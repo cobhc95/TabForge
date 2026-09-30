@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">Tinkle Bell</title>
+  <desc>Original flat vector music icon. Recolour the background circle by changing its fill attribute. Artwork is independent.</desc>
+  <circle id="background" cx="256" cy="256" r="248" fill="#b6c7aa"/>
+  <g id="artwork">
+<circle cx="256" cy="139" r="15" fill="#bd8034"/><circle cx="256" cy="139" r="8" fill="none"/><path d="M217 197Q217 162 256 162Q295 162 295 197L303 275Q307 292 322 302H190Q205 292 209 275Z" fill="#eebd57"/><path d="M257 168Q288 169 289 198L296 277Q300 292 307 297H271Z" fill="#bd8034"/><ellipse cx="256" cy="303" rx="66" ry="14" fill="#bd8034"/><ellipse cx="256" cy="302" rx="52" ry="8" fill="#80462f"/><circle cx="256" cy="308" r="11" fill="#eebd57"/>
+  </g>
+</svg>

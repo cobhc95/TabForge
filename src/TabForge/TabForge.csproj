@@ -1,0 +1,80 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
+    <UseWPF>true</UseWPF>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>TabForge</AssemblyName>
+    <RootNamespace>TabForge</RootNamespace>
+    <!-- Version, Nullable, warnings-as-errors, analysis level and locked restore: see ..\..\Directory.Build.props. -->
+    <Product>TabForge</Product>
+    <Company>TabForge</Company>
+    <Copyright>Copyright (c) 2026 TabForge contributors</Copyright>
+    <ApplicationIcon>Assets\TabForge.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <StartupObject>TabForge.Program</StartupObject>
+    <!-- Lightweight runtime: only English framework resources, precompiled code (no start-up JIT),
+         and a GC that prefers compacting so freed memory goes back to Windows. -->
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <PublishReadyToRun>true</PublishReadyToRun>
+    <TieredPGO>true</TieredPGO>
+    <ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <RuntimeHostConfigurationOption Include="System.GC.ConserveMemory" Value="5" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AlphaTab" Version="1.8.4" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The audio engine runs in its own process (TabForge.exe, audio-engine mode); TabForge only talks to it
+         through the contracts (pipe + shared memory) and never calls its code in the editor process. -->
+    <ProjectReference Include="..\TabForge.Audio.Contracts\TabForge.Audio.Contracts.csproj" />
+    <ProjectReference Include="..\TabForge.AudioEngine\TabForge.AudioEngine.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\TabForge.ico" />
+    <Content Include="Assets\Icons\Transport\*.svg"
+             Link="Assets\TransportIcons\%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="Assets\Icons\Tools\**\*.svg"
+             Link="Assets\ToolIcons\%(RecursiveDir)%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <!-- GM instrument artwork (132 vector badges) and its manifest (names, categories, programs). -->
+    <Content Include="Assets\Icons\Instruments\SVG\**\*.svg"
+             Link="Assets\Instruments\SVG\%(RecursiveDir)%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <!-- Drum map presets for the MIDI note-map processor (JSON; user maps live in the app data folder). -->
+    <Content Include="Resources\DrumMaps\*.json"
+             Link="Resources\DrumMaps\%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="Assets\Icons\Instruments\manifest.json"
+             Link="Assets\Instruments\manifest.json"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <!-- Licence texts of the bundled components (verbatim copies); shipped as <app folder>\licenses\. -->
+    <Content Include="licenses\*.txt"
+             Link="licenses\%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <!-- The original demo song (CC0), shipped as <app folder>\Samples\. -->
+    <Content Include="..\..\samples\*.gp" Link="Samples\%(Filename)%(Extension)" ExcludeFromSingleFile="true"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <!-- The notices file Help > About opens (<app folder>\THIRD_PARTY.md), in every build, not only packaged ones. -->
+    <Content Include="..\..\THIRD_PARTY.md" Link="THIRD_PARTY.md"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <!-- SoundTouch.Net is LGPL-2.1: keep it as a loose, replaceable DLL beside TabForge.exe instead of inside the
+       single-file bundle, so a user can substitute a modified build (see THIRD_PARTY.md). -->
+  <Target Name="KeepSoundTouchLoose" AfterTargets="ComputeResolvedFilesToPublishList">
+    <ItemGroup>
+      <ResolvedFileToPublish Condition="'%(Filename)%(Extension)' == 'SoundTouch.Net.dll'">
+        <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      </ResolvedFileToPublish>
+    </ItemGroup>
+  </Target>
+
+</Project>

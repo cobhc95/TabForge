@@ -1,0 +1,107 @@
+using System.Windows;
+using System.Windows.Media;
+
+namespace TabForge.Views;
+
+/// <summary>
+/// A lightweight overlay that draws only the playback caret. It sits above the score in the same
+/// coordinate space, so the caret can move every UI tick without repainting the (expensive) score
+/// page, and it can never lag the audio by a repaint cadence.
+/// </summary>
+public sealed class PlayheadOverlay : FrameworkElement
+{
+    private (double X, double Top, double Bottom)? _geometry;
+    private (double X, double EndX, double Top, double Bottom)[] _durationGeometries = Array.Empty<(double, double, double, double)>();
+    private Color _color = Color.FromRgb(0x3F, 0xB9, 0x50);
+    private Color _durationColor = Color.FromRgb(0x3F, 0xB9, 0x50);
+    private double _durationOpacity = 0.1;
+    private double _thickness = 1.7;
+    private bool _durationEnabled = true;
+    public Color CurrentColor => _color;
+
+    public PlayheadOverlay()
+    {
+        IsHitTestVisible = false;
+        SnapsToDevicePixels = true;
+    }
+
+    public void SetGeometry((double X, double Top, double Bottom)? geometry)
+    {
+        if (_geometry is { } a && geometry is { } b &&
+            Math.Abs(a.X - b.X) < 0.2 && Math.Abs(a.Top - b.Top) < 0.2 && Math.Abs(a.Bottom - b.Bottom) < 0.2)
+            return;
+        _geometry = geometry;
+        InvalidateVisual();
+    }
+
+    public void SetColor(Color color)
+    {
+        if (_color == color) return;
+        _color = color;
+        InvalidateVisual();
+    }
+
+    public void SetDurationGeometry((double X, double EndX, double Top, double Bottom)? geometry)
+    {
+        SetDurationGeometries(geometry is { } value ? new[] { value } : Array.Empty<(double, double, double, double)>());
+    }
+
+    public void SetDurationGeometries(IReadOnlyList<(double X, double EndX, double Top, double Bottom)> geometries)
+    {
+        if (_durationGeometries.Length == geometries.Count)
+        {
+            var unchanged = true;
+            for (var i = 0; i < _durationGeometries.Length; i++)
+            {
+                var a = _durationGeometries[i];
+                var b = geometries[i];
+                if (Math.Abs(a.X - b.X) >= 0.2 || Math.Abs(a.EndX - b.EndX) >= 0.2 ||
+                    Math.Abs(a.Top - b.Top) >= 0.2 || Math.Abs(a.Bottom - b.Bottom) >= 0.2)
+                {
+                    unchanged = false;
+                    break;
+                }
+            }
+            if (unchanged) return;
+        }
+
+        _durationGeometries = new (double X, double EndX, double Top, double Bottom)[geometries.Count];
+        for (var i = 0; i < geometries.Count; i++) _durationGeometries[i] = geometries[i];
+        InvalidateVisual();
+    }
+
+    public void SetDurationStyle(Color color, double opacity, bool enabled = true)
+    {
+        opacity = double.IsFinite(opacity) ? Math.Clamp(opacity, 0, 1) : 0;
+        if (_durationColor == color && Math.Abs(_durationOpacity - opacity) < 0.001 && _durationEnabled == enabled) return;
+        _durationColor = color;
+        _durationOpacity = opacity;
+        _durationEnabled = enabled;
+        InvalidateVisual();
+    }
+
+    public void SetThickness(double thickness)
+    {
+        _thickness = double.IsFinite(thickness) ? Math.Clamp(thickness, 0.5, 5) : 1.7;
+        InvalidateVisual();
+    }
+
+    protected override void OnRender(DrawingContext dc)
+    {
+        if (_durationEnabled && _durationOpacity > 0)
+        {
+            var alpha = PlaybackGlowIntensity.ScaleAlpha(_durationColor.A, _durationOpacity);
+            if (alpha > 0)
+            {
+                var brush = new SolidColorBrush(Color.FromArgb(alpha, _durationColor.R, _durationColor.G, _durationColor.B));
+                foreach (var glow in _durationGeometries)
+                    if (glow.EndX > glow.X)
+                        dc.DrawRectangle(brush, null, new Rect(glow.X, glow.Top, glow.EndX - glow.X, glow.Bottom - glow.Top));
+            }
+        }
+        if (_geometry is not { } g) return;
+        var pen = new Pen(new SolidColorBrush(_color), _thickness);
+        dc.DrawLine(pen, new Point(g.X, g.Top), new Point(g.X, g.Bottom));
+        dc.DrawEllipse(new SolidColorBrush(_color), null, new Point(g.X, g.Top - 3), 3.6, 3.6);
+    }
+}

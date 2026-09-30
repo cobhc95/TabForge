@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">Shanai</title>
+  <desc>Original flat vector music icon. Recolour the background circle by changing its fill attribute. Artwork is independent.</desc>
+  <circle id="background" cx="256" cy="256" r="248" fill="#e7b386"/>
+  <g id="artwork">
+<path d="M247 148H265L278 328L314 390H198L233 328Z" fill="#b77342"/><ellipse cx="256" cy="389" rx="58" ry="13" fill="#bd8034"/><ellipse cx="256" cy="389" rx="42" ry="6" fill="#80462f"/><rect x="251" y="112" width="10" height="36" rx="2" fill="#eebd57"/><circle cx="256" cy="178" r="5" fill="#80462f"/><circle cx="256" cy="201" r="5" fill="#80462f"/><circle cx="256" cy="224" r="5" fill="#80462f"/><circle cx="256" cy="247" r="5" fill="#80462f"/><circle cx="256" cy="270" r="5" fill="#80462f"/><circle cx="256" cy="293" r="5" fill="#80462f"/><circle cx="256" cy="316" r="5" fill="#80462f"/><rect x="245" y="159" width="22" height="8" rx="2" fill="#eebd57"/><rect x="233" y="317" width="45" height="10" rx="3" fill="#eebd57"/>
+  </g>
+</svg>

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">Woodblock</title>
+  <desc>Original flat vector music icon. Recolour the background circle by changing its fill attribute. Artwork is independent.</desc>
+  <circle id="background" cx="256" cy="256" r="248" fill="#b6c7aa"/>
+  <g id="artwork">
+<path d="M131 243L298 192L382 235L219 293Z" fill="#b77342"/><path d="M131 243V306L219 357V293Z" fill="#80462f"/><path d="M219 293L382 235V298L219 357Z" fill="#bd8034"/><path d="M153 255L181 271V305L153 289Z" fill="#182633"/><path d="M226 136L362 198" fill="none" stroke="#80462f" stroke-width="10" stroke-linecap="round"/><circle cx="219" cy="132" r="19" fill="#b77342"/>
+  </g>
+</svg>

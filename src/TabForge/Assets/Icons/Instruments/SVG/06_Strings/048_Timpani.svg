@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">Timpani</title>
+  <desc>Original flat vector music icon. Recolour the background circle by changing its fill attribute. Artwork is independent.</desc>
+  <circle id="background" cx="256" cy="256" r="248" fill="#b9bfda"/>
+  <g id="artwork">
+<path d="M146 239Q143 357 256 370Q369 357 366 239Z" fill="#bd8034"/><path d="M259 254V361Q351 351 362 252Z" fill="#b77342"/><ellipse cx="256" cy="238" rx="115" ry="37" fill="#293643"/><ellipse cx="256" cy="231" rx="108" ry="29" fill="#fff3d8"/><path d="M185 341L167 407" fill="none" stroke="#293643" stroke-width="8" stroke-linecap="round"/><path d="M323 341L345 407" fill="none" stroke="#293643" stroke-width="8" stroke-linecap="round"/><path d="M255 369L256 417" fill="none" stroke="#293643" stroke-width="8" stroke-linecap="round"/><path d="M161 124L254 212" fill="none" stroke="#80462f" stroke-width="7" stroke-linecap="round"/><path d="M286 124L186 217" fill="none" stroke="#80462f" stroke-width="7" stroke-linecap="round"/><circle cx="161" cy="124" r="14" fill="#fff3d8"/><circle cx="286" cy="124" r="14" fill="#fff3d8"/>
+  </g>
+</svg>

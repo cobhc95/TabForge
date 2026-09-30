@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">Shamisen</title>
+  <desc>Original flat vector music icon. Recolour the background circle by changing its fill attribute. Artwork is independent.</desc>
+  <circle id="background" cx="256" cy="256" r="248" fill="#e7b386"/>
+  <g id="artwork">
+<rect x="202" y="301" width="102" height="117" rx="17" fill="#80462f"/><rect x="208" y="306" width="90" height="106" rx="14" fill="#fff3d8"/><path d="M242 101H255L260 356H238Z" fill="#80462f"/><path d="M240 81L257 77L258 122H242Z" fill="#b77342"/><path d="M247 97L273 97" fill="none" stroke="#80462f" stroke-width="4" stroke-linecap="round"/><ellipse cx="275" cy="97" rx="8" ry="4" fill="#182633"/><path d="M247 111L221 111" fill="none" stroke="#80462f" stroke-width="4" stroke-linecap="round"/><ellipse cx="219" cy="111" rx="8" ry="4" fill="#182633"/><path d="M247 125L273 125" fill="none" stroke="#80462f" stroke-width="4" stroke-linecap="round"/><ellipse cx="275" cy="125" rx="8" ry="4" fill="#182633"/><path d="M244 95L244 378" fill="none" stroke="#d8e4e7" stroke-width="1" stroke-linecap="round"/><path d="M249 95L249 378" fill="none" stroke="#d8e4e7" stroke-width="1" stroke-linecap="round"/><path d="M254 95L254 378" fill="none" stroke="#d8e4e7" stroke-width="1" stroke-linecap="round"/><rect x="228" y="372" width="45" height="5" rx="1" fill="#b77342"/><path d="M339 306L366 358L318 362Z" fill="#fff3d8"/><path d="M339 306L345 317L333 329L327 317Z" fill="#b77342"/>
+  </g>
+</svg>

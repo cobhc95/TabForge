@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">Drum Kit (Electronic)</title>
+  <desc>Original flat vector music icon. Recolour the background circle by changing its fill attribute. Artwork is independent.</desc>
+  <circle id="background" cx="256" cy="256" r="248" fill="#a9d7e6"/>
+  <g id="artwork">
+<path d="M256 176L256 392M150 218L150 392M362 218L362 392" stroke="#57636c" stroke-width="7" stroke-linecap="round" fill="none"/>
+<path d="M150 392L362 392" stroke="#57636c" stroke-width="7" stroke-linecap="round" fill="none"/>
+<path d="M96 200L150 170L204 200L204 236L150 266L96 236Z" fill="#2d3740"/><path d="M110 206L150 184L190 206L190 230L150 252L110 230Z" fill="#46d0f0"/>
+<path d="M202 146L256 116L310 146L310 182L256 212L202 182Z" fill="#2d3740"/><path d="M216 152L256 130L296 152L296 176L256 198L216 176Z" fill="#46d0f0"/>
+<path d="M308 200L362 170L416 200L416 236L362 266L308 236Z" fill="#2d3740"/><path d="M322 206L362 184L402 206L402 230L362 252L322 230Z" fill="#46d0f0"/>
+<rect x="206" y="262" width="100" height="70" rx="10" fill="#2d3740"/><rect x="216" y="272" width="80" height="34" rx="4" fill="#8ff3a6"/>
+<circle cx="232" cy="318" r="5" fill="#ff5a5a"/><circle cx="252" cy="318" r="5" fill="#ffd23c"/><circle cx="272" cy="318" r="5" fill="#46d0f0"/>
+  </g>
+</svg>

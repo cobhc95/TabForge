@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">Drum Kit (Brush)</title>
+  <desc>Original flat vector music icon. Recolour the background circle by changing its fill attribute. Artwork is independent.</desc>
+  <circle id="background" cx="256" cy="256" r="248" fill="#cfe0c4"/>
+  <g id="artwork">
+<rect x="140" y="250" width="232" height="112" rx="12" fill="#6e8f5a"/><ellipse cx="256" cy="250" rx="116" ry="34" fill="#f4f2e7"/><ellipse cx="256" cy="362" rx="116" ry="34" fill="#4c6a3c"/>
+<path d="M150 280L362 280M150 306L362 306M150 332L362 332" stroke="#d8c77a" stroke-width="3" fill="none"/>
+<path d="M130 116L246 238" stroke="#2f3438" stroke-width="12" stroke-linecap="round" fill="none"/>
+<path d="M382 116L266 238" stroke="#2f3438" stroke-width="12" stroke-linecap="round" fill="none"/>
+<path d="M240 232L214 262M244 236L230 268M248 240L246 270M252 242L262 268M236 228L202 250" stroke="#c9ced6" stroke-width="3" stroke-linecap="round" fill="none"/>
+<path d="M272 232L298 262M268 236L282 268M264 240L266 270M260 242L250 268M276 228L310 250" stroke="#c9ced6" stroke-width="3" stroke-linecap="round" fill="none"/>
+  </g>
+</svg>

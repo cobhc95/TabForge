@@ -1,0 +1,41 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{D59AD8FA-D202-4A44-8A80-20BA1173B0D3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TabForge", "src\TabForge\TabForge.csproj", "{C578ADF1-7987-49C4-BBC0-101AE64E930E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TabForge.AudioEngine", "src\TabForge.AudioEngine\TabForge.AudioEngine.csproj", "{875AEA2E-AD80-433A-8F75-EE030E9123F8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TabForge.Audio.Contracts", "src\TabForge.Audio.Contracts\TabForge.Audio.Contracts.csproj", "{762F48DB-86F3-4E23-A7A9-9DB11D43BF44}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C578ADF1-7987-49C4-BBC0-101AE64E930E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C578ADF1-7987-49C4-BBC0-101AE64E930E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C578ADF1-7987-49C4-BBC0-101AE64E930E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C578ADF1-7987-49C4-BBC0-101AE64E930E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{875AEA2E-AD80-433A-8F75-EE030E9123F8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{875AEA2E-AD80-433A-8F75-EE030E9123F8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{875AEA2E-AD80-433A-8F75-EE030E9123F8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{875AEA2E-AD80-433A-8F75-EE030E9123F8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{762F48DB-86F3-4E23-A7A9-9DB11D43BF44}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{762F48DB-86F3-4E23-A7A9-9DB11D43BF44}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{762F48DB-86F3-4E23-A7A9-9DB11D43BF44}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{762F48DB-86F3-4E23-A7A9-9DB11D43BF44}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{C578ADF1-7987-49C4-BBC0-101AE64E930E} = {D59AD8FA-D202-4A44-8A80-20BA1173B0D3}
+		{875AEA2E-AD80-433A-8F75-EE030E9123F8} = {D59AD8FA-D202-4A44-8A80-20BA1173B0D3}
+		{762F48DB-86F3-4E23-A7A9-9DB11D43BF44} = {D59AD8FA-D202-4A44-8A80-20BA1173B0D3}
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,862 @@
+<Window x:Class="TabForge.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:TabForge.Views"
+        x:Name="RootWindow"
+        Title="TabForge" Width="1500" Height="960" MinWidth="1080" MinHeight="720"
+        WindowStartupLocation="CenterScreen" WindowStyle="None" ResizeMode="CanResize"
+        Icon="/Assets/TabForge.ico"
+        AllowDrop="True" DragOver="Window_DragOver" Drop="Window_Drop"
+        Background="{DynamicResource WindowBrush}" Foreground="{DynamicResource TextBrush}"
+        FontFamily="Segoe UI" FontSize="12">
+
+    <!-- Client-drawn chrome: the whole caption is client area (CaptionHeight 0) so the tab strip, the
+         overflow arrows and the caption buttons all receive WPF input; the empty caption regions still
+         start a native drag through WM_NCLBUTTONDOWN, which keeps Aero Snap. -->
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="0" ResizeBorderThickness="6" CornerRadius="0"
+                      GlassFrameThickness="0" UseAeroCaptionButtons="False"/>
+    </WindowChrome.WindowChrome>
+
+    <Window.Resources>
+        <local:SectionColorBrushConverter x:Key="SectionColorBrushConverter"/>
+        <local:SectionColorValueConverter x:Key="SectionColorValueConverter"/>
+    </Window.Resources>
+
+    <DockPanel LastChildFill="True">
+
+        <!-- ============ TITLE BAR: browser-style document tabs ============ -->
+        <Border x:Name="TitleBar" DockPanel.Dock="Top" Height="44" Background="{DynamicResource ChromeStripBrush}"
+                BorderBrush="{DynamicResource ChromeBorderBrush}" BorderThickness="0,0,0,1"
+                WindowChrome.IsHitTestVisibleInChrome="True">
+            <DockPanel LastChildFill="True">
+                <!-- Caption buttons are docked first so the (very wide) tab strip can never push them
+                     off the right edge; the tab strip fills whatever is left, as in Edge / Firefox. -->
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Height="44"
+                            WindowChrome.IsHitTestVisibleInChrome="True">
+                    <!-- Title-bar settings button: Segoe Fluent Icons gear (E713, 17px). -->
+                    <Button x:Name="TitleSettingsButton" Style="{StaticResource ChromeCaptionButton}" Click="Prefs_Click"
+                            WindowChrome.IsHitTestVisibleInChrome="True" Width="40"
+                            ToolTip="Settings (F12)" AutomationProperties.Name="Settings">
+                        <TextBlock Text="&#xE713;" FontFamily="Segoe Fluent Icons" FontSize="17"
+                                   Foreground="{DynamicResource ChromeGlyphBrush}"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Button>
+                    <Button x:Name="MinButton" Style="{StaticResource ChromeCaptionButton}" Click="MinButton_Click"
+                            WindowChrome.IsHitTestVisibleInChrome="True"
+                            AutomationProperties.Name="Minimise">
+                        <Path Style="{StaticResource IconPath}" Data="{StaticResource IconMinimise}" Stroke="{DynamicResource ChromeGlyphBrush}" Width="10" Height="10"/>
+                    </Button>
+                    <Button x:Name="MaxButton" Style="{StaticResource ChromeCaptionButton}" Click="MaxButton_Click"
+                            WindowChrome.IsHitTestVisibleInChrome="True"
+                            AutomationProperties.Name="Maximise">
+                        <Path x:Name="MaxIcon" Style="{StaticResource IconPath}" Data="{StaticResource IconMaximise}" Stroke="{DynamicResource ChromeGlyphBrush}" Width="10" Height="10"/>
+                    </Button>
+                    <Button x:Name="CloseButton" Style="{StaticResource ChromeCloseButton}" Click="CloseButton_Click"
+                            WindowChrome.IsHitTestVisibleInChrome="True"
+                            AutomationProperties.Name="Close">
+                        <Path Style="{StaticResource IconPath}" Data="{StaticResource IconClose}" Stroke="#FFFFFF" Width="10" Height="10"/>
+                    </Button>
+                </StackPanel>
+
+                <local:BrowserTabBar x:Name="Tabs"/>
+            </DockPanel>
+        </Border>
+
+        <!-- One compact footer keeps the useful cursor/status fields and score navigation together. -->
+        <Border x:Name="MainStatusBar" DockPanel.Dock="Bottom" Height="28"
+                Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderSoftBrush}"
+                BorderThickness="0,1,0,0" Padding="5,0"
+                AutomationProperties.AutomationId="MainStatusBar"
+                AutomationProperties.Name="Status and timeline navigation">
+            <Grid VerticalAlignment="Center">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <Border Grid.Column="0" BorderBrush="{DynamicResource BorderSoftBrush}" BorderThickness="0,0,1,0" Padding="5,0,9,0">
+                    <TextBlock x:Name="StatusText" Text="Ready" MaxWidth="150" TextTrimming="CharacterEllipsis"
+                               VerticalAlignment="Center" ToolTip="Last action or current state"/>
+                </Border>
+                <Border Grid.Column="1" BorderBrush="{DynamicResource BorderSoftBrush}" BorderThickness="0,0,1,0" Padding="8,0">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
+                                ToolTip="MIDI output activity: grey = idle, green = playing">
+                        <Ellipse x:Name="MidiLed" Width="9" Height="9" Fill="#6B7280" Stroke="#23272E"/>
+                        <TextBlock Text="MIDI" FontSize="10" Margin="5,0,0,0" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource MutedBrush}"/>
+                    </StackPanel>
+                </Border>
+                <Border Grid.Column="2" BorderBrush="{DynamicResource BorderSoftBrush}" BorderThickness="0,0,1,0" Padding="8,0">
+                    <TextBlock x:Name="PositionText" Text="Bar 1" MaxWidth="365" TextTrimming="CharacterEllipsis"
+                               VerticalAlignment="Center" ToolTip="Playing position (or edit cursor): measure · track · string · cell"/>
+                </Border>
+                <Border Grid.Column="3" BorderBrush="{DynamicResource BorderSoftBrush}" BorderThickness="0,0,1,0" Padding="8,0">
+                    <TextBlock x:Name="BarStateText" Text="4/4 · 16:16" MaxWidth="110" TextTrimming="CharacterEllipsis"
+                               VerticalAlignment="Center" ToolTip="Time signature · written : expected bar duration"/>
+                </Border>
+                <Border Grid.Column="4" BorderBrush="{DynamicResource BorderSoftBrush}" BorderThickness="0,0,1,0" Padding="8,0">
+                    <TextBlock x:Name="MasterInfoText" Text="♩=120 · C major · quarter" MaxWidth="240" TextTrimming="CharacterEllipsis"
+                               VerticalAlignment="Center" ToolTip="Tempo · key signature · current note value"/>
+                </Border>
+                <ContentControl x:Name="TimelineScrollHost" Grid.Column="5" Margin="8,0"
+                                VerticalAlignment="Center" HorizontalContentAlignment="Stretch"
+                                AutomationProperties.Name="Arrangement timeline horizontal scrollbar"/>
+                <StackPanel Grid.Column="6" Orientation="Horizontal" VerticalAlignment="Center">
+                    <!-- The running audio device, click for its settings (shown while the audio engine runs). -->
+                    <Button x:Name="AudioDeviceButton" Style="{StaticResource StatusLinkButton}" Visibility="Collapsed"
+                            Click="AudioDevice_Click" AutomationProperties.Name="Audio device settings"
+                            ToolTip="Audio device · click for Settings &gt; Audio &amp; VST (driver, device, sample rate, buffer)">
+                        <TextBlock x:Name="AudioDeviceText" MaxWidth="300" TextTrimming="CharacterEllipsis"/>
+                    </Button>
+                    <TextBlock x:Name="OutputStatusText" Text="Microsoft MIDI Mapper" MaxWidth="185"
+                               TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Margin="8,0,5,0"
+                               ToolTip="MIDI output device for the selected track"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- ============ MENU + GLOBAL CONTROLS ============ -->
+        <Border x:Name="MainToolbar" DockPanel.Dock="Top" Height="30" Background="{DynamicResource PanelBrush}"
+                BorderBrush="{DynamicResource BorderSoftBrush}" BorderThickness="0,0,0,1">
+            <DockPanel>
+                <Menu DockPanel.Dock="Left" Background="Transparent" VerticalAlignment="Center">
+                    <MenuItem Header="_File">
+                        <MenuItem Header="_New" Click="New_Click" InputGestureText="Ctrl+N"/>
+                        <MenuItem Header="New from t_emplate..." Click="ApplyTemplate_Click"/>
+                        <MenuItem Header="New _tab" Click="NewTab_Click" InputGestureText="Ctrl+T"/>
+                        <MenuItem Header="_Open..." Click="Open_Click" InputGestureText="Ctrl+O"/>
+                        <MenuItem Header="Open in new _tab..." Click="OpenInNewTab_Click" InputGestureText="Ctrl+Shift+O"/>
+                        <MenuItem Header="_Save" Click="Save_Click" InputGestureText="Ctrl+S"/>
+                        <MenuItem Header="Save _As..." Click="SaveAs_Click" InputGestureText="Ctrl+Shift+S"/>
+                        <MenuItem Header="Save as temp_late..." Click="SaveAsTemplate_Click"/>
+                        <MenuItem Header="_Close tab" Click="CloseTab_Click" InputGestureText="Ctrl+W"/>
+                        <Separator/>
+                        <MenuItem Header="Export _MIDI..." Click="ExportMidi_Click"/>
+                        <MenuItem Header="_Render to audio file..." Click="Render_Click" InputGestureText="Ctrl+Alt+R"/>
+                        <MenuItem Header="Export _ASCII tab..." Click="ExportAscii_Click"/>
+                        <MenuItem Header="Export P_DF..." Click="ExportPdf_Click"/>
+                        <MenuItem Header="Export Music_XML..." Click="ExportMusicXml_Click"/>
+                        <MenuItem Header="Command pa_lette..." Click="CommandPalette_Click" InputGestureText="Ctrl+Shift+A"/>
+                        <Separator/>
+                        <MenuItem Header="Score _information..." Click="ScoreInfo_Click" InputGestureText="F5"/>
+                        <MenuItem Header="Print _preview..." Click="PrintPreview_Click"/>
+                        <MenuItem Header="_Print..." Click="Print_Click" InputGestureText="Ctrl+P"/>
+                        <Separator/><MenuItem Header="E_xit" Click="Exit_Click"/>
+                    </MenuItem>
+                    <MenuItem Header="_Edit">
+                        <MenuItem Header="_Undo" Click="Undo_Click" InputGestureText="Ctrl+Z"/>
+                        <MenuItem Header="_Redo" Click="Redo_Click" InputGestureText="Ctrl+Y"/>
+                        <Separator/>
+                        <MenuItem Header="_Copy" Click="Copy_Click" InputGestureText="Ctrl+C"/>
+                        <MenuItem Header="Cu_t" Click="Cut_Click" InputGestureText="Ctrl+X"/>
+                        <MenuItem Header="_Paste" Click="Paste_Click" InputGestureText="Ctrl+V"/>
+                        <Separator/>
+                        <MenuItem Header="_Insert beat" Click="InsertBeat_Click" InputGestureText="Ctrl +"/>
+                        <MenuItem Header="_Delete beats" Click="DeleteBeats_Click" InputGestureText="Ctrl -"/>
+                        <MenuItem Header="_Copy last beat" Click="CopyBeats_Click" InputGestureText="C"/>
+                    </MenuItem>
+                    <MenuItem Header="_Bar">
+                        <MenuItem Header="Insert _bar" Click="InsertBar_Click" InputGestureText="Ctrl+Ins"/>
+                        <MenuItem Header="_Delete bar" Click="DeleteBar_Click" InputGestureText="Ctrl+Del"/>
+                        <MenuItem Header="Duplicate bar" Click="DuplicateBar_Click"/>
+                        <MenuItem Header="Repeat selection as bars" Click="RepeatSelection_Click"/>
+                        <Separator/>
+                        <MenuItem Header="_Time signature..." Click="TimeSig_Click" InputGestureText="Ctrl+Shift+T"/>
+                        <MenuItem Header="_Key signature..." Click="KeySig_Click" InputGestureText="Ctrl+K"/>
+                        <MenuItem Header="_Clef" Click="Clef_Click" InputGestureText="K"/>
+                        <MenuItem Header="Triplet _feel" Click="TripletFeel_Click" InputGestureText="Ctrl+/"/>
+                        <Separator/>
+                        <MenuItem Header="Repeat _open" Click="RepeatOpen_Click" InputGestureText="["/>
+                        <MenuItem Header="Repeat _close..." Click="RepeatClose_Click" InputGestureText="]"/>
+                        <MenuItem Header="_Directions / ending..." Click="Directions_Click" InputGestureText="D"/>
+                        <MenuItem Header="_Double bar" Click="DoubleBar_Click"/>
+                        <MenuItem Header="Repeat one _bar" Click="Simile1_Click"/>
+                        <MenuItem Header="Repeat two b_ars" Click="Simile2_Click"/>
+                        <Separator/>
+                        <MenuItem Header="_Section..." Click="Section_Click" InputGestureText="Shift+Ins"/>
+                    </MenuItem>
+                    <MenuItem Header="_Track">
+                        <MenuItem Header="Add _Guitar" Click="AddGuitar_Click"/>
+                        <MenuItem Header="Add _Bass" Click="AddBass_Click"/>
+                        <MenuItem Header="Add _Drums" Click="AddDrums_Click"/>
+                        <MenuItem Header="Add _Keys" Click="AddKeys_Click"/>
+                        <Separator/>
+                        <MenuItem Header="_Delete track" Click="DeleteTrack_Click"/>
+                        <MenuItem Header="Move _up" Click="MoveTrackUp_Click"/>
+                        <MenuItem Header="Move _down" Click="MoveTrackDown_Click"/>
+                        <Separator/>
+                        <MenuItem Header="_Properties..." Click="TrackProps_Click" InputGestureText="F6"/>
+                    </MenuItem>
+                    <MenuItem Header="_Note">
+                        <MenuItem Header="Whole" Click="Dur1_Click"/>
+                        <MenuItem Header="Half" Click="Dur2_Click"/>
+                        <MenuItem Header="Quarter" Click="Dur4_Click"/>
+                        <MenuItem Header="Eighth" Click="Dur8_Click"/>
+                        <MenuItem Header="Sixteenth" Click="Dur16_Click"/>
+                        <MenuItem Header="32nd" Click="Dur32_Click"/>
+                        <MenuItem Header="64th" Click="Dur64_Click"/>
+                        <Separator/>
+                        <MenuItem Header="Increase duration" Click="DurLonger_Click" InputGestureText="+"/>
+                        <MenuItem Header="Decrease duration" Click="DurShorter_Click" InputGestureText="-"/>
+                        <MenuItem Header="Dotting" Click="Dot_Click" InputGestureText="."/>
+                        <MenuItem Header="Double dotting" Click="DoubleDot_Click" InputGestureText="Ctrl+."/>
+                        <MenuItem Header="Triplet" Click="Triplet_Click" InputGestureText="/"/>
+                        <Separator/>
+                        <MenuItem Header="Tie note" Click="Tie_Click" InputGestureText="L"/>
+                        <MenuItem Header="Rest" Click="Rest_Click" InputGestureText="R"/>
+                        <MenuItem Header="Fermata" Click="Fermata_Click" InputGestureText="F"/>
+                        <MenuItem Header="Accent" Click="Accent_Click" InputGestureText=";"/>
+                        <MenuItem Header="Staccato" Click="Staccato_Click" InputGestureText="Shift+1"/>
+                        <MenuItem Header="Tenuto" Click="Tenuto_Click" InputGestureText="Shift+-"/>
+                        <Separator/>
+                        <MenuItem Header="Shift pitch up (semitone)" Click="PitchUp_Click" InputGestureText="Shift+Up"/>
+                        <MenuItem Header="Shift pitch down (semitone)" Click="PitchDown_Click" InputGestureText="Shift+Down"/>
+                        <MenuItem Header="Move to higher string" Click="MoveUpString_Click" InputGestureText="Alt+Up"/>
+                        <MenuItem Header="Move to lower string" Click="MoveDownString_Click" InputGestureText="Alt+Down"/>
+                    </MenuItem>
+                    <MenuItem Header="_Effects">
+                        <MenuItem Header="Dead note" Click="FxDead_Click" InputGestureText="X"/>
+                        <MenuItem Header="Ghost note" Click="FxGhost_Click" InputGestureText="O"/>
+                        <MenuItem Header="Palm mute" Click="PalmMute_Click" InputGestureText="P"/>
+                        <MenuItem Header="Let ring" Click="LetRing_Click" InputGestureText="I"/>
+                        <MenuItem Header="Hammer / pull" Click="Hopo_Click" InputGestureText="H"/>
+                        <MenuItem Header="Bend" Click="Bend_Click" InputGestureText="B"/>
+                        <MenuItem Header="Legato slide" Click="Slide_Click" InputGestureText="S"/>
+                        <MenuItem Header="Shift slide" Click="FxShiftSlide_Click"/>
+                        <MenuItem Header="Vibrato" Click="Vibrato_Click" InputGestureText="V"/>
+                        <MenuItem Header="Wide vibrato" Click="FxWideVib_Click"/>
+                        <MenuItem Header="Tremolo bar" Click="FxTremBar_Click" InputGestureText="W"/>
+                        <MenuItem Header="Natural harmonic" Click="FxHarm_Click" InputGestureText="Y"/>
+                        <MenuItem Header="Artificial harmonic" Click="FxArtHarm_Click"/>
+                        <MenuItem Header="Tapping" Click="FxTap_Click"/>
+                        <MenuItem Header="Slap" Click="FxSlap_Click"/>
+                        <MenuItem Header="Pop" Click="FxPop_Click"/>
+                        <MenuItem Header="Trill" Click="FxTrill_Click" InputGestureText="N"/>
+                        <MenuItem Header="Tremolo picking" Click="FxTremPick_Click"/>
+                        <MenuItem Header="Fade in" Click="FxFadeIn_Click" InputGestureText="Shift+,"/>
+                        <MenuItem Header="Fade out" Click="FxFadeOut_Click" InputGestureText="Shift+."/>
+                        <MenuItem Header="Wah open" Click="FxWahOpen_Click"/>
+                        <MenuItem Header="Wah close" Click="FxWahClose_Click"/>
+                        <MenuItem Header="Brush down" Click="FxBrushDown_Click"/>
+                        <MenuItem Header="Brush up" Click="FxBrushUp_Click"/>
+                        <MenuItem Header="Arpeggio down" Click="FxArpDown_Click"/>
+                        <MenuItem Header="Arpeggio up" Click="FxArpUp_Click"/>
+                        <MenuItem Header="Grace before beat" Click="FxGrace_Click" InputGestureText="G"/>
+                        <Separator/>
+                        <MenuItem Header="Chord... " Click="Chord_Click" InputGestureText="A"/>
+                        <MenuItem Header="Text... " Click="Text_Click" InputGestureText="T"/>
+                    </MenuItem>
+                    <MenuItem Header="_Sections">
+                        <MenuItem Header="Add section..." Click="AddMarker_Click"/>
+                        <MenuItem Header="Go to... " Click="GoTo_Click" InputGestureText="Ctrl+G"/>
+                        <MenuItem Header="Previous section" Click="PrevSection_Click" InputGestureText="Alt+Left"/>
+                        <MenuItem Header="Next section" Click="NextSection_Click" InputGestureText="Alt+Right"/>
+                    </MenuItem>
+                    <MenuItem Header="_Tools">
+                        <MenuItem Header="Check bar duration" Click="CheckBars_Click" InputGestureText="F4"/>
+                        <MenuItem Header="Transpose..." Click="Transpose_Click"/>
+                        <MenuItem Header="Scale finder..." Click="ScaleFinder_Click"/>
+                        <MenuItem Header="Tuner..." Click="Tuner_Click"/>
+                        <Separator/>
+                        <MenuItem x:Name="MetronomeMenu" Header="Metronome" Click="Metronome_Click" IsCheckable="True"/>
+                        <MenuItem x:Name="CountInMenu" Header="Count-in" Click="CountIn_Click" IsCheckable="True"/>
+                        <MenuItem x:Name="PreviewNotesMenu" Header="Preview note sound" Click="PreviewNotes_Click" IsCheckable="True" IsChecked="True"/>
+                    </MenuItem>
+                    <MenuItem Header="_Sound">
+                        <MenuItem Header="Play / pause" Click="Play_Click" InputGestureText="Space"/>
+                        <MenuItem Header="Play from beginning" Click="PlayFromStart_Click" InputGestureText="Shift+Space"/>
+                        <MenuItem Header="First bar" Click="FirstBar_Click" InputGestureText="Ctrl+Home"/>
+                        <MenuItem Header="Last bar" Click="LastBar_Click" InputGestureText="Ctrl+End"/>
+                        <Separator/>
+                        <MenuItem Header="Empty bar" Click="EmptyBar_Click"/>
+                        <MenuItem Header="MIDI / Audio setup" Click="ShowAudioTab_Click"/>
+                        <MenuItem Header="Test selected track output" Click="TestMidi_Click"/>
+                    </MenuItem>
+                    <MenuItem Header="_View">
+                        <MenuItem Header="Tablature + standard" Click="NotationBoth_Click"/>
+                        <MenuItem Header="Tablature only" Click="NotationTab_Click"/>
+                        <MenuItem Header="Standard notation only" Click="NotationStaff_Click"/>
+                        <Separator/>
+                        <MenuItem Header="Dark score page" Click="ThemeDark_Click"/>
+                        <MenuItem Header="Light score page" Click="ThemeLight_Click"/>
+                        <Separator/>
+                        <MenuItem x:Name="InstrumentViewMenu" Header="Instrument view" Click="ToggleInstrumentView_Click" IsCheckable="True" IsChecked="True"/>
+                        <MenuItem x:Name="ArrangementMenu" Header="Arrangement overview" Click="ToggleArrangement_Click" IsCheckable="True" IsChecked="True"/>
+                        <MenuItem x:Name="ArrangementIndividualNotesMenu" Header="Show individual notes" Click="ArrangementIndividualNotesMenu_Click" IsCheckable="True"/>
+                        <MenuItem x:Name="ArrangementContinuousBlocksMenu" Header="Show continuous line" Click="ArrangementContinuousBlocksMenu_Click" IsCheckable="True"/>
+                        <MenuItem Header="Mixer / VST" Click="ShowMixer_Click"/>
+                        <Separator/>
+                        <MenuItem x:Name="DockPanelsMenu" Header="Panels"/>
+                        <MenuItem Header="Reset all panels to original positions" Click="ResetDockWorkspace_Click"/>
+                        <Separator/>
+                        <MenuItem Header="Zoom 75%" Click="Zoom75_Click"/>
+                        <MenuItem Header="Zoom 100% (fit width)" Click="Zoom100_Click"/>
+                        <MenuItem Header="Zoom 150%" Click="Zoom150_Click"/>
+                        <MenuItem Header="Full screen" Click="Fullscreen_Click" InputGestureText="F11"/>
+                    </MenuItem>
+                    <MenuItem Header="_Options">
+                        <MenuItem Header="Practice / learn mode" Click="ShowPractice_Click"/>
+                        <MenuItem Header="Stylesheet..." Click="Stylesheet_Click" InputGestureText="F7"/>
+                        <MenuItem Header="Preferences..." Click="Prefs_Click" InputGestureText="F12"/>
+                    </MenuItem>
+                    <MenuItem Header="_Help">
+                        <MenuItem Header="Keyboard shortcuts..." Click="Shortcuts_Click"/>
+                        <MenuItem Header="Check for updates..." Click="CheckForUpdates_Click"/>
+                        <MenuItem Header="About" Click="About_Click"/>
+                    </MenuItem>
+                </Menu>
+                <!-- Pinned tools: right-click any palette icon → "Pin to toolbar". Empty until the user pins. -->
+                <StackPanel x:Name="PinnedToolStrip" DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center" Margin="14,0,0,0"/>
+                <!-- Tempo and song-wide readouts remain in the main toolbar; only metronome and
+                     score zoom are hosted by the movable controller. -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0">
+                    <TextBox x:Name="TempoBox" Width="52" Text="120" ToolTip="Tempo (BPM)" LostFocus="TempoBox_LostFocus"/>
+                    <TextBlock Text="BPM" VerticalAlignment="Center" Margin="4,0,8,0" Foreground="{DynamicResource MutedBrush}"/>
+                    <Separator Style="{StaticResource BarSeparator}"/>
+                    <TextBlock x:Name="TimeSigLabel" Text="4/4" VerticalAlignment="Center" Margin="2,0,6,0" Foreground="{DynamicResource TextBrush}" ToolTip="Time signature (Ctrl+Shift+T)"/>
+                    <TextBlock x:Name="KeyLabelText" Text="C major" VerticalAlignment="Center" Margin="2,0,6,0" Foreground="{DynamicResource TextBrush}" ToolTip="Key signature (Ctrl+K)"/>
+                    <Button x:Name="SidePanelButton" Style="{StaticResource ToolButton}" ToolTip="Show / hide the side panel (tools, sections, practice)" Click="ToggleSidePanel_Click"
+                            AutomationProperties.Name="Show or hide the side panel">
+                        <Path Style="{StaticResource IconPath}" Data="M3,4 H21 V20 H3 Z M15,4 V20"/>
+                    </Button>
+                    <Button x:Name="InstrumentPanelButton" Style="{StaticResource ToolButton}" ToolTip="Show/hide fretboard / keyboard" Click="ToggleInstrumentView_Click"
+                            AutomationProperties.Name="Show or hide the fretboard / keyboard">
+                        <Path Style="{StaticResource IconPath}" Data="{StaticResource IconFretboard}"/>
+                    </Button>
+                    <Button Style="{StaticResource ToolButton}" ToolTip="Project settings: song info, credits, tempo, key" Click="ProjectSettings_Click"
+                            AutomationProperties.Name="Project settings">
+                        <Path Style="{StaticResource IconPath}" Data="{StaticResource IconPrefs}"/>
+                    </Button>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- ============ WORKSPACE ============ -->
+        <Grid x:Name="DockLayout">
+            <Grid x:Name="DockWorkspaceMount"/>
+            <Grid x:Name="DockPanelStaging" Visibility="Collapsed">
+            <Grid x:Name="LegacyDockLayout">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="5"/>
+                <RowDefinition x:Name="ArrangementRow" Height="248"/>
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" MinWidth="420"/>
+                <ColumnDefinition Width="5"/>
+                <ColumnDefinition x:Name="DockPanelColumn" Width="360" MinWidth="280" MaxWidth="600"/>
+            </Grid.ColumnDefinitions>
+            <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                          Grid.Row="0"
+                          Background="{DynamicResource BorderSoftBrush}" BorderThickness="0"
+                          ResizeDirection="Columns" ResizeBehavior="PreviousAndNext" ShowsPreview="False"
+                          Cursor="SizeWE"
+                          ToolTip="Drag to resize the side panel" Panel.ZIndex="2"/>
+            <Grid x:Name="EditorWorkspace" Grid.Column="0" Grid.Row="0">
+            <Grid.RowDefinitions>
+                <RowDefinition x:Name="InstrumentRow" Height="182"/>
+                <RowDefinition Height="5"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- instrument visualisation (fretboard / drums / keyboard) -->
+            <Border x:Name="InstrumentHost" Grid.Row="0" Background="{DynamicResource InstrumentHostBrush}" BorderBrush="{DynamicResource BorderSoftBrush}" BorderThickness="0,0,0,1"
+                    ToolTip="Click a fret to enter a note. Drag horizontally to snap the fretboard left, centre or right."
+                    AutomationProperties.HelpText="Click a fret to enter a note; drag the fretboard horizontally to move it between left, centre and right positions.">
+                <Grid>
+                    <local:InstrumentPanel x:Name="Instrument" AutomationProperties.Name="Instrument fretboard"/>
+                    <!-- Scale finder, placed under the colour legend by the code (top-right when no legend). -->
+                    <Canvas x:Name="InstrumentOverlay" ClipToBounds="True">
+                        <Button x:Name="ScaleFinderButton" Click="ScaleFinderButton_Click" Height="24" Padding="6,0,8,0"
+                                Background="{DynamicResource Panel2Brush}" BorderBrush="{DynamicResource BorderSoftBrush}" BorderThickness="1"
+                                ToolTip="Scale finder: find the scales these notes fit, or pick any scale to show on the fretboard"
+                                AutomationProperties.Name="Scale finder" Focusable="False">
+                            <StackPanel Orientation="Horizontal">
+                                <!-- rising steps: a scale -->
+                                <Path Data="M0,11 L3,11 L3,8 L6,8 L6,5 L9,5 L9,2 L12,2" Stroke="{DynamicResource AccentBrush}" StrokeThickness="1.6"
+                                      StrokeLineJoin="Round" Width="13" Height="13" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                                <TextBlock Text="Scales" FontSize="11" VerticalAlignment="Center" Foreground="{DynamicResource TextBrush}"/>
+                            </StackPanel>
+                        </Button>
+                    </Canvas>
+                    <!-- Hide the pane (same as the toolbar toggle / View > Instrument view). The legend and the
+                         fretboard keep a corner strip clear for it (FretboardGeometry.CornerReserve). -->
+                    <Button x:Name="InstrumentHideButton" Style="{StaticResource ToolButton}" Click="ToggleInstrumentView_Click"
+                            HorizontalAlignment="Right" VerticalAlignment="Top" Width="20" Height="20" MinWidth="20" MinHeight="20"
+                            Padding="0" Margin="0,2,2,0" Focusable="False"
+                            ToolTip="Hide fretboard / keyboard (show again with the toolbar button or View menu)"
+                            AutomationProperties.Name="Hide fretboard / keyboard">
+                        <Path Style="{StaticResource IconPath}" Data="{StaticResource IconClose}" Width="9" Height="9"/>
+                    </Button>
+                </Grid>
+            </Border>
+
+            <GridSplitter Grid.Row="1" Height="5" HorizontalAlignment="Stretch" Background="{DynamicResource BorderSoftBrush}"/>
+
+            <!-- score page -->
+                <Border x:Name="ScoreEditorHost" Grid.Row="2" Background="{DynamicResource WorkspaceBrush}" BorderBrush="{DynamicResource BorderSoftBrush}" BorderThickness="0,1,0,1">
+                <ScrollViewer x:Name="ScoreScroll" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
+                              Background="{DynamicResource WorkspaceBrush}" Padding="0" HorizontalContentAlignment="Center" SizeChanged="ScoreScroll_SizeChanged"
+                              PreviewMouseWheel="ScoreScroll_PreviewMouseWheel">
+                        <Border x:Name="ScorePage" Background="{DynamicResource PaperDarkBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                            HorizontalAlignment="Center" VerticalAlignment="Top" SnapsToDevicePixels="True">
+                        <Grid>
+                            <local:TabEditorControl x:Name="Editor"/>
+                            <local:PlayheadOverlay x:Name="Playhead"/>
+                        </Grid>
+                    </Border>
+                </ScrollViewer>
+            </Border>
+
+            </Grid>
+            <GridSplitter Grid.Row="1" Grid.ColumnSpan="3" Height="5" HorizontalAlignment="Stretch"
+                          Background="{DynamicResource BorderSoftBrush}"/>
+            <Grid x:Name="ArrangementHost" Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3">
+                <local:ArrangementPanel x:Name="Arrangement"/>
+            </Grid>
+            <Grid x:Name="RightSidePanelsGrid" Grid.Row="0" Grid.Column="2" Background="{DynamicResource PanelBrush}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="0.58*" MinHeight="120"/>
+                    <RowDefinition Height="5"/>
+                    <RowDefinition x:Name="SectionsPanelRow" Height="0.42*" MinHeight="120"/>
+                    <RowDefinition x:Name="ControllerDockSplitterRow" Height="0"/>
+                    <RowDefinition x:Name="ControllerDockRow" Height="0"/>
+                </Grid.RowDefinitions>
+                <GridSplitter Grid.Row="1" Height="5" HorizontalAlignment="Stretch" VerticalAlignment="Center"
+                              Background="{DynamicResource BorderSoftBrush}" ResizeDirection="Rows" ResizeBehavior="PreviousAndNext"
+                              ShowsPreview="False" Cursor="SizeNS"
+                              ToolTip="Drag to resize the tools and Sections panels"/>
+                <Border x:Name="ToolsPanelContent" Grid.Row="0" Margin="8" Background="{DynamicResource Panel2Brush}"
+                        BorderBrush="{DynamicResource BorderSoftBrush}" BorderThickness="1" CornerRadius="4" Padding="7">
+                    <DockPanel LastChildFill="True">
+                        <StackPanel x:Name="ToolsTabStrip" DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6"/>
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                            <StackPanel x:Name="ToolsPaletteHost"/>
+                        </ScrollViewer>
+                    </DockPanel>
+                </Border>
+                <Grid x:Name="SectionsPanelContent" Grid.Row="2" Margin="8">
+                    <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                    <GroupBox Header="Sections">
+                        <DockPanel Margin="5">
+                            <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal">
+                                <Button x:Name="AddSectionButton" Content="Add" Click="AddMarker_Click" AutomationProperties.Name="Add new section"/><Button Content="Go" Click="MarkerGo_Click"/><Button Content="Edit" Click="MarkerEdit_Click"/><Button Content="Delete" Click="MarkerDel_Click"/>
+                            </StackPanel>
+                            <ListBox x:Name="MarkerList" PreviewMouseLeftButtonUp="MarkerList_PreviewMouseLeftButtonUp">
+                                <ListBox.ItemContainerStyle>
+                                    <Style TargetType="ListBoxItem">
+                                        <Setter Property="Background" Value="Transparent"/>
+                                        <Setter Property="Padding" Value="0"/>
+                                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="ListBoxItem">
+                                                    <Border Background="{TemplateBinding Background}">
+                                                        <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                                                    </Border>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </ListBox.ItemContainerStyle>
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Padding="7,4" Margin="0,1" CornerRadius="2">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="Background" Value="{Binding Converter={StaticResource SectionColorBrushConverter}, ConverterParameter=dim:170}"/>
+                                                    <Setter Property="Opacity" Value="0.82"/>
+                                                    <Setter Property="Effect">
+                                                        <Setter.Value>
+                                                            <DropShadowEffect Color="{Binding Converter={StaticResource SectionColorValueConverter}}"
+                                                                              BlurRadius="0" ShadowDepth="0" Opacity="0"/>
+                                                        </Setter.Value>
+                                                    </Setter>
+                                                    <Style.Triggers>
+                                                         <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True">
+                                                            <Setter Property="Background" Value="{Binding Converter={StaticResource SectionColorBrushConverter}, ConverterParameter=215}"/>
+                                                            <Setter Property="Opacity" Value="1"/>
+                                                            <Setter Property="Effect">
+                                                                <Setter.Value>
+                                                                    <DropShadowEffect Color="{Binding Converter={StaticResource SectionColorValueConverter}}"
+                                                                                      BlurRadius="10" ShadowDepth="0" Opacity="{DynamicResource SectionHoverGlowOpacity}"/>
+                                                                </Setter.Value>
+                                                            </Setter>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True">
+                                                            <Setter Property="Background" Value="{Binding Converter={StaticResource SectionColorBrushConverter}, ConverterParameter=255}"/>
+                                                            <Setter Property="Opacity" Value="1"/>
+                                                            <Setter Property="BorderBrush" Value="#CCFFFFFF"/>
+                                                            <Setter Property="BorderThickness" Value="1"/>
+                                                            <Setter Property="Effect">
+                                                                <Setter.Value>
+                                                                    <DropShadowEffect Color="{Binding Converter={StaticResource SectionColorValueConverter}}"
+                                                                                      BlurRadius="14" ShadowDepth="0" Opacity="{DynamicResource SectionActiveGlowOpacity}"/>
+                                                                </Setter.Value>
+                                                            </Setter>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                            <DockPanel LastChildFill="True">
+                                                <TextBlock DockPanel.Dock="Right" Text="🔒" Margin="6,0,0,0" Foreground="{DynamicResource MutedBrush}">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding LockPosition}" Value="True">
+                                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                                <TextBlock Text="{Binding Title}" Foreground="White" TextTrimming="CharacterEllipsis"/>
+                                            </DockPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </DockPanel>
+                    </GroupBox>
+                    <Expander Grid.Row="1" Header="Lyrics" IsExpanded="False" Margin="0,6,0,0">
+                        <TextBox x:Name="LyricsBox" MinHeight="120" AcceptsReturn="True"
+                                 VerticalScrollBarVisibility="Auto" TextWrapping="Wrap"
+                                 LostFocus="LyricsBox_LostFocus"/>
+                    </Expander>
+                </Grid>
+                <GridSplitter x:Name="ControllerDockSplitter" Grid.Row="3" Height="5"
+                              HorizontalAlignment="Stretch" VerticalAlignment="Center"
+                              Background="{DynamicResource BorderSoftBrush}"
+                              ResizeDirection="Rows" ResizeBehavior="PreviousAndNext"
+                              ShowsPreview="False" Cursor="SizeNS" Visibility="Collapsed"
+                              ToolTip="Resize the docked playback controller"/>
+                <Grid x:Name="ControllerDockHost" Grid.Row="4" Margin="8" Visibility="Collapsed">
+                    <Border x:Name="ControllerDockPreview" CornerRadius="7" BorderThickness="2"
+                            BorderBrush="{DynamicResource AccentBrush}" Background="{DynamicResource AccentSoftBrush}"
+                            Visibility="Collapsed" IsHitTestVisible="False">
+                        <Border.Effect>
+                            <DropShadowEffect Color="#4C9AFF" BlurRadius="18" ShadowDepth="0" Opacity="0.9"/>
+                        </Border.Effect>
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <TextBlock Text="DOCK ZOOM" FontSize="10" FontWeight="Bold"
+                                       Foreground="{DynamicResource TextBrush}" HorizontalAlignment="Center"/>
+                            <TextBlock Text="Release to place below Sections and Lyrics" FontSize="10"
+                                       Foreground="{DynamicResource MutedBrush}" Margin="0,4,0,0"/>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+                <ScrollViewer x:Name="LowerPanelScroll" Grid.Row="2" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel Margin="8">
+                        <TextBlock Text="Tools" FontSize="13" FontWeight="SemiBold" Margin="2,0,0,6"/>
+                        <GroupBox Header="Practice" Margin="0,0,0,8">
+                            <StackPanel Margin="8">
+                                <CheckBox x:Name="PracticePreviewCheck" Content="Preview next notes" IsChecked="True" Margin="0,2" Checked="PracticeOption_Changed" Unchecked="PracticeOption_Changed"/>
+                                <CheckBox x:Name="PracticeNamesCheck" Content="Note names" Margin="0,2" Checked="PracticeOption_Changed" Unchecked="PracticeOption_Changed"/>
+                                <CheckBox x:Name="LeftHandedCheck" Content="Left-handed" Margin="0,2" Checked="PracticeOption_Changed" Unchecked="PracticeOption_Changed"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                    <TextBlock Text="Preview" VerticalAlignment="Center" Foreground="{DynamicResource MutedBrush}"/>
+                                    <Slider x:Name="PreviewHorizonSlider" Width="86" Minimum="1" Maximum="10" Value="6" Margin="6,0,0,0" VerticalAlignment="Center" ToolTip="How many upcoming movements to preview" ValueChanged="PracticeOption_Changed"/>
+                                </StackPanel>
+                                <TextBlock Text="Scale highlight" Margin="0,6,0,2" Foreground="{DynamicResource MutedBrush}"/>
+                                <ComboBox x:Name="ScaleHighlightCombo" SelectionChanged="PracticeOption_Changed"><ComboBoxItem Content="Off"/></ComboBox>
+                                <TextBlock Text="Fretboard" Margin="0,6,0,2" Foreground="{DynamicResource MutedBrush}"/>
+                                <ComboBox x:Name="FretboardFretsCombo" SelectionChanged="PracticeOption_Changed"><ComboBoxItem Content="24 frets"/><ComboBoxItem Content="12 frets"/></ComboBox>
+                                <TextBlock x:Name="PracticeHint" Text="" TextWrapping="Wrap" Margin="0,8,0,0" FontSize="11" Foreground="{DynamicResource MutedBrush}"/>
+                            </StackPanel>
+                        </GroupBox>
+                        <Border Background="{DynamicResource Panel2Brush}" BorderBrush="{DynamicResource BorderSoftBrush}" BorderThickness="1" CornerRadius="4" Padding="8,6" Margin="0,0,0,8">
+                            <StackPanel><TextBlock x:Name="SongStatsText" Text="Song stats" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" ToolTip="Notes, tracks and bars in the current score"/><TextBlock x:Name="OverviewTitle" Text="" TextWrapping="Wrap" Margin="0,6,0,0" FontWeight="SemiBold"/></StackPanel>
+                        </Border>
+                        <GroupBox Header="Chord finder" Margin="0,0,0,8">
+                            <StackPanel Margin="6">
+                                <WrapPanel><TextBlock Text="Root" VerticalAlignment="Center"/><ComboBox x:Name="ChordRootCombo" Width="64" Margin="4,0"/><TextBlock Text="Type" VerticalAlignment="Center"/><ComboBox x:Name="ChordTypeCombo" Width="96" Margin="4,0"/></WrapPanel>
+                                <ListBox x:Name="ChordResultList" Height="84" Margin="0,6,0,0"/>
+                                <WrapPanel Margin="0,6,0,0"><Button Content="Show" Click="ChordShow_Click"/><Button Content="Insert name" Click="ChordInsert_Click"/></WrapPanel>
+                            </StackPanel>
+                        </GroupBox>
+                        <GroupBox Header="Scale finder" Margin="0,0,0,8">
+                            <StackPanel Margin="6">
+                                <StackPanel Orientation="Horizontal"><TextBlock Text="Root" VerticalAlignment="Center"/><ComboBox x:Name="ScaleRootCombo" Width="64" Margin="4,0"/><TextBlock Text="Scale" VerticalAlignment="Center"/><ComboBox x:Name="ScaleNameCombo" Width="130" Margin="4,0"/></StackPanel>
+                                <TextBlock x:Name="ScaleResultText" Text="—" TextWrapping="Wrap" Margin="0,6,0,0"/>
+                                <Button Content="Show scale" Click="ScaleShow_Click" HorizontalAlignment="Left" Margin="0,6,0,0"/>
+                            </StackPanel>
+                        </GroupBox>
+                        <GroupBox Header="Selected track routing" Margin="0,0,0,8">
+                            <StackPanel Margin="6"><TextBlock Text="MIDI output device" Foreground="{DynamicResource MutedBrush}"/><ComboBox x:Name="SelectedOutputCombo" ItemsSource="{Binding MidiDevices}" DisplayMemberPath="Name" SelectedValuePath="DeviceId" SelectionChanged="SelectedOutputCombo_SelectionChanged"/><WrapPanel Margin="0,6,0,0"><Button Content="Test sound" Click="TestMidi_Click"/><Button Content="Refresh devices" Click="RefreshMidiDevices_Click"/></WrapPanel></StackPanel>
+                        </GroupBox>
+                        <GroupBox Header="Track FX" Margin="0,0,0,8" ToolTip="VST instruments and effects for the selected track, and the mixer.">
+                            <WrapPanel Margin="5"><Button Content="Open FX chain…" Click="OpenSelectedFxChain_Click"/><Button Content="Mixer…" Click="OpenMixer_Click"/></WrapPanel>
+                        </GroupBox>
+                        <GroupBox Header="Track mixer (detailed)">
+                            <DockPanel Margin="5">
+                                <TextBlock DockPanel.Dock="Bottom" Text="Drag a row up or down to reorder tracks." Foreground="{DynamicResource MutedBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,0"/>
+                                <DataGrid x:Name="TrackMixerGrid" AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False" HeadersVisibility="Column" RowHeaderWidth="0" SelectionMode="Single" SelectionUnit="FullRow" SelectionChanged="TrackMixerGrid_SelectionChanged" CellEditEnding="TrackMixerGrid_CellEditEnding" Height="150" PreviewMouseLeftButtonDown="TrackMixerGrid_PreviewMouseLeftButtonDown" PreviewMouseMove="TrackMixerGrid_PreviewMouseMove" PreviewMouseLeftButtonUp="TrackMixerGrid_PreviewMouseLeftButtonUp" ToolTip="Drag a row up or down to reorder tracks">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Binding="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Width="90"><DataGridTextColumn.Header><TextBlock Text="Name" ToolTip="Track name"/></DataGridTextColumn.Header></DataGridTextColumn>
+                                        <DataGridCheckBoxColumn Binding="{Binding Solo, UpdateSourceTrigger=PropertyChanged}" Width="24"><DataGridCheckBoxColumn.Header><TextBlock Text="S" ToolTip="Solo"/></DataGridCheckBoxColumn.Header></DataGridCheckBoxColumn>
+                                        <DataGridCheckBoxColumn Binding="{Binding Mute, UpdateSourceTrigger=PropertyChanged}" Width="24"><DataGridCheckBoxColumn.Header><TextBlock Text="M" ToolTip="Mute"/></DataGridCheckBoxColumn.Header></DataGridCheckBoxColumn>
+                                        <DataGridTextColumn Binding="{Binding MidiChannel}" Width="30"><DataGridTextColumn.Header><TextBlock Text="Ch" ToolTip="MIDI channel"/></DataGridTextColumn.Header></DataGridTextColumn>
+                                        <DataGridTextColumn Binding="{Binding MidiProgram, UpdateSourceTrigger=PropertyChanged}" Width="52"><DataGridTextColumn.Header><TextBlock Text="Program" ToolTip="MIDI program (instrument)"/></DataGridTextColumn.Header></DataGridTextColumn>
+                                        <DataGridTextColumn Binding="{Binding Volume, UpdateSourceTrigger=PropertyChanged}" Width="40"><DataGridTextColumn.Header><TextBlock Text="Vol" ToolTip="Volume (0-127)"/></DataGridTextColumn.Header></DataGridTextColumn>
+                                        <DataGridTextColumn Binding="{Binding Pan, UpdateSourceTrigger=PropertyChanged}" Width="40"><DataGridTextColumn.Header><TextBlock Text="Pan" ToolTip="Pan (0 = left, 64 = centre, 127 = right)"/></DataGridTextColumn.Header></DataGridTextColumn>
+                                        <DataGridTextColumn Binding="{Binding Chorus, UpdateSourceTrigger=PropertyChanged}" Width="38"><DataGridTextColumn.Header><TextBlock Text="Cho" ToolTip="Chorus send"/></DataGridTextColumn.Header></DataGridTextColumn>
+                                        <DataGridTextColumn Binding="{Binding Reverb, UpdateSourceTrigger=PropertyChanged}" Width="38"><DataGridTextColumn.Header><TextBlock Text="Rev" ToolTip="Reverb send"/></DataGridTextColumn.Header></DataGridTextColumn>
+                                        <DataGridTextColumn Binding="{Binding Transpose, UpdateSourceTrigger=PropertyChanged}" Width="30"><DataGridTextColumn.Header><TextBlock Text="Tr" ToolTip="Transpose (semitones)"/></DataGridTextColumn.Header></DataGridTextColumn>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </DockPanel>
+                        </GroupBox>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+            <Canvas x:Name="ControllerFloatLayer" Grid.Row="0" Grid.Column="0" Grid.RowSpan="3" Grid.ColumnSpan="3"
+                    Panel.ZIndex="50" ClipToBounds="False">
+                <Border x:Name="ControllerPanel" Visibility="Collapsed"
+                        Background="{DynamicResource Panel2Brush}" BorderBrush="{DynamicResource BorderSoftBrush}"
+                        BorderThickness="1" CornerRadius="8" Padding="0"
+                        AutomationProperties.AutomationId="ZoomController"
+                        AutomationProperties.Name="Floating zoom controller">
+                    <Border.Effect>
+                        <DropShadowEffect Color="#000000" BlurRadius="14" ShadowDepth="2" Opacity="0.48"/>
+                    </Border.Effect>
+                    <DockPanel LastChildFill="True">
+                        <StackPanel x:Name="ControllerControls" Orientation="Horizontal" Margin="3,2,3,2" HorizontalAlignment="Left">
+                            <Border x:Name="PlaybarControls" Background="{StaticResource PlaybarSurfaceBrush}"
+                                    BorderBrush="{StaticResource PlaybarBorderBrush}" BorderThickness="1"
+                                    CornerRadius="6" Padding="2" Margin="1,1,5,2" AutomationProperties.Name="Transport controls">
+                                <StackPanel Orientation="Horizontal">
+                                    <Button Style="{StaticResource TransportButton}" Width="34" Height="34" MinWidth="34" Padding="0" Margin="1" ToolTip="Rewind to beginning" Click="RewindToBeginning_Click"
+                                            AutomationProperties.Name="Rewind to beginning" Background="{StaticResource PlaybarRewindBrush}" BorderBrush="{StaticResource PlaybarRewindBorderBrush}">
+                                        <local:SvgIconView Icon="rewind_to_beginning" Width="28" Height="28" ShowFrame="False" IsHitTestVisible="False" ButtonHovered="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                                    </Button>
+                                    <Button x:Name="StopButton" Style="{StaticResource TransportButton}" Width="34" Height="34" MinWidth="34" Padding="0" Margin="1"
+                                            ToolTip="Stop playback" Click="Stop_Click" AutomationProperties.AutomationId="TransportStop"
+                                            AutomationProperties.Name="Stop playback" Background="{StaticResource PlaybarStopBrush}" BorderBrush="{StaticResource PlaybarStopBorderBrush}">
+                                        <local:SvgIconView Icon="stop" Width="28" Height="28" ShowFrame="False" IsHitTestVisible="False" ButtonHovered="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                                    </Button>
+                                    <Button x:Name="RecordButton" Style="{StaticResource TransportButton}" Width="34" Height="34" MinWidth="34" Padding="0" Margin="1"
+                                            ToolTip="Record (Ctrl+R): records every armed track (the red button on a track row) while the song plays; press again to stop"
+                                            Click="Record_Click" AutomationProperties.Name="Record" Background="{StaticResource PlaybarStopBrush}" BorderBrush="{StaticResource PlaybarStopBorderBrush}">
+                                        <Grid Width="22" Height="22" IsHitTestVisible="False">
+                                            <Ellipse Stroke="{DynamicResource DangerBrush}" StrokeThickness="2"/>
+                                            <Ellipse Margin="6" Fill="{DynamicResource DangerBrush}"/>
+                                            <Ellipse x:Name="RecordPulse" Margin="1" Fill="{DynamicResource DangerBrush}" Opacity="0.85" Visibility="Collapsed"/>
+                                        </Grid>
+                                    </Button>
+                                    <Button x:Name="PlayButton" Style="{StaticResource TransportButton}" Width="34" Height="34" MinWidth="34" Padding="0" Margin="1" ToolTip="Play / pause (Space)" Click="Play_Click"
+                                            AutomationProperties.AutomationId="TransportPlay" AutomationProperties.Name="Play or pause"
+                                            Background="{StaticResource PlaybarPlayBrush}" BorderBrush="{StaticResource PlaybarPlayBorderBrush}">
+                                        <local:SvgIconView x:Name="PlayIcon" Icon="play" Width="28" Height="28" ShowFrame="False" IsHitTestVisible="False" ButtonHovered="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                                    </Button>
+                                    <Button Style="{StaticResource TransportButton}" Width="34" Height="34" MinWidth="34" Padding="0" Margin="1" ToolTip="Next section" Click="NextSection_Click"
+                                            AutomationProperties.Name="Next section" Background="{StaticResource PlaybarNextBrush}" BorderBrush="{StaticResource PlaybarNextBorderBrush}">
+                                        <local:SvgIconView Icon="next_section" Width="28" Height="28" ShowFrame="False" IsHitTestVisible="False" ButtonHovered="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                                    </Button>
+                                    <Border Width="1" Height="22" Background="{StaticResource PlaybarBorderBrush}" VerticalAlignment="Center" Margin="3,0"/>
+                                    <Button x:Name="CountInButton" Style="{StaticResource TransportButton}" Width="34" Height="34" MinWidth="34" Padding="0" Margin="1" ToolTip="Count-in · left-click to toggle, right-click for count-in settings" Click="CountIn_Click" PreviewMouseRightButtonUp="CountInButton_PreviewMouseRightButtonUp"
+                                            AutomationProperties.Name="Click and beat count-in" Background="{StaticResource PlaybarBeatBrush}" BorderBrush="#7656B3">
+                                        <local:SvgIconView Icon="click_beat" Width="28" Height="28" ShowFrame="False" IsHitTestVisible="False" ButtonHovered="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                                    </Button>
+                                    <Button x:Name="MetronomeButton" Style="{StaticResource TransportButton}" Width="34" Height="34" MinWidth="34" Padding="0" Margin="1" ToolTip="Metronome · left-click to toggle, right-click for settings" Click="Metronome_Click"
+                                            PreviewMouseRightButtonUp="MetronomeButton_PreviewMouseRightButtonUp"
+                                            AutomationProperties.AutomationId="TransportMetronome" AutomationProperties.Name="Metronome"
+                                            Background="{StaticResource PlaybarMetroBrush}" BorderBrush="#9E542F">
+                                        <local:SvgIconView x:Name="MetronomeIcon" Icon="metronome" Width="28" Height="28" ShowFrame="False" IsHitTestVisible="False" ButtonHovered="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                                    </Button>
+                                    <Button x:Name="LoopButton" Style="{StaticResource TransportButton}" Width="34" Height="34" MinWidth="34" Padding="0" Margin="1" ToolTip="Loop · left-click to toggle (F9), right-click for loop settings" Click="Loop_Click"
+                                            PreviewMouseRightButtonUp="LoopButton_PreviewMouseRightButtonUp"
+                                            AutomationProperties.AutomationId="TransportLoop" AutomationProperties.Name="Loop enable"
+                                            Background="{StaticResource PlaybarLoopBrush}" BorderBrush="#18865E">
+                                        <local:SvgIconView x:Name="LoopIcon" Icon="loop" Width="28" Height="28" ShowFrame="False" IsHitTestVisible="False" ButtonHovered="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                                    </Button>
+                                    <TextBlock x:Name="LoopCountBadge" Visibility="Collapsed" VerticalAlignment="Center" Margin="2,0,4,0" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
+                                </StackPanel>
+                            </Border>
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0">
+                                <Button Style="{StaticResource TransportButton}" Width="26" Height="26" MinWidth="26" Padding="0" ToolTip="Zoom out" Click="ZoomOutButton_Click" AutomationProperties.Name="Zoom out">
+                                    <local:SvgIconView Icon="zoom_minus" Width="20" Height="20" IsHitTestVisible="False" ButtonHovered="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                                </Button>
+                                <ComboBox x:Name="ZoomCombo" Width="76" Height="26" ToolTip="Score zoom. Choose a preset or type 50–200%."
+                                          AutomationProperties.AutomationId="ZoomCombo" AutomationProperties.Name="Zoom"
+                                          Loaded="ZoomCombo_ReSync" IsVisibleChanged="ZoomCombo_VisibleReSync"
+                                          IsEditable="True" IsTextSearchEnabled="False"
+                                          SelectionChanged="ZoomCombo_Changed" LostFocus="ZoomCombo_LostFocus"
+                                          PreviewKeyDown="ZoomCombo_PreviewKeyDown">
+                                    <ComboBoxItem Content="Fit width"/><ComboBoxItem Content="50%"/><ComboBoxItem Content="60%"/>
+                                    <ComboBoxItem Content="75%"/><ComboBoxItem Content="80%"/><ComboBoxItem Content="90%"/>
+                                    <ComboBoxItem Content="100%"/><ComboBoxItem Content="110%"/><ComboBoxItem Content="125%"/>
+                                    <ComboBoxItem Content="150%"/><ComboBoxItem Content="175%"/><ComboBoxItem Content="200%"/>
+                                </ComboBox>
+                                <Button Style="{StaticResource TransportButton}" Width="26" Height="26" MinWidth="26" Padding="0" ToolTip="Zoom in" Click="ZoomInButton_Click" AutomationProperties.Name="Zoom in">
+                                    <local:SvgIconView Icon="zoom_plus" Width="20" Height="20" IsHitTestVisible="False" ButtonHovered="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                                </Button>
+                            </StackPanel>
+                            <Border Width="1" Height="20" Background="{DynamicResource BorderSoftBrush}" VerticalAlignment="Center" Margin="6,0"/>
+                            <TextBlock Text="Speed" FontSize="11" VerticalAlignment="Center" Margin="0,0,3,0" Foreground="{DynamicResource MutedBrush}" ToolTip="Playback speed"/>
+                            <ComboBox x:Name="SpeedCombo" Width="76" Height="26" ToolTip="Playback speed. Choose a preset or type 25–200%."
+                                      AutomationProperties.AutomationId="Transport.Speed" AutomationProperties.Name="Playback speed"
+                                      Loaded="SpeedCombo_ReSync" IsVisibleChanged="SpeedCombo_VisibleReSync"
+                                      IsEditable="True" IsTextSearchEnabled="False"
+                                      SelectionChanged="SpeedCombo_Changed" LostFocus="SpeedCombo_LostFocus"
+                                      PreviewKeyDown="SpeedCombo_PreviewKeyDown">
+                                <ComboBoxItem Content="50%"/><ComboBoxItem Content="75%"/><ComboBoxItem Content="100%"/>
+                                <ComboBoxItem Content="125%"/><ComboBoxItem Content="150%"/><ComboBoxItem Content="200%"/>
+                            </ComboBox>
+                        </StackPanel>
+                        <Popup x:Name="MetronomeSettingsPopup" PlacementTarget="{Binding ElementName=MetronomeButton}"
+                               Placement="Bottom" StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade">
+                            <Border LayoutTransform="{DynamicResource UiScaleTransform}" Width="276" Padding="12" Background="{DynamicResource Panel2Brush}"
+                                    BorderBrush="{DynamicResource BorderSoftBrush}" BorderThickness="1" CornerRadius="8">
+                                <Border.Effect>
+                                    <DropShadowEffect Color="#000000" BlurRadius="16" ShadowDepth="3" Opacity="0.52"/>
+                                </Border.Effect>
+                                <StackPanel>
+                                    <DockPanel Margin="0,0,0,8">
+                                        <Button DockPanel.Dock="Right" Content="×" Width="23" Height="23" Padding="0"
+                                                ToolTip="Close metronome settings" Click="CloseMetronomeSettings_Click"/>
+                                        <TextBlock Text="METRONOME SETTINGS" FontSize="10" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"/>
+                                    </DockPanel>
+                                    <DockPanel Margin="0,2,0,0">
+                                        <TextBlock Text="Metronome volume"/>
+                                        <TextBlock x:Name="MetronomeVolumeValue" DockPanel.Dock="Right" Text="100%" Foreground="{DynamicResource MutedBrush}"/>
+                                    </DockPanel>
+                                    <Slider x:Name="MetronomeVolumeSlider" Tag="Master" Minimum="0" Maximum="100" Value="100"
+                                            TickFrequency="10" IsSnapToTickEnabled="False" ValueChanged="MetronomeSlider_ValueChanged"/>
+                                    <DockPanel Margin="0,3,0,0">
+                                        <TextBlock Text="Accent / first beat"/>
+                                        <TextBlock x:Name="MetronomeAccentValue" DockPanel.Dock="Right" Text="100%" Foreground="{DynamicResource MutedBrush}"/>
+                                    </DockPanel>
+                                    <Slider x:Name="MetronomeAccentSlider" Tag="Accent" Minimum="0" Maximum="100" Value="100"
+                                            TickFrequency="10" IsSnapToTickEnabled="False" ValueChanged="MetronomeSlider_ValueChanged"/>
+                                    <DockPanel Margin="0,3,0,0">
+                                        <TextBlock Text="Regular click"/>
+                                        <TextBlock x:Name="MetronomeClickValue" DockPanel.Dock="Right" Text="76%" Foreground="{DynamicResource MutedBrush}"/>
+                                    </DockPanel>
+                                    <Slider x:Name="MetronomeClickSlider" Tag="Click" Minimum="0" Maximum="100" Value="76"
+                                            TickFrequency="10" IsSnapToTickEnabled="False" ValueChanged="MetronomeSlider_ValueChanged"/>
+                                    <TextBlock Text="Click sound" Margin="0,6,0,2"/>
+                                    <ComboBox x:Name="MetronomeSoundCombo" SelectionChanged="MetronomeSound_SelectionChanged">
+                                        <ComboBoxItem Content="Classic metronome" Tag="classic"/>
+                                        <ComboBoxItem Content="Woodblock" Tag="woodblock"/>
+                                        <ComboBoxItem Content="Side stick" Tag="sidestick"/>
+                                        <ComboBoxItem Content="Hand clap" Tag="clap"/>
+                                        <ComboBoxItem Content="Custom MIDI notes" Tag="custom"/>
+                                    </ComboBox>
+                                    <CheckBox x:Name="MetronomeBoostCheck" Content="Boosted (layered, much louder)" Margin="0,6,0,0"
+                                              IsChecked="True" Click="MetronomeBoost_Click"/>
+                                    <TextBlock Text="Subdivision" Margin="0,6,0,2"/>
+                                    <ComboBox x:Name="MetronomeSubdivisionCombo" SelectionChanged="MetronomeSubdivision_SelectionChanged">
+                                        <ComboBoxItem Content="Quarter beats" Tag="1"/>
+                                        <ComboBoxItem Content="Eighth notes" Tag="2"/>
+                                        <ComboBoxItem Content="Eighth-note triplets" Tag="3"/>
+                                        <ComboBoxItem Content="Sixteenth notes" Tag="4"/>
+                                    </ComboBox>
+                                    <TextBlock Text="Settings apply during playback" FontSize="10" Foreground="{DynamicResource MutedBrush}" Margin="0,7,0,0"/>
+                                </StackPanel>
+                            </Border>
+                        </Popup>
+                        <Popup x:Name="CountInSettingsPopup" PlacementTarget="{Binding ElementName=CountInButton}"
+                               Placement="Bottom" StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade">
+                            <Border LayoutTransform="{DynamicResource UiScaleTransform}" Width="250" Padding="12" Background="{DynamicResource Panel2Brush}"
+                                    BorderBrush="{DynamicResource BorderSoftBrush}" BorderThickness="1" CornerRadius="8">
+                                <Border.Effect>
+                                    <DropShadowEffect Color="#000000" BlurRadius="16" ShadowDepth="3" Opacity="0.52"/>
+                                </Border.Effect>
+                                <StackPanel>
+                                    <TextBlock Text="COUNT-IN SETTINGS" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,8"/>
+                                    <DockPanel>
+                                        <TextBlock Text="Volume"/>
+                                        <TextBlock x:Name="CountInVolumeValue" DockPanel.Dock="Right" Text="70%" Foreground="{DynamicResource MutedBrush}" HorizontalAlignment="Right"/>
+                                    </DockPanel>
+                                    <Slider x:Name="CountInVolumeSlider" Minimum="0" Maximum="100" Value="70" ValueChanged="CountInVolume_ValueChanged"/>
+                                    <TextBlock Text="Length" Margin="0,6,0,2"/>
+                                    <ComboBox x:Name="CountInBarsCombo" SelectionChanged="CountInOption_Changed">
+                                        <ComboBoxItem Content="1 bar" Tag="1"/>
+                                        <ComboBoxItem Content="2 bars" Tag="2"/>
+                                        <ComboBoxItem Content="3 bars" Tag="3"/>
+                                        <ComboBoxItem Content="4 bars" Tag="4"/>
+                                    </ComboBox>
+                                    <TextBlock Text="Click sound" Margin="0,6,0,2"/>
+                                    <ComboBox x:Name="CountInSoundCombo" SelectionChanged="CountInOption_Changed">
+                                        <ComboBoxItem Content="Same as metronome" Tag="same"/>
+                                        <ComboBoxItem Content="Woodblock" Tag="76,77"/>
+                                        <ComboBoxItem Content="Side stick" Tag="37,37"/>
+                                        <ComboBoxItem Content="Hand clap" Tag="39,39"/>
+                                        <ComboBoxItem Content="Cowbell" Tag="56,56"/>
+                                        <ComboBoxItem Content="Classic metronome" Tag="33,34"/>
+                                    </ComboBox>
+                                    <CheckBox x:Name="CountInSongStartCheck" Content="Only when starting from bar 1" Margin="0,8,0,0" Click="CountInChecks_Click"/>
+                                    <CheckBox x:Name="CountInSectionCheck" Content="Also before every section while playing" Margin="0,4,0,0" Click="CountInChecks_Click"/>
+                                    <CheckBox x:Name="CountInLoopCheck" Content="Also before every loop repeat" Margin="0,4,0,0" Click="CountInChecks_Click"/>
+                                    <TextBlock Text="Toggling count-in during playback applies next time you press Play." FontSize="10" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" Margin="0,6,0,0"/>
+                                    <TextBlock Text="Boosted like the metronome when its Boosted option is on." FontSize="10" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" Margin="0,7,0,0"/>
+                                </StackPanel>
+                            </Border>
+                        </Popup>
+                        <Popup x:Name="LoopSettingsPopup" PlacementTarget="{Binding ElementName=LoopButton}"
+                               Placement="Bottom" StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade">
+                            <Border LayoutTransform="{DynamicResource UiScaleTransform}" Width="276" Padding="12" Background="{DynamicResource Panel2Brush}"
+                                    BorderBrush="{DynamicResource BorderSoftBrush}" BorderThickness="1" CornerRadius="8">
+                                <Border.Effect>
+                                    <DropShadowEffect Color="#000000" BlurRadius="16" ShadowDepth="3" Opacity="0.52"/>
+                                </Border.Effect>
+                                <StackPanel>
+                                    <DockPanel Margin="0,0,0,8">
+                                        <Button DockPanel.Dock="Right" Content="×" Width="23" Height="23" Padding="0"
+                                                ToolTip="Close loop settings" Click="CloseLoopSettings_Click"/>
+                                        <TextBlock Text="LOOP SETTINGS" FontSize="10" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"/>
+                                    </DockPanel>
+                                    <TextBlock x:Name="LoopRangeText" Text="No loop area" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,6"/>
+                                    <CheckBox x:Name="LoopButtonSectionCheck" Content="Loop button loops what is playing (no area needed)"
+                                              Margin="0,2,0,6" Click="LoopButtonSection_Click"/>
+                                    <TextBlock Text="When that is on, loop" Margin="0,2,0,2"/>
+                                    <ComboBox x:Name="LoopScopeCombo" SelectionChanged="LoopScope_SelectionChanged">
+                                        <ComboBoxItem Content="The current section" Tag="Section"/>
+                                        <ComboBoxItem Content="The current bar" Tag="Bar"/>
+                                        <ComboBoxItem Content="The whole song" Tag="Song"/>
+                                    </ComboBox>
+                                    <CheckBox x:Name="LoopClearOnDisableCheck" Content="Forget the area when loop is turned off"
+                                              Margin="0,8,0,0" Click="LoopClearOnDisable_Click"/>
+                                    <DockPanel Margin="0,10,0,0">
+                                        <TextBlock Text="Number of loops" VerticalAlignment="Center"/>
+                                        <TextBox x:Name="LoopCountBox" DockPanel.Dock="Right" Width="60" HorizontalAlignment="Right"
+                                                 ToolTip="How many times to play the loop. Empty or ∞ = forever." LostFocus="LoopBehaviour_Changed" KeyDown="LoopCountBox_KeyDown"/>
+                                    </DockPanel>
+                                    <CheckBox x:Name="LoopCountInCheck" Content="Count-in clicks before every loop" Margin="0,8,0,0" Click="LoopBehaviour_Changed"/>
+                                    <RadioButton x:Name="LoopSimpleRadio" Content="Simple loop" GroupName="LoopMode" Margin="0,10,0,0" Click="LoopBehaviour_Changed"/>
+                                    <RadioButton x:Name="LoopTrainerRadio" Content="Speed trainer" GroupName="LoopMode" Margin="0,4,0,0" Click="LoopBehaviour_Changed"/>
+                                    <StackPanel x:Name="LoopTrainerPanel" Margin="18,4,0,0" IsEnabled="{Binding IsChecked, ElementName=LoopTrainerRadio}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="Tempo" Width="44" VerticalAlignment="Center"/>
+                                            <TextBox x:Name="LoopTrainerFromBox" Width="40" LostFocus="LoopBehaviour_Changed"/>
+                                            <TextBlock Text=" %  to " VerticalAlignment="Center"/>
+                                            <TextBox x:Name="LoopTrainerToBox" Width="40" LostFocus="LoopBehaviour_Changed"/>
+                                            <TextBlock Text=" %" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                            <TextBlock Text="Increase tempo each loop by " VerticalAlignment="Center"/>
+                                            <TextBox x:Name="LoopTrainerStepBox" Width="40" LostFocus="LoopBehaviour_Changed"/>
+                                            <TextBlock Text=" %" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                    <Button Content="Clear loop area (Esc)" Margin="0,10,0,0" HorizontalAlignment="Left"
+                                            Padding="10,3" Click="ClearLoopArea_Click"/>
+                                    <TextBlock Text="Drag across bars in the arrangement to pick an area; right-click a section to loop it."
+                                               FontSize="10" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" Margin="0,8,0,0"/>
+                                </StackPanel>
+                            </Border>
+                        </Popup>
+                    </DockPanel>
+                </Border>
+            </Canvas>
+            </Grid>
+            </Grid>
+        </Grid>
+    </DockPanel>
+</Window>

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">Agogo</title>
+  <desc>Original flat vector music icon. Recolour the background circle by changing its fill attribute. Artwork is independent.</desc>
+  <circle id="background" cx="256" cy="256" r="248" fill="#b6c7aa"/>
+  <g id="artwork">
+<path d="M213 192L212 139Q211 104 251 104Q291 104 292 139L292 188" fill="none" stroke="#90abb6" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/><path d="M195 181Q213 173 231 181L248 341Q213 355 178 341Z" fill="#293643"/><path d="M196 189L208 185L201 334L184 336Z" fill="#465865"/><ellipse cx="213" cy="341" rx="35" ry="11" fill="#182633"/><ellipse cx="213" cy="343" rx="28" ry="6" fill="#111c24"/><path d="M278 181Q293 175 308 181L323 298Q294 310 264 298Z" fill="#465865"/><path d="M279 187L290 183L280 292L270 294Z" fill="#90abb6"/><ellipse cx="293" cy="299" rx="30" ry="9" fill="#182633"/><ellipse cx="293" cy="300" rx="24" ry="5" fill="#111c24"/><path d="M345 359L382 185" fill="none" stroke="#b77342" stroke-width="8" stroke-linecap="round"/><circle cx="382" cy="184" r="5" fill="#b77342"/>
+  </g>
+</svg>

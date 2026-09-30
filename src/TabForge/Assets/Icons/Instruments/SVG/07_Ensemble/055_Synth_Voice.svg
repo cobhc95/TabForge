@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">Synth Voice</title>
+  <desc>Original flat vector music icon. Recolour the background circle by changing its fill attribute. Artwork is independent.</desc>
+  <circle id="background" cx="256" cy="256" r="248" fill="#c9b9d4"/>
+  <g id="artwork">
+<g transform="translate(254 256) scale(1.05)"><path d="M-55 146V93Q-48 55 -20 52H20Q48 55 55 93V146Z" fill="#c75450"/><path d="M-20 53L0 80L20 53Z" fill="#fff3d8"/><ellipse cx="0" cy="0" rx="39" ry="46" fill="#b77342"/><path d="M-39 0Q-45 -60 6 -55Q44 -54 39 -4L24 -27L-24 -18Z" fill="#80462f"/><ellipse cx="0" cy="18" rx="11" ry="13" fill="#182633"/><circle cx="-14" cy="-1" r="2" fill="#80462f"/><circle cx="14" cy="-1" r="2" fill="#80462f"/></g><path d="M128 130L156 130L156 104L182 104L182 148L207 148L207 121L235 121" fill="none" stroke="#fff3d8" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>

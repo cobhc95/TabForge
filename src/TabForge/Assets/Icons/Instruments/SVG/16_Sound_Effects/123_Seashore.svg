@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">Seashore</title>
+  <desc>Original flat vector music icon. Recolour the background circle by changing its fill attribute. Artwork is independent.</desc>
+  <circle id="background" cx="256" cy="256" r="248" fill="#aabccf"/>
+  <g id="artwork">
+<path d="M118 329Q205 287 273 320Q341 350 398 325V367Q251 419 118 367Z" fill="#eebd57"/><path d="M114 206Q147 175 185 206T256 206T328 206T398 206V244Q361 264 327 244T256 244T184 244T114 244Z" fill="#90abb6"/><path d="M114 252Q147 221 185 252T256 252T328 252T398 252V290Q361 310 327 290T256 290T184 290T114 290Z" fill="#318f96"/><path d="M114 298Q147 267 185 298T256 298T328 298T398 298V336Q361 356 327 336T256 336T184 336T114 336Z" fill="#26707f"/><circle cx="343" cy="136" r="28" fill="#eebd57"/>
+  </g>
+</svg>

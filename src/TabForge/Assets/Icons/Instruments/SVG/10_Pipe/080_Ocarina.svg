@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">Ocarina</title>
+  <desc>Original flat vector music icon. Recolour the background circle by changing its fill attribute. Artwork is independent.</desc>
+  <circle id="background" cx="256" cy="256" r="248" fill="#a9c6ae"/>
+  <g id="artwork">
+<path d="M151 304Q137 250 196 218L301 183L351 157L367 183L342 225Q393 291 339 337Q291 378 219 354Z" fill="#318f96"/><path d="M155 304Q221 348 330 319Q359 310 367 287Q360 365 263 363Q181 359 155 304Z" fill="#24747e"/><ellipse cx="211" cy="257" rx="9" ry="7" fill="#182633"/><ellipse cx="248" cy="243" rx="9" ry="7" fill="#182633"/><ellipse cx="285" cy="233" rx="9" ry="7" fill="#182633"/><ellipse cx="231" cy="294" rx="9" ry="7" fill="#182633"/><ellipse cx="273" cy="282" rx="9" ry="7" fill="#182633"/><ellipse cx="314" cy="271" rx="9" ry="7" fill="#182633"/>
+  </g>
+</svg>

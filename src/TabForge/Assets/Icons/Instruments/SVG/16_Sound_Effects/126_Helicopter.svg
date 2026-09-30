@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">Helicopter</title>
+  <desc>Original flat vector music icon. Recolour the background circle by changing its fill attribute. Artwork is independent.</desc>
+  <circle id="background" cx="256" cy="256" r="248" fill="#aabccf"/>
+  <g id="artwork">
+<path d="M149 244L106 204L95 209L114 267L221 295L295 319Q358 331 391 283Q373 221 298 218L248 238Z" fill="#318f96"/><path d="M303 232Q352 231 374 275H303Z" fill="#90abb6"/><rect x="245" y="269" width="35" height="25" rx="4" fill="#90abb6"/><path d="M287 217L287 181" fill="none" stroke="#293643" stroke-width="9" stroke-linecap="round"/><path d="M162 177L410 177" fill="none" stroke="#293643" stroke-width="10" stroke-linecap="round"/><path d="M113 218L100 277" fill="none" stroke="#293643" stroke-width="7" stroke-linecap="round"/><path d="M84 240L131 252" fill="none" stroke="#293643" stroke-width="7" stroke-linecap="round"/><path d="M265 319L260 344" fill="none" stroke="#293643" stroke-width="7" stroke-linecap="round"/><path d="M345 317L350 343" fill="none" stroke="#293643" stroke-width="7" stroke-linecap="round"/><path d="M237 344H370Q385 344 390 331" fill="none" stroke="#293643" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>

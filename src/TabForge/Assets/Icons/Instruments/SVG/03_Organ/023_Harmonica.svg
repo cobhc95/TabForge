@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">Harmonica</title>
+  <desc>Original flat vector music icon. Recolour the background circle by changing its fill attribute. Artwork is independent.</desc>
+  <circle id="background" cx="256" cy="256" r="248" fill="#a0c9bf"/>
+  <g id="artwork">
+<rect x="110" y="219" width="295" height="84" rx="15" fill="#90abb6"/><rect x="118" y="227" width="279" height="25" rx="8" fill="#d8e4e7"/><rect x="120" y="258" width="275" height="34" rx="4" fill="#182633"/><rect x="129" y="263" width="14" height="22" rx="2" fill="#80462f"/><rect x="151" y="263" width="14" height="22" rx="2" fill="#80462f"/><rect x="173" y="263" width="14" height="22" rx="2" fill="#80462f"/><rect x="195" y="263" width="14" height="22" rx="2" fill="#80462f"/><rect x="217" y="263" width="14" height="22" rx="2" fill="#80462f"/><rect x="239" y="263" width="14" height="22" rx="2" fill="#80462f"/><rect x="261" y="263" width="14" height="22" rx="2" fill="#80462f"/><rect x="283" y="263" width="14" height="22" rx="2" fill="#80462f"/><rect x="305" y="263" width="14" height="22" rx="2" fill="#80462f"/><rect x="327" y="263" width="14" height="22" rx="2" fill="#80462f"/><rect x="349" y="263" width="14" height="22" rx="2" fill="#80462f"/><rect x="371" y="263" width="14" height="22" rx="2" fill="#80462f"/><circle cx="125" cy="239" r="3" fill="#293643"/><circle cx="388" cy="239" r="3" fill="#293643"/>
+  </g>
+</svg>

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">Blown Bottle</title>
+  <desc>Original flat vector music icon. Recolour the background circle by changing its fill attribute. Artwork is independent.</desc>
+  <circle id="background" cx="256" cy="256" r="248" fill="#a9c6ae"/>
+  <g id="artwork">
+<path d="M232 127H280V218Q280 234 304 252Q325 267 325 301V381Q325 395 308 395H204Q187 395 187 381V301Q187 267 208 252Q232 234 232 218Z" fill="#318f96"/><rect x="228" y="122" width="56" height="15" rx="4" fill="#293643"/><path d="M204 302Q204 275 224 265V372H204Z" fill="#90abb6"/><rect x="194" y="309" width="124" height="47" rx="4" fill="#fff3d8"/>
+  </g>
+</svg>

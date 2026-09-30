@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">Video</title>
+  <desc>Original flat vector music icon. Recolour the background circle by changing its fill attribute. Artwork is independent.</desc>
+  <circle id="background" cx="256" cy="256" r="248" fill="#b6c2d0"/>
+  <g id="artwork">
+<rect x="121" y="166" width="274" height="214" rx="12" fill="#293643"/><rect x="138" y="209" width="240" height="151" rx="5" fill="#318f96"/><path d="M222 238V331L297 285Z" fill="#fff3d8"/><path d="M127 166H148L168 201H147Z" fill="#fff3d8"/><path d="M165 166H186L206 201H185Z" fill="#fff3d8"/><path d="M203 166H224L244 201H223Z" fill="#fff3d8"/><path d="M241 166H262L282 201H261Z" fill="#fff3d8"/><path d="M279 166H300L320 201H299Z" fill="#fff3d8"/><path d="M317 166H338L358 201H337Z" fill="#fff3d8"/><path d="M355 166H376L396 201H375Z" fill="#fff3d8"/>
+  </g>
+</svg>

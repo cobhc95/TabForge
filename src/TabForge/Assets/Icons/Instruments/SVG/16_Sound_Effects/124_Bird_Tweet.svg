@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">Bird Tweet</title>
+  <desc>Original flat vector music icon. Recolour the background circle by changing its fill attribute. Artwork is independent.</desc>
+  <circle id="background" cx="256" cy="256" r="248" fill="#aabccf"/>
+  <g id="artwork">
+<path d="M178 290Q156 272 164 236Q174 211 211 218L257 179Q291 149 322 182Q350 211 328 248L286 299Q239 342 183 312L125 327L149 286Z" fill="#318f96"/><path d="M208 240Q247 209 282 229Q269 288 212 295Z" fill="#90abb6"/><circle cx="307" cy="202" r="5" fill="#182633"/><path d="M331 213L370 225L331 236Z" fill="#eebd57"/><path d="M244 319L235 353" fill="none" stroke="#80462f" stroke-width="5" stroke-linecap="round"/><path d="M270 315L280 351" fill="none" stroke="#80462f" stroke-width="5" stroke-linecap="round"/><path d="M151 354L363 354" fill="none" stroke="#80462f" stroke-width="8" stroke-linecap="round"/>
+  </g>
+</svg>

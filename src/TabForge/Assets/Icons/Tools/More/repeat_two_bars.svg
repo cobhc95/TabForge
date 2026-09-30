@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" role="img" aria-label="Two bar repeat"><style>
+.icon{fill:none;stroke:#E8EDF4;stroke-width:2.15;stroke-linecap:round;stroke-linejoin:round}
+.fill{fill:#E8EDF4;stroke:none}
+.muted{fill:none;stroke:#9AA6B5;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.txt{fill:#E8EDF4;font-family:Segoe UI,Arial,sans-serif;font-weight:600;text-anchor:middle}
+</style><path class="icon" d="M5 23L17 11M15 21L27 9"/><circle class="fill" cx="7" cy="11" r="1.7"/><circle class="fill" cx="25" cy="21" r="1.7"/></svg>

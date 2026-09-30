@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">Applause</title>
+  <desc>Original flat vector music icon. Recolour the background circle by changing its fill attribute. Artwork is independent.</desc>
+  <circle id="background" cx="256" cy="256" r="248" fill="#aabccf"/>
+  <g id="artwork">
+<g transform="rotate(-13 219 252)"><path d="M180 347L171 263L144 235Q129 218 142 208Q153 201 164 214L185 231L179 152Q177 136 189 135Q204 133 205 150L210 207L213 126Q215 112 227 115Q238 116 237 132L234 206L245 138Q248 124 259 130Q269 133 266 149L256 214L272 166Q278 152 288 158Q299 164 292 180L272 268L253 347Z" fill="#b77342"/></g><g transform="translate(120 8) rotate(14 219 252)"><path d="M180 347L171 263L144 235Q129 218 142 208Q153 201 164 214L185 231L179 152Q177 136 189 135Q204 133 205 150L210 207L213 126Q215 112 227 115Q238 116 237 132L234 206L245 138Q248 124 259 130Q269 133 266 149L256 214L272 166Q278 152 288 158Q299 164 292 180L272 268L253 347Z" fill="#b77342"/></g><path d="M212 81L209 59M289 83L299 59M351 117L371 99" fill="none" stroke="#fff3d8" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>

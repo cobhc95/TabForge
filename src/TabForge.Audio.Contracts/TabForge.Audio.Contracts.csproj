@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- The only code shared by TabForge and its audio engine process: message layouts and shared memory. -->
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- Nullable, warnings-as-errors, analysis, locked restore and Version: see Directory.Build.props. -->
+  </PropertyGroup>
+</Project>

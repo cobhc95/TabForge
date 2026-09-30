@@ -1,0 +1,1190 @@
+[
+  {
+    "id": 1,
+    "name": "Acoustic Grand Piano",
+    "category": "Piano",
+    "gm_program_1_based": 1,
+    "midi_program_0_based": 0,
+    "svg": "SVG/01_Piano/001_Acoustic_Grand_Piano.svg",
+    "background_fill": "#f6be46"
+  },
+  {
+    "id": 2,
+    "name": "Bright Acoustic Piano",
+    "category": "Piano",
+    "gm_program_1_based": 2,
+    "midi_program_0_based": 1,
+    "svg": "SVG/01_Piano/002_Bright_Acoustic_Piano.svg",
+    "background_fill": "#f6be46"
+  },
+  {
+    "id": 3,
+    "name": "Electric Grand Piano",
+    "category": "Piano",
+    "gm_program_1_based": 3,
+    "midi_program_0_based": 2,
+    "svg": "SVG/01_Piano/003_Electric_Grand_Piano.svg",
+    "background_fill": "#f6be46"
+  },
+  {
+    "id": 4,
+    "name": "Honky-tonk Piano",
+    "category": "Piano",
+    "gm_program_1_based": 4,
+    "midi_program_0_based": 3,
+    "svg": "SVG/01_Piano/004_Honky_tonk_Piano.svg",
+    "background_fill": "#f6be46"
+  },
+  {
+    "id": 5,
+    "name": "Electric Piano 1",
+    "category": "Piano",
+    "gm_program_1_based": 5,
+    "midi_program_0_based": 4,
+    "svg": "SVG/01_Piano/005_Electric_Piano_1.svg",
+    "background_fill": "#f6be46"
+  },
+  {
+    "id": 6,
+    "name": "Electric Piano 2",
+    "category": "Piano",
+    "gm_program_1_based": 6,
+    "midi_program_0_based": 5,
+    "svg": "SVG/01_Piano/006_Electric_Piano_2.svg",
+    "background_fill": "#f6be46"
+  },
+  {
+    "id": 7,
+    "name": "Harpsichord",
+    "category": "Piano",
+    "gm_program_1_based": 7,
+    "midi_program_0_based": 6,
+    "svg": "SVG/01_Piano/007_Harpsichord.svg",
+    "background_fill": "#f6be46"
+  },
+  {
+    "id": 8,
+    "name": "Clavinet",
+    "category": "Piano",
+    "gm_program_1_based": 8,
+    "midi_program_0_based": 7,
+    "svg": "SVG/01_Piano/008_Clavinet.svg",
+    "background_fill": "#f6be46"
+  },
+  {
+    "id": 9,
+    "name": "Celesta",
+    "category": "Chromatic Percussion",
+    "gm_program_1_based": 9,
+    "midi_program_0_based": 8,
+    "svg": "SVG/02_Chromatic_Percussion/009_Celesta.svg",
+    "background_fill": "#e99c7e"
+  },
+  {
+    "id": 10,
+    "name": "Glockenspiel",
+    "category": "Chromatic Percussion",
+    "gm_program_1_based": 10,
+    "midi_program_0_based": 9,
+    "svg": "SVG/02_Chromatic_Percussion/010_Glockenspiel.svg",
+    "background_fill": "#e99c7e"
+  },
+  {
+    "id": 11,
+    "name": "Music Box",
+    "category": "Chromatic Percussion",
+    "gm_program_1_based": 11,
+    "midi_program_0_based": 10,
+    "svg": "SVG/02_Chromatic_Percussion/011_Music_Box.svg",
+    "background_fill": "#e99c7e"
+  },
+  {
+    "id": 12,
+    "name": "Vibraphone",
+    "category": "Chromatic Percussion",
+    "gm_program_1_based": 12,
+    "midi_program_0_based": 11,
+    "svg": "SVG/02_Chromatic_Percussion/012_Vibraphone.svg",
+    "background_fill": "#e99c7e"
+  },
+  {
+    "id": 13,
+    "name": "Marimba",
+    "category": "Chromatic Percussion",
+    "gm_program_1_based": 13,
+    "midi_program_0_based": 12,
+    "svg": "SVG/02_Chromatic_Percussion/013_Marimba.svg",
+    "background_fill": "#e99c7e"
+  },
+  {
+    "id": 14,
+    "name": "Xylophone",
+    "category": "Chromatic Percussion",
+    "gm_program_1_based": 14,
+    "midi_program_0_based": 13,
+    "svg": "SVG/02_Chromatic_Percussion/014_Xylophone.svg",
+    "background_fill": "#e99c7e"
+  },
+  {
+    "id": 15,
+    "name": "Tubular Bells",
+    "category": "Chromatic Percussion",
+    "gm_program_1_based": 15,
+    "midi_program_0_based": 14,
+    "svg": "SVG/02_Chromatic_Percussion/015_Tubular_Bells.svg",
+    "background_fill": "#e99c7e"
+  },
+  {
+    "id": 16,
+    "name": "Dulcimer",
+    "category": "Chromatic Percussion",
+    "gm_program_1_based": 16,
+    "midi_program_0_based": 15,
+    "svg": "SVG/02_Chromatic_Percussion/016_Dulcimer.svg",
+    "background_fill": "#e99c7e"
+  },
+  {
+    "id": 17,
+    "name": "Drawbar Organ",
+    "category": "Organ",
+    "gm_program_1_based": 17,
+    "midi_program_0_based": 16,
+    "svg": "SVG/03_Organ/017_Drawbar_Organ.svg",
+    "background_fill": "#a0c9bf"
+  },
+  {
+    "id": 18,
+    "name": "Percussive Organ",
+    "category": "Organ",
+    "gm_program_1_based": 18,
+    "midi_program_0_based": 17,
+    "svg": "SVG/03_Organ/018_Percussive_Organ.svg",
+    "background_fill": "#a0c9bf"
+  },
+  {
+    "id": 19,
+    "name": "Rock Organ",
+    "category": "Organ",
+    "gm_program_1_based": 19,
+    "midi_program_0_based": 18,
+    "svg": "SVG/03_Organ/019_Rock_Organ.svg",
+    "background_fill": "#a0c9bf"
+  },
+  {
+    "id": 20,
+    "name": "Church Organ",
+    "category": "Organ",
+    "gm_program_1_based": 20,
+    "midi_program_0_based": 19,
+    "svg": "SVG/03_Organ/020_Church_Organ.svg",
+    "background_fill": "#a0c9bf"
+  },
+  {
+    "id": 21,
+    "name": "Reed Organ",
+    "category": "Organ",
+    "gm_program_1_based": 21,
+    "midi_program_0_based": 20,
+    "svg": "SVG/03_Organ/021_Reed_Organ.svg",
+    "background_fill": "#a0c9bf"
+  },
+  {
+    "id": 22,
+    "name": "Accordion",
+    "category": "Organ",
+    "gm_program_1_based": 22,
+    "midi_program_0_based": 21,
+    "svg": "SVG/03_Organ/022_Accordion.svg",
+    "background_fill": "#a0c9bf"
+  },
+  {
+    "id": 23,
+    "name": "Harmonica",
+    "category": "Organ",
+    "gm_program_1_based": 23,
+    "midi_program_0_based": 22,
+    "svg": "SVG/03_Organ/023_Harmonica.svg",
+    "background_fill": "#a0c9bf"
+  },
+  {
+    "id": 24,
+    "name": "Tango Accordion",
+    "category": "Organ",
+    "gm_program_1_based": 24,
+    "midi_program_0_based": 23,
+    "svg": "SVG/03_Organ/024_Tango_Accordion.svg",
+    "background_fill": "#a0c9bf"
+  },
+  {
+    "id": 25,
+    "name": "Acoustic Guitar nylon",
+    "category": "Guitar",
+    "gm_program_1_based": 25,
+    "midi_program_0_based": 24,
+    "svg": "SVG/04_Guitar/025_Acoustic_Guitar_nylon.svg",
+    "background_fill": "#f1c469"
+  },
+  {
+    "id": 26,
+    "name": "Acoustic Guitar steel",
+    "category": "Guitar",
+    "gm_program_1_based": 26,
+    "midi_program_0_based": 25,
+    "svg": "SVG/04_Guitar/026_Acoustic_Guitar_steel.svg",
+    "background_fill": "#f1c469"
+  },
+  {
+    "id": 27,
+    "name": "Electric Guitar jazz",
+    "category": "Guitar",
+    "gm_program_1_based": 27,
+    "midi_program_0_based": 26,
+    "svg": "SVG/04_Guitar/027_Electric_Guitar_jazz.svg",
+    "background_fill": "#f1c469"
+  },
+  {
+    "id": 28,
+    "name": "Electric Guitar clean",
+    "category": "Guitar",
+    "gm_program_1_based": 28,
+    "midi_program_0_based": 27,
+    "svg": "SVG/04_Guitar/028_Electric_Guitar_clean.svg",
+    "background_fill": "#f1c469"
+  },
+  {
+    "id": 29,
+    "name": "Electric Guitar muted",
+    "category": "Guitar",
+    "gm_program_1_based": 29,
+    "midi_program_0_based": 28,
+    "svg": "SVG/04_Guitar/029_Electric_Guitar_muted.svg",
+    "background_fill": "#f1c469"
+  },
+  {
+    "id": 30,
+    "name": "Overdriven Guitar",
+    "category": "Guitar",
+    "gm_program_1_based": 30,
+    "midi_program_0_based": 29,
+    "svg": "SVG/04_Guitar/030_Overdriven_Guitar.svg",
+    "background_fill": "#f1c469"
+  },
+  {
+    "id": 31,
+    "name": "Distortion Guitar",
+    "category": "Guitar",
+    "gm_program_1_based": 31,
+    "midi_program_0_based": 30,
+    "svg": "SVG/04_Guitar/031_Distortion_Guitar.svg",
+    "background_fill": "#f1c469"
+  },
+  {
+    "id": 32,
+    "name": "Guitar Harmonics",
+    "category": "Guitar",
+    "gm_program_1_based": 32,
+    "midi_program_0_based": 31,
+    "svg": "SVG/04_Guitar/032_Guitar_Harmonics.svg",
+    "background_fill": "#f1c469"
+  },
+  {
+    "id": 33,
+    "name": "Acoustic Bass",
+    "category": "Bass",
+    "gm_program_1_based": 33,
+    "midi_program_0_based": 32,
+    "svg": "SVG/05_Bass/033_Acoustic_Bass.svg",
+    "background_fill": "#96c2c4"
+  },
+  {
+    "id": 34,
+    "name": "Electric Bass finger",
+    "category": "Bass",
+    "gm_program_1_based": 34,
+    "midi_program_0_based": 33,
+    "svg": "SVG/05_Bass/034_Electric_Bass_finger.svg",
+    "background_fill": "#96c2c4"
+  },
+  {
+    "id": 35,
+    "name": "Electric Bass pick",
+    "category": "Bass",
+    "gm_program_1_based": 35,
+    "midi_program_0_based": 34,
+    "svg": "SVG/05_Bass/035_Electric_Bass_pick.svg",
+    "background_fill": "#96c2c4"
+  },
+  {
+    "id": 36,
+    "name": "Fretless Bass",
+    "category": "Bass",
+    "gm_program_1_based": 36,
+    "midi_program_0_based": 35,
+    "svg": "SVG/05_Bass/036_Fretless_Bass.svg",
+    "background_fill": "#96c2c4"
+  },
+  {
+    "id": 37,
+    "name": "Slap Bass 1",
+    "category": "Bass",
+    "gm_program_1_based": 37,
+    "midi_program_0_based": 36,
+    "svg": "SVG/05_Bass/037_Slap_Bass_1.svg",
+    "background_fill": "#96c2c4"
+  },
+  {
+    "id": 38,
+    "name": "Slap Bass 2",
+    "category": "Bass",
+    "gm_program_1_based": 38,
+    "midi_program_0_based": 37,
+    "svg": "SVG/05_Bass/038_Slap_Bass_2.svg",
+    "background_fill": "#96c2c4"
+  },
+  {
+    "id": 39,
+    "name": "Synth Bass 1",
+    "category": "Bass",
+    "gm_program_1_based": 39,
+    "midi_program_0_based": 38,
+    "svg": "SVG/05_Bass/039_Synth_Bass_1.svg",
+    "background_fill": "#96c2c4"
+  },
+  {
+    "id": 40,
+    "name": "Synth Bass 2",
+    "category": "Bass",
+    "gm_program_1_based": 40,
+    "midi_program_0_based": 39,
+    "svg": "SVG/05_Bass/040_Synth_Bass_2.svg",
+    "background_fill": "#96c2c4"
+  },
+  {
+    "id": 41,
+    "name": "Violin",
+    "category": "Strings",
+    "gm_program_1_based": 41,
+    "midi_program_0_based": 40,
+    "svg": "SVG/06_Strings/041_Violin.svg",
+    "background_fill": "#b9bfda"
+  },
+  {
+    "id": 42,
+    "name": "Viola",
+    "category": "Strings",
+    "gm_program_1_based": 42,
+    "midi_program_0_based": 41,
+    "svg": "SVG/06_Strings/042_Viola.svg",
+    "background_fill": "#b9bfda"
+  },
+  {
+    "id": 43,
+    "name": "Cello",
+    "category": "Strings",
+    "gm_program_1_based": 43,
+    "midi_program_0_based": 42,
+    "svg": "SVG/06_Strings/043_Cello.svg",
+    "background_fill": "#b9bfda"
+  },
+  {
+    "id": 44,
+    "name": "Contrabass",
+    "category": "Strings",
+    "gm_program_1_based": 44,
+    "midi_program_0_based": 43,
+    "svg": "SVG/06_Strings/044_Contrabass.svg",
+    "background_fill": "#b9bfda"
+  },
+  {
+    "id": 45,
+    "name": "Tremolo Strings",
+    "category": "Strings",
+    "gm_program_1_based": 45,
+    "midi_program_0_based": 44,
+    "svg": "SVG/06_Strings/045_Tremolo_Strings.svg",
+    "background_fill": "#b9bfda"
+  },
+  {
+    "id": 46,
+    "name": "Pizzicato Strings",
+    "category": "Strings",
+    "gm_program_1_based": 46,
+    "midi_program_0_based": 45,
+    "svg": "SVG/06_Strings/046_Pizzicato_Strings.svg",
+    "background_fill": "#b9bfda"
+  },
+  {
+    "id": 47,
+    "name": "Orchestral Harp",
+    "category": "Strings",
+    "gm_program_1_based": 47,
+    "midi_program_0_based": 46,
+    "svg": "SVG/06_Strings/047_Orchestral_Harp.svg",
+    "background_fill": "#b9bfda"
+  },
+  {
+    "id": 48,
+    "name": "Timpani",
+    "category": "Strings",
+    "gm_program_1_based": 48,
+    "midi_program_0_based": 47,
+    "svg": "SVG/06_Strings/048_Timpani.svg",
+    "background_fill": "#b9bfda"
+  },
+  {
+    "id": 49,
+    "name": "String Ensemble 1",
+    "category": "Ensemble",
+    "gm_program_1_based": 49,
+    "midi_program_0_based": 48,
+    "svg": "SVG/07_Ensemble/049_String_Ensemble_1.svg",
+    "background_fill": "#c9b9d4"
+  },
+  {
+    "id": 50,
+    "name": "String Ensemble 2",
+    "category": "Ensemble",
+    "gm_program_1_based": 50,
+    "midi_program_0_based": 49,
+    "svg": "SVG/07_Ensemble/050_String_Ensemble_2.svg",
+    "background_fill": "#c9b9d4"
+  },
+  {
+    "id": 51,
+    "name": "Synth Strings 1",
+    "category": "Ensemble",
+    "gm_program_1_based": 51,
+    "midi_program_0_based": 50,
+    "svg": "SVG/07_Ensemble/051_Synth_Strings_1.svg",
+    "background_fill": "#c9b9d4"
+  },
+  {
+    "id": 52,
+    "name": "Synth Strings 2",
+    "category": "Ensemble",
+    "gm_program_1_based": 52,
+    "midi_program_0_based": 51,
+    "svg": "SVG/07_Ensemble/052_Synth_Strings_2.svg",
+    "background_fill": "#c9b9d4"
+  },
+  {
+    "id": 53,
+    "name": "Choir Aahs",
+    "category": "Ensemble",
+    "gm_program_1_based": 53,
+    "midi_program_0_based": 52,
+    "svg": "SVG/07_Ensemble/053_Choir_Aahs.svg",
+    "background_fill": "#c9b9d4"
+  },
+  {
+    "id": 54,
+    "name": "Voice Oohs",
+    "category": "Ensemble",
+    "gm_program_1_based": 54,
+    "midi_program_0_based": 53,
+    "svg": "SVG/07_Ensemble/054_Voice_Oohs.svg",
+    "background_fill": "#c9b9d4"
+  },
+  {
+    "id": 55,
+    "name": "Synth Voice",
+    "category": "Ensemble",
+    "gm_program_1_based": 55,
+    "midi_program_0_based": 54,
+    "svg": "SVG/07_Ensemble/055_Synth_Voice.svg",
+    "background_fill": "#c9b9d4"
+  },
+  {
+    "id": 56,
+    "name": "Orchestra Hit",
+    "category": "Ensemble",
+    "gm_program_1_based": 56,
+    "midi_program_0_based": 55,
+    "svg": "SVG/07_Ensemble/056_Orchestra_Hit.svg",
+    "background_fill": "#c9b9d4"
+  },
+  {
+    "id": 57,
+    "name": "Trumpet",
+    "category": "Brass",
+    "gm_program_1_based": 57,
+    "midi_program_0_based": 56,
+    "svg": "SVG/08_Brass/057_Trumpet.svg",
+    "background_fill": "#93bec8"
+  },
+  {
+    "id": 58,
+    "name": "Trombone",
+    "category": "Brass",
+    "gm_program_1_based": 58,
+    "midi_program_0_based": 57,
+    "svg": "SVG/08_Brass/058_Trombone.svg",
+    "background_fill": "#93bec8"
+  },
+  {
+    "id": 59,
+    "name": "Tuba",
+    "category": "Brass",
+    "gm_program_1_based": 59,
+    "midi_program_0_based": 58,
+    "svg": "SVG/08_Brass/059_Tuba.svg",
+    "background_fill": "#93bec8"
+  },
+  {
+    "id": 60,
+    "name": "Muted Trumpet",
+    "category": "Brass",
+    "gm_program_1_based": 60,
+    "midi_program_0_based": 59,
+    "svg": "SVG/08_Brass/060_Muted_Trumpet.svg",
+    "background_fill": "#93bec8"
+  },
+  {
+    "id": 61,
+    "name": "French Horn",
+    "category": "Brass",
+    "gm_program_1_based": 61,
+    "midi_program_0_based": 60,
+    "svg": "SVG/08_Brass/061_French_Horn.svg",
+    "background_fill": "#93bec8"
+  },
+  {
+    "id": 62,
+    "name": "Brass Section",
+    "category": "Brass",
+    "gm_program_1_based": 62,
+    "midi_program_0_based": 61,
+    "svg": "SVG/08_Brass/062_Brass_Section.svg",
+    "background_fill": "#93bec8"
+  },
+  {
+    "id": 63,
+    "name": "Synth Brass 1",
+    "category": "Brass",
+    "gm_program_1_based": 63,
+    "midi_program_0_based": 62,
+    "svg": "SVG/08_Brass/063_Synth_Brass_1.svg",
+    "background_fill": "#93bec8"
+  },
+  {
+    "id": 64,
+    "name": "Synth Brass 2",
+    "category": "Brass",
+    "gm_program_1_based": 64,
+    "midi_program_0_based": 63,
+    "svg": "SVG/08_Brass/064_Synth_Brass_2.svg",
+    "background_fill": "#93bec8"
+  },
+  {
+    "id": 65,
+    "name": "Soprano Sax",
+    "category": "Reed",
+    "gm_program_1_based": 65,
+    "midi_program_0_based": 64,
+    "svg": "SVG/09_Reed/065_Soprano_Sax.svg",
+    "background_fill": "#e9ba79"
+  },
+  {
+    "id": 66,
+    "name": "Alto Sax",
+    "category": "Reed",
+    "gm_program_1_based": 66,
+    "midi_program_0_based": 65,
+    "svg": "SVG/09_Reed/066_Alto_Sax.svg",
+    "background_fill": "#e9ba79"
+  },
+  {
+    "id": 67,
+    "name": "Tenor Sax",
+    "category": "Reed",
+    "gm_program_1_based": 67,
+    "midi_program_0_based": 66,
+    "svg": "SVG/09_Reed/067_Tenor_Sax.svg",
+    "background_fill": "#e9ba79"
+  },
+  {
+    "id": 68,
+    "name": "Baritone Sax",
+    "category": "Reed",
+    "gm_program_1_based": 68,
+    "midi_program_0_based": 67,
+    "svg": "SVG/09_Reed/068_Baritone_Sax.svg",
+    "background_fill": "#e9ba79"
+  },
+  {
+    "id": 69,
+    "name": "Oboe",
+    "category": "Reed",
+    "gm_program_1_based": 69,
+    "midi_program_0_based": 68,
+    "svg": "SVG/09_Reed/069_Oboe.svg",
+    "background_fill": "#e9ba79"
+  },
+  {
+    "id": 70,
+    "name": "English Horn",
+    "category": "Reed",
+    "gm_program_1_based": 70,
+    "midi_program_0_based": 69,
+    "svg": "SVG/09_Reed/070_English_Horn.svg",
+    "background_fill": "#e9ba79"
+  },
+  {
+    "id": 71,
+    "name": "Bassoon",
+    "category": "Reed",
+    "gm_program_1_based": 71,
+    "midi_program_0_based": 70,
+    "svg": "SVG/09_Reed/071_Bassoon.svg",
+    "background_fill": "#e9ba79"
+  },
+  {
+    "id": 72,
+    "name": "Clarinet",
+    "category": "Reed",
+    "gm_program_1_based": 72,
+    "midi_program_0_based": 71,
+    "svg": "SVG/09_Reed/072_Clarinet.svg",
+    "background_fill": "#e9ba79"
+  },
+  {
+    "id": 73,
+    "name": "Piccolo",
+    "category": "Pipe",
+    "gm_program_1_based": 73,
+    "midi_program_0_based": 72,
+    "svg": "SVG/10_Pipe/073_Piccolo.svg",
+    "background_fill": "#a9c6ae"
+  },
+  {
+    "id": 74,
+    "name": "Flute",
+    "category": "Pipe",
+    "gm_program_1_based": 74,
+    "midi_program_0_based": 73,
+    "svg": "SVG/10_Pipe/074_Flute.svg",
+    "background_fill": "#a9c6ae"
+  },
+  {
+    "id": 75,
+    "name": "Recorder",
+    "category": "Pipe",
+    "gm_program_1_based": 75,
+    "midi_program_0_based": 74,
+    "svg": "SVG/10_Pipe/075_Recorder.svg",
+    "background_fill": "#a9c6ae"
+  },
+  {
+    "id": 76,
+    "name": "Pan Flute",
+    "category": "Pipe",
+    "gm_program_1_based": 76,
+    "midi_program_0_based": 75,
+    "svg": "SVG/10_Pipe/076_Pan_Flute.svg",
+    "background_fill": "#a9c6ae"
+  },
+  {
+    "id": 77,
+    "name": "Blown Bottle",
+    "category": "Pipe",
+    "gm_program_1_based": 77,
+    "midi_program_0_based": 76,
+    "svg": "SVG/10_Pipe/077_Blown_Bottle.svg",
+    "background_fill": "#a9c6ae"
+  },
+  {
+    "id": 78,
+    "name": "Shakuhachi",
+    "category": "Pipe",
+    "gm_program_1_based": 78,
+    "midi_program_0_based": 77,
+    "svg": "SVG/10_Pipe/078_Shakuhachi.svg",
+    "background_fill": "#a9c6ae"
+  },
+  {
+    "id": 79,
+    "name": "Whistle",
+    "category": "Pipe",
+    "gm_program_1_based": 79,
+    "midi_program_0_based": 78,
+    "svg": "SVG/10_Pipe/079_Whistle.svg",
+    "background_fill": "#a9c6ae"
+  },
+  {
+    "id": 80,
+    "name": "Ocarina",
+    "category": "Pipe",
+    "gm_program_1_based": 80,
+    "midi_program_0_based": 79,
+    "svg": "SVG/10_Pipe/080_Ocarina.svg",
+    "background_fill": "#a9c6ae"
+  },
+  {
+    "id": 81,
+    "name": "Lead 1 square",
+    "category": "Synth Lead",
+    "gm_program_1_based": 81,
+    "midi_program_0_based": 80,
+    "svg": "SVG/11_Synth_Lead/081_Lead_1_square.svg",
+    "background_fill": "#94bdce"
+  },
+  {
+    "id": 82,
+    "name": "Lead 2 sawtooth",
+    "category": "Synth Lead",
+    "gm_program_1_based": 82,
+    "midi_program_0_based": 81,
+    "svg": "SVG/11_Synth_Lead/082_Lead_2_sawtooth.svg",
+    "background_fill": "#94bdce"
+  },
+  {
+    "id": 83,
+    "name": "Lead 3 calliope",
+    "category": "Synth Lead",
+    "gm_program_1_based": 83,
+    "midi_program_0_based": 82,
+    "svg": "SVG/11_Synth_Lead/083_Lead_3_calliope.svg",
+    "background_fill": "#94bdce"
+  },
+  {
+    "id": 84,
+    "name": "Lead 4 chiff",
+    "category": "Synth Lead",
+    "gm_program_1_based": 84,
+    "midi_program_0_based": 83,
+    "svg": "SVG/11_Synth_Lead/084_Lead_4_chiff.svg",
+    "background_fill": "#94bdce"
+  },
+  {
+    "id": 85,
+    "name": "Lead 5 charang",
+    "category": "Synth Lead",
+    "gm_program_1_based": 85,
+    "midi_program_0_based": 84,
+    "svg": "SVG/11_Synth_Lead/085_Lead_5_charang.svg",
+    "background_fill": "#94bdce"
+  },
+  {
+    "id": 86,
+    "name": "Lead 6 voice",
+    "category": "Synth Lead",
+    "gm_program_1_based": 86,
+    "midi_program_0_based": 85,
+    "svg": "SVG/11_Synth_Lead/086_Lead_6_voice.svg",
+    "background_fill": "#94bdce"
+  },
+  {
+    "id": 87,
+    "name": "Lead 7 fifths",
+    "category": "Synth Lead",
+    "gm_program_1_based": 87,
+    "midi_program_0_based": 86,
+    "svg": "SVG/11_Synth_Lead/087_Lead_7_fifths.svg",
+    "background_fill": "#94bdce"
+  },
+  {
+    "id": 88,
+    "name": "Lead 8 bass and lead",
+    "category": "Synth Lead",
+    "gm_program_1_based": 88,
+    "midi_program_0_based": 87,
+    "svg": "SVG/11_Synth_Lead/088_Lead_8_bass_and_lead.svg",
+    "background_fill": "#94bdce"
+  },
+  {
+    "id": 89,
+    "name": "Pad 1 new age",
+    "category": "Synth Pad",
+    "gm_program_1_based": 89,
+    "midi_program_0_based": 88,
+    "svg": "SVG/12_Synth_Pad/089_Pad_1_new_age.svg",
+    "background_fill": "#adb7d9"
+  },
+  {
+    "id": 90,
+    "name": "Pad 2 warm",
+    "category": "Synth Pad",
+    "gm_program_1_based": 90,
+    "midi_program_0_based": 89,
+    "svg": "SVG/12_Synth_Pad/090_Pad_2_warm.svg",
+    "background_fill": "#adb7d9"
+  },
+  {
+    "id": 91,
+    "name": "Pad 3 polysynth",
+    "category": "Synth Pad",
+    "gm_program_1_based": 91,
+    "midi_program_0_based": 90,
+    "svg": "SVG/12_Synth_Pad/091_Pad_3_polysynth.svg",
+    "background_fill": "#adb7d9"
+  },
+  {
+    "id": 92,
+    "name": "Pad 4 choir",
+    "category": "Synth Pad",
+    "gm_program_1_based": 92,
+    "midi_program_0_based": 91,
+    "svg": "SVG/12_Synth_Pad/092_Pad_4_choir.svg",
+    "background_fill": "#adb7d9"
+  },
+  {
+    "id": 93,
+    "name": "Pad 5 bowed",
+    "category": "Synth Pad",
+    "gm_program_1_based": 93,
+    "midi_program_0_based": 92,
+    "svg": "SVG/12_Synth_Pad/093_Pad_5_bowed.svg",
+    "background_fill": "#adb7d9"
+  },
+  {
+    "id": 94,
+    "name": "Pad 6 metallic",
+    "category": "Synth Pad",
+    "gm_program_1_based": 94,
+    "midi_program_0_based": 93,
+    "svg": "SVG/12_Synth_Pad/094_Pad_6_metallic.svg",
+    "background_fill": "#adb7d9"
+  },
+  {
+    "id": 95,
+    "name": "Pad 7 halo",
+    "category": "Synth Pad",
+    "gm_program_1_based": 95,
+    "midi_program_0_based": 94,
+    "svg": "SVG/12_Synth_Pad/095_Pad_7_halo.svg",
+    "background_fill": "#adb7d9"
+  },
+  {
+    "id": 96,
+    "name": "Pad 8 sweep",
+    "category": "Synth Pad",
+    "gm_program_1_based": 96,
+    "midi_program_0_based": 95,
+    "svg": "SVG/12_Synth_Pad/096_Pad_8_sweep.svg",
+    "background_fill": "#adb7d9"
+  },
+  {
+    "id": 97,
+    "name": "FX 1 rain",
+    "category": "Synth Effects",
+    "gm_program_1_based": 97,
+    "midi_program_0_based": 96,
+    "svg": "SVG/13_Synth_Effects/097_FX_1_rain.svg",
+    "background_fill": "#94c7c6"
+  },
+  {
+    "id": 98,
+    "name": "FX 2 soundtrack",
+    "category": "Synth Effects",
+    "gm_program_1_based": 98,
+    "midi_program_0_based": 97,
+    "svg": "SVG/13_Synth_Effects/098_FX_2_soundtrack.svg",
+    "background_fill": "#94c7c6"
+  },
+  {
+    "id": 99,
+    "name": "FX 3 crystal",
+    "category": "Synth Effects",
+    "gm_program_1_based": 99,
+    "midi_program_0_based": 98,
+    "svg": "SVG/13_Synth_Effects/099_FX_3_crystal.svg",
+    "background_fill": "#94c7c6"
+  },
+  {
+    "id": 100,
+    "name": "FX 4 atmosphere",
+    "category": "Synth Effects",
+    "gm_program_1_based": 100,
+    "midi_program_0_based": 99,
+    "svg": "SVG/13_Synth_Effects/100_FX_4_atmosphere.svg",
+    "background_fill": "#94c7c6"
+  },
+  {
+    "id": 101,
+    "name": "FX 5 brightness",
+    "category": "Synth Effects",
+    "gm_program_1_based": 101,
+    "midi_program_0_based": 100,
+    "svg": "SVG/13_Synth_Effects/101_FX_5_brightness.svg",
+    "background_fill": "#94c7c6"
+  },
+  {
+    "id": 102,
+    "name": "FX 6 goblins",
+    "category": "Synth Effects",
+    "gm_program_1_based": 102,
+    "midi_program_0_based": 101,
+    "svg": "SVG/13_Synth_Effects/102_FX_6_goblins.svg",
+    "background_fill": "#94c7c6"
+  },
+  {
+    "id": 103,
+    "name": "FX 7 echoes",
+    "category": "Synth Effects",
+    "gm_program_1_based": 103,
+    "midi_program_0_based": 102,
+    "svg": "SVG/13_Synth_Effects/103_FX_7_echoes.svg",
+    "background_fill": "#94c7c6"
+  },
+  {
+    "id": 104,
+    "name": "FX 8 sci-fi",
+    "category": "Synth Effects",
+    "gm_program_1_based": 104,
+    "midi_program_0_based": 103,
+    "svg": "SVG/13_Synth_Effects/104_FX_8_sci_fi.svg",
+    "background_fill": "#94c7c6"
+  },
+  {
+    "id": 105,
+    "name": "Sitar",
+    "category": "Ethnic",
+    "gm_program_1_based": 105,
+    "midi_program_0_based": 104,
+    "svg": "SVG/14_Ethnic/105_Sitar.svg",
+    "background_fill": "#e7b386"
+  },
+  {
+    "id": 106,
+    "name": "Banjo",
+    "category": "Ethnic",
+    "gm_program_1_based": 106,
+    "midi_program_0_based": 105,
+    "svg": "SVG/14_Ethnic/106_Banjo.svg",
+    "background_fill": "#e7b386"
+  },
+  {
+    "id": 107,
+    "name": "Shamisen",
+    "category": "Ethnic",
+    "gm_program_1_based": 107,
+    "midi_program_0_based": 106,
+    "svg": "SVG/14_Ethnic/107_Shamisen.svg",
+    "background_fill": "#e7b386"
+  },
+  {
+    "id": 108,
+    "name": "Koto",
+    "category": "Ethnic",
+    "gm_program_1_based": 108,
+    "midi_program_0_based": 107,
+    "svg": "SVG/14_Ethnic/108_Koto.svg",
+    "background_fill": "#e7b386"
+  },
+  {
+    "id": 109,
+    "name": "Kalimba",
+    "category": "Ethnic",
+    "gm_program_1_based": 109,
+    "midi_program_0_based": 108,
+    "svg": "SVG/14_Ethnic/109_Kalimba.svg",
+    "background_fill": "#e7b386"
+  },
+  {
+    "id": 110,
+    "name": "Bag Pipe",
+    "category": "Ethnic",
+    "gm_program_1_based": 110,
+    "midi_program_0_based": 109,
+    "svg": "SVG/14_Ethnic/110_Bag_Pipe.svg",
+    "background_fill": "#e7b386"
+  },
+  {
+    "id": 111,
+    "name": "Fiddle",
+    "category": "Ethnic",
+    "gm_program_1_based": 111,
+    "midi_program_0_based": 110,
+    "svg": "SVG/14_Ethnic/111_Fiddle.svg",
+    "background_fill": "#e7b386"
+  },
+  {
+    "id": 112,
+    "name": "Shanai",
+    "category": "Ethnic",
+    "gm_program_1_based": 112,
+    "midi_program_0_based": 111,
+    "svg": "SVG/14_Ethnic/112_Shanai.svg",
+    "background_fill": "#e7b386"
+  },
+  {
+    "id": 113,
+    "name": "Tinkle Bell",
+    "category": "Percussive",
+    "gm_program_1_based": 113,
+    "midi_program_0_based": 112,
+    "svg": "SVG/15_Percussive/113_Tinkle_Bell.svg",
+    "background_fill": "#b6c7aa"
+  },
+  {
+    "id": 114,
+    "name": "Agogo",
+    "category": "Percussive",
+    "gm_program_1_based": 114,
+    "midi_program_0_based": 113,
+    "svg": "SVG/15_Percussive/114_Agogo.svg",
+    "background_fill": "#b6c7aa"
+  },
+  {
+    "id": 115,
+    "name": "Steel Drums",
+    "category": "Percussive",
+    "gm_program_1_based": 115,
+    "midi_program_0_based": 114,
+    "svg": "SVG/15_Percussive/115_Steel_Drums.svg",
+    "background_fill": "#b6c7aa"
+  },
+  {
+    "id": 116,
+    "name": "Woodblock",
+    "category": "Percussive",
+    "gm_program_1_based": 116,
+    "midi_program_0_based": 115,
+    "svg": "SVG/15_Percussive/116_Woodblock.svg",
+    "background_fill": "#b6c7aa"
+  },
+  {
+    "id": 117,
+    "name": "Taiko Drum",
+    "category": "Percussive",
+    "gm_program_1_based": 117,
+    "midi_program_0_based": 116,
+    "svg": "SVG/15_Percussive/117_Taiko_Drum.svg",
+    "background_fill": "#b6c7aa"
+  },
+  {
+    "id": 118,
+    "name": "Melodic Tom",
+    "category": "Percussive",
+    "gm_program_1_based": 118,
+    "midi_program_0_based": 117,
+    "svg": "SVG/15_Percussive/118_Melodic_Tom.svg",
+    "background_fill": "#b6c7aa"
+  },
+  {
+    "id": 119,
+    "name": "Synth Drum",
+    "category": "Percussive",
+    "gm_program_1_based": 119,
+    "midi_program_0_based": 118,
+    "svg": "SVG/15_Percussive/119_Synth_Drum.svg",
+    "background_fill": "#b6c7aa"
+  },
+  {
+    "id": 120,
+    "name": "Reverse Cymbal",
+    "category": "Percussive",
+    "gm_program_1_based": 120,
+    "midi_program_0_based": 119,
+    "svg": "SVG/15_Percussive/120_Reverse_Cymbal.svg",
+    "background_fill": "#b6c7aa"
+  },
+  {
+    "id": 121,
+    "name": "Guitar Fret Noise",
+    "category": "Sound Effects",
+    "gm_program_1_based": 121,
+    "midi_program_0_based": 120,
+    "svg": "SVG/16_Sound_Effects/121_Guitar_Fret_Noise.svg",
+    "background_fill": "#aabccf"
+  },
+  {
+    "id": 122,
+    "name": "Breath Noise",
+    "category": "Sound Effects",
+    "gm_program_1_based": 122,
+    "midi_program_0_based": 121,
+    "svg": "SVG/16_Sound_Effects/122_Breath_Noise.svg",
+    "background_fill": "#aabccf"
+  },
+  {
+    "id": 123,
+    "name": "Seashore",
+    "category": "Sound Effects",
+    "gm_program_1_based": 123,
+    "midi_program_0_based": 122,
+    "svg": "SVG/16_Sound_Effects/123_Seashore.svg",
+    "background_fill": "#aabccf"
+  },
+  {
+    "id": 124,
+    "name": "Bird Tweet",
+    "category": "Sound Effects",
+    "gm_program_1_based": 124,
+    "midi_program_0_based": 123,
+    "svg": "SVG/16_Sound_Effects/124_Bird_Tweet.svg",
+    "background_fill": "#aabccf"
+  },
+  {
+    "id": 125,
+    "name": "Telephone Ring",
+    "category": "Sound Effects",
+    "gm_program_1_based": 125,
+    "midi_program_0_based": 124,
+    "svg": "SVG/16_Sound_Effects/125_Telephone_Ring.svg",
+    "background_fill": "#aabccf"
+  },
+  {
+    "id": 126,
+    "name": "Helicopter",
+    "category": "Sound Effects",
+    "gm_program_1_based": 126,
+    "midi_program_0_based": 125,
+    "svg": "SVG/16_Sound_Effects/126_Helicopter.svg",
+    "background_fill": "#aabccf"
+  },
+  {
+    "id": 127,
+    "name": "Applause",
+    "category": "Sound Effects",
+    "gm_program_1_based": 127,
+    "midi_program_0_based": 126,
+    "svg": "SVG/16_Sound_Effects/127_Applause.svg",
+    "background_fill": "#aabccf"
+  },
+  {
+    "id": 128,
+    "name": "Audio File",
+    "category": "Media",
+    "gm_program_1_based": null,
+    "midi_program_0_based": null,
+    "svg": "SVG/17_Media/128_Audio_File.svg",
+    "background_fill": "#b6c2d0"
+  },
+  {
+    "id": 129,
+    "name": "Other Instrument",
+    "category": "Media",
+    "gm_program_1_based": null,
+    "midi_program_0_based": null,
+    "svg": "SVG/17_Media/129_Other_Instrument.svg",
+    "background_fill": "#b6c2d0"
+  },
+  {
+    "id": 130,
+    "name": "Instrument Group",
+    "category": "Media",
+    "gm_program_1_based": null,
+    "midi_program_0_based": null,
+    "svg": "SVG/17_Media/130_Instrument_Group.svg",
+    "background_fill": "#b6c2d0"
+  },
+  {
+    "id": 131,
+    "name": "Other Audio File Type",
+    "category": "Media",
+    "gm_program_1_based": null,
+    "midi_program_0_based": null,
+    "svg": "SVG/17_Media/131_Other_Audio_File_Type.svg",
+    "background_fill": "#b6c2d0"
+  },
+  {
+    "id": 132,
+    "name": "Video",
+    "category": "Media",
+    "gm_program_1_based": null,
+    "midi_program_0_based": null,
+    "svg": "SVG/17_Media/132_Video.svg",
+    "background_fill": "#b6c2d0"
+  }
+]

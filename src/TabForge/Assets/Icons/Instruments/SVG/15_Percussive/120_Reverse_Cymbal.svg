@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">Reverse Cymbal</title>
+  <desc>Original flat vector music icon. Recolour the background circle by changing its fill attribute. Artwork is independent.</desc>
+  <circle id="background" cx="256" cy="256" r="248" fill="#b6c7aa"/>
+  <g id="artwork">
+<ellipse cx="256" cy="268" rx="139" ry="42" fill="#eebd57"/><ellipse cx="256" cy="261" rx="119" ry="30" fill="#bd8034"/><ellipse cx="256" cy="259" rx="95" ry="24" fill="#eebd57"/><ellipse cx="256" cy="252" rx="37" ry="15" fill="#bd8034"/><circle cx="256" cy="248" r="6" fill="#182633"/><path d="M256 276L256 391" fill="none" stroke="#293643" stroke-width="7" stroke-linecap="round"/><path d="M256 390L206 421" fill="none" stroke="#293643" stroke-width="6" stroke-linecap="round"/><path d="M256 390L306 421" fill="none" stroke="#293643" stroke-width="6" stroke-linecap="round"/><path d="M172 172Q247 113 327 172" fill="none" stroke="#fff3d8" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/><path d="M172 172L198 171L180 148Z" fill="#fff3d8"/>
+  </g>
+</svg>

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">Whistle</title>
+  <desc>Original flat vector music icon. Recolour the background circle by changing its fill attribute. Artwork is independent.</desc>
+  <circle id="background" cx="256" cy="256" r="248" fill="#a9c6ae"/>
+  <g id="artwork">
+<path d="M138 245H250Q280 205 323 219Q368 235 363 280Q358 325 307 329Q264 330 247 298H138Z" fill="#d8e4e7"/><rect x="138" y="247" width="84" height="49" rx="3" fill="#90abb6"/><rect x="190" y="244" width="28" height="12" rx="2" fill="#182633"/><circle cx="309" cy="273" r="26" fill="#90abb6"/><path d="M365 288Q409 285 407 312Q405 338 378 328" fill="none" stroke="#293643" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>

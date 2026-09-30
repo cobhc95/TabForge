@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" role="img" aria-label="Insert bar"><style>
+.icon{fill:none;stroke:#E8EDF4;stroke-width:2.15;stroke-linecap:round;stroke-linejoin:round}
+.fill{fill:#E8EDF4;stroke:none}
+.muted{fill:none;stroke:#9AA6B5;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.txt{fill:#E8EDF4;font-family:Segoe UI,Arial,sans-serif;font-weight:600;text-anchor:middle}
+</style><path class="muted" d="M4 9h24M4 16h24M4 23h24"/><path class="muted" d="M4 7v18M28 7v18"/><path class="icon" d="M16 5v22M11 12l5-4 5 4"/><circle class="fill" cx="16" cy="16" r="2.2"/></svg>

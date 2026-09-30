@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Audio engine: runs ONLY inside the separate engine process (TabForge.exe, audio-engine mode). It is the
+       only code that opens audio devices or loads plug-in code; the editor never calls it directly. -->
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\TabForge.Audio.Contracts\TabForge.Audio.Contracts.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- VST3 host shim (native\tfvst3, built from the Steinberg VST3 SDK); optional until it is built. -->
+    <None Include="native\tfvst3.dll" Condition="Exists('native\tfvst3.dll')" Link="tfvst3.dll" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="MeltySynth" Version="2.4.1" />
+    <PackageReference Include="NAudio" Version="2.2.1" />
+    <PackageReference Include="SoundTouch.Net" Version="2.3.2" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">Tuba</title>
+  <desc>Original flat vector music icon. Recolour the background circle by changing its fill attribute. Artwork is independent.</desc>
+  <circle id="background" cx="256" cy="256" r="248" fill="#93bec8"/>
+  <g id="artwork">
+<path d="M213 190V309Q213 357 266 357Q323 357 323 307V218" fill="none" stroke="#eebd57" stroke-width="31" stroke-linecap="round" stroke-linejoin="round"/><path d="M300 234L309 155L279 108H399L362 155L349 238Z" fill="#eebd57"/><ellipse cx="339" cy="109" rx="60" ry="18" fill="#bd8034"/><ellipse cx="339" cy="107" rx="43" ry="10" fill="#182633"/><path d="M231 216V302Q231 324 244 324" fill="none" stroke="#bd8034" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/><rect x="229" y="203" width="12" height="7" rx="3" fill="#fff3d8"/><path d="M252 216V302Q252 324 265 324" fill="none" stroke="#bd8034" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/><rect x="250" y="203" width="12" height="7" rx="3" fill="#fff3d8"/><path d="M273 216V302Q273 324 286 324" fill="none" stroke="#bd8034" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/><rect x="271" y="203" width="12" height="7" rx="3" fill="#fff3d8"/><path d="M211 217L181 195V170" fill="none" stroke="#eebd57" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/><rect x="169" y="163" width="24" height="9" rx="3" fill="#fff3d8"/>
+  </g>
+</svg>

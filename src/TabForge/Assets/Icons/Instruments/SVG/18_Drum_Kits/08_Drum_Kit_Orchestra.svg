@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">Drum Kit (Orchestra)</title>
+  <desc>Original flat vector music icon. Recolour the background circle by changing its fill attribute. Artwork is independent.</desc>
+  <circle id="background" cx="256" cy="256" r="248" fill="#e8c9a0"/>
+  <g id="artwork">
+<path d="M110 218Q116 330 190 360L322 360Q396 330 402 218Z" fill="#c07a3c"/><path d="M130 232Q140 318 196 344L316 344Q372 318 382 232Z" fill="#dd9a55" opacity="0.6"/>
+<ellipse cx="256" cy="218" rx="146" ry="38" fill="#8c5226"/><ellipse cx="256" cy="212" rx="136" ry="31" fill="#f5ecd6"/>
+<path d="M176 360L150 410M336 360L362 410M256 360L256 414" stroke="#5e656c" stroke-width="7" stroke-linecap="round" fill="none"/>
+<path d="M170 132L238 196" stroke="#6f4a2b" stroke-width="7" stroke-linecap="round" fill="none"/><circle cx="162" cy="124" r="15" fill="#f4f2e7"/>
+<path d="M348 128L282 196" stroke="#6f4a2b" stroke-width="7" stroke-linecap="round" fill="none"/><circle cx="356" cy="120" r="15" fill="#f4f2e7"/>
+  </g>
+</svg>

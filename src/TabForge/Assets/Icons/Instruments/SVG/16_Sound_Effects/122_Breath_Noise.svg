@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">Breath Noise</title>
+  <desc>Original flat vector music icon. Recolour the background circle by changing its fill attribute. Artwork is independent.</desc>
+  <circle id="background" cx="256" cy="256" r="248" fill="#aabccf"/>
+  <g id="artwork">
+<path d="M125 165Q201 136 231 196L214 214L239 235L207 246Q207 291 160 311L123 302Z" fill="#b77342"/><path d="M246 218Q291 196 320 213T386 210M249 246Q306 260 350 249M241 274Q283 303 337 289" fill="none" stroke="#fff3d8" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>

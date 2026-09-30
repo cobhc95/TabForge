@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">Drum Kit (TR-808)</title>
+  <desc>Original flat vector music icon. Recolour the background circle by changing its fill attribute. Artwork is independent.</desc>
+  <circle id="background" cx="256" cy="256" r="248" fill="#f1c07a"/>
+  <g id="artwork">
+<rect x="84" y="176" width="344" height="168" rx="14" fill="#3b3a38"/><rect x="84" y="176" width="344" height="42" rx="14" fill="#e9e3d2"/>
+<rect x="84" y="204" width="344" height="14" fill="#e9e3d2"/>
+<rect x="104" y="188" width="92" height="18" rx="3" fill="#c8342f"/><rect x="206" y="188" width="54" height="18" rx="3" fill="#f39a2b"/>
+<circle cx="292" cy="197" r="9" fill="#3b3a38"/><circle cx="322" cy="197" r="9" fill="#3b3a38"/><circle cx="352" cy="197" r="9" fill="#3b3a38"/><circle cx="382" cy="197" r="9" fill="#3b3a38"/><circle cx="408" cy="197" r="7" fill="#3b3a38"/>
+<circle cx="120" cy="248" r="10" fill="#c9c3b3"/><circle cx="156" cy="248" r="10" fill="#c9c3b3"/><circle cx="192" cy="248" r="10" fill="#c9c3b3"/><circle cx="228" cy="248" r="10" fill="#c9c3b3"/><circle cx="264" cy="248" r="10" fill="#c9c3b3"/><circle cx="300" cy="248" r="10" fill="#c9c3b3"/><circle cx="336" cy="248" r="10" fill="#c9c3b3"/><circle cx="372" cy="248" r="10" fill="#c9c3b3"/>
+<rect x="100" y="286" width="32" height="40" rx="4" fill="#e0402f"/><rect x="140" y="286" width="32" height="40" rx="4" fill="#e0402f"/><rect x="180" y="286" width="32" height="40" rx="4" fill="#e0402f"/><rect x="220" y="286" width="32" height="40" rx="4" fill="#f39a2b"/>
+<rect x="260" y="286" width="32" height="40" rx="4" fill="#f39a2b"/><rect x="300" y="286" width="32" height="40" rx="4" fill="#f5d547"/><rect x="340" y="286" width="32" height="40" rx="4" fill="#f5d547"/><rect x="380" y="286" width="32" height="40" rx="4" fill="#f4f1e8"/>
+  </g>
+</svg>

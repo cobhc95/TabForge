@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">Telephone Ring</title>
+  <desc>Original flat vector music icon. Recolour the background circle by changing its fill attribute. Artwork is independent.</desc>
+  <circle id="background" cx="256" cy="256" r="248" fill="#aabccf"/>
+  <g id="artwork">
+<path d="M166 243H346L382 352Q385 379 354 379H159Q128 379 132 352Z" fill="#c75450"/><rect x="183" y="215" width="22" height="46" rx="5" fill="#80462f"/><rect x="307" y="215" width="22" height="46" rx="5" fill="#80462f"/><path d="M143 199Q253 122 369 199L357 242L312 226L317 203Q256 177 196 203L201 226L155 242Z" fill="#293643"/><circle cx="256" cy="301" r="49" fill="#fff3d8"/><circle cx="256" cy="301" r="23" fill="#c75450"/><circle cx="291.0" cy="301.0" r="6" fill="#293643"/><circle cx="284.3155948031232" cy="321.57248383023654" r="6" fill="#293643"/><circle cx="266.8155948031232" cy="334.28697807033035" r="6" fill="#293643"/><circle cx="245.18440519687684" cy="334.2869780703304" r="6" fill="#293643"/><circle cx="227.68440519687684" cy="321.5724838302366" r="6" fill="#293643"/><circle cx="221.0" cy="301.0" r="6" fill="#293643"/><circle cx="227.68440519687684" cy="280.42751616976346" r="6" fill="#293643"/><circle cx="245.18440519687684" cy="267.71302192966965" r="6" fill="#293643"/><circle cx="266.81559480312313" cy="267.7130219296696" r="6" fill="#293643"/><circle cx="284.31559480312313" cy="280.4275161697634" r="6" fill="#293643"/><path d="M123 156Q147 129 182 126M331 126Q365 129 389 156" fill="none" stroke="#fff3d8" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>

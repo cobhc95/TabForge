@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">Recorder</title>
+  <desc>Original flat vector music icon. Recolour the background circle by changing its fill attribute. Artwork is independent.</desc>
+  <circle id="background" cx="256" cy="256" r="248" fill="#a9c6ae"/>
+  <g id="artwork">
+<g transform="rotate(24 256 256)"><path d="M246 119H265L269 372Q276 392 269 414H240Q234 392 241 372Z" fill="#eebd57"/><path d="M248 128L249 399H244L244 132Z" fill="#bd8034"/><path d="M245 92L265 92L264 128H246Z" fill="#80462f"/><rect x="249" y="149" width="12" height="18" rx="2" fill="#80462f"/><circle cx="255" cy="192" r="4.3" fill="#80462f"/><circle cx="255" cy="218" r="4.3" fill="#80462f"/><circle cx="255" cy="244" r="4.3" fill="#80462f"/><circle cx="255" cy="270" r="4.3" fill="#80462f"/><circle cx="255" cy="296" r="4.3" fill="#80462f"/><circle cx="255" cy="322" r="4.3" fill="#80462f"/><circle cx="255" cy="348" r="4.3" fill="#80462f"/><rect x="239" y="179" width="31" height="5" rx="2" fill="#bd8034"/><rect x="239" y="379" width="31" height="5" rx="2" fill="#bd8034"/></g>
+  </g>
+</svg>

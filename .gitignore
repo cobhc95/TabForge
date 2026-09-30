@@ -1,0 +1,29 @@
+# Build output and caches
+bin/
+obj/
+build/
+*.user
+.vs/
+
+# Local-only: source backups and copyrighted sample songs (see THIRD_PARTY.md)
+backup/*.zip
+Tabs/
+
+# Diagnostics written by the app or tools
+*.log
+
+# Release packages (uploaded to GitHub Releases, not committed)
+dist/
+
+# Native build output and fetched third-party SDKs
+native/tfvst3/build/
+third_party/
+
+# Stray third-party packages (not part of TabForge)
+*.whl
+
+# Local audit kits, reference data, recordings and tools (outside the product; copyrighted songs and personal recordings)
+work/
+
+# WPF temporary build projects
+*_wpftmp.csproj

@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">Drum Kit (Room)</title>
+  <desc>Original flat vector music icon. Recolour the background circle by changing its fill attribute. Artwork is independent.</desc>
+  <circle id="background" cx="256" cy="256" r="248" fill="#e9cfa6"/>
+  <g id="artwork">
+<path d="M88 118L200 170L200 400M424 118L312 170L312 400M200 170L312 170" stroke="#b08a5a" stroke-width="4" fill="none" opacity="0.7"/><path d="M110 150L178 138" stroke="#6b7780" stroke-width="5" stroke-linecap="round" fill="none"/>
+<path d="M144 144L150 360" stroke="#6b7780" stroke-width="5" stroke-linecap="round" fill="none"/>
+<ellipse cx="144" cy="142" rx="54" ry="11" fill="#d9b35b"/><ellipse cx="144" cy="152" rx="54" ry="11" fill="#d9b35b" opacity="0.8"/>
+<path d="M322 132L398 118" stroke="#6b7780" stroke-width="5" stroke-linecap="round" fill="none"/>
+<path d="M366 124L372 360" stroke="#6b7780" stroke-width="5" stroke-linecap="round" fill="none"/>
+<ellipse cx="362" cy="124" rx="66" ry="13" fill="#d9b35b"/>
+<rect x="190" y="172" width="64" height="48" rx="6" fill="#a5683a"/><ellipse cx="222" cy="172" rx="32" ry="9" fill="#f7ecd7"/><ellipse cx="222" cy="220" rx="32" ry="9" fill="#6f4323"/>
+<rect x="262" y="166" width="70" height="52" rx="6" fill="#a5683a"/><ellipse cx="297" cy="166" rx="35" ry="10" fill="#f7ecd7"/><ellipse cx="297" cy="218" rx="35" ry="10" fill="#6f4323"/>
+<circle cx="256" cy="306" r="84" fill="#6f4323"/><circle cx="256" cy="306" r="74" fill="#f7ecd7"/><circle cx="256" cy="306" r="30" fill="#a5683a"/>
+
+<rect x="118" y="246" width="70" height="44" rx="6" fill="#a5683a"/><ellipse cx="153" cy="246" rx="35" ry="10" fill="#f7ecd7"/><ellipse cx="153" cy="290" rx="35" ry="10" fill="#6f4323"/>
+<path d="M126 262L180 262M126 276L180 276" stroke="#d9b35b" stroke-width="3" fill="none"/>
+<rect x="336" y="238" width="72" height="92" rx="6" fill="#a5683a"/><ellipse cx="372" cy="238" rx="36" ry="10" fill="#f7ecd7"/><ellipse cx="372" cy="330" rx="36" ry="10" fill="#6f4323"/>
+<path d="M176 388L206 360M336 388L306 360" stroke="#6b7780" stroke-width="6" stroke-linecap="round" fill="none"/>
+  </g>
+</svg>

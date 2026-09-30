@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">Kalimba</title>
+  <desc>Original flat vector music icon. Recolour the background circle by changing its fill attribute. Artwork is independent.</desc>
+  <circle id="background" cx="256" cy="256" r="248" fill="#e7b386"/>
+  <g id="artwork">
+<rect x="159" y="161" width="195" height="224" rx="26" fill="#b77342"/><path d="M174 174H339V359Q272 388 174 359Z" fill="#bd8034"/><circle cx="256" cy="301" r="35" fill="#80462f"/><circle cx="256" cy="301" r="26" fill="#182633"/><rect x="178" y="184" width="12" height="91.0" rx="4" fill="#d8e4e7"/><rect x="196" y="184" width="12" height="100.0" rx="4" fill="#d8e4e7"/><rect x="214" y="184" width="12" height="109.0" rx="4" fill="#d8e4e7"/><rect x="232" y="184" width="12" height="118.0" rx="4" fill="#d8e4e7"/><rect x="250" y="184" width="12" height="127.0" rx="4" fill="#d8e4e7"/><rect x="268" y="184" width="12" height="118.0" rx="4" fill="#d8e4e7"/><rect x="286" y="184" width="12" height="109.0" rx="4" fill="#d8e4e7"/><rect x="304" y="184" width="12" height="100.0" rx="4" fill="#d8e4e7"/><rect x="322" y="184" width="12" height="91.0" rx="4" fill="#d8e4e7"/><rect x="174" y="198" width="166" height="10" rx="3" fill="#90abb6"/>
+  </g>
+</svg>
