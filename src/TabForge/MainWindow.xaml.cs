@@ -173,8 +173,8 @@ public partial class MainWindow : Window
         Editor.StatusMessage += (_, msg) => StatusText.Text = msg;
         Editor.ContextMenuRequested += (_, args) =>
         {
-            if (args.OnNote) ShowNoteContextMenu(args);
-            else ShowScoreContextMenu(args.Position);
+            if (args.OnNote || args.InsideSelection) ShowNoteContextMenu(args);
+            else ShowScoreContextMenu(args.Position, args);
         };
         ScoreScroll.MouseRightButtonUp += (s, e) => { if (!Editor.IsMouseOver) { ShowScoreContextMenu(e.GetPosition(ScoreScroll)); e.Handled = true; } };
         ScoreScroll.PreviewMouseLeftButtonDown += (_, _) =>

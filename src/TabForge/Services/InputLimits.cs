@@ -11,6 +11,11 @@ public static class InputLimits
     public const long MaxTforgeFileBytes = 128L * 1024 * 1024;
     public const long MaxGuitarProFileBytes = 128L * 1024 * 1024;
     public const long MaxSettingsJsonBytes = 2L * 1024 * 1024;
+    /// <summary>Score clips read from the clipboard (untrusted, <see cref="ScoreClip"/>): size and count caps.</summary>
+    public const int MaxClipboardBytes = 16 * 1024 * 1024;
+    public const int MaxClipBars = 4_096;
+    public const int MaxClipEvents = 65_536;
+    public const double MaxClipSlots = MaxClipBars * (double)MaxCellsPerMeasure;
     public const int MaxJsonDepth = 64;
 
     public const int MaxTracks = 256;

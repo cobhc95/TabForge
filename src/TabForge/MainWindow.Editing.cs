@@ -361,16 +361,9 @@ public partial class MainWindow
     private void Rest_Click(object sender, RoutedEventArgs e) => Editor.ToggleRest();
     private void Fermata_Click(object sender, RoutedEventArgs e) => Editor.ToggleFermata();
     private void Accent_Click(object sender, RoutedEventArgs e) => Editor.CycleAccent();
-    private void Staccato_Click(object sender, RoutedEventArgs e)
-    {
-        var c = Editor.CurrentCell(); if (c is null) return;
-        CaptureUndo(); c.Staccato = !c.Staccato; CommitEdit(EditRefresh.Score);
-    }
-    private void Tenuto_Click(object sender, RoutedEventArgs e)
-    {
-        var c = Editor.CurrentCell(); if (c is null) return;
-        CaptureUndo(); c.Tenuto = !c.Tenuto; CommitEdit(EditRefresh.Score);
-    }
+    // Staccato and tenuto: the same editor commands as their shortcuts (one undo step).
+    private void Staccato_Click(object sender, RoutedEventArgs e) => Editor.ToggleStaccato();
+    private void Tenuto_Click(object sender, RoutedEventArgs e) => Editor.ToggleTenuto();
 
     // ---------- effects ----------
 
@@ -398,11 +391,8 @@ public partial class MainWindow
     private void FxWahClose_Click(object sender, RoutedEventArgs e) => Editor.ToggleTechnique(TechniqueNames.WahClose);
     private void FxBrushDown_Click(object sender, RoutedEventArgs e) => Editor.ToggleTechnique(TechniqueNames.BrushDown);
     private void FxBrushUp_Click(object sender, RoutedEventArgs e) => Editor.ToggleTechnique(TechniqueNames.BrushUp);
-    private void FxGrace_Click(object sender, RoutedEventArgs e)
-    {
-        var c = Editor.CurrentCell(); if (c is null) return;
-        CaptureUndo(); c.IsGrace = !c.IsGrace; CommitEdit(EditRefresh.Score);
-    }
+    // Same command as the G shortcut (Note.Grace): the per-note GraceBefore technique.
+    private void FxGrace_Click(object sender, RoutedEventArgs e) => Editor.ToggleTechnique("GraceBefore");
 
     private void Chord_Click(object sender, RoutedEventArgs e)
     {

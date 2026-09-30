@@ -16,11 +16,28 @@ public sealed class ChildProcessJob : IDisposable
     /// <summary>This process's job, kept for its whole lifetime (closed by Windows when the process ends).</summary>
     public static ChildProcessJob ForThisProcess { get; } = new();
 
-    public ChildProcessJob()
+    public ChildProcessJob() : this(0, TimeSpan.Zero) { }
+
+    /// <summary>
+    /// A kill-on-close job that also caps the committed memory of all its processes together (<paramref name="jobMemoryLimitBytes"/>)
+    /// and their total user-mode CPU time (<paramref name="cpuTimeLimit"/>); Windows ends every process in the job when either is
+    /// exceeded. Zero = no such limit. Used by the Guitar Pro import worker (A5-07).
+    /// </summary>
+    public ChildProcessJob(long jobMemoryLimitBytes, TimeSpan cpuTimeLimit)
     {
         _handle = CreateJobObject(IntPtr.Zero, null);
         if (_handle == IntPtr.Zero) return;   // no job (very old Windows / restricted): the polling layer still ends orphans
         var info = new JOBOBJECT_EXTENDED_LIMIT_INFORMATION { BasicLimitInformation = { LimitFlags = JobObjectLimitKillOnJobClose } };
+        if (jobMemoryLimitBytes > 0)
+        {
+            info.BasicLimitInformation.LimitFlags |= JobObjectLimitJobMemory;
+            info.JobMemoryLimit = (UIntPtr)(ulong)jobMemoryLimitBytes;
+        }
+        if (cpuTimeLimit > TimeSpan.Zero)
+        {
+            info.BasicLimitInformation.LimitFlags |= JobObjectLimitJobTime;
+            info.BasicLimitInformation.PerJobUserTimeLimit = cpuTimeLimit.Ticks;   // 100 ns units, like TimeSpan ticks
+        }
         var size = Marshal.SizeOf<JOBOBJECT_EXTENDED_LIMIT_INFORMATION>();
         if (!SetInformationJobObject(_handle, JobObjectExtendedLimitInformation, ref info, (uint)size))
         {
@@ -48,6 +65,8 @@ public sealed class ChildProcessJob : IDisposable
 
     private const int JobObjectExtendedLimitInformation = 9;
     private const uint JobObjectLimitKillOnJobClose = 0x2000;
+    private const uint JobObjectLimitJobTime = 0x4;
+    private const uint JobObjectLimitJobMemory = 0x200;
 
     [StructLayout(LayoutKind.Sequential)]
     private struct JOBOBJECT_BASIC_LIMIT_INFORMATION

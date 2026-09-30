@@ -13,15 +13,70 @@ package on a mismatch or a missing record, unless -AllowUnprovenancedNative is p
 The PDBs are not shipped; they are archived in dist\symbols\<version>\ so crash logs can be symbolicated later.
 The portable zip is written with forward-slash entry names and one fixed, neutral timestamp (2026-01-01 00:00) for
 every entry, so it carries no build machine time or time zone.
+
+Reproducible builds: unless it already runs on a clean checkout (CI), the script builds from a temporary git worktree
+of the committed HEAD, never from the working folder, so line endings, stray files and uncommitted edits cannot leak
+into the release, and a local build equals a CI build of the same commit. Build settings that affect bytes live in
+global.json (exact SDK), Directory.Build.props and tools\Publish.ps1. The one native bridge is the committed
+src\TabForge.AudioEngine\native\tfvst3.dll (its hash is verified against native\BUILD_PROVENANCE.md).
+tools\Compare-Release.ps1 compares two results. See docs\REPRODUCIBLE_BUILDS.md.
 #>
 [CmdletBinding()]
 param(
     [string]$InnoCompiler = '',
-    [switch]$AllowUnprovenancedNative
+    [switch]$AllowUnprovenancedNative,
+    # Internal: set by the worktree wrapper below (and implied on CI) - the tree this script lives in is already a
+    # clean checkout of the commit being released.
+    [switch]$InCleanCheckout
 )
 
 $ErrorActionPreference = 'Stop'
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
+
+# ---- build from a clean worktree of the committed HEAD ---------------------------------------------
+if (-not $InCleanCheckout -and $env:CI -ne 'true') {
+    $dirty = @(& git -C $root status --porcelain)
+    if ($dirty.Count -gt 0) {
+        Write-Warning ("The working folder has {0} uncommitted change(s). The release is built from the committed HEAD only; they are NOT in it (commit first if they should be)." -f $dirty.Count)
+    }
+    $head = (& git -C $root rev-parse HEAD).Trim()
+    if ($LASTEXITCODE -or $head -notmatch '^[0-9a-f]{40}$') { throw 'git rev-parse HEAD failed; the release is built from a git commit.' }
+    $wt = Join-Path ([IO.Path]::GetTempPath()) ('tfrel-' + $head.Substring(0, 8) + '-' + [Guid]::NewGuid().ToString('N').Substring(0, 6))
+    function Remove-Worktree {
+        if (Test-Path -LiteralPath $wt) {
+            # git marks some files read-only (pack files of the SoundTouch clone); clear that so the folder can go.
+            Get-ChildItem -LiteralPath $wt -Recurse -Force -File -ErrorAction SilentlyContinue | ForEach-Object { $_.Attributes = 'Normal' }
+            [IO.Directory]::Delete($wt, $true)
+        }
+        & git -C $root worktree prune
+    }
+    Remove-Worktree
+    & git -C $root worktree add --detach --quiet $wt $head
+    if ($LASTEXITCODE) { throw "git worktree add failed for $wt" }
+    Write-Output "Building commit $head from a clean worktree: $wt"
+    try {
+        $innerArgs = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', (Join-Path $wt 'tools\Package-Release.ps1'), '-InCleanCheckout')
+        if ($InnoCompiler) { $innerArgs += @('-InnoCompiler', $InnoCompiler) }
+        if ($AllowUnprovenancedNative) { $innerArgs += '-AllowUnprovenancedNative' }
+        & (Get-Process -Id $PID).Path @innerArgs
+        if ($LASTEXITCODE) { throw "The release build in the clean worktree failed (exit $LASTEXITCODE)." }
+        # Bring the results (zip, installer, checksums, self-test log, symbols) home.
+        $distHome = Join-Path $root 'dist'
+        [IO.Directory]::CreateDirectory($distHome) | Out-Null
+        foreach ($item in Get-ChildItem -LiteralPath (Join-Path $wt 'dist')) {
+            Copy-Item -LiteralPath $item.FullName -Destination $distHome -Recurse -Force
+        }
+        Write-Output "Release files are in $distHome (built from commit $head)."
+    } finally {
+        Remove-Worktree
+    }
+    return
+}
+# From here on this is a clean checkout of one commit (a temporary worktree, or the CI checkout).
+$porcelain = @(& git -C $root status --porcelain)
+if ($porcelain.Count -gt 0) { throw ('The checkout is not clean, so the build would not match the committed commit:' + [Environment]::NewLine + ($porcelain -join [Environment]::NewLine)) }
+# Same as CI: the sample songs in Tabs\ are not part of a clean checkout, so the gate must not depend on them.
+$env:TABFORGE_NO_LOCAL_SONGS = '1'
 $project = Join-Path $root 'src\TabForge\TabForge.csproj'
 $buildProps = Join-Path $root 'Directory.Build.props'
 $version = ([xml][IO.File]::ReadAllText($buildProps)).Project.PropertyGroup.Version | Where-Object { $_ } | Select-Object -First 1

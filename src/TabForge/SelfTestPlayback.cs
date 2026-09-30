@@ -1060,7 +1060,7 @@ public static partial class SelfTest
         var e8 = Editor(out _, out _);
         e8.SetPosition(2, 3, 0);
         e8.SelectAll();
-        Check("hotkey: Ctrl+A selects the whole track", e8.HasSelection && e8.CopySelection() is not null);
+        Check("hotkey: Ctrl+A selects the whole track", e8.HasSelection && e8.CaptureClip(out _) is not null);
     }
 
     private static void TestEditorScrollGeometry()

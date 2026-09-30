@@ -232,7 +232,6 @@ public partial class MainWindow
 
     // ---------- selected area (bar range picked by dragging the timeline or selecting in the score) ----------
 
-    private List<List<MeasureModel>>? _areaClipboard;
     private List<(int Start, int End)> _skipRanges => Doc.SkipRanges;
 
     private bool AreaContains(int bar) => _loopHasArea && bar >= _loopStartBar && bar <= _loopEndBar;
@@ -263,47 +262,41 @@ public partial class MainWindow
         _midi.SetSkipRanges(_skipRanges);
     }
 
-    private void AddAreaMenuItems(ContextMenu menu)
+    /// <summary>The selection menu (owner request: Copy / Cut / Paste / Delete on top, the rest in submenus).</summary>
+    private ContextMenu BuildSelectionMenu()
     {
         var (s, e) = (_loopStartBar, _loopEndBar);
         var label = s == e ? $"bar {s + 1}" : $"bars {s + 1}-{e + 1}";
-        MenuItem Item(string header, Action action, bool enabled = true)
-        {
-            var item = new MenuItem { Header = header, Style = (Style)FindResource(typeof(MenuItem)), IsEnabled = enabled };
-            item.Click += (_, _) => action();
-            return item;
-        }
-        var index = 0;
-        void Add(Control item) => menu.Items.Insert(index++, item);
-        Add(new MenuItem { Header = $"Selected area: {label}", IsEnabled = false, Style = (Style)FindResource(typeof(MenuItem)) });
-        Add(Item("Copy area", CopyArea));
-        Add(Item("Cut area", () => { CopyArea(); DeleteArea("Cut"); }));
-        Add(Item("Paste before area", () => PasteAreaAt(s), _areaClipboard is not null));
-        Add(Item("Move area… (click the new position)", () => Arrangement.BeginAreaMove(s, e)));
-        Add(Item("Delete area", () => DeleteArea("Deleted")));
-        var loop = Item(_loop ? "Loop area (on)" : "Loop area", () => SetLoopActive(!_loop));
-        loop.IsCheckable = true; loop.IsChecked = _loop;
-        Add(loop);
         var skipped = _skipRanges.Any(r => r.Start == s && r.End == e);
-        var skip = Item("Skip area during playback", () =>
+        var state = new SelectionMenuState(s == e ? $"Bar {s + 1} selected" : $"Bars {s + 1}-{e + 1} selected",
+            TimelineClips.CanPasteOnTimeline(ClipboardService.Shared.TryGetClip(out _)), _loop, skipped, _skipRanges.Count > 0, TimelineDisplay());
+        return NewTimelineMenu("Arrangement timeline selection options", TimelineMenus.Selection(state, MenuKey), command =>
         {
-            if (skipped) _skipRanges.RemoveAll(r => r.Start == s && r.End == e);
-            else _skipRanges.Add((s, e));
-            SyncAreaVisuals();
-            StatusText.Text = skipped ? $"Playing {label} again" : $"Skipping {label} during playback";
+            if (RunDisplayCommand(command)) return;
+            switch (command)
+            {
+                case TimelineCommand.CopySelection: CopyArea(); break;
+                case TimelineCommand.CutSelection: CopyArea(); DeleteArea("Cut"); break;
+                case TimelineCommand.PasteSelection: PasteAreaAt(s); break;
+                case TimelineCommand.DeleteSelection: DeleteArea("Deleted"); break;
+                case TimelineCommand.LoopSelection: SetLoopActive(!_loop); break;
+                case TimelineCommand.MoveSelection: Arrangement.BeginAreaMove(s, e); break;
+                case TimelineCommand.SkipSelection:
+                    if (skipped) _skipRanges.RemoveAll(r => r.Start == s && r.End == e);
+                    else _skipRanges.Add((s, e));
+                    SyncAreaVisuals();
+                    StatusText.Text = skipped ? $"Playing {label} again" : $"Skipping {label} during playback";
+                    break;
+                case TimelineCommand.PlaySkippedAgain: _skipRanges.Clear(); SyncAreaVisuals(); break;
+                case TimelineCommand.ClearSelection: ClearLoopAreaKeepLoop(); break;
+            }
         });
-        skip.IsCheckable = true; skip.IsChecked = skipped;
-        Add(skip);
-        if (_skipRanges.Count > 0) Add(Item("Play all skipped areas again", () => { _skipRanges.Clear(); SyncAreaVisuals(); }));
-        Add(Item("Clear selection (Esc)", ClearLoopAreaKeepLoop));
-        Add(new Separator { Style = (Style)FindResource(typeof(Separator)) });
     }
 
     private void CopyArea()
     {
         var (s, e) = (_loopStartBar, _loopEndBar);
-        _areaClipboard = BarRangeEditor.Capture(_project, s, e);
-        StatusText.Text = $"Copied bars {s + 1}-{e + 1}";
+        CopyClipToClipboard(() => TimelineClips.CopyArea(_project, s, e), $"Copied bars {s + 1}-{e + 1}");
     }
 
     private void DeleteArea(string verb)
@@ -324,13 +317,16 @@ public partial class MainWindow
 
     private void PasteAreaAt(int at)
     {
-        if (_areaClipboard is null) return;
-        var transaction = _undo.BeginTransaction(_project);
-        var map = BarRangeEditor.Insert(_project, at, _areaClipboard);
+        if (ClipboardService.Shared.TryGetClip(out var error) is not { } clip) { StatusText.Text = error ?? ClipboardService.NotTabForgeNotesMessage; return; }
+        var transaction = _undo.BeginTransaction(_project);   // one undo step for the whole paste
+        var result = TimelineClips.PasteBars(_project, clip, at, Math.Max(0, TrackMixerGrid.SelectedIndex), TimelinePasteKind.InsertBars,
+            _settings.Editing, new WpfPasteQuestionAsker(this));
+        SaveSettings();   // a "Remember my choice" answer
+        if (!result.Changed || result.OldToNewBar is null) { _undo.Cancel(transaction); StatusText.Text = result.Message; return; }
         var capture = _undo.Commit(transaction);
         if (capture.Stored) RememberPlaybackBarMapping(capture.Snapshot);
-        var count = _areaClipboard.Max(t => t.Count);
-        FinishSectionStructureEdit($"Pasted {count} bar(s) at bar {at + 1}", map);
+        var count = result.BarsPasted;
+        FinishSectionStructureEdit(result.Message, result.OldToNewBar);
         ApplyLoopRange(at, at + count - 1);   // after the remap: these are already new bar numbers
     }
 
@@ -362,106 +358,39 @@ public partial class MainWindow
         }
         else bar = -1;
 
-        var menu = new ContextMenu
-        {
-            Style = (Style)FindResource(typeof(ContextMenu)),
-            Background = (Brush)FindResource("Panel2Brush"),
-            Foreground = (Brush)FindResource("TextBrush"),
-            PlacementTarget = Arrangement,
-            Placement = PlacementMode.MousePoint
-        };
-        System.Windows.Automation.AutomationProperties.SetName(menu, "Arrangement timeline options");
-        MenuItem Item(string header, RoutedEventHandler handler, bool enabled = true)
-        {
-            var item = new MenuItem
-            {
-                Header = header,
-                Style = (Style)FindResource(typeof(MenuItem)),
-                IsEnabled = enabled
-            };
-            item.Click += handler;
-            return item;
-        }
-        void Add(string header, Action action, bool enabled = true) => menu.Items.Add(Item(header, (_, _) => action(), enabled));
-        void Sep() => menu.Items.Add(new Separator { Style = (Style)FindResource(typeof(Separator)) });
-
-        var individualNotes = new MenuItem
-        {
-            Header = "Show individual notes",
-            Style = (Style)FindResource(typeof(MenuItem)),
-            IsCheckable = true,
-            IsChecked = Arrangement.ShowIndividualNotes
-        };
-        individualNotes.Click += (_, _) =>
-        {
-            Arrangement.ShowIndividualNotes = individualNotes.IsChecked;
-            ArrangementIndividualNotesMenu.IsChecked = Arrangement.ShowIndividualNotes;
-            ArrangementContinuousBlocksMenu.IsChecked = Arrangement.ShowContinuousBlocks;
-        };
-        menu.Items.Add(individualNotes);
-        var continuousLine = new MenuItem
-        {
-            Header = "Show continuous line",
-            Style = (Style)FindResource(typeof(MenuItem)),
-            IsCheckable = true,
-            IsChecked = Arrangement.ShowContinuousBlocks
-        };
-        continuousLine.Click += (_, _) =>
-        {
-            Arrangement.ShowContinuousBlocks = continuousLine.IsChecked;
-            ArrangementIndividualNotesMenu.IsChecked = Arrangement.ShowIndividualNotes;
-            ArrangementContinuousBlocksMenu.IsChecked = Arrangement.ShowContinuousBlocks;
-        };
-        menu.Items.Add(continuousLine);
-        var hideEmptyGrid = new MenuItem
-        {
-            Header = "Hide grid in empty bars",
-            Style = (Style)FindResource(typeof(MenuItem)),
-            IsCheckable = true,
-            IsChecked = Arrangement.HideEmptyTimelineGrid
-        };
-        hideEmptyGrid.Click += (_, _) => Arrangement.HideEmptyTimelineGrid = hideEmptyGrid.IsChecked;
-        menu.Items.Add(hideEmptyGrid);
-        var barGlow = new MenuItem
-        {
-            Header = "Subtle bar glow",
-            Style = (Style)FindResource(typeof(MenuItem)),
-            IsCheckable = true,
-            IsChecked = Arrangement.ShowBarGlow
-        };
-        barGlow.Click += (_, _) => Arrangement.ShowBarGlow = barGlow.IsChecked;
-        menu.Items.Add(barGlow);
-        Sep();
+        // Inside the selected bars: the selection menu only. Outside it: the single-bar menu, and the selection stays.
+        if (AreaContains(bar)) { BuildSelectionMenu().IsOpen = true; return; }
 
         var selectedTrack = SelectedTrack;
         var hasBar = bar >= 0;
-        Add("Copy bar (this track)", () => CopyArrangementBar(bar, selectedTrack, allTracks: false), hasBar && selectedTrack is not null);
-        Add("Copy bar (all tracks)", () => CopyArrangementBar(bar, selectedTrack, allTracks: true), hasBar && _project.Tracks.Count > 0);
-        Add("Copy section", () => CopyArrangementSection(bar), hasBar && _arrangementController.SectionAt(_project, bar) is not null);
         var section = hasBar ? _arrangementController.SectionAt(_project, bar) : null;
-        if (section is not null)
+        var barsClip = ClipboardService.Shared.TryGetClip(out _);
+        var canPasteBars = TimelineClips.CanPasteOnTimeline(barsClip);
+        var state = new BarMenuState(hasBar, selectedTrack is not null, _project.Tracks.Count,
+            selectedTrack is not null && selectedTrack.Measures.Count > 1, MaxMeasures() > 1,
+            section is not null, section?.LockPosition ?? false, canPasteBars, canPasteBars && barsClip!.Tracks.Count > 1, TimelineDisplay());
+        var menu = NewTimelineMenu("Arrangement timeline options", TimelineMenus.Bar(state, MenuKey), command =>
         {
-            var lockPosition = Item("Lock section position", (_, _) =>
+            if (RunDisplayCommand(command)) return;
+            switch (command)
             {
-                CaptureUndo();
-                section.LockPosition = !section.LockPosition;
-                CommitEdit(EditRefresh.Arrangement | EditRefresh.Markers);
-            });
-            lockPosition.IsCheckable = true;
-            lockPosition.IsChecked = section.LockPosition;
-            menu.Items.Add(lockPosition);
-        }
-        Sep();
-        Add("Paste bar into this track", () => PasteArrangementBar(bar, selectedTrack, allTracks: false), hasBar && selectedTrack is not null && _arrangementController.HasSingleTrackBarClipboard);
-        Add("Paste bar into all tracks", () => PasteArrangementBar(bar, selectedTrack, allTracks: true), hasBar && _arrangementController.HasAllTracksBarClipboard);
-        Add("Paste section here", () => PasteArrangementSection(bar), hasBar && _arrangementController.HasSectionClipboard);
-        Sep();
-        Add("Add bar (in front)", () => InsertArrangementBar(bar), hasBar);
-        Add("Add bar (behind)", () => InsertArrangementBar(bar + 1), hasBar);
-        Sep();
-        Add("Delete bar (this track)", () => DeleteArrangementBar(bar, selectedTrack, allTracks: false), hasBar && selectedTrack is not null && selectedTrack.Measures.Count > 1);
-        Add("Delete bar (all tracks)", () => DeleteArrangementBar(bar, selectedTrack, allTracks: true), hasBar && MaxMeasures() > 1);
-        if (AreaContains(bar)) AddAreaMenuItems(menu);
+                case TimelineCommand.CopyBar: CopyArrangementBar(bar, selectedTrack, allTracks: false); break;
+                case TimelineCommand.CopyBarAllTracks: CopyArrangementBar(bar, selectedTrack, allTracks: true); break;
+                case TimelineCommand.CopySection: CopyArrangementSection(bar); break;
+                case TimelineCommand.PasteBar: PasteArrangementBar(bar, selectedTrack, allTracks: false); break;
+                case TimelineCommand.PasteBarAllTracks: PasteArrangementBar(bar, selectedTrack, allTracks: true); break;
+                case TimelineCommand.PasteSectionHere: PasteArrangementSection(bar); break;
+                case TimelineCommand.InsertBarBefore: InsertArrangementBar(bar); break;
+                case TimelineCommand.InsertBarAfter: InsertArrangementBar(bar + 1); break;
+                case TimelineCommand.DeleteBar: DeleteArrangementBar(bar, selectedTrack, allTracks: false); break;
+                case TimelineCommand.DeleteBarAllTracks: DeleteArrangementBar(bar, selectedTrack, allTracks: true); break;
+                case TimelineCommand.ToggleSectionLockAtBar when section is not null:
+                    CaptureUndo();
+                    section.LockPosition = !section.LockPosition;
+                    CommitEdit(EditRefresh.Arrangement | EditRefresh.Markers);
+                    break;
+            }
+        });
         menu.IsOpen = true;
     }
 
@@ -486,81 +415,45 @@ public partial class MainWindow
         var markers = _project.Markers.OrderBy(marker => marker.MeasureIndex).ToList();
         if (markerIndex < 0 || markerIndex >= markers.Count) return;
         var marker = markers[markerIndex];
-        var menu = new ContextMenu
-        {
-            Style = (Style)FindResource(typeof(ContextMenu)),
-            Background = (Brush)FindResource("Panel2Brush"),
-            Foreground = (Brush)FindResource("TextBrush"),
-            PlacementTarget = Arrangement,
-            Placement = PlacementMode.MousePoint
-        };
-        System.Windows.Automation.AutomationProperties.SetName(menu, "Section options");
-
-        MenuItem Item(string header, RoutedEventHandler handler, bool enabled = true)
-        {
-            var item = new MenuItem
-            {
-                Header = header,
-                Style = (Style)FindResource(typeof(MenuItem)),
-                IsEnabled = enabled
-            };
-            item.Click += handler;
-            return item;
-        }
-
-        if (clickedBar is int atBar && atBar != marker.MeasureIndex)
-        {
-            menu.Items.Add(Item($"Add section at bar {atBar + 1}", (_, _) => AddSectionAt(atBar)));
-            menu.Items.Add(new Separator { Style = (Style)FindResource(typeof(Separator)) });
-        }
-        menu.Items.Add(Item("Copy Section", (_, _) => CopySectionToClipboard(marker)));
-        menu.Items.Add(Item("Cut Section", (_, _) => CutArrangementSection(marker)));
-        menu.Items.Add(Item("Paste Section", (_, _) => PasteArrangementSectionAfter(marker),
-            _arrangementController.HasSectionClipboard));
-        menu.Items.Add(Item("Duplicate Section", (_, _) => DuplicateArrangementSection(marker)));
-        menu.Items.Add(Item("Delete Section", (_, _) => DeleteSectionContent(marker, confirm: true)));
-        menu.Items.Add(new Separator { Style = (Style)FindResource(typeof(Separator)) });
         var sectionLastBar = Math.Max(marker.MeasureIndex, SectionLayout.End(markers, markerIndex, MaxMeasures()) - 1);
         var sectionLooped = _loop && _loopStartBar == marker.MeasureIndex && _loopEndBar == sectionLastBar;
-        var loopItem = Item("Loop section", (_, _) =>
+        int? addAt = clickedBar is int atBar && atBar != marker.MeasureIndex ? atBar : null;
+        var state = new SectionMenuState(addAt, TimelineClips.CanPasteOnTimeline(ClipboardService.Shared.TryGetClip(out _)),
+            sectionLooped, marker.LockPosition, _settings.Timeline.ShowSectionBrackets, _settings.Timeline.MatchSimilarSectionColours);
+        var menu = NewTimelineMenu("Section options", TimelineMenus.Section(state, MenuKey), command =>
         {
-            if (sectionLooped) { SetLoopActive(false); return; } // ticked: clicking again turns the loop off
-            SetLoopActive(true);
-            ApplyLoopRange(marker.MeasureIndex, sectionLastBar);
+            switch (command)
+            {
+                case TimelineCommand.AddSectionHere when addAt is int at: AddSectionAt(at); break;
+                case TimelineCommand.CopySectionMenu: CopySectionToClipboard(marker); break;
+                case TimelineCommand.CutSection: CutArrangementSection(marker); break;
+                case TimelineCommand.PasteSectionAfter: PasteArrangementSectionAfter(marker); break;
+                case TimelineCommand.DuplicateSection: DuplicateArrangementSection(marker); break;
+                case TimelineCommand.DeleteSection: DeleteSectionContent(marker, confirm: true); break;
+                case TimelineCommand.LoopSection:
+                    if (sectionLooped) { SetLoopActive(false); break; } // ticked: clicking again turns the loop off
+                    SetLoopActive(true);
+                    ApplyLoopRange(marker.MeasureIndex, sectionLastBar);
+                    break;
+                case TimelineCommand.RenameSection: EditSectionTitle(marker); break;
+                case TimelineCommand.GoToSection: JumpToMarker(marker); break;
+                case TimelineCommand.ShowSectionBrackets:
+                    _settings.Timeline.ShowSectionBrackets = !_settings.Timeline.ShowSectionBrackets;
+                    Arrangement.ShowSectionBrackets = _settings.Timeline.ShowSectionBrackets;
+                    SaveSettings();
+                    break;
+                case TimelineCommand.SameColourSections:
+                    _settings.Timeline.MatchSimilarSectionColours = !_settings.Timeline.MatchSimilarSectionColours;
+                    Arrangement.MatchSimilarSectionColours = _settings.Timeline.MatchSimilarSectionColours;
+                    SaveSettings();
+                    break;
+                case TimelineCommand.ToggleSectionLock:
+                    CaptureUndo();
+                    marker.LockPosition = !marker.LockPosition;
+                    CommitEdit(EditRefresh.Arrangement | EditRefresh.Markers);
+                    break;
+            }
         });
-        loopItem.IsCheckable = true;
-        loopItem.IsChecked = sectionLooped;
-        menu.Items.Add(loopItem);
-        menu.Items.Add(Item("Go to section", (_, _) => JumpToMarker(marker)));
-        var brackets = Item("Show section brackets [ ]", (_, _) =>
-        {
-            _settings.Timeline.ShowSectionBrackets = !_settings.Timeline.ShowSectionBrackets;
-            Arrangement.ShowSectionBrackets = _settings.Timeline.ShowSectionBrackets;
-            SaveSettings();
-        });
-        brackets.IsCheckable = true;
-        brackets.IsChecked = _settings.Timeline.ShowSectionBrackets;
-        menu.Items.Add(brackets);
-        var similar = Item("Same colour for similar sections", (_, _) =>
-        {
-            _settings.Timeline.MatchSimilarSectionColours = !_settings.Timeline.MatchSimilarSectionColours;
-            Arrangement.MatchSimilarSectionColours = _settings.Timeline.MatchSimilarSectionColours;
-            SaveSettings();
-        });
-        similar.IsCheckable = true;
-        similar.IsChecked = _settings.Timeline.MatchSimilarSectionColours;
-        similar.ToolTip = "Verse 1, Verse 2… share the first one's colour. Display only; each section keeps its own colour.";
-        menu.Items.Add(similar);
-        menu.Items.Add(Item("Edit section title…", (_, _) => EditSectionTitle(marker)));
-        var lockPosition = Item(marker.LockPosition ? "Unlock section position" : "Lock section position", (_, _) =>
-        {
-            CaptureUndo();
-            marker.LockPosition = !marker.LockPosition;
-            CommitEdit(EditRefresh.Arrangement | EditRefresh.Markers);
-        });
-        lockPosition.IsCheckable = true;
-        lockPosition.IsChecked = marker.LockPosition;
-        menu.Items.Add(lockPosition);
         menu.IsOpen = true;
     }
 
@@ -578,12 +471,23 @@ public partial class MainWindow
     private void CopyArrangementBar(int bar, TrackModel? track, bool allTracks)
     {
         var trackIndex = track is null ? -1 : _project.Tracks.IndexOf(track);
-        if (!_arrangementController.CopyBar(_project, bar, trackIndex, allTracks)) return;
-        if (allTracks)
-            StatusText.Text = $"Copied bar {bar + 1} from all tracks";
-        else if (track is not null)
-            StatusText.Text = $"Copied bar {bar + 1} from {track.Name}";
+        if (!allTracks && track is null) return;
+        CopyClipToClipboard(() => TimelineClips.CopyBar(_project, bar, trackIndex, allTracks),
+            allTracks ? $"Copied bar {bar + 1} from all tracks" : $"Copied bar {bar + 1} from {track!.Name}");
     }
+
+    /// <summary>Puts a Bars clip on the shared score clipboard (the same one the score editor pastes from) and reports it.</summary>
+    private void CopyClipToClipboard(Func<ScoreClip> capture, string status)
+    {
+        try
+        {
+            var written = ClipboardService.Shared.Copy(capture());
+            StatusText.Text = written ? status : status + " (clipboard busy: paste works inside TabForge only)";
+        }
+        catch (System.IO.InvalidDataException ex) { StatusText.Text = ex.Message; }
+    }
+
+    private static string WithNote(string status, string note) => note.Length > 0 ? $"{status} ({note})" : status;
 
     private void CopyArrangementSection(int bar)
     {
@@ -594,8 +498,12 @@ public partial class MainWindow
 
     private void CopySectionToClipboard(MarkerModel marker)
     {
-        if (!_arrangementController.CopySection(_project, marker)) return;
-        StatusText.Text = $"Copied section '{marker.Title}'";
+        try
+        {
+            if (_arrangementController.CopySection(_project, marker, ClipboardService.Shared, out var written) is null) return;
+            StatusText.Text = written ? $"Copied section '{marker.Title}'" : $"Copied section '{marker.Title}' (clipboard busy: paste works inside TabForge only)";
+        }
+        catch (System.IO.InvalidDataException ex) { StatusText.Text = ex.Message; }
     }
 
     private void CutArrangementSection(MarkerModel marker)
@@ -619,9 +527,8 @@ public partial class MainWindow
 
     private void PasteArrangementSectionAfter(MarkerModel marker)
     {
-        var snapshot = _arrangementController.SectionClipboard;
-        if (snapshot is null || !_arrangementController.TryGetSectionBounds(_project, marker, out _, out var end)) return;
-        InsertSectionSnapshot(end, snapshot, $"Pasted section '{snapshot.Marker.Title}'");
+        if (!_arrangementController.TryGetSectionBounds(_project, marker, out _, out var end)) return;
+        PasteClipAsSection(end);
     }
 
     private void InsertSectionSnapshot(int at, SectionClipboardSnapshot snapshot, string status)
@@ -629,7 +536,9 @@ public partial class MainWindow
         if (_project.Tracks.Count == 0 || snapshot.Tracks.Count == 0 || snapshot.Tracks.Max(track => track.Count) == 0) return;
         at = Math.Clamp(at, 0, MaxMeasures());
         var transaction = _undo.BeginTransaction(_project);
-        var mapping = SectionReorderService.Insert(_project, at, snapshot.Tracks, snapshot.Marker);
+        var mapping = snapshot.Marker is null
+            ? BarRangeEditor.Insert(_project, at, snapshot.Tracks)
+            : SectionReorderService.Insert(_project, at, snapshot.Tracks, snapshot.Marker);
         if (mapping is null) { _undo.Cancel(transaction); return; }
         var capture = _undo.Commit(transaction);
         if (capture.Stored) RememberPlaybackBarMapping(capture.Snapshot);
@@ -675,18 +584,39 @@ public partial class MainWindow
     private void PasteArrangementBar(int bar, TrackModel? track, bool allTracks)
     {
         var trackIndex = track is null ? -1 : _project.Tracks.IndexOf(track);
-        if (!_arrangementController.CanPasteBar(_project, bar, trackIndex, allTracks)) return;
-        CaptureUndo();
-        _arrangementController.PasteBar(_project, bar, trackIndex, allTracks);
-        FinishArrangementEdit($"Pasted bar {bar + 1}");
+        if (ClipboardService.Shared.TryGetClip(out var error) is not { } clip) { StatusText.Text = error ?? ClipboardService.NotTabForgeNotesMessage; return; }
+        var transaction = _undo.BeginTransaction(_project);   // one undo step per paste
+        var result = TimelineClips.PasteBars(_project, clip, bar, trackIndex, allTracks ? TimelinePasteKind.OverwriteAllTracks : TimelinePasteKind.OverwriteThisTrack,
+            _settings.Editing, new WpfPasteQuestionAsker(this));
+        SaveSettings();   // a "Remember my choice" answer
+        if (!result.Changed) { _undo.Cancel(transaction); StatusText.Text = result.Message; return; }
+        var capture = _undo.Commit(transaction);
+        if (result.OldToNewBar is { } map)   // answered "Insert before/after": structural, like the area paste
+        {
+            if (capture.Stored) RememberPlaybackBarMapping(capture.Snapshot);
+            FinishSectionStructureEdit(result.Message, map);
+            return;
+        }
+        FinishArrangementEdit(result.Message);
     }
 
     private void PasteArrangementSection(int bar)
     {
-        var snapshot = _arrangementController.SectionClipboard;
-        if (snapshot is null) return;
-        InsertSectionSnapshot(Math.Clamp(bar, 0, MaxMeasures()), snapshot,
-            $"Pasted section '{snapshot.Marker.Title}'");
+        PasteClipAsSection(Math.Clamp(bar, 0, MaxMeasures()));
+    }
+
+    /// <summary>
+    /// Inserts the shared Bars clip before bar <paramref name="at"/> on all tracks: a copied section comes back with its title and
+    /// colour; bars copied in the score or as an area come in as plain bars (no section marker).
+    /// </summary>
+    private void PasteClipAsSection(int at)
+    {
+        if (ClipboardService.Shared.TryGetClip(out var error) is not { } clip) { StatusText.Text = error ?? ClipboardService.NotTabForgeNotesMessage; return; }
+        if (!TimelineClips.CanPasteOnTimeline(clip)) { StatusText.Text = "The timeline pastes whole bars only; paste beats in the score."; return; }
+        var tracks = TimelineClips.BarsPerTrack(clip, _project, Math.Max(0, TrackMixerGrid.SelectedIndex), out var note);
+        var marker = _arrangementController.SectionMarkerFor(clip);
+        InsertSectionSnapshot(at, new SectionClipboardSnapshot(tracks, marker),
+            WithNote(marker is not null ? $"Pasted section '{marker.Title}'" : $"Pasted {clip.BarCount} bar(s) at bar {at + 1}", note));
     }
 
     private void InsertArrangementBar(int at)

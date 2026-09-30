@@ -1,0 +1,44 @@
+name: build-bridge
+
+# Builds native/tfvst3 (the VST3 host bridge) from the pinned, unpatched Steinberg VST3 SDK on the GitHub runner,
+# attests it and uploads tfvst3.dll plus native/BUILD_PROVENANCE.md. Run it by hand (Actions > build-bridge > Run
+# workflow) whenever the bridge source or the SDK pin changes, then commit both files as they are. Releases ship the
+# committed DLL, so local and CI release builds carry the same bridge (docs/REPRODUCIBLE_BUILDS.md).
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bridge:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Build tfvst3.dll from the pinned SDK
+        shell: pwsh
+        run: |
+          # A short build folder: the SDK's submodules contain very long paths.
+          ./native/build-tfvst3.ps1 -NoTest -BuildDir C:\tfb
+          if (-not $?) { exit 1 }
+          Get-Content native/BUILD_PROVENANCE.md
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: src/TabForge.AudioEngine/native/tfvst3.dll
+
+      - name: Upload the bridge and its provenance record
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: tfvst3-bridge
+          path: |
+            src/TabForge.AudioEngine/native/tfvst3.dll
+            native/BUILD_PROVENANCE.md
+          if-no-files-found: error

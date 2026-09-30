@@ -226,35 +226,25 @@ public partial class MainWindow
     {
         if (trackIndex < 0 || trackIndex >= _project.Tracks.Count) return;
         var track = _project.Tracks[trackIndex];
-        var menu = new ContextMenu();
-        string Key(string id) => HotkeyCatalog.GestureFor(_settings.Hotkeys, id) is { Length: > 0 } g ? HotkeyCatalog.Display(g) : "";
-        MenuItem Item(string header, string id, Action action, bool enabled = true)
-        {
-            var item = new MenuItem { Header = header, IsEnabled = enabled, InputGestureText = Key(id) };
-            item.Click += (_, _) => action();
-            menu.Items.Add(item);
-            return item;
-        }
-
-        if (clip is not null)
-        {
-            Item("Duplicate", "Clip.Duplicate", () => DuplicateClip(track, clip));
-            Item("Copy", "Clip.Copy", () => _clipClipboard = clip.Clone());
-            Item("Cut", "Clip.Cut", () => { _clipClipboard = clip.Clone(); EditClip(() => { track.AudioClips.Remove(clip); ClipLanes.Trim(track); }); });
-        }
         var lane = _laneCursor is { } cursor && ReferenceEquals(cursor.Track, track) ? cursor.Lane : clip?.Lane ?? 0;
-        Item("Paste", "Clip.Paste", () => PasteClip(track, lane, sec), _clipClipboard is not null);
-        if (clip is not null)
+        var state = new ClipMenuState(clip is not null, clip?.IsMidi ?? false, _clipClipboard is not null, clip?.Muted ?? false);
+        var menu = NewTimelineMenu(clip is null ? "Empty lane options" : "Clip options", TimelineMenus.Clip(state, MenuKey), command =>
         {
-            Item("Delete", "Clip.Delete", () => EditClip(() => { track.AudioClips.Remove(clip); ClipLanes.Trim(track); Arrangement.SelectedClip = null; }));
-            menu.Items.Add(new Separator());
-            var mute = Item("Mute", "Clip.Mute", () => EditClip(() => clip.Muted = !clip.Muted));
-            mute.IsCheckable = true; mute.IsChecked = clip.Muted;
-            if (clip.IsMidi)
+            switch (command)
             {
-                var write = new MenuItem { Header = "Write into the track's notation" };
-                write.Click += (_, _) =>
-                {
+                case TimelineCommand.ClipCopy when clip is not null: _clipClipboard = clip.Clone(); break;
+                case TimelineCommand.ClipCut when clip is not null:
+                    _clipClipboard = clip.Clone();
+                    EditClip(() => { track.AudioClips.Remove(clip); ClipLanes.Trim(track); });
+                    break;
+                case TimelineCommand.ClipPaste: PasteClip(track, lane, sec); break;
+                case TimelineCommand.ClipDuplicate when clip is not null: DuplicateClip(track, clip); break;
+                case TimelineCommand.ClipDelete when clip is not null:
+                    EditClip(() => { track.AudioClips.Remove(clip); ClipLanes.Trim(track); Arrangement.SelectedClip = null; });
+                    break;
+                case TimelineCommand.ClipMute when clip is not null: EditClip(() => clip.Muted = !clip.Muted); break;
+                case TimelineCommand.ClipProperties when clip is not null: EditClipProperties(clip); break;
+                case TimelineCommand.ClipWriteNotation when clip is not null:
                     CaptureUndo();
                     var written = MidiClipToTab.Write(_project, track, clip, s => SongClock.BarAt(_project, s));
                     if (written == 0) { StatusText.Text = "No notes of that MIDI clip fit this track's strings or bars"; return; }
@@ -263,34 +253,17 @@ public partial class MainWindow
                     ClipsChanged(true);
                     Editor.InvalidateScoreLayout();
                     StatusText.Text = $"Wrote {written} notes into {track.Name}";
-                };
-                menu.Items.Add(write);
-                var advanced = new MenuItem { Header = "Advanced notation conversion…", ToolTip = "Planned: a visual, interactive converter with rules and presets (not built yet)" };
-                advanced.Click += (_, _) => MessageBox.Show(this,
-                    "Advanced notation conversion is planned and not built yet." + Environment.NewLine + Environment.NewLine +
-                    "It will open a window where you preview the tab, pick playing rules and presets (position, fret range, quantising, voices), and apply the result." + Environment.NewLine + Environment.NewLine +
-                    "For now, \"Write into the track's notation\" uses the lowest fret on a free string.",
-                    "Advanced notation conversion", MessageBoxButton.OK, MessageBoxImage.Information);
-                menu.Items.Add(advanced);
+                    break;
+                case TimelineCommand.ClipAddAudioFile:
+                    var dialog = new Microsoft.Win32.OpenFileDialog
+                    {
+                        Filter = "Audio files|" + string.Join(";", WaveformCache.Extensions.Select(x => "*" + x)) + "|All files|*.*",
+                        Multiselect = true
+                    };
+                    if (dialog.ShowDialog(this) == true) AddAudioFiles(trackIndex, sec, dialog.FileNames);
+                    break;
             }
-            Item("Properties…", "Clip.Properties", () => EditClipProperties(clip));
-        }
-        else
-        {
-            menu.Items.Add(new Separator());
-            var add = new MenuItem { Header = "Add audio file…" };
-            add.Click += (_, _) =>
-            {
-                var dialog = new Microsoft.Win32.OpenFileDialog
-                {
-                    Filter = "Audio files|" + string.Join(";", WaveformCache.Extensions.Select(x => "*" + x)) + "|All files|*.*",
-                    Multiselect = true
-                };
-                if (dialog.ShowDialog(this) == true) AddAudioFiles(trackIndex, sec, dialog.FileNames);
-            };
-            menu.Items.Add(add);
-        }
-        menu.PlacementTarget = Arrangement;
+        });
         menu.IsOpen = true;
     }
 

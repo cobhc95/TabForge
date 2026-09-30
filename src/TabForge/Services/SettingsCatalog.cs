@@ -399,6 +399,18 @@ public static class SettingsCatalog
             Int(Editing, "Navigation", "editing.scorewheel", "Score wheel scroll distance", v => ed.ScoreWheelScrollPixels = v, () => ed.ScoreWheelScrollPixels, 12, 96,
                 "Pixels moved per mouse-wheel notch over the score page.", "score page mouse wheel scroll", "px"),
 
+            // Copy and paste: one row per paste question (Q1..Q5)
+            PasteRow(ed, PasteQuestion.BeatsOntoNotes, "Pastes that land on existing notes: replace them at the cursor, or insert and push the following notes along.",
+                "paste copy beats replace insert push notes cursor overwrite"),
+            PasteRow(ed, PasteQuestion.Octave, "Pastes between instruments of different range, such as guitar and bass: keep the exact pitch, or shift by an octave automatically.",
+                "paste copy octave pitch range guitar bass shift instrument"),
+            PasteRow(ed, PasteQuestion.BarsOntoNotes, "Pastes of whole bars onto bars that already have notes: overwrite them, or insert before or after.",
+                "paste copy bars overwrite insert before after replace"),
+            PasteRow(ed, PasteQuestion.BarSettings, "Whether pasted bars bring their time signature, key, tempo and similar settings, or keep the target bars' own.",
+                "paste copy bar settings time signature key tempo keep target"),
+            PasteRow(ed, PasteQuestion.Drums, "Pastes between a pitched instrument and a drum track: put the rhythm onto one drum sound, or do not paste.",
+                "paste copy drums drum sound rhythm pitched track"),
+
             // Timeline & sections
             Bool(Timeline, "Sections", "timeline.similarcolours", "Same colour for similar sections", v => timeline.MatchSimilarSectionColours = v, () => timeline.MatchSimilarSectionColours,
                 "Sections with the same base name (Verse 1, Verse 2, Chorus x2) are shown in the first one's colour.", "section colour similar verse chorus match same"),
@@ -559,6 +571,17 @@ public static class SettingsCatalog
         string? dependsOnValue = null) =>
         Make(category, group, key, title, description, SettingKind.Bool, () => get(), v => set(v is bool b && b),
             keywords, dependsOn, hotkey: hotkey, dependsOnValue: dependsOnValue);
+
+    /// <summary>A "Copy and paste" row: "Ask every time" plus each answer of the question.</summary>
+    private static SettingDescriptor PasteRow(EditingSettings ed, PasteQuestion q, string description, string keywords)
+    {
+        var options = PasteQuestionInfo.Options(q);
+        var choices = new[] { PasteQuestionInfo.AskLabel }.Concat(options.Select(o => o.Label)).ToArray();
+        return Choice(Editing, "Copy and paste", PasteQuestionInfo.SettingKey(q), PasteQuestionInfo.Title(q),
+            v => PasteQuestionInfo.Set(ed, q, options.FirstOrDefault(o => o.Label == v)?.Id),
+            () => options.FirstOrDefault(o => o.Id == PasteQuestionInfo.Get(ed, q))?.Label ?? PasteQuestionInfo.AskLabel,
+            choices, description, keywords);
+    }
 
     private static SettingDescriptor Choice(string category, string group, string key, string title, Action<string> set,
         Func<string> get, string[] choices, string description, string keywords = "", string? dependsOn = null,

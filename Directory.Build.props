@@ -2,7 +2,7 @@
   <!-- Build settings shared by every TabForge project (app, audio engine, contracts), so they cannot drift. -->
   <PropertyGroup>
     <!-- Release version: the one place it is set. Shown in About/Settings, stamped into every assembly and the installer. -->
-    <Version>0.2.0-beta.5</Version>
+    <Version>0.3.0-beta.1</Version>
     <Nullable>enable</Nullable>
     <!-- Hygiene: a warning is a build failure, so the tree stays at zero warnings. -->
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>

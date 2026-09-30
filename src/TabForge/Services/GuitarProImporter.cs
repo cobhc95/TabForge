@@ -82,12 +82,24 @@ public static class GuitarProImporter
     public static SongProject Import(string path)
     {
         path = FilePathPolicy.ExistingFile(path, "Guitar Pro file", SupportedExtensions);
-        // Reset before the embedded-project early return so a lossless .gp load never reports the previous import's duplicates.
-        LastImportSkippedDuplicates = 0;
-        LastImportDuplicateSamples.Clear();
         // Cooperative limits (A5-07): the ambient guard of a background import; null for synchronous headless use.
         ImportGuard.CheckCurrent();
         var raw = InputLimits.ReadBoundedBytes(path, InputLimits.MaxGuitarProFileBytes, "Guitar Pro file");
+        return ImportBytes(raw, path);
+    }
+
+    /// <summary>
+    /// Imports a Guitar Pro file already read into memory (at most <see cref="InputLimits.MaxGuitarProFileBytes"/>). <paramref name="path"/>
+    /// only names it (extension, fallback title, <see cref="SongProject.ImportedFrom"/>); the import worker process uses this.
+    /// </summary>
+    internal static SongProject ImportBytes(byte[] raw, string path)
+    {
+        if (raw.LongLength > InputLimits.MaxGuitarProFileBytes)
+            throw new InvalidDataException("The Guitar Pro file exceeds the supported size limit.");
+        // Reset before the embedded-project early return so a lossless .gp load never reports the previous import's duplicates.
+        LastImportSkippedDuplicates = 0;
+        LastImportDuplicateSamples.Clear();
+        ImportGuard.CheckCurrent();
         // Container / header checks on the raw bytes, before anything unpacks or parses them.
         GuitarProPreParse.Validate(WithoutLeadingJunk(raw));
         ImportGuard.CheckCurrent();

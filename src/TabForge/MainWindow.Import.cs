@@ -15,7 +15,7 @@ public partial class MainWindow
         get
         {
             if (_imports is not null) return _imports;
-            _imports = new ScoreImportQueue(path => _documentController.Open(path));
+            _imports = ScoreImportQueue.WithImportWorker(_documentController);
             _imports.Changed += RefreshImportStatus;
             Closed += (_, _) => _imports.CancelAll();   // a result arriving after the window closed is never applied
             return _imports;

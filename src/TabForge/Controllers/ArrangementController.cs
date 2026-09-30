@@ -3,74 +3,20 @@ using TabForge.Services;
 
 namespace TabForge.Controllers;
 
-public sealed record SectionClipboardSnapshot(List<List<MeasureModel>> Tracks, MarkerModel Marker);
+public sealed record SectionClipboardSnapshot(List<List<MeasureModel>> Tracks, MarkerModel? Marker);
 
 /// <summary>Model-side bar operations and arrangement clipboard state; dialogs and refreshes stay in WPF.</summary>
 public sealed class ArrangementController
 {
-    private MeasureModel? _barClipboard;
-    private List<MeasureModel?>? _allTracksBarClipboard;
+    // Bar, area and section copies live on the shared ClipboardService (TimelineClips); only the copied section's own
+    // marker (title/colour, not score content) stays here, tied to the clip it belongs to.
+    private ScoreClip? _sectionClip;
+    private MarkerModel? _sectionMarker;
 
-    public SectionClipboardSnapshot? SectionClipboard { get; private set; }
-    public bool HasBarClipboard => _barClipboard is not null || _allTracksBarClipboard is not null;
-    public bool HasSingleTrackBarClipboard => _barClipboard is not null;
-    public bool HasAllTracksBarClipboard => _allTracksBarClipboard is not null;
-    public bool HasSectionClipboard => SectionClipboard is not null;
+    /// <summary>The marker of the section copied as <paramref name="clip"/>, or null when the clip is not the last copied section.</summary>
+    public MarkerModel? SectionMarkerFor(ScoreClip? clip) => clip is not null && ReferenceEquals(clip, _sectionClip) ? _sectionMarker : null;
 
     public MarkerModel? SectionAt(SongProject project, int bar) => SectionLayout.At(project, bar);
-
-    public bool CopyBar(SongProject project, int bar, int trackIndex, bool allTracks)
-    {
-        if (allTracks)
-        {
-            if (bar < 0 || bar >= MaxMeasures(project)) return false;
-            _allTracksBarClipboard = project.Tracks
-                .Select(track => bar < track.Measures.Count ? ProjectService.CloneMeasure(track.Measures[bar]) : null)
-                .ToList();
-            _barClipboard = null;
-            return true;
-        }
-
-        if (trackIndex < 0 || trackIndex >= project.Tracks.Count || bar < 0 ||
-            bar >= project.Tracks[trackIndex].Measures.Count) return false;
-        _barClipboard = ProjectService.CloneMeasure(project.Tracks[trackIndex].Measures[bar]);
-        _allTracksBarClipboard = null;
-        return true;
-    }
-
-    public bool PasteBar(SongProject project, int bar, int trackIndex, bool allTracks)
-    {
-        var changed = false;
-        if (allTracks && _allTracksBarClipboard is not null)
-        {
-            for (var index = 0; index < Math.Min(project.Tracks.Count, _allTracksBarClipboard.Count); index++)
-            {
-                var source = _allTracksBarClipboard[index];
-                if (source is null || bar < 0 || bar >= project.Tracks[index].Measures.Count) continue;
-                var copy = ProjectService.CloneMeasure(source);
-                copy.Number = bar + 1;
-                project.Tracks[index].Measures[bar] = copy;
-                changed = true;
-            }
-        }
-        else if (!allTracks && _barClipboard is not null && trackIndex >= 0 && trackIndex < project.Tracks.Count &&
-                 bar >= 0 && bar < project.Tracks[trackIndex].Measures.Count)
-        {
-            var copy = ProjectService.CloneMeasure(_barClipboard);
-            copy.Number = bar + 1;
-            project.Tracks[trackIndex].Measures[bar] = copy;
-            changed = true;
-        }
-        return changed;
-    }
-
-    public bool CanPasteBar(SongProject project, int bar, int trackIndex, bool allTracks) =>
-        allTracks
-            ? _allTracksBarClipboard is not null && bar >= 0 &&
-              Enumerable.Range(0, Math.Min(project.Tracks.Count, _allTracksBarClipboard.Count))
-                  .Any(index => _allTracksBarClipboard[index] is not null && bar < project.Tracks[index].Measures.Count)
-            : _barClipboard is not null && trackIndex >= 0 && trackIndex < project.Tracks.Count &&
-              bar >= 0 && bar < project.Tracks[trackIndex].Measures.Count;
 
     public SectionClipboardSnapshot? CaptureSectionSnapshot(SongProject project, MarkerModel marker)
     {
@@ -81,12 +27,16 @@ public sealed class ArrangementController
         return new SectionClipboardSnapshot(tracks, CloneMarker(marker));
     }
 
-    public bool CopySection(SongProject project, MarkerModel marker)
+    /// <summary>Copies the section's bars (all tracks) as a Bars clip onto the shared clipboard and remembers its marker.</summary>
+    public ScoreClip? CopySection(SongProject project, MarkerModel marker, ClipboardService clipboard, out bool systemClipboardWritten)
     {
-        var snapshot = CaptureSectionSnapshot(project, marker);
-        if (snapshot is null) return false;
-        SectionClipboard = snapshot;
-        return true;
+        systemClipboardWritten = false;
+        if (!TryGetSectionBounds(project, marker, out var start, out var end)) return null;
+        var clip = TimelineClips.CopySection(project, start, end);
+        systemClipboardWritten = clipboard.Copy(clip);
+        _sectionClip = clip;
+        _sectionMarker = CloneMarker(marker);
+        return clip;
     }
 
     public bool TryGetSectionBounds(SongProject project, MarkerModel marker, out int start, out int end) =>

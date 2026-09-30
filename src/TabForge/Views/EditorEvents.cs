@@ -34,4 +34,8 @@ public sealed class ContextMenuEventArgs : EventArgs
     public int StringIndex { get; init; } = -1;
     /// <summary>A note sits on the clicked string at the clicked beat.</summary>
     public bool OnNote { get; init; }
+    /// <summary>The click landed inside the current score selection: the menu acts on it and the selection is kept.</summary>
+    public bool InsideSelection { get; init; }
+    /// <summary>The click landed on the page below the header (a beat position), not on the header strip.</summary>
+    public bool OverBeat { get; init; }
 }

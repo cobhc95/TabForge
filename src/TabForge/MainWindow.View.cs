@@ -325,27 +325,59 @@ public partial class MainWindow
 
     private void Copy_Click(object sender, RoutedEventArgs e)
     {
-        var data = Editor.CopySelection();
-        if (data is null) return;
-        // Another program can hold the clipboard open; the copy then simply does not happen.
-        try { Clipboard.SetText(data); StatusText.Text = "Copied selection"; }
-        catch (System.Runtime.InteropServices.ExternalException) { StatusText.Text = "Clipboard busy - copy failed"; }
+        if (CopyScoreSelection(out _) is { } status) StatusText.Text = status;
+    }
+
+    /// <summary>Copies the score selection (or the cursor beat) to the shared clipboard; returns the status text.</summary>
+    private string? CopyScoreSelection(out ScoreClip? clip)
+    {
+        clip = Editor.CaptureClip(out var error);
+        if (clip is null) return error;
+        // Another program can hold the Windows clipboard open; the clip then stays in TabForge's own clipboard.
+        var written = ClipboardService.Shared.Copy(clip);
+        var what = clip.Kind == ScoreClipKind.Bars
+            ? (clip.BarCount == 1 ? "Copied 1 bar" : $"Copied {clip.BarCount} bars")
+            : (clip.Tracks[0].Events.Count == 1 ? "Copied 1 beat" : $"Copied {clip.Tracks[0].Events.Count} beats");
+        return written ? what : what + " (Windows clipboard busy: paste works in TabForge only)";
     }
 
     private void Cut_Click(object sender, RoutedEventArgs e)
     {
-        Copy_Click(sender, e);
-        Editor.DeleteBeats();
-        StatusText.Text = "Cut selection";
+        var status = CopyScoreSelection(out var clip);
+        if (clip is null) { if (status is not null) StatusText.Text = status; return; }
+        Editor.CutSelection(clip);
+        StatusText.Text = "Cut" + status!["Copied".Length..];
     }
 
     private void Paste_Click(object sender, RoutedEventArgs e)
     {
-        string text;
-        try { text = Clipboard.GetText(); }
-        catch (System.Runtime.InteropServices.ExternalException) { StatusText.Text = "Clipboard busy - paste failed"; return; }
-        if (string.IsNullOrWhiteSpace(text)) return;
-        if (Editor.PasteSelection(text)) StatusText.Text = "Pasted";
+        if (ClipboardService.Shared.TryGetClip(out var error) is not { } clip) { StatusText.Text = error ?? ClipboardService.NotTabForgeNotesMessage; return; }
+        if (Editor.Track is null) return;
+        var outcome = EditCommands.PasteWithUndo(_undo, _project, clip, Editor.PasteTarget, _settings.Editing,
+            new WpfPasteQuestionAsker(this), out var capture);
+        if (outcome.Asked.Count > 0) SaveSettings();   // a "Remember my choice" answer
+        FinishPaste(outcome, capture);
+    }
+
+    /// <summary>Paste Special: one small dialog (repeat, mode, octave shift, keep string and fret, bar settings), then the same paste path with explicit answers.</summary>
+    private void PasteSpecial_Click(object sender, RoutedEventArgs e)
+    {
+        if (ClipboardService.Shared.TryGetClip(out var error) is not { } clip) { StatusText.Text = error ?? ClipboardService.NotTabForgeNotesMessage; return; }
+        if (Editor.Track is null) return;
+        var dialog = new PasteSpecialDialog(clip.Kind);
+        if (IsLoaded) dialog.Owner = this;
+        if (DialogHost.ShowModal(dialog) != true || dialog.Result is not { } options) return;
+        var outcome = EditCommands.PasteSpecialWithUndo(_undo, _project, clip, Editor.PasteTarget, options, _settings.Editing, out var capture);
+        FinishPaste(outcome, capture);
+    }
+
+    private void FinishPaste(PasteOutcome outcome, UndoCapture? capture)
+    {
+        if (!outcome.Changed) { StatusText.Text = outcome.Status; return; }
+        if (capture is { Stored: true } stored) RememberPlaybackBarMapping(stored.Snapshot);
+        if (outcome.BarMap is { } map) FinishSectionStructureEdit(outcome.Status, map);
+        Editor.NotifyEdited();
+        StatusText.Text = outcome.Status;
     }
 
     private void GoTo_Click(object sender, RoutedEventArgs e)
@@ -758,8 +790,6 @@ public partial class MainWindow
             ToolTip = "Locked: dragging the edge does not resize the fretboard / keyboard. Unlocked: the drawing scales with the pane."
         };
         lockItem.Click += (_, _) => ToggleInstrumentSizeLock();
-        menu.Items.Add(lockItem);
-        menu.Items.Add(new Separator());
 
         // Available on every track and view: what the panel draws, and the scale tools.
         MenuItem ViewMenu(string header, TrackModel? target)
@@ -776,13 +806,13 @@ public partial class MainWindow
             }
             return parent;
         }
-        var thisTrack = ViewMenu($"Show this track as ({track.Name})", track);
+        var thisTrack = ViewMenu(ContextMenuLayouts.ShowThisTrackAs, track);
+        thisTrack.ToolTip = $"The view for {track.Name}";
         thisTrack.InputGestureText = HotkeyCatalog.Display(HotkeyCatalog.GestureFor(_settings.Hotkeys, "View.InstrumentView"));
-        menu.Items.Add(thisTrack);
-        menu.Items.Add(ViewMenu("Show all tracks as", null));
-        var defaults = new MenuItem { Header = "Default view and keyboard size: Settings > Fretboard..." };
+        var allTracks = ViewMenu("Show all tracks as", null);
+        var defaults = new MenuItem { Header = "Fretboard settings…", ToolTip = "Default view and keyboard size: Settings > Fretboard" };
         defaults.Click += (_, _) => Prefs_Click(this, new RoutedEventArgs());
-        menu.Items.Add(defaults);
+        MenuItem? keyboardSize = null;
         if (Instrument.ShowsKeyboard)
         {
             var size = new MenuItem { Header = "Keyboard size" };
@@ -793,7 +823,7 @@ public partial class MainWindow
                 item.Click += (_, _) => SetKeyboardKeys(k);
                 size.Items.Add(item);
             }
-            menu.Items.Add(size);
+            keyboardSize = size;
         }
 
         // Appearance (saved for every song and window): key colours, scale highlight, fret dots.
@@ -829,8 +859,6 @@ public partial class MainWindow
         appearance.Items.Add(Choices("Number size", FretNumberSizes.All, ed.FretNumberSize, v => SetInstrumentAppearance(numberSize: v), FretNumberSizes.Label));
         if (Instrument.CanRepositionFretboard && !Instrument.ShowsKeyboard)
             appearance.Items.Add(Choices("String spacing", FretStringSpacings.All, ed.FretStringSpacing, v => SetInstrumentAppearance(stringSpacing: v), FretStringSpacings.Label));
-        menu.Items.Add(appearance);
-        menu.Items.Add(new Separator());
 
         var scales = new MenuItem { Header = "Scale" };
         // Grouped by key (C > Major, Minor...) instead of one long list; "Off" first.
@@ -859,39 +887,27 @@ public partial class MainWindow
             InputGestureText = HotkeyCatalog.Display(HotkeyCatalog.GestureFor(_settings.Hotkeys, "View.ClearScale")) };
         clear.Click += (_, _) => ClearScaleHighlight();
         scales.Items.Add(clear);
-        menu.Items.Add(scales);
 
         // Fretboard and keyboard options (drum pads have none of these).
-        if (!Instrument.CanRepositionFretboard && !Instrument.ShowsKeyboard)
-        {
-            Instrument.ContextMenu = menu;
-            menu.PlacementTarget = Instrument;
-            menu.IsOpen = true;
-            e.Handled = true;
-            return;
-        }
-        menu.Items.Add(new Separator());
-        var preview = new MenuItem { Header = "Preview next notes", IsCheckable = true, IsChecked = _previewHorizon > 0 };
+        var drums = !Instrument.CanRepositionFretboard && !Instrument.ShowsKeyboard;
+        var preview =new MenuItem { Header = "Preview next notes", IsCheckable = true, IsChecked = _previewHorizon > 0 };
         preview.Click += (_, _) =>
         {
             PracticePreviewCheck.IsChecked = preview.IsChecked;
             PracticeOption_Changed(preview, new RoutedEventArgs());
         };
-        menu.Items.Add(preview);
-        var names = new MenuItem { Header = "Note names", IsCheckable = true, IsChecked = _showNoteNames };
+        var names =new MenuItem { Header = "Note names", IsCheckable = true, IsChecked = _showNoteNames };
         names.Click += (_, _) =>
         {
             PracticeNamesCheck.IsChecked = names.IsChecked;
             PracticeOption_Changed(names, new RoutedEventArgs());
         };
-        menu.Items.Add(names);
         var leftHanded = new MenuItem { Header = "Left-handed", IsCheckable = true, IsChecked = _leftHanded };
         leftHanded.Click += (_, _) =>
         {
             LeftHandedCheck.IsChecked = leftHanded.IsChecked;
             PracticeOption_Changed(leftHanded, new RoutedEventArgs());
         };
-        if (!Instrument.ShowsKeyboard) menu.Items.Add(leftHanded);
 
         var style = new MenuItem { Header = "Preview layout" };
         foreach (var (id, label) in new[]
@@ -912,7 +928,6 @@ public partial class MainWindow
             };
             style.Items.Add(item);
         }
-        menu.Items.Add(style);
 
         var previewDepth = new MenuItem { Header = "Preview length", IsEnabled = _settings.Audio.FretboardStyle == "TabForge",
             ToolTip = "Used by the TabForge layout; the Show beat / bar layouts follow the score." };
@@ -928,7 +943,6 @@ public partial class MainWindow
             };
             previewDepth.Items.Add(item);
         }
-        menu.Items.Add(previewDepth);
 
         var frets = new MenuItem { Header = "Fretboard" };
         foreach (var (count, label) in new[] { (24, "24 frets"), (12, "12 frets") })
@@ -941,7 +955,34 @@ public partial class MainWindow
             };
             frets.Items.Add(item);
         }
-        if (!Instrument.ShowsKeyboard) menu.Items.Add(frets);
+
+        // Appearance and layout: everything that is set once goes here (nothing is removed, only grouped).
+        var layout = new MenuItem { Header = ContextMenuLayouts.AppearanceAndLayout };
+        if (!drums)
+        {
+            if (!Instrument.ShowsKeyboard) layout.Items.Add(leftHanded);
+            layout.Items.Add(style);
+            layout.Items.Add(previewDepth);
+            if (!Instrument.ShowsKeyboard) layout.Items.Add(frets);
+            if (keyboardSize is not null) layout.Items.Add(keyboardSize);
+            layout.Items.Add(new Separator());
+        }
+        layout.Items.Add(allTracks);
+        layout.Items.Add(appearance);
+        layout.Items.Add(new Separator());
+        layout.Items.Add(defaults);
+
+        var parts = new Dictionary<string, Func<Control>>
+        {
+            [ContextMenuLayouts.ShowThisTrackAs] = () => thisTrack,
+            [ContextMenuLayouts.Scale] = () => scales,
+            ["Note names"] = () => names,
+            ["Preview next notes"] = () => preview,
+            [ContextMenuLayouts.AppearanceAndLayout] = () => layout,
+            ["Lock fretboard size"] = () => lockItem
+        };
+        foreach (var id in ContextMenuLayouts.Fretboard(Instrument.ShowsKeyboard, drums))
+            menu.Items.Add(id == ContextMenuLayouts.Sep ? new Separator() : parts[id]());
 
         Instrument.ContextMenu = menu;
         menu.PlacementTarget = Instrument;

@@ -11,9 +11,9 @@ namespace TabForge.Services;
 /// (<see cref="Enter"/>), so the synchronous importer needs no extra parameters and headless tools run without one.
 /// </summary>
 /// <remarks>
-/// Residual limit: alphaTab's parse is a single call that cannot be interrupted. A file that makes it run long is only
-/// noticed when it returns; the UI side (ScoreImportQueue) stops waiting at the time budget or on
-/// Cancel and abandons that worker. A separate import process with OS-enforced time and memory limits is the future option.
+/// alphaTab's parse is a single call that cannot be interrupted. The app's background import therefore runs it in a separate
+/// process (<see cref="ImportWorker"/>) inside a Job Object with memory and CPU limits, killed on Cancel or at the time budget;
+/// only when that process cannot start does the parse run in-process, where a stuck parse is abandoned rather than stopped.
 /// </remarks>
 public sealed class ImportGuard
 {
@@ -32,6 +32,10 @@ public sealed class ImportGuard
 
     public TimeSpan TimeBudget { get; }
     public long MemoryBudgetBytes { get; }
+    /// <summary>The import's cancellation (the out-of-process worker's client kills the worker when it fires).</summary>
+    public CancellationToken Token => _token;
+    /// <summary>Time left of the budget (zero once it ran out).</summary>
+    public TimeSpan Remaining => TimeSpan.FromSeconds(Math.Max(0, (_deadlineTimestamp - Stopwatch.GetTimestamp()) / (double)Stopwatch.Frequency));
 
     public ImportGuard(CancellationToken token, TimeSpan? timeBudget = null, long? memoryBudgetBytes = null)
     {

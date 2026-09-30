@@ -478,6 +478,12 @@ public sealed class EditingSettings
     /// <summary>false: + shortens, - lengthens. true: + lengthens, - shortens.</summary>
     public bool ReversePlusMinusDuration { get; set; }
     public bool PreventBarOverflow { get; set; }
+    /// <summary>Remembered paste answers (docs/COPY_PASTE_DESIGN.md Q1..Q5): "Ask" (default) or an option id, see <see cref="PasteQuestionInfo"/>.</summary>
+    public string PasteBeatsOntoNotes { get; set; } = PasteQuestionInfo.Ask;
+    public string PasteOctave { get; set; } = PasteQuestionInfo.Ask;
+    public string PasteBarsOntoNotes { get; set; } = PasteQuestionInfo.Ask;
+    public string PasteBarSettings { get; set; } = PasteQuestionInfo.Ask;
+    public string PasteDrums { get; set; } = PasteQuestionInfo.Ask;
 }
 
 /// <summary>Timeline and section presentation/interaction preferences.</summary>

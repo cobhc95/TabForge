@@ -418,10 +418,7 @@ public sealed partial class TabEditorControl
         if (Array.IndexOf(MusicTime.AllDenominators, denominator) < 0) return;
         if ((!force || PreventBarOverflow) && !CanSetDuration(denominator)) return;
         CurrentDurationDenominator = denominator;
-        if (ApplyToolSelection(cells =>
-            {
-                foreach (var selected in cells) selected.DurationDenominator = denominator;
-            })) return;
+        if (ApplyToolSelection(cells => Services.EditCommands.ApplyDuration(cells, denominator))) return;
         var cell = CurrentCell();
         if (cell is not null && (cell.Notes.Count > 0 || cell.IsRest))
         {
@@ -482,7 +479,7 @@ public sealed partial class TabEditorControl
     {
         var selectionCells = HasSelection ? ToolCells() : new List<TabCell>();
         var triplet = selectionCells.Count > 0
-            ? !selectionCells.All(cell => cell.IsTriplet || cell.TupletNumerator > 0)
+            ? Services.EditCommands.NextTriplet(selectionCells)
             : !CurrentTriplet;
         if (!CanSetTuplet(triplet ? (3, 2) : (0, 0))) return;
         CurrentTriplet = triplet;
@@ -490,12 +487,7 @@ public sealed partial class TabEditorControl
         CurrentTupletDenominator = triplet ? 2 : 0;
         if (ApplyToolSelection(cells =>
             {
-                foreach (var selected in cells)
-                {
-                    selected.IsTriplet = CurrentTriplet;
-                    if (!CurrentTriplet) { selected.TupletNumerator = 0; selected.TupletDenominator = 0; }
-                    else if (selected.TupletNumerator == 0) { selected.TupletNumerator = 3; selected.TupletDenominator = 2; }
-                }
+                foreach (var selected in cells) Services.EditCommands.ApplyTriplet(selected, CurrentTriplet);
             })) return;
         var cell = CurrentCell();
         if (cell is null) { NotifyState(); InvalidateVisual(); return; }
@@ -848,11 +840,7 @@ public sealed partial class TabEditorControl
 
     public void ToggleStaccato()
     {
-        if (ApplyToolSelection(cells =>
-            {
-                var value = !cells.All(cell => cell.Staccato);
-                foreach (var selected in cells) selected.Staccato = value;
-            })) return;
+        if (ApplyToolSelection(Services.EditCommands.ToggleStaccato)) return;
         var cell = CurrentCell(create: true); if (cell is null) return;
         EditStarting?.Invoke(this, EventArgs.Empty); cell.Staccato = !cell.Staccato; EditedNow();
     }
@@ -861,17 +849,6 @@ public sealed partial class TabEditorControl
     {
         var cell = CurrentCell(create: true); if (cell is null) return;
         EditStarting?.Invoke(this, EventArgs.Empty); cell.Tenuto = !cell.Tenuto; EditedNow();
-    }
-
-    public void ToggleGrace()
-    {
-        if (ApplyToolSelection(cells =>
-            {
-                var value = !cells.All(cell => cell.IsGrace);
-                foreach (var selected in cells) selected.IsGrace = value;
-            })) return;
-        var cell = CurrentCell(create: true); if (cell is null) return;
-        EditStarting?.Invoke(this, EventArgs.Empty); cell.IsGrace = !cell.IsGrace; EditedNow();
     }
 
     public void ToggleTechnique(string technique)

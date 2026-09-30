@@ -382,6 +382,7 @@ public partial class MainWindow
             case "Edit.Copy": Copy_Click(this, args); return true;
             case "Edit.Cut": Cut_Click(this, args); return true;
             case "Edit.Paste": Paste_Click(this, args); return true;
+            case "Edit.PasteSpecial": PasteSpecial_Click(this, args); return true;
             case "Edit.SelectAll": Editor.SelectAll(); return true;
             case "Edit.RepeatSelection": RepeatSelection_Click(this, args); return true;
             case "Transport.PlayPause": TogglePlayback(); return true;
@@ -396,6 +397,8 @@ public partial class MainWindow
             case "Bar.Clef": Clef_Click(this, args); return true;
             case "Bar.Directions": Directions_Click(this, args); return true;
             case "Bar.GoTo": GoTo_Click(this, args); return true;
+            case "Reader.ReadBar": { var text = Editor.DescribeBar(); Editor.AnnounceText(text); StatusText.Text = text; return true; }
+            case "Reader.ReadPosition": { var text = Editor.DescribePosition(); Editor.AnnounceText(text); StatusText.Text = text; return true; }
             case "Bar.First": FirstBar_Click(this, args); return true;
             case "Bar.Last": LastBar_Click(this, args); return true;
             case "Bar.Check": CheckBars_Click(this, args); return true;

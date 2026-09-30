@@ -8,7 +8,7 @@ namespace TabForge.Services;
 /// <c>EditStarting</c> event) and the menu handlers call the editor, never the model directly.
 /// Pure model code: no UI, no undo capture.
 /// </summary>
-public static class EditCommands
+public static partial class EditCommands
 {
     /// <summary>Whether <paramref name="cursor"/> is a real slot of <paramref name="cells"/> with an earlier written beat before it.</summary>
     public static bool CanCopyLastBeat(IList<TabCell> cells, int cursor)
@@ -49,6 +49,31 @@ public static class EditCommands
     {
         dots = Math.Clamp(dots, 0, 2);
         foreach (var cell in cells) cell.Dots = dots;
+    }
+
+    /// <summary>Sets the written duration on every cell (the caller has already checked <c>CanSetDuration</c>).</summary>
+    public static void ApplyDuration(IEnumerable<TabCell> cells, int denominator)
+    {
+        foreach (var cell in cells) cell.DurationDenominator = denominator;
+    }
+
+    /// <summary>Whether toggling the triplet should turn it on: off only when every cell is already a tuplet.</summary>
+    public static bool NextTriplet(IReadOnlyCollection<TabCell> cells)
+        => !cells.All(cell => cell.IsTriplet || cell.TupletNumerator > 0);
+
+    /// <summary>Turns the triplet (3:2) on or off on one cell; an existing custom tuplet is kept when turning on.</summary>
+    public static void ApplyTriplet(TabCell cell, bool triplet)
+    {
+        cell.IsTriplet = triplet;
+        if (!triplet) { cell.TupletNumerator = 0; cell.TupletDenominator = 0; }
+        else if (cell.TupletNumerator == 0) { cell.TupletNumerator = 3; cell.TupletDenominator = 2; }
+    }
+
+    /// <summary>Staccato toggle over a selection: on unless every beat already has it.</summary>
+    public static void ToggleStaccato(IReadOnlyList<TabCell> cells)
+    {
+        var value = !cells.All(cell => cell.Staccato);
+        foreach (var cell in cells) cell.Staccato = value;
     }
 
     /// <summary>A bar's repeat marks are a song-level property: the bar is changed in every track.</summary>

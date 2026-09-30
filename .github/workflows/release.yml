@@ -2,6 +2,10 @@ name: release
 
 # Builds the release files from a clean checkout and attests them. It never publishes a release: it uploads the
 # files as workflow artifacts; a maintainer downloads them, checks them and attaches them to a release.
+# The build is reproducible: the exact SDK comes from global.json, the native bridge is the committed
+# src/TabForge.AudioEngine/native/tfvst3.dll (built by the build-bridge workflow, verified against
+# native/BUILD_PROVENANCE.md), so a maintainer's local RELEASE.cmd of the same commit gives the same TabForge.exe and
+# portable zip contents (tools/Compare-Release.ps1 checks; see docs/REPRODUCIBLE_BUILDS.md).
 on:
   push:
     tags: ['v*']
@@ -40,16 +44,14 @@ jobs:
           "Directory.Build.props version: $version; tag: $env:GITHUB_REF_NAME"
           if ("v$version" -ne $env:GITHUB_REF_NAME) { Write-Error "Tag $env:GITHUB_REF_NAME does not match version $version"; exit 1 }
 
-      # The bridge that ships is the one built here from the pinned, unpatched VST3 SDK. The script fetches and
-      # verifies the SDK pin, builds tfvst3.dll, copies it over the checked-in file and rewrites
-      # native/BUILD_PROVENANCE.md with this build's compiler and SHA-256 (which Package-Release.ps1 then verifies).
-      - name: Build tfvst3.dll from the pinned SDK
+      # The bridge is NOT rebuilt here: the release ships the committed DLL, so local and CI builds carry the same
+      # bridge. Package-Release.ps1 refuses to package if its SHA-256 differs from native/BUILD_PROVENANCE.md.
+      - name: Show the committed bridge and the SDK in use
         shell: pwsh
         run: |
-          # A short build folder: the SDK's submodules contain very long paths.
-          ./native/build-tfvst3.ps1 -NoTest -BuildDir C:\tfb
-          if (-not $?) { exit 1 }
+          dotnet --version
           Get-Content native/BUILD_PROVENANCE.md
+          (Get-FileHash -Algorithm SHA256 src/TabForge.AudioEngine/native/tfvst3.dll).Hash.ToLowerInvariant()
 
       - name: Restore (locked mode)
         run: dotnet restore TabForge.sln --locked-mode
@@ -68,7 +70,7 @@ jobs:
           "Inno Setup: $iscc"
           "ISCC=$iscc" | Add-Content -Path $env:GITHUB_ENV
 
-      # Publishes, self-tests the exact publish folder (required areas: gp-fixtures, synthetic-fixtures, source-hygiene,
+      # Runs on the clean checkout itself (no worktree needed) and refuses a dirty tree. Publishes, self-tests the exact publish folder (required areas: gp-fixtures, synthetic-fixtures, source-hygiene,
       # installer-parity), then builds the portable zip, the installer and the SHA-256 file in dist/.
       - name: Package (self-test, portable zip, installer, checksums)
         shell: pwsh

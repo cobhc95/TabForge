@@ -607,7 +607,7 @@ public partial class MainWindow
             case "effect:heavy_accent": Editor.SetAccent(2); break;
             case "effect:let_ring": Editor.ToggleTechnique(TechniqueNames.LetRing); break;
             case "effect:natural_harmonic": Editor.ToggleTechnique(TechniqueNames.Harmonic); break;
-            case "effect:grace_note": Editor.ToggleGrace(); break;
+            case "effect:grace_note": Editor.TryRunNoteCommand("Note.Grace"); break;
             case "effect:trill": Editor.ToggleTechnique(TechniqueNames.Trill); break;
             case "effect:tremolo_picking": Editor.ToggleTechnique(TechniqueNames.TremoloPick); break;
             case "effect:palm_mute": Editor.ToggleTechnique(TechniqueNames.PalmMute); break;

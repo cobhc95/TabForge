@@ -159,6 +159,7 @@
                         <MenuItem Header="_Copy" Click="Copy_Click" InputGestureText="Ctrl+C"/>
                         <MenuItem Header="Cu_t" Click="Cut_Click" InputGestureText="Ctrl+X"/>
                         <MenuItem Header="_Paste" Click="Paste_Click" InputGestureText="Ctrl+V"/>
+                        <MenuItem Header="Paste _special..." Click="PasteSpecial_Click" InputGestureText="Ctrl+Shift+V"/>
                         <Separator/>
                         <MenuItem Header="_Insert beat" Click="InsertBeat_Click" InputGestureText="Ctrl +"/>
                         <MenuItem Header="_Delete beats" Click="DeleteBeats_Click" InputGestureText="Ctrl -"/>

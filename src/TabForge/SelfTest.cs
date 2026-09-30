@@ -59,6 +59,7 @@ public static partial class SelfTest
         Guard(TestBarSlots);
         Guard(TestCellSlots);
         Guard(TestAnalyzeBar);
+        Guard(TestBarGridPlacement);
         Section("Automatic pitch matching");
         Guard(TestPitchMatch);
         Section("Timeline / playback");
@@ -75,7 +76,18 @@ public static partial class SelfTest
         Guard(TestEditorDurations);
         Guard(TestPlaybackGlowIntensity);
         Guard(TestEditorCopyPaste);
+        Guard(TestNoteMapper);
+        Guard(TestScoreClipCapture);
+        Guard(TestScoreClipJson);
+        Guard(TestScoreClipRejectsUntrustedInput);
+        Guard(TestClipboardServiceFallback);
+        Guard(TestTimelineClipsShareClipboard);
+        Guard(TestTimelineSectionCopiesAsBars);
+        Guard(TestTimelineContextMenus);
+        Guard(TestPasteCommands);
+        Guard(TestPasteSpecial);
         Guard(TestSelectionModel);
+        Guard(TestContextMenuLayouts);
         Guard(TestFollowSurvivesZoom);
         Guard(TestZoomComboShowsValue);
         Guard(TestSpeedControl);
@@ -93,6 +105,7 @@ public static partial class SelfTest
         Guard(TestTemplateKeepsSetupOnly);
         Guard(TestSnapLayoutHitTest);
         Guard(TestAutomationPeers);
+        Guard(TestEditorStructurePeer);
         Guard(TestEditCommands);
         Guard(TestReadableTextTokens);
         Guard(TestEngravingHeader);
@@ -125,6 +138,7 @@ public static partial class SelfTest
         Guard(TestSyntheticGuitarProFixture);
         Guard(TestGuitarProFiles);
         Guard(TestGuitarProImportContainment);
+        Guard(TestGuitarProImportWorker);
         Guard(TestRoundTripSemanticsSuite);
         Section("Synthetic fixtures (run everywhere, no local songs)");
         Guard(TestSyntheticFixtures);
@@ -134,6 +148,8 @@ public static partial class SelfTest
         Guard(TestSeekWhilePlayingSoundsFirstNote);
         Guard(TestCountInIsHeard);
         Guard(TestEverySettingIsWired);
+        Guard(TestPasteOptionsDialog);
+        Guard(TestPasteSettingsRows);
         Guard(TestSettingsStoreSharedAcrossWindows);
         Guard(TestEngineWarmOwnership);
         Guard(TestEngineMultiTabPlayback);
@@ -261,17 +277,18 @@ public static partial class SelfTest
         ["TestSaveTransactions"] = "persistence", ["TestPairSaveRecovery"] = "persistence", ["TestProfileLeavesUserFoldersUntouched"] = "persistence", ["TestNightPluginApproval"] = "persistence", ["TestAsyncSaveSequencing"] = "persistence", ["TestPluginStateCollection"] = "persistence",
         ["TestSidecarRouting"] = "persistence", ["TestPersistenceSchema"] = "persistence", ["TestTforgeCompression"] = "persistence", ["TestCleanGpExportKeepsFeatures"] = "guitarpro",["TestMusicXmlExport"] = "guitarpro",["TestRoundTripSemanticsSuite"] = "guitarpro",["TestMusicXmlBarsFillTheTimeSignature"] = "guitarpro",["TestMusicXmlHeaderForReaders"] = "guitarpro",["TestMusicXmlGuitarPro8Encoding"] = "guitarpro",["TestImporterNamesAndDynamics"] = "guitarpro",["TestSettingsWithInlinePluginStates"] = "persistence",
         ["TestReaperChainImport"] = "persistence", ["TestProjectRoundtrip"] = "persistence", ["TestModelRoundTrip"] = "persistence",
-        ["TestSyntheticGuitarProFixture"] = "guitarpro", ["TestSyntheticFixtures"] = "synthetic", ["TestGuitarProFiles"] = "guitarpro", ["TestTupletImport"] = "guitarpro", ["TestGuitarProImportContainment"] = "guitarpro",
+        ["TestSyntheticGuitarProFixture"] = "guitarpro", ["TestSyntheticFixtures"] = "synthetic", ["TestGuitarProFiles"] = "guitarpro", ["TestTupletImport"] = "guitarpro", ["TestGuitarProImportContainment"] = "guitarpro", ["TestGuitarProImportWorker"] = "guitarpro",
         ["TestGp5EditingSemantics"] = "guitarpro", ["TestAsciiExport"] = "guitarpro", ["TestMidiExport"] = "guitarpro",
         ["TestPlaybackDepth"] = "playback", ["TestNoOpOptionChangesDoNotRestartPlayback"] = "playback", ["TestSeekWhilePlayingSoundsFirstNote"] = "playback",
         ["TestCountInIsHeard"] = "playback", ["TestTimelineBasics"] = "playback", ["TestTimelineTechniques"] = "playback",
         ["TestTimelineMetronome"] = "playback", ["TestTimelineRevision"] = "playback", ["TestAudioDataSizeLimit"] = "persistence", ["TestGpOpenKeepsTitle"] = "persistence", ["TestTimelineLoopAndOrder"] = "playback", ["TestPlaybackOrderSpec"] = "playback",
-        ["TestEditorEntry"] = "ui", ["TestEditCommands"] = "ui", ["TestReadableTextTokens"] = "ui", ["TestEditorNavigation"] = "ui", ["TestEditorDurations"] = "ui", ["TestPlaybackGlowIntensity"] = "ui",
-        ["TestEditorCopyPaste"] = "ui", ["TestNotationLayout"] = "ui", ["TestTabUi"] = "ui", ["TestBrowserTabShell"] = "ui",
+        ["TestEditorEntry"] = "ui", ["TestEditorStructurePeer"] = "ui", ["TestEditCommands"] = "ui", ["TestReadableTextTokens"] = "ui", ["TestEditorNavigation"] = "ui", ["TestEditorDurations"] = "ui", ["TestPlaybackGlowIntensity"] = "ui",
+        ["TestEditorCopyPaste"] = "ui", ["TestNoteMapper"] = "ui", ["TestScoreClipCapture"] = "persistence", ["TestScoreClipJson"] = "persistence", ["TestScoreClipRejectsUntrustedInput"] = "persistence", ["TestClipboardServiceFallback"] = "persistence", ["TestTimelineClipsShareClipboard"] = "ui", ["TestTimelineSectionCopiesAsBars"] = "ui", ["TestTimelineContextMenus"] = "ui", ["TestPasteCommands"] = "ui", ["TestPasteSpecial"] = "ui", ["TestNotationLayout"] = "ui", ["TestTabUi"] = "ui", ["TestBrowserTabShell"] = "ui",
         ["TestNoteEvents"] = "ui", ["TestInstrumentVisualState"] = "ui", ["TestFretboardGeometry"] = "ui", ["TestArrangementGeometry"] = "ui",
         ["TestArrangementFollowGeometry"] = "ui", ["TestScaleFinder"] = "ui", ["TestGp5SvgIcons"] = "ui", ["TestInstrumentArtwork"] = "ui",
         ["TestRuntimeIconAndResourceKeys"] = "ui", ["TestSystemBreakPreferences"] = "ui", ["TestEverySettingIsWired"] = "settings",
         ["TestSettingsStoreSharedAcrossWindows"] = "settings", ["TestEngineWarmOwnership"] = "engine", ["TestEngineMultiTabPlayback"] = "engine",["TestEngineDefaultOnAndManualOffSticks"] = "settings", ["TestInstrumentSizeUnlockedByDefault"] = "settings", ["TestPerControlTextDpi"] = "ui",
+        ["TestPasteOptionsDialog"] = "ui", ["TestPasteSettingsRows"] = "settings", ["TestContextMenuLayouts"] = "ui",
     };
 
     private static HashSet<string>? _areas;   // null: every area
@@ -811,11 +828,12 @@ public static partial class SelfTest
             editor.HasSelection && editor.AffectedMeasureRange == (1, 3) && editor.SelectedMeasure == 1);
         editor.ClearSelection();
         Check("clearing the score selection removes the mirrored range", !editor.HasSelection);
-        var clip = editor.CopySelection();
-        Check("selection copies to clipboard text", !string.IsNullOrWhiteSpace(clip));
+        editor.SetPosition(0, 8, 0);   // the copied beat (fret 9)
+        var clip = editor.CaptureClip(out _);
+        Check("the cursor beat copies as a clip", clip is { Kind: ScoreClipKind.Beats });
 
         editor.SetPosition(2, 0, 0);
-        var ok = clip is not null && editor.PasteSelection(clip);
+        var ok = clip is not null && EditCommands.Paste(editor.Project!, clip, editor.PasteTarget, new EditingSettings(), new RecommendedPasteAnswers()).Changed;
         Check("paste succeeds", ok);
     }
 
@@ -2282,10 +2300,10 @@ public static partial class SelfTest
         arrangement.InsertBar(song, 1, 0, moveMarkers: true);
         Check("arrangement controller inserts bars and shifts section positions",
             song.Tracks[0].Measures.Count == oldMeasureCount + 1 && song.Markers.Single().MeasureIndex == 2);
-        arrangement.CopyBar(song, 0, 0, allTracks: false);
+        var barClip = TimelineClips.CopyBar(song, 0, 0, allTracks: false);
         song.Tracks[0].Measures[1].Cells[0].Notes.Add(new TabNote { StringIndex = 0, Fret = 3, MidiValue = 43 });
         Check("arrangement clipboard pastes an independent deep measure copy",
-            arrangement.PasteBar(song, 1, 0, allTracks: false) && song.Tracks[0].Measures[1].Cells[0].Notes.Count == 0);
+            TimelineClips.PasteBars(song, barClip, 1, 0, TimelinePasteKind.OverwriteThisTrack).Changed && song.Tracks[0].Measures[1].Cells[0].Notes.Count == 0);
         Check("arrangement controller deletes bars and rebases section markers",
             arrangement.DeleteBar(song, 1, -1, allTracks: true, moveMarkers: true) &&
             song.Tracks[0].Measures.Count == oldMeasureCount && song.Markers.Single().MeasureIndex == 1);

@@ -216,6 +216,7 @@ public sealed partial class TabEditorControl
     /// <summary>Invalidate the natural-width and system-break cache after score content changes.</summary>
     public void InvalidateScoreLayout()
     {
+        InvalidateStructure();
         _scoreLayout = null;
         _scoreGeneration++;
         _scoreFactsGeneration = -1;

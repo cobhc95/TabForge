@@ -94,16 +94,29 @@ public sealed partial class TabEditorControl
         // Right-click only opens a menu: it must not move the cursor or seek running playback.
         var (measure, cell, stringIndex) = HitTest(p);
         var onNote = false;
-        if (p.Y >= HeaderHeight && measure >= 0 && measure < Track.Measures.Count)
+        var overBeat = p.Y >= HeaderHeight && measure >= 0 && measure < Track.Measures.Count;
+        if (overBeat)
         {
             var cells = CellsFor(Track.Measures[measure], create: false);
             onNote = cell >= 0 && cell < cells.Count && cells[cell].Notes.Any(n => n.StringIndex == stringIndex);
         }
         ContextMenuRequested?.Invoke(this, new ContextMenuEventArgs(new Point(p.X, p.Y))
         {
-            Measure = measure, Cell = cell, StringIndex = stringIndex, OnNote = onNote
+            Measure = measure, Cell = cell, StringIndex = stringIndex, OnNote = onNote, OverBeat = overBeat,
+            InsideSelection = overBeat && IsInSelection(measure, cell)
         });
         e.Handled = true;
+    }
+
+    /// <summary>True when the beat (measure, cell) lies inside the current score selection (false without a selection).</summary>
+    public bool IsInSelection(int measure, int cell)
+    {
+        if (!HasSelection) return false;
+        var (m1, c1, m2, c2) = SelectionCellRange;
+        if (measure < m1 || measure > m2) return false;
+        if (measure == m1 && cell < c1) return false;
+        if (measure == m2 && cell > c2) return false;
+        return true;
     }
 
     /// <summary>Selects a beat/string for editing without seeking playback (used by the note menu).</summary>

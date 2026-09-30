@@ -84,8 +84,10 @@ public static partial class SelfTest
         window.SourceInitialized += (_, _) =>
         {
             var hwnd = new System.Windows.Interop.WindowInteropHelper(window).Handle;
-            const int GwlExStyle = -20, WsExLayered = 0x00080000; const uint LwaAlpha = 0x2;
-            SetWindowLongForTest(hwnd, GwlExStyle, GetWindowLong(hwnd, GwlExStyle) | WsExLayered);
+            // No-activate: a simulated press focuses a control, which would make this hidden window the foreground window; when
+            // the shell takes the foreground back mid-drag, Windows cancels the mouse capture (WM_CANCELMODE) and the drag ends.
+            const int GwlExStyle = -20, WsExLayered = 0x00080000, WsExNoActivate = 0x08000000; const uint LwaAlpha = 0x2;
+            SetWindowLongForTest(hwnd, GwlExStyle, GetWindowLong(hwnd, GwlExStyle) | WsExLayered | WsExNoActivate);
             SetLayeredWindowAttributes(hwnd, 0, 0, LwaAlpha);
         };
         window.Show();

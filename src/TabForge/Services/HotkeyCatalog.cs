@@ -64,9 +64,10 @@ public static class HotkeyCatalog
 
         new("Edit.Undo", CategoryEdit, "Undo", "Ctrl+Z", "Undo the last edit."),
         new("Edit.Redo", CategoryEdit, "Redo", "Ctrl+Y", "Redo the last undone edit."),
-        new("Edit.Copy", CategoryEdit, "Copy beat", "Ctrl+C", "Copy the current beat."),
-        new("Edit.Cut", CategoryEdit, "Cut beat", "Ctrl+X", "Cut the current beat."),
-        new("Edit.Paste", CategoryEdit, "Paste beat", "Ctrl+V", "Paste the copied beat."),
+        new("Edit.Copy", CategoryEdit, "Copy", "Ctrl+C", "Copy the selected beats or bars, or the beat at the cursor."),
+        new("Edit.Cut", CategoryEdit, "Cut", "Ctrl+X", "Cut the selected beats or bars (beats become rests, bars are emptied)."),
+        new("Edit.Paste", CategoryEdit, "Paste", "Ctrl+V", "Paste at the cursor; asks only what the paste needs."),
+        new("Edit.PasteSpecial", CategoryEdit, "Paste special", "Ctrl+Shift+V", "Paste with a repeat count, replace or insert, octave shift, keep string and fret, and bar settings."),
         new("Edit.SelectAll", CategoryEdit, "Select whole track", "Ctrl+A", "Select every bar of the track."),
         new("Edit.RepeatSelection", CategoryEdit, "Repeat selection", "Ctrl+Shift+R", "Repeat the selected bars."),
 
@@ -86,6 +87,8 @@ public static class HotkeyCatalog
         new("Bar.Clef", CategoryBar, "Clef", "K", "Change the clef of the track."),
         new("Bar.Directions", CategoryBar, "Directions", "D", "Edit repeat/DC/DS directions."),
         new("Bar.GoTo", CategoryBar, "Go to bar", "Ctrl+G", "Jump to a bar number."),
+        new("Reader.ReadBar", CategoryBar, "Read current bar", "Ctrl+Alt+B", "Announce every beat of the current bar (for screen readers; also shown in the status bar)."),
+        new("Reader.ReadPosition", CategoryBar, "Read position", "Ctrl+Alt+P", "Announce the track, bar, beat, string, section, time signature, tempo and time of the cursor (for screen readers; also shown in the status bar)."),
         new("Bar.First", CategoryBar, "First bar", "Ctrl+Home", "Jump to the first bar."),
         new("Bar.Last", CategoryBar, "Last bar", "Ctrl+End", "Jump to the last bar."),
         new("Bar.Check", CategoryBar, "Check bars", "F4", "Report bars that do not fill their time signature."),
@@ -361,6 +364,7 @@ public static class HotkeyPresets
         ["Note.RepeatBeat"] = "",
         ["Transport.Loop"] = "F9",
         ["Tab.Duplicate"] = "",
+        ["Edit.PasteSpecial"] = "",
     };
 
     /// <summary>The preset's key for an action, or null when the preset uses the catalogue default.</summary>

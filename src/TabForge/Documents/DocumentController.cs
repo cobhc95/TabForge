@@ -11,7 +11,11 @@ public readonly record struct OpenedScore(SongProject Project, string? SessionPa
 /// <summary>File-level document operations kept separate from window prompts and tab presentation.</summary>
 public sealed class DocumentController
 {
-    public OpenedScore Open(string path)
+    public OpenedScore Open(string path) => Open(path, null);
+
+    /// <param name="importGuitarPro">Parses a Guitar Pro file (null = <see cref="GuitarProImporter.Import"/> in this process); it may add
+    /// notices. The background import passes the out-of-process worker (A5-07); the pair recovery and .tfaudio stay in this process.</param>
+    public OpenedScore Open(string path, Func<string, List<string>, SongProject>? importGuitarPro)
     {
         path = FilePathPolicy.ExistingFile(path, "score file",
             FileTypes.AllOpenable);
@@ -21,7 +25,7 @@ public sealed class DocumentController
         var notices = new List<string>();
         // A save of the .gp + .tfaudio pair that was cut short is undone first, so the pair read below is consistent.
         if (path.EndsWith(".gp", StringComparison.OrdinalIgnoreCase) && FilePathPolicy.RecoverInterruptedPair(path, AudioDataFile.PathFor(path)) is { } recovery) notices.Add(recovery);
-        var project = GuitarProImporter.Import(path);
+        var project = importGuitarPro is null ? GuitarProImporter.Import(path) : importGuitarPro(path, notices);
         // A5-04: the song's own title wins (also for a TabForge-embedded project); the file name only fills an empty one.
         if (string.IsNullOrWhiteSpace(project.Title)) project.Title = Path.GetFileNameWithoutExtension(path);
         // A clean .gp saved with its TabForge audio data beside it ("song.tfaudio"): bring the mixer and FX back.

@@ -3,6 +3,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Automation.Peers;
 using System.Windows.Media;
 using TabForge.Diagnostics;
 using TabForge.Models;
@@ -38,6 +39,8 @@ public sealed partial class TabEditorControl
                 text += note.Dead ? ", dead note" : $", fret {note.Fret}";
                 if (midi >= 0 && !note.Dead) text += ", note " + TabForge.Services.MusicTheoryService.NoteName(midi).Replace("#", " sharp");
                 if (note.Ghost) text += ", ghost";
+                var techniques = TechniqueText(note);
+                if (techniques.Length > 0) text += ", " + techniques;
             }
         }
         if (HasSelection)
@@ -90,17 +93,55 @@ public sealed partial class TabEditorControl
         protected override string GetItemStatusCore() => _editor.DescribeCursor();
         protected override string GetHelpTextCore() => "Arrow keys move the cursor, digits set the fret, Enter or space plays.";
         protected override bool IsKeyboardFocusableCore() => true;
+        private StructureKey? _key;
+        private List<AutomationPeer>? _bars;
+
+        // Bars of the system that holds the cursor, each with its beats; built when a client asks, cached per song revision.
+        protected override List<AutomationPeer>? GetChildrenCore()
+        {
+            var key = _editor.CurrentStructureKey();
+            if (_bars is not null && key == _key) return _bars;
+            StructureBuilds++;
+            var list = new List<AutomationPeer>();
+            var (first, last) = _editor.SystemBars(key.System);
+            for (var bar = first; bar <= last; bar++) list.Add(new BarPeer(this, _editor, bar));
+            _key = key;
+            return _bars = list;
+        }
+
+        /// <summary>An edit or a track/project change: the tree is stale.</summary>
+        public void Invalidate()
+        {
+            if (_bars is null) return;
+            _bars = null; _key = null;
+            ResetChildrenCache();
+        }
+
+        /// <summary>The cursor moved: the tree is stale only when it left the cached system.</summary>
+        public void CursorMoved()
+        {
+            if (_bars is null || _key is null) return;
+            if (_editor.CurrentSystemIndex() != _key.System) Invalidate();
+        }
+
+        public void Speak(string text) =>
+            RaiseNotificationEvent(System.Windows.Automation.AutomationNotificationKind.Other,
+                System.Windows.Automation.AutomationNotificationProcessing.MostRecent, text, "cursor");
+
         public void Announce()
         {
-            RaisePropertyChangedEvent(System.Windows.Automation.AutomationElement.ItemStatusProperty, "", _editor.DescribeCursor());
-            RaisePropertyChangedEvent(System.Windows.Automation.ValuePatternIdentifiers.ValueProperty, "", _editor.DescribeCursor());
-            RaiseNotificationEvent(System.Windows.Automation.AutomationNotificationKind.Other,
-                System.Windows.Automation.AutomationNotificationProcessing.MostRecent, _editor.DescribeCursor(), "cursor");
+            var cursor = _editor.DescribeCursorAnnouncement();
+            var value = _editor.DescribeCursor();
+            RaisePropertyChangedEvent(System.Windows.Automation.AutomationElement.ItemStatusProperty, "", value);
+            RaisePropertyChangedEvent(System.Windows.Automation.ValuePatternIdentifiers.ValueProperty, "", value);
+            Speak(cursor);
         }
     }
 
     private void AnnounceCursor()
     {
+        StructureCursorMoved();
+        if (!ClientsListening) return;   // no screen reader attached: no strings built, no events raised
         if (System.Windows.Automation.Peers.UIElementAutomationPeer.FromElement(this) is EditorPeer peer) peer.Announce();
     }
 }

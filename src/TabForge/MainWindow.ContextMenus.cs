@@ -31,8 +31,22 @@ public partial class MainWindow
 {
     // ---------- score context menu (right click) ----------
 
-    private void ShowScoreContextMenu(Point position)
+    /// <summary>The shortcut text of a command, from the user's bindings (empty when unbound).</summary>
+    private string MenuKey(string id) =>
+        HotkeyCatalog.GestureFor(_settings.Hotkeys, id) is { Length: > 0 } g ? HotkeyCatalog.Display(g) : "";
+
+    /// <summary>
+    /// Right-click on empty page (docs/CONTEXT_MENU_AUDIT.md section 6). With a <paramref name="target"/> over a beat the beat is
+    /// selected (no seek) and Paste / Paste special appear first when the clipboard holds a clip.
+    /// </summary>
+    private void ShowScoreContextMenu(Point position, Views.ContextMenuEventArgs? target = null)
     {
+        var overBeat = target is { OverBeat: true };
+        if (overBeat)
+        {
+            Editor.SelectForEdit(target!.Measure, target.Cell, target.StringIndex);
+            RefreshToolsPalette();
+        }
         var menu = new ContextMenu
         {
             Style = (Style)FindResource(typeof(ContextMenu)),
@@ -51,12 +65,11 @@ public partial class MainWindow
             mi.Click += handler;
             return mi;
         }
-        void Add(string header, RoutedEventHandler handler, string? gesture = null) => menu.Items.Add(Item(header, handler, gesture));
         void Sep() => menu.Items.Add(new Separator { Style = (Style)FindResource(typeof(Separator)) });
 
         var scoreLayout = new MenuItem
         {
-            Header = "Score layout",
+            Header = ContextMenuLayouts.ScoreDisplay,
             Style = (Style)FindResource(typeof(MenuItem))
         };
         var pageLayoutItem = Item("Page (paper)", (_, _) => SetContinuousScoreView(false));
@@ -67,19 +80,18 @@ public partial class MainWindow
         continuousLayoutItem.IsChecked = Editor.CenterSystems;
         scoreLayout.Items.Add(pageLayoutItem);
         scoreLayout.Items.Add(continuousLayoutItem);
-        menu.Items.Add(scoreLayout);
+        scoreLayout.Items.Add(new Separator { Style = (Style)FindResource(typeof(Separator)) });
         // Second, independent choice: wrap into lines going down, or one line going right.
-        var scrollDirection = new MenuItem { Header = "Score scrolling", Style = (Style)FindResource(typeof(MenuItem)) };
         var verticalItem = Item("Vertical (lines wrap, scroll down)", (_, _) => SetHorizontalScoreView(false));
         verticalItem.IsCheckable = true;
         verticalItem.IsChecked = !Editor.HorizontalScroll;
         var horizontalItem = Item("Horizontal (one line, scroll right)", (_, _) => SetHorizontalScoreView(true));
         horizontalItem.IsCheckable = true;
         horizontalItem.IsChecked = Editor.HorizontalScroll;
-        scrollDirection.Items.Add(verticalItem);
-        scrollDirection.Items.Add(horizontalItem);
-        menu.Items.Add(scrollDirection);
-        var followStyle = new MenuItem { Header = "Follow playback", Style = (Style)FindResource(typeof(MenuItem)) };
+        scoreLayout.Items.Add(verticalItem);
+        scoreLayout.Items.Add(horizontalItem);
+        scoreLayout.Items.Add(new Separator { Style = (Style)FindResource(typeof(Separator)) });
+        var followStyle = new MenuItem { Header = ContextMenuLayouts.PlaybackDisplay, Style = (Style)FindResource(typeof(MenuItem)) };
         var instantItem = Item("Page turn (jump half a page / next line)", (_, _) => SetSmoothFollow(false));
         instantItem.IsCheckable = true;
         instantItem.IsChecked = !_follow.Continuous;
@@ -88,33 +100,21 @@ public partial class MainWindow
         smoothItem.IsChecked = _follow.Continuous;
         followStyle.Items.Add(instantItem);
         followStyle.Items.Add(smoothItem);
-        menu.Items.Add(followStyle);
-        var scorePage = new MenuItem
-        {
-            Header = "Score page",
-            Style = (Style)FindResource(typeof(MenuItem))
-        };
-        var darkPageItem = Item("Dark", (_, _) => SetPaper(dark: true));
+        followStyle.Items.Add(new Separator { Style = (Style)FindResource(typeof(Separator)) });
+        var darkPageItem = Item("Dark page", (_, _) => SetPaper(dark: true));
         darkPageItem.IsCheckable = true;
         darkPageItem.IsChecked = Editor.DarkPaper;
-        var lightPageItem = Item("Light", (_, _) => SetPaper(dark: false));
+        var lightPageItem = Item("Light page", (_, _) => SetPaper(dark: false));
         lightPageItem.IsCheckable = true;
         lightPageItem.IsChecked = !Editor.DarkPaper;
-        scorePage.Items.Add(darkPageItem);
-        scorePage.Items.Add(lightPageItem);
-        menu.Items.Add(scorePage);
-        Sep();
-        Add("Zoom in", (_, _) => ZoomBy(1));
-        Add("Zoom out", (_, _) => ZoomBy(-1));
-        Add("Fit width", (_, _) => ApplyZoomText("Fit width"));
-        Add("Playback and glow settings…", (_, _) => Prefs_Click(this, new RoutedEventArgs()));
-        var playbackStyle = new MenuItem
-        {
-            Header = "Playback appearance",
-            Style = (Style)FindResource(typeof(MenuItem))
-        };
-        playbackStyle.Items.Add(Item("Text & fonts…", (_, _) => ShowScoreTextStyleWindow()));
-        playbackStyle.Items.Add(new Separator { Style = (Style)FindResource(typeof(Separator)) });
+        scoreLayout.Items.Add(darkPageItem);
+        scoreLayout.Items.Add(lightPageItem);
+        scoreLayout.Items.Add(new Separator { Style = (Style)FindResource(typeof(Separator)) });
+        var zoomMenu = new MenuItem { Header = ContextMenuLayouts.Zoom, Style = (Style)FindResource(typeof(MenuItem)) };
+        zoomMenu.Items.Add(Item("Zoom in", (_, _) => ZoomBy(1), MenuKey("View.ZoomIn")));
+        zoomMenu.Items.Add(Item("Zoom out", (_, _) => ZoomBy(-1), MenuKey("View.ZoomOut")));
+        zoomMenu.Items.Add(Item("Fit width", (_, _) => ApplyZoomText("Fit width")));
+        var playbackStyle = followStyle;
         playbackStyle.Items.Add(Item("Playback line colour…", (_, _) => ChoosePlaybackColour(
             "Playback line colour", Playhead.CurrentColor, color => Playhead.SetColor(color))));
         playbackStyle.Items.Add(Item("Duration glow colour…", (_, _) => ChoosePlaybackColour(
@@ -137,13 +137,13 @@ public partial class MainWindow
             glowIntensity.Items.Add(intensityItem);
         }
         playbackStyle.Items.Add(glowIntensity);
-        menu.Items.Add(playbackStyle);
-        Sep();
+        playbackStyle.Items.Add(new Separator { Style = (Style)FindResource(typeof(Separator)) });
+        playbackStyle.Items.Add(Item("Text & fonts…", (_, _) => ShowScoreTextStyleWindow()));
+        playbackStyle.Items.Add(Item("Playback and glow settings…", (_, _) => Prefs_Click(this, new RoutedEventArgs())));
         var notation = Item("Show standard notation", (sender, _) =>
             SetNotation((sender as MenuItem)?.IsChecked == true ? NotationMode.TabAndStaff : NotationMode.TabOnly));
         notation.IsCheckable = true;
         notation.IsChecked = Editor.Notation != NotationMode.TabOnly;
-        menu.Items.Add(notation);
 
         var ledgerMenu = new MenuItem
         {
@@ -157,7 +157,23 @@ public partial class MainWindow
             ledgerItem.IsChecked = Editor.LedgerLines == mode;
             ledgerMenu.Items.Add(ledgerItem);
         }
-        menu.Items.Add(ledgerMenu);
+        scoreLayout.Items.Add(ledgerMenu);
+
+        var canPaste = ClipboardService.Shared.CanPaste;
+        var parts = new Dictionary<string, Func<MenuItem>>
+        {
+            [ContextMenuLayouts.Paste] = () => Item("Paste", Paste_Click, MenuKey("Edit.Paste")),
+            [ContextMenuLayouts.PasteSpecial] = () => Item("Paste special…", PasteSpecial_Click, MenuKey("Edit.PasteSpecial")),
+            [ContextMenuLayouts.ShowNotation] = () => notation,
+            [ContextMenuLayouts.Zoom] = () => zoomMenu,
+            [ContextMenuLayouts.ScoreDisplay] = () => scoreLayout,
+            [ContextMenuLayouts.PlaybackDisplay] = () => playbackStyle
+        };
+        foreach (var id in ContextMenuLayouts.ScoreEmptyMenu(overBeat, canPaste))
+        {
+            if (id == ContextMenuLayouts.Sep) Sep();
+            else menu.Items.Add(parts[id]());
+        }
 
         menu.PlacementTarget = Editor;
         menu.IsOpen = true;
@@ -170,7 +186,9 @@ public partial class MainWindow
     /// </summary>
     private void ShowNoteContextMenu(Views.ContextMenuEventArgs target)
     {
-        Editor.SelectForEdit(target.Measure, target.Cell, target.StringIndex);
+        // A right-click inside the current selection keeps it (the menu acts on the whole selection);
+        // outside it, the clicked beat becomes the selection.
+        if (!target.InsideSelection) Editor.SelectForEdit(target.Measure, target.Cell, target.StringIndex);
         RefreshToolsPalette();
         var menu = new ContextMenu
         {
@@ -178,10 +196,11 @@ public partial class MainWindow
             Background = (Brush)FindResource("Panel2Brush"),
             Foreground = (Brush)FindResource("TextBrush")
         };
-        MenuItem Item(string header, Action action, bool isChecked = false, bool enabled = true)
+        MenuItem Item(string header, Action action, bool isChecked = false, bool enabled = true, string? gesture = null)
         {
             var mi = new MenuItem { Header = header, Style = (Style)FindResource(typeof(MenuItem)), IsEnabled = enabled };
             if (isChecked) { mi.IsCheckable = true; mi.IsChecked = true; }
+            if (!string.IsNullOrEmpty(gesture)) mi.InputGestureText = gesture;
             mi.Click += (_, _) => action();
             return mi;
         }
@@ -198,18 +217,29 @@ public partial class MainWindow
             return group;
         }
 
-        menu.Items.Add(Group("Duration", "Duration"));
-        menu.Items.Add(Group("Dynamics", "Dynamic"));
-        menu.Items.Add(Group("Effects", "Effects"));
-        menu.Items.Add(Group("Beat", "Beat"));
-        menu.Items.Add(new Separator { Style = (Style)FindResource(typeof(Separator)) });
-        menu.Items.Add(Item("Pitch up a semitone", () => Editor.ShiftPitch(1)));
-        menu.Items.Add(Item("Pitch down a semitone", () => Editor.ShiftPitch(-1)));
-        menu.Items.Add(Item("Move to string above", () => Editor.MoveString(-1)));
-        menu.Items.Add(Item("Move to string below", () => Editor.MoveString(1)));
-        menu.Items.Add(new Separator { Style = (Style)FindResource(typeof(Separator)) });
-        menu.Items.Add(Item("Delete note", () => Editor.DeleteNote()));
-        menu.Items.Add(Item("Score options…", () => ShowScoreContextMenu(target.Position)));
+        var pitchAndString = new MenuItem { Header = ContextMenuLayouts.PitchAndString, Style = (Style)FindResource(typeof(MenuItem)) };
+        pitchAndString.Items.Add(Item("Pitch up a semitone", () => Editor.ShiftPitch(1), gesture: "Shift+Up"));
+        pitchAndString.Items.Add(Item("Pitch down a semitone", () => Editor.ShiftPitch(-1), gesture: "Shift+Down"));
+        pitchAndString.Items.Add(Item("Move to string above", () => Editor.MoveString(-1), gesture: "Alt+Up"));
+        pitchAndString.Items.Add(Item("Move to string below", () => Editor.MoveString(1), gesture: "Alt+Down"));
+        var parts = new Dictionary<string, Func<MenuItem>>
+        {
+            [ContextMenuLayouts.Copy] = () => Item("Copy", () => Copy_Click(this, new RoutedEventArgs()), gesture: MenuKey("Edit.Copy")),
+            [ContextMenuLayouts.Cut] = () => Item("Cut", () => Cut_Click(this, new RoutedEventArgs()), gesture: MenuKey("Edit.Cut")),
+            [ContextMenuLayouts.Paste] = () => Item("Paste", () => Paste_Click(this, new RoutedEventArgs()), gesture: MenuKey("Edit.Paste")),
+            [ContextMenuLayouts.PasteSpecial] = () => Item("Paste special…", () => PasteSpecial_Click(this, new RoutedEventArgs()), gesture: MenuKey("Edit.PasteSpecial")),
+            [ContextMenuLayouts.Delete] = () => Item("Delete", () => Editor.DeleteNote(), gesture: "Backspace"),
+            [ContextMenuLayouts.Duration] = () => Group("Duration", "Duration"),
+            [ContextMenuLayouts.Dynamics] = () => Group("Dynamics", "Dynamic"),
+            [ContextMenuLayouts.Effects] = () => Group("Effects", "Effects"),
+            [ContextMenuLayouts.Beat] = () => Group("Beat", "Beat"),
+            [ContextMenuLayouts.PitchAndString] = () => pitchAndString
+        };
+        foreach (var id in ContextMenuLayouts.NoteMenu(ClipboardService.Shared.CanPaste))
+        {
+            if (id == ContextMenuLayouts.Sep) menu.Items.Add(new Separator { Style = (Style)FindResource(typeof(Separator)) });
+            else menu.Items.Add(parts[id]());
+        }
         menu.Closed += (_, _) => RefreshToolsPalette();
         menu.PlacementTarget = Editor;
         menu.IsOpen = true;

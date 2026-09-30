@@ -163,6 +163,7 @@ public static class SettingsValidator
         value.KeyboardKeyColours = KeyboardKeyStyles.All.FirstOrDefault(v => string.Equals(v, value.KeyboardKeyColours, StringComparison.OrdinalIgnoreCase)) ?? KeyboardKeyStyles.MatchTheme;
         value.PreviewHorizon = Math.Clamp(value.PreviewHorizon, 1, 10);
         value.ScaleHighlight = SafeText(value.ScaleHighlight, 64, null);
+        foreach (var q in PasteQuestionInfo.All) PasteQuestionInfo.Set(value, q, PasteQuestionInfo.Get(value, q));
     }
 
     private static void NormalizeFollow(FollowSettings value, FollowSettings defaults)

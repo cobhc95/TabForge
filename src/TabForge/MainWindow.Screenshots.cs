@@ -206,9 +206,12 @@ public partial class MainWindow
         await Settle(250);
         if (Instrument.ContextMenu is { } fretMenu)
         {
-            var appearance = fretMenu.Items.OfType<MenuItem>().FirstOrDefault(i => i.Header?.ToString() == "Appearance");
-            if (appearance is not null)
+            var layoutMenu = fretMenu.Items.OfType<MenuItem>().FirstOrDefault(i => i.Header?.ToString() == ContextMenuLayouts.AppearanceAndLayout);
+            var appearance = layoutMenu?.Items.OfType<MenuItem>().FirstOrDefault(i => i.Header?.ToString() == "Appearance");
+            if (layoutMenu is not null && appearance is not null)
             {
+                layoutMenu.IsSubmenuOpen = true;
+                await Settle(250);
                 appearance.IsSubmenuOpen = true;
                 await Settle(250);
                 if (appearance.Template.FindName("PART_Popup", appearance) is Popup { Child: FrameworkElement ap })
@@ -223,6 +226,7 @@ public partial class MainWindow
                     size.IsSubmenuOpen = false;
                 }
                 appearance.IsSubmenuOpen = false;
+                layoutMenu.IsSubmenuOpen = false;
             }
             fretMenu.IsOpen = false;
         }

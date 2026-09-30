@@ -377,6 +377,21 @@ public static class ProjectValidator
         }
     }
 
+    /// <summary>Score clips (<see cref="ScoreClip"/>): the project's per-bar rules for one bar of <paramref name="track"/>; totals run across the clip.</summary>
+    internal static void ValidateClipMeasure(MeasureModel measure, TrackModel track,
+        ref long totalCells, ref long totalNotes, ref long totalCurvePoints, ref long totalTechniques)
+        => ValidateMeasure(measure ?? throw Invalid("The clip contains an empty bar."), track,
+            ref totalCells, ref totalNotes, ref totalCurvePoints, ref totalTechniques);
+
+    /// <summary>Score clips: the project's per-beat and per-note rules for one beat of <paramref name="track"/>.</summary>
+    internal static void ValidateClipCell(TabCell cell, TrackModel track,
+        ref long totalNotes, ref long totalCurvePoints, ref long totalTechniques)
+    {
+        var cellNotes = 0;
+        ValidateCell(cell ?? throw Invalid("The clip contains an empty beat."), track,
+            ref totalNotes, ref totalCurvePoints, ref totalTechniques, ref cellNotes);
+    }
+
     private static void ValidateMeasure(MeasureModel measure, TrackModel track,
         ref long totalCells, ref long totalNotes, ref long totalCurvePoints, ref long totalTechniques)
     {

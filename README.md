@@ -1,4 +1,4 @@
-# TabForge 0.2.0 Beta 5
+# TabForge 0.3.0 Beta 1
 
 **A keyboard-driven tablature and notation editor for Windows. Opens and saves Guitar Pro files.** Write, import and play back guitar,
 bass, drum and keyboard parts, with a live fretboard / keyboard, an arrangement timeline, audio and MIDI
@@ -9,7 +9,7 @@ recording lanes, mixer groups, VST effects and instruments, and offline audio re
 *The main screenshot shows TabForge's own demo song and a third-party VST3 plug-in (Superior Drummer 3 by Toontrack, sold separately) as an example of plug-in hosting. TabForge does not include that plug-in and is not affiliated with Toontrack.*
 
 > [!WARNING]
-> **TabForge 0.2.0 Beta 5 is a pre-release.** No bugs are known at the moment, but extensive testing is still
+> **TabForge 0.3.0 Beta 1 is a pre-release.** No bugs are known at the moment, but extensive testing is still
 > ongoing, so expect surprises. Keep backups of your projects and your original Guitar Pro files, especially
 > before using recording or third-party plug-ins.
 
@@ -19,7 +19,7 @@ TabForge is an independent project. Guitar Pro is a trademark of Arobas Music; T
 
 Get the latest build from [Releases](https://github.com/cobhc95/TabForge/releases):
 
-**0.2.0 Beta 5 downloads:** [Windows installer](https://github.com/cobhc95/TabForge/releases/download/v0.2.0-beta.5/TabForge-0.2.0-beta.5-setup.exe) · [Portable ZIP](https://github.com/cobhc95/TabForge/releases/download/v0.2.0-beta.5/TabForge-0.2.0-beta.5-win-x64-portable.zip) · [SHA-256 checksums](https://github.com/cobhc95/TabForge/releases/download/v0.2.0-beta.5/TabForge-0.2.0-beta.5-SHA256.txt)
+**0.3.0 Beta 1 downloads:** [Windows installer](https://github.com/cobhc95/TabForge/releases/download/v0.3.0-beta.1/TabForge-0.3.0-beta.1-setup.exe) · [Portable ZIP](https://github.com/cobhc95/TabForge/releases/download/v0.3.0-beta.1/TabForge-0.3.0-beta.1-win-x64-portable.zip) · [SHA-256 checksums](https://github.com/cobhc95/TabForge/releases/download/v0.3.0-beta.1/TabForge-0.3.0-beta.1-SHA256.txt)
 
 Installer, portable ZIP, SHA-256 checksums and release notes are on the [Releases page](https://github.com/cobhc95/TabForge/releases).
 
@@ -365,6 +365,7 @@ Settings > Hotkeys (all rebindable).
 - **Effects**: dead, ghost, palm mute, let ring, hammer/pull, bend, legato and shift slide, vibrato, wide vibrato, tremolo bar, natural and artificial harmonics, tapping, slap, pop, trill, tremolo picking, fade in/out, wah open/close, brush and arpeggio up/down, grace note, chord names, beat text, lyrics.
 - **Bars**: insert, delete, duplicate, repeat selection as bars, time signature, key signature, clef, triplet feel, repeat open/close, directions and endings, double bar, repeat one or two bars, section editor, **Check bars (F4)**, **Go to bar**, mix table points (F10).
 - Insert/delete beats, cut/copy/paste, select whole track, full undo/redo (fast on large songs).
+- **Copy, cut and paste** of beat ranges (from the cursor, flowing over bar lines by the target's time signature) and whole bars, shared with the timeline clipboard. Paste asks only what it needs (replace or insert, overwrite or insert before/after, keep the pitch or shift an octave, bar settings) with "Remember my choice" (Preferences > Editing > Copy and paste); it works between instruments (guitar to bass, other tunings, drums) and **Paste special** (Ctrl+Shift+V) adds repeats, an octave shift and keep string and fret. Every paste is one undo step and cutting bars empties them.
 - **Tools menu**: Check bar duration, **Transpose**, **Scale finder**, **Tuner**, **Metronome**, **Count-in**, preview note sound.
 - **Tuner**: a chromatic tuner; the engine detects the pitch of the armed input and shows the note, a cents needle and the track's string tunings with the nearest string highlighted.
 

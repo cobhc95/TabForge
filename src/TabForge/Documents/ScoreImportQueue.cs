@@ -29,6 +29,13 @@ public sealed class ScoreImportQueue
     /// <param name="open">The synchronous open (DocumentController.Open); a test passes a synthetic slow one.</param>
     public ScoreImportQueue(Func<string, OpenedScore> open) => _open = open;
 
+    /// <summary>
+    /// The app's queue: each Guitar Pro file is parsed in the import worker process (<see cref="ImportWorker"/>), killed on Cancel
+    /// or at the time budget; when that process cannot start, the parse runs here in the background and the opened score says so.
+    /// </summary>
+    public static ScoreImportQueue WithImportWorker(DocumentController documents, ImportWorkerOptions? options = null) =>
+        new(path => documents.Open(path, (file, notices) => ImportWorker.ImportOrFallback(file, notices, options)));
+
     public TimeSpan TimeBudget { get; set; } = ImportGuard.DefaultTimeBudget;
     public long MemoryBudgetBytes { get; set; } = ImportGuard.DefaultMemoryBudgetBytes;
     /// <summary>Extra wait after the time budget before an import stuck inside alphaTab is abandoned.</summary>

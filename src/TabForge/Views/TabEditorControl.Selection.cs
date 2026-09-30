@@ -125,71 +125,49 @@ public sealed partial class TabEditorControl
         return (a.Item1, a.Item2, b.Item1, b.Item2);
     }
 
-    /// <summary>Copy the selected beats (whole bars when a full bar is selected).</summary>
-    public string? CopySelection()
+    /// <summary>
+    /// The selection as a score clip (design 3.1): whole bars give a Bars clip (both voices, bar settings), anything else a Beats
+    /// clip of the active voice; with no selection, the beat at the cursor. Null with a user-facing <paramref name="error"/>.
+    /// </summary>
+    public ScoreClip? CaptureClip(out string? error)
     {
-        var track = Track;
-        if (track is null) return null;
-        if (!HasSelection)
+        error = null;
+        if (_project is null || Track is null) return null;
+        var (m1, c1, m2, c2) = SelectionCellRange;
+        try
         {
-            var cell = CurrentCell();
-            if (cell is null) return null;
-            var copiedCell = CloneCell(cell);
-            copiedCell.RhythmicPosition = null;
-            return ProjectService.Snapshot(new SongProject
-            {
-                FormatVersion = 2,
-                Tracks = new List<TrackModel>
-                {
-                    new() { Measures = new List<MeasureModel> { new() { Cells = new List<TabCell> { copiedCell } } } }
-                }
-            });
+            var songId = TimelineClips.SongId(_project);
+            return HasSelection
+                ? ClipboardService.CaptureSelection(_project, SelectedTrackIndex, ActiveVoiceIndex, m1, c1, m2, c2, songId)
+                : ClipboardService.CaptureBeats(_project, SelectedTrackIndex, ActiveVoiceIndex, m1, c1, m1, c1, songId);
         }
-        var (m1, c1, m2, c2) = SelectionRange();
-        if (m2 < m1 || (m2 == m1 && c2 < c1)) (m1, c1, m2, c2) = (m2, c2, m1, c1);
-        var clip = new SongProject { FormatVersion = 2, Tracks = new List<TrackModel> { new() } };
-        var src = track;
-        for (var m = m1; m <= m2; m++)
-        {
-            if (m >= src.Measures.Count) break;
-            var srcMeasure = src.Measures[m];
-            var newMeasure = new MeasureModel { Number = m + 1, Cells = new List<TabCell>() };
-            var srcCells = CellsFor(srcMeasure);
-            for (var c = 0; c < srcCells.Count; c++)
-            {
-                var inRange = (m > m1 || c >= c1) && (m < m2 || c <= c2);
-                newMeasure.Cells.Add(inRange ? CloneCell(srcCells[c]) : new TabCell());
-            }
-            clip.Tracks[0].Measures.Add(newMeasure);
-        }
-        return ProjectService.Snapshot(clip);
+        catch (System.IO.InvalidDataException ex) { error = ex.Message; return null; }
     }
 
-    public bool PasteSelection(string clipboard)
+    /// <summary>Where a paste lands: the active track and voice at the selection start (the cursor without a selection).</summary>
+    public PasteTarget PasteTarget
     {
-        var track = Track;
-        if (track is null) return false;
-        SongProject clip;
-        try { clip = ProjectService.Restore(clipboard); }
-        catch (System.IO.InvalidDataException) { return false; } // not TabForge clipboard data
-        if (clip.Tracks.Count == 0) return false;
-        EditStarting?.Invoke(this, EventArgs.Empty);
-        var clipTrack = clip.Tracks[0];
-        var destBar = SelectedMeasure;
-        for (var i = 0; i < clipTrack.Measures.Count && destBar + i < track.Measures.Count; i++)
+        get
         {
-            var dest = track.Measures[destBar + i];
-            var src = clipTrack.Measures[i];
-            var destCells = CellsFor(dest, create: true);
-            var srcCells = ActiveVoiceIndex == 1 && src.Voice2Cells.Count > 0 ? src.Voice2Cells : src.Cells;
-            for (var c = 0; c < srcCells.Count && c < destCells.Count; c++)
-            {
-                var inRange = i > 0 || (SelectedCell == 0);
-                if (!inRange && c < SelectedCell) continue;
-                destCells[c] = CloneCell(srcCells[c]);
-            }
+            var (m1, c1, _, _) = SelectionCellRange;
+            return new PasteTarget(SelectedTrackIndex, ActiveVoiceIndex, m1, c1);
         }
-        EditedNow();
-        return true;
     }
+
+    /// <summary>
+    /// Cut: clears what <paramref name="clip"/> (just captured from the selection) took, as one undo step: whole bars are emptied
+    /// (not deleted), beats become rests in the active voice. Returns true when anything changed.
+    /// </summary>
+    public bool CutSelection(ScoreClip clip)
+    {
+        if (_project is null || Track is null) return false;
+        var (m1, c1, m2, c2) = SelectionCellRange;
+        EditStarting?.Invoke(this, EventArgs.Empty);   // one undo step
+        var changed = EditCommands.CutClear(_project, clip.Kind, SelectedTrackIndex, ActiveVoiceIndex, m1, c1, m2, HasSelection ? c2 : c1);
+        if (changed) EditedNow();
+        return changed;
+    }
+
+    /// <summary>Tells the host the project changed outside the editor's own commands (paste), and refreshes the score.</summary>
+    public void NotifyEdited() => EditedNow();
 }

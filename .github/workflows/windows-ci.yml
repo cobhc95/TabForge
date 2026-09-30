@@ -64,7 +64,8 @@ jobs:
 
   # Builds native/tfvst3 from the pinned Steinberg VST3 SDK and compares it with the checked-in DLL.
   # REPORT ONLY: this job never fails on a mismatch (see native/tfvst3/BUILD.md, "Reproducibility"). Releases do not
-  # depend on the match: release.yml builds the bridge itself and ships that build.
+  # depend on the match: they ship the committed DLL, which the maintainer replaces with the build-bridge workflow's
+  # output whenever the bridge changes (docs/REPRODUCIBLE_BUILDS.md).
   native-bridge:
     runs-on: windows-latest
     timeout-minutes: 20

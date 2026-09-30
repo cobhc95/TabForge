@@ -6,6 +6,42 @@ namespace TabForge;
 
 public static partial class SelfTest
 {
+    /// <summary>
+    /// Score note menu, score empty-area menu and fretboard menu (docs/CONTEXT_MENU_AUDIT.md 5-7): the top-level layouts, the
+    /// paste items only with a clip, and a right-click inside the selection is recognised (so the selection is kept).
+    /// </summary>
+    private static void TestContextMenuLayouts()
+    {
+        var note = Views.ContextMenuLayouts.NoteMenu(canPaste: true);
+        Check("note menu: Copy, Cut, Paste, Paste special, Delete, then the five submenus",
+            note.SequenceEqual(new[] { "Copy", "Cut", "Paste", "Paste special…", "Delete", "-", "Duration", "Dynamics", "Effects", "Beat", "Pitch and string" }),
+            string.Join(" | ", note));
+        Eq("note menu has 10 top-level entries", 10, Views.ContextMenuLayouts.TopLevelCount(note));
+        var noteEmpty = Views.ContextMenuLayouts.NoteMenu(canPaste: false);
+        Check("note menu hides both paste items without a clip (hidden, not greyed)",
+            !noteEmpty.Contains("Paste") && !noteEmpty.Contains("Paste special…") && Views.ContextMenuLayouts.TopLevelCount(noteEmpty) == 8);
+
+        var overBeat = Views.ContextMenuLayouts.ScoreEmptyMenu(overBeat: true, canPaste: true);
+        Eq("score empty menu over a beat with a clip: 6 entries", 6, Views.ContextMenuLayouts.TopLevelCount(overBeat));
+        Check("score empty menu starts with Paste, Paste special", overBeat[0] == "Paste" && overBeat[1] == "Paste special…");
+        Eq("score empty menu without a clip: 4 entries", 4, Views.ContextMenuLayouts.TopLevelCount(Views.ContextMenuLayouts.ScoreEmptyMenu(true, false)));
+        Eq("score empty menu off a beat: 4 entries", 4, Views.ContextMenuLayouts.TopLevelCount(Views.ContextMenuLayouts.ScoreEmptyMenu(false, true)));
+
+        Eq("fretboard menu: 6 entries", 6, Views.ContextMenuLayouts.TopLevelCount(Views.ContextMenuLayouts.Fretboard(keyboard: false, drums: false)));
+        Eq("keyboard menu: 6 entries", 6, Views.ContextMenuLayouts.TopLevelCount(Views.ContextMenuLayouts.Fretboard(keyboard: true, drums: false)));
+        Eq("drum pads menu: 4 entries", 4, Views.ContextMenuLayouts.TopLevelCount(Views.ContextMenuLayouts.Fretboard(keyboard: false, drums: true)));
+
+        var editor = NewEditor(out _, out _);
+        editor.SetPosition(0, 0, 0);
+        editor.BeginSelection();
+        editor.ExtendSelection(1);
+        editor.ExtendSelection(1);
+        Check("a beat inside the selection is recognised", editor.IsInSelection(0, 1));
+        Check("a beat past the selection is not", !editor.IsInSelection(0, 6) && !editor.IsInSelection(1, 0));
+        editor.ClearSelection();
+        Check("no selection means nothing is inside it", !editor.IsInSelection(0, 0));
+    }
+
     [System.Runtime.InteropServices.DllImport("user32.dll")]
     private static extern IntPtr SendMessage(IntPtr hwnd, int message, IntPtr wParam, IntPtr lParam);
 
@@ -312,6 +348,44 @@ public static partial class SelfTest
             bar6.Cells.All(c => c.Notes.Count == 0 && !c.IsRest) && bar6.Voice2Cells[0].Notes.Count == 1 && steps6() == 1);
         ed6.EmptyBar();
         Check("empty bar: an already empty bar captures no undo step", steps6() == 1);
+
+        // Note toggles and rhythm changes (A5-15 batch 2): the menu handler calls the editor method, the shortcut runs the
+        // catalogued id; both must leave the same model and take exactly one undo step.
+        static string Sig(TabCell c) => string.Join("|", c.DurationDenominator, c.Dots, c.IsTriplet, c.TupletNumerator, c.IsRest, c.IsTied,
+            c.Staccato, c.Tenuto, c.Accent, string.Join(",", c.Notes.Select(n => $"{n.StringIndex}:{n.Fret}:{string.Join("+", n.Techniques.OrderBy(t => t))}")));
+        var pairs = new (string Id, Action<Views.TabEditorControl> Menu)[]
+        {
+            ("Note.Staccato", e => e.ToggleStaccato()), ("Note.Tenuto", e => e.ToggleTenuto()),
+            ("Note.Triplet", e => e.ToggleTriplet()), ("Note.Dot", e => e.ToggleDot()), ("Note.DoubleDot", e => e.SetDots(2)),
+            ("Note.Tie", e => e.ToggleTie()), ("Note.Rest", e => e.ToggleRest()), ("Note.Dead", e => e.ToggleDead()),
+            ("Note.Ghost", e => e.ToggleGhost()), ("Note.Accent", e => e.CycleAccent()),
+            ("Note.LetRing", e => e.ToggleTechnique(TechniqueNames.LetRing)), ("Note.PalmMute", e => e.ToggleTechnique(TechniqueNames.PalmMute)),
+            ("Note.Grace", e => e.ToggleTechnique("GraceBefore")),
+        };
+        foreach (var (id, menu) in pairs)
+        {
+            var (em, sm, stm) = Make(); var (es, ss, sts) = Make();
+            foreach (var (e, s) in new[] { (em, sm), (es, ss) })
+            {
+                s.Tracks[0].Measures[0].Cells[0] = Beat(5);
+                s.Tracks[0].Measures[0].Cells[1] = Beat(7);
+                e.SetPosition(0, 1, 1, false);
+            }
+            menu(em);
+            es.TryRunNoteCommand(id);
+            Check($"{id}: menu and shortcut give the same beat, one undo step each",
+                Sig(sm.Tracks[0].Measures[0].Cells[1]) == Sig(ss.Tracks[0].Measures[0].Cells[1]) && stm() == 1 && sts() == 1,
+                $"menu={Sig(sm.Tracks[0].Measures[0].Cells[1])} ({stm()}) shortcut={Sig(ss.Tracks[0].Measures[0].Cells[1])} ({sts()})");
+        }
+        var (edd, sd, std) = Make();
+        sd.Tracks[0].Measures[0].Cells[0] = Beat(5);
+        edd.SetPosition(0, 0, 1, false);
+        edd.Longer();
+        var afterLonger = sd.Tracks[0].Measures[0].Cells[0].DurationDenominator;
+        edd.Shorter(); edd.SetDuration(16);
+        Check("duration: longer/shorter/set each change the beat with one undo step",
+            afterLonger == 4 && sd.Tracks[0].Measures[0].Cells[0].DurationDenominator == 16 && std() == 3,
+            $"longer={afterLonger} final={sd.Tracks[0].Measures[0].Cells[0].DurationDenominator} steps={std()}");
     }
 
     /// <summary>The shared minimum font size and the higher-contrast secondary text token exist and agree with the code constant.</summary>
