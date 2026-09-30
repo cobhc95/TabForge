@@ -230,9 +230,16 @@ public static partial class SelfTest
             WriteTestWav(wav, 1.5);
             File.SetLastWriteTimeUtc(wav, DateTime.UtcNow.AddMinutes(1));
             Thread.Sleep(10);
-            _ = WaveformCache.Get(wav);          // notices the change and reads again
-            WaveformCache.WaitIdle(5000);
-            var second = WaveformCache.Get(wav)?.Length ?? -1;
+            // Notices the change and reads again in the background: poll (the re-read is queued asynchronously, so a single
+            // WaitIdle can return before it is scheduled on a fast machine).
+            var second = -1;
+            for (var tries = 0; tries < 100 && second is < 145 or > 155; tries++)
+            {
+                _ = WaveformCache.Get(wav);
+                WaveformCache.WaitIdle(200);
+                second = WaveformCache.Get(wav)?.Length ?? -1;
+                if (second is < 145 or > 155) Thread.Sleep(50);
+            }
             Check($"a file replaced at the same path shows the new data ({first} -> {second} peaks)", first is >= 45 and <= 55 && second is >= 145 and <= 155);
         }
         finally
