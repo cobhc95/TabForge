@@ -48,7 +48,7 @@ public sealed partial class TabEditorControl
 
     private void EditedNow()
     {
-        if (_project is not null) _project.IsDirty = true;
+        if (_project is not null) { _project.IsDirty = true; _project.MarkTimelineChanged(); }
         Edited?.Invoke(this, EventArgs.Empty);
         CoerceSelection();
         InvalidateScoreLayout();

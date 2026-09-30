@@ -230,7 +230,7 @@ public sealed class AudioEngineClient : IDisposable
     private bool PlaysElsewhere(int slot, object owner)
         => _slotOwners.TryGetValue(slot, out var slotOwner) && !ReferenceEquals(slotOwner, owner) && IsOwnerPlaying?.Invoke(slotOwner) == true;
 
-    // ---- R-10: one owner, warm engine (see ARCHITECTURE.md §5) ----
+    // ---- R-10: one owner, warm engine (one engine process is shared by all documents and kept warm while idle) ----
 
     /// <summary>How long the engine stays running without engine tracks, and how long another document's chains stay parked.</summary>
     public const int DefaultWarmIdleMinutes = 5;

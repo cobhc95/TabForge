@@ -75,9 +75,9 @@ public sealed class SavedLayout
 }
 
 /// <summary>
-/// Keeping the score under the player's eyes while they play. Modelled on TuxGuitar's
-/// TablatureScrollPlaying / TGControl: a jump mode with anticipation, a smooth mode paced to the
-/// music, no scrolling once the end is already on screen, and "stop following if the user scrolls".
+/// Keeping the score under the player's eyes while they play: a jump mode with anticipation, a smooth
+/// mode paced to the music, no scrolling once the end is already on screen, and "stop following if the
+/// user scrolls".
 /// </summary>
 public sealed class FollowSettings
 {

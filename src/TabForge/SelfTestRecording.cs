@@ -70,6 +70,57 @@ public static partial class SelfTest
                 lengthOk && reader.SampleCount == 50000, $"{takes[0].LengthSec} s, {reader.SampleCount} samples, dropped {r1.DroppedFrames}");
         }
         finally { try { Directory.Delete(folder, true); } catch { } }
+
+        // A5-02: a drop becomes silence at the position where the input was lost, after the older queued audio (stalled writer).
+        var gapFolder = Path.Combine(Path.GetTempPath(), $"tf-rec-gap-{Guid.NewGuid():N}");
+        try
+        {
+            static float[] ReadTake(string path)
+            {
+                using var wav = new NAudio.Wave.WaveFileReader(path);
+                var samples = new float[(int)wav.SampleCount];
+                var got = NAudio.Wave.WaveExtensionMethods.ToSampleProvider(wav).Read(samples, 0, samples.Length);
+                return got == samples.Length ? samples : samples[..got];
+            }
+            static float[] Block(int frames, params (int At, float Value)[] impulses)
+            {
+                var b = new float[frames * 2];
+                foreach (var (at, v) in impulses) { b[at * 2] = v; b[at * 2 + 1] = v; }
+                return b;
+            }
+            static List<int> Impulses(float[] s, float value) { var l = new List<int>(); for (var i = 0; i < s.Length; i++) if (s[i] == value) l.Add(i); return l; }
+
+            // 8 kHz: the queue holds 32768 frames. Fill 32000 of them (an impulse at 100), then two adjacent drops (1000 + 900 frames,
+            // their impulses are lost; 768 frames are free, so both are too big), then 500 frames that still fit (impulse at 20): they were queued after the drop.
+            var stalled = new EA.Recorder(gapFolder, new[] { (0, "Gap", 0) }, 0, 8000, startWriter: false);
+            stalled.Enqueue(Block(1000, (100, 0.5f)), 1000);
+            for (var i = 0; i < 31; i++) stalled.Enqueue(Block(1000), 1000);
+            stalled.Enqueue(Block(1000, (10, 0.7f)), 1000);
+            stalled.Enqueue(Block(900, (0, 0.9f)), 900);
+            stalled.Enqueue(Block(500, (20, 0.8f)), 500);
+            var stalledTake = stalled.Finish();
+            var s1 = ReadTake(stalledTake[0].Take.Path);
+            var at500 = Impulses(s1, 0.5f); var at800 = Impulses(s1, 0.8f);
+            var silent = s1.Skip(32000).Take(1900).All(v => v == 0);
+            Check("a dropped block becomes silence at its own position, after the older queued audio and before the newer (impulses at exact frames, length intact)",
+                s1.Length == 34400 && Math.Abs(stalledTake[0].LengthSec - 34400 / 8000.0) < 1e-9 && at500.SequenceEqual(new[] { 100 }) && at800.SequenceEqual(new[] { 33920 })
+                && silent && Impulses(s1, 0.7f).Count == 0 && Impulses(s1, 0.9f).Count == 0 && stalled.DroppedFrames == 1900 && stalled.GapOverflows == 0,
+                $"len {s1.Length}, 0.5 at [{string.Join(",", at500)}], 0.8 at [{string.Join(",", at800)}], silent {silent}, dropped {stalled.DroppedFrames}, overflows {stalled.GapOverflows}");
+
+            // One marker only: a second, separated drop cannot get its own marker; it is merged into the first (reported), and the take keeps its full length.
+            var tiny = new EA.Recorder(gapFolder, new[] { (0, "Gap2", 0) }, 0, 8000, startWriter: false, gapCapacity: 1);
+            tiny.Enqueue(Block(1000, (100, 0.5f)), 1000);
+            for (var i = 0; i < 31; i++) tiny.Enqueue(Block(1000), 1000);
+            tiny.Enqueue(Block(1000), 1000);                          // dropped: marker 1
+            tiny.Enqueue(Block(500, (20, 0.8f)), 500);                // fits
+            tiny.Enqueue(Block(1000), 1000);                          // dropped, queued audio in between: needs a second marker
+            var tinyTake = tiny.Finish();
+            var s2 = ReadTake(tinyTake[0].Take.Path);
+            Check("a full gap-marker ring merges the drop into the newest marker, reports it, and the take keeps its full length",
+                s2.Length == 34500 && tiny.GapOverflows == 1 && Impulses(s2, 0.5f).SequenceEqual(new[] { 100 }) && Impulses(s2, 0.8f).Count == 1,
+                $"len {s2.Length}, overflows {tiny.GapOverflows}");
+        }
+        finally { try { Directory.Delete(gapFolder, true); } catch { } }
     }
 
     private static void TestRoutingCycles()

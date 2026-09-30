@@ -15,7 +15,8 @@ namespace TabForge.Services;
 public static class AudioDataFile
 {
     public const string Extension = ".tfaudio";
-    private const long MaxBytes = 64L * 1024 * 1024;
+    /// <summary>A5-03: the one size limit of a .tfaudio, for writing and reading alike (a file TabForge writes can always be read back).</summary>
+    public const long MaxBytes = 64L * 1024 * 1024;
 
     private static readonly JsonSerializerOptions Options = new() { WriteIndented = true, MaxDepth = 32 };
 
@@ -50,7 +51,11 @@ public static class AudioDataFile
 
     public static string PathFor(string gpPath) => Path.ChangeExtension(gpPath, Extension);
 
-    /// <summary>The file's bytes for <paramref name="project"/>, paired with the .gp whose bytes hash to <paramref name="gpSha256"/>.</summary>
+    /// <summary>
+    /// The file's bytes for <paramref name="project"/>, paired with the .gp whose bytes hash to <paramref name="gpSha256"/>.
+    /// Throws <see cref="InvalidDataException"/> (naming the largest plug-in states) when the result is over <see cref="MaxBytes"/>,
+    /// so a save fails before either file of the pair is written instead of producing a .tfaudio that cannot be opened again.
+    /// </summary>
     public static byte[] Serialize(SongProject project, string gpSha256 = "")
     {
         var contents = new Contents
@@ -60,7 +65,32 @@ public static class AudioDataFile
             Mixer = project.Mixer,
             Tracks = project.Tracks.Select((t, i) => new TrackAudio { Index = i, Name = t.Name, Id = t.Id.ToString("N"), Volume = t.Volume, Pan = t.Pan, SoundSource = t.SoundSource, MidiSound = t.MidiSound, MixerGroup = t.MixerGroup, Rig = t.Rig, AudioClips = t.AudioClips, Lanes = t.Lanes }).ToList()
         };
-        return JsonSerializer.SerializeToUtf8Bytes(contents, Options);
+        var bytes = JsonSerializer.SerializeToUtf8Bytes(contents, Options);
+        if (bytes.LongLength > MaxBytes) throw new InvalidDataException(TooLargeMessage(project, bytes.LongLength));
+        return bytes;
+    }
+
+    private static string TooLargeMessage(SongProject project, long size)
+    {
+        static string Mb(long bytes) => $"{bytes / (1024.0 * 1024):0.#} MB";
+        var states = new List<(string Owner, string Plugin, long Bytes)>();
+        void Rig(RigPreset? rig, string owner)
+        {
+            if (rig?.Plugins is null) return;
+            foreach (var p in rig.Plugins)
+                if (p?.State is { Length: > 0 } state) states.Add((owner, p.Name, state.Length));
+        }
+        foreach (var t in project.Tracks) Rig(t.Rig, t.Name);
+        if (project.Mixer is { } mixer)
+        {
+            if (mixer.Buses is not null) foreach (var (group, bus) in mixer.Buses) Rig(bus?.Rig, $"{group} bus");
+            Rig(mixer.Master?.Rig, "Master");
+            Rig(mixer.MonitorFx?.Rig, "Monitor");
+        }
+        var largest = states.OrderByDescending(s => s.Bytes).Take(5).Select(s => $"{s.Plugin} on {s.Owner} ({Mb(s.Bytes)})").ToList();
+        return $"The TabForge audio data ({Extension}) would be {Mb(size)}, over its {Mb(MaxBytes)} limit, so nothing was saved. "
+            + (largest.Count > 0 ? $"The largest plug-in states: {string.Join(", ", largest)}. " : "")
+            + "Remove or reset those plug-ins (or unload large sample sets), or save as a .tforge project instead.";
     }
 
     public static string Sha256Hex(ReadOnlySpan<byte> bytes) => Convert.ToHexString(SHA256.HashData(bytes));
@@ -81,14 +111,20 @@ public static class AudioDataFile
     {
         var path = PathFor(gpPath);
         if (!File.Exists(path)) return false;
+        // A5-03: a sidecar that exists but cannot be used is never skipped silently.
+        string NotApplied(string why) => $"{Path.GetFileName(path)} was not applied ({why}): the mixer, plug-in and clip settings saved with this song are missing";
         Contents? contents;
         try
         {
             var bytes = InputLimits.ReadBoundedBytes(path, MaxBytes, "TabForge audio data");
             contents = JsonSerializer.Deserialize<Contents>(bytes, Options);
         }
-        catch (Exception ex) when (ex is IOException or JsonException or InvalidDataException or UnauthorizedAccessException) { return false; }
-        if (contents?.Tracks is null || contents.Mixer is null) return false;
+        catch (Exception ex) when (ex is IOException or JsonException or InvalidDataException or UnauthorizedAccessException)
+        {
+            notices?.Add(NotApplied(ex is JsonException ? "the file is damaged" : ex.Message.TrimEnd('.')));
+            return false;
+        }
+        if (contents?.Tracks is null || contents.Mixer is null) { notices?.Add(NotApplied("the file is incomplete")); return false; }
 
         var found = new List<string>();
         if (contents.GpSha256 is { Length: > 0 } expected)
@@ -146,6 +182,7 @@ public static class AudioDataFile
             for (var i = 0; i < project.Tracks.Count; i++)
                 (project.Tracks[i].SoundSource, project.Tracks[i].MixerGroup, project.Tracks[i].Rig, project.Tracks[i].MidiSound, project.Tracks[i].AudioClips, project.Tracks[i].Lanes) = backup.Item2[i];
             for (var i = 0; i < project.Tracks.Count; i++) (project.Tracks[i].Volume, project.Tracks[i].Pan) = volumePanBackup[i];
+            notices?.Add(NotApplied("its settings are invalid"));
             return false;
         }
     }

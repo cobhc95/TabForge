@@ -86,25 +86,29 @@ public partial class MainWindow
         };
         if (dlg.ShowDialog(this) != true) return;
         var replaceCurrent = !inNewTab;
+        // Guitar Pro files import in the background (A5-07); results open in the selected order. "Keep" on the replace prompt
+        // stops the rest of this selection, as before.
+        var batch = new List<ScoreImportJob>();
+        var stopped = false;
         foreach (var file in dlg.FileNames)
         {
-            try
+            if (stopped) break;
+            var job = OpenScore(file, replaceCurrent, replaceAll: false, (opened, loaded) =>
             {
-                var opened = _documentController.Open(file);
-                if (opened.ImportedFromGuitarPro) StatusText.Text = "Importing Guitar Pro file…";
-                if (!LoadProject(opened.Project, opened.SessionPath, true, replaceCurrent)) break;
+                if (!loaded)
+                {
+                    stopped = true;
+                    foreach (var other in batch) Imports.Cancel(other);
+                    return;
+                }
                 StatusText.Text = opened.ImportedFromGuitarPro
                     ? $"Imported {Path.GetFileName(file)}"
                     : $"Opened {Path.GetFileName(file)}";
                 if (opened.Notice is { } notice) StatusText.Text += $" — {notice}";
-                // With multi-select, replace the original active tab once; open remaining files in new tabs.
-                replaceCurrent = false;
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(this, $"Could not open {Path.GetFileName(file)}.\n\n{ex.Message}", "Open failed", MessageBoxButton.OK, MessageBoxImage.Error);
-                StatusText.Text = "Open failed";
-            }
+            });
+            if (job is not null) batch.Add(job);
+            // With multi-select, replace the original active tab once; open remaining files in new tabs.
+            replaceCurrent = false;
         }
     }
 

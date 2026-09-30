@@ -510,8 +510,8 @@ public sealed class MixerWindow : Window
         var names = new[] { "TRACK / GROUP", "FX", "MIDI", "PITCH", "PAN", "VOLUME", "" };
         for (var i = 0; i < names.Length; i++)
         {
-            var t = new TextBlock { Text = names[i], FontSize = 10, FontWeight = FontWeights.SemiBold };
-            t.SetResourceReference(TextBlock.ForegroundProperty, "MutedBrush");
+            var t = new TextBlock { Text = names[i], FontSize = Services.ThemeService.MinFontSize, FontWeight = FontWeights.SemiBold };
+            t.SetResourceReference(TextBlock.ForegroundProperty, "SecondaryTextBrush");
             Put(grid, t, i);
         }
         return grid;
@@ -728,8 +728,8 @@ public sealed class MixerWindow : Window
         var name = new TextBlock { Text = title, FontWeight = FontWeights.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis, ToolTip = title };
         if (accent) name.SetResourceReference(TextBlock.ForegroundProperty, "AccentBrush");
         panel.Children.Add(name);
-        var sub = new TextBlock { Text = subtitle, FontSize = 10, TextTrimming = TextTrimming.CharacterEllipsis, ToolTip = subtitle };
-        sub.SetResourceReference(TextBlock.ForegroundProperty, "MutedBrush");
+        var sub = new TextBlock { Text = subtitle, FontSize = Services.ThemeService.MinFontSize, TextTrimming = TextTrimming.CharacterEllipsis, ToolTip = subtitle };
+        sub.SetResourceReference(TextBlock.ForegroundProperty, "SecondaryTextBrush");
         panel.Children.Add(sub);
         return panel;
     }

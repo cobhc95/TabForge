@@ -69,6 +69,7 @@ public partial class MainWindow
     private void OnArrangementEdited()
     {
         _project.IsDirty = true;
+        _project.MarkTimelineChanged();
         Editor.InvalidateScoreLayout();
         RefreshArrangement();
         RefreshInstrument();
@@ -151,6 +152,7 @@ public partial class MainWindow
         var capture = _undo.Capture(before);
         if (capture.Stored) RememberPlaybackBarMapping(capture.Snapshot);
         _project.IsDirty = true;
+        _project.MarkTimelineChanged();
         _selection.Remap(mapping, MaxMeasures());   // the selected range follows its bars
         if (selectedBar >= 0 && selectedBar < mapping.Length)
             Editor.SetPosition(mapping[selectedBar], Editor.SelectedCell, Editor.SelectedString, seekPlayback: false);
@@ -728,6 +730,7 @@ public partial class MainWindow
     private void FinishArrangementEdit(string status)
     {
         _project.IsDirty = true;
+        _project.MarkTimelineChanged();
         Editor.InvalidateScoreLayout();
         RefreshArrangement();
         RefreshTabs();
@@ -739,6 +742,7 @@ public partial class MainWindow
     private void FinishSectionStructureEdit(string status, int[] oldToNewBar, int? continueAtBar = null)
     {
         _project.IsDirty = true;
+        _project.MarkTimelineChanged();
         _selection.Remap(oldToNewBar, MaxMeasures());   // the selected range follows its bars
         if (_isPlayingVisual)
         {

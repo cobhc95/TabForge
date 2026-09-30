@@ -580,15 +580,15 @@ public sealed class FxChainWindow : Window
                 check.Click += (_, _) => Edit(() => { captured.Enabled = check.IsChecked == true; _host.Engine.SetPluginEnabled(_track, captured); });
                 var row = new DockPanel { Margin = new Thickness(2) };
                 row.Children.Add(check);
-                var kind = new TextBlock { Text = slot.Type == PluginSlotType.Instrument ? "INST" : "FX", FontSize = 10, Width = 32, VerticalAlignment = VerticalAlignment.Center };
+                var kind = new TextBlock { Text = slot.Type == PluginSlotType.Instrument ? "INST" : "FX", FontSize = Services.ThemeService.MinFontSize, Width = 32, VerticalAlignment = VerticalAlignment.Center };
                 kind.SetResourceReference(TextBlock.ForegroundProperty, slot.Type == PluginSlotType.Instrument ? "AccentBrush" : "MutedBrush");
                 row.Children.Add(kind);
                 var names = new StackPanel();
                 names.Children.Add(new TextBlock { Text = slot.Name, TextTrimming = TextTrimming.CharacterEllipsis });
                 if (slot.Vendor.Length > 0)
                 {
-                    var vendor = new TextBlock { Text = slot.Vendor, FontSize = 10, TextTrimming = TextTrimming.CharacterEllipsis };
-                    vendor.SetResourceReference(TextBlock.ForegroundProperty, "MutedBrush");
+                    var vendor = new TextBlock { Text = slot.Vendor, FontSize = Services.ThemeService.MinFontSize, TextTrimming = TextTrimming.CharacterEllipsis };
+                    vendor.SetResourceReference(TextBlock.ForegroundProperty, "SecondaryTextBrush");
                     names.Children.Add(vendor);
                 }
                 row.Children.Add(names);

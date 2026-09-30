@@ -77,14 +77,21 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <Border Grid.Column="0" BorderBrush="{DynamicResource BorderSoftBrush}" BorderThickness="0,0,1,0" Padding="5,0,9,0">
-                    <TextBlock x:Name="StatusText" Text="Ready" MaxWidth="150" TextTrimming="CharacterEllipsis"
-                               VerticalAlignment="Center" ToolTip="Last action or current state"/>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock x:Name="StatusText" Text="Ready" MaxWidth="150" TextTrimming="CharacterEllipsis"
+                                   VerticalAlignment="Center" ToolTip="Last action or current state"
+                                   AutomationProperties.Name="Status" AutomationProperties.LiveSetting="Polite"/>
+                        <!-- A5-07: shown only while a Guitar Pro file imports in the background -->
+                        <Button x:Name="CancelImportButton" Content="Cancel" Visibility="Collapsed" Margin="6,0,0,0" Padding="6,0"
+                                VerticalAlignment="Center" Click="CancelImport_Click" ToolTip="Cancel the import in progress"
+                                AutomationProperties.Name="Cancel import"/>
+                    </StackPanel>
                 </Border>
                 <Border Grid.Column="1" BorderBrush="{DynamicResource BorderSoftBrush}" BorderThickness="0,0,1,0" Padding="8,0">
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
                                 ToolTip="MIDI output activity: grey = idle, green = playing">
                         <Ellipse x:Name="MidiLed" Width="9" Height="9" Fill="#6B7280" Stroke="#23272E"/>
-                        <TextBlock Text="MIDI" FontSize="10" Margin="5,0,0,0" VerticalAlignment="Center"
+                        <TextBlock Text="MIDI" FontSize="{StaticResource MinFontSize}" Margin="5,0,0,0" VerticalAlignment="Center"
                                    Foreground="{DynamicResource MutedBrush}"/>
                     </StackPanel>
                 </Border>
@@ -542,9 +549,9 @@
                             <DropShadowEffect Color="#4C9AFF" BlurRadius="18" ShadowDepth="0" Opacity="0.9"/>
                         </Border.Effect>
                         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <TextBlock Text="DOCK ZOOM" FontSize="10" FontWeight="Bold"
+                            <TextBlock Text="DOCK ZOOM" FontSize="{StaticResource MinFontSize}" FontWeight="Bold"
                                        Foreground="{DynamicResource TextBrush}" HorizontalAlignment="Center"/>
-                            <TextBlock Text="Release to place below Sections and Lyrics" FontSize="10"
+                            <TextBlock Text="Release to place below Sections and Lyrics" FontSize="{StaticResource MinFontSize}"
                                        Foreground="{DynamicResource MutedBrush}" Margin="0,4,0,0"/>
                         </StackPanel>
                     </Border>
@@ -718,7 +725,7 @@
                                     <DockPanel Margin="0,0,0,8">
                                         <Button DockPanel.Dock="Right" Content="×" Width="23" Height="23" Padding="0"
                                                 ToolTip="Close metronome settings" Click="CloseMetronomeSettings_Click"/>
-                                        <TextBlock Text="METRONOME SETTINGS" FontSize="10" FontWeight="SemiBold"
+                                        <TextBlock Text="METRONOME SETTINGS" FontSize="{StaticResource MinFontSize}" FontWeight="SemiBold"
                                                    Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"/>
                                     </DockPanel>
                                     <DockPanel Margin="0,2,0,0">
@@ -756,7 +763,7 @@
                                         <ComboBoxItem Content="Eighth-note triplets" Tag="3"/>
                                         <ComboBoxItem Content="Sixteenth notes" Tag="4"/>
                                     </ComboBox>
-                                    <TextBlock Text="Settings apply during playback" FontSize="10" Foreground="{DynamicResource MutedBrush}" Margin="0,7,0,0"/>
+                                    <TextBlock Text="Settings apply during playback" FontSize="{StaticResource MinFontSize}" Foreground="{DynamicResource MutedBrush}" Margin="0,7,0,0"/>
                                 </StackPanel>
                             </Border>
                         </Popup>
@@ -768,7 +775,7 @@
                                     <DropShadowEffect Color="#000000" BlurRadius="16" ShadowDepth="3" Opacity="0.52"/>
                                 </Border.Effect>
                                 <StackPanel>
-                                    <TextBlock Text="COUNT-IN SETTINGS" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,8"/>
+                                    <TextBlock Text="COUNT-IN SETTINGS" FontSize="{StaticResource MinFontSize}" FontWeight="SemiBold" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,8"/>
                                     <DockPanel>
                                         <TextBlock Text="Volume"/>
                                         <TextBlock x:Name="CountInVolumeValue" DockPanel.Dock="Right" Text="70%" Foreground="{DynamicResource MutedBrush}" HorizontalAlignment="Right"/>
@@ -793,8 +800,8 @@
                                     <CheckBox x:Name="CountInSongStartCheck" Content="Only when starting from bar 1" Margin="0,8,0,0" Click="CountInChecks_Click"/>
                                     <CheckBox x:Name="CountInSectionCheck" Content="Also before every section while playing" Margin="0,4,0,0" Click="CountInChecks_Click"/>
                                     <CheckBox x:Name="CountInLoopCheck" Content="Also before every loop repeat" Margin="0,4,0,0" Click="CountInChecks_Click"/>
-                                    <TextBlock Text="Toggling count-in during playback applies next time you press Play." FontSize="10" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" Margin="0,6,0,0"/>
-                                    <TextBlock Text="Boosted like the metronome when its Boosted option is on." FontSize="10" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" Margin="0,7,0,0"/>
+                                    <TextBlock Text="Toggling count-in during playback applies next time you press Play." FontSize="{StaticResource MinFontSize}" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" Margin="0,6,0,0"/>
+                                    <TextBlock Text="Boosted like the metronome when its Boosted option is on." FontSize="{StaticResource MinFontSize}" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" Margin="0,7,0,0"/>
                                 </StackPanel>
                             </Border>
                         </Popup>
@@ -809,7 +816,7 @@
                                     <DockPanel Margin="0,0,0,8">
                                         <Button DockPanel.Dock="Right" Content="×" Width="23" Height="23" Padding="0"
                                                 ToolTip="Close loop settings" Click="CloseLoopSettings_Click"/>
-                                        <TextBlock Text="LOOP SETTINGS" FontSize="10" FontWeight="SemiBold"
+                                        <TextBlock Text="LOOP SETTINGS" FontSize="{StaticResource MinFontSize}" FontWeight="SemiBold"
                                                    Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"/>
                                     </DockPanel>
                                     <TextBlock x:Name="LoopRangeText" Text="No loop area" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,6"/>
@@ -848,7 +855,7 @@
                                     <Button Content="Clear loop area (Esc)" Margin="0,10,0,0" HorizontalAlignment="Left"
                                             Padding="10,3" Click="ClearLoopArea_Click"/>
                                     <TextBlock Text="Drag across bars in the arrangement to pick an area; right-click a section to loop it."
-                                               FontSize="10" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" Margin="0,8,0,0"/>
+                                               FontSize="{StaticResource MinFontSize}" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" Margin="0,8,0,0"/>
                                 </StackPanel>
                             </Border>
                         </Popup>

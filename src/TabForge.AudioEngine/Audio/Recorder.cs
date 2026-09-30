@@ -6,7 +6,7 @@ namespace TabForge.AudioEngine.Audio;
 /// Writes the input of each armed track to its own WAV file (32-bit float, the engine rate). The capture callback
 /// (which for ASIO is the driver's real-time thread) only copies into a preallocated lock-free queue
 /// (<see cref="Enqueue"/>); a dedicated disk thread writes the files. If the disk falls behind and the queue fills,
-/// the lost frames are replaced by silence (so the take stays in time) and reported once.
+/// the lost frames are replaced by silence at the position where they were lost (ordered gap markers, so the take stays in time) and reported once.
 /// </summary>
 public sealed class Recorder : IDisposable
 {
@@ -22,15 +22,30 @@ public sealed class Recorder : IDisposable
     private readonly float[] _queue;
     private readonly long _queueMask;          // in frames (capacity is a power of two)
     private long _qWrite, _qRead;              // frame counters
-    private long _dropped;                     // frames the producer could not queue (written as silence later)
     private long _droppedTotal;
+    // A5-02: ordered gap markers (SPSC ring). A drop is recorded as (position in the queued-audio stream, length) so the disk
+    // thread writes the audio queued before the drop, then the silence, then the audio queued after it: the take stays in time.
+    // The producer merges a drop into the newest marker while nothing was queued since (CAS on its length); the consumer claims
+    // a marker by swapping its length to -1, so a merge never lands on a marker already being written.
+    private readonly long[] _gapPos, _gapLen;
+    private readonly long _gapMask;
+    private long _gWrite, _gRead;              // marker counters
+    private long _lastGapPos = -1;             // producer only: queue position of the newest marker
+    private long _lateSilence;                 // fallback: drops that fit no marker (ring full, newest marker already claimed): written as soon as the disk thread is idle
+    private long _gapOverflows;
     private readonly float[] _drain = new float[8192 * 2];
-    private readonly Thread _diskThread;
+    private readonly Thread? _diskThread;
     private volatile bool _stopping;
+    private bool _reportedDrop, _reportedOverflow;
 
-    public Recorder(string folder, IEnumerable<(int Slot, string TrackName, int Mode)> tracks, double startSec, int rate)
+    /// <param name="startWriter">False (tests only): no disk thread; the caller drives the writer with <see cref="PumpForTests"/>.</param>
+    /// <param name="gapCapacity">Gap markers kept between the capture thread and the disk thread (rounded up to a power of two).</param>
+    public Recorder(string folder, IEnumerable<(int Slot, string TrackName, int Mode)> tracks, double startSec, int rate, bool startWriter = true, int gapCapacity = 256)
     {
         _rate = rate;
+        var gaps = 1;
+        while (gaps < Math.Max(1, gapCapacity)) gaps <<= 1;
+        _gapPos = new long[gaps]; _gapLen = new long[gaps]; _gapMask = gaps - 1;
         // ~4 s of stereo input between the callback and the disk.
         var capacity = 1L;
         while (capacity < rate * 4L) capacity <<= 1;
@@ -54,9 +69,16 @@ public sealed class Recorder : IDisposable
             _writers.Clear();
             throw;
         }
+        if (!startWriter) return;
         _diskThread = new Thread(DiskLoop) { IsBackground = true, Name = "TabForge recorder disk", Priority = ThreadPriority.AboveNormal };
         _diskThread.Start();
     }
+
+    /// <summary>Tests only (recorder built with <c>startWriter: false</c>): runs the disk thread's work until everything queued is written.</summary>
+    public void PumpForTests() { while (Pump()) { } }
+
+    /// <summary>Gap markers that could not be kept exactly (merged into an earlier marker or written late): timing after such a gap is approximate.</summary>
+    public long GapOverflows => Interlocked.Read(ref _gapOverflows);
 
     /// <summary>
     /// A new file that did not exist before (create-new semantics): "name.wav", else "name-2.wav", "name-3.wav"… so two
@@ -93,8 +115,8 @@ public sealed class Recorder : IDisposable
         var free = (_queueMask + 1) - (write - Volatile.Read(ref _qRead));
         if (free < frames)
         {
-            Interlocked.Add(ref _dropped, frames);
             Interlocked.Add(ref _droppedTotal, frames);
+            RecordGap(write, frames);
             return;
         }
         for (var i = 0; i < frames; i++)
@@ -106,34 +128,102 @@ public sealed class Recorder : IDisposable
         Volatile.Write(ref _qWrite, write + frames);
     }
 
+    /// <summary>Capture thread, allocation-free and lock-free: records <paramref name="frames"/> lost at queue position <paramref name="pos"/>.</summary>
+    private void RecordGap(long pos, int frames)
+    {
+        var gw = _gWrite;   // producer-owned
+        // Nothing was queued since the newest marker: the drop continues it.
+        if (gw > 0 && _lastGapPos == pos && TryExtend((int)((gw - 1) & _gapMask), frames)) return;
+        if (gw - Volatile.Read(ref _gRead) >= _gapMask + 1)
+        {
+            // Marker ring full: merge into the newest marker (the silence lands at its position; later timing is approximate),
+            // or, if the disk thread already claimed it, write the silence when the writer is next idle. Reported once.
+            Interlocked.Increment(ref _gapOverflows);
+            if (gw > 0 && TryExtend((int)((gw - 1) & _gapMask), frames)) return;
+            Interlocked.Add(ref _lateSilence, frames);
+            return;
+        }
+        var slot = (int)(gw & _gapMask);
+        _gapPos[slot] = pos;
+        Volatile.Write(ref _gapLen[slot], frames);
+        _lastGapPos = pos;
+        Volatile.Write(ref _gWrite, gw + 1);   // published after the marker's fields; audio queued later sits after it
+    }
+
+    private bool TryExtend(int slot, long frames)
+    {
+        while (true)
+        {
+            var current = Volatile.Read(ref _gapLen[slot]);
+            if (current < 0) return false;   // the disk thread already claimed it
+            if (Interlocked.CompareExchange(ref _gapLen[slot], current + frames, current) == current) return true;
+        }
+    }
+
     private void DiskLoop()
     {
-        var reportedDrop = false;
         while (true)
         {
             var stopping = _stopping;
-            var moved = DrainOnce();
-            var dropped = Interlocked.Exchange(ref _dropped, 0);
-            if (dropped > 0)
-            {
-                WriteSilence(dropped);
-                if (!reportedDrop)
-                {
-                    reportedDrop = true;
-                    try { Error?.Invoke($"The disk could not keep up; {dropped / (double)_rate:0.00} s of input was replaced by silence."); } catch { }
-                }
-            }
-            if (stopping && !moved && Volatile.Read(ref _qWrite) == Volatile.Read(ref _qRead)) return;
+            var moved = Pump();
+            if (stopping && !moved && Idle) return;
             if (!moved) Thread.Sleep(5);
         }
     }
 
-    private bool DrainOnce()
+    private bool Idle => Volatile.Read(ref _qWrite) == Volatile.Read(ref _qRead) && Volatile.Read(ref _gWrite) == Volatile.Read(ref _gRead)
+        && Interlocked.Read(ref _lateSilence) == 0;
+
+    /// <summary>Disk thread: writes the queued audio and the gaps in order (audio up to a marker, then that marker's silence). True if anything was written.</summary>
+    private bool Pump()
+    {
+        var moved = false;
+        while (true)
+        {
+            var q = Volatile.Read(ref _qWrite);   // read before the marker counter: a marker published after this lies at or beyond q
+            var gw = Volatile.Read(ref _gWrite);
+            var gr = _gRead;
+            var read = _qRead;
+            if (gr != gw)
+            {
+                var slot = (int)(gr & _gapMask);
+                var pos = _gapPos[slot];
+                if (read < pos)
+                {
+                    var upTo = Math.Min(pos, q);
+                    if (upTo > read) { DrainOnce(upTo - read); moved = true; }
+                    continue;   // q may still trail pos (published since): read it again
+                }
+                var len = Interlocked.Exchange(ref _gapLen[slot], -1);   // claim: the producer no longer merges into it
+                if (len > 0) { WriteSilence(len); ReportDrop(len); moved = true; }
+                Volatile.Write(ref _gRead, gr + 1);
+                continue;
+            }
+            if (q > read) { DrainOnce(q - read); moved = true; continue; }
+            var late = Interlocked.Exchange(ref _lateSilence, 0);
+            if (late > 0) { WriteSilence(late); ReportDrop(late); moved = true; }
+            return moved;
+        }
+    }
+
+    private void ReportDrop(long frames)
+    {
+        if (!_reportedDrop)
+        {
+            _reportedDrop = true;
+            try { Error?.Invoke($"The disk could not keep up; {frames / (double)_rate:0.00} s of input was replaced by silence."); } catch { }
+        }
+        if (!_reportedOverflow && Interlocked.Read(ref _gapOverflows) > 0)
+        {
+            _reportedOverflow = true;
+            try { Error?.Invoke("The disk fell far behind; timing after the lost input may be slightly off."); } catch { }
+        }
+    }
+
+    private void DrainOnce(long limit)
     {
         var read = _qRead;
-        var available = Volatile.Read(ref _qWrite) - read;
-        if (available <= 0) return false;
-        var frames = (int)Math.Min(available, _drain.Length / 2);
+        var frames = (int)Math.Min(limit, _drain.Length / 2);
         for (var i = 0; i < frames; i++)
         {
             var at = ((read + i) & _queueMask) * 2;
@@ -142,7 +232,6 @@ public sealed class Recorder : IDisposable
         }
         Volatile.Write(ref _qRead, read + frames);
         Write(_drain, frames);
-        return true;
     }
 
     private void WriteSilence(long frames)
@@ -192,7 +281,8 @@ public sealed class Recorder : IDisposable
     {
         // Let the disk thread write everything still queued, then close the files.
         _stopping = true;
-        if (_diskThread.IsAlive && _diskThread != Thread.CurrentThread) _diskThread.Join(TimeSpan.FromSeconds(10));
+        if (_diskThread is null) PumpForTests();
+        else if (_diskThread.IsAlive && _diskThread != Thread.CurrentThread) _diskThread.Join(TimeSpan.FromSeconds(10));
         lock (_gate)
         {
             var length = (double)_frames / _rate;

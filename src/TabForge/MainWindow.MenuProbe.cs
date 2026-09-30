@@ -46,7 +46,7 @@ public partial class MainWindow
                     if (_midi.IsPlaying) StopPlayback();
                     File.Copy(song!, workCopy, true);
                     foreach (var d in _documents.Documents) d.MarkClean();
-                    OpenDocumentFromPath(workCopy, replaceCurrent: true, replaceAll: true);
+                    await OpenDocumentFromPath(workCopy, replaceCurrent: true, replaceAll: true);
                     _settings = JsonSerializer.Deserialize<AppSettings>(original)!;
                     _settings.Editing.ConfirmDeleteBar = false; // run the real delete, not just its prompt
                     _settings.General.ConfirmDeleteSection = false;

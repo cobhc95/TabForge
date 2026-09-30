@@ -85,12 +85,19 @@ public static class GuitarProImporter
         // Reset before the embedded-project early return so a lossless .gp load never reports the previous import's duplicates.
         LastImportSkippedDuplicates = 0;
         LastImportDuplicateSamples.Clear();
+        // Cooperative limits (A5-07): the ambient guard of a background import; null for synchronous headless use.
+        ImportGuard.CheckCurrent();
+        var raw = InputLimits.ReadBoundedBytes(path, InputLimits.MaxGuitarProFileBytes, "Guitar Pro file");
+        // Container / header checks on the raw bytes, before anything unpacks or parses them.
+        GuitarProPreParse.Validate(WithoutLeadingJunk(raw));
+        ImportGuard.CheckCurrent();
         // A .gp saved by TabForge carries its complete project: load that for a lossless round trip.
-        if (path.EndsWith(".gp", StringComparison.OrdinalIgnoreCase) && GuitarProExporter.TryReadEmbedded(path) is { } embedded)
+        if (path.EndsWith(".gp", StringComparison.OrdinalIgnoreCase) && GuitarProExporter.TryReadEmbedded(raw) is { } embedded)
             return embedded;
 
-        var data = WithoutLeadingJunk(InputLimits.ReadBoundedBytes(path, InputLimits.MaxGuitarProFileBytes, "Guitar Pro file"));
+        var data = WithoutLeadingJunk(raw);
         object score;
+        // alphaTab's parse is one uninterruptible call: the guard is checked right before and after it.
         try { score = ScoreLoader.LoadScoreFromBytes(data, new Settings()); }
         catch (Exception ex) when (ex is not OutOfMemoryException and not AccessViolationException)
         {
@@ -103,7 +110,8 @@ public static class GuitarProImporter
                 throw new InvalidDataException($"This Guitar Pro 3-5 file could not be read at or near bar {failedBar}: a second voice with no beats after a two-voice bar, which the Guitar Pro reader TabForge uses rejects (Guitar Pro itself opens it). Adding a rest to that voice in Guitar Pro fixes it.", ex);
             throw new InvalidDataException("This Guitar Pro file is invalid, truncated, or unsupported.", ex);
         }
-        _gp3To5 = data.AsSpan(0, Math.Min(data.Length, 32)).IndexOf(Gp3To5Signature) >= 0;
+        ImportGuard.CheckCurrent();
+        _gp3To5 =data.AsSpan(0, Math.Min(data.Length, 32)).IndexOf(Gp3To5Signature) >= 0;
         object root = score;
         LastImportSkippedDuplicates = 0;
         LastImportDuplicateSamples.Clear();
@@ -144,6 +152,7 @@ public static class GuitarProImporter
         {
             foreach (var sourceTrack in sourceTracks)
             {
+                ImportGuard.CheckCurrent();
                 var track = ConvertTrack(masterBars, sourceTrack, channel, budget);
                 if (track.Kind != TrackKind.Drums) channel = NextMelodicChannel(channel);
                 project.Tracks.Add(track);
@@ -153,6 +162,7 @@ public static class GuitarProImporter
 
         // Repeats / endings / sections / tempo map are master-bar level: apply them to every track.
         ReadMasterBarInfo(masterBars, project, new GuitarProMixTableScanner.TempoRampFinder(data));
+        ImportGuard.CheckCurrent();
 
         if (project.Tracks.Count == 0)
             throw new InvalidDataException("The Guitar Pro file loaded, but contained no tracks.");
@@ -166,11 +176,13 @@ public static class GuitarProImporter
     {
         private long _measures;
         private long _cells;
+        private int _cellCalls;
         private long _notes;
         private long _curvePoints;
 
         public void AddMeasures(int count)
         {
+            ImportGuard.CheckCurrent();   // per converted track: cancel, time and memory budget of a background import
             _measures += count;
             if (_measures > InputLimits.MaxTotalMeasures)
                 throw new InvalidDataException("The Guitar Pro file contains too many measures overall.");
@@ -178,6 +190,7 @@ public static class GuitarProImporter
 
         public void AddCells(int count)
         {
+            if ((++_cellCalls & 63) == 0) ImportGuard.CheckCurrent();   // every 64 bars converted
             _cells += count;
             if (_cells > InputLimits.MaxTotalCells)
                 throw new InvalidDataException("The Guitar Pro file contains too many beats overall.");

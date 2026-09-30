@@ -63,7 +63,7 @@ internal sealed partial class ScoreToMidiCompiler
         if (cell.Staccato) length *= 0.5;
         // Dead notes are a short muted click; ghost notes (parenthesised) are just softer, full length.
         if (note.Dead) length = Math.Min(length, slotMs * 0.16);   // 0.04 beat
-        // Palm mute: TuxGuitar caps a palm-muted note at a quarter note (min(quarter, written)) so it
+        // Palm mute: a palm-muted note is capped at a quarter note (min(quarter, written)) so it
         // chugs instead of ringing the full written value.
         if (TechniqueNames.HasPalmMute(t)) length = Math.Min(length, 4 * slotMs);
         length = Math.Max(20, length);

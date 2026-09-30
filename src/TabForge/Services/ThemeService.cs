@@ -9,6 +9,9 @@ namespace TabForge.Services;
 /// </summary>
 public static class ThemeService
 {
+    /// <summary>The smallest font size (device-independent px) any label may use; App.xaml's <c>MinFontSize</c> carries the same value.</summary>
+    public const double MinFontSize = 11;
+
     public static void Apply(AppearanceSettings a, Window? window = null)
     {
         var resources = Application.Current?.Resources;
@@ -46,6 +49,7 @@ public static class ThemeService
         Set(resources, "TextBrush", text);
         Set(resources, "TextStrongBrush", light ? "#111111" : "#FFFFFF");
         Set(resources, "MutedBrush", muted);
+        Set(resources, "SecondaryTextBrush", Blend(muted, text, 0.45));
         Set(resources, "AccentBrush", a.Accent);
         Set(resources, "AccentSoftBrush", Blend(a.Accent, background, 0.55));
         Set(resources, "SelectionBrush", a.SelectionColour);

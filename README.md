@@ -1,4 +1,4 @@
-# TabForge 0.2.0 Beta 4
+# TabForge 0.2.0 Beta 5
 
 **A keyboard-driven tablature and notation editor for Windows. Opens and saves Guitar Pro files.** Write, import and play back guitar,
 bass, drum and keyboard parts, with a live fretboard / keyboard, an arrangement timeline, audio and MIDI
@@ -9,7 +9,7 @@ recording lanes, mixer groups, VST effects and instruments, and offline audio re
 *The main screenshot shows TabForge's own demo song and a third-party VST3 plug-in (Superior Drummer 3 by Toontrack, sold separately) as an example of plug-in hosting. TabForge does not include that plug-in and is not affiliated with Toontrack.*
 
 > [!WARNING]
-> **TabForge 0.2.0 Beta 4 is a pre-release.** No bugs are known at the moment, but extensive testing is still
+> **TabForge 0.2.0 Beta 5 is a pre-release.** No bugs are known at the moment, but extensive testing is still
 > ongoing, so expect surprises. Keep backups of your projects and your original Guitar Pro files, especially
 > before using recording or third-party plug-ins.
 
@@ -19,9 +19,14 @@ TabForge is an independent project. Guitar Pro is a trademark of Arobas Music; T
 
 Get the latest build from [Releases](https://github.com/cobhc95/TabForge/releases):
 
-**0.2.0 Beta 4 downloads:** [Windows installer](https://github.com/cobhc95/TabForge/releases/download/v0.2.0-beta.4/TabForge-0.2.0-beta.4-setup.exe) · [Portable ZIP](https://github.com/cobhc95/TabForge/releases/download/v0.2.0-beta.4/TabForge-0.2.0-beta.4-win-x64-portable.zip) · [SHA-256 checksums](https://github.com/cobhc95/TabForge/releases/download/v0.2.0-beta.4/TabForge-0.2.0-beta.4-SHA256.txt)
+**0.2.0 Beta 5 downloads:** [Windows installer](https://github.com/cobhc95/TabForge/releases/download/v0.2.0-beta.5/TabForge-0.2.0-beta.5-setup.exe) · [Portable ZIP](https://github.com/cobhc95/TabForge/releases/download/v0.2.0-beta.5/TabForge-0.2.0-beta.5-win-x64-portable.zip) · [SHA-256 checksums](https://github.com/cobhc95/TabForge/releases/download/v0.2.0-beta.5/TabForge-0.2.0-beta.5-SHA256.txt)
 
 Installer, portable ZIP, SHA-256 checksums and release notes are on the [Releases page](https://github.com/cobhc95/TabForge/releases).
+
+**Unsigned binaries.** The downloads are not code-signed, so Windows SmartScreen may warn when you first run
+them. Releases built by the GitHub Actions release workflow from the tagged source come with build attestations
+(`gh attestation verify <file> --repo cobhc95/TabForge`) and SHA-256 checksums, so you can verify that a
+download matches that build.
 
 - **`TabForge-<version>-setup.exe`** — installer: Start menu entry, optional desktop icon and an optional
   *"Open Guitar Pro and TabForge files with TabForge"* association. Installs for your Windows account;
@@ -189,7 +194,7 @@ or the keyboard (root marked more strongly); *Scale > Clear selection* removes i
   palm mute, ghost/dead notes and triplet feel/swing.
 - **Song structure (repeats, endings, D.C./D.S.) played as written:** repeats (up to x99, several closes, multi-pass endings such as
   1.2.3.), D.S. / D.C. / Coda / Fine, and tempo changes that last until the next one, including changes partway
-  through a bar. Tested bar by bar against a corpus of 1,694 song files in Guitar Pro formats.
+  through a bar. Covered by synthetic test songs that run on every build.
 - **Metronome and count-in** with their own sounds and levels, subdivisions, count-in before every loop.
 - **Seamless looping** of the song, a section or any selected area; set a number of loops; a **speed
   trainer** that raises the tempo each pass; skip areas during playback.
@@ -270,7 +275,7 @@ is listed with its path, and changes preview live before you apply them:
 | ASCII tab (`.txt`) | | export |
 
 Drum parts import from every format, including Guitar Pro 6 (`.gpx`) extended articulations and Guitar Pro 7/8
-(`.gp`) drum kits; the import is checked note-for-note against the reference reader on ~1,700 real files. Known
+(`.gp`) drum kits; the import is covered by synthetic round-trip tests that run on every build. Known
 limit: Guitar Pro 3–5 files with more than 1,000 bars cannot be opened by the reader library yet (save them as
 `.gp`/`.gpx` from Guitar Pro 6/7/8). Guitar Pro 1/2 (`.gtp`) and TuxGuitar (`.tg`) files are not supported.
 
@@ -355,7 +360,7 @@ Settings > Hotkeys (all rebindable).
 - Drag-and-drop tabs between windows; **Windows 11 Snap Layouts** on the maximise button; full-screen mode (F11).
 
 ### Editing and notation
-- **Notation and playback checked against reference files**: engraving (bends, whammy diagrams, grace notes, key/time signatures, tempo marks, dynamics) and playback (repeats, jumps, tempo changes, tremolo, strokes, bend channel).
+- **Notation and playback** covered by automated tests: engraving (bends, whammy diagrams, grace notes, key/time signatures, tempo marks, dynamics) and playback (repeats, jumps, tempo changes, tremolo, strokes, bend channel).
 - Note entry: fret digits, arrow navigation, **durations** (whole to 64th, increase/decrease, dotted, double dotted, triplet), rest, tie, fermata, accent, staccato, tenuto, **shift pitch** by semitone, **move to higher/lower string** (Alt+Up/Down in the score), copy last beat.
 - **Effects**: dead, ghost, palm mute, let ring, hammer/pull, bend, legato and shift slide, vibrato, wide vibrato, tremolo bar, natural and artificial harmonics, tapping, slap, pop, trill, tremolo picking, fade in/out, wah open/close, brush and arpeggio up/down, grace note, chord names, beat text, lyrics.
 - **Bars**: insert, delete, duplicate, repeat selection as bars, time signature, key signature, clef, triplet feel, repeat open/close, directions and endings, double bar, repeat one or two bars, section editor, **Check bars (F4)**, **Go to bar**, mix table points (F10).
@@ -482,7 +487,7 @@ Settings > Hotkeys (all rebindable).
 
 - **Architecture rules**: one-directional dependencies, no UI code in the model or playback layers, one owner
   per piece of state, one place per rule (bar length, section bounds, technique names, colour parsing...).
-- **A headless regression suite of ~1,000 deterministic checks** (`TabForge.exe --selftest <log>`) covers timing,
+- **A headless regression suite of about 2,000 deterministic checks** (`TabForge.exe --selftest <log>`) covers timing,
   ties, repeats, import/export round trips, notation layout, editing semantics, hotkeys, security boundaries,
   every Settings row and scale detection. Every group is isolated so one crash cannot hide failures, and a
   missing input is reported as **SKIP**, never as a pass.
@@ -497,8 +502,8 @@ TabForge treats every file, clipboard paste and settings file as **untrusted inp
 - **Bounded reads everywhere**: projects and Guitar Pro files are capped at 128 MB, settings at 2 MB, JSON
   nesting at 64 levels. Files are size-checked *before* they are read into memory.
 - **Structure limits** checked before and after parsing — e.g. at most 256 tracks, 20,000 bars per track,
-  1,000,000 notes, 16 strings, 64 techniques per note, 512 bend points — so a crafted file cannot exhaust
-  memory or CPU. Every loaded project, undo snapshot and paste is validated the same way.
+  1,000,000 notes, 16 strings, 64 techniques per note, 512 bend points — to keep the memory and CPU a crafted file can use bounded
+  (hardened continuously; not a guarantee). Every loaded project, undo snapshot and paste is validated the same way.
 - **Zip-bomb safe `.gp` reading**: the embedded project is inflated with a hard cap (its declared size is
   not trusted), and anything wrong falls back to the normal import.
 - **Safe saving**: files are written to a temporary file and swapped in atomically, so a crash or full disk

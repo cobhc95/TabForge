@@ -1,355 +1,522 @@
-using System.Linq;
 using TabForge.Models;
 
 namespace TabForge.Playback;
 
 /// <summary>
-/// Turns the score's bar structure into the linear order of bars that are actually performed.
-/// Handles repeat open/close, repeat counts and alternate endings (the reference semantics, adapted
-/// from TuxGuitar's MidiRepeatController). The bar order is derived once and reused by the MIDI
-/// compiler and by the arrangement's playhead logic.
+/// Turns a score's bar structure into the order in which the bars are performed, following the repeat,
+/// alternate-ending and direction rules that Guitar Pro files define.
 /// </summary>
+/// <remarks>
+/// The order is built in three stages:
+/// <list type="number">
+/// <item>Repeats and alternate endings are expanded, walking the bars from the first one.</item>
+/// <item>Directions (D.C., D.S., D.S.S., To Coda, Coda, Fine) are applied to that expanded order.</item>
+/// <item>The start bar is applied as a filter.</item>
+/// </list>
+/// Only the first track's bars carry structure; bars beyond the end of the first track are plain bars.
+/// Every stage has a visit limit, so contradictory structures still give a finite order.
+/// </remarks>
 public static class PlaybackOrder
 {
-    /// <summary>Bar indices (source bars) in performance order.</summary>
+    /// <summary>The largest number of passes a repeat close can have.</summary>
+    public const int MaxRepeats = 99;
+
+    /// <summary>Endings can name passes 1 to 8 only.</summary>
+    private const int EndingPassCount = 8;
+
+    /// <summary>
+    /// Bar indices (source bars, from 0) in performance order. The same bar appears once per time it is
+    /// played; the list is empty only for a score without bars or a start bar at or past the song's end.
+    /// </summary>
+    /// <param name="project">The song. Structure is read from its first track.</param>
+    /// <param name="opt">Uses <see cref="PlaybackOptions.RepeatExpansion"/> and <see cref="PlaybackOptions.StartBar"/>.</param>
     public static List<int> Build(SongProject project, PlaybackOptions opt)
     {
-        var measureCount = project.Tracks.Count == 0 ? 0 : project.Tracks.Max(t => t.Measures.Count);
-        var first = project.Tracks.FirstOrDefault();
-        var order = new List<int>();
-        if (measureCount == 0) return order;
+        opt ??= new PlaybackOptions();
+        var score = BarStructure.Read(project);
+        if (score.BarCount == 0) return new List<int>();
 
-        MeasureModel? Bar(int i) => first is not null && i >= 0 && i < first.Measures.Count ? first.Measures[i] : null;
-
-        // Repeat expansion (the state machine TuxGuitar uses to match GP): a close sends
-        // playback back to the most recent open until its passes are used up; an ending bracket stays in force
-        // until the close and plays only on its passes; while an ending is in force at a close the repeat
-        // keeps going, so one repeat can have several closes with their own endings (1st, 2nd, 3rd...).
-        // A close with no open repeats from just after the previous finished repeat (or from bar 1).
-        var startIndex = 0;
-        var open = true;
-        var pass = 0;
-        var ending = 0;
-        var furthest = -1;
-        var lastClose = -1;
-        var bracketToClose = false;
-        var lastOpen = -1;
-        var foreignEnding = new HashSet<int>();
-        // Each close counts its own jumps: "x2" sends playback back once, however many passes its ending
-        // covers, and a repeat with several closes (1st / 2nd / 3rd ending each with a close) uses each once.
-        var closeUses = new Dictionary<int, int>();
-        bool CloseFollows(int from)
-        {
-            for (var k = from + 1; k < measureCount; k++)
-            {
-                if (Bar(k)?.RepeatStart == true) return false;
-                if (Bar(k)?.RepeatEnd == true) return true;
-            }
-            return false;
-        }
-        bool JumpsBack(int bar, MeasureModel? close)
-        {
-            var used = closeUses.GetValueOrDefault(bar);
-            if (used >= Passes(close) - 1) return false;
-            closeUses[bar] = used + 1;
-            return true;
-        }
-        bool ReachesClose(int from)
-        {
-            for (var k = from; k < measureCount; k++)
-            {
-                var bar = Bar(k);
-                if (bar?.RepeatEnd == true) return true;
-                if (k > from && (bar?.RepeatStart == true || (bar?.EndingPasses ?? 0) != 0)) return false;
-            }
-            return false;
-        }
-        var guard = measureCount * (MaxRepeats + 2) + 1024;
-        for (var i = 0; i < measureCount && guard-- > 0; i++)
-        {
-            var measure = Bar(i);
-            if (!opt.RepeatExpansion) { order.Add(i); continue; }
-            // Endings apply to the open bar too (an ending that starts on the repeat's first bar).
-            {
-                // An ending on the bar that opens the next repeat belongs to the repeat before it; inside its own
-                // repeat that bar plays on every pass.
-                var own = foreignEnding.Contains(i) && i == startIndex && open ? 0 : measure?.EndingPasses ?? 0;
-                if (own != 0) { ending = own; bracketToClose = ReachesClose(i); }
-                // A bracket that no repeat close ends (the last ending) covers only its own bars.
-                else if (own == 0 && ending != 0 && !bracketToClose) ending = 0;
-                if (open && ending != 0 && (pass >= 8 || (ending & (1 << pass)) == 0))
-                {
-                    if (measure?.RepeatEnd == true)
-                    {
-                        ending = 0;
-                        // A skipped close still sends playback back while it has passes left.
-                        if (JumpsBack(i, measure)) { pass++; i = startIndex - 1; }
-                        else if (!CloseFollows(i))
-                        {
-                            // This close's passes are used up and no other close follows: the repeat is over,
-                            // so the next ending (e.g. "3.") plays.
-                            pass = 0; open = false; lastClose = i; closeUses.Clear();
-                        }
-                    }
-                    continue; // an ending for other passes
-                }
-            }
-            // A played open bar starts a repeat (checked after the endings: the open bar can carry the previous
-            // repeat's last ending, e.g. "2." on the bar that opens the next repeat).
-            if (measure?.RepeatStart == true)
-            {
-                startIndex = i;
-                open = true;
-                if (i > furthest)
-                {
-                    if ((measure.EndingPasses) != 0 && lastClose == i - 1) foreignEnding.Add(i);
-                    pass = 0; ending = 0; closeUses.Clear();
-                }
-                lastOpen = i;
-            }
-            furthest = Math.Max(furthest, i);
-            order.Add(i);
-            if (measure?.RepeatEnd != true) continue;
-            // A close with no open of its own goes back to the most recent open (or bar 1).
-            if (!open) { startIndex = Math.Max(0, lastOpen); open = true; pass = 0; closeUses.Clear(); }
-            if (JumpsBack(i, measure))
-            {
-                pass++;
-                ending = 0;
-                i = startIndex - 1;
-                continue;
-            }
-            pass = 0;
-            ending = 0;
-            open = false;
-            lastClose = i;
-            closeUses.Clear();
-        }
-
-        order = ApplyNavigationDirections(first, order);
-        if (opt.StartBar > 0) order = order.Where(b => b >= opt.StartBar).ToList();
-        if (order.Count == 0 && opt.StartBar < measureCount)
-            order.Add(Math.Clamp(opt.StartBar, 0, measureCount - 1));
-        return order;
-    }
-
-    private static List<int> ApplyNavigationDirections(TrackModel? track, IReadOnlyList<int> repeatedOrder)
-    {
-        if (track is null || repeatedOrder.Count == 0) return repeatedOrder.ToList();
-        string[] Tokens(int bar)
-        {
-            if (bar < 0 || bar >= track.Measures.Count) return Array.Empty<string>();
-            return DirectionTokens(track.Measures[bar].Directions);
-        }
-        bool Has(int bar, params string[] names)
-            => Tokens(bar).Any(token => names.Any(name => token.Equals(name, StringComparison.OrdinalIgnoreCase)));
-
-        var output = new List<int>(repeatedOrder.Count);
-        var position = 0;
-        var jumped = false;
-        var codaArmed = false;
-        var tookCoda = false;
-        var guard = Math.Max(256, repeatedOrder.Count * 64);
-        while (position < repeatedOrder.Count && guard-- > 0)
-        {
-            var bar = repeatedOrder[position];
-            output.Add(bar);
-            if (jumped && Has(bar, "Fine")) break;
-
-            var direction = Tokens(bar);
-            if (jumped && codaArmed && !tookCoda && direction.Any(token => token.Equals("ToCoda", StringComparison.OrdinalIgnoreCase)))
-            {
-                var coda = FindDirectionTarget(track, repeatedOrder, "DoubleCoda", "Coda");
-                if (coda >= 0) { position = coda; tookCoda = true; continue; }
-            }
-
-            var dalSegnoSegno = direction.Any(token => token.Equals("DalSegnoSegno", StringComparison.OrdinalIgnoreCase) ||
-                                                       token.Equals("DalSegnoSegnoAlCoda", StringComparison.OrdinalIgnoreCase));
-            var dalSegno = dalSegnoSegno || direction.Any(token => token.Equals("DalSegno", StringComparison.OrdinalIgnoreCase) ||
-                                                  token.Equals("DalSegnoAlCoda", StringComparison.OrdinalIgnoreCase));
-            var daCapo = direction.Any(token => token.Equals("DaCapo", StringComparison.OrdinalIgnoreCase) ||
-                                                token.Equals("DaCapoAlCoda", StringComparison.OrdinalIgnoreCase));
-            if (!jumped && (daCapo || dalSegno))
-            {
-                // D.S.S. goes to the double segno, falling back to the single one when the file marks none.
-                var doubleSegno = dalSegnoSegno ? FindDirectionTarget(track, repeatedOrder, "SegnoSegno") : -1;
-                var target = doubleSegno >= 0 ? doubleSegno
-                    : dalSegno ? FindDirectionTarget(track, repeatedOrder, "Segno") : FindFirstBar(repeatedOrder);
-                if (target >= 0)
-                {
-                    var alCoda = direction.Any(token => token.Equals("DalSegnoAlCoda", StringComparison.OrdinalIgnoreCase) ||
-                                                        token.Equals("DalSegnoSegnoAlCoda", StringComparison.OrdinalIgnoreCase) ||
-                                                        token.Equals("DaCapoAlCoda", StringComparison.OrdinalIgnoreCase));
-                    // After a D.S. / D.C. playback continues straight through: no repeats, only each group's last ending.
-                    PlayAfterJump(track, repeatedOrder[target], alCoda, output, Has);
-                    return output;
-                }
-            }
-            position++;
-        }
-        return output;
-    }
-
-    private static void PlayAfterJump(TrackModel track, int fromBar, bool alCoda, List<int> output, Func<int, string[], bool> has)
-    {
-        var count = track.Measures.Count;
-        var skip = EarlierEndingBars(track);
-        var tookCoda = false;
-        var guard = count * 4 + 16;
-        for (var bar = fromBar; bar < count && guard-- > 0; bar++)
-        {
-            if (skip[bar]) continue;
-            output.Add(bar);
-            if (has(bar, new[] { "Fine" })) return;
-            if (alCoda && !tookCoda && has(bar, new[] { "ToCoda", "ToDoubleCoda" }))
-            {
-                // The Coda normally follows; an earlier one is used when there is none after this bar.
-                var coda = Enumerable.Range(bar + 1, Math.Max(0, count - bar - 1)).Concat(Enumerable.Range(0, bar + 1))
-                    .FirstOrDefault(k => has(k, new[] { "Coda", "DoubleCoda" }), -1);
-                if (coda >= 0) { tookCoda = true; bar = coda - 1; }
-            }
-        }
-    }
-
-    /// <summary>Bars inside an ending bracket that a later ending of the same repeat replaces (skipped after a jump).</summary>
-    private static bool[] EarlierEndingBars(TrackModel track)
-    {
-        var bars = track.Measures;
-        var skip = new bool[bars.Count];
-        static int Highest(int passes) { var h = -1; for (var n = 0; n < 8; n++) if ((passes & (1 << n)) != 0) h = n; return h; }
-        var inBracket = false; var skipping = false; var closed = false;
-        for (var b = 0; b < bars.Count; b++)
-        {
-            var own = bars[b].EndingPasses;
-            if (own != 0)
-            {
-                var high = Highest(own);
-                skipping = false;
-                for (var k = b + 1; k < bars.Count && !bars[k].RepeatStart; k++)
-                    if (bars[k].EndingPasses != 0 && Highest(bars[k].EndingPasses) > high) { skipping = true; break; }
-                inBracket = true; closed = false;
-            }
-            else if (bars[b].RepeatStart || closed) inBracket = false;
-            skip[b] = inBracket && skipping;
-            if (bars[b].RepeatEnd) closed = true;
-        }
-        return skip;
-    }
-
-    private static int FindDirectionTarget(TrackModel track, IReadOnlyList<int> order, params string[] names)
-    {
-        for (var i = 0; i < order.Count; i++)
-        {
-            var bar = order[i];
-            if (bar < 0 || bar >= track.Measures.Count) continue;
-            var directions = DirectionTokens(track.Measures[bar].Directions);
-            if (names.Any(name => directions.Any(direction => direction.Equals(name, StringComparison.OrdinalIgnoreCase)))) return i;
-        }
-        return -1;
+        var expanded = opt.RepeatExpansion ? ExpandRepeats(score) : Enumerable.Range(0, score.BarCount).ToList();
+        var performed = ApplyDirections(score, expanded);
+        return ApplyStartBar(performed, opt.StartBar, score.BarCount);
     }
 
     /// <summary>
-    /// A bar's directions in TabForge's names. Guitar Pro imports keep alphaTab's names ("TargetSegno",
-    /// "JumpDalSegnoAlCoda", "JumpDaCoda"...), which playback used to ignore, so no D.S. / D.C. / Coda was followed.
+    /// The loop's inclusive source-bar range: both loop bars clamped to the song, in ascending order.
+    /// A song without bars gives (0, 0).
+    /// </summary>
+    public static (int startBar, int endBar) LoopRange(SongProject project, PlaybackOptions opt)
+    {
+        opt ??= new PlaybackOptions();
+        var last = Math.Max(0, BarStructure.CountBars(project) - 1);
+        var a = Math.Clamp(opt.LoopStartBar, 0, last);
+        var b = Math.Clamp(opt.LoopEndBar, 0, last);
+        return a <= b ? (a, b) : (b, a);
+    }
+
+    /// <summary>
+    /// The loop's start and end in milliseconds inside a compiled timeline. The loop starts at the selected
+    /// grid cell of the first performance of its first bar and ends after the selected cell (or the whole bar)
+    /// of the last performance of its last bar. Not available when either bar is missing from the timeline or
+    /// the span is empty.
+    /// </summary>
+    public static (double startMs, double endMs, bool available) LoopBounds(ScoreTimeline timeline, SongProject project, PlaybackOptions opt)
+    {
+        opt ??= new PlaybackOptions();
+        var (startBar, endBar) = LoopRange(project, opt);
+
+        ScoreBar? first = null;
+        ScoreBar? last = null;
+        foreach (var bar in timeline.Bars)
+        {
+            if (bar.Bar == startBar && first is null) first = bar;
+            if (bar.Bar == endBar) last = bar;
+        }
+        if (first is not { } from || last is not { } to) return (0, 0, false);
+
+        var fromSlots = Math.Max(1, from.Slots);
+        var startCell = Math.Clamp(opt.LoopStartCell, 0, fromSlots - 1);
+        var start = from.StartMs + (from.EndMs - from.StartMs) * startCell / fromSlots;
+
+        var toSlots = Math.Max(1, to.Slots);
+        var endCell = opt.LoopEndCell == -1 ? toSlots : Math.Clamp(opt.LoopEndCell + 1, 1, toSlots);
+        var end = to.StartMs + (to.EndMs - to.StartMs) * endCell / toSlots;
+
+        return end > start ? (start, end, true) : (0, 0, false);
+    }
+
+    /// <summary>
+    /// A bar's direction names: the comma-separated text split, trimmed, empty pieces dropped, and each
+    /// stored spelling normalised (for example <c>JumpDaCoda</c> becomes <c>ToCoda</c>, <c>TargetSegno</c>
+    /// becomes <c>Segno</c>). Names are compared case-insensitively afterwards.
     /// </summary>
     internal static string[] DirectionTokens(string? directions)
     {
         if (string.IsNullOrWhiteSpace(directions)) return Array.Empty<string>();
-        return directions.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(token => token switch
-        {
-            "JumpDaCoda" => "ToCoda",
-            "JumpDaDoubleCoda" => "ToDoubleCoda",
-            "JumpDaCapoAlFine" => "DaCapo",
-            "JumpDalSegnoAlFine" => "DalSegno",
-            "JumpDaCapoAlDoubleCoda" => "DaCapoAlCoda",
-            "JumpDalSegnoAlDoubleCoda" => "DalSegnoAlCoda",
-            "JumpDalSegnoSegno" or "JumpDalSegnoSegnoAlFine" => "DalSegnoSegno",
-            "JumpDalSegnoSegnoAlCoda" or "JumpDalSegnoSegnoAlDoubleCoda" => "DalSegnoSegnoAlCoda",
-            _ when token.StartsWith("Target", StringComparison.Ordinal) && token.Length > 6 => token[6..],
-            _ when token.StartsWith("Jump", StringComparison.Ordinal) && token.Length > 4 => token[4..],
-            _ => token,
-        }).ToArray();
+        return directions.Split(',')
+            .Select(piece => piece.Trim())
+            .Where(piece => piece.Length > 0)
+            .Select(NormaliseDirection)
+            .ToArray();
     }
 
-    private static int FindFirstBar(IReadOnlyList<int> order)
+    private static string NormaliseDirection(string piece) => piece switch
     {
-        return order.Count == 0 || order[0] < 0 ? -1 : 0;
-    }
+        "JumpDaCoda" => "ToCoda",
+        "JumpDaDoubleCoda" => "ToDoubleCoda",
+        "JumpDaCapoAlFine" => "DaCapo",
+        "JumpDalSegnoAlFine" => "DalSegno",
+        "JumpDaCapoAlDoubleCoda" => "DaCapoAlCoda",
+        "JumpDalSegnoAlDoubleCoda" => "DalSegnoAlCoda",
+        "JumpDalSegnoSegno" or "JumpDalSegnoSegnoAlFine" => "DalSegnoSegno",
+        "JumpDalSegnoSegnoAlCoda" or "JumpDalSegnoSegnoAlDoubleCoda" => "DalSegnoSegnoAlCoda",
+        _ when piece.Length > 6 && piece.StartsWith("Target", StringComparison.Ordinal) => piece[6..],
+        _ when piece.Length > 4 && piece.StartsWith("Jump", StringComparison.Ordinal) => piece[4..],
+        _ => piece,
+    };
 
-    private static int FindRepeatEnd(Func<int, MeasureModel?> bar, int start, int count)
+    // ------------------------------------------------------------------------------------------------
+    // Stage 1: repeats and alternate endings
+    // ------------------------------------------------------------------------------------------------
+
+    /// <summary>
+    /// Walks the bars from the first one and expands repeats and alternate endings.
+    /// <list type="bullet">
+    /// <item>The song start acts as an open until the first open bar is played. The most recently played
+    /// open is the return point; the pass count restarts only when an open bar is reached for the first time.</item>
+    /// <item>A close with N passes sends playback back N-1 times, then lets it through. The count belongs to
+    /// the close; a close that is not played (its ending does not cover the pass) still counts.</item>
+    /// <item>A close under an ending whose jumps are used up hands over to a further close of the same repeat
+    /// (one that follows before the next open bar). Otherwise the repeat is finished: pass count and jump counts
+    /// are cleared, and a later close without an open of its own returns to the bar after this close.</item>
+    /// <item>An ending bar plays on the passes it names. After a repeat has finished, ending bars play once
+    /// until the next open bar. On pass 9 and later, ending bars are skipped.</item>
+    /// <item>An ending bar that also opens a repeat, directly after a close (or on the first bar), is the
+    /// previous repeat's ending; within its own repeat it plays on every pass.</item>
+    /// </list>
+    /// </summary>
+    private static List<int> ExpandRepeats(BarStructure score)
     {
-        // The open bar can close the repeat itself (a one-bar repeat); it used to be skipped.
-        // A later repeat open before the close takes over (a repeat starts from the most recent open), so
-        // this open is then an ordinary bar.
-        for (var k = start; k < count; k++)
+        var n = score.BarCount;
+        var order = new List<int>();
+        var jumpsTaken = new int[n];
+        var returnPoint = 0;
+        var returnPointIsOpenBar = false;
+        var pass = 1;
+        var furthest = -1;
+        var repeatJustFinished = false;
+        var visitLimit = (long)n * 101 + 1024;
+        long visits = 0;
+
+        var bar = 0;
+        while (bar < n && visits++ < visitLimit)
         {
-            if (k > start && bar(k)?.RepeatStart == true) return -1;
-            if (bar(k)?.RepeatEnd == true) return k;
+            var firstArrival = bar > furthest;
+            if (firstArrival) furthest = bar;
+
+            var plays = PlaysOnPass(score, bar, pass, repeatJustFinished, returnPointIsOpenBar && returnPoint == bar);
+            if (plays)
+            {
+                order.Add(bar);
+                if (score.Open(bar))
+                {
+                    if (firstArrival)
+                    {
+                        pass = 1;
+                        Array.Clear(jumpsTaken);
+                    }
+                    returnPoint = bar;
+                    returnPointIsOpenBar = true;
+                    repeatJustFinished = false;
+                }
+            }
+
+            if (score.Close(bar))
+            {
+                if (jumpsTaken[bar] < score.Passes(bar) - 1)
+                {
+                    jumpsTaken[bar]++;
+                    pass++;
+                    repeatJustFinished = false;
+                    bar = returnPoint;
+                    continue;
+                }
+
+                var handsOver = score.Ending(bar) != 0 && score.CloseFollowsBeforeNextOpen(bar);
+                if (!handsOver)
+                {
+                    Array.Clear(jumpsTaken);
+                    pass = 1;
+                    returnPoint = bar + 1;
+                    returnPointIsOpenBar = false;
+                    repeatJustFinished = true;
+                }
+            }
+            bar++;
         }
+        return order;
+    }
+
+    private static bool PlaysOnPass(BarStructure score, int bar, int pass, bool repeatJustFinished, bool insideOwnRepeat)
+    {
+        var ending = score.Ending(bar);
+        if (ending == 0) return true;
+        if (insideOwnRepeat && score.LeadingEnding(bar)) return true;
+        if (repeatJustFinished) return true;
+        if (pass > EndingPassCount) return false;
+        return (ending & (1 << (pass - 1))) != 0;
+    }
+
+    // ------------------------------------------------------------------------------------------------
+    // Stage 2: directions
+    // ------------------------------------------------------------------------------------------------
+
+    /// <summary>
+    /// Copies the expanded order until one D.C./D.S. is taken, then plays straight through from its target.
+    /// <list type="bullet">
+    /// <item>Before the jump, Fine and To Coda are ignored. A jump bar is played in full, then the jump happens;
+    /// inside a repeat it is acted on at its last performance, so the repeat plays out first.</item>
+    /// <item>D.C. returns to the first performed bar, D.S. to the first segno, D.S.S. to the first double segno
+    /// (or the first segno when there is none). A jump without a target is ignored.</item>
+    /// <item>After the jump, repeats are not taken again and only the last ending of each repeat is played.
+    /// Fine ends playback after its bar. After an "al Coda" jump, the first To Coda bar leads to the nearest
+    /// coda after it (or the first one in the song); after an "al Fine" jump, To Coda is ignored.</item>
+    /// </list>
+    /// </summary>
+    private static List<int> ApplyDirections(BarStructure score, List<int> expanded)
+    {
+        var output = new List<int>(expanded.Count);
+        if (expanded.Count == 0) return output;
+
+        var lastPerformance = new Dictionary<int, int>();
+        for (var i = 0; i < expanded.Count; i++) lastPerformance[expanded[i]] = i;
+
+        var beforeJumpLimit = Math.Max(256, 64L * expanded.Count);
+        for (var i = 0; i < expanded.Count && output.Count < beforeJumpLimit; i++)
+        {
+            var bar = expanded[i];
+            output.Add(bar);
+            if (lastPerformance[bar] != i) continue;
+
+            foreach (var jump in score.Jumps(bar))
+            {
+                var target = FindJumpTarget(score, expanded, jump.Kind);
+                if (target < 0) continue;
+                PlayAfterJump(score, output, target, jump.AlCoda);
+                return output;
+            }
+        }
+        return output;
+    }
+
+    private static int FindJumpTarget(BarStructure score, List<int> expanded, JumpKind kind)
+    {
+        switch (kind)
+        {
+            case JumpKind.DaCapo:
+                return expanded[0];
+            case JumpKind.DalSegno:
+                return FirstPerformedWith(score, expanded, Mark.Segno);
+            case JumpKind.DalSegnoSegno:
+                var doubleSegno = FirstPerformedWith(score, expanded, Mark.SegnoSegno);
+                return doubleSegno >= 0 ? doubleSegno : FirstPerformedWith(score, expanded, Mark.Segno);
+            default:
+                return -1;
+        }
+    }
+
+    private static int FirstPerformedWith(BarStructure score, List<int> expanded, Mark mark)
+    {
+        foreach (var bar in expanded)
+            if (score.Has(bar, mark)) return bar;
         return -1;
     }
 
-    private static int Passes(MeasureModel? repeatEnd) => Math.Clamp(repeatEnd?.RepeatCount ?? 2, 2, MaxRepeats);
-
-    /// <summary>A repeat may play up to 99 times (it used to be capped at 8 here).</summary>
-    public const int MaxRepeats = 99;
-
-    /// <summary>An alternate ending N sounds on the N-th pass; an unmarked bar sounds on every pass.</summary>
-    /// <summary>
-    /// One pass through a repeated section. An alternate-ending bracket runs from its bar to the next ending or
-    /// the repeat close, so bars inside it without an ending of their own belong to it (the reference semantics).
-    /// </summary>
-    private static void AddSectionPass(List<int> order, Func<int, MeasureModel?> bar, int start, int end, int pass)
+    private static void PlayAfterJump(BarStructure score, List<int> output, int target, bool alCoda)
     {
-        var bracket = 0;
-        for (var b = start; b <= end; b++)
+        var n = score.BarCount;
+        var limit = 4L * n + 16;
+        long played = 0;
+        var codaTaken = !alCoda;
+        var bar = target;
+
+        // Every step moves forward except the single coda jump, so this always ends.
+        while (bar < n && played < limit)
         {
-            var own = bar(b)?.EndingPasses ?? 0;
-            if (own != 0) bracket = own;
-            var passes = own != 0 ? own : bracket;
-            if (passes == 0 || pass is >= 0 and < 8 && (passes & (1 << pass)) != 0) order.Add(b);
+            if (score.DroppedAfterJump(bar)) { bar++; continue; }
+
+            output.Add(bar);
+            played++;
+            if (score.Has(bar, Mark.Fine)) return;
+
+            if (!codaTaken && score.Has(bar, Mark.ToCoda))
+            {
+                var coda = score.NearestCoda(bar);
+                if (coda >= 0)
+                {
+                    codaTaken = true;
+                    bar = coda;
+                    continue;
+                }
+            }
+            bar++;
         }
     }
 
-    /// <summary>The ending passes in force at bar <paramref name="at"/> of a section starting at <paramref name="start"/>.</summary>
-    private static MeasureModel? EndingInForce(Func<int, MeasureModel?> bar, int start, int at)
+    // ------------------------------------------------------------------------------------------------
+    // Stage 3: start bar
+    // ------------------------------------------------------------------------------------------------
+
+    /// <summary>
+    /// Keeps only performances of bars at or after the start bar. When nothing is left, the start bar alone is
+    /// played if it is inside the song.
+    /// </summary>
+    private static List<int> ApplyStartBar(List<int> performed, int startBar, int barCount)
     {
-        MeasureModel? bracket = null;
-        for (var b = start; b <= at; b++)
-            if ((bar(b)?.EndingPasses ?? 0) != 0) bracket = bar(b);
-        return (bar(at)?.EndingPasses ?? 0) != 0 ? bar(at) : bracket;
+        if (startBar <= 0) return performed;
+        var kept = performed.Where(bar => bar >= startBar).ToList();
+        if (kept.Count == 0 && startBar < barCount) kept.Add(startBar);
+        return kept;
     }
 
-    private static bool PlaysOnPass(MeasureModel? bar, int pass)
+    // ------------------------------------------------------------------------------------------------
+    // Bar structure read from the first track
+    // ------------------------------------------------------------------------------------------------
+
+    private enum JumpKind { DaCapo, DalSegno, DalSegnoSegno }
+
+    private readonly record struct Jump(JumpKind Kind, bool AlCoda);
+
+    [Flags]
+    private enum Mark
     {
-        // An ending can cover several passes ("1.2.3."); it used to play on its first only.
-        var passes = bar?.EndingPasses ?? 0;
-        return passes == 0 || pass is >= 0 and < 8 && (passes & (1 << pass)) != 0;
+        None = 0,
+        Segno = 1,
+        SegnoSegno = 2,
+        Coda = 4,
+        Fine = 8,
+        ToCoda = 16,
     }
 
-    /// <summary>The inclusive source-bar range a loop covers, clamped to the score.</summary>
-    public static (int startBar, int endBar) LoopRange(SongProject project, PlaybackOptions opt)
+    /// <summary>
+    /// The structural facts of every bar: opens, closes and their pass counts, endings (with each ending
+    /// bracket's reach), destinations and jumps. Bars past the first track are plain.
+    /// </summary>
+    private sealed class BarStructure
     {
-        var max = Math.Max(0, (project.Tracks.Count == 0 ? 0 : project.Tracks.Max(t => t.Measures.Count)) - 1);
-        var s = Math.Clamp(opt.LoopStartBar, 0, max);
-        var e = Math.Clamp(opt.LoopEndBar, 0, max);
-        if (s > e) (s, e) = (e, s);
-        return (s, e);
-    }
+        private static readonly Jump[] NoJumps = Array.Empty<Jump>();
 
-    /// <summary>Absolute ms bounds of the loop inside a compiled timeline (unavailable if it is empty).</summary>
-    public static (double startMs, double endMs, bool available) LoopBounds(ScoreTimeline timeline, SongProject project, PlaybackOptions opt)
-    {
-        var (startBar, endBar) = LoopRange(project, opt);
-        var startBars = timeline.Bars.Where(b => b.Bar == startBar).ToList();
-        var endBars = timeline.Bars.Where(b => b.Bar == endBar).ToList();
-        if (startBars.Count == 0 || endBars.Count == 0) return (0, 0, false);
-        var first = startBars.MinBy(b => b.StartMs);
-        var last = endBars.MaxBy(b => b.EndMs);
-        var startCell = Math.Clamp(opt.LoopStartCell, 0, Math.Max(0, first.Slots - 1));
-        var endCell = opt.LoopEndCell < 0 ? last.Slots : Math.Clamp(opt.LoopEndCell + 1, 1, Math.Max(1, last.Slots));
-        var start = first.StartMs + (first.EndMs - first.StartMs) * startCell / Math.Max(1, first.Slots);
-        var end = last.StartMs + (last.EndMs - last.StartMs) * endCell / Math.Max(1, last.Slots);
-        return end > start ? (start, end, true) : (0, 0, false);
+        private readonly bool[] _open;
+        private readonly bool[] _close;
+        private readonly int[] _passes;
+        private readonly int[] _ownEnding;
+        private readonly int[] _ending;
+        private readonly int[] _bracketEnd;
+        private readonly bool[] _leadingEnding;
+        private readonly bool[] _droppedAfterJump;
+        private readonly Mark[] _marks;
+        private readonly Jump[][] _jumps;
+
+        public int BarCount { get; }
+
+        private BarStructure(int barCount)
+        {
+            BarCount = barCount;
+            _open = new bool[barCount];
+            _close = new bool[barCount];
+            _passes = new int[barCount];
+            _ownEnding = new int[barCount];
+            _ending = new int[barCount];
+            _bracketEnd = new int[barCount];
+            _leadingEnding = new bool[barCount];
+            _droppedAfterJump = new bool[barCount];
+            _marks = new Mark[barCount];
+            _jumps = new Jump[barCount][];
+        }
+
+        public static int CountBars(SongProject project) =>
+            project?.Tracks is { Count: > 0 } tracks ? tracks.Max(t => t?.Measures?.Count ?? 0) : 0;
+
+        public static BarStructure Read(SongProject project)
+        {
+            var score = new BarStructure(CountBars(project));
+            var measures = project?.Tracks is { Count: > 0 } tracks ? tracks[0]?.Measures : null;
+            var structured = Math.Min(measures?.Count ?? 0, score.BarCount);
+
+            for (var bar = 0; bar < score.BarCount; bar++)
+            {
+                score._bracketEnd[bar] = bar;
+                score._jumps[bar] = NoJumps;
+                if (bar >= structured || measures![bar] is not { } m) continue;
+
+                score._open[bar] = m.RepeatStart;
+                score._close[bar] = m.RepeatEnd;
+                score._passes[bar] = Math.Clamp(m.RepeatCount, 2, MaxRepeats);
+                score._ownEnding[bar] = m.EndingPasses & 0xFF;
+                ReadDirections(score, bar, m.Directions);
+            }
+
+            score.MarkLeadingEndings();
+            score.SpanEndingBrackets();
+            score.MarkEndingsDroppedAfterJump();
+            return score;
+        }
+
+        private static void ReadDirections(BarStructure score, int bar, string? directions)
+        {
+            List<Jump>? jumps = null;
+            foreach (var name in DirectionTokens(directions))
+            {
+                if (Is(name, "Segno")) score._marks[bar] |= Mark.Segno;
+                else if (Is(name, "SegnoSegno")) score._marks[bar] |= Mark.SegnoSegno;
+                else if (Is(name, "Coda") || Is(name, "DoubleCoda")) score._marks[bar] |= Mark.Coda;
+                else if (Is(name, "Fine")) score._marks[bar] |= Mark.Fine;
+                else if (Is(name, "ToCoda") || Is(name, "ToDoubleCoda")) score._marks[bar] |= Mark.ToCoda;
+                else if (Is(name, "DaCapo")) (jumps ??= new()).Add(new Jump(JumpKind.DaCapo, false));
+                else if (Is(name, "DaCapoAlCoda")) (jumps ??= new()).Add(new Jump(JumpKind.DaCapo, true));
+                else if (Is(name, "DalSegno")) (jumps ??= new()).Add(new Jump(JumpKind.DalSegno, false));
+                else if (Is(name, "DalSegnoAlCoda")) (jumps ??= new()).Add(new Jump(JumpKind.DalSegno, true));
+                else if (Is(name, "DalSegnoSegno")) (jumps ??= new()).Add(new Jump(JumpKind.DalSegnoSegno, false));
+                else if (Is(name, "DalSegnoSegnoAlCoda")) (jumps ??= new()).Add(new Jump(JumpKind.DalSegnoSegno, true));
+            }
+            if (jumps is not null) score._jumps[bar] = jumps.ToArray();
+        }
+
+        private static bool Is(string name, string expected) => string.Equals(name, expected, StringComparison.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// An ending bar that also opens a repeat, placed on the first bar or directly after a close, is the
+        /// ending of the repeat before it.
+        /// </summary>
+        private void MarkLeadingEndings()
+        {
+            for (var bar = 0; bar < BarCount; bar++)
+                _leadingEnding[bar] = _ownEnding[bar] != 0 && _open[bar] && (bar == 0 || _close[bar - 1]);
+        }
+
+        /// <summary>
+        /// From an ending bar, looking forward: when a close comes before any other ending bar or open bar, the
+        /// bracket covers every bar through that close, and the unmarked bars inside take its passes. Otherwise
+        /// the bracket is the marked bar alone. A leading ending never reaches into its own repeat.
+        /// </summary>
+        private void SpanEndingBrackets()
+        {
+            for (var bar = 0; bar < BarCount; bar++)
+            {
+                if (_ownEnding[bar] == 0) continue;
+                _ending[bar] = _ownEnding[bar];
+                if (_leadingEnding[bar] || _close[bar]) continue;
+
+                for (var next = bar + 1; next < BarCount; next++)
+                {
+                    if (_open[next] || _ownEnding[next] != 0) break;
+                    if (!_close[next]) continue;
+                    for (var inside = bar + 1; inside <= next; inside++) _ending[inside] = _ownEnding[bar];
+                    _bracketEnd[bar] = next;
+                    break;
+                }
+            }
+        }
+
+        /// <summary>
+        /// After a D.C./D.S., only a repeat's last ending plays: an ending bracket is left out when a later
+        /// ending of the same repeat (the endings that follow it directly) names a higher pass, even when that
+        /// later ending's bar also opens the next repeat.
+        /// </summary>
+        private void MarkEndingsDroppedAfterJump()
+        {
+            for (var bar = 0; bar < BarCount; bar++)
+            {
+                if (_ownEnding[bar] == 0) continue;
+                var highest = HighestPass(_ownEnding[bar]);
+                var dropped = false;
+                for (var next = _bracketEnd[bar] + 1; next < BarCount && _ownEnding[next] != 0; next = _bracketEnd[next] + 1)
+                {
+                    if (HighestPass(_ownEnding[next]) > highest) { dropped = true; break; }
+                    if (_open[next]) break;
+                }
+                if (!dropped) continue;
+                for (var inside = bar; inside <= _bracketEnd[bar]; inside++) _droppedAfterJump[inside] = true;
+            }
+        }
+
+        private static int HighestPass(int mask)
+        {
+            var highest = 0;
+            for (var pass = 1; pass <= EndingPassCount; pass++)
+                if ((mask & (1 << (pass - 1))) != 0) highest = pass;
+            return highest;
+        }
+
+        public bool Open(int bar) => _open[bar];
+        public bool Close(int bar) => _close[bar];
+        public int Passes(int bar) => _passes[bar];
+        /// <summary>Passes the bar plays on (its own ending or its bracket's), bit n = pass n+1; 0 = every pass.</summary>
+        public int Ending(int bar) => _ending[bar];
+        public bool LeadingEnding(int bar) => _leadingEnding[bar];
+        public bool DroppedAfterJump(int bar) => _droppedAfterJump[bar];
+        public bool Has(int bar, Mark mark) => (_marks[bar] & mark) != 0;
+        public IReadOnlyList<Jump> Jumps(int bar) => _jumps[bar];
+
+        /// <summary>True when another close follows this one before the next open bar.</summary>
+        public bool CloseFollowsBeforeNextOpen(int bar)
+        {
+            for (var next = bar + 1; next < BarCount; next++)
+            {
+                if (_open[next]) return false;
+                if (_close[next]) return true;
+            }
+            return false;
+        }
+
+        /// <summary>The first coda (or double coda) after the bar; when there is none, the first one in the song; -1 when there is none at all.</summary>
+        public int NearestCoda(int bar)
+        {
+            for (var next = bar + 1; next < BarCount; next++)
+                if (Has(next, Mark.Coda)) return next;
+            for (var from = 0; from <= bar && from < BarCount; from++)
+                if (Has(from, Mark.Coda)) return from;
+            return -1;
+        }
     }
 }

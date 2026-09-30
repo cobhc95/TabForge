@@ -203,12 +203,16 @@ public partial class MainWindow
                 section.Children.Add(new TextBlock
                 {
                     Text = group.Key,
-                    FontSize = 10,
+                    FontSize = TabForge.Services.ThemeService.MinFontSize,
                     FontWeight = FontWeights.SemiBold,
-                    Foreground = (Brush)FindResource("MutedBrush"),
+                    Foreground = (Brush)FindResource("SecondaryTextBrush"),
                     Margin = new Thickness(2, 2, 2, 3)
                 });
                 var buttons = new WrapPanel();
+                // One Tab stop per group; the arrow keys move between its buttons (across wrapped rows too).
+                KeyboardNavigation.SetTabNavigation(buttons, KeyboardNavigationMode.Once);
+                KeyboardNavigation.SetDirectionalNavigation(buttons, KeyboardNavigationMode.Contained);
+                System.Windows.Automation.AutomationProperties.SetName(buttons, group.Key + " tools");
                 foreach (var tool in group)
                 {
                     var icon = new SvgIconView
@@ -230,11 +234,11 @@ public partial class MainWindow
                         MinWidth = 36,
                         Padding = new Thickness(0),
                         Margin = new Thickness(1),
-                        Focusable = false,
                         IsEnabled = tool.Supported,
                         ToolTip = PaletteToolTip(tool)
                     };
                     System.Windows.Automation.AutomationProperties.SetName(button, tool.Label);
+                    WirePaletteButtonFocus(button);
                     button.Click += ToolsPaletteButton_Click;
                     var pinTool = tool;
                     button.ContextMenuOpening += (_, _) => button.ContextMenu = PinMenu(pinTool);
@@ -408,7 +412,9 @@ public partial class MainWindow
                 (durationKey is null || Editor.CanSetDurationForTool(durationKey)) && PaletteToolEnabled(tool.Id);
             controls.Button.Background = active ? accentSoft : Brushes.Transparent;
             controls.Button.BorderBrush = active ? new SolidColorBrush(accent) : Brushes.Transparent;
-            controls.Button.BorderThickness = new Thickness(1);
+            // The active tool is marked by shape as well as colour: a thick underline, and "active" in its automation name.
+            controls.Button.BorderThickness = active ? new Thickness(1, 1, 1, 3) : new Thickness(1);
+            System.Windows.Automation.AutomationProperties.SetName(controls.Button, active ? tool.Label + ", active" : tool.Label);
             controls.Button.Foreground = new SolidColorBrush(active ? accent : tool.Supported ? idle : muted);
             controls.Icon.IconColor = active ? accent : tool.Supported ? idle : muted;
             var showIcons = _settings.Appearance.ShowToolbarIcons;
@@ -476,6 +482,8 @@ public partial class MainWindow
     private void BuildPinnedToolStrip()
     {
         PinnedToolStrip.Children.Clear();
+        KeyboardNavigation.SetTabNavigation(PinnedToolStrip, KeyboardNavigationMode.Once);
+        KeyboardNavigation.SetDirectionalNavigation(PinnedToolStrip, KeyboardNavigationMode.Contained);
         var tools = AllPaletteTools().ToDictionary(t => t.Id);
         foreach (var id in _settings.Appearance.PinnedTools.Distinct().ToList())
         {
@@ -489,14 +497,33 @@ public partial class MainWindow
                     IconColor = PaletteBrushColor("TextBrush", Color.FromRgb(0xC7, 0xCF, 0xDA))
                 },
                 Tag = tool.Id, Width = 26, Height = 24, MinWidth = 26, Padding = new Thickness(0), Margin = new Thickness(1, 0, 1, 0),
-                Focusable = false, ToolTip = PaletteToolTip(tool) + "\nRight-click to unpin."
+                ToolTip = PaletteToolTip(tool) + "\nRight-click to unpin."
             };
             System.Windows.Automation.AutomationProperties.SetName(button, tool.Label);
+            WirePaletteButtonFocus(button);
             button.Click += ToolsPaletteButton_Click;
             button.ContextMenu = PinMenu(tool);
             button.ContextMenuOpening += (_, _) => button.ContextMenu = PinMenu(tool);
             PinnedToolStrip.Children.Add(button);
         }
+    }
+
+    /// <summary>
+    /// Palette buttons are keyboard-focusable (arrow keys roam a group, Enter/Space run the tool), but a mouse click
+    /// must not steal the editor's typing focus: after a mouse click the focus goes back to the score.
+    /// </summary>
+    private void WirePaletteButtonFocus(Button button)
+    {
+        button.Focusable = true;
+        var byMouse = false;
+        button.PreviewMouseLeftButtonDown += (_, _) => byMouse = true;
+        button.PreviewKeyDown += (_, _) => byMouse = false;
+        button.Click += (_, _) =>
+        {
+            if (!byMouse) return;
+            byMouse = false;
+            if (Editor.IsVisible) Editor.Focus();
+        };
     }
 
     private void ToolsPaletteButton_Click(object sender, RoutedEventArgs e)
@@ -703,6 +730,7 @@ public partial class MainWindow
         CaptureUndo();
         _arrangementController.TrySetTempoChange(_project, Editor.SelectedMeasure, tempo);
         _project.IsDirty = true;
+        _project.MarkTimelineChanged();
         Editor.InvalidateScoreLayout();
         RebuildVisualTimeline();
         _midi.Rebuild(_project);

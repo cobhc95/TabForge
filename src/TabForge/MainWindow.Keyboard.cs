@@ -219,6 +219,7 @@ public partial class MainWindow
     private void CommitEdit(EditRefresh refresh)
     {
         _project.IsDirty = true;
+        _project.MarkTimelineChanged();   // A5-08: every window edit ends here; timing caches rebuild once
         if (refresh.HasFlag(EditRefresh.Status)) RefreshStatus();
         if (refresh.HasFlag(EditRefresh.Markers)) RefreshMarkers();
         if (refresh.HasFlag(EditRefresh.Arrangement)) RefreshArrangement();

@@ -60,8 +60,8 @@ public sealed partial class ArrangementPanel
         cells["settings"] = chevron;
         var title = new TextBlock { Text = group, FontWeight = FontWeights.SemiBold, FontSize = 11, VerticalAlignment = VerticalAlignment.Center };
         title.SetResourceReference(TextBlock.ForegroundProperty, "AccentBrush");
-        var sub = new TextBlock { Text = $"  {count} track{(count == 1 ? "" : "s")}", FontSize = 10, VerticalAlignment = VerticalAlignment.Center };
-        sub.SetResourceReference(TextBlock.ForegroundProperty, "MutedBrush");
+        var sub = new TextBlock { Text = $"  {count} track{(count == 1 ? "" : "s")}", FontSize = Services.ThemeService.MinFontSize, VerticalAlignment = VerticalAlignment.Center };
+        sub.SetResourceReference(TextBlock.ForegroundProperty, "SecondaryTextBrush");
         var titleRow = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(4, 0, 0, 0) };
         titleRow.Children.Add(title);
         titleRow.Children.Add(sub);

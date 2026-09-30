@@ -51,6 +51,7 @@ public static class HotkeyCatalog
         new("File.SaveAs", CategoryFile, "Save as", "Ctrl+Shift+S", "Save the active score under a new name."),
         new("File.Print", CategoryFile, "Print", "Ctrl+P", "Print the active score."),
         new("File.PrintPreview", CategoryFile, "Print preview", "Ctrl+Shift+P", "Preview the printed page."),
+        new("File.CancelImport", CategoryFile, "Cancel import", "", "Cancel the Guitar Pro import(s) running in the background (same as the status-bar Cancel button)."),
         new("File.ExportPdf", CategoryFile, "Export PDF", "", "Export the engraved score (notation and tab) as a PDF file."),
         new("File.ExportMusicXml", CategoryFile, "Export MusicXML", "", "Export the song as uncompressed MusicXML (.musicxml): a part per track with notation and a tab staff."),
         new("App.CommandPalette", CategoryFile, "Command palette", "Ctrl+Shift+A", "Search every command by name, see its key and run it."),

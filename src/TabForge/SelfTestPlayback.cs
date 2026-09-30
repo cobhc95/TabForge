@@ -737,10 +737,10 @@ public static partial class SelfTest
             cs.Length > 4 && cs.SequenceEqual(ds), $"continuous={cs.Length} points, direct={ds.Length} points");
     }
 
-    /// <summary>Engine behaviours aligned with TuxGuitar's sequence parser.</summary>
+    /// <summary>Playback behaviours of the compiled sequence: palm-mute length, channel setup and neutral resets.</summary>
     private static void TestEngineParity()
     {
-        // Palm mute: a palm-muted note is capped at a quarter note (TuxGuitar applyStaticDuration).
+        // Palm mute: a palm-muted note is capped at a quarter note.
         var p = SingleTrack();
         var cell = Beat(p, 0, 0, 0, 1, 60);                       // whole note
         cell.Notes[0].Techniques.Add("PalmMute");

@@ -265,7 +265,7 @@ public partial class MainWindow
                     StatusText.Text = $"Wrote {written} notes into {track.Name}";
                 };
                 menu.Items.Add(write);
-                var advanced = new MenuItem { Header = "Advanced notation conversion…", ToolTip = "Planned: a visual, interactive converter with rules and presets (see HANDOFF.md)" };
+                var advanced = new MenuItem { Header = "Advanced notation conversion…", ToolTip = "Planned: a visual, interactive converter with rules and presets (not built yet)" };
                 advanced.Click += (_, _) => MessageBox.Show(this,
                     "Advanced notation conversion is planned and not built yet." + Environment.NewLine + Environment.NewLine +
                     "It will open a window where you preview the tab, pick playing rules and presets (position, fret range, quantising, voices), and apply the result." + Environment.NewLine + Environment.NewLine +

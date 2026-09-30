@@ -129,6 +129,7 @@ public partial class MainWindow
             // Unchanged bars move over from the song being replaced; only the bars the undo changes are rebuilt.
             _project = _undo.Restore(snapshot, _project);
             _project.IsDirty = true;
+            _project.MarkTimelineChanged();   // A5-08: undo/redo may restore in place
             // Undoing back to the saved state clears the "*": the exact content check runs here only.
             if (Doc.IsCleanContent(snapshot)) _project.IsDirty = false;
             TempoBox.Text = _project.Tempo.ToString();
@@ -149,22 +150,8 @@ public partial class MainWindow
 
     private void InsertBeat_Click(object sender, RoutedEventArgs e) { Editor.InsertBeat(); StatusText.Text = "Inserted beat"; }
     private void DeleteBeats_Click(object sender, RoutedEventArgs e) { Editor.DeleteBeats(); StatusText.Text = "Deleted beats"; }
-    private void CopyBeats_Click(object sender, RoutedEventArgs e)
-    {
-        var track = SelectedTrack; var cell = Editor.CurrentCell();
-        if (track is null || cell is null || Editor.SelectedMeasure >= track.Measures.Count) return;
-        CaptureUndo();
-        var m = track.Measures[Editor.SelectedMeasure];
-        var copy = cell.Clone();
-        copy.RhythmicPosition = null;
-        var target = m.Cells.FindLastIndex(c => c.Notes.Count > 0 || c.IsRest);
-        target = Math.Clamp(target + 1, 0, 15);
-        m.Cells[target] = copy;
-        _project.IsDirty = true;
-        Arrangement.InvalidateActivities(Editor.SelectedTrackIndex, Editor.SelectedMeasure, Editor.SelectedMeasure);
-        Arrangement.RefreshScore();
-        Editor.InvalidateScoreLayout(); UpdateTitle(); StatusText.Text = "Copied beat to end";
-    }
+    // Same command as the C shortcut (EditCommands.CopyLastBeat through the editor): one behaviour, one undo step.
+    private void CopyBeats_Click(object sender, RoutedEventArgs e) => Editor.CopyLastBeat();
 
     // ---------- measure ----------
 
@@ -208,7 +195,7 @@ public partial class MainWindow
             return;
         CaptureUndo();
         _arrangementController.DeleteBar(_project, Editor.SelectedMeasure, -1, allTracks: true, moveMarkers: false);
-        _project.IsDirty = true; Editor.SetPosition(Math.Max(0, Editor.SelectedMeasure - 1), 0, Editor.SelectedString);
+        _project.IsDirty = true; _project.MarkTimelineChanged(); Editor.SetPosition(Math.Max(0, Editor.SelectedMeasure - 1), 0, Editor.SelectedString);
         RefreshArrangement(); Editor.InvalidateScoreLayout(); UpdateTitle(); StatusText.Text = "Deleted bar";
     }
 
@@ -280,23 +267,19 @@ public partial class MainWindow
         CommitEdit(EditRefresh.None); StatusText.Text = v ? "Triplet feel on" : "Triplet feel off";
     }
 
-    private void RepeatOpen_Click(object sender, RoutedEventArgs e)
-    {
-        if (CurBar() is null) return;
-        CaptureUndo();
-        if (!_arrangementController.TryToggleRepeatStart(_project, TrackMixerGrid.SelectedIndex, Editor.SelectedMeasure, out _)) return;
-        CommitEdit(EditRefresh.Score | EditRefresh.Arrangement | EditRefresh.Palette);
-    }
+    // Repeat open/close share EditCommands with the [ and ] shortcuts (through the editor): the same bar change in every
+    // track and one undo step. The menu only adds the count prompt when a repeat end is being added.
+    private void RepeatOpen_Click(object sender, RoutedEventArgs e) => Editor.ToggleRepeatOpen();
 
     private void RepeatClose_Click(object sender, RoutedEventArgs e)
     {
         var bar = CurBar(); if (bar is null) return;
+        if (bar.RepeatEnd) { Editor.ToggleRepeatClose(); StatusText.Text = "Repeat end removed"; return; }
         var txt = GpDialogs.Prompt("Repeat close", "Repeat times (2-99):", bar.RepeatCount.ToString());
         if (txt is null) return;
-        CaptureUndo();
         var n = Math.Clamp(int.TryParse(txt, out var v) ? v : 2, 2, TabForge.Playback.PlaybackOrder.MaxRepeats);
-        _arrangementController.TrySetRepeatEnd(_project, Editor.SelectedMeasure, n);
-        CommitEdit(EditRefresh.Score | EditRefresh.Arrangement | EditRefresh.Palette); StatusText.Text = $"Repeat ×{n}";
+        Editor.ToggleRepeatClose(n);
+        StatusText.Text = $"Repeat ×{n}";
     }
 
     private void Directions_Click(object sender, RoutedEventArgs e)
@@ -367,25 +350,12 @@ public partial class MainWindow
 
     private void EmptyBar_Click(object sender, RoutedEventArgs e)
     {
-        var track = SelectedTrack; var measure = Editor.CurrentMeasure();
-        if (track is null || measure is null) return;
-        CaptureUndo();
-        foreach (var cell in measure.Cells) { cell.Notes.Clear(); cell.IsRest = false; cell.IsTied = false; }
-        CommitEdit(EditRefresh.Score | EditRefresh.Arrangement);
+        Editor.EmptyBar();
         StatusText.Text = "Bar emptied";
     }
-    private void Dot_Click(object sender, RoutedEventArgs e)
-    {
-        var c = Editor.CurrentCell(); if (c is null) return;
-        CaptureUndo(); // Editor toggles without its own capture? it captures via EditStarting only for note entry; capture here:
-        Editor.ToggleDot(); RefreshStatus();
-    }
-    private void DoubleDot_Click(object sender, RoutedEventArgs e)
-    {
-        var c = Editor.CurrentCell(); if (c is null) return;
-        CaptureUndo();
-        Editor.CurrentDots = 2; c.Dots = 2; CommitEdit(EditRefresh.Score | EditRefresh.Status);
-    }
+    // The editor captures the undo step itself (EditStarting); capturing here too made two steps.
+    private void Dot_Click(object sender, RoutedEventArgs e) { Editor.ToggleDot(); RefreshStatus(); }
+    private void DoubleDot_Click(object sender, RoutedEventArgs e) { Editor.SetDots(2); RefreshStatus(); }
     private void Triplet_Click(object sender, RoutedEventArgs e) { Editor.ToggleTriplet(); RefreshStatus(); }
     private void Tie_Click(object sender, RoutedEventArgs e) => Editor.ToggleTie();
     private void Rest_Click(object sender, RoutedEventArgs e) => Editor.ToggleRest();

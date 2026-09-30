@@ -128,7 +128,7 @@ public static partial class SelfTest
         var detection = EP.PluginFactory.IsVst3(@"C:\x\Synth.vst3", "") && EP.PluginFactory.IsVst3(@"C:\x\Synth.dll", "vst3")
             && !EP.PluginFactory.IsVst3(@"C:\x\Synth.dll", "VST2") && !EP.PluginFactory.IsVst3(@"C:\x\Synth.dll", "");
         var root = FindRepositoryRoot();
-        if (root is null) { Check("D8: plug-in format detection (.vst3 or format VST3)", detection); Skip("D8: only PluginFactory constructs plug-ins", "no source checkout found"); return; }
+        if (root is null) { Check("D8: plug-in format detection (.vst3 or format VST3)", detection); Skip("D8: only PluginFactory constructs plug-ins", "no source checkout found", "source-hygiene"); return; }
         var offenders = new List<string>();
         foreach (var file in Directory.EnumerateFiles(Path.Combine(root, "src"), "*.cs", SearchOption.AllDirectories))
         {

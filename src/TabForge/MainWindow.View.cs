@@ -373,6 +373,7 @@ public partial class MainWindow
         CaptureUndo();
         if (!_arrangementController.DuplicateBar(_project, TrackMixerGrid.SelectedIndex, Editor.SelectedMeasure)) return;
         _project.IsDirty = true;
+        _project.MarkTimelineChanged();
         Editor.MoveBar(1);
         RefreshArrangement();
         RefreshTabs();
@@ -390,6 +391,7 @@ public partial class MainWindow
         CaptureUndo();
         _arrangementController.RepeatRange(_project, ls, le, times);
         _project.IsDirty = true;
+        _project.MarkTimelineChanged();
         RefreshArrangement();
         RefreshTabs();
         UpdateTitle();

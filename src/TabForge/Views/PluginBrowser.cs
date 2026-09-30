@@ -59,6 +59,7 @@ internal static class PluginBrowser
             ? settings.ScanCache.Select(k => new VstPluginInfo(k.Name, k.Path, k.Format, k.Vendor, k.Role)).ToList()
             : VstScannerService.LastScan;
         var scanning = false;
+        var notIdentified = new HashSet<string>(StringComparer.OrdinalIgnoreCase);   // not approved: its role is not read by running it
         ThemedList.MakeSortable(view, (column, ascending) => { sortColumn = column; sortAscending = ascending; Filter(); });
 
         VstPluginInfo WithKnown(VstPluginInfo p)
@@ -72,7 +73,7 @@ internal static class PluginBrowser
             var q = search.Text.Trim();
             var rows = all.Select(WithKnown)
                 .Where(p => q.Length == 0 || p.Name.Contains(q, StringComparison.OrdinalIgnoreCase) || p.Vendor.Contains(q, StringComparison.OrdinalIgnoreCase))
-                .Select(p => new Row(p.Name, p.Vendor, p.Format, p.Role.Length > 0 ? p.Role : "…", p));
+                .Select(p => new Row(p.Name, p.Vendor, p.Format, p.Role.Length > 0 ? p.Role : notIdentified.Contains(p.Path) ? "approve to identify" : "…", p));
             Func<Row, string> key = sortColumn switch { 1 => r => r.Vendor, 2 => r => r.Format, 3 => r => r.Role, _ => r => r.Name };
             var sorted = (sortAscending ? rows.OrderBy(key, StringComparer.CurrentCultureIgnoreCase) : rows.OrderByDescending(key, StringComparer.CurrentCultureIgnoreCase))
                 .ThenBy(r => r.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
@@ -115,7 +116,7 @@ internal static class PluginBrowser
             _ = Identify();
         }
 
-        // Plug-ins whose role / vendor the files do not tell are asked (one at a time, each in a
+        // Plug-ins whose role / vendor the files do not tell are asked when they are approved (several at a time, each in a
         // throwaway process), while this window is open. Results are remembered, so each is checked only once.
         var identifying = false;
         async Task Identify()
@@ -132,7 +133,8 @@ internal static class PluginBrowser
                 try
                 {
                     if (!w.IsLoaded) return;
-                    await Task.Run(() => PluginCatalog.Describe(plugin.Path, settings, 10000));
+                    var described = await Task.Run(() => PluginCatalog.Describe(plugin.Path, settings, 10000));
+                    if (described.Role.Length == 0) notIdentified.Add(plugin.Path);   // unapproved or changed: never executed to find out
                 }
                 finally { gate.Release(); }
                 done++;   // back on the UI thread here

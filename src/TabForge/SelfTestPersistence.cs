@@ -326,4 +326,85 @@ public static partial class SelfTest
         }
         finally { try { Directory.Delete(folder, true); } catch (IOException) { } }
     }
+
+    // A5-03: one .tfaudio size limit for writing and reading. An oversized pair save fails before either file is touched (the song stays
+    // unsaved, the message names the large plug-in states); a sidecar that cannot be read is reported on open, never dropped silently.
+    private static void TestAudioDataSizeLimit()
+    {
+        var folder = Path.Combine(Path.GetTempPath(), $"tf-a503-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(folder);
+        try
+        {
+            var gp = Path.Combine(folder, "song.gp");
+            var tfaudio = AudioDataFile.PathFor(gp);
+            var old = PersistenceSong("Lead");
+            old.Tracks[0].SoundSource = SoundSources.Plugins;
+            old.Tracks[0].Rig.Plugins.Add(new PluginSlot { Name = "ReaEQ", Path = @"C:\x\reaeq.dll", Format = "VST2" });
+            new DocumentController().SaveCleanGuitarProWithAudioData(SessionFor(old), gp, "");
+            var oldGp = File.ReadAllBytes(gp);
+            var oldAudio = File.ReadAllBytes(tfaudio);
+
+            var big = PersistenceSong("Lead");
+            big.Tracks[0].Measures[0].Cells[0].Notes.Add(new TabNote { StringIndex = 0, Fret = 3 });
+            big.Tracks[0].SoundSource = SoundSources.Plugins;
+            big.Tracks[0].Rig.Plugins.Add(new PluginSlot { Name = "HugeSampler", Path = @"C:\x\huge.dll", Format = "VST2", State = new string('A', (int)AudioDataFile.MaxBytes + 1024) });
+            big.IsDirty = true;
+            var session = SessionFor(big);
+            string? message = null;
+            try { new DocumentController().SaveCleanGuitarProWithAudioData(session, gp, ""); }
+            catch (InvalidDataException ex) { message = ex.Message; }
+            Check("A5-03: an oversized .tfaudio fails the save with a message naming the large plug-in state",
+                message is not null && message.Contains("HugeSampler on Lead", StringComparison.Ordinal) && message.Contains("limit", StringComparison.Ordinal), message);
+            Check("A5-03: the failed save leaves the old pair byte-identical and nothing else behind",
+                File.ReadAllBytes(gp).AsSpan().SequenceEqual(oldGp) && File.ReadAllBytes(tfaudio).AsSpan().SequenceEqual(oldAudio) && Directory.GetFiles(folder).Length == 2,
+                string.Join(", ", Directory.GetFiles(folder).Select(Path.GetFileName)));
+            Check("A5-03: the song stays unsaved after the failed save", session.HasUnsavedChanges && session.IsNew && session.Path is null && big.IsDirty);
+            big.Tracks[0].Rig.Plugins[0].State = null;   // release the large string
+
+            // Reading: damaged, incomplete and oversized sidecars are each reported and the score still opens.
+            File.WriteAllText(tfaudio, "{ this is not json");
+            var damaged = new DocumentController().Open(gp);
+            Check("A5-03: a damaged .tfaudio is reported on open", damaged.Notice?.Contains("was not applied (the file is damaged)", StringComparison.Ordinal) == true
+                && damaged.Project.Tracks[0].Rig.Plugins.Count == 0, damaged.Notice);
+            File.WriteAllText(tfaudio, "null");
+            var incomplete = new DocumentController().Open(gp);
+            Check("A5-03: an incomplete .tfaudio is reported on open", incomplete.Notice?.Contains("was not applied", StringComparison.Ordinal) == true, incomplete.Notice);
+            using (var stream = new FileStream(tfaudio, FileMode.Create, FileAccess.Write)) stream.SetLength(AudioDataFile.MaxBytes + 1);
+            var oversized = new DocumentController().Open(gp);
+            Check("A5-03: an oversized .tfaudio is reported on open with the reason", oversized.Notice?.Contains("was not applied", StringComparison.Ordinal) == true
+                && oversized.Notice.Contains("size limit", StringComparison.Ordinal) && oversized.Notice.Contains("mixer, plug-in and clip settings", StringComparison.Ordinal), oversized.Notice);
+        }
+        finally { try { Directory.Delete(folder, true); } catch (IOException) { } }
+    }
+
+    // A5-04: opening a .gp keeps the song's own title (clean and TabForge-embedded); only an empty title falls back to the file name.
+    private static void TestGpOpenKeepsTitle()
+    {
+        var folder = Path.Combine(Path.GetTempPath(), $"tf-a504-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(folder);
+        try
+        {
+            var clean = Path.Combine(folder, "rehearsal-copy.gp");
+            var song = PersistenceSong("Lead");
+            song.Title = "Original Song";
+            new DocumentController().SaveCleanGuitarProWithAudioData(SessionFor(song), clean, "");
+            var opened = new DocumentController().Open(clean).Project;
+            Check("A5-04: \"Original Song\" saved as rehearsal-copy.gp keeps its title", opened.Title == "Original Song", opened.Title);
+
+            var embedded = Path.Combine(folder, "embedded-copy.gp");
+            var copy = PersistenceSong("Lead");
+            copy.Title = "Original Song";
+            new DocumentController().Save(SessionFor(copy), embedded, "");
+            var openedEmbedded = new DocumentController().Open(embedded).Project;
+            Check("A5-04: a .gp with the TabForge project embedded keeps its title", openedEmbedded.Title == "Original Song", openedEmbedded.Title);
+
+            var untitledPath = Path.Combine(folder, "untitled-take.gp");
+            var untitled = PersistenceSong("Lead");
+            untitled.Title = "  ";
+            new DocumentController().Save(SessionFor(untitled), untitledPath, "");
+            var openedUntitled = new DocumentController().Open(untitledPath).Project;
+            Check("A5-04: a .gp with an empty title is named after its file", openedUntitled.Title == "untitled-take", openedUntitled.Title);
+        }
+        finally { try { Directory.Delete(folder, true); } catch (IOException) { } }
+    }
 }

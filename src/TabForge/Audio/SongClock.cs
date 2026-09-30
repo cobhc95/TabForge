@@ -15,7 +15,7 @@ public sealed class SongClock
     private readonly AudioEngineClient _engine;
     private (int Bar, double StartMs, double EndMs)[] _bars = Array.Empty<(int, double, double)>();
     private object? _mappedProject;
-    private int _mappedVersion = -1;
+    private (int Revision, int Measures) _mappedVersion = (-1, -1);
     private double _lastSongMs;
     private double _sentSongMs = double.NaN;
     private long _sentStamp;
@@ -26,7 +26,7 @@ public sealed class SongClock
     /// <summary>The whole song's bars in performed order (built once per song change; cheap to keep).</summary>
     private void Map(SongProject project)
     {
-        var version = project.Tracks.Sum(t => t.Measures.Count) * 31 + project.Tempo;
+        var version = TimelineKey(project);
         if (ReferenceEquals(project, _mappedProject) && version == _mappedVersion) return;
         var timeline = MidiTimelineBuilder.Build(project, new PlaybackOptions { RepeatExpansion = true, RespectMuteSolo = false, SkipClips = true });
         _bars = timeline.Bars.Select(b => (b.Bar, b.StartMs, b.EndMs)).ToArray();
@@ -116,16 +116,16 @@ public sealed class SongClock
     public double CurrentSec => _lastSongMs / 1000;
 
     private static readonly object TransportGate = new();
-    private static (object? Project, long Key, TransportBar[] Bars) _transport = (null, 0, Array.Empty<TransportBar>());
+    private static (object? Project, (int, int) Key, TransportBar[] Bars) _transport = (null, (-1, -1), Array.Empty<TransportBar>());
 
     /// <summary>
     /// RT-04: the song's bar map for the engine's plug-in transport, on the same song-seconds clock as <see cref="Report"/> (the same
-    /// performed timeline, repeats expanded): per bar its start, ppq, tempo and time signature. Rebuilt only when the song's bars, meters
-    /// or tempos change (cached per project).
+    /// performed timeline, repeats expanded): per bar its start, ppq, tempo and time signature. Rebuilt only when the song's timeline changes
+    /// (<see cref="TimelineKey"/>, cached per project).
     /// </summary>
     public static TransportBar[] TransportBars(SongProject project)
     {
-        var key = TransportKey(project);
+        var key = TimelineKey(project);
         lock (TransportGate)
             if (ReferenceEquals(_transport.Project, project) && _transport.Key == key) return _transport.Bars;
         var timeline = MidiTimelineBuilder.Build(project, new PlaybackOptions { RepeatExpansion = true, RespectMuteSolo = false, SkipClips = true });
@@ -149,13 +149,10 @@ public sealed class SongClock
         return bars;
     }
 
-    private static long TransportKey(SongProject project)
-    {
-        var hash = new HashCode();
-        hash.Add(project.Tempo); hash.Add(project.TimeSignatureNumerator); hash.Add(project.TimeSignatureDenominator);
-        hash.Add(project.Tracks.Sum(t => t.Measures.Count));
-        if (project.Tracks.FirstOrDefault() is { } first)
-            foreach (var m in first.Measures) { hash.Add(m.TimeSigNum); hash.Add(m.TimeSigDenom); hash.Add(m.TempoChange); }
-        return hash.ToHashCode();
-    }
+    /// <summary>
+    /// A5-08: the key both timing caches use: the project's <see cref="SongProject.TimelineRevision"/> (bumped by every edit ending and by
+    /// undo/redo) plus the bar count as a cheap guard for a path that forgot to bump. Compared exactly, so it cannot collide like a hash.
+    /// </summary>
+    internal static (int Revision, int Measures) TimelineKey(SongProject project)
+        => (project.TimelineRevision, project.Tracks.Sum(t => t.Measures.Count));
 }

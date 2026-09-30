@@ -331,6 +331,7 @@ public partial class MainWindow : Window
                 return;
             }
             _project.IsDirty = true;
+            _project.MarkTimelineChanged();   // the first track (time signatures) may have changed
             SyncAudioEngine();
             if (_midi.IsPlaying) _midi.RefreshArrangement(_project, Enumerable.Range(0, MaxMeasures()).ToArray());
             RefreshTracks();

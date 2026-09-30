@@ -35,6 +35,17 @@ public sealed class SongProject
     [JsonIgnore]
     public bool IsDirty { get; set; }
 
+    private int _timelineRevision;
+    /// <summary>
+    /// Changes whenever something that affects timing may have changed (tempos and ramps, time signatures, repeats, endings,
+    /// directions, bars inserted/deleted/moved, undo/redo). Timing caches (SongClock) key on it. Not saved; read from any thread.
+    /// </summary>
+    [JsonIgnore]
+    public int TimelineRevision => Volatile.Read(ref _timelineRevision);
+
+    /// <summary>Invalidates every timing cache built for this project. Called by each edit ending (editor, window, arrangement) and by undo/redo.</summary>
+    public void MarkTimelineChanged() => Interlocked.Increment(ref _timelineRevision);
+
     /// <summary>A shallow copy without the tracks added from startup templates (what is written to a .tforge file).</summary>
     public SongProject WithoutStartupTracks()
     {

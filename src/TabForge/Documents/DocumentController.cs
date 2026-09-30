@@ -22,7 +22,8 @@ public sealed class DocumentController
         // A save of the .gp + .tfaudio pair that was cut short is undone first, so the pair read below is consistent.
         if (path.EndsWith(".gp", StringComparison.OrdinalIgnoreCase) && FilePathPolicy.RecoverInterruptedPair(path, AudioDataFile.PathFor(path)) is { } recovery) notices.Add(recovery);
         var project = GuitarProImporter.Import(path);
-        project.Title = Path.GetFileNameWithoutExtension(path);
+        // A5-04: the song's own title wins (also for a TabForge-embedded project); the file name only fills an empty one.
+        if (string.IsNullOrWhiteSpace(project.Title)) project.Title = Path.GetFileNameWithoutExtension(path);
         // A clean .gp saved with its TabForge audio data beside it ("song.tfaudio"): bring the mixer and FX back.
         if (path.EndsWith(".gp", StringComparison.OrdinalIgnoreCase)) AudioDataFile.TryApply(project, path, notices);
         return new OpenedScore(project, null, true, notices.Count == 0 ? null : string.Join("; ", notices));

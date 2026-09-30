@@ -214,6 +214,119 @@ public static partial class SelfTest
         }
     }
 
+    /// <summary>
+    /// Menu and shortcut share one behaviour per command (EditCommands through the editor): repeat beat, double dot,
+    /// repeat open/close and empty bar each take exactly one undo step and change the same model.
+    /// </summary>
+    private static void TestEditCommands()
+    {
+        static TabCell Beat(int fret) => new() { DurationDenominator = 8, Notes = { new TabNote { StringIndex = 1, Fret = fret } } };
+        (Views.TabEditorControl Editor, SongProject Project, Func<int> Steps) Make()
+        {
+            var project = Presets.TemplateFactory.Create("Rock Band");
+            var e = new Views.TabEditorControl { Project = project, SelectedTrackIndex = 0 };
+            var steps = 0;
+            e.EditStarting += (_, _) => steps++;
+            return (e, project, () => steps);
+        }
+
+        // Repeat beat: cursor-relative, no clamping to 16, cell 15 is not overwritten, one undo step.
+        var (ed, song, steps) = Make();
+        var cells = song.Tracks[0].Measures[0].Cells;
+        cells[2] = Beat(7);
+        cells[15] = Beat(9);
+        ed.SetPosition(0, 5, 1, false);
+        ed.CopyLastBeat();
+        Check("repeat beat: copies the previous beat onto the cursor slot, leaves slot 15 alone, one undo step",
+            cells[5].Notes.Count == 1 && cells[5].Notes[0].Fret == 7 && cells[15].Notes[0].Fret == 9 && steps() == 1 && ed.SelectedCell > 5);
+        var before = steps();
+        ed.SetPosition(0, 1, 1, false);
+        ed.CopyLastBeat();
+        Check("repeat beat: nothing earlier to copy means no change and no undo step", cells[1].Notes.Count == 0 && steps() == before);
+
+        // The shortcut id and the direct call give the same result.
+        var (ed2, song2, _) = Make();
+        song2.Tracks[0].Measures[0].Cells[2] = Beat(7);
+        ed2.SetPosition(0, 5, 1, false);
+        ed2.TryRunNoteCommand("Note.RepeatBeat");
+        Check("repeat beat: the Note.RepeatBeat shortcut gives the same cell as CopyLastBeat",
+            song2.Tracks[0].Measures[0].Cells[5].Notes.Count == 1 && song2.Tracks[0].Measures[0].Cells[5].Notes[0].Fret == 7);
+
+        // The active voice is used; voice 1 stays untouched.
+        var (ed3, song3, _) = Make();
+        var bar3 = song3.Tracks[0].Measures[0];
+        bar3.Cells[2] = Beat(3);
+        bar3.CellsForVoice(1, create: true)[1] = Beat(12);
+        ed3.SetActiveVoice(1);
+        ed3.SetPosition(0, 4, 1, false);
+        ed3.CopyLastBeat();
+        Check("repeat beat: follows the active voice (voice 2 copy, voice 1 unchanged)",
+            bar3.Voice2Cells[4].Notes.Count == 1 && bar3.Voice2Cells[4].Notes[0].Fret == 12 && bar3.Cells[4].Notes.Count == 0);
+
+        // Safe on short bars and out-of-range cursors (model level).
+        var shortBar = new List<TabCell> { Beat(5), new(), new(), new() };
+        Check("repeat beat: a cursor past a short bar's end is a safe no-op",
+            !Services.EditCommands.CopyLastBeat(shortBar, 9) && !Services.EditCommands.CopyLastBeat(shortBar, 0) &&
+            Services.EditCommands.CopyLastBeat(shortBar, 3) && shortBar[3].Notes[0].Fret == 5 && shortBar.Count == 4);
+
+        // Double dot goes through CanSetDots and takes one undo step (menu == Ctrl+.).
+        var (ed4, song4, steps4) = Make();
+        var bar4 = song4.Tracks[0].Measures[0];
+        bar4.Cells[0] = Beat(4);
+        ed4.SetPosition(0, 0, 1, false);
+        ed4.TryRunNoteCommand("Note.DoubleDot");
+        Check("double dot: sets two dots with exactly one undo step", bar4.Cells[0].Dots == 2 && steps4() == 1);
+        ed4.PreventBarOverflow = true;
+        bar4.Cells[0] = new TabCell { DurationDenominator = 1, Notes = { new TabNote { StringIndex = 1, Fret = 4 } } };
+        var before4 = steps4();
+        ed4.SetDots(2);
+        Check("double dot: refused when the beat would not fit the bar (CanSetDots), nothing captured",
+            !ed4.CanSetDots(2) && bar4.Cells[0].Dots == 0 && steps4() == before4);
+
+        // Repeat open / close: same change in every track, one undo step, the menu's count honoured.
+        var (ed5, song5, steps5) = Make();
+        ed5.SetPosition(1, 0, 1, false);
+        ed5.TryRunNoteCommand("Bar.RepeatOpen");
+        Check("repeat open: toggles the bar in every track with one undo step",
+            song5.Tracks.All(t => t.Measures[1].RepeatStart) && steps5() == 1);
+        ed5.TryRunNoteCommand("Bar.RepeatOpen");
+        Check("repeat open: toggling again removes it everywhere", song5.Tracks.All(t => !t.Measures[1].RepeatStart) && steps5() == 2);
+        ed5.SetPosition(2, 0, 1, false);
+        ed5.TryRunNoteCommand("Bar.RepeatClose");
+        Check("repeat close (shortcut): turns the end on with a count of at least 2 in every track",
+            song5.Tracks.All(t => t.Measures[2].RepeatEnd && t.Measures[2].RepeatCount >= 2) && steps5() == 3);
+        ed5.ToggleRepeatClose();
+        Check("repeat close: toggling off clears it", song5.Tracks.All(t => !t.Measures[2].RepeatEnd));
+        ed5.ToggleRepeatClose(4);
+        Check("repeat close (menu, count from the prompt): same change with the chosen count",
+            song5.Tracks.All(t => t.Measures[2].RepeatEnd && t.Measures[2].RepeatCount == 4) && steps5() == 5);
+
+        // Empty bar: active voice only, one undo step, none when already empty.
+        var (ed6, song6, steps6) = Make();
+        var bar6 = song6.Tracks[0].Measures[0];
+        bar6.Cells[0] = Beat(1); bar6.Cells[3] = new TabCell { IsRest = true, DurationDenominator = 4 };
+        bar6.CellsForVoice(1, create: true)[0] = Beat(8);
+        ed6.SetPosition(0, 0, 1, false);
+        ed6.EmptyBar();
+        Check("empty bar: clears the active voice, keeps the other voice, one undo step",
+            bar6.Cells.All(c => c.Notes.Count == 0 && !c.IsRest) && bar6.Voice2Cells[0].Notes.Count == 1 && steps6() == 1);
+        ed6.EmptyBar();
+        Check("empty bar: an already empty bar captures no undo step", steps6() == 1);
+    }
+
+    /// <summary>The shared minimum font size and the higher-contrast secondary text token exist and agree with the code constant.</summary>
+    private static void TestReadableTextTokens()
+    {
+        var app = System.Windows.Application.Current;
+        if (app is null) { Skip("readable text tokens", "no application resources in this run"); return; }
+        Check("MinFontSize resource equals ThemeService.MinFontSize and is at least 11",
+            app.TryFindResource("MinFontSize") is double size && size == Services.ThemeService.MinFontSize && size >= 11);
+        Check("SecondaryTextBrush is a theme brush, brighter than muted on dark and darker than muted on light",
+            app.TryFindResource("SecondaryTextBrush") is System.Windows.Media.SolidColorBrush
+            && Services.ThemeService.TryParse(Services.ThemeService.Blend("#98A1AE", "#E7EAEF", 0.45), out var dark) && dark.R > 0x98
+            && Services.ThemeService.TryParse(Services.ThemeService.Blend("#3A3A3A", "#111111", 0.45), out var light) && light.R < 0x3A);
+    }
+
     /// <summary>Automation peers: the score editor reports its cursor as a Value, track rows are list items, the fretboard is named.</summary>
     private static void TestAutomationPeers()
     {

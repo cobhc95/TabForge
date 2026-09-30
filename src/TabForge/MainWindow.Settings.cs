@@ -367,6 +367,7 @@ public partial class MainWindow
             case "File.SaveAs": SaveAs_Click(this, args); return true;
             case "File.Print": Print_Click(this, args); return true;
             case "File.Render": Render_Click(this, args); return true;
+            case "File.CancelImport": CancelImport_Click(this, args); return true;
             case "File.ExportPdf": ExportPdf_Click(this, args); return true;
             case "File.ExportMusicXml": ExportMusicXml_Click(this, args); return true;
             case "App.CommandPalette": CommandPalette_Click(this, args); return true;
@@ -641,18 +642,14 @@ public partial class MainWindow
     }
 
     /// <summary>Opens a .tforge or Guitar Pro file into a new tab (used by the file argument).</summary>
-    public void OpenDocumentFromPath(string path, bool replaceCurrent = false, bool replaceAll = false)
+    /// <remarks>A Guitar Pro file imports in the background (A5-07) and opens when done; the returned task completes then.</remarks>
+    public Task OpenDocumentFromPath(string path, bool replaceCurrent = false, bool replaceAll = false)
     {
-        try
+        var job = OpenScore(path, replaceCurrent, replaceAll, (opened, loaded) =>
         {
-            var opened = _documentController.Open(path);
-            if (!LoadProject(opened.Project, opened.SessionPath, true, replaceCurrent, replaceAll)) return;
-            StatusText.Text = $"Opened {Path.GetFileName(path)}" + (opened.Notice is { } notice ? $" — {notice}" : "");
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show(this, $"Could not open {Path.GetFileName(path)}.\n\n{ex.Message}", "Open failed", MessageBoxButton.OK, MessageBoxImage.Error);
-        }
+            if (loaded) StatusText.Text = $"Opened {Path.GetFileName(path)}" + (opened.Notice is { } notice ? $" — {notice}" : "");
+        });
+        return job?.Completion ?? Task.CompletedTask;
     }
 
     /// <summary>
@@ -669,9 +666,13 @@ public partial class MainWindow
         Focus();
     }
 
-    public void OpenStartupFile(string path)
+    /// <param name="background">False for probe / tour launches, which expect the song open when this returns.</param>
+    public void OpenStartupFile(string path, bool background = true)
     {
-        OpenDocumentFromPath(path, replaceCurrent: true, replaceAll: true);
+        OpenScore(path, replaceCurrent: true, replaceAll: true, (opened, loaded) =>
+        {
+            if (loaded) StatusText.Text = $"Opened {Path.GetFileName(path)}" + (opened.Notice is { } notice ? $" — {notice}" : "");
+        }, background);
     }
 
     public void ReportStartupFileMissing(string path)

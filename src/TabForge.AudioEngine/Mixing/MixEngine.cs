@@ -268,7 +268,7 @@ public sealed class MixEngine : ISampleProvider
     {
         Epoch.Enter();   // before the chains are read
         try { return ReadBlock(buffer, offset, count); }
-        finally { Epoch.Exit(); }
+        finally { Isolation.PluginHostLink.EndCallback(); Epoch.Exit(); }
     }
 
     private int ReadBlock(float[] buffer, int offset, int count)
@@ -280,6 +280,8 @@ public sealed class MixEngine : ISampleProvider
         var chains = Volatile.Read(ref _chains);
         var fanout = Volatile.Read(ref _fanout);
         var frames = count / 2;
+        // A5-09: every isolated plug-in in this callback shares one wait deadline (cleared in Read's finally).
+        Isolation.PluginHostLink.BeginCallback(started, frames, _sampleRate);
         // Where "frame 0 of this call" is on the shared clock, shifted back by the fixed delay - smoothed by a
         // delay-locked loop so device-callback jitter and the true sample rate do not move event placement.
         var rawCallTime = started + OutputLatencyTicks - DelayTicks;

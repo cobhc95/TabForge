@@ -229,7 +229,7 @@ internal sealed partial class ScoreToMidiCompiler
 
     /// <summary>
     /// Triplet feel (swing) for a plain eighth note: the first of a beat's pair is lengthened and the
-    /// second is pushed late and shortened, so the pair spans exactly one beat (TuxGuitar checkTripletFeel).
+    /// second is pushed late and shortened, so the pair spans exactly one beat.
     /// </summary>
     private static (double onsetSlots, double durationSlots) SwingFor(MeasureModel measure,
         IReadOnlyList<TabCell> cells, int i)

@@ -127,6 +127,12 @@ public static class GuitarProExporter
         catch (InvalidDataException) { return null; }
         catch (IOException) { return null; }
         catch (UnauthorizedAccessException) { return null; }
+        return TryReadEmbedded(file);
+    }
+
+    /// <summary>The embedded TabForge project of a .gp already read into memory (bounded), or null.</summary>
+    internal static SongProject? TryReadEmbedded(byte[] file)
+    {
         try
         {
             using var zip = new System.IO.Compression.ZipArchive(new MemoryStream(file, writable: false), System.IO.Compression.ZipArchiveMode.Read);
@@ -146,6 +152,23 @@ public static class GuitarProExporter
         // Not a TabForge-written .gp (or a damaged one): fall back to the normal Guitar Pro import.
         catch (InvalidDataException) { return null; }
         catch (IOException) { return null; }
+    }
+
+    /// <summary>A bar's navigation marks (TabForge's names or Guitar Pro's own) as alphaTab directions, so D.C. / D.S. / Coda / Fine survive a clean .gp.</summary>
+    private static IEnumerable<Direction> GpDirections(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) yield break;
+        foreach (var token in text.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            var name = token switch
+            {
+                "Segno" => "TargetSegno", "SegnoSegno" => "TargetSegnoSegno", "Coda" => "TargetCoda", "DoubleCoda" => "TargetDoubleCoda",
+                "Fine" => "TargetFine", "ToCoda" => "JumpDaCoda", "ToDoubleCoda" => "JumpDaDoubleCoda",
+                "DaCapo" or "DaCapoAlCoda" or "DalSegno" or "DalSegnoAlCoda" or "DalSegnoSegno" or "DalSegnoSegnoAlCoda" => "Jump" + token,
+                _ => token,
+            };
+            if (Enum.TryParse<Direction>(name, out var direction)) yield return direction;
+        }
     }
 
     private static Score Build(SongProject project)
@@ -177,6 +200,13 @@ public static class GuitarProExporter
             if (model?.KeySignature is int ks) lastKey = ks;
             if (model?.KeySignatureMinor is bool km) lastMinor = km;
             if (model is not null && model.EndingPasses != 0) mb.AlternateEndings = model.EndingPasses;
+            var directions = GpDirections(model?.Directions).ToList();
+            if (directions.Count > 0)
+            {
+                var set = new AlphaTab.Core.EcmaScript.Set<Direction>();
+                foreach (var direction in directions) set.Add(direction);
+                mb.Directions = set;
+            }
             if (markers.TryGetValue(b, out var title)) mb.Section = new Section { Text = title, Marker = "" };
             var tempo = b == 0 ? model?.TempoChange ?? project.Tempo : model?.TempoChange;
             if (tempo is int bpm) mb.TempoAutomations.Add(new Automation { Type = AutomationType.Tempo, Value = bpm, RatioPosition = 0, Text = "" });

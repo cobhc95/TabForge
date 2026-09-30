@@ -169,7 +169,7 @@ internal sealed class ScoreFollowCoordinator
 
     /// <summary>
     /// Following is a courtesy, not a cage: if the player scrolls by hand we stop moving the page until
-    /// they press play again or move the cursor (TuxGuitar compares scrollbar positions the same way).
+    /// they press play again or move the cursor (a hand scroll shows as a scrollbar position we did not set).
     /// </summary>
     public void OnScrollChanged(ScrollChangedEventArgs e)
     {

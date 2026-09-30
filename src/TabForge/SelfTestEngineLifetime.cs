@@ -12,6 +12,89 @@ namespace TabForge;
 /// </summary>
 public static partial class SelfTest
 {
+    /// <summary>
+    /// A5-09: one wait deadline per callback (start + 75 % of the block) shared by the isolated plug-ins in it. Chain: two on-time
+    /// children, twelve children that never answer, one more on-time child. The first late child uses what is left of the budget,
+    /// the rest (including the last on-time one) are bypassed without a request, and the whole chain stays inside the budget.
+    /// </summary>
+    private static void TestIsolatedCallbackBudget()
+    {
+        const int frames = 512, rate = 48000, lateCount = 12, total = 2 + lateCount + 1;
+        var budgetMs = EI.PluginHostLink.CallbackBudgetMs(frames, rate);
+        var stop = false;
+        var blocks = new EI.PluginHostBlock[total];
+        var views = new EI.PluginHostBlock[total];
+        var links = new EI.PluginHostLink[total];
+        var threads = new List<Thread>();
+        var failures = 0;
+        try
+        {
+            for (var p = 0; p < total; p++)
+            {
+                var id = Guid.NewGuid().ToString("N");
+                blocks[p] = EI.PluginHostBlock.Create(id, frames);
+                views[p] = EI.PluginHostBlock.Open(id, frames);
+                links[p] = new EI.PluginHostLink(blocks[p], rate, () => Interlocked.Increment(ref failures));
+                var late = p >= 2 && p < 2 + lateCount;
+                if (late) continue;   // nobody answers: a child that misses every deadline
+                var view = views[p];
+                var t = new Thread(() =>
+                {
+                    while (!Volatile.Read(ref stop))
+                    {
+                        if (!view.TakeRequest(50, out var g)) continue;
+                        var n = Math.Clamp(view.Frames, 0, frames);
+                        for (var i = 0; i < n; i++) { view.Channel(2)[i] = view.Channel(0)[i] * 2; view.Channel(3)[i] = view.Channel(1)[i] * 2; }
+                        view.Complete(g);
+                    }
+                }) { IsBackground = true, Name = $"selftest budget child {p}" };
+                t.Start(); threads.Add(t);
+            }
+            var a = new[] { new float[frames], new float[frames] };
+            var b = new[] { new float[frames], new float[frames] };
+            var transport = new EP.TransportInfo { Tempo = 120 };
+            Array.Fill(a[0], 0.1f); Array.Fill(a[1], 0.1f);
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            EI.PluginHostLink.BeginCallback(System.Diagnostics.Stopwatch.GetTimestamp(), frames, rate);
+            try
+            {
+                for (var p = 0; p < total; p++) { links[p].Process(a, b, frames, default, transport); (a, b) = (b, a); }
+            }
+            finally { EI.PluginHostLink.EndCallback(); }
+            var elapsedMs = sw.Elapsed.TotalMilliseconds;
+            var skipped = links.Sum(l => l.BudgetSkippedBlocks);
+            var lateLinks = links.Skip(2).Take(lateCount).ToArray();
+            // Old behaviour: every late child waited its own 2+ ms (here 8 ms each, ~100 ms for the chain) and the last child would process (x8).
+            Check("a chain of late isolated children never exceeds the callback budget: the first late one waits the remainder, the rest are bypassed",
+                Math.Abs(budgetMs - 8) < 1e-9 && elapsedMs < budgetMs + 40 && lateLinks[0].MissedBlocks == 1 && lateLinks[0].BudgetSkippedBlocks == 0
+                && lateLinks.Skip(1).All(l => l.BudgetSkippedBlocks == 1 && l.MissedBlocks == 0) && skipped == lateCount,
+                $"{elapsedMs:0.0} ms (budget {budgetMs} ms), skipped {skipped}, first late missed {lateLinks[0].MissedBlocks}");
+            // Starved children are not charged: with the budget spent on every block for 100 ms (miss window 20 ms), a link is never failed.
+            var starvedFailures = 0;
+            var starved = new EI.PluginHostLink(blocks[total - 1], rate, () => Interlocked.Increment(ref starvedFailures), windowMs: 20);
+            var sw2 = System.Diagnostics.Stopwatch.StartNew();
+            while (sw2.ElapsedMilliseconds < 100)
+            {
+                EI.PluginHostLink.BeginCallback(System.Diagnostics.Stopwatch.GetTimestamp() - System.Diagnostics.Stopwatch.Frequency, frames, rate);
+                try { starved.Process(a, b, frames, default, transport); } finally { EI.PluginHostLink.EndCallback(); }
+                Thread.Sleep(2);
+            }
+            Check("children bypassed only because the callback budget was spent are not charged misses: never disabled, however long it lasts",
+                !starved.Failed && starvedFailures == 0 && starved.MissedBlocks == 0 && starved.BudgetSkippedBlocks >= 3,
+                $"failed {starved.Failed}, reports {starvedFailures}, missed {starved.MissedBlocks}, skipped {starved.BudgetSkippedBlocks}");
+            Check("children before the budget is spent still process; children after it pass the audio through, nothing fails",
+                Math.Abs(a[0][frames - 1] - 0.4f) < 1e-6f && links[total - 1].BudgetSkippedBlocks == 1 && failures == 0,
+                $"out {a[0][frames - 1]}, failures {failures}");
+        }
+        finally
+        {
+            Volatile.Write(ref stop, true);
+            foreach (var t in threads) t.Join(1000);
+            foreach (var x in blocks) x?.Dispose();
+            foreach (var x in views) x?.Dispose();
+        }
+    }
+
     private static void TestIsolatedPluginGenerations()
     {
         // Protocol: a "done" for an earlier generation is not taken for the current request.

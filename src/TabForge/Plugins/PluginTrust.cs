@@ -147,6 +147,25 @@ public static class PluginTrust
         }
     }
 
+    /// <summary>
+    /// The SHA-256 the identify probe must find (it executes the plug-in, so it is only ever run for a trusted one): the approved hash,
+    /// or, for a plug-in trusted by location (Program Files, which has no per-file record), the file's hash now. "" when there is
+    /// none (missing or unreadable): the probe then refuses to load. Reads the file, so call it off the UI thread.
+    /// </summary>
+    public static string ProbeHash(string path, PluginSettings settings)
+    {
+        var expected = ExpectedHashFor(path, settings);
+        if (expected.Length > 0) return expected;
+        var bin = BinaryOf(Normalize(path));
+        if (bin is null) return "";
+        try
+        {
+            using var stream = new FileStream(bin, FileMode.Open, FileAccess.Read, FileShare.Read, 1 << 16, FileOptions.SequentialScan);
+            return PluginIdentity.Sha256Hex(stream);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return ""; }
+    }
+
     /// <summary>Approves a path and records the fingerprint of the file as it is now: the new baseline, taken only on this explicit action.</summary>
     public static void Approve(PluginSettings settings, string path)
     {

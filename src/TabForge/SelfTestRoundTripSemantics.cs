@@ -1127,7 +1127,7 @@ public static partial class SelfTest
             var pairPath = Path.Combine(folder, "edited.gp");
             controller.SaveCleanGuitarProWithAudioData(DocumentSession.FromProject(RtCopy(edited), null), pairPath, edited.Lyrics);
             var pair = controller.Open(pairPath).Project;
-            RtVerify("import -> edit -> save clean .gp+.tfaudio -> reopen", RtGpClean(("song.title", "DocumentController.Open titles a .gp by its file name")), edited, pair);
+            RtVerify("import -> edit -> save clean .gp+.tfaudio -> reopen", RtGpClean(), edited, pair);
             Check("edit flow: the .tfaudio pair was written beside the .gp", File.Exists(AudioDataFile.PathFor(pairPath)));
         }
         finally { RtCleanup(folder); }
@@ -1144,8 +1144,7 @@ public static partial class SelfTest
             RtVerify("plug-in state, buses, sidechains, MIDI forwarding, clips, missing devices/plug-ins", RtGpEmbedded, expected, RtViaGp(song, folder, "a", true), audio: true);
             // clean .gp + .tfaudio: routing is re-pointed by matching tracks; device numbers and per-track live settings live in neither file.
             var pair = RtViaGpPair(song, folder, "a");
-            var pairProfile = RtGpClean(("song.title", "DocumentController.Open titles a .gp by its file name"),
-                ("track.midiDevice", "MIDI output device numbers are machine-specific; not stored in .gp or .tfaudio"),
+            var pairProfile = RtGpClean(("track.midiDevice", "MIDI output device numbers are machine-specific; not stored in .gp or .tfaudio"),
                 ("track.audioInput", "record input choice is a live setting, not stored in .gp or .tfaudio"),
                 ("track.monitor", "input monitoring is a live setting, not stored"), ("track.tint", "row tint is a view preference (.tforge only)"),
                 ("track.reverb", "the GP7 export does not write reverb sends"), ("track.chorus", "the GP7 export does not write chorus sends"),
@@ -1191,8 +1190,7 @@ public static partial class SelfTest
             RtVerify("track reorder + rename with duplicate names", RtTforge, expected, RtViaTforge(song, folder, "r"), audio: true);
             RtVerify("track reorder + rename with duplicate names", RtGpEmbedded, expected, RtViaGp(song, folder, "r", true), audio: true);
             var pair = RtViaGpPair(song, folder, "r");
-            var profile = RtGpClean(("song.title", "DocumentController.Open titles a .gp by its file name"),
-                ("track.midiDevice", "machine-specific, not in .gp/.tfaudio"), ("track.audioInput", "live setting, not stored"), ("track.monitor", "live setting, not stored"),
+            var profile = RtGpClean(("track.midiDevice", "machine-specific, not in .gp/.tfaudio"), ("track.audioInput", "live setting, not stored"), ("track.monitor", "live setting, not stored"),
                 ("track.tint", "view preference"), ("track.reverb", "not in GP7 export"), ("track.chorus", "not in GP7 export"), ("track.transpose", "not in GP7 export"),
                 ("track.performer", "display-only"), ("track.trackNotes", "display-only"), ("track.instrumentName", "re-derived from program"), ("track.drumMap", "TabForge-only"),
                 ("track.color", "colour is re-derived on import"));

@@ -18,6 +18,8 @@
         <SolidColorBrush x:Key="TextBrush" Color="#E7EAEF"/>
         <SolidColorBrush x:Key="TextStrongBrush" Color="#FFFFFF"/>
         <SolidColorBrush x:Key="MutedBrush" Color="#98A1AE"/>
+        <!-- Higher-contrast secondary text for small labels (ThemeService recomputes it per theme). -->
+        <SolidColorBrush x:Key="SecondaryTextBrush" Color="#B9C0CA"/>
         <SolidColorBrush x:Key="AccentBrush" Color="#4C9AFF"/>
         <SolidColorBrush x:Key="AccentSoftBrush" Color="#2A4A73"/>
         <SolidColorBrush x:Key="CursorBrush" Color="#F2C14E"/>
@@ -75,6 +77,8 @@
         <sys:Double x:Key="ToolButtonFontSize">13</sys:Double>
         <sys:Double x:Key="ToolButtonMinWidth">30</sys:Double>
         <sys:Double x:Key="IconSize">14</sys:Double>
+        <!-- The smallest text the app draws (same value as ThemeService.MinFontSize). -->
+        <sys:Double x:Key="MinFontSize">11</sys:Double>
 
         <!-- ===== Window ===== -->
         <Style TargetType="Window">

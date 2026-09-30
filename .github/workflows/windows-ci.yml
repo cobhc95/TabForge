@@ -41,9 +41,11 @@ jobs:
         run: |
           $log = Join-Path $PWD 'selftest.log'
           $exe = Join-Path $PWD 'src/TabForge/bin/Release/net8.0-windows/TabForge.exe'
+          # --require makes the source-hygiene and installer-parity checks fail instead of skipping when the source
+          # tree or installer script cannot be found (the working directory is the repository root).
           # TabForge.exe is a WPF (GUI-subsystem) executable: start it and wait for it to exit. --selftest opens no
           # main window, needs no audio device (the engine tests use the headless harness and a null output).
-          $p = Start-Process -FilePath $exe -ArgumentList @('--selftest', "`"$log`"", '--require', 'gp-fixtures') -Wait -PassThru
+          $p = Start-Process -FilePath $exe -ArgumentList @('--selftest', "`"$log`"", '--require', 'gp-fixtures,synthetic-fixtures,source-hygiene,installer-parity') -Wait -PassThru
           "self-test exit code: $($p.ExitCode)"
           if (-not (Test-Path -LiteralPath $log)) { Write-Error 'self-test log was not written'; exit 2 }
           Select-String -Path $log -Pattern '^\s+(SKIP|FAIL)\s|self-test:' | ForEach-Object { $_.Line }
@@ -61,7 +63,8 @@ jobs:
           if-no-files-found: warn
 
   # Builds native/tfvst3 from the pinned Steinberg VST3 SDK and compares it with the checked-in DLL.
-  # REPORT ONLY: this job never fails on a mismatch (see native/tfvst3/BUILD.md, "Reproducibility").
+  # REPORT ONLY: this job never fails on a mismatch (see native/tfvst3/BUILD.md, "Reproducibility"). Releases do not
+  # depend on the match: release.yml builds the bridge itself and ships that build.
   native-bridge:
     runs-on: windows-latest
     timeout-minutes: 20

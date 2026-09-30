@@ -32,7 +32,8 @@ public static partial class SelfTest
     /// <summary>
     /// Requirements that turn skips into failures: <c>--selftest &lt;log&gt; --require gp-fixtures[,all]</c> or the
     /// TABFORGE_SELFTEST_REQUIRE environment variable (comma/semicolon separated). "gp-fixtures" demands the
-    /// synthetic Guitar Pro round trip ran; "all" makes every skip a failure. Exit code stays 0 = pass, non-zero = fail.
+    /// synthetic Guitar Pro round trip ran; "synthetic-fixtures" that the synthetic fixture group ran; "source-hygiene" and "installer-parity" demand the repository-source checks
+    /// (control characters, single plug-in factory; installer file associations) ran; "all" makes every skip a failure. Exit code stays 0 = pass, non-zero = fail.
     /// </summary>
     private static HashSet<string> ParseRequirements()
     {
@@ -49,7 +50,7 @@ public static partial class SelfTest
 
     public static int Run(string outputPath)
     {
-        Log.Clear(); _pass = 0; _fail = 0; _skip = 0; _gpFixtureRan = false;
+        Log.Clear(); _pass = 0; _fail = 0; _skip = 0; _gpFixtureRan = false; _syntheticFixturesRan = false;
         _required = ParseRequirements();
         _areas = ParseAreas();
         if (_areas is not null) Log.Add($"  info  areas: core + {string.Join(", ", _areas.OrderBy(x => x))}");
@@ -66,6 +67,8 @@ public static partial class SelfTest
         Guard(TestPlaybackDifferences);
         Guard(TestTimelineMetronome);
         Guard(TestTimelineLoopAndOrder);
+        Guard(TestTimelineRevision);
+        Guard(TestPlaybackOrderSpec);
         Section("Editor");
         Guard(TestEditorEntry);
         Guard(TestEditorNavigation);
@@ -90,6 +93,8 @@ public static partial class SelfTest
         Guard(TestTemplateKeepsSetupOnly);
         Guard(TestSnapLayoutHitTest);
         Guard(TestAutomationPeers);
+        Guard(TestEditCommands);
+        Guard(TestReadableTextTokens);
         Guard(TestEngravingHeader);
         Guard(TestUserTemplatesAndFaultedChain);
         Section("Standard-notation engraving layout");
@@ -119,7 +124,10 @@ public static partial class SelfTest
         Section("Guitar Pro compatibility (real files)");
         Guard(TestSyntheticGuitarProFixture);
         Guard(TestGuitarProFiles);
+        Guard(TestGuitarProImportContainment);
         Guard(TestRoundTripSemanticsSuite);
+        Section("Synthetic fixtures (run everywhere, no local songs)");
+        Guard(TestSyntheticFixtures);
         Section("Playback depth (timing / ties / channels)");
         Guard(TestPlaybackDepth);
         Guard(TestNoOpOptionChangesDoNotRestartPlayback);
@@ -146,6 +154,8 @@ public static partial class SelfTest
         Guard(TestAsyncSaveSequencing);
         Guard(TestPluginStateCollection);
         Guard(TestSidecarRouting);
+        Guard(TestAudioDataSizeLimit);
+        Guard(TestGpOpenKeepsTitle);
         Guard(TestPersistenceSchema);
         Guard(TestImporterNamesAndDynamics);
         Guard(TestTforgeCompression);
@@ -155,6 +165,7 @@ public static partial class SelfTest
         Guard(TestMusicXmlHeaderForReaders);
         Guard(TestMusicXmlGuitarPro8Encoding);
         Guard(TestIsolatedPluginGenerations);
+        Guard(TestIsolatedCallbackBudget);
         Guard(TestIsolatedControlChannel);
         Guard(TestRetirementEpochBarrier);
         Guard(TestMonitorFx);
@@ -211,6 +222,8 @@ public static partial class SelfTest
 
         if (_required.Contains(RequireGpFixtures))
             Check("required: the synthetic Guitar Pro fixture test ran to completion", _gpFixtureRan);
+        if (_required.Contains(RequireSyntheticFixtures))
+            Check("required: the synthetic fixture group (repeats, navigation, tempo, mix, tuplets, voices, spans, demo song) ran to completion", _syntheticFixturesRan);
         var summary = $"TabForge self-test: {_pass} passed, {_fail} failed" + (_skip > 0 ? $", {_skip} skipped" : "");
         if (_skippedByArea > 0) summary += $" ({_skippedByArea} test groups outside the selected areas not run)";
         Log.Add("");
@@ -235,7 +248,7 @@ public static partial class SelfTest
     /// </summary>
     private static readonly Dictionary<string, string> AreaOf = new(StringComparer.Ordinal)
     {
-        ["TestPitchMatch"] = "engine", ["TestMixer"] = "engine", ["TestIsolatedPluginGenerations"] = "engine", ["TestIsolatedControlChannel"] = "engine",
+        ["TestPitchMatch"] = "engine", ["TestMixer"] = "engine", ["TestIsolatedPluginGenerations"] = "engine", ["TestIsolatedCallbackBudget"] = "engine", ["TestIsolatedControlChannel"] = "engine",
         ["TestRetirementEpochBarrier"] = "engine", ["TestMonitorFx"] = "engine", ["TestSharedRingProducers"] = "engine", ["TestEngineExitCleanupOnUi"] = "engine",
         ["TestHeadlessDeviceReconfigure"] = "engine", ["TestClipChurnWhileStreaming"] = "engine", ["TestDiskStreamerIdle"] = "engine", ["TestRealtimePolish"] = "engine",
         ["TestPluginFactorySingleSource"] = "engine", ["TestWatchdogPolicy"] = "engine", ["TestCommandFrameRobustness"] = "engine",
@@ -248,12 +261,12 @@ public static partial class SelfTest
         ["TestSaveTransactions"] = "persistence", ["TestPairSaveRecovery"] = "persistence", ["TestProfileLeavesUserFoldersUntouched"] = "persistence", ["TestNightPluginApproval"] = "persistence", ["TestAsyncSaveSequencing"] = "persistence", ["TestPluginStateCollection"] = "persistence",
         ["TestSidecarRouting"] = "persistence", ["TestPersistenceSchema"] = "persistence", ["TestTforgeCompression"] = "persistence", ["TestCleanGpExportKeepsFeatures"] = "guitarpro",["TestMusicXmlExport"] = "guitarpro",["TestRoundTripSemanticsSuite"] = "guitarpro",["TestMusicXmlBarsFillTheTimeSignature"] = "guitarpro",["TestMusicXmlHeaderForReaders"] = "guitarpro",["TestMusicXmlGuitarPro8Encoding"] = "guitarpro",["TestImporterNamesAndDynamics"] = "guitarpro",["TestSettingsWithInlinePluginStates"] = "persistence",
         ["TestReaperChainImport"] = "persistence", ["TestProjectRoundtrip"] = "persistence", ["TestModelRoundTrip"] = "persistence",
-        ["TestSyntheticGuitarProFixture"] = "guitarpro", ["TestGuitarProFiles"] = "guitarpro", ["TestTupletImport"] = "guitarpro",
+        ["TestSyntheticGuitarProFixture"] = "guitarpro", ["TestSyntheticFixtures"] = "synthetic", ["TestGuitarProFiles"] = "guitarpro", ["TestTupletImport"] = "guitarpro", ["TestGuitarProImportContainment"] = "guitarpro",
         ["TestGp5EditingSemantics"] = "guitarpro", ["TestAsciiExport"] = "guitarpro", ["TestMidiExport"] = "guitarpro",
         ["TestPlaybackDepth"] = "playback", ["TestNoOpOptionChangesDoNotRestartPlayback"] = "playback", ["TestSeekWhilePlayingSoundsFirstNote"] = "playback",
         ["TestCountInIsHeard"] = "playback", ["TestTimelineBasics"] = "playback", ["TestTimelineTechniques"] = "playback",
-        ["TestTimelineMetronome"] = "playback", ["TestTimelineLoopAndOrder"] = "playback",
-        ["TestEditorEntry"] = "ui", ["TestEditorNavigation"] = "ui", ["TestEditorDurations"] = "ui", ["TestPlaybackGlowIntensity"] = "ui",
+        ["TestTimelineMetronome"] = "playback", ["TestTimelineRevision"] = "playback", ["TestAudioDataSizeLimit"] = "persistence", ["TestGpOpenKeepsTitle"] = "persistence", ["TestTimelineLoopAndOrder"] = "playback", ["TestPlaybackOrderSpec"] = "playback",
+        ["TestEditorEntry"] = "ui", ["TestEditCommands"] = "ui", ["TestReadableTextTokens"] = "ui", ["TestEditorNavigation"] = "ui", ["TestEditorDurations"] = "ui", ["TestPlaybackGlowIntensity"] = "ui",
         ["TestEditorCopyPaste"] = "ui", ["TestNotationLayout"] = "ui", ["TestTabUi"] = "ui", ["TestBrowserTabShell"] = "ui",
         ["TestNoteEvents"] = "ui", ["TestInstrumentVisualState"] = "ui", ["TestFretboardGeometry"] = "ui", ["TestArrangementGeometry"] = "ui",
         ["TestArrangementFollowGeometry"] = "ui", ["TestScaleFinder"] = "ui", ["TestGp5SvgIcons"] = "ui", ["TestInstrumentArtwork"] = "ui",
@@ -294,10 +307,12 @@ public static partial class SelfTest
     }
 
     /// <summary>A check that could not run (missing optional input). Reported, never counted as a pass.</summary>
-    private static void Skip(string name, string reason)
+    private static void Skip(string name, string reason, string? requirement = null)
     {
-        // "--require all" turns every skip into a failure so CI cannot pass by silently not running a check.
-        if (_required.Contains("all")) { Check($"{name} (required by --require all)", false, $"skipped: {reason}"); return; }
+        // "--require all" (or --require <requirement> for a named group such as source-hygiene or installer-parity)
+        // turns a skip into a failure so CI cannot pass by silently not running a check.
+        if (_required.Contains("all") || (requirement is not null && _required.Contains(requirement)))
+        { Check($"{name} (required by --require {(requirement is not null && _required.Contains(requirement) ? requirement : "all")})", false, $"skipped: {reason}"); return; }
         _skip++; Log.Add($"  SKIP  {name}  -> {reason}");
     }
 
@@ -2023,8 +2038,8 @@ public static partial class SelfTest
             !legacySettings.Appearance.ShowFretboard && !legacySettings.Appearance.ShowArrangementOverview &&
             legacySettings.Appearance.ScorePaper == "Light");
 
-        // Following the score while playing: defaults mirror TuxGuitar's model (discrete with a 20%
-        // margin and one bar of anticipation, capped at 40 fps, stopping once the end is visible).
+        // Following the score while playing: the played system is parked with a 20% margin, one bar of
+        // anticipation is kept visible, and scrolling stops once the end is on screen.
         var follow = new FollowSettings();
         Check("follow defaults to smooth mode", follow.Mode == FollowModes.Smooth, follow.Mode);
         Check("follow parks the played system 20% from the top", follow.MarginPercent == 20);

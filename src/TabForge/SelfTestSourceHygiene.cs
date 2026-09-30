@@ -12,12 +12,12 @@ public static partial class SelfTest
     /// <summary>
     /// H-02: a scripted edit once ran escape processing on a Windows path ("native\fetch" became a form feed).
     /// Fails on any control character other than tab, CR and LF in the repository's text sources.
-    /// Skipped when the executable does not run from inside a source checkout (installed copy).
+    /// Skipped (a failure with --require source-hygiene) when the executable does not run from inside a source checkout (installed copy).
     /// </summary>
     private static void TestSourceControlCharacters()
     {
         var root = FindRepositoryRoot();
-        if (root is null) { Skip("source files contain no stray control characters", "no source checkout found"); return; }
+        if (root is null) { Skip("source files contain no stray control characters", "no source checkout found", "source-hygiene"); return; }
 
         var offenders = new List<string>();
         var scanned = 0;
@@ -51,7 +51,7 @@ public static partial class SelfTest
     {
         var root = FindRepositoryRoot();
         var iss = root is null ? null : Path.Combine(root, "installer", "TabForge.iss");
-        if (iss is null || !File.Exists(iss)) { Skip("installer file associations match FileAssociations.Extensions", "no source checkout / installer script found"); return; }
+        if (iss is null || !File.Exists(iss)) { Skip("installer file associations match FileAssociations.Extensions", "no source checkout / installer script found", "installer-parity"); return; }
 
         var lines = new List<string>();
         var inRegistry = false;
@@ -125,7 +125,7 @@ public static partial class SelfTest
             for (var dir = new DirectoryInfo(start); dir is not null; dir = dir.Parent)
             {
                 if (File.Exists(Path.Combine(dir.FullName, "TabForge.sln")) &&
-                    File.Exists(Path.Combine(dir.FullName, "REBUILD.cmd")))
+                    File.Exists(Path.Combine(dir.FullName, "Directory.Build.props")))
                     return dir.FullName;
             }
         }

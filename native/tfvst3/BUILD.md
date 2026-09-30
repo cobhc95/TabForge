@@ -106,4 +106,11 @@ folder with `/Brepro` (`-DCMAKE_SHARED_LINKER_FLAGS=/Brepro -DCMAKE_CXX_FLAGS=/B
 so it is not done for the current file. The workflow `windows-ci.yml` builds the bridge from the pinned SDK on
 every run and reports the hash comparison and the number of differing bytes; it never fails on a mismatch.
 
+**Release builds.** The release workflow (`.github/workflows/release.yml`) does not ship the checked-in DLL. It
+builds the bridge from the pinned SDK on the GitHub Actions runner with `native/build-tfvst3.ps1`, rewrites
+`native/BUILD_PROVENANCE.md` with that build's compiler and SHA-256, packages that DLL, and publishes a build
+attestation for the release files and for the DLL. The shipped bridge is therefore always the one the workflow
+built, and its hash is recorded in the same run; no byte-for-byte match with the checked-in file is needed or
+claimed. The checked-in DLL only serves local development builds.
+
 The checked-in DLL has no Authenticode signature.

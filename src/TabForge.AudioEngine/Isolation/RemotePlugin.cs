@@ -58,7 +58,7 @@ public sealed class RemotePlugin : IPluginInstance
         var pipe = _pipe = new NamedPipeServerStream($"TabForge.PluginHost.{id}", PipeDirection.InOut, 1, PipeTransmissionMode.Byte,
             PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
         var exe = Environment.ProcessPath ?? throw new InvalidOperationException("Engine path unknown.");
-        var args = $"--plugin-host {id} {Environment.ProcessId} {sampleRate} {maxBlock} {(_spec.IsInstrument ? 1 : 0)} {_spec.Format} \"{_spec.Path}\"";
+        var args = $"--plugin-host {id} {Environment.ProcessId} {sampleRate} {maxBlock} {(_spec.IsInstrument ? 1 : 0)} {_spec.Format} \"{_spec.Path}\" {(string.IsNullOrEmpty(_spec.ExpectedSha256) ? "none" : _spec.ExpectedSha256)}";
         var process = _process = System.Diagnostics.Process.Start(new ProcessStartInfo(exe, args) { UseShellExecute = false, CreateNoWindow = true })
             ?? throw new InvalidOperationException("The plug-in process did not start.");
         ChildProcessJob.ForThisProcess.Add(process);   // ends with the engine, however the engine ends

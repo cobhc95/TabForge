@@ -38,12 +38,24 @@ public static class PluginIdentity
     /// engine-internal plug-ins). Throws <see cref="PluginChangedException"/> when the file changed or cannot be read; the
     /// message says what to do.
     /// </summary>
-    public static IDisposable? Hold(PluginSpec spec)
+    public static IDisposable? Hold(PluginSpec spec) => Hold(spec.Path, spec.ExpectedSha256);
+
+    /// <summary>
+    /// The one owner of the rule "no plug-in code runs before it is trusted", for every process that loads a plug-in (the engine,
+    /// the isolated plug-in host, the identify probe). With <paramref name="required"/> (the probe and the plug-in host) a
+    /// missing expectation fails closed: nothing is loaded without an approved SHA-256. Without it (the engine, for
+    /// folder-trusted and engine-internal plug-ins) an empty expectation means no per-file approval and returns null.
+    /// </summary>
+    public static IDisposable? Hold(string path, string? expectedSha256, bool required = false)
     {
-        var expected = spec.ExpectedSha256;
-        if (string.IsNullOrEmpty(expected)) return null;
-        var name = System.IO.Path.GetFileName(spec.Path.TrimEnd('\\', '/'));
-        var bin = BinaryOf(spec.Path);
+        var expected = expectedSha256;
+        var name = System.IO.Path.GetFileName(path.TrimEnd('\\', '/'));
+        if (string.IsNullOrEmpty(expected))
+        {
+            if (!required) return null;
+            throw new PluginChangedException($"'{name}' has no approved SHA-256 to check, so it was not loaded. Approve it first (Review plug-ins).");
+        }
+        var bin = BinaryOf(path);
         if (expected == ExpectMissing)
         {
             if (bin is null) return null;   // still missing: the loader reports it

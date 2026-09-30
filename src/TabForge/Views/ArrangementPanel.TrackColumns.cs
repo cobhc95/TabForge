@@ -191,7 +191,7 @@ public sealed partial class ArrangementPanel
             var index = c;
             var label = new TextBlock
             {
-                Text = ColumnSpecs[id].label, FontSize = 9, FontWeight = FontWeights.SemiBold, Opacity = 0.55,
+                Text = ColumnSpecs[id].label, FontSize = Services.ThemeService.MinFontSize, FontWeight = FontWeights.SemiBold, Opacity = 0.8,
                 VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis,
                 HorizontalAlignment = id == "name" ? HorizontalAlignment.Left : HorizontalAlignment.Center,
                 Margin = new Thickness(id == "name" ? 4 : 0, 0, 0, 0), IsHitTestVisible = false
@@ -632,8 +632,8 @@ public sealed partial class ArrangementPanel
 
     private static MenuItem MenuHeader(string text)
     {
-        var label = new TextBlock { Text = text, FontSize = 10, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 2, 0, 1) };
-        label.SetResourceReference(TextBlock.ForegroundProperty, "MutedBrush");
+        var label = new TextBlock { Text = text, FontSize = Services.ThemeService.MinFontSize, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 2, 0, 1) };
+        label.SetResourceReference(TextBlock.ForegroundProperty, "SecondaryTextBrush");
         return new MenuItem { Header = label, IsEnabled = false, IsHitTestVisible = false, Focusable = false,
             Style = (Style)Application.Current.FindResource(typeof(MenuItem)) };
     }

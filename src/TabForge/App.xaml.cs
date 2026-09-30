@@ -153,10 +153,12 @@ public partial class App : Application
         var fileArgs = args.Where((a, i) => !a.StartsWith("--", StringComparison.Ordinal) &&
             (i == 0 || !args[i - 1].StartsWith("--", StringComparison.Ordinal))).ToArray();
         if (fileArgs.Length == 0) return;
+        // Probes and tours (any "--" option) expect the song open when they start: they keep the synchronous open.
+        var background = !args.Any(a => a.StartsWith("--", StringComparison.Ordinal));
         var direct = fileArgs.FirstOrDefault(File.Exists);
-        if (direct is not null) { window.OpenStartupFile(direct); return; }
+        if (direct is not null) { window.OpenStartupFile(direct, background); return; }
         var joined = string.Join(" ", fileArgs);
-        if (File.Exists(joined)) window.OpenStartupFile(joined);
+        if (File.Exists(joined)) window.OpenStartupFile(joined, background);
         else window.ReportStartupFileMissing(joined);
     }
 

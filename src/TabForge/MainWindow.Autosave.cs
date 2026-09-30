@@ -132,11 +132,11 @@ public partial class MainWindow
         }
     }
 
-    private void OpenRecoveredSong(string file)
+    private async void OpenRecoveredSong(string file)
     {
         try
         {
-            OpenDocumentFromPath(file);
+            await OpenDocumentFromPath(file);   // queued behind a Guitar Pro import still running (e.g. the start-up song)
             var doc = _documents.FindByPath(file);
             if (doc is null) return;   // the open failed and said so; the copy stays for the next start
             doc.Path = null;

@@ -457,10 +457,7 @@ public sealed partial class TabEditorControl
         var dots = (CurrentDots + 1) % 3;
         if (!CanSetDots(dots)) return;
         CurrentDots = dots;
-        if (ApplyToolSelection(cells =>
-            {
-                foreach (var selected in cells) selected.Dots = CurrentDots;
-            })) return;
+        if (ApplyToolSelection(cells => Services.EditCommands.ApplyDots(cells, CurrentDots))) return;
         var cell = CurrentCell();
         if (cell is null) { NotifyState(); InvalidateVisual(); return; }
         EditStarting?.Invoke(this, EventArgs.Empty);
@@ -473,10 +470,7 @@ public sealed partial class TabEditorControl
         dots = Math.Clamp(dots, 0, 2);
         if (!CanSetDots(dots)) return;
         CurrentDots = dots;
-        if (ApplyToolSelection(cells =>
-            {
-                foreach (var selected in cells) selected.Dots = CurrentDots;
-            })) return;
+        if (ApplyToolSelection(cells => Services.EditCommands.ApplyDots(cells, CurrentDots))) return;
         var cell = CurrentCell();
         if (cell is null) { NotifyState(); InvalidateVisual(); return; }
         EditStarting?.Invoke(this, EventArgs.Empty);
@@ -1020,27 +1014,28 @@ public sealed partial class TabEditorControl
         while (cells.Count > slots) cells.RemoveAt(cells.Count - 1);
     }
 
+    /// <summary>Repeat beat (C, and Edit > Copy last beat): the previous beat of the active voice onto the cursor, then step forward.</summary>
     public void CopyLastBeat()
     {
         var track = Track; var measure = CurrentMeasure();
         if (track is null || measure is null) return;
-        var source = CellsFor(measure).Take(SelectedCell).LastOrDefault(c => c.Notes.Count > 0);
-        if (source is null) { StatusMessage?.Invoke(this, "No previous beat to copy"); return; }
+        var cells = CellsFor(measure);
+        if (!Services.EditCommands.CanCopyLastBeat(cells, SelectedCell)) { StatusMessage?.Invoke(this, "No previous beat to copy"); return; }
         EditStarting?.Invoke(this, EventArgs.Empty);
-        var dest = CurrentCell();
-        if (dest is null) return;
-        var clone = CloneCell(source);
-        dest.Notes = clone.Notes;
-        dest.DurationDenominator = clone.DurationDenominator;
-        dest.Dots = clone.Dots;
-        dest.IsTriplet = clone.IsTriplet;
-        dest.TupletNumerator = clone.TupletNumerator;
-        dest.TupletDenominator = clone.TupletDenominator;
-        dest.RhythmicPosition = null;
-        dest.ChordName = clone.ChordName;
-        dest.IsRest = false;
+        Services.EditCommands.CopyLastBeat(cells, SelectedCell);
         EditedNow();
         MoveForwardBeat(track);
+    }
+
+    /// <summary>Empties the active voice of the selected bar (one undo step; nothing is captured when it is already empty).</summary>
+    public void EmptyBar()
+    {
+        var measure = CurrentMeasure(); if (measure is null) return;
+        var cells = CellsFor(measure);
+        if (!cells.Any(c => c.Notes.Count > 0 || c.IsRest || c.IsTied)) return;
+        EditStarting?.Invoke(this, EventArgs.Empty);
+        Services.EditCommands.EmptyBar(cells);
+        EditedNow();
     }
 
     public event EventHandler<string>? StatusMessage;

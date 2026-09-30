@@ -7,7 +7,7 @@ using TabForge.AudioEngine.Plugins;
 namespace TabForge.AudioEngine.Isolation;
 
 /// <summary>
-/// A process that runs exactly one plug-in (TabForge.exe --plugin-host id enginePid rate block instrument format path).
+/// A process that runs exactly one plug-in (TabForge.exe --plugin-host id enginePid rate block instrument format path [sha256|none]).
 /// Audio is processed on a dedicated thread signalled by the engine; the main thread runs the command pipe and the
 /// plug-in's editor window. Exits when the engine goes away.
 /// </summary>
@@ -22,6 +22,7 @@ public static class PluginHostMain
         var wantInstrument = args[5] == "1";
         var format = args[6];
         var path = args[7];
+        var expectedSha256 = args.Length > 8 && args[8] != "none" ? args[8] : "";   // the approved hash the engine was sent; re-checked here because this process does the actual load (also after a device change)
         Process engine;
         try { engine = Process.GetProcessById(enginePid); } catch (ArgumentException) { return 3; }
 
@@ -31,7 +32,7 @@ public static class PluginHostMain
         IPluginInstance plugin;
         try
         {
-            plugin = PluginFactory.Create(path, format, wantInstrument, rate, maxBlock);
+            plugin = PluginFactory.CreateVerified(path, format, wantInstrument, rate, maxBlock, expectedSha256, required: false);
         }
         catch (Exception ex)
         {

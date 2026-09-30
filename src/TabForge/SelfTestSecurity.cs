@@ -224,6 +224,7 @@ public static partial class SelfTest
         Check("a UNC path is trusted once explicitly approved", PluginTrust.IsTrusted(unc, scanned));
         TestPluginFingerprintTrust();
         TestPluginBinaryIdentity();
+        TestPluginIdentifyTrustGate();
     }
 
     // Item 4 (source review): approval covers the exact binary; a same-size, same-time replacement is caught at load; a changed
@@ -334,6 +335,55 @@ public static partial class SelfTest
         catch (Exception ex) { Check("plug-in binary identity tests complete", false, ex.GetBaseException().Message); }
         finally
         {
+            try { Directory.Delete(dir, recursive: true); }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
+        }
+    }
+
+    // A5-01: identifying a plug-in (role / vendor) executes it, so an unapproved or changed file is never run to find out; an
+    // approved file is probed with its approved hash, which the probe checks (fail closed) before loading.
+    private static void TestPluginIdentifyTrustGate()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "tabforge-identify-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        var launches = 0;
+        PluginCatalog.ProbeOverride = (_, hash, _) => { launches++; return hash.Length == 64 ? ("Instrument", "Vendor", "Name") : null; };
+        try
+        {
+            var dll = Path.Combine(dir, "unknown.dll");
+            var original = Enumerable.Range(0, 4096).Select(i => (byte)(i * 7)).ToArray();
+            File.WriteAllBytes(dll, original);
+            var settings = new PluginSettings();
+            var described = PluginCatalog.Describe(dll, settings);
+            Check("identify never executes an unapproved plug-in (shown as unknown, nothing remembered)",
+                launches == 0 && described.Role.Length == 0 && settings.Probed.Count == 0);
+
+            var creates = 0;
+            Func<string, TabForge.AudioEngine.Plugins.IPluginInstance> seam = _ => { creates++; throw new InvalidOperationException("seam reached"); };
+            Check("the probe refuses a file with no approved hash and loads nothing (fail closed)",
+                TabForge.AudioEngine.Isolation.PluginInfoProbe.Run(new[] { "--plugin-info", dll }, seam) == 5 && creates == 0);
+
+            PluginTrust.Approve(settings, dll);
+            var approved = PluginTrust.ProbeHash(dll, settings);
+            var changed = (byte[])original.Clone(); changed[100] ^= 0xFF;
+            File.WriteAllBytes(dll, changed);
+            var rcChanged = TabForge.AudioEngine.Isolation.PluginInfoProbe.Run(new[] { "--plugin-info", dll, approved }, seam);
+            Check("a file changed after approval is refused by the probe and never loaded", rcChanged == 5 && creates == 0);
+            described = PluginCatalog.Describe(dll, settings);
+            Check("identify does not run a changed-after-approval file either", launches == 0 && described.Role.Length == 0 && settings.Probed.Count == 0);
+
+            File.WriteAllBytes(dll, original);
+            var rcTrusted = TabForge.AudioEngine.Isolation.PluginInfoProbe.Run(new[] { "--plugin-info", dll, approved }, seam);
+            Check("the probe gets past the identity gate for the approved file (load attempted exactly once)", rcTrusted == 1 && creates == 1);
+            described = PluginCatalog.Describe(dll, settings);
+            Check("a trusted plug-in still identifies, with the approved hash passed to the probe",
+                launches == 1 && described.Role == "Instrument" && settings.Probed.Count == 1);
+        }
+        catch (Exception ex) { Check("plug-in identify trust gate tests complete", false, ex.GetBaseException().Message); }
+        finally
+        {
+            PluginCatalog.ProbeOverride = null;
             try { Directory.Delete(dir, recursive: true); }
             catch (IOException) { }
             catch (UnauthorizedAccessException) { }

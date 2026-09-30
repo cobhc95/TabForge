@@ -166,7 +166,7 @@ public static class TrackPropertiesWindow
         Border Card(string title, UIElement content)
         {
             var stack = new StackPanel();
-            stack.Children.Add(new TextBlock { Text = title.ToUpperInvariant(), FontSize = 10.5, FontWeight = FontWeights.SemiBold, Opacity = 0.75, Margin = new Thickness(0, 0, 0, 2) });
+            stack.Children.Add(new TextBlock { Text = title.ToUpperInvariant(), FontSize = Services.ThemeService.MinFontSize, FontWeight = FontWeights.SemiBold, Opacity = 0.75, Margin = new Thickness(0, 0, 0, 2) });
             stack.Children.Add(content);
             var card = new Border { CornerRadius = new CornerRadius(8), Padding = new Thickness(14, 10, 14, 12), Margin = new Thickness(0, 0, 0, 10), BorderThickness = new Thickness(1), Child = stack };
             card.SetResourceReference(Border.BackgroundProperty, "PanelBrush");

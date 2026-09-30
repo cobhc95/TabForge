@@ -14,7 +14,7 @@ namespace TabForge.AudioEngine.Isolation;
 /// </summary>
 public sealed class PluginHostLink
 {
-    /// <summary>The wait for one realtime block: 75 % of the block's duration, never under 2 ms nor over 40 ms.</summary>
+    /// <summary>Realtime wait: one deadline per mixer callback (<see cref="BeginCallback"/>: start + 75 % of its duration, at most 40 ms) shared by every isolated plug-in in it; outside a callback, 75 % of the block, 2..40 ms.</summary>
     public const double MinBudgetMs = 2, MaxBudgetMs = 40, BlockShare = 0.75;
     /// <summary>Offline (render) blocks are not realtime: a slow plug-in may take this long before it counts as hung.</summary>
     public const double OfflineBudgetMs = 30000, ModeSwitchBudgetMs = 15000;
@@ -51,8 +51,26 @@ public sealed class PluginHostLink
     /// <summary>True once a request went unanswered (or <see cref="Stop"/> was called): the shared block is no longer touched.</summary>
     public bool Failed => Volatile.Read(ref _failed) != 0;
 
+    /// <summary>The wait for one block of a link used outside a mixer callback (no deadline opened with <see cref="BeginCallback"/>).</summary>
     public static double BudgetMs(int frames, int sampleRate) =>
         Math.Clamp(frames * 1000.0 * BlockShare / Math.Max(1, sampleRate), MinBudgetMs, MaxBudgetMs);
+
+    /// <summary>A5-09: the whole callback's wait allowance: 75 % of its duration (no floor: it is shared by every isolated plug-in), capped at <see cref="MaxBudgetMs"/>.</summary>
+    public static double CallbackBudgetMs(int frames, int sampleRate) =>
+        Math.Min(frames * 1000.0 * BlockShare / Math.Max(1, sampleRate), MaxBudgetMs);
+
+    // Audio thread: the deadline (Stopwatch ticks) every isolated plug-in of the running callback shares; 0 = none open.
+    [ThreadStatic] private static long _callbackDeadline;
+
+    /// <summary>Audio thread, at the start of a callback: one deadline (start + 75 % of the callback) for all isolated plug-ins in it. Allocation-free.</summary>
+    public static void BeginCallback(long startTicks, int frames, int sampleRate) =>
+        _callbackDeadline = startTicks + (long)(CallbackBudgetMs(frames, sampleRate) * System.Diagnostics.Stopwatch.Frequency / 1000.0);
+
+    /// <summary>Audio thread, when the callback ends.</summary>
+    public static void EndCallback() => _callbackDeadline = 0;
+
+    /// <summary>Blocks bypassed without a request because the callback's shared budget was already spent (not counted as misses: they never count toward the 25 % rule).</summary>
+    public long BudgetSkippedBlocks { get; private set; }
 
     /// <summary>Audio thread (or a render worker).</summary>
     public void Process(float[][] input, float[][] output, int frames, ReadOnlySpan<BlockMidi> midi, in TransportInfo transport)
@@ -71,6 +89,26 @@ public sealed class PluginHostLink
             }
             _outstanding = 0;   // it caught up: resume normal processing with a fresh generation
         }
+        // A5-09: realtime blocks share one deadline per callback; each plug-in waits only for what is left, and once it is spent
+        // the rest of the chain is bypassed (no request is sent, so nothing is left in flight). Those blocks are counted in
+        // BudgetSkippedBlocks only: the miss rule is charged to the child that actually ran late, never to the ones starved behind it.
+        double waitMs;
+        if (_offline) waitMs = OfflineBudgetMs;
+        else
+        {
+            var deadline = _callbackDeadline;
+            if (deadline == 0) waitMs = BudgetMs(frames, _sampleRate);
+            else
+            {
+                waitMs = (deadline - now) * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
+                if (waitMs <= 0)
+                {
+                    PassThrough(input, output, frames);
+                    BudgetSkippedBlocks++;   // not this child's fault: never counted as its miss
+                    return;
+                }
+            }
+        }
         input[0].AsSpan(0, frames).CopyTo(_block.Channel(0));
         input[1].AsSpan(0, frames).CopyTo(_block.Channel(1));
         var count = Math.Min(midi.Length, PluginHostBlock.MaxEvents);
@@ -81,7 +119,7 @@ public sealed class PluginHostLink
         _block.BarStartPpq = transport.Meter.BarStartPpq; _block.TimeSigNumerator = transport.Meter.Numerator; _block.TimeSigDenominator = transport.Meter.Denominator;
         var generation = ++_generation;
         _block.Send(generation);
-        if (_block.WaitDone(generation, _offline ? OfflineBudgetMs : BudgetMs(frames, _sampleRate)))
+        if (_block.WaitDone(generation, waitMs))
         {
             _block.Channel(2)[..frames].CopyTo(output[0]);
             _block.Channel(3)[..frames].CopyTo(output[1]);

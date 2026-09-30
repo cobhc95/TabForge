@@ -5,8 +5,9 @@ using TabForge.Services;
 namespace TabForge.Plugins;
 
 /// <summary>
-/// Knows what each plug-in is: its vendor, and whether it is an instrument or an effect. VST3 bundles say so in
-/// their moduleinfo.json; anything else is probed once in a throwaway process (TabForge.exe --plugin-info, so a
+/// Knows what each plug-in is: its vendor, and whether it is an instrument or an effect. An unapproved or changed file is never run to find out: only passive
+/// metadata is read and the role stays "" (unknown, "approve to identify").VST3 bundles say so in
+/// their moduleinfo.json; anything else that the user has approved is probed once in a throwaway process (TabForge.exe --plugin-info, so a
 /// plug-in that crashes cannot affect TabForge). Results are remembered in settings.
 /// </summary>
 public static class PluginCatalog
@@ -22,7 +23,12 @@ public static class PluginCatalog
             var (vendor, role) = VstScannerService.Vst3ModuleInfo(path);
             if (role.Length > 0) return Remember(settings, path, role, vendor, "");
         }
-        var probed = Probe(path, timeoutMs);
+        // Passive metadata is all an unapproved (or changed) file gets: probing loads and runs the plug-in's code. Its role stays
+        // unknown ("approve to identify") and nothing is remembered; it is identified once the user approves it.
+        if (!PluginTrust.IsTrusted(path, settings))
+            return ("", path.EndsWith(".vst3", StringComparison.OrdinalIgnoreCase) ? VstScannerService.Vst3ModuleInfo(path).Vendor : VstScannerService.Vst2Vendor(path), "");
+        var hash = PluginTrust.ProbeHash(path, settings);
+        var probed = hash.Length == 0 ? null : (ProbeOverride ?? Probe)(path, hash, timeoutMs);
         if (probed is { } found) return Remember(settings, path, found.Role, found.Vendor, found.Name);
         // Could not be probed (crashed or timed out): guess from the name, never remembered.
         var name = Path.GetFileNameWithoutExtension(path).ToLowerInvariant();
@@ -43,7 +49,10 @@ public static class PluginCatalog
         return (role, vendor, name);
     }
 
-    private static (string Role, string Vendor, string Name)? Probe(string path, int timeoutMs)
+    /// <summary>Self-test seam: replaces the throwaway process (a counter shows what would have been executed).</summary>
+    internal static Func<string, string, int, (string Role, string Vendor, string Name)?>? ProbeOverride;
+
+    private static (string Role, string Vendor, string Name)? Probe(string path, string sha256, int timeoutMs)
     {
         var exe = Environment.ProcessPath;
         if (exe is null) return null;
@@ -52,6 +61,7 @@ public static class PluginCatalog
             var start = new ProcessStartInfo(exe) { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true };
             start.ArgumentList.Add("--plugin-info");
             start.ArgumentList.Add(path);
+            start.ArgumentList.Add(sha256);   // the approved hash: the probe refuses to load anything else
             using var process = Process.Start(start);
             if (process is null) return null;
             var output = process.StandardOutput.ReadLineAsync();

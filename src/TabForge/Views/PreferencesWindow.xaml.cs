@@ -872,7 +872,7 @@ public partial class PreferencesWindow : Window
         labelStack.Children.Add(Note(action.Description, 12, new Thickness(0, 3, 8, 0)));
         var tags = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 3, 0, 0) };
         tags.Children.Add(Note(action.Category, 11));
-        if (customized) tags.Children.Add(new TextBlock { Text = "CUSTOM", FontSize = 10, Foreground = Brush("#6DBBFF"), Margin = new Thickness(8, 0, 0, 0) });
+        if (customized) tags.Children.Add(new TextBlock { Text = "CUSTOM", FontSize = Services.ThemeService.MinFontSize, Foreground = Brush("#6DBBFF"), Margin = new Thickness(8, 0, 0, 0) });
         labelStack.Children.Add(tags);
 
         var shortcut = CreateButton(string.IsNullOrWhiteSpace(gesture) ? "Unbound" : HotkeyCatalog.Display(gesture),

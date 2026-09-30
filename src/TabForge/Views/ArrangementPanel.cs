@@ -26,7 +26,7 @@ public sealed partial class ArrangementPanel : Grid
 {
     // The ruler is taller than the minimum so the controls side has room for the column-label strip.
     public const double RulerHeight = 40;
-    public const double ColumnHeaderHeight = 14;
+    public const double ColumnHeaderHeight = 16;
     public const double SectionHeight = 24;
     public const double TrackRowHeight = 30;
     /// <summary>Height of a track's audio lane (under its row when it has audio or is armed).</summary>

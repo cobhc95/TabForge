@@ -124,18 +124,18 @@ public sealed partial class TabEditorControl
 
     public void ToggleRepeatOpen()
     {
-        var measure = CurrentMeasure(); if (measure is null) return;
+        if (_project is null || CurrentMeasure() is null) return;
         EditStarting?.Invoke(this, EventArgs.Empty);
-        measure.RepeatStart = !measure.RepeatStart;
+        Services.EditCommands.ToggleRepeatOpen(_project, SelectedTrackIndex, SelectedMeasure, out _);
         EditedNow();
     }
 
-    public void ToggleRepeatClose()
+    /// <summary>Toggles the repeat end; <paramref name="count"/> (from the menu's prompt) sets the repeat count when turning it on.</summary>
+    public void ToggleRepeatClose(int? count = null)
     {
-        var measure = CurrentMeasure(); if (measure is null) return;
+        if (_project is null || CurrentMeasure() is null) return;
         EditStarting?.Invoke(this, EventArgs.Empty);
-        measure.RepeatEnd = !measure.RepeatEnd;
-        if (measure.RepeatEnd && measure.RepeatCount < 2) measure.RepeatCount = 2;
+        Services.EditCommands.ToggleRepeatClose(_project, SelectedTrackIndex, SelectedMeasure, count, out _);
         EditedNow();
     }
 
