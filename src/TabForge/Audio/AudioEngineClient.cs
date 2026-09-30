@@ -541,8 +541,17 @@ public sealed class AudioEngineClient : IDisposable
     /// <summary>Level, clips and arm for one track: sent only when they changed (cheap to call often).</summary>
     private void SyncAudio(TrackModel track, int slot, (int Volume, int Pan) mix)
     {
-        var clips = track.AudioClips.Where(c => !c.IsMidi && ClipLanes.Audible(track, c))
-            .Select(c => new ClipSpec(c.File, c.StartSec, c.OffsetSec, c.SourceLengthSec, c.GainDb, c.Pitch, c.Speed)).ToList();
+        // Linked audio goes through the media policy: device paths are refused, network / removable folders wait for the user's approval
+        // (a clip that is not allowed is simply not sent, so the engine never opens it); the engine gets the normalised absolute path.
+        var projectPath = MediaAccess.CurrentProjectPath();
+        var clips = new List<ClipSpec>();
+        foreach (var c in track.AudioClips)
+        {
+            if (c.IsMidi || !ClipLanes.Audible(track, c)) continue;
+            var access = MediaAccess.Evaluate(c.File, projectPath);
+            if (!access.Allowed) continue;
+            clips.Add(new ClipSpec(access.Verdict.FullPath, c.StartSec, c.OffsetSec, c.SourceLengthSec, c.GainDb, c.Pitch, c.Speed));
+        }
         var armMode = Array.IndexOf(AudioInputs.Audio, track.AudioInput);
         var armed = track.RecordArm && armMode >= 0;   // MIDI input is recorded by the editor, not the engine
         var key = $"{mix.Volume}|{mix.Pan}|{armed}|{armMode}|{track.MonitorInput}|" + string.Join("|", clips.Select(c => $"{c.File}@{c.StartSec:0.###}+{c.OffsetSec:0.###}/{c.SourceLengthSec:0.###}/{c.GainDb:0.##}/{c.Pitch:0.##}/{c.Speed:0.###}"));

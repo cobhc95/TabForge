@@ -78,7 +78,8 @@ internal sealed partial class ScoreToMidiCompiler
         var firstBarMs = MusicTime.BarMs(_project, order[0], _speedScale);
         var firstSlots = Math.Max(1, MusicTime.BarSlots(_project, order[0]));
         var startSlot = Math.Clamp(_opt.StartCell, 0, firstSlots - 1);
-        _timeline.PlayFromMs = cursorMs + startSlot * (firstBarMs / firstSlots);
+        _timeline.PlayFromMs = cursorMs + FermataSpan.Warp(
+            FermataTime.Spans(_project, order[0], _speedScale, MusicTime.TempoAt(_project, order[0])), startSlot * (firstBarMs / firstSlots));
 
         EmitChannelSetup(_timeline.PlayFromMs);
 
@@ -94,6 +95,9 @@ internal sealed partial class ScoreToMidiCompiler
             var slots = Math.Max(1, MusicTime.BarSlots(_project, barIndex));
             _barTempo = (measure, tempo);
             var barMs = MusicTime.OffsetMs(measure, slots, tempo, _speedScale);
+            // A fermata on any track holds the beat for every track: the bar is longer by the hold and all later events move with it.
+            _barHolds = FermataTime.Spans(_project, barIndex, _speedScale, tempo);
+            var holdMs = FermataSpan.TotalExtraMs(_barHolds);
             runningTempo = MusicTime.TempoAfter(_project, barIndex, tempo);
             var barStart = cursorMs;
             var num = measure?.TimeSigNum ?? _project.TimeSignatureNumerator;
@@ -103,9 +107,11 @@ internal sealed partial class ScoreToMidiCompiler
             // Only for Guitar Pro imports: in TabForge-authored bars empty cells are intentional silence.
             var contentSlots = _project.ImportedFrom is null ? 0 : ContentSlots(barIndex);
             if (contentSlots > 0.25 && contentSlots < slots - 0.01) performedMs = barMs * contentSlots / slots;
+            var baseMs = performedMs;
+            performedMs += holdMs;
             _timeline.Bars.Add(new ScoreBar(barIndex, barStart, barStart + performedMs,
-                performedMs < barMs ? Math.Max(1, (int)Math.Ceiling(contentSlots - 0.001)) : slots, tempo));
-            if (_opt.Metronome) EmitMetronome(barStart, performedMs < barMs ? performedMs : barMs, num);
+                baseMs < barMs ? Math.Max(1, (int)Math.Ceiling(contentSlots - 0.001)) : slots, tempo, _barHolds));
+            if (_opt.Metronome) EmitMetronome(barStart, baseMs < barMs ? baseMs : barMs, num);
 
             var skipSlots = firstPerformedBar ? startSlot : 0;
             foreach (var track in _players)
@@ -165,7 +171,10 @@ internal sealed partial class ScoreToMidiCompiler
     private double _slideInLeadMs;
 
     /// <summary>Milliseconds from the performed bar's start to a slot, through its mid-bar tempo changes.</summary>
-    private double At(double slot) => MusicTime.OffsetMs(_barTempo.Bar, slot, _barTempo.Tempo, _speedScale);
+    private double At(double slot) => FermataSpan.Warp(_barHolds, MusicTime.OffsetMs(_barTempo.Bar, slot, _barTempo.Tempo, _speedScale));
+
+    /// <summary>The performed bar's fermata holds (null when none), in the bar's own unheld milliseconds.</summary>
+    private FermataSpan[]? _barHolds;
 
     private void EmitMeasure(TrackModel track, int trackIndex, int playBar, int sourceBar, double barStart, double barMs, int slots, int skipSlots)
     {
@@ -173,6 +182,7 @@ internal sealed partial class ScoreToMidiCompiler
         var measure = track.Measures[sourceBar];
         var slotMs = barMs / slots;
         var varying = _barTempo.Bar?.MidBarTempos is { Count: > 0 };
+        var mapped = varying || _barHolds is not null;   // tempo changes or a fermata hold: times come from the map, not the linear grid
 
         // Voice lanes have independent rhythm and independent tie chains while sharing the same
         // performed bar and score coordinates.
@@ -193,15 +203,15 @@ internal sealed partial class ScoreToMidiCompiler
                 {
                     var slotsForCell = MusicTime.ConsumeSlots(cell);
                     if (i >= skipSlots && cell.Mix is { IsEmpty: false } mix)
-                        EmitMix(mix, trackIndex, barStart + (varying ? At(cursor) : cursor * slotMs), slotMs * 4);
+                        EmitMix(mix, trackIndex, barStart + (mapped ? At(cursor) : cursor * slotMs), slotMs * 4);
                     if (i >= skipSlots && cell.Notes.Count > 0)
                     {
                         var (swingOnset, swingDuration) = SwingFor(measure, cells, i);
                         var onsetSlot = cursor + swingOnset;
                         var endSlot = onsetSlot + slotsForCell + swingDuration - swingOnset;
                         // Constant tempo: the linear grid (unchanged). Mid-bar tempo changes: the tempo map.
-                        var onset = varying ? At(onsetSlot) : onsetSlot * slotMs;
-                        var length = varying ? At(endSlot) - At(onsetSlot) : (slotsForCell + swingDuration) * slotMs;
+                        var onset = mapped ? At(onsetSlot) : onsetSlot * slotMs;
+                        var length = mapped ? At(endSlot) - At(onsetSlot) : (slotsForCell + swingDuration) * slotMs;
                         var localSlotMs = varying ? MusicTime.SlotsToMsAt(1, TempoAtSlot(onsetSlot), _speedScale) : slotMs;
                         EmitBeat(track, trackIndex, voiceIndex, playBar, i, cell, barStart + onset, length, localSlotMs);
                     }

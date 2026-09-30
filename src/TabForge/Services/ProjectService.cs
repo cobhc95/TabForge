@@ -99,15 +99,16 @@ public static class ProjectService
         }
     }
 
-    public static SongProject Load(string path)
+    /// <param name="maxBytes">File and JSON size bound; only the app's own crash-recovery copies are read with <see cref="InputLimits.MaxRecoveryProjectBytes"/>.</param>
+    public static SongProject Load(string path, long maxBytes = InputLimits.MaxTforgeFileBytes)
     {
         path = FilePathPolicy.ExistingFile(path, "TabForge project", ".tforge");
 
         try
         {
-            var bytes = InputLimits.ReadBoundedBytes(path, InputLimits.MaxTforgeFileBytes, "TabForge project");
+            var bytes = InputLimits.ReadBoundedBytes(path, maxBytes, "TabForge project");
             // Files written since M-03 are gzip; older ones are plain JSON. Detect by the gzip magic bytes.
-            if (bytes.Length >= 2 && bytes[0] == 0x1F && bytes[1] == 0x8B) bytes = GunzipBounded(bytes);
+            if (bytes.Length >= 2 && bytes[0] == 0x1F && bytes[1] == 0x8B) bytes = GunzipBounded(bytes, maxBytes);
             ProjectValidator.ValidateJsonShape(bytes);
             var project = JsonSerializer.Deserialize<SongProject>(bytes, DiskOptions)
                           ?? throw new InvalidDataException("The TabForge project is empty or invalid.");
@@ -158,7 +159,7 @@ public static class ProjectService
     }
 
     /// <summary>Decompresses a gzip .tforge, refusing anything that expands past the project size limit.</summary>
-    internal static byte[] GunzipBounded(byte[] data)
+    internal static byte[] GunzipBounded(byte[] data, long maxBytes = InputLimits.MaxTforgeFileBytes)
     {
         try
         {
@@ -170,7 +171,7 @@ public static class ProjectService
             {
                 var read = gzip.Read(buffer, 0, buffer.Length);
                 if (read == 0) break;
-                if (output.Length + read > InputLimits.MaxTforgeFileBytes)
+                if (output.Length + read > maxBytes)
                     throw new InvalidDataException("The TabForge project exceeds the decompressed size limit.");
                 output.Write(buffer, 0, read);
             }
@@ -258,12 +259,21 @@ public static class ProjectService
     private static void SerializeChunked<T>(Stream stream, T value, JsonSerializerOptions options) =>
         Task.Run(() => JsonSerializer.SerializeAsync(stream, value, options)).GetAwaiter().GetResult();
 
-    /// <summary>The project embedded in a TabForge-written .gp: gzip of the full disk JSON (FormatVersion always written, no compaction).</summary>
-    public static byte[] PersistBytes(SongProject project)
+    /// <summary>
+    /// The project embedded in a TabForge-written .gp: gzip of the full disk JSON (FormatVersion always written, no compaction).
+    /// A6-02: the JSON is held to <see cref="InputLimits.MaxTforgeFileBytes"/>, the same limit the .tforge save and the embedded-project
+    /// reader (<see cref="RestorePersistedBytes"/>) apply, so a .gp TabForge writes can always be read back. Throws
+    /// an <see cref="InvalidDataException"/> with <see cref="SizeLimitMessage"/> when it is over.
+    /// </summary>
+    internal const string SizeLimitMessage = "The TabForge project exceeds the 128 MiB size limit.";
+
+    /// <param name="maxJsonBytes">The crash-recovery copy passes <see cref="InputLimits.MaxRecoveryProjectBytes"/>, the bound its reader applies.</param>
+    public static byte[] PersistBytes(SongProject project, long maxJsonBytes = InputLimits.MaxTforgeFileBytes)
     {
         using var output = new MemoryStream();
         using (var gzip = new GZipStream(output, CompressionLevel.Fastest, leaveOpen: true))
-            SerializeChunked(gzip, project, DiskOptions);
+        using (var sink = new HashingLimitStream(gzip, maxJsonBytes, hash: false))
+            SerializeChunked(sink, project, DiskOptions);
         return output.ToArray();
     }
 
@@ -366,22 +376,27 @@ internal sealed class HashingLimitStream : Stream
 {
     private readonly Stream _inner;
     private readonly long _limit;
-    private readonly IncrementalHash _hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+    private readonly IncrementalHash? _hash;
     private long _written;
 
-    public HashingLimitStream(Stream inner, long limit) { _inner = inner; _limit = limit; }
+    public HashingLimitStream(Stream inner, long limit, bool hash = true)
+    {
+        _inner = inner;
+        _limit = limit;
+        _hash = hash ? IncrementalHash.CreateHash(HashAlgorithmName.SHA256) : null;
+    }
 
     public override void Write(byte[] buffer, int offset, int count) => Write(buffer.AsSpan(offset, count));
 
     public override void Write(ReadOnlySpan<byte> buffer)
     {
         _written += buffer.Length;
-        if (_written > _limit) throw new InvalidDataException("The TabForge project exceeds the 128 MiB size limit.");
-        _hash.AppendData(buffer);
+        if (_written > _limit) throw new InvalidDataException(ProjectService.SizeLimitMessage);
+        _hash?.AppendData(buffer);
         _inner.Write(buffer);
     }
 
-    public byte[] Finish() => _hash.GetHashAndReset();
+    public byte[] Finish() => _hash?.GetHashAndReset() ?? Array.Empty<byte>();
 
     public override bool CanRead => false;
     public override bool CanSeek => false;
@@ -392,5 +407,5 @@ internal sealed class HashingLimitStream : Stream
     public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
     public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
     public override void SetLength(long value) => throw new NotSupportedException();
-    protected override void Dispose(bool disposing) { if (disposing) _hash.Dispose(); base.Dispose(disposing); }
+    protected override void Dispose(bool disposing) { if (disposing) _hash?.Dispose(); base.Dispose(disposing); }
 }

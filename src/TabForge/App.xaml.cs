@@ -261,7 +261,7 @@ public partial class App : Application
             project.IsDirty = false;   // the file on disk records a saved project, as a normal save would
             // PersistBytes is the disk JSON (every property, FormatVersion included), gzip-wrapped: the same format a .tforge save
             // writes since M-03, so it is written as is (ProjectService.Load detects the gzip header).
-            var persisted = ProjectService.PersistBytes(toWrite);
+            var persisted = ProjectService.PersistBytes(toWrite, InputLimits.MaxRecoveryProjectBytes);   // the recovery reader accepts up to the same bound
             FilePathPolicy.WriteAtomically(path, stream => stream.Write(persisted), createDirectory: true);
         }
         finally { project.IsDirty = wasDirty; }

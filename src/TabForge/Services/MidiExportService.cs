@@ -72,16 +72,38 @@ public static class MidiExportService
             }
             // Tempo changes and ramps inside the bar (tempo ramp): one tempo event per sixteenth slot whose
             // whole-BPM tempo differs, so the file's tempo track follows the same map the notes were timed with.
+            var inBar = new List<(int Tick, int Mpq, int Bpm)>();   // Bpm 0: a fermata's exact slowed tempo
             if (measure?.MidBarTempos is { Count: > 0 })
+            {
+                var simulated = lastTempo;
                 for (var slot = 1; slot < bar.Slots; slot++)
                 {
                     var tempo = MusicTime.TempoAtSlot(measure, slot, bar.Tempo);
-                    if (tempo == lastTempo) continue;
-                    var slotTick = tick + (int)Math.Round(slot * (double)Division / MusicTime.SlotsPerQuarter);
-                    WriteTempo(events, slotTick - cursorTick, tempo);
-                    cursorTick = slotTick;
-                    lastTempo = tempo;
+                    if (tempo == simulated) continue;
+                    inBar.Add((tick + (int)Math.Round(slot * (double)Division / MusicTime.SlotsPerQuarter), 0, tempo));
+                    simulated = tempo;
                 }
+            }
+            // A fermata hold: the beat's ticks stay as written while its time grows, so the tempo drops for the beat and returns after it.
+            if (bar.Fermatas is { } holds)
+                foreach (var hold in holds)
+                {
+                    var startTick = tick + (int)Math.Round(hold.Slot * (double)Division / MusicTime.SlotsPerQuarter);
+                    var endTick = tick + (int)Math.Round((hold.Slot + hold.LengthSlots) * (double)Division / MusicTime.SlotsPerQuarter);
+                    var holdTempo = MusicTime.TempoAtSlot(measure, hold.Slot, bar.Tempo);
+                    var endTempo = MusicTime.TempoAtSlot(measure, hold.Slot + hold.LengthSlots, bar.Tempo);
+                    inBar.RemoveAll(e => e.Tick >= startTick && e.Tick <= endTick);
+                    var slowed = 60_000_000.0 / Math.Clamp(holdTempo, 20, 400) * (hold.BaseLengthMs + hold.ExtraMs) / Math.Max(1e-6, hold.BaseLengthMs);
+                    inBar.Add((startTick, (int)Math.Round(slowed), 0));
+                    inBar.Add((endTick, 0, endTempo));
+                }
+            foreach (var e in inBar.OrderBy(x => x.Tick))
+            {
+                if (e.Bpm == 0) WriteTempoMpq(events, e.Tick - cursorTick, e.Mpq);
+                else WriteTempo(events, e.Tick - cursorTick, e.Bpm);
+                cursorTick = Math.Max(cursorTick, e.Tick);
+                lastTempo = e.Bpm == 0 ? int.MinValue : e.Bpm;
+            }
         }
         return BuildChunk(events);
     }
@@ -149,7 +171,7 @@ public static class MidiExportService
             if (MusicTime.BarOf(_project, bar.Bar) is { MidBarTempos.Count: > 0 } varying && bar.Slots > 0)
             {
                 double low = 0, high = bar.Slots;
-                var relative = ms - bar.StartMs;
+                var relative = FermataSpan.Unwarp(bar.Fermatas, ms - bar.StartMs);   // the tempo map runs on time without the hold
                 for (var step = 0; step < 40; step++)
                 {
                     var middle = (low + high) / 2;
@@ -157,9 +179,7 @@ public static class MidiExportService
                 }
                 return (int)Math.Round(_startTick[lo] + (low + high) / 2 * Division / MusicTime.SlotsPerQuarter);
             }
-            var length = Math.Max(1.0, bar.EndMs - bar.StartMs);
-            var fraction = Math.Clamp((ms - bar.StartMs) / length, 0, 1);
-            return (int)Math.Round(_startTick[lo] + fraction * barTicks);
+            return (int)Math.Round(_startTick[lo] + bar.SlotFraction(ms) * barTicks);
         }
     }
 
@@ -193,9 +213,11 @@ public static class MidiExportService
     }
 
     private static void WriteTempo(List<byte> b, int delta, int bpm)
+        => WriteTempoMpq(b, delta, (int)Math.Round(60_000_000.0 / Math.Clamp(bpm, 20, 400)));
+
+    private static void WriteTempoMpq(List<byte> b, int delta, int mpq)
     {
-        bpm = Math.Clamp(bpm, 20, 400);
-        var mpq = (int)Math.Round(60_000_000.0 / bpm);
+        mpq = Math.Clamp(mpq, 1, 0xFFFFFF);
         WriteVarLen(b, delta); b.Add(0xFF); b.Add(0x51); b.Add(0x03);
         b.Add((byte)((mpq >> 16) & 0xFF)); b.Add((byte)((mpq >> 8) & 0xFF)); b.Add((byte)(mpq & 0xFF));
     }

@@ -377,6 +377,130 @@ public static partial class SelfTest
         finally { try { Directory.Delete(folder, true); } catch (IOException) { } }
     }
 
+    // A6-02: the project embedded in a .gp has one size limit for writing and reading. An over-limit save is refused before any file is
+    // touched (song stays unsaved, message names the large plug-in state); a present-but-unusable embedded project is reported on open
+    // (the file opens as plain Guitar Pro), an absent one is silent, and a normal round trip is unchanged.
+    private static void TestEmbeddedProjectLimit()
+    {
+        var folder = Path.Combine(Path.GetTempPath(), $"tf-a602-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(folder);
+        try
+        {
+            var gp = Path.Combine(folder, "song.gp");
+            var old = PersistenceSong("Lead");
+            old.Tracks[0].Measures[0].Cells[0].Notes.Add(new TabNote { StringIndex = 0, Fret = 5 });
+            new DocumentController().Save(SessionFor(old), gp, "");
+            var oldBytes = File.ReadAllBytes(gp);
+            var normal = new DocumentController().Open(gp);
+            Check("A6-02: a normal .gp round trip is unchanged (embedded project read back, no notice)",
+                normal.Notice is null && GuitarProExporter.TryReadEmbedded(gp) is { FormatVersion: 2 } && normal.Project.Tracks[0].Name == "Lead", normal.Notice);
+
+            var big = PersistenceSong("Lead");
+            big.Tracks[0].SoundSource = SoundSources.Plugins;
+            big.Tracks[0].Rig.Plugins.Add(new PluginSlot { Name = "HugeSampler", Path = @"C:\x\huge.dll", Format = "VST2", State = new string('A', (int)InputLimits.MaxTforgeFileBytes + 1024) });
+            big.IsDirty = true;
+            var session = SessionFor(big);
+            string? message = null;
+            try { new DocumentController().Save(session, gp, ""); }
+            catch (InvalidDataException ex) { message = ex.Message; }
+            Check("A6-02: an over-limit .gp save is refused with a message naming the large plug-in state",
+                message is not null && message.Contains("HugeSampler on Lead", StringComparison.Ordinal) && message.Contains("limit", StringComparison.Ordinal) && message.Contains("nothing was saved", StringComparison.Ordinal), message);
+            Check("A6-02: the refused save leaves the old .gp byte-identical and nothing else behind",
+                File.ReadAllBytes(gp).AsSpan().SequenceEqual(oldBytes) && Directory.GetFiles(folder).Length == 1, string.Join(", ", Directory.GetFiles(folder).Select(Path.GetFileName)));
+            Check("A6-02: the song stays unsaved after the refused save", session.HasUnsavedChanges && session.IsNew && session.Path is null && big.IsDirty);
+            big.Tracks[0].Rig.Plugins[0].State = null;   // release the large string
+
+            // Reading: a crafted .gp with each kind of unusable embedded entry opens as plain Guitar Pro with a notice.
+            var clean = GuitarProExporter.ToBytes(old, embedProject: false);
+            static byte[] Gzip(Action<Stream> write)
+            {
+                using var output = new MemoryStream();
+                using (var z = new System.IO.Compression.GZipStream(output, System.IO.Compression.CompressionLevel.Fastest, leaveOpen: true)) write(z);
+                return output.ToArray();
+            }
+            byte[] WithEntry(byte[] entryData)
+            {
+                using var zipStream = new MemoryStream();
+                using (var zip = new System.IO.Compression.ZipArchive(zipStream, System.IO.Compression.ZipArchiveMode.Create, leaveOpen: true))
+                {
+                    foreach (var part in GuitarProExporter.ReadZip(clean))
+                    {
+                        var e = zip.CreateEntry(part.Name, System.IO.Compression.CompressionLevel.Optimal);
+                        if (part.Name.EndsWith('/')) continue;
+                        using var s = e.Open();
+                        s.Write(part.Data);
+                    }
+                    using var embedded = zip.CreateEntry(GuitarProExporter.EmbeddedProjectEntry, System.IO.Compression.CompressionLevel.Optimal).Open();
+                    embedded.Write(entryData);
+                }
+                return zipStream.ToArray();
+            }
+            void Expect(string label, byte[] entryData, string reason)
+            {
+                var path = Path.Combine(folder, label + ".gp");
+                File.WriteAllBytes(path, WithEntry(entryData));
+                var opened = new DocumentController().Open(path);
+                Check($"A6-02: a .gp whose embedded project is {label} opens as plain Guitar Pro with a notice giving the reason",
+                    opened.Notice is not null && opened.Notice.Contains("TabForge project data could not be read (" + reason, StringComparison.Ordinal)
+                    && opened.Notice.Contains("opened as a plain Guitar Pro file", StringComparison.Ordinal) && opened.Project.Tracks.Count == 1, opened.Notice);
+                var viaWorker = new List<string>();
+                SongProject project; try { project = ImportWorker.Import(path, null, viaWorker); } catch (ImportWorkerUnavailableException ex) { project = ImportWorker.ImportInProcess(path, viaWorker, ex.Message); }
+                Check($"A6-02: the background import reports the same notice ({label})",
+                    viaWorker.Any(n => n.Contains("TabForge project data could not be read (" + reason, StringComparison.Ordinal)) && project.Tracks.Count == 1, string.Join("; ", viaWorker));
+            }
+            Expect("oversize", Gzip(z => { var zeros = new byte[1024 * 1024]; for (var i = 0; i <= InputLimits.MaxTforgeFileBytes / zeros.Length; i++) z.Write(zeros, 0, zeros.Length); }), "it is over the");
+            Expect("corrupt", System.Text.Encoding.ASCII.GetBytes("this is not a gzip stream"), "the data is damaged or invalid");
+            var goodJson = System.Text.Encoding.UTF8.GetString(ProjectService.GunzipBounded(ProjectService.PersistBytes(old)));
+            Check("A6-02: the bad-version fixture really carries a FormatVersion to replace", goodJson.Contains("\"FormatVersion\":2", StringComparison.Ordinal));
+            Expect("bad-version", Gzip(z => z.Write(System.Text.Encoding.UTF8.GetBytes(goodJson.Replace("\"FormatVersion\":2", "\"FormatVersion\":99", StringComparison.Ordinal)))), "it was saved by a newer or unknown version");
+
+            var plain = Path.Combine(folder, "plain.gp");
+            File.WriteAllBytes(plain, clean);
+            var absent = new DocumentController().Open(plain);
+            Check("A6-02: a .gp with no embedded project opens silently", absent.Notice is null && absent.Project.Tracks.Count == 1, absent.Notice);
+        }
+        finally { try { Directory.Delete(folder, true); } catch (IOException) { } }
+    }
+
+    // A6-02 follow-up: a crash-recovery copy over the .tforge limit is written with the recovery bound and read back with the same bound,
+    // but only from the app's own Recovery folder (elsewhere the normal limit still applies).
+    private static void TestRecoveryCopyOverTforgeLimit()
+    {
+        var folder = Path.Combine(Path.GetTempPath(), $"tf-a602r-{Guid.NewGuid():N}");
+        var other = Path.Combine(folder, "elsewhere");
+        Directory.CreateDirectory(other);
+        try
+        {
+            var state = new string('A', InputLimits.MaxPluginStateChars);   // the largest single state the validator accepts
+            var big = PersistenceSong("T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8");
+            foreach (var track in big.Tracks)
+            {
+                track.SoundSource = SoundSources.Plugins;
+                track.Rig.Plugins.Add(new PluginSlot { Name = "Sampler", Path = @"C:\x\s.dll", Format = "VST2", State = state });
+            }
+            var name = $"autosave-4242-{Guid.NewGuid():N}-Big.tforge";
+            var copy = Path.Combine(folder, name);
+            var errors = App.WriteRecoveryCopy(big, copy);
+            Check("A6-02: the recovery copy of a song over the .tforge limit is written", errors is null && File.Exists(copy), errors);
+            var json = ProjectService.GunzipBounded(File.ReadAllBytes(copy), InputLimits.MaxRecoveryProjectBytes);
+            Check("A6-02: that copy really is over the .tforge JSON limit (and within the recovery bound)",
+                json.LongLength > InputLimits.MaxTforgeFileBytes && json.LongLength <= InputLimits.MaxRecoveryProjectBytes, $"{json.LongLength:N0} bytes");
+            json = Array.Empty<byte>();
+            var normal = false;
+            try { ProjectService.Load(copy); } catch (InvalidDataException) { normal = true; }
+            Check("A6-02: the normal .tforge reader still refuses it", normal);
+            var recovered = new DocumentController { RecoveryFolder = folder }.Open(copy);
+            Check("A6-02: at restart the recovery folder's copy is recovered", recovered.Project.Tracks.Count == 8 && recovered.Project.Tracks[7].Rig.Plugins[0].State?.Length == state.Length);
+            recovered = default;
+            var moved = Path.Combine(other, name);
+            File.Copy(copy, moved);
+            var refused = false;
+            try { new DocumentController { RecoveryFolder = folder }.Open(moved); } catch (InvalidDataException) { refused = true; }
+            Check("A6-02: the larger bound applies to the Recovery folder only, not to the same file elsewhere", refused);
+        }
+        finally { try { Directory.Delete(folder, true); } catch (IOException) { } }
+    }
+
     // A5-04: opening a .gp keeps the song's own title (clean and TabForge-embedded); only an empty title falls back to the file name.
     private static void TestGpOpenKeepsTitle()
     {

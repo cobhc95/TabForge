@@ -381,6 +381,7 @@ public partial class MainWindow : IMixerHost, IFxChainHost
         Audio.AudioRouting.Apply(_project, Doc.Playback.Routing, engine, _settings.Plugins, _settings.Audio.MasterVolume, owner: Doc);   // R-10: the active document owns the engine
         UpdateAudioDeviceStatus();
         UpdatePluginTrustBar();
+        UpdateMediaApprovalBar();
     }
 
     private void HookAudioEngine(Audio.AudioEngineClient engine)

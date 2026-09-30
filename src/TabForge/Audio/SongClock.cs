@@ -13,7 +13,7 @@ namespace TabForge.Audio;
 public sealed class SongClock
 {
     private readonly AudioEngineClient _engine;
-    private (int Bar, double StartMs, double EndMs)[] _bars = Array.Empty<(int, double, double)>();
+    private ScoreBar[] _bars = Array.Empty<ScoreBar>();
     private object? _mappedProject;
     private (int Revision, int Measures) _mappedVersion = (-1, -1);
     private double _lastSongMs;
@@ -29,7 +29,7 @@ public sealed class SongClock
         var version = TimelineKey(project);
         if (ReferenceEquals(project, _mappedProject) && version == _mappedVersion) return;
         var timeline = MidiTimelineBuilder.Build(project, new PlaybackOptions { RepeatExpansion = true, RespectMuteSolo = false, SkipClips = true });
-        _bars = timeline.Bars.Select(b => (b.Bar, b.StartMs, b.EndMs)).ToArray();
+        _bars = timeline.Bars.ToArray();
         _mappedProject = project;
         _mappedVersion = version;
     }
@@ -39,10 +39,10 @@ public sealed class SongClock
     {
         Map(project);
         double? first = null;
-        foreach (var (b, start, end) in _bars)
+        foreach (var scoreBar in _bars)
         {
-            if (b != bar) continue;
-            var at = start + (end - start) * Math.Clamp(fraction, 0, 1);
+            if (scoreBar.Bar != bar) continue;
+            var at = scoreBar.MsAtFraction(Math.Clamp(fraction, 0, 1));   // the playhead fraction is in slots; a fermata hold stretches time
             first ??= at;
             if (at >= _lastSongMs - 400) return at;
         }
@@ -53,7 +53,7 @@ public sealed class SongClock
     public double BarStartSec(SongProject project, int bar)
     {
         Map(project);
-        foreach (var (b, start, _) in _bars) if (b == bar) return start / 1000;
+        foreach (var b in _bars) if (b.Bar == bar) return b.StartMs / 1000;
         return 0;
     }
 
@@ -62,8 +62,8 @@ public sealed class SongClock
     {
         Map(project);
         var ms = songSec * 1000;
-        foreach (var (b, start, end) in _bars)
-            if (ms < end) return (b, end > start ? Math.Clamp((ms - start) / (end - start), 0, 1) : 0);
+        foreach (var b in _bars)
+            if (ms < b.EndMs) return (b.Bar, b.EndMs > b.StartMs ? b.SlotFraction(ms) : 0);
         return _bars.Length == 0 ? (0, 0) : (_bars[^1].Bar, 1);
     }
 
@@ -100,7 +100,7 @@ public sealed class SongClock
     public double BarEndSec(SongProject project, int bar)
     {
         Map(project);
-        foreach (var (b, _, end) in _bars) if (b == bar) return end / 1000;
+        foreach (var b in _bars) if (b.Bar == bar) return b.EndMs / 1000;
         return _bars.Length == 0 ? 0 : _bars[^1].EndMs / 1000;
     }
 

@@ -180,6 +180,7 @@ public partial class MainWindow
     private void ClipsChanged(bool refreshRows = false)
     {
         _project.IsDirty = true;
+        WaveformCache.CancelUnused(_project.Tracks.SelectMany(t => t.AudioClips).Where(c => !c.IsMidi).Select(c => c.File));   // a removed clip stops being read
         SyncAudioEngine();
         if (_project.Tracks.Any(t => t.AudioClips.Any(c => c.IsMidi)) || _midiClipsPlayed) _midi.Rebuild(_project);
         _midiClipsPlayed = _project.Tracks.Any(t => t.AudioClips.Any(c => c.IsMidi));
@@ -276,7 +277,7 @@ public partial class MainWindow
         var at = Math.Max(0, sec);
         foreach (var file in files)
         {
-            var length = WaveformCache.LengthOf(file);
+            var length = WaveformCache.LengthOf(file, userPicked: true);   // the user chose this file: a network or removable folder is allowed (and remembered for this song below)
             if (length <= 0) continue;
             clips.Add(new AudioClip
             {
@@ -291,6 +292,8 @@ public partial class MainWindow
             return;
         }
         CaptureUndo();
+        foreach (var clip in clips)
+            if (MediaPathPolicy.Classify(clip.File, MediaAccess.FolderOf(_currentPath)) is { Remote: true } picked) MediaAccess.Approve(picked, _currentPath);
         foreach (var clip in clips)
         {
             clip.Lane = ClipLanes.FreeLane(track, clip.StartSec, clip.EndSec);

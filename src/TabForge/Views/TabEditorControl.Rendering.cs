@@ -889,6 +889,7 @@ public sealed partial class TabEditorControl
             }
         }
         if (showTab) DrawLetRingSpans(dc, layout, x + measureWidth, tabTop, ink, showStaff);
+        DrawDynamics(dc, track, measure, measureIndex, layout, staffTop, tabTop, strings, ink, showStaff);
         FlushBendLabels(dc);
     }
 
@@ -1094,6 +1095,8 @@ public sealed partial class TabEditorControl
                 foreach (var mp in systemLayout.Measures)
                 {
                     if (mp.MeasureIndex < passage.FirstMeasure || mp.MeasureIndex > passage.LastMeasure || mp.MeasureIndex >= _staffLayoutCache.GetLength(0)) continue;
+                    if (BarHasDynamic(track.Measures[mp.MeasureIndex]))
+                        lowest = Math.Max(lowest, StaffDynamicTop(mp.MeasureIndex, belowStaffBottom.Value) + DynamicHeight);   // the P.M. lane clears the dynamics row
                     for (var v = 0; v < 2; v++)
                         if (_staffLayoutCache[mp.MeasureIndex, v] is { } cachedLayout)
                             foreach (var b in cachedLayout.Beats)

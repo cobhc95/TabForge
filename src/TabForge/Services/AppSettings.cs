@@ -229,6 +229,8 @@ public sealed class AppearanceSettings
     /// <summary>Palette tool ids pinned to the menu-row toolbar, in order.</summary>
     public List<string> PinnedTools { get; set; } = new();
     public bool ShowSectionHeadings { get; set; } = true;
+    /// <summary>Engrave dynamics markings (ppp..fff) under the staff where the dynamic changes.</summary>
+    public bool ShowDynamics { get; set; } = true;
     public bool ShowScoreBarNumbers { get; set; } = true;
     public int ScoreBarNumberFrequency { get; set; } = 1;
     public double SystemVerticalSpacing { get; set; } = 1.0;
@@ -382,6 +384,8 @@ public static class AudioDrivers
 
 public sealed class AudioSettings
 {
+    /// <summary>Folders (network or removable) the user allowed a song to read linked audio from; revoked in the "Linked audio" review window.</summary>
+    public List<MediaApproval> ApprovedMedia { get; set; } = new();
     public bool Metronome { get; set; }
     public bool CountIn { get; set; }
     public int CountInBars { get; set; } = 1;

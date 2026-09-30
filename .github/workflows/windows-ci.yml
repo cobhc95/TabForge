@@ -45,7 +45,7 @@ jobs:
           # tree or installer script cannot be found (the working directory is the repository root).
           # TabForge.exe is a WPF (GUI-subsystem) executable: start it and wait for it to exit. --selftest opens no
           # main window, needs no audio device (the engine tests use the headless harness and a null output).
-          $p = Start-Process -FilePath $exe -ArgumentList @('--selftest', "`"$log`"", '--require', 'gp-fixtures,synthetic-fixtures,source-hygiene,installer-parity') -Wait -PassThru
+          $p = Start-Process -FilePath $exe -ArgumentList @('--selftest', "`"$log`"", '--require', 'gp-fixtures,synthetic-fixtures,source-hygiene,installer-parity,fuzz') -Wait -PassThru
           "self-test exit code: $($p.ExitCode)"
           if (-not (Test-Path -LiteralPath $log)) { Write-Error 'self-test log was not written'; exit 2 }
           Select-String -Path $log -Pattern '^\s+(SKIP|FAIL)\s|self-test:' | ForEach-Object { $_.Line }
@@ -63,9 +63,11 @@ jobs:
           if-no-files-found: warn
 
   # Builds native/tfvst3 from the pinned Steinberg VST3 SDK and compares it with the checked-in DLL.
-  # REPORT ONLY: this job never fails on a mismatch (see native/tfvst3/BUILD.md, "Reproducibility"). Releases do not
-  # depend on the match: they ship the committed DLL, which the maintainer replaces with the build-bridge workflow's
-  # output whenever the bridge changes (docs/REPRODUCIBLE_BUILDS.md).
+  # The rebuild is never byte-identical (link timestamps, PDB identity, source-path hash names; native/tfvst3/BUILD.md,
+  # "Reproducibility"): tools/Compare-NativeBridge.ps1 explains those categories from the PE headers and fails only when
+  # a difference falls outside them (different code, size, SDK or compiler). Releases do not depend on the match: they
+  # ship the committed DLL, which the maintainer replaces with the build-bridge workflow's output whenever the bridge
+  # changes (docs/REPRODUCIBLE_BUILDS.md).
   native-bridge:
     runs-on: windows-latest
     timeout-minutes: 20
@@ -81,25 +83,11 @@ jobs:
           cmake --version | Select-Object -First 1
           Select-String -Path 'C:\tfb\CMakeFiles\*\CMakeCXXCompiler.cmake' -Pattern 'COMPILER_ID "|COMPILER_VERSION "' | ForEach-Object { $_.Line }
 
-      - name: Compare with the checked-in DLL (report only)
+      # PE-aware: parses the headers, masks the link timestamps, the PDB identity and the source-path hash names in both
+      # files, and requires everything else to be identical. Exits 1 when a difference falls outside those categories.
+      - name: Compare with the checked-in DLL (PE-aware)
         shell: pwsh
-        run: |
-          $built = 'C:\tfb\Release\tfvst3.dll'
-          $shipped = 'src/TabForge.AudioEngine/native/tfvst3.dll'
-          $hb = (Get-FileHash -Algorithm SHA256 $built).Hash.ToLowerInvariant()
-          $hs = (Get-FileHash -Algorithm SHA256 $shipped).Hash.ToLowerInvariant()
-          $a = [IO.File]::ReadAllBytes($built); $b = [IO.File]::ReadAllBytes($shipped)
-          $diff = -1
-          if ($a.Length -eq $b.Length) { $diff = 0; for ($i = 0; $i -lt $a.Length; $i++) { if ($a[$i] -ne $b[$i]) { $diff++ } } }
-          $lines = @(
-            '### tfvst3.dll: CI build vs checked-in',
-            "- built from the pinned SDK on this runner: ``$hb`` ($($a.Length) bytes)",
-            "- checked in (src/TabForge.AudioEngine/native/tfvst3.dll): ``$hs`` ($($b.Length) bytes)",
-            $(if ($hb -eq $hs) { '- result: identical' }
-              elseif ($diff -ge 0) { "- result: NOT byte-identical ($diff differing bytes; expected: link timestamps, and compiler/path-dependent names when the compiler or source path differs; see native/tfvst3/BUILD.md)" }
-              else { '- result: NOT identical, sizes differ (different compiler version or SDK?)' }))
-          $lines | ForEach-Object { $_ }
-          $lines | Add-Content -Path $env:GITHUB_STEP_SUMMARY
+        run: ./tools/Compare-NativeBridge.ps1 -Built 'C:\tfb\Release\tfvst3.dll' -Shipped 'src/TabForge.AudioEngine/native/tfvst3.dll' -SummaryPath $env:GITHUB_STEP_SUMMARY
 
       - name: Upload the built DLL
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

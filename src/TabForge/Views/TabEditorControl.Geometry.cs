@@ -139,9 +139,8 @@ public sealed partial class TabEditorControl
                 continue;
 
             var measurePosition = layout.Measure(bar.Bar);
-            var barDuration = Math.Max(1, bar.EndMs - bar.StartMs);
-            var startSlot = Math.Clamp((segmentStart - bar.StartMs) / barDuration, 0, 1) * bar.Slots;
-            var endSlot = Math.Clamp((segmentEnd - bar.StartMs) / barDuration, 0, 1) * bar.Slots;
+            var startSlot = bar.SlotFraction(segmentStart) * bar.Slots;
+            var endSlot = bar.SlotFraction(segmentEnd) * bar.Slots;
             if (endSlot <= startSlot + 0.001) continue;
 
             var system = measurePosition.SystemIndex;
@@ -224,6 +223,7 @@ public sealed partial class TabEditorControl
         _scoreFactsProject = null;
         _palmMutePassages = Array.Empty<PalmMutePassage>();
         _fadePassages = Array.Empty<FadePassage>();
+        _dynamicMarks = new Dictionary<TabCell, string>(ReferenceEqualityComparer.Instance);
         _barStateCache = null;
         _barStateComputed = null;
         _markerByMeasure = null;
@@ -412,6 +412,13 @@ public sealed partial class TabEditorControl
                 left = Math.Max(left, width / 2 + 3);
                 right = Math.Max(right, width / 2 + 3);
             }
+            if (_dynamicMarks.TryGetValue(beat.Cell, out var dynamicName))
+            {
+                // The marking is centred under the beat: keep neighbouring markings and notes apart.
+                var width = DynamicText(dynamicName, Colors.White).Width;
+                left = Math.Max(left, width / 2 + 2);
+                right = Math.Max(right, width / 2 + 2);
+            }
             if (beat.Cell.Fermata || beat.Cell.IsGrace) right = Math.Max(right, 13);
             if (beat.Cell.Dots > 0) right = Math.Max(right, 11 + beat.Cell.Dots * 4);
 
@@ -578,6 +585,7 @@ public sealed partial class TabEditorControl
             ? Array.Empty<PalmMutePassage>()
             : BuildPalmMutePassages(track, project);
         _fadePassages = BuildFadePassages(track, project);
+        _dynamicMarks = ShowDynamics ? BuildDynamicMarks(track) : new Dictionary<TabCell, string>(ReferenceEqualityComparer.Instance);
         _scoreFactsTrack = track;
         _scoreFactsProject = project;
         _scoreFactsGeneration = _scoreGeneration;

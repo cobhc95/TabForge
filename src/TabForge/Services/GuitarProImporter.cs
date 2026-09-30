@@ -33,6 +33,9 @@ public static class GuitarProImporter
 
     /// <summary>Notes skipped as duplicates in the last import (same string/pitch merged by voices/staves).</summary>
     public static int LastImportSkippedDuplicates { get; private set; }
+
+    /// <summary>A6-02: the open notice when the last <see cref="ImportBytes"/> on this thread found a TabForge project inside the .gp but could not use it (opened as plain Guitar Pro); otherwise null.</summary>
+    [ThreadStatic] internal static string? LastEmbeddedRejection;
     /// <summary>Diagnostics: a few of the notes the last import merged as duplicates.</summary>
     public static List<string> LastImportDuplicateSamples { get; } = new();
 
@@ -104,8 +107,13 @@ public static class GuitarProImporter
         GuitarProPreParse.Validate(WithoutLeadingJunk(raw));
         ImportGuard.CheckCurrent();
         // A .gp saved by TabForge carries its complete project: load that for a lossless round trip.
-        if (path.EndsWith(".gp", StringComparison.OrdinalIgnoreCase) && GuitarProExporter.TryReadEmbedded(raw) is { } embedded)
-            return embedded;
+        // A6-02: one that is present but rejected (too big, damaged, bad version) is reported, not silently treated as absent.
+        LastEmbeddedRejection = null;
+        if (path.EndsWith(".gp", StringComparison.OrdinalIgnoreCase))
+        {
+            if (GuitarProExporter.ReadEmbedded(raw, out var rejected) is { } embedded) return embedded;
+            if (rejected is not null) LastEmbeddedRejection = GuitarProExporter.RejectedNotice(rejected);
+        }
 
         var data = WithoutLeadingJunk(raw);
         object score;

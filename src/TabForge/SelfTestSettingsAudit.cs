@@ -26,7 +26,7 @@ public static partial class SelfTest
         static bool MachineDependent(string key) =>
             key.Equals("vst.device", StringComparison.OrdinalIgnoreCase) || key.Equals("vst.input", StringComparison.OrdinalIgnoreCase) ||
             key.StartsWith("vst.asio.", StringComparison.OrdinalIgnoreCase);
-        var catalog = SettingsCatalog.Build(settings).Where(d => !MachineDependent(d.Key)).ToList();
+        var catalog = SettingsCatalog.Build(settings).Where(d => !MachineDependent(d.Key) && d.Kind != SettingKind.Button).ToList();
         var notRoundTripped = new List<string>();
         var notPersisted = new List<string>();
         var crossTalk = new List<string>();

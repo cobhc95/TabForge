@@ -404,8 +404,29 @@ public partial class PreferencesWindow : Window
             SettingKind.Choice => BuildChoiceEditor(descriptor),
             SettingKind.Number => BuildNumberEditor(descriptor),
             SettingKind.Colour => BuildColourEditor(descriptor),
+            SettingKind.Button => BuildLinkedAudioButton(descriptor),
             _ => BuildTextEditor(descriptor)
         };
+    }
+
+    /// <summary>Hook set by the main window: opens the Linked audio window and returns the approvals as they are afterwards.</summary>
+    internal static Func<List<MediaApproval>>? ManageLinkedAudio { get; set; }
+
+    private FrameworkElement BuildLinkedAudioButton(SettingDescriptor descriptor)
+    {
+        var button = new Button { Content = "Manage approved folders…", Padding = new Thickness(10, 3, 10, 3), ToolTip = descriptor.Tooltip(_settings.Hotkeys),
+            IsEnabled = ManageLinkedAudio is not null };
+        AutomationProperties.SetName(button, "Manage approved folders");
+        button.Click += (_, _) =>
+        {
+            if (ManageLinkedAudio is not { } open) return;
+            // Approvals change straight away (they are a safety decision); keep this window's copy and its baseline in step
+            // so Apply does not bring back a revoked folder and Cancel does not undo one.
+            var approvals = open();
+            _settings.Audio.ApprovedMedia = approvals.Select(a => new MediaApproval { Project = a.Project, Folder = a.Folder }).ToList();
+            _baseline.Audio.ApprovedMedia = approvals.Select(a => new MediaApproval { Project = a.Project, Folder = a.Folder }).ToList();
+        };
+        return button;
     }
 
     private FrameworkElement BuildBoolEditor(SettingDescriptor descriptor)

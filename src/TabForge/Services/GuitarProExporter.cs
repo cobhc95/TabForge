@@ -30,6 +30,8 @@ public static class GuitarProExporter
     /// <summary>The complete .gp file bytes (built in memory; nothing is written).</summary>
     public static byte[] ToBytes(SongProject project, bool embedProject = true)
     {
+        // A6-02: the embedded project is built (and size-checked) first, so an over-limit song fails before anything is exported or written.
+        var embeddedBytes = embedProject ? EmbeddedProjectBytes(project) : null;
         var settings = new AlphaTab.Settings();
         var score = Build(project);
         score.Finish(settings);
@@ -56,14 +58,31 @@ public static class GuitarProExporter
                 using var entryStream = entry.Open();
                 entryStream.Write(part.Data);
             }
-            if (embedProject)
+            if (embeddedBytes is not null)
             {
                 var entry = zip.CreateEntry(EmbeddedProjectEntry, System.IO.Compression.CompressionLevel.Optimal);
                 using var entryStream = entry.Open();
-                entryStream.Write(ProjectService.PersistBytes(project));
+                entryStream.Write(embeddedBytes);
             }
         }
         return zipStream.ToArray();
+    }
+
+    /// <summary>
+    /// The gzip project bytes for the embedded entry, held to the same limit the reader applies (<see cref="InputLimits.MaxTforgeFileBytes"/>).
+    /// Over it: an <see cref="InvalidDataException"/> naming the largest plug-in states, in the style of the .tfaudio size message (A5-03).
+    /// </summary>
+    internal static byte[] EmbeddedProjectBytes(SongProject project)
+    {
+        try { return ProjectService.PersistBytes(project); }
+        catch (InvalidDataException ex) when (ex.Message == ProjectService.SizeLimitMessage)
+        {
+            var largest = AudioDataFile.LargestPluginStates(project);
+            throw new InvalidDataException(
+                $"The TabForge project saved inside this Guitar Pro file would be over its {AudioDataFile.Mb(InputLimits.MaxTforgeFileBytes)} limit, so nothing was saved. "
+                + (largest.Count > 0 ? $"The largest plug-in states: {string.Join(", ", largest)}. " : "")
+                + "Remove or reset those plug-ins (or unload large sample sets), then save again.");
+        }
     }
 
     internal readonly record struct ZipPart(string Name, uint StoredCrc, byte[] Data);
@@ -131,28 +150,54 @@ public static class GuitarProExporter
     }
 
     /// <summary>The embedded TabForge project of a .gp already read into memory (bounded), or null.</summary>
-    internal static SongProject? TryReadEmbedded(byte[] file)
+    internal static SongProject? TryReadEmbedded(byte[] file) => ReadEmbedded(file, out _);
+
+    /// <summary>
+    /// A6-02: the embedded project of a .gp in memory. Null with <paramref name="rejected"/> null: there is none (not a TabForge-written .gp;
+    /// the normal Guitar Pro import applies, silently). Null with a reason in <paramref name="rejected"/>: one is present but cannot be used
+    /// (over the size limit, damaged, unsupported version); the caller opens the file as plain Guitar Pro and tells the user why.
+    /// </summary>
+    internal static SongProject? ReadEmbedded(byte[] file, out string? rejected)
     {
-        try
+        rejected = null;
+        System.IO.Compression.ZipArchive zip;
+        try { zip = new System.IO.Compression.ZipArchive(new MemoryStream(file, writable: false), System.IO.Compression.ZipArchiveMode.Read); }
+        catch (InvalidDataException) { return null; }   // not a zip at all (Guitar Pro 3-5 ...): no embedded project
+        using (zip)
         {
-            using var zip = new System.IO.Compression.ZipArchive(new MemoryStream(file, writable: false), System.IO.Compression.ZipArchiveMode.Read);
-            var entry = zip.GetEntry(EmbeddedProjectEntry);
-            if (entry is null || entry.Length > InputLimits.MaxTforgeFileBytes) return null;
-            using var stream = entry.Open();
-            using var buffer = new MemoryStream();
-            var chunk = new byte[64 * 1024];
-            int read;
-            while ((read = stream.Read(chunk, 0, chunk.Length)) > 0)
+            System.IO.Compression.ZipArchiveEntry? entry;
+            try { entry = zip.GetEntry(EmbeddedProjectEntry); }
+            catch (InvalidDataException) { return null; }   // directory unreadable: the plain import reports the damage
+            if (entry is null) return null;
+            try
             {
-                if (buffer.Length + read > InputLimits.MaxTforgeFileBytes) return null;
-                buffer.Write(chunk, 0, read);
+                if (entry.Length > InputLimits.MaxTforgeFileBytes) { rejected = TooBigReason; return null; }
+                using var stream = entry.Open();
+                using var buffer = new MemoryStream();
+                var chunk = new byte[64 * 1024];
+                int read;
+                while ((read = stream.Read(chunk, 0, chunk.Length)) > 0)
+                {
+                    if (buffer.Length + read > InputLimits.MaxTforgeFileBytes) { rejected = TooBigReason; return null; }
+                    buffer.Write(chunk, 0, read);
+                }
+                return ProjectService.RestorePersistedBytes(buffer.ToArray());
             }
-            return ProjectService.RestorePersistedBytes(buffer.ToArray());
+            catch (Exception ex) when (ex is InvalidDataException or IOException)
+            {
+                rejected = ex.Message.Contains("size limit", StringComparison.Ordinal) ? TooBigReason
+                    : ex.Message.Contains("unsupported format version", StringComparison.Ordinal) ? "it was saved by a newer or unknown version of TabForge"
+                    : "the data is damaged or invalid";
+                return null;
+            }
         }
-        // Not a TabForge-written .gp (or a damaged one): fall back to the normal Guitar Pro import.
-        catch (InvalidDataException) { return null; }
-        catch (IOException) { return null; }
     }
+
+    private static readonly string TooBigReason = $"it is over the {AudioDataFile.Mb(InputLimits.MaxTforgeFileBytes)} limit";
+
+    /// <summary>The open notice for an embedded project that was present but rejected (<see cref="ReadEmbedded"/>).</summary>
+    internal static string RejectedNotice(string reason) =>
+        $"This file's TabForge project data could not be read ({reason}); it was opened as a plain Guitar Pro file";
 
     /// <summary>A bar's navigation marks (TabForge's names or Guitar Pro's own) as alphaTab directions, so D.C. / D.S. / Coda / Fine survive a clean .gp.</summary>
     private static IEnumerable<Direction> GpDirections(string? text)

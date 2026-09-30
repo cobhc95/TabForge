@@ -17,6 +17,7 @@ public partial class MainWindow
             if (_imports is not null) return _imports;
             _imports = ScoreImportQueue.WithImportWorker(_documentController);
             _imports.Changed += RefreshImportStatus;
+            _imports.ConfirmInProcess = ConfirmImportInProcess;
             Closed += (_, _) => _imports.CancelAll();   // a result arriving after the window closed is never applied
             return _imports;
         }
@@ -55,6 +56,12 @@ public partial class MainWindow
                 else ReportOpenFailed(path, error);
             });
     }
+
+    /// <summary>A6-03: the protected import could not start; opening in this process needs the user's yes for this file (default No).</summary>
+    private bool ConfirmImportInProcess(ScoreImportJob job, string reason) =>
+        IsLoaded && MessageBox.Show(this,
+            $"The protected import process could not start ({reason}).\n\nOpening {job.Name} inside TabForge is less protected against damaged files. Open it anyway?",
+            "Open without protection?", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) == MessageBoxResult.Yes;
 
     private void ReportOpenFailed(string path, Exception ex)
     {

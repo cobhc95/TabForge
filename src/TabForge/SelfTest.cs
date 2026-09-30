@@ -50,7 +50,7 @@ public static partial class SelfTest
 
     public static int Run(string outputPath)
     {
-        Log.Clear(); _pass = 0; _fail = 0; _skip = 0; _gpFixtureRan = false; _syntheticFixturesRan = false;
+        Log.Clear(); _pass = 0; _fail = 0; _skip = 0; _gpFixtureRan = false; _syntheticFixturesRan = false; _fuzzRan = false;
         _required = ParseRequirements();
         _areas = ParseAreas();
         if (_areas is not null) Log.Add($"  info  areas: core + {string.Join(", ", _areas.OrderBy(x => x))}");
@@ -66,6 +66,7 @@ public static partial class SelfTest
         Guard(TestTimelineBasics);
         Guard(TestTimelineTechniques);
         Guard(TestPlaybackDifferences);
+        Guard(TestFermataPlayback);
         Guard(TestTimelineMetronome);
         Guard(TestTimelineLoopAndOrder);
         Guard(TestTimelineRevision);
@@ -99,9 +100,11 @@ public static partial class SelfTest
         Guard(TestMixerDragAndDrop);
         Guard(TestTrackListGroupRows);
         Guard(TestOrderAnimationAndSpeedCommands);
+        Guard(TestRepeatedOpenCloseReleasesWindows);   // needs the application alive: keep it with the other window tests
         Guard(TestCommandPaletteAndPdf);
         Guard(TestTechniqueEngraving);
         Guard(TestLayoutAuditTechniqueSong);
+        Guard(TestDynamicsEngraving);
         Guard(TestTemplateKeepsSetupOnly);
         Guard(TestSnapLayoutHitTest);
         Guard(TestAutomationPeers);
@@ -172,6 +175,8 @@ public static partial class SelfTest
         Guard(TestSidecarRouting);
         Guard(TestAudioDataSizeLimit);
         Guard(TestGpOpenKeepsTitle);
+        Guard(TestEmbeddedProjectLimit);
+        Guard(TestRecoveryCopyOverTforgeLimit);
         Guard(TestPersistenceSchema);
         Guard(TestImporterNamesAndDynamics);
         Guard(TestTforgeCompression);
@@ -219,6 +224,11 @@ public static partial class SelfTest
         Guard(TestSystemBreakPreferences);
         Section("Security / untrusted inputs");
         Guard(TestSecurityInputBoundaries);
+        Guard(TestMediaPathPolicy);
+        Guard(TestWaveformCacheBounds);
+        Guard(TestClosedTimelineIsCollected);
+        Section("Malformed-input fuzzing and lifecycle");
+        Guard(TestMalformedInputFuzz);
         Section("Repository hygiene");
         Guard(TestSourceControlCharacters);
         Guard(TestInstallerAssociationParity);
@@ -240,6 +250,8 @@ public static partial class SelfTest
             Check("required: the synthetic Guitar Pro fixture test ran to completion", _gpFixtureRan);
         if (_required.Contains(RequireSyntheticFixtures))
             Check("required: the synthetic fixture group (repeats, navigation, tempo, mix, tuplets, voices, spans, demo song) ran to completion", _syntheticFixturesRan);
+        if (_required.Contains(RequireFuzz))
+            Check("required: the malformed-input fuzz group ran to completion", _fuzzRan);
         var summary = $"TabForge self-test: {_pass} passed, {_fail} failed" + (_skip > 0 ? $", {_skip} skipped" : "");
         if (_skippedByArea > 0) summary += $" ({_skippedByArea} test groups outside the selected areas not run)";
         Log.Add("");
@@ -279,16 +291,18 @@ public static partial class SelfTest
         ["TestReaperChainImport"] = "persistence", ["TestProjectRoundtrip"] = "persistence", ["TestModelRoundTrip"] = "persistence",
         ["TestSyntheticGuitarProFixture"] = "guitarpro", ["TestSyntheticFixtures"] = "synthetic", ["TestGuitarProFiles"] = "guitarpro", ["TestTupletImport"] = "guitarpro", ["TestGuitarProImportContainment"] = "guitarpro", ["TestGuitarProImportWorker"] = "guitarpro",
         ["TestGp5EditingSemantics"] = "guitarpro", ["TestAsciiExport"] = "guitarpro", ["TestMidiExport"] = "guitarpro",
-        ["TestPlaybackDepth"] = "playback", ["TestNoOpOptionChangesDoNotRestartPlayback"] = "playback", ["TestSeekWhilePlayingSoundsFirstNote"] = "playback",
+        ["TestPlaybackDepth"] = "playback", ["TestFermataPlayback"] = "playback",["TestNoOpOptionChangesDoNotRestartPlayback"] = "playback", ["TestSeekWhilePlayingSoundsFirstNote"] = "playback",
         ["TestCountInIsHeard"] = "playback", ["TestTimelineBasics"] = "playback", ["TestTimelineTechniques"] = "playback",
-        ["TestTimelineMetronome"] = "playback", ["TestTimelineRevision"] = "playback", ["TestAudioDataSizeLimit"] = "persistence", ["TestGpOpenKeepsTitle"] = "persistence", ["TestTimelineLoopAndOrder"] = "playback", ["TestPlaybackOrderSpec"] = "playback",
+        ["TestTimelineMetronome"] = "playback", ["TestTimelineRevision"] = "playback", ["TestAudioDataSizeLimit"] = "persistence", ["TestGpOpenKeepsTitle"] = "persistence", ["TestEmbeddedProjectLimit"] = "persistence", ["TestRecoveryCopyOverTforgeLimit"] = "persistence", ["TestTimelineLoopAndOrder"] = "playback", ["TestPlaybackOrderSpec"] = "playback",
         ["TestEditorEntry"] = "ui", ["TestEditorStructurePeer"] = "ui", ["TestEditCommands"] = "ui", ["TestReadableTextTokens"] = "ui", ["TestEditorNavigation"] = "ui", ["TestEditorDurations"] = "ui", ["TestPlaybackGlowIntensity"] = "ui",
         ["TestEditorCopyPaste"] = "ui", ["TestNoteMapper"] = "ui", ["TestScoreClipCapture"] = "persistence", ["TestScoreClipJson"] = "persistence", ["TestScoreClipRejectsUntrustedInput"] = "persistence", ["TestClipboardServiceFallback"] = "persistence", ["TestTimelineClipsShareClipboard"] = "ui", ["TestTimelineSectionCopiesAsBars"] = "ui", ["TestTimelineContextMenus"] = "ui", ["TestPasteCommands"] = "ui", ["TestPasteSpecial"] = "ui", ["TestNotationLayout"] = "ui", ["TestTabUi"] = "ui", ["TestBrowserTabShell"] = "ui",
         ["TestNoteEvents"] = "ui", ["TestInstrumentVisualState"] = "ui", ["TestFretboardGeometry"] = "ui", ["TestArrangementGeometry"] = "ui",
         ["TestArrangementFollowGeometry"] = "ui", ["TestScaleFinder"] = "ui", ["TestGp5SvgIcons"] = "ui", ["TestInstrumentArtwork"] = "ui",
         ["TestRuntimeIconAndResourceKeys"] = "ui", ["TestSystemBreakPreferences"] = "ui", ["TestEverySettingIsWired"] = "settings",
-        ["TestSettingsStoreSharedAcrossWindows"] = "settings", ["TestEngineWarmOwnership"] = "engine", ["TestEngineMultiTabPlayback"] = "engine",["TestEngineDefaultOnAndManualOffSticks"] = "settings", ["TestInstrumentSizeUnlockedByDefault"] = "settings", ["TestPerControlTextDpi"] = "ui",
+        ["TestSettingsStoreSharedAcrossWindows"] = "settings", ["TestEngineWarmOwnership"] = "engine", ["TestEngineMultiTabPlayback"] = "engine",["TestEngineDefaultOnAndManualOffSticks"] = "settings", ["TestInstrumentSizeUnlockedByDefault"] = "settings", ["TestPerControlTextDpi"] = "ui", ["TestDynamicsEngraving"] = "ui",
+        ["TestMediaPathPolicy"] = "persistence", ["TestWaveformCacheBounds"] = "recording", ["TestClosedTimelineIsCollected"] = "ui",
         ["TestPasteOptionsDialog"] = "ui", ["TestPasteSettingsRows"] = "settings", ["TestContextMenuLayouts"] = "ui",
+        ["TestMalformedInputFuzz"] = "fuzz", ["TestRepeatedOpenCloseReleasesWindows"] = "leaks",
     };
 
     private static HashSet<string>? _areas;   // null: every area

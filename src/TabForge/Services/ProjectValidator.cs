@@ -273,6 +273,7 @@ public static class ProjectValidator
             {
                 if (clip is null) throw Invalid("The project contains an empty audio clip.");
                 RequireText(clip.File, InputLimits.MaxPathLength, "audio file path");
+                if (MediaPathPolicy.IsDeviceForm(clip.File) || clip.File.Any(c => c < 32)) throw Invalid("An audio clip points at a device path, which is never opened.");
                 if (clip.Lane is < 0 or > 255) throw Invalid("An audio clip is on an invalid lane.");
                 if (clip.Notes is { } notes && (notes.Count > 200_000 || notes.Any(n => n is null || !double.IsFinite(n.StartSec) || !double.IsFinite(n.LengthSec)
                     || n.StartSec < 0 || n.LengthSec is < 0 or > 86_400 || n.Pitch is < 0 or > 127 || n.Velocity is < 0 or > 127)))

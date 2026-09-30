@@ -39,6 +39,8 @@ public static class SettingsValidator
         plugins.Probed = CleanList(plugins.Probed);
         plugins.ApprovedPluginPaths = (plugins.ApprovedPluginPaths ?? new()).Where(f => f is { Length: > 0 and <= InputLimits.MaxPathLength })
             .Select(TabForge.Plugins.PluginTrust.Normalize).Where(f => f.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).Take(1024).ToList();
+        settings.Audio.ApprovedMedia = (settings.Audio.ApprovedMedia ?? new()).Where(a => a is not null && a.Folder is { Length: > 0 and <= InputLimits.MaxPathLength } && (a.Project ?? "").Length <= InputLimits.MaxPathLength)
+            .Select(a => new MediaApproval { Project = a.Project ?? "", Folder = a.Folder }).Take(512).ToList();
         plugins.Quarantined = (plugins.Quarantined ?? new()).Where(f => f is { Length: > 0 and <= InputLimits.MaxPathLength })
             .Distinct(StringComparer.OrdinalIgnoreCase).Take(1024).ToList();
 

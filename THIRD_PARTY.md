@@ -91,6 +91,20 @@ Windows Forms) are part of `TabForge.exe`, together with `System.Drawing.Common`
   [licenses/THIRD-PARTY-NOTICES_System.Drawing.Common.txt](licenses/THIRD-PARTY-NOTICES_System.Drawing.Common.txt)
 - Source: https://github.com/dotnet/runtime and https://github.com/dotnet/wpf
 
+## VST 2 plug-in hosting (TabForge's own code)
+
+TabForge hosts VST 2 plug-ins through its own, independent C# implementation of the plug-in binary interface: a
+plug-in is a 64-bit DLL that exports `VSTPluginMain`, and TabForge talks to it through the plain C structures and
+dispatcher opcodes that such a DLL expects. The code is in `src/TabForge.AudioEngine/Plugins/Vst2Plugin.cs` (and, for
+the headless tests, `Vst2TestEffect.cs`) and is covered by TabForge's own MIT licence.
+
+- TabForge contains no Steinberg VST 2 SDK headers or code (no `aeffect.h`, `aeffectx.h` or other file from the VST 2
+  SDK, and none of their text), and none are distributed with TabForge. To work with existing plug-ins, the code has
+  to use the same structure layouts and numeric constants as the binary interface; it declares them itself.
+- VST is a trademark of Steinberg Media Technologies GmbH. TabForge is not affiliated with, sponsored or endorsed by
+  Steinberg.
+- VST 3 plug-ins are hosted by a different component, the native bridge below, which uses the MIT-licensed VST 3 SDK.
+
 ## Steinberg VST 3 SDK and the native bridge (`tfvst3.dll`)
 
 VST3 plug-ins are hosted by `tfvst3.dll`, a small C++ bridge (about 600 KB) built against the Steinberg VST 3 SDK

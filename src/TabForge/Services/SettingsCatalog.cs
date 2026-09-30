@@ -2,7 +2,7 @@ using TabForge.Documents;
 
 namespace TabForge.Services;
 
-public enum SettingKind { Bool, Choice, Number, Text, Colour }
+public enum SettingKind { Bool, Choice, Number, Text, Colour, Button }
 
 /// <summary>A searchable, grouped setting descriptor bound to a live settings model.</summary>
 public sealed class SettingDescriptor
@@ -209,6 +209,8 @@ public static class SettingsCatalog
                 "Draw every Nth bar number; 1 shows every measure.", "bar numbers every frequency interval"),
             Bool(Score, "Labels", "score.sectionheadings", "Show section headings", v => a.ShowSectionHeadings = v, () => a.ShowSectionHeadings,
                 "Show marker names above the score.", "section marker title heading label"),
+            Bool(Score, "Labels", "score.dynamics", "Show dynamics", v => a.ShowDynamics = v, () => a.ShowDynamics,
+                "Engrave dynamics markings (ppp to fff) under the staff where the dynamic changes.", "dynamics markings forte piano ppp mf fff loudness"),
             Number(Score, "Highlighting", "score.hoverintensity", "Hover-highlight intensity", v => a.HoverHighlightIntensity = v / 100, () => a.HoverHighlightIntensity * 100, 0, 100,
                 "Strength of the score hover outline.", "hover pointer highlight opacity percent", "%", 1, 0),
             Number(Score, "Highlighting", "score.selectionintensity", "Selection-highlight intensity", v => a.SelectionHighlightIntensity = v / 100, () => a.SelectionHighlightIntensity * 100, 0, 100,
@@ -329,6 +331,9 @@ public static class SettingsCatalog
             Choice(AudioVst, "Audio output", "vst.buffer", "Buffer size", v => pl.BufferSize = Math.Clamp(int.Parse(v), AudioDrivers.MinBuffer, AudioDrivers.MaxBuffer), () => pl.BufferSize.ToString(),
                 AudioDrivers.BufferSizes.Select(r => r.ToString()).ToArray(),
                 "Samples per block (type any value from 16 to 8192, or pick one). Smaller is lower latency but uses more CPU; raise it if you hear crackles. ASIO: this size is requested from the driver (kept inside what it allows); the status bar shows the size the driver really uses.", "buffer size latency samples crackle"),
+            Button(AudioVst, "Linked audio", "audio.linkedmedia", "Linked audio from network or removable drives",
+                "A song can link audio files on a network location or a removable drive. They are read only from folders you approved. Review the approved folders here and revoke any you no longer want.",
+                "network removable linked audio approve revoke folders drive usb unc share"),
             Text(AudioVst, "Plug-ins", "vst.folders", "Plug-in folders", v => pl.Folders = v.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList(),
                 () => string.Join("; ", pl.Folders),
                 "Folders that hold your VST2 (.dll) and VST3 (.vst3) plug-ins, separated by ';'. Use Browse to add one. Only these folders are scanned unless the option below is on.",
@@ -607,6 +612,10 @@ public static class SettingsCatalog
         Func<string?> get, string description, string keywords = "") =>
         Make(category, group, key, title, description, SettingKind.Text, () => get() ?? "",
             v => set(v?.ToString() ?? ""), keywords);
+
+    /// <summary>A row with a button (the editor is built by the Preferences window from the key); it stores nothing.</summary>
+    private static SettingDescriptor Button(string category, string group, string key, string title, string description, string keywords) =>
+        Make(category, group, key, title, description, SettingKind.Button, () => "", _ => { }, keywords);
 
     private static SettingDescriptor Colour(string category, string group, string key, string title, Action<string> set,
         Func<string> get, string description, string keywords = "", string? dependsOn = null,

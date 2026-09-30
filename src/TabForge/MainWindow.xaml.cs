@@ -106,6 +106,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        WireMediaAccess();
         _follow = new ScoreFollowCoordinator(ScoreScroll, Editor, () => _isPlayingVisual, () => _midi.IsPaused,
             () => _playheadBar, () => _playheadFraction, MaxMeasures, () => _settings.Follow);
         WireScoreScrollGestures();

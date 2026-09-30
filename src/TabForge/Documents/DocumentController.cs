@@ -11,6 +11,9 @@ public readonly record struct OpenedScore(SongProject Project, string? SessionPa
 /// <summary>File-level document operations kept separate from window prompts and tab presentation.</summary>
 public sealed class DocumentController
 {
+    /// <summary>The folder whose autosave-named files are read with the recovery size bound (tests point it elsewhere).</summary>
+    public string RecoveryFolder { get; init; } = AutosaveService.DefaultFolder;
+
     public OpenedScore Open(string path) => Open(path, null);
 
     /// <param name="importGuitarPro">Parses a Guitar Pro file (null = <see cref="GuitarProImporter.Import"/> in this process); it may add
@@ -20,12 +23,23 @@ public sealed class DocumentController
         path = FilePathPolicy.ExistingFile(path, "score file",
             FileTypes.AllOpenable);
         if (string.Equals(Path.GetExtension(path), FileTypes.Project, StringComparison.OrdinalIgnoreCase))
-            return new OpenedScore(ProjectService.Load(path), path, false);
+        {
+            // Only the app's own crash-recovery copies (written with the larger bound) may exceed the normal .tforge limit.
+            var limit = AutosaveService.IsRecoveryCopy(path, RecoveryFolder) ? InputLimits.MaxRecoveryProjectBytes : InputLimits.MaxTforgeFileBytes;
+            return new OpenedScore(ProjectService.Load(path, limit), path, false);
+        }
 
         var notices = new List<string>();
         // A save of the .gp + .tfaudio pair that was cut short is undone first, so the pair read below is consistent.
         if (path.EndsWith(".gp", StringComparison.OrdinalIgnoreCase) && FilePathPolicy.RecoverInterruptedPair(path, AudioDataFile.PathFor(path)) is { } recovery) notices.Add(recovery);
-        var project = importGuitarPro is null ? GuitarProImporter.Import(path) : importGuitarPro(path, notices);
+        SongProject project;
+        if (importGuitarPro is null)
+        {
+            project = GuitarProImporter.Import(path);
+            // A6-02: an embedded TabForge project that was present but unusable is reported (the worker path adds it through its own notices).
+            if (GuitarProImporter.LastEmbeddedRejection is { } rejected) notices.Add(rejected);
+        }
+        else project = importGuitarPro(path, notices);
         // A5-04: the song's own title wins (also for a TabForge-embedded project); the file name only fills an empty one.
         if (string.IsNullOrWhiteSpace(project.Title)) project.Title = Path.GetFileNameWithoutExtension(path);
         // A clean .gp saved with its TabForge audio data beside it ("song.tfaudio"): bring the mixer and FX back.

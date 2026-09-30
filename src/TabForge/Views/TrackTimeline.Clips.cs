@@ -102,13 +102,18 @@ internal sealed partial class TrackTimeline
     {
         AllowDrop = true;
         Focusable = true;
-        // A waveform finished reading in the background: redraw once, if that file is on this song.
-        WaveformCache.Ready += file => Dispatcher.BeginInvoke(() =>
-        {
-            if (Project?.Tracks.Any(t => t.AudioClips.Any(c => string.Equals(c.File, file, StringComparison.OrdinalIgnoreCase))) == true)
-                InvalidateVisual();
-        });
+        // A waveform finished reading in the background: redraw once, if that file is on this song. Weak: a closed timeline is not kept alive by the static cache.
+        _waveformSubscription = WaveformCache.SubscribeWeak(this, static (t, file) => t.OnWaveformReady(file));
+        Unloaded += (_, _) => WaveformCache.Cancel(Project?.Tracks.SelectMany(t => t.AudioClips).Where(c => !c.IsMidi).Select(c => c.File).ToList() ?? new List<string>());   // what this song asked for stops decoding once its timeline is gone
     }
+
+    private readonly IDisposable? _waveformSubscription;
+
+    private void OnWaveformReady(string file) => Dispatcher.BeginInvoke(() =>
+    {
+        if (Project?.Tracks.Any(t => t.AudioClips.Any(c => string.Equals(c.File, file, StringComparison.OrdinalIgnoreCase))) == true)
+            InvalidateVisual();
+    });
 
     private double RowTop(int track) =>
         ArrangementPanel.RulerHeight + ArrangementPanel.SectionHeight + ArrangementPanel.RowTopOf(Project, track) - VerticalScrollOffset;
@@ -153,6 +158,8 @@ internal sealed partial class TrackTimeline
             if (clip.IsMidi) DrawMidiNotes(dc, clip, box, colour, alpha, width);
             else DrawWaveform(dc, clip, box, colour, alpha, width);
             var label = clip.Muted ? $"{clip.Name} (muted)" : clip.Name;
+            if (!clip.IsMidi && WaveformCache.StatusOf(clip.File) is { State: WaveState.NeedsApproval or WaveState.Failed } problem)
+                label = $"{label}: {problem.Message}";
             if (box.Width > 30) Draw.At(dc, label, box.X + 5, box.Y + 1, 10, Draw.Solid(_theme.Text, 0.85 * alpha));
             dc.Pop();
         }

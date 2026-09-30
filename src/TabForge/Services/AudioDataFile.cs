@@ -70,9 +70,11 @@ public static class AudioDataFile
         return bytes;
     }
 
-    private static string TooLargeMessage(SongProject project, long size)
+    internal static string Mb(long bytes) => $"{bytes / (1024.0 * 1024):0.#} MB";
+
+    /// <summary>The (up to five) largest saved plug-in states of a project as "Plugin on Owner (n MB)", for size-limit messages (A5-03, A6-02).</summary>
+    internal static List<string> LargestPluginStates(SongProject project)
     {
-        static string Mb(long bytes) => $"{bytes / (1024.0 * 1024):0.#} MB";
         var states = new List<(string Owner, string Plugin, long Bytes)>();
         void Rig(RigPreset? rig, string owner)
         {
@@ -87,7 +89,12 @@ public static class AudioDataFile
             Rig(mixer.Master?.Rig, "Master");
             Rig(mixer.MonitorFx?.Rig, "Monitor");
         }
-        var largest = states.OrderByDescending(s => s.Bytes).Take(5).Select(s => $"{s.Plugin} on {s.Owner} ({Mb(s.Bytes)})").ToList();
+        return states.OrderByDescending(s => s.Bytes).Take(5).Select(s => $"{s.Plugin} on {s.Owner} ({Mb(s.Bytes)})").ToList();
+    }
+
+    private static string TooLargeMessage(SongProject project, long size)
+    {
+        var largest = LargestPluginStates(project);
         return $"The TabForge audio data ({Extension}) would be {Mb(size)}, over its {Mb(MaxBytes)} limit, so nothing was saved. "
             + (largest.Count > 0 ? $"The largest plug-in states: {string.Join(", ", largest)}. " : "")
             + "Remove or reset those plug-ins (or unload large sample sets), or save as a .tforge project instead.";

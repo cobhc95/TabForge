@@ -196,6 +196,7 @@ public partial class MainWindow
         Editor.ShowBarNumbers = s.Appearance.ShowScoreBarNumbers;
         Editor.BarNumberFrequency = Math.Clamp(s.Appearance.ScoreBarNumberFrequency, 1, 16);
         Editor.ShowSectionHeadings = s.Appearance.ShowSectionHeadings;
+        Editor.ShowDynamics = s.Appearance.ShowDynamics;
         Editor.CursorColor = ParseColour(s.Appearance.CursorColour, Color.FromRgb(0xF2, 0xC1, 0x4E));
         Playhead.SetColor(ParseColour(follow.PlayheadColour, Color.FromRgb(0x3F, 0xB9, 0x50)));
         Playhead.SetDurationStyle(Editor.DurationGlowColor, Editor.DurationGlowOpacity, follow.DurationTintEnabled);
@@ -428,6 +429,7 @@ public partial class MainWindow
             case "Track.MoveUp": MoveTrack(-1); return true;
             case "Track.MoveDown": MoveTrack(1); return true;
             case "View.ShowTrackGroups": ((IMixerHost)this).SetTrackListShows("groups", !_project.Mixer.ShowGroupsInTrackList); return true;
+            case "Media.ManageApprovals": ReviewLinkedAudio(); return true;
             case "Mixer.MasterFx": OpenBusFx(null); return true;
             case "Mixer.MonitorFx": OpenMonitorFx(); return true;
             case "Mixer.GroupFx": if (SelectedTrack is { } groupTrack) OpenBusFx(MixerGroups.GroupOf(_project, groupTrack)); return true;

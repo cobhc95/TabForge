@@ -26,9 +26,15 @@ public sealed class ImportWorkerOptions
     internal bool TestHang { get; init; }
     /// <summary>Self-test seam: called with the worker process right after it started.</summary>
     internal Action<Process>? Started { get; init; }
+    /// <summary>Self-test seams (A6-03): the Job Object cannot be created / the started worker cannot be assigned to it.</summary>
+    internal bool TestFailJobCreate { get; init; }
+    internal bool TestFailJobAssign { get; init; }
 }
 
-/// <summary>The import worker process could not be started or did not connect; the caller may import in-process instead.</summary>
+/// <summary>
+/// The import worker could not be started, did not connect, or could not be confined to its Job Object. The caller may import
+/// in-process only with the user's consent for that file (A6-03).
+/// </summary>
 public sealed class ImportWorkerUnavailableException : Exception
 {
     public ImportWorkerUnavailableException(string message, Exception? inner = null) : base(message, inner) { }
@@ -47,23 +53,21 @@ public static class ImportWorker
 {
     public const string Argument = "--import-worker";
     private const string PipePrefix = "TabForge.ImportWorker.";
-    private const byte FrameRequest = 1, FrameData = 2, FrameResult = 3, FrameError = 4;
+    private const byte FrameRequest = 1, FrameData = 2, FrameResult = 3, FrameError = 4, FrameNotice = 5;
     private const int MaxRequestBytes = 64 * 1024;
     private const int MaxErrorBytes = 8 * 1024;
     private const int FlagTestHang = 1;
 
     /// <summary>
-    /// The background import's parse: in the worker process, or, when that cannot start, in this process with a notice.
-    /// A worker that started but failed, was cancelled or ran out of time is never retried in-process.
+    /// A6-03: the in-process parse, used by the background import only after the user agreed for this file (the worker or its
+    /// containment could not be set up; <paramref name="reason"/> says why). The opened score carries a notice.
     /// </summary>
-    public static SongProject ImportOrFallback(string path, List<string> notices, ImportWorkerOptions? options = null)
+    public static SongProject ImportInProcess(string path, List<string> notices, string reason)
     {
-        try { return Import(path, options); }
-        catch (ImportWorkerUnavailableException ex)
-        {
-            notices.Add($"imported inside TabForge because the separate import process could not start ({ex.Message})");
-            return GuitarProImporter.Import(path);
-        }
+        notices.Add($"imported inside TabForge because the protected import process could not start ({reason})");
+        var project = GuitarProImporter.Import(path);
+        if (GuitarProImporter.LastEmbeddedRejection is { } rejected) notices.Add(rejected);
+        return project;
     }
 
     /// <summary>
@@ -71,7 +75,7 @@ public static class ImportWorker
     /// <see cref="ImportGuard"/> (none: not cancellable, default budget). Throws <see cref="ImportWorkerUnavailableException"/> when
     /// the worker cannot start, <see cref="OperationCanceledException"/>, <see cref="TimeoutException"/> or <see cref="InvalidDataException"/>.
     /// </summary>
-    public static SongProject Import(string path, ImportWorkerOptions? options = null)
+    public static SongProject Import(string path, ImportWorkerOptions? options = null, List<string>? notices = null)
     {
         options ??= ImportWorkerOptions.Default;
         var guard = ImportGuard.Current;
@@ -86,6 +90,8 @@ public static class ImportWorker
         var pipeName = PipePrefix + Guid.NewGuid().ToString("N");
         var cpuLimit = TimeSpan.FromTicks(Math.Max(budget.Ticks, TimeSpan.FromSeconds(10).Ticks) * 2);
         using var job = new ChildProcessJob(options.JobMemoryLimitBytes, cpuLimit);
+        // A6-03: no worker without its Job Object (memory / CPU limits, kill-on-close); the caller asks before parsing in-process.
+        if (!job.IsActive || options.TestFailJobCreate) throw new ImportWorkerUnavailableException("its memory and time limits could not be set up");
         using var pipe = new NamedPipeServerStream(pipeName, PipeDirection.InOut, 1, PipeTransmissionMode.Byte,
             PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
         Process process;
@@ -115,7 +121,9 @@ public static class ImportWorker
         {
             try
             {
-                job.Add(process);
+                // The worker only parses after it received the file below, so nothing ran unconfined before this check.
+                if (options.TestFailJobAssign || !job.Add(process))
+                    throw new ImportWorkerUnavailableException("it could not be placed under its memory and time limits");
                 options.Started?.Invoke(process);
                 using var onCancel = token.Register(Kill);
 
@@ -140,6 +148,13 @@ public static class ImportWorker
                     pipe.Flush();
 
                     var kind = ReadHeader(pipe, out var length);
+                    // A6-02: the worker reports an embedded TabForge project it found but could not use, before its result.
+                    while (kind == FrameNotice)
+                    {
+                        if (length > MaxErrorBytes) throw new InvalidDataException("The import process sent an invalid reply.");
+                        notices?.Add(Encoding.UTF8.GetString(ReadPayload(pipe, length)));
+                        kind = ReadHeader(pipe, out length);
+                    }
                     if (kind == FrameError)
                     {
                         if (length > MaxErrorBytes) throw new InvalidDataException("The import process sent an invalid reply.");
@@ -201,6 +216,11 @@ public static class ImportWorker
                 data = Array.Empty<byte>();
                 reply = ProjectService.PersistBytes(project);
                 kind = FrameResult;
+                if (GuitarProImporter.LastEmbeddedRejection is { } rejected)
+                {
+                    var text = Encoding.UTF8.GetBytes(rejected.Length > 2_000 ? rejected[..2_000] : rejected);
+                    WriteFrame(pipe, FrameNotice, text);
+                }
             }
             catch (Exception ex) when (ex is not OutOfMemoryException)
             {

@@ -1,4 +1,5 @@
 using System.Linq;
+using TabForge.Services;
 
 namespace TabForge.Playback;
 
@@ -79,7 +80,26 @@ public sealed class NoteEvent
 }
 
 /// <summary>A performed bar in the playback order. <see cref="Bar"/> is the source bar index.</summary>
-public readonly record struct ScoreBar(int Bar, double StartMs, double EndMs, int Slots, int Tempo);
+public readonly record struct ScoreBar(int Bar, double StartMs, double EndMs, int Slots, int Tempo, FermataSpan[]? Fermatas = null)
+{
+    /// <summary>Fraction (0..1) of the bar's slots reached at an absolute time, skipping the time a fermata holds the music.</summary>
+    public double SlotFraction(double ms)
+    {
+        var length = Math.Max(1.0, EndMs - StartMs);
+        if (Fermatas is null) return Math.Clamp((ms - StartMs) / length, 0, 1);
+        var baseLength = Math.Max(1.0, length - FermataSpan.TotalExtraMs(Fermatas));
+        return Math.Clamp(FermataSpan.Unwarp(Fermatas, ms - StartMs) / baseLength, 0, 1);
+    }
+
+    /// <summary>Absolute time at a fraction of the bar's slots (inverse of <see cref="SlotFraction"/>).</summary>
+    public double MsAtFraction(double fraction)
+    {
+        var length = Math.Max(1.0, EndMs - StartMs);
+        if (Fermatas is null) return StartMs + length * fraction;
+        var baseLength = Math.Max(1.0, length - FermataSpan.TotalExtraMs(Fermatas));
+        return StartMs + FermataSpan.Warp(Fermatas, baseLength * fraction);
+    }
+}
 
 /// <summary>
 /// Absolute-time MIDI event list compiled from a score: the single source of truth for playback,

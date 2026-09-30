@@ -152,8 +152,21 @@ public sealed class ClipPlayer : IDisposable
         try
         {
             var intoClip = Math.Max(0, songSec - Spec.StartSec) * Spec.Speed; // seconds of source
+            if (!ClipPathGuard.IsAllowed(Spec.File, out var refused))
+            {
+                Failed = true;
+                EngineLog.Write($"audio clip refused ({refused}): {Spec.File}");
+                return;
+            }
             CloseSource();
             _reader = new AudioFileReader(Spec.File);
+            if (_reader.TotalTime.TotalHours > 2)   // same limit as the UI
+            {
+                Failed = true;
+                EngineLog.Write($"audio clip too long: {Spec.File}");
+                CloseSource();
+                return;
+            }
             var sourcePos = Spec.OffsetSec + intoClip;
             _reader.CurrentTime = TimeSpan.FromSeconds(Math.Min(sourcePos, _reader.TotalTime.TotalSeconds));
             ISampleProvider provider = _reader;

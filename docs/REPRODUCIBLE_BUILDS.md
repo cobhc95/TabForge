@@ -37,6 +37,36 @@ The script lists every differing zip entry (with the number of differing bytes a
 causes) and exits with 0 only when all entries are identical. The installers are compared by payload when
 `innounp.exe` or `innoextract.exe` is on `PATH`; otherwise the script says that an installer difference is expected.
 
+## The native bridge
+
+`tfvst3.dll` is the one binary that is not rebuilt for a release. The release ships the DLL committed in the repository
+(`src/TabForge.AudioEngine/native/tfvst3.dll`), so the GitHub build and a local build carry exactly the same bridge.
+Two rebuilds of the bridge from the same source never match byte for byte, so the committed DLL is produced once, by
+the manual `build-bridge` workflow, and then only reused:
+
+1. The maintainer runs the `build-bridge` workflow (Actions, Run workflow) whenever the bridge source or the SDK pin
+   changes. It builds the bridge from the pinned, unpatched SDK on the runner, records the compiler and SHA-256 in
+   `native/BUILD_PROVENANCE.md`, attests the DLL and uploads both files.
+2. The maintainer commits that DLL and that `BUILD_PROVENANCE.md` as they are. `tools/Package-Release.ps1` refuses to
+   package when the DLL's SHA-256 differs from the record.
+
+### What the CI comparison checks
+
+The `native-bridge` job of `windows-ci` rebuilds the bridge on every run and runs `tools/Compare-NativeBridge.ps1`,
+which parses the PE headers of both files, masks the expected differences and requires everything else to be
+identical. The expected differences are:
+
+| Category | Where | Why it differs |
+| --- | --- | --- |
+| Link timestamps | COFF header `TimeDateStamp`, export and resource directory timestamps, the timestamp of each debug directory entry | the linker stamps the link time (it runs without `/Brepro`) |
+| PDB identity | CodeView (RSDS) GUID and PDB path, the PE checksum, a `/Brepro` content hash record | a new GUID per link, the build folder, and the checksum follows the content |
+| Source-path hash names | the 8 hex digits of `?A0x<hash>` anonymous-namespace names in the RTTI names | MSVC hashes the absolute path of each source file, and the runner's checkout folder differs from the maintainer's |
+
+The job passes when the files are identical or differ only in those categories (the script prints how many bytes
+differed in each), and fails when the size differs or any code or data byte differs outside them (a different bridge
+source, SDK or compiler). In that case run `build-bridge` and commit its output. A difference in these categories does not
+mean the shipped bridge is wrong; it is the expected result of rebuilding.
+
 ## Updating the native bridge
 
 The bridge changes rarely. When its source or the SDK pin changes:

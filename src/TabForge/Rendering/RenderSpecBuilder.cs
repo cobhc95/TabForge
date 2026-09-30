@@ -54,8 +54,8 @@ public static class RenderSpecBuilder
                 var s = first.StartMs; var e = last.EndMs;
                 if (bounds == RenderBounds.TimeSelection)
                 {
-                    if (first.Bar == startBar && first.Slots > 0 && startCell > 0) s = first.StartMs + (first.EndMs - first.StartMs) * Math.Min(startCell, first.Slots) / first.Slots;
-                    if (last.Bar == endBar && last.Slots > 0 && endCell >= 0) e = last.StartMs + (last.EndMs - last.StartMs) * Math.Min(endCell + 1, last.Slots) / last.Slots;
+                    if (first.Bar == startBar && first.Slots > 0 && startCell > 0) s = first.MsAtFraction((double)Math.Min(startCell, first.Slots) / first.Slots);
+                    if (last.Bar == endBar && last.Slots > 0 && endCell >= 0) e = last.MsAtFraction((double)Math.Min(endCell + 1, last.Slots) / last.Slots);
                 }
                 return (s, Math.Max(s, e));
         }
@@ -83,16 +83,36 @@ public static class RenderSpecBuilder
             // A bar after a varying one is re-anchored so slot-level rounding does not carry into it.
             if (map.Count == 0 || prevVaried || Math.Abs(map[^1].Tempo - tempo) > 1e-6) map.Add(new RenderTempoPoint(ToFrames(bar.StartMs, rate), tempo, ppq));
             var last = tempo;
+            var firstInBar = map.Count;
             if (varied)
                 for (var slot = 1; slot < bar.Slots; slot++)
                 {
                     var slotTempo = MusicTime.TempoAtSlot(measure, slot, startTempo);
                     if (slotTempo == last) continue;
-                    map.Add(new RenderTempoPoint(ToFrames(bar.StartMs + MusicTime.OffsetMs(measure, slot, startTempo), rate), slotTempo, ppq + slot / (double)MusicTime.SlotsPerQuarter));
+                    map.Add(new RenderTempoPoint(ToFrames(bar.StartMs + FermataSpan.Warp(bar.Fermatas, MusicTime.OffsetMs(measure, slot, startTempo)), rate), slotTempo, ppq + slot / (double)MusicTime.SlotsPerQuarter));
                     last = slotTempo;
                 }
+            // A fermata hold is a slower stretch of the map: the beat's quarter-notes take their length plus the hold.
+            if (bar.Fermatas is { } holds)
+            {
+                foreach (var hold in holds)
+                {
+                    var holdTempo = varied ? MusicTime.TempoAtSlot(measure, hold.Slot, startTempo) : startTempo;
+                    var endSlot = hold.Slot + hold.LengthSlots;
+                    var endTempo = varied ? MusicTime.TempoAtSlot(measure, endSlot, startTempo) : startTempo;
+                    var baseEnd = hold.BaseStartMs + hold.BaseLengthMs;
+                    map.Add(new RenderTempoPoint(ToFrames(bar.StartMs + FermataSpan.Warp(holds, hold.BaseStartMs), rate),
+                        holdTempo * hold.BaseLengthMs / Math.Max(1e-6, hold.BaseLengthMs + hold.ExtraMs), ppq + hold.Slot / (double)MusicTime.SlotsPerQuarter));
+                    map.Add(new RenderTempoPoint(ToFrames(bar.StartMs + FermataSpan.Warp(holds, baseEnd), rate),
+                        endTempo, ppq + endSlot / (double)MusicTime.SlotsPerQuarter));
+                    last = endTempo;
+                }
+                var added = map.GetRange(firstInBar, map.Count - firstInBar).OrderBy(point => point.Ppq).ToList();
+                map.RemoveRange(firstInBar, map.Count - firstInBar);
+                map.AddRange(added);
+            }
             ppq += bar.Slots / (double)MusicTime.SlotsPerQuarter;
-            prevTempo = varied ? last : tempo; prevVaried = varied;
+            prevTempo = varied ? last : tempo; prevVaried = varied || bar.Fermatas is not null;
         }
         if (map[0].Frame != 0) map.Insert(0, new RenderTempoPoint(0, map[0].Tempo, 0));
         return map;

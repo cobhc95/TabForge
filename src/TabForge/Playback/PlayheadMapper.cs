@@ -14,8 +14,7 @@ public static class PlayheadMapper
 
         var bar = timeline.BarAt(ms);
         pos.Bar = bar.Bar;
-        var length = Math.Max(1.0, bar.EndMs - bar.StartMs);
-        var fraction = Math.Clamp((ms - bar.StartMs) / length, 0, 1);
+        var fraction = bar.SlotFraction(ms);   // a fermata hold keeps the playhead on its beat
         pos.BarFraction = fraction;
         var slots = Math.Max(1, bar.Slots);
         pos.Cell = Math.Clamp((int)Math.Floor(fraction * slots), 0, slots - 1);

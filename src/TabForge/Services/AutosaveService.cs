@@ -33,6 +33,18 @@ public static class AutosaveService
         return m.Success && int.TryParse(m.Groups["pid"].Value, out pid);
     }
 
+    /// <summary>True for a recovery copy TabForge itself wrote: an autosave-named file directly inside <paramref name="folder"/> (the Recovery folder).</summary>
+    public static bool IsRecoveryCopy(string path, string folder)
+    {
+        try
+        {
+            if (!TryParse(path, out _)) return false;
+            var dir = Path.GetDirectoryName(Path.GetFullPath(path));
+            return dir is not null && string.Equals(dir.TrimEnd('\\', '/'), Path.GetFullPath(folder).TrimEnd('\\', '/'), StringComparison.OrdinalIgnoreCase);
+        }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException) { return false; }
+    }
+
     /// <summary>Deletes an autosave file and its error list; never throws.</summary>
     public static void Delete(string? path)
     {

@@ -78,7 +78,7 @@ internal sealed partial class ScoreToMidiCompiler
         for (var b = 0; b < beats; b++)
             for (var tick = 0; tick < MetronomeTicksPerBeat; tick++)
                 if (ShouldCompileMetronomeTick(tick))
-                    Click(barStart + b * beatMs + beatMs * tick / MetronomeTicksPerBeat,
+                    Click(barStart + FermataSpan.Warp(_barHolds, b * beatMs + beatMs * tick / MetronomeTicksPerBeat),
                         b == 0 && tick == 0, tick, isCountIn: false);
     }
 

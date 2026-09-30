@@ -470,6 +470,48 @@ public static partial class SelfTest
             string.Join(" | ", found.Take(5)));
     }
 
+    /// <summary>Dynamics are engraved only where the dynamic changes (and on the first note), and the layout audit finds no collision with lyrics, beat text or palm mutes.</summary>
+    private static void TestDynamicsEngraving()
+    {
+        var song = new SongProject { Title = "Dynamics", Tempo = 100 };
+        var lead = new TrackModel { Name = "Lead", Kind = TrackKind.Guitar, MidiProgram = 29, MidiChannel = 0, Measures = TemplateFactory.Measures(4) };
+        song.Tracks.Add(lead);
+        int[] dynamicOf = { 5, 5, 2, 2, 2, 4, 4, 6, 6, 6, 6, 6, 6, 6, 1, 1 };   // f f p p | p mf mf ff | ff ff ff ff | ff ff pp pp
+        var cells = new List<TabCell>();
+        for (var k = 0; k < 16; k++)
+        {
+            var tech = k is >= 8 and <= 11 ? new[] { TechniqueNames.PalmMute } : Array.Empty<string>();
+            cells.Add(RtPut(lead, k / 4, (k % 4) * 4, 4, 0, RtNote(lead, k % 3 + 1, 3 + k % 5, Dynamics.Velocities[dynamicOf[k]], tech)));
+        }
+        cells[1].Lyrics = "la"; cells[2].Lyrics = "ooh-ooh"; cells[5].Lyrics = "yeah"; cells[7].Text = "big hit"; cells[14].Lyrics = "end";
+
+        var marks = Views.TabEditorControl.BuildDynamicMarks(lead);
+        var expected = new (int Cell, string Name)[] { (0, "f"), (2, "p"), (5, "mf"), (7, "ff"), (14, "pp") };
+        Check("dynamics are marked on the first note and only where the dynamic changes",
+            marks.Count == expected.Length && expected.All(e => marks.TryGetValue(cells[e.Cell], out var n) && n == e.Name),
+            string.Join(",", marks.Values));
+        Check("a repeated dynamic is not marked again", !marks.ContainsKey(cells[1]) && !marks.ContainsKey(cells[6]) && !marks.ContainsKey(cells[15]));
+
+        static bool HasText(System.Windows.Media.Drawing drawing, string text) => drawing switch
+        {
+            System.Windows.Media.DrawingGroup g => g.Children.Any(c => HasText(c, text)),
+            System.Windows.Media.GlyphRunDrawing r => r.GlyphRun?.Characters is { } chars && new string(chars.ToArray()) == text,
+            _ => false
+        };
+        bool Engraves(bool show)
+        {
+            var editor = new Views.TabEditorControl { Project = song, SelectedTrackIndex = 0, DarkPaper = false, HideCursor = true, ShowDynamics = show };
+            editor.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
+            editor.Arrange(new System.Windows.Rect(editor.DesiredSize));
+            editor.UpdateLayout();
+            return editor.AuditSystemDrawings().Any(s => HasText(s.Item2, "mf"));
+        }
+        Check("the marking is engraved when 'Show dynamics' is on and absent when it is off", Engraves(true) && !Engraves(false));
+
+        var found = Diagnostics.LayoutAudit.Run(song, 0).Select(c => c.ToString()).ToList();
+        Check("layout audit: dynamics with lyrics, beat text and palm mutes collide with nothing", found.Count == 0, string.Join(" | ", found.Take(5)));
+    }
+
     /// <summary>Audit 3 section 6a engraving helpers (bends, whammy, tremolo, harmonics, trill, swing) and a render smoke test.</summary>
     private static void TestTechniqueEngraving()
     {

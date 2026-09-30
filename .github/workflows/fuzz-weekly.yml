@@ -1,0 +1,90 @@
+name: fuzz-weekly
+
+# Malformed-input fuzzing with a larger input count and a fresh random seed every week (the regular CI run uses 300
+# inputs and a fixed seed). The seed is printed in the log and the job summary: to replay a failure locally, set
+# TABFORGE_FUZZ_SEED and TABFORGE_FUZZ_COUNT to the logged values and run `TabForge.exe --selftest <log> --areas fuzz`.
+# Inputs that fail are uploaded as the fuzz-failures artifact.
+on:
+  schedule:
+    - cron: '17 4 * * 1'   # Mondays 04:17 UTC
+  workflow_dispatch:
+    inputs:
+      count:
+        description: 'Mutated inputs per file format'
+        default: '3000'
+        required: false
+      seed:
+        description: 'Seed (empty: random)'
+        default: ''
+        required: false
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: 'true'
+  DOTNET_CLI_TELEMETRY_OPTOUT: 'true'
+
+jobs:
+  fuzz:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    env:
+      TABFORGE_NO_LOCAL_SONGS: '1'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
+        with:
+          global-json-file: global.json
+
+      - name: Restore (locked mode)
+        run: dotnet restore TabForge.sln --locked-mode
+
+      - name: Build (Release)
+        run: dotnet build TabForge.sln -c Release --no-restore
+
+      - name: Fuzz (larger count, random logged seed)
+        shell: pwsh
+        env:
+          INPUT_COUNT: ${{ github.event.inputs.count }}
+          INPUT_SEED: ${{ github.event.inputs.seed }}
+        run: |
+          $count = $env:INPUT_COUNT
+          if (-not $count) { $count = '3000' }
+          $seed = $env:INPUT_SEED
+          if (-not $seed) { $seed = [string](Get-Random -Minimum 1 -Maximum 2147483647) }
+          $env:TABFORGE_FUZZ_COUNT = $count
+          $env:TABFORGE_FUZZ_SEED = $seed
+          $env:TABFORGE_FUZZ_SAVE_DIR = Join-Path $PWD 'fuzz-failures'
+          $line = "fuzz: $count inputs per format, seed $seed"
+          $line
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "### $line"
+          $log = Join-Path $PWD 'fuzz.log'
+          $exe = Join-Path $PWD 'src/TabForge/bin/Release/net8.0-windows/TabForge.exe'
+          # --require fuzz: the group must run, never be skipped. TabForge.exe is a GUI-subsystem program: start it and wait.
+          $p = Start-Process -FilePath $exe -ArgumentList @('--selftest', "`"$log`"", '--areas', 'fuzz', '--require', 'fuzz') -Wait -PassThru
+          "self-test exit code: $($p.ExitCode)"
+          if (-not (Test-Path -LiteralPath $log)) { Write-Error 'fuzz log was not written'; exit 2 }
+          Select-String -Path $log -Pattern 'fuzz|^\s+FAIL\s|self-test:' | ForEach-Object { $_.Line }
+          Select-String -Path $log -Pattern 'fuzz \[|self-test:' | ForEach-Object { Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "- $($_.Line.Trim())" }
+          if ($p.ExitCode -ne 0) { exit $p.ExitCode }
+          if (-not (Select-String -Path $log -Pattern '^TabForge self-test: \d+ passed, 0 failed' -Quiet)) {
+            Write-Error 'fuzz log does not report 0 failed'; exit 1
+          }
+
+      - name: Upload fuzz log
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: fuzz-log
+          path: fuzz.log
+          if-no-files-found: warn
+
+      - name: Upload failing inputs
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: fuzz-failures
+          path: fuzz-failures
+          if-no-files-found: ignore

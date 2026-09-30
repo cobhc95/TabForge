@@ -1,4 +1,4 @@
-# TabForge 0.3.0 Beta 1
+# TabForge 0.3.0 Beta 2
 
 **A keyboard-driven tablature and notation editor for Windows. Opens and saves Guitar Pro files.** Write, import and play back guitar,
 bass, drum and keyboard parts, with a live fretboard / keyboard, an arrangement timeline, audio and MIDI
@@ -9,7 +9,7 @@ recording lanes, mixer groups, VST effects and instruments, and offline audio re
 *The main screenshot shows TabForge's own demo song and a third-party VST3 plug-in (Superior Drummer 3 by Toontrack, sold separately) as an example of plug-in hosting. TabForge does not include that plug-in and is not affiliated with Toontrack.*
 
 > [!WARNING]
-> **TabForge 0.3.0 Beta 1 is a pre-release.** No bugs are known at the moment, but extensive testing is still
+> **TabForge 0.3.0 Beta 2 is a pre-release.** No bugs are known at the moment, but extensive testing is still
 > ongoing, so expect surprises. Keep backups of your projects and your original Guitar Pro files, especially
 > before using recording or third-party plug-ins.
 
@@ -19,7 +19,7 @@ TabForge is an independent project. Guitar Pro is a trademark of Arobas Music; T
 
 Get the latest build from [Releases](https://github.com/cobhc95/TabForge/releases):
 
-**0.3.0 Beta 1 downloads:** [Windows installer](https://github.com/cobhc95/TabForge/releases/download/v0.3.0-beta.1/TabForge-0.3.0-beta.1-setup.exe) · [Portable ZIP](https://github.com/cobhc95/TabForge/releases/download/v0.3.0-beta.1/TabForge-0.3.0-beta.1-win-x64-portable.zip) · [SHA-256 checksums](https://github.com/cobhc95/TabForge/releases/download/v0.3.0-beta.1/TabForge-0.3.0-beta.1-SHA256.txt)
+**0.3.0 Beta 2 downloads:** [Windows installer](https://github.com/cobhc95/TabForge/releases/download/v0.3.0-beta.2/TabForge-0.3.0-beta.2-setup.exe) · [Portable ZIP](https://github.com/cobhc95/TabForge/releases/download/v0.3.0-beta.2/TabForge-0.3.0-beta.2-win-x64-portable.zip) · [SHA-256 checksums](https://github.com/cobhc95/TabForge/releases/download/v0.3.0-beta.2/TabForge-0.3.0-beta.2-SHA256.txt)
 
 Installer, portable ZIP, SHA-256 checksums and release notes are on the [Releases page](https://github.com/cobhc95/TabForge/releases).
 

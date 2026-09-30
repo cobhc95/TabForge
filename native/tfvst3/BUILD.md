@@ -104,11 +104,15 @@ Because of 1 and 2, the check that is meaningful is "same size, same code and da
 path-hashed names", not equal hashes. A future release could make the build reproducible by building from a fixed
 folder with `/Brepro` (`-DCMAKE_SHARED_LINKER_FLAGS=/Brepro -DCMAKE_CXX_FLAGS=/Brepro`); that changes the DLL,
 so it is not done for the current file. The workflow `windows-ci.yml` builds the bridge from the pinned SDK on
-every run and reports the hash comparison and the number of differing bytes; it never fails on a mismatch.
+every run and runs `tools/Compare-NativeBridge.ps1`: it parses the PE headers, masks the link timestamps (COFF header,
+export, resource and debug directories), the PDB identity (GUID, path, checksum) and the `?A0x<hash>` source-path hash
+names, reports how many bytes differed in each category, and fails only when a byte outside those categories (or the
+size) differs.
 
 **Release builds.** Releases ship the checked-in DLL, in the local build and in the GitHub Actions build alike, so both
-carry the same bridge. The workflow `build-bridge.yml` (run by hand whenever the bridge source or the SDK pin
-changes) builds the bridge from the pinned SDK on the runner with `native/build-tfvst3.ps1`, attests it, and uploads
+carry the same bridge; the CI rebuild above is a check, not the source of the shipped file. The workflow
+`build-bridge.yml` (run by hand whenever the bridge source or the SDK pin changes; the maintainer then commits its DLL
+and `native/BUILD_PROVENANCE.md` as they are) builds the bridge from the pinned SDK on the runner with `native/build-tfvst3.ps1`, attests it, and uploads
 `tfvst3.dll` together with `native/BUILD_PROVENANCE.md` (compiler and SHA-256). Those two files are committed as they
 are. `tools/Package-Release.ps1` refuses to package if the DLL's SHA-256 differs from the record. The release is then
 reproducible: see `docs/REPRODUCIBLE_BUILDS.md`.

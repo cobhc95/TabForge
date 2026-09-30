@@ -2,7 +2,7 @@
   <!-- Build settings shared by every TabForge project (app, audio engine, contracts), so they cannot drift. -->
   <PropertyGroup>
     <!-- Release version: the one place it is set. Shown in About/Settings, stamped into every assembly and the installer. -->
-    <Version>0.3.0-beta.1</Version>
+    <Version>0.3.0-beta.2</Version>
     <Nullable>enable</Nullable>
     <!-- Hygiene: a warning is a build failure, so the tree stays at zero warnings. -->
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
@@ -14,6 +14,9 @@
     <Deterministic>true</Deterministic>
     <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
     <!-- Reproducible, machine-neutral binaries: source and PDB paths are recorded relative to the repository root. -->
+    <!-- The version string carries no git commit id, so a build of the same source is byte-identical whichever
+         repository clone (and commit id) it was built from. -->
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <PathMap>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)'))=/_/</PathMap>
   </PropertyGroup>
 </Project>

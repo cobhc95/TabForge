@@ -141,6 +141,47 @@ public static partial class SelfTest
             Check("import containment: a failed import applies nothing and reports its error",
                 !failApplied && failError is InvalidDataException { Message: "broken" } && failQueue.Pending.Count == 0);
 
+            // A6-04: six imports at once run at most two at a time and apply in start order; Cancel all drops the waiting ones.
+            var running = 0;
+            var peak = 0;
+            var opens = 0;
+            var poolQueue = new ScoreImportQueue(path =>
+            {
+                Interlocked.Increment(ref opens);
+                var now = Interlocked.Increment(ref running);
+                int seen;
+                while ((seen = Volatile.Read(ref peak)) < now && Interlocked.CompareExchange(ref peak, now, seen) != seen) { }
+                Thread.Sleep(150);
+                Interlocked.Decrement(ref running);
+                return controller.Open(path);
+            });
+            var order = new List<int>();
+            var poolJobs = Enumerable.Range(0, 6).Select(i => poolQueue.Start(gp, (_, _) => order.Add(i), (_, _) => order.Add(-1 - i))).ToArray();
+            var pendingAtStart = poolQueue.Pending.Count;
+            PumpUntil(() => poolJobs.All(j => j.Completion.IsCompleted), 20_000);
+            Check("import containment: six simultaneous imports never run more than two at once and all apply in order",
+                pendingAtStart == 6 && peak == 2 && opens == 6 && order.SequenceEqual(Enumerable.Range(0, 6)) && poolQueue.Pending.Count == 0,
+                $"peak {peak}, opens {opens}, order [{string.Join(",", order)}]");
+
+            opens = 0;
+            var cancelPoolQueue = new ScoreImportQueue(path =>
+            {
+                Interlocked.Increment(ref opens);
+                for (var i = 0; i < 100; i++) { ImportGuard.CheckCurrent(); Thread.Sleep(10); }
+                return controller.Open(path);
+            });
+            var cancelPoolApplied = 0;
+            var cancelPoolReported = 0;
+            var cancelPoolJobs = Enumerable.Range(0, 5).Select(_ => cancelPoolQueue.Start(gp, (_, _) => cancelPoolApplied++,
+                (_, error) => { if (error is null) cancelPoolReported++; })).ToArray();
+            PumpUntil(() => Volatile.Read(ref opens) >= 2, 5_000);
+            cancelPoolQueue.CancelAll();   // what closing the window does
+            PumpUntil(() => cancelPoolJobs.All(j => j.Completion.IsCompleted), 5_000);
+            PumpUntil(() => false, 200);
+            Check("import containment: Cancel all ends the running imports and the waiting ones never start",
+                cancelPoolJobs.All(j => j.Completion.IsCompleted) && cancelPoolApplied == 0 && cancelPoolReported == 5 &&
+                opens == 2 && cancelPoolQueue.Pending.Count == 0, $"opens {opens}, applied {cancelPoolApplied}, reported {cancelPoolReported}");
+
             // A synthetic slow import (like a long alphaTab parse: no cooperative checks) must not block the calling thread.
             var slowQueue = new ScoreImportQueue(path => { Thread.Sleep(600); return controller.Open(path); });
             var ticks = 0;
