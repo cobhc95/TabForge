@@ -87,7 +87,19 @@ jobs:
       # files, and requires everything else to be identical. Exits 1 when a difference falls outside those categories.
       - name: Compare with the checked-in DLL (PE-aware)
         shell: pwsh
-        run: ./tools/Compare-NativeBridge.ps1 -Built 'C:\tfb\Release\tfvst3.dll' -Shipped 'src/TabForge.AudioEngine/native/tfvst3.dll' -SummaryPath $env:GITHUB_STEP_SUMMARY
+        run: |
+          # Strict only when this runner's compiler is the one that built the shipped DLL; a runner image update changes the
+          # compiler, and then the comparison is reported as a warning until the bridge is rebuilt with build-bridge.yml.
+          $recorded = (Select-String -Path native/BUILD_PROVENANCE.md -Pattern 'Compiler: MSVC (\S+)').Matches | Select-Object -First 1 | ForEach-Object { $_.Groups[1].Value }
+          $current = (Select-String -Path 'C:\tfb\CMakeCache.txt' -Pattern 'CMAKE_CXX_COMPILER_VERSION:\w+=(\S+)' -ErrorAction SilentlyContinue).Matches | Select-Object -First 1 | ForEach-Object { $_.Groups[1].Value }
+          ./tools/Compare-NativeBridge.ps1 -Built 'C:\tfb\Release\tfvst3.dll' -Shipped 'src/TabForge.AudioEngine/native/tfvst3.dll' -SummaryPath $env:GITHUB_STEP_SUMMARY
+          if ($LASTEXITCODE -ne 0) {
+            if ($recorded -and $current -and $recorded -ne $current) {
+              Write-Output "::warning::Bridge differs, but the runner compiler ($current) is not the one that built the shipped DLL ($recorded). Rebuild it with the build-bridge workflow."
+              exit 0
+            }
+            exit $LASTEXITCODE
+          }
 
       - name: Upload the built DLL
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
