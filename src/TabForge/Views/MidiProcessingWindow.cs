@@ -167,6 +167,25 @@ public sealed class MidiProcessingWindow : Window
         _search.Focus();
     }
 
+    // Capture hooks (--capture scripts only): build a processor list and type a search without a mouse.
+    internal void CaptureAdd(string type)
+    {
+        if (MidiProcessorCatalog.Find(type) is not { } info) throw new InvalidOperationException($"unknown MIDI processor '{type}'");
+        var created = MidiProcessorCatalog.Create(info);
+        Procs.Add(created);
+        RefreshList(Procs.IndexOf(created));
+    }
+    internal void CaptureSelect(int index) { if (index >= 0 && index < _list.Items.Count) _list.SelectedIndex = index; }
+    internal void CaptureSearch(string text) => _search.Text = text;
+    internal void CaptureParam(string key, double value)
+    {
+        if (Selected is not { } proc || MidiProcessorCatalog.Find(proc.Type) is not { } info) throw new InvalidOperationException("no processor selected");
+        var values = MidiProcessorCatalog.ParseParams(proc, info);
+        values[key] = value;
+        Store(proc, values);
+        ShowSelected();
+    }
+
     private List<PluginMidiProcessor> Procs => _slot.MidiProcessors;
     private PluginMidiProcessor? Selected => _list.SelectedItem is ListBoxItem { Tag: PluginMidiProcessor p } ? p : null;
 

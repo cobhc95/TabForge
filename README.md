@@ -63,6 +63,10 @@ A `licenses/` folder beside `TabForge.exe` (portable zip and installer) holds th
 
 - **Type exact knob values.** Double-click, right-click or press F2 on any round knob and type "-6 dB", "75%", "L30" and so on. Ctrl+click resets.
 - **Sound that never goes silent.** If a VST instrument stops playing (FX off, bypassed, removed, crashed or missing), the track falls back to the built-in General MIDI sound. Renders pass through a transparent safety limiter, and crashed plug-ins can be **allowed again**.
+- **Plug-ins switched off after a crash** can be allowed again from the FX chain window or from Preferences.
+
+  ![Allow again](docs/screenshots/fx-allow-again.png)
+
 - **Keyboard and menus.** Every menu shows your current shortcut. Section, bar, track and speed shortcuts all work, tooltips wrap and show their shortcut, Shift+F10 or the Menu key opens the right-click menu in the score, timeline and fretboard, and Esc closes dialogs.
 - **Engraving.** The real clef on every system, harmonics at the fretted pitch, full flags, slide strokes and slurs on the staff, standard strum arrows, ledger lines matched to the staff lines, proper repeat-bar (simile) signs, volta brackets, system heights that fit 7- and 8-string tracks, a tighter tab-only view, and thousands fewer overlapping symbols.
 
@@ -105,6 +109,52 @@ A `licenses/` folder beside `TabForge.exe` (portable zip and installer) holds th
   - Over 3,600 automated checks run on every build.
 
 The full list is in the [0.5 release notes](https://github.com/cobhc95/TabForge/releases/tag/v0.5.0).
+
+## MIDI processing: shape the MIDI before it reaches your instruments
+
+Every plug-in slot has its own **MIDI processing** chain. Open it with the **MIDI…** button in the FX chain. Processors run top to bottom, before the plug-in, on everything it plays: the song, live keys and other tracks routed to it. On an effect plug-in, they shape the MIDI that plug-in and the ones after it receive.
+
+![MIDI processing chain](docs/screenshots/midi-processing-overview.png)
+
+- **Velocity:**
+  - **Velocity** scales and offsets the incoming velocity, or sets it to a fixed value.
+  - Its compressor mode has min/max limits, randomness and a dry/wet mix. It can be limited to an input velocity range.
+  - **Velocity variation** adds accent patterns.
+- **Pitch:**
+  - **Transpose** (±64 semitones).
+  - **Note map**, for drum maps, with overrides.
+  - **Snap to scale / key**.
+  - **Chord**: fixed intervals or in key, up to four voices.
+- **Timing:**
+  - **Humanizer**: timing and velocity randomness, bias and base delay.
+  - **MIDI delay**, in milliseconds, beats or samples.
+- **Filtering and routing:**
+  - **Channel filter / remap** (a 16-row table with solo) and **Channel router**.
+  - **Note range filter**.
+  - **Choke** and **Choke group**.
+  - **Duplicate-note sanitizer** and **Note hold**.
+- **Controllers:**
+  - **Program / bank select**.
+  - **CC sender** and **CC mapper**.
+  - **LFO** to any CC or the pitch wheel: sine, triangle, saw, square or sample-and-hold.
+- **Generators:**
+  - **Note repeater** and **Arpeggiator**.
+  - Note, modal and scale/pattern **randomizers**.
+  - **Step sequencer**.
+- **Audio-coupled:**
+  - **Audio to MIDI drum trigger** and **MIDI EQ ducker**.
+  - **Loop sampler** and **Synchronized looper**.
+- **Utilities:** **All notes off / Panic** and a live **MIDI log**.
+
+![Velocity processor](docs/screenshots/midi-processing-velocity.png)
+
+**Every parameter is searchable.** One search box finds processors by name, description or keyword, and finds individual parameters ("Processor › Parameter"). Press Enter to add the processor, or jump straight to the parameter, which is highlighted on the processor already in your chain. Most processors can be limited to some notes ("only these notes" or "all except these") and to an input channel.
+
+A note-off always follows its note-on, so nothing hangs. Each processor can be bypassed, reordered by dragging, and set precisely by typing into its knobs. Whole chains save as **presets**: built-in ones such as "Humanize light", and your own.
+
+![Searching processors and parameters](docs/screenshots/midi-processing-search.png)
+
+![MIDI routed into an instrument plug-in](docs/screenshots/midi-routing.png)
 
 ## Why it exists
 

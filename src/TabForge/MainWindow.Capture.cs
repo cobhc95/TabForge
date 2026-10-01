@@ -190,6 +190,17 @@ public partial class MainWindow
                 case "context": ShowContext(value.GetString() ?? ""); await _w.Settle(300); break;
                 case "dump": DumpSong(); break;
                 case "example-plugins": ExampleSlots(); _w.RefreshTracks(); await _w.Settle(400); break;
+                case "quarantine-example":   // the next FX chain window shows the "Switched off after a crash ... Allow again" state for the example instrument
+                {
+                    var path = _w.SelectedTrack?.Rig.Plugins.FirstOrDefault(p => p.Name == "Example instrument")?.Path ?? throw new InvalidOperationException("no example instrument (use example-plugins first)");
+                    _w._settings.Plugins.Quarantined.Add(path);
+                    _cleanup.Add(() => _w._settings.Plugins.Quarantined.Remove(path));
+                    break;
+                }
+                case "midi-add": foreach (var type in value.ValueKind == JsonValueKind.Array ? value.EnumerateArray().Select(e => e.GetString() ?? "") : new[] { value.GetString() ?? "" }) MidiWindow().CaptureAdd(type); await _w.Settle(300); break;
+                case "midi-select": MidiWindow().CaptureSelect(value.GetInt32()); await _w.Settle(300); break;
+                case "midi-search": MidiWindow().CaptureSearch(value.GetString() ?? ""); await _w.Settle(300); break;
+                case "midi-param": MidiWindow().CaptureParam(value[0].GetString() ?? "", value[1].GetDouble()); await _w.Settle(300); break;
                 case "popup": ShowPopup(value.GetString() ?? ""); break;
                 case "solo": _w._project.Tracks[value.GetInt32()].Solo = true; _w.RefreshTracks(); await _w.Settle(300); break;
                 case "wait": await _w.Settle(value.GetInt32()); break;
@@ -383,6 +394,9 @@ public partial class MainWindow
 
         private PreferencesWindow? _prefs;
 
+        private MidiProcessingWindow MidiWindow() =>
+            _tools.GetValueOrDefault("MidiProcessing") as MidiProcessingWindow ?? throw new InvalidOperationException("open the MidiProcessing window first");
+
         private void OpenTool(string name, Dictionary<string, JsonElement> args)
         {
             var w = _w;
@@ -395,7 +409,7 @@ public partial class MainWindow
                 switch (name.ToLowerInvariant())
                 {
                     case "mixer": Adopt(new MixerWindow(w, w) { Width = 1180, Height = 560 }); break;
-                    case "render": Adopt(new RenderWindow(new RenderContext { Project = w._project, Settings = w._settings }, w)); break;
+                    case "render": w._settings.Render.Directory = "Renders"; Adopt(new RenderWindow(new RenderContext { Project = w._project, Settings = w._settings }, w)); break;
                     case "preferences":
                         _page = args.TryGetValue("page", out var page) ? page.GetString() : null;
                         PreferencesWindow.InitialCategory = _page;
@@ -445,8 +459,19 @@ public partial class MainWindow
         private (TabForge.Plugins.PluginSlot Instrument, TabForge.Plugins.PluginSlot Effect, TrackModel Track) ExampleSlots()
         {
             var track = _w.SelectedTrack ?? throw new InvalidOperationException("no track selected");
-            var instrument = new TabForge.Plugins.PluginSlot { Name = "Example instrument", Path = @"C:\Example\instrument.dll", Format = "VST2", Type = TabForge.Plugins.PluginSlotType.Instrument };
-            var effect = new TabForge.Plugins.PluginSlot { Name = "Example effect", Path = @"C:\Example\effect.dll", Format = "VST2", Wet = 80 };
+            var existingInstrument = track.Rig.Plugins.FirstOrDefault(p => p.Name == "Example instrument");
+            var existingEffect = track.Rig.Plugins.FirstOrDefault(p => p.Name == "Example effect");
+            if (existingInstrument is not null && existingEffect is not null) return (existingInstrument, existingEffect, track);   // later steps reuse the same two slots
+            // Placeholder files in the capture folder, approved, so the slots look trusted (no "Blocked" message with a path).
+            var folder = Path.Combine(_out, "example");
+            Directory.CreateDirectory(folder);
+            var instrumentPath = Path.Combine(folder, "Example instrument.dll");
+            var effectPath = Path.Combine(folder, "Example effect.dll");
+            File.WriteAllText(instrumentPath, "placeholder"); File.WriteAllText(effectPath, "placeholder");
+            TabForge.Plugins.PluginTrust.Approve(_w._settings.Plugins, instrumentPath);
+            TabForge.Plugins.PluginTrust.Approve(_w._settings.Plugins, effectPath);
+            var instrument = new TabForge.Plugins.PluginSlot { Name = "Example instrument", Path = instrumentPath, Format = "VST2", Type = TabForge.Plugins.PluginSlotType.Instrument };
+            var effect = new TabForge.Plugins.PluginSlot { Name = "Example effect", Path = effectPath, Format = "VST2", Wet = 80 };
             track.Rig.Plugins.Add(instrument);
             track.Rig.Plugins.Add(effect);
             _cleanup.Add(() => { track.Rig.Plugins.Remove(effect); track.Rig.Plugins.Remove(instrument); });
