@@ -152,6 +152,7 @@ public partial class MainWindow
             ? s.Editing.DefaultDuration : 4;
         Editor.AutoAdvanceAfterEntry = s.Editing.AutoAdvance;
         Editor.ReversePlusMinusDuration = s.Editing.ReversePlusMinusDuration;
+        HotkeyCatalog.ReverseDurationKeys = s.Editing.ReversePlusMinusDuration;   // the default keys of Longer / Shorter swap with it
         Editor.PreventBarOverflow = s.Editing.PreventBarOverflow;
         _metronome = s.Audio.Metronome;
         _countIn = s.Audio.CountIn;
@@ -192,7 +193,6 @@ public partial class MainWindow
         Editor.HoverColor = ParseColour(s.Appearance.HoverColour, Color.FromRgb(0x98, 0xA1, 0xAE));
         Editor.HoverHighlightIntensity = Math.Clamp(s.Appearance.HoverHighlightIntensity, 0, 1);
         Editor.SelectionHighlightIntensity = Math.Clamp(s.Appearance.SelectionHighlightIntensity, 0, 1);
-        Editor.LedgerLineOpacity = Math.Clamp(s.Appearance.LedgerLineOpacity, 0, 1);
         Editor.ShowBarNumbers = s.Appearance.ShowScoreBarNumbers;
         Editor.BarNumberFrequency = Math.Clamp(s.Appearance.ScoreBarNumberFrequency, 1, 16);
         Editor.ShowSectionHeadings = s.Appearance.ShowSectionHeadings;
@@ -219,6 +219,15 @@ public partial class MainWindow
             if (_mainWindowInitialized) RefreshMarkers(); // section colours are resolved when the list is built
         }
         Arrangement.AnimateSectionDragging = s.Timeline.SectionDragAnimation;
+        // Timeline appearance (Preferences rows; the View menu keeps the two note-drawing toggles in step).
+        Arrangement.ShowContinuousBlocks = s.Timeline.ShowContinuousLine;
+        Arrangement.ShowIndividualNotes = s.Timeline.ShowIndividualNotes && !s.Timeline.ShowContinuousLine;
+        Arrangement.HideEmptyTimelineGrid = s.Timeline.HideEmptyGrid;
+        Arrangement.ShowBarGlow = s.Timeline.BarGlow;
+        Arrangement.PlayheadStyle = s.Timeline.PlayheadStyle;
+        ArrangementIndividualNotesMenu.IsChecked = Arrangement.ShowIndividualNotes;
+        ArrangementContinuousBlocksMenu.IsChecked = Arrangement.ShowContinuousBlocks;
+        if (_mainWindowInitialized) ApplyInstrumentSizeLock();   // "Lock fretboard size" is a Preferences row too
         SetSectionGlowResources(Arrangement.SectionGlowIntensity);
         ApplyIconSize(s.Appearance.IconSize); // UI scale is applied to the whole window by ThemeService
 
@@ -347,7 +356,11 @@ public partial class MainWindow
     {
         _hotkeyMap = HotkeyCatalog.BuildMap(_settings.Hotkeys);
         _clipHotkeyMap = HotkeyCatalog.BuildMap(_settings.Hotkeys, clipContext: true);
+        RefreshMenuGestures();
     }
+
+    /// <summary>The key text beside every main-menu item, read from the live bindings (blank when the command is unbound).</summary>
+    private void RefreshMenuGestures() => MenuHotkey.Apply(MainMenu, MenuKey);
 
     /// <summary>Runs a catalogued command. Returns false when this window has no handler for it.</summary>
     private bool RunHotkey(string id)
@@ -370,6 +383,11 @@ public partial class MainWindow
             case "File.Render": Render_Click(this, args); return true;
             case "File.CancelImport": CancelImport_Click(this, args); return true;
             case "File.ExportPdf": ExportPdf_Click(this, args); return true;
+            case "File.ExportMidi": ExportMidi_Click(this, args); return true;
+            case "File.ExportAscii": ExportAscii_Click(this, args); return true;
+            case "File.ProjectSettings": ProjectSettings_Click(this, args); return true;
+            case "Transport.Metronome": Metronome_Click(this, args); return true;
+            case "Transport.CountIn": CountIn_Click(this, args); return true;
             case "File.ExportMusicXml": ExportMusicXml_Click(this, args); return true;
             case "App.CommandPalette": CommandPalette_Click(this, args); return true;
             case "File.PrintPreview": PrintPreview_Click(this, args); return true;
@@ -407,9 +425,20 @@ public partial class MainWindow
             case "Section.Add": AddSectionAt(Editor.SelectedMeasure); return true;
             case "View.InstrumentView": CycleInstrumentView(); return true;
             case "Tools.ScaleFinder": OpenScaleFinder(); return true;
+            case "Tools.Transpose": Transpose_Click(this, args); return true;
             case "Tools.Tuner": Tuner_Click(this, args); return true;
             case "View.ClearScale": ClearScaleHighlight(); return true;
+            case "View.ScaleHighlightBrighter":
+            case "View.ScaleHighlightDimmer":
+            {
+                var step = id =="View.ScaleHighlightBrighter" ? ScaleHighlightStyles.StrengthStep : -ScaleHighlightStyles.StrengthStep;
+                _settings.Editing.ScaleHighlightStrength = Math.Clamp(_settings.Editing.ScaleHighlightStrength + step, ScaleHighlightStyles.MinStrength, ScaleHighlightStyles.MaxStrength);
+                SetInstrumentAppearance();
+                StatusText.Text = $"Scale highlight strength: {_settings.Editing.ScaleHighlightStrength}%";
+                return true;
+            }
             case "View.CycleStringSpacing": SetInstrumentAppearance(stringSpacing: FretStringSpacings.Next(_settings.Editing.FretStringSpacing)); StatusText.Text = $"Fretboard string spacing: {_settings.Editing.FretStringSpacing}"; return true;
+            case "View.CyclePlayheadStyle": _settings.Timeline.PlayheadStyle = PlayheadStyles.Next(_settings.Timeline.PlayheadStyle); Arrangement.PlayheadStyle = _settings.Timeline.PlayheadStyle; SaveSettings(); StatusText.Text = $"Playback position marker: {_settings.Timeline.PlayheadStyle}"; return true;
             case "View.Mixer": OpenMixer(); return true;
             case "View.SidePanel": ToggleSidePanel(); return true;
             case "View.InstrumentPanel": ToggleInstrumentPanel(); return true;
@@ -434,6 +463,8 @@ public partial class MainWindow
             case "Mixer.MonitorFx": OpenMonitorFx(); return true;
             case "Mixer.GroupFx": if (SelectedTrack is { } groupTrack) OpenBusFx(MixerGroups.GroupOf(_project, groupTrack)); return true;
             case "Track.MidiProcessing": OpenMidiProcessing(SelectedTrack); return true;
+            case "Help.Tutorial": Tutorial_Click(this, args); return true;
+            case "Help.TutorialDetailed": TutorialDetailed_Click(this, args); return true;
             case "Help.CheckForUpdates": _ = CheckForUpdatesAsync(manual: true); return true;
             case "Section.Edit": Section_Click(this, args); return true;
             case "Section.Previous": PrevSection_Click(this, args); return true;
@@ -456,50 +487,16 @@ public partial class MainWindow
         return false;
     }
 
-    /// <summary>Appends "(Ctrl+S)"-style hints to the toolbar buttons.</summary>
-    private readonly Dictionary<Button, string> _baseToolTips = new();
-
+    /// <summary>
+    /// Key bindings changed (rebind, preset, import): every control bound with <see cref="Views.TooltipShortcuts"/> in every
+    /// window shows the new key at once. Event-driven; nothing polls.
+    /// </summary>
     private void RefreshHotkeyTooltips()
     {
-        foreach (var (name, actionId) in ToolbarTooltipActions)
-        {
-            var button = FindButtonByAutomationName(this, name);
-            if (button is null) continue;
-            // Keep the button's own tooltip (remembered once, so repeated calls cannot stack the suffix).
-            if (!_baseToolTips.TryGetValue(button, out var text))
-                _baseToolTips[button] = text = button.ToolTip as string ?? HotkeyCatalog.ById(actionId)?.Name ?? name;
-            button.ToolTip = text + HotkeyCatalog.TooltipSuffix(_settings.Hotkeys, actionId);
-        }
-        AddSectionButton.ToolTip = "Add new section at the cursor bar" + HotkeyCatalog.TooltipSuffix(_settings.Hotkeys, "Section.Add");
+        Views.TooltipShortcuts.SetHotkeys(_settings.Hotkeys);
         // Palette tooltips carry their key too; rebuilt here so a rebind shows at once.
         foreach (var tool in AllPaletteTools())
             if (_paletteButtons.TryGetValue(tool.Id, out var palette)) palette.Button.ToolTip = PaletteToolTip(tool);
-    }
-
-    // Automation names of the toolbar buttons (as in MainWindow.xaml) and the command each one runs.
-    private static readonly (string Button, string Action)[] ToolbarTooltipActions =
-    {
-        ("Play or pause", "Transport.PlayPause"),
-        ("Stop playback", "Transport.Stop"),
-        ("Loop enable", "Transport.Loop"),
-        ("Settings", "App.Preferences"),
-        ("Next section", "Section.Next"),
-        ("Zoom in", "View.ZoomIn"),
-        ("Zoom out", "View.ZoomOut"),
-    };
-
-    private static Button? FindButtonByAutomationName(DependencyObject root, string name)
-    {
-        var count = VisualTreeHelper.GetChildrenCount(root);
-        for (var i = 0; i < count; i++)
-        {
-            var child = VisualTreeHelper.GetChild(root, i);
-            if (child is Button b && string.Equals(System.Windows.Automation.AutomationProperties.GetName(b), name, StringComparison.Ordinal))
-                return b;
-            var found = FindButtonByAutomationName(child, name);
-            if (found is not null) return found;
-        }
-        return null;
     }
 
     /// <summary>Parses "#RRGGBB", falling back to a sane default rather than throwing.</summary>
@@ -725,7 +722,7 @@ public partial class MainWindow
     {
         var dlg = new ThemedConfirmDialog(
             "About TabForge",
-            $"TabForge {AppInfo.DisplayVersion}\nTablature and notation workstation\n\nTabForge is an independent project. Guitar Pro is a trademark of Arobas Music; TabForge is not affiliated with, sponsored or endorsed by Arobas Music, Steinberg, Toontrack or any other company named in the app.\n\nBeta pre-release: expect some rough edges and keep backups of your files.\n\nMultitrack TAB + notation, durations/dots/triplets, rests/ties/fermata, repeats/endings/sections, chord/text/lyrics/markers, mixer with MIDI vol/pan/chorus/reverb, speed-trainer loop, metronome, fretboard, chord/scale finders, tuning reference, Guitar Pro 3/4/5/7 import, .gp (Guitar Pro 7/8) save, MIDI + ASCII export, VST2/VST3 plug-ins in a separate audio engine.",
+            $"TabForge {AppInfo.DisplayVersion}\nTablature and notation workstation\n\nTabForge is an independent project. Guitar Pro is a trademark of Arobas Music; TabForge is not affiliated with, sponsored or endorsed by Arobas Music, Steinberg, Toontrack or any other company named in the app.\n\nTabForge is under active development: keep backups of your files.\n\nMultitrack TAB + notation, durations/dots/triplets, rests/ties/fermata, repeats/endings/sections, chord/text/lyrics/markers, mixer with MIDI vol/pan/chorus/reverb, speed-trainer loop, metronome, fretboard, chord/scale finders, tuning reference, Guitar Pro 3/4/5/7 import, .gp (Guitar Pro 7/8) save, MIDI + ASCII export, VST2/VST3 plug-ins in a separate audio engine.",
             yesToolTip: "Close this window",
             noToolTip: "Open the third-party licence notices",
             showCancel: false,

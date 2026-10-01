@@ -38,7 +38,26 @@ internal sealed class StaffNotationMeasureLayout
     public required IReadOnlyList<StaffNotationTupletGroup> TupletGroups { get; init; }
     public required IReadOnlyList<StaffNotationTie> Ties { get; init; }
     public required IReadOnlyList<StaffNotationSlur> HopoSlurs { get; init; }
+    /// <summary>Short slanted strokes for shift, legato and slide-in / slide-out marks (the reference's slide lines).</summary>
+    public IReadOnlyList<StaffNotationSlideStroke> Slides { get; init; } = Array.Empty<StaffNotationSlideStroke>();
+    /// <summary>Voice 2: its markings go below the staff, voice 1's above.</summary>
+    public bool IsSecondVoice { get; init; }
+    /// <summary>Right edge of the key / time signature drawn at the bar start (the editor sets it; marks that reach back must stay right of it).</summary>
+    public double ContentLeft { get; set; } = double.NegativeInfinity;
+    /// <summary>Row stacking of the markings around this staff; shared by both voices of a bar (set by the editor, else private to the layout).</summary>
+    public MarkSkyline Skyline { get; set; } = new();
+    /// <summary>Voice 2 only: voice 1's layout of the same bar (set by the editor before drawing), so a fermata both voices hold can be drawn once in the TAB.</summary>
+    public StaffNotationMeasureLayout? FirstVoice { get; set; }
     public StaffNotationBeat? BeatForCell(int cellIndex) => Beats.FirstOrDefault(b => b.CellIndex == cellIndex);
+
+    /// <summary>Voice 2's beat holds a fermata that voice 1 also holds at the same onset.</summary>
+    internal bool FermataSharedWithFirstVoice(StaffNotationBeat beat)
+    {
+        if (!IsSecondVoice || FirstVoice is null || !beat.Cell.Fermata) return false;
+        foreach (var other in FirstVoice.Beats)
+            if (other.Cell.Fermata && Math.Abs(other.StartSlots - beat.StartSlots) < 0.001) return true;
+        return false;
+    }
 
     internal bool TryGetLedgerSegments(LedgerLineMode mode, out IReadOnlyList<StaffLedgerLineSegment> segments)
     {
@@ -129,11 +148,15 @@ internal sealed class StaffNotationTupletGroup
     public bool IsBeamed => BeamGroupIndex >= 0;
 }
 
+/// <param name="StartInset">How far right of X1 the arc starts (5 normally; more clears a ghost bracket after the first head).</param>
+/// <param name="EndInset">How far left of X2 the arc ends (5 normally; more stops short of a ghost bracket or a chord-mate's accidental).</param>
 internal readonly record struct StaffNotationTie(
-    double X1, double Y1, double X2, double Y2, bool Above, bool IsStub, bool TowardLeft);
+    double X1, double Y1, double X2, double Y2, bool Above, bool IsStub, bool TowardLeft, double StartInset = 5, double EndInset = 5);
+
+internal readonly record struct StaffNotationSlideStroke(double X1, double Y1, double X2, double Y2);
 
 internal readonly record struct StaffNotationSlur(
-    double X1, double Y1, double X2, double Y2, bool StemsUp);
+    double X1, double Y1, double X2, double Y2, bool StemsUp, double StartInset = 5, double EndInset = 5);
 
 /// <summary>
 /// Engraves score notation in four explicit stages: musical events and durations, metrical beam
@@ -145,10 +168,14 @@ internal sealed class StaffNotationRenderer
     private const double StemLength = 3.0 * StaffGap;
     private const double BeamThickness = 1.7;
     private const double BeamGap = 3.4;
-    private const double HeadRadiusX = StaffGap * 0.56;
+    internal const double HeadRadiusX = StaffGap * 0.56;
     private const double HeadRadiusY = StaffGap * 0.38;
     private const double MiddleLineOffset = 2 * StaffGap;
     private const double PositionEpsilon = 0.001;
+    /// <summary>How far a standard ledger line runs past the notehead on each side (the marks beside a ledger note clear it).</summary>
+    private const double LedgerOverhang = 3.5;
+    private static bool OnLedger(StaffNotationMeasureLayout layout, StaffNotationNote note) =>
+        note.Y < layout.StaffTop - 1 || note.Y > layout.StaffTop + 4 * StaffGap + 1;
     /// <summary>Imported tuplet beats sit on whole file ticks, so neighbours drift by a fraction of a slot from their exact ratio.</summary>
     private const double TupletTickSlack = 0.15;
 
@@ -202,12 +229,15 @@ internal sealed class StaffNotationRenderer
                 if (octaveTranspose == 0 && track?.Kind is TrackKind.Guitar or TrackKind.Bass) octaveTranspose = 12;
                 foreach (var note in cell.Notes)
                 {
-                    var soundingMidi = note.MidiValue > 0
-                        ? note.MidiValue
-                        : (track?.Kind is TrackKind.Guitar or TrackKind.Bass) &&
-                          note.StringIndex >= 0 && note.StringIndex < track.StringTunings.Count
-                            ? track.PitchOf(note.StringIndex, note.Fret)
-                            : 0;
+                    var fretted = (track?.Kind is TrackKind.Guitar or TrackKind.Bass) &&
+                                  note.StringIndex >= 0 && note.StringIndex < track.StringTunings.Count
+                        ? track.PitchOf(note.StringIndex, note.Fret)
+                        : 0;
+                    // Artificial, tap, pinch (pick) and semi (slap) harmonics are written at the fretted note with a diamond head, as in
+                    // the reference; their stored pitch is the much higher sounding harmonic. A natural harmonic keeps its stored pitch.
+                    var soundingMidi = IsWrittenAtFret(note.Techniques) && fretted > 0
+                        ? fretted
+                        : note.MidiValue > 0 ? note.MidiValue : fretted;
                     if (soundingMidi <= 0) continue;
                     var writtenMidi = soundingMidi + octaveTranspose;
                     var pitch = SpellPitch(writtenMidi, keyAlterations, keySignature);
@@ -259,8 +289,8 @@ internal sealed class StaffNotationRenderer
         var tuplets = BuildTupletGroups(beats, beamGroups);
         ResolveAccidentals(beats, keyAlterations);
         AssignAccidentalColumns(beats);
-        var ties = BuildTies(track, measureIndex, slots, beats, voiceIndex);
-        var slurs = BuildHopoSlurs(beats);
+        var ties = BuildTies(track, measureIndex, slots, beats, voiceIndex, staffTop);
+        var slurs = BuildHopoSlurs(beats, staffTop);
 
         return new StaffNotationMeasureLayout
         {
@@ -273,8 +303,129 @@ internal sealed class StaffNotationRenderer
             BeamSegments = beamSegments,
             TupletGroups = tuplets,
             Ties = ties,
-            HopoSlurs = slurs
+            HopoSlurs = slurs,
+            Slides = BuildSlideStrokes(track, measureIndex, voiceIndex, beats, staffTop),
+            IsSecondVoice = voiceIndex == 1
         };
+    }
+
+    /// <summary>Staff y of each sound of a drum beat, from the track's drum map (a beamed drum beat keeps a nominal MinY/MaxY).</summary>
+    internal static IEnumerable<double> DrumHeadYs(StaffNotationBeat beat)
+    {
+        foreach (var n in beat.Cell.Notes)
+        {
+            var entry = beat.DrumMap?.Invoke(n.MidiValue > 0 ? n.MidiValue : n.Fret);
+            yield return entry is null ? beat.MinY : beat.StaffTop + entry.StaffStep * StaffGap / 2;
+        }
+    }
+
+    /// <summary>Claims the notation's own ink (heads, accidentals, stems, flags, beams, grace notes) so every mark stacks outside it.</summary>
+    internal static void SeedSkyline(StaffNotationMeasureLayout layout)
+    {
+        var sky = layout.Skyline;
+        foreach (var beat in layout.Beats)
+        {
+            if (beat.IsRest)
+            {
+                // The rest glyph is ink too (a stack of flags on a 32nd/64th rest reaches well below the staff middle): marks stack outside it.
+                var duration = NormalizeDuration(beat.Cell.DurationDenominator);
+                var restTop = layout.StaffTop + StaffGap * (duration <= 2 ? (duration <= 1 ? 1.0 : 1.5) : 1.0);
+                var restBottom = duration <= 1 ? restTop + StaffGap * 0.5 : duration == 2 ? restTop + StaffGap * 0.5
+                    : duration == 4 ? layout.StaffTop + StaffGap + 18
+                    : layout.StaffTop + StaffGap * 1.1 + StaffGap * (1.5 + 0.9 * ((duration switch { 8 => 1, 16 => 2, 32 => 3, _ => 4 }) - 1));
+                sky.Claim(beat.CenterX - 6.5, beat.CenterX + 6.5 + (beat.Cell.Dots > 0 ? 4 + beat.Cell.Dots * 4 : 0), restTop - 1, restBottom + 1);
+                continue;
+            }
+            foreach (var c in GhostClusters(layout, beat))
+                sky.Claim(c.L - HeadRadiusX - 13 - c.Pad, c.R + HeadRadiusX + 8 + c.Pad, c.InkY - c.Half - 1, c.InkY + c.Half + 1);
+            foreach (var n in beat.Notes)
+            {
+                sky.Claim(n.X - HeadRadiusX - 2.2, n.X + HeadRadiusX + 2.2, n.Y - HeadRadiusY - 2.6, n.Y + HeadRadiusY + 2.6);   // the rotated (and outlined) head
+                // Ledger lines run from the staff to the head: that column is ink too.
+                var staffBottom = layout.StaffTop + 4 * StaffGap;
+                if (n.Y > staffBottom + 1) sky.Claim(n.X - HeadRadiusX - 3.5, n.X + HeadRadiusX + 3.5, staffBottom, n.Y + 1);
+                else if (n.Y < layout.StaffTop - 1) sky.Claim(n.X - HeadRadiusX - 3.5, n.X + HeadRadiusX + 3.5, n.Y - 1, layout.StaffTop);
+                for (var d = 0; d < Math.Clamp(beat.Cell.Dots, 0, 2); d++)
+                    sky.Claim(n.X + HeadRadiusX + 1.5 + d * 4, n.X + HeadRadiusX + 6 + d * 4, n.Y - 4.5, n.Y + 2);
+                if (n.Accidental is not null)
+                {
+                    var ax = AccidentalX(layout, beat, n);
+                    sky.Claim(ax - 4, ax + 4, n.Y - 8, n.Y + 8);
+                }
+            }
+            if (beat.IsDrum)
+                foreach (var y in DrumHeadYs(beat)) sky.Claim(beat.CenterX - 7, beat.CenterX + 7, y - 7, y + 7);
+            if (beat.Notes.Count > 0 && beat.Cell.Notes.Any(n => n.Techniques.Any(t => t is "ArpeggioDown" or "ArpeggioUp" or "BrushDown" or "BrushUp")))
+            {
+                // The arpeggio / brush line and its arrowhead left of the chord (head reaches 5.7 px past the line's end) are ink too.
+                var ax = beat.CenterX - 13 - (beat.Notes.Any(n => n.Accidental is not null) ? 8 : 0);
+                var ay1 = beat.Notes.Min(n => n.Y) - 4;
+                sky.Claim(ax - 3.5, ax + 3.5, ay1 - 6, Math.Max(beat.Notes.Max(n => n.Y) + 4, ay1 + 9) + 6);
+            }
+            if ((beat.Cell.Staccato || beat.Cell.Tenuto) && beat.Notes.Count > 0)
+            {
+                var below = !beat.HasStem || beat.StemUp;
+                if (below) sky.Claim(beat.CenterX - 4, beat.CenterX + 4, beat.MaxY + 6, beat.MaxY + 9 + (beat.Cell.Staccato && beat.Cell.Tenuto ? 9 : 3));
+                else sky.Claim(beat.CenterX - 4, beat.CenterX + 4, beat.MinY - 9 - (beat.Cell.Staccato && beat.Cell.Tenuto ? 9 : 3), beat.MinY - 6);
+            }
+            if (beat.HasStem)
+            {
+                var top = Math.Min(beat.StemStartY, beat.StemEndY);
+                var bottom = Math.Max(beat.StemStartY, beat.StemEndY);
+                sky.Claim(beat.StemX - 1, beat.StemX + 1, top, bottom);
+                if (beat.Flags > 0 && beat.BeamGroupIndex < 0)
+                    sky.Claim(beat.StemX - 0.5, beat.StemX + 8.5, beat.StemUp ? top : bottom - 15 - (beat.Flags - 1) * BeamGap, beat.StemUp ? top + 15 + (beat.Flags - 1) * BeamGap : bottom);
+                if (beat.LowerStemTopY is { } lowerTop) sky.Claim(beat.CenterX - 6, beat.CenterX - 4, lowerTop, beat.LowerStemEndY);
+            }
+            if (beat.GraceNotes.Count > 0)
+            {
+                var gy = beat.GraceNotes.Min(g => g.Y);
+                var gx = beat.CenterX - GraceOffset(beat, GhostRoom(layout.StaffTop, beat));   // where DrawGraceNotes puts the first grace head
+                sky.Claim(gx - 9 * Math.Min(3, beat.GraceNotes.Count) - 4, gx + 7, gy - 18, beat.GraceNotes.Max(g => g.Y) + 4);
+            }
+        }
+        foreach (var beam in layout.BeamSegments)
+            sky.Claim(Math.Min(beam.X1, beam.X2) - 0.5, Math.Max(beam.X1, beam.X2) + 0.5,
+                Math.Min(beam.Y1, beam.Y2) - BeamThickness, Math.Max(beam.Y1, beam.Y2) + BeamThickness);
+        foreach (var tie in layout.Ties)
+            if (!tie.IsStub) sky.Claim(tie.X1, tie.X2, Math.Min(tie.Y1, tie.Y2) - (tie.Above ? 21 : 0), Math.Max(tie.Y1, tie.Y2) + (tie.Above ? 0 : 21));
+            else
+            {
+                var sign = tie.TowardLeft ? -1.0 : 1.0;
+                var xa = tie.X1 + sign * 5; var xb = tie.X1 + sign * 13;
+                sky.Claim(Math.Min(xa, xb), Math.Max(xa, xb), tie.Y1 - (tie.Above ? 18 : 0), tie.Y1 + (tie.Above ? 0 : 18));
+            }
+    }
+
+    /// <summary>
+    /// A mark of <paramref name="height"/> and <paramref name="x0"/>..<paramref name="x1"/> stacked outside the notation ink:
+    /// above the staff (voice 1) or below it (voice 2), starting <paramref name="distance"/> from the staff edge.
+    /// Returns the top of the placed box.
+    /// </summary>
+    internal static double PlaceMark(StaffNotationMeasureLayout layout, double x0, double x1, double height, double distance)
+    {
+        if (layout.IsSecondVoice) return layout.Skyline.PlaceBelow(x0, x1, height, layout.StaffTop + 4 * StaffGap + distance);
+        return layout.Skyline.PlaceAbove(x0, x1, height, layout.StaffTop - distance);
+    }
+
+    /// <summary>A centred text mark claimed in the skyline; the glyph is drawn inside its box.</summary>
+    private static void DrawStackedText(DrawingContext dc, StaffNotationMeasureLayout layout, string text, double size, FontWeight? weight,
+        double cx, double distance, Brush brush)
+    {
+        var ft = MakeText(text, size, brush, weight);
+        var h = size * 0.95;
+        var top = PlaceMark(layout, cx - ft.Width / 2, cx + ft.Width / 2, h, distance);
+        TabForge.Visualization.Draw.DrawText(dc, ft, new Point(cx - ft.Width / 2, top + h / 2 - ft.Height / 2));
+    }
+
+    /// <summary>A centred text mark stacked below the staff (after the dynamics row).</summary>
+    private static void DrawStackedBelow(DrawingContext dc, StaffNotationMeasureLayout layout, string text, double size, FontWeight? weight,
+        double cx, double distance, Brush brush)
+    {
+        var ft = MakeText(text, size, brush, weight);
+        var h = size * 0.95;
+        var top = layout.Skyline.PlaceBelow(cx - ft.Width / 2, cx + ft.Width / 2, h, layout.StaffTop + 4 * StaffGap + distance);
+        TabForge.Visualization.Draw.DrawText(dc, ft, new Point(cx - ft.Width / 2, top + h / 2 - ft.Height / 2));
     }
 
     /// <summary>Draws glyphs and the already-resolved geometry; no rhythmic decisions happen here.</summary>
@@ -290,8 +441,7 @@ internal sealed class StaffNotationRenderer
         Color staffLineColor,
         LedgerLineMode ledgerLineMode,
         IReadOnlySet<(int bar, int cell, int s)> sounding,
-        IReadOnlySet<(int bar, int cell, int s)> struck,
-        double ledgerLineOpacity = 1)
+        IReadOnlySet<(int bar, int cell, int s)> struck)
     {
         if (Math.Abs(layout.StaffScale - 1.0) > 0.001)
             dc.PushTransform(new ScaleTransform(1, layout.StaffScale, 0, layout.StaffTop));
@@ -300,13 +450,15 @@ internal sealed class StaffNotationRenderer
         var faintBrush = RenderDraw.Solid(faint);
         var paperBrush = RenderDraw.Solid(paper);
 
-        DrawLedgerLines(dc, layout, staffLineColor, ledgerLineMode, ledgerLineOpacity);
+        DrawLedgerLines(dc, layout, staffLineColor, ledgerLineMode);
+        DrawTuplets(dc, layout, inkBrush);   // first: the brackets sit next to the notation, every other mark stacks outside them
 
         foreach (var beat in layout.Beats)
         {
             if (beat.IsRest)
             {
                 DrawRest(dc, beat.Cell, beat.CenterX, layout.StaffTop, inkBrush);
+                if (beat.Cell.Fermata) DrawStackedText(dc, layout, layout.IsSecondVoice ? "𝄑" : "𝄐", 12, null, beat.CenterX, 8, inkBrush);   // a held rest keeps its fermata (voice 2: inverted, below)
                 continue;
             }
 
@@ -360,30 +512,31 @@ internal sealed class StaffNotationRenderer
                 else dc.DrawEllipse(noteBrush, null, new Point(note.X, note.Y), HeadRadiusX, HeadRadiusY);
                 dc.Pop();
 
-                if (note.Source.Ghost)
-                {
-                    Draw(dc, "(", note.X - HeadRadiusX - 9, note.Y - 8, 13, noteBrush);
-                    Draw(dc, ")", note.X + HeadRadiusX + 1, note.Y - 8, 13, noteBrush);
-                }
-
                 DrawAugmentationDots(dc, beat.Cell, note, noteBrush);
                 if (note.Accidental is not null)
-                    DrawCentered(dc, note.Accidental, note.X - HeadRadiusX - 6.5 - note.AccidentalColumn * 10,
+                    DrawCentered(dc, note.Accidental, AccidentalX(layout, beat, note),
                         note.Y, 15, noteBrush);
             }
 
-            DrawGraceNotes(dc, beat, inkBrush);
+            foreach (var c in GhostClusters(layout, beat)) // ghost notes: one pair of brackets around each cluster of touching ghost heads
+            {
+                // The 13 px bracket is stretched vertically (a bigger font would also widen it into the heads and accidentals).
+                dc.PushTransform(new ScaleTransform(1, c.Half / GhostInkHalf, 0, c.InkY));
+                Draw(dc, "(", c.L - HeadRadiusX - GhostOpenGap - c.Pad, c.InkY - GhostInkCentre, 13, inkBrush);   // closer to the heads: clears accidentals and the previous beat's stem
+                Draw(dc, ")", c.R + HeadRadiusX + 1 + c.Pad, c.InkY - GhostInkCentre, 13, inkBrush);
+                dc.Pop();
+            }
+            DrawGraceNotes(dc, beat, inkBrush, GhostRoom(layout.StaffTop, beat));
             var harmonicCaption = beat.Notes.Select(n => TabEditorControl.HarmonicCaption(n.Source.Techniques)).FirstOrDefault(c => c.Length > 0);
             if (!string.IsNullOrEmpty(harmonicCaption)) // The reference: the caption sits below the staff
-                DrawCentered(dc, harmonicCaption, beat.CenterX, layout.StaffTop + 4 * StaffGap + 24, 8.5, inkBrush, FontWeights.SemiBold);
+                DrawStackedBelow(dc, layout, harmonicCaption, 8.5, FontWeights.SemiBold, beat.CenterX, 8, inkBrush);
             DrawBeatMarks(dc, layout, beat, inkBrush);
 
             var articulationY = layout.StaffTop + 4 * StaffGap + 4;
             if (beat.Cell.Accent != 0)
             {
                 // One mark above the notes: ">" accent, "^" heavy accent (marcato).
-                var topY = Math.Min(layout.StaffTop - 6, (beat.HasStem && beat.StemUp ? Math.Min(beat.StemEndY, beat.MinY) : beat.MinY) - 10);
-                DrawCentered(dc, beat.Cell.Accent == 2 ? "^" : ">", beat.CenterX, topY - 7, 10, inkBrush, FontWeights.Bold);
+                DrawStackedText(dc, layout, beat.Cell.Accent == 2 ? "^" : ">", 10, FontWeights.Bold, beat.CenterX, 8, inkBrush);
             }
             if ((beat.Cell.Staccato || beat.Cell.Tenuto) && beat.Notes.Count > 0)
             {
@@ -395,16 +548,16 @@ internal sealed class StaffNotationRenderer
                 if (beat.Cell.Staccato) { dc.DrawEllipse(inkBrush, null, new Point(beat.CenterX, headY), 1.5, 1.5); headY += step; }
                 if (beat.Cell.Tenuto) dc.DrawLine(dotPen, new Point(beat.CenterX - 3.5, headY), new Point(beat.CenterX + 3.5, headY));
             }
-            if (beat.Cell.Fermata) DrawCentered(dc, "𝄐", beat.CenterX, layout.StaffTop - 15, 12, inkBrush);
+            if (beat.Cell.Fermata) DrawStackedText(dc, layout, layout.IsSecondVoice ? "𝄑" : "𝄐", 12, null, beat.CenterX, 8, inkBrush);   // two voices: upright above and inverted below, as engraved
         }
 
         DrawStemsAndFlags(dc, layout, inkBrush);
         DrawBeams(dc, layout, inkBrush);
         DrawTremoloSlashes(dc, layout, inkBrush);
         DrawOctaveMarkings(dc, layout, inkBrush);
-        DrawTuplets(dc, layout, inkBrush);
-        DrawTies(dc, layout.Ties, inkBrush);
+        DrawTies(dc, layout.Ties, inkBrush, layout.ContentLeft);
         DrawHopoSlurs(dc, layout.HopoSlurs, inkBrush);
+        DrawSlideStrokes(dc, layout.Slides, inkBrush);
         if (Math.Abs(layout.StaffScale - 1.0) > 0.001) dc.Pop();
     }
 
@@ -418,12 +571,15 @@ internal sealed class StaffNotationRenderer
             if (first is null || last is null) return;
             var left = first.CenterX - 5;
             var right = last.CenterX + Math.Max(7, last.DurationSlots * layout.SlotWidth / 2);
-            var y = layout.StaffTop - 18;
             var label = first.Cell.OctaveShiftSemitones switch
             {
                 12 => "8va", -12 => "8vb", 24 => "15ma", _ => "15mb"
             };
-            Draw(dc, label, Math.Max(left, layout.OctaveLabelMinX), y - 12, 8.5, brush, FontWeights.SemiBold);
+            var labelLeft = Math.Max(left, layout.OctaveLabelMinX);
+            var labelWidth = MakeText(label, 8.5, brush, FontWeights.SemiBold).Width;
+            var boxTop = PlaceMark(layout, left - 2, Math.Max(right, labelLeft + labelWidth), 20, 6) + 3;   // the caption (drawn 1.5 px above the line row, taller than its box) is inside the claim
+            var y = boxTop + 13;
+            Draw(dc, label, labelLeft, boxTop - 1.5, 8.5, brush, FontWeights.SemiBold);
             dc.DrawLine(linePen, new Point(left, y), new Point(right, y));
             dc.DrawLine(linePen, new Point(left, y), new Point(left, y + 4));
             dc.DrawLine(linePen, new Point(right, y), new Point(right, y + 4));
@@ -453,6 +609,10 @@ internal sealed class StaffNotationRenderer
         _ => "𝅁"
     };
 
+    /// <summary>Harmonics the reference writes at the fretted pitch (not the sounding one): artificial, tap, pinch and semi.</summary>
+    internal static bool IsWrittenAtFret(IEnumerable<string> techniques) =>
+        techniques.Any(t => t is "ArtificialHarmonic" or "TapHarmonic" or "PinchHarmonic" or "SemiHarmonic");
+
     private static bool HasHarmonic(HashSet<string> techniques) =>
         techniques.Contains("Harmonic") || techniques.Contains("ArtificialHarmonic") ||
         techniques.Contains("PinchHarmonic") || techniques.Contains("TapHarmonic") ||
@@ -469,13 +629,46 @@ internal sealed class StaffNotationRenderer
         return (pre ? "P.B. " : "") + amount + (release ? " R" : "");
     }
 
+    /// <summary>How far left of the beat centre the first grace head sits: clear of the main notes' accidentals and ghost brackets.
+    /// <paramref name="ghostRoom"/> is <see cref="GhostRoom"/> for the beat.</summary>
+    internal static double GraceOffset(StaffNotationBeat beat, double ghostRoom)
+    {
+        var offset = 15.0;
+        if (beat.Notes.Count == 0) return offset;
+        var lead = beat.CenterX - beat.Notes.Min(n => n.X) + HeadRadiusX;
+        if (ghostRoom > 0) offset = Math.Max(offset, lead + ghostRoom + 13);   // the grace slash clears the "(" (its ink ends 10 px left of the head)
+        if (beat.Notes.Any(n => n.Accidental is not null))
+        {
+            var maxColumn = beat.Notes.Where(n => n.Accidental is not null).Max(n => n.AccidentalColumn);
+            offset = Math.Max(offset, lead + 6.5 + 4.5 + maxColumn * 10 + 4 + 4 + ghostRoom);
+        }
+        return offset;
+    }
+
+    /// <summary>Extra room ghost brackets take left of the chord (8 px, more beside a ledger line): accidentals and grace notes sit outside it.</summary>
+    internal static double GhostRoom(double staffTop, StaffNotationBeat beat)
+    {
+        var room = 0.0;
+        foreach (var n in beat.Notes)
+        {
+            if (!n.Source.Ghost) continue;
+            var ledger = n.Y < staffTop - 1 || n.Y > staffTop + 4 * StaffGap + 1;
+            room = Math.Max(room, 8 + (ledger ? GhostLedgerPad : 0));
+        }
+        return room;
+    }
+
+    /// <summary>The (up to three) grace notes in the order they are drawn right to left: the latest in time first.</summary>
+    internal static IReadOnlyList<StaffNotationNote> GraceDrawOrder(StaffNotationBeat beat) =>
+        beat.GraceNotes.OrderBy(g => g.Source.GraceOnsetOffsetSlots).Take(3).Reverse().ToList();
+
     /// <summary>Small slashed grace notes just before the main note (stem up, slash across the stem).</summary>
-    private static void DrawGraceNotes(DrawingContext dc, StaffNotationBeat beat, Brush brush)
+    private static void DrawGraceNotes(DrawingContext dc, StaffNotationBeat beat, Brush brush, double ghostRoom)
     {
         if (beat.GraceNotes.Count == 0) return;
         var pen = RenderDraw.Pen(brush, 0.8);
-        var x = beat.CenterX - 15;
-        foreach (var grace in beat.GraceNotes.OrderBy(g => g.Source.GraceOnsetOffsetSlots).Take(3))
+        var x = beat.CenterX - GraceOffset(beat, ghostRoom);
+        foreach (var grace in GraceDrawOrder(beat)) // latest grace nearest the main note, so they read left to right in time
         {
             var rx = HeadRadiusX * 0.72; var ry = HeadRadiusY * 0.72;
             dc.PushTransform(new RotateTransform(-20, x, grace.Y));
@@ -527,11 +720,13 @@ internal sealed class StaffNotationRenderer
         }
         if (techniques.Contains("Trill"))
         {
-            DrawCentered(dc, "tr", beat.CenterX - 5, layout.StaffTop - 24, 9, brush, FontWeights.SemiBold);
+            var trWidth = MakeText("tr", 9, brush, FontWeights.SemiBold).Width;
+            var trTop = PlaceMark(layout, beat.CenterX - 5 - trWidth / 2, beat.CenterX + 4 + 8 * 2.6 + 1, 15, 6);
+            DrawCentered(dc, "tr", beat.CenterX - 5, trTop + 4.5, 9, brush, FontWeights.SemiBold);
             var g = new StreamGeometry();
             using (var c = g.Open())
             {
-                var y = layout.StaffTop - 16;
+                var y = trTop + 12;
                 c.BeginFigure(new Point(beat.CenterX + 4, y), false, false);
                 for (var i = 1; i <= 8; i++) c.LineTo(new Point(beat.CenterX + 4 + i * 2.6, y + (i % 2 == 0 ? 0 : -2)), true, false);
             }
@@ -540,17 +735,16 @@ internal sealed class StaffNotationRenderer
         }
         if (techniques.Contains("WahClose") || techniques.Contains("WahOpen"))
         {
-            DrawCentered(dc, techniques.Contains("WahClose") ? "+" : "o", beat.CenterX, layout.StaffTop - 22, 10, brush, FontWeights.Bold);
+            DrawStackedText(dc, layout, techniques.Contains("WahClose") ? "+" : "o", 10, FontWeights.Bold, beat.CenterX, 8, brush);
             // The words appear where the pedal turns on, not on every beat of a run.
             var at = layout.Beats.ToList().IndexOf(beat);
             var previousHasWah = at > 0 && layout.Beats[at - 1].Cell.Notes.Any(n => n.Techniques.Contains("WahClose") || n.Techniques.Contains("WahOpen"));
-            if (!previousHasWah) DrawCentered(dc, "Wah-wah on", beat.CenterX, layout.StaffTop + 4 * StaffGap + 20, 8.5, brush);
+            if (!previousHasWah) DrawStackedBelow(dc, layout, "Wah-wah on", 8.5, null, beat.CenterX, 8, brush);
         }
         if (techniques.Contains("Tapping") || techniques.Contains("LeftTap"))
         {
             // Tapped notes carry a "+" above the notation.
-            var plusY = Math.Min(layout.StaffTop - 6, beat.MinY - 10) - 8 - (beat.Cell.Accent != 0 ? 10 : 0);
-            DrawCentered(dc, "+", beat.CenterX, plusY, 10, brush, FontWeights.Bold);
+            DrawStackedText(dc, layout, "+", 10, FontWeights.Bold, beat.CenterX, 8, brush);
         }
     }
 
@@ -965,6 +1159,37 @@ internal sealed class StaffNotationRenderer
         }
     }
 
+    /// <summary>Accidentals hang off the chord's leftmost head, so a head displaced to the left (seconds) never sits under an accidental.</summary>
+    private static double AccidentalX(StaffNotationMeasureLayout layout, StaffNotationBeat beat, StaffNotationNote note) =>
+        beat.Notes.Min(n => n.X) - HeadRadiusX - 6.5 - GhostRoom(layout.StaffTop, beat) - note.AccidentalColumn * 10;
+
+    private const double GhostLedgerPad = LedgerOverhang + 2;
+    /// <summary>Distance from a ghost cluster's first head to the "(" glyph's origin (its ink ends about 3.5 px from the head).</summary>
+    private const double GhostOpenGap = 8.5;
+    /// <summary>Ink of a 13 px bracket drawn at y: centre y + 10.5, half-height 5.6. A lone ghost head keeps the bracket's
+    /// historic 2.5 px drop; a cluster's brackets are centred on it and stretched to cover every head.</summary>
+    private const double GhostInkCentre = 10.5, GhostInkHalf = 5.6;
+
+    /// <summary>Clusters of ghost heads in one beat (heads closer than a bracket's height share one pair of brackets);
+    /// InkY/Half are the brackets' ink centre and half-height, Pad clears ledger lines.</summary>
+    private static List<(double L, double R, double InkY, double Half, double Pad)> GhostClusters(StaffNotationMeasureLayout layout, StaffNotationBeat beat)
+    {
+        var result = new List<(double, double, double, double, double)>();
+        var ghosts = beat.Notes.Where(n => n.Source.Ghost).OrderBy(n => n.Y).ToList();
+        for (var i = 0; i < ghosts.Count;)
+        {
+            var j = i;
+            while (j + 1 < ghosts.Count && ghosts[j + 1].Y - ghosts[j].Y < 13) j++;
+            var group = ghosts.GetRange(i, j - i + 1);
+            var span = group[^1].Y - group[0].Y;
+            var pad = group.Any(n => OnLedger(layout, n)) ? GhostLedgerPad : 0;
+            var mid = (group[0].Y + group[^1].Y) / 2;
+            result.Add((group.Min(n => n.X), group.Max(n => n.X), span > 0 ? mid : mid + 2.5, GhostInkHalf + span / 2, pad));
+            i = j + 1;
+        }
+        return result;
+    }
+
     private static void AssignAccidentalColumns(IReadOnlyList<StaffNotationBeat> beats)
     {
         foreach (var beat in beats)
@@ -980,8 +1205,37 @@ internal sealed class StaffNotationRenderer
         }
     }
 
+    /// <summary>A simile bar shows only its sign: no tie runs into it or out of it (the notes behind it are a copy kept for playback).</summary>
+    internal static bool IsSimileBar(TrackModel? track, int measureIndex) =>
+        track is not null && measureIndex >= 0 && measureIndex < track.Measures.Count && (track.Measures[measureIndex].SimileOneBar || track.Measures[measureIndex].SimileTwoBar);
+
+    /// <summary>
+    /// Where an arc between two heads starts and ends so it stays clear of the ink around them: a ghost bracket after the first head
+    /// and in front of the second, and the accidentals of the second beat that sit at about the arc's height. Returns (5, 5), the plain
+    /// head-to-head arc, when there is nothing to avoid or no room to avoid it in.
+    /// </summary>
+    internal static (double Start, double End) ArcInsets(StaffNotationBeat originBeat, StaffNotationNote origin,
+        StaffNotationBeat destBeat, StaffNotationNote dest, double staffTop)
+    {
+        double start = 5, end = 5;
+        if (origin.Source.Ghost) start = Math.Max(start, HeadRadiusX + 8 + (OnLedgerAt(staffTop, origin) ? GhostLedgerPad : 0));
+        if (dest.Source.Ghost) end = Math.Max(end, HeadRadiusX + GhostOpenGap + 1.5 + (OnLedgerAt(staffTop, dest) ? GhostLedgerPad : 0));
+        var room = GhostRoom(staffTop, destBeat);
+        var leftmost = destBeat.Notes.Min(n => n.X);
+        foreach (var other in destBeat.Notes)
+        {
+            if (other.Accidental is null || Math.Abs(other.Y - dest.Y) > 14) continue;
+            var accidentalLeft = leftmost - HeadRadiusX - 6.5 - room - other.AccidentalColumn * 10 - 4.5;
+            end = Math.Max(end, dest.X - accidentalLeft + 1.5);
+        }
+        // Too tight to stop short (the arc would turn back on itself): keep the plain head-to-head arc.
+        return dest.X - end - (origin.X + start) < 12 ? (5, 5) : (start, end);
+    }
+
+    private static bool OnLedgerAt(double staffTop, StaffNotationNote note) => note.Y < staffTop - 1 || note.Y > staffTop + 4 * StaffGap + 1;
+
     private static List<StaffNotationTie> BuildTies(TrackModel? track, int measureIndex, int measureSlots,
-        IReadOnlyList<StaffNotationBeat> beats, int voiceIndex)
+        IReadOnlyList<StaffNotationBeat> beats, int voiceIndex, double staffTop)
     {
         var ties = new List<StaffNotationTie>();
         foreach (var beat in beats.Where(b => b.Notes.Count > 0))
@@ -992,25 +1246,37 @@ internal sealed class StaffNotationRenderer
                 var previous = PreviousNoteInMeasure(beats, beat, note.Source, track);
                 if (previous is { } prior)
                 {
+                    var (start, end) = ArcInsets(prior.Beat, prior.Note, beat, note, staffTop);
                     ties.Add(new StaffNotationTie(prior.Note.X, prior.Note.Y, note.X, note.Y,
-                        Above: !beat.StemUp, IsStub: false, TowardLeft: false));
+                        Above: !beat.StemUp, IsStub: false, TowardLeft: false, StartInset: start, EndInset: end));
                 }
-                else if (beat.StartSlots < PositionEpsilon &&
+                else if (beat.StartSlots < PositionEpsilon && !IsSimileBar(track, measureIndex - 1) &&
                           FindAdjacentBarNote(track, measureIndex - 1, note.Source, track, voiceIndex) is { } barPrior)
                 {
-                    ties.Add(new StaffNotationTie(note.X, note.Y, note.X, note.Y,
+                    // The stub reaches left over the chord's accidentals and ghost bracket: start it beyond them.
+                    var stubX = note.X;
+                    var room = GhostRoom(staffTop, beat);
+                    var leftmost = beat.Notes.Min(n => n.X);
+                    foreach (var other in beat.Notes)
+                    {
+                        if (other.Accidental is null || Math.Abs(other.Y - note.Y) > 14) continue;
+                        stubX = Math.Min(stubX, leftmost - HeadRadiusX - 6.5 - room - other.AccidentalColumn * 10 - 4.5 + 4);
+                    }
+                    if (note.Source.Ghost) stubX = Math.Min(stubX, note.X - HeadRadiusX - GhostOpenGap - 1.5 - (OnLedgerAt(staffTop, note) ? GhostLedgerPad : 0) + 4);
+                    ties.Add(new StaffNotationTie(stubX, note.Y, stubX, note.Y,
                         Above: !beat.StemUp, IsStub: true, TowardLeft: true));
                 }
             }
 
-            if (track is null || measureIndex + 1 >= track.Measures.Count ||
+            if (track is null || measureIndex + 1 >= track.Measures.Count || IsSimileBar(track, measureIndex + 1) ||
                 beat.StartSlots + beat.DurationSlots < measureSlots - PositionEpsilon) continue;
             var next = NextNoteInMeasure(beats, beat, note.Source, track);
             if (next is not null) continue; // Same-measure destination draws the full tie above.
             var nextBar = FindAdjacentBarTieDestination(track, measureIndex + 1, note.Source, track, voiceIndex);
             if (nextBar is { } destination && destination.StartSlots < PositionEpsilon &&
                 (destination.Cell.IsTied || destination.Note.Tied))
-                ties.Add(new StaffNotationTie(note.X, note.Y, note.X, note.Y,
+                ties.Add(new StaffNotationTie(note.Source.Ghost ? note.X + HeadRadiusX + 3 + (OnLedgerAt(staffTop, note) ? GhostLedgerPad : 0) : note.X, note.Y,
+                    note.Source.Ghost ? note.X + HeadRadiusX + 3 + (OnLedgerAt(staffTop, note) ? GhostLedgerPad : 0) : note.X, note.Y,
                     Above: !beat.StemUp, IsStub: true, TowardLeft: false));
         }
         return ties;
@@ -1084,7 +1350,7 @@ internal sealed class StaffNotationRenderer
         => candidate.MidiValue == target.MidiValue &&
            (!UsesStringIdentity(track) || candidate.StringIndex == target.StringIndex);
 
-    private static List<StaffNotationSlur> BuildHopoSlurs(IReadOnlyList<StaffNotationBeat> beats)
+    private static List<StaffNotationSlur> BuildHopoSlurs(IReadOnlyList<StaffNotationBeat> beats, double staffTop)
     {
         var result = new List<StaffNotationSlur>();
         foreach (var beat in beats)
@@ -1100,10 +1366,63 @@ internal sealed class StaffNotationRenderer
                 .SelectMany(b => b.Notes.Select(n => (Beat: b, Note: n)))
                 .FirstOrDefault(pair => pair.Note.Source.StringIndex == note.Source.StringIndex &&
                                         pair.Note.Source.Techniques.Contains("HOPODestination"));
-            if (destination.Note is null || destination.Beat.CenterX - beat.CenterX < 18) continue;
-            result.Add(new StaffNotationSlur(note.X, note.Y, destination.Note.X, destination.Note.Y, beat.StemUp));
+            if (destination.Note is null) continue;
+            if (MakeHopoSlur(beat, note, destination.Beat, destination.Note, staffTop) is { } slur) result.Add(slur);
         }
+        AddLegacyHopoSlurs(beats, staffTop, result);
         return result;
+    }
+
+    /// <summary>
+    /// The editor's H toggle only sets a generic "HOPO" bit (no origin/destination pair). Same rule as the tab arc: the first such note
+    /// on a string starts a phrase that runs over the following notes on that string that carry the bit; one slur from start to end.
+    /// </summary>
+    private static void AddLegacyHopoSlurs(IReadOnlyList<StaffNotationBeat> beats, double staffTop, List<StaffNotationSlur> result)
+    {
+        static bool IsLegacy(TabNote n) => n.Techniques.Contains("HOPO") && !n.Techniques.Contains("HOPOOrigin") && !n.Techniques.Contains("HOPODestination");
+        var ordered = beats.OrderBy(b => b.StartSlots).ToList();
+        for (var i = 0; i < ordered.Count; i++)
+        foreach (var note in ordered[i].Notes.Where(n => IsLegacy(n.Source)))
+        {
+            var stringIndex = note.Source.StringIndex;
+            var startsPhrase = true;
+            for (var j = i - 1; j >= 0 && startsPhrase; j--)
+            {
+                var earlier = ordered[j].Notes.FirstOrDefault(n => n.Source.StringIndex == stringIndex);
+                if (earlier is null) continue;
+                startsPhrase = !earlier.Source.Techniques.Contains("HOPO");
+                break;
+            }
+            if (!startsPhrase) continue;
+            (StaffNotationBeat Beat, StaffNotationNote Note)? last = null;
+            for (var j = i + 1; j < ordered.Count; j++)
+            {
+                var next = ordered[j].Notes.FirstOrDefault(n => n.Source.StringIndex == stringIndex);
+                if (next is null) continue;
+                if (!next.Source.Techniques.Contains("HOPO")) break;
+                last = (ordered[j], next);
+            }
+            if (last is { } end && MakeHopoSlur(ordered[i], note, end.Beat, end.Note, staffTop) is { } slur) result.Add(slur);
+        }
+    }
+
+    private static StaffNotationSlur? MakeHopoSlur(StaffNotationBeat beat, StaffNotationNote note,
+        StaffNotationBeat destinationBeat, StaffNotationNote destinationNote, double staffTop)
+    {
+        var destination = (Beat: destinationBeat, Note: destinationNote);
+        {
+            if (destination.Beat.CenterX - beat.CenterX < 18) return null;
+            // A destination with an accidental: the slur ends at the accidental's left edge instead of running through it.
+            var endX = destination.Note.Accidental is not null ? destination.Beat.Notes.Min(n => n.X) - HeadRadiusX - 13 - GhostRoom(staffTop, destination.Beat) - destination.Note.AccidentalColumn * 10 : destination.Note.X;
+            if (endX - note.X < 18) endX = destination.Note.X;   // too tight to stop short of the accidental (the arc would turn back on itself): keep the old head-to-head arc
+            // Ghost brackets and a chord-mate's accidental at the slur's height: start / end clear of them (the stop-short case above already is).
+            var (startInset, endInset) = ArcInsets(beat, note, destination.Beat, destination.Note, staffTop);
+            var stoppedShort = endX != destination.Note.X;
+            // ArcInsets measured its room against the destination head; a slur that already stops short has less, so a ghost start
+            // inset could carry the start past the end. Keep the plain start then.
+            if (stoppedShort && endX - 5 - (note.X + startInset) < 12) startInset = 5;
+            return new StaffNotationSlur(note.X, note.Y, endX, destination.Note.Y, beat.StemUp, startInset, stoppedShort ? 5 : endInset);
+        }
     }
 
     private static void DrawStemsAndFlags(DrawingContext dc, StaffNotationMeasureLayout layout, Brush brush)
@@ -1137,12 +1456,13 @@ internal sealed class StaffNotationRenderer
 
     private static void DrawTuplets(DrawingContext dc, StaffNotationMeasureLayout layout, Brush brush)
     {
+        var sky = layout.Skyline;
         foreach (var tuplet in layout.TupletGroups)
         {
             var first = tuplet.Beats[0];
             var last = tuplet.Beats[^1];
             var up = first.StemUp;
-            double bracketY;
+            var numberText = tuplet.Numerator.ToString(CultureInfo.InvariantCulture);
             if (tuplet.IsBeamed)
             {
                 var beam = layout.BeamGroups[tuplet.BeamGroupIndex];
@@ -1154,39 +1474,47 @@ internal sealed class StaffNotationRenderer
                     edgeMin = Math.Min(edgeMin, y);
                     edgeMax = Math.Max(edgeMax, y);
                 }
-                bracketY = up
-                    ? edgeMin - beam.MaxFlags * BeamGap - 7
-                    : edgeMax + beam.MaxFlags * BeamGap + 7;
-                // The reference brackets beamed tuplets too: the number sits in a gap of the bracket line.
+                // The reference brackets beamed tuplets too: the number sits in a gap of the bracket line. The whole
+                // bracket claims its box, stacked outside the beams, stems and heads of the beats it spans.
+                var x0 = first.StemX - 2; var x1 = last.StemX + 2;
                 var mid = (first.StemX + last.StemX) / 2;
-                var lineY = bracketY + 6.5;
                 var tick = up ? 4.0 : -4.0;
+                var blockTop = up ? sky.PlaceAbove(x0, x1, 15, edgeMin - 1) : sky.PlaceBelow(x0, x1, 15, edgeMax + 1);
+                var numberY = up ? blockTop + 4.5 : blockTop + 10.5;
+                var lineY = up ? blockTop + 10.5 : blockTop + 4.5;
                 var bracketPen = RenderDraw.Pen(brush, 0.9);
-                dc.DrawLine(bracketPen, new Point(first.StemX - 2, lineY), new Point(Math.Max(first.StemX - 2, mid - 8), lineY));
-                dc.DrawLine(bracketPen, new Point(Math.Min(last.StemX + 2, mid + 8), lineY), new Point(last.StemX + 2, lineY));
-                dc.DrawLine(bracketPen, new Point(first.StemX - 2, lineY), new Point(first.StemX - 2, lineY + tick));
-                dc.DrawLine(bracketPen, new Point(last.StemX + 2, lineY), new Point(last.StemX + 2, lineY + tick));
-                DrawCentered(dc, tuplet.Numerator.ToString(CultureInfo.InvariantCulture), mid, bracketY, 11, brush, FontWeights.SemiBold);
+                dc.DrawLine(bracketPen, new Point(x0, lineY), new Point(Math.Max(x0, mid - 8), lineY));
+                dc.DrawLine(bracketPen, new Point(Math.Min(x1, mid + 8), lineY), new Point(x1, lineY));
+                dc.DrawLine(bracketPen, new Point(x0, lineY), new Point(x0, lineY + tick));
+                dc.DrawLine(bracketPen, new Point(x1, lineY), new Point(x1, lineY + tick));
+                DrawCentered(dc, numberText, mid, numberY, 11, brush, FontWeights.SemiBold);
             }
             else
             {
                 var top = tuplet.Beats.Min(b => b.MinY);
                 var bottom = tuplet.Beats.Max(b => b.MaxY);
-                bracketY = up ? top - StemLength - 8 : bottom + StemLength + 8;
-                var tickY = up ? bracketY + 5 : bracketY - 5;
                 var left = first.CenterX;
                 var right = last.CenterX;
+                if (right - left < 10) { left -= 5; right += 5; }
+                var blockTop = up ? sky.PlaceAbove(left, right, 16, top - 1) : sky.PlaceBelow(left, right, 16, bottom + 1);
+                var lineY = up ? blockTop + 11 : blockTop + 5;
+                var tickY = up ? lineY + 5 : lineY - 5;
                 var pen = RenderDraw.Pen(brush, 1);
-                dc.DrawLine(pen, new Point(left, bracketY), new Point(right, bracketY));
-                dc.DrawLine(pen, new Point(left, bracketY), new Point(left, tickY));
-                dc.DrawLine(pen, new Point(right, bracketY), new Point(right, tickY));
-                DrawCentered(dc, tuplet.Numerator.ToString(CultureInfo.InvariantCulture),
-                    (left + right) / 2, up ? bracketY - 9 : bracketY + 9, 11, brush, FontWeights.SemiBold);
+                dc.DrawLine(pen, new Point(left, lineY), new Point(right, lineY));
+                dc.DrawLine(pen, new Point(left, lineY), new Point(left, tickY));
+                dc.DrawLine(pen, new Point(right, lineY), new Point(right, tickY));
+                DrawCentered(dc, numberText, (left + right) / 2, up ? blockTop + 4.5 : blockTop + 11.5, 11, brush, FontWeights.SemiBold);
             }
         }
     }
 
     /// <summary>Rests are drawn as vector shapes (not font glyphs): full-size, black, the same on every machine.</summary>
+    private static readonly TabCell WholeRestCell = new() { IsRest = true, DurationDenominator = 1 };
+
+    /// <summary>The whole rest an empty bar shows (the reference engraves one in an empty first voice).</summary>
+    internal static void DrawWholeBarRest(DrawingContext dc, double cx, double staffTop, Color ink) =>
+        DrawRest(dc, WholeRestCell, cx, staffTop, RenderDraw.Solid(ink));
+
     private static void DrawRest(DrawingContext dc, TabCell cell, double cx, double staffTop, Brush brush)
     {
         var duration = NormalizeDuration(cell.DurationDenominator);
@@ -1325,7 +1653,7 @@ internal sealed class StaffNotationRenderer
         if (mode == LedgerLineMode.Hidden) return Array.Empty<StaffLedgerLineSegment>();
         if (layout.TryGetLedgerSegments(mode, out var cached)) return cached;
 
-        var halfWidth = mode == LedgerLineMode.Standard ? HeadRadiusX + 3.5 : HeadRadiusX + 1.3;
+        var halfWidth = mode == LedgerLineMode.Standard ? HeadRadiusX + LedgerOverhang : HeadRadiusX + 2.4;
         var onsets = new List<List<StaffNotationBeat>>();
         foreach (var beat in layout.Beats)
         {
@@ -1376,9 +1704,11 @@ internal sealed class StaffNotationRenderer
         return resultArray;
     }
 
-    internal static Color SubduedLedgerLineColor(Color staffLineColor)
-        => Color.FromArgb((byte)Math.Round(staffLineColor.A * 0.82),
-            staffLineColor.R, staffLineColor.G, staffLineColor.B);
+    /// <summary>Thickness of the staff lines and of the ledger lines: they are one unit.</summary>
+    internal const double StaffLineThickness = 1.0;
+
+    /// <summary>The pen for staff lines AND ledger lines: the staff-line colour (which already carries the staff-line opacity), one thickness.</summary>
+    internal static Pen StaffLinePen(Color staffLineColor) => RenderDraw.Pen(staffLineColor, StaffLineThickness);
 
     internal static Color EngravingInkColor(Color ink, Color paper)
     {
@@ -1390,13 +1720,11 @@ internal sealed class StaffNotationRenderer
     }
 
     private static void DrawLedgerLines(DrawingContext dc, StaffNotationMeasureLayout layout,
-        Color staffLineColor, LedgerLineMode mode, double opacity)
+        Color staffLineColor, LedgerLineMode mode)
     {
         if (mode == LedgerLineMode.Hidden) return;
-        var subdued = SubduedLedgerLineColor(staffLineColor);
-        subdued = Color.FromArgb((byte)Math.Clamp(Math.Round(subdued.A * Math.Clamp(opacity, 0, 1)), 0, 255),
-            subdued.R, subdued.G, subdued.B);
-        var pen = RenderDraw.Pen(subdued, 1.0);
+        // Exactly the staff lines' pen: ledger lines are an extension of the staff and always match it.
+        var pen = StaffLinePen(staffLineColor);
         foreach (var line in LedgerLineSegments(layout, mode))
             dc.DrawLine(pen, new Point(line.X1, line.Y), new Point(line.X2, line.Y));
     }
@@ -1409,29 +1737,46 @@ internal sealed class StaffNotationRenderer
             dc.DrawEllipse(brush, null, new Point(note.X + HeadRadiusX + 3 + d * 4, dotY), 1.4, 1.4);
     }
 
-    private static void DrawTies(DrawingContext dc, IReadOnlyList<StaffNotationTie> ties, Brush brush)
+    private static void DrawTies(DrawingContext dc, IReadOnlyList<StaffNotationTie> ties, Brush brush, double contentLeft = double.NegativeInfinity)
     {
         foreach (var tie in ties)
         {
+            // A stub reaching back over the key / time signature is left to the previous bar's outgoing stub.
+            if (tie.IsStub && tie.TowardLeft && tie.X1 - 13 < contentLeft) continue;
             if (tie.IsStub) DrawTieStub(dc, tie.X1, tie.Y1, tie.TowardLeft, tie.Above, brush);
-            else DrawTie(dc, tie.X1, tie.Y1, tie.X2, tie.Y2, tie.Above, brush);
+            else DrawTie(dc, tie.X1, tie.Y1, tie.X2, tie.Y2, tie.Above, brush, tie.StartInset, tie.EndInset);
         }
     }
 
-    private static void DrawTie(DrawingContext dc, double x1, double y1, double x2, double y2, bool above, Brush brush)
+    private static void DrawTie(DrawingContext dc, double x1, double y1, double x2, double y2, bool above, Brush brush, double startInset = 5, double endInset = 5)
     {
         var dir = above ? -1.0 : 1.0;
         var y1b = y1 + dir * 6;
         var y2b = y2 + dir * 6;
-        var bow = Math.Clamp(Math.Abs(x2 - x1) * 0.10 + 4, 5, 14);
-        var figure = new PathFigure { StartPoint = new Point(x1 + 5, y1b), IsClosed = false };
+        var (sx, c1, c2, ex, span) = ArcShape(x1, x2, startInset, endInset);
+        var bow = Math.Clamp(span * 0.10 + 4, 5, 14);
+        var figure = new PathFigure { StartPoint = new Point(sx, y1b), IsClosed = false };
         figure.Segments.Add(new BezierSegment(
-            new Point(x1 + (x2 - x1) * 0.30, y1b + dir * bow),
-            new Point(x1 + (x2 - x1) * 0.70, y2b + dir * bow),
-            new Point(x2 - 5, y2b), true));
+            new Point(c1, y1b + dir * bow),
+            new Point(c2, y2b + dir * bow),
+            new Point(ex, y2b), true));
         var geometry = new PathGeometry();
         geometry.Figures.Add(figure);
         dc.DrawGeometry(null, RenderDraw.Pen(brush, 1.2), geometry);
+    }
+
+    /// <summary>
+    /// Horizontal shape of a tie / slur between heads at <paramref name="x1"/> and <paramref name="x2"/>: start, the two control points,
+    /// end, and the span the bow height is taken from. The plain (5, 5) arc keeps its historic shape exactly; an inset arc places its
+    /// control points inside its own (shorter) span, otherwise a control point past the end would make the arc hook back on itself.
+    /// </summary>
+    internal static (double Start, double Control1, double Control2, double End, double BowSpan) ArcShape(double x1, double x2, double startInset, double endInset)
+    {
+        var start = x1 + startInset;
+        var end = x2 - endInset;
+        if (startInset == 5 && endInset == 5) return (start, x1 + (x2 - x1) * 0.30, x1 + (x2 - x1) * 0.70, end, Math.Abs(x2 - x1));
+        var drawn = end - start;
+        return (start, start + drawn * 0.25, start + drawn * 0.75, end, Math.Abs(drawn) + 10);
     }
 
     private static void DrawTieStub(DrawingContext dc, double x, double y, bool towardLeft, bool above, Brush brush)
@@ -1449,36 +1794,105 @@ internal sealed class StaffNotationRenderer
         dc.DrawGeometry(null, RenderDraw.Pen(brush, 1.2), geometry);
     }
 
+    /// <summary>
+    /// The reference's slide strokes in the staff: a short slanted line between the two heads of a shift / legato slide, a slash leading
+    /// into a head (slide in from below / above) and a slash trailing from it (slide out up / down). Clear of the chord's accidentals and
+    /// ghost bracket on the left, and of the ghost bracket and augmentation dots on the right.
+    /// </summary>
+    internal static List<StaffNotationSlideStroke> BuildSlideStrokes(TrackModel? track, int measureIndex, int voiceIndex,
+        IReadOnlyList<StaffNotationBeat> beats, double staffTop)
+    {
+        var result = new List<StaffNotationSlideStroke>();
+        if (track is null) return result;
+        double Left(StaffNotationBeat beat) => beat.Notes.Min(n => n.X) - HeadRadiusX - 2 - GhostRoom(staffTop, beat)
+            - (beat.Notes.Any(n => n.Accidental is not null) ? 11 + beat.Notes.Where(n => n.Accidental is not null).Max(n => n.AccidentalColumn) * 10 : 0);
+        double Right(StaffNotationBeat beat, StaffNotationNote note) => note.X + HeadRadiusX + 2 + beat.Cell.Dots * 4 +
+            (note.Source.Ghost ? 8 + (OnLedgerAt(staffTop, note) ? GhostLedgerPad : 0) : 0);
+        foreach (var mark in TabSlideNotation.ForMeasure(track, measureIndex, voiceIndex))
+        {
+            var beat = beats.FirstOrDefault(b => b.CellIndex == mark.SourceCellIndex);
+            var note = beat?.Notes.FirstOrDefault(n => ReferenceEquals(n.Source, mark.Source));
+            if (beat is null || note is null) continue;
+            switch (mark.Kind)
+            {
+                case TabSlideMarkKind.IncomingFromBelow:
+                case TabSlideMarkKind.IncomingFromAbove:
+                {
+                    var below = mark.Kind == TabSlideMarkKind.IncomingFromBelow;
+                    var x2 = Left(beat);
+                    // Only as long as the room after the previous beat's ink (its head, ghost bracket, dots and stem) allows.
+                    var previous = beats.Where(b => b.StartSlots < beat.StartSlots - PositionEpsilon && b.Notes.Count > 0).OrderByDescending(b => b.StartSlots).FirstOrDefault();
+                    var length = Math.Min(7, x2 - (previous is null ? double.NegativeInfinity : previous.Notes.Max(n => Right(previous, n)) + 4));
+                    if (length < 3.5) break;
+                    result.Add(new StaffNotationSlideStroke(x2 - length, note.Y + (below ? 4.5 : -4.5) * length / 7, x2, note.Y + (below ? -0.5 : 0.5)));
+                    break;
+                }
+                case TabSlideMarkKind.Connection when mark.TargetMeasureIndex == measureIndex &&
+                    beats.FirstOrDefault(b => b.CellIndex == mark.TargetCellIndex) is { } destBeat &&
+                    destBeat.Notes.FirstOrDefault(n => ReferenceEquals(n.Source, mark.Target)) is { } destNote &&
+                    !beats.Any(b => b.Notes.Count > 0 && b.StartSlots > beat.StartSlots + PositionEpsilon && b.StartSlots < destBeat.StartSlots - PositionEpsilon) &&   // nothing between: a stroke never crosses another beat
+                    Left(destBeat) - Right(beat, note) >= 8:
+                    result.Add(new StaffNotationSlideStroke(Right(beat, note), note.Y, Left(destBeat), destNote.Y));
+                    break;
+                case TabSlideMarkKind.Connection:
+                case TabSlideMarkKind.OutgoingUp:
+                case TabSlideMarkKind.OutgoingDown:
+                {
+                    // No head to run to in this bar (or no room): a short trailing stroke in the slide's direction.
+                    var up = mark.Kind == TabSlideMarkKind.OutgoingUp ||
+                             mark.Kind == TabSlideMarkKind.Connection && (mark.Target is null || mark.Target.Fret >= mark.Source.Fret);   // same string: the fret gives the direction (as in the tab)
+                    var x1 = Right(beat, note);
+                    var next = beats.Where(b => b.StartSlots > beat.StartSlots + PositionEpsilon && b.Notes.Count > 0).OrderBy(b => b.StartSlots).FirstOrDefault();
+                    var length = Math.Min(7, (next is null ? double.PositiveInfinity : Left(next) - 1.5 - x1));
+                    if (length < 3.5) break;
+                    result.Add(new StaffNotationSlideStroke(x1, note.Y + (up ? 0.5 : -0.5), x1 + length, note.Y + (up ? -4.5 : 4.5) * length / 7));
+                    break;
+                }
+            }
+        }
+        return result;
+    }
+
+    private static void DrawSlideStrokes(DrawingContext dc, IReadOnlyList<StaffNotationSlideStroke> slides, Brush brush)
+    {
+        if (slides.Count == 0) return;
+        var pen = RenderDraw.Pen(brush, 1.1);
+        foreach (var slide in slides) dc.DrawLine(pen, new Point(slide.X1, slide.Y1), new Point(slide.X2, slide.Y2));
+    }
+
     private static void DrawHopoSlurs(DrawingContext dc, IReadOnlyList<StaffNotationSlur> slurs, Brush brush)
     {
         var pen = RenderDraw.Pen(brush, 1.1);
         foreach (var slur in slurs)
         {
             var direction = slur.StemsUp ? 1.0 : -1.0;
-            var start = new Point(slur.X1 + 5, slur.Y1 + direction * 6);
-            var end = new Point(slur.X2 - 5, slur.Y2 + direction * 6);
-            var bow = Math.Clamp(Math.Abs(slur.X2 - slur.X1) * 0.10 + 4, 5, 12);
+            var (sx, c1, c2, ex, span) = ArcShape(slur.X1, slur.X2, slur.StartInset, slur.EndInset);
+            var start = new Point(sx, slur.Y1 + direction * 6);
+            var end = new Point(ex, slur.Y2 + direction * 6);
+            var bow = Math.Clamp(span * 0.10 + 4, 5, 12);
             var figure = new PathFigure { StartPoint = start, IsClosed = false };
             figure.Segments.Add(new BezierSegment(
-                new Point(slur.X1 + (slur.X2 - slur.X1) * 0.30, start.Y + direction * bow),
-                new Point(slur.X1 + (slur.X2 - slur.X1) * 0.70, end.Y + direction * bow), end, true));
+                new Point(c1, start.Y + direction * bow),
+                new Point(c2, end.Y + direction * bow), end, true));
             var geometry = new PathGeometry();
             geometry.Figures.Add(figure);
             dc.DrawGeometry(null, pen, geometry);
         }
     }
 
-    private static Geometry FlagGeometry(double x, double y, bool up)
+    internal static Geometry FlagGeometry(double x, double y, bool up)
     {
         var direction = up ? 1.0 : -1.0;
         var geometry = new StreamGeometry();
         using (var context = geometry.Open())
         {
+            // A full flag: it leaves the stem tip with some body (2.6 px thick, under the 3.4 px gap between stacked flags), sweeps right
+            // and curls down to a point 15 px below, like the reference's eighth, sixteenth and thirty-second flags.
             context.BeginFigure(new Point(x, y), true, true);
-            context.BezierTo(new Point(x + 6, y + 3 * direction), new Point(x + 6.5, y + 10 * direction),
-                new Point(x + 1, y + 14 * direction), true, false);
-            context.BezierTo(new Point(x + 4.5, y + 9 * direction), new Point(x + 4, y + 4 * direction),
-                new Point(x + 1.6, y + 1.4 * direction), true, false);
+            context.BezierTo(new Point(x + 2, y + 3.8 * direction), new Point(x + 6, y + 6 * direction),
+                new Point(x + 3.2, y + 13 * direction), true, false);
+            context.BezierTo(new Point(x + 3.5, y + 8.5 * direction), new Point(x + 2.2, y + 6.5 * direction),
+                new Point(x, y + 2.8 * direction), true, false);
         }
         geometry.Freeze();
         return geometry;

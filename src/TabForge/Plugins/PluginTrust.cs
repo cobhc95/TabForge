@@ -191,6 +191,9 @@ public static class PluginTrust
         }
     }
 
+    /// <summary>Forgets the in-memory scan fingerprints (a test that scans scratch folders must not leak them into later tests).</summary>
+    public static void ClearScanRecords() { ScanRecords.Clear(); Interlocked.Increment(ref _scanGeneration); }
+
     /// <summary>Called by the scanner: fingerprints the plug-ins it found in user-writable local folders (the scan's baseline).</summary>
     public static void RecordScan(IReadOnlyList<VstPluginInfo> found, CancellationToken cancellationToken, IProgress<(int Found, string Folder)>? progress)
     {

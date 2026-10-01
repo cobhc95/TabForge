@@ -25,6 +25,7 @@ public sealed partial class ArrangementPanel
         if (Math.Abs(MeasureWidth - width) < 0.01) return;
         MeasureWidth = width;
         _timeline.MeasureWidth = width;
+        _timeline.ClearHover();
         _timeline.InvalidateMeasure();
         _timeline.InvalidateVisual();
         RefreshTimelineExtent();
@@ -237,6 +238,67 @@ public sealed partial class ArrangementPanel
         Canvas.SetTop(_sectionHighlight, top);
     }
 
+    private (int Bar, int Track, Rect Cell) _barMarkerKey;
+
+    /// <summary>The cell the bar marker sits in: the playhead's bar on the selected track (the first track when none is selected).</summary>
+    internal Rect? BarMarkerCell() =>
+        _playheadBar < 0 || (_project?.Tracks.Count ?? 0) == 0 ? null
+        : _timeline.CellBounds(_playheadBar, _timeline.SelectedTrack >= 0 && _timeline.SelectedTrack < _project!.Tracks.Count ? _timeline.SelectedTrack : 0);
+
+    /// <summary>The marker's rectangle inside <paramref name="cell"/>: a square of 45% of the cell height, centred.</summary>
+    internal static Rect BarMarkerRect(Rect cell)
+    {
+        var side = Math.Min(Math.Round(cell.Height * 0.45), Math.Max(4, cell.Width - 2));
+        return new Rect(cell.X + (cell.Width - side) / 2, cell.Y + (cell.Height - side) / 2, side, side);
+    }
+
+    internal Rect BarMarkerBounds => new(Canvas.GetLeft(_barMarker), Canvas.GetTop(_barMarker), _barMarker.Width, _barMarker.Height);
+    internal bool BarMarkerVisible => _barMarker.Visibility == Visibility.Visible;
+    internal bool PlayheadLineVisible => _playheadLine.Visibility == Visibility.Visible;
+
+    // Moves the one cached marker; does nothing unless the bar, the track, the cell geometry or the style changed.
+    private void LayoutBarMarker()
+    {
+        var cell = PlayheadStyles.ShowsBarMarker(_playheadStyle) ? BarMarkerCell() : null;
+        if (cell is null || cell.Value.Y < RulerHeight + SectionHeight)   // scrolled under the ruler: nothing to show
+        {
+            _barMarker.Visibility = Visibility.Collapsed;
+            _barMarkerKey = default;
+            return;
+        }
+        var key = (_playheadBar, _timeline.SelectedTrack, cell.Value);
+        if (key.Equals(_barMarkerKey) && _barMarker.Visibility == Visibility.Visible) return;
+        _barMarkerKey = key;
+        var r = BarMarkerRect(cell.Value);
+        _barMarker.Width = r.Width; _barMarker.Height = r.Height;
+        _barMarker.RadiusX = _barMarker.RadiusY = Math.Max(2, r.Width * 0.22);
+        Canvas.SetLeft(_barMarker, r.X);
+        Canvas.SetTop(_barMarker, r.Y);
+        _barMarker.Visibility = Visibility.Visible;
+    }
+
+    private void LayoutHoverCell(int bar, int track)
+    {
+        if (_timeline.CellBounds(bar, track) is not { } cell || cell.Y < RulerHeight + SectionHeight)
+        {
+            _hoverCell.Visibility = Visibility.Collapsed;
+            return;
+        }
+        _hoverCell.Fill = VisualTheme.IsLight ? HoverShadeLight : HoverShadeDark;
+        _hoverCell.Width = cell.Width; _hoverCell.Height = cell.Height;
+        Canvas.SetLeft(_hoverCell, cell.X);
+        Canvas.SetTop(_hoverCell, cell.Y);
+        _hoverCell.Visibility = Visibility.Visible;
+    }
+
+    internal Rect? HoverCellBounds => _hoverCell.Visibility == Visibility.Visible
+        ? new Rect(Canvas.GetLeft(_hoverCell), Canvas.GetTop(_hoverCell), _hoverCell.Width, _hoverCell.Height) : null;
+    /// <summary>Test / diagnostic hook: what the mouse-move handler does for a pointer at <paramref name="p"/> (timeline coordinates).</summary>
+    internal void SimulateHover(Point p) => _timeline.SimulateHover(p);
+    /// <summary>Centre of a bar cell in timeline coordinates (for hover diagnostics and tests).</summary>
+    internal Point? CellCentre(int bar, int track) =>
+        _timeline.CellBounds(bar, track) is { } c ? new Point(c.X + c.Width / 2, c.Y + c.Height / 2) : null;
+
     private int _playheadBar = -1;
     private double _playheadFraction;
 
@@ -247,6 +309,15 @@ public sealed partial class ArrangementPanel
             _playheadLine.Visibility = Visibility.Collapsed;
             _selectedTrackPlayMarker.Visibility = Visibility.Collapsed;
             _sectionHighlight.Visibility = Visibility.Collapsed;
+            _barMarker.Visibility = Visibility.Collapsed;
+            _barMarkerKey = default;
+            return;
+        }
+        LayoutBarMarker();
+        if (!PlayheadStyles.ShowsLine(_playheadStyle))
+        {
+            _playheadLine.Visibility = Visibility.Collapsed;
+            _selectedTrackPlayMarker.Visibility = Visibility.Collapsed;
             return;
         }
         var x = _timeline.XOfBar(_playheadBar) + _timeline.BarWidthOf(_playheadBar) * Math.Clamp(_playheadFraction, 0, 1);
@@ -424,6 +495,8 @@ public sealed partial class ArrangementPanel
         _sectionDragOverlay.Height = height;
         _sectionInsertionIndicator.Width = width;
         _sectionInsertionIndicator.Height = height;
+        _dropGhost.Width = width;
+        _dropGhost.Height = height;
         _timelineHost.InvalidateMeasure();
         SyncTimelineScrollBar();
         LayoutDragLaneOutline();

@@ -85,6 +85,8 @@ public sealed class InstrumentVisualState
     public string ScaleStyle = "Shaded";
     /// <summary>Scale highlight colour.</summary>
     public System.Windows.Media.Color ScaleColour = System.Windows.Media.Color.FromRgb(0x4C, 0x8A, 0xE0);
+    /// <summary>Scale highlight strength multiplier (0.1 .. 1.5; 1.0 = the standard look).</summary>
+    public double ScaleStrength = 1.0;
     /// <summary>Fret position dots: colour (null = theme) and brightness 0 (original) .. 1.</summary>
     public System.Windows.Media.Color? MarkerColour;
     public double MarkerBrightness = 0.3;

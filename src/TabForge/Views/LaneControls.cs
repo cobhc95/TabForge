@@ -42,6 +42,12 @@ public sealed class InputMeter : FrameworkElement
 
     protected override void OnRender(DrawingContext dc)
     {
+        try { RenderGuard.Inject("InputMeter"); RenderCore(dc); }
+        catch (Exception ex) when (RenderGuard.Contain(ex, "InputMeter", dc, ActualWidth, ActualHeight)) { }
+    }
+
+    private void RenderCore(DrawingContext dc)
+    {
         var w = ActualWidth; var h = ActualHeight;
         if (w <= 0 || h <= 0) return;
         var back = TryFindResource("Panel3Brush") as Brush ?? Brushes.Black;
@@ -85,7 +91,13 @@ public sealed class MonitorButton : FrameworkElement
 
     protected override void OnRender(DrawingContext dc)
     {
-        var accent = TryFindResource("AccentBrush") as Brush ?? Brushes.DodgerBlue;
+        try { RenderGuard.Inject("MonitorButton"); RenderCore(dc); }
+        catch (Exception ex) when (RenderGuard.Contain(ex, "MonitorButton", dc, ActualWidth, ActualHeight)) { }
+    }
+
+    private void RenderCore(DrawingContext dc)
+    {
+        var accent =TryFindResource("AccentBrush") as Brush ?? Brushes.DodgerBlue;
         var border = TryFindResource("BorderBrush") as Brush ?? Brushes.Gray;
         var muted = TryFindResource("MutedBrush") as Brush ?? Brushes.Gray;
         var strong = TryFindResource("TextStrongBrush") as Brush ?? Brushes.White;

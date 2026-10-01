@@ -400,17 +400,25 @@ public partial class MainWindow
 
     private void DuplicateBar_Click(object sender, RoutedEventArgs e)
     {
-        var track = SelectedTrack;
-        if (track is null || Editor.SelectedMeasure >= track.Measures.Count) return;
-        CaptureUndo();
-        if (!_arrangementController.DuplicateBar(_project, TrackMixerGrid.SelectedIndex, Editor.SelectedMeasure)) return;
-        _project.IsDirty = true;
-        _project.MarkTimelineChanged();
-        Editor.MoveBar(1);
-        RefreshArrangement();
-        RefreshTabs();
-        UpdateTitle();
-        StatusText.Text = "Bar duplicated";
+        // Bars are shared by every track, so the copy goes into every track (insert / delete bar do the same):
+        // the cursor bar, or the whole selected bar range, is copied to right after itself in one undo step.
+        var barCount = MaxMeasures();
+        if (barCount == 0) return;
+        var cursor = Math.Clamp(Editor.SelectedMeasure, 0, barCount - 1);
+        var hadRange = _selection.HasRange;
+        var (first, last) = hadRange ? (Math.Clamp(_selection.StartBar, 0, barCount - 1), Math.Clamp(_selection.EndBar, 0, barCount - 1)) : (cursor, cursor);
+        var count = last - first + 1;
+        var transaction = _undo.BeginTransaction(_project);
+        var map = _arrangementController.DuplicateBars(_project, first, last);
+        if (map is null) { _undo.Cancel(transaction); StatusText.Text = "Cannot duplicate: the song would get too long"; return; }
+        var capture = _undo.Commit(transaction);
+        if (capture.Stored) RememberPlaybackBarMapping(capture.Snapshot);
+        var at = last + 1;
+        Editor.SetPosition(Math.Clamp(at, 0, Math.Max(0, MaxMeasures() - 1)), 0, Editor.SelectedString, seekPlayback: false);
+        var status = count == 1 ? $"Duplicated bar {first + 1}" : $"Duplicated bars {first + 1}-{last + 1}";
+        FinishSectionStructureEdit(status, map);
+        if (hadRange) ApplyLoopRange(at, at + count - 1);   // after the remap: the copy is selected, like a paste
+        StatusText.Text = status;
     }
 
     private void RepeatSelection_Click(object sender, RoutedEventArgs e)
@@ -648,18 +656,18 @@ public partial class MainWindow
     }
 
     private void Multitrack_Click(object sender, RoutedEventArgs e) { TrackMixerGrid.BringIntoView(); StatusText.Text = "Multitrack: all tracks in the mixer; click a color block to jump"; }
-    private void ShowMixer_Click(object sender, RoutedEventArgs e)
-    {
-        _dockWorkspace?.SetPanelVisible("practice", true);
-        _dockWorkspace?.SelectPanel("practice");
-        TrackMixerGrid.BringIntoView();
-    }
+    /// <summary>View > Mixer / VST: the same command as the Mixer button and hotkey (opens the Mixer window, or raises it); the docked Practice tab only shows practice tools.</summary>
+    private void ShowMixer_Click(object sender, RoutedEventArgs e) => OpenMixer();
 
     private void Stylesheet_Click(object sender, RoutedEventArgs e) => Prefs_Click(sender, e);
     /// <summary>Opens Settings on one page (e.g. Audio & VST).</summary>
-    private void OpenSettingsCategory(string category)
+    private void OpenSettingsCategory(string category) => OpenSettings(category);
+
+    /// <summary>Opens Settings on <paramref name="category"/> and, when given, scrolls to and highlights the row <paramref name="rowKey"/>
+    /// (the "... settings..." entries of the right-click menus).</summary>
+    private void OpenSettings(string category, string? rowKey = null)
     {
-        Views.PreferencesWindow.InitialCategory = category;
+        Views.PreferencesWindow.SetTarget(category, rowKey);
         Prefs_Click(this, new RoutedEventArgs());
     }
 
@@ -680,6 +688,7 @@ public partial class MainWindow
             JsonSerializer.Serialize(settings.Workspace), StringComparison.Ordinal);
         var fretboardVisibilityChanged = settings.Appearance.ShowFretboard != _settings.Appearance.ShowFretboard;
         var arrangementVisibilityChanged = settings.Appearance.ShowArrangementOverview != _settings.Appearance.ShowArrangementOverview;
+        TabForge.Plugins.PluginQuarantine.KeepLive(settings.Plugins, _settings.Plugins);   // a crash while Preferences was open must survive Apply
         _settings = settings;
         _settingsStore.AcceptCurrentAsReplacement();   // reviewed and applied: it may now replace an unreadable settings file
         if (workspaceChanged) _dockWorkspace?.RestoreLayout(settings.Workspace);
@@ -700,6 +709,7 @@ public partial class MainWindow
     {
         var workspaceChanged = !string.Equals(JsonSerializer.Serialize(_settings.Workspace),
             JsonSerializer.Serialize(settings.Workspace), StringComparison.Ordinal);
+        TabForge.Plugins.PluginQuarantine.KeepLive(settings.Plugins, _settings.Plugins);
         _settings = settings;
         _suppressWorkspaceSave = true;
         try
@@ -756,6 +766,9 @@ public partial class MainWindow
         ApplyZoomText($"{nextPercent:0}%", zoomAnchor);
     }
 
+    private void Tutorial_Click(object sender, RoutedEventArgs e) => Views.TutorialWindow.ShowOrActivate(this);
+    private void TutorialDetailed_Click(object sender, RoutedEventArgs e) => Views.TutorialWindow.ShowOrActivate(this, TabForge.Services.TutorialGuide.Detailed);
+
     private void Shortcuts_Click(object sender, RoutedEventArgs e)
     {
         MessageBox.Show(this,
@@ -778,217 +791,56 @@ public partial class MainWindow
         SaveSettings();
     }
 
+    /// <summary>
+    /// Right-click on the fretboard / keyboard / drum pads: the lean menu of <see cref="InstrumentMenus"/> (owner decisions
+    /// 2026-09-30). Appearance, sizes, colours and look-ahead live in Preferences behind "Fretboard settings...".
+    /// </summary>
     private void Instrument_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        ShowInstrumentContextMenu(fromKeyboard: false);
+        e.Handled = true;
+    }
+
+    /// <summary>The fretboard / keyboard menu; from the keyboard (Shift+F10, the Menu key) it opens at the panel's top-left with the first item focused.</summary>
+    private void ShowInstrumentContextMenu(bool fromKeyboard)
     {
         var track = SelectedTrack;
         if (track is null) return;
-        var menu = new ContextMenu { Style = (Style)FindResource(typeof(ContextMenu)) };
-        var lockItem = new MenuItem
-        {
-            Header = "Lock fretboard size", IsCheckable = true, IsChecked = _settings.Appearance.LockInstrumentSize,
-            InputGestureText = HotkeyCatalog.Display(HotkeyCatalog.GestureFor(_settings.Hotkeys, "View.LockInstrumentSize")),
-            ToolTip = "Locked: dragging the edge does not resize the fretboard / keyboard. Unlocked: the drawing scales with the pane."
-        };
-        lockItem.Click += (_, _) => ToggleInstrumentSizeLock();
-
-        // Available on every track and view: what the panel draws, and the scale tools.
-        MenuItem ViewMenu(string header, TrackModel? target)
-        {
-            var parent = new MenuItem { Header = header };
-            var current = target is not null && _trackInstrumentViews.TryGetValue(target, out var own) ? own
-                : _instrumentViewOverride ?? _settings.Editing.InstrumentView;
-            foreach (var view in InstrumentViews.All)
-            {
-                var choice = view;
-                var item = new MenuItem { Header = view, IsCheckable = true, IsChecked = current == view };
-                item.Click += (_, _) => SetInstrumentView(choice, target);
-                parent.Items.Add(item);
-            }
-            return parent;
-        }
-        var thisTrack = ViewMenu(ContextMenuLayouts.ShowThisTrackAs, track);
-        thisTrack.ToolTip = $"The view for {track.Name}";
-        thisTrack.InputGestureText = HotkeyCatalog.Display(HotkeyCatalog.GestureFor(_settings.Hotkeys, "View.InstrumentView"));
-        var allTracks = ViewMenu("Show all tracks as", null);
-        var defaults = new MenuItem { Header = "Fretboard settings…", ToolTip = "Default view and keyboard size: Settings > Fretboard" };
-        defaults.Click += (_, _) => Prefs_Click(this, new RoutedEventArgs());
-        MenuItem? keyboardSize = null;
-        if (Instrument.ShowsKeyboard)
-        {
-            var size = new MenuItem { Header = "Keyboard size" };
-            foreach (var keys in InstrumentViews.KeyboardSizes)
-            {
-                var k = keys;
-                var item = new MenuItem { Header = k == 88 ? "88 keys (full piano)" : $"{k} keys", IsCheckable = true, IsChecked = _settings.Editing.KeyboardKeys == k };
-                item.Click += (_, _) => SetKeyboardKeys(k);
-                size.Items.Add(item);
-            }
-            keyboardSize = size;
-        }
-
-        // Appearance (saved for every song and window): key colours, scale highlight, fret dots.
-        MenuItem Choices(string header, IEnumerable<string> values, string current, Action<string> set, Func<string, string>? label = null)
-        {
-            var parent = new MenuItem { Header = header };
-            foreach (var value in values)
-            {
-                var choice = value;
-                var item = new MenuItem { Header = label?.Invoke(value) ?? value, IsCheckable = true, IsChecked = current == value };
-                item.Click += (_, _) => set(choice);
-                parent.Items.Add(item);
-            }
-            return parent;
-        }
-        var ed = _settings.Editing;
-        var appearance = new MenuItem { Header = "Appearance" };
-        if (Instrument.ShowsKeyboard)
-            appearance.Items.Add(Choices("Key colours", KeyboardKeyStyles.All, ed.KeyboardKeyColours, SetKeyboardKeyColours,
-                v => v == KeyboardKeyStyles.MatchTheme ? "Match the theme (grey in dark, white in light)" : v));
-        appearance.Items.Add(Choices("Scale highlight style", ScaleHighlightStyles.All, ed.ScaleHighlightStyle, v => SetInstrumentAppearance(scaleStyle: v),
-            v => v == ScaleHighlightStyles.Circles ? "Circles" : v));
-        appearance.Items.Add(Choices("Scale highlight colour", ScaleHighlightStyles.Colours, ed.ScaleHighlightColour, v => SetInstrumentAppearance(scaleColour: v)));
-        if (Instrument.CanRepositionFretboard && !Instrument.ShowsKeyboard)
-        {
-            appearance.Items.Add(new Separator());
-            appearance.Items.Add(Choices("Fret marker colour", FretMarkerLevels.Colours, ed.FretMarkerColour, v => SetInstrumentAppearance(markerColour: v),
-                v => v == "Default" ? "Default (theme)" : v));
-            appearance.Items.Add(Choices("Fret marker brightness", FretMarkerLevels.All, ed.FretMarkerBrightness, v => SetInstrumentAppearance(markerBrightness: v),
-                v => v == FretMarkerLevels.Brighter ? "Brighter (default)" : v == FretMarkerLevels.Original ? "Original (dim)" : v));
-        }
-        appearance.Items.Add(new Separator());
-        appearance.Items.Add(Choices("Number size", FretNumberSizes.All, ed.FretNumberSize, v => SetInstrumentAppearance(numberSize: v), FretNumberSizes.Label));
-        if (Instrument.CanRepositionFretboard && !Instrument.ShowsKeyboard)
-            appearance.Items.Add(Choices("String spacing", FretStringSpacings.All, ed.FretStringSpacing, v => SetInstrumentAppearance(stringSpacing: v), FretStringSpacings.Label));
-
-        var scales = new MenuItem { Header = "Scale" };
-        // Grouped by key (C > Major, Minor...) instead of one long list; "Off" first.
-        var select = new MenuItem { Header = "Select scale" };
-        var off = new MenuItem { Header = "Off", IsCheckable = true, IsChecked = _scaleHighlight is null };
-        off.Click += (_, _) => SetScaleHighlight(null);
-        select.Items.Add(off);
-        foreach (var root in Services.MusicTheoryService.NoteNames)
-        {
-            var key = new MenuItem { Header = root, IsChecked = _scaleHighlight?.StartsWith(root + " ", StringComparison.Ordinal) == true };
-            foreach (var scaleName in Services.MusicTheoryService.Scales.Keys)
-            {
-                var value = $"{root} {scaleName}";
-                var item = new MenuItem { Header = scaleName, IsCheckable = true, IsChecked = value == _scaleHighlight };
-                item.Click += (_, _) => SetScaleHighlight(value);
-                key.Items.Add(item);
-            }
-            select.Items.Add(key);
-        }
-        scales.Items.Add(select);
-        var find = new MenuItem { Header = "Find scale…",
-            InputGestureText = HotkeyCatalog.Display(HotkeyCatalog.GestureFor(_settings.Hotkeys, "Tools.ScaleFinder")) };
-        find.Click += (_, _) => OpenScaleFinder();
-        scales.Items.Add(find);
-        var clear = new MenuItem { Header = "Clear selection", IsEnabled = _scaleHighlight is not null,
-            InputGestureText = HotkeyCatalog.Display(HotkeyCatalog.GestureFor(_settings.Hotkeys, "View.ClearScale")) };
-        clear.Click += (_, _) => ClearScaleHighlight();
-        scales.Items.Add(clear);
-
-        // Fretboard and keyboard options (drum pads have none of these).
         var drums = !Instrument.CanRepositionFretboard && !Instrument.ShowsKeyboard;
-        var preview =new MenuItem { Header = "Preview next notes", IsCheckable = true, IsChecked = _previewHorizon > 0 };
-        preview.Click += (_, _) =>
-        {
-            PracticePreviewCheck.IsChecked = preview.IsChecked;
-            PracticeOption_Changed(preview, new RoutedEventArgs());
-        };
-        var names =new MenuItem { Header = "Note names", IsCheckable = true, IsChecked = _showNoteNames };
-        names.Click += (_, _) =>
-        {
-            PracticeNamesCheck.IsChecked = names.IsChecked;
-            PracticeOption_Changed(names, new RoutedEventArgs());
-        };
-        var leftHanded = new MenuItem { Header = "Left-handed", IsCheckable = true, IsChecked = _leftHanded };
-        leftHanded.Click += (_, _) =>
-        {
-            LeftHandedCheck.IsChecked = leftHanded.IsChecked;
-            PracticeOption_Changed(leftHanded, new RoutedEventArgs());
-        };
-
-        var style = new MenuItem { Header = "Preview layout" };
-        foreach (var (id, label) in new[]
-                 {
-                     ("TabForge", "TabForge (look-ahead by count)"), ("-", ""),
-                     ("GP5: Beat", "Show beat"), ("GP5: Beat + next beat", "Show beat + next beat"),
-                     ("GP5: Beat + bar", "Show beat + bar"), ("GP5: Bar", "Show bar")
-                 })
-        {
-            if (id == "-") { style.Items.Add(new Separator()); continue; }
-            var item = new MenuItem { Header = label, IsCheckable = true, IsChecked = _settings.Audio.FretboardStyle == id };
-            item.Click += (_, _) =>
-            {
-                _settings.Audio.FretboardStyle = id;
-                ApplyFretboardStyle(id);
-                RefreshInstrument();
-                SaveSettings();
-            };
-            style.Items.Add(item);
-        }
-
-        var previewDepth = new MenuItem { Header = "Preview length", IsEnabled = _settings.Audio.FretboardStyle == "TabForge",
-            ToolTip = "Used by the TabForge layout; the Show beat / bar layouts follow the score." };
-        for (var depth = 1; depth <= 10; depth++)
-        {
-            var value = depth;
-            var item = new MenuItem { Header = value.ToString(), IsCheckable = true, IsChecked = value == Math.Max(1, _previewHorizon) };
-            item.Click += (_, _) =>
-            {
-                PreviewHorizonSlider.Value = value;
-                PracticePreviewCheck.IsChecked = true;
-                PracticeOption_Changed(item, new RoutedEventArgs());
-            };
-            previewDepth.Items.Add(item);
-        }
-
-        var frets = new MenuItem { Header = "Fretboard" };
-        foreach (var (count, label) in new[] { (24, "24 frets"), (12, "12 frets") })
-        {
-            var item = new MenuItem { Header = label, IsCheckable = true, IsChecked = count == _fretboardFrets };
-            item.Click += (_, _) =>
-            {
-                FretboardFretsCombo.SelectedIndex = count == 12 ? 1 : 0;
-                PracticeOption_Changed(item, new RoutedEventArgs());
-            };
-            frets.Items.Add(item);
-        }
-
-        // Appearance and layout: everything that is set once goes here (nothing is removed, only grouped).
-        var layout = new MenuItem { Header = ContextMenuLayouts.AppearanceAndLayout };
-        if (!drums)
-        {
-            if (!Instrument.ShowsKeyboard) layout.Items.Add(leftHanded);
-            layout.Items.Add(style);
-            layout.Items.Add(previewDepth);
-            if (!Instrument.ShowsKeyboard) layout.Items.Add(frets);
-            if (keyboardSize is not null) layout.Items.Add(keyboardSize);
-            layout.Items.Add(new Separator());
-        }
-        layout.Items.Add(allTracks);
-        layout.Items.Add(appearance);
-        layout.Items.Add(new Separator());
-        layout.Items.Add(defaults);
-
-        var parts = new Dictionary<string, Func<Control>>
-        {
-            [ContextMenuLayouts.ShowThisTrackAs] = () => thisTrack,
-            [ContextMenuLayouts.Scale] = () => scales,
-            ["Note names"] = () => names,
-            ["Preview next notes"] = () => preview,
-            [ContextMenuLayouts.AppearanceAndLayout] = () => layout,
-            ["Lock fretboard size"] = () => lockItem
-        };
-        foreach (var id in ContextMenuLayouts.Fretboard(Instrument.ShowsKeyboard, drums))
-            menu.Items.Add(id == ContextMenuLayouts.Sep ? new Separator() : parts[id]());
-
+        var current = _trackInstrumentViews.TryGetValue(track, out var own) ? own : _instrumentViewOverride ?? _settings.Editing.InstrumentView;
+        var state = new InstrumentMenuState(Instrument.ShowsKeyboard, drums, track.Name, current, InstrumentViews.All.ToList(),
+            MusicTheoryService.NoteNames.ToList(), MusicTheoryService.Scales.Keys.ToList(), _scaleHighlight, _showNoteNames,
+            _previewHorizon > 0, _leftHanded, _settings.Appearance.LockInstrumentSize);
+        var menu = NewSpecMenu("Fretboard options", InstrumentMenus.Build(state, MenuKey), spec => RunInstrumentCommand(spec, track), Instrument);
         Instrument.ContextMenu = menu;
-        menu.PlacementTarget = Instrument;
-        menu.IsOpen = true;
-        e.Handled = true;
+        OpenContextMenu(menu, Instrument, new Point(8, 8), fromKeyboard);
     }
+
+    private void RunInstrumentCommand(MenuSpec spec, TrackModel track)
+    {
+        switch (spec.Id)
+        {
+            case InstrumentMenus.ViewId: SetInstrumentView(spec.Arg, track); break;
+            case InstrumentMenus.ScaleId: SetScaleHighlight(spec.Arg); break;
+            case InstrumentMenus.FindScaleId: OpenScaleFinder(); break;
+            case InstrumentMenus.ClearScaleId: ClearScaleHighlight(); break;
+            case InstrumentMenus.NoteNamesId:
+                PracticeNamesCheck.IsChecked = !spec.Checked;
+                PracticeOption_Changed(PracticeNamesCheck, new RoutedEventArgs());
+                break;
+            case InstrumentMenus.PreviewId:
+                PracticePreviewCheck.IsChecked = !spec.Checked;
+                PracticeOption_Changed(PracticePreviewCheck, new RoutedEventArgs());
+                break;
+            case InstrumentMenus.LeftHandedId:
+                LeftHandedCheck.IsChecked = !spec.Checked;
+                PracticeOption_Changed(LeftHandedCheck, new RoutedEventArgs());
+                break;
+            case InstrumentMenus.LockId: ToggleInstrumentSizeLock(); break;
+            case InstrumentMenus.SettingsId: OpenSettings(SettingsCatalog.Fretboard, InstrumentMenus.SettingsRow); break;
+        }
+    }
+
 
     /// <summary>The panels on the side (tools, structure, rhythm, layout, sections, practice, metronome).</summary>
     private static readonly string[] SidePanelIds = { "tools", "structure", "rhythm", "layout", "sections", "practice", "playback" };
@@ -1113,6 +965,7 @@ public partial class MainWindow
         Arrangement.ShowIndividualNotes = ArrangementIndividualNotesMenu.IsChecked;
         ArrangementIndividualNotesMenu.IsChecked = Arrangement.ShowIndividualNotes;
         ArrangementContinuousBlocksMenu.IsChecked = Arrangement.ShowContinuousBlocks;
+        SaveTimelineAppearance();
     }
 
     private void ArrangementContinuousBlocksMenu_Click(object sender, RoutedEventArgs e)
@@ -1120,6 +973,7 @@ public partial class MainWindow
         Arrangement.ShowContinuousBlocks = ArrangementContinuousBlocksMenu.IsChecked;
         ArrangementIndividualNotesMenu.IsChecked = Arrangement.ShowIndividualNotes;
         ArrangementContinuousBlocksMenu.IsChecked = Arrangement.ShowContinuousBlocks;
+        SaveTimelineAppearance();
     }
 
     private void ShowPractice_Click(object sender, RoutedEventArgs e)

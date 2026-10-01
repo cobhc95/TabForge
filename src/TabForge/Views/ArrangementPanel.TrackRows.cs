@@ -116,7 +116,7 @@ public sealed partial class ArrangementPanel
                 Width = 18, Height = 18, Padding = new Thickness(1), HorizontalAlignment = HorizontalAlignment.Center,
                 Style = (Style)Application.Current.FindResource("TransportButton"),
                 Background = Brushes.Transparent, BorderThickness = new Thickness(0),
-                VerticalAlignment = VerticalAlignment.Center, ToolTip = "Track properties (instrument, tuning, mixer, details)",
+                VerticalAlignment = VerticalAlignment.Center,
                 Content = new System.Windows.Shapes.Path
                 {
                     Data = (Geometry)Application.Current.FindResource("IconCog"),
@@ -124,6 +124,7 @@ public sealed partial class ArrangementPanel
                     Width = 13, Height = 13, Stretch = Stretch.Uniform
                 }
             };
+            TooltipShortcuts.Bind(settings, "Track properties (instrument, tuning, mixer, details)", "Track.Properties");
             System.Windows.Automation.AutomationProperties.SetName(settings, $"Track {index + 1} properties");
             settings.Click += (_, _) => TrackOptionsRequested?.Invoke(this, index);
             cells["colour"] = arm;
@@ -243,7 +244,7 @@ public sealed partial class ArrangementPanel
                 var knob = new KnobControl
                 {
                     Minimum = 0, Maximum = 127, DefaultValue = 64, Origin = 64, Value = track.Pan,
-                    Label = "Pan", Format = PanText, HorizontalAlignment = HorizontalAlignment.Left,
+                    Label = "Pan", Format = PanText, Parse = KnobValueParser.ParsePan, HorizontalAlignment = HorizontalAlignment.Left,
                     VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(6, 0, 4, 0)
                 };
                 knob.ValueChanged += (_, e) => { track.Pan = (int)e.NewValue; MixChanged?.Invoke(this, EventArgs.Empty); };
@@ -318,6 +319,10 @@ public sealed partial class ArrangementPanel
             row.LostMouseCapture += (_, _) => CancelControlTrackDrag(row);
             row.PreviewMouseRightButtonUp += (_, e) =>
             {
+                // A right-click on a control (knob type-in, pan menu, slider, buttons) or on the number (colour menu)
+                // belongs to that control; only the row's own background opens Track properties.
+                var src = e.OriginalSource as DependencyObject;
+                if (IsInside(src, arm) || IsInside(src, handleElement) || IsInteractiveTrackControl(src, row)) return;
                 TrackOptionsRequested?.Invoke(this, index);
                 e.Handled = true;
             };

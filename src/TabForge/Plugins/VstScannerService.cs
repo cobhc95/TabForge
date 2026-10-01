@@ -119,6 +119,16 @@ public static class VstScannerService
 
     public static IEnumerable<string> StandardFolders => GetDefaultRoots();
 
+    /// <summary>The standard folders as shown to the user: with environment names, never an expanded user path (same list as <see cref="StandardFolders"/>).</summary>
+    public static readonly string[] StandardFolderLabels =
+    {
+        @"%CommonProgramFiles%\VST3", @"%ProgramFiles%\Common Files\VST3", @"%ProgramFiles%\VstPlugins", @"%ProgramFiles%\Steinberg\VSTPlugins",
+        @"%CommonProgramFiles%\VST2", @"%LocalAppData%\Programs\Common\VST3",
+    };
+
+    /// <summary>The Add plug-in window's "Scan the standard VST folders" button: turns the option on (the user's choice, off by default).</summary>
+    public static void EnableStandardFolders(PluginSettings settings) => settings.ScanStandardFolders = true;
+
     /// <summary>The built-in list of usual VST folders (environment variables are expanded when scanning).</summary>
     public static readonly string[] DefaultCommonFolders =
     {

@@ -62,6 +62,12 @@ public sealed class SvgIconView : FrameworkElement
 
     protected override void OnRender(DrawingContext dc)
     {
+        try { RenderGuard.Inject("SvgIconView"); RenderCore(dc); }
+        catch (Exception ex) when (RenderGuard.Contain(ex, "SvgIconView", dc, ActualWidth, ActualHeight)) { }
+    }
+
+    private void RenderCore(DrawingContext dc)
+    {
         SvgAsset? asset;
         try { asset = LoadAsset(Icon); }
         catch (Exception ex)

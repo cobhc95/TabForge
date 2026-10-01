@@ -117,6 +117,8 @@ public sealed class RenderSpec
     public RenderThreads Threads = RenderThreads.Auto;
     /// <summary>Render no faster than realtime (for streaming samplers that cannot keep up with a fast render).</summary>
     public bool RealtimePace;
+    /// <summary>Transparent master safety limiter (-0.3 dBFS) on the master mix after the master chain (A7-A01). On by default; stems are never limited.</summary>
+    public bool SafetyLimiter = true;
     public List<RenderSlot> Slots = new();
     /// <summary>Tempo map sorted by frame (empty = 120 bpm from frame 0).</summary>
     public List<RenderTempoPoint> Tempo = new();
@@ -134,6 +136,7 @@ public sealed class RenderSpec
         }
         w.Write(Tempo.Count);
         foreach (var t in Tempo) { w.Write(t.Frame); w.Write(t.Tempo); w.Write(t.Ppq); }
+        w.Write(SafetyLimiter);
     }
 
     public static RenderSpec Read(BinaryReader r)
@@ -159,6 +162,7 @@ public sealed class RenderSpec
         var tempos = r.ReadInt32();
         if (tempos is < 0 or > 100_000) throw new InvalidDataException("Bad tempo map.");
         for (var i = 0; i < tempos; i++) spec.Tempo.Add(new RenderTempoPoint(r.ReadInt64(), r.ReadDouble(), r.ReadDouble()));
+        if (r.BaseStream.CanSeek && r.BaseStream.Position < r.BaseStream.Length) spec.SafetyLimiter = r.ReadBoolean();
         return spec;
     }
 }

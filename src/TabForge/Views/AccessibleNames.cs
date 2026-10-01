@@ -66,7 +66,7 @@ internal static class AccessibleNames
         string? label = null;
         if (!hasName)
         {
-            label = FirstLine(element.ToolTip as string) ?? (element is KnobControl { Label.Length: > 0 } knob ? knob.Label : null) ??
+            label = FirstLine(TooltipShortcuts.GetBaseText(element) ?? element.ToolTip as string) ?? (element is KnobControl { Label.Length: > 0 } knob ? knob.Label : null) ??
                     (element is ContentControl { Content: string text } ? text : null) ??
                     (element is HeaderedItemsControl { Header: string header } ? header : null);
             if (!string.IsNullOrWhiteSpace(label))

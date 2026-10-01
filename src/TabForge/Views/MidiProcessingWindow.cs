@@ -413,7 +413,7 @@ public sealed class MidiProcessingWindow : Window
                 var scale = Math.Max(1, p.Scale);
                 var knob = new KnobControl
                 {
-                    Minimum = p.Min * scale, Maximum = p.Max * scale, DefaultValue = p.Default * scale, Origin = Math.Clamp(0, p.Min, p.Max) * scale, Width = 28, Height = 28, Label = p.Label,
+                    Minimum = p.Min * scale, Maximum = p.Max * scale, DefaultValue = p.Default * scale, Origin = Math.Clamp(0, p.Min, p.Max) * scale, Width = 28, Height = 28, Label = p.Label, DisplayScale = scale,
                     Format = v => p.Format(v / scale), ToolTip = p.Tip.Length > 0 ? p.Tip : p.Label,
                 };
                 var text = new TextBlock { Width = 90, Margin = new Thickness(8, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };

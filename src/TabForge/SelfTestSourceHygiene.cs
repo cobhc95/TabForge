@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using System.Linq;
 
 namespace TabForge;
@@ -7,7 +7,7 @@ public static partial class SelfTest
 {
     private static readonly string[] HygieneExtensions = { ".cs", ".xaml", ".ps1", ".cmd", ".md" };
     private static readonly HashSet<string> HygieneSkippedFolders =
-        new(StringComparer.OrdinalIgnoreCase) { "bin", "obj", "build", "dist", "third_party", "Tabs", "backup", ".git", ".vs" };
+        new(StringComparer.OrdinalIgnoreCase) { "bin", "obj", "build", "dist", "third_party", "Tabs", "backup", "work" };   // plus every dot-folder (tool data, other checkouts), see EnumerateHygieneFiles
 
     /// <summary>
     /// H-02: a scripted edit once ran escape processing on a Windows path ("native\fetch" became a form feed).
@@ -111,7 +111,7 @@ public static partial class SelfTest
         {
             var dir = pending.Pop();
             foreach (var sub in Directory.EnumerateDirectories(dir))
-                if (!HygieneSkippedFolders.Contains(Path.GetFileName(sub))) pending.Push(sub);
+                if (!HygieneSkippedFolders.Contains(Path.GetFileName(sub)) && !Path.GetFileName(sub).StartsWith('.')) pending.Push(sub);
             foreach (var file in Directory.EnumerateFiles(dir))
                 if (HygieneExtensions.Contains(Path.GetExtension(file), StringComparer.OrdinalIgnoreCase)) yield return file;
         }

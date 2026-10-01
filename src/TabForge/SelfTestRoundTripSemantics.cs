@@ -45,8 +45,9 @@ public static partial class SelfTest
         public RtProfile With(params (string Category, string Reason)[] more)
         {
             var losses = new Dictionary<string, string>(Losses);
-            foreach (var (c, r) in more) losses[c] = r;
-            return new RtProfile { Name = Name, Losses = losses, Only = new Dictionary<string, Func<RtDiff, bool>>(Only) };
+            var only = new Dictionary<string, Func<RtDiff, bool>>(Only);
+            foreach (var (c, r) in more) { losses[c] = r; only.Remove(c); }   // a scenario's own allowance is not narrowed by the base profile's
+            return new RtProfile { Name = Name, Losses = losses, Only = only };
         }
     }
 
@@ -92,13 +93,13 @@ public static partial class SelfTest
             f[key + "timeSig"] = $"{m?.TimeSigNum ?? p.TimeSignatureNumerator}/{m?.TimeSigDenom ?? p.TimeSignatureDenominator}";
             f[key + "tempo"] = MusicTime.TempoAt(p, b).ToString(CultureInfo.InvariantCulture);
             f[key + "tempoChange"] = b == 0 ? "" : m?.TempoChange?.ToString(CultureInfo.InvariantCulture) ?? "";
-            f[key + "midTempos"] = string.Join(";", (m?.MidBarTempos ?? new List<TempoPoint>()).Select(t => $"{RtF(t.Slot)}:{t.Tempo}"));
+            f[key + "midTempos"] = string.Join(";", (m?.MidBarTempos ?? new List<TempoPoint>()).Select(t => $"{RtF(t.Slot)}:{t.Tempo}{(t.RampSlots > 0 ? "~" + RtF(t.RampSlots) : "")}"));
             f[key + "repeatStart"] = (m?.RepeatStart ?? false) ? "1" : "0";
             f[key + "repeatEnd"] = (m?.RepeatEnd ?? false) ? "1" : "0";
             f[key + "repeatCount"] = m is { RepeatEnd: true } ? Math.Max(2, m.RepeatCount).ToString(CultureInfo.InvariantCulture) : "";
             f[key + "endings"] = m?.EndingLabel ?? "";
-            if (m?.KeySignature is int ks) lastKey = ks;
-            if (m?.KeySignatureMinor is bool km) lastMinor = km;
+            // a bar without a key of its own is in the song's key (BarSignatures.KeyAt, as the score shows it)
+            if (m is not null) { lastKey = m.KeySignature ?? p.KeySignature; lastMinor = m.KeySignatureMinor ?? p.KeySignatureMinor; }
             f[key + "key"] = $"{lastKey}{(lastMinor ? "m" : "")}";
             f[key + "doubleBar"] = (m?.IsDoubleBar ?? false) ? "1" : "0";
             f[key + "directions"] = m?.Directions ?? "";
@@ -313,6 +314,7 @@ public static partial class SelfTest
     private static void RtVerify(string scenario, RtProfile profile, SongProject expected, SongProject actual, bool audio = false, bool scoreToo = true)
     {
         RtProfiles.Add(profile.Name);
+        if (profile.Name == RtGpCleanProfile.Name) expected = RtBakedTranspose(expected);   // a .gp has no playback transposition: it is written into string + fret
         var ef = new Dictionary<string, string>(); var af = new Dictionary<string, string>();
         var noteCount = 0; var beatCount = 0; var actualNotes = 0; var actualBeats = 0;
         if (scoreToo) { ef = RtScoreFacts(expected, out noteCount, out beatCount); af = RtScoreFacts(actual, out actualNotes, out actualBeats); }
@@ -378,7 +380,11 @@ public static partial class SelfTest
             ["note.slideTarget"] = "derived data: the importer computes the slide's target pitch from the next note; a value the source did not set is filled in",
             ["note.trillTarget"] = "derived data: the importer fills the trill's target pitch when the source only tagged the trill",
             ["note.trillDur"] = "derived data: the importer fills the trill speed (1/16) when the source did not set it",
-            ["beat.tremoloPick"] = "derived data: the importer fills the tremolo-picking speed (1/8 default) when the source only tagged it",
+            ["beat.tremoloPick"] = "derived data: the importer fills the tremolo-picking speed (1/8 default) when the source only tagged it; GP7 has three speeds (1/8, 1/16, 1/32), so 1/64 is written as 1/32",
+            ["note.technique:FadeIn.extra"] = "GP stores a volume swell per beat: one faded note fades every note of the beat on reopen",
+            ["note.technique:FadeOut.extra"] = "GP stores a fade-out per beat: one faded note fades every note of the beat on reopen",
+            ["bar.directions"] = "the clean .gp stores directions under Guitar Pro's own names (Segno -> TargetSegno, ToCoda -> JumpDaCoda); the same marks, allowed only when the names are exactly the GP spelling",
+            ["bar.tempoChange"] = "a tempo marking that restates the tempo already running is not kept as a change on import (bar.tempo, the tempo actually played, is compared strictly)",
             ["note.technique:TremBar*"] = "alphaTab re-derives the whammy sub-type (Dip, Dive, ...) from the curve; the tag may change name (whammy.shape is compared strictly)",
             ["note.technique:Harmonic.extra"] = "the importer also tags every harmonic kind (artificial, pinch, tap, semi, feedback) with the generic Harmonic name",
             ["note.technique:Dead.extra"] = "the importer mirrors the dead-note flag as a Dead technique name (the flag itself is compared strictly)",
@@ -401,7 +407,10 @@ public static partial class SelfTest
         Only = new()
         {
             ["beat.fermata"] = d => d.Expected == "0", ["track.channel"] = d => d.Expected != "9" && d.Actual != "9",
-            ["note.slideTarget"] = RtSourceHadNone, ["note.trillTarget"] = RtSourceHadNone, ["note.trillDur"] = RtSourceHadNone, ["beat.tremoloPick"] = RtSourceHadNone,
+            ["note.slideTarget"] = RtSourceHadNone, ["note.trillTarget"] = RtSourceHadNone, ["note.trillDur"] = RtSourceHadNone,
+            ["beat.tremoloPick"] = d => RtSourceHadNone(d) || d.Expected == "64" && d.Actual == "32",
+            ["bar.directions"] = d => string.Join(",", GuitarProExporter.GpDirections(d.Expected)) == d.Actual,
+            ["bar.tempoChange"] = d => d.Actual == "",
         },
     };
 
@@ -732,6 +741,28 @@ public static partial class SelfTest
 
     private static SongProject RtCopy(SongProject s) => ProjectService.Restore(ProjectService.Snapshot(s));
 
+    /// <summary>What a clean .gp must hold for a song whose tracks play transposed (Guitar Pro has no playback transposition): the same
+    /// sounding pitches, carried by a shifted tuning with the frets unchanged (guitar, bass) or written as string + fret (other tracks).</summary>
+    internal static SongProject RtBakedTranspose(SongProject s)
+    {
+        var copy = RtCopy(s);
+        foreach (var t in copy.Tracks.Where(x => x.Kind != TrackKind.Drums && x.MidiChannel != 9))
+        {
+            var semitones = MixerGroups.Transpose(copy, t);
+            if (semitones == 0) continue;
+            var tuning = GuitarProExporter.TuningCarriesTranspose(t, semitones);
+            var notes = t.Measures.SelectMany(m => m.Cells.Concat(m.Voice2Cells)).SelectMany(c => c.Notes).ToList();
+            if (tuning) t.StringTunings = t.StringTunings.Select(v => v + semitones).ToList();
+            foreach (var n in notes)
+            {
+                if (!tuning) (n.StringIndex, n.Fret) = GuitarProExporter.TransposedPosition(t, n.StringIndex, n.Fret, semitones);
+                n.MidiValue = t.PitchOf(n.StringIndex, n.Fret);
+                if (n.TrillTargetMidi > 0) n.TrillTargetMidi = Math.Clamp(n.TrillTargetMidi + semitones, 0, 127);
+            }
+        }
+        return copy;
+    }
+
     // ------------------------------------------------------------------ independent reader: MusicXML
 
     private static Dictionary<string, string> RtMusicXmlFacts(byte[] bytes, SongProject model, out int noteCount)
@@ -891,7 +922,7 @@ public static partial class SelfTest
                     f[key + "repeatEnd"] = master is { RepeatEnd: true } ? "1" : "0";
                     f[key + "repeatCount"] = master is { RepeatEnd: true } ? Math.Max(2, master.RepeatCount).ToString(CultureInfo.InvariantCulture) : "";
                     f[key + "endings"] = master?.EndingLabel ?? "";
-                    var ks = master?.KeySignature ?? lastKey; var km = master?.KeySignatureMinor ?? lastMinor;
+                    var ks = master is null ? lastKey : master.KeySignature ?? p.KeySignature; var km = master is null ? lastMinor : master.KeySignatureMinor ?? p.KeySignatureMinor;
                     if (b == 0 || ks != lastKey || km != lastMinor) f[key + "keyChange"] = $"{Math.Clamp(ks, -7, 7)}{(km ? "m" : "")}";
                     lastKey = ks; lastMinor = km;
                     f[key + "rehearsal"] = markers.TryGetValue(b, out var section) ? section : "";

@@ -51,13 +51,20 @@ public partial class MainWindow
     private void Transpose_Click(object sender, RoutedEventArgs e)
     {
         var t = SelectedTrack; if (t is null) return;
-        var txt = GpDialogs.Prompt("Transpose", "Semitones (-12..12):", "0");
+        // Percussion numbers are instruments, not pitches: a drum track is never transposed.
+        if (t.Kind == TrackKind.Drums || t.MidiChannel == 9) { StatusText.Text = $"{t.Name} is a drum track: drums are not transposed"; return; }
+        // With bars/beats selected only those move; otherwise the whole track (both voices).
+        var hasSelection = Editor.HasSelection;
+        var txt = GpDialogs.Prompt("Transpose", hasSelection ? "Semitones (-12..12) for the selection:" : "Semitones (-12..12) for the whole track:", "0");
         if (txt is null || !int.TryParse(txt, out var st)) return;
         st = Math.Clamp(st, -12, 12);
         if (st == 0) return;
         CaptureUndo();
-        MusicTheoryService.TransposeTrack(t, st);
-        CommitEdit(EditRefresh.Score | EditRefresh.Instrument); StatusText.Text = $"Transposed {t.Name} {st:+0;-0} st";
+        var range = hasSelection ? Editor.SelectionCellRange : ((int, int, int, int)?)null;
+        var (_, unplaced) = MusicTheoryService.TransposeTrack(t, st, range);
+        CommitEdit(EditRefresh.Score | EditRefresh.Instrument);
+        StatusText.Text = $"Transposed {(hasSelection ? "the selection of " : "")}{t.Name} {st:+0;-0} st" +
+            (unplaced > 0 ? $" ({unplaced} note{(unplaced == 1 ? "" : "s")} did not fit on a free string and kept their fret)" : "");
     }
 
     // Tools > Scale finder: likely scales for the selection / song, or any scale, shown on the fretboard.

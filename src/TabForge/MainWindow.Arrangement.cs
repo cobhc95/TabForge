@@ -269,12 +269,12 @@ public partial class MainWindow
         var label = s == e ? $"bar {s + 1}" : $"bars {s + 1}-{e + 1}";
         var skipped = _skipRanges.Any(r => r.Start == s && r.End == e);
         var state = new SelectionMenuState(s == e ? $"Bar {s + 1} selected" : $"Bars {s + 1}-{e + 1} selected",
-            TimelineClips.CanPasteOnTimeline(ClipboardService.Shared.TryGetClip(out _)), _loop, skipped, _skipRanges.Count > 0, TimelineDisplay());
+            TimelineClips.CanPasteOnTimeline(ClipboardService.Shared.TryGetClip(out _)), _loop, skipped, _skipRanges.Count > 0);
         return NewTimelineMenu("Arrangement timeline selection options", TimelineMenus.Selection(state, MenuKey), command =>
         {
-            if (RunDisplayCommand(command)) return;
             switch (command)
             {
+                case TimelineCommand.TimelineSettings: OpenSettings(SettingsCatalog.Timeline, TimelineMenus.TimelineSettingsRow); break;
                 case TimelineCommand.CopySelection: CopyArea(); break;
                 case TimelineCommand.CutSelection: CopyArea(); DeleteArea("Cut"); break;
                 case TimelineCommand.PasteSelection: PasteAreaAt(s); break;
@@ -345,7 +345,19 @@ public partial class MainWindow
         SyncAreaVisuals();
     }
 
-    private void ShowArrangementContextMenu(int bar, int trackIndex)
+    /// <summary>
+    /// Shift+F10 / the Menu key on the timeline: the selection menu when bars are selected, otherwise the bar menu for the playhead's bar
+    /// (while playing) or the current bar of the selected track, at that bar's top-left with the first item focused.
+    /// </summary>
+    private void ShowTimelineContextMenuFromKeyboard()
+    {
+        if (MaxMeasures() == 0) return;
+        var bar = _loopHasArea ? _loopStartBar
+            : _isPlayingVisual && _playheadBar >= 0 ? _playheadBar : Editor.SelectedMeasure;
+        ShowArrangementContextMenu(bar, Math.Max(0, TrackMixerGrid.SelectedIndex), fromKeyboard: true);
+    }
+
+    private void ShowArrangementContextMenu(int bar, int trackIndex, bool fromKeyboard = false)
     {
         if (trackIndex >= 0 && trackIndex < _project.Tracks.Count)
             TrackMixerGrid.SelectedIndex = trackIndex;
@@ -359,7 +371,8 @@ public partial class MainWindow
         else bar = -1;
 
         // Inside the selected bars: the selection menu only. Outside it: the single-bar menu, and the selection stays.
-        if (AreaContains(bar)) { BuildSelectionMenu().IsOpen = true; return; }
+        Point? anchor = fromKeyboard && bar >= 0 ? Arrangement.TimelineBarAnchor(bar) : null;
+        if (AreaContains(bar)) { OpenContextMenu(BuildSelectionMenu(), Arrangement, anchor, fromKeyboard); return; }
 
         var selectedTrack = SelectedTrack;
         var hasBar = bar >= 0;
@@ -368,12 +381,12 @@ public partial class MainWindow
         var canPasteBars = TimelineClips.CanPasteOnTimeline(barsClip);
         var state = new BarMenuState(hasBar, selectedTrack is not null, _project.Tracks.Count,
             selectedTrack is not null && selectedTrack.Measures.Count > 1, MaxMeasures() > 1,
-            section is not null, section?.LockPosition ?? false, canPasteBars, canPasteBars && barsClip!.Tracks.Count > 1, TimelineDisplay());
+            section is not null, section?.LockPosition ?? false, canPasteBars, canPasteBars && barsClip!.Tracks.Count > 1);
         var menu = NewTimelineMenu("Arrangement timeline options", TimelineMenus.Bar(state, MenuKey), command =>
         {
-            if (RunDisplayCommand(command)) return;
             switch (command)
             {
+                case TimelineCommand.TimelineSettings: OpenSettings(SettingsCatalog.Timeline, TimelineMenus.TimelineSettingsRow); break;
                 case TimelineCommand.CopyBar: CopyArrangementBar(bar, selectedTrack, allTracks: false); break;
                 case TimelineCommand.CopyBarAllTracks: CopyArrangementBar(bar, selectedTrack, allTracks: true); break;
                 case TimelineCommand.CopySection: CopyArrangementSection(bar); break;
@@ -391,7 +404,7 @@ public partial class MainWindow
                     break;
             }
         });
-        menu.IsOpen = true;
+        OpenContextMenu(menu, Arrangement, anchor, fromKeyboard);
     }
 
     /// <summary>Right-click on the section lane: a section's menu, or just "Add section" on an empty stretch.</summary>
@@ -419,11 +432,12 @@ public partial class MainWindow
         var sectionLooped = _loop && _loopStartBar == marker.MeasureIndex && _loopEndBar == sectionLastBar;
         int? addAt = clickedBar is int atBar && atBar != marker.MeasureIndex ? atBar : null;
         var state = new SectionMenuState(addAt, TimelineClips.CanPasteOnTimeline(ClipboardService.Shared.TryGetClip(out _)),
-            sectionLooped, marker.LockPosition, _settings.Timeline.ShowSectionBrackets, _settings.Timeline.MatchSimilarSectionColours);
+            sectionLooped, marker.LockPosition);
         var menu = NewTimelineMenu("Section options", TimelineMenus.Section(state, MenuKey), command =>
         {
             switch (command)
             {
+                case TimelineCommand.SectionSettings: OpenSettings(SettingsCatalog.Timeline, TimelineMenus.SectionSettingsRow); break;
                 case TimelineCommand.AddSectionHere when addAt is int at: AddSectionAt(at); break;
                 case TimelineCommand.CopySectionMenu: CopySectionToClipboard(marker); break;
                 case TimelineCommand.CutSection: CutArrangementSection(marker); break;
@@ -437,16 +451,6 @@ public partial class MainWindow
                     break;
                 case TimelineCommand.RenameSection: EditSectionTitle(marker); break;
                 case TimelineCommand.GoToSection: JumpToMarker(marker); break;
-                case TimelineCommand.ShowSectionBrackets:
-                    _settings.Timeline.ShowSectionBrackets = !_settings.Timeline.ShowSectionBrackets;
-                    Arrangement.ShowSectionBrackets = _settings.Timeline.ShowSectionBrackets;
-                    SaveSettings();
-                    break;
-                case TimelineCommand.SameColourSections:
-                    _settings.Timeline.MatchSimilarSectionColours = !_settings.Timeline.MatchSimilarSectionColours;
-                    Arrangement.MatchSimilarSectionColours = _settings.Timeline.MatchSimilarSectionColours;
-                    SaveSettings();
-                    break;
                 case TimelineCommand.ToggleSectionLock:
                     CaptureUndo();
                     marker.LockPosition = !marker.LockPosition;
@@ -459,7 +463,10 @@ public partial class MainWindow
 
     private void EditSectionTitle(MarkerModel marker)
     {
-        var edited = GpDialogs.Marker(marker.Title, marker.ColorHex, "Save");
+        // Preselect the section's current colour: its own colour if valid, otherwise the colour the timeline shows.
+        var currentHex = Visualization.ColourText.TryParse(marker.ColorHex, out _) ? marker.ColorHex
+            : SectionColours.DisplayFor(marker) is { } shown ? $"#{shown.R:X2}{shown.G:X2}{shown.B:X2}" : "#2E74B5";
+        var edited = GpDialogs.Marker(marker.Title, currentHex, "Save");
         if (edited is null || (string.Equals(edited.Value.title, marker.Title, StringComparison.Ordinal) &&
                                string.Equals(edited.Value.color, marker.ColorHex, StringComparison.OrdinalIgnoreCase))) return;
         CaptureUndo();
@@ -555,7 +562,7 @@ public partial class MainWindow
             return;
         }
         if (confirm && _settings.General.ConfirmDeleteSection && MessageBox.Show(this,
-                $"Delete the entire '{marker.Title}' section and its musical content from every track?",
+                $"Delete the '{marker.Title}' section and its bars and notes from every track? Undo can restore them.",
                 "Delete Section", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes)
             return;
 
@@ -573,7 +580,7 @@ public partial class MainWindow
         var newSelection = mappedSelection >= 0 ? mappedSelection : removal.ContinueAtBar;
         Editor.SetPosition(Math.Clamp(newSelection, 0, Math.Max(0, MaxMeasures() - 1)), selectedCell,
             selectedString, seekPlayback: false);
-        FinishSectionStructureEdit(status ?? $"Deleted section '{marker.Title}'", removal.OldToNewBar,
+        FinishSectionStructureEdit(status ?? $"Deleted section '{marker.Title}' and its bars from every track (Undo restores them)", removal.OldToNewBar,
             removal.ContinueAtBar);
     }
 

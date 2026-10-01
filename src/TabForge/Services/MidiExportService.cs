@@ -42,70 +42,49 @@ public static class MidiExportService
 
     private static byte[] BuildConductorTrack(SongProject project, ScoreTimeline timeline, TickMap map)
     {
-        var events = new List<byte>();
-        WriteMeta(events, 0, 0x03, Encoding.ASCII.GetBytes("TabForge " + project.Title));
-        WriteTimeSig(events, 0, project.TimeSignatureNumerator, project.TimeSignatureDenominator);
+        var events = new List<(int Tick, byte[] Bytes)>();
+        var nameBytes = new List<byte>();
+        WriteMeta(nameBytes, 0, 0x03, Encoding.ASCII.GetBytes("TabForge " + project.Title));
+        events.Add((0, nameBytes.ToArray()));
+        var first = new List<byte>();
+        WriteTimeSig(first, 0, project.TimeSignatureNumerator, project.TimeSignatureDenominator);
+        events.Add((0, first.ToArray()));
 
-        var lastTempo = int.MinValue;
         // Seed from the meta written above so bar 1 does not duplicate the same time signature.
         var lastNum = project.TimeSignatureNumerator;
         var lastDen = project.TimeSignatureDenominator;
-        var cursorTick = 0;
         for (var i = 0; i < timeline.Bars.Count; i++)
         {
             var bar = timeline.Bars[i];
-            var tick = map.TickOfBar(i);
             var measure = MusicTime.BarOf(project, bar.Bar);
             var num = measure?.TimeSigNum ?? project.TimeSignatureNumerator;
             var den = measure?.TimeSigDenom ?? project.TimeSignatureDenominator;
-            if (num != lastNum || den != lastDen)
-            {
-                WriteTimeSig(events, tick - cursorTick, num, den);
-                cursorTick = tick;
-                lastNum = num; lastDen = den;
-            }
-            if (bar.Tempo != lastTempo)
-            {
-                WriteTempo(events, tick - cursorTick, bar.Tempo);
-                cursorTick = tick;
-                lastTempo = bar.Tempo;
-            }
-            // Tempo changes and ramps inside the bar (tempo ramp): one tempo event per sixteenth slot whose
-            // whole-BPM tempo differs, so the file's tempo track follows the same map the notes were timed with.
-            var inBar = new List<(int Tick, int Mpq, int Bpm)>();   // Bpm 0: a fermata's exact slowed tempo
-            if (measure?.MidBarTempos is { Count: > 0 })
-            {
-                var simulated = lastTempo;
-                for (var slot = 1; slot < bar.Slots; slot++)
-                {
-                    var tempo = MusicTime.TempoAtSlot(measure, slot, bar.Tempo);
-                    if (tempo == simulated) continue;
-                    inBar.Add((tick + (int)Math.Round(slot * (double)Division / MusicTime.SlotsPerQuarter), 0, tempo));
-                    simulated = tempo;
-                }
-            }
-            // A fermata hold: the beat's ticks stay as written while its time grows, so the tempo drops for the beat and returns after it.
-            if (bar.Fermatas is { } holds)
-                foreach (var hold in holds)
-                {
-                    var startTick = tick + (int)Math.Round(hold.Slot * (double)Division / MusicTime.SlotsPerQuarter);
-                    var endTick = tick + (int)Math.Round((hold.Slot + hold.LengthSlots) * (double)Division / MusicTime.SlotsPerQuarter);
-                    var holdTempo = MusicTime.TempoAtSlot(measure, hold.Slot, bar.Tempo);
-                    var endTempo = MusicTime.TempoAtSlot(measure, hold.Slot + hold.LengthSlots, bar.Tempo);
-                    inBar.RemoveAll(e => e.Tick >= startTick && e.Tick <= endTick);
-                    var slowed = 60_000_000.0 / Math.Clamp(holdTempo, 20, 400) * (hold.BaseLengthMs + hold.ExtraMs) / Math.Max(1e-6, hold.BaseLengthMs);
-                    inBar.Add((startTick, (int)Math.Round(slowed), 0));
-                    inBar.Add((endTick, 0, endTempo));
-                }
-            foreach (var e in inBar.OrderBy(x => x.Tick))
-            {
-                if (e.Bpm == 0) WriteTempoMpq(events, e.Tick - cursorTick, e.Mpq);
-                else WriteTempo(events, e.Tick - cursorTick, e.Bpm);
-                cursorTick = Math.Max(cursorTick, e.Tick);
-                lastTempo = e.Bpm == 0 ? int.MinValue : e.Bpm;
-            }
+            if (num == lastNum && den == lastDen) continue;
+            var bytes = new List<byte>();
+            WriteTimeSig(bytes, 0, num, den);
+            events.Add((map.TickOfBar(i), bytes.ToArray()));
+            lastNum = num; lastDen = den;
         }
-        return BuildChunk(events);
+        // The tempo map comes from the timeline itself (see TickMap.TempoChanges): tempo steps, ramps and fermata holds are all
+        // written as the exact microseconds per quarter that put every tick at the time playback reaches it.
+        foreach (var (tick, mpq) in map.TempoChanges)
+        {
+            var bytes = new List<byte>();
+            WriteTempoMpq(bytes, 0, mpq);
+            events.Add((tick, bytes.ToArray()));
+        }
+
+        var body = new List<byte>();
+        var cursor = 0;
+        foreach (var (tick, bytes) in events.OrderBy(e => e.Tick))   // stable: same-tick events keep their order
+        {
+            // each entry was written with delta 0 (one byte); replace it with the real delta
+            var delta = Math.Max(0, tick - cursor);
+            cursor = Math.Max(cursor, tick);
+            WriteVarLen(body, delta);
+            body.AddRange(bytes.Skip(1));
+        }
+        return BuildChunk(body, Math.Max(0, map.EndTick - cursor));
     }
 
     private static byte[] BuildTrackChunk(SongProject project, ScoreTimeline timeline, TickMap map, int trackIndex)
@@ -119,75 +98,148 @@ public static class MidiExportService
         {
             var tick = map.TickOf(e.TimeMs);
             var delta = Math.Max(0, tick - cursorTick);
-            cursorTick = tick;
+            cursorTick = Math.Max(cursorTick, tick);
             WriteVarLen(events, delta);
             events.Add((byte)(e.Status & 0xFF));
             events.Add((byte)(e.Data1 & 0x7F));
             if ((e.Status & 0xF0) != 0xC0 && (e.Status & 0xF0) != 0xD0) events.Add((byte)(e.Data2 & 0x7F));
         }
-        return BuildChunk(events);
+        // every track ends with the song, so all chunks are the same length
+        return BuildChunk(events, Math.Max(0, map.EndTick - cursorTick));
     }
 
-    /// <summary>Absolute ms to absolute MIDI ticks, using the timeline's own bar/tempo map.</summary>
+    /// <summary>
+    /// Absolute ms to absolute MIDI ticks, using the timeline's own bar/tempo map. Each performed bar has a clock (<see cref="BarClock"/>):
+    /// the time playback reaches each slot, through the bar's tempo, mid-bar tempo changes and ramps, and fermata holds. The tempo events
+    /// written to the file are derived from the same clock, so reading the file back gives playback's time at every bar start and note.
+    /// </summary>
     internal sealed class TickMap
     {
-        private readonly List<ScoreBar> _bars;
-        private readonly double[] _startTick;
+        private readonly BarClock[] _clocks;
+        private readonly double _endMs;
+        private readonly int _endTick;
+        private int _lastMpq = 500_000;
 
-        private readonly SongProject _project;
+        /// <summary>Tempo events (tick, microseconds per quarter) that reproduce the timeline's time at every bar start, ramp slot and hold.</summary>
+        public List<(int Tick, int Mpq)> TempoChanges { get; } = new();
+
+        /// <summary>The tick at the end of the last performed bar.</summary>
+        public int EndTick => _endTick;
 
         public TickMap(ScoreTimeline timeline, SongProject project)
         {
-            _project = project;
-            _bars = timeline.Bars;
-            _startTick = new double[_bars.Count];
-            var running = 0.0;
-            for (var i = 0; i < _bars.Count; i++)
+            _clocks = new BarClock[timeline.Bars.Count];
+            var running = 0;
+            for (var i = 0; i < _clocks.Length; i++)
             {
-                _startTick[i] = running;
-                running += _bars[i].Slots * (double)Division / MusicTime.SlotsPerQuarter;
+                var bar = timeline.Bars[i];
+                _clocks[i] = new BarClock(bar, MusicTime.BarOf(project, bar.Bar), running);
+                running += bar.Slots * Division / MusicTime.SlotsPerQuarter;
             }
+            _endTick = running;
+            _endMs = timeline.Bars.Count > 0 ? timeline.Bars[^1].EndMs : 0;
+            BuildTempoMap();
         }
 
-        public int TickOfBar(int index)
-        {
-            if (index < 0 || index >= _startTick.Length) return 0;
-            return (int)Math.Round(_startTick[index]);
-        }
+        public int TickOfBar(int index) => index < 0 || index >= _clocks.Length ? 0 : _clocks[index].StartTick;
 
         public int TickOf(double ms)
         {
-            if (_bars.Count == 0) return 0;
+            if (_clocks.Length == 0) return 0;
             var lo = 0;
-            var hi = _bars.Count - 1;
+            var hi = _clocks.Length - 1;
             while (lo < hi)
             {
                 var mid = (lo + hi + 1) / 2;
-                if (_bars[mid].StartMs <= ms + 1e-6) lo = mid; else hi = mid - 1;
+                if (_clocks[mid].Bar.StartMs <= ms + 1e-6) lo = mid; else hi = mid - 1;
             }
-            var bar = _bars[lo];
-            var barTicks = bar.Slots * (double)Division / MusicTime.SlotsPerQuarter;
-            // A bar with tempo changes is not linear in time: find the slot whose tempo-map time is this moment.
-            if (MusicTime.BarOf(_project, bar.Bar) is { MidBarTempos.Count: > 0 } varying && bar.Slots > 0)
+            // After the last bar (a release or let-ring tail): carry on at the tempo the file ends with.
+            if (lo == _clocks.Length - 1 && ms > _endMs) return _endTick + (int)Math.Round((ms - _endMs) * 1000.0 / _lastMpq * Division);
+            return _clocks[lo].TickAt(ms);
+        }
+
+        private void BuildTempoMap()
+        {
+            double fileMs = 0;
+            var lastMpq = -1;
+            foreach (var clock in _clocks)
             {
-                double low = 0, high = bar.Slots;
-                var relative = FermataSpan.Unwarp(bar.Fermatas, ms - bar.StartMs);   // the tempo map runs on time without the hold
-                for (var step = 0; step < 40; step++)
+                var points = clock.Breakpoints();
+                for (var k = 0; k + 1 < points.Count; k++)
                 {
-                    var middle = (low + high) / 2;
-                    if (MusicTime.OffsetMs(varying, middle, bar.Tempo) < relative) low = middle; else high = middle;
+                    var last = k + 2 == points.Count;
+                    var from = clock.StartTick + (int)Math.Round(points[k] * Division / MusicTime.SlotsPerQuarter);
+                    var to = last ? clock.EndTick : clock.StartTick + (int)Math.Round(points[k + 1] * Division / MusicTime.SlotsPerQuarter);
+                    if (to <= from) continue;
+                    var target = last ? clock.Bar.EndMs : clock.MsAt(points[k + 1]);
+                    var quarters = (to - from) / (double)Division;
+                    // Exact microseconds per quarter for this stretch, correcting the rounding left by earlier stretches so nothing accumulates.
+                    var mpq = Math.Clamp((int)Math.Round((target - fileMs) * 1000.0 / quarters), 1, 0xFFFFFF);
+                    if (mpq != lastMpq) { TempoChanges.Add((from, mpq)); lastMpq = mpq; }
+                    fileMs += quarters * mpq / 1000.0;
                 }
-                return (int)Math.Round(_startTick[lo] + (low + high) / 2 * Division / MusicTime.SlotsPerQuarter);
             }
-            return (int)Math.Round(_startTick[lo] + bar.SlotFraction(ms) * barTicks);
+            if (lastMpq > 0) _lastMpq = lastMpq;
+        }
+    }
+
+    /// <summary>The time a performed bar's slots are reached: the bar's own tempo map (mid-bar changes, ramps) then its fermata holds.</summary>
+    internal sealed class BarClock
+    {
+        public ScoreBar Bar { get; }
+        public int StartTick { get; }
+        public int EndTick => StartTick + Bar.Slots * Division / MusicTime.SlotsPerQuarter;
+        private readonly MeasureModel? _measure;
+
+        public BarClock(ScoreBar bar, MeasureModel? measure, int startTick) { Bar = bar; _measure = measure; StartTick = startTick; }
+
+        private bool Varying => _measure?.MidBarTempos is { Count: > 0 };
+
+        public double MsAt(double slot) => Bar.StartMs + FermataSpan.Warp(Bar.Fermatas, MusicTime.OffsetMs(_measure, slot, Bar.Tempo));
+
+        public int TickAt(double ms) => StartTick + (int)Math.Round(SlotAt(ms) * Division / MusicTime.SlotsPerQuarter);
+
+        /// <summary>Inverse of <see cref="MsAt"/> (a slot position, not clamped to the bar so a tail after the last slot keeps counting).</summary>
+        public double SlotAt(double ms)
+        {
+            var relative = FermataSpan.Unwarp(Bar.Fermatas, ms - Bar.StartMs);
+            if (!Varying) return Math.Max(0, relative / MusicTime.SlotsToMsAt(1, Bar.Tempo));
+            double low = 0, high = Bar.Slots;
+            for (var step = 0; step < 40; step++)
+            {
+                var middle = (low + high) / 2;
+                if (MusicTime.OffsetMs(_measure, middle, Bar.Tempo) < relative) low = middle; else high = middle;
+            }
+            return (low + high) / 2;
+        }
+
+        /// <summary>Slot positions where the file needs a tempo event: bar start, every slot inside a ramp, tempo steps and hold edges, bar end.</summary>
+        public List<double> Breakpoints()
+        {
+            var set = new SortedSet<double> { 0, Bar.Slots };
+            void Add(double slot) { if (slot > 1e-6 && slot < Bar.Slots - 1e-6) set.Add(Math.Round(slot, 6)); }
+            if (Bar.Fermatas is { } holds)
+                foreach (var hold in holds) { Add(hold.Slot); Add(hold.Slot + hold.LengthSlots); }
+            if (_measure?.MidBarTempos is { Count: > 0 } points)
+                for (var i = 0; i < points.Count; i++)
+                {
+                    var point = points[i];
+                    Add(point.Slot);
+                    if (point.RampSlots <= 0) continue;
+                    var next = i + 1 < points.Count ? points[i + 1].Slot : Bar.Slots;
+                    var rampEnd = Math.Min(Math.Min(point.Slot + point.RampSlots, next), Bar.Slots);
+                    for (var slot = Math.Floor(point.Slot) + 1; slot < rampEnd - 1e-6; slot += 1) Add(slot);
+                    Add(rampEnd);
+                }
+            return set.ToList();
         }
     }
 
     // ---------- chunk helpers ----------
 
-    private static byte[] BuildChunk(List<byte> events)
+    private static byte[] BuildChunk(List<byte> events, int endDelta = 0)
     {
-        WriteVarLen(events, 0); events.Add(0xFF); events.Add(0x2F); events.Add(0x00);
+        WriteVarLen(events, endDelta); events.Add(0xFF); events.Add(0x2F); events.Add(0x00);
         var output = new List<byte>();
         output.AddRange(Encoding.ASCII.GetBytes("MTrk"));
         var length = events.Count;

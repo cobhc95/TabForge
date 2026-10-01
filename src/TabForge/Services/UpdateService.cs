@@ -41,7 +41,8 @@ public static class UpdateService
     public static async Task<ReleaseInfo?> CheckAsync(string currentVersion, CancellationToken cancellation)
     {
         var json = await FetchAsync(cancellation).ConfigureAwait(false);
-        var latest = json is null ? null : LatestVersionFrom(json);
+        // A final-release user is only offered final releases; a pre-release user is offered anything newer.
+        var latest = json is null ? null : LatestVersionFrom(json, includePreReleases: currentVersion.Contains('-') || AppInfo.IsPreRelease);
         return latest is not null && IsNewer(latest, currentVersion) ? new ReleaseInfo(latest, PageFor(latest)) : null;
     }
 
@@ -82,7 +83,7 @@ public static class UpdateService
     private static string SafeToken(string version) => Regex.Replace(version, "[^0-9A-Za-z.\\-]", "");
 
     /// <summary>Highest plain-version tag among the first published (non-draft) releases of a GitHub releases array.</summary>
-    public static string? LatestVersionFrom(string json)
+    public static string? LatestVersionFrom(string json, bool includePreReleases = true)
     {
         try
         {
@@ -97,6 +98,7 @@ public static class UpdateService
                 var match = TagPattern.Match(tag.GetString() ?? "");
                 if (!match.Success) continue;
                 var version = match.Groups[1].Value;
+                if (!includePreReleases && (version.Contains('-') || (release.TryGetProperty("prerelease", out var pre) && pre.ValueKind == JsonValueKind.True))) continue;
                 if (best is null || Compare(version, best) > 0) best = version;
             }
             return best;

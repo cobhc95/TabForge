@@ -129,7 +129,12 @@ public sealed class DocumentSession
         return session;
     }
 
-    public void DisposePlayback() => Playback.Dispose();
+    /// <summary>The document is gone for good (tab closed, replaced or its window closed): playback stops and its engine chains are unloaded now, not parked.</summary>
+    public void DisposePlayback()
+    {
+        Playback.Dispose();
+        if (Playback.Routing is not null) Audio.AudioEngineClient.Instance.ReleaseOwner(this);
+    }
 }
 
 /// <summary>Owns the open documents and which one is active.</summary>

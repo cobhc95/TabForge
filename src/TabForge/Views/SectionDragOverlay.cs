@@ -54,6 +54,12 @@ internal sealed class SectionDragOverlay : FrameworkElement
 
     protected override void OnRender(DrawingContext dc)
     {
+        try { RenderGuard.Inject("SectionDragOverlay"); RenderCore(dc); }
+        catch (Exception ex) when (RenderGuard.Contain(ex, "SectionDragOverlay", dc, ActualWidth, ActualHeight)) { }
+    }
+
+    private void RenderCore(DrawingContext dc)
+    {
         base.OnRender(dc);
         if (_blockDrawing is not null) dc.DrawDrawing(_blockDrawing);
     }

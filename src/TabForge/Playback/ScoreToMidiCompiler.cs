@@ -140,10 +140,14 @@ internal sealed partial class ScoreToMidiCompiler
     /// Written length of bar <paramref name="barIndex"/> across all tracks (sixteenth slots): the latest
     /// end of any note or rest. 0 when no track has content; the full bar when any track fills it.
     /// </summary>
-    private double ContentSlots(int barIndex)
+    private double ContentSlots(int barIndex) => ContentSlots(_project, barIndex);
+
+    /// <inheritdoc cref="ContentSlots(int)"/>
+    /// <remarks>Shared with the clean .gp export, which writes an imported song's short bar no longer than this.</remarks>
+    internal static double ContentSlots(SongProject project, int barIndex)
     {
         var end = 0.0;
-        foreach (var track in _project.Tracks)
+        foreach (var track in project.Tracks)
         {
             if (barIndex >= track.Measures.Count) continue;
             var m = track.Measures[barIndex];
@@ -282,11 +286,14 @@ internal sealed partial class ScoreToMidiCompiler
             if ((arpeggio || brush) && double.IsFinite(cell.BrushStepSlots) && cell.BrushStepSlots > 0)
                 spreadStep = Math.Min(cell.BrushStepSlots * slotMs, noteMs * 0.9 / (cell.Notes.Count - 1));
         }
-        var up = cell.Notes.Any(n => n.Techniques.Contains("ArpeggioUp") || n.Techniques.Contains("BrushUp"));
-        // A down-stroke sounds the low string first (highest StringIndex), an up-stroke the high string first.
+        // Guitar Pro 5 (the reference; Help > Stroke): the downstroke goes from the bass string to the highest string, the upstroke from
+        // the highest string to the bass string. GP5 has no separate arpeggio effect, so arpeggio up/down keep the stroke direction.
+        // The order follows PITCH, not string index: keyboards have no real strings (keys tracks put chord notes on octave "strings"),
+        // and on a guitar high pitch = low StringIndex in normal tunings, so guitars sound exactly as before. Equal pitches keep string order.
+        var upStroke = cell.Notes.Any(n => n.Techniques.Contains("ArpeggioUp") || n.Techniques.Contains("BrushUp"));
         var ordered = !(arpeggio || brush) ? cell.Notes.OrderBy(n => n.StringIndex).ToList()
-            : up ? cell.Notes.OrderBy(n => n.StringIndex).ToList()
-            : cell.Notes.OrderByDescending(n => n.StringIndex).ToList();
+            : upStroke ? cell.Notes.OrderByDescending(n => n.MidiValue).ThenBy(n => n.StringIndex).ToList()
+            : cell.Notes.OrderBy(n => n.MidiValue).ThenByDescending(n => n.StringIndex).ToList();
 
         var index = 0;
         foreach (var note in ordered)

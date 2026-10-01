@@ -37,7 +37,7 @@
                     <!-- Title-bar settings button: Segoe Fluent Icons gear (E713, 17px). -->
                     <Button x:Name="TitleSettingsButton" Style="{StaticResource ChromeCaptionButton}" Click="Prefs_Click"
                             WindowChrome.IsHitTestVisibleInChrome="True" Width="40"
-                            ToolTip="Settings (F12)" AutomationProperties.Name="Settings">
+                            ToolTip="Settings" local:TooltipShortcuts.Command="App.Preferences" AutomationProperties.Name="Settings">
                         <TextBlock Text="&#xE713;" FontFamily="Segoe Fluent Icons" FontSize="17"
                                    Foreground="{DynamicResource ChromeGlyphBrush}"
                                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -82,8 +82,9 @@
                                    VerticalAlignment="Center" ToolTip="Last action or current state"
                                    AutomationProperties.Name="Status" AutomationProperties.LiveSetting="Polite"/>
                         <!-- A5-07: shown only while a Guitar Pro file imports in the background -->
-                        <Button x:Name="CancelImportButton" Content="Cancel" Visibility="Collapsed" Margin="6,0,0,0" Padding="6,0"
-                                VerticalAlignment="Center" Click="CancelImport_Click" ToolTip="Cancel the import in progress"
+                        <Button x:Name="CancelImportButton" Content="Cancel" Visibility="Collapsed" Margin="6,0,0,0" Padding="8,1" Focusable="True" IsTabStop="True"
+                                BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}" Background="{DynamicResource Panel2Brush}"
+                                VerticalAlignment="Center" Click="CancelImport_Click" ToolTip="Cancel the import in progress" local:TooltipShortcuts.Command="File.CancelImport"
                                 AutomationProperties.Name="Cancel import"/>
                     </StackPanel>
                 </Border>
@@ -128,74 +129,74 @@
         <Border x:Name="MainToolbar" DockPanel.Dock="Top" Height="30" Background="{DynamicResource PanelBrush}"
                 BorderBrush="{DynamicResource BorderSoftBrush}" BorderThickness="0,0,0,1">
             <DockPanel>
-                <Menu DockPanel.Dock="Left" Background="Transparent" VerticalAlignment="Center">
+                <Menu x:Name="MainMenu" DockPanel.Dock="Left" Background="Transparent" VerticalAlignment="Center">
                     <MenuItem Header="_File">
-                        <MenuItem Header="_New" Click="New_Click" InputGestureText="Ctrl+N"/>
-                        <MenuItem Header="New from t_emplate..." Click="ApplyTemplate_Click"/>
-                        <MenuItem Header="New _tab" Click="NewTab_Click" InputGestureText="Ctrl+T"/>
-                        <MenuItem Header="_Open..." Click="Open_Click" InputGestureText="Ctrl+O"/>
-                        <MenuItem Header="Open in new _tab..." Click="OpenInNewTab_Click" InputGestureText="Ctrl+Shift+O"/>
-                        <MenuItem Header="_Save" Click="Save_Click" InputGestureText="Ctrl+S"/>
-                        <MenuItem Header="Save _As..." Click="SaveAs_Click" InputGestureText="Ctrl+Shift+S"/>
-                        <MenuItem Header="Save as temp_late..." Click="SaveAsTemplate_Click"/>
-                        <MenuItem Header="_Close tab" Click="CloseTab_Click" InputGestureText="Ctrl+W"/>
+                        <MenuItem Header="_New" Click="New_Click" local:MenuHotkey.Id="File.New"/>
+                        <MenuItem Header="New from t_emplate…" Click="ApplyTemplate_Click" local:MenuHotkey.Id="File.NewFromTemplate"/>
+                        <MenuItem Header="New _tab" Click="NewTab_Click" local:MenuHotkey.Id="Tab.New"/>
+                        <MenuItem Header="_Open…" Click="Open_Click" local:MenuHotkey.Id="File.Open"/>
+                        <MenuItem Header="Open in new _tab…" Click="OpenInNewTab_Click" local:MenuHotkey.Id="File.OpenInNewTab"/>
+                        <MenuItem Header="_Save" Click="Save_Click" local:MenuHotkey.Id="File.Save"/>
+                        <MenuItem Header="Save _As…" Click="SaveAs_Click" local:MenuHotkey.Id="File.SaveAs"/>
+                        <MenuItem Header="Save as temp_late…" Click="SaveAsTemplate_Click" local:MenuHotkey.Id="File.SaveAsTemplate"/>
+                        <MenuItem Header="_Close tab" Click="CloseTab_Click" local:MenuHotkey.Id="Tab.Close"/>
                         <Separator/>
-                        <MenuItem Header="Export _MIDI..." Click="ExportMidi_Click"/>
-                        <MenuItem Header="_Render to audio file..." Click="Render_Click" InputGestureText="Ctrl+Alt+R"/>
-                        <MenuItem Header="Export _ASCII tab..." Click="ExportAscii_Click"/>
-                        <MenuItem Header="Export P_DF..." Click="ExportPdf_Click"/>
-                        <MenuItem Header="Export Music_XML..." Click="ExportMusicXml_Click"/>
-                        <MenuItem Header="Command pa_lette..." Click="CommandPalette_Click" InputGestureText="Ctrl+Shift+A"/>
+                        <MenuItem Header="Export _MIDI…" Click="ExportMidi_Click" local:MenuHotkey.Id="File.ExportMidi"/>
+                        <MenuItem Header="_Render to audio file…" Click="Render_Click" local:MenuHotkey.Id="File.Render"/>
+                        <MenuItem Header="Export _ASCII tab…" Click="ExportAscii_Click" local:MenuHotkey.Id="File.ExportAscii"/>
+                        <MenuItem Header="Export P_DF…" Click="ExportPdf_Click" local:MenuHotkey.Id="File.ExportPdf"/>
+                        <MenuItem Header="Export Music_XML…" Click="ExportMusicXml_Click" local:MenuHotkey.Id="File.ExportMusicXml"/>
+                        <MenuItem Header="Command pa_lette…" Click="CommandPalette_Click" local:MenuHotkey.Id="App.CommandPalette"/>
                         <Separator/>
-                        <MenuItem Header="Score _information..." Click="ScoreInfo_Click" InputGestureText="F5"/>
-                        <MenuItem Header="Print _preview..." Click="PrintPreview_Click"/>
-                        <MenuItem Header="_Print..." Click="Print_Click" InputGestureText="Ctrl+P"/>
+                        <MenuItem Header="Score _information…" Click="ScoreInfo_Click" local:MenuHotkey.Id="Bar.ScoreInfo"/>
+                        <MenuItem Header="Print _preview…" Click="PrintPreview_Click" local:MenuHotkey.Id="File.PrintPreview"/>
+                        <MenuItem Header="_Print…" Click="Print_Click" local:MenuHotkey.Id="File.Print"/>
                         <Separator/><MenuItem Header="E_xit" Click="Exit_Click"/>
                     </MenuItem>
                     <MenuItem Header="_Edit">
-                        <MenuItem Header="_Undo" Click="Undo_Click" InputGestureText="Ctrl+Z"/>
-                        <MenuItem Header="_Redo" Click="Redo_Click" InputGestureText="Ctrl+Y"/>
+                        <MenuItem Header="_Undo" Click="Undo_Click" local:MenuHotkey.Id="Edit.Undo"/>
+                        <MenuItem Header="_Redo" Click="Redo_Click" local:MenuHotkey.Id="Edit.Redo"/>
                         <Separator/>
-                        <MenuItem Header="_Copy" Click="Copy_Click" InputGestureText="Ctrl+C"/>
-                        <MenuItem Header="Cu_t" Click="Cut_Click" InputGestureText="Ctrl+X"/>
-                        <MenuItem Header="_Paste" Click="Paste_Click" InputGestureText="Ctrl+V"/>
-                        <MenuItem Header="Paste _special..." Click="PasteSpecial_Click" InputGestureText="Ctrl+Shift+V"/>
+                        <MenuItem Header="_Copy" Click="Copy_Click" local:MenuHotkey.Id="Edit.Copy"/>
+                        <MenuItem Header="Cu_t" Click="Cut_Click" local:MenuHotkey.Id="Edit.Cut"/>
+                        <MenuItem Header="_Paste" Click="Paste_Click" local:MenuHotkey.Id="Edit.Paste"/>
+                        <MenuItem Header="Paste _special…" Click="PasteSpecial_Click" local:MenuHotkey.Id="Edit.PasteSpecial"/>
                         <Separator/>
-                        <MenuItem Header="_Insert beat" Click="InsertBeat_Click" InputGestureText="Ctrl +"/>
-                        <MenuItem Header="_Delete beats" Click="DeleteBeats_Click" InputGestureText="Ctrl -"/>
-                        <MenuItem Header="_Copy last beat" Click="CopyBeats_Click" InputGestureText="C"/>
+                        <MenuItem Header="_Insert beat" Click="InsertBeat_Click" local:MenuHotkey.Id="Edit.InsertBeat"/>
+                        <MenuItem Header="_Delete beats" Click="DeleteBeats_Click" local:MenuHotkey.Id="Edit.DeleteBeats"/>
+                        <MenuItem Header="_Copy last beat" Click="CopyBeats_Click" local:MenuHotkey.Id="Note.RepeatBeat"/>
                     </MenuItem>
                     <MenuItem Header="_Bar">
-                        <MenuItem Header="Insert _bar" Click="InsertBar_Click" InputGestureText="Ctrl+Ins"/>
-                        <MenuItem Header="_Delete bar" Click="DeleteBar_Click" InputGestureText="Ctrl+Del"/>
+                        <MenuItem Header="Insert _bar" Click="InsertBar_Click" local:MenuHotkey.Id="Bar.Insert"/>
+                        <MenuItem Header="_Delete bar" Click="DeleteBar_Click" local:MenuHotkey.Id="Bar.Delete"/>
                         <MenuItem Header="Duplicate bar" Click="DuplicateBar_Click"/>
-                        <MenuItem Header="Repeat selection as bars" Click="RepeatSelection_Click"/>
+                        <MenuItem Header="Repeat selection as bars" Click="RepeatSelection_Click" local:MenuHotkey.Id="Edit.RepeatSelection"/>
                         <Separator/>
-                        <MenuItem Header="_Time signature..." Click="TimeSig_Click" InputGestureText="Ctrl+Shift+T"/>
-                        <MenuItem Header="_Key signature..." Click="KeySig_Click" InputGestureText="Ctrl+K"/>
-                        <MenuItem Header="_Clef" Click="Clef_Click" InputGestureText="K"/>
-                        <MenuItem Header="Triplet _feel" Click="TripletFeel_Click" InputGestureText="Ctrl+/"/>
+                        <MenuItem Header="_Time signature…" Click="TimeSig_Click" local:MenuHotkey.Id="Bar.TimeSignature"/>
+                        <MenuItem Header="_Key signature…" Click="KeySig_Click" local:MenuHotkey.Id="Bar.KeySignature"/>
+                        <MenuItem Header="_Clef" Click="Clef_Click" local:MenuHotkey.Id="Bar.Clef"/>
+                        <MenuItem Header="Triplet _feel" Click="TripletFeel_Click"/>
                         <Separator/>
-                        <MenuItem Header="Repeat _open" Click="RepeatOpen_Click" InputGestureText="["/>
-                        <MenuItem Header="Repeat _close..." Click="RepeatClose_Click" InputGestureText="]"/>
-                        <MenuItem Header="_Directions / ending..." Click="Directions_Click" InputGestureText="D"/>
+                        <MenuItem Header="Repeat _open" Click="RepeatOpen_Click" local:MenuHotkey.Id="Bar.RepeatOpen"/>
+                        <MenuItem Header="Repeat _close…" Click="RepeatClose_Click" local:MenuHotkey.Id="Bar.RepeatClose"/>
+                        <MenuItem Header="_Directions / ending…" Click="Directions_Click" local:MenuHotkey.Id="Bar.Directions"/>
                         <MenuItem Header="_Double bar" Click="DoubleBar_Click"/>
                         <MenuItem Header="Repeat one _bar" Click="Simile1_Click"/>
                         <MenuItem Header="Repeat two b_ars" Click="Simile2_Click"/>
                         <Separator/>
-                        <MenuItem Header="_Section..." Click="Section_Click" InputGestureText="Shift+Ins"/>
+                        <MenuItem Header="_Section…" Click="Section_Click" local:MenuHotkey.Id="Section.Edit"/>
                     </MenuItem>
                     <MenuItem Header="_Track">
-                        <MenuItem Header="Add _Guitar" Click="AddGuitar_Click"/>
+                        <MenuItem Header="Add _Guitar" Click="AddGuitar_Click" local:MenuHotkey.Id="Track.Add"/>
                         <MenuItem Header="Add _Bass" Click="AddBass_Click"/>
                         <MenuItem Header="Add _Drums" Click="AddDrums_Click"/>
                         <MenuItem Header="Add _Keys" Click="AddKeys_Click"/>
                         <Separator/>
-                        <MenuItem Header="_Delete track" Click="DeleteTrack_Click"/>
-                        <MenuItem Header="Move _up" Click="MoveTrackUp_Click"/>
-                        <MenuItem Header="Move _down" Click="MoveTrackDown_Click"/>
+                        <MenuItem Header="_Delete track" Click="DeleteTrack_Click" local:MenuHotkey.Id="Track.Delete"/>
+                        <MenuItem Header="Move _up" Click="MoveTrackUp_Click" local:MenuHotkey.Id="Track.MoveUp"/>
+                        <MenuItem Header="Move _down" Click="MoveTrackDown_Click" local:MenuHotkey.Id="Track.MoveDown"/>
                         <Separator/>
-                        <MenuItem Header="_Properties..." Click="TrackProps_Click" InputGestureText="F6"/>
+                        <MenuItem Header="_Properties…" Click="TrackProps_Click" local:MenuHotkey.Id="Track.Properties"/>
                     </MenuItem>
                     <MenuItem Header="_Note">
                         <MenuItem Header="Whole" Click="Dur1_Click"/>
@@ -206,77 +207,77 @@
                         <MenuItem Header="32nd" Click="Dur32_Click"/>
                         <MenuItem Header="64th" Click="Dur64_Click"/>
                         <Separator/>
-                        <MenuItem Header="Increase duration" Click="DurLonger_Click" InputGestureText="+"/>
-                        <MenuItem Header="Decrease duration" Click="DurShorter_Click" InputGestureText="-"/>
-                        <MenuItem Header="Dotting" Click="Dot_Click" InputGestureText="."/>
-                        <MenuItem Header="Double dotting" Click="DoubleDot_Click" InputGestureText="Ctrl+."/>
-                        <MenuItem Header="Triplet" Click="Triplet_Click" InputGestureText="/"/>
+                        <MenuItem Header="Longer note value" Click="DurLonger_Click" local:MenuHotkey.Id="Note.Longer"/>
+                        <MenuItem Header="Shorter note value" Click="DurShorter_Click" local:MenuHotkey.Id="Note.Shorter"/>
+                        <MenuItem Header="Dotting" Click="Dot_Click" local:MenuHotkey.Id="Note.Dot"/>
+                        <MenuItem Header="Double dotting" Click="DoubleDot_Click" local:MenuHotkey.Id="Note.DoubleDot"/>
+                        <MenuItem Header="Triplet" Click="Triplet_Click" local:MenuHotkey.Id="Note.Triplet"/>
                         <Separator/>
-                        <MenuItem Header="Tie note" Click="Tie_Click" InputGestureText="L"/>
-                        <MenuItem Header="Rest" Click="Rest_Click" InputGestureText="R"/>
-                        <MenuItem Header="Fermata" Click="Fermata_Click" InputGestureText="F"/>
-                        <MenuItem Header="Accent" Click="Accent_Click" InputGestureText=";"/>
-                        <MenuItem Header="Staccato" Click="Staccato_Click" InputGestureText="Shift+1"/>
-                        <MenuItem Header="Tenuto" Click="Tenuto_Click" InputGestureText="Shift+-"/>
+                        <MenuItem Header="Tie note" Click="Tie_Click" local:MenuHotkey.Id="Note.Tie"/>
+                        <MenuItem Header="Rest" Click="Rest_Click" local:MenuHotkey.Id="Note.Rest"/>
+                        <MenuItem Header="Fermata" Click="Fermata_Click" local:MenuHotkey.Id="Note.Fermata"/>
+                        <MenuItem Header="Accent" Click="Accent_Click" local:MenuHotkey.Id="Note.Accent"/>
+                        <MenuItem Header="Staccato" Click="Staccato_Click" local:MenuHotkey.Id="Note.Staccato"/>
+                        <MenuItem Header="Tenuto" Click="Tenuto_Click" local:MenuHotkey.Id="Note.Tenuto"/>
                         <Separator/>
-                        <MenuItem Header="Shift pitch up (semitone)" Click="PitchUp_Click" InputGestureText="Shift+Up"/>
-                        <MenuItem Header="Shift pitch down (semitone)" Click="PitchDown_Click" InputGestureText="Shift+Down"/>
-                        <MenuItem Header="Move to higher string" Click="MoveUpString_Click" InputGestureText="Alt+Up"/>
-                        <MenuItem Header="Move to lower string" Click="MoveDownString_Click" InputGestureText="Alt+Down"/>
+                        <MenuItem Header="Shift pitch up (semitone)" Click="PitchUp_Click" local:MenuHotkey.Id="Note.PitchUp"/>
+                        <MenuItem Header="Shift pitch down (semitone)" Click="PitchDown_Click" local:MenuHotkey.Id="Note.PitchDown"/>
+                        <MenuItem Header="Move to higher string" Click="MoveUpString_Click" local:MenuHotkey.Id="Note.MoveStringUp"/>
+                        <MenuItem Header="Move to lower string" Click="MoveDownString_Click" local:MenuHotkey.Id="Note.MoveStringDown"/>
                     </MenuItem>
                     <MenuItem Header="_Effects">
-                        <MenuItem Header="Dead note" Click="FxDead_Click" InputGestureText="X"/>
-                        <MenuItem Header="Ghost note" Click="FxGhost_Click" InputGestureText="O"/>
-                        <MenuItem Header="Palm mute" Click="PalmMute_Click" InputGestureText="P"/>
-                        <MenuItem Header="Let ring" Click="LetRing_Click" InputGestureText="I"/>
-                        <MenuItem Header="Hammer / pull" Click="Hopo_Click" InputGestureText="H"/>
-                        <MenuItem Header="Bend" Click="Bend_Click" InputGestureText="B"/>
-                        <MenuItem Header="Legato slide" Click="Slide_Click" InputGestureText="S"/>
+                        <MenuItem Header="Dead note" Click="FxDead_Click" local:MenuHotkey.Id="Note.Dead"/>
+                        <MenuItem Header="Ghost note" Click="FxGhost_Click" local:MenuHotkey.Id="Note.Ghost"/>
+                        <MenuItem Header="Palm mute" Click="PalmMute_Click" local:MenuHotkey.Id="Note.PalmMute"/>
+                        <MenuItem Header="Let ring" Click="LetRing_Click" local:MenuHotkey.Id="Note.LetRing"/>
+                        <MenuItem Header="Hammer / pull" Click="Hopo_Click" local:MenuHotkey.Id="Note.HammerPull"/>
+                        <MenuItem Header="Bend" Click="Bend_Click" local:MenuHotkey.Id="Note.Bend"/>
+                        <MenuItem Header="Legato slide" Click="Slide_Click" local:MenuHotkey.Id="Note.Slide"/>
                         <MenuItem Header="Shift slide" Click="FxShiftSlide_Click"/>
-                        <MenuItem Header="Vibrato" Click="Vibrato_Click" InputGestureText="V"/>
+                        <MenuItem Header="Vibrato" Click="Vibrato_Click" local:MenuHotkey.Id="Note.Vibrato"/>
                         <MenuItem Header="Wide vibrato" Click="FxWideVib_Click"/>
-                        <MenuItem Header="Tremolo bar" Click="FxTremBar_Click" InputGestureText="W"/>
-                        <MenuItem Header="Natural harmonic" Click="FxHarm_Click" InputGestureText="Y"/>
+                        <MenuItem Header="Tremolo bar" Click="FxTremBar_Click" local:MenuHotkey.Id="Note.TremoloBar"/>
+                        <MenuItem Header="Natural harmonic" Click="FxHarm_Click" local:MenuHotkey.Id="Note.Harmonic"/>
                         <MenuItem Header="Artificial harmonic" Click="FxArtHarm_Click"/>
                         <MenuItem Header="Tapping" Click="FxTap_Click"/>
                         <MenuItem Header="Slap" Click="FxSlap_Click"/>
                         <MenuItem Header="Pop" Click="FxPop_Click"/>
-                        <MenuItem Header="Trill" Click="FxTrill_Click" InputGestureText="N"/>
+                        <MenuItem Header="Trill" Click="FxTrill_Click" local:MenuHotkey.Id="Note.Trill"/>
                         <MenuItem Header="Tremolo picking" Click="FxTremPick_Click"/>
-                        <MenuItem Header="Fade in" Click="FxFadeIn_Click" InputGestureText="Shift+,"/>
-                        <MenuItem Header="Fade out" Click="FxFadeOut_Click" InputGestureText="Shift+."/>
+                        <MenuItem Header="Fade in" Click="FxFadeIn_Click" local:MenuHotkey.Id="Note.FadeIn"/>
+                        <MenuItem Header="Fade out" Click="FxFadeOut_Click" local:MenuHotkey.Id="Note.FadeOut"/>
                         <MenuItem Header="Wah open" Click="FxWahOpen_Click"/>
                         <MenuItem Header="Wah close" Click="FxWahClose_Click"/>
                         <MenuItem Header="Brush down" Click="FxBrushDown_Click"/>
                         <MenuItem Header="Brush up" Click="FxBrushUp_Click"/>
                         <MenuItem Header="Arpeggio down" Click="FxArpDown_Click"/>
                         <MenuItem Header="Arpeggio up" Click="FxArpUp_Click"/>
-                        <MenuItem Header="Grace before beat" Click="FxGrace_Click" InputGestureText="G"/>
+                        <MenuItem Header="Grace before beat" Click="FxGrace_Click" local:MenuHotkey.Id="Note.Grace"/>
                         <Separator/>
-                        <MenuItem Header="Chord... " Click="Chord_Click" InputGestureText="A"/>
-                        <MenuItem Header="Text... " Click="Text_Click" InputGestureText="T"/>
+                        <MenuItem Header="Chord…" Click="Chord_Click" local:MenuHotkey.Id="Note.Chord"/>
+                        <MenuItem Header="Text…" Click="Text_Click" local:MenuHotkey.Id="Note.Text"/>
                     </MenuItem>
                     <MenuItem Header="_Sections">
-                        <MenuItem Header="Add section..." Click="AddMarker_Click"/>
-                        <MenuItem Header="Go to... " Click="GoTo_Click" InputGestureText="Ctrl+G"/>
-                        <MenuItem Header="Previous section" Click="PrevSection_Click" InputGestureText="Alt+Left"/>
-                        <MenuItem Header="Next section" Click="NextSection_Click" InputGestureText="Alt+Right"/>
+                        <MenuItem Header="Add section…" Click="AddMarker_Click" local:MenuHotkey.Id="Section.Add"/>
+                        <MenuItem Header="Go to…" Click="GoTo_Click" local:MenuHotkey.Id="Bar.GoTo"/>
+                        <MenuItem Header="Previous section" Click="PrevSection_Click" local:MenuHotkey.Id="Section.Previous"/>
+                        <MenuItem Header="Next section" Click="NextSection_Click" local:MenuHotkey.Id="Section.Next"/>
                     </MenuItem>
                     <MenuItem Header="_Tools">
-                        <MenuItem Header="Check bar duration" Click="CheckBars_Click" InputGestureText="F4"/>
-                        <MenuItem Header="Transpose..." Click="Transpose_Click"/>
-                        <MenuItem Header="Scale finder..." Click="ScaleFinder_Click"/>
-                        <MenuItem Header="Tuner..." Click="Tuner_Click"/>
+                        <MenuItem Header="Check bar duration" Click="CheckBars_Click" local:MenuHotkey.Id="Bar.Check"/>
+                        <MenuItem Header="Transpose…" Click="Transpose_Click" local:MenuHotkey.Id="Tools.Transpose"/>
+                        <MenuItem Header="Scale finder…" Click="ScaleFinder_Click" local:MenuHotkey.Id="Tools.ScaleFinder"/>
+                        <MenuItem Header="Tuner…" Click="Tuner_Click" local:MenuHotkey.Id="Tools.Tuner"/>
                         <Separator/>
-                        <MenuItem x:Name="MetronomeMenu" Header="Metronome" Click="Metronome_Click" IsCheckable="True"/>
-                        <MenuItem x:Name="CountInMenu" Header="Count-in" Click="CountIn_Click" IsCheckable="True"/>
+                        <MenuItem x:Name="MetronomeMenu" Header="Metronome" Click="Metronome_Click" local:MenuHotkey.Id="Transport.Metronome" IsCheckable="True"/>
+                        <MenuItem x:Name="CountInMenu" Header="Count-in" Click="CountIn_Click" local:MenuHotkey.Id="Transport.CountIn" IsCheckable="True"/>
                         <MenuItem x:Name="PreviewNotesMenu" Header="Preview note sound" Click="PreviewNotes_Click" IsCheckable="True" IsChecked="True"/>
                     </MenuItem>
                     <MenuItem Header="_Sound">
-                        <MenuItem Header="Play / pause" Click="Play_Click" InputGestureText="Space"/>
-                        <MenuItem Header="Play from beginning" Click="PlayFromStart_Click" InputGestureText="Shift+Space"/>
-                        <MenuItem Header="First bar" Click="FirstBar_Click" InputGestureText="Ctrl+Home"/>
-                        <MenuItem Header="Last bar" Click="LastBar_Click" InputGestureText="Ctrl+End"/>
+                        <MenuItem Header="Play / pause" Click="Play_Click" local:MenuHotkey.Id="Transport.PlayPause"/>
+                        <MenuItem Header="Play from beginning" Click="PlayFromStart_Click" local:MenuHotkey.Id="Transport.PlayFromStart"/>
+                        <MenuItem Header="First bar" Click="FirstBar_Click" local:MenuHotkey.Id="Bar.First"/>
+                        <MenuItem Header="Last bar" Click="LastBar_Click" local:MenuHotkey.Id="Bar.Last"/>
                         <Separator/>
                         <MenuItem Header="Empty bar" Click="EmptyBar_Click"/>
                         <MenuItem Header="MIDI / Audio setup" Click="ShowAudioTab_Click"/>
@@ -290,28 +291,30 @@
                         <MenuItem Header="Dark score page" Click="ThemeDark_Click"/>
                         <MenuItem Header="Light score page" Click="ThemeLight_Click"/>
                         <Separator/>
-                        <MenuItem x:Name="InstrumentViewMenu" Header="Instrument view" Click="ToggleInstrumentView_Click" IsCheckable="True" IsChecked="True"/>
-                        <MenuItem x:Name="ArrangementMenu" Header="Arrangement overview" Click="ToggleArrangement_Click" IsCheckable="True" IsChecked="True"/>
-                        <MenuItem x:Name="ArrangementIndividualNotesMenu" Header="Show individual notes" Click="ArrangementIndividualNotesMenu_Click" IsCheckable="True"/>
-                        <MenuItem x:Name="ArrangementContinuousBlocksMenu" Header="Show continuous line" Click="ArrangementContinuousBlocksMenu_Click" IsCheckable="True"/>
-                        <MenuItem Header="Mixer / VST" Click="ShowMixer_Click"/>
+                        <MenuItem x:Name="InstrumentViewMenu" Header="Instrument view" Click="ToggleInstrumentView_Click" local:MenuHotkey.Id="View.InstrumentPanel" IsCheckable="True" IsChecked="True"/>
+                        <MenuItem x:Name="ArrangementMenu" Header="Arrangement overview" Click="ToggleArrangement_Click" local:MenuHotkey.Id="View.Global" IsCheckable="True" IsChecked="True"/>
+                        <MenuItem x:Name="ArrangementIndividualNotesMenu" Header="Show the notes in each track lane" Click="ArrangementIndividualNotesMenu_Click" IsCheckable="True"/>
+                        <MenuItem x:Name="ArrangementContinuousBlocksMenu" Header="Show one continuous line per track lane" Click="ArrangementContinuousBlocksMenu_Click" IsCheckable="True"/>
+                        <MenuItem Header="Mixer / VST" Click="ShowMixer_Click" local:MenuHotkey.Id="View.Mixer"/>
                         <Separator/>
                         <MenuItem x:Name="DockPanelsMenu" Header="Panels"/>
-                        <MenuItem Header="Reset all panels to original positions" Click="ResetDockWorkspace_Click"/>
+                        <MenuItem Header="Reset all panels to default positions" Click="ResetDockWorkspace_Click"/>
                         <Separator/>
                         <MenuItem Header="Zoom 75%" Click="Zoom75_Click"/>
-                        <MenuItem Header="Zoom 100% (fit width)" Click="Zoom100_Click"/>
+                        <MenuItem Header="Zoom 100%" Click="Zoom100_Click"/>
                         <MenuItem Header="Zoom 150%" Click="Zoom150_Click"/>
-                        <MenuItem Header="Full screen" Click="Fullscreen_Click" InputGestureText="F11"/>
+                        <MenuItem Header="Full screen" Click="Fullscreen_Click" local:MenuHotkey.Id="View.Fullscreen"/>
                     </MenuItem>
                     <MenuItem Header="_Options">
                         <MenuItem Header="Practice / learn mode" Click="ShowPractice_Click"/>
-                        <MenuItem Header="Stylesheet..." Click="Stylesheet_Click" InputGestureText="F7"/>
-                        <MenuItem Header="Preferences..." Click="Prefs_Click" InputGestureText="F12"/>
+                        <MenuItem Header="Stylesheet…" Click="Stylesheet_Click"/>
+                        <MenuItem Header="Preferences…" Click="Prefs_Click" local:MenuHotkey.Id="App.Preferences"/>
                     </MenuItem>
                     <MenuItem Header="_Help">
-                        <MenuItem Header="Keyboard shortcuts..." Click="Shortcuts_Click"/>
-                        <MenuItem Header="Check for updates..." Click="CheckForUpdates_Click"/>
+                        <MenuItem Header="Tutorial…" Click="Tutorial_Click" local:MenuHotkey.Id="Help.Tutorial"/>
+                        <MenuItem Header="Detailed guide…" Click="TutorialDetailed_Click" local:MenuHotkey.Id="Help.TutorialDetailed"/>
+                        <MenuItem Header="Keyboard shortcuts…" Click="Shortcuts_Click" local:MenuHotkey.Id="App.Shortcuts"/>
+                        <MenuItem Header="Check for updates…" Click="CheckForUpdates_Click" local:MenuHotkey.Id="Help.CheckForUpdates"/>
                         <MenuItem Header="About" Click="About_Click"/>
                     </MenuItem>
                 </Menu>
@@ -320,16 +323,16 @@
                 <!-- Tempo and song-wide readouts remain in the main toolbar; only metronome and
                      score zoom are hosted by the movable controller. -->
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0">
-                    <TextBox x:Name="TempoBox" Width="52" Text="120" ToolTip="Tempo (BPM)" LostFocus="TempoBox_LostFocus"/>
+                    <TextBox x:Name="TempoBox" Width="52" Text="120" ToolTip="Tempo (BPM)" LostFocus="TempoBox_LostFocus" PreviewKeyDown="TempoBox_PreviewKeyDown"/>
                     <TextBlock Text="BPM" VerticalAlignment="Center" Margin="4,0,8,0" Foreground="{DynamicResource MutedBrush}"/>
                     <Separator Style="{StaticResource BarSeparator}"/>
-                    <TextBlock x:Name="TimeSigLabel" Text="4/4" VerticalAlignment="Center" Margin="2,0,6,0" Foreground="{DynamicResource TextBrush}" ToolTip="Time signature (Ctrl+Shift+T)"/>
-                    <TextBlock x:Name="KeyLabelText" Text="C major" VerticalAlignment="Center" Margin="2,0,6,0" Foreground="{DynamicResource TextBrush}" ToolTip="Key signature (Ctrl+K)"/>
-                    <Button x:Name="SidePanelButton" Style="{StaticResource ToolButton}" ToolTip="Show / hide the side panel (tools, sections, practice)" Click="ToggleSidePanel_Click"
+                    <TextBlock x:Name="TimeSigLabel" Text="4/4" VerticalAlignment="Center" Margin="2,0,6,0" Foreground="{DynamicResource TextBrush}" ToolTip="Time signature" local:TooltipShortcuts.Command="Bar.TimeSignature"/>
+                    <TextBlock x:Name="KeyLabelText" Text="C major" VerticalAlignment="Center" Margin="2,0,6,0" Foreground="{DynamicResource TextBrush}" ToolTip="Key signature" local:TooltipShortcuts.Command="Bar.KeySignature"/>
+                    <Button x:Name="SidePanelButton" Style="{StaticResource ToolButton}" ToolTip="Show / hide the side panel (tools, sections, practice)" local:TooltipShortcuts.Command="View.SidePanel" Click="ToggleSidePanel_Click"
                             AutomationProperties.Name="Show or hide the side panel">
                         <Path Style="{StaticResource IconPath}" Data="M3,4 H21 V20 H3 Z M15,4 V20"/>
                     </Button>
-                    <Button x:Name="InstrumentPanelButton" Style="{StaticResource ToolButton}" ToolTip="Show/hide fretboard / keyboard" Click="ToggleInstrumentView_Click"
+                    <Button x:Name="InstrumentPanelButton" Style="{StaticResource ToolButton}" ToolTip="Show/hide fretboard / keyboard" local:TooltipShortcuts.Command="View.InstrumentPanel" Click="ToggleInstrumentView_Click"
                             AutomationProperties.Name="Show or hide the fretboard / keyboard">
                         <Path Style="{StaticResource IconPath}" Data="{StaticResource IconFretboard}"/>
                     </Button>
@@ -379,7 +382,7 @@
                     <Canvas x:Name="InstrumentOverlay" ClipToBounds="True">
                         <Button x:Name="ScaleFinderButton" Click="ScaleFinderButton_Click" Height="24" Padding="6,0,8,0"
                                 Background="{DynamicResource Panel2Brush}" BorderBrush="{DynamicResource BorderSoftBrush}" BorderThickness="1"
-                                ToolTip="Scale finder: find the scales these notes fit, or pick any scale to show on the fretboard"
+                                ToolTip="Scale finder: find the scales these notes fit, or pick any scale to show on the fretboard" local:TooltipShortcuts.Command="Tools.ScaleFinder"
                                 AutomationProperties.Name="Scale finder" Focusable="False">
                             <StackPanel Orientation="Horizontal">
                                 <!-- rising steps: a scale -->
@@ -394,7 +397,7 @@
                     <Button x:Name="InstrumentHideButton" Style="{StaticResource ToolButton}" Click="ToggleInstrumentView_Click"
                             HorizontalAlignment="Right" VerticalAlignment="Top" Width="20" Height="20" MinWidth="20" MinHeight="20"
                             Padding="0" Margin="0,2,2,0" Focusable="False"
-                            ToolTip="Hide fretboard / keyboard (show again with the toolbar button or View menu)"
+                            ToolTip="Hide fretboard / keyboard (show again with the toolbar button or View menu)" local:TooltipShortcuts.Command="View.InstrumentPanel"
                             AutomationProperties.Name="Hide fretboard / keyboard">
                         <Path Style="{StaticResource IconPath}" Data="{StaticResource IconClose}" Width="9" Height="9"/>
                     </Button>
@@ -405,7 +408,7 @@
 
             <!-- score page -->
                 <Border x:Name="ScoreEditorHost" Grid.Row="2" Background="{DynamicResource WorkspaceBrush}" BorderBrush="{DynamicResource BorderSoftBrush}" BorderThickness="0,1,0,1">
-                <ScrollViewer x:Name="ScoreScroll" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
+                <ScrollViewer x:Name="ScoreScroll" Focusable="False" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
                               Background="{DynamicResource WorkspaceBrush}" Padding="0" HorizontalContentAlignment="Center" SizeChanged="ScoreScroll_SizeChanged"
                               PreviewMouseWheel="ScoreScroll_PreviewMouseWheel">
                         <Border x:Name="ScorePage" Background="{DynamicResource PaperDarkBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
@@ -450,7 +453,7 @@
                     <GroupBox Header="Sections">
                         <DockPanel Margin="5">
                             <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal">
-                                <Button x:Name="AddSectionButton" Content="Add" Click="AddMarker_Click" AutomationProperties.Name="Add new section"/><Button Content="Go" Click="MarkerGo_Click"/><Button Content="Edit" Click="MarkerEdit_Click"/><Button Content="Delete" Click="MarkerDel_Click"/>
+                                <Button x:Name="AddSectionButton" Content="Add" Click="AddMarker_Click" AutomationProperties.Name="Add new section" ToolTip="Add new section at the cursor bar" local:TooltipShortcuts.Command="Section.Add"/><Button Content="Go" Click="MarkerGo_Click"/><Button Content="Edit" Click="MarkerEdit_Click"/><Button Content="Remove" Click="MarkerDel_Click" AutomationProperties.Name="Remove section marker" ToolTip="Remove the selected section marker. The bars and notes stay (use Delete section and its bars in the timeline menu to remove them too)"/>
                             </StackPanel>
                             <ListBox x:Name="MarkerList" PreviewMouseLeftButtonUp="MarkerList_PreviewMouseLeftButtonUp">
                                 <ListBox.ItemContainerStyle>
@@ -597,7 +600,7 @@
                             <StackPanel Margin="6"><TextBlock Text="MIDI output device" Foreground="{DynamicResource MutedBrush}"/><ComboBox x:Name="SelectedOutputCombo" ItemsSource="{Binding MidiDevices}" DisplayMemberPath="Name" SelectedValuePath="DeviceId" SelectionChanged="SelectedOutputCombo_SelectionChanged"/><WrapPanel Margin="0,6,0,0"><Button Content="Test sound" Click="TestMidi_Click"/><Button Content="Refresh devices" Click="RefreshMidiDevices_Click"/></WrapPanel></StackPanel>
                         </GroupBox>
                         <GroupBox Header="Track FX" Margin="0,0,0,8" ToolTip="VST instruments and effects for the selected track, and the mixer.">
-                            <WrapPanel Margin="5"><Button Content="Open FX chain…" Click="OpenSelectedFxChain_Click"/><Button Content="Mixer…" Click="OpenMixer_Click"/></WrapPanel>
+                            <WrapPanel Margin="5"><Button Content="Open FX chain…" Click="OpenSelectedFxChain_Click" ToolTip="Open the selected track's FX (plug-in) chain" local:TooltipShortcuts.Command="Track.FxChain"/><Button Content="Mixer…" Click="OpenMixer_Click" ToolTip="Open the mixer" local:TooltipShortcuts.Command="View.Mixer"/></WrapPanel>
                         </GroupBox>
                         <GroupBox Header="Track mixer (detailed)">
                             <DockPanel Margin="5">
@@ -642,12 +645,12 @@
                                         <local:SvgIconView Icon="rewind_to_beginning" Width="28" Height="28" ShowFrame="False" IsHitTestVisible="False" ButtonHovered="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=Button}}"/>
                                     </Button>
                                     <Button x:Name="StopButton" Style="{StaticResource TransportButton}" Width="34" Height="34" MinWidth="34" Padding="0" Margin="1"
-                                            ToolTip="Stop playback" Click="Stop_Click" AutomationProperties.AutomationId="TransportStop"
+                                            ToolTip="Stop playback" local:TooltipShortcuts.Command="Transport.Stop" Click="Stop_Click" AutomationProperties.AutomationId="TransportStop"
                                             AutomationProperties.Name="Stop playback" Background="{StaticResource PlaybarStopBrush}" BorderBrush="{StaticResource PlaybarStopBorderBrush}">
                                         <local:SvgIconView Icon="stop" Width="28" Height="28" ShowFrame="False" IsHitTestVisible="False" ButtonHovered="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=Button}}"/>
                                     </Button>
                                     <Button x:Name="RecordButton" Style="{StaticResource TransportButton}" Width="34" Height="34" MinWidth="34" Padding="0" Margin="1"
-                                            ToolTip="Record (Ctrl+R): records every armed track (the red button on a track row) while the song plays; press again to stop"
+                                            ToolTip="Record every armed track (the red button on a track row) while the song plays; press again to stop" local:TooltipShortcuts.Command="Transport.Record"
                                             Click="Record_Click" AutomationProperties.Name="Record" Background="{StaticResource PlaybarStopBrush}" BorderBrush="{StaticResource PlaybarStopBorderBrush}">
                                         <Grid Width="22" Height="22" IsHitTestVisible="False">
                                             <Ellipse Stroke="{DynamicResource DangerBrush}" StrokeThickness="2"/>
@@ -655,12 +658,12 @@
                                             <Ellipse x:Name="RecordPulse" Margin="1" Fill="{DynamicResource DangerBrush}" Opacity="0.85" Visibility="Collapsed"/>
                                         </Grid>
                                     </Button>
-                                    <Button x:Name="PlayButton" Style="{StaticResource TransportButton}" Width="34" Height="34" MinWidth="34" Padding="0" Margin="1" ToolTip="Play / pause (Space)" Click="Play_Click"
+                                    <Button x:Name="PlayButton" Style="{StaticResource TransportButton}" Width="34" Height="34" MinWidth="34" Padding="0" Margin="1" ToolTip="Play / pause" local:TooltipShortcuts.Command="Transport.PlayPause" Click="Play_Click"
                                             AutomationProperties.AutomationId="TransportPlay" AutomationProperties.Name="Play or pause"
                                             Background="{StaticResource PlaybarPlayBrush}" BorderBrush="{StaticResource PlaybarPlayBorderBrush}">
                                         <local:SvgIconView x:Name="PlayIcon" Icon="play" Width="28" Height="28" ShowFrame="False" IsHitTestVisible="False" ButtonHovered="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=Button}}"/>
                                     </Button>
-                                    <Button Style="{StaticResource TransportButton}" Width="34" Height="34" MinWidth="34" Padding="0" Margin="1" ToolTip="Next section" Click="NextSection_Click"
+                                    <Button Style="{StaticResource TransportButton}" Width="34" Height="34" MinWidth="34" Padding="0" Margin="1" ToolTip="Next section" local:TooltipShortcuts.Command="Section.Next" Click="NextSection_Click"
                                             AutomationProperties.Name="Next section" Background="{StaticResource PlaybarNextBrush}" BorderBrush="{StaticResource PlaybarNextBorderBrush}">
                                         <local:SvgIconView Icon="next_section" Width="28" Height="28" ShowFrame="False" IsHitTestVisible="False" ButtonHovered="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=Button}}"/>
                                     </Button>
@@ -675,7 +678,7 @@
                                             Background="{StaticResource PlaybarMetroBrush}" BorderBrush="#9E542F">
                                         <local:SvgIconView x:Name="MetronomeIcon" Icon="metronome" Width="28" Height="28" ShowFrame="False" IsHitTestVisible="False" ButtonHovered="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=Button}}"/>
                                     </Button>
-                                    <Button x:Name="LoopButton" Style="{StaticResource TransportButton}" Width="34" Height="34" MinWidth="34" Padding="0" Margin="1" ToolTip="Loop · left-click to toggle (F9), right-click for loop settings" Click="Loop_Click"
+                                    <Button x:Name="LoopButton" Style="{StaticResource TransportButton}" Width="34" Height="34" MinWidth="34" Padding="0" Margin="1" ToolTip="Loop · left-click to toggle, right-click for loop settings" local:TooltipShortcuts.Command="Transport.Loop" Click="Loop_Click"
                                             PreviewMouseRightButtonUp="LoopButton_PreviewMouseRightButtonUp"
                                             AutomationProperties.AutomationId="TransportLoop" AutomationProperties.Name="Loop enable"
                                             Background="{StaticResource PlaybarLoopBrush}" BorderBrush="#18865E">
@@ -685,7 +688,7 @@
                                 </StackPanel>
                             </Border>
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0">
-                                <Button Style="{StaticResource TransportButton}" Width="26" Height="26" MinWidth="26" Padding="0" ToolTip="Zoom out" Click="ZoomOutButton_Click" AutomationProperties.Name="Zoom out">
+                                <Button Style="{StaticResource TransportButton}" Width="26" Height="26" MinWidth="26" Padding="0" ToolTip="Zoom out" local:TooltipShortcuts.Command="View.ZoomOut" Click="ZoomOutButton_Click" AutomationProperties.Name="Zoom out">
                                     <local:SvgIconView Icon="zoom_minus" Width="20" Height="20" IsHitTestVisible="False" ButtonHovered="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=Button}}"/>
                                 </Button>
                                 <ComboBox x:Name="ZoomCombo" Width="76" Height="26" ToolTip="Score zoom. Choose a preset or type 50–200%."
@@ -699,7 +702,7 @@
                                     <ComboBoxItem Content="100%"/><ComboBoxItem Content="110%"/><ComboBoxItem Content="125%"/>
                                     <ComboBoxItem Content="150%"/><ComboBoxItem Content="175%"/><ComboBoxItem Content="200%"/>
                                 </ComboBox>
-                                <Button Style="{StaticResource TransportButton}" Width="26" Height="26" MinWidth="26" Padding="0" ToolTip="Zoom in" Click="ZoomInButton_Click" AutomationProperties.Name="Zoom in">
+                                <Button Style="{StaticResource TransportButton}" Width="26" Height="26" MinWidth="26" Padding="0" ToolTip="Zoom in" local:TooltipShortcuts.Command="View.ZoomIn" Click="ZoomInButton_Click" AutomationProperties.Name="Zoom in">
                                     <local:SvgIconView Icon="zoom_plus" Width="20" Height="20" IsHitTestVisible="False" ButtonHovered="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=Button}}"/>
                                 </Button>
                             </StackPanel>

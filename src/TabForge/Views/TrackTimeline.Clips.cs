@@ -33,11 +33,11 @@ internal sealed partial class TrackTimeline
     /// Snaps a song time: to the grid (nearest grid line of the song's bars), to the edges of other clips, and to the playhead,
     /// whichever is nearest within the snap distance (the grid at any distance when that is on). Alt turns snapping off while held.
     /// </summary>
-    private double SnapSec(double sec, AudioClip? except, out double distancePx)
+    private double SnapSec(double sec, AudioClip? except, out double distancePx, bool? altHeld = null)
     {
         distancePx = double.PositiveInfinity;
         var snap = Snap;
-        if (snap is not { Enabled: true } || Project is null || Keyboard.Modifiers.HasFlag(ModifierKeys.Alt)) return sec;
+        if (snap is not { Enabled: true } || Project is null || (altHeld ?? Keyboard.Modifiers.HasFlag(ModifierKeys.Alt))) return sec;
         var best = sec; var bestDistance = double.PositiveInfinity;
         void Consider(double candidate, double limitPx)
         {
@@ -76,10 +76,8 @@ internal sealed partial class TrackTimeline
     public event Action<int, AudioClip?, double>? ClipContextRequested;
     /// <summary>Double-click on a clip.</summary>
     public event Action<int, AudioClip>? ClipPropertiesRequested;
-    /// <summary>Audio files dropped on a track: track, song seconds, files.</summary>
-    public event Action<int, double, string[]>? AudioFilesDropped;
-    /// <summary>A clip was dropped on another track's lane: clip, from track, to track, lane.</summary>
-    public event Action<AudioClip, int, int, int>? ClipMovedToTrack;
+    /// <summary>A clip was dragged to a lane (any track, a new lane, or below the last track): clip, from track, where it lands, Ctrl held (copy).</summary>
+    public event Action<AudioClip, int, MediaDropPlan, bool>? ClipMoveRequested;
     /// <summary>A MIDI clip was dropped on a track's notation row: clip, from track, to track.</summary>
     public event Action<AudioClip, int, int>? MidiClipToNotation;
     /// <summary>A lane was clicked: track, lane, song seconds (the clip edit cursor, where Paste goes).</summary>
@@ -97,6 +95,13 @@ internal sealed partial class TrackTimeline
     private double _clipLastX = double.NaN;
     private int _clipFromTrack = -1;
     private (int Track, int Lane, bool NotationRow)? _clipDropTarget;
+    // The move gesture: the clip stays where it is (drawn faint) while the shared drop ghost shows where it would land.
+    private bool _clipMoveActive;
+    private bool _moveCopy;
+    private MediaDropPlan? _movePlan;
+    private (int Track, int Lane, bool Notation, double Start, double Scroll, double Zoom, int Revision, bool Copy)? _moveKey;
+    private (int Track, int Lane, bool Midi)? _clipPendingSelect;
+    private static readonly IReadOnlyList<DropItem> MoveGhostItems = new[] { new DropItem { Path = "", Name = "" } };
 
     public TrackTimeline()
     {
@@ -152,6 +157,7 @@ internal sealed partial class TrackTimeline
             var heard = ClipLanes.Audible(track, clip);
             var colour = heard ? clipColour : Blend(clipColour, _theme.Muted, 0.7);
             var alpha = heard ? 1.0 : 0.45;
+            if (_clipMoveActive && !_moveCopy && ReferenceEquals(clip, _clipDrag)) alpha *= 0.4;   // the ghost shows where it is going
             var selected = ReferenceEquals(clip, SelectedClip);
             dc.DrawRoundedRectangle(Draw.Solid(colour, 0.34 * alpha), Draw.Pen(selected ? _theme.Text : colour, selected ? 1.8 : 1, 0.9 * alpha), box, 3, 3);
             dc.PushClip(new RectangleGeometry(box, 3, 3));
@@ -333,7 +339,10 @@ internal sealed partial class TrackTimeline
             e.Handled = true;
             return true;
         }
-        ClipLaneSelected?.Invoke(hit.Track, hit.Lane, clip.IsMidi, Keyboard.Modifiers.HasFlag(ModifierKeys.Control));
+        // Ctrl on a clip toggles its lane's play state, but Ctrl+drag copies: the toggle waits for the release (a click, not a drag).
+        _clipPendingSelect = null;
+        if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control)) _clipPendingSelect = (hit.Track, hit.Lane, clip.IsMidi);
+        else ClipLaneSelected?.Invoke(hit.Track, hit.Lane, clip.IsMidi, false);
         _clipDrag = clip;
         _clipGesture = hit.Gesture;
         _clipOrigin = (clip.StartSec, clip.OffsetSec, clip.SourceLengthSec);
@@ -343,7 +352,8 @@ internal sealed partial class TrackTimeline
         _clipLastX = p.X;
         _clipFromTrack = hit.Track;
         _clipDropTarget = null;
-        ClipEditStarting?.Invoke(this, EventArgs.Empty);
+        _clipMoveActive = false; _movePlan = null; _moveKey = null;
+        if (hit.Gesture != ClipGesture.Move) ClipEditStarting?.Invoke(this, EventArgs.Empty);   // a move captures undo when it lands
         CaptureMouse();
         InvalidateVisual();
         e.Handled = true;
@@ -367,27 +377,14 @@ internal sealed partial class TrackTimeline
         if (!_clipChanged &&
             Math.Abs(p.X - _clipPressPoint.X) < SystemParameters.MinimumHorizontalDragDistance &&
             Math.Abs(p.Y - _clipPressPoint.Y) < SystemParameters.MinimumVerticalDragDistance) return true;
-        var target = _clipGesture == ClipGesture.Move && Math.Abs(p.Y - _clipPressPoint.Y) > 8 ? DropTargetAt(p) : null;
-        var targetChanged = target != _clipDropTarget;
-        if (Math.Abs(p.X - _clipLastX) < 1 && !targetChanged) return true;   // repaint only when something visible changed
+        if (_clipGesture == ClipGesture.Move) { UpdateClipMove(clip, p, Keyboard.Modifiers.HasFlag(ModifierKeys.Alt), Keyboard.Modifiers.HasFlag(ModifierKeys.Control)); return true; }
+        if (Math.Abs(p.X - _clipLastX) < 1) return true;   // repaint only when something visible changed
         _clipLastX = p.X;
-        _clipDropTarget = target;
-        // Within its own track the clip follows the pointer between lanes right away.
-        if (target is { NotationRow: false } same && same.Track == _clipFromTrack && same.Lane != clip.Lane) { clip.Lane = same.Lane; _clipChanged = true; }
         var delta = SecOfX(p.X) - _clipPressSec;
         var speed = Math.Clamp(clip.Speed, 0.25, 4);
         var fileLength = clip.FileLengthSec > 0 ? clip.FileLengthSec : _clipOrigin.Offset + _clipOrigin.Length;
         switch (_clipGesture)
         {
-            case ClipGesture.Move:
-            {
-                var start = Math.Max(0, _clipOrigin.Start + delta);
-                var length = clip.LengthSec;
-                var byStart = SnapSec(start, clip, out var startDistance);
-                var byEnd = SnapSec(start + length, clip, out var endDistance) - length;
-                clip.StartSec = Math.Max(0, endDistance < startDistance ? byEnd : byStart);
-                break;
-            }
             case ClipGesture.TrimStart:
             {
                 var snappedStart = SnapSec(_clipOrigin.Start + delta, clip, out _);
@@ -416,25 +413,106 @@ internal sealed partial class TrackTimeline
         var target = _clipDropTarget;
         _clipDropTarget = null;
         ReleaseMouseCapture();
-        if (target is { NotationRow: true } row && clip.IsMidi)
+        if (_clipMoveActive)
         {
-            MidiClipToNotation?.Invoke(clip, _clipFromTrack, row.Track);
-            return true;
-        }
-        if (target is { NotationRow: false } lane && lane.Track != _clipFromTrack)
-        {
-            ClipMovedToTrack?.Invoke(clip, _clipFromTrack, lane.Track, lane.Lane);
+            var plan = _movePlan; var copy = _moveCopy;
+            _clipMoveActive = false; _movePlan = null; _moveKey = null;
+            SetDropPreview(null);
+            if (target is { NotationRow: true } row && clip.IsMidi)
+            {
+                ClipEditStarting?.Invoke(this, EventArgs.Empty);
+                MidiClipToNotation?.Invoke(clip, _clipFromTrack, row.Track);
+            }
+            else if (plan is { Valid: true }) ClipMoveRequested?.Invoke(clip, _clipFromTrack, plan, copy);
+            else InvalidateVisual();
             return true;
         }
         if (_clipChanged) ClipEdited?.Invoke(this, clip);
         else
         {
+            if (_clipPendingSelect is { } pending) ClipLaneSelected?.Invoke(pending.Track, pending.Lane, pending.Midi, true);
             // A plain click selected the clip (above); like clicking a note in the score it drops the bar range.
             PlainClicked?.Invoke(this, EventArgs.Empty);
             InvalidateVisual();
         }
         return true;
     }
+
+    /// <summary>Esc during a clip drag: the clip stays (or goes back) where it was and the ghost goes. False when no clip is being dragged.</summary>
+    internal bool CancelClipDrag()
+    {
+        if (_clipDrag is not { } clip) return false;
+        if (_clipGesture != ClipGesture.Move)
+        {
+            clip.StartSec = _clipOrigin.Start;
+            clip.OffsetSec = _clipOrigin.Offset;
+            clip.SourceLengthSec = _clipOrigin.Length;
+        }
+        _clipDrag = null; _clipDropTarget = null; _clipMoveActive = false; _movePlan = null; _moveKey = null; _clipChanged = false;
+        SetDropPreview(null);
+        if (IsMouseCaptured) ReleaseMouseCapture();
+        InvalidateVisual();
+        return true;
+    }
+
+    /// <summary>
+    /// The move gesture: where the pointer is (track, lane, snapped start; Alt = free placement, Ctrl = copy) is planned like a file
+    /// drop and handed to the shared ghost. Nothing is recomputed or redrawn while the snapped target stays the same.
+    /// </summary>
+    private void UpdateClipMove(AudioClip clip, Point p, bool alt, bool copy)
+    {
+        var project = Project!;
+        var start = Math.Max(0, _clipOrigin.Start + SecOfX(p.X) - _clipPressSec);
+        var length = clip.LengthSec;
+        var byStart = SnapSec(start, clip, out var startDistance, alt);
+        var byEnd = SnapSec(start + length, clip, out var endDistance, alt) - length;
+        start = Math.Max(0, endDistance < startDistance ? byEnd : byStart);
+
+        var gridTop = ArrangementPanel.RulerHeight + ArrangementPanel.SectionHeight;
+        var track = TrackAt(p.Y);
+        if (track < 0 && p.Y >= gridTop && p.Y + VerticalScrollOffset - gridTop >= ArrangementPanel.RowsHeight(project)) track = project.Tracks.Count;   // below the last track
+        int lane = 0; var notation = false;
+        if (track >= 0 && track < project.Tracks.Count)
+        {
+            var lanes = ArrangementPanel.LaneCountOf(project.Tracks[track]);
+            var offset = p.Y - LaneTop(track, 0);
+            if (offset < 0) notation = clip.IsMidi && lanes > 0;   // a MIDI clip on a track's notation row is written into the score
+            else lane = Math.Min((int)(offset / ArrangementPanel.AudioLaneHeight), Math.Max(0, lanes - 1));
+        }
+        var key = (track, lane, notation, start, VerticalScrollOffset, MeasureWidth, project.TimelineRevision, copy);
+        if (_clipMoveActive && _moveKey == key) return;
+        var redraw = !_clipMoveActive || copy != _moveCopy || notation != (_moveKey?.Notation ?? false);
+        _moveKey = key; _moveCopy = copy; _clipMoveActive = true; _clipChanged = true;
+        if (notation)
+        {
+            _movePlan = null;
+            _clipDropTarget = (track, 0, true);
+            SetDropPreview(null);
+        }
+        else
+        {
+            _clipDropTarget = null;
+            var sourceKind = _clipFromTrack >= 0 && _clipFromTrack < project.Tracks.Count ? project.Tracks[_clipFromTrack].Kind : TrackKind.Guitar;
+            _movePlan = MediaDrop.PlanMove(project, clip, sourceKind, track, lane, start, QuarterMap(), copy);
+            SetDropPreview(DropGeometry(_movePlan, p, MoveGhostItems));
+        }
+        if (redraw) InvalidateVisual();
+    }
+
+    /// <summary>Test / render hook: the clip is being dragged from <paramref name="press"/> to <paramref name="to"/> (as if the mouse were held there).</summary>
+    internal DropPreview? SimulateClipMove(AudioClip clip, int fromTrack, Point press, Point to, bool copy = false, bool alt = false)
+    {
+        if (!ReferenceEquals(_clipDrag, clip))
+        {
+            _clipDrag = clip; _clipGesture = ClipGesture.Move; _clipOrigin = (clip.StartSec, clip.OffsetSec, clip.SourceLengthSec);
+            _clipPressSec = SecOfX(press.X); _clipFromTrack = fromTrack; _clipMoveActive = false; _moveKey = null;
+        }
+        UpdateClipMove(clip, to, alt, copy);
+        return _dropPreview;
+    }
+
+    /// <summary>The plan the simulated drag would drop (null when none is valid).</summary>
+    internal MediaDropPlan? SimulatedMovePlan => _movePlan;
 
     private bool ClipRightClick(Point p)
     {
@@ -446,30 +524,8 @@ internal sealed partial class TrackTimeline
         return true;
     }
 
-    // ---------- file drops ----------
-    private static string[] AudioFilesIn(DragEventArgs e) =>
-        e.Data.GetData(DataFormats.FileDrop) is string[] files
-            ? files.Where(f => WaveformCache.Extensions.Contains(Path.GetExtension(f).ToLowerInvariant())).ToArray()
-            : Array.Empty<string>();
-
-    protected override void OnDragOver(DragEventArgs e)
-    {
-        base.OnDragOver(e);
-        if (AudioFilesIn(e).Length == 0 || TrackAt(e.GetPosition(this).Y) < 0) return;
-        e.Effects = DragDropEffects.Copy;
-        e.Handled = true;
-    }
-
-    protected override void OnDrop(DragEventArgs e)
-    {
-        base.OnDrop(e);
-        var files = AudioFilesIn(e);
-        var p = e.GetPosition(this);
-        var track = TrackAt(p.Y);
-        if (files.Length == 0 || track < 0) return;
-        e.Handled = true;
-        AudioFilesDropped?.Invoke(track, SecOfX(p.X), files);
-    }
+    // File drops (audio and MIDI from Windows or a plug-in): TrackTimeline.MediaDrop.cs, driven by the panel's scroll viewer
+    // so the area below the last track takes drops too.
 }
 
 /// <summary>A take being recorded, drawn live: where it is, and what has come in so far.</summary>

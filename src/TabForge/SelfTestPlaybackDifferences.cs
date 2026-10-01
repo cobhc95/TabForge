@@ -46,6 +46,35 @@ public static partial class SelfTest
                 string.Join(",", ons.Select(e => e.TimeMs.ToString("0.#"))));
         }
 
+        // P-11b: strokes and arpeggios order by PITCH, not string index, with GP5's stroke meaning (Help > Stroke: downstroke bass to
+        // treble, upstroke treble to bass; GP5 has no separate arpeggio effect). A keys chord on octave strings in any row order
+        // follows the same pitch rule; guitar order is unchanged (high pitch = low StringIndex).
+        foreach (var (tech, expected, what) in new[]
+        {
+            ("ArpeggioUp", new[] { 71, 66, 62, 59 }, "piano arpeggio up sounds high to low by pitch (GP5 upstroke meaning)"),
+            ("ArpeggioDown", new[] { 59, 62, 66, 71 }, "piano arpeggio down sounds low to high by pitch (GP5 downstroke meaning)"),
+        })
+        {
+            var piano = SingleTrack();
+            piano.Tracks[0].Kind = TrackKind.Keys;
+            piano.Tracks[0].StringTunings = new() { 96, 84, 72, 60, 48, 36, 24 };
+            // deliberately NOT in pitch order on the strings: B4 and D4 swapped rows
+            var chord = Beat(piano, 0, 0, 0, 4, 71, 3, 11);
+            foreach (var (midi, s) in new[] { (66, 4), (62, 2), (59, 5) }) chord.Notes.Add(new TabNote { StringIndex = s, MidiValue = midi });
+            foreach (var n in chord.Notes) n.Techniques.Add(tech);
+            chord.BrushStepSlots = 1.0 / 6;
+            var ons = MidiTimelineBuilder.Build(piano, new PlaybackOptions()).Events.Where(e => e.IsNoteOn).OrderBy(e => e.TimeMs).ToList();
+            Check($"P-11b: {what}", ons.Select(e => e.Data1).SequenceEqual(expected), string.Join(",", ons.Select(e => e.Data1)));
+        }
+        var guitarArp = SingleTrack();
+        var arpChord = Beat(guitarArp, 0, 0, 0, 4, 64, 0);
+        arpChord.Notes.Add(new TabNote { StringIndex = 1, MidiValue = 59 });
+        arpChord.Notes.Add(new TabNote { StringIndex = 2, MidiValue = 55 });
+        foreach (var n in arpChord.Notes) n.Techniques.Add("ArpeggioUp");
+        arpChord.BrushStepSlots = 1.0 / 6;
+        var arpOns = MidiTimelineBuilder.Build(guitarArp, new PlaybackOptions()).Events.Where(e => e.IsNoteOn).OrderBy(e => e.TimeMs).ToList();
+        Check("P-11b: guitar arpeggio up is unchanged (high string first, as the GP5 upstroke)", arpOns.Select(e => e.Data1).SequenceEqual(new[] { 64, 59, 55 }), string.Join(",", arpOns.Select(e => e.Data1)));
+
         // P-10: a grace note before the beat comes out of the previous beat; the principal note stays on the beat.
         foreach (var beforeBeat in new[] { true, false })
         {

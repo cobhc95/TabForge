@@ -529,11 +529,11 @@ public sealed partial class ArrangementPanel
             var text = GpDialogs.Prompt("Pan", "Pan from -63 (left) to +63 (right), 0 = centre:", (track.Pan - 64).ToString());
             if (int.TryParse(text, out var offset)) SetPan(Math.Clamp(offset + 64, 0, 127));
         }));
-        menu.Items.Add(new Separator { Style = (Style)Application.Current.FindResource(typeof(Separator)) });
+        menu.Items.Add(new Separator { Style = (Style)Application.Current.FindResource(MenuItem.SeparatorStyleKey) });
         var knobs = Item("Knob style", () => PanStyleChanged?.Invoke(this, true));
-        knobs.IsCheckable = true; knobs.IsChecked = PanKnobs;
+        knobs.IsCheckable = true; knobs.IsChecked = PanKnobs; MenuMarks.SetIsRadio(knobs, true);
         var sliders = Item("Slider style", () => PanStyleChanged?.Invoke(this, false));
-        sliders.IsCheckable = true; sliders.IsChecked = !PanKnobs;
+        sliders.IsCheckable = true; sliders.IsChecked = !PanKnobs; MenuMarks.SetIsRadio(sliders, true);
         menu.Items.Add(knobs);
         menu.Items.Add(sliders);
 
@@ -604,7 +604,7 @@ public sealed partial class ArrangementPanel
             {
                 menu.Items.Add(MenuHeader(currentFamily!.ToUpperInvariant()));
                 foreach (var e in siblings) menu.Items.Add(Item(e));
-                menu.Items.Add(MenuDivider());
+                menu.Items.Add(new Separator { Style = (Style)Application.Current.FindResource(MenuItem.SeparatorStyleKey) });
             }
             menu.Items.Add(MenuHeader("ALL INSTRUMENT FAMILIES"));
             foreach (var family in TabForge.Services.InstrumentCatalog.Categories)
@@ -638,25 +638,6 @@ public sealed partial class ArrangementPanel
             Style = (Style)Application.Current.FindResource(typeof(MenuItem)) };
     }
 
-    // A clearly visible divider: a full-width 2px line with space above and below.
-    private static Separator MenuDivider()
-    {
-        var line = new Separator { Margin = new Thickness(0, 6, 0, 6), Height = 2, MinHeight = 2 };
-        line.Template = new ControlTemplate(typeof(Separator))
-        {
-            VisualTree = CreateDividerVisual()
-        };
-        return line;
-    }
-
-    private static FrameworkElementFactory CreateDividerVisual()
-    {
-        var border = new FrameworkElementFactory(typeof(Border));
-        border.SetValue(FrameworkElement.HeightProperty, 2.0);
-        border.SetResourceReference(Border.BackgroundProperty, "MutedBrush");
-        border.SetValue(UIElement.OpacityProperty, 0.7);
-        return border;
-    }
 
     private static Color ParseColour(string? hex) =>
         TabForge.Views.ColourChooser.TryParse(hex, out var c) ? c : Color.FromRgb(0x80, 0x80, 0x80);

@@ -27,6 +27,192 @@ public static partial class SelfTest
         TestGmPolyphony();
         TestEngineLogRotation();
         TestHeadlessRealtime();
+        TestSafetyLimiter();
+        TestAuditClickDetector();
+    }
+
+    /// <summary>A7-A03: the audio audit's click detector ignores steep edges that repeat at a steady period (a saw) and still flags an isolated step.</summary>
+    private static void TestAuditClickDetector()
+    {
+        const int rate = 48000;
+        var empty = Array.Empty<bool>();
+        var saw = new float[rate * 2];
+        for (var i = 0; i < saw.Length; i++) saw[i] = (float)(0.3 * (2 * ((i * 55.0 / rate) % 1.0) - 1));   // 55 Hz saw: a 0.6 reset every 18.2 ms
+        var sawFlags = TabForge.Diagnostics.AudioAudit.FindClicks(saw, rate, empty).Count;
+        var sine = new float[rate * 2];
+        for (var i = 0; i < sine.Length; i++) sine[i] = (float)(0.3 * Math.Sin(2 * Math.PI * 220 * i / rate)) + (i >= 40000 ? 0.1f : 0f);   // one injected step
+        var sineFlags = TabForge.Diagnostics.AudioAudit.FindClicks(sine, rate, empty).Count;
+        Check("audio audit: a 55 Hz saw (periodic steep edges) gives no click flags", sawFlags == 0, $"{sawFlags} flags");
+        Check("audio audit: a sine with one injected step gives exactly one click flag", sineFlags == 1, $"{sineFlags} flags");
+        var pair = new float[rate * 2];
+        for (var i = 0; i < pair.Length; i++) pair[i] = (float)(0.3 * Math.Sin(2 * Math.PI * 220 * i / rate)) + (i >= 40000 ? 0.1f : 0f) + (i >= 42400 ? 0.1f : 0f);   // two steps 50 ms apart
+        var pairFlags = TabForge.Diagnostics.AudioAudit.FindClicks(pair, rate, empty).Count;
+        Check("audio audit: two similar clicks 50 ms apart are both still flagged (one neighbour is not a waveform)", pairFlags == 2, $"{pairFlags} flags");
+    }
+
+    /// <summary>A7-A01: the master safety limiter holds the -0.3 dBFS ceiling, leaves quiet audio untouched, allocates nothing, and is on for renders / off for live playback by default.</summary>
+    private static void TestSafetyLimiter()
+    {
+        const int rate = 48000, block = 256;
+        var ceiling = EM.SafetyLimiter.DefaultCeiling;
+        var limiter = new EM.SafetyLimiter(rate);
+        // A loud signal: a +6 dB sine with +12 dB bursts and a single full-scale-times-ten spike.
+        var frames = rate * 2;
+        var inL = new float[frames]; var inR = new float[frames];
+        for (var i = 0; i < frames; i++)
+        {
+            var burst = (i / 4800) % 5 == 0 ? 2f : 1f;
+            inL[i] = (float)(2.0 * burst * Math.Sin(2 * Math.PI * 110 * i / rate));
+            inR[i] = (float)(1.5 * burst * Math.Sin(2 * Math.PI * 165 * i / rate));
+        }
+        inL[70000] = 10f;
+        var outL = (float[])inL.Clone(); var outR = (float[])inR.Clone();
+        var bl = new float[block]; var br = new float[block];
+        for (var o = 0; o < frames; o += block)
+        {
+            var n = Math.Min(block, frames - o);
+            Array.Copy(outL, o, bl, 0, n); Array.Copy(outR, o, br, 0, n);
+            limiter.Process(bl, br, n);
+            Array.Copy(bl, 0, outL, o, n); Array.Copy(br, 0, outR, o, n);
+        }
+        var peak = 0f;
+        for (var i = 0; i < frames; i++) peak = Math.Max(peak, Math.Max(Math.Abs(outL[i]), Math.Abs(outR[i])));
+        Check("safety limiter: a clipping signal comes out at or below -0.3 dBFS", peak <= ceiling + 1e-6f && peak > ceiling * 0.97f, $"peak {peak:0.0000} (ceiling {ceiling:0.0000})");
+        // Stereo-linked: the image does not shift (the L/R ratio of a sample is kept, away from the clamp).
+        var ratioKept = true;
+        for (var i = limiter.Latency; i < frames && ratioKept; i += 97)
+        {
+            var a = inL[i - limiter.Latency]; var b = inR[i - limiter.Latency];
+            if (Math.Abs(a) < 0.2f || Math.Abs(b) < 0.2f) continue;
+            ratioKept = Math.Abs(outL[i] / a - outR[i] / b) < 1e-3f;
+        }
+        Check("safety limiter: stereo-linked (both channels get the same gain)", ratioKept);
+
+        // A quiet signal: bit-identical (only delayed), also long after the loud part (the release has finished).
+        limiter = new EM.SafetyLimiter(rate);
+        var quiet = new float[rate]; var quietR = new float[rate];
+        for (var i = 0; i < rate; i++) { quiet[i] = (float)(0.5 * Math.Sin(2 * Math.PI * 220 * i / rate)); quietR[i] = -quiet[i] * 0.5f; }
+        var qL = (float[])quiet.Clone(); var qR = (float[])quietR.Clone();
+        for (var o = 0; o < rate; o += block)
+        {
+            var n = Math.Min(block, rate - o);
+            Array.Copy(qL, o, bl, 0, n); Array.Copy(qR, o, br, 0, n);
+            limiter.Process(bl, br, n);
+            Array.Copy(bl, 0, qL, o, n); Array.Copy(br, 0, qR, o, n);
+        }
+        var worst = 0f;
+        for (var i = limiter.Latency; i < rate; i++) worst = Math.Max(worst, Math.Max(Math.Abs(qL[i] - quiet[i - limiter.Latency]), Math.Abs(qR[i] - quietR[i - limiter.Latency])));
+        Check("safety limiter: quiet audio is unchanged (within 1e-6), delayed by the lookahead only", worst <= 1e-6f, $"worst difference {worst}");
+
+        // Release: after a loud burst, a quiet tone is back at unity gain within half a second.
+        limiter = new EM.SafetyLimiter(rate);
+        var rl = new float[2 * rate]; var rr = new float[2 * rate];
+        for (var i = 0; i < 2400; i++) { rl[i] = 4f * (float)Math.Sin(2 * Math.PI * 200 * i / rate); rr[i] = rl[i]; }
+        for (var i = 2400; i < 2 * rate; i++) { rl[i] = 0.25f; rr[i] = 0.25f; }
+        var releaseIn = (float[])rl.Clone();
+        for (var o = 0; o < 2 * rate; o += block)
+        {
+            var n = Math.Min(block, 2 * rate - o);
+            Array.Copy(rl, o, bl, 0, n); Array.Copy(rr, o, br, 0, n);
+            limiter.Process(bl, br, n);
+            Array.Copy(bl, 0, rl, o, n);
+        }
+        Check("safety limiter: gain recovers after the burst (smooth release, no stuck reduction)", rl[2 * rate - 1000] == releaseIn[2 * rate - 1000 - limiter.Latency] && rl[2600] < 0.1f && rl[rate / 4] > 0.22f, $"after burst {rl[2600]:0.0000}, 250 ms {rl[rate / 4]:0.0000}, end {rl[2 * rate - 1000]:0.0000}");
+
+        // Audio thread: no allocation once built.
+        var before = GC.GetAllocatedBytesForCurrentThread();
+        for (var o = 0; o + block <= frames; o += block)
+        {
+            Array.Copy(inL, o, bl, 0, block); Array.Copy(inR, o, br, 0, block);
+            limiter.Process(bl, br, block);
+        }
+        var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+        Check("safety limiter: Process allocates nothing", allocated == 0, $"{allocated} bytes");
+
+        // Non-finite input is silenced, never poisons the gain.
+        limiter = new EM.SafetyLimiter(rate);
+        bl[0] = float.NaN; br[0] = float.PositiveInfinity; for (var i = 1; i < block; i++) { bl[i] = 0.1f; br[i] = 0.1f; }
+        limiter.Process(bl, br, block);
+        var finite = true; for (var i = 0; i < block; i++) finite &= float.IsFinite(bl[i]) && float.IsFinite(br[i]);
+        Check("safety limiter: a NaN / infinite sample does not reach the output", finite);
+
+        // Defaults: render on, live off; the render switch survives the engine protocol.
+        using var shared = SharedBlock.Create($"tf-selftest-{Guid.NewGuid():N}");
+        var mix = new EM.MixEngine(shared, rate, block);
+        var spec = new RenderSpec { StartFrame = 0, EndFrame = 1000 };
+        using var ms = new MemoryStream();
+        using (var w = new BinaryWriter(ms, System.Text.Encoding.UTF8, true)) { spec.Write(w); spec.SafetyLimiter = false; spec.Write(w); }
+        ms.Position = 0;
+        using var rd = new BinaryReader(ms);
+        var on = RenderSpec.Read(rd).SafetyLimiter; var off = RenderSpec.Read(rd).SafetyLimiter;
+        Check("safety limiter defaults: renders ON, live playback OFF (settings and engine)",
+            new TabForge.Rendering.RenderSettings().SafetyLimiter && new RenderSpec().SafetyLimiter && !new TabForge.Services.PluginSettings().LiveLimiter && !mix.LiveLimiter);
+        Check("safety limiter: the render spec carries the switch through the engine protocol", on && !off, $"on {on}, off {off}");
+
+        // Render path: the lookahead is compensated, also when the auto tail trims the held silence (the last audible frames
+        // must not be lost) and on the fixed-tail / hard-cap path. Quiet material renders byte-identical with the limiter on or off.
+        foreach (var mode in new[] { RenderTailMode.Auto, RenderTailMode.Fixed })
+        {
+            var plain = LimiterRender(false, mode, 0.25f);
+            var limited = LimiterRender(true, mode, 0.25f);
+            Check($"safety limiter render ({mode} tail): quiet master is byte-identical to the unlimited one and as long as the stem",
+                plain.Master.Length > 1000 && plain.Master.AsSpan().SequenceEqual(limited.Master) && limited.Master.Length == limited.Stem.Length,
+                $"plain {plain.Master.Length}, limited {limited.Master.Length}, stem {limited.Stem.Length} bytes");
+        }
+        var loud = LimiterRender(true, RenderTailMode.Auto, 2f);
+        var loudPeak = 0f;
+        var dataAt = loud.Master.AsSpan().IndexOf("data"u8) + 8;
+        for (var i = dataAt; dataAt >= 8 && i + 4 <= loud.Master.Length; i += 4) loudPeak = MathF.Max(loudPeak, MathF.Abs(BitConverter.ToSingle(loud.Master, i)));
+        Check("safety limiter render: a +6 dB master is held at -0.3 dBFS and keeps the stem's length",
+            loudPeak <= ceiling + 1e-6f && loudPeak > ceiling * 0.97f && loud.Master.Length == loud.Stem.Length, $"peak {loudPeak:0.0000}, {loud.Master.Length} / {loud.Stem.Length} bytes");
+    }
+
+    /// <summary>Constant level until an absolute frame, then silence (the auto tail trims after it).</summary>
+    private sealed class GatedConstInstrument(float level, long until) : EP.IPluginInstance
+    {
+        private long _frame;
+        public string Path => "selftest-gated";
+        public bool IsInstrument => true;
+        public bool HasEditor => false;
+        public int LatencySamples => 0;
+        public void Process(float[][] input, float[][] output, int frames, ReadOnlySpan<EP.BlockMidi> midi, in EP.TransportInfo transport)
+        {
+            for (var i = 0; i < frames; i++, _frame++) { var v = _frame < until ? level : 0f; output[0][i] = v; output[1][i] = v; }
+        }
+        public byte[]? GetState() => null;
+        public void SetState(byte[] state) { }
+        public (int Width, int Height)? OpenEditor(IntPtr parent) => null;
+        public void CloseEditor() { }
+        public void EditorIdle() { }
+        public void Dispose() { }
+    }
+
+    private static (byte[] Master, byte[] Stem) LimiterRender(bool limiter, RenderTailMode mode, float level)
+    {
+        using var shared = SharedBlock.Create($"tf-selftest-{Guid.NewGuid():N}");
+        var mix = new EM.MixEngine(shared, 48000, 64);
+        // The level ends 1000 frames into the tail (not on a block edge), so the auto tail's last audible block is in the tail.
+        mix.SetChain(0, new EM.TrackChain(0, 0, null, new[] { new EM.TrackChain.Effect(new GatedConstInstrument(level, 5800), 1f, 0, IsInstrument: true) }, 64));
+        mix.SetGraph(new EM.MixEngine.RenderGraph(new[] { 0 }, EM.MixEngine.RenderGraph.NewDest(), Array.Empty<int>()));
+        var dir = Directory.CreateTempSubdirectory("tf-limiter-").FullName;
+        try
+        {
+            var events = Path.Combine(dir, "e.events");
+            RenderEventFile.Write(events, new List<RenderEvent>());
+            var master = Path.Combine(dir, "m.wav"); var stem = Path.Combine(dir, "s.wav");
+            var spec = new RenderSpec
+            {
+                StartFrame = 0, EndFrame = 4800, TailMode = mode, TailMs = 2000, Channels = 2, SafetyLimiter = limiter,
+                Format = RenderFormat.Float32, MasterPath = master, EventFile = events, Threads = RenderThreads.One,
+                Slots = { new RenderSlot { Slot = 0, StemPath = stem } },
+                Tempo = { new RenderTempoPoint(0, 120, 0) },
+            };
+            var renderer = new EM.OfflineRenderer(spec, mix, shared, 48000, 64, () => false, _ => { });
+            renderer.Prepare();
+            try { renderer.Run(); } finally { renderer.Restore(); }
+            return (File.ReadAllBytes(master), File.ReadAllBytes(stem));
+        }
+        finally { try { Directory.Delete(dir, true); } catch (IOException) { } }
     }
 
     private static float[][] Stereo(int frames) => new[] { new float[frames], new float[frames] };

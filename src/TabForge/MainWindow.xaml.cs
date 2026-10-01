@@ -180,7 +180,10 @@ public partial class MainWindow : Window
         ScoreScroll.MouseRightButtonUp += (s, e) => { if (!Editor.IsMouseOver) { ShowScoreContextMenu(e.GetPosition(ScoreScroll)); e.Handled = true; } };
         ScoreScroll.PreviewMouseLeftButtonDown += (_, _) =>
         {
-            if (!Editor.IsMouseOver) Editor.ClearSelection();
+            if (Editor.IsMouseOver) return;
+            Editor.ClearSelection();
+            // A click on empty paper puts the keyboard on the editor (the ScrollViewer is not focusable, so it cannot take it).
+            if (!Editor.IsKeyboardFocused) Editor.Focus();
         };
         // A plain click on the timeline (not a drag, not a clip/section/area-move gesture) clears the shared
         // selection in both views, exactly like a click on empty score paper. The timeline decides "plain" on
@@ -193,6 +196,8 @@ public partial class MainWindow : Window
         Instrument.PreviewMouseLeftButtonUp += Instrument_MouseLeftButtonUp;
         Instrument.LostMouseCapture += Instrument_LostMouseCapture;
         Instrument.MouseRightButtonUp += Instrument_MouseRightButtonUp;
+        Instrument.ContextMenuKeyPressed += (_, _) => ShowInstrumentContextMenu(fromKeyboard: true);
+        Arrangement.TimelineKeyboardContextRequested += (_, _) => ShowTimelineContextMenuFromKeyboard();
         Instrument.LegendAnchorChanged += PlaceScaleFinderButton;
         InstrumentOverlay.SizeChanged += (_, _) => PlaceScaleFinderButton(_scaleButtonAnchor);
         Arrangement.BarSelected += (_, bar) =>
@@ -347,6 +352,9 @@ public partial class MainWindow : Window
         Arrangement.GroupMixerRequested += group => { OpenMixer(); _mixerWindow?.RevealGroup(group); };
         Arrangement.GroupsShownState = () => _project.Mixer.ShowGroupsInTrackList;
         Arrangement.GroupsToggleRequested += on => ((IMixerHost)this).SetTrackListShows("groups", on);
+        Arrangement.ColourByGroupRequested += ColourTracksByGroup;
+        Arrangement.ColourTracksRequested += ColourTracksWithDialog;
+        Arrangement.TrackListSettingsRequested += () => OpenSettings(SettingsCatalog.Timeline, "timeline.trackgroups");
         Arrangement.DockMenuItems = () => _dockWorkspace?.PanelMenuItems("timeline") ?? new List<System.Windows.Controls.Control>();
         _documents.Changed += (_, _) => RefreshTabs();
         PreviewMouseDown += (_, e) => Arrangement.DismissTrackNameEditOnClick(e.OriginalSource as DependencyObject);

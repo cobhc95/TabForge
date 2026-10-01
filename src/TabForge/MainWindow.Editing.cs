@@ -222,9 +222,9 @@ public partial class MainWindow
         _project.GrayInactiveVoice = r.GrayInactiveVoice;
         _project.Tempo = r.Tempo; TempoBox.Text = r.Tempo.ToString();
         if (r.TimeSigNum != _project.TimeSignatureNumerator || r.TimeSigDenom != _project.TimeSignatureDenominator)
-            _arrangementController.SetTimeSignature(_project, 0, r.TimeSigNum, r.TimeSigDenom);
+            _arrangementController.SetSongTimeSignature(_project, r.TimeSigNum, r.TimeSigDenom);
         if (r.KeySignature != _project.KeySignature || r.KeyMinor != _project.KeySignatureMinor)
-            _arrangementController.SetKeySignature(_project, 0, r.KeySignature, r.KeyMinor);
+            _arrangementController.SetSongKeySignature(_project, r.KeySignature, r.KeyMinor);
         CommitEdit(EditRefresh.Score | EditRefresh.TimelineGeometry | EditRefresh.Palette | EditRefresh.Status);
         StatusText.Text = "Project settings updated";
     }
@@ -232,23 +232,47 @@ public partial class MainWindow
     private void TimeSig_Click(object sender, RoutedEventArgs e)
     {
         var current = CurBar();
+        var range = SelectedBarRange();
         var r = GpDialogs.TimeSignature(current?.TimeSigNum ?? _project.TimeSignatureNumerator,
-            current?.TimeSigDenom ?? _project.TimeSignatureDenominator);
+            current?.TimeSigDenom ?? _project.TimeSignatureDenominator, range is { } sel ? $"bars {sel.First + 1}-{sel.Last + 1}" : null);
         if (r is null) return;
         CaptureUndo();
-        _arrangementController.SetTimeSignature(_project, Editor.SelectedMeasure, r.Value.num, r.Value.denom);
-        CommitEdit(EditRefresh.Score | EditRefresh.TimelineGeometry | EditRefresh.Palette | EditRefresh.Status); StatusText.Text = $"Time signature {r.Value.num}/{r.Value.denom}";
+        var first = range?.First ?? Editor.SelectedMeasure;
+        var last = range is { } span
+            ? BarSignatures.SetTimeRange(_project, span.First, span.Last, r.Value.num, r.Value.denom)
+            : BarSignatures.SetTime(_project, first, r.Value.num, r.Value.denom, !r.Value.onlyThisBar);
+        CommitEdit(EditRefresh.Score | EditRefresh.TimelineGeometry | EditRefresh.Palette | EditRefresh.Status);
+        StatusText.Text = $"Time signature {r.Value.num}/{r.Value.denom} {SignatureSpan(first, last)}";
     }
+
+    /// <summary>The selected bars when the selection spans more than one bar (a signature change then applies to exactly those bars).</summary>
+    private (int First, int Last)? SelectedBarRange()
+    {
+        if (!_selection.HasRange) return null;
+        var count = MaxMeasures();
+        if (count == 0) return null;
+        var (first, last) = (Math.Clamp(Math.Min(_selection.StartBar, _selection.EndBar), 0, count - 1), Math.Clamp(Math.Max(_selection.StartBar, _selection.EndBar), 0, count - 1));
+        return last > first ? (first, last) : null;
+    }
+
+    /// <summary>"for bar 5", "from bar 5 to bar 9" or "from bar 5 to the end" (the bars a signature change reached).</summary>
+    private string SignatureSpan(int first, int last) =>
+        last <= first ? $"for bar {first + 1}" : last >= MaxMeasures() - 1 ? $"from bar {first + 1} to the end" : $"from bar {first + 1} to bar {last + 1}";
 
     private void KeySig_Click(object sender, RoutedEventArgs e)
     {
         var current = CurBar();
+        var range = SelectedBarRange();
         var r = GpDialogs.KeySignature(current?.KeySignature ?? _project.KeySignature,
-            current?.KeySignatureMinor ?? _project.KeySignatureMinor);
+            current?.KeySignatureMinor ?? _project.KeySignatureMinor, range is { } sel ? $"bars {sel.First + 1}-{sel.Last + 1}" : null);
         if (r is null) return;
         CaptureUndo();
-        _arrangementController.SetKeySignature(_project, Editor.SelectedMeasure, r.Value.signature, r.Value.minor);
+        var first = range?.First ?? Editor.SelectedMeasure;
+        var last = range is { } span
+            ? BarSignatures.SetKeyRange(_project, span.First, span.Last, r.Value.signature, r.Value.minor)
+            : BarSignatures.SetKey(_project, first, r.Value.signature, r.Value.minor, !r.Value.onlyThisBar);
         CommitEdit(EditRefresh.Score | EditRefresh.Palette | EditRefresh.Status);
+        StatusText.Text = $"Key signature changed {SignatureSpan(first, last)}";
     }
 
     private void Clef_Click(object sender, RoutedEventArgs e)
@@ -343,8 +367,8 @@ public partial class MainWindow
     private void DurShorter_Click(object sender, RoutedEventArgs e) { Editor.Shorter(); RefreshStatus(); StatusText.Text = $"Note value: {MusicTime.DurationName(Editor.CurrentDurationDenominator)}"; }
     private void PitchUp_Click(object sender, RoutedEventArgs e) => Editor.ShiftPitch(1);
     private void PitchDown_Click(object sender, RoutedEventArgs e) => Editor.ShiftPitch(-1);
-    private void MoveUpString_Click(object sender, RoutedEventArgs e) => Editor.MoveString(-1);
-    private void MoveDownString_Click(object sender, RoutedEventArgs e) => Editor.MoveString(1);
+    private void MoveUpString_Click(object sender, RoutedEventArgs e) => Editor.MoveNotesToAdjacentString(-1);
+    private void MoveDownString_Click(object sender, RoutedEventArgs e) => Editor.MoveNotesToAdjacentString(1);
     private void FxArpDown_Click(object sender, RoutedEventArgs e) => Editor.ToggleTechnique(TechniqueNames.ArpeggioDown);
     private void FxArpUp_Click(object sender, RoutedEventArgs e) => Editor.ToggleTechnique(TechniqueNames.ArpeggioUp);
 
@@ -461,6 +485,7 @@ public partial class MainWindow
     {
         if (MarkerList.SelectedItem is not MarkerModel m) return;
         CaptureUndo(); _project.Markers.Remove(m); CommitEdit(EditRefresh.Score | EditRefresh.Markers);
+        StatusText.Text = $"Removed the section marker '{m.Title}'; its bars and notes stay (Undo brings the marker back)";
     }
 
     private void PrevSection_Click(object sender, RoutedEventArgs e) => JumpSection(-1);

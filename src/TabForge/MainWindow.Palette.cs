@@ -253,7 +253,7 @@ public partial class MainWindow
         RefreshToolsPalette();
     }
 
-    private string PaletteToolTip(PaletteTool tool)
+    private string PaletteToolTip(PaletteTool tool, string? extraLine = null)
     {
         var description = tool.Id switch
         {
@@ -286,9 +286,10 @@ public partial class MainWindow
             _ when tool.Id.StartsWith("gp:octave_", StringComparison.Ordinal) => "Apply an octave-transposition marking to the selected beat(s).",
             _ => tool.Label
         };
-        // "(key)" after the text, from the live key map, so a rebind shows immediately.
-        var suffix = HotkeyCatalog.TooltipSuffix(_settings.Hotkeys, PaletteHotkeyId(tool.Id));
-        return $"{tool.Label}{suffix}: {description}";
+        // "(key)" last, from the live key map, so a rebind shows immediately.
+        var text = description == tool.Label ? tool.Label : $"{tool.Label}: {description}";
+        if (!string.IsNullOrEmpty(extraLine)) text += "\n" + extraLine;
+        return Views.TooltipShortcuts.Append(text, PaletteHotkeyId(tool.Id));
     }
 
     /// <summary>The command a palette tool runs: a shared command where one exists, else its own Tool.* id.</summary>
@@ -317,6 +318,8 @@ public partial class MainWindow
         "effect:trill" => "Note.Trill",
         "effect:palm_mute" => "Note.PalmMute",
         "effect:staccato" => "Note.Staccato",
+        "effect:accent" => "Note.Accent",
+        "gp:tie_note" => "Note.Tie",
         "effect:tremolo_bar" => "Note.TremoloBar",
         "effect:fade_in" => "Note.FadeIn",
         "effect:chord" => "Note.Chord",
@@ -497,7 +500,7 @@ public partial class MainWindow
                     IconColor = PaletteBrushColor("TextBrush", Color.FromRgb(0xC7, 0xCF, 0xDA))
                 },
                 Tag = tool.Id, Width = 26, Height = 24, MinWidth = 26, Padding = new Thickness(0), Margin = new Thickness(1, 0, 1, 0),
-                ToolTip = PaletteToolTip(tool) + "\nRight-click to unpin."
+                ToolTip = PaletteToolTip(tool, "Right-click to unpin.")
             };
             System.Windows.Automation.AutomationProperties.SetName(button, tool.Label);
             WirePaletteButtonFocus(button);

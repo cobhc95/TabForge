@@ -74,6 +74,7 @@ public partial class MainWindow
         var ed = _settings.Editing;
         state.ScaleStyle = ed.ScaleHighlightStyle;
         state.ScaleColour = ThemeService.ScaleHighlightColour(ed.ScaleHighlightColour, VisualTheme.IsLight);
+        state.ScaleStrength = ScaleHighlightStyles.StrengthFactor(ed.ScaleHighlightStrength);
         state.MarkerColour = ThemeService.FretMarkerColour(ed.FretMarkerColour);
         state.MarkerBrightness = FretMarkerLevels.Level(ed.FretMarkerBrightness);
         state.NumberScale = FretNumberSizes.Scale(ed.FretNumberSize);

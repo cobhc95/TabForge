@@ -17,6 +17,11 @@ public static class UserPaths
 
     public static bool IsProfile => ProfileRoot is not null;
 
+    /// <summary>True when <c>--profile</c> points at the real %APPDATA% or %LOCALAPPDATA% TabForge folder (so it is not a test profile at all).</summary>
+    public static bool ProfileIsRealUserFolder => ProfileRoot is { } p
+        && new[] { Environment.SpecialFolder.ApplicationData, Environment.SpecialFolder.LocalApplicationData }
+            .Any(f => string.Equals(Path.TrimEndingDirectorySeparator(p), Path.Combine(Environment.GetFolderPath(f), "TabForge"), StringComparison.OrdinalIgnoreCase));
+
     /// <summary>Roaming data: settings.json, plug-in library, chain states, presets, drum maps, templates.</summary>
     public static string Roaming => ProfileRoot ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "TabForge");
 

@@ -54,6 +54,9 @@ public static class HotkeyCatalog
         new("File.CancelImport", CategoryFile, "Cancel import", "", "Cancel the Guitar Pro import(s) running in the background (same as the status-bar Cancel button)."),
         new("File.ExportPdf", CategoryFile, "Export PDF", "", "Export the engraved score (notation and tab) as a PDF file."),
         new("File.ExportMusicXml", CategoryFile, "Export MusicXML", "", "Export the song as uncompressed MusicXML (.musicxml): a part per track with notation and a tab staff."),
+        new("File.ExportMidi", CategoryFile, "Export MIDI", "", "Export the song as a standard MIDI file (File > Export MIDI)."),
+        new("File.ExportAscii", CategoryFile, "Export ASCII tab", "", "Export the tablature as a plain-text ASCII tab file (File > Export ASCII tab)."),
+        new("File.ProjectSettings", CategoryFile, "Project settings", "", "Open the project settings: song info, credits, tempo and key (the toolbar's Project settings button)."),
         new("App.CommandPalette", CategoryFile, "Command palette", "Ctrl+Shift+A", "Search every command by name, see its key and run it."),
         new("File.Render", CategoryFile, "Render to audio file", "Ctrl+Alt+R", "Render the song to WAV / MP3 (master mix and / or stems) faster than realtime."),
         new("Tab.New", CategoryFile, "New tab", "Ctrl+T", "Open another score in a new tab."),
@@ -69,6 +72,8 @@ public static class HotkeyCatalog
         new("Edit.Paste", CategoryEdit, "Paste", "Ctrl+V", "Paste at the cursor; asks only what the paste needs."),
         new("Edit.PasteSpecial", CategoryEdit, "Paste special", "Ctrl+Shift+V", "Paste with a repeat count, replace or insert, octave shift, keep string and fret, and bar settings."),
         new("Edit.SelectAll", CategoryEdit, "Select whole track", "Ctrl+A", "Select every bar of the track."),
+        new("Edit.InsertBeat", CategoryEdit, "Insert beat", "Insert", "Insert an empty beat at the cursor and push the rest of the bar right (the bar keeps its length)."),
+        new("Edit.DeleteBeats", CategoryEdit, "Delete beats (shift left)", "", "Remove the beat at the cursor and pull the rest of the bar left. The Delete key only empties the beat."),
         new("Edit.RepeatSelection", CategoryEdit, "Repeat selection", "Ctrl+Shift+R", "Repeat the selected bars."),
 
         new("Transport.PlayPause", CategoryTransport, "Play / pause", "Space", "Start or pause playback."),
@@ -78,6 +83,8 @@ public static class HotkeyCatalog
         new("Playback.SpeedReset", CategoryTransport, "Reset speed to 100 %", "Ctrl+Alt+D0", "Play at the song's own tempo (100 %)."),
         new("Transport.Stop", CategoryTransport, "Stop", "Ctrl+OemPeriod", "Stop playback and return to the edit cursor."),
         new("Transport.Loop", CategoryTransport, "Loop", "F9", "Play the loop range repeatedly."),
+        new("Transport.Metronome", CategoryTransport, "Metronome on / off", "", "Turn the metronome click on or off (the same as the transport's Metronome button)."),
+        new("Transport.CountIn", CategoryTransport, "Count-in on / off", "", "Turn the count-in before playback on or off (the same as the transport's Count-in button)."),
 
         new("Bar.Insert", CategoryBar, "Insert bar", "Ctrl+Insert", "Insert an empty bar before the cursor."),
         new("Bar.Delete", CategoryBar, "Delete bar", "Ctrl+Delete", "Delete the bar at the cursor."),
@@ -106,11 +113,13 @@ public static class HotkeyCatalog
         new("Track.Next", CategoryNote, "Next track", "Ctrl+Shift+Down", "Select the next track."),
         new("Track.Previous", CategoryNote, "Previous track", "Ctrl+Shift+Up", "Select the previous track."),
 
-        new("View.Multitrack", CategoryView, "Multitrack view", "F3", "Show every track in the score."),
-        new("View.Global", CategoryView, "Global view", "F8", "Show all tracks together."),
+        new("View.Multitrack", CategoryView, "Show track list", "F3", "Scroll the track list (the mixer table with every track) into view; click a track's colour block there to jump to it."),
+        new("View.Global", CategoryView, "Show / hide arrangement overview", "F8", "Show or hide the Arrangement (timeline) panel, the same as View > Arrangement overview."),
         new("View.Fullscreen", CategoryView, "Fullscreen", "F11", "Toggle fullscreen."),
         new("View.HorizontalScroll", CategoryView, "Horizontal score scrolling", "", "Switch the score between wrapped lines (scroll down) and one line (scroll right)."),
-        new("View.InstrumentView", CategoryView, "Switch instrument view", "", "Cycle the instrument panel between fretboard, keyboard and drum pads (this session; the default is in Settings > Fretboard)."),
+        new("View.InstrumentView", CategoryView, "Switch instrument view", "", "Cycle the instrument panel between fretboard, keyboard and drum pads (this session; the default is in Settings > Fretboard & Keyboard)."),
+        new("Help.Tutorial", CategoryView, "Tutorial", "", "Open the Beginner's Guide: searchable chapters with pictures, and a PDF export (Help > Tutorial)."),
+        new("Help.TutorialDetailed", CategoryView, "Detailed guide", "", "Open the Tutorial window on the Detailed Guide, the full reference to every feature (Help > Detailed guide)."),
         new("Help.CheckForUpdates", CategoryView, "Check for updates", "", "Ask GitHub whether a newer TabForge release exists (one anonymous HTTPS request)."),
         new("Transport.Record", CategoryTransport, "Record", "Ctrl+R", "Record every armed track while the song plays (press again to stop)."),
         new("Clip.Delete", CategoryClips, "Delete clip", "Delete", "Delete the selected clip."),
@@ -142,14 +151,18 @@ public static class HotkeyCatalog
         new("Track.MoveUp", CategoryNote, "Move track up", "Alt+Up", "Move the selected track up one place in the track list. In the Mixer window it moves the selected mixer row (a track, or a whole group) up; a track passing the top of its group joins the group above."),
         new("Track.MoveDown", CategoryNote, "Move track down", "Alt+Down", "Move the selected track down one place in the track list. In the Mixer window it moves the selected mixer row (a track, or a whole group) down; a track passing the end of its group joins the group below."),
         new("View.ShowTrackGroups", CategoryView, "Show tracks in groups", "", "Show or hide a header per mixer group (guitars, basses...) in the track list. The same setting as the Mixer's \"Groups in track list\" box and the track list's right-click menu."),
-        new("Media.ManageApprovals", CategoryView, "Manage linked audio approvals", "", "Open the Linked audio window: folders on network locations or removable drives this song is waiting on, and the approvals you gave earlier (revoke them there). Also in Preferences > Audio & VST."),
+        new("Media.ManageApprovals", CategoryView, "Manage linked audio approvals", "", "Open the Linked audio window: folders on network locations or removable drives this song is waiting on, and the approvals you gave earlier (revoke them there). Also in Preferences > Files & Backups."),
         new("Mixer.MasterFx", CategoryView, "Master FX chain", "", "Open the master effects chain (applied to the whole mix after the group buses)."),
         new("Mixer.MonitorFx", CategoryView, "Mixer: Monitor FX", "", "Open the monitoring effects chain (e.g. speaker calibration). It plays after the master, live only: never included in renders or exports."),
         new("Mixer.GroupFx", CategoryView, "Group bus FX chain", "", "Open the effects bus chain of the selected track's mixer group (its tracks sum into it before the master)."),
         new("Track.MidiProcessing", CategoryView, "Plug-in MIDI processing", "", "Open the MIDI processing window (filter, transpose, drum map, velocity, humanize, delay, program / CC, log) of the selected track's selected plug-in."),
         new("View.ClearScale", CategoryView, "Clear scale highlight", "", "Remove the highlighted scale from the fretboard and keyboard."),
+        new("View.ScaleHighlightBrighter", CategoryView, "Scale highlight brighter", "", "Make the scale highlight on the fretboard and keyboard 10% stronger (up to 150%). The same setting as Preferences > Fretboard > Appearance > Scale highlight strength."),
+        new("View.ScaleHighlightDimmer", CategoryView, "Scale highlight dimmer", "", "Make the scale highlight on the fretboard and keyboard 10% weaker (down to 10%). The same setting as Preferences > Fretboard > Appearance > Scale highlight strength."),
+        new("View.CyclePlayheadStyle", CategoryView, "Cycle playback position marker", "", "Switch the timeline's playback position marker between Line (default), Bar marker and Both. The same setting as Preferences > Timeline & Tracks > Playback position marker."),
         new("View.CycleStringSpacing", CategoryView, "Cycle fretboard string spacing", "", "Switch the fretboard string spacing between Compact, Natural (default) and Wide (at most 1.5x natural). The same setting as right-click the fretboard > Appearance > String spacing."),
         new("Tools.ScaleFinder", CategoryView, "Scale finder", "", "Find which scales the selected notes (or the whole song) fit, or pick any scale, and highlight it on the fretboard."),
+        new("Tools.Transpose", CategoryNote, "Transpose", "", "Transpose the notes of the selected track (or only the selected bars) by a number of semitones, in every voice. Drum tracks are skipped. One undo step."),
         new("Tools.Tuner", CategoryView, "Tuner", "", "Open the chromatic tuner: the note and cents of the sound on the armed input, with the selected track's string tunings."),
         new("View.SmoothFollow", CategoryView, "Smooth page-turn follow", "", "Switch playback follow between instant page turns and smooth (glided) page turns."),
         new("View.ZoomIn", CategoryView, "Zoom in", "Ctrl+OemPlus", "Increase the score zoom."),
@@ -157,6 +170,12 @@ public static class HotkeyCatalog
 
         // Single-key note shortcuts (classic layout). Previously hard-wired in the editor.
         new("Note.RepeatBeat", CategoryNote, "Repeat previous beat", "C", "Copy the previous beat onto the cursor."),
+        new(NoteLonger, CategoryDuration, "Longer note value", "OemMinus", "Make the note value one step longer (16th to 8th to quarter...). Numpad - does the same. Preferences > Editing > \"Reverse + / - duration keys\" swaps the two default keys."),
+        new(NoteShorter, CategoryDuration, "Shorter note value", "OemPlus", "Make the note value one step shorter (quarter to 8th to 16th...). Numpad + and Shift+= do the same. Preferences > Editing > \"Reverse + / - duration keys\" swaps the two default keys."),
+        new("Note.PitchUp", CategoryNote, "Shift pitch up (semitone)", "Shift+Up", "Raise the selected note by a semitone."),
+        new("Note.PitchDown", CategoryNote, "Shift pitch down (semitone)", "Shift+Down", "Lower the selected note by a semitone."),
+        new("Note.MoveStringUp", CategoryNote, "Move note to higher string", "Alt+Shift+Up", "Move the selected note(s) to the next higher string, keeping the pitch (the fret is recalculated). Nothing changes when the pitch cannot be played there or the string is taken in that beat. The plain Up arrow moves only the cursor."),
+        new("Note.MoveStringDown", CategoryNote, "Move note to lower string", "Alt+Shift+Down", "Move the selected note(s) to the next lower string, keeping the pitch (the fret is recalculated). Nothing changes when the pitch cannot be played there or the string is taken in that beat. The plain Down arrow moves only the cursor."),
         new("Note.Rest", CategoryNote, "Rest", "R", "Turn the beat into a rest (or back)."),
         new("Note.Tie", CategoryNote, "Tie note", "L", "Tie the note to the previous one."),
         new("Note.Fermata", CategoryNote, "Fermata", "F", "Hold the beat."),
@@ -221,7 +240,9 @@ public static class HotkeyCatalog
         {
             if (IsClipAction(action.Id) != clipContext) continue;
             var gesture = GestureFor(settings, action.Id);
-            if (!string.IsNullOrWhiteSpace(gesture)) map[gesture] = action.Id;
+            if (string.IsNullOrWhiteSpace(gesture)) continue;
+            // Keys are the canonical spelling (what the window builds from a key event), whatever order a binding was written in.
+            map[TryParse(gesture, out var key, out var mods) ? Format(key, mods) : gesture] = action.Id;
         }
         return map;
     }
@@ -232,8 +253,16 @@ public static class HotkeyCatalog
         var custom = settings[id];
         if (!string.IsNullOrWhiteSpace(custom)) return custom;
         if (HotkeyPresets.Override(settings.Preset, id) is { } preset) return preset;
+        // The "Reverse + / - duration keys" setting swaps the two default keys (a user's own binding is never swapped).
+        if (ReverseDurationKeys && id == NoteLonger) id = NoteShorter;
+        else if (ReverseDurationKeys && id == NoteShorter) id = NoteLonger;
         return ById(id)?.DefaultGesture ?? "";
     }
+
+    public const string NoteLonger = "Note.Longer", NoteShorter = "Note.Shorter";
+
+    /// <summary>Mirrors Preferences > Editing > "Reverse + / - duration keys" (set by the window when settings are applied).</summary>
+    public static bool ReverseDurationKeys { get; set; }
 
     // ---------- gesture formatting / parsing ----------
 
@@ -241,8 +270,10 @@ public static class HotkeyCatalog
     {
         var parts = new List<string>(4);
         if (mods.HasFlag(HotkeyModifiers.Control)) parts.Add("Ctrl");
-        if (mods.HasFlag(HotkeyModifiers.Shift)) parts.Add("Shift");
+        // Ctrl, Alt, Shift: the one canonical order (the catalogue writes "Alt+Shift+Left"); a gesture written in another
+        // order still matches because BuildMap and the settings validator normalise through here.
         if (mods.HasFlag(HotkeyModifiers.Alt)) parts.Add("Alt");
+        if (mods.HasFlag(HotkeyModifiers.Shift)) parts.Add("Shift");
         if (mods.HasFlag(HotkeyModifiers.Windows)) parts.Add("Win");
         parts.Add(key.Trim());
         return string.Join("+", parts);
@@ -283,6 +314,17 @@ public static class HotkeyCatalog
             "add" => "Num +",
             "subtract" => "Num -",
             "decimal" => "Num .",
+            "multiply" => "Num *",
+            "divide" => "Num /",
+            // The punctuation keys as they are printed on a US keyboard (the layout the key names come from).
+            "oem1" => ";",
+            "oemquestion" => "/",
+            "oemopenbrackets" => "[",
+            "oemclosebrackets" => "]",
+            "oemtilde" => "`",
+            "oemquotes" => "'",
+            "oempipe" => "\\",
+            "d0" or "d1" or "d2" or "d3" or "d4" or "d5" or "d6" or "d7" or "d8" or "d9" => key[1..],
             _ => key
         };
         return Format(text, mods);
@@ -293,6 +335,26 @@ public static class HotkeyCatalog
     {
         var display = Display(GestureFor(settings, id));
         return string.IsNullOrWhiteSpace(display) ? "" : $" ({display})";
+    }
+
+    /// <summary>
+    /// A tooltip with the command's key last: "Save the score (Ctrl+S)", or just the text when the command has no key.
+    /// A text that already ends in a bracket gets the key inside it ("Zoom (50-200%; Ctrl++)") so there are never two bracket groups.
+    /// </summary>
+    public static string TooltipWithKey(HotkeySettings settings, string text, string id) =>
+        TooltipWithDisplay(text, Display(GestureFor(settings, id)));
+
+    public static string TooltipWithDisplay(string text, string display)
+    {
+        if (string.IsNullOrWhiteSpace(display)) return text;
+        var trimmed = text.TrimEnd();
+        if (trimmed.EndsWith(')'))
+        {
+            var open = trimmed.LastIndexOf(" (", StringComparison.Ordinal);
+            if (open > 0 && trimmed.IndexOf('\n', open) < 0)
+                return trimmed[..^1] + "; " + display + ")";
+        }
+        return trimmed + " (" + display + ")";
     }
 
     private static IReadOnlyDictionary<string, string> BuildKeyNames()

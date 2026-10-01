@@ -200,33 +200,21 @@ public partial class MainWindow
         _dockWorkspace?.SelectPanel("playback");
         await Settle(400);
         Shoot(ControllerPanel, "zoom-and-speed");
-        // Fretboard context menu: Appearance, then Number size.
+        // Fretboard context menu (lean: view, scale, practice toggles, lock, settings), then its Scale submenu.
         Instrument_MouseRightButtonUp(Instrument, new MouseButtonEventArgs(Mouse.PrimaryDevice, Environment.TickCount, MouseButton.Right)
             { RoutedEvent = UIElement.MouseRightButtonUpEvent });
         await Settle(250);
         if (Instrument.ContextMenu is { } fretMenu)
         {
-            var layoutMenu = fretMenu.Items.OfType<MenuItem>().FirstOrDefault(i => i.Header?.ToString() == ContextMenuLayouts.AppearanceAndLayout);
-            var appearance = layoutMenu?.Items.OfType<MenuItem>().FirstOrDefault(i => i.Header?.ToString() == "Appearance");
-            if (layoutMenu is not null && appearance is not null)
+            Shoot(fretMenu, "fretboard-menu");
+            var scaleMenu = fretMenu.Items.OfType<MenuItem>().FirstOrDefault(i => i.Header?.ToString() == InstrumentMenus.Scale);
+            if (scaleMenu is not null)
             {
-                layoutMenu.IsSubmenuOpen = true;
+                scaleMenu.IsSubmenuOpen = true;
                 await Settle(250);
-                appearance.IsSubmenuOpen = true;
-                await Settle(250);
-                if (appearance.Template.FindName("PART_Popup", appearance) is Popup { Child: FrameworkElement ap })
-                    Shoot(ap, "fretboard-menu-appearance");
-                var size = appearance.Items.OfType<MenuItem>().FirstOrDefault(i => i.Header?.ToString() == "Number size");
-                if (size is not null)
-                {
-                    size.IsSubmenuOpen = true;
-                    await Settle(250);
-                    if (size.Template.FindName("PART_Popup", size) is Popup { Child: FrameworkElement sp })
-                        Shoot(sp, "fretboard-menu-number-size");
-                    size.IsSubmenuOpen = false;
-                }
-                appearance.IsSubmenuOpen = false;
-                layoutMenu.IsSubmenuOpen = false;
+                if (scaleMenu.Template.FindName("PART_Popup", scaleMenu) is Popup { Child: FrameworkElement sp })
+                    Shoot(sp, "fretboard-menu-scale");
+                scaleMenu.IsSubmenuOpen = false;
             }
             fretMenu.IsOpen = false;
         }
@@ -284,8 +272,8 @@ public partial class MainWindow
         Shoot(preferences, "settings-search");
         preferences.SearchBox.Text = "";
         foreach (var (page, row, name) in new[] { ("General", "Autosave unsaved songs", "settings-autosave-row"),
-                     ("Audio & VST", "Windows MIDI latency", "settings-midi-latency-measure"),
-                     ("Audio & VST", "Play the whole song through the audio engine", "settings-audio-engine-toggle") })
+                     (SettingsCatalog.AudioVst, "Windows MIDI latency", "settings-midi-latency-measure"),
+                     (SettingsCatalog.AudioVst, "Play the whole song through the audio engine", "settings-audio-engine-toggle") })
         {
             var nav = buttons.FirstOrDefault(b => TextOf(b) == page);
             if (nav is null) continue;

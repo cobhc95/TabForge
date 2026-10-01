@@ -51,6 +51,8 @@ internal static class PluginBrowser
         // Themed, sortable headers (click to sort, again to reverse) and theme row hover/selection.
         var sortColumn = 0; var sortAscending = true;
         var list = new ListView { View = view };
+        UiIds.Id(search, "Plugins.Search", "Search plug-ins");
+        UiIds.Id(list, "Plugins.List", "Plug-ins");
         ThemedList.StyleRows(list);
         list.SetResourceReference(Control.BackgroundProperty, "PanelBrush");
         root.Children.Add(list);
@@ -59,6 +61,7 @@ internal static class PluginBrowser
             ? settings.ScanCache.Select(k => new VstPluginInfo(k.Name, k.Path, k.Format, k.Vendor, k.Role)).ToList()
             : VstScannerService.LastScan;
         var scanning = false;
+        Button? scanStandard = null;   // the empty-state button (set below); shown only while the list is empty and the standard folders are off
         var notIdentified = new HashSet<string>(StringComparer.OrdinalIgnoreCase);   // not approved: its role is not read by running it
         ThemedList.MakeSortable(view, (column, ascending) => { sortColumn = column; sortAscending = ascending; Filter(); });
 
@@ -79,9 +82,10 @@ internal static class PluginBrowser
                 .ThenBy(r => r.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
             list.ItemsSource = sorted;
             if (scanning) return;
+            if (scanStandard is not null) scanStandard.Visibility = all.Count == 0 && !settings.ScanStandardFolders ? Visibility.Visible : Visibility.Collapsed;
             status.Text = all.Count == 0
                 ? (settings.Folders.Count == 0 && !settings.ScanStandardFolders
-                    ? "No plug-in folders yet: click Add folder… (or turn on the standard folders in Folder settings…), or browse to a plug-in file."
+                    ? "No plug-in folders yet: click Scan the standard VST folders, or Add folder…, or browse to a plug-in file."
                     : "No plug-ins found in your folders.")
                 : $"{all.Count} plug-ins{(settings.RememberScan ? " (remembered list)" : "")}. Double-click one, or select it and press Enter, to add it.";
         }
@@ -147,10 +151,30 @@ internal static class PluginBrowser
 
         void Add(string text, Action click, string tip)
         {
+            AddButton(text, click, tip);
+        }
+        Button AddButton(string text, Action click, string tip)
+        {
             var b = new Button { Content = text, Margin = new Thickness(0, 0, 6, 4), Padding = new Thickness(10, 3, 10, 3), ToolTip = tip };
             b.Click += (_, _) => click();
+            var id = text switch
+            {
+                "Add folder…" => "Plugins.AddFolder", "Browse for a plug-in file…" => "Plugins.BrowseFile", "Rescan" => "Plugins.Rescan",
+                "Scan common folders" => "Plugins.ScanCommon", "Edit list…" => "Plugins.EditList", "Folder settings…" => "Plugins.FolderSettings",
+                "Cancel" => "Plugins.Cancel", "Scan the standard VST folders" => "Plugins.ScanStandard", _ => null
+            };
+            if (id is not null) UiIds.Id(b, id);
             buttons.Children.Add(b);
+            return b;
         }
+        scanStandard = AddButton("Scan the standard VST folders", async () =>
+        {
+            VstScannerService.EnableStandardFolders(settings);   // the user's choice: Preferences > Audio & Plug-ins > Also scan the standard VST folders
+            host.SaveSettings();
+            scanStandard!.Visibility = Visibility.Collapsed;
+            await Scan();
+        }, "Turns on Settings > Audio & Plug-ins > Also scan the standard VST folders, then scans: "
+            + string.Join(", ", VstScannerService.StandardFolderLabels) + ", and the common folders list (Edit list…).");
         void Accept() { if (list.SelectedItem is Row row) { result = row.Info; w.DialogResult = true; } }
         Add("Add folder…", async () =>
         {
@@ -160,7 +184,7 @@ internal static class PluginBrowser
                 if (!settings.Folders.Contains(folder, StringComparer.OrdinalIgnoreCase)) settings.Folders.Add(folder);
             host.SaveSettings();
             await Scan();
-        }, "Add one or more folders that hold plug-ins; they are kept in Settings > Audio & VST.");
+        }, "Add one or more folders that hold plug-ins; they are kept in Settings > Audio & Plug-ins.");
         Add("Browse for a plug-in file…", () =>
         {
             var dialog = new Microsoft.Win32.OpenFileDialog { Title = "Choose a VST plug-in", Filter = "VST plug-ins (*.vst3;*.dll)|*.vst3;*.dll" };
@@ -201,7 +225,7 @@ internal static class PluginBrowser
             var lines = box.Text.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
             settings.CommonFolders = lines.SequenceEqual(VstScannerService.DefaultCommonFolders) ? new List<string>() : lines;
             host.SaveSettings();
-        }, "Edit the list of common folders (also in Settings > Audio & VST), with Reset to defaults.");
+        }, "Edit the list of common folders (also in Settings > Audio & Plug-ins), with Reset to defaults.");
         // Remember: the list is kept and shown at once next time, without scanning the folders again.
         var remember = new CheckBox
         {
@@ -218,7 +242,7 @@ internal static class PluginBrowser
             Filter();
         };
         bottom.Children.Insert(2, remember);
-        Add("Folder settings…", () => { w.DialogResult = false; host.OpenAudioSettings(); }, "Plug-in folders, remembered scans and plug-in window options (Settings > Audio & VST).");
+        Add("Folder settings…", () => { w.DialogResult = false; host.OpenAudioSettings(); }, "Plug-in folders, remembered scans and plug-in window options (Settings > Audio & Plug-ins).");
         Add("Cancel", () => w.DialogResult = false, "Close without adding");
 
         list.MouseDoubleClick += (_, _) => Accept();

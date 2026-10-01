@@ -41,6 +41,7 @@ public static class ProjectSettingsWindow
             TextWrapping = multiline ? TextWrapping.Wrap : TextWrapping.NoWrap,
             VerticalScrollBarVisibility = multiline ? ScrollBarVisibility.Auto : ScrollBarVisibility.Hidden,
             MinHeight = multiline ? 110 : 26,
+            MaxHeight = multiline ? 320 : double.PositiveInfinity,   // a long notice or lyrics (up to 64K) scrolls inside its box
             VerticalContentAlignment = multiline ? VerticalAlignment.Top : VerticalAlignment.Center
         };
 

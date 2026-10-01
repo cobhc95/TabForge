@@ -31,6 +31,25 @@ public static partial class SelfTest
             UpdateService.LatestVersionFrom("{\"message\":\"rate limited\"}") is null && UpdateService.LatestVersionFrom("not json") is null);
         Check("draft releases are ignored", UpdateService.LatestVersionFrom("""[{ "tag_name": "v9.9.9", "draft": true }]""") is null);
 
+        // 0.5 is the first final release: tag v0.5.0 equals version 0.5.0; a final-release user is offered 0.5.1 / 0.6.0 but never betas.
+        Check("tag v0.5.0 equals version 0.5.0", UpdateService.Compare("v0.5.0", "0.5.0") == 0 && !UpdateService.IsNewer("v0.5.0", "0.5.0"));
+        Check("0.5.1 and 0.6.0 are newer than 0.5.0", UpdateService.IsNewer("v0.5.1", "0.5.0") && UpdateService.IsNewer("v0.6.0", "0.5.0"));
+        const string finalReply = """
+            [
+              { "tag_name": "v0.6.0-beta.1", "draft": false, "prerelease": true },
+              { "tag_name": "v0.5.1", "draft": false, "prerelease": false },
+              { "tag_name": "v0.5.2", "draft": false, "prerelease": true },
+              { "tag_name": "v0.5.0", "draft": false }
+            ]
+            """;
+        Check("a final-release user is not offered betas or flagged pre-releases", UpdateService.LatestVersionFrom(finalReply, includePreReleases: false) == "0.5.1", UpdateService.LatestVersionFrom(finalReply, includePreReleases: false));
+        Check("a pre-release user is offered the newest of all", UpdateService.LatestVersionFrom(finalReply, includePreReleases: true) == "0.6.0-beta.1");
+        Check("display version: 0.5.0 shows as 0.5", AppInfo.FormatDisplay("0.5.0", false) == "0.5");
+        Check("display version: 0.5.1 shows in full", AppInfo.FormatDisplay("0.5.1", false) == "0.5.1");
+        Check("display version: betas and flagged versions say pre-release",
+            AppInfo.FormatDisplay("0.6.0-beta.1", false) == "0.6.0 beta.1 (pre-release)" && AppInfo.FormatDisplay("0.5.0", true) == "0.5.0 (pre-release)");
+        Check("this build is the official release: no pre-release flag or text", !AppInfo.IsPreRelease && !AppInfo.DisplayVersion.Contains("pre-release"), AppInfo.DisplayVersion);
+
         // The page opened is built locally for the validated version, never taken from the reply.
         Check("the download page is on the TabForge GitHub repository",
             UpdateService.PageFor("0.1.0-beta.2").AbsoluteUri == "https://github.com/cobhc95/TabForge/releases/tag/v0.1.0-beta.2");

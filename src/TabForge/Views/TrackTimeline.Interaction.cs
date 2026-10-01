@@ -399,7 +399,8 @@ internal sealed partial class TrackTimeline
         if (sectionIndex < 0 || sectionIndex >= sorted.Count) return "";
         var marker = sorted[sectionIndex];
         var title = string.IsNullOrWhiteSpace(marker.Title) ? "Section" : marker.Title;
-        if (marker.LockPosition) return $"{title} (position locked)\nRight-click: section options · Add section (M)";
+        var addHint = TooltipShortcuts.Append("Add section", "Section.Add");   // the key follows rebinding
+        if (marker.LockPosition) return $"{title} (position locked)\nRight-click: section options · {addHint}";
         string plain;
         if (SectionLayout.MoveRange(Project!, marker) is var (min, max))
         {
@@ -409,7 +410,7 @@ internal sealed partial class TrackTimeline
         }
         else plain = $"Drag: no free bars next to {title}, so it cannot move on its own";
         return $"{plain}\nCtrl+drag: move {title} together with its bars (other sections make room)\n" +
-               "Drag an edge: resize · Right-click: section options · Add section (M)";
+               $"Drag an edge: resize · Right-click: section options · {addHint}";
     }
 
     // The section lane shows its hint through its own ToolTip, opened after a short hover: a tooltip
@@ -512,6 +513,7 @@ internal sealed partial class TrackTimeline
     {
         base.OnMouseMove(e);
         var p = e.GetPosition(this);
+        UpdateHover(p);
         if (!_dragging && _resizeMarker is null && ClipMouseMove(e, p)) return;
         if (_resizeMarker is not null)
         {
@@ -717,6 +719,7 @@ internal sealed partial class TrackTimeline
     protected override void OnMouseLeave(MouseEventArgs e)
     {
         base.OnMouseLeave(e);
+        ClearHover();
         if (!_dragging) UpdateSectionHover(-1);
     }
 

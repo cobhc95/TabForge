@@ -207,6 +207,17 @@ internal sealed partial class EngineSession
         finally { LeaveCall(entered); }
     }
 
+    /// <summary>The live master safety limiter (off by default); survives a device change.</summary>
+    public bool LiveLimiter { get; private set; }
+
+    public void SetLiveLimiter(bool on)
+    {
+        AssertMain();
+        LiveLimiter = on;
+        if (Mix is { } mix) mix.LiveLimiter = on;
+        EngineLog.Write($"live safety limiter {(on ? "on" : "off")}");
+    }
+
     public void SetWindowsPathOffset(float db)
     {
         AssertMain();
@@ -383,6 +394,7 @@ internal sealed partial class EngineSession
             if (SampleRate != oldRate || maxBlock != oldBlock) ReconfigureLive(SampleRate, maxBlock);
             var previous = Loaded.Values.ToList();
             Volatile.Write(ref Mix, new MixEngine(Shared!, SampleRate, maxBlock, Transport));   // the reader thread reads it (Panic)
+            Mix!.LiveLimiter = LiveLimiter;
             if (config.Driver == AudioOutputFactory.WasapiShared) Mix!.Ceiling = 8f;   // +18 dB: the Windows float mixer clips after its volume
             // Chains depend on the sample rate and block size (their buffers): rebuild every requested chain for the new engine.
             foreach (var (slot, request) in Requested.ToList()) BuildChain(slot, request.Track, request.UseMidiSynth, request.Specs);
@@ -863,15 +875,35 @@ internal sealed partial class EngineSession
         }
     }
 
-    private void StopRecording()
+    /// <summary>Takes still being written after Stop (main thread only); Shutdown finishes them so no file is left without its header.</summary>
+    private readonly List<Audio.Recorder> _draining = new();
+
+    /// <param name="wait">True (shutdown): close the files here. False: the disk thread finishes the take and sends the events, so a
+    /// slow disk with a long queue never holds the main thread past TabForge's 5 s liveness limit (which would end the engine and lose the take).</param>
+    private void StopRecording(bool wait = false)
     {
         AssertMain();
         if (Recorder is null) return;
         if (Input is not null) Input.BlockCaptured = null;
-        var takes = Recorder.Finish();
+        var recorder = Recorder;
         Recorder = null;
+        if (wait) { ReportTakes(recorder, recorder.Finish()); return; }
+        _draining.Add(recorder);
+        recorder.FinishInBackground(takes =>
+        {
+            ReportTakes(recorder, takes);
+            EngineThreads.Post(() => _draining.Remove(recorder));   // let the queue memory go
+        });
+    }
+
+    /// <summary>Any thread: the Recorded events, then one loss summary if input was lost.</summary>
+    private static void ReportTakes(Audio.Recorder recorder, List<(Audio.Recorder.Take Take, double LengthSec)> takes)
+    {
+        var summary = recorder.LossSummary;
+        if (summary is not null) EngineLog.Write($"recording finished: {summary}");
         foreach (var (take, length) in takes)
             Send(EngineEvent.Recorded, w => { w.Write(take.Slot); w.WriteString(take.Path); w.Write(take.StartSec); w.Write(length); });
+        if (summary is not null) Send(EngineEvent.RecordingLoss, w => w.WriteString(summary));
     }
 
     // ---- Plug-ins: editors, programs, states ----
@@ -970,7 +1002,13 @@ internal sealed partial class EngineSession
         AssertMain();
         RenderCancel = true;
         RenderThread?.Join(5000);
-        try { StopRecording(); } catch (Exception ex) { EngineLog.Write($"shutdown: recorder: {ex.Message}"); }
+        try
+        {
+            StopRecording(wait: true);
+            foreach (var draining in _draining.ToList()) draining.Finish();   // takes stopped earlier and still being written
+            _draining.Clear();
+        }
+        catch (Exception ex) { EngineLog.Write($"shutdown: recorder: {ex.Message}"); }
         try { Input?.Dispose(); } catch (Exception ex) { EngineLog.Write($"shutdown: input: {ex.Message}"); }
         try { EditorWindows.CloseAll(); } catch (Exception ex) { EngineLog.Write($"shutdown: editors: {ex.Message}"); }
         try { StopOutput(); } catch (Exception ex) { EngineLog.Write($"shutdown: player: {ex.Message}"); }

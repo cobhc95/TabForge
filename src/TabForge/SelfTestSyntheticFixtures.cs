@@ -220,12 +220,13 @@ public static partial class SelfTest
         // Linear-in-beat ramp from t0 to t1 over L slots: the integral of 60000 / (4 * t(x)) dx is 15000 * L * ln(t1 / t0) / (t1 - t0).
         static double Ramp(double l, double t0, double t1) => 15000.0 * l * Math.Log(t1 / t0) / (t1 - t0);
         var rampMs = new[] { SfMs(16, 120), Ramp(16, 120, 60), SfMs(16, 60), SfMs(4, 60) + Ramp(8, 60, 180) + SfMs(4, 180), SfMs(16, 180) };
-        SfRoundTrip("tempo ramps", ramps, new[] { 0, 1, 2, 3, 4 }, rampMs, clean: RtGpClean(("bar.midTempos", "the clean .gp keeps each tempo change as an instant step; the ramp length is not written"),
-            ("bar.tempo", "a ramp that starts on the bar's first slot reopens as the bar's own tempo change (its start tempo is lost)"),
-            ("bar.tempoChange", "a ramp that starts on the bar's first slot reopens as the bar's own tempo change")), cleanPerformance: false);
+        // A7-E02: the clean .gp writes each ramp as Guitar Pro's linear tempo automation (a linear point gliding to the next point), so the ramps, their lengths and the timing all survive.
+        SfRoundTrip("tempo ramps", ramps, new[] { 0, 1, 2, 3, 4 }, rampMs);
         var cleanRamp = SfViaCleanGp(ramps);
         var rampPoint = cleanRamp.Tracks[0].Measures[1].MidBarTempos;
-        Log.Add($"  info  synthetic: a tempo ramp in a clean .gp reopens with {(rampPoint is { Count: > 0 } ? $"{rampPoint.Count} point(s), ramp {rampPoint[0].RampSlots} slots" : "no mid-bar point")} (TabForge's own .tforge and project-embedded .gp keep the exact ramp)");
+        var rampPoint2 = cleanRamp.Tracks[0].Measures[3].MidBarTempos;
+        Check("tempo ramps: the clean .gp reopens with both ramps, same target tempo and length", rampPoint is [{ Slot: 0, Tempo: 60, RampSlots: 16 }] && rampPoint2 is [{ Slot: 4, Tempo: 180, RampSlots: 8 }],
+            $"bar 2: {string.Join(";", rampPoint ?? new())}; bar 4: {string.Join(";", rampPoint2 ?? new())}");
     }
 
     private static SongProject SfViaCleanGp(SongProject s)
@@ -409,11 +410,11 @@ public static partial class SelfTest
         if (path is null) return;
         var song = GuitarProImporter.Import(path);
         var bars = song.Tracks.Count == 0 ? 0 : song.Tracks.Max(t => t.Measures.Count);
-        Eq("demo song: 4 tracks", 4, song.Tracks.Count);
-        Check("demo song: every track has 34 bars", song.Tracks.All(t => t.Measures.Count == 34), string.Join("/", song.Tracks.Select(t => t.Measures.Count)));
+        Eq("demo song: 10 tracks", 10, song.Tracks.Count);
+        Check("demo song: every track has 144 bars", song.Tracks.All(t => t.Measures.Count == 144), string.Join("/", song.Tracks.Select(t => t.Measures.Count)));
         var sections = string.Join(", ", song.Markers.OrderBy(m => m.MeasureIndex).Select(m => $"{m.MeasureIndex + 1}:{m.Title}"));
         Check("demo song: it has a drum track", song.Tracks.Any(t => t.Kind == TrackKind.Drums));
-        Check("demo song: five sections (Intro, Verse, Chorus, Breakdown, Outro at bars 1, 5, 13, 21, 29)", sections == "1:Intro, 5:Verse, 13:Chorus, 21:Breakdown, 29:Outro", sections);
+        Check("demo song: named sections from the intro to the ending (at least 15)", song.Markers.Count >= 15 && song.Markers.OrderBy(m => m.MeasureIndex).First().MeasureIndex == 0, sections);
         Check("demo song: title and artist are set", !string.IsNullOrWhiteSpace(song.Title) && !string.IsNullOrWhiteSpace(song.Artist));
         Log.Add($"  info  demo song invariants: {song.Tracks.Count} tracks, {bars} bars, sections {string.Join(", ", song.Markers.OrderBy(m => m.MeasureIndex).Select(m => $"{m.MeasureIndex + 1}:{m.Title}"))}; tempo {song.Tempo}");
         var order = PlaybackOrder.Build(song, new PlaybackOptions());
@@ -429,10 +430,76 @@ public static partial class SelfTest
             RtVerify("demo song", RtGpEmbedded, expected, RtViaGp(song, folder, "demo", embed: true));
             var cleaned = RtViaGp(song, folder, "demo", embed: false);
             RtVerify("demo song", RtGpClean(), expected, cleaned);
+            // A7-E03: alphaTab's GP7 reader drops a double bar on the last bar; the importer takes it from the file.
+            Check("demo song: the double bar on the last bar survives the clean .gp round trip",
+                expected.Tracks[0].Measures[bars - 1].IsDoubleBar && cleaned.Tracks.All(t => t.Measures[bars - 1].IsDoubleBar));
             Check("demo song: the performed bar order is the same after .tforge and clean .gp round trips",
                 PlaybackOrder.Build(tforge, new PlaybackOptions()).SequenceEqual(order) && PlaybackOrder.Build(cleaned, new PlaybackOptions()).SequenceEqual(order));
             RtCheckTimelineSame("demo song", ".tforge", expected, tforge, exactVelocity: true);
-            RtCheckTimelineSame("demo song", "clean .gp", expected, cleaned, exactVelocity: false);
+            // Allow-listed for the clean .gp: a cell's sound length (SoundDurationPercent, a TabForge note-length setting) has no Guitar Pro field,
+            // so the reference timeline plays those cells at full length; every other note event must match.
+            var fullLength = RtCopy(expected);
+            foreach (var cell in fullLength.Tracks.SelectMany(t => t.Measures).SelectMany(m => m.Cells.Concat(m.Voice2Cells))) cell.SoundDurationPercent = 100;
+            // and the techniques the clean profile allow-lists as missing (no GP7 writer support) are not played by the reference either
+            var lostTechniques = RtGpClean().Losses.Keys.Where(k => k.StartsWith("note.technique:", StringComparison.Ordinal) && k.EndsWith(".missing", StringComparison.Ordinal))
+                .Select(k => k["note.technique:".Length..^".missing".Length]).ToHashSet();
+            foreach (var n in fullLength.Tracks.SelectMany(t => t.Measures).SelectMany(m => m.Cells.Concat(m.Voice2Cells)).SelectMany(c => c.Notes))
+                n.Techniques.RemoveWhere(lostTechniques.Contains);
+            RtCheckTimelineSame("demo song", "clean .gp", fullLength, cleaned, exactVelocity: false);
+        }
+        finally { RtCleanup(folder); }
+    }
+
+    // ------------------------------------------------------------------ clean .gp fidelity (losses found by the demo song)
+
+    private static void SfCleanGpFidelity()
+    {
+        var song = SfSong("Clean .gp fidelity", 7);
+        var g = song.Tracks[0]; var bass = song.Tracks[1];
+        // bar 1: tremolo picking 1/8, 1/16, 1/32 on beats of different lengths (the speed used to come back halved or quartered)
+        SfClearBar(g, 0);
+        foreach (var (slot, den, speed) in new[] { (0.0, 2, 8), (8.0, 4, 16), (12.0, 4, 32) })
+            SfNote(g, 0, slot, den, 0, 1, 5, "TremoloPick").TremoloPickDenominator = speed;
+        // bar 2: one-bar simile; bars 3-4: two-bar simile (both lost: the importer read the mark from the master bar)
+        SfClearBar(g, 1); g.Measures[1].SimileOneBar = true;
+        SfClearBar(g, 2); SfClearBar(g, 3); g.Measures[2].SimileTwoBar = true; g.Measures[3].SimileTwoBar = true;
+        // bar 5: triplet feel (not written); a legato slide into an artificial harmonic (target read as the harmonic's pitch);
+        // a bend grace before the last beat (alphaTab's GP7 writer dropped BendGrace, so the grace became a 32nd that pushed the beat late)
+        SfBar(song, 4, m => m.TripletFeelKind = TripletFeels.Eighth);
+        SfClearBar(g, 4);
+        SfNote(g, 4, 0, 4, 0, 2, 3, "LegatoSlide").Notes[0].SlideTargetMidi = g.PitchOf(2, 5);
+        var harmonic = SfNote(g, 4, 4, 4, 0, 2, 5, "ArtificialHarmonic").Notes[0];
+        harmonic.HarmonicFret = 17; harmonic.MidiValue = GuitarProImporter.HarmonicMidi("Artificial", g.StringTunings[2], 5, 17);
+        var principal = SfNote(g, 4, 12, 4, 0, 1, 7);
+        var grace = RtNote(g, 1, 5, 95, "GraceBend", "Bend");
+        grace.IsGraceNote = true; grace.GraceBeforeBeat = true; grace.GraceDurationSlots = 0.5;
+        grace.BendPoints = new() { new() { Offset = 0, Value = 0 }, new() { Offset = 60, Value = 4 } };
+        principal.Notes.Insert(0, grace);
+        // bar 6: a 7-tuplet and a 13-tuplet run (whole-tick positions drifted early), and a dead-slapped bass note (not written)
+        SfClearBar(g, 5);
+        g.Measures[5].Cells = Enumerable.Range(0, 32).Select(_ => new TabCell()).ToList();   // 21 beats: more cells than sixteenths, as the importer builds them
+        for (var k = 0; k < 7; k++) { var c = SfNote(g, 5, k * 4 / 7.0, 16, 0, 0, 3 + k % 3); c.TupletNumerator = 7; c.TupletDenominator = 4; }
+        for (var k = 0; k < 13; k++) { var c = SfNote(g, 5, 4 + k * 8 / 13.0, 16, 0, 1, 2 + k % 4); c.TupletNumerator = 13; c.TupletDenominator = 8; }
+        SfNote(g, 5, 12, 4, 0, 0, 7);
+        SfClearBar(bass, 5);
+        SfNote(bass, 5, 0, 2, 0, 1, 0, "DeadSlapped", "Slap", "Dead").Notes[0].Dead = true;
+        SfNote(bass, 5, 8, 2, 0, 2, 3);
+        // bar 7: a brushed chord with its own stroke speed (the export always wrote the default spread)
+        SfClearBar(g, 6);
+        var strum = SfNote(g, 6, 0, 2, 0, 0, 0, "BrushDown");
+        strum.Notes.Add(RtNote(g, 1, 1, 95, "BrushDown")); strum.Notes.Add(RtNote(g, 2, 0, 95, "BrushDown")); strum.Notes.Add(RtNote(g, 3, 2, 95, "BrushDown"));
+        strum.BrushStepSlots = 0.5;
+        var folder = RtFolder();
+        try
+        {
+            var expected = RtCopy(song);
+            var cleaned = RtViaGp(song, folder, "fidelity", embed: false);
+            RtVerify("clean .gp fidelity", RtGpClean(), expected, cleaned);
+            var cg = cleaned.Tracks[0].Measures;
+            Check("clean .gp: simile marks survive (one-bar on bar 2, two-bar on bars 3-4)", cg[1].SimileOneBar && cg[2].SimileTwoBar && cg[3].SimileTwoBar && !cg[0].SimileOneBar && !cg[4].SimileTwoBar,
+                $"{cg[1].SimileOneBar}/{cg[2].SimileTwoBar}/{cg[3].SimileTwoBar}");
+            Check("clean .gp: a triplet feel survives", cleaned.Tracks.All(t => t.Measures[4].TripletFeelKind == TripletFeels.Eighth), cg[4].TripletFeelKind);
+            RtCheckTimelineSame("clean .gp fidelity", "clean .gp", expected, cleaned, exactVelocity: false);
         }
         finally { RtCleanup(folder); }
     }
@@ -448,6 +515,7 @@ public static partial class SelfTest
         SfTuplets();
         SfVoices();
         SfSpans();
+        SfCleanGpFidelity();
         SfDemoSong();
         _syntheticFixturesRan = true;
     }

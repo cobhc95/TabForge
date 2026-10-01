@@ -12,7 +12,7 @@ public sealed class RecordArmButton : FrameworkElement
 {
     private bool _hover;
 
-    public bool Armed { get => _armed; set { _armed = value; ToolTip = (value ? "Armed. " : "") + BaseTip; InvalidateVisual(); } }
+    public bool Armed { get => _armed; set { _armed = value; TooltipShortcuts.SetText(this, (value ? "Armed. " : "") + BaseTip); InvalidateVisual(); } }
     private const string BaseTip = "Arm for recording: monitors the audio input through this track (press Record on the transport to record)";
     private bool _armed;
 
@@ -26,7 +26,7 @@ public sealed class RecordArmButton : FrameworkElement
     {
         Width = 20; Height = 20;
         Focusable = true; UseLayoutRounding = true; SnapsToDevicePixels = true; FocusVisualStyle = null;
-        ToolTip = "Arm for recording: monitors the audio input through this track (press Record on the transport to record)";
+        TooltipShortcuts.Bind(this, BaseTip, "Track.Arm");
         System.Windows.Automation.AutomationProperties.SetName(this, "Arm track for recording");
     }
 
@@ -57,6 +57,12 @@ public sealed class RecordArmButton : FrameworkElement
     }
 
     protected override void OnRender(DrawingContext dc)
+    {
+        try { RenderGuard.Inject("RecordArmButton"); RenderCore(dc); }
+        catch (Exception ex) when (RenderGuard.Contain(ex, "RecordArmButton", dc, ActualWidth, ActualHeight)) { }
+    }
+
+    private void RenderCore(DrawingContext dc)
     {
         var size = Math.Min(ActualWidth, ActualHeight);
         if (size <= 0) return;

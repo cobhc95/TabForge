@@ -403,7 +403,7 @@ public sealed class FretboardRenderer : IInstrumentRenderer
         var staticKey = (bounds, placement.Position, placement.HorizontalOffset, placement.PlacementWidth, strings, frets,
             firstFret, lastFret, state.ShowStringLabels, state.ShowNoteNames, state.LeftHanded, SequenceHash(state.Tuning),
             SequenceHash(state.ScalePitchClasses), theme, VisualTheme.IsLight, Draw.DpiKey,
-            (state.ScaleStyle, state.ScaleColour, state.MarkerColour, state.MarkerBrightness, state.ScaleName, state.NumberScale, state.StringSpacing));
+            (state.ScaleStyle, state.ScaleColour, state.MarkerColour, state.MarkerBrightness, state.ScaleName, state.NumberScale, state.StringSpacing, state.ScaleStrength));
         if (!Equals(_staticKey, staticKey) || _staticBoard is null)
         {
             var group = new DrawingGroup();
@@ -432,7 +432,7 @@ public sealed class FretboardRenderer : IInstrumentRenderer
                             var pc = ((openMidi + f) % 12 + 12) % 12;
                             if (!state.ScalePitchClasses.Contains(pc)) continue;
                             var x = FretX(f) - fretWidth / 2;
-                            var fill = Draw.Solid(state.ScaleColour, pc == scaleRoot ? 0.5 : 0.28);
+                            var fill = Draw.Solid(state.ScaleColour, ScaleHighlightStyles.ScaleAlpha(pc == scaleRoot ? 0.5 : 0.28, state.ScaleStrength, pc == scaleRoot));
                             dc.DrawRectangle(fill, null, new Rect(x, StringY(s) - stringGap / 2, fretWidth, stringGap));
                         }
                     }
@@ -487,10 +487,13 @@ public sealed class FretboardRenderer : IInstrumentRenderer
                         if (!state.ScalePitchClasses.Contains(pc)) continue;
                         var centre = new Point(FretX(f), StringY(s));
                         var root = pc == scaleRoot;
+                        var k = state.ScaleStrength;
                         if (state.ScaleStyle == ScaleHighlightStyles.Rings)
-                            dc.DrawEllipse(root ? Draw.Solid(state.ScaleColour, 0.35) : null, Draw.Pen(state.ScaleColour, root ? 2.2 : 1.5), centre, radius, radius);
+                            dc.DrawEllipse(root ? Draw.Solid(state.ScaleColour, ScaleHighlightStyles.ScaleAlpha(0.35, k, true)) : null,
+                                Draw.Pen(state.ScaleColour, (root ? 2.2 : 1.5) * Math.Max(1, k), Math.Min(1, k)), centre, radius, radius);
                         else
-                            dc.DrawEllipse(Draw.Solid(state.ScaleColour, root ? 0.95 : 0.6), root ? Draw.Pen(Blend(state.ScaleColour, Colors.White, 0.5), 1.4) : null, centre, radius, radius);
+                            dc.DrawEllipse(Draw.Solid(state.ScaleColour, ScaleHighlightStyles.ScaleAlpha(root ? 0.95 : 0.6, k, root)),
+                                root ? Draw.Pen(Blend(state.ScaleColour, Colors.White, 0.5), 1.4, Math.Min(1, k)) : null, centre, radius, radius);
                     }
                 }
             }
@@ -561,12 +564,13 @@ public sealed class FretboardRenderer : IInstrumentRenderer
         }
 
         // Notes
+        Point WhereIs(VisualNote n) => new(n.Fret == 0 ? boardRect.Left - 14 : FretX(n.Fret), StringY(n.StringIndex));
         foreach (var note in state.Notes)
         {
             if (note.Fret < firstFret - 1 || note.Fret > lastFret + 1) continue;
             var x = note.Fret == 0 ? boardRect.Left - 14 : FretX(note.Fret);
             var y = StringY(note.StringIndex);
-            RenderMarker(dc, note, x, y, theme, fretWidth, state.Pulse, state.ShowNoteNames, state.NumberScale);
+            RenderMarker(dc, note, x, y, theme, fretWidth, state.Pulse, state.ShowNoteNames, state.NumberScale, bounds.Y, bounds.X + 34, state.Notes, WhereIs);
         }
 
         if (placement.SnapPreview is { } snapPreview)
@@ -602,8 +606,24 @@ public sealed class FretboardRenderer : IInstrumentRenderer
 
     private static readonly string[] MarkerNoteNames = { "C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B" };
 
+    /// <summary>True when the tag pill would cover another marker's bubble (cheap box test over the notes; no allocation).</summary>
+    private static bool PillHitsOther(Rect pill, VisualNote self, IReadOnlyList<VisualNote>? others, Func<VisualNote, Point>? whereIs, double reach)
+    {
+        if (others is null || whereIs is null) return false;
+        var r = Math.Min(16, Math.Max(8, reach));
+        for (var i = 0; i < others.Count; i++)
+        {
+            var o = others[i];
+            if (ReferenceEquals(o, self)) continue;
+            var p = whereIs(o);
+            if (p.X + r > pill.Left && p.X - r < pill.Right && p.Y + r > pill.Top && p.Y - r < pill.Bottom) return true;
+        }
+        return false;
+    }
+
     private static void RenderMarker(DrawingContext dc, VisualNote note, double x, double y, VisualTheme theme, double fretWidth, double pulse,
-        bool showNoteNames = false, double numberScale = 1)
+        bool showNoteNames = false, double numberScale = 1, double topLimit = double.NegativeInfinity, double leftLimit = double.NegativeInfinity,
+        IReadOnlyList<VisualNote>? others = null, Func<VisualNote, Point>? whereIs = null)
     {
         _ = pulse;
         var color = note.Role switch
@@ -672,9 +692,17 @@ public sealed class FretboardRenderer : IInstrumentRenderer
         {
             var pillWidth = Math.Max(22, tag.Length * 6.2 + 10) * numberScale;
             var pill = new Rect(x - pillWidth / 2, y - radius - 17 * numberScale, pillWidth, 13 * numberScale);
+            // No room above the marker (top string) or another marker / bubble is in the way: sit beside the marker instead,
+            // on the left when there is room (left of the nut), otherwise on the right.
+            if (pill.Y < topLimit || PillHitsOther(pill, note, others, whereIs, fretWidth * 0.44 * numberScale))
+            {
+                var left = new Rect(x - radius - 3 - pillWidth, y - 6.5 * numberScale, pillWidth, 13 * numberScale);
+                var right = new Rect(x + radius + 3, left.Y, pillWidth, left.Height);
+                pill = left.X >= leftLimit && !PillHitsOther(left, note, others, whereIs, fretWidth * 0.44 * numberScale) ? left : right;
+            }
             var alpha = note.Role == VisualRole.Next ? 0.7 : 1.0;
             dc.DrawRoundedRectangle(Draw.Solid(theme.Background, 0.88 * alpha), Draw.Pen(color, 1, 0.9 * alpha), pill, 6.5 * numberScale, 6.5 * numberScale);
-            Draw.Centered(dc, tag, x, pill.Y + 1.5 * numberScale, 8.5 * numberScale, Draw.Solid(color, alpha), bold: true);
+            Draw.Centered(dc, tag, pill.X + pill.Width / 2, pill.Y + 1.5 * numberScale, 8.5 * numberScale, Draw.Solid(color, alpha), bold: true);
         }
     }
 }
@@ -900,10 +928,11 @@ public sealed class KeyboardRenderer : IInstrumentRenderer
         // Key colours: pure white or a soft grey; scale keys tinted blue, the scale's root more strongly.
         var whiteKey = state.GreyKeys ? Color.FromRgb(0xC4, 0xC8, 0xCE) : Colors.White;
         var tint = state.ScaleColour;
-        var whiteScale = FretboardRenderer.Blend(whiteKey, tint, 0.35);
-        var whiteRoot = FretboardRenderer.Blend(whiteKey, tint, 0.62);
-        var blackScale = FretboardRenderer.Blend(Colors.Black, tint, 0.5);
-        var blackRoot = FretboardRenderer.Blend(Colors.Black, tint, 0.8);
+        var strength = state.ScaleStrength;
+        var whiteScale = FretboardRenderer.Blend(whiteKey, tint, Math.Min(0.9, 0.35 * strength));
+        var whiteRoot = FretboardRenderer.Blend(whiteKey, tint, Math.Min(1, 0.62 * strength));
+        var blackScale = FretboardRenderer.Blend(Colors.Black, tint, Math.Min(0.9, 0.5 * strength));
+        var blackRoot = FretboardRenderer.Blend(Colors.Black, tint, Math.Min(1, 0.8 * strength));
         var scaleRoot = ScaleRootPitchClass(state.ScaleName);
         var shaded = state.ScaleStyle == ScaleHighlightStyles.Shaded;
         bool InScale(int midi) => state.ScalePitchClasses.Contains(((midi % 12) + 12) % 12);
@@ -919,9 +948,11 @@ public sealed class KeyboardRenderer : IInstrumentRenderer
             if (shaded || !InScale(midi)) return;
             var root = ((midi % 12) + 12) % 12 == scaleRoot;
             if (state.ScaleStyle == ScaleHighlightStyles.Rings)
-                dc.DrawEllipse(root ? Draw.Solid(tint, 0.35) : null, Draw.Pen(tint, root ? 2.2 : 1.5), new Point(cx, cy), r, r);
+                dc.DrawEllipse(root ? Draw.Solid(tint, ScaleHighlightStyles.ScaleAlpha(0.35, strength, true)) : null,
+                    Draw.Pen(tint, (root ? 2.2 : 1.5) * Math.Max(1, strength), Math.Min(1, strength)), new Point(cx, cy), r, r);
             else
-                dc.DrawEllipse(Draw.Solid(tint, root ? 1 : 0.7), root ? Draw.Pen(FretboardRenderer.Blend(tint, Colors.White, 0.5), 1.2) : null, new Point(cx, cy), r, r);
+                dc.DrawEllipse(Draw.Solid(tint, ScaleHighlightStyles.ScaleAlpha(root ? 1 : 0.7, strength, root)),
+                    root ? Draw.Pen(FretboardRenderer.Blend(tint, Colors.White, 0.5), 1.2, Math.Min(1, strength)) : null, new Point(cx, cy), r, r);
         }
         var labelBrush = Draw.Solid(Color.FromRgb(0x44, 0x4A, 0x52));
 

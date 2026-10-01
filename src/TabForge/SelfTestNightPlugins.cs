@@ -47,6 +47,14 @@ public static partial class SelfTest
             Check("H-5: without --profile the flag is refused and nothing is approved",
                 refusedResult == NightPluginApproval.Outcome.Refused && refusedList.Count == 0 && refused.ApprovedPluginPaths.Count == 0 && refused.TrustRecords.Count == 0);
 
+            // --profile pointed at the real %APPDATA%\TabForge is not a test profile: refused as well (in-memory settings only).
+            UserPaths.SetProfile(realRoaming + Path.DirectorySeparatorChar);
+            var realProfile = new PluginSettings();
+            Check("H-5: --profile set to the real user folder is refused",
+                UserPaths.ProfileIsRealUserFolder && NightPluginApproval.Apply(new[] { "--approve-night-plugins", "all" }, realProfile, out _, roots) == NightPluginApproval.Outcome.Refused
+                && realProfile.ApprovedPluginPaths.Count == 0);
+            UserPaths.SetProfile(null);
+
             // With --profile but without the flag nothing happens.
             UserPaths.SetProfile(Path.Combine(root, "profile"));
             var quiet = new PluginSettings();
@@ -74,19 +82,44 @@ public static partial class SelfTest
                 && NightPluginApproval.Without(new[] { "a", "--approve-night-plugins", "b" }).SequenceEqual(new[] { "a", "b" }));
             Check("H-5: approving leaves the real %APPDATA%\\TabForge byte-identical", FolderFingerprint(realRoaming) == realBefore);
 
+            // "all": every plug-in the normal scanner finds, only inside a profile; the named list stays the default without it.
+            var evil = PluginTrust.Normalize(Path.Combine(root, "vst3", "Evil.vst3"));
+            var allRoots = roots with { AllScanRoots = new[] { Path.Combine(root, "vst3") } };
+            var allFlag = new[] { "--approve-night-plugins", "all" };
+            UserPaths.SetProfile(null);
+            var allRefused = new PluginSettings();
+            var allRefusedResult = NightPluginApproval.Apply(allFlag, allRefused, out var allRefusedList, allRoots);
+            Check("H-5: 'all' without --profile is refused and approves nothing",
+                allRefusedResult == NightPluginApproval.Outcome.Refused && allRefusedList.Count == 0 && allRefused.ApprovedPluginPaths.Count == 0 && allRefused.TrustRecords.Count == 0);
+            UserPaths.SetProfile(Path.Combine(root, "profile"));
+            var allSettings = new PluginSettings();
+            var allResult = NightPluginApproval.Apply(allFlag, allSettings, out _, allRoots);
+            var allApproved = allSettings.ApprovedPluginPaths.Select(PluginTrust.Normalize).ToList();
+            Check("H-5: 'all' with --profile also approves the other plug-ins the scanner finds, plus the named list",
+                allResult == NightPluginApproval.Outcome.Approved && allApproved.Contains(evil, StringComparer.OrdinalIgnoreCase) && expected.All(p => allApproved.Contains(p, StringComparer.OrdinalIgnoreCase)),
+                $"approved {allApproved.Count}");
+            var namedAgain = new PluginSettings();
+            NightPluginApproval.Apply(flag, namedAgain, out _, allRoots);
+            Check("H-5: without 'all' the named list stays the default (Evil.vst3 is not approved)", !namedAgain.ApprovedPluginPaths.Select(PluginTrust.Normalize).Contains(evil, StringComparer.OrdinalIgnoreCase));
+            Check("H-5: 'all' is detected and stripped together with the flag",
+                NightPluginApproval.AllRequested(new[] { "--approve-night-plugins", "all" }) && !NightPluginApproval.AllRequested(new[] { "--approve-night-plugins", "x.gp5" })
+                && NightPluginApproval.Without(new[] { "a", "--approve-night-plugins", "all", "b" }).SequenceEqual(new[] { "a", "b" })
+                && NightPluginApproval.Without(new[] { "--approve-night-plugins", "x.gp5" }).SequenceEqual(new[] { "x.gp5" }));
+
             // Read-only search on this machine finds only allowed things.
             var real = NightPluginApproval.Find(NightRoots.Default());
             bool Allowed(string p)
             {
                 var name = Path.GetFileName(p);
                 return name.Equals("Nexus.dll", StringComparison.OrdinalIgnoreCase) || name.Equals("Nexus.vst3", StringComparison.OrdinalIgnoreCase)
-                    || name.StartsWith("Superior Drummer 3.", StringComparison.OrdinalIgnoreCase) || name.Equals(NightPluginApproval.CrashTestDll, StringComparison.OrdinalIgnoreCase)
+                    || name.StartsWith("Superior Drummer 3.", StringComparison.OrdinalIgnoreCase) || (name.StartsWith("FabFilter ", StringComparison.OrdinalIgnoreCase) && name.EndsWith(".vst3", StringComparison.OrdinalIgnoreCase)) || name.Equals(NightPluginApproval.CrashTestDll, StringComparison.OrdinalIgnoreCase)
                     || (p.Contains(@"REAPER", StringComparison.OrdinalIgnoreCase) && p.Contains(@"\FX\", StringComparison.OrdinalIgnoreCase) && name.EndsWith(".dll", StringComparison.OrdinalIgnoreCase));
             }
-            Check("H-5: the machine search returns only Nexus, Superior Drummer 3, REAPER FX and the crash-test DLL", real.All(Allowed), string.Join(" | ", real.Where(p => !Allowed(p))));
+            Check("H-5: the machine search returns only Nexus, Superior Drummer 3, FabFilter, REAPER FX and the crash-test DLL", real.All(Allowed), string.Join(" | ", real.Where(p => !Allowed(p))));
         }
         finally
         {
+            PluginTrust.ClearScanRecords();   // the 'all' checks scanned scratch folders
             UserPaths.SetProfile(previous);
             try { Directory.Delete(root, recursive: true); } catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
         }

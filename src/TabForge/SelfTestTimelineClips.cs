@@ -6,67 +6,76 @@ namespace TabForge;
 /// <summary>Timeline bar/area/section copies on the shared score clipboard (docs/COPY_PASTE_DESIGN.md chunk C7).</summary>
 public static partial class SelfTest
 {
-    /// <summary>The arrangement-timeline right-click menus: short top level, grouped submenus, every command still reachable.</summary>
+    /// <summary>The arrangement-timeline right-click menus: short top level, this track before all tracks, appearance in Preferences, every command still reachable.</summary>
     private static void TestTimelineContextMenus()
     {
-        Func<string, string> key = id => id == "Edit.Copy" ? "Ctrl+C" : "";
-        var display = new Views.TimelineDisplayState(true, false, false, true);
+        Func<string, string> key = id => id == "Edit.Copy" ? "Ctrl+C" : id == "Clip.Deselect" ? "Esc" : "";
         string[] Top(IEnumerable<Views.MenuSpec> m) => m.Where(x => !x.IsSeparator).Select(x => x.Header).ToArray();
         bool Has(IEnumerable<Views.MenuSpec> m, Views.TimelineCommand c) => Views.TimelineMenus.Leaves(m).Any(x => x.Command == c);
 
-        // Bar menu: outside a section, several tracks.
-        var bar = Views.TimelineMenus.Bar(new Views.BarMenuState(true, true, 3, true, true, false, false, true, true, display), key);
-        Check("bar menu: Copy, Paste, Delete, then Insert / All tracks / Timeline display (6 top-level items)",
-            string.Join("|", Top(bar)) == "Copy bar|Paste bar|Delete bar|Insert bar|All tracks|Timeline display", string.Join("|", Top(bar)));
+        // Bar menu: outside a section, several tracks. This track first, then "All tracks", then the one settings door.
+        var bar = Views.TimelineMenus.Bar(new Views.BarMenuState(true, true, 3, true, true, false, false, true, true), key);
+        Check("bar menu: this-track Copy / Paste / Delete, Insert bar, All tracks, Timeline settings (6 top-level items)",
+            string.Join("|", Top(bar)) == "Copy bar (this track)|Paste bar (this track)|Delete bar (this track)|Insert bar|All tracks|Timeline settings…", string.Join("|", Top(bar)));
+        var allTracksAt = bar.FindIndex(x => x.Header == "All tracks");
+        Check("'All tracks' comes after the this-track items and a separator", allTracksAt > 4 && bar[allTracksAt - 1].IsSeparator && bar[0].Header.StartsWith("Copy bar"));
         Check("bar menu shows the user's Copy shortcut", bar[0].Shortcut == "Ctrl+C");
-        var section = Views.TimelineMenus.Bar(new Views.BarMenuState(true, true, 1, true, false, true, true, false, false, display), key);
-        Check("bar menu inside a section adds 'Section >' and, with one track, hides 'All tracks >'",
-            Top(section).Contains("Section") && !Top(section).Contains("All tracks") && Top(section).Length == 6, string.Join("|", Top(section)));
-        var allBar = new[] { bar, section }.SelectMany(Views.TimelineMenus.Leaves).Select(x => x.Command).ToHashSet();
-        Check("bar menus keep every old bar command reachable", new[]
+        var oneTrack = Views.TimelineMenus.Bar(new Views.BarMenuState(true, true, 1, true, false, true, true, false, false), key);
+        Check("with one track the labels stay plain, there is no 'All tracks >', and inside a section 'Section >' appears",
+            string.Join("|", Top(oneTrack)) == "Copy bar|Paste bar|Delete bar|Insert bar|Section|Timeline settings…", string.Join("|", Top(oneTrack)));
+        var allBar = new[] { bar, oneTrack }.SelectMany(Views.TimelineMenus.Leaves).Select(x => x.Command).ToHashSet();
+        Check("bar menus keep every bar command reachable", new[]
         {
             Views.TimelineCommand.CopyBar, Views.TimelineCommand.CopyBarAllTracks, Views.TimelineCommand.CopySection, Views.TimelineCommand.ToggleSectionLockAtBar,
             Views.TimelineCommand.PasteBar, Views.TimelineCommand.PasteBarAllTracks, Views.TimelineCommand.PasteSectionHere, Views.TimelineCommand.InsertBarBefore,
-            Views.TimelineCommand.InsertBarAfter, Views.TimelineCommand.DeleteBar, Views.TimelineCommand.DeleteBarAllTracks, Views.TimelineCommand.ShowIndividualNotes,
-            Views.TimelineCommand.ShowContinuousLine, Views.TimelineCommand.HideEmptyGrid, Views.TimelineCommand.SubtleBarGlow
+            Views.TimelineCommand.InsertBarAfter, Views.TimelineCommand.DeleteBar, Views.TimelineCommand.DeleteBarAllTracks, Views.TimelineCommand.TimelineSettings
         }.All(allBar.Contains));
-        var noBar = Views.TimelineMenus.Bar(new Views.BarMenuState(false, false, 0, false, false, false, false, false, false, display), key);
+        Check("the timeline appearance toggles are Preferences rows, no longer in any menu",
+            !Views.TimelineMenus.Leaves(bar).Any(x => x.Header.Contains("notes") || x.Header.Contains("glow") || x.Header.Contains("grid")));
+        var noBar = Views.TimelineMenus.Bar(new Views.BarMenuState(false, false, 0, false, false, false, false, false, false), key);
         Check("bar menu on an empty song hides the bar-only groups", Top(noBar).Length == 4 && !Top(noBar).Contains("Insert bar"), string.Join("|", Top(noBar)));
 
         // Selection menu.
-        var sel = Views.TimelineMenus.Selection(new Views.SelectionMenuState("Bars 3-6 selected", true, false, false, true, display), key);
-        Check("selection menu: grey label, Copy / Cut / Paste / Delete on top, 8 entries",
-            sel[0].IsLabel && sel[0].Header == "Bars 3-6 selected" && Top(sel.Skip(1)).Length == 8 && string.Join("|", Top(sel.Skip(1)).Take(4)) == "Copy|Cut|Paste|Delete",
+        var sel = Views.TimelineMenus.Selection(new Views.SelectionMenuState("Bars 3-6 selected", true, false, false, true), key);
+        Check("selection menu: grey label, Copy / Cut / Paste / Delete on top, then Loop, Arrange, Clear selection, Timeline settings",
+            sel[0].IsLabel && sel[0].Header == "Bars 3-6 selected" && string.Join("|", Top(sel.Skip(1))) == "Copy|Cut|Paste|Delete|Loop selection|Arrange|Clear selection|Timeline settings…",
             string.Join("|", Top(sel)));
-        Check("selection menu keeps loop, move, skip, play-skipped-again, clear and the display toggles", new[]
+        Check("'Clear selection' shows the user's binding, not a fixed 'Esc' text", Views.TimelineMenus.Leaves(sel).First(x => x.Command == Views.TimelineCommand.ClearSelection).Shortcut == "Esc");
+        Check("selection menu keeps loop, move, skip, play-skipped-again, clear and the settings door", new[]
         {
             Views.TimelineCommand.LoopSelection, Views.TimelineCommand.MoveSelection, Views.TimelineCommand.SkipSelection, Views.TimelineCommand.PlaySkippedAgain,
-            Views.TimelineCommand.ClearSelection, Views.TimelineCommand.ShowIndividualNotes, Views.TimelineCommand.SubtleBarGlow
+            Views.TimelineCommand.ClearSelection, Views.TimelineCommand.TimelineSettings
         }.All(c => Has(sel, c)));
-        var selNone = Views.TimelineMenus.Selection(new Views.SelectionMenuState("Bar 2 selected", false, false, false, false, display), key);
+        var selNone = Views.TimelineMenus.Selection(new Views.SelectionMenuState("Bar 2 selected", false, false, false, false), key);
         Check("'Play all skipped areas again' is hidden when nothing is skipped", !Has(selNone, Views.TimelineCommand.PlaySkippedAgain));
         Check("selection menu does not repeat the single-bar items", !Has(sel, Views.TimelineCommand.CopyBar) && !Has(sel, Views.TimelineCommand.DeleteBar));
+        Check("'Move selection' has no instruction in its label (it is the tooltip)",
+            Views.TimelineMenus.Leaves(sel).First(x => x.Command == Views.TimelineCommand.MoveSelection) is { Header: "Move selection…", ToolTip: not null });
 
-        // Section menu.
-        var sec = Views.TimelineMenus.Section(new Views.SectionMenuState(null, true, false, false, true, true), key);
-        Check("section menu: 8 top-level items ending with 'More >'", Top(sec).Length == 8 && Top(sec)[^1] == "More", string.Join("|", Top(sec)));
-        Check("section menu keeps every old command", new[]
+        // Section menu: no 'More >' catch-all; Go to and Lock are on top; brackets / similar colours are Preferences rows.
+        var sec = Views.TimelineMenus.Section(new Views.SectionMenuState(null, true, false, false), key);
+        Check("section menu: five edit items, Loop, Rename, Go to, Lock, Timeline settings (10 items, no 'More')",
+            string.Join("|", Top(sec)) == "Copy section|Cut section|Paste section|Duplicate section|Delete section and its bars…|Loop section|Rename / recolour section…|Go to section|Lock section position|Timeline settings…",
+            string.Join("|", Top(sec)));
+        Check("section menu keeps every section command", new[]
         {
             Views.TimelineCommand.CopySectionMenu, Views.TimelineCommand.CutSection, Views.TimelineCommand.PasteSectionAfter, Views.TimelineCommand.DuplicateSection,
             Views.TimelineCommand.DeleteSection, Views.TimelineCommand.LoopSection, Views.TimelineCommand.RenameSection, Views.TimelineCommand.GoToSection,
-            Views.TimelineCommand.ToggleSectionLock, Views.TimelineCommand.ShowSectionBrackets, Views.TimelineCommand.SameColourSections
+            Views.TimelineCommand.ToggleSectionLock, Views.TimelineCommand.SectionSettings
         }.All(c => Has(sec, c)));
-        Check("section menu uses sentence case", Views.TimelineMenus.Leaves(sec).All(x => !x.Header.Contains("Section")));
+        Check("the lock item has one fixed label whatever the state",
+            Views.TimelineMenus.Leaves(Views.TimelineMenus.Section(new Views.SectionMenuState(null, true, false, true), key)).First(x => x.Command == Views.TimelineCommand.ToggleSectionLock).Header == "Lock section position");
         Check("section menu offers 'Add section' only away from the section's first bar",
-            !Has(sec, Views.TimelineCommand.AddSectionHere) && Has(Views.TimelineMenus.Section(new Views.SectionMenuState(4, true, false, false, true, true), key), Views.TimelineCommand.AddSectionHere));
+            !Has(sec, Views.TimelineCommand.AddSectionHere) && Has(Views.TimelineMenus.Section(new Views.SectionMenuState(4, true, false, false), key), Views.TimelineCommand.AddSectionHere));
 
         // Clip menus.
         var audio = Views.TimelineMenus.Clip(new Views.ClipMenuState(true, false, true, false), key);
         Check("audio clip menu: Copy, Cut, Paste, Duplicate, Delete, Mute, Properties (7 entries, no submenu)",
             string.Join("|", Top(audio)) == "Copy|Cut|Paste|Duplicate|Delete|Mute|Properties…", string.Join("|", Top(audio)));
         var midi = Views.TimelineMenus.Clip(new Views.ClipMenuState(true, true, false, true), key);
-        Check("MIDI clip menu adds 'MIDI clip >' with the notation writer and hides the not-built placeholder",
-            Top(midi)[^1] == "MIDI clip" && Has(midi, Views.TimelineCommand.ClipWriteNotation) && Views.TimelineMenus.Leaves(midi).All(x => !x.Header.StartsWith("Advanced")));
+        Check("MIDI clip menu ends with 'Write into the track's notation' at the top level (no single-item submenu)",
+            Top(midi)[^1] == "Write into the track's notation" && Has(midi, Views.TimelineCommand.ClipWriteNotation) && Views.TimelineMenus.MaxDepth(midi) == 0 &&
+            Views.TimelineMenus.Leaves(midi).All(x => !x.Header.StartsWith("Advanced")));
         var lane = Views.TimelineMenus.Clip(new Views.ClipMenuState(false, false, true, false), key);
         Check("empty-lane menu is still Paste + Add audio file", string.Join("|", Top(lane)) == "Paste|Add audio file…", string.Join("|", Top(lane)));
     }

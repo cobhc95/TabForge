@@ -25,12 +25,15 @@ internal sealed partial class ScoreToMidiCompiler
         // Grace notes: "before the beat" is played ahead of the beat, out of the previous beat, and the
         // principal note stays on the beat; "on the beat" takes a short slice off the principal note.
         var importedGraceNotes = cell.Notes.Where(candidate => candidate.IsGraceNote).ToArray();
-        var graceDelaySlots = importedGraceNotes.Select(GraceDelaySlots).DefaultIfEmpty(0).Max();
+        // A before-the-beat grace needs room before the beat: at the very start of the song there is none, so it
+        // plays on the beat instead (taking a slice off the principal note) rather than before time zero.
+        var beforeBeatFits = onset >= Math.Max(20, GraceSlots * slotMs);
+        var graceDelaySlots = importedGraceNotes.Select(g => GraceDelaySlots(g, beforeBeatFits)).DefaultIfEmpty(0).Max();
         if (note.IsGraceNote)
         {
             var graceMs = Math.Max(20, GraceSlots * slotMs);
             noteMs = graceMs;
-            if (note.GraceBeforeBeat)
+            if (note.GraceBeforeBeat && beforeBeatFits)
             {
                 onset -= graceMs;
                 TrimPreviousBeat(trackIndex, voiceIndex, onset);
@@ -115,7 +118,7 @@ internal sealed partial class ScoreToMidiCompiler
         _slideInLeadMs = 0;
         if ((t.Contains("SlideInBelow") || t.Contains("SlideInAbove")) && !note.IsGraceNote && channel != ChannelAllocator.PercussionChannel)
         {
-            var lead = Math.Min(120, length * 0.25);
+            var lead = Math.Min(Math.Min(120, length * 0.25), Math.Max(0, onset));   // never starts before time zero
             onset -= lead;
             length += lead;
             _slideInLeadMs = lead;
@@ -207,7 +210,8 @@ internal sealed partial class ScoreToMidiCompiler
     private const double GraceSlots = 0.5;
 
     /// <summary>How far a grace note pushes the principal note later: only an on-the-beat grace does.</summary>
-    private static double GraceDelaySlots(TabNote graceNote) => graceNote.GraceBeforeBeat || graceNote.Dead ? 0 : GraceSlots;
+    private static double GraceDelaySlots(TabNote graceNote, bool beforeBeatFits) =>
+        (graceNote.GraceBeforeBeat && beforeBeatFits) || graceNote.Dead ? 0 : GraceSlots;
 
     /// <summary>
     /// Grace-note transition: a grace note that slides or bends (grace bend) moves to the principal note's pitch.
@@ -231,8 +235,7 @@ internal sealed partial class ScoreToMidiCompiler
             if (previous.TrackIndex != trackIndex || previous.VoiceIndex != voiceIndex) continue;
             if (previous.OnsetMs >= atMs - 1 || previous.EndMs <= atMs) continue;
             foreach (var index in previous.OffEventIndices)
-                if (index >= 0 && index < _timeline.Events.Count && _timeline.Events[index].TimeMs > atMs)
-                    _timeline.Events[index].TimeMs = atMs;
+                SustainResolver.LimitOffTime(_timeline, index, atMs);
             previous.DurationMs = atMs - previous.OnsetMs;
         }
     }
@@ -447,9 +450,11 @@ internal sealed partial class ScoreToMidiCompiler
             Add(device, channel, 0xB0, 1, t.Contains("WahOpen") ? 110 : 10, onset, trackIndex);
             Add(device, channel, 0xB0, 1, 0, onset + Math.Max(1, length), trackIndex);
         }
-        if (emitLegacyGrace && (t.Contains("GraceBefore") || t.Contains("GraceOnBeat")))
+        // (Skipped when there is no room before the beat: both events would clamp to time zero and the off would sort before its on.)
+        // The grace's on must stay strictly before its off (onset - 2): g >= 10 and onset - g >= 0.
+        if (emitLegacyGrace && (t.Contains("GraceBefore") || t.Contains("GraceOnBeat")) && onset >= 10)
         {
-            var g = Math.Max(10, Math.Min(90, length * 0.25));
+            var g = Math.Min(Math.Max(10, Math.Min(90, length * 0.25)), onset);
             Add(device, channel, 0x90, Math.Max(0, midi - 1), Math.Max(1, 90 / 2), onset - g, trackIndex);
             Add(device, channel, 0x80, Math.Max(0, midi - 1), 0, onset - 2, trackIndex);
         }

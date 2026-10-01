@@ -31,6 +31,11 @@ public sealed class ScoreEvent
     public int MetronomeTick;
     /// <summary>Matching note-on/off identifier, unique within this timeline.</summary>
     public int MetronomePairId;
+    /// <summary>
+    /// A compiled attack that was cut away (a repeated tremolo/trill attack after its note was shortened): kept while
+    /// event indices are still in use, removed by the final sort so it is never sent.
+    /// </summary>
+    internal bool Dropped;
 
     public bool IsNoteOn => (Status & 0xF0) == 0x90 && Data2 > 0;
     public bool IsNoteOff => (Status & 0xF0) == 0x80 || ((Status & 0xF0) == 0x90 && Data2 == 0);

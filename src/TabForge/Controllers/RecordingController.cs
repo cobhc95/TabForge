@@ -28,6 +28,8 @@ internal interface IRecordingHost
     /// <summary>Puts the editor cursor back and scrolls it into view.</summary>
     void RestoreCursor(int measure, int cell, int stringIndex);
     void SetStatus(string text);
+    /// <summary>A message the user must read in full (the status bar is too narrow): a dialog.</summary>
+    void ShowNotice(string text);
     void CaptureUndo();
     void SyncAudioEngine();
     void RefreshTracks();
@@ -129,7 +131,7 @@ internal sealed class RecordingController
         var audioArmed = armed.Any(t => !AudioInputs.IsMidi(t.AudioInput));
         if (audioArmed && !engine.StartRecording(Project.Tracks, MediaFolder()))
         {
-            _host.SetStatus("Recording could not start: the audio engine is not running (check Settings > Audio & VST)");
+            _host.SetStatus("Recording could not start: the audio engine is not running (check Settings > Audio & Plug-ins)");
             if (!armed.Any(t => AudioInputs.IsMidi(t.AudioInput))) return;
         }
         _recordLoop = _host.LoopOn ? LoopSeconds() : null;
@@ -175,12 +177,7 @@ internal sealed class RecordingController
     }
 
     /// <summary>Where recordings go: "&lt;song&gt; Media" beside the saved song, else Music\TabForge Recordings.</summary>
-    private string MediaFolder()
-    {
-        if (_host.CurrentPath is { Length: > 0 } path && Path.GetDirectoryName(path) is { } folder)
-            return Path.Combine(folder, $"{Path.GetFileNameWithoutExtension(path)} Media");
-        return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyMusic), "TabForge Recordings");
-    }
+    private string MediaFolder() => Services.MediaFolders.ForSong(_host.CurrentPath);
 
     private void HookRecording()
     {
@@ -206,6 +203,7 @@ internal sealed class RecordingController
             _host.SetStatus(takes.Count > 1 ? $"Recorded {takes.Count} takes on {track.Name} (the newest plays)" : $"Recorded {lengthSec:0.0} s on {track.Name}");
         };
         engine.InputError += message => _host.SetStatus($"Audio input: {message}");
+        engine.RecordingLoss += message => { _host.SetStatus("Recording lost input"); _host.ShowNotice(message); };
         _midiInput.Message += OnMidiInput;
     }
 

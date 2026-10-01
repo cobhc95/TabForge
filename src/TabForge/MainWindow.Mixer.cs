@@ -235,52 +235,43 @@ public partial class MainWindow : IMixerHost, IFxChainHost
         SaveSettings();
     }
 
-    /// <summary>Right-click on + Track: track colours and groups.</summary>
+    /// <summary>
+    /// Right-click on + Track: adding a track and the Mixer, nothing else (owner decision 2026-09-30). The colour items moved to the
+    /// track list's empty-area menu (Colours), and the colour of each group to Settings > Appearance &amp; colours.
+    /// </summary>
     private void ShowAddTrackMenu(FrameworkElement target)
     {
-        var menu = new System.Windows.Controls.ContextMenu { PlacementTarget = target };
-        System.Windows.Controls.MenuItem Item(string header, Action action, System.Windows.Controls.ItemsControl? parent = null)
+        var menu = new System.Windows.Controls.ContextMenu
         {
-            var item = new System.Windows.Controls.MenuItem { Header = header };
+            PlacementTarget = target,
+            Style = (Style)FindResource(typeof(System.Windows.Controls.ContextMenu))
+        };
+        System.Windows.Controls.MenuItem Item(string header, Action action)
+        {
+            var item = new System.Windows.Controls.MenuItem { Header = header, Style = (Style)FindResource(typeof(System.Windows.Controls.MenuItem)) };
             item.Click += (_, _) => action();
-            (parent ?? menu).Items.Add(item);
+            menu.Items.Add(item);
             return item;
         }
         Item("Add track…", AddTrackWithWindow);
-        menu.Items.Add(new System.Windows.Controls.Separator());
-        Item("Colour tracks by group (guitars, basses, drums…)", () =>
-        {
-            CaptureUndo();
-            var changed = Services.TrackColouring.ByGroup(_project, _settings.Appearance.GroupColours);
-            TrackColoursChanged();
-            StatusText.Text = changed == 0 ? "Tracks already have their group colours" : $"Coloured {changed} track{(changed == 1 ? "" : "s")} by group";
-        });
-        var groups = new System.Windows.Controls.MenuItem { Header = "Group colours" };
-        foreach (var group in Models.MixerGroups.Names(_project.Mixer.Grouping))
-        {
-            var g = group;
-            var current = Services.TrackColouring.ColourOf(g, _settings.Appearance.GroupColours);
-            var sub = new System.Windows.Controls.MenuItem { Header = g, Icon = Swatch(current) };
-            foreach (var (name, hex) in Views.ArrangementPanel.TrackColourPalette)
-            {
-                var h = hex;
-                var pick = new System.Windows.Controls.MenuItem { Header = name, Icon = Swatch(h), IsCheckable = true, IsChecked = string.Equals(h, current, StringComparison.OrdinalIgnoreCase) };
-                pick.Click += (_, _) => ColourGroup(g, h);
-                sub.Items.Add(pick);
-            }
-            groups.Items.Add(sub);
-        }
-        menu.Items.Add(groups);
-        Item("Colour tracks…", () =>
-        {
-            var captured = false;
-            Views.TrackColoursDialog.Show(this, _project, () => { if (!captured) { CaptureUndo(); captured = true; } }, TrackColoursChanged);
-        });
-        menu.Items.Add(new System.Windows.Controls.Separator());
-        var showGroups = Item("Show groups in the track list", () => ((IMixerHost)this).SetTrackListShows("groups", !_project.Mixer.ShowGroupsInTrackList));
-        showGroups.IsCheckable = true; showGroups.IsChecked = _project.Mixer.ShowGroupsInTrackList;
         Item("Mixer…", OpenMixer);
         menu.IsOpen = true;
+    }
+
+    /// <summary>Track list menu "Colours > Colour tracks by group" (the group colours are in Settings > Appearance &amp; colours).</summary>
+    private void ColourTracksByGroup()
+    {
+        CaptureUndo();
+        var changed = Services.TrackColouring.ByGroup(_project, _settings.Appearance.GroupColours);
+        TrackColoursChanged();
+        StatusText.Text = changed == 0 ? "Tracks already have their group colours" : $"Coloured {changed} track{(changed == 1 ? "" : "s")} by group";
+    }
+
+    /// <summary>Track list menu "Colours > Colour tracks...".</summary>
+    private void ColourTracksWithDialog()
+    {
+        var captured = false;
+        Views.TrackColoursDialog.Show(this, _project, () => { if (!captured) { CaptureUndo(); captured = true; } }, TrackColoursChanged);
     }
 
     private static System.Windows.Controls.Border Swatch(string hex)
@@ -398,6 +389,8 @@ public partial class MainWindow : IMixerHost, IFxChainHost
         {
             // A plug-in whose file changed since its approval was refused at load: show it in the trust bar and re-send it as Skip.
             if (ack.Plugins.Any(x => x.Status == TabForge.Audio.Contracts.PluginLoadStatus.BlockedChanged)) { UpdatePluginTrustBar(); SyncAudioEngine(); }
+            // An instrument that failed to load (or loads fine again) changes whether GM takes over: re-apply the automatic GM sound.
+            else if (engine.RefreshAvailability(_project.Tracks, _settings.Plugins)) { SyncAudioEngine(); _midi.Rebuild(_project); RefreshTracks(); RefreshMixerWindow(); }
         };
         engine.AutoPitch ??= new TabForge.Audio.AutoPitchMatcher(engine, () => _settings.Plugins);   // automatic pitch matching of VST instruments
         engine.PluginCrashed += path =>
@@ -408,7 +401,7 @@ public partial class MainWindow : IMixerHost, IFxChainHost
                 ? "The audio engine stopped responding and was restarted; playback continues"
                 : $"{System.IO.Path.GetFileNameWithoutExtension(path)} stopped working and was switched off; playback continues";
             if (!engine.TooManyCrashes) SyncAudioEngine();
-            else StatusText.Text = "The audio engine stopped several times; plug-in tracks now play on Windows MIDI. Check Settings > Audio & VST.";
+            else StatusText.Text = "The audio engine stopped several times; plug-in tracks now play on Windows MIDI. Check Settings > Audio & Plug-ins.";
             RefreshMixerWindow();
             Arrangement.RefreshAll();
         };

@@ -112,7 +112,7 @@ public sealed class TunerWindow : Window
         else if ((DateTime.UtcNow - _lastVoiced).TotalMilliseconds > 1200)
         {
             _smoothedMidi = double.NaN;
-            _hint.Text = "Play a note. The tuner listens to the armed input: arm a track to record (R) so the input is open.";
+            _hint.Text = "Play a note. The tuner listens to the armed input: arm a track (the red dot on its row) so the input is open.";
             Display(double.NaN, 0, -1);
         }
     }
@@ -157,6 +157,12 @@ public sealed class TunerWindow : Window
         public void Set(double cents) { if (cents.Equals(_cents)) return; _cents = cents; InvalidateVisual(); }
 
         protected override void OnRender(DrawingContext dc)
+        {
+            try { RenderGuard.Inject("TunerGauge"); RenderCore(dc); }
+            catch (Exception ex) when (RenderGuard.Contain(ex, "TunerGauge", dc, ActualWidth, ActualHeight)) { }
+        }
+
+        private void RenderCore(DrawingContext dc)
         {
             var w = ActualWidth; var h = ActualHeight;
             if (w < 20 || h < 10) return;

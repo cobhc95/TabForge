@@ -95,7 +95,9 @@ public sealed class RenderWindow : Window
         var tailRow = Row(Label("Tail:"), _tail, _tailMs, Label("ms (reverb / delay ring-out)"));
         foreach (var t in new[] { "Off", "Fixed", "Auto (until silent)" }) _tail.Items.Add(t);
         bounds.Children.Add(tailRow);
-        Group(stack, "Bounds", bounds);
+        Group(stack, "Bounds", bounds, "Render.Range");
+        string[] rangeIds = { "Entire", "Selection", "Bars", "Custom" };
+        for (var i = 0; i < 4; i++) UiIds.Id(_bounds[i], "Render.Range." + rangeIds[i]);
 
         var output = new DockPanel();
         var browse = new Button { Content = "Browse…", Padding = new Thickness(10, 2, 10, 2), Margin = new Thickness(6, 0, 0, 0) };
@@ -122,9 +124,20 @@ public sealed class RenderWindow : Window
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 8, 0, 0) };
         _render.Margin = new Thickness(0, 0, 8, 0);
         buttons.Children.Add(_render); buttons.Children.Add(_cancel);
-        stack.Children.Add(_bar); stack.Children.Add(_status); stack.Children.Add(buttons);
         _bar.Margin = new Thickness(0, 8, 0, 4);
-        Content = new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Content = stack };
+        _bar.SetResourceReference(StyleProperty, "ThemedProgressBar");   // no bright default strip on the dark theme
+        _bar.Height = 10;
+        // Progress, status and the Render / Close buttons sit in a footer outside the scroll area, so they are always in view.
+        var footer = new StackPanel { Margin = new Thickness(14, 0, 14, 12) };
+        footer.Children.Add(_bar); footer.Children.Add(_status); footer.Children.Add(buttons);
+        var footerHost = new Border { Child = footer, BorderThickness = new Thickness(0, 1, 0, 0) };
+        footerHost.SetResourceReference(Border.BorderBrushProperty, "BorderSoftBrush");
+        DockPanel.SetDock(footerHost, Dock.Bottom);
+        var layout = new DockPanel { LastChildFill = true };
+        layout.Children.Add(footerHost);
+        layout.Children.Add(new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Content = stack });
+        Content = layout;
+        Height = Math.Min(860, SystemParameters.WorkArea.Height - 40);
 
         LoadSettings();
         foreach (var c in new[] { _source, _tail, _rate, _format, _threads }) c.SelectionChanged += (_, _) => Changed();
@@ -135,6 +148,14 @@ public sealed class RenderWindow : Window
             var dlg = new Microsoft.Win32.OpenFolderDialog { Title = "Render into folder", InitialDirectory = _dir.Text };
             if (dlg.ShowDialog(this) == true) _dir.Text = dlg.FolderName;
         };
+        // Stable automation ids (the folder box's own name is its path, so it gets a fixed name).
+        UiIds.Id(_dir, "Render.Folder", "Output folder");
+        UiIds.Id(_pattern, "Render.FileName", "File name pattern");
+        UiIds.Id(_format, "Render.Format", "Format");
+        UiIds.Id(_source, "Render.Source", "Source");
+        UiIds.Id(browse, "Render.Browse");
+        UiIds.Id(_render, "Render.Start");
+        UiIds.Id(_cancel, "Render.Cancel");
         _render.Click += async (_, _) => await RenderAsync();
         _cancel.Click += (_, _) => { if (_cts is not null) _cts.Cancel(); else Close(); };
         Closing += (_, e) => { _cts?.Cancel(); SaveSettings(); };
@@ -267,7 +288,7 @@ public sealed class RenderWindow : Window
         }
         catch (RenderException ex) { _status.Text = ex.Cancelled ? "Render cancelled." : "Render failed: " + ex.Message + (string.IsNullOrEmpty(ex.PluginPath) ? "" : $" (plug-in: {Path.GetFileName(ex.PluginPath)}; try Threads: 1)"); }
         catch (Exception ex) { _status.Text = "Render failed: " + ex.Message; }
-        finally { _cts?.Dispose(); _cts = null; _render.IsEnabled = true; _cancel.Content = "Close"; Changed(); }
+        finally { _cts?.Dispose(); _cts = null; _render.IsEnabled = true; _cancel.Content = "Close"; UiIds.Id(_cancel, "Render.Close"); Changed(); }
     }
 
     // ---- small layout helpers ----
@@ -291,9 +312,10 @@ public sealed class RenderWindow : Window
         return row;
     }
 
-    private static void Group(StackPanel parent, string header, UIElement content)
+    private static void Group(StackPanel parent, string header, UIElement content, string? automationId = null)
     {
         var box = new GroupBox { Header = header, Padding = new Thickness(8, 4, 8, 6), Margin = new Thickness(0, 0, 0, 8), Content = content };
+        if (automationId is not null) UiIds.Id(box, automationId, header);
         box.SetResourceReference(ForegroundProperty, "TextBrush");
         box.SetResourceReference(BorderBrushProperty, "BorderSoftBrush");
         parent.Children.Add(box);

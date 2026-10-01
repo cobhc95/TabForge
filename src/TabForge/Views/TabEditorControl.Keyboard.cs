@@ -33,34 +33,31 @@ public sealed partial class TabEditorControl
 
         if (key == Key.Space && !ctrl && !alt) { PlayRequested?.Invoke(this, EventArgs.Empty); return true; }
 
+        // The keyboard way to the context menu (accessibility): Shift+F10 or the Menu key.
+        if ((key == Key.Apps && !ctrl && !alt && !shift) || (key == Key.F10 && shift && !ctrl && !alt))
+            return RequestContextMenuAtCaret();
+
         // Duration: + / - (and the numpad +/-). Shift+- and Shift+Up/Down are separate bindings below,
         // so the plain handlers must not swallow shifted keys (they used to shadow Tenuto and Fade out).
-        if (!ctrl && !alt && (key == Key.Add || key == Key.OemPlus)) { PlusDuration(); return true; }
+        // The main-keyboard = and - keys are the catalogued commands Note.Shorter / Note.Longer (rebindable); the numpad
+        // + / - and the typed "+" (Shift+=) stay here as fixed aliases of the same pair.
+        if (!ctrl && !alt && (key == Key.Add || (shift && key == Key.OemPlus))) { PlusDuration(); return true; }
         if (!ctrl && !alt && key == Key.Subtract) { MinusDuration(); return true; }
-        if (!ctrl && !alt && !shift && key == Key.OemMinus) { MinusDuration(); return true; }
-        if (ctrl && !alt && (key == Key.Add || key == Key.OemPlus)) { InsertBeat(); return true; }
-        if (ctrl && !alt && (key == Key.Subtract || key == Key.OemMinus)) { DeleteBeats(); return true; }
 
         // Arrows
         if (key == Key.Left && alt && !ctrl) { MoveToEnteredNote(-1); return true; }
         if (key == Key.Right && alt && !ctrl) { MoveToEnteredNote(1); return true; }
-        if (key == Key.Left && ctrl) { MoveBar(-1); return true; }
-        if (key == Key.Right && ctrl) { MoveBar(1); return true; }
-        if (key == Key.Left && shift) { ExtendSelection(-1); MoveBeat(-1); return true; }
-        if (key == Key.Right && shift) { ExtendSelection(1); MoveBeat(1); return true; }
-        if (key == Key.Left) { MoveBeat(-1); return true; }
-        if (key == Key.Right) { MoveBeat(1); return true; }
-        if (key == Key.Up && shift && !ctrl && !alt) { ShiftPitch(1); return true; }
-        if (key == Key.Down && shift && !ctrl && !alt) { ShiftPitch(-1); return true; }
-        if (key == Key.Up && alt && !ctrl) { MoveString(-1); return true; }
-        if (key == Key.Down && alt && !ctrl) { MoveString(1); return true; }
-        if (key == Key.Up && ctrl && alt) { MoveNoteOnStaff(1); return true; }
-        if (key == Key.Down && ctrl && alt) { MoveNoteOnStaff(-1); return true; }
+        if (key == Key.Left && ctrl && !alt) { MoveBar(-1); return true; }
+        if (key == Key.Right && ctrl && !alt) { MoveBar(1); return true; }
+        if (key == Key.Left && shift && !alt) { ExtendSelection(-1); MoveBeat(-1); return true; }
+        if (key == Key.Right && shift && !alt) { ExtendSelection(1); MoveBeat(1); return true; }
+        if (key == Key.Left && !alt) { MoveBeat(-1); return true; }
+        if (key == Key.Right && !alt) { MoveBeat(1); return true; }
         // Up/down move between strings.
-        if (key == Key.Up && ctrl) { MoveLine(-1); return true; }
-        if (key == Key.Down && ctrl) { MoveLine(1); return true; }
-        if (key == Key.Up) { MoveString(-1); return true; }
-        if (key == Key.Down) { MoveString(1); return true; }
+        if (key == Key.Up && ctrl && !shift && !alt) { MoveLine(-1); return true; }
+        if (key == Key.Down && ctrl && !shift && !alt) { MoveLine(1); return true; }
+        if (key == Key.Up && !ctrl && !shift && !alt) { MoveString(-1); return true; }
+        if (key == Key.Down && !ctrl && !shift && !alt) { MoveString(1); return true; }
 
         if (key == Key.Home && ctrl) { MoveToFirstBar(); return true; }
         if (key == Key.End && ctrl) { MoveToLastBar(); return true; }
@@ -81,9 +78,10 @@ public sealed partial class TabEditorControl
             return true;
         }
 
-        if (key == Key.Insert) { InsertBeat(); return true; }
-        if (key == Key.Back) { DeleteNote(); return true; }
-        if (key == Key.Delete) { DeleteBeat(); return true; }
+        // Insert (Insert beat) is the catalogued command Edit.InsertBeat; Insert / Delete with a modifier belong to the bar,
+        // section and track commands, so the plain handlers below only take the bare key.
+        if (key == Key.Back && !ctrl && !alt && !shift) { DeleteNote(); return true; }
+        if (key == Key.Delete && !ctrl && !alt && !shift) { DeleteBeat(); return true; }
 
         // Digits (Shift+1..9 are reserved for the effect shortcuts below).
         if (!ctrl && !alt && !shift && TryDigit(key, out var digit))
@@ -139,24 +137,48 @@ public sealed partial class TabEditorControl
         EditedNow();
     }
 
-    /// <summary>Ctrl+Alt+Up/Down: move the note to the adjacent string keeping the pitch when possible.</summary>
-    public void MoveNoteOnStaff(int direction)
+    /// <summary>
+    /// Moves the selected note(s) (the note under the cursor, or every note of the selected beats) to the adjacent string
+    /// without changing the pitch: the fret is recalculated from the tuning and capo. <paramref name="delta"/> -1 is the higher
+    /// string (one up on the tab), +1 the lower. All or nothing: when any note cannot go (no such string, a fret below 0 or past
+    /// the last fret, or the string is taken in that beat) nothing changes and the status line says why. One undo step.
+    /// </summary>
+    public bool MoveNotesToAdjacentString(int delta)
     {
-        var track = Track; var cell = CurrentCell();
-        if (track is null || cell is null) return;
-        var note = cell.Notes.FirstOrDefault(n => n.StringIndex == SelectedString);
-        if (note is null) { MoveString(direction); return; }
-        var target = Math.Clamp(note.StringIndex - direction, 0, track.StringTunings.Count - 1);
-        if (target == note.StringIndex) return;
-        var absolute = MidiOf(track, note.StringIndex, note.Fret);
-        var fret = track.FretOf(target, absolute);
-        if (fret < 0 || fret > track.NumberOfFrets) return;
+        var track = Track;
+        if (track is null) return false;
+        void Say(string text) => StatusMessage?.Invoke(this, text);
+        if (track.StringTunings.Count == 0 || track.MidiChannel == 9 || track.Kind == TrackKind.Drums)
+        { Say("This track has no strings to move notes between"); return false; }
+        var side = delta < 0 ? "higher" : "lower";
+        var moves = new List<(TabNote Note, int Target, int Fret)>();
+        foreach (var cell in ToolCells())
+        {
+            var movers = HasSelection ? cell.Notes.ToList() : cell.Notes.Where(n => n.StringIndex == SelectedString).ToList();
+            foreach (var note in movers)
+            {
+                var target = note.StringIndex + delta;
+                if (target < 0 || target >= track.StringTunings.Count) { Say($"No change: the note is already on the {(delta < 0 ? "highest" : "lowest")} string"); return false; }
+                var fret = track.FretOf(target, MidiOf(track, note.StringIndex, note.Fret));
+                if (fret < 0) { Say($"No change: that pitch is below the open {side} string"); return false; }
+                if (fret > track.NumberOfFrets) { Say($"No change: that pitch is above the last fret of the {side} string"); return false; }
+                if (cell.Notes.Any(other => other.StringIndex == target && !movers.Contains(other))) { Say($"No change: the {side} string already has a note in that beat"); return false; }
+                moves.Add((note, target, fret));
+            }
+        }
+        if (moves.Count == 0) { Say("No note to move: put the cursor on a note or select some beats"); return false; }
         EditStarting?.Invoke(this, EventArgs.Empty);
-        note.StringIndex = target;
-        note.Fret = fret;
-        note.MidiValue = absolute;
-        SelectedString = target;
+        foreach (var (note, target, fret) in moves)
+        {
+            var pitch = MidiOf(track, note.StringIndex, note.Fret);
+            note.StringIndex = target;
+            note.Fret = fret;
+            note.MidiValue = pitch;
+        }
+        if (!HasSelection) SelectedString = moves[0].Target;
         EditedNow();
+        Say(moves.Count == 1 ? $"Moved the note to the {side} string" : $"Moved {moves.Count} notes to the {side} string");
+        return true;
     }
 
     /// <summary>Move the note up/down in pitch by semitones (Shift+Up / Shift+Down).</summary>

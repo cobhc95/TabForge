@@ -51,6 +51,12 @@ internal sealed class SectionInsertionIndicator : FrameworkElement
 
     protected override void OnRender(DrawingContext dc)
     {
+        try { RenderGuard.Inject("SectionInsertionIndicator"); RenderCore(dc); }
+        catch (Exception ex) when (RenderGuard.Contain(ex, "SectionInsertionIndicator", dc, ActualWidth, ActualHeight)) { }
+    }
+
+    private void RenderCore(DrawingContext dc)
+    {
         base.OnRender(dc);
         if (!_hasColor) return;
         var y = ArrangementPanel.RulerHeight - 1;

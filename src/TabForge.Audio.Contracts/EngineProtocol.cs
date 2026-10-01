@@ -78,6 +78,8 @@ public enum EngineCommand : byte
     TestHang = 38,
     /// <summary>All notes off on some slots only (count, slots): one document stops while other open documents keep playing.</summary>
     PanicSlots = 39,
+    /// <summary>Live master safety limiter on / off (bool). Off by default (A7-A01); renders have their own switch in the render spec.</summary>
+    SetLiveLimiter = 40,
     Shutdown = 99,
 }
 
@@ -187,6 +189,8 @@ public enum EngineEvent : byte
     /// path); index -1 means the track's own sound (General MIDI synth, clip or input) was non-finite and that block was silenced. Once each.
     /// </summary>
     PluginMisbehaved = 22,
+    /// <summary>A recording lost input to a slow disk (the take keeps its length; the lost stretches are silence): one summary line (message), sent after the Recorded events.</summary>
+    RecordingLoss = 23,
 }
 
 /// <summary>What the engine could read for one plug-in's state.</summary>

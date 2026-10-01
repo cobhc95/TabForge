@@ -117,10 +117,21 @@ public sealed partial class TabEditorControl
         foreach (var beat in layout.Beats)
         {
             if (!_dynamicMarks.TryGetValue(beat.Cell, out var name)) continue;
-            top ??= showStaff ? StaffDynamicTop(measureIndex, staffTop + 4 * StaffGap)
-                              : TabDynamicTop(measure, tabTop + (strings - 1) * StringGap);
             var text = DynamicText(name, ink);
-            RenderDraw.DrawText(dc, text, new Point(beat.CenterX - text.Width / 2, top.Value));
+            if (showStaff)
+            {
+                // Stacked under the staff's own ink (heads, ledger notes, stems of this column), then claimed for the marks below it.
+                var y = layout.Skyline.PlaceBelow(beat.CenterX - text.Width / 2, beat.CenterX + text.Width / 2, DynamicHeight, staffTop + 4 * StaffGap + 8);
+                RenderDraw.DrawText(dc, text, new Point(beat.CenterX - text.Width / 2, y));
+                continue;
+            }
+            var tabBottom = tabTop + (strings - 1) * StringGap;
+            top ??= TabDynamicTop(measure, tabBottom);
+            var dynY = top.Value;
+            // Fingering and lyric rows can push the row past the system's own height (it would print over the next system): stack it above the TAB instead.
+            if (dynY + DynamicHeight > tabBottom + 28.0 * _scoreSpacing + 2)
+                dynY = _sky.PlaceAbove(beat.CenterX - text.Width / 2, beat.CenterX + text.Width / 2, DynamicHeight, tabTop - 13);
+            RenderDraw.DrawText(dc, text, new Point(beat.CenterX - text.Width / 2, dynY));
         }
     }
 }

@@ -36,6 +36,7 @@ public sealed partial class ArrangementPanel : Grid
 
     private readonly TrackTimeline _timeline = new();
     private readonly SectionDragOverlay _sectionDragOverlay = new();
+    private readonly MediaDropGhost _dropGhost = new();
     private readonly SectionInsertionIndicator _sectionInsertionIndicator = new();
     private bool _sectionDragAutoScroll;
     private double _sectionDragPointerViewportX;
@@ -79,6 +80,24 @@ public sealed partial class ArrangementPanel : Grid
             Opacity = 0.72
         },
         IsHitTestVisible = false
+    };
+    // Hover shade: one reusable rectangle, moved only when the hovered cell changes (never hit-testable).
+    private readonly System.Windows.Shapes.Rectangle _hoverCell = new()
+    {
+        RadiusX = 2, RadiusY = 2,
+        IsHitTestVisible = false,
+        Visibility = Visibility.Collapsed
+    };
+    private static readonly Brush HoverShadeDark = Draw.Solid(Colors.White, 0.12);
+    private static readonly Brush HoverShadeLight = Draw.Solid(Colors.Black, 0.08);
+    // Bar marker (playback position marker style): one cached element, moved only when the bar, track or layout changes.
+    private readonly System.Windows.Shapes.Rectangle _barMarker = new()
+    {
+        Fill = Draw.Solid(Color.FromRgb(0x14, 0x17, 0x1D)),
+        Stroke = Draw.Solid(Colors.White, 0.8),
+        StrokeThickness = 1.25,
+        IsHitTestVisible = false,
+        Visibility = Visibility.Collapsed
     };
     private readonly System.Windows.Shapes.Path _selectedTrackPlayMarker = new()
     {
@@ -157,7 +176,7 @@ public sealed partial class ArrangementPanel : Grid
         var on = _timeline.Snap?.Enabled == true;
         _snapButton.SetResourceReference(Control.BackgroundProperty, on ? "AccentSoftBrush" : "Panel2Brush");
         _snapButton.SetResourceReference(Control.BorderBrushProperty, on ? "AccentBrush" : "BorderBrush");
-        _snapButton.ToolTip = $"Snapping {(on ? "on" : "off")} (Alt+S): clips snap to the grid, other clips and the playhead. Hold Alt while dragging to bypass. Right-click for the snap settings.";
+        TooltipShortcuts.Bind(_snapButton, $"Snapping {(on ? "on" : "off")}: clips snap to the grid, other clips and the playhead. Hold Alt while dragging to bypass. Right-click for the snap settings.", "Timeline.Snap");
     }
     /// <summary>Right-click on + Track: the host shows its track options menu there.</summary>
     public event Action<FrameworkElement>? AddTrackMenuRequested;
@@ -169,6 +188,11 @@ public sealed partial class ArrangementPanel : Grid
     public event Action<string>? GroupMixerRequested;
     /// <summary>"Show tracks in groups" in an empty-area menu (on / off).</summary>
     public event Action<bool>? GroupsToggleRequested;
+    /// <summary>"Colours > Colour tracks by group" and "Colours > Colour tracks..." in an empty-area menu.</summary>
+    public event Action? ColourByGroupRequested;
+    public event Action? ColourTracksRequested;
+    /// <summary>"Track list settings..." in an empty-area menu (Preferences > Timeline &amp; sections).</summary>
+    public event Action? TrackListSettingsRequested;
     /// <summary>Whether the track list shows groups (the checked state of the menu item).</summary>
     public Func<bool>? GroupsShownState { get; set; }
     /// <summary>The dock pane's own items (reset / close panel), appended below the track list's items.</summary>
@@ -214,10 +238,13 @@ public sealed partial class ArrangementPanel : Grid
     public event Action<int, int, bool, bool>? ClipLaneSelected;
     public event EventHandler? ClipEditStarting;
     public event EventHandler<AudioClip>? ClipEdited;
+    /// <summary>Esc while dragging a clip: cancel the drag. False when none is being dragged.</summary>
+    public bool CancelClipDrag() => _timeline.CancelClipDrag();
     public event Action<int, AudioClip?, double>? ClipContextRequested;
     public event Action<int, AudioClip>? ClipPropertiesRequested;
-    public event Action<int, double, string[]>? AudioFilesDropped;
-    public event Action<AudioClip, int, int, int>? ClipMovedToTrack;
+    /// <summary>Audio / MIDI files dropped on the timeline: where they land (see <see cref="MediaDrop.Plan"/>).</summary>
+    public event Action<MediaDropPlan>? MediaDropped;
+    public event Action<AudioClip, int, MediaDropPlan, bool>? ClipMoveRequested;
     public event Action<AudioClip, int, int>? MidiClipToNotation;
     public event Action<int, int, double>? LaneClicked;
 
@@ -270,6 +297,14 @@ public sealed partial class ArrangementPanel : Grid
     public event EventHandler<(int markerIndex, int bar)>? SectionLaneContextRequested;
     /// <summary>A timeline bar was right-clicked (bar index, track index; track may be -1).</summary>
     public event EventHandler<(int bar, int track)>? TimelineContextRequested;
+    /// <summary>Shift+F10 / the Menu key on the focused timeline: the host opens the bar or selection menu at the current bar.</summary>
+    public event EventHandler? TimelineKeyboardContextRequested;
+
+    /// <summary>Where a keyboard-opened timeline menu goes: the top-left of <paramref name="bar"/> just under the ruler and section lane, in this panel's coordinates.</summary>
+    public Point TimelineBarAnchor(int bar) =>
+        _timeline.TranslatePoint(new Point(_timeline.BarX(bar) + 4, RulerHeight + SectionHeight + 4), this);
+
+    internal bool TryHandleContextKey(Key key, ModifierKeys mods) => _timeline.TryHandleContextMenuKey(key, mods);
 
     public double MeasureWidth { get; private set; } = 30;
     public bool ShowIndividualNotes
@@ -302,6 +337,19 @@ public sealed partial class ArrangementPanel : Grid
             if (_timeline.HideEmptyTimelineGrid == value) return;
             _timeline.HideEmptyTimelineGrid = value;
             _timeline.InvalidateVisual();
+        }
+    }
+    private string _playheadStyle = PlayheadStyles.Line;
+    /// <summary>Playback position marker: the line, a marker in the current bar cell, or both (<see cref="PlayheadStyles"/>).</summary>
+    public string PlayheadStyle
+    {
+        get => _playheadStyle;
+        set
+        {
+            value = PlayheadStyles.Normalize(value);
+            if (_playheadStyle == value) return;
+            _playheadStyle = value;
+            LayoutPlayhead();
         }
     }
     public bool ShowBarGlow
@@ -433,6 +481,7 @@ public sealed partial class ArrangementPanel : Grid
             _timeline.VerticalScrollOffset = e.VerticalOffset;
             _timeline.InvalidateVisual();
             LayoutPlayhead();
+            _timeline.RefreshHover();
             LayoutDragLaneOutline();
         };
         SetRow(_controlsScroll, 1);
@@ -473,11 +522,15 @@ public sealed partial class ArrangementPanel : Grid
         _timelineHost.Children.Add(_timeline);
         _timelineHost.Children.Add(_sectionDragOverlay);
         _timelineHost.Children.Add(_sectionInsertionIndicator);
+        _timelineHost.Children.Add(_hoverCell);
         _timelineHost.Children.Add(_sectionHighlight);
+        _timelineHost.Children.Add(_barMarker);
         _timelineHost.Children.Add(_playheadLine);
         _timelineHost.Children.Add(_selectedTrackPlayMarker);
         _timelineHost.Children.Add(_dragLaneOutline);
         _timelineHost.Children.Add(_areaMoveOutline);
+        _timelineHost.Children.Add(_dropGhost);
+        HookMediaDrop();
         _timeline.AreaMoveFinished += (_, target) => EndAreaMoveVisual(target);
         _timeline.SizeChanged += (_, _) =>
         {
@@ -496,7 +549,8 @@ public sealed partial class ArrangementPanel : Grid
         Children.Add(timelineColumn);
 
         _timelineScrollBar.Scroll += (_, e) => _horizontal.ScrollToHorizontalOffset(e.NewValue);
-        _horizontal.ScrollChanged += (_, _) => SyncTimelineScrollBar();
+        _horizontal.ScrollChanged += (_, _) => { SyncTimelineScrollBar(); _timeline.RefreshHover(); };
+        _timeline.HoverCellChanged += (_, c) => LayoutHoverCell(c.bar, c.track);
         _timelineScrollBar.ValueChanged += (_, _) =>
         {
             if (!_syncingHorizontalScroll) _horizontal.ScrollToHorizontalOffset(_timelineScrollBar.Value);
@@ -554,12 +608,13 @@ public sealed partial class ArrangementPanel : Grid
         _timeline.SectionMarkerMoved += (_, move) => SectionMarkerMoved?.Invoke(this, move);
         _timeline.SectionLaneContextRequested += (_, at) => SectionLaneContextRequested?.Invoke(this, at);
         _timeline.ContextRequested += (_, context) => TimelineContextRequested?.Invoke(this, context);
+        _timeline.KeyboardContextRequested += (_, _) => TimelineKeyboardContextRequested?.Invoke(this, EventArgs.Empty);
         _timeline.ClipEditStarting += (_, _) => ClipEditStarting?.Invoke(this, EventArgs.Empty);
         _timeline.ClipEdited += (_, clip) => ClipEdited?.Invoke(this, clip);
         _timeline.ClipContextRequested += (track, clip, sec) => ClipContextRequested?.Invoke(track, clip, sec);
         _timeline.ClipPropertiesRequested += (track, clip) => ClipPropertiesRequested?.Invoke(track, clip);
-        _timeline.AudioFilesDropped += (track, sec, files) => AudioFilesDropped?.Invoke(track, sec, files);
-        _timeline.ClipMovedToTrack += (clip, from, to, lane) => ClipMovedToTrack?.Invoke(clip, from, to, lane);
+        _timeline.MediaDropped += plan => MediaDropped?.Invoke(plan);
+        _timeline.ClipMoveRequested += (clip, from, plan, copy) => ClipMoveRequested?.Invoke(clip, from, plan, copy);
         _timeline.MidiClipToNotation += (clip, from, to) => MidiClipToNotation?.Invoke(clip, from, to);
         _timeline.LaneClicked += (track, lane, sec) => LaneClicked?.Invoke(track, lane, sec);
         _timeline.ClipLaneSelected += (track, lane, midi, ctrl) => ClipLaneSelected?.Invoke(track, lane, midi, ctrl);
@@ -679,7 +734,8 @@ public sealed partial class ArrangementPanel : Grid
         addContents.Children.Add(new TextBlock { Text = "Track", FontWeight = FontWeights.SemiBold, Margin = new Thickness(3, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center });
         add.Content = addContents;
         add.Click += (_, _) => AddTrackRequested?.Invoke(this, EventArgs.Empty);
-        add.ToolTip = "Add a track · right-click for more options (track colours, groups)";
+        // Opens the Add track window (instrument and position). The Add track key adds a ready guitar straight away, so it is not shown here.
+        TooltipShortcuts.Bind(add, "Add a track: choose its instrument and position in a window · right-click for Add track… and Mixer…", null);
         add.MouseRightButtonUp += (_, e) => { e.Handled = true; AddTrackMenuRequested?.Invoke(add); };
         DockPanel.SetDock(add, Dock.Left);
         panel.Children.Add(add);
@@ -713,7 +769,7 @@ public sealed partial class ArrangementPanel : Grid
             Background = (Brush)Application.Current.FindResource("Panel2Brush"),
             BorderBrush = (Brush)Application.Current.FindResource("BorderBrush"),
             BorderThickness = new Thickness(1),
-            Content = TuningButtonContent(), ToolTip = "Global tuning — click the fork for the tuning window, the number to type a shift; double-click to edit; right-click for quick options"
+            Content = TuningButtonContent(), ToolTip = "Global tuning: click to open the tuning window · double-click to type a semitone shift · right-click for quick options (tune up or down a semitone, back to original)"
         };
         TuningButton.SetResourceReference(Control.BackgroundProperty, "Panel2Brush");
         TuningButton.SetResourceReference(Control.BorderBrushProperty, "BorderBrush");
@@ -751,6 +807,7 @@ public sealed partial class ArrangementPanel : Grid
             Width = 34, MinWidth = 34, Height = 34, Padding = new Thickness(0), Margin = new Thickness(2, 0, 2, 0),
             BorderThickness = new Thickness(1), ToolTip = "Mixer: track and group levels, pan, pitch, sound source and FX chains"
         };
+        TooltipShortcuts.Bind(mixer, "Mixer: track and group levels, pan, pitch, sound source and FX chains", "View.Mixer");
         mixer.SetResourceReference(Control.BackgroundProperty, "Panel2Brush");
         mixer.SetResourceReference(Control.BorderBrushProperty, "BorderBrush");
         var mixerIcon = new SvgIconView { Icon = "mixer", Width = 28, Height = 28, ShowFrame = false, IsHitTestVisible = false };

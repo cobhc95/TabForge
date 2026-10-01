@@ -35,22 +35,55 @@ public partial class PreferencesWindow : Window
     private AppSettings _baseline;
     private List<SettingDescriptor> _descriptors;
     private string _selectedCategory = TakeInitialCategory();
+    /// <summary>The page the last Settings window was left on; a plain open (F12, the menu) returns there. Kept in memory only.</summary>
+    private static string? _lastPage;
+    /// <summary>Groups whose "More options" the user opened (or a search or deep link opened) in this window: "page|group".</summary>
+    private readonly HashSet<string> _openMore = new(StringComparer.OrdinalIgnoreCase);
+    private DispatcherTimer? _statusTimer;
 
-    /// <summary>The page the next Settings window opens on (e.g. Audio & VST from the mixer); used once.</summary>
+    /// <summary>The page the next Settings window opens on (a page id or name, e.g. "audio" from the mixer); used once.</summary>
     internal static string? InitialCategory { get; set; }
+    /// <summary>The row the next Settings window scrolls to and highlights (see <see cref="SetTarget"/>); used once.</summary>
+    internal static string? InitialRow { get; set; }
+
+    /// <summary>
+    /// Deep link for the "... settings..." entries of the right-click menus: the next Settings window opens on page
+    /// <paramref name="pageKey"/> (a <see cref="SettingsCatalog"/> category) and, when <paramref name="rowKey"/> is given,
+    /// scrolls to that row's group and highlights the row. Both are used once, so a later plain open shows the last page again.
+    /// </summary>
+    internal static void SetTarget(string pageKey, string? rowKey = null)
+    {
+        InitialCategory = pageKey;
+        InitialRow = rowKey;
+    }
+
+    private string? _pendingRow = TakeInitialRow();
+
+    private static string? TakeInitialRow()
+    {
+        var row = InitialRow;
+        InitialRow = null;
+        return row;
+    }
 
     private static string TakeInitialCategory()
     {
-        var category = InitialCategory is { } c && SettingsCatalog.Categories.Contains(c) ? c : SettingsCatalog.General;
+        // An unknown id opens Common settings (and says so in the debug output); a plain open returns to the last page.
+        var requested = InitialCategory;
+        var category = SettingsCatalog.ResolvePage(requested);
+        if (requested is not null && category is null) System.Diagnostics.Debug.WriteLine($"Preferences: unknown page '{requested}', opening {SettingsCatalog.Home}");
+        category ??= requested is null ? _lastPage ?? SettingsCatalog.Home : SettingsCatalog.Home;
         InitialCategory = null;
         return category;
     }
+
+    /// <summary>Set by the main window: applies the default instrument view to every track of the open song.</summary>
+    internal static Action<string>? ShowAllTracksAs { get; set; }
     private string? _recordingActionId;
     private (string ActionId, string Gesture, string ConflictingActionId)? _pendingConflict;
     private bool _dirty;
     private bool _allowClose;
     private bool _rebuilding;
-    private bool _lastUsedTwoColumns;
     private bool _wasSearching;
     private int _cardIndex;
     private readonly DispatcherTimer _searchDebounce;
@@ -65,7 +98,6 @@ public partial class PreferencesWindow : Window
     internal PreferencesWindow(AppSettings current, Window? owner, Action<AppSettings>? apply, Action<AppSettings>? preview)
     {
         InitializeComponent();
-        VersionText.Text = $"TabForge {AppInfo.DisplayVersion}";
         Title = $"TabForge Settings - {AppInfo.DisplayVersion}";
         if (owner is not null) Owner = owner;
         _apply = apply;
@@ -76,6 +108,8 @@ public partial class PreferencesWindow : Window
         ReplaceDescriptorMap();
         foreach (var descriptor in SettingsCatalog.Build(new AppSettings()))
             _defaultsByKey[descriptor.Key] = descriptor;
+        // A deep link to a row also picks the row's page (colour rows live on the Appearance page, whatever the menu says).
+        if (_pendingRow is not null && _descriptorsByKey.TryGetValue(_pendingRow, out var target)) _selectedCategory = target.Category;
 
         CategoryFilter.ItemsSource = new[] { "All categories" }
             .Concat(SettingsCatalog.Categories)
@@ -90,31 +124,45 @@ public partial class PreferencesWindow : Window
         SearchBox.TextChanged += (_, _) => { _searchDebounce.Stop(); _searchDebounce.Start(); };
         SearchBox.PreviewKeyDown += (_, e) =>
         {
-            if (e.Key != Key.Escape) return;
+            // Esc clears the search first (a second Esc cancels the window); Enter must not press OK from here.
+            if (e.Key == Key.Enter) { e.Handled = true; return; }
+            if (e.Key != Key.Escape || SearchBox.Text.Length == 0) return;
             SearchBox.Clear();
             e.Handled = true;
         };
         CategoryFilter.SelectionChanged += (_, _) => RebuildPage();
         PreviewKeyDown += Window_PreviewKeyDown;
-        PreviewMouseDown += Window_PreviewMouseDown;
-        SizeChanged += (_, _) =>
+        // Esc = Cancel. Not IsCancel on the button: that closes the dialog even after "keep editing" in the discard question
+        // (and asks it twice). Bubbling KeyDown, so an open combo box, the search box and shortcut capture handle Esc first.
+        KeyDown += (_, e) =>
         {
-            UpdateSearchAreaWidth();
-            var twoColumns = ActualWidth >= 1240;
-            if (twoColumns != _lastUsedTwoColumns) RebuildPage();
+            if (e.Key != Key.Escape || e.Handled) return;
+            e.Handled = true;
+            CancelButton_Click(this, new RoutedEventArgs());
         };
+        PreviewMouseDown += Window_PreviewMouseDown;
+        SizeChanged += (_, _) => UpdateSearchAreaWidth();
         SearchHeaderBorder.SizeChanged += (_, _) => UpdateSearchAreaWidth();
         Closing += Window_Closing;
         SourceInitialized += (_, _) => ApplyDarkCaption();
         Loaded += (_, _) =>
         {
             UpdateSearchAreaWidth();
-            RebuildPage();
+            // A deep link names a row: show its page and scroll to it (the row flashes so the eye finds its group).
+            var row = _pendingRow;
+            _pendingRow = null;
+            RebuildPage(focusSettingKey: row is not null && _descriptorsByKey.ContainsKey(row) ? row : null);
         };
 
         RebuildPage();
         UpdateNavigationSelection();
     }
+
+    /// <summary>The page the window is showing (self-test hook for the deep links).</summary>
+    internal string SelectedCategory => _selectedCategory;
+
+    /// <summary>Keys of the setting rows built on the page now showing, collapsed "More options" rows included (self-test hook).</summary>
+    internal IReadOnlyList<string> BuiltRowKeys => _rows.Where(row => row.Setting is not null).Select(row => row.Setting!.Key).ToList();
 
     /// <summary>The currently staged settings; callers should only adopt this after acceptance.</summary>
     public AppSettings Result => SettingsMigration.Clone(_settings);
@@ -133,7 +181,21 @@ public partial class PreferencesWindow : Window
     {
         NavigationPanel.Children.Clear();
         _navigation.Clear();
-        foreach (var category in SettingsCatalog.Categories)
+        foreach (var (band, pages) in SettingsCatalog.Bands)
+        {
+            // Non-clickable caption above each band of pages (11 px minimum, muted, not a button).
+            if (band.Length > 0)
+                NavigationPanel.Children.Add(new TextBlock
+                {
+                    Text = band, FontSize = 11, FontWeight = FontWeights.SemiBold, Margin = new Thickness(18, 12, 0, 4),
+                    Foreground = (Brush)Application.Current.FindResource("MutedBrush"), Focusable = false
+                });
+            foreach (var category in pages) AddNavigationButton(category);
+        }
+    }
+
+    private void AddNavigationButton(string category)
+    {
         {
             var icon = new SettingsNavigationIcon { Kind = IconKind(category), Width = 25, Height = 25,
                 VerticalAlignment = VerticalAlignment.Center };
@@ -150,7 +212,7 @@ public partial class PreferencesWindow : Window
                 Content = content,
                 Tag = category,
                 Style = (Style)FindResource("SettingsNavigationButton"),
-                ToolTip = $"Show {category} settings.",
+                ToolTip = Subtitle(category),
                 Focusable = true
             };
             AutomationProperties.SetName(button, category);
@@ -162,22 +224,25 @@ public partial class PreferencesWindow : Window
 
     private static string IconKind(string category) => category switch
     {
-        "General" => "General",
-        "Appearance & colours" => "Appearance",
-        "Score & notation" => "Viewing",
-        "Playback & sound" => "PlaybackSound",
-        "Audio & VST" => "AudioPlugins",
-        "Editing" => "Pencil",
-        "Timeline & sections" => "Viewing",
-        "Fretboard" => "Fretboard",
-        "Tabs & windows" => "Tabs",
-        "Hotkeys" => "Hotkeys",
-        _ => "Settings"
+        SettingsCatalog.Home => "Home",
+        SettingsCatalog.General => "General",
+        SettingsCatalog.Appearance => "Appearance",
+        SettingsCatalog.Score => "Score",
+        SettingsCatalog.Fretboard => "Fretboard",
+        SettingsCatalog.Timeline => "Timeline",
+        SettingsCatalog.Editing => "Pencil",
+        SettingsCatalog.Playback => "Playback",
+        SettingsCatalog.AudioVst => "Audio",
+        SettingsCatalog.Recording => "Recording",
+        SettingsCatalog.Tabs => "Tabs",
+        SettingsCatalog.Hotkeys => "Shortcuts",
+        SettingsCatalog.Files => "Files",
+        _ => "Advanced"
     };
 
     private void NavigateToCategory(string category)
     {
-        _selectedCategory = category;
+        _selectedCategory = _lastPage = category;
         SearchBox.Clear();
         CategoryFilter.SelectedIndex = 0;
         UpdateNavigationSelection();
@@ -212,20 +277,26 @@ public partial class PreferencesWindow : Window
             var query = SearchBox.Text.Trim();
             var categoryFilter = CategoryFilter.SelectedIndex > 0 ? CategoryFilter.SelectedItem?.ToString() : null;
             var searching = query.Length > 0;
-            _lastUsedTwoColumns = ActualWidth >= 1240;
-            var columns = _lastUsedTwoColumns ? 2 : 1;
-            for (var column = 0; column < columns; column++)
-                ContentGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            // One centred column: pages are short (Basic rows first, the rest behind "More options").
+            const int columns = 1;
+            ContentGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            ResetPageButton.Visibility = !searching && _selectedCategory is not (SettingsCatalog.Home or SettingsCatalog.Advanced)
+                ? Visibility.Visible : Visibility.Collapsed;
 
             if (!searching && _selectedCategory == SettingsCatalog.Hotkeys)
             {
                 BuildHotkeyPage(categoryFilter);
-                SetPageHeader("Hotkeys", "Search, assign and resolve keyboard shortcuts");
+                SetPageHeader(SettingsCatalog.Hotkeys, Subtitle(SettingsCatalog.Hotkeys));
             }
             else if (!searching && _selectedCategory == SettingsCatalog.Advanced)
             {
                 BuildAdvancedPage();
-                SetPageHeader("Advanced", "Settings storage and compatibility information");
+                SetPageHeader(SettingsCatalog.Advanced, Subtitle(SettingsCatalog.Advanced));
+            }
+            else if (!searching && _selectedCategory == SettingsCatalog.Home)
+            {
+                BuildHomePage();
+                SetPageHeader(SettingsCatalog.Home, Subtitle(SettingsCatalog.Home));
             }
             else
             {
@@ -235,13 +306,20 @@ public partial class PreferencesWindow : Window
                     (categoryFilter is null || descriptor.Category.Equals(categoryFilter, StringComparison.OrdinalIgnoreCase)))
                     .ToList();
 
-                if (!searching && _selectedCategory == SettingsCatalog.Appearance)
-                    AddTopCard(RestoreThemeCard(), columns);
+                // A search result or a deep link lands on a row that may be inside "More options": open that group.
+                if (focusSettingKey is not null && _descriptorsByKey.TryGetValue(focusSettingKey, out var focused))
+                    _openMore.Add(MoreKey(focused));
 
-                foreach (var group in descriptors.GroupBy(descriptor => descriptor.Group))
+                foreach (var group in descriptors.OrderBy(descriptor => searching ? descriptor.Category : "")
+                             .ThenBy(descriptor => descriptor.Order).GroupBy(descriptor => (descriptor.Category, descriptor.Group)))
                 {
-                    var card = GroupCard(group.Key);
-                    foreach (var descriptor in group) AddCardContent(card, SettingRow(descriptor, searching));
+                    var card = GroupCard(searching ? $"{group.Key.Category} › {group.Key.Group}" : group.Key.Group);
+                    var basic = group.Where(descriptor => !descriptor.More).ToList();
+                    var more = group.Where(descriptor => descriptor.More).ToList();
+                    foreach (var descriptor in basic) AddCardContent(card, SettingRow(descriptor, searching));
+                    if (!searching && _selectedCategory == SettingsCatalog.Appearance && group.Key.Group == "Theme")
+                        AddThemeReset(card);
+                    if (more.Count > 0) AddMoreOptions(card, more, searching);
                     AddTopCard(card, columns);
                 }
 
@@ -258,10 +336,10 @@ public partial class PreferencesWindow : Window
                 }
 
                 if (searching && descriptors.Count == 0 && hotkeys.Count == 0)
-                    AddTopCard(InformationCard("No matching settings", "Try another keyword or choose a different category."), columns);
+                    AddTopCard(InformationCard("No matching settings", "Try: theme, audio, metronome, shortcut. Or choose a different category."), columns);
 
                 SetPageHeader(searching ? "Search results" : _selectedCategory,
-                    searching ? $"Matches for ‘{query}’" : Subtitle(_selectedCategory));
+                    searching ? $"{descriptors.Count + hotkeys.Count} results for ‘{query}’" : Subtitle(_selectedCategory));
             }
 
             if (ContentGrid.RowDefinitions.Count == 0)
@@ -404,13 +482,66 @@ public partial class PreferencesWindow : Window
             SettingKind.Choice => BuildChoiceEditor(descriptor),
             SettingKind.Number => BuildNumberEditor(descriptor),
             SettingKind.Colour => BuildColourEditor(descriptor),
-            SettingKind.Button => BuildLinkedAudioButton(descriptor),
+            SettingKind.Button => BuildRowButton(descriptor),
             _ => BuildTextEditor(descriptor)
         };
     }
 
     /// <summary>Hook set by the main window: opens the Linked audio window and returns the approvals as they are afterwards.</summary>
     internal static Func<List<MediaApproval>>? ManageLinkedAudio { get; set; }
+
+    /// <summary>The button of a <see cref="SettingKind.Button"/> row: each key has its own action.</summary>
+    private FrameworkElement BuildRowButton(SettingDescriptor descriptor)
+    {
+        switch (descriptor.Key)
+        {
+            case "score.textfonts":
+                return RowButton(descriptor, "Text & fonts…", true, OpenScoreTextFonts);
+            case "fretboard.showallas":
+                return RowButton(descriptor, "Apply to all tracks", ShowAllTracksAs is not null,
+                    () => ShowAllTracksAs?.Invoke(_settings.Editing.InstrumentView));
+            case "vst.quarantine":
+                return BuildQuarantineButton(descriptor);
+            default:
+                return BuildLinkedAudioButton(descriptor);
+        }
+    }
+
+    /// <summary>Hook set by the main window: lists the plug-ins switched off after a crash (live settings) with Allow again; returns the list afterwards.</summary>
+    internal static Func<Window, List<string>>? ManageQuarantine { get; set; }
+
+    private FrameworkElement BuildQuarantineButton(SettingDescriptor descriptor)
+    {
+        var button = RowButton(descriptor, "Plug-ins switched off after a crash…", ManageQuarantine is not null, () =>
+        {
+            if (ManageQuarantine is not { } open) return;
+            // Allow again changes the live settings straight away (like the linked-audio approvals); keep this window's copy and baseline in step.
+            var list = open(this);
+            _settings.Plugins.Quarantined = list.ToList();
+            _baseline.Plugins.Quarantined = list.ToList();
+        });
+        return button;
+    }
+
+    private Button RowButton(SettingDescriptor descriptor, string label, bool enabled, Action click)
+    {
+        var button = new Button { Content = label, Padding = new Thickness(10, 3, 10, 3), ToolTip = descriptor.Tooltip(_settings.Hotkeys), IsEnabled = enabled };
+        AutomationProperties.SetName(button, descriptor.Title);
+        button.Click += (_, _) => click();
+        return button;
+    }
+
+    /// <summary>Per-area score text styles, edited on this window's staged settings and previewed live like any other row.</summary>
+    private void OpenScoreTextFonts()
+    {
+        var areas = _settings.Appearance.ScoreTextAreas ??= new();
+        var before = JsonSerializer.Serialize(areas);
+        if (ScoreTextStyleWindow.Show(this, areas, () => { TabEditorControl.ConfigureTextAreas(areas); SettingChanged(); })) { SettingChanged(); return; }
+        var restored = JsonSerializer.Deserialize<Dictionary<string, ScoreTextAreaStyle>>(before) ?? new();
+        _settings.Appearance.ScoreTextAreas = restored;
+        TabEditorControl.ConfigureTextAreas(restored);
+        SettingChanged();
+    }
 
     private FrameworkElement BuildLinkedAudioButton(SettingDescriptor descriptor)
     {
@@ -672,7 +803,7 @@ public partial class PreferencesWindow : Window
         button.Click += async (_, _) =>
         {
             button.IsEnabled = false;
-            result.Text = "Measuring (about 5 s)...";
+            result.Text = "Measuring (about 5 s)…";
             (double? Ms, string Detail) outcome;
             try { outcome = await Task.Run(() => TabForge.Audio.WindowsMidiLatency.Measure(new TabForge.Playback.SharedMidiOutput())); }
             catch (Exception ex) { outcome = (null, ex.Message); }
@@ -861,7 +992,7 @@ public partial class PreferencesWindow : Window
         {
             var card = GroupCard(group.Key);
             foreach (var action in group) AddCardContent(card, HotkeyRow(action, false));
-            AddTopCard(card, _lastUsedTwoColumns ? 2 : 1);
+            AddTopCard(card, 1);
         }
         if (matching.Count == 0)
             AddTopCard(InformationCard("No matching shortcuts", "Choose another category to view its keyboard commands."), 1);
@@ -1048,26 +1179,108 @@ public partial class PreferencesWindow : Window
 
     private string GestureLabel(HotkeyAction action) => GestureForDisplay(_settings.Hotkeys, action);
 
+    private static string MoreKey(SettingDescriptor descriptor) => descriptor.Category + "|" + descriptor.Group;
+
+    /// <summary>The group's advanced rows behind a "More options (n)" toggle; a search or a deep link opens it, and it stays open while this window lives.</summary>
+    private void AddMoreOptions(Border card, List<SettingDescriptor> more, bool searching)
+    {
+        if (card.Child is not StackPanel stack) return;
+        var key = MoreKey(more[0]);
+        var rows = new StackPanel { Visibility = Visibility.Collapsed };
+        foreach (var descriptor in more)
+        {
+            var row = SettingRow(descriptor, searching);
+            if (rows.Children.Count > 0) row.Margin = new Thickness(0, 12, 0, 0);
+            rows.Children.Add(row);
+        }
+        var toggle = new System.Windows.Controls.Primitives.ToggleButton
+        {
+            Content = $"More options ({more.Count})",
+            Style = (Style)FindResource("MoreOptionsToggle"),
+            Margin = new Thickness(-6, 8, 0, 0),
+            IsChecked = searching || _openMore.Contains(key)
+        };
+        AutomationProperties.SetName(toggle, $"More options, {more.Count} more settings in this group");
+        toggle.ToolTip = "Show or hide the less common settings of this group.";
+        void Sync()
+        {
+            rows.Visibility = toggle.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+            rows.Margin = new Thickness(0, 4, 0, 0);
+        }
+        toggle.Checked += (_, _) => { if (!searching) _openMore.Add(key); Sync(); };
+        toggle.Unchecked += (_, _) => { if (!searching) _openMore.Remove(key); Sync(); };
+        Sync();
+        stack.Children.Add(toggle);
+        stack.Children.Add(rows);
+    }
+
+    /// <summary>The Theme group's own button: restores the built-in theme (asks first).</summary>
+    private void AddThemeReset(Border card)
+    {
+        var restore = CreateButton("Reset theme…", "SecondaryActionButton", "Restore the built-in dark palette, sizing, typography and motion defaults (asks first).");
+        restore.HorizontalAlignment = HorizontalAlignment.Left;
+        restore.Margin = new Thickness(0, 10, 0, 0);
+        restore.Click += (_, _) => RestoreDefaultTheme();
+        AddCardContent(card, restore);
+        AddCardContent(card, Note("Restores the built-in dark palette, sizing, typography and motion defaults.", 12, new Thickness(0, 4, 0, 0)));
+    }
+
+    /// <summary>"Common settings": references to the same rows (same keys, same state) for the things people come here for, plus doors to the rest.</summary>
+    private void BuildHomePage()
+    {
+        void Group(string title, string[] keys, params (string Label, Action Click)[] links)
+        {
+            var card = GroupCard(title);
+            foreach (var key in keys)
+                if (_descriptorsByKey.TryGetValue(key, out var descriptor)) AddCardContent(card, SettingRow(descriptor, false));
+            foreach (var (label, click) in links)
+            {
+                var button = CreateButton(label, "SecondaryActionButton");
+                button.HorizontalAlignment = HorizontalAlignment.Left;
+                button.Margin = new Thickness(0, 10, 0, 0);
+                button.Click += (_, _) => click();
+                AddCardContent(card, button);
+            }
+            AddTopCard(card, 1);
+        }
+        Group("Look", new[] { "appearance.thememode", "appearance.uiscale", "appearance.fretboard", "general.toolbar" },
+            ("All appearance settings", () => NavigateToCategory(SettingsCatalog.Appearance)));
+        Group("Sound", new[] { "vst.driver", "vst.device", "audio.metronome", "audio.metrovolume", "audio.countin", "audio.speed" },
+            ("More audio settings", () => NavigateToCategory(SettingsCatalog.AudioVst)),
+            ("Playback and practice settings", () => NavigateToCategory(SettingsCatalog.Playback)));
+        Group("Score", new[] { "score.defaultnotation", "follow.mode" },
+            ("All score settings", () => NavigateToCategory(SettingsCatalog.Score)));
+        Group("Files", new[] { "general.autosave", "general.saveformat" },
+            ("Files and backups", () => NavigateToCategory(SettingsCatalog.Files)));
+        var shortcuts = GroupCard("Shortcuts");
+        var open = CreateButton("Open all shortcuts", "SecondaryActionButton");
+        open.HorizontalAlignment = HorizontalAlignment.Left;
+        open.Margin = new Thickness(0, 6, 0, 0);
+        open.Click += (_, _) => NavigateToCategory(SettingsCatalog.Hotkeys);
+        AddCardContent(shortcuts, Note("Pick a preset layout (TabForge or another program's) and change any key on the Shortcuts page.", 12, new Thickness(0, 2, 0, 0)));
+        AddCardContent(shortcuts, open);
+        AddTopCard(shortcuts, 1);
+        AddTopCard(InformationCard("Looking for this song's settings?",
+            "Preferences are for the program. A song's own settings are in other windows: Project settings (the File menu) and Track properties (right-click a track)."), 1);
+    }
+
     private void BuildAdvancedPage()
     {
+        AddTopCard(InformationCard("Version", $"TabForge {AppInfo.DisplayVersion}"), 1);
         AddTopCard(InformationCard("Settings file",
             UserPaths.SettingsFile), 1);
         AddTopCard(InformationCard("Compatibility",
             "Older flat settings files are migrated into the current settings model when loaded or imported. All fields recognized by the settings model remain available to export; unrecognized JSON properties are ignored."), 1);
         AddTopCard(InformationCard("Arrangement playback",
             "Section edits and reordering always refresh the future playback route at a safe bar boundary. This safety behavior is intentionally not optional."), 1);
-    }
-
-    private Border RestoreThemeCard()
-    {
-        var card = GroupCard("Theme");
-        var restore = CreateButton("Restore default TabForge visual theme", "SecondaryActionButton");
-        restore.HorizontalAlignment = HorizontalAlignment.Left;
-        restore.Click += (_, _) => RestoreDefaultTheme();
-        AddCardContent(card, restore);
-        AddCardContent(card, Note("Restores the built-in dark palette, sizing, typography and motion defaults.", 12,
-            new Thickness(0, 4, 0, 0)));
-        return card;
+        var reset = GroupCard("Reset");
+        var resetAll = CreateButton("Reset all settings…", "SecondaryActionButton", "Restore every setting and every shortcut to its default (asks first).");
+        resetAll.HorizontalAlignment = HorizontalAlignment.Left;
+        resetAll.Margin = new Thickness(0, 10, 0, 0);
+        resetAll.Click += (_, _) => ResetAll();
+        AddCardContent(reset, Note("Restores every setting and all keyboard shortcuts to their defaults. You can still press Cancel to undo it.", 12, new Thickness(0, 2, 0, 0)));
+        AddCardContent(reset, resetAll);
+        AddTopCard(reset, 1);
     }
 
     private static Border InformationCard(string title, string text)
@@ -1077,8 +1290,16 @@ public partial class PreferencesWindow : Window
         return card;
     }
 
+    /// <summary>Every reset asks first and says how much it will change; the staged change can still be undone with Cancel.</summary>
+    private bool ConfirmReset(string title, string message)
+    {
+        var prompt = new ThemedConfirmDialog(title, message, yesToolTip: "Reset", noToolTip: "Keep the current values", showCancel: false) { Owner = this };
+        return DialogHost.ShowModal(prompt) == true && prompt.Result == MessageBoxResult.Yes;
+    }
+
     private void RestoreDefaultTheme()
     {
+        if (!ConfirmReset("Reset theme", "Restore the built-in theme: palette, sizing, typography, motion and the score page look?")) return;
         var keys = new[]
         {
             "appearance.thememode", "appearance.uiscale", "appearance.density", "appearance.reduceanimations",
@@ -1089,7 +1310,7 @@ public partial class PreferencesWindow : Window
             "appearance.scoreitalic", "appearance.spacing", "appearance.paper", "appearance.scorepaper.dark",
             "appearance.scorepaper.light", "appearance.scoreink.dark", "appearance.scoreink.light",
             "appearance.scorelines.dark", "appearance.scorelines.light", "appearance.cursor",
-            "score.systemspacing", "score.measurespacing", "score.ledger", "score.ledgeropacity", "score.staffopacity",
+            "score.systemspacing", "score.measurespacing", "score.ledger", "score.staffopacity",
             "score.hoverintensity", "score.selectionintensity", "score.barnumbers", "score.barnumberfrequency",
             "score.sectionheadings"
         };
@@ -1108,9 +1329,9 @@ public partial class PreferencesWindow : Window
             Style = (Style)FindResource("SettingsMenuItem") };
         var export = new MenuItem { Header = "Export settings…", ToolTip = "Export the current staged settings to JSON.",
             Style = (Style)FindResource("SettingsMenuItem") };
-        var resetPage = new MenuItem { Header = "Reset current page", ToolTip = "Restore defaults for the selected category.",
+        var resetPage = new MenuItem { Header = "Reset current page…", ToolTip = "Restore defaults for the selected category (asks first).",
             Style = (Style)FindResource("SettingsMenuItem") };
-        var resetAll = new MenuItem { Header = "Reset all settings", ToolTip = "Restore defaults for every setting and shortcut.",
+        var resetAll = new MenuItem { Header = "Reset all settings…", ToolTip = "Restore defaults for every setting and shortcut (asks first).",
             Style = (Style)FindResource("SettingsMenuItem") };
         import.Click += (_, _) => ImportSettings();
         export.Click += (_, _) => ExportSettings();
@@ -1126,16 +1347,25 @@ public partial class PreferencesWindow : Window
 
     private void ResetPageButton_Click(object sender, RoutedEventArgs e) => ResetPage();
 
-    private void ResetAllButton_Click(object sender, RoutedEventArgs e) => ResetAll();
-
     private void ResetPage()
     {
         if (_selectedCategory == SettingsCatalog.Hotkeys)
         {
-            ResetHotkeyCategory(HotkeyCatalog.All.Select(action => action.Category).Distinct().ToList());
+            // Resets what the page shows: the chosen category, or every category when none is chosen.
+            var chosen = CategoryFilter.SelectedIndex > 0 ? CategoryFilter.SelectedItem?.ToString() : null;
+            var categories = HotkeyCatalog.All.Where(action => chosen is null || chosen.Equals(SettingsCatalog.Hotkeys, StringComparison.OrdinalIgnoreCase) ||
+                chosen.Equals(action.Category, StringComparison.OrdinalIgnoreCase)).Select(action => action.Category).Distinct().ToList();
+            var changed = HotkeyCatalog.All.Count(action => categories.Contains(action.Category) && IsHotkeyCustomized(action));
+            if (changed == 0) { StatusText.Text = "No shortcuts on this page differ from the defaults."; return; }
+            if (!ConfirmReset("Reset shortcuts", $"Restore the default keys for {changed} changed shortcut{(changed == 1 ? "" : "s")}?")) return;
+            ResetHotkeyCategory(categories);
             return;
         }
-        foreach (var descriptor in _descriptors.Where(item => item.Category == _selectedCategory))
+        var page = _descriptors.Where(item => item.Category == _selectedCategory).ToList();
+        var customised = page.Count(IsCustomized);
+        if (customised == 0) { StatusText.Text = "No settings on this page differ from the defaults."; return; }
+        if (!ConfirmReset($"Reset {_selectedCategory}", $"Restore {customised} setting{(customised == 1 ? "" : "s")} on this page to their defaults?")) return;
+        foreach (var descriptor in page)
             if (_defaultsByKey.TryGetValue(descriptor.Key, out var source)) descriptor.Set(source.Get());
         SettingChanged();
         RebuildPage();
@@ -1143,6 +1373,7 @@ public partial class PreferencesWindow : Window
 
     private void ResetAll()
     {
+        if (!ConfirmReset("Reset all settings", $"Restore every setting and all {HotkeyCatalog.All.Count} keyboard shortcuts to their defaults? Cancel still undoes it until you press OK or Apply.")) return;
         CopySettings(new AppSettings(), _settings);
         _descriptors = SettingsCatalog.Build(_settings);
         ReplaceDescriptorMap();
@@ -1257,7 +1488,8 @@ public partial class PreferencesWindow : Window
         if (descriptor is not null) descriptor.Set(value);
         _dirty = !string.Equals(JsonSerializer.Serialize(_settings), JsonSerializer.Serialize(_baseline), StringComparison.Ordinal);
         ApplyButton.IsEnabled = _dirty;
-        StatusText.Text = _dirty ? "Unapplied changes · previewing live" : "Changes preview live";
+        _statusTimer?.Stop();
+        StatusText.Text = _dirty ? "Previewing changes - not saved yet. OK keeps them, Cancel undoes them." : "All changes saved";
         var snapshot = Clone(_settings);
         SettingsPreviewed?.Invoke(snapshot);
         _preview?.Invoke(snapshot);
@@ -1274,6 +1506,11 @@ public partial class PreferencesWindow : Window
         _dirty = false;
         ApplyButton.IsEnabled = false;
         StatusText.Text = "Applied";
+        // "Applied" for two seconds, then back to the resting text.
+        _statusTimer?.Stop();
+        _statusTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+        _statusTimer.Tick += (_, _) => { _statusTimer?.Stop(); if (!_dirty) StatusText.Text = "All changes saved"; };
+        _statusTimer.Start();
         if (close)
         {
             _allowClose = true;
@@ -1405,7 +1642,7 @@ public partial class PreferencesWindow : Window
     private void NavigateToSetting(string key)
     {
         if (!_descriptorsByKey.TryGetValue(key, out var descriptor)) return;
-        _selectedCategory = descriptor.Category;
+        _selectedCategory = _lastPage = descriptor.Category;
         SearchBox.Clear();
         CategoryFilter.SelectedIndex = 0;
         UpdateNavigationSelection();
@@ -1414,7 +1651,7 @@ public partial class PreferencesWindow : Window
 
     private void NavigateToHotkey(string id)
     {
-        _selectedCategory = SettingsCatalog.Hotkeys;
+        _selectedCategory = _lastPage = SettingsCatalog.Hotkeys;
         SearchBox.Clear();
         CategoryFilter.SelectedIndex = 0;
         UpdateNavigationSelection();
@@ -1423,9 +1660,9 @@ public partial class PreferencesWindow : Window
 
     private void Highlight(Border element)
     {
-        element.BorderBrush = Brush("#4C9AFF");
+        element.BorderBrush = (Brush)Application.Current.FindResource("AccentBrush");
         element.Background = (Brush)Application.Current.FindResource("AccentSoftBrush");
-        var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1250) };
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(2000) };
         timer.Tick += (_, _) =>
         {
             timer.Stop();
@@ -1507,17 +1744,20 @@ public partial class PreferencesWindow : Window
 
     private static string Subtitle(string category) => category switch
     {
-        "General" => "Core application behavior and safety",
-        "Appearance & colours" => "Theme mode, colours, glow and highlights, sizing, typography and motion",
-        "Score & notation" => "Page layout, notation, labels and score colours",
-        "Playback & sound" => "Following and highlighting, transport, metronome and note preview",
-        "Audio & VST" => "Audio output, plug-in folders and plug-in safety",
-        "Editing" => "Score entry and destructive edit behavior",
-        "Timeline & sections" => "Arrangement display and section interactions",
-        "Fretboard" => "Instrument panel, note preview and scale display",
-        "Tabs & windows" => "Document tabs, opening and window behavior",
-        "Hotkeys" => "Searchable shortcut assignments",
-        "Advanced" => "Settings storage and compatibility",
+        SettingsCatalog.Home => "The settings people change most, and where to find the rest",
+        SettingsCatalog.General => "Updates, window memory and the questions TabForge asks before it acts",
+        SettingsCatalog.Appearance => "How the program looks: theme, size and text, panels, motion and track colours",
+        SettingsCatalog.Score => "What the score shows, its spacing, text, page and ink colours, selection and hover",
+        SettingsCatalog.Fretboard => "The instrument panel: view, frets, note names, scales, practice aids and its appearance",
+        SettingsCatalog.Timeline => "The track list, the timeline display and sections",
+        SettingsCatalog.Editing => "Note entry, copy and paste, mouse scrolling",
+        SettingsCatalog.Playback => "Scrolling while playing, the playing highlight, speed, metronome, count-in and note preview",
+        SettingsCatalog.AudioVst => "Output device, driver, buffer, plug-in folders and plug-in options",
+        SettingsCatalog.Recording => "Input device, ASIO inputs and the recording offset",
+        SettingsCatalog.Tabs => "Opening, closing and dragging tabs, and how they look",
+        SettingsCatalog.Hotkeys => "Search, assign and resolve keyboard shortcuts",
+        SettingsCatalog.Files => "Opening and saving, autosave and recovery, Windows file association, linked audio folders",
+        SettingsCatalog.Advanced => "Version, settings file, compatibility and reset",
         _ => category
     };
 

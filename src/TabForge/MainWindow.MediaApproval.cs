@@ -17,6 +17,18 @@ public partial class MainWindow
     private void WireMediaAccess()
     {
         Views.PreferencesWindow.ManageLinkedAudio = () => { ReviewLinkedAudio(); return _settings.Audio.ApprovedMedia.ToList(); };
+        Views.PreferencesWindow.ManageQuarantine = owner =>
+        {
+            Views.QuarantineWindow.Show(owner, () => _settings.Plugins.Quarantined.ToList(), path =>
+            {
+                if (TabForge.Plugins.PluginQuarantine.AllowAgain(_settings.Plugins.Quarantined, path) == 0) return;
+                SaveSettings();
+                SyncAudioEngine();   // the chain key no longer says Skip: the engine loads it again
+                RefreshArrangement();   // the faulted FX icon clears
+            });
+            return _settings.Plugins.Quarantined.ToList();
+        };
+        Views.PreferencesWindow.ShowAllTracksAs = view => SetInstrumentView(view, null);   // Settings > Fretboard > Show all tracks as
         MediaAccess.SettingsProvider = () => _settings?.Audio;
         MediaAccess.ProjectPathProvider = () => _currentPath;
         MediaAccess.Changed += () => Dispatcher.BeginInvoke(() => { UpdateMediaApprovalBar(); });

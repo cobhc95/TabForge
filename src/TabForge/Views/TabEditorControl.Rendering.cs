@@ -89,7 +89,7 @@ public sealed partial class TabEditorControl
             if (s == activeSystem || HorizontalScroll)
             {
                 // Reads the continuous playback position (progress fill): always engraved live.
-                DrawSystem(dc, track, system, ink, faint, line, accent, cursorColor, playColor, errorColor, palmMutePassages, fadePassages);
+                DrawSystemContained(dc, track, system, ink, faint, line, accent, cursorColor, playColor, errorColor, palmMutePassages, fadePassages);
                 _systemDrawings.Remove(s);
                 continue;
             }
@@ -98,7 +98,7 @@ public sealed partial class TabEditorControl
             {
                 var group = new DrawingGroup();
                 using (var recorder = group.Open())
-                    DrawSystem(recorder, track, system, ink, faint, line, accent, cursorColor, playColor, errorColor, palmMutePassages, fadePassages);
+                    DrawSystemContained(recorder, track, system, ink, faint, line, accent, cursorColor, playColor, errorColor, palmMutePassages, fadePassages);
                 group.Freeze();
                 cached = (signature, group);
                 _systemDrawings[s] = cached;
@@ -112,10 +112,69 @@ public sealed partial class TabEditorControl
         dc.Pop();
     }
 
+    /// <summary>
+    /// Command-line runs (self-test, bar audit, render) set this so a drawing error still fails them loudly; the
+    /// interactive app contains it per system instead (see <see cref="DrawSystemContained"/>).
+    /// </summary>
+    internal static bool RethrowRenderFailures;
+    /// <summary>Drawing errors contained since start (self-test and diagnostics read it).</summary>
+    internal static int ContainedRenderFailures;
+    /// <summary>Self-test hook: throws for the system index it is given, to prove the containment.</summary>
+    internal static Action<int>? RenderFaultInjection;
+    private static readonly HashSet<string> LoggedRenderFailures = new(StringComparer.Ordinal);
+
+    /// <summary>
+    /// One system's engraving with the failure contained: a bug in one mark must not take the editor down or turn every
+    /// repaint into an error dialog (WPF re-runs a failed render on each layout pass). The failed system shows a short
+    /// note, the error is logged once per distinct cause, and the other systems draw normally.
+    /// </summary>
+    private void DrawSystemContained(DrawingContext dc, TrackModel track, ScoreSystemPosition system, Color ink, Color faint, Color line, Color accent, Color cursorColor, Color playColor, Color errorColor,
+        IReadOnlyList<PalmMutePassage> palmMutePassages, IReadOnlyList<FadePassage> fadePassages)
+    {
+        if (RethrowRenderFailures)
+        {
+            RenderFaultInjection?.Invoke(system.Index);
+            DrawSystem(dc, track, system, ink, faint, line, accent, cursorColor, playColor, errorColor, palmMutePassages, fadePassages);
+            return;
+        }
+        try
+        {
+            RenderFaultInjection?.Invoke(system.Index);
+            DrawSystem(dc, track, system, ink, faint, line, accent, cursorColor, playColor, errorColor, palmMutePassages, fadePassages);
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            ContainedRenderFailures++;
+            var key = ex.GetType().FullName + "|" + ex.TargetSite + "|" + ex.Message;
+            if (RenderFaultInjection is null && LoggedRenderFailures.Count < 32 && LoggedRenderFailures.Add(key))
+            {
+                System.Diagnostics.Debug.WriteLine($"Score drawing failed (system {system.Index + 1}): {ex}");
+                try { DiagnosticFileService.WriteText(FilePathPolicy.DefaultDiagnosticsPath($"render-error-{DateTime.Now:yyyyMMdd-HHmmss}.log"), $"{DateTime.Now:O}{Environment.NewLine}system {system.Index + 1}{Environment.NewLine}{ex}"); }
+                catch (Exception logError) { System.Diagnostics.Debug.WriteLine($"Render error log could not be written: {logError}"); }
+            }
+            try { DrawIn(ScoreTextArea.Header, dc, "This line could not be drawn (details in the diagnostics log).", system.X + 4, StaffTop(system.Index), 10, Brush(errorColor)); }
+            catch (Exception noteError) { System.Diagnostics.Debug.WriteLine($"Render error note failed: {noteError}"); }
+        }
+    }
+
     private ScrollViewer? _viewport;
     private bool _viewportHooked;
     private int _drawnFirstSystem;
     private int _drawnLastSystem = -1;
+
+    /// <summary>
+    /// A simile bar shows only its sign, as in the reference. While the edit cursor or the selection is inside it (and the
+    /// transport is stopped) its notes are shown, so what the user edits there is never invisible.
+    /// </summary>
+    private bool SimileHidesNotes(MeasureModel measure, int measureIndex)
+    {
+        if (!measure.SimileOneBar && !measure.SimileTwoBar) return false;
+        if (HideCursor || PlaybackActive) return true;
+        if (measureIndex == SelectedMeasure) return false;
+        if (!HasSelection) return true;
+        var (m1, _, m2, _) = SelectionRange();
+        return measureIndex < Math.Min(m1, m2) || measureIndex > Math.Max(m1, m2);
+    }
 
     /// <summary>The inclusive range of systems overlapping the viewport, with one system of margin.</summary>
     private (int First, int Last) VisibleSystems(int systems)
@@ -260,14 +319,14 @@ public sealed partial class TabEditorControl
         var strings = Math.Max(1, track.StringTunings.Count);
         var showStaff = Notation != NotationMode.TabOnly;
         var showTab = Notation != NotationMode.StaffOnly;
-        var thin = RenderDraw.Pen(line, 1.0);
+        var thin = StaffNotationRenderer.StaffLinePen(line);   // staff lines and ledger lines share this pen
         var thick = RenderDraw.Pen(ink, 1.4);
         var systemRight = systemLayout.X + systemLayout.Width;
 
         if (showStaff) for (var l = 0; l < 5; l++) dc.DrawLine(thin, new Point(systemLayout.X, staffTop + l * StaffGap), new Point(systemRight, staffTop + l * StaffGap));
         if (showTab) for (var s = 0; s < strings; s++) dc.DrawLine(thin, new Point(systemLayout.X, tabTop + s * StringGap), new Point(systemRight, tabTop + s * StringGap));
 
-        if (showStaff) Draw(dc, "𝄞", GridLeft - 26, staffTop - 6, 22, Brush(ink));
+        if (showStaff) DrawClef(dc, systemLayout.Measures.Count > 0 ? track.Measures[systemLayout.Measures[0].MeasureIndex].Clef : null, GridLeft - 26, staffTop, 22, ink);
         if (showTab)
         {
             if (track.Kind == TrackKind.Drums && DrumMaps.LineNames(track.DrumMapPreset) is { } lineNames)
@@ -318,6 +377,8 @@ public sealed partial class TabEditorControl
             if (endsSong) dc.DrawLine(finalThin, new Point(finalBarX - 5, tabTop - 4), new Point(finalBarX - 5, tabTop + (strings - 1) * StringGap + 4));
         }
 
+        var voltas = new List<VoltaSpan>();
+        _textSpill.Clear();
         foreach (var measurePosition in systemLayout.Measures)
         {
             if (!InHorizontalBand(measurePosition)) continue;
@@ -332,8 +393,10 @@ public sealed partial class TabEditorControl
             double SlotX(double s) => x + warp.Fraction(s) * measureWidth;
 
             // Titles, endings and beat text ride above the tallest stem of the bar (drum chords have long stems).
-            _barLift = showStaff ? BarLift(track, measure, measureIndex, x, staffTop, slotWidth, slots) : 0;
-            DrawBarAnnotations(dc, track, measure, measureIndex, x, measureWidth, staffTop, tabTop, strings, ink, faint, accent, _barLift);
+            PrepareMarkSkyline(track, measure, measureIndex, x, staffTop, slotWidth, slots, showStaff, tabTop);
+            _barRight = x + measureWidth;
+            foreach (var spill in _textSpill) _sky.Claim(spill);   // a long text of the previous bar runs on into this one: bar number, tempo and title stack above it
+            DrawBarStaffAnnotations(dc, track, measure, measureIndex, x, measureWidth, staffTop, ink, tabTop + 2.5 * StringGap);
 
             // standard repeat barlines on both staves: thick line, thin line and two dots (start ||:,
             // end :||), with the play count above the end repeat.
@@ -446,50 +509,70 @@ public sealed partial class TabEditorControl
             if (Voice2HasContent(measure))
                 DrawMeasure(dc, track, measure, measureIndex, x, measureWidth, staffTop, tabTop, slotWidth, slots, strings, ink, faint, line, accent, playColor, showStaff, showTab,
                     measure.Voice2Cells, inactiveVoice: _project?.GrayInactiveVoice == true && _activeVoiceIndex != 1);
+            // Bar-level texts stack last, outside everything the notes and their marks claimed.
+            DrawBarLabels(dc, track, measure, measureIndex, x, measureWidth, staffTop, ink, faint, accent, voltas);
         }
+        DrawVoltaBrackets(dc, voltas, ink);
 
         if (showTab || showStaff) DrawPalmMutePassages(dc, palmMutePassages, track, systemLayout, tabTop, ink, showStaff ? staffTop + 4 * StaffGap : null);
         DrawFadePassages(dc, fadePassages, track, systemLayout, staffTop, tabTop, ink, showTab);
     }
 
-    private double _barLift;
+    // ---- row stacking: one skyline per bar, shared by both voices; every mark claims its box and the next is placed outside it ----
+    private readonly MarkSkyline _sky = new();
+    private readonly List<Rect> _textSpill = new();   // the parts of stacked texts that run past their bar's right edge, claimed again in the next bar
+    private double _barRight;
 
-    /// <summary>How far the upper text lanes must rise so the bar's tallest stem, beam or grace note stays clear of them.</summary>
-    private double BarLift(TrackModel track, MeasureModel measure, int measureIndex, double x, double staffTop, double slotWidth, int slots)
+    /// <summary>A volta bracket waiting for the end of the system, so all bars of one ending share one height.</summary>
+    private readonly record struct VoltaSpan(int Measure, double X, double Right, double Top, string Label, bool OpenStart, bool OpenEnd);
+
+    /// <summary>Starts the bar's skyline: the notation ink of both voices (heads, accidentals, stems, beams, grace notes) is claimed first.</summary>
+    private void PrepareMarkSkyline(TrackModel track, MeasureModel measure, int measureIndex, double x, double staffTop, double slotWidth, int slots, bool showStaff, double tabTop)
     {
+        _sky.Clear();
+        if (!showStaff)
+        {
+            // Tab only: the palm-mute label and dashed line take their lane just above the strings; accents, let ring and technique labels stack above it.
+            var hasPalmMute = measure.Cells.Concat(Voice2HasContent(measure) ? measure.Voice2Cells : Enumerable.Empty<TabCell>())
+                .Any(c => c.Notes.Any(n => n.Techniques.Any(IsPalmMute)));
+            if (hasPalmMute) _sky.Claim(x, x + slotWidth * slots, tabTop - 24, tabTop - 10);
+            foreach (var fade in _fadePassages)
+                if (measureIndex >= fade.FirstMeasure && measureIndex <= fade.LastMeasure) { _sky.Claim(x, x + slotWidth * slots, tabTop - 13, tabTop - 3); break; }   // the fade wedge sits just above the strings
+            return;
+        }
         var numerator = measure.TimeSigNum ?? _project?.TimeSignatureNumerator ?? 4;
         var denominator = measure.TimeSigDenom ?? _project?.TimeSignatureDenominator ?? 4;
         var keySignature = measure.KeySignature ?? _project?.KeySignature ?? 0;
-        var top = double.PositiveInfinity;
+        if (SimileHidesNotes(measure, measureIndex)) return;   // only the sign is drawn: hidden notes claim no space
         foreach (var cells in Voice2HasContent(measure) ? new[] { measure.Cells, measure.Voice2Cells } : new[] { measure.Cells })
         {
             var layout = StaffLayoutFor(track, measure, measureIndex, slots, x, staffTop, slotWidth, numerator, denominator, keySignature, cells);
-            foreach (var beat in layout.Beats)
-            {
-                if (beat.HasStem) top = Math.Min(top, Math.Min(beat.StemStartY, beat.StemEndY) - (beat.Flags > 0 ? 2 : 0));
-                foreach (var note in beat.Notes)
-                    top = Math.Min(top, note.Y - 6 - (note.Accidental is not null ? 6 : 0));
-                if (beat.IsDrum) top = Math.Min(top, beat.MinY - 6);
-                foreach (var grace in beat.GraceNotes) top = Math.Min(top, grace.Y - 18);
-            }
+            layout.Skyline = _sky;
+            StaffNotationRenderer.SeedSkyline(layout);
         }
-        // The lowest text lane (tempo / bar number) ends about 12 px above the staff; titles sit above 32 px.
-        return double.IsInfinity(top) ? 0 : Math.Clamp((staffTop - 13) - top, 0, 34);
     }
 
-    private void DrawBarAnnotations(DrawingContext dc, TrackModel track, MeasureModel measure, int measureIndex, double x, double measureWidth, double staffTop, double tabTop, int strings, Color ink, Color faint, Color accent, double lift)
+    /// <summary>Text drawn from its left edge, stacked above the staff (<paramref name="distance"/> = gap between the staff top and the row's bottom).</summary>
+    private double StackTextAbove(DrawingContext dc, FormattedText ft, double size, double x, double staffTop, double distance)
     {
-        var marker = MarkerForMeasure(measureIndex);
-        var sectionLabel = marker?.Title ?? measure.SectionName;
-        var sectionColor = marker is not null && ThemeService.TryParse(marker.ColorHex, out var markerColor)
-            ? markerColor : accent;
-        if (ShowSectionHeadings && !string.IsNullOrWhiteSpace(sectionLabel))
-            DrawIn(ScoreTextArea.BarInfo, dc, sectionLabel!, x + 2, staffTop - 44 - lift, 10, Brush(sectionColor), FontWeights.Bold);
-        if (ShowBarNumbers && measureIndex % Math.Max(1, BarNumberFrequency) == 0)
-            DrawIn(ScoreTextArea.BarInfo, dc, (measureIndex + 1).ToString(), x + 2, staffTop - 26 - lift, 9, Brush(accent));
+        var h = size * 1.2;
+        var top = _sky.PlaceAbove(x, x + ft.Width, h, staffTop - distance);
+        if (x + ft.Width > _barRight + 0.5 && x < _barRight) _textSpill.Add(new Rect(_barRight, top, x + ft.Width - _barRight, h));
+        TabForge.Visualization.Draw.DrawText(dc, ft, new Point(x, top - size * 0.1));
+        return top;
+    }
+
+    /// <summary>Key and time signatures, simile marks: drawn on the staff itself, no stacking.</summary>
+    private void DrawBarStaffAnnotations(DrawingContext dc, TrackModel track, MeasureModel measure, int measureIndex, double x, double measureWidth, double staffTop, Color ink, double tabMiddle)
+    {
         if (_project is null) return;
         var showStaffHere = Notation != NotationMode.TabOnly;
         var noteX = x + 28;
+        if (ClefChanges(track, measureIndex))
+        {
+            if (showStaffHere && GetScoreLayout(track).SystemForMeasure(measureIndex) == GetScoreLayout(track).SystemForMeasure(measureIndex - 1)) DrawClef(dc, measure.Clef, x + 8, staffTop, 15, ink);   // the new clef, smaller, as the reference does
+            noteX += ClefChangeWidth;
+        }
         if (KeySignatureChanges(track, measureIndex))
         {
             var key = measure.KeySignature ?? _project.KeySignature;
@@ -498,32 +581,124 @@ public sealed partial class TabEditorControl
         }
         if (TimeSignatureShown(track, measureIndex) && showStaffHere)
             DrawTimeSignature(dc, measure, noteX, staffTop, ink);
-        var tempoText = TempoText(measure, measureIndex);
-        if (tempoText is not null) DrawIn(ScoreTextArea.BarInfo, dc, tempoText, x + 22, staffTop - 26 - lift, 9, Brush(accent), FontWeights.Bold);
-        if (measure.AlternateEnding > 0 || measure.AlternateEndingMask != 0)
+        if (measure.SimileOneBar) DrawSimileSign(dc, x + measureWidth / 2, showStaffHere ? staffTop + 2 * StaffGap : tabMiddle, 1, ink);
+        if (measure.SimileTwoBar) DrawSimileSign(dc, x + measureWidth / 2, showStaffHere ? staffTop + 2 * StaffGap : tabMiddle, 2, ink);
+    }
+
+    /// <summary>The repeat-bar sign (slash with a dot each side; two slashes for "repeat two bars"), drawn as vector shapes: no font carries it.</summary>
+    private void DrawSimileSign(DrawingContext dc, double cx, double cy, int bars, Color ink)
+    {
+        var brush = Brush(ink);
+        var pen = RenderDraw.Pen(ink, 2.6);
+        const double half = 5.5;
+        var gap = bars == 2 ? 4.0 : 0.0;
+        for (var i = 0; i < bars; i++)
         {
-            // The reference volta bracket: a line over the ending's bars with a hook down at its start and the pass numbers inside.
-            var bracketY = staffTop - 56 - lift;
-            var pen = RenderDraw.Pen(ink, 1.0);
-            dc.DrawLine(pen, new Point(x + 1, bracketY), new Point(x + measureWidth - 1, bracketY));
-            dc.DrawLine(pen, new Point(x + 1, bracketY), new Point(x + 1, bracketY + 9));
-            DrawIn(ScoreTextArea.BarInfo, dc, measure.EndingLabel, x + 4, bracketY + 1, 9, Brush(ink));
+            var sx = cx + (bars == 2 ? (i == 0 ? -gap : gap) : 0);
+            dc.DrawLine(pen, new Point(sx - half * 0.55, cy + half), new Point(sx + half * 0.55, cy - half));
         }
-        if (!string.IsNullOrWhiteSpace(measure.Directions)) {
-            var titleWidth = ShowSectionHeadings && !string.IsNullOrWhiteSpace(sectionLabel)
-                ? MakeTextIn(ScoreTextArea.BarInfo, sectionLabel!, 10, Brush(sectionColor), FontWeights.Bold).Width + 10 : 0;
-            DrawDirections(dc, measure.Directions, x + 2 + titleWidth, x + measureWidth - 4, staffTop - 44 - lift, ink);
+        var dotX = (bars == 2 ? gap : 0) + 7.5;
+        dc.DrawEllipse(brush, null, new Point(cx - dotX, cy - 3.5), 1.7, 1.7);
+        dc.DrawEllipse(brush, null, new Point(cx + dotX, cy + 3.5), 1.7, 1.7);
+    }
+
+    /// <summary>Whether two bars carry the same alternate ending (one bracket continues across them).</summary>
+    private static bool SameEnding(MeasureModel a, MeasureModel b) =>
+        (a.AlternateEnding > 0 || a.AlternateEndingMask != 0) && a.AlternateEnding == b.AlternateEnding && a.AlternateEndingMask == b.AlternateEndingMask;
+
+    /// <summary>Tempo, bar number, swing symbol, section title, directions and the volta row: stacked last, outside the notation and its marks.</summary>
+    private void DrawBarLabels(DrawingContext dc, TrackModel track, MeasureModel measure, int measureIndex, double x, double measureWidth, double staffTop,
+        Color ink, Color faint, Color accent, List<VoltaSpan> voltas)
+    {
+        var marker = MarkerForMeasure(measureIndex);
+        var sectionLabel = marker?.Title ?? measure.SectionName;
+        var sectionColor = marker is not null && ThemeService.TryParse(marker.ColorHex, out var markerColor)
+            ? markerColor : accent;
+        var tempoText = _project is null ? null : TempoText(measure, measureIndex);
+        double tempoRight = x + 2;
+        if (ShowBarNumbers && measureIndex % Math.Max(1, BarNumberFrequency) == 0)
+        {
+            var numberText = MakeTextIn(ScoreTextArea.BarInfo, (measureIndex + 1).ToString(), 9, Brush(accent));
+            StackTextAbove(dc, numberText, 9, x + 2, staffTop, 14);
+            tempoRight = x + 2 + numberText.Width + 6;
         }
-        if (measure.SimileOneBar) DrawCentered(dc, "𝄌", x + measureWidth / 2, staffTop + 6, 16, Brush(ink));
-        if (measure.SimileTwoBar) DrawCentered(dc, "𝄌𝄌", x + measureWidth / 2, staffTop + 6, 16, Brush(ink));
+        if (tempoText is not null)
+        {
+            var tempoFt = MakeTextIn(ScoreTextArea.BarInfo, tempoText, 9, Brush(accent), FontWeights.Bold);
+            var at = Math.Max(x + 22, tempoRight);
+            StackTextAbove(dc, tempoFt, 9, at, staffTop, 14);
+            tempoRight = at + tempoFt.Width + 8;
+        }
         var feel = TripletFeels.Effective(measure);
         if (feel != TripletFeels.None)
         {
-            // The reference prints the swing symbol right after the tempo, on the tempo lane.
-            var swingX = x + 22 + (tempoText is null ? 0 : MakeTextIn(ScoreTextArea.BarInfo, tempoText, 9, Brush(accent), FontWeights.Bold).Width + 8);
-            DrawIn(ScoreTextArea.BarInfo, dc, SwingSymbol(feel), swingX, staffTop - 26 - lift, 9, Brush(faint));
+            // The reference prints the swing symbol right after the tempo, on the tempo row.
+            var swing = MakeTextIn(ScoreTextArea.BarInfo, SwingSymbol(feel), 9, Brush(faint));
+            StackTextAbove(dc, swing, 9, Math.Max(x + 22, tempoRight), staffTop, 14);
+        }
+        if (measure.MidBarTempos is { Count: > 0 } midTempos)
+        {
+            // Tempo changes inside the bar sit over the beat where they start (a change at the bar start follows the bar's own tempo mark).
+            var warp = WarpFor(track, measureIndex);
+            foreach (var point in midTempos)
+            {
+                var midFt = MakeTextIn(ScoreTextArea.BarInfo, $"♩ = {point.Tempo}", 9, Brush(accent), FontWeights.Bold);
+                var midX = point.Slot <= 0 ? Math.Max(x + 22, tempoRight) : x + warp.Fraction(point.Slot) * measureWidth;
+                midX = Math.Min(midX, x + measureWidth - midFt.Width - 1);
+                StackTextAbove(dc, midFt, 9, midX, staffTop, 14);
+            }
+        }
+        double titleRight = x + 2;
+        if (ShowSectionHeadings && !string.IsNullOrWhiteSpace(sectionLabel))
+        {
+            var titleFt = MakeTextIn(ScoreTextArea.BarInfo, sectionLabel!, 10, Brush(sectionColor), FontWeights.Bold);
+            StackTextAbove(dc, titleFt, 10, x + 2, staffTop, 30);
+            titleRight = x + 2 + titleFt.Width + 10;
+        }
+        if (!string.IsNullOrWhiteSpace(measure.Directions))
+        {
+            var dirTop = _sky.PlaceAbove(titleRight, x + measureWidth - 4, 16, staffTop - 30);
+            DrawDirections(dc, measure.Directions, titleRight, x + measureWidth - 4, dirTop + 4, ink);
+        }
+        if (measure.AlternateEnding > 0 || measure.AlternateEndingMask != 0)
+        {
+            // The reference volta bracket: a line over the ending's bars, a label and a hook at its start, a hook at its end.
+            // Its row is stacked like everything else; all bars of one ending share the highest row (drawn at the end of the system).
+            var top = _sky.PlaceAbove(x + 1, x + measureWidth - 1, 15, staffTop - 44, claim: false);
+            var track2 = track.Measures;
+            var openStart = measureIndex > 0 && SameEnding(measure, track2[measureIndex - 1]);
+            var openEnd = measureIndex + 1 < track2.Count && SameEnding(measure, track2[measureIndex + 1]);
+            voltas.Add(new VoltaSpan(measureIndex, x, x + measureWidth, top, measure.EndingLabel, openStart, openEnd));
         }
         if (measure.FreeTime) DrawIn(ScoreTextArea.BarInfo, dc, "free", x + measureWidth - 34, staffTop - 10, 8.5, Brush(faint));
+    }
+
+    /// <summary>Draws the volta brackets collected for the system; the bars of one ending share the highest row.</summary>
+    private void DrawVoltaBrackets(DrawingContext dc, List<VoltaSpan> voltas, Color ink)
+    {
+        if (voltas.Count == 0) return;
+        var pen = RenderDraw.Pen(ink, 1.0);
+        var brush = Brush(ink);
+        for (var i = 0; i < voltas.Count; i++)
+        {
+            var run = i;
+            var top = voltas[i].Top;
+            while (run + 1 < voltas.Count && voltas[run].OpenEnd && voltas[run + 1].Measure == voltas[run].Measure + 1)
+            { run++; top = Math.Min(top, voltas[run].Top); }
+            for (var k = i; k <= run; k++)
+            {
+                var v = voltas[k];
+                var y = top + 1;
+                dc.DrawLine(pen, new Point(v.X + 1, y), new Point(v.Right - 1, y));
+                if (!v.OpenStart)
+                {
+                    dc.DrawLine(pen, new Point(v.X + 1, y), new Point(v.X + 1, y + 11));
+                    DrawIn(ScoreTextArea.BarInfo, dc, v.Label, v.X + 4, y + 1.5, 9, brush);
+                }
+                if (!v.OpenEnd) dc.DrawLine(pen, new Point(v.Right - 1, y), new Point(v.Right - 1, y + 11));
+            }
+            i = run;
+        }
     }
 
     /// <summary>the standard swing indicator, e.g. "(♫ = ♩♪)".</summary>
@@ -730,6 +905,8 @@ public sealed partial class TabEditorControl
     private void DrawMeasure(DrawingContext dc, TrackModel track, MeasureModel measure, int measureIndex, double x, double measureWidth, double staffTop, double tabTop, double slotWidth, int slots, int strings, Color ink, Color faint, Color staffLine, Color accent, Color playColor, bool showStaff, bool showTab,
         IReadOnlyList<TabCell> cells, bool inactiveVoice)
     {
+        // A simile bar shows only its sign (the notes behind it are a copy kept for playback and export).
+        if (SimileHidesNotes(measure, measureIndex)) cells = Array.Empty<TabCell>();
         if (inactiveVoice)
         {
             var gray = Color.FromRgb(0x6F, 0x7A, 0x89);
@@ -737,6 +914,7 @@ public sealed partial class TabEditorControl
             faint = Color.FromRgb(0x5D, 0x67, 0x75);
         }
         _bendLabelBoxes.Clear();
+        _drawnBendLabels.Clear();
         _pendingBendLabels.Clear();
         var bg = DarkPaper ? DarkPaperColor : LightPaperColor;
         var numerator = measure.TimeSigNum ?? _project?.TimeSignatureNumerator ?? 4;
@@ -744,19 +922,24 @@ public sealed partial class TabEditorControl
         var keySignature = measure.KeySignature ?? _project?.KeySignature ?? 0;
         var layout = StaffLayoutFor(track, measure, measureIndex, slots, x, staffTop, slotWidth,
             numerator, denominator, keySignature, cells);
-        if (showStaff)
+        layout.Skyline = _sky;
+        layout.FirstVoice = layout.IsSecondVoice && _staffLayoutCache is not null && measureIndex < _staffLayoutCache.GetLength(0) ? _staffLayoutCache[measureIndex, 0] : null;
         {
-            // 8va / 15ma captions share the lane of the tempo text and bar number: start them to the right of those.
-            var octaveMinX = double.NegativeInfinity;
-            var tempoHere = TempoText(measure, measureIndex);
-            if (tempoHere is not null) octaveMinX = x + 22 + MakeTextIn(ScoreTextArea.BarInfo, tempoHere, 9, Brush(faint), FontWeights.Bold).Width + 6;
-            else if (ShowBarNumbers && measureIndex % Math.Max(1, BarNumberFrequency) == 0)
-                octaveMinX = x + 2 + MakeTextIn(ScoreTextArea.BarInfo, (measureIndex + 1).ToString(), 9, Brush(faint)).Width + 4;
-            layout.OctaveLabelMinX = octaveMinX;
+            var signatureRight = double.NegativeInfinity;
+            if (Notation != NotationMode.TabOnly && _project is not null)
+            {
+                var afterSignatures = x + 28 + (ClefChanges(track, measureIndex) ? ClefChangeWidth : 0) + (KeySignatureChanges(track, measureIndex) ? KeySignatureWidth(track, measureIndex) : 0);
+                if (TimeSignatureShown(track, measureIndex)) afterSignatures += TimeSignatureWidth(measure) + 4;
+                if (afterSignatures > x + 28) signatureRight = afterSignatures;
+            }
+            layout.ContentLeft = signatureRight;
         }
+        if (showStaff) DrawDynamics(dc, track, measure, measureIndex, layout, staffTop, tabTop, strings, ink, showStaff);   // nearest the staff: claims its row first
         if (showStaff)
             _staff.DrawMeasure(dc, layout, measureIndex, ink, faint, accent, playColor, bg, staffLine, LedgerLines,
-                _soundingNow, _struckNow, LedgerLineOpacity);
+                _soundingNow, _struckNow);
+        if (showStaff && layout.Beats.Count == 0 && !layout.IsSecondVoice && !Voice2HasContent(measure) && !measure.SimileOneBar && !measure.SimileTwoBar)
+            StaffNotationRenderer.DrawWholeBarRest(dc, x + measureWidth / 2, staffTop, ink);   // an empty bar reads as a whole-bar rest
         if (showTab)
             DrawTabSlides(dc, track, measureIndex, layout, cells, strings, tabTop, ink);
 
@@ -767,26 +950,55 @@ public sealed partial class TabEditorControl
             var cx = beat.CenterX;
             if (cell.IsRest && cell.Notes.Count == 0)
             {
-                if (showTab && !showStaff) // The reference shows the rest only on the staff when notation is visible
-                    DrawCentered(dc, StaffNotationRenderer.RestGlyph(cell), cx,
-                        tabTop + (strings - 1) * StringGap / 2.0 - 9, 14, Brush(faint));
+                if (showTab && !showStaff && !layout.IsSecondVoice) // The reference shows the rest only on the staff when notation is visible
+                {
+                    // A fret of the other voice at the same beat sits at the rest's height: the rest moves up, clear of the topmost such fret.
+                    var restY = tabTop + (strings - 1) * StringGap / 2.0 - 9;
+                    var otherCells = ReferenceEquals(cells, measure.Voice2Cells) ? measure.Cells : measure.Voice2Cells;
+                    var restAt = cell.RhythmicPosition ?? i;
+                    var sameBeat = otherCells.Where((o, k) => o.Notes.Count > 0 && Math.Abs((o.RhythmicPosition ?? k) - restAt) < 0.01).SelectMany(o => o.Notes).ToList();
+                    if (sameBeat.Count > 0)
+                        restY = Math.Min(restY, tabTop + sameBeat.Min(n => n.StringIndex) * StringGap - 27);
+                    DrawCentered(dc, StaffNotationRenderer.RestGlyph(cell), cx, restY, 14, Brush(faint));
+                }
+                // A rest can still carry a chord name, beat text and a fermata (a held rest).
+                if (!string.IsNullOrWhiteSpace(cell.ChordName))
+                {
+                    var restChordFt = MakeTextIn(ScoreTextArea.Chord, cell.ChordName!, 10, Brush(accent), FontWeights.SemiBold);
+                    StackTextAbove(dc, restChordFt, 10, cx - restChordFt.Width / 2, staffTop, 14);
+                }
+                if (!string.IsNullOrWhiteSpace(cell.Text))
+                {
+                    var restTextFt = MakeTextIn(ScoreTextArea.Lyrics, cell.Text!, 9, Brush(faint));
+                    StackTextAbove(dc, restTextFt, 9, Math.Clamp(cx - restTextFt.Width / 2, x + 2, Math.Max(x + 2, x + measureWidth - restTextFt.Width - 2)), staffTop, 14);
+                }
+                if (cell.Fermata && !showStaff && !layout.FermataSharedWithFirstVoice(beat)) DrawCenteredIn(ScoreTextArea.Technique, dc, "𝄐", cx, _sky.PlaceAbove(cx - 6, cx + 6, 14, tabTop - 10), 12, Brush(ink));   // tab only: one fermata per onset
                 continue;
             }
 
             {
                     var techniqueLabel = showTab ? DrawnTechniqueLabel(cell.Notes, !showStaff) : "";
-                    if (!string.IsNullOrWhiteSpace(cell.ChordName)) DrawCenteredIn(ScoreTextArea.Chord, dc, cell.ChordName!, cx, staffTop - 28 - _barLift, 10, Brush(accent), FontWeights.SemiBold);
+                    if (!string.IsNullOrWhiteSpace(cell.ChordName))
+                    {
+                        var chordFt = MakeTextIn(ScoreTextArea.Chord, cell.ChordName!, 10, Brush(accent), FontWeights.SemiBold);
+                        StackTextAbove(dc, chordFt, 10, cx - chordFt.Width / 2, staffTop, 14);
+                    }
             // The reference vibrato: a wavy line along the note's duration, above the staff and above the TAB.
             var vibratoWide = cell.Notes.Any(n => n.Techniques.Contains("WideVibrato"));
             if (vibratoWide || cell.Notes.Any(n => n.Techniques.Contains("Vibrato")))
             {
                 var right = beat.CenterX + Math.Max(18, beat.DurationSlots * (measureWidth / Math.Max(1, slots)) * 0.8);
+                right = Math.Max(Math.Min(right, x + measureWidth - 3), beat.CenterX + 8);   // the line ends inside its bar (and so inside the page)
                 // Stack above whatever already sits over the note instead of drawing across it:
                 // staff: above the chord-name / text lanes when present; TAB: above the technique label
                 // and the P.M. lane.
                 var staffLane = staffTop - 16;
-                if (!string.IsNullOrWhiteSpace(cell.ChordName)) staffLane = staffTop - 40;
-                if (!string.IsNullOrWhiteSpace(cell.Text)) staffLane = Math.Min(staffLane, staffTop - 54);
+                if (showStaff)
+                {
+                    // Stacked above the staff's marks for this column (the wavy line is about 8 px tall).
+                    var vibTop = _sky.PlaceAbove(cx - 6, right, vibratoWide ? 9 : 7, staffTop - 8);
+                    staffLane = vibTop + (vibratoWide ? 4.5 : 3.5);
+                }
                 var pm = cell.Notes.Any(note => note.Techniques.Any(IsPalmMute));
                 var tabLane = tabTop - 12;
                 if (pm && !showStaff) tabLane = tabTop - 30;
@@ -797,37 +1009,43 @@ public sealed partial class TabEditorControl
             // Mix Table point (F10): a red marker with a white core above the beat dot.
             if (cell.Mix is not null)
             {
-                dc.DrawEllipse(Brush(Color.FromRgb(0xE0, 0x3B, 0x3B)), null, new Point(cx, staffTop - 48), 4.2, 4.2);
-                dc.DrawEllipse(Brush(Colors.White), null, new Point(cx, staffTop - 48), 1.5, 1.5);
+                var mixY = _sky.PlaceAbove(cx - 4.2, cx + 4.2, 8.4, staffTop - 24) + 4.2;
+                dc.DrawEllipse(Brush(Color.FromRgb(0xE0, 0x3B, 0x3B)), null, new Point(cx, mixY), 4.2, 4.2);
+                dc.DrawEllipse(Brush(Colors.White), null, new Point(cx, mixY), 1.5, 1.5);
             }
                     if (!string.IsNullOrWhiteSpace(cell.Text))
                     {
-                        // Beat text shares a lane with the section title: start to the right of the title, never on it.
+                        // Beat text stacks above the staff's marks like every other text; the bar's title and tempo stack above it.
                         var textFt = MakeTextIn(ScoreTextArea.Lyrics, cell.Text!, 9, Brush(faint));
-                        var textLeft = cx - textFt.Width / 2;
-                        var sectionTitleHere = MarkerForMeasure(measureIndex)?.Title ?? measure.SectionName;
-                        if (ShowSectionHeadings && !string.IsNullOrWhiteSpace(sectionTitleHere))
-                            textLeft = Math.Max(textLeft, x + 2 + MakeTextIn(ScoreTextArea.BarInfo, sectionTitleHere!, 10, Brush(faint), FontWeights.Bold).Width + 6);
-                        TabForge.Visualization.Draw.DrawText(dc, textFt, new Point(textLeft, staffTop - 42 - _barLift));
+                        StackTextAbove(dc, textFt, 9, Math.Clamp(cx - textFt.Width / 2, x + 2, Math.Max(x + 2, x + measureWidth - textFt.Width - 2)), staffTop, 14);
                     }
-                    if (cell.Fermata) DrawCenteredIn(ScoreTextArea.Technique, dc, "𝄐", cx, staffTop - 14, 12, Brush(ink));
+                    if (cell.Fermata && !showStaff && !layout.FermataSharedWithFirstVoice(beat)) DrawCenteredIn(ScoreTextArea.Technique, dc, "𝄐", cx, _sky.PlaceAbove(cx - 6, cx + 6, 14, tabTop - 10), 12, Brush(ink));   // tab only: one fermata per onset
                     if (cell.Accent != 0 && !showStaff)
                     {
                         // With a notation staff the accent is engraved above the note there; tab-only shows it here.
-                        var accentY = tabTop - 22;
+                        var accentY = _sky.PlaceAbove(cx - 5, cx + 5, 12, tabTop - 10);
                         DrawCenteredIn(ScoreTextArea.Technique, dc, cell.Accent == 2 ? "^" : ">", cx, accentY, 11, Brush(ink), FontWeights.Bold);
                     }
                     // With a notation staff the renderer engraves staccato / tenuto beside the note head; tab-only shows them here.
-                    if (cell.Staccato && !showStaff) DrawCenteredIn(ScoreTextArea.Technique, dc, "•", cx, tabTop - 26, 10, Brush(ink));
-                    if (cell.Tenuto && !showStaff) DrawCenteredIn(ScoreTextArea.Technique, dc, "—", cx, tabTop - (cell.Staccato ? 16 : 26), 10, Brush(ink));
-                    if (cell.IsGrace && !cell.Notes.Any(n => n.IsGraceNote)) DrawCenteredIn(ScoreTextArea.Technique, dc, "gr", cx, staffTop - 40, 8, Brush(faint));
+                    if (cell.Staccato && !showStaff) DrawCenteredIn(ScoreTextArea.Technique, dc, "•", cx, _sky.PlaceAbove(cx - 4, cx + 4, 10, tabTop - 10), 10, Brush(ink));
+                    if (cell.Tenuto && !showStaff) DrawCenteredIn(ScoreTextArea.Technique, dc, "—", cx, _sky.PlaceAbove(cx - 5, cx + 5, 10, tabTop - 10), 10, Brush(ink));
+                    if (cell.IsGrace && !cell.Notes.Any(n => n.IsGraceNote))
+                    {
+                        var grFt = MakeTextIn(ScoreTextArea.Technique, "gr", 8, Brush(faint));
+                        StackTextAbove(dc, grFt, 8, cx - grFt.Width / 2, staffTop, 14);
+                    }
 
                     // Lyrics sit under the TAB staff, one line per row (the reference layout).
                     if (!string.IsNullOrWhiteSpace(cell.Lyrics))
                     {
                         var lines = cell.Lyrics.Split('\n');
+                        // The row starts under the fingering of every beat the text runs across, not only its own.
+                        var lyricWidth = lines.Max(l => MakeTextIn(ScoreTextArea.Lyrics, l, 10, Brush(ink)).Width);
+                        var fingeringUnder = FingeringHeight(cell);
+                        foreach (var other in layout.Beats)
+                            if (Math.Abs(other.CenterX - cx) < lyricWidth / 2 + 8) fingeringUnder = Math.Max(fingeringUnder, FingeringHeight(other.Cell));
                         for (var li = 0; li < Math.Min(lines.Length, 3); li++)
-                            DrawCenteredIn(ScoreTextArea.Lyrics, dc, lines[li], cx, tabTop + (strings - 1) * StringGap + 13 + FingeringHeight(cell) + li * 12, 10, Brush(ink));
+                            DrawCenteredIn(ScoreTextArea.Lyrics, dc, lines[li], cx, tabTop + (strings - 1) * StringGap + 13 + fingeringUnder + li * 14.5, 10, Brush(ink));
                     }
 
                     foreach (var note in cell.Notes)
@@ -835,7 +1053,10 @@ public sealed partial class TabEditorControl
                         if (note.StringIndex < 0 || note.StringIndex >= strings) continue;
                         var isSounding = _soundingNow.Contains((measureIndex, i, note.StringIndex));
                         var isStruck = _struckNow.Contains((measureIndex, i, note.StringIndex));
-                        if (showTab)
+                        // The reference prints no fret number for a tied-to note in the TAB (the tie is in the notation); the selected beat keeps it so it can still be edited.
+                        // Tab only: there is no notation to show the tie, so the number stays.
+                        var tiedTo = (note.Tied || cell.IsTied) && !note.IsGraceNote && track.Kind != TrackKind.Drums && Notation != NotationMode.TabOnly && !(measureIndex == SelectedMeasure && i == SelectedCell);
+                        if (showTab && !tiedTo)
                         {
                             var sy = tabTop + note.StringIndex * StringGap;
                             var label = note.Dead ? "X"
@@ -853,11 +1074,13 @@ public sealed partial class TabEditorControl
                             var isGraceNote = note.IsGraceNote && cell.Notes.Any(other => !other.IsGraceNote);
                             var brush = Brush(ink);
                             var ft = MakeTextIn(ScoreTextArea.Fret, label, isGraceNote ? FretFontSize - 3 : label.Contains('\n') ? FretFontSize - 4 : FretFontSize, brush, FontWeights.Normal, "Consolas");
-                            var gx = isGraceNote ? cx - 13 : cx; // a grace fret sits small, just before the main fret
+                            // a grace fret sits small, just before the main fret: clear of the widest main fret number (two digits, brackets) by a gap of at least 2.4 px
+                            var mainChars = isGraceNote ? cell.Notes.Where(o => !o.IsGraceNote).Max(o => Math.Max(1, o.Fret.ToString().Length) + (o.Ghost && !o.Dead ? 2 : 0)) : 0;
+                            var gx = isGraceNote ? cx - Math.Max(13, mainChars * FretFontSize * 0.55 / 2 + ft.Width / 2 + 3.6 + (GraceTransitionShown(track, cell, note) ? 6 : 0)) : cx;   // room for the line / arc to the main note
                             var chipWidth = ft.Width + 2;
                             var chipHeight = Math.Max(14, ft.Height + 2);
 
-                            if (!isGraceNote) DrawTabHopoSlur(dc, note, measureIndex, i, cx, sy, ink);
+                            if (!isGraceNote) DrawTabHopoSlur(dc, note, measureIndex, i, cx, sy, ink, ReferenceEquals(cells, measure.Voice2Cells) ? 1 : 0);
 
                             if (isSounding)
                             {
@@ -875,6 +1098,7 @@ public sealed partial class TabEditorControl
                                     new Rect(gx - chipWidth / 2, sy - chipHeight / 2, chipWidth, chipHeight));
                             }
                             TabForge.Visualization.Draw.DrawText(dc, ft, new Point(gx - ft.Width / 2, sy - ft.Height / 2));
+                            if (isGraceNote && GraceTransitionShown(track, cell, note)) DrawTabGraceTransition(dc, cell, note, gx, ft.Width, cx, sy, tabTop, ink);
                         }
                     }
                     if (techniqueLabel.Length > 0)
@@ -882,14 +1106,27 @@ public sealed partial class TabEditorControl
                         // One complete, width-reserved annotation per beat prevents chord techniques
                         // from being overprinted and keeps simultaneous marks together.
                         var hasPalmMute = cell.Notes.Any(note => note.Techniques.Any(IsPalmMute));
-                        DrawCenteredIn(ScoreTextArea.Technique, dc, techniqueLabel, cx, tabTop - (hasPalmMute && !showStaff ? 34 : 20), 9, Brush(ink),
+                        var techniqueY = tabTop - (hasPalmMute && !showStaff ? 34 : 20);
+                        var techniqueFt = MakeTextIn(ScoreTextArea.Technique, techniqueLabel, 9, Brush(ink),
                             techniqueLabel.Split(' ').Contains("T") ? FontWeights.SemiBold : FontWeights.Normal);
+                        // Between the staff and the TAB the label stacks upward from the TAB, clear of whatever the staff side claimed.
+                        if (showStaff) techniqueY = _sky.PlaceAbove(cx - techniqueFt.Width / 2, cx + techniqueFt.Width / 2, 11, tabTop - 9) - 1;
+                        else techniqueY = _sky.PlaceAbove(cx - techniqueFt.Width / 2, cx + techniqueFt.Width / 2, 11, tabTop - 9);
+                        TabForge.Visualization.Draw.DrawText(dc, techniqueFt, new Point(cx - techniqueFt.Width / 2, techniqueY));
                     }
-                    if (showTab) DrawTabBeatMarks(dc, track, layout, beat, x + measureWidth, tabTop, strings, ink, showStaff);
+                    if (showTab)
+                    {
+                        // Voice 2's marks under the TAB go below voice 1's at the same beat.
+                        var voiceOneUnder = 0.0;
+                        if (layout.IsSecondVoice && _staffLayoutCache is not null && measureIndex < _staffLayoutCache.GetLength(0) && _staffLayoutCache[measureIndex, 0] is { } voiceOne)
+                            foreach (var other in voiceOne.Beats)
+                                if (Math.Abs(other.CenterX - cx) < 14) voiceOneUnder = Math.Max(voiceOneUnder, FingeringExtent(other.Cell) > 0 ? FingeringExtent(other.Cell) - 8 : 0);
+                        DrawTabBeatMarks(dc, track, layout, beat, x + measureWidth, tabTop, strings, ink, showStaff, voiceOneUnder);
+                    }
             }
         }
         if (showTab) DrawLetRingSpans(dc, layout, x + measureWidth, tabTop, ink, showStaff);
-        DrawDynamics(dc, track, measure, measureIndex, layout, staffTop, tabTop, strings, ink, showStaff);
+        if (!showStaff) DrawDynamics(dc, track, measure, measureIndex, layout, staffTop, tabTop, strings, ink, showStaff);
         FlushBendLabels(dc);
     }
 
@@ -902,6 +1139,7 @@ public sealed partial class TabEditorControl
         {
             var measure = track.Measures[measureIndex];
             var slots = MusicTime.BarSlots(project, measureIndex);
+            if (measure.SimileOneBar || measure.SimileTwoBar) { measureStart += slots; continue; }   // a simile bar shows only its sign: the P.M. line ends at the bar line before it
             for (var cellIndex = 0; cellIndex < measure.Cells.Count && cellIndex < slots; cellIndex++)
             {
                 var cell = measure.Cells[cellIndex];
@@ -1029,7 +1267,7 @@ public sealed partial class TabEditorControl
             DarkPaper ? DarkPaperColor : LightPaperColor);
         var pen = RenderDraw.Pen(phraseInk, 0.9);
         const double halfOpening = 3.5;
-        var lineY = showTab ? tabTop - 8 : staffTop + 4 * StaffGap + 20;
+        var baseLineY = showTab ? tabTop - 8 : staffTop + 4 * StaffGap + 20;
         foreach (var passage in passages)
         {
             var firstSystem = layout.SystemForMeasure(passage.FirstMeasure);
@@ -1046,6 +1284,17 @@ public sealed partial class TabEditorControl
                 ? systemLayout.X + systemLayout.Width - 2
                 : CellBoundaryX(passage.LastMeasure, passage.LastEndSlots);
             if (endX <= startX + 1) continue;
+
+            var lineY = baseLineY;
+            if (!showTab)
+                foreach (var mp in systemLayout.Measures)   // notation only: the wedge goes under the dynamics row of the bars it spans
+                    if (mp.MeasureIndex >= passage.FirstMeasure && mp.MeasureIndex <= passage.LastMeasure && mp.MeasureIndex < track.Measures.Count && BarHasDynamic(track.Measures[mp.MeasureIndex]))
+                        lineY = Math.Max(lineY, StaffDynamicTop(mp.MeasureIndex, staffTop + 4 * StaffGap) + DynamicHeight + halfOpening + 6);
+            if (!showTab)
+                foreach (var mp in systemLayout.Measures)   // ...and under a harmonic caption (F.B., A.H.) printed below the staff
+                    if (mp.MeasureIndex >= passage.FirstMeasure && mp.MeasureIndex <= passage.LastMeasure && mp.MeasureIndex < track.Measures.Count
+                        && track.Measures[mp.MeasureIndex].Cells.Any(c => c.Notes.Any(n => HarmonicCaption(n.Techniques).Length > 0)))
+                    { lineY = Math.Max(lineY, baseLineY + 14) + 8; break; }
 
             var startHalf = continuesFromPreviousSystem || passage.IsFadeOut ? halfOpening : 0;
             var endHalf = continuesIntoNextSystem || !passage.IsFadeOut ? halfOpening : 0;
@@ -1101,7 +1350,7 @@ public sealed partial class TabEditorControl
                         if (_staffLayoutCache[mp.MeasureIndex, v] is { } cachedLayout)
                             foreach (var b in cachedLayout.Beats)
                             {
-                                foreach (var n in b.Notes) lowest = Math.Max(lowest, n.Y);
+                                foreach (var n in b.Notes) lowest = Math.Max(lowest, n.Y + (n.Source.Ghost ? 9 : 0));   // a ghost note's brackets reach below its head
                                 if (b.HasStem) lowest = Math.Max(lowest, Math.Max(b.StemStartY, b.StemEndY) + 3);
                                 if (b.LowerStemTopY is not null) lowest = Math.Max(lowest, b.LowerStemEndY + 3);
                             }
@@ -1224,7 +1473,7 @@ public sealed partial class TabEditorControl
     };
 
     private void DrawTabHopoSlur(DrawingContext dc, TabNote note, int measureIndex, int cellIndex,
-        double startX, double y, Color ink)
+        double startX, double y, Color ink, int voice = 0)
     {
         var isExplicitOrigin = note.Techniques.Contains("HOPOOrigin");
         var isLegacyHopo = note.Techniques.Contains("HOPO") &&
@@ -1234,32 +1483,32 @@ public sealed partial class TabEditorControl
         (int Measure, int Cell, TabNote Note)? next;
         if (isExplicitOrigin)
         {
-            var previous = FindPreviousTabNoteOnString(measureIndex, cellIndex, note.StringIndex);
+            var previous = FindPreviousTabNoteOnString(measureIndex, cellIndex, note.StringIndex, voice);
             if (previous is { } prior && GetScoreLayout().SystemForMeasure(prior.Measure) == GetScoreLayout().SystemForMeasure(measureIndex) &&
                 prior.Note.Techniques.Contains("HOPOOrigin")) return;
 
-            next = FindHopoDestination(measureIndex, cellIndex, note.StringIndex);
+            next = FindHopoDestination(measureIndex, cellIndex, note.StringIndex, voice);
             while (next is { } endpoint && endpoint.Note.Techniques.Contains("HOPOOrigin"))
             {
-                var chained = FindHopoDestination(endpoint.Measure, endpoint.Cell, note.StringIndex);
+                var chained = FindHopoDestination(endpoint.Measure, endpoint.Cell, note.StringIndex, voice);
                 if (chained is null) break;
                 next = chained;
             }
             // Some reference variants only encode the origin bit. Preserve a useful short slur for them.
-            next ??= FindNextTabNoteOnString(measureIndex, cellIndex, note.StringIndex);
+            next ??= FindNextTabNoteOnString(measureIndex, cellIndex, note.StringIndex, voice);
         }
         else
         {
             // Older saved projects only have a generic HOPO bit. Treat each contiguous run as one
             // legato phrase: draw from its first note to its last instead of tiny adjacent arcs.
-            var previous = FindPreviousTabNoteOnString(measureIndex, cellIndex, note.StringIndex);
+            var previous = FindPreviousTabNoteOnString(measureIndex, cellIndex, note.StringIndex, voice);
             if (previous is { } prior && GetScoreLayout().SystemForMeasure(prior.Measure) == GetScoreLayout().SystemForMeasure(measureIndex) &&
                 prior.Note.Techniques.Contains("HOPO")) return;
-            next = FindLegacyHopoPhraseEnd(measureIndex, cellIndex, note.StringIndex);
+            next = FindLegacyHopoPhraseEnd(measureIndex, cellIndex, note.StringIndex, voice);
         }
         if (next is null || GetScoreLayout().SystemForMeasure(next.Value.Measure) != GetScoreLayout().SystemForMeasure(measureIndex)) return;
 
-        var endX = CellCenterX(next.Value.Measure, next.Value.Cell);
+        var endX = CellCenterX(next.Value.Measure, next.Value.Cell, voice);
         if (endX - startX < 18) return;
 
         // Hammer-on / pull-off groups as a legato slur in the tablature,
@@ -1290,10 +1539,11 @@ public sealed partial class TabEditorControl
         {
             var sourceBeat = layout.BeatForCell(mark.SourceCellIndex);
             if (sourceBeat is null || mark.Source.StringIndex < 0 || mark.Source.StringIndex >= strings) continue;
+            if (track.Kind != TrackKind.Drums && mark.Source.IsGraceNote && sourceBeat.Cell.Notes.Any(o => !o.IsGraceNote)) continue;   // a grace note's slide / hammer is drawn between it and its main note
 
             var sourceX = sourceBeat.CenterX;
             var y = tabTop + mark.Source.StringIndex * StringGap;
-            var sourceLabel = mark.Source.Dead ? "X" : mark.Source.Fret.ToString(CultureInfo.InvariantCulture);
+            var sourceLabel = FretLabelWidthText(mark.Source);
             var sourceWidth = MakeTextIn(ScoreTextArea.Fret, sourceLabel, FretFontSize, Brush(ink), FontWeights.Normal, "Consolas").Width;
             switch (mark.Kind)
             {
@@ -1320,7 +1570,7 @@ public sealed partial class TabEditorControl
                     }
 
                     var targetX = CellCenterX(targetMeasure, mark.TargetStartSlots);
-                    var targetLabel = mark.Target.Dead ? "X" : mark.Target.Fret.ToString(CultureInfo.InvariantCulture);
+                    var targetLabel = FretLabelWidthText(mark.Target);
                     var targetWidth = MakeTextIn(ScoreTextArea.Fret, targetLabel, FretFontSize, Brush(ink), FontWeights.Normal, "Consolas").Width;
                     var startX = sourceX + sourceWidth / 2 + 1.5;
                     var endX = targetX - targetWidth / 2 - 1.5;
@@ -1354,14 +1604,18 @@ public sealed partial class TabEditorControl
         dc.DrawLine(pen, start, end);
     }
 
-    private (int Measure, int Cell, TabNote Note)? FindNextTabNoteOnString(int measureIndex, int cellIndex, int stringIndex)
+    // The cell list of one voice (0 = voice 1, 1 = voice 2). The hammer-on/pull-off slur searches must walk the same
+    // voice as the note they start from: the two lists can differ in length.
+    private static List<TabCell> VoiceCells(MeasureModel measure, int voice) => voice == 1 ? measure.Voice2Cells : measure.Cells;
+
+    private (int Measure, int Cell, TabNote Note)? FindNextTabNoteOnString(int measureIndex, int cellIndex, int stringIndex, int voice = 0)
     {
         var track = Track;
         if (track is null) return null;
         for (var measure = measureIndex; measure < track.Measures.Count; measure++)
         {
             var firstCell = measure == measureIndex ? cellIndex + 1 : 0;
-            var cells = track.Measures[measure].Cells;
+            var cells = VoiceCells(track.Measures[measure], voice);
             for (var cell = firstCell; cell < cells.Count; cell++)
             {
                 var next = cells[cell].Notes.FirstOrDefault(candidate => candidate.StringIndex == stringIndex);
@@ -1371,7 +1625,7 @@ public sealed partial class TabEditorControl
         return null;
     }
 
-    private (int Measure, int Cell, TabNote Note)? FindHopoDestination(int measureIndex, int cellIndex, int stringIndex)
+    private (int Measure, int Cell, TabNote Note)? FindHopoDestination(int measureIndex, int cellIndex, int stringIndex, int voice = 0)
     {
         var track = Track;
         if (track is null) return null;
@@ -1379,7 +1633,7 @@ public sealed partial class TabEditorControl
         for (var measure = measureIndex; measure < track.Measures.Count && GetScoreLayout(track).SystemForMeasure(measure) == system; measure++)
         {
             var firstCell = measure == measureIndex ? cellIndex + 1 : 0;
-            var cells = track.Measures[measure].Cells;
+            var cells = VoiceCells(track.Measures[measure], voice);
             for (var cell = firstCell; cell < cells.Count; cell++)
             {
                 var next = cells[cell].Notes.FirstOrDefault(candidate => candidate.StringIndex == stringIndex);
@@ -1390,7 +1644,7 @@ public sealed partial class TabEditorControl
         return null;
     }
 
-    private (int Measure, int Cell, TabNote Note)? FindLegacyHopoPhraseEnd(int measureIndex, int cellIndex, int stringIndex)
+    private (int Measure, int Cell, TabNote Note)? FindLegacyHopoPhraseEnd(int measureIndex, int cellIndex, int stringIndex, int voice = 0)
     {
         var track = Track;
         if (track is null) return null;
@@ -1399,7 +1653,7 @@ public sealed partial class TabEditorControl
         for (var measure = measureIndex; measure < track.Measures.Count && GetScoreLayout(track).SystemForMeasure(measure) == system; measure++)
         {
             var firstCell = measure == measureIndex ? cellIndex + 1 : 0;
-            var cells = track.Measures[measure].Cells;
+            var cells = VoiceCells(track.Measures[measure], voice);
             for (var cell = firstCell; cell < cells.Count; cell++)
             {
                 var next = cells[cell].Notes.FirstOrDefault(candidate => candidate.StringIndex == stringIndex);
@@ -1411,32 +1665,34 @@ public sealed partial class TabEditorControl
         return last;
     }
 
-    private (int Measure, int Cell, TabNote Note)? FindPreviousTabNoteOnString(int measureIndex, int cellIndex, int stringIndex)
+    private (int Measure, int Cell, TabNote Note)? FindPreviousTabNoteOnString(int measureIndex, int cellIndex, int stringIndex, int voice = 0)
     {
         var track = Track;
         if (track is null) return null;
-        for (var measure = measureIndex; measure >= 0; measure--)
+        for (var measure = Math.Min(measureIndex, track.Measures.Count - 1); measure >= 0; measure--)
         {
-            var firstCell = measure == measureIndex ? cellIndex - 1 : track.Measures[measure].Cells.Count - 1;
+            var cells = VoiceCells(track.Measures[measure], voice);
+            var firstCell = measure == measureIndex ? Math.Min(cellIndex - 1, cells.Count - 1) : cells.Count - 1;
             for (var cell = firstCell; cell >= 0; cell--)
             {
-                var previous = track.Measures[measure].Cells[cell].Notes.FirstOrDefault(candidate => candidate.StringIndex == stringIndex);
+                var previous = cells[cell].Notes.FirstOrDefault(candidate => candidate.StringIndex == stringIndex);
                 if (previous is not null) return (measure, cell, previous);
             }
         }
         return null;
     }
 
-    private double CellCenterX(int measureIndex, int cellIndex)
+    private double CellCenterX(int measureIndex, int cellIndex, int voice = 0)
     {
         var track = Track;
         if (track is null || measureIndex < 0 || measureIndex >= track.Measures.Count) return 0;
         var measure = track.Measures[measureIndex];
+        var voiceCells = VoiceCells(measure, voice);
         var slots = SlotsFor(measureIndex);
         var position = GetScoreLayout(track).Measure(measureIndex);
         var slotWidth = position.Width / Math.Max(1, slots);
-        var startSlots = cellIndex >= 0 && cellIndex < measure.Cells.Count
-            ? measure.Cells[cellIndex].RhythmicPosition ?? cellIndex
+        var startSlots = cellIndex >= 0 && cellIndex < voiceCells.Count
+            ? voiceCells[cellIndex].RhythmicPosition ?? cellIndex
             : Math.Max(0, cellIndex);
         return position.X + WarpFor(track, measureIndex).CenterFraction(Math.Max(0, startSlots)) * position.Width;
     }

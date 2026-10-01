@@ -103,7 +103,7 @@ public static partial class EngineHost
                 if (m.Calls > 0)
                     EngineLog.Write($"audio callback: {m.Calls} calls, p95 {m.P95Ms:0.0} ms, p99 {m.P99Ms:0.0} ms, max {m.MaxMs:0.0} ms, " +
                                     $"deadline misses {m.DeadlineMisses}, late calls {m.LateCalls}, allocated {m.AllocatedBytes} B, " +
-                                    $"MIDI dropped {m.MidiDropped}, MIDI deferred {m.MidiDeferred}");
+                                    $"MIDI dropped {m.MidiDropped}, MIDI deferred {m.MidiDeferred}, device block {m.BlockFrames} frames");   // the granted size, which can differ from the requested one (WASAPI exclusive)
             }
             if (parent.HasExited) return false;
             // Watchdog: a plug-in that freezes the audio thread would silence everything. End the engine; the
@@ -447,6 +447,7 @@ public static partial class EngineHost
                     case EngineCommand.MeasurePitch: ReadMeasurePitch(r); break;
                     case EngineCommand.SetAutoPitch: ReadSetAutoPitch(r); break;
                     case EngineCommand.SetWindowsPathOffset: { var db = Math.Clamp(r.ReadSingle(), -60f, 12f); EngineThreads.Post(() => _session.SetWindowsPathOffset(db)); break; }
+                    case EngineCommand.SetLiveLimiter: { var on = r.ReadBoolean(); EngineThreads.Post(() => _session.SetLiveLimiter(on)); break; }
                     case EngineCommand.Shutdown: _exit = true; break;
                 }
     }

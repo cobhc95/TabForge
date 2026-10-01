@@ -3,10 +3,13 @@ using System.Windows.Media;
 
 namespace TabForge.Views;
 
-/// <summary>Small DPI-independent outline glyphs for the native settings category rail.</summary>
+/// <summary>
+/// Small DPI-independent outline glyphs for the native settings category rail: one idea per page, no duplicates, one line weight
+/// (fills only for dots of about 3 px or less).
+/// </summary>
 internal sealed class SettingsNavigationIcon : FrameworkElement
 {
-    public string Kind { get; init; } = "Settings";
+    public string Kind { get; init; } = "Advanced";
 
     public bool IsSelected
     {
@@ -22,6 +25,12 @@ internal sealed class SettingsNavigationIcon : FrameworkElement
     private bool _isSelected;
 
     protected override void OnRender(DrawingContext context)
+    {
+        try { RenderGuard.Inject("SettingsNavigationIcon"); RenderCore(context); }
+        catch (Exception ex) when (RenderGuard.Contain(ex, "SettingsNavigationIcon", context, ActualWidth, ActualHeight)) { }
+    }
+
+    private void RenderCore(DrawingContext context)
     {
         base.OnRender(context);
         if (RenderSize.Width <= 1 || RenderSize.Height <= 1) return;
@@ -41,109 +50,120 @@ internal sealed class SettingsNavigationIcon : FrameworkElement
         void Box(double x, double y, double width, double height) => context.DrawRectangle(null, pen, R(x, y, width, height));
         void Circle(double x, double y, double radius, bool fill = false) =>
             context.DrawEllipse(fill ? pen.Brush : null, fill ? null : pen, P(x, y), radius * scaleX, radius * scaleY);
+        void Path(string data)
+        {
+            var geometry = Geometry.Parse(data).Clone();
+            geometry.Transform = new ScaleTransform(scaleX, scaleY);
+            context.DrawGeometry(null, pen, geometry);
+        }
 
         switch (Kind)
         {
-            case "General":
-                Circle(12, 12, 3.3);
-                Circle(12, 12, 7);
-                for (var i = 0; i < 8; i++)
-                {
-                    var angle = i * Math.PI / 4;
-                    Line(12 + Math.Cos(angle) * 7, 12 + Math.Sin(angle) * 7,
-                        12 + Math.Cos(angle) * 9, 12 + Math.Sin(angle) * 9);
-                }
+            case "Home":
+                // A house with a tick: the page that answers "where is the thing I came for?".
+                Path("M3.5,11 L12,4 L20.5,11");
+                Path("M5.5,9.5 L5.5,20 L18.5,20 L18.5,9.5");
+                Path("M9.3,14.2 L11.3,16.2 L15,12.2");
                 break;
-            case "Appearance":
+            case "General":
             {
-                // Painter's palette (thumb hole notch on the lower edge) with paint dabs, and a brush.
-                var palette = Geometry.Parse("M12,3.5 C6.8,3.5 3,7.2 3,11.8 C3,16.3 6.6,20 11,20 C12.6,20 13.2,19 12.6,17.7 " +
-                                             "C12,16.4 12.8,15.2 14.3,15.2 L16.2,15.2 C18.9,15.2 21,13.3 21,10.6 C21,6.6 17,3.5 12,3.5 Z").Clone();
-                palette.Transform = new ScaleTransform(scaleX, scaleY);
-                context.DrawGeometry(null, pen, palette);
-                Circle(7.4, 11.6, 1.25, true);
-                Circle(9.3, 7.6, 1.25, true);
-                Circle(13.8, 6.9, 1.25, true);
-                Circle(17.3, 9.8, 1.25, true);
-                var brushPen = new Pen(pen.Brush, 2.2) { StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round };
-                context.DrawLine(brushPen, P(16.2, 21.2), P(21.2, 16.2));
-                context.DrawEllipse(pen.Brush, null, P(15.6, 21.8), 1.3 * scaleX, 1.3 * scaleY);
+                // A cog: eight teeth round a hub.
+                var gear = new StreamGeometry();
+                using (var g = gear.Open())
+                {
+                    for (var i = 0; i < 8; i++)
+                    {
+                        var centre = i * Math.PI / 4;
+                        var points = new (double R, double A)[] { (6.6, centre - 0.27), (9, centre - 0.17), (9, centre + 0.17), (6.6, centre + 0.27) };
+                        for (var k = 0; k < points.Length; k++)
+                        {
+                            var point = P(12 + Math.Cos(points[k].A) * points[k].R, 12 + Math.Sin(points[k].A) * points[k].R);
+                            if (i == 0 && k == 0) g.BeginFigure(point, false, true);
+                            else g.LineTo(point, true, true);
+                        }
+                    }
+                }
+                gear.Freeze();
+                context.DrawGeometry(null, pen, gear);
+                Circle(12, 12, 2.8);
                 break;
             }
+            case "Appearance":
+                // A painter's palette (thumb notch on the lower edge) with three paint dabs.
+                Path("M12,3.5 C6.8,3.5 3,7.2 3,11.8 C3,16.3 6.6,20 11,20 C12.6,20 13.2,19 12.6,17.7 " +
+                     "C12,16.4 12.8,15.2 14.3,15.2 L16.2,15.2 C18.9,15.2 21,13.3 21,10.6 C21,6.6 17,3.5 12,3.5 Z");
+                Circle(7.6, 11.4, 1.25, true);
+                Circle(10.2, 7.3, 1.25, true);
+                Circle(15, 7.3, 1.25, true);
+                break;
+            case "Score":
+                // A five-line staff with one note and its stem.
+                for (var i = 0; i < 5; i++) Line(3, 6 + i * 3, 21, 6 + i * 3);
+                Circle(9, 16.5, 1.9);
+                Line(10.9, 16.2, 10.9, 6);
+                break;
             case "Fretboard":
-                // A short guitar neck: frets across, strings along.
+                // A short guitar neck: three frets across, three strings along.
                 Box(3, 7.5, 18, 9);
                 Line(8, 7.5, 8, 16.5);
                 Line(13, 7.5, 13, 16.5);
                 Line(17.5, 7.5, 17.5, 16.5);
-                Line(3, 10.5, 21, 10.5);
-                Line(3, 13.5, 21, 13.5);
-                Circle(10.5, 12, 1.1, true);
+                Line(3, 12, 21, 12);
                 break;
-            case "Interface":
-                Box(3.5, 4.5, 17, 15);
-                Line(3.5, 9, 20.5, 9);
-                Circle(6.5, 6.8, 0.7, true);
-                Circle(9.5, 6.8, 0.7, true);
-                break;
-            case "Viewing":
-                Box(4, 5, 16, 11);
-                Line(9, 20, 15, 20);
-                Line(12, 16, 12, 20);
-                break;
-            case "AudioPlugins":
-                // Three faders: audio mixing and plug-ins (effects and instruments).
-                Line(6, 4, 6, 20); Line(12, 4, 12, 20); Line(18, 4, 18, 20);
-                context.DrawRoundedRectangle(pen.Brush, null, R(3.8, 13, 4.4, 3.4), 1 * scaleX, 1 * scaleY);
-                context.DrawRoundedRectangle(pen.Brush, null, R(9.8, 6.5, 4.4, 3.4), 1 * scaleX, 1 * scaleY);
-                context.DrawRoundedRectangle(pen.Brush, null, R(15.8, 10.5, 4.4, 3.4), 1 * scaleX, 1 * scaleY);
+            case "Timeline":
+                // Three track lanes with blocks of different length.
+                Box(3, 4.5, 8, 4);
+                Box(9, 10, 12, 4);
+                Box(5, 15.5, 9, 4);
                 break;
             case "Pencil":
             {
                 // A pencil: body, tip and the line it draws.
-                var body = Geometry.Parse("M15.5,4.5 L19.5,8.5 L9,19 L4.5,19.5 L5,15 Z").Clone();
-                body.Transform = new ScaleTransform(scaleX, scaleY);
-                context.DrawGeometry(null, pen, body);
+                Path("M15.5,4.5 L19.5,8.5 L9,19 L4.5,19.5 L5,15 Z");
                 Line(13, 7, 17, 11);
                 Line(5, 15, 9, 19);
                 break;
             }
-            case "PlaybackSound":
-            {
-                // A play triangle with sound waves coming out of it: playback and sound in one.
-                var play = Geometry.Parse("M4.5,5.5 L4.5,18.5 L14,12 Z").Clone();
-                play.Transform = new ScaleTransform(scaleX, scaleY);
-                context.DrawGeometry(null, pen, play);
-                foreach (var wave in new[] { "M16.6,8.6 C18.2,10.4 18.2,13.6 16.6,15.4", "M19.2,6 C22.1,9.5 22.1,14.5 19.2,18" })
-                {
-                    var arc = Geometry.Parse(wave).Clone();
-                    arc.Transform = new ScaleTransform(scaleX, scaleY);
-                    context.DrawGeometry(null, pen, arc);
-                }
+            case "Playback":
+                // The transport play triangle in a ring.
+                Circle(12, 12, 9);
+                Path("M10,8.4 L16,12 L10,15.6 Z");
                 break;
-            }
-            case "Performance":
-                Line(4, 17, 6, 12);
-                Line(6, 12, 10, 8);
-                Line(10, 8, 15, 7);
-                Line(15, 7, 20, 12);
-                Line(12, 14, 16, 9);
+            case "Audio":
+                // A speaker with two waves: where the sound goes out.
+                Path("M3.5,9.5 L7.5,9.5 L12.5,5.5 L12.5,18.5 L7.5,14.5 L3.5,14.5 Z");
+                Path("M15.6,9 C17.2,10.8 17.2,13.2 15.6,15");
+                Path("M18.4,6.4 C21.4,9.8 21.4,14.2 18.4,17.6");
+                break;
+            case "Recording":
+                // A microphone: capsule, pickup arc and stand.
+                context.DrawRoundedRectangle(null, pen, R(9, 3, 6, 10.5), 3 * scaleX, 3 * scaleY);
+                Path("M6,11 C6,14.8 8.7,17.2 12,17.2 C15.3,17.2 18,14.8 18,11");
+                Line(12, 17.2, 12, 21);
+                Line(8.5, 21, 15.5, 21);
                 break;
             case "Tabs":
-                Box(3, 7, 18, 12);
-                Line(7, 7, 7, 11);
-                Line(12, 7, 12, 11);
+                // Two overlapping windows, the front one with a tab line.
+                Path("M8,9.5 L8,4.5 L21,4.5 L21,15 L16,15");
+                Box(3, 9.5, 13, 10);
+                Line(3, 12.5, 16, 12.5);
                 break;
-            case "Hotkeys":
-                Box(3, 6, 18, 12);
-                for (var x = 6; x <= 18; x += 4)
-                {
-                    Line(x, 9, x + 1, 9);
-                    Line(x, 13, x + 1, 13);
-                }
-                Line(8, 16, 16, 16);
+            case "Shortcuts":
+                // A keycap with a modifier mark in its corner.
+                context.DrawRoundedRectangle(null, pen, R(4, 4.5, 16, 15), 3.5 * scaleX, 3.5 * scaleY);
+                Line(7.5, 8.5, 10.5, 8.5);
+                Line(7.5, 8.5, 7.5, 11.5);
+                Line(9, 15.5, 15, 15.5);
+                break;
+            case "Files":
+                // A folder with a circular arrow: opening, saving and recovery.
+                Path("M3,7 C3,6.2 3.7,5.5 4.5,5.5 L9,5.5 L11,8 L19.5,8 C20.3,8 21,8.7 21,9.5 L21,18.5 C21,19.3 20.3,20 19.5,20 L4.5,20 C3.7,20 3,19.3 3,18.5 Z");
+                Path("M14.6,13.2 A2.9,2.9 0 1 0 14.9,15.6");
+                Line(14.6, 13.2, 16.4, 13.3);
+                Line(14.6, 13.2, 14.5, 11.5);
                 break;
             default:
+                // Advanced: three horizontal sliders.
                 Line(4, 7, 9, 7); Circle(12, 7, 2); Line(15, 7, 20, 7);
                 Line(4, 12, 5, 12); Circle(8, 12, 2); Line(11, 12, 20, 12);
                 Line(4, 17, 12, 17); Circle(15, 17, 2); Line(18, 17, 20, 17);

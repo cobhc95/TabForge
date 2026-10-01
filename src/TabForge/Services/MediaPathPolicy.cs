@@ -92,7 +92,11 @@ public static class MediaPathPolicy
             || p.StartsWith(@"\??\", StringComparison.Ordinal) || p.Contains("GLOBALROOT", StringComparison.OrdinalIgnoreCase);
     }
 
-    public static MediaVerdict Classify(string? path, string? projectFolder)
+    public static MediaVerdict Classify(string? path, string? projectFolder) => Classify(path, projectFolder, requireAudio: true);
+
+    /// <summary>As <see cref="Classify(string?, string?)"/>; <paramref name="requireAudio"/> false judges any file type the same way
+    /// (a dropped MIDI file: device forms refused, network and removable places told apart, links followed).</summary>
+    public static MediaVerdict Classify(string? path, string? projectFolder, bool requireAudio)
     {
         static MediaVerdict Bad(MediaLocation l, string why) => new(l, "", false, why);
         if (string.IsNullOrWhiteSpace(path)) return Bad(MediaLocation.Invalid, "no file path");
@@ -119,7 +123,7 @@ public static class MediaPathPolicy
             var dot = stem.IndexOf('.');
             if (Reserved.Contains(dot >= 0 ? stem[..dot] : stem)) return Bad(MediaLocation.Device, "a reserved device name in the path");
         }
-        if (!IsAudioExtension(full)) return Bad(MediaLocation.Invalid, "not an audio file type");
+        if (requireAudio && !IsAudioExtension(full)) return Bad(MediaLocation.Invalid, "not an audio file type");
 
         var folder = string.IsNullOrWhiteSpace(projectFolder) ? null : Normalize(projectFolder);
         var location = LocationOf(full);

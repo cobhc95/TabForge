@@ -31,7 +31,7 @@ public sealed class FxSplitButton : FrameworkElement
         {
             if (_faulted == value) return;
             _faulted = value;
-            ToolTip = value ? "A plug-in in this chain crashed and was switched off. Open the chain to review it." : DefaultTip;
+            TooltipShortcuts.SetText(this, value ? "A plug-in in this chain crashed and was switched off. Open the chain to review it." : DefaultTip);
             InvalidateVisual();
         }
     }
@@ -53,7 +53,7 @@ public sealed class FxSplitButton : FrameworkElement
     {
         Width = 52; Height = 22;
         Focusable = true; UseLayoutRounding = true; SnapsToDevicePixels = true; FocusVisualStyle = null;
-        ToolTip = DefaultTip;
+        TooltipShortcuts.Bind(this, DefaultTip, "Track.FxChain");
         System.Windows.Automation.AutomationProperties.SetName(this, "Track FX chain");
     }
 
@@ -94,6 +94,12 @@ public sealed class FxSplitButton : FrameworkElement
     protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e) => e.Handled = true;
 
     protected override void OnRender(DrawingContext dc)
+    {
+        try { RenderGuard.Inject("FxSplitButton"); RenderCore(dc); }
+        catch (Exception ex) when (RenderGuard.Contain(ex, "FxSplitButton", dc, ActualWidth, ActualHeight)) { }
+    }
+
+    private void RenderCore(DrawingContext dc)
     {
         var w = ActualWidth; var h = ActualHeight;
         if (w <= 0 || h <= 0) return;

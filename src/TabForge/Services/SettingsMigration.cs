@@ -102,6 +102,10 @@ public static class SettingsMigration
             settings.Appearance.InstrumentLockVersion = 1;
         }
 
+        // Ledger lines no longer have an opacity of their own (they share the staff lines' colour and opacity). The old
+        // Appearance.LedgerLineOpacity / LedgerOpacityVersion keys are no longer properties: loading ignores them and the next save
+        // leaves them out. The staff-line opacity is kept exactly as stored. Nothing needs to run, so nothing can run twice.
+
         // The Windows MIDI latency default was a guessed 60 ms; the Windows synth measured about 200 ms. A stored 60 in an older file is the old
         // default (moved once); any other stored value is the user's own choice and stays.
         if (!Has(Find(root, "Plugins"), "WindowsMidiLatencyVersion"))

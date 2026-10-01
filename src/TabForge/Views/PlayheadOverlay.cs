@@ -88,6 +88,12 @@ public sealed class PlayheadOverlay : FrameworkElement
 
     protected override void OnRender(DrawingContext dc)
     {
+        try { RenderGuard.Inject("PlayheadOverlay"); RenderCore(dc); }
+        catch (Exception ex) when (RenderGuard.Contain(ex, "PlayheadOverlay", dc, ActualWidth, ActualHeight)) { }
+    }
+
+    private void RenderCore(DrawingContext dc)
+    {
         if (_durationEnabled && _durationOpacity > 0)
         {
             var alpha = PlaybackGlowIntensity.ScaleAlpha(_durationColor.A, _durationOpacity);

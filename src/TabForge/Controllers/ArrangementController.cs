@@ -151,35 +151,21 @@ public sealed class ArrangementController
         });
     }
 
-    public bool SetTimeSignature(SongProject project, int bar, int numerator, int denominator)
-    {
-        if (bar < 0 || !HasMeasure(project, bar)) return false;
-        if (bar == 0)
-        {
-            project.TimeSignatureNumerator = numerator;
-            project.TimeSignatureDenominator = denominator;
-        }
-        return UpdateMeasuresAtBar(project, bar, measure =>
-        {
-            measure.TimeSigNum = numerator;
-            measure.TimeSigDenom = denominator;
-        });
-    }
+    /// <summary>
+    /// Time signature from <paramref name="bar"/> up to the next change (or on that bar only): see <see cref="BarSignatures"/>.
+    /// All tracks change together.
+    /// </summary>
+    public bool SetTimeSignature(SongProject project, int bar, int numerator, int denominator, bool untilNextChange = true) =>
+        BarSignatures.SetTime(project, bar, numerator, denominator, untilNextChange) >= 0;
 
-    public bool SetKeySignature(SongProject project, int bar, int signature, bool minor)
-    {
-        if (bar < 0 || !HasMeasure(project, bar)) return false;
-        if (bar == 0)
-        {
-            project.KeySignature = signature;
-            project.KeySignatureMinor = minor;
-        }
-        return UpdateMeasuresAtBar(project, bar, measure =>
-        {
-            measure.KeySignature = signature;
-            measure.KeySignatureMinor = minor;
-        });
-    }
+    /// <summary>Key signature from <paramref name="bar"/> up to the next change (or on that bar only): see <see cref="BarSignatures"/>.</summary>
+    public bool SetKeySignature(SongProject project, int bar, int signature, bool minor, bool untilNextChange = true) =>
+        BarSignatures.SetKey(project, bar, signature, minor, untilNextChange) >= 0;
+
+    /// <summary>Project settings: the song's own signature, followed by every bar without an override of its own.</summary>
+    public void SetSongTimeSignature(SongProject project, int numerator, int denominator) => BarSignatures.SetSongTime(project, numerator, denominator);
+
+    public void SetSongKeySignature(SongProject project, int signature, bool minor) => BarSignatures.SetSongKey(project, signature, minor);
 
     public bool TryCycleClef(SongProject project, int selectedTrack, int bar, out string clef)
     {
@@ -239,15 +225,8 @@ public sealed class ArrangementController
         TryToggleMeasureProperty(project, selectedTrack, bar,
             measure => measure.IsDoubleBar, (measure, value) => measure.IsDoubleBar = value, out enabled);
 
-    public bool DuplicateBar(SongProject project, int trackIndex, int bar)
-    {
-        var source = GetMeasure(project, trackIndex, bar);
-        if (source is null) return false;
-        var clone = ProjectService.CloneMeasure(source);
-        clone.Number = source.Number + 1;
-        project.Tracks[trackIndex].Measures.Insert(bar + 1, clone);
-        return true;
-    }
+    /// <summary>Duplicate bar / bars: see <see cref="BarRangeEditor.Duplicate"/> (every track gets the copy; one new master bar per copied bar).</summary>
+    public int[]? DuplicateBars(SongProject project, int startBar, int endBar) => BarRangeEditor.Duplicate(project, startBar, endBar);
 
     public int RepeatRange(SongProject project, int startBar, int endBar, int times)
     {
@@ -273,9 +252,6 @@ public sealed class ArrangementController
         bar < project.Tracks[trackIndex].Measures.Count
             ? project.Tracks[trackIndex].Measures[bar]
             : null;
-
-    private static bool HasMeasure(SongProject project, int bar) =>
-        project.Tracks.Any(track => bar < track.Measures.Count);
 
     private static bool UpdateMeasuresAtBar(SongProject project, int bar, Action<MeasureModel> update)
     {

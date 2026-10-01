@@ -34,6 +34,12 @@ internal sealed partial class TrackTimeline
 
     protected override void OnRender(DrawingContext dc)
     {
+        try { RenderGuard.Inject("TrackTimeline"); RenderCore(dc); }
+        catch (Exception ex) when (RenderGuard.Contain(ex, "TrackTimeline", dc, ActualWidth, ActualHeight)) { }
+    }
+
+    private void RenderCore(DrawingContext dc)
+    {
 #if DEBUG
         using var performance = RenderPerformance.Measure(RenderPerformance.PerformanceCategory.Arrangement);
 #endif
@@ -102,7 +108,7 @@ internal sealed partial class TrackTimeline
             ? sections[activeSectionPosition].MarkerIndex : -1;
         if (sections.Count == 0 && bars > 0)
         {
-            Draw.At(dc, "no sections yet — Sections ▸ Add section...", 8, ArrangementPanel.RulerHeight + 5, 10, Draw.Solid(_theme.Muted));
+            Draw.At(dc, "no sections yet — Sections ▸ Add section…", 8, ArrangementPanel.RulerHeight + 5, 10, Draw.Solid(_theme.Muted));
         }
         foreach (var section in sections)
         {

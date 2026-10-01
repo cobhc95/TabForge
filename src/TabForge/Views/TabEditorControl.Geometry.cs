@@ -27,7 +27,7 @@ public sealed partial class TabEditorControl
     private double HeaderHeight => 82 + TuningRows * 11;
     private double SystemTop(int system) => HeaderHeight + system * SystemHeight;
     private double StaffTop(int system) => HeaderHeight + system * SystemHeight + StaffMarginTop;
-    private double TabTop(int system) => StaffTop(system) + StaffHeight + StaveGap;
+    private double TabTop(int system) => StaffTop(system) + StaffToTab;
     private double GridLeft => PagePad + 46;
     internal double GridWidth => Math.Max(200, PageWidth - PagePad * 2 - 46);
 
@@ -47,8 +47,8 @@ public sealed partial class TabEditorControl
         var staffTop = StaffTop(system);
         var tabTop = TabTop(system);
         var strings = Math.Max(1, track.StringTunings.Count);
-        var showTab = Notation != NotationMode.TabOnly;
-        var showStaff = Notation != NotationMode.StaffOnly;
+        var showTab = Notation != NotationMode.StaffOnly;
+        var showStaff = Notation != NotationMode.TabOnly;
         var bottom = showTab ? tabTop + (strings - 1) * StringGap + 14 : staffTop + 4 * StaffGap + 14;
         var top = showStaff ? staffTop - 12 : tabTop - 12;
         return (x * _zoom, top * _zoom, bottom * _zoom);
@@ -128,8 +128,8 @@ public sealed partial class TabEditorControl
 
         var layout = GetScoreLayout(track);
         var strings = Math.Max(1, track.StringTunings.Count);
-        var showTab = Notation != NotationMode.TabOnly;
-        var showStaff = Notation != NotationMode.StaffOnly;
+        var showTab = Notation != NotationMode.StaffOnly;
+        var showStaff = Notation != NotationMode.TabOnly;
         var geometries = new List<(double X, double EndX, double Top, double Bottom)>();
         foreach (var bar in timeline.Bars)
         {
@@ -265,8 +265,15 @@ public sealed partial class TabEditorControl
         var palmMutePassages = _project is null
             ? Array.Empty<PalmMutePassage>()
             : EnsureScoreFacts(track, _project).PalmMutePassages;
+        BeginMarkExtentScan();
         for (var i = 0; i < widths.Length; i++)
+        {
             widths[i] = NaturalMeasureWidth(track, track.Measures[i], i, palmMutePassages) * _measureHorizontalSpacing;
+            if (!HorizontalScroll) widths[i] = Math.Min(widths[i], GridWidth);   // a bar never runs past the page, however crowded its marks
+        }
+        var extraBefore = (_extraAbove, _extraBelow, _extraTabBelow);
+        EndMarkExtentScan();
+        if ((_extraAbove, _extraBelow, _extraTabBelow) != extraBefore) InvalidateMeasure();   // the system height follows the content
         var forceLineBreaks = new bool[track.Measures.Count];
         var preventLineBreaks = new bool[track.Measures.Count];
         for (var measure = 0; measure < track.Measures.Count; measure++)
@@ -306,6 +313,73 @@ public sealed partial class TabEditorControl
         return false;
     }
 
+    // ---- vertical room for the stacked markings: measured once per layout from the track's own content ----
+    private double _extraAbove, _extraBelow, _extraTabBelow;
+    private double _scanTabBelow;
+    private double _scanTop, _scanBottom, _scanRows;
+    private bool _scanVolta;
+
+    private void BeginMarkExtentScan() { _scanTop = 0; _scanBottom = 4 * StaffNotationRenderer.StaffGap; _scanRows = 0; _scanVolta = false; _scanTabBelow = 0; }
+
+    private void EndMarkExtentScan()
+    {
+        // Above: the ink over the staff plus the rows its marks stack into (the first row fits the default margin); below: how far low notes reach under the staff.
+        var above = Math.Max(0, -_scanTop) + Math.Max(0, _scanRows * 11 - 14) + (_scanVolta ? 14 : 0);
+        var below = Math.Max(0, _scanBottom - 4 * StaffNotationRenderer.StaffGap);
+        var newAbove = above > 0 ? Math.Ceiling(above) : 0;
+        var newBelow = below > 0 ? Math.Ceiling(below + 6) : 0;
+        _extraTabBelow = _scanTabBelow > 28 ? Math.Ceiling(_scanTabBelow) : 0;   // lyric rows (and the fingering above them) under the TAB
+        if (Math.Abs(newAbove - _extraAbove) > 0.5 || Math.Abs(newBelow - _extraBelow) > 0.5) { _extraAbove = newAbove; _extraBelow = newBelow; }
+    }
+
+    /// <summary>Accumulates how far this bar's notation and marks reach above and below the staff (layout time, no drawing).</summary>
+    private void ScanMarkExtents(StaffNotationMeasureLayout layout, MeasureModel measure)
+    {
+        foreach (var beat in layout.Beats)
+        {
+            if (beat.IsRest) continue;
+            foreach (var n in beat.Notes)
+            {
+                _scanTop = Math.Min(_scanTop, n.Y - 6);
+                _scanBottom = Math.Max(_scanBottom, n.Y + 6);
+            }
+            if (beat.IsDrum)
+                foreach (var y in StaffNotationRenderer.DrumHeadYs(beat)) { _scanTop = Math.Min(_scanTop, y - 7); _scanBottom = Math.Max(_scanBottom, y + 7); }
+            if (beat.HasStem)
+            {
+                _scanTop = Math.Min(_scanTop, Math.Min(beat.StemStartY, beat.StemEndY) - (beat.Flags > 0 ? 2 : 0));
+                _scanBottom = Math.Max(_scanBottom, Math.Max(beat.StemStartY, beat.StemEndY) + 2);
+            }
+            if (beat.LowerStemTopY is not null) _scanBottom = Math.Max(_scanBottom, beat.LowerStemEndY + 2);
+            foreach (var grace in beat.GraceNotes) _scanTop = Math.Min(_scanTop, grace.Y - 18);
+        }
+        // Voice 2's marks go below voice 1's at the same beat (the drawing offsets them by voice 1's extent - 8).
+        var voiceOneMax = layout.IsSecondVoice ? measure.Cells.Select(c => FingeringExtent(c) > 0 ? FingeringExtent(c) - 8 : 0).DefaultIfEmpty(0).Max() : 0;
+        foreach (var b in layout.Beats) { var ext = FingeringExtent(b.Cell); if (ext > 0) _scanTabBelow = Math.Max(_scanTabBelow, ext + voiceOneMax + 2); }   // finger rings / letters / harmonic values reach this far under the strings
+        var lyricLines = 0; var fingering = 0.0;
+        foreach (var b in layout.Beats)
+        {
+            if (string.IsNullOrWhiteSpace(b.Cell.Lyrics)) continue;
+            lyricLines = Math.Max(lyricLines, Math.Min(3, b.Cell.Lyrics.Split('\n').Length));
+            fingering = Math.Max(fingering, layout.Beats.Max(o => Math.Abs(o.CenterX - b.CenterX) < 60 ? FingeringHeight(o.Cell) : 0));
+        }
+        if (lyricLines > 0) _scanTabBelow = Math.Max(_scanTabBelow, 29 + fingering + (lyricLines - 1) * 14.5);   // first row 13 px under the strings + fingering, 14.5 px per row, 14 px of text
+        var cell = measure;
+        var kinds = 0;
+        bool Any(Func<TabCell, bool> test) => layout.Beats.Any(b => test(b.Cell));
+        if (Any(c => c.Accent != 0)) kinds++;
+        if (Any(c => c.Fermata)) kinds++;
+        if (Any(c => c.IsTriplet || c.TupletNumerator > 0)) kinds++;
+        if (Any(c => c.Notes.Any(n => n.Techniques.Contains("Trill")))) kinds++;
+        if (Any(c => c.OctaveShiftSemitones != 0)) kinds++;
+        if (Any(c => c.Notes.Any(n => n.Techniques.Contains("WahOpen") || n.Techniques.Contains("WahClose") || n.Techniques.Contains("Tapping") || n.Techniques.Contains("LeftTap")))) kinds++;
+        if (Any(c => c.Notes.Any(n => n.Techniques.Contains("Vibrato") || n.Techniques.Contains("WideVibrato")))) kinds++;
+        if (Any(c => !string.IsNullOrWhiteSpace(c.ChordName))) kinds++;
+        if (Any(c => !string.IsNullOrWhiteSpace(c.Text))) kinds++;
+        _scanRows = Math.Max(_scanRows, kinds);
+        if (cell.AlternateEnding > 0 || cell.AlternateEndingMask != 0) _scanVolta = true;
+    }
+
     internal double NaturalMeasureWidth(TrackModel track, MeasureModel measure, int measureIndex,
         IReadOnlyList<PalmMutePassage> palmMutePassages)
     {
@@ -316,10 +390,12 @@ public sealed partial class TabEditorControl
         var notation = _staff.CreateLayout(track, measure, measureIndex, slots, 0, 0, 1,
             numerator, denominator, keySignature, _scoreSpacing);
         var notationBeats = notation.Beats.AsEnumerable();
+        ScanMarkExtents(notation, measure);
         if (Voice2HasContent(measure))
         {
             var voice2 = _staff.CreateLayout(track, measure, measureIndex, slots, 0, 0, 1,
                 numerator, denominator, keySignature, _scoreSpacing, measure.Voice2Cells);
+            ScanMarkExtents(voice2, measure);
             notationBeats = notationBeats.Concat(voice2.Beats).OrderBy(beat => beat.StartSlots);
         }
 
@@ -346,6 +422,7 @@ public sealed partial class TabEditorControl
                 right = Math.Max(right, 1 + stemOffset);
             }
 
+            var ghostRoom = StaffNotationRenderer.GhostRoom(notation.StaffTop, beat);   // voice 2 shares the staff top
             foreach (var note in beat.Notes)
             {
                 var offset = note.X - beat.CenterX;
@@ -354,9 +431,10 @@ public sealed partial class TabEditorControl
                 if (note.Accidental is not null)
                 {
                     var accidentalWidth = MakeText(note.Accidental, 15, Brush(Colors.White)).Width;
-                    left = Math.Max(left, 10.1 + note.AccidentalColumn * 10 + accidentalWidth / 2 - offset);
+                    left = Math.Max(left, 12.1 + note.AccidentalColumn * 10 + accidentalWidth / 2 - (beat.Notes.Min(n => n.X) - beat.CenterX) + ghostRoom); // accidentals hang off the chord's leftmost head, outside any ghost bracket
                 }
 
+                if (note.Source.Ghost) { left = Math.Max(left, 11 + ghostRoom - offset); right = Math.Max(right, 3 + ghostRoom + offset); }   // the ghost brackets
                 var fret = note.Source.Dead ? "X"
                     : track.Kind == TrackKind.Drums ? DrumMaps.For(track, note.Source.MidiValue > 0 ? note.Source.MidiValue : note.Source.Fret).Label
                     : note.Source.Fret.ToString(CultureInfo.InvariantCulture);
@@ -420,6 +498,7 @@ public sealed partial class TabEditorControl
                 right = Math.Max(right, width / 2 + 2);
             }
             if (beat.Cell.Fermata || beat.Cell.IsGrace) right = Math.Max(right, 13);
+            if (beat.GraceNotes.Count > 0) left = Math.Max(left, StaffNotationRenderer.GraceOffset(beat, StaffNotationRenderer.GhostRoom(notation.StaffTop, beat)) + 9 * (Math.Min(3, beat.GraceNotes.Count) - 1) + 6 + (beat.Cell.Notes.Any(g => GraceTransitionShown(track, beat.Cell, g)) ? 6 : 0));   // a line / arc between the grace fret and the main fret needs room
             if (beat.Cell.Dots > 0) right = Math.Max(right, 11 + beat.Cell.Dots * 4);
 
             events[eventIndex] = current with
@@ -456,9 +535,11 @@ public sealed partial class TabEditorControl
         var lead = 16.0;
         var keyChanges = KeySignatureChanges(track, measureIndex);
         var timeShown = TimeSignatureShown(track, measureIndex);
-        if (keyChanges || timeShown)
+        var clefChanged = ClefChanges(track, measureIndex);
+        if (keyChanges || timeShown || clefChanged)
         {
             lead = 28;
+            if (clefChanged) lead += ClefChangeWidth;
             if (keyChanges) lead += KeySignatureWidth(track, measureIndex);
             if (timeShown) lead += TimeSignatureWidth(measure) + 6;
         }
@@ -524,8 +605,10 @@ public sealed partial class TabEditorControl
     private double HeaderLeadWeight(TrackModel track, int measureIndex)
     {
         var pixels = 0.0;
+        if (ClefChanges(track, measureIndex)) pixels += ClefChangeWidth;
         if (KeySignatureChanges(track, measureIndex)) pixels += KeySignatureWidth(track, measureIndex);
         if (TimeSignatureShown(track, measureIndex)) pixels += TimeSignatureWidth(track.Measures[measureIndex]) + 6;
+        if (pixels > 0) pixels += 12;   // the signatures start 28 px in (NaturalMeasureWidth's lead), 12 px beyond the plain 16 px lead the first-note spacing already has
         return pixels <= 0 ? 0 : pixels / Math.Max(1, RhythmicPixelsPerSlot * _scoreSpacing);
     }
 

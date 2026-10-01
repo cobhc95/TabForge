@@ -9,6 +9,7 @@ public static class AudioRouting
     /// <param name="owner">The document that owns the engine now (R-10); null: the project itself.</param>
     public static void Apply(SongProject project, RoutedMidiOutput? routing, AudioEngineClient engine, Services.PluginSettings settings, int masterPercent = 100, object? owner = null)
     {
+        engine.RefreshAvailability(project.Tracks, settings);   // instruments the engine cannot play (quarantined, untrusted, missing, failed to load) count as not playing
         foreach (var t in project.Tracks) MixerGroups.ApplyAutoGm(t);   // GM sound follows whether a VST instrument plays
         var anySolo = project.Tracks.Any(t => t.Solo);
         engine.Sync(project.Tracks, settings, t =>

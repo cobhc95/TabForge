@@ -9,7 +9,8 @@ namespace TabForge.Audio;
 /// One document's MIDI output. Channels whose track plays through plug-ins are sent to the audio engine (shared
 /// ring, time-stamped); everything else goes to Windows MIDI exactly as before. While the engine is in use,
 /// Windows MIDI is held back by the engine's latency so both stay in time (a small delay thread, idle otherwise).
-/// With no plug-in tracks this is a straight pass-through: no delay, no thread, no engine.
+/// With no plug-in tracks and "Play the whole song through the audio engine" switched off, this is a straight
+/// pass-through: no delay, no thread, no engine. That setting is on by default, so normally the engine is in use.
 /// </summary>
 public sealed class RoutedMidiOutput : IMidiOutput
 {

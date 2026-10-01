@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:sys="clr-namespace:System;assembly=mscorlib"
              xmlns:shell="clr-namespace:TabForge.Shell"
+             xmlns:views="clr-namespace:TabForge.Views"
              >
     <Application.Resources>
         <!-- ===== TabForge palette =====
@@ -460,18 +461,35 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="CheckBox">
-                        <StackPanel Orientation="Horizontal">
-                            <Border x:Name="box" Width="15" Height="15" CornerRadius="3" Background="{DynamicResource WindowBrush}"
+                        <!-- A DockPanel (not a horizontal StackPanel, which measures its text with unlimited width): long labels wrap. -->
+                        <DockPanel LastChildFill="True">
+                            <Border x:Name="box" DockPanel.Dock="Left" Width="15" Height="15" CornerRadius="3" Background="{DynamicResource WindowBrush}"
                                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" VerticalAlignment="Center">
                                 <Path x:Name="check" Data="M 2 6 L 6 10 L 12 2" Stroke="{DynamicResource AccentBrush}" StrokeThickness="2"
                                       Visibility="Collapsed" Margin="1"/>
                             </Border>
                             <ContentPresenter Margin="6,0,0,0" VerticalAlignment="Center"/>
-                        </StackPanel>
+                        </DockPanel>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsChecked" Value="True"><Setter TargetName="check" Property="Visibility" Value="Visible"/></Trigger>
                             <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="box" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/></Trigger>
                         </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Determinate progress bar in the theme's colours (track = panel, fill = accent); apply with Style="{StaticResource ThemedProgressBar}". -->
+        <Style x:Key="ThemedProgressBar" TargetType="ProgressBar">
+            <Setter Property="Height" Value="8"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ProgressBar">
+                        <Grid>
+                            <Border x:Name="PART_Track" Background="{DynamicResource Panel2Brush}" BorderBrush="{DynamicResource BorderSoftBrush}"
+                                    BorderThickness="1" CornerRadius="3"/>
+                            <Border x:Name="PART_Indicator" HorizontalAlignment="Left" Background="{DynamicResource AccentBrush}" CornerRadius="3"/>
+                        </Grid>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
@@ -535,6 +553,14 @@
                                 <Setter TargetName="icon" Property="Content" Value="✔"/>
                                 <Setter TargetName="icon" Property="TextElement.Foreground" Value="{DynamicResource AccentBrush}"/>
                             </Trigger>
+                            <!-- One-of-several choices (Page / Continuous...) are drawn as a dot, not a tick. -->
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsChecked" Value="True"/>
+                                    <Condition Property="views:MenuMarks.IsRadio" Value="True"/>
+                                </MultiTrigger.Conditions>
+                                <Setter TargetName="icon" Property="Content" Value="●"/>
+                            </MultiTrigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
@@ -567,18 +593,21 @@
                 </Setter.Value>
             </Setter>
         </Style>
-        <Style TargetType="Separator">
+        <!-- ONE menu separator for every menu (context-menu audit 2, section 2). The control has no margin or height of
+             its own: the rule's 8,4 margin sits inside the template only (it was counted twice before, which left a gap
+             with no line). Registered under MenuItem.SeparatorStyleKey so a menu that adds a bare Separator gets it too. -->
+        <Style x:Key="{x:Static MenuItem.SeparatorStyleKey}" TargetType="Separator">
             <Setter Property="Background" Value="{DynamicResource BorderSoftBrush}"/>
-            <Setter Property="Margin" Value="4,3"/>
-            <Setter Property="Height" Value="1"/>
+            <Setter Property="Margin" Value="0"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Separator">
-                        <Border Background="{TemplateBinding Background}" Height="1" Margin="{TemplateBinding Margin}"/>
+                        <Border Background="{TemplateBinding Background}" Height="1" Margin="8,4" SnapsToDevicePixels="True"/>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
         </Style>
+        <Style TargetType="Separator" BasedOn="{StaticResource {x:Static MenuItem.SeparatorStyleKey}}"/>
 
         <!-- Status-bar dividers are vertical; the global Separator style above draws a horizontal rule,
              which would render as a stray dash between status items. -->
@@ -922,6 +951,13 @@
             <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="Padding" Value="7,4"/>
+            <!-- Plain-text tooltips wrap at about 460 DIP (a long one becomes 2-3 lines; a short one keeps its natural
+                 width). Only string content is affected; rich content and explicit line breaks render as before. -->
+            <Style.Resources>
+                <DataTemplate DataType="{x:Type sys:String}">
+                    <TextBlock Text="{Binding}" TextWrapping="Wrap" MaxWidth="460"/>
+                </DataTemplate>
+            </Style.Resources>
         </Style>
 
         <!-- ===== GridSplitter ===== -->

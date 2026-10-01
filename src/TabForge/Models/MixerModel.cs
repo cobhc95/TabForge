@@ -349,7 +349,7 @@ public static class MixerGroups
         if (track.SoundSource != SoundSources.Plugins && track.MidiSoundManualOff && !track.MidiSound && track.Rig.Plugins.Count > 0) return TrackRoute.Silent;
         if (track.SoundSource != SoundSources.Plugins) return PlayAllThroughEngine ? TrackRoute.MidiThroughEffects : TrackRoute.WindowsMidi;
         var plugins = track.Rig.Plugins.Where(p => p.Enabled).ToList();
-        if (plugins.Any(p => p.Type == TabForge.Plugins.PluginSlotType.Instrument)) return TrackRoute.Instrument;
+        if (plugins.Any(p => p.Type == TabForge.Plugins.PluginSlotType.Instrument && !p.Unavailable)) return TrackRoute.Instrument;
         if (!track.MidiSound) return TrackRoute.Silent;
         return plugins.Count > 0 || PlayAllThroughEngine ? TrackRoute.MidiThroughEffects : TrackRoute.WindowsMidi;
     }
@@ -376,6 +376,11 @@ public static class MixerGroups
         _ => true,
     };
 
+    /// <summary>A VST instrument really plays this track: chain on, the instrument not bypassed, and the engine can run it (not crashed, quarantined, untrusted or missing).</summary>
+    public static bool InstrumentPlays(TrackModel track) =>
+        track.SoundSource == SoundSources.Plugins
+        && track.Rig.Plugins.Any(p => p.Enabled && !p.Unavailable && p.Type == TabForge.Plugins.PluginSlotType.Instrument);
+
     /// <summary>Settings: tick a track's GM sound automatically when no VST instrument plays it, and untick it when one does again.</summary>
     public static bool AutoGmSound { get; set; } = true;
 
@@ -386,9 +391,10 @@ public static class MixerGroups
     /// </summary>
     public static bool ApplyAutoGm(TrackModel track)
     {
-        if (!AutoGmSound || track.IsBus || track.Rig.Plugins.Count == 0) return false;
-        var instrumentPlays = track.SoundSource == SoundSources.Plugins
-            && track.Rig.Plugins.Any(p => p.Enabled && p.Type == TabForge.Plugins.PluginSlotType.Instrument);
+        if (!AutoGmSound || track.IsBus) return false;
+        // A track with the chain on but nothing left in it (the last plug-in removed) is silent without GM too; a plain track is not touched.
+        if (track.Rig.Plugins.Count == 0 && track.SoundSource != SoundSources.Plugins) return false;
+        var instrumentPlays = InstrumentPlays(track);
         if (!instrumentPlays && !track.MidiSound && !track.MidiSoundManualOff) { track.MidiSound = true; track.MidiSoundAuto = true; return true; }
         if (instrumentPlays && track.MidiSound && track.MidiSoundAuto) { track.MidiSound = false; track.MidiSoundAuto = false; return true; }
         return false;

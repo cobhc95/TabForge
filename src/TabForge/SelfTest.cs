@@ -60,13 +60,33 @@ public static partial class SelfTest
         Guard(TestCellSlots);
         Guard(TestAnalyzeBar);
         Guard(TestBarGridPlacement);
+        Section("Duplicate bar, time and key signatures");
+        Guard(TestDuplicateBarAllTracks);
+        Guard(TestSignaturesCarryForward);
+        Guard(TestKeySignaturesCarryForward);
+        Guard(TestSignatureRoundTrips);
         Section("Automatic pitch matching");
         Guard(TestPitchMatch);
         Section("Timeline / playback");
         Guard(TestTimelineBasics);
         Guard(TestTimelineTechniques);
         Guard(TestPlaybackDifferences);
+        Guard(TestNoHangingNotes);
+        Guard(TestNoticeLimit);
+        Guard(TestLongGuitarPro35Import);
         Guard(TestFermataPlayback);
+        Guard(TestMarkStacking);
+        Guard(TestEngravingCollisions);
+        Guard(TestSimileBarHidesLinesAndTies);
+        Guard(TestClefShapesAndChanges);
+        Guard(TestVoice2HopoSlurWithLongerVoice);
+        Guard(TestNewBindableCommands);
+        Guard(TestKeyRoutingOrder);
+        Guard(TestViewMenuWording);
+        Guard(TestSectionDeleteWording);
+        Guard(TestMenuGestureTextFollowsBindings);
+        Guard(TestMoveNoteToAdjacentString);
+        Guard(TestBarAuditTool);
         Guard(TestTimelineMetronome);
         Guard(TestTimelineLoopAndOrder);
         Guard(TestTimelineRevision);
@@ -88,7 +108,36 @@ public static partial class SelfTest
         Guard(TestPasteCommands);
         Guard(TestPasteSpecial);
         Guard(TestSelectionModel);
+        Guard(TestKnobTypeIn);
+        Guard(TestTooltips);
+        Guard(TestTrackRowRightClick);
+        Guard(TestInstrumentChoiceStrings);
+        Guard(TestTransposeAllVoices);
+        Guard(TestCapoRepitchesNotes);
         Guard(TestContextMenuLayouts);
+        Guard(TestContextMenuLean);
+        Guard(TestPreferencesCatalog);
+        Guard(TestRenderGuardContainment);
+        Guard(TestDialogEscape);
+        Guard(TestTutorialMarkdown);
+        Guard(TestTutorialSearch);
+        Guard(TestTutorialWindow);
+        Guard(TestTutorialPdfExport);
+        Guard(TestTutorialCommandAndSettings);
+        Guard(TestTutorialGuides);
+        Guard(TestTempoBoxText);
+        Guard(TestStaffArcInsets);
+        Guard(TestHarmonicNoteheadPositions);
+        Guard(TestFlagShape);
+        Guard(TestSlideStrokesOnStaff);
+        Guard(TestAutomationIds);
+        Guard(TestScoreContextMenuByKeyboard);
+        Guard(TestEditorShiftClickAndEffectDuration);
+        Guard(TestDrumEntryAndQuickAddBars);
+        Guard(TestKeyboardContextMenuPlacement);
+        Guard(TestTimelineAndInstrumentContextMenuByKeyboard);
+        Guard(TestThemedCheckBoxAndProgressBar);
+        Guard(TestDockRatioNotRewrittenByAutoFit);
         Guard(TestFollowSurvivesZoom);
         Guard(TestZoomComboShowsValue);
         Guard(TestSpeedControl);
@@ -101,6 +150,7 @@ public static partial class SelfTest
         Guard(TestTrackListGroupRows);
         Guard(TestOrderAnimationAndSpeedCommands);
         Guard(TestRepeatedOpenCloseReleasesWindows);   // needs the application alive: keep it with the other window tests
+        Guard(TestClosedDocumentChainsReleased);
         Guard(TestCommandPaletteAndPdf);
         Guard(TestTechniqueEngraving);
         Guard(TestLayoutAuditTechniqueSong);
@@ -111,6 +161,7 @@ public static partial class SelfTest
         Guard(TestEditorStructurePeer);
         Guard(TestEditCommands);
         Guard(TestReadableTextTokens);
+        Guard(TestColourChoiceEntries);
         Guard(TestEngravingHeader);
         Guard(TestUserTemplatesAndFaultedChain);
         Section("Standard-notation engraving layout");
@@ -121,6 +172,7 @@ public static partial class SelfTest
         Guard(TestModelRoundTrip);
         Guard(TestAsciiExport);
         Guard(TestMidiExport);
+        Guard(TestMidiExportTiming);
         Guard(TestTupletImport);
         Guard(TestTabUi);
         Section("Documents");
@@ -143,8 +195,10 @@ public static partial class SelfTest
         Guard(TestGuitarProImportContainment);
         Guard(TestGuitarProImportWorker);
         Guard(TestRoundTripSemanticsSuite);
+        Guard(TestGpRoundTripFixes);
         Section("Synthetic fixtures (run everywhere, no local songs)");
         Guard(TestSyntheticFixtures);
+        Guard(TestFullDemoSong);
         Section("Playback depth (timing / ties / channels)");
         Guard(TestPlaybackDepth);
         Guard(TestNoOpOptionChangesDoNotRestartPlayback);
@@ -169,9 +223,11 @@ public static partial class SelfTest
         Guard(TestPairSaveEveryStage);
         Guard(TestPairSaveProcessKill);
         Guard(TestProfileLeavesUserFoldersUntouched);
+        Guard(TestCaptureMainWindowOffscreen);
         Guard(TestNightPluginApproval);
         Guard(TestAsyncSaveSequencing);
         Guard(TestPluginStateCollection);
+        Guard(TestQuarantineAllowAgain);
         Guard(TestSidecarRouting);
         Guard(TestAudioDataSizeLimit);
         Guard(TestGpOpenKeepsTitle);
@@ -208,12 +264,19 @@ public static partial class SelfTest
         Guard(TestEngineLivenessAndSlowLoad);
         Guard(TestCaptureResampling);
         Guard(TestRoutingCycles);
+        Guard(TestAutoGmEveryPath);
         Guard(TestReaperChainImport);
         Guard(TestSettingsWithInlinePluginStates);
         Guard(TestDataIntegrityLeftovers);
         Guard(TestAutosaveRecovery);
         Guard(TestCallbackMetrics);
+        Guard(TestAudioAudit);
+        Guard(TestAudioAuditRepeatedSections);
         Guard(TestClips);
+        Guard(TestMediaDropPlan);
+        Guard(TestMidiFileToClip);
+        Guard(TestVirtualFileDrop);
+        Guard(TestSongFileDropRouting);
         Guard(TestUpdateCheck);
         Section("Editing semantics (reference behaviour)");
         Guard(TestGp5EditingSemantics);
@@ -227,6 +290,11 @@ public static partial class SelfTest
         Guard(TestMediaPathPolicy);
         Guard(TestWaveformCacheBounds);
         Guard(TestClosedTimelineIsCollected);
+        Guard(TestPlayheadStyleSetting);
+        Guard(TestTimelineHoverAndBarMarker);
+        Guard(TestMediaDropPreviewGeometry);
+        Guard(TestClipMoves);
+        Guard(TestClipMoveGhost);
         Section("Malformed-input fuzzing and lifecycle");
         Guard(TestMalformedInputFuzz);
         Section("Repository hygiene");
@@ -280,7 +348,9 @@ public static partial class SelfTest
         ["TestRetirementEpochBarrier"] = "engine", ["TestMonitorFx"] = "engine", ["TestSharedRingProducers"] = "engine", ["TestEngineExitCleanupOnUi"] = "engine",
         ["TestHeadlessDeviceReconfigure"] = "engine", ["TestClipChurnWhileStreaming"] = "engine", ["TestDiskStreamerIdle"] = "engine", ["TestRealtimePolish"] = "engine",
         ["TestPluginFactorySingleSource"] = "engine", ["TestWatchdogPolicy"] = "engine", ["TestCommandFrameRobustness"] = "engine",
-        ["TestPumpOnce"] = "engine", ["TestTunerPitchDetection"] = "engine", ["TestEffectChannel"] = "engine", ["TestDrumAndMelodicDispatchTogether"] = "engine", ["TestColdStartSetupSurvivesPanic"] = "engine", ["TestChildProcessJob"] = "engine", ["TestEngineLivenessAndSlowLoad"] = "engine", ["TestCaptureResampling"] = "recording", ["TestRoutingCycles"] = "engine", ["TestGmLevelCalibration"] = "engine", ["TestCallbackMetrics"] = "engine",
+        ["TestPumpOnce"] = "engine", ["TestTunerPitchDetection"] = "engine", ["TestEffectChannel"] = "engine", ["TestDrumAndMelodicDispatchTogether"] = "engine", ["TestColdStartSetupSurvivesPanic"] = "engine", ["TestChildProcessJob"] = "engine", ["TestEngineLivenessAndSlowLoad"] = "engine", ["TestCaptureResampling"] = "recording", ["TestRoutingCycles"] = "engine", ["TestGmLevelCalibration"] = "engine", ["TestCallbackMetrics"] = "engine", ["TestAudioAudit"] = "audioaudit", ["TestAudioAuditRepeatedSections"] = "audioaudit",
+        ["TestMidiProcessors"] = "midi", ["TestRecordingPipeline"] = "recording", ["TestClips"] = "recording", ["TestMediaDropPlan"] = "recording", ["TestMidiFileToClip"] = "recording", ["TestVirtualFileDrop"] = "recording", ["TestSongFileDropRouting"] = "recording", ["TestMediaDropPreviewGeometry"] = "ui", ["TestClipMoves"] = "recording", ["TestClipMoveGhost"] = "ui",
+        ["TestPumpOnce"] = "engine", ["TestTunerPitchDetection"] = "engine", ["TestEffectChannel"] = "engine", ["TestDrumAndMelodicDispatchTogether"] = "engine", ["TestColdStartSetupSurvivesPanic"] = "engine", ["TestChildProcessJob"] = "engine", ["TestEngineLivenessAndSlowLoad"] = "engine", ["TestCaptureResampling"] = "recording", ["TestRoutingCycles"] = "engine", ["TestAutoGmEveryPath"] = "engine", ["TestGmLevelCalibration"] = "engine", ["TestCallbackMetrics"] = "engine", ["TestAudioAudit"] = "audioaudit", ["TestAudioAuditRepeatedSections"] = "audioaudit",
         ["TestMidiProcessors"] = "midi", ["TestRecordingPipeline"] = "recording", ["TestClips"] = "recording",
         ["TestSaveTransactions"] = "persistence", ["TestPairSaveRecovery"] = "persistence", ["TestPairMarkerIsUntrusted"] = "persistence", ["TestPairSaveEveryStage"] = "persistence", ["TestPairSaveProcessKill"] = "persistence",["TestProfileLeavesUserFoldersUntouched"] = "persistence", ["TestNightPluginApproval"] = "persistence", ["TestAsyncSaveSequencing"] = "persistence", ["TestPluginStateCollection"] = "persistence",
         ["TestSidecarRouting"] = "persistence", ["TestPersistenceSchema"] = "persistence", ["TestTforgeCompression"] = "persistence", ["TestCleanGpExportKeepsFeatures"] = "guitarpro",["TestMusicXmlExport"] = "guitarpro",["TestMusicXmlBarsFillTheTimeSignature"] = "guitarpro",["TestMusicXmlHeaderForReaders"] = "guitarpro",["TestMusicXmlGuitarPro8Encoding"] = "guitarpro",["TestImporterNamesAndDynamics"] = "guitarpro",["TestSettingsWithInlinePluginStates"] = "persistence",
@@ -289,20 +359,29 @@ public static partial class SelfTest
         ["TestSaveTransactions"] = "persistence", ["TestPairSaveRecovery"] = "persistence", ["TestProfileLeavesUserFoldersUntouched"] = "persistence", ["TestNightPluginApproval"] = "persistence", ["TestAsyncSaveSequencing"] = "persistence", ["TestPluginStateCollection"] = "persistence",
         ["TestSidecarRouting"] = "persistence", ["TestPersistenceSchema"] = "persistence", ["TestTforgeCompression"] = "persistence", ["TestCleanGpExportKeepsFeatures"] = "guitarpro",["TestMusicXmlExport"] = "guitarpro",["TestRoundTripSemanticsSuite"] = "guitarpro",["TestMusicXmlBarsFillTheTimeSignature"] = "guitarpro",["TestMusicXmlHeaderForReaders"] = "guitarpro",["TestMusicXmlGuitarPro8Encoding"] = "guitarpro",["TestImporterNamesAndDynamics"] = "guitarpro",["TestSettingsWithInlinePluginStates"] = "persistence",
         ["TestReaperChainImport"] = "persistence", ["TestProjectRoundtrip"] = "persistence", ["TestModelRoundTrip"] = "persistence",
-        ["TestSyntheticGuitarProFixture"] = "guitarpro", ["TestSyntheticFixtures"] = "synthetic", ["TestGuitarProFiles"] = "guitarpro", ["TestTupletImport"] = "guitarpro", ["TestGuitarProImportContainment"] = "guitarpro", ["TestGuitarProImportWorker"] = "guitarpro",
-        ["TestGp5EditingSemantics"] = "guitarpro", ["TestAsciiExport"] = "guitarpro", ["TestMidiExport"] = "guitarpro",
-        ["TestPlaybackDepth"] = "playback", ["TestFermataPlayback"] = "playback",["TestNoOpOptionChangesDoNotRestartPlayback"] = "playback", ["TestSeekWhilePlayingSoundsFirstNote"] = "playback",
+        ["TestSyntheticGuitarProFixture"] = "guitarpro", ["TestGpRoundTripFixes"] = "guitarpro", ["TestSyntheticFixtures"] = "synthetic", ["TestFullDemoSong"] = "synthetic", ["TestGuitarProFiles"] = "guitarpro", ["TestTupletImport"] = "guitarpro", ["TestGuitarProImportContainment"] = "guitarpro", ["TestGuitarProImportWorker"] = "guitarpro",
+        ["TestGp5EditingSemantics"] = "guitarpro", ["TestAsciiExport"] = "guitarpro", ["TestMidiExport"] = "guitarpro", ["TestMidiExportTiming"] = "playback",
+        ["TestPlaybackDepth"] = "playback", ["TestNoHangingNotes"] = "playback", ["TestNoticeLimit"] = "guitarpro", ["TestLongGuitarPro35Import"] = "guitarpro",["TestFermataPlayback"] = "playback",["TestNoOpOptionChangesDoNotRestartPlayback"] = "playback", ["TestSeekWhilePlayingSoundsFirstNote"] = "playback",
         ["TestCountInIsHeard"] = "playback", ["TestTimelineBasics"] = "playback", ["TestTimelineTechniques"] = "playback",
         ["TestTimelineMetronome"] = "playback", ["TestTimelineRevision"] = "playback", ["TestAudioDataSizeLimit"] = "persistence", ["TestGpOpenKeepsTitle"] = "persistence", ["TestEmbeddedProjectLimit"] = "persistence", ["TestRecoveryCopyOverTforgeLimit"] = "persistence", ["TestTimelineLoopAndOrder"] = "playback", ["TestPlaybackOrderSpec"] = "playback",
-        ["TestEditorEntry"] = "ui", ["TestEditorStructurePeer"] = "ui", ["TestEditCommands"] = "ui", ["TestReadableTextTokens"] = "ui", ["TestEditorNavigation"] = "ui", ["TestEditorDurations"] = "ui", ["TestPlaybackGlowIntensity"] = "ui",
+        ["TestEditorEntry"] = "ui", ["TestEditorStructurePeer"] = "ui", ["TestEditCommands"] = "ui", ["TestReadableTextTokens"] = "ui", ["TestColourChoiceEntries"] = "ui", ["TestEditorNavigation"] = "ui", ["TestEditorDurations"] = "ui", ["TestPlaybackGlowIntensity"] = "ui",
         ["TestEditorCopyPaste"] = "ui", ["TestNoteMapper"] = "ui", ["TestScoreClipCapture"] = "persistence", ["TestScoreClipJson"] = "persistence", ["TestScoreClipRejectsUntrustedInput"] = "persistence", ["TestClipboardServiceFallback"] = "persistence", ["TestTimelineClipsShareClipboard"] = "ui", ["TestTimelineSectionCopiesAsBars"] = "ui", ["TestTimelineContextMenus"] = "ui", ["TestPasteCommands"] = "ui", ["TestPasteSpecial"] = "ui", ["TestNotationLayout"] = "ui", ["TestTabUi"] = "ui", ["TestBrowserTabShell"] = "ui",
-        ["TestNoteEvents"] = "ui", ["TestInstrumentVisualState"] = "ui", ["TestFretboardGeometry"] = "ui", ["TestArrangementGeometry"] = "ui",
+        ["TestNewBindableCommands"] = "ui", ["TestKeyRoutingOrder"] = "ui", ["TestViewMenuWording"] = "ui", ["TestSectionDeleteWording"] = "ui", ["TestMenuGestureTextFollowsBindings"] = "ui", ["TestMoveNoteToAdjacentString"] = "ui",
+        ["TestMarkStacking"] = "ui", ["TestDrumEntryAndQuickAddBars"] = "ui",["TestEditorShiftClickAndEffectDuration"] = "ui",["TestEngravingCollisions"] = "ui", ["TestSimileBarHidesLinesAndTies"] = "ui", ["TestVoice2HopoSlurWithLongerVoice"] = "ui", ["TestBarAuditTool"] = "ui",["TestNoteEvents"] = "ui", ["TestInstrumentVisualState"] = "ui", ["TestFretboardGeometry"] = "ui", ["TestArrangementGeometry"] = "ui",
+        ["TestMarkStacking"] = "ui", ["TestEditorShiftClickAndEffectDuration"] = "ui",["TestEngravingCollisions"] = "ui", ["TestSimileBarHidesLinesAndTies"] = "ui", ["TestClefShapesAndChanges"] = "ui", ["TestVoice2HopoSlurWithLongerVoice"] = "ui", ["TestBarAuditTool"] = "ui",["TestNoteEvents"] = "ui", ["TestInstrumentVisualState"] = "ui", ["TestFretboardGeometry"] = "ui", ["TestArrangementGeometry"] = "ui",
         ["TestArrangementFollowGeometry"] = "ui", ["TestScaleFinder"] = "ui", ["TestGp5SvgIcons"] = "ui", ["TestInstrumentArtwork"] = "ui",
         ["TestRuntimeIconAndResourceKeys"] = "ui", ["TestSystemBreakPreferences"] = "ui", ["TestEverySettingIsWired"] = "settings",
         ["TestSettingsStoreSharedAcrossWindows"] = "settings", ["TestEngineWarmOwnership"] = "engine", ["TestEngineMultiTabPlayback"] = "engine",["TestEngineDefaultOnAndManualOffSticks"] = "settings", ["TestInstrumentSizeUnlockedByDefault"] = "settings", ["TestPerControlTextDpi"] = "ui", ["TestDynamicsEngraving"] = "ui",
+        ["TestMediaPathPolicy"] = "persistence", ["TestWaveformCacheBounds"] = "recording", ["TestClosedTimelineIsCollected"] = "ui", ["TestTimelineHoverAndBarMarker"] = "ui", ["TestPlayheadStyleSetting"] = "settings",
+        ["TestTooltips"] = "ui", ["TestPasteOptionsDialog"] = "ui", ["TestPasteSettingsRows"] = "settings", ["TestContextMenuLayouts"] = "ui", ["TestContextMenuLean"] = "ui", ["TestPreferencesCatalog"] = "settings", ["TestRenderGuardContainment"] = "ui", ["TestDialogEscape"] = "ui", ["TestTempoBoxText"] = "ui", ["TestStaffArcInsets"] = "ui", ["TestAutomationIds"] = "ui", ["TestScoreContextMenuByKeyboard"] = "ui", ["TestKeyboardContextMenuPlacement"] = "ui", ["TestTimelineAndInstrumentContextMenuByKeyboard"] = "ui", ["TestThemedCheckBoxAndProgressBar"] = "ui", ["TestDockRatioNotRewrittenByAutoFit"] = "ui",
         ["TestMediaPathPolicy"] = "persistence", ["TestWaveformCacheBounds"] = "recording", ["TestClosedTimelineIsCollected"] = "ui",
-        ["TestPasteOptionsDialog"] = "ui", ["TestPasteSettingsRows"] = "settings", ["TestContextMenuLayouts"] = "ui",
-        ["TestMalformedInputFuzz"] = "fuzz", ["TestRepeatedOpenCloseReleasesWindows"] = "leaks",
+        ["TestPasteOptionsDialog"] = "ui", ["TestPasteSettingsRows"] = "settings", ["TestContextMenuLayouts"] = "ui", ["TestContextMenuLean"] = "ui", ["TestPreferencesCatalog"] = "settings", ["TestRenderGuardContainment"] = "ui", ["TestDialogEscape"] = "ui", ["TestTempoBoxText"] = "ui", ["TestStaffArcInsets"] = "ui", ["TestHarmonicNoteheadPositions"] = "ui", ["TestFlagShape"] = "ui", ["TestSlideStrokesOnStaff"] = "ui", ["TestAutomationIds"] = "ui", ["TestScoreContextMenuByKeyboard"] = "ui", ["TestKeyboardContextMenuPlacement"] = "ui", ["TestTimelineAndInstrumentContextMenuByKeyboard"] = "ui", ["TestThemedCheckBoxAndProgressBar"] = "ui", ["TestDockRatioNotRewrittenByAutoFit"] = "ui",
+        ["TestPasteOptionsDialog"] = "ui", ["TestPasteSettingsRows"] = "settings", ["TestContextMenuLayouts"] = "ui", ["TestContextMenuLean"] = "ui", ["TestPreferencesCatalog"] = "settings", ["TestRenderGuardContainment"] = "ui", ["TestDialogEscape"] = "ui", ["TestTempoBoxText"] = "ui", ["TestStaffArcInsets"] = "ui", ["TestAutomationIds"] = "ui", ["TestScoreContextMenuByKeyboard"] = "ui", ["TestKeyboardContextMenuPlacement"] = "ui", ["TestTimelineAndInstrumentContextMenuByKeyboard"] = "ui", ["TestThemedCheckBoxAndProgressBar"] = "ui", ["TestDockRatioNotRewrittenByAutoFit"] = "ui", ["TestCaptureMainWindowOffscreen"] = "ui",
+        ["TestPasteOptionsDialog"] = "ui", ["TestPasteSettingsRows"] = "settings", ["TestContextMenuLayouts"] = "ui", ["TestContextMenuLean"] = "ui", ["TestPreferencesCatalog"] = "settings", ["TestRenderGuardContainment"] = "ui", ["TestDialogEscape"] = "ui", ["TestTutorialMarkdown"] = "tutorial", ["TestTutorialSearch"] = "tutorial", ["TestTutorialWindow"] = "tutorial", ["TestTutorialPdfExport"] = "tutorial", ["TestTutorialCommandAndSettings"] = "tutorial", ["TestTutorialGuides"] = "tutorial", ["TestTempoBoxText"] = "ui", ["TestStaffArcInsets"] = "ui", ["TestAutomationIds"] = "ui", ["TestScoreContextMenuByKeyboard"] = "ui", ["TestKeyboardContextMenuPlacement"] = "ui", ["TestTimelineAndInstrumentContextMenuByKeyboard"] = "ui", ["TestThemedCheckBoxAndProgressBar"] = "ui", ["TestDockRatioNotRewrittenByAutoFit"] = "ui",
+        ["TestPasteOptionsDialog"] = "ui", ["TestPasteSettingsRows"] = "settings", ["TestContextMenuLayouts"] = "ui", ["TestContextMenuLean"] = "ui", ["TestPreferencesCatalog"] = "settings", ["TestRenderGuardContainment"] = "ui", ["TestDialogEscape"] = "ui", ["TestTempoBoxText"] = "ui", ["TestStaffArcInsets"] = "ui", ["TestAutomationIds"] = "ui", ["TestScoreContextMenuByKeyboard"] = "ui", ["TestKeyboardContextMenuPlacement"] = "ui", ["TestTimelineAndInstrumentContextMenuByKeyboard"] = "ui", ["TestThemedCheckBoxAndProgressBar"] = "ui", ["TestDockRatioNotRewrittenByAutoFit"] = "ui",
+        ["TestTrackRowRightClick"] = "ui", ["TestInstrumentChoiceStrings"] = "ui", ["TestTransposeAllVoices"] = "notation", ["TestCapoRepitchesNotes"] = "playback",
+        ["TestQuarantineAllowAgain"] = "settings",
+        ["TestMalformedInputFuzz"] = "fuzz", ["TestRepeatedOpenCloseReleasesWindows"] = "leaks", ["TestClosedDocumentChainsReleased"] = "leaks",
     };
 
     private static HashSet<string>? _areas;   // null: every area
@@ -1958,8 +2037,8 @@ public static partial class SelfTest
         Check("settings catalogue is not empty", catalog.Count >= 30, $"{catalog.Count} settings");
         Check("settings pages follow the requested category order", SettingsCatalog.Categories.SequenceEqual(new[]
         {
-            "General", "Appearance & colours", "Score & notation", "Playback & sound", "Audio & VST", "Editing",
-            "Timeline & sections", "Fretboard", "Tabs & windows", "Hotkeys", "Advanced"
+            "Common settings", "General", "Appearance", "Score & Notation", "Fretboard & Keyboard", "Timeline & Tracks", "Editing",
+            "Playback & Practice", "Audio & Plug-ins", "Recording", "Tabs & Windows", "Shortcuts", "Files & Backups", "Advanced"
         }));
         Check("setting keys are unique", catalog.Select(d => d.Key).Distinct(StringComparer.OrdinalIgnoreCase).Count() == catalog.Count);
         Check("every setting is searchable", catalog.All(d => d.SearchText.Length > 4 && d.SearchText == d.SearchText.ToLowerInvariant()));
@@ -2108,9 +2187,9 @@ public static partial class SelfTest
         var spaced = new TabEditorControl();
         var defaultHeight = spaced.SystemHeightNow;
         Check("score spacing defaults to 100%", Math.Abs(spaced.ScoreSpacing - 1.0) < 0.001);
-        Check("standard notation and tablature have clear separation", spaced.StaffToTabGapNow >= 60,
+        Check("standard notation and tablature have clear separation", spaced.StaffToTabGapNow >= 48,
             $"{spaced.StaffToTabGapNow:0} DIP gap");
-        Check("score spacing scales the staff-to-tab gap", Math.Abs(spaced.StaffToTabGapNow - 64) < 0.001);
+        Check("score spacing scales the staff-to-tab gap", Math.Abs(spaced.StaffToTabGapNow - 52) < 0.001);
         spaced.ScoreSpacing = 1.4;
         Check("raising the score spacing makes each system taller", spaced.SystemHeightNow > defaultHeight,
             $"{defaultHeight:0} -> {spaced.SystemHeightNow:0}");
@@ -2341,9 +2420,9 @@ public static partial class SelfTest
         var preDuplicate = multiTrackSong.Tracks[0].Measures.Count;
         var repeatedBars = arrangement.RepeatRange(multiTrackSong, 0, 0, 2);
         Check("arrangement duplicates a bar and repeats a selected range on every track",
-            arrangement.DuplicateBar(multiTrackSong, 0, 1) &&
+            arrangement.DuplicateBars(multiTrackSong, 1, 1) is not null &&
             multiTrackSong.Tracks[0].Measures.Count == preDuplicate + 3 &&
-            multiTrackSong.Tracks[1].Measures.Count == preDuplicate + 2 && repeatedBars == 2);
+            multiTrackSong.Tracks[1].Measures.Count == preDuplicate + 3 && repeatedBars == 2);
     }
 
     private static void TestBrowserTabShell()
@@ -2592,6 +2671,23 @@ public static partial class SelfTest
         Check("string spacing: Wide is at most 1.5x Natural, Compact is not larger than Natural",
             portraitWide.StringGap <= portrait.StringGap * 1.5 + 0.01 && portraitWide.StringGap >= portrait.StringGap &&
             portraitCompact.StringGap <= portrait.StringGap + 0.01);
+
+        // The setting must visibly change the drawn string gap in normal panes (landscape and portrait), with no clipping.
+        foreach (var (w, h, nm) in new[] { (1400.0, 260.0, "landscape-1400x260"), (1100.0, 1900.0, "portrait-1100x1900") })
+        {
+            var cmp = Measured(w, h, 0.75, nm + "-compact", out var cs, out _);
+            var nat = Measured(w, h, 1.0, nm + "-natural", out var ns, out _);
+            var wid = Measured(w, h, 1.5, nm + "-wide", out var ws, out _);
+            state.StringSpacing = 1.0;
+            double cg = cmp.StringGap * cs, ng = nat.StringGap * ns, wg = wid.StringGap * ws;
+            Log.Add($"  info  string spacing {nm}: drawn gap Compact {cg:0.0} px, Natural {ng:0.0} px, Wide {wg:0.0} px");
+            Check($"string spacing {nm}: Compact < Natural < Wide (drawn gap)", cg < ng - 0.5 && ng < wg - 0.5, $"{cg:0.0} / {ng:0.0} / {wg:0.0}");
+            Check($"string spacing {nm}: Wide is at most 1.5x Natural", wg <= ng * 1.5 + 0.5);
+            foreach (var (l, sc, n2) in new[] { (cmp, cs, "compact"), (nat, ns, "natural"), (wid, ws, "wide") })
+                Check($"string spacing {nm} {n2}: nothing clipped (top marker room above, fret numbers below)",
+                    l.Board.Top >= FretboardGeometry.TopPad - 0.01 && (l.Board.Bottom + FretboardGeometry.BottomPad) * sc <= h + 0.5,
+                    $"top {l.Board.Top * sc:0.0} bottom {(l.Board.Bottom + FretboardGeometry.BottomPad) * sc:0.0} of {h}");
+        }
     }
 
     /// <summary>

@@ -29,6 +29,10 @@ public sealed class ContextMenuEventArgs : EventArgs
     public ContextMenuEventArgs(Point position) => Position = position;
     public Point Position { get; }
     /// <summary>The spot that was right-clicked (not selected: right-click never moves the cursor).</summary>
+    /// <summary>Opened with Shift+F10 / the Menu key: the menu belongs at <see cref="Anchor"/> (control coordinates), not at the mouse, and takes keyboard focus.</summary>
+    public bool FromKeyboard { get; init; }
+    /// <summary>Bottom-left of the caret cell in the editor's own coordinates; set for a keyboard-opened menu.</summary>
+    public Point? Anchor { get; init; }
     public int Measure { get; init; } = -1;
     public int Cell { get; init; } = -1;
     public int StringIndex { get; init; } = -1;

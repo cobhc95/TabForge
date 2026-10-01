@@ -1,4 +1,4 @@
-# TabForge 0.3.0 Beta 2
+# TabForge 0.5
 
 **A keyboard-driven tablature and notation editor for Windows. Opens and saves Guitar Pro files.** Write, import and play back guitar,
 bass, drum and keyboard parts, with a live fretboard / keyboard, an arrangement timeline, audio and MIDI
@@ -8,10 +8,9 @@ recording lanes, mixer groups, VST effects and instruments, and offline audio re
 
 *The main screenshot shows TabForge's own demo song and a third-party VST3 plug-in (Superior Drummer 3 by Toontrack, sold separately) as an example of plug-in hosting. TabForge does not include that plug-in and is not affiliated with Toontrack.*
 
-> [!WARNING]
-> **TabForge 0.3.0 Beta 2 is a pre-release.** No bugs are known at the moment, but extensive testing is still
-> ongoing, so expect surprises. Keep backups of your projects and your original Guitar Pro files, especially
-> before using recording or third-party plug-ins.
+> [!NOTE]
+> **TabForge 0.5 is the first official release.** Keep backups of your projects and your original song files,
+> especially before using recording or third-party plug-ins, and report anything odd on the Issues page.
 
 TabForge is an independent project. Guitar Pro is a trademark of Arobas Music; TabForge is not affiliated with, sponsored or endorsed by Arobas Music, Steinberg, Toontrack or any other company named here.
 
@@ -19,7 +18,7 @@ TabForge is an independent project. Guitar Pro is a trademark of Arobas Music; T
 
 Get the latest build from [Releases](https://github.com/cobhc95/TabForge/releases):
 
-**0.3.0 Beta 2 downloads:** [Windows installer](https://github.com/cobhc95/TabForge/releases/download/v0.3.0-beta.2/TabForge-0.3.0-beta.2-setup.exe) · [Portable ZIP](https://github.com/cobhc95/TabForge/releases/download/v0.3.0-beta.2/TabForge-0.3.0-beta.2-win-x64-portable.zip) · [SHA-256 checksums](https://github.com/cobhc95/TabForge/releases/download/v0.3.0-beta.2/TabForge-0.3.0-beta.2-SHA256.txt)
+**0.5 downloads:** [Windows installer](https://github.com/cobhc95/TabForge/releases/download/v0.5.0/TabForge-0.5-setup.exe) · [Portable ZIP](https://github.com/cobhc95/TabForge/releases/download/v0.5.0/TabForge-0.5-win-x64-portable.zip) · [SHA-256 checksums](https://github.com/cobhc95/TabForge/releases/download/v0.5.0/TabForge-0.5-SHA256.txt)
 
 Installer, portable ZIP, SHA-256 checksums and release notes are on the [Releases page](https://github.com/cobhc95/TabForge/releases).
 
@@ -43,6 +42,69 @@ or any MIDI output you choose, or through TabForge's audio engine.
 Includes an original demo song, *Ashen Meridian* (CC0), used in all screenshots.
 
 A `licenses/` folder beside `TabForge.exe` (portable zip and installer) holds the full licence texts of every bundled component. SoundTouch.Net (LGPL-2.1) ships as a separate, replaceable `SoundTouch.Net.dll`; each release attaches its source.
+
+## What's new in 0.5
+
+- **Built-in tutorial.** Help > Tutorial… opens a **Basic Guide** (seven short chapters) and a **Detailed Guide** (sixteen chapters covering every feature), with instant search and **Export PDF**.
+
+  ![Tutorial window](docs/screenshots/tutorial-basic.png)
+
+  ![Detailed Guide with search](docs/screenshots/tutorial-detailed.png)
+
+- **Import audio and MIDI by dragging.** Drop MP3, WAV, FLAC, OGG, AIFF, M4A, WMA or MIDI files from Windows, or a groove straight from a plug-in's editor, onto any track. A live preview shows where the file lands and how long it is. Overlaps open a new lane automatically, dropping below the last track creates a new track, and a MIDI groove lands exactly on the song's bar grid. Song files dropped on the window open in new tabs.
+
+  ![Dropping a file on the timeline](docs/screenshots/timeline-drop.png)
+
+- **Move clips anywhere.** Drag a clip to another lane or another track, with the same preview. Ctrl+drag copies it, and empty lanes tidy themselves away (optional).
+
+  ![Moving a clip](docs/screenshots/timeline-move-clip.png)
+
+  ![A new lane opens on overlap](docs/screenshots/timeline-drop-new-lane.png)
+
+- **Type exact knob values.** Double-click, right-click or press F2 on any round knob and type "-6 dB", "75%", "L30" and so on. Ctrl+click resets.
+- **Sound that never goes silent.** If a VST instrument stops playing (FX off, bypassed, removed, crashed or missing), the track falls back to the built-in General MIDI sound. Renders pass through a transparent safety limiter, and crashed plug-ins can be **allowed again**.
+- **Keyboard and menus.** Every menu shows your current shortcut. Section, bar, track and speed shortcuts all work, tooltips wrap and show their shortcut, Shift+F10 or the Menu key opens the right-click menu in the score, timeline and fretboard, and Esc closes dialogs.
+- **Engraving.** The real clef on every system, harmonics at the fretted pitch, full flags, slide strokes and slurs on the staff, standard strum arrows, ledger lines matched to the staff lines, proper repeat-bar (simile) signs, volta brackets, system heights that fit 7- and 8-string tracks, a tighter tab-only view, and thousands fewer overlapping symbols.
+
+  ![Notation](docs/screenshots/notation-clefs-harmonics.png)
+
+- **Reorganised settings.** Preferences has 14 clear pages in four groups (Basics, Music, Sound, System), with a new **Common settings** page first.
+  - Everyday options are shown; the rest sit behind "More options".
+  - Search finds any word in any order.
+  - Right-click menus end in one "… settings…" link that opens the right page.
+
+  ![Common settings](docs/screenshots/preferences-common-settings.png)
+
+  ![Settings search](docs/screenshots/preferences-search.png)
+
+- **Fretboard and timeline.** A new default fretboard look and a **Scale highlight strength** setting. The timeline gets a hover shade and a choice of playback marker (line, bar marker or both).
+
+  ![Fretboard](docs/screenshots/fretboard-2026.png)
+
+  ![Playback marker: line and bar marker](docs/screenshots/timeline-playhead-styles.png)
+
+- **Editing.**
+  - Duplicate bar copies every track.
+  - Time and key signatures carry forward to the next change, with an "Only this bar" option.
+  - Notes move to the neighbouring string at the same pitch.
+  - Transpose covers both voices and skips drums.
+  - A capo change moves the sounding pitch.
+  - Every drum pad writes.
+- **Files.**
+  - Saving and reopening .gp keeps far more of your song.
+  - MIDI export matches playback to the millisecond.
+  - Guitar Pro 3–5 songs with more than 1,000 bars now open.
+- **Under the hood.**
+  - Playback tested on real hardware, with ASIO and WASAPI at low latency.
+  - Recording survives a busy disk.
+  - Closing a tab frees its plug-ins' memory.
+  - Hanging notes fixed, and fermatas hold in playback, MIDI export and render.
+  - The recording buffer grew from about 5 s to about 175 s.
+  - Typing a tempo applies on Enter.
+  - The demo song's drum swell and outro piano can now be heard.
+  - Over 3,600 automated checks run on every build.
+
+The full list is in the [0.5 release notes](https://github.com/cobhc95/TabForge/releases/tag/v0.5.0).
 
 ## Why it exists
 
@@ -276,8 +338,7 @@ is listed with its path, and changes preview live before you apply them:
 
 Drum parts import from every format, including Guitar Pro 6 (`.gpx`) extended articulations and Guitar Pro 7/8
 (`.gp`) drum kits; the import is covered by synthetic round-trip tests that run on every build. Known
-limit: Guitar Pro 3–5 files with more than 1,000 bars cannot be opened by the reader library yet (save them as
-`.gp`/`.gpx` from Guitar Pro 6/7/8). Guitar Pro 1/2 (`.gtp`) and TuxGuitar (`.tg`) files are not supported.
+limit: Guitar Pro 3–5 files open with up to 20,000 bars per track. Guitar Pro 1/2 (`.gtp`) and TuxGuitar (`.tg`) files are not supported.
 
 A `.gp` saved by TabForge follows the `.gp` file format, **and** carries the complete TabForge project inside it
 (an extra entry other readers can ignore), so reopening it in TabForge loses nothing — drum map, section sizes,

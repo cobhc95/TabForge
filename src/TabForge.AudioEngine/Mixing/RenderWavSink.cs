@@ -55,6 +55,7 @@ internal sealed class RenderWavSink : IDisposable
     /// <summary>Writes a block now.</summary>
     public void Write(float[] left, float[] right, int frames)
     {
+        WrittenFrames += frames;
         var channels = _channels;
         if (channels == 2) for (var i = 0; i < frames; i++) { _inter[2 * i] = left[i]; _inter[2 * i + 1] = right[i]; }
         else for (var i = 0; i < frames; i++) _inter[i] = 0.5f * (left[i] + right[i]);
@@ -73,6 +74,22 @@ internal sealed class RenderWavSink : IDisposable
     }
 
     public void DropHeld() => _held.Clear();
+
+    /// <summary>Writes only the first <paramref name="frames"/> held frames and drops the rest (a delayed master that must end where the stems end).</summary>
+    public void FlushHeldFirst(long frames)
+    {
+        foreach (var (l, r, n) in _held)
+        {
+            if (frames <= 0) break;
+            var k = (int)Math.Min(n, frames);
+            Write(l, r, k);
+            frames -= k;
+        }
+        _held.Clear();
+    }
+
+    /// <summary>Engine-rate frames written so far (held frames not counted).</summary>
+    public long WrittenFrames { get; private set; }
 
     private void Drain()
     {

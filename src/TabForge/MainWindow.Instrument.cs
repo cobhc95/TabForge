@@ -54,6 +54,10 @@ public partial class MainWindow
               (string.IsNullOrWhiteSpace(chord) ? "" : $"\nchord: {chord}");
     }
 
+    /// <summary>The TAB line a clicked drum pad writes to: the track's drum map (preset or custom), kept inside the track's lines.</summary>
+    internal static int PercussionPadLine(TrackModel drumTrack, int percussion) =>
+        Math.Clamp(Services.DrumMaps.For(drumTrack, percussion).TabLine, 0, Math.Max(0, drumTrack.StringTunings.Count - 1));
+
     /// <summary>Arms a fretboard click/drag gesture; note entry waits until mouse-up so horizontal drags stay edits-free.</summary>
     private void Instrument_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
@@ -61,7 +65,7 @@ public partial class MainWindow
         if (SelectedTrack is { } drumTrack && (drumTrack.Kind == TrackKind.Drums || drumTrack.MidiChannel == 9) &&
             Instrument.TryHitPercussion(e.GetPosition(Instrument), out var percussion))
         {
-            var line = Math.Min(Services.GuitarProImporter.DrumLine(percussion), Math.Max(0, drumTrack.StringTunings.Count - 1));
+            var line = PercussionPadLine(drumTrack, percussion);
             if (Editor.ToggleFretAtPosition(line, percussion)) Editor.Focus();
             e.Handled = true;
             return;

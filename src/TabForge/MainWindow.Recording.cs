@@ -50,6 +50,7 @@ public partial class MainWindow : IRecordingHost
         ScrollToCursor();
     }
     void IRecordingHost.SetStatus(string text) => StatusText.Text = text;
+    void IRecordingHost.ShowNotice(string text) => MessageBox.Show(this, text + "\n\nThe take keeps its length: the lost parts are silent. Record again with the disk less busy, or on another drive.", "Recording", MessageBoxButton.OK, MessageBoxImage.Warning);
     void IRecordingHost.CaptureUndo() => CaptureUndo();
     void IRecordingHost.SyncAudioEngine() => SyncAudioEngine();
     void IRecordingHost.RefreshTracks() => RefreshTracks();

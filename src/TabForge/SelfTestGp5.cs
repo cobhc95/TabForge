@@ -358,11 +358,16 @@ public static partial class SelfTest
         Check("forced line break starts a new system at its measure", forced.SystemCount == 2 &&
             forced.SystemForMeasure(1) == 0 && forced.SystemForMeasure(2) == 1);
 
-        var prevented = ScorePageLayout.Create(0, 100, natural.Take(3).ToArray(),
+        var prevented = ScorePageLayout.Create(0, 145, natural.Take(3).ToArray(),
             new[] { false, false, false }, new[] { false, true, false });
         Check("prevent-line-break keeps adjacent measures together when a row overflows",
             prevented.SystemCount == 2 && prevented.SystemForMeasure(0) == prevented.SystemForMeasure(1) &&
             prevented.SystemForMeasure(1) != prevented.SystemForMeasure(2));
+
+        var tooNarrow = ScorePageLayout.Create(0, 100, natural.Take(3).ToArray(),
+            new[] { false, false, false }, new[] { false, true, false });
+        Check("prevent-line-break is ignored when the bars cannot fit the page even at their tightest spacing (nothing runs past the page)",
+            tooNarrow.SystemForMeasure(0) != tooNarrow.SystemForMeasure(1));
 
         var ordinary = Enumerable.Repeat(100d, 5).ToArray();
         var narrow = ScorePageLayout.Create(0, 480, ordinary);

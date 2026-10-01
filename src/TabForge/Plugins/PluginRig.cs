@@ -53,6 +53,8 @@ public sealed class PluginSlot
     /// <summary>Instruments: the measured automatic pitch-match transpose in semitones (null: not measured yet). Applied right before the plug-in.</summary>
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public int? AutoPitchOffset { get; set; }
+    /// <summary>Runtime only: the engine cannot play this plug-in (not loaded, quarantined, untrusted or missing); set by the audio client, never saved.</summary>
+    [System.Text.Json.Serialization.JsonIgnore] public bool Unavailable { get; set; }
 }
 
 /// <summary>A plug-in's MIDI input routing (property names are the file format).</summary>

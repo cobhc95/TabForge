@@ -42,11 +42,16 @@ public sealed partial class TabEditorControl : FrameworkElement
     private bool _centerSystems;
     private double StaffGap => 9.0 * _scoreSpacing;
     private double StringGap => 15.0 * _scoreSpacing;
-    private double StaffMarginTop => 46.0 * _scoreSpacing;
+    private double StaffMarginTop => (46.0 + _extraAbove) * _scoreSpacing;
     private double StaffHeight => 4 * StaffGap;
-    // Keep a generous clear band between standard notation and tablature, matching printed scores.
-    private double StaveGap => 64.0 * _scoreSpacing * _systemVerticalSpacing;
-    private double SystemHeight => StaffMarginTop + StaffHeight + StaveGap + 5 * StringGap + 28.0 * _scoreSpacing;
+    // Keep a generous clear band between standard notation and tablature, matching printed scores (grown when low notes reach into it).
+    private double StaveGap => (52.0 + _extraBelow) * _scoreSpacing * _systemVerticalSpacing;
+    private double SystemHeight => StaffMarginTop + StaffToTab + (TabStringCount - 1) * StringGap + Math.Max(28.0 * _scoreSpacing, _extraTabBelow);
+    /// <summary>Strings of the shown track (6 when there is none): the tab part of a system follows it.</summary>
+    private int TabStringCount => Math.Max(1, Track?.StringTunings.Count is > 0 and var n ? n : 6);
+
+    /// <summary>Distance from the staff top to the TAB top: the staff and its gap, or just room for the marks when only the TAB is shown.</summary>
+    private double StaffToTab => Notation == NotationMode.TabOnly ? 30.0 * _scoreSpacing : StaffHeight + StaveGap;
 
     /// <summary>Readability scale for the tablature: line spacing and fret numbers.</summary>
     public double ScoreSpacing
@@ -148,7 +153,19 @@ public sealed partial class TabEditorControl : FrameworkElement
     public event EventHandler? PlayRequested;
     public event EventHandler<NotePreviewEventArgs>? NotePreview;
 
-    public NotationMode Notation { get; set; } = NotationMode.TabAndStaff;
+    public NotationMode Notation
+    {
+        get => _notation;
+        set
+        {
+            if (_notation == value) return;
+            _notation = value;
+            InvalidateScoreLayout();   // the tab-only view drops the empty staff band, so the system height changes
+            InvalidateMeasure();
+            InvalidateVisual();
+        }
+    }
+    private NotationMode _notation = NotationMode.TabAndStaff;
     public LedgerLineMode LedgerLines { get; set; } = LedgerLineMode.Minimal;
     public bool DarkPaper { get; set; } = true;
     public Color DarkPaperColor { get; set; } = Color.FromRgb(0x15, 0x18, 0x1D);
@@ -170,7 +187,6 @@ public sealed partial class TabEditorControl : FrameworkElement
     public bool ShowSectionHeadings { get; set; } = true;
     public bool ShowBarNumbers { get; set; } = true;
     public int BarNumberFrequency { get; set; } = 1;
-    public double LedgerLineOpacity { get; set; } = 1;
     public double HoverHighlightIntensity { get; set; } = 0.27;
     public double SelectionHighlightIntensity { get; set; } = 0.25;
     public Color SelectionColor { get; set; } = Color.FromRgb(0x4C, 0x9A, 0xFF);
@@ -259,7 +275,7 @@ public sealed partial class TabEditorControl : FrameworkElement
     public int SelectedTrackIndex
     {
         get => _selectedTrackIndex;
-        set { _selectedTrackIndex = Math.Max(0, value); CoerceSelection(); InvalidateScoreLayout(); }
+        set { _selectedTrackIndex = Math.Max(0, value); CoerceSelection(); InvalidateScoreLayout(); InvalidateMeasure(); }
     }
 
     public TrackModel? Track => _project is not null && _selectedTrackIndex >= 0 && _selectedTrackIndex < _project.Tracks.Count

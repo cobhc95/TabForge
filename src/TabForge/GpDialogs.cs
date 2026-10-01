@@ -56,8 +56,10 @@ public static class GpDialogs
         return DialogHost.ShowModal(w) == true ? result : null;
     }
 
-    public static (int num, int denom)? TimeSignature(int num, int denom)    {
-        var w = new Window { Title = "Time signature (Ctrl+Shift+T)", Width = 300, Height = 190, WindowStartupLocation = WindowStartupLocation.CenterOwner, ResizeMode = ResizeMode.NoResize };
+    /// <summary>The bar's time signature; <c>OnlyThisBar</c> limits the change to that bar (otherwise it lasts until the next change).</summary>
+    /// <param name="selectedBars">"bars 3-6" when a bar range is selected: the change applies to exactly those bars.</param>
+    public static (int num, int denom, bool onlyThisBar)? TimeSignature(int num, int denom, string? selectedBars = null)    {
+        var w = new Window { Title = "Time signature (Ctrl+Shift+T)", Width = 300, Height = 230, WindowStartupLocation = WindowStartupLocation.CenterOwner, ResizeMode = ResizeMode.NoResize };
         var p = new StackPanel { Margin = new Thickness(10) };
         p.Children.Add(new TextBlock { Text = "Beats per bar / beat value" });
         var row = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 8, 0, 8) };
@@ -68,20 +70,25 @@ public static class GpDialogs
         if (dBox.SelectedIndex < 0) dBox.SelectedIndex = 2;
         row.Children.Add(nBox); row.Children.Add(new TextBlock { Text = " / ", VerticalAlignment = VerticalAlignment.Center }); row.Children.Add(dBox);
         p.Children.Add(row);
-        (int, int)? res = null;
+        p.Children.Add(new TextBlock { Text = selectedBars is null ? "Applies from this bar until the next time signature change." : $"Applies to the selected {selectedBars}.", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 6) });
+        var onlyThisBar = new CheckBox { Content = "Only this bar", Margin = new Thickness(0, 0, 0, 8), Visibility = selectedBars is null ? Visibility.Visible : Visibility.Collapsed };
+        p.Children.Add(onlyThisBar);
+        (int, int, bool)? res = null;
         var btns = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
         var ok = new Button { Content = "OK", Width = 75, IsDefault = true };
         var c = new Button { Content = "Cancel", Width = 75, IsCancel = true };
-        ok.Click += (_, _) => { if (int.TryParse(nBox.Text, out var n) && int.TryParse(dBox.SelectedItem?.ToString(), out var d)) res = (Math.Clamp(n, 1, 32), d); w.DialogResult = true; w.Close(); };
+        ok.Click += (_, _) => { if (int.TryParse(nBox.Text, out var n) && int.TryParse(dBox.SelectedItem?.ToString(), out var d)) res = (Math.Clamp(n, 1, 32), d, onlyThisBar.IsChecked == true); w.DialogResult = true; w.Close(); };
         btns.Children.Add(ok); btns.Children.Add(c); p.Children.Add(btns);
         w.Content = p;
         return DialogHost.ShowModal(w) == true ? res : null;
     }
 
-    public static (int signature, bool minor)? KeySignature(int current, bool currentMinor)
+    /// <summary>The bar's key signature; <c>OnlyThisBar</c> limits the change to that bar (otherwise it lasts until the next change).</summary>
+    /// <param name="selectedBars">"bars 3-6" when a bar range is selected: the change applies to exactly those bars.</param>
+    public static (int signature, bool minor, bool onlyThisBar)? KeySignature(int current, bool currentMinor, string? selectedBars = null)
     {
         var names = new[] { "Cb", "Gb", "Db", "Ab", "Eb", "Bb", "F", "C", "G", "D", "A", "E", "B", "F#", "C#" };
-        var w = new Window { Title = "Key signature (Ctrl+K)", Width = 340, Height = 190, WindowStartupLocation = WindowStartupLocation.CenterOwner };
+        var w = new Window { Title = "Key signature (Ctrl+K)", Width = 340, Height = 250, WindowStartupLocation = WindowStartupLocation.CenterOwner };
         var p = new StackPanel { Margin = new Thickness(10) };
         var cb = new ComboBox { Margin = new Thickness(0, 6, 0, 8) };
         foreach (var name in names) cb.Items.Add(name);
@@ -89,11 +96,14 @@ public static class GpDialogs
         var minor = new CheckBox { Content = "Minor mode", IsChecked = currentMinor, Margin = new Thickness(0, 0, 0, 8) };
         p.Children.Add(new TextBlock { Text = "Key" }); p.Children.Add(cb);
         p.Children.Add(minor);
-        (int, bool)? res = null;
+        p.Children.Add(new TextBlock { Text = selectedBars is null ? "Applies from this bar until the next key signature change." : $"Applies to the selected {selectedBars}.", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 6) });
+        var onlyThisBar = new CheckBox { Content = "Only this bar", Margin = new Thickness(0, 0, 0, 8), Visibility = selectedBars is null ? Visibility.Visible : Visibility.Collapsed };
+        p.Children.Add(onlyThisBar);
+        (int, bool, bool)? res = null;
         var row = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
         var ok = new Button { Content = "OK", Width = 75, IsDefault = true };
         var cc = new Button { Content = "Cancel", Width = 75, IsCancel = true };
-        ok.Click += (_, _) => { if (cb.SelectedIndex >= 0) res = (cb.SelectedIndex - 7, minor.IsChecked == true); w.DialogResult = true; w.Close(); };
+        ok.Click += (_, _) => { if (cb.SelectedIndex >= 0) res = (cb.SelectedIndex - 7, minor.IsChecked == true, onlyThisBar.IsChecked == true); w.DialogResult = true; w.Close(); };
         row.Children.Add(ok); row.Children.Add(cc); p.Children.Add(row);
         w.Content = p;
         return DialogHost.ShowModal(w) == true ? res : null;
@@ -145,6 +155,38 @@ public static class GpDialogs
         return accepted ? selected : null;
     }
 
+    /// <summary>One entry of a colour drop-down: a name and its #RRGGBB value. ToString is the name (shown by UI Automation).</summary>
+    internal sealed record ColourChoice(string Name, string Hex)
+    {
+        public override string ToString() => Name;
+
+        public System.Windows.Media.Brush Swatch => Visualization.ColourText.TryParse(Hex, out var c) ? Frozen(c) : System.Windows.Media.Brushes.Transparent;
+
+        private static System.Windows.Media.Brush Frozen(System.Windows.Media.Color c) { var b = new System.Windows.Media.SolidColorBrush(c); b.Freeze(); return b; }
+
+        /// <summary>Small rounded swatch followed by the name; used for both the list items and the selection box.</summary>
+        public static DataTemplate Template()
+        {
+            var row = new FrameworkElementFactory(typeof(StackPanel));
+            row.SetValue(StackPanel.OrientationProperty, Orientation.Horizontal);
+            var box = new FrameworkElementFactory(typeof(Border));
+            box.SetValue(FrameworkElement.WidthProperty, 14.0);
+            box.SetValue(FrameworkElement.HeightProperty, 14.0);
+            box.SetValue(Border.CornerRadiusProperty, new CornerRadius(3));
+            box.SetValue(Border.BorderThicknessProperty, new Thickness(1));
+            box.SetValue(FrameworkElement.MarginProperty, new Thickness(0, 0, 8, 0));
+            box.SetValue(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Center);
+            box.SetBinding(Border.BackgroundProperty, new System.Windows.Data.Binding(nameof(Swatch)));
+            box.SetResourceReference(Border.BorderBrushProperty, "BorderBrush");
+            var text = new FrameworkElementFactory(typeof(TextBlock));
+            text.SetBinding(TextBlock.TextProperty, new System.Windows.Data.Binding(nameof(Name)));
+            text.SetValue(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Center);
+            row.AppendChild(box);
+            row.AppendChild(text);
+            return new DataTemplate { VisualTree = row };
+        }
+    }
+
     public static (string title, string color)? Marker(string title = "", string color = "#2E74B5", string action = "Add")
     {
         var w = new Window { Title = $"{action} score marker", Width = 340, Height = 190, WindowStartupLocation = WindowStartupLocation.CenterOwner };
@@ -153,14 +195,21 @@ public static class GpDialogs
         var nameBox = new TextBox { Text = title, Margin = new Thickness(0, 4, 0, 10) };
         panel.Children.Add(nameBox);
         panel.Children.Add(new TextBlock { Text = "Colour" });
-        var colors = new (string name, string hex)[]
+        var colors = new ColourChoice[]
         {
-            ("Blue", "#2E74B5"), ("Green", "#3FB950"), ("Gold", "#D8A032"), ("Violet", "#8B5CF6"),
-            ("Teal", "#00A6A6"), ("Rose", "#E06C75"), ("Slate", "#64748B"), ("Pink", "#C45A9A")
+            new("Blue", "#2E74B5"), new("Green", "#3FB950"), new("Gold", "#D8A032"), new("Violet", "#8B5CF6"),
+            new("Teal", "#00A6A6"), new("Rose", "#E06C75"), new("Slate", "#64748B"), new("Pink", "#C45A9A")
         };
-        var combo = new ComboBox { Margin = new Thickness(0, 4, 0, 10), DisplayMemberPath = "name", SelectedValuePath = "hex" };
-        foreach (var item in colors) combo.Items.Add(new { item.name, item.hex });
-        combo.SelectedValue = colors.FirstOrDefault(item => item.hex.Equals(color, StringComparison.OrdinalIgnoreCase)).hex ?? colors[0].hex;
+        var combo = new ComboBox { Margin = new Thickness(0, 4, 0, 10), ItemTemplate = ColourChoice.Template(), SelectedValuePath = nameof(ColourChoice.Hex) };
+        System.Windows.Automation.AutomationProperties.SetName(combo, "Colour");
+        foreach (var item in colors) combo.Items.Add(item);
+        var current = colors.FirstOrDefault(item => item.Hex.Equals(color, StringComparison.OrdinalIgnoreCase));
+        if (current is null && Visualization.ColourText.TryParse(color, out _))
+        {
+            current = new ColourChoice($"Custom ({color.ToUpperInvariant()})", color);
+            combo.Items.Add(current);
+        }
+        combo.SelectedItem = current ?? colors[0];
         panel.Children.Add(combo);
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
         var ok = new Button { Content = action, Width = 75, IsDefault = true };
@@ -180,6 +229,11 @@ public static class GpDialogs
 
     public static bool EditScoreInfo(Models.SongProject p)
     {
+        static TextBox LongText(string? value) => new()
+        {
+            Text = value ?? "", AcceptsReturn = true, TextWrapping = TextWrapping.Wrap,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto, MinHeight = 44, MaxHeight = 140
+        };
         var w = new Window { Title = "Score information (F5)", Width = 480, Height = 560, WindowStartupLocation = WindowStartupLocation.CenterOwner };
         var fields = new (string label, TextBox box)[]
         {
@@ -187,7 +241,8 @@ public static class GpDialogs
             ("Artist", new TextBox { Text = p.Artist }), ("Album", new TextBox { Text = p.Album }),
             ("Music author", new TextBox { Text = p.MusicAuthor }), ("Lyrics author", new TextBox { Text = p.LyricsAuthor }),
             ("Copyright", new TextBox { Text = p.Copyright }), ("Tab author", new TextBox { Text = p.TabAuthor }),
-            ("Instructions", new TextBox { Text = p.Instructions }), ("Notice", new TextBox { Text = p.Notice }),
+            // Multi-line texts (a notice may be 64K characters) scroll inside a bounded box instead of stretching the dialog.
+            ("Instructions", LongText(p.Instructions)), ("Notice", LongText(p.Notice)),
         };
         var sp = new StackPanel { Margin = new Thickness(10) };
         foreach (var (l, b) in fields) { sp.Children.Add(new TextBlock { Text = l, FontWeight = FontWeights.Bold }); sp.Children.Add(b); }

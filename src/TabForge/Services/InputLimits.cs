@@ -48,6 +48,8 @@ public static class InputLimits
     public const int MaxTitleLength = 256;
     public const int MaxUserTextLength = 4_096;
     public const int MaxLyricsLength = 65_536;
+    /// <summary>The song's notice (Guitar Pro "notices": one line per entry, often a long tabber's note; real songs reach 6,000+ characters). Same bound as lyrics.</summary>
+    public const int MaxNoticeLength = 65_536;
     public const int MaxLyricsLinesPerBeat = 64;
     public const int MaxSettingsTextLength = 4_096;
     public const int MaxRecentColourLength = 64;

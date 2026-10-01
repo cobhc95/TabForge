@@ -124,6 +124,7 @@ internal sealed class PasteSpecialDialog : Window
                 Margin = new Thickness(6, 2, 0, 2), Foreground = ResourceBrush("TextBrush"), ToolTip = labels[i]
             };
             AutomationProperties.SetName(_modes[i], "Mode: " + labels[i]);
+            UiIds.Id(_modes[i], "PasteSpecial.Mode." + i);
             body.Children.Add(_modes[i]);
         }
 
@@ -175,6 +176,7 @@ internal sealed class PasteSpecialDialog : Window
             Background = ResourceBrush("AccentBrush"), BorderBrush = ResourceBrush("AccentBrush"), Foreground = Brushes.White
         };
         AutomationProperties.SetName(paste, "Paste");
+        UiIds.Id(paste, "PasteSpecial.Ok");
         paste.Click += (_, _) => Finish(true);
         var cancel = new Button
         {
@@ -182,6 +184,7 @@ internal sealed class PasteSpecialDialog : Window
             IsCancel = true, ToolTip = "Cancel the paste (Esc)"
         };
         AutomationProperties.SetName(cancel, "Cancel");
+        UiIds.Id(cancel, "PasteSpecial.Cancel");
         cancel.Click += (_, _) => Finish(false);
         var actions = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(14, 10, 14, 12) };
         actions.Children.Add(paste);

@@ -200,7 +200,8 @@ public static class ProjectValidator
     {
         "title" or "subtitle" or "artist" or "album" or "musicauthor" or "lyricsauthor" or "copyright" or
             "tabauthor" or "name" or "instrumentname" or "sectionname" or "chordname" or "articulationmap" => InputLimits.MaxTitleLength,
-        "instructions" or "notice" or "text" or "directions" => InputLimits.MaxUserTextLength,
+        "instructions" or "text" or "directions" => InputLimits.MaxUserTextLength,
+        "notice" => InputLimits.MaxNoticeLength,
         "lyrics" => InputLimits.MaxLyricsLength,
         "importedfrom" or "path" => InputLimits.MaxPathLength,
         "colorhex" => 16,
@@ -221,7 +222,7 @@ public static class ProjectValidator
         RequireText(project.Copyright, InputLimits.MaxTitleLength, "copyright text");
         RequireText(project.TabAuthor, InputLimits.MaxTitleLength, "tab author");
         RequireText(project.Instructions, InputLimits.MaxUserTextLength, "instructions");
-        RequireText(project.Notice, InputLimits.MaxUserTextLength, "notice");
+        RequireText(project.Notice, InputLimits.MaxNoticeLength, "notice");
         RequireText(project.Lyrics, InputLimits.MaxLyricsLength, "lyrics");
         if (project.ImportedFrom is not null) RequireText(project.ImportedFrom, InputLimits.MaxPathLength, "source path");
         if (project.Tempo is < InputLimits.MinTempo or > InputLimits.MaxTempo)

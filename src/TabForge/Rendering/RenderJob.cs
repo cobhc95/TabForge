@@ -88,7 +88,7 @@ public static class RenderJob
             }
             finally { engine.ChainAcknowledged -= Ack; }
             cancel.ThrowIfCancellationRequested();
-            if (!engine.IsRunning) throw new RenderException("The audio engine could not be started (see Settings > Audio & VST).");
+            if (!engine.IsRunning) throw new RenderException("The audio engine could not be started (see Settings > Audio & Plug-ins).");
             if (!readiness.IsReady)
             {
                 var names = readiness.MissingSlots.Select(s => r.Project.Tracks.FirstOrDefault(t => engine.SlotOf(t) == s)?.Name ?? $"mix bus (slot {s})");

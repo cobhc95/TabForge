@@ -21,15 +21,22 @@ public static partial class SelfTest
         Check("note menu hides both paste items without a clip (hidden, not greyed)",
             !noteEmpty.Contains("Paste") && !noteEmpty.Contains("Paste special…") && Views.ContextMenuLayouts.TopLevelCount(noteEmpty) == 8);
 
-        var overBeat = Views.ContextMenuLayouts.ScoreEmptyMenu(overBeat: true, canPaste: true);
-        Eq("score empty menu over a beat with a clip: 6 entries", 6, Views.ContextMenuLayouts.TopLevelCount(overBeat));
-        Check("score empty menu starts with Paste, Paste special", overBeat[0] == "Paste" && overBeat[1] == "Paste special…");
-        Eq("score empty menu without a clip: 4 entries", 4, Views.ContextMenuLayouts.TopLevelCount(Views.ContextMenuLayouts.ScoreEmptyMenu(true, false)));
-        Eq("score empty menu off a beat: 4 entries", 4, Views.ContextMenuLayouts.TopLevelCount(Views.ContextMenuLayouts.ScoreEmptyMenu(false, true)));
+        string[] Top(IEnumerable<Views.MenuSpec> m) => m.Where(x => !x.IsSeparator).Select(x => x.Header).ToArray();
+        Func<string, string> noKeys = _ => "";
+        var overBeat = Top(Views.ScoreMenus.Empty(new Views.ScoreEmptyState(true, true, true, true, false), noKeys));
+        Check("score empty menu over a beat with a clip: Paste, Paste special, notation, Zoom, Page layout, Score settings (6 entries)",
+            string.Join("|", overBeat) == "Paste|Paste special…|Show standard notation|Zoom|Page layout|Score settings…", string.Join("|", overBeat));
+        Eq("score empty menu with the clipboard empty: 4 entries", 4, Top(Views.ScoreMenus.Empty(new Views.ScoreEmptyState(true, false, true, true, false), noKeys)).Length);
+        Eq("score empty menu off a beat: 4 entries", 4, Top(Views.ScoreMenus.Empty(new Views.ScoreEmptyState(false, true, true, true, false), noKeys)).Length);
 
-        Eq("fretboard menu: 6 entries", 6, Views.ContextMenuLayouts.TopLevelCount(Views.ContextMenuLayouts.Fretboard(keyboard: false, drums: false)));
-        Eq("keyboard menu: 6 entries", 6, Views.ContextMenuLayouts.TopLevelCount(Views.ContextMenuLayouts.Fretboard(keyboard: true, drums: false)));
-        Eq("drum pads menu: 4 entries", 4, Views.ContextMenuLayouts.TopLevelCount(Views.ContextMenuLayouts.Fretboard(keyboard: false, drums: true)));
+        var views = new[] { "Match the instrument", "Fretboard", "Keyboard", "Drums" };
+        Views.InstrumentMenuState Instrument(bool keyboard, bool drums) => new(keyboard, drums, "Guitar", "Fretboard", views,
+            new[] { "C", "D" }, new[] { "Major", "Minor" }, null, true, false, false, true);
+        var fretboard = Top(Views.InstrumentMenus.Build(Instrument(false, false), noKeys));
+        Check("fretboard menu: view, scale, note names, preview, left-handed, lock, settings (7 entries)",
+            string.Join("|", fretboard) == "Show this track as|Scale|Note names|Preview next notes|Left-handed|Lock fretboard size|Fretboard settings…", string.Join("|", fretboard));
+        Eq("keyboard menu: 6 entries (no left-handed)", 6, Top(Views.InstrumentMenus.Build(Instrument(true, false), noKeys)).Length);
+        Eq("drum pads menu: 4 entries", 4, Top(Views.InstrumentMenus.Build(Instrument(false, true), noKeys)).Length);
 
         var editor = NewEditor(out _, out _);
         editor.SetPosition(0, 0, 0);
@@ -40,6 +47,135 @@ public static partial class SelfTest
         Check("a beat past the selection is not", !editor.IsInSelection(0, 6) && !editor.IsInSelection(1, 0));
         editor.ClearSelection();
         Check("no selection means nothing is inside it", !editor.IsInSelection(0, 0));
+    }
+
+    /// <summary>
+    /// Lean context menus (owner decisions 2026-09-30): at most two submenu levels, no submenu inside a same-named one, every
+    /// setting-like (checkable) item either maps to a SettingsCatalog row or says why not, and each menu has ONE "settings..." door
+    /// that deep-links to a real row on the right page. Also the deep-link API and the one menu separator (100 / 125 / 150%).
+    /// </summary>
+    private static void TestContextMenuLean()
+    {
+        Func<string, string> noKeys = _ => "";
+        var catalog = Services.SettingsCatalog.Build(new Services.AppSettings()).ToDictionary(d => d.Key, StringComparer.OrdinalIgnoreCase);
+        var views = new[] { "Match the instrument", "Fretboard", "Keyboard", "Drums" };
+        var roots = Services.MusicTheoryService.NoteNames.ToList();
+        var scales = Services.MusicTheoryService.Scales.Keys.ToList();
+        Views.InstrumentMenuState Instrument(bool keyboard, bool drums) => new(keyboard, drums, "Guitar", "Fretboard", views, roots, scales, "C Major", true, true, true, true);
+        var menus = new Dictionary<string, List<Views.MenuSpec>>
+        {
+            ["Fretboard"] = Views.InstrumentMenus.Build(Instrument(false, false), noKeys),
+            ["Keyboard"] = Views.InstrumentMenus.Build(Instrument(true, false), noKeys),
+            ["Drum pads"] = Views.InstrumentMenus.Build(Instrument(false, true), noKeys),
+            ["Score empty area"] = Views.ScoreMenus.Empty(new Views.ScoreEmptyState(true, true, true, true, true), noKeys),
+            ["Timeline bar"] = Views.TimelineMenus.Bar(new Views.BarMenuState(true, true, 3, true, true, true, true, true, true), noKeys),
+            ["Timeline selection"] = Views.TimelineMenus.Selection(new Views.SelectionMenuState("Bars 1-2 selected", true, true, true, true), noKeys),
+            ["Timeline section"] = Views.TimelineMenus.Section(new Views.SectionMenuState(2, true, true, true), noKeys),
+            ["Timeline clip"] = Views.TimelineMenus.Clip(new Views.ClipMenuState(true, true, true, true), noKeys),
+        };
+
+        // The mapping table: every checkable (setting-like) item -> its Preferences row, or the reason it has none.
+        var table = new List<(string Menu, string Item, string Key)>();
+        var problems = new List<string>();
+        foreach (var (name, menu) in menus)
+        {
+            if (Views.TimelineMenus.MaxDepth(menu) > 2) problems.Add($"{name}: depth {Views.TimelineMenus.MaxDepth(menu)}");
+            foreach (var nested in Views.TimelineMenus.SameNameNesting(menu)) problems.Add($"{name}: same-name submenu {nested}");
+            foreach (var item in Views.TimelineMenus.Checkables(menu))
+            {
+                var mapped = item.SettingKey is not null;
+                if (mapped == (item.NoSetting is not null)) { problems.Add($"{name}: '{item.Header}' needs a setting row or a reason"); continue; }
+                if (!mapped) continue;
+                table.Add((name, item.Header, item.SettingKey!));
+                if (!catalog.ContainsKey(item.SettingKey!)) problems.Add($"{name}: '{item.Header}' maps to missing row {item.SettingKey}");
+            }
+        }
+        Check("every context menu is at most 2 submenu levels deep, has no same-named nested submenu, and every tick maps to a settings row or a reason",
+            problems.Count == 0, string.Join("; ", problems));
+        Check("the mapping table covers the fretboard, keyboard, score menus (Lock size, Page / Continuous, Vertical / Horizontal, notation, scale, note names)",
+            new[] { "fretboard.locksize", "score.pagelayout", "score.scrolling", "score.defaultnotation", "editing.scale", "editing.notenames", "editing.horizon.enabled", "editing.lefthanded", "fretboard.instrumentview" }
+                .All(k => table.Any(t => t.Key == k)), string.Join(", ", table.Select(t => t.Key).Distinct()));
+        Check("the scale picker still reaches every scale of every key (Scale > key > scale)",
+            Views.TimelineMenus.Leaves(menus["Fretboard"]).Count(i => i.Id == Views.InstrumentMenus.ScaleId) == roots.Count * scales.Count);
+
+        // One "... settings..." door per menu; it names a real row, and that row's page is the page the menu promises.
+        var doors = new (string Menu, string Row, string Page)[]
+        {
+            ("Fretboard", Views.InstrumentMenus.SettingsRow, Services.SettingsCatalog.Fretboard),
+            ("Score empty area", Views.ScoreMenus.SettingsRow, Services.SettingsCatalog.Score),
+            ("Timeline bar", Views.TimelineMenus.TimelineSettingsRow, Services.SettingsCatalog.Timeline),
+            ("Timeline selection", Views.TimelineMenus.TimelineSettingsRow, Services.SettingsCatalog.Timeline),
+            ("Timeline section", Views.TimelineMenus.SectionSettingsRow, Services.SettingsCatalog.Timeline),
+        };
+        foreach (var (menu, row, page) in doors)
+        {
+            var count = Views.TimelineMenus.Leaves(menus[menu]).Count(i => i.Header.EndsWith("settings…", StringComparison.Ordinal));
+            Check($"{menu} menu has exactly one '... settings...' entry", count == 1, count.ToString());
+            Check($"{menu} menu's settings entry scrolls to a real row on the {page} page",
+                catalog.TryGetValue(row, out var d) && string.Equals(d.Category, page, StringComparison.OrdinalIgnoreCase), row);
+        }
+        Check("the clip menu has a single-item submenu nowhere (MIDI clip writes the notation from the top level)",
+            menus["Timeline clip"].All(i => i.Children is null || i.Children.Count(c => !c.IsSeparator) > 1));
+
+        // Every setting-like option that used to live only in a menu has a searchable Preferences row with a description.
+        var newRows = new[]
+        {
+            "fretboard.locksize", "fretboard.showallas", "score.pagelayout", "score.scrolling", "score.textfonts",
+            "timeline.individualnotes", "timeline.continuousline", "timeline.hideemptygrid", "timeline.barglow", "timeline.trackgroups",
+            "appearance.groupcolour.guitars", "appearance.groupcolour.basses", "appearance.groupcolour.keys", "appearance.groupcolour.drums",
+        };
+        Check("the rows for the menu options that had none exist, are searchable and have a description",
+            newRows.All(k => catalog.TryGetValue(k, out var d) && d.Description.Length > 20 && Services.SettingsCatalog.Matches(d, d.Title.ToLowerInvariant())),
+            string.Join(", ", newRows.Where(k => !catalog.ContainsKey(k))));
+        Check("'Appearance' is the word for looks: no Preferences group is called 'Display'",
+            catalog.Values.All(d => d.Group != "Display"));
+
+        // The deep-link API: the next Preferences window opens on the row's page and consumes the target.
+        Views.PreferencesWindow.SetTarget(Services.SettingsCatalog.Timeline, "timeline.brackets");
+        var deepLinked = new Views.PreferencesWindow(new Services.AppSettings());
+        Check("PreferencesWindow.SetTarget opens the next window on the named page", deepLinked.SelectedCategory == Services.SettingsCatalog.Timeline, deepLinked.SelectedCategory);
+        Check("the deep-link target is used once", Views.PreferencesWindow.InitialCategory is null && Views.PreferencesWindow.InitialRow is null);
+        deepLinked.Close();
+        Views.PreferencesWindow.SetTarget(Services.SettingsCatalog.General, "appearance.groupcolour.drums");
+        var colourLink = new Views.PreferencesWindow(new Services.AppSettings());
+        Check("a deep link to a row opens the row's own page (colour rows live on Appearance & colours)",
+            colourLink.SelectedCategory == Services.SettingsCatalog.Appearance, colourLink.SelectedCategory);
+        colourLink.Close();
+
+        TestMenuSeparatorGeometry();
+    }
+
+    /// <summary>One separator style for every menu: the rule is 1px, sits inside its own slot (8,4 margin) and is not clipped at 100 / 125 / 150% UI scale.</summary>
+    private static void TestMenuSeparatorGeometry()
+    {
+        var app = System.Windows.Application.Current;
+        if (app?.TryFindResource(System.Windows.Controls.MenuItem.SeparatorStyleKey) is not System.Windows.Style style)
+        {
+            Check("the menu separator style is registered under MenuItem.SeparatorStyleKey", false, "Application resources are unavailable");
+            return;
+        }
+        Check("the implicit Separator style is the same one (bare separators look identical)",
+            app.TryFindResource(typeof(System.Windows.Controls.Separator)) is System.Windows.Style implicitStyle &&
+            (ReferenceEquals(implicitStyle, style) || ReferenceEquals(implicitStyle.BasedOn, style)));
+        foreach (var scale in new[] { 1.0, 1.25, 1.5 })
+        {
+            var separator = new System.Windows.Controls.Separator { Style = style };
+            var host = new System.Windows.Controls.Border
+            {
+                Width = 240, Child = separator,
+                LayoutTransform = new System.Windows.Media.ScaleTransform(scale, scale)   // the app scales menus with a LayoutTransform
+            };
+            host.Measure(new System.Windows.Size(240 * scale, 400));
+            host.Arrange(new System.Windows.Rect(0, 0, host.DesiredSize.Width, host.DesiredSize.Height));
+            host.UpdateLayout();
+            var rule = System.Windows.Media.VisualTreeHelper.GetChildrenCount(separator) > 0
+                ? System.Windows.Media.VisualTreeHelper.GetChild(separator, 0) as System.Windows.FrameworkElement : null;
+            var top = rule is null ? -1 : rule.TransformToAncestor(separator).Transform(new System.Windows.Point(0, 0)).Y;
+            Check($"menu separator at {scale * 100:0}%: a 1px rule with 4px above and below, not clipped",
+                rule is not null && Math.Abs(separator.ActualHeight - 9) < 0.01 && Math.Abs(rule.ActualHeight - 1) < 0.01 && Math.Abs(top - 4) < 0.01 &&
+                System.Windows.Media.VisualTreeHelper.GetClip(rule) is null,
+                $"slot {separator.ActualHeight:0.##}, rule {rule?.ActualHeight:0.##} at y {top:0.##}");
+        }
     }
 
     [System.Runtime.InteropServices.DllImport("user32.dll")]
@@ -386,6 +522,14 @@ public static partial class SelfTest
         Check("duration: longer/shorter/set each change the beat with one undo step",
             afterLonger == 4 && sd.Tracks[0].Measures[0].Cells[0].DurationDenominator == 16 && std() == 3,
             $"longer={afterLonger} final={sd.Tracks[0].Measures[0].Cells[0].DurationDenominator} steps={std()}");
+    }
+
+    /// <summary>Colour drop-down entries read as their name (not an anonymous type's text) and carry a swatch brush.</summary>
+    private static void TestColourChoiceEntries()
+    {
+        var gold = new GpDialogs.ColourChoice("Gold", "#D8A032");
+        Check("colour choice: ToString is the colour name and the swatch is the colour",
+            gold.ToString() == "Gold" && gold.Swatch is System.Windows.Media.SolidColorBrush b && b.Color == System.Windows.Media.Color.FromRgb(0xD8, 0xA0, 0x32) && b.IsFrozen);
     }
 
     /// <summary>The shared minimum font size and the higher-contrast secondary text token exist and agree with the code constant.</summary>

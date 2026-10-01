@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Media;
 using TabForge.Visualization;
 
@@ -46,6 +47,35 @@ public sealed partial class InstrumentPanel : FrameworkElement
     public InstrumentPanel()
     {
         SnapsToDevicePixels = true;
+        // A Tab stop only: Tab can reach the panel, but a mouse click (note entry) never takes focus away from the score.
+        Focusable = true;
+        FocusVisualStyle = null;   // the focus outline is drawn by the panel itself
+        GotKeyboardFocus += (_, _) => InvalidateVisual();
+        LostKeyboardFocus += (_, _) => InvalidateVisual();
+    }
+
+    /// <summary>Shift+F10 or the Menu key while the panel has keyboard focus: open its context menu.</summary>
+    public event EventHandler? ContextMenuKeyPressed;
+
+    protected override void OnPreviewGotKeyboardFocus(KeyboardFocusChangedEventArgs e)
+    {
+        base.OnPreviewGotKeyboardFocus(e);
+        if (e.NewFocus == this && Mouse.LeftButton == MouseButtonState.Pressed) e.Handled = true;   // not by mouse click
+    }
+
+    internal bool TryHandleContextMenuKey(Key key, ModifierKeys mods)
+    {
+        if (key == Key.System) return false;
+        if (!((key == Key.Apps && mods == ModifierKeys.None) || (key == Key.F10 && mods == ModifierKeys.Shift))) return false;
+        ContextMenuKeyPressed?.Invoke(this, EventArgs.Empty);
+        return true;
+    }
+
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        base.OnKeyDown(e);
+        // F10 arrives as a "system" key.
+        if (TryHandleContextMenuKey(e.Key == Key.System ? e.SystemKey : e.Key, Keyboard.Modifiers)) e.Handled = true;
     }
 
     public string Title { get; set; } = "Instrument";
@@ -133,7 +163,7 @@ public sealed partial class InstrumentPanel : FrameworkElement
         if (state is null) return false;
         var s = DrawScale;   // the drawing is scaled: hit test in the same virtual space
         var width = (ActualWidth <= 0 ? 900 : ActualWidth) / s;
-        var content = FretboardContent(state, width, (ActualHeight <= 0 ? 168 : ActualHeight) / s);
+        var content = FretboardContent(state, width, (ActualHeight <= 0 ? 168 : ActualHeight) / s, s);   // same scale as OnRender: the keyboard's legend strip depends on it
         return FretboardGeometry.HitTest(state, content, new Point(point.X / s, point.Y / s), out stringIndex, out fret,
             _horizontalPosition, _horizontalDragOffset / s, width);
     }
@@ -187,6 +217,8 @@ public sealed partial class InstrumentPanel : FrameworkElement
     private const double MinPercussionRow = 14;
     /// <summary>Colour legend (4 rows from y 8-10) and the Scales button placed under it (24 px + margin).</summary>
     private const double LegendAndScalesButton = 10 + 4 * 18 + 6 + 24 + 6;
+    /// <summary>Highest the fretboard legend may sit (when the grid is too short to bottom-align the whole block).</summary>
+    private const double LegendTop = 10;
 
     /// <summary>Smallest drawing scale (markers still readable); the pane's minimum height is the natural height at this scale.</summary>
     public const double MinScale = 0.7;
@@ -251,7 +283,10 @@ public sealed partial class InstrumentPanel : FrameworkElement
                 var strings = state is null ? 6 : Math.Max(1, state.Tuning.Count);
                 // Drawn extent from the renderer's own layout: board top, string rows, then the larger of the
                 // bottom pad (fret numbers) and the lowest string's marker + halo.
-                var board = FretboardGeometry.TopPad + (strings - 1) * MinStringGap
+                // "Wide" string spacing needs proportionally more room (the drawing scales down instead of clipping).
+                var wide = state is not null && double.IsFinite(state.StringSpacing)
+                    ? Math.Clamp(state.StringSpacing, 1.0, FretboardGeometry.MaxSpacingFactor) : 1.0;
+                var board = FretboardGeometry.TopPad + (strings - 1) * MinStringGap * wide
                             + Math.Max(FretboardGeometry.BottomPad, BelowLowestString);
                 return Math.Ceiling(Math.Max(board, LegendAndScalesButton) + SafetyMargin);
             }
@@ -285,6 +320,18 @@ public sealed partial class InstrumentPanel : FrameworkElement
 
     protected override void OnRender(DrawingContext dc)
     {
+        try
+        {
+            RenderGuard.Inject("InstrumentPanel"); RenderCore(dc);
+            // Visible keyboard focus: an accent outline just inside the panel.
+            if (IsKeyboardFocused && ActualWidth > 6 && ActualHeight > 6)
+                dc.DrawRectangle(null, Draw.Pen(_theme.Accent, 2), new Rect(1, 1, ActualWidth - 2, ActualHeight - 2));
+        }
+        catch (Exception ex) when (RenderGuard.Contain(ex, "InstrumentPanel", dc, ActualWidth, ActualHeight)) { }
+    }
+
+    private void RenderCore(DrawingContext dc)
+    {
         _legendDrawnThisFrame = false;
         using var dpiScope = Draw.UseDpi(this);   // A-03: text shaped for this window's monitor
         try { RenderPanel(dc); }
@@ -317,27 +364,31 @@ public sealed partial class InstrumentPanel : FrameworkElement
         dc.PushTransform(new ScaleTransform(s, s));
         try
         {
-        var content = FretboardContent(state, w, h);
+        var content = FretboardContent(state, w, h, s);
         _renderer.Render(dc, state, content, _theme,
             new InstrumentRenderPlacement(_horizontalPosition, offset, w, _snapPreview));
         if (state.Kind == InstrumentKind.Keyboard)
         {
-            // Same legend as the fretboard, on a small backing plate at the top-right over the keys; the
-            // hide (X) button's corner strip is unscaled, so keep it clear in real pixels.
+            // Same legend as the fretboard, at the same (unscaled) size, on a backing plate in the strip the keys leave free
+            // at the right (see FretboardContent); the hide (X) button's corner strip is also kept clear. Real pixels, so a tall
+            // pane (which scales the keys up) does not blow the legend up.
+            dc.PushTransform(new ScaleTransform(1 / s, 1 / s));
             var plateWidth = FretboardGeometry.LegendWidth - FretboardGeometry.CornerReserve;
-            var lx = Math.Max(0, w - plateWidth - 2 - FretboardGeometry.CornerReserve / s);
+            var lx = Math.Max(4, w * s - plateWidth - 2 - FretboardGeometry.CornerReserve);
             dc.DrawRoundedRectangle(Draw.Solid(_theme.Background, 0.85), Draw.Pen(_theme.BoardEdge, 1),
                 new Rect(lx - 4, 4, plateWidth, 4 * 18 + 8), 4, 4);
             Legend(dc, 8, lx + 2, _theme);
-            SetLegendAnchor(new Point(lx * s, (8 + 4 * 18 + 8) * s));
+            dc.Pop();
+            SetLegendAnchor(new Point(lx, 8 + 4 * 18 + 8));
         }
         if (state.Kind is InstrumentKind.Guitar or InstrumentKind.Bass)
         {
             var geometry = FretboardGeometry.Compute(state, content, _horizontalPosition, offset, w);
-            // The legend (and the Scales button under it) rides with the board when a tall pane centres it.
-            var legendShift = geometry.Board.Top - FretboardGeometry.TopPad;
-            Legend(dc, 10 + legendShift, geometry.Board.Right + 14, _theme);
-            SetLegendAnchor(new Point((geometry.Board.Right + 12) * s, (10 + legendShift + 4 * 18 + 6) * s));
+            // The legend with the Scales button under it (24 real px) is bottom-aligned with the grid's lower edge, so it rides
+            // with the board when a tall pane centres it and never sits above the grid's top.
+            var legendY = Math.Max(LegendTop, geometry.Board.Bottom - (4 * 18 + 6 + 24 / s));
+            Legend(dc, legendY, geometry.Board.Right + 14, _theme);
+            SetLegendAnchor(new Point((geometry.Board.Right + 12) * s, (legendY + 4 * 18 + 6) * s));
             // Hover preview: a faded, semi-transparent note where a click would write one.
             if (_hover is { } hover)
             {
@@ -421,9 +472,16 @@ public sealed partial class InstrumentPanel : FrameworkElement
         }
     }
 
-    private static Rect FretboardContent(InstrumentVisualState state, double width, double height)
+    private static Rect FretboardContent(InstrumentVisualState state, double width, double height, double scale = 1)
     {
         var content = new Rect(0, 0, width, height);
+        if (state.Kind == InstrumentKind.Keyboard)
+        {
+            // The keys stop short of the legend plate (real pixels: the plate is not scaled with the drawing).
+            var reserve = (FretboardGeometry.LegendWidth - FretboardGeometry.CornerReserve + 4 + FretboardGeometry.CornerReserve) / Math.Max(0.1, scale);
+            content.Width = Math.Max(120, width - reserve);
+            return content;
+        }
         if (state.Kind is not (InstrumentKind.Guitar or InstrumentKind.Bass)) return content;
 
         var board = FretboardGeometry.Compute(state, content).Board;

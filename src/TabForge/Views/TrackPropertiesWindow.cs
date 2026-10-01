@@ -109,16 +109,7 @@ public static class TrackPropertiesWindow
 
     public static string NoteName(int midi) => $"{NoteNames[((midi % 12) + 12) % 12]}{midi / 12 - 1}";
 
-    private static TrackKind KindOf(string instrument, TrackModel track)
-    {
-        instrument = InstrumentNaming.WithoutStringCount(instrument); // "(7 strings)" is not the Strings family
-        if (track.MidiChannel == 9 || instrument.Contains("Drum", StringComparison.OrdinalIgnoreCase)) return TrackKind.Drums;
-        if (instrument.Contains("Bass", StringComparison.OrdinalIgnoreCase)) return TrackKind.Bass;
-        if (instrument.Contains("Piano", StringComparison.OrdinalIgnoreCase) || instrument.Contains("Organ", StringComparison.OrdinalIgnoreCase) ||
-            instrument.Contains("Strings", StringComparison.OrdinalIgnoreCase)) return TrackKind.Keys;
-        if (instrument.Contains("Guitar", StringComparison.OrdinalIgnoreCase)) return TrackKind.Guitar;
-        return track.Kind;
-    }
+    private static TrackKind KindOf(string instrument, TrackModel track) => TrackSetup.KindOf(instrument, track.MidiChannel, track.Kind);
 
     /// <summary>Where "Add track" puts the new track; <see cref="InsertIndex"/> is set when the user confirms.</summary>
     public sealed class AddTrackPlacement
@@ -152,8 +143,21 @@ public static class TrackPropertiesWindow
 
         // ---------- working copies ----------
         var tunings = track.StringTunings.ToList();
+        // Choosing an instrument of another kind (bass, keys, guitar) gives an EMPTY track that kind's default strings;
+        // a track with notes keeps its strings (an instrument change never moves written notes).
+        var trackHadNotes = TrackSetup.HasNotes(track);
+        Action? refreshTuningUi = null;
+        TextBlock? stringsStayHint = null;
         var instrument = new ComboBox();
         Border? tuningCard = null;
+        TextBlock? channelHint = null;
+        Func<string> channelWindowText = () => track.MidiChannel.ToString();
+        void UpdateChannelHint()
+        {
+            if (channelHint is null) return;
+            var drums = KindOf((string?)instrument.SelectedItem ?? track.InstrumentName, track) == TrackKind.Drums;
+            channelHint.Visibility = drums || channelWindowText() == "9" ? Visibility.Visible : Visibility.Collapsed;
+        }
         var colour = ThemeService.TryParse(track.ColorHex, out var parsed) ? parsed : Colors.SteelBlue;
 
         TextBlock Caption(string text) => new() { Text = text, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 10, 0, 4) };
@@ -206,7 +210,7 @@ public static class TrackPropertiesWindow
         identity.Children.Add(Caption("Played by")); identity.Children.Add(performer);
         identity.Children.Add(Hint("The musician who normally plays this part."));
         identity.Children.Add(Caption("Colour")); identity.Children.Add(swatches);
-        var tint = new CheckBox { Content = "Tint the track's row and lane with its colour", IsChecked = track.TintRow, Margin = new Thickness(0, 4, 0, 0),
+        var tint = new CheckBox { Content = new TextBlock { Text = "Tint the track's row and lane with its colour", TextWrapping = TextWrapping.Wrap }, IsChecked = track.TintRow, Margin = new Thickness(0, 4, 0, 0),
             ToolTip = "The strength is set in Settings > Appearance > Track colour tint." };
         identity.Children.Add(tint);
         identity.Children.Add(Caption("Notes")); identity.Children.Add(notes);
@@ -246,11 +250,13 @@ public static class TrackPropertiesWindow
         instrument.SelectedItem = track.InstrumentName;
         var program = new TextBox { Text = track.MidiProgram.ToString(), Width = 60 };
         var channel = new TextBox { Text = track.MidiChannel.ToString(), Width = 60 };
+        channelWindowText = () => channel.Text.Trim();
         var soundRow = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 8, 0, 0) };
         soundRow.Children.Add(new TextBlock { Text = "MIDI program", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0) });
         soundRow.Children.Add(program);
         soundRow.Children.Add(new TextBlock { Text = "Channel", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(16, 0, 8, 0) });
         soundRow.Children.Add(channel);
+        var lastKind = KindOf((string?)instrument.SelectedItem ?? track.InstrumentName, track);
         instrument.SelectionChanged += (_, _) =>
         {
             var entry = InstrumentCatalog.Find((string?)instrument.SelectedItem);
@@ -261,13 +267,27 @@ public static class TrackPropertiesWindow
                 if (entry.IsDrumKit) channel.Text = "9";
                 else if (channel.Text.Trim() == "9") channel.Text = track.MidiChannel != 9 ? track.MidiChannel.ToString() : "0";
             }
+            var newKind = KindOf((string?)instrument.SelectedItem ?? track.InstrumentName, track);
+            if (newKind != lastKind)
+            {
+                if (!trackHadNotes && TrackSetup.DefaultStrings(newKind) is { } defaults) { tunings = defaults; refreshTuningUi?.Invoke(); }
+                lastKind = newKind;
+            }
+            if (stringsStayHint is not null)
+                stringsStayHint.Visibility = trackHadNotes && newKind != track.Kind && newKind != TrackKind.Drums ? Visibility.Visible : Visibility.Collapsed;
             RedrawPicture();
         };
         var instrumentPanel = new StackPanel();
         instrumentPanel.Children.Add(chooseButton);
         instrumentPanel.Children.Add(instrument);
         instrumentPanel.Children.Add(soundRow);
-        instrumentPanel.Children.Add(Hint("Channel 9 (the 10th) is the General MIDI drum channel."));
+        // The drum-channel explanation matters only for a drum track or while channel 9 is typed.
+        channelHint = Hint("Channel 9 (the 10th) is the General MIDI drum channel.");
+        instrumentPanel.Children.Add(channelHint);
+        stringsStayHint = Hint("This track has notes, so its strings stay as they are. Add a new track to start with this instrument's own strings.");
+        stringsStayHint.Visibility = Visibility.Collapsed;
+        instrumentPanel.Children.Add(stringsStayHint);
+        channel.TextChanged += (_, _) => UpdateChannelHint();
 
         KnobControl Knob(string label, double value, double def, double origin, Func<double, string> fmt) => new()
         {
@@ -275,7 +295,9 @@ public static class TrackPropertiesWindow
             Width = 44, Height = 44, Label = label, Format = fmt, HorizontalAlignment = HorizontalAlignment.Center
         };
         var volume = Knob("Volume", track.Volume, 100, 0, v => $"{Math.Round(v / 1.27)}%");
+        volume.FromDisplay = percent => percent * 1.27;
         var pan = Knob("Pan", track.Pan, 64, 64, v => (int)v - 64 is var o && o == 0 ? "Centre" : o < 0 ? $"L {-o}" : $"R {o}");
+        pan.Parse = KnobValueParser.ParsePan;
         StackPanel KnobBlock(KnobControl knob, string label)
         {
             var block = new StackPanel { Margin = new Thickness(0, 4, 26, 0) };
@@ -293,13 +315,14 @@ public static class TrackPropertiesWindow
         mixer.Children.Add(KnobBlock(pan, "Pan"));
         var mixerStack = new StackPanel();
         mixerStack.Children.Add(mixer);
-        mixerStack.Children.Add(Hint("Drag or scroll a knob; double-click to reset."));
+        mixerStack.Children.Add(Hint("Drag or scroll a knob; double-click to type a value; Ctrl+click to reset."));
         var fxButton = new Button
         {
             Content = "Effects & instruments (FX)…", Padding = new Thickness(10, 4, 10, 4), Margin = new Thickness(0, 8, 0, 0),
-            HorizontalAlignment = HorizontalAlignment.Left, IsEnabled = add is null && owner is MainWindow,
-            ToolTip = add is null ? "Open this track's FX chain window (plug-in instruments and effects)" : "Available once the track has been added"
+            HorizontalAlignment = HorizontalAlignment.Left, IsEnabled = add is null && owner is MainWindow
         };
+        TooltipShortcuts.Bind(fxButton, add is null ? "Open this track's FX chain window (plug-in instruments and effects)" : "Available once the track has been added",
+            add is null ? "Track.FxChain" : null);
         fxButton.Click += (_, _) => (owner as MainWindow)?.OpenFxChain(track);
         mixerStack.Children.Add(fxButton);
 
@@ -451,6 +474,7 @@ public static class TrackPropertiesWindow
         tuningPanel.Children.Add(keepFretsRow);
         tuningPanel.Children.Add(fretRow);
         tuningCard = Card("Tuning", tuningPanel);
+        UiIds.Id(tuningCard, "Track.Tuning");
 
         var right = new StackPanel();
         right.Children.Add(Card("Instrument", instrumentPanel));
@@ -498,13 +522,17 @@ public static class TrackPropertiesWindow
                 : InstrumentArt.Build(kind, colour, tunings.Count);
             pictureCaption.Text = chosenName;
             refreshChooser?.Invoke();
-            if (tuningCard is not null) tuningCard.Visibility = kind == TrackKind.Drums ? Visibility.Collapsed : Visibility.Visible;
+            // Strings are for fretted instruments: drums and keyboards (piano, organ, pads / strings) have no tuning to show.
+            if (tuningCard is not null) tuningCard.Visibility = kind is TrackKind.Drums or TrackKind.Keys ? Visibility.Collapsed : Visibility.Visible;
+            UpdateChannelHint();
         }
 
         // ---------- footer ----------
         var error = new TextBlock { Foreground = Brushes.IndianRed, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 12, 0), TextWrapping = TextWrapping.Wrap };
         var ok = new Button { Content = add is null ? "OK" : "Add track", Width = add is null ? 92 : 110, IsDefault = true, Margin = new Thickness(0, 0, 8, 0) };
         var cancel = new Button { Content = "Cancel", Width = 92, IsCancel = true };
+        UiIds.Id(ok, "Track.Ok");
+        UiIds.Id(cancel, "Track.Cancel");
         var footer = new DockPanel { Margin = new Thickness(16, 10, 16, 14), LastChildFill = true };
         DockPanel.SetDock(cancel, Dock.Right); DockPanel.SetDock(ok, Dock.Right);
         footer.Children.Add(cancel); footer.Children.Add(ok);
@@ -541,6 +569,7 @@ public static class TrackPropertiesWindow
         RebuildStrings();
         RefreshPresets();
         RedrawPicture();
+        refreshTuningUi = () => { RebuildStrings(); RefreshPresets(); };
 
         var accepted = false;
         ok.Click += (_, _) =>
@@ -585,7 +614,8 @@ public static class TrackPropertiesWindow
             track.Volume = (int)volume.Value;
             track.Pan = (int)pan.Value;
             track.NumberOfFrets = fr;
-            track.Capo = cp;
+            // The capo moves the sounding pitch of the notes (frets are relative to it); the written frets stay.
+            TrackSetup.SetCapo(track, cp);
             // Drum tracks have no tuning: their lines come from the drum notation preset instead.
             if (drumCard.Visibility != Visibility.Visible) ApplyTuning(track, tunings, keepFrets.IsChecked == true);
             // A new track takes the type of the instrument picked (drums, bass, keys or guitar).
@@ -595,6 +625,7 @@ public static class TrackPropertiesWindow
                 // The placeholder name follows the instrument unless the user typed their own.
                 if (name.Text.Trim() == defaultName) track.Name = selected;
             }
+            else if (!trackHadNotes && track.Kind != TrackKind.Drums && KindOf(selected, track) is var newKind and not TrackKind.Drums) track.Kind = newKind;
             accepted = true;
             w.DialogResult = true;
         };

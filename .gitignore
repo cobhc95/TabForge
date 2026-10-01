@@ -27,3 +27,4 @@ work/
 
 # WPF temporary build projects
 *_wpftmp.csproj
+backup/night-*/

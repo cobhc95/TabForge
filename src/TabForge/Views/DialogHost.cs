@@ -20,6 +20,42 @@ public static class DialogHost
             dialog.Owner = main;
             dialog.WindowStartupLocation = WindowStartupLocation.CenterOwner;
         }
+        Prepare(dialog);
         return dialog.ShowDialog();
+    }
+
+    /// <summary>
+    /// Every dialog closes on Esc, however it was opened. WPF's own IsCancel handling needs keyboard focus inside the dialog; a dialog
+    /// opened from a shortcut can come up without it (the key that opened it is still down), so Esc went to the window behind it.
+    /// The dialog is activated once shown, and an Esc nothing else handled presses its Cancel button.
+    /// </summary>
+    internal static void Prepare(Window dialog)
+    {
+        dialog.ContentRendered += (_, _) =>
+        {
+            if (!dialog.IsActive) dialog.Activate();
+            if (dialog.IsKeyboardFocusWithin) return;
+            dialog.MoveFocus(new System.Windows.Input.TraversalRequest(System.Windows.Input.FocusNavigationDirection.First));
+        };
+        dialog.KeyDown += (_, e) =>
+        {
+            if (e.Key != System.Windows.Input.Key.Escape || e.Handled) return;
+            if (PressCancel(dialog)) e.Handled = true;
+        };
+    }
+
+    /// <summary>Clicks the dialog's enabled IsCancel button; false when it has none.</summary>
+    internal static bool PressCancel(DependencyObject root)
+    {
+        if (root is System.Windows.Controls.Button { IsCancel: true, IsEnabled: true, IsVisible: true } button)
+        {
+            // Invoke (not a raised Click event) so the button's own IsCancel behaviour closes the dialog.
+            if (new System.Windows.Automation.Peers.ButtonAutomationPeer(button).GetPattern(System.Windows.Automation.Peers.PatternInterface.Invoke)
+                is System.Windows.Automation.Provider.IInvokeProvider invoke) invoke.Invoke();
+            return true;
+        }
+        for (var i = 0; i < System.Windows.Media.VisualTreeHelper.GetChildrenCount(root); i++)
+            if (PressCancel(System.Windows.Media.VisualTreeHelper.GetChild(root, i))) return true;
+        return false;
     }
 }

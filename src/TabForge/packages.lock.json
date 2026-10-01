@@ -13,6 +13,17 @@
           "System.Drawing.Common": "9.0.8"
         }
       },
+      "PDFsharp-MigraDoc-WPF": {
+        "type": "Direct",
+        "requested": "[6.2.4, )",
+        "resolved": "6.2.4",
+        "contentHash": "0r3+I3H4BIv2Mt5+3ajQnilY5kqs6fByoVdNly1A2jGOJwjW5qaWE+ohgi9hbMY3hK/JwcxvuChhHz4fi5DO3Q==",
+        "dependencies": {
+          "Microsoft.Extensions.Logging.Abstractions": "8.0.3",
+          "PDFsharp-WPF": "6.2.4",
+          "System.Security.Cryptography.Pkcs": "8.0.1"
+        }
+      },
       "AlphaSkia": {
         "type": "Transitive",
         "resolved": "3.4.135",
@@ -27,6 +38,19 @@
         "type": "Transitive",
         "resolved": "4.7.0",
         "contentHash": "pTj+D3uJWyN3My70i2Hqo+OXixq3Os2D1nJ2x92FFo6sk8fYS1m1WLNTs0Dc1uPaViH0YvEEwvzddQ7y4rhXmA=="
+      },
+      "Microsoft.Extensions.DependencyInjection.Abstractions": {
+        "type": "Transitive",
+        "resolved": "8.0.2",
+        "contentHash": "3iE7UF7MQkCv1cxzCahz+Y/guQbTqieyxyaWKhrRO91itI9cOKO76OHeQDahqG4MmW5umr3CcCvGmK92lWNlbg=="
+      },
+      "Microsoft.Extensions.Logging.Abstractions": {
+        "type": "Transitive",
+        "resolved": "8.0.3",
+        "contentHash": "dL0QGToTxggRLMYY4ZYX5AMwBb+byQBd/5dMiZE07Nv73o6I5Are3C7eQTh7K2+A4ct0PVISSr7TZANbiNb2yQ==",
+        "dependencies": {
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "8.0.2"
+        }
       },
       "Microsoft.NETCore.Platforms": {
         "type": "Transitive",
@@ -107,6 +131,15 @@
           "NAudio.Core": "2.2.1"
         }
       },
+      "PDFsharp-WPF": {
+        "type": "Transitive",
+        "resolved": "6.2.4",
+        "contentHash": "wD2byoUNGc/IDmSSSPLGGCNMXf4TybnjKlcYa40nuWIYLVA4DSvnCvWr7HbsBEwFvAYRP6DceQ4MN35COD/pdw==",
+        "dependencies": {
+          "Microsoft.Extensions.Logging.Abstractions": "8.0.3",
+          "System.Security.Cryptography.Pkcs": "8.0.1"
+        }
+      },
       "SoundTouch.Net": {
         "type": "Transitive",
         "resolved": "2.3.2",
@@ -129,6 +162,11 @@
           "System.Security.Principal.Windows": "4.7.0"
         }
       },
+      "System.Security.Cryptography.Pkcs": {
+        "type": "Transitive",
+        "resolved": "8.0.1",
+        "contentHash": "CoCRHFym33aUSf/NtWSVSZa99dkd0Hm7OCZUxORBjRB16LNhIEOf8THPqzIYlvKM0nNDAPTRBa1FxEECrgaxxA=="
+      },
       "System.Security.Principal.Windows": {
         "type": "Transitive",
         "resolved": "4.7.0",
@@ -143,7 +181,7 @@
           "MeltySynth": "[2.4.1, )",
           "NAudio": "[2.2.1, )",
           "SoundTouch.Net": "[2.3.2, )",
-          "TabForge.Audio.Contracts": "[1.0.0, )"
+          "TabForge.Audio.Contracts": "[0.5.1, )"
         }
       }
     },
@@ -170,6 +208,11 @@
           "Microsoft.NETCore.Platforms": "3.1.0",
           "System.Security.Principal.Windows": "4.7.0"
         }
+      },
+      "System.Security.Cryptography.Pkcs": {
+        "type": "Transitive",
+        "resolved": "8.0.1",
+        "contentHash": "CoCRHFym33aUSf/NtWSVSZa99dkd0Hm7OCZUxORBjRB16LNhIEOf8THPqzIYlvKM0nNDAPTRBa1FxEECrgaxxA=="
       },
       "System.Security.Principal.Windows": {
         "type": "Transitive",

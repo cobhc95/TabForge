@@ -14,9 +14,9 @@ public static class FretboardGeometry
 
     public const double LeftGutter = 54;
     public const double RightPad = 14;
-    /// <summary>Room above the top string for its sounding marker (radius 16 + halo) and the fret label pill
-    /// drawn over it (y - radius - 17), so nothing is clipped whatever the docking position.</summary>
-    public const double TopPad = 16 + 17 + 3;
+    /// <summary>Room above the top string for its sounding marker (radius 16 + halo 4) so nothing is clipped whatever the docking
+    /// position. A technique tag that would not fit above the top string's marker is drawn beside it instead.</summary>
+    public const double TopPad = 16 + 4 + 2;
     public const double BottomPad = 26;
     /// <summary>Top-right strip kept clear for the pane's hide (X) button.</summary>
     public const double CornerReserve = 24;
@@ -80,12 +80,15 @@ public static class FretboardGeometry
         var fretWidth = boardWidth / (lastFret - firstFret + 1);
         var gaps = Math.Max(1, strings - 1);
 
-        // The string gap fills the pane height only up to a natural proportion of the fret width (times the
-        // user's spacing factor, at most 1.5x natural); a taller pane centres the board (with its labels, which
-        // are placed relative to the board) instead of stretching it.
+        // The natural string gap fills the pane height only up to a natural proportion of the fret width; a taller
+        // pane centres the board (with its labels, which are placed relative to the board) instead of stretching it.
+        // The user's spacing factor then scales that natural gap (Compact tighter, Wide up to 1.5x), never past the
+        // pane height (nothing clips; the panel raises its natural height for Wide so the dock gives it the room).
         var spacing = double.IsFinite(state.StringSpacing) ? Math.Clamp(state.StringSpacing, 0.75, MaxSpacingFactor) : 1.0;
-        var gapCap = Math.Max(MinStringGap, MaxGapToFretWidth * fretWidth * spacing);
-        var stringGap = Math.Min(availableHeight / gaps, gapCap);
+        var heightGap = availableHeight / gaps;
+        var naturalGap = Math.Min(heightGap, Math.Max(MinStringGap, MaxGapToFretWidth * fretWidth));
+        var floorGap = Math.Min(naturalGap, MinStringGap * Math.Min(1.0, spacing));
+        var stringGap = Math.Min(Math.Clamp(naturalGap * spacing, floorGap, naturalGap * MaxSpacingFactor), heightGap);
         var boardHeight = stringGap * gaps;
         var top = content.Y + TopPad + Math.Max(0, (availableHeight - boardHeight) / 2);
         var board = new Rect(left, top, boardWidth, boardHeight);

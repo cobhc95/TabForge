@@ -73,10 +73,13 @@ internal sealed class ScorePageLayout
         var rows = new List<List<int>>();
         var row = new List<int>();
         var rowPreferredWidth = 0.0;
+        var rowMinimumWidth = 0.0;
         for (var measure = 0; measure < minimums.Length; measure++)
         {
             var forceBreak = forceLineBreaks is not null && measure < forceLineBreaks.Count && forceLineBreaks[measure];
-            var preventBreak = preventLineBreaks is not null && measure < preventLineBreaks.Count && preventLineBreaks[measure];
+            // A prevent-break is honoured only while the row still fits the page at its tightest spacing: nothing may run past the page edge.
+            var preventBreak = preventLineBreaks is not null && measure < preventLineBreaks.Count && preventLineBreaks[measure]
+                && rowMinimumWidth + minimums[measure] <= usableWidth + 0.001;
             var wouldExceedWidth = rowPreferredWidth + preferredWidths[measure] > usableWidth + 0.001;
             var wouldExceedFixedCount = row.Count >= fixedCount;
             if (row.Count > 0 && (forceBreak || (!preventBreak && (wouldExceedWidth || wouldExceedFixedCount))))
@@ -84,9 +87,11 @@ internal sealed class ScorePageLayout
                 rows.Add(row);
                 row = new List<int>();
                 rowPreferredWidth = 0;
+                rowMinimumWidth = 0;
             }
             row.Add(measure);
             rowPreferredWidth += preferredWidths[measure];
+            rowMinimumWidth += minimums[measure];
         }
         if (row.Count > 0) rows.Add(row);
         if (rows.Count == 0) rows.Add(new List<int>());

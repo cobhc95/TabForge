@@ -150,9 +150,9 @@ public static class MusicXmlExportService
             var slots = MusicTime.BarSlots(project, b);
             var barNum = master?.TimeSigNum ?? project.TimeSignatureNumerator;
             var barDen = master?.TimeSigDenom ?? project.TimeSignatureDenominator;
-            var barKey = key; var barMinor = minor;
-            if (model?.KeySignature is int ks) barKey = ks;
-            if (model?.KeySignatureMinor is bool km) barMinor = km;
+            // A bar without a key of its own is in the song's key, as the score shows it (BarSignatures.KeyAt); a bar past this track's end follows the previous one.
+            var barKey = model is null ? key : model.KeySignature ?? project.KeySignature;
+            var barMinor = model is null ? minor : model.KeySignatureMinor ?? project.KeySignatureMinor;
 
             xml.WriteStartElement("measure");
             xml.WriteAttributeString("number", Num(b + 1));

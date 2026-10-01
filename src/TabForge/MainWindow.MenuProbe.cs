@@ -17,7 +17,7 @@ namespace TabForge;
 public partial class MainWindow
 {
     // Exit would close the app; Check for updates would contact GitHub (tested headlessly without network).
-    private static readonly string[] MenuProbeSkip = { "E_xit", "Check for updates..." };
+    private static readonly string[] MenuProbeSkip = { "E_xit", "Check for updates…" };
 
     public void RunMenuProbe(string folder)
     {

@@ -28,6 +28,8 @@
 
   <ItemGroup>
     <PackageReference Include="AlphaTab" Version="1.8.4" />
+    <!-- Tutorial PDF export (MIT): PDF writer + layout. The WPF build needs no GDI+ and no browser engine. -->
+    <PackageReference Include="PDFsharp-MigraDoc-wpf" Version="6.2.4" />
   </ItemGroup>
   <ItemGroup>
     <!-- The audio engine runs in its own process (TabForge.exe, audio-engine mode); TabForge only talks to it
@@ -61,6 +63,10 @@
              CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <!-- The original demo song (CC0), shipped as <app folder>\Samples\. -->
     <Content Include="..\..\samples\*.gp" Link="Samples\%(Filename)%(Extension)" ExcludeFromSingleFile="true"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <!-- The Beginner's Guide (Help > Tutorial): Markdown chapters, their pictures and the brand artwork, shipped as <app folder>, folder tutorial. -->
+    <Content Include="..\..\docs\tutorial\**\*.md;..\..\docs\tutorial\**\*.png;..\..\docs\tutorial\**\*.jpg;..\..\docs\tutorial\**\*.jpeg;..\..\docs\tutorial\**\*.gif"
+             Link="tutorial\%(RecursiveDir)%(Filename)%(Extension)" ExcludeFromSingleFile="true"
              CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <!-- The notices file Help > About opens (<app folder>\THIRD_PARTY.md), in every build, not only packaged ones. -->
     <Content Include="..\..\THIRD_PARTY.md" Link="THIRD_PARTY.md"

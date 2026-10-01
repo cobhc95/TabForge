@@ -17,13 +17,30 @@ public partial class App : Application
         var args = UserPaths.ApplyProfileArgument(e.Args);
         // --approve-night-plugins (Audit 5 H-5) only works together with --profile; alone it is refused before anything is loaded or written.
         var approveNightPlugins = TabForge.Plugins.NightPluginApproval.Requested(args);
-        if (approveNightPlugins && !UserPaths.IsProfile)
+        if (approveNightPlugins && (!UserPaths.IsProfile || UserPaths.ProfileIsRealUserFolder))
         {
             Debug.WriteLine($"{TabForge.Plugins.NightPluginApproval.Switch} needs --profile <folder>; refused, nothing was approved.");
             Shutdown(2);
             return;
         }
+        // --capture likewise: refused before settings are loaded or a window exists, so a run without a scratch profile (or without
+        // its script and folder) can neither show a window nor save the window state and settings into the real user folder.
+        var captureSwitch = Array.FindIndex(args, a => a.Equals("--capture", StringComparison.OrdinalIgnoreCase));
+        if (captureSwitch >= 0 && (!UserPaths.IsProfile || UserPaths.ProfileIsRealUserFolder || captureSwitch + 2 >= args.Length))
+        {
+            Debug.WriteLine("--capture needs --profile <scratch folder> and <script.json> <outDir>; refused, nothing was loaded.");
+            Shutdown(2);
+            return;
+        }
+        var approveAll = TabForge.Plugins.NightPluginApproval.AllRequested(args);
         args = TabForge.Plugins.NightPluginApproval.Without(args);
+        // --software-render (test runs): WPF draws in software. With the monitor switched off the GPU has no display and hardware
+        // rendering leaves the main window black; unattended runs still need real pixels for screenshots and recordings.
+        if (args.Any(a => string.Equals(a, "--software-render", StringComparison.OrdinalIgnoreCase)))
+        {
+            System.Windows.Media.RenderOptions.ProcessRenderMode = System.Windows.Interop.RenderMode.SoftwareOnly;
+            args = args.Where(a => !string.Equals(a, "--software-render", StringComparison.OrdinalIgnoreCase)).ToArray();
+        }
         // Headless modes (--selftest, --playtest, --dump, ...) never open a window.
         if (DiagnosticCommands.TryRun(args, out var exitCode))
         {
@@ -34,7 +51,7 @@ public partial class App : Application
         // R-09: the app's one settings object, loaded once; every window reads and writes through it.
         var settings = AppSettingsStore.InitializeShared();
         if (approveNightPlugins
-            && TabForge.Plugins.NightPluginApproval.Apply(new[] { TabForge.Plugins.NightPluginApproval.Switch }, settings.Settings.Plugins, out var nightApproved) == TabForge.Plugins.NightPluginApproval.Outcome.Approved)
+            && TabForge.Plugins.NightPluginApproval.Apply(approveAll ? new[] { TabForge.Plugins.NightPluginApproval.Switch, "all" } : new[] { TabForge.Plugins.NightPluginApproval.Switch }, settings.Settings.Plugins, out var nightApproved) == TabForge.Plugins.NightPluginApproval.Outcome.Approved)
         {
             settings.MarkChanged();   // saved into the profile's settings.json
             settings.Flush();
@@ -59,10 +76,20 @@ public partial class App : Application
         Views.AccessibleNames.Install();
         Shell.WindowPolish.Register();
         ThemeService.PrepareMutableBrushes();
+        // --capture <script.json> <outDir> (documentation screenshots): the window is created off-screen and never activated.
+        var captureAt = Array.FindIndex(args, a => a.Equals("--capture", StringComparison.OrdinalIgnoreCase));
+        string? captureScript = null, captureOut = null;
+        if (captureAt >= 0 && captureAt + 2 < args.Length)
+        {
+            captureScript = args[captureAt + 1];
+            captureOut = args[captureAt + 2];
+            args = args.Take(captureAt + 1).Concat(args.Skip(captureAt + 3)).ToArray();   // only the bare switch stays, so no value is taken for a song to open
+        }
         var window = new MainWindow();
         MainWindow = window;
-        ApplyRequestedWindowSize(window, args);
+        if (captureScript is null) ApplyRequestedWindowSize(window, args); else window.PrepareOffscreenCapture();
         window.Show();
+        if (captureScript is not null) window.RunCaptureScript(captureScript, captureOut!);
         OpenStartupFile(window, args);
         if (!args.Any(a => a.StartsWith("--", StringComparison.Ordinal)))
             window.Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, window.OfferAutosaveRecovery);   // songs a crash left behind

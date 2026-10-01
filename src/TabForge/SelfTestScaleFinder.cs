@@ -66,11 +66,55 @@ public static partial class SelfTest
         Check("clearing the scale highlight can be bound to a key", HotkeyCatalog.All.Any(a => a.Id == "View.ClearScale"));
 
         var looks = new AppSettings();
-        Check("appearance defaults: shaded blue scale, brighter theme-coloured fret dots, keys match the theme, Explorer opens tabs",
+        Check("appearance defaults: shaded blue scale at 100%, white original-brightness fret dots, large numbers, natural spacing, keys match the theme, Explorer opens tabs",
             looks.Editing.ScaleHighlightStyle == ScaleHighlightStyles.Shaded && looks.Editing.ScaleHighlightColour == "Blue"
-            && looks.Editing.FretMarkerColour == "Default" && looks.Editing.FretMarkerBrightness == FretMarkerLevels.Brighter
+            && looks.Editing.ScaleHighlightStrength == 100
+            && looks.Editing.FretMarkerColour == "White" && looks.Editing.FretMarkerBrightness == FretMarkerLevels.Original
+            && looks.Editing.FretNumberSize == FretNumberSizes.Large && looks.Editing.FretStringSpacing == FretStringSpacings.Natural
             && looks.Editing.KeyboardKeyColours == KeyboardKeyStyles.MatchTheme && looks.General.OpenFromExplorer == "A new tab");
-        Check("the default fret dots are brighter than the original ones",
+        // Ledger lines and staff lines are one unit: one pen, one opacity setting, no separate ledger row.
+        var staffColour = System.Windows.Media.Color.FromArgb(64, 0x34, 0x39, 0x40);
+        var staffPen = Views.StaffNotationRenderer.StaffLinePen(staffColour);
+        Check("ledger lines use exactly the staff lines' pen (same colour with its opacity, same thickness)",
+            ReferenceEquals(staffPen, Views.StaffNotationRenderer.StaffLinePen(staffColour))
+            && staffPen.Thickness == Views.StaffNotationRenderer.StaffLineThickness
+            && staffPen.Brush is System.Windows.Media.SolidColorBrush { Color: var penColour } && penColour == staffColour);
+        var staffRows = SettingsCatalog.Build(new AppSettings()).Where(d => d.Key is "score.staffopacity" or "score.ledgeropacity").ToList();
+        Check("Preferences has one staff-and-ledger opacity row and no separate ledger-opacity row",
+            staffRows.Count == 1 && staffRows[0].Key == "score.staffopacity" && staffRows[0].Title.Contains("ledger", StringComparison.OrdinalIgnoreCase));
+        var opacityHolder = new AppSettings();
+        SettingsCatalog.Build(opacityHolder).First(d => d.Key == "score.staffopacity").Set(40.0);
+        Check("the one opacity setting is stored once and defaults to the staff-line colour as chosen (100%)",
+            Math.Abs(opacityHolder.Appearance.StaffLineOpacity - 0.4) < 1e-9 && new AppSettings().Appearance.StaffLineOpacity == 1.0);
+        const string oldLedgerFile = "{\"Appearance\":{\"LedgerLineOpacity\":0.6,\"LedgerOpacityVersion\":1,\"StaffLineOpacity\":0.7}}";
+        var oldLedgerSettings = SettingsMigration.Normalize(oldLedgerFile, System.Text.Json.JsonSerializer.Deserialize<AppSettings>(oldLedgerFile)!);
+        Check("a settings file with the old ledger keys still loads, the staff opacity is kept and the ledger keys are not written again",
+            Math.Abs(oldLedgerSettings.Appearance.StaffLineOpacity - 0.7) < 1e-9
+            && !System.Text.Json.JsonSerializer.Serialize(oldLedgerSettings).Contains("LedgerLineOpacity", StringComparison.Ordinal));
+        Check("saved appearance values are not overwritten by the new defaults",
+            SettingsMigration.Normalize("{\"Editing\":{\"InstrumentViewVersion\":1,\"FretMarkerColour\":\"Default\",\"FretMarkerBrightness\":\"Brighter\",\"FretNumberSize\":\"Medium\"}}",
+                System.Text.Json.JsonSerializer.Deserialize<AppSettings>("{\"Editing\":{\"InstrumentViewVersion\":1,\"FretMarkerColour\":\"Default\",\"FretMarkerBrightness\":\"Brighter\",\"FretNumberSize\":\"Medium\"}}")!).Editing
+                is { FretMarkerColour: "Default", FretMarkerBrightness: "Brighter", FretNumberSize: "Medium" });
+        // Scale highlight strength: clamp, default look unchanged, root always stronger, hotkeys exist.
+        var lowStrength = new AppSettings(); lowStrength.Editing.ScaleHighlightStrength = -5;
+        var highStrength = new AppSettings(); highStrength.Editing.ScaleHighlightStrength = 900;
+        SettingsValidator.Normalize(lowStrength); SettingsValidator.Normalize(highStrength);
+        Check("scale highlight strength is clamped to 10..150%",
+            lowStrength.Editing.ScaleHighlightStrength == 10 && highStrength.Editing.ScaleHighlightStrength == 150);
+        Check("scale highlight strength 100% keeps the standard alphas",
+            ScaleHighlightStyles.ScaleAlpha(0.28, 1.0, false) == 0.28 && ScaleHighlightStyles.ScaleAlpha(0.5, 1.0, true) == 0.5
+            && ScaleHighlightStyles.ScaleAlpha(0.6, 1.0, false) == 0.6 && ScaleHighlightStyles.ScaleAlpha(0.95, 1.0, true) == 0.95);
+        var rootStronger = true;
+        foreach (var pct in new[] { 10, 20, 50, 100, 120, 150 })
+        {
+            var k = ScaleHighlightStyles.StrengthFactor(pct);
+            foreach (var (other, root) in new[] { (0.28, 0.5), (0.6, 0.95), (0.7, 1.0) })
+                rootStronger &= ScaleHighlightStyles.ScaleAlpha(root, k, true) > ScaleHighlightStyles.ScaleAlpha(other, k, false);
+        }
+        Check("the scale root stays stronger than the other scale notes from 10% to 150%", rootStronger);
+        Check("scale highlight brighter / dimmer can be bound to keys",
+            HotkeyCatalog.All.Any(a => a.Id == "View.ScaleHighlightBrighter") && HotkeyCatalog.All.Any(a => a.Id == "View.ScaleHighlightDimmer"));
+        Check("fret dots at Original are no brighter than the Brighter level",
             FretMarkerLevels.Level(FretMarkerLevels.Brighter) > FretMarkerLevels.Level(FretMarkerLevels.Original));
         var odd = new AppSettings();
         odd.Editing.ScaleHighlightStyle = "Sparkles"; odd.Editing.ScaleHighlightColour = "#FF00FF";
@@ -78,9 +122,9 @@ public static partial class SelfTest
         SettingsValidator.Normalize(odd);
         Check("unknown appearance values fall back to the defaults",
             odd.Editing.ScaleHighlightStyle == ScaleHighlightStyles.Shaded && odd.Editing.ScaleHighlightColour == "Blue"
-            && odd.Editing.FretMarkerColour == "Default" && odd.Editing.FretMarkerBrightness == FretMarkerLevels.Brighter
+            && odd.Editing.FretMarkerColour == "White" && odd.Editing.FretMarkerBrightness == FretMarkerLevels.Original
             && odd.Editing.KeyboardKeyColours == KeyboardKeyStyles.MatchTheme);
-        // Fret number size: default Medium (85%), round trip through JSON, existing values kept, unknown falls back.
+        // Fret number size: default Large (100%), round trip through JSON, existing values kept, unknown falls back.
         var sizeDefault = new AppSettings();
         var sizeSmall = new AppSettings(); sizeSmall.Editing.FretNumberSize = FretNumberSizes.Small;
         var sizeJson = System.Text.Json.JsonSerializer.Serialize(sizeSmall);
@@ -88,12 +132,12 @@ public static partial class SelfTest
         var sizeMissingJson = "{\"Editing\":{\"InstrumentViewVersion\":1}}";
         var sizeMissing = SettingsMigration.Normalize(sizeMissingJson, System.Text.Json.JsonSerializer.Deserialize<AppSettings>(sizeMissingJson)!);
         var sizeOdd = new AppSettings(); sizeOdd.Editing.FretNumberSize = "Huge";
-        Check("fret number size: default Medium (0.85), Small 0.75, Large 1.0, saved value round-trips, missing key gets the default, unknown falls back",
-            sizeDefault.Editing.FretNumberSize == FretNumberSizes.Medium && FretNumberSizes.Scale(FretNumberSizes.Medium) == 0.85
+        Check("fret number size: default Large (1.0), Medium 0.85, Small 0.75, saved value round-trips, missing key gets the default, unknown falls back",
+            sizeDefault.Editing.FretNumberSize == FretNumberSizes.Large && FretNumberSizes.Scale(FretNumberSizes.Medium) == 0.85
             && FretNumberSizes.Scale(FretNumberSizes.Small) == 0.75 && FretNumberSizes.Scale(FretNumberSizes.Large) == 1.0
             && sizeLoaded.Editing.FretNumberSize == FretNumberSizes.Small
-            && sizeMissing.Editing.FretNumberSize == FretNumberSizes.Medium
-            && SettingsValidator.Normalize(sizeOdd).Editing.FretNumberSize == FretNumberSizes.Medium);
+            && sizeMissing.Editing.FretNumberSize == FretNumberSizes.Large
+            && SettingsValidator.Normalize(sizeOdd).Editing.FretNumberSize == FretNumberSizes.Large);
         var circles = new AppSettings(); circles.Editing.ScaleHighlightStyle = "circles";
         Check("appearance choices are matched without regard to case", SettingsValidator.Normalize(circles).Editing.ScaleHighlightStyle == ScaleHighlightStyles.Circles);
 

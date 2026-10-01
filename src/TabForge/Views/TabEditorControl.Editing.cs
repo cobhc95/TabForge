@@ -252,6 +252,14 @@ public sealed partial class TabEditorControl
     {
         switch (id)
         {
+            case "Edit.InsertBeat": InsertBeat(); return true;
+            case "Edit.DeleteBeats": DeleteBeats(); return true;
+            case "Note.Longer": Longer(); return true;
+            case "Note.Shorter": Shorter(); return true;
+            case "Note.MoveStringUp": MoveNotesToAdjacentString(-1); return true;
+            case "Note.MoveStringDown": MoveNotesToAdjacentString(1); return true;
+            case "Note.PitchUp": ShiftPitch(1); return true;
+            case "Note.PitchDown": ShiftPitch(-1); return true;
             case "Note.RepeatBeat": CopyLastBeat(); return true;
             case "Note.Rest": ToggleRest(); return true;
             case "Note.Tie": ToggleTie(); return true;
@@ -282,6 +290,10 @@ public sealed partial class TabEditorControl
         return false;
     }
 
+    /// <summary>Highest typed/clicked number: a fret (36), or on a drum track the GM percussion note itself (up to 127).</summary>
+    private static int MaxEntryNumber(TrackModel track) =>
+        track.MidiChannel == 9 || track.Kind == TrackKind.Drums ? 127 : 36;
+
     public void EnterFret(int digit, bool autoAdvance = true)
     {
         var track = Track;
@@ -295,7 +307,7 @@ public sealed partial class TabEditorControl
         var append = existing is not null && (DateTime.UtcNow - _lastDigit).TotalMilliseconds < 700
                      && _lastDigitMeasure == SelectedMeasure && _lastDigitCell == SelectedCell
                      && _lastDigitString == SelectedString && existing.Fret < 10 && existing.Fret > 0;
-        var fret = Math.Clamp(append ? existing!.Fret * 10 + digit : digit, 0, 36);
+        var fret = Math.Clamp(append ? existing!.Fret * 10 + digit : digit, 0, MaxEntryNumber(track));
         if (existing is null)
         {
             existing = new TabNote { StringIndex = SelectedString, Velocity = CurrentVelocity };
@@ -319,7 +331,7 @@ public sealed partial class TabEditorControl
         var track = Track;
         var cell = CurrentCell(create: true);
         if (track is null || cell is null || track.StringTunings.Count == 0 ||
-            stringIndex < 0 || stringIndex >= track.StringTunings.Count || fret is < 0 or > 36)
+            stringIndex < 0 || stringIndex >= track.StringTunings.Count || fret < 0 || fret > MaxEntryNumber(track))
             return false;
 
         EditStarting?.Invoke(this, EventArgs.Empty);
@@ -873,6 +885,7 @@ public sealed partial class TabEditorControl
         var note = cell.Notes.FirstOrDefault(n => n.StringIndex == SelectedString);
         if (note is null)
         {
+            ApplyPendingDuration(cell);
             note = new TabNote { StringIndex = SelectedString, Fret = 0, MidiValue = MidiOf(track, SelectedString, 0), Velocity = CurrentVelocity };
             cell.Notes.Add(note);
         }
@@ -896,7 +909,7 @@ public sealed partial class TabEditorControl
         if (track is null || cell is null) return;
         EditStarting?.Invoke(this, EventArgs.Empty);
         var note = cell.Notes.FirstOrDefault(n => n.StringIndex == SelectedString);
-        if (note is null) { note = new TabNote { StringIndex = SelectedString, Dead = true, Fret = 0, MidiValue = MidiOf(track, SelectedString, 0), Velocity = CurrentVelocity }; cell.Notes.Add(note); }
+        if (note is null) { ApplyPendingDuration(cell); note = new TabNote { StringIndex = SelectedString, Dead = true, Fret = 0, MidiValue = MidiOf(track, SelectedString, 0), Velocity = CurrentVelocity }; cell.Notes.Add(note); }
         else note.Dead = !note.Dead;
         EditedNow();
     }
@@ -917,7 +930,7 @@ public sealed partial class TabEditorControl
         if (track is null || cell is null) return;
         EditStarting?.Invoke(this, EventArgs.Empty);
         var note = cell.Notes.FirstOrDefault(n => n.StringIndex == SelectedString);
-        if (note is null) { note = new TabNote { StringIndex = SelectedString, Ghost = true, Fret = 5, MidiValue = MidiOf(track, SelectedString, 5), Velocity = CurrentVelocity }; cell.Notes.Add(note); }
+        if (note is null) { ApplyPendingDuration(cell); note = new TabNote { StringIndex = SelectedString, Ghost = true, Fret = 5, MidiValue = MidiOf(track, SelectedString, 5), Velocity = CurrentVelocity }; cell.Notes.Add(note); }
         else note.Ghost = !note.Ghost;
         EditedNow();
     }

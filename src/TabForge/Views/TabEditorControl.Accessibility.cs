@@ -68,7 +68,8 @@ public sealed partial class TabEditorControl
     internal (double PageWidth, double HeaderHeight, double SystemHeight, int Systems) ExportMetrics()
     {
         var track = Track;
-        return (PageWidth, HeaderHeight, SystemHeight, track is null ? 0 : GetScoreLayout(track).SystemCount);
+        var systems = track is null ? 0 : GetScoreLayout(track).SystemCount;   // first: the layout scan sets the system height
+        return (PageWidth, HeaderHeight, SystemHeight, systems);
     }
 
     protected override System.Windows.Automation.Peers.AutomationPeer OnCreateAutomationPeer() => new EditorPeer(this);

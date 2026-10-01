@@ -37,7 +37,9 @@ public partial class MainWindow
 
     /// <summary>
     /// Right-click on empty page (docs/CONTEXT_MENU_AUDIT.md section 6). With a <paramref name="target"/> over a beat the beat is
-    /// selected (no seek) and Paste / Paste special appear first when the clipboard holds a clip.
+    /// selected (no seek) and Paste / Paste special appear first when the clipboard holds a clip. Lean (owner decisions
+    /// 2026-09-30): notation, zoom, page layout and ONE "Score settings..." door; paper, ledger lines, page turns, colours and
+    /// text fonts are Preferences rows.
     /// </summary>
     private void ShowScoreContextMenu(Point position, Views.ContextMenuEventArgs? target = null)
     {
@@ -47,136 +49,31 @@ public partial class MainWindow
             Editor.SelectForEdit(target!.Measure, target.Cell, target.StringIndex);
             RefreshToolsPalette();
         }
-        var menu = new ContextMenu
+        var state = new ScoreEmptyState(overBeat, ClipboardService.Shared.CanPaste, Editor.Notation != NotationMode.TabOnly,
+            Editor.CenterSystems, Editor.HorizontalScroll);
+        var menu = NewSpecMenu("Score options", ScoreMenus.Empty(state, MenuKey), spec =>
         {
-            Style = (Style)FindResource(typeof(ContextMenu)),
-            Background = (Brush)FindResource("Panel2Brush"),
-            Foreground = (Brush)FindResource("TextBrush")
-        };
-
-        MenuItem Item(string header, RoutedEventHandler handler, string? gesture = null)
-        {
-            var mi = new MenuItem
+            switch (spec.Id)
             {
-                Header = header,
-                Style = (Style)FindResource(typeof(MenuItem))
-            };
-            if (gesture is not null) mi.InputGestureText = gesture;
-            mi.Click += handler;
-            return mi;
-        }
-        void Sep() => menu.Items.Add(new Separator { Style = (Style)FindResource(typeof(Separator)) });
-
-        var scoreLayout = new MenuItem
-        {
-            Header = ContextMenuLayouts.ScoreDisplay,
-            Style = (Style)FindResource(typeof(MenuItem))
-        };
-        var pageLayoutItem = Item("Page (paper)", (_, _) => SetContinuousScoreView(false));
-        pageLayoutItem.IsCheckable = true;
-        pageLayoutItem.IsChecked = !Editor.CenterSystems;
-        var continuousLayoutItem = Item("Continuous (seamless)", (_, _) => SetContinuousScoreView(true));
-        continuousLayoutItem.IsCheckable = true;
-        continuousLayoutItem.IsChecked = Editor.CenterSystems;
-        scoreLayout.Items.Add(pageLayoutItem);
-        scoreLayout.Items.Add(continuousLayoutItem);
-        scoreLayout.Items.Add(new Separator { Style = (Style)FindResource(typeof(Separator)) });
-        // Second, independent choice: wrap into lines going down, or one line going right.
-        var verticalItem = Item("Vertical (lines wrap, scroll down)", (_, _) => SetHorizontalScoreView(false));
-        verticalItem.IsCheckable = true;
-        verticalItem.IsChecked = !Editor.HorizontalScroll;
-        var horizontalItem = Item("Horizontal (one line, scroll right)", (_, _) => SetHorizontalScoreView(true));
-        horizontalItem.IsCheckable = true;
-        horizontalItem.IsChecked = Editor.HorizontalScroll;
-        scoreLayout.Items.Add(verticalItem);
-        scoreLayout.Items.Add(horizontalItem);
-        scoreLayout.Items.Add(new Separator { Style = (Style)FindResource(typeof(Separator)) });
-        var followStyle = new MenuItem { Header = ContextMenuLayouts.PlaybackDisplay, Style = (Style)FindResource(typeof(MenuItem)) };
-        var instantItem = Item("Page turn (jump half a page / next line)", (_, _) => SetSmoothFollow(false));
-        instantItem.IsCheckable = true;
-        instantItem.IsChecked = !_follow.Continuous;
-        var smoothItem = Item("Smooth page turn (same turns, glided)", (_, _) => SetSmoothFollow(true));
-        smoothItem.IsCheckable = true;
-        smoothItem.IsChecked = _follow.Continuous;
-        followStyle.Items.Add(instantItem);
-        followStyle.Items.Add(smoothItem);
-        followStyle.Items.Add(new Separator { Style = (Style)FindResource(typeof(Separator)) });
-        var darkPageItem = Item("Dark page", (_, _) => SetPaper(dark: true));
-        darkPageItem.IsCheckable = true;
-        darkPageItem.IsChecked = Editor.DarkPaper;
-        var lightPageItem = Item("Light page", (_, _) => SetPaper(dark: false));
-        lightPageItem.IsCheckable = true;
-        lightPageItem.IsChecked = !Editor.DarkPaper;
-        scoreLayout.Items.Add(darkPageItem);
-        scoreLayout.Items.Add(lightPageItem);
-        scoreLayout.Items.Add(new Separator { Style = (Style)FindResource(typeof(Separator)) });
-        var zoomMenu = new MenuItem { Header = ContextMenuLayouts.Zoom, Style = (Style)FindResource(typeof(MenuItem)) };
-        zoomMenu.Items.Add(Item("Zoom in", (_, _) => ZoomBy(1), MenuKey("View.ZoomIn")));
-        zoomMenu.Items.Add(Item("Zoom out", (_, _) => ZoomBy(-1), MenuKey("View.ZoomOut")));
-        zoomMenu.Items.Add(Item("Fit width", (_, _) => ApplyZoomText("Fit width")));
-        var playbackStyle = followStyle;
-        playbackStyle.Items.Add(Item("Playback line colour…", (_, _) => ChoosePlaybackColour(
-            "Playback line colour", Playhead.CurrentColor, color => Playhead.SetColor(color))));
-        playbackStyle.Items.Add(Item("Duration glow colour…", (_, _) => ChoosePlaybackColour(
-            "Duration glow colour", Editor.DurationGlowColor, color =>
-            {
-                Editor.DurationGlowColor = color;
-                Editor.InvalidateVisual();
-                Playhead.SetDurationStyle(color, Editor.DurationGlowOpacity, _settings.Follow.DurationTintEnabled);
-            })));
-        var glowIntensity = new MenuItem
-        {
-            Header = $"Duration glow intensity ({Math.Round(Editor.DurationGlowOpacity * 100):0}%)",
-            Style = (Style)FindResource(typeof(MenuItem))
-        };
-        foreach (var percent in PlaybackGlowIntensity.PresetPercentages)
-        {
-            var intensityItem = Item($"{percent}%", (_, _) => SetDurationGlowOpacity(percent / 100.0));
-            intensityItem.IsCheckable = true;
-            intensityItem.IsChecked = Math.Abs(Editor.DurationGlowOpacity * 100 - percent) < 0.5;
-            glowIntensity.Items.Add(intensityItem);
-        }
-        playbackStyle.Items.Add(glowIntensity);
-        playbackStyle.Items.Add(new Separator { Style = (Style)FindResource(typeof(Separator)) });
-        playbackStyle.Items.Add(Item("Text & fonts…", (_, _) => ShowScoreTextStyleWindow()));
-        playbackStyle.Items.Add(Item("Playback and glow settings…", (_, _) => Prefs_Click(this, new RoutedEventArgs())));
-        var notation = Item("Show standard notation", (sender, _) =>
-            SetNotation((sender as MenuItem)?.IsChecked == true ? NotationMode.TabAndStaff : NotationMode.TabOnly));
-        notation.IsCheckable = true;
-        notation.IsChecked = Editor.Notation != NotationMode.TabOnly;
-
-        var ledgerMenu = new MenuItem
-        {
-            Header = "Ledger lines",
-            Style = (Style)FindResource(typeof(MenuItem))
-        };
-        foreach (var mode in Enum.GetValues<LedgerLineMode>())
-        {
-            var ledgerItem = Item(mode.ToString(), (_, _) => SetLedgerLines(mode));
-            ledgerItem.IsCheckable = true;
-            ledgerItem.IsChecked = Editor.LedgerLines == mode;
-            ledgerMenu.Items.Add(ledgerItem);
-        }
-        scoreLayout.Items.Add(ledgerMenu);
-
-        var canPaste = ClipboardService.Shared.CanPaste;
-        var parts = new Dictionary<string, Func<MenuItem>>
-        {
-            [ContextMenuLayouts.Paste] = () => Item("Paste", Paste_Click, MenuKey("Edit.Paste")),
-            [ContextMenuLayouts.PasteSpecial] = () => Item("Paste special…", PasteSpecial_Click, MenuKey("Edit.PasteSpecial")),
-            [ContextMenuLayouts.ShowNotation] = () => notation,
-            [ContextMenuLayouts.Zoom] = () => zoomMenu,
-            [ContextMenuLayouts.ScoreDisplay] = () => scoreLayout,
-            [ContextMenuLayouts.PlaybackDisplay] = () => playbackStyle
-        };
-        foreach (var id in ContextMenuLayouts.ScoreEmptyMenu(overBeat, canPaste))
-        {
-            if (id == ContextMenuLayouts.Sep) Sep();
-            else menu.Items.Add(parts[id]());
-        }
-
-        menu.PlacementTarget = Editor;
-        menu.IsOpen = true;
+                case ScoreMenus.PasteId: Paste_Click(this, new RoutedEventArgs()); break;
+                case ScoreMenus.PasteSpecialId: PasteSpecial_Click(this, new RoutedEventArgs()); break;
+                case ScoreMenus.NotationId: SetNotation(spec.Checked ? NotationMode.TabOnly : NotationMode.TabAndStaff); break;
+                case ScoreMenus.ZoomInId: ZoomBy(1); break;
+                case ScoreMenus.ZoomOutId: ZoomBy(-1); break;
+                case ScoreMenus.FitWidthId: ApplyZoomText("Fit width"); break;
+                case ScoreMenus.LayoutId:
+                    switch (spec.Arg)
+                    {
+                        case "page": SetContinuousScoreView(false); break;
+                        case "continuous": SetContinuousScoreView(true); break;
+                        case "vertical": SetHorizontalScoreView(false); break;
+                        case "horizontal": SetHorizontalScoreView(true); break;
+                    }
+                    break;
+                case ScoreMenus.SettingsId: OpenSettings(SettingsCatalog.Score, ScoreMenus.SettingsRow); break;
+            }
+        }, Editor);
+        OpenContextMenu(menu, Editor, target?.Anchor, target?.FromKeyboard == true);
     }
 
     /// <summary>
@@ -196,53 +93,55 @@ public partial class MainWindow
             Background = (Brush)FindResource("Panel2Brush"),
             Foreground = (Brush)FindResource("TextBrush")
         };
-        MenuItem Item(string header, Action action, bool isChecked = false, bool enabled = true, string? gesture = null)
+        // Tools with a state (on / off) are checkable even when off, so the tick shows the next time; choices of one value
+        // (durations, dynamics) are drawn as a dot (radio), the rest as a tick.
+        MenuItem Item(string header, Action action, bool? state = null, bool enabled = true, string? gesture = null, bool radio = false)
         {
             var mi = new MenuItem { Header = header, Style = (Style)FindResource(typeof(MenuItem)), IsEnabled = enabled };
-            if (isChecked) { mi.IsCheckable = true; mi.IsChecked = true; }
+            if (state is not null) { mi.IsCheckable = true; mi.IsChecked = state == true; MenuMarks.SetIsRadio(mi, radio); }
             if (!string.IsNullOrEmpty(gesture)) mi.InputGestureText = gesture;
             mi.Click += (_, _) => action();
             return mi;
         }
         void RunTool(string id) => ToolsPaletteButton_Click(new Button { Tag = id }, new RoutedEventArgs());
-        MenuItem Group(string header, string category)
+        MenuItem Group(string header, string category, bool radio = false)
         {
             var group = new MenuItem { Header = header, Style = (Style)FindResource(typeof(MenuItem)) };
             foreach (var tool in PaletteTools.Where(t => t.Group == category && t.Supported))
             {
                 var durationKey = tool.Id.StartsWith("duration:", StringComparison.Ordinal) ? tool.Id[9..] : null;
                 var enabled = (durationKey is null || Editor.CanSetDurationForTool(durationKey)) && PaletteToolEnabled(tool.Id);
-                group.Items.Add(Item(tool.Label, () => RunTool(tool.Id), PaletteToolState(tool.Id) == true, enabled));
+                group.Items.Add(Item(tool.Label, () => RunTool(tool.Id), PaletteToolState(tool.Id), enabled, radio: radio));
             }
             return group;
         }
 
         var pitchAndString = new MenuItem { Header = ContextMenuLayouts.PitchAndString, Style = (Style)FindResource(typeof(MenuItem)) };
-        pitchAndString.Items.Add(Item("Pitch up a semitone", () => Editor.ShiftPitch(1), gesture: "Shift+Up"));
-        pitchAndString.Items.Add(Item("Pitch down a semitone", () => Editor.ShiftPitch(-1), gesture: "Shift+Down"));
-        pitchAndString.Items.Add(Item("Move to string above", () => Editor.MoveString(-1), gesture: "Alt+Up"));
-        pitchAndString.Items.Add(Item("Move to string below", () => Editor.MoveString(1), gesture: "Alt+Down"));
+        pitchAndString.Items.Add(Item("Pitch up a semitone", () => Editor.ShiftPitch(1), gesture: MenuKey("Note.PitchUp")));
+        pitchAndString.Items.Add(Item("Pitch down a semitone", () => Editor.ShiftPitch(-1), gesture: MenuKey("Note.PitchDown")));
+        pitchAndString.Items.Add(Item("Move note to higher string", () => Editor.MoveNotesToAdjacentString(-1), gesture: MenuKey("Note.MoveStringUp")));
+        pitchAndString.Items.Add(Item("Move note to lower string", () => Editor.MoveNotesToAdjacentString(1), gesture: MenuKey("Note.MoveStringDown")));
         var parts = new Dictionary<string, Func<MenuItem>>
         {
             [ContextMenuLayouts.Copy] = () => Item("Copy", () => Copy_Click(this, new RoutedEventArgs()), gesture: MenuKey("Edit.Copy")),
             [ContextMenuLayouts.Cut] = () => Item("Cut", () => Cut_Click(this, new RoutedEventArgs()), gesture: MenuKey("Edit.Cut")),
             [ContextMenuLayouts.Paste] = () => Item("Paste", () => Paste_Click(this, new RoutedEventArgs()), gesture: MenuKey("Edit.Paste")),
             [ContextMenuLayouts.PasteSpecial] = () => Item("Paste special…", () => PasteSpecial_Click(this, new RoutedEventArgs()), gesture: MenuKey("Edit.PasteSpecial")),
-            [ContextMenuLayouts.Delete] = () => Item("Delete", () => Editor.DeleteNote(), gesture: "Backspace"),
-            [ContextMenuLayouts.Duration] = () => Group("Duration", "Duration"),
-            [ContextMenuLayouts.Dynamics] = () => Group("Dynamics", "Dynamic"),
+            [ContextMenuLayouts.Delete] = () => Item("Delete", () => Editor.DeleteNote(), gesture: ContextMenuLayouts.FixedKeys.DeleteNote),
+            [ContextMenuLayouts.Duration] = () => Group("Duration", "Duration", radio: true),
+            [ContextMenuLayouts.Dynamics] = () => Group("Dynamics", "Dynamic", radio: true),
             [ContextMenuLayouts.Effects] = () => Group("Effects", "Effects"),
             [ContextMenuLayouts.Beat] = () => Group("Beat", "Beat"),
             [ContextMenuLayouts.PitchAndString] = () => pitchAndString
         };
         foreach (var id in ContextMenuLayouts.NoteMenu(ClipboardService.Shared.CanPaste))
         {
-            if (id == ContextMenuLayouts.Sep) menu.Items.Add(new Separator { Style = (Style)FindResource(typeof(Separator)) });
+            if (id == ContextMenuLayouts.Sep) menu.Items.Add(MenuSeparator());
             else menu.Items.Add(parts[id]());
         }
         menu.Closed += (_, _) => RefreshToolsPalette();
         menu.PlacementTarget = Editor;
-        menu.IsOpen = true;
+        OpenContextMenu(menu, Editor, target.Anchor, target.FromKeyboard);
     }
 
     private void SetSmoothFollow(bool smooth)

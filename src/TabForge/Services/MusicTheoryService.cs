@@ -67,21 +67,64 @@ public static class MusicTheoryService
         return best;
     }
 
-    public static void TransposeTrack(TrackModel track, int semitones)
+    /// <summary>
+    /// Transposes the notes of both voices by <paramref name="semitones"/>. Drum tracks are skipped (their note numbers are
+    /// instruments, not pitches). <paramref name="range"/> limits it to a cell range (inclusive, EndCell -1 = end of the
+    /// bar); null = the whole track. A note whose new fret would leave 0..NumberOfFrets moves to another free string of
+    /// its beat where it fits (lowest fret); if none fits, its pitch still moves but its fret stays (counted in Unplaced).
+    /// </summary>
+    public static (int Moved, int Unplaced) TransposeTrack(TrackModel track, int semitones, (int StartMeasure, int StartCell, int EndMeasure, int EndCell)? range = null)
     {
-        foreach (var m in track.Measures)
-            foreach (var c in m.Cells)
-                foreach (var n in c.Notes)
+        if (track.Kind == TrackKind.Drums || track.MidiChannel == 9) return (0, 0);
+        var moved = 0;
+        var unplaced = 0;
+        for (var mi = 0; mi < track.Measures.Count; mi++)
+        {
+            if (range is { } r && (mi < r.StartMeasure || mi > r.EndMeasure)) continue;
+            var m = track.Measures[mi];
+            foreach (var cells in new[] { m.Cells, m.Voice2Cells })
+                for (var ci = 0; ci < cells.Count; ci++)
                 {
-                    // Move fret when possible, else shift midi.
-                    var nf = n.Fret + semitones;
-                    if (nf >= 0 && nf <= track.NumberOfFrets)
+                    if (range is { } rr)
                     {
-                        n.Fret = nf;
-                        if (n.StringIndex >= 0 && n.StringIndex < track.StringTunings.Count)
-                            n.MidiValue = track.PitchOf(n.StringIndex, nf);
+                        if (mi == rr.StartMeasure && ci < rr.StartCell) continue;
+                        if (mi == rr.EndMeasure && rr.EndCell >= 0 && ci > rr.EndCell) continue;
                     }
-                    else n.MidiValue = Math.Clamp(n.MidiValue + semitones, 0, 127);
+                    var notes = cells[ci].Notes;
+                    foreach (var n in notes)
+                    {
+                        // The stored sounding pitch moves by the interval (a harmonic keeps its offset over the fret).
+                        var onString = n.StringIndex >= 0 && n.StringIndex < track.StringTunings.Count;
+                        var newMidi = Math.Clamp((n.MidiValue > 0 || !onString ? n.MidiValue : track.PitchOf(n.StringIndex, n.Fret)) + semitones, 0, 127);
+                        var nf = n.Fret + semitones;
+                        if (onString && nf >= 0 && nf <= track.NumberOfFrets) n.Fret = nf;
+                        else if (onString && FreeStringFor(track, notes, n, track.PitchOf(n.StringIndex, n.Fret) + semitones) is var (s, f) && s >= 0)
+                        {
+                            // Off the neck on its own string: re-finger it on a free string of the same beat.
+                            n.StringIndex = s;
+                            n.Fret = f;
+                        }
+                        else unplaced++;
+                        n.MidiValue = newMidi;
+                        if (n.SlideTargetMidi > 0) n.SlideTargetMidi = Math.Clamp(n.SlideTargetMidi + semitones, 0, 127);
+                        if (n.TrillTargetMidi > 0) n.TrillTargetMidi = Math.Clamp(n.TrillTargetMidi + semitones, 0, 127);
+                        moved++;
+                    }
                 }
+        }
+        return (moved, unplaced);
+    }
+
+    /// <summary>The free string of the beat (lowest fret) where <paramref name="pitch"/> fits on the neck; (-1, 0) if none.</summary>
+    private static (int String, int Fret) FreeStringFor(TrackModel track, List<TabNote> beat, TabNote note, int pitch)
+    {
+        var best = (String: -1, Fret: 0);
+        for (var s = 0; s < track.StringTunings.Count; s++)
+        {
+            if (beat.Any(o => !ReferenceEquals(o, note) && o.StringIndex == s)) continue;
+            var f = track.FretOf(s, pitch);
+            if (f >= 0 && f <= track.NumberOfFrets && (best.String < 0 || f < best.Fret)) best = (s, f);
+        }
+        return best;
     }
 }

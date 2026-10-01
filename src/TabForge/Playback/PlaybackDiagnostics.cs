@@ -112,13 +112,35 @@ public static class PlaybackDiagnostics
 
         // Unmatched note-ons (hanging notes) is a hard invariant.
         var open = new Dictionary<(int ch, int note), int>();
+        var lastOn = new Dictionary<(int ch, int note), ScoreEvent>();
+        var orphanOffs = new List<ScoreEvent>();
         foreach (var e in timeline.Events)
         {
             var key = (e.Status & 0x0F, e.Data1);
-            if (e.IsNoteOn) { open.TryGetValue(key, out var c); open[key] = c + 1; }
-            else if (e.IsNoteOff && open.TryGetValue(key, out var c) && c > 0) open[key] = c - 1;
+            if (e.IsNoteOn) { open.TryGetValue(key, out var c); open[key] = c + 1; lastOn[key] = e; }
+            else if (e.IsNoteOff)
+            {
+                if (open.TryGetValue(key, out var c) && c > 0) open[key] = c - 1;
+                else orphanOffs.Add(e);
+            }
         }
         sb.AppendLine($"hangingNotes={open.Values.Sum()}");
+        foreach (var (key, count) in open.Where(p => p.Value > 0).Take(8))
+        {
+            sb.AppendLine($"  hanging: ch={key.ch} note={key.note} x{count} last on at t={lastOn[key].TimeMs:0.000} track={lastOn[key].TrackIndex}");
+            foreach (var w in timeline.Events.Where(w => (w.Status & 0x0F) == key.ch && w.Data1 == key.note && (w.IsNoteOn || w.IsNoteOff) && w.TimeMs > lastOn[key].TimeMs - 400 && w.TimeMs < lastOn[key].TimeMs + 1500).Take(12))
+                sb.AppendLine($"      event: t={w.TimeMs:0.000} {(w.IsNoteOn ? "on " : "off")} track={w.TrackIndex}");
+            foreach (var n in timeline.Notes.Where(n => n.TrackIndex == lastOn[key].TrackIndex && n.Midi == key.note && Math.Abs(n.OnsetMs - lastOn[key].TimeMs) < 400).Take(4))
+                sb.AppendLine($"      note: bar {n.Bar + 1} cell {n.Cell} voice {n.VoiceIndex} string {n.StringIndex} onset={n.OnsetMs:0.0} dur={n.DurationMs:0.0} ch={n.Channel}");
+        }
+        foreach (var e in orphanOffs.Take(8))
+        {
+            sb.AppendLine($"  off without on: t={e.TimeMs:0.000} ch={e.Channel} note={e.Data1} track={e.TrackIndex}");
+            foreach (var w in timeline.Events.Where(w => (w.Status & 0x0F) == (e.Status & 0x0F) && (w.IsNoteOn || w.IsNoteOff) && w.TimeMs > e.TimeMs - 130 && w.TimeMs < e.TimeMs + 300).Take(24))
+                sb.AppendLine($"      event: t={w.TimeMs:0.000} {(w.IsNoteOn ? "on " : "off")} note={w.Data1} track={w.TrackIndex}");
+            foreach (var n in timeline.Notes.Where(n => n.TrackIndex == e.TrackIndex && n.Midi == e.Data1 && Math.Abs(n.OnsetMs - e.TimeMs) < 1500).Take(4))
+                sb.AppendLine($"      note: bar {n.Bar + 1} cell {n.Cell} voice {n.VoiceIndex} string {n.StringIndex} onset={n.OnsetMs:0.0} dur={n.DurationMs:0.0} ch={n.Channel} letRing={n.LetRing} dead={n.Dead}");
+        }
 
         if (eventPreview > 0)
         {

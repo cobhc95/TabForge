@@ -587,11 +587,30 @@ public partial class MainWindow
     }
 
     private void TempoBox_LostFocus(object sender, RoutedEventArgs e) => ApplyTempo();
+
+    /// <summary>Enter applies the typed tempo and keeps focus in the box (so more can be typed); it is never a transport or editor key.</summary>
+    private void TempoBox_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key is not (Key.Enter or Key.Return)) return;
+        ApplyTempo();
+        TempoBox.SelectAll();
+        e.Handled = true;
+    }
+
+    /// <summary>The tempo a typed text means: a whole number clamped to 20-400, or <paramref name="current"/> when it is not a number.</summary>
+    internal static int ResolveTempoText(string? text, int current) =>
+        Math.Clamp(int.TryParse(text?.Trim(), out var bpm) ? bpm : current, 20, 400);
+
     private void ApplyTempo()
     {
-        if (!int.TryParse(TempoBox.Text, out var bpm)) bpm = _project.Tempo;
-        bpm = Math.Clamp(bpm, 20, 400);
-        if (bpm != _project.Tempo) { CaptureUndo(); _project.Tempo = bpm; CommitEdit(EditRefresh.Status); }
+        var bpm = ResolveTempoText(TempoBox.Text, _project.Tempo);
+        if (bpm != _project.Tempo)
+        {
+            CaptureUndo(); _project.Tempo = bpm; CommitEdit(EditRefresh.Status);
+            // While playing, recompile from the current position so the new tempo is heard at once (not from bar 1, and
+            // only when the value really changed, so clicking away from the box never restarts anything).
+            if (_midi.IsPlaying) _midi.Rebuild(_project);
+        }
         TempoBox.Text = bpm.ToString();
     }
 

@@ -97,8 +97,21 @@ internal sealed partial class TrackTimeline : FrameworkElement
     protected override void OnKeyDown(KeyEventArgs e)
     {
         base.OnKeyDown(e);
-        if (_areaMoving && e.Key == Key.Escape) { FinishAreaMove(-1); e.Handled = true; }
+        if (e.Key == Key.Escape && CancelClipDrag()) { e.Handled = true; return; }
+        if (_areaMoving && e.Key == Key.Escape) { FinishAreaMove(-1); e.Handled = true; return; }
+        // F10 arrives as a "system" key.
+        if (TryHandleContextMenuKey(e.Key == Key.System ? e.SystemKey : e.Key, Keyboard.Modifiers)) e.Handled = true;
     }
+
+    /// <summary>Shift+F10 or the Menu key: ask the host for the menu a right-click on the current selection / bar would open.</summary>
+    internal bool TryHandleContextMenuKey(Key key, ModifierKeys mods)
+    {
+        if (!((key == Key.Apps && mods == ModifierKeys.None) || (key == Key.F10 && mods == ModifierKeys.Shift))) return false;
+        KeyboardContextRequested?.Invoke(this, EventArgs.Empty);
+        return true;
+    }
+
+    public event EventHandler? KeyboardContextRequested;
     public IReadOnlyList<(int Start, int End)> SkipRanges = Array.Empty<(int, int)>();
     public int LoopEnd = -1;
     /// <summary>Draw the loop region overlay only when loop playback is actually enabled; an

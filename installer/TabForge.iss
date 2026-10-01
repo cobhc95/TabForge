@@ -1,13 +1,15 @@
 ﻿; TabForge installer (Inno Setup 7). Built by tools\Package-Release.ps1, which passes the version and
-; the publish folder:  ISCC.exe /DAppVersion=0.2.0-beta.4/DSourceDir=..\build\TabForge installer\TabForge.iss
+; the publish folder:  ISCC.exe /DAppVersion=0.5 /DFileVersion=0.5.0.0 /DSourceDir=..\build\TabForge installer\TabForge.iss
 #ifndef AppVersion
   #define AppVersion "0.0.0-dev"
 #endif
 #ifndef SourceDir
   #define SourceDir "..\build\TabForge"
 #endif
-; File version resource: the numeric part of AppVersion ("0.2.0-beta.4" -> "0.2.0").
-#if Pos("-", AppVersion) > 0
+; File version resource: passed in as FileVersion (0.5.0.0); otherwise the numeric part of AppVersion ("0.2.0-beta.4" -> "0.2.0").
+#ifdef FileVersion
+  #define NumericVersion FileVersion
+#elif Pos("-", AppVersion) > 0
   #define NumericVersion Copy(AppVersion, 1, Pos("-", AppVersion) - 1)
 #else
   #define NumericVersion AppVersion

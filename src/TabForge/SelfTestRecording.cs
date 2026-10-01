@@ -68,6 +68,22 @@ public static partial class SelfTest
             using var reader = new NAudio.Wave.WaveFileReader(takes[0].Take.Path);
             Check("queued recording writes every frame (take length = input length, silence stands in for any overflow)",
                 lengthOk && reader.SampleCount == 50000, $"{takes[0].LengthSec} s, {reader.SampleCount} samples, dropped {r1.DroppedFrames}");
+
+            // Stop does not wait for the disk (the engine main thread must keep answering pings): the disk thread writes the backlog,
+            // closes the files and reports the takes once; a later Finish (shutdown) returns the same takes.
+            var r3 = new EA.Recorder(folder, new[] { (0, "Bg", 0) }, 0, 8000);
+            for (var i = 0; i < 50; i++) r3.Enqueue(chunk, 1000);
+            var calls = 0;
+            List<(EA.Recorder.Take Take, double LengthSec)>? bgTakes = null;
+            using var doneSignal = new ManualResetEventSlim();
+            r3.FinishInBackground(t => { Interlocked.Increment(ref calls); bgTakes = t; doneSignal.Set(); });
+            var signalled = doneSignal.Wait(TimeSpan.FromSeconds(10));
+            var again = r3.Finish();
+            long bgSamples = -1;
+            if (bgTakes is { Count: 1 }) { using var bgReader = new NAudio.Wave.WaveFileReader(bgTakes[0].Take.Path); bgSamples = bgReader.SampleCount; }
+            Check("stopping a take hands the backlog to the disk thread: it reports the take once, full length, files closed",
+                signalled && calls == 1 && r3.Finished && bgSamples == 50000 && ReferenceEquals(again, bgTakes),
+                $"signalled {signalled}, calls {calls}, samples {bgSamples}");
         }
         finally { try { Directory.Delete(folder, true); } catch { } }
 
@@ -92,7 +108,7 @@ public static partial class SelfTest
 
             // 8 kHz: the queue holds 32768 frames. Fill 32000 of them (an impulse at 100), then two adjacent drops (1000 + 900 frames,
             // their impulses are lost; 768 frames are free, so both are too big), then 500 frames that still fit (impulse at 20): they were queued after the drop.
-            var stalled = new EA.Recorder(gapFolder, new[] { (0, "Gap", 0) }, 0, 8000, startWriter: false);
+            var stalled = new EA.Recorder(gapFolder, new[] { (0, "Gap", 0) }, 0, 8000, startWriter: false, queueSeconds: 4);
             stalled.Enqueue(Block(1000, (100, 0.5f)), 1000);
             for (var i = 0; i < 31; i++) stalled.Enqueue(Block(1000), 1000);
             stalled.Enqueue(Block(1000, (10, 0.7f)), 1000);
@@ -108,7 +124,7 @@ public static partial class SelfTest
                 $"len {s1.Length}, 0.5 at [{string.Join(",", at500)}], 0.8 at [{string.Join(",", at800)}], silent {silent}, dropped {stalled.DroppedFrames}, overflows {stalled.GapOverflows}");
 
             // One marker only: a second, separated drop cannot get its own marker; it is merged into the first (reported), and the take keeps its full length.
-            var tiny = new EA.Recorder(gapFolder, new[] { (0, "Gap2", 0) }, 0, 8000, startWriter: false, gapCapacity: 1);
+            var tiny = new EA.Recorder(gapFolder, new[] { (0, "Gap2", 0) }, 0, 8000, startWriter: false, gapCapacity: 1, queueSeconds: 4);
             tiny.Enqueue(Block(1000, (100, 0.5f)), 1000);
             for (var i = 0; i < 31; i++) tiny.Enqueue(Block(1000), 1000);
             tiny.Enqueue(Block(1000), 1000);                          // dropped: marker 1
@@ -119,6 +135,47 @@ public static partial class SelfTest
             Check("a full gap-marker ring merges the drop into the newest marker, reports it, and the take keeps its full length",
                 s2.Length == 34500 && tiny.GapOverflows == 1 && Impulses(s2, 0.5f).SequenceEqual(new[] { 100 }) && Impulses(s2, 0.8f).Count == 1,
                 $"len {s2.Length}, overflows {tiny.GapOverflows}");
+
+            // A7 stress 1: a long queue absorbs a long writer stall. 8 kHz, 60 s queue (65.5 s of capacity); the disk thread is stalled (nothing pumps)
+            // while 30 s are captured: nothing is lost, in order, with no gap.
+            var longQueue = new EA.Recorder(gapFolder, new[] { (0, "Long", 0) }, 0, 8000, startWriter: false, queueSeconds: 60);
+            for (var i = 0; i < 240; i++) longQueue.Enqueue(Block(1000, (i, 0.25f + i * 0.001f)), 1000);   // 30 s; impulse i at frame i of block i
+            var longTake = longQueue.Finish();
+            var s3 = ReadTake(longTake[0].Take.Path);
+            var inOrder = true;
+            for (var i = 0; i < 240 && inOrder; i++) inOrder = s3.Length == 240000 && s3[i * 1000 + i] == 0.25f + i * 0.001f;
+            Check("a 30 s writer stall with a 60 s queue loses nothing: every block in order, no gap, no drop",
+                inOrder && longQueue.DroppedFrames == 0 && longQueue.GapCount == 0 && longQueue.LostSeconds == 0 && longQueue.LossSummary is null,
+                $"len {s3.Length}, dropped {longQueue.DroppedFrames}, gaps {longQueue.GapCount}");
+
+            // A stall longer than the queue: the overflow is still marked as silence in place and the totals are exact.
+            var over = new EA.Recorder(gapFolder, new[] { (0, "Over", 0) }, 0, 8000, startWriter: false, queueSeconds: 60);
+            for (var i = 0; i < 640; i++) over.Enqueue(Block(1000, (0, i < 524 ? 0.5f : 0.9f)), 1000);   // 80 s into a 65.5 s queue
+            var overTake = over.Finish();
+            var s4 = ReadTake(overTake[0].Take.Path);
+            var keptHead = s4.Take(524000).Where(v => v == 0.5f).Count() == 524;
+            var lostSilent = s4.Skip(524000).All(v => v == 0f);
+            Check("a stall longer than the queue marks the gap in place and reports the exact total (1 gap, 14.5 s, take length intact)",
+                s4.Length == 640000 && keptHead && lostSilent && over.DroppedFrames == 116000 && over.GapCount == 1 && Math.Abs(over.LostSeconds - 14.5) < 1e-9
+                && over.LossSummary == "Recording lost 1 gap, 14.5 s in total (disk too slow)",
+                $"len {s4.Length}, dropped {over.DroppedFrames}, gaps {over.GapCount}, lost {over.LostSeconds} s, \"{over.LossSummary}\"");
+
+            // Queue size: 120 s asked for, rounded up to a power of two of frames; a memory cap shrinks it (never under 4 s).
+            using (var sized = new EA.Recorder(gapFolder, new[] { (0, "Size", 0) }, 0, 48000, startWriter: false))
+                Check("the default queue holds at least 120 s at 48 kHz (67 MB shared by all armed tracks)", sized.QueueCapacityFrames >= 120L * 48000 && sized.QueueCapacityFrames * 8 <= 256L * 1024 * 1024, $"{sized.QueueCapacityFrames} frames");
+            using (var capped = new EA.Recorder(gapFolder, new[] { (0, "Cap", 0) }, 0, 8000, startWriter: false, queueSeconds: 120, maxQueueBytes: 1024 * 1024))
+                Check("a memory cap shrinks the queue (fallback, not a failure)", capped.QueueCapacityFrames == 131072, $"{capped.QueueCapacityFrames} frames");
+
+            // Audio thread: Enqueue (the capture callback) allocates nothing, with room and when dropping.
+            using (var rt = new EA.Recorder(gapFolder, new[] { (0, "Rt", 0) }, 0, 8000, startWriter: false, queueSeconds: 4))
+            {
+                var blk = Block(1000);
+                for (var i = 0; i < 40; i++) rt.Enqueue(blk, 1000);   // warm up, and the queue (32768 frames) is full: the rest are drops
+                var before = GC.GetAllocatedBytesForCurrentThread();
+                for (var i = 0; i < 2000; i++) rt.Enqueue(blk, 1000);
+                var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+                Check("recorder: the capture-thread Enqueue path allocates nothing, also while dropping", allocated == 0 && rt.DroppedFrames > 0, $"{allocated} bytes, dropped {rt.DroppedFrames}");
+            }
         }
         finally { try { Directory.Delete(gapFolder, true); } catch { } }
     }

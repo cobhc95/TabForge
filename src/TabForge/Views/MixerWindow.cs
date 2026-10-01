@@ -103,13 +103,14 @@ public sealed class MixerWindow : Window
             ("groups", "Groups in track list", "Show the mixer groups in the main track list: a box per group, which can be collapsed and dragged as a whole"),
         })
         {
-            var box = new CheckBox { Content = label, IsChecked = _host.TrackListShows(what), ToolTip = tip, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 12, 0) };
+            var box = new CheckBox { Content = label, IsChecked = _host.TrackListShows(what), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 12, 0) };
+            TooltipShortcuts.Bind(box, tip, what == "groups" ? "View.ShowTrackGroups" : null);
             box.Click += (_, _) => _host.SetTrackListShows(what, box.IsChecked == true);
             _showBoxes.Add((what, box));
             shows.Children.Add(box);
         }
         groupingRow.Children.Add(shows);
-        var settings = new Button { Content = "Audio & VST settings…", Padding = new Thickness(10, 3, 10, 3), HorizontalAlignment = HorizontalAlignment.Right };
+        var settings = new Button { Content = "Audio & Plug-ins settings…", Padding = new Thickness(10, 3, 10, 3), HorizontalAlignment = HorizontalAlignment.Right };
         settings.Click += (_, _) => _host.OpenAudioSettings();
         DockPanel.SetDock(settings, Dock.Right);
         top.Children.Insert(0, settings);
@@ -587,10 +588,11 @@ public sealed class MixerWindow : Window
         var fx = new FxSplitButton
         {
             ChainOn = existing?.On ?? true, PluginCount = existing?.Rig.Plugins.Count ?? 0, Width = 54, Height = 22, HorizontalAlignment = HorizontalAlignment.Left,
-            ToolTip = group is null
-                ? "Master effects: FX opens the chain applied to the whole mix (e.g. reverb on everything) · power: bypass it"
-                : "Group effects bus: FX opens the chain the group's tracks sum into before the master · power: bypass it"
         };
+        TooltipShortcuts.Bind(fx, group is null
+                ? "Master effects: FX opens the chain applied to the whole mix (e.g. reverb on everything) · power: bypass it"
+                : "Group effects bus: FX opens the chain the group's tracks sum into before the master · power: bypass it",
+            group is null ? "Mixer.MasterFx" : null);   // the group command acts on the selected track's group, not on this row's
         fx.OpenChain += (_, _) => _host.OpenBusFx(group);
         fx.TogglePower += (_, _) =>
         {
@@ -619,9 +621,9 @@ public sealed class MixerWindow : Window
         // Monitoring FX: a different look on purpose (amber outline, headphones, "MON"): live only, never part of a render.
         var mon = new MonitorFxButton
         {
-            Active = MonitorActive(), Margin = new Thickness(2, 0, 0, 0), HorizontalAlignment = HorizontalAlignment.Left,
-            ToolTip = "Monitoring effects (e.g. speaker calibration). Heard live only; never included in renders or exports."
+            Active = MonitorActive(), Margin = new Thickness(2, 0, 0, 0), HorizontalAlignment = HorizontalAlignment.Left
         };
+        TooltipShortcuts.Bind(mon, "Monitoring effects (e.g. speaker calibration). Heard live only; never included in renders or exports.", "Mixer.MonitorFx");
         mon.Click += (_, _) => _host.OpenMonitorFx();
         _syncers.Add(() => mon.Active = MonitorActive());
         Put(grid, mon, 2);

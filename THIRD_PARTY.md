@@ -28,7 +28,13 @@ it without rebuilding TabForge. TabForge only calls it through its public API.
 
 TabForge references the `AlphaTab` NuGet package for Guitar Pro reading and `.gp` (GP7) writing.
 
-- Version: 1.8.4, the unmodified NuGet package (no alphaTab source is vendored or changed in this repository).
+- Version: 1.8.4, the unmodified NuGet package (`AlphaTab.dll` is shipped exactly as published; no alphaTab source is
+  vendored or changed).
+- One TabForge file derives from alphaTab source and is therefore itself under MPL-2.0:
+  `src/TabForge/Services/Gp3To5LongSongReader.cs`. It repeats the step order of `Gp3To5Importer.readScore` (calling
+  alphaTab's own, unchanged reader methods) with TabForge's bar limit in place of alphaTab's fixed 1,000-bar threshold,
+  so Guitar Pro 3-5 songs over 1,000 bars open. Its Source Code Form is that file in TabForge's source; the rest of
+  TabForge stays under its MIT licence.
 - Copyright (c) 2025, Daniel Kuschny and Contributors.
 - Project: https://www.alphatab.net/
 - Source code form (tag `v1.8.4`, commit `022a45c8e42370f9e12e68949d11eada370da83d`):
@@ -80,7 +86,9 @@ process it (it plays Windows' own `gm.dls` sound bank, converted in memory; the 
 
 TabForge is a self-contained .NET 8 application: the .NET runtime (8.0.31) and the Windows Desktop runtime (WPF,
 Windows Forms) are part of `TabForge.exe`, together with `System.Drawing.Common` and
-`Microsoft.Win32.SystemEvents` (9.0.8).
+`Microsoft.Win32.SystemEvents` (9.0.8). The PDF export (below) adds `Microsoft.Extensions.Logging.Abstractions` (8.0.3),
+`Microsoft.Extensions.DependencyInjection.Abstractions` (8.0.2) and `System.Security.Cryptography.Pkcs` (8.0.1), also from
+dotnet/runtime under the same MIT licence.
 
 - Copyright (c) .NET Foundation and Contributors / Microsoft Corporation.
 - Licences: [licenses/MIT_DotNet_runtime_LICENSE.txt](licenses/MIT_DotNet_runtime_LICENSE.txt),
@@ -150,6 +158,17 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
+
+## PDFsharp and MigraDoc (MIT)
+
+The Beginner's Guide (Help > Tutorial) is exported as a PDF with the `PDFsharp-MigraDoc-WPF` NuGet package (and its
+`PDFsharp-WPF` dependency), the unmodified packages.
+
+- Version: 6.2.4.
+- Copyright (c) 2001-2026 empira Software GmbH, Troisdorf (Cologne Area), Germany.
+- Project: https://docs.pdfsharp.net/ , source: https://github.com/empira/PDFsharp
+- Licence: MIT. Text: [licenses/MIT_PDFsharp_MigraDoc.txt](licenses/MIT_PDFsharp_MigraDoc.txt).
+- The WPF build uses Windows' own font and image support; no GDI+ and no browser engine.
 
 ## Sample song
 

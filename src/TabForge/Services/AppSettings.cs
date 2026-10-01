@@ -169,6 +169,13 @@ public sealed class GeneralSettings
     public double PlaybackControllerY { get; set; } = -1;
     /// <summary>Height of the playback controller when docked, in device-independent units.</summary>
     public double PlaybackControllerHeight { get; set; } = 100;
+    /// <summary>Id of the chapter the Tutorial window (Help > Tutorial) showed last; empty = the first chapter.</summary>
+    public string TutorialLastChapter { get; set; } = "";
+    /// <summary>Which guide the Tutorial window showed last: "basic" or "detailed".</summary>
+    public string TutorialLastGuide { get; set; } = "basic";
+    /// <summary>Size of the Tutorial window in device-independent units; 0 = the default size.</summary>
+    public double TutorialWindowWidth { get; set; }
+    public double TutorialWindowHeight { get; set; }
 }
 
 public sealed class AppearanceSettings
@@ -235,7 +242,7 @@ public sealed class AppearanceSettings
     public int ScoreBarNumberFrequency { get; set; } = 1;
     public double SystemVerticalSpacing { get; set; } = 1.0;
     public double MeasureHorizontalSpacing { get; set; } = 1.0;
-    public double LedgerLineOpacity { get; set; } = 1.0;
+    /// <summary>Opacity of the staff lines and the ledger lines (one unit, 0..1); 1.0 shows the staff-line colour as chosen.</summary>
     public double StaffLineOpacity { get; set; } = 1.0;
     public double HoverHighlightIntensity { get; set; } = 0.27;
     public double SelectionHighlightIntensity { get; set; } = 0.25;
@@ -282,6 +289,8 @@ public sealed class PluginSettings
     public int SampleRate { get; set; } = 48000;
     /// <summary>ASIO ignores the Windows volume; on: the Windows master volume and mute also scale TabForge's audio (off by default).</summary>
     public bool FollowWindowsVolume { get; set; } = true;
+    /// <summary>Master safety limiter on live playback (-0.3 dBFS, 1.5 ms lookahead; adds that much delay). Off by default: renders have their own switch (on).</summary>
+    public bool LiveLimiter { get; set; }
     /// <summary>Play every track through the audio engine (its General MIDI synth) so the song uses the chosen audio driver. Off: tracks without plug-ins use Windows MIDI. Older files stored null (auto): read as on.</summary>
     [JsonConverter(typeof(NullIsTrueBoolConverter))]
     public bool PlayAllThroughEngine { get; set; } = true;
@@ -463,12 +472,14 @@ public sealed class EditingSettings
     public string ScaleHighlightStyle { get; set; } = ScaleHighlightStyles.Shaded;
     /// <summary>Colour of the scale highlight (see <see cref="ScaleHighlightStyles.Colours"/>).</summary>
     public string ScaleHighlightColour { get; set; } = "Blue";
-    /// <summary>Colour of the fretboard position dots (inlays): "Default" follows the theme.</summary>
-    public string FretMarkerColour { get; set; } = "Default";
-    /// <summary>Brightness of the fretboard position dots: "Original", "Brighter" (default), "Bright" or "Brightest".</summary>
-    public string FretMarkerBrightness { get; set; } = FretMarkerLevels.Brighter;
-    /// <summary>Size of the fret numbers and note bubbles: "Small" (75%), "Medium" (85%, default) or "Large" (100%).</summary>
-    public string FretNumberSize { get; set; } = FretNumberSizes.Medium;
+    /// <summary>Strength of the scale highlight in percent (100 = the standard look; the root always stays stronger than the other scale notes).</summary>
+    public int ScaleHighlightStrength { get; set; } = ScaleHighlightStyles.DefaultStrength;
+    /// <summary>Colour of the fretboard position dots (inlays): "White" (default); "Default" follows the theme.</summary>
+    public string FretMarkerColour { get; set; } = "White";
+    /// <summary>Brightness of the fretboard position dots: "Original" (default), "Brighter", "Bright" or "Brightest".</summary>
+    public string FretMarkerBrightness { get; set; } = FretMarkerLevels.Original;
+    /// <summary>Size of the fret numbers and note bubbles: "Small" (75%), "Medium" (85%) or "Large" (100%, default).</summary>
+    public string FretNumberSize { get; set; } = FretNumberSizes.Large;
     /// <summary>Fretboard string spacing relative to the fret width: "Compact", "Natural" (default) or "Wide" (at most 1.5x natural).</summary>
     public string FretStringSpacing { get; set; } = FretStringSpacings.Natural;
     public int FretboardFrets { get; set; } = 24;
@@ -542,6 +553,20 @@ public sealed class TimelineSettings
     public double TrackControlsWidth { get; set; }
     /// <summary>Resize the track list / arrangement panel to fit all rows when tracks or groups change.</summary>
     public bool AutoFitTrackList { get; set; } = true;
+    /// <summary>Timeline appearance: draw each note as a mark in its lane (off = the lane's default drawing).</summary>
+    public bool ShowIndividualNotes { get; set; }
+    /// <summary>Timeline appearance: draw each lane as one continuous line (turns <see cref="ShowIndividualNotes"/> off).</summary>
+    public bool ShowContinuousLine { get; set; }
+    /// <summary>Timeline appearance: leave out the grid lines in bars without notes.</summary>
+    public bool HideEmptyGrid { get; set; } = true;
+    /// <summary>Timeline appearance: a faint glow on bars that have notes.</summary>
+    public bool BarGlow { get; set; } = true;
+    /// <summary>How the playback position is shown on the timeline (see <see cref="PlayheadStyles"/>).</summary>
+    public string PlayheadStyle { get; set; } = PlayheadStyles.Line;
+    /// <summary>New songs list their tracks under a header per mixer group.</summary>
+    public bool ShowGroupsInNewSongs { get; set; }
+    /// <summary>A clip lane with no clips left (after a move, delete, cut) is removed and the lanes below close up. Armed tracks are never touched.</summary>
+    public bool AutoRemoveEmptyLanes { get; set; } = true;
 }
 
 /// <summary>Action id → key gesture string (e.g. "Ctrl+Shift+T"). Missing ids use the catalog default.</summary>
@@ -596,6 +621,11 @@ public static class ScaleHighlightStyles
     public static readonly string[] All = { Shaded, Circles, Rings };
     /// <summary>Colour names; the colours themselves are <see cref="ThemeService.ScaleHighlightColour"/> (the settings types stay WPF-free).</summary>
     public static readonly string[] Colours = { "Blue", "Green", "Amber", "Purple", "Red", "Teal", "Grey" };
+    public const int MinStrength = 10, MaxStrength = 150, DefaultStrength = 100, StrengthStep = 10;
+    /// <summary>The strength setting as a multiplier of the standard look (1.0 = today's alphas).</summary>
+    public static double StrengthFactor(int percent) => Math.Clamp(percent, MinStrength, MaxStrength) / 100.0;
+    /// <summary>A scale mark's alpha: the standard alpha times the strength; other scale notes top out at 0.9 so the root (up to 1.0) always stays stronger.</summary>
+    public static double ScaleAlpha(double standardAlpha, double strength, bool root) => root ? Math.Min(1, standardAlpha * strength) : Math.Min(0.9, standardAlpha * strength);
 }
 
 public static class FretMarkerLevels
@@ -616,7 +646,7 @@ public static class FretNumberSizes
     public const string Medium = "Medium";
     public const string Large = "Large";
     public static readonly string[] All = { Small, Medium, Large };
-    public static string Label(string size) => size switch { Small => "Small (75%)", Large => "Large (100%)", _ => "Medium (85%, default)" };
+    public static string Label(string size) => size switch { Small => "Small (75%)", Large => "Large (100%, default)", _ => "Medium (85%)" };
     public static double Scale(string? size) => size switch { Small => 0.75, Large => 1.0, _ => 0.85 };
 }
 
@@ -632,6 +662,19 @@ public static class FretStringSpacings
     /// <summary>Multiplier of the natural string-gap cap; never above 1.5.</summary>
     public static double Factor(string? v) => v switch { Compact => 0.75, Wide => 1.5, _ => 1.0 };
     public static string Next(string? v) => v switch { Compact => Natural, Natural => Wide, _ => Compact };
+}
+
+/// <summary>Playback position marker on the timeline: the vertical line, a marker inside the current bar cell, or both.</summary>
+public static class PlayheadStyles
+{
+    public const string Line = "Line";
+    public const string BarMarker = "Bar marker";
+    public const string Both = "Both";
+    public static readonly string[] All = { Line, BarMarker, Both };
+    public static string Normalize(string? v) => All.FirstOrDefault(a => string.Equals(a, v, StringComparison.OrdinalIgnoreCase)) ?? Line;
+    public static string Next(string? v) => Normalize(v) switch { Line => BarMarker, BarMarker => Both, _ => Line };
+    public static bool ShowsLine(string? v) => Normalize(v) != BarMarker;
+    public static bool ShowsBarMarker(string? v) => Normalize(v) != Line;
 }
 
 public static class KeyboardKeyStyles

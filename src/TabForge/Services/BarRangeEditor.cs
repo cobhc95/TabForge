@@ -75,6 +75,26 @@ public static class BarRangeEditor
     }
 
     /// <summary>
+    /// Duplicate bar: copies bars [start, end] of EVERY track and inserts the copies right after <paramref name="end"/>
+    /// (bars are shared master bars, so all tracks stay aligned: insert / delete bar work the same way). A track that has
+    /// no bar there gets an empty one. The copy carries everything the bar has (notes, time and key signature, repeats,
+    /// tempo, ...) except the section label, so the same label is not shown twice. Sections after the copy move with their bars;
+    /// a copy made inside a resized section widens it. Returns the old-to-new bar map, or null when there is nothing to copy
+    /// or the song would get too long. The caller wraps the call in one undo step.
+    /// </summary>
+    public static int[]? Duplicate(SongProject project, int start, int end)
+    {
+        var barCount = MaxMeasures(project);
+        if (project.Tracks.Count == 0 || start < 0 || start >= barCount) return null;
+        end = Math.Clamp(end, start, barCount - 1);
+        if (barCount + (end - start + 1) > InputLimits.MaxMeasuresPerTrack) return null;
+        var clip = Capture(project, start, end);
+        foreach (var track in clip)
+            foreach (var bar in track) { bar.SectionName = ""; bar.Anacrusis = false; }   // a copy is never the song's pickup bar
+        return Insert(project, end + 1, clip);
+    }
+
+    /// <summary>
     /// Moves bars [start, end] so they land before <paramref name="insertBefore"/> (an index in the
     /// original numbering). Returns the new first bar and the old-to-new map, or null when the target
     /// is inside the range itself or the range cannot be removed.

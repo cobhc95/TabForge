@@ -16,7 +16,9 @@ public sealed class Recorder : IDisposable
     private readonly object _gate = new();
     private readonly int _rate;
     private long _frames;
-    private readonly float[] _scratch = new float[8192 * 2];
+    // Big write chunks (32768 frames = 256 KB per write): fewer, larger writes hold up better when the disk is busy.
+    private const int ChunkFrames = 32768;
+    private readonly float[] _scratch = new float[ChunkFrames * 2];
 
     // Single-producer (capture thread) / single-consumer (disk thread) queue of interleaved stereo frames.
     private readonly float[] _queue;
@@ -33,24 +35,38 @@ public sealed class Recorder : IDisposable
     private long _lastGapPos = -1;             // producer only: queue position of the newest marker
     private long _lateSilence;                 // fallback: drops that fit no marker (ring full, newest marker already claimed): written as soon as the disk thread is idle
     private long _gapOverflows;
-    private readonly float[] _drain = new float[8192 * 2];
+    private readonly float[] _drain = new float[ChunkFrames * 2];
+    private long _gapsWritten, _lostWritten;   // disk thread: gaps written as silence and their frames (final after Finish)
     private readonly Thread? _diskThread;
     private volatile bool _stopping;
     private bool _reportedDrop, _reportedOverflow;
 
     /// <param name="startWriter">False (tests only): no disk thread; the caller drives the writer with <see cref="PumpForTests"/>.</param>
     /// <param name="gapCapacity">Gap markers kept between the capture thread and the disk thread (rounded up to a power of two).</param>
-    public Recorder(string folder, IEnumerable<(int Slot, string TrackName, int Mode)> tracks, double startSec, int rate, bool startWriter = true, int gapCapacity = 256)
+    /// <summary>Seconds of input the disk queue holds before frames are replaced by silence (rounded up to a power of two of frames), and the most memory it may take.</summary>
+    public const int QueueSeconds = 120;
+    public const long MaxQueueBytes = 256L * 1024 * 1024;
+
+    /// <param name="queueSeconds">How many seconds of stereo input the queue should hold (allocated once, here, never on the audio thread).</param>
+    /// <param name="maxQueueBytes">Memory cap for the queue: a smaller queue (never under 4 s) is used, with a log line, when the rate needs more.</param>
+    public Recorder(string folder, IEnumerable<(int Slot, string TrackName, int Mode)> tracks, double startSec, int rate, bool startWriter = true, int gapCapacity = 256,
+        int queueSeconds = QueueSeconds, long maxQueueBytes = MaxQueueBytes)
     {
         _rate = rate;
         var gaps = 1;
         while (gaps < Math.Max(1, gapCapacity)) gaps <<= 1;
         _gapPos = new long[gaps]; _gapLen = new long[gaps]; _gapMask = gaps - 1;
-        // ~4 s of stereo input between the callback and the disk.
+        // One stereo queue shared by every armed track (each take picks its channel): the memory does not grow with the track count.
         var capacity = 1L;
-        while (capacity < rate * 4L) capacity <<= 1;
+        while (capacity < rate * (long)Math.Max(4, queueSeconds)) capacity <<= 1;
+        var reduced = false;
+        while (capacity * 8 > maxQueueBytes && capacity > rate * 4L) { capacity >>= 1; reduced = true; }
+        EngineLog.Write($"recorder queue: {capacity / (double)rate:0} s ({capacity * 8 / 1048576} MB, shared by all armed tracks){(reduced ? ", reduced to fit the memory cap" : "")}");
         _queue = new float[capacity * 2];
         _queueMask = capacity - 1;
+        // Fault every page in here (engine main thread, a few ms), not one page per callback on the capture thread for the first two minutes:
+        // a fresh large array is untouched demand-zero memory, and a page fault on a real-time thread under memory pressure can take milliseconds.
+        for (var i = 0; i < _queue.Length; i += 1024) _queue[i] = 0f;
         Directory.CreateDirectory(folder);
         var stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss");
         try
@@ -76,6 +92,16 @@ public sealed class Recorder : IDisposable
 
     /// <summary>Tests only (recorder built with <c>startWriter: false</c>): runs the disk thread's work until everything queued is written.</summary>
     public void PumpForTests() { while (Pump()) { } }
+
+    /// <summary>Frames the input queue holds.</summary>
+    public long QueueCapacityFrames => _queueMask + 1;
+
+    /// <summary>Gaps (stretches of input replaced by silence) written so far and their total length. Final once <see cref="Finish"/> has returned.</summary>
+    public long GapCount => Interlocked.Read(ref _gapsWritten);
+    public double LostSeconds => Interlocked.Read(ref _lostWritten) / (double)_rate;
+
+    /// <summary>One line for the user when input was lost (null: nothing lost); read after <see cref="Finish"/>.</summary>
+    public string? LossSummary => GapCount == 0 ? null : $"Recording lost {GapCount} gap{(GapCount == 1 ? "" : "s")}, {LostSeconds:0.0} s in total (disk too slow)";
 
     /// <summary>Gap markers that could not be kept exactly (merged into an earlier marker or written late): timing after such a gap is approximate.</summary>
     public long GapOverflows => Interlocked.Read(ref _gapOverflows);
@@ -166,7 +192,16 @@ public sealed class Recorder : IDisposable
         {
             var stopping = _stopping;
             var moved = Pump();
-            if (stopping && !moved && Idle) return;
+            if (stopping && !moved && Idle)
+            {
+                var result = Complete();
+                if (Volatile.Read(ref _onFinished) is { } done)
+                {
+                    try { done(result); }
+                    catch (Exception ex) { EngineLog.Write($"recorder: finish callback failed: {ex.Message}"); }   // never let it end the engine process
+                }
+                return;
+            }
             if (!moved) Thread.Sleep(5);
         }
     }
@@ -208,6 +243,9 @@ public sealed class Recorder : IDisposable
 
     private void ReportDrop(long frames)
     {
+        var gaps = Interlocked.Increment(ref _gapsWritten);
+        var lost = Interlocked.Add(ref _lostWritten, frames);
+        EngineLog.Write($"recording: {frames / (double)_rate:0.00} s of input lost at {(_frames - frames) / (double)_rate:0.0} s into the take (disk too slow); {gaps} gap(s), {lost / (double)_rate:0.0} s so far");
         if (!_reportedDrop)
         {
             _reportedDrop = true;
@@ -283,12 +321,38 @@ public sealed class Recorder : IDisposable
         _stopping = true;
         if (_diskThread is null) PumpForTests();
         else if (_diskThread.IsAlive && _diskThread != Thread.CurrentThread) _diskThread.Join(TimeSpan.FromSeconds(10));
+        return Complete();
+    }
+
+    /// <summary>
+    /// Engine main thread: stops taking input and returns at once. The disk thread writes what is still queued (up to the whole
+    /// queue on a slow disk, which can take longer than the 5 s the main thread may go without answering TabForge's liveness ping),
+    /// closes the files and then calls <paramref name="done"/> on the disk thread. Without a disk thread (tests) it finishes here.
+    /// </summary>
+    public void FinishInBackground(Action<List<(Take Take, double LengthSec)>> done)
+    {
+        if (_diskThread is not { IsAlive: true }) { done(Finish()); return; }
+        Volatile.Write(ref _onFinished, done);   // before _stopping: the disk thread only ends once it sees _stopping
+        _stopping = true;
+    }
+
+    /// <summary>True once the files are closed.</summary>
+    public bool Finished => Volatile.Read(ref _result) is not null;
+
+    private List<(Take Take, double LengthSec)>? _result;
+    private Action<List<(Take Take, double LengthSec)>>? _onFinished;
+
+    /// <summary>Closes the files once (disk thread at its end, or <see cref="Finish"/>); later calls return the same takes.</summary>
+    private List<(Take Take, double LengthSec)> Complete()
+    {
         lock (_gate)
         {
+            if (_result is not null) return _result;
             var length = (double)_frames / _rate;
             var result = _writers.Select(w => (w.Take, length)).ToList();
             foreach (var (_, writer) in _writers) { try { writer.Dispose(); } catch { } }
             _writers.Clear();
+            Volatile.Write(ref _result, result);
             return result;
         }
     }

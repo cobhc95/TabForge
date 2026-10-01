@@ -280,8 +280,10 @@ public sealed class DockWorkspace : Grid
     public DockWorkspaceState CaptureLayout()
     {
         var result = Clone(_state);
+        UseUserRatios(result.Root);
         foreach (var floating in result.Floating)
         {
+            UseUserRatios(floating.Root);
             if (!_floatWindows.TryGetValue(floating.Id, out var window)) continue;
             floating.Left = window.Left;
             floating.Top = window.Top;
@@ -289,6 +291,16 @@ public sealed class DockWorkspace : Grid
             floating.Height = Math.Max(window.MinHeight, window.Height);
         }
         return result;
+    }
+
+    /// <summary>A captured layout carries the user's ratios, not the ones auto-fit set for the live window size.</summary>
+    private static void UseUserRatios(DockNodeState? node)
+    {
+        if (node is null) return;
+        if (node.UserRatio is { } user && double.IsFinite(user)) node.Ratio = Math.Clamp(user, 0.02, 0.98);
+        node.UserRatio = null;
+        UseUserRatios(node.First);
+        UseUserRatios(node.Second);
     }
 
     /// <summary>Every panel in a captured layout (docked and floating).</summary>
@@ -762,13 +774,14 @@ public sealed class DockWorkspace : Grid
             if (available <= 0) return false;
             // Never below the pane's own minimum (e.g. the fretboard's full-draw height).
             height = Math.Max(Math.Max(0, height), MinimumSize(inFirst ? node.First! : node.Second!).Height);
+            // The fit follows this window's size, so it changes the live split only: the user's ratio is what gets saved.
+            node.UserRatio ??= node.Ratio;
             node.Ratio = Math.Clamp(inFirst ? height / available : (available - height) / available, 0.02, 0.98);
             if (inFirst) split.RowDefinitions[0].MinHeight = height;
             else split.RowDefinitions[2].MinHeight = height;
             split.RowDefinitions[0].Height = new GridLength(node.Ratio, GridUnitType.Star);
             split.RowDefinitions[2].Height = new GridLength(1 - node.Ratio, GridUnitType.Star);
-            NotifyLayoutChanged();
-            return true;
+            return true;   // no LayoutChanged: nothing the user did, so nothing is saved
         }
         return false;
     }
@@ -791,6 +804,7 @@ public sealed class DockWorkspace : Grid
         if (split is null) return;
         EnforceSplitMinimums(splitter);
         split.UpdateLayout();
+        node.UserRatio = null;   // the user's drag is now the ratio to save
         if (string.Equals(node.Orientation, "Horizontal", StringComparison.OrdinalIgnoreCase))
         {
             var available = split.ActualWidth - SplitterSize;
@@ -1243,14 +1257,14 @@ public sealed class DockWorkspace : Grid
             Background = Brush("Panel2Brush", Color.FromRgb(30, 33, 39)),
             Foreground = Brush("TextBrush", Color.FromRgb(231, 234, 239))
         };
-        var reset = new MenuItem { Header = "Reset this panel to original position" };
+        var reset = new MenuItem { Header = "Reset this panel to default position" };
         reset.Click += (_, _) => ContextReset(panelId);
         menu.Items.Add(reset);
         var close = new MenuItem { Header = "Close panel" };
         close.Click += (_, _) => ClosePanel(panelId);
         menu.Items.Add(close);
         menu.Items.Add(new Separator());
-        var all = new MenuItem { Header = "Reset all panels to original positions" };
+        var all = new MenuItem { Header = "Reset all panels to default positions" };
         all.Click += (_, _) => ResetAllPanels();
         menu.Items.Add(all);
         return menu;
@@ -1290,6 +1304,7 @@ public sealed class DockWorkspace : Grid
         SelectedPanel = node.SelectedPanel,
         Orientation = node.Orientation,
         Ratio = double.IsFinite(node.Ratio) ? Math.Clamp(node.Ratio, 0.02, 0.98) : 0.5,
+        UserRatio = node.UserRatio,
         First = CloneNode(node.First),
         Second = CloneNode(node.Second)
     };

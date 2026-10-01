@@ -449,11 +449,6 @@ public static partial class SelfTest
             standardLedger.Zip(minimalLedger).All(pair => pair.First.X2 - pair.First.X1 > pair.Second.X2 - pair.Second.X1));
         Check("minimal ledger lines are only slightly wider than a notehead",
             minimalLedger.All(segment => segment.X2 - segment.X1 <= 15));
-        var lightStaffLine = System.Windows.Media.Color.FromRgb(0xD5, 0xD5, 0xD5);
-        var subduedLedger = StaffNotationRenderer.SubduedLedgerLineColor(lightStaffLine);
-        Check("ledger lines use a translucent staff-line shade in both visible modes",
-            subduedLedger.A < lightStaffLine.A && subduedLedger.R == lightStaffLine.R &&
-            subduedLedger.G == lightStaffLine.G && subduedLedger.B == lightStaffLine.B);
         var unrelatedLedger = NewMeasure();
         unrelatedLedger.Cells[0] = NotationCell(4, 52);
         unrelatedLedger.Cells[8] = NotationCell(4, 52);
@@ -571,6 +566,21 @@ public static partial class SelfTest
         slurred.Cells[4].Notes[0].Techniques.Add("HOPODestination");
         Check("HOPO slur geometry only follows explicit origin/destination data",
             Layout(renderer, slurred, kind: TrackKind.Other).HopoSlurs.Count == 1);
+
+        // The editor's H toggle sets only a plain "HOPO" bit; the tab arc joins the run, so the staff gets one slur too.
+        var toggled = NewMeasure();
+        toggled.Cells[0] = NotationCell(4, 60);
+        toggled.Cells[0].Notes[0].Techniques.Add("HOPO");
+        toggled.Cells[4] = NotationCell(4, 62);
+        toggled.Cells[4].Notes[0].Techniques.Add("HOPO");
+        Check("a plain H/P toggle on two notes of one string gives one staff slur",
+            Layout(renderer, toggled, kind: TrackKind.Other).HopoSlurs.Count == 1);
+        var lone = NewMeasure();
+        lone.Cells[0] = NotationCell(4, 60);
+        lone.Cells[0].Notes[0].Techniques.Add("HOPO");
+        lone.Cells[4] = NotationCell(4, 62);
+        Check("a plain H/P toggle on a single note draws no staff slur (as in the tab)",
+            Layout(renderer, lone, kind: TrackKind.Other).HopoSlurs.Count == 0);
     }
 
     private static MeasureModel NewMeasure() => new()

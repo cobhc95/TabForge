@@ -1,8 +1,9 @@
 <#
 Builds the two GitHub release downloads into dist\:
-  TabForge-<version>-win-x64-portable.zip   extract anywhere and run TabForge.exe
-  TabForge-<version>-setup.exe              Inno Setup installer (optional file associations)
+  TabForge-<display>-win-x64-portable.zip   extract anywhere and run TabForge.exe
+  TabForge-<display>-setup.exe              Inno Setup installer (optional file associations)
 The version comes from Directory.Build.props <Version>, so the app, the engine, the zip and the installer agree.
+File names and the installer use the display version (0.5.0 shows as "0.5", like the app); the numeric file version stays 0.5.0.0.
 
 Release gate: this script publishes to build\TabForge-release, runs the headless self-test ON THAT EXACT
 FOLDER (with --require gp-fixtures,synthetic-fixtures,source-hygiene,installer-parity) and refuses to package unless it exits 0 and its log says
@@ -81,6 +82,10 @@ $project = Join-Path $root 'src\TabForge\TabForge.csproj'
 $buildProps = Join-Path $root 'Directory.Build.props'
 $version = ([xml][IO.File]::ReadAllText($buildProps)).Project.PropertyGroup.Version | Where-Object { $_ } | Select-Object -First 1
 if (-not $version) { throw 'No <Version> in Directory.Build.props.' }
+# Display version, same rule as AppInfo.DisplayVersion: a final release with patch 0 is shown as major.minor ("0.5").
+$display = $version
+if ($version -match '^(\d+)\.(\d+)\.0$') { $display = "$($Matches[1]).$($Matches[2])" }
+$numericVersion = ($version -split '-')[0] + '.0'   # 0.5.0 -> 0.5.0.0 (file version resource)
 $publish = Join-Path $root 'build\TabForge-release'
 $dist = Join-Path $root 'dist'
 
@@ -107,7 +112,7 @@ function Write-LoudWarning([string]$Message) {
     Write-Warning ('*' * 70)
 }
 
-Write-Output "TabForge $version"
+Write-Output "TabForge $display (version $version)"
 
 # ---- native bridge provenance ---------------------------------------------------------------------
 $shippedDll = Join-Path $root 'src\TabForge.AudioEngine\native\tfvst3.dll'
@@ -160,7 +165,7 @@ Copy-Item (Join-Path $root 'THIRD_PARTY.md') $publish
 if (-not (Test-Path -LiteralPath (Join-Path $publish 'SoundTouch.Net.dll'))) {
     throw 'SoundTouch.Net.dll is not beside TabForge.exe in the publish folder (LGPL: it must stay a loose, replaceable file); refusing to package.'
 }
-foreach ($required in @('LGPL-2.1_SoundTouch.Net.txt', 'OFL-1.1_Bravura.txt', 'MIT_NAudio.txt', 'MIT_MeltySynth_and_notices.txt', 'THIRD-PARTY-NOTICES_DotNet_runtime.txt')) {
+foreach ($required in @('LGPL-2.1_SoundTouch.Net.txt', 'OFL-1.1_Bravura.txt', 'MIT_NAudio.txt', 'MIT_MeltySynth_and_notices.txt', 'THIRD-PARTY-NOTICES_DotNet_runtime.txt', 'MIT_PDFsharp_MigraDoc.txt')) {
     if (-not (Test-Path -LiteralPath (Join-Path $publish "licenses\$required"))) { throw "licenses\$required is missing from the publish folder; refusing to package." }
 }
 # Machine-neutral binaries: no local user or build paths may be embedded in anything that ships.
@@ -197,14 +202,14 @@ if (-not (Select-String -LiteralPath $selfTestLog -Pattern '^TabForge self-test:
     throw "Self-test log does not report '0 failed' (log: $selfTestLog); refusing to package."
 }
 if ((Get-Sha256 $exe) -ne $exeHashBefore) { throw 'TabForge.exe changed during the self-test; refusing to package.' }
-Copy-Item -LiteralPath $selfTestLog -Destination (Join-Path $dist "TabForge-$version-selftest.log") -Force
+Copy-Item -LiteralPath $selfTestLog -Destination (Join-Path $dist "TabForge-$display-selftest.log") -Force
 Write-Output "Self-test passed for the exact build being packaged (TabForge.exe SHA-256 $exeHashBefore)."
 
 # ---- package the tested folder ---------------------------------------------------------------------
 # Portable zip: one top-level folder so extracting never scatters files.
-$zip = Join-Path $dist "TabForge-$version-win-x64-portable.zip"
+$zip = Join-Path $dist "TabForge-$display-win-x64-portable.zip"
 if (Test-Path -LiteralPath $zip) { [IO.File]::Delete($zip) }
-$staging = Join-Path ([IO.Path]::GetTempPath()) "TabForge-$version-portable"
+$staging = Join-Path ([IO.Path]::GetTempPath()) "TabForge-$display-portable"
 Clear-Folder $staging
 Copy-Item -LiteralPath $publish -Destination (Join-Path $staging 'TabForge') -Recurse
 if ((Get-Sha256 (Join-Path $staging 'TabForge\TabForge.exe')) -ne $exeHashBefore) { throw 'Staged TabForge.exe differs from the tested one.' }
@@ -234,9 +239,9 @@ Write-Output ("Portable: {0} ({1:N1} MB)" -f $zip, ((Get-Item $zip).Length / 1MB
 
 # Installer (built from the same tested folder)
 if (-not (Test-Path -LiteralPath $InnoCompiler)) { throw "Inno Setup compiler not found: $InnoCompiler" }
-& $InnoCompiler "/DAppVersion=$version" "/DSourceDir=$publish" /Q (Join-Path $root 'installer\TabForge.iss')
+& $InnoCompiler "/DAppVersion=$display" "/DFileVersion=$numericVersion" "/DSourceDir=$publish" /Q (Join-Path $root 'installer\TabForge.iss')
 if ($LASTEXITCODE) { throw 'Inno Setup failed' }
-$setup = Join-Path $dist "TabForge-$version-setup.exe"
+$setup = Join-Path $dist "TabForge-$display-setup.exe"
 Write-Output ("Installer: {0} ({1:N1} MB)" -f $setup, ((Get-Item $setup).Length / 1MB))
 
 # SoundTouch.Net source (LGPL-2.1 s6): a pinned clone of the official repository, attached to the release.
@@ -271,7 +276,7 @@ try {
 }
 
 # Checksums for the release notes.
-$sums = Join-Path $dist "TabForge-$version-SHA256.txt"
+$sums = Join-Path $dist "TabForge-$display-SHA256.txt"
 Get-FileHash -Algorithm SHA256 $zip, $setup |
     ForEach-Object { "{0}  {1}" -f $_.Hash.ToLowerInvariant(), (Split-Path $_.Path -Leaf) } |
     Set-Content -LiteralPath $sums -Encoding ascii

@@ -16,7 +16,8 @@ internal static class LayoutAudit
 {
     internal enum Kind { Text, Head, Line, DashedLine, Shape, Curve }
 
-    internal sealed record Item(Kind Kind, string Label, Rect Box, IReadOnlyList<Point[]> Paths);
+    /// <summary>One drawn thing. Size / Font / BaseY describe text runs; Thickness is the pen width (lines, curves); used by the per-bar audit.</summary>
+    internal sealed record Item(Kind Kind, string Label, Rect Box, IReadOnlyList<Point[]> Paths, double Size = 0, double Thickness = 0, string Font = "", double BaseY = 0);
 
     internal sealed record Collision(int Track, int Bar, int System, Item A, Item B)
     {
@@ -46,7 +47,7 @@ internal static class LayoutAudit
         return result;
     }
 
-    private static void Walk(Drawing drawing, Matrix outer, List<Item> items)
+    internal static void Walk(Drawing drawing, Matrix outer, List<Item> items)
     {
         switch (drawing)
         {
@@ -58,12 +59,13 @@ internal static class LayoutAudit
             {
                 var run = text.GlyphRun;
                 if (run is null) break;
-                var chars = run.Characters is { } c ? new string(c.ToArray()) : "";
+                var chars = run.Characters is { Count: > 0 } c ? new string(c.ToArray()) : RunText(run);
                 if (chars.Length > 0 && string.IsNullOrWhiteSpace(chars)) break;
                 var ink = run.ComputeInkBoundingBox();
                 if (ink.IsEmpty) break;
                 ink.Offset(run.BaselineOrigin.X, run.BaselineOrigin.Y);
-                items.Add(new Item(Kind.Text, chars, new MatrixTransform(outer).TransformBounds(ink), NoPaths));
+                items.Add(new Item(Kind.Text, chars, new MatrixTransform(outer).TransformBounds(ink), NoPaths,
+                    run.FontRenderingEmSize, 0, FontOf(run), outer.Transform(run.BaselineOrigin).Y));
                 break;
             }
             case GeometryDrawing g when g.Geometry is { } geo:
@@ -75,21 +77,39 @@ internal static class LayoutAudit
                 {
                     case LineGeometry line:
                         items.Add(new Item(dashed ? Kind.DashedLine : Kind.Line, "", box,
-                            new[] { new[] { outer.Transform(line.StartPoint), outer.Transform(line.EndPoint) } }));
+                            new[] { new[] { outer.Transform(line.StartPoint), outer.Transform(line.EndPoint) } }, 0, g.Pen?.Thickness ?? 0));
                         break;
                     case EllipseGeometry e:
-                        if (e.RadiusX <= 16) items.Add(new Item(Kind.Head, "", box, NoPaths));
+                        if (e.RadiusX <= 16) items.Add(new Item(Kind.Head, "", box, NoPaths, 0, g.Pen?.Thickness ?? 0));
                         break;
                     case RectangleGeometry:
                         break; // chips, masks, highlights
                     default:
                         if (g.Brush is not null || g.Pen is not null)
-                            items.Add(new Item(g.Brush is null ? Kind.Curve : Kind.Shape, "", box, Outline(geo, outer)));
+                            items.Add(new Item(g.Brush is null ? Kind.Curve : Kind.Shape, "", box, Outline(geo, outer), 0, g.Pen?.Thickness ?? 0));
                         break;
                 }
                 break;
             }
         }
+    }
+
+    private static string FontOf(GlyphRun run)
+    {
+        try { return run.GlyphTypeface.Win32FamilyNames.Values.FirstOrDefault() ?? ""; }
+        catch (Exception) { return ""; }
+    }
+
+    /// <summary>Text of a glyph run that carries no character list: the glyph indices mapped back through the font's character map.</summary>
+    private static string RunText(GlyphRun run)
+    {
+        try
+        {
+            var back = new Dictionary<ushort, char>();
+            foreach (var kv in run.GlyphTypeface.CharacterToGlyphMap) back.TryAdd(kv.Value, (char)kv.Key);
+            return new string(run.GlyphIndices.Select(i => back.TryGetValue(i, out var ch) ? ch : '?').ToArray());
+        }
+        catch (Exception) { return ""; }
     }
 
     private static Point[][] Outline(Geometry geo, Matrix outer)
@@ -111,7 +131,7 @@ internal static class LayoutAudit
         return paths.ToArray();
     }
 
-    private static IEnumerable<(Item, Item)> Collisions(List<Item> items)
+    internal static IEnumerable<(Item, Item)> Collisions(List<Item> items)
     {
         var sorted = items.OrderBy(i => i.Box.X).ToList();
         for (var i = 0; i < sorted.Count; i++)

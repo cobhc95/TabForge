@@ -73,13 +73,32 @@ public static class GuitarProImporter
             var type = typeof(ScoreLoader).Assembly.GetType("AlphaTab.Importer.Gp3To5Importer");
             if (type is null || Activator.CreateInstance(type, true) is not { } importer) return null;
             type.GetMethod("Init")?.Invoke(importer, new object[] { AlphaTab.Io.ByteBuffer.FromBuffer(data), new Settings() });
-            try { type.GetMethod("ReadScore")?.Invoke(importer, null); } catch (Exception) { /* expected: this is the failure being located */ }
+            Exception? failure = null;
+            try { type.GetMethod("ReadScore")?.Invoke(importer, null); } catch (Exception ex) { failure = ex; /* expected: this is the failure being located */ }
             var field = type.GetField("_score", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-            if (field?.GetValue(importer) is not AlphaTab.Model.Score partial) return null;
+            // A song over alphaTab's 1,000 bars stops at that check before any bar: locate the failure with the long-song reader.
+            var partial = failure is not null && Gp3To5LongSongReader.IsBarCountRefusal(failure)
+                ? Gp3To5LongSongReader.ReadPartial(data, InputLimits.MaxMeasuresPerTrack)
+                : field?.GetValue(importer) as AlphaTab.Model.Score;
+            if (partial is null) return null;
             var reached = partial.Tracks.Select(t => t.Staves.Count > 0 ? t.Staves[0].Bars.Count : 0).DefaultIfEmpty(0).Max();
             return Math.Max(1, (int)reached);
         }
         catch (Exception) { return null; }
+    }
+
+    /// <summary>
+    /// alphaTab's ScoreLoader; a Guitar Pro 3-5 file it refuses only for its fixed 1,000-bar threshold is read again by
+    /// <see cref="Gp3To5LongSongReader"/> with TabForge's own bar limit (<see cref="InputLimits.MaxMeasuresPerTrack"/>).
+    /// </summary>
+    private static object LoadScore(byte[] data)
+    {
+        try { return ScoreLoader.LoadScoreFromBytes(data, new Settings()); }
+        catch (Exception ex) when (ex is not OutOfMemoryException && Gp3To5LongSongReader.IsBarCountRefusal(ex) && Gp3To5LongSongReader.IsAvailable)
+        {
+            ImportGuard.CheckCurrent();
+            return Gp3To5LongSongReader.Read(data, new Settings(), InputLimits.MaxMeasuresPerTrack);
+        }
     }
 
     public static SongProject Import(string path)
@@ -118,11 +137,11 @@ public static class GuitarProImporter
         var data = WithoutLeadingJunk(raw);
         object score;
         // alphaTab's parse is one uninterruptible call: the guard is checked right before and after it.
-        try { score = ScoreLoader.LoadScoreFromBytes(data, new Settings()); }
-        catch (Exception ex) when (ex is not OutOfMemoryException and not AccessViolationException)
+        try { score = LoadScore(data); }
+        catch (Exception ex) when (ex is not OutOfMemoryException and not AccessViolationException and not InvalidDataException and not OperationCanceledException)
         {
-            // alphaTab's Guitar Pro 3-5 reader refuses songs over 1,000 bars (a fixed limit in the library).
-            if (ex.GetBaseException().Message.Contains("'bar count'", StringComparison.Ordinal))
+            // Only reached if the long-song reader is unavailable (a different alphaTab build): alphaTab's own 1,000-bar refusal.
+            if (Gp3To5LongSongReader.IsBarCountRefusal(ex))
                 throw new InvalidDataException("This Guitar Pro 3-5 file has more than 1,000 bars, which the Guitar Pro reader TabForge uses cannot open yet. Saving it from Guitar Pro 6/7/8 as .gp or .gpx opens it.", ex);
             var barHint = ex.GetBaseException() is IndexOutOfRangeException or ArgumentOutOfRangeException
                 ? LocateFailedBar(data) : null;
@@ -182,6 +201,10 @@ public static class GuitarProImporter
 
         // Repeats / endings / sections / tempo map are master-bar level: apply them to every track.
         ReadMasterBarInfo(masterBars, project, new GuitarProMixTableScanner.TempoRampFinder(data));
+        // alphaTab's Guitar Pro 7/8 reader drops a double bar on the very last bar (the file has it, the model does not): take it from the file itself.
+        if (masterBars.Count > 0 && masterBars[^1] is { } lastMasterBar && !GetBool(lastMasterBar, "IsDoubleBar", false) && LastMasterBarHasDoubleBar(data))
+            foreach (var track in project.Tracks)
+                if (masterBars.Count - 1 < track.Measures.Count) track.Measures[masterBars.Count - 1].IsDoubleBar = true;
         ImportGuard.CheckCurrent();
 
         if (project.Tracks.Count == 0)
@@ -234,6 +257,55 @@ public static class GuitarProImporter
 
     // ---------- master bars: repeats, endings, sections, tempo map ----------
 
+    /// <summary>
+    /// True when the last &lt;MasterBar&gt; of a Guitar Pro 7/8 file's score.gpif carries a &lt;DoubleBar/&gt;. The zip was already checked by
+    /// <see cref="GuitarProPreParse"/> (entry count and unpacked size); the entry is read once, bounded by the same per-entry cap, and only
+    /// searched as bytes. Anything unreadable or not a zip (Guitar Pro 3-6) is simply false.
+    /// </summary>
+    private static bool LastMasterBarHasDoubleBar(byte[] data)
+    {
+        try
+        {
+            using var zip = new System.IO.Compression.ZipArchive(new MemoryStream(data, writable: false), System.IO.Compression.ZipArchiveMode.Read);
+            var entry = zip.GetEntry("Content/score.gpif");
+            if (entry is null || entry.Length > GuitarProPreParse.MaxZipEntryBytes) return false;
+            using var stream = entry.Open();
+            using var buffer = new MemoryStream();
+            var chunk = new byte[64 * 1024];
+            int read;
+            while ((read = stream.Read(chunk, 0, chunk.Length)) > 0)
+            {
+                if (buffer.Length + read > GuitarProPreParse.MaxZipEntryBytes) return false;
+                buffer.Write(chunk, 0, read);
+            }
+            var bytes = buffer.GetBuffer().AsSpan(0, (int)buffer.Length);
+            var start = bytes.LastIndexOf("<MasterBar>"u8);
+            if (start < 0) return false;
+            var tail = bytes[start..];
+            var end = tail.IndexOf("</MasterBar>"u8);
+            return tail[..(end < 0 ? tail.Length : end)].IndexOf("<DoubleBar"u8) >= 0;
+        }
+        catch (Exception ex) when (ex is InvalidDataException or IOException or NotSupportedException) { return false; }
+    }
+
+    /// <summary>The value of the tempo point a linear (progressive) point at automation index <paramref name="index"/> glides to, and the slots in between; null when there is none.</summary>
+    private static (int Value, double Slots)? LinearRampTarget(List<object> masterBars, int bar, List<(double ratio, int value, bool linear)> automations, int index)
+    {
+        static double SlotsOf(object? mb) => Math.Max(1, 16.0 * GetInt(mb, "TimeSignatureNumerator", 4) / Math.Max(1, GetInt(mb, "TimeSignatureDenominator", 4)));
+        var thisSlots = SlotsOf(masterBars[bar]);
+        if (index + 1 < automations.Count) return (automations[index + 1].value, (automations[index + 1].ratio - automations[index].ratio) * thisSlots);
+        var slots = (1 - automations[index].ratio) * thisSlots;
+        for (var j = bar + 1; j < masterBars.Count && j <= bar + 64; j++)
+        {
+            var next = AsObjects(Get(masterBars[j], "TempoAutomations"))
+                .Select(a => (ratio: GetDouble(a, "RatioPosition", 0), value: GetInt(a, "Value", 0)))
+                .Where(a => a.value is >= 20 and <= 400).OrderBy(a => a.ratio).Select(a => ((double ratio, int value)?)a).FirstOrDefault();
+            if (next is { } found) return (found.value, slots + found.ratio * SlotsOf(masterBars[j]));
+            slots += SlotsOf(masterBars[j]);
+        }
+        return null;
+    }
+
     private static void ReadMasterBarInfo(List<object> masterBars, SongProject project, GuitarProMixTableScanner.TempoRampFinder? rampFinder = null)
     {
         var runningTempo = project.Tempo;
@@ -276,13 +348,30 @@ public static class GuitarProImporter
 
             // Guitar Pro tempo automations: one at the bar start is the bar's tempo change; later ones (a mix-table
             // tempo on a later beat) become tempo points inside the bar. The last one carries on to the next bars.
-            var automations = AsObjects(Get(mb, "TempoAutomations"))
-                .Select(a => (ratio: GetDouble(a, "RatioPosition", 0), value: GetInt(a, "Value", 0)))
+            var rawAutomations = AsObjects(Get(mb, "TempoAutomations"))
+                // IsLinear only from a Guitar Pro 6-8 file: alphaTab's Guitar Pro 3-5 reader marks EVERY mix-table tempo linear (its
+                // transitions come from the raw mix tables via rampFinder instead).
+                .Select(a => (ratio: GetDouble(a, "RatioPosition", 0), value: GetInt(a, "Value", 0), linear: !_gp3To5 && GetBool(a, "IsLinear", false)))
                 .Where(a => a.value is >= 20 and <= 400).Take(64)
                 // Several automations at the same position: the last one written is the one Guitar Pro plays.
                 .GroupBy(a => Math.Round(a.ratio, 4)).Select(g => g.Last()).OrderBy(a => a.ratio).ToList();
+            var automations = rawAutomations.Select(a => (a.ratio, a.value)).ToList();
             // Transition lengths (beats) of these tempo changes, from the raw mix tables (file order).
-            var ramps = automations.Select(a => rampFinder?.Next(a.value) ?? 0).ToList();
+            var ramps = automations.Select(a => (double)(rampFinder?.Next(a.value) ?? 0)).ToList();
+            var rampPart = automations.Select(_ => false).ToList();
+            // Guitar Pro 7 "progressive" (linear) tempo point: the tempo glides from this point's value to the NEXT tempo point, which may lie in a later bar.
+            // In the model that is a step to this value (when it differs from the running tempo) plus a ramp to the next point's value over the distance.
+            if (rawAutomations.Any(a => a.linear))
+            {
+                var expanded = new List<(double ratio, int value)>(); var expandedRamps = new List<double>(); var expandedPart = new List<bool>();
+                for (var ai = 0; ai < rawAutomations.Count; ai++)
+                {
+                    expanded.Add(automations[ai]); expandedRamps.Add(ramps[ai]); expandedPart.Add(false);
+                    if (!rawAutomations[ai].linear || LinearRampTarget(masterBars, i, rawAutomations, ai) is not { } target) continue;
+                    expanded.Add((automations[ai].ratio, target.Value)); expandedRamps.Add(Math.Max(1.0, target.Slots) / MusicTime.SlotsPerQuarter); expandedPart.Add(true);
+                }
+                automations = expanded; ramps = expandedRamps; rampPart = expandedPart;
+            }
             if (automations.Count > 0) tempo = automations[0].ratio < 0.001 ? automations[0].value : 0;
             // A tempo automation at the end of the previous bar (position 1.0) starts this bar; it used to be lost.
             if (tempo is < 20 or > 400 && carriedTempo is { } carried) tempo = carried;
@@ -301,7 +390,7 @@ public static class GuitarProImporter
             for (var ai = 0; ai < automations.Count; ai++)
             {
                 var (ratio, value) = automations[ai];
-                if (ratio < 0.001 || ratio >= 1) continue;
+                if (ratio < 0.001 && !rampPart[ai] || ratio >= 1) continue;
                 if (value == runningTempo) continue;
                 midBar.Add(new TempoPoint(Math.Round(ratio * barSlots, 3), value, ramps[ai] * MusicTime.SlotsPerQuarter));
                 runningTempo = value;
@@ -530,7 +619,10 @@ public static class GuitarProImporter
             for (var s = 0; s < inferred.Count; s++)
             {
                 var opens = result.Measures.SelectMany(m => m.Cells.Concat(m.Voice2Cells)).SelectMany(c => c.Notes)
-                    .Where(n => n.StringIndex == s && !n.Dead && n.MidiValue > 0 && result.Capo == 0)
+                    // Harmonics sound above their string (an octave or more) and a tie destination carries its origin's pitch: neither says
+                    // anything about the open string, and a string played mostly in harmonics came out tuned an octave high (59 -> 71 -> 83).
+                    .Where(n => n.StringIndex == s && !n.Dead && !n.Tied && n.HarmonicFret is null && !n.Techniques.Any(t => t.Contains("Harmonic", StringComparison.Ordinal))
+                        && n.MidiValue > 0 && result.Capo == 0)
                     .Select(n => n.MidiValue - n.Fret).GroupBy(v => v).OrderByDescending(g => g.Count()).FirstOrDefault();
                 if (opens is null || opens.Count() < 3 || opens.Key == inferred[s] || opens.Key is < 12 or > 108) continue;
                 inferred[s] = opens.Key;
@@ -583,7 +675,20 @@ public static class GuitarProImporter
             ? AsObjects(Get(Get(Get(bar, "Staff"), "Track"), "PercussionArticulations")).ToList()
             : null;
         var clef = Get(bar, "Clef")?.ToString();
-        if (!string.IsNullOrWhiteSpace(clef) && measure.Clef == Clefs.Guitar) measure.Clef = clef!;
+        if (!string.IsNullOrWhiteSpace(clef) && measure.Clef == Clefs.Guitar)
+        {
+            // G2 with an 8vb mark is TabForge's guitar clef (the default); a plain G2 is the treble clef. Other clefs keep alphaTab's name (F4, C3, C4, Neutral).
+            var eightBelow = Get(bar, "ClefOttava")?.ToString() is "_8vb" or "8vb";
+            if (clef != "G2") measure.Clef = clef!;
+            else if (!eightBelow) measure.Clef = Clefs.Treble;
+        }
+        // alphaTab 1.8 keeps the simile mark on the track's Bar (MasterBar has none, so the old master-bar read was always empty).
+        switch (Get(bar, "SimileMark")?.ToString())
+        {
+            case "Simple": measure.SimileOneBar = true; break;
+            case "FirstOfDouble":
+            case "SecondOfDouble": measure.SimileTwoBar = true; break;
+        }
 
         var slots = measure.Cells.Count;
         var tone = GetInt(bar, "KeySignature", int.MinValue);
@@ -602,6 +707,7 @@ public static class GuitarProImporter
             var cells = measure.CellsForVoice(voiceNumber == 0 ? 0 : 1, create: voiceNumber > 0);
             voiceNumber++;
             var lastSlot = -1;
+            var exactCursor = 0.0; var voiceBeats = 0;
             foreach (var beat in AsObjects(Get(voice, "Beats")))
             {
                 if (++beatsInMeasure > InputLimits.MaxBeatsPerMeasure)
@@ -626,9 +732,22 @@ public static class GuitarProImporter
                 if (!graceBeat) lastSlot = slot;
                 var durationSlots = BeatSlots(beat);
 
+                // alphaTab's tick positions are whole ticks, so a run of 7-, 9- or 13-tuplets drifts early by up to a tick per beat
+                // (a 13-tuplet ended at slot 11.95 instead of 12). Where the file's start agrees with the exact sum of the voice's
+                // previous durations (within that truncation), the exact position is kept.
+                var position = placementStart / (double)TicksPerSlot;
+                if (!graceBeat && placementStart >= 0)
+                {
+                    // When both agree to float noise the file's whole-tick value is kept, so ordinary rhythms read exactly as before.
+                    var drift = Math.Abs(exactCursor * TicksPerSlot - placementStart);
+                    if (drift > 1e-6 && drift <= 2 * voiceBeats + 2) position = exactCursor;
+                    exactCursor = position + ExactBeatSlots(beat);
+                    voiceBeats++;
+                }
+
                 if (slot >= cells.Count) continue;
                 var cell = cells[slot];
-                if (placementStart >= 0) cell.RhythmicPosition ??= placementStart / (double)TicksPerSlot;
+                if (placementStart >= 0) cell.RhythmicPosition ??= position;
 
                 // Annotations belong to the beat, not to its notes. Read them first so a comment, chord
                 // or lyric on a rest (or an empty beat) is never dropped - real Guitar Pro files put
@@ -707,6 +826,11 @@ public static class GuitarProImporter
                         // A percussion note has no string/fret fallback. Prefer its GM articulation
                         // when available, then its sounding value; never synthesize a kit-tuning note.
                         midi = DrumPitch(pitchSource, drumArticulations);
+                        // A hit with no sound at all (no articulation, string or fret: alphaTab reads such GP3-5 notes as fret -1, value 0) is
+                        // imported as the sound playback gives it: the kit-tuning string its line sits on (ScoreToMidiCompiler plays a note without
+                        // a pitch as tuning + fret). It used to import as value 0 and a clean .gp wrote that as articulation 0, which reopened as
+                        // a different drum (GM 1, 9, 12 or 16) than the one that played before the export.
+                        if (midi <= 0 && track.StringTunings.Count > DrumLine(0) && track.PitchOf(DrumLine(0), 0) is >= 27 and <= 87 and var kitSound) midi = kitSound;
                         // Keep every hit that is in the file: a value outside the GM drum
                         // range (e.g. a "0" some older tabs use) stays visible and silent instead of vanishing.
                         if (midi is < 0 or > 127) continue;
@@ -772,8 +896,14 @@ public static class GuitarProImporter
     /// </summary>
     internal static int DrumPitch(object sourceNote, IReadOnlyList<object>? articulations = null)
     {
-        var pitchSource = GetBool(sourceNote, "IsTieDestination", false) && Get(sourceNote, "TieOrigin") is { } origin
-            ? origin : sourceNote;
+        // A tie destination takes its sound from its origin; the origin of a long tie can itself be a tie destination without a sound
+        // of its own, so follow the chain to the note that has one.
+        var pitchSource = sourceNote;
+        for (var step = 0; step < 64 && GetBool(pitchSource, "IsTieDestination", false) && Get(pitchSource, "TieOrigin") is { } origin; step++)
+        {
+            pitchSource = origin;
+            if (GetInt(origin, "PercussionArticulation", -1) > 0 || GetInt(origin, "Fret", -1) >= 0 || GetInt(origin, "RealValue", 0) > 0) break;
+        }
         var articulation = GetInt(pitchSource, "PercussionArticulation", -1);
         if (articulations is { Count: > 0 } && articulation >= 0 && articulation < articulations.Count)
         {
@@ -785,6 +915,10 @@ public static class GuitarProImporter
         // 93 ride edge, 95 splash, 97 crash...): alphaTab's Guitar Pro articulation table gives the MIDI sound.
         if (articulation > 87 && GpArticulations.OutputMidi(articulation) is >= 27 and <= 87 and var known)
             return known;
+        // a GP7/8 articulation list entry outside the GM drum range (a kit sound with its own output number, or one TabForge wrote
+        // for a value outside it): its output number is the sound, and reading anything else turned it into another drum
+        if (articulations is { Count: > 0 } && articulation >= 0 && articulation < articulations.Count
+            && GetInt(articulations[articulation], "OutputMidiNumber", 0) is > 0 and <= 127 and var outside) return outside;
         var real = GetInt(pitchSource, "RealValue", 0);
         if (real is >= 27 and <= 87) return real;
         // Guitar Pro 3-5 write the GM drum number as the note's fret; many drum hits arrive with neither an
@@ -852,6 +986,18 @@ public static class GuitarProImporter
         if (text.Contains("8va", StringComparison.OrdinalIgnoreCase) || text.Contains("OctaveAbove", StringComparison.OrdinalIgnoreCase)) return 12;
         if (text.Contains("8vb", StringComparison.OrdinalIgnoreCase) || text.Contains("OctaveBelow", StringComparison.OrdinalIgnoreCase)) return -12;
         return 0;
+    }
+
+    /// <summary>A beat's exact length in sixteenth slots (dots and tuplet ratio unrounded), for placing tuplet runs.</summary>
+    private static double ExactBeatSlots(object beat)
+    {
+        var slots = 16.0 / Math.Clamp(DurationToDenominator(Get(beat, "Duration")), 1, 64);
+        var dots = Math.Clamp(GetInt(beat, "Dots", 0), 0, 2);
+        slots *= dots == 1 ? 1.5 : dots >= 2 ? 1.75 : 1.0;
+        var num = GetInt(beat, "TupletNumerator", 0);
+        var den = GetInt(beat, "TupletDenominator", 0);
+        if (num > 0 && den > 0) slots = slots * den / num;
+        return slots;
     }
 
     private static int BeatSlots(object beat)
@@ -1120,8 +1266,9 @@ public static class GuitarProImporter
     /// </summary>
     internal static int TremoloDenominator(object beat, bool gp3To5)
     {
+        // alphaTab 1.8 derives TremoloSpeed from the marks one step slow for every format (a GP7 1/16 read back as 1/4 or 1/8), so the marks come first.
         var marks = GetDouble(Get(beat, "TremoloPicking"), "Marks", double.NaN);
-        if (gp3To5 && double.IsFinite(marks) && marks >= 1)
+        if (double.IsFinite(marks) && marks >= 1)
             return Math.Clamp(8 << (int)Math.Round(marks - 1), 8, 64);
         var speed = Get(beat, "TremoloSpeed");
         if (IsSet(speed)) return DurationToDenominator(speed);
@@ -1154,7 +1301,8 @@ public static class GuitarProImporter
     {
         var target = Get(sourceNote, "SlideTarget");
         if (target is null) return;
-        var midi = GetInt(target, "RealValue", 0);
+        // The fretted pitch of the target: a harmonic target's sounding pitch (RealValue) is octaves above where the slide ends.
+        var midi = GetInt(target, "RealValueWithoutHarmonic", GetInt(target, "RealValue", 0));
         if (midi > 0 && midi <= 127) note.SlideTargetMidi = midi;
     }
 

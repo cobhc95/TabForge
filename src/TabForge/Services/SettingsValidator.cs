@@ -24,6 +24,7 @@ public static class SettingsValidator
             timeline.Snap ??= new SnapSettings();
             if (!SnapSettings.Grids.Contains(timeline.Snap.Grid)) timeline.Snap.Grid = "1/4";
             timeline.Snap.DistancePx = Math.Clamp(timeline.Snap.DistancePx, 1, 40);
+            timeline.PlayheadStyle = PlayheadStyles.Normalize(timeline.PlayheadStyle);
         }
         plugins.AsioOutputChannel = Math.Clamp(plugins.AsioOutputChannel, 0, 62);
         plugins.AsioOutputLastChannel = Math.Clamp(plugins.AsioOutputLastChannel, 0, 63);
@@ -81,6 +82,10 @@ public static class SettingsValidator
         value.PlaybackControllerX = Clamp(value.PlaybackControllerX, -32_768, 32_768, defaults.PlaybackControllerX);
         value.PlaybackControllerY = Clamp(value.PlaybackControllerY, -32_768, 32_768, defaults.PlaybackControllerY);
         value.PlaybackControllerHeight = Clamp(value.PlaybackControllerHeight, 80, 2_048, defaults.PlaybackControllerHeight);
+        value.TutorialLastGuide = string.Equals(value.TutorialLastGuide, "detailed", StringComparison.OrdinalIgnoreCase) ? "detailed" : "basic";
+        value.TutorialLastChapter = SafeText(value.TutorialLastChapter, 80, "") ?? "";
+        value.TutorialWindowWidth = value.TutorialWindowWidth <= 0 ? 0 : Clamp(value.TutorialWindowWidth, 520, 7_680, 0);
+        value.TutorialWindowHeight = value.TutorialWindowHeight <= 0 ? 0 : Clamp(value.TutorialWindowHeight, 380, 4_320, 0);
     }
 
     private static void NormalizeAppearance(AppearanceSettings value, AppearanceSettings defaults)
@@ -106,7 +111,6 @@ public static class SettingsValidator
         value.ScoreSpacing = Clamp(value.ScoreSpacing, 0.85, 1.6, defaults.ScoreSpacing);
         value.SystemVerticalSpacing = Clamp(value.SystemVerticalSpacing, 0.7, 1.6, defaults.SystemVerticalSpacing);
         value.MeasureHorizontalSpacing = Clamp(value.MeasureHorizontalSpacing, 0.8, 1.6, defaults.MeasureHorizontalSpacing);
-        value.LedgerLineOpacity = Clamp(value.LedgerLineOpacity, 0, 1, defaults.LedgerLineOpacity);
         value.StaffLineOpacity = Clamp(value.StaffLineOpacity, 0, 1, defaults.StaffLineOpacity);
         value.HoverHighlightIntensity = Clamp(value.HoverHighlightIntensity, 0, 1, defaults.HoverHighlightIntensity);
         value.SelectionHighlightIntensity = Clamp(value.SelectionHighlightIntensity, 0, 1, defaults.SelectionHighlightIntensity);
@@ -158,10 +162,11 @@ public static class SettingsValidator
         if (!InstrumentViews.KeyboardSizes.Contains(value.KeyboardKeys)) value.KeyboardKeys = 88;
         value.ScaleHighlightStyle = ScaleHighlightStyles.All.FirstOrDefault(v => string.Equals(v, value.ScaleHighlightStyle, StringComparison.OrdinalIgnoreCase)) ?? ScaleHighlightStyles.Shaded;
         value.ScaleHighlightColour = ScaleHighlightStyles.Colours.FirstOrDefault(v => string.Equals(v, value.ScaleHighlightColour, StringComparison.OrdinalIgnoreCase)) ?? "Blue";
-        value.FretMarkerColour = FretMarkerLevels.Colours.FirstOrDefault(v => string.Equals(v, value.FretMarkerColour, StringComparison.OrdinalIgnoreCase)) ?? "Default";
-        value.FretNumberSize = FretNumberSizes.All.FirstOrDefault(v => string.Equals(v, value.FretNumberSize, StringComparison.OrdinalIgnoreCase)) ?? FretNumberSizes.Medium;
+        value.ScaleHighlightStrength = Math.Clamp(value.ScaleHighlightStrength, ScaleHighlightStyles.MinStrength, ScaleHighlightStyles.MaxStrength);
+        value.FretMarkerColour = FretMarkerLevels.Colours.FirstOrDefault(v => string.Equals(v, value.FretMarkerColour, StringComparison.OrdinalIgnoreCase)) ?? "White";
+        value.FretNumberSize = FretNumberSizes.All.FirstOrDefault(v => string.Equals(v, value.FretNumberSize, StringComparison.OrdinalIgnoreCase)) ?? FretNumberSizes.Large;
         value.FretStringSpacing = FretStringSpacings.All.FirstOrDefault(v => string.Equals(v, value.FretStringSpacing, StringComparison.OrdinalIgnoreCase)) ?? FretStringSpacings.Natural;
-        value.FretMarkerBrightness =FretMarkerLevels.All.FirstOrDefault(v => string.Equals(v, value.FretMarkerBrightness, StringComparison.OrdinalIgnoreCase)) ?? FretMarkerLevels.Brighter;
+        value.FretMarkerBrightness =FretMarkerLevels.All.FirstOrDefault(v => string.Equals(v, value.FretMarkerBrightness, StringComparison.OrdinalIgnoreCase)) ?? FretMarkerLevels.Original;
         value.KeyboardKeyColours = KeyboardKeyStyles.All.FirstOrDefault(v => string.Equals(v, value.KeyboardKeyColours, StringComparison.OrdinalIgnoreCase)) ?? KeyboardKeyStyles.MatchTheme;
         value.PreviewHorizon = Math.Clamp(value.PreviewHorizon, 1, 10);
         value.ScaleHighlight = SafeText(value.ScaleHighlight, 64, null);

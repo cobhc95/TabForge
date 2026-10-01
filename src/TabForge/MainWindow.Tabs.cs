@@ -77,6 +77,7 @@ public partial class MainWindow
         var blank = DocumentSession.Blank();
         ApplyPreferredScoreView(blank);
         blank.Notation = PreferredNotation;
+        blank.Project.Mixer.ShowGroupsInTrackList = _settings.Timeline.ShowGroupsInNewSongs;   // Settings > Timeline & sections > Track list
         var doc = _documents.Insert(blank, at);
         ActivateDocument(doc, focusTabSelection: true, applyPlaybackSwitchPolicy: true);
         StatusText.Text = "New tab";
@@ -312,14 +313,42 @@ public partial class MainWindow
     /// </summary>
     private void Window_DragOver(object sender, DragEventArgs e)
     {
-        if (!e.Data.GetDataPresent(TabDragService.Format)) return;
+        if (!e.Data.GetDataPresent(TabDragService.Format))
+        {
+            // Files from Windows: songs open in new tabs anywhere on the window; audio and MIDI only on the timeline (it handles them first).
+            if (!e.Data.GetDataPresent(DataFormats.FileDrop)) return;
+            e.Effects = DroppedSongs.In(e.Data).Length > 0 ? DragDropEffects.Copy : DragDropEffects.None;
+            e.Handled = true;
+            return;
+        }
         e.Effects = DragDropEffects.Move;
         e.Handled = true;
     }
 
+    /// <summary>Song files dropped on the window (anywhere, the timeline and tab strip included): each opens in a new tab.</summary>
+    private void OpenDroppedSongs(string[] songs)
+    {
+        foreach (var file in songs)
+            OpenScore(file, replaceCurrent: false, replaceAll: false, (opened, loaded) =>
+            {
+                if (!loaded) return;
+                StatusText.Text = opened.ImportedFromGuitarPro ? $"Imported {Path.GetFileName(file)}" : $"Opened {Path.GetFileName(file)}";
+                if (opened.Notice is { } notice) StatusText.Text += $" — {notice}";
+            });
+    }
+
     private void Window_Drop(object sender, DragEventArgs e)
     {
-        if (!e.Data.GetDataPresent(TabDragService.Format)) return;
+        if (!e.Data.GetDataPresent(TabDragService.Format))
+        {
+            var songs = DroppedSongs.In(e.Data);
+            if (songs.Length == 0) return;
+            e.Effects = DragDropEffects.Copy;
+            e.Handled = true;
+            // After the drag returns: opening a song can show a dialog, which must not run inside the drag source's drag loop.
+            Dispatcher.BeginInvoke(() => OpenDroppedSongs(songs));
+            return;
+        }
         e.Handled = true;
         e.Effects = DragDropEffects.Move;
         var index = _documents.Documents.Count;

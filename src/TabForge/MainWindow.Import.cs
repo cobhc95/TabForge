@@ -76,7 +76,7 @@ public partial class MainWindow
         if (pending.Count == 0) { StatusText.ToolTip = "Last action or current state"; return; }
         StatusText.Text = pending.Count == 1 ? $"Importing {pending[0].Name}…" : $"Importing {pending.Count} files…";
         StatusText.ToolTip = string.Join("\n", pending.Select(job => $"Importing {job.Name}"));
-        CancelImportButton.ToolTip = pending.Count == 1 ? $"Cancel importing {pending[0].Name}" : $"Cancel the {pending.Count} imports in progress";
+        Views.TooltipShortcuts.SetText(CancelImportButton, pending.Count == 1 ? $"Cancel importing {pending[0].Name}" : $"Cancel the {pending.Count} imports in progress");   // keeps the key bracket, and a rebind cannot revert it
     }
 
     private void CancelImport_Click(object sender, RoutedEventArgs e) => _imports?.CancelAll();

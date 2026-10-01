@@ -112,6 +112,7 @@ internal sealed class PasteOptionsDialog : Window
             Background = ResourceBrush("AccentBrush"), BorderBrush = ResourceBrush("AccentBrush"), Foreground = Brushes.White
         };
         AutomationProperties.SetName(paste, "Paste");
+        UiIds.Id(paste, "Paste.Ok");
         paste.Click += (_, _) => Finish(true);
         var cancel = new Button
         {
@@ -119,6 +120,7 @@ internal sealed class PasteOptionsDialog : Window
             IsCancel = true, ToolTip = "Cancel the paste (Esc)"
         };
         AutomationProperties.SetName(cancel, "Cancel");
+        UiIds.Id(cancel, "Paste.Cancel");
         cancel.Click += (_, _) => Finish(false);
         var actions = new StackPanel
         {
@@ -222,6 +224,7 @@ internal sealed class PasteOptionsDialog : Window
                 ToolTip = label
             };
             AutomationProperties.SetName(radios[i], $"{PasteQuestionInfo.Title(question)}: {label}");
+            UiIds.Id(radios[i], $"Paste.Q{(int)question}.{i}");
             panel.Children.Add(radios[i]);
         }
         var remember = new CheckBox

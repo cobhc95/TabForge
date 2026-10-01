@@ -345,6 +345,15 @@ public static partial class SelfTest
             // Tolerant: the audit target doubled for a loaded machine, and relative to the old path measured here.
             Check($"per-edit undo capture on a {tracks}x{bars} song ({notes} notes) stays near the {target:0} ms target",
                 capture < target * 2 || capture * 4 < full, $"{capture:0.0} ms (old path {full:0.0} ms)");
+            // Absolute guard for the largest song (a felt hitch per edit if it creeps up); not meaningful on a deliberately throttled run.
+            if (tracks == 20)
+            {
+                var priority = Process.GetCurrentProcess().PriorityClass;
+                if (priority is ProcessPriorityClass.Idle or ProcessPriorityClass.BelowNormal)
+                    Skip("per-edit undo capture on the 20x500 song is at most 100 ms", $"run at {priority} priority");
+                else
+                    Check("per-edit undo capture on the 20x500 song is at most 100 ms (Normal priority)", capture <= 100.0, $"{capture:0.0} ms");
+            }
             Check($"undo (state + restore) on a {tracks}x{bars} song is faster than the old full snapshot + hash",
                 undoMs < full || undoMs < target * 2, $"{undoMs:0.0} ms vs {full:0.0} ms");
         }

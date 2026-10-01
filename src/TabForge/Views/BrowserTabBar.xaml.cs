@@ -571,6 +571,7 @@ public partial class BrowserTabBar : UserControl
     {
         if (!e.Data.GetDataPresent(TabDragService.Format))
         {
+            if (DroppedSongs.In(e.Data).Length > 0) return;   // song files from Windows: the main window opens them in new tabs
             e.Effects = DragDropEffects.None;
             e.Handled = true;
             return;

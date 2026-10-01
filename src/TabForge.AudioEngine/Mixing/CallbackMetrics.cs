@@ -14,6 +14,7 @@ public sealed class CallbackMetrics
     private readonly long[] _histogram = new long[Buckets];
     private long _calls, _misses, _late, _allocated, _maxTicks;
     private long _lastStart;
+    private int _blockFrames;                    // frames per callback the device actually delivers (the last one seen)
 
     /// <summary>Audio thread, once per callback.</summary>
     public void Record(long startTicks, long endTicks, int frames, int sampleRate, long allocatedBytes)
@@ -28,6 +29,7 @@ public sealed class CallbackMetrics
         var last = _lastStart;
         if (last != 0 && startTicks - last > deadline * 1.5) Interlocked.Increment(ref _late);
         _lastStart = startTicks;
+        _blockFrames = frames;
         if (allocatedBytes > 0) Interlocked.Add(ref _allocated, allocatedBytes);
         if (duration > Volatile.Read(ref _maxTicks)) Volatile.Write(ref _maxTicks, duration);
     }
@@ -43,7 +45,7 @@ public sealed class CallbackMetrics
     /// <param name="MidiDropped">MIDI messages dropped because a chain's event buffer was full (all chains of the process).</param>
     /// <param name="MidiDeferred">Callbacks that left MIDI in the shared ring because the pending list was full.</param>
     public readonly record struct Snapshot(long Calls, double P95Ms, double P99Ms, double MaxMs, long DeadlineMisses, long LateCalls, long AllocatedBytes,
-        long MidiDropped = 0, long MidiDeferred = 0);
+        long MidiDropped = 0, long MidiDeferred = 0, int BlockFrames = 0);
 
     /// <summary>Engine thread: the figures since the last call, then starts a new window.</summary>
     public Snapshot TakeAndReset()
@@ -54,7 +56,7 @@ public sealed class CallbackMetrics
         var snapshot = new Snapshot(calls, Percentile(counts, calls, 0.95), Percentile(counts, calls, 0.99),
             Interlocked.Exchange(ref _maxTicks, 0) * 1000.0 / Stopwatch.Frequency,
             Interlocked.Exchange(ref _misses, 0), Interlocked.Exchange(ref _late, 0), Interlocked.Exchange(ref _allocated, 0),
-            Interlocked.Exchange(ref TrackChain.MidiDropped, 0), Interlocked.Exchange(ref _midiDeferred, 0));
+            Interlocked.Exchange(ref TrackChain.MidiDropped, 0), Interlocked.Exchange(ref _midiDeferred, 0), Volatile.Read(ref _blockFrames));
         return snapshot;
     }
 

@@ -10,10 +10,24 @@ public static class AppInfo
         (typeof(AppInfo).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.0.0")
         .Split('+')[0];
 
-    public static bool IsPreRelease => Version.Contains('-');
+    /// <summary>Set by the PreRelease build property (Directory.Build.props): a plain version such as 0.5.0 can still be a pre-release.</summary>
+    private static bool PreReleaseFlag { get; } =
+        typeof(AppInfo).Assembly.GetCustomAttributes<AssemblyMetadataAttribute>()
+            .Any(a => a.Key == "PreRelease" && string.Equals(a.Value, "true", StringComparison.OrdinalIgnoreCase));
 
-    /// <summary>"0.1.0 beta.1 (pre-release)".</summary>
-    public static string DisplayVersion => IsPreRelease
-        ? $"{Version.Split('-')[0]} {Version[(Version.IndexOf('-') + 1)..]} (pre-release)"
-        : Version;
+    public static bool IsPreRelease => Version.Contains('-') || PreReleaseFlag;
+
+    /// <summary>"0.5" for a final release with patch 0 (0.5.0), "0.5.1" for other final releases,
+    /// "0.6.0 beta.1 (pre-release)" for a suffixed version, "0.5.0 (pre-release)" for a plain version marked pre-release.</summary>
+    public static string DisplayVersion => FormatDisplay(Version, PreReleaseFlag);
+
+    /// <summary>The display rule on its own, so it can be tested with any version.</summary>
+    public static string FormatDisplay(string version, bool preReleaseFlag)
+    {
+        var dash = version.IndexOf('-');
+        if (dash >= 0) return $"{version[..dash]} {version[(dash + 1)..]} (pre-release)";
+        if (preReleaseFlag) return $"{version} (pre-release)";
+        var parts = version.Split('.');
+        return parts.Length == 3 && parts[2] == "0" ? $"{parts[0]}.{parts[1]}" : version;
+    }
 }

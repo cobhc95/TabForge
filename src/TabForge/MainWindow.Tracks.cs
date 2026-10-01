@@ -111,7 +111,7 @@ public partial class MainWindow
             var text = GpDialogs.Prompt("Master volume", "Master volume for all tracks (0–100 %):", ((int)master.Value).ToString());
             if (int.TryParse(text?.Trim().TrimEnd('%'), out var value)) master.Value = Math.Clamp(value, 0, 100);
         }));
-        masterMenu.Items.Add(new Separator { Style = (Style)FindResource(typeof(Separator)) });
+        masterMenu.Items.Add(MenuSeparator());
         foreach (var preset in new[] { 100, 75, 50, 25 })
             masterMenu.Items.Add(MixerMenuItem(preset == 100 ? "Reset to 100%" : $"{preset}%", () => master.Value = preset));
         master.ContextMenu = masterMenu;
@@ -122,7 +122,7 @@ public partial class MainWindow
             menu.Items.Add(MixerMenuItem("Tune up a semitone (+1)", () => RetuneAllTracks(1)));
             menu.Items.Add(MixerMenuItem("Tune down a semitone (−1)", () => RetuneAllTracks(-1)));
             menu.Items.Add(MixerMenuItem("Global tuning window…", ShowGlobalTuningWindow));
-            menu.Items.Add(new Separator { Style = (Style)FindResource(typeof(Separator)) });
+            menu.Items.Add(MenuSeparator());
             var reset = MixerMenuItem("Back to original tuning", () => RetuneStrings(_globalStringOffsets.Select(o => -o).ToArray()));
             reset.IsEnabled = _globalStringOffsets.Any(o => o != 0);
             menu.Items.Add(reset);
@@ -322,9 +322,11 @@ public partial class MainWindow
             ? "This bar is incomplete or too long for its time signature"
             : "Bar duration: written : expected";
 
-        TimeSigLabel.Text = $"{_project.TimeSignatureNumerator}/{_project.TimeSignatureDenominator}";
-        KeyLabelText.Text = KeyLabel(_project.KeySignature);
-        MasterInfoText.Text = $"♩={_project.Tempo}  ·  {KeyLabel(_project.KeySignature)}  ·  {MusicTime.DurationName(Editor.CurrentDurationDenominator)}{(Editor.CurrentDots == 1 ? " dotted" : Editor.CurrentDots >= 2 ? " double-dotted" : "")}{(Editor.CurrentTriplet ? " triplet" : "")}";
+        // The toolbar shows the signatures in force at the bar you are looking at (a change carries forward to the bars after it).
+        var shownKey = bar?.KeySignature ?? _project.KeySignature;
+        TimeSigLabel.Text = $"{num}/{den}";
+        KeyLabelText.Text = KeyLabel(shownKey);
+        MasterInfoText.Text = $"♩={_project.Tempo}  ·  {KeyLabel(shownKey)}  ·  {MusicTime.DurationName(Editor.CurrentDurationDenominator)}{(Editor.CurrentDots == 1 ? " dotted" : Editor.CurrentDots >= 2 ? " double-dotted" : "")}{(Editor.CurrentTriplet ? " triplet" : "")}";
     }
 
     private static string KeyLabel(int k) => k == 0 ? "C major" : k > 0 ? $"{k}♯" : $"{-k}♭";

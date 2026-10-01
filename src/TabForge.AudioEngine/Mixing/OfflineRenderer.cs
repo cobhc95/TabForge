@@ -227,6 +227,25 @@ public sealed class OfflineRenderer
             long silentFrames = 0, lastAudibleEnd = _mainFrames;
             var finalFrames = _hardTotal;
             var masterGain = _spec.MasterGain;
+            // A7-A01: transparent master safety limiter, after the master chain and the master level (Monitor FX never render). It
+            // lags by its lookahead: the first `limiterSkip` output frames are dropped and the same number is flushed at the end,
+            // so the master file lines up with the stems and keeps its length. Stems are never limited.
+            var limiter = _spec.SafetyLimiter && master is not null ? new SafetyLimiter(_rate) : null;
+            var limiterSkip = limiter?.Latency ?? 0;
+            long keptEnd = 0;          // input frames up to the end of the last block that was not held back (what the stems keep)
+            var trimmed = false;       // the auto tail ended the render early: the held silence was dropped
+            // Limits mixL / mixR in place (n frames) and returns how many frames of it are written (after the drop).
+            int MasterOut(int frames)
+            {
+                if (limiter is null) return frames;
+                limiter.Process(mixL, mixR, frames);
+                if (limiterSkip <= 0) return frames;
+                var drop = Math.Min(limiterSkip, frames);
+                limiterSkip -= drop;
+                var left = frames - drop;
+                if (left > 0) { Array.Copy(mixL, drop, mixL, 0, left); Array.Copy(mixR, drop, mixR, 0, left); }
+                return left;
+            }
             for (long b = 0; b < _limitBlocks; b++)
             {
                 var n = (int)Math.Min(block, _hardTotal - b * block);
@@ -266,12 +285,25 @@ public sealed class OfflineRenderer
                 {
                     if (hold) silentFrames += n; else { silentFrames = 0; lastAudibleEnd = b * block + n; }
                 }
-                if (master is not null) Put(master, mixL, mixR, n, hold);
+                if (master is not null) Put(master, mixL, mixR, MasterOut(n), hold);
                 foreach (var job in _jobs) if (job.Stem is { } stem) Put(stem, job.Buffers[q][0], job.Buffers[q][1], n, hold);
                 written = b * block + n;
+                if (!hold) keptEnd = written;
                 foreach (var job in _jobs) job.Free.Release();
                 foreach (var w in _workers) w.Wake.Set();
-                if (inTail && silentFrames >= _rate) { finalFrames = Math.Max(_mainFrames, lastAudibleEnd); foreach (var sink in sinks) sink.DropHeld(); break; }
+                if (inTail && silentFrames >= _rate)
+                {
+                    finalFrames = Math.Max(_mainFrames, lastAudibleEnd);
+                    foreach (var sink in sinks)
+                    {
+                        // The limited master lags by its lookahead: the start of its held output still carries the last audible
+                        // frames. Keep exactly enough of it to end where the stems end; the rest (and the limiter's delay) is silence.
+                        if (limiter is not null && ReferenceEquals(sink, master)) sink.FlushHeldFirst(keptEnd - sink.WrittenFrames);
+                        else sink.DropHeld();
+                    }
+                    trimmed = true;
+                    break;
+                }
                 if (_spec.RealtimePace)
                 {
                     var due = written * 1000.0 / _rate;
@@ -286,6 +318,18 @@ public sealed class OfflineRenderer
                 finalFrames = written;
             }
             foreach (var sink in sinks) sink.FlushHeld();   // the cap was reached inside the tail: what was held is still part of the file
+            if (limiter is not null && master is not null && !trimmed)
+            {
+                // The last `Latency` frames are still inside the limiter's delay: push silence through and write them.
+                for (var left = limiter.Latency; left > 0;)
+                {
+                    var chunk = Math.Min(block, left);
+                    Array.Clear(mixL, 0, chunk); Array.Clear(mixR, 0, chunk);
+                    var written2 = MasterOut(chunk);
+                    if (written2 > 0) master.Write(mixL, mixR, written2);
+                    left -= chunk;
+                }
+            }
             _stop = true;
             foreach (var w in _workers) w.Wake.Set();
             foreach (var job in _jobs) { job.Free.Release(Queue); }

@@ -34,6 +34,13 @@ public sealed class DockNodeState
     public string Orientation { get; set; } = "Horizontal";
     /// <summary>Fraction assigned to First, excluding the splitter.</summary>
     public double Ratio { get; set; } = 0.5;
+    /// <summary>
+    /// The user's own ratio, kept while the program has resized this split for the live window (track-list auto-fit, which depends on
+    /// the window's size). Never serialized: <see cref="Views.DockWorkspace.CaptureLayout"/> writes it as <see cref="Ratio"/>, so a
+    /// launch on another screen never rewrites the saved layout. Cleared when the user drags the splitter.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public double? UserRatio { get; set; }
     public DockNodeState? First { get; set; }
     public DockNodeState? Second { get; set; }
 }

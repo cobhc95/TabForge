@@ -49,6 +49,12 @@ public sealed class MonitorFxButton : FrameworkElement
 
     protected override void OnRender(DrawingContext dc)
     {
+        try { RenderGuard.Inject("MonitorFxButton"); RenderCore(dc); }
+        catch (Exception ex) when (RenderGuard.Contain(ex, "MonitorFxButton", dc, ActualWidth, ActualHeight)) { }
+    }
+
+    private void RenderCore(DrawingContext dc)
+    {
         var w = ActualWidth; var h = ActualHeight;
         if (w <= 0 || h <= 0) return;
         Brush Res(string key, Color fallback) => TryFindResource(key) as Brush ?? new SolidColorBrush(fallback);

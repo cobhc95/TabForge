@@ -996,14 +996,22 @@ public static partial class SelfTest
         // + / - change the note value; the plain '-' must not swallow the shifted variants.
         var e1 = Editor(out _, out _);
         e1.SetDuration(8);
-        e1.TryHandleKey(Key.OemPlus, ModifierKeys.None);
+        PressKey(e1, Key.OemPlus, ModifierKeys.None);
         Eq("hotkey: + shortens the note", 16, e1.CurrentDurationDenominator);
-        e1.TryHandleKey(Key.OemMinus, ModifierKeys.None);
+        PressKey(e1, Key.OemMinus, ModifierKeys.None);
         Eq("hotkey: - lengthens the note", 8, e1.CurrentDurationDenominator);
+        e1.TryHandleKey(Key.Add, ModifierKeys.None);
+        Eq("hotkey: numpad + shortens the note", 16, e1.CurrentDurationDenominator);
+        e1.TryHandleKey(Key.Subtract, ModifierKeys.None);
+        Eq("hotkey: numpad - lengthens the note", 8, e1.CurrentDurationDenominator);
         e1.ReversePlusMinusDuration = true;
-        e1.TryHandleKey(Key.OemPlus, ModifierKeys.None);
-        Eq("hotkey: reversed + lengthens", 4, e1.CurrentDurationDenominator);
-        e1.TryHandleKey(Key.OemMinus, ModifierKeys.None);
+        HotkeyCatalog.ReverseDurationKeys = true;
+        var reversedKeys = HotkeyCatalog.BuildMap(new HotkeySettings());
+        HotkeyCatalog.ReverseDurationKeys = false;
+        Check("hotkey: reversed, the = key runs Longer and the - key Shorter", reversedKeys["OemPlus"] == HotkeyCatalog.NoteLonger && reversedKeys["OemMinus"] == HotkeyCatalog.NoteShorter);
+        e1.TryHandleKey(Key.Add, ModifierKeys.None);
+        Eq("hotkey: reversed numpad + lengthens", 4, e1.CurrentDurationDenominator);
+        e1.TryHandleKey(Key.Subtract, ModifierKeys.None);
         e1.ReversePlusMinusDuration = false;
         Check("hotkey: Shift+- toggles tenuto (not duration)", PressKey(e1, Key.OemMinus, ModifierKeys.Shift) && e1.CurrentCell()!.Tenuto);
         Eq("hotkey: Shift+- left the duration unchanged", 8, e1.CurrentDurationDenominator);
@@ -1042,19 +1050,20 @@ public static partial class SelfTest
         e6.SetDuration(4);
         e6.EnterFret(5, autoAdvance: false);
         var note6 = e6.CurrentCell()!.Notes.FirstOrDefault();
-        e6.TryHandleKey(Key.Up, ModifierKeys.Shift);
+        PressKey(e6, Key.Up, ModifierKeys.Shift);
         Check("hotkey: Shift+Up raises the pitch a semitone", note6 is not null && note6.Fret == 6);
-        e6.TryHandleKey(Key.Down, ModifierKeys.Shift);
+        PressKey(e6, Key.Down, ModifierKeys.Shift);
         Check("hotkey: Shift+Down lowers it back", note6 is not null && note6.Fret == 5);
 
-        // Ctrl + / - insert and delete beats.
+        // Insert beat is the Insert key (a catalogued command); Delete beats is a command with no key.
         var e7 = Editor(out _, out var t7);
         e7.SetDuration(4);
         e7.EnterFret(1, autoAdvance: false);
-        e7.TryHandleKey(Key.OemPlus, ModifierKeys.Control);
-        Eq("hotkey: Ctrl++ inserts a beat without changing the bar length", 16, t7.Measures[0].Cells.Count);
-        e7.TryHandleKey(Key.OemMinus, ModifierKeys.Control);
-        Eq("hotkey: Ctrl+- deletes a beat without changing the bar length", 16, t7.Measures[0].Cells.Count);
+        Check("hotkey: Insert is bound to Insert beat", defaultKeys.TryGetValue("Insert", out var insertId) && insertId == "Edit.InsertBeat");
+        e7.TryRunNoteCommand("Edit.InsertBeat");
+        Eq("hotkey: Insert inserts a beat without changing the bar length", 16, t7.Measures[0].Cells.Count);
+        e7.TryRunNoteCommand("Edit.DeleteBeats");
+        Eq("hotkey: the Delete beats command deletes a beat without changing the bar length", 16, t7.Measures[0].Cells.Count);
 
         // Ctrl+A selects the whole track (TuxGuitar "select all").
         var e8 = Editor(out _, out _);

@@ -27,7 +27,12 @@ internal static partial class DiagnosticCommands
         ["--audit"] = args => RunAudit(args, playtest: false),
         ["--playtest"] = args => RunAudit(args, playtest: true),
         ["--render"] = RunRender,
+        ["--render-fretboard"] = RunRenderFretboard,
+        ["--tutorial-shot"] = RunTutorialShot,
+        ["--tutorial-pdf"] = RunTutorialPdf,
         ["--layout-audit"] = RunLayoutAudit,
+        ["--render-bars"] = RunRenderBars,
+        ["--render-timeline"] = RunRenderTimeline,
         ["--midi-export"] = RunMidiExport,
         ["--gendiag"] = RunGenerateDiagnosticSongs,
         ["--gendemo"] = RunGenerateDemo,
@@ -54,8 +59,15 @@ internal static partial class DiagnosticCommands
         ["--audit-timing"] = RunTimingAudit,
         ["--probe-audio"] = RunAudioProbe,
         ["--render-probe"] = RunRenderProbe,
+        ["--audio-audit"] = RunAudioAudit,
         ["--level-match"] = LevelMatch.Run,
         ["--pitch-audit"] = PitchAudit.Run,
+        ["--midi-timing"] = args => args.Length < 3 ? Usage("--midi-timing <song> <out.mid>") : Guard("MIDI timing", () =>
+        {
+            var result = MidiTimingAudit.Measure(LoadAny(args[1]), FilePathPolicy.OutputFile(args[2], "MIDI export", ".mid", ".midi"));
+            Console.WriteLine(result);
+            return result.MaxBarStartErrMs <= 1 && Math.Abs(result.EndErrMs) <= 1 ? Ok : CheckFailed;
+        }),
         ["--write-gp-fixture"] = args =>
         {
             if (args.Length < 2) return Usage("--write-gp-fixture <out.gp> [basic|showcase]");
@@ -65,7 +77,20 @@ internal static partial class DiagnosticCommands
             Console.WriteLine($"Wrote {args[1]}");
             return Ok;
         },
+        ["--write-demo-song"] = args => args.Length < 2 ? Usage("--write-demo-song <out.gp>") : Guard("Demo song", () =>
+        {
+            // The built-in full demo "Ashen Meridian" (docs/DEMO_SONG_PLAN.md) with the whole project embedded, then verified.
+            var song = FullDemoSongFactory.Create();
+            var outPath = FilePathPolicy.OutputFile(args[1], "Guitar Pro file", ".gp");
+            GuitarProExporter.Save(song, outPath, embedProject: true);
+            var back = GuitarProExporter.TryReadEmbedded(outPath);
+            var same = back is not null && ProjectService.ContentHash(back).AsSpan().SequenceEqual(ProjectService.ContentHash(song));
+            Console.WriteLine(same ? $"Wrote {outPath}" : $"Wrote {outPath}, but the embedded project does not read back identically");
+            return same ? Ok : CheckFailed;
+        }),
+        ["--write-tutorial-starters"] = args => args.Length < 2 ? Usage("--write-tutorial-starters <dir>") : Guard("Tutorial starter songs", () => TutorialStarterSongs.Write(FilePathPolicy.OutputDirectory(args[1], "starter song folder")) ? Ok : CheckFailed),
         ["--audit-gm-techniques"] = args => args.Length < 2 ? Usage("--audit-gm-techniques <report>") : GmSongAudit.RunProject(GmSongAudit.TechniqueSong(), "technique test song", args[1]),
+        ["--roundtrip-diff"] = args => args.Length < 3 ? Usage("--roundtrip-diff <song|@list.txt> <out.txt> [gp,tforge,midi]") : Guard("Round-trip diff", () => SelfTest.RunRoundTripDiff(args[1], args[2], args.Length > 3 ? args[3] : "")),
         ["--roundtrip-semantics"] = args => args.Length < 2 ? Usage("--roundtrip-semantics <report>") : SelfTest.RunRoundTripSemantics(args[1]),
         ["--audit-gm"] = args => args.Length < 3 ? Usage("--audit-gm <song> <report>") : GmSongAudit.Run(args[1], args[2]),
     };
@@ -75,6 +100,7 @@ internal static partial class DiagnosticCommands
     {
         exitCode = Ok;
         if (args.Length == 0 || !Commands.TryGetValue(args[0], out var command)) return false;
+        Views.TabEditorControl.RethrowRenderFailures = true;   // a drawing error fails a command-line run instead of being contained
         exitCode = command(args);
         return true;
     }
@@ -116,6 +142,14 @@ internal static partial class DiagnosticCommands
             var project = LoadAny(args[1]);
             var trackIndex = args.Length > 5 && int.TryParse(args[5], out var ti) ? Math.Clamp(ti, 0, Math.Max(0, project.Tracks.Count - 1)) : 0;
             var editor = new Views.TabEditorControl { Project = project, SelectedTrackIndex = trackIndex };
+            // Look checks: TF_RENDER_LIGHT=1 draws the light paper; TF_RENDER_STAFFOPACITY=0..1 scales the staff-line (and ledger-line) opacity.
+            if (Environment.GetEnvironmentVariable("TF_RENDER_LIGHT") == "1") editor.DarkPaper = false;
+            if (double.TryParse(Environment.GetEnvironmentVariable("TF_RENDER_STAFFOPACITY"), NumberStyles.Float, CultureInfo.InvariantCulture, out var staffOpacity))
+            {
+                static System.Windows.Media.Color Fade(System.Windows.Media.Color c, double o) => System.Windows.Media.Color.FromArgb((byte)Math.Round(255 * Math.Clamp(o, 0, 1)), c.R, c.G, c.B);
+                editor.DarkStaffLineColor = Fade(editor.DarkStaffLineColor, staffOpacity);
+                editor.LightStaffLineColor = Fade(editor.LightStaffLineColor, staffOpacity);
+            }
             if (args.Length > 3 && double.TryParse(args[3], NumberStyles.Float, CultureInfo.InvariantCulture, out var pageWidth) && pageWidth > 200)
                 editor.PageWidthOverride = pageWidth;
             var maxHeight = args.Length > 4 && int.TryParse(args[4], out var mh) ? Math.Clamp(mh, 200, 16000) : 3000;
@@ -382,7 +416,7 @@ internal static partial class DiagnosticCommands
             for (var t = 0; t < song.Tracks.Count; t++)
             {
                 var track = song.Tracks[t];
-                text.AppendLine($"track {t} {track.Name} kind={track.Kind} ch={track.MidiChannel} prog={track.MidiProgram} vol={track.Volume} tuning=[{string.Join(",", track.StringTunings)}]");
+                text.AppendLine($"track {t} {track.Name} kind={track.Kind} ch={track.MidiChannel} prog={track.MidiProgram} vol={track.Volume} capo={track.Capo} tuning=[{string.Join(",", track.StringTunings)}]");
                 for (var b = first; b < Math.Min(track.Measures.Count, first + count); b++)
                 {
                     var measure = track.Measures[b];
@@ -400,12 +434,12 @@ internal static partial class DiagnosticCommands
     /// <summary>`--exportgp &lt;song&gt; &lt;out.gp&gt;`: writes a .gp, reads it back and reports what survived (1 = notes lost).</summary>
     private static int RunExportGp(string[] args)
     {
-        if (args.Length < 3) return Usage("--exportgp <song> <out.gp>");
+        if (args.Length < 3) return Usage("--exportgp <song> <out.gp> [clean]");
         return Guard("Guitar Pro export", () =>
         {
             var song = LoadAny(args[1]);
             var outPath = FilePathPolicy.OutputFile(args[2], "Guitar Pro file", ".gp");
-            GuitarProExporter.Save(song, outPath);
+            GuitarProExporter.Save(song, outPath, embedProject: !(args.Length > 3 && args[3].Equals("clean", StringComparison.OrdinalIgnoreCase)));
             var back = GuitarProImporter.Import(outPath);
             static int Notes(SongProject p) => p.Tracks.Sum(t => t.Measures.Sum(m => m.Cells.Concat(m.Voice2Cells).Sum(c => c.Notes.Count)));
             static int Bars(SongProject p) => p.Tracks.Count == 0 ? 0 : p.Tracks.Max(t => t.Measures.Count);
@@ -479,6 +513,7 @@ internal static partial class DiagnosticCommands
         {
             Debug.WriteLine($"{what} failed: {ex}");
             Console.Error.WriteLine($"{what} failed ({ex.GetBaseException().GetType().Name}: {ex.GetBaseException().Message}).");
+            if (Environment.GetEnvironmentVariable("TABFORGE_DIAG_STACK") == "1") Console.Error.WriteLine(ex.ToString());
             return CouldNotRun;
         }
     }

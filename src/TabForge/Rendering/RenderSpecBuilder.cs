@@ -25,6 +25,8 @@ public sealed class RenderSettings
     public int Format { get; set; } = 1;     // 0 WAV16, 1 WAV24, 2 WAV32f, 3 MP3
     public int Mp3Kbps { get; set; } = 192;
     public bool OpenFolder { get; set; } = true;
+    /// <summary>Transparent master safety limiter (-0.3 dBFS) on the rendered master mix (A7-A01). On by default; stems are not limited.</summary>
+    public bool SafetyLimiter { get; set; } = true;
 }
 
 public enum RenderSource { Master, StemsSelected, StemsAll, MasterAndStems }
@@ -147,7 +149,7 @@ public static class RenderSpecBuilder
         {
             StartFrame = startFrame, EndFrame = endFrame, TailMode = (RenderTailMode)Math.Clamp(s.TailMode, 0, 2), TailMs = Math.Clamp(s.TailMs, 0, 30000),
             SampleRate = s.SampleRate, Channels = s.Mono ? 1 : 2, MasterPath = masterPath, EventFile = eventFile,
-            MasterGain = Math.Clamp(masterPercent, 0, 100) / 100f, Threads = s.SingleThread ? RenderThreads.One : RenderThreads.Auto, RealtimePace = s.RealtimePace,
+            MasterGain = Math.Clamp(masterPercent, 0, 100) / 100f, Threads = s.SingleThread ? RenderThreads.One : RenderThreads.Auto, RealtimePace = s.RealtimePace, SafetyLimiter = s.SafetyLimiter,
             Tempo = TempoMap(tl, rate, project.Tempo, project),
             Format = s.Format switch { 0 => RenderFormat.Pcm16, 2 or 3 => RenderFormat.Float32, _ => RenderFormat.Pcm24 },
         };

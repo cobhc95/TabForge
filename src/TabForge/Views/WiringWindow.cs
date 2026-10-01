@@ -64,7 +64,7 @@ public sealed class WiringWindow : Window
         _sidechain.ItemsSource = linkTargets;
         string? sideOff = _track.IsBus ? "Sidechain is for track plug-ins (not group buses or the master)"
             : _slot.Format == "VST3" || _slot.Path.EndsWith(".vst3", StringComparison.OrdinalIgnoreCase) ? "Not available for VST3 plug-ins (the VST3 bridge has no sidechain input bus yet)"
-            : _host.PluginSettings.SeparateProcessPerPlugin ? "Not available while plug-ins run in their own process (Settings > Audio & VST)"
+            : _host.PluginSettings.SeparateProcessPerPlugin ? "Not available while plug-ins run in their own process (Settings > Audio & Plug-ins)"
             : _slot.Type == PluginSlotType.Instrument ? "Instruments take no audio input" : null;
         _sidechain.IsEnabled = sideOff is null;
         root.Children.Add(Row("Sidechain 3/4", _sidechain,

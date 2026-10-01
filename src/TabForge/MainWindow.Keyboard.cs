@@ -39,6 +39,14 @@ public partial class MainWindow
         var inText = IsEditableTextInput(e.OriginalSource) || IsEditableTextInput(Keyboard.FocusedElement);
         var gesture = WpfHotkeyGestureAdapter.FromEvent(e);
 
+        // Shift+F10 / the Menu key on the score: the keyboard way to its context menu (F10 arrives as a "system" key).
+        var rawKey = e.Key == Key.System ? e.SystemKey : e.Key;
+        if (!inText && ScoreScroll.IsKeyboardFocusWithin && ((rawKey == Key.Apps && mods == ModifierKeys.None) || (rawKey == Key.F10 && mods == ModifierKeys.Shift)))
+        {
+            if (Editor.RequestContextMenuAtCaret()) e.Handled = true;
+            return;
+        }
+
         // Route Space at the window level rather than relying on whichever editor/control has focus.
         // Read-only labels are not text-entry fields; an actual editable field keeps normal spaces.
         if (!inText && e.Key == Key.Space && (mods == ModifierKeys.None || mods == ModifierKeys.Shift))
@@ -126,28 +134,16 @@ public partial class MainWindow
         var isArrow = e.Key is Key.Left or Key.Right or Key.Up or Key.Down;
         if (isArrow && gridOwnsArrows && mods == ModifierKeys.None) return;
 
-        // Alt+Left / Alt+Right step through entered notes and hear them (the reference behaviour).
-        if (mods == ModifierKeys.Alt && (e.Key == Key.Left || e.Key == Key.Right))
+        // A bound Ctrl / Alt chord, then the editor's note entry and score navigation, then the other bindings (the map is
+        // rebuilt whenever the hotkey settings change). Alt chords arrive as Key.System; the router reads the real key.
+        var target = WindowKeyRouter.Dispatch(e.Key, e.SystemKey, mods, Editor, _hotkeyMap, RunHotkey);
+        if (target == WindowKeyRouter.Target.Editor)
         {
-            Editor.TryHandleKey(e.Key, mods);
-            e.Handled = true;
-            return;
-        }
-
-        // Note entry and score navigation belong to the editor and win over single-key commands.
-        if (Editor.TryHandleKey(e.Key, mods))
-        {
-            if (!Keyboard.IsKeyToggled(Key.NumLock) && e.Key is Key.Insert or Key.End or Key.Down or Key.Next or Key.Left or Key.Clear or Key.Right or Key.Home or Key.Up or Key.Prior)
+            if (!Keyboard.IsKeyToggled(Key.NumLock) && rawKey is Key.Insert or Key.End or Key.Down or Key.Next or Key.Left or Key.Clear or Key.Right or Key.Home or Key.Up or Key.Prior)
                 StatusText.Text = "Note entered — turn NumLock ON to use the numeric keypad";
             e.Handled = true;
-            return;
         }
-
-        // Configurable commands: the map is rebuilt whenever the hotkey settings change.
-        if (_hotkeyMap.TryGetValue(gesture, out var actionId) && RunHotkey(actionId))
-        {
-            e.Handled = true;
-        }
+        else if (target == WindowKeyRouter.Target.Hotkey) e.Handled = true;
     }
 
     private static bool IsEditableTextInput(object? source)

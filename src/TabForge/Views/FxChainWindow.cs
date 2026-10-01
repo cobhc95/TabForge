@@ -44,9 +44,9 @@ public sealed class FxChainWindow : Window
     private readonly ListBox _list = new() { BorderThickness = new Thickness(0), AllowDrop = true };
     private readonly CheckBox _useChain = new() { Content = "Through chain", ToolTip = "Play this track through the chain. Off: the track plays through Windows MIDI." };
     private readonly CheckBox _midiSound = new() { Content = "GM sound", ToolTip = "On: the track's General MIDI instrument sound plays; with effects and no VST instrument the effects shape it. Off: only a VST instrument sounds." };
-    private readonly CheckBox _autoGm = new() { Content = "Auto-switch to GM sound when no VST instrument plays", ToolTip = "On: GM sound is ticked when no VST instrument plays this track (chain off, instrument bypassed or removed) and unticked when one plays again. A GM sound you untick yourself stays off. Same as the option in Settings > Audio & VST." };
+    private readonly CheckBox _autoGm = new() { Content = "Auto-switch to GM sound when no VST instrument plays", ToolTip = "On: GM sound is ticked when no VST instrument plays this track (chain off, instrument bypassed or removed) and unticked when one plays again. A GM sound you untick yourself stays off. Same as the option in Settings > Audio & Plug-ins." };
     private readonly CheckBox _autoLoad = new() { Content = "Auto-load for this instrument", ToolTip = "Save this chain (plug-ins, their settings, each plug-in's MIDI processors, wiring and MIDI input) as the default for this instrument type. It is then applied automatically to any track of this instrument type without plug-ins, in any song when loaded, and to new tracks of this type. Untick to remove the default." };
-    private readonly CheckBox _startup = new() { Content = "Add as a track on startup", ToolTip = "Off by default. On: this chain (plug-ins, their settings, wiring and MIDI configuration, volume, audio input and monitor setting) is added as a track, not armed, to every song you open or create. That track is not saved with the song until you untick this. Manage them in Settings > Audio & VST." };
+    private readonly CheckBox _startup = new() { Content = "Add as a track on startup", ToolTip = "Off by default. On: this chain (plug-ins, their settings, wiring and MIDI configuration, volume, audio input and monitor setting) is added as a track, not armed, to every song you open or create. That track is not saved with the song until you untick this. Manage them in Settings > Audio & Plug-ins." };
     private readonly Button _midiButton =new() { Content = "MIDI…", Padding = new Thickness(10, 3, 10, 3), Margin = new Thickness(0, 0, 8, 0), ToolTip = "MIDI processors in front of this plug-in: filter, transpose, drum map, velocity, humanize, delay, program / CC, log… (lit when any is on)" };
     private BypassOverlay? _overlay;
     private readonly ComboBox _presets = new() { MinWidth = 220, ToolTip = "Presets: the plug-in's own programs and your saved presets" };
@@ -54,8 +54,8 @@ public sealed class FxChainWindow : Window
     private WiringWindow? _wiringWindow;
     private readonly KnobControl _volume = new()
     {
-        Minimum = -60, Maximum = 12, DefaultValue = 0, Origin = 0, Width = 30, Height = 30, Label = "Volume",
-        Format = v => v <= -59.9 ? "-inf dB" : $"{v:+0.0;-0.0;0.0} dB", ToolTip = "This plug-in's output volume (double-click: 0 dB)"
+        Minimum = -60, Maximum = 12, DefaultValue = 0, Origin = 0, Width = 30, Height = 30, Label = "Volume", Step = 0.1,
+        Format = v => v <= -59.9 ? "-inf dB" : $"{v:+0.0;-0.0;0.0} dB", ToolTip = "This plug-in's output volume (double-click or right-click: type a value; Ctrl+click: 0 dB)"
     };
     private readonly CheckBox _bypass = new() { Content = "On", ToolTip = "Untick to bypass this plug-in", VerticalAlignment = VerticalAlignment.Center };
     private readonly PluginDockHost _dock = new();
@@ -73,7 +73,7 @@ public sealed class FxChainWindow : Window
 
     public TrackModel Track => _track;
 
-    private readonly CheckBox _autoPitch = new() { Content = "Match pitch automatically", Margin = new Thickness(16, 0, 0, 0), ToolTip = "On (default, see Settings > Audio & VST): each VST instrument's sounding octave is measured silently when it loads or its preset changes, and it is transposed to match the notes. A Transpose MIDI processor still applies on top. Drum tracks are never transposed." };
+    private readonly CheckBox _autoPitch = new() { Content = "Match pitch automatically", Margin = new Thickness(16, 0, 0, 0), ToolTip = "On (default, see Settings > Audio & Plug-ins): each VST instrument's sounding octave is measured silently when it loads or its preset changes, and it is transposed to match the notes. A Transpose MIDI processor still applies on top. Drum tracks are never transposed." };
     private readonly TextBlock _autoPitchLabel = new() { Margin = new Thickness(6, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
     private readonly Button _remeasure = new() { Content = "Re-measure", Padding = new Thickness(8, 1, 8, 1), Margin = new Thickness(6, 0, 0, 0), ToolTip = "Measure the instruments' pitch again (silent; waits while the song plays)" };
 
@@ -103,6 +103,11 @@ public sealed class FxChainWindow : Window
 
     public FxChainWindow(IFxChainHost host, TrackModel track, Window? owner)
     {
+        // Stable automation ids (the buttons keep their tooltip-based names).
+        UiIds.Id(_list, "Fx.List", "Plug-in chain");
+        UiIds.Id(_presets, "Fx.Presets");
+        UiIds.Id(_wiring, "Fx.Wiring");
+        UiIds.Id(_midiButton, "Fx.Midi");
         PreviewKeyDown += (_, e) => { if (e.Key == Key.Escape && Keyboard.FocusedElement is not System.Windows.Controls.Primitives.TextBoxBase && Keyboard.FocusedElement is not ComboBox) { e.Handled = true; Close(); } };
         _host = host;
         _track = track;
@@ -240,8 +245,8 @@ public sealed class FxChainWindow : Window
         DockPanel.SetDock(left, Dock.Left);
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 6, 0, 0) };
         DockPanel.SetDock(buttons, Dock.Bottom);
-        buttons.Children.Add(MakeButton("Add…", AddPlugin, "Add a plug-in to the end of the chain"));
-        buttons.Children.Add(MakeButton("Remove", RemoveSelected, "Remove the selected plug-in (Delete)"));
+        buttons.Children.Add(UiIds.Id(MakeButton("Add…", AddPlugin, "Add a plug-in to the end of the chain"), "Fx.Add"));
+        buttons.Children.Add(UiIds.Id(MakeButton("Remove", RemoveSelected, "Remove the selected plug-in (Delete)"), "Fx.Remove"));
         buttons.Children.Add(_status);
         _status.SetResourceReference(TextBlock.ForegroundProperty, "MutedBrush");
         left.Children.Add(buttons);
@@ -274,6 +279,17 @@ public sealed class FxChainWindow : Window
         _dockHere.Click += (_, _) =>
         {
             if (Selected is not { } s) return;
+            if (_dockHere.Tag is "allow-again")
+            {
+                // Quarantine only: trust and approval records stay as they are (an untrusted file is still blocked by the trust check).
+                if (TabForge.Plugins.PluginQuarantine.AllowAgain(_host.PluginSettings.Quarantined, s.Path) > 0)
+                {
+                    _host.SaveSettings();
+                    _host.ChainChanged(_track);   // the next engine Sync loads it again (its chain key no longer says Skip)
+                }
+                ShowSelected();
+                return;
+            }
             if (!TabForge.Plugins.PluginTrust.IsTrusted(s.Path, _host.PluginSettings))
             {
                 TabForge.Plugins.PluginTrust.Approve(_host.PluginSettings, s.Path);
@@ -509,6 +525,8 @@ public sealed class FxChainWindow : Window
             menu.IsOpen = true;
         };
         _presets.SelectionChanged += (_, _) => { if (!_building) ApplyPreset(); };
+        TooltipShortcuts.Bind(_wiring, "Audio pins and MIDI routing (source track, channel) of this plug-in", "Track.Wiring");
+        TooltipShortcuts.Bind(_midiButton, "MIDI processors in front of this plug-in: filter, transpose, drum map, velocity, humanize, delay, program / CC, log… (lit when any is on)", "Track.MidiProcessing");
         _wiring.Click += (_, _) => OpenWiring();
         _midiButton.Click += (_, _) => OpenMidiProcessing();
         var volumeDragging = false;
@@ -621,12 +639,22 @@ public sealed class FxChainWindow : Window
         if (slot is not null && !ReferenceEquals(slot, _docked)) CloseDocked();
         _dockHere.Visibility = Visibility.Collapsed;
         _dockHere.Content = "Show it here";
+        _dockHere.Tag = null;
         if (slot is null) { ShowMessage("No plug-ins yet. Use Add… (or the FX menu) to choose a VST instrument or effect."); return; }
         if (!TabForge.Plugins.PluginTrust.IsTrusted(slot.Path, _host.PluginSettings))
         {
             ShowMessage($"Blocked: not approved, or the file changed since you approved it. It is not loaded (use Allow only if you trust it):\n{slot.Path}");
             _dockHere.Content = "Allow";
             _dockHere.Visibility = Visibility.Visible;
+            return;
+        }
+        if (TabForge.Plugins.PluginQuarantine.Contains(_host.PluginSettings.Quarantined, slot.Path))
+        {
+            ShowMessage($"Switched off after a crash. It is not loaded until you allow it again:\n{System.IO.Path.GetFileName(slot.Path.TrimEnd('\\', '/'))}");
+            _dockHere.Content = "Allow again";
+            _dockHere.Tag = "allow-again";
+            _dockHere.Visibility = Visibility.Visible;
+            _docked = null;
             return;
         }
         if (!_host.Engine.IsRunning || _host.Engine.SlotOf(_track) < 0)

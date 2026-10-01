@@ -9,7 +9,9 @@ namespace TabForge.Services;
 /// <see cref="GuitarProImporter"/>. Tracks, tunings, capo, MIDI program/channel/volume/pan, metre,
 /// tempo changes, repeats, alternate endings, sections, durations, tuplets, rests, ties, dead/ghost
 /// notes, palm mute, let ring, vibrato, hammer-ons, slides, harmonics, bends, accents and staccato are
-/// written. TabForge-only settings (drum presets, score fonts, mix-table ramps...) stay in .tforge.
+/// written. By default the whole TabForge project (drum presets, score fonts, mix-table ramps, plug-in states...)
+/// is also embedded inside the .gp, so reopening it in TabForge restores everything; with embedProject = false
+/// the file is clean and those TabForge-only settings are not stored in it.
 /// </summary>
 public static class GuitarProExporter
 {
@@ -200,7 +202,7 @@ public static class GuitarProExporter
         $"This file's TabForge project data could not be read ({reason}); it was opened as a plain Guitar Pro file";
 
     /// <summary>A bar's navigation marks (TabForge's names or Guitar Pro's own) as alphaTab directions, so D.C. / D.S. / Coda / Fine survive a clean .gp.</summary>
-    private static IEnumerable<Direction> GpDirections(string? text)
+    internal static IEnumerable<Direction> GpDirections(string? text)
     {
         if (string.IsNullOrWhiteSpace(text)) yield break;
         foreach (var token in text.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
@@ -216,6 +218,14 @@ public static class GuitarProExporter
         }
     }
 
+    /// <summary>A tempo automation at a position of a bar; a second one at the same position updates the first (a linear flag sticks).</summary>
+    private static void AddTempoAutomation(MasterBar bar, double ratio, int bpm, bool linear)
+    {
+        foreach (var existing in bar.TempoAutomations)
+            if (Math.Abs(existing.RatioPosition - ratio) < 1e-6) { existing.Value = bpm; existing.IsLinear |= linear; return; }
+        bar.TempoAutomations.Add(new Automation { Type = AutomationType.Tempo, Value = bpm, RatioPosition = ratio, Text = "", IsLinear = linear });
+    }
+
     private static Score Build(SongProject project)
     {
         var score = new Score
@@ -228,6 +238,7 @@ public static class GuitarProExporter
         var markers = project.Markers.ToDictionary(m => m.MeasureIndex, m => m.Title);
 
         var keys = new List<(int Key, bool Minor)>();
+        var pendingTempo = new Dictionary<int, int>();   // a tempo ramp that ends on a bar line: its target, written at the start of the next bar
         var lastKey = project.KeySignature; var lastMinor = project.KeySignatureMinor;
         for (var b = 0; b < barCount; b++)
         {
@@ -237,13 +248,16 @@ public static class GuitarProExporter
                 TimeSignatureNumerator = model?.TimeSigNum ?? project.TimeSignatureNumerator,
                 TimeSignatureDenominator = model?.TimeSigDenom ?? project.TimeSignatureDenominator,
                 IsRepeatStart = model?.RepeatStart ?? false,
+                IsAnacrusis = model?.Anacrusis ?? false,
                 RepeatCount = model is { RepeatEnd: true } ? Math.Max(2, model.RepeatCount) : 0,
 #pragma warning disable CS0618 // alphaTab 1.8 marks this obsolete, but its GP7 writer still emits the master-bar double bar from it.
                 IsDoubleBar = model?.IsDoubleBar ?? false,
 #pragma warning restore CS0618
             };
-            if (model?.KeySignature is int ks) lastKey = ks;
-            if (model?.KeySignatureMinor is bool km) lastMinor = km;
+            // A bar without a key of its own is in the song's key, as the score shows it (BarSignatures.KeyAt; MusicXML does the same).
+            // Carrying the previous bar's key forward made older songs, whose key change was set on one bar only, export differently.
+            lastKey = model?.KeySignature ?? project.KeySignature;
+            lastMinor = model?.KeySignatureMinor ?? project.KeySignatureMinor;
             if (model is not null && model.EndingPasses != 0) mb.AlternateEndings = model.EndingPasses;
             var directions = GpDirections(model?.Directions).ToList();
             if (directions.Count > 0)
@@ -253,13 +267,45 @@ public static class GuitarProExporter
                 mb.Directions = set;
             }
             if (markers.TryGetValue(b, out var title)) mb.Section = new Section { Text = title, Marker = "" };
+            mb.TripletFeel = model?.TripletFeelKind switch
+            {
+                TripletFeels.Eighth => TripletFeel.Triplet8th, TripletFeels.Sixteenth => TripletFeel.Triplet16th, _ => TripletFeel.NoTripletFeel,
+            };
             var tempo = b == 0 ? model?.TempoChange ?? project.Tempo : model?.TempoChange;
-            if (tempo is int bpm) mb.TempoAutomations.Add(new Automation { Type = AutomationType.Tempo, Value = bpm, RatioPosition = 0, Text = "" });
+            if (tempo is int bpm) AddTempoAutomation(mb, 0, bpm, false);
+            if (pendingTempo.TryGetValue(b, out var rampTarget) && model?.TempoChange is null) AddTempoAutomation(mb, 0, rampTarget, false);
             if (model?.MidBarTempos is { Count: > 0 } points)
             {
                 var barSlots = Math.Max(1, MusicTime.BarSlots(project, b));
-                foreach (var point in points)
-                    mb.TempoAutomations.Add(new Automation { Type = AutomationType.Tempo, Value = point.Tempo, RatioPosition = Math.Clamp(point.Slot / barSlots, 0, 0.999), Text = "" });
+                var startTempo = MusicTime.TempoAt(project, b);
+                for (var pi = 0; pi < points.Count; pi++)
+                {
+                    var point = points[pi];
+                    var ratio = Math.Clamp(point.Slot / barSlots, 0, 0.999);
+                    if (point.RampSlots <= 0) { AddTempoAutomation(mb, ratio, point.Tempo, false); continue; }
+                    // A tempo ramp is Guitar Pro's linear tempo automation: a linear point at the ramp's start (holding the tempo
+                    // running there) glides to the NEXT automation, which is written where the ramp ends. The model plays a ramp only until
+                    // the next point or the bar's end (MusicTime.OffsetMs / TempoAfter), so a ramp cut short that way glides only part of
+                    // the way (to the tempo it has reached) and the next point or bar then starts at the target: written the same way,
+                    // the reopened song plays the same tempo curve.
+                    var from = MusicTime.TempoAtSlot(model, point.Slot - 1e-6, startTempo);
+                    AddTempoAutomation(mb, ratio, from, true);
+                    var nextSlot = pi + 1 < points.Count ? points[pi + 1].Slot : double.MaxValue;
+                    var endSlot = Math.Min(Math.Min(point.Slot + point.RampSlots, nextSlot), barSlots);
+                    var reached = (int)Math.Round(Math.Clamp(from + (point.Tempo - from) * (endSlot - point.Slot) / point.RampSlots, 20, 400));
+                    var complete = Math.Abs(reached - point.Tempo) < 1;
+                    if (endSlot < barSlots - 1e-6)
+                    {
+                        // a following point at the very slot the glide ends would overwrite its end value: end the glide a hair earlier
+                        var endRatio = (nextSlot <= endSlot + 1e-6 && !complete ? endSlot - 0.02 : endSlot) / barSlots;
+                        AddTempoAutomation(mb, endRatio, complete ? point.Tempo : reached, false);
+                        continue;
+                    }
+                    var nextModel = project.Tracks.FirstOrDefault(t => b + 1 < t.Measures.Count)?.Measures[b + 1];
+                    if (!complete) AddTempoAutomation(mb, 0.999, reached, false);   // the glide ends at the bar line holding what it reached; the next bar starts at the target
+                    else if (nextModel is null || nextModel.TempoChange is { } other && other != point.Tempo) { AddTempoAutomation(mb, 0.999, point.Tempo, false); continue; }
+                    if (nextModel?.TempoChange is null) pendingTempo[b + 1] = point.Tempo;
+                }
             }
             score.AddMasterBar(mb);
             keys.Add((lastKey, lastMinor));
@@ -268,6 +314,13 @@ public static class GuitarProExporter
         foreach (var source in project.Tracks)
         {
             var drums = source.Kind == TrackKind.Drums || source.MidiChannel == 9;
+            // Guitar Pro keeps pitch in tuning + fret and has no playback transposition: the gpif Track <Transpose> is a display-only
+            // offset (alphaTab reads it into Staff.DisplayTranspositionPitch, "applies only to rendering"). So a track's transpose goes
+            // into the tuning of a guitar or bass (every fret stays as written), or into string + fret when the shifted tuning would leave
+            // a sane range or the track is not fretted. The in-memory song is never changed.
+            var transpose = drums ? 0 : MixerGroups.Transpose(project, source);
+            var tuningShift = TuningCarriesTranspose(source, transpose);
+            var bake = tuningShift ? 0 : transpose;
             var track = new Track
             {
                 Name = source.Name ?? "",
@@ -284,7 +337,7 @@ public static class GuitarProExporter
             if (ColourChooserParse(source.ColorHex) is { } c) track.Color = new AlphaTab.Model.Color((byte)c.R, (byte)c.G, (byte)c.B, 255);
             var staff = new Staff { IsPercussion = drums, Capo = source.Capo, ShowTablature = !drums, ShowStandardNotation = true };
             if (!drums && source.StringTunings.Count > 0)
-                staff.StringTuning = new Tuning("", source.StringTunings.Select(v => (double)v).ToList(), false);
+                staff.StringTuning = new Tuning("", source.StringTunings.Select(v => (double)(v + (tuningShift ? transpose : 0))).ToList(), false);
             track.AddStaff(staff);
 
             // Drums: one GP articulation per GM sound used (GP7 writes drum notes as articulations).
@@ -298,6 +351,8 @@ public static class GuitarProExporter
             {
                 var bar = new Bar();
                 staff.AddBar(bar);
+                if (drums) bar.Clef = Clef.Neutral;
+                else if (b < source.Measures.Count) (bar.Clef, bar.ClefOttava) = GpClef(source.Measures[b].Clef, source.Kind == TrackKind.Bass);
                 if (b >= source.Measures.Count)
                 {
                     for (var v = 0; v < (hasVoice2 ? 2 : 1); v++) { var empty = new Voice(); bar.AddVoice(empty); empty.AddBeat(RestBeat(4)); }
@@ -305,6 +360,15 @@ public static class GuitarProExporter
                 }
                 var measure = source.Measures[b];
                 var slots = MusicTime.BarSlots(project, b);
+                // An imported song's short bar plays only as long as its longest part (the same rule as the playback compiler), so an
+                // empty part of it (another track, or the second voice) is written that long: a whole-bar rest would lengthen the bar.
+                var played = project.ImportedFrom is null ? 0 : TabForge.Playback.ScoreToMidiCompiler.ContentSlots(project, b);
+                var emptyLength = played > 0.25 && played < slots - 0.01 ? played : slots;
+                // Simile marks live on the track's bar in GP7 (a two-bar simile is written as its first and second bar).
+                if (measure.SimileOneBar) bar.SimileMark = SimileMark.Simple;
+                else if (measure.SimileTwoBar)
+                    bar.SimileMark = b > 0 && b - 1 < source.Measures.Count && source.Measures[b - 1].SimileTwoBar && staff.Bars[b - 1].SimileMark == SimileMark.FirstOfDouble
+                        ? SimileMark.SecondOfDouble : SimileMark.FirstOfDouble;
                 // Voice 1 always; voice 2 when the bar has one.
                 foreach (var cells in hasVoice2 ? new[] { measure.Cells, measure.Voice2Cells } : new[] { measure.Cells })
                 {
@@ -318,12 +382,16 @@ public static class GuitarProExporter
                         if (cell.Notes.Count == 0 && !cell.IsRest) continue;
                         var start = cell.RhythmicPosition ?? Math.Max(i, cursor);
                         if (start > cursor + 0.01) foreach (var fill in FillRests(start - cursor)) voice.AddBeat(fill);
-                        foreach (var written in BeatsFor(cell, source, drums, track, articulations, staff, chordIds)) voice.AddBeat(written);
+                        foreach (var written in BeatsFor(cell, source, drums, track, articulations, staff, chordIds, (transpose, bake))) voice.AddBeat(written);
                         cursor = start + MusicTime.CellSlots(cell);
                         any = true;
                     }
-                    if (!any) { voice.AddBeat(RestBeat(slots >= 16 ? 1 : 4)); continue; }
-                    if (cursor < slots - 0.01) foreach (var fill in FillRests(slots - cursor)) voice.AddBeat(fill);
+                    // An empty bar is one whole-bar rest (a quarter rest in a 3/4 bar would reopen as a one-beat bar).
+                    if (!any) { if (emptyLength == 16) voice.AddBeat(RestBeat(1)); else foreach (var fill in FillRests(emptyLength)) voice.AddBeat(fill); continue; }
+                    // A bar that ends early stays short (a pickup, a short last bar): the playback compiler plays an imported song's
+                    // incomplete bar only as long as its content (ScoreToMidiCompiler.ContentSlots), so padding it with rests would
+                    // lengthen the bar and push every later bar late. A TabForge-written song keeps its empty cells as silence, so it is padded.
+                    if (cursor < slots - 0.01 && project.ImportedFrom is null) foreach (var fill in FillRests(slots - cursor)) voice.AddBeat(fill);
                 }
             }
             score.AddTrack(track);
@@ -342,12 +410,12 @@ public static class GuitarProExporter
     /// beat) becomes two beats: a grace beat, then the principal beat with its own duration and dots. Writing
     /// the whole cell as one grace beat used to drop the principal duration and shift the rest of the bar.
     /// </summary>
-    private static IEnumerable<Beat> BeatsFor(TabCell cell, TrackModel source, bool drums, Track track, Dictionary<int, int> articulations, Staff staff, Dictionary<string, string> chordIds)
+    private static IEnumerable<Beat> BeatsFor(TabCell cell, TrackModel source, bool drums, Track track, Dictionary<int, int> articulations, Staff staff, Dictionary<string, string> chordIds, (int Sounding, int Bake) shift)
     {
         var graces = cell.Notes.Where(n => n.IsGraceNote).ToList();
         if (graces.Count == 0 || graces.Count == cell.Notes.Count)
         {
-            yield return BeatFor(cell, source, drums, track, articulations, staff, chordIds);
+            yield return BeatFor(cell, source, drums, track, articulations, staff, chordIds, shift);
             yield break;
         }
         var lead = graces[0];
@@ -359,14 +427,14 @@ public static class GuitarProExporter
             IsGrace = true,
             GraceBeforeBeat = lead.GraceBeforeBeat,
         };
-        yield return BeatFor(grace, source, drums, track, articulations, staff, chordIds);
+        yield return BeatFor(grace, source, drums, track, articulations, staff, chordIds, shift);
         var principal = cell.Clone();
         principal.Notes = principal.Notes.Where(n => !n.IsGraceNote).ToList();
         principal.IsGrace = false;
-        yield return BeatFor(principal, source, drums, track, articulations, staff, chordIds);
+        yield return BeatFor(principal, source, drums, track, articulations, staff, chordIds, shift);
     }
 
-    private static Beat BeatFor(TabCell cell, TrackModel source, bool drums, Track track, Dictionary<int, int> articulations, Staff staff, Dictionary<string, string> chordIds)
+    private static Beat BeatFor(TabCell cell, TrackModel source, bool drums, Track track, Dictionary<int, int> articulations, Staff staff, Dictionary<string, string> chordIds, (int Sounding, int Bake) shift)
     {
         var beat = new Beat
         {
@@ -389,11 +457,13 @@ public static class GuitarProExporter
         }
         if (cell.Fermata || cell.Notes.Any(n => n.Techniques.Contains("Fermata"))) beat.Fermata = new Fermata { Type = FermataType.Medium, Length = 1 };
         // Tenuto: alphaTab's model has no tenuto flag (only Note.Accentuated / IsStaccato), so it cannot be written to .gp.
+        // GP7 knows only before-beat and on-beat graces: alphaTab's GP7 writer drops a BendGrace entirely (the grace became
+        // a normal 32nd that pushed the principal note late), so a bend grace is written as a before-beat grace; its bend stays on the note.
         var graceTech = cell.Notes.SelectMany(n => n.Techniques).ToList();
         if (cell.IsGrace || graceTech.Contains("GraceBefore"))
-            beat.GraceType = graceTech.Contains("GraceBend") ? GraceType.BendGrace : cell.IsGrace && !cell.GraceBeforeBeat ? GraceType.OnBeat : GraceType.BeforeBeat;
+            beat.GraceType = cell.IsGrace && !cell.GraceBeforeBeat && !graceTech.Contains("GraceBend") ? GraceType.OnBeat : GraceType.BeforeBeat;
         else if (graceTech.Contains("GraceOnBeat")) beat.GraceType = GraceType.OnBeat;
-        else if (graceTech.Contains("GraceBend")) beat.GraceType = GraceType.BendGrace;
+        else if (graceTech.Contains("GraceBend") && cell.Notes.All(n => n.IsGraceNote)) beat.GraceType = GraceType.BeforeBeat;
         var whammyName = cell.Notes.SelectMany(n => n.Techniques).FirstOrDefault(x => x.StartsWith("TremBar", StringComparison.Ordinal) && x.Length > 7);
         var hasTremBar = cell.Notes.Any(n => n.Techniques.Contains("TremBar"));
         if (cell.WhammyPoints.Count > 0 || hasTremBar || whammyName is not null)
@@ -403,16 +473,26 @@ public static class GuitarProExporter
             foreach (var (o, v) in SimplifyWhammy(pts)) beat.AddWhammyBarPoint(new BendPoint(o, v));
         }
         var all = cell.Notes.SelectMany(n => n.Techniques).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        // Tremolo picking as slashes (1 = 1/8, 2 = 1/16, 3 = 1/32, GP7's range): the TremoloSpeed setter did not round-trip
+        // (a 1/16 came back as 1/4 or 1/8 depending on the beat); 1/64 has no GP7 spelling and is written as 1/32.
         if (cell.TremoloPickDenominator > 0 || all.Contains("TremoloPick"))
-            beat.TremoloSpeed = DurationOf(cell.TremoloPickDenominator > 0 ? cell.TremoloPickDenominator : 8);
+        {
+            var speed = cell.TremoloPickDenominator > 0 ? cell.TremoloPickDenominator : 8;
+            beat.TremoloPicking = new TremoloPickingEffect { Marks = speed >= 32 ? 3 : speed >= 16 ? 2 : 1 };
+        }
         if (all.Contains("Tapping")) beat.Tap = true;
-        if (all.Contains("Slap")) beat.Slap = true;
+        if (all.Contains("DeadSlapped")) beat.DeadSlapped = true;
+        if (all.Contains("Slap") && !all.Contains("DeadSlapped")) beat.Slap = true;
         if (all.Contains("Pop")) beat.Pop = true;
         if (all.Contains("FadeIn")) beat.Fade = FadeType.FadeIn; else if (all.Contains("FadeOut")) beat.Fade = FadeType.FadeOut;
         if (all.Contains("WahOpen")) beat.WahPedal = WahPedal.Open; else if (all.Contains("WahClose")) beat.WahPedal = WahPedal.Closed;
-        if (all.Contains("BrushDown")) beat.BrushType = BrushType.BrushDown; else if (all.Contains("BrushUp")) beat.BrushType = BrushType.BrushUp;
-        else if (all.Contains("ArpeggioDown")) beat.BrushType = BrushType.ArpeggioDown; else if (all.Contains("ArpeggioUp")) beat.BrushType = BrushType.ArpeggioUp;
-        if (beat.BrushType != BrushType.None) beat.BrushDuration = 60;
+        // The importer tags an arpeggio stroke with BOTH its Arpeggio* name and a Brush* name, so the arpeggio must be tested first.
+        if (all.Contains("ArpeggioDown")) beat.BrushType = BrushType.ArpeggioDown; else if (all.Contains("ArpeggioUp")) beat.BrushType = BrushType.ArpeggioUp;
+        else if (all.Contains("BrushDown")) beat.BrushType = BrushType.BrushDown; else if (all.Contains("BrushUp")) beat.BrushType = BrushType.BrushUp;
+        // The stroke's spread: the importer reads BrushDuration back as 3 string steps (ticks / 3 / 240 = BrushStepSlots).
+        // No spread set: none is written, so the reopened stroke keeps the player's default spread (a fixed 60 ticks made it faster).
+        if (beat.BrushType != BrushType.None && double.IsFinite(cell.BrushStepSlots) && cell.BrushStepSlots > 0)
+            beat.BrushDuration = Math.Round(cell.BrushStepSlots * 3 * 240);
         if (all.Contains("PickDown")) beat.PickStroke = PickStroke.Down; else if (all.Contains("PickUp")) beat.PickStroke = PickStroke.Up;
         beat.Ottava = cell.OctaveShiftSemitones switch
         {
@@ -448,8 +528,16 @@ public static class GuitarProExporter
             }
             else
             {
-                note.String = Math.Max(1, source.StringTunings.Count - n.StringIndex);
-                note.Fret = n.Fret;
+                var (stringIndex, fret) = (n.StringIndex, n.Fret);
+                // A Guitar Pro file holds pitch only as string tuning + capo + fret. A note whose sounding pitch is not that (a track whose
+                // tuning the source did not give, so the pitch came from the file's own note value) is written where it sounds right: it
+                // used to reopen 16 semitones low. Tie destinations and harmonics carry their origin's or the harmonic's pitch, so they stay.
+                if (n.MidiValue > 0 && !n.Dead && !n.Tied && !cell.IsTied && n.HarmonicFret is null && !t.Any(x => x.Contains("Harmonic", StringComparison.Ordinal))
+                    && source.StringTunings.Count > 0 && source.PitchOf(stringIndex, fret) is var written && written != n.MidiValue)
+                    (stringIndex, fret) = TransposedPosition(source, stringIndex, fret, n.MidiValue - written);
+                if (shift.Bake != 0) (stringIndex, fret) = TransposedPosition(source, stringIndex, fret, shift.Bake);
+                note.String = Math.Max(1, source.StringTunings.Count - stringIndex);
+                note.Fret = fret;
             }
             if (t.Contains("ShiftSlide")) note.SlideOutType = SlideOutType.Shift;
             else if (t.Contains("LegatoSlide") || t.Contains("Slide")) note.SlideOutType = SlideOutType.Legato;
@@ -470,7 +558,7 @@ public static class GuitarProExporter
             if (t.Contains("LeftTap")) note.IsLeftHandTapped = true;
             if (t.Contains("Trill"))
             {
-                note.TrillValue = n.TrillTargetMidi > 0 ? n.TrillTargetMidi : n.MidiValue + 2;
+                note.TrillValue = Math.Clamp((n.TrillTargetMidi > 0 ? n.TrillTargetMidi : n.MidiValue + 2) + shift.Sounding, 0, 127);   // an absolute pitch: follows the track transpose
                 note.TrillSpeed = DurationOf(n.TrillDurationDenominator > 0 ? n.TrillDurationDenominator : 16);
             }
             foreach (var (offset, value) in SimplifyBend(n.BendPoints.Select(p => (p.Offset <= 1.0 ? p.Offset * 60 : p.Offset, p.Value)).ToList()))
@@ -479,6 +567,43 @@ public static class GuitarProExporter
         }
         if (cell.Notes.Any(n => TechniqueNames.HasPalmMute(n.Techniques))) beat.IsPalmMute = true;
         return beat;
+    }
+
+    /// <summary>
+    /// The Guitar Pro clef for a TabForge bar clef (a bar's clef can change anywhere in a track): F4 for bass, C3 for alto, C4 for tenor
+    /// and G2 for everything else (the guitar clef is G2 with an 8vb mark). The importer reads the clef and its octave mark back
+    /// (G2 + 8vb is the guitar clef, plain G2 the treble clef), so a clef is stable over any number of round trips.
+    /// </summary>
+    internal static (Clef Clef, Ottavia Ottava) GpClef(string? clef, bool bassTrack)
+    {
+        var value = (clef ?? "").Replace(" ", "", StringComparison.Ordinal).ToLowerInvariant();
+        if (value.Length == 0 || value == "g8" || value.StartsWith("guitar", StringComparison.Ordinal)) return (Clef.G2, Ottavia._8vb);   // TabForge's guitar clef: G2 written an octave down
+        if (value.Contains("bass", StringComparison.Ordinal) || value[0] == 'f') return (Clef.F4, bassTrack && value == "f4" ? Ottavia._8vb : Ottavia.Regular);
+        if (value.Contains("tenor", StringComparison.Ordinal) || value == "c4") return (Clef.C4, Ottavia.Regular);
+        if (value.Contains("alto", StringComparison.Ordinal) || value[0] == 'c') return (Clef.C3, Ottavia.Regular);
+        if (value == "neutral") return (Clef.Neutral, Ottavia.Regular);
+        return (Clef.G2, Ottavia.Regular);
+    }
+
+    /// <summary>True when a guitar or bass track's transpose is written as a shifted tuning (every string, frets unchanged): the shifted
+    /// strings must stay between C0 (12) and 127. Otherwise (keys, extreme shifts) the notes are moved on string + fret instead.</summary>
+    internal static bool TuningCarriesTranspose(TrackModel source, int semitones) =>
+        semitones != 0 && source.Kind is TrackKind.Guitar or TrackKind.Bass && source.MidiChannel != 9 && source.StringTunings.Count > 0
+        && source.StringTunings.Min() + semitones >= 12 && source.StringTunings.Max() + semitones <= 127;
+
+    /// <summary>The string and fret that sound <paramref name="semitones"/> above the given position: the same string when the fret stays
+    /// at or above 0, otherwise the string that reaches the pitch with the lowest fret (a pitch below the lowest open string stays
+    /// on it at fret 0).</summary>
+    internal static (int StringIndex, int Fret) TransposedPosition(TrackModel source, int stringIndex, int fret, int semitones)
+    {
+        if (source.StringTunings.Count == 0) return (stringIndex, Math.Max(0, fret + semitones));
+        stringIndex = Math.Clamp(stringIndex, 0, source.StringTunings.Count - 1);
+        var target = source.PitchOf(stringIndex, fret) + semitones;
+        if (source.FretOf(stringIndex, target) >= 0) return (stringIndex, source.FretOf(stringIndex, target));
+        var best = -1;
+        for (var s = 0; s < source.StringTunings.Count; s++)
+            if (source.FretOf(s, target) >= 0 && (best < 0 || source.FretOf(s, target) < source.FretOf(best, target))) best = s;
+        return best < 0 ? (stringIndex, 0) : (best, source.FretOf(best, target));
     }
 
     /// <summary>
@@ -514,8 +639,22 @@ public static class GuitarProExporter
     internal static List<(double Offset, double Value)> SimplifyWhammy(List<(double Offset, double Value)> points)
     {
         if (points.Count <= 4) return points;
-        var interior = points.Skip(1).Take(points.Count - 2).MaxBy(p => Math.Abs(p.Value));
-        return new() { points[0], (Math.Clamp(interior.Offset, 10, 50), interior.Value), points[^1] };
+        // Keep the interior peak above both ends and the interior dip below both ends (in time order), so a curve that rises
+        // and then dives keeps both extremes; a plain dip or rise keeps its single extreme (the deepest/highest point).
+        var inner = points.Skip(1).Take(points.Count - 2).ToList();
+        var high = inner.MaxBy(p => p.Value); var low = inner.MinBy(p => p.Value);
+        var ends = new[] { points[0].Value, points[^1].Value };
+        var extremes = new List<(double Offset, double Value)>();
+        if (high.Value > ends.Max()) extremes.Add(high);
+        if (low.Value < ends.Min()) extremes.Add(low);
+        if (extremes.Count == 0) extremes.Add(inner.MaxBy(p => Math.Abs(p.Value)));
+        var kept = extremes.OrderBy(p => p.Offset).Select(p => (Math.Clamp(p.Offset, 10, 50), p.Value)).ToList();
+        if (kept.Count == 2 && kept[0].Item1 >= kept[1].Item1)
+        {
+            var first = Math.Min(kept[0].Item1, 49);   // both clamped to 50 would share an offset
+            kept[0] = (first, kept[0].Value); kept[1] = (first + 1, kept[1].Value);
+        }
+        return new List<(double, double)> { points[0] }.Concat(kept).Append(points[^1]).ToList();
     }
 
     private static Duration DurationOf(int denominator) => denominator switch

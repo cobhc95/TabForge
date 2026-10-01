@@ -15,6 +15,6 @@ public static partial class SelfTest
         Check("trace: all enables every area",
             all.SetEquals(new[] { Trace.Playback, Trace.Engine, Trace.Layout, Trace.Import, Trace.Ui }), string.Join(",", all));
         Check("trace: files go to the diagnostics folder",
-            Trace.PathFor(Trace.Layout).EndsWith(System.IO.Path.Combine("TabForge", "Diagnostics", "trace-layout.log"), StringComparison.OrdinalIgnoreCase));
+            string.Equals(Trace.PathFor(Trace.Layout), System.IO.Path.Combine(TabForge.Services.UserPaths.Diagnostics, "trace-layout.log"), StringComparison.OrdinalIgnoreCase));   // also right under --profile
     }
 }

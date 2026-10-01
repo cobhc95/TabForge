@@ -39,15 +39,23 @@ public sealed class TrackController
 
     public TrackModel CreateTrack(SongProject project, TrackKind kind)
     {
-        var measures = Math.Max(32, project.Tracks.FirstOrDefault()?.Measures.Count ?? 32);
+        // A new track matches the song's bar count (an empty project starts with 32 bars).
+        var measures = project.Tracks.Count > 0 ? Math.Max(1, project.Tracks.Max(t => t.Measures.Count)) : 32;
         var color = TrackColours[project.Tracks.Count % TrackColours.Length];
         return kind switch
         {
             TrackKind.Bass => new TrackModel { Name = "Bass", Kind = TrackKind.Bass, ColorHex = color, InstrumentName = "Electric Bass", MidiChannel = FindMidiChannel(project), MidiProgram = 33, StringTunings = new() { 43, 38, 33, 28 }, Measures = TemplateFactory.Measures(measures), Rig = new RigPreset { Name = "Bass", ArticulationMap = "Generic Bass" } },
-            TrackKind.Drums => new TrackModel { Name = "Drums", Kind = TrackKind.Drums, ColorHex = color, InstrumentName = "Drum Kit", MidiChannel = 9, MidiProgram = 0, StringTunings = new() { 49, 46, 42, 38, 36 }, Measures = TemplateFactory.Measures(measures), Rig = new RigPreset { Name = "GM Drum Kit", ArticulationMap = "GM Drums" } },
+            TrackKind.Drums => NewDrumTrack(new TrackModel { Name = "Drums", Kind = TrackKind.Drums, ColorHex = color, InstrumentName = "Drum Kit", MidiChannel = 9, MidiProgram = 0, StringTunings = new() { 49, 46, 42, 38, 36 }, Measures = TemplateFactory.Measures(measures), Rig = new RigPreset { Name = "GM Drum Kit", ArticulationMap = "GM Drums" } }),
             TrackKind.Keys => new TrackModel { Name = "Piano", Kind = TrackKind.Keys, ColorHex = color, InstrumentName = "Grand Piano", MidiChannel = FindMidiChannel(project), MidiProgram = 0, StringTunings = new() { 96, 91, 86, 81, 76, 71 }, Measures = TemplateFactory.Measures(measures), Rig = new RigPreset { Name = "Piano", ArticulationMap = "Piano" } },
             _ => new TrackModel { Name = "Guitar", Kind = TrackKind.Guitar, ColorHex = color, InstrumentName = "Electric Guitar", MidiChannel = FindMidiChannel(project), MidiProgram = 29, StringTunings = new() { 64, 59, 55, 50, 45, 40 }, Measures = TemplateFactory.Measures(measures), Rig = new RigPreset { Name = "Overdriven Guitar", ArticulationMap = "Generic Guitar" } }
         };
+    }
+
+    /// <summary>A new drum track takes the default drum map's TAB lines (not a separate hard-coded list).</summary>
+    private static TrackModel NewDrumTrack(TrackModel track)
+    {
+        DrumMaps.Apply(track, DrumMaps.GuitarPro5);
+        return track;
     }
 
     public bool DeleteTrack(SongProject project, int index)
@@ -105,6 +113,9 @@ public sealed class TrackController
         var drum = entry?.IsDrumKit ?? preset!.Map == "GM Drums";
         if (drum && track.MidiChannel != 9) track.MidiChannel = 9;
         else if (!drum && track.MidiChannel == 9) track.MidiChannel = FindMidiChannel(project);
+        // An empty track takes the kind and default strings of the new instrument (a bass sound gets 4 strings);
+        // a track with notes keeps its strings and kind, so no written note ever moves.
+        if (!drum) TrackSetup.AdoptInstrumentKind(track, track.InstrumentName, track.MidiChannel);
         return true;
     }
 

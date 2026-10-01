@@ -166,6 +166,12 @@ public sealed class AudioEngineClient : IDisposable
         if (project is not null && !idle && MixerBuses.ActiveMonitor(project, settings.MonitorFx) is { } monitorFx) wanted.Add(monitorFx);
         if (!ownIdle && _config != config) { _config = config; Send(EngineCommand.Configure, w => w.Write(config)); }
         if (!ownIdle) SyncWindowsPathOffset(config);
+        if (EngineProcessId is int enginePid && _limiterSent != (enginePid, settings.LiveLimiter))
+        {
+            _limiterSent = (enginePid, settings.LiveLimiter);
+            var liveLimiter = settings.LiveLimiter;
+            Send(EngineCommand.SetLiveLimiter, w => w.Write(liveLimiter));
+        }
         var now = WarmClock();
         foreach (var parked in _parkedSince.Keys.Where(s => !_slots.ContainsValue(s)).ToList()) _parkedSince.Remove(parked);   // a crash cleared the slots
 
@@ -304,6 +310,33 @@ public sealed class AudioEngineClient : IDisposable
         ScheduleWarmCheck();
     }
 
+    /// <summary>
+    /// UI thread: a document closed. Its tracks' chains are removed now instead of being parked for <see cref="WarmIdle"/>: a closed tab
+    /// never comes back (reopening the file builds new tracks), so a parked chain would only cost memory and CPU until it expired
+    /// (one large sampler per closed song). Shared bus slots stay for the next owner's Sync; the document is no longer referenced.
+    /// The removal is posted, not done inline: chain windows of the closed tracks close later in the same close (tab switch, owned
+    /// windows of a closing window) and a startup track's window asks the engine for its plug-in states as it closes; that request
+    /// must reach the engine before the chain is removed, or the startup template keeps stale states.
+    /// </summary>
+    public void ReleaseOwner(object owner) => RaiseOnUi(() => ReleaseOwnerNow(owner));
+
+    private void ReleaseOwnerNow(object owner)
+    {
+        foreach (var track in _slots.Where(kv => !kv.Key.IsBus && _slotOwners.TryGetValue(kv.Value, out var o) && ReferenceEquals(o, owner)).Select(kv => kv.Key).ToList())
+            RemoveSlot(track);
+        foreach (var slot in _slotOwners.Where(kv => ReferenceEquals(kv.Value, owner)).Select(kv => kv.Key).ToList())
+            _slotOwners.Remove(slot);
+        // No track of any document left (the closed one was the last, e.g. its window closed and no other window syncs): its bus,
+        // master and monitor chains go too and the warm period starts, as a Sync without engine tracks would do, instead of the
+        // closed song's bus chains staying loaded and unowned until some later Sync.
+        if (IsRunning && !_slots.Keys.Any(t => !t.IsBus))
+        {
+            foreach (var bus in _slots.Keys.ToList()) RemoveSlot(bus);
+            _idleSince ??= WarmClock();
+        }
+        ScheduleWarmCheck();
+    }
+
     private void ResetWarmState()
     {
         _slotOwners.Clear();
@@ -315,6 +348,7 @@ public sealed class AudioEngineClient : IDisposable
     internal void ExpireWarmForTest() => ExpireWarm();
     internal bool IsParkedForTest(TrackModel track) => _slots.TryGetValue(track, out var slot) && _parkedSince.ContainsKey(slot);
     internal int ChainLoadsSentForTest => Volatile.Read(ref _nextChainLoad);
+    internal bool IdleForTest => _idleSince is not null;
     /// <summary>Self-test hook: a "running" engine with no process or pipe (every Send is dropped), for UI-side bookkeeping tests.</summary>
     internal void AttachFakeForTest() { _stopping = false; IsRunning = true; }
 
@@ -324,6 +358,7 @@ public sealed class AudioEngineClient : IDisposable
     /// <summary>Last Windows audio path measurement, for diagnostics.</summary>
     internal static string WindowsPathDetail { get; private set; } = "";
     private int? _pathOffsetSentTo;
+    private (int Pid, bool On) _limiterSent;   // live safety limiter state the running engine was last told
 
     /// <summary>
     /// ASIO + follow Windows volume: the engine also needs the part of the Windows path's attenuation the volume APIs do not
@@ -511,6 +546,38 @@ public sealed class AudioEngineClient : IDisposable
         }
     }
 
+    /// <summary>The plug-in at chain index <paramref name="index"/> failed to load, per the engine's acknowledgement of the current request (an older or missing acknowledgement says nothing).</summary>
+    internal static bool InstrumentFailed(ChainAck? ack, int currentGeneration, int index) =>
+        ack is not null && ack.Generation == currentGeneration && ack.Plugins.Any(r => r.Index == index && r.Status != PluginLoadStatus.Loaded);
+
+    /// <summary>
+    /// Marks each track's plug-ins the engine cannot play (<see cref="PluginSlot.Unavailable"/>): untrusted, missing, quarantined (a crash) or
+    /// skipped for this song, or reported as not loaded by the engine. Cheap (no engine traffic); returns true when any flag changed, so the
+    /// caller re-applies the automatic GM sound. Run before <see cref="MixerGroups.ApplyAutoGm"/>.
+    /// </summary>
+    public bool RefreshAvailability(IEnumerable<TrackModel> tracks, PluginSettings settings)
+    {
+        var changed = false;
+        ICollection<string> quarantined = Quarantine?.Invoke() ?? Array.Empty<string>();
+        if (SkipForNow?.Invoke() is { Count: > 0 } skipped) quarantined = quarantined.Concat(skipped).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        foreach (var track in tracks)
+        {
+            if (track.IsBus || track.Rig.Plugins.Count == 0) continue;
+            var slotKnown = _slots.TryGetValue(track, out var slot);
+            ChainAck? ack = null;
+            if (slotKnown) _lastAcks.TryGetValue(slot, out ack);
+            var generation = slotKnown ? _chainRequests.GetValueOrDefault(slot) : -1;
+            var specs = PluginTrust.BuildSpecs(track.Rig.Plugins, quarantined, settings);
+            for (var i = 0; i < track.Rig.Plugins.Count; i++)
+            {
+                var p = track.Rig.Plugins[i];
+                var unavailable = specs[i].Skip || InstrumentFailed(ack, generation, i);
+                if (p.Unavailable != unavailable) { p.Unavailable = unavailable; changed = true; }
+            }
+        }
+        return changed;
+    }
+
     /// <summary>Every plug-in's live bypass: its own switch, and all of them while the chain is off (they stay loaded). Sent per plug-in that changed.</summary>
     private void SyncBypass(TrackModel track, int slot)
     {
@@ -597,6 +664,8 @@ public sealed class AudioEngineClient : IDisposable
     public event Action<TrackModel, string, double, double>? Recorded;
     /// <summary>The audio input could not be opened (message).</summary>
     public event Action<string>? InputError;
+    /// <summary>A recording lost input to a slow disk: one summary line (UI thread), after the take's Recorded event.</summary>
+    public event Action<string>? RecordingLoss;
 
     /// <summary>The engine slot a track plays through, or -1 (Windows MIDI).</summary>
     public int SlotOf(TrackModel track) => IsRunning && _slots.TryGetValue(track, out var slot) ? slot : -1;
@@ -1162,6 +1231,7 @@ public sealed class AudioEngineClient : IDisposable
                         break;
                     }
                     case EngineEvent.InputError: { var message = r.ReadBoundedString(); RaiseOnUi(() => InputError?.Invoke(message)); break; }
+                    case EngineEvent.RecordingLoss: { var message = r.ReadBoundedString(); RaiseOnUi(() => RecordingLoss?.Invoke(message)); break; }
                     case EngineEvent.EditorClosed: RaiseOnUi(() => EditorClosed?.Invoke()); break;
                     case EngineEvent.EditorSize:
                     {

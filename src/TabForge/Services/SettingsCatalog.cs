@@ -1,4 +1,5 @@
 using TabForge.Documents;
+using TabForge.Models;
 
 namespace TabForge.Services;
 
@@ -26,30 +27,67 @@ public sealed class SettingDescriptor
     public required Func<object?> Get { get; init; }
     public required Action<object?> Set { get; init; }
     public string SearchText { get; init; } = "";
+    /// <summary>True for a row shown inside its group's collapsed "More options"; false for a Basic row that is always visible.</summary>
+    public bool More { get; init; }
+    /// <summary>Sort key inside a page: the group's position, then the row's position (see <see cref="SettingsCatalog"/> layout table).</summary>
+    public int Order { get; init; }
 
     public string Tooltip(HotkeySettings hotkeys)
     {
         var text = string.IsNullOrWhiteSpace(Description) ? Title : Description;
-        return HotkeyAction is null ? text : text + HotkeyCatalog.TooltipSuffix(hotkeys, HotkeyAction);
+        return HotkeyAction is null ? text : HotkeyCatalog.TooltipWithKey(hotkeys, text, HotkeyAction);
     }
 }
 
 /// <summary>Declarative catalogue of settings exposed in the Settings window.</summary>
 public static class SettingsCatalog
 {
+    // Pages, in rail order (Preferences reorganisation, owner decisions 2026-09-30). The display name is the page key.
+    public const string Home = "Common settings";
     public const string General = "General";
-    public const string Appearance = "Appearance & colours";
-    public const string Score = "Score & notation";
-    /// <summary>Playback following and highlighting, transport, metronome and note preview: one page (was "Playback" and "Audio").</summary>
-    public const string Playback = "Playback & sound";
-    public const string Audio = Playback;
-    public const string AudioVst = "Audio & VST";
+    public const string Appearance = "Appearance";
+    public const string Score = "Score & Notation";
+    public const string Fretboard = "Fretboard & Keyboard";
+    public const string Timeline = "Timeline & Tracks";
     public const string Editing = "Editing";
-    public const string Timeline = "Timeline & sections";
-    public const string Fretboard = "Fretboard";
-    public const string Tabs = "Tabs & windows";
-    public const string Hotkeys = "Hotkeys";
+    /// <summary>Scrolling while playing, the playing highlight, speed, metronome, count-in and note preview.</summary>
+    public const string Playback = "Playback & Practice";
+    public const string Audio = Playback;
+    public const string AudioVst = "Audio & Plug-ins";
+    public const string Recording = "Recording";
+    public const string Tabs = "Tabs & Windows";
+    public const string Hotkeys = "Shortcuts";
+    public const string Files = "Files & Backups";
     public const string Advanced = "Advanced";
+
+    /// <summary>Stable page ids (for deep links that should survive a rename) and the old display names, all mapped to the page.</summary>
+    private static readonly Dictionary<string, string> PageAliases = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["home"] = Home, ["general"] = General, ["appearance"] = Appearance, ["score"] = Score, ["fretboard"] = Fretboard,
+        ["timeline"] = Timeline, ["editing"] = Editing, ["playback"] = Playback, ["audio"] = AudioVst, ["recording"] = Recording,
+        ["tabs"] = Tabs, ["shortcuts"] = Hotkeys, ["files"] = Files, ["advanced"] = Advanced,
+        // Display names before the reorganisation.
+        ["Appearance & colours"] = Appearance, ["Score & notation"] = Score, ["Playback & sound"] = Playback,
+        ["Audio & VST"] = AudioVst, ["Timeline & sections"] = Timeline, ["Tabs & windows"] = Tabs, ["Hotkeys"] = Hotkeys,
+    };
+
+    /// <summary>Resolves a page id, a current name or an old name to the page's name; null when unknown.</summary>
+    public static string? ResolvePage(string? idOrName)
+    {
+        if (string.IsNullOrWhiteSpace(idOrName)) return null;
+        if (Categories.Contains(idOrName, StringComparer.OrdinalIgnoreCase)) return Categories.First(c => c.Equals(idOrName, StringComparison.OrdinalIgnoreCase));
+        return PageAliases.TryGetValue(idOrName.Trim(), out var page) ? page : null;
+    }
+
+    /// <summary>The rail's captions and the pages under each (non-clickable captions, like Windows 11 Settings).</summary>
+    public static readonly IReadOnlyList<(string Band, string[] Pages)> Bands = new[]
+    {
+        ("", new[] { Home }),
+        ("BASICS", new[] { General, Appearance }),
+        ("MUSIC", new[] { Score, Fretboard, Timeline, Editing }),
+        ("SOUND", new[] { Playback, AudioVst, Recording }),
+        ("SYSTEM", new[] { Tabs, Hotkeys, Files, Advanced }),
+    };
 
     public const string DefaultAudioDevice = "(Windows default)";
 
@@ -86,11 +124,157 @@ public static class SettingsCatalog
 
     public static readonly IReadOnlyList<string> Categories = new[]
     {
-        General, Appearance, Score, Playback, AudioVst, Editing, Timeline, Fretboard, Tabs, Hotkeys, Advanced
+        Home, General, Appearance, Score, Fretboard, Timeline, Editing, Playback, AudioVst, Recording, Tabs, Hotkeys, Files, Advanced
     };
 
-    public static bool Matches(SettingDescriptor descriptor, string lowerCaseQuery) =>
-        lowerCaseQuery.Length == 0 || descriptor.SearchText.Contains(lowerCaseQuery, StringComparison.Ordinal);
+    /// <summary>Everyday words that find a row by another name: alias -> the word the row's text uses (the alias itself still matches).</summary>
+    private static readonly Dictionary<string, string[]> Synonyms = BuildSynonyms(
+        "theme: dark light colour color skin mode",
+        "audio: soundcard speakers headphones interface output driver device",
+        "shortcuts: hotkey hotkeys keybinding keybindings key",
+        "buffer: latency delay lag sync",
+        "follow: scroll jump page-turn",
+        "bar: measure",
+        "metronome: click count-in",
+        "fretboard: neck frets",
+        "recording: input microphone take",
+        "autosave: backup recovery",
+        "font: text typeface size",
+        "tablature: tab");
+
+    private static Dictionary<string, string[]> BuildSynonyms(params string[] groups)
+    {
+        var map = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+        foreach (var group in groups)
+        {
+            var parts = group.Split(':', 2);
+            var head = parts[0].Trim();
+            foreach (var alias in parts[1].Split(' ', StringSplitOptions.RemoveEmptyEntries))
+            {
+                if (!map.TryGetValue(alias, out var list)) map[alias] = list = new List<string>();
+                list.Add(head);
+            }
+        }
+        return map.ToDictionary(pair => pair.Key, pair => pair.Value.ToArray(), StringComparer.Ordinal);
+    }
+
+    /// <summary>A query matches when every word of it is found (itself or through a synonym) in the row's text, in any order.</summary>
+    public static bool Matches(SettingDescriptor descriptor, string lowerCaseQuery)
+    {
+        if (lowerCaseQuery.Length == 0 || descriptor.SearchText.Contains(lowerCaseQuery, StringComparison.Ordinal)) return true;
+        var words = lowerCaseQuery.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (words.Length == 0) return true;
+        foreach (var word in words)
+        {
+            if (descriptor.SearchText.Contains(word, StringComparison.Ordinal)) continue;
+            if (Synonyms.TryGetValue(word, out var heads) && heads.Any(h => descriptor.SearchText.Contains(h, StringComparison.Ordinal))) continue;
+            return false;
+        }
+        return true;
+    }
+
+    /// <summary>
+    /// Where every catalogue row lives: page, group, and Basic (always shown) or More (inside the group's collapsed "More options",
+    /// marked with a trailing *). The order here is the order on the page. Only the place a row is shown changes; nothing is stored differently.
+    /// </summary>
+    private static readonly (string Page, string Group, string Keys)[] Layout =
+    {
+        (General, "Updates", "general.checkupdates"),
+        (General, "Window", "general.restorewindow"),
+        (General, "Confirmations", "general.confirmclose general.confirmdiscardsettings editing.confirmdelete timeline.confirmdelete"),
+
+        (Appearance, "Theme", "appearance.thememode"),
+        (Appearance, "Size and text", "appearance.uiscale appearance.density appearance.font* appearance.fontsize* appearance.iconsize* appearance.toolbaricons*"),
+        (Appearance, "Panels and toolbars", "general.toolbar general.statusbar appearance.tabstrip"),
+        (Appearance, "Track colours", "appearance.tracktint appearance.groupcolour.guitars* appearance.groupcolour.basses* appearance.groupcolour.keys* appearance.groupcolour.drums* appearance.groupcolour.other* appearance.groupcolour.other-instruments*"),
+        (Appearance, "Interface colours", "appearance.accent"),
+        (Appearance, "Motion", "appearance.reduceanimations appearance.animationspeed* timeline.draganimation*"),
+        (Appearance, "Custom palette", "appearance.background* appearance.panel* appearance.titlebar* appearance.tabactive* appearance.tabhover* appearance.text* appearance.muted*"),
+
+        (Score, "What is shown", "score.defaultnotation score.pagelayout score.scrolling score.barnumbers score.sectionheadings score.dynamics score.barnumberfrequency* score.ledger*"),
+        (Score, "Spacing and size", "appearance.spacing score.systemspacing* score.measurespacing*"),
+        (Score, "Text and fonts", "appearance.scorefont appearance.scorefontsize score.textfonts appearance.scorebold* appearance.scoreitalic*"),
+        (Score, "Appearance", "appearance.paper appearance.scorepaper.dark* appearance.scorepaper.light* appearance.scoreink.dark* appearance.scoreink.light* appearance.scorelines.dark* appearance.scorelines.light* appearance.cursor* score.staffopacity* appearance.selection* appearance.hover* score.hoverintensity* score.selectionintensity*"),
+
+        (Fretboard, "Panel", "appearance.fretboard fretboard.position fretboard.instrumentview fretboard.showallas fretboard.locksize"),
+        (Fretboard, "Guitar fretboard", "editing.frets editing.lefthanded editing.notenames"),
+        (Fretboard, "Keyboard", "fretboard.keyboardkeys fretboard.keyboardcolours*"),
+        (Fretboard, "Practice aids", "editing.horizon.enabled editing.scale follow.fretboard editing.horizon* audio.fretboardstyle*"),
+        (Fretboard, "Appearance", "fretboard.scalestyle* fretboard.scalecolour* fretboard.scalestrength* fretboard.markercolour* fretboard.markerbrightness* fretboard.numbersize* fretboard.stringspacing*"),
+
+        (Timeline, "Track list", "timeline.volumestyle timeline.panstyle timeline.autofit timeline.trackgroups"),
+        (Timeline, "Clip lanes", "timeline.removeemptylanes"),
+        (Timeline, "Timeline display", "appearance.arrangement timeline.numbers timeline.individualnotes timeline.continuousline timeline.hideemptygrid* timeline.barglow* timeline.playheadstyle* appearance.timelinescrollbar*"),
+        (Timeline, "Sections", "timeline.similarcolours timeline.brackets timeline.names follow.sectionglow* appearance.sectionbracket*"),
+
+        (Editing, "Note entry", "editing.duration editing.advance editing.reverseplusminus* editing.preventoverflow*"),
+        (Editing, "Mouse and scrolling", "editing.scorewheel*"),
+        (Editing, "Copy and paste", "editing.paste.beats* editing.paste.octave* editing.paste.bars* editing.paste.barsettings* editing.paste.drums*"),
+
+        (Playback, "Scrolling and following", "follow.mode follow.horizontal follow.vertical follow.anticipation* follow.verticaltrigger* follow.margin* follow.stopmanual* follow.stopatend* follow.fps*"),
+        (Playback, "Appearance", "follow.highlight follow.colour follow.playhead follow.bg* follow.duration.enabled* follow.durationglow* follow.durationopacity* follow.playhead.thickness*"),
+        (Playback, "Practice", "audio.metronome audio.countin audio.speed audio.countinbars*"),
+        (Playback, "Metronome", "audio.metrovolume audio.metroclick* audio.metroaccent* audio.metroaccentvolume* audio.metroclickvolume* audio.metrodivision*"),
+        (Playback, "Note preview", "audio.preview audio.previewlen* audio.letring*"),
+        (Playback, "Several tabs", "tabs.playbackonswitch"),
+
+        (AudioVst, "Output device", "vst.driver vst.device vst.buffer vst.renderlimiter vst.samplerate* vst.asio.out* vst.asio.outlast* vst.followvolume* vst.livelimiter*"),
+        (AudioVst, "Playback engine", "vst.playall* vst.autogm* vst.winmidilatency*"),
+        (AudioVst, "Plug-ins", "vst.folders vst.commonfolders* vst.rememberscan* vst.dock* vst.ontop* vst.scanstandard* vst.isolate* vst.autopitch* vst.startuptracks* vst.quarantine*"),
+
+        (Recording, "Input device", "vst.input vst.asio.inputs vst.asio.infirst* vst.asio.inlast*"),
+        (Recording, "Timing", "vst.recordoffset*"),
+
+        (Tabs, "Opening and closing tabs", "tabs.closebutton tabs.lastclosed tabs.newposition tabs.openincurrent tabs.playing"),
+        (Tabs, "Tab look", "tabs.style* tabs.width* tabs.maxwidth* tabs.minwidth* tabs.height* tabs.fontsize*"),
+        (Tabs, "Mouse actions", "tabs.doubleclick* tabs.middleclick* tabs.middlebar*"),
+        (Tabs, "Dragging between windows", "tabs.detach* tabs.merge*"),
+
+        (Files, "Opening and saving", "general.openfromexplorer general.saveformat"),
+        (Files, "Backups and recovery", "general.autosave"),
+        (Files, "Windows integration", "general.associate*"),
+        (Files, "Linked audio", "audio.linkedmedia*"),
+    };
+
+    private sealed record Place(string Page, string Group, bool More, int Order);
+
+    private static readonly Dictionary<string, Place> Places = BuildPlaces();
+
+    private static Dictionary<string, Place> BuildPlaces()
+    {
+        var places = new Dictionary<string, Place>(StringComparer.OrdinalIgnoreCase);
+        var order = 0;
+        foreach (var (page, group, keys) in Layout)
+            foreach (var entry in keys.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+            {
+                var more = entry.EndsWith('*');
+                places[more ? entry[..^1] : entry] = new Place(page, group, more, order++);
+            }
+        return places;
+    }
+
+    /// <summary>Where a row lives now (page, group, level); null when the key is not in the layout table.</summary>
+    internal static (string Page, string Group, bool More)? PlaceOf(string key) =>
+        Places.TryGetValue(key, out var place) ? (place.Page, place.Group, place.More) : null;
+
+    /// <summary>Menu wording, old titles and old page names that still find a row in search (the audit's "old names" rule).</summary>
+    private static readonly Dictionary<string, string> OldNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["audio.fretboardstyle"] = "preview layout", ["editing.horizon.enabled"] = "preview next notes", ["editing.horizon"] = "preview length",
+        ["fretboard.numbersize"] = "number size", ["appearance.paper"] = "dark page light page", ["follow.mode"] = "page turn smooth page turn follow the playhead",
+        ["timeline.barglow"] = "subtle bar glow", ["timeline.individualnotes"] = "timeline display individual notes",
+        ["timeline.continuousline"] = "timeline display continuous line", ["timeline.hideemptygrid"] = "timeline display hide grid",
+        ["appearance.density"] = "density", ["score.defaultnotation"] = "show standard notation default score display",
+        ["score.pagelayout"] = "page continuous", ["score.scrolling"] = "vertical horizontal", ["score.textfonts"] = "text fonts",
+        ["fretboard.showallas"] = "show all tracks as", ["fretboard.instrumentview"] = "show this track as",
+        ["vst.driver"] = "audio vst", ["vst.folders"] = "audio vst", ["general.confirmclose"] = "stop asking are you sure",
+    };
+
+    private static readonly Dictionary<string, string> PageWords = new(StringComparer.OrdinalIgnoreCase)
+    {
+        [AudioVst] = "audio vst plugins", [Hotkeys] = "hotkeys", [Appearance] = "colours colors look", [Playback] = "playback sound",
+        [Score] = "notation", [Timeline] = "sections arrangement", [Tabs] = "windows",
+    };
 
     public static List<SettingDescriptor> Build(AppSettings s)
     {
@@ -142,8 +326,8 @@ public static class SettingsCatalog
             Int(Appearance, "Interface", "appearance.tracktint", "Track colour tint", v => a.TrackTintPercent = v, () => a.TrackTintPercent, 0, 60,
                 "How strongly each track's row and timeline lane take the track's colour (0 = off). Subtle and darker in the dark theme. Tracks can turn it off in Track properties.",
                 "track colour color tint background row lane intensity transparency", unit: "%"),
-            Choice(Appearance, "Interface", "appearance.density", "Density", v => a.Density = v, () => a.Density,
-                new[] { "Compact", "Comfortable", "Spacious" }, "Adjust toolbar and control spacing.", "compact comfortable spacious density"),
+            Choice(Appearance, "Interface", "appearance.density", "Spacing", v => a.Density = v, () => a.Density,
+                new[] { "Compact", "Comfortable", "Spacious" }, "How tightly the toolbar and buttons are packed.", "compact comfortable spacious density"),
             Bool(Appearance, "Motion", "appearance.reduceanimations", "Reduce animations", v => a.ReduceAnimations = v, () => a.ReduceAnimations,
                 "Disable short tab and timeline drag transitions.", "motion accessibility reduce animation"),
             Number(Appearance, "Motion", "appearance.animationspeed", "Animation speed", v => a.AnimationSpeed = v, () => a.AnimationSpeed, 0.25, 2,
@@ -199,10 +383,8 @@ public static class SettingsCatalog
                 "Scale engraved measure widths while preserving note and annotation clearance.", "bar measure horizontal width spacing", "x", 0.05, 2),
             Choice(Score, "Layout", "score.ledger", "Ledger lines", v => a.LedgerLines = v, () => a.LedgerLines,
                 new[] { "Standard", "Minimal", "Hidden" }, "Choose the notation ledger-line style.", "staff ledger lines minimal standard hidden"),
-            Number(Score, "Layout", "score.ledgeropacity", "Ledger-line opacity", v => a.LedgerLineOpacity = v / 100, () => a.LedgerLineOpacity * 100, 0, 100,
-                "Opacity of notation ledger lines.", "score ledger alpha percent", "%", 1, 0),
-            Number(Score, "Layout", "score.staffopacity", "Staff-line opacity", v => a.StaffLineOpacity = v / 100, () => a.StaffLineOpacity * 100, 0, 100,
-                "Opacity of staff and TAB lines.", "staff tab string line alpha percent", "%", 1, 0),
+            Number(Score, "Layout", "score.staffopacity", "Staff and ledger line opacity", v => a.StaffLineOpacity = v / 100, () => a.StaffLineOpacity * 100, 0, 100,
+                "Opacity of the staff, TAB and ledger lines. Staff lines and ledger lines always share one colour (the dark / light mode staff-line colours) and one opacity.", "staff tab string ledger line alpha percent opacity", "%", 1, 0),
             Bool(Score, "Labels", "score.barnumbers", "Show bar numbers", v => a.ShowScoreBarNumbers = v, () => a.ShowScoreBarNumbers,
                 "Show measure numbers on the score page.", "measure number bar label"),
             Int(Score, "Labels", "score.barnumberfrequency", "Bar-number frequency", v => a.ScoreBarNumberFrequency = v, () => a.ScoreBarNumberFrequency, 1, 16,
@@ -231,10 +413,22 @@ public static class SettingsCatalog
                 "Staff and TAB line colour on light score paper.", "score staff line light"),
             Colour(Score, "Score colours", "appearance.cursor", "Edit cursor colour", v => a.CursorColour = v, () => a.CursorColour,
                 "Colour of the edit caret when playback is stopped.", "edit cursor caret"),
+            // Page layout: the score right-click menu's Page / Continuous and Vertical / Horizontal choices (saved as the layout songs open with).
+            Choice(Score, "Page layout", "score.pagelayout", "Score page layout", v => s.PreferredContinuousScoreView = v == "Continuous",
+                () => s.PreferredContinuousScoreView ? "Continuous" : "Page", new[] { "Page", "Continuous" },
+                "Page: the score is drawn as paper pages. Continuous: one seamless sheet. Used for every song you open; right-click the score to change the open song.",
+                "page paper continuous seamless score layout view right click"),
+            Choice(Score, "Page layout", "score.scrolling", "Score scrolling", v => s.PreferredHorizontalScoreView = v == "Horizontal",
+                () => s.PreferredHorizontalScoreView ? "Horizontal" : "Vertical", new[] { "Vertical", "Horizontal" },
+                "Vertical: lines of music wrap and you scroll down. Horizontal: one long line you scroll to the right. Used for every song you open; right-click the score to change the open song.",
+                "vertical horizontal scroll wrap line score layout direction"),
+            Button(Score, "Notation", "score.textfonts", "Text & fonts for each part of the score",
+                "Choose the font, size and style of each kind of score text (title and header, chord names, lyrics, fret numbers, techniques, bar information) separately.",
+                "score text fonts per area title lyrics chord names fret numbers style"),
 
             // Playback
-            Choice(Playback, "Follow", "follow.mode", "Follow the playhead", v => fv.Mode = v, () => fv.Mode,
-                new[] { FollowModes.Off, FollowModes.Jump, FollowModes.Smooth }, "Turn score following off, jump by system, or smoothly scroll.", "follow auto scroll mode"),
+            Choice(Playback, "Follow", "follow.mode", "Scroll the score while playing", v => fv.Mode = v, () => fv.Mode,
+                new[] { FollowModes.Off, FollowModes.Jump, FollowModes.Smooth }, "Off, jump a line at a time, or scroll smoothly.", "follow auto scroll mode playhead"),
             Bool(Playback, "Follow", "follow.horizontal", "Horizontal follow", v => fv.HorizontalFollow = v, () => fv.HorizontalFollow,
                 "Scroll horizontally as playback reaches the end of the visible system.", "follow sideways x axis", dependsOn: "follow.mode", dependsOnValue: "Jump|Smooth"),
             Bool(Playback, "Follow", "follow.vertical", "Vertical follow", v => fv.VerticalFollow = v, () => fv.VerticalFollow,
@@ -308,6 +502,12 @@ public static class SettingsCatalog
                 "ASIO bypasses the Windows mixer, so the Windows volume keys and slider do nothing to it. On: TabForge scales its audio by the Windows master volume and mute (a software level; the interface's own knob is not touched). On by default.",
                 "asio windows volume master follow keys slider mute interface knob",
                 dependsOn: "vst.driver", dependsOnValue: "ASIO"),
+            Bool(AudioVst, "Audio output", "vst.renderlimiter", "Safety limiter on rendered audio", v => s.Render.SafetyLimiter = v, () => s.Render.SafetyLimiter,
+                "File > Render: a transparent limiter on the master mix (ceiling -0.3 dBFS, 1.5 ms lookahead, about 80 ms release) catches peaks that would otherwise clip the file. Material already below the ceiling is unchanged. Stems are never limited. On by default.",
+                "render export limiter safety clip clipping peak ceiling master wav mp3 loud"),
+            Bool(AudioVst, "Audio output", "vst.livelimiter", "Safety limiter on live playback", v => pl.LiveLimiter = v, () => pl.LiveLimiter,
+                "The same limiter on the live output of the audio engine, after the master chain and Monitor FX. Off by default: it adds about 1.5 ms of delay and normal playback should not need it.",
+                "live playback limiter safety clip clipping peak ceiling output engine loud"),
             Bool(AudioVst, "Audio input", "vst.asio.inputs", "Enable ASIO inputs", v => pl.AsioInputsEnabled = v, () => pl.AsioInputsEnabled,
                 "Use the ASIO driver's inputs for recording and monitoring. Off: no input through ASIO.", "asio enable inputs recording monitor",
                 dependsOn: "vst.driver", dependsOnValue: "ASIO"),
@@ -352,6 +552,9 @@ public static class SettingsCatalog
                 "Floating plug-in windows stay above other windows.", "plugin window always on top float"),
             Bool(AudioVst, "Plug-ins", "vst.scanstandard", "Also scan the standard VST folders", v => pl.ScanStandardFolders = v, () => pl.ScanStandardFolders,
                 "Off (default): only the folders you added are scanned. On: the usual Common Files VST3 and VstPlugins folders too.", "scan standard default folders common files vst3"),
+            Button(AudioVst, "Plug-ins", "vst.quarantine", "Plug-ins switched off after a crash",
+                "A plug-in that crashed is switched off so it cannot crash the next playback too. Review the list here and allow a plug-in again; it is then loaded on the next playback (the same button is in its FX chain window). Allowing again does not approve an untrusted file.",
+                "quarantine crashed crash switched off plugin allow again blocked faulted"),
             Bool(AudioVst, "Safety", "vst.isolate", "Run each plug-in in its own process", v => pl.SeparateProcessPerPlugin = v, () => pl.SeparateProcessPerPlugin,
                 "Off (default): all plug-ins share one audio engine process, separate from TabForge, so a crash never closes TabForge. On: each plug-in gets its own process, so a crash stops only that plug-in (uses more CPU and memory). This contains crashes only; it is not a security sandbox, so load only plug-ins you trust.",
                 "isolate sandbox crash process bridge separate safe plugin"),
@@ -425,7 +628,7 @@ public static class SettingsCatalog
                 "Show titles inside section blocks.", "section title marker label"),
             Bool(Timeline, "Timeline", "appearance.arrangement", "Show the arrangement overview", v => a.ShowArrangementOverview = v, () => a.ShowArrangementOverview,
                 "Show the track arrangement overview.", "timeline arrangement overview panel"),
-            Bool(Timeline, "Ruler", "timeline.numbers", "Show bar numbers", v => timeline.ShowBarNumbers = v, () => timeline.ShowBarNumbers,
+            Bool(Timeline, "Ruler", "timeline.numbers", "Show bar numbers in the ruler",v => timeline.ShowBarNumbers = v, () => timeline.ShowBarNumbers,
                 "Show measure numbers in the timeline ruler.", "bar measure ruler number"),
             Number(Timeline, "Sections", "follow.sectionglow", "Section glow intensity", v => fv.SectionGlowIntensity = v / 100, () => fv.SectionGlowIntensity * 100, 0, 100,
                 "Intensity of active and hovered section highlights.", "section glow active hover", "%", 1, 0),
@@ -433,59 +636,86 @@ public static class SettingsCatalog
                 "Stroke width of the active section indicator.", "active bracket width", "px"),
             Bool(Timeline, "Sections", "timeline.confirmdelete", "Confirm section deletion", v => g.ConfirmDeleteSection = v, () => g.ConfirmDeleteSection,
                 "Ask before removing the section and its musical content from every track.", "confirm destructive remove"),
+            // Timeline appearance: the four toggles that used to live only in the timeline's right-click menu.
+            Bool(Timeline, "Timeline appearance", "timeline.individualnotes", "Show the notes in each track lane", v => { timeline.ShowIndividualNotes = v; if (v) timeline.ShowContinuousLine = false; }, () => timeline.ShowIndividualNotes,
+                "Draw every note as a small mark in its track's lane. Turning this on turns off the continuous line.",
+                "timeline individual notes marks lane draw appearance"),
+            Bool(Timeline, "Timeline appearance", "timeline.continuousline", "Show one continuous line per track lane", v => { timeline.ShowContinuousLine = v; if (v) timeline.ShowIndividualNotes = false; }, () => timeline.ShowContinuousLine,
+                "Draw each track's music as one continuous line instead of separate notes. Turning this on turns off the individual notes.",
+                "timeline continuous line blocks lane draw appearance"),
+            Bool(Timeline, "Timeline appearance", "timeline.hideemptygrid", "Hide the grid in empty bars", v => timeline.HideEmptyGrid = v, () => timeline.HideEmptyGrid,
+                "Leave out the bar lines in bars that have no notes, so the timeline only shows where there is music.",
+                "timeline grid empty bars hide lines appearance"),
+            Bool(Timeline, "Timeline appearance", "timeline.barglow", "Soft glow on bars that have notes", v => timeline.BarGlow = v, () => timeline.BarGlow,
+                "A faint glow around bars that contain notes. Turn it off for a flatter, plainer timeline.",
+                "timeline subtle bar glow soft outline appearance"),
+            Choice(Timeline, "Timeline appearance", "timeline.playheadstyle", "Playback position marker", v => timeline.PlayheadStyle = PlayheadStyles.Normalize(v), () => PlayheadStyles.Normalize(timeline.PlayheadStyle),
+                PlayheadStyles.All,
+                "How the playback position shows on the timeline. Line is the white vertical line. Bar marker is a small dark square in the current bar of the selected track (it moves bar by bar). Both shows the line and the marker.",
+                "timeline playhead playback position marker line bar square cursor style"),
+            Bool(Timeline, "Track list", "timeline.trackgroups", "Show tracks in groups in new songs", v => timeline.ShowGroupsInNewSongs = v, () => timeline.ShowGroupsInNewSongs,
+                "New songs list their tracks under a header per group (guitars, basses, drums...), which can be collapsed. For the open song use the track list's right-click menu or the Mixer (Groups in track list).",
+                "track list groups headers collapse guitars basses drums mixer group tracks new song"),
+            Bool(Timeline, "Clip lanes", "timeline.removeemptylanes", "Remove empty clip lanes automatically", v => timeline.AutoRemoveEmptyLanes = v, () => timeline.AutoRemoveEmptyLanes,
+                "When a lane under a track has no clips left (you moved, cut or deleted the last one), remove it and close the lanes below it. Turn it off to keep empty lanes until you remove them yourself. A track that is armed for recording keeps its lanes.",
+                "clip lanes empty remove delete auto close takes audio midi tidy"),
             Bool(Timeline, "Dragging", "timeline.draganimation", "Animate section dragging", v => timeline.SectionDragAnimation = v, () => timeline.SectionDragAnimation,
                 "Animate sections moving aside while dragging.", "drag transition animation"),
 
             // Fretboard (legacy values remain in Editing for file compatibility)
-            Bool(Fretboard, "Display", "appearance.fretboard", "Show the fretboard", v => a.ShowFretboard = v, () => a.ShowFretboard,
+            Bool(Fretboard, "Appearance","appearance.fretboard", "Show the fretboard", v => a.ShowFretboard = v, () => a.ShowFretboard,
                 "Show the instrument/fretboard panel.", "instrument panel hide"),
-            Choice(Fretboard, "Display", "fretboard.position", "Fretboard position", v => a.FretboardPosition = v, () => a.FretboardPosition,
+            Choice(Fretboard, "Appearance","fretboard.position", "Fretboard position", v => a.FretboardPosition = v, () => a.FretboardPosition,
                 new[] { "Left", "Centre", "Right" }, "Snap the fretboard horizontally.", "fretboard alignment position"),
-            Choice(Fretboard, "Display", "editing.frets", "Fretboard frets", v => ed.FretboardFrets = int.Parse(v), () => ed.FretboardFrets.ToString(),
+            Choice(Fretboard, "Appearance","editing.frets", "Fretboard frets", v => ed.FretboardFrets = int.Parse(v), () => ed.FretboardFrets.ToString(),
                 new[] { "12", "24" }, "Show 12 or 24 frets.", "fret count range"),
-            Bool(Fretboard, "Display", "editing.lefthanded", "Left-handed fretboard", v => ed.LeftHanded = v, () => ed.LeftHanded,
+            Bool(Fretboard, "Appearance","editing.lefthanded", "Left-handed fretboard", v => ed.LeftHanded = v, () => ed.LeftHanded,
                 "Mirror the fretboard for left-handed playing.", "left handed mirror orientation"),
-            Bool(Fretboard, "Display", "editing.notenames", "Show note names on the fretboard", v => ed.ShowNoteNames = v, () => ed.ShowNoteNames,
+            Bool(Fretboard, "Appearance","editing.notenames", "Show note names on the fretboard", v => ed.ShowNoteNames = v, () => ed.ShowNoteNames,
                 "Label frets with their note names.", "pitch labels names"),
             Bool(Fretboard, "Preview", "editing.horizon.enabled", "Show look-ahead notes", v => ed.PreviewNotesEnabled = v, () => ed.PreviewNotesEnabled,
                 "Show upcoming notes on the fretboard.", "preview next future notes"),
-            Choice(Fretboard, "Display", "fretboard.instrumentview", "Default instrument view", v => ed.InstrumentView = v, () => ed.InstrumentView,
+            Choice(Fretboard, "Appearance","fretboard.instrumentview", "Default instrument view", v => ed.InstrumentView = v, () => ed.InstrumentView,
                 InstrumentViews.All,
                 "Match the instrument (default): stringed instruments get a fretboard with the track's own strings, drums get drum pads, and piano, winds and everything else get a keyboard. Or always show one view. Right-click the panel to change it for one track or all tracks.",
                 "instrument view fretboard keyboard piano drums pads default show match"),
-            Choice(Fretboard, "Display", "fretboard.keyboardkeys", "Keyboard size", v => ed.KeyboardKeys = int.TryParse(v, out var k) ? k : 88, () => ed.KeyboardKeys.ToString(),
+            Choice(Fretboard, "Appearance","fretboard.keyboardkeys", "Keyboard size", v => ed.KeyboardKeys = int.TryParse(v, out var k) ? k : 88, () => ed.KeyboardKeys.ToString(),
                 InstrumentViews.KeyboardSizes.Select(k => k.ToString()).ToArray(),
                 "Keys on the keyboard view: 88 is a full piano. Smaller keyboards follow the notes being played.",
                 "keyboard piano keys size 88 76 61 49 37 25"),
-            Choice(Fretboard, "Display", "fretboard.keyboardcolours", "Keyboard key colours", v => ed.KeyboardKeyColours = v, () => ed.KeyboardKeyColours,
+            Choice(Fretboard, "Appearance","fretboard.keyboardcolours", "Keyboard key colours", v => ed.KeyboardKeyColours = v, () => ed.KeyboardKeyColours,
                 KeyboardKeyStyles.All,
                 "The keyboard view's white keys: match the theme (soft grey in the dark theme, white in the light theme), or always grey or always white.",
                 "keyboard piano keys colour color grey gray white appearance"),
-            Choice(Fretboard, "Display", "fretboard.scalestyle", "Scale highlight style", v => ed.ScaleHighlightStyle = v, () => ed.ScaleHighlightStyle,
+            Choice(Fretboard, "Appearance","fretboard.scalestyle", "Scale highlight style", v => ed.ScaleHighlightStyle = v, () => ed.ScaleHighlightStyle,
                 ScaleHighlightStyles.All,
                 "How the notes of a highlighted scale are marked on the fretboard and keyboard: shaded cells, small circles or rings. The root is always marked more strongly.",
                 "scale highlight style circles dots rings shaded appearance guitar pro"),
-            Choice(Fretboard, "Display", "fretboard.scalecolour", "Scale highlight colour", v => ed.ScaleHighlightColour = v, () => ed.ScaleHighlightColour,
+            Choice(Fretboard, "Appearance","fretboard.scalecolour", "Scale highlight colour", v => ed.ScaleHighlightColour = v, () => ed.ScaleHighlightColour,
                 ScaleHighlightStyles.Colours,
                 "Colour of the scale highlight on the fretboard and keyboard.",
                 "scale highlight colour color blue green amber purple red teal grey"),
-            Choice(Fretboard, "Display", "fretboard.markercolour", "Fret marker colour", v => ed.FretMarkerColour = v, () => ed.FretMarkerColour,
+            Int(Fretboard, "Appearance", "fretboard.scalestrength", "Scale highlight strength", v => ed.ScaleHighlightStrength = v, () => ed.ScaleHighlightStrength,
+                ScaleHighlightStyles.MinStrength, ScaleHighlightStyles.MaxStrength,
+                "How strong the scale highlight looks on the fretboard and keyboard: lower is dimmer, higher is brighter (100% is the standard look). The root note always stays stronger than the other scale notes.",
+                "scale highlight strength opacity brightness dimmer brighter intensity transparency", unit: "%", step: ScaleHighlightStyles.StrengthStep),
+            Choice(Fretboard, "Appearance","fretboard.markercolour", "Fret marker colour", v => ed.FretMarkerColour = v, () => ed.FretMarkerColour,
                 FretMarkerLevels.Colours,
-                "Colour of the position dots on the fretboard (frets 3, 5, 7, 9, 12...). Default follows the theme.",
+                "Colour of the position dots on the fretboard (frets 3, 5, 7, 9, 12...). White is the standard; Default uses the theme's own dot colour.",
                 "fret marker dots inlay position colour color"),
-            Choice(Fretboard, "Display", "fretboard.markerbrightness", "Fret marker brightness", v => ed.FretMarkerBrightness = v, () => ed.FretMarkerBrightness,
+            Choice(Fretboard, "Appearance","fretboard.markerbrightness", "Fret marker brightness", v => ed.FretMarkerBrightness = v, () => ed.FretMarkerBrightness,
                 FretMarkerLevels.All,
-                "How bright the fretboard position dots are. Original is the earlier, dimmer look.",
+                "How bright the fretboard position dots are. Original (the standard) is the plain, dimmer look; the other levels lift the dots towards white.",
                 "fret marker dots inlay position brightness bright dim"),
-            Choice(Fretboard, "Display", "fretboard.numbersize", "Fret number size", v => ed.FretNumberSize = v, () => ed.FretNumberSize,
+            Choice(Fretboard, "Appearance","fretboard.numbersize", "Fret number size", v => ed.FretNumberSize = v, () => ed.FretNumberSize,
                 FretNumberSizes.All,
-                "Size of the fret numbers, technique tags and note bubbles on the fretboard (Large is the original size).",
+                "Size of the fret numbers, technique tags and note bubbles on the fretboard (Large is the standard size).",
                 "fret number size small medium large bubble label"),
-            Choice(Fretboard, "Display", "fretboard.stringspacing", "String spacing", v => ed.FretStringSpacing = v, () => ed.FretStringSpacing,
+            Choice(Fretboard, "Appearance","fretboard.stringspacing", "String spacing", v => ed.FretStringSpacing = v, () => ed.FretStringSpacing,
                 FretStringSpacings.All,
                 "How far apart the strings are drawn relative to the fret width. Natural keeps real-fretboard proportions in any window shape; Wide stretches up to 1.5x natural.",
                 "fretboard string spacing stretch compact natural wide tall portrait"),
-            Choice(Fretboard, "Display", "audio.fretboardstyle", "Fretboard style", v => au.FretboardStyle = v, () => au.FretboardStyle,
+            Choice(Fretboard, "Appearance","audio.fretboardstyle", "Fretboard style", v => au.FretboardStyle = v, () => au.FretboardStyle,
                 new[] { "TabForge", "GP5: Beat", "GP5: Beat + next beat", "GP5: Beat + bar", "GP5: Bar" },
                 "TabForge previews a set number of upcoming notes. The beat and bar layouts follow the score instead: the current beat, the next beat, or every note of the current bar.",
                 "fretboard style guitar pro gp5 look preview red show beat bar next"),
@@ -496,6 +726,13 @@ public static class SettingsCatalog
                 "Highlight scale tones on the fretboard.", "scale key root highlight notes"),
             Bool(Fretboard, "Playback", "follow.fretboard", "Update the fretboard during playback", v => fv.FollowFretboard = v, () => fv.FollowFretboard,
                 "Update fretboard note positions as playback moves.", "playback live update"),
+            // Size and per-track views: the fretboard right-click menu's "Lock fretboard size", "Show this track as" and "Show all tracks as".
+            Bool(Fretboard, "Size", "fretboard.locksize", "Lock fretboard size", v => a.LockInstrumentSize = v, () => a.LockInstrumentSize,
+                "Locked: dragging the pane's edge does not resize the fretboard or keyboard. Unlocked: the drawing scales with the pane (between 0.7x and 2x). The pane never clips: it scrolls when it is too small.",
+                "lock fretboard keyboard size resize pane splitter height scale drag", hotkey: "View.LockInstrumentSize"),
+            Button(Fretboard, "Instrument view", "fretboard.showallas", "Show all tracks as",
+                "Use the default instrument view above for every track of the open song, replacing any view you chose for a single track (right-click the fretboard > Show this track as).",
+                "show all tracks as instrument view fretboard keyboard drums apply every track reset per track"),
 
             // Tabs & windows
             Bool(Tabs, "Window", "general.restorewindow", "Remember the window size", v => g.RestoreWindow = v, () => g.RestoreWindow,
@@ -543,33 +780,37 @@ public static class SettingsCatalog
             // Advanced contains a deliberately informational page, not fabricated runtime toggles.
         };
 
+        // One colour per mixer group: the colour "Colour tracks by group" (track list menu) and the Mixer's group swatches use.
+        foreach (var group in new[] { MixerGroups.Guitars, MixerGroups.Basses, MixerGroups.Keys, MixerGroups.Drums, MixerGroups.Other, MixerGroups.AllButGuitarsAndBass })
+        {
+            var name = group;
+            list.Add(Colour(Appearance, "Track group colours", "appearance.groupcolour." + name.Replace(' ', '-').ToLowerInvariant(), $"{name} track colour",
+                v => a.GroupColours[name] = v, () => TrackColouring.ColourOf(name, a.GroupColours),
+                $"The colour of the {name} group. \"Colour tracks by group\" in the track list's right-click menu gives every {name.ToLowerInvariant()} track this colour.",
+                "track group colours colour color mixer guitars basses keys drums other instruments colour tracks by group"));
+        }
+
         for (var i = 0; i < list.Count; i++)
         {
             var d = list[i];
+            // A row not in the layout table keeps the page and group it was declared with (the catalogue self-test flags it).
+            var place = Places.TryGetValue(d.Key, out var p) ? p : null;
+            var page = place?.Page ?? d.Category;
+            var group = place?.Group ?? d.Group;
+            OldNames.TryGetValue(d.Key, out var oldName);
+            PageWords.TryGetValue(page, out var pageWords);
             list[i] = new SettingDescriptor
             {
-                Key = d.Key, Category = ThemeCategory(d), Group = d.Group, Title = d.Title, Description = d.Description,
+                Key = d.Key, Category = page, Group = group, Title = d.Title, Description = d.Description,
                 Kind = d.Kind, Choices = d.Choices, Min = d.Min, Max = d.Max, Step = d.Step, Decimals = d.Decimals,
                 Unit = d.Unit, DependsOn = d.DependsOn, DependsOnValue = d.DependsOnValue,
                 HotkeyAction = d.HotkeyAction, Keywords = d.Keywords,
-                Get = d.Get, Set = d.Set,
-                SearchText = string.Join(' ', new[] { d.Title, d.Description, d.Category, d.Group, d.Key }.Concat(d.Keywords)).ToLowerInvariant()
+                Get = d.Get, Set = d.Set, More = place?.More ?? false, Order = place?.Order ?? int.MaxValue,
+                SearchText = string.Join(' ', new[] { d.Title, d.Description, page, group, d.Key, oldName ?? "", pageWords ?? "" }.Concat(d.Keywords)).ToLowerInvariant()
             };
         }
         return list;
     }
-
-    // Everything about look and colour lives on one page: theme mode, glow/highlight strength and every
-    // colour setting, whichever feature it belongs to. Behaviour settings stay on their own pages.
-    private static readonly HashSet<string> ThemePageKeys = new(StringComparer.Ordinal)
-    {
-        "appearance.thememode", "appearance.paper", "follow.highlight", "follow.duration.enabled",
-        "follow.durationglow", "follow.durationopacity", "follow.sectionglow",
-        "score.hoverintensity", "score.selectionintensity", "score.ledgeropacity", "score.staffopacity"
-    };
-
-    private static string ThemeCategory(SettingDescriptor d) =>
-        d.Kind == SettingKind.Colour || ThemePageKeys.Contains(d.Key) ? Appearance : d.Category;
 
     private static SettingDescriptor Bool(string category, string group, string key, string title, Action<bool> set,
         Func<bool> get, string description, string keywords = "", string? hotkey = null, string? dependsOn = null,

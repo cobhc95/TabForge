@@ -205,6 +205,40 @@ public static partial class SelfTest
         }
     }
 
+    // Allow again: takes exactly that path off the quarantine list (any case); trust is untouched, so an untrusted path stays blocked.
+    private static void TestQuarantineAllowAgain()
+    {
+        var settings = new PluginSettings();
+        var untrusted = Path.Combine(Path.GetTempPath(), "tabforge-quar-" + Guid.NewGuid().ToString("N"), "crashy.dll");
+        var trusted = Path.Combine(Path.GetTempPath(), "tabforge-quar-" + Guid.NewGuid().ToString("N"), "okay.dll");
+        PluginTrust.Approve(settings, trusted);
+        var slots = new List<PluginSlot> { new() { Name = "u", Path = untrusted, Format = "VST2" }, new() { Name = "t", Path = trusted, Format = "VST2" } };
+        settings.Quarantined = new List<string> { untrusted, trusted, @"C:\other\keep.dll" };
+        var specs = PluginTrust.BuildSpecs(slots, settings.Quarantined, settings);
+        Check("quarantined plug-ins are sent as Skip", specs[0].Skip && specs[1].Skip && !specs[1].Untrusted);
+        Check("the quarantine list reports a path in any case", PluginQuarantine.Contains(settings.Quarantined, trusted.ToUpperInvariant()));
+        var removed = PluginQuarantine.AllowAgain(settings.Quarantined, trusted.ToUpperInvariant());
+        Check("Allow again removes exactly that path (any case)", removed == 1 && settings.Quarantined.Count == 2
+            && settings.Quarantined.Contains(untrusted) && settings.Quarantined.Contains(@"C:\other\keep.dll"));
+        specs = PluginTrust.BuildSpecs(slots, settings.Quarantined, settings);
+        Check("a trusted plug-in is no longer Skip after Allow again", !specs[1].Skip);
+        PluginQuarantine.AllowAgain(settings.Quarantined, untrusted);
+        specs = PluginTrust.BuildSpecs(slots, settings.Quarantined, settings);
+        Check("an untrusted plug-in stays Skip/Untrusted after Allow again (trust is not granted)", specs[0] is { Skip: true, Untrusted: true });
+        // Preferences applies a snapshot: the live crash list wins (a crash while Preferences was open is kept; Allow again sticks).
+        var live = new PluginSettings { Quarantined = new List<string> { "x.dll" } };
+        var snapshot = new PluginSettings { Quarantined = new List<string> { "x.dll" } };
+        live.Quarantined.Add("y.dll");   // the crash, while Preferences is open
+        PluginQuarantine.KeepLive(snapshot, live);
+        Check("applying a Preferences snapshot keeps a crash that happened meanwhile ([x] + y = [x, y])",
+            snapshot.Quarantined.SequenceEqual(new[] { "x.dll", "y.dll" }));
+        PluginQuarantine.AllowAgain(live.Quarantined, "x.dll");   // Allow again through the hook edits the live list
+        var snapshot2 = new PluginSettings { Quarantined = new List<string> { "x.dll" } };   // the stale copy still holds x
+        PluginQuarantine.KeepLive(snapshot2, live);
+        Check("Allow again sticks after a stale snapshot is applied ([y])", snapshot2.Quarantined.SequenceEqual(new[] { "y.dll" }));
+        Check("Allow again on a path not in the list changes nothing", PluginQuarantine.AllowAgain(settings.Quarantined, "x.dll") == 0 && settings.Quarantined.Count == 1);
+    }
+
     // Project-named plug-ins outside trusted locations must reach the engine as Skip until approved; UNC is never auto-trusted.
     private static void TestPluginTrustBoundary()
     {

@@ -16,6 +16,8 @@ public static partial class SelfTest
     private static readonly HashSet<string> SettingsWithSideEffects = new(StringComparer.OrdinalIgnoreCase)
     {
         "appearance.thememode",
+        // The timeline draws either individual notes or one continuous line: turning one on turns the other off.
+        "timeline.individualnotes", "timeline.continuousline",
     };
 
     private static void TestEverySettingIsWired()

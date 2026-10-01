@@ -140,6 +140,12 @@ public static partial class SelfTest
         var settings = new PluginSettings();
         Check("plug-in folders: only the user's own folders are scanned by default",
             !VstScannerService.RootsFor(settings).Any() && VstScannerService.RootsFor(new PluginSettings { ScanStandardFolders = true }).Any());
+        // The Add plug-in window's empty-state button runs this same method: the default stays off, one click turns the standard folders on.
+        VstScannerService.EnableStandardFolders(settings);
+        Check("plug-in folders: the empty-state button's action turns the standard folders on (scan roots appear)",
+            settings.ScanStandardFolders && VstScannerService.RootsFor(settings).Any());
+        Check("plug-in folders: the button tooltip lists the folders by environment name, never a user path",
+            VstScannerService.StandardFolderLabels.Length > 0 && VstScannerService.StandardFolderLabels.All(l => l.StartsWith('%') && !l.Contains(Environment.UserName, StringComparison.OrdinalIgnoreCase)));
         Check("mixer and FX chain can be bound to keys",
             HotkeyCatalog.All.Any(a => a.Id == "View.Mixer") && HotkeyCatalog.All.Any(a => a.Id == "Track.FxChain"));
         Check("wiring and MIDI processing can be bound to keys",

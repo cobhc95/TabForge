@@ -86,9 +86,9 @@ public sealed partial class ArrangementPanel
         var fx = new FxSplitButton
         {
             ChainOn = bus?.On ?? true, PluginCount = bus?.Rig.Plugins.Count ?? 0, Width = 50, Height = 18,
-            VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center,
-            ToolTip = "Group effects bus: FX opens the chain this group's tracks sum into before the master · power: bypass it"
+            VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center
         };
+        TooltipShortcuts.Bind(fx, "Group effects bus: FX opens the chain this group's tracks sum into before the master · power: bypass it", null);
         fx.OpenChain += (_, _) => BusFxRequested?.Invoke(this, group);
         fx.TogglePower += (_, _) => BusPowerRequested?.Invoke(this, group);
         cells["fx"] = fx;
@@ -198,8 +198,29 @@ public sealed partial class ArrangementPanel
         };
         groups.Click += (_, _) => GroupsToggleRequested?.Invoke(groups.IsChecked);
         menu.Items.Add(groups);
+        // Track colours live here, not under "+ Track": they colour existing tracks (the colour per group is a Preferences row).
+        var colours = new MenuItem { Header = "Colours", Style = (Style)Application.Current.FindResource(typeof(MenuItem)) };
+        var byGroup = new MenuItem
+        {
+            Header = "Colour tracks by group", Style = (Style)Application.Current.FindResource(typeof(MenuItem)),
+            ToolTip = "Give every track the colour of its group (guitars, basses, drums...). The colour of each group is set in Settings > Appearance > Track colours."
+        };
+        byGroup.Click += (_, _) => ColourByGroupRequested?.Invoke();
+        var pick = new MenuItem { Header = "Colour tracks…", Style = (Style)Application.Current.FindResource(typeof(MenuItem)) };
+        pick.Click += (_, _) => ColourTracksRequested?.Invoke();
+        colours.Items.Add(byGroup);
+        colours.Items.Add(pick);
+        menu.Items.Add(colours);
         var ownItems = own?.ToList() ?? new List<Control>();
         if (ownItems.Count > 0) { menu.Items.Add(new Separator()); foreach (var item in ownItems) menu.Items.Add(item); }
+        menu.Items.Add(new Separator());
+        var settings = new MenuItem
+        {
+            Header = "Track list settings…", Style = (Style)Application.Current.FindResource(typeof(MenuItem)),
+            ToolTip = "Open Settings > Timeline & Tracks (groups in new songs, automatic sizing, pan and volume controls)"
+        };
+        settings.Click += (_, _) => TrackListSettingsRequested?.Invoke();
+        menu.Items.Add(settings);
         var dock = DockMenuItems?.Invoke().ToList();
         if (dock is { Count: > 0 }) { menu.Items.Add(new Separator()); foreach (var item in dock) menu.Items.Add(item); }
         return menu;

@@ -68,6 +68,11 @@ public sealed class MixEngine : ISampleProvider
     /// </summary>
     public volatile float Ceiling = 1f;
 
+    /// <summary>Live master safety limiter (-0.3 dBFS, 1.5 ms lookahead). Off by default; <see cref="SafetyLimiter"/>.</summary>
+    public volatile bool LiveLimiter;
+    private readonly SafetyLimiter _limiter;
+    private bool _limiterWasOn;
+
     /// <param name="transport">The engine's song transport (null: a private one, e.g. for tests).</param>
     public MixEngine(SharedBlock shared, int sampleRate, int maxBlock, SongTransport? transport = null)
     {
@@ -83,6 +88,7 @@ public sealed class MixEngine : ISampleProvider
         _ticksPerFrame = (double)Stopwatch.Frequency / sampleRate;
         _tpfEst = _ticksPerFrame;
         _sampleRate = sampleRate;
+        _limiter = new SafetyLimiter(sampleRate);
         WaveFormat = WaveFormat.CreateIeeeFloatWaveFormat(sampleRate, 2);
     }
 
@@ -349,6 +355,13 @@ public sealed class MixEngine : ISampleProvider
             for (var i = 0; i < n; i++) poison += (_left[i] - _left[i]) + (_right[i] - _right[i]);
             if (poison != 0f) { Array.Clear(_left, 0, n); Array.Clear(_right, 0, n); }
             if (!float.IsFinite(master)) master = 0f;
+            // A7-A01: live safety limiter (off by default), after the master chain and the Monitor FX, before the output level.
+            if (LiveLimiter)
+            {
+                if (!_limiterWasOn) { _limiter.Reset(); _limiterWasOn = true; }
+                _limiter.Process(_left, _right, n);
+            }
+            else _limiterWasOn = false;
             for (var i = 0; i < n; i++)
             {
                 buffer[offset + 2 * (done + i)] = Math.Clamp(_left[i] * master, -ceiling, ceiling);

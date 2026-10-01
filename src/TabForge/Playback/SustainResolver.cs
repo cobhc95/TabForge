@@ -94,6 +94,28 @@ internal static class SustainResolver
         }
     }
 
+    /// <summary>
+    /// Moves a note-off earlier, to at most <paramref name="limitMs"/>, without ever placing it before its own
+    /// note-on (the on is always emitted right before its off). A repeated attack (tremolo picking, trill) that
+    /// would start at or after the limit is dropped: both events are marked <see cref="ScoreEvent.Dropped"/> and
+    /// <see cref="SortEvents"/> leaves them out, so nothing is sent for them (no quiet blip that a sampled plug-in could
+    /// still voice, and no note-off landing inside the next note of the same pitch).
+    /// Cutting only the off used to leave such an attack sounding forever (a hanging note).
+    /// </summary>
+    internal static void LimitOffTime(ScoreTimeline timeline, int offIndex, double limitMs)
+    {
+        if (offIndex < 0 || offIndex >= timeline.Events.Count) return;
+        var off = timeline.Events[offIndex];
+        if (off.TimeMs <= limitMs) return;
+        off.TimeMs = limitMs;
+        if (offIndex > 0 && timeline.Events[offIndex - 1] is { IsNoteOn: true } on &&
+            on.Data1 == off.Data1 && on.Channel == off.Channel && on.TimeMs + 1.0 > limitMs)
+        {
+            on.Dropped = true;
+            off.Dropped = true;
+        }
+    }
+
     private static void SetEnd(ScoreTimeline timeline, NoteEvent note, double endMs)
     {
         var sustainReleases = note.SustainOffEventIndices.Count > 0
@@ -138,11 +160,7 @@ internal static class SustainResolver
                     // dropping the new attack is not.
                     var desiredEnd = Math.Max(current.OnsetMs + 1.0, nextOnset - ReleaseGapMs);
                     foreach (var index in current.OffEventIndices)
-                    {
-                        if (index < 0 || index >= timeline.Events.Count) continue;
-                        var off = timeline.Events[index];
-                        if (off.TimeMs > desiredEnd) off.TimeMs = desiredEnd;
-                    }
+                        LimitOffTime(timeline, index, desiredEnd);
                 }
 
                 var lastOff = current.OffEventIndices
@@ -176,8 +194,10 @@ internal static class SustainResolver
         // remain select -> data-entry -> deselect, and expression endpoints must remain before
         // their same-time resets. Setup is sent before score events at an identical timestamp,
         // followed by track and original emission order for deterministic ties.
+        // Dropped events (an attack cut away by LimitOffTime) leave the list here, after the last use of event indices.
         var ordered = timeline.Events
             .Select((item, index) => (item, index))
+            .Where(pair => !pair.item.Dropped)
             .OrderBy(pair => pair.item.TimeMs)
             .ThenBy(pair => Priority(pair.item))
             .ThenBy(pair => pair.item.IsSetup ? 0 : 1)

@@ -1,6 +1,7 @@
 <UserControl x:Class="TabForge.Views.BrowserTabBar"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:TabForge.Views"
              Background="{x:Null}" Focusable="False">
     <!-- Rounded "pill" tabs that fade in on hover and brighten when active, a 20 px circular close
          button, a 36 px (+) button, and accent overflow arrows that appear only when the strip is wider
@@ -151,7 +152,8 @@
                                              ToolTip="Unsaved changes"/>
 
                                     <Button x:Name="TabClose" Grid.Column="3"
-                                            Click="TabClose_Click" AutomationProperties.Name="Close tab">
+                                            Click="TabClose_Click" AutomationProperties.Name="Close tab"
+                                            ToolTip="Close tab" local:TooltipShortcuts.Command="Tab.Close">
                                         <Path Data="{StaticResource IconClose}" Stroke="#B4BEC8" StrokeThickness="1.4"
                                               StrokeStartLineCap="Round" StrokeEndLineCap="Round"
                                               Width="10" Height="10" Stretch="Uniform" Fill="Transparent"/>
@@ -200,7 +202,7 @@
 
                 <!-- (+) sits immediately after the last tab -->
                 <Button x:Name="NewTabButton" Style="{StaticResource TabPlusButton}"
-                        ToolTip="New score in a new tab (Ctrl+T)" Click="NewTab_Click"
+                        ToolTip="New score in a new tab" local:TooltipShortcuts.Command="Tab.New" Click="NewTab_Click"
                         VerticalAlignment="Top"
                         AutomationProperties.Name="New tab"
                         WindowChrome.IsHitTestVisibleInChrome="True">

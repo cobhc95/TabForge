@@ -87,6 +87,48 @@ public static class ClipLanes
             if (!track.AudioClips.Any(c => c.Lane == lane && !ReferenceEquals(c, except) && c.Overlaps(from, to))) return lane;
     }
 
+    /// <summary>First lane (from <paramref name="startLane"/>) with nothing of the clips not in <paramref name="ignore"/> in [from, to).</summary>
+    public static int FreeLane(TrackModel track, double from, double to, IReadOnlyCollection<AudioClip> ignore, int startLane = 0)
+    {
+        for (var lane = startLane; ; lane++)
+            if (!track.AudioClips.Any(c => c.Lane == lane && !ignore.Contains(c) && c.Overlaps(from, to))) return lane;
+    }
+
+    /// <summary>
+    /// Removes every lane that holds no clip (middle ones too) and renumbers the clips of the lanes below, keeping each remaining
+    /// lane's play / grey state. A track that is armed for recording is never touched. When a removed lane was a playing one and
+    /// no lane of a kind (audio or MIDI) plays any more, the last lane holding that kind plays again (nothing goes silent by accident).
+    /// Returns whether a lane was removed.
+    /// </summary>
+    public static bool Compact(TrackModel track)
+    {
+        if (track.RecordArm) return false;
+        var count = Math.Max(track.Lanes.Count, track.AudioClips.Count == 0 ? 0 : track.AudioClips.Max(c => c.Lane) + 1);
+        if (count == 0) return false;
+        Ensure(track, count);
+        var used = new bool[count];
+        foreach (var clip in track.AudioClips) if (clip.Lane >= 0) used[clip.Lane] = true;
+        if (used.All(u => u)) return false;
+        var map = new int[count];
+        var kept = new List<ClipLane>(count);
+        var removedPlaying = false;
+        for (var i = 0; i < count; i++)
+        {
+            if (used[i]) { map[i] = kept.Count; kept.Add(track.Lanes[i]); }
+            else removedPlaying |= track.Lanes[i].Plays;
+        }
+        foreach (var clip in track.AudioClips) if (clip.Lane >= 0) clip.Lane = map[clip.Lane];
+        track.Lanes.Clear();
+        track.Lanes.AddRange(kept);
+        if (removedPlaying)
+            foreach (var midi in new[] { false, true })
+            {
+                var holding = Enumerable.Range(0, kept.Count).Where(l => track.AudioClips.Any(c => c.Lane == l && c.IsMidi == midi)).ToList();
+                if (holding.Count > 0 && !holding.Any(l => kept[l].Plays)) kept[holding[^1]].Plays = true;
+            }
+        return true;
+    }
+
     /// <summary>A lane just recorded becomes the only playing lane (older takes are greyed out).</summary>
     public static void PlayOnly(TrackModel track, int lane)
     {
