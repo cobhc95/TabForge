@@ -12,6 +12,25 @@ namespace TabForge;
 /// <summary>The track-list dock fits its rows (no empty band) after every kind of resize, and dragging its splitter stretches the rows.</summary>
 public static partial class SelfTest
 {
+    /// <summary>The dock laid out at an explicit size (no top-level window, so the screen size and DPI cannot clamp it).</summary>
+    private sealed class FitStage
+    {
+        private readonly DockWorkspace _workspace; private double _height;
+        public FitStage(DockWorkspace workspace, double width, double height) { _workspace = workspace; Width = width; _height = height; }
+        public double Width { get; }
+        public double Height { get => _height; set { _height = value; UpdateLayout(); } }
+        public double ActualWidth => Width;
+        public double ActualHeight => _height;
+        public void UpdateLayout()
+        {
+            _workspace.Measure(new Size(Width, _height));
+            _workspace.Arrange(new Rect(0, 0, Width, _height));
+            _workspace.UpdateLayout();
+        }
+        public void Render(System.Windows.Media.Imaging.RenderTargetBitmap bitmap) => bitmap.Render(_workspace);
+        public void Close() { }
+    }
+
     private sealed class FitHost : ITrackListFitHost
     {
         public TimelineSettings Timeline { get; } = new();
@@ -24,13 +43,13 @@ public static partial class SelfTest
     }
 
     /// <summary>Set TABFORGE_TRACKFIT_PNG to a folder to get before/after pictures of the track list from this test.</summary>
-    private static void TrackFitPng(Window window, string name)
+    private static void TrackFitPng(FitStage window, string name)
     {
         if (Environment.GetEnvironmentVariable("TABFORGE_TRACKFIT_PNG") is not { Length: > 0 } folder) return;
         Directory.CreateDirectory(folder);
         PumpUi(); window.UpdateLayout();
         var bitmap = new System.Windows.Media.Imaging.RenderTargetBitmap((int)window.ActualWidth, (int)window.ActualHeight, 96, 96, PixelFormats.Pbgra32);
-        bitmap.Render(window);
+        window.Render(bitmap);
         var encoder = new System.Windows.Media.Imaging.PngBitmapEncoder();
         encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(bitmap));
         using var file = File.Create(Path.Combine(folder, $"timeline-fit-{name}.png"));
@@ -43,16 +62,15 @@ public static partial class SelfTest
         for (var i = 0; i < 7; i++) song.Tracks.Add(MixerTestTrack("T" + i, TrackKind.Guitar, 30));
         var panel = new ArrangementPanel();
         panel.Bind(song, Array.Empty<Playback.MidiOutputDeviceInfo>());
-        var window = new Window { Width = 1000, Height = 800 };
-        var workspace = new DockWorkspace(window);
-        window.Content = workspace;
+        var workspace = new DockWorkspace(new Window());
+        var window = new FitStage(workspace, 1000, 800);
         workspace.SetEditorContent(new Border());
         workspace.RegisterPanel("timeline", "Arrangement", panel, 440, 112, "timeline", "score-editor");
         workspace.RestoreLayout(null);
         using var alive = KeepAlive();
         try
         {
-            ShowTestWindow(window);
+            window.UpdateLayout();
             PumpUi();
             double Gap() { PumpUi(); workspace.UpdateLayout(); return panel.ActualHeight + TrackListFitController.Chrome - panel.PreferredHeight(); }
 
@@ -66,7 +84,7 @@ public static partial class SelfTest
             Log.Add($"  info  track list fit: gap after a fit {fitGap:0.0}px, after growing the window without the fit {oldGap:0.0}px");
 
             var host = new FitHost { Arrangement = panel, Dock = workspace };
-            var fit = new TrackListFitController(host, window);
+            var fit = new TrackListFitController(host, workspace);
             fit.FitToTracks();
             Check("track list fit: fitting leaves no empty space", Math.Abs(Gap()) < 1.5, $"{Gap():0.0}px");
 
@@ -155,20 +173,20 @@ public static partial class SelfTest
         var a = new ArrangementPanel(); var b = new ArrangementPanel();
         a.Bind(songA, Array.Empty<Playback.MidiOutputDeviceInfo>());
         b.Bind(songB, Array.Empty<Playback.MidiOutputDeviceInfo>());
-        var window = new Window { Width = 900, Height = 700, Content = new StackPanel { Children = { a, b } } };
+        var window = new StackPanel { Children = { a, b } };
         a.Height = 300; b.Height = 300;
         using var alive = KeepAlive();
         try
         {
-            ShowTestWindow(window); PumpUi();
-            a.SetTrackRowHeight(60); PumpUi(); window.UpdateLayout();
+            window.Measure(new Size(900, 700)); window.Arrange(new Rect(0, 0, 900, 700)); window.UpdateLayout(); PumpUi();
+            a.SetTrackRowHeight(60); PumpUi(); window.Measure(new Size(900, 700)); window.Arrange(new Rect(0, 0, 900, 700)); window.UpdateLayout();
             Check("two track lists: stretching one leaves the other's row height alone", Math.Abs(b.TrackRowHeight - 30) < 0.01 && Math.Abs(a.TrackRowHeight - 60) < 0.01, $"{a.TrackRowHeight} / {b.TrackRowHeight}");
             Check("two track lists: the other one's track rows and timeline lanes stay aligned at the default",
                 b.TrackRowActualHeights.All(h => Math.Abs(h - 30) < 0.6) && Math.Abs(ArrangementPanel.RowTopOf(songB, 2) - 60) < 0.01 &&
                 a.TrackRowActualHeights.All(h => Math.Abs(h - 60) < 0.6) && Math.Abs(ArrangementPanel.RowTopOf(songA, 2) - 120) < 0.01,
                 string.Join(",", b.TrackRowActualHeights.Select(h => h.ToString("0.0"))));
         }
-        finally { window.Close(); }
+        finally { }
     }
 
     /// <summary>The splitter stops where all rows fit at the default row height and where they fit at the largest; a too-short window caps at what the other panes allow.</summary>
@@ -180,19 +198,18 @@ public static partial class SelfTest
         if (groups) { song.Tracks[0].Kind = TrackKind.Bass; if (trackCount > 2) song.Tracks[2].Kind = TrackKind.Keys; }
         var panel = new ArrangementPanel();
         panel.Bind(song, Array.Empty<Playback.MidiOutputDeviceInfo>());
-        var window = new Window { Width = 1000, Height = windowHeight };
-        var workspace = new DockWorkspace(window);
-        window.Content = workspace;
+        var workspace = new DockWorkspace(new Window());
+        var window = new FitStage(workspace, 1000, windowHeight);
         workspace.SetEditorContent(new Border());
         workspace.RegisterPanel("timeline", "Arrangement", panel, 440, 112, "timeline", "score-editor");
         workspace.RestoreLayout(null);
         var host = new FitHost { Arrangement = panel, Dock = workspace };
-        var fit = new TrackListFitController(host, window);
+        var fit = new TrackListFitController(host, workspace);
         var label = $"track list limits ({trackCount} tracks{(groups ? ", groups" : "")}, window {windowHeight})";
         using var alive = KeepAlive();
         try
         {
-            ShowTestWindow(window); PumpUi();
+            window.UpdateLayout(); PumpUi();
             fit.FitToTracks(); PumpUi();
             double Gap() { PumpUi(); workspace.UpdateLayout(); return panel.ActualHeight + TrackListFitController.Chrome - panel.PreferredHeight(); }
             var minPane = panel.PreferredHeightAt(ArrangementPanel.DefaultTrackRowHeight);

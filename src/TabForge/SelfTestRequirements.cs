@@ -158,7 +158,8 @@ public static partial class SelfTest
         foreach (var rel in ciFiles)
         {
             var path = Path.Combine(root, rel);
-            if (!File.Exists(path)) { Skip($"{rel} exists", "file not found", "source-hygiene"); continue; }
+            // REBUILD.cmd is the local clean-rebuild script and is not part of the published source: its absence is expected there.
+            if (!File.Exists(path)) { if (rel == "REBUILD.cmd") Skip($"{rel} exists", "local-only script, not in the published source"); else Skip($"{rel} exists", "file not found", "source-hygiene"); continue; }
             // Comments are not arguments: drop whole-line comments (# in yml/ps1, rem and :: in cmd).
             var text = string.Join(' ', File.ReadAllLines(path).Where(l => { var t = l.TrimStart(); return !t.StartsWith('#') && !t.StartsWith("rem ", StringComparison.OrdinalIgnoreCase) && !t.StartsWith("::"); }));
             var names = pattern.Matches(text).SelectMany(m => m.Groups[1].Value.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries)).ToList();
