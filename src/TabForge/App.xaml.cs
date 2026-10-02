@@ -13,6 +13,7 @@ public partial class App : Application
 {
     protected override void OnStartup(StartupEventArgs e)
     {
+        ClipboardService.Compose(new Views.WindowsScoreClipboard());   // the one score clipboard of this process; every window and diagnostic run shares it
         // --profile <folder> (already applied in Program.Main) is removed; the rest are the app's own arguments.
         var args = UserPaths.ApplyProfileArgument(e.Args);
         // --approve-night-plugins (Audit 5 H-5) only works together with --profile; alone it is refused before anything is loaded or written.
@@ -74,6 +75,7 @@ public partial class App : Application
         ToolTipService.ShowOnDisabledProperty.OverrideMetadata(typeof(System.Windows.Controls.Control),
             new FrameworkPropertyMetadata(true));
         base.OnStartup(e);
+        TabForge.Views.SlowTrace.HookInput();
         Views.AccessibleNames.Install();
         Shell.WindowPolish.Register();
         ThemeService.PrepareMutableBrushes();
@@ -86,11 +88,11 @@ public partial class App : Application
             captureOut = args[captureAt + 2];
             args = args.Take(captureAt + 1).Concat(args.Skip(captureAt + 3)).ToArray();   // only the bare switch stays, so no value is taken for a song to open
         }
-        var window = new MainWindow();
+        var window = new MainWindow(Audio.AudioEngineClient.Instance, new Shell.AppOptions());
         MainWindow = window;
-        if (captureScript is null) ApplyRequestedWindowSize(window, args); else window.PrepareOffscreenCapture();
+        if (captureScript is null) ApplyRequestedWindowSize(window, args); else new WindowProbes(window).PrepareOffscreenCapture();
         window.Show();
-        if (captureScript is not null) window.RunCaptureScript(captureScript, captureOut!);
+        if (captureScript is not null) new WindowProbes(window).RunCaptureScript(captureScript, captureOut!);
         OpenStartupFile(window, args);
         if (!args.Any(a => a.StartsWith("--", StringComparison.Ordinal)))
             window.Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, window.OfferAutosaveRecovery);   // songs a crash left behind
@@ -112,16 +114,16 @@ public partial class App : Application
     {
         ["--theme"] = (w, v) => w.ApplyThemeOverride(v),
         // `--screenshots <folder>`: photograph menus, panels, settings and dialogs for the README, then exit.
-        ["--screenshots"] = (w, v) => w.RunScreenshotTour(v),
+        ["--screenshots"] = (w, v) => new WindowProbes(w).RunScreenshotTour(v),
         // `--perf-follow <report>`: measure CPU/memory of each score follow style during playback, then exit.
-        ["--perf-follow"] = (w, v) => w.RunFollowPerfProbe(v),
-        ["--probe-settings"] = (w, v) => w.RunSettingsProbe(v),
-        ["--probe-playback-visuals"] = (w, v) => w.RunPlaybackVisualsProbe(v),
-        ["--probe-record"] = (w, v) => w.RunRecordingProbe(v),
-        ["--probe-menus"] = (w, v) => w.RunMenuProbe(v),
-        ["--probe-update"] = (w, v) => w.RunUpdateProbe(v),
+        ["--perf-follow"] = (w, v) => new WindowProbes(w).RunFollowPerfProbe(v),
+        ["--probe-settings"] = (w, v) => new WindowProbes(w).RunSettingsProbe(v),
+        ["--probe-playback-visuals"] = (w, v) => new WindowProbes(w).RunPlaybackVisualsProbe(v),
+        ["--probe-record"] = (w, v) => new WindowProbes(w).RunRecordingProbe(v),
+        ["--probe-menus"] = (w, v) => new WindowProbes(w).RunMenuProbe(v),
+        ["--probe-update"] = (w, v) => new WindowProbes(w).RunUpdateProbe(v),
         ["--probe-instrument-menu"] = (w, v) => w.RunInstrumentMenuProbe(v),
-        ["--probe-countin"] = (w, v) => w.RunCountInProbe(v),
+        ["--probe-countin"] = (w, v) => new WindowProbes(w).RunCountInProbe(v),
     };
 
     private readonly CancellationTokenSource _serverStop = new();

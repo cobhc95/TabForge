@@ -8,6 +8,9 @@ namespace TabForge.Documents;
 /// <param name="Notice">Something the user should know about the opened file (e.g. its .tfaudio did not match); null when all is well.</param>
 public readonly record struct OpenedScore(SongProject Project, string? SessionPath, bool ImportedFromGuitarPro, string? Notice = null, string? SourcePath = null);
 
+// Owns: opening and creating scores into explicit documents (file read, import, session and project assembly).
+// Does not own: writing files (DocumentSaveFlow) and the window's tabs.
+// Tests: TestDocuments, TestArchitectureLayering.
 /// <summary>File-level document operations kept separate from window prompts and tab presentation.</summary>
 public sealed class DocumentController
 {
@@ -18,7 +21,8 @@ public sealed class DocumentController
 
     /// <param name="importGuitarPro">Parses a Guitar Pro file (null = <see cref="GuitarProImporter.Import"/> in this process); it may add
     /// notices. The background import passes the out-of-process worker (A5-07); the pair recovery and .tfaudio stay in this process.</param>
-    public OpenedScore Open(string path, Func<string, List<string>, SongProject>? importGuitarPro)
+    /// <param name="context">The import's limits and reported notices (the in-process parse uses it; null = a fresh one without limits).</param>
+    public OpenedScore Open(string path, Func<string, List<string>, SongProject>? importGuitarPro, ImportContext? context = null)
     {
         path = FilePathPolicy.ExistingFile(path, "score file",
             FileTypes.AllOpenable);
@@ -26,19 +30,21 @@ public sealed class DocumentController
         {
             // Only the app's own crash-recovery copies (written with the larger bound) may exceed the normal .tforge limit.
             var limit = AutosaveService.IsRecoveryCopy(path, RecoveryFolder) ? InputLimits.MaxRecoveryProjectBytes : InputLimits.MaxTforgeFileBytes;
-            return new OpenedScore(ProjectService.Load(path, limit), path, false);
+            // A cut-short save of the .gp + .tforge pair is resolved first (the marker belongs to the .gp beside it), exactly as for the .gp.
+            var projectRecovery = RecoverInterruptedPairFor(path);
+            return new OpenedScore(ProjectService.Load(path, limit), path, false, projectRecovery);
         }
 
         var notices = new List<string>();
         // A save of the .gp + .tfaudio pair that was cut short is undone first, so the pair read below is consistent.
-        if (path.EndsWith(".gp", StringComparison.OrdinalIgnoreCase) && FilePathPolicy.RecoverInterruptedPair(path, AudioDataFile.PathFor(path)) is { } recovery) notices.Add(recovery);
+        if (RecoverInterruptedPairFor(path) is { } recovery) notices.Add(recovery);
         SongProject project;
         if (importGuitarPro is null)
         {
-            project = GuitarProImporter.Import(path);
+            context ??= new ImportContext();
+            project = GuitarProImporter.Import(path, context);
             // A6-02: an embedded TabForge project that was present but unusable is reported (the worker path adds it through its own notices).
-            if (GuitarProImporter.LastEmbeddedRejection is { } rejected) notices.Add(rejected);
-            if (GuitarProImporter.LastDamageNotice is { } damaged) notices.Add(damaged);
+            context.AddNoticesTo(notices);
         }
         else project = importGuitarPro(path, notices);
         // A5-04: the song's own title wins (also for a TabForge-embedded project); the file name only fills an empty one.
@@ -53,13 +59,29 @@ public sealed class DocumentController
     }
 
     /// <summary>
+    /// The one place every open path (menu, recent files, drag-drop, command line, file association) resolves an interrupted pair save:
+    /// a .gp is checked directly; a .tforge is checked through the same-named .gp whose marker may name it as the partner.
+    /// Returns the notice for the user, or null when nothing was pending.
+    /// </summary>
+    internal static string? RecoverInterruptedPairFor(string path)
+    {
+        try
+        {
+            if (path.EndsWith(".gp", StringComparison.OrdinalIgnoreCase)) return FilePathPolicy.RecoverInterruptedPair(path);
+            if (path.EndsWith(FileTypes.Project, StringComparison.OrdinalIgnoreCase)) return FilePathPolicy.RecoverInterruptedPair(Path.ChangeExtension(path, ".gp"));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException) { }
+        return null;
+    }
+
+    /// <summary>
     /// Saves a clean Guitar Pro file (nothing TabForge-specific inside, so Guitar Pro reads it exactly as its own)
     /// plus "song.tfaudio" beside it with the mixer and FX chains, which TabForge re-applies on open.
     /// Both files are staged completely before either is replaced, and the .tfaudio records the SHA-256 of the .gp it belongs to.
     /// </summary>
     public void SaveCleanGuitarProWithAudioData(DocumentSession document, string path, string? lyrics)
     {
-        path = FilePathPolicy.OutputFile(path, "Guitar Pro file", ".gp");
+        path = FilePathPolicy.OutputFile(path, "score file", ".gp");
         var originalLyrics = document.Project.Lyrics;
         document.Project.Lyrics = lyrics ?? "";
         try
@@ -90,7 +112,7 @@ public sealed class DocumentController
     /// </summary>
     public GuitarProExportResult ExportCleanGuitarPro(DocumentSession document, string path, GpExportKind kind, GpExportChoice choice, string? lyrics)
     {
-        path = FilePathPolicy.OutputFile(path, "Guitar Pro file", ".gp");
+        path = FilePathPolicy.OutputFile(path, "score file", ".gp");
         var report = GpExportPreflight.Analyze(document.Project);
         var plan = GpExportPreflight.Plan(report, choice, kind, path, document.Path);
         if (!plan.Proceed) return new GuitarProExportResult(null, null, plan.Note);
@@ -106,11 +128,17 @@ public sealed class DocumentController
         try
         {
             byte[]? hash = null;
-            var wasDirty = document.Project.IsDirty;
-            if (plan.NativeCopyPath is { } native) hash = ProjectService.Save(FilePathPolicy.OutputFile(native, "TabForge project", ".tforge"), document.Project);
-            // ProjectService.Save clears the flag; until every file is written the document's own unsaved state stays (a failed .gp write must not leave it "clean").
-            document.Project.IsDirty = wasDirty;
-            GuitarProExporter.Save(document.Project, FilePathPolicy.OutputFile(plan.CompatiblePath, "Guitar Pro file", ".gp"), embedProject: false);
+            var compatiblePath = FilePathPolicy.OutputFile(plan.CompatiblePath, "score file", ".gp");
+            if (plan.NativeCopyPath is { } native)
+            {
+                // The full copy and the .gp are one pair: both are staged before either is replaced, and an interrupted write is resolved on the next open.
+                var nativeTarget = FilePathPolicy.OutputFile(native, "TabForge project", ".tforge");
+                var gp = GuitarProExporter.ToBytes(document.Project, embedProject: false);
+                _ = FilePathPolicy.RecoverInterruptedPair(compatiblePath);   // an earlier interrupted pair of this .gp (whatever its partner) is resolved first; the write below refuses if it cannot be
+                FilePathPolicy.WritePairAtomically(compatiblePath, stream => stream.Write(gp), nativeTarget, stream => ProjectService.WriteTo(stream, document.Project));
+                hash = ProjectService.ContentHash(document.Project);
+            }
+            else GuitarProExporter.Save(document.Project, compatiblePath, embedProject: false);
             if (plan.MarkDocumentClean && plan.NativeCopyPath is { } nativePath && hash is not null)
             {
                 if (plan.ChangeDocumentPath) { document.Path = nativePath; document.IsNew = false; }
@@ -129,37 +157,63 @@ public sealed class DocumentController
     public GuitarProExportResult ExportCleanGuitarPro(DocumentSession document, string path, GpExportKind kind, string? lyrics, Func<GpPreflightReport, GpExportChoice> ask)
     {
         var report = GpExportPreflight.Analyze(document.Project);
-        var choice = report.ShouldAsk ? ask(report) : GpExportChoice.ExportCompatible;
+        var choice = report.ShouldAskFor(kind) ? ask(report) : GpExportChoice.ExportCompatible;
         return ExportCleanGuitarPro(document, path, kind, choice, lyrics);
     }
 
-    /// <summary>True while a save is collecting plug-in states or writing; a second save or exit-save must wait.</summary>
-    public bool IsSaving { get; private set; }
+    /// <summary>The claim a running save or export holds from its first question (the file dialog included) until it is finished; dispose it to release.</summary>
+    public sealed class SaveHold : IDisposable
+    {
+        private readonly DocumentController _owner;
+        internal SaveHold(DocumentController owner) => _owner = owner;
+        public void Dispose() => _owner.Release(this);
+    }
+
+    private SaveHold? _hold;
+
+    /// <summary>True from the first dialog of a save or export until it is finished (collecting plug-in states and writing included): a second save, an exit-save or an import placing a song must wait or open beside.</summary>
+    public bool IsSaving => _hold is not null;
     public event Action? SavingChanged;
+
+    /// <summary>Claims the save for the caller (null when one is already running). Everything that follows runs under the claim, so it covers the dialogs before the write.</summary>
+    public SaveHold? TryBeginSave()
+    {
+        if (_hold is not null) return null;
+        _hold = new SaveHold(this);
+        SavingChanged?.Invoke();
+        return _hold;
+    }
+
+    private void Release(SaveHold hold)
+    {
+        if (!ReferenceEquals(_hold, hold)) return;
+        _hold = null;
+        SavingChanged?.Invoke();
+    }
 
     /// <summary>
     /// The one save sequence: collect plug-in states asynchronously (the caller's thread is never blocked), and only then run
     /// <paramref name="write"/> so the file is a snapshot of the model after the states arrived. Returns null (nothing done)
-    /// when a save is already running.
+    /// when a save is already running and <paramref name="held"/> is not its claim.
     /// </summary>
-    public async Task<StateCollection?> SaveAsync(Func<Task<StateCollection>> collectStates, Action<StateCollection> write)
+    /// <param name="held">The claim the caller already took with <see cref="TryBeginSave"/>; null takes (and releases) one for this call.</param>
+    public async Task<StateCollection?> SaveAsync(Func<Task<StateCollection>> collectStates, Action<StateCollection> write, SaveHold? held = null)
     {
-        if (IsSaving) return null;
-        IsSaving = true;
-        SavingChanged?.Invoke();
+        var hold = held ?? TryBeginSave();
+        if (hold is null || !ReferenceEquals(hold, _hold)) return null;
         try
         {
             var capture = await collectStates();
             write(capture);
             return capture;
         }
-        finally { IsSaving = false; SavingChanged?.Invoke(); }
+        finally { if (held is null) hold.Dispose(); }
     }
 
     public void Save(DocumentSession document, string path, string? lyrics)
     {
         var asGuitarPro = path.EndsWith(".gp", StringComparison.OrdinalIgnoreCase);
-        path = asGuitarPro ? FilePathPolicy.OutputFile(path, "Guitar Pro file", ".gp") : FilePathPolicy.OutputFile(path, "TabForge project", ".tforge");
+        path = asGuitarPro ? FilePathPolicy.OutputFile(path, "score file", ".gp") : FilePathPolicy.OutputFile(path, "TabForge project", ".tforge");
         var originalLyrics = document.Project.Lyrics;
         document.Project.Lyrics = lyrics ?? "";
         try

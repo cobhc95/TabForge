@@ -33,7 +33,7 @@ public static partial class EditCommands
 
     /// <summary>
     /// Pastes <paramref name="clip"/> <see cref="PasteSpecialOptions.Repeat"/> times end to end with the explicit choices
-    /// (nothing is asked and no answer is remembered). Model only; wrap in <see cref="PasteSpecialWithUndo"/> for one undo step.
+    /// (nothing is asked and no answer is remembered). Model only; the caller runs it through <c>DocumentEdits.Run</c> for one undo step.
     /// </summary>
     public static PasteOutcome PasteSpecial(SongProject p, ScoreClip clip, PasteTarget target, PasteSpecialOptions options, EditingSettings settings)
     {
@@ -51,21 +51,6 @@ public static partial class EditCommands
         return clip.Kind == ScoreClipKind.Beats
             ? PasteBeats(p, repeated, target, settings, none, choice, options.Repeat)
             : PasteBars(p, repeated, target, settings, none, choice, options.Repeat);
-    }
-
-    /// <summary><see cref="PasteSpecial"/> as exactly one undo step (no step when nothing changed), however many copies.</summary>
-    public static PasteOutcome PasteSpecialWithUndo(UndoController undo, SongProject p, ScoreClip clip, PasteTarget target,
-        PasteSpecialOptions options, EditingSettings settings, out UndoCapture? capture)
-    {
-        capture = null;
-        using var timeline = p.BeginTimelineBatch();   // one invalidation for the whole paste (see PasteWithUndo)
-        var transaction = undo.BeginTransaction(p);
-        PasteOutcome outcome;
-        try { outcome = PasteSpecial(p, clip, target, options, settings); }
-        catch { undo.Cancel(transaction); throw; }
-        if (outcome.Changed) { capture = undo.Commit(transaction); p.MarkTimelineChanged(); }
-        else undo.Cancel(transaction);
-        return outcome;
     }
 
     /// <summary>The clip laid end to end <paramref name="times"/> times (the clip itself when 1); null when it would be too large.</summary>

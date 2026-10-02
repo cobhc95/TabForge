@@ -18,19 +18,25 @@ public interface IScoreClipboard
     ScoreClipboardRead TryRead(int maxBytes);
 }
 
+// Owns: the one score clipboard: building clips from tracks and reading and writing the system clipboard.
+// Does not own: pasting rules (EditCommands, BarGrid) and the clip format (ScoreClip).
+// Tests: TestClipAndSectionEdits, TestScoreClipJson.
 /// <summary>
 /// The one score clipboard (design 3.8): builds clips from a track range (<see cref="CaptureBars"/>, <see cref="CaptureBeats"/>,
 /// <see cref="CaptureSelection"/>), writes them to the system clipboard when it can, and reads them back as untrusted input.
 /// The last clip is always kept in memory, so copy/paste keeps working when the system clipboard is unavailable. No WPF here
-/// (the Windows adapter is <see cref="Views.WindowsScoreClipboard"/>); UI thread only (the Windows clipboard needs STA).
+/// (the Windows adapter is composed by the application at start-up, see <see cref="Compose"/>); UI thread only (the Windows clipboard needs STA).
 /// </summary>
 public sealed class ClipboardService
 {
     public const string NotTabForgeNotesMessage = "The clipboard does not contain TabForge notes.";
 
     private static ClipboardService? _shared;
-    /// <summary>The application's clipboard (Windows clipboard adapter), created on first use.</summary>
-    public static ClipboardService Shared => _shared ??= new ClipboardService(new Views.WindowsScoreClipboard());
+    /// <summary>The application's clipboard, the one every window shares.</summary>
+    public static ClipboardService Shared => _shared ?? throw new InvalidOperationException("The application's clipboard has not been composed.");
+
+    /// <summary>Sets the application's clipboard over <paramref name="system"/> (the application does this once, before any window exists).</summary>
+    public static void Compose(IScoreClipboard? system) => _shared = new ClipboardService(system);
 
     private readonly IScoreClipboard? _system;
     private uint _cachedSequence;
@@ -40,6 +46,25 @@ public sealed class ClipboardService
 
     /// <param name="system">The system clipboard; null keeps clips in memory only.</param>
     public ClipboardService(IScoreClipboard? system) => _system = system;
+
+    private string? _trackJson;
+
+    /// <summary>True when a whole track was copied (in memory; the Windows clipboard is not used for tracks).</summary>
+    public bool HasTrack => _trackJson is not null;
+
+    /// <summary>Remembers a private copy of <paramref name="track"/> (notation, clips, mix, FX chain, colour, name).</summary>
+    public void CopyTrack(TrackModel track) => _trackJson = System.Text.Json.JsonSerializer.Serialize(track);
+
+    /// <summary>A new independent copy of the copied track (fresh ids), or null when no track was copied.</summary>
+    public TrackModel? TryGetTrack()
+    {
+        if (_trackJson is null) return null;
+        var copy = System.Text.Json.JsonSerializer.Deserialize<TrackModel>(_trackJson);
+        if (copy is null) return null;
+        copy.Id = Guid.NewGuid();
+        foreach (var clip in copy.AudioClips) clip.Id = Guid.NewGuid().ToString("N");
+        return copy;
+    }
 
     /// <summary>The last clip copied here or read successfully from the system clipboard (read-only; clone cells before use).</summary>
     public ScoreClip? Current { get; private set; }

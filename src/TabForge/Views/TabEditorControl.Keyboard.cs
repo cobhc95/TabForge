@@ -120,67 +120,13 @@ public sealed partial class TabEditorControl
         });
     }
 
-    public void ToggleRepeatOpen()
-    {
-        if (_project is null || CurrentMeasure() is null) return;
-        EditStarting?.Invoke(this, EventArgs.Empty);
-        Services.EditCommands.ToggleRepeatOpen(_project, SelectedTrackIndex, SelectedMeasure, out _);
-        EditedNow();
-    }
-
-    /// <summary>Toggles the repeat end; <paramref name="count"/> (from the menu's prompt) sets the repeat count when turning it on.</summary>
-    public void ToggleRepeatClose(int? count = null)
-    {
-        if (_project is null || CurrentMeasure() is null) return;
-        EditStarting?.Invoke(this, EventArgs.Empty);
-        Services.EditCommands.ToggleRepeatClose(_project, SelectedTrackIndex, SelectedMeasure, count, out _);
-        EditedNow();
-    }
-
-    /// <summary>
-    /// Moves the selected note(s) (the note under the cursor, or every note of the selected beats) to the adjacent string
-    /// without changing the pitch: the fret is recalculated from the tuning and capo. <paramref name="delta"/> -1 is the higher
-    /// string (one up on the tab), +1 the lower. All or nothing: when any note cannot go (no such string, a fret below 0 or past
-    /// the last fret, or the string is taken in that beat) nothing changes and the status line says why. One undo step.
-    /// </summary>
-    public bool MoveNotesToAdjacentString(int delta)
-    {
-        var track = Track;
-        if (track is null) return false;
-        void Say(string text) => StatusMessage?.Invoke(this, text);
-        // The rules (which notes may move, the new frets, why not) are Services.EditCommands.PlanStringMove; the control brackets them with its edit events.
-        var plan = Services.EditCommands.PlanStringMove(track, ToolCells().Select(cell =>
-            (cell, (IReadOnlyList<TabNote>)(HasSelection ? cell.Notes.ToList() : cell.Notes.Where(n => n.StringIndex == SelectedString).ToList()))), delta);
-        if (plan.Refusal is { } refusal) { Say(refusal); return false; }
-        var side = delta < 0 ? "higher" : "lower";
-        EditStarting?.Invoke(this, EventArgs.Empty);
-        Services.EditCommands.ApplyStringMove(track, plan);
-        if (!HasSelection) SelectedString = plan.Moves[0].Target;
-        EditedNow();
-        Say(plan.Moves.Count == 1 ? $"Moved the note to the {side} string" : $"Moved {plan.Moves.Count} notes to the {side} string");
-        return true;
-    }
-
-    /// <summary>Move the note up/down in pitch by semitones (Shift+Up / Shift+Down).</summary>
-    public void ShiftPitch(int semitones)
-    {
-        var track = Track; var cell = CurrentCell();
-        if (track is null || cell is null) return;
-        var note = cell.Notes.FirstOrDefault(n => n.StringIndex == SelectedString);
-        if (note is null) return;
-        // Below the open string the same pitch moves to the next lower free string (Services.EditCommands.PlanPitchShift); null: already the lowest playable pitch.
-        if (Services.EditCommands.PlanPitchShift(track, cell, note, semitones) is not var (stringIndex, fret)) return;
-        EditStarting?.Invoke(this, EventArgs.Empty);
-        Services.EditCommands.ApplyPitchShift(track, note, stringIndex, fret);
-        if (stringIndex != SelectedString) SetPosition(SelectedMeasure, SelectedCell, stringIndex);
-        EditedNow();
-    }
-
     private void PreviewNote(TabNote note)
     {
         var track = Track;
-        if (track is null) return;
-        var midi = note.MidiValue > 0 ? note.MidiValue : MidiOf(track, note.StringIndex, note.Fret);
-        NotePreview?.Invoke(this, new NotePreviewEventArgs(midi, track.MidiOutputDeviceId, track.MidiChannel, track.MidiProgram));
+        if (track is null || !Services.EditorGuard.CanEdit(track)) return;   // no track, or an audio track (no notation)
+        var midi = note.MidiValue > 0 ? note.MidiValue : Score.ScoreEditCommands.MidiOf(track, note.StringIndex, note.Fret);
+        var cell = CurrentCell();
+        var ms = cell is not null && Project is { } project ? MusicTime.NoteLengthMs(project, SelectedMeasure, SelectedCell, cell) : 0;
+        NotePreview?.Invoke(this, new NotePreviewEventArgs(midi, track.MidiOutputDeviceId, track.MidiChannel, track.MidiProgram, ms));
     }
 }

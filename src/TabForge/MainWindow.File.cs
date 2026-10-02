@@ -80,8 +80,8 @@ public partial class MainWindow
     {
         var dlg = new OpenFileDialog
         {
-            Title = "Open TabForge or Guitar Pro file",
-            Filter = "Supported scores|*.tforge;*.gp3;*.gp4;*.gp5;*.gpx;*.gp|TabForge project (*.tforge)|*.tforge|Guitar Pro (*.gp3;*.gp4;*.gp5;*.gpx;*.gp)|*.gp3;*.gp4;*.gp5;*.gpx;*.gp",
+            Title = "Open TabForge or .gp file",
+            Filter = "Supported scores|*.tforge;*.gp3;*.gp4;*.gp5;*.gpx;*.gp|TabForge project (*.tforge)|*.tforge|GP files (*.gp3;*.gp4;*.gp5;*.gpx;*.gp)|*.gp3;*.gp4;*.gp5;*.gpx;*.gp",
             Multiselect = true
         };
         if (dlg.ShowDialog(this) != true) return;
@@ -115,10 +115,12 @@ public partial class MainWindow
     private void Save_Click(object sender, RoutedEventArgs e) => _ = SaveCurrentAsync(Doc);
 
     /// <summary>Save (or Save As when the song has no writable path yet) the given document, whichever tab is displayed; true when the song was written.</summary>
-    private Task<bool> SaveCurrentAsync(DocumentSession doc)
+    private Task<bool> SaveCurrentAsync(DocumentSession doc, DocumentController.SaveHold? hold = null)
     {
+        // The save is claimed before its first dialog (the degraded-mode question, the file dialog), so no other save starts and no import replaces a tab meanwhile.
+        if (hold is null) return SaveFlow.RunClaimedAsync(claim => SaveCurrentAsync(doc, claim), ShowSaveBusy);
         // Only .tforge and .gp can be written; a song opened from .gp3/.gp4/.gp5/.gpx asks where to save.
-        if (!DocumentSaveFlow.CanSaveInPlace(doc.Path)) return SaveAsAsync(doc);
+        if (!DocumentSaveFlow.CanSaveInPlace(doc.Path)) return SaveAsAsync(doc, hold);
         var current = doc.Path!;
         if (_degraded && File.Exists(current) && !_degradedConfirmedPaths.Contains(current))
         {
@@ -130,10 +132,10 @@ public partial class MainWindow
                 yesToolTip: "Save as a new file (recommended)", noToolTip: $"Overwrite {name}") { Owner = this };
             var answer = DialogHost.ShowModal(dialog) == true ? dialog.Result : MessageBoxResult.Cancel;
             if (answer == MessageBoxResult.Cancel) return Task.FromResult(false);
-            if (answer == MessageBoxResult.Yes) return SaveAsAsync(doc);
+            if (answer == MessageBoxResult.Yes) return SaveAsAsync(doc, hold);
             _degradedConfirmedPaths.Add(current);
         }
-        return SaveToAsync(doc, current);
+        return SaveToAsync(doc, current, hold);
     }
 
     // ---------- degraded mode (after an unexpected error) ----------
@@ -290,9 +292,6 @@ public partial class MainWindow
     private void BeginSaveInputGate()
     {
         if (_saveGateDepth++ > 0) return;
-        PreviewKeyDown += SwallowKeyWhileSaving;
-        PreviewTextInput += SwallowTextWhileSaving;
-        PreviewMouseDown += SwallowMouseWhileSaving;
         _cursorBeforeSave = Cursor;
         Cursor = Cursors.AppStarting;
     }
@@ -300,27 +299,39 @@ public partial class MainWindow
     private void EndSaveInputGate()
     {
         if (_saveGateDepth == 0 || --_saveGateDepth > 0) return;
-        PreviewKeyDown -= SwallowKeyWhileSaving;
-        PreviewTextInput -= SwallowTextWhileSaving;
-        PreviewMouseDown -= SwallowMouseWhileSaving;
         Cursor = _cursorBeforeSave;
     }
 
-    private void SwallowKeyWhileSaving(object sender, KeyEventArgs e)
+    // The gate is the window's own class handlers for the preview events: they run before every handler added to the window (the key handler
+    // of the window itself included), so a key or click the gate swallows reaches nothing.
+    protected override void OnPreviewKeyDown(KeyEventArgs e)
     {
-        if (e.Key == Key.System && e.SystemKey == Key.F4) return;
-        e.Handled = true;
+        if (_saveGateDepth > 0 && !(e.Key == Key.System && e.SystemKey == Key.F4)) e.Handled = true;
+        base.OnPreviewKeyDown(e);
     }
 
-    private void SwallowTextWhileSaving(object sender, TextCompositionEventArgs e) => e.Handled = true;
-    private void SwallowMouseWhileSaving(object sender, MouseButtonEventArgs e) => e.Handled = true;
+    protected override void OnPreviewTextInput(TextCompositionEventArgs e)
+    {
+        if (_saveGateDepth > 0) e.Handled = true;
+        base.OnPreviewTextInput(e);
+    }
+
+    protected override void OnPreviewMouseDown(MouseButtonEventArgs e)
+    {
+        if (_saveGateDepth > 0) e.Handled = true;
+        base.OnPreviewMouseDown(e);
+    }
+
+    /// <summary>A save or export was refused because another one is running: the status bar says so.</summary>
+    private void ShowSaveBusy(string text) => StatusText.Text = text;
 
     private void SaveAs_Click(object sender, RoutedEventArgs e) => _ = SaveAsAsync(Doc);
 
-    private Task<bool> SaveAsAsync(DocumentSession doc)
+    private Task<bool> SaveAsAsync(DocumentSession doc, DocumentController.SaveHold? hold = null)
     {
+        if (hold is null) return SaveFlow.RunClaimedAsync(claim => SaveAsAsync(doc, claim), ShowSaveBusy);
         var gpDefault = !string.Equals(_settings.General.DefaultSaveFormat, "tforge", StringComparison.OrdinalIgnoreCase);
-        const string gp = "Guitar Pro 7/8 (*.gp) - opens in Guitar Pro, keeps every TabForge feature|*.gp";
+        const string gp = ".gp file (*.gp) - keeps every TabForge feature|*.gp";
         const string tf = "TabForge project (*.tforge)|*.tforge";
         var dlg = new SaveFileDialog
         {
@@ -328,25 +339,7 @@ public partial class MainWindow
             DefaultExt = gpDefault ? ".gp" : ".tforge", AddExtension = true,
             FileName = SanitizeFileName(Path.GetFileNameWithoutExtension(doc.Path) is { Length: > 0 } name ? name : doc.Project.Title),
         };
-        return dlg.ShowDialog(this) == true ? SaveToAsync(doc, dlg.FileName) : Task.FromResult(false);
-    }
-
-    /// <summary>The questions a save may ask, answered with this window's dialogs.</summary>
-    private sealed class SaveDialogs : ISaveInteractions
-    {
-        private readonly Window _owner;
-        public SaveDialogs(Window owner) => _owner = owner;
-
-        public AudioDataSaveChoice? AskAudioDataChoice(string fileName) => Views.PluginSaveDialog.Ask(_owner, fileName) switch
-        {
-            Views.PluginSaveDialog.TForge => AudioDataSaveChoice.TForgeFile,
-            Views.PluginSaveDialog.GpPlusDataFile => AudioDataSaveChoice.GpPlusDataFile,
-            null => null,
-            _ => AudioDataSaveChoice.GpWithEmbeddedProject,
-        };
-
-        public GpExportChoice AskGpPreflight(GpPreflightReport report, GpExportKind kind, string fileName) =>
-            Views.GpExportPreflightDialog.Ask(_owner, report, kind, fileName);
+        return dlg.ShowDialog(this) == true ? SaveToAsync(doc, dlg.FileName, hold) : Task.FromResult(false);
     }
 
     private DocumentSaveFlow? _saveFlow;
@@ -354,8 +347,7 @@ public partial class MainWindow
 
     /// <summary>The plug-in states of a document's tracks (and the song's buses and monitor chain), read from the engine; large states (Nexus) take a moment.</summary>
     private Task<Audio.StateCollection> CollectStatesAsync(DocumentSession doc) =>
-        Audio.AudioEngineClient.Instance.CollectStatesAsync(doc.Project.Tracks.Concat(Models.MixerBuses.Active(doc.Project))
-            .Concat(Models.MixerBuses.ActiveMonitor(doc.Project, _settings.Plugins.MonitorFx) is { } monitorFx ? new[] { monitorFx } : Array.Empty<Models.TrackModel>()).ToList(), 5000);
+        _engine.CollectStatesAsync(Models.SongRigs.Running(doc.Project, _settings.Plugins.MonitorFx).Select(r => r.AsTrack()).ToList(), 5000);
 
     /// <summary>
     /// Saves <paramref name="doc"/> to <paramref name="path"/> without blocking the window: plug-in states are awaited (status "Saving…", UI responsive,
@@ -363,16 +355,15 @@ public partial class MainWindow
     /// sequence is <see cref="DocumentSaveFlow"/>'s, for this document; this method is the window's half (input gate, status, the failure message,
     /// the title). Returns true when the song was written and is clean.
     /// </summary>
-    private async Task<bool> SaveToAsync(DocumentSession doc, string path)
+    private async Task<bool> SaveToAsync(DocumentSession doc, string path, DocumentController.SaveHold hold)
     {
-        if (_documentController.IsSaving) { StatusText.Text = "Already saving…"; return false; }
         BeginDocumentOperation();   // a window close waits for this save instead of interrupting it
         BeginSaveInputGate();       // no edits, tab closes or other commands in this window until it is done (dialogs are their own windows)
         try
         {
             // The lyrics as they are now: the box belongs to the displayed tab only (input is gated until the write is done).
             var lyrics = ReferenceEquals(_documents.Active, doc) ? LyricsBox.Text : doc.Project.Lyrics;
-            var outcome = await SaveFlow.SaveAsync(doc, path, lyrics, new SaveDialogs(this), CollectStatesAsync, text => StatusText.Text = text);
+            var outcome = await SaveFlow.SaveAsync(doc, path, lyrics, new SaveDialogs(this), CollectStatesAsync, text => StatusText.Text = text, hold);
             if (outcome.Message.Length > 0) StatusText.Text = outcome.Message;
             if (outcome.Cancelled) return false;
             if (_degraded && doc.Path is { } written) _degradedConfirmedPaths.Add(written);   // the file the user chose while degraded
@@ -393,28 +384,27 @@ public partial class MainWindow
     }
 
     /// <summary>File > Export compatible Guitar Pro file: a copy for other programs. Never changes this song's file or unsaved state.</summary>
-    private void ExportGuitarPro_Click(object sender, RoutedEventArgs e) => _ = ExportGuitarProAsync();
+    private void ExportGuitarPro_Click(object sender, RoutedEventArgs e) => _ = SaveFlow.RunClaimedAsync(hold => ExportGuitarProAsync(Doc, hold), ShowSaveBusy);   // claimed before the file dialog, like a save; the song is the one this command started for, even if another tab is selected while the dialogs are open
 
-    private async Task ExportGuitarProAsync()
+    private async Task<bool> ExportGuitarProAsync(DocumentSession doc, DocumentController.SaveHold hold)
     {
-        if (_documentController.IsSaving) { StatusText.Text = "Already saving…"; return; }
-        var doc = Doc;   // the song this command was started for, even if another tab is selected while the dialogs are open
         var dlg = new SaveFileDialog
         {
-            Title = "Export compatible .gp file", Filter = "Guitar Pro 7/8 (*.gp)|*.gp", DefaultExt = ".gp", AddExtension = true,
+            Title = "Export compatible .gp file", Filter = ".gp file (*.gp)|*.gp", DefaultExt = ".gp", AddExtension = true,
             FileName = SanitizeFileName(Path.GetFileNameWithoutExtension(doc.Path ?? "") is { Length: > 0 } name ? name : doc.Project.Title),
         };
-        if (dlg.ShowDialog(this) != true) return;
+        if (dlg.ShowDialog(this) != true) return false;
         var path = dlg.FileName;
         BeginDocumentOperation();
         BeginSaveInputGate();
         try
         {
             var lyrics = ReferenceEquals(_documents.Active, doc) ? LyricsBox.Text : doc.Project.Lyrics;
-            var outcome = await SaveFlow.ExportGuitarProAsync(doc, path, lyrics, new SaveDialogs(this), CollectStatesAsync, text => StatusText.Text = text);
+            var outcome = await SaveFlow.ExportGuitarProAsync(doc, path, lyrics, new SaveDialogs(this), CollectStatesAsync, text => StatusText.Text = text, hold);
             StatusText.Text = outcome.Message;
+            return true;
         }
-        catch (Exception ex) { StatusText.Text = "Export failed"; DialogHost.ShowError(this, ex.Message, ".gp export failed"); }
+        catch (Exception ex) { StatusText.Text = "Export failed"; DialogHost.ShowError(this, ex.Message, ".gp export failed"); return false; }
         finally
         {
             EndSaveInputGate();
@@ -436,7 +426,7 @@ public partial class MainWindow
         var selected = Editor.SelectedTrackIndex is >= 0 && Editor.SelectedTrackIndex < _project.Tracks.Count ? new[] { _project.Tracks[Editor.SelectedTrackIndex] } : Array.Empty<Models.TrackModel>();
         var ctx = new Views.RenderContext
         {
-            Project = _project, Media = Doc.Media, Settings = _settings, SelectedTracks = selected,
+            Project = _project, Media = Doc.Media, Settings = _settings, Engine = _engine, SelectedTracks = selected,
             Selection = Editor.HasSelection ? (sel.StartMeasure, sel.StartCell, sel.EndMeasure, sel.EndCell) : null,
             StopPlayback = () => { if (_midi.IsPlaying) StopPlayback(); },
             Restore = () => { SyncAudioEngine(); _midi.RearmChannelSetup(); },
@@ -488,7 +478,7 @@ public partial class MainWindow
 
     private void ScoreInfo_Click(object sender, RoutedEventArgs e)
     {
-        var capture = CaptureUndo();
+        var capture = CheckpointUndo();
         if (GpDialogs.EditScoreInfo(_project)) { RefreshStatus(); UpdateTitle(); StatusText.Text = "Score info updated"; }
         else if (capture is { } cancelled) _undo.Discard(cancelled);
     }

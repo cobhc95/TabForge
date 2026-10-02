@@ -2,6 +2,10 @@ using TabForge.Models;
 
 namespace TabForge.Services;
 
+// Owns: the model half of commands reached from both a menu and a key, one behaviour per command (partial files: notes, paste,
+//     paste special).
+// Does not own: the editor's selection, drawing and menus.
+// Tests: TestEditCommands, TestEditorCopyPaste.
 /// <summary>
 /// The model half of the commands that both a menu item and a keyboard shortcut reach. There is exactly one
 /// behaviour per command: <c>TabEditorControl</c> calls these (capturing one undo step through its

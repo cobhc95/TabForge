@@ -34,31 +34,9 @@ public partial class MainWindow
     private PlaybackOptions BuildOptions()
     {
         var (ls, le) = GetLoopRange();
-        TabForge.Playback.PlaybackEngine.CountInEachSection = _countIn && _settings.Audio.CountInEachSection;
         _midi.SetSectionStarts(_project.Markers.Select(marker => marker.MeasureIndex).Where(bar => bar > 0));
         _midi.SetMasterVolume(_project, _settings.Audio.MasterVolume);
-        return new PlaybackOptions
-        {
-            StartBar = Editor.SelectedMeasure,
-            StartCell = Editor.SelectedCell,
-            Speed = _speed,
-            Loop = _loop,
-            LoopStartBar = ls,
-            LoopEndBar = le,
-            LoopStartCell = _loopStartCell,
-            LoopEndCell = _loopEndCell,
-            Metronome = _metronome,
-            // "Only from bar 1": the count-in plays only when starting at the top of the song.
-            CountIn = _countIn && (!_settings.Audio.CountInOnlyAtSongStart || Editor.SelectedMeasure == 0),
-            CountInBars = _settings.Audio.CountInBars,
-            MetronomeAccentNote = _settings.Audio.MetronomeAccent,
-            MetronomeClickNote = _settings.Audio.MetronomeClick,
-            MetronomeVolume = _settings.Audio.MetronomeVolume,
-            MetronomeAccentVolume = _settings.Audio.MetronomeAccentVolume,
-            MetronomeClickVolume = _settings.Audio.MetronomeClickVolume,
-            MetronomeSubdivision = _settings.Audio.MetronomeSubdivision,
-            LetRingCapMs = _settings.Audio.LetRingCapMs
-        };
+        return _transport.BuildOptions(Editor.SelectedMeasure, Editor.SelectedCell, _loop, ls, le, _loopStartCell, _loopEndCell);
     }
 
     private void Play_Click(object sender, RoutedEventArgs e) => TogglePlayback();
@@ -95,6 +73,7 @@ public partial class MainWindow
         if (_midi.IsPlaying && !_midi.IsPaused)
         {
             _midi.Pause();
+            SongClock.Paused();
             _follow.Halt();
             Arrangement.SetPlayhead(Math.Max(0, _playheadBar), _playheadFraction, playbackActive: true, playbackPaused: true);
             SetPlayIcon(false);
@@ -130,7 +109,7 @@ public partial class MainWindow
         var options = BuildOptions();
         Editor.PlaybackTrackIndex = Math.Max(0, Editor.SelectedTrackIndex);
         Arrangement.SetLoopRange(GetLoopRange().start, GetLoopRange().end);
-        _playbackUiTick.Start();
+        _playbackView.StartTick();
         _follow.ResetForPlayback();
         playback.PlaybackBarMappingsBySnapshot.Clear();
         playback.PlaybackBarRemap = Enumerable.Range(0, MaxMeasures()).ToArray();
@@ -138,6 +117,7 @@ public partial class MainWindow
         Playback.RememberBarMapping(_undo.Snapshot(_project));
         var songProject = session.Project;
         var clock = playback.Clock;   // the song's own clock, not this window's: the engine keeps this callback when the tab moves to another window
+        clock.PrepareForPlayback(songProject);   // the song map is built while the engine starts, not after the first playhead asks for it
         playback.Engine.Start(session.Project, options,
             // Engine thread: record the newest position, and keep audio clips in step with the song.
             position =>
@@ -147,35 +127,6 @@ public partial class MainWindow
             },
             playback.MarkFinished);
         SetPlayIcon(true);
-    }
-
-    /// <summary>Receives the engine's compiled timeline (also after a seek or a speed change).</summary>
-    private void OnPlaybackTimelineChanged(ScoreTimeline timeline)
-    {
-        if (_isClosed || !ReferenceEquals(_observedPlaybackDocument, Doc)) return;
-        _timeline = timeline;
-        Editor.Timeline = timeline;
-        RebasePlaybackBarMappings();
-        _playheadMs = timeline.PlayFromMs;
-        _playheadBar = -1;                     // status shows the cursor until the first position tick
-        _playheadCell = 0;
-        Editor.PlaybackMs = timeline.PlayFromMs;
-        _lastUiBar = -1;
-        _lastUiCell = -1;
-        _lastUiMs = timeline.PlayFromMs - 1;
-    }
-
-    /// <summary>Installs the live-reordered future timeline without moving the current playhead.</summary>
-    private void OnPlaybackTimelineRevised(ScoreTimeline timeline)
-    {
-        if (!Dispatcher.CheckAccess())
-        {
-            PostIfOpen(() => OnPlaybackTimelineRevised(timeline), DispatcherPriority.Normal);
-            return;
-        }
-        if (_isClosed || !ReferenceEquals(_observedPlaybackDocument, Doc)) return;
-        _timeline = timeline;
-        Editor.Timeline = timeline;
     }
 
     /// <summary>
@@ -211,141 +162,8 @@ public partial class MainWindow
             _midi.Seek(_project, Editor.SelectedMeasure, Editor.SelectedCell);
     }
 
-    /// <summary>Applies the newest playback position, doing only the work that actually changed.</summary>
-    private void ApplyPendingPlayhead()
-    {
-        var playback = Playback;
-        if (playback.TakeFinished())
-        {
-            CompletePlaybackForActiveDocument();
-            return;
-        }
-        if (!playback.TryTakePendingPosition(out var position) || position is null) return;
-        // Draw what is heard now: the live clock minus the output latency, not the scheduler's last report.
-        if (playback.Engine.IsPlaying && !playback.Engine.IsPaused) position = playback.Engine.AudiblePlayhead();
-
-        var remap = playback.PlaybackBarRemap;
-        var bar = remap is not null && position.Bar >= 0 && position.Bar < remap.Length
-            ? remap[position.Bar]
-            : position.Bar;
-        _playheadMs = position.ElapsedMs;
-        _playheadBar = bar;
-        _playheadCell = position.Cell;
-        _playheadFraction = position.BarFraction;
-        // Keep score following independent of score-cache repaint cadence. In particular, layout/zoom
-        // and loop-wrap updates can change the follow target without changing a rendered note boundary.
-        _follow.OnPlayheadBar(bar);
-
-        var barChanged = bar != _lastUiBar || position.Cell != _lastUiCell;
-        var now = DateTime.UtcNow;
-        if (barChanged) UpdatePlayingSectionMarker(bar);
-
-        // The arrangement playhead is a cheap overlay: update every tick.
-        Arrangement.SetPlayhead(bar, position.BarFraction, playbackActive: true, playbackPaused: _midi.IsPaused);
-
-        // The score page is the expensive one: repaint only when the beat changes, when a note
-        // actually starts/ends (so the highlight is exactly as long as the note), or as a fallback
-        // cadence. The fretboard follows at a lower cadence.
-        var noteBoundary = Editor.PlaybackNeedsRepaint(_lastUiMs, position.ElapsedMs);
-        if (barChanged || noteBoundary || (now - _lastEditorUpdate).TotalMilliseconds >= 250)
-        {
-            _lastEditorUpdate = now;
-            Editor.PlaybackMs = position.ElapsedMs;
-            Editor.PlaybackFraction = position.BarFraction;
-            Editor.PlaybackTrackIndex = Math.Max(0, Editor.SelectedTrackIndex);
-            Editor.SetPlayhead(bar, position.Cell);
-        }
-        else
-        {
-            Editor.PlaybackMs = position.ElapsedMs;
-            Editor.PlaybackFraction = position.BarFraction;
-        }
-
-        // A drum hit starts at a note boundary; per-frame redraws run only while its glow is fading.
-        var drumGlowing = Instrument.IsAnimating && SelectedTrack is { } shownTrack &&
-            (shownTrack.Kind == TrackKind.Drums || shownTrack.MidiChannel == 9);
-        if (drumGlowing || barChanged || noteBoundary || (now - _lastInstrumentUpdate).TotalMilliseconds >= 200)
-        {
-            _lastInstrumentUpdate = now;
-            if (_follow.FollowFretboard) RefreshInstrument();
-        }
-        if (barChanged) RefreshStatus();
-        Playhead.SetGeometry(Editor.PlayheadGeometry());
-        // The duration glow is off by default; don't compute its geometry every frame when it is hidden.
-        Playhead.SetDurationGeometries(_settings.Follow.DurationTintEnabled
-            ? Editor.PlaybackDurationGeometries()
-            : Array.Empty<(double, double, double, double)>());
-        _lastUiBar = bar;
-        _lastUiCell = position.Cell;
-        _lastUiMs = position.ElapsedMs;
-    }
-
-    private void SyncPlaybackUiToActiveDocument()
-    {
-        var playback = Playback;
-        var engine = playback.Engine;
-        if (!engine.IsPlaying || !playback.IsPlayingVisual)
-        {
-            _playbackUiTick.Stop();
-            _follow.Halt();
-            Editor.PlaybackActive = false;
-            Editor.PlaybackBarRemap = null;
-            Editor.ClearPlayhead();
-            Playhead.SetGeometry(null);
-            Playhead.SetDurationGeometry(null);
-            SyncArrangementPlayhead();
-            SetPlayIcon(false);
-            MidiLed.Fill = Brushes.Gray;
-            return;
-        }
-
-        Editor.Timeline = playback.Timeline;
-        Editor.PlaybackBarRemap = playback.PlaybackBarRemap;
-        Editor.PlaybackActive = true;
-        Editor.PlaybackTrackIndex = Math.Max(0, Editor.SelectedTrackIndex);
-        _follow.ResetRow();
-        _lastUiBar = -1;
-        _lastUiCell = -1;
-        _lastUiMs = double.NegativeInfinity;
-        playback.ReportPosition(engine.Playhead());
-        _playbackUiTick.Start();
-        _follow.Halt();
-        ApplyPendingPlayhead();
-        Arrangement.SetPlayhead(Math.Max(0, _playheadBar), _playheadFraction,
-            playbackActive: true, playbackPaused: engine.IsPaused);
-        SetPlayIcon(!engine.IsPaused);
-        MidiLed.Fill = engine.IsPaused ? Brushes.Gray : Brushes.LimeGreen;
-        StatusText.Text = engine.IsPaused ? "Paused" : "Playing";
-    }
-
-    private void CompletePlaybackForActiveDocument()
-    {
-        var playback = Playback;
-        playback.IsPlayingVisual = false;
-        playback.PlayheadBar = -1;
-        playback.PlaybackBarRemap = null;
-        playback.PlaybackBarMappingsBySnapshot.Clear();
-        _follow.ResetRow();
-        Editor.PlaybackBarRemap = null;
-        UpdatePlayingSectionMarker(-1);
-        Editor.PlaybackActive = false;
-        Playhead.SetGeometry(null);
-        Playhead.SetDurationGeometry(null);
-        _playbackUiTick.Stop();
-        _follow.Halt();
-        Editor.ClearPlayhead();
-        SyncArrangementPlayhead();
-        SetPlayIcon(false);
-        StatusText.Text = "Playback finished";
-        MidiLed.Fill = Brushes.Gray;
-        RefreshInstrument();
-    }
-
-    private int _lastUiBar = -1;
-    private int _lastUiCell = -1;
-    private double _lastUiMs;
-    private DateTime _lastEditorUpdate = DateTime.MinValue;
-    private DateTime _lastInstrumentUpdate = DateTime.MinValue;
+    /// <summary>Applies the newest playback position (the controller's tick body).</summary>
+    private void ApplyPendingPlayhead() => _playbackView.Apply();
 
     /// <summary>Rebuilds the visual timeline (used when the score changes while stopped).</summary>
     private void RebuildVisualTimeline()
@@ -378,7 +196,7 @@ public partial class MainWindow
         Playhead.SetGeometry(null);
         Playhead.SetDurationGeometry(null);
         _playheadBar = -1;
-        _playbackUiTick.Stop();
+        _playbackView.StopTick();
         _follow.Halt();
         Editor.ClearPlayhead();
         Editor.PlaybackMs = 0;
@@ -408,7 +226,9 @@ public partial class MainWindow
         {
             // No selected area: loop the whole song, or (opt-in) the section being played.
             var lastBar = Math.Max(0, MaxMeasures() - 1);
-            var (start, end) = _settings.Audio.LoopButtonLoopsSection ? DefaultLoopArea() : (0, lastBar);
+            var (start, end) = _settings.Audio.LoopButtonLoopsSection
+                ? TransportControlsController.DefaultLoopArea(_project, _settings.Audio.LoopDefaultScope, _isPlayingVisual && _playheadBar >= 0 ? _playheadBar : Editor.SelectedMeasure)
+                : (0, lastBar);
             _loopStartBar = start;
             _loopEndBar = end;
             _loopStartCell = 0;
@@ -426,32 +246,9 @@ public partial class MainWindow
         StatusText.Text = _loop ? $"Looping bars {_loopStartBar + 1}-{_loopEndBar + 1}" : "Loop off";
     }
 
-    /// <summary>The bars the loop button covers when no area was picked, per the loop settings.</summary>
-    private (int start, int end) DefaultLoopArea()
-    {
-        var lastBar = Math.Max(0, (_project.Tracks.Count == 0 ? 1 : _project.Tracks.Max(t => t.Measures.Count)) - 1);
-        var bar = Math.Clamp(_isPlayingVisual && _playheadBar >= 0 ? _playheadBar : Editor.SelectedMeasure, 0, lastBar);
-        switch (_settings.Audio.LoopDefaultScope)
-        {
-            case "Bar":
-                return (bar, bar);
-            case "Song":
-                return (0, lastBar);
-            default:
-                var markers = SectionLayout.Sorted(_project);
-                var index = markers.FindLastIndex(m => m.MeasureIndex <= bar);
-                if (index < 0) return markers.Count > 0 ? (0, Math.Max(0, markers[0].MeasureIndex - 1)) : (0, lastBar);
-                var sectionEnd = SectionLayout.End(markers, index, lastBar + 1);
-                // A bar in the gap after a resized section loops the gap itself.
-                if (bar >= sectionEnd)
-                    return (sectionEnd, Math.Clamp((index + 1 < markers.Count ? markers[index + 1].MeasureIndex : lastBar + 1) - 1, sectionEnd, lastBar));
-                return (markers[index].MeasureIndex, Math.Clamp(sectionEnd - 1, markers[index].MeasureIndex, lastBar));
-        }
-    }
-
     private void LoopButton_PreviewMouseRightButtonUp(object sender, MouseButtonEventArgs e)
     {
-        _syncingLoopSettings = true;
+        _transport.SyncingLoopSettings = true;
         LoopRangeText.Text = _loopHasArea || _loop
             ? $"Loop area: bars {_loopStartBar + 1}-{_loopEndBar + 1}{(_loop ? "" : " (loop off)")}"
             : "No loop area selected";
@@ -460,18 +257,17 @@ public partial class MainWindow
         LoopClearOnDisableCheck.IsChecked = _settings.Audio.LoopClearAreaOnDisable;
         LoopButtonSectionCheck.IsChecked = _settings.Audio.LoopButtonLoopsSection;
         SyncLoopBehaviourControls();
-        _syncingLoopSettings = false;
+        _transport.SyncingLoopSettings = false;
         LoopSettingsPopup.IsOpen = true;
         e.Handled = true;
     }
 
-    private bool _syncingLoopSettings;
 
     private void CloseLoopSettings_Click(object sender, RoutedEventArgs e) => LoopSettingsPopup.IsOpen = false;
 
     private void LoopScope_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (_syncingLoopSettings || LoopScopeCombo.SelectedItem is not ComboBoxItem { Tag: string scope }) return;
+        if (_transport.SyncingLoopSettings || LoopScopeCombo.SelectedItem is not ComboBoxItem { Tag: string scope }) return;
         _settings.Audio.LoopDefaultScope = scope;
         SaveSettings();
     }
@@ -490,102 +286,28 @@ public partial class MainWindow
         StatusText.Text = "Loop area cleared";
     }
 
-    // One source of truth: _speed. The only speed control is SpeedCombo (Zoom & speed pane, "100%");
-    // it, restored settings and any command write through ApplySpeed and re-draw from _speed.
-    private bool _speedSync;
-
-    private void SpeedCombo_Changed(object sender, SelectionChangedEventArgs e)
-    {
-        if (_speedSync || !IsLoaded || _restoring || SpeedCombo.SelectedItem is not ComboBoxItem item) return;
-        ApplySpeedText(item.Content?.ToString() ?? "100%");
-    }
-
-    private void SpeedCombo_ReSync(object sender, RoutedEventArgs e) => UpdateSpeedControls();
+    // The one speed control is SpeedCombo (Zoom & speed pane, "100%"); the transport controller holds the speed and draws it.
+    private void SpeedCombo_Changed(object sender, SelectionChangedEventArgs e) => _transport.OnSpeedComboChanged();
+    private void SpeedCombo_ReSync(object sender, RoutedEventArgs e) => _transport.ShowSpeed();
 
     private void SpeedCombo_VisibleReSync(object sender, DependencyPropertyChangedEventArgs e)
     {
-        if (e.NewValue is true) UpdateSpeedControls();
+        if (e.NewValue is true) _transport.ShowSpeed();
     }
 
-    private void SpeedCombo_LostFocus(object sender, RoutedEventArgs e) => CommitCustomSpeed();
+    private void SpeedCombo_LostFocus(object sender, RoutedEventArgs e) => _transport.CommitCustomSpeed();
 
     private void SpeedCombo_PreviewKeyDown(object sender, KeyEventArgs e)
     {
         if (e.Key != Key.Enter) return;
-        CommitCustomSpeed();
+        _transport.CommitCustomSpeed();
         e.Handled = true;
     }
 
-    private void CommitCustomSpeed()
-    {
-        if (!IsLoaded || _restoring || SpeedCombo.SelectedItem is ComboBoxItem) return;
-        ApplySpeedText(SpeedCombo.Text);
-    }
-
-    /// <summary>Parses typed speed: "90%" or "90" = 0.9; a bare value of 4 or less is a factor ("0.9", "1.25").</summary>
-    internal static double? ParseSpeedText(string? text)
-    {
-        var t = (text ?? "").Trim().Replace(',', '.');
-        var pct = t.EndsWith('%');
-        t = t.TrimEnd('%', '×', 'x', 'X').Trim();
-        if (!double.TryParse(t, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var v) || !double.IsFinite(v))
-            return null;
-        return pct || v > 4 ? v / 100.0 : v;
-    }
-
-    private static readonly double[] SpeedPresets = { 0.5, 0.75, 1.0, 1.25, 1.5, 2.0 };
-
-    /// <summary>The next preset above (direction +1) or below (-1) the current speed; a custom speed steps to its neighbouring preset.</summary>
-    internal static double NextSpeedPreset(double current, int direction)
-    {
-        current = ClampSpeed(current);
-        if (direction > 0) foreach (var p in SpeedPresets) { if (p > current + 1e-6) return p; }
-        else for (var i = SpeedPresets.Length - 1; i >= 0; i--) { if (SpeedPresets[i] < current - 1e-6) return SpeedPresets[i]; }
-        return current;
-    }
-
-    internal static double ClampSpeed(double v) => double.IsFinite(v) ? Math.Clamp(v, 0.25, 2.0) : 1.0;
-
-    private void ApplySpeedText(string text)
-    {
-        if (ParseSpeedText(text) is not { } v) { UpdateSpeedControls(); return; }
-        ApplySpeed(v);
-    }
-
-    /// <summary>Sets the playback speed everywhere (engine and the speed box) and saves it.</summary>
-    internal void ApplySpeed(double value)
-    {
-        _speed = ClampSpeed(value);
-        if (_midi.IsPlaying) _midi.SetSpeed(_project, _speed);
-        UpdateSpeedControls();
-        StatusText.Text = $"Speed {_speed:0.00}×";
-        if (IsLoaded && !_restoring) SaveSettings();
-    }
-
-    internal double CurrentSpeed => _speed;
-
-    /// <summary>Re-draws the speed box from _speed (also used after settings restore).</summary>
-    private void UpdateSpeedControls()
-    {
-        if (SpeedCombo is null) return;
-        var was = _speedSync;
-        _speedSync = true;
-        try { ShowSpeedOn(SpeedCombo, _speed); }
-        finally { _speedSync = was; }
-    }
-
-    /// <summary>Makes an editable speed combo display the given speed as a percentage; returns the text shown.</summary>
-    internal static string ShowSpeedOn(ComboBox combo, double speed)
-    {
-        combo.ApplyTemplate();
-        var label = $"{ClampSpeed(speed) * 100:0}%";
-        var preset = combo.Items.OfType<ComboBoxItem>()
-            .FirstOrDefault(i => string.Equals(i.Content?.ToString(), label, StringComparison.Ordinal));
-        combo.SelectedItem = preset;
-        if (preset is null) combo.SelectedIndex = -1;
-        combo.Text = label;
-        return label;
-    }
+    internal static double NextSpeedPreset(double current, int direction) => TransportControlsController.NextSpeedPreset(current, direction);
+    internal void ApplySpeed(double value) => _transport.ApplySpeed(value);
+    internal double CurrentSpeed => _transport.Speed;
+    private void UpdateSpeedControls() => _transport.ShowSpeed();
 
     private void TempoBox_LostFocus(object sender, RoutedEventArgs e) => ApplyTempo();
 
@@ -599,20 +321,18 @@ public partial class MainWindow
     }
 
     /// <summary>The tempo a typed text means: a whole number clamped to 20-400, or <paramref name="current"/> when it is not a number.</summary>
-    internal static int ResolveTempoText(string? text, int current) =>
-        Math.Clamp(int.TryParse(text?.Trim(), out var bpm) ? bpm : current, 20, 400);
+    internal static int ResolveTempoText(string? text, int current) => DocumentViewBinder.ResolveTempoText(text, current);
+
+    /// <summary>A typed note sounds once for the set length at the song tempo (the Preferences length is only the fallback).</summary>
+    private void OnNotePreview(object? sender, NotePreviewEventArgs e)
+    {
+        if (_previewNotes) _midi.PreviewNote(e.DeviceId, e.Channel, e.Program, e.Midi, e.LengthMs > 0 ? e.LengthMs : _settings.Audio.PreviewLengthMs);
+    }
 
     private void ApplyTempo()
     {
-        var bpm = ResolveTempoText(TempoBox.Text, _project.Tempo);
-        if (bpm != _project.Tempo)
-        {
-            DocumentEdits.Run(Doc, p => { p.Tempo = bpm; return true; }); RefreshAfterEdit(EditRefresh.Status);
-            // While playing, recompile from the current position so the new tempo is heard at once (not from bar 1, and
-            // only when the value really changed, so clicking away from the box never restarts anything).
-            if (_midi.IsPlaying) _midi.Rebuild(_project);
-        }
-        TempoBox.Text = bpm.ToString();
+        if (DocumentViewBinder.CommitTempo(Doc, TempoBox.Text)) RefreshAfterEdit(EditRefresh.Status);
+        TempoBox.Text = _project.Tempo.ToString();
     }
 
     private void Beginning_Click(object sender, RoutedEventArgs e) { Editor.MoveToFirstBar(); ScrollToCursor(); }
@@ -679,5 +399,86 @@ public partial class MainWindow
     {
         while (d is not null && d is not T) d = d is Visual or System.Windows.Media.Media3D.Visual3D ? VisualTreeHelper.GetParent(d) : LogicalTreeHelper.GetParent(d);
         return d as T;
+    }
+
+    /// <summary>The window as the host of its <see cref="PlaybackViewController"/>.</summary>
+    private sealed class PlaybackViewHost : IPlaybackViewHost
+    {
+        private readonly MainWindow _window;
+        public PlaybackViewHost(MainWindow window) => _window = window;
+
+        public bool IsClosed => _window._isClosed;
+        public DocumentSession ActiveDocument => _window.Doc;
+        public IScorePlayhead Score => _window.Editor.Playback;
+        public int ScoreTrackIndex => Math.Max(0, _window.Editor.SelectedTrackIndex);
+        public void SelectScoreTrack() => _window.Editor.PlaybackTrackIndex = ScoreTrackIndex;
+        public bool OnUiThread => _window.Dispatcher.CheckAccess();
+        public void Post(Action work) => _window.PostIfOpen(work, DispatcherPriority.Normal);
+
+        public void FollowPlayheadBar(int bar) => _window._follow.OnPlayheadBar(bar);
+        public void ShowPlayingSection(int bar) => _window.UpdatePlayingSectionMarker(bar);
+        public void ShowArrangementPlayhead(int bar, double fraction, bool paused) => _window.Arrangement.SetPlayhead(bar, fraction, playbackActive: true, playbackPaused: paused);
+        public bool InstrumentAnimating => _window.Instrument.IsAnimating && _window.SelectedTrack is { } shown && (shown.Kind == TrackKind.Drums || shown.MidiChannel == 9);
+        public bool FollowsFretboard => _window._follow.FollowFretboard;
+        public void RefreshInstrument() => _window.RefreshInstrument();
+        public void RefreshStatus() => _window.RefreshStatus();
+
+        public void ShowPlayheadGeometry()
+        {
+            var window = _window;
+            window.Playhead.SetGeometry(window.Editor.PlayheadGeometry());
+            // The duration glow is off by default; don't compute its geometry every frame when it is hidden.
+            window.Playhead.SetDurationGeometries(window._settings.Follow.DurationTintEnabled
+                ? window.Editor.PlaybackDurationGeometries()
+                : Array.Empty<(double, double, double, double)>());
+        }
+
+        public void ShowTimeline(ScoreTimeline timeline, bool rebaseBarMappings)
+        {
+            _window._timeline = timeline;
+            _window.Editor.Timeline = timeline;
+            if (rebaseBarMappings) _window.RebasePlaybackBarMappings();
+        }
+
+        public void ShowStopped()
+        {
+            var window = _window;
+            window.Editor.PlaybackActive = false;
+            window.Editor.PlaybackBarRemap = null;
+            window.Editor.ClearPlayhead();
+            window.Playhead.SetGeometry(null);
+            window.Playhead.SetDurationGeometry(null);
+            window.SyncArrangementPlayhead();
+            window.SetPlayIcon(false);
+            window.MidiLed.Fill = Brushes.Gray;
+        }
+
+        public void ShowTransportRunning(bool paused)
+        {
+            _window.SetPlayIcon(!paused);
+            _window.MidiLed.Fill = paused ? Brushes.Gray : Brushes.LimeGreen;
+            _window.StatusText.Text = paused ? "Paused" : "Playing";
+        }
+
+        public void ShowPlaybackFinished()
+        {
+            var window = _window;
+            window._follow.ResetRow();
+            window.Editor.PlaybackBarRemap = null;
+            window.UpdatePlayingSectionMarker(-1);
+            window.Editor.PlaybackActive = false;
+            window.Playhead.SetGeometry(null);
+            window.Playhead.SetDurationGeometry(null);
+            window._follow.Halt();
+            window.Editor.ClearPlayhead();
+            window.SyncArrangementPlayhead();
+            window.SetPlayIcon(false);
+            window.StatusText.Text = "Playback finished";
+            window.MidiLed.Fill = Brushes.Gray;
+            window.RefreshInstrument();
+        }
+
+        public void HaltFollow() => _window._follow.Halt();
+        public void ResetFollowRow() => _window._follow.ResetRow();
     }
 }

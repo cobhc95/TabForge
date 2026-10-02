@@ -23,12 +23,41 @@ public sealed partial class ArrangementPanel
     // ---------- track-control columns: ordered, resizable, re-orderable ----------
     // "name" is the flexible column; every other column has a stored width.
     public static readonly string[] DefaultColumnOrder = { "settings", "colour", "number", "name", "fx", "mute", "solo", "volume", "pan", "instrument" };
-    private static readonly Dictionary<string, (string label, double width, double min, double max)> ColumnSpecs = new()
+    private static readonly Dictionary<string, (string label, double width, double min, double max)> ColumnSpecs = WithHeaderMinimums(new()
     {
         ["colour"] = ("●", 22, 18, 40), ["settings"] = ("⚙", 24, 20, 40), ["number"] = ("#", 28, 22, 50),
         ["name"] = ("TRACK", 0, 0, 0), ["fx"] = ("FX", 56, 50, 80), ["mute"] = ("M", 26, 22, 44), ["solo"] = ("S", 26, 22, 44),
         ["volume"] = ("VOLUME", 82, 40, 240), ["pan"] = ("PAN", 82, 28, 240), ["instrument"] = ("INSTRUMENT", 132, 80, 280)
-    };
+    });
+
+    /// <summary>Header label font size (DIPs); the minimum column widths are measured at it.</summary>
+    private const double HeaderFontSize = Services.ThemeService.MinFontSize * 1.2;
+    private const double HeaderCellPadding = 8;   // cell margin + border + a little air, both sides
+
+    /// <summary>Width (DIPs) a column's header label needs at the header font, so no header ever trims.</summary>
+    public static double HeaderNeed(string label)
+    {
+        var text = new FormattedText(label, System.Globalization.CultureInfo.InvariantCulture, FlowDirection.LeftToRight,
+            new Typeface(new FontFamily("Segoe UI"), FontStyles.Normal, FontWeights.SemiBold, FontStretches.Normal), HeaderFontSize, Brushes.Black, 1.0);
+        return Math.Ceiling(text.WidthIncludingTrailingWhitespace + HeaderCellPadding);
+    }
+
+    private static Dictionary<string, (string label, double width, double min, double max)> WithHeaderMinimums(
+        Dictionary<string, (string label, double width, double min, double max)> specs)
+    {
+        foreach (var id in specs.Keys.ToList())
+        {
+            if (id == "name") continue;
+            var (label, width, min, max) = specs[id];
+            min = Math.Max(min, HeaderNeed(label));
+            specs[id] = (label, Math.Max(width, min), min, Math.Max(max, min));
+        }
+        return specs;
+    }
+
+    /// <summary>Each column's minimum width and the width its header needs (self-test: minimum >= need).</summary>
+    public static IEnumerable<(string id, double min, double need)> ColumnMinimumsForTest() =>
+        ColumnSpecs.Where(p => p.Key != "name").Select(p => (p.Key, p.Value.min, HeaderNeed(p.Value.label)));
     private const double RowGridLeft = 6, RowGridRight = 10;
     private List<string> _columnOrder = DefaultColumnOrder.ToList();
     private readonly Dictionary<string, double> _columnWidths = ColumnSpecs.ToDictionary(p => p.Key, p => p.Value.width);
@@ -191,12 +220,12 @@ public sealed partial class ArrangementPanel
             var index = c;
             var label = new TextBlock
             {
-                Text = ColumnSpecs[id].label, FontSize = Services.ThemeService.MinFontSize, FontWeight = FontWeights.SemiBold, Opacity = 0.8,
+                Text = ColumnSpecs[id].label, FontSize = HeaderFontSize, FontWeight = FontWeights.SemiBold,
                 VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis,
                 HorizontalAlignment = id == "name" ? HorizontalAlignment.Left : HorizontalAlignment.Center,
                 Margin = new Thickness(id == "name" ? 4 : 0, 0, 0, 0), IsHitTestVisible = false
             };
-            label.SetResourceReference(TextBlock.ForegroundProperty, "TextBrush");
+            label.SetResourceReference(TextBlock.ForegroundProperty, "LegibleBrush");
             var cell = new Border
             {
                 Background = Brushes.Transparent, Child = label, CornerRadius = new CornerRadius(3), Margin = new Thickness(1, 1, 1, 1),
@@ -580,6 +609,7 @@ public sealed partial class ArrangementPanel
         {
             Content = content, Margin = new Thickness(4, 2, 4, 2), FontSize = 11, Padding = new Thickness(5, 1, 5, 1),
             HorizontalContentAlignment = HorizontalAlignment.Stretch, ToolTip = "Instrument / VST for this track",
+            VerticalAlignment = VerticalAlignment.Center, MaxHeight = 30,   // stays a button-sized control when rows are tall
         };
         button.Click += (_, _) =>
         {
@@ -717,74 +747,47 @@ public sealed partial class ArrangementPanel
             slider.Minimum, slider.Maximum);
     }
 
-    private static void SetSliderFromTrackClick(Slider slider, MouseButtonEventArgs e)
-    {
-        if (IsSliderThumb(e.OriginalSource as DependencyObject)) return;
-        var usableWidth = Math.Max(1, slider.ActualWidth - 12);
-        var ratio = Math.Clamp((e.GetPosition(slider).X - 6) / usableWidth, 0, 1);
-        if (slider.IsDirectionReversed) ratio = 1 - ratio;
-        slider.Value = slider.Minimum + ratio * (slider.Maximum - slider.Minimum);
-        e.Handled = true;
-    }
-
-    private static bool IsSliderThumb(DependencyObject? element)
-    {
-        while (element is not null)
-        {
-            if (element is System.Windows.Controls.Primitives.Thumb) return true;
-            element = VisualTreeHelper.GetParent(element);
-        }
-        return false;
-    }
-
     internal static Button ToggleIconButton(string iconResource, bool active, Action toggle, string tooltip)
     {
+        // "M" (grey box, red when muted) and "S" (solo): the box restyles on the click, before any follow-up work runs.
+        var mute = iconResource == "IconMute";
+        var label = new TextBlock
+        {
+            Text = mute ? "M" : "S", FontSize = 11, FontWeight = FontWeights.Bold,
+            HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center
+        };
         var button = new Button
         {
             Width = 23, MinWidth = 23, Height = 22, Padding = new Thickness(0),
-            Margin = new Thickness(1, 0, 1, 0), ToolTip = tooltip,
+            Margin = new Thickness(1, 0, 1, 0),
             Style = (Style)Application.Current.FindResource("TransportButton"),
-            Background = iconResource == "IconMute"
-                ? active ? (Brush)Application.Current.FindResource("TrackMutedBrush") : (Brush)Application.Current.FindResource("TrackAudibleBrush")
-                : active ? (Brush)Application.Current.FindResource("TrackSoloBrush") : (Brush)Application.Current.FindResource("TrackToggleIdleBrush"),
-            BorderBrush = iconResource == "IconMute"
-                ? active ? (Brush)Application.Current.FindResource("TrackMutedBrush") : (Brush)Application.Current.FindResource("TrackAudibleBrush")
-                : active ? (Brush)Application.Current.FindResource("TrackSoloActiveBorderBrush") : (Brush)Application.Current.FindResource("BorderSoftBrush")
+            Content = label
         };
-        if (iconResource == "IconSolo")
+        static Brush Res(string key) => (Brush)Application.Current.FindResource(key);
+        void Restyle()
         {
-            button.Content = new TextBlock
+            button.Background = active ? Res(mute ? "TrackMutedBrush" : "TrackSoloBrush") : Res("TrackToggleIdleBrush");
+            button.BorderBrush = active ? Res(mute ? "TrackMutedBrush" : "TrackSoloActiveBorderBrush") : Res("BorderSoftBrush");
+            if (mute && active)
             {
-                Text = "S", FontSize = 11, FontWeight = FontWeights.Bold,
-                Foreground = active ? (Brush)Application.Current.FindResource("TrackSoloTextBrush") : (Brush)Application.Current.FindResource("MutedBrush"),
-                HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center
-            };
+                // Readable on the red box in both themes (the light theme's red is pale).
+                var c = Res("TrackMutedBrush") is SolidColorBrush solid ? solid.Color : Colors.Red;
+                label.Foreground = Draw.Solid(0.299 * c.R + 0.587 * c.G + 0.114 * c.B > 150 ? Color.FromRgb(0x2A, 0x08, 0x0E) : Colors.White);
+            }
+            else label.Foreground = !mute && active ? Res("TrackSoloTextBrush") : Res("MutedBrush");
+            var stateWord = mute ? (active ? "Muted" : "Not muted") : (active ? "Soloed" : "Not soloed");
+            button.ToolTip = $"{tooltip} ({stateWord})";
+            System.Windows.Automation.AutomationProperties.SetHelpText(button, stateWord);
         }
-        else
-        {
-            button.Content = new System.Windows.Shapes.Path
-            {
-                Data = (Geometry)Application.Current.FindResource(iconResource == "IconMute" && !active ? "IconSpeaker" : iconResource),
-                Style = (Style)Application.Current.FindResource("IconPath")
-            };
-        }
-        var stateWord = iconResource == "IconMute" ? (active ? "Muted" : "Not muted") : iconResource == "IconSolo" ? (active ? "Soloed" : "Not soloed") : (active ? "On" : "Off");
-        button.ToolTip = $"{tooltip} ({stateWord})";
-        System.Windows.Automation.AutomationProperties.SetHelpText(button, stateWord);
+        Restyle();
         System.Windows.Automation.AutomationProperties.SetName(button, tooltip);
-        button.Click += (_, _) => toggle();
+        button.Click += (_, _) =>
+        {
+            active = !active;
+            Restyle();
+            toggle();
+        };
         return button;
-    }
-
-    private static readonly string[] Palette =
-    {
-        "#F61A16", "#ED2224", "#F4E014", "#2248E8", "#35B954", "#D850C6", "#FF8C00", "#00B7C3", "#8B5CF6", "#64748B"
-    };
-
-    private static string NextColor(string current)
-    {
-        var i = Array.IndexOf(Palette, current);
-        return Palette[(i + 1 + Palette.Length) % Palette.Length];
     }
 
     public static Brush ParseBrush(string hex, Brush fallback) =>

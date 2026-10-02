@@ -4,8 +4,11 @@ using TabForge.Services;
 
 namespace TabForge.Controllers;
 
-public sealed record SectionClipboardSnapshot(List<List<MeasureModel>> Tracks, MarkerModel? Marker);
+public sealed record SectionClipboardSnapshot(List<List<MeasureModel>> Tracks, MarkerModel? Marker, SectionClipSet? Clips = null);
 
+// Owns: the arrangement-level edits of tracks and sections that the timeline and menus request.
+// Does not own: the document model, undo capture (DocumentEdits) and the timeline drawing.
+// Tests: TestEditControllers, TestDocumentOperations, TestDuplicateBarAllTracks.
 /// <summary>Model-side bar operations and arrangement clipboard state; dialogs and refreshes stay in WPF.</summary>
 public sealed class ArrangementController
 {
@@ -13,9 +16,13 @@ public sealed class ArrangementController
     // marker (title/colour, not score content) stays here, tied to the clip it belongs to.
     private ScoreClip? _sectionClip;
     private MarkerModel? _sectionMarker;
+    private SectionClipSet? _sectionClips;   // copies of the clips that lay fully inside the copied section
 
     /// <summary>The marker of the section copied as <paramref name="clip"/>, or null when the clip is not the last copied section.</summary>
     public MarkerModel? SectionMarkerFor(ScoreClip? clip) => clip is not null && ReferenceEquals(clip, _sectionClip) ? _sectionMarker : null;
+
+    /// <summary>The clips copied with the section copied as <paramref name="clip"/>, or null.</summary>
+    public SectionClipSet? SectionClipsFor(ScoreClip? clip) => clip is not null && ReferenceEquals(clip, _sectionClip) ? _sectionClips : null;
 
     public MarkerModel? SectionAt(SongProject project, int bar) => SectionLayout.At(project, bar);
 
@@ -25,7 +32,7 @@ public sealed class ArrangementController
         var tracks = project.Tracks.Select(track => Enumerable.Range(start, end - start)
             .Select(bar => bar < track.Measures.Count ? ProjectService.CloneMeasure(track.Measures[bar]) : new MeasureModel())
             .ToList()).ToList();
-        return new SectionClipboardSnapshot(tracks, CloneMarker(marker));
+        return new SectionClipboardSnapshot(tracks, CloneMarker(marker), SectionClips.Cloned(SectionClips.Capture(project, start, end)));
     }
 
     /// <summary>Copies the section's bars (all tracks) as a Bars clip onto the shared clipboard and remembers its marker.</summary>
@@ -37,6 +44,7 @@ public sealed class ArrangementController
         systemClipboardWritten = clipboard.Copy(clip);
         _sectionClip = clip;
         _sectionMarker = CloneMarker(marker);
+        _sectionClips = SectionClips.Cloned(SectionClips.Capture(project, start, end));
         return clip;
     }
 
@@ -306,8 +314,13 @@ public sealed class ArrangementController
     public sealed record BarMove(int At, int[] Map);
     public sealed record BarInserted(int At);
 
-    public EditResult<BarInserted> InsertBar(DocumentSession document, int at, int templateBar, bool moveMarkers) =>
-        DocumentEdits.Run(document, project => new BarInserted(InsertBar(project, at, templateBar, moveMarkers)));
+    public EditResult<BarInserted> InsertBar(DocumentSession document, int at, int templateBar, bool moveMarkers, bool fillRests = false) =>
+        DocumentEdits.Run(document, project =>
+        {
+            var added = InsertBar(project, at, templateBar, moveMarkers);
+            if (fillRests) for (var t = 0; t < project.Tracks.Count; t++) BarFill.FillBars(project, t, added, added);   // a new bar starts as one whole-bar rest
+            return new BarInserted(added);
+        });
 
     public EditResult DeleteBar(DocumentSession document, int bar, int trackIndex, bool allTracks, bool moveMarkers) =>
         DocumentEdits.Run(document, project => DeleteBar(project, bar, trackIndex, allTracks, moveMarkers));
@@ -324,20 +337,79 @@ public sealed class ArrangementController
 
     /// <summary>Moves a whole section; <paramref name="before"/> is the undo state taken when a drag started (null: taken now).</summary>
     public EditResult<int[]> MoveSection(DocumentSession document, int from, int insertBefore, UndoSnapshot? before = null) =>
-        DocumentEdits.Run<int[]>(document, project => SectionReorderService.Move(project, from, insertBefore), before);
+        DocumentEdits.Run<int[]>(document, project =>
+        {
+            // The clips fully inside the section travel with it, in bars and beats; the song grows to cover them. All in this one step.
+            var sorted = project.Markers.OrderBy(m => m.MeasureIndex).ToList();
+            var carried = from >= 0 && from < sorted.Count && SectionLayout.TryGetBounds(project, sorted[from], out var start, out var end)
+                ? SectionClips.Capture(project, start, end) : SectionClipSet.None;
+            var map = SectionReorderService.Move(project, from, insertBefore);
+            if (map is not null && !carried.IsEmpty) GrowToCover(project, SectionClips.Place(project, carried, map[carried.Start], add: false));
+            return FollowBars(document, map);
+        }, before);
+
+    private static void GrowToCover(SongProject project, double clipEndSec)
+    {
+        if (clipEndSec > 0) SongExtent.EnsureCovers(project, clipEndSec);
+    }
+
+    /// <summary>
+    /// Skipped areas are bar ranges of the document, not of the song: after a structural edit they follow their bars through
+    /// <paramref name="oldToNewBar"/> (a deleted bar leaves its range; a range split by a move becomes one range per run). Returns the mapping.
+    /// Undo and redo give the ranges back with the song state (<see cref="DocumentSession.RestoreSkipRanges"/>).
+    /// </summary>
+    private static int[]? FollowBars(DocumentSession document, int[]? oldToNewBar)
+    {
+        if (oldToNewBar is null || document.SkipRanges.Count == 0) return oldToNewBar;
+        var moved = RemapSkipRanges(document.SkipRanges, oldToNewBar);
+        document.SkipRanges.Clear();
+        document.SkipRanges.AddRange(moved);
+        return oldToNewBar;
+    }
+
+    /// <summary>The bar ranges that hold the same bars after <paramref name="oldToNewBar"/> (-1 = the bar is gone), in bar order.</summary>
+    internal static List<(int Start, int End)> RemapSkipRanges(IEnumerable<(int Start, int End)> ranges, int[] oldToNewBar)
+    {
+        var bars = new SortedSet<int>();
+        foreach (var (start, end) in ranges)
+            for (var bar = Math.Max(0, start); bar <= end && bar < oldToNewBar.Length; bar++)
+                if (oldToNewBar[bar] >= 0) bars.Add(oldToNewBar[bar]);
+        var result = new List<(int Start, int End)>();
+        foreach (var bar in bars)
+        {
+            if (result.Count > 0 && result[^1].End + 1 == bar) result[^1] = (result[^1].Start, bar);
+            else result.Add((bar, bar));
+        }
+        return result;
+    }
 
     /// <summary>Inserts copied bars (a duplicated or pasted section, with its marker when it has one) before bar <paramref name="at"/> in every track.</summary>
     public EditResult<int[]> InsertSection(DocumentSession document, int at, SectionClipboardSnapshot snapshot)
     {
         if (document.Project.Tracks.Count == 0 || snapshot.Tracks.Count == 0 || snapshot.Tracks.Max(track => track.Count) == 0) return new EditResult<int[]>(false, null, default);
         at = Math.Clamp(at, 0, MaxMeasures(document.Project));
-        return DocumentEdits.Run<int[]>(document, project => snapshot.Marker is null
-            ? BarRangeEditor.Insert(project, at, snapshot.Tracks)
-            : SectionReorderService.Insert(project, at, snapshot.Tracks, snapshot.Marker));
+        return DocumentEdits.Run<int[]>(document, project =>
+        {
+            var map = snapshot.Marker is null
+                ? BarRangeEditor.Insert(project, at, snapshot.Tracks)
+                : SectionReorderService.Insert(project, at, snapshot.Tracks, snapshot.Marker);
+            if (map is not null && snapshot.Clips is { IsEmpty: false } clips)   // the copy's clips land on the new bars, as copies
+                GrowToCover(project, SectionClips.Place(project, SectionClips.Cloned(clips), at, add: true));
+            return FollowBars(document, map);
+        });
     }
 
-    public EditResult<SectionReorderService.SectionRemoval> DeleteSection(DocumentSession document, MarkerModel marker) =>
-        DocumentEdits.Run(document, project => SectionReorderService.Delete(project, marker));
+    /// <summary>Deletes a section's bars; with <paramref name="takeClips"/> (a cut) the clips fully inside it go in the same step.</summary>
+    public EditResult<SectionReorderService.SectionRemoval> DeleteSection(DocumentSession document, MarkerModel marker, bool takeClips = false) =>
+        DocumentEdits.Run(document, project =>
+        {
+            var inside = takeClips && SectionLayout.TryGetBounds(project, marker, out var start, out var end) ? SectionClips.Capture(project, start, end) : SectionClipSet.None;
+            var removal = SectionReorderService.Delete(project, marker);
+            if (removal is null) return null;
+            foreach (var entry in inside.Entries) project.Tracks[entry.TrackIndex].AudioClips.Remove(entry.Clip);
+            FollowBars(document, removal.OldToNewBar);
+            return removal;
+        });
 
     private static MarkerModel CloneMarker(MarkerModel marker) => new()
     {

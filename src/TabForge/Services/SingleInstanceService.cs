@@ -6,6 +6,9 @@ using System.Text;
 
 namespace TabForge.Services;
 
+// Owns: handing a song file path to an already running TabForge and exiting.
+// Does not own: opening the file in the running window.
+// Tests: TestScaleFinder.
 /// <summary>
 /// "Open files from Explorer in a new tab": a second TabForge launch with a song file hands the path to the
 /// TabForge already running and exits. The hand-off is a named pipe that only the same Windows account can

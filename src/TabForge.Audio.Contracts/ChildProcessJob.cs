@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 namespace TabForge.Audio.Contracts;
 
 /// <summary>
-/// R-08: a Windows Job Object with JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE. Child processes added to it (TabForge's audio engine; the
+/// A Windows Job Object with JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE. Child processes added to it (TabForge's audio engine; the
 /// engine's isolated plug-in hosts) end when the job's last handle closes, which Windows does when the owning process ends for any
 /// reason (Task Manager, debugger, crash). The owners' HasExited polling stays as a second layer. Children a member starts join
 /// the job too (nested jobs, Windows 8+).
@@ -21,7 +21,7 @@ public sealed class ChildProcessJob : IDisposable
     /// <summary>
     /// A kill-on-close job that also caps the committed memory of all its processes together (<paramref name="jobMemoryLimitBytes"/>)
     /// and their total user-mode CPU time (<paramref name="cpuTimeLimit"/>); Windows ends every process in the job when either is
-    /// exceeded. Zero = no such limit. Used by the Guitar Pro import worker (A5-07).
+    /// exceeded. Zero = no such limit. Used by the Guitar Pro import worker.
     /// </summary>
     public ChildProcessJob(long jobMemoryLimitBytes, TimeSpan cpuTimeLimit)
     {

@@ -4,7 +4,7 @@ name: release
 # files as workflow artifacts; a maintainer downloads them, checks them and attaches them to a release.
 # The build is reproducible: the exact SDK comes from global.json, the native bridge is the committed
 # src/TabForge.AudioEngine/native/tfvst3.dll (built by the build-bridge workflow, verified against
-# native/BUILD_PROVENANCE.md), so a maintainer's local RELEASE.cmd of the same commit gives the same TabForge.exe and
+# native/BUILD_PROVENANCE.md), so a local run of tools/Package-Release.ps1 on the same commit gives the same TabForge.exe and
 # portable zip contents (tools/Compare-Release.ps1 checks; see docs/REPRODUCIBLE_BUILDS.md).
 on:
   push:

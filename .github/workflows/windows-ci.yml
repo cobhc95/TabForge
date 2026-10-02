@@ -23,6 +23,9 @@ jobs:
       # Run as on a clean checkout: the copyrighted sample songs in Tabs/ are not part of the repository, so every
       # check that needs them must skip (reported in the log), never fail.
       TABFORGE_NO_LOCAL_SONGS: '1'
+      # Judge test windows against the runner's small screen (1024x728 at 100%) so the same check fails on a developer PC
+      # with a big or high-DPI screen (docs/TESTING.md).
+      TABFORGE_SELFTEST_SMALLSCREEN: '1'
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
@@ -34,7 +37,8 @@ jobs:
         run: dotnet restore TabForge.sln --locked-mode
 
       - name: Build (Release)
-        run: dotnet build TabForge.sln -c Release --no-restore
+        # CI is the full gate: the full suite (tests/full-suite) is compiled in with TabForgeFullSuite.
+        run: dotnet build TabForge.sln -c Release --no-restore -p:TabForgeFullSuite=true
 
       - name: Self-test (headless)
         shell: pwsh

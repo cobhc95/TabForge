@@ -30,7 +30,7 @@ public static class ChannelAllocator
         for (var i = 0; i < project.Tracks.Count; i++)
         {
             var track = project.Tracks[i];
-            if (result[i] >= 0) continue;
+            if (result[i] >= 0 || project.Tracks[i].IsAudio) continue;   // an audio track plays no notes: it gets no channel (-1)
             var preferred = track.MidiChannel;
             if (preferred is >= 0 and < ChannelCount && preferred != PercussionChannel && !used[preferred])
             {
@@ -43,12 +43,23 @@ public static class ChannelAllocator
         var next = 0;
         for (var i = 0; i < project.Tracks.Count; i++)
         {
-            if (result[i] >= 0) continue;
+            if (result[i] >= 0 || project.Tracks[i].IsAudio) continue;   // audio tracks: pass 4
             while (next < ChannelCount && (used[next] || next == PercussionChannel)) next++;
             if (next >= ChannelCount) next = FirstMelodic(next: 0, used);   // >15 melodic tracks: reuse
             result[i] = next;
             used[next] = true;
             next++;
+        }
+
+        // Pass 4: an audio track plays no notes and gets no channel (-1), except one whose instrument plug-in plays its MIDI clips: it takes
+        // a channel nobody else uses, after every other track, so no notated track's channel ever moves because of it.
+        for (var i = 0; i < project.Tracks.Count; i++)
+        {
+            if (!project.Tracks[i].IsAudio || !MixerGroups.InstrumentPlays(project.Tracks[i])) continue;
+            var free = Array.FindIndex(used, c => !c);
+            if (free < 0) break;
+            result[i] = free;
+            used[free] = true;
         }
         return result;
     }

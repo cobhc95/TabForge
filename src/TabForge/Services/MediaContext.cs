@@ -2,6 +2,9 @@ using System.IO;
 
 namespace TabForge.Services;
 
+// Owns: the media approval scope and state of one document.
+// Does not own: path classification and the settings file.
+// Tests: TestClips, TestDocumentContext.
 /// <summary>
 /// The context every media operation (waveform reading, clip playback sync, drop measuring, the linked-audio review) is given explicitly:
 /// whose media it is, where relative paths resolve, which approvals count, and an operation revision that tells work started earlier

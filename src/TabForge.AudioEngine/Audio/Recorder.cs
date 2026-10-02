@@ -25,7 +25,7 @@ public sealed class Recorder : IDisposable
     private readonly long _queueMask;          // in frames (capacity is a power of two)
     private long _qWrite, _qRead;              // frame counters
     private long _droppedTotal;
-    // A5-02: ordered gap markers (SPSC ring). A drop is recorded as (position in the queued-audio stream, length) so the disk
+    // Ordered gap markers (SPSC ring). A drop is recorded as (position in the queued-audio stream, length) so the disk
     // thread writes the audio queued before the drop, then the silence, then the audio queued after it: the take stays in time.
     // The producer merges a drop into the newest marker while nothing was queued since (CAS on its length); the consumer claims
     // a marker by swapping its length to -1, so a merge never lands on a marker already being written.

@@ -38,19 +38,20 @@ public partial class MainWindow
         var issues = MusicTime.FindBarProblems(_project);
         if (issues.Count == 0)
         {
-            MessageBox.Show(this, "Every bar adds up to its time signature.", "Check bars (F4)", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show(this, "Every bar adds up to its time signature.", "Check bars", MessageBoxButton.OK, MessageBoxImage.Information);
             StatusText.Text = "Bars OK";
             return;
         }
         var lines = issues.Take(20).Select(issue => issue.Describe());
         var more = issues.Count > 20 ? $"\n…and {issues.Count - 20} more" : "";
-        MessageBox.Show(this, string.Join("\n", lines) + more, "Check bars (F4)", MessageBoxButton.OK, MessageBoxImage.Warning);
+        MessageBox.Show(this, string.Join("\n", lines) + more, "Check bars", MessageBoxButton.OK, MessageBoxImage.Warning);
         StatusText.Text = $"{issues.Count} bar{(issues.Count == 1 ? "" : "s")} to check";
     }
 
     private void Transpose_Click(object sender, RoutedEventArgs e)
     {
         var t = SelectedTrack; if (t is null) return;
+        if (t.IsAudio) { StatusText.Text = Services.EditorGuard.Hint; return; }
         // Percussion numbers are instruments, not pitches: a drum track is never transposed.
         if (t.Kind == TrackKind.Drums || t.MidiChannel == 9) { StatusText.Text = $"{t.Name} is a drum track: drums are not transposed"; return; }
         // With bars/beats selected only those move; otherwise the whole track (both voices).
@@ -80,16 +81,16 @@ public partial class MainWindow
     private void Tuner_Click(object sender, RoutedEventArgs e)
     {
         // Chromatic tuner: the engine listens to the armed input; the window follows the selected track's tuning.
-        TunerWindow.Open(this, Audio.AudioEngineClient.Instance, () => SelectedTrack);
+        TunerWindow.Open(this, _engine, () => SelectedTrack);
     }
 
     private void Metronome_Click(object sender, RoutedEventArgs e)
     {
-        _metronome = !_metronome;
-        MetronomeMenu.IsChecked = _metronome;
-        SetTransportActive(MetronomeButton, _metronome);
+        _transport.Metronome = !_transport.Metronome;
+        MetronomeMenu.IsChecked = _transport.Metronome;
+        SetTransportActive(MetronomeButton, _transport.Metronome);
         ApplyMetronomeSettingsToEngines();
-        StatusText.Text = _metronome ? "Metronome on" : "Metronome off";
+        StatusText.Text = _transport.Metronome ? "Metronome on" : "Metronome off";
         SaveSettings();
     }
 
@@ -105,7 +106,7 @@ public partial class MainWindow
 
     private void MetronomeSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
-        if (!_mainWindowInitialized || _syncingMetronomeSettings || sender is not Slider slider || MetronomeVolumeValue is null) return;
+        if (!_mainWindowInitialized || _transport.SyncingMetronomeSettings || sender is not Slider slider || MetronomeVolumeValue is null) return;
         var value = Math.Clamp((int)Math.Round(slider.Value), 0, 100);
         switch (slider.Tag as string)
         {
@@ -121,30 +122,8 @@ public partial class MainWindow
 
     private void MetronomeSound_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (!_mainWindowInitialized || _syncingMetronomeSettings || MetronomeSoundCombo?.SelectedItem is not ComboBoxItem { Tag: string preset }) return;
-        switch (preset)
-        {
-            case "classic":
-                _settings.Audio.MetronomeAccent = 33;
-                _settings.Audio.MetronomeClick = 34;
-                break;
-            case "woodblock":
-                _settings.Audio.MetronomeAccent = 76;
-                _settings.Audio.MetronomeClick = 77;
-                break;
-            case "sidestick":
-                _settings.Audio.MetronomeAccent = 37;
-                _settings.Audio.MetronomeClick = 37;
-                break;
-            case "clap":
-                _settings.Audio.MetronomeAccent = 39;
-                _settings.Audio.MetronomeClick = 39;
-                break;
-            case "custom":
-                return;
-            default:
-                return;
-        }
+        if (!_mainWindowInitialized || _transport.SyncingMetronomeSettings || MetronomeSoundCombo?.SelectedItem is not ComboBoxItem { Tag: string preset }) return;
+        if (!_transport.ApplyMetronomePreset(preset)) return;
         ApplyMetronomeSettingsToEngines();
         SaveSettings();
     }
@@ -154,17 +133,16 @@ public partial class MainWindow
         if (!_mainWindowInitialized || CountInVolumeValue is null) return;
         var value = (int)Math.Round(e.NewValue);
         CountInVolumeValue.Text = $"{value}%";
-        if (_syncingMetronomeSettings) return;
+        if (_transport.SyncingMetronomeSettings) return;
         _settings.Audio.CountInVolume = value;
-        TabForge.Playback.PlaybackEngine.CountInVolume = value;
+        _options.Playback.CountInVolume = value;
         QueueMetronomeSettingsSave();
     }
 
-    private bool _syncingCountIn;
 
     private void CountInButton_PreviewMouseRightButtonUp(object sender, MouseButtonEventArgs e)
     {
-        _syncingCountIn = true;
+        _transport.SyncingCountIn = true;
         var audio = _settings.Audio;
         CountInBarsCombo.SelectedItem = CountInBarsCombo.Items.OfType<ComboBoxItem>()
             .FirstOrDefault(i => (string)i.Tag == Math.Clamp(audio.CountInBars, 1, 4).ToString()) ?? CountInBarsCombo.Items[0];
@@ -174,7 +152,7 @@ public partial class MainWindow
         CountInSongStartCheck.IsChecked = audio.CountInOnlyAtSongStart;
         CountInSectionCheck.IsChecked = audio.CountInEachSection;
         CountInLoopCheck.IsChecked = audio.LoopCountInEachLoop;
-        _syncingCountIn = false;
+        _transport.SyncingCountIn = false;
         CountInSettingsPopup.IsOpen = true;
         e.Handled = true;
     }
@@ -187,18 +165,18 @@ public partial class MainWindow
 
     private void CountInChecks_Click(object sender, RoutedEventArgs e)
     {
-        if (_syncingCountIn) return;
+        if (_transport.SyncingCountIn) return;
         _settings.Audio.CountInOnlyAtSongStart = CountInSongStartCheck.IsChecked == true;
         _settings.Audio.CountInEachSection = CountInSectionCheck.IsChecked == true;
         _settings.Audio.LoopCountInEachLoop = CountInLoopCheck.IsChecked == true;
         ApplyLoopBehaviour();
-        TabForge.Playback.PlaybackEngine.CountInEachSection = _countIn && _settings.Audio.CountInEachSection;
+        _options.Playback.CountInEachSection = _transport.CountIn && _settings.Audio.CountInEachSection;
         SaveSettings();
     }
 
     private void CountInOption_Changed(object sender, SelectionChangedEventArgs e)
     {
-        if (!_mainWindowInitialized || _syncingCountIn) return;
+        if (!_mainWindowInitialized || _transport.SyncingCountIn) return;
         var audio = _settings.Audio;
         if (CountInBarsCombo.SelectedItem is ComboBoxItem { Tag: string bars } && int.TryParse(bars, out var n))
             audio.CountInBars = n;
@@ -208,33 +186,18 @@ public partial class MainWindow
         SaveSettings();
     }
 
-    private void ApplyCountInSound()
-    {
-        var parts = _settings.Audio.CountInSound.Split(',');
-        var custom = parts.Length == 2 && int.TryParse(parts[0], out var accent) && int.TryParse(parts[1], out var click);
-        TabForge.Playback.PlaybackEngine.CountInAccentNote = custom ? int.Parse(parts[0]) : -1;
-        TabForge.Playback.PlaybackEngine.CountInClickNote = custom ? int.Parse(parts[1]) : -1;
-    }
+    private void ApplyCountInSound() => _transport.ApplyCountInSound();
 
     private void LoopCountBox_KeyDown(object sender, KeyEventArgs e)
     {
         if (e.Key == Key.Enter) { LoopBehaviour_Changed(sender, e); e.Handled = true; }
     }
 
-    private static int ParsePercent(string? text, int fallback) =>
-        int.TryParse(text?.Trim().TrimEnd('%'), out var v) ? Math.Clamp(v, 10, 200) : fallback;
-
     private void LoopBehaviour_Changed(object sender, RoutedEventArgs e)
     {
-        if (_syncingLoopSettings) return;
-        var audio = _settings.Audio;
-        var countText = LoopCountBox.Text.Trim();
-        audio.LoopCount = int.TryParse(countText, out var count) ? Math.Clamp(count, 0, 9999) : 0;
-        audio.LoopCountInEachLoop = LoopCountInCheck.IsChecked == true;
-        audio.LoopSpeedTrainer = LoopTrainerRadio.IsChecked == true;
-        audio.LoopTrainerFrom = ParsePercent(LoopTrainerFromBox.Text, audio.LoopTrainerFrom);
-        audio.LoopTrainerTo = ParsePercent(LoopTrainerToBox.Text, audio.LoopTrainerTo);
-        audio.LoopTrainerStep = int.TryParse(LoopTrainerStepBox.Text?.Trim().TrimEnd('%'), out var step) ? Math.Clamp(step, 0, 100) : audio.LoopTrainerStep;
+        if (_transport.SyncingLoopSettings) return;
+        _transport.ReadLoopBehaviour(LoopCountBox.Text, LoopCountInCheck.IsChecked == true, LoopTrainerRadio.IsChecked == true,
+            LoopTrainerFromBox.Text, LoopTrainerToBox.Text, LoopTrainerStepBox.Text);
         SyncLoopBehaviourControls();
         ApplyLoopBehaviour();
         SaveSettings();
@@ -243,8 +206,8 @@ public partial class MainWindow
     private void SyncLoopBehaviourControls()
     {
         var audio = _settings.Audio;
-        var was = _syncingLoopSettings;
-        _syncingLoopSettings = true;
+        var was = _transport.SyncingLoopSettings;
+        _transport.SyncingLoopSettings = true;
         LoopCountBox.Text = audio.LoopCount > 0 ? audio.LoopCount.ToString() : "∞";
         LoopCountInCheck.IsChecked = audio.LoopCountInEachLoop;
         LoopTrainerRadio.IsChecked = audio.LoopSpeedTrainer;
@@ -252,24 +215,20 @@ public partial class MainWindow
         LoopTrainerFromBox.Text = audio.LoopTrainerFrom.ToString();
         LoopTrainerToBox.Text = audio.LoopTrainerTo.ToString();
         LoopTrainerStepBox.Text = audio.LoopTrainerStep.ToString();
-        _syncingLoopSettings = was;
+        _transport.SyncingLoopSettings = was;
     }
 
     private void ApplyLoopBehaviour()
     {
-        var audio = _settings.Audio;
-        TabForge.Playback.PlaybackEngine.LoopSettings = new TabForge.Playback.PlaybackEngine.LoopBehaviour(
-            audio.LoopCount, audio.LoopCountInEachLoop, audio.LoopSpeedTrainer,
-            audio.LoopTrainerFrom, audio.LoopTrainerTo, audio.LoopTrainerStep);
-        UpdateLoopCountBadge(_loopsCompleted);
+        _transport.ApplyLoopBehaviour();
+        UpdateLoopCountBadge(_transport.LoopsCompleted);
     }
 
-    private int _loopsCompleted;
 
     // Loops-left badge beside the loop button: it takes its own space, so neighbouring buttons move over.
     private void UpdateLoopCountBadge(int completed)
     {
-        _loopsCompleted = completed;
+        _transport.LoopsCompleted = completed;
         var total = _settings.Audio.LoopCount;
         if (total <= 0) { LoopCountBadge.Visibility = Visibility.Collapsed; return; }
         var left = Math.Max(0, total - completed);
@@ -282,13 +241,13 @@ public partial class MainWindow
     {
         if (!_mainWindowInitialized) return;
         _settings.Audio.MetronomeBoost = MetronomeBoostCheck.IsChecked == true;
-        TabForge.Playback.PlaybackEngine.MetronomeBoost = _settings.Audio.MetronomeBoost;
+        _options.Playback.MetronomeBoost = _settings.Audio.MetronomeBoost;
         SaveSettings();
     }
 
     private void MetronomeSubdivision_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (!_mainWindowInitialized || _syncingMetronomeSettings || MetronomeSubdivisionCombo?.SelectedItem is not ComboBoxItem { Tag: string tag } ||
+        if (!_mainWindowInitialized || _transport.SyncingMetronomeSettings || MetronomeSubdivisionCombo?.SelectedItem is not ComboBoxItem { Tag: string tag } ||
             !int.TryParse(tag, out var subdivisions)) return;
         _settings.Audio.MetronomeSubdivision = subdivisions is 1 or 2 or 3 or 4 ? subdivisions : 1;
         ApplyMetronomeSettingsToEngines();
@@ -300,7 +259,7 @@ public partial class MainWindow
         if (!_mainWindowInitialized || MetronomeVolumeSlider is null || MetronomeAccentSlider is null ||
             MetronomeClickSlider is null || MetronomeSoundCombo is null || MetronomeSubdivisionCombo is null ||
             MetronomeVolumeValue is null || MetronomeAccentValue is null || MetronomeClickValue is null) return;
-        _syncingMetronomeSettings = true;
+        _transport.SyncingMetronomeSettings = true;
         var audio = _settings.Audio;
         audio.MetronomeVolume = Math.Clamp(audio.MetronomeVolume, 0, 100);
         audio.MetronomeAccentVolume = Math.Clamp(audio.MetronomeAccentVolume, 0, 100);
@@ -319,37 +278,22 @@ public partial class MainWindow
             audio.MetronomeAccent == 37 && audio.MetronomeClick == 37 ? 2 :
             audio.MetronomeAccent == 39 && audio.MetronomeClick == 39 ? 3 : 4;
         MetronomeSubdivisionCombo.SelectedIndex = audio.MetronomeSubdivision - 1;
-        _syncingMetronomeSettings = false;
+        _transport.SyncingMetronomeSettings = false;
     }
 
-    private void ApplyMetronomeSettingsToEngines()
-    {
-        var audio = _settings.Audio;
-        foreach (var document in _documents.Documents)
-            document.Playback.Engine.SetMetronomeSettings(_metronome, audio.MetronomeVolume,
-                audio.MetronomeAccentVolume, audio.MetronomeClickVolume,
-                audio.MetronomeAccent, audio.MetronomeClick, audio.MetronomeSubdivision);
-    }
+    private void ApplyMetronomeSettingsToEngines() => _transport.ApplyMetronomeSettingsToEngines();
 
-    private void QueueMetronomeSettingsSave()
-    {
-        if (_metronomeSettingsSaveTimer is null) SaveSettings();
-        else
-        {
-            _metronomeSettingsSaveTimer.Stop();
-            _metronomeSettingsSaveTimer.Start();
-        }
-    }
+    private void QueueMetronomeSettingsSave() => _transport.QueueSettingsSave();
 
     private void CountIn_Click(object sender, RoutedEventArgs e)
     {
-        _countIn = !_countIn;
-        CountInMenu.IsChecked = _countIn;
-        SetTransportActive(CountInButton, _countIn);
-        TabForge.Playback.PlaybackEngine.CountInEachSection = _countIn && _settings.Audio.CountInEachSection;
+        _transport.CountIn = !_transport.CountIn;
+        CountInMenu.IsChecked = _transport.CountIn;
+        SetTransportActive(CountInButton, _transport.CountIn);
+        _options.Playback.CountInEachSection = _transport.CountIn && _settings.Audio.CountInEachSection;
         _midi.SetSectionStarts(_project.Markers.Select(marker => marker.MeasureIndex).Where(bar => bar > 0));
         // Takes effect the next time playback starts from silence; toggling it never interrupts playback.
-        if (!_midi.IsPlaying) _midi.UpdateOptions(_project, o => o.CountIn = _countIn);
+        if (!_midi.IsPlaying) _midi.UpdateOptions(_project, o => o.CountIn = _transport.CountIn);
     }
 
     private static void SetTransportActive(Button button, bool active)
@@ -417,6 +361,25 @@ public partial class MainWindow
 
     private void LyricsBox_LostFocus(object sender, RoutedEventArgs e)
     {
-        if (_project.Lyrics != LyricsBox.Text) { DocumentEdits.Run(Doc, p => { p.Lyrics = LyricsBox.Text; return true; }); RefreshAfterEdit(EditRefresh.None); }
+        if (DocumentViewBinder.CommitLyrics(Doc, LyricsBox.Text)) RefreshAfterEdit(EditRefresh.None);
+    }
+
+    /// <summary>The window as the host of its <see cref="TransportControlsController"/>.</summary>
+    private sealed class TransportHost : ITransportControlsHost
+    {
+        private readonly MainWindow _window;
+        public TransportHost(MainWindow window) => _window = window;
+
+        public IReadOnlyList<DocumentSession> Documents => _window._documents.Documents;
+        public AppSettings Settings => _window._settings;
+        public PlaybackPreferences Preferences => _window._options.Playback;
+        public void SaveSettings() => _window.SaveSettings();
+        public ComboBox? SpeedCombo => _window.SpeedCombo;
+        public bool IsInteractive => _window.IsLoaded && !_window._restoring;
+        public void SetEngineSpeed(double speed)
+        {
+            if (_window._midi.IsPlaying) _window._midi.SetSpeed(_window._project, speed);
+        }
+        public void SetStatus(string text) => _window.StatusText.Text = text;
     }
 }

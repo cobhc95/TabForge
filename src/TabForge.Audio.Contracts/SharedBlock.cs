@@ -11,6 +11,9 @@ public struct TimedMidi
     public long Timestamp;
     public int Slot;
     public byte Status, Data1, Data2, Flags;
+
+    /// <summary><see cref="Flags"/> bit: not a note message but an ordered "all notes off" for <see cref="Slot"/>: it silences what was queued before it in the ring and nothing after it.</summary>
+    public const byte PanicFlag = 1;
 }
 
 /// <summary>
@@ -131,7 +134,7 @@ public sealed unsafe class SharedBlock : IDisposable
     /// <summary>TabForge: an armed track's latest input peak.</summary>
     public float InputPeak(int slot) => slot is >= 0 and < MeterSlots ? InputMeters[slot] : 0;
 
-    // RT-07 (audio thread only): the path string whose text the breadcrumb holds now. A plug-in's Path is one string instance for its
+    // Audio thread only: the path string whose text the breadcrumb holds now. A plug-in's Path is one string instance for its
     // lifetime, so a reference compare skips the copy (up to 520 chars) on every call but the first after a change.
     private string? _crumbPath;
 

@@ -7,6 +7,7 @@ using System.Windows.Input;
 using TabForge.Audio;
 using TabForge.Models;
 using TabForge.Plugins;
+using TabForge.Services;
 using EM = TabForge.AudioEngine.Midi;
 
 namespace TabForge.Views;
@@ -39,7 +40,7 @@ public sealed class MidiProcessingWindow : Window
     private bool _learning;
     private Action<int>? _learnSink;
     private Border? _noteEditor;
-    private readonly ComboBox _presets = new() { Width = 230, ToolTip = "Load a preset: replaces this plug-in's whole processor list (undo with Ctrl+Z in the FX window)" };
+    private readonly ComboBox _presets = new() { Width = 230, ToolTip = "Load a preset: replaces this plug-in's whole processor list (Undo works in the FX window)" };
     private readonly Button _savePreset = new() { Content = "Save preset…", Padding = new Thickness(10, 3, 10, 3), Margin = new Thickness(6, 0, 0, 0), ToolTip = "Save the whole processor list as a preset" };
     private readonly Button _deletePreset = new() { Content = "Delete", Padding = new Thickness(10, 3, 10, 3), Margin = new Thickness(6, 0, 0, 0), IsEnabled = false, ToolTip = "Delete the selected saved preset" };
     private readonly TextBox _log = new() { IsReadOnly = true, FontFamily = new System.Windows.Media.FontFamily("Consolas"), FontSize = 11, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, Height = 150 };
@@ -586,7 +587,7 @@ public sealed class MidiProcessingWindow : Window
     {
         var drums = _track.Kind == TrackKind.Drums || _track.MidiChannel == 9;
         if (drums && DrumMapLibrary.Find("General MIDI") is { } gm && gm.Notes.TryGetValue(n, out var piece)) return piece;
-        return EM.NoteSetText.NoteName(n);
+        return MusicTheoryService.NoteName(n);
     }
 
     // ---------- presets (whole processor list, %APPDATA%\TabForge\MidiPresets) ----------
@@ -719,13 +720,11 @@ public sealed class MidiProcessingWindow : Window
         _log.ScrollToEnd();
     }
 
-    private static readonly string[] NoteNames = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
-
     /// <summary>One log line: song time, channel, decoded message, and the position of the log processor that saw it.</summary>
     public static string Describe(MidiLogLine l)
     {
         var kind = l.Status & 0xF0; var ch = (l.Status & 0x0F) + 1;
-        string note(int n) => $"{NoteNames[n % 12]}{n / 12 - 1} ({n})";
+        string note(int n) => $"{MusicTheoryService.NoteName(n)} ({n})";
         var what = l.Status >= 0xF0 ? $"System {l.Status:X2} {l.Data1} {l.Data2}" : kind switch
         {
             0x90 when l.Data2 > 0 => $"ch{ch,-2} Note on   {note(l.Data1)} vel {l.Data2}",

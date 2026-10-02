@@ -1,3 +1,4 @@
+using TabForge.Views.Score;
 using System.Globalization;
 using System.Linq;
 using System.Windows;
@@ -28,50 +29,25 @@ public sealed partial class TabEditorControl
 
     private void MoveForwardBeat(TrackModel track)
     {
-        var cell = CurrentCell();
-        var step = cell is not null && (cell.Notes.Count > 0 || cell.IsRest) ? MusicTime.CellSlotsRounded(cell) : CurrentDurationSlots();
-        var slots = SlotsFor(SelectedMeasure);
-        var next = SelectedCell + Math.Max(1, step);
-        // A tuplet's rounded slot can fall before the stride lands; hop onto any real beat in between so
-        // keyboard navigation never skips a written note.
-        var measure = SelectedMeasure < track.Measures.Count ? track.Measures[SelectedMeasure] : null;
-        if (measure is not null)
-        {
-            var nextBeat = MusicTime.BeatSlots(CellsFor(measure)).FirstOrDefault(s => s > SelectedCell, -1);
-            if (nextBeat > SelectedCell && nextBeat < next) next = nextBeat;
-        }
-        if (next >= slots)
-        {
-            // Bar complete: GP moves to the next bar.
-            if (SelectedMeasure + 1 < track.Measures.Count)
-            {
-                SelectedMeasure++;
-                SelectedCell = 0;
-            }
-            else SelectedCell = Math.Max(0, slots - 1);
-        }
-        else SelectedCell = next;
+        if (SelectedMeasure >= track.Measures.Count) return;
+        var next = CursorPositions.Next(CellsFor(track.Measures[SelectedMeasure]), SelectedCell);
+        if (next >= 0) SelectedCell = next;
+        else if (SelectedMeasure + 1 < track.Measures.Count) { SelectedMeasure++; SelectedCell = Snap(SelectedMeasure, 0); }
+        else return;
         SelectionChangedNow();
     }
 
     private void MoveBackBeat(TrackModel track)
     {
         if (SelectedMeasure >= track.Measures.Count) return;
-        var measure = track.Measures[SelectedMeasure];
-        var cells = CellsFor(measure);
-        var onsets = new SortedSet<int>();
-        var i = 0;
-        while (i < cells.Count)
-        {
-            onsets.Add(i);
-            var d = MusicTime.ConsumeSlots(cells[i]);
-            i += Math.Max(1, (int)Math.Ceiling(d - 0.001));
-        }
-        foreach (var beat in MusicTime.BeatSlots(cells)) onsets.Add(beat);
-        var prev = onsets.Where(o => o < SelectedCell).DefaultIfEmpty(-1).Max();
+        var prev = CursorPositions.Previous(CellsFor(track.Measures[SelectedMeasure]), SelectedCell);
         if (prev >= 0) SelectedCell = prev;
-        else if (SelectedMeasure > 0) { SelectedMeasure--; SelectedCell = 0; }
-        else SelectedCell = 0;
+        else if (SelectedMeasure > 0)
+        {
+            SelectedMeasure--;
+            SelectedCell = CursorPositions.Allowed(CellsFor(track.Measures[SelectedMeasure])).Last();
+        }
+        else SelectedCell = Snap(0, 0);
         SelectionChangedNow();
     }
 
@@ -80,7 +56,7 @@ public sealed partial class TabEditorControl
         var track = Track;
         if (track is null) return;
         SelectedMeasure = Math.Clamp(SelectedMeasure + direction, 0, Math.Max(0, track.Measures.Count - 1));
-        SelectedCell = Math.Min(SelectedCell, SlotsFor(SelectedMeasure) - 1);
+        SelectedCell = Snap(SelectedMeasure, SelectedCell);
         SelectionChangedNow();
     }
 
@@ -93,7 +69,7 @@ public sealed partial class TabEditorControl
         var column = layout.Measure(SelectedMeasure).ColumnIndex;
         var row = layout.Systems[system];
         SelectedMeasure = row.Measures[Math.Min(column, row.Measures.Count - 1)].MeasureIndex;
-        SelectedCell = Math.Min(SelectedCell, SlotsFor(SelectedMeasure) - 1);
+        SelectedCell = Snap(SelectedMeasure, SelectedCell);
         SelectionChangedNow();
     }
 
@@ -123,23 +99,26 @@ public sealed partial class TabEditorControl
         SelectionChangedNow();
     }
 
-    public void MoveToBarStart() => SetPosition(SelectedMeasure, 0, SelectedString);
+    /// <summary>The allowed cursor cell (a real beat or the append slot) of a bar for the grid cell <paramref name="cell"/>.</summary>
+    private int Snap(int measure, int cell) => Track is { } t && measure >= 0 && measure < t.Measures.Count ? CursorPositions.Snap(CellsFor(t.Measures[measure]), cell) : 0;
+
+    public void MoveToBarStart() { if (Track is { Measures.Count: > 0 } track) SetPosition(SelectedMeasure, Snap(SelectedMeasure, 0), SelectedString); }
 
     public void MoveToBarEnd()
     {
         var track = Track;
         if (track is null) return;
-        SelectedCell = Math.Max(0, SlotsFor(SelectedMeasure) - 1);
+        SelectedCell = CursorPositions.Allowed(CellsFor(track.Measures[Math.Clamp(SelectedMeasure, 0, track.Measures.Count - 1)])).Last();
         SelectionChangedNow();
     }
 
-    public void MoveToFirstBar() => SetPosition(0, 0, SelectedString);
+    public void MoveToFirstBar() { if (Track is { Measures.Count: > 0 } track) SetPosition(0, Snap(0, 0), SelectedString); }
 
     public void MoveToLastBar()
     {
         var track = Track;
-        if (track is null) return;
-        SetPosition(Math.Max(0, track.Measures.Count - 1), 0, SelectedString);
+        if (track is null || track.Measures.Count == 0) return;
+        SetPosition(track.Measures.Count - 1, Snap(track.Measures.Count - 1, 0), SelectedString);
     }
 
     /// <summary>Alt+Left / Alt+Right: step through entered notes and hear them.</summary>

@@ -50,6 +50,9 @@ public readonly record struct FermataSpan(double Slot, double LengthSlots, doubl
     }
 }
 
+// Owns: fermata timing: how a hold stretches a bar for every track.
+// Does not own: the playback timeline compilation and the notation of fermatas.
+// Tests: TestFermataPlayback.
 /// <summary>
 /// Fermata timing. A fermata is a timing event for the whole score: a hold on any track stretches the bar for every
 /// track, so playback, the playhead, MIDI export and the offline render (which all use the compiled timeline) agree.

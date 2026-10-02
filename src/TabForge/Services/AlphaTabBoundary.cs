@@ -5,6 +5,9 @@ using AlphaTab.Importer;
 
 namespace TabForge.Services;
 
+// Owns: the required version and assembly check of the bundled score library and the import settings it is created with.
+// Does not own: the song model and the file conversion.
+// Tests: TestGuitarProImportWorker, TestLongGuitarPro35Import.
 /// <summary>
 /// The one place where TabForge configures and checks the alphaTab dependency for importing Guitar Pro files (audit R4).
 /// </summary>
@@ -39,19 +42,19 @@ internal static class AlphaTabBoundary
     {
         var name = alphaTab.GetName();
         if (!string.Equals(name.Name, RequiredAssemblyName, StringComparison.Ordinal))
-            return $"The Guitar Pro reader component is not the one TabForge needs ({name.Name} {name.Version}; expected {RequiredAssemblyName} {RequiredVersion}). Reinstall TabForge.";
+            return $"The score reader component is not the one TabForge needs ({name.Name} {name.Version}; expected {RequiredAssemblyName} {RequiredVersion}). Reinstall TabForge.";
         if (name.Version is null || name.Version.Major != RequiredVersion.Major || name.Version.Minor != RequiredVersion.Minor
             || name.Version.Build != RequiredVersion.Build || name.Version.Revision < RequiredVersion.Revision)
-            return $"The Guitar Pro reader component has the wrong version ({name.Version}; expected {RequiredVersion}). Reinstall TabForge.";
+            return $"The score reader component has the wrong version ({name.Version}; expected {RequiredVersion}). Reinstall TabForge.";
         var limit = alphaTab.GetType("AlphaTab.ImporterSettings")?.GetProperty("MaxGp3To5BarCount", BindingFlags.Public | BindingFlags.Instance);
         if (limit is null || limit.PropertyType != typeof(double) || !limit.CanRead || !limit.CanWrite)
-            return "The Guitar Pro reader component lacks the per-file bar limit TabForge needs for long songs. Reinstall TabForge.";
+            return "The score reader component lacks the per-file bar limit TabForge needs for long songs. Reinstall TabForge.";
         if (alphaTab.GetType("AlphaTab.Model.PercussionMapper")?.GetMethod("GetArticulationById", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static, new[] { typeof(double) }) is null)
-            return "The Guitar Pro reader component lacks the percussion table TabForge needs for drum tracks. Reinstall TabForge.";
+            return "The score reader component lacks the percussion table TabForge needs for drum tracks. Reinstall TabForge.";
         var info = alphaTab.GetType("AlphaTab.Model.PlaybackInformation");
         foreach (var fractionName in new[] { "VolumeFraction", "BalanceFraction" })
             if (info?.GetProperty(fractionName, BindingFlags.Public | BindingFlags.Instance) is not { CanRead: true, CanWrite: true } fraction || fraction.PropertyType != typeof(double))
-                return "The Guitar Pro reader component lacks the exact mixer volume and balance TabForge needs for Guitar Pro 7/8 files. Reinstall TabForge.";
+                return "The score reader component lacks the exact mixer volume and balance TabForge needs for .gp files. Reinstall TabForge.";
         return null;
     }
 
@@ -79,8 +82,8 @@ internal static class AlphaTabBoundary
     {
         if (Problem is { } problem) throw new InvalidDataException(problem);
         try { return ScoreLoader.LoadScoreFromBytes(data, CreateImportSettings(maxBars)); }
-        catch (MissingMemberException ex) { throw new InvalidDataException("The Guitar Pro reader component does not match this TabForge. Reinstall TabForge.", ex); }
-        catch (Exception ex) when (IsBarCountRefusal(ex)) { throw new InvalidDataException("The Guitar Pro file contains too many measures.", ex); }
+        catch (MissingMemberException ex) { throw new InvalidDataException("The score reader component does not match this TabForge. Reinstall TabForge.", ex); }
+        catch (Exception ex) when (IsBarCountRefusal(ex)) { throw new InvalidDataException("The score file contains too many measures.", ex); }
     }
 
     /// <summary>

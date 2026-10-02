@@ -40,6 +40,9 @@ public sealed class ImportWorkerUnavailableException : Exception
     public ImportWorkerUnavailableException(string message, Exception? inner = null) : base(message, inner) { }
 }
 
+// Owns: the out-of-process import: launching the worker, its pipe protocol and its limits.
+// Does not own: the conversion rules (GuitarProImporter).
+// Tests: TestGuitarProImportWorker, TestLongGuitarPro35Import.
 /// <summary>
 /// Out-of-process Guitar Pro import (audit A5-07). <c>TabForge.exe --import-worker &lt;pipe&gt; &lt;parent id&gt;</c> (the same exe, like the
 /// audio engine and plug-in host modes) receives the file bytes over a current-user-only pipe with a random name, parses them with
@@ -62,29 +65,29 @@ public static class ImportWorker
     /// A6-03: the in-process parse, used by the background import only after the user agreed for this file (the worker or its
     /// containment could not be set up; <paramref name="reason"/> says why). The opened score carries a notice.
     /// </summary>
-    public static SongProject ImportInProcess(string path, List<string> notices, string reason)
+    public static SongProject ImportInProcess(string path, List<string> notices, string reason, ImportContext? context = null)
     {
         notices.Add($"imported inside TabForge because the protected import process could not start ({reason})");
-        var project = GuitarProImporter.Import(path);
-        if (GuitarProImporter.LastEmbeddedRejection is { } rejected) notices.Add(rejected);
-        if (GuitarProImporter.LastDamageNotice is { } damaged) notices.Add(damaged);
+        context ??= new ImportContext();
+        var project = GuitarProImporter.Import(path, context);
+        context.AddNoticesTo(notices);
         return project;
     }
 
     /// <summary>
-    /// Imports <paramref name="path"/> in a worker process. Cancellation and the time budget come from the ambient
+    /// Imports <paramref name="path"/> in a worker process. Cancellation and the time budget come from the <paramref name="context"/>, through its
     /// <see cref="ImportGuard"/> (none: not cancellable, default budget). Throws <see cref="ImportWorkerUnavailableException"/> when
     /// the worker cannot start, <see cref="OperationCanceledException"/>, <see cref="TimeoutException"/> or <see cref="InvalidDataException"/>.
     /// </summary>
-    public static SongProject Import(string path, ImportWorkerOptions? options = null, List<string>? notices = null)
+    public static SongProject Import(string path, ImportWorkerOptions? options = null, List<string>? notices = null, ImportContext? context = null)
     {
         options ??= ImportWorkerOptions.Default;
-        var guard = ImportGuard.Current;
+        var guard = context?.Guard;
         var token = guard?.Token ?? CancellationToken.None;
         var budget = guard?.Remaining ?? ImportGuard.DefaultTimeBudget;
-        path = FilePathPolicy.ExistingFile(path, "Guitar Pro file", GuitarProImporter.SupportedExtensions);
+        path = FilePathPolicy.ExistingFile(path, "score file", GuitarProImporter.SupportedExtensions);
         token.ThrowIfCancellationRequested();
-        var raw = InputLimits.ReadBoundedBytes(path, InputLimits.MaxGuitarProFileBytes, "Guitar Pro file");
+        var raw = InputLimits.ReadBoundedBytes(path, InputLimits.MaxGuitarProFileBytes, "score file");
 
         var exe = options.ExecutablePath ?? Environment.ProcessPath;
         if (string.IsNullOrEmpty(exe) || !File.Exists(exe)) throw new ImportWorkerUnavailableException("its program file was not found");
@@ -143,7 +146,7 @@ public static class ImportWorker
                     BinaryPrimitives.WriteInt32LittleEndian(request, options.TestHang ? FlagTestHang : 0);
                     BinaryPrimitives.WriteInt32LittleEndian(request.AsSpan(4), (int)Math.Min(int.MaxValue, budget.TotalMilliseconds));
                     Encoding.UTF8.GetBytes(path, request.AsSpan(8));
-                    if (request.Length > MaxRequestBytes) throw new InvalidDataException("The Guitar Pro file's path is too long.");
+                    if (request.Length > MaxRequestBytes) throw new InvalidDataException("The score file's path is too long.");
                     WriteFrame(pipe, FrameRequest, request);
                     WriteFrame(pipe, FrameData, raw);
                     pipe.Flush();
@@ -160,7 +163,7 @@ public static class ImportWorker
                     {
                         if (length > MaxErrorBytes) throw new InvalidDataException("The import process sent an invalid reply.");
                         var message = Encoding.UTF8.GetString(ReadPayload(pipe, length));
-                        throw new InvalidDataException(message.Length == 0 ? "This Guitar Pro file is invalid, truncated, or unsupported." : message);
+                        throw new InvalidDataException(message.Length == 0 ? "This score file is invalid, truncated, or unsupported." : message);
                     }
                     if (kind != FrameResult) throw new InvalidDataException("The import process sent an invalid reply.");
                     if (length > options.MaxResultBytes)
@@ -175,7 +178,7 @@ public static class ImportWorker
                     token.ThrowIfCancellationRequested();
                     if (Volatile.Read(ref timedOut))
                         throw new TimeoutException($"Importing {Path.GetFileName(path)} took longer than {budget.TotalSeconds:0} seconds, so it was stopped.");
-                    throw new InvalidDataException("The import process stopped unexpectedly: this Guitar Pro file needed more memory or time than allowed, or it is damaged.", ex);
+                    throw new InvalidDataException("The import process stopped unexpectedly: this score file needed more memory or time than allowed, or it is damaged.", ex);
                 }
             }
             finally
@@ -210,24 +213,24 @@ public static class ImportWorker
             try
             {
                 if (!GuitarProImporter.SupportedExtensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase))
-                    throw new InvalidDataException("This is not a Guitar Pro file.");
-                var guard = new ImportGuard(CancellationToken.None, TimeSpan.FromMilliseconds(budgetMs));
+                    throw new InvalidDataException("This is not a score file.");
+                var context = new ImportContext(new ImportGuard(CancellationToken.None, TimeSpan.FromMilliseconds(budgetMs)));
                 SongProject project;
-                using (guard.Enter()) project = GuitarProImporter.ImportBytes(data, path);
+                project = GuitarProImporter.ImportBytes(data, path, context);
                 data = Array.Empty<byte>();
                 reply = ProjectService.TransferBytes(project, $"imported song ({project.Tracks.Count} tracks, {project.Tracks.Select(t => t.Measures.Count).DefaultIfEmpty(0).Max():N0} bars)");
                 kind = FrameResult;
-                if (GuitarProImporter.LastEmbeddedRejection is { } rejected)
+                if (context.EmbeddedRejection is { } rejected)
                 {
                     var text = Encoding.UTF8.GetBytes(rejected.Length > 2_000 ? rejected[..2_000] : rejected);
                     WriteFrame(pipe, FrameNotice, text);
                 }
-                if (GuitarProImporter.LastDamageNotice is { } damaged)
+                if (context.DamageNotice is { } damaged)
                     WriteFrame(pipe, FrameNotice, Encoding.UTF8.GetBytes(damaged.Length > 2_000 ? damaged[..2_000] : damaged));
             }
             catch (Exception ex) when (ex is not OutOfMemoryException)
             {
-                var message = ex is InvalidDataException ? ex.Message : "This Guitar Pro file is invalid, truncated, or unsupported.";
+                var message = ex is InvalidDataException ? ex.Message : "This score file is invalid, truncated, or unsupported.";
                 if (message.Length > 2_000) message = message[..2_000];
                 reply = Encoding.UTF8.GetBytes(message);
                 kind = FrameError;

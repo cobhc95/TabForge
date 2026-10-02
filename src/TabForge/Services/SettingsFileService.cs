@@ -6,6 +6,9 @@ using TabForge.Docking;
 
 namespace TabForge.Services;
 
+// Owns: reading and writing settings.json with bounded, atomic file access.
+// Does not own: the in-memory settings object (AppSettingsStore) and migration.
+// Tests: TestSettingsWithInlinePluginStates, TestSecurityInputBoundaries.
 /// <summary>Bounded settings import and same-directory atomic persistence.</summary>
 public static class SettingsFileService
 {
@@ -73,25 +76,28 @@ public static class SettingsFileService
             throw new InvalidDataException("The settings file contains an invalid or overlong recent colour.");
 
         var hotkeys = Property(root, "Hotkeys");
-        var bindings = Property(hotkeys, "Bindings");
-        if (bindings.ValueKind == JsonValueKind.Object)
+        foreach (var (bindingsName, disabledName) in new[] { ("Bindings", "DisabledActions"), ("Bindings2", "DisabledActions2") })
         {
-            var count = 0;
-            foreach (var pair in bindings.EnumerateObject())
+            var bindings = Property(hotkeys, bindingsName);
+            if (bindings.ValueKind == JsonValueKind.Object)
             {
-                if (++count > InputLimits.MaxHotkeyBindings)
-                    throw new InvalidDataException("The settings file contains too many hotkey bindings.");
-                if (pair.Name.Length > InputLimits.MaxHotkeyActionIdLength || pair.Value.ValueKind != JsonValueKind.String ||
-                    pair.Value.GetString()!.Length > InputLimits.MaxHotkeyGestureLength)
-                    throw new InvalidDataException("The settings file contains an invalid hotkey binding.");
+                var count = 0;
+                foreach (var pair in bindings.EnumerateObject())
+                {
+                    if (++count > InputLimits.MaxHotkeyBindings)
+                        throw new InvalidDataException("The settings file contains too many hotkey bindings.");
+                    if (pair.Name.Length > InputLimits.MaxHotkeyActionIdLength || pair.Value.ValueKind != JsonValueKind.String ||
+                        pair.Value.GetString()!.Length > InputLimits.MaxHotkeyGestureLength)
+                        throw new InvalidDataException("The settings file contains an invalid hotkey binding.");
+                }
             }
+            var disabled = Property(hotkeys, disabledName);
+            if (disabled.ValueKind == JsonValueKind.Array && disabled.GetArrayLength() > InputLimits.MaxHotkeyBindings)
+                throw new InvalidDataException("The settings file contains too many disabled hotkeys.");
+            if (disabled.ValueKind == JsonValueKind.Array && disabled.EnumerateArray().Any(action =>
+                    action.ValueKind != JsonValueKind.String || action.GetString()!.Length > InputLimits.MaxHotkeyActionIdLength))
+                throw new InvalidDataException("The settings file contains an invalid disabled hotkey.");
         }
-        var disabled = Property(hotkeys, "DisabledActions");
-        if (disabled.ValueKind == JsonValueKind.Array && disabled.GetArrayLength() > InputLimits.MaxHotkeyBindings)
-            throw new InvalidDataException("The settings file contains too many disabled hotkeys.");
-        if (disabled.ValueKind == JsonValueKind.Array && disabled.EnumerateArray().Any(action =>
-                action.ValueKind != JsonValueKind.String || action.GetString()!.Length > InputLimits.MaxHotkeyActionIdLength))
-            throw new InvalidDataException("The settings file contains an invalid disabled hotkey.");
 
         var workspace = Property(root, "Workspace");
         if (workspace.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined) return;

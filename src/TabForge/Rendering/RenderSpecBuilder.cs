@@ -9,7 +9,7 @@ namespace TabForge.Rendering;
 /// <summary>Last-used File > Render options (stored in the app settings).</summary>
 public sealed class RenderSettings
 {
-    public int Source { get; set; }          // RenderSource
+    public int Source { get; set; }          // 0 master, 1 stems of the selected tracks, 2 all stems, 3 master and stems
     public List<string>? StemTrackNames { get; set; }   // checked tracks for "Stems: selected tracks" (null = not chosen yet)
     public int Bounds { get; set; }          // RenderBounds
     public double CustomStartSec { get; set; }
@@ -35,7 +35,6 @@ public sealed class RenderSettings
     public bool SafetyLimiter { get; set; } = true;
 }
 
-public enum RenderSource { Master, StemsSelected, StemsAll, MasterAndStems }
 public enum RenderBounds { Song, TimeSelection, Bars, Custom, CustomBars, CustomSections }
 
 /// <summary>The "Custom bars" / "Custom sections" choices of the render dialog (pure, so they are testable without a window).</summary>
@@ -186,7 +185,6 @@ public static class RenderSpecBuilder
     public static RenderSpec Build(SongProject project, ScoreTimeline tl, AudioEngineClient engine, int masterPercent, long startFrame, long endFrame,
         RenderSettings s, string masterPath, IReadOnlyDictionary<TrackModel, string> stems, string eventFile, int rate)
     {
-        var anySolo = project.Tracks.Any(t => t.Solo);
         var spec = new RenderSpec
         {
             StartFrame = startFrame, EndFrame = endFrame, TailMode = (RenderTailMode)Math.Clamp(s.TailMode, 0, 2), TailMs = Math.Clamp(s.TailMs, 0, 30000),
@@ -199,10 +197,11 @@ public static class RenderSpecBuilder
         {
             var slot = engine.SlotOf(t);
             if (slot < 0) continue;
-            var silent = t.Mute || (anySolo && !t.Solo) || MixerGroups.GroupSilences(project, t);
+            var silent = !MixerGroups.IsAudible(project, t);
             spec.Slots.Add(new RenderSlot
             {
-                Slot = slot, Volume = MixerGroups.Volume(project, t), Pan = MixerGroups.Pan(project, t), InMaster = !silent,
+                // At least 1: level 0 is the engine's mute gate, and a fader at 0 must still follow the song's Mix Table volume changes (as in playback).
+                Slot = slot, Volume = Audio.AudioRouting.EngineLevel(true, MixerGroups.Volume(project, t)), Pan = MixerGroups.Pan(project, t), InMaster = !silent,
                 StemPath = stems.TryGetValue(t, out var stem) ? stem : "",
             });
         }

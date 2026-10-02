@@ -53,6 +53,7 @@ internal sealed partial class TrackTimeline
         if (Project is null || SessionFor(data) is not { } session) { SetDropPreview(null); return null; }
         var preview = DropPreviewAt(session.Items, p, altHeld);
         SetDropPreview(preview);
+        SetAddLaneDrag(IsInAddLane(p) && preview.Valid);
         return preview.Valid ? DragDropEffects.Copy : DragDropEffects.None;
     }
 
@@ -122,7 +123,7 @@ internal sealed partial class TrackTimeline
 
     private void SetDropPreview(DropPreview? preview)
     {
-        if (preview is null) _dropKey = null;
+        if (preview is null) { _dropKey = null; SetAddLaneDrag(false); }
         if (ReferenceEquals(preview, _dropPreview)) return;
         _dropPreview = preview;
         DropPreviewChanged?.Invoke(preview);
@@ -142,10 +143,11 @@ internal sealed partial class TrackTimeline
             if (offset >= 0) lane = Math.Min((int)(offset / ArrangementPanel.AudioLaneHeight), Math.Max(0, ArrangementPanel.LaneCountOf(project.Tracks[track]) - 1));
         }
         var start = SnapSec(SecOfX(Math.Max(0, p.X)), null, out _, altHeld);
-        var key = (track, lane, start, VerticalScrollOffset, MeasureWidth, project.TimelineRevision);
+        var inLane = IsInAddLane(p);   // a file dropped on the Add-track lane always makes an AUDIO track (audio or MIDI)
+        var key = (track, inLane ? -1 : lane, start, VerticalScrollOffset, MeasureWidth, project.TimelineRevision);
         // The pointer moved inside the same snapped spot: nothing to recompute (no allocation per DragOver).
         if (_dropKey == key && ReferenceEquals(_dropKeyItems, items) && _dropPreview is { Valid: true } same) return same;
-        var plan = MediaDrop.Plan(project, items, track, lane, start, QuarterMap());
+        var plan = inLane ? MediaDrop.PlanAddTrackLane(project, items, QuarterMap(), start) : MediaDrop.Plan(project, items, track, lane, start, QuarterMap());
         _dropKey = key;
         _dropKeyItems = items;
         return DropGeometry(plan, p, items);
@@ -171,9 +173,10 @@ internal sealed partial class TrackTimeline
         if (plan.NewTrack)
         {
             var rowTop = ArrangementPanel.RulerHeight + ArrangementPanel.SectionHeight + ArrangementPanel.RowsHeight(project) - VerticalScrollOffset;
-            slot = new Rect(0, rowTop, width, ArrangementPanel.RowHeightFor(Project) + laneHeight);
+            var notation = plan.NewTrackKind is TrackKind.Drums or TrackKind.Keys ? ArrangementPanel.RowHeightFor(Project) : 0;   // a new audio track is lanes only
+            slot = new Rect(0, rowTop, width, notation + laneHeight);
             slotLabel = $"New {plan.NewTrackKind switch { TrackKind.Drums => "drum", TrackKind.Keys => "keys", _ => "audio" }} track";
-            laneTop = rowTop + ArrangementPanel.RowHeightFor(Project);
+            laneTop = rowTop + notation;
         }
         else
         {

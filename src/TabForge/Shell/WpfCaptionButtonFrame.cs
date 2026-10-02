@@ -130,7 +130,7 @@ internal sealed class WpfCaptionButtonFrame : IDisposable
 
     private static void Log(string text)
     {
-        if (!LogEnabled) { Diagnostics.Trace.Write(Diagnostics.Trace.Ui, "caption " + text); return; }
+        if (!LogEnabled) { Services.Trace.Write(Services.Trace.Ui, "caption " + text); return; }
         try { System.IO.File.AppendAllText(System.IO.Path.Combine(System.IO.Path.GetTempPath(), "tabforge-caption.log"), $"{DateTime.Now:HH:mm:ss.fff} {text}{Environment.NewLine}"); }
         catch (System.IO.IOException) { }
     }

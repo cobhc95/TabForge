@@ -134,6 +134,9 @@ internal sealed class ProjectStateEncoder
     // The bars of the song _last was taken from (or restored into), per chunk slot; weak on the song so a replaced song is not kept alive.
     private readonly ConditionalWeakTable<SongProject, MeasureModel?[][]> _lastBars = new();
     private Dictionary<ulong, StateChunk>? _index;
+    private readonly object _indexGate = new();
+    /// <summary>Songs with at least this many bars (all tracks) encode their tracks in parallel: below it the pool hand-off costs more than it saves.</summary>
+    private const int ParallelEncodeBars = 1500;
     // Only guards the caches above if a caller ever runs off the UI thread; reading a song while it is edited is still the caller's problem.
     private readonly object _gate = new();
 
@@ -158,11 +161,16 @@ internal sealed class ProjectStateEncoder
         var sourceTracks = project.Tracks ?? new List<TrackModel>();
         var tracks = new TrackState[sourceTracks.Count];
         var liveBars = new MeasureModel?[sourceTracks.Count][];
-        for (var trackIndex = 0; trackIndex < sourceTracks.Count; trackIndex++)
+        var freshByTrack = new long[sourceTracks.Count];
+
+        // Reads only the live song and the previous state, and writes only its own slots: the tracks of a big song can encode side by side
+        // (the calling thread waits, so the song cannot change meanwhile).
+        void EncodeTrack(int trackIndex, BarWriter writer)
         {
+            long trackFresh = 0;
             var track = sourceTracks[trackIndex];
             var prior = previous is not null && trackIndex < previous.Tracks.Length ? previous.Tracks[trackIndex] : null;
-            var header = Reuse(ProjectService.UndoTrackHeader(track), prior?.Header, ref fresh);
+            var header = Reuse(ProjectService.UndoTrackHeader(track), prior?.Header, ref trackFresh);
             var measures = track?.Measures;
             var count = measures?.Count ?? 0;
             var bars = new StateChunk[count];
@@ -174,9 +182,9 @@ internal sealed class ProjectStateEncoder
                 var measure = measures![bar];
                 live[bar] = measure;
                 numbers[bar] = measure?.Number ?? 0;
-                _writer.Reset();
-                BarCodec.Write(_writer, measure);
-                var bytes = _writer.Written;
+                writer.Reset();
+                BarCodec.Write(writer, measure);
+                var bytes = writer.Written;
                 var slot = prior is not null && bar < prior.Bars.Length ? prior.Bars[bar] : null;
                 StateChunk chunk;
                 if (slot is not null && slot.Bytes.AsSpan().SequenceEqual(bytes)) chunk = slot;
@@ -184,14 +192,26 @@ internal sealed class ProjectStateEncoder
                 else
                 {
                     chunk = new StateChunk(bytes.ToArray());
-                    fresh += chunk.Bytes.Length;
+                    trackFresh += chunk.Bytes.Length;
                 }
                 bars[bar] = chunk;
                 if (same) same = ReferenceEquals(chunk, prior!.Bars[bar]) && numbers[bar] == prior.Numbers[bar];
             }
             tracks[trackIndex] = same ? prior! : new TrackState(header, bars, numbers);
             liveBars[trackIndex] = live;
+            freshByTrack[trackIndex] = trackFresh;
         }
+
+        var totalBars = 0;
+        foreach (var track in sourceTracks) totalBars += track?.Measures?.Count ?? 0;
+        if (sourceTracks.Count > 1 && totalBars >= ParallelEncodeBars && Environment.ProcessorCount > 1)
+        {
+            try { Parallel.For(0, sourceTracks.Count, trackIndex => EncodeTrack(trackIndex, new BarWriter())); }
+            catch (AggregateException ex) when (ex.InnerExceptions.Count > 0) { System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(ex.InnerExceptions[0]).Throw(); }
+        }
+        else
+            for (var trackIndex = 0; trackIndex < sourceTracks.Count; trackIndex++) EncodeTrack(trackIndex, _writer);
+        fresh += freshByTrack.Sum();
 
         // The first state of a document is its baseline (the song itself is already in memory): only later changes are charged.
         var state = new ProjectState(song, tracks, previous is null ? 0 : fresh);
@@ -299,14 +319,21 @@ internal sealed class ProjectStateEncoder
     private StateChunk? FindInPrevious(ReadOnlySpan<byte> bytes)
     {
         if (_last is null) return null;
-        if (_index is null)
-        {
-            _index = new Dictionary<ulong, StateChunk>();
-            foreach (var track in _last.Tracks)
-                foreach (var chunk in track.Bars)
-                    _index.TryAdd(chunk.Key, chunk);
-        }
-        return _index.TryGetValue(StateChunk.KeyOf(bytes), out var found) && found.Bytes.AsSpan().SequenceEqual(bytes) ? found : null;
+        var index = _index;
+        if (index is null)
+            lock (_indexGate)   // tracks encode in parallel on a big song: the first miss builds it for all of them
+            {
+                if (_index is null)
+                {
+                    var built = new Dictionary<ulong, StateChunk>();
+                    foreach (var track in _last.Tracks)
+                        foreach (var chunk in track.Bars)
+                            built.TryAdd(chunk.Key, chunk);
+                    Volatile.Write(ref _index, built);
+                }
+                index = _index;
+            }
+        return index.TryGetValue(StateChunk.KeyOf(bytes), out var found) && found.Bytes.AsSpan().SequenceEqual(bytes) ? found : null;
     }
 }
 

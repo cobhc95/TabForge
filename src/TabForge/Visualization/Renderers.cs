@@ -32,6 +32,7 @@ public sealed class VisualTheme
     public Color Nut => P(0xC8, 0xCE, 0xD8, 0xEF, 0xE8, 0xD6);
     public Color Text => P(0xE7, 0xEA, 0xEF, 0x1E, 0x24, 0x2B);
     public Color Muted => P(0x8B, 0x93, 0x9F, 0x5B, 0x66, 0x73);
+    public Color Legible => P(0xA5, 0xAC, 0xB6, 0x3F, 0x4A, 0x56);   // mock: lifted muted text for tiny labels
     public Color Accent => P(0x4C, 0x9A, 0xFF, 0x1F, 0x6F, 0xD6);
     public Color Current => P(0x3F, 0xB9, 0x50, 0x2A, 0x9A, 0x3F);
     public Color Next => P(0xF2, 0xC1, 0x4E, 0xC4, 0x8A, 0x10);
@@ -354,11 +355,6 @@ public static class Draw
 /// <summary>Guitar / bass fretboard with live current/next/upcoming note markers.</summary>
 public sealed class FretboardRenderer : IInstrumentRenderer
 {
-    /// <summary>
-    /// score-following layout: no movement line between beats (markers keep the TabForge look).
-    /// </summary>
-    public static bool Gp5Style { get; set; }
-
     private static readonly int[] InlayFrets = { 3, 5, 7, 9, 12, 15, 17, 19, 21, 24 };
     private object? _staticKey;
     private Drawing? _staticBoard;
@@ -502,7 +498,7 @@ public sealed class FretboardRenderer : IInstrumentRenderer
             for (var f = firstFret; f <= lastFret; f++)
             {
                 if (f % 2 != 0 && f != firstFret && lastFret - firstFret > 6) continue;
-                Draw.Centered(dc, f.ToString(), FretX(f), boardRect.Bottom + 5, 10 * state.NumberScale, Draw.Solid(theme.Muted));
+                Draw.Centered(dc, f.ToString(), FretX(f), boardRect.Bottom + 5, 13.5 * state.NumberScale, Draw.Solid(theme.Legible));
             }
 
             // String labels (note names, high string first)
@@ -514,7 +510,7 @@ public sealed class FretboardRenderer : IInstrumentRenderer
                     var label = state.ShowNoteNames && s < state.Tuning.Count
                         ? MusicTheoryService.NoteName(state.Tuning[s])
                         : (s + 1).ToString();
-                    Draw.At(dc, label, bounds.X + 12, y, 11 * state.NumberScale, Draw.Solid(theme.Muted));
+                    Draw.At(dc, label, bounds.X + 12, y, 14.5 * state.NumberScale, Draw.Solid(theme.Legible));
                 }
             }
         }
@@ -551,7 +547,7 @@ public sealed class FretboardRenderer : IInstrumentRenderer
                 nextY += StringY(note.StringIndex);
             }
         }
-        if (currentCount > 0 && nextCount > 0 && !Gp5Style && !currentShape.SetEquals(nextShape))
+        if (currentCount > 0 && nextCount > 0 && !state.FollowScoreStyle && !currentShape.SetEquals(nextShape))
         {
             var from = new Point(currentX / currentCount, currentY / currentCount);
             var to = new Point(nextX / nextCount, nextY / nextCount);
@@ -603,8 +599,6 @@ public sealed class FretboardRenderer : IInstrumentRenderer
         Draw.Centered(dc, target.ToString().ToUpperInvariant(), badge.X + badge.Width / 2, badge.Y + 3,
             8, Draw.Solid(theme.Text), bold: true);
     }
-
-    private static readonly string[] MarkerNoteNames = { "C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B" };
 
     /// <summary>True when the tag pill would cover another marker's bubble (cheap box test over the notes; no allocation).</summary>
     private static bool PillHitsOther(Rect pill, VisualNote self, IReadOnlyList<VisualNote>? others, Func<VisualNote, Point>? whereIs, double reach)
@@ -672,7 +666,7 @@ public sealed class FretboardRenderer : IInstrumentRenderer
 
         // Always label the marker: a fret number you can actually read at a glance.
         // Note names mode labels each marker with its pitch name instead of the fret number.
-        var label = showNoteNames ? (note.Dead ? "x" : MarkerNoteNames[((note.Midi % 12) + 12) % 12])
+        var label = showNoteNames ? (note.Dead ? "x" : Audio.Contracts.NoteNames.MarkerPitchClass(note.Midi))
             : note.Fret == 0 ? "0" : note.Fret.ToString();
         var textColor = note.Role is VisualRole.Current or VisualRole.Selected or VisualRole.Next ? theme.Background
             : emphasis > 0.55 ? theme.Text : theme.Muted;

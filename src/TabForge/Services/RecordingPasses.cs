@@ -1,5 +1,8 @@
 namespace TabForge.Services;
 
+// Owns: splitting a recording take into the lane segments (song start, file offset, length) it lands as.
+// Does not own: capture and the clip drawing.
+// Tests: TestClips.
 /// <summary>Loop recording: one continuous recording cut into the passes (takes) of the loop.</summary>
 public static class RecordingPasses
 {

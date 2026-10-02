@@ -88,7 +88,7 @@ public static class PluginHostMain
                     var (type, r) = frame.Value;
                     if (type == RemotePlugin.CmdQuit) { quit = true; break; }
                     // Every other command starts with its request id; the reply echoes it, and a handler that throws
-                    // still answers (MsgFailed) so the engine never waits out its timeout for nothing (R-11).
+                    // still answers (MsgFailed) so the engine never waits out its timeout for nothing.
                     var id = r.ReadUInt32();
                     switch (type)
                     {

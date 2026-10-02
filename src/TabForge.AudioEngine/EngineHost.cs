@@ -12,7 +12,7 @@ namespace TabForge.AudioEngine;
 /// Entry point of the audio engine process (TabForge.exe --audio-engine &lt;session&gt; &lt;parent pid&gt;).
 /// Connects to TabForge's pipe, opens the shared block, and runs: commands and plug-in windows on the main thread,
 /// audio on the device thread. Exits when TabForge closes the pipe or its process ends.
-/// A-02: this class keeps the process and IPC side only (pipe, shared block, command reader, watchdogs, main loop). The engine
+/// This class keeps the process and IPC side only (pipe, shared block, command reader, watchdogs, main loop). The engine
 /// state and the command handlers live in one <see cref="EngineSession"/> per run; the reader thread parses each command and posts
 /// the matching session handler to the main thread.
 /// </summary>
@@ -22,7 +22,7 @@ public static partial class EngineHost
     private static NamedPipeClientStream? _pipe;
     private static volatile bool _exit;
 
-    /// <summary>A-02: the per-session state and handlers (see <see cref="EngineSession"/>); <see cref="Run"/> starts a fresh one.</summary>
+    /// <summary>The per-session state and handlers (see <see cref="EngineSession"/>); <see cref="Run"/> starts a fresh one.</summary>
     private static EngineSession _session = new();
 
     /// <summary>The shared block with TabForge (null in a process that is neither the engine nor the headless harness).</summary>
@@ -134,7 +134,7 @@ public static partial class EngineHost
     private static long _busySince;
 
     /// <summary>
-    /// Separate thread (R-05 / R-06): judges the engine main thread twice a second (<see cref="EngineWatchdog.Decide"/>). A plug-in call past
+    /// Separate thread: judges the engine main thread twice a second (<see cref="EngineWatchdog.Decide"/>). A plug-in call past
     /// its kind's limit (load / SetState 90 s, GetState 30 s, editor 20 s, other 10 s) ends the engine with 70 (TabForge blames that
     /// plug-in); a call past <see cref="EngineWatchdog.SlowNoticeSec"/> is reported once as slow ("still loading", not a crash); the main
     /// thread stuck 30 s outside any plug-in call ends it with 71 (unattributed: nothing is quarantined).
@@ -223,7 +223,7 @@ public static partial class EngineHost
     }
 
     /// <summary>
-    /// S-03: one command frame, parsed on the reader thread (bounded reads; the work is posted to the main thread). A payload that does
+    /// One command frame, parsed on the reader thread (bounded reads; the work is posted to the main thread). A payload that does
     /// not parse or is out of range (any exception, version skew included) drops only that frame and is logged with its command; the
     /// reader thread survives. Returns false for a dropped frame.
     /// </summary>
@@ -350,9 +350,9 @@ public static partial class EngineHost
                     }
                     case EngineCommand.SetClips:
                     {
-                        var slot = r.ReadInt32(); var clips = r.ReadClips();
+                        var slot = r.ReadInt32(); var clips = r.ReadClips(); var owner = r.ReadOwnerTail();
                         if (slot < 0 || slot >= MixEngine.MaxSlots) throw new InvalidDataException($"SetClips: track slot {slot} out of range");
-                        EngineThreads.Post(() => _session.SetClips(slot, clips));
+                        EngineThreads.Post(() => _session.SetClips(slot, clips, owner));
                         break;
                     }
                     case EngineCommand.SetArm:
@@ -364,10 +364,10 @@ public static partial class EngineHost
                     }
                     case EngineCommand.SetPosition:
                     {
-                        var playing = r.ReadBoolean(); var songSec = r.ReadDouble(); var stamp = r.ReadInt64();
-                        // RT-08: reader thread. The position lives in the engine's one SongTransport (not in the MixEngine, which Configure
+                        var playing = r.ReadBoolean(); var songSec = r.ReadDouble(); var stamp = r.ReadInt64(); var owner = r.ReadOwnerTail();
+                        // Reader thread. The position lives in the owner's SongTransport (not in the MixEngine, which Configure
                         // replaces on the main thread), published as one immutable record: never torn, never lost to a mixer swap.
-                        if (double.IsFinite(songSec)) _session.Transport.SetPosition(playing, Math.Max(0, songSec), stamp);
+                        if (double.IsFinite(songSec)) _session.Transports[owner].SetPosition(playing, Math.Max(0, songSec), stamp);
                         break;
                     }
                     case EngineCommand.Record:
@@ -380,11 +380,12 @@ public static partial class EngineHost
                             if (slot < 0 || slot >= MixEngine.MaxSlots) throw new InvalidDataException($"Record: track slot {slot} out of range");
                             names[slot] = name;
                         }
-                        // RT-09: the user's recording offset (ms, double) follows; an older sender has none.
+                        // The user's recording offset (ms, double) follows; an older sender has none.
                         var offsetMs = r.BaseStream.Position < r.BaseStream.Length ? r.ReadDouble() : 0;
                         if (!double.IsFinite(offsetMs)) throw new InvalidDataException("Record: offset is not a number");
                         offsetMs = Math.Clamp(offsetMs, -Audio.TakeAlignment.MaxOffsetMs, Audio.TakeAlignment.MaxOffsetMs);
-                        EngineThreads.Post(() => _session.Record(start, folder, names, offsetMs));
+                        var owner = r.ReadOwnerTail();   // the recording song's transport (absent: owner 0)
+                        EngineThreads.Post(() => _session.Record(start, folder, names, offsetMs, owner));
                         break;
                     }
                     case EngineCommand.CloseEditor:
@@ -438,10 +439,12 @@ public static partial class EngineHost
                     case EngineCommand.SetTransport:
                     {
                         var tempo = r.ReadDouble(); r.ReadBoolean();   // playing: SetPosition carries it
-                        // RT-04: the song's bar map (time signatures, bar starts, tempo per bar) follows; an older sender has none.
+                        // The song's bar map (time signatures, bar starts, tempo per bar) follows; an older sender has none.
                         var bars = r.BaseStream.Position < r.BaseStream.Length ? TransportMap.Read(r) : null;
-                        if (double.IsFinite(tempo)) _session.Transport.SetTempo(Math.Clamp(tempo, 1, 2000));
-                        if (bars is not null) _session.Transport.SetMap(bars);
+                        var owner = r.ReadOwnerTail();
+                        var transport = _session.Transports[owner];
+                        if (double.IsFinite(tempo)) transport.SetTempo(Math.Clamp(tempo, 1, 2000));
+                        if (bars is not null) transport.SetMap(bars);
                         break;
                     }
                     case EngineCommand.MeasurePitch: ReadMeasurePitch(r); break;

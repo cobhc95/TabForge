@@ -62,14 +62,13 @@ internal sealed partial class ScoreToMidiCompiler
         var order = _playbackOrder?.ToList() ?? PlaybackOrder.Build(_project, _opt);
         if (order.Count == 0) return _timeline;
 
-        var anySolo = _opt.RespectMuteSolo && _project.Tracks.Any(t => t.Solo);
         _players = _opt.RespectMuteSolo
-            ? _project.Tracks.Where(t => !t.Mute && (!anySolo || t.Solo) && !MixerGroups.GroupSilences(_project, t)
-                && MixerGroups.RouteOf(t) != TrackRoute.Silent).ToList()
+            ? _project.Tracks.Where(t => MixerGroups.IsAudible(_project, t)
+                && !MixerGroups.IsSilentRoute(t)).ToList()
             : _project.Tracks.ToList();
         _channels = ChannelAllocator.Assign(_project);
         _effectChannels = ChannelAllocator.AssignEffect(_project, _channels);
-        _metronomeDevice = _players.Count > 0 ? _players[0].MidiOutputDeviceId : -1;
+        _metronomeDevice = _players.FirstOrDefault(t => !t.IsAudio)?.MidiOutputDeviceId ?? -1;   // never an audio track's device
 
         var cursorMs = 0.0;
         if (_opt.CountIn) cursorMs += CountInMs(order[0]) * Math.Clamp(_opt.CountInBars, 1, 4);
@@ -116,6 +115,7 @@ internal sealed partial class ScoreToMidiCompiler
             var skipSlots = firstPerformedBar ? startSlot : 0;
             foreach (var track in _players)
             {
+                if (track.IsAudio) continue;   // no notation: its MIDI clips are emitted by EmitClipNotes
                 var trackIndex = _project.Tracks.IndexOf(track);
                 if (barIndex >= track.Measures.Count) continue;
                 var bar = track.Measures[barIndex];
@@ -325,6 +325,7 @@ internal sealed partial class ScoreToMidiCompiler
             var target = _project.Tracks[index];
             var device = target.MidiOutputDeviceId;
             var channel = _channels.Length > index ? _channels[index] : target.MidiChannel;
+            if (channel < 0) continue;   // an audio track without a channel has nothing to adjust
             var effect = EffectChannelOf(index);
             // Mix changes reach the track's effect channel too, so bent notes keep the track's sound and level.
             void AddBoth(int statusBase, int data1, int data2, double at)

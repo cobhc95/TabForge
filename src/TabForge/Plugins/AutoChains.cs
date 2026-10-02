@@ -35,7 +35,7 @@ public static class AutoChains
     /// <summary>Gives a track without plug-ins the default chain of its instrument type. True when it changed.</summary>
     public static bool Apply(PluginSettings settings, TrackModel track)
     {
-        if (track.Rig.Plugins.Count > 0 || Find(settings, track) is not { Plugins.Count: > 0 } auto) return false;
+        if (track.IsAudio || track.Rig.Plugins.Count > 0 || Find(settings, track) is not { Plugins.Count: > 0 } auto) return false;
         track.Rig.Plugins = Clone(auto.Plugins);
         ChainStateStore.Resolve(track.Rig.Plugins);
         track.SoundSource = SoundSources.Plugins;

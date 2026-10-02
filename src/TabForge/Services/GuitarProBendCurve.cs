@@ -7,6 +7,9 @@ using AlphaTab.Model;
 
 namespace TabForge.Services;
 
+// Owns: how a bend curve is written to and read from a clean .gp file.
+// Does not own: the notation drawing of bends and bend playback.
+// Tests: TestGpFidelity.
 /// <summary>
 /// How a bend curve is written to a clean .gp file. The format keeps a bend as four fields (origin, a flat middle stretch between two offsets,
 /// destination), but alphaTab's writer always puts the middle stretch at the midpoint (a plain bend) or at the peak (bend and release) and ignores

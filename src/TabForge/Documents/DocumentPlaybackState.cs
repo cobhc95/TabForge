@@ -1,3 +1,4 @@
+using TabForge.Models;
 using TabForge.Playback;
 
 namespace TabForge.Documents;
@@ -12,9 +13,10 @@ public sealed class DocumentPlaybackState : IDisposable
     private bool _finishedPending;
     private bool _disposed;
 
-    public DocumentPlaybackState() : this(new Audio.RoutedMidiOutput(new SharedMidiOutput(), Audio.AudioEngineClient.Instance)) { }
+    /// <summary>A document whose engine reads <paramref name="preferences"/> (null: a private instance until a <see cref="DocumentManager"/> gives it the application's).</summary>
+    public DocumentPlaybackState(PlaybackPreferences? preferences = null) : this(new Audio.RoutedMidiOutput(new SharedMidiOutput(), Audio.AudioEngineClient.Instance), preferences) { }
 
-    private DocumentPlaybackState(Audio.RoutedMidiOutput output) : this(new PlaybackEngine(output)) => Routing = output;
+    private DocumentPlaybackState(Audio.RoutedMidiOutput output, PlaybackPreferences? preferences) : this(new PlaybackEngine(output, preferences)) => Routing = output;
 
     /// <summary>Sends plug-in tracks to the audio engine (null for test engines built without routing).</summary>
     public Audio.RoutedMidiOutput? Routing { get; }
@@ -123,6 +125,56 @@ public sealed class DocumentPlaybackState : IDisposable
     {
         if (!IsPlayingVisual || PlaybackBarRemap is null) return;
         PlaybackBarMappingsBySnapshot[snapshot.Fingerprint] = PlaybackBarRemap.ToArray();
+    }
+
+    // ---- live edits: an edit made while the song plays is heard from the next bar (the engine splices it in at the playing bar's end) ----
+
+    private const int LiveEditSettleMs = 120;
+    private const int MaxLiveAttempts = 6;   // bars a refresh may miss in a row before it is left to the next edit or play (a song too big to compile within one bar)
+    private SongProject? _liveProject;
+    private bool _liveDirty;
+    private bool _liveBusy;
+
+    /// <summary>
+    /// The song changed (an edit ended). While this document plays, the future part of the running timeline is recompiled once the edits settle,
+    /// so a burst of edits (typing) becomes one splice at the next bar boundary. The bar playing now finishes as it was. Owner thread only.
+    /// </summary>
+    public void NotifyScoreEdited(SongProject project)
+    {
+        if (!IsPlayingVisual || !Engine.IsPlaying || _disposed) return;
+        _liveProject = project;
+        _liveDirty = true;
+        if (_liveBusy) return;
+        _liveBusy = true;
+        _ = RunLiveRefreshesAsync();
+    }
+
+    private async Task RunLiveRefreshesAsync()
+    {
+        try
+        {
+            var attempts = 0;
+            await Task.Delay(LiveEditSettleMs);
+            while (_liveDirty && !_disposed && IsPlayingVisual && Engine.IsPlaying && _liveProject is { } project)
+            {
+                _liveDirty = false;
+                var barCount = project.Tracks.Count == 0 ? 0 : project.Tracks.Max(t => t.Measures.Count);
+                var remap = PlaybackBarRemap ?? Enumerable.Range(0, barCount).ToArray();
+                var retryInMs = await Engine.RefreshArrangementLive(project, remap);
+                if (retryInMs == 0)
+                {
+                    attempts = 0;
+                    if (_liveDirty) await Task.Delay(LiveEditSettleMs);   // edits arrived while it compiled: one more refresh for the whole burst
+                    continue;
+                }
+                // Too close to the end of the playing bar, or the compile missed the bar line (the old schedule played on): the next bar takes it.
+                if (++attempts > MaxLiveAttempts) break;
+                _liveDirty = true;
+                await Task.Delay(retryInMs);
+            }
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException) { System.Diagnostics.Debug.WriteLine($"live edit refresh failed: {ex.Message}"); }   // the edit stays in the song; the next play pass has it
+        finally { _liveBusy = false; _liveDirty = false; }
     }
 
     public event Action<ScoreTimeline>? TimelineChanged;

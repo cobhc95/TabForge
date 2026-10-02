@@ -28,15 +28,21 @@ namespace TabForge;
 
 public partial class MainWindow : Window
 {
-    private readonly DocumentManager _documents = new();
+    private readonly DocumentManager _documents;
+    private readonly AppOptions _options;   // the application's shared settings-driven options; each song's engine and the views read them
     private readonly DocumentController _documentController = new();
     private readonly ArrangementController _arrangementController = new();
     private readonly TrackController _trackController = new();
     private readonly ISettingsWindowHost _settingsWindowHost;
+    private readonly BackgroundServices _services;
+    private readonly Audio.AudioEngineClient _engine;
+    private readonly EngineSyncController _engineSync;
+    private bool _muteSoloFollowUp;
+    private readonly TransportControlsController _transport;
+    private readonly ClipEditController _clips;
+    private readonly SectionEditFlow _sections;
     private PlaybackEngine _midi => Doc.Playback.Engine;
-    private DocumentSession? _observedPlaybackDocument;
-    private MainWindow? _attachTarget;
-    private int _attachTargetIndex = -1;
+    private readonly TabTransferController _tabTransfer;
     private WpfResizeBorderFrame? _resizeBorderFrame;
     private WpfCaptionButtonFrame? _captionButtonFrame;
     private bool _restoring;
@@ -46,12 +52,7 @@ public partial class MainWindow : Window
     private int _loopEndBar { get => Doc.LoopEndBar; set => Doc.LoopEndBar = value; }
     private int _loopStartCell { get => Doc.LoopStartCell; set => Doc.LoopStartCell = value; }
     private int _loopEndCell { get => Doc.LoopEndCell; set => Doc.LoopEndCell = value; }
-    private bool _metronome;
-    private bool _syncingMetronomeSettings;
     private bool _mainWindowInitialized;
-    private DispatcherTimer? _metronomeSettingsSaveTimer;
-    private bool _countIn;
-    private double _speed = 1.0;
     private bool _fullscreen;
     private bool _instrumentDragArmed;
     private bool _instrumentDragging;
@@ -66,6 +67,8 @@ public partial class MainWindow : Window
     private double _zoomFactor;
     // ---- keep-the-score-in-view ----
     private readonly ScoreFollowCoordinator _follow;
+    private InputGate<(double Width, double Zoom, bool Horizontal, bool Centre)> _pageInputs;   // the score layout reacts to these, not to height
+    private SettleAction? _centreSettle;
     private bool _leftHanded;
     private bool _suppressWorkspaceSave;
     private bool _showNoteNames;
@@ -85,10 +88,8 @@ public partial class MainWindow : Window
     private MarkerModel? _playingSectionMarker;
     private bool _syncingPlayingSectionSelection;
 
-    // Coalesced UI updates: the engine reports ~60 times a second, but the UI is refreshed on a
-    // fixed cadence from the latest position. This keeps a slow render from queueing unbounded
-    // dispatcher work (which previously made the app look frozen during playback).
-    private readonly Shell.FrameTicker _playbackUiTick;
+    // The engine reports ~60 times a second; the playback view applies the newest position once per rendered frame.
+    private readonly PlaybackViewController _playbackView;
     private int _fretboardFrets = 24;
     private int _scoreWheelScrollPixels = 32;
 
@@ -103,27 +104,30 @@ public partial class MainWindow : Window
 
     public ObservableCollection<MidiOutputDeviceInfo> MidiDevices { get; } = new();
 
-    public MainWindow()
+    public MainWindow(Audio.AudioEngineClient engine, AppOptions? options = null)
     {
+        _engine = engine;
+        _options = options ?? new AppOptions();
+        _documents = new DocumentManager(_options.Playback);
+        _engineSync = new EngineSyncController(new EngineSyncHost(this), engine);
+        _lifetime.Add(_engineSync.Dispose);
+        _transport = new TransportControlsController(new TransportHost(this));
+        _lifetime.Add(_transport.Dispose);
+        _playbackView = new PlaybackViewController(new PlaybackViewHost(this));
+        _tabTransfer = new TabTransferController(new TabTransferHost(this));
         InitializeComponent();
-        WireMediaAccess();
+        Arrangement.ViewOptions = _options.Visual;
+        Arrangement.QuarantinedPlugins = () => _settings.Plugins.Quarantined;   // faulted FX icon on tracks whose plug-in crashed
         _follow = new ScoreFollowCoordinator(ScoreScroll, Editor, () => _isPlayingVisual, () => _midi.IsPaused,
             () => _playheadBar, () => _playheadFraction, MaxMeasures, () => _settings.Follow);
         WireScoreScrollGestures();
         _settingsWindowHost = new WpfSettingsWindowHost(this, CreateSettingsActions());   // this window's own callbacks for its Settings dialogs
         _mainWindowInitialized = true;
-        Loaded += (_, _) => ScheduleAutomaticUpdateCheck();
-        _metronomeSettingsSaveTimer = new DispatcherTimer(DispatcherPriority.Background)
-        {
-            Interval = TimeSpan.FromMilliseconds(280)
-        };
-        _metronomeSettingsSaveTimer.Tick += (_, _) =>
-        {
-            _metronomeSettingsSaveTimer.Stop();
-            SaveSettings();
-        };
         _documents.AddNew();
-        StartAutosave();
+        _services = new BackgroundServices(this);
+        _clips = new ClipEditController(new ClipHost(this), _trackController);
+        _sections = new SectionEditFlow(new SectionHost(this), _arrangementController);
+        Loaded += (_, _) => _services.Update.ScheduleAutomaticUpdateCheck();
         BuildToolsPalette();
         BuildPinnedToolStrip();
         Arrangement.SetPlaybar(PlaybarControls);
@@ -153,10 +157,8 @@ public partial class MainWindow : Window
         DataContext = this;
         WireTabs();
 
-        Editor.EditStarting += (_, _) => CaptureUndo();
         Editor.Edited += (_, _) =>
         {
-            _project.IsDirty = true;
             var changed = Editor.AffectedMeasureRange;
             Arrangement.InvalidateActivities(Editor.SelectedTrackIndex, changed.FirstMeasure, changed.LastMeasure);
             RefreshArrangementScore();
@@ -170,7 +172,7 @@ public partial class MainWindow : Window
         };
         Editor.SelectionChanged += (_, _) => OnEditorSelectionChanged();
         Editor.PlayRequested += (_, _) => TogglePlayback();
-        Editor.NotePreview += (_, e) => { if (_previewNotes) _midi.PreviewNote(e.DeviceId, e.Channel, e.Program, e.Midi, _settings.Audio.PreviewLengthMs); };
+        Editor.NotePreview += OnNotePreview;
         Editor.StatusMessage += (_, msg) => StatusText.Text = msg;
         Editor.ContextMenuRequested += (_, args) =>
         {
@@ -232,11 +234,8 @@ public partial class MainWindow : Window
         };
         Arrangement.MuteSoloChanged += (_, _) =>
         {
-            CompleteTrackEditUndo();
-            CommitEdit(EditRefresh.Arrangement);
-            _midi.SetMuteSolo(_project);
-            SyncAudioEngine(); // audio clips / monitored input follow mute and solo
-            _mixerWindow?.SyncValues();
+            CompleteTrackEditUndo();   // the undo step; the sound follows in ApplyMuteSolo
+            ApplyMuteSolo();
         };
         Arrangement.TrackColorChanged += (_, _) =>
         {
@@ -258,6 +257,7 @@ public partial class MainWindow : Window
         Arrangement.MixChanged += (_, _) =>
         {
             if (_mixUndoTransaction is not null) _mixUndoChanged = true;
+            if (Arrangement.InMuteSoloGesture) return;   // a group mute/solo: ApplyMuteSolo follows with the sound
             OnArrangementMixChanged();
             SyncAudioEngine(); // cheap: only changed levels are sent
         };
@@ -287,10 +287,8 @@ public partial class MainWindow : Window
         {
             var sections = SectionLayout.Sorted(_project);
             if (move.markerIndex < 0 || move.markerIndex >= sections.Count) return;
-            var transaction = _undo.BeginTransaction(_project);
-            if (!SectionLayout.MoveMarker(_project, sections[move.markerIndex], move.bar)) { _undo.Cancel(transaction); return; }
-            _undo.Commit(transaction);
-            CommitEdit(EditRefresh.Score | EditRefresh.Markers | EditRefresh.Arrangement);
+            if (!DocumentEdits.Run(Doc, p => SectionLayout.MoveMarker(p, sections[move.markerIndex], move.bar)).Changed) return;
+            RefreshAfterEdit(EditRefresh.Score | EditRefresh.Markers | EditRefresh.Arrangement);
             StatusText.Text = $"Section moved to bar {move.bar + 1} (bars unchanged; Ctrl+drag moves the bars too)";
         };
         Arrangement.SectionLaneContextRequested += (_, at) => ShowSectionLaneMenu(at.markerIndex, at.bar);
@@ -298,12 +296,9 @@ public partial class MainWindow : Window
         {
             var resizeStart = _sectionUndoSnapshot;
             _sectionUndoSnapshot = null;
-            if (resizeStart is { } before)
-            {
-                var capture = _undo.Capture(before);
-                if (capture.Stored) Playback.RememberBarMapping(capture.Snapshot);
-            }
-            CommitEdit(EditRefresh.Score | EditRefresh.Arrangement);
+            // The drag changed the markers live; the state taken at its start is the undo step.
+            if (resizeStart is { } before) DocumentEdits.Run(Doc, _ => true, before);
+            RefreshAfterEdit(EditRefresh.Score | EditRefresh.Arrangement);
         };
         Arrangement.MixerRequested += (_, _) => OpenMixer();
         Arrangement.FxChainRequested += (_, index) => { if (index >= 0 && index < _project.Tracks.Count) OpenFxChain(_project.Tracks[index]); };
@@ -313,6 +308,7 @@ public partial class MainWindow : Window
         Arrangement.TrackOptionsRequested += (_, index) => { TrackMixerGrid.SelectedIndex = index; TrackProps_Click(this, new RoutedEventArgs()); };
         Arrangement.TimelineContextRequested += (_, context) => ShowArrangementContextMenu(context.bar, context.track);
         HookAudioLanes();
+        HookAddTrackLane();
         Arrangement.AddTrackMenuRequested += ShowAddTrackMenu;
         Arrangement.GroupCollapseToggled += group =>
         {
@@ -355,7 +351,7 @@ public partial class MainWindow : Window
         PreviewMouseDown += (_, e) => Arrangement.DismissTrackNameEditOnClick(e.OriginalSource as DependencyObject);
         PreviewKeyDown += MainWindow_PreviewKeyDown;
         Closing += MainWindow_Closing;
-        Loaded += (_, _) => TabWindowRegistry.Register(this);
+        Loaded += (_, _) => _tabTransfer.Register();
         // Drawn text is shaped per control for that control's own display DPI (A-03: Draw.UseDpi in each OnRender), so two
         // windows on monitors with different scaling no longer share one value. Moving to another monitor re-renders.
         Loaded += (_, _) => ApplyGpuLayerCaches(VisualTreeHelper.GetDpi(this).PixelsPerDip);
@@ -369,11 +365,6 @@ public partial class MainWindow : Window
         Closed += (_, _) => ReleaseWindowResources();   // every attachment to a longer-lived object ends here, once (MainWindow.Lifetime.cs)
         StateChanged += (_, _) => UpdateMaximiseGlyph();
         SizeChanged += (_, _) => ApplyLayout();
-
-        // Fixed-cadence playback UI refresh; engine threads publish only into their document state.
-        // Display-synchronised: one update per rendered frame at the monitor's refresh rate, only while playing.
-        _playbackUiTick = new Shell.FrameTicker();
-        _playbackUiTick.Tick += (_, _) => ApplyPendingPlayhead();
 
         // Score follow has its own render-priority timer so vertical movement glides without
         // increasing the cadence of playback-position, arrangement, or audio updates.
@@ -389,8 +380,8 @@ public partial class MainWindow : Window
         RefreshMidiDevices();
         // Optional capture of every dispatched MIDI message for offline jitter analysis.
         var midiLogPath = Environment.GetEnvironmentVariable("TABFORGE_MIDI_LOG");
-        if (string.IsNullOrWhiteSpace(midiLogPath) && Diagnostics.Trace.IsOn(Diagnostics.Trace.Playback))
-            midiLogPath = Diagnostics.Trace.PathFor("playback-midi");
+        if (string.IsNullOrWhiteSpace(midiLogPath) && Services.Trace.IsOn(Services.Trace.Playback))
+            midiLogPath = Services.Trace.PathFor("playback-midi");
         if (!string.IsNullOrWhiteSpace(midiLogPath))
         {
             try { _midi.StartDiagnostics(midiLogPath); }
@@ -442,9 +433,9 @@ public partial class MainWindow : Window
         });
 
 
-    private static void ApplyFretboardStyle(string? style)
+    private void ApplyFretboardStyle(string? style)
     {
-        TabForge.Visualization.InstrumentVisualizer.Gp5Mode = style switch
+        _options.Visual.Gp5Mode = style switch
         {
             "GP5: Beat" => TabForge.Visualization.Gp5FretboardMode.Beat,
             "GP5: Beat + next beat" => TabForge.Visualization.Gp5FretboardMode.BeatAndNextBeat,
@@ -452,7 +443,6 @@ public partial class MainWindow : Window
             "GP5: Bar" => TabForge.Visualization.Gp5FretboardMode.Bar,
             _ => null
         };
-        TabForge.Visualization.FretboardRenderer.Gp5Style = TabForge.Visualization.InstrumentVisualizer.Gp5Mode is not null;
     }
 
     private bool _lastInputWasMouse;

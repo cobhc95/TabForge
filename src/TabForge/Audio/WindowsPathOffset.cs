@@ -1,3 +1,4 @@
+using TabForge.Audio.Contracts;
 using NAudio.CoreAudioApi;
 using NAudio.Wave;
 
@@ -35,7 +36,7 @@ internal static class WindowsPathOffset
                     for (var i = 0; i + 4 * fmt.Channels <= e.BytesRecorded; i += 4 * fmt.Channels)
                         samples.Add(BitConverter.ToSingle(e.Buffer, i));
             };
-            var amplitude = MathF.Pow(10, ToneDb / 20);
+            var amplitude = Gain.FromDb(ToneDb);
             var tone = new float[rate * 2 * 4 / 10];
             for (var i = 0; i < tone.Length / 2; i++) tone[2 * i] = tone[2 * i + 1] = amplitude * MathF.Sin(2 * MathF.PI * 1000 * i / rate);
             var provider = new BufferedWaveProvider(WaveFormat.CreateIeeeFloatWaveFormat(rate, 2)) { BufferLength = tone.Length * 4 + 4096, ReadFully = false };
@@ -68,9 +69,9 @@ internal static class WindowsPathOffset
             }
             var endpointDb = device.AudioEndpointVolume.Mute ? -200f : device.AudioEndpointVolume.MasterVolumeLevel;
             var sessionDb = 40 * Math.Log10(Math.Max(session, 1e-5));
-            if (best <= 1e-9 || (floor > 0 && 20 * Math.Log10(best / floor) < 20))
-                return (null, $"no clean reading (tone {20 * Math.Log10(Math.Max(best, 1e-12)):0.0} dBFS, floor {20 * Math.Log10(Math.Max(floor, 1e-12)):0.0} dBFS)");
-            var total = 20 * Math.Log10(best / amplitude);
+            if (best <= 1e-9 || (floor > 0 && Gain.ToDb(best / floor) < 20))
+                return (null, $"no clean reading (tone {Gain.ToDb(Math.Max(best, 1e-12)):0.0} dBFS, floor {Gain.ToDb(Math.Max(floor, 1e-12)):0.0} dBFS)");
+            var total = Gain.ToDb(best / amplitude);
             var offset = (float)(total - endpointDb - sessionDb);
             LastTotalDb = total;
             return (offset, $"total {total:0.00} dB = endpoint {endpointDb:0.00} dB + session {sessionDb:0.00} dB + offset {offset:0.00} dB");

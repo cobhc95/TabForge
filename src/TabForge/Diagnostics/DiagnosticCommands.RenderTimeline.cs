@@ -22,10 +22,14 @@ internal static partial class DiagnosticCommands
             var outPath = FilePathPolicy.OutputFile(args[2], "timeline render", ".png");
             var project = LoadAny(args[1]);
             var light = args.Any(a => a.Equals("light", StringComparison.OrdinalIgnoreCase));
-            var keywords = new[] { "light", "drop", "dropnew", "dropbelow", "move" };
+            var keywords = new[] { "light", "drop", "dropnew", "dropbelow", "move", "mute" };
+            double? mutedDim = null;
+            if (args.Skip(3).FirstOrDefault(a => a.StartsWith("dim", StringComparison.OrdinalIgnoreCase)) is { } dimArg && int.TryParse(dimArg[3..], out var dimPercent))
+                mutedDim = Math.Clamp(dimPercent, 0, 100) / 100.0;   // `dim35`: the muted-track dimming strength
+            if (args.Skip(3).Any(a => a.Equals("mute", StringComparison.OrdinalIgnoreCase)) && project.Tracks.Count > 1) project.Tracks[1].Mute = true;   // `mute`: the second track is drawn muted
             var move = args.Skip(3).Any(a => a.Equals("move", StringComparison.OrdinalIgnoreCase));
             var drop = args.Skip(3).FirstOrDefault(a => a.StartsWith("drop", StringComparison.OrdinalIgnoreCase))?.ToLowerInvariant();
-            var positional = args.Skip(3).Where(a => !keywords.Contains(a, StringComparer.OrdinalIgnoreCase)).ToArray();
+            var positional = args.Skip(3).Where(a => !keywords.Contains(a, StringComparer.OrdinalIgnoreCase) && !a.StartsWith("dim", StringComparison.OrdinalIgnoreCase)).ToArray();
             var bar = positional.Length > 0 && int.TryParse(positional[0], out var b) ? Math.Max(1, b) - 1 : 4;
             var style = positional.Length > 1 ? Services.PlayheadStyles.Normalize(positional[1].Replace("BarMarker", "Bar marker", StringComparison.OrdinalIgnoreCase)) : Services.PlayheadStyles.Line;
             int hoverBar = -1, hoverTrack = -1;
@@ -37,6 +41,7 @@ internal static partial class DiagnosticCommands
 
             if (drop is not null || move) AddDropRenderClip(project);
             var panel = new Views.ArrangementPanel { PlayheadStyle = style };
+            if (mutedDim is { } dim) panel.ViewOptions = new Visualization.VisualOptions { MutedDim = dim };
             panel.Bind(project, Array.Empty<Playback.MidiOutputDeviceInfo>());
             var clock = new Audio.SongClock(Audio.AudioEngineClient.Instance);
             panel.SetSongTime(b => clock.BarStartSec(project, b), sec => clock.BarAt(project, sec));

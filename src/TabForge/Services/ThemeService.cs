@@ -3,6 +3,9 @@ using System.Windows.Media;
 
 namespace TabForge.Services;
 
+// Owns: applying the appearance settings to the application resources at runtime.
+// Does not own: the stored settings and the XAML styles.
+// Tests: TestTabUi, TestReadableTextTokens.
 /// <summary>
 /// Applies the appearance settings to the application resources at runtime. The XAML references these
 /// brushes with <c>DynamicResource</c>, so changing a colour here restyles the live UI immediately.
@@ -49,6 +52,7 @@ public static class ThemeService
         Set(resources, "TextBrush", text);
         Set(resources, "TextStrongBrush", light ? "#111111" : "#FFFFFF");
         Set(resources, "MutedBrush", muted);
+        Set(resources, "LegibleBrush", Blend(muted, text, 0.2));   // mock: lifted muted text for tiny labels
         Set(resources, "SecondaryTextBrush", Blend(muted, text, 0.45));
         Set(resources, "AccentBrush", a.Accent);
         Set(resources, "AccentSoftBrush", Blend(a.Accent, background, 0.55));
@@ -330,8 +334,7 @@ public static class ThemeService
 
     private static bool IsLightColour(string hex)
     {
-        try { return Luminance((Color)ColorConverter.ConvertFromString(hex)) > 0.35; }
-        catch (FormatException) { return false; }
+        return TryParse(hex, out var colour) && Luminance(colour) > 0.35;
     }
 
     public static bool IsLightTheme(string mode)

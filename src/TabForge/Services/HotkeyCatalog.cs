@@ -13,8 +13,11 @@ public enum HotkeyModifiers
 }
 
 /// <summary>One customisable command: a stable id, where it appears, its default gesture and what it does.</summary>
-public sealed record HotkeyAction(string Id, string Category, string Name, string DefaultGesture, string Description = "");
+public sealed record HotkeyAction(string Id, string Category, string Name, string DefaultGesture, string Description = "", string DefaultGesture2 = "");
 
+// Owns: the catalogue of every bindable command with its default key, and the key presets.
+// Does not own: running the commands and key routing (WindowKeyRouter).
+// Tests: TestNewBindableCommands, TestKeyRoutingOrder.
 /// <summary>
 /// The catalogue of every command that can be bound to a key. The settings store only the bindings the
 /// user has changed; everything else falls back to <see cref="HotkeyAction.DefaultGesture"/>.
@@ -37,21 +40,31 @@ public static class HotkeyCatalog
     /// <summary>Clip-context commands (see <see cref="CategoryClips"/>).</summary>
     public static bool IsClipAction(string id) => id.StartsWith("Clip.", StringComparison.OrdinalIgnoreCase);
 
-    /// <summary>Two commands can share a key when exactly one of them is a clip command.</summary>
-    public static bool SameContext(string a, string b) => IsClipAction(a) == IsClipAction(b);
+    /// <summary>Track-row commands: they only act while a track row of the track list has the focus, so they may share keys with
+    /// score commands (Ctrl+C, Delete...).</summary>
+    public const string CategoryTrackRows = "Tracks (while a track row is focused)";
+
+    /// <summary>Track-row context commands (see <see cref="CategoryTrackRows"/>).</summary>
+    public static bool IsTrackRowAction(string id) => id.StartsWith("TrackRow.", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>0 = the global map, 1 = clip context, 2 = track-row context: keys only collide inside one context.</summary>
+    public static int ContextOf(string id) => IsClipAction(id) ? 1 : IsTrackRowAction(id) ? 2 : 0;
+
+    /// <summary>Two commands can share a key when they act in different contexts.</summary>
+    public static bool SameContext(string a, string b) => ContextOf(a) == ContextOf(b);
 
     private static readonly List<HotkeyAction> Actions = new()
     {
         new("File.New", CategoryFile, "New score", "Ctrl+N", "Create a new score in a new tab."),
         new("File.NewFromTemplate", CategoryFile, "New from template", "", "Create a new score from a built-in or saved template (File > New from template)."),
         new("File.SaveAsTemplate", CategoryFile, "Save as template", "", "Save a copy of the active score as a template in the templates folder."),
-        new("File.Open", CategoryFile, "Open score", "Ctrl+O", "Open a .tforge or Guitar Pro file in the current tab."),
-        new("File.OpenInNewTab", CategoryFile, "Open score in new tab", "Ctrl+Shift+O", "Open a .tforge or Guitar Pro file in a new tab."),
+        new("File.Open", CategoryFile, "Open score", "Ctrl+O", "Open a .tforge or .gp file in the current tab."),
+        new("File.OpenInNewTab", CategoryFile, "Open score in new tab", "Ctrl+Shift+O", "Open a .tforge or .gp file in a new tab."),
         new("File.Save", CategoryFile, "Save", "Ctrl+S", "Save the active score."),
         new("File.SaveAs", CategoryFile, "Save as", "Ctrl+Shift+S", "Save the active score under a new name."),
         new("File.Print", CategoryFile, "Print", "Ctrl+P", "Print the active score."),
         new("File.PrintPreview", CategoryFile, "Print preview", "Ctrl+Shift+P", "Preview the printed page."),
-        new("File.CancelImport", CategoryFile, "Cancel import", "", "Cancel the Guitar Pro import(s) running in the background (same as the status-bar Cancel button)."),
+        new("File.CancelImport", CategoryFile, "Cancel import", "", "Cancel the score import(s) running in the background (same as the status-bar Cancel button)."),
         new("File.ExportPdf", CategoryFile, "Export PDF", "", "Export the engraved score (notation and tab) as a PDF file."),
         new("File.ExportMusicXml", CategoryFile, "Export MusicXML", "", "Export the song as uncompressed MusicXML (.musicxml): a part per track with notation and a tab staff."),
         new("File.ExportMidi", CategoryFile, "Export MIDI", "", "Export the song as a standard MIDI file (File > Export MIDI)."),
@@ -108,7 +121,7 @@ public static class HotkeyCatalog
 
         new("Note.Chord", CategoryNote, "Chord name", "A", "Attach a chord name to the beat."),
         new("Note.Text", CategoryNote, "Beat text", "T", "Attach text to the beat."),
-        new("Track.Add", CategoryNote, "Add track", "Ctrl+Shift+Insert", "Add a new track."),
+        new("Track.Add", CategoryNote, "Add track", "Ctrl+Alt+T", "Add a new track.", "Ctrl+Shift+Insert"),
         new("Track.Delete", CategoryNote, "Delete track", "Ctrl+Shift+Delete", "Delete the selected track."),
         new("Track.Properties", CategoryNote, "Track properties", "F6", "Edit the selected track's properties."),
         new("Track.Next", CategoryNote, "Next track", "Ctrl+Shift+Down", "Select the next track."),
@@ -138,6 +151,11 @@ public static class HotkeyCatalog
         new("Clip.Duplicate", CategoryClips, "Duplicate clip", "Ctrl+D", "Duplicate the selected clip right after itself."),
         new("Clip.Mute", CategoryClips, "Mute clip", "Ctrl+M", "Mute or unmute the selected clip."),
         new("Clip.Properties", CategoryClips, "Clip properties", "F2", "Volume, pitch, speed and name of the selected clip."),
+        new("TrackRow.Copy", CategoryTrackRows, "Copy track", "Ctrl+C", "Copy the focused track (notation, clips, mixer settings, FX chain, colour and name)."),
+        new("TrackRow.Cut", CategoryTrackRows, "Cut track", "Ctrl+X", "Copy the focused track and remove it from the song."),
+        new("TrackRow.Paste", CategoryTrackRows, "Paste track", "Ctrl+V", "Paste the copied track after the focused track, with a unique name."),
+        new("TrackRow.Duplicate", CategoryTrackRows, "Duplicate track", "Ctrl+D", "Duplicate the focused track right after itself."),
+        new("TrackRow.Delete", CategoryTrackRows, "Delete track (track row)", "Delete", "Delete the focused track after a confirmation."),
         new("Timeline.Snap", CategoryView, "Snap clips on / off", "Alt+S", "Turn snapping of audio and MIDI clips on or off (right-click the snap button for its settings)."),
         new("Track.Arm", CategoryTransport, "Arm track for recording", "", "Monitor the audio input through the selected track (and record it with Record)."),
         new("View.SidePanel", CategoryView, "Show / hide side panel", "", "Hide the side panel (tools, sections, practice) for more score space, or bring it back."),
@@ -162,6 +180,7 @@ public static class HotkeyCatalog
         new("View.ClearScale", CategoryView, "Clear scale highlight", "", "Remove the highlighted scale from the fretboard and keyboard."),
         new("View.ScaleHighlightBrighter", CategoryView, "Scale highlight brighter", "", "Make the scale highlight on the fretboard and keyboard 10% stronger (up to 150%). The same setting as Preferences > Fretboard > Appearance > Scale highlight strength."),
         new("View.ScaleHighlightDimmer", CategoryView, "Scale highlight dimmer", "", "Make the scale highlight on the fretboard and keyboard 10% weaker (down to 10%). The same setting as Preferences > Fretboard > Appearance > Scale highlight strength."),
+        new("View.ToggleAddTrackLane", CategoryView, "Show or hide the Add-track lane", "", "Show or hide the Add track strip under the last track. The same setting as Preferences > Timeline & Tracks > Show the Add-track lane."),
         new("View.CyclePlayheadStyle", CategoryView, "Cycle playback position marker", "", "Switch the timeline's playback position marker between Line (default), Bar marker and Both. The same setting as Preferences > Timeline & Tracks > Playback position marker."),
         new("View.CycleStringSpacing", CategoryView, "Cycle fretboard string spacing", "", "Switch the fretboard string spacing between Compact, Natural (default) and Wide (at most 1.5x natural). The same setting as right-click the fretboard > Appearance > String spacing."),
         new("Tools.ScaleFinder", CategoryView, "Scale finder", "", "Find which scales the selected notes (or the whole song) fit, or pick any scale, and highlight it on the fretboard."),
@@ -236,36 +255,53 @@ public static class HotkeyCatalog
 
     /// <summary>The effective gesture for an action: the user's binding, else the catalogue default.</summary>
     /// <summary>Every effective gesture mapped to its command id (what the window dispatches on).</summary>
-    public static Dictionary<string, string> BuildMap(HotkeySettings settings, bool clipContext = false)
+    public static Dictionary<string, string> BuildMap(HotkeySettings settings, bool clipContext = false, bool trackRowContext = false)
     {
+        var context = clipContext ? 1 : trackRowContext ? 2 : 0;
         var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (var action in All)
         {
-            if (IsClipAction(action.Id) != clipContext) continue;
+            if (ContextOf(action.Id) != context) continue;
             var gesture = GestureFor(settings, action.Id);
             if (string.IsNullOrWhiteSpace(gesture)) continue;
             // Keys are the canonical spelling (what the window builds from a key event), whatever order a binding was written in.
-            map[TryParse(gesture, out var key, out var mods) ? Format(key, mods) : gesture] = action.Id;
+            map[Canonical(gesture)] = action.Id;
+        }
+        // Hotkey 2 never displaces a Hotkey 1: a gesture some action has as Hotkey 1 keeps that action.
+        foreach (var action in All)
+        {
+            if (ContextOf(action.Id) != context) continue;
+            var gesture = GestureFor(settings, action.Id, 2);
+            if (string.IsNullOrWhiteSpace(gesture)) continue;
+            map.TryAdd(Canonical(gesture), action.Id);
         }
         return map;
     }
 
-    public static string GestureFor(HotkeySettings settings, string id)
+    /// <summary>Hotkey 1 of an action: the user's binding, else the preset's, else the catalogue default.</summary>
+    public static string GestureFor(HotkeySettings settings, string id) => GestureFor(settings, id, 1);
+
+    /// <summary>One slot of an action (1 = Hotkey 1, 2 = Hotkey 2); the same precedence in both.</summary>
+    public static string GestureFor(HotkeySettings settings, string id, int slot)
     {
-        if (settings.IsDisabled(id)) return "";
-        var custom = settings[id];
+        if (settings.IsDisabled(id, slot)) return "";
+        var custom = settings.Get(id, slot);
         if (!string.IsNullOrWhiteSpace(custom)) return custom;
-        if (HotkeyPresets.Override(settings.Preset, id) is { } preset) return preset;
+        if (HotkeyPresets.Override(settings.Preset, id, slot) is { } preset) return preset;
         // The "Reverse + / - duration keys" setting swaps the two default keys (a user's own binding is never swapped).
-        if (ReverseDurationKeys && id == NoteLonger) id = NoteShorter;
-        else if (ReverseDurationKeys && id == NoteShorter) id = NoteLonger;
-        return ById(id)?.DefaultGesture ?? "";
+        if (settings.ReverseDurationKeys && id == NoteLonger) id = NoteShorter;
+        else if (settings.ReverseDurationKeys && id == NoteShorter) id = NoteLonger;
+        var action = ById(id);
+        return (slot == 2 ? action?.DefaultGesture2 : action?.DefaultGesture) ?? "";
     }
 
-    public const string NoteLonger = "Note.Longer", NoteShorter = "Note.Shorter";
+    /// <summary>The catalogue default of one slot.</summary>
+    public static string DefaultFor(HotkeyAction action, int slot) => slot == 2 ? action.DefaultGesture2 : action.DefaultGesture;
 
-    /// <summary>Mirrors Preferences > Editing > "Reverse + / - duration keys" (set by the window when settings are applied).</summary>
-    public static bool ReverseDurationKeys { get; set; }
+    /// <summary>The canonical spelling of a gesture (modifier order fixed); an unparsable text is returned as is.</summary>
+    public static string Canonical(string gesture) => TryParse(gesture, out var key, out var mods) ? Format(key, mods) : gesture.Trim();
+
+    public const string NoteLonger ="Note.Longer", NoteShorter = "Note.Shorter";
 
     // ---------- gesture formatting / parsing ----------
 
@@ -333,10 +369,18 @@ public static class HotkeyCatalog
         return Format(text, mods);
     }
 
+    /// <summary>The live keys of a command for menus and tooltips: Hotkey 1, then Hotkey 2 when it is set ("Ctrl+Alt+T, Ctrl+Shift+Insert"); "" when unbound.</summary>
+    public static string DisplayAll(HotkeySettings settings, string id)
+    {
+        var first = Display(GestureFor(settings, id));
+        var second = Display(GestureFor(settings, id, 2));
+        return first.Length == 0 ? second : second.Length == 0 ? first : first + ", " + second;
+    }
+
     /// <summary>"(Ctrl+S)" for tooltips, or "" when the action has no gesture.</summary>
     public static string TooltipSuffix(HotkeySettings settings, string id)
     {
-        var display = Display(GestureFor(settings, id));
+        var display = DisplayAll(settings, id);
         return string.IsNullOrWhiteSpace(display) ? "" : $" ({display})";
     }
 
@@ -345,7 +389,7 @@ public static class HotkeyCatalog
     /// A text that already ends in a bracket gets the key inside it ("Zoom (50-200%; Ctrl++)") so there are never two bracket groups.
     /// </summary>
     public static string TooltipWithKey(HotkeySettings settings, string text, string id) =>
-        TooltipWithDisplay(text, Display(GestureFor(settings, id)));
+        TooltipWithDisplay(text, DisplayAll(settings, id));
 
     public static string TooltipWithDisplay(string text, string display)
     {
@@ -405,14 +449,14 @@ public static class HotkeyPresets
     public static readonly IReadOnlyList<string> Names = new[] { TabForge, GuitarPro5, TuxGuitar };
 
     /// <summary>Display name of a preset (its internal id never changes).</summary>
-    public static string DisplayName(string id) => id == GuitarPro5 ? "Classic (influenced by Guitar Pro 5)" : id;
+    public static string DisplayName(string id) => id == GuitarPro5 ? "Classic" : id == TuxGuitar ? "Alternative" : id;
 
     /// <summary>Tooltip of a preset in the picker.</summary>
     public static string Tooltip(string id) => id == GuitarPro5
-        ? "A shortcut layout familiar to Guitar Pro 5 users. TabForge is not affiliated with Arobas Music."
+        ? "A classic tab-editor shortcut layout."
         : "";
 
-    // TabForge's defaults already follow the classic layout, so both presets are currently identical.
+    // TabForge's defaults follow the classic layout except Add track (see Override), so this table is empty.
     private static readonly Dictionary<string, string> GuitarPro5Overrides = new(StringComparer.OrdinalIgnoreCase);
 
     // TuxGuitar 1.6 defaults (Tools → Shortcuts). "" = not bound in TuxGuitar.
@@ -433,9 +477,14 @@ public static class HotkeyPresets
         ["Edit.PasteSpecial"] = "",
     };
 
-    /// <summary>The preset's key for an action, or null when the preset uses the catalogue default.</summary>
-    public static string? Override(string? preset, string id)
+    /// <summary>The preset's Hotkey 1 for an action, or null when the preset uses the catalogue default.</summary>
+    public static string? Override(string? preset, string id) => Override(preset, id, 1);
+
+    /// <summary>The preset's key for one slot of an action, or null when the preset uses the catalogue default. The Classic layout keeps Add track on its familiar key as Hotkey 1.</summary>
+    public static string? Override(string? preset, string id, int slot)
     {
+        if (preset == GuitarPro5 && id == "Track.Add") return slot == 2 ? "Ctrl+Alt+T" : "Ctrl+Shift+Insert";
+        if (slot == 2) return null;
         var map = preset switch
         {
             TuxGuitar => TuxGuitarOverrides,
@@ -451,9 +500,12 @@ public static class HotkeyPresets
         settings.Preset = Names.Contains(preset) ? preset : TabForge;
         settings.Bindings.Clear();
         settings.DisabledActions.Clear();
+        settings.Bindings2.Clear();
+        settings.DisabledActions2.Clear();
     }
 
     /// <summary>What the preset box should show: the base preset, or Custom once the user changed keys.</summary>
     public static string Describe(HotkeySettings settings) =>
-        settings.Bindings.Count > 0 || settings.DisabledActions.Count > 0 ? Custom : (settings.Preset ?? TabForge);
+        settings.Bindings.Count > 0 || settings.DisabledActions.Count > 0 ||
+        settings.Bindings2.Count > 0 || settings.DisabledActions2.Count > 0 ? Custom : (settings.Preset ?? TabForge);
 }

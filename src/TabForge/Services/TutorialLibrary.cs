@@ -44,6 +44,9 @@ public sealed class TutorialChapter
 public sealed record TutorialSearchResult(TutorialChapter Chapter, string? HeadingId, string HeadingText, string Snippet,
     IReadOnlyList<(int Start, int Length)> Highlights, int Score);
 
+// Owns: the tutorial chapters parsed once and their full-text search index.
+// Does not own: the Markdown parsing (TutorialMarkdown) and the tutorial window.
+// Tests: TestTutorialSearch, TestTutorialWindow.
 /// <summary>
 /// The tutorial content: every chapter parsed once, plus an in-memory full-text index built at the same time (so a keystroke in the
 /// search box never touches a file). <see cref="Load"/> never throws; unreadable files are skipped and counted.

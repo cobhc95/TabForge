@@ -12,7 +12,7 @@ therefore ship the files GitHub built and attested, and anyone can rebuild them 
 | NuGet packages | `packages.lock.json` per project, restore in locked mode. |
 | alphaTab | `TabForge.AlphaTab`: upstream alphaTab 1.8.4 plus three patches, built from source by `tools/Build-AlphaTab.ps1` and checked in as `vendor/alphatab/*.nupkg` (a local NuGet source, `nuget.config`). CI rebuilds it and fails when the DLL differs; see `vendor/alphatab/README.md`. |
 | Compiler output | `Deterministic`, `ContinuousIntegrationBuild` (always on in `tools/Publish.ps1`, not only when `CI=true`), `PathMap` to `/_/` so no folder name is embedded. |
-| Version | One `<Version>` in `Directory.Build.props`; the git commit id is part of the informational version, and is the same in both builds. |
+| Version | One `<Version>` in `Directory.Build.props`; the version string carries no git commit id (`IncludeSourceRevisionInInformationalVersion` is `false`, and source-control links are off in the PDB), so a build of the same source is identical whichever clone or commit id it was built from. |
 | Source text | `.gitattributes` forces CRLF for every text file (`* text=auto eol=crlf`), so a checkout is identical on every machine; embedded source checksums and loose text files match. |
 | Build folder | `tools/Package-Release.ps1` builds from a temporary `git worktree` of the committed HEAD, never from the working folder, so uncommitted edits, stray files and local line endings cannot reach the release. It refuses a checkout that is not clean. |
 | Native bridge | One binary: the committed `src/TabForge.AudioEngine/native/tfvst3.dll`, verified against `native/BUILD_PROVENANCE.md`. Both builds ship it. |
@@ -25,7 +25,8 @@ tested folder as the portable zip, so the portable zip is the file to compare.
 
 1. Let GitHub Actions build the tag (the `release` workflow) and download the `release-files` artifact.
 2. On a PC with the pinned SDK (`dotnet --version` prints the version in `global.json`), commit everything and run
-   `RELEASE.cmd`. It builds the committed HEAD in a temporary worktree and leaves the files in `dist\`.
+   `.\tools\Package-Release.ps1` from the repository root (it needs Inno Setup 6 or later installed; `-InnoCompiler <path to ISCC.exe>` names it).
+   It builds the committed HEAD in a temporary worktree, tests that exact build and leaves the files in `dist\`.
 3. Compare:
 
 ```powershell

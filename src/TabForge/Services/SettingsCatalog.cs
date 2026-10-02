@@ -39,6 +39,9 @@ public sealed class SettingDescriptor
     }
 }
 
+// Owns: the catalogue of settings descriptors used by search and the settings pages.
+// Does not own: storing the values (AppSettings) and the page layout.
+// Tests: TestTabUi, TestContextMenuLayouts.
 /// <summary>Declarative catalogue of settings exposed in the Settings window.</summary>
 public static class SettingsCatalog
 {
@@ -179,14 +182,14 @@ public static class SettingsCatalog
     /// </summary>
     private static readonly (string Page, string Group, string Keys)[] Layout =
     {
-        (General, "Updates", "general.checkupdates"),
+        (General, "Updates", "general.checkupdates general.checknow"),
         (General, "Window", "general.restorewindow"),
         (General, "Confirmations", "general.confirmclose general.confirmdiscardsettings editing.confirmdelete timeline.confirmdelete"),
 
         (Appearance, "Theme", "appearance.thememode"),
         (Appearance, "Size and text", "appearance.uiscale appearance.density appearance.font* appearance.fontsize* appearance.iconsize* appearance.toolbaricons*"),
         (Appearance, "Panels and toolbars", "general.toolbar general.statusbar appearance.tabstrip"),
-        (Appearance, "Track colours", "appearance.tracktint appearance.groupcolour.guitars* appearance.groupcolour.basses* appearance.groupcolour.keys* appearance.groupcolour.drums* appearance.groupcolour.other* appearance.groupcolour.other-instruments*"),
+        (Appearance, "Track colours", "appearance.tracktint appearance.mutedtrackdim appearance.groupcolour.guitars* appearance.groupcolour.basses* appearance.groupcolour.keys* appearance.groupcolour.drums* appearance.groupcolour.other* appearance.groupcolour.other-instruments*"),
         (Appearance, "Interface colours", "appearance.accent"),
         (Appearance, "Motion", "appearance.reduceanimations appearance.animationspeed* timeline.draganimation*"),
         (Appearance, "Custom palette", "appearance.background* appearance.panel* appearance.titlebar* appearance.tabactive* appearance.tabhover* appearance.text* appearance.muted*"),
@@ -202,12 +205,12 @@ public static class SettingsCatalog
         (Fretboard, "Practice aids", "editing.horizon.enabled editing.scale follow.fretboard editing.horizon* audio.fretboardstyle*"),
         (Fretboard, "Appearance", "fretboard.scalestyle* fretboard.scalecolour* fretboard.scalestrength* fretboard.markercolour* fretboard.markerbrightness* fretboard.numbersize* fretboard.stringspacing*"),
 
-        (Timeline, "Track list", "timeline.volumestyle timeline.panstyle timeline.autofit timeline.trackgroups"),
+        (Timeline, "Track list", "timeline.volumestyle timeline.panstyle timeline.autofit timeline.trackgroups timeline.addtracklane"),
         (Timeline, "Clip lanes", "timeline.removeemptylanes"),
         (Timeline, "Timeline display", "appearance.arrangement timeline.numbers timeline.individualnotes timeline.continuousline timeline.hideemptygrid* timeline.barglow* timeline.playheadstyle* appearance.timelinescrollbar*"),
         (Timeline, "Sections", "timeline.similarcolours timeline.brackets timeline.names follow.sectionglow* appearance.sectionbracket*"),
 
-        (Editing, "Note entry", "editing.duration editing.advance editing.reverseplusminus* editing.preventoverflow*"),
+        (Editing, "Note entry", "editing.duration editing.advance editing.reverseplusminus* editing.preventoverflow* editing.fillrests* editing.deleteleaves*"),
         (Editing, "Mouse and scrolling", "editing.scorewheel*"),
         (Editing, "Copy and paste", "editing.paste.beats* editing.paste.octave* editing.paste.bars* editing.paste.barsettings* editing.paste.drums*"),
 
@@ -292,6 +295,9 @@ public static class SettingsCatalog
             Bool(General, "Updates", "general.checkupdates", "Check for updates automatically", v => g.CheckForUpdates = v, () => g.CheckForUpdates,
                 "Once a day, ask GitHub whether a newer TabForge release exists and offer to open its download page. One anonymous HTTPS request; nothing is downloaded or installed automatically. Help > Check for updates works either way.",
                 "update updates new version release github check automatic notify beta download"),
+            Button(General, "Updates", "general.checknow", "Check for updates now",
+                "Ask GitHub now whether a newer TabForge release exists, even when the automatic check is off. One anonymous HTTPS request; nothing is downloaded or installed.",
+                "update updates check now manual new version release github"),
             Choice(General, "Files", "general.openfromexplorer", "Open songs from Explorer in", v => g.OpenFromExplorer = v, () => g.OpenFromExplorer,
                 new[] { "A new tab", "A new window" },
                 "When TabForge is already running, a song you double-click in Explorer opens as a new tab in that window (default), or in a separate TabForge window.",
@@ -301,11 +307,11 @@ public static class SettingsCatalog
                 "Copies songs with unsaved changes into TabForge's Recovery folder at this interval (skipped while playing). Your own files are never overwritten; the copies are offered the next time TabForge starts after a crash, and removed when you save or close.",
                 "autosave auto save backup recovery crash power loss interval minutes"),
             Choice(General, "Files", "general.saveformat", "Default save format", v => g.DefaultSaveFormat = v == "TabForge project (.tforge)" ? "tforge" : "gp",
-                () => g.DefaultSaveFormat == "tforge" ? "TabForge project (.tforge)" : "Guitar Pro 7/8 (.gp)",
-                new[] { "Guitar Pro 7/8 (.gp)", "TabForge project (.tforge)" },
-                ".gp opens in Guitar Pro 7/8 and keeps every TabForge feature (stored inside the file). .tforge is TabForge-only.",
-                "save format extension gp gp7 gp8 guitar pro tforge default"),
-            Bool(General, "Windows integration", "general.associate", "Open Guitar Pro and TabForge files with TabForge", v => g.AssociateFiles = v, () => g.AssociateFiles,
+                () => g.DefaultSaveFormat == "tforge" ? "TabForge project (.tforge)" : ".gp file (.gp)",
+                new[] { ".gp file (.gp)", "TabForge project (.tforge)" },
+                ".gp keeps every TabForge feature (stored inside the file). .tforge is TabForge-only.",
+                "save format extension gp gp7 gp8 tforge default"),
+            Bool(General, "Windows integration", "general.associate", "Open .gp and .tforge files with TabForge", v => g.AssociateFiles = v, () => g.AssociateFiles,
                 "Adds TabForge to Explorer's Open with for .gp, .gp5, .gp4, .gp3, .gpx and .tforge (for your Windows account only). Turning it off removes TabForge's entries again.",
                 "file association windows integration explorer open with gp gp5 gpx tforge double click"),
             Bool(General, "Application", "general.toolbar", "Show the toolbar", v => g.ShowToolbar = v, () => g.ShowToolbar,
@@ -330,6 +336,9 @@ public static class SettingsCatalog
                 new[] { "Compact", "Comfortable", "Spacious" }, "How tightly the toolbar and buttons are packed.", "compact comfortable spacious density"),
             Bool(Appearance, "Motion", "appearance.reduceanimations", "Reduce animations", v => a.ReduceAnimations = v, () => a.ReduceAnimations,
                 "Disable short tab and timeline drag transitions.", "motion accessibility reduce animation"),
+            Int(Appearance, "Track colours", "appearance.mutedtrackdim", "Muted track dimming", v => a.MutedTrackDimPercent = v, () => a.MutedTrackDimPercent, 0, 100,
+                "How strongly a muted track is greyed out in the track list and in its timeline lane (0 = not dimmed, 100 = strongest). Tracks that are only silent because another track is soloed are not greyed.",
+                "muted track dim grey gray dimming dimmed mute lane row opacity", unit: "%"),
             Number(Appearance, "Motion", "appearance.animationspeed", "Animation speed", v => a.AnimationSpeed = v, () => a.AnimationSpeed, 0.25, 2,
                 "Scale the duration of tab and timeline drag animations.", "motion animation faster slower duration", "x", 0.05, 2),
             Colour(Appearance, "Interface colours", "appearance.accent", "Accent colour", v => a.Accent = v, () => a.Accent,
@@ -564,7 +573,7 @@ public static class SettingsCatalog
                 "A plug-in that crashed is switched off so it cannot crash the next playback too. Review the list here and allow a plug-in again; it is then loaded on the next playback (the same button is in its FX chain window). Allowing again does not approve an untrusted file.",
                 "quarantine crashed crash switched off plugin allow again blocked faulted"),
             Bool(AudioVst, "Safety", "vst.isolate", "Run each plug-in in its own process", v => pl.SeparateProcessPerPlugin = v, () => pl.SeparateProcessPerPlugin,
-                "Off (default): all plug-ins share one audio engine process, separate from TabForge, so a crash never closes TabForge. On: each plug-in gets its own process, so a crash stops only that plug-in (uses more CPU and memory). This contains crashes only; it is not a security sandbox, so load only plug-ins you trust.",
+                "Off (default): all plug-ins share one audio engine process, separate from TabForge, so a crash never closes TabForge. On: each plug-in gets its own process, so a crash stops only that plug-in (uses more CPU and memory). This protects TabForge from a plug-in crash, not your files from the plug-in: a plug-in runs with your Windows permissions and can read and write your files like any program, so only use plug-ins from sources you trust.",
                 "isolate sandbox crash process bridge separate safe plugin"),
             Bool(Audio, "Transport", "audio.metronome", "Metronome", v => au.Metronome = v, () => au.Metronome,
                 "Play clicks during playback.", "click tempo count"),
@@ -610,6 +619,10 @@ public static class SettingsCatalog
                 "Off (default): + makes the note shorter (8th to 16th), - makes it longer. On: the opposite.", "plus minus duration shorter longer reverse gp5"),
             Bool(Editing, "Entry", "editing.preventoverflow", "Prevent rhythms that overfill a bar", v => ed.PreventBarOverflow = v, () => ed.PreventBarOverflow,
                 "Off (default): notes can be made longer freely and a bar that no longer adds up turns red. On: such changes are refused.", "red bar overfill duration longer block prevent"),
+            Bool(Editing, "Entry", "editing.fillrests", "Fill incomplete bars with rests", v => ed.FillBarsWithRests = v, () => ed.FillBarsWithRests,
+                "On (default): a bar you edit always adds up. Empty space becomes rests, a deleted beat becomes a rest of the same length, and a typed note takes its place inside a rest. Off: bars may stay incomplete and show red.", "rest fill complete bar incomplete red empty gap"),
+            Choice(Editing, "Entry", "editing.deleteleaves", "When deleting notes, leave", v => ed.MergeRestsOnDelete = v == "Merged rests", () => ed.MergeRestsOnDelete ? "Merged rests" : "A rest of the same length",
+                new[] { "A rest of the same length", "Merged rests" }, "Used with \"Fill incomplete bars with rests\". A rest of the same length keeps the deleted note's value. Merged rests join the deleted notes and the rests beside them into the fewest rests that fill the bar (a cleared bar becomes one whole-bar rest).", "delete notes rest merge whole bar clear"),
             Bool(Editing, "Safety", "editing.confirmdelete", "Confirm before deleting a bar", v => ed.ConfirmDeleteBar = v, () => ed.ConfirmDeleteBar,
                 "Ask before deleting a bar and shifting later content.", "confirm delete bar prompt", hotkey: "Bar.Delete"),
             Int(Editing, "Navigation", "editing.scorewheel", "Score wheel scroll distance", v => ed.ScoreWheelScrollPixels = v, () => ed.ScoreWheelScrollPixels, 12, 96,
@@ -664,6 +677,9 @@ public static class SettingsCatalog
             Bool(Timeline, "Track list", "timeline.trackgroups", "Show tracks in groups in new songs", v => timeline.ShowGroupsInNewSongs = v, () => timeline.ShowGroupsInNewSongs,
                 "New songs list their tracks under a header per group (guitars, basses, drums...), which can be collapsed. For the open song use the track list's right-click menu or the Mixer (Groups in track list).",
                 "track list groups headers collapse guitars basses drums mixer group tracks new song"),
+            Bool(Timeline, "Track list", "timeline.addtracklane", "Show the Add-track lane", v => timeline.ShowAddTrackLane = v, () => timeline.ShowAddTrackLane,
+                "Show a strip labelled Add track under the last track, across the track list and the timeline. Click or double-click it to add a track, or drop an audio or MIDI file on it to get an audio track. The + Track button next to the transport stays either way.",
+                "add track lane strip new audio instrument drop plus button"),
             Bool(Timeline, "Clip lanes", "timeline.removeemptylanes", "Remove empty clip lanes automatically", v => timeline.AutoRemoveEmptyLanes = v, () => timeline.AutoRemoveEmptyLanes,
                 "When a lane under a track has no clips left (you moved, cut or deleted the last one), remove it and close the lanes below it. Turn it off to keep empty lanes until you remove them yourself. A track that is armed for recording keeps its lanes.",
                 "clip lanes empty remove delete auto close takes audio midi tidy"),
@@ -698,7 +714,7 @@ public static class SettingsCatalog
             Choice(Fretboard, "Appearance","fretboard.scalestyle", "Scale highlight style", v => ed.ScaleHighlightStyle = v, () => ed.ScaleHighlightStyle,
                 ScaleHighlightStyles.All,
                 "How the notes of a highlighted scale are marked on the fretboard and keyboard: shaded cells, small circles or rings. The root is always marked more strongly.",
-                "scale highlight style circles dots rings shaded appearance guitar pro"),
+                "scale highlight style circles dots rings shaded appearance"),
             Choice(Fretboard, "Appearance","fretboard.scalecolour", "Scale highlight colour", v => ed.ScaleHighlightColour = v, () => ed.ScaleHighlightColour,
                 ScaleHighlightStyles.Colours,
                 "Colour of the scale highlight on the fretboard and keyboard.",
@@ -726,7 +742,7 @@ public static class SettingsCatalog
             Choice(Fretboard, "Appearance","audio.fretboardstyle", "Fretboard style", v => au.FretboardStyle = v, () => au.FretboardStyle,
                 new[] { "TabForge", "GP5: Beat", "GP5: Beat + next beat", "GP5: Beat + bar", "GP5: Bar" },
                 "TabForge previews a set number of upcoming notes. The beat and bar layouts follow the score instead: the current beat, the next beat, or every note of the current bar.",
-                "fretboard style guitar pro gp5 look preview red show beat bar next"),
+                "fretboard style gp5 look preview red show beat bar next"),
             Int(Fretboard, "Preview", "editing.horizon", "Look-ahead notes", v => ed.PreviewHorizon = v, () => ed.PreviewHorizon, 1, 10,
                 "Number of upcoming notes to display.", "horizon preview upcoming", dependsOn: "editing.horizon.enabled"),
             Choice(Fretboard, "Preview", "editing.scale", "Scale highlight", v => ed.ScaleHighlight = v == "Off" ? null : v,

@@ -9,15 +9,15 @@ public sealed record VstPluginInfo(string Name, string Path, string Format = "VS
     public override string ToString() => $"{Name}  ({Format})";
 }
 
+// Owns: discovering VST3 bundles and VST2 DLLs by file inspection, without loading plug-in code.
+// Does not own: plug-in trust decisions (PluginTrust) and hosting.
+// Tests: TestVstReparseLoop, TestMixer.
 /// <summary>
 /// Discovers VST3 bundles and VST2 DLLs; it never loads or executes plug-in code (a DLL counts as VST2 only when
 /// its export table lists the VST2 entry point, read straight from the file).
 /// </summary>
 public static class VstScannerService
 {
-    /// <summary>Result of the most recent completed scan, so the arrangement view can offer VST instruments.</summary>
-    public static IReadOnlyList<VstPluginInfo> LastScan { get; private set; } = Array.Empty<VstPluginInfo>();
-
     public static IReadOnlyList<VstPluginInfo> Scan() => Scan(GetDefaultRoots(), CancellationToken.None);
 
     public static IReadOnlyList<VstPluginInfo> Scan(CancellationToken cancellationToken) =>
@@ -27,8 +27,12 @@ public static class VstScannerService
     public static IReadOnlyList<VstPluginInfo> Scan(IEnumerable<string> roots, CancellationToken cancellationToken = default) =>
         Scan(roots, cancellationToken, null);
 
-    /// <summary>Scan with progress: (plug-ins found so far, folder being read).</summary>
-    public static IReadOnlyList<VstPluginInfo> Scan(IEnumerable<string> roots, CancellationToken cancellationToken, IProgress<(int Found, string Folder)>? progress)
+    /// <summary>
+    /// Scan with progress: (plug-ins found so far, folder being read). <paramref name="remember"/> receives the finished list as its
+    /// <see cref="PluginSettings.LastScan"/>, so the arrangement view can offer VST instruments.
+    /// </summary>
+    public static IReadOnlyList<VstPluginInfo> Scan(IEnumerable<string> roots, CancellationToken cancellationToken, IProgress<(int Found, string Folder)>? progress,
+        PluginSettings? remember = null)
     {
         ArgumentNullException.ThrowIfNull(roots);
         var pending = new Stack<(string Path, int Depth)>();
@@ -107,7 +111,7 @@ public static class VstScannerService
         var list = results.Values.OrderBy(plugin => plugin.Name, StringComparer.OrdinalIgnoreCase)
             .ThenBy(plugin => plugin.Path, StringComparer.OrdinalIgnoreCase).ToList();
         PluginTrust.RecordScan(list, cancellationToken, progress);   // fingerprint the finds in user-writable folders: the trust baseline
-        LastScan = list;
+        if (remember is not null) remember.LastScan = list;
         return list;
     }
 

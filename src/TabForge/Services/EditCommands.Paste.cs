@@ -50,7 +50,7 @@ public static partial class EditCommands
     /// Pastes <paramref name="clip"/> at <paramref name="target"/>: works out which questions apply, takes remembered answers from
     /// <paramref name="settings"/>, asks the rest through <paramref name="asker"/> (cancel = no change), stores the answers the user
     /// asked to remember (the caller saves the settings), maps the notes to the target instrument(s) and places them.
-    /// Pure model code; the caller wraps it in one undo step (<see cref="PasteWithUndo"/>).
+    /// Pure model code; the caller runs it through <c>DocumentEdits.Run</c> for one undo step.
     /// </summary>
     public static PasteOutcome Paste(SongProject p, ScoreClip clip, PasteTarget target, EditingSettings settings, IPasteQuestionAsker asker)
     {
@@ -61,19 +61,26 @@ public static partial class EditCommands
             : PasteBars(p, clip, target, settings, asker);
     }
 
-    /// <summary><see cref="Paste"/> as exactly one undo step (no step when nothing changed).</summary>
-    public static PasteOutcome PasteWithUndo(UndoController undo, SongProject p, ScoreClip clip, PasteTarget target, EditingSettings settings,
-        IPasteQuestionAsker asker, out UndoCapture? capture)
+    /// <summary>Runs a paste as one edit through <see cref="Documents.DocumentEdits.Run"/>: one undo step (none when nothing changed), the dirty flag and one timeline invalidation. Returns the outcome either way.</summary>
+    public static PasteOutcome RunPaste(Documents.DocumentSession document, ScoreClip clip, PasteTarget target, EditingSettings settings, IPasteQuestionAsker asker) =>
+        EditorGuard.Blocks(document.Project, target.TrackIndex) ? new PasteOutcome { Status = EditorGuard.Hint } : RunPaste(document, p => FillPasted(p, Paste(p, clip, target, settings, asker), target, settings));
+
+    /// <summary>With the rest fill on, a paste that leaves a bar short gets the remainder filled with rests (pasted notes are never dropped; an overfull bar shows red).</summary>
+    private static PasteOutcome FillPasted(SongProject p, PasteOutcome outcome, PasteTarget target, EditingSettings settings)
     {
-        capture = null;
-        using var timeline = p.BeginTimelineBatch();   // the bar grid marks the timeline itself: with this edit's own mark that is one invalidation, not two
-        var transaction = undo.BeginTransaction(p);
-        PasteOutcome outcome;
-        try { outcome = Paste(p, clip, target, settings, asker); }
-        catch { undo.Cancel(transaction); throw; }
-        if (outcome.Changed) { capture = undo.Commit(transaction); p.MarkTimelineChanged(); }
-        else undo.Cancel(transaction);
+        if (settings.FillBarsWithRests && outcome.Changed && outcome.FirstBar >= 0) BarFill.FillBars(p, target.TrackIndex, outcome.FirstBar, outcome.LastBar);
         return outcome;
+    }
+
+    /// <summary><see cref="RunPaste(Documents.DocumentSession, ScoreClip, PasteTarget, EditingSettings, IPasteQuestionAsker)"/> for Paste Special.</summary>
+    public static PasteOutcome RunPasteSpecial(Documents.DocumentSession document, ScoreClip clip, PasteTarget target, PasteSpecialOptions options, EditingSettings settings) =>
+        EditorGuard.Blocks(document.Project, target.TrackIndex) ? new PasteOutcome { Status = EditorGuard.Hint } : RunPaste(document, p => FillPasted(p, PasteSpecial(p, clip, target, options, settings), target, settings));
+
+    private static PasteOutcome RunPaste(Documents.DocumentSession document, Func<SongProject, PasteOutcome> paste)
+    {
+        var last = new PasteOutcome();
+        Documents.DocumentEdits.Run<PasteOutcome>(document, p => (last = paste(p)).Changed ? last : null);
+        return last;
     }
 
     // ---------- beats ----------
@@ -247,7 +254,7 @@ public static partial class EditCommands
     private static bool CarriesOtherSettings(SongProject p, ScoreClip clip, int at, int count)
     {
         var bars = clip.Tracks[0].Bars;
-        var measures = p.Tracks.FirstOrDefault()?.Measures;
+        var measures = p.MasterBarTrack?.Measures;
         for (var i = 0; i < count && i < bars.Count; i++)
         {
             var bar = bars[i];

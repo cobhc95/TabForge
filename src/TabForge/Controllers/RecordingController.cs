@@ -3,6 +3,7 @@ using System.IO;
 using System.Windows.Media;
 using System.Windows.Threading;
 using TabForge.Audio;
+using TabForge.Documents;
 using TabForge.Models;
 using TabForge.Playback;
 using TabForge.Views;
@@ -12,11 +13,12 @@ namespace TabForge.Controllers;
 /// <summary>What the recording controller needs from its window (MainWindow implements it; A-01).</summary>
 internal interface IRecordingHost
 {
-    /// <summary>The current tab's song (read on every use: switching tabs swaps it).</summary>
-    SongProject Project { get; }
-    /// <summary>The current tab's MIDI playback engine.</summary>
-    PlaybackEngine Playback { get; }
-    SongClock SongClock { get; }
+    /// <summary>The song shown now (read on every use: switching tabs swaps it). Recording remembers the one that was armed when it started.</summary>
+    DocumentSession Document { get; }
+    /// <summary>The songs open in this window.</summary>
+    IReadOnlyList<DocumentSession> OpenDocuments { get; }
+    /// <summary>After clips of the shown song changed: dirty, engine sync, song growth to cover them, redraw.</summary>
+    void ClipsChanged(bool refreshRows);
     ArrangementPanel Arrangement { get; }
     Dispatcher Dispatcher { get; }
     /// <summary>The song file's path, if saved.</summary>
@@ -30,17 +32,19 @@ internal interface IRecordingHost
     void SetStatus(string text);
     /// <summary>A message the user must read in full (the status bar is too narrow): a dialog.</summary>
     void ShowNotice(string text);
-    void CaptureUndo();
     void SyncAudioEngine();
     void RefreshTracks();
     void RefreshArrangement();
     void UpdateTitle();
     void StartPlayback();
+    /// <summary>Stops the shown song's playback and resets the playhead views.</summary>
     void StopPlayback();
-    void ClipsChanged(bool refreshRows);
     void SetRecordIcon(bool recording);
 }
 
+// Owns: record-arm, input level meters and the recording of armed tracks (live take drawing, landing on a lane).
+// Does not own: audio capture itself (audio engine) and the clip model.
+// Tests: TestClips, TestDocumentOperations.
 /// <summary>
 /// Record-arm (live monitoring through the track), the input level meters, and recording armed tracks
 /// (behaviour): audio is captured by the audio engine, MIDI by the editor; the take is drawn live as it comes in; it
@@ -54,6 +58,8 @@ internal sealed class RecordingController
     private bool _recording;
     private bool _recordingHooked;
     private bool _recordStartedPlayback;
+    /// <summary>The song that was shown when recording began: its tracks are armed and its playback runs, whichever tab is shown later.</summary>
+    private DocumentSession? _recordingDoc;
     private int _recordStartMeasure, _recordStartCell, _recordStartString;
     private bool _frameHooked;
     private readonly MidiInputCapture _midiInput = new();
@@ -67,7 +73,9 @@ internal sealed class RecordingController
     private long _lastMidiStamp;
     private TimeSpan _lastFrame;
 
-    public RecordingController(IRecordingHost host) => _host = host;
+    private readonly AudioEngineClient _engine;
+
+    public RecordingController(IRecordingHost host, AudioEngineClient engine) { _host = host; _engine = engine; }
 
     public bool IsRecording => _recording;
 
@@ -76,8 +84,28 @@ internal sealed class RecordingController
     /// <summary>Loop wraps seen since recording began (diagnostics / the recording probe).</summary>
     public int RecordLaps => _recordLaps;
 
-    private SongProject Project => _host.Project;
+    private SongProject Project => _host.Document.Project;
     private ArrangementPanel Arrangement => _host.Arrangement;
+
+    /// <summary>
+    /// Applies new clips to <paramref name="document"/> as one undo step (one dirty change). The shown song then refreshes its views and grows to cover
+    /// the clips (<see cref="IRecordingHost.ClipsChanged"/>); a song that is not shown grows in the same step.
+    /// </summary>
+    private void CommitTakes(DocumentSession document, Action<SongProject> place)
+    {
+        var shown = ReferenceEquals(document, _host.Document);
+        DocumentEdits.Run(document, project =>
+        {
+            place(project);
+            if (!shown) Services.SongExtent.EnsureCovers(project, project.Tracks.SelectMany(t => t.AudioClips).Select(c => c.EndSec).DefaultIfEmpty(0).Max());
+            return true;
+        }, invalidatesTimeline: false);
+        if (shown) _host.ClipsChanged(true);
+    }
+
+    /// <summary>The song whose tracks record: the armed one while recording, else the song shown.</summary>
+    private DocumentSession SourceDocument => _recording && _recordingDoc is { } armed ? armed : _host.Document;
+    private bool SourceShown => ReferenceEquals(SourceDocument, _host.Document);
 
     /// <summary>MIDI coming in for one armed track during a recording: its passes (takes) and held notes.</summary>
     private sealed class MidiTake
@@ -91,13 +119,15 @@ internal sealed class RecordingController
     public void ToggleArm(TrackModel track)
     {
         HookRecording();
-        _host.CaptureUndo();
-        track.RecordArm = !track.RecordArm;
-        if (!track.RecordArm) ClipLanes.Trim(track);
-        Project.IsDirty = true;
+        DocumentEdits.Run(_host.Document, _ =>
+        {
+            track.RecordArm = !track.RecordArm;
+            if (!track.RecordArm) ClipLanes.Trim(track);
+            return true;
+        }, invalidatesTimeline: false);
         ArmChanged();
         _host.SetStatus(track.RecordArm
-            ? $"{track.Name}: armed — {(AudioInputs.IsMidi(track.AudioInput) ? "MIDI input plays through the track" : "the audio input is monitored through the track")} (press Record or Ctrl+R to record)"
+            ? $"{track.Name}: armed — {(AudioInputs.IsMidi(track.AudioInput) ? "MIDI input plays through the track" : "the audio input is monitored through the track")} (press {TooltipShortcuts.Append("Record", "Transport.Record")} to record)"
             : $"{track.Name}: disarmed");
     }
 
@@ -116,7 +146,7 @@ internal sealed class RecordingController
     public void ToggleRecording()
     {
         HookRecording();
-        var engine = AudioEngineClient.Instance;
+        var engine = _engine;
         if (_recording) { StopRecording(); return; }
         var armed = Project.Tracks.Where(t => t.RecordArm).ToList();
         if (armed.Count == 0)
@@ -125,8 +155,9 @@ internal sealed class RecordingController
             return;
         }
         _host.SyncAudioEngine();
+        _recordingDoc = _host.Document;
         (_recordStartMeasure, _recordStartCell, _recordStartString) = _host.Cursor;
-        _recordStartedPlayback = !_host.Playback.IsPlaying;
+        _recordStartedPlayback = !_recordingDoc.Playback.Engine.IsPlaying;
         if (_recordStartedPlayback) _host.StartPlayback();
         var audioArmed = armed.Any(t => !AudioInputs.IsMidi(t.AudioInput));
         if (audioArmed && !engine.StartRecording(Project.Tracks, MediaFolder()))
@@ -143,22 +174,35 @@ internal sealed class RecordingController
         _recording = true;
         _host.SetRecordIcon(true);
         UpdateFrameHook();
-        _host.SetStatus("Recording… press Record (Ctrl+R) or Stop to finish");
+        _host.SetStatus($"Recording… press {TooltipShortcuts.Append("Record", "Transport.Record")} or Stop to finish");
     }
 
     private void StopRecording()
     {
+        var recorded = SourceDocument;
+        FinishMidiTakes(recorded);
         _recording = false;
-        AudioEngineClient.Instance.StopRecording();   // audio takes arrive through Recorded
+        _recordingDoc = null;
+        _engine.StopRecording();   // audio takes arrive through Recorded
         _host.SetRecordIcon(false);
-        FinishMidiTakes();
         // Audio live takes stay drawn until their files arrive; MIDI ones are replaced now.
         Arrangement.LiveTakes.RemoveAll(t => t.Midi);
         Arrangement.RefreshLiveTakes();
         UpdateFrameHook();
-        // Stop ends playback too and returns the cursor to where recording began, so Space plays the take from its start.
-        _host.StopPlayback();
-        _host.RestoreCursor(_recordStartMeasure, _recordStartCell, _recordStartString);
+        // Stop ends the recorded song's playback too and returns its cursor to where recording began, so Space plays the take from its start.
+        if (ReferenceEquals(recorded, _host.Document))
+        {
+            _host.StopPlayback();
+            _host.RestoreCursor(_recordStartMeasure, _recordStartCell, _recordStartString);
+        }
+        else
+        {
+            // Another tab is shown: only the recorded song's own playback state is reset, and its cursor is kept for when it is shown again.
+            recorded.Playback.Engine.Stop();
+            recorded.Playback.Clock.Stopped();
+            recorded.Playback.ClearPlaybackPosition();
+            (recorded.CursorBar, recorded.CursorCell, recorded.CursorString) = (_recordStartMeasure, _recordStartCell, _recordStartString);
+        }
         _host.SetStatus("Recording stopped");
     }
 
@@ -166,7 +210,7 @@ internal sealed class RecordingController
     private (double, double) LoopSeconds()
     {
         var project = Project;
-        var clock = _host.SongClock;
+        var clock = _host.Document.Playback.Clock;
         var (start, end) = _host.GetLoopRange();
         var startSec = clock.BarStartSec(project, start);
         var endSec = clock.BarEndSec(project, end);
@@ -183,14 +227,13 @@ internal sealed class RecordingController
     {
         if (_recordingHooked) return;
         _recordingHooked = true;
-        var engine = AudioEngineClient.Instance;
+        var engine = _engine;
         _onRecorded = (track, file, startSec, lengthSec) =>
         {
             Arrangement.LiveTakes.RemoveAll(t => !t.Midi && ReferenceEquals(t.Track, track));
             Arrangement.RefreshLiveTakes();
             if (lengthSec < 0.05) { try { File.Delete(file); } catch (IOException) { } return; }
-            if (!Project.Tracks.Contains(track)) return;
-            _host.CaptureUndo();
+            if (_host.OpenDocuments.FirstOrDefault(d => d.Project.Tracks.Contains(track)) is not { } owner) return;   // the song was closed: the take file stays in its media folder
             var name = Path.GetFileNameWithoutExtension(file);
             var passes = Services.RecordingPasses.Split(startSec, lengthSec, _recordLoop);
             var takes = passes.Select((pass, i) => new AudioClip
@@ -198,8 +241,7 @@ internal sealed class RecordingController
                 File = file, Name = passes.Count > 1 ? $"{name} take {i + 1}" : name, StartSec = pass.SongStart,
                 OffsetSec = pass.FileOffset, SourceLengthSec = pass.Length, FileLengthSec = lengthSec,
             }).ToList();
-            PlaceTakes(track, takes, midi: false);
-            _host.ClipsChanged(true);
+            CommitTakes(owner, _ => PlaceTakes(track, takes, midi: false));
             _host.SetStatus(takes.Count > 1 ? $"Recorded {takes.Count} takes on {track.Name} (the newest plays)" : $"Recorded {lengthSec:0.0} s on {track.Name}");
         };
         _onInputError = message => _host.SetStatus($"Audio input: {message}");
@@ -224,7 +266,7 @@ internal sealed class RecordingController
     {
         if (_released) return;
         _released = true;
-        var engine = AudioEngineClient.Instance;
+        var engine = _engine;
         if (_recording) { _recording = false; engine.StopRecording(); }
         if (_onRecorded is not null) engine.Recorded -= _onRecorded;
         if (_onInputError is not null) engine.InputError -= _onInputError;
@@ -236,7 +278,7 @@ internal sealed class RecordingController
     }
 
     /// <summary>Takes of one recording on one track: each on the first lane with room, the last one plays.</summary>
-    private static void PlaceTakes(TrackModel track, List<AudioClip> takes, bool midi)
+    internal static void PlaceTakes(TrackModel track, List<AudioClip> takes, bool midi)
     {
         var newLane = false;
         foreach (var take in takes)
@@ -261,8 +303,8 @@ internal sealed class RecordingController
             // Each armed MIDI track plays with its own sound: set its program now (playback may not be running).
             var channels = ChannelAllocator.Assign(project);
             for (var i = 0; i < project.Tracks.Count; i++)
-                if (project.Tracks[i].RecordArm && AudioInputs.IsMidi(project.Tracks[i].AudioInput))
-                    _host.Playback.SendLive(project.Tracks[i].MidiOutputDeviceId, 0xC0 | (channels[i] & 0x0F), project.Tracks[i].MidiProgram, 0);
+                if (project.Tracks[i].RecordArm && AudioInputs.IsMidi(project.Tracks[i].AudioInput) && channels[i] >= 0)
+                    _host.Document.Playback.Engine.SendLive(project.Tracks[i].MidiOutputDeviceId, 0xC0 | (channels[i] & 0x0F), project.Tracks[i].MidiProgram, 0);
         }
         else if (!wanted && _midiInput.IsOpen) _midiInput.Close();
     }
@@ -273,25 +315,26 @@ internal sealed class RecordingController
         _host.Dispatcher.BeginInvoke(() =>
         {
             if (_released) return;
-            var project = Project;
+            var source = SourceDocument;   // the armed song, also when another tab is shown
+            var project = source.Project;
             var type = status & 0xF0;
             var channels = ChannelAllocator.Assign(project);
             // What the player heard at that moment (Windows MIDI is held back by the engine latency).
-            var heardSec = _host.SongClock.SecAt(stamp) - HeardDelaySec();
+            var heardSec = source.Playback.Clock.SecAt(stamp) - HeardDelaySec();
             for (var i = 0; i < project.Tracks.Count; i++)
             {
                 var track = project.Tracks[i];
                 if (!track.RecordArm || !AudioInputs.IsMidi(track.AudioInput)) continue;
-                if (track.MonitorInput) _host.Playback.SendLive(track.MidiOutputDeviceId, type | (channels[i] & 0x0F), Math.Clamp(data1 + (type is 0x80 or 0x90 ? track.Transpose : 0), 0, 127), data2);
+                if (track.MonitorInput && channels[i] >= 0) source.Playback.Engine.SendLive(track.MidiOutputDeviceId, type | (channels[i] & 0x0F), Math.Clamp(data1 + (type is 0x80 or 0x90 ? track.Transpose : 0), 0, 127), data2);
                 if (_recording && _midiTakes.TryGetValue(track, out var take) && !double.IsNaN(heardSec)) Keep(take, type, data1, data2, heardSec);
             }
             if (type == 0x90 && data2 > 0) { _midiLevel = Math.Max(_midiLevel, data2 / 127.0); _lastMidiStamp = stamp; }
         });
     }
 
-    private static double HeardDelaySec()
+    private double HeardDelaySec()
     {
-        var engine = AudioEngineClient.Instance;
+        var engine = _engine;
         return engine.IsRunning ? engine.LatencyTicks / (double)Stopwatch.Frequency : 0;
     }
 
@@ -333,10 +376,10 @@ internal sealed class RecordingController
     }
 
     /// <summary>Recording stopped: every MIDI pass with notes becomes a MIDI clip.</summary>
-    private void FinishMidiTakes()
+    private void FinishMidiTakes(DocumentSession recorded)
     {
-        var endSec = _host.SongClock.SecAt(Stopwatch.GetTimestamp()) - HeardDelaySec();
-        var any = false;
+        var endSec = recorded.Playback.Clock.SecAt(Stopwatch.GetTimestamp()) - HeardDelaySec();
+        var pending = new List<(TrackModel Track, List<AudioClip> Clips)>();
         foreach (var (track, take) in _midiTakes)
         {
             if (take.Passes.Count == 0) continue;
@@ -349,13 +392,10 @@ internal sealed class RecordingController
                 StartSec = Math.Max(0, p.Start), SourceLengthSec = Math.Max(0.1, p.End - p.Start),
                 Notes = p.Notes.OrderBy(n => n.StartSec).ToList(),
             }).ToList();
-            if (clips.Count == 0) continue;
-            if (!any) _host.CaptureUndo();
-            any = true;
-            PlaceTakes(track, clips, midi: true);
+            if (clips.Count > 0) pending.Add((track, clips));
         }
         _midiTakes.Clear();
-        if (any) _host.ClipsChanged(true);
+        if (pending.Count > 0) CommitTakes(recorded, _ => { foreach (var (track, clips) in pending) PlaceTakes(track, clips, midi: true); });
     }
 
     // ---------- per-frame: meters and the live takes ----------
@@ -372,16 +412,19 @@ internal sealed class RecordingController
     private void OnRecordFrame(object? sender, EventArgs e)
     {
         if (e is RenderingEventArgs r) { if (r.RenderingTime == _lastFrame) return; _lastFrame = r.RenderingTime; }
-        var engine = AudioEngineClient.Instance;
+        var engine = _engine;
         var midiRecent = (Stopwatch.GetTimestamp() - _lastMidiStamp) < Stopwatch.Frequency / 8;
         _midiLevel *= midiRecent ? 1 : 0.85;
-        var nowSec = _recording ? _host.SongClock.SecAt(Stopwatch.GetTimestamp()) - HeardDelaySec() : double.NaN;
+        var source = SourceDocument;
+        var shown = SourceShown;   // the live takes and meters are drawn on the shown song only
+        var nowSec = _recording ? source.Playback.Clock.SecAt(Stopwatch.GetTimestamp()) - HeardDelaySec() : double.NaN;
         if (_recording && !double.IsNaN(nowSec))
         {
             if (!double.IsNaN(_lastFrameSec) && nowSec < _lastFrameSec - 0.25) _recordLaps++;   // the loop wrapped
             _lastFrameSec = nowSec;
         }
-        foreach (var track in Project.Tracks)
+        if (!shown) return;
+        foreach (var track in source.Project.Tracks)
         {
             if (!track.RecordArm) continue;
             var midi = AudioInputs.IsMidi(track.AudioInput);

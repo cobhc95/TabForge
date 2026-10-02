@@ -16,6 +16,8 @@ public interface IMixerHost
     void BeginMixerEdit();
     /// <summary>A mixer value changed. <paramref name="recompile"/>: pitch, mute/solo or source changed.</summary>
     void MixerChanged(bool recompile);
+    /// <summary>A mute or solo toggled: heard at once, without recompiling playback.</summary>
+    void MuteSoloChanged() => MixerChanged(false);
     void OpenFxChain(TrackModel track);
     void OpenAudioSettings();
     /// <summary>Colour every track of a mixer group (and remember it as that group's colour).</summary>
@@ -119,7 +121,7 @@ public sealed class MixerWindow : Window
         var hint = new TextBlock
         {
             Text = "Group rows add to every track in the group (pan and pitch are offsets, volume is a percentage of each track's own). " +
-                   "Drag a track or group row to reorder (Alt+Up / Alt+Down moves the selected row); right-click a track row to move it to another group. Double-click a slider to reset it.",
+                   "Drag a track or group row to reorder (the Move track up and down commands also move the selected row); right-click a track row to move it to another group. Double-click a slider to reset it.",
             TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 8, 0, 0), FontSize = 11
         };
         hint.SetResourceReference(TextBlock.ForegroundProperty, "MutedBrush");
@@ -823,8 +825,10 @@ public sealed class MixerWindow : Window
             var b = ArrangementPanel.ToggleIconButton(icon, on, () =>
             {
                 _host.BeginMixerEdit();
-                Change(() => set(!get()), recompile: true);
-                Dispatcher.BeginInvoke(Rebuild);
+                if (_building) return;
+                set(!get());
+                _host.MuteSoloChanged();
+                Dispatcher.BeginInvoke(new Action(SyncValues));
             }, tip);
             b.Width = 34; b.Height = 26; b.Margin = new Thickness(2, 0, 2, 0);
             b.Tag = on;
@@ -846,9 +850,5 @@ public sealed class MixerWindow : Window
         return row;
     }
 
-    private static Brush BrushOf(string hex)
-    {
-        try { return new SolidColorBrush((Color)ColorConverter.ConvertFromString(hex)); }
-        catch (FormatException) { return Brushes.Gray; }
-    }
+    private static Brush BrushOf(string hex) => TabForge.Visualization.ColourText.BrushOr(hex);
 }

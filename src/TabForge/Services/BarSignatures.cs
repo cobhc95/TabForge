@@ -2,6 +2,9 @@ using TabForge.Models;
 
 namespace TabForge.Services;
 
+// Owns: the key and time signature carried by each bar, including carry-forward rules.
+// Does not own: notation drawing and playback timing.
+// Tests: TestSignaturesCarryForward, TestBarGridPlacement.
 /// <summary>
 /// Time and key signatures per master bar.
 /// <para>

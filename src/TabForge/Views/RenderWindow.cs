@@ -16,6 +16,8 @@ public sealed class RenderContext
 {
     public required SongProject Project { get; init; }
     public required AppSettings Settings { get; init; }
+    /// <summary>The shared audio engine client the render runs on.</summary>
+    public required Audio.AudioEngineClient Engine { get; init; }
     /// <summary>The rendered song's media context (its linked audio is judged with it).</summary>
     public Services.MediaContext? Media { get; init; }
     /// <summary>Tracks selected in the arrangement / mixer (stems "selected tracks").</summary>
@@ -361,7 +363,7 @@ public sealed class RenderWindow : Window
                 _bar.Value = p.Fraction;
                 _status.Text = $"Rendering… {p.Fraction:P0}, {p.Seconds:0.0} s of audio, {p.Speed:0.#}x realtime";
             });
-            var result = await RenderJob.RunAsync(request, progress, _cts.Token);
+            var result = await RenderJob.RunAsync(request, progress, _cts.Token, _ctx.Engine);
             _bar.Value = 1;
             var clipped = result.Files.Sum(f => f.ClippedSamples);
             _status.Text = $"Done: {plan.Files.Count} file(s), {result.Seconds:0.0} s of audio in {result.ElapsedSeconds:0.0} s ({result.Seconds / Math.Max(0.001, result.ElapsedSeconds):0.#}x realtime)" + (clipped > 0 ? $"; {clipped} samples clipped." : ".");

@@ -20,22 +20,46 @@ namespace TabForge.Views;
 // ArrangementPanel: track tint and building the per-track control rows.
 public sealed partial class ArrangementPanel
 {
-    /// <summary>Track colour tint strength (0..0.6), from Settings > Appearance.</summary>
-    public static double TrackTint { get; set; } = 0.2;
-
     /// <summary>The track colour as a subtle row background (darker in the dark theme), or transparent.</summary>
-    internal static Color? TintColour(TrackModel? track)
+    internal static Color? TintColour(TrackModel? track, VisualOptions options)
     {
-        if (track is null || !track.TintRow || TrackTint <= 0) return null;
+        var tint = options.TrackTint;
+        if (track is null || !track.TintRow || tint <= 0) return null;
         var colour = Draw.Tame(ParseColour(track.ColorHex));
         if (!VisualTheme.IsLight) colour = FretboardRenderer.Blend(colour, Colors.Black, 0.35);
         // On a light background the same alpha reads much stronger than on a dark one: softer there.
-        var strength = Math.Clamp(TrackTint, 0, 0.6) * (VisualTheme.IsLight ? 0.6 : 1);
+        var strength = Math.Clamp(tint, 0, 0.6) * (VisualTheme.IsLight ? 0.6 : 1);
         return Color.FromArgb((byte)Math.Round(255 * strength), colour.R, colour.G, colour.B);
     }
 
+    /// <summary>Opacity of a muted track row's name and controls for a dimming strength of 0..1.</summary>
+    internal static double MutedRowOpacity(double dim) => 1 - 0.9 * Math.Clamp(dim, 0, 1);
+
+    private readonly Dictionary<TrackModel, Dictionary<string, FrameworkElement>> _trackCells = new();
+
+    private void ApplyRowDim(SongProject project, TrackModel track, Dictionary<string, FrameworkElement> cells)
+    {
+        var opacity = track.Mute && !MixerGroups.IsAudible(project, track) && ViewOptions.MutedDim > 0 ? MutedRowOpacity(ViewOptions.MutedDim) : 1;
+        foreach (var (key, cell) in cells)
+            if (key is not ("mute" or "solo")) cell.Opacity = opacity;
+    }
+
+    /// <summary>True while a group mute/solo reports its mix change (the host then skips the full mix refresh; the mute/solo path carries the sound).</summary>
+    internal bool InMuteSoloGesture { get; private set; }
+
+    /// <summary>Mute/solo click: every row's dimming and the timeline lanes follow the new state at once, without rebuilding the list.</summary>
+    internal void ApplyMuteVisualsNow()
+    {
+        if (_project is not { } project) return;
+        foreach (var (track, cells) in _trackCells) ApplyRowDim(project, track, cells);
+        _timeline.InvalidateVisual();
+    }
+
+    /// <summary>Test probe: the opacity of a track row's name cell.</summary>
+    internal double RowNameOpacityForTest(TrackModel track) => _trackCells.TryGetValue(track, out var cells) && cells.TryGetValue("name", out var name) ? name.Opacity : -1;
+
     private Brush TintBrush(int index) =>
-        _project is { } p && index >= 0 && index < p.Tracks.Count && TintColour(p.Tracks[index]) is { } c ? Draw.Solid(c) : Brushes.Transparent;
+        _project is { } p && index >= 0 && index < p.Tracks.Count && TintColour(p.Tracks[index], ViewOptions) is { } c ? Draw.Solid(c) : Brushes.Transparent;
 
     // Volume / pan sliders of the track and group rows with their model value, for SyncMixValues (no rebuild).
     private readonly List<(Slider Slider, Func<double> Model)> _mixSliders = new();
@@ -55,13 +79,16 @@ public sealed partial class ArrangementPanel
 
     private void RebuildControls()
     {
+        using var slowTrace = TabForge.Views.SlowTrace.Measure("track rows rebuild", 0);
         _controls.Children.Clear();
         _mixSliders.Clear();
         _inputMeters.Clear();
         _rowGrids.Clear();
+        _trackCells.Clear();
         _columnRowCells.Clear();
         _rowSeparators.Clear();
         _trackRows.Clear();
+        _renameStarters.Clear();
         _rowTransforms.Clear();
         var project = _project;
         if (project is null) return;
@@ -79,7 +106,7 @@ public sealed partial class ArrangementPanel
                 BorderBrush = (Brush)Application.Current.FindResource("BorderSoftBrush"),
                 BorderThickness = new Thickness(0, 0, 1, 1),
                 Background = TintBrush(i),
-                Cursor = Cursors.Arrow,
+                Cursor = Cursors.Arrow, Focusable = true, FocusVisualStyle = null,
                 RenderTransform = new TranslateTransform()
             };
             _rowTransforms.Add((TranslateTransform)row.RenderTransform);
@@ -147,7 +174,7 @@ public sealed partial class ArrangementPanel
                 Background = Brushes.Transparent, BorderBrush = Brushes.Transparent,
                 BorderThickness = new Thickness(0), Effect = null
             };
-            name.MouseDoubleClick += (_, e) =>
+            void BeginRename()
             {
                 _editingTrackName = name;
                 _editingTrackModel = track;
@@ -160,8 +187,9 @@ public sealed partial class ArrangementPanel
                 name.BorderThickness = new Thickness(1);
                 name.Focus();
                 name.SelectAll();
-                e.Handled = true;
-            };
+            }
+            name.MouseDoubleClick += (_, e) => { BeginRename(); e.Handled = true; };
+            _renameStarters[track] = BeginRename;
             name.LostFocus += (_, _) =>
             {
                 if (!name.IsReadOnly) FinishTrackNameEdit(name, track, commit: true);
@@ -196,11 +224,13 @@ public sealed partial class ArrangementPanel
             cells["mute"] = ToggleIconButton("IconMute", track.Mute, () =>
             {
                 TrackEditRequested?.Invoke(new TrackEditRequest(index, TrackEditKind.ToggleMute));
+                ApplyMuteVisualsNow();
                 MuteSoloChanged?.Invoke(this, EventArgs.Empty);
             }, "Mute track");
             cells["solo"] = ToggleIconButton("IconSolo", track.Solo, () =>
             {
                 TrackEditRequested?.Invoke(new TrackEditRequest(index, TrackEditKind.ToggleSolo));
+                ApplyMuteVisualsNow();
                 MuteSoloChanged?.Invoke(this, EventArgs.Empty);
             }, "Solo track");
 
@@ -277,18 +307,21 @@ public sealed partial class ArrangementPanel
             panControl.ContextMenu = PanContextMenu(track, panControl);
             cells["pan"] = panControl;
 
-            var instrument = InstrumentButton(track, selected =>
+            FrameworkElement instrument = track.IsAudio ? AudioKindCell() : InstrumentButton(track, selected =>
             {
                 TrackEditRequested?.Invoke(new TrackEditRequest(index, TrackEditKind.SelectInstrument, selected));
                 ProjectEdited?.Invoke(this, EventArgs.Empty);
             });
             cells["instrument"] = instrument;
+            // An explicitly muted track reads grey: its name and controls are dimmed (the M box stays full strength, red).
+            _trackCells[track] = cells;
+            ApplyRowDim(project, track, cells);
             PlaceCells(grid, cells);
 
             if (HasAudioLane(track))
             {
                 // The row's controls on top; each clip lane's strip (play button, input, meter) underneath.
-                grid.Height = TrackRowHeight;
+                grid.Height = track.IsAudio ? AudioControlsHeight : TrackRowHeight;
                 grid.VerticalAlignment = VerticalAlignment.Top;
                 var stack = new StackPanel();
                 stack.Children.Add(grid);
@@ -309,6 +342,7 @@ public sealed partial class ArrangementPanel
                 }
                 if (IsInside(source, arm) || IsInteractiveTrackControl(source, row)) return;
                 BeginControlTrackDrag(index, row, e.GetPosition(_controls));
+                FocusTrackRow(index);
                 e.Handled = true;
             };
             row.MouseMove += (_, e) => UpdateControlTrackDrag(index, e);
@@ -323,11 +357,23 @@ public sealed partial class ArrangementPanel
                 // belongs to that control; only the row's own background opens Track properties.
                 var src = e.OriginalSource as DependencyObject;
                 if (IsInside(src, arm) || IsInside(src, handleElement) || IsInteractiveTrackControl(src, row)) return;
+                if (TrackRowMenuRequested is { } menuRequested)
+                {
+                    TrackSelected?.Invoke(this, index);
+                    // The row takes the keyboard focus before the menu opens: focus moved afterwards would close the menu at once.
+                    // When the menu closes the focus returns to the row, so the track-row hotkeys act on it.
+                    if (index < _trackRows.Count) _trackRows[index].Focus();   // the selection may have rebuilt the rows
+                    menuRequested(this, index);
+                    e.Handled = true;
+                    return;
+                }
+                if (track.IsAudio) { ShowAudioRowMenu(index, row); e.Handled = true; return; }   // properties, or convert to an instrument track
                 TrackOptionsRequested?.Invoke(this, index);
                 e.Handled = true;
             };
             _trackRows.Add(row);
             _controls.Children.Add(row);
         }
+        if (BuildAddLane() is { } addLane) _controls.Children.Add(addLane);   // rows end flush against it
     }
 }

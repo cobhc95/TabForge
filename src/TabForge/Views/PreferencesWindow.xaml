@@ -585,6 +585,8 @@
                                   Stretch="Fill" Margin="8,0,0,0" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
+                    <TextBlock x:Name="VersionLabel" Foreground="{DynamicResource MutedBrush}" FontSize="12" Margin="14,0,0,0"
+                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis" AutomationProperties.Name="TabForge version"/>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                     <TextBlock x:Name="StatusText" Text="All changes saved" Foreground="{DynamicResource TextBrush}" FontSize="13"

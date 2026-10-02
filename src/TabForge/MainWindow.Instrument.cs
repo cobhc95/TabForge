@@ -33,14 +33,15 @@ public partial class MainWindow
 
     private void RefreshInstrument()
     {
-        var track = SelectedTrack;
+        var audioSelected = SelectedTrack is { IsAudio: true };
+        var track = audioSelected ? null : SelectedTrack;   // an audio track has no instrument: the panel shows its no-track state
         Instrument.DrumLabel = track is { Kind: TrackKind.Drums } drums ? midi => Services.DrumMaps.For(drums, midi).Label : null;
         var state = InstrumentVisualizer.Build(
             _project, track, _timeline, _playheadMs, _isPlayingVisual, _midi.IsPaused,
-            _previewHorizon, _leftHanded, _showNoteNames, _scaleHighlight, _fretboardFrets);
+            _previewHorizon, _leftHanded, _showNoteNames, _scaleHighlight, _fretboardFrets, options: _options.Visual);
         var editingSelection = InstrumentVisualizer.BuildEditingSelection(
-            track, Editor.CurrentCell(), _leftHanded, _showNoteNames, _scaleHighlight, _fretboardFrets);
-        Instrument.Title = track?.Name ?? "Instrument";
+            track, Editor.CurrentCell(), _leftHanded, _showNoteNames, _scaleHighlight, _fretboardFrets, options: _options.Visual);
+        Instrument.Title = track?.Name ?? "Instrument"; Instrument.AudioTrack = audioSelected;
         ApplyInstrumentView(state);
         ApplyInstrumentView(editingSelection);
         Instrument.SetState(state);
@@ -48,7 +49,7 @@ public partial class MainWindow
 
         var cell = Editor.CurrentCell();
         var chord = cell?.ChordName;
-        PracticeHint.Text = track is null
+        PracticeHint.Text = audioSelected ? Services.EditorGuard.Message : track is null
             ? "Select a track"
             : $"{track.Name} · {track.StringTunings.Count} strings · capo {track.Capo}" +
               (string.IsNullOrWhiteSpace(chord) ? "" : $"\nchord: {chord}");

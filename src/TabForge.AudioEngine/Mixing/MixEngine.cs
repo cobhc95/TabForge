@@ -48,9 +48,17 @@ public sealed class MixEngine : ISampleProvider
     /// <summary>When the audio callback last finished (the engine's watchdog checks it).</summary>
     public long Heartbeat => Volatile.Read(ref _heartbeat);
     private TransportInfo _transport = new() { Tempo = 120 };
-    /// <summary>Song position, tempo and bar map (RT-08: shared with the engine's command reader, survives a mixer swap).</summary>
+    /// <summary>Song position, tempo and bar map (shared with the engine's command reader, survives a mixer swap).</summary>
     private readonly SongTransport _song;
-    private int _barCursor;
+    /// <summary>Every song owner's transport (element 0 is <see cref="_song"/>).</summary>
+    private readonly SongTransport[] _owners;
+    /// <summary>Per owner above 0: the block's transport for chains whose clips follow that owner, built on first use in a block (no allocation).</summary>
+    private readonly TransportInfo[] _ownerTransport = new TransportInfo[SongOwners.Max];
+    private readonly long[] _ownerBlock = new long[SongOwners.Max];
+    private long _blockId;
+    private double _blockStartTicks;
+    /// <summary>Per owner: where the last bar lookup ended (the lookup starts there next block).</summary>
+    private readonly int[] _barCursor = new int[SongOwners.Max];
 
     public WaveFormat WaveFormat { get; }
     /// <summary>Output latency of the device, in Stopwatch ticks.</summary>
@@ -73,10 +81,11 @@ public sealed class MixEngine : ISampleProvider
     private readonly SafetyLimiter _limiter;
     private bool _limiterWasOn;
 
-    /// <param name="transport">The engine's song transport (null: a private one, e.g. for tests).</param>
-    public MixEngine(SharedBlock shared, int sampleRate, int maxBlock, SongTransport? transport = null)
+    /// <param name="owners">The engine's song transports by owner id, element 0 first (null: a private one, e.g. for tests).</param>
+    public MixEngine(SharedBlock shared, int sampleRate, int maxBlock, SongTransport[]? owners = null)
     {
-        _song = transport ?? new SongTransport();
+        _owners = owners is { Length: > 0 } ? owners : new[] { new SongTransport() };
+        _song = _owners[0];
         _shared = shared;
         _maxBlock = maxBlock;
         _inputBlock = new Audio.InputBlock(maxBlock);
@@ -177,17 +186,58 @@ public sealed class MixEngine : ISampleProvider
     /// <summary>Any thread: the song tempo used when there is no bar map (playing comes with <see cref="SetPosition"/>).</summary>
     public void SetTransport(double tempo, bool playing) => _song.SetTempo(tempo);
 
-    /// <summary>Any thread: the song's bar map (RT-04: time signature, bar start and tempo per performed bar).</summary>
+    /// <summary>Any thread: the song's bar map (time signature, bar start and tempo per performed bar).</summary>
     public void SetTransportMap(TransportBar[] bars) => _song.SetMap(bars);
 
     /// <summary>The song transport is playing (pitch measurement waits for it to stop).</summary>
-    public bool SongPlaying => _song.Current.Playing;
+    public bool SongPlaying
+    {
+        get { foreach (var o in _owners) if (o.Current.Playing) return true; return false; }
+    }
 
     /// <summary>Song position: <paramref name="songSec"/> at Stopwatch time <paramref name="stamp"/> (the MIDI time-stamp clock).</summary>
     public void SetPosition(bool playing, double songSec, long stamp) => _song.SetPosition(playing, songSec, stamp);
 
     /// <summary>The song time now, on the time-stamp clock (what TabForge's scheduler is sending).</summary>
-    public double SongSecNow => _song.Current.SecAt(Stopwatch.GetTimestamp());
+    public double SongSecNow
+    {
+        get
+        {
+            // Owner 0 unless it is stopped and another song plays: the recording follows the song that is heard.
+            var o = _song;
+            if (!o.Current.Playing) foreach (var other in _owners) if (other.Current.Playing) { o = other; break; }
+            return o.Current.SecAt(Stopwatch.GetTimestamp());
+        }
+    }
+
+    /// <summary>The song time of one owner now (a recording aligns to the song that records); owner 0 when the id is out of range.</summary>
+    public double SongSecFor(int owner) => _owners[owner >= 0 && owner < _owners.Length ? owner : 0].Current.SecAt(Stopwatch.GetTimestamp());
+
+    /// <summary>Audio thread: the transport a chain renders with, the one of the song that owns the chain (playing, position, ppq, tempo, meter). Buses, master and chains of owner 0 use the primary one.</summary>
+    private ref readonly TransportInfo TransportFor(TrackChain chain)
+    {
+        var owner = chain.ClipOwner;
+        if (owner <= 0 || owner >= _owners.Length) return ref _transport;
+        if (_ownerBlock[owner] != _blockId)
+        {
+            var o = _owners[owner];
+            FillTransport(ref _ownerTransport[owner], o.Current, o.Bars, o.Tempo, owner);
+            _ownerBlock[owner] = _blockId;
+        }
+        return ref _ownerTransport[owner];
+    }
+
+    /// <summary>Audio thread: one song's transport for the current block. Ppq position, tempo, time signature and bar start come from the song's bar map (none yet: the plain tempo, no meter).</summary>
+    private void FillTransport(ref TransportInfo t, SongTransport.Position position, TransportBar[] bars, double songTempo, int owner)
+    {
+        t.Playing = position.Playing;
+        t.SongSec = position.SecAt(_blockStartTicks);
+        if (TransportMap.Locate(bars, t.SongSec, ref _barCursor[owner], out var ppq, out var barTempo, out var meter))
+        {
+            t.PpqPosition = ppq; t.Tempo = barTempo; t.Meter = meter;
+        }
+        else { t.Tempo = songTempo; t.Meter = default; }
+    }
 
     private readonly Audio.InputBlock _inputBlock;
 
@@ -243,8 +293,8 @@ public sealed class MixEngine : ISampleProvider
             if (slot >= chains.Length || chains[slot] is not { } chain) continue;
             var dest = graph.Dest[slot];
             if (dest >= BusBase && dest < MasterSlot && chains[dest] is not null)
-                chain.Render(_busL[dest - BusBase], _busR[dest - BusBase], 0, n, _transport, _shared, input, chains);
-            else chain.Render(_left, _right, 0, n, _transport, _shared, input, chains);
+                chain.Render(_busL[dest - BusBase], _busR[dest - BusBase], 0, n, TransportFor(chain), _shared, input, chains);
+            else chain.Render(_left, _right, 0, n, TransportFor(chain), _shared, input, chains);
         }
         foreach (var bus in graph.Buses)
             chains[bus]?.Render(_left, _right, 0, n, _transport, _shared, null, null, _busL[bus - BusBase], _busR[bus - BusBase]);
@@ -286,7 +336,7 @@ public sealed class MixEngine : ISampleProvider
         var chains = Volatile.Read(ref _chains);
         var fanout = Volatile.Read(ref _fanout);
         var frames = count / 2;
-        // A5-09: every isolated plug-in in this callback shares one wait deadline (cleared in Read's finally).
+        // Every isolated plug-in in this callback shares one wait deadline (cleared in Read's finally).
         Isolation.PluginHostLink.BeginCallback(started, frames, _sampleRate);
         // Where "frame 0 of this call" is on the shared clock, shifted back by the fixed delay - smoothed by a
         // delay-locked loop so device-callback jitter and the true sample rate do not move event placement.
@@ -294,7 +344,7 @@ public sealed class MixEngine : ISampleProvider
         var callTime = FilterCallTime(rawCallTime, frames);
 
         while (_pendingCount < _pending.Length && _shared.TryRead(out var e)) _pending[_pendingCount++] = e;
-        // M-05: the pending list is full: the rest stays in the shared ring for a later callback (late, not lost). Counted.
+        // The pending list is full: the rest stays in the shared ring for a later callback (late, not lost). Counted.
         if (_pendingCount == _pending.Length) Metrics.CountMidiDeferred();
         var song = _song.Current;
         var bars = _song.Bars;
@@ -316,10 +366,17 @@ public sealed class MixEngine : ISampleProvider
                 {
                     // Earlier than the block start (stalled producer) still plays, at frame 0.
                     var frame = (int)Math.Clamp(Math.Round((e.Timestamp - blockStart) / _tpfEst), 0, n - 1);
-                    if (e.Slot is >= 0 and < MaxSlots)
+                    if (e.Slot is >= 0 and < MaxSlots && (e.Flags & TimedMidi.PanicFlag) != 0)
+                    {
+                        // Ordered panic: drops what this block already holds for the slot (all queued before it), keeps what follows.
+                        chains[e.Slot]?.PanicNow();
+                        if (fanout[e.Slot] is { } panicked)
+                            foreach (var d in panicked) chains[d]?.PanicNow();
+                    }
+                    else if (e.Slot is >= 0 and < MaxSlots)
                     {
                         RememberChannelState(e.Slot, e.Status, e.Data1, e.Data2);
-                        chains[e.Slot]?.AddEvent(frame, e.Status, e.Data1, e.Data2);   // a full chain buffer counts the drop (M-05)
+                        chains[e.Slot]?.AddEvent(frame, e.Status, e.Data1, e.Data2);   // a full chain buffer counts the drop
                         // Instruments that take this track's MIDI as their input (filtered by channel in the chain).
                         if (fanout[e.Slot] is { } destinations)
                             foreach (var d in destinations) chains[d]?.AddRouted(frame, e.Status, e.Data1, e.Data2);
@@ -331,14 +388,8 @@ public sealed class MixEngine : ISampleProvider
 
             Array.Clear(_left, 0, n);
             Array.Clear(_right, 0, n);
-            _transport.Playing = song.Playing;
-            _transport.SongSec = song.SecAt(blockStart);
-            // RT-04: ppq position, tempo, time signature and bar start from the song's bar map (none yet: the plain tempo, no meter).
-            if (TransportMap.Locate(bars, _transport.SongSec, ref _barCursor, out var ppq, out var barTempo, out var meter))
-            {
-                _transport.PpqPosition = ppq; _transport.Tempo = barTempo; _transport.Meter = meter;
-            }
-            else { _transport.Tempo = songTempo; _transport.Meter = default; }
+            _blockId++; _blockStartTicks = blockStart;
+            FillTransport(ref _transport, song, bars, songTempo, 0);
             // Live input: read once per block and shared by every armed chain (each applies its own channel choice).
             Audio.InputBlock? inputBlock = null;
             if (Input is { } input)
@@ -349,7 +400,7 @@ public sealed class MixEngine : ISampleProvider
             }
             RenderGraphBlock(chains, Volatile.Read(ref _graph), n, inputBlock);
             var master = MasterGain; var ceiling = Ceiling;
-            // RT-02 last line of defence (each chain already mutes its own non-finite output): Math.Clamp keeps NaN, so a
+            // Last line of defence (each chain already mutes its own non-finite output): Math.Clamp keeps NaN, so a
             // non-finite master block is silenced whole. x - x is 0 for finite x and NaN otherwise; the sum is branch-free.
             var poison = 0f;
             for (var i = 0; i < n; i++) poison += (_left[i] - _left[i]) + (_right[i] - _right[i]);

@@ -4,6 +4,9 @@ using TabForge.Models;
 
 namespace TabForge.Services;
 
+// Owns: saving a song as a Guitar Pro 7/8 (.gp) file.
+// Does not own: reading files (GuitarProImporter) and the export questions (GpExportPreflight).
+// Tests: TestGuitarProFiles, TestGpFidelity.
 /// <summary>
 /// Saves a song as a Guitar Pro 7/8 file (.gp) via alphaTab's GP7 writer: the reverse of
 /// <see cref="GuitarProImporter"/>. Tracks, tunings, capo, MIDI program/channel/volume/pan, metre,
@@ -33,6 +36,7 @@ public static class GuitarProExporter
     public static byte[] ToBytes(SongProject project, bool embedProject = true)
     {
         // A6-02: the embedded project is built (and size-checked) first, so an over-limit song fails before anything is exported or written.
+        AudioTrackExport.RequireNotation(project, "a score file");
         var embeddedBytes = embedProject ? EmbeddedProjectBytes(project) : null;
         var settings = new AlphaTab.Settings();
         var score = Build(project);
@@ -177,7 +181,7 @@ public static class GuitarProExporter
         // Untrusted input: the same bounded read as any Guitar Pro file, and the zip entry is inflated
         // with a hard cap (its declared size can lie), so a small crafted .gp cannot expand to gigabytes.
         byte[] file;
-        try { file = InputLimits.ReadBoundedBytes(path, InputLimits.MaxGuitarProFileBytes, "Guitar Pro file"); }
+        try { file = InputLimits.ReadBoundedBytes(path, InputLimits.MaxGuitarProFileBytes, "score file"); }
         catch (InvalidDataException) { return null; }
         catch (IOException) { return null; }
         catch (UnauthorizedAccessException) { return null; }
@@ -237,7 +241,7 @@ public static class GuitarProExporter
 
     /// <summary>The open notice for an embedded project that was present but rejected (<see cref="ReadEmbedded"/>).</summary>
     internal static string RejectedNotice(string reason) =>
-        $"This file's TabForge project data could not be read ({reason}); it was opened as a plain Guitar Pro file"
+        $"This file's TabForge project data could not be read ({reason}); it was opened as a plain score file"
         + (ReferenceEquals(reason, EmbeddedBinding.StaleReason) ? ", so the score is shown exactly as the file holds it and the older TabForge-only settings were not applied" : "");
 
     /// <summary>A bar's navigation marks (TabForge's names or Guitar Pro's own) as alphaTab directions, so D.C. / D.S. / Coda / Fine survive a clean .gp.</summary>
@@ -273,7 +277,7 @@ public static class GuitarProExporter
             Music = project.MusicAuthor ?? "", Words = project.LyricsAuthor ?? "", Copyright = project.Copyright ?? "",
             Tab = project.TabAuthor ?? "", Instructions = project.Instructions ?? "", Notices = project.Notice ?? "",
         };
-        var barCount = project.Tracks.Count == 0 ? 1 : project.Tracks.Max(t => t.Measures.Count);
+        var barCount = Math.Max(1, project.NotationTracks.Select(t => t.Measures.Count).DefaultIfEmpty(1).Max());
         var markers = project.Markers.ToDictionary(m => m.MeasureIndex, m => m.Title);
 
         var keys = new List<(int Key, bool Minor)>();
@@ -281,7 +285,7 @@ public static class GuitarProExporter
         var lastKey = project.KeySignature; var lastMinor = project.KeySignatureMinor;
         for (var b = 0; b < barCount; b++)
         {
-            var model = project.Tracks.FirstOrDefault(t => b < t.Measures.Count)?.Measures[b];
+            var model = project.NotationTracks.FirstOrDefault(t => b < t.Measures.Count)?.Measures[b];
             var mb = new MasterBar
             {
                 TimeSignatureNumerator = model?.TimeSigNum ?? project.TimeSignatureNumerator,
@@ -340,7 +344,7 @@ public static class GuitarProExporter
                         AddTempoAutomation(mb, endRatio, complete ? point.Tempo : reached, false);
                         continue;
                     }
-                    var nextModel = project.Tracks.FirstOrDefault(t => b + 1 < t.Measures.Count)?.Measures[b + 1];
+                    var nextModel = project.NotationTracks.FirstOrDefault(t => b + 1 < t.Measures.Count)?.Measures[b + 1];
                     if (!complete) AddTempoAutomation(mb, 0.999, reached, false);   // the glide ends at the bar line holding what it reached; the next bar starts at the target
                     else if (nextModel is null || nextModel.TempoChange is { } other && other != point.Tempo) { AddTempoAutomation(mb, 0.999, point.Tempo, false); continue; }
                     if (nextModel?.TempoChange is null) pendingTempo[b + 1] = point.Tempo;
@@ -350,7 +354,7 @@ public static class GuitarProExporter
             keys.Add((lastKey, lastMinor));
         }
 
-        foreach (var source in project.Tracks)
+        foreach (var source in project.NotationTracks)
         {
             var drums = source.Kind == TrackKind.Drums || source.MidiChannel == 9;
             // Guitar Pro keeps pitch in tuning + fret and has no playback transposition: the gpif Track <Transpose> is a display-only
@@ -739,6 +743,6 @@ public static class GuitarProExporter
             while (slots >= size - 0.001) { yield return RestBeat(den); slots -= size; }
     }
 
-    private static System.Windows.Media.Color? ColourChooserParse(string? hex) =>
-        TabForge.Views.ColourChooser.TryParse(hex, out var c) ? c : null;
+    private static TabForge.Models.Rgba? ColourChooserParse(string? hex) =>
+        TabForge.Models.ColourHex.TryParseStrict(hex, out var c) ? c : null;
 }

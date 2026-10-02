@@ -22,7 +22,7 @@ internal sealed partial class TrackTimeline
 {
     protected override Size MeasureOverride(Size availableSize)
     {
-        var height = ArrangementPanel.RulerHeight + ArrangementPanel.SectionHeight + ArrangementPanel.RowsHeight(Project) + 2;
+        var height = ArrangementPanel.RulerHeight + ArrangementPanel.SectionHeight + ArrangementPanel.RowsHeight(Project) + AddLaneHeight + 2;
         // Never report the full (very wide) timeline as the panel's own desired width: the internal
         // horizontal ScrollViewer scrolls the timeline, but an unbounded desired size would inflate the
         // whole window layout (pushing the caption buttons and side panel off-screen).
@@ -32,8 +32,13 @@ internal sealed partial class TrackTimeline
         return new Size(width, height);
     }
 
+    /// <summary>Number of full timeline renders (probe and test counter).</summary>
+    internal int RenderCount { get; private set; }
+
     protected override void OnRender(DrawingContext dc)
     {
+        using var slowTrace = TabForge.Views.SlowTrace.Measure("timeline render");
+        RenderCount++;
         try { RenderGuard.Inject("TrackTimeline"); RenderCore(dc); }
         catch (Exception ex) when (RenderGuard.Contain(ex, "TrackTimeline", dc, ActualWidth, ActualHeight)) { }
     }
@@ -49,6 +54,7 @@ internal sealed partial class TrackTimeline
         var height = ActualHeight;
         dc.DrawRectangle(Draw.Solid(_theme.Background), null, new Rect(0, 0, width, height));
         if (project is null || project.Tracks.Count == 0) return;
+        _audible = PlaybackEngine.AudibleMask(project);   // once per full render: dimmed = not heard (the shared mute/solo rule), not the raw mute switch
 
         var bars = BarCount;
         var trackCount = project.Tracks.Count;
@@ -81,8 +87,8 @@ internal sealed partial class TrackTimeline
             }
             if ((label || isCurrent) && ShowBarNumbers)
             {
-                Draw.At(dc, (b + 1).ToString(), numberX, 4, 10,
-                    Draw.Solid(isCurrent ? _theme.Next : _theme.Muted), isCurrent);
+                Draw.At(dc, (b + 1).ToString(), numberX, 3, 12,
+                    Draw.Solid(isCurrent ? _theme.Next : _theme.Legible), isCurrent);
             }
             if (label)
             {
@@ -163,16 +169,17 @@ internal sealed partial class TrackTimeline
             void DrawLane(DrawingContext dc)
             {
                 if (startsGroup && _animatingLanes) DrawGroupBar(dc);
-                var rowRect = new Rect(0, rowTop, width, ArrangementPanel.RowHeightFor(Project));
+                var rowRect = new Rect(0, rowTop, width, track.IsAudio ? ArrangementPanel.RowHeightOf(Project, track) : ArrangementPanel.RowHeightFor(Project));
                 var highlighted = t == SelectedTrack || t == DragTrackFrom;
                 var rowBg = t % 2 == 0 ? _theme.Background : _theme.RowAlt;
                 dc.DrawRectangle(Draw.Solid(rowBg), null, rowRect);
-                if (ArrangementPanel.TintColour(track) is { } tint) dc.DrawRectangle(Draw.Solid(tint), null, rowRect);
+                if (ArrangementPanel.TintColour(track, ViewOptions) is { } tint) dc.DrawRectangle(Draw.Solid(tint), null, rowRect);
                 if (highlighted)
                     dc.DrawRectangle(Draw.Solid(_theme.Accent, 0.25), null, rowRect);
 
                 var trackColor = Parse(track.ColorHex, _theme.Accent);
-                for (var b = 0; b < bars; b++)
+                if (Silenced(t)) trackColor = Desaturate(trackColor, Dim);
+                for (var b = 0; b < (track.IsAudio ? 0 : bars); b++)   // an audio track's row shows its clip lanes only: no bar cells
                 {
                     var x2 = XOfBar(b);
                     var w = WidthOfBar(b);
@@ -216,14 +223,14 @@ internal sealed partial class TrackTimeline
                             }
                             else if (ShowIndividualNotes)
                             {
-                                dc.DrawRectangle(Draw.Solid(trackColor, track.Mute ? 0.16 : 0.30), null, cell);
-                                DrawMiniature(dc, activity, cell, track, trackColor, track.Mute);
+                                dc.DrawRectangle(Draw.Solid(trackColor, Fade(0.30, 0.16, t)), null, cell);
+                                DrawMiniature(dc, activity, cell, track, trackColor, Silenced(t) ? Dim : 0);
                             }
                             else
                             {
                                 // Default to one readable block per occupied measure. Detailed note
                                 // strokes can be restored from the arrangement context menu.
-                                var opacity = track.Mute ? 0.28 : 0.82;
+                                var opacity = Fade(0.82, 0.28, t);
                                 var block = new Rect(cell.X + 1, cell.Y + 2,
                                     Math.Max(1, cell.Width - 2), Math.Max(1, cell.Height - 4));
                                 dc.DrawRoundedRectangle(Draw.Solid(trackColor, opacity), null, block, 2, 2);
@@ -245,7 +252,8 @@ internal sealed partial class TrackTimeline
                 }
                 if (ShowContinuousBlocks)
                     DrawContinuousRuns(dc, t, track, rowTop, trackColor);
-                dc.DrawLine(Draw.Pen(_theme.BoardEdge, 0.6, 0.7), new Point(0, rowTop + ArrangementPanel.RowHeightFor(Project) - 0.5), new Point(width, rowTop + ArrangementPanel.RowHeightFor(Project) - 0.5));
+                var notationEnd = rowTop + ArrangementPanel.NotationHeightOf(Project, track);
+                if (notationEnd > rowTop) dc.DrawLine(Draw.Pen(_theme.BoardEdge, 0.6, 0.7), new Point(0, notationEnd - 0.5), new Point(width, notationEnd - 0.5));
                 DrawAudioLane(dc, track, rowTop, width, trackColor);
             }
             if (!_animatingLanes) dc.Pop();
@@ -268,13 +276,28 @@ internal sealed partial class TrackTimeline
     }
 
     private readonly List<(int Track, int Bar)> _mixPoints = new();
+    private bool[] _audible = Array.Empty<bool>();
+    /// <summary>The track is explicitly muted (and not soloed): its lane is drawn grey and dim. Silence implied by another track's solo is not drawn.</summary>
+    private bool Silenced(int track) => track >= 0 && track < _audible.Length && !_audible[track] && Project is { } p && track < p.Tracks.Count && p.Tracks[track].Mute;
+    private double Dim => Math.Clamp(ViewOptions.MutedDim, 0, 1);
+    /// <summary>Opacity of a lane element: <paramref name="normal"/>, moving to <paramref name="silenced"/> as the muted-track dimming setting rises.</summary>
+    internal static double FadeBy(double normal, double silenced, double dim) => normal + (silenced - normal) * Math.Clamp(dim, 0, 1);
+    private double Fade(double normal, double silenced, int track) => Silenced(track) ? FadeBy(normal, silenced, Dim) : normal;
+    private static Color Desaturate(Color c, double amount)
+    {
+        var g = 0.3 * c.R + 0.59 * c.G + 0.11 * c.B;
+        return Color.FromRgb((byte)(c.R + (g - c.R) * amount), (byte)(c.G + (g - c.G) * amount), (byte)(c.B + (g - c.B) * amount));
+    }
     private double _overlayGridTop, _overlayWidth, _overlayHeight;
     private int _overlayBars;
 
     private void DrawLaneOverlay(DrawingContext dc)
     {
         var gridTop = _overlayGridTop; var width = _overlayWidth; var height = _overlayHeight; var bars = _overlayBars;
+        // The Add-track lane lives in the overlay: its hover and drag states repaint this small layer, never the whole grid.
+        DrawAddLane(dc, width);
         DrawLiveTakes(dc, width);
+        DrawSectionHover(dc);
 
         // --- track drag: the moving lane border is a Canvas overlay above the complete lane rendering. ---
         if (DragTrackFrom >= 0 && DragTrackTo >= 0 && DragTrackTo != DragTrackFrom)
@@ -445,7 +468,7 @@ internal sealed partial class TrackTimeline
                 dc.DrawRoundedRectangle(null, glowOuter, line, lineThickness / 2, lineThickness / 2);
                 dc.DrawRoundedRectangle(null, glowInner, line, lineThickness / 2, lineThickness / 2);
             }
-            dc.DrawRoundedRectangle(Draw.Solid(trackColor, track.Mute ? 0.38 : 0.96), null, line, lineThickness / 2, lineThickness / 2);
+            dc.DrawRoundedRectangle(Draw.Solid(trackColor, Fade(0.96, 0.38, trackIndex)), null, line, lineThickness / 2, lineThickness / 2);
             runStart = -1;
         }
     }
@@ -529,7 +552,7 @@ internal sealed partial class TrackTimeline
         return new Activity(notes, beats, rests, measure.Cells.Count, notes > 0, miniature.ToArray());
     }
 
-    private static void DrawMiniature(DrawingContext dc, Activity activity, Rect cell, TrackModel track, Color trackColor, bool muted)
+    private static void DrawMiniature(DrawingContext dc, Activity activity, Rect cell, TrackModel track, Color trackColor, double dim)
     {
         var slots = Math.Max(1, activity.CellCount);
         var slotWidth = cell.Width / slots;
@@ -542,7 +565,7 @@ internal sealed partial class TrackTimeline
                 for (var note = 0; note < item.DrumVelocities.Length; note++)
                 {
                     var height = 6 + Math.Min(8, item.DrumVelocities[note] / 14);
-                    dc.DrawRectangle(Draw.Solid(trackColor, muted ? 0.35 : 0.95), null,
+                    dc.DrawRectangle(Draw.Solid(trackColor, 0.95 + (0.35 - 0.95) * dim), null,
                         new Rect(x + 1, cell.Bottom - 4 - height, Math.Max(1.5, Math.Min(4, slotWidth - 2)), height));
                 }
             }
@@ -551,11 +574,11 @@ internal sealed partial class TrackTimeline
                 var width = Math.Max(1.5, item.ConsumedSlots * slotWidth - 1.5);
                 var height = Math.Min(cell.Height - 8, 5 + item.NoteCount * 3);
                 var y = cell.Y + (cell.Height - height) / 2;
-                dc.DrawRoundedRectangle(Draw.Solid(trackColor, muted ? 0.35 : 0.95), null,
+                dc.DrawRoundedRectangle(Draw.Solid(trackColor, 0.95 + (0.35 - 0.95) * dim), null,
                     new Rect(x + 1, y, width, height), 1.5, 1.5);
             }
         }
-        if (muted) dc.DrawRectangle(Draw.Solid(Colors.Black, 0.25), null, cell);
+        if (dim > 0) dc.DrawRectangle(Draw.Solid(Colors.Black, 0.25 * dim), null, cell);
     }
 
     private static Color Parse(string hex, Color fallback) =>

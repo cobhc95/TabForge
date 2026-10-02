@@ -1,0 +1,22 @@
+# Services
+
+Musical logic, file formats, settings, limits and path policy. No WPF.
+
+## Key types
+- `AppSettingsStore`: the one shared settings store; `SettingsValidator` bounds values, `SettingsMigration` upgrades old files, `SettingsFileService` reads and writes.
+- `FilePathPolicy`: atomic writes, leftover sweeps, reserved-name checks. `InputLimits` bounds every read.
+- `ProjectService`: the .tforge format; `GuitarProImporter` and `GuitarProExporter`: .gp and .gp5.
+- `EditCommands` (partial files): the note, bar and paste edits the editor calls.
+- `HotkeyCatalog`: every bindable command (`HotkeySettings` holds the user's Hotkey 1 and Hotkey 2); `MediaContext` and `MediaPathPolicy`: a song's audio files.
+- `MusicXmlExportService`, `MidiExportService`, `AsciiExportService`: exports.
+
+## Pathway
+- Write files only through `FilePathPolicy.WriteAtomically`; bound reads with `InputLimits`.
+- A new setting touches `AppSettings`, `SettingsValidator`, `SettingsCatalog` and a row in `PreferencesWindow` (`docs/RECIPES.md`).
+- A new command needs a `HotkeyCatalog` entry, the presets and `TOOLS_AND_HOTKEYS.md`.
+
+## Must not depend on
+WPF assemblies, other than the listed exceptions in `src/TabForge/SelfTests/Architecture/SelfTestArchitecture.cs`. Only `Program`, diagnostics and the listed exceptions may reference the audio engine.
+
+## Tests
+`TestEverySettingIsWired`, `TestSettingsStoreSharedAcrossWindows`, `TestSecurityInputBoundaries`, `TestMediaPathPolicy`, `TestEditCommands`, `TestGuitarProFiles`, `TestMusicXmlExport`, `TestMidiExport`, `TestTforgeCompression`, `TestNewBindableCommands`.

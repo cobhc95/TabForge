@@ -42,6 +42,7 @@ public sealed class OfflineRenderer
         public RenderWavSink? Stem;
         public Audio.ClipPlayer[]? OldClipsReal;
         public (int Volume, int Pan) OldMix;
+        public bool OldSilent;
         public Audio.ClipPlayer[]? OfflineClips;
     }
 
@@ -93,6 +94,8 @@ public sealed class OfflineRenderer
             if (!rs.InMaster && string.IsNullOrEmpty(rs.StemPath)) continue;   // neither in the master nor a stem: nothing to render
             var job = new Job { Chain = chain, Slot = rs.Slot, InMaster = rs.InMaster, StemPath = rs.StemPath ?? "" };
             job.OldMix = chain.GetMix();
+            job.OldSilent = chain.Silent;
+            chain.Silent = false;   // the render's own rules decide: InMaster (the shared mute/solo rule) for the mix, stems ignore mute
             _jobs.Add(job);
             if (rs.Volume >= 0 || rs.Pan >= 0) chain.SetMix(rs.Volume >= 0 ? rs.Volume : job.OldMix.Volume, rs.Pan >= 0 ? rs.Pan : job.OldMix.Pan);
             // Audio clips: always the synchronous offline reader (the live players stream from the disk thread).
@@ -153,6 +156,7 @@ public sealed class OfflineRenderer
                 job.OfflineClips = null;
             }
             job.Chain.SetMix(job.OldMix.Volume, job.OldMix.Pan);
+            job.Chain.Silent = job.OldSilent;
             job.Chain.Panic();
         }
         foreach (var chain in BusChains()) chain.Panic();
@@ -223,7 +227,7 @@ public sealed class OfflineRenderer
             var busIn = new Dictionary<TrackChain, float[][]>(ReferenceEqualityComparer.Instance);
             foreach (var bus in _buses) busIn[bus] = new[] { new float[block], new float[block] };
             long written = 0; var lastReport = Stopwatch.GetTimestamp();
-            var silenceFloor = (float)Math.Pow(10, SilenceDb / 20);
+            var silenceFloor = (float)Gain.FromDb(SilenceDb);
             long silentFrames = 0, lastAudibleEnd = _mainFrames;
             var finalFrames = _hardTotal;
             var masterGain = _spec.MasterGain;

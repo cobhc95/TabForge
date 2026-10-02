@@ -1,23 +1,19 @@
 using TabForge.Documents;
-using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using TabForge.Audio;
+using TabForge.Controllers;
 using TabForge.Models;
 using TabForge.Services;
 using TabForge.Views;
 
 namespace TabForge;
 
-// MainWindow: the clip lanes on the timeline: arm / input choice, lane play buttons, clip moves and trims, the
-// clip commands (keyboard and menu: delete, nudge, lane up/down, copy, cut, paste, duplicate, mute, properties),
-// moving clips between tracks, MIDI clips into notation, and audio files dropped on a track.
+// MainWindow: the clip lanes on the timeline: arm / input choice, lane play buttons and the wiring of the lane events. The clip commands (delete, nudge, lane
+// up/down, copy, cut, paste, duplicate, mute, properties, moves between tracks, MIDI clips into notation, dropped audio files) belong to ClipEditController;
+// ClipHost is the window's side of it.
 public partial class MainWindow
 {
-    private static AudioClip? _clipClipboard;
-    /// <summary>Last clicked lane position (the edit cursor for clips): where Paste goes.</summary>
-    private (TrackModel Track, int Lane, double Sec)? _laneCursor;
-
     private void HookAudioLanes()
     {
         Arrangement.SetSongTime(bar => SongClock.BarStartSec(_project, bar), sec => SongClock.BarAt(_project, sec));
@@ -40,7 +36,7 @@ public partial class MainWindow
             if (index < 0 || index >= _project.Tracks.Count) return;
             var track = _project.Tracks[index];
             if (!DocumentEdits.Run(Doc, _ => ClipLanes.SelectTake(track, lane, midi, add), invalidatesTimeline: false).Changed) return;   // already the playing take: nothing to do
-            ClipsChanged(true);
+            _clips.Changed(Doc, true);
         };
         Arrangement.SetSnap(_settings.Timeline.Snap, () => SongClock.CurrentSec);
         Arrangement.SnapChanged += (_, _) => { SaveSettings(); StatusText.Text = _settings.Timeline.Snap.Enabled ? $"Snapping on (grid {_settings.Timeline.Snap.Grid})" : "Snapping off"; };
@@ -48,34 +44,24 @@ public partial class MainWindow
             SnapSettingsDialog.Show(this, _settings.Timeline.Snap, () => { Arrangement.UpdateSnapButton(); SaveSettings(); });
         Arrangement.LaneClicked += (index, lane, sec) =>
         {
-            if (index >= 0 && index < _project.Tracks.Count) _laneCursor = (_project.Tracks[index], lane, sec);
+            if (index >= 0 && index < _project.Tracks.Count) _clips.LaneCursor = new LaneCursor(_project.Tracks[index], lane, sec);
         };
-        Arrangement.ClipEditStarting += (_, _) => CaptureUndo();
-        Arrangement.ClipEdited += (_, _) => ClipsChanged(true);
-        Arrangement.ClipPropertiesRequested += (_, clip) => EditClipProperties(clip);
+        Arrangement.ClipEditStarting += (_, _) => CheckpointUndo();
+        Arrangement.ClipEdited += (_, _) => _clips.Changed(Doc, true);
+        Arrangement.ClipPropertiesRequested += (_, clip) => _clips.EditProperties(Doc, clip);
         Arrangement.ClipContextRequested += ShowClipMenu;
-        Arrangement.MediaDropped += ApplyMediaDrop;
-        Arrangement.ClipMoveRequested += MoveClipTo;
-        Arrangement.MidiClipToNotation += (clip, from, to) =>
-        {
-            if (from < 0 || to < 0 || from >= _project.Tracks.Count || to >= _project.Tracks.Count) return;
-            var written = MidiClipToTab.Write(_project, _project.Tracks[to], clip, sec => SongClock.BarAt(_project, sec));
-            if (written == 0) { StatusText.Text = "No notes of that MIDI clip fit this track's strings or bars"; RefreshArrangement(); return; }
-            _project.Tracks[from].AudioClips.Remove(clip);
-            Arrangement.SelectedClip = null;
-            ClipsChanged(true);
-            Editor.InvalidateScoreLayout();
-            StatusText.Text = $"Wrote {written} notes from {clip.Name} into {_project.Tracks[to].Name} (undo with Ctrl+Z)";
-        };
-        Subscribe(h => Audio.AudioEngineClient.Instance.StatusChanged += h, h => Audio.AudioEngineClient.Instance.StatusChanged -= h, (Action)(() => { if (!_isClosed) UpdateAudioDeviceStatus(); }));
+        Arrangement.MediaDropped += plan => _clips.ApplyMediaDrop(Doc, plan);
+        Arrangement.ClipMoveRequested += (clip, from, plan, copy) => _clips.MoveTo(Doc, clip, from, plan, copy);
+        Arrangement.MidiClipToNotation += (clip, from, to) => _clips.MidiClipToNotation(Doc, clip, from, to);
+        Subscribe(h => _engine.StatusChanged += h, h => _engine.StatusChanged -= h, (Action)(() => { if (!_isClosed) UpdateAudioDeviceStatus(); }));
         // Clicking the score leaves the clip context (keys go back to note editing).
-        Editor.PreviewMouseLeftButtonDown += (_, _) => { if (Arrangement.SelectedClip is not null) Arrangement.SelectedClip = null; _laneCursor = null; };
+        Editor.PreviewMouseLeftButtonDown += (_, _) => { if (Arrangement.SelectedClip is not null) Arrangement.SelectedClip = null; _clips.LaneCursor = null; };
     }
 
     /// <summary>Status bar: the running audio device, e.g. "ASIO: Audient USB (6 ms · 48 kHz · 128)".</summary>
     private void UpdateAudioDeviceStatus()
     {
-        var engine = Audio.AudioEngineClient.Instance;
+        var engine = _engine;
         var output = engine.IsRunning ? engine.Output : null;
         var configured = _settings.Plugins;
         var asioChosen = configured.Driver == Audio.Contracts.AudioDriverNames.Asio;
@@ -100,294 +86,69 @@ public partial class MainWindow
     private void AudioDevice_Click(object sender, RoutedEventArgs e) => OpenSettingsCategory(SettingsCatalog.AudioVst);
 
     /// <summary>Clip keys are active while a clip is selected, or a lane was clicked and the timeline has focus.</summary>
-    private bool ClipContextActive => Arrangement.SelectedClip is not null || (_laneCursor is not null && Arrangement.TimelineHasFocus);
-
-    private TrackModel? TrackOfClip(AudioClip clip) => _project.Tracks.FirstOrDefault(t => t.AudioClips.Contains(clip));
-
-    private bool RunClipHotkey(string id)
-    {
-        var clip = Arrangement.SelectedClip;
-        var track = clip is null ? null : TrackOfClip(clip);
-        if (clip is not null && track is null) { Arrangement.SelectedClip = null; return false; }
-        switch (id)
-        {
-            case "Clip.Deselect":
-                if (Arrangement.CancelClipDrag()) { StatusText.Text = "Clip move cancelled"; return true; }
-                if (clip is null && _laneCursor is null) return false;
-                Arrangement.SelectedClip = null;
-                _laneCursor = null;
-                StatusText.Text = "Clip deselected";
-                return true;
-            case "Clip.Paste":
-                if (_clipClipboard is null) return false;
-                var target = _laneCursor ?? (track is not null ? (track, clip!.Lane, clip.EndSec) : null);
-                if (target is not { } at) return false;
-                PasteClip(at.Track, at.Lane, at.Sec);
-                return true;
-        }
-        if (clip is null || track is null) return false;
-        switch (id)
-        {
-            case "Clip.Delete": EditClip(() => { track.AudioClips.Remove(clip); Arrangement.SelectedClip = null; }, $"Deleted {clip.Name}"); return true;
-            case "Clip.NudgeLeft": EditClip(() => clip.StartSec = Math.Max(0, clip.StartSec - BeatSecAt(clip.StartSec))); return true;
-            case "Clip.NudgeRight": EditClip(() => clip.StartSec += BeatSecAt(clip.StartSec)); return true;
-            case "Clip.NudgeLeftFine": EditClip(() => clip.StartSec = Math.Max(0, clip.StartSec - 0.01)); return true;
-            case "Clip.NudgeRightFine": EditClip(() => clip.StartSec += 0.01); return true;
-            case "Clip.LaneUp": if (clip.Lane == 0) return true; EditClip(() => clip.Lane--); return true;
-            case "Clip.LaneDown": EditClip(() => { clip.Lane++; ClipLanes.Ensure(track, clip.Lane + 1); }); return true;
-            case "Clip.Copy": _clipClipboard = clip.Clone(); StatusText.Text = $"Copied {clip.Name}"; return true;
-            case "Clip.Cut": _clipClipboard = clip.Clone(); EditClip(() => { track.AudioClips.Remove(clip); Arrangement.SelectedClip = null; }, $"Cut {clip.Name}"); return true;
-            case "Clip.Duplicate": DuplicateClip(track, clip); return true;
-            case "Clip.Mute": EditClip(() => clip.Muted = !clip.Muted, clip.Muted ? $"Unmuted {clip.Name}" : $"Muted {clip.Name}"); return true;
-            case "Clip.Properties": EditClipProperties(clip); return true;
-        }
-        return false;
-    }
-
-    /// <summary>One beat at a song time (the bar's length / its time signature).</summary>
-    private double BeatSecAt(double sec)
-    {
-        var bar = SongClock.BarAt(_project, sec).Bar;
-        var length = SongClock.BarEndSec(_project, bar) - SongClock.BarStartSec(_project, bar);
-        var beats = MusicTime.BarOf(_project, bar)?.TimeSigNum ?? _project.TimeSignatureNumerator;
-        return length > 0 ? length / Math.Max(1, beats) : 60.0 / Math.Max(20, _project.Tempo);
-    }
-
-    /// <summary>
-    /// A clip dragged to a lane (this track or another, a new lane, or below the last track for a new track): moved, or copied with
-    /// Ctrl, with the recording-take rules, as one undo step. Empty lanes close up afterwards when that setting is on.
-    /// </summary>
-    private void MoveClipTo(AudioClip clip, int fromIndex, MediaDropPlan plan, bool copy)
-    {
-        if (!plan.Valid || fromIndex < 0 || fromIndex >= _project.Tracks.Count) return;
-        var source = _project.Tracks[fromIndex];
-        if (!source.AudioClips.Contains(clip)) return;
-        if (!plan.NewTrack && (plan.TrackIndex < 0 || plan.TrackIndex >= _project.Tracks.Count)) return;
-        TrackModel target = null!;
-        AudioClip placed = null!;
-        DocumentEdits.Run(Doc, p =>
-        {
-            if (plan.NewTrack)
-            {
-                target = _trackController.CreateTrack(p, plan.NewTrackKind);
-                if (clip.Name.Length > 0) target.Name = clip.Name;
-                Plugins.AutoChains.Apply(_settings.Plugins, target);
-                p.Tracks.Add(target);
-            }
-            else target = p.Tracks[plan.TrackIndex];
-            placed = MediaDrop.ApplyMove(source, target, clip, plan.Lane, plan.StartSec, copy, _settings.Timeline.AutoRemoveEmptyLanes);
-            return true;
-        }, invalidatesTimeline: false);
-        Arrangement.SelectedClip = placed;
-        if (plan.NewTrack) _midi.Rebuild(_project);
-        ClipsChanged(true);
-        if (plan.NewTrack)
-        {
-            TrackMixerGrid.SelectedIndex = _project.Tracks.Count - 1;
-            RefreshInstrument();
-            ScheduleFitTimelineToTracks();
-        }
-        StatusText.Text = $"{(copy ? "Copied" : "Moved")} {clip.Name} to {(plan.NewTrack ? $"a new track ({target.Name})" : target.Name)}, lane {placed.Lane + 1}";
-    }
-
-    private void EditClip(Action change, string? status = null)
-    {
-        DocumentEdits.Run(Doc, _ => { change(); return true; }, invalidatesTimeline: false);
-        ClipsChanged(true);
-        if (status is not null) StatusText.Text = status;
-    }
-
-    /// <summary>After any clip change: mark dirty, tell the engine (and the MIDI timeline), redraw.</summary>
-    private void ClipsChanged(bool refreshRows = false)
-    {
-        _project.IsDirty = true;
-        if (_settings.Timeline.AutoRemoveEmptyLanes)
-            foreach (var track in _project.Tracks) ClipLanes.Compact(track);   // empty lanes close up (armed tracks are skipped inside)
-        WaveformCache.CancelUnused(_project.Tracks.SelectMany(t => t.AudioClips).Where(c => !c.IsMidi).Select(c => c.File), Doc.Media);   // a removed clip stops being read
-        SyncAudioEngine();
-        if (_project.Tracks.Any(t => t.AudioClips.Any(c => c.IsMidi)) || _midiClipsPlayed) _midi.Rebuild(_project);
-        _midiClipsPlayed = _project.Tracks.Any(t => t.AudioClips.Any(c => c.IsMidi));
-        if (refreshRows) RefreshTracks();
-        RefreshArrangement();
-        UpdateTitle();
-    }
-
-    private bool _midiClipsPlayed;
-
-    private void EditClipProperties(AudioClip clip)
-    {
-        var before = clip.Clone();
-        CaptureUndo();
-        if (!ClipPropertiesDialog.Show(this, clip)) return;
-        if (clip.GainDb == before.GainDb && clip.Pitch == before.Pitch && clip.Speed == before.Speed && clip.Muted == before.Muted && clip.Name == before.Name) return;
-        ClipsChanged();
-    }
-
-    private void DuplicateClip(TrackModel track, AudioClip clip) => EditClip(() =>
-    {
-        var copy = clip.Clone();
-        copy.StartSec = clip.EndSec;
-        copy.Lane = clip.Lane;
-        if (track.AudioClips.Any(c => c.Lane == copy.Lane && c.Overlaps(copy.StartSec, copy.EndSec))) copy.Lane = ClipLanes.FreeLane(track, copy.StartSec, copy.EndSec);
-        ClipLanes.Ensure(track, copy.Lane + 1);
-        track.AudioClips.Add(copy);
-        Arrangement.SelectedClip = copy;
-    }, $"Duplicated {clip.Name}");
-
-    private void PasteClip(TrackModel track, int lane, double sec) => EditClip(() =>
-    {
-        var pasted = _clipClipboard!.Clone();
-        pasted.StartSec = Math.Max(0, sec);
-        pasted.Lane = track.AudioClips.Any(c => c.Lane == lane && c.Overlaps(pasted.StartSec, pasted.EndSec))
-            ? ClipLanes.FreeLane(track, pasted.StartSec, pasted.EndSec) : lane;
-        ClipLanes.Ensure(track, pasted.Lane + 1);
-        track.AudioClips.Add(pasted);
-        Arrangement.SelectedClip = pasted;
-        _laneCursor = (track, pasted.Lane, pasted.EndSec);
-    }, $"Pasted {_clipClipboard!.Name}");
+    private bool ClipContextActive => Arrangement.SelectedClip is not null || (_clips.LaneCursor is not null && Arrangement.TimelineHasFocus);
 
     private void ShowClipMenu(int trackIndex, AudioClip? clip, double sec)
     {
         if (trackIndex < 0 || trackIndex >= _project.Tracks.Count) return;
+        var doc = Doc;
         var track = _project.Tracks[trackIndex];
-        var lane = _laneCursor is { } cursor && ReferenceEquals(cursor.Track, track) ? cursor.Lane : clip?.Lane ?? 0;
-        var state = new ClipMenuState(clip is not null, clip?.IsMidi ?? false, _clipClipboard is not null, clip?.Muted ?? false);
+        var lane = _clips.LaneCursor is { } cursor && ReferenceEquals(cursor.Track, track) ? cursor.Lane : clip?.Lane ?? 0;
+        var state = new ClipMenuState(clip is not null, clip?.IsMidi ?? false, ClipClipboard.HasClip, clip?.Muted ?? false);
         var menu = NewTimelineMenu(clip is null ? "Empty lane options" : "Clip options", TimelineMenus.Clip(state, MenuKey), command =>
         {
             switch (command)
             {
-                case TimelineCommand.ClipCopy when clip is not null: _clipClipboard = clip.Clone(); break;
+                case TimelineCommand.ClipCopy when clip is not null: ClipClipboard.Copy(clip); break;
                 case TimelineCommand.ClipCut when clip is not null:
-                    _clipClipboard = clip.Clone();
-                    EditClip(() => { track.AudioClips.Remove(clip); });
+                    ClipClipboard.Copy(clip);
+                    _clips.Remove(doc, track, clip, null, clearSelection: false);
                     break;
-                case TimelineCommand.ClipPaste: PasteClip(track, lane, sec); break;
-                case TimelineCommand.ClipDuplicate when clip is not null: DuplicateClip(track, clip); break;
-                case TimelineCommand.ClipDelete when clip is not null:
-                    EditClip(() => { track.AudioClips.Remove(clip); Arrangement.SelectedClip = null; });
-                    break;
-                case TimelineCommand.ClipMute when clip is not null: EditClip(() => clip.Muted = !clip.Muted); break;
-                case TimelineCommand.ClipProperties when clip is not null: EditClipProperties(clip); break;
-                case TimelineCommand.ClipWriteNotation when clip is not null:
-                    var written = 0;
-                    DocumentEdits.Run(Doc, p =>   // writes notes into the score: the timeline is invalidated
-                    {
-                        written = MidiClipToTab.Write(p, track, clip, s => SongClock.BarAt(p, s));
-                        if (written == 0) return false;
-                        track.AudioClips.Remove(clip);
-                        return true;
-                    });
-                    if (written == 0) { StatusText.Text = "No notes of that MIDI clip fit this track's strings or bars"; return; }
-
-                    ClipsChanged(true);
-                    Editor.InvalidateScoreLayout();
-                    StatusText.Text = $"Wrote {written} notes into {track.Name}";
-                    break;
+                case TimelineCommand.ClipPaste: _clips.Paste(doc, track, lane, sec); break;
+                case TimelineCommand.ClipDuplicate when clip is not null: _clips.Duplicate(doc, track, clip); break;
+                case TimelineCommand.ClipDelete when clip is not null: _clips.Remove(doc, track, clip, null, clearSelection: true); break;
+                case TimelineCommand.ClipMute when clip is not null: _clips.Edit(doc, () => clip.Muted = !clip.Muted); break;
+                case TimelineCommand.ClipProperties when clip is not null: _clips.EditProperties(doc, clip); break;
+                case TimelineCommand.ClipWriteNotation when clip is not null: _clips.WriteNotation(doc, track, clip); break;
                 case TimelineCommand.ClipAddAudioFile:
                     var dialog = new Microsoft.Win32.OpenFileDialog
                     {
                         Filter = "Audio files|" + string.Join(";", WaveformCache.Extensions.Select(x => "*" + x)) + "|All files|*.*",
                         Multiselect = true
                     };
-                    if (dialog.ShowDialog(this) == true) AddAudioFiles(trackIndex, sec, dialog.FileNames);
+                    if (dialog.ShowDialog(this) == true) _clips.AddAudioFiles(doc, trackIndex, sec, dialog.FileNames);
                     break;
             }
         });
         menu.IsOpen = true;
     }
 
-    /// <summary>Audio files chosen with "Add audio file…" on a lane: placed exactly like files dropped at that spot.</summary>
-    private void AddAudioFiles(int trackIndex, double sec, string[] files)
+    private sealed class ClipHost : IClipHost
     {
-        if (trackIndex < 0 || trackIndex >= _project.Tracks.Count) return;
-        var items = files.Select(f => MediaDropSession.Measure(f, DropItemKind.Audio, MediaDrop.IsTransient(f), Doc.Media)).ToList();
-        var lane = _laneCursor is { } cursor && ReferenceEquals(cursor.Track, _project.Tracks[trackIndex]) ? cursor.Lane : 0;
-        ApplyMediaDrop(MediaDrop.Plan(_project, items, trackIndex, lane, sec, SongQuarterMap.For(_project)));
-    }
+        private readonly MainWindow _window;
 
-    /// <summary>
-    /// Audio and MIDI files dropped on the timeline (or chosen from the lane menu), as one undo step: temp and virtual files are
-    /// copied into the song's media folder first (plug-ins delete their drag files), files on a network drive are measured now,
-    /// a drop below the last track adds a track of a fitting kind, and the clips go on the planned lane with the take rules.
-    /// </summary>
-    private void ApplyMediaDrop(MediaDropPlan plan)
-    {
-        if (!plan.Valid) { StatusText.Text = plan.Problem ?? "Nothing to add there"; return; }
-        if (!plan.NewTrack && (plan.TrackIndex < 0 || plan.TrackIndex >= _project.Tracks.Count)) return;
-        var media = Doc.Media;   // the document this drop was made on: captured once, the whole method is synchronous
-        var mediaFolder = MediaFolders.ForSong(_currentPath);
-        var items = new List<DropItem>();
-        var problems = new List<string>();
-        foreach (var planned in plan.Clips)
-        {
-            var item = planned.Item;
-            if (item.Deferred) { problems.Add($"{item.Name} could not be read from the drag"); continue; }
-            if (item.IsMidi && item.Midi is null)
-            {
-                // A MIDI file on a network or removable drive is read only now that the user dropped it.
-                item = MediaDropSession.ReadMidi(item.Path, item.Transient);
-                if (item.Problem is { } why) { problems.Add(why); continue; }
-            }
-            try
-            {
-                if (!item.IsMidi && item.Transient)
-                    item = new DropItem { Path = MediaDrop.KeepCopy(item.Path, mediaFolder), Name = item.Name, Kind = item.Kind, Seconds = item.Seconds };
-                if (!item.IsMidi && item.Seconds <= 0)
-                {
-                    // The user chose this file: a network or removable folder is allowed (and remembered for this song below).
-                    item.Seconds = WaveformCache.LengthOf(item.Path, media, userPicked: true);
-                    if (item.Seconds <= 0) { problems.Add($"{item.Name} could not be read as audio"); continue; }
-                }
-                items.Add(item);
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException or ArgumentException)
-            {
-                problems.Add($"{item.Name} could not be kept: {ex.Message}");
-            }
-        }
-        if (items.Count == 0) { StatusText.Text = problems.FirstOrDefault() ?? "Those files could not be added"; return; }
+        public ClipHost(MainWindow window) => _window = window;
 
-        var time = SongQuarterMap.For(_project);
-        CaptureUndo();   // not a DocumentEdits.Run: the plan is recomputed from the new track's final state and folder approvals (events) interleave with the mutation
-        int trackIndex;
-        if (plan.NewTrack)
+        public AppSettings Settings => _window._settings;
+        public bool IsShown(DocumentSession document) => ReferenceEquals(document, _window.Doc);
+        public AudioClip? SelectedClip { get => _window.Arrangement.SelectedClip; set => _window.Arrangement.SelectedClip = value; }
+        public bool CancelClipDrag() => _window.Arrangement.CancelClipDrag();
+        public void SetStatus(string text) => _window.StatusText.Text = text;
+        public void CheckpointUndo() => _window.CheckpointUndo();
+        public void SyncAudioEngine() => _window.SyncAudioEngine();
+        public void RefreshTracks() => _window.RefreshTracks();
+        public void RefreshArrangement() => _window.RefreshArrangement();
+        public void RefreshAfterSongGrew() => _window.RefreshAfterEdit(EditRefresh.Score | EditRefresh.TimelineGeometry);
+        public void InvalidateScoreLayout() => _window.Editor.InvalidateScoreLayout();
+        public void UpdateTitle() => _window.UpdateTitle();
+        public void ShowNewTrack(int index)
         {
-            var created = _trackController.CreateTrack(_project, plan.NewTrackKind);
-            created.Name = items[0].Name.Length > 0 ? items[0].Name : created.Name;
-            Plugins.AutoChains.Apply(_settings.Plugins, created);
-            _project.Tracks.Add(created);
-            trackIndex = _project.Tracks.Count - 1;
+            _window.TrackMixerGrid.SelectedIndex = index;
+            _window.RefreshInstrument();
+            _window.ScheduleFitTimelineToTracks();
         }
-        else trackIndex = plan.TrackIndex;
-        var track = _project.Tracks[trackIndex];
-        // Planned again with the final lengths: a file measured only now can change the span, and so the free lane.
-        var final = MediaDrop.Plan(_project, items, trackIndex, plan.Lane, plan.StartSec, time);
-        var drums = track.Kind == TrackKind.Drums || track.MidiChannel == 9;
-        var clips = new List<AudioClip>();
-        foreach (var planned in final.Clips)
-        {
-            var item = planned.Item;
-            if (item.Midi is { } midi)
-            {
-                var (notes, length) = MidiFileImport.ToClipNotes(midi, planned.StartSec, time, drums);
-                clips.Add(new AudioClip { Name = item.Name, StartSec = planned.StartSec, SourceLengthSec = length, FileLengthSec = length, Notes = notes });
-            }
-            else clips.Add(new AudioClip { File = item.Path, Name = item.Name, StartSec = planned.StartSec, SourceLengthSec = item.Seconds, FileLengthSec = item.Seconds });
-        }
-        foreach (var clip in clips.Where(c => !c.IsMidi))
-            if (MediaPathPolicy.Classify(clip.File, media.BaseDirectory) is { Remote: true } picked) MediaAccess.Approve(picked, media);
-        MediaDrop.AddClips(track, clips, final.Lane);
-        Arrangement.SelectedClip = clips[^1];
-        if (plan.NewTrack) _midi.Rebuild(_project);
-        ClipsChanged(true);
-        if (plan.NewTrack)
-        {
-            TrackMixerGrid.SelectedIndex = trackIndex;
-            RefreshInstrument();
-            ScheduleFitTimelineToTracks();
-        }
-        var what = clips.Count == 1 ? clips[0].Name : $"{clips.Count} files";
-        var where = plan.NewTrack ? $"a new track ({track.Name})" : final.NewLane ? $"{track.Name}, new lane {final.Lane + 1}" : track.Name;
-        StatusText.Text = $"Added {what} to {where}" + (problems.Count > 0 ? $" ({problems.Count} skipped: {problems[0]})" : "");
+        public bool ShowClipProperties(AudioClip clip) => ClipPropertiesDialog.Show(_window, clip);
+        public DropItem MeasureDroppedFile(string file, DropItemKind kind, bool transient, MediaContext media) => MediaDropSession.Measure(file, kind, transient, media);
+        public DropItem ReadDroppedMidi(string file, bool transient) => MediaDropSession.ReadMidi(file, transient);
     }
 }

@@ -1,6 +1,6 @@
 namespace TabForge.Audio.Contracts;
 
-/// <summary>D4: the one file-name sanitiser (UI project and audio engine): invalid characters become '_', edges are trimmed, Windows reserved device names are prefixed.</summary>
+/// <summary>The one file-name sanitiser (UI project and audio engine): invalid characters become '_', edges are trimmed, Windows reserved device names are prefixed.</summary>
 public static class SafeFileNames
 {
     public static string SafeFileName(string? name, string fallback, int maxLength = 0)

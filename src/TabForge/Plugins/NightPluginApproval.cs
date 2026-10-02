@@ -25,11 +25,11 @@ public sealed record NightRoots(string[] Vst2Folders, string[] Vst3Folders, stri
 }
 
 /// <summary>
-/// Audit 5 hook H-5. <c>--profile &lt;folder&gt; --approve-night-plugins</c> pre-approves, in that profile's plug-in trust store only, the plug-ins a
-/// night run may use: Nexus, Superior Drummer 3, FabFilter, REAPER's bundled FX (Plugins\FX\*.dll of the REAPER install) and TabForge's crash-test DLL
+/// <c>--profile &lt;folder&gt; --approve-night-plugins</c> pre-approves, in that profile's plug-in trust store only, the plug-ins an
+/// unattended stress run may use: Nexus, Superior Drummer 3, FabFilter, REAPER's bundled FX (Plugins\FX\*.dll of the REAPER install) and TabForge's crash-test DLL
 /// (native\crashtest\bin). Each is approved by exact path through <see cref="PluginTrust.Approve"/> (path plus hash where the location is
 /// user-writable) and nothing else is touched. With <c>all</c> (<c>--approve-night-plugins all</c>) it approves every plug-in the normal scanner finds in the standard VST2/VST3 folders instead
-/// (owner's choice for stress testing), by the same rules. Without <c>--profile</c> the flag is refused either way: the user's real approvals are never changed.
+/// (for stress testing), by the same rules. Without <c>--profile</c> the flag is refused either way: the user's real approvals are never changed.
 /// </summary>
 public static class NightPluginApproval
 {
@@ -72,7 +72,7 @@ public static class NightPluginApproval
         roots ??= NightRoots.Default();
         var paths = Find(roots);
         if (AllRequested(args))   // every installed plug-in, still only inside a profile (checked above)
-            foreach (var plugin in VstScannerService.Scan(roots.ScanRoots()))
+            foreach (var plugin in VstScannerService.Scan(roots.ScanRoots(), CancellationToken.None, null, settings))
                 if (!paths.Contains(plugin.Path, StringComparer.OrdinalIgnoreCase)) paths.Add(plugin.Path);
         foreach (var path in paths)
         {
@@ -94,7 +94,7 @@ public static class NightPluginApproval
         foreach (var name in new[] { "Nexus.vst3", "Superior Drummer 3.vst3" })
             foreach (var folder in roots.Vst3Folders) Add(FindNamed(folder, name, file: null));
 
-        // FabFilter (the owner's heavyweight test effects): "FabFilter *.vst3" in the VST3 folders, directly or one vendor folder down.
+        // FabFilter (heavyweight test effects): "FabFilter *.vst3" in the VST3 folders, directly or one vendor folder down.
         foreach (var folder in roots.Vst3Folders)
         {
             try

@@ -2,6 +2,9 @@ using TabForge.Models;
 
 namespace TabForge.Services;
 
+// Owns: track colours by mixer group.
+// Does not own: the colour settings storage and the track list drawing.
+// Tests: TestClips.
 /// <summary>
 /// Track colours by group: every track of a mixer group (guitars, basses, keys, drums, other...) gets that group's
 /// colour. The group colours are the user's (Settings: Appearance), with sensible defaults; colouring a range of

@@ -36,6 +36,7 @@ public static class DocumentEdits
         using var timeline = project.BeginTimelineBatch();   // a model step that marks the timeline itself (bar grid) and this edit's own mark are one invalidation
         var transaction = before is null ? document.Undo.BeginTransaction(project) : null;
         var shiftBefore = (int[])document.TuningShift.Clone();
+        var skipBefore = document.SkipRanges.ToArray();
         T? value;
         try { value = mutate(project); }
         catch
@@ -49,10 +50,33 @@ public static class DocumentEdits
             return new EditResult<T>(false, null, default);
         }
         var capture = transaction is not null ? document.Undo.Commit(transaction) : document.Undo.Capture(before!.Value);
-        if (capture.Stored) { document.Playback.RememberBarMapping(capture.Snapshot); document.RememberTuningShift(capture.Snapshot.State, shiftBefore); }
-        project.IsDirty = true;
-        if (invalidatesTimeline) project.MarkTimelineChanged();
+        if (capture.Stored)
+        {
+            document.Playback.RememberBarMapping(capture.Snapshot);
+            document.RememberTuningShift(capture.Snapshot.State, shiftBefore);
+            if (!skipBefore.AsSpan().SequenceEqual(document.SkipRanges.ToArray())) document.RememberSkipRanges(capture.Snapshot.State, skipBefore);   // only an edit that moved them
+        }
+        MarkChanged(document, invalidatesTimeline);
         return new EditResult<T>(true, value, capture);
+    }
+
+    /// <summary>
+    /// Stores the document's current state as the undo step of a change that follows (a drag, a dialog the user may cancel, a gesture whose model
+    /// changes arrive over several events). Nothing is marked changed here: the change that follows marks it. The returned capture is what
+    /// <see cref="UndoController.Discard"/> takes when the change is cancelled.
+    /// </summary>
+    public static UndoCapture Checkpoint(DocumentSession document)
+    {
+        var capture = document.Undo.Capture(document.Project);
+        if (capture.Stored) document.Playback.RememberBarMapping(capture.Snapshot);
+        return capture;
+    }
+
+    /// <summary>The dirty change and timeline invalidation of a change whose undo step was recorded separately (a committed transaction, a <see cref="Checkpoint"/>).</summary>
+    public static void MarkChanged(DocumentSession document, bool invalidatesTimeline = true)
+    {
+        document.Project.IsDirty = true;
+        if (invalidatesTimeline) document.Project.MarkTimelineChanged();
     }
 
     /// <summary>Undo one step. Returns the restored state (the view then refreshes), or null when there is nothing to undo.</summary>
@@ -63,8 +87,10 @@ public static class DocumentEdits
         if (!document.Undo.TryUndo(current, out var target)) return null;
         document.Playback.RememberBarMapping(current);
         document.RememberTuningShift(current.State);
+        document.RememberSkipRangesForReturn(current.State, target.State);
         Restore(document, target);
         document.RestoreTuningShift(target.State);
+        document.RestoreSkipRanges(target.State);
         return target;
     }
 
@@ -76,8 +102,10 @@ public static class DocumentEdits
         if (!document.Undo.TryRedo(current, out var target)) return null;
         document.Playback.RememberBarMapping(current);
         document.RememberTuningShift(current.State);
+        document.RememberSkipRangesForReturn(current.State, target.State);
         Restore(document, target);
         document.RestoreTuningShift(target.State);
+        document.RestoreSkipRanges(target.State);
         return target;
     }
 
@@ -85,8 +113,7 @@ public static class DocumentEdits
     {
         // Unchanged bars move over from the song being replaced; only the bars the undo changes are rebuilt.
         document.Project = document.Undo.Restore(snapshot, document.Project);
-        document.Project.IsDirty = true;
-        document.Project.MarkTimelineChanged();   // A5-08: undo / redo may restore in place
+        MarkChanged(document);   // undo / redo may restore in place
         // Undoing back to the saved state clears the "*": the exact content check runs here only.
         if (document.IsCleanContent(snapshot)) document.Project.IsDirty = false;
     }

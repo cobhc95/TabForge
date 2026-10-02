@@ -5,7 +5,6 @@ using System.Text;
 using TabForge.Models;
 using TabForge.Presets;
 using TabForge.Services;
-using TabForge.Views;
 
 namespace TabForge.Documents;
 
@@ -22,13 +21,17 @@ public sealed class DocumentSession
     public DocumentSession()
     {
         Playback = new DocumentPlaybackState();
+        Playback.Clock.OwnerKey = this;
         _project.DisplayStateChanged += OnProjectDisplayState;
+        _project.TimelineMarked += OnProjectTimelineMarked;
     }
 
     public DocumentSession(TabForge.Playback.PlaybackEngine playbackEngine)
     {
         Playback = new DocumentPlaybackState(playbackEngine);
+        Playback.Clock.OwnerKey = this;
         _project.DisplayStateChanged += OnProjectDisplayState;
+        _project.TimelineMarked += OnProjectTimelineMarked;
     }
 
     private SongProject _project = TemplateFactory.Blank();
@@ -39,12 +42,17 @@ public sealed class DocumentSession
         {
             if (ReferenceEquals(_project, value)) return;
             _project.DisplayStateChanged -= OnProjectDisplayState;
+            _project.TimelineMarked -= OnProjectTimelineMarked;
             _project = value;
             _project.DisplayStateChanged += OnProjectDisplayState;
+            _project.TimelineMarked += OnProjectTimelineMarked;
             DisplayStateChanged?.Invoke(this, EventArgs.Empty);
         }
     }
     private void OnProjectDisplayState(object? sender, EventArgs e) => DisplayStateChanged?.Invoke(this, EventArgs.Empty);
+
+    /// <summary>Any song change that affects timing (every edit path, paste, bar grid, undo and redo) reaches playback here: while the song plays, the future bars are re-spliced.</summary>
+    private void OnProjectTimelineMarked(SongProject project) => Playback.NotifyScoreEdited(project);
 
     /// <summary>Raised when what a tab shows (name, tooltip, unsaved mark) may have changed: a save, a rename, an edit, an undo.</summary>
     public event EventHandler? DisplayStateChanged;
@@ -104,6 +112,22 @@ public sealed class DocumentSession
     internal void RestoreTuningShift(ProjectState state)
     {
         if (_tuningByState.TryGetValue(state, out var shift)) Array.Copy(shift, TuningShift, TuningShift.Length);
+    }
+
+    // The skipped areas follow the bars of a structural edit (a section move, insert or delete) and belong to the song state they were set with:
+    // undo and redo restore them together with the bars.
+    private readonly System.Runtime.CompilerServices.ConditionalWeakTable<ProjectState, (int Start, int End)[]> _skipByState = new();
+    internal void RememberSkipRanges(ProjectState state, (int Start, int End)[] ranges) => _skipByState.AddOrUpdate(state, ((int Start, int End)[])ranges.Clone());
+    /// <summary>Undo or redo is about to leave <paramref name="current"/> for <paramref name="target"/>: when the target carries skipped areas (an edit moved them), the current ones are kept for the way back.</summary>
+    internal void RememberSkipRangesForReturn(ProjectState current, ProjectState target)
+    {
+        if (_skipByState.TryGetValue(target, out _)) _skipByState.AddOrUpdate(current, SkipRanges.ToArray());
+    }
+    internal void RestoreSkipRanges(ProjectState state)
+    {
+        if (!_skipByState.TryGetValue(state, out var ranges)) return;
+        SkipRanges.Clear();
+        SkipRanges.AddRange(ranges);
     }
 
     /// <summary>
@@ -175,7 +199,7 @@ public sealed class DocumentSession
         Media.Close();   // queued waveform / drop / sync work for this song is dropped when it completes
         Audio.WaveformCache.Forget(Media);   // its outlines are not kept in the cache's memory budget after the song is gone
         Playback.Dispose();
-        if (Playback.Routing is not null) Audio.AudioEngineClient.Instance.ReleaseOwner(this);
+        Playback.Routing?.ReleaseEngineOwner(this);
     }
 }
 
@@ -184,6 +208,18 @@ public sealed class DocumentManager
 {
     private readonly List<DocumentSession> _documents = new();
     private int _activeIndex = -1;
+
+    /// <summary>A manager whose documents all read <paramref name="preferences"/> (null: a private instance, for a manager built on its own).</summary>
+    public DocumentManager(TabForge.Playback.PlaybackPreferences? preferences = null) => Preferences = preferences ?? new TabForge.Playback.PlaybackPreferences();
+
+    /// <summary>The playback preferences every document that joins this manager has its engine read (the application's, shared by every window).</summary>
+    public TabForge.Playback.PlaybackPreferences Preferences { get; }
+
+    private DocumentSession Adopted(DocumentSession session)
+    {
+        session.Playback.Engine.Preferences = Preferences;
+        return session;
+    }
 
     public event EventHandler? Changed;
     public event EventHandler? ActiveChanged;
@@ -205,7 +241,7 @@ public sealed class DocumentManager
     {
         get
         {
-            if (_documents.Count == 0) _documents.Add(DocumentSession.Blank());
+            if (_documents.Count == 0) _documents.Add(Adopted(DocumentSession.Blank()));
             if (_activeIndex < 0 || _activeIndex >= _documents.Count) _activeIndex = _documents.Count - 1;
             return _documents[_activeIndex];
         }
@@ -213,7 +249,7 @@ public sealed class DocumentManager
 
     public DocumentSession Add(DocumentSession session, bool activate = true)
     {
-        _documents.Add(session);
+        _documents.Add(Adopted(session));
         if (activate) _activeIndex = _documents.Count - 1;
         RaiseChanged(activeMoved: activate);
         return session;
@@ -239,7 +275,7 @@ public sealed class DocumentManager
         if (index < 0 || index >= _documents.Count) return false;
         var wasActive = index == _activeIndex;
         _documents.RemoveAt(index);
-        if (_documents.Count == 0) _documents.Add(DocumentSession.Blank());
+        if (_documents.Count == 0) _documents.Add(Adopted(DocumentSession.Blank()));
         if (wasActive) _activeIndex = Math.Clamp(index, 0, _documents.Count - 1);
         else if (index < _activeIndex) _activeIndex--;
         RaiseChanged(activeMoved: true);
@@ -284,7 +320,7 @@ public sealed class DocumentManager
     public DocumentSession Insert(DocumentSession doc, int index)
     {
         index = Math.Clamp(index, 0, _documents.Count);
-        _documents.Insert(index, doc);
+        _documents.Insert(index, Adopted(doc));
         _activeIndex = index;
         RaiseChanged(activeMoved: true);
         return doc;
@@ -294,7 +330,7 @@ public sealed class DocumentManager
     public bool Replace(int index, DocumentSession session)
     {
         if (index < 0 || index >= _documents.Count) return false;
-        _documents[index] = session;
+        _documents[index] = Adopted(session);
         _activeIndex = index;
         RaiseChanged(activeMoved: true);
         return true;
@@ -304,7 +340,7 @@ public sealed class DocumentManager
     public void ReplaceAll(DocumentSession session)
     {
         _documents.Clear();
-        _documents.Add(session);
+        _documents.Add(Adopted(session));
         _activeIndex = 0;
         RaiseChanged(activeMoved: true);
     }

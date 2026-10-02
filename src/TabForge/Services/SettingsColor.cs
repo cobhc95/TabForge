@@ -3,6 +3,9 @@ using System.Globalization;
 
 namespace TabForge.Services;
 
+// Owns: parsing and formatting the colour values stored in settings.
+// Does not own: applying the colours (ThemeService).
+// Tests: TestTabUi.
 /// <summary>Framework-neutral validation for color values persisted in application settings.</summary>
 public static class SettingsColor
 {

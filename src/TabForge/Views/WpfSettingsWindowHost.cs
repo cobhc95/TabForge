@@ -16,6 +16,8 @@ internal sealed class SettingsWindowActions
     public Func<Window, List<string>>? ManageQuarantine { get; init; }
     /// <summary>Applies the default instrument view to every track of the window's open song.</summary>
     public Action<string>? ShowAllTracksAs { get; init; }
+    /// <summary>Runs the manual update check now (even with the automatic check off); its dialog is owned by the given Settings window.</summary>
+    public Action<Window>? CheckForUpdatesNow { get; init; }
 }
 
 /// <summary>Shows the native settings dialog on the owning WPF application's dispatcher.</summary>
@@ -37,7 +39,9 @@ public sealed class WpfSettingsWindowHost : ISettingsWindowHost
         var baseline = SettingsMigration.Clone(current);
         try
         {
-            var dialog = new PreferencesWindow(current, _owner, apply, preview, _actions);
+            PreferencesWindow dialog;
+            using (TabForge.Views.SlowTrace.Measure("settings window construct", 0)) dialog = new PreferencesWindow(current, _owner, apply, preview, _actions);
+            dialog.ContentRendered += (_, _) => TabForge.Views.SlowTrace.Mark("settings window first frame");
             return DialogHost.ShowModal(dialog) == true ? SettingsShowResult.Applied : SettingsShowResult.Cancelled;
         }
         catch (Exception ex)

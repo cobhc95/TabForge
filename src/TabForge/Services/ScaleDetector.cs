@@ -10,6 +10,9 @@ public sealed record ScaleCandidate(string Root, string Scale, double Coverage, 
     public string NoteList => string.Join(" ", MusicTheoryService.ScaleNotes(Root, Scale));
 }
 
+// Owns: finding which scales the notes of a passage belong to.
+// Does not own: the scale highlight display.
+// Tests: TestScaleFinder.
 /// <summary>
 /// "Find scale": which scales the notes of a passage (or the whole song) belong to. Notes are weighted by
 /// length, so passing tones count less than held notes; drum tracks and dead notes are ignored.

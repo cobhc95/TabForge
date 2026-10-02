@@ -4,6 +4,7 @@ using System.Windows.Media;
 using TabForge.Models;
 using TabForge.Views;
 using static TabForge.Diagnostics.LayoutAudit;
+using TabForge.Views.Score;
 
 namespace TabForge.Diagnostics;
 
@@ -257,12 +258,12 @@ internal sealed class BarChecker
         // section title
         var marker = P.Markers.FirstOrDefault(m => m.MeasureIndex == Bar);
         var title = marker?.Title ?? M.SectionName;
-        if (V.Editor.ShowSectionHeadings && !string.IsNullOrWhiteSpace(title) && !HasText(title)) Miss("section-title", $"\"{title}\"");
+        if (V.Editor.Appearance.ShowSectionHeadings && !string.IsNullOrWhiteSpace(title) && !HasText(title)) Miss("section-title", $"\"{title}\"");
 
         // tempo change and swing
         var tempo = M.TempoChange is { } tc ? $"♩ = {tc}" : Bar == 0 && P.Tempo > 0 ? $"♩ = {P.Tempo}" : null;
         var feel = TripletFeels.Effective(M);
-        var swing = feel != TripletFeels.None ? TabEditorControl.SwingSymbol(feel) : null;
+        var swing = feel != TripletFeels.None ? ScoreMarkText.SwingSymbol(feel) : null;
         if (tempo is not null && !HasText(tempo)) Miss("tempo", tempo);
         var expectedNotes = (tempo is not null ? 1 : 0) + (M.MidBarTempos?.Count ?? 0) + (swing is not null && swing.Contains('♩') ? 1 : 0);
         if (CountSub("♩") > expectedNotes) Extra("tempo", $"a tempo mark is drawn but the data has none ({CountSub("♩")} vs {expectedNotes})");
@@ -284,7 +285,7 @@ internal sealed class BarChecker
 
             var key = M.KeySignature ?? P.KeySignature; var prevKey = previous is null ? 0 : previous.KeySignature ?? P.KeySignature;
             var keyChanges = Bar == 0 || key != prevKey || (M.KeySignatureMinor ?? P.KeySignatureMinor) != (previous!.KeySignatureMinor ?? P.KeySignatureMinor);
-            var (naturals, accidentals) = keyChanges ? TabEditorControl.KeySignatureGlyphs(prevKey, key) : (0, 0);
+            var (naturals, accidentals) = keyChanges ? ScoreClefKey.KeySignatureGlyphs(prevKey, key) : (0, 0);
             var expectedKey = naturals + accidentals;
             var zoneRight = X + 30 + expectedKey * 10.5 + 8;
             var drawnKey = Texts.Where(t => Math.Abs(t.Size - 15 * K) < 0.6 * K && CenterX(t) >= X + 24 && CenterX(t) <= zoneRight)
@@ -322,14 +323,14 @@ internal sealed class BarChecker
 
         foreach (var raw in M.Directions.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
-            var text = TabEditorControl.DirectionText(raw).Text;
+            var text = ScoreMarkText.DirectionText(raw).Text;
             if (!HasText(text)) Miss("direction", $"{raw} (\"{text}\")");
         }
         if (M.FreeTime && !HasText("free")) Miss("free-time", "free");
         // the simile mark and the coda sign are drawn with the same character (U+1D10C); a coda direction adds one (or two) of them
         const string CodaSign = "\U0001D10C";
         var codas = M.Directions.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Sum(raw => Occurrences(TabEditorControl.DirectionText(raw).Text, CodaSign));
+            .Sum(raw => Occurrences(ScoreMarkText.DirectionText(raw).Text, CodaSign));
         var similes = (M.SimileOneBar ? 1 : 0) + (M.SimileTwoBar ? 2 : 0);
         // The repeat-bar sign is vector drawing (one heavy slash per repeated bar, centred in the bar), so only coda directions show up as glyphs.
         Count("coda", codas, CountSub(CodaSign), "coda mark");
@@ -337,7 +338,7 @@ internal sealed class BarChecker
         Count("simile", similes, simileSlashes, "repeat-bar sign slashes");
 
         // dynamics (first note of the track, then each change)
-        var expectedDynamics = V.Editor.ShowDynamics ? V.DynamicsFor(Bar) : new List<string>();
+        var expectedDynamics = V.Editor.Appearance.ShowDynamics ? V.DynamicsFor(Bar) : new List<string>();
         var left = new List<string>(expectedDynamics);
         foreach (var name in Texts.Where(t => t.Font.Contains("Times", StringComparison.OrdinalIgnoreCase)).Select(t => t.Label))
             if (!left.Remove(name)) Extra("dynamic", $"\"{name}\" is drawn but not in the data");
@@ -381,7 +382,7 @@ internal sealed class BarChecker
                         Math.Abs(CenterY(t) - (Box.TabTop + note.StringIndex * stringGap)) <= stringGap * 0.6);
                     if (at >= 0) drawn.RemoveAt(at);
                     else Miss("fret-number", $"string {note.StringIndex + 1} fret {label} on beat {index + 1}");
-                    if (note.Techniques.Contains("Trill") && TabEditorControl.TrillFret(Trk, note) is var tf and >= 0)
+                    if (note.Techniques.Contains("Trill") && ScoreMarkText.TrillFret(Trk, note) is var tf and >= 0)
                     {
                         var trill = drawn.FindIndex(t => t.Label == $"({tf})" && CenterX(t) - cx is >= 2 and <= 24 && Math.Abs(CenterY(t) - (Box.TabTop + note.StringIndex * stringGap)) <= 5);
                         if (trill >= 0) drawn.RemoveAt(trill);
@@ -503,17 +504,17 @@ internal sealed class BarChecker
         }
 
         // harmonics
-        foreach (var caption in Sounding.SelectMany(c => c.Cell.Notes).Select(n => TabEditorControl.HarmonicCaption(n.Techniques)).Where(s => s.Length > 0).Distinct())
+        foreach (var caption in Sounding.SelectMany(c => c.Cell.Notes).Select(n => ScoreMarkText.HarmonicCaption(n.Techniques)).Where(s => s.Length > 0).Distinct())
             if (!HasText(caption)) Miss("harmonic", $"caption \"{caption}\"");
         if (T)
-            foreach (var text in Sounding.SelectMany(c => c.Cell.Notes).Select(TabEditorControl.HarmonicFretText).Where(s => s.Length > 0).Distinct())
+            foreach (var text in Sounding.SelectMany(c => c.Cell.Notes).Select(ScoreMarkText.HarmonicFretText).Where(s => s.Length > 0).Distinct())
                 if (!HasText(text)) Miss("harmonic", $"harmonic value \"{text}\" under the tab");
 
         // technique label above the tab
         if (T)
             foreach (var (voice, index, cell) in sounding)
             {
-                var label = TabEditorControl.DrawnTechniqueLabel(cell.Notes, !N);
+                var label = ScoreMarkText.DrawnTechniqueLabel(cell.Notes, !N);
                 if (label.Length > 0 && !HasText(label)) Miss("technique-label", $"\"{label}\" on beat {index + 1}");
             }
 
@@ -557,7 +558,7 @@ internal sealed class BarChecker
         }
         if (T && CellsWith(n => n.Techniques.Contains("PickDown") || n.Techniques.Contains("PickUp")) > 0 &&
             !Items.Any(i => i.Kind == Kind.Line && Thick(i, 1.1, 0.03) && i.Box.Top > Box.TabBottom + 3)) Miss("pick-stroke", "pick stroke in the data, no mark under the tab");
-        var slashes = sounding.Sum(c => TabEditorControl.TremoloSlashCount(c.Cell));
+        var slashes = sounding.Sum(c => ScoreMarkText.TremoloSlashCount(c.Cell));
         if (N) Count("tremolo-slash", slashes, Items.Count(i => Slash(i, 1.7, 9.6)), "tremolo slashes on the staff");
         if (T) Count("tremolo-slash", slashes, Items.Count(i => Slash(i, 1.6, 9.0)), "tremolo slashes on the tab");
 

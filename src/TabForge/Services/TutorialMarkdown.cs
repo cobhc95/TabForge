@@ -26,6 +26,9 @@ public sealed record TutorialRule : TutorialBlock;
 /// <summary>A parsed chapter file: its front matter and body blocks.</summary>
 public sealed record TutorialDocument(IReadOnlyDictionary<string, string> FrontMatter, IReadOnlyList<TutorialBlock> Blocks);
 
+// Owns: the small Markdown subset the tutorial chapters use, parsed into blocks and spans.
+// Does not own: the chapter list and the window drawing.
+// Tests: TestTutorialMarkdown.
 /// <summary>
 /// The small Markdown subset the tutorial chapters use: headings (#, ##, ###), paragraphs, bold, italic, inline code, ordered
 /// and unordered lists (nested by indentation), images, simple pipe tables, block quotes with Tip / Note / Warning callouts,

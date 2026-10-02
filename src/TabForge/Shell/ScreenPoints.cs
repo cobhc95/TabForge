@@ -7,7 +7,7 @@ namespace TabForge.Shell;
 /// <summary>
 /// Screen/element coordinate conversion that never throws. WPF's PointToScreen/PointFromScreen throw when
 /// a visual is not currently in a window (e.g. a tab or panel re-parented or closed in the middle of a
-/// drag), which used to crash drag-and-drop. Every drag and hit test goes through these instead.
+/// drag), which would crash drag-and-drop. Every drag and hit test goes through these instead.
 /// </summary>
 internal static class ScreenPoints
 {

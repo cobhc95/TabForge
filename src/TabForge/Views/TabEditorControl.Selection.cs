@@ -1,3 +1,4 @@
+using TabForge.Views.Score;
 using System.Globalization;
 using System.Linq;
 using System.Windows;
@@ -19,24 +20,23 @@ public sealed partial class TabEditorControl
 
     public void BeginSelection()
     {
-        _anchorMeasure = SelectedMeasure;
-        _anchorCell = SelectedCell;
-        _selectionEndMeasure = SelectedMeasure;
-        _selectionEndCell = SelectedCell;
-        _selecting = true;
+        _sel.Begin(SelectedMeasure, SelectedCell);
         InvalidateVisual();
     }
 
     public void ExtendSelection(int direction)
     {
-        if (!_selecting) BeginSelection();
-        var m = _selectionEndMeasure; var c = _selectionEndCell;
+        if (!_sel.Selecting) BeginSelection();
+        var m = _sel.EndMeasure; var c = _sel.EndCell;
         var track = Track; if (track is null) return;
-        c += direction;
-        if (c >= SlotsFor(m)) { m++; c = 0; }
-        if (c < 0) { m--; c = m >= 0 ? SlotsFor(m) - 1 : 0; }
+        // Steps over the allowed cursor positions (beat starts and the append slot), like the arrow keys.
         if (m < 0 || m >= track.Measures.Count) return;
-        _selectionEndMeasure = m; _selectionEndCell = c;
+        var step = direction > 0 ? CursorPositions.Next(CellsFor(track.Measures[m]), c) : CursorPositions.Previous(CellsFor(track.Measures[m]), c);
+        if (step >= 0) c = step;
+        else if (direction > 0) { m++; c = 0; }
+        else { m--; c = m >= 0 ? CursorPositions.Allowed(CellsFor(track.Measures[m])).Last() : 0; }
+        if (m < 0 || m >= track.Measures.Count) return;
+        _sel.SetEnd(m, c);
         InvalidateVisual();
         SelectionChanged?.Invoke(this, EventArgs.Empty);
     }
@@ -44,8 +44,7 @@ public sealed partial class TabEditorControl
     public void ClearSelection(bool notify = true)
     {
         var hadSelection = HasSelection;
-        _selecting = false;
-        _anchorMeasure = _selectionEndMeasure = -1;
+        _sel.Clear();
         InvalidateVisual();
         if (notify && hadSelection) SelectionChangedNow(seekPlayback: false);
     }
@@ -75,11 +74,7 @@ public sealed partial class TabEditorControl
         if (ClampRange(startMeasure, startCell, endMeasure, endCell) is not var (m1, c1, m2, c2)) return;
         SelectedMeasure = m1;
         SelectedCell = c1;
-        _anchorMeasure = m1;
-        _anchorCell = c1;
-        _selectionEndMeasure = m2;
-        _selectionEndCell = c2;
-        _selecting = true;
+        _sel.Set(m1, c1, m2, c2);
         SelectionChangedNow(seekPlayback: false);
     }
 
@@ -101,7 +96,7 @@ public sealed partial class TabEditorControl
         var lastCell = Math.Max(0, SlotsFor(m2) - 1);
         var c2 = endCell < 0 ? lastCell : Math.Clamp(endCell, 0, lastCell);
         if (m1 == m2 && c2 < c1) c2 = c1;
-        return (m1, c1, m2, c2);
+        return _sel.Snapped(m1, c1, m2, c2);
     }
 
     /// <summary>Selects every beat of the current track (Ctrl+A, TuxGuitar "select all").</summary>
@@ -109,20 +104,15 @@ public sealed partial class TabEditorControl
     {
         var track = Track;
         if (track is null || track.Measures.Count == 0) return;
-        _anchorMeasure = 0;
-        _anchorCell = 0;
-        _selectionEndMeasure = track.Measures.Count - 1;
-        _selectionEndCell = Math.Max(0, SlotsFor(_selectionEndMeasure) - 1);
-        _selecting = true;
+        var lastBar = track.Measures.Count - 1;
+        _sel.Set(0, 0, lastBar, Math.Max(0, SlotsFor(lastBar) - 1));
         InvalidateVisual();
         SelectionChanged?.Invoke(this, EventArgs.Empty);
     }
 
     private (int m1, int c1, int m2, int c2) SelectionRange()
     {
-        var a = (_anchorMeasure, _anchorCell);
-        var b = (_selectionEndMeasure, _selectionEndCell);
-        return (a.Item1, a.Item2, b.Item1, b.Item2);
+        return _sel.Range();
     }
 
     /// <summary>
@@ -162,13 +152,10 @@ public sealed partial class TabEditorControl
     {
         if (_project is null || Track is null) return false;
         var (m1, c1, m2, c2) = SelectionCellRange;
-        EditStarting?.Invoke(this, EventArgs.Empty);   // one undo step
-        var changed = EditCommands.CutClear(_project, clip.Kind, SelectedTrackIndex, ActiveVoiceIndex, m1, c1, m2, HasSelection ? c2 : c1);
-        if (changed) EditedNow();
-        return changed;
+        return RunEdit(() => EditCommands.CutClear(_project, clip.Kind, SelectedTrackIndex, ActiveVoiceIndex, m1, c1, m2, HasSelection ? c2 : c1));
     }
 
     /// <summary>Tells the host the project changed outside the editor's own commands (paste), and refreshes the score.</summary>
     /// <param name="markTimeline">False when the edit that changed the song already invalidated the playback timeline (once): only the editor's refresh is wanted.</param>
-    public void NotifyEdited(bool markTimeline = true) => EditedNow(markTimeline);
+    public void NotifyEdited() => EditedNow();
 }

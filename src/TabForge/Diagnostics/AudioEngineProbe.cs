@@ -144,7 +144,7 @@ internal static partial class DiagnosticCommands
             report.AppendLine($"output details: {client.Output}");
             report.AppendLine($"latency (Windows MIDI is delayed by this): {client.LatencyTicks * 1000.0 / Stopwatch.Frequency:0.0} ms");
             var slots = song.Tracks.Select(client.SlotOf).ToList();
-            report.AppendLine($"slots: {string.Join(", ", song.Tracks.Select((t, i) => $"{t.Name}={slots[i]} route={MixerGroups.RouteOf(t)}"))}");
+            report.AppendLine($"slots: {string.Join(", ", song.Tracks.Select((t, i) => $"{t.Name}={slots[i]} route={MixerGroups.RouteOf(t, client.Mixer)}"))}");
             WaitFor(() => false, 800); // plug-ins load on the engine's main thread
 
             // A few quiet notes on each routed track.

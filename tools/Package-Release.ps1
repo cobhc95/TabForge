@@ -5,9 +5,11 @@ Builds the two GitHub release downloads into dist\:
 The version comes from Directory.Build.props <Version>, so the app, the engine, the zip and the installer agree.
 File names and the installer use the display version (0.5.0 shows as "0.5", like the app); the numeric file version stays 0.5.0.0.
 
-Release gate: this script publishes to build\TabForge-release, runs the headless self-test ON THAT EXACT
-FOLDER (with --require ci: gp-fixtures, synthetic-fixtures, source-hygiene, installer-parity, fuzz) and refuses to package unless it exits 0 and its log says
-"TabForge self-test: N passed, 0 failed". The tested folder is what gets zipped and installed; the
+Release gate: this script publishes to build\TabForge-release, runs the headless basic self-test set ON THAT EXACT
+FOLDER and refuses to package unless it exits 0 and its log says
+"TabForge self-test: N passed, 0 failed". The full suite (tests\full-suite) never runs implicitly: pass -FullSuite to
+also publish a separate full-suite build (build\TabForge-fullsuite, never packaged) and run it with --require ci,document-context first.
+The tested folder is what gets zipped and installed; the
 executable hash is re-checked after the test so nothing can be swapped in between.
 It also verifies the shipped tfvst3.dll against the SHA-256 recorded in native\BUILD_PROVENANCE.md and refuses to
 package on a mismatch or a missing record, unless -AllowUnprovenancedNative is passed (then it only warns loudly).
@@ -26,6 +28,8 @@ tools\Compare-Release.ps1 compares two results. See docs\REPRODUCIBLE_BUILDS.md.
 param(
     [string]$InnoCompiler = '',
     [switch]$AllowUnprovenancedNative,
+    # Also builds and runs the full self-test suite (tests\full-suite) before packaging; without it the gate is the basic set only.
+    [switch]$FullSuite,
     # Internal: set by the worktree wrapper below (and implied on CI) - the tree this script lives in is already a
     # clean checkout of the commit being released.
     [switch]$InCleanCheckout
@@ -59,6 +63,7 @@ if (-not $InCleanCheckout -and $env:CI -ne 'true') {
         $innerArgs = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', (Join-Path $wt 'tools\Package-Release.ps1'), '-InCleanCheckout')
         if ($InnoCompiler) { $innerArgs += @('-InnoCompiler', $InnoCompiler) }
         if ($AllowUnprovenancedNative) { $innerArgs += '-AllowUnprovenancedNative' }
+        if ($FullSuite) { $innerArgs += '-FullSuite' }
         & (Get-Process -Id $PID).Path @innerArgs
         if ($LASTEXITCODE) { throw "The release build in the clean worktree failed (exit $LASTEXITCODE)." }
         # Bring the results (zip, installer, checksums, self-test log, symbols) home.
@@ -188,13 +193,31 @@ if (-not (Get-ChildItem -LiteralPath (Join-Path $publish 'Samples') -Filter '*.g
 $sbom = Join-Path $root 'docs\SBOM.md'
 if (Test-Path -LiteralPath $sbom) { Copy-Item $sbom (Join-Path $publish 'SBOM.md') }
 
-# ---- release gate: self-test the exact folder that will be packaged --------------------------------
+# ---- optional: the full suite, on its own build that is never packaged -----------------------------
+if ($FullSuite) {
+    $fullFolder = Join-Path $root 'build\TabForge-fullsuite'
+    Clear-Folder $fullFolder
+    & (Join-Path $PSScriptRoot 'Publish.ps1') -Output $fullFolder -ExtraArgs '-p:TabForgeFullSuite=true'
+    $fullLog = Join-Path ([IO.Path]::GetTempPath()) "tabforge-release-fullsuite-$version.log"
+    if (Test-Path -LiteralPath $fullLog) { Remove-Item -LiteralPath $fullLog -Force }
+    Write-Output "Full-suite self-test of $fullFolder ..."
+    $fullProc = Start-Process -FilePath (Join-Path $fullFolder 'TabForge.exe') -ArgumentList @('--selftest', "`"$fullLog`"", '--require', 'ci,document-context') -WorkingDirectory $root -Wait -PassThru
+    if (-not (Test-Path -LiteralPath $fullLog)) { throw "Full-suite self-test wrote no log ($fullLog); refusing to package." }
+    if ($fullProc.ExitCode -ne 0 -or -not (Select-String -LiteralPath $fullLog -Pattern '^TabForge self-test: \d+ passed, 0 failed' -Quiet)) {
+        Select-String -LiteralPath $fullLog -Pattern '^\s+FAIL' | ForEach-Object { Write-Output $_.Line }
+        throw "Full-suite self-test failed (log: $fullLog); refusing to package."
+    }
+    Copy-Item -LiteralPath $fullLog -Destination (Join-Path $dist "TabForge-$display-fullsuite.log") -Force
+    Remove-Item -LiteralPath $fullFolder -Recurse -Force
+}
+
+# ---- release gate: self-test the exact folder that will be packaged (the basic set) ----------------
 $exe = Join-Path $publish 'TabForge.exe'
 $exeHashBefore = Get-Sha256 $exe
 $selfTestLog = Join-Path ([IO.Path]::GetTempPath()) "tabforge-release-selftest-$version.log"
 if (Test-Path -LiteralPath $selfTestLog) { Remove-Item -LiteralPath $selfTestLog -Force }
 Write-Output "Self-testing $exe ..."
-$proc = Start-Process -FilePath $exe -ArgumentList @('--selftest', "`"$selfTestLog`"", '--require', 'ci') -WorkingDirectory $root -Wait -PassThru
+$proc = Start-Process -FilePath $exe -ArgumentList @('--selftest', "`"$selfTestLog`"") -WorkingDirectory $root -Wait -PassThru
 if (-not (Test-Path -LiteralPath $selfTestLog)) { throw "Self-test wrote no log ($selfTestLog); refusing to package." }
 $summary = Select-String -LiteralPath $selfTestLog -Pattern '^TabForge self-test: \d+ passed, \d+ failed' | Select-Object -Last 1
 if ($summary) { Write-Output $summary.Line }

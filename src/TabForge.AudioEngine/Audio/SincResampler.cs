@@ -1,7 +1,7 @@
 namespace TabForge.AudioEngine.Audio;
 
 /// <summary>
-/// Streaming stereo windowed-sinc resampler for the capture path (RT-09): 48 taps, Blackman-Harris window, 256 kernel phases with
+/// Streaming stereo windowed-sinc resampler for the capture path: 48 taps, Blackman-Harris window, 256 kernel phases with
 /// linear interpolation between them, cutoff at 92 % of the lower Nyquist (anti-aliasing when downsampling). Input-driven: every
 /// input frame is consumed; <see cref="Taps"/> / 2 input frames stay buffered as look-ahead. All buffers are allocated in the
 /// constructor, so <see cref="Process"/> never allocates (NAudio's WDL resampler resizes its input buffer as the carried-over

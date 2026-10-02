@@ -21,8 +21,10 @@ internal sealed class ThemedConfirmDialog : Window
         bool showCancel = true,
         string? rememberText = null,
         string yesText = "Yes",
-        string noText = "No")
+        string noText = "No",
+        bool defaultIsNo = false)
     {
+        _defaultIsNo = defaultIsNo;
         Title = title;
         Width = 420;
         SizeToContent = SizeToContent.Height;
@@ -159,8 +161,9 @@ internal sealed class ThemedConfirmDialog : Window
             footerStack.Children.Add(_remember);
         }
         footer.Child = footerStack;
-        actions.Children.Add(ActionButton(yesText, MessageBoxResult.Yes, isDefault: true, toolTip: yesToolTip));
-        actions.Children.Add(ActionButton(noText, MessageBoxResult.No, toolTip: noToolTip));
+        // A destructive question puts Enter and the focus on the safe answer (No) and has no Y shortcut.
+        actions.Children.Add(ActionButton(yesText, MessageBoxResult.Yes, isDefault: !defaultIsNo, toolTip: yesToolTip));
+        actions.Children.Add(ActionButton(noText, MessageBoxResult.No, isDefault: defaultIsNo, toolTip: noToolTip));
         // Where "No" already means "go back", a Cancel button would just duplicate it.
         if (showCancel) actions.Children.Add(ActionButton("Cancel", MessageBoxResult.Cancel, isCancel: true));
         else ((Button)actions.Children[1]).IsCancel = true;
@@ -171,13 +174,15 @@ internal sealed class ThemedConfirmDialog : Window
         {
             // Y = yes, N = no, Esc = cancel (shown in each button's tooltip).
             if (e.Key == Key.Escape) SetResult(MessageBoxResult.Cancel);
-            else if (e.Key == Key.Y) SetResult(MessageBoxResult.Yes);
+            else if (e.Key == Key.Y && !defaultIsNo) SetResult(MessageBoxResult.Yes);
             else if (e.Key == Key.N) SetResult(showCancel ? MessageBoxResult.No : MessageBoxResult.No);
             else return;
             e.Handled = true;
         };
-        Loaded += (_, _) => actions.Children[0].Focus();
+        Loaded += (_, _) => actions.Children[defaultIsNo ? 1 : 0].Focus();
     }
+
+    private readonly bool _defaultIsNo;
 
     public MessageBoxResult Result => _result;
 
@@ -233,7 +238,7 @@ internal sealed class ThemedConfirmDialog : Window
             IsDefault = isDefault,
             IsCancel = isCancel,
             ToolTip = (toolTip ?? (result == MessageBoxResult.Yes ? "Save the changes" : result == MessageBoxResult.No ? "Discard the changes" : "Return without closing"))
-                + (result == MessageBoxResult.Yes ? "  (Y / Enter)" : result == MessageBoxResult.No ? "  (N)" : "  (Esc)")
+                + (result == MessageBoxResult.Yes ? (_defaultIsNo ? "" : "  (Y / Enter)") : result == MessageBoxResult.No ? (_defaultIsNo ? "  (N / Enter / Esc)" : "  (N)") : "  (Esc)")
         };
         if (isDefault)
         {

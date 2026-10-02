@@ -1,5 +1,8 @@
 namespace TabForge.Services;
 
+// Owns: the list of file types TabForge opens and saves and their extensions.
+// Does not own: reading or writing those files.
+// Tests: TestTrimMerges.
 /// <summary>D2: the one list of file types TabForge opens (importer, Explorer association, single-instance hand-off, diagnostics). installer/TabForge.iss repeats it; a self-test compares the two.</summary>
 public static class FileTypes
 {

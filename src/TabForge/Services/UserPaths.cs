@@ -2,6 +2,9 @@ using System.IO;
 
 namespace TabForge.Services;
 
+// Owns: the one place that resolves every per-user folder.
+// Does not own: what is stored in them.
+// Tests: TestProfileLeavesUserFoldersUntouched, TestNightPluginApproval.
 /// <summary>
 /// The one place that resolves every per-user folder (settings, plug-in approvals and scan cache, chain states, presets, drum maps,
 /// templates, recent files (inside settings), recovery, autosave, crash logs and diagnostics). By default these are

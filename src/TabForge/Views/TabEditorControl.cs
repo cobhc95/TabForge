@@ -9,10 +9,9 @@ using TabForge.Models;
 using TabForge.Playback;
 using TabForge.Services;
 using RenderDraw = TabForge.Visualization.Draw;
+using TabForge.Views.Score;
 
 namespace TabForge.Views;
-
-public enum NotationMode { TabAndStaff, TabOnly, StaffOnly }
 
 internal readonly record struct PalmMutePassage(
     int FirstMeasure, double FirstStartSlots,
@@ -24,47 +23,24 @@ internal readonly record struct FadePassage(
     int LastMeasure, double LastEndSlots,
     bool IsFadeOut);
 
-public sealed partial class TabEditorControl : FrameworkElement
+public sealed partial class TabEditorControl : FrameworkElement, IScoreLayoutHost, IScoreAppearanceHost, IPlaybackOverlayHost, IScoreRenderHost, IEditorInputHost
 {
     public const double BasePageWidth = 1280;
-    private const double PagePad = 44;
-    private const double RhythmicPixelsPerSlot = 7.5;
-    private static string _scoreFontFamily = "Segoe UI";
-    private static double _scoreTextSize = 13.5;
-    private static bool _scoreTextBold;
-    private static bool _scoreTextItalic;
 
     // Score metrics derive from a single spacing factor so a player can make the tablature easier to
     // read on stage without touching the code. The defaults reproduce the original fixed layout.
-    private double _scoreSpacing = 1.0;
-    private double _systemVerticalSpacing = 1.0;
-    private double _measureHorizontalSpacing = 1.0;
-    private bool _centerSystems;
-    private double StaffGap => 9.0 * _scoreSpacing;
-    private double StringGap => 15.0 * _scoreSpacing;
-    private double StaffMarginTop => (46.0 + _extraAbove) * _scoreSpacing;
+    private double StaffGap => 9.0 * Appearance.ScoreSpacing;
+    private double StringGap => 15.0 * Appearance.ScoreSpacing;
+    private double StaffMarginTop => (46.0 + _layout.ExtraAbove) * Appearance.ScoreSpacing;
     private double StaffHeight => 4 * StaffGap;
     // Keep a generous clear band between standard notation and tablature, matching printed scores (grown when low notes reach into it).
-    private double StaveGap => (52.0 + _extraBelow) * _scoreSpacing * _systemVerticalSpacing;
-    private double SystemHeight => StaffMarginTop + StaffToTab + (TabStringCount - 1) * StringGap + Math.Max(28.0 * _scoreSpacing, _extraTabBelow);
+    private double StaveGap => (52.0 + _layout.ExtraBelow) * Appearance.ScoreSpacing * Appearance.SystemVerticalSpacing;
+    private double SystemHeight => StaffMarginTop + StaffToTab + (TabStringCount - 1) * StringGap + Math.Max(28.0 * Appearance.ScoreSpacing, _layout.ExtraTabBelow);
     /// <summary>Strings of the shown track (6 when there is none): the tab part of a system follows it.</summary>
     private int TabStringCount => Math.Max(1, Track?.StringTunings.Count is > 0 and var n ? n : 6);
 
     /// <summary>Distance from the staff top to the TAB top: the staff and its gap, or just room for the marks when only the TAB is shown.</summary>
-    private double StaffToTab => Notation == NotationMode.TabOnly ? 30.0 * _scoreSpacing : StaffHeight + StaveGap;
-
-    /// <summary>Readability scale for the tablature: line spacing and fret numbers.</summary>
-    public double ScoreSpacing
-    {
-        get => _scoreSpacing;
-        set
-        {
-            var clamped = Math.Clamp(value, 0.85, 1.6);
-            if (Math.Abs(clamped - _scoreSpacing) < 0.001) return;
-            _scoreSpacing = clamped;
-            InvalidateScoreLayout();
-        }
-    }
+    private double StaffToTab => Notation == NotationMode.TabOnly ? 30.0 * Appearance.ScoreSpacing : StaffHeight + StaveGap;
 
     /// <summary>Height of one system (staff + tablature + annotations) at the current spacing.</summary>
     public double SystemHeightNow => SystemHeight * _zoom;
@@ -78,37 +54,9 @@ public sealed partial class TabEditorControl : FrameworkElement
     private DateTime _lastDigit = DateTime.MinValue;
     private int _lastDigitMeasure = -1, _lastDigitCell = -1, _lastDigitString = -1;
     private double _zoom = 1.0;
-    private int _anchorMeasure = -1, _anchorCell = -1;
-    private bool _selecting;
-    private int _hoverMeasure = -1, _hoverCell = -1;
-    private int _selectionEndMeasure = -1, _selectionEndCell = -1;
+    private readonly EditorSelectionState _sel = new();
+    private readonly EditorInputController _input;
     private bool _selectionShouldSeekPlayback = true;
-    private Point _leftMouseDownPoint;
-    private long _leftMouseDownTicks;
-    /// <summary>A score range needs the button held this long; a click made mid-movement stays a click.</summary>
-    private const int RangeSelectHoldMs = 140;
-    private bool _leftMouseDownPending;
-    private ScorePageLayout? _scoreLayout;
-    private TrackModel? _scoreLayoutTrack;
-    private SongProject? _scoreLayoutProject;
-    private double _scoreLayoutGridWidth = double.NaN;
-    private bool _scoreLayoutHorizontal;
-    private double _scoreLayoutSpacing = double.NaN;
-    private double _scoreLayoutSystemSpacing = double.NaN;
-    private double _scoreLayoutMeasureSpacing = double.NaN;
-    private int _scoreGeneration;
-    private TrackModel? _scoreFactsTrack;
-    private SongProject? _scoreFactsProject;
-    private int _scoreFactsGeneration = -1;
-    private IReadOnlyList<PalmMutePassage> _palmMutePassages = Array.Empty<PalmMutePassage>();
-    private IReadOnlyList<FadePassage> _fadePassages = Array.Empty<FadePassage>();
-    private BarState[]? _barStateCache;
-    private bool[]? _barStateComputed;
-    private MarkerModel?[]? _markerByMeasure;
-    private SongProject? _markerCacheProject;
-    private int _markerCacheGeneration = -1;
-    private StaffNotationMeasureLayout?[,]? _staffLayoutCache;
-    private StaffLayoutCacheKey[,]? _staffLayoutKeys;
 
     /// <summary>Unscaled score-surface width in DIPs; the host derives it from the viewport and zoom.</summary>
     private double _pageWidthOverride;
@@ -123,30 +71,10 @@ public sealed partial class TabEditorControl : FrameworkElement
         }
     }
 
-    public double SystemVerticalSpacing
-    {
-        get => _systemVerticalSpacing;
-        set
-        {
-            var clamped = Math.Clamp(value, 0.7, 1.6);
-            if (Math.Abs(clamped - _systemVerticalSpacing) < 0.001) return;
-            _systemVerticalSpacing = clamped;
-            InvalidateScoreLayout();
-        }
-    }
+    /// <summary>Where edits run (one undo step, dirty, timeline); when unset, the window that shows the editor if it implements the interface.</summary>
+    public IScoreEditHost? EditHost { get; set; }
 
-    public double MeasureHorizontalSpacing
-    {
-        get => _measureHorizontalSpacing;
-        set
-        {
-            var clamped = Math.Clamp(value, 0.8, 1.6);
-            if (Math.Abs(clamped - _measureHorizontalSpacing) < 0.001) return;
-            _measureHorizontalSpacing = clamped;
-            InvalidateScoreLayout();
-        }
-    }
-
+    /// <summary>Raised before an edit when no <see cref="EditHost"/> runs the edits (a standalone control).</summary>
     public event EventHandler? EditStarting;
     public event EventHandler? Edited;
     public event EventHandler? SelectionChanged;
@@ -166,55 +94,23 @@ public sealed partial class TabEditorControl : FrameworkElement
         }
     }
     private NotationMode _notation = NotationMode.TabAndStaff;
-    public LedgerLineMode LedgerLines { get; set; } = LedgerLineMode.Minimal;
-    public bool DarkPaper { get; set; } = true;
-    public Color DarkPaperColor { get; set; } = Color.FromRgb(0x15, 0x18, 0x1D);
-    public Color LightPaperColor { get; set; } = Colors.White;
-    public Color DarkInkColor { get; set; } = Color.FromRgb(0xE7, 0xEA, 0xEF);
-    public Color LightInkColor { get; set; } = Color.FromRgb(0x11, 0x11, 0x11);
-    public Color DarkStaffLineColor { get; set; } = Color.FromRgb(0x34, 0x39, 0x40);
-    public Color LightStaffLineColor { get; set; } = Color.FromRgb(0xD5, 0xD5, 0xD5);
-    public Color AccentColor { get; set; } = Color.FromRgb(0x4C, 0x9A, 0xFF);
-    public Color CursorColor { get; set; } = Color.FromRgb(0xF2, 0xC1, 0x4E);
-    /// <summary>Colour of sounding notes, fret numbers and the playhead.</summary>
-    public Color PlaybackColor { get; set; } = Color.FromRgb(0x3F, 0xB9, 0x50);
-    public Color DurationGlowColor { get; set; } = Color.FromRgb(0x3F, 0xB9, 0x50);
-    public double DurationGlowOpacity { get; set; } = 0;
-    /// <summary>Background tint behind the beat that is sounding (TuxGuitar tints the played beat).</summary>
-    public Color HighlightBackground { get; set; } = Color.FromRgb(0x1E, 0x3A, 0x2A);
-    /// <summary>Draw the sounding-beat band at all.</summary>
-    public bool HighlightPlayedBeat { get; set; } = true;
-    public bool ShowSectionHeadings { get; set; } = true;
-    public bool ShowBarNumbers { get; set; } = true;
-    public int BarNumberFrequency { get; set; } = 1;
-    public double HoverHighlightIntensity { get; set; } = 0.27;
-    public double SelectionHighlightIntensity { get; set; } = 0.25;
-    public Color SelectionColor { get; set; } = Color.FromRgb(0x4C, 0x9A, 0xFF);
-    public Color HoverColor { get; set; } = Color.FromRgb(0x98, 0xA1, 0xAE);
-    /// <summary>Font size of tablature fret numbers (scaled by <see cref="ScoreSpacing"/>).</summary>
-    private double FretFontSize => 11.0 * _scoreSpacing;
+    /// <summary>Font size of tablature fret numbers (scaled by <see cref="Appearance.ScoreSpacing"/>).</summary>
+    private double FretFontSize => 11.0 * Appearance.ScoreSpacing;
 
-    public static void ConfigureScoreTextStyle(string? fontFamily, double size, bool bold, bool italic)
-    {
-        var family = string.IsNullOrWhiteSpace(fontFamily) ? "Segoe UI" : fontFamily.Trim();
-        try { _ = new FontFamily(family); }
-        catch (ArgumentException) { family = "Segoe UI"; } // not a usable family name
-        var clampedSize = Math.Clamp(size, 8, 24);
-        if (_scoreFontFamily == family && Math.Abs(_scoreTextSize - clampedSize) < 0.001 &&
-            _scoreTextBold == bold && _scoreTextItalic == italic) return;
-        _scoreFontFamily = family;
-        _scoreTextSize = clampedSize;
-        _scoreTextBold = bold;
-        _scoreTextItalic = italic;
-        TypefaceCache.Clear();
-        TextCache.Clear();
-    }
+    public static void ConfigureScoreTextStyle(string? fontFamily, double size, bool bold, bool italic) => ScoreText.ConfigureStyle(fontFamily, size, bold, italic);
+
+    /// <summary>Per-area score text styles (Score &gt; Appearance &gt; Text &amp; fonts).</summary>
+    public static void ConfigureTextAreas(IReadOnlyDictionary<string, TabForge.Services.ScoreTextAreaStyle>? styles) => ScoreText.ConfigureAreas(styles);
     public int CurrentDurationDenominator { get; set; } = 4;
-    public bool AutoAdvanceAfterEntry { get; set; } = true;
+    public bool AutoAdvanceAfterEntry { get; set; } = false;
     /// <summary>Default: + shortens the note, - lengthens it. True swaps them.</summary>
     public bool ReversePlusMinusDuration { get; set; }
     /// <summary>When true, duration/dot/tuplet changes that would overfill a bar are refused.</summary>
     public bool PreventBarOverflow { get; set; }
+    /// <summary>Fill incomplete bars with rests (the setting): edits keep every edited bar complete.</summary>
+    public bool FillBarsWithRests { get; set; }
+    /// <summary>Deleting notes leaves merged rests (the fewest that fill the bar) instead of a rest of the same length.</summary>
+    public bool MergeRestsOnDelete { get; set; }
     private void PlusDuration() { if (ReversePlusMinusDuration) Longer(); else Shorter(); }
     private void MinusDuration() { if (ReversePlusMinusDuration) Shorter(); else Longer(); }
     public int CurrentDots { get; set; } = 0;
@@ -229,41 +125,56 @@ public sealed partial class TabEditorControl : FrameworkElement
     public int ActiveVoiceIndex => _activeVoiceIndex;
     /// <summary>False during mouse-only cursor selection so clicking a bar never starts/relocates audio.</summary>
     public bool SelectionShouldSeekPlayback => _selectionShouldSeekPlayback;
-    public int PlaybackMeasure { get; set; } = -1;
     /// <summary>Print/PDF export: draw no edit cursor (selection and playback are never set on the private export control).</summary>
     internal bool HideCursor { get; set; }
-    public int PlaybackCell { get; set; } = -1;
 
-    // ---- playback feedback (fed from the canonical timeline) ----
+    // ---- playback feedback (state lives in PlaybackOverlay) ----
+    public int PlaybackMeasure { get => _playback.Measure; set => _playback.Measure = value; }
+    public int PlaybackCell { get => _playback.Cell; set => _playback.Cell = value; }
     /// <summary>Timeline being played, used to highlight the exact sounding notes.</summary>
-    public ScoreTimeline? Timeline { get; set; }
+    public ScoreTimeline? Timeline { get => _playback.Timeline; set => _playback.Timeline = value; }
     /// <summary>Track whose notes should be highlighted (the selected track).</summary>
-    public int PlaybackTrackIndex { get; set; }
+    public int PlaybackTrackIndex { get => _playback.TrackIndex; set => _playback.TrackIndex = value; }
     /// <summary>Absolute playback time in milliseconds.</summary>
-    public double PlaybackMs { get; set; }
+    public double PlaybackMs { get => _playback.Ms; set => _playback.Ms = value; }
     /// <summary>Fraction through the playing bar (0..1) for the exact caret position.</summary>
-    public double PlaybackFraction { get; set; }
+    public double PlaybackFraction { get => _playback.Fraction; set => _playback.Fraction = value; }
     /// <summary>Maps source-bar indexes from an already-running timeline to the reordered score.</summary>
-    public int[]? PlaybackBarRemap { get; set; }
+    public int[]? PlaybackBarRemap { get => _playback.BarRemap; set => _playback.BarRemap = value; }
     /// <summary>True while the transport is running (playing or paused): dims the edit cursor so the
-    /// green playhead is the only tracker.</summary>
-    public bool PlaybackActive
-    {
-        get => _playbackActive;
-        // Start and stop only (never per tick): repaint so no frozen system keeps the playing-bar band or the dimmed cursor.
-        set { if (_playbackActive == value) return; _playbackActive = value; InvalidateVisual(); }
-    }
-    private bool _playbackActive;
+    /// green playhead is the only tracker. Start and stop only, never per tick.</summary>
+    public bool PlaybackActive { get => _playback.Active; set => _playback.Active = value; }
+
+    private readonly PlaybackOverlay _playback;
+    private readonly ScoreLayoutEngine _layout;
+    private readonly ScoreRenderer _renderer;
+
+    /// <summary>How the score looks: colours, spacing, labels and the playing-bar band.</summary>
+    internal ScoreAppearance Appearance { get; }
+
+    // The settings other windows still reach through the editor.
+    public bool DarkPaper { get => Appearance.DarkPaper; set => Appearance.DarkPaper = value; }
+    public LedgerLineMode LedgerLines { get => Appearance.LedgerLines; set => Appearance.LedgerLines = value; }
+    public bool CenterSystems { get => Appearance.CenterSystems; set => Appearance.CenterSystems = value; }
+    public bool PlayingBarEnabled { get => Appearance.PlayingBarEnabled; set => Appearance.PlayingBarEnabled = value; }
+    public Color DurationGlowColor { get => Appearance.DurationGlowColor; set => Appearance.DurationGlowColor = value; }
+    public double DurationGlowOpacity { get => Appearance.DurationGlowOpacity; set => Appearance.DurationGlowOpacity = value; }
+    internal ScoreLayoutEngine Layout => _layout;
 
     public TabEditorControl()
     {
+        Appearance = new ScoreAppearance(this);
+        _playback = new PlaybackOverlay(this);
+        _layout = new ScoreLayoutEngine(this, _staff);
+        _renderer = new ScoreRenderer(this, _layout, _staff);
         Focusable = true;
         SnapsToDevicePixels = true;
-        MouseDown += OnMouseDown;
-        MouseRightButtonDown += OnRightDown;
-        MouseMove += OnMouseMove;
-        MouseLeave += (_, _) => { if (_hoverMeasure != -1) { _hoverMeasure = -1; _hoverCell = -1; InvalidateVisual(); } };
-        MouseUp += OnMouseUp;
+        _input = new EditorInputController(this, _sel);
+        MouseDown += _input.OnMouseDown;
+        MouseRightButtonDown += _input.OnRightDown;
+        MouseMove += _input.OnMouseMove;
+        MouseLeave += _input.OnMouseLeave;
+        MouseUp += _input.OnMouseUp;
     }
 
     public double Zoom
@@ -287,16 +198,16 @@ public sealed partial class TabEditorControl : FrameworkElement
     public TrackModel? Track => _project is not null && _selectedTrackIndex >= 0 && _selectedTrackIndex < _project.Tracks.Count
         ? _project.Tracks[_selectedTrackIndex] : null;
 
-    public bool HasSelection => _selecting && (_anchorMeasure != _selectionEndMeasure || _anchorCell != _selectionEndCell);
+    public bool HasSelection => _sel.HasSelection;
 
     /// <summary>Inclusive measure range changed by the next edit, used by overview activity invalidation.</summary>
     public (int FirstMeasure, int LastMeasure) AffectedMeasureRange
     {
         get
         {
-            if (!HasSelection || _anchorMeasure < 0 || _selectionEndMeasure < 0)
+            if (!HasSelection || _sel.AnchorMeasure < 0 || _sel.EndMeasure < 0)
                 return (SelectedMeasure, SelectedMeasure);
-            return (Math.Min(_anchorMeasure, _selectionEndMeasure), Math.Max(_anchorMeasure, _selectionEndMeasure));
+            return (Math.Min(_sel.AnchorMeasure, _sel.EndMeasure), Math.Max(_sel.AnchorMeasure, _sel.EndMeasure));
         }
     }
 }

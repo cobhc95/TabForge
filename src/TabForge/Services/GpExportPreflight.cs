@@ -24,14 +24,21 @@ public sealed record GpLoss(string Feature, string Result, int Count, string Whe
 public sealed class GpPreflightReport
 {
     public List<GpLoss> Losses { get; } = new();
+    /// <summary>The line telling that audio tracks are left out of a compatible .gp (null when the song has none).</summary>
+    public string? AudioTrackNotice { get; set; }
     /// <summary>Plug-in chains, audio clips or mixer groups that a clean .gp stores nowhere (they need the embedded project, a .tfaudio or a .tforge).</summary>
     public bool HasNativeOnlyAudioData { get; set; }
-    /// <summary>The dialog is shown only for a song that actually uses something unsupported (never for a harmless save).</summary>
-    public bool ShouldAsk => Losses.Count > 0;
+    /// <summary>
+    /// The dialog is shown only for a song that actually loses something in the file(s) about to be written (never for a harmless save).
+    /// A Save writes the .gp together with its .tfaudio (or an embedded project), which hold the plug-ins, FX chains, clips and mixer groups, so there only
+    /// <see cref="Losses"/> count. An Export writes the compatible .gp alone, so native-only audio data is omitted from what is written and is asked about too.
+    /// </summary>
+    public bool ShouldAskFor(GpExportKind kind) => Losses.Count > 0 || kind == GpExportKind.Export && HasNativeOnlyAudioData;
 
     public string Summary(int maxLines = 8)
     {
         var sb = new StringBuilder();
+        if (AudioTrackNotice is { } audioLine) sb.AppendLine("- " + audioLine);
         foreach (var loss in Losses.Take(maxLines)) sb.AppendLine($"- {loss.Feature} ({loss.Where}): {loss.Result}");
         if (Losses.Count > maxLines) sb.AppendLine($"- and {Losses.Count - maxLines} more");
         if (HasNativeOnlyAudioData) sb.AppendLine("- TabForge audio settings (plug-ins, FX chains, clips, mixer groups): not stored in a compatible .gp file");
@@ -42,6 +49,10 @@ public sealed class GpPreflightReport
 /// <summary>What a choice does to the files and to the document, decided before anything is written.</summary>
 public sealed record GpExportPlan(bool Proceed, string CompatiblePath, string? NativeCopyPath, bool MarkDocumentClean, bool ChangeDocumentPath, string Note);
 
+// Owns: the lossy-export preflight for a clean .gp export: finding what the format cannot hold and planning the files for each
+//     choice.
+// Does not own: the dialog and the writing (GuitarProExporter).
+// Tests: TestGpLossCoverage, TestGpFidelity.
 /// <summary>
 /// R5 lossy-export preflight (owner-approved): for a clean .gp export, find what the Guitar Pro format (as written through alphaTab) cannot hold,
 /// and decide the files and document state for each of three choices. Pure logic: the dialog is Iris's (see docs), the writes are DocumentController's.
@@ -52,7 +63,7 @@ public static class GpExportPreflight
 {
     public static GpPreflightReport Analyze(SongProject project)
     {
-        var report = new GpPreflightReport();
+        var report = new GpPreflightReport { AudioTrackNotice = AudioTrackExport.SkippedNotice(project) };
         var found = new Dictionary<string, (string Result, List<(string Track, int Bar)> At)>();
         void Hit(string feature, string result, string track, int bar)
         {
@@ -64,6 +75,7 @@ public static class GpExportPreflight
         for (var t = 0; t < project.Tracks.Count; t++)
         {
             var track = project.Tracks[t];
+            if (track.IsAudio) { report.HasNativeOnlyAudioData = true; continue; }   // not written to a compatible .gp (the notice line below)
             var name = string.IsNullOrWhiteSpace(track.Name) ? $"Track {t + 1}" : track.Name;
             var drums = track.Kind == TrackKind.Drums || track.MidiChannel == 9;
             if (track.Reverb != 24 || track.Chorus != 0) Hit("Reverb / chorus sends", "not written to the .gp file; they reopen at the defaults", name, -1);
@@ -74,11 +86,15 @@ public static class GpExportPreflight
                     foreach (var cell in cells)
                     {
                         if (cell.Fermata) { if (!fermataBars.TryGetValue(b, out var set)) fermataBars[b] = set = new(); set.Add(t); }
-                        if (cell.Notes.Count == 0) continue;
+                        // Beat-level facts first, for a rest as much as for a note beat: the exporter writes a rest's whammy / tremolo picking like any beat's and
+                        // writes no mix change on any beat. (Only a beat counts: an unused grid slot is not written at all.)
+                        if (cell.Notes.Count == 0 && !cell.IsRest) continue;
                         if (cell.WhammyPoints.Count > 4) Hit("Whammy-bar curve over four points", "reduced to origin, two middle points and end", name, b);
                         if (cell.Mix is { IsEmpty: false } mix && (mix.Volume is not null || mix.Pan is not null || mix.Program is not null || mix.Chorus is not null || mix.Reverb is not null || mix.Phaser is not null || mix.Tremolo is not null))
                             Hit("Mix-table change on a beat (volume, pan, sound)", "not written; the track keeps its starting mix", name, b);
                         if (cell.TremoloPickDenominator >= 64) Hit("Tremolo picking at 1/64", "written as 1/32", name, b);
+                        // Note-level facts: a rest has no notes.
+                        if (cell.Notes.Count == 0) continue;
                         var dynamics = cell.Notes.Where(n => !n.IsGraceNote).Select(n => Dynamics.NearestIndex(n.Velocity)).Distinct().Count();
                         if (dynamics > 1) Hit("Different loudness inside one chord or drum beat", "every note takes the first note's dynamic", name, b);
                         // Guitar Pro 8 keeps a ghost mark only on a note with no <Accent> element (staccato, accent, heavy accent and tenuto each replaced it in a re-save).
@@ -106,9 +122,13 @@ public static class GpExportPreflight
             }
         }
         // a fermata is a bar-position mark in Guitar Pro: on one track only, it shows on every track
-        for (var b = 0; b < (project.Tracks.Count == 0 ? 0 : project.Tracks.Max(t => t.Measures.Count)); b++)
-            if (fermataBars.TryGetValue(b, out var set) && set.Count < project.Tracks.Count(t => b < t.Measures.Count) && project.Tracks.Count > 1)
+        var notation = project.NotationTracks.ToList();
+        for (var b = 0; b < (notation.Count == 0 ? 0 : notation.Max(t => t.Measures.Count)); b++)
+            if (fermataBars.TryGetValue(b, out var set) && set.Count < notation.Count(t => b < t.Measures.Count) && notation.Count > 1)
                 Hit("Fermata on some tracks only", "a .gp file stores it for every track", "all tracks", b);
+
+        // mixer groups, group / master chains and the other things the audio-data save offers its choices for (plug-ins and clips are caught per track above)
+        if (MixerGroups.HasAudioData(project)) report.HasNativeOnlyAudioData = true;
 
         foreach (var (feature, (result, at)) in found)
             report.Losses.Add(new GpLoss(feature, result, at.Count, Describe(at)));
@@ -171,7 +191,7 @@ public static class GpExportPreflight
         // The compatible file goes to the target unless the target is the original native content (the document's own file, or one holding an embedded
         // project / sidecar / .tforge): a lossy copy never replaces that.
         var sameAsDocument = documentPath is not null && string.Equals(Path.GetFullPath(documentPath), Path.GetFullPath(targetGpPath), StringComparison.OrdinalIgnoreCase);
-        // (Not only when ShouldAsk: an embedded project or sidecar also holds plug-ins, clips and TabForge-only fields the preflight does not list.)
+        // (Not only when the question is asked: an embedded project or sidecar also holds plug-ins, clips and TabForge-only fields the preflight does not list.)
         var compatible = (kind == GpExportKind.Export && sameAsDocument) || OriginalHoldsNative(targetGpPath, ignoreSidecar: kind == GpExportKind.Save) ? UniqueSibling(targetGpPath, "compatible") : targetGpPath;
         if (choice == GpExportChoice.KeepNativeCopy)
         {
@@ -184,6 +204,6 @@ public static class GpExportPreflight
         // and the song is then saved: the person accepted the listed losses. Only when the target is protected (redirected to a sibling) does the song stay unsaved.
         if (kind == GpExportKind.Save && compatible == targetGpPath) return new GpExportPlan(true, compatible, null, true, true, "");
         return new GpExportPlan(true, compatible, null, false, false,
-            report.ShouldAsk ? $"Compatible .gp file written as {Path.GetFileName(compatible)}; the song in TabForge still has what it cannot hold and stays unsaved." : "");
+            report.ShouldAskFor(kind) ? $"Compatible .gp file written as {Path.GetFileName(compatible)}; the song in TabForge still has what it cannot hold and stays unsaved." : "");
     }
 }

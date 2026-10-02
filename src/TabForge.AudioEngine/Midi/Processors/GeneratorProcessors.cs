@@ -1,3 +1,5 @@
+using TabForge.Audio.Contracts;
+
 namespace TabForge.AudioEngine.Midi.Processors;
 
 /// <summary>Note repeater: while a note is held its note-off / note-on pair is re-sent every <c>Size</c> beats with the original velocity.</summary>
@@ -35,8 +37,8 @@ public sealed class RepeaterProcessor : IMidiProcessor
 
     public void Process(MidiBuffer input, MidiBuffer output, in MidiContext ctx)
     {
-        var tempo = ctx.Tempo > 1 ? ctx.Tempo : 120;
-        var period = Math.Max(1.0, _size * 60.0 / tempo * ctx.SampleRate);
+        var tempo = TempoMath.Effective(ctx.Tempo);
+        var period = Math.Max(1.0, TempoMath.BeatsToSamples(_size, tempo, ctx.SampleRate));
         for (var i = 0; i < input.Count; i++)
         {
             var e = input.Items[i];
@@ -124,8 +126,8 @@ public sealed class ArpeggiatorProcessor : IMidiProcessor
 
     public void Process(MidiBuffer input, MidiBuffer output, in MidiContext ctx)
     {
-        var tempo = ctx.Tempo > 1 ? ctx.Tempo : 120;
-        var period = Math.Max(1.0, 60.0 / tempo * ctx.SampleRate / _rate);
+        var tempo = TempoMath.Effective(ctx.Tempo);
+        var period = Math.Max(1.0, TempoMath.SamplesPerBeat(tempo, ctx.SampleRate) / _rate);
         for (var i = 0; i < input.Count; i++)
         {
             var e = input.Items[i];
@@ -179,8 +181,8 @@ public sealed class ModalRandomizerProcessor : IMidiProcessor
 
     public void Process(MidiBuffer input, MidiBuffer output, in MidiContext ctx)
     {
-        var tempo = ctx.Tempo > 1 ? ctx.Tempo : 120;
-        var beat = 60.0 / tempo * ctx.SampleRate;
+        var tempo = TempoMath.Effective(ctx.Tempo);
+        var beat = TempoMath.SamplesPerBeat(tempo, ctx.SampleRate);
         for (var i = 0; i < input.Count; i++)
         {
             var e = input.Items[i];
@@ -274,8 +276,8 @@ public sealed class LfoProcessor : IMidiProcessor
             }
             return;
         }
-        var tempo = ctx.Tempo > 1 ? ctx.Tempo : 120;
-        var beat = 60.0 / tempo * ctx.SampleRate;
+        var tempo = TempoMath.Effective(ctx.Tempo);
+        var beat = TempoMath.SamplesPerBeat(tempo, ctx.SampleRate);
         var inc = _beats ? _freq / beat : _freq / ctx.SampleRate;
         var tick = Math.Max(1.0, beat / _updates);
         var end = ctx.BlockStart + ctx.Frames;
@@ -344,8 +346,8 @@ public sealed class StepSequencerProcessor : IMidiProcessor
         if (_passInput) for (var i = 0; i < input.Count; i++) output.Add(input.Items[i]);
         if (ctx.Playing)
         {
-            var tempo = ctx.Tempo > 1 ? ctx.Tempo : 120;
-            var sl = 60.0 / tempo * ctx.SampleRate / _spb;
+            var tempo = TempoMath.Effective(ctx.Tempo);
+            var sl = TempoMath.SamplesPerBeat(tempo, ctx.SampleRate) / _spb;
             var end = ctx.BlockStart + ctx.Frames;
             if (!_running || ctx.PlayStarted) { _running = true; _grid = ctx.BlockStart; _k = 0; }
             while (_grid < end)

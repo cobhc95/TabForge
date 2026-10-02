@@ -29,7 +29,7 @@ public sealed class RemotePlugin : IPluginInstance
     private readonly PluginSpec _spec;
     private bool _disposed;
     private volatile bool _dead;
-    private PluginControlChannel _control = null!;   // request ids: a late reply is never taken for the next request's (R-11)
+    private PluginControlChannel _control = null!;   // request ids: a late reply is never taken for the next request's
 
     public string Path { get; }
     public bool IsInstrument { get; private set; }

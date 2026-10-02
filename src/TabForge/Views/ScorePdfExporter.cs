@@ -41,6 +41,10 @@ internal static class ScorePdfExporter
     /// <summary>Writes the PDF; returns the page count.</summary>
     public static int Export(SongProject project, int trackIndex, string path)
     {
+        // An audio track has no notation: the first notation track is exported instead, and a song with none is refused.
+        Services.AudioTrackExport.RequireNotation(project, "a PDF score");
+        if (trackIndex < 0 || trackIndex >= project.Tracks.Count || project.Tracks[trackIndex].IsAudio)
+            trackIndex = project.Tracks.IndexOf(project.FirstNotationTrack!);
         var editor = new TabEditorControl { Project = project, SelectedTrackIndex = Math.Max(0, trackIndex), DarkPaper = false, HideCursor = true, PlaybackMeasure = -1 };
         editor.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
         editor.Arrange(new Rect(editor.DesiredSize));

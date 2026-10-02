@@ -14,10 +14,12 @@ public static class TabPlaybackSwitchPolicy
             if (action == TabPlaybackAction.Pause)
             {
                 previous.Playback.Engine.Pause();
+                previous.Playback.Clock.Paused();   // its audio clips pause with it
             }
             else if (action == TabPlaybackAction.Stop)
             {
                 previous.Playback.Engine.Stop();
+                previous.Playback.Clock.Stopped();
                 previous.Playback.ClearPlaybackPosition();
             }
         }

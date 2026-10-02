@@ -7,6 +7,9 @@ namespace TabForge.Services;
 
 public enum AutosaveFailureKind { None, DiskFull, AccessDenied, Other }
 
+// Owns: the autosave health record and the pass that copies dirty songs to the recovery folder.
+// Does not own: the timer and notices (AutosaveController) and the file naming rules (AutosaveService).
+// Tests: TestAutosaveRecovery.
 /// <summary>
 /// What the autosave has achieved so far: the last attempt and the last SUCCESS are tracked separately, so a failing autosave is
 /// visible (status-bar notice) instead of only reaching the debug output. Pure, so it can be tested without a window.

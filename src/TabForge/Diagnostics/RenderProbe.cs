@@ -29,7 +29,7 @@ internal static partial class DiagnosticCommands
             var client = AudioEngineClient.Instance;
             client.WarmIdle = TimeSpan.Zero;   // the probe's last Sync stops the engine (no R-10 warm period headless)
             var settings = new PluginSettings();
-            MixerGroups.PlayAllThroughEngine = true;   // the blank track has no plug-ins: it plays on the engine's General MIDI synth
+            client.Mixer.PlayAllThroughEngine = true;   // the blank track has no plug-ins: it plays on the engine's General MIDI synth
 
             bool WaitFor(Func<bool> condition, int ms)
             {

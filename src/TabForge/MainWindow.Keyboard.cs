@@ -73,7 +73,14 @@ public partial class MainWindow
         }
 
         // A selected clip (or a clicked clip lane) owns its keys first: Delete, arrows, Esc, Ctrl+C/X/V/D...
-        if (!inText && ClipContextActive && _clipHotkeyMap.TryGetValue(gesture, out var clipAction) && RunClipHotkey(clipAction))
+        if (!inText && ClipContextActive && _clipHotkeyMap.TryGetValue(gesture, out var clipAction) && _clips.RunHotkey(Doc, clipAction))
+        {
+            e.Handled = true;
+            return;
+        }
+
+        // A focused track row owns Ctrl+C/X/V/D and Delete for the track.
+        if (!inText && TryRunTrackRowHotkey(gesture))
         {
             e.Handled = true;
             return;
@@ -197,20 +204,12 @@ public partial class MainWindow
 
     // The instant flag: the exact content check (serialises the whole song) runs after undo/redo and
     // before closing, not on every edit.
-    /// <summary>What an edit needs redrawn; <see cref="CommitEdit"/> marks the song changed and applies it.</summary>
+    /// <summary>What an edit needs redrawn; <see cref="RefreshAfterEdit"/> applies it.</summary>
     [Flags]
     private enum EditRefresh
     {
         None = 0, Score = 1, Repaint = 2, Arrangement = 4, TimelineGeometry = 8,
         Palette = 16, Status = 32, Instrument = 64, Markers = 128,
-    }
-
-    /// <summary>The one ending for a model edit made from the window: dirty flag, the requested refreshes, title.</summary>
-    private void CommitEdit(EditRefresh refresh)
-    {
-        _project.IsDirty = true;
-        _project.MarkTimelineChanged();   // A5-08: every window edit ends here; timing caches rebuild once
-        RefreshAfterEdit(refresh);
     }
 
     /// <summary>The view's half of an edit that already went through <see cref="DocumentEdits"/> (which marked the song changed): redraws only.</summary>

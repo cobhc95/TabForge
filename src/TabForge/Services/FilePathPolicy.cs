@@ -2,6 +2,9 @@ using System.IO;
 
 namespace TabForge.Services;
 
+// Owns: the safe file operations: atomic writes, leftover sweeps, reserved-name checks and bounded reads.
+// Does not own: the contents of the files written.
+// Tests: TestDataIntegrityLeftovers, TestSecurityInputBoundaries.
 /// <summary>Validates user-selected file boundaries without narrowing Unicode or long-path support.</summary>
 public static class FilePathPolicy
 {
@@ -271,7 +274,32 @@ public static class FilePathPolicy
     /// that cannot be proven (a malformed or foreign marker, a mismatching backup, a locked file) changes nothing, keeps every file and the
     /// marker, and is reported so the next open can retry. Returns a message for the user, or null when nothing was pending.
     /// </summary>
-    public static string? RecoverInterruptedPair(string firstPath, string secondPath)
+    public static string? RecoverInterruptedPair(string firstPath, string secondPath) => RecoverInterruptedPairCore(firstPath, secondPath);
+
+    /// <summary>
+    /// <see cref="RecoverInterruptedPair(string, string)"/> for a first file whose partner is named by the marker itself: a .gp saved with a
+    /// full copy (.tforge) or with its audio data (.tfaudio). Only those two partner kinds are accepted from a marker.
+    /// </summary>
+    public static string? RecoverInterruptedPair(string firstPath)
+    {
+        string first;
+        try
+        {
+            first = Path.GetFullPath(firstPath);
+            if (Path.GetDirectoryName(first) is not { } folder || !File.Exists(PairMarkerPath(first))) return null;
+            var partner = Path.ChangeExtension(first, ".tfaudio");
+            if (ReadMarkerBytes(PairMarkerPath(first), out _) is { } bytes && ParseMarker(bytes, Path.GetFileName(first), null, out _) is { } info
+                && (info.SecondName.EndsWith(".tfaudio", StringComparison.OrdinalIgnoreCase) || info.SecondName.EndsWith(".tforge", StringComparison.OrdinalIgnoreCase)))
+                partner = Path.Combine(folder, info.SecondName);
+            return RecoverInterruptedPairCore(first, partner);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException or System.Security.SecurityException)
+        {
+            return null;
+        }
+    }
+
+    private static string? RecoverInterruptedPairCore(string firstPath, string secondPath)
     {
         string first, second, directory, marker;
         try

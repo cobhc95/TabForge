@@ -1,6 +1,6 @@
 # Third-party components
 
-TabForge is an independent project. Guitar Pro is a trademark of Arobas Music. VST and ASIO are trademarks of Steinberg Media Technologies GmbH. Other product and company names are trademarks of their owners. TabForge is not affiliated with, sponsored or endorsed by any of them.
+TabForge is an independent project. VST and ASIO are trademarks of Steinberg Media Technologies GmbH. Other product and company names are trademarks of their owners. TabForge is not affiliated with, sponsored or endorsed by any of them.
 
 The full licence texts of the bundled components are in the `licenses` folder next to `TabForge.exe` (in the source
 tree: `src/TabForge/licenses/`). Every text there is an unmodified copy taken from the package or runtime it belongs to.
@@ -12,7 +12,7 @@ later (LGPL-2.1-or-later). You may replace `SoundTouch.Net.dll` in this folder w
 `SoundTouch.Net.dll` is a separate file beside `TabForge.exe`; it is not packed into the executable, so you can swap
 it without rebuilding TabForge. TabForge only calls it through its public API.
 
-- Licence text: [licenses/LGPL-2.1_SoundTouch.Net.txt](licenses/LGPL-2.1_SoundTouch.Net.txt)
+- Licence text: [licenses/LGPL-2.1_SoundTouch.Net.txt](src/TabForge/licenses/LGPL-2.1_SoundTouch.Net.txt)
 - Copyright: Olaf Woudenberg 2011-2019 (SoundTouch.Net); the SoundTouch algorithms are by Olli Parviainen (https://www.surina.net/soundtouch/).
 - Source of the exact version used (tag `2.3.2`, commit `98e5b8fd2f8efed0ddf7c8f66b435bfb231659dc`):
   https://github.com/owoudenberg/soundtouch.net/tree/98e5b8fd2f8efed0ddf7c8f66b435bfb231659dc
@@ -26,18 +26,18 @@ it without rebuilding TabForge. TabForge only calls it through its public API.
 
 ## alphaTab (MPL-2.0)
 
-TabForge uses alphaTab for Guitar Pro reading and `.gp` (GP7) writing, as its own **modified build** of alphaTab 1.8.4,
+TabForge uses alphaTab for reading score files and writing `.gp`, as its own **modified build** of alphaTab 1.8.4,
 shipped as the assembly `TabForge.AlphaTab.dll` (NuGet package `TabForge.AlphaTab` 1.8.4-tabforge.3). It is not the upstream
 `AlphaTab` package and carries a different name on purpose.
 
 - The modifications (MPL-2.0 section 3.2: the Source Code Form of the modified files stays available, see below), three patches:
-  (1) alphaTab refuses a Guitar Pro 3-5 file with more than 1,000 bars through a hard-coded constant. The patch turns that constant into
+  (1) alphaTab refuses a .gp3/.gp4/.gp5 file with more than 1,000 bars through a hard-coded constant. The patch turns that constant into
   a setting of each individual import (`ImporterSettings.MaxGp3To5BarCount`, default 1,000, i.e. unchanged); TabForge sets it to its own
   per-track limit of 20,000 bars. It also pins the build date stamped into the library and renames the package and assembly.
-  (2) A Guitar Pro 7/8 file (gpif) stores a track's mixer volume and balance as fractions, while alphaTab's model keeps only a 0..16
+  (2) A .gp file (gpif) stores a track's mixer volume and balance as fractions, while alphaTab's model keeps only a 0..16
   step of them. The patch adds `PlaybackInformation.VolumeFraction` and `BalanceFraction` (default -1, i.e. unchanged), which the gpif
   reader fills and the gpif writer prefers when set, so the exact values survive.
-  (3) A Guitar Pro 7/8 file stores a trill's speed in a note XProperty (id 688062467, the note value in ticks); alphaTab neither wrote it
+  (3) A .gp file stores a trill's speed in a note XProperty (id 688062467, the note value in ticks); alphaTab neither wrote it
   nor read it (every trill read as 1/16). The patch writes it for every trill and reads it back as the nearest note value; it also raises
   the package version to 1.8.4-tabforge.3.
   The patches are `vendor/alphatab/0001-per-import-gp3-5-bar-limit-and-tabforge-identity.patch` (29 changed lines in 5 files) and
@@ -57,7 +57,7 @@ shipped as the assembly `TabForge.AlphaTab.dll` (NuGet package `TabForge.AlphaTa
 - Project: https://www.alphatab.net/
 - Source code form (tag `v1.8.4`, commit `022a45c8e42370f9e12e68949d11eada370da83d`):
   https://github.com/CoderLine/alphaTab/tree/022a45c8e42370f9e12e68949d11eada370da83d
-- Licence: Mozilla Public License 2.0 (MPL-2.0). Text: [licenses/MPL-2.0_alphaTab.txt](licenses/MPL-2.0_alphaTab.txt)
+- Licence: Mozilla Public License 2.0 (MPL-2.0). Text: [licenses/MPL-2.0_alphaTab.txt](src/TabForge/licenses/MPL-2.0_alphaTab.txt)
   (also at https://www.mozilla.org/MPL/2.0/). The Source Code Form of alphaTab is available at the link above.
 
 ## Bravura music font (SIL OFL 1.1)
@@ -66,7 +66,7 @@ The alphaTab library embeds the Bravura font (version 1.38) as the resource `Alp
 inside `TabForge.AlphaTab.dll` (unchanged by TabForge's patch).
 
 - Copyright (c) 2020, Steinberg Media Technologies GmbH (http://www.steinberg.net/), with Reserved Font Name "Bravura".
-- Licence: SIL Open Font License, Version 1.1. Text: [licenses/OFL-1.1_Bravura.txt](licenses/OFL-1.1_Bravura.txt)
+- Licence: SIL Open Font License, Version 1.1. Text: [licenses/OFL-1.1_Bravura.txt](src/TabForge/licenses/OFL-1.1_Bravura.txt)
   (the licence field of the font file itself).
 - Source: https://github.com/steinbergmedia/bravura
 
@@ -77,7 +77,7 @@ shipped; no native Skia library is included.
 
 - Copyright (c) 2025, Daniel Kuschny.
 - Source: https://github.com/CoderLine/alphaSkia
-- Licence: BSD 3-Clause. Text: [licenses/BSD-3-Clause_AlphaSkia.txt](licenses/BSD-3-Clause_AlphaSkia.txt) (the project's
+- Licence: BSD 3-Clause. Text: [licenses/BSD-3-Clause_AlphaSkia.txt](src/TabForge/licenses/BSD-3-Clause_AlphaSkia.txt) (the project's
   LICENSE file, which also carries the Skia and HarfBuzz notices).
 
 ## NAudio (MIT)
@@ -86,7 +86,7 @@ The audio engine uses the `NAudio` NuGet packages (2.2.1) for audio output (WASA
 
 - Copyright 2020 Mark Heath.
 - Source: https://github.com/naudio/NAudio
-- Licence: MIT. Text: [licenses/MIT_NAudio.txt](licenses/MIT_NAudio.txt)
+- Licence: MIT. Text: [licenses/MIT_NAudio.txt](src/TabForge/licenses/MIT_NAudio.txt)
 
 ASIO is a trademark and software of Steinberg Media Technologies GmbH.
 
@@ -98,7 +98,7 @@ process it (it plays Windows' own `gm.dls` sound bank, converted in memory; the 
 - Copyright (c) 2021 Nobuaki Tanaka. The licence file also carries the notices for C# Synth (Alex Veltsistas, 2014)
   and TinySoundFont (Bernhard Schelling, based on SFZero by Steve Folta).
 - Source: https://github.com/sinshu/meltysynth
-- Licence: MIT. Text: [licenses/MIT_MeltySynth_and_notices.txt](licenses/MIT_MeltySynth_and_notices.txt)
+- Licence: MIT. Text: [licenses/MIT_MeltySynth_and_notices.txt](src/TabForge/licenses/MIT_MeltySynth_and_notices.txt)
 
 ## Microsoft .NET runtime, WindowsDesktop runtime and packages (MIT)
 
@@ -109,12 +109,12 @@ Windows Forms) are part of `TabForge.exe`, together with `System.Drawing.Common`
 dotnet/runtime under the same MIT licence.
 
 - Copyright (c) .NET Foundation and Contributors / Microsoft Corporation.
-- Licences: [licenses/MIT_DotNet_runtime_LICENSE.txt](licenses/MIT_DotNet_runtime_LICENSE.txt),
-  [licenses/MIT_DotNet_WindowsDesktop_runtime.txt](licenses/MIT_DotNet_WindowsDesktop_runtime.txt),
-  [licenses/MIT_Microsoft_System.Drawing.Common.txt](licenses/MIT_Microsoft_System.Drawing.Common.txt)
+- Licences: [licenses/MIT_DotNet_runtime_LICENSE.txt](src/TabForge/licenses/MIT_DotNet_runtime_LICENSE.txt),
+  [licenses/MIT_DotNet_WindowsDesktop_runtime.txt](src/TabForge/licenses/MIT_DotNet_WindowsDesktop_runtime.txt),
+  [licenses/MIT_Microsoft_System.Drawing.Common.txt](src/TabForge/licenses/MIT_Microsoft_System.Drawing.Common.txt)
 - Notices for the third-party code inside them:
-  [licenses/THIRD-PARTY-NOTICES_DotNet_runtime.txt](licenses/THIRD-PARTY-NOTICES_DotNet_runtime.txt),
-  [licenses/THIRD-PARTY-NOTICES_System.Drawing.Common.txt](licenses/THIRD-PARTY-NOTICES_System.Drawing.Common.txt)
+  [licenses/THIRD-PARTY-NOTICES_DotNet_runtime.txt](src/TabForge/licenses/THIRD-PARTY-NOTICES_DotNet_runtime.txt),
+  [licenses/THIRD-PARTY-NOTICES_System.Drawing.Common.txt](src/TabForge/licenses/THIRD-PARTY-NOTICES_System.Drawing.Common.txt)
 - Source: https://github.com/dotnet/runtime and https://github.com/dotnet/wpf
 
 ## VST 2 plug-in hosting (TabForge's own code)
@@ -149,7 +149,7 @@ The checked-in `src/TabForge.AudioEngine/native/tfvst3.dll` is a build of that r
   proprietary licences are no longer offered, and this project uses no earlier version. MIT is compatible with
   TabForge's own MIT licence. Its terms require the copyright notice and licence text to accompany copies of the
   Software, including a redistributed `tfvst3.dll`; the notice is reproduced here and in
-  [licenses/MIT_Steinberg_VST3_SDK.txt](licenses/MIT_Steinberg_VST3_SDK.txt):
+  [licenses/MIT_Steinberg_VST3_SDK.txt](src/TabForge/licenses/MIT_Steinberg_VST3_SDK.txt):
 - VST is a registered trademark of Steinberg Media Technologies GmbH. ASIO is a trademark of Steinberg Media
   Technologies GmbH. TabForge is not affiliated with or endorsed by Steinberg.
 
@@ -185,7 +185,7 @@ The Beginner's Guide (Help > Tutorial) is exported as a PDF with the `PDFsharp-M
 - Version: 6.2.4.
 - Copyright (c) 2001-2026 empira Software GmbH, Troisdorf (Cologne Area), Germany.
 - Project: https://docs.pdfsharp.net/ , source: https://github.com/empira/PDFsharp
-- Licence: MIT. Text: [licenses/MIT_PDFsharp_MigraDoc.txt](licenses/MIT_PDFsharp_MigraDoc.txt).
+- Licence: MIT. Text: [licenses/MIT_PDFsharp_MigraDoc.txt](src/TabForge/licenses/MIT_PDFsharp_MigraDoc.txt).
 - The WPF build uses Windows' own font and image support; no GDI+ and no browser engine.
 
 ## Sample song

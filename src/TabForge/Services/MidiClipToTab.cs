@@ -2,6 +2,9 @@ using TabForge.Models;
 
 namespace TabForge.Services;
 
+// Owns: writing a recorded MIDI clip into a track's notation.
+// Does not own: recording and the clip model.
+// Tests: TestClips.
 /// <summary>
 /// Writes a recorded MIDI clip into a track's notation (when the clip is dragged onto the track's row): onsets
 /// are quantised to the 16th grid, notes starting together form one beat, each beat lasts until the next one

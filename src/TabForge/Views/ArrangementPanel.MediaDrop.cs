@@ -19,6 +19,10 @@ public sealed partial class ArrangementPanel
         _horizontal.DragOver += OnMediaDragOver;
         _horizontal.DragLeave += (_, _) => _timeline.MediaDragLeave();
         _horizontal.Drop += OnMediaDrop;
+        _timeline.AddLaneShown = _showAddTrackLane;
+        _timeline.AddLaneClicked += RaiseTimelineAddLane;
+        _timeline.AddLaneHotChanged += hot => { _addLaneHot = hot; ApplyAddLaneState(); };
+        _timeline.AddLaneDragChanged += _ => ApplyAddLaneState();
         _timeline.DropPreviewChanged += preview => { if (!_simulatingGhost) _dropGhost.Show(preview); };
     }
 

@@ -3,6 +3,9 @@ using TabForge.Documents;
 
 namespace TabForge.Services;
 
+// Owns: bounding every settings value to its valid range.
+// Does not own: file access and migration.
+// Tests: TestNewBindableCommands, TestPasteSettingsRows.
 /// <summary>Clamps imported and persisted settings to practical UI, audio, and collection bounds.</summary>
 public static class SettingsValidator
 {
@@ -13,6 +16,7 @@ public static class SettingsValidator
         SettingsMigration.EnsureSections(settings);
         settings.Plugins ??= new PluginSettings();
         settings.Appearance.TrackTintPercent = Math.Clamp(settings.Appearance.TrackTintPercent, 0, 60);
+        settings.Appearance.MutedTrackDimPercent = Math.Clamp(settings.Appearance.MutedTrackDimPercent, 0, 100);
         var plugins = settings.Plugins;
         plugins.Driver = AudioDrivers.All.FirstOrDefault(d => string.Equals(d, plugins.Driver, StringComparison.OrdinalIgnoreCase)) ?? AudioDrivers.WasapiShared;
         plugins.Device = plugins.Device is { Length: <= 256 } device ? device : "";
@@ -204,9 +208,22 @@ public static class SettingsValidator
     {
         value.Bindings ??= new Dictionary<string, string>();
         value.DisabledActions ??= new List<string>();
-        var bindings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        value.Bindings2 ??= new Dictionary<string, string>();
+        value.DisabledActions2 ??= new List<string>();
+        // One gesture is stored once across both slots; slot 1 is read first so it wins.
         var usedGestures = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var pair in value.Bindings.Take(InputLimits.MaxHotkeyBindings))
+        value.Bindings = NormalizeBindings(value.Bindings, usedGestures);
+        value.Bindings2 = NormalizeBindings(value.Bindings2, usedGestures);
+        value.DisabledActions = NormalizeDisabled(value.DisabledActions);
+        value.DisabledActions2 = NormalizeDisabled(value.DisabledActions2);
+        foreach (var disabled in value.DisabledActions) value.Bindings.Remove(disabled);
+        foreach (var disabled in value.DisabledActions2) value.Bindings2.Remove(disabled);
+    }
+
+    private static Dictionary<string, string> NormalizeBindings(Dictionary<string, string> source, HashSet<string> usedGestures)
+    {
+        var bindings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var pair in source.Take(InputLimits.MaxHotkeyBindings))
         {
             var action = HotkeyCatalog.ById(pair.Key);
             if (action is null || !InputLimits.IsSafeText(pair.Value, 64, allowLineBreaks: false) ||
@@ -215,12 +232,13 @@ public static class SettingsValidator
             if (!usedGestures.Add(gesture)) continue;
             bindings[action.Id] = gesture;
         }
-        value.Bindings = bindings;
-        value.DisabledActions = value.DisabledActions.Where(id => HotkeyCatalog.ById(id) is not null)
+        return bindings;
+    }
+
+    private static List<string> NormalizeDisabled(List<string> source) =>
+        source.Where(id => HotkeyCatalog.ById(id) is not null)
             .Select(id => HotkeyCatalog.ById(id)!.Id).Distinct(StringComparer.OrdinalIgnoreCase)
             .Take(InputLimits.MaxHotkeyBindings).ToList();
-        foreach (var disabled in value.DisabledActions) value.Bindings.Remove(disabled);
-    }
 
     private static double Clamp(double value, double minimum, double maximum, double fallback) =>
         double.IsFinite(value) ? Math.Clamp(value, minimum, maximum) : fallback;

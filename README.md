@@ -1,6 +1,6 @@
-# TabForge 0.5.1
+# TabForge 0.5.2
 
-**A keyboard-driven tablature and notation editor for Windows. Opens and saves Guitar Pro files.** Write, import and play back guitar,
+**A keyboard-driven tablature and notation editor for Windows. Opens and saves GP files (.gp, .gp3–.gp5, .gpx).** Write, import and play back guitar,
 bass, drum and keyboard parts, with a live fretboard / keyboard, an arrangement timeline, audio and MIDI
 recording lanes, mixer groups, VST effects and instruments, and offline audio rendering.
 
@@ -9,16 +9,16 @@ recording lanes, mixer groups, VST effects and instruments, and offline audio re
 *The main screenshot shows TabForge's own demo song and a third-party VST3 plug-in (Superior Drummer 3 by Toontrack, sold separately) as an example of plug-in hosting. TabForge does not include that plug-in and is not affiliated with Toontrack.*
 
 > [!NOTE]
-> **TabForge 0.5 is the first official release.** Keep backups of your projects and your original song files,
+> **TabForge 0.5.2 is a pre-release.** Keep backups of your projects and your original song files,
 > especially before using recording or third-party plug-ins, and report anything odd on the Issues page.
 
-TabForge is an independent project. Guitar Pro is a trademark of Arobas Music; TabForge is not affiliated with, sponsored or endorsed by Arobas Music, Steinberg, Toontrack or any other company named here.
+TabForge is an independent project, not affiliated with any other software maker.
 
 ## Download
 
 Get the latest build from [Releases](https://github.com/cobhc95/TabForge/releases):
 
-**0.5.1 downloads:** [Windows installer](https://github.com/cobhc95/TabForge/releases/download/v0.5.1/TabForge-0.5.1-setup.exe) · [Portable ZIP](https://github.com/cobhc95/TabForge/releases/download/v0.5.1/TabForge-0.5.1-win-x64-portable.zip) · [SHA-256 checksums](https://github.com/cobhc95/TabForge/releases/download/v0.5.1/TabForge-0.5.1-SHA256.txt)
+**0.5.2 downloads:** [Windows installer](https://github.com/cobhc95/TabForge/releases/download/v0.5.2/TabForge-0.5.2-setup.exe) · [Portable ZIP](https://github.com/cobhc95/TabForge/releases/download/v0.5.2/TabForge-0.5.2-win-x64-portable.zip) · [SHA-256 checksums](https://github.com/cobhc95/TabForge/releases/download/v0.5.2/TabForge-0.5.2-SHA256.txt)
 
 Installer, portable ZIP, SHA-256 checksums and release notes are on the [Releases page](https://github.com/cobhc95/TabForge/releases).
 
@@ -28,7 +28,7 @@ them. Releases built by the GitHub Actions release workflow from the tagged sour
 download matches that build.
 
 - **`TabForge-<version>-setup.exe`** — installer: Start menu entry, optional desktop icon and an optional
-  *"Open Guitar Pro and TabForge files with TabForge"* association. Installs for your Windows account;
+  *"Open .gp and .tforge files with TabForge"* association. Installs for your Windows account;
   no administrator rights needed.
 - **`TabForge-<version>-win-x64-portable.zip`** — extract anywhere and run `TabForge.exe`. Nothing is
   installed and nothing is registered.
@@ -43,17 +43,25 @@ Includes an original demo song, *Ashen Meridian* (CC0), used in all screenshots.
 
 A `licenses/` folder beside `TabForge.exe` (portable zip and installer) holds the full licence texts of every bundled component. SoundTouch.Net (LGPL-2.1) ships as a separate, replaceable `SoundTouch.Net.dll`; each release attaches its source.
 
-## What's new in 0.5.1
+## What's new in 0.5.2
 
-- **Highlight the playing bar** (off by default): View > Highlight playing bar shades the whole bar that is playing; colour and opacity in Preferences > Playback > Appearance.
-- **Render a bar or section range:** Render to file > Bounds now offers Custom bars and Custom sections.
-- **Browser-style tabs:** dragging a window's only tab moves the window; drop it on another window's tab bar to merge.
-- **Track list always fits:** no empty space under the tracks; the splitter stretches the rows instead.
-- **Safer .gp saving:** you are told before anything is lost, and a clean .gp keeps bend shapes, trill speed, Legato, Rasgueado, pick slides and exact volume and pan.
-- **Very long songs** (around 2,000 bars) now open in seconds.
+- **Audio tracks and the Add-track lane.** A track that holds audio and MIDI clips and has no notation. Click the **Add track** lane under the last track (or drop files on it) to add one; right-click an audio track > *Convert to instrument track* keeps every clip. The song grows to fit clips you place past its end.
 
-Every change is in the [CHANGELOG](CHANGELOG.md).
+  ![Audio track row with a waveform clip and the Add-track lane](docs/screenshots/audio-track-row.png)
 
+- **Track right-click menu.** Cut, Copy, Paste, Duplicate, Delete, Rename, Colour and Properties on any track row. Whole tracks (notation, clips, mixer settings, FX chain) copy, cut, paste and duplicate, and the usual keys work while a track row has the focus.
+
+  ![Track right-click menu](docs/screenshots/track-row-menu.png)
+
+- **Two shortcuts per command** (Hotkey 1 and Hotkey 2 in Settings > Shortcuts), and menus show the keys you set.
+- **Live editing.** An edit made during playback is heard from the next bar, with no stop or jump.
+- **Writing.** Bars you edit are filled with rests (optional); typing on a rest uses your remembered duration; the cursor sits only on real beats; Delete, tenuto and pitch act on the whole selection.
+- **Mute and Solo are instant**, muted tracks are drawn grey, and render follows the same rule (solo wins; muted and soloed plays).
+- **Sections carry their clips.** Drag a section to move it with its bars (Ctrl+drag moves only the marker).
+- **Smoother and faster.** Playback, mixer and view options are passed in explicitly, each song owns its audio-engine transport, and track switching, menus and Settings open faster. Dragging a pane splitter shows a light shade instead of redrawing every step.
+- **Check for updates now** in Settings > General > Updates.
+
+Full notes: [0.5.2 release notes](https://github.com/cobhc95/TabForge/releases/tag/v0.5.2) and the [changelog](CHANGELOG.md).
 ## What's new in 0.5
 
 - **Built-in tutorial.** Help > Tutorial… opens a **Basic Guide** (seven short chapters) and a **Detailed Guide** (sixteen chapters covering every feature), with instant search and **Export PDF**.
@@ -108,7 +116,7 @@ Every change is in the [CHANGELOG](CHANGELOG.md).
 - **Files.**
   - Saving and reopening .gp keeps far more of your song.
   - MIDI export matches playback to the millisecond.
-  - Guitar Pro 3–5 songs with more than 1,000 bars now open.
+  - .gp3/.gp4/.gp5 songs with more than 1,000 bars now open.
 - **Under the hood.**
   - Playback tested on real hardware, with ASIO and WASAPI at low latency.
   - Recording survives a busy disk.
@@ -119,7 +127,7 @@ Every change is in the [CHANGELOG](CHANGELOG.md).
   - The demo song's drum swell and outro piano can now be heard.
   - Over 3,600 automated checks run on every build.
 
-The full list is in the [0.5 release notes](https://github.com/cobhc95/TabForge/releases/tag/v0.5.0).
+The full list is in the [0.5.0 release notes](https://github.com/cobhc95/TabForge/releases/tag/v0.5.0).
 
 ## MIDI processing: shape the MIDI before it reaches your instruments
 
@@ -219,7 +227,7 @@ The whole workspace can be rearranged to suit how you write:
 | [![Sections](docs/screenshots/menu-sections.png)](docs/screenshots/menu-sections.png) | [![Tools](docs/screenshots/menu-tools.png)](docs/screenshots/menu-tools.png) | [![Sound](docs/screenshots/menu-sound.png)](docs/screenshots/menu-sound.png) |
 | [![View](docs/screenshots/menu-view.png)](docs/screenshots/menu-view.png) | [![Options](docs/screenshots/menu-options.png)](docs/screenshots/menu-options.png) | [![Help](docs/screenshots/menu-help.png)](docs/screenshots/menu-help.png) |
 
-Familiar menu order and shortcuts for people coming from other tab editors (a "Classic (influenced by Guitar Pro 5)" shortcut preset is included); every command shows its shortcut (tooltips too, in brackets), and every shortcut can be
+Familiar menu order and shortcuts for people coming from other tab editors (a "Classic" shortcut preset is included); every command shows its shortcut (tooltips too, in brackets), and every shortcut can be
 changed (see [Hotkeys](#8-settings)).
 
 ### 3. Writing and editing
@@ -232,6 +240,7 @@ changed (see [Hotkeys](#8-settings)).
 - **30+ techniques**: bends (with curves), slides, hammer-ons/pull-offs, palm mute, let ring, vibrato and
   wide vibrato, natural/artificial/pinch/tapped harmonics, dead and ghost notes, tremolo picking, trills,
   fades, accents, staccato, tenuto, grace notes, arpeggio/brush strokes, tapping, slap and pop.
+- **Edits during playback** are heard from the next bar. Bars you edit stay complete (*Fill incomplete bars with rests*, on by default); typing on a rest writes your remembered duration; *Advance after entering a note* (off by default) moves the caret on.
 - **Two voices per bar**, tuplets, ties, rests, fermatas, chord names, text and lyrics.
 - **Mix table points (F10)**: tempo, volume and pan changes inside a song.
 - Copy/cut/paste beats and bars, repeat selections, insert/delete beats that keep the bar length, full undo.
@@ -250,6 +259,8 @@ changed (see [Hotkeys](#8-settings)).
 - **Drag across bars to select an area**: copy, cut, paste, move, delete, loop it, or skip it during
   playback. `Esc` clears the selection.
 - Right-click menus for bars, tracks and sections; drag tracks up or down to reorder them.
+- **Add-track lane**: a strip under the last track (click it, or drop audio or MIDI files on it) that adds an audio track or opens the Add track window; hide it in Preferences > Timeline & Tracks.
+- **Sections carry their clips**: moving, copying or duplicating a section takes the clips inside it; the song grows to fit clips that run past its end.
 
 [![Sections panel](docs/screenshots/sections-panel.png)](docs/screenshots/sections-panel.png)
 
@@ -302,10 +313,15 @@ or the keyboard (root marked more strongly); *Scale > Clear selection* removes i
   4-/5-/6-/7-string bass and 6-/7-/8-/9-string guitar, `+ / − Low string` to change the number of strings.
   Extended-range instruments are named by string count, e.g. *Electric Bass (Finger) (5 strings)*.
   Choose whether retuning keeps the fret numbers or the sounding pitches.
-- **Drum notation presets** (Guitar Pro 5, Guitar Pro 6/7, line-per-instrument drum tab) plus a fully
+- **Drum notation presets** (.gp5, .gpx/.gp, line-per-instrument drum tab) plus a fully
   custom map: TAB line, TAB text, staff position and notehead for every GM drum sound.
 - **Global tuning** shifts every track at once, e.g. the whole song down a half step.
-- **Instrument and tool icons** are original artwork, redrawn for this release.
+- **Instrument and tool icons** are original artwork.
+
+- **Audio tracks** have no notation and no instrument picker: they hold audio and MIDI clips and are silent unless an instrument plug-in plays them. Convert one to an instrument track at any time.
+- **Track menu**: right-click a track row for Cut, Copy, Paste, Duplicate, Delete, Rename, Colour and Properties. A track row in focus takes Ctrl+C, Ctrl+X, Ctrl+V, Ctrl+D and Delete.
+
+[![Track list with an audio track](docs/screenshots/audio-track-main.png)](docs/screenshots/audio-track-main.png)
 
 [![Add track](docs/screenshots/add-track.png)](docs/screenshots/add-track.png)
 
@@ -335,6 +351,8 @@ or the keyboard (root marked more strongly); *Scale > Clear selection* removes i
 
 ### 8. Recording, clip lanes and grouping
 
+Recording is here to help you capture song ideas quickly and turn them into notation and tab, so an idea isn't lost while you're writing. It is a sketchpad for songwriting, not a replacement for a full recording studio or DAW, and that isn't a goal of TabForge.
+
 [![Recording lanes and track controls](docs/screenshots/recording-layout.png)](docs/screenshots/recording-layout.png)
 
 - **Ctrl+R** records armed tracks into audio or MIDI clips; choose an audio input or *MIDI (all inputs)*,
@@ -353,6 +371,9 @@ or the keyboard (root marked more strongly); *Scale > Clear selection* removes i
 
 ### 9. Settings
 
+- Every command has **two shortcuts** (Hotkey 1 and Hotkey 2); *Check now* in General > Updates looks for a newer release.
+- **Mute and Solo**: solo wins (only soloed tracks play); a track both muted and soloed plays. Muted tracks are drawn grey (Appearance > Muted track dimming).
+
 [![Settings — General](docs/screenshots/settings-general.png)](docs/screenshots/settings-general.png)
 
 Settings are grouped into pages and **searchable** — type a word and every matching setting from every page
@@ -370,7 +391,7 @@ is listed with its path, and changes preview live before you apply them:
   score fonts per text area.
 - **Every setting is audited**: a self-test changes each one and checks it is stored, survives save and reload
   and never changes another; a live probe checks each one visibly changes the app.
-- **Hotkeys**: every command is rebindable, with presets for TabForge, Classic (influenced by Guitar Pro 5) and TuxGuitar and
+- **Hotkeys**: every command is rebindable, with presets for TabForge, Classic and Alternative and
   conflict warnings. The full list is in Settings > Hotkeys.
 - **Updates**: *Check for updates automatically* is the first setting on the General page — once a day TabForge
   asks GitHub whether a newer release exists and offers to open its download page (see
@@ -379,7 +400,7 @@ is listed with its path, and changes preview live before you apply them:
   [![Update available](docs/screenshots/update-available.png)](docs/screenshots/update-available.png)
 
 - **Help > About** shows the version, the independent-project notice and a **Licences** button that opens the third-party licence list and the `licenses/` folder.
-- **Windows integration**: turn "Open Guitar Pro and TabForge files with TabForge" on or off (see
+- **Windows integration**: turn "Open .gp and .tforge files with TabForge" on or off (see
   [Security](#security-and-safety) for exactly what it writes).
 - Import/export all settings as a file.
 
@@ -388,23 +409,25 @@ is listed with its path, and changes preview live before you apply them:
 
 ### 10. Files and compatibility
 
+TabForge supports GP files: it opens .gp3, .gp4, .gp5, .gpx and .gp, and saves .gp.
+
 | Format | Open | Save |
 |---|---|---|
-| Guitar Pro 3 / 4 / 5 (`.gp3`, `.gp4`, `.gp5`) | ✔ | |
-| Guitar Pro 6 (`.gpx`) | ✔ | |
-| Guitar Pro 7 / 8 (`.gp`) | ✔ | ✔ (default) |
+| `.gp3`, `.gp4`, `.gp5` | ✔ | |
+| `.gpx` | ✔ | |
+| `.gp` | ✔ | ✔ (default) |
 | TabForge project (`.tforge`) | ✔ | ✔ |
 | Standard MIDI file (`.mid`) | | export |
 | ASCII tab (`.txt`) | | export |
 
-Drum parts import from every format, including Guitar Pro 6 (`.gpx`) extended articulations and Guitar Pro 7/8
+Drum parts import from every format, including `.gpx` extended articulations and .gp
 (`.gp`) drum kits; the import is covered by synthetic round-trip tests that run on every build. Known
-limit: Guitar Pro 3–5 files open with up to 20,000 bars per track. Guitar Pro 1/2 (`.gtp`) and TuxGuitar (`.tg`) files are not supported.
+limit: .gp3/.gp4/.gp5 files open with up to 20,000 bars per track. `.gtp` and `.tg` files are not supported.
 
 A `.gp` saved by TabForge follows the `.gp` file format, **and** carries the complete TabForge project inside it
 (an extra entry other readers can ignore), so reopening it in TabForge loses nothing — drum map, section sizes,
 score styles, mix points. Imports are checked against the reference parser (alphaTab) note-for-note on real
-GP3/GP4/GP5/GPX files.
+.gp3/.gp4/.gp5/GPX files.
 
 Saved `.gp` files carry correct zip checksums and keep the album, copyright, tab author, music, words and instructions fields.
 
@@ -467,7 +490,7 @@ Settings > Hotkeys (all rebindable).
 
   [![New from template](docs/screenshots/new-from-template.png)](docs/screenshots/new-from-template.png)
 
-- **Export**: Standard MIDI, ASCII tab, **PDF** (engraved notation and tab as A4 pages, no printer needed), **MusicXML** (`.musicxml`, one part per track with a tab staff), clean **Guitar Pro `.gp`**, and **Render to audio** (WAV / MP3, master and stems).
+- **Export**: Standard MIDI, ASCII tab, **PDF** (engraved notation and tab as A4 pages, no printer needed), **MusicXML** (`.musicxml`, one part per track with a tab staff), clean **`.gp`**, and **Render to audio** (WAV / MP3, master and stems).
 - **Print** and **Print preview**; **Score information** (F5).
 - **Command palette** (Ctrl+Shift+A): fuzzy-search every command by name, see its key, press Enter to run it.
 
@@ -544,7 +567,7 @@ Settings > Hotkeys (all rebindable).
 - Repeats up to x99, D.S./D.C./Coda/Fine, tempo changes (also mid-bar), mix-table fades, dynamics, technique playback; **score follow** with page turn or smooth page turn (stops only on a genuine manual scroll).
 
 ### Settings and help
-- Preferences (F12) with search, themes (Dark, Light, System), colours, fonts, interface scale, project settings, import/export of all settings, **Keyboard shortcuts** (F1) with TabForge, Classic (influenced by Guitar Pro 5) and TuxGuitar presets, **Check for updates**, About, Windows file-association option.
+- Preferences (F12) with search, themes (Dark, Light, System), colours, fonts, interface scale, project settings, import/export of all settings, **Keyboard shortcuts** (F1) with TabForge, Classic and Alternative presets, **Check for updates**, About, Windows file-association option.
 
 ### Menus, panels and windows in detail
 
@@ -610,7 +633,7 @@ Settings > Hotkeys (all rebindable).
 
 - **Architecture rules**: one-directional dependencies, no UI code in the model or playback layers, one owner
   per piece of state, one place per rule (bar length, section bounds, technique names, colour parsing...).
-- **A headless regression suite of about 2,000 deterministic checks** (`TabForge.exe --selftest <log>`) covers timing,
+- **A headless regression suite of deterministic checks** (`TabForge.exe --selftest <log>`) covers timing,
   ties, repeats, import/export round trips, notation layout, editing semantics, hotkeys, security boundaries,
   every Settings row and scale detection. Every group is isolated so one crash cannot hide failures, and a
   missing input is reported as **SKIP**, never as a pass.
@@ -622,7 +645,7 @@ Settings > Hotkeys (all rebindable).
 
 TabForge treats every file, clipboard paste and settings file as **untrusted input**:
 
-- **Bounded reads everywhere**: projects and Guitar Pro files are capped at 128 MB, settings at 2 MB, JSON
+- **Bounded reads everywhere**: projects and score files are capped at 128 MB, settings at 2 MB, JSON
   nesting at 64 levels. Files are size-checked *before* they are read into memory.
 - **Structure limits** checked before and after parsing — e.g. at most 256 tracks, 20,000 bars per track,
   1,000,000 notes, 16 strings, 64 techniques per note, 512 bend points — to keep the memory and CPU a crafted file can use bounded
@@ -709,6 +732,5 @@ Downloads and release notes: [Releases](https://github.com/cobhc95/TabForge/rele
 
 ## Licence
 
-MIT — see [LICENSE](LICENSE). Guitar Pro file reading/writing uses [alphaTab](https://github.com/CoderLine/alphaTab) (MPL-2.0);
-see [THIRD_PARTY.md](THIRD_PARTY.md). Full licence texts ship in the `licenses/` folder (SoundTouch.Net, LGPL-2.1, is a replaceable DLL). Guitar Pro is a trademark of Arobas Music; TabForge is an independent project and is not affiliated with,
-sponsored or endorsed by Arobas Music, Steinberg, Toontrack or any other company named here.
+MIT — see [LICENSE](LICENSE). Score file reading/writing uses [alphaTab](https://github.com/CoderLine/alphaTab) (MPL-2.0);
+see [THIRD_PARTY.md](THIRD_PARTY.md). Full licence texts ship in the `licenses/` folder (SoundTouch.Net, LGPL-2.1, is a replaceable DLL). TabForge is an independent project and is not affiliated with, sponsored or endorsed by any other software maker.

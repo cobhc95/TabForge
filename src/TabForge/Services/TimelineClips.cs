@@ -19,6 +19,9 @@ public enum TimelinePasteKind
 /// <param name="OldToNewBar">Structural inserts only: old-to-new bar map for playback, selection and section remapping.</param>
 public sealed record TimelinePasteResult(bool Changed, int BarsPasted, int[]? OldToNewBar, string Message);
 
+// Owns: the arrangement timeline's use of the one score clipboard (bar, area and section copies).
+// Does not own: the clipboard format and capture (ClipboardService).
+// Tests: TestTimelineClipsShareClipboard, TestTimelineSectionCopiesAsBars.
 /// <summary>
 /// The arrangement timeline's side of the one score clipboard (<see cref="ClipboardService"/>, design chunk C7): bar, area and
 /// section copies are Bars <see cref="ScoreClip"/>s, so a copy in the timeline pastes in the score editor and the reverse.

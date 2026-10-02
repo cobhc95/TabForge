@@ -17,6 +17,9 @@ public sealed class DrumMapEntry
     public DrumMapEntry Clone() => (DrumMapEntry)MemberwiseClone();
 }
 
+// Owns: the drum maps that name drum notes per kit and notation style.
+// Does not own: drum playback and the notation drawing.
+// Tests: TestDrumEntryAndQuickAddBars, TestInstrumentChoiceStrings.
 /// <summary>
 /// Drum notation presets, modelled on how the common programs show percussion:
 /// - Guitar Pro 5: TAB shows the GM note number on a line per kit group.
@@ -30,13 +33,13 @@ public sealed class DrumMapEntry
 public static class DrumMaps
 {
     public const string GuitarPro5 = "Guitar Pro 5";
-    public const string GuitarPro6 = "Guitar Pro 6/7";
+    public const string GuitarPro6 = ".gp6/.gp7";
     public const string DrumTab = "Drum tab (lines)";
     public const string Custom = "Custom";
     public static readonly string[] Presets = { GuitarPro5, GuitarPro6, DrumTab, Custom };
 
     /// <summary>Display label of a stored preset name (the stored value never changes).</summary>
-    public static string DisplayName(string preset) => preset == GuitarPro5 ? "GP5 file drum map" : preset == GuitarPro6 ? "GP6/7 file drum map" : preset;
+    public static string DisplayName(string preset) => preset == GuitarPro5 ? ".gp5 file drum map" : preset == GuitarPro6 ? ".gp6/.gp7 file drum map" : preset;
 
     // (midi, staffStep, head, abbreviation, kit group)  group: 0 cymbal, 1 hihat, 2 high tom, 3 snare, 4 low tom, 5 kick, 6 other
     private static readonly Dictionary<int, (int Step, string Head, string Abbrev, int Group)> Standard = new()

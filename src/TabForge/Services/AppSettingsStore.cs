@@ -3,6 +3,9 @@ using System.IO;
 
 namespace TabForge.Services;
 
+// Owns: the one live settings object of the running app: debounced atomic save and the change notification every window uses.
+// Does not own: the file format rules (SettingsFileService, SettingsMigration) and the settings UI.
+// Tests: TestDocumentContext, TestProfileLeavesUserFoldersUntouched.
 /// <summary>
 /// R-09: the one <see cref="AppSettings"/> of the running app. <see cref="App"/> owns the shared store (created at startup, flushed on
 /// exit); every window reads and writes <see cref="Settings"/> through it and none keeps or saves its own copy, so a change made in one

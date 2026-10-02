@@ -5,7 +5,7 @@ using System.Windows.Media;
 namespace TabForge.Shell;
 
 /// <summary>
-/// Cuts the references a closed window's child controls hold back to the window (R1 follow-up). A UI Automation client keeps
+/// Cuts the references a closed window's child controls hold back to the window. A UI Automation client keeps
 /// <c>ElementProxy -> AutomationPeer -> control</c> alive after the window has closed; if the control's event handlers (the window's methods)
 /// stay attached, that chain pins the closed window and, through it, its songs. At <c>Closed</c> TabForge's own controls drop their C# events
 /// (field-like events) and forget the song (<see cref="ForgetDocument(object)"/>). WPF's routed-event handlers are left alone: the window

@@ -6,6 +6,9 @@ using TabForge.Playback;
 
 namespace TabForge.Services;
 
+// Owns: Standard MIDI File export from the canonical playback timeline.
+// Does not own: playback and the MIDI import.
+// Tests: TestMidiExport, TestFermataPlayback.
 /// <summary>
 /// Standard MIDI File export. The file is written from the canonical playback timeline, so an
 /// exported file plays exactly what TabForge plays (repeats, ties, techniques, tempo map included).
@@ -27,7 +30,7 @@ public static class MidiExportService
 
         var chunks = new List<byte[]> { BuildConductorTrack(project, timeline, map) };
         for (var trackIndex = 0; trackIndex < project.Tracks.Count; trackIndex++)
-            chunks.Add(BuildTrackChunk(project, timeline, map, trackIndex));
+            if (!project.Tracks[trackIndex].IsAudio) chunks.Add(BuildTrackChunk(project, timeline, map, trackIndex));
 
         FilePathPolicy.WriteAtomically(path, fs =>
         {

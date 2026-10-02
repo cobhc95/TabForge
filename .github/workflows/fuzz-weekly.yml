@@ -42,7 +42,7 @@ jobs:
         run: dotnet restore TabForge.sln --locked-mode
 
       - name: Build (Release)
-        run: dotnet build TabForge.sln -c Release --no-restore
+        run: dotnet build TabForge.sln -c Release --no-restore -p:TabForgeFullSuite=true
 
       - name: Fuzz (larger count, random logged seed)
         shell: pwsh

@@ -14,22 +14,23 @@ using WpfPath = System.Windows.Shapes.Path;
 using System.Windows.Threading;
 using Microsoft.Win32;
 using TabForge.Services;
+using static TabForge.Views.PreferencesCards;
 
 namespace TabForge.Views;
 
 /// <summary>Native, searchable settings pages backed directly by the framework-neutral descriptors.</summary>
-public partial class PreferencesWindow : Window
+public partial class PreferencesWindow : Window, IPreferencesHost
 {
-    private sealed record PageRow(string Category, SettingDescriptor? Setting, HotkeyAction? Hotkey, Border Element);
-    private sealed record HotkeyControl(HotkeyAction Action, Button Gesture, TextBlock Feedback, Button Reassign, Button Reset);
 
+    private readonly SettingEditors _editors;
+    private readonly HotkeyPage _hotkeys;
+    private readonly CommonPages _pages;
     private readonly Action<AppSettings>? _apply;
     private readonly Action<AppSettings>? _preview;
     private readonly Dictionary<string, SettingDescriptor> _descriptorsByKey = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, SettingDescriptor> _defaultsByKey = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<PageRow> _rows = new();
     private readonly List<(SettingDescriptor Descriptor, FrameworkElement Row, Button Reset)> _settingControls = new();
-    private readonly List<HotkeyControl> _hotkeyControls = new();
     private readonly Dictionary<string, (Button Button, SettingsNavigationIcon Icon)> _navigation = new(StringComparer.OrdinalIgnoreCase);
     private AppSettings _settings;
     private AppSettings _baseline;
@@ -79,15 +80,12 @@ public partial class PreferencesWindow : Window
 
     /// <summary>The actions of the main window that opened this dialog (Linked audio, quarantine, "Apply to all tracks"); null for an unowned test dialog.</summary>
     private readonly SettingsWindowActions? _actions;
-    private string? _recordingActionId;
-    private (string ActionId, string Gesture, string ConflictingActionId)? _pendingConflict;
     private bool _dirty;
     private bool _allowClose;
     private bool _rebuilding;
     private bool _wasSearching;
     private int _cardIndex;
     private readonly DispatcherTimer _searchDebounce;
-    private static readonly Dictionary<string, string> HotkeySearchIndex = new(StringComparer.Ordinal);
 
     public event Action<AppSettings>? SettingsApplied;
     public event Action<AppSettings>? SettingsPreviewed;
@@ -99,8 +97,12 @@ public partial class PreferencesWindow : Window
     {
         InitializeComponent();
         Title = $"TabForge Settings - {AppInfo.DisplayVersion}";
+        VersionLabel.Text = AppInfo.VersionLine;
         if (owner is not null) Owner = owner;
         _actions = actions;
+        _editors = new SettingEditors(this);
+        _hotkeys = new HotkeyPage(this);
+        _pages = new CommonPages(this);
         _apply = apply;
         _preview = preview;
         _settings = SettingsMigration.Clone(current);
@@ -132,7 +134,7 @@ public partial class PreferencesWindow : Window
             e.Handled = true;
         };
         CategoryFilter.SelectionChanged += (_, _) => RebuildPage();
-        PreviewKeyDown += Window_PreviewKeyDown;
+        PreviewKeyDown += (_, e) => _hotkeys.OnPreviewKeyDown(e);
         // Esc = Cancel. Not IsCancel on the button: that closes the dialog even after "keep editing" in the discard question
         // (and asks it twice). Bubbling KeyDown, so an open combo box, the search box and shortcut capture handle Esc first.
         KeyDown += (_, e) =>
@@ -141,7 +143,7 @@ public partial class PreferencesWindow : Window
             e.Handled = true;
             CancelButton_Click(this, new RoutedEventArgs());
         };
-        PreviewMouseDown += Window_PreviewMouseDown;
+        PreviewMouseDown += (_, e) => _hotkeys.OnPreviewMouseDown(e);
         SizeChanged += (_, _) => UpdateSearchAreaWidth();
         SearchHeaderBorder.SizeChanged += (_, _) => UpdateSearchAreaWidth();
         Closing += Window_Closing;
@@ -149,10 +151,10 @@ public partial class PreferencesWindow : Window
         Loaded += (_, _) =>
         {
             UpdateSearchAreaWidth();
-            // A deep link names a row: show its page and scroll to it (the row flashes so the eye finds its group).
+            // A deep link names a row: rebuild its page (already built by the constructor) to scroll to it and flash it.
             var row = _pendingRow;
             _pendingRow = null;
-            RebuildPage(focusSettingKey: row is not null && _descriptorsByKey.ContainsKey(row) ? row : null);
+            if (row is not null && _descriptorsByKey.ContainsKey(row)) RebuildPage(focusSettingKey: row);
         };
 
         RebuildPage();
@@ -168,6 +170,27 @@ public partial class PreferencesWindow : Window
     /// <summary>The currently staged settings; callers should only adopt this after acceptance.</summary>
     public AppSettings Result => SettingsMigration.Clone(_settings);
     public bool HasChanges => _dirty;
+
+    internal static (string Name, string Hex)[] ColourPresets => SettingEditors.ColourPresets;
+
+    Window IPreferencesHost.Dialog => this;
+    AppSettings IPreferencesHost.Settings => _settings;
+    AppSettings IPreferencesHost.Baseline => _baseline;
+    Dictionary<string, SettingDescriptor> IPreferencesHost.DescriptorsByKey => _descriptorsByKey;
+    Dictionary<string, SettingDescriptor> IPreferencesHost.DefaultsByKey => _defaultsByKey;
+    SettingsWindowActions? IPreferencesHost.Actions => _actions;
+    void IPreferencesHost.SettingChanged(SettingDescriptor? descriptor, object? value) => SettingChanged(descriptor, value);
+    void IPreferencesHost.RebuildPage(string? focusSettingKey, string? focusHotkey) => RebuildPage(focusSettingKey, focusHotkey);
+    void IPreferencesHost.RefreshDescriptors() { _descriptors = SettingsCatalog.Build(_settings); ReplaceDescriptorMap(); }
+    void IPreferencesHost.SetStatus(string text) => StatusText.Text = text;
+    void IPreferencesHost.AddTopCard(Border card, int columns) => AddTopCard(card, columns);
+    void IPreferencesHost.AddRow(PageRow row) => _rows.Add(row);
+    Border IPreferencesHost.SettingRow(SettingDescriptor descriptor, bool searchResult) => SettingRow(descriptor, searchResult);
+    void IPreferencesHost.NavigateToCategory(string category) => NavigateToCategory(category);
+    void IPreferencesHost.NavigateToHotkey(string id) => NavigateToHotkey(id);
+    void IPreferencesHost.ResetAll() => ResetAll();
+    void IPreferencesHost.ResetHotkeyCategory(IReadOnlyCollection<string> categories) => ResetHotkeyCategory(categories);
+    void IPreferencesHost.AddRecentColour(string hex) => AddRecentColour(hex);
 
     private static AppSettings Clone(AppSettings settings) => SettingsMigration.Clone(settings);
 
@@ -269,7 +292,7 @@ public partial class PreferencesWindow : Window
         {
             _rows.Clear();
             _settingControls.Clear();
-            _hotkeyControls.Clear();
+            _hotkeys.Clear();
             ContentGrid.Children.Clear();
             ContentGrid.RowDefinitions.Clear();
             ContentGrid.ColumnDefinitions.Clear();
@@ -286,17 +309,17 @@ public partial class PreferencesWindow : Window
 
             if (!searching && _selectedCategory == SettingsCatalog.Hotkeys)
             {
-                BuildHotkeyPage(categoryFilter);
+                _hotkeys.BuildPage(categoryFilter);
                 SetPageHeader(SettingsCatalog.Hotkeys, Subtitle(SettingsCatalog.Hotkeys));
             }
             else if (!searching && _selectedCategory == SettingsCatalog.Advanced)
             {
-                BuildAdvancedPage();
+                _pages.BuildAdvancedPage();
                 SetPageHeader(SettingsCatalog.Advanced, Subtitle(SettingsCatalog.Advanced));
             }
             else if (!searching && _selectedCategory == SettingsCatalog.Home)
             {
-                BuildHomePage();
+                _pages.BuildHomePage();
                 SetPageHeader(SettingsCatalog.Home, Subtitle(SettingsCatalog.Home));
             }
             else
@@ -327,12 +350,12 @@ public partial class PreferencesWindow : Window
                 var hotkeys = searching ? HotkeyCatalog.All.Where(action =>
                     (categoryFilter is null || categoryFilter.Equals(SettingsCatalog.Hotkeys, StringComparison.OrdinalIgnoreCase) ||
                      categoryFilter.Equals(action.Category, StringComparison.OrdinalIgnoreCase)) &&
-                    (HotkeySearchText(action).Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                    (HotkeyPage.HotkeySearchText(action).Contains(query, StringComparison.OrdinalIgnoreCase) ||
                      "hotkeys shortcuts commands".Contains(query, StringComparison.OrdinalIgnoreCase))).ToList() : new List<HotkeyAction>();
                 foreach (var group in hotkeys.GroupBy(action => action.Category))
                 {
                     var card = GroupCard(group.Key + " commands");
-                    foreach (var action in group) AddCardContent(card, HotkeyRow(action, true));
+                    foreach (var action in group) AddCardContent(card, _hotkeys.HotkeyRow(action, true));
                     AddTopCard(card, columns);
                 }
 
@@ -385,29 +408,6 @@ public partial class PreferencesWindow : Window
         _cardIndex++;
     }
 
-    private static Border GroupCard(string title)
-    {
-        var stack = new StackPanel();
-        stack.Children.Add(new TextBlock { Text = title, FontSize = 16, FontWeight = FontWeights.SemiBold,
-            Margin = new Thickness(0, 0, 0, 2), TextWrapping = TextWrapping.Wrap });
-        return new Border
-        {
-            Background = (Brush)Application.Current.FindResource("Panel2Brush"),
-            BorderBrush = (Brush)Application.Current.FindResource("BorderSoftBrush"),
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(8),
-            Padding = new Thickness(16, 14, 16, 14),
-            Child = stack,
-            HorizontalAlignment = HorizontalAlignment.Stretch
-        };
-    }
-
-    private static void AddCardContent(Border card, FrameworkElement row)
-    {
-        if (card.Child is not StackPanel stack) return;
-        if (stack.Children.Count > 1) row.Margin = new Thickness(0, 12, 0, 0);
-        stack.Children.Add(row);
-    }
 
     private Border SettingRow(SettingDescriptor descriptor, bool searchResult)
     {
@@ -439,7 +439,7 @@ public partial class PreferencesWindow : Window
         rowContent.Children.Add(labelStack);
 
         var editorAndReset = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
-        var editor = BuildEditor(descriptor);
+        var editor = _editors.BuildEditor(descriptor);
         editorAndReset.Children.Add(editor);
         var reset = CreateButton("Reset", "ResetActionButton", $"Restore the default value for {descriptor.Title}.");
         reset.Margin = new Thickness(8, 0, 0, 0);
@@ -475,704 +475,6 @@ public partial class PreferencesWindow : Window
         return border;
     }
 
-    private FrameworkElement BuildEditor(SettingDescriptor descriptor)
-    {
-        return descriptor.Kind switch
-        {
-            SettingKind.Bool => BuildBoolEditor(descriptor),
-            SettingKind.Choice => BuildChoiceEditor(descriptor),
-            SettingKind.Number => BuildNumberEditor(descriptor),
-            SettingKind.Colour => BuildColourEditor(descriptor),
-            SettingKind.Button => BuildRowButton(descriptor),
-            _ => BuildTextEditor(descriptor)
-        };
-    }
-
-    /// <summary>The button of a <see cref="SettingKind.Button"/> row: each key has its own action.</summary>
-    private FrameworkElement BuildRowButton(SettingDescriptor descriptor)
-    {
-        switch (descriptor.Key)
-        {
-            case "score.textfonts":
-                return RowButton(descriptor, "Text & fonts…", true, OpenScoreTextFonts);
-            case "fretboard.showallas":
-                return RowButton(descriptor, "Apply to all tracks", _actions?.ShowAllTracksAs is not null,
-                    () => _actions?.ShowAllTracksAs?.Invoke(_settings.Editing.InstrumentView));
-            case "vst.quarantine":
-                return BuildQuarantineButton(descriptor);
-            default:
-                return BuildLinkedAudioButton(descriptor);
-        }
-    }
-
-    private FrameworkElement BuildQuarantineButton(SettingDescriptor descriptor)
-    {
-        var button = RowButton(descriptor, "Plug-ins switched off after a crash…", _actions?.ManageQuarantine is not null, () =>
-        {
-            if (_actions?.ManageQuarantine is not { } open) return;
-            // Allow again changes the live settings straight away (like the linked-audio approvals); keep this window's copy and baseline in step.
-            var list = open(this);
-            _settings.Plugins.Quarantined = list.ToList();
-            _baseline.Plugins.Quarantined = list.ToList();
-        });
-        return button;
-    }
-
-    private Button RowButton(SettingDescriptor descriptor, string label, bool enabled, Action click)
-    {
-        var button = new Button { Content = label, Padding = new Thickness(10, 3, 10, 3), ToolTip = descriptor.Tooltip(_settings.Hotkeys), IsEnabled = enabled };
-        AutomationProperties.SetName(button, descriptor.Title);
-        button.Click += (_, _) => click();
-        return button;
-    }
-
-    /// <summary>Per-area score text styles, edited on this window's staged settings and previewed live like any other row.</summary>
-    private void OpenScoreTextFonts()
-    {
-        var areas = _settings.Appearance.ScoreTextAreas ??= new();
-        var before = JsonSerializer.Serialize(areas);
-        if (ScoreTextStyleWindow.Show(this, areas, () => { TabEditorControl.ConfigureTextAreas(areas); SettingChanged(); })) { SettingChanged(); return; }
-        var restored = JsonSerializer.Deserialize<Dictionary<string, ScoreTextAreaStyle>>(before) ?? new();
-        _settings.Appearance.ScoreTextAreas = restored;
-        TabEditorControl.ConfigureTextAreas(restored);
-        SettingChanged();
-    }
-
-    private FrameworkElement BuildLinkedAudioButton(SettingDescriptor descriptor)
-    {
-        var button = new Button { Content = "Manage approved folders…", Padding = new Thickness(10, 3, 10, 3), ToolTip = descriptor.Tooltip(_settings.Hotkeys),
-            IsEnabled = _actions?.ManageLinkedAudio is not null };
-        AutomationProperties.SetName(button, "Manage approved folders");
-        button.Click += (_, _) =>
-        {
-            if (_actions?.ManageLinkedAudio is not { } open) return;
-            // Approvals change straight away (they are a safety decision); keep this window's copy and its baseline in step
-            // so Apply does not bring back a revoked folder and Cancel does not undo one.
-            var approvals = open(this);
-            _settings.Audio.ApprovedMedia = approvals.Select(a => new MediaApproval { Project = a.Project, Folder = a.Folder }).ToList();
-            _baseline.Audio.ApprovedMedia = approvals.Select(a => new MediaApproval { Project = a.Project, Folder = a.Folder }).ToList();
-        };
-        return button;
-    }
-
-    private FrameworkElement BuildBoolEditor(SettingDescriptor descriptor)
-    {
-        var check = new CheckBox { IsChecked = descriptor.Get() is true, VerticalAlignment = VerticalAlignment.Center,
-            ToolTip = descriptor.Tooltip(_settings.Hotkeys), MinWidth = 24 };
-        AutomationProperties.SetName(check, descriptor.Title);
-        check.Checked += (_, _) => SettingChanged(descriptor, true);
-        check.Unchecked += (_, _) => SettingChanged(descriptor, false);
-        return check;
-    }
-
-    private FrameworkElement BuildChoiceEditor(SettingDescriptor descriptor)
-    {
-        var choices = descriptor.Choices;
-        // Device names are shown exactly as Windows names them ("Audient iD4", not "Audient i D4").
-        string Label(string value) => descriptor.Key is "vst.device" or "vst.input" or "vst.asio.in" or "vst.asio.out" or "vst.asio.outlast" ? value
-            : descriptor.Key == "audio.fretboardstyle" && value.StartsWith("GP5: ", StringComparison.Ordinal) ? "Show " + value.Substring(5).ToLowerInvariant()
-            : Prettify(value);
-        var selected = choices.ToList().FindIndex(value => value.Equals(descriptor.Get()?.ToString(), StringComparison.OrdinalIgnoreCase));
-        var combo = new ComboBox
-        {
-            Width = Math.Clamp(choices.Select(Label).DefaultIfEmpty("").Max(value => value.Length) * 8 + 36, 150, 300),
-            ItemsSource = choices.Select(Label).ToArray(),
-            SelectedIndex = Math.Max(0, selected),
-            ToolTip = descriptor.Tooltip(_settings.Hotkeys),
-            MaxDropDownHeight = 330
-        };
-        AutomationProperties.SetName(combo, descriptor.Title);
-        combo.SelectionChanged += (_, _) =>
-        {
-            if (combo.SelectedIndex < 0 || combo.SelectedIndex >= choices.Count) return;
-            descriptor.Set(choices[combo.SelectedIndex]);
-            SettingChanged();
-            // A theme preset rewrites many colours: show their new values (after this event finishes).
-            if (descriptor.Key == "appearance.thememode") Dispatcher.BeginInvoke(new Action(() => RebuildPage()));
-            // A new audio driver has its own devices: refresh the device list and the ASIO-only rows.
-            if (descriptor.Key == "vst.driver")
-                Dispatcher.BeginInvoke(new Action(() => { _descriptors = SettingsCatalog.Build(_settings); ReplaceDescriptorMap(); RebuildPage(); }));
-        };
-        if (descriptor.Key == "vst.buffer") return BufferSizeEditor(descriptor, combo, choices);
-        if (descriptor.Key != "vst.device" || !string.Equals(_settings.Plugins.Driver, AudioDrivers.Asio, StringComparison.Ordinal)) return combo;
-        // ASIO: the driver's own panel sets the buffer size and routing.
-        var configure = new Button { Content = "Configure…", Margin = new Thickness(6, 0, 0, 0), Padding = new Thickness(8, 2, 8, 2),
-            ToolTip = "Open the ASIO driver's own control panel (buffer size, sample rate, routing)" };
-        configure.Click += (_, _) =>
-        {
-            if (!TabForge.Audio.AudioDevices.ShowAsioControlPanel(_settings.Plugins.Device, out var why)) StatusText.Text = why;
-        };
-        var panel = new StackPanel { Orientation = Orientation.Horizontal };
-        panel.Children.Add(combo);
-        panel.Children.Add(configure);
-        return panel;
-    }
-
-    /// <summary>Buffer size: type any value (16 to 8192 samples) or pick a usual one from the list.</summary>
-    private FrameworkElement BufferSizeEditor(SettingDescriptor descriptor, ComboBox presets, IReadOnlyList<string> choices)
-    {
-        var box = new TextBox { Width = 64, Text = descriptor.Get()?.ToString() ?? "256", VerticalContentAlignment = VerticalAlignment.Center,
-            ToolTip = "Type a buffer size in samples (16 to 8192) and press Enter" };
-        AutomationProperties.SetName(box, descriptor.Title);
-        void Commit()
-        {
-            if (!int.TryParse(box.Text.Trim(), out var typed)) { box.Text = descriptor.Get()?.ToString() ?? "256"; return; }
-            typed = Math.Clamp(typed, AudioDrivers.MinBuffer, AudioDrivers.MaxBuffer);
-            box.Text = typed.ToString();
-            if (typed.ToString() == descriptor.Get()?.ToString()) return;
-            descriptor.Set(typed.ToString());
-            SettingChanged();
-        }
-        box.LostKeyboardFocus += (_, _) => Commit();
-        box.PreviewKeyDown += (_, e) => { if (e.Key == Key.Enter) { Commit(); e.Handled = true; } };
-        // The list: picking one fills the box.
-        presets.Width = 74;
-        presets.SelectedIndex = -1;
-        presets.SelectionChanged += (_, _) =>
-        {
-            if (presets.SelectedIndex < 0 || presets.SelectedIndex >= choices.Count) return;
-            box.Text = choices[presets.SelectedIndex];
-            Commit();
-        };
-        var row = new StackPanel { Orientation = Orientation.Horizontal };
-        row.Children.Add(box);
-        presets.Margin = new Thickness(6, 0, 0, 0);
-        row.Children.Add(presets);
-        return row;
-    }
-
-    private FrameworkElement BuildNumberEditor(SettingDescriptor descriptor)
-    {
-        var value = ToFiniteDouble(descriptor.Get(), descriptor.Min);
-        value = Math.Clamp(value, descriptor.Min, descriptor.Max);
-        var spinner = BuildNumberSpinner(descriptor, value);
-        if (descriptor.Key == "vst.winmidilatency") return WithMeasureButton(descriptor, spinner);
-        if (!descriptor.Unit.Equals("%", StringComparison.Ordinal)) return spinner;
-
-        var panel = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
-        var slider = new Slider
-        {
-            Minimum = descriptor.Min,
-            Maximum = descriptor.Max,
-            Value = value,
-            Width = 165,
-            TickFrequency = descriptor.Step,
-            SmallChange = descriptor.Step,
-            LargeChange = descriptor.Step * 10,
-            VerticalAlignment = VerticalAlignment.Center,
-            ToolTip = descriptor.Tooltip(_settings.Hotkeys),
-            IsSnapToTickEnabled = false
-        };
-        AutomationProperties.SetName(slider, descriptor.Title);
-        panel.Children.Add(slider);
-        spinner.Margin = new Thickness(8, 0, 0, 0);
-        panel.Children.Add(spinner);
-        var syncing = false;
-        slider.ValueChanged += (_, args) =>
-        {
-            if (syncing) return;
-            syncing = true;
-            SetNumberSpinnerValue(spinner, descriptor, args.NewValue);
-            syncing = false;
-            descriptor.Set(args.NewValue);
-            SettingChanged();
-        };
-        spinner.Tag = new Action<double>(next =>
-        {
-            if (syncing) return;
-            syncing = true;
-            slider.Value = next;
-            syncing = false;
-            descriptor.Set(next);
-            SettingChanged();
-        });
-        return panel;
-    }
-
-    private FrameworkElement BuildNumberSpinner(SettingDescriptor descriptor, double initial)
-    {
-        var width = descriptor.Unit == "%" ? 82.0 : 118.0;
-        var panel = new Grid { Width = width, Height = 32, ToolTip = descriptor.Tooltip(_settings.Hotkeys),
-            Tag = descriptor };
-        panel.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        panel.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(20) });
-        panel.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-        panel.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-        var text = new TextBox
-        {
-            Style = (Style)FindResource("NumericValueTextBox"),
-            Text = FormatNumber(initial, descriptor.Decimals),
-            VerticalContentAlignment = VerticalAlignment.Center
-        };
-        AutomationProperties.SetName(text, descriptor.Title);
-        Grid.SetRowSpan(text, 2);
-        panel.Children.Add(text);
-        var up = CreateButton("", "NumericStepButton", $"Increase {descriptor.Title}.");
-        var down = CreateButton("", "NumericStepButton", $"Decrease {descriptor.Title}.");
-        up.Content = SpinnerArrow(upward: true);
-        down.Content = SpinnerArrow(upward: false);
-        AutomationProperties.SetName(up, $"Increase {descriptor.Title}");
-        AutomationProperties.SetName(down, $"Decrease {descriptor.Title}");
-        Grid.SetColumn(up, 1);
-        Grid.SetColumn(down, 1);
-        Grid.SetRow(down, 1);
-        var outer = new Border { Background = (Brush)Application.Current.FindResource("Panel2Brush"), BorderBrush = (Brush)Application.Current.FindResource("BorderSoftBrush"),
-            BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(4), Child = panel };
-        panel.Children.Add(up);
-        panel.Children.Add(down);
-
-        var valid = true;
-        var settingText = false;
-        void Change(double candidate, bool updateText)
-        {
-            var next = Math.Clamp(candidate, descriptor.Min, descriptor.Max);
-            if (updateText)
-            {
-                settingText = true;
-                text.Text = FormatNumber(next, descriptor.Decimals);
-                settingText = false;
-            }
-            if (outer.Tag is Action<double> callback) callback(next);
-            else
-            {
-                descriptor.Set(next);
-                SettingChanged();
-            }
-        }
-        text.TextChanged += (_, _) =>
-        {
-            if (settingText) return;
-            if (double.TryParse(text.Text, NumberStyles.Float, CultureInfo.CurrentCulture, out var parsed) ||
-                double.TryParse(text.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out parsed))
-            {
-                valid = true;
-                text.BorderBrush = Brushes.Transparent;
-                if (double.IsFinite(parsed)) Change(parsed, false);
-            }
-            else
-            {
-                valid = false;
-                text.BorderBrush = Brush("#C04D5B");
-            }
-        };
-        text.LostFocus += (_, _) =>
-        {
-            var current = Math.Clamp(ToFiniteDouble(descriptor.Get(), descriptor.Min), descriptor.Min, descriptor.Max);
-            if (!valid || !double.TryParse(text.Text, NumberStyles.Float, CultureInfo.CurrentCulture, out var entered) ||
-                !double.IsFinite(entered) || Math.Abs(Math.Clamp(entered, descriptor.Min, descriptor.Max) - entered) > 1e-9)
-            {
-                settingText = true;
-                text.Text = FormatNumber(current, descriptor.Decimals);
-                settingText = false;
-            }
-            valid = true;
-            text.BorderBrush = Brushes.Transparent;
-        };
-        text.PreviewKeyDown += (_, e) =>
-        {
-            if (e.Key != Key.Enter) return;
-            MoveFocus(new TraversalRequest(FocusNavigationDirection.Next));
-            e.Handled = true;
-        };
-        up.Click += (_, _) => Change(ToFiniteDouble(descriptor.Get(), initial) + descriptor.Step, true);
-        down.Click += (_, _) => Change(ToFiniteDouble(descriptor.Get(), initial) - descriptor.Step, true);
-        AutomationProperties.SetName(outer, descriptor.Title);
-        panel.Tag = null;
-        return outer;
-    }
-
-    /// <summary>
-    /// "Windows MIDI latency (ms)": the number box plus a Measure button. One press plays a very quiet hit five times through the Windows
-    /// synth and reads it back (only when nothing else plays); the median is stored only when it is plausible (20-600 ms).
-    /// </summary>
-    private FrameworkElement WithMeasureButton(SettingDescriptor descriptor, FrameworkElement spinner)
-    {
-        var panel = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
-        var button = new Button { Content = "Measure", Padding = new Thickness(10, 2, 10, 2), Margin = new Thickness(8, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center,
-            ToolTip = "Plays one very quiet hit five times through the Windows MIDI synth and reads it back from the Windows output. Stop playback first; other audio spoils the reading." };
-        AutomationProperties.SetName(button, "Measure the Windows MIDI latency");
-        var result = new TextBlock { Margin = new Thickness(8, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center, Opacity = 0.8 };
-        panel.Children.Add(spinner);
-        panel.Children.Add(button);
-        panel.Children.Add(result);
-        button.Click += async (_, _) =>
-        {
-            button.IsEnabled = false;
-            result.Text = "Measuring (about 5 s)…";
-            (double? Ms, string Detail) outcome;
-            try { outcome = await Task.Run(() => TabForge.Audio.WindowsMidiLatency.Measure(new TabForge.Playback.SharedMidiOutput())); }
-            catch (Exception ex) { outcome = (null, ex.Message); }
-            if (outcome.Ms is { } ms)
-            {
-                var rounded = (int)Math.Round(ms);
-                SetNumberSpinnerValue(spinner, descriptor, rounded);
-                descriptor.Set(rounded);
-                SettingChanged();
-                result.Text = $"{rounded} ms stored ({outcome.Detail})";
-            }
-            else result.Text = $"Not changed: {outcome.Detail}";
-            button.IsEnabled = true;
-        };
-        return panel;
-    }
-
-    private static void SetNumberSpinnerValue(FrameworkElement spinner, SettingDescriptor descriptor, double value)
-    {
-        if (spinner is not Border { Child: Grid grid }) return;
-        if (grid.Children.OfType<TextBox>().FirstOrDefault() is { } text)
-            text.Text = FormatNumber(value, descriptor.Decimals);
-    }
-
-    private static WpfPath SpinnerArrow(bool upward) => new()
-    {
-        Data = Geometry.Parse(upward ? "M 1,4 L 4,1 L 7,4" : "M 1,1 L 4,4 L 7,1"),
-        Stroke = (Brush)Application.Current.FindResource("MutedBrush"),
-        StrokeThickness = 1.3,
-        StrokeStartLineCap = PenLineCap.Round,
-        StrokeEndLineCap = PenLineCap.Round,
-        Width = 8,
-        Height = 5,
-        Stretch = Stretch.Fill,
-        HorizontalAlignment = HorizontalAlignment.Center,
-        VerticalAlignment = VerticalAlignment.Center
-    };
-
-    private FrameworkElement BuildTextEditor(SettingDescriptor descriptor)
-    {
-        var text = new TextBox { Width = 210, Text = descriptor.Get()?.ToString() ?? "",
-            ToolTip = descriptor.Tooltip(_settings.Hotkeys), VerticalContentAlignment = VerticalAlignment.Center };
-        AutomationProperties.SetName(text, descriptor.Title);
-        text.TextChanged += (_, _) =>
-        {
-            descriptor.Set(text.Text);
-            SettingChanged();
-        };
-        if (descriptor.Key != "vst.folders") return text;
-        // Folder lists: browse to a folder instead of typing its path.
-        var browse = new Button { Content = "Browse…", Margin = new Thickness(6, 0, 0, 0), Padding = new Thickness(8, 2, 8, 2) };
-        browse.Click += (_, _) =>
-        {
-            var dialog = new Microsoft.Win32.OpenFolderDialog { Title = "Add a plug-in folder", Multiselect = true };
-            if (dialog.ShowDialog(this) != true) return;
-            var folders = text.Text.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
-            foreach (var folder in dialog.FolderNames)
-                if (!folders.Contains(folder, StringComparer.OrdinalIgnoreCase)) folders.Add(folder);
-            text.Text = string.Join("; ", folders);
-        };
-        var row = new StackPanel { Orientation = Orientation.Horizontal };
-        row.Children.Add(text);
-        row.Children.Add(browse);
-        return row;
-    }
-
-    internal static readonly (string Name, string Hex)[] ColourPresets =
-    {
-        ("Glide blue", "#4C9AFF"), ("Cyan", "#22D3EE"), ("Teal", "#14B8A6"), ("Emerald", "#10B981"),
-        ("Green", "#3FB950"), ("Lime", "#84CC16"), ("Violet", "#8B5CF6"), ("Indigo", "#6366F1"),
-        ("Magenta", "#D946EF"), ("Rose", "#F43F5E"), ("Crimson", "#DC2626"), ("Orange", "#F97316"),
-        ("Amber", "#F59E0B"), ("White", "#F2F4F6"), ("Silver", "#98A1AE"), ("Slate", "#4B5563"),
-        ("Charcoal", "#23272D"), ("Black", "#111111")
-    };
-
-    /// <summary>
-    /// Colour setting: a swatch (click for the full picker with hue and hex) next to a preset dropdown.
-    /// The dropdown lists the setting's default, the named presets and, when needed, the current custom value.
-    /// </summary>
-    private FrameworkElement BuildColourEditor(SettingDescriptor descriptor)
-    {
-        var panel = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
-        var swatch = new Button
-        {
-            Style = (Style)FindResource("ColourSwatchButton"),
-            Background = SafeBrush(descriptor.Get()?.ToString()),
-            ToolTip = "Open the colour picker (hue, shade and hex code)."
-        };
-        AutomationProperties.SetName(swatch, $"Choose {descriptor.Title}");
-        var defaultHex = _defaultsByKey.TryGetValue(descriptor.Key, out var original)
-            ? original.Get()?.ToString() ?? "#FFFFFF" : "#FFFFFF";
-        var combo = new ComboBox { Width = 170, Margin = new Thickness(8, 0, 0, 0), ToolTip = descriptor.Tooltip(_settings.Hotkeys) };
-        AutomationProperties.SetName(combo, descriptor.Title);
-        var syncing = false;
-
-        FrameworkElement Entry(string name, string hex)
-        {
-            var row = new StackPanel { Orientation = Orientation.Horizontal, Tag = hex };
-            row.Children.Add(new Border
-            {
-                Width = 12, Height = 12, CornerRadius = new CornerRadius(3), Margin = new Thickness(0, 0, 8, 0),
-                Background = SafeBrush(hex), BorderBrush = Brush("#55606B"), BorderThickness = new Thickness(1),
-                VerticalAlignment = VerticalAlignment.Center
-            });
-            row.Children.Add(new TextBlock { Text = name, VerticalAlignment = VerticalAlignment.Center });
-            return row;
-        }
-
-        void Populate(string current)
-        {
-            syncing = true;
-            combo.Items.Clear();
-            combo.Items.Add(Entry("Default", defaultHex));
-            foreach (var (name, hex) in ColourPresets) combo.Items.Add(Entry(name, hex));
-            var match = combo.Items.OfType<FrameworkElement>()
-                .FirstOrDefault(item => string.Equals((string)item.Tag, current, StringComparison.OrdinalIgnoreCase));
-            if (match is null)
-            {
-                match = Entry($"Custom ({current.ToUpperInvariant()})", current);
-                combo.Items.Add(match);
-            }
-            combo.SelectedItem = match;
-            syncing = false;
-        }
-
-        void Apply(string hex)
-        {
-            if (!TryColour(hex, out _)) return;
-            swatch.Background = SafeBrush(hex);
-            descriptor.Set(hex);
-            SettingChanged();
-        }
-
-        combo.SelectionChanged += (_, _) =>
-        {
-            if (syncing || combo.SelectedItem is not FrameworkElement { Tag: string hex }) return;
-            Apply(hex);
-        };
-        swatch.Click += (_, _) =>
-        {
-            var current = descriptor.Get()?.ToString() ?? defaultHex;
-            var picker = new ColourPickerWindow(current, defaultHex, _settings.Appearance.RecentColours, this);
-            if (DialogHost.ShowModal(picker) != true || picker.SelectedColour is null) return;
-            AddRecentColour(picker.SelectedColour);
-            Apply(picker.SelectedColour);
-            Populate(picker.SelectedColour);
-        };
-        Populate(descriptor.Get()?.ToString() ?? defaultHex);
-        panel.Children.Add(swatch);
-        panel.Children.Add(combo);
-        return panel;
-    }
-    private void BuildHotkeyPage(string? categoryFilter)
-    {
-        var matching = HotkeyCatalog.All.Where(action => categoryFilter is null ||
-                categoryFilter.Equals(SettingsCatalog.Hotkeys, StringComparison.OrdinalIgnoreCase) ||
-                action.Category.Equals(categoryFilter, StringComparison.OrdinalIgnoreCase))
-            .ToList();
-        var reset = CreateButton("Reset category", "SecondaryActionButton", "Restore default shortcuts for the displayed category.");
-        reset.HorizontalAlignment = HorizontalAlignment.Left;
-        reset.Click += (_, _) => ResetHotkeyCategory(matching.Select(action => action.Category).Distinct().ToList());
-        // Preset: switching really rebinds every key to that application's layout. Editing any key
-        // afterwards turns the layout into "Custom" (your changes on top of the chosen base).
-        var preset = new ComboBox { Width = 250, Margin = new Thickness(0, 0, 10, 0), ToolTip = "Keyboard layout preset", SelectedValuePath = "Tag" };
-        foreach (var name in HotkeyPresets.Names)
-        {
-            var tip = HotkeyPresets.Tooltip(name);
-            preset.Items.Add(new ComboBoxItem { Content = HotkeyPresets.DisplayName(name), Tag = name, ToolTip = tip.Length == 0 ? null : tip });
-        }
-        preset.Items.Add(new ComboBoxItem { Content = HotkeyPresets.Custom, Tag = HotkeyPresets.Custom });
-        preset.SelectedValue = HotkeyPresets.Describe(_settings.Hotkeys);
-        preset.SelectionChanged += (_, _) =>
-        {
-            if (preset.SelectedValue is not string chosen || chosen == HotkeyPresets.Custom ||
-                chosen == HotkeyPresets.Describe(_settings.Hotkeys)) return;
-            HotkeyPresets.Apply(_settings.Hotkeys, chosen);
-            SettingChanged();
-            RebuildPage();
-        };
-        var presetRow = new StackPanel { Orientation = Orientation.Horizontal };
-        presetRow.Children.Add(new TextBlock { Text = "Preset", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 10, 0) });
-        presetRow.Children.Add(preset);
-        presetRow.Children.Add(reset);
-        AddTopCard(GroupCardWithChildren("Commands", presetRow), 1);
-        foreach (var group in matching.GroupBy(action => action.Category))
-        {
-            var card = GroupCard(group.Key);
-            foreach (var action in group) AddCardContent(card, HotkeyRow(action, false));
-            AddTopCard(card, 1);
-        }
-        if (matching.Count == 0)
-            AddTopCard(InformationCard("No matching shortcuts", "Choose another category to view its keyboard commands."), 1);
-    }
-
-    private Border GroupCardWithChildren(string title, FrameworkElement child)
-    {
-        var card = GroupCard(title);
-        AddCardContent(card, child);
-        return card;
-    }
-
-    private Border HotkeyRow(HotkeyAction action, bool searchResult)
-    {
-        var gesture = HotkeyCatalog.GestureFor(_settings.Hotkeys, action.Id);
-        var customized = IsHotkeyCustomized(action);
-        var labelStack = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
-        FrameworkElement name;
-        if (searchResult)
-        {
-            var nameButton = CreateButton(action.Name, "SearchResultTitleButton", "Open this command on the Hotkeys page.");
-            nameButton.HorizontalAlignment = HorizontalAlignment.Left;
-            AutomationProperties.SetName(nameButton, action.Name);
-            nameButton.Click += (_, _) => NavigateToHotkey(action.Id);
-            name = nameButton;
-        }
-        else name = new TextBlock { Text = action.Name, FontSize = 14, TextWrapping = TextWrapping.Wrap };
-        labelStack.Children.Add(name);
-        labelStack.Children.Add(Note(action.Description, 12, new Thickness(0, 3, 8, 0)));
-        var tags = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 3, 0, 0) };
-        tags.Children.Add(Note(action.Category, 11));
-        if (customized) tags.Children.Add(new TextBlock { Text = "CUSTOM", FontSize = Services.ThemeService.MinFontSize, Foreground = Brush("#6DBBFF"), Margin = new Thickness(8, 0, 0, 0) });
-        labelStack.Children.Add(tags);
-
-        var shortcut = CreateButton(string.IsNullOrWhiteSpace(gesture) ? "Unbound" : HotkeyCatalog.Display(gesture),
-            "SecondaryActionButton", "Click, then press the key combination to assign.");
-        shortcut.MinWidth = 142;
-        shortcut.Height = 34;
-        shortcut.HorizontalContentAlignment = HorizontalAlignment.Center;
-        shortcut.Click += (_, _) => BeginRecording(action.Id);
-        var feedback = new TextBlock { FontSize = 11, Foreground = Brush("#E08484"), TextWrapping = TextWrapping.Wrap,
-            Width = 150, Visibility = Visibility.Collapsed };
-        var reassign = CreateButton("Reassign", "ResetActionButton", "Move the captured shortcut from its current command to this command.");
-        reassign.Visibility = Visibility.Collapsed;
-        reassign.Click += (_, _) => ResolveHotkeyConflict(action.Id);
-        var clear = CreateButton("Clear", "ResetActionButton", "Unbind this keyboard command.");
-        clear.Click += (_, _) =>
-        {
-            _settings.Hotkeys.Disable(action.Id);
-            SettingChanged();
-            RebuildPage(focusHotkey: action.Id);
-        };
-        var reset = CreateButton("Reset", "ResetActionButton", "Restore the default keyboard shortcut.");
-        reset.Visibility = customized ? Visibility.Visible : Visibility.Collapsed;
-        reset.Click += (_, _) =>
-        {
-            _settings.Hotkeys.Reset(action.Id);
-            SettingChanged();
-            RebuildPage(focusHotkey: action.Id);
-        };
-
-        var commands = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right,
-            VerticalAlignment = VerticalAlignment.Center };
-        shortcut.Margin = new Thickness(0, 0, 5, 0);
-        clear.Margin = new Thickness(0, 0, 5, 0);
-        reassign.Margin = new Thickness(0, 0, 5, 0);
-        commands.Children.Add(shortcut);
-        commands.Children.Add(clear);
-        commands.Children.Add(reassign);
-        commands.Children.Add(reset);
-        var controls = new StackPanel { VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Right };
-        controls.Children.Add(commands);
-        feedback.Margin = new Thickness(0, 4, 0, 0);
-        feedback.HorizontalAlignment = HorizontalAlignment.Right;
-        controls.Children.Add(feedback);
-        var content = new Grid { MinHeight = 57 };
-        content.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        content.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        content.Children.Add(labelStack);
-        Grid.SetColumn(controls, 1);
-        content.Children.Add(controls);
-        var border = new Border
-        {
-            Padding = new Thickness(3, 7, 3, 7),
-            BorderThickness = new Thickness(1),
-            BorderBrush = customized ? Brush("#3A5369") : Brushes.Transparent,
-            Child = content
-        };
-        _rows.Add(new PageRow(SettingsCatalog.Hotkeys, null, action, border));
-        _hotkeyControls.Add(new HotkeyControl(action, shortcut, feedback, reassign, reset));
-        return border;
-    }
-
-    private void BeginRecording(string actionId)
-    {
-        var row = _hotkeyControls.FirstOrDefault(control => control.Action.Id.Equals(actionId, StringComparison.OrdinalIgnoreCase));
-        if (row is null) return;
-        CancelRecording();
-        _pendingConflict = null;
-        _recordingActionId = actionId;
-        row.Gesture.Content = "Press a key…";
-        row.Feedback.Text = "Press a key combination. Esc cancels.";
-        row.Feedback.Visibility = Visibility.Visible;
-        row.Reassign.Visibility = Visibility.Collapsed;
-        row.Gesture.Focus();
-    }
-
-    private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
-    {
-        if (_recordingActionId is null) return;
-        e.Handled = true;
-        var key = e.Key == Key.System ? e.SystemKey : e.Key;
-        if (key == Key.Escape)
-        {
-            CancelRecording();
-            return;
-        }
-        if (key is Key.LeftCtrl or Key.RightCtrl or Key.LeftShift or Key.RightShift or
-            Key.LeftAlt or Key.RightAlt or Key.LWin or Key.RWin or Key.System or Key.None) return;
-
-        var actionId = _recordingActionId;
-        var gesture = WpfHotkeyGestureAdapter.FromEvent(e);
-        _recordingActionId = null;
-        var conflict = HotkeyCatalog.All.FirstOrDefault(other => other.Id != actionId && HotkeyCatalog.SameContext(other.Id, actionId!) &&
-            !string.IsNullOrWhiteSpace(HotkeyCatalog.GestureFor(_settings.Hotkeys, other.Id)) &&
-            string.Equals(NormalizeGesture(HotkeyCatalog.GestureFor(_settings.Hotkeys, other.Id)),
-                NormalizeGesture(gesture), StringComparison.OrdinalIgnoreCase));
-        var row = _hotkeyControls.FirstOrDefault(control => control.Action.Id == actionId);
-        if (row is null) return;
-        if (conflict is not null)
-        {
-            _pendingConflict = (actionId, gesture, conflict.Id);
-            row.Feedback.Text = $"Already used by {conflict.Name} ({conflict.Category}).";
-            row.Feedback.Visibility = Visibility.Visible;
-            row.Reassign.Visibility = Visibility.Visible;
-            row.Gesture.Content = "Conflict";
-            return;
-        }
-
-        AssignHotkey(actionId, gesture, null);
-    }
-
-    private void AssignHotkey(string actionId, string gesture, HotkeyAction? replaced)
-    {
-        if (replaced is not null) _settings.Hotkeys.Disable(replaced.Id);
-        _settings.Hotkeys[actionId] = gesture;
-        _pendingConflict = null;
-        SettingChanged();
-        RebuildPage(focusHotkey: actionId);
-        StatusText.Text = replaced is null
-            ? $"Bound {HotkeyCatalog.ById(actionId)?.Name ?? actionId} to {HotkeyCatalog.Display(gesture)}"
-            : $"Moved {HotkeyCatalog.Display(gesture)} from {replaced.Name} to {HotkeyCatalog.ById(actionId)?.Name ?? actionId}";
-    }
-
-    private void ResolveHotkeyConflict(string actionId)
-    {
-        if (_pendingConflict is not { } pending || pending.ActionId != actionId) return;
-        var conflictingAction = HotkeyCatalog.ById(pending.ConflictingActionId);
-        if (conflictingAction is null) return;
-        AssignHotkey(actionId, pending.Gesture, conflictingAction);
-    }
-
-    private void CancelRecording()
-    {
-        if (_recordingActionId is { } actionId && _hotkeyControls.FirstOrDefault(row => row.Action.Id == actionId) is { } row)
-        {
-            row.Gesture.Content = GestureLabel(row.Action);
-            row.Feedback.Text = "";
-            row.Feedback.Visibility = Visibility.Collapsed;
-        }
-        _recordingActionId = null;
-    }
-
-    private void Window_PreviewMouseDown(object sender, MouseButtonEventArgs e)
-    {
-        if (_recordingActionId is null) return;
-        var clicked = e.OriginalSource as DependencyObject;
-        for (var current = clicked; current is not null; current = ParentOf(current))
-        {
-            if (_hotkeyControls.Any(row => ReferenceEquals(current, row.Gesture))) return;
-        }
-        CancelRecording();
-    }
-
-    private string GestureLabel(HotkeyAction action) => GestureForDisplay(_settings.Hotkeys, action);
 
     private static string MoreKey(SettingDescriptor descriptor) => descriptor.Category + "|" + descriptor.Group;
 
@@ -1221,69 +523,6 @@ public partial class PreferencesWindow : Window
     }
 
     /// <summary>"Common settings": references to the same rows (same keys, same state) for the things people come here for, plus doors to the rest.</summary>
-    private void BuildHomePage()
-    {
-        void Group(string title, string[] keys, params (string Label, Action Click)[] links)
-        {
-            var card = GroupCard(title);
-            foreach (var key in keys)
-                if (_descriptorsByKey.TryGetValue(key, out var descriptor)) AddCardContent(card, SettingRow(descriptor, false));
-            foreach (var (label, click) in links)
-            {
-                var button = CreateButton(label, "SecondaryActionButton");
-                button.HorizontalAlignment = HorizontalAlignment.Left;
-                button.Margin = new Thickness(0, 10, 0, 0);
-                button.Click += (_, _) => click();
-                AddCardContent(card, button);
-            }
-            AddTopCard(card, 1);
-        }
-        Group("Look", new[] { "appearance.thememode", "appearance.uiscale", "appearance.fretboard", "general.toolbar" },
-            ("All appearance settings", () => NavigateToCategory(SettingsCatalog.Appearance)));
-        Group("Sound", new[] { "vst.driver", "vst.device", "audio.metronome", "audio.metrovolume", "audio.countin", "audio.speed" },
-            ("More audio settings", () => NavigateToCategory(SettingsCatalog.AudioVst)),
-            ("Playback and practice settings", () => NavigateToCategory(SettingsCatalog.Playback)));
-        Group("Score", new[] { "score.defaultnotation", "follow.mode" },
-            ("All score settings", () => NavigateToCategory(SettingsCatalog.Score)));
-        Group("Files", new[] { "general.autosave", "general.saveformat" },
-            ("Files and backups", () => NavigateToCategory(SettingsCatalog.Files)));
-        var shortcuts = GroupCard("Shortcuts");
-        var open = CreateButton("Open all shortcuts", "SecondaryActionButton");
-        open.HorizontalAlignment = HorizontalAlignment.Left;
-        open.Margin = new Thickness(0, 6, 0, 0);
-        open.Click += (_, _) => NavigateToCategory(SettingsCatalog.Hotkeys);
-        AddCardContent(shortcuts, Note("Pick a preset layout (TabForge or another program's) and change any key on the Shortcuts page.", 12, new Thickness(0, 2, 0, 0)));
-        AddCardContent(shortcuts, open);
-        AddTopCard(shortcuts, 1);
-        AddTopCard(InformationCard("Looking for this song's settings?",
-            "Preferences are for the program. A song's own settings are in other windows: Project settings (the File menu) and Track properties (right-click a track)."), 1);
-    }
-
-    private void BuildAdvancedPage()
-    {
-        AddTopCard(InformationCard("Version", $"TabForge {AppInfo.DisplayVersion}"), 1);
-        AddTopCard(InformationCard("Settings file",
-            UserPaths.SettingsFile), 1);
-        AddTopCard(InformationCard("Compatibility",
-            "Older flat settings files are migrated into the current settings model when loaded or imported. All fields recognized by the settings model remain available to export; unrecognized JSON properties are ignored."), 1);
-        AddTopCard(InformationCard("Arrangement playback",
-            "Section edits and reordering always refresh the future playback route at a safe bar boundary. This safety behavior is intentionally not optional."), 1);
-        var reset = GroupCard("Reset");
-        var resetAll = CreateButton("Reset all settings…", "SecondaryActionButton", "Restore every setting and every shortcut to its default (asks first).");
-        resetAll.HorizontalAlignment = HorizontalAlignment.Left;
-        resetAll.Margin = new Thickness(0, 10, 0, 0);
-        resetAll.Click += (_, _) => ResetAll();
-        AddCardContent(reset, Note("Restores every setting and all keyboard shortcuts to their defaults. You can still press Cancel to undo it.", 12, new Thickness(0, 2, 0, 0)));
-        AddCardContent(reset, resetAll);
-        AddTopCard(reset, 1);
-    }
-
-    private static Border InformationCard(string title, string text)
-    {
-        var card = GroupCard(title);
-        AddCardContent(card, Note(text, 12, new Thickness(0, 2, 0, 0)));
-        return card;
-    }
 
     /// <summary>Every reset asks first and says how much it will change; the staged change can still be undone with Cancel.</summary>
     private bool ConfirmReset(string title, string message)
@@ -1350,7 +589,7 @@ public partial class PreferencesWindow : Window
             var chosen = CategoryFilter.SelectedIndex > 0 ? CategoryFilter.SelectedItem?.ToString() : null;
             var categories = HotkeyCatalog.All.Where(action => chosen is null || chosen.Equals(SettingsCatalog.Hotkeys, StringComparison.OrdinalIgnoreCase) ||
                 chosen.Equals(action.Category, StringComparison.OrdinalIgnoreCase)).Select(action => action.Category).Distinct().ToList();
-            var changed = HotkeyCatalog.All.Count(action => categories.Contains(action.Category) && IsHotkeyCustomized(action));
+            var changed = HotkeyCatalog.All.Count(action => categories.Contains(action.Category) && _hotkeys.IsHotkeyCustomized(action));
             if (changed == 0) { StatusText.Text = "No shortcuts on this page differ from the defaults."; return; }
             if (!ConfirmReset("Reset shortcuts", $"Restore the default keys for {changed} changed shortcut{(changed == 1 ? "" : "s")}?")) return;
             ResetHotkeyCategory(categories);
@@ -1601,16 +840,12 @@ public partial class PreferencesWindow : Window
     private bool IsCustomized(SettingDescriptor descriptor) =>
         _defaultsByKey.TryGetValue(descriptor.Key, out var original) && !Equals(descriptor.Get(), original.Get());
 
-    private bool IsHotkeyCustomized(HotkeyAction action) => _settings.Hotkeys.IsDisabled(action.Id) ||
-        !string.Equals(NormalizeGesture(HotkeyCatalog.GestureFor(_settings.Hotkeys, action.Id)),
-            NormalizeGesture(action.DefaultGesture), StringComparison.OrdinalIgnoreCase);
 
     private void RefreshResetButtons()
     {
         foreach (var (descriptor, _, reset) in _settingControls)
             reset.Visibility = IsCustomized(descriptor) ? Visibility.Visible : Visibility.Collapsed;
-        foreach (var row in _hotkeyControls)
-            row.Reset.Visibility = IsHotkeyCustomized(row.Action) ? Visibility.Visible : Visibility.Collapsed;
+        _hotkeys.RefreshResetButtons();
     }
 
     private void UpdateDependencies()
@@ -1676,25 +911,7 @@ public partial class PreferencesWindow : Window
             _settings.Appearance.RecentColours.RemoveRange(12, _settings.Appearance.RecentColours.Count - 12);
     }
 
-    private static string HotkeySearchText(HotkeyAction action)
-    {
-        lock (HotkeySearchIndex)
-        {
-            if (!HotkeySearchIndex.TryGetValue(action.Id, out var text))
-                HotkeySearchIndex[action.Id] = text =
-                    $"hotkey shortcuts key binding commands {action.Name} {action.Category} {action.Description} {action.DefaultGesture} {action.Id}".ToLowerInvariant();
-            return text;
-        }
-    }
 
-    private static string NormalizeGesture(string gesture) =>
-        HotkeyCatalog.TryParse(gesture, out var key, out var modifiers) ? HotkeyCatalog.Format(key, modifiers) : gesture.Trim();
-
-    private static FrameworkElement Note(string text, double fontSize = 12, Thickness? margin = null)
-    {
-        var label = new TextBlock { Text = text, FontSize = fontSize, TextWrapping = TextWrapping.Wrap, Foreground = (Brush)Application.Current.FindResource("MutedBrush") };
-        return new Border { Child = label, Margin = margin ?? new Thickness(0) };
-    }
 
     private Button CreateButton(string text, string styleKey, string? tooltip = null)
     {
@@ -1704,39 +921,7 @@ public partial class PreferencesWindow : Window
         return button;
     }
 
-    private static Brush Brush(string hex) => new SolidColorBrush((Color)ColorConverter.ConvertFromString(hex));
 
-    private static Brush SafeBrush(string? text) => TryColour(text, out var color) ? new SolidColorBrush(color) : Brushes.Transparent;
-
-    private static bool TryColour(string? text, out Color color) => TabForge.Visualization.ColourText.TryParseSetting(text, out color);
-
-    private static double ToFiniteDouble(object? value, double fallback)
-    {
-        try
-        {
-            var result = Convert.ToDouble(value, CultureInfo.InvariantCulture);
-            return double.IsFinite(result) ? result : fallback;
-        }
-        catch (Exception ex) when (ex is FormatException or InvalidCastException or OverflowException) { return fallback; }
-    }
-
-    private static string FormatNumber(double value, int decimals)
-    {
-        var format = decimals > 0 ? "0." + new string('0', decimals) : "0";
-        return value.ToString(format, CultureInfo.CurrentCulture);
-    }
-
-    private static string Prettify(string value)
-    {
-        if (string.IsNullOrEmpty(value)) return value;
-        var result = new System.Text.StringBuilder(value.Length + 5);
-        for (var i = 0; i < value.Length; i++)
-        {
-            if (i > 0 && char.IsUpper(value[i]) && !char.IsUpper(value[i - 1])) result.Append(' ');
-            result.Append(value[i]);
-        }
-        return result.ToString();
-    }
 
     private static string Subtitle(string category) => category switch
     {
@@ -1773,225 +958,5 @@ public partial class PreferencesWindow : Window
     [DllImport("dwmapi.dll", PreserveSig = true)]
     private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref uint value, uint valueSize);
 
-    private static DependencyObject? ParentOf(DependencyObject item) => item is Visual or System.Windows.Media.Media3D.Visual3D
-        ? VisualTreeHelper.GetParent(item)
-        : LogicalTreeHelper.GetParent(item);
 
-    private static string GestureForDisplay(HotkeySettings hotkeys, HotkeyAction action)
-    {
-        var gesture = HotkeyCatalog.GestureFor(hotkeys, action.Id);
-        return string.IsNullOrWhiteSpace(gesture) ? "Unbound" : HotkeyCatalog.Display(gesture);
-    }
-
-    private sealed class ColourPickerWindow : Window
-    {
-        private readonly string _default;
-        private readonly Slider _hue = new() { Minimum = 0, Maximum = 359, TickFrequency = 1 };
-        private readonly Slider _saturation = new() { Minimum = 0, Maximum = 100, TickFrequency = 1 };
-        private readonly Slider _value = new() { Minimum = 0, Maximum = 100, TickFrequency = 1 };
-        private readonly Slider _alpha = new() { Minimum = 0, Maximum = 100, TickFrequency = 1 };
-        private readonly CheckBox _useAlpha = new() { Content = "Include alpha" };
-        private readonly Border _preview = new() { Height = 44, CornerRadius = new CornerRadius(5), BorderThickness = new Thickness(1) };
-        private readonly TextBox _hex = new() { Width = 130 };
-        private readonly PreferencesWindow _owner;
-        private bool _updating;
-        private Color _color;
-
-        public string? SelectedColour { get; private set; }
-
-        public ColourPickerWindow(string initial, string defaultValue, IReadOnlyList<string> recent, PreferencesWindow owner)
-        {
-            _default = defaultValue;
-            _owner = owner;
-            _color = TryParse(initial, out var parsed) ? parsed : Colors.White;
-            Width = 490;
-            Height = 630;
-            MinWidth = 490;
-            MinHeight = 630;
-            MaxWidth = 490;
-            MaxHeight = 630;
-            ResizeMode = ResizeMode.NoResize;
-            WindowStartupLocation = WindowStartupLocation.CenterOwner;
-            Owner = owner;
-            Title = "Choose colour";
-            Background = (Brush)Application.Current.FindResource("WindowBrush");
-            Foreground = (Brush)Application.Current.FindResource("TextBrush");
-            FontFamily = new FontFamily("Segoe UI");
-            FontSize = 13;
-            foreach (var key in owner.Resources.Keys)
-                Resources[key] = owner.Resources[key];
-
-            _hex.Text = ColourHex(_color);
-            _useAlpha.IsChecked = _color.A != byte.MaxValue;
-            _alpha.Value = _color.A * 100.0 / 255;
-            LoadHsv(_color);
-
-            var content = new StackPanel { Margin = new Thickness(22) };
-            content.Children.Add(new TextBlock { Text = "Colour", FontSize = 20, FontWeight = FontWeights.SemiBold,
-                Margin = new Thickness(0, 0, 0, 10) });
-            _preview.Margin = new Thickness(0, 0, 0, 12);
-            content.Children.Add(_preview);
-
-            var recentPanel = new WrapPanel();
-            foreach (var item in recent.Where(value => TryParse(value, out _)).Take(12))
-            {
-                var recentButton = new Button
-                {
-                    Style = (Style)owner.FindResource("ColourSwatchButton"),
-                    Width = 30,
-                    Height = 28,
-                    Margin = new Thickness(2),
-                    Background = SafeBrush(item)
-                };
-                ToolTipService.SetToolTip(recentButton, item);
-                recentButton.Click += (_, _) => SetColor(Parse(item));
-                recentPanel.Children.Add(recentButton);
-            }
-            content.Children.Add(new StackPanel { Margin = new Thickness(0, 0, 0, 8), Children =
-                { new TextBlock { Text = "Recent colours", FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 4) }, recentPanel } });
-            content.Children.Add(SliderRow("Hue", _hue));
-            content.Children.Add(SliderRow("Saturation", _saturation));
-            content.Children.Add(SliderRow("Brightness", _value));
-            var alphaRow = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center,
-                Margin = new Thickness(0, 4, 0, 4) };
-            alphaRow.Children.Add(_useAlpha);
-            _alpha.Width = 250;
-            _alpha.Margin = new Thickness(12, 0, 0, 0);
-            alphaRow.Children.Add(_alpha);
-            content.Children.Add(alphaRow);
-            var hexRow = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center,
-                Margin = new Thickness(0, 4, 0, 12) };
-            hexRow.Children.Add(new TextBlock { Text = "Hex", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 10, 0) });
-            _hex.VerticalContentAlignment = VerticalAlignment.Center;
-            hexRow.Children.Add(_hex);
-            content.Children.Add(hexRow);
-
-            var cancel = DialogButton("Cancel", "SecondaryActionButton");
-            var reset = DialogButton("Default", "SecondaryActionButton");
-            var use = DialogButton("Use colour", "PrimaryActionButton");
-            var actions = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
-            reset.Margin = new Thickness(0, 0, 8, 0);
-            cancel.Margin = new Thickness(0, 0, 8, 0);
-            actions.Children.Add(reset);
-            actions.Children.Add(cancel);
-            actions.Children.Add(use);
-            content.Children.Add(actions);
-            Content = content;
-
-            _hue.ValueChanged += (_, _) => UpdateFromHsv();
-            _saturation.ValueChanged += (_, _) => UpdateFromHsv();
-            _value.ValueChanged += (_, _) => UpdateFromHsv();
-            _alpha.ValueChanged += (_, _) => UpdateFromHsv();
-            _useAlpha.Checked += (_, _) => UpdateFromHsv();
-            _useAlpha.Unchecked += (_, _) => UpdateFromHsv();
-            _hex.TextChanged += (_, _) =>
-            {
-                if (_updating || !TryParse(_hex.Text, out var value)) return;
-                _updating = true;
-                _color = value;
-                _useAlpha.IsChecked = value.A != byte.MaxValue;
-                _alpha.Value = value.A * 100.0 / 255;
-                LoadHsv(value);
-                _hex.Text = ColourHex(value);
-                _updating = false;
-                UpdatePreview();
-            };
-            cancel.Click += (_, _) => { SelectedColour = null; DialogResult = false; };
-            reset.Click += (_, _) => { SelectedColour = _default; DialogResult = true; };
-            use.Click += (_, _) => { SelectedColour = ColourHex(_color, _useAlpha.IsChecked == true); DialogResult = true; };
-            UpdatePreview();
-        }
-
-        private Button DialogButton(string text, string key)
-        {
-            var button = new Button { Content = text, Style = (Style)_owner.FindResource(key) };
-            AutomationProperties.SetName(button, text);
-            return button;
-        }
-
-        private static FrameworkElement SliderRow(string label, Slider slider)
-        {
-            slider.Margin = new Thickness(0, 3, 0, 3);
-            var grid = new Grid { Margin = new Thickness(0, 2, 0, 2) };
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(100) });
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            grid.Children.Add(new TextBlock { Text = label, VerticalAlignment = VerticalAlignment.Center });
-            slider.HorizontalAlignment = HorizontalAlignment.Stretch;
-            Grid.SetColumn(slider, 1);
-            grid.Children.Add(slider);
-            return grid;
-        }
-
-        private void UpdateFromHsv()
-        {
-            if (_updating) return;
-            _color = HsvColor(_hue.Value, _saturation.Value / 100, _value.Value / 100,
-                _useAlpha.IsChecked == true ? (byte)Math.Round(_alpha.Value * 255 / 100) : byte.MaxValue);
-            _updating = true;
-            _hex.Text = ColourHex(_color, _useAlpha.IsChecked == true);
-            _updating = false;
-            UpdatePreview();
-        }
-
-        private void SetColor(Color color)
-        {
-            _updating = true;
-            _color = color;
-            _useAlpha.IsChecked = color.A != byte.MaxValue;
-            _alpha.Value = color.A * 100.0 / 255;
-            LoadHsv(color);
-            _hex.Text = ColourHex(color);
-            _updating = false;
-            UpdatePreview();
-        }
-
-        private void LoadHsv(Color color)
-        {
-            var red = color.R / 255.0;
-            var green = color.G / 255.0;
-            var blue = color.B / 255.0;
-            var maximum = Math.Max(red, Math.Max(green, blue));
-            var minimum = Math.Min(red, Math.Min(green, blue));
-            var delta = maximum - minimum;
-            var hue = delta == 0 ? 0 : maximum == red ? 60 * (((green - blue) / delta) % 6) :
-                maximum == green ? 60 * ((blue - red) / delta + 2) : 60 * ((red - green) / delta + 4);
-            if (hue < 0) hue += 360;
-            var wasUpdating = _updating;
-            _updating = true;
-            _hue.Value = hue;
-            _saturation.Value = maximum == 0 ? 0 : delta / maximum * 100;
-            _value.Value = maximum * 100;
-            _updating = wasUpdating;
-        }
-
-        private void UpdatePreview()
-        {
-            _preview.Background = new SolidColorBrush(_color);
-            _preview.BorderBrush = Brush("#53606B");
-        }
-
-        private static bool TryParse(string? text, out Color color) => TabForge.Visualization.ColourText.TryParseSetting(text, out color);
-
-        private static Color Parse(string value) => (Color)ColorConverter.ConvertFromString(value);
-        private static Brush SafeBrush(string value) => TryParse(value, out var color) ? new SolidColorBrush(color) : Brushes.Transparent;
-        private static Brush Brush(string value) => new SolidColorBrush((Color)ColorConverter.ConvertFromString(value));
-
-        private static Color HsvColor(double hue, double saturation, double value, byte alpha)
-        {
-            var chroma = value * saturation;
-            var x = chroma * (1 - Math.Abs(hue / 60 % 2 - 1));
-            var m = value - chroma;
-            var (red, green, blue) = hue switch
-            {
-                < 60 => (chroma, x, 0.0), < 120 => (x, chroma, 0.0), < 180 => (0.0, chroma, x),
-                < 240 => (0.0, x, chroma), < 300 => (x, 0.0, chroma), _ => (chroma, 0.0, x)
-            };
-            return Color.FromArgb(alpha, ToByte(red + m), ToByte(green + m), ToByte(blue + m));
-        }
-
-        private static byte ToByte(double value) => (byte)Math.Clamp(Math.Round(value * 255), 0, 255);
-        private static string ColourHex(Color color, bool includeAlpha = false) => includeAlpha
-            ? $"#{color.A:X2}{color.R:X2}{color.G:X2}{color.B:X2}"
-            : $"#{color.R:X2}{color.G:X2}{color.B:X2}";
-    }
 }

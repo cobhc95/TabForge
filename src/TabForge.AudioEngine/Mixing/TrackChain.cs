@@ -39,10 +39,10 @@ public sealed class TrackChain : IDisposable
         public int FwdCount;
         /// <summary>Instruments: automatic pitch match, an implicit transpose right before the plug-in (after its MIDI processors).</summary>
         public readonly PitchMatch.Transposer AutoPitch = new();
-        /// <summary>RT-01: <see cref="Pins"/> (the UI label, kept for persistence) mapped once, so the audio thread never compares strings.</summary>
+        /// <summary><see cref="Pins"/> (the UI label, kept for persistence) mapped once, so the audio thread never compares strings.</summary>
         public readonly PinMode Mode = PinModes.Parse(Pins);
         /// <summary>
-        /// RT-02, set by the audio thread: the plug-in produced a non-finite sample (NaN / infinity). That block's output was discarded and the
+        /// Set by the audio thread: the plug-in produced a non-finite sample (NaN / infinity). That block's output was discarded and the
         /// plug-in is skipped from then on (its input passes through, as when bypassed) until it is switched on again or the chain is rebuilt.
         /// </summary>
         public volatile bool Misbehaved;
@@ -51,12 +51,12 @@ public sealed class TrackChain : IDisposable
     }
 
     /// <summary>
-    /// RT-02: incremented (lock-free) by an audio thread whenever a stage or a chain output turns non-finite; the engine main loop compares it
+    /// Incremented (lock-free) by an audio thread whenever a stage or a chain output turns non-finite; the engine main loop compares it
     /// with the value it last saw and only then looks for what to report (<see cref="CollectMisbehaved"/>).
     /// </summary>
     public static int MisbehaveSignal;
 
-    /// <summary>M-05: MIDI messages dropped because a chain's event buffer was full (every chain of the process; the metrics log takes and resets it).</summary>
+    /// <summary>MIDI messages dropped because a chain's event buffer was full (every chain of the process; the metrics log takes and resets it).</summary>
     public static long MidiDropped;
 
     private volatile bool _poisoned;
@@ -124,7 +124,7 @@ public sealed class TrackChain : IDisposable
             if (e.Index == index)
             {
                 e.Bypass = bypassed;
-                if (!bypassed) { e.Misbehaved = false; e.MisbehaveReported = false; }   // switched on again: it gets another chance (RT-02)
+                if (!bypassed) { e.Misbehaved = false; e.MisbehaveReported = false; }   // switched on again: it gets another chance
                 if (!bypassed && e.IsInstrument) _panic = true;
             }
     }
@@ -192,6 +192,8 @@ public sealed class TrackChain : IDisposable
     private volatile bool _panic;
     /// <summary>The track's audio clips (replaced as a whole by the main thread).</summary>
     public volatile Audio.ClipPlayer[] Clips = Array.Empty<Audio.ClipPlayer>();
+    /// <summary>The song owner whose position drives <see cref="Clips"/> (0 .. <see cref="SongOwners.Max"/> - 1).</summary>
+    public volatile int ClipOwner;
     /// <summary>Input monitoring: -1 off, 0 = input 1, 1 = input 2, 2 = inputs 1+2.</summary>
     public volatile int ArmMode = -1;
     /// <summary>Play the armed input through the chain (off: it is only metered and recorded).</summary>
@@ -201,7 +203,14 @@ public sealed class TrackChain : IDisposable
     private readonly float[] _inL, _inR;
 
     /// <summary>Track level and pan from the mixer (0..127 each).</summary>
-    public void SetMix(int volume, int pan) { _volume = Math.Clamp(volume, 0, 127) / 127f; _pan = Math.Clamp(pan, 0, 127) / 127f; }
+    public void SetMix(int volume, int pan) { _volume = Math.Clamp(volume, 0, 127) / 127f; _pan = Math.Clamp(pan, 0, 127) / 127f; Silent = volume <= 0; }
+
+    /// <summary>
+    /// The mixer's mute gate: set by <see cref="SetMix"/> with level 0 (what the client sends for a muted / not-soloed track), cleared by any other level.
+    /// A MIDI volume message (CC7) at a seek, loop wrap or restart re-primes <c>_volume</c> but can never lift this, so a muted track stays silent
+    /// whatever its source (clips, input, GM synth, plug-in).
+    /// </summary>
+    public volatile bool Silent;
 
     /// <summary>Current level and pan (0..127), as CC7 / CC10 in the MIDI stream may have changed them.</summary>
     public (int Volume, int Pan) GetMix() => ((int)MathF.Round(_volume * 127f), (int)MathF.Round(_pan * 127f));
@@ -262,7 +271,7 @@ public sealed class TrackChain : IDisposable
         _silence = new[] { new float[maxBlock], new float[maxBlock] };
         _inL = new float[maxBlock];
         _inR = new float[maxBlock];
-        _wired = new[] { new float[maxBlock], new float[maxBlock] };   // RT-01: never allocated lazily on the audio thread
+        _wired = new[] { new float[maxBlock], new float[maxBlock] };   // Never allocated lazily on the audio thread
         PostL = new float[maxBlock];
         PostR = new float[maxBlock];
         Plugins = _effects.Select(e => e.Plugin).ToList();
@@ -401,24 +410,27 @@ public sealed class TrackChain : IDisposable
     /// <summary>Any thread: silence every note at the next block.</summary>
     public void Panic() => _panic = true;
 
+    /// <summary>Audio thread: silence now, dropping the notes this block holds so far (events added after this call are kept).</summary>
+    public void PanicNow()
+    {
+        _panic = false;
+        _unsorted = false;
+        foreach (var e in _effects) e.AutoPitch.Reset();
+        foreach (var e in _effects) e.ProcActive?.Reset();   // held notes and delayed events are gone with the panic
+        // The panic silences notes but must not eat channel state: a song start is "reset, then program / volume / bend setup", and the
+        // setup travels by the shared ring, so the panic can land in the block that already holds the setup. Dropping it left the synth on
+        // piano (GM program 0) until the setup was sent again (the first cold play).
+        PanicKeepingState(_events, ref _eventCount);
+        PanicKeepingState(_instEvents, ref _instCount);
+    }
+
     /// <summary>Audio thread: renders one block and adds it into <paramref name="mixL"/> / <paramref name="mixR"/>.</summary>
     /// <param name="peers">Every chain by slot (sidechain sources); null: no sidechain.</param>
     /// <param name="busL">Bus / master chains: the summed input audio (added before the plug-ins, at unity).</param>
     public void Render(float[] mixL, float[] mixR, int offset, int frames, in TransportInfo transport, SharedBlock shared, Audio.InputBlock? monitor = null,
         TrackChain?[]? peers = null, float[]? busL = null, float[]? busR = null)
     {
-        if (_panic)
-        {
-            _panic = false;
-            _unsorted = false;
-            foreach (var e in _effects) e.AutoPitch.Reset();
-            foreach (var e in _effects) e.ProcActive?.Reset();   // held notes and delayed events are gone with the panic
-            // The panic silences notes but must not eat channel state: a song start is "reset, then program / volume / bend setup", and the
-            // Panic command travels by pipe while the setup travels by the shared ring, so the panic can land in the block that already holds
-            // the setup. Dropping it left the synth on piano (GM program 0) until the setup was sent again (the first cold play).
-            PanicKeepingState(_events, ref _eventCount);
-            PanicKeepingState(_instEvents, ref _instCount);
-        }
+        if (_panic) PanicNow();
         if (_unsorted) { SortByFrame(_events, _eventCount); SortByFrame(_instEvents, _instCount); _unsorted = false; }
         // The stream entering the plug-in list (routed, channel-filtered); each plug-in's MIDI processors run right before it.
         _curCount = Math.Min(_instCount, _cur.Length);
@@ -501,7 +513,7 @@ public sealed class TrackChain : IDisposable
             effect.Plugin.Process(input, _b, frames, plugMidi, transport);
             if (!Finite(_b, frames))
             {
-                // RT-02: a NaN / infinity would poison the bus, the master, the meters and recorded stems. Discard the block,
+                // A NaN / infinity would poison the bus, the master, the meters and recorded stems. Discard the block,
                 // skip the plug-in from now on (its input passes on) and let the main loop report it once.
                 effect.Misbehaved = true;
                 Interlocked.Increment(ref MisbehaveSignal);
@@ -555,7 +567,7 @@ public sealed class TrackChain : IDisposable
         float gl = 1, gr = 1;
         if (!IsBus)
         {
-            var level = _volume * _volume * (_midiSynth is null || !_synthOn ? 1f : 1.6129f); // (127/100)²
+            var level = Silent ? 0f : _volume * _volume * (_midiSynth is null || !_synthOn ? 1f : 1.6129f); // (127/100)²
             var angle = _pan * MathF.PI / 2;
             gl = level * MathF.Cos(angle) * 1.4142135f;
             gr = level * MathF.Sin(angle) * 1.4142135f;
@@ -563,7 +575,7 @@ public sealed class TrackChain : IDisposable
         var l = _a[0]; var r = _a[1];
         var postL = PostL; var postR = PostR;
         var peak = 0f;
-        var poison = 0f;   // RT-02: x - x is 0 for finite x, NaN otherwise (branch-free)
+        var poison = 0f;   // x - x is 0 for finite x, NaN otherwise (branch-free)
         for (var i = 0; i < frames; i++)
         {
             var ol = l[i] * gl; var or = r[i] * gr;
@@ -596,7 +608,7 @@ public sealed class TrackChain : IDisposable
 
     private readonly float[][] _wired;
 
-    /// <summary>The effect's input as its pin wiring asks (an in+out pin connector, simplified). No allocation, no string compare (RT-01).</summary>
+    /// <summary>The effect's input as its pin wiring asks (an in+out pin connector, simplified). No allocation, no string compare.</summary>
     private float[][] Wire(PinMode mode, int frames)
     {
         if (mode == PinMode.Stereo) return _a;
@@ -623,7 +635,7 @@ public sealed class TrackChain : IDisposable
     }
 }
 
-/// <summary>An effect's input pin wiring (RT-01): what <see cref="PluginSpec.Pins"/> says, as a value the audio thread can switch on.</summary>
+/// <summary>An effect's input pin wiring: what <see cref="PluginSpec.Pins"/> says, as a value the audio thread can switch on.</summary>
 public enum PinMode : byte { Stereo, Mono, LeftOnly, RightOnly, Swap }
 
 public static class PinModes

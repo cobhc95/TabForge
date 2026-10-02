@@ -50,7 +50,7 @@ public static class ReaperChainImporter
                 }
                 if (kind == "JS")
                 {
-                    notes.Add($"REAPER JS effect skipped: {(tokens.Count > 1 ? tokens[1] : "?")}");
+                    notes.Add($"JS effect skipped: {(tokens.Count > 1 ? tokens[1] : "?")}");
                     var j = i + 1; var depth = 1;
                     for (; j < lines.Length && depth > 0; j++) { var l = lines[j].Trim(); if (l.StartsWith('<')) depth++; else if (l == ">") depth--; }
                     i = j - 1; pendingBypass = false;
@@ -130,7 +130,7 @@ public static class ReaperChainImporter
     public static (List<PluginSlot> Chain, string Report)? Import(string path, IEnumerable<VstPluginInfo> catalog)
     {
         string text;
-        try { text = Encoding.UTF8.GetString(InputLimits.ReadBoundedBytes(path, 16L * 1024 * 1024, "REAPER FX chain")); }
+        try { text = Encoding.UTF8.GetString(InputLimits.ReadBoundedBytes(path, 16L * 1024 * 1024, "FX chain file")); }
         catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException) { return null; }
         var parsed = Parse(text);
         var cat = catalog.ToList();

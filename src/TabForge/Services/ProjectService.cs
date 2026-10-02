@@ -7,6 +7,9 @@ using TabForge.Models;
 
 namespace TabForge.Services;
 
+// Owns: saving and loading the .tforge project file, including its bounded read.
+// Does not own: the exports, autosave and plug-in state files.
+// Tests: TestProjectRoundtrip, TestModelRoundTrip.
 public static class ProjectService
 {
     /// <summary>In-memory form (clipboard snapshots, the unsaved-changes hash): compacted, see <see cref="LosslessCompactResolver"/>.</summary>
@@ -82,32 +85,29 @@ public static class ProjectService
         _ => value.GetType().IsValueType && value.Equals(initial)
     };
 
+    /// <summary>
+    /// Writes the project to <paramref name="path"/> and returns the hash of its content as written. The song's own unsaved state is not touched:
+    /// whoever saves the song decides when it is clean.
+    /// </summary>
     public static byte[] Save(string path, SongProject project)
     {
         path = FilePathPolicy.OutputFile(path, "TabForge project", ".tforge");
-        var wasDirty = project.IsDirty;
-        project.IsDirty = false;
-        try
-        {
-            var toWrite = project.Tracks.Any(t => t.StartupTemplateId is not null) ? project.WithoutStartupTracks() : project;   // startup-template tracks are not saved
-            ProjectValidator.Validate(toWrite);
-            // Stream to disk (size-checking on the way) instead of building the whole file in
-            // one pooled buffer that the shared ArrayPool would keep afterwards.
-            FilePathPolicy.WriteAtomically(path, stream =>
-            {
-                // gzip-compressed on disk (Audit 3 M-03: ~35x smaller); the limit applies to the JSON size.
-                using var gzip = new GZipStream(stream, CompressionLevel.Optimal, leaveOpen: true);
-                using var sink = new HashingLimitStream(gzip, InputLimits.MaxTforgeFileBytes);
-                SerializeChunked(sink, toWrite, DiskOptions);
-            });
-            // The clean baseline for the unsaved-changes check, which hashes the compact in-memory form.
-            return ContentHash(project);
-        }
-        catch
-        {
-            project.IsDirty = wasDirty;
-            throw;
-        }
+        // Stream to disk (size-checking on the way) instead of building the whole file in
+        // one pooled buffer that the shared ArrayPool would keep afterwards.
+        FilePathPolicy.WriteAtomically(path, stream => WriteTo(stream, project));
+        // The clean baseline for the unsaved-changes check, which hashes the compact in-memory form.
+        return ContentHash(project);
+    }
+
+    /// <summary>Writes the .tforge bytes of <paramref name="project"/> to <paramref name="stream"/>: startup-template tracks left out, validated, gzip-compressed, JSON size bounded.</summary>
+    public static void WriteTo(Stream stream, SongProject project)
+    {
+        var toWrite = project.Tracks.Any(t => t.StartupTemplateId is not null) ? project.WithoutStartupTracks() : project;   // startup-template tracks are not saved
+        ProjectValidator.Validate(toWrite);
+        // gzip-compressed on disk (Audit 3 M-03: ~35x smaller); the limit applies to the JSON size.
+        using var gzip = new GZipStream(stream, CompressionLevel.Optimal, leaveOpen: true);
+        using var sink = new HashingLimitStream(gzip, InputLimits.MaxTforgeFileBytes);
+        SerializeChunked(sink, toWrite, DiskOptions);
     }
 
     /// <param name="maxBytes">File and JSON size bound; only the app's own crash-recovery copies are read with <see cref="InputLimits.MaxRecoveryProjectBytes"/>.</param>

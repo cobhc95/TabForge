@@ -9,149 +9,28 @@ using TabForge.Models;
 using TabForge.Playback;
 using TabForge.Services;
 using RenderDraw = TabForge.Visualization.Draw;
+using TabForge.Views.Score;
 
 namespace TabForge.Views;
 
 // TabEditorControl: mouse input and hit testing.
 public sealed partial class TabEditorControl
 {
-    // ---------- mouse ----------
-
-    private (int measure, int cell, int stringIndex) HitTest(Point p)
-    {
-        var track = Track;
-        if (track is null) return (0, 0, 0);
-        var system = Math.Max(0, (int)((p.Y - HeaderHeight) / SystemHeight));
-        var layout = GetScoreLayout(track);
-        system = Math.Clamp(system, 0, layout.SystemCount - 1);
-        var row = layout.Systems[system];
-        var measurePosition = row.Measures.FirstOrDefault(item => p.X >= item.X && p.X < item.X + item.Width);
-        if (measurePosition.Width <= 0)
-            measurePosition = p.X < row.X ? row.Measures[0] : row.Measures[^1];
-        var measure = measurePosition.MeasureIndex;
-        var localX = Math.Clamp(p.X - measurePosition.X, 0, Math.Max(0, measurePosition.Width - 0.001));
-        var hitSlot = WarpFor(track, measure).SlotAt(localX / Math.Max(1e-6, measurePosition.Width));
-        var gridCell = Math.Clamp((int)hitSlot, 0, SlotsFor(measure) - 1);
-        var measureModel = track.Measures[measure];
-        var cell = ResolveBeatHitCell(measureModel, hitSlot, gridCell,
-            CellsFor(measureModel, create: _activeVoiceIndex == 1));
-        var tabTop = TabTop(system);
-        var stringIndex = Math.Clamp((int)Math.Round((p.Y - tabTop) / StringGap), 0, Math.Max(0, track.StringTunings.Count - 1));
-        return (measure, cell, stringIndex);
-    }
+    // ---------- mouse (hit testing, clicks and drags live in EditorInputController) ----------
 
     /// <summary>
     /// Resolve clicks on a sustained note to its actual beat cell instead of the empty sixteenth-grid
     /// slot underneath it. Notes are drawn at their rhythmic onset, while the old hit test used only
     /// the integer slot index; imported fractional onsets and any note longer than one slot could
     /// therefore leave a selectable cursor position in the middle of the visible note.
+    /// The cursor may only sit on a real beat start or the single append slot (see <see cref="CursorPositions"/>);
+    /// any other click snaps to the nearest allowed position.
     /// </summary>
     internal static int ResolveBeatHitCell(MeasureModel measure, double slotPosition, int fallbackCell,
         IReadOnlyList<TabCell>? voiceCells = null)
     {
         if (!double.IsFinite(slotPosition)) return fallbackCell;
-        var hit = (voiceCells ?? measure.Cells).Select((cell, index) =>
-            {
-                var start = BeatStart(cell, index);
-                var distanceFromHead = Math.Abs(slotPosition - (start + 0.5));
-                var occupiesPosition = slotPosition >= start - 0.001 &&
-                                       slotPosition < start + MusicTime.CellSlots(cell) - 0.001;
-                var nearHead = cell.Notes.Count > 0 && distanceFromHead <= 0.55;
-                return (cell, index, start, distanceFromHead, IsHit: occupiesPosition || nearHead,
-                    HasBeat: cell.Notes.Count > 0 || cell.IsRest || cell.HasAnnotation);
-            })
-            .Where(candidate => candidate.HasBeat && candidate.IsHit)
-            .OrderBy(candidate => candidate.distanceFromHead)
-            .ThenByDescending(candidate => candidate.start)
-            .Select(candidate => candidate.index)
-            .FirstOrDefault(-1);
-        return hit >= 0 ? hit : fallbackCell;
-    }
-
-    private void OnMouseDown(object sender, MouseButtonEventArgs e)
-    {
-        if (e.ChangedButton != MouseButton.Left) return;
-        _leftMouseDownPending = false;
-        Focus();
-        if (Track is null) return;
-        var pointer = e.GetPosition(this);
-        var p = ToPagePoint(pointer);
-        if (p.Y < HeaderHeight) { ClearSelection(); return; }
-        var (measure, cell, stringIndex) = HitTest(p);
-        if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) && ShiftClickExtend(measure, cell, stringIndex)) return;
-        ClearSelection(notify: false);
-        SelectedMeasure = measure; SelectedCell = cell; SelectedString = stringIndex;
-        _leftMouseDownPoint = pointer;
-        _leftMouseDownTicks = Environment.TickCount64;
-        _leftMouseDownPending = true;
-        SelectionChangedNow();
-    }
-
-    /// <summary>
-    /// Shift+click: extends the selection from the cursor (or the existing anchor) to the clicked beat, like Shift+arrows.
-    /// Returns false when there is no cursor to extend from (the click then behaves as a plain click).
-    /// </summary>
-    internal bool ShiftClickExtend(int measure, int cell, int stringIndex)
-    {
-        var track = Track;
-        if (track is null || measure < 0 || measure >= track.Measures.Count) return false;
-        if (!_selecting) BeginSelection();
-        _selectionEndMeasure = measure; _selectionEndCell = cell;
-        SelectedMeasure = measure; SelectedCell = cell; SelectedString = stringIndex;
-        SelectionChangedNow();
-        return true;
-    }
-
-    private void OnRightDown(object sender, MouseButtonEventArgs e)
-    {
-        Focus();
-        if (Track is null) return;
-        var p = ToPagePoint(e.GetPosition(this));
-        // Right-click only opens a menu: it must not move the cursor or seek running playback.
-        var (measure, cell, stringIndex) = HitTest(p);
-        var onNote = false;
-        var overBeat = p.Y >= HeaderHeight && measure >= 0 && measure < Track.Measures.Count;
-        if (overBeat)
-        {
-            var cells = CellsFor(Track.Measures[measure], create: false);
-            onNote = cell >= 0 && cell < cells.Count && cells[cell].Notes.Any(n => n.StringIndex == stringIndex);
-        }
-        ContextMenuRequested?.Invoke(this, new ContextMenuEventArgs(new Point(p.X, p.Y))
-        {
-            Measure = measure, Cell = cell, StringIndex = stringIndex, OnNote = onNote, OverBeat = overBeat,
-            InsideSelection = overBeat && IsInSelection(measure, cell)
-        });
-        e.Handled = true;
-    }
-
-    /// <summary>
-    /// Shift+F10 / the Menu key: the same menu as a right-click, for the caret: OnNote and InsideSelection come from the caret and
-    /// selection like the mouse path, and the menu opens at the bottom-left of the caret cell.
-    /// </summary>
-    public bool RequestContextMenuAtCaret()
-    {
-        var track = Track;
-        if (track is null || track.Measures.Count == 0) return false;
-        var measure = Math.Clamp(SelectedMeasure, 0, track.Measures.Count - 1);
-        var layout = GetScoreLayout(track);
-        var system = -1;
-        var placement = default((int MeasureIndex, double X, double Width));
-        for (var s = 0; s < layout.SystemCount && system < 0; s++)
-            foreach (var item in layout.Systems[s].Measures)
-                if (item.MeasureIndex == measure) { system = s; placement = (item.MeasureIndex, item.X, item.Width); break; }
-        if (system < 0) return false;
-        var cells = CellsFor(track.Measures[measure], create: false);
-        var cell = Math.Clamp(SelectedCell, 0, Math.Max(0, SlotsFor(measure) - 1));
-        var x = placement.X + WarpFor(track, measure).Fraction(CellStartSlots(track.Measures[measure], cell, cells)) * placement.Width;
-        var stringIndex = Math.Clamp(SelectedString, 0, Math.Max(0, track.StringTunings.Count - 1));
-        var y = TabTop(system) + stringIndex * StringGap + StringGap / 2;
-        var onNote = cell < cells.Count && cells[cell].Notes.Any(n => n.StringIndex == stringIndex);
-        ContextMenuRequested?.Invoke(this, new ContextMenuEventArgs(new Point(x, y))
-        {
-            Measure = measure, Cell = cell, StringIndex = stringIndex, OnNote = onNote, OverBeat = true,
-            InsideSelection = IsInSelection(measure, cell), FromKeyboard = true, Anchor = new Point(x * _zoom, y * _zoom)
-        });
-        return true;
+        return CursorPositions.Resolve(voiceCells ?? measure.Cells, slotPosition);
     }
 
     /// <summary>True when the beat (measure, cell) lies inside the current score selection (false without a selection).</summary>
@@ -173,47 +52,14 @@ public sealed partial class TabEditorControl
         SelectionChangedNow(seekPlayback: false);
     }
 
-    private void OnMouseMove(object sender, MouseEventArgs e)
-    {
-        if (Track is null) return;
-        var p = ToPagePoint(e.GetPosition(this));
-        if (e.LeftButton != MouseButtonState.Pressed || !_leftMouseDownPending)
-        {
-            // Hover highlight only (no editing, no position change).
-            if (p.Y < HeaderHeight)
-            {
-                if (_hoverMeasure != -1) { _hoverMeasure = -1; _hoverCell = -1; InvalidateVisual(); }
-                return;
-            }
-            var (hm, hc, _) = HitTest(p);
-            if (hm != _hoverMeasure || hc != _hoverCell) { _hoverMeasure = hm; _hoverCell = hc; InvalidateVisual(); }
-            return;
-        }
-        var pointer = e.GetPosition(this);
-        var horizontalDrag = Math.Abs(pointer.X - _leftMouseDownPoint.X);
-        // A normal click can move a few pixels while the button is down. Do not turn that
-        // pointer jitter into a score range; time-range selection requires an intentional drag.
-        if (horizontalDrag < Math.Max(10, SystemParameters.MinimumHorizontalDragDistance * 2)) return;
-        if (!_selecting && Environment.TickCount64 - _leftMouseDownTicks < RangeSelectHoldMs) return;
-        if (!_selecting) BeginSelection();
-        if (p.Y < HeaderHeight) return;
-        var (measure, cell, _) = HitTest(p);
-        // Pointer moves inside the same cell change nothing: no repaint, no status/fretboard refresh.
-        if (measure == _selectionEndMeasure && cell == _selectionEndCell) return;
-        _selectionEndMeasure = measure; _selectionEndCell = cell;
-        SelectionChangedNow(seekPlayback: false);
-    }
+    /// <summary>Shift+click: extends the selection to the clicked beat (see <see cref="EditorInputController.ShiftClickExtend"/>).</summary>
+    internal bool ShiftClickExtend(int measure, int cell, int stringIndex) => _input.ShiftClickExtend(measure, cell, stringIndex);
+
+    /// <summary>Shift+F10 / the Menu key: the context menu for the caret.</summary>
+    public bool RequestContextMenuAtCaret() => _input.RequestContextMenuAtCaret();
 
     /// <summary>True while the user drags a score range (the window defers side-panel refreshes).</summary>
-    public bool IsDragSelecting => _selecting && _leftMouseDownPending && Mouse.LeftButton == MouseButtonState.Pressed;
-
-    private void OnMouseUp(object sender, MouseButtonEventArgs e)
-    {
-        if (e.ChangedButton == MouseButton.Left) _leftMouseDownPending = false;
-        if (_selecting) InvalidateVisual();
-    }
+    public bool IsDragSelecting => _input.IsDragSelecting;
 
     public event EventHandler<ContextMenuEventArgs>? ContextMenuRequested;
-
-    private Point ToPagePoint(Point point) => new(point.X / _zoom, point.Y / _zoom);
 }

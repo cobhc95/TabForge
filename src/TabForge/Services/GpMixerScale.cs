@@ -1,5 +1,8 @@
 namespace TabForge.Services;
 
+// Owns: the scale between mixer values and the fractions a Guitar Pro 7/8 file stores for a track.
+// Does not own: the mixer and the file writing.
+// Tests: TestGpMixerExact, TestGpFidelity.
 /// <summary>
 /// The scale between TabForge's mixer values (volume and pan, 0..127) and the fractions a Guitar Pro 7/8 file stores for a track
 /// (the ChannelStrip parameters of the gpif, 0..1; pan 0.5 = centre). alphaTab's own model keeps only the 0..16 step (a floor), which

@@ -1,3 +1,4 @@
+using TabForge.Controllers;
 using TabForge.Documents;
 using System.Windows;
 using TabForge.Models;
@@ -13,7 +14,6 @@ public partial class MainWindow : IMixerHost, IFxChainHost
 {
     private MixerWindow? _mixerWindow;
     private readonly Dictionary<TrackModel, FxChainWindow> _fxWindows = new(ReferenceEqualityComparer.Instance);
-    private bool _mixerUndoCaptured;
 
     /// <summary>Mixer button / hotkey: opens the mixer, or brings it forward.</summary>
     private void OpenMixer()
@@ -26,7 +26,7 @@ public partial class MainWindow : IMixerHost, IFxChainHost
         }
         _mixerWindow = new MixerWindow(this, this);
         _mixerWindow.Closed += (_, _) => _mixerWindow = null;
-        _mixerWindow.SliderDragEnded += () => { if (_mixerDragRefreshHeld) { _mixerDragRefreshHeld = false; ScheduleMixerFollowUp(); } };
+        _mixerWindow.SliderDragEnded += _engineSync.MixerSliderDragEnded;
         _mixerWindow.Show();
     }
 
@@ -35,14 +35,7 @@ public partial class MainWindow : IMixerHost, IFxChainHost
 
     SongProject IMixerHost.Project => _project;
 
-    void IMixerHost.BeginMixerEdit()
-    {
-        // One undo step per gesture: the first change after a pause captures, later ones in the same drag do not.
-        if (_mixerUndoCaptured) return;
-        CaptureUndo();
-        _mixerUndoCaptured = true;
-        Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ApplicationIdle, () => _mixerUndoCaptured = false);
-    }
+    void IMixerHost.BeginMixerEdit() => _engineSync.BeginMixerEdit();
 
     void IMixerHost.MixerChanged(bool recompile)
     {
@@ -53,45 +46,38 @@ public partial class MainWindow : IMixerHost, IFxChainHost
             // A slider drag: as light as a track-list drag. The track list's matching slider moves in place, the plug-in
             // engine sync is coalesced to once per frame, and the full list / timeline refresh waits for the drag's end.
             Arrangement.SyncMixValues();
-            ScheduleEngineSync();
-            _mixerDragRefreshHeld = true;
+            _engineSync.MixerSliderDragged();
         }
         else
         {
             SyncAudioEngine(); // live level/pan/mute/solo for plug-in tracks (the engine's track mix; only changed values are sent)
-            ScheduleMixerFollowUp();
+            _engineSync.ScheduleMixerFollowUp();
         }
         UpdateTitle();
     }
 
-    private bool _mixerFollowUpPending, _mixerDragRefreshHeld, _engineSyncPending;
-
-    /// <summary>At most one engine sync per frame while a mixer slider is dragged (only changed values are sent).</summary>
-    private void ScheduleEngineSync()
-    {
-        if (_engineSyncPending) return;
-        _engineSyncPending = true;
-        Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Render, new Action(() =>
-        {
-            _engineSyncPending = false;
-            SyncAudioEngine();
-        }));
-    }
+    void IMixerHost.MuteSoloChanged() => ApplyMuteSolo();
 
     /// <summary>
-    /// Root cause of the mixer sliders jumping: every single value step rebuilt the whole track list and timeline
-    /// (RefreshTracks + RefreshArrangement) inside the drag, so the UI thread fell behind the pointer and the value
-    /// leapt between far apart positions. The sound is updated at once; the list refresh runs once, when input is idle.
+    /// A mute / solo toggle (track list, group row or Mixer): mixer state, not score content. The sound changes first (the MIDI gate and one
+    /// engine level per track); the song is marked dirty without invalidating the timeline, so playback is never recompiled or spliced.
+    /// The visuals follow in place; only a song with audio clips or monitored input reconciles the engine afterwards, once, when idle.
     /// </summary>
-    private void ScheduleMixerFollowUp()
+    private void ApplyMuteSolo()
     {
-        if (_mixerFollowUpPending) return;
-        _mixerFollowUpPending = true;
-        Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle, new Action(() =>
+        _midi.SetMuteSolo(_project);
+        _engineSync.SyncLevelsNow();
+        var wasDirty = _project.IsDirty;
+        DocumentEdits.MarkChanged(Doc, invalidatesTimeline: false);
+        Arrangement.ApplyMuteVisualsNow();
+        if (_muteSoloFollowUp) return;
+        _muteSoloFollowUp = true;
+        Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, new Action(() =>
         {
-            _mixerFollowUpPending = false;
-            RefreshTracks();
-            RefreshArrangement();
+            _muteSoloFollowUp = false;
+            if (_project.Tracks.Any(t => t.AudioClips.Count > 0 || t.MonitorInput || t.RecordArm)) SyncAudioEngine();   // clips and monitoring follow mute and solo
+            _mixerWindow?.SyncValues();
+            if (!wasDirty) { UpdateTitle(); RefreshTabs(); }
         }));
     }
 
@@ -224,10 +210,13 @@ public partial class MainWindow : IMixerHost, IFxChainHost
     }
 
     /// <summary>
-    /// Right-click on + Track: adding a track and the Mixer, nothing else (owner decision 2026-09-30). The colour items moved to the
+    /// Right-click on + Track: "Add track…" and "Audio track", nothing else (owner decision 2026-09-30; the Mixer has its own button). The colour items moved to the
     /// track list's empty-area menu (Colours), and the colour of each group to Settings > Appearance &amp; colours.
     /// </summary>
-    private void ShowAddTrackMenu(FrameworkElement target)
+    private void ShowAddTrackMenu(FrameworkElement target) => BuildAddTrackMenu(target).IsOpen = true;
+
+    /// <summary>The + Track button's right-click menu: "Add track…" and "Audio track" (a test reads and clicks its items).</summary>
+    internal System.Windows.Controls.ContextMenu BuildAddTrackMenu(FrameworkElement target)
     {
         var menu = new System.Windows.Controls.ContextMenu
         {
@@ -242,15 +231,15 @@ public partial class MainWindow : IMixerHost, IFxChainHost
             return item;
         }
         Item("Add track…", AddTrackWithWindow);
-        Item("Mixer…", OpenMixer);
-        menu.IsOpen = true;
+        Item("Audio track", AddAudioTrack);
+        return menu;
     }
 
     /// <summary>Track list menu "Colours > Colour tracks by group" (the group colours are in Settings > Appearance &amp; colours).</summary>
     private void ColourTracksByGroup()
     {
-        CaptureUndo();
-        var changed = Services.TrackColouring.ByGroup(_project, _settings.Appearance.GroupColours);
+        var changed = 0;
+        DocumentEdits.Run(Doc, p => { changed = Services.TrackColouring.ByGroup(p, _settings.Appearance.GroupColours); return true; }, invalidatesTimeline: false);
         TrackColoursChanged();
         StatusText.Text = changed == 0 ? "Tracks already have their group colours" : $"Coloured {changed} track{(changed == 1 ? "" : "s")} by group";
     }
@@ -259,15 +248,12 @@ public partial class MainWindow : IMixerHost, IFxChainHost
     private void ColourTracksWithDialog()
     {
         var captured = false;
-        Views.TrackColoursDialog.Show(this, _project, () => { if (!captured) { CaptureUndo(); captured = true; } }, TrackColoursChanged);
+        Views.TrackColoursDialog.Show(this, _project, () => { if (!captured) { CheckpointUndo(); captured = true; } }, TrackColoursChanged);
     }
 
     private static System.Windows.Controls.Border Swatch(string hex)
     {
-        System.Windows.Media.Brush brush;
-        try { brush = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(hex)); }
-        catch (FormatException) { brush = System.Windows.Media.Brushes.Gray; }
-        return new System.Windows.Controls.Border { Width = 14, Height = 14, CornerRadius = new CornerRadius(3), Background = brush };
+        return new System.Windows.Controls.Border { Width = 14, Height = 14, CornerRadius = new CornerRadius(3), Background = Visualization.ColourText.BrushOr(hex) };
     }
 
     void IMixerHost.OpenAudioSettings() => OpenSettingsCategory(SettingsCatalog.AudioVst);
@@ -329,133 +315,30 @@ public partial class MainWindow : IMixerHost, IFxChainHost
         UpdateTitle();
     }
 
+    void IFxChainHost.PluginSwitched(TrackModel track)
+    {
+        // An instrument that is switched can change what plays the track's notes (the plug-in or the GM sound): that is a full chain change.
+        if (track.Rig.Plugins.Any(p => p.Type == PluginSlotType.Instrument)) { ((IFxChainHost)this).ChainChanged(track); return; }
+        if (track.IsBus) MixerBuses.SyncBack(track);
+        if (MixerBuses.IsMonitor(track) && _project.Mixer.MonitorUseGlobal) SaveSettings();
+        else _project.IsDirty = true;
+        SyncAudioEngine();   // the engine already has the switch; this keeps its track mix in step
+        RefreshTracks();
+        RefreshMixerWindow();
+        UpdateTitle();
+    }
+
     void IFxChainHost.OpenAudioSettings() => OpenSettingsCategory(SettingsCatalog.AudioVst);
     IntPtr IFxChainHost.OwnerWindow => new System.Windows.Interop.WindowInteropHelper(this).Handle;
     bool IFxChainHost.DarkTheme => !Visualization.VisualTheme.IsLight;
-    Audio.AudioEngineClient IFxChainHost.Engine => Audio.AudioEngineClient.Instance;
+    Audio.AudioEngineClient IFxChainHost.Engine => _engine;
 
     void IFxChainHost.SaveSettings() => SaveSettings();
-
-    private bool _audioEngineHooked;
 
     /// <summary>Song time for audio clips: the clock of the active song (it belongs to the document, so it stays with the song when its tab moves to another window).</summary>
     internal Audio.SongClock SongClock => Doc.Playback.Clock;
 
-    /// <summary>
-    /// Starts / updates / stops the audio engine for the active song's plug-in tracks and routes their MIDI to it.
-    /// Songs without plug-in tracks never start the engine.
-    /// </summary>
-    private void SyncAudioEngine()
-    {
-        var engine = Audio.AudioEngineClient.Instance;
-        HookAudioEngine(engine);
-        TabForge.Models.MixerGroups.AutoGmSound = _settings.Plugins.AutoGmSound;
-        var playAll = _settings.Plugins.PlayAllThroughEngine;
-        if (TabForge.Models.MixerGroups.PlayAllThroughEngine != playAll)
-        {
-            TabForge.Models.MixerGroups.PlayAllThroughEngine = playAll;
-            if (_mainWindowInitialized) _midi.Rebuild(_project);
-        }
-        Audio.AudioRouting.Apply(_project, Doc.Playback.Routing, engine, _settings.Plugins, _settings.Audio.MasterVolume, owner: Doc, media: Doc.Media, skippedPlugins: Doc.SkippedPlugins);   // R-10: the active document owns the engine; its media context and skipped plug-ins go with it
-        UpdateAudioDeviceStatus();
-        UpdatePluginTrustBar();
-        UpdateMediaApprovalBar();
-    }
-
-    private void HookAudioEngine(Audio.AudioEngineClient engine)
-    {
-        if (_audioEngineHooked) return;
-        _audioEngineHooked = true;
-        // The shared engine client outlives every window. The delegates it keeps read the app-wide shared settings store or the open-window
-        // registry, never this window; the event handlers below are detached when this window has really closed (Subscribe).
-        engine.Quarantine = static () => AppSettingsStore.Shared.Settings.Plugins.Quarantined;
-        // Multi-tab playback: a song that still plays in another tab keeps its engine tracks live (not parked) when this tab takes over.
-        engine.IsOwnerPlaying = static owner => owner is TabForge.Documents.DocumentSession { Playback.Engine.IsPlaying: true };
-        Arrangement.QuarantinedPlugins = () => _settings.Plugins.Quarantined;   // faulted FX icon on tracks whose plug-in crashed
-        // A synth created while the song plays starts on the default piano: give it its programs again.
-        Subscribe(h => engine.ChainLoaded += h, h => engine.ChainLoaded -= h, (Action)(() => { if (!_isClosed) _midi.RearmChannelSetup(); }));
-        Subscribe(h => engine.ChainAcknowledged += h, h => engine.ChainAcknowledged -= h, (Action<TabForge.Audio.Contracts.ChainAck>)(ack =>
-        {
-            if (_isClosed) return;
-            // A plug-in whose file changed since its approval was refused at load: show it in the trust bar and re-send it as Skip.
-            if (ack.Plugins.Any(x => x.Status == TabForge.Audio.Contracts.PluginLoadStatus.BlockedChanged)) { UpdatePluginTrustBar(); SyncAudioEngine(); }
-            // An instrument that failed to load (or loads fine again) changes whether GM takes over: re-apply the automatic GM sound.
-            else if (engine.RefreshAvailability(_project.Tracks, _settings.Plugins, Doc.SkippedPlugins)) { SyncAudioEngine(); _midi.Rebuild(_project); RefreshTracks(); RefreshMixerWindow(); }
-        }));
-        engine.AutoPitch ??= new TabForge.Audio.AutoPitchMatcher(engine, static () => AppSettingsStore.Shared.Settings.Plugins);   // automatic pitch matching of VST instruments
-        Subscribe(h => engine.PluginCrashed += h, h => engine.PluginCrashed -= h, (Action<string>)(path =>
-        {
-            if (_isClosed) return;
-            SaveSettings();
-            // No path: the engine hung outside any plug-in call (or stopped answering) and was restarted; nothing was switched off.
-            StatusText.Text = string.IsNullOrEmpty(path)
-                ? "The audio engine stopped responding and was restarted; playback continues"
-                : $"{System.IO.Path.GetFileNameWithoutExtension(path)} stopped working and was switched off; playback continues";
-            if (!engine.TooManyCrashes) SyncAudioEngine();
-            else StatusText.Text = "The audio engine stopped several times; plug-in tracks now play on Windows MIDI. Check Settings > Audio & Plug-ins.";
-            RefreshMixerWindow();
-            Arrangement.RefreshAll();
-        }));
-        Subscribe(h => engine.PluginFailed += h, h => engine.PluginFailed -= h, (Action<string, string>)((path, why) =>
-        {
-            if (!_isClosed) StatusText.Text = $"{System.IO.Path.GetFileNameWithoutExtension(path)} could not be loaded: {why}";
-        }));
-        // RT-02: invalid audio (NaN / infinity) never reaches the mix; the plug-in is skipped until it is switched off and on again.
-        Subscribe(h => engine.PluginMisbehaved += h, h => engine.PluginMisbehaved -= h, (Action<string, int>)((path, index) =>
-        {
-            if (!_isClosed) StatusText.Text = index >= 0
-                ? $"{System.IO.Path.GetFileNameWithoutExtension(path)} produced invalid audio and was bypassed; switch it off and on in its FX chain to try again"
-                : $"A track's sound ({path}) produced invalid audio; it was muted for that moment";
-        }));
-        Subscribe(h => engine.DeviceError += h, h => engine.DeviceError -= h, (Action<string>)(message => { if (!_isClosed) StatusText.Text = $"Audio output: {message}"; }));
-        // Slow is not a crash: a big instrument may take a while; it is switched off only if it passes its limit (load 90 s).
-        Subscribe(h => engine.PluginSlow += h, h => engine.PluginSlow -= h, (Action<string, TabForge.Audio.Contracts.PluginCallKind, int>)((path, kind, seconds) =>
-        {
-            if (_isClosed) return;
-            StatusText.Text = $"{System.IO.Path.GetFileNameWithoutExtension(path)} " + kind switch
-            {
-                TabForge.Audio.Contracts.PluginCallKind.Load => "is still loading",
-                TabForge.Audio.Contracts.PluginCallKind.SetState => "is still applying its settings",
-                TabForge.Audio.Contracts.PluginCallKind.GetState => "is still saving its settings",
-                TabForge.Audio.Contracts.PluginCallKind.Editor => "is still opening its window",
-                _ => "is still busy",
-            } + $" ({seconds} s)…";
-            if (kind == TabForge.Audio.Contracts.PluginCallKind.Load && seconds >= TabForge.Audio.Contracts.EngineWatchdog.LongNoticeSec)
-                PromptSlowLoad(engine, path);
-        }));
-        Subscribe(h => engine.ChainLoaded += h, h => engine.ChainLoaded -= h, (Action)(() => { if (!_isClosed) _slowLoadPrompt?.Close(); }));   // the load finished: nothing left to decide
-        Subscribe(h => engine.PluginEdited += h, h => engine.PluginEdited -= h, (Action)(() => { if (!_isClosed && !_project.IsDirty) { _project.IsDirty = true; UpdateTitle(); } }));
-    }
-
-
-    /// <summary>The one "plug-in loading slowly" question the application shows: the engine is shared, so every window hears the same slow load, but only one prompt (in the window whose song uses the plug-in) may be open at a time.</summary>
-    private static Views.ThemedConfirmDialog? _slowLoadPrompt;
-
-    /// <summary>R-06: a plug-in load past 30 s asks (non-modal) whether to keep waiting or disable it for this song.</summary>
-    private void PromptSlowLoad(Audio.AudioEngineClient engine, string path)
-    {
-        // The song that owns this plug-in answers (not whichever tab is shown): the displayed one if it uses the plug-in, else another tab of this window; a plug-in used only by another window's song is that window's question.
-        var doc = _documents.Documents.Where(d => d.Project.Tracks.Any(t => t.Rig.Plugins.Any(p => string.Equals(p.Path, path, StringComparison.OrdinalIgnoreCase))))
-            .OrderByDescending(d => ReferenceEquals(d, Doc)).FirstOrDefault();
-        if (doc is null || _slowLoadPrompt is not null || string.IsNullOrEmpty(path) || doc.SkippedPlugins.Contains(path)) return;
-        var name = System.IO.Path.GetFileNameWithoutExtension(path);
-        var prompt = _slowLoadPrompt = new Views.ThemedConfirmDialog(
-            "Plug-in loading slowly",
-            $"{name} is taking a long time to load.\n\nDisable it: the song plays without it while this song is open. " +
-            "This is not a quarantine: it is not saved and the plug-in loads normally the next time the song is opened.",
-            yesToolTip: "Keep waiting for the plug-in to load",
-            noToolTip: "Skip this plug-in for this song and reload its chain without it",
-            showCancel: false, yesText: "Keep waiting", noText: "Disable it") { Owner = this };
-        prompt.ShowModeless(result =>
-        {
-            if (ReferenceEquals(_slowLoadPrompt, prompt)) _slowLoadPrompt = null;
-            if (result != MessageBoxResult.No) return;
-            doc.SkippedPlugins.Add(path);
-            StatusText.Text = $"{name} is disabled for this song (not permanently); its chain reloads without it once the engine is free";
-            if (ReferenceEquals(doc, Doc)) SyncAudioEngine();
-            RefreshMixerWindow();
-        });
-    }
+    private void SyncAudioEngine() => _engineSync.Sync();
 
     /// <summary>Song switched or restored (undo): rebuild the mixer, close chain windows of tracks no longer shown.</summary>
     private void SyncMixerWindows()
@@ -466,5 +349,53 @@ public partial class MainWindow : IMixerHost, IFxChainHost
         foreach (var (track, window) in _fxWindows.ToList())
             if (!_project.Tracks.Contains(track) && !MixerBuses.IsCurrent(_project, track)
                 && !(MixerBuses.IsMonitor(track) && ReferenceEquals(track.Bus, ((IMixerHost)this).MonitorChain))) window.Close();
+    }
+
+    /// <summary>The window as the host of its <see cref="EngineSyncController"/>.</summary>
+    private sealed class EngineSyncHost : IEngineSyncHost
+    {
+        private readonly MainWindow _window;
+        public EngineSyncHost(MainWindow window) => _window = window;
+
+        public DocumentSession ActiveDocument => _window.Doc;
+        public IReadOnlyList<DocumentSession> Documents => _window._documents.Documents;
+        public AppSettings Settings => _window._settings;
+        public bool IsInitialized => _window._mainWindowInitialized;
+        /// <summary>The one "plug-in loading slowly" question the application shows: the engine is shared, so every window hears the same slow load, but only one prompt (in the window whose song uses the plug-in) may be open at a time.</summary>
+        private static Views.ThemedConfirmDialog? _slowLoadPrompt;
+
+        public bool ShowSlowLoadPrompt(string pluginName, Action<bool> answered)
+        {
+            if (_slowLoadPrompt is not null) return false;
+            var prompt = _slowLoadPrompt = new Views.ThemedConfirmDialog(
+                "Plug-in loading slowly",
+                $"{pluginName} is taking a long time to load.\n\nDisable it: the song plays without it while this song is open. " +
+                "This is not a quarantine: it is not saved and the plug-in loads normally the next time the song is opened.",
+                yesToolTip: "Keep waiting for the plug-in to load",
+                noToolTip: "Skip this plug-in for this song and reload its chain without it",
+                showCancel: false, yesText: "Keep waiting", noText: "Disable it") { Owner = _window };
+            prompt.ShowModeless(result =>
+            {
+                if (ReferenceEquals(_slowLoadPrompt, prompt)) _slowLoadPrompt = null;
+                answered(result == MessageBoxResult.No);
+            });
+            return true;
+        }
+
+        public void CloseSlowLoadPrompt() => _slowLoadPrompt?.Close();
+        public void Post(Action work, System.Windows.Threading.DispatcherPriority priority) => _window.PostIfOpen(work, priority);
+        public void RebuildMidi() => _window._midi.Rebuild(_window._project);
+        public void RearmChannelSetup() => _window._midi.RearmChannelSetup();
+        public void SetStatus(string text) => _window.StatusText.Text = text;
+        public void CheckpointUndo() => _window.CheckpointUndo();
+        public void SaveSettings() => _window.SaveSettings();
+        public void UpdateTitle() => _window.UpdateTitle();
+        public void RefreshTracks() => _window.RefreshTracks();
+        public void RefreshArrangement() => _window.RefreshArrangement();
+        public void RefreshArrangementAll() => _window.Arrangement.RefreshAll();
+        public void RefreshMixer() => _window.RefreshMixerWindow();
+        public void UpdateAudioDeviceStatus() => _window.UpdateAudioDeviceStatus();
+        public void UpdatePluginTrustBar() => _window.UpdatePluginTrustBar();
+        public void UpdateMediaApprovalBar() => _window.UpdateMediaApprovalBar();
     }
 }

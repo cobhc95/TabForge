@@ -26,7 +26,7 @@ public static class SnapSettingsDialog
             return box;
         }
 
-        Check("Enable snapping (Alt+S)", snap.Enabled, v => snap.Enabled = v, "Clips snap while you move or trim them. Hold Alt while dragging to bypass.");
+        Check(TooltipShortcuts.Append("Enable snapping", "Timeline.Snap"), snap.Enabled, v => snap.Enabled = v, "Clips snap while you move or trim them. Hold Alt while dragging to bypass.");
 
         var gridRow = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 10, 0, 4) };
         gridRow.Children.Add(new TextBlock { Text = "Grid size", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 10, 0) });

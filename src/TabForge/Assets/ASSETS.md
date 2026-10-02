@@ -25,6 +25,6 @@ only; no font file is distributed and the icons are not named "Bravura".
 
 ## Not used
 
-No Guitar Pro (or other third-party application) images, icons, fonts or sounds are used or copied anywhere in TabForge.
+No third-party application images, icons, fonts or sounds are used or copied anywhere in TabForge.
 The toolbar's functional layout and command names follow common notation-editor conventions; the artwork is not derived
 from any of them.

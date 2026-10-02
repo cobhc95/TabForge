@@ -71,7 +71,7 @@ public static class TooltipShortcuts
 
     /// <summary>"text (Ctrl+S)" with the command's current key, or just "text" when it has none.</summary>
     public static string Append(string text, string commandId) =>
-        Compose(text, HotkeyCatalog.Display(HotkeyCatalog.GestureFor(_hotkeys, commandId)));
+        Compose(text, HotkeyCatalog.DisplayAll(_hotkeys, commandId));
 
     /// <summary>
     /// Appends the key last. A text that already ends in a bracket gets the key inside it ("Zoom (50-200%; Ctrl++)")

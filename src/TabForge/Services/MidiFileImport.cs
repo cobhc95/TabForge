@@ -1,6 +1,7 @@
 using System.IO;
 using TabForge.Audio;
 using TabForge.Models;
+using TempoMath = TabForge.Audio.Contracts.TempoMath;
 
 namespace TabForge.Services;
 
@@ -40,6 +41,9 @@ public sealed class MidiFileData
     }
 }
 
+// Owns: parsing a Standard MIDI File into notes and tempo maps.
+// Does not own: writing it to notation (MidiClipToTab).
+// Tests: TestMidiFileToClip, TestVirtualFileDrop.
 /// <summary>Reads .mid / .midi files (format 0, 1 and 2) for MIDI clips; bounded, never trusts the file's lengths.</summary>
 public static class MidiFileImport
 {
@@ -241,13 +245,13 @@ public sealed class SongQuarterMap
     public double QuarterAt(double sec)
     {
         var i = Last(_sec, sec);
-        return _q[i] + (sec - _sec[i]) * _tempo[i] / 60.0;
+        return _q[i] + TempoMath.SecondsToBeats(sec - _sec[i], _tempo[i]);
     }
 
     public double SecAt(double quarter)
     {
         var i = Last(_q, quarter);
-        return _sec[i] + (quarter - _q[i]) * 60.0 / _tempo[i];
+        return _sec[i] + TempoMath.BeatsToSeconds(quarter - _q[i], _tempo[i]);
     }
 
     /// <summary>One bar's worth of time at a song time (a placeholder length for a file not measured yet).</summary>

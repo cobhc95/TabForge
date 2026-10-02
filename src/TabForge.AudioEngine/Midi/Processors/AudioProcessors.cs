@@ -1,3 +1,4 @@
+using TabForge.Audio.Contracts;
 using TabForge.AudioEngine.Plugins;
 
 namespace TabForge.AudioEngine.Midi.Processors;
@@ -21,7 +22,7 @@ internal static class AudioProcUtil
     }
 
     public static float MsCoef(double ms, int sr) => ms <= 0 ? 1f : (float)(1 - Math.Exp(-1.0 / (ms * 0.001 * sr)));
-    public static float DbToLin(double db) => (float)Math.Pow(10, db / 20);
+    public static float DbToLin(double db) => (float)Gain.FromDb(db);
 }
 
 /// <summary>Audio to MIDI drum trigger: a level above the open threshold fires a note-on (velocity from the peak), falling below the close threshold sends the note-off.</summary>
@@ -59,7 +60,7 @@ public sealed class AudioDrumTriggerProcessor : IMidiProcessor, IAudioAwareProce
             {
                 var peak = 0f;
                 for (var k = i; k < n && k < i + _peakWin; k++) peak = Math.Max(peak, Math.Max(Math.Abs(l[k]), Math.Abs(r[k])));
-                var db = 20 * Math.Log10(Math.Max(peak, 1e-6f));
+                var db = Gain.ToDb(Math.Max(peak, 1e-6f));
                 var t = Math.Clamp((db - _openDb) / -_openDb, 0, 1);
                 var vel = (byte)(1 + (int)Math.Round(126 * t));
                 output.Add(i, (byte)(0x90 | _ch), (byte)_note, vel); output.Unsorted = true;

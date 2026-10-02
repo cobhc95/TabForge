@@ -1,3 +1,5 @@
+using TabForge.Audio.Contracts;
+
 namespace TabForge.AudioEngine.Midi.Processors;
 
 /// <summary>Choke: a note-on in the choke set ends every sounding note of the affected set; while a choke note is held, affected note-ons are blocked (or allowed).</summary>
@@ -123,8 +125,8 @@ public sealed class NoteSanitizerProcessor : IMidiProcessor
 
     public void Process(MidiBuffer input, MidiBuffer output, in MidiContext ctx)
     {
-        var tempo = ctx.Tempo > 1 ? ctx.Tempo : 120;
-        var limit = _threshold * (ctx.SampleRate * 60.0 / tempo) / 8.0;   // 1/32 note = 1/8 beat
+        var tempo = TempoMath.Effective(ctx.Tempo);
+        var limit = _threshold * TempoMath.SampleRateBeat(ctx.SampleRate, tempo) / 8.0;   // 1/32 note = 1/8 beat
         for (var i = 0; i < input.Count; i++)
         {
             var e = input.Items[i];

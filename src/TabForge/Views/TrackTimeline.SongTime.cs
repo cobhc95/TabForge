@@ -45,6 +45,6 @@ internal sealed partial class TrackTimeline
         if (next > start) return next - start;
         // Last bar (or a repeat jump): estimate from the tempo.
         var tempo = Math.Max(20, Project?.Tempo ?? 120);
-        return 4 * 60.0 / tempo;
+        return TabForge.Audio.Contracts.TempoMath.BeatsToSeconds(4, tempo);
     }
 }

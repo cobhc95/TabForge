@@ -47,14 +47,14 @@ ChangesAssociations=yes
 CloseApplications=yes
 
 [Messages]
-WelcomeLabel2=This will install [name/ver] on your computer.%n%nIt is recommended that you close all other applications before continuing.%n%nTabForge is an independent project. Guitar Pro is a trademark of Arobas Music. VST and ASIO are trademarks of Steinberg Media Technologies GmbH. Other product and company names are trademarks of their owners. TabForge is not affiliated with, sponsored or endorsed by any of them.
+WelcomeLabel2=This will install [name/ver] on your computer.%n%nIt is recommended that you close all other applications before continuing.%n%nTabForge is an independent project. VST and ASIO are trademarks of Steinberg Media Technologies GmbH. Other product and company names are trademarks of their owners. TabForge is not affiliated with, sponsored or endorsed by any of them.
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
-Name: "associate"; Description: "Open Guitar Pro (.gp, .gp5, .gp4, .gp3, .gpx) and TabForge (.tforge) files with TabForge"; GroupDescription: "Windows integration:"
+Name: "associate"; Description: "Open .gp, .gp5, .gp4, .gp3, .gpx and TabForge (.tforge) files with TabForge"; GroupDescription: "Windows integration:"
 
 [Files]
 ; The whole publish folder: TabForge.exe, the loose SoundTouch.Net.dll (LGPL, replaceable), licenses\ (licence texts), Assets\, Resources\.
@@ -69,23 +69,23 @@ Name: "{autodesktop}\TabForge"; Filename: "{app}\TabForge.exe"; Tasks: desktopic
 
 [Registry]
 ; The same per-user entries TabForge's own Settings > Windows integration switch writes and removes.
-Root: HKCU; Subkey: "Software\Classes\TabForge.gp"; ValueType: string; ValueName: ""; ValueData: "Guitar Pro file (.gp)"; Flags: uninsdeletekey; Tasks: associate
+Root: HKCU; Subkey: "Software\Classes\TabForge.gp"; ValueType: string; ValueName: ""; ValueData: "Score file (.gp)"; Flags: uninsdeletekey; Tasks: associate
 Root: HKCU; Subkey: "Software\Classes\TabForge.gp\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: """{app}\TabForge.exe"",0"; Tasks: associate
 Root: HKCU; Subkey: "Software\Classes\TabForge.gp\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\TabForge.exe"" ""%1"""; Tasks: associate
 Root: HKCU; Subkey: "Software\Classes\.gp\OpenWithProgids"; ValueType: none; ValueName: "TabForge.gp"; Flags: uninsdeletevalue; Tasks: associate
-Root: HKCU; Subkey: "Software\Classes\TabForge.gp5"; ValueType: string; ValueName: ""; ValueData: "Guitar Pro file (.gp5)"; Flags: uninsdeletekey; Tasks: associate
+Root: HKCU; Subkey: "Software\Classes\TabForge.gp5"; ValueType: string; ValueName: ""; ValueData: "Score file (.gp5)"; Flags: uninsdeletekey; Tasks: associate
 Root: HKCU; Subkey: "Software\Classes\TabForge.gp5\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: """{app}\TabForge.exe"",0"; Tasks: associate
 Root: HKCU; Subkey: "Software\Classes\TabForge.gp5\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\TabForge.exe"" ""%1"""; Tasks: associate
 Root: HKCU; Subkey: "Software\Classes\.gp5\OpenWithProgids"; ValueType: none; ValueName: "TabForge.gp5"; Flags: uninsdeletevalue; Tasks: associate
-Root: HKCU; Subkey: "Software\Classes\TabForge.gp4"; ValueType: string; ValueName: ""; ValueData: "Guitar Pro file (.gp4)"; Flags: uninsdeletekey; Tasks: associate
+Root: HKCU; Subkey: "Software\Classes\TabForge.gp4"; ValueType: string; ValueName: ""; ValueData: "Score file (.gp4)"; Flags: uninsdeletekey; Tasks: associate
 Root: HKCU; Subkey: "Software\Classes\TabForge.gp4\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: """{app}\TabForge.exe"",0"; Tasks: associate
 Root: HKCU; Subkey: "Software\Classes\TabForge.gp4\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\TabForge.exe"" ""%1"""; Tasks: associate
 Root: HKCU; Subkey: "Software\Classes\.gp4\OpenWithProgids"; ValueType: none; ValueName: "TabForge.gp4"; Flags: uninsdeletevalue; Tasks: associate
-Root: HKCU; Subkey: "Software\Classes\TabForge.gp3"; ValueType: string; ValueName: ""; ValueData: "Guitar Pro file (.gp3)"; Flags: uninsdeletekey; Tasks: associate
+Root: HKCU; Subkey: "Software\Classes\TabForge.gp3"; ValueType: string; ValueName: ""; ValueData: "Score file (.gp3)"; Flags: uninsdeletekey; Tasks: associate
 Root: HKCU; Subkey: "Software\Classes\TabForge.gp3\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: """{app}\TabForge.exe"",0"; Tasks: associate
 Root: HKCU; Subkey: "Software\Classes\TabForge.gp3\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\TabForge.exe"" ""%1"""; Tasks: associate
 Root: HKCU; Subkey: "Software\Classes\.gp3\OpenWithProgids"; ValueType: none; ValueName: "TabForge.gp3"; Flags: uninsdeletevalue; Tasks: associate
-Root: HKCU; Subkey: "Software\Classes\TabForge.gpx"; ValueType: string; ValueName: ""; ValueData: "Guitar Pro file (.gpx)"; Flags: uninsdeletekey; Tasks: associate
+Root: HKCU; Subkey: "Software\Classes\TabForge.gpx"; ValueType: string; ValueName: ""; ValueData: "Score file (.gpx)"; Flags: uninsdeletekey; Tasks: associate
 Root: HKCU; Subkey: "Software\Classes\TabForge.gpx\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: """{app}\TabForge.exe"",0"; Tasks: associate
 Root: HKCU; Subkey: "Software\Classes\TabForge.gpx\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\TabForge.exe"" ""%1"""; Tasks: associate
 Root: HKCU; Subkey: "Software\Classes\.gpx\OpenWithProgids"; ValueType: none; ValueName: "TabForge.gpx"; Flags: uninsdeletevalue; Tasks: associate

@@ -22,6 +22,18 @@
     <ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
   </PropertyGroup>
 
+  <!-- The full self-test suite (tests/full-suite) is compiled in only with -p:TabForgeFullSuite=true (REBUILD.cmd fullsuite); normal builds carry the basic set only. -->
+  <PropertyGroup Condition="'$(TabForgeFullSuite)' == 'true'">
+    <DefineConstants>$(DefineConstants);FULL_SUITE</DefineConstants>
+  </PropertyGroup>
+  <!-- Test seams (Override / FaultInjection hooks) are assigned only by the full suite. -->
+  <PropertyGroup Condition="'$(TabForgeFullSuite)' != 'true'">
+    <NoWarn>$(NoWarn);CS0649</NoWarn>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(TabForgeFullSuite)' == 'true'">
+    <Compile Include="..\..\tests\full-suite\**\*.cs" Link="FullSuite\%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
   <ItemGroup>
     <RuntimeHostConfigurationOption Include="System.GC.ConserveMemory" Value="5" />
   </ItemGroup>

@@ -55,14 +55,12 @@ public partial class MainWindow
 
     private void RefreshTabsAndActivate(DocumentSession session)
     {
-        CaptureDocumentState();
         ActivateDocument(session, applyPlaybackSwitchPolicy: true);
     }
 
     private void ActivateTabAt(int index)
     {
         if (index < 0 || index >= _documents.Documents.Count || index == _documents.ActiveIndex) return;
-        CaptureDocumentState();
         ActivateDocument(_documents.Documents[index], applyPlaybackSwitchPolicy: true);
     }
 
@@ -70,7 +68,6 @@ public partial class MainWindow
 
     private void NewTab()
     {
-        CaptureDocumentState();
         var at = _tabSettings.NewTabPosition == NewTabPositions.AtEnd
             ? _documents.Documents.Count
             : _documents.ActiveIndex + 1;
@@ -164,165 +161,20 @@ public partial class MainWindow
         finally { EndDocumentOperation(); }
     }
 
-    // ---------- moving tabs between windows ----------
+    // ---------- moving tabs between windows (TabTransferController; these are its entry points) ----------
 
-    /// <summary>Opens the document in a brand-new top-level window (drag-out or the tab menu).</summary>
-    private void DetachDocumentToNewWindow(int index)
-    {
-        if (index < 0 || index >= _documents.Documents.Count) return;
-        var doc = _documents.Documents[index];
-        _documents.Detach(index);
-        if (_documents.Documents.Count == 0) HandleSourceWindowEmptied();
-        else ActivateDocument(_documents.Active);
-        var position = Mouse.GetPosition(this);
-        OpenWindowWith(doc, new Point(Left + position.X - 60, Top + position.Y + 24));
-        StatusText.Text = $"Moved {doc.DisplayName} to a new window";
-    }
+    private void DetachDocumentToNewWindow(int index) => _tabTransfer.DetachToNewWindow(index);
 
-    /// <summary>
-    /// Held tear-off path: transfer the live session, place a real top-level window under the held
-    /// pointer, then hand movement to the native caption loop so Aero Snap and monitor-edge behaviour
-    /// remain owned by Windows. The editor itself stays in the workspace.
-    /// </summary>
-    private void DetachHeldDocumentToNewWindow(int index, Point screenPoint)
-    {
-        if (index < 0 || index >= _documents.Documents.Count) return;
-        if (BrowserTabDragPolicy.TearOffAction(_documents.Documents.Count) == TabTearOffAction.MoveWindow)
-        {
-            MoveWholeWindowWithHeldPointer(screenPoint);
-            return;
-        }
-        var session = _documents.Documents[index];
-        CaptureDocumentState();
-        _documents.Detach(index);
-        if (_documents.Documents.Count == 0) HandleSourceWindowEmptied();
-        else ActivateDocument(_documents.Active);
-
-        // Screen pixels -> this window's DIPs (per-monitor DPI; also correct below 100 % scaling).
-        var fromDevice = PresentationSource.FromVisual(this)?.CompositionTarget?.TransformFromDevice ?? Matrix.Identity;
-        var dropDip = fromDevice.Transform(screenPoint);
-        var detached = new MainWindow();
-        detached.AdoptSession(session);
-        // Detached document windows should open at the dropped position rather than inheriting
-        // the maximised startup state of the primary application window.
-        detached.WindowState = WindowState.Normal;
-        detached.WindowStartupLocation = WindowStartupLocation.Manual;
-        detached.Left = dropDip.X - 120;
-        detached.Top = dropDip.Y - 22;
-        detached.Show();
-        detached.Activate();
-        var hwnd = new System.Windows.Interop.WindowInteropHelper(detached).Handle;
-        if (hwnd != IntPtr.Zero && (GetAsyncKeyState(VK_LBUTTON) & 0x8000) != 0)
-        {
-            ReleaseCapture();
-            detached.LocationChanged += detached.TearOffWindow_LocationChanged;
-            SendMessage(hwnd, WM_NCLBUTTONDOWN, (IntPtr)HTCAPTION, IntPtr.Zero);
-            detached.LocationChanged -= detached.TearOffWindow_LocationChanged;
-            detached.CompleteHeldTearOff();
-        }
-    }
-
-    /// <summary>
-    /// A window's only tab was dragged out: the window itself follows the pointer (native caption loop, so snapping
-    /// still works) and no new window is created. Released over another window's tab strip, the tab merges there
-    /// and this window closes.
-    /// </summary>
-    private void MoveWholeWindowWithHeldPointer(Point screenPoint)
-    {
-        var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
-        if (hwnd == IntPtr.Zero || (GetAsyncKeyState(VK_LBUTTON) & 0x8000) == 0) return;
-        if (WindowState != WindowState.Normal)
-        {
-            var fromDevice = PresentationSource.FromVisual(this)?.CompositionTarget?.TransformFromDevice ?? Matrix.Identity;
-            var dropDip = fromDevice.Transform(screenPoint);
-            WindowState = WindowState.Normal;
-            Left = dropDip.X - 120;
-            Top = dropDip.Y - 22;
-        }
-        ReleaseCapture();
-        LocationChanged += TearOffWindow_LocationChanged;
-        try { SendMessage(hwnd, WM_NCLBUTTONDOWN, (IntPtr)HTCAPTION, IntPtr.Zero); }
-        finally { LocationChanged -= TearOffWindow_LocationChanged; }
-        CompleteHeldTearOff();
-    }
+    private void DetachHeldDocumentToNewWindow(int index, Point screenPoint) => _tabTransfer.DetachHeldToNewWindow(index, screenPoint);
 
     /// <summary>Moves this window's only document into <paramref name="target"/> at <paramref name="index"/> and closes this window.</summary>
-    internal bool MergeSoleDocumentInto(MainWindow target, int index)
-    {
-        if (ReferenceEquals(target, this) || _documents.Documents.Count != 1) return false;
-        CaptureDocumentState();
-        var session = _documents.Detach(0);
-        if (session is null) return false;
-        target.AdoptDroppedDocument(session, Math.Max(0, index));
-        Close();
-        return true;
-    }
+    internal bool MergeSoleDocumentInto(MainWindow target, int index) => _tabTransfer.MergeSoleDocumentInto(target._tabTransfer, index);
 
-    private void TearOffWindow_LocationChanged(object? sender, EventArgs e) => UpdateAttachTargetFromCursor();
+    /// <summary>Adopts a document dropped onto this window's tab strip.</summary>
+    private void AdoptDroppedDocument(DocumentSession session, int index) => _tabTransfer.TryAdopt(session, index);
 
-    private void UpdateAttachTargetFromCursor()
-    {
-        if (!TryGetScreenCursor(out var cursor)) return;
-        var next = TabWindowRegistry.FindTarget(this, cursor);
-        if (!ReferenceEquals(next, _attachTarget))
-        {
-            _attachTarget?.SetTabAttachHighlight(false);
-            _attachTarget = next;
-            _attachTarget?.SetTabAttachHighlight(true);
-        }
-        _attachTargetIndex = _attachTarget?.GetTabAttachInsertIndex(cursor) ?? -1;
-    }
-
-    private void CompleteHeldTearOff()
-    {
-        if (!TryGetScreenCursor(out var cursor)) cursor = new Point(Left, Top);
-        UpdateAttachTargetFromCursor();
-        var target = _attachTarget;
-        var index = _attachTargetIndex;
-        ClearAttachTarget();
-        if (target is null || !target.IsVisible || !target.CanAcceptTabAttachAt(cursor)) return;
-        MergeSoleDocumentInto(target, index);
-    }
-
-    private void ClearAttachTarget()
-    {
-        _attachTarget?.SetTabAttachHighlight(false);
-        _attachTarget = null;
-        _attachTargetIndex = -1;
-    }
-
-    internal bool CanAcceptTabAttachAt(Point screenPoint)
-    {
-        if (!IsVisible || !IsEnabled) return false;
-        var strip = Tabs.GetScreenRect();
-        var scale = Math.Max(1.0, VisualTreeHelper.GetDpi(this).DpiScaleY);
-        var horizontal = Math.Max(24, 28 * scale);
-        var top = Math.Max(4, 6 * scale);
-        var bottom = Math.Max(56, 78 * scale);
-        var zone = new Rect(strip.Left - horizontal, strip.Top - top,
-            strip.Width + horizontal * 2, strip.Height + top + bottom);
-        return zone.Contains(screenPoint);
-    }
-
-    internal int GetTabAttachInsertIndex(Point screenPoint) => Tabs.GetInsertionIndexAtScreen(screenPoint);
-
-    internal void SetTabAttachHighlight(bool highlighted)
-    {
-        if (TitleBar is null) return;
-        // Whole-strip attach treatment: a full accent outline and a soft fill across the complete
-        // title row, including the tab buttons and unused caption space.
-        TitleBar.BorderBrush = (Brush)FindResource(highlighted ? "AccentBrush" : "ChromeBorderBrush");
-        TitleBar.Background = (Brush)FindResource(highlighted ? "AccentSoftBrush" : "ChromeStripBrush");
-        TitleBar.BorderThickness = highlighted ? new Thickness(2) : new Thickness(0, 0, 0, 1);
-        TitleBar.CornerRadius = highlighted ? new CornerRadius(4) : new CornerRadius(0);
-    }
-
-    private static bool TryGetScreenCursor(out Point point)
-    {
-        if (GetCursorPos(out var native)) { point = new Point(native.X, native.Y); return true; }
-        point = default;
-        return false;
-    }
+    /// <summary>Replaces the freshly-created blank tab with a document handed over from another window.</summary>
+    public void AdoptSession(DocumentSession session) => _tabTransfer.AdoptAsOnlyDocument(session);
 
     /// <summary>Applies the "last tab closed" setting after a drag removed the final tab.</summary>
     private void HandleSourceWindowEmptied()
@@ -333,15 +185,6 @@ public partial class MainWindow
         blank.Notation = PreferredNotation;
         _documents.Insert(blank, 0);
         ActivateDocument(_documents.Active);
-    }
-
-    /// <summary>Adopts a document dropped onto this window's tab strip.</summary>
-    private void AdoptDroppedDocument(DocumentSession session, int index)
-    {
-        CaptureDocumentState();
-        _documents.Insert(session, Math.Clamp(index, 0, _documents.Documents.Count));
-        ActivateDocument(session, focusTabSelection: true);
-        StatusText.Text = $"Opened {session.DisplayName} here";
     }
 
     /// <summary>
@@ -387,59 +230,95 @@ public partial class MainWindow
             Dispatcher.BeginInvoke(() => OpenDroppedSongs(songs));
             return;
         }
-        e.Handled = true;
-        e.Effects = DragDropEffects.Move;
-        var index = _documents.Documents.Count;
-
-        if (TabDragService.Current is { } incoming)
-        {
-            if (_documents.IndexOf(incoming.Session) >= 0) return;   // our own tab: the strip handled it
-            incoming.Consumed = true;
-            AdoptDroppedDocument(incoming.Session, index);
-            return;
-        }
-
-        var json = e.Data.GetData(TabDragService.Format) as string;
-        if (string.IsNullOrEmpty(json)) return;
-        try
-        {
-            var project = ProjectService.Restore(json);
-            var doc = DocumentSession.FromProject(project, null);
-            ApplyPreferredScoreView(doc);
-            doc.Project.IsDirty = true;
-            AdoptDroppedDocument(doc, index);
-        }
-        catch
-        {
-            // Corrupt payload: ignore the drop rather than crashing.
-        }
+        _tabTransfer.DropTab(e);
     }
 
-    /// <summary>Creates a window that starts with the given document instead of a blank tab.</summary>
-    private void OpenWindowWith(DocumentSession session, Point? screenPosition)
+    /// <summary>The window as the host of its <see cref="TabTransferController"/>.</summary>
+    private sealed class TabTransferHost : ITabTransferHost
     {
-        var window = new MainWindow();
-        // A newly detached document window is a normal, positioned child window. The primary
-        // application window is maximised by default, but that is not appropriate for tear-off.
-        window.WindowState = WindowState.Normal;
-        window.AdoptSession(session);
-        if (screenPosition is { } p)
-        {
-            window.WindowStartupLocation = WindowStartupLocation.Manual;
-            window.Left = p.X;
-            window.Top = p.Y;
-        }
-        window.Show();
-        window.Activate();
-    }
+        private readonly MainWindow _window;
+        public TabTransferHost(MainWindow window) => _window = window;
 
-    /// <summary>Replaces the freshly-created blank tab with a document handed over from another window.</summary>
-    public void AdoptSession(DocumentSession session)
-    {
-        while (_documents.Documents.Count > 0)
-            _documents.Detach(0)?.DisposePlayback();
-        _documents.Insert(session, 0);
-        ActivateDocument(session, focusTabSelection: true);
+        public DocumentManager Documents => _window._documents;
+        public bool IsOpen => !_window._isClosed && _window.IsVisible;
+        public bool IsEnabled => _window.IsEnabled;
+        public Rect TabStripScreenRect => _window.Tabs.GetScreenRect();
+        public double DpiScaleY => VisualTreeHelper.GetDpi(_window).DpiScaleY;
+        public int TabInsertIndexAt(Point screen) => _window.Tabs.GetInsertionIndexAtScreen(screen);
+
+        public void SetAttachHighlight(bool highlighted)
+        {
+            var titleBar = _window.TitleBar;
+            if (titleBar is null) return;
+            // Whole-strip attach treatment: a full accent outline and a soft fill across the complete
+            // title row, including the tab buttons and unused caption space.
+            titleBar.BorderBrush = (Brush)_window.FindResource(highlighted ? "AccentBrush" : "ChromeBorderBrush");
+            titleBar.Background = (Brush)_window.FindResource(highlighted ? "AccentSoftBrush" : "ChromeStripBrush");
+            titleBar.BorderThickness = highlighted ? new Thickness(2) : new Thickness(0, 0, 0, 1);
+            titleBar.CornerRadius = highlighted ? new CornerRadius(4) : new CornerRadius(0);
+        }
+
+        public bool TryGetCursor(out Point screen)
+        {
+            if (GetCursorPos(out var native)) { screen = new Point(native.X, native.Y); return true; }
+            screen = default;
+            return false;
+        }
+
+        // Screen pixels -> this window's DIPs (per-monitor DPI; also correct below 100 % scaling).
+        public Point ScreenToDip(Point screen) =>
+            (PresentationSource.FromVisual(_window)?.CompositionTarget?.TransformFromDevice ?? Matrix.Identity).Transform(screen);
+
+        public Point NewWindowPositionNearPointer()
+        {
+            var position = Mouse.GetPosition(_window);
+            return new Point(_window.Left + position.X - 60, _window.Top + position.Y + 24);
+        }
+
+        public void CaptureDocumentState() => _window.CaptureDocumentState();
+        public void ShowActiveDocument() => _window.ActivateDocument(_window._documents.Active);
+        public void ActivateAdopted(DocumentSession session) => _window.ActivateDocument(session, focusTabSelection: true);
+        public void LastDocumentLeft() => _window.HandleSourceWindowEmptied();
+        public void CloseWindow() => _window.Close();
+        public void SetStatus(string text) => _window.StatusText.Text = text;
+        public void PrepareRestoredDocument(DocumentSession session) => _window.ApplyPreferredScoreView(session);
+
+        public TabTransferController OpenWindowWith(DocumentSession session, Point? dipPosition)
+        {
+            var window = new MainWindow(_window._engine, _window._options);
+            // A newly detached document window is a normal, positioned child window. The primary
+            // application window is maximised by default, but that is not appropriate for tear-off.
+            window.WindowState = WindowState.Normal;
+            window.AdoptSession(session);
+            if (dipPosition is { } p)
+            {
+                window.WindowStartupLocation = WindowStartupLocation.Manual;
+                window.Left = p.X;
+                window.Top = p.Y;
+            }
+            window.Show();
+            window.Activate();
+            return window._tabTransfer;
+        }
+
+        public bool DragWindowWithHeldPointer(Point screen, Action moved)
+        {
+            var hwnd = new System.Windows.Interop.WindowInteropHelper(_window).Handle;
+            if (hwnd == IntPtr.Zero || (GetAsyncKeyState(VK_LBUTTON) & 0x8000) == 0) return false;
+            if (_window.WindowState != WindowState.Normal)
+            {
+                var drop = ScreenToDip(screen);
+                _window.WindowState = WindowState.Normal;
+                _window.Left = drop.X - 120;
+                _window.Top = drop.Y - 22;
+            }
+            ReleaseCapture();
+            EventHandler onMoved = (_, _) => moved();
+            _window.LocationChanged += onMoved;
+            try { SendMessage(hwnd, WM_NCLBUTTONDOWN, (IntPtr)HTCAPTION, IntPtr.Zero); }
+            finally { _window.LocationChanged -= onMoved; }
+            return true;
+        }
     }
 
     private void ToggleMaximise() =>

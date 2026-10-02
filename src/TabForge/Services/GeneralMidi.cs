@@ -1,5 +1,8 @@
 namespace TabForge.Services;
 
+// Owns: General MIDI program names and percussion helpers.
+// Does not own: synthesis and sound source choice.
+// Tests: TestInstrumentArtwork.
 /// <summary>
 /// General MIDI program names and percussion helpers. Used to show the real instrument an imported
 /// track plays (Guitar Pro stores a MIDI program; the name is not in the file).

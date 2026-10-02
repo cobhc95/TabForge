@@ -1,9 +1,9 @@
 # TabForge.AlphaTab: alphaTab 1.8.4 plus three patches
 
-TabForge reads and writes Guitar Pro files with [alphaTab](https://www.alphatab.net/) (MPL-2.0). Upstream alphaTab refuses a
-Guitar Pro 3-5 file with more than 1,000 bars through a hard-coded constant that no setting can change, so TabForge ships its own
+TabForge reads and writes score files with [alphaTab](https://www.alphatab.net/) (MPL-2.0). Upstream alphaTab refuses a
+.gp3/.gp4/.gp5 file with more than 1,000 bars through a hard-coded constant that no setting can change, so TabForge ships its own
 build of alphaTab 1.8.4 with **three small changes**: (1) that limit became a setting of the individual import
-(`ImporterSettings.MaxGp3To5BarCount`, default 1,000 = unchanged); (2) a Guitar Pro 7/8 file's exact mixer volume and balance are kept
+(`ImporterSettings.MaxGp3To5BarCount`, default 1,000 = unchanged); (2) a .gp file's exact mixer volume and balance are kept
 (`PlaybackInformation.VolumeFraction`/`BalanceFraction`, see below); (3) the trill speed is written and read (note XProperty 688062467). This folder holds everything needed to see, rebuild and verify it.
 
 | | |
@@ -30,8 +30,8 @@ checked at run time: a different or older component makes the import fail with a
 
 ## Patch 0002 (`0002-gpif-exact-mixer-volume-and-balance.patch`)
 
-A Guitar Pro 7/8 file stores a track's volume and balance as floats (the `ChannelStrip` parameters of the gpif, entries 12 and 13), but
-alphaTab's model keeps them as the 0..16 step of Guitar Pro 5 (the reader floors, the writer divides by 16), so TabForge's 0..127 values
+A .gp file stores a track's volume and balance as floats (the `ChannelStrip` parameters of the gpif, entries 12 and 13), but
+alphaTab's model keeps them as the 0..16 step of .gp5 (the reader floors, the writer divides by 16), so TabForge's 0..127 values
 were quantised to steps of 8 in a clean `.gp`. The patch adds two numbers to `PlaybackInformation`:
 
 1. `model/PlaybackInformation.ts`: `volumeFraction` and `balanceFraction` (0..1, default -1 = not known).
@@ -42,19 +42,19 @@ were quantised to steps of 8 in a clean `.gp`. The patch adds two numbers to `Pl
 With nothing set, the Parameters text is exactly what upstream writes, and every other property of the model is unchanged (the `long-import` self-test
 compares the full model of every fixture with the unpatched upstream hashes, leaving out only the two new properties). TabForge maps 0..127 to a
 fraction as value/128 in both directions (`Services/GpMixerScale.cs`): every value survives exactly and the pan centre 64 is exactly 0.5.
-Guitar Pro 3-5 files carry no fractions and keep the old 0..16 mapping. `AlphaTabBoundary.Inspect` refuses a component without the two properties.
+.gp3/.gp4/.gp5 files carry no fractions and keep the old 0..16 mapping. `AlphaTabBoundary.Inspect` refuses a component without the two properties.
 
 ## Patch 0003 (`0003-gpif-trill-speed.patch`)
 
-Guitar Pro 7/8 keeps a trill's speed in a note XProperty, id 688062467, an `Int` that is the note value in ticks of a 960-tick quarter (a real
-Guitar Pro 7 file holds 240 for a 16th and 471-474 for an 8th). alphaTab's writer wrote only the trill's target pitch and its reader set every
+.gp keeps a trill's speed in a note XProperty, id 688062467, an `Int` that is the note value in ticks of a 960-tick quarter (a real
+.gp file holds 240 for a 16th and 471-474 for an 8th). alphaTab's writer wrote only the trill's target pitch and its reader set every
 trill to 1/16, so a 1/32 trill reopened as 1/16.
 
 1. `exporter/GpifWriter.ts`: every trill note gets `<XProperties><XProperty id="688062467"><Int>ticks</Int>` (480, 240, 120 or 60 for 1/8 to 1/64).
 2. `importer/GpifParser.ts`: the reader takes the nearest note value (1 to 64) for the stored ticks; without the XProperty a trill stays 1/16 as before.
 3. `Directory.Build.props`: package version 1.8.4-tabforge.3, assembly version 1.8.4.3, description.
 
-The gp-fidelity self-test (`TestGpTrillSpeed`) checks the written ticks, the exact round trip of 1/8, 1/16, 1/32 and 1/64, jittered values as Guitar Pro writes them, and a file without the XProperty.
+The gp-fidelity self-test (`TestGpTrillSpeed`) checks the written ticks, the exact round trip of 1/8, 1/16, 1/32 and 1/64, jittered values as the .gp format writes them, and a file without the XProperty.
 
 ## Rebuild and verify
 
@@ -67,7 +67,7 @@ Needs git, Node.js (LTS) and npm, and the .NET 8 SDK; everything comes from gith
 
 The DLL does not depend on the machine or folder it was built in (verified with two builds in different folders). It is not
 byte-identical to the nuget.org `AlphaTab` DLL: the compiler build and the patched sources differ. Behaviour equals upstream: the self-test
-`long-import` compares the complete model (every property alphaTab serialises) of generated GP3, GP4, GP5.00 and GP5.10 files and of the
+`long-import` compares the complete model (every property alphaTab serialises) of generated .gp3, .gp4, .gp5.00 and .gp5.10 files and of the
 demo song with the SHA-256 recorded from the unpatched upstream package.
 
 Changing the patch means a new version: add a patch file that raises the suffix (next: `1.8.4-tabforge.4`, assembly version 1.8.4.4), in the

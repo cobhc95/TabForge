@@ -46,7 +46,6 @@ internal static class AudioAudit
         Directory.CreateDirectory(outDir);
         var tl = RenderSpecBuilder.Compile(project);
         var (startMs, endMs) = RenderSpecBuilder.Bounds(tl, RenderBounds.Song, 0, 0, 0, 0, 0, 0);
-        var anySolo = project.Tracks.Any(t => t.Solo);
 
         var stemPaths = new Dictionary<TrackModel, string>();
         var infos = new List<AuditTrackInfo>();
@@ -57,7 +56,7 @@ internal static class AudioAudit
             var file = $"{i + 1:00} {Sanitize(t.Name)}.wav";
             stemPaths[t] = Path.Combine(outDir, file);
             infos.Add(new AuditTrackInfo(i, t.Name, t.Kind.ToString(), t.MidiProgram, IsSlowAttack(t) ? "slow-attack" : "sharp",
-                !(t.Mute || (anySolo && !t.Solo)), file, noteOns[i]));
+                MixerGroups.IsAudible(project, t), file, noteOns[i]));
         }
         var mixPath = Path.Combine(outDir, "mix.wav");
         foreach (var p in stemPaths.Values.Append(mixPath)) try { File.Delete(p); } catch (IOException) { }   // the render never overwrites
@@ -82,7 +81,7 @@ internal static class AudioAudit
                 ConfirmIncomplete = _ => Task.FromResult(true),
             };
             log("Rendering offline...");
-            var task = RenderJob.RunAsync(request, null, CancellationToken.None);
+            var task = RenderJob.RunAsync(request, null, CancellationToken.None, client);
             var clock = Stopwatch.StartNew();
             while (!task.IsCompleted && clock.Elapsed < TimeSpan.FromMinutes(15))
             {

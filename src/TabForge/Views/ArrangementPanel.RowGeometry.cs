@@ -23,7 +23,10 @@ public sealed partial class ArrangementPanel
     // ---------- row geometry: one place for every row position (rows can carry an audio lane) ----------
     public static bool HasAudioLane(TrackModel? track) => LaneCountOf(track) > 0;
     public static int LaneCountOf(TrackModel? track) => track is null ? 0 : ClipLanes.Count(track);
-    public static double RowHeightOf(SongProject? project, TrackModel? track) => RowHeightFor(project) + LaneCountOf(track) * AudioLaneHeight;
+    /// <summary>Height of the notation (bar-cell) part of a row: none for an audio track that has lanes, which is lanes only.</summary>
+    public static double NotationHeightOf(SongProject? project, TrackModel? track) =>
+        track is { IsAudio: true } && LaneCountOf(track) > 0 ? 0 : RowHeightFor(project);
+    public static double RowHeightOf(SongProject? project, TrackModel? track) => NotationHeightOf(project, track) + LaneCountOf(track) * AudioLaneHeight;
 
     /// <summary>Height of a group's header row in the track list (when groups are shown).</summary>
     public const double GroupHeaderHeight = 24;

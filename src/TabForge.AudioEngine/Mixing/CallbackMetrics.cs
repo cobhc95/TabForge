@@ -37,7 +37,7 @@ public sealed class CallbackMetrics
     private long _midiDeferred;
 
     /// <summary>
-    /// M-05, audio thread: a callback found the pending-MIDI list full (the rest waits in the shared ring: late, not lost). Messages a
+    /// Audio thread: a callback found the pending-MIDI list full (the rest waits in the shared ring: late, not lost). Messages a
     /// chain's buffers had no room for are dropped and counted in <see cref="TrackChain.MidiDropped"/>.
     /// </summary>
     public void CountMidiDeferred() => Interlocked.Increment(ref _midiDeferred);

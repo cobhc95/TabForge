@@ -11,6 +11,9 @@ public sealed record InstrumentEntry(string Name, string Category, int Program, 
     public string Map => IsDrumKit ? "GM Drums" : Category == "Guitar" ? "Generic Guitar" : Category == "Bass" ? "Generic Bass" : "Piano";
 }
 
+// Owns: the full instrument list with families and artwork names.
+// Does not own: sound playback and the instrument pickers.
+// Tests: TestInstrumentArtwork.
 /// <summary>
 /// The full instrument list: all 128 General MIDI programs grouped by the GM families,
 /// plus the GM drum kits. Names, families and artwork come from Assets/Instruments/manifest.json.

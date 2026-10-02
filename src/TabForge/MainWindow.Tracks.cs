@@ -53,9 +53,9 @@ public partial class MainWindow : ITrackListFitHost
         }
         Arrangement.PanKnobs = _settings.Audio.PanKnobs;
         Arrangement.VolumeKnobs = _settings.Audio.VolumeKnobs;
-        TabForge.Playback.PlaybackEngine.MetronomeBoost = _settings.Audio.MetronomeBoost;
+        _options.Playback.MetronomeBoost = _settings.Audio.MetronomeBoost;
         MetronomeBoostCheck.IsChecked = _settings.Audio.MetronomeBoost;
-        TabForge.Playback.PlaybackEngine.CountInVolume = _settings.Audio.CountInVolume;
+        _options.Playback.CountInVolume = _settings.Audio.CountInVolume;
         ApplyCountInSound();
         CountInVolumeSlider.Value = _settings.Audio.CountInVolume;
         ApplyLoopBehaviour();
@@ -125,7 +125,7 @@ public partial class MainWindow : ITrackListFitHost
         Arrangement.TuningNumberClicked += (_, _) => ShowGlobalTuningWindow();
         Arrangement.TuningIconClicked += (_, _) => ShowGlobalTuningWindow();
         Arrangement.TuningShiftEdited += (_, shift) => SetUniformTuningShift(shift);
-        Arrangement.AreaMoveDropped += (_, target) => MoveAreaTo(target);
+        Arrangement.AreaMoveDropped += (_, target) => _sections.MoveArea(Doc, _loopStartBar, _loopEndBar, target);
     }
 
     // Per-string shift from the song's original tuning, six-string reference (high to low).
@@ -263,13 +263,17 @@ public partial class MainWindow : ITrackListFitHost
         return source is DataGridRow row ? row.GetIndex() : -1;
     }
 
+    private Views.SettleAction? _trackSwitchSync;
+
     private void TrackMixerGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)    {
         if (TrackMixerGrid.SelectedIndex < 0) return;
         Editor.SelectedTrackIndex = TrackMixerGrid.SelectedIndex;
         Doc.TrackIndex = TrackMixerGrid.SelectedIndex;
         // The selected bars stay selected on the new track: the model re-applies them to the score.
         _selection.SetTrack(TrackMixerGrid.SelectedIndex);
-        RefreshPluginChain();
+        // Selecting a track changes no sound: the engine and mixer sync runs just after the frame (one for a burst of switches),
+        // so a click that also starts a drag (a clip, a bar range) or opens a menu draws at once.
+        (_trackSwitchSync ??= new Views.SettleAction(RefreshPluginChain, 30)).Request();
         RefreshInstrument();
         RefreshArrangementSelection();
         SyncSelectedOutput();
@@ -304,6 +308,7 @@ public partial class MainWindow : ITrackListFitHost
         var shownCell = playing ? Math.Max(0, _playheadCell) : Editor.SelectedCell;
         PositionText.Text = track is null
             ? "No track"
+            : track.IsAudio ? $"{track.Name}  ·  {Services.EditorGuard.Message}"   // status-bar hint: nothing to edit here
             : $"Measure {shownBar + 1}  ·  {track.Name}  ·  cell {shownCell + 1}";
 
         // The status bar shows the bar's actual:theoretical duration in the status bar.
@@ -312,10 +317,10 @@ public partial class MainWindow : ITrackListFitHost
         var den = bar?.TimeSigDenom ?? _project.TimeSignatureDenominator;
         var state = MusicTime.AnalyzeBar(_project, shownBar);
         BarStateText.Text = $"{num}/{den}  {state.Used:0.##}:{state.Slots}";
-        BarStateText.Foreground = state.Error
+        BarStateText.Foreground = state.Marked
             ? new SolidColorBrush(Color.FromRgb(229, 72, 77))
-            : (Brush)FindResource("MutedBrush");
-        BarStateText.ToolTip = state.Error
+            : (Brush)FindResource("LegibleBrush");
+        BarStateText.ToolTip = state.Marked
             ? "This bar is incomplete or too long for its time signature"
             : "Bar duration: written : expected";
 
@@ -350,8 +355,10 @@ public partial class MainWindow : ITrackListFitHost
     private void AddTrackWithWindow()
     {
         var track = _trackController.CreateTrack(_project, TrackKind.Guitar);
+        var colourBefore = track.ColorHex;
         var placement = new Views.TrackPropertiesWindow.AddTrackPlacement(_project.Tracks.Count, TrackMixerGrid.SelectedIndex);
         if (!Views.TrackPropertiesWindow.ShowAdd(this, track, placement)) return;
+        TrackController.RecolourNewTrack(track, colourBefore);
         if (track.Kind == TrackKind.Drums)
         {
             var drums = _trackController.CreateTrack(_project, TrackKind.Drums);
@@ -374,8 +381,7 @@ public partial class MainWindow : ITrackListFitHost
     private void DeleteTrack_Click(object sender, RoutedEventArgs e)
     {
         if (SelectedTrack is null || _project.Tracks.Count <= 1) { StatusText.Text = "Cannot delete the last track"; return; }
-        _trackController.DeleteTrack(Doc, TrackMixerGrid.SelectedIndex);
-        RefreshTracks(); RefreshArrangement(); ScheduleFitTimelineToTracks(); UpdateTitle();
+        TrackFlow.Delete(TrackMixerGrid.SelectedIndex);
     }
 
     private void MoveTrackUp_Click(object sender, RoutedEventArgs e) => MoveTrack(-1);
@@ -411,7 +417,7 @@ public partial class MainWindow : ITrackListFitHost
     private void TrackProps_Click(object sender, RoutedEventArgs e)
     {
         var t = SelectedTrack; if (t is null) return;
-        var capture = CaptureUndo();
+        var capture = CheckpointUndo();
         if (Views.TrackPropertiesWindow.Show(this, t)) { _project.IsDirty = true; Editor.InvalidateScoreLayout(); _midi.Rebuild(_project); RefreshTracks(); RefreshArrangement(); RefreshInstrument(); RefreshStatus(); UpdateTitle(); }
         else if (capture is { } cancelled) _undo.Discard(cancelled);
     }

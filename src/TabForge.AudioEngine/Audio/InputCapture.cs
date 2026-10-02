@@ -18,7 +18,7 @@ public sealed class InputCapture : IDisposable
     private readonly int _channels;
     private readonly float[] _converted = new float[8192 * 2];
     /// <summary>
-    /// RT-09: band-limited windowed-sinc resampler to the engine rate when the device cannot capture at it; null when the rates
+    /// Band-limited windowed-sinc resampler to the engine rate when the device cannot capture at it; null when the rates
     /// match. Preallocated, so the capture callback does not allocate.
     /// </summary>
     private readonly SincResampler? _resampler;
@@ -80,7 +80,7 @@ public sealed class InputCapture : IDisposable
         {
             capture = new WasapiCapture(device, true, WasapiBufferMs);
             var format = capture.WaveFormat;
-            // RT-09: capture at the engine rate when the device takes it (no resampling at all); otherwise float at its own rate.
+            // Capture at the engine rate when the device takes it (no resampling at all); otherwise float at its own rate.
             var atEngineRate = WaveFormat.CreateIeeeFloatWaveFormat(engineRate, format.Channels);
             var (supported, streamLatencyMs) = ProbeCapture(device, atEngineRate);
             if (supported) capture.WaveFormat = atEngineRate;
@@ -90,7 +90,7 @@ public sealed class InputCapture : IDisposable
                     capture.WaveFormat = WaveFormat.CreateIeeeFloatWaveFormat(format.SampleRate, format.Channels);
                 streamLatencyMs = ProbeCapture(device, capture.WaveFormat).LatencyMs;
             }
-            // The device-reported stream latency plus our buffer, when Windows reports it; else the buffer alone (the old fixed 10 ms).
+            // The device-reported stream latency plus our buffer, when Windows reports it; else the buffer alone.
             if (streamLatencyMs > 0) { LatencyMs = WasapiBufferMs + streamLatencyMs; LatencySource = $"device ({streamLatencyMs} ms stream + {WasapiBufferMs} ms buffer)"; }
             _channels = Math.Max(1, capture.WaveFormat.Channels);
             _engineRate = engineRate;

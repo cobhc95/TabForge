@@ -74,9 +74,11 @@ public sealed partial class ArrangementPanel
         {
             MixEditStarting?.Invoke(this, EventArgs.Empty);   // one undo step per gesture, like the track sliders
             apply(project.Mixer.Edit(group));
-            MixChanged?.Invoke(this, EventArgs.Empty);
+            InMuteSoloGesture = muteSolo;
+            try { MixChanged?.Invoke(this, EventArgs.Empty); }
+            finally { InMuteSoloGesture = false; }
             MixEditEnded?.Invoke(this, EventArgs.Empty);
-            if (muteSolo) MuteSoloChanged?.Invoke(this, EventArgs.Empty);
+            if (muteSolo) { ApplyMuteVisualsNow(); MuteSoloChanged?.Invoke(this, EventArgs.Empty); }
         }
 
         // No record-arm on a group row (only tracks are armed); the slot stays empty so the columns line up.
@@ -149,7 +151,7 @@ public sealed partial class ArrangementPanel
                 for (var k = from; k < _controls.Children.Count; k++)
                 {
                     var el = _controls.Children[k];
-                    if (k > from && el is Border { Tag: "group-header" }) break;
+                    if (k > from && el is Border { Tag: "group-header" or "add-lane" }) break;
                     _groupDragElements.Add(el);
                     if (el is UIElement u) { u.Opacity = 0.85; Panel.SetZIndex(u, 10); }
                 }

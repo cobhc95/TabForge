@@ -19,7 +19,7 @@ public sealed unsafe partial class Vst2Plugin : IPluginInstance
         EffProcessEvents = 25, EffStartProcess = 71, EffStopProcess = 72;
     private const int FlagHasEditor = 1, FlagCanReplacing = 1 << 4, FlagProgramChunks = 1 << 5, FlagIsSynth = 1 << 8;
     private const int MaxEvents = 512;
-    /// <summary>RT-05: a plug-in declaring more audio inputs or outputs than this is refused (its pointer arrays are allocated as declared).</summary>
+    /// <summary>A plug-in declaring more audio inputs or outputs than this is refused (its pointer arrays are allocated as declared).</summary>
     public const int MaxChannels = 128;
     // VstTimeInfo flags.
     private const int KVstTransportChanged = 1, KVstTransportPlaying = 2, KVstPpqPosValid = 1 << 9, KVstTempoValid = 1 << 10,
@@ -163,7 +163,7 @@ public sealed unsafe partial class Vst2Plugin : IPluginInstance
     /// <summary>Raised on the main thread when the plug-in reports a parameter edit (the song has changed).</summary>
     public event Action? Edited;
 
-    // RT-03: host callbacks arrive on any thread, the audio thread included (audioMasterAutomate from processReplacing: modulated
+    // Host callbacks arrive on any thread, the audio thread included (audioMasterAutomate from processReplacing: modulated
     // parameters, macro knobs). They only set these flags and bump the process-wide signal: no closure, no queue node, no allocation.
     // The main loop (EngineThreads.RunPending) raises Edited / ResizeRequested once per flag.
     private int _editedFlag, _resizeFlag;
@@ -237,7 +237,7 @@ public sealed unsafe partial class Vst2Plugin : IPluginInstance
 
             Dispatch(EffOpen, 0, IntPtr.Zero, IntPtr.Zero, 0);
             opened = true;
-            // RT-05: the channel pointer arrays hold exactly as many channels as the plug-in declares (read after effOpen, where some
+            // The channel pointer arrays hold exactly as many channels as the plug-in declares (read after effOpen, where some
             // plug-ins settle their I/O), at least stereo: the plug-in indexes them up to numInputs / numOutputs. Past 128: refused.
             var declaredIn = _effect->numInputs;
             var declaredOut = _effect->numOutputs;
@@ -259,7 +259,7 @@ public sealed unsafe partial class Vst2Plugin : IPluginInstance
         }
         catch
         {
-            // RT-05: close what was opened, free what was allocated. The module is unloaded only if the plug-in's own code never ran:
+            // Close what was opened, free what was allocated. The module is unloaded only if the plug-in's own code never ran:
             // once VSTPluginMain / effOpen ran it may have started threads (Dispose never unloads it either, for the same reason).
             if (opened) Dispatch(EffClose, 0, IntPtr.Zero, IntPtr.Zero, 0);
             if (_effect is not null) Instances.TryRemove((IntPtr)_effect, out _);
@@ -333,7 +333,7 @@ public sealed unsafe partial class Vst2Plugin : IPluginInstance
         var meter = transport.Meter;
         if (meter.IsValid)
         {
-            // RT-04: the song's real meter and bar start (3/4, 6/8, odd meters), so arpeggiators, synced LFOs and gates stay on the bar.
+            // The song's real meter and bar start (3/4, 6/8, odd meters), so arpeggiators, synced LFOs and gates stay on the bar.
             _timeInfo->timeSigNumerator = meter.Numerator; _timeInfo->timeSigDenominator = meter.Denominator;
             _timeInfo->barStartPos = meter.BarStartPpq;
             flags |= KVstTimeSigValid | KVstBarsValid;
@@ -411,7 +411,7 @@ public sealed unsafe partial class Vst2Plugin : IPluginInstance
             {
                 case 1: return 2400;                                   // audioMasterVersion
                 case 0: case 43: case 44:                              // automate / beginEdit / endEdit: the user changed something
-                    self?.FlagEdited();                                // RT-03: a flag, raised by the main loop (no allocation here)
+                    self?.FlagEdited();                                // A flag, raised by the main loop (no allocation here)
                     return 0;
                 case 6: return 1;                                      // wantMidi
                 case 8: self?.CollectOut(ptr); return 1;               // processEvents: MIDI out of the plug-in

@@ -485,7 +485,10 @@ public sealed partial class ArrangementPanel
     {
         var width = Math.Max(200, _timeline.TotalWidth);
         if (_horizontal.ActualWidth > 0) width = Math.Max(width, _horizontal.ActualWidth);
-        var height = RulerHeight + SectionHeight + RowsHeight(_project) + 2;
+        var fill = AddLaneFillHeight;
+        _timeline.AddLaneFill = fill;
+        if (_addLaneRow is { } laneRow && Math.Abs(laneRow.Height - fill) > 0.01) laneRow.Height = fill;
+        var height = RulerHeight + SectionHeight + RowsHeight(_project) + fill + 2;
         _timelineHost.Width = width;
         _timelineHost.Height = height;
         // Keep the canvas, rendered timeline, and overlay coordinate spaces identical. In particular,

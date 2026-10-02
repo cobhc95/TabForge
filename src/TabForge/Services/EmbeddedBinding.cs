@@ -7,6 +7,10 @@ using TabForge.Models;
 
 namespace TabForge.Services;
 
+// Owns: the binding that ties the project embedded in a .gp file to the score bytes it was saved with, and its staleness
+//     check.
+// Does not own: the rest of the project file (ProjectService).
+// Tests: TestProjectRoundtrip.
 /// <summary>
 /// R5 metadata safety. A .gp written by TabForge carries its whole project in one extra zip entry. Guitar Pro drops entries it does not know,
 /// but another program may keep them while editing the score: the embedded project would then be older than the score and, because it wins on

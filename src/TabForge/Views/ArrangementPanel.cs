@@ -27,7 +27,7 @@ public sealed partial class ArrangementPanel : Grid
 {
     // The ruler is taller than the minimum so the controls side has room for the column-label strip.
     public const double RulerHeight = 40;
-    public const double ColumnHeaderHeight = 16;
+    public const double ColumnHeaderHeight = 18;
     public const double SectionHeight = 24;
     /// <summary>A track row's height when nothing was stretched (the minimum).</summary>
     public const double DefaultTrackRowHeight = 30;
@@ -45,11 +45,101 @@ public sealed partial class ArrangementPanel : Grid
     /// <summary>This panel's track row height: the mixer rows on the left and the timeline lanes share it.</summary>
     public double TrackRowHeight => RowHeightFor(_project);
     /// <summary>Height of a track's audio lane (under its row when it has audio or is armed).</summary>
-    public const double AudioLaneHeight = 46;
+    public const double AudioLaneHeight = 54;
+    /// <summary>Height of an audio row's controls (they share lane 0 with its armed strip).</summary>
+    public const double AudioControlsHeight = DefaultTrackRowHeight;
 
     public const double ControlsWidth = 580;
 
     private readonly TrackTimeline _timeline = new();
+    private InputGate<double> _rowScrollInputs;
+    private SettleAction? _extentSettle;   // pane height changes (splitter drags) re-fit the Add-track lane once, after the drag settles
+    internal void FlushExtent() { _extentSettle?.Cancel(); RefreshTimelineExtent(); }
+    private ResizeShade? _resizePreview;
+    private readonly List<UIElement> _hiddenForResize = new();
+
+    /// <summary>
+    /// While the dock splitter above the panel is dragged, the real rows are collapsed and a light shade is drawn instead: one
+    /// translucent band per track in its colour, scaled with the live height (like the section-drag shadow). A drag step costs
+    /// one tiny redraw, no layout; the real rows come back once, at the final size, when the drag ends.
+    /// </summary>
+    internal void BeginResizePreview()
+    {
+        if (_resizePreview is not null || _project is null || ActualHeight < 1) return;
+        var header = RulerHeight + SectionHeight;
+        var listWidth = ColumnDefinitions.Count > 0 ? ColumnDefinitions[0].ActualWidth : ControlsWidth;
+        var scroll = _horizontal.HorizontalOffset;
+        var viewWidth = Math.Max(0, ActualWidth - listWidth);
+        // Built once from the song (not from the controls): per track a band with its name, and in the timeline one cell per
+        // visible bar, filled where the bar has notes; drawn later with a vertical scale only.
+        var drawing = new System.Windows.Media.DrawingGroup();
+        var names = new List<(System.Windows.Media.FormattedText Text, double Centre)>();
+        using (var dc = drawing.Open())
+        {
+            dc.DrawRectangle(Draw.Solid(System.Windows.Media.Color.FromRgb(0x22, 0x26, 0x2D), 1), null, new Rect(0, 0, ActualWidth, header));
+            var top = header;
+            var typeface = new System.Windows.Media.Typeface("Segoe UI");
+            for (var t = 0; t < _project.Tracks.Count; t++)
+            {
+                var track = _project.Tracks[t];
+                var h = RowHeightOf(_project, track);
+                var colour = Draw.Tame(ParseColour(track.ColorHex));
+                dc.DrawRectangle(Draw.Solid(colour, 0.16), null, new Rect(0, top, ActualWidth, h));
+                names.Add((new System.Windows.Media.FormattedText(track.Name ?? "", System.Globalization.CultureInfo.CurrentUICulture, FlowDirection.LeftToRight,
+                    typeface, 12, Draw.Solid(System.Windows.Media.Colors.White, 0.55), 1.0), top + h / 2));
+                for (var bar = 0; bar < track.Measures.Count; bar++)
+                {
+                    var x = listWidth + _timeline.XOfBar(bar) - scroll; var x2 = listWidth + _timeline.XOfBar(bar + 1) - scroll;
+                    if (x2 < listWidth) continue; if (x > ActualWidth) break;
+                    var filled = track.Measures[bar].Cells.Any(c => c.Notes.Count > 0);
+                    dc.DrawRoundedRectangle(Draw.Solid(colour, filled ? 0.55 : 0.12), null, new Rect(Math.Max(listWidth, x + 1), top + 2, Math.Max(0, x2 - x - 2), Math.Max(1, h - 4)), 3, 3);
+                }
+                top += h;
+            }
+        }
+        drawing.Freeze();
+        foreach (UIElement child in Children) { if (child.Visibility == Visibility.Visible) { child.Visibility = Visibility.Collapsed; _hiddenForResize.Add(child); } }
+        _resizePreview = new ResizeShade(drawing, names, ActualHeight, header) { IsHitTestVisible = false };
+        SetColumnSpan(_resizePreview, Math.Max(1, ColumnDefinitions.Count)); SetRowSpan(_resizePreview, Math.Max(1, RowDefinitions.Count));
+        Children.Add(_resizePreview);
+    }
+
+    /// <summary>Ends the resize preview: the real rows come back (laid out once at the final size).</summary>
+    internal void EndResizePreview()
+    {
+        if (_resizePreview is null) return;
+        Children.Remove(_resizePreview);
+        _resizePreview = null;
+        foreach (var child in _hiddenForResize) child.Visibility = Visibility.Visible;
+        _hiddenForResize.Clear();
+    }
+
+    /// <summary>The drag shade: the panel drawn once from the song, stretched vertically (rows only) to the live height.</summary>
+    private sealed class ResizeShade : FrameworkElement
+    {
+        private readonly System.Windows.Media.Drawing _drawing;
+        private readonly IReadOnlyList<(System.Windows.Media.FormattedText Text, double Centre)> _names;
+        private readonly double _startHeight, _header;
+        public ResizeShade(System.Windows.Media.Drawing drawing, IReadOnlyList<(System.Windows.Media.FormattedText, double)> names, double startHeight, double header)
+        { _drawing = drawing; _names = names; _startHeight = startHeight; _header = header; SizeChanged += (_, _) => InvalidateVisual(); }
+        protected override void OnRender(System.Windows.Media.DrawingContext dc)
+        {
+            dc.DrawRectangle(Draw.Solid(System.Windows.Media.Color.FromRgb(0x14, 0x17, 0x1C), 1), null, new Rect(0, 0, ActualWidth, ActualHeight));
+            var scale = Math.Max(0.1, (ActualHeight - _header) / Math.Max(1, _startHeight - _header));
+            dc.PushClip(new System.Windows.Media.RectangleGeometry(new Rect(0, 0, ActualWidth, ActualHeight)));
+            dc.PushTransform(new System.Windows.Media.ScaleTransform(1, scale, 0, _header));
+            dc.DrawDrawing(_drawing);
+            dc.Pop();
+            // Names stay at their real size: only their position follows the stretched rows.
+            foreach (var (text, centre) in _names) dc.DrawText(text, new Point(56, _header + (centre - _header) * scale - text.Height / 2));
+            dc.Pop();
+        }
+    }
+
+    private void RequestExtentSettle() => (_extentSettle ??= new SettleAction(RefreshTimelineExtent, 120)).Request();
+
+    /// <summary>The shared view options (track tint) the rows and the timeline read; the main window hands in the application's.</summary>
+    public TabForge.Visualization.VisualOptions ViewOptions { get => _timeline.ViewOptions; set => _timeline.ViewOptions = value; }
     private readonly SectionDragOverlay _sectionDragOverlay = new();
     private readonly MediaDropGhost _dropGhost = new();
     private readonly SectionInsertionIndicator _sectionInsertionIndicator = new();
@@ -139,6 +229,9 @@ public sealed partial class ArrangementPanel : Grid
     private readonly ScrollViewer _horizontal = new();
     /// <summary>The interactive timeline, excluding its transport and track controls.</summary>
     public FrameworkElement TimelineSurface => _timeline;
+    internal int TimelineRenderCount => _timeline.RenderCount;
+    internal double PlayheadLineLeft => Canvas.GetLeft(_playheadLine);
+    internal double TimelineXOfBar(int bar, double fraction) => _timeline.XOfBar(bar) + _timeline.BarWidthOf(bar) * fraction;
     private readonly ScrollBar _timelineScrollBar = new() { Orientation = Orientation.Horizontal, Height = 16, Margin = new Thickness(6, 0, 6, 0), VerticalAlignment = VerticalAlignment.Center };
     private bool _syncingHorizontalScroll;
     private int _zoomGeneration;
@@ -477,7 +570,7 @@ public sealed partial class ArrangementPanel : Grid
         _controlsScroll.ContextMenuOpening += (_, e) =>
         {
             for (var d = e.OriginalSource as DependencyObject; d is not null; d = d is Visual or System.Windows.Media.Media3D.Visual3D ? VisualTreeHelper.GetParent(d) : LogicalTreeHelper.GetParent(d))
-                if (d is UIElement el && el != _controls && _controls.Children.Contains(el)) { e.Handled = true; return; }
+                if (d is UIElement el && el != _controls && !ReferenceEquals(el, _addLaneRow) && _controls.Children.Contains(el)) { e.Handled = true; return; }   // the Add-track lane is empty space: it keeps the pane's menu
             _controlsScroll.ContextMenu = BuildEmptyAreaMenu(new Control[] { AutoFitItem() });
         };
         // The header strip (gaps between the buttons, column header row): the same "Show tracks in groups" item above the pane's items.
@@ -494,12 +587,15 @@ public sealed partial class ArrangementPanel : Grid
         };
         _controlsScroll.ScrollChanged += (_, e) =>
         {
+            // A viewport-only change (the dock or window resizing) leaves the offset alone: nothing to redraw.
+            if (!_rowScrollInputs.Changed(Math.Round(e.VerticalOffset, 2))) return;
             _timeline.VerticalScrollOffset = e.VerticalOffset;
             _timeline.InvalidateVisual();
             LayoutPlayhead();
             _timeline.RefreshHover();
             LayoutDragLaneOutline();
         };
+        _controlsScroll.SizeChanged += (_, e) => { if (e.HeightChanged) RequestExtentSettle(); };   // the Add-track lane fills the room below the rows
         SetRow(_controlsScroll, 1);
         controlsHost.Children.Add(_controlsScroll);
         SetColumn(controlsHost, 0);
@@ -548,15 +644,16 @@ public sealed partial class ArrangementPanel : Grid
         _timelineHost.Children.Add(_dropGhost);
         HookMediaDrop();
         _timeline.AreaMoveFinished += (_, target) => EndAreaMoveVisual(target);
-        _timeline.SizeChanged += (_, _) =>
+        _timeline.SizeChanged += (_, e) =>
         {
             LayoutPlayhead();
-            RefreshTimelineExtent();
+            // The extent depends on the width (bars, zoom), not the height: a height-only change (splitter drag) settles once.
+            if (e.WidthChanged) RefreshTimelineExtent(); else RequestExtentSettle();
             LayoutSectionHighlight(_playheadBar);
         };
         _horizontal.Content = _timelineHost;
         _horizontal.SetResourceReference(System.Windows.Controls.Control.BackgroundProperty, "WindowBrush");
-        SizeChanged += (_, _) => RefreshTimelineExtent();
+        SizeChanged += (_, e) => { if (e.WidthChanged) RefreshTimelineExtent(); else RequestExtentSettle(); };
         var timelineColumn = new Grid();
         timelineColumn.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         SetRow(_horizontal, 0);
@@ -565,7 +662,7 @@ public sealed partial class ArrangementPanel : Grid
         Children.Add(timelineColumn);
 
         _timelineScrollBar.Scroll += (_, e) => _horizontal.ScrollToHorizontalOffset(e.NewValue);
-        _horizontal.ScrollChanged += (_, _) => { SyncTimelineScrollBar(); _timeline.RefreshHover(); };
+        _horizontal.ScrollChanged += (_, _) => { SyncTimelineScrollBar(); _timeline.RefreshHover(); _timeline.SetViewport(_horizontal.HorizontalOffset, _horizontal.ViewportWidth); };
         _timeline.HoverCellChanged += (_, c) => LayoutHoverCell(c.bar, c.track);
         _timelineScrollBar.ValueChanged += (_, _) =>
         {
@@ -676,7 +773,7 @@ public sealed partial class ArrangementPanel : Grid
     // Include a small per-row allowance for device-pixel rounding/borders so the final track is not
     // clipped at fractional DPI scales.
     public double PreferredHeight(int trackCount) =>
-        RulerHeight + SectionHeight + (_project is { } p ? RowsHeight(p) + VisibleTrackCount(p, trackCount) * 2 : trackCount * (TrackRowHeight + 2)) + 2;
+        RulerHeight + SectionHeight + (_project is { } p ? RowsHeight(p) : trackCount * TrackRowHeight) + AddLaneExtra + 2;
 
     /// <summary>Test hook: the laid-out height of each track-control row.</summary>
     internal IReadOnlyList<double> TrackRowActualHeights => _trackRows.Select(r => r.ActualHeight).ToList();
@@ -727,7 +824,7 @@ public sealed partial class ArrangementPanel : Grid
             for (var i = 0; i < _trackRows.Count && i < p.Tracks.Count; i++)
             {
                 _trackRows[i].Height = RowHeightOf(p, p.Tracks[i]);
-                if (_trackRows[i].Child is StackPanel { Children.Count: > 0 } stack && stack.Children[0] is FrameworkElement top) top.Height = TrackRowHeight;
+                if (_trackRows[i].Child is StackPanel { Children.Count: > 0 } stack && stack.Children[0] is FrameworkElement top) top.Height = p.Tracks[i].IsAudio ? AudioControlsHeight : TrackRowHeight;
             }
         RefreshTimelineGeometry();
         LayoutPlayhead();
@@ -739,7 +836,8 @@ public sealed partial class ArrangementPanel : Grid
     /// </summary>
     private FrameworkElement AudioLaneStrip(int index, TrackModel track, int lane)
     {
-        var strip = new DockPanel { Height = AudioLaneHeight, Margin = new Thickness(RowGridLeft + 8, 0, RowGridRight, 0), LastChildFill = false };
+        // An audio row is lanes only: its controls take the top of lane 0, so lane 0's strip is the part below them.
+        var strip = new DockPanel { Height = lane == 0 && track.IsAudio ? AudioLaneHeight - AudioControlsHeight : AudioLaneHeight,Margin = new Thickness(RowGridLeft + 8, 0, RowGridRight, 0), LastChildFill = false };
         if (lane != 0 || !track.RecordArm) return strip;
         var midi = AudioInputs.IsMidi(track.AudioInput);
         var label = new TextBlock
@@ -805,8 +903,8 @@ public sealed partial class ArrangementPanel : Grid
         addContents.Children.Add(new TextBlock { Text = "Track", FontWeight = FontWeights.SemiBold, Margin = new Thickness(3, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center });
         add.Content = addContents;
         add.Click += (_, _) => AddTrackRequested?.Invoke(this, EventArgs.Empty);
-        // Opens the Add track window (instrument and position). The Add track key adds a ready guitar straight away, so it is not shown here.
-        TooltipShortcuts.Bind(add, "Add a track: choose its instrument and position in a window · right-click for Add track… and Mixer…", null);
+        // Opens the Add track window (instrument and position). The tooltip shows the live Add track keys.
+        TooltipShortcuts.Bind(add, "Add track", "Track.Add");
         add.MouseRightButtonUp += (_, e) => { e.Handled = true; AddTrackMenuRequested?.Invoke(add); };
         DockPanel.SetDock(add, Dock.Left);
         panel.Children.Add(add);

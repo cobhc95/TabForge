@@ -1,8 +1,8 @@
 using System.Windows;
 using TabForge.Audio;
 using TabForge.Controllers;
+using TabForge.Documents;
 using TabForge.Models;
-using TabForge.Playback;
 using TabForge.Views;
 
 namespace TabForge;
@@ -12,7 +12,7 @@ namespace TabForge;
 public partial class MainWindow : IRecordingHost
 {
     private RecordingController? _recorder;
-    private RecordingController Recorder => _recorder ??= new RecordingController(this);
+    private RecordingController Recorder => _recorder ??= new RecordingController(this, _engine);
 
     /// <summary>A recording is in progress.</summary>
     internal bool IsRecording => _recorder?.IsRecording == true;
@@ -35,9 +35,6 @@ public partial class MainWindow : IRecordingHost
     }
 
     // ---- IRecordingHost ----
-    SongProject IRecordingHost.Project => _project;
-    PlaybackEngine IRecordingHost.Playback => _midi;
-    SongClock IRecordingHost.SongClock => SongClock;
     ArrangementPanel IRecordingHost.Arrangement => Arrangement;
     string? IRecordingHost.CurrentPath => _currentPath;
     bool IRecordingHost.LoopOn => _loop;
@@ -51,13 +48,14 @@ public partial class MainWindow : IRecordingHost
     }
     void IRecordingHost.SetStatus(string text) => StatusText.Text = text;
     void IRecordingHost.ShowNotice(string text) => MessageBox.Show(this, text + "\n\nThe take keeps its length: the lost parts are silent. Record again with the disk less busy, or on another drive.", "Recording", MessageBoxButton.OK, MessageBoxImage.Warning);
-    void IRecordingHost.CaptureUndo() => CaptureUndo();
     void IRecordingHost.SyncAudioEngine() => SyncAudioEngine();
     void IRecordingHost.RefreshTracks() => RefreshTracks();
     void IRecordingHost.RefreshArrangement() => RefreshArrangement();
     void IRecordingHost.UpdateTitle() => UpdateTitle();
     void IRecordingHost.StartPlayback() => StartPlayback();
+    DocumentSession IRecordingHost.Document => Doc;
+    IReadOnlyList<DocumentSession> IRecordingHost.OpenDocuments => OpenDocuments;
     void IRecordingHost.StopPlayback() => StopPlayback();
-    void IRecordingHost.ClipsChanged(bool refreshRows) => ClipsChanged(refreshRows);
+    void IRecordingHost.ClipsChanged(bool refreshRows) => _clips.Changed(Doc, refreshRows);
     void IRecordingHost.SetRecordIcon(bool recording) => SetRecordIcon(recording);
 }

@@ -6,6 +6,9 @@ using TabForge.Plugins;
 
 namespace TabForge.Services;
 
+// Owns: the small TabForge audio data file kept beside a clean .gp file (mixer groups, sound sources, FX chains).
+// Does not own: the .gp format itself (GuitarProExporter) and plug-in state storage.
+// Tests: TestGpCompatibilityDoc, TestMalformedInputFuzz.
 /// <summary>
 /// The TabForge audio data of a song (mixer groups, each track's sound source, mixer group and FX chain) in a
 /// small file beside a clean Guitar Pro file: "song.gp" + "song.tfaudio". The .gp stays exactly what Guitar Pro
@@ -82,13 +85,7 @@ public static class AudioDataFile
             foreach (var p in rig.Plugins)
                 if (p?.State is { Length: > 0 } state) states.Add((owner, p.Name, state.Length));
         }
-        foreach (var t in project.Tracks) Rig(t.Rig, t.Name);
-        if (project.Mixer is { } mixer)
-        {
-            if (mixer.Buses is not null) foreach (var (group, bus) in mixer.Buses) Rig(bus?.Rig, $"{group} bus");
-            Rig(mixer.Master?.Rig, "Master");
-            Rig(mixer.MonitorFx?.Rig, "Monitor");
-        }
+        foreach (var rig in SongRigs.All(project)) Rig(rig.Rig, rig.Owner);
         return states.OrderByDescending(s => s.Bytes).Take(5).Select(s => $"{s.Plugin} on {s.Owner} ({Mb(s.Bytes)})").ToList();
     }
 
@@ -138,7 +135,7 @@ public static class AudioDataFile
         if (contents.GpSha256 is { Length: > 0 } expected)
         {
             string? actual = null;
-            try { actual = Sha256Hex(InputLimits.ReadBoundedBytes(gpPath, InputLimits.MaxGuitarProFileBytes, "Guitar Pro file")); }
+            try { actual = Sha256Hex(InputLimits.ReadBoundedBytes(gpPath, InputLimits.MaxGuitarProFileBytes, "score file")); }
             catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException) { }
             if (!string.Equals(actual, expected, StringComparison.OrdinalIgnoreCase))
             {
@@ -226,7 +223,7 @@ public static class AudioDataFile
     }
 
     /// <summary>
-    /// Rewrites every track link inside every rig (tracks, group buses, master) from saved ids to the current tracks. A link whose target
+    /// Rewrites every track link inside every rig of the song (see <see cref="SongRigs.All"/>) from saved ids to the current tracks. A link whose target
     /// is not a current track after mapping is cleared and reported.
     /// </summary>
     internal static void RelinkRouting(SongProject project, IReadOnlyDictionary<string, string> idMap, IReadOnlySet<string> ambiguous, List<string> notices)
@@ -261,13 +258,7 @@ public static class AudioDataFile
                 }
             }
         }
-        foreach (var t in project.Tracks) Rig(t.Rig, t.Name);
-        if (project.Mixer is { } mixer)
-        {
-            if (mixer.Buses is not null) foreach (var (group, bus) in mixer.Buses) Rig(bus?.Rig, $"{group} bus");
-            Rig(mixer.Master?.Rig, "Master");
-            Rig(mixer.MonitorFx?.Rig, "Monitor");
-        }
+        foreach (var rig in SongRigs.All(project)) Rig(rig.Rig, rig.Owner);
         if (unresolved.Count > 0) notices.Add($"{unresolved.Count} routing link{(unresolved.Count == 1 ? "" : "s")} could not be matched to a track and {(unresolved.Count == 1 ? "was" : "were")} cleared ({string.Join(", ", unresolved.Distinct().Take(4))})");
         if (guessed.Count > 0) notices.Add($"Several tracks share a name, so {guessed.Count} routing link{(guessed.Count == 1 ? "" : "s")} {(guessed.Count == 1 ? "was" : "were")} matched to the first track of that name ({string.Join(", ", guessed.Distinct().Take(4))}) — check them");
     }

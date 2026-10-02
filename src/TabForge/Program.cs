@@ -16,7 +16,9 @@ public static class Program
         if (args.Length > 0 && args[0] == TabForge.Services.ImportWorker.Argument) return TabForge.Services.ImportWorker.Run(args);
         if (args.Length > 0 && args[0] == "--plugin-info") return TabForge.AudioEngine.Isolation.PluginInfoProbe.Run(args);
         // Self-test child: a .gp + .tfaudio pair save that stops at one stage so the self-test can kill the process there (no WPF, no settings).
+#if FULL_SUITE
         if (args.Length > 0 && args[0] == "--pair-save-probe") return SelfTest.PairSaveProbe(args);
+#endif
         TabForge.Services.UserPaths.ApplyProfileArgument(args);
         var app = new App();
         app.InitializeComponent();

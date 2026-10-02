@@ -14,10 +14,12 @@ namespace TabForge.Views;
 
 public sealed class NotePreviewEventArgs : EventArgs
 {
-    public NotePreviewEventArgs(int midi, int deviceId, int channel, int program)
+    public NotePreviewEventArgs(int midi, int deviceId, int channel, int program, int lengthMs = 0)
     {
-        Midi = midi; DeviceId = deviceId; Channel = channel; Program = program;
+        Midi = midi; DeviceId = deviceId; Channel = channel; Program = program; LengthMs = lengthMs;
     }
+    /// <summary>The set note length at the song tempo; 0 = unknown (the handler uses its default).</summary>
+    public int LengthMs { get; }
     public int Midi { get; }
     public int DeviceId { get; }
     public int Channel { get; }

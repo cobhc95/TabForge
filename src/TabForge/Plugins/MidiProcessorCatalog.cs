@@ -355,9 +355,9 @@ public static class MidiProcessorCatalog
     /// <summary>Built-in whole-list presets (name, processors).</summary>
     public static IReadOnlyList<(string Name, Func<List<PluginMidiProcessor>> Build)> BuiltInPresets { get; } = new (string, Func<List<PluginMidiProcessor>>)[]
     {
-        ("Drums: GM → Superior Drummer 3", () => new() { Make("noteMap", o => { o["From"] = "General MIDI"; o["To"] = "Superior Drummer 3 (unverified)"; }) }),
+        ("Drums: GM → kit map", () => new() { Make("noteMap", o => { o["From"] = "General MIDI"; o["To"] = "Superior Drummer 3 (unverified)"; }) }),
         ("Humanize light", () => new() { Make("humanize", o => { o["TimingMs"] = 4; o["VelRandom"] = 5; o["BaseDelayMs"] = 10; }) }),
-        ("Drums: GM → SD3 + humanize", () => new() { Make("noteMap", o => { o["From"] = "General MIDI"; o["To"] = "Superior Drummer 3 (unverified)"; }), Make("humanize", o => { o["TimingMs"] = 4; o["VelRandom"] = 6; o["BaseDelayMs"] = 10; }) }),
+        ("Drums: GM → kit map + humanize", () => new() { Make("noteMap", o => { o["From"] = "General MIDI"; o["To"] = "Superior Drummer 3 (unverified)"; }), Make("humanize", o => { o["TimingMs"] = 4; o["VelRandom"] = 6; o["BaseDelayMs"] = 10; }) }),
         ("Kick and snare: softer", () => new() { Make("velocity", o => { o["Mul"] = 0.8; o["NoteMode"] = 1; o["NoteSet"] = "36,38"; }) }),
     };
 

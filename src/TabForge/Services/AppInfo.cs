@@ -2,6 +2,9 @@
 
 namespace TabForge.Services;
 
+// Owns: the application's version and pre-release facts for display.
+// Does not own: update checking.
+// Tests: TestUpdateCheck.
 /// <summary>Product identity shown in About, Settings and the window; the version comes from the csproj.</summary>
 public static class AppInfo
 {
@@ -20,6 +23,8 @@ public static class AppInfo
     /// <summary>"0.5" for a final release with patch 0 (0.5.0), "0.5.1" for other final releases,
     /// "0.6.0 beta.1 (pre-release)" for a suffixed version, "0.5.0 (pre-release)" for a plain version marked pre-release.</summary>
     public static string DisplayVersion => FormatDisplay(Version, PreReleaseFlag);
+    /// <summary>The version line of the About box and the Settings bottom bar.</summary>
+    public static string VersionLine => $"TabForge {DisplayVersion}";
 
     /// <summary>The display rule on its own, so it can be tested with any version.</summary>
     public static string FormatDisplay(string version, bool preReleaseFlag)

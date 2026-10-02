@@ -92,7 +92,7 @@ public static class MixerBuses
 {
     public const int BusBase = 256, MasterSlot = 288, MonitorSlot = 289;
     private static readonly string[] Known =
-        { MixerGroups.Guitars, MixerGroups.Basses, MixerGroups.Keys, MixerGroups.Drums, MixerGroups.Other, MixerGroups.Everything, MixerGroups.AllButGuitarsAndBass };
+        { MixerGroups.Guitars, MixerGroups.Basses, MixerGroups.Keys, MixerGroups.Drums, MixerGroups.Other, MixerGroups.Everything, MixerGroups.AllButGuitarsAndBass, MixerGroups.Audio };
 
     public static int SlotOf(string group) { var i = Array.IndexOf(Known, group); return i < 0 ? -1 : BusBase + i; }
 
@@ -146,7 +146,7 @@ public static class MixerBuses
     public static List<TrackModel> Active(SongProject project)
     {
         var list = new List<TrackModel>();
-        foreach (var group in MixerGroups.Names(project.Mixer.Grouping))
+        foreach (var group in MixerGroups.AllNames(project.Mixer.Grouping))
             if (project.Mixer.Buses.TryGetValue(group, out var bus) && bus.On && bus.Rig.Plugins.Count > 0 && SlotOf(group) >= 0
                 && project.Tracks.Any(t => MixerGroups.GroupOf(project, t) == group))
                 list.Add(BusTrack(project, group));
@@ -272,6 +272,12 @@ public static class MixerGroups
     public const string Other = "Other";
     public const string Everything = "All tracks";
     public const string AllButGuitarsAndBass = "Other instruments";
+    /// <summary>The family of audio tracks. Not in <see cref="Names"/> (so "Move to" menus and existing songs' group lists are unchanged); a group level is only stored once the user edits it.</summary>
+    public const string Audio = "Audio";
+
+    /// <summary><see cref="Names"/> plus the Audio family (unless the grouping is "All tracks"): every group a track can be in.</summary>
+    public static IReadOnlyList<string> AllNames(string grouping) =>
+        grouping == MixerGrouping.None ? Names(grouping) : Names(grouping).Append(Audio).ToList();
 
     /// <summary>The groups a grouping mode can produce, in display order.</summary>
     public static IReadOnlyList<string> Names(string grouping) => grouping switch
@@ -286,8 +292,9 @@ public static class MixerGroups
     {
         var grouping = project.Mixer.Grouping;
         if (grouping == MixerGrouping.None) return Everything;
-        if (!string.IsNullOrWhiteSpace(track.MixerGroup) && Names(grouping).Contains(track.MixerGroup)) return track.MixerGroup;
+        if (!string.IsNullOrWhiteSpace(track.MixerGroup) && AllNames(grouping).Contains(track.MixerGroup)) return track.MixerGroup;
         var family = Family(track);
+        if (family == Audio) return Audio;
         if (grouping == MixerGrouping.Compact)
             return family is Guitars or Basses or Drums ? family : AllButGuitarsAndBass;
         return family;
@@ -296,6 +303,7 @@ public static class MixerGroups
     /// <summary>Instrument family from the track type, GM program and name.</summary>
     public static string Family(TrackModel track)
     {
+        if (track.IsAudio) return Audio;
         if (track.Kind == TrackKind.Drums || track.MidiChannel == 9) return Drums;
         var program = track.MidiProgram;
         var name = " " + System.Text.RegularExpressions.Regex.Replace((track.InstrumentName ?? "").ToLowerInvariant(), "[^a-z]+", " ");
@@ -323,13 +331,23 @@ public static class MixerGroups
     public static int Transpose(SongProject project, TrackModel track) =>
         Math.Clamp(track.Transpose + LevelsFor(project, track).Pitch, -48, 48);
 
-    /// <summary>Muted by its own switch or its group's, or silenced by a soloed group.</summary>
+    /// <summary>The group's part of the audibility rule: with any group soloed only soloed groups play (a muted, soloed group plays); otherwise a muted group is silent.</summary>
     public static bool GroupSilences(SongProject project, TrackModel track)
     {
         var levels = LevelsFor(project, track);
-        if (levels.Mute) return true;
         var anySolo = project.Mixer.Groups.Where(g => g.Value.Solo).Select(g => g.Key).ToHashSet();
-        return anySolo.Count > 0 && !anySolo.Contains(GroupOf(project, track));
+        return anySolo.Count > 0 ? !anySolo.Contains(GroupOf(project, track)) : levels.Mute;
+    }
+
+    /// <summary>
+    /// THE mute/solo rule, shared by MIDI scheduling, the audio clip path (the level sent to the engine), the mixer and offline render.
+    /// With any track soloed only soloed tracks play (a track both muted and soloed plays); otherwise a muted track is silent.
+    /// Groups follow the same rule one level up. Mute covers the whole track: every lane and clip.
+    /// </summary>
+    public static bool IsAudible(SongProject project, TrackModel track)
+    {
+        var trackPlays = project.Tracks.Any(t => t.Solo) ? track.Solo : !track.Mute;
+        return trackPlays && !GroupSilences(project, track);
     }
 
     /// <summary>
@@ -337,21 +355,29 @@ public static class MixerGroups
     /// <see cref="TrackRoute.MidiThroughEffects"/> (chain on, no VST instrument, at least one enabled effect,
     /// MIDI sound on); every other track without an instrument stays on Windows MIDI, so nothing extra runs.
     /// </summary>
-    /// <summary>
-    /// Settings > Audio &amp; VST: every MIDI track is played by the audio engine's General MIDI synth (so the whole song goes
-    /// out through the chosen audio driver, ASIO included) instead of Windows MIDI, which ignores the driver.
-    /// </summary>
-    public static bool PlayAllThroughEngine { get; set; } = true;
-
-    public static TrackRoute RouteOf(TrackModel track)
+    public static TrackRoute RouteOf(TrackModel track, MixerOptions options)
     {
+        // An audio track has no notes of its own: its MIDI clips sound only through an enabled instrument plug-in, never the GM synth.
+        if (track.IsAudio) return InstrumentPlays(track) ? TrackRoute.Instrument : TrackRoute.Silent;
+        var playAll = options.PlayAllThroughEngine;
         // The user unticked both "Through chain" and "GM sound" on a track with plug-ins: silence is what they asked for.
-        if (track.SoundSource != SoundSources.Plugins && track.MidiSoundManualOff && !track.MidiSound && track.Rig.Plugins.Count > 0) return TrackRoute.Silent;
-        if (track.SoundSource != SoundSources.Plugins) return PlayAllThroughEngine ? TrackRoute.MidiThroughEffects : TrackRoute.WindowsMidi;
+        if (IsSilentRoute(track)) return TrackRoute.Silent;
+        if (track.SoundSource != SoundSources.Plugins) return playAll ? TrackRoute.MidiThroughEffects : TrackRoute.WindowsMidi;
         var plugins = track.Rig.Plugins.Where(p => p.Enabled).ToList();
         if (plugins.Any(p => p.Type == TabForge.Plugins.PluginSlotType.Instrument && !p.Unavailable)) return TrackRoute.Instrument;
-        if (!track.MidiSound) return TrackRoute.Silent;
-        return plugins.Count > 0 || PlayAllThroughEngine ? TrackRoute.MidiThroughEffects : TrackRoute.WindowsMidi;
+        return plugins.Count > 0 || playAll ? TrackRoute.MidiThroughEffects : TrackRoute.WindowsMidi;
+    }
+
+    /// <summary>
+    /// The track is silent whatever the playback routing is (no <see cref="MixerOptions"/> needed): both "Through chain" and "GM sound" are
+    /// unticked on a track with plug-ins, or its chain is on with no instrument playing and no GM sound.
+    /// </summary>
+    public static bool IsSilentRoute(TrackModel track)
+    {
+        if (track.IsAudio) return !InstrumentPlays(track);
+        if (track.SoundSource != SoundSources.Plugins) return track.MidiSoundManualOff && !track.MidiSound && track.Rig.Plugins.Count > 0;
+        var instrumentPlays = track.Rig.Plugins.Any(p => p.Enabled && p.Type == TabForge.Plugins.PluginSlotType.Instrument && !p.Unavailable);
+        return !instrumentPlays && !track.MidiSound;
     }
 
     /// <summary>True when the song uses anything a Guitar Pro file cannot store (plug-ins or audio).</summary>
@@ -365,11 +391,12 @@ public static class MixerGroups
     /// <summary>The track's MIDI plays through the engine (VST instrument or effects on the General MIDI sound).</summary>
     /// A track with plug-ins stays in the engine whatever its route (chain off, everything bypassed, silent): the plug-ins stay
     /// loaded with their editors open, and its General MIDI sound plays on the engine's synth in time with the plug-in tracks.
-    public static bool MidiInEngine(TrackModel track) =>
-        RouteOf(track) is TrackRoute.Instrument or TrackRoute.MidiThroughEffects || (!track.IsBus && track.Rig.Plugins.Count > 0);
+    public static bool MidiInEngine(TrackModel track, MixerOptions options) =>
+        track.IsAudio ? InstrumentPlays(track) :
+        RouteOf(track, options) is TrackRoute.Instrument or TrackRoute.MidiThroughEffects || (!track.IsBus && track.Rig.Plugins.Count > 0);
 
     /// <summary>The track's General MIDI sound is heard (for a track in the engine: its GM synth is on).</summary>
-    public static bool GmSounds(TrackModel track) => RouteOf(track) switch
+    public static bool GmSounds(TrackModel track, MixerOptions options) => !track.IsAudio && RouteOf(track, options) switch
     {
         TrackRoute.Instrument => track.MidiSound,
         TrackRoute.Silent => false,
@@ -381,17 +408,14 @@ public static class MixerGroups
         track.SoundSource == SoundSources.Plugins
         && track.Rig.Plugins.Any(p => p.Enabled && !p.Unavailable && p.Type == TabForge.Plugins.PluginSlotType.Instrument);
 
-    /// <summary>Settings: tick a track's GM sound automatically when no VST instrument plays it, and untick it when one does again.</summary>
-    public static bool AutoGmSound { get; set; } = true;
-
     /// <summary>
     /// Keeps "GM sound" in line with reality: when no VST instrument plays the track (chain off, instrument bypassed or removed) GM is
     /// ticked, and when an instrument plays again an automatic tick is taken back. A manual untick is respected (then silence is correct).
     /// Returns true when it changed the track.
     /// </summary>
-    public static bool ApplyAutoGm(TrackModel track)
+    public static bool ApplyAutoGm(TrackModel track, MixerOptions options)
     {
-        if (!AutoGmSound || track.IsBus) return false;
+        if (!options.AutoGmSound || track.IsBus || track.IsAudio) return false;
         // A track with the chain on but nothing left in it (the last plug-in removed) is silent without GM too; a plain track is not touched.
         if (track.Rig.Plugins.Count == 0 && track.SoundSource != SoundSources.Plugins) return false;
         var instrumentPlays = InstrumentPlays(track);

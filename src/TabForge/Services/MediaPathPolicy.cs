@@ -66,6 +66,9 @@ internal sealed class RealMediaFileSystem : IMediaFileSystem
     }
 }
 
+// Owns: classifying a path a project names for audio as local, removable, network or device.
+// Does not own: the approval state and the file opening.
+// Tests: TestMediaPathPolicy.
 /// <summary>
 /// Classifies a path a project names for audio (clips): local / removable / network / device. Device paths, \\?\ forms,
 /// reserved device names, alternate data streams and non-audio extensions are refused; remote paths (and links that lead

@@ -19,6 +19,7 @@
         <SolidColorBrush x:Key="TextBrush" Color="#E7EAEF"/>
         <SolidColorBrush x:Key="TextStrongBrush" Color="#FFFFFF"/>
         <SolidColorBrush x:Key="MutedBrush" Color="#98A1AE"/>
+        <SolidColorBrush x:Key="LegibleBrush" Color="#A6ADB9"/>
         <!-- Higher-contrast secondary text for small labels (ThemeService recomputes it per theme). -->
         <SolidColorBrush x:Key="SecondaryTextBrush" Color="#B9C0CA"/>
         <SolidColorBrush x:Key="AccentBrush" Color="#4C9AFF"/>

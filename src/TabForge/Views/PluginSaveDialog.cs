@@ -36,7 +36,7 @@ public static class PluginSaveDialog
         var detail = new TextBlock
         {
             TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 12),
-            Text = $"Guitar Pro does not know these settings: it plays {fileName} with its own sounds, and if Guitar Pro saves the file, "
+            Text = $"Other programs do not know these settings: they play {fileName} with their own sounds, and if one saves the file, "
                  + "the TabForge settings are removed. How should TabForge save it?"
         };
         detail.SetResourceReference(TextBlock.ForegroundProperty, "MutedBrush");
@@ -55,13 +55,13 @@ public static class PluginSaveDialog
             b.Click += (_, _) => { result = value; w.DialogResult = true; };
             root.Children.Add(b);
         }
-        Option("Guitar Pro file with the audio settings inside (recommended)",
-            "One .gp file for both programs: TabForge keeps everything, Guitar Pro skips the TabForge part. "
-            + "For the best compatibility with Guitar Pro, choose the next option.", GpWithData, true);
-        Option("Clean Guitar Pro file + audio data file",
-            "The .gp contains nothing TabForge-specific (exactly what Guitar Pro expects); the audio settings go in a "
+        Option(".gp file with the audio settings inside (recommended)",
+            "One .gp file for both: TabForge keeps everything, other programs skip the TabForge part. "
+            + "For the best compatibility with other programs, choose the next option.", GpWithData, true);
+        Option("Clean .gp file + audio data file",
+            "The .gp contains nothing TabForge-specific (plain notation only); the audio settings go in a "
             + ".tfaudio file beside it, which TabForge loads automatically when you open the .gp.", GpPlusDataFile, false);
-        Option("TabForge project (.tforge)", "TabForge's own format: keeps everything. Guitar Pro cannot open it.", TForge, false);
+        Option("TabForge project (.tforge)", "TabForge's own format: keeps everything. Other programs cannot open it.", TForge, false);
         var cancel = new Button { Content = "Cancel", IsCancel = true, HorizontalAlignment = HorizontalAlignment.Right, Padding = new Thickness(12, 3, 12, 3) };
         root.Children.Add(cancel);
         w.Content = root;

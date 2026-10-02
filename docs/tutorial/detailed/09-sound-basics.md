@@ -57,7 +57,7 @@ To return a knob to its default, hold `Ctrl` and click it.
 
 Two buttons on every track row help you listen. **Mute track** (**M**) silences that track. **Solo track** (**S**) silences every other track, so you hear only the soloed one. Group rows in the Mixer have their own mute and solo, and soloing a group silences the other groups.
 
-Muting and soloing change only what you hear. They never change the notes in the song.
+Muting and soloing change only what you hear. They never change the notes in the song. A muted track stays muted when you click the timeline, loop, jump or restart, for every kind of track and all its lanes, and in a render too. If any track is soloed, only the soloed tracks play. A track that is both muted and soloed plays. The timeline dims the tracks you cannot hear.
 
 > **Tip:** Solo each track in turn and listen to it alone. It trains your ear to hear what every part contributes.
 

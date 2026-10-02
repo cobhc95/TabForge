@@ -32,8 +32,7 @@ public partial class MainWindow
     // ---------- score context menu (right click) ----------
 
     /// <summary>The shortcut text of a command, from the user's bindings (empty when unbound).</summary>
-    private string MenuKey(string id) =>
-        HotkeyCatalog.GestureFor(_settings.Hotkeys, id) is { Length: > 0 } g ? HotkeyCatalog.Display(g) : "";
+    private string MenuKey(string id) => HotkeyCatalog.DisplayAll(_settings.Hotkeys, id);
 
     /// <summary>
     /// Right-click on empty page (docs/CONTEXT_MENU_AUDIT.md section 6). With a <paramref name="target"/> over a beat the beat is

@@ -5,6 +5,9 @@ using TabForge.Plugins;
 
 namespace TabForge.Services;
 
+// Owns: checking a loaded song for impossible values and repairing them.
+// Does not own: reading the file and the notices shown.
+// Tests: TestDataIntegrityLeftovers, TestNoticeLimit.
 /// <summary>Validates a deserialized score before it can be attached to a document or rendered.</summary>
 public static class ProjectValidator
 {
@@ -212,7 +215,7 @@ public static class ProjectValidator
     public static void Validate(SongProject project)
     {
         if (project is null) throw Invalid("The project is empty or invalid.");
-        if (project.FormatVersion is < 1 or > 2) throw Invalid("This project uses an unsupported format version.");
+        if (project.FormatVersion is < 1 or > 3) throw Invalid("This project uses an unsupported format version.");
         RequireText(project.Title, InputLimits.MaxTitleLength, "project title");
         RequireText(project.Subtitle, InputLimits.MaxTitleLength, "project subtitle");
         RequireText(project.Artist, InputLimits.MaxTitleLength, "artist name");
@@ -255,7 +258,7 @@ public static class ProjectValidator
             RequireText(track.ColorHex, 16, "track colour", allowLineBreaks: false);
             RequireText(track.InstrumentName, InputLimits.MaxTitleLength, "instrument name");
             if (!Enum.IsDefined(track.Kind)) throw Invalid("The project contains an unsupported track type.");
-            if (track.NumberOfFrets is < 1 or > InputLimits.MaxFrets || track.Capo is < 0 or > 48 ||
+            if (track.NumberOfFrets < (track.IsAudio ? 0 : 1) || track.NumberOfFrets > InputLimits.MaxFrets || track.Capo is < 0 or > 48 ||
                 track.MidiChannel is < 0 or > 15 || track.MidiProgram is < 0 or > 127 ||
                 track.MidiOutputDeviceId is < -1 or > 100_000 || track.Volume is < 0 or > 127 ||
                 track.Pan is < 0 or > 127 || track.Chorus is < 0 or > 127 || track.Reverb is < 0 or > 127 ||
@@ -289,6 +292,7 @@ public static class ProjectValidator
             if (track.Lanes is null || track.Lanes.Count > 256 || track.Lanes.Any(l => l is null)) throw Invalid("A track has an invalid clip lane list.");
             if (track.MixerGroup is { Length: > 64 }) throw Invalid("A track has an overlong mixer group name.");
 
+            if (track.IsAudio) ClearAudioNotes(track);   // before the bars are checked: a note on an audio track is dropped, not rejected
             var measures = track.Measures ?? throw Invalid("A track has no valid measure list.");
             if (measures.Count > InputLimits.MaxMeasuresPerTrack)
                 throw Invalid("A track contains too many measures.");
@@ -304,6 +308,7 @@ public static class ProjectValidator
             }
         }
 
+        RepairAudioTracks(tracks);
         ValidateMixer(project.Mixer);
 
         foreach (var marker in markers)
@@ -316,6 +321,30 @@ public static class ProjectValidator
             RequireText(marker.Title, InputLimits.MaxTitleLength, "section title");
             RequireText(marker.ColorHex, 16, "section colour", allowLineBreaks: false);
         }
+    }
+
+    /// <summary>
+    /// An audio track keeps empty bars, as many as the notation tracks have (its own count when it is alone): notes found on one
+    /// are cleared and a short or long bar list is padded or trimmed, so every track keeps the same bar count.
+    /// </summary>
+    private static void RepairAudioTracks(List<TrackModel> tracks)
+    {
+        if (!tracks.Any(t => t.IsAudio)) return;
+        var notation = tracks.Where(t => t.HasNotation).Select(t => t.Measures.Count).ToList();
+        foreach (var audio in tracks.Where(t => t.IsAudio))
+        {
+            var bars = notation.Count > 0 ? notation.Max() : Math.Max(1, audio.Measures.Count);
+            if (audio.Measures.Count > bars) audio.Measures.RemoveRange(bars, audio.Measures.Count - bars);
+            while (audio.Measures.Count < bars) audio.Measures.Add(new MeasureModel { Number = audio.Measures.Count + 1 });
+        }
+    }
+
+    private static void ClearAudioNotes(TrackModel track)
+    {
+        if (track.Measures is not { } bars) return;
+        for (var i = 0; i < bars.Count; i++)
+            if (bars[i] is { } bar && (bar.Cells ?? new()).Concat(bar.Voice2Cells ?? new()).Any(c => c?.Notes is { Count: > 0 }))
+                bars[i] = new MeasureModel { Number = bar.Number };
     }
 
     private static void ValidateMixer(MixerSettings? mixer)

@@ -182,6 +182,8 @@ When you record with the loop on, every pass becomes its own take on its own lan
 
 ## Work with clips
 
+The song grows to fit its clips. If you drop, import, move, paste or record a clip that ends after the last bar, TabForge adds whole empty bars so that nothing is cut off. One **Undo** removes the clip and the added bars. The song never shrinks on its own.
+
 A recording or an audio file on the timeline is a clip. Click a clip to select it. Drag its body to move it, even onto another track. Drag its left or right edge to trim it. Right-click it for a menu with **Copy**, **Cut**, **Paste**, **Duplicate**, **Delete**, **Mute** and **Properties…**.
 
 Some keys work while a clip is selected. `Left` and `Right` nudge it by one beat. `Shift+Left` and `Shift+Right` nudge it by 10 milliseconds. `Ctrl+D` duplicates it, `Ctrl+M` mutes it and `F2` opens its properties.

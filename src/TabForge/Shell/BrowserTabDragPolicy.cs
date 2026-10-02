@@ -70,21 +70,3 @@ public static class BrowserChromeHitTest
         return captionBounds.Contains(point) ? BrowserChromeHit.DraggableCaption : BrowserChromeHit.Client;
     }
 }
-
-/// <summary>Tracks tab ownership transitions during detach/attach operations.</summary>
-public sealed class TabOwnershipState
-{
-    private readonly Dictionary<Guid, Guid> _owners = new();
-
-    public int Count => _owners.Count;
-    public bool TryGetOwner(Guid tabId, out Guid windowId) => _owners.TryGetValue(tabId, out windowId);
-    public void Register(Guid tabId, Guid windowId) => _owners[tabId] = windowId;
-    public bool Transfer(Guid tabId, Guid sourceWindowId, Guid destinationWindowId)
-    {
-        if (!_owners.TryGetValue(tabId, out var owner) || owner != sourceWindowId) return false;
-        _owners[tabId] = destinationWindowId;
-        return true;
-    }
-    public bool Close(Guid tabId, Guid windowId) =>
-        _owners.TryGetValue(tabId, out var owner) && owner == windowId && _owners.Remove(tabId);
-}

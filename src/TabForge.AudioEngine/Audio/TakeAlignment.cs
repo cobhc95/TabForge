@@ -1,7 +1,7 @@
 namespace TabForge.AudioEngine.Audio;
 
 /// <summary>
-/// Where a recorded take starts on the song timeline (RT-09). The player hears the song after the engine's output delay, and their
+/// Where a recorded take starts on the song timeline. The player hears the song after the engine's output delay, and their
 /// playing reaches the input after the input latency (device-reported when available); the user's recording offset corrects what is
 /// left (a manual input offset): positive = takes sounded late, so they move earlier.
 /// </summary>

@@ -65,8 +65,11 @@ public sealed class RoutedMidiOutput : IMidiOutput
     /// <summary>All notes off on this document's engine slots only: other open documents playing at the same time keep sounding.</summary>
     private void PanicOwnSlots(int[] routes)
     {
-        var slots = routes.Where(r => r >= 0).Distinct().ToArray();
-        if (slots.Length > 0) _engine.Panic(slots);
+        // An ordered marker in the note ring, not a pipe command: a pipe panic lands whenever the engine's reader thread gets to it,
+        // which can be after the note a seek sends right behind the reset, and then silences or drops that first note.
+        var stamp = Stopwatch.GetTimestamp() + Compensation(_engine.LatencyTicks, WindowsMidiTicks, _engine.Mixer.PlayAllThroughEngine).EngineHoldTicks;
+        foreach (var slot in routes.Where(r => r >= 0).Distinct())
+            _engine.Write(new TimedMidi { Timestamp = stamp, Slot = slot, Status = 0xB0, Data1 = 123, Flags = TimedMidi.PanicFlag });
     }
 
     /// <summary>
@@ -79,7 +82,7 @@ public sealed class RoutedMidiOutput : IMidiOutput
         {
             var running = _engine.IsRunning;
             var engineMs = running ? _engine.LatencyTicks * 1000.0 / Stopwatch.Frequency : 0;
-            if (running && MixerGroups.PlayAllThroughEngine) return engineMs;
+            if (running && _engine.Mixer.PlayAllThroughEngine) return engineMs;
             var engineInvolved = running && (_engineInUse || _routes.Any(r => r >= 0));
             return engineInvolved ? Math.Max(engineMs, WindowsMidiLatencyMs) : WindowsMidiLatencyMs;
         }
@@ -94,7 +97,7 @@ public sealed class RoutedMidiOutput : IMidiOutput
         if (status < 0xF0 && routes[channel] is var slot && slot >= 0 && _engine.IsRunning)
         {
             // The engine schedules by timestamp, so a later stamp holds the event back (net < 0: Windows MIDI is the slower path).
-            var engineHold = Compensation(_engine.LatencyTicks, WindowsMidiTicks, MixerGroups.PlayAllThroughEngine).EngineHoldTicks;
+            var engineHold = Compensation(_engine.LatencyTicks, WindowsMidiTicks, _engine.Mixer.PlayAllThroughEngine).EngineHoldTicks;
             _engine.Write(new TimedMidi
             {
                 Timestamp = Stopwatch.GetTimestamp() + engineHold, Slot = slot,
@@ -137,16 +140,20 @@ public sealed class RoutedMidiOutput : IMidiOutput
         _inner.Close();
     }
 
+    /// <summary>The document that used this output is gone for good: its engine chains are unloaded now, not parked.</summary>
+    public void ReleaseEngineOwner(object owner) => _engine.ReleaseOwner(owner);
+
     public void Dispose() => Close();
 
     /// <summary>Holds Windows MIDI messages until their due time (ordered, one small thread).</summary>
-    private sealed class DelayLine : IDisposable
+    internal sealed class DelayLine : IDisposable
     {
         private readonly IMidiOutput _output;
         private readonly Queue<(long Due, int Device, int Status, int D1, int D2)> _queue = new();
         private readonly AutoResetEvent _signal = new(false);
         private readonly Thread _thread;
         private volatile bool _stop;
+        private int _clearVersion; // guarded by _queue
 
         public DelayLine(IMidiOutput output)
         {
@@ -162,7 +169,8 @@ public sealed class RoutedMidiOutput : IMidiOutput
             _signal.Set();
         }
 
-        public void Clear() { lock (_queue) _queue.Clear(); }
+        // A Clear while the thread waits on its peeked head must not let it dequeue (and so lose) a message pushed after the Clear.
+        public void Clear() { lock (_queue) { _queue.Clear(); _clearVersion++; } }
 
         private void Run()
         {
@@ -176,8 +184,10 @@ public sealed class RoutedMidiOutput : IMidiOutput
                 while (!_stop)
                 {
                     (long Due, int Device, int Status, int D1, int D2) next;
+                    int version;
                     lock (_queue)
                     {
+                        version = _clearVersion;
                         if (_queue.Count == 0) next = default;
                         else next = _queue.Peek();
                     }
@@ -201,7 +211,12 @@ public sealed class RoutedMidiOutput : IMidiOutput
                     {
                         if ((++spins & 63) == 0) Thread.Yield(); else Thread.SpinWait(20);
                     }
-                    lock (_queue) if (_queue.Count > 0) _queue.Dequeue();
+                    lock (_queue)
+                    {
+                        // Cleared while we waited: the held message is stale and the queue now holds newer ones.
+                        if (version != _clearVersion || _queue.Count == 0) continue;
+                        _queue.Dequeue();
+                    }
                     _output.Send(next.Device, next.Status, next.D1, next.D2);
                 }
             }

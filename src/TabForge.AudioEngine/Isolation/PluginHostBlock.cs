@@ -55,7 +55,7 @@ public sealed unsafe class PluginHostBlock : IDisposable
     public ref int RequestGeneration => ref *(int*)(_p + 32);
     /// <summary>Generation of the request the plug-in host last finished (written before "done" is signalled).</summary>
     public ref int DoneGeneration => ref *(int*)(_p + 36);
-    /// <summary>RT-04: the block's bar start (ppq) and time signature (numerator 0: unknown).</summary>
+    /// <summary>The block's bar start (ppq) and time signature (numerator 0: unknown).</summary>
     public ref double BarStartPpq => ref *(double*)(_p + 40);
     public ref int TimeSigNumerator => ref *(int*)(_p + 48);
     public ref int TimeSigDenominator => ref *(int*)(_p + 52);

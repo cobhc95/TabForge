@@ -11,6 +11,9 @@ public readonly record struct UndoSnapshot(ProjectState State, long Order = 0)
 
 public readonly record struct UndoCapture(UndoSnapshot Snapshot, bool Stored);
 
+// Owns: one document's undo history and its memory budget.
+// Does not own: when edits are captured (DocumentEdits) and the song model.
+// Tests: TestUndoController.
 /// <summary>
 /// Owns one document's undo history and its memory budget. States share every unchanged bar with the state before them
 /// (Audit 3 M-06), so capturing and restoring cost what the edit changed rather than the whole song. UI thread only.

@@ -12,6 +12,10 @@ public sealed record ClosePlan(bool Cancel, IReadOnlyList<DocumentSession> Save,
     public static readonly ClosePlan Cancelled = new(true, Array.Empty<DocumentSession>(), Array.Empty<DocumentSession>());
 }
 
+// Owns: closing a window that holds several songs: which songs need a question, how answers are collected and the save
+//     sequence that follows.
+// Does not own: the save mechanics (DocumentSaveFlow) and the dialogs.
+// Tests: TestDocumentOperations, TestArchitectureLayering.
 /// <summary>
 /// Closing a window that holds several songs: which of them need a question, how the answers are collected, and the save sequence that follows. The
 /// document list, the already-answered set and the questions are arguments; there is no window and no "current" document in here.

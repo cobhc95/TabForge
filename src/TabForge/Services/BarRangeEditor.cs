@@ -2,6 +2,9 @@ using TabForge.Models;
 
 namespace TabForge.Services;
 
+// Owns: whole-score bar-range edits across all tracks: copy, remove, insert and move.
+// Does not own: undo capture and the arrangement selection.
+// Tests: TestBarRangeEditor, TestDuplicateBarAllTracks.
 /// <summary>
 /// Whole-score bar-range edits (all tracks at once) used by the arrangement's selected area:
 /// copy, remove, insert and move. Each structural edit returns an old-to-new bar map (-1 = removed)

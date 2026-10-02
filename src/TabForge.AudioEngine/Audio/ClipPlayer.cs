@@ -43,7 +43,7 @@ public sealed class ClipPlayer : IDisposable
         Spec = spec;
         _rate = rate;
         _offline = offline;
-        _gain = (float)Math.Pow(10, spec.GainDb / 20);
+        _gain = (float)Gain.FromDb(spec.GainDb);
     }
 
     /// <summary>Offline: seeks (when the position jumped) and decodes exactly what this block needs, then copies it.</summary>

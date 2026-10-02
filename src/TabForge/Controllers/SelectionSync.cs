@@ -3,6 +3,9 @@ using TabForge.Views;
 
 namespace TabForge.Controllers;
 
+// Owns: keeping the score editor and the arrangement timeline in step with one SelectionModel.
+// Does not own: the selection data itself (SelectionModel) and the views' drawing.
+// Tests: TestSelectionModel, TestEngravingHeader.
 /// <summary>
 /// Binds the score editor and the arrangement timeline to one <see cref="SelectionModel"/>. The editor pushes
 /// its selection with <see cref="PushFromEditor"/> (from its SelectionChanged); every other source writes the

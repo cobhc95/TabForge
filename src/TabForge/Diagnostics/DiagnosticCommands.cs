@@ -27,6 +27,8 @@ internal static partial class DiagnosticCommands
         ["--audit"] = args => RunAudit(args, playtest: false),
         ["--playtest"] = args => RunAudit(args, playtest: true),
         ["--render"] = RunRender,
+        ["--render-identity"] = args => Guard("Render identity", () => ScoreRenderIdentity.Run(args, LoadAny, path => FilePathPolicy.OutputDirectory(path, "render identity folder"))),
+        ["--render-identity-compare"] = args => Guard("Render identity compare", () => ScoreRenderIdentity.Compare(args)),
         ["--render-fretboard"] = RunRenderFretboard,
         ["--tutorial-shot"] = RunTutorialShot,
         ["--tutorial-pdf"] = RunTutorialPdf,
@@ -70,6 +72,7 @@ internal static partial class DiagnosticCommands
             Console.WriteLine(result);
             return result.MaxBarStartErrMs <= 1 && Math.Abs(result.EndErrMs) <= 1 ? Ok : CheckFailed;
         }),
+#if FULL_SUITE   // these commands live in tests/full-suite
         ["--write-gp-fixture"] = args =>
         {
             if (args.Length < 2) return Usage("--write-gp-fixture <out.gp> [basic|showcase]");
@@ -79,6 +82,7 @@ internal static partial class DiagnosticCommands
             Console.WriteLine($"Wrote {args[1]}");
             return Ok;
         },
+#endif
         ["--write-demo-song"] = args => args.Length < 2 ? Usage("--write-demo-song <out.gp>") : Guard("Demo song", () =>
         {
             // The built-in full demo "Ashen Meridian" (docs/DEMO_SONG_PLAN.md) with the whole project embedded, then verified.
@@ -92,16 +96,24 @@ internal static partial class DiagnosticCommands
         }),
         ["--write-tutorial-starters"] = args => args.Length < 2 ? Usage("--write-tutorial-starters <dir>") : Guard("Tutorial starter songs", () => TutorialStarterSongs.Write(FilePathPolicy.OutputDirectory(args[1], "starter song folder")) ? Ok : CheckFailed),
         ["--audit-gm-techniques"] = args => args.Length < 2 ? Usage("--audit-gm-techniques <report>") : GmSongAudit.RunProject(GmSongAudit.TechniqueSong(), "technique test song", args[1]),
+#if FULL_SUITE
         ["--roundtrip-diff"] = args => args.Length < 3 ? Usage("--roundtrip-diff <song|@list.txt> <out.txt> [gp,tforge,midi]") : Guard("Round-trip diff", () => SelfTest.RunRoundTripDiff(args[1], args[2], args.Length > 3 ? args[3] : "")),
         ["--write-gp-fixtures"] = args => args.Length < 2 ? Usage("--write-gp-fixtures <dir>") : Guard("GP fixtures", () => SelfTest.RunWriteGpFixtures(FilePathPolicy.OutputDirectory(args[1], "fixture folder"))),
         ["--gp-capability"] = args => args.Length < 2 ? Usage("--gp-capability <out.md> [gp-folder]") : Guard("GP capability record", () => SelfTest.RunGpCapability(FilePathPolicy.OutputFile(args[1], "capability record", ".md"), args.Length > 2 ? args[2] : null)),
         ["--gp-compare"] = args => args.Length < 3 ? Usage("--gp-compare <a.gp> <b.gp> [report.txt]") : Guard("GP compare", () => SelfTest.RunGpCompare(args[1], args[2], args.Length > 3 ? FilePathPolicy.OutputFile(args[3], "comparison report", ".txt") : null)),
         ["--write-gp-probes"] = args => args.Length < 2 ? Usage("--write-gp-probes <dir>") : Guard("GP probes", () => SelfTest.RunWriteGpProbes(FilePathPolicy.OutputDirectory(args[1], "probe folder"))),
         ["--gp-open"] = args => args.Length < 2 ? Usage("--gp-open <file.gp>") : Guard("GP open", () => SelfTest.RunGpOpen(FilePathPolicy.ExistingFile(args[1], "Guitar Pro file", ".gp"))),
+        ["--gp-compat-doc"] = args => args.Length < 2 ? Usage("--gp-compat-doc <out.md>") : Guard("Compatibility page", () => SelfTest.RunGpCompatDoc(FilePathPolicy.OutputFile(args[1], "compatibility page", ".md"))),
+        ["--gp-loss-coverage"] = args => args.Length < 2 ? Usage("--gp-loss-coverage <report> [group]") : SelfTest.RunGpLossCoverage(args[1], args.Length > 2 && args[2] == "group"),
         ["--roundtrip-semantics"] = args => args.Length < 2 ? Usage("--roundtrip-semantics <report>") : SelfTest.RunRoundTripSemantics(args[1]),
+#endif
         ["--audit-gm"] = args => args.Length < 3 ? Usage("--audit-gm <song> <report>") : GmSongAudit.Run(args[1], args[2]),
         ["--import-measure"] = args => args.Length < 3 ? Usage("--import-measure <song> <report.txt> [worker|inproc]") : Guard("Import measure", () => ImportMeasure.Run(args)),
+        ["--feature-map"] = args => Guard("Feature map", () => FeatureMapGenerator.Run(args)),
     };
+
+    /// <summary>The names of the diagnostic modes (docs/DEBUGGING.md lists them; a self-test keeps the two in step).</summary>
+    internal static IReadOnlyCollection<string> CommandNames => Commands.Keys;
 
     /// <summary>Runs a diagnostic mode when the first argument names one.</summary>
     public static bool TryRun(string[] args, out int exitCode)
@@ -155,8 +167,8 @@ internal static partial class DiagnosticCommands
             if (double.TryParse(Environment.GetEnvironmentVariable("TF_RENDER_STAFFOPACITY"), NumberStyles.Float, CultureInfo.InvariantCulture, out var staffOpacity))
             {
                 static System.Windows.Media.Color Fade(System.Windows.Media.Color c, double o) => System.Windows.Media.Color.FromArgb((byte)Math.Round(255 * Math.Clamp(o, 0, 1)), c.R, c.G, c.B);
-                editor.DarkStaffLineColor = Fade(editor.DarkStaffLineColor, staffOpacity);
-                editor.LightStaffLineColor = Fade(editor.LightStaffLineColor, staffOpacity);
+                editor.Appearance.DarkStaffLineColor = Fade(editor.Appearance.DarkStaffLineColor, staffOpacity);
+                editor.Appearance.LightStaffLineColor = Fade(editor.Appearance.LightStaffLineColor, staffOpacity);
             }
             if (args.Length > 3 && double.TryParse(args[3], NumberStyles.Float, CultureInfo.InvariantCulture, out var pageWidth) && pageWidth > 200)
                 editor.PageWidthOverride = pageWidth;
@@ -331,7 +343,8 @@ internal static partial class DiagnosticCommands
                     var score = AlphaTab.Importer.ScoreLoader.LoadScoreFromBytes(GuitarProImporter.WithoutLeadingJunk(File.ReadAllBytes(file)), new AlphaTab.Settings());
                     var sourceDrums = score.Tracks.Where(t => t.Staves.Any(s => s.IsPercussion)).ToList();
                     var sourceNotes = sourceDrums.Sum(t => t.Staves.Sum(s => s.Bars.Sum(b => b.Voices.Sum(v => v.Beats.Sum(beat => beat.Notes.Count)))));
-                    var song = GuitarProImporter.Import(file);
+                    var importContext = new ImportContext();
+                    var song = GuitarProImporter.Import(file, importContext);
                     var drums = song.Tracks.Where(t => t.Kind == Models.TrackKind.Drums || t.MidiChannel == 9).ToList();
                     var notes = drums.Sum(t => t.Measures.Sum(m => m.Cells.Sum(c => c.Notes.Count) + m.Voice2Cells.Sum(c => c.Notes.Count)));
                     // Which source drum sounds would be discarded (outside the GM drum range) and why.
@@ -352,8 +365,8 @@ internal static partial class DiagnosticCommands
                     var layout = string.Join(" ", sourceDrums.SelectMany(t => t.Staves.Select((st, si) => $"staff{si}:" + string.Join(",",
                         Enumerable.Range(0, st.Bars.Count == 0 ? 0 : st.Bars.Max(b => b.Voices.Count))
                             .Select(vi => $"v{vi}={st.Bars.Sum(b => vi < b.Voices.Count ? b.Voices[vi].Beats.Sum(bt => bt.Notes.Count) : 0)}")))));
-                    var skipped = GuitarProImporter.LastImportSkippedDuplicates;
-                    var dupSamples = Environment.GetEnvironmentVariable("TF_DRUM_DETAIL") is { Length: > 0 } ? " dups[" + string.Join("; ", GuitarProImporter.LastImportDuplicateSamples) + "]" : "";
+                    var skipped = importContext.SkippedDuplicates;
+                    var dupSamples = Environment.GetEnvironmentVariable("TF_DRUM_DETAIL") is { Length: > 0 } ? " dups[" + string.Join("; ", importContext.DuplicateSamples) + "]" : "";
                     // Export round trip: what Guitar Pro 7/8 (and alphaTab/TuxGuitar) read back from our .gp.
                     var exportNote = "";
                     if (drums.Count > 0)

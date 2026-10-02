@@ -16,6 +16,9 @@ internal interface ITrackListFitHost
     void SetStatus(string text);
 }
 
+// Owns: the track-list dock height: fitting it to its rows and turning a splitter drag into a row height.
+// Does not own: the track row controls and the dock layout persistence.
+// Tests: TestTrackListFit.
 /// <summary>
 /// Keeps the track-list dock exactly as tall as its rows (no empty band under the last track) and turns a drag of its
 /// splitter into a row height: the rows (track controls and timeline lanes) stretch to fill the dock, between the default
@@ -27,7 +30,7 @@ internal sealed class TrackListFitController
     /// <summary>The dock hands the panel this much less than the height it was asked to fit (measured: its own border), so the panel's height + this is what compares with the preferred height.</summary>
     internal const double Chrome = 2;
     private readonly ITrackListFitHost _host;
-    private bool _fitting, _dragging, _fitPending, _dragPending;
+    private bool _fitting, _dragging, _fitPending;
     private bool _userShort;   // the user dragged the dock shorter than its rows: leave it there until the tracks change
 
     public TrackListFitController(ITrackListFitHost host, FrameworkElement owner)
@@ -93,16 +96,15 @@ internal sealed class TrackListFitController
 
     private void OnSplitter(object? sender, DockSplitterEventArgs e)
     {
-        if (!Enabled || !e.Vertical || !e.Second.Contains(PanelId)) return;
+        if (!e.Vertical || !(e.Second.Contains(PanelId) || e.First.Contains(PanelId))) return;
+        // During the drag the panel shows its blurred, stretched snapshot; the rows are resized once when the drag ends.
+        if (e.Phase == DockSplitterPhase.Started) _host.Arrangement.BeginResizePreview();
+        if (e.Phase == DockSplitterPhase.Completed) _host.Arrangement.EndResizePreview();
+        if (!Enabled || !e.Second.Contains(PanelId)) return;
         switch (e.Phase)
         {
             case DockSplitterPhase.Started: _dragging = true; break;
-            case DockSplitterPhase.Delta:
-                _dragging = true;
-                if (_dragPending) break;   // at most one row-height update per layout pass
-                _dragPending = true;
-                _host.Dispatcher.BeginInvoke(DispatcherPriority.Render, () => { _dragPending = false; if (_dragging) StretchToDock(); });
-                break;
+            case DockSplitterPhase.Delta: _dragging = true; break;
             case DockSplitterPhase.Completed:
                 _dragging = false;
                 StretchToDock();

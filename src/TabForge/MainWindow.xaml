@@ -81,7 +81,7 @@
                         <TextBlock x:Name="StatusText" Text="Ready" MaxWidth="150" TextTrimming="CharacterEllipsis"
                                    VerticalAlignment="Center" ToolTip="Last action or current state"
                                    AutomationProperties.Name="Status" AutomationProperties.LiveSetting="Polite"/>
-                        <!-- A5-07: shown only while a Guitar Pro file imports in the background -->
+                        <!-- A5-07: shown only while a score file imports in the background -->
                         <Button x:Name="CancelImportButton" Content="Cancel" Visibility="Collapsed" Margin="6,0,0,0" Padding="8,1" Focusable="True" IsTabStop="True"
                                 BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}" Background="{DynamicResource Panel2Brush}"
                                 VerticalAlignment="Center" Click="CancelImport_Click" ToolTip="Cancel the import in progress" local:TooltipShortcuts.Command="File.CancelImport"
@@ -92,8 +92,8 @@
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
                                 ToolTip="MIDI output activity: grey = idle, green = playing">
                         <Ellipse x:Name="MidiLed" Width="9" Height="9" Fill="#6B7280" Stroke="#23272E"/>
-                        <TextBlock Text="MIDI" FontSize="{StaticResource MinFontSize}" Margin="5,0,0,0" VerticalAlignment="Center"
-                                   Foreground="{DynamicResource MutedBrush}"/>
+                        <TextBlock Text="MIDI" FontSize="13" Margin="5,0,0,0" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource LegibleBrush}"/>
                     </StackPanel>
                 </Border>
                 <Border Grid.Column="2" BorderBrush="{DynamicResource BorderSoftBrush}" BorderThickness="0,0,1,0" Padding="8,0">
@@ -101,11 +101,11 @@
                                VerticalAlignment="Center" ToolTip="Playing position (or edit cursor): measure · track · string · cell"/>
                 </Border>
                 <Border Grid.Column="3" BorderBrush="{DynamicResource BorderSoftBrush}" BorderThickness="0,0,1,0" Padding="8,0">
-                    <TextBlock x:Name="BarStateText" Text="4/4 · 16:16" MaxWidth="110" TextTrimming="CharacterEllipsis"
+                    <TextBlock x:Name="BarStateText" Text="4/4 · 16:16" MaxWidth="110" FontSize="13.8" TextTrimming="CharacterEllipsis"
                                VerticalAlignment="Center" ToolTip="Time signature · written : expected bar duration"/>
                 </Border>
                 <Border Grid.Column="4" BorderBrush="{DynamicResource BorderSoftBrush}" BorderThickness="0,0,1,0" Padding="8,0">
-                    <TextBlock x:Name="MasterInfoText" Text="♩=120 · C major · quarter" MaxWidth="240" TextTrimming="CharacterEllipsis"
+                    <TextBlock x:Name="MasterInfoText" Text="♩=120 · C major · quarter" MaxWidth="240" FontSize="13.8" Foreground="{DynamicResource LegibleBrush}" TextTrimming="CharacterEllipsis"
                                VerticalAlignment="Center" ToolTip="Tempo · key signature · current note value"/>
                 </Border>
                 <ContentControl x:Name="TimelineScrollHost" Grid.Column="5" Margin="8,0"
@@ -860,7 +860,7 @@
                                             <TextBlock Text=" %" VerticalAlignment="Center"/>
                                         </StackPanel>
                                     </StackPanel>
-                                    <Button Content="Clear loop area (Esc)" Margin="0,10,0,0" HorizontalAlignment="Left"
+                                    <Button Content="Clear loop area" Margin="0,10,0,0" HorizontalAlignment="Left"
                                             Padding="10,3" Click="ClearLoopArea_Click"/>
                                     <TextBlock Text="Drag across bars in the arrangement to pick an area; right-click a section to loop it."
                                                FontSize="{StaticResource MinFontSize}" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" Margin="0,8,0,0"/>

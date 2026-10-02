@@ -11,6 +11,9 @@ namespace TabForge.Services;
 /// <summary>A newer TabForge release: its version and the release page built for it (never taken from the reply).</summary>
 public sealed record ReleaseInfo(string Version, Uri Page);
 
+// Owns: the update check request to the release feed with its timeouts and size caps.
+// Does not own: when the check runs (UpdateCheckController) and the dialogs.
+// Tests: TestUpdateCheck.
 /// <summary>
 /// Update check, deliberately minimal:
 /// - one anonymous HTTPS GET to a fixed address (the public GitHub releases list of this repository);

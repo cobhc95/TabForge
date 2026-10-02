@@ -27,17 +27,17 @@ public sealed class ScoreImportQueue
     /// <summary>A6-04: all running import workers together stay within this committed memory (split evenly across the slots).</summary>
     public const long TotalWorkerMemoryBytes = 3L * 1024 * 1024 * 1024;
 
-    private readonly Func<string, OpenedScore> _open;
-    private readonly Func<string, string, OpenedScore>? _openInProcess;
+    private readonly Func<string, ImportContext, OpenedScore> _open;
+    private readonly Func<string, string, ImportContext, OpenedScore>? _openInProcess;
     private readonly SemaphoreSlim _slots;
     private readonly List<ScoreImportJob> _pending = new();
     private Task _tail = Task.CompletedTask;
 
-    /// <param name="open">The synchronous open (DocumentController.Open); a test passes a synthetic slow one.</param>
+    /// <param name="open">The synchronous open (DocumentController.Open), given the import's context; a test passes a synthetic slow one.</param>
     /// <param name="maxConcurrent">How many opens run at once; later ones wait for a slot (results still apply in start order).</param>
     /// <param name="openInProcess">A6-03: the unprotected in-process open (path, reason) used only when <paramref name="open"/> threw
     /// <see cref="ImportWorkerUnavailableException"/> and <see cref="ConfirmInProcess"/> agreed for that file.</param>
-    public ScoreImportQueue(Func<string, OpenedScore> open, int maxConcurrent = DefaultMaxConcurrent, Func<string, string, OpenedScore>? openInProcess = null)
+    public ScoreImportQueue(Func<string, ImportContext, OpenedScore> open, int maxConcurrent = DefaultMaxConcurrent, Func<string, string, ImportContext, OpenedScore>? openInProcess = null)
     {
         _open = open;
         _openInProcess = openInProcess;
@@ -53,8 +53,8 @@ public sealed class ScoreImportQueue
     public static ScoreImportQueue WithImportWorker(DocumentController documents, ImportWorkerOptions? options = null)
     {
         options ??= new ImportWorkerOptions { JobMemoryLimitBytes = TotalWorkerMemoryBytes / DefaultMaxConcurrent };
-        return new(path => documents.Open(path, (file, notices) => ImportWorker.Import(file, options, notices)), DefaultMaxConcurrent,
-            (path, reason) => documents.Open(path, (file, notices) => ImportWorker.ImportInProcess(file, notices, reason)));
+        return new((path, context) => documents.Open(path, (file, notices) => ImportWorker.Import(file, options, notices, context), context), DefaultMaxConcurrent,
+            (path, reason, context) => documents.Open(path, (file, notices) => ImportWorker.ImportInProcess(file, notices, reason, context), context));
     }
 
     /// <summary>
@@ -116,7 +116,7 @@ public sealed class ScoreImportQueue
                 // A6-03: never a silent in-process parse; the user decides per file (this runs on the caller's context).
                 var reason = unavailable.Message;
                 if (ConfirmInProcess?.Invoke(job, reason) != true || job.IsCancelled) throw new OperationCanceledException();
-                opened = await ImportAsync(job.Path, path => _openInProcess(path, reason), job.Cancellation.Token, TimeBudget, MemoryBudgetBytes, StuckGrace);
+                opened = await ImportAsync(job.Path, (path, context) => _openInProcess(path, reason, context), job.Cancellation.Token, TimeBudget, MemoryBudgetBytes, StuckGrace);
             }
         }
         catch (Exception ex) { error = ex; }
@@ -135,25 +135,22 @@ public sealed class ScoreImportQueue
     }
 
     /// <summary>
-    /// Runs <paramref name="open"/> on the thread pool under an ambient <see cref="ImportGuard"/>. Returns (or throws
+    /// Runs <paramref name="open"/> on the thread pool with an <see cref="ImportContext"/> that holds an <see cref="ImportGuard"/>. Returns (or throws
     /// <see cref="OperationCanceledException"/>) as soon as the token is cancelled, and throws <see cref="TimeoutException"/>
     /// once the time budget plus <paramref name="stuckGrace"/> passed with alphaTab still busy; that worker is then abandoned
     /// (its eventual result or error is observed and dropped). Never blocks the calling thread.
     /// </summary>
-    public static async Task<OpenedScore> ImportAsync(string path, Func<string, OpenedScore> open, CancellationToken token,
+    public static async Task<OpenedScore> ImportAsync(string path, Func<string, ImportContext, OpenedScore> open, CancellationToken token,
         TimeSpan timeBudget, long memoryBudgetBytes, TimeSpan stuckGrace)
     {
         token.ThrowIfCancellationRequested();
         var work = Task.Run(() =>
         {
             var guard = new ImportGuard(token, timeBudget, memoryBudgetBytes);
-            using (guard.Enter())
-            {
-                guard.Check();
-                var result = open(path);
-                guard.Check();
-                return result;
-            }
+            guard.Check();
+            var result = open(path, new ImportContext(guard));
+            guard.Check();
+            return result;
         }, CancellationToken.None);
         var watchdog = Task.Delay(timeBudget + stuckGrace, token);
         var first = await Task.WhenAny(work, watchdog).ConfigureAwait(false);

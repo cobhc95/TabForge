@@ -1,5 +1,8 @@
 namespace TabForge.Services;
 
+// Owns: the shared animation settings (reduce-animations switch, speed) and the durations derived from them.
+// Does not own: the animations that use them.
+// Tests: TestOrderAnimationAndSpeedCommands.
 /// <summary>Shared duration policy for the application's short drag transitions.</summary>
 public static class UiMotion
 {

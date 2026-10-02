@@ -14,6 +14,7 @@ internal sealed partial class ScoreToMidiCompiler
         foreach (var track in _players)
         {
             var trackIndex = _project.Tracks.IndexOf(track);
+            if (track.IsAudio && MixerGroups.InstrumentPlays(track) is false) continue;
             var mainChannel = _channels.Length > trackIndex ? _channels[trackIndex] : track.MidiChannel;
             // The effect channel (bent notes) gets exactly the main channel's program, volume, pan, sends and pitch-bend range.
             for (var pass = 0; pass < 2; pass++)

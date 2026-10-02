@@ -18,7 +18,7 @@ public static class EngineThreads
     private static int _mainThreadId;
 
     /// <summary>
-    /// A-02: marks the calling thread as the engine main thread (EngineHost.Run, or the thread that attaches the headless harness).
+    /// Marks the calling thread as the engine main thread (EngineHost.Run, or the thread that attaches the headless harness).
     /// Read only by the Debug-build checks in <see cref="EngineSession"/>.
     /// </summary>
     public static void MarkMainThread() => Volatile.Write(ref _mainThreadId, Environment.CurrentManagedThreadId);
@@ -46,7 +46,7 @@ public static class EngineThreads
     private const uint DnFlush = 0x01000000, McwDn = 0x03000000;
 
     /// <summary>
-    /// RT-02: denormals flushed to zero on the calling thread (_DN_FLUSH sets both SSE flags, FTZ and DAZ), as a DAW's audio threads: a
+    /// Denormals flushed to zero on the calling thread (_DN_FLUSH sets both SSE flags, FTZ and DAZ), as a DAW's audio threads: a
     /// decaying reverb tail or filter state otherwise turns into denormals that cost up to 100x per operation (CPU spikes at small buffers).
     /// Returns false when the C runtime call is not available.
     /// </summary>
@@ -124,7 +124,7 @@ public static class EngineThreads
     /// <summary>Main thread: runs queued work (bounded per call so the message loop stays responsive).</summary>
     public static void RunPending(int max = 64)
     {
-        // RT-03: parameter edits / resize requests VST2 plug-ins flagged from their callbacks (allocation-free there), raised here once.
+        // Parameter edits / resize requests VST2 plug-ins flagged from their callbacks (allocation-free there), raised here once.
         Plugins.Vst2Plugin.DeliverHostNotifications();
         for (var i = 0; i < max && Queue.TryDequeue(out var action); i++)
         {
@@ -136,7 +136,7 @@ public static class EngineThreads
 
 /// <summary>
 /// The engine log (a file in %TEMP%, shared by the engine, every plug-in host and TabForge), for diagnosing device and plug-in problems.
-/// M-01 / C11: <see cref="Write"/> only queues the line (bounded: past <see cref="MaxQueued"/> lines are counted and dropped, never
+/// <see cref="Write"/> only queues the line (bounded: past <see cref="MaxQueued"/> lines are counted and dropped, never
 /// blocking); one background thread appends whole batches. Every line carries the writing process's id. At <see cref="MaxBytes"/> the
 /// file rotates to <c>.1.log</c> (the previous history is kept, not deleted). <see cref="Flush"/> writes what is queued now (before a
 /// watchdog exit, at shutdown, at process exit).

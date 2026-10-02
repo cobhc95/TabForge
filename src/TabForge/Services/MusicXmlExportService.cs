@@ -6,6 +6,9 @@ using TabForge.Models;
 
 namespace TabForge.Services;
 
+// Owns: uncompressed MusicXML export of a song.
+// Does not own: the other export formats.
+// Tests: TestMusicXmlExport, TestMusicXmlBarsFillTheTimeSignature.
 /// <summary>
 /// Exports a song as uncompressed MusicXML 4.0 (score-partwise, .musicxml): one part per track with a
 /// notation staff and, for fretted tracks, a tab staff carrying the string and fret of every note.
@@ -35,6 +38,7 @@ public static class MusicXmlExportService
     /// <summary>The complete .musicxml file (UTF-8, no byte-order mark); nothing is written to disk.</summary>
     public static byte[] ToBytes(SongProject project)
     {
+        AudioTrackExport.RequireNotation(project, "MusicXML");
         using var buffer = new MemoryStream();
         var settings = new XmlWriterSettings { Indent = true, IndentChars = "  ", Encoding = new UTF8Encoding(false), CloseOutput = false };
         using (var xml = XmlWriter.Create(buffer, settings))
@@ -72,6 +76,7 @@ public static class MusicXmlExportService
         for (var t = 0; t < project.Tracks.Count; t++)
         {
             var track = project.Tracks[t];
+            if (track.IsAudio) continue;
             xml.WriteStartElement("score-part");
             xml.WriteAttributeString("id", PartId(t));
             xml.WriteElementString("part-name", string.IsNullOrWhiteSpace(track.Name) ? "Track " + (t + 1) : track.Name);
@@ -113,13 +118,11 @@ public static class MusicXmlExportService
 
         var markers = new Dictionary<int, string>();
         foreach (var marker in project.Markers) markers[marker.MeasureIndex] = marker.Title;
-        for (var t = 0; t < project.Tracks.Count; t++) WritePart(project, project.Tracks[t], t, markers, xml);
+        for (var t = 0; t < project.Tracks.Count; t++) if (!project.Tracks[t].IsAudio) WritePart(project, project.Tracks[t], t, markers, xml);
 
         xml.WriteEndElement();
         xml.WriteEndDocument();
     }
-
-    [ThreadStatic] private static string? _partId;
 
     private static string PartId(int index) => "P" + (index + 1).ToString(CultureInfo.InvariantCulture);
     private static string Num(int value) => value.ToString(CultureInfo.InvariantCulture);
@@ -132,7 +135,7 @@ public static class MusicXmlExportService
         var drums = IsDrums(track);
         var tab = HasTab(track);
         var staves = tab ? 2 : 1;
-        var barCount = Math.Max(1, project.Tracks.Max(t => t.Measures.Count));
+        var barCount = Math.Max(1, project.NotationTracks.Max(t => t.Measures.Count));
         xml.WriteStartElement("part");
         xml.WriteAttributeString("id", PartId(trackIndex));
 
@@ -142,11 +145,11 @@ public static class MusicXmlExportService
         var tupletRun = 0;
         var octaveShift = 0;
         var previousEnding = 0;
-        _partId = PartId(trackIndex);
+        var partId = PartId(trackIndex);
         for (var b = 0; b < barCount; b++)
         {
             var model = b < track.Measures.Count ? track.Measures[b] : null;
-            var master = project.Tracks.FirstOrDefault(t => b < t.Measures.Count)?.Measures[b];
+            var master = project.NotationTracks.FirstOrDefault(t => b < t.Measures.Count)?.Measures[b];
             var slots = MusicTime.BarSlots(project, b);
             var barNum = master?.TimeSigNum ?? project.TimeSignatureNumerator;
             var barDen = master?.TimeSigDenom ?? project.TimeSignatureDenominator;
@@ -255,7 +258,7 @@ public static class MusicXmlExportService
                         var isTab = staff == 2;
                         var voiceNumber = (isTab ? 4 : 0) + v + 1;
                         // String and fret only on the tab staff (the notation staff would get circled string numbers).
-                        var advanced = WriteVoice(xml, voices[v], slots, staff, voiceNumber, isTab, drums, project, lyricsHere: v == 0 && !isTab,
+                        var advanced = WriteVoice(xml, partId, voices[v], slots, staff, voiceNumber, isTab, drums, project, lyricsHere: v == 0 && !isTab,
                             ref previousDynamic, ref tupletRun, ref octaveShift, writeDynamics: v == 0 && !isTab);
                         var isLast = staff == staves && v == voices.Count - 1;
                         if (!isLast && advanced > 0) WriteBackup(xml, advanced);
@@ -386,7 +389,7 @@ public static class MusicXmlExportService
     /// bar's length: a bar with no notes is one whole-bar rest, a short bar is padded with a trailing forward,
     /// and an overfull bar is cut at the barline (a cell that starts after it is dropped, one that crosses it is shortened).
     /// </summary>
-    private static int WriteVoice(XmlWriter xml, List<TabCell> cells, int barSlots, int staff, int voice, bool isTab, bool drums,
+    private static int WriteVoice(XmlWriter xml, string partId, List<TabCell> cells, int barSlots, int staff, int voice, bool isTab, bool drums,
         SongProject project, bool lyricsHere, ref int previousDynamic, ref int tupletRun, ref int octaveShift, bool writeDynamics)
     {
         var cursor = 0.0;
@@ -461,16 +464,16 @@ public static class MusicXmlExportService
             if (writeDynamics && !string.IsNullOrWhiteSpace(cell.ChordName)) WriteHarmony(xml, cell.ChordName!);
 
             foreach (var grace in graces)
-                WriteNote(xml, cell, grace, isChord: false, isGrace: true, duration, staff, voice, isTab, drums, project, false, null, ref tupletRun, pendingHopo, pendingSlide, cells, i);
+                WriteNote(xml, partId, cell, grace, isChord: false, isGrace: true, duration, staff, voice, isTab, drums, project, false, null, ref tupletRun, pendingHopo, pendingSlide, cells, i);
 
             if (principal.Count == 0)
             {
-                WriteNote(xml, cell, null, isChord: false, isGrace: false, duration, staff, voice, isTab, drums, project, lyricsHere, cell.Lyrics, ref tupletRun, pendingHopo, pendingSlide, cells, i);
+                WriteNote(xml, partId, cell, null, isChord: false, isGrace: false, duration, staff, voice, isTab, drums, project, lyricsHere, cell.Lyrics, ref tupletRun, pendingHopo, pendingSlide, cells, i);
             }
             else
             {
                 for (var n = 0; n < principal.Count; n++)
-                    WriteNote(xml, cell, principal[n], isChord: n > 0, isGrace: false, duration, staff, voice, isTab, drums, project, lyricsHere && n == 0, cell.Lyrics, ref tupletRun, pendingHopo, pendingSlide, cells, i);
+                    WriteNote(xml, partId, cell, principal[n], isChord: n > 0, isGrace: false, duration, staff, voice, isTab, drums, project, lyricsHere && n == 0, cell.Lyrics, ref tupletRun, pendingHopo, pendingSlide, cells, i);
             }
             written += duration;
         }
@@ -520,7 +523,7 @@ public static class MusicXmlExportService
         return links;
     }
 
-    private static void WriteNote(XmlWriter xml, TabCell cell, TabNote? note, bool isChord, bool isGrace, int duration, int staff, int voice,
+    private static void WriteNote(XmlWriter xml, string partId, TabCell cell, TabNote? note, bool isChord, bool isGrace, int duration, int staff, int voice,
         bool isTab, bool drums, SongProject project, bool lyrics, string? lyricText, ref int tupletRun,
         Dictionary<int, string> pendingHopo, HashSet<int> pendingSlide, List<TabCell> cells, int cellIndex)
     {
@@ -563,7 +566,7 @@ public static class MusicXmlExportService
         if (note is not null && drums)
         {
             xml.WriteStartElement("instrument");
-            xml.WriteAttributeString("id", _partId + "-I" + Num(DrumMidi(note)));
+            xml.WriteAttributeString("id", partId + "-I" + Num(DrumMidi(note)));
             xml.WriteEndElement();
         }
         xml.WriteElementString("voice", Num(voice));

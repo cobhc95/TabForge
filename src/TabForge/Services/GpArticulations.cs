@@ -3,6 +3,9 @@ using AlphaTab.Model;
 
 namespace TabForge.Services;
 
+// Owns: the standard percussion articulation table for imported and exported drum notes.
+// Does not own: drum playback and drawing.
+// Tests: TestGuitarProFiles.
 /// <summary>
 /// The standard percussion articulation table (from alphaTab's internal PercussionMapper, alphaTab 1.8.x):
 /// Guitar Pro ids above the GM range (91 snare rim shot, 92 half-open hi-hat, 93 ride edge...) and the full

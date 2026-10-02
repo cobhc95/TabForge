@@ -109,7 +109,7 @@ public static class ColourChooser
         return accepted ? color : null;
     }
 
-    public static string Hex(Color c) => c.A == 255 ? $"#{c.R:X2}{c.G:X2}{c.B:X2}" : $"#{c.A:X2}{c.R:X2}{c.G:X2}{c.B:X2}";
+    public static string Hex(Color c) => TabForge.Visualization.ColourText.HexAuto(c);
 
     /// <summary>Hex colour as typed in the chooser; <paramref name="color"/> is white when invalid.</summary>
     public static bool TryParse(string? text, out Color color)

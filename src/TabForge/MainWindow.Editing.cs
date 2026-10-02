@@ -27,17 +27,18 @@ using TabForge.Visualization;
 namespace TabForge;
 
 // MainWindow, score editing commands: undo, bars, measures, notes, effects, markers.
-public partial class MainWindow
+public partial class MainWindow : TabForge.Views.Score.IScoreEditHost
 {
+    // ---------- edits made in the score editor ----------
+
+    /// <summary>The editor's commands change the song here: one undo step, the dirty flag and the timeline invalidation come from <see cref="DocumentEdits.Run"/>.</summary>
+    bool TabForge.Views.Score.IScoreEditHost.Run(Func<SongProject, bool> edit, bool invalidatesTimeline) =>
+        DocumentEdits.Run(Doc, edit, invalidatesTimeline: invalidatesTimeline).Changed;
+
     // ---------- undo ----------
 
-    private UndoCapture? CaptureUndo()
-    {
-        if (_restoring) return null;
-        var capture = _undo.Capture(_project);
-        if (capture.Stored) Playback.RememberBarMapping(capture.Snapshot);
-        return capture;
-    }
+    /// <summary>The undo step for a change that follows (a drag, a dialog): <see cref="DocumentEdits.Checkpoint"/>, except while the window is applying a restored state, when the controls it refreshes must not record.</summary>
+    private UndoCapture? CheckpointUndo() => _restoring ? null : DocumentEdits.Checkpoint(Doc);
 
     /// <summary>Undo / redo while playing: the document state (remap, playhead bar) is <see cref="DocumentPlaybackState.RestoreBarMapping"/>; this refreshes the views from it.</summary>
     private void ApplyRestoredPlaybackBarMapping(UndoSnapshot snapshot)
@@ -113,7 +114,7 @@ public partial class MainWindow
     private void InsertBar_Click(object sender, RoutedEventArgs e)
     {
         var at = Math.Clamp(Editor.SelectedMeasure, 0, MaxMeasures());
-        _arrangementController.InsertBar(Doc, at, Editor.SelectedMeasure, moveMarkers: false);
+        _arrangementController.InsertBar(Doc, at, Editor.SelectedMeasure, moveMarkers: false, fillRests: _settings.Editing.FillBarsWithRests);
         RefreshAfterEdit(EditRefresh.Score | EditRefresh.Arrangement); StatusText.Text = $"Inserted bar {at + 1}";
     }
 
@@ -121,7 +122,7 @@ public partial class MainWindow
     private void AppendBar()
     {
         var at = MaxMeasures();
-        _arrangementController.InsertBar(Doc, at, Math.Max(0, at - 1), moveMarkers: false);
+        _arrangementController.InsertBar(Doc, at, Math.Max(0, at - 1), moveMarkers: false, fillRests: _settings.Editing.FillBarsWithRests);
         RefreshAfterEdit(EditRefresh.Score | EditRefresh.Arrangement);
         StatusText.Text = $"Added bar {at + 1} at the end";
     }
@@ -336,7 +337,7 @@ public partial class MainWindow
         Editor.EmptyBar();
         StatusText.Text = "Bar emptied";
     }
-    // The editor captures the undo step itself (EditStarting); capturing here too made two steps.
+    // The editor runs its commands through DocumentEdits (one undo step each); nothing is captured here.
     private void Dot_Click(object sender, RoutedEventArgs e) { Editor.ToggleDot(); RefreshStatus(); }
     private void DoubleDot_Click(object sender, RoutedEventArgs e) { Editor.SetDots(2); RefreshStatus(); }
     private void Triplet_Click(object sender, RoutedEventArgs e) { Editor.ToggleTriplet(); RefreshStatus(); }
@@ -380,7 +381,7 @@ public partial class MainWindow
     private void Chord_Click(object sender, RoutedEventArgs e)
     {
         var c = Editor.CurrentCell(); if (c is null) return;
-        var txt = GpDialogs.Prompt("Chord (A)", "Chord name (e.g. Am, G7):", c.ChordName ?? "");
+        var txt = GpDialogs.Prompt("Chord name", "Chord name (e.g. Am, G7):", c.ChordName ?? "");
         if (txt is null) return;
         DocumentEdits.Run(Doc, _ => { c.ChordName = txt; return true; }); RefreshAfterEdit(EditRefresh.Score);
     }
@@ -388,7 +389,7 @@ public partial class MainWindow
     private void Text_Click(object sender, RoutedEventArgs e)
     {
         var c = Editor.CurrentCell(); if (c is null) return;
-        var txt = GpDialogs.Prompt("Text (T)", "Beat text:", c.Text ?? "");
+        var txt = GpDialogs.Prompt("Beat text", "Beat text:", c.Text ?? "");
         if (txt is null) return;
         DocumentEdits.Run(Doc, _ => { c.Text = txt; return true; }); RefreshAfterEdit(EditRefresh.Score);
     }

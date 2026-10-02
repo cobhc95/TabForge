@@ -5,9 +5,7 @@ namespace TabForge.AudioEngine.Midi;
 /// <summary>Parses and formats note sets such as "36, 38, 40-45, C2, D#3" (note names use C-1 = 0, so C4 = 60).</summary>
 public static class NoteSetText
 {
-    private static readonly string[] Names = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
-
-    public static string NoteName(int n) => $"{Names[((n % 12) + 12) % 12]}{n / 12 - 1}";
+    public static string NoteName(int n) => TabForge.Audio.Contracts.NoteNames.Name(n);
 
     /// <summary>Bit set of notes 0..127 (tokens that do not parse are ignored).</summary>
     public static bool[] Parse(string? text)

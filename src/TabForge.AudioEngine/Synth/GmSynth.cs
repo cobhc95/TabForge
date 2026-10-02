@@ -1,3 +1,4 @@
+using TabForge.Audio.Contracts;
 using MeltySynth;
 using TabForge.AudioEngine.Plugins;
 
@@ -21,7 +22,7 @@ public sealed class GmSynth : IPluginInstance
     }
 
     /// <summary>
-    /// C6: voices per track synth. One GM synth serves one track (a guitar's chords with let-ring, or a kit's hits and cymbal tails), so
+    /// Voices per track synth. One GM synth serves one track (a guitar's chords with let-ring, or a kit's hits and cymbal tails), so
     /// 32 is ample; MeltySynth steals the oldest voice beyond it, which bounds the worst-case CPU per block (was 64).
     /// </summary>
     public const int MaxVoices = 32;
@@ -122,17 +123,17 @@ public static class GmSynthTuning
     // converted gm.dls was 6.3 dB quieter at 0.5 on every instrument tested (piano, guitars, bass, strings, drums).
     public static float MasterVolume { get; set; } = 1.03f;
     // The Windows GS synth plays no reverb / chorus tail even when a track sends CC91 / CC93 (measured: drums are
-    // silent 0.5 s after the hit), so the engine's copy runs dry too. C6: fixed off (also saves the reverb / chorus CPU per track).
+    // silent 0.5 s after the hit), so the engine's copy runs dry too: reverb and chorus are fixed off (which also saves their CPU per track).
     public const bool ReverbAndChorus = false;
     /// <summary>Applies the measured per-program / per-drum-note level calibration (see docs/LEVEL_MATCH_2026-09-29.md).</summary>
     public static bool Calibrate { get; set; } = true;
 
     /// <summary>Measured correction per GM program, dB (positive = make the engine louder); NaN = not measured (family average).</summary>
-    // Measured 2026-09-29 run 3 (docs/LEVEL_MATCH_2026-09-29.md): engine minus GS negated, mean of velocities 40/64/90/110/127
+    // Measurement method (docs/LEVEL_MATCH_2026-09-29.md): engine minus GS negated, mean of velocities 40/64/90/110/127
     // (the velocity curves are identical: spread <= 0.2 dB per program), path offset from a steady tone (-32.21 dB).
-    // User decision 2026-09-29: the engine plays the sound bank as it is, except the two things the user hears as different
-    // from the Windows synth: snares quieter (+2.5 dB) and crashes louder (-4 dB), set by ear. The earlier measured
-    // per-program / per-drum table (kick +14.6 dB etc.) made the engine sound wrong and was removed; see git history (6fd6354).
+    // The engine plays the sound bank as it is, except for the two things heard as different from the Windows synth:
+    // snares quieter (+2.5 dB) and crashes louder (-4 dB), set by ear. The program table is empty: a full measured
+    // per-program / per-drum table (kick +14.6 dB etc.) made the engine sound wrong.
     public static readonly double[] ProgramGainDb = BuildProgramTable(new Dictionary<int, double>());
     /// <summary>Correction per drum note, dB (positive = louder in the engine); notes not listed get 0.</summary>
     public static readonly Dictionary<int, double> DrumGainDb = new()
@@ -142,12 +143,12 @@ public static class GmSynthTuning
     };
     /// <summary>Overall trim of the engine synth after calibration, dB (0: engine on and off must sound the same).</summary>
     public static double OverallTrimDb { get; set; }
-    // The full corrections are applied (kick 35 +14.6 dB). That is not clipping: the GS synth's own kick peaks about +8 dBFS on
+    // A large correction (kick 35 +14.6 dB) is not clipping: the GS synth's own kick peaks about +8 dBFS on
     // the same scale, and Windows applies its volume (and a further ~-18 dB, measured) in float before the final clip. The engine
     // matches that: WASAPI shared passes floats above 1 to the Windows mixer (MixEngine.Ceiling), ASIO applies the same Windows
-    // attenuation first (EngineHost.FollowWindowsVolume). The old ±6 dB clamp clipped in the engine's own ±1 output clamp instead.
-    // Capped at ±6 dB (user, 2026-09-29): the measured kick boosts (+14.6 / +11.7 dB) made the kick far too loud through the
-    // engine on the user's system. ±6 dB is the level the user confirmed sounded right; larger measured values are clamped.
+    // attenuation first (EngineHost.FollowWindowsVolume).
+    // Corrections are capped at ±6 dB: the measured kick boosts (+14.6 / +11.7 dB) sounded far too loud through the
+    // engine, and ±6 dB is the level confirmed to sound right; larger measured values are clamped.
     public const double MaxCorrectionDb = 6;
 
     /// <summary>
@@ -161,8 +162,8 @@ public static class GmSynthTuning
     {
         if (!Calibrate || pan == 0) return pan;
         var theta = Math.PI / 2 * (Math.Clamp(pan, -499, 499) / 1000 + 0.5);
-        var db = 20 * Math.Log10(Math.Tan(theta)) * PanWidth;
-        return (Math.Atan(Math.Pow(10, db / 20)) / (Math.PI / 2) - 0.5) * 1000;
+        var db = Gain.ToDb(Math.Tan(theta)) * PanWidth;
+        return (Math.Atan(Gain.FromDb(db)) / (Math.PI / 2) - 0.5) * 1000;
     }
 
     private static double[] BuildProgramTable(Dictionary<int, double> measured)
@@ -187,5 +188,5 @@ public static class GmSynthTuning
     public static double CalibrationAttenuationDb(bool isDrum, int program, int key) => Math.Min(MaxCorrectionDb, MaxBoostDb) - CalibrationGainDb(isDrum, program, key);
 
     /// <summary>Master volume the synth actually uses: the base level, plus the calibration headroom and trim when calibrated.</summary>
-    public static float EffectiveMasterVolume => (float)(MasterVolume * Math.Pow(10, (Calibrate ? Math.Min(MaxCorrectionDb, MaxBoostDb) + OverallTrimDb : 0) / 20));
+    public static float EffectiveMasterVolume => (float)(MasterVolume * Gain.FromDb(Calibrate ? Math.Min(MaxCorrectionDb, MaxBoostDb) + OverallTrimDb : 0));
 }

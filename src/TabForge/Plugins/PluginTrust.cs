@@ -228,10 +228,19 @@ public static class PluginTrust
         return specs;
     }
 
-    /// <summary>Distinct untrusted plug-in paths of the song (tracks, group buses and master chain) with the reason for each.</summary>
+    /// <summary>
+    /// What every place that asks the user to trust a plug-in says (the Review plug-ins dialog, the Settings option for running plug-ins in their own process).
+    /// A self-test keeps the key facts in it.
+    /// </summary>
+    public const string RightsNotice =
+        "A plug-in runs with your Windows permissions and can read and write your files like any program. " +
+        "Running plug-ins in their own process (Settings > Audio & Plug-ins, off by default) protects TabForge from a plug-in crash, not your files from the plug-in. " +
+        "Only use plug-ins from sources you trust.";
+
+    /// <summary>Distinct untrusted plug-in paths of every rig of the song (see <see cref="SongRigs.All"/>: tracks, every group bus, master and the song's own monitor chain) with the reason for each.</summary>
     public static List<(string Path, string Reason)> UntrustedDetails(SongProject project, PluginSettings settings)
     {
-        var slots = project.Tracks.Concat(MixerBuses.Active(project)).Distinct().SelectMany(t => t.Rig.Plugins);
+        var slots = SongRigs.All(project).SelectMany(r => r.Rig.Plugins);
         var list = new List<(string Path, string Reason)>();
         foreach (var path in slots.Select(p => p.Path).Where(p => !string.IsNullOrWhiteSpace(p)).Distinct(StringComparer.OrdinalIgnoreCase))
         {
@@ -241,7 +250,7 @@ public static class PluginTrust
         return list;
     }
 
-    /// <summary>Distinct untrusted plug-in paths of the song (tracks, group buses and master chain).</summary>
+    /// <summary>Distinct untrusted plug-in paths of every rig of the song (see <see cref="UntrustedDetails"/>).</summary>
     public static List<string> Untrusted(SongProject project, PluginSettings settings) =>
         UntrustedDetails(project, settings).Select(u => u.Path).ToList();
 
@@ -266,7 +275,7 @@ public static class PluginTrust
         folders.Add(-1);
         foreach (var f in s.CommonFolders ?? new()) folders.Add(f ?? "", StringComparer.OrdinalIgnoreCase);
         return new Revision(s, s.ApprovedPluginPaths, s.ApprovedPluginPaths?.Count ?? 0, s.ScanCache, s.ScanCache?.Count ?? 0,
-            VstScannerService.LastScan, s.TrustRecords, folders.ToHashCode(), s.ScanStandardFolders, Volatile.Read(ref _scanGeneration));
+            s.LastScan, s.TrustRecords, folders.ToHashCode(), s.ScanStandardFolders, Volatile.Read(ref _scanGeneration));
     }
 
     private static Index IndexFor(PluginSettings settings)
@@ -283,7 +292,7 @@ public static class PluginTrust
                 records[Normalize(r.Path)] = r;
             }
         var scanned = new HashSet<string>((settings.ScanCache ?? new()).Where(k => k is not null).Select(k => Normalize(k.Path))
-            .Concat(VstScannerService.LastScan.Select(p => Normalize(p.Path)))
+            .Concat(settings.LastScan.Select(p => Normalize(p.Path)))
             .Concat(records.Where(r => r.Value.Scanned).Select(r => r.Key)).Where(p => p.Length > 0), cmp);
         var roots = VstScannerService.RootsFor(settings).Select(Normalize).Where(r => r.Length > 0 && IsProtectedLocation(r))
             .Select(r => r.TrimEnd('\\') + "\\").Distinct(cmp).ToArray();

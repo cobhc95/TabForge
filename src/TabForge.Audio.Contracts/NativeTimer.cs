@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 namespace TabForge.Audio.Contracts;
 
 /// <summary>
-/// D10 / RT-10: the one owner of the process's 1 ms Windows timer resolution (<c>timeBeginPeriod(1)</c>). Reference-counted: the first
+/// The one owner of the process's 1 ms Windows timer resolution (<c>timeBeginPeriod(1)</c>). Reference-counted: the first
 /// <see cref="Acquire"/> raises it, the last <see cref="Release"/> gives it back, so callers (the engine for its lifetime, the playback
 /// scheduler while playing, the MIDI delay line while it has messages due) never undo each other. Not for the audio thread (takes a lock).
 /// </summary>

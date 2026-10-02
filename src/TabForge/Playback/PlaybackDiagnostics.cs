@@ -82,8 +82,8 @@ public static class PlaybackDiagnostics
         var dead = project.Tracks.Sum(t => t.Measures.Sum(m => m.Cells.Sum(c => c.Notes.Count(n => n.Dead))));
         var ghost = project.Tracks.Sum(t => t.Measures.Sum(m => m.Cells.Sum(c => c.Notes.Count(n => n.Ghost))));
         var palmMute = project.Tracks.Sum(t => t.Measures.Sum(m => m.Cells.Sum(c => c.Notes.Count(n => n.Techniques.Contains("PalmMute")))));
-        var tempoChanges = project.Tracks.FirstOrDefault()?.Measures.Count(m => m.TempoChange is not null) ?? 0;
-        var sigChanges = project.Tracks.FirstOrDefault()?.Measures.Count(m => m.TimeSigNum is not null) ?? 0;
+        var tempoChanges = project.MasterBarTrack?.Measures.Count(m => m.TempoChange is not null) ?? 0;
+        var sigChanges = project.MasterBarTrack?.Measures.Count(m => m.TimeSigNum is not null) ?? 0;
 
         sb.AppendLine("== score ==");
         sb.AppendLine($"tracks={project.Tracks.Count} bars={(project.Tracks.Count == 0 ? 0 : project.Tracks.Max(t => t.Measures.Count))} notes={notes} bpm={project.Tempo}");

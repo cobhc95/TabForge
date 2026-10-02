@@ -1,3 +1,4 @@
+using TabForge.Audio.Contracts;
 using System.IO;
 using System.Windows;
 using System.Windows.Input;
@@ -134,7 +135,7 @@ internal sealed partial class TrackTimeline
     private double RowTop(int track) =>
         ArrangementPanel.RulerHeight + ArrangementPanel.SectionHeight + ArrangementPanel.RowTopOf(Project, track) - VerticalScrollOffset;
 
-    private double LaneTop(int track, int lane) => RowTop(track) + ArrangementPanel.RowHeightFor(Project) + lane * ArrangementPanel.AudioLaneHeight;
+    private double LaneTop(int track, int lane) => RowTop(track) + ArrangementPanel.NotationHeightOf(Project, Project?.Tracks.ElementAtOrDefault(track)) + lane * ArrangementPanel.AudioLaneHeight;
 
     // ---------- drawing ----------
     private void DrawAudioLane(DrawingContext dc, TrackModel track, double rowTop, double width, Color trackColor)
@@ -143,9 +144,10 @@ internal sealed partial class TrackTimeline
         if (lanes == 0) return;
         var clipColour = Readable(trackColor);
         var trackIndex = Project?.Tracks.IndexOf(track) ?? -1;
+        var notation = ArrangementPanel.NotationHeightOf(Project, track);
         for (var lane = 0; lane < lanes; lane++)
         {
-            var laneRect = new Rect(0, rowTop + ArrangementPanel.RowHeightFor(Project) + lane * ArrangementPanel.AudioLaneHeight, width, ArrangementPanel.AudioLaneHeight);
+            var laneRect = new Rect(0, rowTop + notation + lane * ArrangementPanel.AudioLaneHeight, width, ArrangementPanel.AudioLaneHeight);
             dc.DrawRectangle(Draw.Solid(_theme.Board, 0.55), null, laneRect);
             dc.DrawRectangle(Draw.Solid(trackColor, ClipLanes.Plays(track, lane) ? 0.08 : 0.03), null, laneRect);
             if (_clipDropTarget is { NotationRow: false } target && target.Track == trackIndex && target.Lane == lane && _clipFromTrack != trackIndex)
@@ -154,7 +156,7 @@ internal sealed partial class TrackTimeline
         }
         if (track.RecordArm && track.AudioClips.Count == 0 && !LiveTakes.Any(t => ReferenceEquals(t.Track, track)))
             Draw.At(dc, AudioInputs.IsMidi(track.AudioInput) ? "Armed (MIDI): press Record to record here" : "Armed: press Record to record here, or drop audio files",
-                8, rowTop + ArrangementPanel.RowHeightFor(Project) + 15, 11, Draw.Solid(_theme.Muted));
+                8, rowTop + notation + 15, 11, Draw.Solid(_theme.Muted));
         if (_clipDropTarget is { NotationRow: true } row && row.Track == trackIndex)
             dc.DrawRectangle(Draw.Solid(_theme.Accent, 0.18), Draw.Pen(_theme.Accent, 1.4), new Rect(0, rowTop, width, ArrangementPanel.RowHeightFor(Project)));
         foreach (var clip in track.AudioClips)
@@ -162,7 +164,7 @@ internal sealed partial class TrackTimeline
             var x1 = XOfSec(clip.StartSec);
             var x2 = XOfSec(clip.EndSec);
             if (x2 < 0 || x1 > width) continue;
-            var laneTop = rowTop + ArrangementPanel.RowHeightFor(Project) + clip.Lane * ArrangementPanel.AudioLaneHeight;
+            var laneTop = rowTop + notation + clip.Lane * ArrangementPanel.AudioLaneHeight;
             var box = new Rect(x1, laneTop + 3, Math.Max(3, x2 - x1), ArrangementPanel.AudioLaneHeight - 6);
             // Greyed: muted, or an audio take on a lane that is not playing.
             var heard = ClipLanes.Audible(track, clip);
@@ -190,23 +192,6 @@ internal sealed partial class TrackTimeline
     {
         static double Luma(Color x) => 0.2126 * x.R + 0.7152 * x.G + 0.0722 * x.B;
         return Math.Abs(Luma(c) - Luma(_theme.Background)) >= 60 ? c : Blend(c, _theme.Text, 0.5);
-    }
-
-    private void DrawWaveform(DrawingContext dc, AudioClip clip, Rect box, Color colour, double alpha, double width)
-    {
-        var peaks = WaveformCache.Get(clip.File, Media);
-        if (peaks is null || peaks.Length == 0 || clip.SourceLengthSec <= 0) return;
-        var gain = Math.Pow(10, clip.GainDb / 20);
-        DrawPeaks(dc, box, colour, alpha, width, x =>
-        {
-            var fileFrom = clip.OffsetSec + (x - box.X) / box.Width * clip.SourceLengthSec;
-            var fileTo = clip.OffsetSec + (x + 1 - box.X) / box.Width * clip.SourceLengthSec;
-            var i0 = Math.Max(0, (int)(fileFrom / WaveformCache.SecondsPerPeak));
-            var i1 = Math.Min(peaks.Length, Math.Max(i0 + 1, (int)Math.Ceiling(fileTo / WaveformCache.SecondsPerPeak)));
-            var peak = 0f;
-            for (var i = i0; i < i1; i++) peak = Math.Max(peak, peaks[i]);
-            return peak * gain;
-        });
     }
 
     /// <summary>One vertical line per visible pixel column, square-root scaled (quiet takes stay readable), as one geometry.</summary>
@@ -325,7 +310,9 @@ internal sealed partial class TrackTimeline
     }
 
     // ---------- gestures (called first by the timeline's mouse handlers; true = handled) ----------
-    private bool ClipMouseDown(MouseButtonEventArgs e, Point p)
+    internal bool ClipDragActive => _clipDrag is not null;
+
+    internal bool ClipMouseDown(MouseButtonEventArgs e, Point p)
     {
         if (LaneHitAt(p) is not { } hit) return false;
         Focus();
@@ -333,10 +320,10 @@ internal sealed partial class TrackTimeline
         LaneClicked?.Invoke(hit.Track, hit.Lane, SecOfX(p.X));
         // Clip lanes consume mouse-down before the bar grid sees it. Seek here as well so
         // empty lanes and takes behave like every other row of the timeline.
-        BarClicked?.Invoke(this, BarAt(p.X));
-        TrackClicked?.Invoke(this, hit.Track);
         if (hit.Clip is not { } clip)
         {
+            BarClicked?.Invoke(this, BarAt(p.X));
+            TrackClicked?.Invoke(this, hit.Track);
             // Empty lane space: deselect; the spot becomes the paste position (the edit cursor).
             // It is empty timeline space, so the selected bar range is cleared too (no drag starts here).
             PlainClicked?.Invoke(this, EventArgs.Empty);
@@ -351,9 +338,11 @@ internal sealed partial class TrackTimeline
             return true;
         }
         // Ctrl on a clip toggles its lane's play state, but Ctrl+drag copies: the toggle waits for the release (a click, not a drag).
-        _clipPendingSelect = null;
-        if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control)) _clipPendingSelect = (hit.Track, hit.Lane, clip.IsMidi);
-        else ClipLaneSelected?.Invoke(hit.Track, hit.Lane, clip.IsMidi, false);
+        // Seek, track switch and take selection wait for the release without a drag: a press on a clip
+        // starts the gesture at once (no playback reposition or window-wide refresh before the first frame).
+        _clipPendingSelect = (hit.Track, hit.Lane, clip.IsMidi);
+        _clipPendingCtrl = Keyboard.Modifiers.HasFlag(ModifierKeys.Control);
+        _clipPendingBar = BarAt(p.X);
         _clipDrag = clip;
         _clipGesture = hit.Gesture;
         _clipOrigin = (clip.StartSec, clip.OffsetSec, clip.SourceLengthSec);
@@ -371,8 +360,9 @@ internal sealed partial class TrackTimeline
         return true;
     }
 
-    private bool ClipMouseMove(MouseEventArgs e, Point p)
+    internal bool ClipMouseMove(MouseEventArgs e, Point p)
     {
+        if (_clipDrag is not null && e.LeftButton == MouseButtonState.Released) { CancelClipDrag(); return true; }   // the release was missed: the drag ends
         if (_clipDrag is not { } clip)
         {
             // Hover: resize cursor on clip edges.
@@ -417,6 +407,13 @@ internal sealed partial class TrackTimeline
         return true;
     }
 
+    private int _clipPendingBar;
+    private bool _clipPendingCtrl;
+
+
+    /// <summary>The pointer capture was taken away mid-drag (popup, focus change): the drag ends instead of following the mouse.</summary>
+    internal bool ClipCaptureLost() => _clipDrag is not null && CancelClipDrag();
+
     private bool ClipMouseUp()
     {
         if (_clipDrag is not { } clip) return false;
@@ -441,7 +438,12 @@ internal sealed partial class TrackTimeline
         if (_clipChanged) ClipEdited?.Invoke(this, clip);
         else
         {
-            if (_clipPendingSelect is { } pending) ClipLaneSelected?.Invoke(pending.Track, pending.Lane, pending.Midi, true);
+            if (_clipPendingSelect is { } pending)
+            {
+                _clipPendingSelect = null;
+                BarClicked?.Invoke(this, _clipPendingBar); TrackClicked?.Invoke(this, pending.Track);
+                ClipLaneSelected?.Invoke(pending.Track, pending.Lane, pending.Midi, _clipPendingCtrl);
+            }
             // A plain click selected the clip (above); like clicking a note in the score it drops the bar range.
             PlainClicked?.Invoke(this, EventArgs.Empty);
             InvalidateVisual();

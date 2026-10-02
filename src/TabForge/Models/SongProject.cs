@@ -7,7 +7,13 @@ namespace TabForge.Models;
 // standard score model. New fields all have defaults so old .tforge files still load.
 public sealed class SongProject
 {
-    public int FormatVersion { get; set; } = 2;
+    private int _formatVersion = 2;
+    /// <summary>File schema: 3 exactly while the song has an audio track, otherwise the loaded value (3 reads as 2), so songs without audio write what older releases read.</summary>
+    public int FormatVersion
+    {
+        get => Tracks is { } tracks && tracks.Any(t => t?.IsAudio == true) ? 3 : _formatVersion == 3 ? 2 : _formatVersion;
+        set => _formatVersion = value;
+    }
     private string _title = "Untitled";
     public string Title
     {
@@ -35,6 +41,21 @@ public sealed class SongProject
     /// <summary>Presentation preference persisted with the score; musical data is never altered.</summary>
     public bool GrayInactiveVoice { get; set; }
     public List<TrackModel> Tracks { get; set; } = new();
+    /// <summary>The tracks that carry notation (every kind except <see cref="TrackKind.Audio"/>), in track order.</summary>
+    [JsonIgnore] public IEnumerable<TrackModel> NotationTracks => Tracks.Where(t => t.HasNotation);
+    /// <summary>The first notation track; null in an audio-only song. Callers must cope with null.</summary>
+    [JsonIgnore] public TrackModel? FirstNotationTrack
+    {
+        get
+        {
+            // A plain loop: playback reads this on every tick and must not allocate.
+            var tracks = Tracks;
+            for (var i = 0; i < tracks.Count; i++) if (tracks[i].HasNotation) return tracks[i];
+            return null;
+        }
+    }
+    /// <summary>The track whose bars hold the song-wide bar attributes (tempo, time and key changes, sections, repeats): the first notation track, else the first track of an audio-only song (its bars carry the same attributes). Null with no tracks.</summary>
+    [JsonIgnore] public TrackModel? MasterBarTrack => FirstNotationTrack ?? (Tracks.Count > 0 ? Tracks[0] : null);
     public List<MarkerModel> Markers { get; set; } = new();
     /// <summary>Mixer groups (levels, pan and pitch per instrument group).</summary>
     public MixerSettings Mixer { get; set; } = new();
@@ -61,7 +82,14 @@ public sealed class SongProject
     {
         if (_timelineBatchDepth > 0) { _timelineBatchMarked = true; return; }
         Interlocked.Increment(ref _timelineRevision);
+        TimelineMarked?.Invoke(this);
     }
+
+    /// <summary>
+    /// Raised after the timeline revision changed (outside a batch), on the thread that marked it. Edits mark on the thread that owns the song,
+    /// so a subscriber can take an immutable copy of the song here and hand that copy to other threads instead of letting them read the live song.
+    /// </summary>
+    public event Action<SongProject>? TimelineMarked;
 
     private int _timelineBatchDepth;
     private bool _timelineBatchMarked;
@@ -89,6 +117,7 @@ public sealed class SongProject
             if (!project._timelineBatchMarked) return;
             project._timelineBatchMarked = false;
             Interlocked.Increment(ref project._timelineRevision);
+            project.TimelineMarked?.Invoke(project);
         }
     }
 
@@ -97,6 +126,7 @@ public sealed class SongProject
     {
         var copy = (SongProject)MemberwiseClone();
         copy.DisplayStateChanged = null;
+        copy.TimelineMarked = null;
         copy.Tracks = Tracks.Where(t => t.StartupTemplateId is null).ToList();
         return copy;
     }
@@ -139,7 +169,9 @@ public enum TrackKind
     Bass,
     Drums,
     Keys,
-    Other
+    Other,
+    /// <summary>Clips only: no notes, no tuning, no instrument. Never converted to or from another kind.</summary>
+    Audio = 5
 }
 
 public sealed class TrackModel
@@ -147,6 +179,10 @@ public sealed class TrackModel
     public Guid Id { get; set; } = Guid.NewGuid();
     public string Name { get; set; } = "Guitar";
     public TrackKind Kind { get; set; } = TrackKind.Guitar;
+    /// <summary>True for an audio track (clips only, see <see cref="TrackKind.Audio"/>).</summary>
+    [JsonIgnore] public bool IsAudio => Kind == TrackKind.Audio;
+    /// <summary>True when the track can hold notes (every kind except audio).</summary>
+    [JsonIgnore] public bool HasNotation => Kind != TrackKind.Audio;
     public string ColorHex { get; set; } = "#F61A16";
     public string InstrumentName { get; set; } = "Electric Guitar";
     /// <summary>Drum tracks: notation preset (see DrumMaps); default Guitar Pro 5.</summary>

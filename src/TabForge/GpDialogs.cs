@@ -2,6 +2,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 
+using TabForge.Services;
 using TabForge.Views;
 
 namespace TabForge;
@@ -59,7 +60,7 @@ public static class GpDialogs
     /// <summary>The bar's time signature; <c>OnlyThisBar</c> limits the change to that bar (otherwise it lasts until the next change).</summary>
     /// <param name="selectedBars">"bars 3-6" when a bar range is selected: the change applies to exactly those bars.</param>
     public static (int num, int denom, bool onlyThisBar)? TimeSignature(int num, int denom, string? selectedBars = null)    {
-        var w = new Window { Title = "Time signature (Ctrl+Shift+T)", Width = 300, Height = 230, WindowStartupLocation = WindowStartupLocation.CenterOwner, ResizeMode = ResizeMode.NoResize };
+        var w = new Window { Title = "Time signature", Width = 300, Height = 230, WindowStartupLocation = WindowStartupLocation.CenterOwner, ResizeMode = ResizeMode.NoResize };
         var p = new StackPanel { Margin = new Thickness(10) };
         p.Children.Add(new TextBlock { Text = "Beats per bar / beat value" });
         var row = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 8, 0, 8) };
@@ -88,7 +89,7 @@ public static class GpDialogs
     public static (int signature, bool minor, bool onlyThisBar)? KeySignature(int current, bool currentMinor, string? selectedBars = null)
     {
         var names = new[] { "Cb", "Gb", "Db", "Ab", "Eb", "Bb", "F", "C", "G", "D", "A", "E", "B", "F#", "C#" };
-        var w = new Window { Title = "Key signature (Ctrl+K)", Width = 340, Height = 250, WindowStartupLocation = WindowStartupLocation.CenterOwner };
+        var w = new Window { Title = "Key signature", Width = 340, Height = 250, WindowStartupLocation = WindowStartupLocation.CenterOwner };
         var p = new StackPanel { Margin = new Thickness(10) };
         var cb = new ComboBox { Margin = new Thickness(0, 6, 0, 8) };
         foreach (var name in names) cb.Items.Add(name);
@@ -234,7 +235,7 @@ public static class GpDialogs
             Text = value ?? "", AcceptsReturn = true, TextWrapping = TextWrapping.Wrap,
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto, MinHeight = 44, MaxHeight = 140
         };
-        var w = new Window { Title = "Score information (F5)", Width = 480, Height = 560, WindowStartupLocation = WindowStartupLocation.CenterOwner };
+        var w = new Window { Title = "Score information", Width = 480, Height = 560, WindowStartupLocation = WindowStartupLocation.CenterOwner };
         var fields = new (string label, TextBox box)[]
         {
             ("Title", new TextBox { Text = p.Title }), ("Subtitle", new TextBox { Text = p.Subtitle }),
@@ -265,13 +266,13 @@ public static class GpDialogs
 
     public static bool EditTrack(Models.TrackModel t)
     {
-        var w = new Window { Title = "Track properties (F6)", Width = 420, Height = 560, WindowStartupLocation = WindowStartupLocation.CenterOwner };
+        var w = new Window { Title = "Track properties", Width = 420, Height = 560, WindowStartupLocation = WindowStartupLocation.CenterOwner };
         var name = new TextBox { Text = t.Name };
         var inst = new TextBox { Text = t.InstrumentName };
         var color = new TextBox { Text = t.ColorHex };
         var frets = new TextBox { Text = t.NumberOfFrets.ToString() };
         var capo = new TextBox { Text = t.Capo.ToString() };
-        var tuning = new TextBox { Text = string.Join(" ", t.StringTunings.Select(MusicTheoryName)) };
+        var tuning = new TextBox { Text = string.Join(" ", t.StringTunings.Select(MusicTheoryService.NoteName)) };
         var ch = new TextBox { Text = t.MidiChannel.ToString() };
         var prog = new TextBox { Text = t.MidiProgram.ToString() };
         var sp = new StackPanel { Margin = new Thickness(10) };
@@ -301,17 +302,10 @@ public static class GpDialogs
         return done;
     }
 
-    private static string MusicTheoryName(int midi)
-    {
-        string[] n = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
-        return n[((midi % 12) + 12) % 12] + (midi / 12 - 1);
-    }
-
     private static List<int> ParseTuning(string s)
     {
         var map = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-        string[] n = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
-        for (var m = 12; m < 100; m++) map[n[m % 12] + (m / 12 - 1)] = m;
+        for (var m = 12; m < 100; m++) map[MusicTheoryService.NoteName(m)] = m;
         var out_ = new List<int>();
         foreach (var tok in s.Split(new[] { ' ', ',', ';' }, StringSplitOptions.RemoveEmptyEntries))
         {

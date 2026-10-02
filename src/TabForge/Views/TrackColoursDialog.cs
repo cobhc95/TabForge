@@ -89,9 +89,5 @@ public static class TrackColoursDialog
         DialogHost.ShowModal(w);
     }
 
-    private static Brush Brush(string hex)
-    {
-        try { return new SolidColorBrush((Color)ColorConverter.ConvertFromString(hex)); }
-        catch (FormatException) { return Brushes.Gray; }
-    }
+    private static Brush Brush(string hex) => TabForge.Visualization.ColourText.BrushOr(hex);
 }

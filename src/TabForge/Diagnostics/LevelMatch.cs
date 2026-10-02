@@ -1,3 +1,4 @@
+using TabForge.Audio.Contracts;
 using System.IO;
 using System.Text;
 using NAudio.Midi;
@@ -73,7 +74,7 @@ internal static class LevelMatch
         var n = Math.Min(stereo.Length - onset, 48000 * 2 * 400 / 1000);
         double sum = 0, peak = 0;
         for (var i = onset; i < onset + n; i++) { sum += stereo[i] * (double)stereo[i]; peak = Math.Max(peak, Math.Abs(stereo[i])); }
-        return (10 * Math.Log10(Math.Max(sum / Math.Max(1, n), 1e-12)), 20 * Math.Log10(Math.Max(peak, 1e-6)));
+        return (10 * Math.Log10(Math.Max(sum / Math.Max(1, n), 1e-12)), Gain.ToDb(Math.Max(peak, 1e-6)));
     }
 
     private static (double Rms, double Peak) Engine(Test t) => Measure(EngineRender(t));
@@ -234,7 +235,7 @@ internal static class LevelMatch
             foreach (var v in new[] { 0.5f, 0.25f })
             {
                 var d = Play(v) - full;
-                log.AppendLine($"session volume {v:0.00}: {d:0.00} dB (linear amplitude {20 * Math.Log10(v):0.00}, squared {40 * Math.Log10(v):0.00})");
+                log.AppendLine($"session volume {v:0.00}: {d:0.00} dB (linear amplitude {Gain.ToDb(v):0.00}, squared {40 * Math.Log10(v):0.00})");
             }
         }
         finally { ev.MasterVolumeLevelScalar = saved; ev.Mute = savedMute; capture.StopRecording(); }

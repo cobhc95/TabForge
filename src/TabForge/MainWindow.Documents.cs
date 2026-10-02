@@ -29,6 +29,9 @@ namespace TabForge;
 // MainWindow, document activation: loading, switching and refreshing the active song.
 public partial class MainWindow
 {
+    private DocumentViewBinder? _viewBinder;
+    private DocumentViewBinder ViewBinder => _viewBinder ??= new DocumentViewBinder(new DocumentViewSurface(Editor, TrackMixerGrid, TempoBox, LyricsBox));
+
     // ---------- document activation / refresh ----------
 
     /// <summary>Compatibility shim: the old measure overview is now the arrangement grid.</summary>
@@ -98,15 +101,17 @@ public partial class MainWindow
     private void ActivateDocument(DocumentSession session, bool firstLoad = false, bool revealScore = false,
         bool focusTabSelection = false, bool applyPlaybackSwitchPolicy = false)
     {
+        // The one switch entry point: the document on show is captured here (callers need not), and what was typed for it in the boxes is settled on it.
+        if (ViewBinder.Shown is { } outgoing) CaptureDocumentState(leaving: !ReferenceEquals(outgoing, session));
         if (applyPlaybackSwitchPolicy) ApplyPlaybackSwitchPolicy(session);
 
-        _playbackUiTick.Stop();
+        _playbackView.StopTick();
         _follow.Halt();
         _restoring = true;
         try
         {
             _documents.Activate(session);
-            ObservePlaybackDocument(session);
+            _playbackView.Observe(session);
             if (session.Playback.IsPlayingVisual && !session.Playback.Engine.IsPlaying)
             {
                 session.Playback.IsPlayingVisual = false;
@@ -127,23 +132,9 @@ public partial class MainWindow
             SyncAreaVisuals();
             UpdateTuningLabel();
             SetTransportActive(LoopButton, _loop);
-            TempoBox.Text = _project.Tempo.ToString();
-            LyricsBox.Text = _project.Lyrics ?? "";
-            Editor.Project = _project;
-            Editor.Notation = session.Notation;
-            Editor.CenterSystems = session.ContinuousScoreView;
-            Editor.HorizontalScroll = session.HorizontalScoreView;
-            // Score paper is an app-wide appearance choice (it follows the Light/Dark theme), not per tab.
-            session.DarkPaper = !string.Equals(_settings.Appearance.ScorePaper, "Light", StringComparison.OrdinalIgnoreCase);
-            Editor.DarkPaper = session.DarkPaper;
+            // Score paper follows the Light/Dark theme, not the tab.
+            ViewBinder.Show(session, !string.Equals(_settings.Appearance.ScorePaper, "Light", StringComparison.OrdinalIgnoreCase));
             ApplyScorePageBackground();
-            Editor.CurrentDurationDenominator = session.DurationDenominator;
-            Editor.CurrentDots = session.DurationDots;
-            Editor.CurrentTriplet = session.DurationTriplet;
-            Editor.SetTupletEntryState(session.TupletNumerator, session.TupletDenominator);
-            Editor.SelectedTrackIndex = Math.Max(0, session.TrackIndex);
-            Editor.SetPosition(session.CursorBar, session.CursorCell, session.CursorString);
-            Editor.SetActiveVoice(session.ActiveVoiceIndex);
             if (session.Playback.IsPlayingVisual && session.Playback.Engine.IsPlaying)
             {
                 _timeline = session.Playback.Timeline ?? MidiTimelineBuilder.Build(_project, BuildOptions());
@@ -159,7 +150,7 @@ public partial class MainWindow
             RefreshToolsPalette();
             _zoomFactor = session.ZoomFactor;
             UpdateZoomControl();
-            RefreshTracks();
+            RefreshTracks(fromDocument: true);
             RefreshPluginChain();
             RefreshMarkers();
             RefreshArrangement();
@@ -174,7 +165,7 @@ public partial class MainWindow
         }
         finally { _restoring = false; }
         ApplyPageWidth();
-        SyncPlaybackUiToActiveDocument();
+        _playbackView.ShowActiveDocument();
         RefreshPlayingIndicators();
         // A freshly opened song should show the notation, not the title block at the top of the page.
         if (revealScore)
@@ -191,41 +182,14 @@ public partial class MainWindow
         }), System.Windows.Threading.DispatcherPriority.Loaded);
     }
 
-    private void ObservePlaybackDocument(DocumentSession session)
-    {
-        if (ReferenceEquals(_observedPlaybackDocument, session)) return;
-        if (_observedPlaybackDocument is not null)
-        {
-            _observedPlaybackDocument.Playback.TimelineChanged -= OnPlaybackTimelineChanged;
-            _observedPlaybackDocument.Playback.TimelineRevised -= OnPlaybackTimelineRevised;
-        }
-        _observedPlaybackDocument = session;
-        session.Playback.TimelineChanged += OnPlaybackTimelineChanged;
-        session.Playback.TimelineRevised += OnPlaybackTimelineRevised;
-    }
-
     private void ApplyPlaybackSwitchPolicy(DocumentSession target)
         => TabPlaybackSwitchPolicy.Apply(_documents.Documents, target, _tabSettings.PlaybackOnTabSwitch);
 
-    /// <summary>Stores the editor's per-document state so switching tabs is lossless.</summary>
-    private void CaptureDocumentState()
+    /// <summary>Stores the view state of the document on show so switching tabs is lossless; <paramref name="leaving"/> also settles the typed boxes on it.</summary>
+    private void CaptureDocumentState(bool leaving = false)
     {
-        var doc = Doc;
-        doc.CursorBar = Editor.SelectedMeasure;
-        doc.CursorCell = Editor.SelectedCell;
-        doc.CursorString = Editor.SelectedString;
-        doc.ActiveVoiceIndex = Editor.ActiveVoiceIndex;
-        doc.TrackIndex = Math.Max(0, TrackMixerGrid.SelectedIndex);
-        doc.Notation = Editor.Notation;
-        doc.DarkPaper = Editor.DarkPaper;
-        doc.ZoomFactor = _zoomFactor;
-        doc.ContinuousScoreView = Editor.CenterSystems;
-        doc.HorizontalScoreView = Editor.HorizontalScroll;
-        doc.DurationDenominator = Editor.CurrentDurationDenominator;
-        doc.DurationDots = Editor.CurrentDots;
-        doc.DurationTriplet = Editor.CurrentTriplet;
-        doc.TupletNumerator = Editor.CurrentTupletNumerator;
-        doc.TupletDenominator = Editor.CurrentTupletDenominator;
+        if (ViewBinder.Shown is { } shown) shown.ZoomFactor = _zoomFactor;
+        ViewBinder.Capture(leaving);
     }
 
     private void ApplyPreferredScoreView(DocumentSession session)
@@ -238,7 +202,8 @@ public partial class MainWindow
 
     private int _fittedTrackCount = -1;
 
-    private void RefreshTracks()
+    /// <param name="fromDocument">The list is rebuilt for another document: its own selected track is shown, not the one the previous document had selected.</param>
+    private void RefreshTracks(bool fromDocument = false)
     {
         // Adding or removing a track resizes the arrangement to the new track count.
         if (_project.Tracks.Count != _fittedTrackCount)
@@ -246,7 +211,7 @@ public partial class MainWindow
             _fittedTrackCount = _project.Tracks.Count;
             Dispatcher.BeginInvoke(DispatcherPriority.Loaded, FitTimelineToTracks);
         }
-        var old = TrackMixerGrid.SelectedIndex;
+        var old = fromDocument ? -1 : TrackMixerGrid.SelectedIndex;
         TrackMixerGrid.ItemsSource = null;
         TrackMixerGrid.ItemsSource = _project.Tracks;
         if (_project.Tracks.Count > 0)

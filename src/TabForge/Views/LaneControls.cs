@@ -1,3 +1,4 @@
+using TabForge.Audio.Contracts;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -38,7 +39,7 @@ public sealed class InputMeter : FrameworkElement
 
     /// <summary>Meter position of a linear peak: dB mapped over -60..+6 dB.</summary>
     private static double Position(double peak) =>
-        peak <= 0.001 ? 0 : Math.Clamp((20 * Math.Log10(peak) + 60) / 66, 0, 1);
+        peak <= 0.001 ? 0 : Math.Clamp((Gain.ToDb(peak) + 60) / 66, 0, 1);
 
     protected override void OnRender(DrawingContext dc)
     {

@@ -55,7 +55,7 @@ public sealed class PluginHostLink
     public static double BudgetMs(int frames, int sampleRate) =>
         Math.Clamp(frames * 1000.0 * BlockShare / Math.Max(1, sampleRate), MinBudgetMs, MaxBudgetMs);
 
-    /// <summary>A5-09: the whole callback's wait allowance: 75 % of its duration (no floor: it is shared by every isolated plug-in), capped at <see cref="MaxBudgetMs"/>.</summary>
+    /// <summary>The whole callback's wait allowance: 75 % of its duration (no floor: it is shared by every isolated plug-in), capped at <see cref="MaxBudgetMs"/>.</summary>
     public static double CallbackBudgetMs(int frames, int sampleRate) =>
         Math.Min(frames * 1000.0 * BlockShare / Math.Max(1, sampleRate), MaxBudgetMs);
 
@@ -89,7 +89,7 @@ public sealed class PluginHostLink
             }
             _outstanding = 0;   // it caught up: resume normal processing with a fresh generation
         }
-        // A5-09: realtime blocks share one deadline per callback; each plug-in waits only for what is left, and once it is spent
+        // Realtime blocks share one deadline per callback; each plug-in waits only for what is left, and once it is spent
         // the rest of the chain is bypassed (no request is sent, so nothing is left in flight). Those blocks are counted in
         // BudgetSkippedBlocks only: the miss rule is charged to the child that actually ran late, never to the ones starved behind it.
         double waitMs;

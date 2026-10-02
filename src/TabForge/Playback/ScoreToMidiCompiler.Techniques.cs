@@ -132,7 +132,7 @@ internal sealed partial class ScoreToMidiCompiler
             StringIndex = note.StringIndex, Fret = note.Fret, Midi = midi, Velocity = velocity,
             Dead = note.Dead, Ghost = note.Ghost, LetRing = t.Contains("LetRing"),
             FadeIn = t.Contains("FadeIn"), ChordName = cell.ChordName,
-            Technique = TabForge.Visualization.VisualNote.TechniqueTag(t)
+            Technique = TechniqueTag.From(t)
         };
         _timeline.Notes.Add(noteEvent);
 

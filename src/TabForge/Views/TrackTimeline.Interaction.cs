@@ -135,7 +135,7 @@ internal sealed partial class TrackTimeline
     private void DrawSectionBlock(DrawingContext dc, SectionHit section, Rect rect, bool isDragged, int activeSectionIndex)
     {
         var color = section.Color;
-        var hovered = section.MarkerIndex == _hoverSectionIndex;
+        var hovered = false;   // hover feedback is drawn in the overlay layer (DrawSectionHover)
         var pressed = section.MarkerIndex == _pressedSectionIndex || isDragged;
         var active = section.MarkerIndex == activeSectionIndex;
         if (isDragged)
@@ -172,6 +172,23 @@ internal sealed partial class TrackTimeline
             if (ft.Width <= maxTextWidth)
                 Draw.DrawText(dc, ft, new Point(rect.X + 5, rect.Y + 2));
             dc.Pop();
+        }
+    }
+
+    private void DrawSectionHover(DrawingContext dc)
+    {
+        if (_hoverSectionIndex < 0 || _sectionDragging || _sectionSettling) return;
+        foreach (var section in SectionHits())
+        {
+            if (section.MarkerIndex != _hoverSectionIndex) continue;
+            var rect = section.Bounds;
+            var color = section.Color;
+            var intensity = SectionGlowIntensity * 0.42;
+            dc.DrawRoundedRectangle(null, Draw.Pen(color, 7, intensity * 0.18), new Rect(rect.X - 1, rect.Y - 1, rect.Width + 2, rect.Height + 2), 4, 4);
+            dc.DrawRoundedRectangle(null, Draw.Pen(color, 2, intensity), rect, 3, 3);
+            dc.DrawRoundedRectangle(Draw.Solid(Colors.White, 0.08), null, rect, 3, 3);
+            dc.DrawRoundedRectangle(null, Draw.Pen(Colors.White, 0.8, 0.24), rect, 3, 3);
+            return;
         }
     }
 
@@ -406,9 +423,9 @@ internal sealed partial class TrackTimeline
         {
             var left = min < marker.MeasureIndex; var right = max > marker.MeasureIndex;
             var where = left && right ? "left or right" : left ? "left" : "right";
-            plain = $"Drag: move {title} {where} into the free bars (same length; its bars stay, a gap is left behind)";
+            plain = $"Ctrl+drag: move only the {title} marker {where} into the free bars (its bars stay, a gap is left behind)";
         }
-        else plain = $"Drag: no free bars next to {title}, so it cannot move on its own";
+        else plain = $"Ctrl+drag: no free bars next to {title} for its marker alone";
         return $"{plain}\nCtrl+drag: move {title} together with its bars (other sections make room)\n" +
                $"Drag an edge: resize · Right-click: section options · {addHint}";
     }
@@ -453,7 +470,7 @@ internal sealed partial class TrackTimeline
         {
             _hoverSectionIndex = sectionIndex;
             ScheduleSectionTip(sectionIndex);
-            InvalidateVisual();
+            RefreshOverlay();
         }
         var hits = SectionHits();
         var hit = sectionIndex >= 0 && sectionIndex < hits.Count && hits[sectionIndex].MarkerIndex == sectionIndex
@@ -475,6 +492,7 @@ internal sealed partial class TrackTimeline
         CloseSectionTip();
         base.OnMouseLeftButtonDown(e);
         var p = e.GetPosition(this);
+        if (IsInAddLane(p)) { e.Handled = true; Dispatcher.BeginInvoke(new Action(RaiseAddLaneClicked)); return; }   // the Add-track lane: not a bar, a track or a clip
         if (!_areaMoving && ClipMouseDown(e, p)) return;
         if (!_areaMoving && SectionEdgeAt(p) is { } edge)
         {
@@ -514,6 +532,9 @@ internal sealed partial class TrackTimeline
         base.OnMouseMove(e);
         var p = e.GetPosition(this);
         UpdateHover(p);
+        var inLane = !_dragging && _resizeMarker is null && IsInAddLane(p);
+        NotifyAddLaneHot(inLane);
+        if (inLane) { Cursor = Cursors.Hand; return; }
         if (!_dragging && _resizeMarker is null && ClipMouseMove(e, p)) return;
         if (_resizeMarker is not null)
         {
@@ -558,7 +579,7 @@ internal sealed partial class TrackTimeline
                 Math.Abs(p.X - _dragStart.X) >= SystemParameters.MinimumHorizontalDragDistance)
             {
                 if (_sectionPressOriginIndex >= hits.Count) return;
-                if (!Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
+                if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
                 {
                     _markerDragging = true;
                     _markerDragHit = hits[_sectionPressOriginIndex];
@@ -706,6 +727,7 @@ internal sealed partial class TrackTimeline
     protected override void OnLostMouseCapture(MouseEventArgs e)
     {
         base.OnLostMouseCapture(e);
+        ClipCaptureLost();
         if (_markerDragging) { EndMarkerDrag(); _dragging = false; _sectionPressOriginIndex = -1; return; }
         if (!_sectionDragging) return;
         _dragging = false;
@@ -719,6 +741,7 @@ internal sealed partial class TrackTimeline
     protected override void OnMouseLeave(MouseEventArgs e)
     {
         base.OnMouseLeave(e);
+        NotifyAddLaneHot(false);
         ClearHover();
         if (!_dragging) UpdateSectionHover(-1);
     }

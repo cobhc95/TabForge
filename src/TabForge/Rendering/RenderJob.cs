@@ -60,12 +60,12 @@ public static class RenderJob
         catch (Exception) { return false; }
     }
 
-    public static async Task<RenderResult> RunAsync(RenderRequest r, IProgress<RenderProgressInfo>? progress, CancellationToken cancel)
+    public static async Task<RenderResult> RunAsync(RenderRequest r, IProgress<RenderProgressInfo>? progress, CancellationToken cancel, AudioEngineClient engine)
     {
-        var engine = AudioEngineClient.Instance;
         var s = r.Settings;
         var mp3 = s.Format == 3;
-        var previousPlayAll = MixerGroups.PlayAllThroughEngine;
+        var mixer = engine.Mixer;
+        var previousPlayAll = mixer.PlayAllThroughEngine;
         var temp = mp3 ? Path.Combine(Path.GetTempPath(), "TabForge-render-" + Guid.NewGuid().ToString("N")[..8]) : "";
         var eventFile = Path.Combine(Path.GetTempPath(), "TabForge-" + Guid.NewGuid().ToString("N")[..8] + ".tfrender");
         var succeeded = false;
@@ -75,7 +75,7 @@ public static class RenderJob
         try
         {
             // Every track through the engine (its General MIDI synth or plug-ins), whatever the playback routing is.
-            MixerGroups.PlayAllThroughEngine = true;
+            mixer.PlayAllThroughEngine = true;
             // The engine's clip sync never waits for the file system (a path still being resolved is left out until it resolves, and a render in
             // progress ignores that late refresh): classify every linked clip now so the render cannot miss one.
             MediaAccess.ResolveNow(r.Project.Tracks.SelectMany(t => t.AudioClips), r.Media);
@@ -160,9 +160,9 @@ public static class RenderJob
         finally
         {
             engine.Rendering = false;
-            MixerGroups.PlayAllThroughEngine = previousPlayAll;
+            mixer.PlayAllThroughEngine = previousPlayAll;
             try { r.Restore?.Invoke(); } catch (Exception) { }
-            try { ResendPrograms(r); } catch (Exception) { }
+            try { ResendPrograms(r, engine); } catch (Exception) { }
             if (!succeeded)
             {
                 // Cancelled or failed: delete only what this job created (its staging files and anything it already published),
@@ -175,9 +175,8 @@ public static class RenderJob
     }
 
     /// <summary>The engine's General MIDI synths were driven by the render: give them their programs, volumes and pans again.</summary>
-    private static void ResendPrograms(RenderRequest r)
+    private static void ResendPrograms(RenderRequest r, AudioEngineClient engine)
     {
-        var engine = AudioEngineClient.Instance;
         if (!engine.IsRunning) return;
         try
         {

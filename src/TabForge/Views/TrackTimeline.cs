@@ -20,6 +20,9 @@ namespace TabForge.Views;
 /// <summary>Custom-drawn timeline: ruler, sections, one precise cell per measure per track.</summary>
 internal sealed partial class TrackTimeline : FrameworkElement
 {
+    /// <summary>The shared view options (track tint): the main window hands in the application's; a timeline on its own keeps private ones.</summary>
+    public TabForge.Visualization.VisualOptions ViewOptions { get; set; } = new();
+
     internal sealed record SectionDragSnapshot(SongProject Project, TimelineGeometry Geometry,
         int StartBar, int EndBar, double VerticalScrollOffset, Color Color, string Title);
     internal sealed record SectionDragPreview(SectionDragSnapshot Snapshot, double X, double InsertionX, double PointerX);

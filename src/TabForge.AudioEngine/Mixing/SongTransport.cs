@@ -4,7 +4,7 @@ using TabForge.Audio.Contracts;
 namespace TabForge.AudioEngine.Mixing;
 
 /// <summary>
-/// RT-08 / RT-04: the song transport as TabForge last described it: position (playing, song seconds at a Stopwatch stamp), tempo and the
+/// The song transport as TabForge last described it: position (playing, song seconds at a Stopwatch stamp), tempo and the
 /// bar map. Written by the engine's command reader thread, read by the audio thread. Each part is one immutable object published with
 /// <see cref="Volatile.Write{T}(ref T, T)"/>, so a reader never sees a torn pair; it lives outside <see cref="MixEngine"/>, so replacing the
 /// mixer (device change) never loses an update that arrived meanwhile.

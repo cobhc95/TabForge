@@ -41,7 +41,7 @@ public partial class MainWindow
         SyncArrangementPlayhead();
         var (ls, le) = GetLoopRange();
         Arrangement.SetLoopRange(ls, le);
-        Arrangement.SetLoopEnabled(ShowLoopOnTimeline);
+        SyncAreaVisuals();   // also the skipped areas: undo, redo and structural edits move them with their bars
     }
 
     private void RefreshTimelineOverviewGeometry() => Arrangement.RefreshTimelineGeometry();
@@ -68,8 +68,7 @@ public partial class MainWindow
 
     private void OnArrangementEdited()
     {
-        _project.IsDirty = true;
-        _project.MarkTimelineChanged();
+        DocumentEdits.MarkChanged(Doc);
         Editor.InvalidateScoreLayout();
         RefreshArrangement();
         RefreshInstrument();
@@ -123,7 +122,7 @@ public partial class MainWindow
         Arrangement.SetLoopEnabled(ShowLoopOnTimeline);
         StatusText.Text = _loop
             ? $"Looping bars {start + 1}-{end + 1}"
-            : $"Loop range set to bars {start + 1}-{end + 1} (F9 to play in loops)";
+            : $"Loop range set to bars {start + 1}-{end + 1} (press {TooltipShortcuts.Append("Loop", "Transport.Loop")} to play in loops)";
     }
 
     /// <summary>Song or track selection changed: keep the mixer, FX windows and audio engine in step.</summary>
@@ -147,15 +146,14 @@ public partial class MainWindow
         _sectionUndoSnapshot = null;
         if (_arrangementController.MoveSection(Doc, from, insertBefore, dragStart).Value is not { } mapping) return;   // one undo step, one dirty change, one timeline invalidation
         _selection.Remap(mapping, MaxMeasures());   // the selected range follows its bars
+        SyncAreaVisuals();   // the skipped areas moved with them (in the controller)
         if (selectedBar >= 0 && selectedBar < mapping.Length)
             Editor.SetPosition(mapping[selectedBar], Editor.SelectedCell, Editor.SelectedString, seekPlayback: false);
         if (Playback.ApplySectionMove(mapping))   // the document's remap and playhead bar; the views follow below
         {
             Editor.PlaybackBarRemap = _playbackBarRemap;
             var engine = Playback.Engine;
-            var project = _project;
-            var playbackRemap = _playbackBarRemap!;
-            _ = Task.Run(() => engine.RefreshArrangement(project, playbackRemap));
+            _ = engine.RefreshArrangementInBackground(_project, _playbackBarRemap!);   // copies the song here; the pool thread compiles the copy
         }
         Editor.InvalidateScoreLayout();
         Arrangement.RefreshSectionOrder(Editor.SelectedMeasure, Math.Max(0, TrackMixerGrid.SelectedIndex));
@@ -167,6 +165,7 @@ public partial class MainWindow
             Playhead.SetGeometry(Editor.PlayheadGeometry());
             Playhead.SetDurationGeometries(Editor.PlaybackDurationGeometries());
         }
+        SyncAudioEngine();   // clips that moved with the section
         StatusText.Text = "Section moved";
     }
 
@@ -265,10 +264,10 @@ public partial class MainWindow
             switch (command)
             {
                 case TimelineCommand.TimelineSettings: OpenSettings(SettingsCatalog.Timeline, TimelineMenus.TimelineSettingsRow); break;
-                case TimelineCommand.CopySelection: CopyArea(); break;
-                case TimelineCommand.CutSelection: CopyArea(); DeleteArea("Cut"); break;
-                case TimelineCommand.PasteSelection: PasteAreaAt(s); break;
-                case TimelineCommand.DeleteSelection: DeleteArea("Deleted"); break;
+                case TimelineCommand.CopySelection: _sections.CopyArea(Doc, s, e); break;
+                case TimelineCommand.CutSelection: _sections.CopyArea(Doc, s, e); _sections.DeleteArea(Doc, s, e, "Cut"); break;
+                case TimelineCommand.PasteSelection: _sections.PasteAreaAt(Doc, s); break;
+                case TimelineCommand.DeleteSelection: _sections.DeleteArea(Doc, s, e, "Deleted"); break;
                 case TimelineCommand.LoopSelection: SetLoopActive(!_loop); break;
                 case TimelineCommand.MoveSelection: Arrangement.BeginAreaMove(s, e); break;
                 case TimelineCommand.SkipSelection:
@@ -281,54 +280,6 @@ public partial class MainWindow
                 case TimelineCommand.ClearSelection: ClearLoopAreaKeepLoop(); break;
             }
         });
-    }
-
-    private void CopyArea()
-    {
-        var (s, e) = (_loopStartBar, _loopEndBar);
-        CopyClipToClipboard(() => TimelineClips.CopyArea(_project, s, e), $"Copied bars {s + 1}-{e + 1}");
-    }
-
-    private void DeleteArea(string verb)
-    {
-        var (s, e) = (_loopStartBar, _loopEndBar);
-        if (_arrangementController.DeleteBars(Doc, s, e).Value is not { } map) { ShowLastSectionWarning(); return; }
-        if (_loop) SetLoopActive(false);
-        _selection.Clear(SelectionOrigin.Command);   // score and timeline drop the deleted range together
-        _skipRanges.Clear();
-        SyncAreaVisuals();
-        Editor.SetPosition(Math.Clamp(s, 0, Math.Max(0, MaxMeasures() - 1)), 0, Editor.SelectedString, seekPlayback: false);
-        FinishSectionStructureEdit($"{verb} bars {s + 1}-{e + 1}", map, Math.Min(s, MaxMeasures() - 1));
-    }
-
-    private void PasteAreaAt(int at)
-    {
-        if (ClipboardService.Shared.TryGetClip(out var error) is not { } clip) { StatusText.Text = error ?? ClipboardService.NotTabForgeNotesMessage; return; }
-        TimelinePasteResult? answered = null;
-        var paste = DocumentEdits.Run<TimelinePasteResult>(Doc, project =>   // one undo step for the whole paste
-        {
-            answered = TimelineClips.PasteBars(project, clip, at, Math.Max(0, TrackMixerGrid.SelectedIndex), TimelinePasteKind.InsertBars,
-                _settings.Editing, new WpfPasteQuestionAsker(this));
-            return answered.Changed && answered.OldToNewBar is not null ? answered : null;
-        });
-        SaveSettings();   // a "Remember my choice" answer
-        if (paste.Value is not { } result) { StatusText.Text = answered?.Message ?? ""; return; }
-        var count = result.BarsPasted;
-        FinishSectionStructureEdit(result.Message, result.OldToNewBar!);
-        ApplyLoopRange(at, at + count - 1);   // after the remap: these are already new bar numbers
-    }
-
-    private void MoveAreaTo(int insertBefore)
-    {
-        var (s, e) = (_loopStartBar, _loopEndBar);
-        if (insertBefore < 0 || (insertBefore >= s && insertBefore <= e + 1)) { StatusText.Text = "Move cancelled"; return; }
-        var count = e - s + 1;
-        if (_arrangementController.MoveBars(Doc, s, e, insertBefore).Value is not { } moved) return;
-        var (at, map) = (moved.At, moved.Map);
-        _skipRanges.Clear();
-        FinishSectionStructureEdit($"Moved bars {s + 1}-{e + 1} to bar {at + 1}", map);
-        ApplyLoopRange(at, at + count - 1);   // after the remap: these are already new bar numbers
-        SyncAreaVisuals();
     }
 
     /// <summary>
@@ -345,22 +296,23 @@ public partial class MainWindow
 
     private void ShowArrangementContextMenu(int bar, int trackIndex, bool fromKeyboard = false)
     {
-        if (trackIndex >= 0 && trackIndex < _project.Tracks.Count)
-            TrackMixerGrid.SelectedIndex = trackIndex;
-        if (MaxMeasures() > 0)
+        using var slowTrace = TabForge.Views.SlowTrace.Measure("timeline menu build+open", 0);
+        var hasTrack = trackIndex >= 0 && trackIndex < _project.Tracks.Count;
+        bar = MaxMeasures() > 0 ? Math.Clamp(bar, 0, MaxMeasures() - 1) : -1;
+        // The menu opens first; the track switch and caret placement (score relayout) follow once it is on screen.
+        // Placing the caret never seeks or rebuilds the engine (notably for the section-lock menu item).
+        var caretBar = bar;
+        Dispatcher.BeginInvoke(DispatcherPriority.ContextIdle, () =>
         {
-            bar = Math.Clamp(bar, 0, MaxMeasures() - 1);
-            // Opening a timeline context menu only places the edit caret; it must never seek or
-            // rebuild the engine as a side effect (notably for the section-lock menu item).
-            Editor.SetBar(bar, seekPlayback: false);
-        }
-        else bar = -1;
+            if (hasTrack && TrackMixerGrid.SelectedIndex != trackIndex) TrackMixerGrid.SelectedIndex = trackIndex;
+            if (caretBar >= 0) Editor.SetBar(caretBar, seekPlayback: false);
+        });
 
         // Inside the selected bars: the selection menu only. Outside it: the single-bar menu, and the selection stays.
         Point? anchor = fromKeyboard && bar >= 0 ? Arrangement.TimelineBarAnchor(bar) : null;
         if (AreaContains(bar)) { OpenContextMenu(BuildSelectionMenu(), Arrangement, anchor, fromKeyboard); return; }
 
-        var selectedTrack = SelectedTrack;
+        var selectedTrack = hasTrack ? _project.Tracks[trackIndex] : SelectedTrack;
         var hasBar = bar >= 0;
         var section = hasBar ? _arrangementController.SectionAt(_project, bar) : null;
         var barsClip = ClipboardService.Shared.TryGetClip(out _);
@@ -373,16 +325,16 @@ public partial class MainWindow
             switch (command)
             {
                 case TimelineCommand.TimelineSettings: OpenSettings(SettingsCatalog.Timeline, TimelineMenus.TimelineSettingsRow); break;
-                case TimelineCommand.CopyBar: CopyArrangementBar(bar, selectedTrack, allTracks: false); break;
-                case TimelineCommand.CopyBarAllTracks: CopyArrangementBar(bar, selectedTrack, allTracks: true); break;
-                case TimelineCommand.CopySection: CopyArrangementSection(bar); break;
-                case TimelineCommand.PasteBar: PasteArrangementBar(bar, selectedTrack, allTracks: false); break;
-                case TimelineCommand.PasteBarAllTracks: PasteArrangementBar(bar, selectedTrack, allTracks: true); break;
-                case TimelineCommand.PasteSectionHere: PasteArrangementSection(bar); break;
-                case TimelineCommand.InsertBarBefore: InsertArrangementBar(bar); break;
-                case TimelineCommand.InsertBarAfter: InsertArrangementBar(bar + 1); break;
-                case TimelineCommand.DeleteBar: DeleteArrangementBar(bar, selectedTrack, allTracks: false); break;
-                case TimelineCommand.DeleteBarAllTracks: DeleteArrangementBar(bar, selectedTrack, allTracks: true); break;
+                case TimelineCommand.CopyBar: _sections.CopyBar(Doc, bar, selectedTrack, allTracks: false); break;
+                case TimelineCommand.CopyBarAllTracks: _sections.CopyBar(Doc, bar, selectedTrack, allTracks: true); break;
+                case TimelineCommand.CopySection: _sections.CopySectionAt(Doc, bar); break;
+                case TimelineCommand.PasteBar: _sections.PasteBar(Doc, bar, selectedTrack, allTracks: false); break;
+                case TimelineCommand.PasteBarAllTracks: _sections.PasteBar(Doc, bar, selectedTrack, allTracks: true); break;
+                case TimelineCommand.PasteSectionHere: _sections.PasteSectionAt(Doc, bar); break;
+                case TimelineCommand.InsertBarBefore: _sections.InsertBar(Doc, bar); break;
+                case TimelineCommand.InsertBarAfter: _sections.InsertBar(Doc, bar + 1); break;
+                case TimelineCommand.DeleteBar: _sections.DeleteBar(Doc, bar, selectedTrack, allTracks: false); break;
+                case TimelineCommand.DeleteBarAllTracks: _sections.DeleteBar(Doc, bar, selectedTrack, allTracks: true); break;
                 case TimelineCommand.ToggleSectionLockAtBar when section is not null:
                     DocumentEdits.Run(Doc, _ => { section.LockPosition = !section.LockPosition; return true; });
                     RefreshAfterEdit(EditRefresh.Arrangement | EditRefresh.Markers);
@@ -402,7 +354,7 @@ public partial class MainWindow
             PlacementTarget = Arrangement,
             Placement = PlacementMode.MousePoint
         };
-        var add = new MenuItem { Header = $"Add section at bar {bar + 1}", InputGestureText = HotkeyCatalog.Display(HotkeyCatalog.GestureFor(_settings.Hotkeys, "Section.Add")), Style = (Style)FindResource(typeof(MenuItem)) };
+        var add = new MenuItem { Header = $"Add section at bar {bar + 1}", InputGestureText = HotkeyCatalog.DisplayAll(_settings.Hotkeys, "Section.Add"), Style = (Style)FindResource(typeof(MenuItem)) };
         add.Click += (_, _) => AddSectionAt(bar);
         menu.Items.Add(add);
         menu.IsOpen = true;
@@ -424,11 +376,11 @@ public partial class MainWindow
             {
                 case TimelineCommand.SectionSettings: OpenSettings(SettingsCatalog.Timeline, TimelineMenus.SectionSettingsRow); break;
                 case TimelineCommand.AddSectionHere when addAt is int at: AddSectionAt(at); break;
-                case TimelineCommand.CopySectionMenu: CopySectionToClipboard(marker); break;
-                case TimelineCommand.CutSection: CutArrangementSection(marker); break;
-                case TimelineCommand.PasteSectionAfter: PasteArrangementSectionAfter(marker); break;
-                case TimelineCommand.DuplicateSection: DuplicateArrangementSection(marker); break;
-                case TimelineCommand.DeleteSection: DeleteSectionContent(marker, confirm: true); break;
+                case TimelineCommand.CopySectionMenu: _sections.CopySection(Doc, marker); break;
+                case TimelineCommand.CutSection: _sections.CutSection(Doc, marker); break;
+                case TimelineCommand.PasteSectionAfter: _sections.PasteSectionAfter(Doc, marker); break;
+                case TimelineCommand.DuplicateSection: _sections.DuplicateSection(Doc, marker); break;
+                case TimelineCommand.DeleteSection: _sections.DeleteSection(Doc, marker, confirm: true); break;
                 case TimelineCommand.LoopSection:
                     if (sectionLooped) { SetLoopActive(false); break; } // ticked: clicking again turns the loop off
                     SetLoopActive(true);
@@ -449,200 +401,12 @@ public partial class MainWindow
     {
         // Preselect the section's current colour: its own colour if valid, otherwise the colour the timeline shows.
         var currentHex = Visualization.ColourText.TryParse(marker.ColorHex, out _) ? marker.ColorHex
-            : SectionColours.DisplayFor(marker) is { } shown ? $"#{shown.R:X2}{shown.G:X2}{shown.B:X2}" : "#2E74B5";
+            : SectionColours.DisplayFor(marker) is { } shown ? Visualization.ColourText.Hex(shown) : "#2E74B5";
         var edited = GpDialogs.Marker(marker.Title, currentHex, "Save");
         if (edited is null || (string.Equals(edited.Value.title, marker.Title, StringComparison.Ordinal) &&
                                string.Equals(edited.Value.color, marker.ColorHex, StringComparison.OrdinalIgnoreCase))) return;
         DocumentEdits.Run(Doc, _ => { marker.Title = edited.Value.title; marker.ColorHex = edited.Value.color; return true; });
         RefreshAfterEdit(EditRefresh.Score | EditRefresh.Arrangement | EditRefresh.Markers);
-    }
-
-    private void CopyArrangementBar(int bar, TrackModel? track, bool allTracks)
-    {
-        var trackIndex = track is null ? -1 : _project.Tracks.IndexOf(track);
-        if (!allTracks && track is null) return;
-        CopyClipToClipboard(() => TimelineClips.CopyBar(_project, bar, trackIndex, allTracks),
-            allTracks ? $"Copied bar {bar + 1} from all tracks" : $"Copied bar {bar + 1} from {track!.Name}");
-    }
-
-    /// <summary>Puts a Bars clip on the shared score clipboard (the same one the score editor pastes from) and reports it.</summary>
-    private void CopyClipToClipboard(Func<ScoreClip> capture, string status)
-    {
-        try
-        {
-            var written = ClipboardService.Shared.Copy(capture());
-            StatusText.Text = written ? status : status + " (clipboard busy: paste works inside TabForge only)";
-        }
-        catch (System.IO.InvalidDataException ex) { StatusText.Text = ex.Message; }
-    }
-
-    private static string WithNote(string status, string note) => note.Length > 0 ? $"{status} ({note})" : status;
-
-    private void CopyArrangementSection(int bar)
-    {
-        var marker = _arrangementController.SectionAt(_project, bar);
-        if (marker is null) return;
-        CopySectionToClipboard(marker);
-    }
-
-    private void CopySectionToClipboard(MarkerModel marker)
-    {
-        try
-        {
-            if (_arrangementController.CopySection(_project, marker, ClipboardService.Shared, out var written) is null) return;
-            StatusText.Text = written ? $"Copied section '{marker.Title}'" : $"Copied section '{marker.Title}' (clipboard busy: paste works inside TabForge only)";
-        }
-        catch (System.IO.InvalidDataException ex) { StatusText.Text = ex.Message; }
-    }
-
-    private void CutArrangementSection(MarkerModel marker)
-    {
-        if (!_arrangementController.CanDeleteSection(_project, marker, out _))
-        {
-            ShowLastSectionWarning();
-            return;
-        }
-        CopySectionToClipboard(marker);
-        DeleteSectionContent(marker, confirm: false, status: $"Cut section '{marker.Title}'");
-    }
-
-    private void DuplicateArrangementSection(MarkerModel marker)
-    {
-        var snapshot = _arrangementController.CaptureSectionSnapshot(_project, marker);
-        if (snapshot is null || !_arrangementController.TryGetSectionBounds(_project, marker, out _, out var end)) return;
-        InsertSectionSnapshot(end, snapshot,
-            $"Duplicated section '{marker.Title}'");
-    }
-
-    private void PasteArrangementSectionAfter(MarkerModel marker)
-    {
-        if (!_arrangementController.TryGetSectionBounds(_project, marker, out _, out var end)) return;
-        PasteClipAsSection(end);
-    }
-
-    private void InsertSectionSnapshot(int at, SectionClipboardSnapshot snapshot, string status)
-    {
-        at = Math.Clamp(at, 0, MaxMeasures());
-        if (_arrangementController.InsertSection(Doc, at, snapshot).Value is not { } mapping) return;
-        Editor.SetPosition(Math.Clamp(at, 0, Math.Max(0, MaxMeasures() - 1)), 0, Editor.SelectedString,
-            seekPlayback: false);
-        FinishSectionStructureEdit(status, mapping);
-    }
-
-    private void DeleteSectionContent(MarkerModel marker, bool confirm, string? status = null)
-    {
-        if (!_arrangementController.CanDeleteSection(_project, marker, out var start))
-        {
-            ShowLastSectionWarning();
-            return;
-        }
-        if (confirm && _settings.General.ConfirmDeleteSection && MessageBox.Show(this,
-                $"Delete the '{marker.Title}' section and its bars and notes from every track? Undo can restore them.",
-                "Delete Section", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes)
-            return;
-
-        var selectedBar = Editor.SelectedMeasure;
-        var selectedCell = Editor.SelectedCell;
-        var selectedString = Editor.SelectedString;
-        if (_arrangementController.DeleteSection(Doc, marker).Value is not { } removal) return;
-        var mappedSelection = selectedBar >= 0 && selectedBar < removal.OldToNewBar.Length
-            ? removal.OldToNewBar[selectedBar]
-            : -1;
-        var newSelection = mappedSelection >= 0 ? mappedSelection : removal.ContinueAtBar;
-        Editor.SetPosition(Math.Clamp(newSelection, 0, Math.Max(0, MaxMeasures() - 1)), selectedCell,
-            selectedString, seekPlayback: false);
-        FinishSectionStructureEdit(status ?? $"Deleted section '{marker.Title}' and its bars from every track (Undo restores them)", removal.OldToNewBar,
-            removal.ContinueAtBar);
-    }
-
-    private void ShowLastSectionWarning() => MessageBox.Show(this,
-        "The last remaining bar cannot be removed from a song.", "Section not removed",
-        MessageBoxButton.OK, MessageBoxImage.Information);
-
-    private void PasteArrangementBar(int bar, TrackModel? track, bool allTracks)
-    {
-        var trackIndex = track is null ? -1 : _project.Tracks.IndexOf(track);
-        if (ClipboardService.Shared.TryGetClip(out var error) is not { } clip) { StatusText.Text = error ?? ClipboardService.NotTabForgeNotesMessage; return; }
-        TimelinePasteResult? answered = null;
-        var paste = DocumentEdits.Run<TimelinePasteResult>(Doc, project =>   // one undo step per paste
-        {
-            answered = TimelineClips.PasteBars(project, clip, bar, trackIndex, allTracks ? TimelinePasteKind.OverwriteAllTracks : TimelinePasteKind.OverwriteThisTrack,
-                _settings.Editing, new WpfPasteQuestionAsker(this));
-            return answered.Changed ? answered : null;
-        });
-        SaveSettings();   // a "Remember my choice" answer
-        if (paste.Value is not { } result) { StatusText.Text = answered?.Message ?? ""; return; }
-        if (result.OldToNewBar is { } map)   // answered "Insert before/after": structural, like the area paste
-        {
-            FinishSectionStructureEdit(result.Message, map);
-            return;
-        }
-        FinishArrangementEdit(result.Message);
-    }
-
-    private void PasteArrangementSection(int bar)
-    {
-        PasteClipAsSection(Math.Clamp(bar, 0, MaxMeasures()));
-    }
-
-    /// <summary>
-    /// Inserts the shared Bars clip before bar <paramref name="at"/> on all tracks: a copied section comes back with its title and
-    /// colour; bars copied in the score or as an area come in as plain bars (no section marker).
-    /// </summary>
-    private void PasteClipAsSection(int at)
-    {
-        if (ClipboardService.Shared.TryGetClip(out var error) is not { } clip) { StatusText.Text = error ?? ClipboardService.NotTabForgeNotesMessage; return; }
-        if (!TimelineClips.CanPasteOnTimeline(clip)) { StatusText.Text = "The timeline pastes whole bars only; paste beats in the score."; return; }
-        var tracks = TimelineClips.BarsPerTrack(clip, _project, Math.Max(0, TrackMixerGrid.SelectedIndex), out var note);
-        var marker = _arrangementController.SectionMarkerFor(clip);
-        InsertSectionSnapshot(at, new SectionClipboardSnapshot(tracks, marker),
-            WithNote(marker is not null ? $"Pasted section '{marker.Title}'" : $"Pasted {clip.BarCount} bar(s) at bar {at + 1}", note));
-    }
-
-    private void InsertArrangementBar(int at)
-    {
-        var oldBars = MaxMeasures();
-        at = _arrangementController.InsertBar(Doc, at, at == 0 ? 0 : at - 1, moveMarkers: true).Value!.At;
-        if (MaxMeasures() > oldBars) _selection.Remap(SelectionModel.InsertMap(oldBars, at), MaxMeasures());
-        Editor.SetBar(Math.Min(at, Math.Max(0, MaxMeasures() - 1)));
-        FinishArrangementEdit($"Added bar {at + 1}");
-    }
-
-    private void DeleteArrangementBar(int bar, TrackModel? track, bool allTracks)
-    {
-        if (bar < 0) return;
-        if (allTracks)
-        {
-            if (MaxMeasures() <= 1) return;
-            if (_settings.Editing.ConfirmDeleteBar && MessageBox.Show(this,
-                    $"Delete bar {bar + 1} from every track?", "Delete bar", MessageBoxButton.YesNo,
-                    MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes) return;
-            var oldBars = MaxMeasures();
-            if (!_arrangementController.DeleteBar(Doc, bar, -1, allTracks: true, moveMarkers: true).Changed) return;
-            if (MaxMeasures() < oldBars) _selection.Remap(SelectionModel.RemoveMap(oldBars, bar, bar), MaxMeasures());
-        }
-        else
-        {
-            if (track is null || track.Measures.Count <= 1 || bar >= track.Measures.Count) return;
-            if (_settings.Editing.ConfirmDeleteBar && MessageBox.Show(this,
-                    $"Delete bar {bar + 1} from {track.Name}?", "Delete bar", MessageBoxButton.YesNo,
-                    MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes) return;
-            var trackIndex = _project.Tracks.IndexOf(track);
-            if (!_arrangementController.DeleteBar(Doc, bar, trackIndex, allTracks: false, moveMarkers: false).Changed) return;
-        }
-        Editor.SetBar(Math.Clamp(bar, 0, Math.Max(0, MaxMeasures() - 1)));
-        FinishArrangementEdit($"Deleted bar {bar + 1}");
-    }
-
-    /// <summary>The view's half of an arrangement edit. The model half (undo step, dirty flag, timeline invalidation) was done once by <see cref="DocumentEdits"/>; nothing here marks the song again.</summary>
-    private void FinishArrangementEdit(string status)
-    {
-        Editor.InvalidateScoreLayout();
-        RefreshArrangement();
-        RefreshTabs();
-        UpdateTitle();
-        _midi.Rebuild(_project);
-        StatusText.Text = status;
     }
 
     /// <summary>The view's half of a structural edit (see <see cref="FinishArrangementEdit"/>: the song was already marked changed, once, by the edit itself).</summary>
@@ -670,5 +434,50 @@ public partial class MainWindow
             _midi.Rebuild(_project);
         }
         StatusText.Text = status;
+    }
+
+    /// <summary>The window's side of <see cref="SectionEditFlow"/>.</summary>
+    private sealed class SectionHost : ISectionEditHost
+    {
+        private readonly MainWindow _window;
+
+        public SectionHost(MainWindow window) => _window = window;
+
+        public AppSettings Settings => _window._settings;
+        public void SaveSettings() => _window.SaveSettings();
+        public bool IsShown(DocumentSession document) => ReferenceEquals(document, _window.Doc);
+        public ClipboardService Clipboard => ClipboardService.Shared;
+        public IPasteQuestionAsker PasteQuestions => new WpfPasteQuestionAsker(_window);
+        public void SetStatus(string text) => _window.StatusText.Text = text;
+        public int SelectedTrackIndex => Math.Max(0, _window.TrackMixerGrid.SelectedIndex);
+        public EditorCaret Caret => new(_window.Editor.SelectedMeasure, _window.Editor.SelectedCell, _window.Editor.SelectedString);
+        public void SetCaret(int bar, int cell, int stringIndex) => _window.Editor.SetPosition(bar, cell, stringIndex, seekPlayback: false);
+        public void SelectBar(int bar) => _window.Editor.SetBar(bar);
+        public void RemapSelection(int[] oldToNewBar) => _window._selection.Remap(oldToNewBar, _window.MaxMeasures());
+        public void ClearSelection() => _window._selection.Clear(SelectionOrigin.Command);
+        public void SelectBars(int start, int end) => _window.ApplyLoopRange(start, end);
+        public void EndLoop() { if (_window._loop) _window.SetLoopActive(false); }
+        public void SyncAreaVisuals() => _window.SyncAreaVisuals();
+        public void SyncAudioEngine() => _window.SyncAudioEngine();
+
+        public void FinishStructureEdit(string status, int[] oldToNewBar, int? continueAtBar) => _window.FinishSectionStructureEdit(status, oldToNewBar, continueAtBar);
+
+        /// <summary>The view's half of an arrangement edit. The model half (undo step, dirty flag, timeline invalidation) was done once by <see cref="DocumentEdits"/>; nothing here marks the song again.</summary>
+        public void FinishBarEdit(string status)
+        {
+            _window.Editor.InvalidateScoreLayout();
+            _window.RefreshArrangement();
+            _window.RefreshTabs();
+            _window.UpdateTitle();
+            _window._midi.Rebuild(_window._project);
+            _window.StatusText.Text = status;
+        }
+
+        public bool ConfirmWarning(string text, string caption) =>
+            MessageBox.Show(_window, text, caption, MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) == MessageBoxResult.Yes;
+
+        public void ShowLastBarWarning() => MessageBox.Show(_window,
+            "The last remaining bar cannot be removed from a song.", "Section not removed",
+            MessageBoxButton.OK, MessageBoxImage.Information);
     }
 }

@@ -3,6 +3,9 @@ using System.Text.Json.Serialization;
 
 namespace TabForge.Models;
 
+/// <summary>Which notation a score editor shows: tablature with the staff, tablature only, or the staff only.</summary>
+public enum NotationMode { TabAndStaff, TabOnly, StaffOnly }
+
 /// <summary>Beaming override for a beat (stored by name in .tforge files).</summary>
 [JsonConverter(typeof(TolerantEnumConverter<BeamMode>))]
 public enum BeamMode { Auto, Force, Break }

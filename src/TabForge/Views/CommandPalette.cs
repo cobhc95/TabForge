@@ -42,7 +42,7 @@ internal sealed class CommandPalette : Window
         SetResourceReference(ForegroundProperty, "TextBrush");
 
         _all = HotkeyCatalog.All
-            .Select(a => new Entry(a.Id, a.Category + ": " + a.Name, HotkeyCatalog.Display(HotkeyCatalog.GestureFor(hotkeys, a.Id)), a.Description))
+            .Select(a => new Entry(a.Id, a.Category + ": " + a.Name, HotkeyCatalog.DisplayAll(hotkeys, a.Id), a.Description))
             .ToList();
 
         AutomationProperties.SetName(_query, "Search commands");

@@ -2,6 +2,9 @@ using TabForge.Models;
 
 namespace TabForge.Services;
 
+// Owns: the per-track setup rules shared by Track properties, Add track and the instrument button.
+// Does not own: the dialogs and the song model edits.
+// Tests: TestInstrumentChoiceStrings, TestCapoRepitchesNotes.
 /// <summary>
 /// Per-track setup rules shared by the Track properties / Add track window and the track row's Instrument button:
 /// which kind an instrument belongs to, the default strings of each kind, and the capo.
@@ -45,7 +48,7 @@ public static class TrackSetup
     /// </summary>
     public static bool AdoptInstrumentKind(TrackModel track, string instrument, int midiChannel)
     {
-        if (track.Kind == TrackKind.Drums || HasNotes(track)) return false;
+        if (track.Kind is TrackKind.Drums or TrackKind.Audio || HasNotes(track)) return false;
         var kind = KindOf(instrument, midiChannel, track.Kind);
         if (kind == track.Kind || DefaultStrings(kind) is not { } strings) return false;
         track.Kind = kind;

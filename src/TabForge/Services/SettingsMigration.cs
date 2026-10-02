@@ -5,6 +5,9 @@ using TabForge.Documents;
 
 namespace TabForge.Services;
 
+// Owns: normalising settings files written by older versions.
+// Does not own: validation of values and file access.
+// Tests: TestDocumentContextLeftovers, TestTrimMerges.
 /// <summary>Normalizes current and legacy settings documents without discarding unknown supported fields.</summary>
 public static class SettingsMigration
 {
@@ -21,6 +24,8 @@ public static class SettingsMigration
         settings.Hotkeys ??= new HotkeySettings();
         settings.Hotkeys.Bindings ??= new Dictionary<string, string>();
         settings.Hotkeys.DisabledActions ??= new List<string>();
+        settings.Hotkeys.Bindings2 ??= new Dictionary<string, string>();
+        settings.Hotkeys.DisabledActions2 ??= new List<string>();
         settings.Appearance.RecentColours ??= new List<string>();
     }
 
@@ -41,6 +46,13 @@ public static class SettingsMigration
                 foreach (var track in plugins.StartupTracks ?? new()) TabForge.Plugins.ChainStateStore.Externalise(track.Plugins ?? new());
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { /* keep inline; retried next load */ }
+        }
+
+        // Files written before the second hotkey slot load as Hotkey 1 only.
+        if (!Has(Find(root, "Hotkeys"), "Bindings2") && !Has(Find(root, "Hotkeys"), "DisabledActions2"))
+        {
+            DisableSecondSlotWhereFirstWasChanged(settings.Hotkeys, HotkeyCatalog.All);
+            KeepUserKeysOverNewDefaults(settings.Hotkeys, HotkeyCatalog.All);
         }
 
         if (!Has(root, "Editing"))
@@ -151,6 +163,39 @@ public static class SettingsMigration
     private static bool IsColour(string value)
     {
         return SettingsColor.IsValid(value);
+    }
+
+    /// <summary>
+    /// An old file that customised or cleared Hotkey 1 of an action with a default Hotkey 2 gets that Hotkey 2 cleared,
+    /// so a default never appears behind the user's back.
+    /// </summary>
+    internal static void DisableSecondSlotWhereFirstWasChanged(HotkeySettings hotkeys, IEnumerable<HotkeyAction> actions)
+    {
+        foreach (var action in actions)
+        {
+            if (string.IsNullOrWhiteSpace(action.DefaultGesture2)) continue;
+            if (hotkeys.IsDisabled(action.Id) || !string.IsNullOrWhiteSpace(hotkeys[action.Id]))
+                hotkeys.Disable(action.Id, 2);
+        }
+    }
+
+    /// <summary>
+    /// An old file's own binding is never overridden by a default added later: an untouched slot whose default key is a key
+    /// the file already binds to another command is cleared. Only commands with a default Hotkey 2 are checked (their keys are the new ones).
+    /// </summary>
+    internal static void KeepUserKeysOverNewDefaults(HotkeySettings hotkeys, IEnumerable<HotkeyAction> actions)
+    {
+        var taken = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var pair in hotkeys.Bindings.Concat(hotkeys.Bindings2))
+            if (!string.IsNullOrWhiteSpace(pair.Value)) taken[HotkeyCatalog.Canonical(pair.Value)] = pair.Key;
+        foreach (var action in actions)
+            foreach (var slot in string.IsNullOrWhiteSpace(action.DefaultGesture2) ? Array.Empty<int>() : new[] { 1, 2 })   // only commands that have a default Hotkey 2: their keys are the new ones
+            {
+                var gesture = HotkeyCatalog.DefaultFor(action, slot);
+                if (string.IsNullOrWhiteSpace(gesture) || hotkeys.IsDisabled(action.Id, slot) || !string.IsNullOrWhiteSpace(hotkeys.Get(action.Id, slot))) continue;
+                if (taken.TryGetValue(HotkeyCatalog.Canonical(gesture), out var owner) && !owner.Equals(action.Id, StringComparison.OrdinalIgnoreCase))
+                    hotkeys.Disable(action.Id, slot);
+            }
     }
 
     private static JsonElement Find(JsonElement element, string name)

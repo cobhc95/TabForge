@@ -4,6 +4,9 @@ using TabForge.Presets;
 
 namespace TabForge.Services;
 
+// Owns: the score templates the user saves and lists.
+// Does not own: creating a new score from them (DocumentController).
+// Tests: TestTemplateKeepsSetupOnly, TestUserTemplatesAndFaultedChain.
 /// <summary>
 /// Score templates saved by the user (File > Save as template). They live as .tforge files in
 /// %APPDATA%\TabForge\Templates and appear in File > New from template after the built-in ones.
@@ -68,7 +71,7 @@ public static class UserTemplates
     /// </summary>
     public static void StripToSetup(SongProject project)
     {
-        var first = project.Tracks.Count > 0 && project.Tracks[0].Measures.Count > 0 ? project.Tracks[0].Measures[0] : null;
+        var first = project.MasterBarTrack is { Measures.Count: > 0 } master ? master.Measures[0] : null;
         if (first?.TimeSigNum is { } num && first.TimeSigDenom is { } denom)
         {
             project.TimeSignatureNumerator = num;

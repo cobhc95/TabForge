@@ -61,6 +61,9 @@ public interface IPasteQuestionAsker
 /// <summary>One choice of a question; <see cref="Id"/> is the enum member name (also what the setting stores).</summary>
 public sealed record PasteOption(string Id, string Label);
 
+// Owns: the paste questions, their options and the recommended answers.
+// Does not own: asking them (dialogs) and the paste itself.
+// Tests: TestPasteSpecial, TestPasteOptionsDialog.
 /// <summary>Wording, options and settings mapping of the paste questions. No WPF here, so it is testable headless.</summary>
 public static class PasteQuestionInfo
 {

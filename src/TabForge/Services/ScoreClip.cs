@@ -17,6 +17,9 @@ public enum ScoreClipKind
     Beats
 }
 
+// Owns: the versioned score clipboard format and its untrusted-input parsing.
+// Does not own: the clipboard access (ClipboardService) and pasting.
+// Tests: TestScoreClipJson, TestScoreClipRejectsUntrustedInput.
 /// <summary>
 /// The score clipboard format (design 3.8), versioned and JSON-serialisable. A clip read from the clipboard is untrusted: only
 /// <see cref="Parse(string)"/> / <see cref="TryParse"/> create one from text, and they validate it fully. Lyrics are never carried.

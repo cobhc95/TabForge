@@ -6,6 +6,9 @@ using TabForge.Models;
 namespace TabForge.Services;
 
 // standard ASCII tab exporter.
+// Owns: rendering a song as plain-text tablature.
+// Does not own: the song model and the file dialogs.
+// Tests: TestAsciiExport.
 public static class AsciiExportService
 {
     public static void Export(SongProject project, string path)
@@ -16,7 +19,7 @@ public static class AsciiExportService
         if (!string.IsNullOrWhiteSpace(project.Album)) sb.AppendLine($"Album: {project.Album}");
         sb.AppendLine($"Tempo: {project.Tempo}  Time: {project.TimeSignatureNumerator}/{project.TimeSignatureDenominator}");
         sb.AppendLine(new string('-', 64));
-        foreach (var track in project.Tracks)
+        foreach (var track in project.NotationTracks)
         {
             sb.AppendLine();
             sb.AppendLine($"[{track.Name}] ({track.Kind}, capo {track.Capo}, program {track.MidiProgram})");

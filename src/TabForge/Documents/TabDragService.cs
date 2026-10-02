@@ -2,6 +2,9 @@ using System.Windows;
 
 namespace TabForge.Documents;
 
+// Owns: process-wide state of a tab drag in progress.
+// Does not own: the tab strip drawing and the drop handling of other windows.
+// Tests: TestDocumentOperations.
 /// <summary>
 /// Process-wide state for a tab drag in progress. The live <see cref="DocumentSession"/> is carried
 /// here so an in-process drop moves the real document (undo history included) instead of round-tripping

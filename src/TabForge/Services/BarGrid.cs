@@ -28,6 +28,9 @@ public sealed record PlacementResult(bool Ok, string? Error, int FirstBar, int L
     public static PlacementResult Refused(string error) => new(false, error, -1, -1, 0, 0, 0);
 }
 
+// Owns: the paste placement engine: absolute slot positions, replace and insert placement, bar-line splitting and ties.
+// Does not own: clipboard capture (ClipboardService) and the editor's selection.
+// Tests: TestBarGridPlacement, TestPasteCommands.
 /// <summary>
 /// Copy/paste placement engine (design C2): absolute slot positions, beat placement in Replace/Insert mode with bar-line
 /// splitting and ties, tuplet-straddle refusal, bars appended at the end, and the bar-level Overwrite/Insert operations.
@@ -228,7 +231,6 @@ public static class BarGrid
             var cells = WriteBar(list, SlotsOf(p, bar));
             if (voice == 0) measure.Cells = cells; else measure.Voice2Cells = cells;
         }
-        p.MarkTimelineChanged();
         return new PlacementResult(true, null, firstBar, lastBar, appended, ties, 0);
     }
 
@@ -386,7 +388,6 @@ public static class BarGrid
                 });
             BarRangeEditor.Renumber(track);
         }
-        p.MarkTimelineChanged();
     }
 
     private static void PadTracks(SongProject p)
@@ -442,7 +443,6 @@ public static class BarGrid
                 target.Voice2Cells = clip.Bars[i].Voice2Cells.Select(c => c.Clone()).ToList();
                 dropped += TrimToBar(p, target, atBar + i);
             }
-        p.MarkTimelineChanged();
         return new PlacementResult(true, null, atBar, atBar + count - 1, appended, 0, dropped);
     }
 
@@ -494,7 +494,6 @@ public static class BarGrid
         var dropped = 0;
         foreach (var track in p.Tracks)
             for (var i = 0; i < count; i++) dropped += TrimToBar(p, track.Measures[atBar + i], atBar + i);
-        p.MarkTimelineChanged();
         return new PlacementResult(true, null, atBar, atBar + count - 1, 0, 0, dropped, map);
     }
 

@@ -193,7 +193,7 @@ public sealed unsafe class Vst3Plugin : IPluginInstance
     }
 
     /// <summary>
-    /// RT-04: time signature and the ppq of the current bar's start for the VST3 ProcessContext (kTimeSigValid /
+    /// Time signature and the ppq of the current bar's start for the VST3 ProcessContext (kTimeSigValid /
     /// kBarPositionValid). Non-positive numerator/denominator or a negative bar position mean "unknown" and leave the flag clear.
     /// </summary>
     private static void MusicalPosition(in TransportInfo transport, out int numerator, out int denominator, out double barPositionPpq)

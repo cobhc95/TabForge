@@ -27,27 +27,6 @@ public sealed class VisualNote
     public string? ChordName;
     /// <summary>Short playing-technique tag drawn above the marker (e.g. "TAP"), or null.</summary>
     public string? Technique;
-
-    /// <summary>The most telling technique on a note as a compact tag, in priority order.</summary>
-    public static string? TechniqueTag(ICollection<string> t)
-    {
-        if (t.Count == 0) return null;
-        if (t.Contains("Tapping") || t.Contains("LeftTap")) return "TAP";
-        if (t.Contains("TapHarmonic")) return "T.H.";
-        if (t.Contains("PinchHarmonic")) return "P.H.";
-        if (t.Contains("Harmonic") || t.Contains("ArtificialHarmonic") || t.Contains("SemiHarmonic")) return "HARM";
-        if (t.Contains("Slap")) return "SLAP";
-        if (t.Contains("Pop")) return "POP";
-        if (t.Contains("HOPO") || t.Contains("Legato")) return "H/P";
-        if (t.Contains("Bend")) return "BEND";
-        if (t.Contains("Slide") || t.Contains("LegatoSlide") || t.Contains("ShiftSlide")) return "SLIDE";
-        if (t.Contains("Trill")) return "TRILL";
-        if (t.Contains("WideVibrato") || t.Contains("Vibrato")) return "VIB";
-        if (t.Contains("TremoloPick")) return "TREM";
-        if (t.Contains("PalmMute")) return "P.M.";
-        if (t.Contains("LetRing")) return "L.R.";
-        return null;
-    }
 }
 
 /// <summary>What an instrument visualisation needs to draw one frame.</summary>
@@ -68,6 +47,8 @@ public sealed class InstrumentVisualState
     public double NowMs;
     public bool IsPlaying;
     public bool IsPaused;
+    /// <summary>Score-following layout: no movement line between beats (markers keep the TabForge look).</summary>
+    public bool FollowScoreStyle;
     public string? ChordName;
     public string? ScaleName;
     public IReadOnlyCollection<int> ScalePitchClasses = Array.Empty<int>();
@@ -106,9 +87,6 @@ public enum Gp5FretboardMode { Beat, BeatAndNextBeat, BeatAndBar, Bar }
 
 public static class InstrumentVisualizer
 {
-    /// <summary>Null = TabForge look-ahead; otherwise the score-following "Show [Beat] / [Bar]" layout.</summary>
-    public static Gp5FretboardMode? Gp5Mode { get; set; }
-
     private static readonly object ScaleCacheGate = new();
     private static readonly Dictionary<string, int[]> ScaleCache = new(StringComparer.Ordinal);
     private static readonly Queue<string> ScaleCacheOrder = new();
@@ -157,8 +135,10 @@ public static class InstrumentVisualizer
         bool showNoteNames,
         string? scaleName,
         int displayFrets = 24,
-        double pulse = 0)
+        double pulse = 0,
+        VisualOptions? options = null)
     {
+        var gp5Mode = options?.Gp5Mode;
         var state = new InstrumentVisualState
         {
             Kind = KindOf(track),
@@ -172,6 +152,7 @@ public static class InstrumentVisualizer
             IsPlaying = isPlaying,
             IsPaused = isPaused,
             ScaleName = scaleName,
+            FollowScoreStyle = gp5Mode is not null,
             Pulse = pulse
         };
 
@@ -231,7 +212,7 @@ public static class InstrumentVisualizer
 
         // score-following layout: the preview follows the score (this beat / next beat / this bar) instead
         // of a fixed number of upcoming movements. Markers keep TabForge's own look.
-        if (Gp5Mode is { } gp5)
+        if (gp5Mode is { } gp5)
         {
             list.RemoveAll(v => v.Role == VisualRole.Past);
             var bar = lo > 0 ? notes[lo - 1].Bar : notes[0].Bar;
@@ -310,7 +291,8 @@ public static class InstrumentVisualizer
         bool leftHanded,
         bool showNoteNames,
         string? scaleName,
-        int displayFrets = 24)
+        int displayFrets = 24,
+        VisualOptions? options = null)
     {
         var state = new InstrumentVisualState
         {
@@ -322,6 +304,7 @@ public static class InstrumentVisualizer
             ShowNoteNames = showNoteNames,
             IsPlaying = false,
             IsPaused = false,
+            FollowScoreStyle = options?.Gp5Mode is not null,
             ScaleName = scaleName
         };
         SetScalePitchClasses(state, scaleName);
@@ -341,7 +324,7 @@ public static class InstrumentVisualizer
             Dead = note.Dead,
             Ghost = note.Ghost,
             ChordName = cell.ChordName,
-            Technique = VisualNote.TechniqueTag(note.Techniques)
+            Technique = TechniqueTag.From(note.Techniques)
         }).ToList();
         state.Notes = selected;
         state.Current = selected.Count > 0 ? selected[0] : null;

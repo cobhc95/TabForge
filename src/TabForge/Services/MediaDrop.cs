@@ -49,6 +49,9 @@ public sealed class MediaDropPlan
     public bool Valid => Problem is null && Clips.Count > 0;
 }
 
+// Owns: planning where dropped audio and MIDI files land on the timeline.
+// Does not own: the timeline drawing and the clip edit commands.
+// Tests: TestMediaDropPlan, TestClipMoves.
 /// <summary>
 /// Dropping audio and MIDI files on the timeline: what a drag carries (<see cref="MediaDropSession"/>), where it lands
 /// (<see cref="Plan"/>), and which dropped files are kept as copies beside the song (<see cref="IsTransient"/>).
@@ -56,9 +59,16 @@ public sealed class MediaDropPlan
 public static class MediaDrop
 {
     /// <summary>
+    /// The "Add track" lane below the last track: audio or MIDI files dropped there make an AUDIO track (any clip kind fits it) with the
+    /// clips laid end to end from the song start (or <paramref name="startSec"/>).
+    /// </summary>
+    public static MediaDropPlan PlanAddTrackLane(SongProject project, IReadOnlyList<DropItem> items, SongQuarterMap time, double startSec = 0) =>
+        Plan(project, items, project.Tracks.Count, 0, startSec, time, newTrackKind: TrackKind.Audio);
+
+    /// <summary>
     /// Lays the files end to end from <paramref name="startSec"/> on one lane of the track: the hovered lane when the whole span is
-    /// free there, otherwise the first free lane (a new one when every lane is busy). <paramref name="trackIndex"/> equal to the
-    /// track count means "below the last track": a new track of a fitting kind.
+    /// free there, otherwise the first free lane (a new one when every lane is busy; an audio track goes multi-lane this way for any clip kind). <paramref name="trackIndex"/> equal to the
+    /// track count means "below the last track": a new audio track.
     /// </summary>
     public static MediaDropPlan Plan(SongProject project, IReadOnlyList<DropItem> items, int trackIndex, int preferredLane, double startSec, SongQuarterMap time,
         IReadOnlyCollection<AudioClip>? ignore = null, TrackKind? newTrackKind = null)
@@ -93,10 +103,9 @@ public static class MediaDrop
             lane = ClipLanes.FreeLane(track, startSec, at, skip, startLane: preferred) == preferred ? preferred : ClipLanes.FreeLane(track, startSec, at, skip);
             newLane = lane >= ClipLanes.Count(track);
         }
-        var kind = !usable.All(i => i.IsMidi) ? TrackKind.Guitar : usable.All(LooksLikeDrums) ? TrackKind.Drums : TrackKind.Keys;
-        return new MediaDropPlan
+                return new MediaDropPlan
         {
-            TrackIndex = trackIndex, NewTrack = newTrack, NewTrackKind = newTrackKind ?? kind, Lane = lane, NewLane = newLane,
+            TrackIndex = trackIndex, NewTrack = newTrack, NewTrackKind = newTrackKind ?? TrackKind.Audio, Lane = lane, NewLane = newLane,
             StartSec = startSec, EndSec = at, Clips = clips, Estimated = estimated,
         };
     }
@@ -112,8 +121,7 @@ public static class MediaDrop
             Path = clip.File, Name = copy ? clip.Name + " (copy)" : clip.Name, Kind = clip.IsMidi ? DropItemKind.Midi : DropItemKind.Audio,
             Seconds = Math.Max(0.05, clip.LengthSec),
         };
-        var kind = clip.IsMidi ? (sourceKind == TrackKind.Drums ? TrackKind.Drums : TrackKind.Keys) : TrackKind.Guitar;
-        return Plan(project, new[] { item }, trackIndex, preferredLane, startSec, time, copy ? null : new[] { clip }, kind);
+        return Plan(project, new[] { item }, trackIndex, preferredLane, startSec, time, copy ? null : new[] { clip });   // below the last track: an audio track, whatever the clip's kind
     }
 
     /// <summary>

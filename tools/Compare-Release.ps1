@@ -2,7 +2,7 @@
 .SYNOPSIS
     Compares two TabForge release builds byte by byte: two portable zips and, optionally, two installers.
 .DESCRIPTION
-    Use it to check that the build from GitHub Actions and the maintainer's local RELEASE.cmd build of the same commit
+    Use it to check that the build from GitHub Actions and a local tools\Package-Release.ps1 build of the same commit
     are identical (docs/REPRODUCIBLE_BUILDS.md).
 
     Portable zips: entry names, sizes and the SHA-256 of every entry's content are compared (the zip container

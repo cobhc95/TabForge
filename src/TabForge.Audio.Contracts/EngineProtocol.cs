@@ -15,8 +15,9 @@ public enum EngineCommand : byte
     GetStates = 6,
     Panic = 7,
     /// <summary>
-    /// Song tempo (double) and playing (bool, ignored: <see cref="SetPosition"/> carries it); then (RT-04, optional at the tail) the song's bar
-    /// map, <see cref="TransportMap.Write"/>: per performed bar its start (song seconds), start ppq, tempo and time signature.
+    /// Song tempo (double) and playing (bool, ignored: <see cref="SetPosition"/> carries it); then (optional, at the tail) the song's bar
+    /// map, <see cref="TransportMap.Write"/>: per performed bar its start (song seconds), start ppq, tempo and time signature; after the
+    /// map (optional) the owner id, an int: which open song's transport this describes (<see cref="SongOwners.Max"/> ids; absent: owner 0).
     /// </summary>
     SetTransport = 9,
     CloseEditor = 10,
@@ -25,13 +26,13 @@ public enum EngineCommand : byte
     SetState = 13,
     /// <summary>Track level and pan (slot, volume 0..127, pan 0..127) for audio clips, input and plug-ins.</summary>
     SetTrackMix = 14,
-    /// <summary>A track's audio clips (slot, clip list).</summary>
+    /// <summary>A track's audio clips (slot, clip list); then (optional) the owner id of the song that plays them, absent: owner 0.</summary>
     SetClips = 15,
     /// <summary>Record-arm / input monitoring (slot, armed, input mode 0 = in 1, 1 = in 2, 2 = stereo).</summary>
     SetArm = 16,
-    /// <summary>Song position: playing, song seconds at a Stopwatch timestamp.</summary>
+    /// <summary>Song position: playing, song seconds at a Stopwatch timestamp; then (optional) the owner id of the song, absent: owner 0.</summary>
     SetPosition = 17,
-    /// <summary>Start (true, folder) or stop (false) recording the armed tracks.</summary>
+    /// <summary>Start (true, folder) or stop (false) recording the armed tracks; after the offset (optional) the owner id of the recording song, absent: owner 0.</summary>
     Record = 18,
     /// <summary>One plug-in's output volume (slot, chain index, dB): a light update, ramped in the engine, no chain rebuild.</summary>
     SetPluginGain = 19,
@@ -83,6 +84,13 @@ public enum EngineCommand : byte
     Shutdown = 99,
 }
 
+/// <summary>Owner ids: each open song has its own transport (position, tempo, bar map) in the engine, so songs that play at the same time keep their own clip timing.</summary>
+public static class SongOwners
+{
+    /// <summary>Owner ids are 0 .. Max - 1; the engine allocates nothing per id after start.</summary>
+    public const int Max = 16;
+}
+
 /// <summary>What a main-thread plug-in call does, written into the breadcrumb: the engine watchdog allows each kind its own time.</summary>
 public enum PluginCallKind
 {
@@ -99,7 +107,7 @@ public enum PluginCallKind
 }
 
 /// <summary>
-/// Watchdog policy (R-05 / R-06): how long a plug-in call of each kind may block the engine main thread before the engine ends itself
+/// Watchdog policy: how long a plug-in call of each kind may block the engine main thread before the engine ends itself
 /// and the plug-in is blamed (exit 70), how long unattributed work may (exit 71, nothing quarantined), and when a call counts as slow
 /// (TabForge says "still loading" instead of treating it as a crash).
 /// </summary>
@@ -185,7 +193,7 @@ public enum EngineEvent : byte
     /// </summary>
     PluginSlow = 21,
     /// <summary>
-    /// RT-02: a plug-in produced non-finite audio (NaN / infinity): the engine discarded it and now skips that plug-in (slot, chain index,
+    /// A plug-in produced non-finite audio (NaN / infinity): the engine discarded it and now skips that plug-in (slot, chain index,
     /// path); index -1 means the track's own sound (General MIDI synth, clip or input) was non-finite and that block was silenced. Once each.
     /// </summary>
     PluginMisbehaved = 22,
@@ -302,6 +310,14 @@ public static class Frames
 
     public static EngineConfig ReadConfig(this BinaryReader r) =>
         new(r.ReadBoundedString(64), r.ReadBoundedString(256), Math.Clamp(r.ReadInt32(), 8000, 384000), Math.Clamp(r.ReadInt32(), 16, 16384), r.ReadBoolean(), r.ReadBoundedString(256), Math.Clamp(r.ReadInt32(), 0, 62), Math.Clamp(r.ReadInt32(), 0, 62), Math.Clamp(r.ReadInt32(), 0, 63), r.ReadBoolean(), r.ReadBoolean(), Math.Clamp(r.ReadInt32(), 0, 63));
+
+    /// <summary>The owner id at the tail of SetPosition, SetClips and SetTransport: absent (an older sender) or out of range is owner 0.</summary>
+    public static int ReadOwnerTail(this BinaryReader r)
+    {
+        if (r.BaseStream.Position >= r.BaseStream.Length) return 0;
+        var owner = r.ReadInt32();
+        return owner is >= 0 and < SongOwners.Max ? owner : 0;
+    }
 
     public static void Write(this BinaryWriter w, IReadOnlyList<ClipSpec> clips)
     {

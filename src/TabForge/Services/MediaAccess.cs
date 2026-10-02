@@ -3,6 +3,9 @@ using System.IO;
 
 namespace TabForge.Services;
 
+// Owns: the gate every project-referenced media file goes through, deciding open, ask or refuse.
+// Does not own: the path classification (MediaPathPolicy) and the approval dialogs.
+// Tests: TestMediaPathPolicy, TestDocumentContext.
 /// <summary>
 /// The gate every project-referenced media file goes through (waveforms, clip playback, render, drops): refused forms never open,
 /// remote / removable folders open only after the user approves that folder for that song. Every call is given the song's

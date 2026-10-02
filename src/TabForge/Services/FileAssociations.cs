@@ -2,6 +2,9 @@ using Microsoft.Win32;
 
 namespace TabForge.Services;
 
+// Owns: the per-user Windows file association registration for Guitar Pro and TabForge files.
+// Does not own: the installer's associations and any other program's keys.
+// Tests: TestInstallerAssociationParity.
 /// <summary>
 /// Windows integration: "Open with TabForge" for Guitar Pro and TabForge files, registered per user
 /// (HKCU\Software\Classes, no administrator rights) so it can be switched on and off from Settings.
@@ -20,7 +23,7 @@ public static class FileAssociations
     // installer/TabForge.iss [Registry] repeats these keys; the self-test compares the two (B-05).
     internal static string Description(string extension) => extension == ".tforge"
         ? "TabForge project"
-        : $"Guitar Pro file ({extension})";
+        : $"Score file ({extension})";
 
     /// <summary>True when every extension lists TabForge (by ProgID) with a command pointing at <paramref name="exePath"/>.</summary>
     public static bool IsRegistered(string exePath)

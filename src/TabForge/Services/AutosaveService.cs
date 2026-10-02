@@ -4,6 +4,9 @@ using System.Text.RegularExpressions;
 
 namespace TabForge.Services;
 
+// Owns: the autosave file naming, recovery listing and cleanup.
+// Does not own: the timer and notices (AutosaveController) and the user's own song files.
+// Tests: TestAutosaveRecovery, TestDataIntegrityLeftovers.
 /// <summary>
 /// Autosave (audit F-04): dirty songs are copied to the Recovery folder as "autosave-&lt;pid&gt;-&lt;id&gt;-&lt;name&gt;.tforge" on a timer. The
 /// user's own files are never touched. A normal save, tab close or exit deletes the copy; copies whose process is gone are what a

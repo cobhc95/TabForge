@@ -3,6 +3,10 @@ using TabForge.Views;
 
 namespace TabForge.Controllers;
 
+// Owns: routing a key press to the editor's navigation and entry keys or to a catalogued command once the window has handled
+//     its special cases.
+// Does not own: the command implementations and the key bindings (HotkeyCatalog).
+// Tests: TestKeyRoutingOrder.
 /// <summary>
 /// Where a key press goes once the window has dealt with its own special cases (Space, zoom, Esc, text boxes, clips):
 /// the editor's fixed navigation / entry keys, or a catalogued command. Pulled out of MainWindow so the order is tested

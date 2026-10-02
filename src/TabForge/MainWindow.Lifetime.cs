@@ -38,30 +38,17 @@ public partial class MainWindow : IDiscardPromptHost
     {
         if (_isClosed) return;
         // A metronome change still waiting for its debounced save is saved now (stopping the timer below would otherwise drop it).
-        if (_metronomeSettingsSaveTimer is { IsEnabled: true } pendingSave) { pendingSave.Stop(); SaveSettings(); }
+        _transport.FlushPendingSave();
         _isClosed = true;
-        _playbackUiTick.Stop();
+        _playbackView.Dispose();
         _follow.Halt();
-        if (_observedPlaybackDocument is { } observed)
-        {
-            observed.Playback.TimelineChanged -= OnPlaybackTimelineChanged;
-            observed.Playback.TimelineRevised -= OnPlaybackTimelineRevised;
-            _observedPlaybackDocument = null;
-        }
         // The documents still in this window are closed for good (a tab moved to another window left _documents when it moved, and is
         // not touched here): their playback stops and their engine chains are unloaded now, not parked.
         foreach (var session in _documents.Documents.ToArray()) session.DisposePlayback();
-        _metronomeSettingsSaveTimer?.Stop();
-        _autosaveTimer?.Stop();
-        _autosaveRecheck?.Stop();
-        _autosaveRecheck = null;
-        _updateCheckTimer?.Stop();
-        _updateCheckTimer = null;
         _recorder?.Release();
         _resizeBorderFrame?.Dispose();
         _captionButtonFrame?.Dispose();
-        ClearAttachTarget();
-        TabWindowRegistry.Unregister(this);
+        _tabTransfer.Dispose();   // clears the attach highlight and leaves the registry
         _lifetime.Dispose();
         // A UI Automation client can keep automation peers of this window's controls alive: they must not lead back to the window.
         // After the other Closed handlers have run: the controls (and this window) let go of their handlers and of the song.
@@ -74,7 +61,7 @@ public partial class MainWindow : IDiscardPromptHost
     }
 
     /// <summary>Attachments still held (self-test: zero once the window has closed).</summary>
-    internal int AttachmentCount => _lifetime.Count;
+    internal int AttachmentCount => _lifetime.Count + _engineSync.AttachmentCount;
 
     // IDiscardPromptHost: the "discard unapplied changes?" question follows the window that opened the dialog.
     bool IDiscardPromptHost.WarnOnDiscard => _settings.General.ConfirmDiscardSettingsChanges;

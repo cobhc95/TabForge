@@ -4,9 +4,12 @@ using TabForge.Models;
 namespace TabForge.Services;
 
 // standard theory helpers: scales, chords, transposition. No external deps.
+// Owns: note names, intervals and pitch arithmetic shared by editing and display.
+// Does not own: the notation layout and playback.
+// Tests: TestNoteNames, TestTransposeAllVoices.
 public static class MusicTheoryService
 {
-    public static readonly string[] NoteNames = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
+    public static readonly string[] NoteNames = Audio.Contracts.NoteNames.SharpPitchClasses();
 
     public static readonly Dictionary<string, int[]> Scales = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -50,7 +53,8 @@ public static class MusicTheoryService
         return iv.Select(i => NoteNames[(rootIdx + i) % 12]).ToList();
     }
 
-    public static string NoteName(int midi) => NoteNames[((midi % 12) + 12) % 12] + (midi / 12 - 1);
+    /// <summary>Note name with octave (60 is "C4"), the one spelling every view and dialog shows.</summary>
+    public static string NoteName(int midi) => Audio.Contracts.NoteNames.Name(midi);
 
     // Suggest a fret/string position for a midi pitch on a tuning (high->low list).
     public static (int stringIndex, int fret) SuggestPosition(IList<int> tuningHighToLow, int midi)

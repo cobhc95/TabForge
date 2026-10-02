@@ -57,6 +57,7 @@ public partial class MainWindow
         _dockWorkspace.RegisterPanel("instrument", "Fretboard", InstrumentHost, 360, 150, "instrument", "score-editor");
         ApplyInstrumentMinHeight();
         Instrument.RequiredHeightChanged += _ => ApplyInstrumentMinHeight();
+        Instrument.MaximumHeightChanged += _ => ApplyInstrumentMaxHeight();
         _dockWorkspace.RegisterPanel("timeline", "Arrangement", ArrangementHost, 440, 112, "timeline", "score-editor");
         _dockWorkspace.RegisterPanel("tools", "Tools", ToolsPanelContent, 210, 150, "tools", "structure");
         _dockWorkspace.RegisterPanel("structure", "Structure", _palettePanelContents["structure"], 210, 150, "tools", "tools");
@@ -151,7 +152,7 @@ public partial class MainWindow
     {
         if (_layoutsMenu is null) return;
         _layoutsMenu.Items.Clear();
-        string GestureText(string id) => HotkeyCatalog.Display(HotkeyCatalog.GestureFor(_settings.Hotkeys, id));
+        string GestureText(string id) => HotkeyCatalog.DisplayAll(_settings.Hotkeys, id);
         MenuItem Entry(string name, string? hotkeyId)
         {
             var item = new MenuItem
@@ -358,10 +359,11 @@ public partial class MainWindow
     {
         if (ClipboardService.Shared.TryGetClip(out var error) is not { } clip) { StatusText.Text = error ?? ClipboardService.NotTabForgeNotesMessage; return; }
         if (Editor.Track is null) return;
-        var outcome = EditCommands.PasteWithUndo(_undo, _project, clip, Editor.PasteTarget, _settings.Editing,
-            new WpfPasteQuestionAsker(this), out var capture);
+        var target = Editor.PasteTarget;
+        var asker = new WpfPasteQuestionAsker(this);
+        var outcome = EditCommands.RunPaste(Doc, clip, target, _settings.Editing, asker);
         if (outcome.Asked.Count > 0) SaveSettings();   // a "Remember my choice" answer
-        FinishPaste(outcome, capture);
+        FinishPaste(outcome);
     }
 
     /// <summary>Paste Special: one small dialog (repeat, mode, octave shift, keep string and fret, bar settings), then the same paste path with explicit answers.</summary>
@@ -372,22 +374,21 @@ public partial class MainWindow
         var dialog = new PasteSpecialDialog(clip.Kind);
         if (IsLoaded) dialog.Owner = this;
         if (DialogHost.ShowModal(dialog) != true || dialog.Result is not { } options) return;
-        var outcome = EditCommands.PasteSpecialWithUndo(_undo, _project, clip, Editor.PasteTarget, options, _settings.Editing, out var capture);
-        FinishPaste(outcome, capture);
+        var target = Editor.PasteTarget;
+        FinishPaste(EditCommands.RunPasteSpecial(Doc, clip, target, options, _settings.Editing));
     }
 
-    private void FinishPaste(PasteOutcome outcome, UndoCapture? capture)
+    private void FinishPaste(PasteOutcome outcome)
     {
         if (!outcome.Changed) { StatusText.Text = outcome.Status; return; }
-        if (capture is { Stored: true } stored) Playback.RememberBarMapping(stored.Snapshot);
         if (outcome.BarMap is { } map) FinishSectionStructureEdit(outcome.Status, map);
-        Editor.NotifyEdited(markTimeline: false);   // the paste (EditCommands.PasteWithUndo) already invalidated the timeline, once
+        Editor.NotifyEdited();
         StatusText.Text = outcome.Status;
     }
 
     private void GoTo_Click(object sender, RoutedEventArgs e)
     {
-        var txt = GpDialogs.Prompt("Go to (Ctrl+G)", "Bar number or section name:", (Editor.SelectedMeasure + 1).ToString());
+        var txt = GpDialogs.Prompt(TooltipShortcuts.Append("Go to bar", "Bar.GoTo"), "Bar number or section name:", (Editor.SelectedMeasure + 1).ToString());
         if (txt is null) return;
         if (int.TryParse(txt, out var bar)) { Editor.SetBar(Math.Clamp(bar - 1, 0, Math.Max(0, MaxMeasures() - 1))); ScrollToCursor(); return; }
         var marker = _project.Markers.FirstOrDefault(m => m.Title.Contains(txt, StringComparison.OrdinalIgnoreCase));
@@ -519,7 +520,12 @@ public partial class MainWindow
         return label;
     }
 
-    private void ScoreScroll_SizeChanged(object sender, SizeChangedEventArgs e) => ApplyPageWidth();
+    private void ScoreScroll_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        // A height-only change (a splitter drag, a window drag) leaves the page layout alone; one-line mode only re-centres once the drag settles.
+        if (_pageInputs.Changed((Math.Round(ScoreScroll.ActualWidth, 1), _zoomFactor, Editor.HorizontalScroll, Editor.CenterSystems))) { ApplyPageWidth(); return; }
+        if (Editor.HorizontalScroll) (_centreSettle ??= new SettleAction(CentreHorizontalPage)).Request();
+    }
 
     /// <summary>Applies either fixed-paper zoom or continuous viewport reflow using one shared layout path.</summary>
     private void ApplyPageWidth(Point? zoomAnchor = null)
@@ -591,7 +597,7 @@ public partial class MainWindow
         else Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(_follow.ReanchorAfterZoom));
 
         var layoutLog = Environment.GetEnvironmentVariable("TABFORGE_LAYOUT_LOG") == "1" ? Path.Combine(Path.GetTempPath(), "tabforge-layout.log")
-            : Diagnostics.Trace.IsOn(Diagnostics.Trace.Layout) ? Diagnostics.Trace.PathFor(Diagnostics.Trace.Layout) : null;
+            : Services.Trace.IsOn(Services.Trace.Layout) ? Services.Trace.PathFor(Services.Trace.Layout) : null;
         if (layoutLog is not null)
         {
             try
@@ -636,7 +642,7 @@ public partial class MainWindow
             _preFullscreenState = WindowState;
             _preFullscreenBounds = RestoreBounds;
             WindowState = WindowState.Maximized;
-            StatusText.Text = "Full screen (F11 to exit)";
+            StatusText.Text = TooltipShortcuts.Append("Full screen", "View.Fullscreen");
         }
         else
         {
@@ -743,7 +749,7 @@ public partial class MainWindow
         try
         {
             if (wanted) FileAssociations.Register(exe); else FileAssociations.Unregister();
-            StatusText.Text = wanted ? "TabForge now opens Guitar Pro and TabForge files" : "File associations removed";
+            StatusText.Text = wanted ? "TabForge now opens .gp and .tforge files" : "File associations removed";
         }
         catch (Exception ex) when (ex is UnauthorizedAccessException or System.Security.SecurityException or IOException)
         {
@@ -773,7 +779,7 @@ public partial class MainWindow
     private void Shortcuts_Click(object sender, RoutedEventArgs e)
     {
         MessageBox.Show(this,
-            "File: Ctrl+N/O/S, Ctrl+T new tab, Ctrl+Shift+S save as, Ctrl+P print\nEdit: Ctrl+Z/Y, Ins beat, Shift+Del, C copy to end\nBar: Ctrl+Ins/Del, Ctrl+Shift+T time signature, Ctrl+K key, [/] repeats, D directions\nNote: +/- duration, . dot, / triplet, R rest, L tie, F fermata\nEffects: X dead, O ghost, B bend, H HOPO, V vibrato, S slide, I let-ring, Y harmonic, N trill, A chord, T text, G grace\nSound: Space play, Ctrl+Space from start, F9 loop\nView: Ctrl+mouse wheel / Ctrl++ and Ctrl+- zoom, F3 multitrack, F6 fretboard/props, F11 fullscreen, F4 check bars",
+            ShortcutHelp.Build(_settings.Hotkeys),
             "Keyboard shortcuts", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
@@ -895,9 +901,17 @@ public partial class MainWindow
         return Others(saved, SidePanelIds).SetEquals(Others(visibleNow, SidePanelIds));
     }
 
-    private void ApplyInstrumentMinHeight() =>
+    private void ApplyInstrumentMinHeight()
+    {
         _dockWorkspace?.SetPanelContentMinHeight("instrument",
             Instrument.RequiredHeight + InstrumentHost.BorderThickness.Top + InstrumentHost.BorderThickness.Bottom);
+        ApplyInstrumentMaxHeight();
+    }
+
+    /// <summary>The fretboard pane cannot grow past its maximum stretch (no empty space above and below the board).</summary>
+    private void ApplyInstrumentMaxHeight() =>
+        _dockWorkspace?.SetPanelContentMaxHeight("instrument", double.IsPositiveInfinity(Instrument.MaximumHeight) ? null
+            : Instrument.MaximumHeight + InstrumentHost.BorderThickness.Top + InstrumentHost.BorderThickness.Bottom);
 
     /// <summary>
     /// Applies Appearance.LockInstrumentSize: locked = the pane keeps its saved height (splitter not draggable);
@@ -917,8 +931,9 @@ public partial class MainWindow
         Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () =>
         {
             if (!_settings.Appearance.LockInstrumentSize || _settings.Appearance.InstrumentPaneHeight > 0) return;
-            _settings.Appearance.InstrumentPaneHeight = Math.Ceiling(InstrumentHost.ActualHeight > 0
-                ? InstrumentHost.ActualHeight : Instrument.NaturalHeight + 1);
+            // Fresh profile: the "medium" size computed from the size model (about 1.1x natural), not the dock's split ratio.
+            _settings.Appearance.InstrumentPaneHeight = Math.Ceiling(Instrument.MediumHeight()
+                + InstrumentHost.BorderThickness.Top + InstrumentHost.BorderThickness.Bottom);
             ApplyInstrumentSizeLock();
             SaveSettings();
         });

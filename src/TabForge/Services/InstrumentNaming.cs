@@ -3,6 +3,9 @@ using TabForge.Models;
 
 namespace TabForge.Services;
 
+// Owns: the display names of extended-range fretted instruments.
+// Does not own: the instrument choice lists.
+// Tests: TestInstrumentNamingAndSectionColours.
 /// <summary>
 /// Names for extended-range fretted instruments: a bass or guitar with a
 /// non-standard string count gets a "(N strings)" suffix ("Electric Bass (Finger) (5 strings)"). The

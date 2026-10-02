@@ -12,6 +12,9 @@ public sealed record TrackEditRequest(int TrackIndex, TrackEditKind Kind, string
 
 public sealed record TrackInstrumentPreset(string Name, int Program, string Rig, string Map);
 
+// Owns: the track-level edit requests (rename, instrument, tuning, mute and solo, add and remove) applied to a song.
+// Does not own: the track list drawing and the engine's track state.
+// Tests: TestEditControllers, TestTrackRowRightClick, TestInstrumentChoiceStrings.
 /// <summary>Track construction and structural operations independent of mixer controls.</summary>
 public sealed class TrackController
 {
@@ -42,13 +45,44 @@ public sealed class TrackController
     {
         // A new track matches the song's bar count (an empty project starts with 32 bars).
         var measures = project.Tracks.Count > 0 ? Math.Max(1, project.Tracks.Max(t => t.Measures.Count)) : 32;
-        var color = TrackColours[project.Tracks.Count % TrackColours.Length];
+        // A new track takes its kind's colour (a song's own track colours are never changed); other kinds cycle the palette.
+        var color = KindColour(kind) ?? TrackColours[project.Tracks.Count % TrackColours.Length];
         return kind switch
         {
+            TrackKind.Audio => NewAudioTrack(project, color, measures),
             TrackKind.Bass => new TrackModel { Name = "Bass", Kind = TrackKind.Bass, ColorHex = color, InstrumentName = "Electric Bass", MidiChannel = FindMidiChannel(project), MidiProgram = 33, StringTunings = new() { 43, 38, 33, 28 }, Measures = TemplateFactory.Measures(measures), Rig = new RigPreset { Name = "Bass", ArticulationMap = "Generic Bass" } },
             TrackKind.Drums => NewDrumTrack(new TrackModel { Name = "Drums", Kind = TrackKind.Drums, ColorHex = color, InstrumentName = "Drum Kit", MidiChannel = 9, MidiProgram = 0, StringTunings = new() { 49, 46, 42, 38, 36 }, Measures = TemplateFactory.Measures(measures), Rig = new RigPreset { Name = "GM Drum Kit", ArticulationMap = "GM Drums" } }),
             TrackKind.Keys => new TrackModel { Name = "Piano", Kind = TrackKind.Keys, ColorHex = color, InstrumentName = "Grand Piano", MidiChannel = FindMidiChannel(project), MidiProgram = 0, StringTunings = new() { 96, 91, 86, 81, 76, 71 }, Measures = TemplateFactory.Measures(measures), Rig = new RigPreset { Name = "Piano", ArticulationMap = "Piano" } },
             _ => new TrackModel { Name = "Guitar", Kind = TrackKind.Guitar, ColorHex = color, InstrumentName = "Electric Guitar", MidiChannel = FindMidiChannel(project), MidiProgram = 29, StringTunings = new() { 64, 59, 55, 50, 45, 40 }, Measures = TemplateFactory.Measures(measures), Rig = new RigPreset { Name = "Overdriven Guitar", ArticulationMap = "Generic Guitar" } }
+        };
+    }
+
+    /// <summary>The colour a new track of this kind starts with (null: the kind cycles the palette).</summary>
+    public static string? KindColour(TrackKind kind) => kind switch
+    {
+        TrackKind.Guitar => "#A12424",   // dark red
+        TrackKind.Bass => "#B8930F",     // dark yellow
+        TrackKind.Drums => "#1F3F9E",    // dark blue
+        TrackKind.Audio => "#7CC4F2",    // light blue
+        _ => null
+    };
+
+    /// <summary>A new track whose kind was changed in the Add track window takes the new kind's colour, unless a colour was picked there.</summary>
+    public static void RecolourNewTrack(TrackModel track, string colourBefore)
+    {
+        if (track.ColorHex == colourBefore && KindColour(track.Kind) is { } colour) track.ColorHex = colour;
+    }
+
+    /// <summary>An audio track: no instrument, tuning or MIDI sound, input 1, one empty clip lane, "Audio n" name, empty bars matching the song.</summary>
+    private static TrackModel NewAudioTrack(SongProject project, string color, int measures)
+    {
+        var number = 1;
+        while (project.Tracks.Any(t => string.Equals(t.Name, $"Audio {number}", StringComparison.Ordinal))) number++;
+        return new TrackModel
+        {
+            Name = $"Audio {number}", Kind = TrackKind.Audio, ColorHex = color, InstrumentName = "", MidiProgram = 0, MidiChannel = 0, NumberOfFrets = 0,
+            StringTunings = new(), MidiSound = false, AudioInput = AudioInputs.Input1, Lanes = new() { new ClipLane() },
+            Measures = TemplateFactory.Measures(measures), Rig = new RigPreset { Name = "Audio", ArticulationMap = "Generic Guitar" }
         };
     }
 
@@ -80,6 +114,49 @@ public sealed class TrackController
         DocumentEdits.Run(document, project =>
         {
             project.Tracks.Insert(Math.Clamp(index ?? project.Tracks.Count, 0, project.Tracks.Count), track);
+            return true;
+        });
+
+    /// <summary>The add-track prompt's "Audio" choice (and the menu's "Audio track"): a new audio track at the end, one undo step; no dialog.</summary>
+    public EditResult<TrackModel> AddAudioTrack(DocumentSession document)
+    {
+        TrackModel? created = null;
+        var result = DocumentEdits.Run(document, project =>
+        {
+            created = CreateTrack(project, TrackKind.Audio);
+            project.Tracks.Add(created);
+            return true;
+        });
+        return new EditResult<TrackModel>(result.Changed, created, result.Capture);
+    }
+
+    /// <summary>
+    /// Turns an audio track into an instrument track (the only direction: an instrument track never becomes audio), one undo step.
+    /// The track takes <paramref name="instrument"/> (a catalogue sound name, as in the instrument picker), the kind, strings, frets and
+    /// MIDI channel that sound implies, and keeps its clips, plug-in chain, input and mix. Its bars are already empty, so notes can be
+    /// entered at once. Every clip moves down one lane (lane 0 is left free under the new tab lane). False for a track that is not audio
+    /// or an unknown instrument; nothing changes then.
+    /// </summary>
+    public EditResult ConvertAudioToInstrument(DocumentSession document, TrackModel track, string instrument) =>
+        DocumentEdits.Run(document, project =>
+        {
+            if (!track.IsAudio || !project.Tracks.Contains(track)) return false;
+            var entry = InstrumentCatalog.Find(instrument);
+            var preset = InstrumentPresets.FirstOrDefault(item => item.Name == instrument);
+            if (entry is null && preset is null) return false;
+            var drum = entry?.IsDrumKit ?? preset!.Map == "GM Drums";
+            var kind = drum ? TrackKind.Drums : TrackSetup.KindOf(entry?.Name ?? preset!.Name, 0, TrackKind.Guitar);
+            var model = CreateTrack(project, kind);
+            track.Kind = kind;
+            track.StringTunings = model.StringTunings;
+            track.NumberOfFrets = model.NumberOfFrets;
+            track.MidiSound = true;
+            track.MidiChannel = model.MidiChannel;
+            track.Measures = track.Measures.Count == model.Measures.Count ? track.Measures : model.Measures;
+            if (drum) DrumMaps.Apply(track, DrumMaps.GuitarPro5);
+            ApplyInstrument(project, track, instrument);
+            foreach (var clip in track.AudioClips) clip.Lane++;
+            track.Lanes.Insert(0, new ClipLane());
             return true;
         });
 
@@ -121,6 +198,7 @@ public sealed class TrackController
     {
         // Any catalogue sound (all 128 GM programs + drum kits): the program is sent on the
         // track channel; drum kits move the track to the GM drum channel (10) and back when leaving it.
+        if (track.IsAudio) return false;   // an audio track has no instrument and never converts
         var entry = InstrumentCatalog.Find(selected);
         var preset = InstrumentPresets.FirstOrDefault(item => item.Name == selected);
         if (entry is null && preset is null) return false;

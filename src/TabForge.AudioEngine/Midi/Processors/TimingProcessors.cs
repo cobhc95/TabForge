@@ -1,3 +1,5 @@
+using TabForge.Audio.Contracts;
+
 namespace TabForge.AudioEngine.Midi.Processors;
 
 /// <summary>
@@ -24,8 +26,8 @@ public sealed class DelayProcessor : IMidiProcessor
 
     public void Process(MidiBuffer input, MidiBuffer output, in MidiContext ctx)
     {
-        var tempo = ctx.Tempo > 1 ? ctx.Tempo : 120;
-        var delay = (long)Math.Round(_ms * _sampleRate / 1000.0 + _beats * 60.0 / tempo * _sampleRate + _samples);
+        var tempo = TempoMath.Effective(ctx.Tempo);
+        var delay = (long)Math.Round(_ms * _sampleRate / 1000.0 + TempoMath.BeatsToSamples(_beats, tempo, _sampleRate) + _samples);
         for (var i = 0; i < input.Count; i++)
         {
             var e = input.Items[i];

@@ -6,7 +6,7 @@ namespace TabForge.AudioEngine.Plugins;
 public sealed unsafe partial class Vst2Plugin
 {
     /// <summary>
-    /// Headless tests (T-01): a pass-through VST2 effect implemented in managed code behind the real VST2 ABI, so the host
+    /// Headless tests: a pass-through VST2 effect implemented in managed code behind the real VST2 ABI, so the host
     /// side (<see cref="Vst2Plugin"/>) runs unchanged without a DLL on disk. It records the rate and block size the host
     /// set, the opcode sequence (main thread) and the processed block lengths (audio thread, allocation-free).
     /// One instance at a time.
@@ -43,8 +43,8 @@ public sealed unsafe partial class Vst2Plugin
         }
 
         /// <summary>A new instance (a fresh AEffect) hosted by the real <see cref="Vst2Plugin"/> code path.</summary>
-        /// <param name="openDelayMs">effOpen sleeps this long (a slow-loading instrument, R-06).</param>
-        /// <param name="inputs">Declared audio inputs (RT-05: the host allocates exactly this many, at least two; more than 128 is refused).</param>
+        /// <param name="openDelayMs">effOpen sleeps this long (a slow-loading instrument).</param>
+        /// <param name="inputs">Declared audio inputs (the host allocates exactly this many, at least two; more than 128 is refused).</param>
         public static Vst2Plugin Create(double sampleRate, int maxBlock, int openDelayMs = 0, int inputs = 2, int outputs = 2)
         {
             Volatile.Write(ref _openDelayMs, openDelayMs);
@@ -66,11 +66,11 @@ public sealed unsafe partial class Vst2Plugin
         [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
         private static AEffect* Main(IntPtr host) { _host = host; return _next; }
 
-        /// <summary>RT-03: each processed block calls audioMasterAutomate (opcode 0) back into the host, from the audio thread.</summary>
+        /// <summary>Each processed block calls audioMasterAutomate (opcode 0) back into the host, from the audio thread.</summary>
         public static volatile bool AutomateInProcess;
-        /// <summary>RT-02: the output is NaN (a misbehaving plug-in).</summary>
+        /// <summary>The output is NaN (a misbehaving plug-in).</summary>
         public static volatile bool OutputNaN;
-        /// <summary>RT-04: the host's VstTimeInfo as seen by the last processed block (audioMasterGetTime from processReplacing).</summary>
+        /// <summary>The host's VstTimeInfo as seen by the last processed block (audioMasterGetTime from processReplacing).</summary>
         public static int TimeSigNumerator, TimeSigDenominator, TimeFlags;
         public static double BarStartPpq, PpqPosition, Tempo;
 

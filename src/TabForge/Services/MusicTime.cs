@@ -1,10 +1,14 @@
 using System.Linq;
 using TabForge.Models;
+using TempoMath = TabForge.Audio.Contracts.TempoMath;
 
 namespace TabForge.Services;
 
 // Musical time helpers. The editor grid is 16 slots per bar in simple signatures:
 // a slot = one 16th note (4/4), 12 slots for 3/4, 12 for 6/8, etc.
+// Owns: bar and cell timing arithmetic in slots and the bar fill state.
+// Does not own: the playback timeline and the drawing.
+// Tests: TestBarSlots, TestCellSlots, TestAnalyzeBar.
 public static class MusicTime
 {
     public const int SlotsPerQuarter = 4;
@@ -22,7 +26,7 @@ public static class MusicTime
 
     public static MeasureModel? BarOf(SongProject p, int measureIndex)
     {
-        var t = p.Tracks.FirstOrDefault();
+        var t = p.MasterBarTrack;
         if (t is null || measureIndex < 0 || measureIndex >= t.Measures.Count) return null;
         return t.Measures[measureIndex];
     }
@@ -73,7 +77,7 @@ public static class MusicTime
         for (var bar = 0; bar < bars; bar++)
         {
             var state = AnalyzeBar(p, bar);
-            if (state.Error || (!state.Complete && state.Used > 0.001)) problems.Add(new BarProblem(bar, state));
+            if (state.Marked || (!state.Complete && state.Used > 0.001)) problems.Add(new BarProblem(bar, state));
         }
         return problems;
     }
@@ -90,7 +94,7 @@ public static class MusicTime
         if (bar.SimileOneBar || bar.SimileTwoBar) return new BarState(slots, slots, true, false);
 
         // A bar is measured over the union of all tracks: the longest content wins.
-        double used = 0; var tooLong = false; var overlap = false;
+        double used = 0, maxCover = 0; var tooLong = false; var overlap = false; var anyBeat = false;
         foreach (var track in p.Tracks)
         {
             if (measureIndex >= track.Measures.Count) continue;
@@ -100,7 +104,7 @@ public static class MusicTime
                 : new[] { (IReadOnlyList<TabCell>)m.Cells, m.Voice2Cells };
             foreach (var cells in voices)
             {
-                double consumed = 0;
+                double consumed = 0, cover = 0;
                 for (var i = 0; i < cells.Count; i++)
                 {
                     var cell = cells[i];
@@ -112,6 +116,7 @@ public static class MusicTime
                     }
                     var start = cell.RhythmicPosition ?? Math.Max(i, consumed);
                     var d = ConsumeSlots(cell);
+                    anyBeat = true; cover += d;
                     // Imported beats sit on whole file ticks (240 per slot), so the exact tuplet lengths (a 9:8 thirty-second is
                     // 0.444 slot) drift by up to a tick against the next beat's position: that is not an overfull bar.
                     if (start + d > slots + TickSlack) { tooLong = true; consumed = Math.Max(consumed, start + d); break; }
@@ -119,10 +124,14 @@ public static class MusicTime
                     consumed = Math.Max(consumed, start + d);
                 }
                 used = Math.Max(used, Math.Min(consumed, slots + 64));
+                maxCover = Math.Max(maxCover, cover);
             }
         }
         var complete = !tooLong && !overlap && used >= slots - TickSlack;
-        return new BarState(slots, used, complete, tooLong || overlap);
+        var error = tooLong || overlap;
+        // Content shorter than the time signature (half-empty); a bar with no beat at all and a pickup bar are not marked.
+        var isShort = !error && anyBeat && !bar.Anacrusis && maxCover < slots - TickSlack;
+        return new BarState(slots, used, complete && !isShort, error, isShort);
     }
 
     /// <summary>
@@ -132,7 +141,7 @@ public static class MusicTime
     /// </summary>
     public static int TempoAt(SongProject p, int measureIndex)
     {
-        var track = p.Tracks.FirstOrDefault();
+        var track = p.MasterBarTrack;
         if (track is not null)
             for (var i = Math.Min(measureIndex, track.Measures.Count - 1); i >= 0; i--)
             {
@@ -191,8 +200,20 @@ public static class MusicTime
         return (int)Math.Round(Math.Clamp(tempo, 20, 400));
     }
 
+    /// <summary>How long a typed note previews: the beat's written length at the song tempo in force there (tempo changes up to the bar included).</summary>
+    public static int NoteLengthMs(SongProject p, int measureIndex, int cellIndex, TabCell cell)
+    {
+        var tempo = p.Tempo;
+        var master = p.MasterBarTrack;
+        if (master is not null)
+            for (var i = 0; i <= measureIndex && i < master.Measures.Count; i++)
+                if (master.Measures[i].TempoChange is { } t) tempo = t;
+        var at = TempoAtSlot(BarOf(p, measureIndex), cell.RhythmicPosition ?? cellIndex, tempo);
+        return (int)Math.Round(ConstMs(CellSlots(cell), at, 1.0));
+    }
+
     private static double ConstMs(double slots, double tempo, double tempoScale)
-        => slots / SlotsPerQuarter * (60000.0 / Math.Clamp(tempo, 20, 400)) * tempoScale;
+        => slots / SlotsPerQuarter * TempoMath.MsPerBeat(Math.Clamp(tempo, 20, 400)) * tempoScale;
 
     /// <summary>Milliseconds for the first <paramref name="x"/> slots of a ramp from t0 to t1 BPM over <paramref name="ramp"/> slots.</summary>
     public static double RampMs(double x, double t0, double t1, double ramp, double tempoScale = 1.0)
@@ -200,15 +221,14 @@ public static class MusicTime
         if (x <= 0) return 0;
         if (Math.Abs(t1 - t0) < 1e-9 || ramp <= 0) return ConstMs(x, t0, tempoScale);
         var tx = t0 + (t1 - t0) * x / ramp;
-        return 60000.0 / SlotsPerQuarter * ramp / (t1 - t0) * Math.Log(tx / t0) * tempoScale;
+        return TempoMath.MsPerMinute / SlotsPerQuarter * ramp / (t1 - t0) * Math.Log(tx / t0) * tempoScale;
     }
 
     public static double SlotsToMs(SongProject p, int measureIndex, double slots, double tempoScale = 1.0)
         => OffsetMs(BarOf(p, measureIndex), slots, TempoAt(p, measureIndex), tempoScale);
 
     /// <summary>Slots to milliseconds at an explicit tempo (playback carries the running tempo itself).</summary>
-    public static double SlotsToMsAt(double slots, int tempo, double tempoScale = 1.0)
-        => slots / SlotsPerQuarter * (60000.0 / Math.Clamp(tempo, 20, 400)) * tempoScale;
+    public static double SlotsToMsAt(double slots, int tempo, double tempoScale = 1.0) => ConstMs(slots, tempo, tempoScale);
 
     public static double BarMs(SongProject p, int measureIndex, double tempoScale = 1.0)
         => SlotsToMs(p, measureIndex, BarSlots(p, measureIndex), tempoScale);
@@ -269,7 +289,11 @@ public static class MusicTime
     }
 }
 
-public readonly record struct BarState(int Slots, double Used, bool Complete, bool Error);
+public readonly record struct BarState(int Slots, double Used, bool Complete, bool Error, bool Short = false)
+{
+    /// <summary>Drawn in the red bar style: overfull/overlapping, or content shorter than the time signature (an empty bar is not).</summary>
+    public bool Marked => Error || Short;
+}
 
 /// <summary>A bar whose rhythm does not add up to its time signature (see <see cref="MusicTime.FindBarProblems"/>).</summary>
 public readonly record struct BarProblem(int BarIndex, BarState State)

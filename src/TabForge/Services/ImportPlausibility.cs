@@ -4,6 +4,9 @@ using TabForge.Models;
 
 namespace TabForge.Services;
 
+// Owns: the single pass that counts facts a valid imported song cannot contain.
+// Does not own: the import conversion.
+// Tests: TestImportPlausibility.
 /// <summary>
 /// One cheap pass over an imported Guitar Pro song that counts facts a valid file cannot produce (a note on a string the track
 /// does not have, a pitch outside MIDI, a fret far past any neck, an impossible beat length or tempo, control characters in a name),

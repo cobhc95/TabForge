@@ -11,15 +11,20 @@ using TabForge.AudioEngine.Synth;
 namespace TabForge.AudioEngine;
 
 /// <summary>
-/// A-02: the engine's per-session state and its command handlers, one instance per engine run. <see cref="EngineHost.Run"/> creates it;
+/// The engine's per-session state and its command handlers, one instance per engine run. <see cref="EngineHost.Run"/> creates it;
 /// the headless harness uses the one created with the process. <see cref="EngineHost"/> keeps only the process and IPC side (pipe,
 /// shared block, command reader, watchdog, main loop); it parses each command on the reader thread and posts the matching handler
 /// here. Unless noted, every member belongs to the engine main thread (checked with <see cref="AssertMain"/> in Debug builds).
 /// </summary>
 internal sealed partial class EngineSession
 {
-    /// <summary>RT-08: song position, tempo and bar map, shared by every MixEngine this process creates (written by the command reader thread).</summary>
-    public readonly SongTransport Transport = new();
+    /// <summary>One transport per song owner (position, tempo, bar map), shared by every MixEngine this process creates (written by the command reader thread). Allocated once, never grown.</summary>
+    public readonly SongTransport[] Transports = CreateTransports();
+    /// <summary>Owner 0: the transport of a sender that names no owner, and the one plug-ins see.</summary>
+    public SongTransport Transport => Transports[0];
+    private static SongTransport[] CreateTransports() { var t = new SongTransport[SongOwners.Max]; for (var i = 0; i < t.Length; i++) t[i] = new SongTransport(); return t; }
+    /// <summary>Per-slot owner of the song whose position drives the slot's clips, kept across chain rebuilds.</summary>
+    public readonly Dictionary<int, int> ClipOwners = new();
     public readonly Dictionary<int, (string Track, bool UseMidiSynth, List<PluginSpec> Specs)> Requested = new();
     public readonly Dictionary<int, TrackChain> Loaded = new();
     /// <summary>Reader thread only: chain loads whose per-plug-in state frames are still arriving.</summary>
@@ -156,19 +161,20 @@ internal sealed partial class EngineSession
     }
 
     /// <summary>SetClips command: waits for a running render like every chain change.</summary>
-    public void SetClips(int slot, List<ClipSpec> clips)
+    public void SetClips(int slot, List<ClipSpec> clips, int owner)
     {
         AssertMain();
-        void Apply() => StoreClips(slot, clips);
+        void Apply() => StoreClips(slot, clips, owner);
         if (!Defer(Apply)) Apply();
     }
 
     /// <summary>Stores a track's clips and applies them to its loaded chain (no render check: the headless harness calls it directly).</summary>
-    public void StoreClips(int slot, List<ClipSpec> clips)
+    public void StoreClips(int slot, List<ClipSpec> clips, int owner = 0)
     {
         AssertMain();
         ClipSpecs[slot] = clips;
-        if (Loaded.TryGetValue(slot, out var c)) ApplyClips(c, clips);
+        ClipOwners[slot] = owner;
+        if (Loaded.TryGetValue(slot, out var c)) ApplyClips(c, clips, owner);
     }
 
     public void SetArm(int slot, bool armed, int mode, bool monitor)
@@ -179,10 +185,10 @@ internal sealed partial class EngineSession
         ApplyArms();
     }
 
-    public void Record(bool start, string folder, Dictionary<int, string> names, double offsetMs)
+    public void Record(bool start, string folder, Dictionary<int, string> names, double offsetMs, int owner = 0)
     {
         AssertMain();
-        if (start) StartRecording(folder, names, offsetMs); else StopRecording();
+        if (start) StartRecording(folder, names, offsetMs, owner); else StopRecording();
     }
 
     public void CloseEditor(int slot, int index)
@@ -221,7 +227,7 @@ internal sealed partial class EngineSession
     public void SetWindowsPathOffset(float db)
     {
         AssertMain();
-        _pathOffsetGain = MathF.Pow(10, db / 20);
+        _pathOffsetGain = Gain.FromDb(db);
         EngineLog.Write($"Windows audio path offset {db:0.00} dB");
         ApplyFollowedGain();
     }
@@ -328,7 +334,7 @@ internal sealed partial class EngineSession
     private int _misbehaveSeen;
 
     /// <summary>
-    /// RT-02, engine main thread: sends <see cref="EngineEvent.PluginMisbehaved"/> once for each plug-in (or track sound) the audio thread
+    /// Engine main thread: sends <see cref="EngineEvent.PluginMisbehaved"/> once for each plug-in (or track sound) the audio thread
     /// caught producing non-finite audio. One read per loop turn while nothing happened.
     /// </summary>
     public int ReportMisbehaving()
@@ -393,7 +399,7 @@ internal sealed partial class EngineSession
             // The live plug-ins follow the new rate / block size in place (they keep their settings); see ReconfigureLive.
             if (SampleRate != oldRate || maxBlock != oldBlock) ReconfigureLive(SampleRate, maxBlock);
             var previous = Loaded.Values.ToList();
-            Volatile.Write(ref Mix, new MixEngine(Shared!, SampleRate, maxBlock, Transport));   // the reader thread reads it (Panic)
+            Volatile.Write(ref Mix, new MixEngine(Shared!, SampleRate, maxBlock, Transports));   // the reader thread reads it (Panic)
             Mix!.LiveLimiter = LiveLimiter;
             if (config.Driver == AudioOutputFactory.WasapiShared) Mix!.Ceiling = 8f;   // +18 dB: the Windows float mixer clips after its volume
             // Chains depend on the sample rate and block size (their buffers): rebuild every requested chain for the new engine.
@@ -591,7 +597,7 @@ internal sealed partial class EngineSession
     /// The endpoint volume Windows really applies is its MasterVolumeLevel in dB (measured on an Audient iD4: loopback level
     /// tracks the reported dB exactly from 0 to -35 dB; the old scalar² curve was up to 5 dB off). The scalar is only the slider.
     /// </summary>
-    private static float EndpointGain(float db, bool muted) => muted ? 0f : MathF.Pow(10, Math.Clamp(db, -96f, 0f) / 20);
+    private static float EndpointGain(float db, bool muted) => muted ? 0f : Gain.FromDb(Math.Clamp(db, -96f, 0f));
 
     /// <summary>A Volume Mixer session slider is applied as scalar² (measured: 0.5 = -12.04 dB, 0.25 = -24.08 dB).</summary>
     private static float SessionGain(float scalar, bool muted) => muted ? 0f : Math.Clamp(scalar, 0f, 1f) * Math.Clamp(scalar, 0f, 1f);
@@ -691,7 +697,7 @@ internal sealed partial class EngineSession
                     EngineLog.Write($"plug-in loaded: {System.IO.Path.GetFileName(spec.Path)} in {loadTimer.ElapsedMilliseconds} ms (create {createdMs} ms, state {loadTimer.ElapsedMilliseconds - createdMs} ms)");
                     if (plugin is Vst2Plugin vst2) vst2.Edited += () => Send(EngineEvent.StateChanged, w => { w.Write(slot); w.Write(index); });
                 }
-                var gain = spec.OutputDb <= -59.9 ? 0f : (float)Math.Pow(10, spec.OutputDb / 20);
+                var gain = spec.OutputDb <= -59.9 ? 0f : (float)Gain.FromDb(spec.OutputDb);
                 if (spec.IsInstrument && instrumentIndex < 0) instrumentIndex = index;
                 var stage = new TrackChain.Effect(plugin, spec.Wet / 100f, index, spec.Pins, gain, spec.IsInstrument) { Bypass = !spec.Enabled };
                 if (Wirings.TryGetValue((slot, spec.Id), out var flags)) { stage.PassMidi = (flags & 1) != 0; stage.MidiOutToNext = (flags & 2) != 0; stage.Replace = (flags & 4) != 0; }
@@ -724,7 +730,7 @@ internal sealed partial class EngineSession
         var chain = new TrackChain(slot, instrumentIndex, synth, effects, maxBlock);
         foreach (var (id, p) in byId) chain.ById[id] = p;
         if (Mixes.TryGetValue(slot, out var mixed)) chain.SetMix(mixed.Volume, mixed.Pan);
-        if (ClipSpecs.TryGetValue(slot, out var clipSpecs)) ApplyClips(chain, clipSpecs);
+        if (ClipSpecs.TryGetValue(slot, out var clipSpecs)) ApplyClips(chain, clipSpecs, ClipOwners.GetValueOrDefault(slot));
         chain.ArmMode = Arms.TryGetValue(slot, out var armMode) ? armMode : -1;
         chain.Monitor = !Unmonitored.Contains(slot);
         Loaded[slot] = chain;
@@ -763,7 +769,7 @@ internal sealed partial class EngineSession
     private IPluginInstance Create(PluginSpec spec, int maxBlock, int slot, int index)
     {
         if (PluginFactory is { } factory) return factory(spec, SampleRate, maxBlock);   // headless tests only
-        // Self-test hook (R-06): the managed test effect, optionally slow in effOpen, in a real engine process. Never without the hooks.
+        // Self-test hook: the managed test effect, optionally slow in effOpen, in a real engine process. Never without the hooks.
         if (EngineHost.TestHooks && spec.Path == Vst2Plugin.TestEffect.PathName)
             return Vst2Plugin.TestEffect.Create(SampleRate, maxBlock,
                 int.TryParse(Environment.GetEnvironmentVariable("TABFORGE_TEST_OPEN_DELAY_MS"), out var delay) ? Math.Clamp(delay, 0, 60_000) : 0);
@@ -783,7 +789,7 @@ internal sealed partial class EngineSession
         AssertMain();
         if (Defer(() => RemoveChain(slot))) return;
         Mixes.Remove(slot);
-        ClipSpecs.Remove(slot);
+        ClipSpecs.Remove(slot); ClipOwners.Remove(slot);
         if (Arms.Remove(slot)) ApplyArms();
         Requested.Remove(slot);
         Loaded.Remove(slot);
@@ -805,9 +811,10 @@ internal sealed partial class EngineSession
         Retired.Add(chain, Mix?.Epoch);
     }
 
-    private void ApplyClips(TrackChain chain, List<ClipSpec> specs)
+    private void ApplyClips(TrackChain chain, List<ClipSpec> specs, int owner)
     {
         AssertMain();
+        chain.ClipOwner = owner;
         var players = specs.Where(s => File.Exists(s.File)).Select(s => new Audio.ClipPlayer(s, SampleRate)).ToArray();
         var old = chain.Clips;
         Audio.DiskStreamer.Register(players);
@@ -829,7 +836,7 @@ internal sealed partial class EngineSession
             {
                 // ASIO: the driver delivers the input in its own callback (no second, competing device).
                 Input = Player is NAudio.Wave.AsioOut && _asioBufferFrames > 0
-                    // RT-09: the driver-reported input latency (ASIOGetLatencies, it includes the buffer) when there is one.
+                    // The driver-reported input latency (ASIOGetLatencies, it includes the buffer) when there is one.
                     ? new Audio.InputCapture(AsioInputLabel(), SampleRate, Math.Max(1, AudioOutputFactory.AsioInputChannelsUsed),
                         Math.Max(1, (int)Math.Round((AudioOutputFactory.AsioInputLatencyFrames > 0 ? AudioOutputFactory.AsioInputLatencyFrames : _asioBufferFrames) * 1000.0 / SampleRate)))
                     : new Audio.InputCapture(Config.InputDevice, SampleRate);
@@ -852,13 +859,13 @@ internal sealed partial class EngineSession
         }
     }
 
-    private void StartRecording(string folder, Dictionary<int, string> names, double offsetMs)
+    private void StartRecording(string folder, Dictionary<int, string> names, double offsetMs, int owner)
     {
         AssertMain();
         if (Recorder is not null || Input is null || Mix is null) return;
         var armed = Arms.Where(a => names.ContainsKey(a.Key)).Select(a => (a.Key, names[a.Key], a.Value)).ToList();
         if (armed.Count == 0) return;
-        var heardSec = Audio.TakeAlignment.StartSec(Mix.SongSecNow, Mix.DelayTicks / (double)Stopwatch.Frequency, Input.LatencyMs, offsetMs);
+        var heardSec = Audio.TakeAlignment.StartSec(Mix.SongSecFor(owner), Mix.DelayTicks / (double)Stopwatch.Frequency, Input.LatencyMs, offsetMs);
         EngineLog.Write($"recording aligned: input latency {Input.LatencyMs} ms, user offset {offsetMs:0.#} ms");
         try
         {

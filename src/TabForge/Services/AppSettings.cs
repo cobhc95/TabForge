@@ -4,6 +4,9 @@ using TabForge.Documents;
 
 namespace TabForge.Services;
 
+// Owns: the data classes of every persisted setting, with their defaults.
+// Does not own: loading, saving, migrating and validating (AppSettingsStore, SettingsMigration, SettingsValidator).
+// Tests: TestTabUi, TestNewBindableCommands.
 /// <summary>
 /// Everything the user can change, persisted to %APPDATA%\TabForge\settings.json. The legacy flat
 /// properties are kept so older files still load; new settings live in the category objects.
@@ -190,6 +193,8 @@ public sealed class AppearanceSettings
 {
     /// <summary>Track rows and timeline lanes tinted with the track's colour, in percent (0 = off).</summary>
     public int TrackTintPercent { get; set; } = 20;
+    /// <summary>How strongly a muted track is greyed in the track list and the timeline, in percent (0 = not dimmed).</summary>
+    public int MutedTrackDimPercent { get; set; } = 80;
     /// <summary>Colour per mixer group (Guitars, Basses, Drums...) for "Colour tracks by group"; missing = default.</summary>
     public Dictionary<string, string> GroupColours { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public List<string> RecentColours { get; set; } = new();
@@ -347,6 +352,9 @@ public sealed class PluginSettings
     public bool RememberScan { get; set; }
     /// <summary>The remembered plug-in list (when <see cref="RememberScan"/> is on).</summary>
     public List<KnownPlugin> ScanCache { get; set; } = new();
+    /// <summary>Result of the most recent completed scan in this run, so the arrangement view can offer VST instruments. Not saved.</summary>
+    [JsonIgnore]
+    public IReadOnlyList<TabForge.Plugins.VstPluginInfo> LastScan { get; set; } = Array.Empty<TabForge.Plugins.VstPluginInfo>();
     /// <summary>Roles / vendors found by probing plug-ins, kept so each is probed once.</summary>
     public List<KnownPlugin> Probed { get; set; } = new();
     /// <summary>Fingerprints of scanned and approved plug-ins in user-writable locations (see <see cref="TabForge.Plugins.PluginTrust"/>): a file that changed since is only trusted again when it has the same Authenticode signer.</summary>
@@ -497,10 +505,14 @@ public sealed class EditingSettings
     /// <summary>Ask before deleting a bar.</summary>
     public bool ConfirmDeleteBar { get; set; }
     /// <summary>Move the caret forward by the entered note's value.</summary>
-    public bool AutoAdvance { get; set; } = true;
+    public bool AutoAdvance { get; set; } = false;
     /// <summary>false: + shortens, - lengthens. true: + lengthens, - shortens.</summary>
     public bool ReversePlusMinusDuration { get; set; }
     public bool PreventBarOverflow { get; set; }
+    /// <summary>Edits keep every bar complete: gaps become rests, a deleted beat becomes a rest. Off: bars may stay incomplete (shown red).</summary>
+    public bool FillBarsWithRests { get; set; } = true;
+    /// <summary>When deleting notes with the rest fill on: false leaves a rest of the same length, true leaves merged rests.</summary>
+    public bool MergeRestsOnDelete { get; set; }
     /// <summary>Remembered paste answers (docs/COPY_PASTE_DESIGN.md Q1..Q5): "Ask" (default) or an option id, see <see cref="PasteQuestionInfo"/>.</summary>
     public string PasteBeatsOntoNotes { get; set; } = PasteQuestionInfo.Ask;
     public string PasteOctave { get; set; } = PasteQuestionInfo.Ask;
@@ -577,40 +589,8 @@ public sealed class TimelineSettings
     public bool ShowGroupsInNewSongs { get; set; }
     /// <summary>A clip lane with no clips left (after a move, delete, cut) is removed and the lanes below close up. Armed tracks are never touched.</summary>
     public bool AutoRemoveEmptyLanes { get; set; } = true;
-}
-
-/// <summary>Action id → key gesture string (e.g. "Ctrl+Shift+T"). Missing ids use the catalog default.</summary>
-public sealed class HotkeySettings
-{
-    /// <summary>Base key layout (see HotkeyPresets); Bindings hold the user's own changes on top.</summary>
-    public string Preset { get; set; } = "TabForge";
-    public Dictionary<string, string> Bindings { get; set; } = new();
-    /// <summary>Commands explicitly unbound by the user; absence from Bindings otherwise means default.</summary>
-    public List<string> DisabledActions { get; set; } = new();
-
-    [JsonIgnore]
-    public string this[string action]
-    {
-        get => Bindings.TryGetValue(action, out var v) ? v : "";
-        set
-        {
-            DisabledActions.RemoveAll(id => id.Equals(action, StringComparison.OrdinalIgnoreCase));
-            if (string.IsNullOrWhiteSpace(value)) Bindings.Remove(action);
-            else Bindings[action] = value;
-        }
-    }
-
-    public bool IsDisabled(string action) => DisabledActions.Contains(action, StringComparer.OrdinalIgnoreCase);
-    public void Disable(string action)
-    {
-        Bindings.Remove(action);
-        if (!IsDisabled(action)) DisabledActions.Add(action);
-    }
-    public void Reset(string action)
-    {
-        Bindings.Remove(action);
-        DisabledActions.RemoveAll(id => id.Equals(action, StringComparison.OrdinalIgnoreCase));
-    }
+    /// <summary>The "Add track" strip under the last track (track list and timeline). The + Track button stays either way.</summary>
+    public bool ShowAddTrackLane { get; set; } = true;
 }
 
 public static class InstrumentViews

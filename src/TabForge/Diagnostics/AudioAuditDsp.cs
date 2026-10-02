@@ -1,9 +1,10 @@
+using TabForge.Audio.Contracts;
 namespace TabForge.Diagnostics;
 
 /// <summary>Signal maths for the audio audit (offline, allocation is fine here): FFT, spectral-flux onsets, K-weighted loudness, statistics.</summary>
 internal static class AudioAuditDsp
 {
-    public static double Db(double linear) => linear <= 1e-6 ? -120 : Math.Max(-120, 20 * Math.Log10(linear));
+    public static double Db(double linear) => linear <= 1e-6 ? -120 : Math.Max(-120, Gain.ToDb(linear));
 
     public static double Percentile(IReadOnlyList<double> sortedAscending, double p)
     {
@@ -143,7 +144,7 @@ internal static class AudioAuditDsp
     private static (double b0, double b1, double b2, double a1, double a2) ShelfCoeffs(int fs)
     {
         const double f0 = 1681.974450955533, g = 3.999843853973347, q = 0.7071752369554196;
-        var k = Math.Tan(Math.PI * f0 / fs); var vh = Math.Pow(10, g / 20); var vb = Math.Pow(vh, 0.4996667741545416);
+        var k = Math.Tan(Math.PI * f0 / fs); var vh = Gain.FromDb(g); var vb = Math.Pow(vh, 0.4996667741545416);
         var a0 = 1 + k / q + k * k;
         return ((vh + vb * k / q + k * k) / a0, 2 * (k * k - vh) / a0, (vh - vb * k / q + k * k) / a0, 2 * (k * k - 1) / a0, (1 - k / q + k * k) / a0);
     }

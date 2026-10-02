@@ -134,7 +134,7 @@ public partial class MainWindow
         _showNoteNames = s.Editing.ShowNoteNames;
         _previewNotes = s.Audio.PreviewNotes;
         var instrumentBefore = (_previewHorizon, _scaleHighlight, _fretboardFrets, _leftHanded, _showNoteNames,
-            TabForge.Visualization.InstrumentVisualizer.Gp5Mode);
+            _options.Visual.Gp5Mode);
         _previewHorizon = s.Editing.PreviewNotesEnabled ? Math.Clamp(s.Editing.PreviewHorizon, 1, 10) : 0;
         ApplyFretboardStyle(s.Audio.FretboardStyle);
         _scaleHighlight = s.Editing.ScaleHighlight;
@@ -142,23 +142,25 @@ public partial class MainWindow
         _scoreWheelScrollPixels = Math.Clamp(s.Editing.ScoreWheelScrollPixels, 12, 96);
         // Fretboard options only showed after the next note/playhead move; redraw it now when one changed.
         if (instrumentBefore != (_previewHorizon, _scaleHighlight, _fretboardFrets, _leftHanded, _showNoteNames,
-                TabForge.Visualization.InstrumentVisualizer.Gp5Mode) && _mainWindowInitialized)
+                _options.Visual.Gp5Mode) && _mainWindowInitialized)
             RefreshInstrument();
         Editor.CurrentDurationDenominator = new[] { 1, 2, 4, 8, 16, 32, 64 }.Contains(s.Editing.DefaultDuration)
             ? s.Editing.DefaultDuration : 4;
         Editor.AutoAdvanceAfterEntry = s.Editing.AutoAdvance;
         Editor.ReversePlusMinusDuration = s.Editing.ReversePlusMinusDuration;
-        HotkeyCatalog.ReverseDurationKeys = s.Editing.ReversePlusMinusDuration;   // the default keys of Longer / Shorter swap with it
+        s.Hotkeys.ReverseDurationKeys = s.Editing.ReversePlusMinusDuration;   // the default keys of Longer / Shorter swap with it
         Editor.PreventBarOverflow = s.Editing.PreventBarOverflow;
-        _metronome = s.Audio.Metronome;
-        _countIn = s.Audio.CountIn;
+        Editor.FillBarsWithRests = s.Editing.FillBarsWithRests;
+        Editor.MergeRestsOnDelete = s.Editing.MergeRestsOnDelete;
+        _transport.Metronome = s.Audio.Metronome;
+        _transport.CountIn = s.Audio.CountIn;
         s.Audio.MetronomeVolume = Math.Clamp(s.Audio.MetronomeVolume, 0, 100);
         s.Audio.MetronomeAccentVolume = Math.Clamp(s.Audio.MetronomeAccentVolume, 0, 100);
         s.Audio.MetronomeClickVolume = Math.Clamp(s.Audio.MetronomeClickVolume, 0, 100);
         s.Audio.MetronomeSubdivision = s.Audio.MetronomeSubdivision is 1 or 2 or 3 or 4 ? s.Audio.MetronomeSubdivision : 1;
-        _speed = Math.Clamp(s.Audio.Speed <= 0 ? 1 : s.Audio.Speed, 0.25, 2.0);
+        _transport.Speed = Math.Clamp(s.Audio.Speed <= 0 ? 1 : s.Audio.Speed, 0.25, 2.0);
         UpdateSpeedControls();
-        if (_midi.IsPlaying) _midi.SetSpeed(_project, _speed);
+        if (_midi.IsPlaying) _midi.SetSpeed(_project, _transport.Speed);
         SyncMetronomeSettingsPopup();
         ApplyMetronomeSettingsToEngines();
         _confirmOnClose = s.General.ConfirmOnClose;
@@ -169,42 +171,42 @@ public partial class MainWindow
         // Legacy compatibility: the old "keep the playhead in view" flag mapped to Off.
         if (!s.General.AutoScroll && follow.Mode == FollowModes.Jump) follow.Mode = FollowModes.Off;
         _follow.ApplySettings(follow);
-        Editor.HighlightPlayedBeat = follow.HighlightPlayedBeat;
-        Editor.PlaybackColor = ParseColour(follow.HighlightColour, Color.FromRgb(0x3F, 0xB9, 0x50));
-        Editor.HighlightBackground = ParseColour(follow.HighlightBackground, Color.FromRgb(0x1E, 0x3A, 0x2A));
+        Editor.Appearance.HighlightPlayedBeat = follow.HighlightPlayedBeat;
+        Editor.Appearance.PlaybackColor = ParseColour(follow.HighlightColour, Color.FromRgb(0x3F, 0xB9, 0x50));
+        Editor.Appearance.HighlightBackground = ParseColour(follow.HighlightBackground, Color.FromRgb(0x1E, 0x3A, 0x2A));
         Editor.DurationGlowColor = ParseColour(follow.DurationGlowColour, Color.FromRgb(0x3F, 0xB9, 0x50));
         Editor.DurationGlowOpacity = Math.Clamp(follow.DurationGlowOpacity, 0, 1);
         Editor.PlayingBarEnabled = follow.PlayingBarEnabled;
-        Editor.PlayingBarColor = ParseColour(follow.PlayingBarColour, Color.FromRgb(0xFF, 0xE0, 0x66));
-        Editor.PlayingBarOpacity = Math.Clamp(follow.PlayingBarOpacity, 0.05, 0.6);
-        Editor.PlayingBarWhenStopped = follow.PlayingBarWhenStopped;
+        Editor.Appearance.PlayingBarColor = ParseColour(follow.PlayingBarColour, Color.FromRgb(0xFF, 0xE0, 0x66));
+        Editor.Appearance.PlayingBarOpacity = Math.Clamp(follow.PlayingBarOpacity, 0.05, 0.6);
+        Editor.Appearance.PlayingBarWhenStopped = follow.PlayingBarWhenStopped;
         PlayingBarMenu.IsChecked = follow.PlayingBarEnabled;
-        Editor.DarkPaperColor = ParseColour(s.Appearance.DarkScorePaperColour, Color.FromRgb(0x15, 0x18, 0x1D));
-        Editor.LightPaperColor = ParseColour(s.Appearance.LightScorePaperColour, Colors.White);
-        Editor.DarkInkColor = ParseColour(s.Appearance.DarkScoreInkColour, Color.FromRgb(0xE7, 0xEA, 0xEF));
-        Editor.LightInkColor = ParseColour(s.Appearance.LightScoreInkColour, Color.FromRgb(0x11, 0x11, 0x11));
-        Editor.DarkStaffLineColor = ApplyOpacity(ParseColour(s.Appearance.DarkScoreLinesColour, Color.FromRgb(0x34, 0x39, 0x40)), s.Appearance.StaffLineOpacity);
-        Editor.LightStaffLineColor = ApplyOpacity(ParseColour(s.Appearance.LightScoreLinesColour, Color.FromRgb(0xD5, 0xD5, 0xD5)), s.Appearance.StaffLineOpacity);
+        Editor.Appearance.DarkPaperColor = ParseColour(s.Appearance.DarkScorePaperColour, Color.FromRgb(0x15, 0x18, 0x1D));
+        Editor.Appearance.LightPaperColor = ParseColour(s.Appearance.LightScorePaperColour, Colors.White);
+        Editor.Appearance.DarkInkColor = ParseColour(s.Appearance.DarkScoreInkColour, Color.FromRgb(0xE7, 0xEA, 0xEF));
+        Editor.Appearance.LightInkColor = ParseColour(s.Appearance.LightScoreInkColour, Color.FromRgb(0x11, 0x11, 0x11));
+        Editor.Appearance.DarkStaffLineColor = ApplyOpacity(ParseColour(s.Appearance.DarkScoreLinesColour, Color.FromRgb(0x34, 0x39, 0x40)), s.Appearance.StaffLineOpacity);
+        Editor.Appearance.LightStaffLineColor = ApplyOpacity(ParseColour(s.Appearance.LightScoreLinesColour, Color.FromRgb(0xD5, 0xD5, 0xD5)), s.Appearance.StaffLineOpacity);
         Editor.LedgerLines = Enum.TryParse<LedgerLineMode>(s.Appearance.LedgerLines, true, out var ledgerMode) &&
                              Enum.IsDefined(typeof(LedgerLineMode), ledgerMode)
             ? ledgerMode
             : LedgerLineMode.Minimal;
-        Editor.AccentColor = ParseColour(s.Appearance.Accent, Color.FromRgb(0x4C, 0x9A, 0xFF));
-        Editor.SelectionColor = ParseColour(s.Appearance.SelectionColour, Color.FromRgb(0x4C, 0x9A, 0xFF));
-        Editor.HoverColor = ParseColour(s.Appearance.HoverColour, Color.FromRgb(0x98, 0xA1, 0xAE));
-        Editor.HoverHighlightIntensity = Math.Clamp(s.Appearance.HoverHighlightIntensity, 0, 1);
-        Editor.SelectionHighlightIntensity = Math.Clamp(s.Appearance.SelectionHighlightIntensity, 0, 1);
-        Editor.ShowBarNumbers = s.Appearance.ShowScoreBarNumbers;
-        Editor.BarNumberFrequency = Math.Clamp(s.Appearance.ScoreBarNumberFrequency, 1, 16);
-        Editor.ShowSectionHeadings = s.Appearance.ShowSectionHeadings;
-        Editor.ShowDynamics = s.Appearance.ShowDynamics;
-        Editor.CursorColor = ParseColour(s.Appearance.CursorColour, Color.FromRgb(0xF2, 0xC1, 0x4E));
+        Editor.Appearance.AccentColor = ParseColour(s.Appearance.Accent, Color.FromRgb(0x4C, 0x9A, 0xFF));
+        Editor.Appearance.SelectionColor = ParseColour(s.Appearance.SelectionColour, Color.FromRgb(0x4C, 0x9A, 0xFF));
+        Editor.Appearance.HoverColor = ParseColour(s.Appearance.HoverColour, Color.FromRgb(0x98, 0xA1, 0xAE));
+        Editor.Appearance.HoverHighlightIntensity = Math.Clamp(s.Appearance.HoverHighlightIntensity, 0, 1);
+        Editor.Appearance.SelectionHighlightIntensity = Math.Clamp(s.Appearance.SelectionHighlightIntensity, 0, 1);
+        Editor.Appearance.ShowBarNumbers = s.Appearance.ShowScoreBarNumbers;
+        Editor.Appearance.BarNumberFrequency = Math.Clamp(s.Appearance.ScoreBarNumberFrequency, 1, 16);
+        Editor.Appearance.ShowSectionHeadings = s.Appearance.ShowSectionHeadings;
+        Editor.Appearance.ShowDynamics = s.Appearance.ShowDynamics;
+        Editor.Appearance.CursorColor = ParseColour(s.Appearance.CursorColour, Color.FromRgb(0xF2, 0xC1, 0x4E));
         Playhead.SetColor(ParseColour(follow.PlayheadColour, Color.FromRgb(0x3F, 0xB9, 0x50)));
         Playhead.SetDurationStyle(Editor.DurationGlowColor, Editor.DurationGlowOpacity, follow.DurationTintEnabled);
         Playhead.SetThickness(follow.PlayheadThickness);
-        Editor.ScoreSpacing = s.Appearance.ScoreSpacing;
-        Editor.SystemVerticalSpacing = s.Appearance.SystemVerticalSpacing;
-        Editor.MeasureHorizontalSpacing = s.Appearance.MeasureHorizontalSpacing;
+        Editor.Appearance.ScoreSpacing = s.Appearance.ScoreSpacing;
+        Editor.Appearance.SystemVerticalSpacing = s.Appearance.SystemVerticalSpacing;
+        Editor.Appearance.MeasureHorizontalSpacing = s.Appearance.MeasureHorizontalSpacing;
         TabEditorControl.ConfigureScoreTextStyle(s.Appearance.ScoreFontFamily, s.Appearance.ScoreTextSize,
             s.Appearance.ScoreTextBold, s.Appearance.ScoreTextItalic);
         TabEditorControl.ConfigureTextAreas(s.Appearance.ScoreTextAreas);
@@ -226,6 +228,7 @@ public partial class MainWindow
         Arrangement.HideEmptyTimelineGrid = s.Timeline.HideEmptyGrid;
         Arrangement.ShowBarGlow = s.Timeline.BarGlow;
         Arrangement.PlayheadStyle = s.Timeline.PlayheadStyle;
+        Arrangement.ShowAddTrackLane = s.Timeline.ShowAddTrackLane;
         ArrangementIndividualNotesMenu.IsChecked = Arrangement.ShowIndividualNotes;
         ArrangementContinuousBlocksMenu.IsChecked = Arrangement.ShowContinuousBlocks;
         if (_mainWindowInitialized) ApplyInstrumentSizeLock();   // "Lock fretboard size" is a Preferences row too
@@ -251,10 +254,10 @@ public partial class MainWindow
         PreviewNotesMenu.IsChecked = _previewNotes;
         PreviewHorizonSlider.Value = _previewHorizon;
         FretboardFretsCombo.SelectedIndex = _fretboardFrets == 12 ? 1 : 0;
-        MetronomeMenu.IsChecked = _metronome;
-        SetTransportActive(MetronomeButton, _metronome);
-        CountInMenu.IsChecked = _countIn;
-        SetTransportActive(CountInButton, _countIn);
+        MetronomeMenu.IsChecked = _transport.Metronome;
+        SetTransportActive(MetronomeButton, _transport.Metronome);
+        CountInMenu.IsChecked = _transport.CountIn;
+        SetTransportActive(CountInButton, _transport.CountIn);
 
         Tabs.Settings = _tabSettings;
         Tabs.Refresh();
@@ -267,13 +270,13 @@ public partial class MainWindow
         RefreshHotkeyTooltips();
         // A changed audio driver, device, channel pair or rate reaches the engine now (only when a setting differs).
         var asioNow = string.Equals(_settings.Plugins.Driver, AudioDrivers.Asio, StringComparison.Ordinal);
-        if (_mainWindowInitialized && _settings.Plugins.PlayAllThroughEngine != TabForge.Models.MixerGroups.PlayAllThroughEngine)
+        if (_mainWindowInitialized && _settings.Plugins.PlayAllThroughEngine != _engine.Mixer.PlayAllThroughEngine)
             _settings.Plugins.PlayAllSetAutomatically = false; // the user changed it by hand: a manual choice is kept
         if (asioNow && !_asioWasSelected) AutoEnablePlayAllThroughEngine(); // ASIO just selected (or active at start)
         else if (!asioNow && _asioWasSelected) AutoDisablePlayAllThroughEngine(); // ASIO deselected
         _asioWasSelected = asioNow;
-        var routeChanged = TabForge.Models.MixerGroups.PlayAllThroughEngine != _settings.Plugins.PlayAllThroughEngine;
-        TabForge.Models.MixerGroups.PlayAllThroughEngine = _settings.Plugins.PlayAllThroughEngine;
+        var routeChanged = _engine.Mixer.PlayAllThroughEngine != _settings.Plugins.PlayAllThroughEngine;
+        _engine.Mixer.PlayAllThroughEngine = _settings.Plugins.PlayAllThroughEngine;
         TabForge.Audio.RoutedMidiOutput.WindowsMidiLatencyMs = _settings.Plugins.WindowsMidiLatencyMs;
         if (_mainWindowInitialized) { SyncAudioEngine(); if (routeChanged) _midi.Rebuild(_project); }
     }
@@ -313,7 +316,8 @@ public partial class MainWindow
     /// <summary>Applies the Appearance settings to the live UI (colours, font, density, paper).</summary>
     private void ApplyAppearance()
     {
-        Views.ArrangementPanel.TrackTint = _settings.Appearance.TrackTintPercent / 100.0;
+        _options.Visual.TrackTint = _settings.Appearance.TrackTintPercent / 100.0;
+        _options.Visual.MutedDim = _settings.Appearance.MutedTrackDimPercent / 100.0;
         if (_settings.Appearance.ThemePresetVersion < 1)
         {
             // Settings from before theme presets: give the colour fields the chosen theme's palette once.
@@ -328,6 +332,7 @@ public partial class MainWindow
         Playhead.InvalidateVisual();
         ApplyScorePageBackground();
         // Code-drawn surfaces pick up the theme palette on their next render.
+        if (_mainWindowInitialized) RefreshArrangement();   // muted rows take the dimming strength when they are built
         Arrangement.InvalidateTimeline();
         Instrument.InvalidateVisual();
         RefreshToolsPalette(); // palette icons are tinted in code, so they need the new text colour
@@ -357,6 +362,7 @@ public partial class MainWindow
     {
         _hotkeyMap = HotkeyCatalog.BuildMap(_settings.Hotkeys);
         _clipHotkeyMap = HotkeyCatalog.BuildMap(_settings.Hotkeys, clipContext: true);
+        _trackRowHotkeyMap = HotkeyCatalog.BuildMap(_settings.Hotkeys, trackRowContext: true);
         RefreshMenuGestures();
     }
 
@@ -440,6 +446,7 @@ public partial class MainWindow
                 return true;
             }
             case "View.CycleStringSpacing": SetInstrumentAppearance(stringSpacing: FretStringSpacings.Next(_settings.Editing.FretStringSpacing)); StatusText.Text = $"Fretboard string spacing: {_settings.Editing.FretStringSpacing}"; return true;
+            case "View.ToggleAddTrackLane": ToggleAddTrackLane(); return true;
             case "View.CyclePlayheadStyle": _settings.Timeline.PlayheadStyle = PlayheadStyles.Next(_settings.Timeline.PlayheadStyle); Arrangement.PlayheadStyle = _settings.Timeline.PlayheadStyle; SaveSettings(); StatusText.Text = $"Playback position marker: {_settings.Timeline.PlayheadStyle}"; return true;
             case "View.Mixer": OpenMixer(); return true;
             case "View.SidePanel": ToggleSidePanel(); return true;
@@ -455,8 +462,8 @@ public partial class MainWindow
             case "View.AutoFitTrackList": ToggleAutoFitTrackList(); return true;
             case "View.ResetTrackRowHeight": _trackListFit?.ResetRowHeight(); return true;
             case "Track.Wiring": OpenWiring(SelectedTrack); return true;
-            case "Playback.SpeedUp": ApplySpeed(NextSpeedPreset(_speed, 1)); return true;
-            case "Playback.SpeedDown": ApplySpeed(NextSpeedPreset(_speed, -1)); return true;
+            case "Playback.SpeedUp": ApplySpeed(NextSpeedPreset(_transport.Speed, 1)); return true;
+            case "Playback.SpeedDown": ApplySpeed(NextSpeedPreset(_transport.Speed, -1)); return true;
             case "Playback.SpeedReset": ApplySpeed(1.0); return true;
             case "Track.MoveUp": MoveTrack(-1); return true;
             case "Track.MoveDown": MoveTrack(1); return true;
@@ -476,6 +483,8 @@ public partial class MainWindow
             case "Note.Text": Text_Click(this, args); return true;
             case "Track.Add": AddGuitar_Click(this, args); return true;
             case "Track.Delete": DeleteTrack_Click(this, args); return true;
+            case "TrackRow.Copy": case "TrackRow.Cut": case "TrackRow.Paste": case "TrackRow.Duplicate": case "TrackRow.Delete":
+                return TrackFlow.RunHotkey(id, TrackMixerGrid.SelectedIndex);   // from the command palette: the selected track
             case "Track.Properties": TrackProps_Click(this, args); return true;
             case "Track.Next": SelectTrack(1); return true;
             case "Track.Previous": SelectTrack(-1); return true;
@@ -511,7 +520,7 @@ public partial class MainWindow
         Color.FromArgb((byte)Math.Clamp(Math.Round(color.A * Math.Clamp(opacity, 0, 1)), 0, 255),
             color.R, color.G, color.B);
 
-    private static string ColourToHex(Color c) => $"#{c.R:X2}{c.G:X2}{c.B:X2}";
+    private static string ColourToHex(Color c) => Visualization.ColourText.Hex(c);
 
     /// <summary>
     /// Icon glyphs are drawn from vector geometry at a configurable size, so the whole chrome follows
@@ -547,9 +556,9 @@ public partial class MainWindow
             s.ScaleHighlight = _scaleHighlight;
             s.FretboardFrets = _fretboardFrets;
             s.ZoomFactor = _zoomFactor;
-            s.Metronome = _metronome;
-            s.CountIn = _countIn;
-            s.Speed = _speed;
+            s.Metronome = _transport.Metronome;
+            s.CountIn = _transport.CountIn;
+            s.Speed = _transport.Speed;
 
             s.Editing.LeftHanded = _leftHanded;
             s.Editing.ShowNoteNames = _showNoteNames;
@@ -563,9 +572,9 @@ public partial class MainWindow
             s.Editing.FretboardFrets = _fretboardFrets;
             s.Editing.ScoreWheelScrollPixels = _scoreWheelScrollPixels;
             s.Audio.PreviewNotes = _previewNotes;
-            s.Audio.Metronome = _metronome;
-            s.Audio.CountIn = _countIn;
-            s.Audio.Speed = _speed;
+            s.Audio.Metronome = _transport.Metronome;
+            s.Audio.CountIn = _transport.CountIn;
+            s.Audio.Speed = _transport.Speed;
             s.Audio.MetronomeVolume = Math.Clamp(s.Audio.MetronomeVolume, 0, 100);
             s.Audio.MetronomeAccentVolume = Math.Clamp(s.Audio.MetronomeAccentVolume, 0, 100);
             s.Audio.MetronomeClickVolume = Math.Clamp(s.Audio.MetronomeClickVolume, 0, 100);
@@ -587,12 +596,12 @@ public partial class MainWindow
             }
             _follow.WriteSettings(s.Follow);
             s.Appearance.IconSize = _settings.Appearance.IconSize;
-            s.Appearance.ScoreSpacing = Editor.ScoreSpacing;
+            s.Appearance.ScoreSpacing = Editor.Appearance.ScoreSpacing;
             s.Appearance.LedgerLines = Editor.LedgerLines.ToString();
             s.Appearance.FretboardPosition = Instrument.HorizontalPosition.ToString();
-            s.Follow.HighlightPlayedBeat = Editor.HighlightPlayedBeat;
-            s.Follow.HighlightColour = ColourToHex(Editor.PlaybackColor);
-            s.Follow.HighlightBackground = ColourToHex(Editor.HighlightBackground);
+            s.Follow.HighlightPlayedBeat = Editor.Appearance.HighlightPlayedBeat;
+            s.Follow.HighlightColour = ColourToHex(Editor.Appearance.PlaybackColor);
+            s.Follow.HighlightBackground = ColourToHex(Editor.Appearance.HighlightBackground);
             s.Follow.PlayheadColour = ColourToHex(Playhead.CurrentColor);
             s.Follow.DurationGlowColour = ColourToHex(Editor.DurationGlowColor);
             s.Follow.DurationGlowOpacity = Math.Clamp(Editor.DurationGlowOpacity, 0, 1);
@@ -622,8 +631,8 @@ public partial class MainWindow
 
     private void ApplyLayout()
     {
-        SetTransportActive(MetronomeButton, _metronome);
-        SetTransportActive(CountInButton, _countIn);
+        SetTransportActive(MetronomeButton, _transport.Metronome);
+        SetTransportActive(CountInButton, _transport.CountIn);
         SetTransportActive(LoopButton, _loop);
         ApplyNotationFromSettings();
     }
@@ -727,7 +736,7 @@ public partial class MainWindow
     {
         var dlg = new ThemedConfirmDialog(
             "About TabForge",
-            $"TabForge {AppInfo.DisplayVersion}\nTablature and notation workstation\n\nTabForge is an independent project. Guitar Pro is a trademark of Arobas Music; TabForge is not affiliated with, sponsored or endorsed by Arobas Music, Steinberg, Toontrack or any other company named in the app.\n\nTabForge is under active development: keep backups of your files.\n\nMultitrack TAB + notation, durations/dots/triplets, rests/ties/fermata, repeats/endings/sections, chord/text/lyrics/markers, mixer with MIDI vol/pan/chorus/reverb, speed-trainer loop, metronome, fretboard, chord/scale finders, tuning reference, Guitar Pro 3/4/5/7 import, .gp (Guitar Pro 7/8) save, MIDI + ASCII export, VST2/VST3 plug-ins in a separate audio engine.",
+            $"{AppInfo.VersionLine}\nTablature and notation workstation\n\nTabForge is an independent project, not affiliated with any other software maker.\n\nTabForge is under active development: keep backups of your files.\n\nMultitrack TAB + notation, durations/dots/triplets, rests/ties/fermata, repeats/endings/sections, chord/text/lyrics/markers, mixer with MIDI vol/pan/chorus/reverb, speed-trainer loop, metronome, fretboard, chord/scale finders, tuning reference, .gp3/.gp4/.gp5/.gpx/.gp import, .gp save, MIDI + ASCII export, VST2/VST3 plug-ins in a separate audio engine.",
             yesToolTip: "Close this window",
             noToolTip: "Open the third-party licence notices",
             showCancel: false,

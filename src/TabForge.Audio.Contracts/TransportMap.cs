@@ -3,7 +3,7 @@ using System.IO;
 namespace TabForge.Audio.Contracts;
 
 /// <summary>
-/// RT-04: the time signature and bar position of the block being processed. The engine fills it per block from the song's bar map
+/// The time signature and bar position of the block being processed. The engine fills it per block from the song's bar map
 /// (<see cref="TransportMap"/>, sent with <see cref="EngineCommand.SetTransport"/>) and hands it to every plug-in in its transport
 /// (VST2 <c>VstTimeInfo</c> timeSig / barStartPos, VST3 <c>ProcessContext</c> timeSigNumerator / timeSigDenominator / barPositionMusic).
 /// <see cref="Numerator"/> 0 = unknown (no bar map yet): the plug-in gets no time-signature / bar flags.
@@ -24,7 +24,7 @@ public struct TransportMeter
 public readonly record struct TransportBar(double StartSec, double StartPpq, double Tempo, int Numerator, int Denominator);
 
 /// <summary>
-/// The song's bar map for the engine's live transport (RT-04): written at the tail of <see cref="EngineCommand.SetTransport"/> and turned
+/// The song's bar map for the engine's live transport: written at the tail of <see cref="EngineCommand.SetTransport"/> and turned
 /// into ppq position, tempo and <see cref="TransportMeter"/> per audio block by <see cref="Locate"/> (allocation-free).
 /// </summary>
 public static class TransportMap

@@ -16,7 +16,7 @@ public struct TransportInfo
     /// <summary>Song time at the start of the block (seconds from the song's start), for audio clips.</summary>
     public double SongSec;
     /// <summary>
-    /// RT-04: time signature and bar start (ppq) at the block start, from the song's bar map; <c>Meter.IsValid</c> false when unknown
+    /// Time signature and bar start (ppq) at the block start, from the song's bar map; <c>Meter.IsValid</c> false when unknown
     /// (then the plug-in gets no time-signature / bar flags).
     /// </summary>
     public TabForge.Audio.Contracts.TransportMeter Meter;
