@@ -11,6 +11,16 @@ public static class DialogHost
     /// <summary>When set, receives the fully built dialog instead of it being shown modally.</summary>
     internal static Func<Window, bool?>? Capture { get; set; }
 
+    /// <summary>When set, receives (caption, text) of an error message instead of it being shown (a test of a failed save must not block on a message box).</summary>
+    internal static Action<string, string>? MessageCapture { get; set; }
+
+    /// <summary>An error message box over <paramref name="owner"/> (the save and export failure reports).</summary>
+    public static void ShowError(Window owner, string text, string caption)
+    {
+        if (MessageCapture is { } capture) { capture(caption, text); return; }
+        MessageBox.Show(owner, text, caption, MessageBoxButton.OK, MessageBoxImage.Error);
+    }
+
     public static bool? ShowModal(Window dialog)
     {
         if (Capture is { } capture) return capture(dialog);

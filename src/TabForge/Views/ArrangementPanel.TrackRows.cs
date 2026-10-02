@@ -74,7 +74,7 @@ public sealed partial class ArrangementPanel
             if (showGroups && StartsGroup(project, i)) _controls.Children.Add(GroupHeader(project, i));
             var row = new TrackRowBorder
             {
-                Height = RowHeightOf(track),
+                Height = RowHeightOf(project, track),
                 Visibility = IsCollapsed(project, i) ? Visibility.Collapsed : Visibility.Visible,
                 BorderBrush = (Brush)Application.Current.FindResource("BorderSoftBrush"),
                 BorderThickness = new Thickness(0, 0, 1, 1),

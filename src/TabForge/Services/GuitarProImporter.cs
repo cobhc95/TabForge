@@ -36,6 +36,8 @@ public static class GuitarProImporter
 
     /// <summary>A6-02: the open notice when the last <see cref="ImportBytes"/> on this thread found a TabForge project inside the .gp but could not use it (opened as plain Guitar Pro); otherwise null.</summary>
     [ThreadStatic] internal static string? LastEmbeddedRejection;
+    /// <summary>The open notice when the last <see cref="ImportBytes"/> on this thread found far more impossible facts than a valid file holds (see <see cref="ImportPlausibility"/>); otherwise null. The song is opened unchanged.</summary>
+    [ThreadStatic] internal static string? LastDamageNotice;
     /// <summary>Diagnostics: a few of the notes the last import merged as duplicates.</summary>
     public static List<string> LastImportDuplicateSamples { get; } = new();
 
@@ -70,16 +72,8 @@ public static class GuitarProImporter
         try
         {
             if (data.AsSpan(0, Math.Min(data.Length, 32)).IndexOf(Gp3To5Signature) < 0) return null;
-            var type = typeof(ScoreLoader).Assembly.GetType("AlphaTab.Importer.Gp3To5Importer");
-            if (type is null || Activator.CreateInstance(type, true) is not { } importer) return null;
-            type.GetMethod("Init")?.Invoke(importer, new object[] { AlphaTab.Io.ByteBuffer.FromBuffer(data), new Settings() });
-            Exception? failure = null;
-            try { type.GetMethod("ReadScore")?.Invoke(importer, null); } catch (Exception ex) { failure = ex; /* expected: this is the failure being located */ }
-            var field = type.GetField("_score", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-            // A song over alphaTab's 1,000 bars stops at that check before any bar: locate the failure with the long-song reader.
-            var partial = failure is not null && Gp3To5LongSongReader.IsBarCountRefusal(failure)
-                ? Gp3To5LongSongReader.ReadPartial(data, InputLimits.MaxMeasuresPerTrack)
-                : field?.GetValue(importer) as AlphaTab.Model.Score;
+            // The partly built score comes from the compatibility boundary (the only place with private alphaTab access).
+            var partial = AlphaTabBoundary.ReadPartial(data);
             if (partial is null) return null;
             var reached = partial.Tracks.Select(t => t.Staves.Count > 0 ? t.Staves[0].Bars.Count : 0).DefaultIfEmpty(0).Max();
             return Math.Max(1, (int)reached);
@@ -88,18 +82,10 @@ public static class GuitarProImporter
     }
 
     /// <summary>
-    /// alphaTab's ScoreLoader; a Guitar Pro 3-5 file it refuses only for its fixed 1,000-bar threshold is read again by
-    /// <see cref="Gp3To5LongSongReader"/> with TabForge's own bar limit (<see cref="InputLimits.MaxMeasuresPerTrack"/>).
+    /// alphaTab's ScoreLoader through <see cref="AlphaTabBoundary"/>: the patched alphaTab build reads Guitar Pro 3-5 files of up
+    /// to TabForge's own bar limit (<see cref="InputLimits.MaxMeasuresPerTrack"/>), set per import, and refuses anything beyond it.
     /// </summary>
-    private static object LoadScore(byte[] data)
-    {
-        try { return ScoreLoader.LoadScoreFromBytes(data, new Settings()); }
-        catch (Exception ex) when (ex is not OutOfMemoryException && Gp3To5LongSongReader.IsBarCountRefusal(ex) && Gp3To5LongSongReader.IsAvailable)
-        {
-            ImportGuard.CheckCurrent();
-            return Gp3To5LongSongReader.Read(data, new Settings(), InputLimits.MaxMeasuresPerTrack);
-        }
-    }
+    private static object LoadScore(byte[] data) => AlphaTabBoundary.LoadScore(data, InputLimits.MaxMeasuresPerTrack);
 
     public static SongProject Import(string path)
     {
@@ -128,6 +114,7 @@ public static class GuitarProImporter
         // A .gp saved by TabForge carries its complete project: load that for a lossless round trip.
         // A6-02: one that is present but rejected (too big, damaged, bad version) is reported, not silently treated as absent.
         LastEmbeddedRejection = null;
+        LastDamageNotice = null;
         if (path.EndsWith(".gp", StringComparison.OrdinalIgnoreCase))
         {
             if (GuitarProExporter.ReadEmbedded(raw, out var rejected) is { } embedded) return embedded;
@@ -140,9 +127,7 @@ public static class GuitarProImporter
         try { score = LoadScore(data); }
         catch (Exception ex) when (ex is not OutOfMemoryException and not AccessViolationException and not InvalidDataException and not OperationCanceledException)
         {
-            // Only reached if the long-song reader is unavailable (a different alphaTab build): alphaTab's own 1,000-bar refusal.
-            if (Gp3To5LongSongReader.IsBarCountRefusal(ex))
-                throw new InvalidDataException("This Guitar Pro 3-5 file has more than 1,000 bars, which the Guitar Pro reader TabForge uses cannot open yet. Saving it from Guitar Pro 6/7/8 as .gp or .gpx opens it.", ex);
+            // A missing or mismatched reader component and a bar count above TabForge's limit arrive as InvalidDataException (AlphaTabBoundary).
             var barHint = ex.GetBaseException() is IndexOutOfRangeException or ArgumentOutOfRangeException
                 ? LocateFailedBar(data) : null;
             if (barHint is int failedBar)
@@ -211,6 +196,7 @@ public static class GuitarProImporter
             throw new InvalidDataException("The Guitar Pro file loaded, but contained no tracks.");
 
         ProjectValidator.Validate(project);
+        LastDamageNotice = ImportPlausibility.Notice(project, data);
         project.IsDirty = false;
         return project;
     }
@@ -543,6 +529,9 @@ public static class GuitarProImporter
         var playbackInfo = Get(sourceTrack, "PlaybackInfo");
         var gpVolume = GetInt(playbackInfo, "Volume", 16);
         var gpBalance = GetInt(playbackInfo, "Balance", 8);
+        // A Guitar Pro 7/8 file (gpif) carries the exact fractions (TabForge.AlphaTab patch 0002); -1 = not known (Guitar Pro 3-5 files): the 0..16 steps are used.
+        var gpVolumeFraction = GetDouble(playbackInfo, "VolumeFraction", -1);
+        var gpBalanceFraction = GetDouble(playbackInfo, "BalanceFraction", -1);
 
         var result = new TrackModel
         {
@@ -554,8 +543,11 @@ public static class GuitarProImporter
                 : InstrumentNaming.ForStringCount(GeneralMidi.NameOf(midiProgram), kind, tuning.Count),
             ColorHex = ReadColor(sourceTrack),
             MidiOutputDeviceId = -1,
-            Volume = Math.Clamp((int)Math.Round(gpVolume * 127.0 / 16.0), 0, 127),
-            Pan = Math.Clamp((int)Math.Round(gpBalance * 127.0 / 16.0), 0, 127),
+            Volume = gpVolumeFraction >= 0 ? GpMixerScale.FromFraction(gpVolumeFraction) : Math.Clamp((int)Math.Round(gpVolume * 127.0 / 16.0), 0, 127),
+            Pan = gpBalanceFraction >= 0 ? GpMixerScale.FromFraction(gpBalanceFraction) : Math.Clamp((int)Math.Round(gpBalance * 127.0 / 16.0), 0, 127),
+            // The mixer's mute and solo buttons are part of the file (the exporter wrote them; the importer used to drop them).
+            Mute = GetBool(playbackInfo, "IsMute", false),
+            Solo = GetBool(playbackInfo, "IsSolo", false),
             StringTunings = isDrums ? new List<int> { 49, 42, 48, 38, 43, 36 } : tuning.Count >= 4 ? tuning : DefaultTuning(kind, isBass ? 4 : 6),
             // (no-string instruments get octave-spaced "strings" so every pitch has a readable TAB number)
             Rig = new RigPreset
@@ -1096,6 +1088,7 @@ public static class GuitarProImporter
         else if (accent.Equals("Normal", StringComparison.OrdinalIgnoreCase) && cell.Accent < 2) cell.Accent = 1;
         else if (GetBool(sourceNote, "Accent", false) && cell.Accent < 2) cell.Accent = 1;
         if (GetBool(sourceNote, "IsStaccato", false)) cell.Staccato = true;
+        if (accent.Equals("Tenuto", StringComparison.OrdinalIgnoreCase)) cell.Tenuto = true;
 
         var fade = Get(beat, "Fade")?.ToString() ?? "";
         if (GetBool(beat, "FadeIn", false) || fade.Equals("FadeIn", StringComparison.OrdinalIgnoreCase)) note.Techniques.Add("FadeIn");
@@ -1127,7 +1120,8 @@ public static class GuitarProImporter
     private static void ReadTechniques(object sourceNote, object beat, TabNote note)
     {
         var t = note.Techniques;
-        if (GetBool(sourceNote, "IsPalmMute", false) || GetBool(beat, "IsPalmMute", false)) t.Add("PalmMute");
+        // Palm mute is a note property in every Guitar Pro format; alphaTab's beat-level flag is "any note is muted", which would mute the whole chord.
+        if (GetBool(sourceNote, "IsPalmMute", false)) t.Add("PalmMute");
         if (GetBool(sourceNote, "IsDead", false)) { t.Add("Dead"); note.Dead = true; }
         if (GetBool(sourceNote, "IsGhost", false)) { t.Add("Ghost"); note.Ghost = true; }
         if (GetBool(sourceNote, "IsLetRing", false) || GetBool(beat, "IsLetRing", false)) t.Add("LetRing");
@@ -1168,6 +1162,9 @@ public static class GuitarProImporter
         switch (Get(beat, "BrushType")?.ToString()) { case "ArpeggioDown": t.Add("ArpeggioDown"); break; case "ArpeggioUp": t.Add("ArpeggioUp"); break; }
         switch (Get(beat, "WahPedal")?.ToString()) { case "Open": t.Add("WahOpen"); break; case "Closed": t.Add("WahClose"); break; }
         AddEnumTechnique(beat, t, "PickStroke", "PickDown", "Up", "PickUp");
+        // A legato slur starts on this beat (the next beat is its destination); a rasgueado is a strumming pattern, kept as "Rasgueado" (the first pattern, ii_1) or "Rasgueado" plus "Rasgueado<pattern>".
+        if (GetBool(beat, "IsLegatoOrigin", false)) t.Add("Legato");
+        if (GetBool(beat, "HasRasgueado", false) && Get(beat, "Rasgueado")?.ToString() is { Length: > 0 } rasgueado && rasgueado != "None") { t.Add("Rasgueado"); if (rasgueado != "Ii") t.Add("Rasgueado" + rasgueado); }
         switch (Get(beat, "GraceType")?.ToString())
         {
             case "BeforeBeat": t.Add("GraceBefore"); break;
@@ -1319,6 +1316,8 @@ public static class GuitarProImporter
             var offset = GetDouble(p, "Offset", double.NaN);
             var value = GetDouble(p, "Value", double.NaN);
             if (!double.IsFinite(offset) || !double.IsFinite(value)) continue;
+            // a file's flat middle stretch is two points; one that starts and ends at the same offset is a single point
+            if (note.BendPoints.Count > 0 && note.BendPoints[^1].Offset == offset && note.BendPoints[^1].Value == value) continue;
             note.BendPoints.Add(new BendPointModel { Offset = offset, Value = value });
         }
     }

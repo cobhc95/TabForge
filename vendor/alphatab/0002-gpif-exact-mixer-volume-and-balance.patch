@@ -1,0 +1,71 @@
+--- a/packages/alphatab/src/model/PlaybackInformation.ts
++++ b/packages/alphatab/src/model/PlaybackInformation.ts
+@@ -17,6 +17,18 @@
+     public balance: number = 8;
+ 
+     /**
++     * TabForge patch (not part of upstream alphaTab): the exact mixer volume (0-1) as stored in a GPIF file, or -1 when not known.
++     * The GPIF format stores a fraction; {@link volume} keeps only its 0-16 steps. Read and written by the GPIF importer/exporter.
++     */
++    public volumeFraction: number = -1;
++
++    /**
++     * TabForge patch (not part of upstream alphaTab): the exact mixer balance (0-1, 0.5 = center) as stored in a GPIF file, or -1 when not known.
++     * See {@link volumeFraction}.
++     */
++    public balanceFraction: number = -1;
++
++    /**
+      * Gets or sets the midi port to use.
+      */
+     public port: number = 1;
+--- a/packages/alphatab/src/importer/GpifParser.ts
++++ b/packages/alphatab/src/importer/GpifParser.ts
+@@ -1332,6 +1332,9 @@
+             if (parameters.length >= 12) {
+                 track.playbackInfo.balance = Math.floor(GpifParser._parseFloatSafe(parameters[11], 0.5) * 16);
+                 track.playbackInfo.volume = Math.floor(GpifParser._parseFloatSafe(parameters[12], 0.9) * 16);
++                // TabForge patch: keep the stored fractions as well, the 0-16 steps above lose them
++                track.playbackInfo.balanceFraction = GpifParser._parseFloatSafe(parameters[11], 0.5);
++                track.playbackInfo.volumeFraction = GpifParser._parseFloatSafe(parameters[12], 0.9);
+             }
+         }
+     }
+--- a/packages/alphatab/src/exporter/GpifWriter.ts
++++ b/packages/alphatab/src/exporter/GpifWriter.ts
+@@ -1244,9 +1244,12 @@
+         channelStrip.attributes.set('version', 'E56');
+ 
+         const channelStripParameters = channelStrip.addElement('Parameters');
+-        channelStripParameters.innerText = `0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 1 0.5 ${
+-            track.playbackInfo.balance / 16
+-        } ${track.playbackInfo.volume / 16} 0.5 0.5 0.5`;
++        // TabForge patch: the exact fractions win over the 0-16 steps when the model carries them
++        const balance =
++            track.playbackInfo.balanceFraction >= 0 ? track.playbackInfo.balanceFraction : track.playbackInfo.balance / 16;
++        const volume =
++            track.playbackInfo.volumeFraction >= 0 ? track.playbackInfo.volumeFraction : track.playbackInfo.volume / 16;
++        channelStripParameters.innerText = `0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 1 0.5 ${balance} ${volume} 0.5 0.5 0.5`;
+     }
+ 
+     private _writeStavesNode(trackNode: XmlNode, track: Track) {
+--- a/packages/csharp/src/Directory.Build.props
++++ b/packages/csharp/src/Directory.Build.props
+@@ -2,14 +2,14 @@
+   <PropertyGroup>
+     <DebugType>portable</DebugType>
+     <DebugSymbols>true</DebugSymbols>
+-    <Version>1.8.4-tabforge.1</Version>
+-    <AssemblyVersion>1.8.4.1</AssemblyVersion>
++    <Version>1.8.4-tabforge.2</Version>
++    <AssemblyVersion>1.8.4.2</AssemblyVersion>
+     <FileVersion>$(AssemblyVersion)</FileVersion>
+     <Authors>Danielku15</Authors>
+     <Company>CoderLine</Company>
+     <Product>AlphaTab</Product>
+     <NeutralLanguage>en</NeutralLanguage>
+-    <Description>TabForge build of alphaTab 1.8.4 (MPL-2.0): upstream plus one patch, a per-import Guitar Pro 3-5 bar limit (ImporterSettings.MaxGp3To5BarCount). Not the upstream package.</Description>
++    <Description>TabForge build of alphaTab 1.8.4 (MPL-2.0): upstream plus two patches: a per-import Guitar Pro 3-5 bar limit (ImporterSettings.MaxGp3To5BarCount) and exact GPIF mixer volume/balance (PlaybackInformation.VolumeFraction/BalanceFraction). Not the upstream package.</Description>
+     <Copyright>Copyright © 2025, Daniel Kuschny and Contributors</Copyright>
+     <PackageLicenseExpression>MPL-2.0</PackageLicenseExpression>
+     <PackageProjectUrl>https://www.alphatab.net</PackageProjectUrl>

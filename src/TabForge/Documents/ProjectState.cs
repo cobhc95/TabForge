@@ -462,7 +462,7 @@ internal static class BarCodec
         [typeof(TabCell)] = new[]
         {
             nameof(TabCell.Notes), nameof(TabCell.RhythmicPosition), nameof(TabCell.DurationDenominator), nameof(TabCell.Dots), nameof(TabCell.IsTriplet),
-            nameof(TabCell.TupletNumerator), nameof(TabCell.TupletDenominator), nameof(TabCell.Tuplet), nameof(TabCell.IsRest), nameof(TabCell.IsTied),
+            nameof(TabCell.TupletNumerator), nameof(TabCell.TupletDenominator), nameof(TabCell.IsRest), nameof(TabCell.IsTied),
             nameof(TabCell.SoundDurationPercent), nameof(TabCell.OctaveShiftSemitones), nameof(TabCell.BeamMode), nameof(TabCell.BreakSecondaryBeamBefore),
             nameof(TabCell.StemDirection), nameof(TabCell.IsGrace), nameof(TabCell.GraceBeforeBeat), nameof(TabCell.Fermata), nameof(TabCell.Accent),
             nameof(TabCell.Staccato), nameof(TabCell.Tenuto), nameof(TabCell.WhammyPoints), nameof(TabCell.TremoloPickDenominator), nameof(TabCell.BrushStepSlots), nameof(TabCell.ChordName),

@@ -239,7 +239,7 @@ public sealed partial class ArrangementPanel
             double gap = 0;
             if (shifting)
             {
-                var moving = RowHeightOf(_project?.Tracks.ElementAtOrDefault(from));
+                var moving = RowHeightOf(_project, _project?.Tracks.ElementAtOrDefault(from));
                 if (from < to && i > from && i <= to) gap = -moving;
                 else if (from > to && i >= to && i < from) gap = moving;
             }

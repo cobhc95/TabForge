@@ -1,0 +1,93 @@
+--- a/packages/alphatab/scripts/generate-typescript.ts
++++ b/packages/alphatab/scripts/generate-typescript.ts
+@@ -29,6 +29,8 @@
+ const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf-8'));
+ const { version } = packageJson;
+ const fileHandle = fs.openSync('src/generated/VersionInfo.ts', 'w');
++// TabForge patch: SOURCE_DATE_EPOCH (seconds) pins the stamped build date so the same source builds to the same binary
++const buildDate = process.env.SOURCE_DATE_EPOCH ? new Date(Number(process.env.SOURCE_DATE_EPOCH) * 1000) : new Date();
+ const commit = execSync('git rev-parse HEAD').toString().trim();
+ 
+ fs.writeSync(
+@@ -41,7 +43,7 @@
+  */ 
+ export class VersionInfo {
+     public static readonly version: string = '${version}';
+-    public static readonly date: string = '${new Date().toISOString()}';
++    public static readonly date: string = '${buildDate.toISOString()}';
+     public static readonly commit: string = '${commit}';
+ 
+     public static print(print: (message:string) => void) {
+--- a/packages/alphatab/src/ImporterSettings.ts
++++ b/packages/alphatab/src/ImporterSettings.ts
+@@ -75,4 +75,13 @@
+      * @since 1.9.0
+      */
+     public maxDecodingBufferSize: number = 128000000;
++
++    /**
++     * The most bars a Guitar Pro 3-5 file may declare before the importer refuses it.
++     * TabForge patch (not part of upstream alphaTab): upstream hard-codes this safety threshold to 1000.
++     * The limit belongs to this settings instance, so concurrent imports with different settings do not affect each other.
++     * @defaultValue `1000`
++     * @category Importer
++     */
++    public maxGp3To5BarCount: number = 1000;
+ }
+--- a/packages/alphatab/src/importer/Gp3To5Importer.ts
++++ b/packages/alphatab/src/importer/Gp3To5Importer.ts
+@@ -174,7 +174,8 @@
+         }
+         // contents
+         this._barCount = IOHelper.readInt32LE(this.data);
+-        this._ensureLoopBoundary(this._barCount, Gp3To5Importer._maxBarCount, 'bar count');
++        // TabForge patch: the bar limit comes from the settings of this import (default unchanged: 1000)
++        this._ensureLoopBoundary(this._barCount, this.settings.importer.maxGp3To5BarCount, 'bar count');
+ 
+         this._trackCount = IOHelper.readInt32LE(this.data);
+         this._ensureLoopBoundary(this._trackCount, Gp3To5Importer._maxTrackCount, 'track count');
+@@ -303,9 +304,8 @@
+     // I don't hink anyone is that verbose in the small GP5 box where you can add notices
+     private static readonly _maxNoticeLines = 1000;
+ 
+-    // I haven't encountered such a long song in the wild. beyond 1000 bars something is clearly off
+-    private static readonly _maxBarCount = 1000;
+-    
++    // TabForge patch: the bar limit is no longer a constant here, see ImporterSettings.maxGp3To5BarCount (default 1000)
++
+     // I think GP5 itself limits already to ~10. 100 tracks is just unrealistic, proof me wrong
+     private static readonly _maxTrackCount = 100;
+ 
+--- a/packages/csharp/src/Directory.Build.props
++++ b/packages/csharp/src/Directory.Build.props
+@@ -2,14 +2,14 @@
+   <PropertyGroup>
+     <DebugType>portable</DebugType>
+     <DebugSymbols>true</DebugSymbols>
+-    <Version>1.8.4</Version>
+-    <AssemblyVersion>1.8.4.0</AssemblyVersion>
++    <Version>1.8.4-tabforge.1</Version>
++    <AssemblyVersion>1.8.4.1</AssemblyVersion>
+     <FileVersion>$(AssemblyVersion)</FileVersion>
+     <Authors>Danielku15</Authors>
+     <Company>CoderLine</Company>
+     <Product>AlphaTab</Product>
+     <NeutralLanguage>en</NeutralLanguage>
+-    <Description>alphaTab is a cross platform music notation and guitar tablature rendering library.</Description>
++    <Description>TabForge build of alphaTab 1.8.4 (MPL-2.0): upstream plus one patch, a per-import Guitar Pro 3-5 bar limit (ImporterSettings.MaxGp3To5BarCount). Not the upstream package.</Description>
+     <Copyright>Copyright © 2025, Daniel Kuschny and Contributors</Copyright>
+     <PackageLicenseExpression>MPL-2.0</PackageLicenseExpression>
+     <PackageProjectUrl>https://www.alphatab.net</PackageProjectUrl>
+--- a/packages/csharp/src/AlphaTab/AlphaTab.csproj
++++ b/packages/csharp/src/AlphaTab/AlphaTab.csproj
+@@ -2,8 +2,8 @@
+ 
+     <PropertyGroup>
+         <RootNamespace>AlphaTab</RootNamespace>
+-        <AssemblyName>AlphaTab</AssemblyName>
+-        <PackageId>AlphaTab</PackageId>
++        <AssemblyName>TabForge.AlphaTab</AssemblyName>
++        <PackageId>TabForge.AlphaTab</PackageId>
+         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+         <GenerateDocumentationFile>true</GenerateDocumentationFile>
+         <PackageReadmeFile>README.md</PackageReadmeFile>

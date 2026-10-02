@@ -148,36 +148,16 @@ public sealed partial class TabEditorControl
         var track = Track;
         if (track is null) return false;
         void Say(string text) => StatusMessage?.Invoke(this, text);
-        if (track.StringTunings.Count == 0 || track.MidiChannel == 9 || track.Kind == TrackKind.Drums)
-        { Say("This track has no strings to move notes between"); return false; }
+        // The rules (which notes may move, the new frets, why not) are Services.EditCommands.PlanStringMove; the control brackets them with its edit events.
+        var plan = Services.EditCommands.PlanStringMove(track, ToolCells().Select(cell =>
+            (cell, (IReadOnlyList<TabNote>)(HasSelection ? cell.Notes.ToList() : cell.Notes.Where(n => n.StringIndex == SelectedString).ToList()))), delta);
+        if (plan.Refusal is { } refusal) { Say(refusal); return false; }
         var side = delta < 0 ? "higher" : "lower";
-        var moves = new List<(TabNote Note, int Target, int Fret)>();
-        foreach (var cell in ToolCells())
-        {
-            var movers = HasSelection ? cell.Notes.ToList() : cell.Notes.Where(n => n.StringIndex == SelectedString).ToList();
-            foreach (var note in movers)
-            {
-                var target = note.StringIndex + delta;
-                if (target < 0 || target >= track.StringTunings.Count) { Say($"No change: the note is already on the {(delta < 0 ? "highest" : "lowest")} string"); return false; }
-                var fret = track.FretOf(target, MidiOf(track, note.StringIndex, note.Fret));
-                if (fret < 0) { Say($"No change: that pitch is below the open {side} string"); return false; }
-                if (fret > track.NumberOfFrets) { Say($"No change: that pitch is above the last fret of the {side} string"); return false; }
-                if (cell.Notes.Any(other => other.StringIndex == target && !movers.Contains(other))) { Say($"No change: the {side} string already has a note in that beat"); return false; }
-                moves.Add((note, target, fret));
-            }
-        }
-        if (moves.Count == 0) { Say("No note to move: put the cursor on a note or select some beats"); return false; }
         EditStarting?.Invoke(this, EventArgs.Empty);
-        foreach (var (note, target, fret) in moves)
-        {
-            var pitch = MidiOf(track, note.StringIndex, note.Fret);
-            note.StringIndex = target;
-            note.Fret = fret;
-            note.MidiValue = pitch;
-        }
-        if (!HasSelection) SelectedString = moves[0].Target;
+        Services.EditCommands.ApplyStringMove(track, plan);
+        if (!HasSelection) SelectedString = plan.Moves[0].Target;
         EditedNow();
-        Say(moves.Count == 1 ? $"Moved the note to the {side} string" : $"Moved {moves.Count} notes to the {side} string");
+        Say(plan.Moves.Count == 1 ? $"Moved the note to the {side} string" : $"Moved {plan.Moves.Count} notes to the {side} string");
         return true;
     }
 
@@ -188,22 +168,10 @@ public sealed partial class TabEditorControl
         if (track is null || cell is null) return;
         var note = cell.Notes.FirstOrDefault(n => n.StringIndex == SelectedString);
         if (note is null) return;
-        var fret = note.Fret + semitones;
-        var stringIndex = note.StringIndex;
-        if (fret < 0)
-        {
-            // Below the open string: play the same pitch on the next lower string that is free (as a guitarist would).
-            var target = MidiOf(track, note.StringIndex, note.Fret) + semitones;
-            var lower = Enumerable.Range(note.StringIndex + 1, Math.Max(0, track.StringTunings.Count - note.StringIndex - 1))
-                .FirstOrDefault(s => MidiOf(track, s, 0) <= target && cell.Notes.All(n => n.StringIndex != s), -1);
-            if (lower < 0) return; // already the lowest playable pitch
-            stringIndex = lower;
-            fret = target - MidiOf(track, lower, 0);
-        }
+        // Below the open string the same pitch moves to the next lower free string (Services.EditCommands.PlanPitchShift); null: already the lowest playable pitch.
+        if (Services.EditCommands.PlanPitchShift(track, cell, note, semitones) is not var (stringIndex, fret)) return;
         EditStarting?.Invoke(this, EventArgs.Empty);
-        note.StringIndex = stringIndex;
-        note.Fret = fret;
-        note.MidiValue = MidiOf(track, stringIndex, fret);
+        Services.EditCommands.ApplyPitchShift(track, note, stringIndex, fret);
         if (stringIndex != SelectedString) SetPosition(SelectedMeasure, SelectedCell, stringIndex);
         EditedNow();
     }

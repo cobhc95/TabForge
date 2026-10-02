@@ -80,6 +80,60 @@ public static partial class SelfTest
             .Select(g => $"{g.Key} ({g.Count()}: {g.First()[(g.Key.Length + 4)..]}, ...)"));
     }
 
+    /// <summary>The document operations R3 extracted out of MainWindow: they take their document as an argument and know nothing of windows.</summary>
+    private static readonly string[] DocumentOperationTypes =
+    {
+        "TabForge.Documents.DocumentEdits", "TabForge.Documents.DocumentSaveFlow", "TabForge.Documents.DocumentCloseFlow", "TabForge.Documents.DocumentPlacement",
+        "TabForge.Documents.DocumentController", "TabForge.Controllers.ArrangementController", "TabForge.Controllers.TrackController",
+    };
+
+    /// <summary>
+    /// R3 boundaries: the document operations reference no WPF assembly, no view and no window; no static state names a document or a document list
+    /// (no new "current document"); and the window's save sequence is handed its document (it must not read whichever tab is displayed).
+    /// No allow-list: every named type must pass.
+    /// </summary>
+    private static void TestArchitectureDocumentOperations()
+    {
+        var assembly = typeof(SelfTest).Assembly;
+        var offenders = new SortedSet<string>(StringComparer.Ordinal);
+        var missing = new List<string>();
+        var unresolved = 0;
+        foreach (var name in DocumentOperationTypes)
+        {
+            var type = assembly.GetType(name);
+            if (type is null) { missing.Add(name); continue; }
+            foreach (var nested in new[] { type }.Concat(assembly.GetTypes().Where(t => OutermostType(t) == type && t != type)))
+                foreach (var referenced in ReferencedTypes(nested, ref unresolved))
+                {
+                    var ns = referenced.Namespace ?? "";
+                    if (WpfAssemblies.Contains(referenced.Assembly.GetName().Name ?? "") || ns == "TabForge.Views" || ns.StartsWith("TabForge.Views.", StringComparison.Ordinal) || referenced.FullName == "TabForge.MainWindow")
+                        offenders.Add($"{name} -> {referenced.FullName ?? referenced.Name}");
+                }
+        }
+        Check("document operations still exist under the names the architecture check lists", missing.Count == 0, string.Join(", ", missing));
+        Check("document operations (edits, save / close / placement flows, controllers) reference no WPF assembly, no view and no MainWindow", offenders.Count == 0, string.Join("; ", offenders.Take(6)));
+
+        const BindingFlags statics = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.DeclaredOnly;
+        var documentTypes = new[] { typeof(TabForge.Documents.DocumentSession), typeof(TabForge.Documents.DocumentManager) };
+        bool NamesDocument(Type t) => documentTypes.Any(d => d.IsAssignableFrom(t));   // a single document or the list; registries keyed by documents (autosave states) are not "the current one"
+        var ambient = assembly.GetTypes()
+            .Where(t => (t.Namespace ?? "").StartsWith("TabForge.Documents", StringComparison.Ordinal) || (t.Namespace ?? "").StartsWith("TabForge.Controllers", StringComparison.Ordinal) || (t.Namespace ?? "").StartsWith("TabForge.Services", StringComparison.Ordinal) || (t.Namespace ?? "").StartsWith("TabForge.Audio", StringComparison.Ordinal))
+            .SelectMany(t => t.GetFields(statics).Where(f => NamesDocument(f.FieldType)).Select(f => $"{t.FullName}.{f.Name}")
+                .Concat(t.GetProperties(statics).Where(p => NamesDocument(p.PropertyType)).Select(p => $"{t.FullName}.{p.Name}")))
+            .ToList();
+        Check("no static field or property in Documents / Controllers / Services / Audio holds a document or the document list (no ambient 'current document')", ambient.Count == 0, string.Join(", ", ambient));
+
+        // The window's save sequence takes its document. A signature without one would read the displayed tab again.
+        const BindingFlags instance = BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly;
+        var saveMethods = new[] { "SaveCurrentAsync", "SaveAsAsync", "SaveToAsync", "SaveDocumentAsync", "CollectStatesAsync" };
+        var takesNoDocument = saveMethods.Where(n => typeof(MainWindow).GetMethods(instance).Where(m => m.Name == n).Any(m => !m.GetParameters().Any(p => p.ParameterType == typeof(TabForge.Documents.DocumentSession)))).ToList();
+        var missingMethods = saveMethods.Where(n => !typeof(MainWindow).GetMethods(instance).Any(m => m.Name == n)).ToList();
+        Check("MainWindow's save sequence (save, save as, save to, save document, collect states) takes the document it saves", takesNoDocument.Count == 0 && missingMethods.Count == 0, string.Join(", ", takesNoDocument.Concat(missingMethods)));
+        Check("the window's save path no longer keeps its own copy of the per-song audio-save choice (it lives in DocumentSaveFlow)", typeof(MainWindow).GetField("_audioSaveChoice", instance) is null);
+        Check("loading a project takes the replace target chosen when the open started (a document, not a flag)",
+            typeof(MainWindow).GetMethod("LoadProject", instance)?.GetParameters().Any(p => p.ParameterType == typeof(TabForge.Documents.DocumentSession)) == true);
+    }
+
     private static Type OutermostType(Type type)
     {
         while (type.DeclaringType is { } outer) type = outer;

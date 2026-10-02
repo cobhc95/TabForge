@@ -45,7 +45,7 @@ jobs:
           # tree or installer script cannot be found (the working directory is the repository root).
           # TabForge.exe is a WPF (GUI-subsystem) executable: start it and wait for it to exit. --selftest opens no
           # main window, needs no audio device (the engine tests use the headless harness and a null output).
-          $p = Start-Process -FilePath $exe -ArgumentList @('--selftest', "`"$log`"", '--require', 'gp-fixtures,synthetic-fixtures,source-hygiene,installer-parity,fuzz') -Wait -PassThru
+          $p = Start-Process -FilePath $exe -ArgumentList @('--selftest', "`"$log`"", '--require', 'ci') -Wait -PassThru
           "self-test exit code: $($p.ExitCode)"
           if (-not (Test-Path -LiteralPath $log)) { Write-Error 'self-test log was not written'; exit 2 }
           Select-String -Path $log -Pattern '^\s+(SKIP|FAIL)\s|self-test:' | ForEach-Object { $_.Line }
@@ -130,3 +130,23 @@ jobs:
           $out
           if ($LASTEXITCODE -ne 0) { Write-Error "dotnet list package failed ($LASTEXITCODE)"; exit 1 }
           if ($out -match 'has the following vulnerable packages') { Write-Error 'vulnerable packages found (see above)'; exit 1 }
+
+  # TabForge.AlphaTab (alphaTab 1.8.4 plus one patch) is built from source and checked in as vendor/alphatab/*.nupkg. This rebuilds it
+  # from the pinned upstream commit and the patch (github.com/CoderLine/alphaTab, npmjs.org, nuget.org) and fails when the rebuilt
+  # DLL is not the one inside the committed package (vendor/alphatab/README.md).
+  alphatab-reproducible:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
+        with:
+          global-json-file: global.json
+
+      - name: Rebuild TabForge.AlphaTab and compare
+        shell: pwsh
+        run: |
+          node --version
+          ./tools/Build-AlphaTab.ps1 -Work (Join-Path $env:RUNNER_TEMP 'tabforge-alphatab-build')
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

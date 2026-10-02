@@ -17,9 +17,12 @@ public partial class MainWindow
         if (Environment.GetCommandLineArgs().Skip(1).Any(a => a.StartsWith("--", StringComparison.Ordinal))) return;
         if (_settings.General.LastUpdateCheckUtc is { } last && DateTime.UtcNow - last < TimeSpan.FromHours(24)) return;
         var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(8) };
-        timer.Tick += async (_, _) => { timer.Stop(); await CheckForUpdatesAsync(manual: false); };
+        _updateCheckTimer = timer;
+        timer.Tick += async (_, _) => { timer.Stop(); _updateCheckTimer = null; await CheckForUpdatesAsync(manual: false); };
         timer.Start();
     }
+
+    private System.Windows.Threading.DispatcherTimer? _updateCheckTimer;   // stopped when the window closes (a pending timer keeps its window alive)
 
     private async void CheckForUpdates_Click(object sender, RoutedEventArgs e) => await CheckForUpdatesAsync(manual: true);
 

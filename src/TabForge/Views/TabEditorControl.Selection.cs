@@ -169,5 +169,6 @@ public sealed partial class TabEditorControl
     }
 
     /// <summary>Tells the host the project changed outside the editor's own commands (paste), and refreshes the score.</summary>
-    public void NotifyEdited() => EditedNow();
+    /// <param name="markTimeline">False when the edit that changed the song already invalidated the playback timeline (once): only the editor's refresh is wanted.</param>
+    public void NotifyEdited(bool markTimeline = true) => EditedNow(markTimeline);
 }

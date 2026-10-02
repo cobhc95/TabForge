@@ -31,13 +31,13 @@ internal static class MidiTimingAudit
         MidiExportService.Export(project, midiPath);
         var midi = AudioAudit.ReadMidi(midiPath);
 
-        double maxBar = 0; var worstBar = 0; long tick = 0;
+        double maxBar = 0; var worstBar = 0;
+        var ticks = new MidiExportService.TickMap(playback, project);   // bar start ticks follow each bar's performed length (a short bar is not a whole number of slots)
         for (var i = 0; i < playback.Bars.Count; i++)
         {
             var bar = playback.Bars[i];
-            var err = Math.Abs(midi.TickToMs(tick) - bar.StartMs);
+            var err = Math.Abs(midi.TickToMs(ticks.TickOfBar(i)) - bar.StartMs);
             if (err > maxBar) { maxBar = err; worstBar = i + 1; }
-            tick += (long)Math.Round(bar.Slots * (double)midi.Ppq / MusicTime.SlotsPerQuarter);
         }
 
         double maxNote = 0; var notesPlayback = 0; var notesFile = 0; var worstNoteAt = "";

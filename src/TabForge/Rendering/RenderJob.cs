@@ -15,6 +15,8 @@ public sealed class RenderRequest
     public required SongProject Project { get; init; }
     public required PluginSettings Plugins { get; init; }
     public int MasterPercent { get; init; } = 100;
+    /// <summary>The rendered song's media context: its linked audio clips are judged with it (null: no document, nothing remote).</summary>
+    public MediaContext? Media { get; init; }
     public required RenderSettings Settings { get; init; }
     public required ScoreTimeline Timeline { get; init; }
     public double StartMs, EndMs;
@@ -74,8 +76,11 @@ public static class RenderJob
         {
             // Every track through the engine (its General MIDI synth or plug-ins), whatever the playback routing is.
             MixerGroups.PlayAllThroughEngine = true;
+            // The engine's clip sync never waits for the file system (a path still being resolved is left out until it resolves, and a render in
+            // progress ignores that late refresh): classify every linked clip now so the render cannot miss one.
+            MediaAccess.ResolveNow(r.Project.Tracks.SelectMany(t => t.AudioClips), r.Media);
             // Explicit readiness: every chain requested by the routing must acknowledge that request's generation.
-            AudioRouting.Apply(r.Project, null, engine, r.Plugins, r.MasterPercent);
+            AudioRouting.Apply(r.Project, null, engine, r.Plugins, r.MasterPercent, media: r.Media);
             var readiness = new ChainReadiness(engine.RequestedChains);
             foreach (var a in engine.LastAcknowledgements) readiness.Acknowledge(a);   // no UI-thread yield since Apply: nothing can be missed
             void Ack(ChainAck a) => readiness.Acknowledge(a);

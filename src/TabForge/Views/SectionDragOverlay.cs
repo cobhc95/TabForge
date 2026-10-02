@@ -107,7 +107,7 @@ internal sealed class SectionDragOverlay : FrameworkElement
         {
             var track = project.Tracks[trackIndex];
             var y = rowTop + ArrangementPanel.RowTopOf(project, trackIndex) - snapshot.VerticalScrollOffset;
-            if (y + ArrangementPanel.TrackRowHeight < rowTop || y > actualHeight) continue;
+            if (y + ArrangementPanel.RowHeightFor(project) < rowTop || y > actualHeight) continue;
             for (var bar = start; bar < end && bar < track.Measures.Count; bar++)
             {
                 var sourceX = geometry.XOfBar(bar);
@@ -119,7 +119,7 @@ internal sealed class SectionDragOverlay : FrameworkElement
                 if (!occupied)
                     for (var cellIndex = 0; cellIndex < measure.Cells.Count; cellIndex++)
                         if (measure.Cells[cellIndex].Notes.Count > 0) { occupied = true; break; }
-                var cell = new Rect(x + 1, y + 2, Math.Max(1, width - 2), ArrangementPanel.TrackRowHeight - 4);
+                var cell = new Rect(x + 1, y + 2, Math.Max(1, width - 2), ArrangementPanel.RowHeightFor(project) - 4);
                 dc.DrawRoundedRectangle(Draw.Solid(snapshot.Color, occupied ? 0.46 : 0.13),
                     Draw.Pen(snapshot.Color, 0.8, 0.62), cell, 2, 2);
                 if (occupied)

@@ -19,7 +19,9 @@ public static partial class SelfTest
         {
             @"Z:\" => DriveType.Network, @"R:\" => DriveType.Removable, _ => DriveType.Fixed,
         };
-        public string? FinalPathOf(string fullPath) { FinalPathCalls++; return Links.TryGetValue(fullPath, out var f) ? f : null; }
+        /// <summary>Runs inside every link resolution (a test makes it stall, as a link into an unreachable share does).</summary>
+        public Action<string>? OnFinalPath;
+        public string? FinalPathOf(string fullPath) { FinalPathCalls++; OnFinalPath?.Invoke(fullPath); return Links.TryGetValue(fullPath, out var f) ? f : null; }
     }
 
     /// <summary>A fake decoder: <paramref name="seconds"/> long, plays <paramref name="frames"/> samples of noise (then ends), optionally slowly.</summary>
@@ -45,14 +47,28 @@ public static partial class SelfTest
         public void Dispose() => Disposed = true;
     }
 
+    /// <summary>A media context over a scratch settings object (its approvals), saved at <paramref name="savedPath"/> (null: an unsaved song).</summary>
+    private static MediaContext TestMediaContext(AppSettings settings, string? savedPath)
+    {
+        var context = new MediaContext(() => settings.Audio, persist: () => { });
+        context.SetSavedPath(savedPath);
+        return context;
+    }
+
+    // The waveform tests below read through one context (a saved song); these keep their call sites short.
+    private static MediaContext _wfCtx = MediaContext.Anonymous;
+    private static float[]? WfGet(string file) => WaveformCache.Get(file, _wfCtx);
+    private static WaveStatus WfStatus(string file) => WaveformCache.StatusOf(file, _wfCtx);
+    private static double WfLength(string file, bool userPicked = false) => WaveformCache.LengthOf(file, _wfCtx, userPicked);
+    private static void WfCancelUnused(IEnumerable<string> wanted) => WaveformCache.CancelUnused(wanted, _wfCtx);
+
     private static void TestMediaPathPolicy()
     {
         var fs = new FakeMediaFs();
         var settings = new AppSettings();
-        var savedFs = MediaPathPolicy.FileSystem; var savedSettings = MediaAccess.SettingsProvider; var savedProject = MediaAccess.ProjectPathProvider;
+        var savedFs = MediaPathPolicy.FileSystem;
         MediaPathPolicy.FileSystem = fs;
-        MediaAccess.SettingsProvider = () => settings.Audio;
-        MediaAccess.ProjectPathProvider = () => @"C:\songs\a\song.tforge";
+        var songA = TestMediaContext(settings, @"C:/songs/a/song.tforge"); var songB = TestMediaContext(settings, @"C:/songs/b/song.tforge");
         MediaAccess.ClearCache();
         try
         {
@@ -76,19 +92,19 @@ public static partial class SelfTest
 
             // Approval: per project and per folder, revocable.
             fs.FinalPathCalls = 0;
-            var unc = MediaAccess.Evaluate(@"\\srv\share\x.wav", @"C:\songs\a\song.tforge");
+            var unc = MediaAccess.Evaluate(@"\\srv\share\x.wav", songA);
             Check("a network file needs approval before anything is opened", unc.State == MediaAccessState.NeedsApproval && fs.FinalPathCalls == 0 && unc.Message.Contains("network location", StringComparison.Ordinal), unc.Message);
-            MediaAccess.Approve(unc.Verdict, @"C:\songs\a\song.tforge");
+            MediaAccess.Approve(unc.Verdict, songA);
             MediaAccess.ClearCache();
             Check("approving the folder allows files in it and its subfolders for that song",
-                MediaAccess.Evaluate(@"\\srv\share\y.wav", @"C:\songs\a\song.tforge").Allowed && MediaAccess.Evaluate(@"\\srv\share\sub\y.wav", @"C:\songs\a\song.tforge").Allowed);
+                MediaAccess.Evaluate(@"\\srv\share\y.wav", songA).Allowed && MediaAccess.Evaluate(@"\\srv\share\sub\y.wav", songA).Allowed);
             Check("...but not another folder, and not another song",
-                !MediaAccess.Evaluate(@"\\srv\other\y.wav", @"C:\songs\a\song.tforge").Allowed && !MediaAccess.Evaluate(@"\\srv\share\y.wav", @"C:\songs\b\song.tforge").Allowed);
-            Check("a removable drive needs approval too", MediaAccess.Evaluate(@"R:\x.wav", @"C:\songs\a\song.tforge").State == MediaAccessState.NeedsApproval);
-            Check("local and in-project files load without approval", MediaAccess.Evaluate(@"C:\music\x.wav", @"C:\songs\a\song.tforge").Allowed && MediaAccess.Evaluate("clips\\q.wav", @"C:\songs\a\song.tforge").Allowed);
-            MediaAccess.Revoke(settings.Audio.ApprovedMedia[0]);
+                !MediaAccess.Evaluate(@"\\srv\other\y.wav", songA).Allowed && !MediaAccess.Evaluate(@"\\srv\share\y.wav", songB).Allowed);
+            Check("a removable drive needs approval too", MediaAccess.Evaluate(@"R:\x.wav", songA).State == MediaAccessState.NeedsApproval);
+            Check("local and in-project files load without approval", MediaAccess.Evaluate(@"C:\music\x.wav", songA).Allowed && MediaAccess.Evaluate("clips\\q.wav", songA).Allowed);
+            MediaAccess.Revoke(settings.Audio.ApprovedMedia[0], songA);
             MediaAccess.ClearCache();
-            Check("revoking the approval blocks the folder again", settings.Audio.ApprovedMedia.Count == 0 && !MediaAccess.Evaluate(@"\\srv\share\y.wav", @"C:\songs\a\song.tforge").Allowed);
+            Check("revoking the approval blocks the folder again", settings.Audio.ApprovedMedia.Count == 0 && !MediaAccess.Evaluate(@"\\srv\share\y.wav", songA).Allowed);
             Check("the approval list survives settings validation", ValidatedApprovalsKept());
 
             // Project validation and the engine's own guard.
@@ -105,7 +121,7 @@ public static partial class SelfTest
         }
         finally
         {
-            MediaPathPolicy.FileSystem = savedFs; MediaAccess.SettingsProvider = savedSettings; MediaAccess.ProjectPathProvider = savedProject;
+            MediaPathPolicy.FileSystem = savedFs;
             MediaAccess.ClearCache();
         }
     }
@@ -123,11 +139,10 @@ public static partial class SelfTest
     {
         var fs = new FakeMediaFs();
         var settings = new AppSettings();
-        var savedFs = MediaPathPolicy.FileSystem; var savedSettings = MediaAccess.SettingsProvider; var savedProject = MediaAccess.ProjectPathProvider;
+        var savedFs = MediaPathPolicy.FileSystem;
         var savedBudget = WaveformCache.BudgetBytes; var savedRecheck = WaveformCache.RecheckMs;
         MediaPathPolicy.FileSystem = fs;
-        MediaAccess.SettingsProvider = () => settings.Audio;
-        MediaAccess.ProjectPathProvider = () => Path.Combine(Path.GetTempPath(), "tf-wave-song.tforge");
+        _wfCtx = TestMediaContext(settings, Path.Combine(Path.GetTempPath(), "tf-wave-song.tforge"));
         MediaAccess.ClearCache();
         WaveformCache.ClearAll();
         var temp = Path.Combine(Path.GetTempPath(), "TabForge-wave-" + Guid.NewGuid().ToString("N"));
@@ -139,33 +154,33 @@ public static partial class SelfTest
             WaveformCache.OpenOverride = p => { lock (opened) opened.Add(p); return new FakeMediaSource(1, 8000); };
             var before = WaveformCache.DecodeCount;
             var unc = @"\\srv\share\take.wav";
-            Check("a network clip starts as 'not loaded'", WaveformCache.Get(unc) is null);
+            Check("a network clip starts as 'not loaded'", WfGet(unc) is null);
             WaveformCache.WaitIdle(3000);
-            var status = WaveformCache.StatusOf(unc);
+            var status = WfStatus(unc);
             Check("a network clip is not opened without approval (no decoder call, status asks for approval)",
                 WaveformCache.DecodeCount == before && opened.Count == 0 && status.State == WaveState.NeedsApproval && status.Message!.Contains("approve", StringComparison.Ordinal), $"{status.State} {status.Message}");
-            MediaAccess.Approve(MediaAccess.Evaluate(unc).Verdict, MediaAccess.CurrentProjectPath());
+            MediaAccess.Approve(MediaAccess.Evaluate(unc, _wfCtx).Verdict, _wfCtx);
             MediaAccess.ClearCache();
-            _ = WaveformCache.Get(unc);
+            _ = WfGet(unc);
             WaveformCache.WaitIdle(3000);
-            Check("after approval the clip is read", WaveformCache.Get(unc) is { Length: > 0 } && opened.Count == 1 && opened[0] == unc, $"{opened.Count}");
+            Check("after approval the clip is read", WfGet(unc) is { Length: > 0 } && opened.Count == 1 && opened[0] == unc, $"{opened.Count}");
             // Device paths: never.
             before = WaveformCache.DecodeCount;
-            _ = WaveformCache.Get(@"\\.\pipe\x.wav"); _ = WaveformCache.Get(@"\\?\C:\x.wav");
+            _ = WfGet(@"\\.\pipe\x.wav"); _ = WfGet(@"\\?\C:\x.wav");
             WaveformCache.WaitIdle(3000);
-            Check("device paths are refused and never decoded", WaveformCache.DecodeCount == before && WaveformCache.StatusOf(@"\\.\pipe\x.wav").State == WaveState.Failed);
+            Check("device paths are refused and never decoded", WaveformCache.DecodeCount == before && WfStatus(@"\\.\pipe\x.wav").State == WaveState.Failed);
             Check("LengthOf refuses device paths and unapproved network paths; a picked network file is fine",
-                WaveformCache.LengthOf(@"\\.\pipe\x.wav", userPicked: true) == 0 && WaveformCache.LengthOf(@"\\srv\nope\x.wav") == 0 && WaveformCache.LengthOf(@"\\srv\nope\x.wav", userPicked: true) > 0);
+                WfLength(@"\\.\pipe\x.wav", userPicked: true) == 0 && WfLength(@"\\srv\nope\x.wav") == 0 && WfLength(@"\\srv\nope\x.wav", userPicked: true) > 0);
 
             // Limits.
             var local = Path.Combine(temp, "a.wav");
             WaveformCache.OpenOverride = _ => new FakeMediaSource(3 * 3600, 8000);
-            _ = WaveformCache.Get(local); WaveformCache.WaitIdle(3000);
-            Check("audio longer than the duration limit is refused with a clear error", WaveformCache.StatusOf(local) is { State: WaveState.Failed } d && d.Message!.Contains("too long", StringComparison.Ordinal));
+            _ = WfGet(local); WaveformCache.WaitIdle(3000);
+            Check("audio longer than the duration limit is refused with a clear error", WfStatus(local) is { State: WaveState.Failed } d && d.Message!.Contains("too long", StringComparison.Ordinal));
             var endless = Path.Combine(temp, "endless.wav");
             WaveformCache.OpenOverride = _ => new FakeMediaSource(10, long.MaxValue);   // claims 10 s, never ends
             var savedMax = WaveformCache.MaxSecondsOverride; WaveformCache.MaxSecondsOverride = 10;
-            try { _ = WaveformCache.Get(endless); Check("a source that never ends stops at the output-sample limit", WaveformCache.WaitIdle(10000) && WaveformCache.StatusOf(endless).State == WaveState.Failed); }
+            try { _ = WfGet(endless); Check("a source that never ends stops at the output-sample limit", WaveformCache.WaitIdle(10000) && WfStatus(endless).State == WaveState.Failed); }
             finally { WaveformCache.MaxSecondsOverride = savedMax; }
             var big = Path.Combine(temp, "big.wav");
             File.WriteAllBytes(big, new byte[4096]);
@@ -174,26 +189,26 @@ public static partial class SelfTest
             var decodes = WaveformCache.DecodeCount;
             try
             {
-                _ = WaveformCache.Get(big); WaveformCache.WaitIdle(3000);
-                Check("a file over the size limit is refused before decoding", WaveformCache.DecodeCount == decodes && WaveformCache.StatusOf(big) is { State: WaveState.Failed } z && z.Message!.Contains("too large", StringComparison.Ordinal));
-                Check("LengthOf applies the size limit", WaveformCache.LengthOf(big, userPicked: true) == 0);
+                _ = WfGet(big); WaveformCache.WaitIdle(3000);
+                Check("a file over the size limit is refused before decoding", WaveformCache.DecodeCount == decodes && WfStatus(big) is { State: WaveState.Failed } z && z.Message!.Contains("too large", StringComparison.Ordinal));
+                Check("LengthOf applies the size limit", WfLength(big, userPicked: true) == 0);
             }
             finally { WaveformCache.MaxFileBytesOverride = savedBytes; }
             var broken = Path.Combine(temp, "broken.wav");
             File.WriteAllBytes(broken, new byte[2048]);
-            _ = WaveformCache.Get(broken); WaveformCache.WaitIdle(5000);
-            Check("a corrupt file shows a clip error, never a crash", WaveformCache.StatusOf(broken) is { State: WaveState.Failed } b && !string.IsNullOrEmpty(b.Message), WaveformCache.StatusOf(broken).State.ToString());
+            _ = WfGet(broken); WaveformCache.WaitIdle(5000);
+            Check("a corrupt file shows a clip error, never a crash", WfStatus(broken) is { State: WaveState.Failed } b && !string.IsNullOrEmpty(b.Message), WfStatus(broken).State.ToString());
 
             // Cancellation: a slow decode stops when its timeline goes away (or the clip is removed).
             WaveformCache.ClearAll();
             var slow = new FakeMediaSource(1000, long.MaxValue, sleepMs: 5);
             var slowPath = Path.Combine(temp, "slow.wav");
             WaveformCache.OpenOverride = _ => slow;
-            _ = WaveformCache.Get(slowPath);
+            _ = WfGet(slowPath);
             var wait = System.Diagnostics.Stopwatch.StartNew();
             while (slow.Reads < 3 && wait.ElapsedMilliseconds < 3000) Thread.Sleep(5);
             Check("the slow decode is running", slow.Reads >= 3);
-            WaveformCache.CancelUnused(Array.Empty<string>());
+            WfCancelUnused(Array.Empty<string>());
             wait.Restart();
             while (!slow.Disposed && wait.ElapsedMilliseconds < 3000) Thread.Sleep(5);
             Check("a removed clip / closed timeline cancels its decode (the file is released)", slow.Disposed);
@@ -203,10 +218,10 @@ public static partial class SelfTest
             WaveformCache.ClearAll();
             var blocker = new FakeMediaSource(1000, long.MaxValue, sleepMs: 5);
             WaveformCache.OpenOverride = p => p.EndsWith("block.wav", StringComparison.Ordinal) ? blocker : new FakeMediaSource(1, 8000, 1);
-            _ = WaveformCache.Get(Path.Combine(temp, "block.wav"));
+            _ = WfGet(Path.Combine(temp, "block.wav"));
             Thread.Sleep(50);
-            for (var i = 0; i < 200; i++) _ = WaveformCache.Get(Path.Combine(temp, $"q{i}.wav"));
-            for (var i = 0; i < 5; i++) _ = WaveformCache.Get(Path.Combine(temp, "q0.wav"));
+            for (var i = 0; i < 200; i++) _ = WfGet(Path.Combine(temp, $"q{i}.wav"));
+            for (var i = 0; i < 5; i++) _ = WfGet(Path.Combine(temp, "q0.wav"));
             Check($"the waiting queue is bounded ({WaveformCache.CachedCount} entries for 201 files)", WaveformCache.CachedCount <= WaveformCache.MaxPending + 2);
             WaveformCache.ClearAll();
 
@@ -214,9 +229,9 @@ public static partial class SelfTest
             WaveformCache.BudgetBytes = 2000;   // each fake file = 100 peaks = 400 bytes
             WaveformCache.OpenOverride = _ => new FakeMediaSource(1, 8000);
             var files = Enumerable.Range(0, 12).Select(i => Path.Combine(temp, $"e{i}.wav")).ToList();
-            foreach (var f in files) { _ = WaveformCache.Get(f); WaveformCache.WaitIdle(3000); Thread.Sleep(3); }
+            foreach (var f in files) { _ = WfGet(f); WaveformCache.WaitIdle(3000); Thread.Sleep(3); }
             Check($"the cache stays within its budget ({WaveformCache.CachedBytes} bytes)", WaveformCache.CachedBytes <= 2000 && WaveformCache.CachedBytes > 0);
-            Check("the most recently read outline is kept", WaveformCache.Get(files[^1]) is not null);
+            Check("the most recently read outline is kept", WfGet(files[^1]) is not null);
             WaveformCache.BudgetBytes = savedBudget;
 
             // A file replaced at the same path is read again (key: path + size + last-write).
@@ -225,8 +240,8 @@ public static partial class SelfTest
             WaveformCache.RecheckMs = 0;
             var wav = Path.Combine(temp, "replace.wav");
             WriteTestWav(wav, 0.5);
-            _ = WaveformCache.Get(wav); WaveformCache.WaitIdle(5000);
-            var first = WaveformCache.Get(wav)?.Length ?? -1;
+            _ = WfGet(wav); WaveformCache.WaitIdle(5000);
+            var first = WfGet(wav)?.Length ?? -1;
             WriteTestWav(wav, 1.5);
             File.SetLastWriteTimeUtc(wav, DateTime.UtcNow.AddMinutes(1));
             Thread.Sleep(10);
@@ -235,9 +250,9 @@ public static partial class SelfTest
             var second = -1;
             for (var tries = 0; tries < 100 && second is < 145 or > 155; tries++)
             {
-                _ = WaveformCache.Get(wav);
+                _ = WfGet(wav);
                 WaveformCache.WaitIdle(200);
-                second = WaveformCache.Get(wav)?.Length ?? -1;
+                second = WfGet(wav)?.Length ?? -1;
                 if (second is < 145 or > 155) Thread.Sleep(50);
             }
             Check($"a file replaced at the same path shows the new data ({first} -> {second} peaks)", first is >= 45 and <= 55 && second is >= 145 and <= 155);
@@ -246,7 +261,7 @@ public static partial class SelfTest
         {
             WaveformCache.ClearAll();
             WaveformCache.OpenOverride = null; WaveformCache.BudgetBytes = savedBudget; WaveformCache.RecheckMs = savedRecheck;
-            MediaPathPolicy.FileSystem = savedFs; MediaAccess.SettingsProvider = savedSettings; MediaAccess.ProjectPathProvider = savedProject;
+            MediaPathPolicy.FileSystem = savedFs;
             MediaAccess.ClearCache();
             try { Directory.Delete(temp, true); } catch (IOException) { }
         }

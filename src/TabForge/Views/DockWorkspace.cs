@@ -742,8 +742,16 @@ public sealed class DockWorkspace : Grid
                     // GridSplitter has just rewritten the row/column sizes; lay out first so the clamp reads the
                     // new sizes. Reading the stale ActualHeight would put the old size back and undo every drag.
                     (VisualTreeHelper.GetParent(splitter) as Grid)?.UpdateLayout();
-                    EnforceSplitMinimums(splitter);
+                    EnforceSplitMinimums(splitter, dragging: true);
+                    RaiseSplitter(splitter, DockSplitterPhase.Delta);
                 };
+        splitter.DragStarted += (_, _) => { EnforceSplitMinimums(splitter, dragging: true); RaiseSplitter(splitter, DockSplitterPhase.Started); };
+        splitter.PreviewMouseLeftButtonDown += (_, e) =>
+        {
+            if (e.ClickCount != 2 || !splitter.IsEnabled) return;
+            e.Handled = true;   // a double-click is a command on the split, not the start of a drag
+            RaiseSplitter(splitter, DockSplitterPhase.DoubleClick);
+        };
         splitter.DragCompleted += Splitter_DragCompleted;
                 splitGrid.Children.Add(splitter);
                 if (horizontal) Grid.SetColumn(splitter, 1); else Grid.SetRow(splitter, 1);
@@ -816,13 +824,55 @@ public sealed class DockWorkspace : Grid
             if (available > 0) node.Ratio = Math.Clamp(split.RowDefinitions[0].ActualHeight / available, 0.02, 0.98);
         }
         NotifyLayoutChanged();
+        RaiseSplitter(splitter, DockSplitterPhase.Completed);
+    }
+
+    /// <summary>A splitter between two pane groups was dragged (start, each move, end) or double-clicked.</summary>
+    public event EventHandler<DockSplitterEventArgs>? SplitterInteraction;
+
+    private readonly Dictionary<string, Func<(double Min, double Max)?>> _heightLimits = new();
+
+    /// <summary>Limits (min, max px) for the height of the pane group holding <paramref name="panelId"/> while its splitter is dragged; null from the function = no limit.</summary>
+    public void SetPanelHeightLimits(string panelId, Func<(double Min, double Max)?>? limits)
+    {
+        if (limits is null) _heightLimits.Remove(panelId); else _heightLimits[panelId] = limits;
+    }
+
+    private void RaiseSplitter(GridSplitter splitter, DockSplitterPhase phase)
+    {
+        if (SplitterInteraction is null || splitter.Tag is not DockNodeState node) return;
+        static string[] Panels(DockNodeState? n) => n is { Kind: "tabs" } ? n.Panels.ToArray() : Array.Empty<string>();
+        SplitterInteraction(this, new DockSplitterEventArgs(phase,
+            !string.Equals(node.Orientation, "Horizontal", StringComparison.OrdinalIgnoreCase), Panels(node.First), Panels(node.Second)));
+    }
+
+    /// <summary>Test hook: does what dragging the splitter above <paramref name="panelId"/> to <paramref name="height"/> px does (live layout, minimum clamp, events).</summary>
+    internal bool SimulateSplitterDrag(string panelId, double height, bool complete)
+    {
+        foreach (var splitter in FindSplitters(this))
+        {
+            if (splitter.Tag is not DockNodeState { Second: { Kind: "tabs" } second } node || !splitter.IsEnabled ||
+                string.Equals(node.Orientation, "Horizontal", StringComparison.OrdinalIgnoreCase) ||
+                !second.Panels.Contains(panelId, StringComparer.Ordinal) || VisualTreeHelper.GetParent(splitter) is not Grid split) continue;
+            var available = split.ActualHeight - SplitterSize;
+            split.RowDefinitions[0].MinHeight = 0; split.RowDefinitions[2].MinHeight = 0;
+            split.RowDefinitions[0].Height = new GridLength(Math.Max(0, available - height), GridUnitType.Star);
+            split.RowDefinitions[2].Height = new GridLength(Math.Max(0, height), GridUnitType.Star);
+            split.UpdateLayout();
+            EnforceSplitMinimums(splitter, dragging: true);
+            split.UpdateLayout();
+            RaiseSplitter(splitter, DockSplitterPhase.Delta);
+            if (complete) Splitter_DragCompleted(splitter, null!);
+            return true;
+        }
+        return false;
     }
 
     /// <summary>
     /// Hard clamp for an interactive splitter drag: neither side may go below its pane minimum (GridSplitter
     /// alone let a star row shrink under its MinHeight). Rewrites both star sizes from the clamped size.
     /// </summary>
-    private void EnforceSplitMinimums(GridSplitter splitter)
+    private void EnforceSplitMinimums(GridSplitter splitter, bool dragging = false)
     {
         if (splitter.Tag is not DockNodeState { First: { } first, Second: { } second } node ||
             VisualTreeHelper.GetParent(splitter) is not Grid split) return;
@@ -835,7 +885,18 @@ public sealed class DockWorkspace : Grid
         var sizeA = horizontal ? split.ColumnDefinitions[0].ActualWidth : split.RowDefinitions[0].ActualHeight;
         var sizeB = horizontal ? split.ColumnDefinitions[2].ActualWidth : split.RowDefinitions[2].ActualHeight;
         var total = sizeA + sizeB > 0 ? sizeA + sizeB : available;
-        var clamped = minA + minB <= total ? Math.Clamp(sizeA, minA, total - minB) : minA;
+        // A lower pane with its own height limits (the track list, with auto-fit on) may not go below the height that shows
+        // all its rows at the smallest row height, nor above the height that shows them at the largest. When the other
+        // panes' minimums leave no room for the lower limit, the lower pane gets what they allow (its content scrolls).
+        var lowerBound = minA;
+        if (!horizontal && second is { Kind: "tabs" } lowerTabs)
+            foreach (var id in lowerTabs.Panels)
+                if (_heightLimits.TryGetValue(id, out var limits) && limits() is { } limit)
+                {
+                    minB = Math.Max(minB, Math.Min(limit.Min, Math.Max(0, total - minA)));
+                    lowerBound = Math.Max(minA, total - Math.Max(minB, limit.Max));
+                }
+        var clamped = minA + minB <= total ? Math.Clamp(sizeA, lowerBound, total - minB) : minA;
         var rest = Math.Max(minB, total - clamped);
         if (horizontal)
         {
@@ -845,7 +906,7 @@ public sealed class DockWorkspace : Grid
         }
         else
         {
-            split.RowDefinitions[0].MinHeight = minA; split.RowDefinitions[2].MinHeight = minB;
+            split.RowDefinitions[0].MinHeight = dragging ? lowerBound : minA; split.RowDefinitions[2].MinHeight = minB;
             split.RowDefinitions[0].Height = new GridLength(clamped, GridUnitType.Star);
             split.RowDefinitions[2].Height = new GridLength(rest, GridUnitType.Star);
         }
@@ -1790,4 +1851,17 @@ public sealed class DockWorkspace : Grid
             Top = position.Y + 12;
         }
     }
+}
+
+public enum DockSplitterPhase { Started, Delta, Completed, DoubleClick }
+
+/// <summary>What happened to a dock splitter, and which panels sit above/left (<see cref="First"/>) and below/right (<see cref="Second"/>) of it.</summary>
+public sealed class DockSplitterEventArgs : EventArgs
+{
+    public DockSplitterEventArgs(DockSplitterPhase phase, bool vertical, IReadOnlyList<string> first, IReadOnlyList<string> second) =>
+        (Phase, Vertical, First, Second) = (phase, vertical, first, second);
+    public DockSplitterPhase Phase { get; }
+    public bool Vertical { get; }
+    public IReadOnlyList<string> First { get; }
+    public IReadOnlyList<string> Second { get; }
 }

@@ -89,7 +89,7 @@ internal static partial class DiagnosticCommands
         var timeline = panel.TimelineForTest;
         var gridTop = Views.ArrangementPanel.RulerHeight + Views.ArrangementPanel.SectionHeight;
         var clip = project.Tracks[0].AudioClips[^1];
-        var press = new Point(timeline.XOfBar(3) + 10, gridTop + Views.ArrangementPanel.RowTopOf(project, 0) + Views.ArrangementPanel.TrackRowHeight + 12);
+        var press = new Point(timeline.XOfBar(3) + 10, gridTop + Views.ArrangementPanel.RowTopOf(project, 0) + Views.ArrangementPanel.DefaultTrackRowHeight + 12);
         var to = new Point(timeline.XOfBar(8) + 10, gridTop + Views.ArrangementPanel.RowTopOf(project, 1) + 10);
         panel.SimulateClipMove(clip, 0, press, to);
     }
@@ -105,7 +105,7 @@ internal static partial class DiagnosticCommands
         var session = Views.MediaDropSession.FromItems(new[] { new DropItem { Path = "Groove 01.mid", Name = "Groove 01", Kind = DropItemKind.Midi, Midi = groove } });
         var timeline = panel.TimelineForTest;
         var gridTop = Views.ArrangementPanel.RulerHeight + Views.ArrangementPanel.SectionHeight;
-        var laneY = gridTop + Views.ArrangementPanel.RowTopOf(project, 0) + Views.ArrangementPanel.TrackRowHeight + 12;
+        var laneY = gridTop + Views.ArrangementPanel.RowTopOf(project, 0) + Views.ArrangementPanel.DefaultTrackRowHeight + 12;
         var point = mode switch
         {
             "dropnew" => new Point(timeline.XOfBar(3) + 3, laneY),

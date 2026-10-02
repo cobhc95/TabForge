@@ -55,11 +55,21 @@ public static class WaveformCache
     internal static double MaxSecondsOverride = MaxSeconds;
     internal static long MaxFileBytesOverride = MaxFileBytes;
 
+    /// <summary>Test seam: replaces the file-size / last-write probe (<c>null</c>: the file does not exist); counts probes.</summary>
+    internal static Func<string, (long Size, long Ticks)?>? StatOverride { get; set; }
+
+    // One slot per (document, file): the request, its permission and its state belong to the document that asked. Decoded peaks are shared
+    // between slots by canonical file identity (a second document asking for the same, approved file reuses them) but only after that
+    // document's own permission was checked; the permission is checked again on every read of a slot, so a revoked approval or a replaced
+    // document never keeps granting access through data another document decoded.
     private sealed class Slot
     {
         public required string Key;
         public required string Raw;
-        public required string? ProjectPath;
+        public required MediaContext Context;
+        public required int Revision;
+        public string? Path;   // canonical file the request resolved to (once allowed)
+        public MediaVerdict? Verdict;   // how the worker classified it: later permission checks reuse it (no file-system call on the draw path or under the lock)
         public float[]? Peaks;
         public WaveState State = WaveState.Loading;
         public string? Message;
@@ -81,8 +91,15 @@ public static class WaveformCache
 
     static WaveformCache()
     {
-        // An approval changed: what waited for it is asked again, and every verdict is reconsidered.
-        MediaAccess.Changed += () => Reset(s => s.State is WaveState.NeedsApproval or WaveState.Failed);
+        // An approval changed (or a song's scope moved): what waited for it is asked again, outlines no longer allowed are dropped, and queued work
+        // is checked again by the worker before it opens anything.
+        MediaAccess.Changed += () =>
+        {
+            Reset(s => s.State is WaveState.NeedsApproval or WaveState.Failed);
+            lock (Gate)
+                foreach (var s in Slots.Values.Where(x => x.State == WaveState.Ready).ToList())
+                    if (s.Verdict is { } known && !MediaAccess.Decide(known, s.Context).Allowed) { s.State = WaveState.NeedsApproval; s.Message = "not loaded (approve to load)"; s.Peaks = null; }
+        };
     }
 
     /// <summary>Files decoded so far (self-test: a blocked path must never get here).</summary>
@@ -90,42 +107,59 @@ public static class WaveformCache
     internal static int CachedCount { get { lock (Gate) return Slots.Count; } }
     internal static long CachedBytes { get { lock (Gate) return Slots.Values.Sum(s => (long)(s.Peaks?.Length ?? 0) * 4); } }
 
-    private static string KeyOf(string file, string? projectPath)
+    private static string KeyOf(string file, MediaContext context)
     {
-        if (Path.IsPathFullyQualified(file)) return file;
-        return (MediaAccess.FolderOf(projectPath) ?? "") + "\0" + file;
+        var scope = context.ScopeKey + "\0";
+        if (Path.IsPathFullyQualified(file)) return scope + file;
+        return scope + (context.BaseDirectory ?? "") + "\0" + file;
     }
 
-    /// <summary>The outline of <paramref name="file"/>, or null while it is not (or cannot be) read; starts reading when needed.</summary>
-    public static float[]? Get(string file)
+    /// <summary>The outline of <paramref name="file"/> for this document, or null while it is not (or may not be) read; starts reading when needed.</summary>
+    public static float[]? Get(string file, MediaContext context)
     {
-        var s = Touch(file);
+        var s = Touch(file, context);
         return s.State == WaveState.Ready ? s.Peaks : null;
     }
 
     /// <summary>Why a clip has no outline: still loading, waiting for approval, or an error.</summary>
-    public static WaveStatus StatusOf(string file)
+    public static WaveStatus StatusOf(string file, MediaContext context)
     {
-        var s = Touch(file);
+        var s = Touch(file, context);
         return new WaveStatus(s.State, s.Message);
     }
 
-    private static Slot Touch(string file)
+    private static Slot Touch(string file, MediaContext context)
     {
-        var project = MediaAccess.CurrentProjectPath();
-        var key = KeyOf(file, project);
+        var key = KeyOf(file, context);
         var now = Environment.TickCount64;
+        // A closed document asks for nothing: no slot, no queued work, no file touched.
+        if (context.IsClosed)
+            return new Slot { Key = key, Raw = file, Context = context, Revision = context.Revision, LastUsed = now, LastChecked = now, State = WaveState.Failed, Message = "the song is closed" };
         lock (Gate)
         {
+            if (Slots.TryGetValue(key, out var old) && old.Revision != context.Revision)
+            {
+                // The song's path or source folder changed since this was asked (Save As, rebase): that request is over.
+                Slots.Remove(key); old.Cts.Cancel();
+                if (old.Queued) { Queue.Remove(old); old.Queued = false; }
+            }
             if (!Slots.TryGetValue(key, out var s))
             {
-                s = new Slot { Key = key, Raw = file, ProjectPath = project, LastUsed = now, LastChecked = now };
+                s = new Slot { Key = key, Raw = file, Context = context, Revision = context.Revision, LastUsed = now, LastChecked = now };
                 if (Queue.Count >= MaxPending) return s;   // not stored: asked again on the next draw
                 Slots[key] = s;
                 Enqueue(s);
                 return s;
             }
             s.LastUsed = now;
+            // Permission is this document's, every time: data a slot already holds is only handed out while its own approval still stands.
+            // Memory only: the classification (a link may lead to an unreachable share) was done by the worker; the draw path never touches the file system.
+            if (s.State == WaveState.Ready && s.Verdict is { } known && MediaAccess.Decide(known, context) is { Allowed: false } denied)
+            {
+                s.State = denied.State == MediaAccessState.Refused ? WaveState.Failed : WaveState.NeedsApproval;
+                s.Message = denied.State == MediaAccessState.Refused ? denied.Message : "not loaded (approve to load)";
+                s.Peaks = null;
+            }
             if (!s.Queued && s.State != WaveState.Loading && now - s.LastChecked > RecheckMs) { s.LastChecked = now; Enqueue(s); }
             return s;
         }
@@ -174,7 +208,11 @@ public static class WaveformCache
     {
         var token = s.Cts.Token;
         if (token.IsCancellationRequested) return false;
-        var decision = MediaAccess.Evaluate(s.Raw, s.ProjectPath);
+        var context = s.Context;
+        // Work asked for by a document that has closed, or whose path changed since (Save As), is dropped before anything is opened.
+        if (!context.IsCurrent(s.Revision)) { DropSlot(s); return false; }
+        // The permission is evaluated now, on the worker, with this document's context: an approval revoked while the request waited in the queue does not open the file.
+        var decision = MediaAccess.Evaluate(s.Raw, context);
         if (decision.State == MediaAccessState.Refused) { Fail(s, decision.Message); return true; }
         if (decision.State == MediaAccessState.NeedsApproval)
         {
@@ -184,7 +222,13 @@ public static class WaveformCache
         long size, ticks;
         try
         {
-            if (OpenOverride is null)
+            if (StatOverride is { } stat)
+            {
+                if (stat(path) is not { } probed) { Fail(s, "file not found"); return true; }
+                (size, ticks) = probed;
+                if (size > MaxFileBytesOverride) { Fail(s, "file too large (limit 2 GiB)"); return true; }
+            }
+            else if (OpenOverride is null)
             {
                 var info = new FileInfo(path);
                 if (!info.Exists) { Fail(s, "file not found"); return true; }
@@ -195,13 +239,29 @@ public static class WaveformCache
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException) { Fail(s, "file not readable"); return true; }
         // Same file as last time (size and last-write unchanged): nothing to read again. A replaced file changes either.
+        float[]? shared = null;
         lock (Gate)
         {
+            s.Path = path;
+            s.Verdict = decision.Verdict;
             if (s.State is WaveState.Ready or WaveState.Failed && s.Size == size && s.Ticks == ticks && OpenOverride is null) return false;
             if (s.State != WaveState.Loading && s.State != WaveState.Ready) s.State = WaveState.Loading;
+            // Another document already decoded this very file (same size and last write): this document was just allowed to read it, so reuse the peaks.
+            if (size > 0 || StatOverride is not null)
+                shared = Slots.Values.FirstOrDefault(x => !ReferenceEquals(x, s) && x.State == WaveState.Ready && x.Peaks is not null && x.Size == size && x.Ticks == ticks
+                    && string.Equals(x.Path, path, StringComparison.OrdinalIgnoreCase))?.Peaks;
+            if (shared is not null) { s.Size = size; s.Ticks = ticks; s.State = WaveState.Ready; s.Message = null; s.Peaks = shared; return true; }
         }
         var peaks = Decode(path, token, out var error);
         if (token.IsCancellationRequested) return false;
+        // The file was decoded for a request that was allowed when it started: apply the result only if the document is still the same and its
+        // permission still stands (a close, Save As or revoke during the read drops the result).
+        if (!context.IsCurrent(s.Revision)) { DropSlot(s); return false; }
+        if (MediaAccess.Evaluate(s.Raw, context) is { Allowed: false })
+        {
+            lock (Gate) { s.State = WaveState.NeedsApproval; s.Message = "not loaded (approve to load)"; s.Peaks = null; }
+            return true;
+        }
         lock (Gate)
         {
             if (s.Cts.IsCancellationRequested) return false;
@@ -210,6 +270,15 @@ public static class WaveformCache
             else { s.State = WaveState.Ready; s.Message = null; s.Peaks = peaks; Evict(s); }
         }
         return true;
+    }
+
+    private static void DropSlot(Slot s)
+    {
+        lock (Gate)
+        {
+            if (Slots.TryGetValue(s.Key, out var current) && ReferenceEquals(current, s)) Slots.Remove(s.Key);
+            s.Cts.Cancel();
+        }
     }
 
     /// <summary>Reads the peaks; null (with <paramref name="error"/>) when the file is refused or unreadable, or the token was cancelled.</summary>
@@ -285,13 +354,13 @@ public static class WaveformCache
     }
 
     /// <summary>Stops reading (and forgets) every file that is still loading and is not one of <paramref name="wanted"/>: a clip was removed or a timeline closed.</summary>
-    public static void CancelUnused(IEnumerable<string> wanted)
+    public static void CancelUnused(IEnumerable<string> wanted, MediaContext context)
     {
-        var project = MediaAccess.CurrentProjectPath();
-        var keep = new HashSet<string>(wanted.Select(f => KeyOf(f, project)), StringComparer.OrdinalIgnoreCase);
+        var keep = new HashSet<string>(wanted.Select(f => KeyOf(f, context)), StringComparer.OrdinalIgnoreCase);
         lock (Gate)
         {
-            foreach (var s in Slots.Values.Where(s => s.State == WaveState.Loading && !keep.Contains(s.Key)).ToList())
+            // Only this document's own requests: another window showing the same file keeps reading it.
+            foreach (var s in Slots.Values.Where(s => ReferenceEquals(s.Context, context) && s.State == WaveState.Loading && !keep.Contains(s.Key)).ToList())
             {
                 Slots.Remove(s.Key);
                 s.Cts.Cancel();
@@ -301,19 +370,30 @@ public static class WaveformCache
     }
 
     /// <summary>Stops reading (and forgets) these files if they are still loading: their timeline closed.</summary>
-    public static void Cancel(IEnumerable<string> files)
+    public static void Cancel(IEnumerable<string> files, MediaContext context)
     {
-        var project = MediaAccess.CurrentProjectPath();
-        var drop = new HashSet<string>(files.Select(f => KeyOf(f, project)), StringComparer.OrdinalIgnoreCase);
+        var drop = new HashSet<string>(files.Select(f => KeyOf(f, context)), StringComparer.OrdinalIgnoreCase);
         lock (Gate)
         {
-            foreach (var s in Slots.Values.Where(s => s.State == WaveState.Loading && drop.Contains(s.Key)).ToList())
+            foreach (var s in Slots.Values.Where(s => ReferenceEquals(s.Context, context) && s.State == WaveState.Loading && drop.Contains(s.Key)).ToList())
             {
                 Slots.Remove(s.Key);
                 s.Cts.Cancel();
                 if (s.Queued) { Queue.Remove(s); s.Queued = false; }
             }
         }
+    }
+
+    /// <summary>A song closed: every slot it asked for goes (reading stops, the outlines leave the memory budget). Other songs' slots are untouched, whatever they share.</summary>
+    public static void Forget(MediaContext context)
+    {
+        lock (Gate)
+            foreach (var s in Slots.Values.Where(s => ReferenceEquals(s.Context, context)).ToList())
+            {
+                Slots.Remove(s.Key);
+                s.Cts.Cancel();
+                if (s.Queued) { Queue.Remove(s); s.Queued = false; }
+            }
     }
 
     /// <summary>Forgets everything (tests).</summary>
@@ -366,14 +446,18 @@ public static class WaveformCache
     /// Length of an audio file in seconds (0 when it cannot be read or is refused). <paramref name="userPicked"/>: the user just
     /// chose this file, so a network or removable location is fine (the caller approves its folder); device paths never are.
     /// </summary>
-    public static double LengthOf(string file, bool userPicked = false)
+    public static double LengthOf(string file, MediaContext context, bool userPicked = false)
     {
         try
         {
-            var v = MediaPathPolicy.Classify(file, MediaAccess.FolderOf(MediaAccess.CurrentProjectPath()));
+            var v = MediaPathPolicy.Classify(file, context.BaseDirectory);
             if (v.Refused) return 0;
-            if (!userPicked && MediaAccess.Evaluate(file).State != MediaAccessState.Allowed) return 0;
-            if (OpenOverride is null)
+            if (!userPicked && MediaAccess.Evaluate(file, context).State != MediaAccessState.Allowed) return 0;
+            if (StatOverride is { } stat)
+            {
+                if (stat(v.FullPath) is not { } probed || probed.Size > MaxFileBytesOverride) return 0;
+            }
+            else if (OpenOverride is null)
             {
                 var info = new FileInfo(v.FullPath);
                 if (!info.Exists || info.Length > MaxFileBytesOverride) return 0;

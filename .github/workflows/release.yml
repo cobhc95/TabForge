@@ -70,8 +70,8 @@ jobs:
           "Inno Setup: $iscc"
           "ISCC=$iscc" | Add-Content -Path $env:GITHUB_ENV
 
-      # Runs on the clean checkout itself (no worktree needed) and refuses a dirty tree. Publishes, self-tests the exact publish folder (required areas: gp-fixtures, synthetic-fixtures, source-hygiene,
-      # installer-parity), then builds the portable zip, the installer and the SHA-256 file in dist/.
+      # Runs on the clean checkout itself (no worktree needed) and refuses a dirty tree. Publishes, self-tests the exact publish folder (--require ci: gp-fixtures, synthetic-fixtures, source-hygiene,
+      # installer-parity, fuzz), then builds the portable zip, the installer and the SHA-256 file in dist/.
       - name: Package (self-test, portable zip, installer, checksums)
         shell: pwsh
         timeout-minutes: 30

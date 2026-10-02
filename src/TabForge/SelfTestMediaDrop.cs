@@ -293,7 +293,7 @@ public static partial class SelfTest
             Snap = new SnapSettings { Enabled = true, Grid = "Bar", ToGrid = true, ToItems = false, ToPlayhead = false, GridAtAnyDistance = true },
         };
         var gridTop = ArrangementPanel.RulerHeight + ArrangementPanel.SectionHeight;
-        var row = ArrangementPanel.TrackRowHeight;
+        var row = ArrangementPanel.DefaultTrackRowHeight;
         var items = new[] { AudioItem("Loop", 4.0) };
         var p = new Point(timeline.XOfBar(3) + 9, gridTop + row + 10);   // a third into bar 4, on track 2's row
         var preview = timeline.DropPreviewAt(items, p);

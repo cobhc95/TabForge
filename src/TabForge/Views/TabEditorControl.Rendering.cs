@@ -426,6 +426,10 @@ public sealed partial class TabEditorControl
                     DrawIn(ScoreTextArea.BarInfo, dc, $"x{measure.RepeatCount}", x + measureWidth - 22, (showStaff ? staffTop : tabTop) - 16, 10, inkBrush, FontWeights.Bold);
             }
 
+            // Opt-in playing-bar band: behind everything that follows (selection, notes, marks).
+            if (PlayingBarBand(track, systemLayout, measurePosition) is { } playingBar)
+                dc.DrawRectangle(playingBar.Brush, null, playingBar.Rect);
+
             var isError = BarStateFor(measureIndex).Error;
             if (isError && measureIndex != SelectedMeasure)
             {

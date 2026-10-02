@@ -134,7 +134,7 @@ public static class MidiExportService
             {
                 var bar = timeline.Bars[i];
                 _clocks[i] = new BarClock(bar, MusicTime.BarOf(project, bar.Bar), running);
-                running += bar.Slots * Division / MusicTime.SlotsPerQuarter;
+                running = _clocks[i].EndTick;
             }
             _endTick = running;
             _endMs = timeline.Bars.Count > 0 ? timeline.Bars[^1].EndMs : 0;
@@ -188,10 +188,18 @@ public static class MidiExportService
     {
         public ScoreBar Bar { get; }
         public int StartTick { get; }
-        public int EndTick => StartTick + Bar.Slots * Division / MusicTime.SlotsPerQuarter;
+        /// <summary>The bar's length in slots as performed: <see cref="ScoreBar.Slots"/> rounded up for a short bar (an imported song's bar plays only as long as its
+        /// content, e.g. two triplet eighths = 8/3 slots), so the ticks follow the real length and notes inside keep their time.</summary>
+        public double LengthSlots { get; }
+        public int EndTick => StartTick + (int)Math.Round(LengthSlots * Division / MusicTime.SlotsPerQuarter);
         private readonly MeasureModel? _measure;
 
-        public BarClock(ScoreBar bar, MeasureModel? measure, int startTick) { Bar = bar; _measure = measure; StartTick = startTick; }
+        public BarClock(ScoreBar bar, MeasureModel? measure, int startTick)
+        {
+            Bar = bar; _measure = measure; StartTick = startTick;
+            var playedMs = bar.EndMs - bar.StartMs - FermataSpan.TotalExtraMs(bar.Fermatas);
+            LengthSlots = playedMs >= MusicTime.OffsetMs(measure, bar.Slots, bar.Tempo) - 0.01 ? bar.Slots : Math.Min(bar.Slots, SlotAtRelative(Math.Max(0, playedMs)));
+        }
 
         private bool Varying => _measure?.MidBarTempos is { Count: > 0 };
 
@@ -202,7 +210,12 @@ public static class MidiExportService
         /// <summary>Inverse of <see cref="MsAt"/> (a slot position, not clamped to the bar so a tail after the last slot keeps counting).</summary>
         public double SlotAt(double ms)
         {
-            var relative = FermataSpan.Unwarp(Bar.Fermatas, ms - Bar.StartMs);
+            return SlotAtRelative(FermataSpan.Unwarp(Bar.Fermatas, ms - Bar.StartMs));
+        }
+
+        /// <summary>The slot reached <paramref name="relative"/> ms into the bar's music (fermata holds already taken out).</summary>
+        private double SlotAtRelative(double relative)
+        {
             if (!Varying) return Math.Max(0, relative / MusicTime.SlotsToMsAt(1, Bar.Tempo));
             double low = 0, high = Bar.Slots;
             for (var step = 0; step < 40; step++)
@@ -216,8 +229,8 @@ public static class MidiExportService
         /// <summary>Slot positions where the file needs a tempo event: bar start, every slot inside a ramp, tempo steps and hold edges, bar end.</summary>
         public List<double> Breakpoints()
         {
-            var set = new SortedSet<double> { 0, Bar.Slots };
-            void Add(double slot) { if (slot > 1e-6 && slot < Bar.Slots - 1e-6) set.Add(Math.Round(slot, 6)); }
+            var set = new SortedSet<double> { 0, LengthSlots };
+            void Add(double slot) { if (slot > 1e-6 && slot < LengthSlots - 1e-6) set.Add(Math.Round(slot, 6)); }
             if (Bar.Fermatas is { } holds)
                 foreach (var hold in holds) { Add(hold.Slot); Add(hold.Slot + hold.LengthSlots); }
             if (_measure?.MidBarTempos is { Count: > 0 } points)
@@ -226,8 +239,8 @@ public static class MidiExportService
                     var point = points[i];
                     Add(point.Slot);
                     if (point.RampSlots <= 0) continue;
-                    var next = i + 1 < points.Count ? points[i + 1].Slot : Bar.Slots;
-                    var rampEnd = Math.Min(Math.Min(point.Slot + point.RampSlots, next), Bar.Slots);
+                    var next = i + 1 < points.Count ? points[i + 1].Slot : LengthSlots;
+                    var rampEnd = Math.Min(Math.Min(point.Slot + point.RampSlots, next), LengthSlots);
                     for (var slot = Math.Floor(point.Slot) + 1; slot < rampEnd - 1e-6; slot += 1) Add(slot);
                     Add(rampEnd);
                 }

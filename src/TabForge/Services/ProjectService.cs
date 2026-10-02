@@ -22,11 +22,22 @@ public static class ProjectService
     /// .tforge files on disk: every property is written (FormatVersion included), so a file never depends on the constructor defaults of
     /// the release that reads it. Not indented, which keeps full files about as small as the old indented compacted ones.
     /// </summary>
+    /// <remarks>
+    /// One exception to "every property": a beat cell (<see cref="TabCell"/>) is written without the properties that still hold their
+    /// constructor value, so an empty cell is <c>{}</c> instead of about 530 bytes. A song keeps 16 cells per bar and track for each of its two
+    /// voices, and a real one is mostly empty cells (a 2,039-bar, 8-track song: 523,592 cells, 86,272 with content), which made the
+    /// full form 265 MiB and over the 128 MiB limit although the song is a 1 MB file. The cell defaults are frozen like the schema-2 ones
+    /// (TestPersistenceSchema); changing one needs a FormatVersion bump and a migration. Files written this way read the same in older releases.
+    /// </remarks>
     private static readonly JsonSerializerOptions DiskOptions = new()
     {
         WriteIndented = false,
         PropertyNameCaseInsensitive = true,
         MaxDepth = InputLimits.MaxJsonDepth,
+        TypeInfoResolver = new System.Text.Json.Serialization.Metadata.DefaultJsonTypeInfoResolver
+        {
+            Modifiers = { info => { if (info.Type == typeof(TabCell)) OmitInitialValues(info); } }
+        },
     };
 
     /// <summary>
@@ -206,6 +217,19 @@ public static class ProjectService
         return sink.Finish();
     }
 
+    /// <summary>Self-test: the JSON of one beat cell as the disk form writes it.</summary>
+    internal static byte[] MeasureCell(TabCell cell) => JsonSerializer.SerializeToUtf8Bytes(cell, DiskOptions);
+
+    /// <summary>Diagnostics (`--import-measure`): the JSON size of the project in the disk form (every property) and in the compact in-memory form.</summary>
+    internal static (long Full, long Compact) MeasureJsonBytes(SongProject project)
+    {
+        using var full = new HashingLimitStream(Stream.Null, long.MaxValue, hash: false);
+        SerializeChunked(full, project, DiskOptions);
+        using var compact = new HashingLimitStream(Stream.Null, long.MaxValue, hash: false);
+        SerializeChunked(compact, project, CompactOptions);
+        return (full.Length, compact.Length);
+    }
+
     public static string Snapshot(SongProject project)
     {
         ProjectValidator.Validate(project);
@@ -265,7 +289,42 @@ public static class ProjectService
     /// reader (<see cref="RestorePersistedBytes"/>) apply, so a .gp TabForge writes can always be read back. Throws
     /// an <see cref="InvalidDataException"/> with <see cref="SizeLimitMessage"/> when it is over.
     /// </summary>
-    internal const string SizeLimitMessage = "The TabForge project exceeds the 128 MiB size limit.";
+    internal const string SizeLimitMessage = "The expanded project data would be larger than the 128 MiB limit (the limit applies to the data inside the project, not to the size of the file).";
+
+    /// <summary>
+    /// The hand-off of an imported song from the import worker process to the app: the project in the compact in-memory form (properties
+    /// at their initial value left out, see <see cref="LosslessCompactResolver"/>), gzip-compressed. Both ends are the same build, so
+    /// nothing depends on a file schema. The JSON is held to <see cref="InputLimits.MaxTforgeFileBytes"/> and the reader applies the
+    /// same bound; <paramref name="what"/> names the data in the message when it is over.
+    /// </summary>
+    internal static byte[] TransferBytes(SongProject project, string what = "imported song")
+    {
+        using var output = new MemoryStream();
+        using (var gzip = new GZipStream(output, CompressionLevel.Fastest, leaveOpen: true))
+        using (var sink = new HashingLimitStream(gzip, InputLimits.MaxTforgeFileBytes, hash: false, what: what))
+            SerializeChunked(sink, project, CompactOptions);
+        return output.ToArray();
+    }
+
+    /// <summary>Reads <see cref="TransferBytes"/> output (bounded, validated like any project).</summary>
+    internal static SongProject RestoreTransferBytes(byte[] transfer)
+    {
+        ArgumentNullException.ThrowIfNull(transfer);
+        if (transfer.LongLength > InputLimits.MaxTforgeFileBytes)
+            throw new InvalidDataException("The imported song's compressed data is larger than the 128 MiB limit.");
+        using var input = new MemoryStream(transfer, writable: false);
+        using var gzip = new GZipStream(input, CompressionMode.Decompress);
+        using var output = new MemoryStream();
+        var buffer = new byte[64 * 1024];
+        int read;
+        while ((read = gzip.Read(buffer, 0, buffer.Length)) > 0)
+        {
+            if (output.Length + read > InputLimits.MaxTforgeFileBytes)
+                throw new InvalidDataException("The imported song's expanded data is larger than the 128 MiB limit.");
+            output.Write(buffer, 0, read);
+        }
+        return DeserializeAndValidate(output.ToArray(), "imported song", CompactOptions);
+    }
 
     /// <param name="maxJsonBytes">The crash-recovery copy passes <see cref="InputLimits.MaxRecoveryProjectBytes"/>, the bound its reader applies.</param>
     public static byte[] PersistBytes(SongProject project, long maxJsonBytes = InputLimits.MaxTforgeFileBytes)
@@ -379,10 +438,13 @@ internal sealed class HashingLimitStream : Stream
     private readonly IncrementalHash? _hash;
     private long _written;
 
-    public HashingLimitStream(Stream inner, long limit, bool hash = true)
+    private readonly string? _what;
+
+    public HashingLimitStream(Stream inner, long limit, bool hash = true, string? what = null)
     {
         _inner = inner;
         _limit = limit;
+        _what = what;
         _hash = hash ? IncrementalHash.CreateHash(HashAlgorithmName.SHA256) : null;
     }
 
@@ -391,7 +453,8 @@ internal sealed class HashingLimitStream : Stream
     public override void Write(ReadOnlySpan<byte> buffer)
     {
         _written += buffer.Length;
-        if (_written > _limit) throw new InvalidDataException(ProjectService.SizeLimitMessage);
+        if (_written > _limit)
+            throw new InvalidDataException(_what is null ? ProjectService.SizeLimitMessage : $"The {_what} would be larger than the {_limit / (1024 * 1024)} MiB limit for its expanded project data (the limit does not apply to the size of the file).");
         _hash?.AppendData(buffer);
         _inner.Write(buffer);
     }

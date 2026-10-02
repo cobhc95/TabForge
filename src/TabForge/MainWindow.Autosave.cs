@@ -13,6 +13,7 @@ public partial class MainWindow
     private readonly AutosavePlanner _autosavePlanner = new(DateTime.UtcNow);
     private readonly AutosaveRunner _autosave = new();
     private DispatcherTimer? _autosaveTimer;
+    private DispatcherTimer? _autosaveRecheck;
     private Border? _autosaveBar;
     private TextBlock? _autosaveBarText;
     private bool _reconcileScheduled;
@@ -40,22 +41,25 @@ public partial class MainWindow
     {
         if (_reconcileScheduled) return;
         _reconcileScheduled = true;
-        Dispatcher.BeginInvoke(DispatcherPriority.Background, () =>
+        PostIfOpen(() =>
         {
             _reconcileScheduled = false;
             ReconcileAutosaveStates();
-        });
+        }, DispatcherPriority.Background);
     }
 
     private void ReconcileAutosaveStates()
     {
+        if (_isClosed) return;   // a closed window's documents were retired when it closed; its recheck timer must not run on
         try
         {
-            if (AutosaveRegistry.Reconcile(DocumentsInAllWindows(), DateTime.UtcNow) > 0)
+            if (AutosaveRegistry.Reconcile(DocumentsInAllWindows(), DateTime.UtcNow) > 0 && _autosaveRecheck is null)
             {
-                // A document is briefly missing (a tab move in progress): look again once the grace period is over.
+                // A document is briefly missing (a tab move in progress): look again once the grace period is over. One pending look at a
+                // time, and the window stops it when it closes (a running timer keeps its window alive until it fires).
                 var recheck = new DispatcherTimer(DispatcherPriority.Background) { Interval = AutosaveRegistry.MissingGrace + TimeSpan.FromMilliseconds(250) };
-                recheck.Tick += (_, _) => { recheck.Stop(); ReconcileAutosaveStates(); };
+                _autosaveRecheck = recheck;
+                recheck.Tick += (_, _) => { recheck.Stop(); _autosaveRecheck = null; ReconcileAutosaveStates(); };
                 recheck.Start();
             }
         }

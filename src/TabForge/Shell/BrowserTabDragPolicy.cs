@@ -2,6 +2,8 @@ using System.Windows;
 
 namespace TabForge.Shell;
 
+public enum TabTearOffAction { NewWindow, MoveWindow }
+
 public enum BrowserChromeHit { Client, Tab, TabAction, CaptionButton, DraggableCaption }
 
 /// <summary>
@@ -41,6 +43,11 @@ public static class BrowserTabDragPolicy
         var insert = Math.Clamp(insertionIndex, 0, count);
         return Math.Clamp(insert > fromIndex ? insert - 1 : insert, 0, count - 1);
     }
+
+    /// <summary>What dragging a tab out of the strip does. A window's only tab (main or secondary) moves the window itself
+    /// (no new window, no blank replacement tab left behind); with 2+ tabs the tab is torn off into a new window.</summary>
+    public static TabTearOffAction TearOffAction(int tabCount) =>
+        tabCount == 1 ? TabTearOffAction.MoveWindow : TabTearOffAction.NewWindow;
 
     public static bool IsBeyondTearOff(double pointerX, double pointerY, double windowWidth,
         double stripTop, double stripHeight, double tolerance = TearOffTolerance) =>

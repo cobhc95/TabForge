@@ -181,6 +181,9 @@ internal sealed class ThemedConfirmDialog : Window
 
     public MessageBoxResult Result => _result;
 
+    /// <summary>Test seam: answers the prompt as a click on that button would (the dialog is never shown).</summary>
+    internal void AnswerForTest(MessageBoxResult answer) => _result = answer;
+
     private CheckBox? _remember;
     /// <summary>The user ticked "don't ask again" (only meaningful together with a Yes result).</summary>
     public bool RememberChoice => _remember?.IsChecked == true;

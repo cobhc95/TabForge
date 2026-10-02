@@ -135,14 +135,15 @@ public partial class MainWindow
         playback.PlaybackBarMappingsBySnapshot.Clear();
         playback.PlaybackBarRemap = Enumerable.Range(0, MaxMeasures()).ToArray();
         Editor.PlaybackBarRemap = playback.PlaybackBarRemap;
-        RememberPlaybackBarMapping(_undo.Snapshot(_project));
+        Playback.RememberBarMapping(_undo.Snapshot(_project));
         var songProject = session.Project;
+        var clock = playback.Clock;   // the song's own clock, not this window's: the engine keeps this callback when the tab moves to another window
         playback.Engine.Start(session.Project, options,
             // Engine thread: record the newest position, and keep audio clips in step with the song.
             position =>
             {
                 playback.ReportPosition(position);
-                SongClock.Report(songProject, position, !playback.Engine.IsPaused);
+                clock.Report(songProject, position, !playback.Engine.IsPaused);
             },
             playback.MarkFinished);
         SetPlayIcon(true);
@@ -151,7 +152,7 @@ public partial class MainWindow
     /// <summary>Receives the engine's compiled timeline (also after a seek or a speed change).</summary>
     private void OnPlaybackTimelineChanged(ScoreTimeline timeline)
     {
-        if (!ReferenceEquals(_observedPlaybackDocument, Doc)) return;
+        if (_isClosed || !ReferenceEquals(_observedPlaybackDocument, Doc)) return;
         _timeline = timeline;
         Editor.Timeline = timeline;
         RebasePlaybackBarMappings();
@@ -169,10 +170,10 @@ public partial class MainWindow
     {
         if (!Dispatcher.CheckAccess())
         {
-            Dispatcher.BeginInvoke(() => OnPlaybackTimelineRevised(timeline));
+            PostIfOpen(() => OnPlaybackTimelineRevised(timeline), DispatcherPriority.Normal);
             return;
         }
-        if (!ReferenceEquals(_observedPlaybackDocument, Doc)) return;
+        if (_isClosed || !ReferenceEquals(_observedPlaybackDocument, Doc)) return;
         _timeline = timeline;
         Editor.Timeline = timeline;
     }
@@ -606,7 +607,7 @@ public partial class MainWindow
         var bpm = ResolveTempoText(TempoBox.Text, _project.Tempo);
         if (bpm != _project.Tempo)
         {
-            CaptureUndo(); _project.Tempo = bpm; CommitEdit(EditRefresh.Status);
+            DocumentEdits.Run(Doc, p => { p.Tempo = bpm; return true; }); RefreshAfterEdit(EditRefresh.Status);
             // While playing, recompile from the current position so the new tempo is heard at once (not from bar 1, and
             // only when the value really changed, so clicking away from the box never restarts anything).
             if (_midi.IsPlaying) _midi.Rebuild(_project);

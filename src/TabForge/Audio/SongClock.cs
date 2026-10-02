@@ -116,7 +116,8 @@ public sealed class SongClock
     public double CurrentSec => _lastSongMs / 1000;
 
     private static readonly object TransportGate = new();
-    private static (object? Project, (int, int) Key, TransportBar[] Bars) _transport = (null, (-1, -1), Array.Empty<TransportBar>());
+    // Weak in the project: this app-wide one-entry cache must not keep the last song alive after its tab and window are gone.
+    private static (WeakReference<SongProject>? Project, (int, int) Key, TransportBar[] Bars) _transport = (null, (-1, -1), Array.Empty<TransportBar>());
 
     /// <summary>
     /// RT-04: the song's bar map for the engine's plug-in transport, on the same song-seconds clock as <see cref="Report"/> (the same
@@ -127,7 +128,7 @@ public sealed class SongClock
     {
         var key = TimelineKey(project);
         lock (TransportGate)
-            if (ReferenceEquals(_transport.Project, project) && _transport.Key == key) return _transport.Bars;
+            if (_transport.Project is { } cached && cached.TryGetTarget(out var cachedProject) && ReferenceEquals(cachedProject, project) && _transport.Key == key) return _transport.Bars;
         var timeline = MidiTimelineBuilder.Build(project, new PlaybackOptions { RepeatExpansion = true, RespectMuteSolo = false, SkipClips = true });
         var count = Math.Min(timeline.Bars.Count, TransportMap.MaxBars);
         var bars = new TransportBar[count];
@@ -145,7 +146,7 @@ public sealed class SongClock
             var endMs = i + 1 < count ? Math.Max(bar.StartMs, timeline.Bars[i + 1].StartMs) : bar.EndMs;
             ppq += Math.Max(0, endMs - bar.StartMs) / 60000.0 * tempo;
         }
-        lock (TransportGate) _transport = (project, key, bars);
+        lock (TransportGate) _transport = (new WeakReference<SongProject>(project), key, bars);
         return bars;
     }
 

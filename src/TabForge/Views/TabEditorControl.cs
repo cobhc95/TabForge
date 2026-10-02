@@ -247,7 +247,13 @@ public sealed partial class TabEditorControl : FrameworkElement
     public int[]? PlaybackBarRemap { get; set; }
     /// <summary>True while the transport is running (playing or paused): dims the edit cursor so the
     /// green playhead is the only tracker.</summary>
-    public bool PlaybackActive { get; set; }
+    public bool PlaybackActive
+    {
+        get => _playbackActive;
+        // Start and stop only (never per tick): repaint so no frozen system keeps the playing-bar band or the dimmed cursor.
+        set { if (_playbackActive == value) return; _playbackActive = value; InvalidateVisual(); }
+    }
+    private bool _playbackActive;
 
     public TabEditorControl()
     {

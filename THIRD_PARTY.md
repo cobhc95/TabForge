@@ -26,15 +26,33 @@ it without rebuilding TabForge. TabForge only calls it through its public API.
 
 ## alphaTab (MPL-2.0)
 
-TabForge references the `AlphaTab` NuGet package for Guitar Pro reading and `.gp` (GP7) writing.
+TabForge uses alphaTab for Guitar Pro reading and `.gp` (GP7) writing, as its own **modified build** of alphaTab 1.8.4,
+shipped as the assembly `TabForge.AlphaTab.dll` (NuGet package `TabForge.AlphaTab` 1.8.4-tabforge.3). It is not the upstream
+`AlphaTab` package and carries a different name on purpose.
 
-- Version: 1.8.4, the unmodified NuGet package (`AlphaTab.dll` is shipped exactly as published; no alphaTab source is
-  vendored or changed).
-- One TabForge file derives from alphaTab source and is therefore itself under MPL-2.0:
-  `src/TabForge/Services/Gp3To5LongSongReader.cs`. It repeats the step order of `Gp3To5Importer.readScore` (calling
-  alphaTab's own, unchanged reader methods) with TabForge's bar limit in place of alphaTab's fixed 1,000-bar threshold,
-  so Guitar Pro 3-5 songs over 1,000 bars open. Its Source Code Form is that file in TabForge's source; the rest of
-  TabForge stays under its MIT licence.
+- The modifications (MPL-2.0 section 3.2: the Source Code Form of the modified files stays available, see below), three patches:
+  (1) alphaTab refuses a Guitar Pro 3-5 file with more than 1,000 bars through a hard-coded constant. The patch turns that constant into
+  a setting of each individual import (`ImporterSettings.MaxGp3To5BarCount`, default 1,000, i.e. unchanged); TabForge sets it to its own
+  per-track limit of 20,000 bars. It also pins the build date stamped into the library and renames the package and assembly.
+  (2) A Guitar Pro 7/8 file (gpif) stores a track's mixer volume and balance as fractions, while alphaTab's model keeps only a 0..16
+  step of them. The patch adds `PlaybackInformation.VolumeFraction` and `BalanceFraction` (default -1, i.e. unchanged), which the gpif
+  reader fills and the gpif writer prefers when set, so the exact values survive.
+  (3) A Guitar Pro 7/8 file stores a trill's speed in a note XProperty (id 688062467, the note value in ticks); alphaTab neither wrote it
+  nor read it (every trill read as 1/16). The patch writes it for every trill and reads it back as the nearest note value; it also raises
+  the package version to 1.8.4-tabforge.3.
+  The patches are `vendor/alphatab/0001-per-import-gp3-5-bar-limit-and-tabforge-identity.patch` (29 changed lines in 5 files) and
+  `vendor/alphatab/0002-gpif-exact-mixer-volume-and-balance.patch` (28 changed lines in 4 files) and
+  `vendor/alphatab/0003-gpif-trill-speed.patch` (50 changed lines in 3 files); every release also carries them as
+  `licenses/alphaTab-<patch name>`.
+- Corresponding source (the Source Code Form of the modified files): upstream tag `v1.8.4`, commit
+  `022a45c8e42370f9e12e68949d11eada370da83d`, plus those patches, applied in order. `tools/Build-AlphaTab.ps1` rebuilds the DLL from them (and
+  verifies it equals the shipped one); `vendor/alphatab/README.md` describes the build, the hashes and the written offer below.
+- Written offer: for at least three years from the date of each TabForge release that includes `TabForge.AlphaTab`, we will give any
+  third party, on request, a complete machine-readable copy of its corresponding source (the upstream commit above plus the patches),
+  for a charge no more than the cost of physically performing the distribution. Ask through
+  https://github.com/cobhc95/TabForge/issues.
+- An earlier TabForge file that replayed alphaTab's reader through private reflection (`Gp3To5LongSongReader.cs`) is gone; no
+  other alphaTab-derived source file remains in TabForge. The rest of TabForge stays under its MIT licence.
 - Copyright (c) 2025, Daniel Kuschny and Contributors.
 - Project: https://www.alphatab.net/
 - Source code form (tag `v1.8.4`, commit `022a45c8e42370f9e12e68949d11eada370da83d`):
@@ -44,8 +62,8 @@ TabForge references the `AlphaTab` NuGet package for Guitar Pro reading and `.gp
 
 ## Bravura music font (SIL OFL 1.1)
 
-The alphaTab package embeds the Bravura font (version 1.38) as the resource `AlphaTab.Platform.Skia.Bravura.otf`
-inside `AlphaTab.dll`.
+The alphaTab library embeds the Bravura font (version 1.38) as the resource `AlphaTab.Platform.Skia.Bravura.otf`
+inside `TabForge.AlphaTab.dll` (unchanged by TabForge's patch).
 
 - Copyright (c) 2020, Steinberg Media Technologies GmbH (http://www.steinberg.net/), with Reserved Font Name "Bravura".
 - Licence: SIL Open Font License, Version 1.1. Text: [licenses/OFL-1.1_Bravura.txt](licenses/OFL-1.1_Bravura.txt)

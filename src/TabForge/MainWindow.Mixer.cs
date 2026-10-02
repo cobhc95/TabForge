@@ -1,3 +1,4 @@
+using TabForge.Documents;
 using System.Windows;
 using TabForge.Models;
 using TabForge.Plugins;
@@ -114,13 +115,7 @@ public partial class MainWindow : IMixerHost, IFxChainHost
     bool IMixerHost.ReorderFromMixer(Func<SongProject, bool> apply, string status)
     {
         var before = CaptureOrderLayout();
-        var capture = CaptureUndo();   // one undo step per drop / nudge
-        if (!apply(_project))
-        {
-            if (capture is { } cancelled) _undo.Discard(cancelled);
-            return false;
-        }
-        _project.IsDirty = true;
+        if (!DocumentEdits.Run(Doc, apply).Changed) return false;   // one undo step per drop / nudge
         SyncAudioEngine();
         if (_midi.IsPlaying) _midi.RefreshArrangement(_project, Enumerable.Range(0, MaxMeasures()).ToArray());
         RefreshTracks();
@@ -161,9 +156,7 @@ public partial class MainWindow : IMixerHost, IFxChainHost
     {
         if (_project.Mixer.MonitorUseGlobal == useGlobal) return;
         foreach (var (track, window) in _fxWindows.ToList()) if (MixerBuses.IsMonitor(track)) window.Close();
-        CaptureUndo();
-        _project.Mixer.MonitorUseGlobal = useGlobal;
-        _project.IsDirty = true;
+        DocumentEdits.Run(Doc, p => { p.Mixer.MonitorUseGlobal = useGlobal; return true; }, invalidatesTimeline: false);
         SyncAudioEngine();
         RefreshMixerWindow();
         UpdateTitle();
@@ -174,10 +167,8 @@ public partial class MainWindow : IMixerHost, IFxChainHost
     /// <summary>Group header power part: bypasses / enables the group's bus chain (one undo step).</summary>
     internal void ToggleBus(string group)
     {
-        CaptureUndo();
-        var bus = _project.Mixer.Bus(group);
-        MixerBuses.SetOn(bus, !bus.On);
-        _project.IsDirty = true;
+        var bus = default(Models.BusChain)!;   // the bus entry is created inside the edit, so the undo state is taken before it exists (as before)
+        DocumentEdits.Run(Doc, p => { bus = p.Mixer.Bus(group); MixerBuses.SetOn(bus, !bus.On); return true; }, invalidatesTimeline: false);
         SyncAudioEngine();
         RefreshTracks();
         RefreshArrangement();
@@ -195,8 +186,7 @@ public partial class MainWindow : IMixerHost, IFxChainHost
     {
         _settings.Appearance.GroupColours[group] = hex;
         SaveSettings();
-        CaptureUndo();
-        if (Services.TrackColouring.Group(_project, group, hex) > 0) TrackColoursChanged();
+        if (DocumentEdits.Run(Doc, p => Services.TrackColouring.Group(p, group, hex) > 0, invalidatesTimeline: false).Changed) TrackColoursChanged();
     }
 
     private void TrackColoursChanged()
@@ -218,9 +208,7 @@ public partial class MainWindow : IMixerHost, IFxChainHost
     {
         if (what == "groups")
         {
-            CaptureUndo();
-            _project.Mixer.ShowGroupsInTrackList = on;
-            _project.IsDirty = true;
+            DocumentEdits.Run(Doc, p => { p.Mixer.ShowGroupsInTrackList = on; return true; }, invalidatesTimeline: false);
             RefreshTracks();
             RefreshArrangement();
             ScheduleFitTimelineToTracks(); // group headers add rows: grow / shrink the arrangement dock to fit
@@ -298,8 +286,7 @@ public partial class MainWindow : IMixerHost, IFxChainHost
     /// <summary>The FX power switch: plays the track through its chain, or back on Windows MIDI.</summary>
     internal void ToggleTrackChain(TrackModel track)
     {
-        CaptureUndo();
-        track.SoundSource = track.SoundSource == SoundSources.Plugins ? SoundSources.Midi : SoundSources.Plugins;
+        DocumentEdits.Run(Doc, _ => { track.SoundSource = track.SoundSource == SoundSources.Plugins ? SoundSources.Midi : SoundSources.Plugins; return true; }, invalidatesTimeline: false);
         ((IFxChainHost)this).ChainChanged(track); // only switches: the chain window opens from the FX part
         StatusText.Text = track.SoundSource == SoundSources.Plugins ? $"{track.Name}: plays through its FX chain" : $"{track.Name}: plays on Windows MIDI";
     }
@@ -351,8 +338,8 @@ public partial class MainWindow : IMixerHost, IFxChainHost
 
     private bool _audioEngineHooked;
 
-    /// <summary>Song time for audio clips (one per window: only the active song plays).</summary>
-    internal Audio.SongClock SongClock { get; } = new(Audio.AudioEngineClient.Instance);
+    /// <summary>Song time for audio clips: the clock of the active song (it belongs to the document, so it stays with the song when its tab moves to another window).</summary>
+    internal Audio.SongClock SongClock => Doc.Playback.Clock;
 
     /// <summary>
     /// Starts / updates / stops the audio engine for the active song's plug-in tracks and routes their MIDI to it.
@@ -369,7 +356,7 @@ public partial class MainWindow : IMixerHost, IFxChainHost
             TabForge.Models.MixerGroups.PlayAllThroughEngine = playAll;
             if (_mainWindowInitialized) _midi.Rebuild(_project);
         }
-        Audio.AudioRouting.Apply(_project, Doc.Playback.Routing, engine, _settings.Plugins, _settings.Audio.MasterVolume, owner: Doc);   // R-10: the active document owns the engine
+        Audio.AudioRouting.Apply(_project, Doc.Playback.Routing, engine, _settings.Plugins, _settings.Audio.MasterVolume, owner: Doc, media: Doc.Media, skippedPlugins: Doc.SkippedPlugins);   // R-10: the active document owns the engine; its media context and skipped plug-ins go with it
         UpdateAudioDeviceStatus();
         UpdatePluginTrustBar();
         UpdateMediaApprovalBar();
@@ -379,22 +366,26 @@ public partial class MainWindow : IMixerHost, IFxChainHost
     {
         if (_audioEngineHooked) return;
         _audioEngineHooked = true;
-        engine.Quarantine = () => _settings.Plugins.Quarantined;
+        // The shared engine client outlives every window. The delegates it keeps read the app-wide shared settings store or the open-window
+        // registry, never this window; the event handlers below are detached when this window has really closed (Subscribe).
+        engine.Quarantine = static () => AppSettingsStore.Shared.Settings.Plugins.Quarantined;
         // Multi-tab playback: a song that still plays in another tab keeps its engine tracks live (not parked) when this tab takes over.
-        engine.IsOwnerPlaying = owner => owner is TabForge.Documents.DocumentSession { Playback.Engine.IsPlaying: true };
+        engine.IsOwnerPlaying = static owner => owner is TabForge.Documents.DocumentSession { Playback.Engine.IsPlaying: true };
         Arrangement.QuarantinedPlugins = () => _settings.Plugins.Quarantined;   // faulted FX icon on tracks whose plug-in crashed
         // A synth created while the song plays starts on the default piano: give it its programs again.
-        engine.ChainLoaded += () => _midi.RearmChannelSetup();
-        engine.ChainAcknowledged += ack =>
+        Subscribe(h => engine.ChainLoaded += h, h => engine.ChainLoaded -= h, (Action)(() => { if (!_isClosed) _midi.RearmChannelSetup(); }));
+        Subscribe(h => engine.ChainAcknowledged += h, h => engine.ChainAcknowledged -= h, (Action<TabForge.Audio.Contracts.ChainAck>)(ack =>
         {
+            if (_isClosed) return;
             // A plug-in whose file changed since its approval was refused at load: show it in the trust bar and re-send it as Skip.
             if (ack.Plugins.Any(x => x.Status == TabForge.Audio.Contracts.PluginLoadStatus.BlockedChanged)) { UpdatePluginTrustBar(); SyncAudioEngine(); }
             // An instrument that failed to load (or loads fine again) changes whether GM takes over: re-apply the automatic GM sound.
-            else if (engine.RefreshAvailability(_project.Tracks, _settings.Plugins)) { SyncAudioEngine(); _midi.Rebuild(_project); RefreshTracks(); RefreshMixerWindow(); }
-        };
-        engine.AutoPitch ??= new TabForge.Audio.AutoPitchMatcher(engine, () => _settings.Plugins);   // automatic pitch matching of VST instruments
-        engine.PluginCrashed += path =>
+            else if (engine.RefreshAvailability(_project.Tracks, _settings.Plugins, Doc.SkippedPlugins)) { SyncAudioEngine(); _midi.Rebuild(_project); RefreshTracks(); RefreshMixerWindow(); }
+        }));
+        engine.AutoPitch ??= new TabForge.Audio.AutoPitchMatcher(engine, static () => AppSettingsStore.Shared.Settings.Plugins);   // automatic pitch matching of VST instruments
+        Subscribe(h => engine.PluginCrashed += h, h => engine.PluginCrashed -= h, (Action<string>)(path =>
         {
+            if (_isClosed) return;
             SaveSettings();
             // No path: the engine hung outside any plug-in call (or stopped answering) and was restarted; nothing was switched off.
             StatusText.Text = string.IsNullOrEmpty(path)
@@ -404,16 +395,23 @@ public partial class MainWindow : IMixerHost, IFxChainHost
             else StatusText.Text = "The audio engine stopped several times; plug-in tracks now play on Windows MIDI. Check Settings > Audio & Plug-ins.";
             RefreshMixerWindow();
             Arrangement.RefreshAll();
-        };
-        engine.PluginFailed += (path, why) => StatusText.Text = $"{System.IO.Path.GetFileNameWithoutExtension(path)} could not be loaded: {why}";
-        // RT-02: invalid audio (NaN / infinity) never reaches the mix; the plug-in is skipped until it is switched off and on again.
-        engine.PluginMisbehaved += (path, index) => StatusText.Text = index >= 0
-            ? $"{System.IO.Path.GetFileNameWithoutExtension(path)} produced invalid audio and was bypassed; switch it off and on in its FX chain to try again"
-            : $"A track's sound ({path}) produced invalid audio; it was muted for that moment";
-        engine.DeviceError += message => StatusText.Text = $"Audio output: {message}";
-        // Slow is not a crash: a big instrument may take a while; it is switched off only if it passes its limit (load 90 s).
-        engine.PluginSlow += (path, kind, seconds) =>
+        }));
+        Subscribe(h => engine.PluginFailed += h, h => engine.PluginFailed -= h, (Action<string, string>)((path, why) =>
         {
+            if (!_isClosed) StatusText.Text = $"{System.IO.Path.GetFileNameWithoutExtension(path)} could not be loaded: {why}";
+        }));
+        // RT-02: invalid audio (NaN / infinity) never reaches the mix; the plug-in is skipped until it is switched off and on again.
+        Subscribe(h => engine.PluginMisbehaved += h, h => engine.PluginMisbehaved -= h, (Action<string, int>)((path, index) =>
+        {
+            if (!_isClosed) StatusText.Text = index >= 0
+                ? $"{System.IO.Path.GetFileNameWithoutExtension(path)} produced invalid audio and was bypassed; switch it off and on in its FX chain to try again"
+                : $"A track's sound ({path}) produced invalid audio; it was muted for that moment";
+        }));
+        Subscribe(h => engine.DeviceError += h, h => engine.DeviceError -= h, (Action<string>)(message => { if (!_isClosed) StatusText.Text = $"Audio output: {message}"; }));
+        // Slow is not a crash: a big instrument may take a while; it is switched off only if it passes its limit (load 90 s).
+        Subscribe(h => engine.PluginSlow += h, h => engine.PluginSlow -= h, (Action<string, TabForge.Audio.Contracts.PluginCallKind, int>)((path, kind, seconds) =>
+        {
+            if (_isClosed) return;
             StatusText.Text = $"{System.IO.Path.GetFileNameWithoutExtension(path)} " + kind switch
             {
                 TabForge.Audio.Contracts.PluginCallKind.Load => "is still loading",
@@ -424,21 +422,23 @@ public partial class MainWindow : IMixerHost, IFxChainHost
             } + $" ({seconds} s)…";
             if (kind == TabForge.Audio.Contracts.PluginCallKind.Load && seconds >= TabForge.Audio.Contracts.EngineWatchdog.LongNoticeSec)
                 PromptSlowLoad(engine, path);
-        };
-        // R-06: "Disable it" on a very slow load skips that plug-in for the active song only (not saved, unlike quarantine).
-        engine.SkipForNow = () => Doc.SkippedPlugins;
-        engine.ChainLoaded += () => _slowLoadPrompt?.Close();   // the load finished: nothing left to decide
-        engine.PluginEdited += () => { if (!_project.IsDirty) { _project.IsDirty = true; UpdateTitle(); } };
+        }));
+        Subscribe(h => engine.ChainLoaded += h, h => engine.ChainLoaded -= h, (Action)(() => { if (!_isClosed) _slowLoadPrompt?.Close(); }));   // the load finished: nothing left to decide
+        Subscribe(h => engine.PluginEdited += h, h => engine.PluginEdited -= h, (Action)(() => { if (!_isClosed && !_project.IsDirty) { _project.IsDirty = true; UpdateTitle(); } }));
     }
 
-    private Views.ThemedConfirmDialog? _slowLoadPrompt;
+
+    /// <summary>The one "plug-in loading slowly" question the application shows: the engine is shared, so every window hears the same slow load, but only one prompt (in the window whose song uses the plug-in) may be open at a time.</summary>
+    private static Views.ThemedConfirmDialog? _slowLoadPrompt;
 
     /// <summary>R-06: a plug-in load past 30 s asks (non-modal) whether to keep waiting or disable it for this song.</summary>
     private void PromptSlowLoad(Audio.AudioEngineClient engine, string path)
     {
-        if (_slowLoadPrompt is not null || string.IsNullOrEmpty(path) || Doc.SkippedPlugins.Contains(path)) return;
+        // The song that owns this plug-in answers (not whichever tab is shown): the displayed one if it uses the plug-in, else another tab of this window; a plug-in used only by another window's song is that window's question.
+        var doc = _documents.Documents.Where(d => d.Project.Tracks.Any(t => t.Rig.Plugins.Any(p => string.Equals(p.Path, path, StringComparison.OrdinalIgnoreCase))))
+            .OrderByDescending(d => ReferenceEquals(d, Doc)).FirstOrDefault();
+        if (doc is null || _slowLoadPrompt is not null || string.IsNullOrEmpty(path) || doc.SkippedPlugins.Contains(path)) return;
         var name = System.IO.Path.GetFileNameWithoutExtension(path);
-        var doc = Doc;
         var prompt = _slowLoadPrompt = new Views.ThemedConfirmDialog(
             "Plug-in loading slowly",
             $"{name} is taking a long time to load.\n\nDisable it: the song plays without it while this song is open. " +
@@ -448,7 +448,7 @@ public partial class MainWindow : IMixerHost, IFxChainHost
             showCancel: false, yesText: "Keep waiting", noText: "Disable it") { Owner = this };
         prompt.ShowModeless(result =>
         {
-            _slowLoadPrompt = null;
+            if (ReferenceEquals(_slowLoadPrompt, prompt)) _slowLoadPrompt = null;
             if (result != MessageBoxResult.No) return;
             doc.SkippedPlugins.Add(path);
             StatusText.Text = $"{name} is disabled for this song (not permanently); its chain reloads without it once the engine is free";

@@ -98,10 +98,11 @@ public sealed partial class ArrangementPanel
 
     public event EventHandler? AddTrackRequested;
 
-    public void Bind(SongProject project, IReadOnlyList<MidiOutputDeviceInfo> devices)
+    public void Bind(SongProject project, IReadOnlyList<MidiOutputDeviceInfo> devices, TabForge.Services.MediaContext? media = null)
     {
         _project = project;
         _devices = devices;
+        _timeline.Media = media ?? TabForge.Services.MediaContext.Anonymous;   // the bound song's media context: base directory and approvals for its clips
         _timeline.Project = project;
         _timeline.MeasureWidth = MeasureWidth;
         _timeline.ValidateTimelineGeometry();
@@ -346,7 +347,7 @@ public sealed partial class ArrangementPanel
 
         _dragLaneOutline.Visibility = Visibility.Visible;
         _dragLaneOutline.Width = Math.Max(_timelineHost.Width, _timeline.TotalWidth);
-        _dragLaneOutline.Height = RowHeightOf(_project.Tracks[from]) - 2;
+        _dragLaneOutline.Height = RowHeightOf(_project, _project.Tracks[from]) - 2;
         // Moved by a render transform, not Canvas.Top, so following the pointer never triggers layout.
         Canvas.SetLeft(_dragLaneOutline, 0);
         Canvas.SetTop(_dragLaneOutline, 0);

@@ -14,6 +14,12 @@ public sealed class RenderSettings
     public int Bounds { get; set; }          // RenderBounds
     public double CustomStartSec { get; set; }
     public double CustomEndSec { get; set; }
+    /// <summary>"Custom bars": 1-based first / last bar (0 = not chosen yet: bar 1 / the last bar).</summary>
+    public int CustomFromBar { get; set; }
+    public int CustomToBar { get; set; }
+    /// <summary>"Custom sections": the first bar (0-based) of the chosen first / last section (-1 = not chosen yet: first / last section).</summary>
+    public int CustomFromSectionBar { get; set; } = -1;
+    public int CustomToSectionBar { get; set; } = -1;
     public int TailMode { get; set; } = 1;   // RenderTailMode
     public int TailMs { get; set; } = 3000;
     public string Directory { get; set; } = "";
@@ -30,7 +36,41 @@ public sealed class RenderSettings
 }
 
 public enum RenderSource { Master, StemsSelected, StemsAll, MasterAndStems }
-public enum RenderBounds { Song, TimeSelection, Bars, Custom }
+public enum RenderBounds { Song, TimeSelection, Bars, Custom, CustomBars, CustomSections }
+
+/// <summary>The "Custom bars" / "Custom sections" choices of the render dialog (pure, so they are testable without a window).</summary>
+public static class RenderBarRange
+{
+    /// <summary>Why a 1-based bar range is not renderable, or null when it is.</summary>
+    public static string? Validate(string fromText, string toText, int barCount)
+    {
+        if (barCount <= 0) return "The song has no bars.";
+        if (!int.TryParse(fromText.Trim(), System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var from) ||
+            !int.TryParse(toText.Trim(), System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var to))
+            return "Enter whole bar numbers.";
+        if (from < 1 || to < 1 || from > barCount || to > barCount) return $"Bars run from 1 to {barCount}.";
+        if (to < from) return "The last bar must not come before the first.";
+        return null;
+    }
+
+    /// <summary>"Verse 1 (bar 9)" for each section in song order.</summary>
+    public static string Label(MarkerModel marker) => $"{marker.Title} (bar {marker.MeasureIndex + 1})";
+
+    /// <summary>
+    /// First and last source bar (0-based, inclusive) from the start of section <paramref name="from"/> to the end of section
+    /// <paramref name="to"/> (indices into <see cref="SectionLayout.Sorted"/>): its end is where the pane draws it, i.e. the bar before the next
+    /// section starts (or the song end; a section resized shorter ends earlier). Null when the sections are not renderable.
+    /// </summary>
+    public static (int FirstBar, int LastBar)? SectionBars(SongProject project, int from, int to)
+    {
+        var sorted = SectionLayout.Sorted(project);
+        var barCount = BarRangeEditor.MaxMeasures(project);
+        if (barCount <= 0 || from < 0 || to < from || to >= sorted.Count) return null;
+        var first = Math.Clamp(sorted[from].MeasureIndex, 0, barCount - 1);
+        var end = SectionLayout.End(sorted, to, barCount);   // exclusive
+        return end > first ? (first, end - 1) : null;
+    }
+}
 
 /// <summary>Turns a song into a <see cref="RenderSpec"/> and its event file (see docs/history/RENDER_PLAN.md).</summary>
 public static class RenderSpecBuilder
@@ -49,6 +89,8 @@ public static class RenderSpecBuilder
         {
             case RenderBounds.Custom: return (Math.Max(0, customStartSec * 1000), Math.Min(total, customEndSec * 1000));
             case RenderBounds.Bars:
+            case RenderBounds.CustomBars:       // same mapping as "Selected bars" (cells ignored)
+            case RenderBounds.CustomSections:
             case RenderBounds.TimeSelection:
                 if (tl.Bars.Count == 0) break;
                 var first = tl.Bars.FirstOrDefault(b => b.Bar >= startBar, tl.Bars[^1]);

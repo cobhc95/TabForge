@@ -36,7 +36,9 @@ public partial class MainWindow
     /// <summary>Compatibility shim: the old fretboard tab is now the instrument panel above the score.</summary>
 
     /// <summary>Loads a project: reuses the tab if the file is already open, otherwise opens a new tab.</summary>
-    private bool LoadProject(SongProject project, string? path, bool clearHistory, bool replaceCurrent = false, bool replaceAll = false)
+    /// <param name="replaceTarget">The tab "open in the current tab" replaces: chosen when the open started, so a background import that completes after another
+    /// tab was selected still replaces the tab it was started for (and opens beside the others when that tab has left this window). Null: a new tab.</param>
+    private bool LoadProject(SongProject project, string? path, bool clearHistory, DocumentSession? replaceTarget = null, bool replaceAll = false, string? sourcePath = null)
     {
         if (path is not null)
         {
@@ -54,55 +56,43 @@ public partial class MainWindow
         // Only the tab being replaced matters: an idle tab (e.g. a fresh Untitled one) is reused even
         // while another tab keeps playing.
         // Opening "in the current tab" (Ctrl+O) replaces it even while it plays: stop that tab first.
-        if (replaceCurrent && _documents.Documents.Count > 0 && _documents.Active.Playback.Engine.IsPlaying) StopPlayback();
-        if (replaceAll && _documents.Documents.Any(d => d.Playback.Engine.IsPlaying))
-        {
-            replaceCurrent = false;
-            replaceAll = false;
-        }
+        if (replaceTarget is not null && ReferenceEquals(replaceTarget, _documents.Active) && replaceTarget.Playback.Engine.IsPlaying) StopPlayback();
 
         Plugins.AutoChains.Apply(_settings.Plugins, project);
         Plugins.StartupTracks.Apply(_settings.Plugins, project);   // not armed, not saved, and MarkClean below keeps the song clean
         var doc = DocumentSession.FromProject(project, path);
+        if (sourcePath is not null) doc.Media.SetSourceDirectory(System.IO.Path.GetDirectoryName(sourcePath));   // an imported song has no native path yet: its relative media resolves here
         doc.Notation = PreferredNotation;
         ApplyPreferredScoreView(doc);
         if (replaceAll) doc.ZoomFactor = 1.0;
         doc.MarkClean();
         if (clearHistory) doc.Undo.Clear();
-        if (replaceAll)
+        // Where the song goes (replace the target, open beside, replace everything) is DocumentPlacement's decision; the window only reacts to it.
+        // While a save runs the target tab is not replaced: the song opens beside it.
+        var displayed = _documents.Documents.Count > 0 ? _documents.Active : null;
+        var placed =DocumentPlacement.Place(_documents, doc, replaceTarget, replaceAll, _documentController.IsSaving, AskDiscardDocument,
+            beforeReplaceAll: ApplyPlaybackSwitchPolicy,
+            beforeSaveFirst: target => { if (ReferenceEquals(target, _documents.Active) && target.Project.Lyrics != LyricsBox.Text) target.Project.Lyrics = LyricsBox.Text; });   // the box shows the tab being saved
+        switch (placed.Kind)
         {
-            var previous = _documents.Documents.ToArray();
-            ApplyPlaybackSwitchPolicy(doc);
-            _documents.ReplaceAll(doc);
-            foreach (var closed in previous) closed.DisposePlayback();
-            ActivateDocument(doc, revealScore: true, focusTabSelection: true);
-            return true;
+            case PlacementKind.Kept:
+                return false;
+            case PlacementKind.ReplacedAll:
+                ActivateDocument(doc, revealScore: true, focusTabSelection: true);
+                return true;
+            case PlacementKind.Replaced:
+                // The displayed tab was replaced in place (no switch). A background import whose target is another tab switches away from the
+                // displayed one, so the playback-on-tab-switch policy applies as for any other switch.
+                ActivateDocument(doc, revealScore: true, focusTabSelection: true, applyPlaybackSwitchPolicy: !ReferenceEquals(placed.Target, displayed));
+                return true;
+            case PlacementKind.OpenedBesideToSave:
+                ActivateDocument(doc, revealScore: true, focusTabSelection: true, applyPlaybackSwitchPolicy: true);
+                SaveThenCloseDocument(placed.Target!);
+                return true;
+            default:
+                ActivateDocument(doc, revealScore: true, focusTabSelection: true, applyPlaybackSwitchPolicy: true);
+                return true;
         }
-        // While a save runs the current tab is not replaced: the song opens beside it.
-        if (replaceCurrent && _documents.Documents.Count > 0 && !_documentController.IsSaving)
-        {
-            var active = _documents.Active;
-            switch (AskDiscardDocument(active))
-            {
-                case DiscardAnswer.Keep:
-                    return false;
-                case DiscardAnswer.SaveFirst:
-                    // No waiting here (no nested dispatcher frame): the new song opens beside the tab, the tab's save starts, and the
-                    // tab closes once its save succeeded (it stays open, with its changes, when it did not).
-                    if (_project.Lyrics != LyricsBox.Text) _project.Lyrics = LyricsBox.Text;   // the box shows the tab being saved
-                    _documents.Insert(doc, _documents.IndexOf(active) + 1);
-                    ActivateDocument(doc, revealScore: true, focusTabSelection: true, applyPlaybackSwitchPolicy: true);
-                    SaveThenCloseDocument(active);
-                    return true;
-            }
-            _documents.Replace(_documents.ActiveIndex, doc);
-            active.DisposePlayback();
-            ActivateDocument(doc, revealScore: true, focusTabSelection: true);
-            return true;
-        }
-        _documents.Add(doc);
-        ActivateDocument(doc, revealScore: true, focusTabSelection: true, applyPlaybackSwitchPolicy: true);
-        return true;
     }
 
     private void ActivateDocument(DocumentSession session, bool firstLoad = false, bool revealScore = false,

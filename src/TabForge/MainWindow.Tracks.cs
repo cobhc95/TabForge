@@ -27,7 +27,7 @@ using TabForge.Visualization;
 namespace TabForge;
 
 // MainWindow, tracks and mixer: mixer header menu, global tuning, mixer drag-reorder, add/delete/move tracks.
-public partial class MainWindow
+public partial class MainWindow : ITrackListFitHost
 {
     private MenuItem MixerMenuItem(string header, Action action)
     {
@@ -46,12 +46,6 @@ public partial class MainWindow
     /// <summary>Pan style, master volume knob and global tuning button in the arrangement header.</summary>
     private void WireMixerHeader()
     {
-        Views.DiscardPrompt.IsEnabled = () => _settings.General.ConfirmDiscardSettingsChanges;
-        Views.DiscardPrompt.DisableAndSave = () =>
-        {
-            _settings.General.ConfirmDiscardSettingsChanges = false;
-            SaveSettings();
-        };
         if (!_settings.Audio.PanSliderAdopted)
         {
             _settings.Audio.PanSliderAdopted = true;
@@ -65,10 +59,8 @@ public partial class MainWindow
         ApplyCountInSound();
         CountInVolumeSlider.Value = _settings.Audio.CountInVolume;
         ApplyLoopBehaviour();
-        TabForge.Playback.PlaybackEngine.LoopCompleted += (engine, done) => Dispatcher.BeginInvoke(() =>
-        {
-            if (ReferenceEquals(engine, _midi)) UpdateLoopCountBadge(done);
-        });
+        Subscribe(h => PlaybackEngine.LoopCompleted += h, h => PlaybackEngine.LoopCompleted -= h,
+            (Action<PlaybackEngine, int>)((engine, done) => PostIfOpen(() => { if (ReferenceEquals(engine, _midi)) UpdateLoopCountBadge(done); })));
         var timeline = _settings.Timeline;
         if (timeline.TrackColumnOrder is not null || timeline.TrackColumnWidths is not null || timeline.TrackControlsWidth > 0)
             if (timeline.TrackColumnOrder is { Count: > 1 } saved && saved[0] == "colour" && saved[1] == "settings")
@@ -163,8 +155,9 @@ public partial class MainWindow
     private void RetuneStrings(int[] delta)
     {
         if (delta.All(d => d == 0)) return;
-        CaptureUndo();
-        foreach (var track in _project.Tracks.Where(t => t.MidiChannel != 9))
+        DocumentEdits.Run(Doc, project =>
+        {
+        foreach (var track in project.Tracks.Where(t => t.MidiChannel != 9))
         {
             var count = track.StringTunings.Count;
             int DeltaOf(int stringIndex) => delta[Math.Clamp(count <= 6 ? stringIndex + (6 - count) : Math.Min(stringIndex, 5), 0, 5)];
@@ -179,9 +172,11 @@ public partial class MainWindow
                         if (note.TrillTargetMidi > 0) note.TrillTargetMidi = Math.Clamp(note.TrillTargetMidi + d, 0, 127);
                     }
         }
-        for (var i = 0; i < 6; i++) _globalStringOffsets[i] += delta[i];
+        for (var i = 0; i < 6; i++) _globalStringOffsets[i] += delta[i];   // the document's tuning-shift readout (session state, not part of the undo snapshot)
+        return true;
+        });
         UpdateTuningLabel();
-        CommitEdit(EditRefresh.Score | EditRefresh.Arrangement | EditRefresh.Instrument);
+        RefreshAfterEdit(EditRefresh.Score | EditRefresh.Arrangement | EditRefresh.Instrument);
         _midi.Rebuild(_project);
         StatusText.Text = _globalStringOffsets.All(o => o == 0) ? "Original tuning"
             : TuningIsUniform ? $"All tracks retuned {(_globalTuneOffset > 0 ? "+" : "")}{_globalTuneOffset} semitones"
@@ -200,16 +195,18 @@ public partial class MainWindow
     {
         _settings.Timeline.AutoFitTrackList = !_settings.Timeline.AutoFitTrackList;
         SaveSettings();
-        if (_settings.Timeline.AutoFitTrackList) FitTimelineToTracks();
+        FitTimelineToTracks();   // off: the rows go back to the default height
         StatusText.Text = _settings.Timeline.AutoFitTrackList ? "Track list auto-resizes to fit" : "Track list keeps its size";
     }
 
-    private void FitTimelineToTracks()
-    {
-        if (!_settings.Timeline.AutoFitTrackList) return;
-        var rows = Math.Max(1, _project.Tracks.Count);
-        _dockWorkspace?.FitPanelHeight("timeline", Arrangement.PreferredHeight(rows));
-    }
+    private TrackListFitController? _trackListFit;
+    TimelineSettings ITrackListFitHost.Timeline => _settings.Timeline;
+    ArrangementPanel ITrackListFitHost.Arrangement => Arrangement;
+    DockWorkspace ITrackListFitHost.Dock => _dockWorkspace!;
+    void ITrackListFitHost.SaveSettings() => SaveSettings();
+    void ITrackListFitHost.SetStatus(string text) => StatusText.Text = text;
+
+    private void FitTimelineToTracks() => _trackListFit?.FitToTracks();
 
     private void ScheduleFitTimelineToTracks() =>
         Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, FitTimelineToTracks);
@@ -341,10 +338,9 @@ public partial class MainWindow
 
     private void AddTrack(TrackKind kind)
     {
-        CaptureUndo();
         var track = _trackController.CreateTrack(_project, kind);
         Plugins.AutoChains.Apply(_settings.Plugins, track);
-        _project.Tracks.Add(track); _project.IsDirty = true; RefreshTracks(); TrackMixerGrid.SelectedIndex = _project.Tracks.Count - 1; RefreshArrangement(); ScheduleFitTimelineToTracks(); UpdateTitle();
+        _trackController.AddTrack(Doc, track); RefreshTracks(); TrackMixerGrid.SelectedIndex = _project.Tracks.Count - 1; RefreshArrangement(); ScheduleFitTimelineToTracks(); UpdateTitle();
     }
 
     /// <summary>
@@ -363,10 +359,8 @@ public partial class MainWindow
             if (track.StringTunings.SequenceEqual(new[] { 64, 59, 55, 50, 45, 40 })) track.StringTunings = drums.StringTunings.ToList();
         }
         Plugins.AutoChains.Apply(_settings.Plugins, track);
-        CaptureUndo();
         var at = Math.Clamp(placement.InsertIndex, 0, _project.Tracks.Count);
-        _project.Tracks.Insert(at, track);
-        _project.IsDirty = true;
+        _trackController.AddTrack(Doc, track, at);
         _midi.Rebuild(_project);
         RefreshTracks();
         TrackMixerGrid.SelectedIndex = at;
@@ -380,9 +374,8 @@ public partial class MainWindow
     private void DeleteTrack_Click(object sender, RoutedEventArgs e)
     {
         if (SelectedTrack is null || _project.Tracks.Count <= 1) { StatusText.Text = "Cannot delete the last track"; return; }
-        CaptureUndo();
-        _trackController.DeleteTrack(_project, TrackMixerGrid.SelectedIndex);
-        _project.IsDirty = true; RefreshTracks(); RefreshArrangement(); ScheduleFitTimelineToTracks(); UpdateTitle();
+        _trackController.DeleteTrack(Doc, TrackMixerGrid.SelectedIndex);
+        RefreshTracks(); RefreshArrangement(); ScheduleFitTimelineToTracks(); UpdateTitle();
     }
 
     private void MoveTrackUp_Click(object sender, RoutedEventArgs e) => MoveTrack(-1);
@@ -401,20 +394,8 @@ public partial class MainWindow
         // The undo state was taken when the drag started (the model is unchanged until now).
         var dragSnapshot = _trackUndoSnapshot;
         _trackUndoSnapshot = null;
-        UndoCapture? capture;
-        if (dragSnapshot is { } dragStart && !_restoring)
-        {
-            capture = _undo.Capture(dragStart);
-            if (capture is { Stored: true } stored) RememberPlaybackBarMapping(stored.Snapshot);
-        }
-        else capture = CaptureUndo();
-        if (!_trackController.MoveTrack(_project, from, to))
-        {
-            if (capture is { } cancelled) _undo.Discard(cancelled);
-            return;
-        }
+        if (!_trackController.MoveTrack(Doc, from, to, dragSnapshot is { } && !_restoring ? dragSnapshot : null).Changed) return;
         to = Math.Clamp(to, 0, _project.Tracks.Count - 1);
-        _project.IsDirty = true;
         RefreshTracks();
         TrackMixerGrid.SelectedIndex = to;
         RefreshArrangement();

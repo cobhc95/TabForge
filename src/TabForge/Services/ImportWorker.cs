@@ -17,7 +17,7 @@ public sealed class ImportWorkerOptions
     public string? ExecutablePath { get; init; }
     /// <summary>Committed memory of the worker process (Job Object limit); Windows ends it above this.</summary>
     public long JobMemoryLimitBytes { get; init; } = 2L * 1024 * 1024 * 1024;
-    /// <summary>Largest converted project (compressed .tforge form) accepted back from the worker.</summary>
+    /// <summary>Largest converted project (compressed, in the compact transfer form of <see cref="ProjectService.TransferBytes"/>) accepted back from the worker.</summary>
     public long MaxResultBytes { get; init; } = InputLimits.MaxTforgeFileBytes;
     public TimeSpan ConnectTimeout { get; init; } = TimeSpan.FromSeconds(10);
     /// <summary>Wait after the time budget (the worker's own guard reports first) before the worker is killed.</summary>
@@ -43,7 +43,7 @@ public sealed class ImportWorkerUnavailableException : Exception
 /// <summary>
 /// Out-of-process Guitar Pro import (audit A5-07). <c>TabForge.exe --import-worker &lt;pipe&gt; &lt;parent id&gt;</c> (the same exe, like the
 /// audio engine and plug-in host modes) receives the file bytes over a current-user-only pipe with a random name, parses them with
-/// alphaTab and the importer, and returns the project in its .tforge form (gzip JSON). Every message is a bounded frame
+/// alphaTab and the importer, and returns the project in the compact transfer form (gzip JSON, ProjectService.TransferBytes). Every message is a bounded frame
 /// (kind byte + 32-bit length, checked before anything is allocated). The worker runs in a Job Object with a memory and a CPU-time
 /// limit and is killed on Cancel or at the time budget, which frees all of its memory even while alphaTab is stuck in one call.
 /// The result is validated (<see cref="ProjectValidator"/>) before use. <c>--dump</c>, <c>--exportgp</c> and the self-tests keep the
@@ -67,6 +67,7 @@ public static class ImportWorker
         notices.Add($"imported inside TabForge because the protected import process could not start ({reason})");
         var project = GuitarProImporter.Import(path);
         if (GuitarProImporter.LastEmbeddedRejection is { } rejected) notices.Add(rejected);
+        if (GuitarProImporter.LastDamageNotice is { } damaged) notices.Add(damaged);
         return project;
     }
 
@@ -167,7 +168,7 @@ public static class ImportWorker
                     var result = ReadPayload(pipe, length);
                     Kill();   // the answer is in: the worker's memory is released now, not when it gets round to exiting
                     // The same checks as a .tforge from disk: bounded gunzip, JSON shape, ProjectValidator.
-                    return ProjectService.RestorePersistedBytes(result);
+                    return ProjectService.RestoreTransferBytes(result);
                 }
                 catch (Exception ex) when (ex is IOException or ObjectDisposedException)
                 {
@@ -214,13 +215,15 @@ public static class ImportWorker
                 SongProject project;
                 using (guard.Enter()) project = GuitarProImporter.ImportBytes(data, path);
                 data = Array.Empty<byte>();
-                reply = ProjectService.PersistBytes(project);
+                reply = ProjectService.TransferBytes(project, $"imported song ({project.Tracks.Count} tracks, {project.Tracks.Select(t => t.Measures.Count).DefaultIfEmpty(0).Max():N0} bars)");
                 kind = FrameResult;
                 if (GuitarProImporter.LastEmbeddedRejection is { } rejected)
                 {
                     var text = Encoding.UTF8.GetBytes(rejected.Length > 2_000 ? rejected[..2_000] : rejected);
                     WriteFrame(pipe, FrameNotice, text);
                 }
+                if (GuitarProImporter.LastDamageNotice is { } damaged)
+                    WriteFrame(pipe, FrameNotice, Encoding.UTF8.GetBytes(damaged.Length > 2_000 ? damaged[..2_000] : damaged));
             }
             catch (Exception ex) when (ex is not OutOfMemoryException)
             {

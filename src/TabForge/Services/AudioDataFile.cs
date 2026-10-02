@@ -134,13 +134,20 @@ public static class AudioDataFile
         if (contents?.Tracks is null || contents.Mixer is null) { notices?.Add(NotApplied("the file is incomplete")); return false; }
 
         var found = new List<string>();
+        var gpChanged = false;
         if (contents.GpSha256 is { Length: > 0 } expected)
         {
             string? actual = null;
             try { actual = Sha256Hex(InputLimits.ReadBoundedBytes(gpPath, InputLimits.MaxGuitarProFileBytes, "Guitar Pro file")); }
             catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException) { }
             if (!string.Equals(actual, expected, StringComparison.OrdinalIgnoreCase))
-                found.Add($"{Path.GetFileName(path)} was saved with a different version of {Path.GetFileName(gpPath)}; its mixer and FX were applied by track position and name — check them");
+            {
+                // Conflict rule (R5): the .gp changed after the pair was saved (another program, or an older copy of the sidecar). The .gp is what holds
+                // the music and its own track levels, so its volume and pan win; the TabForge-only data (mixer groups, FX chains, clips, sound sources)
+                // is applied by track position and name, and the user is told to check it.
+                gpChanged = true;
+                found.Add($"{Path.GetFileName(path)} was saved with a different version of {Path.GetFileName(gpPath)}; its mixer groups, FX and clips were applied by track position and name, and the track volume and pan of the .gp file were kept — check them");
+            }
         }
 
         // Work on a copy: nothing changes unless the result validates.
@@ -175,7 +182,7 @@ public static class AudioDataFile
             track.Lanes = saved.Lanes ?? new List<ClipLane>();
             matched.Add((track, saved));
         }
-        RestoreVolumePan(project, matched, contents.FormatVersion);
+        RestoreVolumePan(project, matched, gpChanged ? 1 : contents.FormatVersion);   // a changed .gp: its own volume/pan, with the group offset taken back out
         RelinkRouting(project, idMap, ambiguous, found);
         try
         {

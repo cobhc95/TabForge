@@ -18,8 +18,6 @@ namespace TabForge;
 /// </summary>
 public static partial class SelfTest
 {
-    private const string RequireFuzz = "fuzz";
-    private static bool _fuzzRan;
 
     private const int FuzzDefaultCount = 300;
     private const int FuzzDefaultSeed = 20260930;
@@ -106,7 +104,6 @@ public static partial class SelfTest
                 (r, s) => FuzzMutateJson(r, r.Next(3) switch { 0 => s, 1 => beatClip, _ => legacyClip }), Controlled);
 
             // MusicXML is written by TabForge, never read: there is no MusicXML importer to fuzz.
-            _fuzzRan = true;
         }
         finally
         {

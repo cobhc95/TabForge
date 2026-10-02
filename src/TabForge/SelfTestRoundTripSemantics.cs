@@ -115,10 +115,11 @@ public static partial class SelfTest
             f[tk + "capo"] = track.Capo.ToString(CultureInfo.InvariantCulture);
             f[tk + "program"] = track.MidiProgram.ToString(CultureInfo.InvariantCulture);
             f[tk + "channel"] = track.MidiChannel.ToString(CultureInfo.InvariantCulture);
-            f[tk + "volume"] = track.Volume.ToString(CultureInfo.InvariantCulture);
-            f[tk + "volume.step8"] = ((int)Math.Round(MixerGroups.Volume(p, track) / 8.0)).ToString(CultureInfo.InvariantCulture);   // group level applied: the .gp bakes it in
-            f[tk + "pan"] = track.Pan.ToString(CultureInfo.InvariantCulture);
-            f[tk + "pan.step8"] = ((int)Math.Round(MixerGroups.Pan(p, track) / 8.0)).ToString(CultureInfo.InvariantCulture);
+            // The EFFECTIVE level (track value with its mixer group's level/pan and the master pan applied), compared exactly in every format:
+            // a clean .gp stores exactly that number (the gpif holds it as a float, TabForge.AlphaTab patch 0002) and a reopened file has no group.
+            // The track's own value and its group are kept separately by .tforge, the embedded project and the .tfaudio sidecar (tested in TestRoundTripMixerGroupNotDoubled).
+            f[tk + "volume"] = MixerGroups.Volume(p, track).ToString(CultureInfo.InvariantCulture);
+            f[tk + "pan"] = MixerGroups.Pan(p, track).ToString(CultureInfo.InvariantCulture);
             f[tk + "mute"] = track.Mute ? "1" : "0"; f[tk + "solo"] = track.Solo ? "1" : "0";
             f[tk + "bars"] = track.Measures.Count.ToString(CultureInfo.InvariantCulture);
             var previousDynamic = -1;
@@ -351,10 +352,8 @@ public static partial class SelfTest
 
     private static readonly RtProfile RtGpEmbedded = new()
     {
+        // The embedded project is the full .tforge JSON: nothing is lost, so the allow-list is empty (the song.title entry was never a loss).
         Name = ".gp with embedded project", Losses = new()
-        {
-            ["song.title"] = "not applicable: the embedded project is the full .tforge JSON; empty allow-list except the fields below",
-        }
     };
 
     private static bool RtSourceHadNone(RtDiff d) => d.Expected is "0" or "" or "(absent)";
@@ -366,36 +365,40 @@ public static partial class SelfTest
         {
             ["note.velocity"] = "GP stores loudness as 8 dynamics steps (ppp..fff); velocity is quantised to the shared table. beat.dynamic is compared strictly instead",
             ["note.dynamic"] = "GP keeps ONE dynamic per beat: the other notes of a chord or drum beat take the first note's dynamic (a drum accent on the kick under a hi-hat is flattened). beat.dynamic is compared strictly",
-            ["track.volume"] = "GP track volume is 0..16; TabForge 0..127 is quantised (compared as volume.step8)",
-            ["track.pan"] = "GP balance is 0..16; TabForge pan 0..127 is quantised (compared as pan.step8)",
-            ["note.bend"] = "GP7 keeps origin/middle/destination only: multi-point bend curves are simplified (bend.shape first/peak/last is compared strictly)",
+            ["note.bend"] = "GP7 keeps origin, one flat middle stretch and destination: a hold at the end of a curve is stored as the destination offset (same sound), a curve with more turns is simplified (bend.shape first/peak/last is compared strictly)",
             ["beat.whammy"] = "GP7 keeps at most 4 whammy points: longer curves are simplified (whammy.shape is compared strictly)",
-            ["note.lhFinger"] = "left-hand fingering is not written to .gp", ["note.rhFinger"] = "right-hand fingering is not written to .gp",
-            ["beat.tenuto"] = "alphaTab's model has no tenuto flag, so it cannot be written to .gp",
-            ["note.technique:Tenuto"] = "tenuto has no .gp representation",
             ["beat.mix"] = "GP5 mix-table changes are TabForge-model data; the GP7 export writes tempo automations only",
-            ["note.technique:PalmMute.extra"] = "GP stores palm mute per beat: one muted chord tone mutes every note of the chord on reopen",
             ["beat.fermata"] = "GP keeps a fermata on the bar position (master bar), so a fermata on one track appears on the other tracks' beat at that position; it is never lost, only added",
             ["track.channel"] = "the importer assigns MIDI channels in track order (percussion on 9); the .gp channel is not read back (drums stay on 9, checked through track.isDrums)",
             ["note.slideTarget"] = "derived data: the importer computes the slide's target pitch from the next note; a value the source did not set is filled in",
             ["note.trillTarget"] = "derived data: the importer fills the trill's target pitch when the source only tagged the trill",
-            ["note.trillDur"] = "derived data: the importer fills the trill speed (1/16) when the source did not set it",
+            ["note.trillDur"] = "derived data: the importer fills the trill speed (1/16, what a gpif without a speed means) when the source did not set it",
             ["beat.tremoloPick"] = "derived data: the importer fills the tremolo-picking speed (1/8 default) when the source only tagged it; GP7 has three speeds (1/8, 1/16, 1/32), so 1/64 is written as 1/32",
             ["note.technique:FadeIn.extra"] = "GP stores a volume swell per beat: one faded note fades every note of the beat on reopen",
             ["note.technique:FadeOut.extra"] = "GP stores a fade-out per beat: one faded note fades every note of the beat on reopen",
             ["bar.directions"] = "the clean .gp stores directions under Guitar Pro's own names (Segno -> TargetSegno, ToCoda -> JumpDaCoda); the same marks, allowed only when the names are exactly the GP spelling",
             ["bar.tempoChange"] = "a tempo marking that restates the tempo already running is not kept as a change on import (bar.tempo, the tempo actually played, is compared strictly)",
-            ["note.technique:TremBar*"] = "alphaTab re-derives the whammy sub-type (Dip, Dive, ...) from the curve; the tag may change name (whammy.shape is compared strictly)",
+            ["note.technique:TremBar.missing"] = "alphaTab re-derives the whammy sub-type (Dip, Dive, ...) from the curve; the tag may change name (whammy.shape is compared strictly)",
+            ["note.technique:TremBarDip.missing"] = "alphaTab re-derives the whammy sub-type (Dip, Dive, ...) from the curve; the tag may change name (whammy.shape is compared strictly)",
+            ["note.technique:TremBarCustom.extra"] = "alphaTab re-derives the whammy sub-type (Dip, Dive, ...) from the curve; the tag may change name (whammy.shape is compared strictly)",
+            ["note.technique:TremBarDive.extra"] = "alphaTab re-derives the whammy sub-type (Dip, Dive, ...) from the curve; the tag may change name (whammy.shape is compared strictly)",
+            ["note.technique:TremBarHold.extra"] = "alphaTab re-derives the whammy sub-type (Dip, Dive, ...) from the curve; the tag may change name (whammy.shape is compared strictly)",
+            ["note.technique:TremBarPredive.extra"] = "alphaTab re-derives the whammy sub-type (Dip, Dive, ...) from the curve; the tag may change name (whammy.shape is compared strictly)",
+            ["note.technique:TremBarPrediveDive.extra"] = "alphaTab re-derives the whammy sub-type (Dip, Dive, ...) from the curve; the tag may change name (whammy.shape is compared strictly)",
+            ["note.technique:TremBarWide.extra"] = "alphaTab re-derives the whammy sub-type (Dip, Dive, ...) from the curve; the tag may change name (whammy.shape is compared strictly)",
+            ["note.technique:TremBar.extra"] = "alphaTab re-derives the whammy sub-type (Dip, Dive, ...) from the curve; the tag may change name (whammy.shape is compared strictly)",
+            ["note.technique:TremBarDip.extra"] = "alphaTab re-derives the whammy sub-type (Dip, Dive, ...) from the curve; the tag may change name (whammy.shape is compared strictly)",
+            ["note.technique:TremBarCustom.missing"] = "alphaTab re-derives the whammy sub-type (Dip, Dive, ...) from the curve; the tag may change name (whammy.shape is compared strictly)",
+            ["note.technique:TremBarDive.missing"] = "alphaTab re-derives the whammy sub-type (Dip, Dive, ...) from the curve; the tag may change name (whammy.shape is compared strictly)",
+            ["note.technique:TremBarHold.missing"] = "alphaTab re-derives the whammy sub-type (Dip, Dive, ...) from the curve; the tag may change name (whammy.shape is compared strictly)",
+            ["note.technique:TremBarPredive.missing"] = "alphaTab re-derives the whammy sub-type (Dip, Dive, ...) from the curve; the tag may change name (whammy.shape is compared strictly)",
+            ["note.technique:TremBarPrediveDive.missing"] = "alphaTab re-derives the whammy sub-type (Dip, Dive, ...) from the curve; the tag may change name (whammy.shape is compared strictly)",
+            ["note.technique:TremBarWide.missing"] = "alphaTab re-derives the whammy sub-type (Dip, Dive, ...) from the curve; the tag may change name (whammy.shape is compared strictly)",
             ["note.technique:Harmonic.extra"] = "the importer also tags every harmonic kind (artificial, pinch, tap, semi, feedback) with the generic Harmonic name",
             ["note.technique:Dead.extra"] = "the importer mirrors the dead-note flag as a Dead technique name (the flag itself is compared strictly)",
             ["note.technique:Ghost.extra"] = "the importer mirrors the ghost-note flag as a Ghost technique name (the flag itself is compared strictly)",
             ["note.technique:HOPOOrigin.extra"] = "the importer splits a hammer-on/pull-off tag into origin and destination tags",
             ["note.technique:HOPODestination.extra"] = "the importer splits a hammer-on/pull-off tag into origin and destination tags",
-            ["note.technique:Legato.missing"] = "generic 'Legato' tag has no .gp representation (hammer-on/pull-off and legato slide do)",
-            ["note.technique:Rasgueado.missing"] = "rasgueado has no .gp7 writer support in alphaTab",
-            ["note.technique:PickSlideUp.missing"] = "pick slides have no .gp7 writer support in alphaTab",
-            ["note.technique:PickSlideDown.missing"] = "pick slides have no .gp7 writer support in alphaTab",
-            ["note.technique:LeftTap.missing"] = "the exporter writes it (IsLeftHandTapped) but the importer does not read it back as a tag",
             ["note.graceSlots"] = "a grace beat written as 1 slot (16th) is read back as 2 slots (an 8th): alphaTab's GP7 round trip normalises the grace length (playback does not use it)",
             ["note.technique:GraceBefore.extra"] = "the importer mirrors the grace-note flag as a GraceBefore technique name (the flag itself is compared strictly)",
             ["note.technique:GraceOnBeat.extra"] = "the importer mirrors the on-beat grace flag as a GraceOnBeat technique name (the flag itself is compared strictly)",
@@ -406,8 +409,9 @@ public static partial class SelfTest
         },
         Only = new()
         {
+            ["note.velocity"] = d => int.TryParse(d.Expected, out _) && int.TryParse(d.Actual, out var a) && Dynamics.Velocities.Contains(a),   // a table value: its own step, or (chord, drum beat) the beat's one dynamic
             ["beat.fermata"] = d => d.Expected == "0", ["track.channel"] = d => d.Expected != "9" && d.Actual != "9",
-            ["note.slideTarget"] = RtSourceHadNone, ["note.trillTarget"] = RtSourceHadNone, ["note.trillDur"] = RtSourceHadNone,
+            ["note.slideTarget"] = RtSourceHadNone, ["note.trillTarget"] = RtSourceHadNone, ["note.trillDur"] = RtSourceHadNone, ["note.graceSlots"] = d => d.Actual == "2",
             ["beat.tremoloPick"] = d => RtSourceHadNone(d) || d.Expected == "64" && d.Actual == "32",
             ["bar.directions"] = d => string.Join(",", GuitarProExporter.GpDirections(d.Expected)) == d.Actual,
             ["bar.tempoChange"] = d => d.Actual == "",
@@ -481,7 +485,7 @@ public static partial class SelfTest
         var graceCell = RtPut(lead, 4, 4, 4, 0, RtNote(lead, 4, 5));
         graceCell.Notes.Insert(0, new TabNote { StringIndex = 4, Fret = 3, MidiValue = lead.StringTunings[4] + 3 + lead.Capo, IsGraceNote = true, GraceBeforeBeat = true, GraceDurationSlots = 1, Velocity = 95 });
         RtPut(lead, 4, 8, 4, 0, new TabNote { StringIndex = 1, Fret = 12, MidiValue = GuitarProImporter.HarmonicMidi("Natural", lead.StringTunings[1] + lead.Capo, 12, 12), HarmonicFret = 12, Techniques = { "Harmonic" } });
-        RtPut(lead, 4, 12, 4, 0, new TabNote { StringIndex = 1, Fret = 5, MidiValue = GuitarProImporter.HarmonicMidi("Artificial", lead.StringTunings[1] + lead.Capo, 5, 17), HarmonicFret = 17, Techniques = { "ArtificialHarmonic" } });
+        RtPut(lead, 4, 12, 4, 0, new TabNote { StringIndex = 1, Fret = 5, MidiValue = GuitarProImporter.HarmonicMidi("Artificial", lead.StringTunings[1] + lead.Capo, 5, 12), HarmonicFret = 12, Techniques = { "ArtificialHarmonic" } });
         RtPut(lead, 5, 0, 4, 0, RtNote(lead, 3, 5, 95, "LegatoSlide")).Notes[0].SlideTargetMidi = lead.StringTunings[3] + 9 + lead.Capo;
         RtPut(lead, 5, 4, 4, 0, RtNote(lead, 3, 9));
         RtPut(lead, 5, 8, 4, 0, RtNote(lead, 3, 7, 95, "ShiftSlide")).Notes[0].SlideTargetMidi = lead.StringTunings[3] + 10 + lead.Capo;
@@ -1181,7 +1185,7 @@ public static partial class SelfTest
                 ("track.reverb", "the GP7 export does not write reverb sends"), ("track.chorus", "the GP7 export does not write chorus sends"),
                 ("track.transpose", "the GP7 export does not write per-track transpose"), ("track.performer", "performer is display-only (.tforge only)"),
                 ("track.trackNotes", "track notes are display-only (.tforge only)"), ("track.instrumentName", "the importer names instruments from the GM program"),
-                ("track.drumMap", "the drum-map preset is TabForge-only (.tforge)"), ("track.color", "track colour: see the GP7 export (colour is written; the importer may re-derive it)"));
+                ("track.drumMap", "the drum-map preset is TabForge-only (.tforge)"));
             RtVerify("plug-in state, buses, sidechains, MIDI forwarding, clips, missing devices/plug-ins", pairProfile, expected, pair, audio: true);
             // dangling / unresolvable links after a track is deleted: cleared and reported, never silently kept
             var broken = RtCopy(song);
@@ -1223,8 +1227,7 @@ public static partial class SelfTest
             var pair = RtViaGpPair(song, folder, "r");
             var profile = RtGpClean(("track.midiDevice", "machine-specific, not in .gp/.tfaudio"), ("track.audioInput", "live setting, not stored"), ("track.monitor", "live setting, not stored"),
                 ("track.tint", "view preference"), ("track.reverb", "not in GP7 export"), ("track.chorus", "not in GP7 export"), ("track.transpose", "not in GP7 export"),
-                ("track.performer", "display-only"), ("track.trackNotes", "display-only"), ("track.instrumentName", "re-derived from program"), ("track.drumMap", "TabForge-only"),
-                ("track.color", "colour is re-derived on import"));
+                ("track.performer", "display-only"), ("track.trackNotes", "display-only"), ("track.instrumentName", "re-derived from program"), ("track.drumMap", "TabForge-only"));
             RtVerify("track reorder + rename with duplicate names", profile, expected, pair, audio: true);
             // the identity of the two same-named tracks: the sidechain of the first "Beta" and of the second must land on their own tracks
             Check("reorder: duplicate track names keep their own rig (the first Beta keeps its amp, the second Beta has none)", pair.Tracks[1].Rig.Plugins.Count == 1 && pair.Tracks[2].Rig.Plugins.Count == 0);

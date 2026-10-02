@@ -16,6 +16,8 @@ public sealed class RenderContext
 {
     public required SongProject Project { get; init; }
     public required AppSettings Settings { get; init; }
+    /// <summary>The rendered song's media context (its linked audio is judged with it).</summary>
+    public Services.MediaContext? Media { get; init; }
     /// <summary>Tracks selected in the arrangement / mixer (stems "selected tracks").</summary>
     public IReadOnlyList<TrackModel> SelectedTracks { get; init; } = Array.Empty<TrackModel>();
     /// <summary>The editor's selection (source bars and grid cells), or null.</summary>
@@ -32,8 +34,14 @@ public sealed class RenderWindow : Window
     private readonly RenderContext _ctx;
     private readonly RenderSettings _s;
     private readonly ComboBox _source = new(), _tail = new(), _rate = new(), _format = new(), _threads = new();
-    private readonly RadioButton[] _bounds = new RadioButton[4];
-    private readonly TextBox _tailMs = new() { Width = 70 }, _start = new() { Width = 70 }, _end = new() { Width = 70 }, _dir = new(), _pattern = new();
+    private readonly RadioButton[] _bounds = new RadioButton[6];
+    private readonly TextBox _tailMs = new() { Width = 70 }, _start = new() { Width = 70 }, _end = new() { Width = 70 }, _dir = new(), _pattern = new(),
+        _barFrom = new() { Width = 60 }, _barTo = new() { Width = 60 };
+    private readonly ComboBox _secFrom = new() { MinWidth = 170 }, _secTo = new() { MinWidth = 170 };
+    private readonly List<MarkerModel> _sections;
+    private readonly int _barCount;
+    private bool _fillingSections;
+    private TextBlock _hint = null!;
     private readonly CheckBox _mono = new() { Content = "Mono (L+R average)" }, _realtime = new() { Content = "Realtime pace (for streaming samplers)" },
         _open = new() { Content = "Open the folder when done" };
     private readonly ListBox _preview = new() { MinHeight = 90 };
@@ -84,20 +92,28 @@ public sealed class RenderWindow : Window
         foreach (var t in new[] { "Master mix", "Stems: checked tracks", "Stems: all tracks", "Master mix + stems (all tracks)" }) _source.Items.Add(t);
 
         var bounds = new StackPanel();
-        var names = new[] { "Entire song", "Time selection", "Selected bars", "Custom range (seconds)" };
-        for (var i = 0; i < 4; i++)
+        _sections = SectionLayout.Sorted(ctx.Project);
+        _barCount = BarRangeEditor.MaxMeasures(ctx.Project);
+        var names = new[] { "Entire song", "Time selection", "Selected bars", "Custom range (seconds)", "Custom bars", "Custom sections" };
+        for (var i = 0; i < 6; i++)
         {
             _bounds[i] = new RadioButton { Content = names[i], GroupName = "bounds", Margin = new Thickness(0, 1, 0, 1) };
             _bounds[i].Checked += (_, _) => Changed();
             bounds.Children.Add(_bounds[i]);
+            if (i == 3) bounds.Children.Add(Row(Label("from"), _start, Label("to"), _end));
+            if (i == 4) bounds.Children.Add(Row(Label("from bar"), _barFrom, Label("to bar"), _barTo, Label($"(1 to {_barCount})")));
+            if (i == 5) bounds.Children.Add(Row(Label("from"), _secFrom, Label("to"), _secTo));
         }
-        bounds.Children.Add(Row(Label("from"), _start, Label("to"), _end));
+        _hint = Small("");
+        bounds.Children.Add(_hint);
         var tailRow = Row(Label("Tail:"), _tail, _tailMs, Label("ms (reverb / delay ring-out)"));
         foreach (var t in new[] { "Off", "Fixed", "Auto (until silent)" }) _tail.Items.Add(t);
         bounds.Children.Add(tailRow);
         Group(stack, "Bounds", bounds, "Render.Range");
-        string[] rangeIds = { "Entire", "Selection", "Bars", "Custom" };
-        for (var i = 0; i < 4; i++) UiIds.Id(_bounds[i], "Render.Range." + rangeIds[i]);
+        string[] rangeIds = { "Entire", "Selection", "Bars", "Custom", "CustomBars", "CustomSections" };
+        for (var i = 0; i < 6; i++) UiIds.Id(_bounds[i], "Render.Range." + rangeIds[i]);
+        UiIds.Id(_barFrom, "Render.BarFrom", "From bar"); UiIds.Id(_barTo, "Render.BarTo", "To bar");
+        UiIds.Id(_secFrom, "Render.SectionFrom", "From section"); UiIds.Id(_secTo, "Render.SectionTo", "To section");
 
         var output = new DockPanel();
         var browse = new Button { Content = "Browse…", Padding = new Thickness(10, 2, 10, 2), Margin = new Thickness(6, 0, 0, 0) };
@@ -141,7 +157,9 @@ public sealed class RenderWindow : Window
 
         LoadSettings();
         foreach (var c in new[] { _source, _tail, _rate, _format, _threads }) c.SelectionChanged += (_, _) => Changed();
-        foreach (var t in new[] { _tailMs, _start, _end, _dir, _pattern }) t.TextChanged += (_, _) => Changed();
+        foreach (var t in new[] { _tailMs, _start, _end, _dir, _pattern, _barFrom, _barTo }) t.TextChanged += (_, _) => Changed();
+        _secFrom.SelectionChanged += (_, _) => { if (!_fillingSections) { FillSectionTo(null); Changed(); } };
+        _secTo.SelectionChanged += (_, _) => { if (!_fillingSections) Changed(); };
         _mono.Click += (_, _) => Changed(); _realtime.Click += (_, _) => Changed(); _open.Click += (_, _) => Changed();
         browse.Click += (_, _) =>
         {
@@ -168,10 +186,22 @@ public sealed class RenderWindow : Window
     {
         _source.SelectedIndex = Math.Clamp(_s.Source, 0, 3);
         var hasSel = _ctx.Selection is not null;
-        var b = Math.Clamp(_s.Bounds, 0, 3);
+        var b = Math.Clamp(_s.Bounds, 0, 5);
         if (!hasSel && b is 1 or 2) b = 0;
+        if (_sections.Count == 0 && b == 5) b = 0;
+        if (_barCount == 0 && b == 4) b = 0;
         _bounds[b].IsChecked = true;
         _bounds[1].IsEnabled = _bounds[2].IsEnabled = hasSel;
+        _barFrom.Text = (_s.CustomFromBar >= 1 ? Math.Min(_s.CustomFromBar, Math.Max(1, _barCount)) : 1).ToString(CultureInfo.InvariantCulture);
+        _barTo.Text = (_s.CustomToBar >= 1 ? Math.Min(_s.CustomToBar, Math.Max(1, _barCount)) : Math.Max(1, _barCount)).ToString(CultureInfo.InvariantCulture);
+        _fillingSections = true;
+        for (var i = 0; i < _sections.Count; i++) _secFrom.Items.Add(new ComboBoxItem { Content = RenderBarRange.Label(_sections[i]), Tag = i });
+        var fromIdx = _sections.FindIndex(m => m.MeasureIndex == _s.CustomFromSectionBar);
+        _secFrom.SelectedIndex = _sections.Count == 0 ? -1 : Math.Max(0, fromIdx);
+        _fillingSections = false;
+        FillSectionTo(_s.CustomToSectionBar);
+        if (_sections.Count == 0) { _bounds[5].IsEnabled = false; _bounds[5].ToolTip = "The song has no sections yet."; }
+        if (_barCount == 0) _bounds[4].IsEnabled = false;
         if (!hasSel) { _bounds[1].ToolTip = _bounds[2].ToolTip = "Select bars in the score first."; }
         _start.Text = _s.CustomStartSec.ToString("0.###", CultureInfo.InvariantCulture);
         _end.Text = (_s.CustomEndSec > 0 ? _s.CustomEndSec : 60).ToString("0.###", CultureInfo.InvariantCulture);
@@ -187,6 +217,38 @@ public sealed class RenderWindow : Window
         _mono.IsChecked = _s.Mono; _realtime.IsChecked = _s.RealtimePace; _open.IsChecked = _s.OpenFolder;
     }
 
+    /// <summary>Fills the "to" list with the sections at or after the chosen "from" one, keeping the choice (or the bar given, or the last section).</summary>
+    private void FillSectionTo(int? wantBar)
+    {
+        var keep = wantBar ?? (_secTo.SelectedItem is ComboBoxItem cur && cur.Tag is int ci ? _sections[ci].MeasureIndex : -1);
+        _fillingSections = true;
+        _secTo.Items.Clear();
+        var from = _secFrom.SelectedItem is ComboBoxItem f && f.Tag is int fi ? fi : -1;
+        var select = -1;
+        if (from >= 0)
+            for (var i = from; i < _sections.Count; i++)
+            {
+                _secTo.Items.Add(new ComboBoxItem { Content = RenderBarRange.Label(_sections[i]), Tag = i });
+                if (_sections[i].MeasureIndex == keep) select = _secTo.Items.Count - 1;
+            }
+        _secTo.SelectedIndex = select >= 0 ? select : _secTo.Items.Count - 1;
+        _fillingSections = false;
+    }
+
+    /// <summary>The bars (0-based, inclusive) of the custom-bars / custom-sections choice, or why they cannot be rendered.</summary>
+    private (int First, int Last, string? Problem) CustomBarRange()
+    {
+        if (_bounds[4].IsChecked == true)
+        {
+            var problem = RenderBarRange.Validate(_barFrom.Text, _barTo.Text, _barCount);
+            return problem is not null ? (0, 0, problem) : (int.Parse(_barFrom.Text.Trim(), CultureInfo.InvariantCulture) - 1, int.Parse(_barTo.Text.Trim(), CultureInfo.InvariantCulture) - 1, null);
+        }
+        if (_secFrom.SelectedItem is ComboBoxItem f && f.Tag is int fi && _secTo.SelectedItem is ComboBoxItem t && t.Tag is int ti
+            && RenderBarRange.SectionBars(_ctx.Project, fi, ti) is { } r)
+            return (r.FirstBar, r.LastBar, null);
+        return (0, 0, _sections.Count == 0 ? "The song has no sections yet." : "Choose the first and last section.");
+    }
+
     private void SaveSettings()
     {
         _s.Source = Math.Max(0, _source.SelectedIndex);
@@ -194,6 +256,10 @@ public sealed class RenderWindow : Window
         _s.Bounds = Array.FindIndex(_bounds, b => b.IsChecked == true);
         if (_s.Bounds < 0) _s.Bounds = 0;
         _s.CustomStartSec = Num(_start.Text); _s.CustomEndSec = Num(_end.Text);
+        if (int.TryParse(_barFrom.Text.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var bf)) _s.CustomFromBar = Math.Max(0, bf);
+        if (int.TryParse(_barTo.Text.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var bt)) _s.CustomToBar = Math.Max(0, bt);
+        if (_secFrom.SelectedItem is ComboBoxItem sf && sf.Tag is int sfi) _s.CustomFromSectionBar = _sections[sfi].MeasureIndex;
+        if (_secTo.SelectedItem is ComboBoxItem st && st.Tag is int sti) _s.CustomToSectionBar = _sections[sti].MeasureIndex;
         _s.TailMode = Math.Max(0, _tail.SelectedIndex); _s.TailMs = (int)Math.Clamp(Num(_tailMs.Text), 0, 30000);
         _s.Directory = _dir.Text; _s.Pattern = _pattern.Text;
         _s.SampleRate = Rates[Math.Max(0, _rate.SelectedIndex)];
@@ -214,6 +280,13 @@ public sealed class RenderWindow : Window
         if (mp3 && Rates[Math.Max(0, _rate.SelectedIndex)] is 88200 or 96000) _rate.SelectedIndex = 0;
         var custom = _bounds[3].IsChecked == true;
         _start.IsEnabled = _end.IsEnabled = custom;
+        var customBars = _bounds[4].IsChecked == true; var customSections = _bounds[5].IsChecked == true;
+        _barFrom.IsEnabled = _barTo.IsEnabled = customBars;
+        _secFrom.IsEnabled = _secTo.IsEnabled = customSections && _sections.Count > 0;
+        var problem = customBars || customSections ? CustomBarRange().Problem : null;
+        _hint.Text = problem ?? (_sections.Count == 0 ? "Custom sections needs sections: add them in the Sections pane." : "");
+        _hint.Visibility = _hint.Text.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
+        if (_cts is null) _render.IsEnabled = problem is null;
         _tailMs.IsEnabled = _tail.SelectedIndex != 0;
         _stemPanel.Visibility = _source.SelectedIndex == 1 ? Visibility.Visible : Visibility.Collapsed;
         _preview.Items.Clear();
@@ -261,10 +334,18 @@ public sealed class RenderWindow : Window
             _render.IsEnabled = false; IsEnabled = true; _cancel.Content = "Cancel render";
             var tl = RenderSpecBuilder.Compile(_ctx.Project);
             var sel = _ctx.Selection;
-            var (startMs, endMs) = RenderSpecBuilder.Bounds(tl, (RenderBounds)Math.Max(0, _s.Bounds), sel?.StartBar ?? 0, sel?.StartCell ?? 0, sel?.EndBar ?? 0, sel?.EndCell ?? -1, _s.CustomStartSec, _s.CustomEndSec);
+            var mode = (RenderBounds)Math.Max(0, _s.Bounds);
+            int sBar = sel?.StartBar ?? 0, sCell = sel?.StartCell ?? 0, eBar = sel?.EndBar ?? 0, eCell = sel?.EndCell ?? -1;
+            if (mode is RenderBounds.CustomBars or RenderBounds.CustomSections)
+            {
+                var range = CustomBarRange();
+                if (range.Problem is not null) { _status.Text = range.Problem; return; }
+                sBar = range.First; sCell = 0; eBar = range.Last; eCell = -1;
+            }
+            var (startMs, endMs) = RenderSpecBuilder.Bounds(tl, mode, sBar, sCell, eBar, eCell, _s.CustomStartSec, _s.CustomEndSec);
             var request = new RenderRequest
             {
-                Project = _ctx.Project, Plugins = _ctx.Settings.Plugins, MasterPercent = _ctx.Settings.Audio.MasterVolume, Settings = _s, Timeline = tl,
+                Project = _ctx.Project, Media = _ctx.Media, Plugins = _ctx.Settings.Plugins, MasterPercent = _ctx.Settings.Audio.MasterVolume, Settings = _s, Timeline = tl,
                 StartMs = startMs, EndMs = endMs, MasterFile = plan.Master, Stems = plan.Stems, Restore = _ctx.Restore,
                 ConfirmIncomplete = missing => Dispatcher.InvokeAsync(() =>
                 {

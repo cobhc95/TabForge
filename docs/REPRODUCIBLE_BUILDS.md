@@ -10,6 +10,7 @@ therefore ship the files GitHub built and attested, and anyone can rebuild them 
 | --- | --- |
 | .NET SDK (compiler, ReadyToRun compiler, runtime pack) | `global.json`: exact version, `rollForward: disable`. CI installs exactly that version (`setup-dotnet` with `global-json-file`). |
 | NuGet packages | `packages.lock.json` per project, restore in locked mode. |
+| alphaTab | `TabForge.AlphaTab`: upstream alphaTab 1.8.4 plus three patches, built from source by `tools/Build-AlphaTab.ps1` and checked in as `vendor/alphatab/*.nupkg` (a local NuGet source, `nuget.config`). CI rebuilds it and fails when the DLL differs; see `vendor/alphatab/README.md`. |
 | Compiler output | `Deterministic`, `ContinuousIntegrationBuild` (always on in `tools/Publish.ps1`, not only when `CI=true`), `PathMap` to `/_/` so no folder name is embedded. |
 | Version | One `<Version>` in `Directory.Build.props`; the git commit id is part of the informational version, and is the same in both builds. |
 | Source text | `.gitattributes` forces CRLF for every text file (`* text=auto eol=crlf`), so a checkout is identical on every machine; embedded source checksums and loose text files match. |

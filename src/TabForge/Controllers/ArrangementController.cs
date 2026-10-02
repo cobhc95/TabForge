@@ -1,3 +1,4 @@
+using TabForge.Documents;
 using TabForge.Models;
 using TabForge.Services;
 
@@ -299,6 +300,44 @@ public sealed class ArrangementController
     }
 
     public static int MaxMeasures(SongProject project) => BarRangeEditor.MaxMeasures(project);
+
+    // ---- document edits: each is one logical edit of an explicit document (DocumentEdits): one undo transaction, one dirty change, one timeline invalidation ----
+
+    public sealed record BarMove(int At, int[] Map);
+    public sealed record BarInserted(int At);
+
+    public EditResult<BarInserted> InsertBar(DocumentSession document, int at, int templateBar, bool moveMarkers) =>
+        DocumentEdits.Run(document, project => new BarInserted(InsertBar(project, at, templateBar, moveMarkers)));
+
+    public EditResult DeleteBar(DocumentSession document, int bar, int trackIndex, bool allTracks, bool moveMarkers) =>
+        DocumentEdits.Run(document, project => DeleteBar(project, bar, trackIndex, allTracks, moveMarkers));
+
+    /// <summary>Copies bars <paramref name="first"/>..<paramref name="last"/> to right after themselves in every track; the value is the old-to-new bar mapping.</summary>
+    public EditResult<int[]> DuplicateBars(DocumentSession document, int first, int last) =>
+        DocumentEdits.Run<int[]>(document, project => DuplicateBars(project, first, last));
+
+    public EditResult<int[]> DeleteBars(DocumentSession document, int first, int last) =>
+        DocumentEdits.Run<int[]>(document, project => BarRangeEditor.Remove(project, first, last));
+
+    public EditResult<BarMove> MoveBars(DocumentSession document, int first, int last, int insertBefore) =>
+        DocumentEdits.Run<BarMove>(document, project => BarRangeEditor.Move(project, first, last, insertBefore) is var (at, map) ? new BarMove(at, map) : null);
+
+    /// <summary>Moves a whole section; <paramref name="before"/> is the undo state taken when a drag started (null: taken now).</summary>
+    public EditResult<int[]> MoveSection(DocumentSession document, int from, int insertBefore, UndoSnapshot? before = null) =>
+        DocumentEdits.Run<int[]>(document, project => SectionReorderService.Move(project, from, insertBefore), before);
+
+    /// <summary>Inserts copied bars (a duplicated or pasted section, with its marker when it has one) before bar <paramref name="at"/> in every track.</summary>
+    public EditResult<int[]> InsertSection(DocumentSession document, int at, SectionClipboardSnapshot snapshot)
+    {
+        if (document.Project.Tracks.Count == 0 || snapshot.Tracks.Count == 0 || snapshot.Tracks.Max(track => track.Count) == 0) return new EditResult<int[]>(false, null, default);
+        at = Math.Clamp(at, 0, MaxMeasures(document.Project));
+        return DocumentEdits.Run<int[]>(document, project => snapshot.Marker is null
+            ? BarRangeEditor.Insert(project, at, snapshot.Tracks)
+            : SectionReorderService.Insert(project, at, snapshot.Tracks, snapshot.Marker));
+    }
+
+    public EditResult<SectionReorderService.SectionRemoval> DeleteSection(DocumentSession document, MarkerModel marker) =>
+        DocumentEdits.Run(document, project => SectionReorderService.Delete(project, marker));
 
     private static MarkerModel CloneMarker(MarkerModel marker) => new()
     {

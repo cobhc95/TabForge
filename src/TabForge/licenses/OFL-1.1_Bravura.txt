@@ -1,4 +1,4 @@
-Bravura music font (SMuFL), version 1.38, as embedded in AlphaTab.dll (resource AlphaTab.Platform.Skia.Bravura.otf).
+Bravura music font (SMuFL), version 1.38, as embedded in TabForge.AlphaTab.dll, TabForge's build of alphaTab (resource AlphaTab.Platform.Skia.Bravura.otf).
 The text below is the licence field of the font file itself (name ID 13), reproduced without changes.
 
 Copyright © 2020, Steinberg Media Technologies GmbH (http://www.steinberg.net/), with Reserved Font Name "Bravura".

@@ -9,3 +9,5 @@
 *.gp* binary
 *.ico binary
 *.zip binary
+*.patch -text
+*.nupkg binary

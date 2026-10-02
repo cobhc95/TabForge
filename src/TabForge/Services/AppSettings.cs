@@ -121,6 +121,14 @@ public sealed class FollowSettings
     public double PlayheadThickness { get; set; } = 1.7;
     /// <summary>Scroll the fretboard so the played position stays visible.</summary>
     public bool FollowFretboard { get; set; } = true;
+    /// <summary>Opt-in: a translucent band over the whole bar that is playing (off by default).</summary>
+    public bool PlayingBarEnabled { get; set; } = false;
+    /// <summary>Colour of the playing-bar band.</summary>
+    public string PlayingBarColour { get; set; } = "#FFE066";
+    /// <summary>Opacity of the playing-bar band (0.05..0.6).</summary>
+    public double PlayingBarOpacity { get; set; } = 0.20;
+    /// <summary>Also band the edit cursor's bar while playback is stopped.</summary>
+    public bool PlayingBarWhenStopped { get; set; } = false;
 }
 
 public static class FollowModes
@@ -553,6 +561,8 @@ public sealed class TimelineSettings
     public double TrackControlsWidth { get; set; }
     /// <summary>Resize the track list / arrangement panel to fit all rows when tracks or groups change.</summary>
     public bool AutoFitTrackList { get; set; } = true;
+    /// <summary>Height of a track row in the track list and timeline (px). 30 is the default and the minimum; dragging the track list's splitter stretches it (up to 90) while auto-fit is on.</summary>
+    public double TrackRowHeight { get; set; } = 30;
     /// <summary>Timeline appearance: draw each note as a mark in its lane (off = the lane's default drawing).</summary>
     public bool ShowIndividualNotes { get; set; }
     /// <summary>Timeline appearance: draw each lane as one continuous line (turns <see cref="ShowIndividualNotes"/> off).</summary>

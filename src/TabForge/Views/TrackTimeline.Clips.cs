@@ -107,15 +107,26 @@ internal sealed partial class TrackTimeline
     {
         AllowDrop = true;
         Focusable = true;
-        // A waveform finished reading in the background: redraw once, if that file is on this song. Weak: a closed timeline is not kept alive by the static cache.
-        _waveformSubscription = WaveformCache.SubscribeWeak(this, static (t, file) => t.OnWaveformReady(file));
-        Unloaded += (_, _) => WaveformCache.Cancel(Project?.Tracks.SelectMany(t => t.AudioClips).Where(c => !c.IsMidi).Select(c => c.File).ToList() ?? new List<string>());   // what this song asked for stops decoding once its timeline is gone
+        // A waveform finished reading in the background: redraw once, if that file is on this song. Attached while the timeline is in a window
+        // (Loaded) and detached when it leaves it (Unloaded: the window closed or the panel was removed), so the static cache holds no
+        // handler of a closed window; weak as well, so a timeline that never loaded is not kept alive either.
+        Loaded += (_, _) => _waveformSubscription ??= WaveformCache.SubscribeWeak(this, static (t, file) => t.OnWaveformReady(file));
+        Unloaded += (_, _) =>
+        {
+            _waveformSubscription?.Dispose();
+            _waveformSubscription = null;
+            WaveformCache.Cancel(Project?.Tracks.SelectMany(t => t.AudioClips).Where(c => !c.IsMidi).Select(c => c.File).ToList() ?? new List<string>(), Media);   // what this song asked for stops decoding once its timeline is gone
+        };
     }
 
-    private readonly IDisposable? _waveformSubscription;
+    private IDisposable? _waveformSubscription;
+
+    /// <summary>The bound song's media context (set with the song by the panel): where its clips' relative paths resolve and what is approved for it. Waveform reads and drop measuring use it, never a "current" document.</summary>
+    internal MediaContext Media { get; set; } = MediaContext.Anonymous;
 
     private void OnWaveformReady(string file) => Dispatcher.BeginInvoke(() =>
     {
+        if (!IsLoaded) return;   // the timeline left its window while this was queued: nothing to redraw
         if (Project?.Tracks.Any(t => t.AudioClips.Any(c => string.Equals(c.File, file, StringComparison.OrdinalIgnoreCase))) == true)
             InvalidateVisual();
     });
@@ -123,7 +134,7 @@ internal sealed partial class TrackTimeline
     private double RowTop(int track) =>
         ArrangementPanel.RulerHeight + ArrangementPanel.SectionHeight + ArrangementPanel.RowTopOf(Project, track) - VerticalScrollOffset;
 
-    private double LaneTop(int track, int lane) => RowTop(track) + ArrangementPanel.TrackRowHeight + lane * ArrangementPanel.AudioLaneHeight;
+    private double LaneTop(int track, int lane) => RowTop(track) + ArrangementPanel.RowHeightFor(Project) + lane * ArrangementPanel.AudioLaneHeight;
 
     // ---------- drawing ----------
     private void DrawAudioLane(DrawingContext dc, TrackModel track, double rowTop, double width, Color trackColor)
@@ -134,7 +145,7 @@ internal sealed partial class TrackTimeline
         var trackIndex = Project?.Tracks.IndexOf(track) ?? -1;
         for (var lane = 0; lane < lanes; lane++)
         {
-            var laneRect = new Rect(0, rowTop + ArrangementPanel.TrackRowHeight + lane * ArrangementPanel.AudioLaneHeight, width, ArrangementPanel.AudioLaneHeight);
+            var laneRect = new Rect(0, rowTop + ArrangementPanel.RowHeightFor(Project) + lane * ArrangementPanel.AudioLaneHeight, width, ArrangementPanel.AudioLaneHeight);
             dc.DrawRectangle(Draw.Solid(_theme.Board, 0.55), null, laneRect);
             dc.DrawRectangle(Draw.Solid(trackColor, ClipLanes.Plays(track, lane) ? 0.08 : 0.03), null, laneRect);
             if (_clipDropTarget is { NotationRow: false } target && target.Track == trackIndex && target.Lane == lane && _clipFromTrack != trackIndex)
@@ -143,15 +154,15 @@ internal sealed partial class TrackTimeline
         }
         if (track.RecordArm && track.AudioClips.Count == 0 && !LiveTakes.Any(t => ReferenceEquals(t.Track, track)))
             Draw.At(dc, AudioInputs.IsMidi(track.AudioInput) ? "Armed (MIDI): press Record to record here" : "Armed: press Record to record here, or drop audio files",
-                8, rowTop + ArrangementPanel.TrackRowHeight + 15, 11, Draw.Solid(_theme.Muted));
+                8, rowTop + ArrangementPanel.RowHeightFor(Project) + 15, 11, Draw.Solid(_theme.Muted));
         if (_clipDropTarget is { NotationRow: true } row && row.Track == trackIndex)
-            dc.DrawRectangle(Draw.Solid(_theme.Accent, 0.18), Draw.Pen(_theme.Accent, 1.4), new Rect(0, rowTop, width, ArrangementPanel.TrackRowHeight));
+            dc.DrawRectangle(Draw.Solid(_theme.Accent, 0.18), Draw.Pen(_theme.Accent, 1.4), new Rect(0, rowTop, width, ArrangementPanel.RowHeightFor(Project)));
         foreach (var clip in track.AudioClips)
         {
             var x1 = XOfSec(clip.StartSec);
             var x2 = XOfSec(clip.EndSec);
             if (x2 < 0 || x1 > width) continue;
-            var laneTop = rowTop + ArrangementPanel.TrackRowHeight + clip.Lane * ArrangementPanel.AudioLaneHeight;
+            var laneTop = rowTop + ArrangementPanel.RowHeightFor(Project) + clip.Lane * ArrangementPanel.AudioLaneHeight;
             var box = new Rect(x1, laneTop + 3, Math.Max(3, x2 - x1), ArrangementPanel.AudioLaneHeight - 6);
             // Greyed: muted, or an audio take on a lane that is not playing.
             var heard = ClipLanes.Audible(track, clip);
@@ -164,7 +175,7 @@ internal sealed partial class TrackTimeline
             if (clip.IsMidi) DrawMidiNotes(dc, clip, box, colour, alpha, width);
             else DrawWaveform(dc, clip, box, colour, alpha, width);
             var label = clip.Muted ? $"{clip.Name} (muted)" : clip.Name;
-            if (!clip.IsMidi && WaveformCache.StatusOf(clip.File) is { State: WaveState.NeedsApproval or WaveState.Failed } problem)
+            if (!clip.IsMidi && WaveformCache.StatusOf(clip.File, Media) is { State: WaveState.NeedsApproval or WaveState.Failed } problem)
                 label = $"{label}: {problem.Message}";
             if (box.Width > 30) Draw.At(dc, label, box.X + 5, box.Y + 1, 10, Draw.Solid(_theme.Text, 0.85 * alpha));
             dc.Pop();
@@ -183,7 +194,7 @@ internal sealed partial class TrackTimeline
 
     private void DrawWaveform(DrawingContext dc, AudioClip clip, Rect box, Color colour, double alpha, double width)
     {
-        var peaks = WaveformCache.Get(clip.File);
+        var peaks = WaveformCache.Get(clip.File, Media);
         if (peaks is null || peaks.Length == 0 || clip.SourceLengthSec <= 0) return;
         var gain = Math.Pow(10, clip.GainDb / 20);
         DrawPeaks(dc, box, colour, alpha, width, x =>

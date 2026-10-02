@@ -14,11 +14,6 @@ namespace TabForge;
 // so a rewrite of PlaybackOrder can be checked against the same fixtures. Runs on every machine; CI requires it (--require synthetic-fixtures).
 public static partial class SelfTest
 {
-    /// <summary>Requirement name for --require / TABFORGE_SELFTEST_REQUIRE: the synthetic fixture group must have run to completion.</summary>
-    private const string RequireSyntheticFixtures = "synthetic-fixtures";
-
-    private static bool _syntheticFixturesRan;
-
     // ------------------------------------------------------------------ song building
 
     private static SongProject SfSong(string title, int bars, int tempo = 120)
@@ -517,6 +512,5 @@ public static partial class SelfTest
         SfSpans();
         SfCleanGpFidelity();
         SfDemoSong();
-        _syntheticFixturesRan = true;
     }
 }

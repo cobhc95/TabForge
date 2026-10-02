@@ -46,9 +46,9 @@ public sealed partial class TabEditorControl
         SelectedString = Math.Clamp(SelectedString, 0, Math.Max(0, track.StringTunings.Count - 1));
     }
 
-    private void EditedNow()
+    private void EditedNow(bool markTimeline = true)
     {
-        if (_project is not null) { _project.IsDirty = true; _project.MarkTimelineChanged(); }
+        if (_project is not null) { _project.IsDirty = true; if (markTimeline) _project.MarkTimelineChanged(); }
         Edited?.Invoke(this, EventArgs.Empty);
         CoerceSelection();
         InvalidateScoreLayout();

@@ -29,12 +29,14 @@ public static partial class SelfTest
         Views.TabEditorControl.AutomationListenerOverride = false;
         try
         {
+            // Relative to now: the counters are process-wide, and a UI Automation client on the machine can walk other windows' editor peers meanwhile.
+            int structureBefore = Views.TabEditorControl.StructureBuilds, announceBefore = Views.TabEditorControl.AnnounceBuilds;
             var (editor, project) = StructureSong();
             editor.SetPosition(1, 0, 1, false);
             var peer = UIElementAutomationPeer.CreatePeerForElement(editor);
             Check("structure: building the peer and moving the cursor build no tree and no announcement without a client",
-                Views.TabEditorControl.StructureBuilds == 0 && Views.TabEditorControl.AnnounceBuilds == 0,
-                $"builds={Views.TabEditorControl.StructureBuilds}/{Views.TabEditorControl.AnnounceBuilds}");
+                Views.TabEditorControl.StructureBuilds == structureBefore && Views.TabEditorControl.AnnounceBuilds == announceBefore,
+                $"builds={Views.TabEditorControl.StructureBuilds - structureBefore}/{Views.TabEditorControl.AnnounceBuilds - announceBefore}");
             int b0 = Views.TabEditorControl.StructureBuilds, a0 = Views.TabEditorControl.AnnounceBuilds;
             editor.SetPosition(2, 0, 1, false);
             editor.InvalidateScoreLayout();

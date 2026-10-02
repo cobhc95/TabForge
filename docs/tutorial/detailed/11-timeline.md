@@ -142,6 +142,8 @@ On the first pass the song plays the first ending. At the repeat sign it jumps b
 
 The track list sits at the left of the timeline. To change the order, drag a track's number up or down. You can also select a track and choose **Track > Move up** or **Track > Move down**, or press `Alt+Up` or `Alt+Down`. Playback carries on while you do it.
 
+The track list always fits its rows. Drag the splitter under the list to make the rows taller or shorter, between 30 and 90 pixels, and double-click the splitter to reset them. The command to reset the row height is in the **View** menu and has no default key.
+
 Groups keep a big song tidy. Right-click empty space in the track list and tick **Show tracks in groups**. A header appears for each group, such as guitars or drums. Click the arrow on a header to collapse its tracks, or drag the header to move the whole group.
 
 To show groups in every new song, tick **Show tracks in groups in new songs** in **Preferences > Timeline & Tracks**.

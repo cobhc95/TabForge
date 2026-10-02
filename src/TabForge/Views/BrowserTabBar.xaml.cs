@@ -29,6 +29,50 @@ public partial class BrowserTabBar : UserControl
     private readonly ObservableCollection<TabItemModel> _items = new();
     private DocumentManager? _documents;
     private readonly HashSet<DocumentSession> _playing = new();
+    private readonly HashSet<DocumentSession> _watched = new();
+    private bool _displayRefreshQueued;
+
+    // A tab's name, tooltip and unsaved dot follow its document through the document's own change event (no polling): this covers a
+    // background tab that was saved, renamed, edited or undone while another tab is displayed.
+    private void WatchDocuments(IReadOnlyList<DocumentSession> docs)
+    {
+        foreach (var gone in _watched.Where(w => !docs.Contains(w)).ToList())
+        {
+            gone.DisplayStateChanged -= Document_DisplayStateChanged;
+            _watched.Remove(gone);
+        }
+        foreach (var doc in docs)
+            if (_watched.Add(doc)) doc.DisplayStateChanged += Document_DisplayStateChanged;
+    }
+
+    private void Document_DisplayStateChanged(object? sender, EventArgs e)
+    {
+        if (_displayRefreshQueued) return;
+        _displayRefreshQueued = true;
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            _displayRefreshQueued = false;
+            UpdateDisplayState();
+        }), System.Windows.Threading.DispatcherPriority.Background);
+    }
+
+    /// <summary>Re-reads each tab's title, tooltip and unsaved dot from its document; announces only what changed.</summary>
+    internal void UpdateDisplayState()
+    {
+        foreach (var item in _items)
+        {
+            var title = item.Session.DisplayName;
+            var tooltip = item.Session.Tooltip;
+            var dirty = item.Session.Project.IsDirty;
+            if (item.ShownTitle != title || item.ShownTooltip != tooltip || item.ShownDirty != dirty)
+            {
+                item.ShownTitle = title; item.ShownTooltip = tooltip; item.ShownDirty = dirty;
+                item.Raise(nameof(TabItemModel.Title));
+                item.Raise(nameof(TabItemModel.Tooltip));
+                item.Raise(nameof(TabItemModel.DirtyVisibility));
+            }
+        }
+    }
 
     public TabSettings Settings { get; set; } = new();
 
@@ -102,6 +146,7 @@ public partial class BrowserTabBar : UserControl
     {
         if (_documents is null) return;
         var docs = _documents.Documents;
+        WatchDocuments(docs);
 
         // Update in place when the set of documents is unchanged: rebuilding the collection on every
         // activation would destroy the element the user just clicked, breaking double-click and drag.
@@ -132,6 +177,7 @@ public partial class BrowserTabBar : UserControl
                     item.Raise(nameof(TabItemModel.PlayingVisibility));
                 }
             }
+            UpdateDisplayState();
             ApplyWidths();
             ScheduleWidths();
             return;

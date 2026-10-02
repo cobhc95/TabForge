@@ -51,7 +51,9 @@ A new song has no file name yet, so **Save** asks for one. A song you opened fro
 
 Only the `.gp` and `.tforge` types can be saved. If you type another extension, TabForge refuses and names the types it can write. The type listed first follows **Preferences > Files & Backups**, under **Opening and saving**, in the row **Default save format**. The standard `.gp` type is the default.
 
-While a song has unsaved changes, the window title ends with an asterisk and its document tab shows a dot. Closing a song with unsaved changes opens a window that asks **Save changes to …?** with **Yes**, **No** and **Cancel**. **Yes** saves first, **No** discards the changes and **Cancel** keeps the song open.
+While a song has unsaved changes, the window title ends with an asterisk and its document tab shows a dot. Closing a song with unsaved changes opens a window that asks **Save changes to …?** with **Yes**, **No** and **Cancel**. **Yes** saves first, **No** discards the changes and **Cancel** keeps the song open. If you close a whole window that holds several songs with unsaved changes, TabForge asks about each of them in turn, and **Cancel** at any question keeps the window and every song as they were.
+
+When the song uses something a standard `.gp` file cannot hold, such as a long bend curve, a mix change inside a bar or a reverb send, **Save** and the exports tell you first. A window lists what the file would lose and where. You can keep a full `.tforge` copy beside it, write the compatible file only, or cancel. Nothing is written on **Cancel**. Saving the compatible file marks the song saved; an export leaves the song as it was. The command **File > Export compatible .gp file** does the compatible-only save directly; it has no default key.
 
 TabForge saves safely. It writes to a temporary file beside your song and swaps it in only when the write is complete. A crash or a full disk leaves your old file intact.
 
@@ -140,7 +142,7 @@ Rendering turns the whole mix into a sound file, faster than real time. Choose *
 The top half holds the choices about what to render.
 
 - **Source** is **Master mix** by default. You can also choose **Stems: checked tracks**, **Stems: all tracks** or **Master mix + stems (all tracks)**. A stem is a separate file for one track.
-- **Bounds** is **Entire song** by default. **Time selection** and **Selected bars** need bars selected first. **Custom range (seconds)** takes a start and an end.
+- **Bounds** is **Entire song** by default. **Time selection** and **Selected bars** need bars selected first. **Custom range (seconds)** takes a start and an end. **Custom bars** renders from bar N to bar M, and **Custom sections** renders from one of the song's sections to another, chosen from a list of the song's sections.
 - **Tail** keeps the sound going after the last note so reverb can fade. It is **Fixed** at 3000 ms by default. **Off** and **Auto (until silent)** are the other choices.
 - **Output** is the folder, which starts as your Music folder, and a file name pattern, which starts as `$project`. A list shows the files that will be written.
 
@@ -182,9 +184,9 @@ Run through these five checks before you send a song to someone.
 
 When you save a `.gp` file for a song that uses plug-ins, effect chains or mixer groups, TabForge asks once how to save it. You can keep one `.gp` file with the audio settings stored inside, which is the first choice. You can write a clean `.gp` file plus a `.tfaudio` file beside it that holds the mixer and effects data. Keep the two files together, and keep them in the same folder. Or you can save a `.tforge` file instead.
 
-Audio clips on a network location or a removable drive stay unloaded until you allow their folder. A strip above the status bar offers **Review…**, which opens the **Linked audio** window. Tick a folder and click **Allow selected**.
+Audio clips on a network location or a removable drive stay unloaded until you allow their folder. A strip above the status bar offers **Review…**, which opens the **Linked audio** window. Tick a folder and click **Allow selected**. The approval belongs to that song only, also for a song you have not saved yet. When you first save the song, its approvals move to the new file, and **Save As…** to another file asks again.
 
-TabForge opens files up to 128 MB. A song can have up to 256 tracks and 20,000 bars per track, and a file over a limit is refused with a message. If the window title ever shows `[after an error: restart recommended]`, save to a new file and restart TabForge.
+TabForge opens files up to 128 MB. A song can have up to 256 tracks and 20,000 bars per track, and a file over a limit is refused with a message that names the song's tracks and bars. Very long songs of about 2,000 bars with many tracks open normally. If the window title ever shows `[after an error: restart recommended]`, save to a new file and restart TabForge.
 
 ## Quick recap
 

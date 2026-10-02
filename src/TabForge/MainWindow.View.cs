@@ -62,6 +62,10 @@ public partial class MainWindow
         _dockWorkspace.RegisterPanel("structure", "Structure", _palettePanelContents["structure"], 210, 150, "tools", "tools");
         _dockWorkspace.RegisterPanel("rhythm", "Rhythm", _palettePanelContents["rhythm"], 210, 140, "tools", "tools");
         _dockWorkspace.RegisterPanel("layout", "Layout", _palettePanelContents["layout"], 210, 140, "tools", "tools");
+        // The Sections pane fills its cell, or scrolls when the cell is shorter than the content's minimum (large UI scale).
+        SectionsPanelContent.SizeChanged += (_, e) =>
+            SectionsPanelGrid.Height = Math.Max(0, e.NewSize.Height - SectionsPanelContent.Padding.Top - SectionsPanelContent.Padding.Bottom);
+        SectionsPanelGrid.Height = 0;
         _dockWorkspace.RegisterPanel("sections", "Sections", SectionsPanelContent, 190, 180, "side", "practice");
         _dockWorkspace.RegisterPanel("practice", "Practice / Mixer", LowerPanelScroll, 220, 180, "side", "sections");
         _dockWorkspace.RegisterPanel("playback", "Zoom & speed", ControllerPanel, 262, 44, "side", "sections");
@@ -84,6 +88,7 @@ public partial class MainWindow
         };
         BuildDockPanelsMenu();
         _dockWorkspace.RestoreLayout(null);
+        _trackListFit = new TrackListFitController(this, this);
         BuildLayoutsMenu();
     }
 
@@ -374,9 +379,9 @@ public partial class MainWindow
     private void FinishPaste(PasteOutcome outcome, UndoCapture? capture)
     {
         if (!outcome.Changed) { StatusText.Text = outcome.Status; return; }
-        if (capture is { Stored: true } stored) RememberPlaybackBarMapping(stored.Snapshot);
+        if (capture is { Stored: true } stored) Playback.RememberBarMapping(stored.Snapshot);
         if (outcome.BarMap is { } map) FinishSectionStructureEdit(outcome.Status, map);
-        Editor.NotifyEdited();
+        Editor.NotifyEdited(markTimeline: false);   // the paste (EditCommands.PasteWithUndo) already invalidated the timeline, once
         StatusText.Text = outcome.Status;
     }
 
@@ -408,11 +413,7 @@ public partial class MainWindow
         var hadRange = _selection.HasRange;
         var (first, last) = hadRange ? (Math.Clamp(_selection.StartBar, 0, barCount - 1), Math.Clamp(_selection.EndBar, 0, barCount - 1)) : (cursor, cursor);
         var count = last - first + 1;
-        var transaction = _undo.BeginTransaction(_project);
-        var map = _arrangementController.DuplicateBars(_project, first, last);
-        if (map is null) { _undo.Cancel(transaction); StatusText.Text = "Cannot duplicate: the song would get too long"; return; }
-        var capture = _undo.Commit(transaction);
-        if (capture.Stored) RememberPlaybackBarMapping(capture.Snapshot);
+        if (_arrangementController.DuplicateBars(Doc, first, last).Value is not { } map) { StatusText.Text = "Cannot duplicate: the song would get too long"; return; }
         var at = last + 1;
         Editor.SetPosition(Math.Clamp(at, 0, Math.Max(0, MaxMeasures() - 1)), 0, Editor.SelectedString, seekPlayback: false);
         var status = count == 1 ? $"Duplicated bar {first + 1}" : $"Duplicated bars {first + 1}-{last + 1}";
@@ -428,10 +429,7 @@ public partial class MainWindow
         var count = GpDialogs.Prompt("Repeat selection", "How many times should the selected bars be repeated?", "1");
         if (count is null || !int.TryParse(count, out var times) || times < 1) return;
         times = Math.Clamp(times, 1, 16);
-        CaptureUndo();
-        _arrangementController.RepeatRange(_project, ls, le, times);
-        _project.IsDirty = true;
-        _project.MarkTimelineChanged();
+        DocumentEdits.Run(Doc, project => _arrangementController.RepeatRange(project, ls, le, times) > 0);
         RefreshArrangement();
         RefreshTabs();
         UpdateTitle();
@@ -673,7 +671,9 @@ public partial class MainWindow
 
     private void Prefs_Click(object sender, RoutedEventArgs e)
     {
-        StatusText.Text = _settingsWindowHost.Show(_settings, ApplyPreferences, PreviewPreferences) switch
+        // Approvals can change while the dialog is open (another window, the Linked audio window): each preview / apply merges with the live list instead of replacing it.
+        var approvals = new MediaApprovalMerge(() => _settings.Audio.ApprovedMedia);
+        StatusText.Text = _settingsWindowHost.Show(_settings, staged => { approvals.Stage(staged); ApplyPreferences(staged); }, staged => { approvals.Stage(staged); PreviewPreferences(staged); }) switch
         {
             SettingsShowResult.Applied => "Settings updated",
             SettingsShowResult.Cancelled => "Settings cancelled",
@@ -695,6 +695,7 @@ public partial class MainWindow
         if (fretboardVisibilityChanged) _dockWorkspace?.SetPanelVisible("instrument", settings.Appearance.ShowFretboard);
         if (arrangementVisibilityChanged) _dockWorkspace?.SetPanelVisible("timeline", settings.Appearance.ShowArrangementOverview);
         SyncFromSettings(applyWindowSize: false);
+        ScheduleFitTimelineToTracks();   // auto-fit or the row height may have changed
         if (Arrangement.PanKnobs != settings.Audio.PanKnobs || Arrangement.VolumeKnobs != settings.Audio.VolumeKnobs)
         {
             Arrangement.PanKnobs = settings.Audio.PanKnobs;

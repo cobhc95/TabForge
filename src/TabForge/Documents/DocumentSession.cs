@@ -19,15 +19,46 @@ public sealed class DocumentSession
     private ProjectState? _cleanState;
 
     // The routed output sends plug-in tracks to the audio engine (a plain engine here bypassed it: no MIDI reached plug-ins).
-    public DocumentSession() => Playback = new DocumentPlaybackState();
+    public DocumentSession()
+    {
+        Playback = new DocumentPlaybackState();
+        _project.DisplayStateChanged += OnProjectDisplayState;
+    }
 
     public DocumentSession(TabForge.Playback.PlaybackEngine playbackEngine)
     {
         Playback = new DocumentPlaybackState(playbackEngine);
+        _project.DisplayStateChanged += OnProjectDisplayState;
     }
 
-    public SongProject Project { get; set; } = TemplateFactory.Blank();
-    public string? Path { get; set; }
+    private SongProject _project = TemplateFactory.Blank();
+    public SongProject Project
+    {
+        get => _project;
+        set
+        {
+            if (ReferenceEquals(_project, value)) return;
+            _project.DisplayStateChanged -= OnProjectDisplayState;
+            _project = value;
+            _project.DisplayStateChanged += OnProjectDisplayState;
+            DisplayStateChanged?.Invoke(this, EventArgs.Empty);
+        }
+    }
+    private void OnProjectDisplayState(object? sender, EventArgs e) => DisplayStateChanged?.Invoke(this, EventArgs.Empty);
+
+    /// <summary>Raised when what a tab shows (name, tooltip, unsaved mark) may have changed: a save, a rename, an edit, an undo.</summary>
+    public event EventHandler? DisplayStateChanged;
+    private string? _path;
+
+    /// <summary>The file this song was saved to or opened from (null: unsaved). Setting it (Save As, first save, recovery) moves the song's media scope and starts a new media revision.</summary>
+    public string? Path
+    {
+        get => _path;
+        set { _path = value; Media.SetSavedPath(value); DisplayStateChanged?.Invoke(this, EventArgs.Empty); }
+    }
+
+    /// <summary>This song's media context: identity, media base directory, approval scope and revision. Passed explicitly to everything that reads its media.</summary>
+    public Services.MediaContext Media { get; } = new();
     public UndoController Undo { get; } = new();
     public bool IsNew { get; set; } = true;
 
@@ -65,6 +96,15 @@ public sealed class DocumentSession
     public HashSet<string> SkippedPlugins { get; } = new(StringComparer.OrdinalIgnoreCase);
     /// <summary>Semitone shift applied per string (high to low) by the global tuning tool, relative to how the song was opened.</summary>
     public int[] TuningShift { get; } = new int[6];
+
+    // The tuning shift belongs to the song state it was set with: undo and redo restore it together with the strings.
+    private readonly System.Runtime.CompilerServices.ConditionalWeakTable<ProjectState, int[]> _tuningByState = new();
+    internal void RememberTuningShift(ProjectState state) => _tuningByState.AddOrUpdate(state, (int[])TuningShift.Clone());
+    internal void RememberTuningShift(ProjectState state, int[] shift) => _tuningByState.AddOrUpdate(state, (int[])shift.Clone());
+    internal void RestoreTuningShift(ProjectState state)
+    {
+        if (_tuningByState.TryGetValue(state, out var shift)) Array.Copy(shift, TuningShift, TuningShift.Length);
+    }
 
     /// <summary>
     /// True only when persisted project content differs from its clean baseline. The legacy dirty
@@ -132,6 +172,8 @@ public sealed class DocumentSession
     /// <summary>The document is gone for good (tab closed, replaced or its window closed): playback stops and its engine chains are unloaded now, not parked.</summary>
     public void DisposePlayback()
     {
+        Media.Close();   // queued waveform / drop / sync work for this song is dropped when it completes
+        Audio.WaveformCache.Forget(Media);   // its outlines are not kept in the cache's memory budget after the song is gone
         Playback.Dispose();
         if (Playback.Routing is not null) Audio.AudioEngineClient.Instance.ReleaseOwner(this);
     }
@@ -147,6 +189,15 @@ public sealed class DocumentManager
     public event EventHandler? ActiveChanged;
 
     public IReadOnlyList<DocumentSession> Documents => _documents;
+
+    /// <summary>The window that held these documents has closed for good (their playback is already disposed): forget them, so a closed window object that is still referenced pins no song.</summary>
+    internal void ReleaseAll()
+    {
+        _documents.Clear();
+        _activeIndex = -1;
+        Changed = null;
+        ActiveChanged = null;
+    }
 
     public int ActiveIndex => _activeIndex;
 
@@ -267,6 +318,7 @@ public sealed class DocumentManager
         project.Title = string.IsNullOrWhiteSpace(project.Title) ? "Untitled copy" : project.Title + " copy";
         project.IsDirty = true;
         var copy = DocumentSession.FromProject(project, null);
+        copy.Media.SetSourceDirectory(src.Media.BaseDirectory);   // its relative media still resolves where the original's did; approvals are not copied (a new song, its own scope)
         copy.CursorBar = src.CursorBar;
         copy.CursorCell = src.CursorCell;
         copy.CursorString = src.CursorString;

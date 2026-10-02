@@ -22,7 +22,7 @@ internal sealed partial class TrackTimeline
         var track = ArrangementPanel.RowIndexAt(Project, inGrid);
         if (track < 0) return (-1, -1);
         var inRow = inGrid - ArrangementPanel.RowTopOf(Project, track);
-        if (inRow < 0 || inRow >= ArrangementPanel.TrackRowHeight) return (-1, -1);   // group header or audio lane
+        if (inRow < 0 || inRow >= ArrangementPanel.RowHeightFor(Project)) return (-1, -1);   // group header or audio lane
         var bars = BarCount;
         if (bars == 0 || p.X >= XOfBar(bars)) return (-1, -1);
         return (BarAt(p.X), track);
@@ -33,7 +33,7 @@ internal sealed partial class TrackTimeline
     {
         if (Project is null || bar < 0 || bar >= BarCount || track < 0 || track >= Project.Tracks.Count) return null;
         var top = ArrangementPanel.RulerHeight + ArrangementPanel.SectionHeight + ArrangementPanel.RowTopOf(Project, track) - VerticalScrollOffset;
-        return new Rect(XOfBar(bar), top + 1, Math.Max(1, WidthOfBar(bar) - 1), ArrangementPanel.TrackRowHeight - 2);
+        return new Rect(XOfBar(bar), top + 1, Math.Max(1, WidthOfBar(bar) - 1), ArrangementPanel.RowHeightFor(Project) - 2);
     }
 
     private bool HoverSuppressed => _dragging || _areaMoving || _sectionDragging || _markerDragging || _resizeMarker is not null ||

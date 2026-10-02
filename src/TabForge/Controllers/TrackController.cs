@@ -1,3 +1,4 @@
+using TabForge.Documents;
 using TabForge.Models;
 using TabForge.Plugins;
 using TabForge.Presets;
@@ -71,6 +72,23 @@ public sealed class TrackController
         to = Math.Clamp(to, 0, project.Tracks.Count - 1);
         return from != to && project.MoveTrack(from, to);
     }
+
+    // ---- document edits (DocumentEdits): one undo transaction, one dirty change, one timeline invalidation per logical edit ----
+
+    /// <summary>Adds <paramref name="track"/> at <paramref name="index"/> (clamped; null: at the end).</summary>
+    public EditResult AddTrack(DocumentSession document, TrackModel track, int? index = null) =>
+        DocumentEdits.Run(document, project =>
+        {
+            project.Tracks.Insert(Math.Clamp(index ?? project.Tracks.Count, 0, project.Tracks.Count), track);
+            return true;
+        });
+
+    public EditResult DeleteTrack(DocumentSession document, int index) =>
+        DocumentEdits.Run(document, project => DeleteTrack(project, index));
+
+    /// <summary>Moves a track; <paramref name="before"/> is the undo state taken when a drag started (null: taken now).</summary>
+    public EditResult MoveTrack(DocumentSession document, int from, int to, UndoSnapshot? before = null) =>
+        DocumentEdits.Run(document, project => MoveTrack(project, from, to), before);
 
     public bool ApplyEdit(SongProject project, TrackEditRequest request)
     {

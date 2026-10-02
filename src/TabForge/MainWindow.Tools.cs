@@ -59,10 +59,10 @@ public partial class MainWindow
         if (txt is null || !int.TryParse(txt, out var st)) return;
         st = Math.Clamp(st, -12, 12);
         if (st == 0) return;
-        CaptureUndo();
         var range = hasSelection ? Editor.SelectionCellRange : ((int, int, int, int)?)null;
-        var (_, unplaced) = MusicTheoryService.TransposeTrack(t, st, range);
-        CommitEdit(EditRefresh.Score | EditRefresh.Instrument);
+        var unplaced = 0;
+        DocumentEdits.Run(Doc, project => { (_, unplaced) = MusicTheoryService.TransposeTrack(t, st, range); return true; });
+        RefreshAfterEdit(EditRefresh.Score | EditRefresh.Instrument);
         StatusText.Text = $"Transposed {(hasSelection ? "the selection of " : "")}{t.Name} {st:+0;-0} st" +
             (unplaced > 0 ? $" ({unplaced} note{(unplaced == 1 ? "" : "s")} did not fit on a free string and kept their fret)" : "");
     }
@@ -405,7 +405,7 @@ public partial class MainWindow
         var c = Editor.CurrentCell(); if (c is null) return;
         var root = ChordRootCombo.SelectedItem?.ToString() ?? "C";
         var type = ChordTypeCombo.SelectedItem?.ToString() ?? "Maj";
-        CaptureUndo(); c.ChordName = $"{root}{type}"; CommitEdit(EditRefresh.Score);
+        DocumentEdits.Run(Doc, _ => { c.ChordName = $"{root}{type}"; return true; }); RefreshAfterEdit(EditRefresh.Score);
     }
 
     private void ScaleShow_Click(object sender, RoutedEventArgs e)
@@ -417,6 +417,6 @@ public partial class MainWindow
 
     private void LyricsBox_LostFocus(object sender, RoutedEventArgs e)
     {
-        if (_project.Lyrics != LyricsBox.Text) { CaptureUndo(); _project.Lyrics = LyricsBox.Text; CommitEdit(EditRefresh.None); }
+        if (_project.Lyrics != LyricsBox.Text) { DocumentEdits.Run(Doc, p => { p.Lyrics = LyricsBox.Text; return true; }); RefreshAfterEdit(EditRefresh.None); }
     }
 }

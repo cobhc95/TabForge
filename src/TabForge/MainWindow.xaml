@@ -144,6 +144,7 @@
                         <MenuItem Header="Export _MIDI…" Click="ExportMidi_Click" local:MenuHotkey.Id="File.ExportMidi"/>
                         <MenuItem Header="_Render to audio file…" Click="Render_Click" local:MenuHotkey.Id="File.Render"/>
                         <MenuItem Header="Export _ASCII tab…" Click="ExportAscii_Click" local:MenuHotkey.Id="File.ExportAscii"/>
+                        <MenuItem Header="Export compatible .gp file…" Click="ExportGuitarPro_Click" local:MenuHotkey.Id="File.ExportGuitarPro"/>
                         <MenuItem Header="Export P_DF…" Click="ExportPdf_Click" local:MenuHotkey.Id="File.ExportPdf"/>
                         <MenuItem Header="Export Music_XML…" Click="ExportMusicXml_Click" local:MenuHotkey.Id="File.ExportMusicXml"/>
                         <MenuItem Header="Command pa_lette…" Click="CommandPalette_Click" local:MenuHotkey.Id="App.CommandPalette"/>
@@ -295,6 +296,7 @@
                         <MenuItem x:Name="ArrangementMenu" Header="Arrangement overview" Click="ToggleArrangement_Click" local:MenuHotkey.Id="View.Global" IsCheckable="True" IsChecked="True"/>
                         <MenuItem x:Name="ArrangementIndividualNotesMenu" Header="Show the notes in each track lane" Click="ArrangementIndividualNotesMenu_Click" IsCheckable="True"/>
                         <MenuItem x:Name="ArrangementContinuousBlocksMenu" Header="Show one continuous line per track lane" Click="ArrangementContinuousBlocksMenu_Click" IsCheckable="True"/>
+                        <MenuItem x:Name="PlayingBarMenu" Header="Highlight playing bar" Click="PlayingBarMenu_Click" local:MenuHotkey.Id="View.PlayingBar" IsCheckable="True"/>
                         <MenuItem Header="Mixer / VST" Click="ShowMixer_Click" local:MenuHotkey.Id="View.Mixer"/>
                         <Separator/>
                         <MenuItem x:Name="DockPanelsMenu" Header="Panels"/>
@@ -448,7 +450,8 @@
                         </ScrollViewer>
                     </DockPanel>
                 </Border>
-                <Grid x:Name="SectionsPanelContent" Grid.Row="2" Margin="8">
+                <ScrollViewer x:Name="SectionsPanelContent" Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False" Padding="8">
+                <Grid x:Name="SectionsPanelGrid" MinHeight="130">
                     <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
                     <GroupBox Header="Sections">
                         <DockPanel Margin="5">
@@ -539,6 +542,7 @@
                                  LostFocus="LyricsBox_LostFocus"/>
                     </Expander>
                 </Grid>
+                </ScrollViewer>
                 <GridSplitter x:Name="ControllerDockSplitter" Grid.Row="3" Height="5"
                               HorizontalAlignment="Stretch" VerticalAlignment="Center"
                               Background="{DynamicResource BorderSoftBrush}"

@@ -2,6 +2,45 @@
 
 All notable changes to TabForge. Downloads are on the [Releases page](https://github.com/cobhc95/TabForge/releases).
 
+## 0.5.1 — 2026-10-02
+
+A focused update: new playback and render options, smoother windows and tabs, very long songs, and a more faithful .gp save.
+
+### ✨ New
+
+- 🟨 **Highlight the playing bar** (off by default): **View > Highlight playing bar** shades the whole bar that is playing, across the staff and tab and behind the notes. Choose its colour and opacity in **Preferences > Playback > Appearance**, and optionally show the cursor's bar while stopped. The command can be bound to a key.
+- 🎚️ **Render a bar range or a section range**: **Render to file > Bounds** has two new choices, **Custom bars** (from bar N to bar M) and **Custom sections** (for example from "Intro" to the end of "Chorus"), using the same timing as "Selected bars".
+- 🗂️ **Dragging tabs feels like a browser**: dragging the only tab of a window moves the window itself, with no extra window and no empty "Untitled" tab. Drop it on another window's tab bar and it joins that window. Tabs dragged out of a window with several tabs still open a new window.
+- 📏 **The track list always fits its rows**: no empty band under the last track after resizing, maximising, restoring a layout or changing the UI scale. Dragging the track list's splitter makes the rows taller or shorter (up to 3x) and stops before a track would be cut off or a gap would appear. Double-click the splitter to go back to the default height.
+- 💾 **Know before a .gp loses anything**: saving or exporting a clean .gp first lists anything the file cannot hold (for example a long bend curve, a mix change inside a bar or a reverb send) and where it is. Keep a full TabForge copy (.tforge) beside it, save the compatible file only, or cancel. New command: **File > Export compatible .gp file**.
+
+### 📁 Files
+
+- 🎸 **Very long songs open**: Guitar Pro 3–5 songs of around 2,000 bars with many tracks now open in seconds and save normally. Project files are smaller and still open in TabForge 0.5.
+- 🎼 **A clean .gp keeps more**: bend shapes as drawn (a quick rise then hold no longer becomes a slow ramp), trill speed (1/8 to 1/64), Legato and Rasgueado, pick slides, and ghost notes inside accented, tenuto or staccato chords.
+- 🔊 **Exact track volume and pan** from .gp and .gpx files (before, they were rounded to 16 steps). Such tracks can sound very slightly louder or wider than in 0.5.
+- 🩹 **Damaged files**: a file with damaged data inside still opens, now with one short notice when far more of it looks impossible than any real song would.
+
+### 🪟 Windows, tabs and linked audio
+
+- Closing a window with several songs asks about every unsaved song, not only the one shown. Cancel keeps everything as it was.
+- Linked audio on a network or removable drive is allowed per song, including songs not saved yet. Allowing a folder for one song no longer allows it for others.
+- Each window and each song always plays and shows its own linked audio, whichever tab is in front.
+- Open in the current tab (Ctrl+O) replaces the tab it was started from, even if you switched tabs while a large song was importing.
+- Saving one song while another tab is shown no longer switches tabs behind the scenes.
+- A tab in the background updates its unsaved dot and name straight away.
+- Closed windows and their songs are freed from memory, also while a screen reader or other accessibility tool is running.
+
+### 🛠️ Fixes
+
+- Undoing or redoing a retune restores the tuning label and shift together with the strings.
+- "Write into the track's notation" from a MIDI clip whose notes fit nothing leaves the song exactly as it was.
+- Adding, deleting or moving a track refreshes the playback timing straight away.
+- A network share that does not answer no longer stalls the window while the timeline redraws.
+- At a large UI scale the Sections pane scrolls instead of cutting off its buttons.
+
+---
+
 ## 0.5 — 2026-10-01
 
 The first official release, and the first without a beta label.

@@ -1,0 +1,3 @@
+a154fce1d8bcf26cdc1aad88ca9b8aa208d635525e9e9767c3756fb2bf3d2364  TabForge.AlphaTab.1.8.4-tabforge.3.nupkg
+04a2287e6e56c6f83196c65d37bccb456adea4ee20dc7b22b249a675b8486eaa  TabForge.AlphaTab.dll (lib/netstandard2.0, inside the package)
+upstream commit  022a45c8e42370f9e12e68949d11eada370da83d (v1.8.4)

@@ -45,6 +45,24 @@ public sealed class AudioEngineClient : IDisposable
 {
     public static AudioEngineClient Instance { get; } = new();
 
+    public AudioEngineClient() { MediaAccess.Changed += OnMediaApprovalChanged; MediaAccess.Resolved += OnMediaResolved; }
+
+    /// <summary>A background classification finished (worker thread): clips that waited for it are judged again on the UI thread. Nothing to do before the first Sync (no slots, no UI context yet).</summary>
+    private void OnMediaResolved() { if (_ui is not null) RaiseOnUi(RefreshClips); }
+
+    /// <summary>An approval was given or revoked (any document): the clips of every live slot are judged again with their own document's context.</summary>
+    private void OnMediaApprovalChanged() => RaiseOnUi(RefreshClips);
+
+    internal void RefreshClips()
+    {
+        if (Rendering) return;   // like Sync: nothing is sent to the engine mid-render (the end of the render re-judges the clips)
+        foreach (var (slot, state) in _audioContext.ToList())
+        {
+            if (state.Media.IsClosed || !_slots.ContainsValue(slot) || _parkedSince.ContainsKey(slot)) continue;   // a closed document asks for nothing; gone, or parked (no clips): its owner's next sync judges them
+            SyncAudio(state.Track, slot, state.Mix, state.Media);
+        }
+    }
+
     private readonly object _gate = new();
     private Process? _process;
     private NamedPipeServerStream? _pipe;
@@ -111,8 +129,6 @@ public sealed class AudioEngineClient : IDisposable
 
     /// <summary>Plug-ins switched off after crashing (full paths); owned by the app settings.</summary>
     public Func<ICollection<string>>? Quarantine { get; set; }
-    /// <summary>Plug-ins skipped for now only (the active song's "Disable it" after a very slow load); never saved, never added to.</summary>
-    public Func<ICollection<string>>? SkipForNow { get; set; }
 
     /// <summary>
     /// Brings the engine in line with the tracks that need it: starts / stops it, loads changed chains, removes
@@ -120,21 +136,34 @@ public sealed class AudioEngineClient : IDisposable
     /// </summary>
     /// <param name="mix">The track's effective level and pan (0..127; level 0 when muted); default: its own settings.</param>
     /// <summary>True while File > Render runs: <see cref="Sync"/> does nothing, so the engine is not stopped or reloaded mid-render.</summary>
-    public bool Rendering { get; set; }
+    public bool Rendering
+    {
+        get => _rendering;
+        set
+        {
+            var was = _rendering;
+            _rendering = value;
+            if (was && !value) RaiseOnUi(RefreshClips);   // approvals that changed during the render are applied to the live slots now
+        }
+    }
+    private volatile bool _rendering;
 
     /// <param name="project">The song (group buses, master chain and the routing graph); null: tracks only.</param>
     /// <param name="owner">
     /// The document these tracks belong to (R-10: the engine has one explicit owner, the active document). Null: <paramref name="project"/>.
     /// Chains of an earlier owner are parked (kept loaded, silent) for <see cref="WarmIdle"/>, so switching back reloads nothing.
     /// </param>
-    public void Sync(IEnumerable<TrackModel> tracks, PluginSettings settings, Func<TrackModel, (int Volume, int Pan)>? mix = null, SongProject? project = null, object? owner = null)
+    /// <param name="media">The owning document's media context (base directory, approval scope): every linked audio clip of these tracks is judged with it. Null: no document (headless probes), nothing remote is allowed.</param>
+    /// <param name="skippedPlugins">The owning document's plug-ins skipped for now (R-06 "Disable it" after a very slow load): never saved, never added to.</param>
+    public void Sync(IEnumerable<TrackModel> tracks, PluginSettings settings, Func<TrackModel, (int Volume, int Pan)>? mix = null, SongProject? project = null, object? owner = null,
+        MediaContext? media = null, ICollection<string>? skippedPlugins = null)
     {
         if (Rendering) return;
         _ui ??= SynchronizationContext.Current;
         RecordingOffsetMs = settings.RecordingOffsetMs;
         owner ??= (object?)project ?? TracksOnlyOwner;
         ICollection<string> quarantined = Quarantine?.Invoke() ?? Array.Empty<string>();
-        if (SkipForNow?.Invoke() is { Count: > 0 } skipped)
+        if (skippedPlugins is { Count: > 0 } skipped)
             quarantined = quarantined.Concat(skipped).ToHashSet(StringComparer.OrdinalIgnoreCase);   // a copy: the quarantine list itself is not changed
         // Tracks whose MIDI plays through plug-ins, or that have audio (clips, or an armed input).
         var wanted = tracks.Where(t => MixerGroups.MidiInEngine(t) || MixerGroups.UsesEngineAudio(t)).ToList();
@@ -219,7 +248,7 @@ public sealed class AudioEngineClient : IDisposable
             SyncBypass(track, slot);
             SyncGain(track, slot);
             if (useSynth) SyncSynth(slot, MixerGroups.GmSounds(track));
-            if (!track.IsBus) SyncAudio(track, slot, mix?.Invoke(track) ?? (track.Mute ? 0 : track.Volume, track.Pan));
+            if (!track.IsBus) SyncAudio(track, slot, mix?.Invoke(track) ?? (track.Mute ? 0 : track.Volume, track.Pan), media);
         }
         foreach (var track in wanted) { if (!track.IsBus) SyncMidiRoute(track, wanted, project); SyncMidiProcessors(track); SyncWiring(track); }
         SyncGraph(wanted, project, liveElsewhere);
@@ -270,6 +299,7 @@ public sealed class AudioEngineClient : IDisposable
         _parkedSince.Remove(slot);
         _sentChains.Remove(slot);
         _sentAudio.Remove(slot);
+        _audioContext.Remove(slot);
         _sentRoutes.Remove(slot);
         _sentProcessors.Remove(slot);
         _sentWiring.Remove(slot);
@@ -555,11 +585,11 @@ public sealed class AudioEngineClient : IDisposable
     /// skipped for this song, or reported as not loaded by the engine. Cheap (no engine traffic); returns true when any flag changed, so the
     /// caller re-applies the automatic GM sound. Run before <see cref="MixerGroups.ApplyAutoGm"/>.
     /// </summary>
-    public bool RefreshAvailability(IEnumerable<TrackModel> tracks, PluginSettings settings)
+    public bool RefreshAvailability(IEnumerable<TrackModel> tracks, PluginSettings settings, ICollection<string>? skippedPlugins = null)
     {
         var changed = false;
         ICollection<string> quarantined = Quarantine?.Invoke() ?? Array.Empty<string>();
-        if (SkipForNow?.Invoke() is { Count: > 0 } skipped) quarantined = quarantined.Concat(skipped).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (skippedPlugins is { Count: > 0 } skipped) quarantined = quarantined.Concat(skipped).ToHashSet(StringComparer.OrdinalIgnoreCase);
         foreach (var track in tracks)
         {
             if (track.IsBus || track.Rig.Plugins.Count == 0) continue;
@@ -606,17 +636,23 @@ public sealed class AudioEngineClient : IDisposable
     private readonly Dictionary<int, string> _sentAudio = new();
 
     /// <summary>Level, clips and arm for one track: sent only when they changed (cheap to call often).</summary>
-    private void SyncAudio(TrackModel track, int slot, (int Volume, int Pan) mix)
+    // What each slot's clips were last judged with: the owning document's context. A later approval change re-judges them (RefreshClips)
+    // for every document that has live slots, not only the one that synced last.
+    private readonly Dictionary<int, (TrackModel Track, MediaContext Media, (int Volume, int Pan) Mix)> _audioContext = new();
+
+    private void SyncAudio(TrackModel track, int slot, (int Volume, int Pan) mix, MediaContext? media)
     {
-        // Linked audio goes through the media policy: device paths are refused, network / removable folders wait for the user's approval
-        // (a clip that is not allowed is simply not sent, so the engine never opens it); the engine gets the normalised absolute path.
-        var projectPath = MediaAccess.CurrentProjectPath();
+        media ??= MediaContext.Anonymous;
+        _audioContext[slot] = (track, media, mix);
+        // Linked audio goes through the media policy with the owning document's context: device paths are refused, network / removable
+        // folders wait for that document's approval (a clip that is not allowed is simply not sent, so the engine never opens it); the engine
+        // gets the normalised absolute path. This runs on the control thread; the engine's audio callback never evaluates paths.
         var clips = new List<ClipSpec>();
         foreach (var c in track.AudioClips)
         {
             if (c.IsMidi || !ClipLanes.Audible(track, c)) continue;
-            var access = MediaAccess.Evaluate(c.File, projectPath);
-            if (!access.Allowed) continue;
+            // UI thread: no file-system call. A clip whose classification is still being resolved is left out now and judged again when MediaAccess.Resolved arrives (RefreshClips).
+            if (MediaAccess.EvaluateNoWait(c.File, media) is not { Allowed: true } access) continue;
             clips.Add(new ClipSpec(access.Verdict.FullPath, c.StartSec, c.OffsetSec, c.SourceLengthSec, c.GainDb, c.Pitch, c.Speed));
         }
         var armMode = Array.IndexOf(AudioInputs.Audio, track.AudioInput);
@@ -625,6 +661,7 @@ public sealed class AudioEngineClient : IDisposable
         if (_sentAudio.TryGetValue(slot, out var sent) && sent == key) return;
         _sentAudio[slot] = key;
         Send(EngineCommand.SetTrackMix, w => { w.Write(slot); w.Write(mix.Volume); w.Write(mix.Pan); });
+        ClipsSentForTest?.Invoke(slot, clips);
         Send(EngineCommand.SetClips, w => { w.Write(slot); w.Write(clips); });
         Send(EngineCommand.SetArm, w => { w.Write(slot); w.Write(armed); w.Write(Math.Max(0, armMode)); w.Write(track.MonitorInput); });
     }
@@ -695,6 +732,8 @@ public sealed class AudioEngineClient : IDisposable
 
     /// <summary>Self-test taps: every command sent and every MIDI message written (null in the app).</summary>
     internal Action<EngineCommand>? SentForTest { get; set; }
+    /// <summary>Self-test tap: the clip list sent for a slot (the owning document's approved clips).</summary>
+    internal Action<int, IReadOnlyList<ClipSpec>>? ClipsSentForTest { get; set; }
     internal Action<TimedMidi>? WrittenForTest { get; set; }
 
     public void SetTransport(double tempo, bool playing) { if (IsRunning) Send(EngineCommand.SetTransport, w => { w.Write(tempo); w.Write(playing); }); }
@@ -1069,7 +1108,7 @@ public sealed class AudioEngineClient : IDisposable
         _sentChains.Clear();
         _chainRequests.Clear();
         _lastAcks.Clear();
-        _sentAudio.Clear();
+        _sentAudio.Clear(); _audioContext.Clear();
         _sentRoutes.Clear();
         _sentProcessors.Clear();
         _sentWiring.Clear();
@@ -1355,5 +1394,10 @@ public sealed class AudioEngineClient : IDisposable
 
     internal int? EngineProcessId => _process is { HasExited: false } p ? p.Id : null;
 
-    public void Dispose() => Stop();
+    public void Dispose()
+    {
+        MediaAccess.Changed -= OnMediaApprovalChanged;
+        MediaAccess.Resolved -= OnMediaResolved;
+        Stop();
+    }
 }

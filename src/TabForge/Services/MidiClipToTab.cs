@@ -44,7 +44,6 @@ public static class MidiClipToTab
             var (bar, slot) = keys[k];
             var measure = track.Measures[bar];
             var slots = Math.Max(1, MusicTime.BarSlots(project, bar));
-            while (measure.Cells.Count < slots) measure.Cells.Add(new TabCell());
             // Until the next beat in this bar (or the bar end), and no longer than the longest note.
             var next = k + 1 < keys.Count && keys[k + 1].Bar == bar ? keys[k + 1].Slot : slots;
             var gap = Math.Max(1, next - slot);
@@ -61,6 +60,7 @@ public static class MidiClipToTab
                 cell.Notes.Add(note);
             }
             if (cell.Notes.Count == 0) continue;
+            while (measure.Cells.Count < slots) measure.Cells.Add(new TabCell());   // pad only a bar that receives notes, so a clip that fits nothing leaves the song untouched
             measure.Cells[slot] = cell;
             written += cell.Notes.Count;
             touched.Add(bar);

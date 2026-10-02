@@ -187,6 +187,11 @@ public partial class MainWindow
     private void DetachHeldDocumentToNewWindow(int index, Point screenPoint)
     {
         if (index < 0 || index >= _documents.Documents.Count) return;
+        if (BrowserTabDragPolicy.TearOffAction(_documents.Documents.Count) == TabTearOffAction.MoveWindow)
+        {
+            MoveWholeWindowWithHeldPointer(screenPoint);
+            return;
+        }
         var session = _documents.Documents[index];
         CaptureDocumentState();
         _documents.Detach(index);
@@ -217,6 +222,42 @@ public partial class MainWindow
         }
     }
 
+    /// <summary>
+    /// A window's only tab was dragged out: the window itself follows the pointer (native caption loop, so snapping
+    /// still works) and no new window is created. Released over another window's tab strip, the tab merges there
+    /// and this window closes.
+    /// </summary>
+    private void MoveWholeWindowWithHeldPointer(Point screenPoint)
+    {
+        var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+        if (hwnd == IntPtr.Zero || (GetAsyncKeyState(VK_LBUTTON) & 0x8000) == 0) return;
+        if (WindowState != WindowState.Normal)
+        {
+            var fromDevice = PresentationSource.FromVisual(this)?.CompositionTarget?.TransformFromDevice ?? Matrix.Identity;
+            var dropDip = fromDevice.Transform(screenPoint);
+            WindowState = WindowState.Normal;
+            Left = dropDip.X - 120;
+            Top = dropDip.Y - 22;
+        }
+        ReleaseCapture();
+        LocationChanged += TearOffWindow_LocationChanged;
+        try { SendMessage(hwnd, WM_NCLBUTTONDOWN, (IntPtr)HTCAPTION, IntPtr.Zero); }
+        finally { LocationChanged -= TearOffWindow_LocationChanged; }
+        CompleteHeldTearOff();
+    }
+
+    /// <summary>Moves this window's only document into <paramref name="target"/> at <paramref name="index"/> and closes this window.</summary>
+    internal bool MergeSoleDocumentInto(MainWindow target, int index)
+    {
+        if (ReferenceEquals(target, this) || _documents.Documents.Count != 1) return false;
+        CaptureDocumentState();
+        var session = _documents.Detach(0);
+        if (session is null) return false;
+        target.AdoptDroppedDocument(session, Math.Max(0, index));
+        Close();
+        return true;
+    }
+
     private void TearOffWindow_LocationChanged(object? sender, EventArgs e) => UpdateAttachTargetFromCursor();
 
     private void UpdateAttachTargetFromCursor()
@@ -240,10 +281,7 @@ public partial class MainWindow
         var index = _attachTargetIndex;
         ClearAttachTarget();
         if (target is null || !target.IsVisible || !target.CanAcceptTabAttachAt(cursor)) return;
-        var session = _documents.Documents.Count > 0 ? _documents.Detach(0) : null;
-        if (session is null) return;
-        target.AdoptDroppedDocument(session, Math.Max(0, index));
-        Close();
+        MergeSoleDocumentInto(target, index);
     }
 
     private void ClearAttachTarget()

@@ -58,11 +58,12 @@ public static partial class EditCommands
         PasteSpecialOptions options, EditingSettings settings, out UndoCapture? capture)
     {
         capture = null;
+        using var timeline = p.BeginTimelineBatch();   // one invalidation for the whole paste (see PasteWithUndo)
         var transaction = undo.BeginTransaction(p);
         PasteOutcome outcome;
         try { outcome = PasteSpecial(p, clip, target, options, settings); }
         catch { undo.Cancel(transaction); throw; }
-        if (outcome.Changed) capture = undo.Commit(transaction);
+        if (outcome.Changed) { capture = undo.Commit(transaction); p.MarkTimelineChanged(); }
         else undo.Cancel(transaction);
         return outcome;
     }

@@ -35,109 +35,64 @@ public partial class MainWindow
     {
         if (_restoring) return null;
         var capture = _undo.Capture(_project);
-        if (capture.Stored) RememberPlaybackBarMapping(capture.Snapshot);
+        if (capture.Stored) Playback.RememberBarMapping(capture.Snapshot);
         return capture;
     }
 
-    private void RememberPlaybackBarMapping(UndoSnapshot snapshot)
-    {
-        if (!_isPlayingVisual || _playbackBarRemap is null) return;
-        _playbackBarMappingsBySnapshot[snapshot.Fingerprint] = _playbackBarRemap.ToArray();
-    }
-
+    /// <summary>Undo / redo while playing: the document state (remap, playhead bar) is <see cref="DocumentPlaybackState.RestoreBarMapping"/>; this refreshes the views from it.</summary>
     private void ApplyRestoredPlaybackBarMapping(UndoSnapshot snapshot)
     {
-        if (!_isPlayingVisual) return;
-        var previous = _playbackBarRemap ?? Enumerable.Range(0, MaxMeasures()).ToArray();
-        var restored = _playbackBarMappingsBySnapshot.TryGetValue(snapshot.Fingerprint, out var saved)
-            ? saved.ToArray()
-            : previous.ToArray();
-        var priorLiveBar = _playheadBar;
-        var sourceBar = Playback.Engine.Playhead().Bar;
-        if (sourceBar < 0 || sourceBar >= restored.Length)
-            sourceBar = Array.IndexOf(previous, _playheadBar);
-        if (sourceBar >= restored.Length)
+        if (Playback.RestoreBarMapping(snapshot, MaxMeasures(), Playback.Engine.Playhead().Bar) is not { } restored) return;
+        Editor.PlaybackBarRemap = restored.Remap;
+        if (restored.PlayheadMoved)
         {
-            var previousLength = restored.Length;
-            Array.Resize(ref restored, sourceBar + 1);
-            Array.Fill(restored, -1, previousLength, restored.Length - previousLength);
-        }
-        _playbackBarRemap = restored;
-        Editor.PlaybackBarRemap = restored;
-        if (sourceBar >= 0 && sourceBar < restored.Length)
-        {
-            _playheadBar = restored[sourceBar] >= 0
-                ? restored[sourceBar]
-                : Math.Clamp(priorLiveBar, 0, Math.Max(0, MaxMeasures() - 1));
             Editor.SetPlayhead(_playheadBar, _playheadCell);
             Arrangement.SetPlayhead(_playheadBar, _playheadFraction, playbackActive: true, playbackPaused: _midi.IsPaused);
             Playhead.SetGeometry(Editor.PlayheadGeometry());
             Playhead.SetDurationGeometries(Editor.PlaybackDurationGeometries());
         }
         UpdatePlayingSectionMarker(_playheadBar, forceRefresh: true);
-        Playback.Engine.RefreshArrangement(_project, restored, Math.Clamp(priorLiveBar, 0, Math.Max(0, MaxMeasures() - 1)));
-        RememberPlaybackBarMapping(snapshot);
+        Playback.Engine.RefreshArrangement(_project, restored.Remap, restored.PriorLiveBar);
     }
 
-    /// <summary>Re-bases saved edit-state mappings when the engine compiles a new current-score timeline.</summary>
+    /// <summary>The engine compiled a new timeline: the document re-bases its saved mappings; the editor follows.</summary>
     private void RebasePlaybackBarMappings()
     {
-        if (!_isPlayingVisual)
-        {
-            _playbackBarRemap = null;
-            Editor.PlaybackBarRemap = null;
-            _playbackBarMappingsBySnapshot.Clear();
-            return;
-        }
-
-        var previous = _playbackBarRemap ?? Enumerable.Range(0, MaxMeasures()).ToArray();
-        var currentCount = MaxMeasures();
-        foreach (var entry in _playbackBarMappingsBySnapshot.ToArray())
-            _playbackBarMappingsBySnapshot[entry.Key] = SectionReorderService.RebaseBarRemap(previous, entry.Value, currentCount);
-
-        _playbackBarRemap = Enumerable.Range(0, currentCount).ToArray();
+        Playback.RebaseBarMappings(MaxMeasures(), () => _undo.Snapshot(_project));
         Editor.PlaybackBarRemap = _playbackBarRemap;
-        RememberPlaybackBarMapping(_undo.Snapshot(_project));
     }
 
+
+    // The model half (history, restore, clean / dirty, timeline invalidation) is DocumentEdits.Undo / Redo on the displayed document; the view refresh is below.
     private void Undo_Click(object sender, RoutedEventArgs e)
     {
         if (!_undo.CanUndo) return;
-        var current = _undo.Snapshot(_project);
-        if (!_undo.TryUndo(current, out var target)) return;
-        RememberPlaybackBarMapping(current);
-        RestoreSnapshot(target);
+        var selected = TrackMixerGrid.SelectedIndex;
+        if (DocumentEdits.Undo(Doc) is not { } target) return;
+        RefreshAfterRestore(target, selected);
         StatusText.Text = "Undo";
     }
 
     private void Redo_Click(object sender, RoutedEventArgs e)
     {
         if (!_undo.CanRedo) return;
-        var current = _undo.Snapshot(_project);
-        if (!_undo.TryRedo(current, out var target)) return;
-        RememberPlaybackBarMapping(current);
-        RestoreSnapshot(target);
+        var selected = TrackMixerGrid.SelectedIndex;
+        if (DocumentEdits.Redo(Doc) is not { } target) return;
+        RefreshAfterRestore(target, selected);
         StatusText.Text = "Redo";
     }
 
-    private void RestoreSnapshot(UndoSnapshot snapshot)
+    private void RefreshAfterRestore(UndoSnapshot snapshot, int selected)
     {
-        var selected = TrackMixerGrid.SelectedIndex;
         _restoring = true;
         try
         {
-            // Unchanged bars move over from the song being replaced; only the bars the undo changes are rebuilt.
-            _project = _undo.Restore(snapshot, _project);
-            _project.IsDirty = true;
-            _project.MarkTimelineChanged();   // A5-08: undo/redo may restore in place
-            // Undoing back to the saved state clears the "*": the exact content check runs here only.
-            if (Doc.IsCleanContent(snapshot)) _project.IsDirty = false;
             TempoBox.Text = _project.Tempo.ToString();
             LyricsBox.Text = _project.Lyrics ?? "";
             Editor.Project = _project;
             RefreshTracks();
             if (_project.Tracks.Count > 0) TrackMixerGrid.SelectedIndex = Math.Clamp(selected, 0, _project.Tracks.Count - 1);
-            RefreshPluginChain(); RefreshArrangement(); RefreshMarkers(); RefreshInstrument(); RefreshStatus(); UpdateTitle();
+            RefreshPluginChain(); RefreshArrangement(); RefreshMarkers(); RefreshInstrument(); RefreshStatus(); UpdateTitle(); UpdateTuningLabel();
             ScheduleFitTimelineToTracks();
             RefreshToolsPalette();
             ApplyRestoredPlaybackBarMapping(snapshot);
@@ -157,19 +112,17 @@ public partial class MainWindow
 
     private void InsertBar_Click(object sender, RoutedEventArgs e)
     {
-        CaptureUndo();
         var at = Math.Clamp(Editor.SelectedMeasure, 0, MaxMeasures());
-        _arrangementController.InsertBar(_project, at, Editor.SelectedMeasure, moveMarkers: false);
-        CommitEdit(EditRefresh.Score | EditRefresh.Arrangement); StatusText.Text = $"Inserted bar {at + 1}";
+        _arrangementController.InsertBar(Doc, at, Editor.SelectedMeasure, moveMarkers: false);
+        RefreshAfterEdit(EditRefresh.Score | EditRefresh.Arrangement); StatusText.Text = $"Inserted bar {at + 1}";
     }
 
     /// <summary>Adds an empty bar after the last one (the standard "Add bar"), keeping the cursor where it is.</summary>
     private void AppendBar()
     {
-        CaptureUndo();
         var at = MaxMeasures();
-        _arrangementController.InsertBar(_project, at, Math.Max(0, at - 1), moveMarkers: false);
-        CommitEdit(EditRefresh.Score | EditRefresh.Arrangement);
+        _arrangementController.InsertBar(Doc, at, Math.Max(0, at - 1), moveMarkers: false);
+        RefreshAfterEdit(EditRefresh.Score | EditRefresh.Arrangement);
         StatusText.Text = $"Added bar {at + 1} at the end";
     }
 
@@ -193,9 +146,8 @@ public partial class MainWindow
                 $"Delete bar {Editor.SelectedMeasure + 1} from every track?",
                 "Delete bar", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes)
             return;
-        CaptureUndo();
-        _arrangementController.DeleteBar(_project, Editor.SelectedMeasure, -1, allTracks: true, moveMarkers: false);
-        _project.IsDirty = true; _project.MarkTimelineChanged(); Editor.SetPosition(Math.Max(0, Editor.SelectedMeasure - 1), 0, Editor.SelectedString);
+        _arrangementController.DeleteBar(Doc, Editor.SelectedMeasure, -1, allTracks: true, moveMarkers: false);
+        Editor.SetPosition(Math.Max(0, Editor.SelectedMeasure - 1), 0, Editor.SelectedString);
         RefreshArrangement(); Editor.InvalidateScoreLayout(); UpdateTitle(); StatusText.Text = "Deleted bar";
     }
 
@@ -213,19 +165,23 @@ public partial class MainWindow
         if (_project.Lyrics != LyricsBox.Text) _project.Lyrics = LyricsBox.Text;
         var r = Views.ProjectSettingsWindow.Show(this, _project);
         if (r is null) return;
-        CaptureUndo();
-        _project.Title = r.Title; _project.Subtitle = r.Subtitle; _project.Artist = r.Artist; _project.Album = r.Album;
-        _project.MusicAuthor = r.MusicAuthor; _project.LyricsAuthor = r.LyricsAuthor;
-        _project.TabAuthor = r.TabAuthor; _project.Copyright = r.Copyright;
-        _project.Instructions = r.Instructions; _project.Notice = r.Notice;
-        _project.Lyrics = r.Lyrics; LyricsBox.Text = r.Lyrics;
-        _project.GrayInactiveVoice = r.GrayInactiveVoice;
-        _project.Tempo = r.Tempo; TempoBox.Text = r.Tempo.ToString();
-        if (r.TimeSigNum != _project.TimeSignatureNumerator || r.TimeSigDenom != _project.TimeSignatureDenominator)
-            _arrangementController.SetSongTimeSignature(_project, r.TimeSigNum, r.TimeSigDenom);
-        if (r.KeySignature != _project.KeySignature || r.KeyMinor != _project.KeySignatureMinor)
-            _arrangementController.SetSongKeySignature(_project, r.KeySignature, r.KeyMinor);
-        CommitEdit(EditRefresh.Score | EditRefresh.TimelineGeometry | EditRefresh.Palette | EditRefresh.Status);
+        DocumentEdits.Run(Doc, p =>
+        {
+            p.Title = r.Title; p.Subtitle = r.Subtitle; p.Artist = r.Artist; p.Album = r.Album;
+            p.MusicAuthor = r.MusicAuthor; p.LyricsAuthor = r.LyricsAuthor;
+            p.TabAuthor = r.TabAuthor; p.Copyright = r.Copyright;
+            p.Instructions = r.Instructions; p.Notice = r.Notice;
+            p.Lyrics = r.Lyrics;
+            p.GrayInactiveVoice = r.GrayInactiveVoice;
+            p.Tempo = r.Tempo;
+            if (r.TimeSigNum != p.TimeSignatureNumerator || r.TimeSigDenom != p.TimeSignatureDenominator)
+                _arrangementController.SetSongTimeSignature(p, r.TimeSigNum, r.TimeSigDenom);
+            if (r.KeySignature != p.KeySignature || r.KeyMinor != p.KeySignatureMinor)
+                _arrangementController.SetSongKeySignature(p, r.KeySignature, r.KeyMinor);
+            return true;
+        });
+        LyricsBox.Text = r.Lyrics; TempoBox.Text = r.Tempo.ToString();
+        RefreshAfterEdit(EditRefresh.Score | EditRefresh.TimelineGeometry | EditRefresh.Palette | EditRefresh.Status);
         StatusText.Text = "Project settings updated";
     }
 
@@ -236,12 +192,16 @@ public partial class MainWindow
         var r = GpDialogs.TimeSignature(current?.TimeSigNum ?? _project.TimeSignatureNumerator,
             current?.TimeSigDenom ?? _project.TimeSignatureDenominator, range is { } sel ? $"bars {sel.First + 1}-{sel.Last + 1}" : null);
         if (r is null) return;
-        CaptureUndo();
         var first = range?.First ?? Editor.SelectedMeasure;
-        var last = range is { } span
-            ? BarSignatures.SetTimeRange(_project, span.First, span.Last, r.Value.num, r.Value.denom)
-            : BarSignatures.SetTime(_project, first, r.Value.num, r.Value.denom, !r.Value.onlyThisBar);
-        CommitEdit(EditRefresh.Score | EditRefresh.TimelineGeometry | EditRefresh.Palette | EditRefresh.Status);
+        var last = first;
+        DocumentEdits.Run(Doc, p =>
+        {
+            last = range is { } span
+                ? BarSignatures.SetTimeRange(p, span.First, span.Last, r.Value.num, r.Value.denom)
+                : BarSignatures.SetTime(p, first, r.Value.num, r.Value.denom, !r.Value.onlyThisBar);
+            return true;
+        });
+        RefreshAfterEdit(EditRefresh.Score | EditRefresh.TimelineGeometry | EditRefresh.Palette | EditRefresh.Status);
         StatusText.Text = $"Time signature {r.Value.num}/{r.Value.denom} {SignatureSpan(first, last)}";
     }
 
@@ -266,29 +226,33 @@ public partial class MainWindow
         var r = GpDialogs.KeySignature(current?.KeySignature ?? _project.KeySignature,
             current?.KeySignatureMinor ?? _project.KeySignatureMinor, range is { } sel ? $"bars {sel.First + 1}-{sel.Last + 1}" : null);
         if (r is null) return;
-        CaptureUndo();
         var first = range?.First ?? Editor.SelectedMeasure;
-        var last = range is { } span
-            ? BarSignatures.SetKeyRange(_project, span.First, span.Last, r.Value.signature, r.Value.minor)
-            : BarSignatures.SetKey(_project, first, r.Value.signature, r.Value.minor, !r.Value.onlyThisBar);
-        CommitEdit(EditRefresh.Score | EditRefresh.Palette | EditRefresh.Status);
+        var last = first;
+        DocumentEdits.Run(Doc, p =>
+        {
+            last = range is { } span
+                ? BarSignatures.SetKeyRange(p, span.First, span.Last, r.Value.signature, r.Value.minor)
+                : BarSignatures.SetKey(p, first, r.Value.signature, r.Value.minor, !r.Value.onlyThisBar);
+            return true;
+        });
+        RefreshAfterEdit(EditRefresh.Score | EditRefresh.Palette | EditRefresh.Status);
         StatusText.Text = $"Key signature changed {SignatureSpan(first, last)}";
     }
 
     private void Clef_Click(object sender, RoutedEventArgs e)
     {
         if (CurBar() is null) return;
-        CaptureUndo();
-        if (!_arrangementController.TryCycleClef(_project, TrackMixerGrid.SelectedIndex, Editor.SelectedMeasure, out var clef)) return;
-        CommitEdit(EditRefresh.Score); StatusText.Text = $"Clef {clef}";
+        var clef = "";
+        if (!DocumentEdits.Run(Doc, p => _arrangementController.TryCycleClef(p, TrackMixerGrid.SelectedIndex, Editor.SelectedMeasure, out clef)).Changed) return;
+        RefreshAfterEdit(EditRefresh.Score); StatusText.Text = $"Clef {clef}";
     }
 
     private void TripletFeel_Click(object sender, RoutedEventArgs e)
     {
         if (CurBar() is null) return;
-        CaptureUndo();
-        if (!_arrangementController.TryToggleTripletFeel(_project, TrackMixerGrid.SelectedIndex, Editor.SelectedMeasure, out var v)) return;
-        CommitEdit(EditRefresh.None); StatusText.Text = v ? "Triplet feel on" : "Triplet feel off";
+        var v = false;
+        if (!DocumentEdits.Run(Doc, p => _arrangementController.TryToggleTripletFeel(p, TrackMixerGrid.SelectedIndex, Editor.SelectedMeasure, out v)).Changed) return;
+        RefreshAfterEdit(EditRefresh.None); StatusText.Text = v ? "Triplet feel on" : "Triplet feel off";
     }
 
     // Repeat open/close share EditCommands with the [ and ] shortcuts (through the editor): the same bar change in every
@@ -311,35 +275,31 @@ public partial class MainWindow
         var bar = CurBar(); if (bar is null) return;
         var txt = GpDialogs.Directions(bar.Directions, bar.AlternateEnding, out var ending);
         if (txt is null) return;
-        CaptureUndo();
-        _arrangementController.TrySetDirections(_project, Editor.SelectedMeasure, txt, ending);
-        CommitEdit(EditRefresh.Score | EditRefresh.Palette);
+        DocumentEdits.Run(Doc, p => _arrangementController.TrySetDirections(p, Editor.SelectedMeasure, txt, ending));
+        RefreshAfterEdit(EditRefresh.Score | EditRefresh.Palette);
     }
 
     private void DoubleBar_Click(object sender, RoutedEventArgs e)
     {
         if (CurBar() is null) return;
-        CaptureUndo();
-        if (!_arrangementController.TryToggleDoubleBar(_project, TrackMixerGrid.SelectedIndex, Editor.SelectedMeasure, out _)) return;
-        CommitEdit(EditRefresh.Score | EditRefresh.Palette);
+        if (!DocumentEdits.Run(Doc, p => _arrangementController.TryToggleDoubleBar(p, TrackMixerGrid.SelectedIndex, Editor.SelectedMeasure, out _)).Changed) return;
+        RefreshAfterEdit(EditRefresh.Score | EditRefresh.Palette);
     }
 
     private void Simile1_Click(object sender, RoutedEventArgs e)
     {
         if (CurBar() is null) return;
-        CaptureUndo();
-        if (!_arrangementController.TrySetSimile(_project, Editor.SelectedMeasure, 1,
-                !_project.Tracks[TrackMixerGrid.SelectedIndex].Measures[Editor.SelectedMeasure].SimileOneBar)) return;
-        CommitEdit(EditRefresh.Score);
+        if (!DocumentEdits.Run(Doc, p => _arrangementController.TrySetSimile(p, Editor.SelectedMeasure, 1,
+                !p.Tracks[TrackMixerGrid.SelectedIndex].Measures[Editor.SelectedMeasure].SimileOneBar)).Changed) return;
+        RefreshAfterEdit(EditRefresh.Score);
     }
 
     private void Simile2_Click(object sender, RoutedEventArgs e)
     {
         if (CurBar() is null) return;
-        CaptureUndo();
-        if (!_arrangementController.TrySetSimile(_project, Editor.SelectedMeasure, 2,
-                !_project.Tracks[TrackMixerGrid.SelectedIndex].Measures[Editor.SelectedMeasure].SimileTwoBar)) return;
-        CommitEdit(EditRefresh.Score);
+        if (!DocumentEdits.Run(Doc, p => _arrangementController.TrySetSimile(p, Editor.SelectedMeasure, 2,
+                !p.Tracks[TrackMixerGrid.SelectedIndex].Measures[Editor.SelectedMeasure].SimileTwoBar)).Changed) return;
+        RefreshAfterEdit(EditRefresh.Score);
     }
 
     private void Section_Click(object sender, RoutedEventArgs e)
@@ -347,9 +307,8 @@ public partial class MainWindow
         var bar = CurBar(); if (bar is null) return;
         var txt = GpDialogs.Prompt("Section", "Section name:", bar.SectionName);
         if (txt is null) return;
-        CaptureUndo();
-        _arrangementController.TrySetSectionName(_project, Editor.SelectedMeasure, txt);
-        CommitEdit(EditRefresh.Score | EditRefresh.Arrangement);
+        DocumentEdits.Run(Doc, p => _arrangementController.TrySetSectionName(p, Editor.SelectedMeasure, txt));
+        RefreshAfterEdit(EditRefresh.Score | EditRefresh.Arrangement);
     }
 
 
@@ -423,7 +382,7 @@ public partial class MainWindow
         var c = Editor.CurrentCell(); if (c is null) return;
         var txt = GpDialogs.Prompt("Chord (A)", "Chord name (e.g. Am, G7):", c.ChordName ?? "");
         if (txt is null) return;
-        CaptureUndo(); c.ChordName = txt; CommitEdit(EditRefresh.Score);
+        DocumentEdits.Run(Doc, _ => { c.ChordName = txt; return true; }); RefreshAfterEdit(EditRefresh.Score);
     }
 
     private void Text_Click(object sender, RoutedEventArgs e)
@@ -431,7 +390,7 @@ public partial class MainWindow
         var c = Editor.CurrentCell(); if (c is null) return;
         var txt = GpDialogs.Prompt("Text (T)", "Beat text:", c.Text ?? "");
         if (txt is null) return;
-        CaptureUndo(); c.Text = txt; CommitEdit(EditRefresh.Score);
+        DocumentEdits.Run(Doc, _ => { c.Text = txt; return true; }); RefreshAfterEdit(EditRefresh.Score);
     }
 
     // ---------- markers ----------
@@ -449,9 +408,8 @@ public partial class MainWindow
         }
         var marker = GpDialogs.Marker("Section", "#2E74B5");
         if (marker is null) return;
-        CaptureUndo();
-        _project.Markers.Add(new MarkerModel { MeasureIndex = bar, Title = marker.Value.title, ColorHex = marker.Value.color });
-        CommitEdit(EditRefresh.Score | EditRefresh.Markers | EditRefresh.Arrangement);
+        DocumentEdits.Run(Doc, p => { p.Markers.Add(new MarkerModel { MeasureIndex = bar, Title = marker.Value.title, ColorHex = marker.Value.color }); return true; });
+        RefreshAfterEdit(EditRefresh.Score | EditRefresh.Markers | EditRefresh.Arrangement);
         StatusText.Text = $"Added section \"{marker.Value.title}\" at bar {bar + 1}";
     }
 
@@ -484,7 +442,7 @@ public partial class MainWindow
     private void MarkerDel_Click(object sender, RoutedEventArgs e)
     {
         if (MarkerList.SelectedItem is not MarkerModel m) return;
-        CaptureUndo(); _project.Markers.Remove(m); CommitEdit(EditRefresh.Score | EditRefresh.Markers);
+        DocumentEdits.Run(Doc, p => p.Markers.Remove(m)); RefreshAfterEdit(EditRefresh.Score | EditRefresh.Markers);
         StatusText.Text = $"Removed the section marker '{m.Title}'; its bars and notes stay (Undo brings the marker back)";
     }
 

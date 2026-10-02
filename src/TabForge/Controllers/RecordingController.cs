@@ -184,7 +184,7 @@ internal sealed class RecordingController
         if (_recordingHooked) return;
         _recordingHooked = true;
         var engine = AudioEngineClient.Instance;
-        engine.Recorded += (track, file, startSec, lengthSec) =>
+        _onRecorded = (track, file, startSec, lengthSec) =>
         {
             Arrangement.LiveTakes.RemoveAll(t => !t.Midi && ReferenceEquals(t.Track, track));
             Arrangement.RefreshLiveTakes();
@@ -202,9 +202,37 @@ internal sealed class RecordingController
             _host.ClipsChanged(true);
             _host.SetStatus(takes.Count > 1 ? $"Recorded {takes.Count} takes on {track.Name} (the newest plays)" : $"Recorded {lengthSec:0.0} s on {track.Name}");
         };
-        engine.InputError += message => _host.SetStatus($"Audio input: {message}");
-        engine.RecordingLoss += message => { _host.SetStatus("Recording lost input"); _host.ShowNotice(message); };
+        _onInputError = message => _host.SetStatus($"Audio input: {message}");
+        _onRecordingLoss = message => { _host.SetStatus("Recording lost input"); _host.ShowNotice(message); };
+        engine.Recorded += _onRecorded;
+        engine.InputError += _onInputError;
+        engine.RecordingLoss += _onRecordingLoss;
         _midiInput.Message += OnMidiInput;
+    }
+
+    // The handlers HookRecording attached to the shared audio engine client, kept so Release can remove exactly them.
+    private Action<TrackModel, string, double, double>? _onRecorded;
+    private Action<string>? _onInputError, _onRecordingLoss;
+    private bool _released;
+
+    /// <summary>
+    /// The window that owns this controller has really closed: nothing of it stays attached to the shared audio engine client, the MIDI
+    /// input or the render loop, and input that is still queued is dropped. A recording in progress is ended (its take file is kept).
+    /// Safe to call more than once.
+    /// </summary>
+    public void Release()
+    {
+        if (_released) return;
+        _released = true;
+        var engine = AudioEngineClient.Instance;
+        if (_recording) { _recording = false; engine.StopRecording(); }
+        if (_onRecorded is not null) engine.Recorded -= _onRecorded;
+        if (_onInputError is not null) engine.InputError -= _onInputError;
+        if (_onRecordingLoss is not null) engine.RecordingLoss -= _onRecordingLoss;
+        _onRecorded = null; _onInputError = null; _onRecordingLoss = null;
+        _midiInput.Message -= OnMidiInput;
+        if (_midiInput.IsOpen) _midiInput.Close();
+        if (_frameHooked) { _frameHooked = false; CompositionTarget.Rendering -= OnRecordFrame; }
     }
 
     /// <summary>Takes of one recording on one track: each on the first lane with room, the last one plays.</summary>
@@ -244,6 +272,7 @@ internal sealed class RecordingController
     {
         _host.Dispatcher.BeginInvoke(() =>
         {
+            if (_released) return;
             var project = Project;
             var type = status & 0xF0;
             var channels = ChannelAllocator.Assign(project);

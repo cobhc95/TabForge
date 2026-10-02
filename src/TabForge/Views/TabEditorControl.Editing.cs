@@ -397,12 +397,8 @@ public sealed partial class TabEditorControl
         return 0;
     }
 
-    private static int MidiOf(TrackModel track, int stringIndex, int fret)
-    {
-        // Drum tracks: the number typed is the GM percussion note itself (as in the reference).
-        if (track.StringTunings.Count == 0 || track.MidiChannel == 9 || track.Kind == TrackKind.Drums) return fret;
-        return track.PitchOf(stringIndex, fret);   // tuning + capo + fret
-    }
+    // Drum tracks: the number typed is the GM percussion note itself (as in the reference); otherwise tuning + capo + fret.
+    private static int MidiOf(TrackModel track, int stringIndex, int fret) => Services.EditCommands.NoteMidi(track, stringIndex, fret);
 
     private void ApplyPendingDuration(TabCell cell)
     {
@@ -869,13 +865,8 @@ public sealed partial class TabEditorControl
         {
             var notes = ToolCells(createVoice: true).SelectMany(cell => cell.Notes).ToList();
             if (notes.Count == 0) return;
-            var add = notes.Any(note => !note.Techniques.Contains(technique));
             EditStarting?.Invoke(this, EventArgs.Empty);
-            foreach (var selectedNote in notes)
-            {
-                if (add) selectedNote.Techniques.Add(technique);
-                else selectedNote.Techniques.Remove(technique);
-            }
+            Services.EditCommands.ToggleTechnique(notes, technique);   // on when any note lacks it, otherwise off for all
             EditedNow();
             return;
         }

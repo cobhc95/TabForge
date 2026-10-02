@@ -77,8 +77,8 @@ public partial class PreferencesWindow : Window
         return category;
     }
 
-    /// <summary>Set by the main window: applies the default instrument view to every track of the open song.</summary>
-    internal static Action<string>? ShowAllTracksAs { get; set; }
+    /// <summary>The actions of the main window that opened this dialog (Linked audio, quarantine, "Apply to all tracks"); null for an unowned test dialog.</summary>
+    private readonly SettingsWindowActions? _actions;
     private string? _recordingActionId;
     private (string ActionId, string Gesture, string ConflictingActionId)? _pendingConflict;
     private bool _dirty;
@@ -93,13 +93,14 @@ public partial class PreferencesWindow : Window
     public event Action<AppSettings>? SettingsPreviewed;
 
     /// <summary>Creates an unowned settings window for in-process tests.</summary>
-    public PreferencesWindow(AppSettings current) : this(current, null, null, null) { }
+    public PreferencesWindow(AppSettings current) : this(current, null, null, null, null) { }
 
-    internal PreferencesWindow(AppSettings current, Window? owner, Action<AppSettings>? apply, Action<AppSettings>? preview)
+    internal PreferencesWindow(AppSettings current, Window? owner, Action<AppSettings>? apply, Action<AppSettings>? preview, SettingsWindowActions? actions)
     {
         InitializeComponent();
         Title = $"TabForge Settings - {AppInfo.DisplayVersion}";
         if (owner is not null) Owner = owner;
+        _actions = actions;
         _apply = apply;
         _preview = preview;
         _settings = SettingsMigration.Clone(current);
@@ -487,9 +488,6 @@ public partial class PreferencesWindow : Window
         };
     }
 
-    /// <summary>Hook set by the main window: opens the Linked audio window and returns the approvals as they are afterwards.</summary>
-    internal static Func<List<MediaApproval>>? ManageLinkedAudio { get; set; }
-
     /// <summary>The button of a <see cref="SettingKind.Button"/> row: each key has its own action.</summary>
     private FrameworkElement BuildRowButton(SettingDescriptor descriptor)
     {
@@ -498,8 +496,8 @@ public partial class PreferencesWindow : Window
             case "score.textfonts":
                 return RowButton(descriptor, "Text & fonts…", true, OpenScoreTextFonts);
             case "fretboard.showallas":
-                return RowButton(descriptor, "Apply to all tracks", ShowAllTracksAs is not null,
-                    () => ShowAllTracksAs?.Invoke(_settings.Editing.InstrumentView));
+                return RowButton(descriptor, "Apply to all tracks", _actions?.ShowAllTracksAs is not null,
+                    () => _actions?.ShowAllTracksAs?.Invoke(_settings.Editing.InstrumentView));
             case "vst.quarantine":
                 return BuildQuarantineButton(descriptor);
             default:
@@ -507,14 +505,11 @@ public partial class PreferencesWindow : Window
         }
     }
 
-    /// <summary>Hook set by the main window: lists the plug-ins switched off after a crash (live settings) with Allow again; returns the list afterwards.</summary>
-    internal static Func<Window, List<string>>? ManageQuarantine { get; set; }
-
     private FrameworkElement BuildQuarantineButton(SettingDescriptor descriptor)
     {
-        var button = RowButton(descriptor, "Plug-ins switched off after a crash…", ManageQuarantine is not null, () =>
+        var button = RowButton(descriptor, "Plug-ins switched off after a crash…", _actions?.ManageQuarantine is not null, () =>
         {
-            if (ManageQuarantine is not { } open) return;
+            if (_actions?.ManageQuarantine is not { } open) return;
             // Allow again changes the live settings straight away (like the linked-audio approvals); keep this window's copy and baseline in step.
             var list = open(this);
             _settings.Plugins.Quarantined = list.ToList();
@@ -546,14 +541,14 @@ public partial class PreferencesWindow : Window
     private FrameworkElement BuildLinkedAudioButton(SettingDescriptor descriptor)
     {
         var button = new Button { Content = "Manage approved folders…", Padding = new Thickness(10, 3, 10, 3), ToolTip = descriptor.Tooltip(_settings.Hotkeys),
-            IsEnabled = ManageLinkedAudio is not null };
+            IsEnabled = _actions?.ManageLinkedAudio is not null };
         AutomationProperties.SetName(button, "Manage approved folders");
         button.Click += (_, _) =>
         {
-            if (ManageLinkedAudio is not { } open) return;
+            if (_actions?.ManageLinkedAudio is not { } open) return;
             // Approvals change straight away (they are a safety decision); keep this window's copy and its baseline in step
             // so Apply does not bring back a revoked folder and Cancel does not undo one.
-            var approvals = open();
+            var approvals = open(this);
             _settings.Audio.ApprovedMedia = approvals.Select(a => new MediaApproval { Project = a.Project, Folder = a.Folder }).ToList();
             _baseline.Audio.ApprovedMedia = approvals.Select(a => new MediaApproval { Project = a.Project, Folder = a.Folder }).ToList();
         };
@@ -1571,7 +1566,8 @@ public partial class PreferencesWindow : Window
             // Cancelling restores the baseline, so record the choice there too; the main window saves it.
             _baseline.General.ConfirmDiscardSettingsChanges = false;
             _settings.General.ConfirmDiscardSettingsChanges = false;
-            Dispatcher.BeginInvoke(new Action(() => DiscardPrompt.DisableAndSave()));
+            var host = DiscardPrompt.HostOf(this);   // the window that opened this dialog
+            Dispatcher.BeginInvoke(new Action(() => host?.DisableDiscardWarning()));
         }
         return discard;
     }

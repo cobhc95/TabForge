@@ -6,7 +6,7 @@ using TabForge.Services;
 namespace TabForge.Documents;
 
 /// <param name="Notice">Something the user should know about the opened file (e.g. its .tfaudio did not match); null when all is well.</param>
-public readonly record struct OpenedScore(SongProject Project, string? SessionPath, bool ImportedFromGuitarPro, string? Notice = null);
+public readonly record struct OpenedScore(SongProject Project, string? SessionPath, bool ImportedFromGuitarPro, string? Notice = null, string? SourcePath = null);
 
 /// <summary>File-level document operations kept separate from window prompts and tab presentation.</summary>
 public sealed class DocumentController
@@ -38,13 +38,18 @@ public sealed class DocumentController
             project = GuitarProImporter.Import(path);
             // A6-02: an embedded TabForge project that was present but unusable is reported (the worker path adds it through its own notices).
             if (GuitarProImporter.LastEmbeddedRejection is { } rejected) notices.Add(rejected);
+            if (GuitarProImporter.LastDamageNotice is { } damaged) notices.Add(damaged);
         }
         else project = importGuitarPro(path, notices);
         // A5-04: the song's own title wins (also for a TabForge-embedded project); the file name only fills an empty one.
         if (string.IsNullOrWhiteSpace(project.Title)) project.Title = Path.GetFileNameWithoutExtension(path);
         // A clean .gp saved with its TabForge audio data beside it ("song.tfaudio"): bring the mixer and FX back.
-        if (path.EndsWith(".gp", StringComparison.OrdinalIgnoreCase)) AudioDataFile.TryApply(project, path, notices);
-        return new OpenedScore(project, null, true, notices.Count == 0 ? null : string.Join("; ", notices));
+        // R5: each mode reads only its own data. TabForge never writes a sidecar with an embedded .gp, so a .tfaudio beside one is left over from an
+        // earlier clean save of that name: it must not replace the embedded project's (newer) mixer and FX.
+        if (path.EndsWith(".gp", StringComparison.OrdinalIgnoreCase) && File.Exists(AudioDataFile.PathFor(path)) && GuitarProExporter.HasEmbeddedEntry(path))
+            notices.Add($"{Path.GetFileName(AudioDataFile.PathFor(path))} was not applied: {Path.GetFileName(path)} holds its own TabForge project, and the .tfaudio is from an earlier save");
+        else if (path.EndsWith(".gp", StringComparison.OrdinalIgnoreCase)) AudioDataFile.TryApply(project, path, notices);
+        return new OpenedScore(project, null, true, notices.Count == 0 ? null : string.Join("; ", notices), path);   // no native save path yet: relative media resolves against the imported file's folder
     }
 
     /// <summary>
@@ -72,6 +77,60 @@ public sealed class DocumentController
             document.Project.Lyrics = originalLyrics;
             throw;
         }
+    }
+
+    /// <summary>What an export wrote and what the person should be told.</summary>
+    public sealed record GuitarProExportResult(string? CompatiblePath, string? NativeCopyPath, string Notice);
+
+    /// <summary>
+    /// Writes a clean Guitar Pro file after the lossy-export preflight (R5). <paramref name="choice"/> is what the person picked when
+    /// <see cref="GpExportPreflight.Analyze"/> found something a clean .gp cannot hold (pass <see cref="GpExportChoice.ExportCompatible"/> when it found nothing).
+    /// Native copy first, then the compatible file; nothing is overwritten that holds native content. The document changes only as the plan says: an Export
+    /// never touches it, and a compatible-only Save leaves it unsaved so native content is never reported as preserved.
+    /// </summary>
+    public GuitarProExportResult ExportCleanGuitarPro(DocumentSession document, string path, GpExportKind kind, GpExportChoice choice, string? lyrics)
+    {
+        path = FilePathPolicy.OutputFile(path, "Guitar Pro file", ".gp");
+        var report = GpExportPreflight.Analyze(document.Project);
+        var plan = GpExportPreflight.Plan(report, choice, kind, path, document.Path);
+        if (!plan.Proceed) return new GuitarProExportResult(null, null, plan.Note);
+        // A Save with the compatible choice: the song's own clean pair (.gp + .tfaudio) and the song is saved.
+        if (kind == GpExportKind.Save && choice == GpExportChoice.ExportCompatible && plan.MarkDocumentClean && plan.NativeCopyPath is null)
+        {
+            SaveCleanGuitarProWithAudioData(document, plan.CompatiblePath, lyrics);
+            return new GuitarProExportResult(plan.CompatiblePath, null, plan.Note);
+        }
+        var originalLyrics = document.Project.Lyrics;
+        document.Project.Lyrics = lyrics ?? "";
+        var followedNativeCopy = false;
+        try
+        {
+            byte[]? hash = null;
+            var wasDirty = document.Project.IsDirty;
+            if (plan.NativeCopyPath is { } native) hash = ProjectService.Save(FilePathPolicy.OutputFile(native, "TabForge project", ".tforge"), document.Project);
+            // ProjectService.Save clears the flag; until every file is written the document's own unsaved state stays (a failed .gp write must not leave it "clean").
+            document.Project.IsDirty = wasDirty;
+            GuitarProExporter.Save(document.Project, FilePathPolicy.OutputFile(plan.CompatiblePath, "Guitar Pro file", ".gp"), embedProject: false);
+            if (plan.MarkDocumentClean && plan.NativeCopyPath is { } nativePath && hash is not null)
+            {
+                if (plan.ChangeDocumentPath) { document.Path = nativePath; document.IsNew = false; }
+                document.MarkClean(hash);
+                followedNativeCopy = true;
+            }
+            return new GuitarProExportResult(plan.CompatiblePath, plan.NativeCopyPath, plan.Note);
+        }
+        finally { if (!followedNativeCopy) document.Project.Lyrics = originalLyrics; }   // the saved lyrics stay when the document now is the native copy (as a normal save)
+    }
+
+    /// <summary>
+    /// The preflight flow: analyses the song, asks <paramref name="ask"/> only when something would be lost (never for a harmless save), then writes as
+    /// <see cref="ExportCleanGuitarPro(DocumentSession, string, GpExportKind, GpExportChoice, string?)"/>. A Cancel from <paramref name="ask"/> writes nothing.
+    /// </summary>
+    public GuitarProExportResult ExportCleanGuitarPro(DocumentSession document, string path, GpExportKind kind, string? lyrics, Func<GpPreflightReport, GpExportChoice> ask)
+    {
+        var report = GpExportPreflight.Analyze(document.Project);
+        var choice = report.ShouldAsk ? ask(report) : GpExportChoice.ExportCompatible;
+        return ExportCleanGuitarPro(document, path, kind, choice, lyrics);
     }
 
     /// <summary>True while a save is collecting plug-in states or writing; a second save or exit-save must wait.</summary>

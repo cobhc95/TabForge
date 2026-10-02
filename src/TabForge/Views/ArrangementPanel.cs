@@ -1,4 +1,5 @@
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -28,7 +29,21 @@ public sealed partial class ArrangementPanel : Grid
     public const double RulerHeight = 40;
     public const double ColumnHeaderHeight = 16;
     public const double SectionHeight = 24;
-    public const double TrackRowHeight = 30;
+    /// <summary>A track row's height when nothing was stretched (the minimum).</summary>
+    public const double DefaultTrackRowHeight = 30;
+    /// <summary>The tallest a stretched track row gets (3x the default).</summary>
+    public const double MaxTrackRowHeight = DefaultTrackRowHeight * 3;
+    // The stretched row height belongs to the panel showing a song (keyed by the song it is bound to, so another window's
+    // panel is never touched); the static geometry helpers read it through the project they are given.
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<SongProject, StrongBox<double>> RowHeights = new();
+    private static readonly List<WeakReference<ArrangementPanel>> AllPanels = new();
+
+    /// <summary>The track row height of the panel showing <paramref name="project"/> (the default until it is stretched).</summary>
+    public static double RowHeightFor(SongProject? project) =>
+        project is not null && RowHeights.TryGetValue(project, out var box) ? box.Value : DefaultTrackRowHeight;
+
+    /// <summary>This panel's track row height: the mixer rows on the left and the timeline lanes share it.</summary>
+    public double TrackRowHeight => RowHeightFor(_project);
     /// <summary>Height of a track's audio lane (under its row when it has audio or is armed).</summary>
     public const double AudioLaneHeight = 46;
 
@@ -426,6 +441,7 @@ public sealed partial class ArrangementPanel : Grid
 
     public ArrangementPanel()
     {
+        lock (AllPanels) { AllPanels.RemoveAll(w => !w.TryGetTarget(out _)); AllPanels.Add(new WeakReference<ArrangementPanel>(this)); }
         SetResourceReference(BackgroundProperty, "PanelBrush");
         ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(ControlsWidth) });
         ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -660,7 +676,62 @@ public sealed partial class ArrangementPanel : Grid
     // Include a small per-row allowance for device-pixel rounding/borders so the final track is not
     // clipped at fractional DPI scales.
     public double PreferredHeight(int trackCount) =>
-        RulerHeight + SectionHeight + (_project is { } p ? RowsHeight(p) + trackCount * 2 : trackCount * (TrackRowHeight + 2)) + 2;
+        RulerHeight + SectionHeight + (_project is { } p ? RowsHeight(p) + VisibleTrackCount(p, trackCount) * 2 : trackCount * (TrackRowHeight + 2)) + 2;
+
+    /// <summary>Test hook: the laid-out height of each track-control row.</summary>
+    internal IReadOnlyList<double> TrackRowActualHeights => _trackRows.Select(r => r.ActualHeight).ToList();
+
+    /// <summary>Height that shows the header plus every row of the bound song (group headers and collapsed groups included).</summary>
+    public double PreferredHeight() => PreferredHeight(Math.Max(1, _project?.Tracks.Count ?? 1));
+
+    private static int VisibleTrackCount(SongProject p, int fallback) =>
+        p.Tracks.Count == 0 ? fallback : Enumerable.Range(0, p.Tracks.Count).Count(i => !IsCollapsed(p, i));
+
+    /// <summary>The height that shows the header plus every row when each track row is <paramref name="rowHeight"/> tall.</summary>
+    public double PreferredHeightAt(double rowHeight)
+    {
+        if (_project is not { Tracks.Count: > 0 } p) return PreferredHeight();
+        return PreferredHeight() + VisibleTrackCount(p, 1) * (rowHeight - TrackRowHeight);
+    }
+
+    /// <summary>The track row height that makes the rows fill exactly <paramref name="paneHeight"/> (clamped to the default..maximum).</summary>
+    public double RowHeightForPaneHeight(double paneHeight)
+    {
+        if (_project is not { Tracks.Count: > 0 } p) return DefaultTrackRowHeight;
+        var visible = VisibleTrackCount(p, 1);
+        if (visible == 0) return DefaultTrackRowHeight;
+        var fixedPart = PreferredHeight() - visible * TrackRowHeight;   // header, group headers, audio lanes, per-row allowance
+        return Math.Clamp((paneHeight - fixedPart) / visible, DefaultTrackRowHeight, MaxTrackRowHeight);
+    }
+
+    /// <summary>
+    /// Stretches (or restores) every track row: the mixer rows on the left and the timeline lanes on the right change together,
+    /// in place (no rebuild of the controls). False when the height is already that.
+    /// </summary>
+    public bool SetTrackRowHeight(double height)
+    {
+        height = Math.Round(Math.Clamp(height, DefaultTrackRowHeight, MaxTrackRowHeight), 1);
+        if (_project is not { } p || Math.Abs(height - TrackRowHeight) < 0.05) return false;
+        RowHeights.GetOrCreateValue(p).Value = height;
+        // A second panel showing the same song follows, so its rows and lanes stay aligned too.
+        lock (AllPanels)
+            foreach (var weak in AllPanels.ToList())
+                if (weak.TryGetTarget(out var other) && !ReferenceEquals(other, this) && ReferenceEquals(other._project, p)) other.ApplyRowHeight();
+        ApplyRowHeight();
+        return true;
+    }
+
+    private void ApplyRowHeight()
+    {
+        if (_project is { } p)
+            for (var i = 0; i < _trackRows.Count && i < p.Tracks.Count; i++)
+            {
+                _trackRows[i].Height = RowHeightOf(p, p.Tracks[i]);
+                if (_trackRows[i].Child is StackPanel { Children.Count: > 0 } stack && stack.Children[0] is FrameworkElement top) top.Height = TrackRowHeight;
+            }
+        RefreshTimelineGeometry();
+        LayoutPlayhead();
+    }
 
     /// <summary>
     /// The strip beside a track's clip lane. Only the first lane of an armed track has controls (monitoring, input, level);

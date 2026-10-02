@@ -33,7 +33,7 @@ public partial class MainWindow
 
     private void RefreshArrangement()
     {
-        Arrangement.Bind(_project, MidiDevices);
+        Arrangement.Bind(_project, MidiDevices, Doc.Media);
         Arrangement.SetSelectedBar(Editor.SelectedMeasure);
         Arrangement.SetSelectedTrack(Math.Max(0, TrackMixerGrid.SelectedIndex));
         // Every structural edit, undo/redo and track change ends here: the bar count may have changed.
@@ -99,7 +99,7 @@ public partial class MainWindow
     {
         if (_trackEditUndoTransaction is not { } transaction) return;
         var capture = _undo.Commit(transaction);
-        if (capture.Stored) RememberPlaybackBarMapping(capture.Snapshot);
+        if (capture.Stored) Playback.RememberBarMapping(capture.Snapshot);
         _trackEditUndoTransaction = null;
     }
 
@@ -142,29 +142,19 @@ public partial class MainWindow
 
     private void MoveSection(int from, int insertBefore)
     {
-        var currentBar = _playheadBar;
         var selectedBar = Editor.SelectedMeasure;
         var dragStart = _sectionUndoSnapshot;
         _sectionUndoSnapshot = null;
-        var before = dragStart ?? _undo.Snapshot(_project);
-        var mapping = SectionReorderService.Move(_project, from, insertBefore);
-        if (mapping is null) return;
-        var capture = _undo.Capture(before);
-        if (capture.Stored) RememberPlaybackBarMapping(capture.Snapshot);
-        _project.IsDirty = true;
-        _project.MarkTimelineChanged();
+        if (_arrangementController.MoveSection(Doc, from, insertBefore, dragStart).Value is not { } mapping) return;   // one undo step, one dirty change, one timeline invalidation
         _selection.Remap(mapping, MaxMeasures());   // the selected range follows its bars
         if (selectedBar >= 0 && selectedBar < mapping.Length)
             Editor.SetPosition(mapping[selectedBar], Editor.SelectedCell, Editor.SelectedString, seekPlayback: false);
-        if (_isPlayingVisual)
+        if (Playback.ApplySectionMove(mapping))   // the document's remap and playhead bar; the views follow below
         {
-            var previous = _playbackBarRemap ?? Enumerable.Range(0, mapping.Length).ToArray();
-            _playbackBarRemap = SectionReorderService.ComposeBarRemap(previous, mapping);
             Editor.PlaybackBarRemap = _playbackBarRemap;
-            if (currentBar >= 0 && currentBar < mapping.Length) _playheadBar = mapping[currentBar];
             var engine = Playback.Engine;
             var project = _project;
-            var playbackRemap = _playbackBarRemap;
+            var playbackRemap = _playbackBarRemap!;
             _ = Task.Run(() => engine.RefreshArrangement(project, playbackRemap));
         }
         Editor.InvalidateScoreLayout();
@@ -302,11 +292,7 @@ public partial class MainWindow
     private void DeleteArea(string verb)
     {
         var (s, e) = (_loopStartBar, _loopEndBar);
-        var transaction = _undo.BeginTransaction(_project);
-        var map = BarRangeEditor.Remove(_project, s, e);
-        if (map is null) { _undo.Cancel(transaction); ShowLastSectionWarning(); return; }
-        var capture = _undo.Commit(transaction);
-        if (capture.Stored) RememberPlaybackBarMapping(capture.Snapshot);
+        if (_arrangementController.DeleteBars(Doc, s, e).Value is not { } map) { ShowLastSectionWarning(); return; }
         if (_loop) SetLoopActive(false);
         _selection.Clear(SelectionOrigin.Command);   // score and timeline drop the deleted range together
         _skipRanges.Clear();
@@ -318,15 +304,17 @@ public partial class MainWindow
     private void PasteAreaAt(int at)
     {
         if (ClipboardService.Shared.TryGetClip(out var error) is not { } clip) { StatusText.Text = error ?? ClipboardService.NotTabForgeNotesMessage; return; }
-        var transaction = _undo.BeginTransaction(_project);   // one undo step for the whole paste
-        var result = TimelineClips.PasteBars(_project, clip, at, Math.Max(0, TrackMixerGrid.SelectedIndex), TimelinePasteKind.InsertBars,
-            _settings.Editing, new WpfPasteQuestionAsker(this));
+        TimelinePasteResult? answered = null;
+        var paste = DocumentEdits.Run<TimelinePasteResult>(Doc, project =>   // one undo step for the whole paste
+        {
+            answered = TimelineClips.PasteBars(project, clip, at, Math.Max(0, TrackMixerGrid.SelectedIndex), TimelinePasteKind.InsertBars,
+                _settings.Editing, new WpfPasteQuestionAsker(this));
+            return answered.Changed && answered.OldToNewBar is not null ? answered : null;
+        });
         SaveSettings();   // a "Remember my choice" answer
-        if (!result.Changed || result.OldToNewBar is null) { _undo.Cancel(transaction); StatusText.Text = result.Message; return; }
-        var capture = _undo.Commit(transaction);
-        if (capture.Stored) RememberPlaybackBarMapping(capture.Snapshot);
+        if (paste.Value is not { } result) { StatusText.Text = answered?.Message ?? ""; return; }
         var count = result.BarsPasted;
-        FinishSectionStructureEdit(result.Message, result.OldToNewBar);
+        FinishSectionStructureEdit(result.Message, result.OldToNewBar!);
         ApplyLoopRange(at, at + count - 1);   // after the remap: these are already new bar numbers
     }
 
@@ -335,10 +323,8 @@ public partial class MainWindow
         var (s, e) = (_loopStartBar, _loopEndBar);
         if (insertBefore < 0 || (insertBefore >= s && insertBefore <= e + 1)) { StatusText.Text = "Move cancelled"; return; }
         var count = e - s + 1;
-        var transaction = _undo.BeginTransaction(_project);
-        if (BarRangeEditor.Move(_project, s, e, insertBefore) is not var (at, map)) { _undo.Cancel(transaction); return; }
-        var capture = _undo.Commit(transaction);
-        if (capture.Stored) RememberPlaybackBarMapping(capture.Snapshot);
+        if (_arrangementController.MoveBars(Doc, s, e, insertBefore).Value is not { } moved) return;
+        var (at, map) = (moved.At, moved.Map);
         _skipRanges.Clear();
         FinishSectionStructureEdit($"Moved bars {s + 1}-{e + 1} to bar {at + 1}", map);
         ApplyLoopRange(at, at + count - 1);   // after the remap: these are already new bar numbers
@@ -398,9 +384,8 @@ public partial class MainWindow
                 case TimelineCommand.DeleteBar: DeleteArrangementBar(bar, selectedTrack, allTracks: false); break;
                 case TimelineCommand.DeleteBarAllTracks: DeleteArrangementBar(bar, selectedTrack, allTracks: true); break;
                 case TimelineCommand.ToggleSectionLockAtBar when section is not null:
-                    CaptureUndo();
-                    section.LockPosition = !section.LockPosition;
-                    CommitEdit(EditRefresh.Arrangement | EditRefresh.Markers);
+                    DocumentEdits.Run(Doc, _ => { section.LockPosition = !section.LockPosition; return true; });
+                    RefreshAfterEdit(EditRefresh.Arrangement | EditRefresh.Markers);
                     break;
             }
         });
@@ -452,9 +437,8 @@ public partial class MainWindow
                 case TimelineCommand.RenameSection: EditSectionTitle(marker); break;
                 case TimelineCommand.GoToSection: JumpToMarker(marker); break;
                 case TimelineCommand.ToggleSectionLock:
-                    CaptureUndo();
-                    marker.LockPosition = !marker.LockPosition;
-                    CommitEdit(EditRefresh.Arrangement | EditRefresh.Markers);
+                    DocumentEdits.Run(Doc, _ => { marker.LockPosition = !marker.LockPosition; return true; });
+                    RefreshAfterEdit(EditRefresh.Arrangement | EditRefresh.Markers);
                     break;
             }
         });
@@ -469,10 +453,8 @@ public partial class MainWindow
         var edited = GpDialogs.Marker(marker.Title, currentHex, "Save");
         if (edited is null || (string.Equals(edited.Value.title, marker.Title, StringComparison.Ordinal) &&
                                string.Equals(edited.Value.color, marker.ColorHex, StringComparison.OrdinalIgnoreCase))) return;
-        CaptureUndo();
-        marker.Title = edited.Value.title;
-        marker.ColorHex = edited.Value.color;
-        CommitEdit(EditRefresh.Score | EditRefresh.Arrangement | EditRefresh.Markers);
+        DocumentEdits.Run(Doc, _ => { marker.Title = edited.Value.title; marker.ColorHex = edited.Value.color; return true; });
+        RefreshAfterEdit(EditRefresh.Score | EditRefresh.Arrangement | EditRefresh.Markers);
     }
 
     private void CopyArrangementBar(int bar, TrackModel? track, bool allTracks)
@@ -540,15 +522,8 @@ public partial class MainWindow
 
     private void InsertSectionSnapshot(int at, SectionClipboardSnapshot snapshot, string status)
     {
-        if (_project.Tracks.Count == 0 || snapshot.Tracks.Count == 0 || snapshot.Tracks.Max(track => track.Count) == 0) return;
         at = Math.Clamp(at, 0, MaxMeasures());
-        var transaction = _undo.BeginTransaction(_project);
-        var mapping = snapshot.Marker is null
-            ? BarRangeEditor.Insert(_project, at, snapshot.Tracks)
-            : SectionReorderService.Insert(_project, at, snapshot.Tracks, snapshot.Marker);
-        if (mapping is null) { _undo.Cancel(transaction); return; }
-        var capture = _undo.Commit(transaction);
-        if (capture.Stored) RememberPlaybackBarMapping(capture.Snapshot);
+        if (_arrangementController.InsertSection(Doc, at, snapshot).Value is not { } mapping) return;
         Editor.SetPosition(Math.Clamp(at, 0, Math.Max(0, MaxMeasures() - 1)), 0, Editor.SelectedString,
             seekPlayback: false);
         FinishSectionStructureEdit(status, mapping);
@@ -569,11 +544,7 @@ public partial class MainWindow
         var selectedBar = Editor.SelectedMeasure;
         var selectedCell = Editor.SelectedCell;
         var selectedString = Editor.SelectedString;
-        var transaction = _undo.BeginTransaction(_project);
-        var removal = SectionReorderService.Delete(_project, marker);
-        if (removal is null) { _undo.Cancel(transaction); return; }
-        var capture = _undo.Commit(transaction);
-        if (capture.Stored) RememberPlaybackBarMapping(capture.Snapshot);
+        if (_arrangementController.DeleteSection(Doc, marker).Value is not { } removal) return;
         var mappedSelection = selectedBar >= 0 && selectedBar < removal.OldToNewBar.Length
             ? removal.OldToNewBar[selectedBar]
             : -1;
@@ -592,15 +563,17 @@ public partial class MainWindow
     {
         var trackIndex = track is null ? -1 : _project.Tracks.IndexOf(track);
         if (ClipboardService.Shared.TryGetClip(out var error) is not { } clip) { StatusText.Text = error ?? ClipboardService.NotTabForgeNotesMessage; return; }
-        var transaction = _undo.BeginTransaction(_project);   // one undo step per paste
-        var result = TimelineClips.PasteBars(_project, clip, bar, trackIndex, allTracks ? TimelinePasteKind.OverwriteAllTracks : TimelinePasteKind.OverwriteThisTrack,
-            _settings.Editing, new WpfPasteQuestionAsker(this));
+        TimelinePasteResult? answered = null;
+        var paste = DocumentEdits.Run<TimelinePasteResult>(Doc, project =>   // one undo step per paste
+        {
+            answered = TimelineClips.PasteBars(project, clip, bar, trackIndex, allTracks ? TimelinePasteKind.OverwriteAllTracks : TimelinePasteKind.OverwriteThisTrack,
+                _settings.Editing, new WpfPasteQuestionAsker(this));
+            return answered.Changed ? answered : null;
+        });
         SaveSettings();   // a "Remember my choice" answer
-        if (!result.Changed) { _undo.Cancel(transaction); StatusText.Text = result.Message; return; }
-        var capture = _undo.Commit(transaction);
+        if (paste.Value is not { } result) { StatusText.Text = answered?.Message ?? ""; return; }
         if (result.OldToNewBar is { } map)   // answered "Insert before/after": structural, like the area paste
         {
-            if (capture.Stored) RememberPlaybackBarMapping(capture.Snapshot);
             FinishSectionStructureEdit(result.Message, map);
             return;
         }
@@ -628,9 +601,8 @@ public partial class MainWindow
 
     private void InsertArrangementBar(int at)
     {
-        CaptureUndo();
         var oldBars = MaxMeasures();
-        at = _arrangementController.InsertBar(_project, at, at == 0 ? 0 : at - 1, moveMarkers: true);
+        at = _arrangementController.InsertBar(Doc, at, at == 0 ? 0 : at - 1, moveMarkers: true).Value!.At;
         if (MaxMeasures() > oldBars) _selection.Remap(SelectionModel.InsertMap(oldBars, at), MaxMeasures());
         Editor.SetBar(Math.Min(at, Math.Max(0, MaxMeasures() - 1)));
         FinishArrangementEdit($"Added bar {at + 1}");
@@ -645,9 +617,8 @@ public partial class MainWindow
             if (_settings.Editing.ConfirmDeleteBar && MessageBox.Show(this,
                     $"Delete bar {bar + 1} from every track?", "Delete bar", MessageBoxButton.YesNo,
                     MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes) return;
-            CaptureUndo();
             var oldBars = MaxMeasures();
-            if (!_arrangementController.DeleteBar(_project, bar, -1, allTracks: true, moveMarkers: true)) return;
+            if (!_arrangementController.DeleteBar(Doc, bar, -1, allTracks: true, moveMarkers: true).Changed) return;
             if (MaxMeasures() < oldBars) _selection.Remap(SelectionModel.RemoveMap(oldBars, bar, bar), MaxMeasures());
         }
         else
@@ -656,18 +627,16 @@ public partial class MainWindow
             if (_settings.Editing.ConfirmDeleteBar && MessageBox.Show(this,
                     $"Delete bar {bar + 1} from {track.Name}?", "Delete bar", MessageBoxButton.YesNo,
                     MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes) return;
-            CaptureUndo();
             var trackIndex = _project.Tracks.IndexOf(track);
-            if (!_arrangementController.DeleteBar(_project, bar, trackIndex, allTracks: false, moveMarkers: false)) return;
+            if (!_arrangementController.DeleteBar(Doc, bar, trackIndex, allTracks: false, moveMarkers: false).Changed) return;
         }
         Editor.SetBar(Math.Clamp(bar, 0, Math.Max(0, MaxMeasures() - 1)));
         FinishArrangementEdit($"Deleted bar {bar + 1}");
     }
 
+    /// <summary>The view's half of an arrangement edit. The model half (undo step, dirty flag, timeline invalidation) was done once by <see cref="DocumentEdits"/>; nothing here marks the song again.</summary>
     private void FinishArrangementEdit(string status)
     {
-        _project.IsDirty = true;
-        _project.MarkTimelineChanged();
         Editor.InvalidateScoreLayout();
         RefreshArrangement();
         RefreshTabs();
@@ -676,21 +645,14 @@ public partial class MainWindow
         StatusText.Text = status;
     }
 
+    /// <summary>The view's half of a structural edit (see <see cref="FinishArrangementEdit"/>: the song was already marked changed, once, by the edit itself).</summary>
     private void FinishSectionStructureEdit(string status, int[] oldToNewBar, int? continueAtBar = null)
     {
-        _project.IsDirty = true;
-        _project.MarkTimelineChanged();
         _selection.Remap(oldToNewBar, MaxMeasures());   // the selected range follows its bars
-        if (_isPlayingVisual)
+        if (Playback.ApplyStructureEdit(oldToNewBar, MaxMeasures()))
         {
-            var currentBar = _playheadBar;
-            var previous = _playbackBarRemap ?? Enumerable.Range(0, oldToNewBar.Length).ToArray();
-            _playbackBarRemap = SectionReorderService.ComposeBarRemapWithInsertions(previous, oldToNewBar,
-                MaxMeasures());
             Editor.PlaybackBarRemap = _playbackBarRemap;
-            if (currentBar >= 0 && currentBar < oldToNewBar.Length && oldToNewBar[currentBar] >= 0)
-                _playheadBar = oldToNewBar[currentBar];
-            Playback.Engine.RefreshArrangement(_project, _playbackBarRemap, continueAtBar);
+            Playback.Engine.RefreshArrangement(_project, _playbackBarRemap!, continueAtBar);
         }
         Editor.InvalidateScoreLayout();
         RefreshArrangement();

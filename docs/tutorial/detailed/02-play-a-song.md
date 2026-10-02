@@ -112,6 +112,7 @@ While a song plays, four things move at once. They always agree, so you can watc
 - **The playback line** crosses the score, and the score scrolls to keep it in view.
 - **The fretboard** lights up the notes of the selected track. Its legend, at the bottom right, explains the dots: **now** for the sounding note, **next**, **upcoming** and **recent**.
 - **The timeline** shows a playback position marker. By default it is a line. In **Preferences > Timeline & Tracks**, open **More options** in the **Timeline display** group and change **Playback position marker** to **Line**, **Bar marker** or **Both**.
+- **The playing bar** can be highlighted. Choose **View > Highlight playing bar** to switch it on; it is off by default and the command has no default key. In **Preferences > Playback & Practice**, the **Appearance** group sets the colour and opacity, and **More options** adds a choice to show the cursor's bar when the song is stopped.
 - **The status bar** shows the playing position: the bar, the track and the cell.
 
 You choose how the score follows. Press `F12`, open **Playback & Practice** and find **Scroll the score while playing**. **Off** keeps the score still. **Jump** moves a line at a time. **Smooth** scrolls steadily, and it is the default.
@@ -140,7 +141,7 @@ You know it worked when the intro played with only the clean guitar, and the ful
 
 Each open song has its own document tab, so you can keep a song you are learning beside one you are writing. Each tab can keep playing while you work in another. A small badge on a tab shows that its song is playing.
 
-To choose what happens to the first song when you switch, open **Preferences > Playback & Practice** and look under **Several tabs**. You can let it continue (the default), pause it or stop it. To work on two songs in two windows, drag a tab out of the title bar, or right-click it and choose **Move to new window**. Drag the tab back to merge it again.
+To choose what happens to the first song when you switch, open **Preferences > Playback & Practice** and look under **Several tabs**. You can let it continue (the default), pause it or stop it. To work on two songs in two windows, drag a tab out of the title bar, or right-click it and choose **Move to new window**. Drag the tab back to merge it again. If a window holds only one tab, dragging that tab moves the whole window, and dropping it on the tab bar of another window merges the song into that window.
 
 ## Speed and tempo at a glance
 

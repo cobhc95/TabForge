@@ -163,7 +163,7 @@ internal sealed partial class TrackTimeline
             void DrawLane(DrawingContext dc)
             {
                 if (startsGroup && _animatingLanes) DrawGroupBar(dc);
-                var rowRect = new Rect(0, rowTop, width, ArrangementPanel.TrackRowHeight);
+                var rowRect = new Rect(0, rowTop, width, ArrangementPanel.RowHeightFor(Project));
                 var highlighted = t == SelectedTrack || t == DragTrackFrom;
                 var rowBg = t % 2 == 0 ? _theme.Background : _theme.RowAlt;
                 dc.DrawRectangle(Draw.Solid(rowBg), null, rowRect);
@@ -176,7 +176,7 @@ internal sealed partial class TrackTimeline
                 {
                     var x2 = XOfBar(b);
                     var w = WidthOfBar(b);
-                    var cell = new Rect(x2, rowTop + 1, Math.Max(1, w - 1), ArrangementPanel.TrackRowHeight - 2);
+                    var cell = new Rect(x2, rowTop + 1, Math.Max(1, w - 1), ArrangementPanel.RowHeightFor(Project) - 2);
                     var hasMeasure = b < track.Measures.Count;
                     var hasContent = false;
                     if (hasMeasure)
@@ -245,7 +245,7 @@ internal sealed partial class TrackTimeline
                 }
                 if (ShowContinuousBlocks)
                     DrawContinuousRuns(dc, t, track, rowTop, trackColor);
-                dc.DrawLine(Draw.Pen(_theme.BoardEdge, 0.6, 0.7), new Point(0, rowTop + ArrangementPanel.TrackRowHeight - 0.5), new Point(width, rowTop + ArrangementPanel.TrackRowHeight - 0.5));
+                dc.DrawLine(Draw.Pen(_theme.BoardEdge, 0.6, 0.7), new Point(0, rowTop + ArrangementPanel.RowHeightFor(Project) - 0.5), new Point(width, rowTop + ArrangementPanel.RowHeightFor(Project) - 0.5));
                 DrawAudioLane(dc, track, rowTop, width, trackColor);
             }
             if (!_animatingLanes) dc.Pop();
@@ -281,7 +281,7 @@ internal sealed partial class TrackTimeline
         {
             var dstTop = gridTop + ArrangementPanel.RowTopOf(Project, DragTrackTo) - VerticalScrollOffset + TrackPreviewTranslation(DragTrackTo);
             // Insertion caret on the side the track is heading toward.
-            var caretY = DragTrackTo > DragTrackFrom ? dstTop + ArrangementPanel.RowHeightOf(Project?.Tracks.ElementAtOrDefault(DragTrackTo)) : dstTop;
+            var caretY = DragTrackTo > DragTrackFrom ? dstTop + ArrangementPanel.RowHeightOf(Project, Project?.Tracks.ElementAtOrDefault(DragTrackTo)) : dstTop;
             dc.DrawRectangle(Draw.Solid(_theme.Next), null, new Rect(0, caretY - 1, width, 2));
         }
 
@@ -316,7 +316,7 @@ internal sealed partial class TrackTimeline
             foreach (var (t, b) in _mixPoints)
             {
                 var rowTop = gridTop + ArrangementPanel.RowTopOf(Project, t) - VerticalScrollOffset;
-                if (b >= bars || rowTop + ArrangementPanel.TrackRowHeight < gridTop || rowTop > height) continue;
+                if (b >= bars || rowTop + ArrangementPanel.RowHeightFor(Project) < gridTop || rowTop > height) continue;
                 dc.DrawEllipse(dot, null, new Point(XOfBar(b) + 5, rowTop + 6), 3, 3);
             }
         }
@@ -438,7 +438,7 @@ internal sealed partial class TrackTimeline
             var x = XOfBar(runStart) + 1;
             var endX = XOfBar(bar) - 1;
             const double lineThickness = 9;
-            var line = new Rect(x, rowTop + (ArrangementPanel.TrackRowHeight - lineThickness) / 2,
+            var line = new Rect(x, rowTop + (ArrangementPanel.RowHeightFor(Project) - lineThickness) / 2,
                 Math.Max(1, endX - x), lineThickness);
             if (glowOuter is not null && glowInner is not null)
             {
@@ -465,7 +465,7 @@ internal sealed partial class TrackTimeline
     }
 
     /// <summary>Height of the row being dragged (rows with an audio lane are taller).</summary>
-    private double MovingRowHeight => ArrangementPanel.RowHeightOf(Project?.Tracks.ElementAtOrDefault(DragTrackFrom));
+    private double MovingRowHeight => ArrangementPanel.RowHeightOf(Project, Project?.Tracks.ElementAtOrDefault(DragTrackFrom));
 
     internal readonly record struct MiniatureEvent(int CellIndex, double ConsumedSlots, int NoteCount,
         int[] DrumVelocities);

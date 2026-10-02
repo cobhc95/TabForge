@@ -33,10 +33,12 @@ internal static partial class DiagnosticCommands
         ["--layout-audit"] = RunLayoutAudit,
         ["--render-bars"] = RunRenderBars,
         ["--render-timeline"] = RunRenderTimeline,
+        ["--render-gp-export-dialog"] = RunRenderGpExportDialog,
         ["--midi-export"] = RunMidiExport,
         ["--gendiag"] = RunGenerateDiagnosticSongs,
         ["--gendemo"] = RunGenerateDemo,
         ["--dump"] = RunDump,
+        ["--plausibility"] = RunPlausibility,
         ["--exportgp"] = RunExportGp,
         ["--musicxml-export"] = args => args.Length < 3 ? Usage("--musicxml-export <song> <out.musicxml|out.xml>") : Guard("MusicXML export", () =>
         {
@@ -91,8 +93,14 @@ internal static partial class DiagnosticCommands
         ["--write-tutorial-starters"] = args => args.Length < 2 ? Usage("--write-tutorial-starters <dir>") : Guard("Tutorial starter songs", () => TutorialStarterSongs.Write(FilePathPolicy.OutputDirectory(args[1], "starter song folder")) ? Ok : CheckFailed),
         ["--audit-gm-techniques"] = args => args.Length < 2 ? Usage("--audit-gm-techniques <report>") : GmSongAudit.RunProject(GmSongAudit.TechniqueSong(), "technique test song", args[1]),
         ["--roundtrip-diff"] = args => args.Length < 3 ? Usage("--roundtrip-diff <song|@list.txt> <out.txt> [gp,tforge,midi]") : Guard("Round-trip diff", () => SelfTest.RunRoundTripDiff(args[1], args[2], args.Length > 3 ? args[3] : "")),
+        ["--write-gp-fixtures"] = args => args.Length < 2 ? Usage("--write-gp-fixtures <dir>") : Guard("GP fixtures", () => SelfTest.RunWriteGpFixtures(FilePathPolicy.OutputDirectory(args[1], "fixture folder"))),
+        ["--gp-capability"] = args => args.Length < 2 ? Usage("--gp-capability <out.md> [gp-folder]") : Guard("GP capability record", () => SelfTest.RunGpCapability(FilePathPolicy.OutputFile(args[1], "capability record", ".md"), args.Length > 2 ? args[2] : null)),
+        ["--gp-compare"] = args => args.Length < 3 ? Usage("--gp-compare <a.gp> <b.gp> [report.txt]") : Guard("GP compare", () => SelfTest.RunGpCompare(args[1], args[2], args.Length > 3 ? FilePathPolicy.OutputFile(args[3], "comparison report", ".txt") : null)),
+        ["--write-gp-probes"] = args => args.Length < 2 ? Usage("--write-gp-probes <dir>") : Guard("GP probes", () => SelfTest.RunWriteGpProbes(FilePathPolicy.OutputDirectory(args[1], "probe folder"))),
+        ["--gp-open"] = args => args.Length < 2 ? Usage("--gp-open <file.gp>") : Guard("GP open", () => SelfTest.RunGpOpen(FilePathPolicy.ExistingFile(args[1], "Guitar Pro file", ".gp"))),
         ["--roundtrip-semantics"] = args => args.Length < 2 ? Usage("--roundtrip-semantics <report>") : SelfTest.RunRoundTripSemantics(args[1]),
         ["--audit-gm"] = args => args.Length < 3 ? Usage("--audit-gm <song> <report>") : GmSongAudit.Run(args[1], args[2]),
+        ["--import-measure"] = args => args.Length < 3 ? Usage("--import-measure <song> <report.txt> [worker|inproc]") : Guard("Import measure", () => ImportMeasure.Run(args)),
     };
 
     /// <summary>Runs a diagnostic mode when the first argument names one.</summary>
@@ -399,6 +407,39 @@ internal static partial class DiagnosticCommands
                 catch (Exception ex) { text.AppendLine($"ERROR    {Path.GetFileName(file)}: {ex.GetBaseException().Message}"); }
             }
             DiagnosticFileService.WriteText(FilePathPolicy.OutputFile(args[2], "drum audit report"), text.ToString()); return Ok;
+        });
+    }
+
+    /// <summary>`--plausibility &lt;file|folder&gt; &lt;out.txt&gt; [seconds per file]`: the damaged-file check on one song or every Guitar Pro file under a folder (one line each; exit 1 when any would warn).</summary>
+    private static int RunPlausibility(string[] args)
+    {
+        if (args.Length < 3) return Usage("--plausibility <file|folder> <out.txt> [seconds per file]");
+        var seconds = args.Length > 3 && int.TryParse(args[3], out var s) ? Math.Clamp(s, 1, 600) : 60;
+        return Guard("Plausibility", () =>
+        {
+            var files = Directory.Exists(args[1])
+                ? Directory.EnumerateFiles(args[1], "*", SearchOption.AllDirectories).Where(f => GuitarProImporter.SupportedExtensions.Contains(Path.GetExtension(f), StringComparer.OrdinalIgnoreCase)).OrderBy(f => f, StringComparer.OrdinalIgnoreCase).ToList()
+                : new List<string> { args[1] };
+            var report = new StringBuilder();
+            int warned = 0, failed = 0, timedOut = 0, clean = 0, odd = 0;
+            foreach (var file in files)
+            {
+                try
+                {
+                    var work = Task.Run(() => ImportPlausibility.Scan(GuitarProImporter.Import(file), File.ReadAllBytes(file)));
+                    if (!work.Wait(TimeSpan.FromSeconds(seconds))) { timedOut++; report.AppendLine($"TIMEOUT {file}"); continue; }
+                    var r = work.Result;
+                    if (r.Count == 0 && r.TextBytes == 0) { clean++; continue; }
+                    odd++;
+                    if (r.ShouldWarn) warned++;
+                    report.AppendLine($"{(r.ShouldWarn ? "WARN" : "odd ")} {file} count={r.Count} text={r.TextBytes} first=bar {r.FirstBar} '{r.FirstTrack}' [{string.Join(", ", r.ByKind.Select(k => $"{k.Key}={k.Value}"))}]");
+                }
+                catch (Exception ex) { failed++; report.AppendLine($"ERROR   {file}: {ex.GetBaseException().Message}"); }
+            }
+            var summary = $"files={files.Count} clean={clean} below-threshold={odd - warned} WARN={warned} import-errors={failed} timeouts={timedOut} threshold={ImportPlausibility.WarnThreshold}";
+            DiagnosticFileService.WriteText(FilePathPolicy.OutputFile(args[2], "plausibility report"), summary + Environment.NewLine + report);
+            Console.WriteLine(summary);
+            return warned == 0 ? Ok : CheckFailed;
         });
     }
 

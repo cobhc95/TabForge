@@ -26,15 +26,17 @@ public static partial class SelfTest
 {
     private static readonly List<string> Log = new();
     private static int _pass, _fail, _skip;
-    private static bool _gpFixtureRan;
     private static HashSet<string> _required = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
-    /// Requirements that turn skips into failures: <c>--selftest &lt;log&gt; --require gp-fixtures[,all]</c> or the
+    /// Requirements that turn skips into failures ("ci" is the one alias every gate uses: gp-fixtures, synthetic-fixtures, source-hygiene,
+    /// installer-parity, fuzz; unknown names fail; groups and their minimum check counts are defined in SelfTestRequirements.cs): <c>--selftest &lt;log&gt; --require gp-fixtures[,all]</c> or the
     /// TABFORGE_SELFTEST_REQUIRE environment variable (comma/semicolon separated). "gp-fixtures" demands the
     /// synthetic Guitar Pro round trip ran; "synthetic-fixtures" that the synthetic fixture group ran; "source-hygiene" and "installer-parity" demand the repository-source checks
     /// (control characters, single plug-in factory; installer file associations) ran; "all" makes every skip a failure. Exit code stays 0 = pass, non-zero = fail.
     /// </summary>
+    private static List<string> _unknownRequired = new();
+
     private static HashSet<string> ParseRequirements()
     {
         var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -42,19 +44,31 @@ public static partial class SelfTest
         var args = Environment.GetCommandLineArgs();
         for (var i = 0; i < args.Length - 1; i++)
             if (args[i].Equals("--require", StringComparison.OrdinalIgnoreCase)) values.Add(args[i + 1]);
-        foreach (var value in values)
-            foreach (var part in value.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-                set.Add(part);
+        var raw = values.SelectMany(v => v.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+        set = NormalizeRequirements(raw, out _unknownRequired);   // "ci" is expanded; unknown names are reported by ReportRequirements
         return set;
     }
 
     public static int Run(string outputPath)
     {
-        Log.Clear(); _pass = 0; _fail = 0; _skip = 0; _gpFixtureRan = false; _syntheticFixturesRan = false; _fuzzRan = false;
+        Log.Clear(); _pass = 0; _fail = 0; _skip = 0; GroupStates.Clear();
+        // The last test window to close must not make the application begin its shutdown (after that no window can load its XAML any more);
+        // App.OnStartup ends the process explicitly with the exit code.
+        try { if (Application.Current is { } app) app.ShutdownMode = ShutdownMode.OnExplicitShutdown; } catch (InvalidOperationException) { }
         _required = ParseRequirements();
         _areas = ParseAreas();
         if (_areas is not null) Log.Add($"  info  areas: core + {string.Join(", ", _areas.OrderBy(x => x))}");
         if (_required.Count > 0) Log.Add($"  info  required: {string.Join(", ", _required.OrderBy(x => x))}");
+        // R1 window lifetime runs first, on a clean process: it asserts that closed main windows are collectable. Run after the UI tests, the
+        // last closed window is pinned by ref-counted UI Automation handles (ElementProxy -> TabEditorControl+BarPeer -> editor -> window):
+        // an out-of-process UIA client on the desktop walked that window's score peers and still holds them. Confirmed with a heap dump
+        // (gcroot), Oct 2026; nothing in TabForge's own statics or events retains it, and the client releases it when it lets go.
+        Section("Window lifetime (real main windows)");
+        GuardGroup("window-lifetime", TestWindowLifetime);   // repeated close, cancelled close, queued work, tab transfer, Preferences owners, engine chains
+        Section("Document context (media, approvals, close)");
+        GuardGroup("document-context", TestDocumentContext);   // R2: explicit media / approval context, stale work, Save As, close with several dirty tabs
+        Section("Document operations (explicit-document edits, entry-point parity)");
+        GuardGroup("document-operations", TestDocumentOperations);   // R3: shared edits, keyboard vs menu, save / open / close sequences without a window
         Section("MusicTime");
         Guard(TestBarSlots);
         Guard(TestCellSlots);
@@ -73,8 +87,10 @@ public static partial class SelfTest
         Guard(TestPlaybackDifferences);
         Guard(TestNoHangingNotes);
         Guard(TestNoticeLimit);
-        Guard(TestLongGuitarPro35Import);
+        GuardGroup("long-import", TestLongGuitarPro35Import);
+        GuardGroup("long-import", TestImportPlausibility);   // damaged-file notice: a file with unreadable bytes opens with one short warning, real files never warn
         Guard(TestFermataPlayback);
+        Guard(TestRenderBarRanges);
         Guard(TestMarkStacking);
         Guard(TestEngravingCollisions);
         Guard(TestSimileBarHidesLinesAndTies);
@@ -138,6 +154,8 @@ public static partial class SelfTest
         Guard(TestTimelineAndInstrumentContextMenuByKeyboard);
         Guard(TestThemedCheckBoxAndProgressBar);
         Guard(TestDockRatioNotRewrittenByAutoFit);
+        Guard(TestTrackListFit);
+        Guard(TestSectionsPaneScrollsWhenShort);
         Guard(TestFollowSurvivesZoom);
         Guard(TestZoomComboShowsValue);
         Guard(TestSpeedControl);
@@ -190,14 +208,17 @@ public static partial class SelfTest
         Guard(TestArrangementGeometry);
         Guard(TestArrangementFollowGeometry);
         Section("Guitar Pro compatibility (real files)");
-        Guard(TestSyntheticGuitarProFixture);
+        GuardGroup("gp-fixtures", TestSyntheticGuitarProFixture);
         Guard(TestGuitarProFiles);
         Guard(TestGuitarProImportContainment);
         Guard(TestGuitarProImportWorker);
         Guard(TestRoundTripSemanticsSuite);
         Guard(TestGpRoundTripFixes);
+        GuardGroup("gp-fidelity", TestGpFidelity);
+        GuardGroup("gp-fidelity", TestGpMixerExact);
+        GuardGroup("gp-fidelity", TestGpTrillSpeed);
         Section("Synthetic fixtures (run everywhere, no local songs)");
-        Guard(TestSyntheticFixtures);
+        GuardGroup("synthetic-fixtures", TestSyntheticFixtures);
         Guard(TestFullDemoSong);
         Section("Playback depth (timing / ties / channels)");
         Guard(TestPlaybackDepth);
@@ -296,15 +317,19 @@ public static partial class SelfTest
         Guard(TestClipMoves);
         Guard(TestClipMoveGhost);
         Section("Malformed-input fuzzing and lifecycle");
-        Guard(TestMalformedInputFuzz);
+        GuardGroup("fuzz", TestMalformedInputFuzz);
         Section("Repository hygiene");
         Guard(TestSourceControlCharacters);
         Guard(TestInstallerAssociationParity);
+        Guard(TestRequireArgumentStrings);
+        Guard(TestRequiredGroupGate);
         Guard(TestLooseSoundTouchAndLicenseTexts);
         Guard(TestTrimMerges);
         Section("Architecture (layering)");
         Guard(TestArchitectureLayering);
+        Guard(TestArchitectureDocumentOperations);
         Guard(TestTraceSwitchAreas);
+        Guard(TestPlayingBar);
 
 #if DEBUG
         var performance = RenderPerformance.Snapshot;
@@ -314,12 +339,7 @@ public static partial class SelfTest
                 $"score-layout rebuild {performance.ScoreLayoutRebuildMs:0.###} ms / {performance.ScoreLayoutRebuildBytes:N0} B");
 #endif
 
-        if (_required.Contains(RequireGpFixtures))
-            Check("required: the synthetic Guitar Pro fixture test ran to completion", _gpFixtureRan);
-        if (_required.Contains(RequireSyntheticFixtures))
-            Check("required: the synthetic fixture group (repeats, navigation, tempo, mix, tuplets, voices, spans, demo song) ran to completion", _syntheticFixturesRan);
-        if (_required.Contains(RequireFuzz))
-            Check("required: the malformed-input fuzz group ran to completion", _fuzzRan);
+        ReportRequirements(_required, _unknownRequired);   // required groups ran with enough checks; unknown --require names fail
         var summary = $"TabForge self-test: {_pass} passed, {_fail} failed" + (_skip > 0 ? $", {_skip} skipped" : "");
         if (_skippedByArea > 0) summary += $" ({_skippedByArea} test groups outside the selected areas not run)";
         Log.Add("");
@@ -359,9 +379,9 @@ public static partial class SelfTest
         ["TestSaveTransactions"] = "persistence", ["TestPairSaveRecovery"] = "persistence", ["TestProfileLeavesUserFoldersUntouched"] = "persistence", ["TestNightPluginApproval"] = "persistence", ["TestAsyncSaveSequencing"] = "persistence", ["TestPluginStateCollection"] = "persistence",
         ["TestSidecarRouting"] = "persistence", ["TestPersistenceSchema"] = "persistence", ["TestTforgeCompression"] = "persistence", ["TestCleanGpExportKeepsFeatures"] = "guitarpro",["TestMusicXmlExport"] = "guitarpro",["TestRoundTripSemanticsSuite"] = "guitarpro",["TestMusicXmlBarsFillTheTimeSignature"] = "guitarpro",["TestMusicXmlHeaderForReaders"] = "guitarpro",["TestMusicXmlGuitarPro8Encoding"] = "guitarpro",["TestImporterNamesAndDynamics"] = "guitarpro",["TestSettingsWithInlinePluginStates"] = "persistence",
         ["TestReaperChainImport"] = "persistence", ["TestProjectRoundtrip"] = "persistence", ["TestModelRoundTrip"] = "persistence",
-        ["TestSyntheticGuitarProFixture"] = "guitarpro", ["TestGpRoundTripFixes"] = "guitarpro", ["TestSyntheticFixtures"] = "synthetic", ["TestFullDemoSong"] = "synthetic", ["TestGuitarProFiles"] = "guitarpro", ["TestTupletImport"] = "guitarpro", ["TestGuitarProImportContainment"] = "guitarpro", ["TestGuitarProImportWorker"] = "guitarpro",
+        ["TestSyntheticGuitarProFixture"] = "guitarpro", ["TestGpMixerExact"] = "guitarpro", ["TestGpTrillSpeed"] = "guitarpro", ["TestGpRoundTripFixes"] = "guitarpro", ["TestGpFidelity"] = "guitarpro", ["TestSyntheticFixtures"] = "synthetic", ["TestFullDemoSong"] = "synthetic", ["TestGuitarProFiles"] = "guitarpro", ["TestTupletImport"] = "guitarpro", ["TestGuitarProImportContainment"] = "guitarpro", ["TestGuitarProImportWorker"] = "guitarpro",
         ["TestGp5EditingSemantics"] = "guitarpro", ["TestAsciiExport"] = "guitarpro", ["TestMidiExport"] = "guitarpro", ["TestMidiExportTiming"] = "playback",
-        ["TestPlaybackDepth"] = "playback", ["TestNoHangingNotes"] = "playback", ["TestNoticeLimit"] = "guitarpro", ["TestLongGuitarPro35Import"] = "guitarpro",["TestFermataPlayback"] = "playback",["TestNoOpOptionChangesDoNotRestartPlayback"] = "playback", ["TestSeekWhilePlayingSoundsFirstNote"] = "playback",
+        ["TestPlaybackDepth"] = "playback", ["TestNoHangingNotes"] = "playback", ["TestNoticeLimit"] = "guitarpro", ["TestLongGuitarPro35Import"] = "guitarpro",["TestImportPlausibility"] = "guitarpro",["TestFermataPlayback"] = "playback",["TestRenderBarRanges"] = "playback",["TestNoOpOptionChangesDoNotRestartPlayback"] = "playback", ["TestSeekWhilePlayingSoundsFirstNote"] = "playback",
         ["TestCountInIsHeard"] = "playback", ["TestTimelineBasics"] = "playback", ["TestTimelineTechniques"] = "playback",
         ["TestTimelineMetronome"] = "playback", ["TestTimelineRevision"] = "playback", ["TestAudioDataSizeLimit"] = "persistence", ["TestGpOpenKeepsTitle"] = "persistence", ["TestEmbeddedProjectLimit"] = "persistence", ["TestRecoveryCopyOverTforgeLimit"] = "persistence", ["TestTimelineLoopAndOrder"] = "playback", ["TestPlaybackOrderSpec"] = "playback",
         ["TestEditorEntry"] = "ui", ["TestEditorStructurePeer"] = "ui", ["TestEditCommands"] = "ui", ["TestReadableTextTokens"] = "ui", ["TestColourChoiceEntries"] = "ui", ["TestEditorNavigation"] = "ui", ["TestEditorDurations"] = "ui", ["TestPlaybackGlowIntensity"] = "ui",
@@ -379,9 +399,9 @@ public static partial class SelfTest
         ["TestPasteOptionsDialog"] = "ui", ["TestPasteSettingsRows"] = "settings", ["TestContextMenuLayouts"] = "ui", ["TestContextMenuLean"] = "ui", ["TestPreferencesCatalog"] = "settings", ["TestRenderGuardContainment"] = "ui", ["TestDialogEscape"] = "ui", ["TestTempoBoxText"] = "ui", ["TestStaffArcInsets"] = "ui", ["TestAutomationIds"] = "ui", ["TestScoreContextMenuByKeyboard"] = "ui", ["TestKeyboardContextMenuPlacement"] = "ui", ["TestTimelineAndInstrumentContextMenuByKeyboard"] = "ui", ["TestThemedCheckBoxAndProgressBar"] = "ui", ["TestDockRatioNotRewrittenByAutoFit"] = "ui", ["TestCaptureMainWindowOffscreen"] = "ui",
         ["TestPasteOptionsDialog"] = "ui", ["TestPasteSettingsRows"] = "settings", ["TestContextMenuLayouts"] = "ui", ["TestContextMenuLean"] = "ui", ["TestPreferencesCatalog"] = "settings", ["TestRenderGuardContainment"] = "ui", ["TestDialogEscape"] = "ui", ["TestTutorialMarkdown"] = "tutorial", ["TestTutorialSearch"] = "tutorial", ["TestTutorialWindow"] = "tutorial", ["TestTutorialPdfExport"] = "tutorial", ["TestTutorialCommandAndSettings"] = "tutorial", ["TestTutorialGuides"] = "tutorial", ["TestTempoBoxText"] = "ui", ["TestStaffArcInsets"] = "ui", ["TestAutomationIds"] = "ui", ["TestScoreContextMenuByKeyboard"] = "ui", ["TestKeyboardContextMenuPlacement"] = "ui", ["TestTimelineAndInstrumentContextMenuByKeyboard"] = "ui", ["TestThemedCheckBoxAndProgressBar"] = "ui", ["TestDockRatioNotRewrittenByAutoFit"] = "ui",
         ["TestPasteOptionsDialog"] = "ui", ["TestPasteSettingsRows"] = "settings", ["TestContextMenuLayouts"] = "ui", ["TestContextMenuLean"] = "ui", ["TestPreferencesCatalog"] = "settings", ["TestRenderGuardContainment"] = "ui", ["TestDialogEscape"] = "ui", ["TestTempoBoxText"] = "ui", ["TestStaffArcInsets"] = "ui", ["TestAutomationIds"] = "ui", ["TestScoreContextMenuByKeyboard"] = "ui", ["TestKeyboardContextMenuPlacement"] = "ui", ["TestTimelineAndInstrumentContextMenuByKeyboard"] = "ui", ["TestThemedCheckBoxAndProgressBar"] = "ui", ["TestDockRatioNotRewrittenByAutoFit"] = "ui",
-        ["TestTrackRowRightClick"] = "ui", ["TestInstrumentChoiceStrings"] = "ui", ["TestTransposeAllVoices"] = "notation", ["TestCapoRepitchesNotes"] = "playback",
+        ["TestPlayingBar"] = "ui", ["TestTrackRowRightClick"] = "ui", ["TestTrackListFit"] = "ui", ["TestInstrumentChoiceStrings"] = "ui", ["TestTransposeAllVoices"] = "notation", ["TestCapoRepitchesNotes"] = "playback",
         ["TestQuarantineAllowAgain"] = "settings",
-        ["TestMalformedInputFuzz"] = "fuzz", ["TestRepeatedOpenCloseReleasesWindows"] = "leaks", ["TestClosedDocumentChainsReleased"] = "leaks",
+        ["TestMalformedInputFuzz"] = "fuzz", ["TestWindowLifetime"] = "window-lifetime", ["TestDocumentContext"] = "document-context", ["TestDocumentOperations"] = "document-operations", ["TestRepeatedOpenCloseReleasesWindows"] = "leaks", ["TestClosedDocumentChainsReleased"] = "leaks",
     };
 
     private static HashSet<string>? _areas;   // null: every area
@@ -398,14 +418,19 @@ public static partial class SelfTest
         return null;
     }
 
-    private static void Guard(Action test, [System.Runtime.CompilerServices.CallerArgumentExpression(nameof(test))] string name = "")
+    private static void Guard(Action test, [System.Runtime.CompilerServices.CallerArgumentExpression(nameof(test))] string name = "") => GuardRan(test, name);
+
+    /// <summary>Runs a test inside the area filter and failure containment; false when it threw. (A test outside --areas counts as not thrown.)</summary>
+    private static bool GuardRan(Action test, string name)
     {
         var area = AreaOf.TryGetValue(test.Method.Name, out var a) ? a : "core";
-        if (_areas is not null && area != "core" && !_areas.Contains(area)) { _skippedByArea++; return; }
+        if (_areas is not null && area != "core" && !_areas.Contains(area)) { _skippedByArea++; return true; }
         var watch = System.Diagnostics.Stopwatch.StartNew();
+        var ok = true;
         try { test(); }
-        catch (Exception ex) { Check($"{name} completed without throwing", false, $"{ex.GetType().Name}: {ex.Message}"); }
+        catch (Exception ex) { ok = false; Check($"{name} completed without throwing", false, $"{ex.GetType().Name}: {ex.Message}"); }
         if (watch.ElapsedMilliseconds >= 1000) Log.Add($"  time  {name} [{area}] {watch.Elapsed.TotalSeconds:0.0} s");
+        return ok;
     }
 
     private static int _skippedByArea;

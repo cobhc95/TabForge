@@ -27,7 +27,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="AlphaTab" Version="1.8.4" />
+    <!-- alphaTab 1.8.4 plus three patches (a per-import Guitar Pro 3-5 bar limit, exact GPIF mixer volume and balance, the GPIF trill speed), built from source under its own package and
+         assembly name so it cannot be taken for the upstream AlphaTab package: vendor/alphatab/README.md, tools/Build-AlphaTab.ps1. -->
+    <PackageReference Include="TabForge.AlphaTab" Version="1.8.4-tabforge.3" />
     <!-- Tutorial PDF export (MIT): PDF writer + layout. The WPF build needs no GDI+ and no browser engine. -->
     <PackageReference Include="PDFsharp-MigraDoc-wpf" Version="6.2.4" />
   </ItemGroup>

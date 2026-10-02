@@ -187,6 +187,8 @@ public static class SettingsValidator
         value.HighlightBackground = Colour(value.HighlightBackground, defaults.HighlightBackground);
         value.PlayheadColour = Colour(value.PlayheadColour, defaults.PlayheadColour);
         value.DurationGlowColour = Colour(value.DurationGlowColour, defaults.DurationGlowColour);
+        value.PlayingBarColour = Colour(value.PlayingBarColour, defaults.PlayingBarColour);
+        value.PlayingBarOpacity = Clamp(value.PlayingBarOpacity, 0.05, 0.6, defaults.PlayingBarOpacity);
     }
 
     private static void NormalizeTabs(TabSettings value, TabSettings defaults)

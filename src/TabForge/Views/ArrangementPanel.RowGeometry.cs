@@ -23,7 +23,7 @@ public sealed partial class ArrangementPanel
     // ---------- row geometry: one place for every row position (rows can carry an audio lane) ----------
     public static bool HasAudioLane(TrackModel? track) => LaneCountOf(track) > 0;
     public static int LaneCountOf(TrackModel? track) => track is null ? 0 : ClipLanes.Count(track);
-    public static double RowHeightOf(TrackModel? track) => TrackRowHeight + LaneCountOf(track) * AudioLaneHeight;
+    public static double RowHeightOf(SongProject? project, TrackModel? track) => RowHeightFor(project) + LaneCountOf(track) * AudioLaneHeight;
 
     /// <summary>Height of a group's header row in the track list (when groups are shown).</summary>
     public const double GroupHeaderHeight = 24;
@@ -41,7 +41,7 @@ public sealed partial class ArrangementPanel
         project.Mixer.CollapsedGroups.Contains(MixerGroups.GroupOf(project, project.Tracks[index]));
 
     public static double RowHeight(SongProject? project, int index) =>
-        project is null || index < 0 || index >= project.Tracks.Count || IsCollapsed(project, index) ? 0 : RowHeightOf(project.Tracks[index]);
+        project is null || index < 0 || index >= project.Tracks.Count || IsCollapsed(project, index) ? 0 : RowHeightOf(project, project.Tracks[index]);
 
     /// <summary>The runs of consecutive tracks in one group: (group, first track, track count).</summary>
     public static List<(string Group, int Start, int Count)> GroupRuns(SongProject project)
@@ -59,7 +59,7 @@ public sealed partial class ArrangementPanel
     /// <summary>Top of a track's row, from the first row (group headers and collapsed groups included).</summary>
     public static double RowTopOf(SongProject? project, int index)
     {
-        if (project is null) return index * TrackRowHeight;
+        if (project is null) return index * DefaultTrackRowHeight;
         double y = 0;
         var groups = ShowsGroups(project);
         for (var i = 0; i <= index && i < project.Tracks.Count; i++)
@@ -103,6 +103,6 @@ public sealed partial class ArrangementPanel
     }
 
     public static double RowsHeight(SongProject? project) =>
-        project is null || project.Tracks.Count == 0 ? TrackRowHeight
+        project is null || project.Tracks.Count == 0 ? RowHeightFor(project)
         : RowTopOf(project, project.Tracks.Count - 1) + RowHeight(project, project.Tracks.Count - 1);
 }

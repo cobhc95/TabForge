@@ -52,7 +52,7 @@ public static partial class SelfTest
         var song = HoverSong();
         var timeline = new TrackTimeline { Project = song, MeasureWidth = 30 };
         var gridTop = ArrangementPanel.RulerHeight + ArrangementPanel.SectionHeight;
-        var row = ArrangementPanel.TrackRowHeight;
+        var row = ArrangementPanel.DefaultTrackRowHeight;
         Check("hover: a point inside bar 4 of track 2 is that cell",
             timeline.HoverCellAt(new Point(timeline.XOfBar(3) + 5, gridTop + row + 10)) == (3, 1));
         Check("hover: the ruler and section strip have no hover cell", timeline.HoverCellAt(new Point(40, gridTop - 2)) == (-1, -1));
@@ -90,7 +90,7 @@ public static partial class SelfTest
             Check("the bar marker moves one bar right when the playhead enters the next bar",
                 Math.Abs(panel.BarMarkerBounds.Y - expected.Y) < 0.01 && panel.BarMarkerBounds.X > expected.X + 20);
             panel.SetSelectedTrack(2);
-            Check("the bar marker follows the selected track", panel.BarMarkerBounds.Y > expected.Y + ArrangementPanel.TrackRowHeight - 1);
+            Check("the bar marker follows the selected track", panel.BarMarkerBounds.Y > expected.Y + ArrangementPanel.DefaultTrackRowHeight - 1);
             panel.PlayheadStyle = PlayheadStyles.Both;
             Check("playback position marker Both: the line and the marker show", panel.PlayheadLineVisible && panel.BarMarkerVisible);
             panel.PlayheadStyle = PlayheadStyles.Line;
@@ -99,7 +99,7 @@ public static partial class SelfTest
             var centre = panel.CellCentre(6, 0)!.Value;
             panel.SimulateHover(centre);
             var shade = panel.HoverCellBounds;
-            Check("hover shade: sits exactly on the hovered cell", shade is { } s && Math.Abs(s.X - panel.CellCentre(6, 0)!.Value.X + s.Width / 2) < 0.01 && s.Height == ArrangementPanel.TrackRowHeight - 2);
+            Check("hover shade: sits exactly on the hovered cell", shade is { } s && Math.Abs(s.X - panel.CellCentre(6, 0)!.Value.X + s.Width / 2) < 0.01 && s.Height == ArrangementPanel.DefaultTrackRowHeight - 2);
             panel.SimulateHover(new Point(centre.X + 40, centre.Y));
             Check("hover shade: moves to the next cell with the pointer", panel.HoverCellBounds is { } n && n.X > shade!.Value.X + 20);
             panel.SimulateHover(new Point(5, 5));

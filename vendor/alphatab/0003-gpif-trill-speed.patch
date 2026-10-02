@@ -1,0 +1,99 @@
+--- a/packages/alphatab/src/importer/GpifParser.ts
++++ b/packages/alphatab/src/importer/GpifParser.ts
+@@ -2244,14 +2244,50 @@
+         }
+     }
+ 
++    /**
++     * TabForge patch: reads the trill speed from the XProperties of a note, or returns -1.
++     * Guitar Pro stores the note value of the trill as ticks of a 960-tick quarter in XProperty 688062467
++     * (about 480 for an 8th, 240 for a 16th, 120 for a 32nd, with a few ticks of jitter); the result is the nearest duration.
++     */
++    private static _parseNoteTrillSpeed(node: XmlNode): number {
++        for (const c of node.childElements()) {
++            if (c.localName === 'XProperty' && c.getAttribute('id') === '688062467') {
++                const ticks = GpifParser._parseIntSafe(c.findChildElement('Int')?.innerText, 0);
++                if (ticks <= 0) {
++                    return -1;
++                }
++                let best = -1;
++                let bestDistance = 1000000;
++                for (const candidate of [1, 2, 4, 8, 16, 32, 64]) {
++                    const distance = Math.abs(MidiUtils.toTicks(candidate as Duration) - ticks);
++                    if (distance < bestDistance) {
++                        best = candidate;
++                        bestDistance = distance;
++                    }
++                }
++                return best;
++            }
++        }
++        return -1;
++    }
++
+     private _parseNote(node: XmlNode): void {
+         const note: Note = new Note();
+         const noteId: string = node.getAttribute('id');
++        let trillSpeedKnown = false;
+         for (const c of node.childElements()) {
+             switch (c.localName) {
+                 case 'Properties':
+                     this._parseNoteProperties(c, note, noteId);
+                     break;
++                case 'XProperties':
++                    // TabForge patch: the trill speed (note XProperty 688062467, the note value in ticks)
++                    const trillSpeed = GpifParser._parseNoteTrillSpeed(c);
++                    if (trillSpeed > 0) {
++                        note.trillSpeed = trillSpeed as Duration;
++                        trillSpeedKnown = true;
++                    }
++                    break;
+                 case 'AntiAccent':
+                     if (c.innerText.toLowerCase() === 'normal') {
+                         note.isGhost = true;
+@@ -2262,7 +2298,9 @@
+                     break;
+                 case 'Trill':
+                     note.trillValue = GpifParser._parseIntSafe(c.innerText, -1);
+-                    note.trillSpeed = Duration.Sixteenth;
++                    if (!trillSpeedKnown) {
++                        note.trillSpeed = Duration.Sixteenth;
++                    }
+                     break;
+                 case 'Accent':
+                     const accentFlags: number = GpifParser._parseIntSafe(c.innerText, 0);
+--- a/packages/alphatab/src/exporter/GpifWriter.ts
++++ b/packages/alphatab/src/exporter/GpifWriter.ts
+@@ -273,6 +273,12 @@
+         if (note.ornament !== NoteOrnament.None) {
+             noteNode.addElement('Ornament').innerText = NoteOrnament[note.ornament];
+         }
++
++        // TabForge patch: the trill speed, as Guitar Pro stores it (note XProperty 688062467, the note value in ticks of a 960-tick quarter)
++        if (note.isTrill) {
++            const noteProperties = noteNode.addElement('XProperties');
++            this._writeSimpleXPropertyNode(noteProperties, '688062467', 'Int', MidiUtils.toTicks(note.trillSpeed).toString());
++        }
+     }
+ 
+     private _writeNoteProperties(parent: XmlNode, note: Note) {
+--- a/packages/csharp/src/Directory.Build.props
++++ b/packages/csharp/src/Directory.Build.props
+@@ -2,14 +2,14 @@
+   <PropertyGroup>
+     <DebugType>portable</DebugType>
+     <DebugSymbols>true</DebugSymbols>
+-    <Version>1.8.4-tabforge.2</Version>
+-    <AssemblyVersion>1.8.4.2</AssemblyVersion>
++    <Version>1.8.4-tabforge.3</Version>
++    <AssemblyVersion>1.8.4.3</AssemblyVersion>
+     <FileVersion>$(AssemblyVersion)</FileVersion>
+     <Authors>Danielku15</Authors>
+     <Company>CoderLine</Company>
+     <Product>AlphaTab</Product>
+     <NeutralLanguage>en</NeutralLanguage>
+-    <Description>TabForge build of alphaTab 1.8.4 (MPL-2.0): upstream plus two patches: a per-import Guitar Pro 3-5 bar limit (ImporterSettings.MaxGp3To5BarCount) and exact GPIF mixer volume/balance (PlaybackInformation.VolumeFraction/BalanceFraction). Not the upstream package.</Description>
++    <Description>TabForge build of alphaTab 1.8.4 (MPL-2.0): upstream plus three patches: a per-import Guitar Pro 3-5 bar limit (ImporterSettings.MaxGp3To5BarCount), exact GPIF mixer volume/balance (PlaybackInformation.VolumeFraction/BalanceFraction) and the GPIF trill speed (note XProperty). Not the upstream package.</Description>
+     <Copyright>Copyright © 2025, Daniel Kuschny and Contributors</Copyright>
+     <PackageLicenseExpression>MPL-2.0</PackageLicenseExpression>
+     <PackageProjectUrl>https://www.alphatab.net</PackageProjectUrl>

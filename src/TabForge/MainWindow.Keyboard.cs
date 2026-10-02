@@ -178,15 +178,9 @@ public partial class MainWindow
     private void MainWindow_Closing(object? sender, CancelEventArgs e)
     {
         // Never waits here: a running or requested save cancels this close and closes again when it is done (MainWindow.File.cs).
-        if (!ConfirmWindowClose()) { e.Cancel = true; return; }
-        _playbackUiTick.Stop();
-        _follow.Halt();
-        if (_observedPlaybackDocument is not null)
-        {
-            _observedPlaybackDocument.Playback.TimelineChanged -= OnPlaybackTimelineChanged;
-            _observedPlaybackDocument.Playback.TimelineRevised -= OnPlaybackTimelineRevised;
-        }
-        foreach (var session in _documents.Documents.ToArray()) session.DisposePlayback();
+        // Closing only decides (it can be cancelled here or by any other handler). The window's playback, observers and attachments to
+        // longer-lived objects are released in Closed (ReleaseWindowResources), so a cancelled close leaves the window fully working.
+        if (!ConfirmWindowClose()) e.Cancel = true;
     }
 
     private void SetPlayIcon(bool playing)
@@ -216,6 +210,12 @@ public partial class MainWindow
     {
         _project.IsDirty = true;
         _project.MarkTimelineChanged();   // A5-08: every window edit ends here; timing caches rebuild once
+        RefreshAfterEdit(refresh);
+    }
+
+    /// <summary>The view's half of an edit that already went through <see cref="DocumentEdits"/> (which marked the song changed): redraws only.</summary>
+    private void RefreshAfterEdit(EditRefresh refresh)
+    {
         if (refresh.HasFlag(EditRefresh.Status)) RefreshStatus();
         if (refresh.HasFlag(EditRefresh.Markers)) RefreshMarkers();
         if (refresh.HasFlag(EditRefresh.Arrangement)) RefreshArrangement();

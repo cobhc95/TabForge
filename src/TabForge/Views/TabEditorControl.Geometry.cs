@@ -235,6 +235,18 @@ public sealed partial class TabEditorControl
         InvalidateVisual();
     }
 
+    /// <summary>
+    /// The window that hosted this editor has closed for good: forget the song and every cache that points into it. A UI Automation client can keep this
+    /// control (through its automation peer) alive after the window is gone; it must then pin a small control, not the song.
+    /// </summary>
+    internal void ReleaseDocument()
+    {
+        _project = null;
+        _scoreLayoutTrack = null;
+        _scoreLayoutProject = null;
+        InvalidateScoreLayout();
+    }
+
     public void SetActiveVoice(int voiceIndex)
     {
         var next = Math.Clamp(voiceIndex, 0, 1);

@@ -28,6 +28,8 @@ TabForge saves two kinds of file.
 
 If another program saves a `.gp` file again, the TabForge-only settings, such as plug-in chains, can be lost, although the notes survive. Keep your own copy as your working file.
 
+If a song uses something a `.gp` file cannot hold, **Save** and the exports tell you first and list what would be lost. You can keep a full `.tforge` copy beside it, write the compatible file only, or cancel. When you close a window with several unsaved songs, TabForge asks about each one, and **Cancel** keeps everything open.
+
 While a song has changes that are not saved, its document tab shows a dot. If you close it, a window asks whether to save first, with **Yes**, **No** and **Cancel**.
 
 > **Warning:** Saving under the name of an existing file replaces that file. To keep the original, use **File > Save As…** and choose a new name.

@@ -30,6 +30,9 @@ public partial class MainWindow
     /// </summary>
     private ScoreImportJob? OpenScore(string path, bool replaceCurrent, bool replaceAll, Action<OpenedScore, bool>? opened = null, bool background = true)
     {
+        // The tab this open replaces is chosen now, not when a background import completes (by then another tab may be displayed, or this one may
+        // have moved to another window): see DocumentPlacement.
+        var replaceTarget = replaceCurrent && _documents.Documents.Count > 0 ? Doc : null;
         // A .tforge opens at once, unless imports are still running: then it queues behind them so tabs keep the requested order.
         // background = false: the synchronous open for probe / tour launches.
         if (!background || (!ScoreImportQueue.RunsInBackground(path) && (_imports?.Pending.Count ?? 0) == 0))
@@ -37,7 +40,7 @@ public partial class MainWindow
             OpenedScore result;
             try { result = _documentController.Open(path); }
             catch (Exception ex) { ReportOpenFailed(path, ex); return null; }
-            var loaded = LoadProject(result.Project, result.SessionPath, true, replaceCurrent, replaceAll);
+            var loaded = LoadProject(result.Project, result.SessionPath, true, replaceTarget, replaceAll, result.SourcePath);
             opened?.Invoke(result, loaded);
             return null;
         }
@@ -46,7 +49,7 @@ public partial class MainWindow
             (_, result) =>
             {
                 bool loaded;
-                try { loaded = LoadProject(result.Project, result.SessionPath, true, replaceCurrent, replaceAll); }
+                try { loaded = LoadProject(result.Project, result.SessionPath, true, replaceTarget, replaceAll, result.SourcePath); }
                 catch (Exception ex) { ReportOpenFailed(path, ex); return; }
                 opened?.Invoke(result, loaded);
             },

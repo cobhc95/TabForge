@@ -1,4 +1,4 @@
-# TabForge 0.5
+# TabForge 0.5.1
 
 **A keyboard-driven tablature and notation editor for Windows. Opens and saves Guitar Pro files.** Write, import and play back guitar,
 bass, drum and keyboard parts, with a live fretboard / keyboard, an arrangement timeline, audio and MIDI
@@ -18,7 +18,7 @@ TabForge is an independent project. Guitar Pro is a trademark of Arobas Music; T
 
 Get the latest build from [Releases](https://github.com/cobhc95/TabForge/releases):
 
-**0.5 downloads:** [Windows installer](https://github.com/cobhc95/TabForge/releases/download/v0.5.0/TabForge-0.5-setup.exe) · [Portable ZIP](https://github.com/cobhc95/TabForge/releases/download/v0.5.0/TabForge-0.5-win-x64-portable.zip) · [SHA-256 checksums](https://github.com/cobhc95/TabForge/releases/download/v0.5.0/TabForge-0.5-SHA256.txt)
+**0.5.1 downloads:** [Windows installer](https://github.com/cobhc95/TabForge/releases/download/v0.5.1/TabForge-0.5.1-setup.exe) · [Portable ZIP](https://github.com/cobhc95/TabForge/releases/download/v0.5.1/TabForge-0.5.1-win-x64-portable.zip) · [SHA-256 checksums](https://github.com/cobhc95/TabForge/releases/download/v0.5.1/TabForge-0.5.1-SHA256.txt)
 
 Installer, portable ZIP, SHA-256 checksums and release notes are on the [Releases page](https://github.com/cobhc95/TabForge/releases).
 
@@ -42,6 +42,17 @@ or any MIDI output you choose, or through TabForge's audio engine.
 Includes an original demo song, *Ashen Meridian* (CC0), used in all screenshots.
 
 A `licenses/` folder beside `TabForge.exe` (portable zip and installer) holds the full licence texts of every bundled component. SoundTouch.Net (LGPL-2.1) ships as a separate, replaceable `SoundTouch.Net.dll`; each release attaches its source.
+
+## What's new in 0.5.1
+
+- **Highlight the playing bar** (off by default): View > Highlight playing bar shades the whole bar that is playing; colour and opacity in Preferences > Playback > Appearance.
+- **Render a bar or section range:** Render to file > Bounds now offers Custom bars and Custom sections.
+- **Browser-style tabs:** dragging a window's only tab moves the window; drop it on another window's tab bar to merge.
+- **Track list always fits:** no empty space under the tracks; the splitter stretches the rows instead.
+- **Safer .gp saving:** you are told before anything is lost, and a clean .gp keeps bend shapes, trill speed, Legato, Rasgueado, pick slides and exact volume and pan.
+- **Very long songs** (around 2,000 bars) now open in seconds.
+
+Every change is in the [CHANGELOG](CHANGELOG.md).
 
 ## What's new in 0.5
 

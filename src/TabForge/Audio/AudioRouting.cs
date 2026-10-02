@@ -7,9 +7,10 @@ namespace TabForge.Audio;
 public static class AudioRouting
 {
     /// <param name="owner">The document that owns the engine now (R-10); null: the project itself.</param>
-    public static void Apply(SongProject project, RoutedMidiOutput? routing, AudioEngineClient engine, Services.PluginSettings settings, int masterPercent = 100, object? owner = null)
+    public static void Apply(SongProject project, RoutedMidiOutput? routing, AudioEngineClient engine, Services.PluginSettings settings, int masterPercent = 100, object? owner = null,
+        Services.MediaContext? media = null, ICollection<string>? skippedPlugins = null)
     {
-        engine.RefreshAvailability(project.Tracks, settings);   // instruments the engine cannot play (quarantined, untrusted, missing, failed to load) count as not playing
+        engine.RefreshAvailability(project.Tracks, settings, skippedPlugins);   // instruments the engine cannot play (quarantined, untrusted, missing, failed to load) count as not playing
         foreach (var t in project.Tracks) MixerGroups.ApplyAutoGm(t);   // GM sound follows whether a VST instrument plays
         var anySolo = project.Tracks.Any(t => t.Solo);
         engine.Sync(project.Tracks, settings, t =>
@@ -18,7 +19,7 @@ public static class AudioRouting
             // Same master scaling as the CC7 the playback sends (PlaybackEngine.MasterScaled), so both agree on the level.
             var level = Math.Clamp((int)Math.Round(MixerGroups.Volume(project, t) * Math.Clamp(masterPercent, 0, 100) / 100.0), 0, 127);
             return (silent ? 0 : level, MixerGroups.Pan(project, t));
-        }, project, owner);
+        }, project, owner, media, skippedPlugins);
         if (routing is null) return;
         var channels = Playback.ChannelAllocator.Assign(project);
         var routes = Enumerable.Repeat(-1, 16).ToArray();

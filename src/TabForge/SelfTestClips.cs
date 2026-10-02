@@ -127,7 +127,7 @@ public static partial class SelfTest
             groups.Tracks.Add(new TrackModel { Name = name, InstrumentName = name, Kind = kind, MidiProgram = program, MidiChannel = kind == TrackKind.Drums ? 9 : 0, Measures = TemplateFactory.Measures(1) });
         var flat = ArrangementPanel.RowTopOf(groups, 3);
         groups.Mixer.ShowGroupsInTrackList = true;
-        var h = ArrangementPanel.GroupHeaderHeight; var r = ArrangementPanel.TrackRowHeight;
+        var h = ArrangementPanel.GroupHeaderHeight; var r = ArrangementPanel.DefaultTrackRowHeight;
         Check("without groups rows stack directly", Math.Abs(flat - 3 * r) < 1e-9);
         Check("each group adds one header row", Math.Abs(ArrangementPanel.RowTopOf(groups, 2) - (h + 2 * r + h)) < 1e-9 && Math.Abs(ArrangementPanel.RowTopOf(groups, 3) - (h + 2 * r + h + r + h)) < 1e-9);
         Check("the group runs are found in order", ArrangementPanel.GroupRuns(groups).Select(x => (x.Group, x.Start, x.Count)).SequenceEqual(new[]

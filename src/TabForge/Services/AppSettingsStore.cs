@@ -22,6 +22,19 @@ public sealed class AppSettingsStore : IDisposable
     /// <summary>App start: loads the settings file once for the whole app.</summary>
     internal static AppSettingsStore InitializeShared() => _shared ??= CreateDefault();
 
+    /// <summary>Test seam: real main windows read the shared store; a test points it at its own scratch store so no user file is read or written. Dispose puts the previous one back.</summary>
+    internal static IDisposable OverrideSharedForTest(AppSettingsStore store)
+    {
+        var previous = _shared;
+        _shared = store;
+        return new SharedRestore(previous);
+    }
+
+    private sealed class SharedRestore(AppSettingsStore? previous) : IDisposable
+    {
+        public void Dispose() => _shared = previous;
+    }
+
     /// <summary>App exit: writes a pending debounced save now. Does nothing when the store was never created (headless runs).</summary>
     internal static void FlushShared() => _shared?.Flush();
 
@@ -44,7 +57,8 @@ public sealed class AppSettingsStore : IDisposable
     private readonly object _timerGate = new();
     private Timer? _timer;
     private bool _dirty;
-    private object? _lastSource;
+    // Weak: the store lives as long as the app, and the source of a change is usually a window that may close before the debounced save.
+    private WeakReference<object>? _lastSource;
 
     private AppSettingsStore(string path, TimeSpan saveDelay)
     {
@@ -105,7 +119,7 @@ public sealed class AppSettingsStore : IDisposable
     public void MarkChanged(object? source = null)
     {
         _dirty = true;
-        _lastSource = source;
+        _lastSource = source is null ? null : new WeakReference<object>(source);
         Changed?.Invoke(source);
         if (SaveDelay <= TimeSpan.Zero) { Flush(); return; }
         lock (_timerGate)
@@ -135,7 +149,7 @@ public sealed class AppSettingsStore : IDisposable
         catch (Exception ex)   // as before R-09: a failed settings save is reported, never fatal
         {
             Debug.WriteLine($"Settings could not be saved: {ex}");
-            SaveFailed?.Invoke(_lastSource, ex);
+            SaveFailed?.Invoke(_lastSource is { } weak && weak.TryGetTarget(out var source) ? source : null, ex);
             return false;
         }
         try { AfterSave?.Invoke(Settings); }

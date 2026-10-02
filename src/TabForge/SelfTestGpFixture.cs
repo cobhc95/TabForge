@@ -11,9 +11,6 @@ namespace TabForge;
 // depends on local (commercial) songs in Tabs/ and can run on a clean public checkout / CI runner.
 public static partial class SelfTest
 {
-    /// <summary>Requirement name for --require / TABFORGE_SELFTEST_REQUIRE: the synthetic .gp round trip must run.</summary>
-    private const string RequireGpFixtures = "gp-fixtures";
-
     internal static SongProject BuildSyntheticGpSong()
     {
         var project = new SongProject { Tempo = 96, Title = "Synthetic GP fixture", Artist = "TabForge self-test" };
@@ -266,7 +263,6 @@ public static partial class SelfTest
                 Check($"showcase .gp: technique {name} survives", after.Contains(name));
             var lost = before.Where(x => !GpStorable.Contains(x, StringComparer.OrdinalIgnoreCase) && !after.Contains(x)).OrderBy(x => x).ToList();
             Log.Add($"  info  showcase .gp: techniques Guitar Pro export does not keep ({lost.Count}): {string.Join(", ", lost)}");
-            _gpFixtureRan = true;
         }
         finally { try { Directory.Delete(folder, true); } catch (IOException) { } catch (UnauthorizedAccessException) { } }
     }
@@ -345,7 +341,6 @@ public static partial class SelfTest
             var restored = ProjectService.Restore(ProjectService.Snapshot(imported));
             var timeline = Playback.MidiTimelineBuilder.Build(restored, new Playback.PlaybackOptions());
             Check("synthetic .gp: imported song compiles a playback timeline", timeline.TotalMs > 0 && timeline.Events.Count > 0);
-            _gpFixtureRan = true;
             TestGpZipCrcs(source);
             TestShowcaseGuitarProFixture();
         }

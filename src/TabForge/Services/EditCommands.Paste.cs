@@ -66,11 +66,12 @@ public static partial class EditCommands
         IPasteQuestionAsker asker, out UndoCapture? capture)
     {
         capture = null;
+        using var timeline = p.BeginTimelineBatch();   // the bar grid marks the timeline itself: with this edit's own mark that is one invalidation, not two
         var transaction = undo.BeginTransaction(p);
         PasteOutcome outcome;
         try { outcome = Paste(p, clip, target, settings, asker); }
         catch { undo.Cancel(transaction); throw; }
-        if (outcome.Changed) capture = undo.Commit(transaction);
+        if (outcome.Changed) { capture = undo.Commit(transaction); p.MarkTimelineChanged(); }
         else undo.Cancel(transaction);
         return outcome;
     }

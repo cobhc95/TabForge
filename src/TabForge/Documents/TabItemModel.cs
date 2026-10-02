@@ -14,6 +14,11 @@ public sealed class TabItemModel : INotifyPropertyChanged
     public bool IsPlaying { get; set; }
     public bool ShowPlayingIndicator { get; set; } = true;
 
+    // What the tab last showed (the bar compares these with the document to know what to announce).
+    internal string? ShownTitle { get; set; }
+    internal string? ShownTooltip { get; set; }
+    internal bool ShownDirty { get; set; }
+
     public string Title => Session.DisplayName;
     public string Tooltip => Session.Tooltip;
     public System.Windows.Visibility DirtyVisibility =>
@@ -31,6 +36,7 @@ public sealed class TabItemModel : INotifyPropertyChanged
 
     public void RaiseAll()
     {
+        ShownTitle = Session.DisplayName; ShownTooltip = Session.Tooltip; ShownDirty = Session.Project.IsDirty;
         Raise(nameof(Title));
         Raise(nameof(Tooltip));
         Raise(nameof(DirtyVisibility));

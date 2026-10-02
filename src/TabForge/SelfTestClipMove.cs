@@ -182,7 +182,7 @@ public static partial class SelfTest
             Snap = new SnapSettings { Enabled = true, Grid = "Bar", ToGrid = true, ToItems = false, ToPlayhead = false, GridAtAnyDistance = true },
         };
         var gridTop = ArrangementPanel.RulerHeight + ArrangementPanel.SectionHeight;
-        var row = ArrangementPanel.TrackRowHeight;
+        var row = ArrangementPanel.DefaultTrackRowHeight;
         var lane = ArrangementPanel.AudioLaneHeight;
         var press = new Point(timeline.XOfBar(2) + 10, gridTop + row + 10);
         var toTrack3 = new Point(timeline.XOfBar(4) + 10, gridTop + row + lane + row + 10);   // track 3 (index 2): no lanes

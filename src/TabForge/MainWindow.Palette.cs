@@ -633,40 +633,40 @@ public partial class MainWindow
     private void ToggleMeasureProperty(Func<MeasureModel, bool> getter, Action<MeasureModel, bool> setter, string label)
     {
         if (CurBar() is null) return;
-        CaptureUndo();
-        if (!_arrangementController.TryToggleMeasureProperty(_project, TrackMixerGrid.SelectedIndex,
-                Editor.SelectedMeasure, getter, setter, out var value)) return;
-        CommitEdit(EditRefresh.Score | EditRefresh.Arrangement | EditRefresh.Palette);
+        var value = false;
+        if (!DocumentEdits.Run(Doc, p => _arrangementController.TryToggleMeasureProperty(p, TrackMixerGrid.SelectedIndex,
+                Editor.SelectedMeasure, getter, setter, out value)).Changed) return;
+        RefreshAfterEdit(EditRefresh.Score | EditRefresh.Arrangement | EditRefresh.Palette);
         StatusText.Text = value ? $"{label} on" : $"{label} off";
     }
 
     private void CycleTripletFeel()
     {
         if (CurBar() is null) return;
-        CaptureUndo();
-        if (!_arrangementController.TryCycleTripletFeel(_project, TrackMixerGrid.SelectedIndex,
-                Editor.SelectedMeasure, out var next)) return;
-        CommitEdit(EditRefresh.Score | EditRefresh.Palette);
+        var next = "";
+        if (!DocumentEdits.Run(Doc, p => _arrangementController.TryCycleTripletFeel(p, TrackMixerGrid.SelectedIndex,
+                Editor.SelectedMeasure, out next)).Changed) return;
+        RefreshAfterEdit(EditRefresh.Score | EditRefresh.Palette);
         StatusText.Text = next switch { "None" => "Straight feel", "Triplet8th" => "Eighth-note swing", _ => "Sixteenth-note swing" };
     }
 
     private void ToggleSimile(int barCount)
     {
         if (CurBar() is null || Editor.SelectedMeasure < barCount) return;
-        CaptureUndo();
-        if (!_arrangementController.TryToggleSimile(_project, TrackMixerGrid.SelectedIndex,
-                Editor.SelectedMeasure, barCount, out var enabled)) return;
-        CommitEdit(EditRefresh.Score | EditRefresh.Arrangement | EditRefresh.Palette);
+        var enabled = false;
+        if (!DocumentEdits.Run(Doc, p => _arrangementController.TryToggleSimile(p, TrackMixerGrid.SelectedIndex,
+                Editor.SelectedMeasure, barCount, out enabled)).Changed) return;
+        RefreshAfterEdit(EditRefresh.Score | EditRefresh.Arrangement | EditRefresh.Palette);
         StatusText.Text = enabled ? $"Repeating previous {barCount} bar{(barCount == 1 ? "" : "s")}" : "Simile repeat removed";
     }
 
     private void ToggleLineBreak(bool force)
     {
         if (CurBar() is null) return;
-        CaptureUndo();
-        if (!_arrangementController.TryToggleLineBreak(_project, TrackMixerGrid.SelectedIndex,
-                Editor.SelectedMeasure, force, out var enabled)) return;
-        CommitEdit(EditRefresh.Score | EditRefresh.Palette);
+        var enabled = false;
+        if (!DocumentEdits.Run(Doc, p => _arrangementController.TryToggleLineBreak(p, TrackMixerGrid.SelectedIndex,
+                Editor.SelectedMeasure, force, out enabled)).Changed) return;
+        RefreshAfterEdit(EditRefresh.Score | EditRefresh.Palette);
         StatusText.Text = force
             ? enabled ? "System break forced before this measure" : "Forced system break removed"
             : enabled ? "Automatic system break prevented before this measure" : "System-break prevention removed";
@@ -674,9 +674,8 @@ public partial class MainWindow
 
     private void ToggleInactiveVoiceGray()
     {
-        CaptureUndo();
-        _project.GrayInactiveVoice = !_project.GrayInactiveVoice;
-        CommitEdit(EditRefresh.Repaint | EditRefresh.Palette);
+        DocumentEdits.Run(Doc, p => { p.GrayInactiveVoice = !p.GrayInactiveVoice; return true; });
+        RefreshAfterEdit(EditRefresh.Repaint | EditRefresh.Palette);
         StatusText.Text = _project.GrayInactiveVoice ? "Inactive voice dimmed" : "Inactive voice at normal brightness";
     }
 
@@ -730,10 +729,7 @@ public partial class MainWindow
             (measure.TempoChange ?? _project.Tempo).ToString());
         if (value is null || !int.TryParse(value, out var tempo)) return;
         tempo = Math.Clamp(tempo, 20, 400);
-        CaptureUndo();
-        _arrangementController.TrySetTempoChange(_project, Editor.SelectedMeasure, tempo);
-        _project.IsDirty = true;
-        _project.MarkTimelineChanged();
+        DocumentEdits.Run(Doc, p => { _arrangementController.TrySetTempoChange(p, Editor.SelectedMeasure, tempo); return true; });
         Editor.InvalidateScoreLayout();
         RebuildVisualTimeline();
         _midi.Rebuild(_project);

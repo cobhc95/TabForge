@@ -62,7 +62,7 @@ public sealed class MediaDropSession : IDisposable
     /// <paramref name="contentsAt"/> replaces the virtual-file reader (tests).
     /// </summary>
     /// <paramref name="onDrop"/> true reads every virtual file now (the drop); while dragging only <see cref="VirtualFileDrop.HoverBudgetBytes"/> are read.
-    public static MediaDropSession? From(System.Windows.IDataObject data, Func<int, Stream?>? contentsAt = null, bool onDrop = false)
+    public static MediaDropSession? From(System.Windows.IDataObject data, Func<int, Stream?>? contentsAt = null, bool onDrop = false, MediaContext? media = null)
     {
         var key = KeyOf(data);
         if (key is null) return null;
@@ -80,8 +80,8 @@ public sealed class MediaDropSession : IDisposable
                     case MediaDrop.FileRole.Audio when measured++ >= 16:
                         items.Add(new DropItem { Path = file, Name = Path.GetFileNameWithoutExtension(file), Kind = DropItemKind.Audio, Transient = MediaDrop.IsTransient(file) });
                         break;
-                    case MediaDrop.FileRole.Audio: items.Add(Measure(file, DropItemKind.Audio, MediaDrop.IsTransient(file))); break;
-                    case MediaDrop.FileRole.Midi: items.Add(Measure(file, DropItemKind.Midi, MediaDrop.IsTransient(file))); break;
+                    case MediaDrop.FileRole.Audio: items.Add(Measure(file, DropItemKind.Audio, MediaDrop.IsTransient(file), media)); break;
+                    case MediaDrop.FileRole.Midi: items.Add(Measure(file, DropItemKind.Midi, MediaDrop.IsTransient(file), media)); break;
                     case MediaDrop.FileRole.Unsupported: unsupported++; break;
                 }
             // only songs (or songs beside other files): the window opens them
@@ -94,7 +94,7 @@ public sealed class MediaDropSession : IDisposable
             var written = VirtualFileDrop.Materialise(data, staging, contentsAt, out unsupported, out var unread,
                 onDrop ? VirtualFileDrop.MaxFileBytes : VirtualFileDrop.HoverBudgetBytes);
             foreach (var file in written)
-                items.Add(Measure(file, MidiFileImport.IsMidiFile(file) ? DropItemKind.Midi : DropItemKind.Audio, transient: true));
+                items.Add(Measure(file, MidiFileImport.IsMidiFile(file) ? DropItemKind.Midi : DropItemKind.Audio, transient: true, media));
             // A source that hands its contents over only on drop: placeholders now (one bar each), read again when dropped.
             foreach (var name in unread)
                 items.Add(new DropItem { Path = "", Name = Path.GetFileNameWithoutExtension(name), Kind = MidiFileImport.IsMidiFile(name) ? DropItemKind.Midi : DropItemKind.Audio, Transient = true, Deferred = true });
@@ -104,22 +104,22 @@ public sealed class MediaDropSession : IDisposable
     }
 
     /// <summary>Measures a file once: audio length (local files only; a network file is measured on drop), or the MIDI file read.</summary>
-    public static DropItem Measure(string file, DropItemKind kind, bool transient)
+    public static DropItem Measure(string file, DropItemKind kind, bool transient, MediaContext? media = null)
     {
         var name = Path.GetFileNameWithoutExtension(file);
         if (kind == DropItemKind.Midi)
         {
             // The same path rules as audio: device paths refused; a file on a network or removable drive is read only when dropped
             // (never while the pointer merely passes over the timeline).
-            var where = MediaPathPolicy.Classify(file, MediaAccess.FolderOf(MediaAccess.CurrentProjectPath()), requireAudio: false);
+            var where = MediaPathPolicy.Classify(file, (media ?? MediaContext.Anonymous).BaseDirectory, requireAudio: false);
             if (where.Refused) return new DropItem { Path = file, Name = name, Kind = kind, Transient = transient, Problem = $"{name}: {where.Problem}" };
             if (where.Location != MediaLocation.Local) return new DropItem { Path = file, Name = name, Kind = kind, Transient = transient };
             return ReadMidi(file, transient);
         }
-        var verdict = MediaPathPolicy.Classify(file, MediaAccess.FolderOf(MediaAccess.CurrentProjectPath()));
+        var verdict = MediaPathPolicy.Classify(file, (media ?? MediaContext.Anonymous).BaseDirectory);
         if (verdict.Refused) return new DropItem { Path = file, Name = name, Kind = kind, Transient = transient, Problem = $"{name}: {verdict.Problem}" };
         if (verdict.Location != MediaLocation.Local) return new DropItem { Path = file, Name = name, Kind = kind, Transient = transient };   // measured on drop
-        var seconds = WaveformCache.LengthOf(file, userPicked: true);
+        var seconds = WaveformCache.LengthOf(file, media ?? MediaContext.Anonymous, userPicked: true);
         return seconds > 0
             ? new DropItem { Path = file, Name = name, Kind = kind, Seconds = seconds, Transient = transient }
             : new DropItem { Path = file, Name = name, Kind = kind, Transient = transient, Problem = $"{name} could not be read as audio" };

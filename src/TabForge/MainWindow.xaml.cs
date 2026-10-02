@@ -110,7 +110,7 @@ public partial class MainWindow : Window
         _follow = new ScoreFollowCoordinator(ScoreScroll, Editor, () => _isPlayingVisual, () => _midi.IsPaused,
             () => _playheadBar, () => _playheadFraction, MaxMeasures, () => _settings.Follow);
         WireScoreScrollGestures();
-        _settingsWindowHost = new WpfSettingsWindowHost(this);
+        _settingsWindowHost = new WpfSettingsWindowHost(this, CreateSettingsActions());   // this window's own callbacks for its Settings dialogs
         _mainWindowInitialized = true;
         Loaded += (_, _) => ScheduleAutomaticUpdateCheck();
         _metronomeSettingsSaveTimer = new DispatcherTimer(DispatcherPriority.Background)
@@ -267,7 +267,7 @@ public partial class MainWindow : Window
             if (_mixUndoChanged)
             {
                 var capture = _undo.Commit(transaction);
-                if (capture.Stored) RememberPlaybackBarMapping(capture.Snapshot);
+                if (capture.Stored) Playback.RememberBarMapping(capture.Snapshot);
             }
             else _undo.Cancel(transaction);
             _mixUndoTransaction = null;
@@ -301,7 +301,7 @@ public partial class MainWindow : Window
             if (resizeStart is { } before)
             {
                 var capture = _undo.Capture(before);
-                if (capture.Stored) RememberPlaybackBarMapping(capture.Snapshot);
+                if (capture.Stored) Playback.RememberBarMapping(capture.Snapshot);
             }
             CommitEdit(EditRefresh.Score | EditRefresh.Arrangement);
         };
@@ -316,10 +316,12 @@ public partial class MainWindow : Window
         Arrangement.AddTrackMenuRequested += ShowAddTrackMenu;
         Arrangement.GroupCollapseToggled += group =>
         {
-            CaptureUndo();
-            var collapsed = _project.Mixer.CollapsedGroups;
-            if (!collapsed.Remove(group)) collapsed.Add(group);
-            _project.IsDirty = true;
+            DocumentEdits.Run(Doc, p =>
+            {
+                var collapsed = p.Mixer.CollapsedGroups;
+                if (!collapsed.Remove(group)) collapsed.Add(group);
+                return true;
+            }, invalidatesTimeline: false);
             RefreshTracks();
             RefreshArrangement();
             ScheduleFitTimelineToTracks();
@@ -329,15 +331,8 @@ public partial class MainWindow : Window
         {
             if (start < 0 || count <= 0 || start + count > _project.Tracks.Count) return;
             var orderBefore = CaptureOrderLayout();
-            var capture = CaptureUndo();
             var moving = _project.Tracks.GetRange(start, count);
-            if (!Models.TrackOrdering.MoveRun(_project, start, count, before))
-            {
-                if (capture is { } cancelled) _undo.Discard(cancelled);
-                return;
-            }
-            _project.IsDirty = true;
-            _project.MarkTimelineChanged();   // the first track (time signatures) may have changed
+            if (!DocumentEdits.Run(Doc, p => Models.TrackOrdering.MoveRun(p, start, count, before)).Changed) return;   // the first track (time signatures) may have changed: the timeline is invalidated
             SyncAudioEngine();
             if (_midi.IsPlaying) _midi.RefreshArrangement(_project, Enumerable.Range(0, MaxMeasures()).ToArray());
             RefreshTracks();
@@ -371,7 +366,7 @@ public partial class MainWindow : Window
             Arrangement.InvalidateTimeline();
             Instrument.InvalidateVisual();
         };
-        Closed += (_, _) => { _resizeBorderFrame?.Dispose(); _captionButtonFrame?.Dispose(); ClearAttachTarget(); TabWindowRegistry.Unregister(this); };
+        Closed += (_, _) => ReleaseWindowResources();   // every attachment to a longer-lived object ends here, once (MainWindow.Lifetime.cs)
         StateChanged += (_, _) => UpdateMaximiseGlyph();
         SizeChanged += (_, _) => ApplyLayout();
 

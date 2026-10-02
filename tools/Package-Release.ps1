@@ -6,7 +6,7 @@ The version comes from Directory.Build.props <Version>, so the app, the engine, 
 File names and the installer use the display version (0.5.0 shows as "0.5", like the app); the numeric file version stays 0.5.0.0.
 
 Release gate: this script publishes to build\TabForge-release, runs the headless self-test ON THAT EXACT
-FOLDER (with --require gp-fixtures,synthetic-fixtures,source-hygiene,installer-parity) and refuses to package unless it exits 0 and its log says
+FOLDER (with --require ci: gp-fixtures, synthetic-fixtures, source-hygiene, installer-parity, fuzz) and refuses to package unless it exits 0 and its log says
 "TabForge self-test: N passed, 0 failed". The tested folder is what gets zipped and installed; the
 executable hash is re-checked after the test so nothing can be swapped in between.
 It also verifies the shipped tfvst3.dll against the SHA-256 recorded in native\BUILD_PROVENANCE.md and refuses to
@@ -160,12 +160,16 @@ if ($pdbs.Count -eq 0) { Write-LoudWarning "No PDBs were produced; dist\symbols\
 else { Write-Output ("Symbols: {0} PDB(s) archived in {1}" -f $pdbs.Count, $symbols) }
 Copy-Item (Join-Path $root 'LICENSE') (Join-Path $publish 'LICENSE.txt')
 Copy-Item (Join-Path $root 'THIRD_PARTY.md') $publish
+# MPL-2.0 s3.2 (TabForge.AlphaTab is a modified alphaTab): the patch, i.e. the source of the modification, ships beside the licence text.
+$alphaTabPatches = @(Get-ChildItem -LiteralPath (Join-Path $root 'vendor\alphatab') -Filter '*.patch' -File)
+if ($alphaTabPatches.Count -eq 0) { throw 'vendor\alphatab\*.patch is missing (MPL-2.0 source of TabForge.AlphaTab); refusing to package.' }
+foreach ($patch in $alphaTabPatches) { Copy-Item -LiteralPath $patch.FullName -Destination (Join-Path $publish "licenses\alphaTab-$($patch.Name)") }
 
 # LGPL-2.1 (SoundTouch.Net): the DLL must be a loose, replaceable file beside the exe, and the licence texts must ship.
 if (-not (Test-Path -LiteralPath (Join-Path $publish 'SoundTouch.Net.dll'))) {
     throw 'SoundTouch.Net.dll is not beside TabForge.exe in the publish folder (LGPL: it must stay a loose, replaceable file); refusing to package.'
 }
-foreach ($required in @('LGPL-2.1_SoundTouch.Net.txt', 'OFL-1.1_Bravura.txt', 'MIT_NAudio.txt', 'MIT_MeltySynth_and_notices.txt', 'THIRD-PARTY-NOTICES_DotNet_runtime.txt', 'MIT_PDFsharp_MigraDoc.txt')) {
+foreach ($required in @('LGPL-2.1_SoundTouch.Net.txt', 'MPL-2.0_alphaTab.txt', 'OFL-1.1_Bravura.txt', 'MIT_NAudio.txt', 'MIT_MeltySynth_and_notices.txt', 'THIRD-PARTY-NOTICES_DotNet_runtime.txt', 'MIT_PDFsharp_MigraDoc.txt')) {
     if (-not (Test-Path -LiteralPath (Join-Path $publish "licenses\$required"))) { throw "licenses\$required is missing from the publish folder; refusing to package." }
 }
 # Machine-neutral binaries: no local user or build paths may be embedded in anything that ships.
@@ -190,7 +194,7 @@ $exeHashBefore = Get-Sha256 $exe
 $selfTestLog = Join-Path ([IO.Path]::GetTempPath()) "tabforge-release-selftest-$version.log"
 if (Test-Path -LiteralPath $selfTestLog) { Remove-Item -LiteralPath $selfTestLog -Force }
 Write-Output "Self-testing $exe ..."
-$proc = Start-Process -FilePath $exe -ArgumentList @('--selftest', "`"$selfTestLog`"", '--require', 'gp-fixtures,synthetic-fixtures,source-hygiene,installer-parity') -WorkingDirectory $root -Wait -PassThru
+$proc = Start-Process -FilePath $exe -ArgumentList @('--selftest', "`"$selfTestLog`"", '--require', 'ci') -WorkingDirectory $root -Wait -PassThru
 if (-not (Test-Path -LiteralPath $selfTestLog)) { throw "Self-test wrote no log ($selfTestLog); refusing to package." }
 $summary = Select-String -LiteralPath $selfTestLog -Pattern '^TabForge self-test: \d+ passed, \d+ failed' | Select-Object -Last 1
 if ($summary) { Write-Output $summary.Line }

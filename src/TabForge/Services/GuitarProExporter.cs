@@ -49,6 +49,12 @@ public static class GuitarProExporter
         try { parts = ReadZip(bytes); }
         catch (InvalidDataException) { parts = new(); }
         if (parts.Count == 0) return bytes; // not a zip we understand: keep alphaTab's output untouched
+        for (var i = 0; i < parts.Count; i++)
+            if (parts[i].Name.Equals(ScoreEntry, StringComparison.OrdinalIgnoreCase) && parts[i].Data is { Length: > 0 })
+            {
+                var patched = GuitarProBendCurve.Patch(parts[i].Data, score);
+                if (!ReferenceEquals(patched, parts[i].Data)) parts[i] = parts[i] with { Data = patched };
+            }
         using var zipStream = new MemoryStream();
         using (var zip = new System.IO.Compression.ZipArchive(zipStream, System.IO.Compression.ZipArchiveMode.Create, leaveOpen: true))
         {
@@ -63,8 +69,16 @@ public static class GuitarProExporter
             if (embeddedBytes is not null)
             {
                 var entry = zip.CreateEntry(EmbeddedProjectEntry, System.IO.Compression.CompressionLevel.Optimal);
-                using var entryStream = entry.Open();
-                entryStream.Write(embeddedBytes);
+                using (var entryStream = entry.Open()) entryStream.Write(embeddedBytes);
+                // The integrity record: which score this project was saved with. Another program that edits the score but keeps unknown zip entries
+                // would otherwise leave a stale project that wins on open (see EmbeddedBinding).
+                var scorePart = parts.FirstOrDefault(p => p.Name.Equals(ScoreEntry, StringComparison.OrdinalIgnoreCase));
+                if (scorePart.Data is not null)
+                {
+                    var bindingEntry = zip.CreateEntry(EmbeddedBindingEntry, System.IO.Compression.CompressionLevel.Optimal);
+                    using var bindingStream = bindingEntry.Open();
+                    bindingStream.Write(EmbeddedBinding.Serialize(scorePart.Data, embeddedBytes));
+                }
             }
         }
         return zipStream.ToArray();
@@ -80,10 +94,12 @@ public static class GuitarProExporter
         catch (InvalidDataException ex) when (ex.Message == ProjectService.SizeLimitMessage)
         {
             var largest = AudioDataFile.LargestPluginStates(project);
+            var beatCells = project.Tracks.Sum(t => t.Measures.Sum(m => (long)m.Cells.Count + m.Voice2Cells.Count));
+            var notes = project.Tracks.Sum(t => t.Measures.Sum(m => (long)m.Cells.Concat(m.Voice2Cells).Sum(c => c.Notes.Count)));
             throw new InvalidDataException(
-                $"The TabForge project saved inside this Guitar Pro file would be over its {AudioDataFile.Mb(InputLimits.MaxTforgeFileBytes)} limit, so nothing was saved. "
-                + (largest.Count > 0 ? $"The largest plug-in states: {string.Join(", ", largest)}. " : "")
-                + "Remove or reset those plug-ins (or unload large sample sets), then save again.");
+                $"The TabForge project saved inside this .gp file would be over its {AudioDataFile.Mb(InputLimits.MaxTforgeFileBytes)} limit, so nothing was saved. "
+                + $"The song has {project.Tracks.Count} tracks, {beatCells:N0} beat cells and {notes:N0} notes"
+                + (largest.Count > 0 ? $"; the largest plug-in states are {string.Join(", ", largest)}. Remove or reset those plug-ins (or unload large sample sets), then save again." : ". Save it as a clean .gp file instead, or split the song."));
         }
     }
 
@@ -137,6 +153,23 @@ public static class GuitarProExporter
     }
 
     public const string EmbeddedProjectEntry = "TabForge/project.tforge.gz";
+    /// <summary>The integrity record beside the embedded project (<see cref="EmbeddedBinding"/>). Absent in files written before it existed.</summary>
+    public const string EmbeddedBindingEntry = "TabForge/binding.json";
+    /// <summary>The Guitar Pro score part the binding hashes.</summary>
+    public const string ScoreEntry = "Content/score.gpif";
+
+    /// <summary>True when the .gp carries an embedded TabForge project entry (used or not); only the zip directory is read.</summary>
+    internal static bool HasEmbeddedEntry(string path)
+    {
+        try
+        {
+            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+            if (stream.Length > InputLimits.MaxGuitarProFileBytes) return false;
+            using var zip = new System.IO.Compression.ZipArchive(stream, System.IO.Compression.ZipArchiveMode.Read);
+            return zip.GetEntry(EmbeddedProjectEntry) is not null;
+        }
+        catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException) { return false; }
+    }
 
     /// <summary>The TabForge project embedded in a .gp written by TabForge, or null for other .gp files.</summary>
     public static SongProject? TryReadEmbedded(string path)
@@ -183,7 +216,12 @@ public static class GuitarProExporter
                     if (buffer.Length + read > InputLimits.MaxTforgeFileBytes) { rejected = TooBigReason; return null; }
                     buffer.Write(chunk, 0, read);
                 }
-                return ProjectService.RestorePersistedBytes(buffer.ToArray());
+                var projectBytes = buffer.ToArray();
+                var stale = EmbeddedBinding.Check(zip, projectBytes);
+                if (stale is not null) { rejected = stale; return null; }
+                var restored = ProjectService.RestorePersistedBytes(projectBytes);
+                if (EmbeddedBinding.LegacyBarCountMismatch(zip, restored)) { rejected = EmbeddedBinding.StaleReason; return null; }
+                return restored;
             }
             catch (Exception ex) when (ex is InvalidDataException or IOException)
             {
@@ -199,7 +237,8 @@ public static class GuitarProExporter
 
     /// <summary>The open notice for an embedded project that was present but rejected (<see cref="ReadEmbedded"/>).</summary>
     internal static string RejectedNotice(string reason) =>
-        $"This file's TabForge project data could not be read ({reason}); it was opened as a plain Guitar Pro file";
+        $"This file's TabForge project data could not be read ({reason}); it was opened as a plain Guitar Pro file"
+        + (ReferenceEquals(reason, EmbeddedBinding.StaleReason) ? ", so the score is shown exactly as the file holds it and the older TabForge-only settings were not applied" : "");
 
     /// <summary>A bar's navigation marks (TabForge's names or Guitar Pro's own) as alphaTab directions, so D.C. / D.S. / Coda / Fine survive a clean .gp.</summary>
     internal static IEnumerable<Direction> GpDirections(string? text)
@@ -329,8 +368,11 @@ public static class GuitarProExporter
                 {
                     Program = Math.Clamp(source.MidiProgram, 0, 127),
                     PrimaryChannel = source.MidiChannel, SecondaryChannel = source.MidiChannel,
-                    Volume = Math.Clamp((int)Math.Round(MixerGroups.Volume(project, source) / 8.0), 0, 16), // mixer groups baked in
+                    // Mixer groups baked in. The 0..16 steps are alphaTab's own model; the exact fractions (patch 0002 of TabForge.AlphaTab) are what the gpif stores.
+                    Volume = Math.Clamp((int)Math.Round(MixerGroups.Volume(project, source) / 8.0), 0, 16),
                     Balance = Math.Clamp((int)Math.Round(MixerGroups.Pan(project, source) / 8.0), 0, 16),
+                    VolumeFraction = GpMixerScale.ToFraction(MixerGroups.Volume(project, source)),
+                    BalanceFraction = GpMixerScale.ToFraction(MixerGroups.Pan(project, source)),
                     IsMute = source.Mute, IsSolo = source.Solo,
                 },
             };
@@ -456,7 +498,7 @@ public static class GuitarProExporter
             beat.ChordId = chordId;
         }
         if (cell.Fermata || cell.Notes.Any(n => n.Techniques.Contains("Fermata"))) beat.Fermata = new Fermata { Type = FermataType.Medium, Length = 1 };
-        // Tenuto: alphaTab's model has no tenuto flag (only Note.Accentuated / IsStaccato), so it cannot be written to .gp.
+        // Tenuto is AccentuationType.Tenuto on the notes (see below).
         // GP7 knows only before-beat and on-beat graces: alphaTab's GP7 writer drops a BendGrace entirely (the grace became
         // a normal 32nd that pushed the principal note late), so a bend grace is written as a before-beat grace; its bend stays on the note.
         var graceTech = cell.Notes.SelectMany(n => n.Techniques).ToList();
@@ -494,10 +536,19 @@ public static class GuitarProExporter
         if (beat.BrushType != BrushType.None && double.IsFinite(cell.BrushStepSlots) && cell.BrushStepSlots > 0)
             beat.BrushDuration = Math.Round(cell.BrushStepSlots * 3 * 240);
         if (all.Contains("PickDown")) beat.PickStroke = PickStroke.Down; else if (all.Contains("PickUp")) beat.PickStroke = PickStroke.Up;
+        // Legato is a slur from this beat to the next (alphaTab derives the destination from the previous beat); a rasgueado keeps its pattern ("Rasgueado<pattern>"), ii_1 when it has none.
+        if (all.Contains("Legato")) beat.IsLegatoOrigin = true;
+        if (all.Contains("Rasgueado"))
+        {
+            var pattern = all.FirstOrDefault(x => x.StartsWith("Rasgueado", StringComparison.OrdinalIgnoreCase) && x.Length > 9);
+            beat.Rasgueado = pattern is not null && Enum.TryParse<Rasgueado>(pattern[9..], true, out var parsed) && parsed != Rasgueado.None ? parsed : Rasgueado.Ii;
+        }
         beat.Ottava = cell.OctaveShiftSemitones switch
         {
             >= 24 => Ottavia._15ma, >= 12 => Ottavia._8va, <= -24 => Ottavia._15mb, <= -12 => Ottavia._8vb, _ => Ottavia.Regular
         };
+        // Mix-table changes (volume, pan, program on a beat) are not written: alphaTab's GP7 writer emits only tempo automations and the track's initial
+        // sound (probed with Beat.Automations of type Volume/Balance/Instrument: nothing reaches the gpif). See docs/R5_CAPABILITY (A11).
         if (cell.IsRest || cell.Notes.Count == 0) return beat;
         foreach (var n in cell.Notes)
         {
@@ -506,10 +557,16 @@ public static class GuitarProExporter
             {
                 IsDead = n.Dead, IsGhost = n.Ghost, IsTieDestination = n.Tied || cell.IsTied,
                 IsPalmMute = TechniqueNames.HasPalmMute(t), IsLetRing = t.Contains("LetRing"),
-                IsStaccato = cell.Staccato,
+                IsStaccato = cell.Staccato && !n.Ghost,   // staccato is an <Accent> bit too: Guitar Pro 8 drops a ghost mark when the note has any <Accent> (re-save probe), so it goes on the plain notes of the chord
                 IsHammerPullOrigin = t.Contains("HOPOOrigin") || t.Contains("HOPO") && !t.Contains("HOPODestination"),
                 Vibrato = t.Contains("WideVibrato") ? VibratoType.Wide : t.Contains("Vibrato") ? VibratoType.Slight : VibratoType.None,
-                Accentuated = cell.Accent == 2 ? AccentuationType.Heavy : cell.Accent == 1 ? AccentuationType.Normal : AccentuationType.None,
+                // GP keeps one mark of the three per note: heavy accent, accent, tenuto (alphaTab's AccentuationType.Tenuto; the importer reads it back onto the beat).
+                // A ghost note carries none of them, nor staccato: Guitar Pro 8 keeps a ghost mark only on a note with no <Accent> element at all (re-saves of a note written
+                // with the ghost mark plus each of staccato, accent, heavy accent, tenuto and two pairs kept the mark and dropped the ghost mark every time; the ghost mark
+                // alone survived; no ghost note of 294 in real .gp files has an <Accent>), and the ghost mark is the per-note fact. The beat's marks stay on the other
+                // notes of the chord; only a beat whose notes are all ghost loses them (GpExportPreflight reports that).
+                Accentuated = n.Ghost ? AccentuationType.None : cell.Accent == 2 ? AccentuationType.Heavy : cell.Accent == 1 ? AccentuationType.Normal : cell.Tenuto || t.Contains("Tenuto") ? AccentuationType.Tenuto : AccentuationType.None,
+                LeftHandFinger = FingerFor(n.LeftHandFinger), RightHandFinger = FingerFor(n.RightHandFinger),
             };
             if (drums)
             {
@@ -543,6 +600,8 @@ public static class GuitarProExporter
             else if (t.Contains("LegatoSlide") || t.Contains("Slide")) note.SlideOutType = SlideOutType.Legato;
             else if (t.Contains("SlideOutDown")) note.SlideOutType = SlideOutType.OutDown;
             else if (t.Contains("SlideOutUp")) note.SlideOutType = SlideOutType.OutUp;
+            else if (t.Contains("PickSlideDown")) note.SlideOutType = SlideOutType.PickSlideDown;
+            else if (t.Contains("PickSlideUp")) note.SlideOutType = SlideOutType.PickSlideUp;
             if (t.Contains("SlideInBelow")) note.SlideInType = SlideInType.IntoFromBelow;
             else if (t.Contains("SlideInAbove")) note.SlideInType = SlideInType.IntoFromAbove;
             // Loudness through the shared dynamics table (ppp..fff); a beat carries the first note's dynamic.
@@ -563,6 +622,8 @@ public static class GuitarProExporter
             }
             foreach (var (offset, value) in SimplifyBend(n.BendPoints.Select(p => (p.Offset <= 1.0 ? p.Offset * 60 : p.Offset, p.Value)).ToList()))
                 note.AddBendPoint(new BendPoint(offset, value));
+            // alphaTab writes only a midpoint or peak middle stretch; the curve's own fit is written into the file afterwards (GuitarProBendCurve.Patch).
+            if (!drums && GuitarProBendCurve.Fit(GuitarProBendCurve.Normalise(n.BendPoints.Select(p => (p.Offset, p.Value)))) is { } bendFit) GuitarProBendCurve.Plan(note, bendFit);
             beat.AddNote(note);
         }
         if (cell.Notes.Any(n => TechniqueNames.HasPalmMute(n.Techniques))) beat.IsPalmMute = true;
@@ -656,6 +717,12 @@ public static class GuitarProExporter
         }
         return new List<(double, double)> { points[0] }.Concat(kept).Append(points[^1]).ToList();
     }
+
+    /// <summary>The model's finger number (0 thumb, 1 index, 2 middle, 3 ring, 4 little; null = not written) as alphaTab's Fingers value.</summary>
+    internal static Fingers FingerFor(int? finger) => finger switch
+    {
+        0 => Fingers.Thumb, 1 => Fingers.IndexFinger, 2 => Fingers.MiddleFinger, 3 => Fingers.AnnularFinger, 4 => Fingers.LittleFinger, _ => Fingers.Unknown,
+    };
 
     private static Duration DurationOf(int denominator) => denominator switch
     {

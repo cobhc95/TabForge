@@ -44,6 +44,7 @@ public partial class App : Application
         // Headless modes (--selftest, --playtest, --dump, ...) never open a window.
         if (DiagnosticCommands.TryRun(args, out var exitCode))
         {
+            _diagnosticExitCode = exitCode;   // a test window closing earlier may already have started a Shutdown() with code 0; OnExit restores this one
             Shutdown(exitCode);
             return;
         }
@@ -125,8 +126,11 @@ public partial class App : Application
 
     private readonly CancellationTokenSource _serverStop = new();
 
+    private int? _diagnosticExitCode;
+
     protected override void OnExit(ExitEventArgs e)
     {
+        if (_diagnosticExitCode is int diagnosticExit) e.ApplicationExitCode = diagnosticExit;   // --selftest and the other diagnostics report their result as the exit code
         AutosaveRegistry.WaitForIdle(TimeSpan.FromSeconds(3));   // a write in flight finishes (or is abandoned) before the copies go
         AutosaveService.DeleteOwn(AutosaveService.DefaultFolder, Environment.ProcessId);   // a normal exit leaves nothing to recover
         AppSettingsStore.FlushShared();   // a debounced settings save still pending is written now

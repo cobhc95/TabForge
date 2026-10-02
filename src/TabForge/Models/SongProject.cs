@@ -8,7 +8,15 @@ namespace TabForge.Models;
 public sealed class SongProject
 {
     public int FormatVersion { get; set; } = 2;
-    public string Title { get; set; } = "Untitled";
+    private string _title = "Untitled";
+    public string Title
+    {
+        get => _title;
+        set { if (_title == value) return; _title = value; DisplayStateChanged?.Invoke(this, EventArgs.Empty); }
+    }
+
+    /// <summary>Raised when the name or the unsaved mark changes, so a tab showing this song follows without polling.</summary>
+    public event EventHandler? DisplayStateChanged;
     public string Subtitle { get; set; } = "";
     public string Artist { get; set; } = "";
     public string Album { get; set; } = "";
@@ -32,8 +40,13 @@ public sealed class SongProject
     public MixerSettings Mixer { get; set; } = new();
     public string? ImportedFrom { get; set; }
 
+    private bool _isDirty;
     [JsonIgnore]
-    public bool IsDirty { get; set; }
+    public bool IsDirty
+    {
+        get => _isDirty;
+        set { if (_isDirty == value) return; _isDirty = value; DisplayStateChanged?.Invoke(this, EventArgs.Empty); }
+    }
 
     private int _timelineRevision;
     /// <summary>
@@ -44,12 +57,46 @@ public sealed class SongProject
     public int TimelineRevision => Volatile.Read(ref _timelineRevision);
 
     /// <summary>Invalidates every timing cache built for this project. Called by each edit ending (editor, window, arrangement) and by undo/redo.</summary>
-    public void MarkTimelineChanged() => Interlocked.Increment(ref _timelineRevision);
+    public void MarkTimelineChanged()
+    {
+        if (_timelineBatchDepth > 0) { _timelineBatchMarked = true; return; }
+        Interlocked.Increment(ref _timelineRevision);
+    }
+
+    private int _timelineBatchDepth;
+    private bool _timelineBatchMarked;
+
+    /// <summary>
+    /// One logical edit, however many model steps mark the timeline inside it (a bar grid change marks itself, the edit marks too): the marks made
+    /// until the returned scope is disposed count as one, applied when the outermost scope ends. A mid-edit state is therefore never published under a
+    /// new revision. UI thread only (edits are).
+    /// </summary>
+    public IDisposable BeginTimelineBatch()
+    {
+        _timelineBatchDepth++;
+        return new TimelineBatch(this);
+    }
+
+    private sealed class TimelineBatch : IDisposable
+    {
+        private SongProject? _project;
+        public TimelineBatch(SongProject project) => _project = project;
+
+        public void Dispose()
+        {
+            var project = Interlocked.Exchange(ref _project, null);
+            if (project is null || --project._timelineBatchDepth > 0) return;
+            if (!project._timelineBatchMarked) return;
+            project._timelineBatchMarked = false;
+            Interlocked.Increment(ref project._timelineRevision);
+        }
+    }
 
     /// <summary>A shallow copy without the tracks added from startup templates (what is written to a .tforge file).</summary>
     public SongProject WithoutStartupTracks()
     {
         var copy = (SongProject)MemberwiseClone();
+        copy.DisplayStateChanged = null;
         copy.Tracks = Tracks.Where(t => t.StartupTemplateId is null).ToList();
         return copy;
     }
@@ -267,6 +314,7 @@ public sealed class TabCell
     /// <summary>Tuplet ratio denominator (e.g. 2 for a triplet, 4 for a quintuplet); 0 when not a tuplet.</summary>
     public int TupletDenominator { get; set; }
     /// <summary>Effective tuplet ratio, falling back to 3:2 when only the legacy triplet flag is set.</summary>
+    [JsonIgnore]   // computed from the three fields above; a ValueTuple serialises as an empty object ("Tuplet":{}), 13 bytes of nothing per beat cell
     public (int Numerator, int Denominator) Tuplet =>
         TupletNumerator > 0 && TupletDenominator > 0 ? (TupletNumerator, TupletDenominator)
         : IsTriplet ? (3, 2)

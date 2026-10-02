@@ -55,13 +55,9 @@ public partial class MainWindow
     /// <summary>Applies the shared settings (loaded once by the store) to this new window and follows other windows' changes.</summary>
     private void LoadSettings()
     {
-        _settingsStore.Changed += OnSharedSettingsChanged;
-        _settingsStore.SaveFailed += OnSharedSettingsSaveFailed;
-        Closed += (_, _) =>
-        {
-            _settingsStore.Changed -= OnSharedSettingsChanged;
-            _settingsStore.SaveFailed -= OnSharedSettingsSaveFailed;
-        };
+        var store = _settingsStore;
+        Subscribe<Action<object?>>(h => store.Changed += h, h => store.Changed -= h, OnSharedSettingsChanged);
+        Subscribe<Action<object?, Exception>>(h => store.SaveFailed += h, h => store.SaveFailed -= h, OnSharedSettingsSaveFailed);
         _suppressWorkspaceSave = true;
         if (_settings.Workspace is not null)
         {
@@ -104,19 +100,19 @@ public partial class MainWindow
     {
         if (ReferenceEquals(source, this) || !_mainWindowInitialized || _sharedSettingsRefreshQueued) return;
         _sharedSettingsRefreshQueued = true;   // coalesced: many saves in a row cost one refresh
-        Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() =>
+        PostIfOpen(() =>
         {
             _sharedSettingsRefreshQueued = false;
             BuildHotkeyMap();
             RefreshHotkeyTooltips();
-        }));
+        }, DispatcherPriority.Background);
     }
 
     private bool _sharedSettingsRefreshQueued;
 
     private void OnSharedSettingsSaveFailed(object? source, Exception error)
     {
-        if (source is not null && !ReferenceEquals(source, this)) return;
+        if (_isClosed || (source is not null && !ReferenceEquals(source, this))) return;
         StatusText.Text = "Settings could not be saved. Check access to the TabForge settings folder.";
     }
 
@@ -178,6 +174,11 @@ public partial class MainWindow
         Editor.HighlightBackground = ParseColour(follow.HighlightBackground, Color.FromRgb(0x1E, 0x3A, 0x2A));
         Editor.DurationGlowColor = ParseColour(follow.DurationGlowColour, Color.FromRgb(0x3F, 0xB9, 0x50));
         Editor.DurationGlowOpacity = Math.Clamp(follow.DurationGlowOpacity, 0, 1);
+        Editor.PlayingBarEnabled = follow.PlayingBarEnabled;
+        Editor.PlayingBarColor = ParseColour(follow.PlayingBarColour, Color.FromRgb(0xFF, 0xE0, 0x66));
+        Editor.PlayingBarOpacity = Math.Clamp(follow.PlayingBarOpacity, 0.05, 0.6);
+        Editor.PlayingBarWhenStopped = follow.PlayingBarWhenStopped;
+        PlayingBarMenu.IsChecked = follow.PlayingBarEnabled;
         Editor.DarkPaperColor = ParseColour(s.Appearance.DarkScorePaperColour, Color.FromRgb(0x15, 0x18, 0x1D));
         Editor.LightPaperColor = ParseColour(s.Appearance.LightScorePaperColour, Colors.White);
         Editor.DarkInkColor = ParseColour(s.Appearance.DarkScoreInkColour, Color.FromRgb(0xE7, 0xEA, 0xEF));
@@ -385,6 +386,7 @@ public partial class MainWindow
             case "File.ExportPdf": ExportPdf_Click(this, args); return true;
             case "File.ExportMidi": ExportMidi_Click(this, args); return true;
             case "File.ExportAscii": ExportAscii_Click(this, args); return true;
+            case "File.ExportGuitarPro": ExportGuitarPro_Click(this, args); return true;
             case "File.ProjectSettings": ProjectSettings_Click(this, args); return true;
             case "Transport.Metronome": Metronome_Click(this, args); return true;
             case "Transport.CountIn": CountIn_Click(this, args); return true;
@@ -451,6 +453,7 @@ public partial class MainWindow
             case "Track.Arm": if (SelectedTrack is { } armTrack) ToggleArm(armTrack); return true;
             case "Track.FxChain": OpenFxChain(SelectedTrack); return true;
             case "View.AutoFitTrackList": ToggleAutoFitTrackList(); return true;
+            case "View.ResetTrackRowHeight": _trackListFit?.ResetRowHeight(); return true;
             case "Track.Wiring": OpenWiring(SelectedTrack); return true;
             case "Playback.SpeedUp": ApplySpeed(NextSpeedPreset(_speed, 1)); return true;
             case "Playback.SpeedDown": ApplySpeed(NextSpeedPreset(_speed, -1)); return true;
@@ -458,7 +461,7 @@ public partial class MainWindow
             case "Track.MoveUp": MoveTrack(-1); return true;
             case "Track.MoveDown": MoveTrack(1); return true;
             case "View.ShowTrackGroups": ((IMixerHost)this).SetTrackListShows("groups", !_project.Mixer.ShowGroupsInTrackList); return true;
-            case "Media.ManageApprovals": ReviewLinkedAudio(); return true;
+            case "Media.ManageApprovals": ReviewLinkedAudio(this); return true;
             case "Mixer.MasterFx": OpenBusFx(null); return true;
             case "Mixer.MonitorFx": OpenMonitorFx(); return true;
             case "Mixer.GroupFx": if (SelectedTrack is { } groupTrack) OpenBusFx(MixerGroups.GroupOf(_project, groupTrack)); return true;
@@ -481,6 +484,7 @@ public partial class MainWindow
             case "View.Fullscreen": Fullscreen_Click(this, args); return true;
             case "View.SmoothFollow": SetSmoothFollow(!_follow.Continuous); return true;
             case "View.HorizontalScroll": SetHorizontalScoreView(!Editor.HorizontalScroll); return true;
+            case "View.PlayingBar": SetPlayingBar(!_settings.Follow.PlayingBarEnabled); return true;
             case "View.ZoomIn": ZoomBy(1); return true;
             case "View.ZoomOut": ZoomBy(-1); return true;
         }
@@ -694,8 +698,9 @@ public partial class MainWindow
     private void SelectedOutputCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_restoring || SelectedTrack is null || SelectedOutputCombo.SelectedValue is not int id) return;
-        CaptureUndo();
-        SelectedTrack.MidiOutputDeviceId = id; _project.IsDirty = true; SyncSelectedOutput(); UpdateTitle();
+        var selected = SelectedTrack;
+        DocumentEdits.Run(Doc, _ => { selected.MidiOutputDeviceId = id; return true; }, invalidatesTimeline: false);
+        SyncSelectedOutput(); UpdateTitle();
     }
 
     private async void TestMidi_Click(object sender, RoutedEventArgs e)

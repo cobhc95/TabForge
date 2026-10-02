@@ -72,7 +72,7 @@ internal sealed partial class TrackTimeline
     {
         _dropLeaveToken++;
         if (Project is null || SessionFor(data) is not { } session) { SetDropPreview(null); return null; }
-        if (session.HasDeferred && MediaDropSession.From(data, onDrop: true) is { } reread)
+        if (session.HasDeferred && MediaDropSession.From(data, onDrop: true, media: Media) is { } reread)
         {
             // Virtual files that could not be read during the drag: read now, while the source still serves them.
             session.Dispose();
@@ -107,7 +107,7 @@ internal sealed partial class TrackTimeline
             if (_dropSession is { } current && current.Key == key) return current;   // the same drag re-entering the window
             _dropSession?.Dispose();
             _dropKey = null;
-            _dropSession = MediaDropSession.From(data);
+            _dropSession = MediaDropSession.From(data, media: Media);
             return _dropSession;
         }
     }
@@ -171,9 +171,9 @@ internal sealed partial class TrackTimeline
         if (plan.NewTrack)
         {
             var rowTop = ArrangementPanel.RulerHeight + ArrangementPanel.SectionHeight + ArrangementPanel.RowsHeight(project) - VerticalScrollOffset;
-            slot = new Rect(0, rowTop, width, ArrangementPanel.TrackRowHeight + laneHeight);
+            slot = new Rect(0, rowTop, width, ArrangementPanel.RowHeightFor(Project) + laneHeight);
             slotLabel = $"New {plan.NewTrackKind switch { TrackKind.Drums => "drum", TrackKind.Keys => "keys", _ => "audio" }} track";
-            laneTop = rowTop + ArrangementPanel.TrackRowHeight;
+            laneTop = rowTop + ArrangementPanel.RowHeightFor(Project);
         }
         else
         {

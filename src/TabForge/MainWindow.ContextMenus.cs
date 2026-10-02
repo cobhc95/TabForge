@@ -153,6 +153,18 @@ public partial class MainWindow
         StatusText.Text = smooth ? "Follow: smooth page turn" : "Follow: page turn";
     }
 
+    private void SetPlayingBar(bool on)
+    {
+        _settings.Follow.PlayingBarEnabled = on;
+        Editor.PlayingBarEnabled = on;
+        PlayingBarMenu.IsChecked = on;
+        Editor.InvalidateVisual();
+        SaveSettings();
+        StatusText.Text = on ? "Playing bar highlight: on" : "Playing bar highlight: off";
+    }
+
+    private void PlayingBarMenu_Click(object sender, RoutedEventArgs e) => SetPlayingBar(PlayingBarMenu.IsChecked);
+
     private void SetHorizontalScoreView(bool horizontal)
     {
         if (Doc.HorizontalScoreView == horizontal && _settings.PreferredHorizontalScoreView == horizontal) return;
@@ -201,12 +213,15 @@ public partial class MainWindow
         var cell = measure.Cells[cellIndex];
         var result = Views.MixTableWindow.Show(this, cell.Mix, track.MidiProgram, track.Volume, track.Pan, measure.TempoChange, _project.Tempo);
         if (result is null) return;
-        CaptureUndo();
-        cell.Mix = result.Mix is { IsEmpty: false } mix ? mix : null;
-        if (result.Mix is { IsEmpty: true } && result.Tempo is null) measure.TempoChange = null;
-        if (result.Tempo is int tempo)
-            foreach (var t in _project.Tracks) if (bar < t.Measures.Count) t.Measures[bar].TempoChange = tempo;
-        CommitEdit(EditRefresh.Score | EditRefresh.Arrangement);
+        DocumentEdits.Run(Doc, p =>
+        {
+            cell.Mix = result.Mix is { IsEmpty: false } mix ? mix : null;
+            if (result.Mix is { IsEmpty: true } && result.Tempo is null) measure.TempoChange = null;
+            if (result.Tempo is int tempo)
+                foreach (var t in p.Tracks) if (bar < t.Measures.Count) t.Measures[bar].TempoChange = tempo;
+            return true;
+        });
+        RefreshAfterEdit(EditRefresh.Score | EditRefresh.Arrangement);
         _midi.Rebuild(_project);
         StatusText.Text = cell.Mix is null ? $"Mix table cleared at bar {bar + 1}" : $"Mix table point set at bar {bar + 1}";
     }

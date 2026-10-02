@@ -112,29 +112,28 @@ public partial class MainWindow
         }
     }
 
-    private void Save_Click(object sender, RoutedEventArgs e) => _ = SaveCurrentAsync();
+    private void Save_Click(object sender, RoutedEventArgs e) => _ = SaveCurrentAsync(Doc);
 
-    /// <summary>Save (or Save As when the song has no writable path yet); true when the song was written.</summary>
-    private Task<bool> SaveCurrentAsync()
+    /// <summary>Save (or Save As when the song has no writable path yet) the given document, whichever tab is displayed; true when the song was written.</summary>
+    private Task<bool> SaveCurrentAsync(DocumentSession doc)
     {
         // Only .tforge and .gp can be written; a song opened from .gp3/.gp4/.gp5/.gpx asks where to save.
-        if (string.IsNullOrWhiteSpace(_currentPath) ||
-            !(_currentPath.EndsWith(".tforge", StringComparison.OrdinalIgnoreCase) || _currentPath.EndsWith(".gp", StringComparison.OrdinalIgnoreCase)))
-            return SaveAsAsync();
-        if (_degraded && File.Exists(_currentPath) && !_degradedConfirmedPaths.Contains(_currentPath))
+        if (!DocumentSaveFlow.CanSaveInPlace(doc.Path)) return SaveAsAsync(doc);
+        var current = doc.Path!;
+        if (_degraded && File.Exists(current) && !_degradedConfirmedPaths.Contains(current))
         {
             // After an unexpected error the model may be damaged: overwriting the user's file is opt-in.
-            var name = Path.GetFileName(_currentPath);
+            var name = Path.GetFileName(current);
             var dialog = new ThemedConfirmDialog("TabForge",
                 $"TabForge hit an unexpected error earlier, so this song may be damaged in memory.\n\nSave it as a new file instead of overwriting {name}?\n\n" +
                 $"Yes: save as a new file (recommended).\nNo: overwrite {name}.\nCancel: do not save.",
                 yesToolTip: "Save as a new file (recommended)", noToolTip: $"Overwrite {name}") { Owner = this };
             var answer = DialogHost.ShowModal(dialog) == true ? dialog.Result : MessageBoxResult.Cancel;
             if (answer == MessageBoxResult.Cancel) return Task.FromResult(false);
-            if (answer == MessageBoxResult.Yes) return SaveAsAsync();
-            _degradedConfirmedPaths.Add(_currentPath);
+            if (answer == MessageBoxResult.Yes) return SaveAsAsync(doc);
+            _degradedConfirmedPaths.Add(current);
         }
-        return SaveToAsync(_currentPath);
+        return SaveToAsync(doc, current);
     }
 
     // ---------- degraded mode (after an unexpected error) ----------
@@ -197,21 +196,38 @@ public partial class MainWindow
             StatusText.Text = "Closing when the save has finished…";
             return false;
         }
-        if (!_confirmOnClose || !Doc.HasUnsavedChanges) return true;
-        var result = ShowSaveChangesConfirmation("Save changes to the current project?");
-        if (result == MessageBoxResult.Cancel) return false;
-        if (result != MessageBoxResult.Yes) return true;
-        Dispatcher.BeginInvoke(new Action(SaveThenCloseWindow));
+        if (!_confirmOnClose) return true;
+        // Every document in this window with unsaved changes is asked about, not only the displayed tab. All answers are collected before
+        // anything happens: Cancel at any point leaves every document and the window exactly as they were (DocumentCloseFlow).
+        var plan = DocumentCloseFlow.Plan(_documents.Documents, _discardOnClose, (doc, asked) =>
+        {
+            var message = asked == 1 && ReferenceEquals(doc, Doc) ? "Save changes to the current project?" : $"Save changes to {doc.DisplayName}?";
+            return ShowSaveChangesConfirmation(message) switch
+            {
+                MessageBoxResult.Cancel => DiscardAnswer.Keep,
+                MessageBoxResult.Yes => DiscardAnswer.SaveFirst,
+                _ => DiscardAnswer.Close,
+            };
+        });
+        if (plan.Cancel) return false;
+        foreach (var doc in plan.Discard) _discardOnClose.Add(doc);   // answered "don't save": the close that follows the saves does not ask again
+        if (plan.Save.Count == 0) return true;
+        Dispatcher.BeginInvoke(new Action(() => SaveThenCloseWindow(plan.Save)));
         return false;
     }
 
-    private async void SaveThenCloseWindow()
-    {
-        var doc = Doc;
-        if (await SaveDocumentAsync(doc) && !doc.HasUnsavedChanges) RequestClose();
-    }
+    /// <summary>Documents the user chose to discard in the window-close prompt (so the close that follows the saves of the others does not ask again).</summary>
+    private readonly HashSet<DocumentSession> _discardOnClose = new();
 
-    private enum DiscardAnswer { Close, Keep, SaveFirst }
+    private async void SaveThenCloseWindow(IReadOnlyList<DocumentSession> documents)
+    {
+        if (!await DocumentCloseFlow.SaveAllAsync(documents, SaveDocumentAsync))
+        {
+            _discardOnClose.Clear();   // a save did not complete: the window stays open and every answer is asked again at the next close
+            return;
+        }
+        if (!_isClosed) RequestClose();
+    }
 
     private DiscardAnswer AskDiscardDocument(DocumentSession doc)
     {
@@ -242,26 +258,17 @@ public partial class MainWindow
     }
 
     /// <summary>
-    /// Saves <paramref name="doc"/> even when it is not the displayed tab. It is made active only for the synchronous start of the save
-    /// (path, dialogs and the snapshot of what to write are taken there, before the first await), then the displayed tab is active again.
+    /// Saves <paramref name="doc"/> even when it is not the displayed tab. The document is an argument all the way down (path, dialogs, the plug-in
+    /// states, the write): the displayed tab is never switched to borrow the "current document" aliases, so nothing is re-read from whichever tab is shown.
     /// </summary>
     private async Task<bool> SaveDocumentAsync(DocumentSession doc)
     {
         BeginDocumentOperation();
         try
         {
-            var displayed = _documents.Active;
             // The write may run after another tab became active: take the lyrics box into the song now, not from the box later.
-            if (ReferenceEquals(displayed, doc) && doc.Project.Lyrics != LyricsBox.Text) doc.Project.Lyrics = LyricsBox.Text;
-            Task<bool> save;
-            if (ReferenceEquals(displayed, doc)) save = SaveCurrentAsync();
-            else
-            {
-                _documents.Activate(doc);
-                try { save = SaveCurrentAsync(); }
-                finally { _documents.Activate(displayed); RefreshTabs(); }
-            }
-            return await save;
+            if (ReferenceEquals(_documents.Active, doc) && doc.Project.Lyrics != LyricsBox.Text) doc.Project.Lyrics = LyricsBox.Text;
+            return await SaveCurrentAsync(doc);
         }
         finally { EndDocumentOperation(); }
     }
@@ -308,9 +315,9 @@ public partial class MainWindow
     private void SwallowTextWhileSaving(object sender, TextCompositionEventArgs e) => e.Handled = true;
     private void SwallowMouseWhileSaving(object sender, MouseButtonEventArgs e) => e.Handled = true;
 
-    private void SaveAs_Click(object sender, RoutedEventArgs e) => _ = SaveAsAsync();
+    private void SaveAs_Click(object sender, RoutedEventArgs e) => _ = SaveAsAsync(Doc);
 
-    private Task<bool> SaveAsAsync()
+    private Task<bool> SaveAsAsync(DocumentSession doc)
     {
         var gpDefault = !string.Equals(_settings.General.DefaultSaveFormat, "tforge", StringComparison.OrdinalIgnoreCase);
         const string gp = "Guitar Pro 7/8 (*.gp) - opens in Guitar Pro, keeps every TabForge feature|*.gp";
@@ -319,79 +326,95 @@ public partial class MainWindow
         {
             Title = "Save song", Filter = gpDefault ? $"{gp}|{tf}" : $"{tf}|{gp}",
             DefaultExt = gpDefault ? ".gp" : ".tforge", AddExtension = true,
-            FileName = SanitizeFileName(Path.GetFileNameWithoutExtension(_currentPath) is { Length: > 0 } name ? name : _project.Title),
+            FileName = SanitizeFileName(Path.GetFileNameWithoutExtension(doc.Path) is { Length: > 0 } name ? name : doc.Project.Title),
         };
-        return dlg.ShowDialog(this) == true ? SaveToAsync(dlg.FileName) : Task.FromResult(false);
+        return dlg.ShowDialog(this) == true ? SaveToAsync(doc, dlg.FileName) : Task.FromResult(false);
     }
 
-    /// <summary>How a song with TabForge audio data is saved as .gp, chosen once per song.</summary>
-    private readonly System.Runtime.CompilerServices.ConditionalWeakTable<SongProject, string> _audioSaveChoice = new();
+    /// <summary>The questions a save may ask, answered with this window's dialogs.</summary>
+    private sealed class SaveDialogs : ISaveInteractions
+    {
+        private readonly Window _owner;
+        public SaveDialogs(Window owner) => _owner = owner;
+
+        public AudioDataSaveChoice? AskAudioDataChoice(string fileName) => Views.PluginSaveDialog.Ask(_owner, fileName) switch
+        {
+            Views.PluginSaveDialog.TForge => AudioDataSaveChoice.TForgeFile,
+            Views.PluginSaveDialog.GpPlusDataFile => AudioDataSaveChoice.GpPlusDataFile,
+            null => null,
+            _ => AudioDataSaveChoice.GpWithEmbeddedProject,
+        };
+
+        public GpExportChoice AskGpPreflight(GpPreflightReport report, GpExportKind kind, string fileName) =>
+            Views.GpExportPreflightDialog.Ask(_owner, report, kind, fileName);
+    }
+
+    private DocumentSaveFlow? _saveFlow;
+    private DocumentSaveFlow SaveFlow => _saveFlow ??= new DocumentSaveFlow(_documentController);
+
+    /// <summary>The plug-in states of a document's tracks (and the song's buses and monitor chain), read from the engine; large states (Nexus) take a moment.</summary>
+    private Task<Audio.StateCollection> CollectStatesAsync(DocumentSession doc) =>
+        Audio.AudioEngineClient.Instance.CollectStatesAsync(doc.Project.Tracks.Concat(Models.MixerBuses.Active(doc.Project))
+            .Concat(Models.MixerBuses.ActiveMonitor(doc.Project, _settings.Plugins.MonitorFx) is { } monitorFx ? new[] { monitorFx } : Array.Empty<Models.TrackModel>()).ToList(), 5000);
 
     /// <summary>
-    /// Saves without blocking the window: plug-in states are awaited (status "Saving…", UI responsive, a second save is refused),
-    /// then the model is written synchronously in one step, so the file is a snapshot taken after the states arrived.
-    /// Returns true when the song was written and is clean.
+    /// Saves <paramref name="doc"/> to <paramref name="path"/> without blocking the window: plug-in states are awaited (status "Saving…", UI responsive,
+    /// a second save is refused), then the model is written synchronously in one step, so the file is a snapshot taken after the states arrived. The
+    /// sequence is <see cref="DocumentSaveFlow"/>'s, for this document; this method is the window's half (input gate, status, the failure message,
+    /// the title). Returns true when the song was written and is clean.
     /// </summary>
-    private async Task<bool> SaveToAsync(string path)
+    private async Task<bool> SaveToAsync(DocumentSession doc, string path)
     {
         if (_documentController.IsSaving) { StatusText.Text = "Already saving…"; return false; }
-        var doc = Doc;
-        var project = doc.Project;
         BeginDocumentOperation();   // a window close waits for this save instead of interrupting it
         BeginSaveInputGate();       // no edits, tab closes or other commands in this window until it is done (dialogs are their own windows)
         try
         {
-            // Songs with plug-ins / FX / mixer groups: Guitar Pro does not know these settings, so ask how to save (before any waiting).
-            string? choice = null;
-            if (path.EndsWith(".gp", StringComparison.OrdinalIgnoreCase) && Models.MixerGroups.HasAudioData(project))
-            {
-                if (!_audioSaveChoice.TryGetValue(project, out choice))
-                {
-                    choice = Views.PluginSaveDialog.Ask(this, Path.GetFileName(path));
-                    if (choice is null) return false;
-                    _audioSaveChoice.AddOrUpdate(project, choice);
-                }
-            }
-            StatusText.Text = "Saving… (reading plug-in states)";
-            // Plug-ins keep their settings in the engine: copy them into the song first.
-            // Any state that could not be read is reported and the song stays unsaved (never a silent "Saved" with stale plug-in settings).
-            var wrote = false;
-            await _documentController.SaveAsync(
-                () => Audio.AudioEngineClient.Instance.CollectStatesAsync(project.Tracks.Concat(Models.MixerBuses.Active(project)).Concat(Models.MixerBuses.ActiveMonitor(project, _settings.Plugins.MonitorFx) is { } monitorFx ? new[] { monitorFx } : Array.Empty<Models.TrackModel>()).ToList(), 5000),   // large states (Nexus) take a moment
-                capture =>
-                {
-                    var lyrics = ReferenceEquals(Doc, doc) ? LyricsBox.Text : project.Lyrics;
-                    string message;
-                    if (choice == Views.PluginSaveDialog.TForge)
-                    {
-                        var tforge = Path.ChangeExtension(path, ".tforge");
-                        _documentController.Save(doc, tforge, lyrics);
-                        message = $"Saved {Path.GetFileName(tforge)}";
-                    }
-                    else if (choice == Views.PluginSaveDialog.GpPlusDataFile)
-                    {
-                        _documentController.SaveCleanGuitarProWithAudioData(doc, path, lyrics);
-                        message = $"Saved {Path.GetFileName(path)} and {Path.GetFileName(AudioDataFile.PathFor(path))}";
-                    }
-                    else
-                    {
-                        _documentController.Save(doc, path, lyrics);
-                        message = $"Saved {Path.GetFileName(path)}";
-                    }
-                    wrote = true;
-                    if (capture.Warning is { } warning) { doc.MarkIncomplete(); StatusText.Text = $"{message}, but {warning}"; }
-                    else StatusText.Text = message;
-                    if (_degraded && doc.Path is { } written) _degradedConfirmedPaths.Add(written);   // the file the user chose while degraded
-                    UpdateTitle();
-                });
-            return wrote && !doc.HasUnsavedChanges;
+            // The lyrics as they are now: the box belongs to the displayed tab only (input is gated until the write is done).
+            var lyrics = ReferenceEquals(_documents.Active, doc) ? LyricsBox.Text : doc.Project.Lyrics;
+            var outcome = await SaveFlow.SaveAsync(doc, path, lyrics, new SaveDialogs(this), CollectStatesAsync, text => StatusText.Text = text);
+            if (outcome.Message.Length > 0) StatusText.Text = outcome.Message;
+            if (outcome.Cancelled) return false;
+            if (_degraded && doc.Path is { } written) _degradedConfirmedPaths.Add(written);   // the file the user chose while degraded
+            UpdateTitle();
+            return outcome.Saved;
         }
         catch (Exception ex)
         {
             StatusText.Text = "Save failed";
-            MessageBox.Show(this, ex.Message, "Save failed", MessageBoxButton.OK, MessageBoxImage.Error);
+            DialogHost.ShowError(this, ex.Message, "Save failed");
             return false;
         }
+        finally
+        {
+            EndSaveInputGate();
+            EndDocumentOperation();
+        }
+    }
+
+    /// <summary>File > Export compatible Guitar Pro file: a copy for other programs. Never changes this song's file or unsaved state.</summary>
+    private void ExportGuitarPro_Click(object sender, RoutedEventArgs e) => _ = ExportGuitarProAsync();
+
+    private async Task ExportGuitarProAsync()
+    {
+        if (_documentController.IsSaving) { StatusText.Text = "Already saving…"; return; }
+        var doc = Doc;   // the song this command was started for, even if another tab is selected while the dialogs are open
+        var dlg = new SaveFileDialog
+        {
+            Title = "Export compatible .gp file", Filter = "Guitar Pro 7/8 (*.gp)|*.gp", DefaultExt = ".gp", AddExtension = true,
+            FileName = SanitizeFileName(Path.GetFileNameWithoutExtension(doc.Path ?? "") is { Length: > 0 } name ? name : doc.Project.Title),
+        };
+        if (dlg.ShowDialog(this) != true) return;
+        var path = dlg.FileName;
+        BeginDocumentOperation();
+        BeginSaveInputGate();
+        try
+        {
+            var lyrics = ReferenceEquals(_documents.Active, doc) ? LyricsBox.Text : doc.Project.Lyrics;
+            var outcome = await SaveFlow.ExportGuitarProAsync(doc, path, lyrics, new SaveDialogs(this), CollectStatesAsync, text => StatusText.Text = text);
+            StatusText.Text = outcome.Message;
+        }
+        catch (Exception ex) { StatusText.Text = "Export failed"; DialogHost.ShowError(this, ex.Message, ".gp export failed"); }
         finally
         {
             EndSaveInputGate();
@@ -413,7 +436,7 @@ public partial class MainWindow
         var selected = Editor.SelectedTrackIndex is >= 0 && Editor.SelectedTrackIndex < _project.Tracks.Count ? new[] { _project.Tracks[Editor.SelectedTrackIndex] } : Array.Empty<Models.TrackModel>();
         var ctx = new Views.RenderContext
         {
-            Project = _project, Settings = _settings, SelectedTracks = selected,
+            Project = _project, Media = Doc.Media, Settings = _settings, SelectedTracks = selected,
             Selection = Editor.HasSelection ? (sel.StartMeasure, sel.StartCell, sel.EndMeasure, sel.EndCell) : null,
             StopPlayback = () => { if (_midi.IsPlaying) StopPlayback(); },
             Restore = () => { SyncAudioEngine(); _midi.RearmChannelSetup(); },
