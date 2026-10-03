@@ -9,7 +9,7 @@ recording lanes, mixer groups, VST effects and instruments, and offline audio re
 *The main screenshot shows TabForge's own demo song and a third-party VST3 plug-in (Superior Drummer 3 by Toontrack, sold separately) as an example of plug-in hosting. TabForge does not include that plug-in and is not affiliated with Toontrack.*
 
 > [!NOTE]
-> **TabForge 0.5.2 is a pre-release.** Keep backups of your projects and your original song files,
+> **TabForge 0.5.2 is an official release.** Keep backups of your projects and your original song files,
 > especially before using recording or third-party plug-ins, and report anything odd on the Issues page.
 
 TabForge is an independent project, not affiliated with any other software maker.

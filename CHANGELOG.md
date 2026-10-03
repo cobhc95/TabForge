@@ -1,6 +1,6 @@
 # Changelog
 
-TabForge is pre-release software: actively developed, incomplete, with numerous known bugs.
+TabForge is actively developed; please report anything odd on the Issues page.
 
 ## 0.5.2 — 2026-10-03
 A larger update to 0.5.1: audio tracks and the Add-track lane, a track right-click menu, two shortcuts per command, live editing during playback, and a reorganised, faster core.
