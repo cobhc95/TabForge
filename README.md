@@ -1,6 +1,6 @@
 # TabForge 0.5.3
 
-**A keyboard-driven tablature and notation editor for Windows. Opens and saves GP files (.gp, .gp3–.gp5, .gpx).** Write, import and play back guitar,
+**A keyboard-driven tablature and notation editor for Windows. Opens GP files (.gp3, .gp4, .gp5, .gpx, .gp) and saves .gp and its own .tforge projects.** Write, import and play back guitar,
 bass, drum and keyboard parts, with a live fretboard / keyboard, an arrangement timeline, audio and MIDI
 recording lanes, mixer groups, VST effects and instruments, and offline audio rendering.
 
@@ -399,6 +399,10 @@ MP3 bit rates are offered when Windows has an encoder. Rendering supports progre
 
 Plug-in wiring selects audio input channels, the MIDI source/channel filter, sidechain input (VST2 with four or
 more inputs) and MIDI output forwarding to another track.
+
+**Current limits:** sidechain input works with VST2 plug-ins that have four or more inputs; offline rendering does not yet
+compensate plug-in delay on sidechain and bus routes; a compatible .gp export lists what it cannot keep before you save.
+Plug-ins run with your Windows permissions (the separate-process option protects TabForge from crashes, not your files).
 
 - **Serial MIDI chain:** MIDI flows through the plug-in list in order, so MIDI-effect plug-ins
   shape the notes for the next slot; instruments add their audio, effects process everything before them.
