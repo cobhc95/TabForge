@@ -121,7 +121,7 @@ public static partial class SelfTest
             }
 
             Check("interactions: I-5: the playhead only moved forward through all plug-in steps (no jump, stall or step back; a restart from the playhead is not one)", trace.Backward == 0 && trace.Jumps == 0 && trace.Stalls == 0, trace.ToString());
-            IxKnown("E5", "no note is sent twice across the plug-in steps (a restart from the playhead replays the beat it cuts)", IxReplays(engine) is (0, 0), $"duplicates and rewinds {IxReplays(engine)}");
+            Check("interactions: I-5: no note is sent twice across the plug-in steps (a restart from the playhead resumes after what was already sent)", IxReplays(engine) is (0, 0), $"duplicates and rewinds {IxReplays(engine)}");
             Check("interactions: I-5: the glitch counters are unchanged across the plug-in steps", IxGlitches.Take(context, session) == glitches, $"{IxGlitches.Take(context, session)} vs {glitches}");
         }
         finally

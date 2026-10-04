@@ -152,6 +152,8 @@ public partial class MainWindow
         internal Dictionary<string, FrameworkElement> _palettePanelContents => _window.ToolPalette.PanelContents;
         internal int _playheadBar { get => _window._playheadBar; set => _window._playheadBar = value; }
         internal double _playheadFraction { get => _window._playheadFraction; set => _window._playheadFraction = value; }
+        internal double _playheadMs { get => _window._playheadMs; set => _window._playheadMs = value; }
+        internal bool _isPlayingVisual { get => _window._isPlayingVisual; set => _window._isPlayingVisual = value; }
         internal bool _probeNoSave { get => _window._probeNoSave; set => _window._probeNoSave = value; }
         internal SongProject _project { get => _window._project; set => _window._project = value; }
         internal string? _scaleHighlight { get => _window.InstrumentPane.ScaleHighlight; set => _window.InstrumentPane.ScaleHighlight = value; }

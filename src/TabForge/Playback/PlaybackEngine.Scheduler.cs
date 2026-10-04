@@ -115,7 +115,7 @@ public sealed partial class PlaybackEngine : IDisposable
             }
         }
 
-        var index = FirstIndexAtOrAfter(events, startMs);
+        var index = FirstIndexToPlay(events, startMs);
         List<double>? sectionMs = null;
         var nextSection = 0;
         var lastCountInMs = startMs;
@@ -360,6 +360,7 @@ public sealed partial class PlaybackEngine : IDisposable
             }
             if (staleStateDropped) RestoreChannelStateAt(timeline, startMs, ms);
             lastDispatchMs = ms;
+            Volatile.Write(ref _sentThroughMs, index > 0 ? Math.Max(ms, events[index - 1].TimeMs) : ms);
 
             if (!loopEnabled && ms >= timeline.TotalMs)
             {

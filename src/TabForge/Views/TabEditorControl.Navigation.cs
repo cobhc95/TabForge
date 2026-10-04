@@ -27,14 +27,15 @@ public sealed partial class TabEditorControl
         else MoveBackBeat(track);
     }
 
-    private void MoveForwardBeat(TrackModel track)
+    /// <summary>Moves the caret one beat on; <paramref name="seekPlayback"/> is false after an edit so playback never jumps.</summary>
+    private void MoveForwardBeat(TrackModel track, bool seekPlayback = true)
     {
         if (SelectedMeasure >= track.Measures.Count) return;
         var next = CursorPositions.Next(CellsFor(track.Measures[SelectedMeasure]), SelectedCell, SlotsFor(SelectedMeasure));
         if (next >= 0) SelectedCell = next;
         else if (SelectedMeasure + 1 < track.Measures.Count) { SelectedMeasure++; SelectedCell = Snap(SelectedMeasure, 0); }
         else return;
-        SelectionChangedNow();
+        SelectionChangedNow(seekPlayback);
     }
 
     private void MoveBackBeat(TrackModel track)

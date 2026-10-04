@@ -6,6 +6,10 @@ TabForge has one headless test suite, built into the executable. It needs no aud
 
 A normal build contains the **basic set**: the architecture and hygiene checks and a few smoke tests. It runs in seconds and is what every rebuild runs. The **full suite** (`tests/full-suite/`, see its README) is compiled in only with `-p:TabForgeFullSuite=true`; CI builds it that way, and so does the maintainer's local rebuild script (`fullsuite` option). The sections below describe the full suite; to run any test of it, build with that switch.
 
+## Release gate (`--areas release`)
+
+`--areas release` is the curated release set: the basic set plus saving, atomic writes and recovery, import and malformed-input containment, playback and editing interaction, document context, plug-in trust and input limits (the list is `ReleaseTestNames` in `src/TabForge/SelfTests/SelfTestRelease.cs`). It needs a full-suite build and runs in about 2 minutes. `tools/Package-Release.ps1` (and so `.github/workflows/release.yml`) always builds a separate full-suite test build, runs it with `--areas release` and refuses to package on any failure; the packaged build is the normal one. The maintainer's local rebuild script has a `release` option that runs the same gate. Push CI stays on the basic set; the full suite runs weekly.
+
 ## Run it
 
 From the repository root (the tests find the source tree from the working directory), after a Release build made with `-p:TabForgeFullSuite=true` (a normal build has only the basic set and does not know the gate groups below):

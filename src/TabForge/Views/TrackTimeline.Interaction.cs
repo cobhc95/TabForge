@@ -487,29 +487,7 @@ internal sealed partial class TrackTimeline : ISectionTipHost, ISectionEdgeHost
                     SectionEdges.BeginMarkerDrag(hits[_sectionPressOriginIndex], _dragStart.X, p.X);
                     return;
                 }
-                _sectionDragMarker = hits[_sectionPressOriginIndex].Marker;
-                _sectionDragGrabOffset = _dragStart.X - hits[_sectionPressOriginIndex].Bounds.X;
-                _sectionDragX = p.X - _sectionDragGrabOffset;
-                _sectionDragStartBar = hits[_sectionPressOriginIndex].FirstBar;
-                _sectionDragEndBar = _sectionPressOriginIndex + 1 < hits.Count
-                    ? hits[_sectionPressOriginIndex + 1].FirstBar : BarCount;
-                _lastSectionTarget = -1;
-                _sectionPreviewPositions.Clear();
-                _sectionPreviewTargets.Clear();
-                foreach (var hit in hits)
-                {
-                    _sectionPreviewPositions[hit.Marker] = hit.Bounds.X;
-                    _sectionPreviewTargets[hit.Marker] = hit.Bounds.X;
-                }
-                _sectionDragHitsSnapshot = hits.ToArray();
-                _sectionDragSnapshot = new SectionDragSnapshot(Project!, EnsureTimelineGeometry(),
-                    _sectionDragStartBar, _sectionDragEndBar, VerticalScrollOffset,
-                    hits[_sectionPressOriginIndex].Color, hits[_sectionPressOriginIndex].Title);
-                _sectionDragging = true;
-                BeginLaneAnimation();
-                SectionDragStarted?.Invoke(this, EventArgs.Empty);
-                InvalidateVisual();
-                PublishSectionDragPreview(hits);
+                BeginSectionDrag(hits, p);
             }
             if (_sectionDragging)
             {
@@ -551,6 +529,34 @@ internal sealed partial class TrackTimeline : ISectionTipHost, ISectionEdgeHost
             SetDragPreview(_dragTrackFrom, _dragTrackTo, p.Y - _dragStart.Y);
             TrackDragPreviewChanged?.Invoke(this, (_dragTrackFrom, _dragTrackTo, p.Y - _dragStart.Y, true));
         }
+    }
+
+    /// <summary>Starts moving the pressed section: the preview positions, the snapshot for the drag overlay and the started event.</summary>
+    private void BeginSectionDrag(IReadOnlyList<SectionHit> hits, Point p)
+    {
+        _sectionDragMarker = hits[_sectionPressOriginIndex].Marker;
+        _sectionDragGrabOffset = _dragStart.X - hits[_sectionPressOriginIndex].Bounds.X;
+        _sectionDragX = p.X - _sectionDragGrabOffset;
+        _sectionDragStartBar = hits[_sectionPressOriginIndex].FirstBar;
+        _sectionDragEndBar = _sectionPressOriginIndex + 1 < hits.Count
+            ? hits[_sectionPressOriginIndex + 1].FirstBar : BarCount;
+        _lastSectionTarget = -1;
+        _sectionPreviewPositions.Clear();
+        _sectionPreviewTargets.Clear();
+        foreach (var hit in hits)
+        {
+            _sectionPreviewPositions[hit.Marker] = hit.Bounds.X;
+            _sectionPreviewTargets[hit.Marker] = hit.Bounds.X;
+        }
+        _sectionDragHitsSnapshot = hits.ToArray();
+        _sectionDragSnapshot = new SectionDragSnapshot(Project!, EnsureTimelineGeometry(),
+            _sectionDragStartBar, _sectionDragEndBar, VerticalScrollOffset,
+            hits[_sectionPressOriginIndex].Color, hits[_sectionPressOriginIndex].Title);
+        _sectionDragging = true;
+        BeginLaneAnimation();
+        SectionDragStarted?.Invoke(this, EventArgs.Empty);
+        InvalidateVisual();
+        PublishSectionDragPreview(hits);
     }
 
     protected override void OnMouseLeftButtonUp(MouseButtonEventArgs e)

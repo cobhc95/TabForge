@@ -617,4 +617,39 @@ public static partial class SelfTest
         Check("a new project shows groups off by default", !new SongProject().Mixer.ShowGroupsInTrackList);
         Check("'Show tracks in groups' is a bindable command", HotkeyCatalog.All.Any(a => a.Id == "View.ShowTrackGroups"));
     }
+
+    private static void TestMixerMuteSoloClick()
+    {
+        var host = new FakeMixerHost();
+        host.Project.Tracks.Add(MixerTestTrack("Lead", TrackKind.Guitar, 30));
+        host.Project.Tracks.Add(MixerTestTrack("Bass", TrackKind.Bass, 33));
+        using var alive = KeepAlive();
+        var window = new MixerWindow(host, null);
+        window.SizeToContent = SizeToContent.Manual; window.Width = 1000; window.Height = 700;
+        try
+        {
+            ShowTestWindow(window);
+            Button Find(string name, int n)   // the n-th track strip's button (group panels have their own)
+            {
+                var strip = VisualDescendants<FrameworkElement>(window).First(e => System.Windows.Automation.AutomationProperties.GetName(e).StartsWith($"Mixer strip: {host.Project.Tracks[n].Name}"));
+                return VisualDescendants<Button>(strip).First(b => System.Windows.Automation.AutomationProperties.GetName(b) == name);
+            }
+            var track = host.Project.Tracks[0];
+            var mute = Find("Mute", 0);
+            try { mute.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); } catch (Exception ex) { Check("Mixer mute click threw", false, ex.ToString().Replace('\n', '|')); throw; }
+            Check("Mixer mute click: state set and the clicked button is still in the live tree inside the click (no rebuild under it)",
+                track.Mute && PresentationSource.FromVisual(mute) is not null, $"mute={track.Mute} live={PresentationSource.FromVisual(mute) is not null} muted=[{string.Join(",", host.Project.Tracks.Select(t => t.Mute))}] edits={host.Edits} changes={host.Changes}");
+            PumpUi(); PumpUi();
+            Check("Mixer mute click: after the deferred sync the strip shows Muted", Find("Mute", 0).ToolTip?.ToString()?.Contains("(Muted)") == true);
+            var solo = Find("Solo", 0);
+            solo.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            PumpUi(); PumpUi();
+            Check("Mixer solo click: solo set and shown", track.Solo && Find("Solo", 0).ToolTip?.ToString()?.Contains("(Soloed)") == true);
+            Find("Mute", 0).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Find("Solo", 0).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            PumpUi(); PumpUi();
+            Check("Mixer mute/solo click: toggles back off", !track.Mute && !track.Solo);
+        }
+        finally { window.Close(); }
+    }
 }

@@ -158,6 +158,7 @@ public static partial class SelfTest
             if (args[i].Equals("--areas", StringComparison.OrdinalIgnoreCase))
             {
                 var set = args[i + 1].Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToHashSet(StringComparer.OrdinalIgnoreCase);
+                if (set.Contains("release")) { _basicOnly = true; _releaseTests = new HashSet<string>(ReleaseTestNames, StringComparer.Ordinal); set.UnionWith(BasicAreas); }   // the release gate: basic plus the curated release tests
                 if (set.Contains("basic")) { _basicOnly = true; set.UnionWith(BasicAreas); }   // the basic set: only the tests tagged with these areas, no untagged core
                 return set.Contains("all") ? null : set;
             }
@@ -170,7 +171,7 @@ public static partial class SelfTest
     private static bool GuardRan(Action test, string name)
     {
         var area = AreaOf.TryGetValue(test.Method.Name, out var a) ? a : "core";
-        if (_areas is not null && (area != "core" || _basicOnly) && !_areas.Contains(area)) { _skippedByArea++; return true; }
+        if (_areas is not null && (area != "core" || _basicOnly) && !_areas.Contains(area) && _releaseTests?.Contains(test.Method.Name) != true) { _skippedByArea++; return true; }
         if (OutsideOnly(test.Method.Name)) { _skippedByOnly++; return true; }
         var watch = System.Diagnostics.Stopwatch.StartNew();
         var ok = true;

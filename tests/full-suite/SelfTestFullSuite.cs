@@ -156,6 +156,7 @@ public static partial class SelfTest
         Guard(TestSpeedControl);
         Guard(TestMixerSliders);
         Guard(TestMixerSlidersRealInput);
+        Guard(TestMixerMuteSoloClick);
         Guard(TestTrackListFollowsMixerInPlace);
         Guard(TestSliderMappingAndGroupValues);
         Guard(TestTrackOrderingModel);
@@ -320,6 +321,7 @@ public static partial class SelfTest
         Guard(TestSettingsWithInlinePluginStates);
         Guard(TestDataIntegrityLeftovers);
         Guard(TestAutosaveRecovery);
+        Guard(TestEmergencyRecoveryNames);
         Guard(TestCallbackMetrics);
         Guard(TestAudioAudit);
         Guard(TestAudioAuditRepeatedSections);
@@ -401,6 +403,7 @@ public static partial class SelfTest
         ["TestMixerDragAndDrop"] = "core",
         ["TestMixerSliders"] = "core",
         ["TestMixerSlidersRealInput"] = "core",
+        ["TestMixerMuteSoloClick"] = "core",
         ["TestOrderAnimationAndSpeedCommands"] = "core",
         ["TestPerNoteDurationPercent"] = "core",
         ["TestPlaybackDifferences"] = "core",
@@ -515,6 +518,7 @@ public static partial class SelfTest
         ["TestAudioTrackModel"] = "persistence",
         ["TestAudioTrackPersistence"] = "persistence",
         ["TestAutosaveRecovery"] = "persistence",
+        ["TestEmergencyRecoveryNames"] = "persistence",
         ["TestClipboardServiceFallback"] = "persistence",
         ["TestDirectTforgeOpenRecovers"] = "persistence",
         ["TestEmbeddedProjectLimit"] = "persistence",

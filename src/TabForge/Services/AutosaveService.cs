@@ -29,6 +29,13 @@ public static class AutosaveService
     public static string FileFor(string folder, int pid, Guid id, string? songName) =>
         Path.Combine(folder, $"autosave-{pid}-{id:N}-{TabForge.Audio.Contracts.SafeFileNames.SafeFileName(songName, "Untitled", 40)}.tforge");
 
+    /// <summary>
+    /// The file for an emergency copy written after an unexpected error. It uses the autosave name shape with process id 0 (so the next start
+    /// lists it as an orphan and a normal exit never deletes it) and a fresh id, so two songs with the same file name never share a copy.
+    /// </summary>
+    public static string EmergencyFileFor(string folder, string? songName, string stamp) =>
+        Path.Combine(folder, $"autosave-0-{Guid.NewGuid():N}-{TabForge.Audio.Contracts.SafeFileNames.SafeFileName(songName, "Untitled", 40)}-{stamp}.tforge");
+
     public static bool TryParse(string path, out int pid)
     {
         pid = 0;

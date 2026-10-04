@@ -72,7 +72,7 @@ public static partial class SelfTest
 
     private static void IxEditDuringPlaybackCase(LifetimeContext context)
     {
-        // With "advance after entering a note" on (the default) the entry moves the cursor on, and a cursor move while playing repositions playback.
+        // With "advance after entering a note" on the entry moves the cursor on; an edit never repositions playback.
         IxEditDuringPlayback(context, advance: true);
         // With it off, an edit ahead of the playhead leaves playback alone.
         IxEditDuringPlayback(context, advance: false);
@@ -190,7 +190,7 @@ public static partial class SelfTest
             var jump = IxPosition(session) - positionAtEdit;
             if (advance)
             {
-                IxKnown("A-advance-seek", "typing a note ahead of the playhead leaves playback where it is (no jump to the cursor)", jump < 1.0 && engine.IsPlaying, $"playhead {positionAtEdit:0.00} -> {IxPosition(session):0.00}, playing {engine.IsPlaying}");
+                Check($"interactions: {label}: typing a note ahead of the playhead leaves playback where it is (no jump to the cursor)", jump < 1.0 && engine.IsPlaying, $"playhead {positionAtEdit:0.00} -> {IxPosition(session):0.00}, playing {engine.IsPlaying}");
                 IxPump(200, trace.Sample);
                 Log.Add($"  info  {label}: after the entry the playhead is at {IxPosition(session):0.00} (was {positionAtEdit:0.00}); {trace}");
                 engine.Stop();

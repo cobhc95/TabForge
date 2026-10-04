@@ -100,5 +100,5 @@ public sealed partial class TabEditorControl : IScoreEditContext
     void IScoreEditContext.SelectRange(int startMeasure, int startCell, int endMeasure, int endCell) => SelectRange(startMeasure, startCell, endMeasure, endCell);
     (int m1, int c1, int m2, int c2) IScoreEditContext.SelectionRange() => SelectionRange();
     void IScoreEditContext.SetPosition(int measure, int cell, int stringIndex) => SetPosition(measure, cell, stringIndex);
-    void IScoreEditContext.MoveForwardBeat(TrackModel track) => MoveForwardBeat(track);
+    void IScoreEditContext.MoveForwardBeat(TrackModel track) => MoveForwardBeat(track, seekPlayback: false);
 }

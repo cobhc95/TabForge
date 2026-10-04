@@ -70,6 +70,8 @@ jobs:
           "Inno Setup: $iscc"
           "ISCC=$iscc" | Add-Content -Path $env:GITHUB_ENV
 
+      # The release gate is part of this step: Package-Release.ps1 first builds a separate full-suite test build (-p:TabForgeFullSuite=true, never packaged) and requires
+      # "--areas release" to report 0 failed, so a failing gate fails the workflow and nothing is attached. The packaged build is the normal one.
       # Runs on the clean checkout itself (no worktree needed) and refuses a dirty tree. Publishes, self-tests the exact publish folder (--require ci: gp-fixtures, synthetic-fixtures, source-hygiene,
       # installer-parity, fuzz), then builds the portable zip, the installer and the SHA-256 file in dist/.
       - name: Package (self-test, portable zip, installer, checksums)

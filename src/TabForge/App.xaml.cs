@@ -263,8 +263,7 @@ public partial class App : Application
             {
                 if (!document.HasUnsavedChanges) continue;
                 Directory.CreateDirectory(RecoveryFolder);
-                var name = TabForge.Audio.Contracts.SafeFileNames.SafeFileName(Path.GetFileNameWithoutExtension(document.DisplayName), "Untitled");
-                var path = Path.Combine(RecoveryFolder, $"{name}-{stamp}.tforge");
+                var path = AutosaveService.EmergencyFileFor(RecoveryFolder, Path.GetFileNameWithoutExtension(document.DisplayName), stamp);
                 WriteRecoveryCopy(document.Project, path);
                 written.Add(path);
             }

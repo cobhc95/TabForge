@@ -211,6 +211,24 @@ if ($FullSuite) {
     Remove-Item -LiteralPath $fullFolder -Recurse -Force
 }
 
+# ---- release gate: the curated release area, on its own test build that is never packaged ----------
+# Basic set plus saving/atomic writes/recovery, import and malformed-input containment, playback/edit interaction, document context and
+# security tests (SelfTestRelease.cs). It cannot be skipped; any failure stops the release.
+$gateFolder = Join-Path $root 'build\TabForge-releasegate'
+Clear-Folder $gateFolder
+& (Join-Path $PSScriptRoot 'Publish.ps1') -Output $gateFolder -ExtraArgs '-p:TabForgeFullSuite=true'
+$gateLog = Join-Path ([IO.Path]::GetTempPath()) "tabforge-release-gate-$version.log"
+if (Test-Path -LiteralPath $gateLog) { Remove-Item -LiteralPath $gateLog -Force }
+Write-Output "Release-gate self-test (--areas release) of $gateFolder ..."
+$gateProc = Start-Process -FilePath (Join-Path $gateFolder 'TabForge.exe') -ArgumentList @('--selftest', "`"$gateLog`"", '--areas', 'release') -WorkingDirectory $root -Wait -PassThru
+if (-not (Test-Path -LiteralPath $gateLog)) { throw "Release-gate self-test wrote no log ($gateLog); refusing to package." }
+if ($gateProc.ExitCode -ne 0 -or -not (Select-String -LiteralPath $gateLog -Pattern '^TabForge self-test: \d+ passed, 0 failed' -Quiet)) {
+    Select-String -LiteralPath $gateLog -Pattern '^\s+FAIL' | ForEach-Object { Write-Output $_.Line }
+    throw "Release-gate self-test failed (log: $gateLog); refusing to package."
+}
+Copy-Item -LiteralPath $gateLog -Destination (Join-Path $dist "TabForge-$display-releasegate.log") -Force
+Remove-Item -LiteralPath $gateFolder -Recurse -Force
+
 # ---- release gate: self-test the exact folder that will be packaged (the basic set) ----------------
 $exe = Join-Path $publish 'TabForge.exe'
 $exeHashBefore = Get-Sha256 $exe

@@ -204,6 +204,7 @@ internal sealed partial class WindowProbes : MainWindow.ProbeAccess
                 case "playhead-style": _w.Arrangement.PlayheadStyle = value.GetString() ?? "Line"; await _w.Settle(300); break;
                 case "solo": _w._project.Tracks[value.GetInt32()].Solo = true; _w.RefreshTracks(); await _w.Settle(300); break;
                 case "clip-edit": case "delete-prompt": case "marker-size": await ExtraStepAsync(verb, value); break;
+                case "frames": await FramesAsync(value.GetString() ?? "frames", args); break;
                 case "wait": await _w.Settle(value.GetInt32()); break;
                 case "shot": await ShotAsync(value.GetString() ?? "shot", args); break;
                 default: throw new InvalidOperationException($"unknown step '{verb}'");
@@ -330,7 +331,7 @@ internal sealed partial class WindowProbes : MainWindow.ProbeAccess
             for (var i = 0; i < project.Tracks.Count; i++)
             {
                 var t = project.Tracks[i];
-                text.AppendLine($"  {i} (0-based) {t.Name}: {t.Kind}, {t.InstrumentName}, {t.StringTunings.Count} strings, capo {t.Capo}, transpose {t.Transpose}, volume {t.Volume}, pan {t.Pan}, bars {t.Measures.Count}");
+                text.AppendLine($"  {i} (0-based) {t.Name}: {t.Kind}, {t.InstrumentName}, {t.StringTunings.Count} strings, capo {t.Capo}, transpose {t.Transpose}, volume {t.Volume}, pan {t.Pan}, bars {t.Measures.Count}, first bars with notes {string.Join(",", t.Measures.Select((m, b) => (m, b)).Where(x => x.m.Cells.Any(c => c.Notes.Count > 0)).Take(10).Select(x => x.b + 1))}");
             }
             text.AppendLine("bar structure on track 0 (only bars with something special):");
             var first = project.Tracks.FirstOrDefault();

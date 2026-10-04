@@ -2,6 +2,20 @@
 
 TabForge is actively developed; please report anything odd on the Issues page.
 
+## 0.5.4 — 2026-10-04
+
+Reliability release after an external review: safer recovery, playback that never jumps or repeats notes, and a stronger release check.
+
+### Architecture and quality
+- Release check: every release build must now pass a release test set (the basic checks plus the core saving, recovery, import, playback, document and security tests, about 2,000 checks in a little over a minute); the full suite still runs weekly.
+- Two interaction checks that were only reported as known issues are fixed and now fail the build if they ever come back.
+
+### Fixes
+- Playback: typing a note during playback with "advance after entry" on no longer moves the playhead to the edit cursor; the edit is heard when playback reaches it.
+- Playback: a mixer, routing or plug-in change during playback resumes exactly where it was, without replaying the notes of the current beat.
+- Recovery: emergency copies written after an unexpected error get a unique name, so two unsaved songs with the same file name from different folders no longer replace each other; both are offered for recovery at the next start.
+- Mixer: a Mute or Solo click on a strip no longer throws a visual-tree error when the strip refreshes afterwards.
+
 ## 0.5.3 — 2026-10-04
 Clip editing, a Delete prompt for bars on the timeline, cleaner Delete in the score, and a lighter, smoother timeline with long songs and long clips. The code behind the main window, the arrangement panel and the timeline was split into smaller owned parts.
 

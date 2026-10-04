@@ -236,6 +236,8 @@ public sealed partial class PlaybackEngine : IDisposable
             var cell = Math.Clamp(options.StartCell, 0, slots - 1);
             _startMs = playBar.StartMs + (playBar.EndMs - playBar.StartMs) * cell / slots;
         }
+        ApplyResume(timeline);
+        _sentThroughMs = _startMs;
         lock (_gate)
         {
             _anchorMs = _startMs;
@@ -512,6 +514,7 @@ public sealed partial class PlaybackEngine : IDisposable
         if (!_running) { SendSetupFromProject(project); return; }
         if (opts is null) return;
         var pos = Playhead();
+        if (TryRestartInPlace(project, opts)) return;
         opts.StartBar = pos.Bar;
         opts.StartCell = pos.Cell;
         RestartKeepingState(project, opts, _paused);

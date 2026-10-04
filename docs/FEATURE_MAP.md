@@ -32,7 +32,7 @@ Generated from the registry. Each test is registered once in `SelfTest.Run` and 
 
 | Area | Tests | Run only this area |
 | --- | --- | --- |
-| core (no area) | 46 | always runs |
+| core (no area) | 47 | always runs |
 | architecture | 4 | `--selftest <log> --areas architecture` |
 | audioaudit | 2 | `--selftest <log> --areas audioaudit` |
 | document-context | 1 | `--selftest <log> --areas document-context` |
@@ -45,7 +45,7 @@ Generated from the registry. Each test is registered once in `SelfTest.Run` and 
 | leaks | 3 | `--selftest <log> --areas leaks` |
 | midi | 1 | `--selftest <log> --areas midi` |
 | notation | 2 | `--selftest <log> --areas notation` |
-| persistence | 30 | `--selftest <log> --areas persistence` |
+| persistence | 31 | `--selftest <log> --areas persistence` |
 | playback | 25 | `--selftest <log> --areas playback` |
 | recording | 11 | `--selftest <log> --areas recording` |
 | settings | 10 | `--selftest <log> --areas settings` |
@@ -97,6 +97,7 @@ A group is a named set of tests with a minimum check count; `--require ci` makes
 | TestKnobTypeIn |  | `tests/full-suite/Views/SelfTestKnob.cs` |
 | TestLayoutAuditTechniqueSong |  | `tests/full-suite/Editor/SelfTestSelection.cs` |
 | TestMixerDragAndDrop |  | `tests/full-suite/Views/SelfTestMixerUi.cs` |
+| TestMixerMuteSoloClick |  | `tests/full-suite/Views/SelfTestMixerUi.cs` |
 | TestMixerSliders |  | `tests/full-suite/Views/SelfTestMixerUi.cs` |
 | TestMixerSlidersRealInput |  | `tests/full-suite/Views/SelfTestMixerUi.cs` |
 | TestOrderAnimationAndSpeedCommands |  | `tests/full-suite/Views/SelfTestMixerUi.cs` |
@@ -298,6 +299,7 @@ A group is a named set of tests with a minimum check count; `--require ci` makes
 | TestClipboardServiceFallback |  | `tests/full-suite/Persistence/SelfTestClipboard.cs` |
 | TestDirectTforgeOpenRecovers |  | `tests/full-suite/Persistence/SelfTestPairRecovery.cs` |
 | TestEmbeddedProjectLimit |  | `tests/full-suite/Persistence/SelfTestPersistence.cs` |
+| TestEmergencyRecoveryNames |  | `tests/full-suite/Persistence/SelfTestEmergencyRecovery.cs` |
 | TestGpOpenKeepsTitle |  | `tests/full-suite/Persistence/SelfTestPersistence.cs` |
 | TestMediaPathPolicy |  | `tests/full-suite/Recording/SelfTestMediaAccess.cs` |
 | TestNightPluginApproval |  | `tests/full-suite/Engine/SelfTestNightPlugins.cs` |

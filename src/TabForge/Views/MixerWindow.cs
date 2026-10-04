@@ -842,7 +842,9 @@ public sealed class MixerWindow : Window
             {
                 var on = get();
                 if (row.Children[index] is Button old && old.Tag is bool shown && shown == on) return;
-                row.Children[index] = Toggle(icon, on, get, set, tip);
+                // Remove + insert, not the indexer: replacing a child through the indexer throws "index already in use" after a click on that button.
+                row.Children.RemoveAt(index);
+                row.Children.Insert(index, Toggle(icon, on, get, set, tip));
             });
         }
         Slot(0, "IconMute", getMute, setMute, "Mute");
