@@ -37,7 +37,7 @@ internal interface IClipGestureHost
 // Owns: the clip gesture state (dragged clip, origin, press point, pending selection, move plan) and the clip events.
 // Does not own: drawing (TrackTimeline.Clips.cs reads DropTarget, FromTrack, IsMovingOriginal), the drop ghost and snapping (host),
 // the clip model edits after release (ClipEditController via the events).
-// Tests: TestClipDragPress, TestClipMoves, TestClipMoveGhost, TestClipSplitGlueFades.
+// Tests: TestClipDragPress, TestClipMoves, TestClipMoveGhost, TestMidiClipMoves, TestClipSplitGlueFades.
 /// <summary>
 /// Clip gestures on the timeline's clip lanes: press, move (to another lane, track or notation row), edge trims, fade handles,
 /// the right-click hit, Esc / lost-capture cancel, and the simulated move used by tests and the render diagnostic.
@@ -55,6 +55,11 @@ internal sealed class ClipGestureController
     private (double In, double Out) _fadeOrigin;
     private double _clipPressSec;
     private Point _clipPressPoint;
+    /// <summary>From the press point down to the dragged clip's lane centre: the move targets the lane under the clip, not under the pointer.</summary>
+    private double _grabToCentre;
+
+    private double GrabToCentre(int track, AudioClip clip, Point press) =>
+        _host.LaneTop(track, clip.Lane) + ArrangementPanel.AudioLaneHeight / 2 - press.Y;
     private bool _clipChanged;
     private double _clipLastX = double.NaN;
     private int _clipFromTrack = -1;
@@ -165,6 +170,7 @@ internal sealed class ClipGestureController
         _fadeOrigin = (clip.FadeInSec, clip.FadeOutSec);
         _clipPressSec = _host.SecOfX(p.X);
         _clipPressPoint = p;
+        _grabToCentre = GrabToCentre(hit.Track, clip, p);
         _clipChanged = false;
         _clipLastX = p.X;
         _clipFromTrack = hit.Track;
@@ -299,14 +305,17 @@ internal sealed class ClipGestureController
         start = Math.Max(0, endDistance < startDistance ? byEnd : byStart);
 
         var gridTop = ArrangementPanel.RulerHeight + ArrangementPanel.SectionHeight;
-        var track = _host.TrackAt(p.Y);
-        if (track < 0 && p.Y >= gridTop && p.Y + _host.VerticalScrollOffset - gridTop >= ArrangementPanel.RowsHeight(project)) track = project.Tracks.Count;   // below the last track
+        var y = p.Y + _grabToCentre;   // where the clip's centre is: a press near the clip's top edge does not slip into the row above
+        var track = _host.TrackAt(y);
+        if (track < 0 && y >= gridTop && y + _host.VerticalScrollOffset - gridTop >= ArrangementPanel.RowsHeight(project)) track = project.Tracks.Count;   // below the last track
         int lane = 0; var notation = false;
         if (track >= 0 && track < project.Tracks.Count)
         {
             var lanes = ArrangementPanel.LaneCountOf(project.Tracks[track]);
-            var offset = p.Y - _host.LaneTop(track, 0);
-            if (offset < 0) notation = clip.IsMidi && lanes > 0;   // a MIDI clip on a track's notation row is written into the score
+            var offset = y - _host.LaneTop(track, 0);
+            // A MIDI clip on a track's notation row is written into the score. A group header above a track counts as that track's
+            // row but is not its notation, and an audio track has no notation to write into.
+            if (offset < 0) notation = clip.IsMidi && lanes > 0 && !project.Tracks[track].IsAudio && offset >= -ArrangementPanel.NotationHeightOf(project, project.Tracks[track]);
             else lane = Math.Min((int)(offset / ArrangementPanel.AudioLaneHeight), Math.Max(0, lanes - 1));
         }
         var key = (track, lane, notation, start, _host.VerticalScrollOffset, _host.MeasureWidth, project.TimelineRevision, copy);
@@ -336,6 +345,7 @@ internal sealed class ClipGestureController
         {
             _clipDrag = clip; _clipGesture = ClipGesture.Move; _clipOrigin = (clip.StartSec, clip.OffsetSec, clip.SourceLengthSec);
             _clipPressSec = _host.SecOfX(press.X); _clipFromTrack = fromTrack; _clipMoveActive = false; _moveKey = null;
+            _grabToCentre = GrabToCentre(fromTrack, clip, press);
         }
         UpdateMove(clip, to, alt, copy);
         return _host.CurrentDropPreview;

@@ -69,7 +69,7 @@ public partial class MainWindow
     private void ReportOpenFailed(string path, Exception ex)
     {
         StatusText.Text = "Open failed";
-        MessageBox.Show(this, $"Could not open {Path.GetFileName(path)}.\n\n{ex.Message}", "Open failed", MessageBoxButton.OK, MessageBoxImage.Error);
+        TabForge.Views.DialogHost.ShowError(this, $"Could not open {Path.GetFileName(path)}.\n\n{ex.Message}", "Open failed");
     }
 
     private void RefreshImportStatus()

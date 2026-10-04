@@ -127,6 +127,12 @@ internal sealed partial class TrackTimeline : IClipGestureHost
                 8, rowTop + notation + 15, 11, Draw.Solid(_theme.Muted));
         if (ClipGestures.DropTarget is { NotationRow: true } row && row.Track == trackIndex)
             dc.DrawRectangle(Draw.Solid(_theme.Accent, 0.18), Draw.Pen(_theme.Accent, 1.4), new Rect(0, rowTop, width, ArrangementPanel.RowHeightFor(Project)));
+        DrawClipsCached(dc, track, rowTop, width, trackColor, clipColour, notation);
+    }
+
+    private void DrawClips(DrawingContext dc, TrackModel track, double rowTop, double width, Color clipColour, double notation)
+    {
+        var trackIndex = Project?.Tracks.IndexOf(track) ?? -1;
         foreach (var clip in track.AudioClips)
         {
             var x1 = XOfSec(clip.StartSec);

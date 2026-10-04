@@ -2,6 +2,12 @@
 
 Built-in songs and templates.
 
+## How to change me
+1. Entry files: `DemoSongFactory.cs`, `TemplateFactory.cs`.
+2. Owner class: the factory for that song or template.
+3. Tests to run: `TestTemplateKeepsSetupOnly` (full-suite build), plus `--areas architecture,hygiene` (see the test box in `docs/TESTING.md`).
+4. Docs to update: `CHANGELOG.md`.
+
 ## Key types
 - `DemoSongFactory`: the demo song.
 - `TemplateFactory`: new-song templates.

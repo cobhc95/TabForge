@@ -2,6 +2,31 @@
 
 TabForge is actively developed; please report anything odd on the Issues page.
 
+## 0.5.5 — 2026-10-04
+
+Track conversion both ways and a round of speed work guided by a new timing audit of about 50 actions.
+
+### Architecture and quality
+- A speed-audit tool times about 50 user actions (stopped and while playing) and reports anything over 50 ms; it guided the fixes below.
+- Essential-action checks (start, opening files, tabs, save, autosave, editing, tracks, timeline, playback, windows, exports) run on every build and in the release check.
+- Copy, cut and paste are checked for every selection scope on every build of a release.
+- Developer docs: one test recipe everywhere, a "how to change me" card in each source folder, a `--find` lookup, and checks that every command is documented.
+
+### Changes
+- A song double-clicked in Explorer opens reliably: closing the last window now really quits TabForge (it could stay running in the background without a window and swallow the next double-click), and while TabForge runs the song opens in an open window.
+- With the loop on, a selection keeps its scope: the loop is drawn over the selected rows and its span is marked on the ruler.
+- Bars copied from every track still paste track for track after an Undo (they no longer shift onto the selected track).
+- Selections have a scope: bars selected in the score cover that track (the timeline highlights only its row), bars selected on the timeline cover every track. The timeline's Copy, Cut and Delete follow it; Paste puts one track's bars onto the selected track and every track's bars into every track.
+- The timeline's bar cells always show the bars' current notes, also after cutting and pasting a track back, reordering or duplicating tracks.
+- Moving a MIDI clip on the timeline follows the clip, not the pointer: grabbing it near its top edge no longer drops it into the notation row (or a group header) where it vanished; audio tracks never take a MIDI clip into notation.
+- Convert to instrument track opens the instrument picker directly with its search box ready (no Add-track window); a track with clips then asks what to do with them (MIDI clips: write as notation or keep; audio clips stay on a second lane), with a "Remember my choice" box and a setting under Settings > Editing. The track keeps its place, colour, name, mixer and plug-ins.
+
+- Clip and bar edits (clip move, clear or remove bars, area move) no longer rebuild every track row when the tracks are unchanged, so the timeline refreshes faster.
+- Preferences opens about 3x faster (audio device lists load when their rows are shown) and the delete-track and delete-bars prompts open faster.
+- Entering a note with a long audio clip on the timeline no longer redraws the clip waveform (about half the time per note), and the first right-click menus open without a cold-start pause.
+- Adding an empty audio track during playback no longer restarts playback (no brief dropout).
+- Track row menu: every instrument track now offers "Convert to audio track…" (asks first; its notation becomes a MIDI clip on the track, the bars are emptied, existing clips stay, one undo step). Converting an audio track back to an instrument asks whether to write its MIDI clips into the notation. Bindable command "Convert track to audio track" (no default key).
+
 ## 0.5.4 — 2026-10-04
 
 Reliability release after an external review: safer recovery, playback that never jumps or repeats notes, and a stronger release check.

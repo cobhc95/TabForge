@@ -25,6 +25,7 @@ public static class InstrumentPickerWindow
         var root = new DockPanel { Margin = new Thickness(14) };
 
         var search = new TextBox { Margin = new Thickness(0, 0, 0, 10), Padding = new Thickness(6, 4, 6, 4), FontSize = 14 };
+        System.Windows.Automation.AutomationProperties.SetName(search, "Search instruments");
         var searchHint = new TextBlock { Text = "Search instruments (e.g. \"bass\", \"strings\", \"drum\")…", IsHitTestVisible = false,
             Margin = new Thickness(10, 5, 0, 0), Opacity = 0.55 };
         var searchHost = new Grid();

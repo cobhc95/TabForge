@@ -20,6 +20,19 @@ internal sealed partial class TrackTimeline
         return true;
     }
 
+    /// <summary>Presses the right (or left) edge of the section at <paramref name="sectionIndex"/> as the mouse-down on the edge does.</summary>
+    internal bool SimulateSectionResizeStart(int sectionIndex, bool rightEdge)
+    {
+        var hits = SectionHits();
+        if (sectionIndex < 0 || sectionIndex >= hits.Count) return false;
+        SectionEdges.BeginResize(hits[sectionIndex].Marker, rightEdge);
+        SectionResizeStarting?.Invoke(this, EventArgs.Empty);
+        return true;
+    }
+
+    /// <summary>Moves the pressed section edge to <paramref name="x"/> as the mouse-move does.</summary>
+    internal void SimulateSectionResizeMove(double x) => SectionEdges.ResizeMove(x);
+
     /// <summary>Releases the simulated drag as the mouse-up does (drop, settle animation, reorder event).</summary>
     internal void SimulateSectionDragEnd() =>
         RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice, Environment.TickCount, MouseButton.Left) { RoutedEvent = MouseLeftButtonUpEvent });

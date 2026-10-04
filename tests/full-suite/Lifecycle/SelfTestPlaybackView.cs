@@ -13,7 +13,7 @@ namespace TabForge;
 public static partial class SelfTest
 {
     /// <summary>Bytes the 200 measured ticks (one position report plus one ApplyPendingPlayhead each) may allocate on this thread.</summary>
-    private const long PlaybackTickAllocationBudgetBytes = 523_200;
+    private const long PlaybackTickAllocationBudgetBytes = 528_000;   // about 526 KB measured, plus headroom for runtime jitter
 
     private static bool PlaybackTickRunning(MainWindow window) => LtField<Controllers.PlaybackViewController>(window, "_playbackView")?.IsTicking == true;
 

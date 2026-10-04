@@ -130,6 +130,7 @@ public static class HotkeyCatalog
         new("Track.Add", CategoryNote, "Add track", "Ctrl+Alt+T", "Add a new track.", "Ctrl+Shift+Insert"),
         new("Track.Delete", CategoryNote, "Delete track", "Ctrl+Shift+Delete", "Delete the selected track."),
         new("Track.Properties", CategoryNote, "Track properties", "F6", "Edit the selected track's properties."),
+        new("Track.ConvertToAudio", CategoryNote, "Convert track to audio track", "", "Turn the selected instrument track into an audio track; its notation becomes a MIDI clip."),
         new("Track.Next", CategoryNote, "Next track", "Ctrl+Shift+Down", "Select the next track."),
         new("Track.Previous", CategoryNote, "Previous track", "Ctrl+Shift+Up", "Select the previous track."),
 

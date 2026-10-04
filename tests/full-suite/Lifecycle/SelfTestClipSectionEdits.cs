@@ -246,7 +246,7 @@ public static partial class SelfTest
         var sections = LtField<SectionEditFlow>(window, "_sections")!;
         var track0 = new Func<DocumentSession, TrackModel>(d => d.Project.Tracks[0]);
         void CopySection(DocumentSession d, int marker = 0) => sections.CopySection(d, d.Project.Markers[marker]);
-        void SelectArea(DocumentSession d) => LtCall(window, "ApplyLoopRange", 1, 2, 0, -1);
+        void SelectArea(DocumentSession d) => LtCall(window, "ApplyLoopRange", 1, 2, 0, -1, null);
 
         Flow("copy section", d => CopySection(d), steps: 0);
         Flow("copy bar (this track)", d => sections.CopyBar(d, 1, track0(d), false), steps: 0);

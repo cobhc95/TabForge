@@ -69,6 +69,21 @@ public static partial class SelfTest
         Guard(TestEverySettingIsWired);
         Guard(TestFretMarkerSize);
         Guard(TestHeadlessDeviceReconfigure);
+        Section("Basic set: essential actions");
+        Guard(TestEssentialStartNoFile);
+        Guard(TestEssentialStartupFiles);
+        Guard(TestEssentialSecondFileAndTabs);
+        Guard(TestEssentialCloseTabUnsaved);
+        Guard(TestEssentialSaveAndReopen);
+        Guard(TestEssentialAutosaveAndRecovery);
+        Guard(TestEssentialNoteEditing);
+        Guard(TestEssentialSelectionCopyPaste);
+        Guard(TestEssentialTracks);
+        Guard(TestEssentialTimelineEdits);
+        Guard(TestEssentialClips);
+        Guard(TestEssentialPlayback);
+        Guard(TestEssentialWindowsAndPrompts);
+        Guard(TestEssentialExports);
         Section("Basic set: repository hygiene");
         Guard(TestSourceControlCharacters);
         Guard(TestInstallerAssociationParity);
@@ -81,6 +96,9 @@ public static partial class SelfTest
         Guard(TestStartHereAndRecipesInSync);
         Guard(TestDocImagesAreReferenced);
         Guard(TestLooseSoundTouchAndLicenseTexts);
+        Guard(TestHotkeyIdsDocumented);
+        Guard(TestNoMojibakeInSources);
+        Guard(TestFindCommand);
         Section("Basic set: architecture (layering)");
         GuardGroup("architecture", TestArchitectureLayering);
         GuardGroup("architecture", TestArchitectureDocumentOperations);
@@ -134,8 +152,23 @@ public static partial class SelfTest
         {
         ["TestArchitectureDocumentOperations"] = "architecture", ["TestArchitectureGuards"] = "architecture", ["TestArchitectureLayering"] = "architecture", ["TestEveryTestHasAnArea"] = "architecture",
         ["TestDocImagesAreReferenced"] = "hygiene", ["TestDebuggingDocInSync"] = "hygiene", ["TestFeatureMapInSync"] = "hygiene", ["TestInstallerAssociationParity"] = "hygiene", ["TestLooseSoundTouchAndLicenseTexts"] = "hygiene",
+        ["TestHotkeyIdsDocumented"] = "hygiene", ["TestNoMojibakeInSources"] = "hygiene", ["TestFindCommand"] = "hygiene",
         ["TestOnlyOption"] = "hygiene", ["TestPublicDocsConsistency"] = "hygiene", ["TestRequireArgumentStrings"] = "hygiene", ["TestRequiredGroupGate"] = "hygiene",
         ["TestSourceControlCharacters"] = "hygiene", ["TestStartHereAndRecipesInSync"] = "hygiene", ["TestEditorEntry"] = "smoke", ["TestEverySettingIsWired"] = "smoke", ["TestFretMarkerSize"] = "smoke",
+        ["TestEssentialStartNoFile"] = "smoke",
+        ["TestEssentialStartupFiles"] = "smoke",
+        ["TestEssentialSecondFileAndTabs"] = "smoke",
+        ["TestEssentialCloseTabUnsaved"] = "smoke",
+        ["TestEssentialSaveAndReopen"] = "smoke",
+        ["TestEssentialAutosaveAndRecovery"] = "smoke",
+        ["TestEssentialNoteEditing"] = "smoke",
+        ["TestEssentialSelectionCopyPaste"] = "smoke",
+        ["TestEssentialTracks"] = "smoke",
+        ["TestEssentialTimelineEdits"] = "smoke",
+        ["TestEssentialClips"] = "smoke",
+        ["TestEssentialPlayback"] = "smoke",
+        ["TestEssentialWindowsAndPrompts"] = "smoke",
+        ["TestEssentialExports"] = "smoke",
         ["TestHeadlessDeviceReconfigure"] = "smoke", ["TestModelRoundTrip"] = "smoke", ["TestProjectRoundtrip"] = "smoke",
         };
         AddFullSuiteAreas(areas);

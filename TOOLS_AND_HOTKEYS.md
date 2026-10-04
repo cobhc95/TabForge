@@ -165,6 +165,8 @@ Default keys are the **TabForge** preset, currently identical to the **Classic**
 | Transport | Count-in on / off | Turn the count-in before playback on or off (the same as the transport's Count-in button). | `Transport.CountIn` | — | Also Tools > Count-in. |
 | Bars and sections | Insert bar | Insert an empty bar before the cursor. | `Bar.Insert` | Ctrl+Insert |  |
 | Bars and sections | Delete bar | Delete the bar at the cursor. | `Bar.Delete` | Ctrl+Delete |  |
+| Bars and sections | Mix table | Change instrument, volume, pan, effects or tempo from the selected beat. | `Beat.MixTable` | F10 |  |
+| Bars and sections | Add section | Add a new section (marker) at the cursor bar. | `Section.Add` | M |  |
 | Bars and sections | Time signature | Change the time signature. | `Bar.TimeSignature` | Ctrl+Shift+T |  |
 | Bars and sections | Key signature | Change the key signature. | `Bar.KeySignature` | Ctrl+K |  |
 | Bars and sections | Clef | Change the clef of the track. | `Bar.Clef` | K |  |
@@ -190,6 +192,7 @@ Default keys are the **TabForge** preset, currently identical to the **Classic**
 | Notes and tracks | Move track up | Move the selected track up one place in the track list. In the Mixer window it moves the selected mixer row (a track, or a whole group) up; a track passing the top of its group joins the group above. | `Track.MoveUp` | Alt+Up |  |
 | Notes and tracks | Move track down | Move the selected track down one place in the track list. In the Mixer window it moves the selected mixer row (a track, or a whole group) down; a track passing the end of its group joins the group below. | `Track.MoveDown` | Alt+Down |  |
 | Notes and tracks | Transpose | Transpose the notes of the selected track (or only the selected bars) by a number of semitones, in every voice. Drum tracks are skipped. One undo step. | `Tools.Transpose` | — |  |
+| Notes and tracks | Convert track to audio track | Turn the selected instrument track into an audio track; its notation becomes a MIDI clip. | `Track.ConvertToAudio` | — | No default key. |
 | Notes and tracks | Next track | Select the next track. | `Track.Next` | Ctrl+Shift+Down |  |
 | Notes and tracks | Previous track | Select the previous track. | `Track.Previous` | Ctrl+Shift+Up |  |
 | View | Show track list | Scroll the track list (the mixer table with every track) into view; click a track's colour block there to jump to it. | `View.Multitrack` | F3 |  |
@@ -275,6 +278,8 @@ These share keys with score commands on purpose: they act only while a clip is s
 | Mute clip | Mute or unmute. | `Clip.Mute` | Ctrl+M |
 | Clip properties | Name, volume, pitch, speed. | `Clip.Properties` | F2 |
 | View | Mixer | Open the mixer: track and group levels, pan, pitch, sound source and FX chains. | `View.Mixer` | — |  |
+| View | Horizontal score scrolling | Switch the score between wrapped lines (scroll down) and one line (scroll right). | `View.HorizontalScroll` | — |  |
+| View | Smooth page-turn follow | Switch playback follow between instant and smooth (glided) page turns. | `View.SmoothFollow` | — |  |
 | View | Highlight playing bar | Shade the whole bar that is playing (staff and tab) with a translucent band behind the notes; off by default. Colour, opacity and "Also show the cursor's bar when stopped" are in Preferences > Playback > Appearance (the "when stopped" option under More options). | `View.PlayingBar` | — |  |
 | View | Show tracks in groups | Show or hide a header per mixer group in the track list (same setting as the Mixer's "Groups in track list" box and the track list's right-click menu; off by default). | `View.ShowTrackGroups` | — |  |
 | View | Track FX chain | Open the selected track's FX (plug-in) chain. | `Track.FxChain` | — |  |

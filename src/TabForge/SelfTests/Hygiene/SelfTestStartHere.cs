@@ -10,7 +10,7 @@ public static partial class SelfTest
     private static readonly string[] StartHereDocs = { "START_HERE.md", "docs/RECIPES.md" };
     /// <summary>First-level source folders without a README: assets and licence texts, not code.</summary>
     private static readonly string[] FolderReadmeExempt = { "Assets", "licenses", "bin", "obj" };
-    private static readonly string[] StartHereKnownOptions = { "--selftest", "--only", "--areas", "--require", "--profile", "--feature-map", "--playtest" };
+    private static readonly string[] StartHereKnownOptions = { "--selftest", "--only", "--areas", "--require", "--profile", "--feature-map", "--find", "--playtest" };
 
     /// <summary>
     /// START_HERE.md and docs/RECIPES.md agree with the code: every file or folder path, type, test and command they name in backticks exists,

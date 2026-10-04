@@ -82,8 +82,24 @@ public sealed partial class ArrangementPanel
         }
     }
 
+    private string? _rowSignature;
+
+    /// <summary>What the built rows depend on: the tracks (identity, name, states, colour), their row heights and collapsed state.</summary>
+    private string RowSignature(SongProject project)
+    {
+        var sb = new System.Text.StringBuilder();
+        for (var i = 0; i < project.Tracks.Count; i++)
+        {
+            var t = project.Tracks[i];
+            sb.Append(System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(t)).Append('|').Append(t.Name).Append('|').Append(t.Mute ? 'm' : '-').Append(t.Solo ? 's' : '-')
+              .Append(t.RecordArm ? 'a' : '-').Append(t.ColorHex).Append('|').Append(RowHeightOf(project, t)).Append(IsCollapsed(project, i) ? 'c' : '-').Append(';');
+        }
+        return sb.ToString();
+    }
+
     private void RebuildControls()
     {
+        _rowSignature = _project is { } sp ? RowSignature(sp) : "";
         using var slowTrace = TabForge.Views.SlowTrace.Measure("track rows rebuild", 0);
         _controls.Children.Clear();
         _mixSliders.Clear();

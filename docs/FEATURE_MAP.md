@@ -36,24 +36,24 @@ Generated from the registry. Each test is registered once in `SelfTest.Run` and 
 | architecture | 4 | `--selftest <log> --areas architecture` |
 | audioaudit | 2 | `--selftest <log> --areas audioaudit` |
 | document-context | 1 | `--selftest <log> --areas document-context` |
-| document-operations | 7 | `--selftest <log> --areas document-operations` |
-| engine | 42 | `--selftest <log> --areas engine` |
+| document-operations | 8 | `--selftest <log> --areas document-operations` |
+| engine | 43 | `--selftest <log> --areas engine` |
 | fuzz | 1 | `--selftest <log> --areas fuzz` |
 | guitarpro | 24 | `--selftest <log> --areas guitarpro` |
-| hygiene | 12 | `--selftest <log> --areas hygiene` |
+| hygiene | 15 | `--selftest <log> --areas hygiene` |
 | interactions | 1 | `--selftest <log> --areas interactions` |
 | leaks | 3 | `--selftest <log> --areas leaks` |
 | midi | 1 | `--selftest <log> --areas midi` |
 | notation | 2 | `--selftest <log> --areas notation` |
-| persistence | 31 | `--selftest <log> --areas persistence` |
+| persistence | 32 | `--selftest <log> --areas persistence` |
 | playback | 25 | `--selftest <log> --areas playback` |
 | recording | 11 | `--selftest <log> --areas recording` |
 | settings | 10 | `--selftest <log> --areas settings` |
-| smoke | 6 | `--selftest <log> --areas smoke` |
+| smoke | 20 | `--selftest <log> --areas smoke` |
 | synthetic | 2 | `--selftest <log> --areas synthetic` |
 | tutorial | 6 | `--selftest <log> --areas tutorial` |
-| ui | 101 | `--selftest <log> --areas ui` |
-| window-lifetime | 1 | `--selftest <log> --areas window-lifetime` |
+| ui | 105 | `--selftest <log> --areas ui` |
+| window-lifetime | 2 | `--selftest <log> --areas window-lifetime` |
 
 ### Groups
 
@@ -63,14 +63,14 @@ A group is a named set of tests with a minimum check count; `--require ci` makes
 | --- | --- |
 | architecture | TestArchitectureLayering, TestArchitectureDocumentOperations, TestArchitectureGuards, TestEveryTestHasAnArea |
 | document-context | TestDocumentContext |
-| document-operations | TestDocumentOperations, TestAddTrackMenu, TestAudioTrackClips, TestClipAndSectionEdits |
+| document-operations | TestDocumentOperations, TestConvertToInstrumentFlow, TestAddTrackMenu, TestAudioTrackClips, TestClipAndSectionEdits |
 | fuzz | TestMalformedInputFuzz |
 | gp-fidelity | TestGpFidelity, TestGpMixerExact, TestGpTrillSpeed, TestGpLossCoverage, TestGpCompatibilityDoc |
 | gp-fixtures | TestSyntheticGuitarProFixture |
 | interactions | TestInteractions |
 | long-import | TestLongGuitarPro35Import, TestImportPlausibility |
 | synthetic-fixtures | TestSyntheticFixtures |
-| window-lifetime | TestWindowLifetime |
+| window-lifetime | TestWindowLifetime, TestStartupFileOpen |
 
 ### Every test
 
@@ -157,6 +157,7 @@ A group is a named set of tests with a minimum check count; `--require ci` makes
 | TestBarDeleteGuards |  | `tests/full-suite/Editor/SelfTestBarDeleteGuards.cs` |
 | TestBarRangeGaps |  | `tests/full-suite/Editor/SelfTestBarRangeGaps.cs` |
 | TestClipAndSectionEdits | document-operations | `tests/full-suite/Lifecycle/SelfTestClipSectionEdits.cs` |
+| TestConvertToInstrumentFlow | document-operations | `tests/full-suite/Editor/SelfTestConvertToInstrument.cs` |
 | TestDocumentOperations | document-operations | `tests/full-suite/Lifecycle/SelfTestDocumentOperations.cs` |
 | TestSectionClips |  | `tests/full-suite/Lifecycle/SelfTestSectionClips.cs` |
 
@@ -164,6 +165,7 @@ A group is a named set of tests with a minimum check count; `--require ci` makes
 
 | Test | Group | File |
 | --- | --- | --- |
+| TestAudioTrackAddDuringPlayback |  | `src/TabForge/SelfTests/Engine/SelfTestEngineHeadless.cs` |
 | TestAudioTrackLiveMidi |  | `tests/full-suite/Engine/SelfTestAudioTrackRouting.cs` |
 | TestAudioTrackRouting |  | `tests/full-suite/Engine/SelfTestAudioTrackRouting.cs` |
 | TestAutoGmEveryPath |  | `tests/full-suite/Engine/SelfTestAutoGm.cs` |
@@ -249,8 +251,11 @@ A group is a named set of tests with a minimum check count; `--require ci` makes
 | TestDebuggingDocInSync |  | `src/TabForge/SelfTests/Hygiene/SelfTestDebuggingDoc.cs` |
 | TestDocImagesAreReferenced |  | `src/TabForge/SelfTests/Hygiene/SelfTestDocImages.cs` |
 | TestFeatureMapInSync |  | `src/TabForge/SelfTests/Hygiene/SelfTestFeatureMap.cs` |
+| TestFindCommand |  | `src/TabForge/SelfTests/Hygiene/SelfTestGuardrails.cs` |
+| TestHotkeyIdsDocumented |  | `src/TabForge/SelfTests/Hygiene/SelfTestGuardrails.cs` |
 | TestInstallerAssociationParity |  | `src/TabForge/SelfTests/Hygiene/SelfTestSourceHygiene.cs` |
 | TestLooseSoundTouchAndLicenseTexts |  | `src/TabForge/SelfTests/Hygiene/SelfTestSourceHygiene.cs` |
+| TestNoMojibakeInSources |  | `src/TabForge/SelfTests/Hygiene/SelfTestGuardrails.cs` |
 | TestOnlyOption |  | `src/TabForge/SelfTests/SelfTestOnly.cs` |
 | TestPublicDocsConsistency |  | `src/TabForge/SelfTests/Hygiene/SelfTestDocsConsistency.cs` |
 | TestRequireArgumentStrings |  | `src/TabForge/SelfTests/SelfTestRequirements.cs` |
@@ -302,6 +307,7 @@ A group is a named set of tests with a minimum check count; `--require ci` makes
 | TestEmbeddedProjectLimit |  | `tests/full-suite/Persistence/SelfTestPersistence.cs` |
 | TestEmergencyRecoveryNames |  | `tests/full-suite/Persistence/SelfTestEmergencyRecovery.cs` |
 | TestGpOpenKeepsTitle |  | `tests/full-suite/Persistence/SelfTestPersistence.cs` |
+| TestInstrumentToAudioConversion |  | `tests/full-suite/Persistence/SelfTestAudioTrack.cs` |
 | TestMediaPathPolicy |  | `tests/full-suite/Recording/SelfTestMediaAccess.cs` |
 | TestNightPluginApproval |  | `tests/full-suite/Engine/SelfTestNightPlugins.cs` |
 | TestPairMarkerIsUntrusted |  | `tests/full-suite/Persistence/SelfTestPairRecovery.cs` |
@@ -388,6 +394,20 @@ A group is a named set of tests with a minimum check count; `--require ci` makes
 | Test | Group | File |
 | --- | --- | --- |
 | TestEditorEntry |  | `src/TabForge/SelfTests/Smoke/SelfTestSmoke.cs` |
+| TestEssentialAutosaveAndRecovery |  | `src/TabForge/SelfTests/Smoke/SelfTestEssentialFiles.cs` |
+| TestEssentialClips |  | `src/TabForge/SelfTests/Smoke/SelfTestEssentialEditing.cs` |
+| TestEssentialCloseTabUnsaved |  | `src/TabForge/SelfTests/Smoke/SelfTestEssentialFiles.cs` |
+| TestEssentialExports |  | `src/TabForge/SelfTests/Smoke/SelfTestEssentialWindows.cs` |
+| TestEssentialNoteEditing |  | `src/TabForge/SelfTests/Smoke/SelfTestEssentialEditing.cs` |
+| TestEssentialPlayback |  | `src/TabForge/SelfTests/Smoke/SelfTestEssentialWindows.cs` |
+| TestEssentialSaveAndReopen |  | `src/TabForge/SelfTests/Smoke/SelfTestEssentialFiles.cs` |
+| TestEssentialSecondFileAndTabs |  | `src/TabForge/SelfTests/Smoke/SelfTestEssentialFiles.cs` |
+| TestEssentialSelectionCopyPaste |  | `src/TabForge/SelfTests/Smoke/SelfTestEssentialEditing.cs` |
+| TestEssentialStartNoFile |  | `src/TabForge/SelfTests/Smoke/SelfTestEssentialFiles.cs` |
+| TestEssentialStartupFiles |  | `src/TabForge/SelfTests/Smoke/SelfTestEssentialFiles.cs` |
+| TestEssentialTimelineEdits |  | `src/TabForge/SelfTests/Smoke/SelfTestEssentialEditing.cs` |
+| TestEssentialTracks |  | `src/TabForge/SelfTests/Smoke/SelfTestEssentialEditing.cs` |
+| TestEssentialWindowsAndPrompts |  | `src/TabForge/SelfTests/Smoke/SelfTestEssentialWindows.cs` |
 | TestEverySettingIsWired |  | `src/TabForge/SelfTests/Settings/SelfTestSettingsAudit.cs` |
 | TestFretMarkerSize |  | `src/TabForge/SelfTests/Settings/SelfTestFretMarkerSize.cs` |
 | TestHeadlessDeviceReconfigure |  | `src/TabForge/SelfTests/Engine/SelfTestEngineHeadless.cs` |
@@ -462,6 +482,7 @@ A group is a named set of tests with a minimum check count; `--require ci` makes
 | TestMarkStacking |  | `tests/full-suite/Notation/SelfTestMarkStacking.cs` |
 | TestMediaDropPreviewGeometry |  | `tests/full-suite/Recording/SelfTestMediaDrop.cs` |
 | TestMenuGestureTextFollowsBindings |  | `tests/full-suite/Editor/SelfTestMenuKeys.cs` |
+| TestMidiClipMoves |  | `tests/full-suite/Recording/SelfTestMidiClipMove.cs` |
 | TestMoveNoteToAdjacentString |  | `tests/full-suite/Editor/SelfTestMenuKeys.cs` |
 | TestNewBindableCommands |  | `tests/full-suite/Editor/SelfTestMenuKeys.cs` |
 | TestNoHardWiredKeyText |  | `tests/full-suite/Views/SelfTestKeyTextGuard.cs` |
@@ -484,6 +505,8 @@ A group is a named set of tests with a minimum check count; `--require ci` makes
 | TestScaleFinder |  | `tests/full-suite/Notation/SelfTestScaleFinder.cs` |
 | TestScoreContextMenuByKeyboard |  | `tests/full-suite/Editor/SelfTestKeyboardContextMenu.cs` |
 | TestSectionDeleteWording |  | `tests/full-suite/Editor/SelfTestMenuKeys.cs` |
+| TestSelectionClipboardMatrix |  | `tests/full-suite/Editor/SelfTestSelectionClipboardMatrix.cs` |
+| TestSelectionScope |  | `tests/full-suite/Editor/SelfTestSelectionScope.cs` |
 | TestSelectionWholeBeats |  | `tests/full-suite/Editor/SelfTestWritingDuration.cs` |
 | TestSelectionWideEdits |  | `tests/full-suite/Editor/SelfTestSelectionWideEdits.cs` |
 | TestSimileBarHidesLinesAndTies |  | `tests/full-suite/Notation/SelfTestEngravingCollisions.cs` |
@@ -503,6 +526,7 @@ A group is a named set of tests with a minimum check count; `--require ci` makes
 | TestTempoBoxText |  | `tests/full-suite/Playback/SelfTestTempoBox.cs` |
 | TestThemedCheckBoxAndProgressBar |  | `tests/full-suite/Views/SelfTestThemedControls.cs` |
 | TestTimelineAndInstrumentContextMenuByKeyboard |  | `tests/full-suite/Editor/SelfTestKeyboardContextMenu.cs` |
+| TestTimelineCellsCurrent |  | `tests/full-suite/Editor/SelfTestSelectionScope.cs` |
 | TestTimelineClipsShareClipboard |  | `tests/full-suite/Recording/SelfTestTimelineClips.cs` |
 | TestTimelineContextMenus |  | `tests/full-suite/Recording/SelfTestTimelineClips.cs` |
 | TestTimelineHoverAndAudioRows |  | `tests/full-suite/Views/SelfTestResizeDuringPlayback.cs` |
@@ -522,6 +546,7 @@ A group is a named set of tests with a minimum check count; `--require ci` makes
 
 | Test | Group | File |
 | --- | --- | --- |
+| TestStartupFileOpen | window-lifetime | `tests/full-suite/Lifecycle/SelfTestStartupOpen.cs` |
 | TestWindowLifetime | window-lifetime | `tests/full-suite/Lifecycle/SelfTestWindowLifetime.cs` |
 
 <!-- END GENERATED TESTS -->

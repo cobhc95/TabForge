@@ -2,6 +2,12 @@
 
 One responsibility moved out of a window, each behind a host interface. A controller owns state and behaviour, not layout.
 
+## How to change me
+1. Entry files: the matching `*Controller` / `*Flow` file here and its `I*Host` interface.
+2. Owner class: the controller named for the behaviour; never `MainWindow`.
+3. Tests to run: `TestEditControllers`, `TestUndoController` (full-suite build); `--areas ui,architecture`, plus `--areas architecture,hygiene` (see the test box in `docs/TESTING.md`).
+4. Docs to update: this README, `START_HERE.md` pathways, `ArchitectureBudget.json`.
+
 ## Key types
 - `EngineSyncController`: keeps the audio engine in step with the shown song and resends state after an engine restart.
 - `PlaybackViewController`, `TransportControlsController`: playback display and transport buttons.

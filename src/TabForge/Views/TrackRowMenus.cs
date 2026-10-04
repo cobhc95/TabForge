@@ -8,14 +8,14 @@ internal sealed record TrackRowMenuState(bool IsAudio, bool CanPaste, bool CanDe
 // Tests: TestTrackRowMenu.
 /// <summary>
 /// Right-click on a track row: Cut, Copy, Paste (after this track), Duplicate and Delete on top, then Rename, Colour and Properties,
-/// and the items of one kind only (an audio track can become an instrument track). Shortcuts come from the user's bindings
+/// and the conversion of its kind (an audio track becomes an instrument track, any other track becomes an audio track). Shortcuts come from the user's bindings
 /// (<c>key</c> maps a hotkey id to its display text).
 /// </summary>
 internal static class TrackRowMenus
 {
     public const string Cut = "TrackRow.Cut", Copy = "TrackRow.Copy", Paste = "TrackRow.Paste", Duplicate = "TrackRow.Duplicate",
         Delete = "TrackRow.Delete", Rename = "TrackRow.Rename", Colour = "TrackRow.Colour", Properties = "TrackRow.Properties",
-        Convert = "TrackRow.Convert";
+        Convert = "TrackRow.Convert", ConvertToAudio = "Track.ConvertToAudio";
 
     public static List<MenuSpec> Build(TrackRowMenuState s, Func<string, string> key)
     {
@@ -36,11 +36,10 @@ internal static class TrackRowMenus
             new MenuSpec { Header = "Colour", Children = colours },
             Item(Properties, "Properties…", key("Track.Properties")),
         };
-        if (s.IsAudio)
-        {
-            list.Add(MenuSpec.Separator());
-            list.Add(Item(Convert, "Convert to instrument track…", "", true, "Choose an instrument; the track keeps its audio and MIDI clips"));
-        }
+        list.Add(MenuSpec.Separator());
+        list.Add(s.IsAudio
+            ? Item(Convert, "Convert to instrument track…", "", true, "Choose an instrument; the track keeps its audio and MIDI clips")
+            : Item(ConvertToAudio, "Convert to audio track…", key("Track.ConvertToAudio"), true, "The notation becomes a MIDI clip on the track; existing clips stay"));
         return list;
     }
 

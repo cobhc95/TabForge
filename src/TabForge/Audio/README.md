@@ -2,6 +2,12 @@
 
 The app's only way to reach the audio engine process, plus device and capture helpers.
 
+## How to change me
+1. Entry files: `Audio/AudioEngineClient*.cs` (Commands, Sync); engine side in `src/TabForge.AudioEngine`.
+2. Owner class: `AudioEngineClient` (reach the engine only through it).
+3. Tests to run: `TestClipWaveformSpan`, `TestWaveformCacheBounds`, `TestEngineMultiTabPlayback` (full-suite build); `--areas engine`, plus `--areas architecture,hygiene` (see the test box in `docs/TESTING.md`).
+4. Docs to update: `docs/FEATURE_MAP.md`, `ARCHITECTURE.md` if IPC changes.
+
 ## Key types
 - `AudioEngineClient` (partial files: core, Sync, Commands, Probes): sends commands, receives events.
 - `AudioDevices`, `AudioRouting`: devices and routing.

@@ -15,6 +15,13 @@ public enum SelectionOrigin
     Document,
 }
 
+/// <summary>Which tracks a bar selection covers: the editor's track (made in the score) or every track (made on the timeline).</summary>
+public enum SelectionScope
+{
+    ThisTrack,
+    AllTracks,
+}
+
 /// <summary>
 /// The one selection state shared by the score editor and the arrangement timeline: the selected bar range
 /// (with optional beat-cell bounds from the score), the track it belongs to, or no range. Both views observe
@@ -41,6 +48,16 @@ public sealed class SelectionModel
     /// <summary>Last score cell inside <see cref="EndBar"/>; -1 = the whole last bar.</summary>
     public int EndCell { get; private set; } = -1;
 
+    /// <summary>
+    /// Tracks the range covers. A score selection (origin <see cref="SelectionOrigin.Editor"/>) is <see cref="SelectionScope.ThisTrack"/>, a timeline
+    /// selection (<see cref="SelectionOrigin.Timeline"/>) is <see cref="SelectionScope.AllTracks"/>; other origins keep the current scope unless one is
+    /// given. A track switch keeps it, so a ThisTrack range moves to the new track.
+    /// </summary>
+    public SelectionScope Scope { get; private set; } = SelectionScope.AllTracks;
+
+    /// <summary>The one track the range covers, or -1 when it covers every track.</summary>
+    public int ScopeTrack => Scope == SelectionScope.ThisTrack ? TrackIndex : -1;
+
     /// <summary>Raised after every real change, with the origin of the (last) change.</summary>
     public event EventHandler<SelectionOrigin>? Changed;
 
@@ -58,15 +75,25 @@ public sealed class SelectionModel
     public bool Contains(int bar) => HasRange && bar >= StartBar && bar <= EndBar;
 
     /// <summary>Selects bars <paramref name="start"/>…<paramref name="end"/> (any order) on <paramref name="track"/>.</summary>
-    public bool SetRange(int track, int start, int end, SelectionOrigin origin, int startCell = 0, int endCell = -1)
+    public bool SetRange(int track, int start, int end, SelectionOrigin origin, int startCell = 0, int endCell = -1) =>
+        SetRange(track, start, end, origin, startCell, endCell, null);
+
+    /// <summary>As above with an explicit scope (null = from the origin).</summary>
+    public bool SetRange(int track, int start, int end, SelectionOrigin origin, int startCell, int endCell, SelectionScope? scope)
     {
+        var newScope = scope ?? origin switch
+        {
+            SelectionOrigin.Editor => SelectionScope.ThisTrack,
+            SelectionOrigin.Timeline => SelectionScope.AllTracks,
+            _ => Scope,
+        };
         if (start < 0 && end < 0) return Clear(origin);
         if (end < start) { (start, end) = (end, start); (startCell, endCell) = (0, -1); }
         start = Math.Max(0, start);
         end = Math.Max(start, end);
         startCell = Math.Max(0, startCell);
         if (endCell < -1) endCell = -1;
-        return Apply(track < 0 ? TrackIndex : track, true, start, end, startCell, endCell, origin);
+        return Apply(track < 0 ? TrackIndex : track, true, start, end, startCell, endCell, origin, newScope);
     }
 
     public bool Clear(SelectionOrigin origin) => Apply(TrackIndex, false, -1, -1, 0, -1, origin);
@@ -118,12 +145,14 @@ public sealed class SelectionModel
         return Apply(track, true, StartBar, end, StartCell, end == EndBar ? EndCell : -1, origin);
     }
 
-    private bool Apply(int track, bool hasRange, int start, int end, int startCell, int endCell, SelectionOrigin origin)
+    private bool Apply(int track, bool hasRange, int start, int end, int startCell, int endCell, SelectionOrigin origin, SelectionScope? scope = null)
     {
         if (!hasRange) { start = end = -1; startCell = 0; endCell = -1; }
+        var newScope = scope ?? Scope;
         if (track == TrackIndex && hasRange == HasRange && start == StartBar && end == EndBar &&
-            startCell == StartCell && endCell == EndCell)
+            startCell == StartCell && endCell == EndCell && newScope == Scope)
             return false;
+        Scope = newScope;
         TrackIndex = track;
         HasRange = hasRange;
         StartBar = start;

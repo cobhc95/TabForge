@@ -220,7 +220,9 @@ public partial class MainWindow
         if (loop && Editor.HasSelection)
         {
             var range = Editor.SelectionCellRange;
-            ApplyLoopRange(range.StartMeasure, range.EndMeasure, range.StartCell, range.EndCell);
+            // The loop never changes the scope: the model's own scope while it holds a range, else the score's (one track).
+            // The loop never changes the scope: the model's own scope while it holds a range, else the score's (one track).
+            ApplyLoopRange(range.StartMeasure, range.EndMeasure, range.StartCell, range.EndCell, _selection.HasRange ? _selection.Scope : SelectionScope.ThisTrack);
         }
         else if (loop && !_loopHasArea)
         {

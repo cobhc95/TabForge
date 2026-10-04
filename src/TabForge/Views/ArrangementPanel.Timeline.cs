@@ -102,7 +102,7 @@ public sealed partial class ArrangementPanel
 
     public event EventHandler? AddTrackRequested;
 
-    public void Bind(SongProject project, IReadOnlyList<MidiOutputDeviceInfo> devices, TabForge.Services.MediaContext? media = null)
+    public void Bind(SongProject project, IReadOnlyList<MidiOutputDeviceInfo> devices, TabForge.Services.MediaContext? media = null, bool keepRows = false)
     {
         _project = project;
         _devices = devices;
@@ -113,8 +113,10 @@ public sealed partial class ArrangementPanel
         // A structural edit (bars cleared in place, inserted or removed) can keep the same bar objects: the bar cells' note
         // summaries are recomputed so emptied bars show empty.
         _timeline.InvalidateActivities();
-        RebuildControls();
-        RefreshEmptyAreaMenus();
+        var signature = RowSignature(project);
+        if (!keepRows || signature != _rowSignature) RebuildControls();
+        _rowSignature = signature;
+        if (!keepRows) RefreshEmptyAreaMenus();
         RefreshTimelineExtent();
         _timeline.InvalidateMeasure();
         _timeline.InvalidateVisual();
@@ -383,8 +385,9 @@ public sealed partial class ArrangementPanel
     }
 
     /// <summary>Highlights the bars currently selected in the score without changing the loop range.</summary>
-    public void SetScoreSelection((int Start, int End)? range)
+    public void SetScoreSelection((int Start, int End)? range, int track = -1)
     {
+        _timeline.ScoreSelectionTrack = track;
         var barCount = _project?.Tracks.Select(track => track.Measures.Count).DefaultIfEmpty(0).Max() ?? 0;
         if (range is { } selected && barCount > 0)
         {

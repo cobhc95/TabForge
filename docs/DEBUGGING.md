@@ -4,6 +4,14 @@ How to run one test, one area, the CI gate, and the headless diagnostics. `docs/
 
 Run every command from the repository root (the source-scanning tests read the folder they start in) and give it a scratch settings folder with `--profile <folder>` so your own settings stay untouched. A run that cannot start exits with 2, a run that found a problem with 1, success is 0.
 
+<!-- TEST-BOX-START -->
+> **How to run a test (canonical)**
+> - Every build: the basic area. `src\TabForge\bin\Release\net8.0-windows\TabForge.exe --selftest <log> --areas basic`, then read the "N passed, M failed" line (the exe prints nothing; read the log).
+> - One test (`--only TestX`): most tests live in `tests/full-suite`, so first build a full-suite copy: `dotnet build src/TabForge/TabForge.csproj -c Release -p:TabForgeFullSuite=true -o <dir>`, then run `<dir>\TabForge.exe --selftest <log> --only TestX`. A normal build reports "0 run" or an unknown name.
+> - Register a test: add an `AreaOf` entry in `src/TabForge/SelfTests/SelfTest.cs`, and register it in `tests/full-suite/SelfTestFullSuite.cs` (not a `Guard` in `SelfTest.cs`). Then run `--feature-map` into `docs/FEATURE_MAP.md`.
+> - Before a release: `--areas release` (full-suite build). The full suite (`--require ci,document-context`) runs weekly and at manager checkpoints only.
+<!-- TEST-BOX-END -->
+
 ## The basic set and the full suite
 
 A normal build carries the **basic set** only: the architecture and hygiene checks and a few smoke tests (model round trip, project load/save, settings, one editor entry, one headless engine start). `--selftest <log>` runs it in a few seconds; `--areas basic` selects the same set in a full-suite build. This is what every local rebuild runs.
@@ -20,6 +28,7 @@ dotnet build src\TabForge\TabForge.csproj -c Release -v q -p:TabForgeFullSuite=t
 Start-Process -Wait src\TabForge\bin\Release\net8.0-windows\TabForge.exe -ArgumentList '--selftest','one.log','--only','TestBarSlots'
 ```
 
+- `TABFORGE_SPEED_ONLY="open Preferences;Delete bars"` (environment) limits `--speed-audit` to the actions whose names contain one of the fragments.
 - `--only <TestName>[,<TestName>...]` runs just the named tests. A name is the test method as written in the `Guard(...)` or `GuardGroup(...)` call in `src/TabForge/SelfTests/SelfTest.cs` (basic set) or `tests/full-suite/SelfTestFullSuite.cs`. Names are exact and case-sensitive. A full-suite test is known only to a build made with `-p:TabForgeFullSuite=true`; the maintainer's local rebuild script builds that for you when `TABFORGE_SELFTEST_ONLY=TestA,TestB` is set.
 - The log ends with the usual line, `TabForge self-test: N passed, M failed`. Search the log for `FAIL`; the exit code alone is not the result.
 - An unknown name fails the run before any test starts and lists the closest registered names.
@@ -82,6 +91,7 @@ Each mode is the first argument. They open no window (the two window options bel
 | `--gendemo [out]` | Writes the built-in demo song as a project file. |
 | `--gendiag [dir]` | Writes the purpose-built diagnostic songs with their expected note-on times. |
 | `--feature-map [file]` | Regenerates `docs/FEATURE_MAP.md`; run it after adding or renaming a test. |
+| `--find <keyword> [out.txt]` | Prints (and writes) at most 40 lines: matching features, owning files and tests from the feature map, test registry and folder READMEs. |
 | `--tutorial-shot <folder> <out.png>` | One tutorial page as an image. |
 | `--tutorial-pdf <folder> <out.pdf>` | The tutorial as a PDF. |
 | `--audit-gm <song> <report>` | Plays a song through the engine's General MIDI synth, one channel per track, and checks the sounding pitches. |
@@ -95,9 +105,10 @@ Each mode is the first argument. They open no window (the two window options bel
 | `--level-match <report> [engine-only]` | Compares the built-in synth's levels with the system synth, or measures it alone. |
 | `--pitch-audit <report> [max]` | Measures the sounding octave of remembered plug-in instruments; settings are read, never written. |
 
-Two options open the main window and need `--profile <scratch folder>`:
+Three options open the main window and need `--profile <scratch folder>`:
 
 | Option | What it does |
 | --- | --- |
 | `--capture <script.json> <outDir>` | Drives the window off-screen from a script and saves screenshots. |
 | `--screenshots <folder>` | Photographs menus, panels, settings and dialogs, then exits. |
+| `--speed-audit <report.md>` | Times every common action (clicks, scrolling, zoom, resizes, windows, menus, editing, tracks, clips, save, open, tabs) on the off-screen window with the demo song and a long audio clip, stopped and playing, and writes a table: median and worst time to idle, synchronous work, worst frame gap, flags above 50 ms or 33 ms. Set `TABFORGE_TRACE=ui` to add the slow-funnel lines with their callers. Silent (master volume 0); works on a copy of the song. |

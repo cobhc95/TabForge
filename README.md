@@ -1,4 +1,4 @@
-# TabForge 0.5.4
+# TabForge 0.5.5
 
 **A keyboard-driven tablature and notation editor for Windows. Opens GP files (.gp3, .gp4, .gp5, .gpx, .gp) and saves .gp and its own .tforge projects.** Write, import and play back guitar, bass, drum and keyboard parts, with a live fretboard / keyboard, an arrangement timeline, audio and MIDI recording, a mixer, VST plug-ins and offline audio rendering.
 
@@ -196,7 +196,7 @@ One block per bar and track, with coloured sections across the top. Drag section
 
 - **Sections** (Intro, Verse, Chorus…) share a colour per type; add one with `M`, the Sections panel or the lane's right-click menu.
 - **Drag a section** to move its marker; **Ctrl+drag** moves it with its bars.
-- **Drag across bars** to select: copy, cut, paste, move, delete, loop or skip during playback.
+- **Drag across bars** to select: copy, cut, paste, move, delete, loop or skip during playback. A timeline selection covers every track; bars selected in the score cover just that track, and copy, cut, paste and loop follow it.
 - **Drop** MP3, WAV, FLAC, OGG, AIFF, M4A, WMA or MIDI files on a track.
 
 <details><summary>More details</summary>
@@ -230,6 +230,7 @@ Every track is a row with level, pan, mute, solo and FX; the Master row sits at 
 - **Mute and Solo** are instant: solo wins, muted tracks are drawn grey.
 - **Groups** by instrument, compact or ungrouped, with collapsible headers.
 - **Add track** with instrument picker, tuning editor and position choice.
+- **Convert** an instrument track to an audio track (its notation becomes a MIDI clip) or back (MIDI clips can be written as notation); the track keeps its place, mixer and plug-ins.
 - **Global tuning** shifts every track at once.
 
 <details><summary>More details</summary>

@@ -98,10 +98,20 @@ internal sealed class SectionEditFlow
             allTracks ? $"Copied bar {bar + 1} from all tracks" : $"Copied bar {bar + 1} from {track!.Name}");
     }
 
-    public void CopyArea(DocumentSession doc, int start, int end)
+    /// <summary>Copies the selected bars of every track, or of track <paramref name="onlyTrack"/> alone (a one-track selection).</summary>
+    public void CopyArea(DocumentSession doc, int start, int end, int onlyTrack = -1)
     {
         if (!_host.IsShown(doc)) return;
-        CopyClip(() => TimelineClips.CopyArea(doc.Project, start, end), $"Copied bars {start + 1}-{end + 1}");
+        var from = onlyTrack >= 0 && onlyTrack < doc.Project.Tracks.Count ? $" from {doc.Project.Tracks[onlyTrack].Name}" : "";
+        CopyClip(() => TimelineClips.CopyArea(doc.Project, start, end, onlyTrack), $"Copied bars {start + 1}-{end + 1}{from}");
+    }
+
+    /// <summary>Cut on the selected bars: every track copies and removes them; one track copies and clears them (its bars stay in line with the others).</summary>
+    public void CutArea(DocumentSession doc, int start, int end, int onlyTrack = -1)
+    {
+        CopyArea(doc, start, end, onlyTrack);
+        if (onlyTrack < 0 || doc.Project.Tracks.Count <= 1) DeleteArea(doc, start, end, "Cut");
+        else Range.Run(doc, BarRangeAction.Clear, start, end, allTracks: false, askAboutClips: false);
     }
 
     /// <summary>Puts a Bars clip on the shared score clipboard (the same one the score editor pastes from) and reports it.</summary>
@@ -297,6 +307,8 @@ internal sealed class SectionEditFlow
     {
         if (!_host.IsShown(doc)) return;
         if (_host.Clipboard.TryGetClip(out var error) is not { } clip) { _host.SetStatus(error ?? ClipboardService.NotTabForgeNotesMessage); return; }
+        // One track's bars go onto the selected track in place; bars of several tracks are inserted on every track.
+        if (clip.Tracks.Count == 1 && doc.Project.Tracks.Count > 1) { PasteBar(doc, at, doc.Project.Tracks.ElementAtOrDefault(_host.SelectedTrackIndex), allTracks: false); return; }
         TimelinePasteResult? answered = null;
         var paste = DocumentEdits.Run<TimelinePasteResult>(doc, project =>   // one undo step for the whole paste
         {

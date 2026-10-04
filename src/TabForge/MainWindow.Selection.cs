@@ -18,7 +18,7 @@ public partial class MainWindow
     private void ApplySelectionToTimeline(SelectionOrigin origin)
     {
         var s = _selection;
-        Arrangement.SetScoreSelection(s.BarRange);
+        Arrangement.SetScoreSelection(s.BarRange, s.ScopeTrack);
         if (s.HasRange)
         {
             ApplyLoopArea(s.StartBar, s.EndBar, s.StartCell, s.EndCell);
@@ -39,6 +39,6 @@ public partial class MainWindow
     private void ReconcileSelection()
     {
         _selectionSync?.Reconcile(MaxMeasures(), _project.Tracks.Count);
-        Arrangement.SetScoreSelection(_selection.BarRange);
+        Arrangement.SetScoreSelection(_selection.BarRange, _selection.ScopeTrack);
     }
 }

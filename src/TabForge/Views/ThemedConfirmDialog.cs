@@ -12,6 +12,22 @@ internal sealed class ThemedConfirmDialog : Window
 {
     private MessageBoxResult _result = MessageBoxResult.Cancel;
 
+    /// <summary>Builds and measures one hidden dialog of each shape so the first real prompt skips the cold template, resource and JIT work.</summary>
+    internal static void Prewarm()
+    {
+        try
+        {
+            foreach (var choices in new IReadOnlyList<string>?[] { null, new[] { "a", "b" } })
+            {
+                var warm = new ThemedConfirmDialog("Confirm", "Confirm", details: new[] { "-" }, rememberText: "Remember", choices: choices, scopes: choices);
+                warm.ApplyTemplate();
+                if (warm.Content is FrameworkElement root) root.Measure(new Size(600, 600));
+                warm.Close();   // a never-shown window still counts as open and would keep the app alive after the last main window closes
+            }
+        }
+        catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"Dialog prewarm skipped: {ex.Message}"); }
+    }
+
     public ThemedConfirmDialog(
         string title,
         string message,

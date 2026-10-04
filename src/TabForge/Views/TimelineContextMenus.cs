@@ -130,9 +130,9 @@ internal static class TimelineMenus
         var items = new List<MenuSpec>
         {
             new() { Header = s.Label, IsLabel = true, Enabled = false },
-            Item(TimelineCommand.CopySelection, "Copy", key("Edit.Copy"), toolTip: "Copies the selected bars of every track"),
-            Item(TimelineCommand.CutSelection, "Cut", key("Edit.Cut"), toolTip: "Cut removes the bars and closes the gap"),
-            Item(TimelineCommand.PasteSelection, "Paste", key("Edit.Paste"), s.CanPaste, "Pastes the copied bars in front of the selection"),
+            Item(TimelineCommand.CopySelection, "Copy", key("Edit.Copy"), toolTip: "Copies the selected bars: of every track for a timeline selection, of its track for a score selection"),
+            Item(TimelineCommand.CutSelection, "Cut", key("Edit.Cut"), toolTip: "Cut copies the bars, then removes them and closes the gap (every track) or clears them (one track)"),
+            Item(TimelineCommand.PasteSelection, "Paste", key("Edit.Paste"), s.CanPaste, "Bars of every track are inserted in front of the selection; one track's bars go onto the selected track"),
             Item(TimelineCommand.DeleteSelection, "Delete…", key("Range.Delete"), toolTip: "Asks what to do: clear the bars, remove them and close the gap, or insert a gap (all tracks or this track)"),
             MenuSpec.Separator(),
             Check(TimelineCommand.LoopSelection, "Loop selection", s.Looping, "transport state (not saved as a preference)", key("Transport.Loop")),

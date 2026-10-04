@@ -2,6 +2,12 @@
 
 One `DocumentSession` per open song: edits, undo, save, close and where a song opens.
 
+## How to change me
+1. Entry files: `DocumentEdits.cs`, `DocumentSaveFlow.cs`.
+2. Owner class: `DocumentSession`; edits via `DocumentEdits.Run`, saves via `DocumentSaveFlow`.
+3. Tests to run: `--areas document-operations,document-context` (full-suite build), plus `--areas architecture,hygiene` (see the test box in `docs/TESTING.md`).
+4. Docs to update: this README, `CHANGELOG.md`.
+
 ## Key types
 - `DocumentSession`: the open song, its undo history and its `MediaContext`.
 - `DocumentEdits`: `DocumentEdits.Run` is the only way to change a song.

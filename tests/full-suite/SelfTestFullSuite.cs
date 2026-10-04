@@ -27,11 +27,13 @@ public static partial class SelfTest
         // Window lifetime runs first, on a clean process: it asserts that closed main windows are collectable. Run after the UI tests, the
         // last closed window is pinned by ref-counted UI Automation handles held by an out-of-process UIA client on the desktop.
         Section("Window lifetime (real main windows)");
-        GuardGroup("window-lifetime", TestWindowLifetime);   // repeated close, cancelled close, queued work, tab transfer, Preferences owners, engine chains
+        GuardGroup("window-lifetime", TestWindowLifetime);
+        GuardGroup("window-lifetime", TestStartupFileOpen);   // a command-line song and a second-launch hand-over open in a fresh window (.gp, .gp5, .tforge)   // repeated close, cancelled close, queued work, tab transfer, Preferences owners, engine chains
         Section("Document context (media, approvals, close)");
         GuardGroup("document-context", TestDocumentContext);   // R2: explicit media / approval context, stale work, Save As, close with several dirty tabs
         Section("Document operations (explicit-document edits, entry-point parity)");
         GuardGroup("document-operations", TestDocumentOperations);   // R3: shared edits, keyboard vs menu, save / open / close sequences without a window
+        GuardGroup("document-operations", TestConvertToInstrumentFlow);
         GuardGroup("document-operations", TestAddTrackMenu);   // the Add-track lane prompt, the + Track menu, converting an audio track, through a real window
         GuardGroup("document-operations", TestAudioTrackClips);   // audio track part E: drop below the tracks, lanes, MIDI take, sections, conversion
         GuardGroup("document-operations", TestClipAndSectionEdits);   // W3-K: clip commands and section/bar/area flows through real windows
@@ -72,6 +74,9 @@ public static partial class SelfTest
         Guard(TestVoice2HopoSlurWithLongerVoice);
         Guard(TestNewBindableCommands);
         Guard(TestTrackRowMenu);
+        Guard(TestSelectionScope);
+        Guard(TestSelectionClipboardMatrix);
+        Guard(TestTimelineCellsCurrent);
         Guard(TestClipDragPress);
         Guard(TestClipWaveformSpan);
         Guard(TestClipSplitGlueFades);
@@ -271,6 +276,7 @@ public static partial class SelfTest
         Guard(TestAudioTrackModel);
         Guard(TestAudioTrackPersistence);
         Guard(TestAudioTrackConversion);
+        Guard(TestInstrumentToAudioConversion);
         Guard(TestAudioTrackExports);
         Guard(TestImporterNamesAndDynamics);
         Guard(TestTforgeCompression);
@@ -298,6 +304,7 @@ public static partial class SelfTest
         Guard(TestMuteHoldsAcrossSeekAndRestart);
         Guard(TestRenderHonoursMute);
         Guard(TestClipChurnWhileStreaming);
+        Guard(TestAudioTrackAddDuringPlayback);
         Guard(TestDiskStreamerIdle);
         Guard(TestEngineOwnerTransports);
         Guard(TestEngineOwnerIdLifecycle);
@@ -348,6 +355,7 @@ public static partial class SelfTest
         Guard(TestMediaDropPreviewGeometry);
         Guard(TestClipMoves);
         Guard(TestClipMoveGhost);
+        Guard(TestMidiClipMoves);
         Guard(TestSongExtent);
         Guard(TestSectionClips);
         Section("Malformed-input fuzzing and lifecycle");
@@ -431,6 +439,7 @@ public static partial class SelfTest
         ["TestZoomComboShowsValue"] = "core",
         ["TestDocumentContext"] = "document-context",
         ["TestAddTrackMenu"] = "document-operations",
+        ["TestConvertToInstrumentFlow"] = "document-operations",
         ["TestAudioTrackClips"] = "document-operations",
         ["TestClipAndSectionEdits"] = "document-operations",
         ["TestDocumentOperations"] = "document-operations",
@@ -441,6 +450,7 @@ public static partial class SelfTest
         ["TestCallbackMetrics"] = "engine",
         ["TestChildProcessJob"] = "engine",
         ["TestClipChurnWhileStreaming"] = "engine",
+        ["TestAudioTrackAddDuringPlayback"] = "engine",
         ["TestColdStartSetupSurvivesPanic"] = "engine",
         ["TestCommandFrameRobustness"] = "engine",
         ["TestDiskStreamerIdle"] = "engine",
@@ -514,6 +524,7 @@ public static partial class SelfTest
         ["TestAsyncSaveSequencing"] = "persistence",
         ["TestAudioDataSizeLimit"] = "persistence",
         ["TestAudioTrackConversion"] = "persistence",
+        ["TestInstrumentToAudioConversion"] = "persistence",
         ["TestAudioTrackExports"] = "persistence",
         ["TestAudioTrackModel"] = "persistence",
         ["TestAudioTrackPersistence"] = "persistence",
@@ -609,6 +620,7 @@ public static partial class SelfTest
         ["TestCaptureMainWindowOffscreen"] = "ui",
         ["TestClefShapesAndChanges"] = "ui",
         ["TestClipMoveGhost"] = "ui",
+        ["TestMidiClipMoves"] = "ui",
         ["TestClosedTimelineIsCollected"] = "ui",
         ["TestColourChoiceEntries"] = "ui",
         ["TestColourHexEquivalence"] = "ui",
@@ -689,11 +701,12 @@ public static partial class SelfTest
         ["TestTooltips"] = "ui",
         ["TestTrackColumnHeaderFit"] = "ui",
         ["TestTrackListFit"] = "ui",
-        ["TestTrackRowRightClick"] = "ui", ["TestTrackRowMenu"] = "ui", ["TestClipDragPress"] = "ui", ["TestClipWaveformSpan"] = "ui",
+        ["TestTrackRowRightClick"] = "ui", ["TestTrackRowMenu"] = "ui", ["TestSelectionScope"] = "ui", ["TestSelectionClipboardMatrix"] = "ui", ["TestTimelineCellsCurrent"] = "ui", ["TestClipDragPress"] = "ui", ["TestClipWaveformSpan"] = "ui",
         ["TestTrackRowsEndFlush"] = "ui",
         ["TestViewMenuWording"] = "ui",
         ["TestVoice2HopoSlurWithLongerVoice"] = "ui",
         ["TestWritingDuration"] = "ui",
         ["TestWindowLifetime"] = "window-lifetime",
+        ["TestStartupFileOpen"] = "window-lifetime",
     };
 }

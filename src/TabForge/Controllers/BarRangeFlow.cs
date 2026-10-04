@@ -23,20 +23,20 @@ internal sealed class BarRangeFlow
     public static BarRangeAction? ActionOf(string id) => Enum.GetValues<BarRangeAction>().Cast<BarRangeAction?>().FirstOrDefault(a => BarRangePromptText.CommandOf(a!.Value) == id);
 
     /// <summary>Runs a Range.* command on the selected bars (direct commands act on every track); false when the id is not one.</summary>
-    public bool RunCommand(DocumentSession doc, string id, int start, int end)
+    public bool RunCommand(DocumentSession doc, string id, int start, int end, bool allTracksDefault = true)
     {
-        if (id == "Range.Delete") { Delete(doc, start, end); return true; }
+        if (id == "Range.Delete") { Delete(doc, start, end, allTracksDefault); return true; }
         if (ActionOf(id) is not { } action) return false;
         Run(doc, action, start, end, allTracks: true, askAboutClips: true);
         return true;
     }
 
     /// <summary>
-    /// Delete on selected bars: the remembered answer (action and scope) runs directly; otherwise the prompt asks (the last choice preselected, "All tracks"
-    /// preselected: a selection on the timeline covers every track unless "This track" is picked) and "Remember my answer" stores the action and scope.
+    /// Delete on selected bars: the remembered answer (action and scope) runs directly; otherwise the prompt asks (the last choice preselected, the scope
+    /// preselected from <paramref name="allTracksDefault"/>: a timeline selection covers every track, a score selection its track) and "Remember my answer" stores the action and scope.
     /// Cancel changes nothing.
     /// </summary>
-    public void Delete(DocumentSession doc, int start, int end)
+    public void Delete(DocumentSession doc, int start, int end, bool allTracksDefault = true)
     {
         if (!_host.IsShown(doc)) return;
         var editing = _host.Settings.Editing;
@@ -45,7 +45,7 @@ internal sealed class BarRangeFlow
         if (BarRangeGaps.ClipsUnder(doc.Project, start, end, -1) is { } impact)
             text += " " + ClipDeleteImpact.DescribeRange(impact);
         var last = Enum.TryParse<BarRangeAction>(editing.BarRangeLastChoice, out var previous) ? previous : BarRangeAction.Clear;
-        if (_host.AskBarRange(text, last, allTracks: true) is not { } answer) return;
+        if (_host.AskBarRange(text, last, allTracksDefault) is not { } answer) return;
         editing.BarRangeLastChoice = answer.Action.ToString();
         if (answer.Remember) editing.BarRangeDelete = BarRangePromptText.Store(answer.Action, answer.AllTracks);
         _host.SaveSettings();

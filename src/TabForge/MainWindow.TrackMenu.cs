@@ -55,11 +55,12 @@ public partial class MainWindow
         public TrackClipboardHost(MainWindow window) => _window = window;
         public DocumentSession Document => _window.Doc;
         public bool ConfirmDeleteTrack(string trackName) => DeleteTrackPrompt.Ask(_window, trackName);
+        public bool ConfirmConvertToAudio(string trackName) => ConvertTrackPrompts.AskToAudio(_window, trackName);
         public void SetStatus(string text) => _window.StatusText.Text = text;
 
         public void TracksChanged(int selectIndex, string status)
         {
-            _window.FinishTrackListChange(selectIndex);
+            _window.FinishTrackListChange(selectIndex); _window.Editor.InvalidateScoreLayout();
             _window.StatusText.Text = status;
         }
     }

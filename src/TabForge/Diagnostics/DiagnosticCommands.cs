@@ -110,6 +110,7 @@ internal static partial class DiagnosticCommands
         ["--audit-gm"] = args => args.Length < 3 ? Usage("--audit-gm <song> <report>") : GmSongAudit.Run(args[1], args[2]),
         ["--import-measure"] = args => args.Length < 3 ? Usage("--import-measure <song> <report.txt> [worker|inproc]") : Guard("Import measure", () => ImportMeasure.Run(args)),
         ["--feature-map"] = args => Guard("Feature map", () => FeatureMapGenerator.Run(args)),
+        ["--find"] = args => Guard("Find", () => FeatureFinder.Run(args)),
     };
 
     /// <summary>The names of the diagnostic modes (docs/DEBUGGING.md lists them; a self-test keeps the two in step).</summary>

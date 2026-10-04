@@ -2,6 +2,12 @@
 
 The dockable panel workspace: layout tree, drag and drop, floating windows.
 
+## How to change me
+1. Entry files: `DockLayoutTree.cs` / `DockDragController.cs`.
+2. Owner class: `DockLayoutTree` (layout), `DockWorkspaceState` (saved).
+3. Tests to run: `TestDockRatioNotRewrittenByAutoFit` (full-suite build); `--areas ui`, plus `--areas architecture,hygiene` (see the test box in `docs/TESTING.md`).
+4. Docs to update: this README, `docs/FEATURE_MAP.md`.
+
 ## Key types
 - `DockLayoutTree`: the layout as a tree of panels and splits.
 - `DockWorkspaceState`: the saved layout.

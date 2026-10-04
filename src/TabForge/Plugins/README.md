@@ -2,6 +2,12 @@
 
 Plug-in discovery, trust, chain state and rigs. Plug-ins run only in isolated processes.
 
+## How to change me
+1. Entry files: `PluginTrust.cs`, `ChainStateStore.cs`.
+2. Owner class: `PluginTrust` (trust), `ChainStateStore` (states); plug-ins stay in isolated processes.
+3. Tests to run: `--areas persistence,settings`; plug-in trust tests via `--areas release` (full-suite build), plus `--areas architecture,hygiene` (see the test box in `docs/TESTING.md`).
+4. Docs to update: `ARCHITECTURE.md` guarantees, `CHANGELOG.md`.
+
 ## Key types
 - `PluginTrust`: records size, time, SHA-256 and signer; a changed file needs re-approval.
 - `VstScannerService`, `PluginCatalog`, `PluginLibrary`: scan and list plug-ins.

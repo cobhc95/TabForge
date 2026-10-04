@@ -112,7 +112,9 @@ public static class DocumentEdits
     private static void Restore(DocumentSession document, UndoSnapshot snapshot)
     {
         // Unchanged bars move over from the song being replaced; only the bars the undo changes are rebuilt.
-        document.Project = document.Undo.Restore(snapshot, document.Project);
+        var replaced = document.Project;
+        document.Project = document.Undo.Restore(snapshot, replaced);
+        TabForge.Services.TimelineClips.CarrySongId(replaced, document.Project);
         MarkChanged(document);   // undo / redo may restore in place
         // Undoing back to the saved state clears the "*": the exact content check runs here only.
         if (document.IsCleanContent(snapshot)) document.Project.IsDirty = false;

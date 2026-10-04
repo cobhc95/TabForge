@@ -2,6 +2,11 @@
 
 WPF controls and windows. Layout and drawing live here; data and rules do not.
 
+## How to change me
+1. Entry files: the control or window file for the screen; `*.xaml` beside it; owner: the owned controller or view part, not `MainWindow` or `TabEditorControl`.
+2. Tests to run: `--areas ui,interactions,architecture` (full-suite build); check in the running app, plus `--areas architecture,hygiene` (see the test box in `docs/TESTING.md`).
+3. Docs to update: `CHANGELOG.md`, the owner's test list, `ArchitectureBudget.json`.
+
 ## Key types
 - `TabEditorControl` (with `StaffNotationRenderer`): the score and tab editor.
 - `ArrangementPanel` (partial files): the timeline of tracks and clips. Owned helpers behind host interfaces: `TrackColumnLayout`
@@ -17,7 +22,7 @@ WPF controls and windows. Layout and drawing live here; data and rules do not.
 - `InstrumentPanel`: fretboard, drum and keyboard display.
 - `PreferencesWindow`, `MixerWindow`, `FxChainWindow`: settings, mixer and plug-in chains.
 - `CommandPalette`, `DialogHost`, `ContextMenuLayouts`: command search, dialogs, menus.
-- `TrackRowMenus`, `DeleteTrackPrompt`: the track row's right-click menu contents and its themed delete question.
+- `TrackRowMenus`, `DeleteTrackPrompt`, `ConvertTrackPrompts`: the track row's right-click menu contents and its themed delete and conversion questions.
 - Main-window panes, each behind a host interface deriving from `IPaneHost`: `DockLayoutController` (layouts, Panels menu, side panel,
   fretboard pane size, full screen), `ScoreZoomController` (zoom box, page width), `ToolPaletteController` (palettes, pinned tools),
   `InstrumentPanelController` (view choice, scale finder, fretboard gesture), `MixerWindowsController` (Mixer and FX chain windows),

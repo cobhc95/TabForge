@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
@@ -27,6 +27,8 @@ public partial class App : Application
         // --capture likewise: refused before settings are loaded or a window exists, so a run without a scratch profile (or without
         // its script and folder) can neither show a window nor save the window state and settings into the real user folder.
         var captureSwitch = Array.FindIndex(args, a => a.Equals("--capture", StringComparison.OrdinalIgnoreCase));
+        var speedAudit = Array.FindIndex(args, a => a.Equals("--speed-audit", StringComparison.OrdinalIgnoreCase));
+        if (speedAudit >= 0 && (!UserPaths.IsProfile || UserPaths.ProfileIsRealUserFolder || speedAudit + 1 >= args.Length)) { Shutdown(2); return; }
         if (captureSwitch >= 0 && (!UserPaths.IsProfile || UserPaths.ProfileIsRealUserFolder || captureSwitch + 2 >= args.Length))
         {
             Debug.WriteLine("--capture needs --profile <scratch folder> and <script.json> <outDir>; refused, nothing was loaded.");
@@ -64,9 +66,11 @@ public partial class App : Application
         // default; Settings > General can open a separate window instead) and exit without a second window.
         if (StartupSongPath(args) is { } song && OpensInNewTab(settings) && !UserPaths.IsProfile && SingleInstanceService.TrySendToRunningInstance(song))
         {
+            TabForge.Services.Trace.Write("ui", $"OPEN sent to the running TabForge: {song}");
             Shutdown(0);
             return;
         }
+        if (StartupSongPath(args) is { } startupSong) TabForge.Services.Trace.Write("ui", $"OPEN startup song {startupSong} (not handed over)");
 
         InstallCrashHandlers();
         // Toolbar/palette buttons are enabled and disabled as the cursor moves. A tooltip whose owner is
@@ -90,14 +94,20 @@ public partial class App : Application
         }
         var window = new MainWindow(Audio.AudioEngineClient.Instance, new Shell.AppOptions());
         MainWindow = window;
-        if (captureScript is null) ApplyRequestedWindowSize(window, args); else new WindowProbes(window).PrepareOffscreenCapture();
+        if (captureScript is null && speedAudit < 0) ApplyRequestedWindowSize(window, args); else new WindowProbes(window).PrepareOffscreenCapture();
         window.Show();
+        window.Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ApplicationIdle, new Action(Views.ThemedConfirmDialog.Prewarm));
         if (captureScript is not null) new WindowProbes(window).RunCaptureScript(captureScript, captureOut!);
         OpenStartupFile(window, args);
         if (!args.Any(a => a.StartsWith("--", StringComparison.Ordinal)))
             window.Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, window.OfferAutosaveRecovery);   // songs a crash left behind
         if (!args.Any(a => a.StartsWith("--", StringComparison.Ordinal)) && !UserPaths.IsProfile)
-            SingleInstanceService.StartServer(path => window.Dispatcher.BeginInvoke(() => window.OpenFromAnotherLaunch(path)), _serverStop.Token);
+            SingleInstanceService.StartServer(path => Dispatcher.BeginInvoke(() =>
+            {
+                var target = HandOverTarget();
+                TabForge.Services.Trace.Write("ui", $"OPEN hand-over received {path} -> {(target is null ? "no window" : "window")} (windows: {Current?.Windows.Count})");
+                target?.OpenFromAnotherLaunch(path);
+            }), _serverStop.Token);
         // Window options that take one value run in registration order; each uses the first occurrence of its option.
         foreach (var (option, run) in WindowCommands)
         {
@@ -124,6 +134,8 @@ public partial class App : Application
         ["--probe-update"] = (w, v) => new WindowProbes(w).RunUpdateProbe(v),
         ["--probe-instrument-menu"] = (w, v) => new WindowProbes(w).RunInstrumentMenuProbe(v),
         ["--probe-countin"] = (w, v) => new WindowProbes(w).RunCountInProbe(v),
+        // `--speed-audit <report.md>` (needs --profile): times every common action on the off-screen window, then exits.
+        ["--speed-audit"] = (w, v) => new WindowProbes(w).RunSpeedAudit(v),
     };
 
     private readonly CancellationTokenSource _serverStop = new();
@@ -180,6 +192,16 @@ public partial class App : Application
     /// Opens a file passed on the command line in the first tab. The arguments are also tried joined,
     /// so a path with spaces still opens when the shell did not quote it.
     /// </summary>
+    /// <summary>The open main window that receives a song from a second launch: the active one, else the newest. The first window may have
+    /// closed while others stay open (its tabs moved to another window), so the receiver is chosen when the song arrives.</summary>
+    internal static MainWindow? HandOverTarget()
+    {
+        // Any visible main window will do (IsLoaded is not dependable for a window that was hidden and shown again); the app's main
+        // window is the fallback, so a song is never dropped while a window is open.
+        var windows = Current?.Windows.OfType<TabForge.MainWindow>().Where(w => w.IsVisible).ToList() ?? new List<TabForge.MainWindow>();
+        return windows.FirstOrDefault(w => w.IsActive) ?? windows.LastOrDefault() ?? Current?.MainWindow as TabForge.MainWindow;
+    }
+
     private static void OpenStartupFile(MainWindow window, string[] args)
     {
         // Values of options ("--screenshots <folder>", "--size WxH") are not files to open.

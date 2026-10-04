@@ -83,6 +83,7 @@ Self-tests fail the build of a change that breaks these.
 - **Layering.** Models, Services and Playback have no WPF; the app reaches the engine only through the client; the contracts project has no dependencies.
 - **Size and shape budgets.** `src/TabForge/ArchitectureBudget.json` caps file and class sizes and lists naming exceptions. A budget may only go down; do not raise one to make room for new code, move the code out instead.
 - **Naming.** XController, XFlow, IXHost and XService as in `CONTRIBUTING.md`.
+- **Find a feature fast.** `TabForge.exe --find <keyword> out.txt` lists matching features, files and tests in at most 40 lines; read that instead of the whole feature map.
 - **Tests.** Every test has an area in the AreaOf table in `src/TabForge/SelfTests/SelfTest.cs`; after adding or renaming tests run `TabForge.exe --feature-map` and commit `docs/FEATURE_MAP.md`.
 - **Docs.** A document that names a file, type, test or command must name one that exists. This page and `docs/RECIPES.md` are checked the same way (`TestStartHereAndRecipesInSync`), and this page stays within 150 lines.
 - **Text.** Sources contain no stray control characters; comments describe the code as it is, without history.

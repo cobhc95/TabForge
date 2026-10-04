@@ -175,17 +175,18 @@ internal sealed class ClipEditController
     {
         var project = doc.Project;
         project.IsDirty = true;
-        var extent = ExtendSongToClips(project);
+        using var changedTrace = TabForge.Views.SlowTrace.Measure("clip change total", 4);
+        ExtentResult extent; using (TabForge.Views.SlowTrace.Measure("clip extend", 2)) extent = ExtendSongToClips(project);
         if (_host.Settings.Timeline.AutoRemoveEmptyLanes)
             foreach (var track in project.Tracks) ClipLanes.Compact(track);   // empty lanes close up (armed tracks are skipped inside)
-        WaveformCache.CancelUnused(project.Tracks.SelectMany(t => t.AudioClips).Where(c => !c.IsMidi).Select(c => c.File), doc.Media);   // a removed clip stops being read
+        using (TabForge.Views.SlowTrace.Measure("clip waveform cancel", 2)) WaveformCache.CancelUnused(project.Tracks.SelectMany(t => t.AudioClips).Where(c => !c.IsMidi).Select(c => c.File), doc.Media);   // a removed clip stops being read
         _host.SyncAudioEngine();
         if (extent.BarsAdded > 0 || project.Tracks.Any(t => t.AudioClips.Any(c => c.IsMidi)) || _midiClipsPlayed) doc.Playback.Engine.Rebuild(project);
         _midiClipsPlayed = project.Tracks.Any(t => t.AudioClips.Any(c => c.IsMidi));
         if (refreshRows) _host.RefreshTracks();
         if (extent.BarsAdded > 0) _host.RefreshAfterSongGrew();
         _host.RefreshArrangement();
-        _host.UpdateTitle();
+        using (TabForge.Views.SlowTrace.Measure("clip title", 2)) _host.UpdateTitle();
         _extentNote = SongExtent.Describe(extent);
         if (extent.Capped) _host.SetStatus("A clip ends after the last bar" + _extentNote);
     }
@@ -286,7 +287,7 @@ internal sealed class ClipEditController
     public void MidiClipToNotation(DocumentSession doc, AudioClip clip, int from, int to)
     {
         var project = doc.Project;
-        if (!_host.IsShown(doc) || from < 0 || to < 0 || from >= project.Tracks.Count || to >= project.Tracks.Count) return;
+        if (!_host.IsShown(doc) || from < 0 || to < 0 || from >= project.Tracks.Count || to >= project.Tracks.Count || project.Tracks[to].IsAudio) return;
         var written = MidiClipToTab.Write(project, project.Tracks[to], clip, sec => doc.Playback.Clock.BarAt(project, sec));
         if (written == 0) { _host.SetStatus("No notes of that MIDI clip fit this track's strings or bars"); _host.RefreshArrangement(); return; }
         project.Tracks[from].AudioClips.Remove(clip);

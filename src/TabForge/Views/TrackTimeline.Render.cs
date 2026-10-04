@@ -39,6 +39,7 @@ internal sealed partial class TrackTimeline
     {
         using var slowTrace = TabForge.Views.SlowTrace.Measure("timeline render");
         RenderCount++;
+        ValidateActivityCache();   // tracks added, removed or reordered since the last bind: the bar-cell cache follows the track list
         try { RenderGuard.Inject("TrackTimeline"); RenderCore(dc); }
         catch (Exception ex) when (RenderGuard.Contain(ex, "TrackTimeline", dc, ActualWidth, ActualHeight)) { }
     }
@@ -321,24 +322,26 @@ internal sealed partial class TrackTimeline
         // so the arrangement no longer looks like the whole track stack is selected)
 
         // --- score selection mirrored into the timeline ---
+        // A one-track selection (made in the score) shades only that track's row; an all-track one the full height.
+        var (bandTop, bandHeight) = SelectionBand(gridTop, height);
         if (ScoreSelectionStart >= 0 && ScoreSelectionEnd >= ScoreSelectionStart && ScoreSelectionEnd < bars)
         {
             var sx = XOfBar(ScoreSelectionStart);
             var sw = XOfBar(ScoreSelectionEnd + 1) - sx;
             dc.DrawRectangle(Draw.Solid(_theme.Accent, 0.12), Draw.Pen(_theme.Accent, 1.2, 0.7),
-                new Rect(sx + 0.5, ArrangementPanel.RulerHeight + 0.5, sw - 1,
-                    height - ArrangementPanel.RulerHeight - 1));
+                new Rect(sx + 0.5, bandTop + 0.5, sw - 1, Math.Max(1, bandHeight - 1)));
         }
 
-        // --- selected area / loop region: shown as soon as an area is picked; brighter while looping ---
+        // --- selected area / loop region: drawn over the selection's own rows (one track or all), brighter while looping. Looping never
+        // changes how the selection looks; the loop's span is marked on the ruler. ---
         if ((LoopEnabled || AreaVisible) && LoopStart >= 0 && LoopEnd >= LoopStart && LoopEnd < bars)
         {
             var sx = XOfBar(LoopStart);
             var sw = XOfBar(LoopEnd + 1) - sx;
             var strength = LoopEnabled ? 1.0 : 0.6;
             dc.DrawRectangle(Draw.Solid(_theme.Accent, 0.10 * strength), Draw.Pen(_theme.Accent, 1.4, strength),
-                new Rect(sx + 0.5, ArrangementPanel.RulerHeight + 0.5, sw - 1, height - ArrangementPanel.RulerHeight - 1));
-            dc.DrawRectangle(Draw.Solid(_theme.Accent, 0.85 * strength), null, new Rect(sx, ArrangementPanel.RulerHeight, sw, 2));
+                new Rect(sx + 0.5, bandTop + 0.5, sw - 1, Math.Max(1, bandHeight - 1)));
+            dc.DrawRectangle(Draw.Solid(_theme.Accent, 0.85 * strength), null, new Rect(sx, LoopEnabled ? ArrangementPanel.RulerHeight - 3 : bandTop, sw, LoopEnabled ? 3 : 2));
         }
         // --- Mix Table points: a small red dot at the top-left of the bar in that track's lane ---
         if (_mixPoints.Count > 0)
@@ -503,7 +506,7 @@ internal sealed partial class TrackTimeline
         int[] DrumVelocities);
     internal readonly record struct Activity(int Notes, int Beats, int Rests, int CellCount, bool HasContent,
         MiniatureEvent[] MiniatureEvents);
-    private readonly record struct ActivityCacheEntry(MeasureModel? Measure, int Generation, Activity Value);
+    private readonly record struct ActivityCacheEntry(MeasureModel? Measure, int Generation, int Revision, Activity Value);
 
     private Activity ActivityOf(int trackIndex, int bar, MeasureModel measure)
     {
@@ -514,13 +517,14 @@ internal sealed partial class TrackTimeline
 
         var generation = _activityGenerations[trackIndex][bar];
         var cached = _activityCache[trackIndex][bar];
-        if (ReferenceEquals(cached.Measure, measure) && cached.Generation == generation)
+        var revision = Project?.ContentRevision ?? 0;   // any edit, by any path, recomputes the cell: never a stale summary
+        if (ReferenceEquals(cached.Measure, measure) && cached.Generation == generation && cached.Revision == revision)
             return cached.Value;
 
         var isDrums = _activityTracks is not null && trackIndex < _activityTracks.Length &&
                       _activityTracks[trackIndex].Kind == TrackKind.Drums;
         var activity = BuildActivity(measure, isDrums);
-        _activityCache[trackIndex][bar] = new ActivityCacheEntry(measure, generation, activity);
+        _activityCache[trackIndex][bar] = new ActivityCacheEntry(measure, generation, revision, activity);
         return activity;
     }
 

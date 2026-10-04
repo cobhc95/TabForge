@@ -302,7 +302,7 @@ public static partial class SelfTest
             var audio = d3.Project.Tracks[1];
             audio.AudioClips.Add(CseClip("kept", 0));
             var undoCount = d3.Undo.UndoCount;
-            var converted = a.ConvertAudioTrackTo(audio, "Electric Bass (Finger)");
+            var converted = new TrackController().ConvertAudioToInstrument(d3, audio, "Electric Bass (Finger)").Changed;
             Check("convert: the audio track becomes a bass track and keeps its clip in lane 2, one undo step",
                 converted && !audio.IsAudio && audio.Kind == TrackKind.Bass && audio.AudioClips.Count == 1 && audio.AudioClips[0].Lane == 1 && d3.Undo.UndoCount == undoCount + 1);
             CseUndo(a);

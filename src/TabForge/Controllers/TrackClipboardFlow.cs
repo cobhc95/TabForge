@@ -11,6 +11,8 @@ public interface ITrackClipboardHost
     DocumentSession Document { get; }
     /// <summary>Asks before a track is deleted (themed confirmation); true to go on.</summary>
     bool ConfirmDeleteTrack(string trackName);
+    /// <summary>Asks before an instrument track becomes an audio track (themed confirmation); true to go on.</summary>
+    bool ConfirmConvertToAudio(string trackName);
     /// <summary>The track list changed: refresh the views and the engine, select <paramref name="selectIndex"/>, show <paramref name="status"/>.</summary>
     void TracksChanged(int selectIndex, string status);
     void SetStatus(string text);
@@ -47,8 +49,18 @@ public sealed class TrackClipboardFlow
             case "TrackRow.Paste": Paste(index); return true;
             case "TrackRow.Duplicate": Duplicate(index); return true;
             case "TrackRow.Delete": Delete(index); return true;
+            case "Track.ConvertToAudio": ConvertToAudio(index); return true;
             default: return false;
         }
+    }
+
+    /// <summary>Instrument track to audio track after a confirmation: the notation becomes a MIDI clip on the track (one undo step).</summary>
+    public void ConvertToAudio(int index)
+    {
+        var track = _host.Document.Project.Tracks[index];
+        if (track.IsAudio || !_host.ConfirmConvertToAudio(track.Name)) return;
+        if (!_tracks.ConvertInstrumentToAudio(_host.Document, track).Changed) { _host.SetStatus("Could not convert that track"); return; }
+        _host.TracksChanged(index, $"{track.Name} is now an audio track; its notation is a MIDI clip on the track");
     }
 
     public void Copy(int index)

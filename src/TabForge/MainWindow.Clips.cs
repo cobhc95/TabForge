@@ -91,7 +91,7 @@ public partial class MainWindow
     /// <summary>Runs a Range.* command on the bars selected in the shared selection; false when no bars are selected.</summary>
     // No bar range: the timeline's current bar is the range, so Delete on one bar asks the same question as on a selection.
     private bool RunRangeHotkey(string id) =>
-        _selection.BarRange is { } range ? _sections.Range.RunCommand(Doc, id, range.Start, range.End)
+        _selection.BarRange is { } range ? _sections.Range.RunCommand(Doc, id, range.Start, range.End, _selection.Scope == SelectionScope.AllTracks)
             : Editor.SelectedMeasure >= 0 && _sections.Range.RunCommand(Doc, id, Editor.SelectedMeasure, Editor.SelectedMeasure);
 
     private void ShowClipMenu(int trackIndex, AudioClip? clip, double sec)
@@ -129,7 +129,7 @@ public partial class MainWindow
                     break;
             }
         });
-        menu.IsOpen = true;
+        OpenContextMenu(menu, Arrangement, null, fromKeyboard: false);
     }
 
     private sealed class ClipHost : IClipHost
@@ -146,7 +146,7 @@ public partial class MainWindow
         public void CheckpointUndo() => _window.CheckpointUndo();
         public void SyncAudioEngine() => _window.SyncAudioEngine();
         public void RefreshTracks() => _window.RefreshTracks();
-        public void RefreshArrangement() => _window.RefreshArrangement();
+        public void RefreshArrangement() => _window.RefreshArrangement(keepRows: true);
         public void RefreshAfterSongGrew() => _window.RefreshAfterEdit(EditRefresh.Score | EditRefresh.TimelineGeometry);
         public void InvalidateScoreLayout() => _window.Editor.InvalidateScoreLayout();
         public void UpdateTitle() => _window.UpdateTitle();

@@ -62,6 +62,37 @@ internal sealed partial class TrackTimeline : FrameworkElement, IAreaMoveHost
     public int PlayheadBar = -1;
     public int ScoreSelectionStart = -1;
     public int ScoreSelectionEnd = -1;
+    /// <summary>Track row the selection covers (a score selection); -1 = every track (a timeline selection).</summary>
+    public int ScoreSelectionTrack = -1;
+
+    /// <summary>Top and height of the selection highlight: the selected track's row, or everything below the ruler.</summary>
+    internal (double Top, double Height) SelectionBand(double gridTop, double height)
+    {
+        if (ScoreSelectionTrack < 0 || Project is not { } p || ScoreSelectionTrack >= p.Tracks.Count)
+            return (ArrangementPanel.RulerHeight, height - ArrangementPanel.RulerHeight);
+        return (gridTop + ArrangementPanel.RowTopOf(p, ScoreSelectionTrack) - VerticalScrollOffset,
+            ArrangementPanel.RowHeightOf(p, p.Tracks[ScoreSelectionTrack]));
+    }
+
+    /// <summary>Bar cells (track, bar) whose cached "has notes" differs from the bar's notes now (test probe; empty = every cell is current).</summary>
+    internal List<(int Track, int Bar)> StaleCells()
+    {
+        var stale = new List<(int, int)>();
+        if (Project is not { } p) return stale;
+        ValidateActivityCache();
+        for (var t = 0; t < p.Tracks.Count; t++)
+            for (var b = 0; b < p.Tracks[t].Measures.Count; b++)
+            {
+                var m = p.Tracks[t].Measures[b];
+                if (ActivityOf(t, b, m).HasContent != BuildActivity(m, p.Tracks[t].Kind == TrackKind.Drums).HasContent) stale.Add((t, b));
+            }
+        return stale;
+    }
+
+    /// <summary>Rows the selection highlight covers (test probe).</summary>
+    internal IReadOnlyList<int> SelectionRows =>
+        ScoreSelectionStart < 0 || Project is null ? Array.Empty<int>()
+        : ScoreSelectionTrack >= 0 ? new[] { ScoreSelectionTrack } : Enumerable.Range(0, Project.Tracks.Count).ToArray();
     public int LoopStart = -1;
     public bool AreaVisible;
     internal double BarX(int bar) => XOfBar(Math.Clamp(bar, 0, Math.Max(0, BarCount)));

@@ -2,6 +2,12 @@
 
 Musical logic, file formats, settings, limits and path policy. No WPF.
 
+## How to change me
+1. Entry files: `SettingsCatalog.cs`, `AppSettings*.cs`, `HotkeyCatalog.cs`, `ProjectService.cs`.
+2. Owner class: `AppSettingsStore` (settings), `FilePathPolicy` (writes), `EditCommands` (edits).
+3. Tests to run: `TestSettingsStoreSharedAcrossWindows`, `TestHotkeySettingsMigration` (full-suite build); `--areas settings,persistence`, plus `--areas architecture,hygiene` (see the test box in `docs/TESTING.md`).
+4. Docs to update: `TOOLS_AND_HOTKEYS.md` and hotkey presets for commands, `CHANGELOG.md`, `docs/RECIPES.md`.
+
 ## Key types
 - `AppSettingsStore`: the one shared settings store; `SettingsValidator` bounds values, `SettingsMigration` upgrades old files, `SettingsFileService` reads and writes.
 - `FilePathPolicy`: atomic writes, leftover sweeps, reserved-name checks. `InputLimits` bounds every read.

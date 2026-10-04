@@ -6,7 +6,7 @@ namespace TabForge;
 public static partial class SelfTest
 {
     /// <summary>Window options documented next to the headless commands; they are registered in App.xaml.cs, not in the diagnostic command table.</summary>
-    private static readonly string[] DebuggingDocWindowOptions = { "--capture", "--screenshots" };
+    private static readonly string[] DebuggingDocWindowOptions = { "--capture", "--screenshots", "--speed-audit" };
 
     /// <summary>
     /// docs/DEBUGGING.md lists every headless diagnostic command, and only real ones: each command in the registry has a table row, each row

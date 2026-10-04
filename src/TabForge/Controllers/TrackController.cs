@@ -131,13 +131,46 @@ public sealed class TrackController
     }
 
     /// <summary>
-    /// Turns an audio track into an instrument track (the only direction: an instrument track never becomes audio), one undo step.
+    /// Turns an instrument track into an audio track, one undo step: its notation becomes one MIDI clip (song time 0, on the first free
+    /// lane; nothing is lost) and its bars are emptied (headers and bar count kept). Instrument, tuning and MIDI sound are cleared to the
+    /// audio defaults; name, colour, mix, plug-in chain and the existing clips are kept. The track stays silent unless an instrument
+    /// plug-in is on it. False for an audio track or one not in the song; nothing changes then.
+    /// </summary>
+    public EditResult ConvertInstrumentToAudio(DocumentSession document, TrackModel track) =>
+        DocumentEdits.Run(document, project =>
+        {
+            if (track.IsAudio || !project.Tracks.Contains(track)) return false;
+            var clip = NotationToMidiClip.Build(project, track);
+            if (clip is not null)
+            {
+                clip.Lane = ClipLanes.FreeLane(track, 0, clip.EndSec);
+                ClipLanes.Ensure(track, clip.Lane + 1);
+                track.AudioClips.Add(clip);
+            }
+            NotationToMidiClip.Empty(track);
+            track.Kind = TrackKind.Audio;
+            track.InstrumentName = "";
+            track.MidiProgram = 0;
+            track.MidiChannel = 0;
+            track.NumberOfFrets = 0;
+            track.StringTunings = new();
+            track.MidiSound = false;
+            track.AudioInput = AudioInputs.Input1;
+            ClipLanes.Ensure(track, 1);
+            track.Rig.Name = "Audio";
+            track.Rig.ArticulationMap = "Generic Guitar";
+            return true;
+        });
+
+    /// <summary>
+    /// Turns an audio track into an instrument track, one undo step (<see cref="ConvertInstrumentToAudio"/> is the way back).
     /// The track takes <paramref name="instrument"/> (a catalogue sound name, as in the instrument picker), the kind, strings, frets and
     /// MIDI channel that sound implies, and keeps its clips, plug-in chain, input and mix. Its bars are already empty, so notes can be
     /// entered at once. Every clip moves down one lane (lane 0 is left free under the new tab lane). False for a track that is not audio
-    /// or an unknown instrument; nothing changes then.
+    /// or an unknown instrument; nothing changes then. With <paramref name="barAt"/> (song seconds to bar and fraction) the track's MIDI clips
+    /// are written into the new notation and removed in the same step (<see cref="MidiClipToTab"/>); a clip that fits nothing stays.
     /// </summary>
-    public EditResult ConvertAudioToInstrument(DocumentSession document, TrackModel track, string instrument) =>
+    public EditResult ConvertAudioToInstrument(DocumentSession document, TrackModel track, string instrument, Func<double, (int Bar, double Fraction)>? barAt = null) =>
         DocumentEdits.Run(document, project =>
         {
             if (!track.IsAudio || !project.Tracks.Contains(track)) return false;
@@ -157,6 +190,9 @@ public sealed class TrackController
             ApplyInstrument(project, track, instrument);
             foreach (var clip in track.AudioClips) clip.Lane++;
             track.Lanes.Insert(0, new ClipLane());
+            if (barAt is not null)
+                foreach (var clip in track.AudioClips.Where(c => c.IsMidi).ToList())
+                    if (MidiClipToTab.Write(project, track, clip, barAt) > 0) track.AudioClips.Remove(clip);
             return true;
         });
 

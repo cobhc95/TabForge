@@ -2,7 +2,9 @@ using System.IO;
 using TabForge.Controllers;
 using TabForge.Documents;
 using TabForge.Models;
+using TabForge.Playback;
 using TabForge.Services;
+using TabForge.Views;
 
 namespace TabForge;
 
@@ -116,5 +118,69 @@ public static partial class SelfTest
             Check("an audio-only song saves and loads", onlyBack.Tracks.Count == 1 && onlyBack.FirstNotationTrack is null && onlyBack.FormatVersion == 3);
         }
         finally { try { Directory.Delete(folder, true); } catch { } }
+    }
+
+    private static void TestInstrumentToAudioConversion()
+    {
+        var project = AudioTrackSong(withAudio: false);
+        var guitar = project.Tracks[0];
+        guitar.Measures[0].Cells[0].Notes.Add(new TabNote { StringIndex = 1, Fret = 3, MidiValue = guitar.PitchOf(1, 3) });
+        guitar.Measures[1].Cells[4].Notes.Add(new TabNote { StringIndex = 2, Fret = 5, MidiValue = guitar.PitchOf(2, 5) });
+        guitar.AudioClips.Add(new AudioClip { File = "a.wav", Name = "a", SourceLengthSec = 2, FileLengthSec = 2, Lane = 0 });
+        guitar.Name = "Lead"; guitar.Volume = 66; guitar.ColorHex = "#35B954";
+        var doc = DocumentSession.FromProject(project, null);
+        doc.MarkClean();
+        var before = DoHash(doc);
+        var bars = guitar.Measures.Count;
+        var tracks = new TrackController();
+        var expected = new[] { guitar.PitchOf(1, 3), guitar.PitchOf(2, 5) };
+
+        var result = tracks.ConvertInstrumentToAudio(doc, guitar);
+        var midi = guitar.AudioClips.Where(c => c.IsMidi).ToList();
+        Check("instrument to audio: one undo step and the track is an audio track with audio defaults",
+            result.Changed && doc.Undo.UndoCount == 1 && guitar.IsAudio && guitar.StringTunings.Count == 0 && guitar.InstrumentName == "" && !guitar.MidiSound && guitar.NumberOfFrets == 0);
+        Check("instrument to audio: name, mix and colour are kept, bars are emptied but keep their count",
+            guitar.Name == "Lead" && guitar.Volume == 66 && guitar.ColorHex == "#35B954" && guitar.Measures.Count == bars && guitar.Measures.All(m => m.Cells.All(c => c.Notes.Count == 0)));
+        Check("instrument to audio: the notation is one MIDI clip with both notes (pitches and order)",
+            midi.Count == 1 && midi[0].Notes!.Count == 2 && midi[0].Notes!.OrderBy(n => n.StartSec).Select(n => n.Pitch).SequenceEqual(expected),
+            string.Join(",", midi.SelectMany(c => c.Notes!).Select(n => n.Pitch)));
+        var bar0 = MusicTime.BarMs(project, 0, 1.0) / 1000.0;
+        var starts = midi[0].Notes!.Select(n => n.StartSec).OrderBy(s => s).ToList();
+        Check("instrument to audio: the notes sit at their song time (bar 1 start, bar 2 beat 2)", Math.Abs(starts[0]) < 0.005 && Math.Abs(starts[1] - (bar0 + bar0 / 4)) < 0.01, string.Join(",", starts));
+        Check("instrument to audio: existing clips stay and the MIDI clip takes a free lane", guitar.AudioClips.Count == 2 && guitar.AudioClips.First(c => !c.IsMidi).Lane == 0 && midi[0].Lane == 1 && guitar.Lanes.Count >= 2);
+        Check("instrument to audio: an audio track does not convert again", !tracks.ConvertInstrumentToAudio(doc, guitar).Changed && doc.Undo.UndoCount == 1);
+
+        DocumentEdits.Undo(doc);
+        Check("instrument to audio: one undo restores the song exactly", DoHash(doc) == before && doc.Project.Tracks[0].Kind == TrackKind.Guitar && !doc.Project.Tracks[0].IsAudio);
+
+        // The way back: convert again, then audio to instrument with the clip written into notation.
+        DocumentEdits.Redo(doc);
+        var audio = doc.Project.Tracks[0];
+        var timeline = new ScoreToMidiCompiler(doc.Project, new PlaybackOptions { RespectMuteSolo = false, SkipClips = true }).Build();
+        (int, double) BarAt(double sec)
+        {
+            var ms = sec * 1000;
+            var bar = timeline.BarAt(ms);
+            return (bar.Bar, (ms - bar.StartMs) / Math.Max(1, bar.EndMs - bar.StartMs));
+        }
+        var undoBefore = doc.Undo.UndoCount;
+        var back = tracks.ConvertAudioToInstrument(doc, audio, "Clean Electric Guitar", BarAt);
+        var notes = audio.Measures.SelectMany(m => m.Cells).SelectMany(c => c.Notes).Select(n => n.MidiValue).OrderBy(v => v).ToList();
+        Check("audio to instrument: one undo step, the MIDI clip is written into the notation and removed, the other clip stays",
+            back.Changed && doc.Undo.UndoCount == undoBefore + 1 && !audio.IsAudio && notes.SequenceEqual(expected.OrderBy(v => v))
+            && audio.AudioClips.Count == 1 && !audio.AudioClips[0].IsMidi, string.Join(",", notes));
+        DocumentEdits.Undo(doc);
+        Check("audio to instrument: undo returns to the audio track with its MIDI clip", doc.Project.Tracks[0].IsAudio && doc.Project.Tracks[0].AudioClips.Count(c => c.IsMidi) == 1);
+
+        // Menu items per kind.
+        string Key(string id) => HotkeyCatalog.DisplayAll(new HotkeySettings(), id);
+        var instrumentMenu = TrackRowMenus.Build(new TrackRowMenuState(false, true, true, "#F61A16"), Key);
+        var audioMenu = TrackRowMenus.Build(new TrackRowMenuState(true, true, true, "#7CC4F2"), Key);
+        Check("track menu: an instrument track offers Convert to audio track (and not Convert to instrument)",
+            instrumentMenu.Any(i => i.Id == TrackRowMenus.ConvertToAudio && i.Header == "Convert to audio track…") && !instrumentMenu.Any(i => i.Id == TrackRowMenus.Convert));
+        Check("track menu: an audio track offers Convert to instrument track (and not Convert to audio)",
+            audioMenu.Any(i => i.Id == TrackRowMenus.Convert) && !audioMenu.Any(i => i.Id == TrackRowMenus.ConvertToAudio));
+        Check("track menu: Convert to audio track shows its live key text and is a bindable command with no default key",
+            instrumentMenu.First(i => i.Id == TrackRowMenus.ConvertToAudio).Shortcut == Key("Track.ConvertToAudio") && HotkeyCatalog.All.Any(a => a.Id == "Track.ConvertToAudio" && a.DefaultGesture == ""));
     }
 }

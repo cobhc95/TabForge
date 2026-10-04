@@ -443,4 +443,43 @@ public static partial class SelfTest
             foreach (var f in new[] { wavA, wavB }) { try { File.Delete(f); } catch (IOException) { } }
         }
     }
+
+    /// <summary>Adding an audio track (with and without a clip) during playback: no callback over budget, no deadline miss, no allocation.</summary>
+    private static void TestAudioTrackAddDuringPlayback()
+    {
+        var shared = SharedBlock.Create($"tf-selftest-{Guid.NewGuid():N}");
+        EH.Attach(shared, (spec, _, _) => throw new InvalidOperationException($"selftest: unexpected plug-in {spec.Path}"));
+        var wav = WriteTestWav(2);
+        try
+        {
+            EH.Configure(NullConfig(48000, 256, manual: false));   // clocked: the callback runs on its own thread meanwhile
+            EH.LoadChain(0, "song", true, new List<PluginSpec>());
+            EH.SetPlaying(true, 0);
+            SettleDisk();
+            Thread.Sleep(300);
+            var mix = EH.Mix!;
+            mix.Metrics.TakeAndReset();
+            var budgetMs = 256 * 1000.0 / 48000;
+            for (var slot = 1; slot <= 8; slot++)
+            {
+                EH.LoadChain(slot, $"audio {slot}", false, new List<PluginSpec>());
+                if (slot % 2 == 0) EH.SetClips(slot, new List<ClipSpec> { new(wav, 0, 0, 2, 0, 0, 1) });
+                EH.Collect();
+                Thread.Sleep(40);
+            }
+            Thread.Sleep(200);
+            var m = mix.Metrics.TakeAndReset();
+            Log.Add($"        track add: calls {m.Calls}, max {m.MaxMs:0.00} ms, p99 {m.P99Ms:0.0} ms, misses {m.DeadlineMisses}, late {m.LateCalls}, allocated {m.AllocatedBytes} B");
+            Check("Adding audio tracks (with and without a clip) during playback: every callback within its block budget, no allocation",
+                m.Calls > 20 && m.MaxMs < budgetMs && m.DeadlineMisses == 0 && m.AllocatedBytes == 0,
+                $"calls {m.Calls}, max {m.MaxMs:0.00} ms (budget {budgetMs:0.00}), misses {m.DeadlineMisses}, late {m.LateCalls}, allocated {m.AllocatedBytes} B");
+        }
+        finally
+        {
+            EH.Detach();
+            SettleDisk();
+            shared.Dispose();
+            try { File.Delete(wav); } catch (IOException) { }
+        }
+    }
 }

@@ -19,7 +19,7 @@ public static partial class SelfTest
         "TestGuitarProFiles", "TestGuitarProImportContainment", "TestGuitarProImportWorker", "TestSyntheticGuitarProFixture", "TestSyntheticFixtures",
         "TestImportPlausibility", "TestMalformedInputFuzz", "TestScoreClipRejectsUntrustedInput",
         "TestPlaybackOrderSpec", "TestNoHangingNotes", "TestSeekWhilePlayingSoundsFirstNote", "TestEditCommands", "TestEditorCopyPaste", "TestUndoController", "TestDocuments",
-        "TestDocumentOperations", "TestDocumentContext",
+        "TestDocumentOperations", "TestDocumentContext", "TestStartupFileOpen", "TestSelectionClipboardMatrix",
         "TestSecurityInputBoundaries", "TestNightPluginApproval", "TestPairMarkerIsUntrusted", "TestQuarantineAllowAgain", "TestPluginStateCollection", "TestPluginRightsNotice",
     };
 

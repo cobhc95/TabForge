@@ -1,6 +1,12 @@
 # SelfTests
 
-The **basic set** of the self-tests, run with `TabForge.exe --selftest <log>`: the architecture and hygiene checks and a few smoke tests (the smoke tests), partial files of `SelfTest`. The big full suite lives in `tests/full-suite/` and is compiled in only with `-p:TabForgeFullSuite=true`.
+The **basic set** of the self-tests, run with `TabForge.exe --selftest <log>`: the architecture and hygiene checks and a few smoke tests and the essential-action smoke checks (`Smoke/SelfTestEssential*.cs`, helpers `Sm*` in `SelfTestEssentialKit.cs`), partial files of `SelfTest`. The big full suite lives in `tests/full-suite/` and is compiled in only with `-p:TabForgeFullSuite=true`.
+
+## How to change me
+1. Entry files: `SelfTest.cs` (the AreaOf table), `tests/full-suite/SelfTestFullSuite.cs`.
+2. Owner class: `SelfTest` runner; new tests go to `tests/full-suite/<topic>/`.
+3. Tests to run: `--areas basic`; then your test with `--only` (full-suite build), plus `--areas architecture,hygiene` (see the test box in `docs/TESTING.md`).
+4. Docs to update: `docs/FEATURE_MAP.md` via `--feature-map`, `docs/TESTING.md`.
 
 ## Key types
 - `SelfTest`: the runner; Guard wraps each test so one failure does not stop the run.

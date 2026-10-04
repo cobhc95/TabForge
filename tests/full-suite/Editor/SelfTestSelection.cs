@@ -833,7 +833,9 @@ public static partial class SelfTest
         Check("model set from the editor: timeline state matches",
             model.SetRange(0, 2, 5, SelectionOrigin.Editor) && timeline == (2, 5));
         Check("setting the same range again is a no-op (no echo)",
-            !model.SetRange(0, 2, 5, SelectionOrigin.Timeline) && timelineApplies == 1);
+            !model.SetRange(0, 2, 5, SelectionOrigin.Editor) && timelineApplies == 1);
+        Check("the same bars from the timeline change the scope to every track",
+            model.SetRange(0, 2, 5, SelectionOrigin.Timeline) && model.Scope == SelectionScope.AllTracks && timelineApplies == 2);
         Check("a backwards drag is normalised", model.SetRange(0, 7, 3, SelectionOrigin.Timeline) && timeline == (3, 7));
         Check("clear from the timeline clears the model", model.Clear(SelectionOrigin.Timeline) && !model.HasRange && timeline is null);
         Check("clearing an empty selection is a no-op", !model.Clear(SelectionOrigin.Editor));

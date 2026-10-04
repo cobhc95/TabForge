@@ -101,6 +101,19 @@ public static class SettingsCatalog
         ? TabForge.Audio.AudioDevices.AsioChannelNames(pl.Device).Outputs : Enumerable.Range(1, 8).Select(i => $"Output {i}").ToArray());
     private static List<string> Numbered(string[] names) => names.Select((n, i) => $"{i + 1}: {n}").ToList();
 
+    /// <summary>A choice list computed on first use, so building the catalogue never enumerates audio devices or ASIO drivers.</summary>
+    private sealed class LazyChoices : IReadOnlyList<string>
+    {
+        private readonly Lazy<IReadOnlyList<string>> _items;
+        public LazyChoices(Func<IReadOnlyList<string>> make) => _items = new(make);
+        public int Count => _items.Value.Count;
+        public string this[int index] => _items.Value[index];
+        public IEnumerator<string> GetEnumerator() => _items.Value.GetEnumerator();
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
+    }
+
+    private static IReadOnlyList<string> Lazy(Func<IReadOnlyList<string>> make) => new LazyChoices(make);
+
     private static string[] AudioInputChoices(PluginSettings settings)
     {
         var names = new List<string> { DefaultAudioDevice };
@@ -212,6 +225,7 @@ public static class SettingsCatalog
 
         (Editing, "Note entry", "editing.duration editing.advance editing.reverseplusminus* editing.preventoverflow* editing.fillrests* editing.deleteleaves*"),
         (Editing, "Mouse and scrolling", "editing.scorewheel*"),
+        (Editing, "Converting tracks", "editing.convertmidi"),
         (Editing, "Copy and paste", "editing.paste.beats* editing.paste.octave* editing.paste.bars* editing.paste.barsettings* editing.paste.drums*"),
 
         (Playback, "Scrolling and following", "follow.mode follow.horizontal follow.vertical follow.anticipation* follow.verticaltrigger* follow.margin* follow.stopmanual* follow.stopatend* follow.fps*"),
@@ -484,15 +498,15 @@ public static class SettingsCatalog
                 "How plug-in audio reaches your speakers. WASAPI (shared) works everywhere; exclusive and ASIO give the lowest latency. ASIO also carries the recording input. DirectSound is the legacy fallback (larger buffer, more latency); WASAPI or ASIO is recommended. Tracks on Windows MIDI are not affected.",
                 "audio driver wasapi asio directsound exclusive shared latency output"),
             Choice(AudioVst, "Audio output", "vst.device", "Output device", v => pl.Device = v == DefaultAudioDevice ? "" : v,
-                () => pl.Device.Length == 0 ? DefaultAudioDevice : pl.Device, AudioDeviceChoices(pl),
+                () => pl.Device.Length == 0 ? DefaultAudioDevice : pl.Device, Lazy(() => AudioDeviceChoices(pl)),
                 "The device plug-in audio plays on (for ASIO: the ASIO driver; use Configure… for its buffer size and routing). Windows default follows the device chosen in Windows sound settings. The list follows the driver above.",
                 "audio output device speakers interface asio driver name headphones"),
             Choice(AudioVst, "Audio output", "vst.asio.out", "ASIO output: first channel", v => pl.AsioOutputChannel = Math.Max(0, AsioOutputs(pl).IndexOf(v)),
-                () => AsioOutputs(pl)[Math.Clamp(pl.AsioOutputChannel, 0, AsioOutputs(pl).Count - 1)], AsioOutputs(pl).ToArray(),
+                () => AsioOutputs(pl)[Math.Clamp(pl.AsioOutputChannel, 0, AsioOutputs(pl).Count - 1)], Lazy(() => AsioOutputs(pl)),
                 "The first ASIO output channel (the output pair starts here). Names come from the driver.", "asio output channels range outputs first",
                 dependsOn: "vst.driver", dependsOnValue: "ASIO"),
             Choice(AudioVst, "Audio output", "vst.asio.outlast", "ASIO output: last channel", v => pl.AsioOutputLastChannel = Math.Max(0, AsioOutputs(pl).IndexOf(v)),
-                () => AsioOutputs(pl)[Math.Clamp(pl.AsioOutputLastChannel, 0, AsioOutputs(pl).Count - 1)], AsioOutputs(pl).ToArray(),
+                () => AsioOutputs(pl)[Math.Clamp(pl.AsioOutputLastChannel, 0, AsioOutputs(pl).Count - 1)], Lazy(() => AsioOutputs(pl)),
                 "The last ASIO output channel: the next one after the first for stereo, or the same as the first for one mono output (the mix is summed to it).", "asio output channels range outputs last mono",
                 dependsOn: "vst.driver", dependsOnValue: "ASIO"),
             Bool(AudioVst, "Audio output", "vst.playall", "Play the whole song through the audio engine", v => pl.PlayAllThroughEngine = v, () => pl.PlayAllThroughEngine,
@@ -529,18 +543,18 @@ public static class SettingsCatalog
                 "Use the ASIO driver's inputs for recording and monitoring. Off: no input through ASIO.", "asio enable inputs recording monitor",
                 dependsOn: "vst.driver", dependsOnValue: "ASIO"),
             Choice(AudioVst, "Audio input", "vst.asio.infirst", "ASIO input: first channel", v => pl.AsioInputChannel = Math.Max(0, AsioInputs(pl).IndexOf(v)),
-                () => AsioInputs(pl)[Math.Clamp(pl.AsioInputChannel, 0, AsioInputs(pl).Count - 1)], AsioInputs(pl).ToArray(),
+                () => AsioInputs(pl)[Math.Clamp(pl.AsioInputChannel, 0, AsioInputs(pl).Count - 1)], Lazy(() => AsioInputs(pl)),
                 "The first ASIO input channel recorded. Pick the same channel for first and last for one mono input (a guitar plugged into input 2, say).", "asio input channels range inputs first",
                 dependsOn: "vst.driver", dependsOnValue: "ASIO"),
             Choice(AudioVst, "Audio input", "vst.asio.inlast", "ASIO input: last channel", v => pl.AsioInputLastChannel = Math.Max(0, AsioInputs(pl).IndexOf(v)),
-                () => AsioInputs(pl)[Math.Clamp(pl.AsioInputLastChannel, 0, AsioInputs(pl).Count - 1)], AsioInputs(pl).ToArray(),
+                () => AsioInputs(pl)[Math.Clamp(pl.AsioInputLastChannel, 0, AsioInputs(pl).Count - 1)], Lazy(() => AsioInputs(pl)),
                 "The last ASIO input channel: the same as the first for mono, or the next one for a stereo pair (at most two channels).", "asio input channels range inputs last",
                 dependsOn: "vst.driver", dependsOnValue: "ASIO"),
             Int(AudioVst, "Audio input", "vst.recordoffset", "Recording offset (ms)", v => pl.RecordingOffsetMs = v, () => pl.RecordingOffsetMs, -1000, 1000,
                 "Shifts new recordings on the timeline, on top of the input latency the device reports. If takes sound late against the song, enter a positive value (they move earlier); if early, a negative one. 0 by default.",
                 "recording offset latency compensation input late early align takes record manual offset", unit: "ms"),
             Choice(AudioVst, "Audio input", "vst.input", "Recording device", v => pl.InputDevice = v == DefaultAudioDevice ? "" : v,
-                () => pl.InputDevice.Length == 0 ? DefaultAudioDevice : pl.InputDevice, AudioInputChoices(pl),
+                () => pl.InputDevice.Length == 0 ? DefaultAudioDevice : pl.InputDevice, Lazy(() => AudioInputChoices(pl)),
                 "The device armed tracks record from (WASAPI, DirectSound). With ASIO the recording comes through the ASIO driver instead.",
                 "audio input recording device microphone interface capture"),
             Choice(AudioVst, "Audio output", "vst.samplerate", "Sample rate", v => pl.SampleRate = int.Parse(v), () => pl.SampleRate.ToString(),
@@ -627,6 +641,8 @@ public static class SettingsCatalog
                 "Ask before deleting a bar and shifting later content.", "confirm delete bar prompt", hotkey: "Bar.Delete"),
             Choice(Editing, "Safety", "editing.bardelete", "Ask what Delete does on bars", v => ed.BarRangeDelete = BarRangePromptText.FromChoice(v), () => BarRangePromptText.ToChoice(ed.BarRangeDelete),
                 BarRangePromptText.Choices, "Delete on bars selected on the timeline opens a prompt (clear, remove and close the gap, or insert a gap). Pick an answer here to make Delete do it directly; \"Remember my answer\" in the prompt sets this too.", "delete bars timeline prompt ask clear remove gap remember"),
+            Choice(Editing, "Converting tracks", "editing.convertmidi", "When converting MIDI clips to an instrument track", v => ed.ConvertMidiClips = v, () => ed.ConvertMidiClips is "Write as notation" or "Keep as MIDI" ? ed.ConvertMidiClips : "Ask",
+                new[] { "Ask", "Write as notation", "Keep as MIDI" }, "Convert to instrument track on an audio track that has MIDI clips: ask each time, write the notes into the bars, or keep the clips as MIDI on a second lane. \"Remember my choice\" in the prompt sets this too.", "convert audio track instrument midi clips notation remember"),
             Int(Editing, "Navigation", "editing.scorewheel", "Score wheel scroll distance", v => ed.ScoreWheelScrollPixels = v, () => ed.ScoreWheelScrollPixels, 12, 96,
                 "Pixels moved per mouse-wheel notch over the score page.", "score page mouse wheel scroll", "px"),
 
@@ -859,7 +875,7 @@ public static class SettingsCatalog
     }
 
     private static SettingDescriptor Choice(string category, string group, string key, string title, Action<string> set,
-        Func<string> get, string[] choices, string description, string keywords = "", string? dependsOn = null,
+        Func<string> get, IReadOnlyList<string> choices, string description, string keywords = "", string? dependsOn = null,
         string? dependsOnValue = null) =>
         Make(category, group, key, title, description, SettingKind.Choice, () => get(), v => set(v?.ToString() ?? ""),
             keywords, dependsOn, choices: choices, dependsOnValue: dependsOnValue);

@@ -66,8 +66,16 @@ public sealed class SongProject
     public bool IsDirty
     {
         get => _isDirty;
-        set { if (_isDirty == value) return; _isDirty = value; DisplayStateChanged?.Invoke(this, EventArgs.Empty); }
+        set { if (value) _contentRevision++; if (_isDirty == value) return; _isDirty = value; DisplayStateChanged?.Invoke(this, EventArgs.Empty); }
     }
+
+    private int _contentRevision;
+    /// <summary>
+    /// Changes with every edit (each one marks the song changed, also when it already was) and with every timeline change. Views that cache
+    /// what bars contain (the timeline's bar cells) key on it, so no edit path can leave them stale. Not saved; read on the UI thread.
+    /// </summary>
+    [JsonIgnore]
+    public int ContentRevision => _contentRevision + TimelineRevision;
 
     private int _timelineRevision;
     /// <summary>

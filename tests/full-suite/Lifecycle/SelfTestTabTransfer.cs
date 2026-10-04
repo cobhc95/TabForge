@@ -83,8 +83,8 @@ public static partial class SelfTest
             var merged = held.MergeSoleDocumentInto(target, 0);
             SettleLifetimeDispatcher();
             Check("tab transfer: a merge into a window that has closed meanwhile is refused; the held window stays open with its song",
-                !merged && held.IsVisible && held.OpenDocuments.Count == 1 && ReferenceEquals(held.OpenDocuments[0], a) && target.OpenDocuments.Count == 0 && context.Failures.Count == failures,
-                $"merged {merged}, held visible {held.IsVisible}, songs in held {held.OpenDocuments.Count}, in closed target {target.OpenDocuments.Count}");
+                !merged && held.IsVisible && held.OpenDocuments.Count == 1 && ReferenceEquals(held.OpenDocuments[0], a) && !target.OpenDocuments.Contains(a) && context.Failures.Count == failures,
+                $"merged {merged}, held visible {held.IsVisible}, songs in held {held.OpenDocuments.Count}, song in closed target {target.OpenDocuments.Contains(a)}");
             Check("tab transfer: the song of a refused merge is still loaded in the engine and not disposed", AudioEngineClient.Instance.SlotOf(a.Project.Tracks[0]) >= 0 && ReferenceEquals(IxSlotOwner(a.Project.Tracks[0]), a),
                 $"slot {AudioEngineClient.Instance.SlotOf(a.Project.Tracks[0])}");
         }

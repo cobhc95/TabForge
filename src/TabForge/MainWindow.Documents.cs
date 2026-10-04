@@ -123,7 +123,7 @@ public partial class MainWindow
             if (firstLoad) session.MarkClean();
             // Every opened / switched song fits the arrangement to its own track count (no gap, no scroll).
             ScheduleFitTimelineToTracks();
-            if (firstLoad) ScheduleMemoryTrim();
+            if (firstLoad) { ScheduleMemoryTrim(); SchedulePrewarmMenus(); }
             // A selected area belongs to the song it was made in: never carry it into another tab/song.
             // The score's range goes with it (silently: the editor still holds the previous song here).
             Editor.ClearSelection(notify: false);

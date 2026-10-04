@@ -524,6 +524,8 @@ public sealed class EditingSettings
     /// <summary>What Delete does on bars selected on the timeline: "Ask" (default, opens the choice prompt) or a remembered <see cref="BarRangeAction"/> name.</summary>
     public string BarRangeDelete { get; set; } = "Ask";
     /// <summary>The option the Delete prompt preselects (the last one chosen), a <see cref="BarRangeAction"/> name.</summary>
+    /// <summary>What converting an audio track that has MIDI clips to an instrument track does with them: "Ask" (default), "Write as notation" or "Keep as MIDI".</summary>
+    public string ConvertMidiClips { get; set; } = "Ask";
     public string BarRangeLastChoice { get; set; } = nameof(BarRangeAction.Clear);
 }
 

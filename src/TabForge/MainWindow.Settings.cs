@@ -421,7 +421,7 @@ public partial class MainWindow
             case "Track.Add": AddGuitar_Click(this, args); return true;
             case "Track.Delete": DeleteTrack_Click(this, args); return true;
             case var range when HotkeyCatalog.IsRangeAction(range): return RunRangeHotkey(range);   // from the command palette: the selected bars
-            case "TrackRow.Copy": case "TrackRow.Cut": case "TrackRow.Paste": case "TrackRow.Duplicate": case "TrackRow.Delete":
+            case "Track.ConvertToAudio": case "TrackRow.Copy": case "TrackRow.Cut": case "TrackRow.Paste": case "TrackRow.Duplicate": case "TrackRow.Delete":
                 return TrackFlow.RunHotkey(id, TrackMixerGrid.SelectedIndex);   // from the command palette: the selected track
             case "Track.Properties": TrackProps_Click(this, args); return true;
             case "Track.Next": SelectTrack(1); return true;
@@ -635,7 +635,8 @@ public partial class MainWindow
     /// <summary>A song double-clicked in Explorer while this window runs: open it in a new tab and come forward.</summary>
     public void OpenFromAnotherLaunch(string path)
     {
-        if (!SingleInstanceService.IsOpenableSong(path)) return;
+        if (!SingleInstanceService.IsOpenableSong(path)) { TabForge.Services.Trace.Write("ui", $"OPEN hand-over refused {path}"); return; }
+        TabForge.Services.Trace.Write("ui", $"OPEN hand-over opening {path}");
         OpenDocumentFromPath(path);
         if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;
         Activate();

@@ -35,14 +35,20 @@ public static class TimelineClips
     /// <summary>Runtime-only id of a loaded song (clip.SourceSongId): tracks map index to index only within the same song.</summary>
     public static string SongId(SongProject project) => (string)SongIds.GetValue(project, _ => Guid.NewGuid().ToString("N"));
 
+    /// <summary>Keeps the song's clipboard identity when undo / redo rebuilds the song object, so a clip copied before the undo still maps track to track.</summary>
+    public static void CarrySongId(SongProject from, SongProject to)
+    {
+        if (!ReferenceEquals(from, to)) SongIds.AddOrUpdate(to, SongId(from));
+    }
+
     // ---- Copy ----
 
     /// <summary>One bar of the given track, or of every track.</summary>
     public static ScoreClip CopyBar(SongProject project, int bar, int trackIndex, bool allTracks) =>
         Capture(project, bar, bar, allTracks ? null : trackIndex);
 
-    /// <summary>Bars <paramref name="start"/>..<paramref name="end"/> of every track (the selected area).</summary>
-    public static ScoreClip CopyArea(SongProject project, int start, int end) => Capture(project, start, end, null);
+    /// <summary>Bars <paramref name="start"/>..<paramref name="end"/> of every track (the selected area), or of track <paramref name="onlyTrack"/> alone.</summary>
+    public static ScoreClip CopyArea(SongProject project, int start, int end, int onlyTrack = -1) => Capture(project, start, end, onlyTrack < 0 ? null : onlyTrack);
 
     /// <summary>The bars of a section (<paramref name="end"/> exclusive, as <see cref="SectionLayout.TryGetBounds"/> returns it); the section's title and colour stay with the caller.</summary>
     public static ScoreClip CopySection(SongProject project, int start, int end) => Capture(project, start, end - 1, null);

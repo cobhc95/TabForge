@@ -31,9 +31,10 @@ public partial class MainWindow
 {
     // ---------- arrangement ----------
 
-    private void RefreshArrangement()
+    /// <param name="keepRows">The edit changed bars or clips only: track rows whose tracks, heights and header state are unchanged stay as they are.</param>
+    private void RefreshArrangement(bool keepRows = false)
     {
-        Arrangement.Bind(_project, MidiDevices, Doc.Media);
+        Arrangement.Bind(_project, MidiDevices, Doc.Media, keepRows);
         Arrangement.SetSelectedBar(Editor.SelectedMeasure);
         Arrangement.SetSelectedTrack(Math.Max(0, TrackMixerGrid.SelectedIndex));
         // Every structural edit, undo/redo and track change ends here: the bar count may have changed.
@@ -51,7 +52,7 @@ public partial class MainWindow
     private void RefreshArrangementSelection()
     {
         Arrangement.SetSelectedBar(Editor.SelectedMeasure);
-        Arrangement.SetScoreSelection(_selection.BarRange);
+        Arrangement.SetScoreSelection(_selection.BarRange, _selection.ScopeTrack);
         Arrangement.SetSelectedTrack(Math.Max(0, TrackMixerGrid.SelectedIndex));
         SyncArrangementPlayhead();
     }
@@ -105,8 +106,8 @@ public partial class MainWindow
     /// <summary>
     /// Selects bars start…end in both views; the selection is the loop area (applied by the model's observer).
     /// </summary>
-    private void ApplyLoopRange(int start, int end, int startCell = 0, int endCell = -1) =>
-        _selection.SetRange(Editor.SelectedTrackIndex, start, end, SelectionOrigin.Command, startCell, endCell);
+    private void ApplyLoopRange(int start, int end, int startCell = 0, int endCell = -1, SelectionScope? scope = null) =>
+        _selection.SetRange(Editor.SelectedTrackIndex, start, end, SelectionOrigin.Command, startCell, endCell, scope);
 
     /// <summary>Only <see cref="ApplySelectionToTimeline"/> calls this: the area always equals the shared selection.</summary>
     private void ApplyLoopArea(int start, int end, int startCell, int endCell)
@@ -265,10 +266,10 @@ public partial class MainWindow
             switch (command)
             {
                 case TimelineCommand.TimelineSettings: OpenSettings(SettingsCatalog.Timeline, TimelineMenus.TimelineSettingsRow); break;
-                case TimelineCommand.CopySelection: _sections.CopyArea(Doc, s, e); break;
-                case TimelineCommand.CutSelection: _sections.CopyArea(Doc, s, e); _sections.DeleteArea(Doc, s, e, "Cut"); break;
+                case TimelineCommand.CopySelection: _sections.CopyArea(Doc, s, e, _selection.ScopeTrack); break;
+                case TimelineCommand.CutSelection: _sections.CutArea(Doc, s, e, _selection.ScopeTrack); break;
                 case TimelineCommand.PasteSelection: _sections.PasteAreaAt(Doc, s); break;
-                case TimelineCommand.DeleteSelection: _sections.Range.Delete(Doc, s, e); break;
+                case TimelineCommand.DeleteSelection: _sections.Range.Delete(Doc, s, e, _selection.Scope == SelectionScope.AllTracks); break;
                 case TimelineCommand.DeleteEmptyBars: _sections.DeleteEmptyInRange(Doc, s, e); break;
                 case TimelineCommand.LoopSelection: SetLoopActive(!_loop); break;
                 case TimelineCommand.MoveSelection: Arrangement.BeginAreaMove(s, e); break;
@@ -385,7 +386,7 @@ public partial class MainWindow
                 case TimelineCommand.LoopSection:
                     if (sectionLooped) { SetLoopActive(false); break; } // ticked: clicking again turns the loop off
                     SetLoopActive(true);
-                    ApplyLoopRange(marker.MeasureIndex, sectionLastBar);
+                    ApplyLoopRange(marker.MeasureIndex, sectionLastBar, scope: SelectionScope.AllTracks);
                     break;
                 case TimelineCommand.RenameSection: EditSectionTitle(marker); break;
                 case TimelineCommand.GoToSection: JumpToMarker(marker); break;
@@ -395,7 +396,7 @@ public partial class MainWindow
                     break;
             }
         });
-        menu.IsOpen = true;
+        OpenContextMenu(menu, Arrangement, null, fromKeyboard: false);
     }
 
     private void EditSectionTitle(MarkerModel marker)
@@ -420,7 +421,7 @@ public partial class MainWindow
             Playback.Engine.RefreshArrangement(_project, _playbackBarRemap!, continueAtBar);
         }
         Editor.InvalidateScoreLayout();
-        RefreshArrangement();
+        RefreshArrangement(keepRows: true);
         RefreshMarkers();
         RefreshTabs();
         UpdateTitle();
@@ -476,7 +477,7 @@ public partial class MainWindow
         public void FinishBarEdit(string status)
         {
             _window.Editor.InvalidateScoreLayout();
-            _window.RefreshArrangement();
+            _window.RefreshArrangement(keepRows: true);
             _window.RefreshTabs();
             _window.UpdateTitle();
             _window._midi.Rebuild(_window._project);

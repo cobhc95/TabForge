@@ -2,6 +2,12 @@
 
 Export of a song to audio files.
 
+## How to change me
+1. Entry files: `RenderJob.cs`, `RenderSpecBuilder.cs`.
+2. Owner class: `RenderJob` (run), `RenderSpecBuilder` (request).
+3. Tests to run: `TestRenderBarRanges`, `TestGainRenderHash`, `TestRenderGuardContainment` (full-suite build), plus `--areas architecture,hygiene` (see the test box in `docs/TESTING.md`).
+4. Docs to update: `CHANGELOG.md`, `TOOLS_AND_HOTKEYS.md` if a command changes.
+
 ## Key types
 - `RenderJob`: runs one render and reports progress.
 - `RenderSpecBuilder`: builds the engine's render request from the song and `RenderSettings`.

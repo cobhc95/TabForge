@@ -2,9 +2,19 @@
 
 TabForge has one headless test suite, built into the executable. It needs no audio device, no installed plug-in and no song files. CI runs it on every push.
 
+<!-- TEST-BOX-START -->
+> **How to run a test (canonical)**
+> - Every build: the basic area. `src\TabForge\bin\Release\net8.0-windows\TabForge.exe --selftest <log> --areas basic`, then read the "N passed, M failed" line (the exe prints nothing; read the log).
+> - One test (`--only TestX`): most tests live in `tests/full-suite`, so first build a full-suite copy: `dotnet build src/TabForge/TabForge.csproj -c Release -p:TabForgeFullSuite=true -o <dir>`, then run `<dir>\TabForge.exe --selftest <log> --only TestX`. A normal build reports "0 run" or an unknown name.
+> - Register a test: add an `AreaOf` entry in `src/TabForge/SelfTests/SelfTest.cs`, and register it in `tests/full-suite/SelfTestFullSuite.cs` (not a `Guard` in `SelfTest.cs`). Then run `--feature-map` into `docs/FEATURE_MAP.md`.
+> - Before a release: `--areas release` (full-suite build). The full suite (`--require ci,document-context`) runs weekly and at manager checkpoints only.
+<!-- TEST-BOX-END -->
+
 ## Basic set and full suite
 
 A normal build contains the **basic set**: the architecture and hygiene checks and a few smoke tests. It runs in seconds and is what every rebuild runs. The **full suite** (`tests/full-suite/`, see its README) is compiled in only with `-p:TabForgeFullSuite=true`; CI builds it that way, and so does the maintainer's local rebuild script (`fullsuite` option). The sections below describe the full suite; to run any test of it, build with that switch.
+
+The basic set also holds the **essential-action smoke checks** (`SelfTests/Smoke/SelfTestEssential*.cs`, about 15 s): start with and without a file, a startup file argument (.tforge, .gp, .gp5), a second file, tabs, close with unsaved changes, save and reopen, autosave, note editing, copy and paste, tracks, bar ranges, clips, playback on a silent engine, every window and prompt, and the exports. They run in the basic area, the release area and the full suite.
 
 ## Release gate (`--areas release`)
 
