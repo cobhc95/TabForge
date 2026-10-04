@@ -28,7 +28,7 @@ public static partial class SelfTest
         "nuget.config", "README.md", "CHANGELOG.md",
         // documents the export must ship (add them to Export-Public.ps1 when they are added here)
         "SECURITY.md", "ARCHITECTURE.md", "TOOLS_AND_HOTKEYS.md", "CONTRIBUTING.md", "docs/SBOM.md", "docs/TESTING.md", "docs/DEBUGGING.md", "docs/FEATURE_MAP.md", "docs/RECIPES.md", "START_HERE.md", "docs/COMPATIBILITY.md",
-        "docs/REPRODUCIBLE_BUILDS.md", "docs/screenshots/", "docs/tutorial/",
+        "docs/REPRODUCIBLE_BUILDS.md", "docs/screenshots/", "docs/animations/", "docs/tutorial/",
         "src/", "tests/full-suite/", "samples/", "vendor/alphatab/",
         ".github/workflows/windows-ci.yml", ".github/workflows/release.yml", ".github/workflows/build-bridge.yml", ".github/workflows/fuzz-weekly.yml",
         "tools/Compare-Release.ps1", "tools/Build-AlphaTab.ps1", "tools/Compare-NativeBridge.ps1", "tools/Package-Release.ps1", "tools/Publish.ps1", "tools/Write-Sbom.ps1",

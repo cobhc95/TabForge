@@ -252,6 +252,10 @@ changed (see [Hotkeys](#8-settings)).
 
 ### 3. Writing and editing
 
+[![Entering notes in the score](docs/animations/score-entry.gif)](docs/animations/score-entry.gif)
+
+*Entering notes with the keyboard.*
+
 - **Keyboard-first entry**: type frets (two quick digits for 10+), arrows move by beat/string,
   `+` / `-` make a note shorter / longer (reversible in Settings), `.` dots it.
 - **Free rhythm entry**: a note can be lengthened even past the end of the bar — the bar turns red instead
@@ -269,6 +273,10 @@ changed (see [Hotkeys](#8-settings)).
 
 [![Arrangement timeline](docs/screenshots/arrangement-timeline.png)](docs/screenshots/arrangement-timeline.png)
 
+[![Dragging bars on the arrangement timeline](docs/animations/arrangement-drag.gif)](docs/animations/arrangement-drag.gif)
+
+*Dragging bars across the arrangement timeline.*
+
 - One block per bar and track shows at a glance where each instrument plays.
 - **Sections** (Intro, Verse, Chorus…) as coloured bars across the top. Sections of the same type share a
   colour; the section list on the right always shows the same colours.
@@ -285,6 +293,10 @@ changed (see [Hotkeys](#8-settings)).
 
 [![Sections panel](docs/screenshots/sections-panel.png)](docs/screenshots/sections-panel.png)
 
+[![Moving a section](docs/animations/section-move.gif)](docs/animations/section-move.gif)
+
+*Moving a section to a new position.*
+
 **Tool palette** (redrawn icons) — durations, dynamics, effects and bar structure (plus rhythm and layout tools), grouped in tabs; right-click a tool to pin it to the quick strip:
 
 [![Tool palette](docs/screenshots/tool-palette.png)](docs/screenshots/tool-palette.png)
@@ -292,6 +304,10 @@ changed (see [Hotkeys](#8-settings)).
 ### 5. Fretboard, keyboard and scale finder
 
 [![Fretboard](docs/screenshots/fretboard.png)](docs/screenshots/fretboard.png)
+
+[![Fretboard lighting up during playback](docs/animations/fretboard-playback.gif)](docs/animations/fretboard-playback.gif)
+
+*The fretboard following playback.*
 
 - **Matches the instrument**: stringed instruments (guitar, bass, oud, cello, violin, ukulele, mandolin,
   banjo…) get a fretboard with the track's own strings — a 5-string bass shows five; drums get a
@@ -312,6 +328,10 @@ changed (see [Hotkeys](#8-settings)).
 | | |
 |---|---|
 | [![Keyboard view](docs/screenshots/instrument-keyboard.png)](docs/screenshots/instrument-keyboard.png) | [![Drum view](docs/screenshots/instrument-drums.png)](docs/screenshots/instrument-drums.png) |
+
+[![Keyboard view during playback](docs/animations/keyboard-view.gif)](docs/animations/keyboard-view.gif)
+
+*The keyboard view following playback.*
 
 **Scale finder** — the **Scales** button beside the fretboard, its right-click menu (*Select scale* /
 *Find scale…*) or Tools > Scale finder. *Likely scales* analyses the notes of the **selection** (score or
@@ -348,6 +368,10 @@ or the keyboard (root marked more strongly); *Scale > Clear selection* removes i
 
 [![Add track](docs/screenshots/add-track.png)](docs/screenshots/add-track.png)
 
+[![Reordering tracks by dragging](docs/animations/track-reorder.gif)](docs/animations/track-reorder.gif)
+
+*Reordering tracks by dragging.*
+
 [![Global tuning](docs/screenshots/global-tuning.png)](docs/screenshots/global-tuning.png)
 
 ### 7. Playback and practice
@@ -378,6 +402,10 @@ Recording is here to help you capture song ideas quickly and turn them into nota
 
 [![Recording lanes and track controls](docs/screenshots/recording-layout.png)](docs/screenshots/recording-layout.png)
 
+[![Recording a take](docs/animations/recording.gif)](docs/animations/recording.gif)
+
+*Recording a take onto a track.*
+
 - **Ctrl+R** records armed tracks into audio or MIDI clips; choose an audio input or *MIDI (all inputs)*,
   watch the input meter, and toggle live monitoring from the lane. Recording stops at the take's start.
 - **Multiple lanes per track** keep overlapping and loop-recorded takes separate. Click a take to choose
@@ -391,7 +419,15 @@ Recording is here to help you capture song ideas quickly and turn them into nota
 
 [![Mixer groups and track controls](docs/screenshots/mixer.png)](docs/screenshots/mixer.png)
 
+[![Adjusting the mixer](docs/animations/mixer.gif)](docs/animations/mixer.gif)
+
+*Adjusting levels in the mixer.*
+
 [![MIDI take lanes](docs/screenshots/recording-lanes.png)](docs/screenshots/recording-lanes.png)
+
+[![Editing an audio clip](docs/animations/clip-edit.gif)](docs/animations/clip-edit.gif)
+
+*Splitting and fading an audio clip.*
 
 ### 9. Settings
 
