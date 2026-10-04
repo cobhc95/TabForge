@@ -40,7 +40,7 @@ Generated from the registry. Each test is registered once in `SelfTest.Run` and 
 | engine | 42 | `--selftest <log> --areas engine` |
 | fuzz | 1 | `--selftest <log> --areas fuzz` |
 | guitarpro | 24 | `--selftest <log> --areas guitarpro` |
-| hygiene | 11 | `--selftest <log> --areas hygiene` |
+| hygiene | 12 | `--selftest <log> --areas hygiene` |
 | interactions | 1 | `--selftest <log> --areas interactions` |
 | leaks | 3 | `--selftest <log> --areas leaks` |
 | midi | 1 | `--selftest <log> --areas midi` |
@@ -247,6 +247,7 @@ A group is a named set of tests with a minimum check count; `--require ci` makes
 | Test | Group | File |
 | --- | --- | --- |
 | TestDebuggingDocInSync |  | `src/TabForge/SelfTests/Hygiene/SelfTestDebuggingDoc.cs` |
+| TestDocImagesAreReferenced |  | `src/TabForge/SelfTests/Hygiene/SelfTestDocImages.cs` |
 | TestFeatureMapInSync |  | `src/TabForge/SelfTests/Hygiene/SelfTestFeatureMap.cs` |
 | TestInstallerAssociationParity |  | `src/TabForge/SelfTests/Hygiene/SelfTestSourceHygiene.cs` |
 | TestLooseSoundTouchAndLicenseTexts |  | `src/TabForge/SelfTests/Hygiene/SelfTestSourceHygiene.cs` |

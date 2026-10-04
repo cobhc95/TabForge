@@ -79,6 +79,7 @@ public static partial class SelfTest
         Guard(TestOnlyOption);
         Guard(TestDebuggingDocInSync);
         Guard(TestStartHereAndRecipesInSync);
+        Guard(TestDocImagesAreReferenced);
         Guard(TestLooseSoundTouchAndLicenseTexts);
         Section("Basic set: architecture (layering)");
         GuardGroup("architecture", TestArchitectureLayering);
@@ -95,6 +96,7 @@ public static partial class SelfTest
 #endif
 
         ReportRequirements(RequiredGroupsFullyIncluded(_required), _unknownRequired);   // required groups ran with enough checks; unknown --require names fail
+        ReportReleaseGate();
         var summary = $"TabForge self-test: {_pass} passed, {_fail} failed" + (_skip > 0 ? $", {_skip} skipped" : "");
         if (_skippedByArea > 0) summary += $" ({_skippedByArea} test groups outside the selected areas not run)";
         if (_skippedByOnly > 0) summary += $" ({_skippedByOnly} tests not named by --only not run)";
@@ -131,7 +133,7 @@ public static partial class SelfTest
         var areas = new Dictionary<string, string>(StringComparer.Ordinal)
         {
         ["TestArchitectureDocumentOperations"] = "architecture", ["TestArchitectureGuards"] = "architecture", ["TestArchitectureLayering"] = "architecture", ["TestEveryTestHasAnArea"] = "architecture",
-        ["TestDebuggingDocInSync"] = "hygiene", ["TestFeatureMapInSync"] = "hygiene", ["TestInstallerAssociationParity"] = "hygiene", ["TestLooseSoundTouchAndLicenseTexts"] = "hygiene",
+        ["TestDocImagesAreReferenced"] = "hygiene", ["TestDebuggingDocInSync"] = "hygiene", ["TestFeatureMapInSync"] = "hygiene", ["TestInstallerAssociationParity"] = "hygiene", ["TestLooseSoundTouchAndLicenseTexts"] = "hygiene",
         ["TestOnlyOption"] = "hygiene", ["TestPublicDocsConsistency"] = "hygiene", ["TestRequireArgumentStrings"] = "hygiene", ["TestRequiredGroupGate"] = "hygiene",
         ["TestSourceControlCharacters"] = "hygiene", ["TestStartHereAndRecipesInSync"] = "hygiene", ["TestEditorEntry"] = "smoke", ["TestEverySettingIsWired"] = "smoke", ["TestFretMarkerSize"] = "smoke",
         ["TestHeadlessDeviceReconfigure"] = "smoke", ["TestModelRoundTrip"] = "smoke", ["TestProjectRoundtrip"] = "smoke",
@@ -173,6 +175,7 @@ public static partial class SelfTest
         var area = AreaOf.TryGetValue(test.Method.Name, out var a) ? a : "core";
         if (_areas is not null && (area != "core" || _basicOnly) && !_areas.Contains(area) && _releaseTests?.Contains(test.Method.Name) != true) { _skippedByArea++; return true; }
         if (OutsideOnly(test.Method.Name)) { _skippedByOnly++; return true; }
+        if (_releaseTests?.Contains(test.Method.Name) == true) _releaseRan.Add(test.Method.Name);
         var watch = System.Diagnostics.Stopwatch.StartNew();
         var ok = true;
         var windowsBefore = VisibleMainWindows();

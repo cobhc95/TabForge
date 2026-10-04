@@ -226,6 +226,10 @@ if ($gateProc.ExitCode -ne 0 -or -not (Select-String -LiteralPath $gateLog -Patt
     Select-String -LiteralPath $gateLog -Pattern '^\s+FAIL' | ForEach-Object { Write-Output $_.Line }
     throw "Release-gate self-test failed (log: $gateLog); refusing to package."
 }
+$gateSummary = Select-String -LiteralPath $gateLog -Pattern '^TabForge self-test: (\d+) passed' | Select-Object -Last 1
+Write-Output $gateSummary.Line
+if (-not $gateSummary -or [int]$gateSummary.Matches[0].Groups[1].Value -lt 1500) { throw "Release gate ran too few checks ($($gateSummary.Line)); the curated release tests did not run. Refusing to package." }
+if (-not (Select-String -LiteralPath $gateLog -Pattern 'release gate: all \d+ curated release tests ran' -Quiet)) { throw "Release gate log lacks the curated-test confirmation ($gateLog); refusing to package." }
 Copy-Item -LiteralPath $gateLog -Destination (Join-Path $dist "TabForge-$display-releasegate.log") -Force
 Remove-Item -LiteralPath $gateFolder -Recurse -Force
 

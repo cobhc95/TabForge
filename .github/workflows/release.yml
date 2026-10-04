@@ -101,6 +101,7 @@ jobs:
             dist/TabForge-*-setup.exe
             dist/TabForge-*-SHA256.txt
             dist/TabForge-*-selftest.log
+            dist/TabForge-*-releasegate.log
             dist/SoundTouch.Net-*-source.zip
             native/BUILD_PROVENANCE.md
           if-no-files-found: error

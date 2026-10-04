@@ -27,7 +27,7 @@
     "TabForge.MainWindow": {"files": ["src/TabForge/MainWindow.cs", "src/TabForge/MainWindow.*.cs"], "lines": 7130, "fileCount": 29, "fields": 197, "methods": 679, "il": 101008},
     "TabForge.Playback.PlaybackEngine": {"files": ["src/TabForge/Playback/PlaybackEngine.cs", "src/TabForge/Playback/PlaybackEngine.*.cs"], "lines": 1638, "fileCount": 5, "fields": 58, "methods": 75, "il": 17947},
     "TabForge.Presets.FullDemoSongFactory": {"files": ["src/TabForge/Presets/FullDemoSong/FullDemoSongFactory.cs", "src/TabForge/Presets/FullDemoSong/FullDemoSongFactory.*.cs"], "lines": 2505, "fileCount": 6, "fields": 0, "methods": 97, "il": 52561},
-    "TabForge.SelfTest": {"files": ["src/TabForge/SelfTests/*.cs", "src/TabForge/SelfTests/**/*.cs", "tests/full-suite/*.cs", "tests/full-suite/**/*.cs"], "ceiling": true, "lines": 42000, "fileCount": 180},
+    "TabForge.SelfTest": {"files": ["src/TabForge/SelfTests/*.cs", "src/TabForge/SelfTests/**/*.cs", "tests/full-suite/*.cs", "tests/full-suite/**/*.cs"], "ceiling": true, "lines": 42000, "fileCount": 181},
     "TabForge.Views.ArrangementPanel": {"files": ["src/TabForge/Views/ArrangementPanel.cs", "src/TabForge/Views/ArrangementPanel.*.cs"], "lines": 2902, "fileCount": 12, "fields": 61, "methods": 219, "il": 36004},
     "TabForge.Views.DockWorkspace": {"files": ["src/TabForge/Views/DockWorkspace.cs"], "lines": 1040, "fileCount": 1, "fields": 16, "methods": 83, "il": 13890},
     "TabForge.Views.PreferencesWindow": {"files": ["src/TabForge/Views/PreferencesWindow.xaml.cs"], "lines": 962, "fileCount": 1, "fields": 39, "methods": 79, "il": 13395},

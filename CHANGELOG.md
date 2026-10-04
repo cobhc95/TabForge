@@ -7,10 +7,12 @@ TabForge is actively developed; please report anything odd on the Issues page.
 Reliability release after an external review: safer recovery, playback that never jumps or repeats notes, and a stronger release check.
 
 ### Architecture and quality
+- Updated build of 0.5.4 (same version): the release workflow now prints the release test set's own summary and fails if fewer than 1,500 checks or any core test group did not run; unused documentation images are no longer published.
 - Release check: every release build must now pass a release test set (the basic checks plus the core saving, recovery, import, playback, document and security tests, about 2,000 checks in a little over a minute); the full suite still runs weekly.
 - Two interaction checks that were only reported as known issues are fixed and now fail the build if they ever come back.
 
 ### Fixes
+- Keyboard view: the piano keys stop growing on a large pane (white keys at most 24 px wide, 120 px tall) and the keyboard stays centred.
 - Playback: typing a note during playback with "advance after entry" on no longer moves the playhead to the edit cursor; the edit is heard when playback reaches it.
 - Playback: a mixer, routing or plug-in change during playback resumes exactly where it was, without replaying the notes of the current beat.
 - Recovery: emergency copies written after an unexpected error get a unique name, so two unsaved songs with the same file name from different folders no longer replace each other; both are offered for recovery at the next start.

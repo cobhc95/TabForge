@@ -86,3 +86,4 @@ When a local song folder exists, the real files are used instead of the stand-in
 - Do not assert an absolute time: compare against a baseline measured in the same run.
 - Text files in the repository have no control characters other than tab, CR and LF (a hygiene test checks).
 - Documentation is tested too: every file, script and command a public document names must exist in the repository and be part of the public tree, and version claims must match `Directory.Build.props` (`src/TabForge/SelfTests/Hygiene/SelfTestDocsConsistency.cs`).
+- Every file in `docs/screenshots` and `docs/animations` is named by a Markdown file; the public export copies only referenced pictures (`TestDocImagesAreReferenced`).

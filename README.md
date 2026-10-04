@@ -62,7 +62,7 @@ Type frets with the keyboard and the notation and tab update together.
 ### Fretboard, keyboard and scale finder
 
 <table><tr>
-<td><a href="docs/animations/keyboard-view.gif"><img src="docs/animations/keyboard-view.gif" alt="Keyboard view during playback" width="420"></a></td>
+<td><a href="docs/animations/keyboard-view.gif"><img src="docs/animations/keyboard-view.gif" alt="Keyboard view during playback" width="300"></a></td>
 </tr></table>
 
 A live fretboard, keyboard or drum map matches each track and lights up as the song plays; click it to write notes.
