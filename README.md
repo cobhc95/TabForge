@@ -33,7 +33,6 @@ Each area starts with a picture; longer lists are folded into *More details*.
 
 ### Writing tab and notation
 
-[![Entering notes in the score](docs/animations/score-entry.gif)](docs/animations/score-entry.gif)
 
 Type frets with the keyboard and the notation and tab update together.
 
@@ -63,7 +62,6 @@ Type frets with the keyboard and the notation and tab update together.
 ### Fretboard, keyboard and scale finder
 
 <table><tr>
-<td><a href="docs/animations/fretboard-playback.gif"><img src="docs/animations/fretboard-playback.gif" alt="Fretboard lighting up during playback" width="420"></a></td>
 <td><a href="docs/animations/keyboard-view.gif"><img src="docs/animations/keyboard-view.gif" alt="Keyboard view during playback" width="420"></a></td>
 </tr></table>
 
@@ -101,7 +99,6 @@ A live fretboard, keyboard or drum map matches each track and lights up as the s
 ### Recording and audio tracks
 
 <table><tr>
-<td><a href="docs/animations/recording.gif"><img src="docs/animations/recording.gif" alt="Recording a take" width="420"></a></td>
 <td><a href="docs/screenshots/audio-track-row.png"><img src="docs/screenshots/audio-track-row.png" alt="Audio track row with a waveform clip and the Add-track lane" width="420"></a></td>
 </tr><tr>
 <td><a href="docs/screenshots/recording-layout.png"><img src="docs/screenshots/recording-layout.png" alt="Recording lanes and track controls" width="420"></a></td>
@@ -188,9 +185,7 @@ Open it with the **MIDI…** button in the FX chain. Processors run top to botto
 
 <table><tr>
 <td><a href="docs/animations/arrangement-drag.gif"><img src="docs/animations/arrangement-drag.gif" alt="Dragging bars on the arrangement timeline" width="420"></a></td>
-<td><a href="docs/animations/section-move.gif"><img src="docs/animations/section-move.gif" alt="Moving a section" width="420"></a></td>
 </tr><tr>
-<td><a href="docs/animations/clip-edit.gif"><img src="docs/animations/clip-edit.gif" alt="Editing an audio clip" width="420"></a></td>
 <td><a href="docs/screenshots/clip-edit-fades.png"><img src="docs/screenshots/clip-edit-fades.png" alt="An audio clip split in two, with fade handles and shaded fades" width="420"></a></td>
 </tr><tr>
 <td><a href="docs/screenshots/arrangement-timeline.png"><img src="docs/screenshots/arrangement-timeline.png" alt="Arrangement timeline" width="420"></a></td>
@@ -227,7 +222,6 @@ One block per bar and track, with coloured sections across the top. Drag section
 ### Mixer and tracks
 
 <table><tr>
-<td><a href="docs/animations/mixer.gif"><img src="docs/animations/mixer.gif" alt="Adjusting the mixer" width="420"></a></td>
 <td><a href="docs/screenshots/mixer.png"><img src="docs/screenshots/mixer.png" alt="Mixer groups and track controls" width="420"></a></td>
 </tr></table>
 
@@ -427,17 +421,14 @@ Everything TabForge does, by area. Every command can be found in the menus, the 
 - **New**, **New tab**, **Open**, **Open in new tab**, **Save**, **Save as**, **Close tab**, **Duplicate tab**, Exit.
 - **Templates**: File > *New from template* (built-in and your own) and *Save as template* (your templates live in `%APPDATA%\TabForge\Templates`).
 
-  [![New from template](docs/screenshots/new-from-template.png)](docs/screenshots/new-from-template.png)
 
 - **Export**: Standard MIDI, ASCII tab, **PDF** (engraved notation and tab as A4 pages, no printer needed), **MusicXML** (`.musicxml`, one part per track with a tab staff), clean **`.gp`**, and **Render to audio** (WAV / MP3, master and stems).
 - **Print** and **Print preview**; **Score information** (F5).
 - **Command palette** (Ctrl+Shift+A): fuzzy-search every command by name, see its key, press Enter to run it.
 
-  [![Command palette](docs/screenshots/command-palette.png)](docs/screenshots/command-palette.png)
 
 - **Autosave and recovery**: unsaved songs are copied to the Recovery folder every 1 to 30 minutes (Settings > General); after a crash or power loss TabForge offers to reopen them. Your own files are never overwritten.
 
-  [![Autosave setting](docs/screenshots/autosave.png)](docs/screenshots/autosave.png)
 
 - **Safe saving**: atomic writes, and a `.gp` plus `.tfaudio` pair is restored to its last complete state if a save is interrupted.
 - **Command line**: `TabForge.exe song.gp5 [more files]` opens files as tabs (Explorer double-click hands over to the running instance, or opens a new window, as you choose); `--theme dark|light|system` starts with that theme (kept in your settings).
@@ -453,7 +444,6 @@ Everything TabForge does, by area. Every command can be found in the menus, the 
 - **Tools menu**: Check bar duration, **Transpose**, **Scale finder**, **Tuner**, **Metronome**, **Count-in**, preview note sound.
 - **Tuner**: a chromatic tuner; the engine detects the pitch of the armed input and shows the note, a cents needle and the track's string tunings with the nearest string highlighted.
 
-  [![Tuner](docs/screenshots/tuner.png)](docs/screenshots/tuner.png)
 
 - **Score views**: tab + standard, tab only, standard only; dark or light score page; continuous line or individual notes; page/continuous layout; vertical or horizontal scrolling; zoom 75 / 100 / 150 % and Ctrl+/- zoom; **stylesheet** (F7).
 - **Screen-reader support**: the tab editor announces track, bar, beat, string, fret and note name as the cursor moves, and every control has an accessible name and a stable id.
@@ -463,7 +453,6 @@ Everything TabForge does, by area. Every command can be found in the menus, the 
 - **Sections** panel; **Lyrics**; **Practice / Mixer**; **Song stats**; **Chord finder**; **Scale highlight**.
 - **Zoom & speed**: one compact row with zoom out/in, zoom box and the single playback-speed box (25 to 200 %, presets 50 to 200 %).
 
-  [![Zoom and speed](docs/screenshots/zoom-speed.png)](docs/screenshots/zoom-speed.png)
 
 - **Speed hotkeys**: Ctrl+Alt+Up (faster), Ctrl+Alt+Down (slower), Ctrl+Alt+0 (back to 100 %).
 - **Layouts**: Compose, Practice and Mix (Ctrl+1/2/3), save, delete, reset; show/hide the side panel and the fretboard; *Reset all panels to original positions*.
@@ -473,7 +462,6 @@ Everything TabForge does, by area. Every command can be found in the menus, the 
 - Fretboard, 88-key (or 76/61/49/37/25) keyboard and drum percussion map; left-handed view, note names, 12/24 frets, scale highlight and *Clear selection*, appearance options (circles or rings, colours, fret-marker dots, key colours).
 - **Number size** (Small, Medium, Large) under right-click > Appearance and in Settings; **Lock fretboard size** (off by default, right-click menu and hotkey); the pane scales its drawing when resized; alternative preview layouts.
 
-  [![Fretboard number size](docs/screenshots/fretboard-number-size.png)](docs/screenshots/fretboard-number-size.png)
 
 - **Show / hide the fretboard** (toolbar button and hotkey), *Switch instrument view*, per-track or all-tracks instrument view.
 
@@ -481,11 +469,9 @@ Everything TabForge does, by area. Every command can be found in the menus, the 
 - **Add** Guitar, Bass, Drums, Keys or any instrument (**+ Track**, with position choice), delete, move up/down, **Track properties** (F6), instrument picker, tuning editor, drum notation presets, **Global tuning**, next/previous track, multitrack (F3) and global (F8) views.
 - **Track list**: arm, mute, solo, level, pan, FX button (red "!" if a plug-in was switched off), collapsible **groups**, *Show tracks in groups* (right-click empty space or from the Mixer), *Auto-resize track list to fit*, Alt+Up/Down to reorder.
 
-  [![Track list groups menu](docs/screenshots/track-groups-menu.png)](docs/screenshots/track-groups-menu.png)
 
 - **Mixer**: instrument, compact or ungrouped views; Master row at the top with **MON** monitoring FX (live only, never rendered); **drag and drop** tracks or whole groups (the track list reorders in step, one undo step per drop, animated); group rows set level, pan and pitch for all tracks; Master row with FX, pan and volume; smooth sliders on one fine scale; **Alt+Up / Alt+Down** moves the selected track or group.
 
-  [![Mixer](docs/screenshots/mixer.png)](docs/screenshots/mixer.png)
 
 - **Selected-track routing** and MIDI output device; detailed track mixer; test selected track output; MIDI / audio setup.
 
@@ -497,7 +483,6 @@ Everything TabForge does, by area. Every command can be found in the menus, the 
 - **VST2 / VST3** instruments and effects, serial chains, wiring window, MIDI processing (many processors, presets, search), **group bus FX** and **master FX** chains, plug-in trust and *Review* prompts, crash isolation with a per-plug-in process option, automatic pitch matching, startup tracks.
 - **Audio output**: WASAPI, ASIO, DirectSound; **Windows MIDI latency** with a **Measure** button; every song plays through the audio engine by default (a Settings toggle).
 
-  [![Preferences, Audio and VST](docs/screenshots/prefs-audio.png)](docs/screenshots/prefs-audio.png)
 
 - **Render window**: range, stems checklist, tail length, file names, WAV / MP3, progress and cancel.
 
