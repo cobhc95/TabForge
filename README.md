@@ -9,18 +9,16 @@ recording lanes, mixer groups, VST effects and instruments, and offline audio re
 *The main screenshot shows TabForge's own demo song and a third-party VST3 plug-in (Superior Drummer 3 by Toontrack, sold separately) as an example of plug-in hosting. TabForge does not include that plug-in and is not affiliated with Toontrack.*
 
 > [!NOTE]
-> **TabForge 0.5.3 is an official release.** Keep backups of your projects and your original song files,
+> **This is an official release.** Keep backups of your projects and your original song files,
 > especially before using recording or third-party plug-ins, and report anything odd on the Issues page.
 
 TabForge is an independent project, not affiliated with any other software maker.
 
 ## Download
 
-Get the latest build from [Releases](https://github.com/cobhc95/TabForge/releases):
+Get the latest build from the [latest release](https://github.com/cobhc95/TabForge/releases/latest).
 
-**0.5.3 downloads:** [Windows installer](https://github.com/cobhc95/TabForge/releases/download/v0.5.3/TabForge-0.5.3-setup.exe) · [Portable ZIP](https://github.com/cobhc95/TabForge/releases/download/v0.5.3/TabForge-0.5.3-win-x64-portable.zip) · [SHA-256 checksums](https://github.com/cobhc95/TabForge/releases/download/v0.5.3/TabForge-0.5.3-SHA256.txt)
-
-Installer, portable ZIP, SHA-256 checksums and release notes are on the [Releases page](https://github.com/cobhc95/TabForge/releases).
+The installer, portable ZIP and SHA-256 checksums for each version are attached to its release.
 
 **Unsigned binaries.** The downloads are not code-signed, so Windows SmartScreen may warn when you first run
 them. Releases built by the GitHub Actions release workflow from the tagged source come with build attestations
@@ -43,113 +41,380 @@ Includes an original demo song, *Ashen Meridian* (CC0), used in all screenshots.
 
 A `licenses/` folder beside `TabForge.exe` (portable zip and installer) holds the full licence texts of every bundled component. SoundTouch.Net (LGPL-2.1) ships as a separate, replaceable `SoundTouch.Net.dll`; each release attaches its source.
 
-## What's new in 0.5.3
+What changed in each version is in the [GitHub Releases](https://github.com/cobhc95/TabForge/releases) and [CHANGELOG.md](CHANGELOG.md).
 
-- **Clip editing.** Press **S** to split the selected clip at the edit cursor, **Ctrl+Shift+G** to glue it with the clips that continue it, and drag the fade handles at its top corners to fade in and out.
+## Why it exists
 
-  ![An audio clip split in two, with fade handles and shaded fades](docs/screenshots/clip-edit-fades.png)
+The author wanted a fast, keyboard-driven way of writing tabs — with freedom to move sections around,
+customise the look and save ideas without fighting the program. The longer-term idea is to blur the line a
+little between writing a song and the first steps of a demo (recorded ideas, a VST on a track, drum
+plug-ins), only where it is genuinely useful.
 
-- **Delete on timeline bars asks what you mean.** Clear the bars, remove them and close the gap, or insert a gap before or after, for all tracks or this track. Ctrl+Delete closes the gap and Ctrl+Shift+Space inserts a gap; the prompt can remember your answer.
+---
 
-  ![The Delete prompt over selected timeline bars](docs/screenshots/timeline-delete-prompt.png)
+---
 
-- **Fretboard note marker size** (60% to 160%) in Settings > Fretboard & Keyboard > Appearance.
+## Feature tour
 
-  ![The fretboard with note markers at 140%](docs/screenshots/fretboard-marker-size.png)
+Each area below has a short description with screenshots and animations.
 
-- **Live MIDI on audio tracks.** An armed audio track with MIDI input and monitoring plays your keyboard through its instrument plug-in.
-- **Cleaner Delete in the score.** A bar left without notes becomes one whole-bar rest, and Delete leaves merged rests by default.
-- **Smoother with long songs and clips.** Zooming and dragging stay responsive; the timeline draws only the bars near the view.
+### Workspace, themes and menus
 
-Full notes: [0.5.3 release notes](https://github.com/cobhc95/TabForge/releases/tag/v0.5.3) and the [changelog](CHANGELOG.md).
+[![Main window](docs/screenshots/main-window.png)](docs/screenshots/main-window.png)
 
-## What's new in 0.5.2
+- **Document tabs in the title bar**, like a browser: several songs open at once, and **several song tabs can play at the same time** — each tab keeps playing when you focus another; drag a tab to reorder it,
+  drag it out to open it in its own window, or drop it onto another TabForge window.
+- **Score** in the middle (standard notation + TAB, or either alone), **fretboard** on top,
+  **arrangement timeline** and track list at the bottom, **tool palette** and **sections** on the right.
+  Every panel can be docked, floated, resized or hidden.
 
-- **Audio tracks and the Add-track lane.** A track that holds audio and MIDI clips and has no notation. Click the **Add track** lane under the last track (or drop files on it) to add one; right-click an audio track > *Convert to instrument track* keeps every clip. The song grows to fit clips you place past its end.
+#### Light and dark themes
 
-  ![Audio track row with a waveform clip and the Add-track lane](docs/screenshots/audio-track-row.png)
+**Dark**, **Light** and **System** are theme presets: one click sets the interface, accent, icons, transport
+buttons and score page together (the light theme is a soft grey, with a wood-coloured fretboard). Every single
+colour — score paper, notation, staff lines, playback colours, fonts — can still be changed afterwards
+(Settings > Appearance & colours).
 
-- **Track right-click menu.** Cut, Copy, Paste, Duplicate, Delete, Rename, Colour and Properties on any track row. Whole tracks (notation, clips, mixer settings, FX chain) copy, cut, paste and duplicate, and the usual keys work while a track row has the focus.
+#### Customisable interface
 
-  ![Track right-click menu](docs/screenshots/track-row-menu.png)
+The whole workspace can be rearranged to suit how you write:
 
-- **Two shortcuts per command** (Hotkey 1 and Hotkey 2 in Settings > Shortcuts), and menus show the keys you set.
-- **Live editing.** An edit made during playback is heard from the next bar, with no stop or jump.
-- **Writing.** Bars you edit are filled with rests (optional); typing on a rest uses your remembered duration; the cursor sits only on real beats; Delete, tenuto and pitch act on the whole selection.
-- **Mute and Solo are instant**, muted tracks are drawn grey, and render follows the same rule (solo wins; muted and soloed plays).
-- **Sections carry their clips.** Drag a section to move it with its bars (Ctrl+drag moves only the marker).
-- **Smoother and faster.** Playback, mixer and view options are passed in explicitly, each song owns its audio-engine transport, and track switching, menus and Settings open faster. Dragging a pane splitter shows a light shade instead of redrawing every step.
-- **Check for updates now** in Settings > General > Updates.
+- **Drag any panel by its tab** (Tools, Structure, Rhythm, Layout, Sections, Practice / Mixer, Zoom,
+  the fretboard or the arrangement). While you drag, the place it will land is highlighted in blue.
+- **Drop on the middle of a panel** to add it as another tab there, or **near an edge** to split that area and
+  put the panel beside, above or below it. The tool palette pages can sit side by side instead of as tabs.
+- **Drop outside the window** to float the panel as its own window (e.g. on a second screen); drag it back to
+  re-dock it.
+- **Resize** any split by dragging the divider; hide panels you do not use from the View menu.
+- The layout is remembered between sessions, and **Reset all panels to original positions** (View menu) puts everything back.
+- Colours, theme, fonts, interface scale, score spacing and every hotkey are customisable too (see Settings).
 
-Full notes: [0.5.2 release notes](https://github.com/cobhc95/TabForge/releases/tag/v0.5.2) and the [changelog](CHANGELOG.md).
-## What's new in 0.5
+Help > Tutorial opens a **Basic Guide** (seven short chapters) and a **Detailed Guide** (every feature), with instant search and **Export PDF**.
 
-- **Built-in tutorial.** Help > Tutorial… opens a **Basic Guide** (seven short chapters) and a **Detailed Guide** (sixteen chapters covering every feature), with instant search and **Export PDF**.
+[![Tutorial window](docs/screenshots/tutorial-basic.png)](docs/screenshots/tutorial-basic.png)
 
-  ![Tutorial window](docs/screenshots/tutorial-basic.png)
+[![Detailed Guide with search](docs/screenshots/tutorial-detailed.png)](docs/screenshots/tutorial-detailed.png)
 
-  ![Detailed Guide with search](docs/screenshots/tutorial-detailed.png)
+| | | |
+|---|---|---|
+| [![File](docs/screenshots/menu-file.png)](docs/screenshots/menu-file.png) | [![Edit](docs/screenshots/menu-edit.png)](docs/screenshots/menu-edit.png) | [![Bar](docs/screenshots/menu-bar.png)](docs/screenshots/menu-bar.png) |
+| [![Track](docs/screenshots/menu-track.png)](docs/screenshots/menu-track.png) | [![Note](docs/screenshots/menu-note.png)](docs/screenshots/menu-note.png) | [![Effects](docs/screenshots/menu-effects.png)](docs/screenshots/menu-effects.png) |
+| [![Sections](docs/screenshots/menu-sections.png)](docs/screenshots/menu-sections.png) | [![Tools](docs/screenshots/menu-tools.png)](docs/screenshots/menu-tools.png) | [![Sound](docs/screenshots/menu-sound.png)](docs/screenshots/menu-sound.png) |
+| [![View](docs/screenshots/menu-view.png)](docs/screenshots/menu-view.png) | [![Options](docs/screenshots/menu-options.png)](docs/screenshots/menu-options.png) | [![Help](docs/screenshots/menu-help.png)](docs/screenshots/menu-help.png) |
 
-- **Import audio and MIDI by dragging.** Drop MP3, WAV, FLAC, OGG, AIFF, M4A, WMA or MIDI files from Windows, or a groove straight from a plug-in's editor, onto any track. A live preview shows where the file lands and how long it is. Overlaps open a new lane automatically, dropping below the last track creates a new track, and a MIDI groove lands exactly on the song's bar grid. Song files dropped on the window open in new tabs.
+Familiar menu order and shortcuts for people coming from other tab editors (a "Classic" shortcut preset is included); every command shows its shortcut (tooltips too, in brackets), and every shortcut can be
+changed (see [Hotkeys](#settings-and-shortcuts)).
 
-  ![Dropping a file on the timeline](docs/screenshots/timeline-drop.png)
+### Writing tab and notation
 
-- **Move clips anywhere.** Drag a clip to another lane or another track, with the same preview. Ctrl+drag copies it, and empty lanes tidy themselves away (optional).
+[![Entering notes in the score](docs/animations/score-entry.gif)](docs/animations/score-entry.gif)
 
-  ![Moving a clip](docs/screenshots/timeline-move-clip.png)
+*Entering notes with the keyboard.*
 
-  ![A new lane opens on overlap](docs/screenshots/timeline-drop-new-lane.png)
+- **Keyboard-first entry**: type frets (two quick digits for 10+), arrows move by beat/string,
+  `+` / `-` make a note shorter / longer (reversible in Settings), `.` dots it.
+- **Free rhythm entry**: a note can be lengthened even past the end of the bar — the bar turns red instead
+  of the change being refused (a strict mode is available). **Check bars (F4)** lists every bar that does
+  not add up, using the same rule as the red highlight.
+- **30+ techniques**: bends (with curves), slides, hammer-ons/pull-offs, palm mute, let ring, vibrato and
+  wide vibrato, natural/artificial/pinch/tapped harmonics, dead and ghost notes, tremolo picking, trills,
+  fades, accents, staccato, tenuto, grace notes, arpeggio/brush strokes, tapping, slap and pop.
+- **Edits during playback** are heard from the next bar. Bars you edit stay complete (*Fill incomplete bars with rests*, on by default); typing on a rest writes your remembered duration; *Advance after entering a note* (off by default) moves the caret on.
+- **Two voices per bar**, tuplets, ties, rests, fermatas, chord names, text and lyrics.
+- **Mix table points (F10)**: tempo, volume and pan changes inside a song.
+- Copy/cut/paste beats and bars, repeat selections, insert/delete beats that keep the bar length, full undo.
 
-- **Type exact knob values.** Double-click, right-click or press F2 on any round knob and type "-6 dB", "75%", "L30" and so on. Ctrl+click resets.
-- **Sound that never goes silent.** If a VST instrument stops playing (FX off, bypassed, removed, crashed or missing), the track falls back to the built-in General MIDI sound. Renders pass through a transparent safety limiter, and crashed plug-ins can be **allowed again**.
-- **Plug-ins switched off after a crash** can be allowed again from the FX chain window or from Preferences.
+Engraving uses the real clef on every system, with harmonics at the fretted pitch, slide strokes and slurs, strum arrows, repeat-bar signs and volta brackets.
 
-  ![Allow again](docs/screenshots/fx-allow-again.png)
+[![Notation](docs/screenshots/notation-clefs-harmonics.png)](docs/screenshots/notation-clefs-harmonics.png)
 
-- **Keyboard and menus.** Every menu shows your current shortcut. Section, bar, track and speed shortcuts all work, tooltips wrap and show their shortcut, Shift+F10 or the Menu key opens the right-click menu in the score, timeline and fretboard, and Esc closes dialogs.
-- **Engraving.** The real clef on every system, harmonics at the fretted pitch, full flags, slide strokes and slurs on the staff, standard strum arrows, ledger lines matched to the staff lines, proper repeat-bar (simile) signs, volta brackets, system heights that fit 7- and 8-string tracks, a tighter tab-only view, and thousands fewer overlapping symbols.
+**Tool palette**: durations, dynamics, effects and bar structure (plus rhythm and layout tools), grouped in tabs; right-click a tool to pin it to the quick strip.
 
-  ![Notation](docs/screenshots/notation-clefs-harmonics.png)
+[![Tool palette](docs/screenshots/tool-palette.png)](docs/screenshots/tool-palette.png)
 
-- **Reorganised settings.** Preferences has 14 clear pages in four groups (Basics, Music, Sound, System), with a new **Common settings** page first.
-  - Everyday options are shown; the rest sit behind "More options".
-  - Search finds any word in any order.
-  - Right-click menus end in one "… settings…" link that opens the right page.
+The **Tuner** (Tools menu) detects the pitch of the armed input and shows the note, a cents needle and the track's string tunings.
 
-  ![Common settings](docs/screenshots/preferences-common-settings.png)
+[![Tuner](docs/screenshots/tuner.png)](docs/screenshots/tuner.png)
 
-  ![Settings search](docs/screenshots/preferences-search.png)
+### Fretboard, keyboard and scale finder
 
-- **Fretboard and timeline.** A new default fretboard look and a **Scale highlight strength** setting. The timeline gets a hover shade and a choice of playback marker (line, bar marker or both).
+[![Fretboard](docs/screenshots/fretboard.png)](docs/screenshots/fretboard.png)
 
-  ![Fretboard](docs/screenshots/fretboard-2026.png)
+[![Fretboard lighting up during playback](docs/animations/fretboard-playback.gif)](docs/animations/fretboard-playback.gif)
 
-  ![Playback marker: line and bar marker](docs/screenshots/timeline-playhead-styles.png)
+*The fretboard following playback.*
 
-- **Editing.**
-  - Duplicate bar copies every track.
-  - Time and key signatures carry forward to the next change, with an "Only this bar" option.
-  - Notes move to the neighbouring string at the same pitch.
-  - Transpose covers both voices and skips drums.
-  - A capo change moves the sounding pitch.
-  - Every drum pad writes.
-- **Files.**
-  - Saving and reopening .gp keeps far more of your song.
-  - MIDI export matches playback to the millisecond.
-  - .gp3/.gp4/.gp5 songs with more than 1,000 bars now open.
-- **Under the hood.**
-  - Playback tested on real hardware, with ASIO and WASAPI at low latency.
-  - Recording survives a busy disk.
-  - Closing a tab frees its plug-ins' memory.
-  - Hanging notes fixed, and fermatas hold in playback, MIDI export and render.
-  - The recording buffer grew from about 5 s to about 175 s.
-  - Typing a tempo applies on Enter.
-  - The demo song's drum swell and outro piano can now be heard.
-  - Over 3,600 automated checks run on every build.
+- **Matches the instrument**: stringed instruments (guitar, bass, oud, cello, violin, ukulele, mandolin,
+  banjo…) get a fretboard with the track's own strings — a 5-string bass shows five; drums get a
+  **percussion map** that lights up on each hit and writes a hit on click; piano, winds, brass and synths get a
+  **keyboard** (88 keys by default; 76/61/49/37/25 from the right-click menu). Right-click to show one track or
+  all tracks differently; the default is in Settings > Fretboard.
+- **Note marker size** (Settings > Fretboard & Keyboard > Appearance, 60% to 160%) scales the note circles and numbers together.
 
-The full list is in the [0.5.0 release notes](https://github.com/cobhc95/TabForge/releases/tag/v0.5.0).
+[![The fretboard with note markers at 140%](docs/screenshots/fretboard-marker-size.png)](docs/screenshots/fretboard-marker-size.png)
 
-## MIDI processing: shape the MIDI before it reaches your instruments
+- Follows playback: the sounding note glows, the next notes are outlined, a line shows where the hand
+  moves next. Chords move as one shape.
+- Click to write a note; hover previews where it would go. Left-handed view, note names, 12 or 24 frets,
+  scale highlighting, alternative preview layouts.
+- **String spacing** (right-click > *Appearance*, also in Settings > Fretboard and bindable): *Compact*, *Natural* (default) or *Wide*. The board keeps natural proportions in any pane shape: a tall pane centres it and a narrow pane scales the drawing down instead of squeezing the frets.
+- **Appearance** (right-click > *Appearance*, saved for every song): scale highlight as shaded cells,
+  **circles** or rings, in the colour you choose; fret-marker dots in any of several colours and
+  brightness levels; keyboard keys grey or white (matching the theme by default).
+
+| | |
+|---|---|
+| [![Keyboard view](docs/screenshots/instrument-keyboard.png)](docs/screenshots/instrument-keyboard.png) | [![Drum view](docs/screenshots/instrument-drums.png)](docs/screenshots/instrument-drums.png) |
+
+[![Keyboard view during playback](docs/animations/keyboard-view.gif)](docs/animations/keyboard-view.gif)
+
+*The keyboard view following playback.*
+
+**Scale finder** — the **Scales** button beside the fretboard, its right-click menu (*Select scale* /
+*Find scale…*) or Tools > Scale finder. *Likely scales* analyses the notes of the **selection** (score or
+timeline) or the **entire song**, for one track or all, and lists every key and scale they fit, best first
+(usually several do); *All scales* picks any key and scale directly. The choice is highlighted on the fretboard
+or the keyboard (root marked more strongly); *Scale > Clear selection* removes it.
+
+[![Scale finder](docs/screenshots/scale-finder.png)](docs/screenshots/scale-finder.png)
+
+[![Fretboard, default look](docs/screenshots/fretboard-2026.png)](docs/screenshots/fretboard-2026.png)
+
+[![Fretboard number size](docs/screenshots/fretboard-number-size.png)](docs/screenshots/fretboard-number-size.png)
+
+### Playback and practice
+
+- MIDI playback with mute/solo/volume/pan per track, live while playing: bends, slides, let ring,
+  palm mute, ghost/dead notes and triplet feel/swing.
+- **Song structure (repeats, endings, D.C./D.S.) played as written:** repeats (up to x99, several closes, multi-pass endings such as
+  1.2.3.), D.S. / D.C. / Coda / Fine, and tempo changes that last until the next one, including changes partway
+  through a bar. Covered by synthetic test songs that run on every build.
+- **Metronome and count-in** with their own sounds and levels, subdivisions, count-in before every loop.
+- **Seamless looping** of the song, a section or any selected area; set a number of loops; a **speed
+  trainer** that raises the tempo each pass; skip areas during playback.
+- **Score follow**: the view keeps the playing bar in sight and stops if you scroll by hand. Right-click the
+  score > *Follow playback*: **Page turn** (default: jumps half a page or to the next line near the edge) or
+  **Smooth page turn** (the same turns, glided at the display refresh rate and idle in between).
+- **Two score views**, both on the right-click menu: *Score layout* (page / continuous) and *Score scrolling* —
+  **vertical** (bars wrap into lines, scroll down) or **horizontal** (the whole song on one line that scrolls and
+  follows to the right, centred vertically in page mode). Only the bars near the view are drawn, so even long songs
+  stay light.
+
+[![Horizontal score scrolling](docs/screenshots/score-horizontal.png)](docs/screenshots/score-horizontal.png)
+
+[![Mix table](docs/screenshots/mix-table.png)](docs/screenshots/mix-table.png)
+
+[![Playback marker: line and bar marker](docs/screenshots/timeline-playhead-styles.png)](docs/screenshots/timeline-playhead-styles.png)
+
+[![Zoom and speed](docs/screenshots/zoom-speed.png)](docs/screenshots/zoom-speed.png)
+
+### Arrangement timeline and sections
+
+[![Arrangement timeline](docs/screenshots/arrangement-timeline.png)](docs/screenshots/arrangement-timeline.png)
+
+[![Dragging bars on the arrangement timeline](docs/animations/arrangement-drag.gif)](docs/animations/arrangement-drag.gif)
+
+*Dragging bars across the arrangement timeline.*
+
+- One block per bar and track shows at a glance where each instrument plays.
+- **Sections** (Intro, Verse, Chorus…) as coloured bars across the top. Sections of the same type share a
+  colour; the section list on the right always shows the same colours.
+- **Drag a section to move its marker** — the section starts somewhere else while the bars stay put.
+  **Ctrl+drag** moves the section *with* its bars (all tracks together; playback continues seamlessly).
+- **Add a section** with `M`, the Sections panel, or right-click on the section lane → *Add section at bar N*.
+- **Drag a section's edge to resize it**: shrinking leaves empty bars, growing pushes the next section along.
+- **Drag across bars to select an area**: copy, cut, paste, move, delete, loop it, or skip it during
+  playback. `Esc` clears the selection.
+- Right-click menus for bars, tracks and sections; drag tracks up or down to reorder them.
+- **Delete on bars** opens one prompt: clear (leave a gap), remove (close the gap) or insert a gap before or after, for all tracks or this track; Ctrl+Delete closes the gap, Ctrl+Shift+Space inserts a gap.
+- **Add-track lane**: a strip under the last track (click it, or drop audio or MIDI files on it) that adds an audio track or opens the Add track window; hide it in Preferences > Timeline & Tracks.
+- **Sections carry their clips**: moving, copying or duplicating a section takes the clips inside it; the song grows to fit clips that run past its end.
+
+[![Sections panel](docs/screenshots/sections-panel.png)](docs/screenshots/sections-panel.png)
+
+[![Moving a section](docs/animations/section-move.gif)](docs/animations/section-move.gif)
+
+*Moving a section to a new position.*
+
+Drop MP3, WAV, FLAC, OGG, AIFF, M4A, WMA or MIDI files, or a groove from a plug-in's editor, onto any track. A live preview shows where the file lands; overlaps open a new lane, and a MIDI groove lands on the song's bar grid. Drag a clip to another lane or track (Ctrl+drag copies it).
+
+[![Dropping a file on the timeline](docs/screenshots/timeline-drop.png)](docs/screenshots/timeline-drop.png)
+
+[![Moving a clip](docs/screenshots/timeline-move-clip.png)](docs/screenshots/timeline-move-clip.png)
+
+[![A new lane opens on overlap](docs/screenshots/timeline-drop-new-lane.png)](docs/screenshots/timeline-drop-new-lane.png)
+
+[![The Delete prompt over selected timeline bars](docs/screenshots/timeline-delete-prompt.png)](docs/screenshots/timeline-delete-prompt.png)
+
+### Tracks and mixer
+
+| | |
+|---|---|
+| [![Track properties — guitar](docs/screenshots/track-properties-guitar.png)](docs/screenshots/track-properties-guitar.png) | [![Track properties — bass](docs/screenshots/track-properties-bass.png)](docs/screenshots/track-properties-bass.png) |
+| [![Track properties — drums](docs/screenshots/track-properties-drums.png)](docs/screenshots/track-properties-drums.png) | [![Instrument picker](docs/screenshots/instrument-picker.png)](docs/screenshots/instrument-picker.png) |
+
+- **Add track** (the **+ Track** button): the same window as Track properties for the new track — pick the
+  instrument from the catalogue, set tuning, mixer and details — plus **where it goes**: last, first, after the
+  selected track, or as track number N.
+- **Instrument picker** with the full General MIDI set, pictures, categories and search.
+- **Tuning editor**: per-string `−`/`+`, double-click a string to type a note (e.g. `Eb3`), presets for
+  4-/5-/6-/7-string bass and 6-/7-/8-/9-string guitar, `+ / − Low string` to change the number of strings.
+  Extended-range instruments are named by string count, e.g. *Electric Bass (Finger) (5 strings)*.
+  Choose whether retuning keeps the fret numbers or the sounding pitches.
+- **Drum notation presets** (.gp5, .gpx/.gp, line-per-instrument drum tab) plus a fully
+  custom map: TAB line, TAB text, staff position and notehead for every GM drum sound.
+- **Global tuning** shifts every track at once, e.g. the whole song down a half step.
+- **Instrument and tool icons** are original artwork.
+
+- **Track menu**: right-click a track row for Cut, Copy, Paste, Duplicate, Delete, Rename, Colour and Properties. A track row in focus takes Ctrl+C, Ctrl+X, Ctrl+V, Ctrl+D and Delete.
+
+[![Track list with an audio track](docs/screenshots/audio-track-main.png)](docs/screenshots/audio-track-main.png)
+
+[![Add track](docs/screenshots/add-track.png)](docs/screenshots/add-track.png)
+
+[![Reordering tracks by dragging](docs/animations/track-reorder.gif)](docs/animations/track-reorder.gif)
+
+*Reordering tracks by dragging.*
+
+[![Global tuning](docs/screenshots/global-tuning.png)](docs/screenshots/global-tuning.png)
+
+- **Track menu**: right-click a track row for Cut, Copy, Paste, Duplicate, Delete, Rename, Colour and Properties; whole tracks (notation, clips, mixer settings, FX chain) copy and paste.
+- **Mute and Solo** are instant: solo wins, a track both muted and soloed plays, and muted tracks are drawn grey.
+- **Track groups** show as collapsible headers with arm, mute, solo, level, pan and FX power. The mixer offers instrument-based, compact or ungrouped views, with the Master row (and its **MON** monitoring chain) at the top.
+
+[![Track right-click menu](docs/screenshots/track-row-menu.png)](docs/screenshots/track-row-menu.png)
+
+[![Track list groups menu](docs/screenshots/track-groups-menu.png)](docs/screenshots/track-groups-menu.png)
+
+[![Mixer groups and track controls](docs/screenshots/mixer.png)](docs/screenshots/mixer.png)
+
+[![Adjusting the mixer](docs/animations/mixer.gif)](docs/animations/mixer.gif)
+
+*Adjusting levels in the mixer.*
+
+### Audio tracks and recording
+
+Recording is here to help you capture song ideas quickly and turn them into notation and tab, so an idea isn't lost while you're writing. It is a sketchpad for songwriting, not a replacement for a full recording studio or DAW, and that isn't a goal of TabForge.
+
+An **audio track** holds audio and MIDI clips and has no notation. Click the **Add track** lane under the last track (or drop files on it) to add one; right-click > *Convert to instrument track* keeps every clip. An armed audio track with MIDI input plays your keyboard through its instrument plug-in.
+
+[![Audio track row with a waveform clip and the Add-track lane](docs/screenshots/audio-track-row.png)](docs/screenshots/audio-track-row.png)
+
+[![Track list with an audio track](docs/screenshots/audio-track-main.png)](docs/screenshots/audio-track-main.png)
+
+[![Recording lanes and track controls](docs/screenshots/recording-layout.png)](docs/screenshots/recording-layout.png)
+
+[![Recording a take](docs/animations/recording.gif)](docs/animations/recording.gif)
+
+*Recording a take onto a track.*
+
+*Recording a take onto a track.*
+
+- **Ctrl+R** records armed tracks into audio or MIDI clips; choose an audio input or *MIDI (all inputs)*,
+  watch the input meter, and toggle live monitoring from the lane. Recording stops at the take's start.
+- **Multiple lanes per track** keep overlapping and loop-recorded takes separate. Click a take to choose
+  what plays; Ctrl+click to layer takes. Waveforms and MIDI notes appear while recording.
+- Click anywhere on a lane to seek to that bar, just as on a notation row; clicking a take also selects it.
+- **Split, glue and fade clips**: S splits at the cursor, Ctrl+Shift+G glues, fade handles sit at the top corners. An armed audio track plays live MIDI through its instrument plug-in.
+- **Snap** clips to a beat grid, playhead or other clip edges; move, trim, mute, duplicate, or edit clip
+
+[![MIDI take lanes](docs/screenshots/recording-lanes.png)](docs/screenshots/recording-lanes.png)
+
+### Clip editing
+
+Press **S** to split the selected clip at the edit cursor, **Ctrl+Shift+G** to glue it with the clips that continue it, and drag the fade handles at its top corners to fade in and out. **Snap** aligns clips to a beat grid, the playhead or other clip edges; MIDI clips can be written into the track's notation.
+
+[![An audio clip split in two, with fade handles and shaded fades](docs/screenshots/clip-edit-fades.png)](docs/screenshots/clip-edit-fades.png)
+
+[![Editing an audio clip](docs/animations/clip-edit.gif)](docs/animations/clip-edit.gif)
+
+*Splitting and fading an audio clip.*
+
+### Import, export and GP files
+
+TabForge supports GP files: it opens .gp3, .gp4, .gp5, .gpx and .gp, and saves .gp.
+
+| Format | Open | Save |
+|---|---|---|
+| `.gp3`, `.gp4`, `.gp5` | ✔ | |
+| `.gpx` | ✔ | |
+| `.gp` | ✔ | ✔ (default) |
+| TabForge project (`.tforge`) | ✔ | ✔ |
+| Standard MIDI file (`.mid`) | | export |
+| ASCII tab (`.txt`) | | export |
+
+Drum parts import from every format, including `.gpx` extended articulations and .gp
+(`.gp`) drum kits; the import is covered by synthetic round-trip tests that run on every build. Known
+limit: .gp3/.gp4/.gp5 files open with up to 20,000 bars per track. `.gtp` and `.tg` files are not supported.
+
+A `.gp` saved by TabForge follows the `.gp` file format, **and** carries the complete TabForge project inside it
+(an extra entry other readers can ignore), so reopening it in TabForge loses nothing — drum map, section sizes,
+score styles, mix points. Imports are checked against the reference parser (alphaTab) note-for-note on real
+.gp3/.gp4/.gp5/GPX files.
+
+Saved `.gp` files carry correct zip checksums and keep the album, copyright, tab author, music, words and instructions fields.
+
+- **Templates**: File > *New from template* (built-in and your own) and *Save as template*.
+- **Export**: Standard MIDI, ASCII tab, PDF (engraved notation and tab as A4 pages), MusicXML and rendered audio.
+- **Autosave and recovery**: unsaved songs are copied to the Recovery folder every 1 to 30 minutes, and offered back after a crash.
+
+[![New from template](docs/screenshots/new-from-template.png)](docs/screenshots/new-from-template.png)
+
+[![Autosave setting](docs/screenshots/autosave.png)](docs/screenshots/autosave.png)
+
+#### Render to audio
+
+[![Render dialog](docs/screenshots/render.png)](docs/screenshots/render.png)
+
+**File > Render…** (`Ctrl+Alt+R`) exports the master mix, track stems or both, for the full song,
+a selection or a custom range. Choose tail length, file-name wildcards and WAV 16/24/32-bit float;
+MP3 bit rates are offered when Windows has an encoder. Rendering supports progress and cancellation.
+
+---
+
+### Plug-ins and FX chains
+
+[![Track FX chain](docs/screenshots/fx-chain.png)](docs/screenshots/fx-chain.png)
+
+- **Mixer** (fader button beside the tuning fork): every track as a row, grouped **by instrument** (guitars,
+  basses, keys, drums, other), **compact** (guitars, basses, drums, everything else) or not at all. Each group row
+  sets level, pan and pitch for all its tracks at once; tracks can be moved between groups.
+- **FX chains**: the **FX** button on each track (and in the mixer) opens the chain; its power
+  switch plays the track through the chain or plain Windows MIDI. A chain is a **VST2 or VST3 instrument** followed
+  by **effects** in series, each with bypass, wet/dry and its own plug-in window. With effects but no VST
+  instrument, the track's own General MIDI sound is played through the effects (rendered from Windows' own sound
+  bank); a *MIDI sound* switch turns it off.
+- **Audio output**: WASAPI (shared / exclusive), ASIO or DirectSound, with device, sample rate and buffer size in
+  **Settings > Audio & VST**. Plug-in folders are added by browsing (no automatic scan unless you turn it on).
+- **Safety**: plug-ins never run inside the editor. They run in a separate audio engine process that starts only
+  when a track uses plug-ins; if a plug-in crashes or freezes, TabForge names it, switches it off and carries on.
+  *Run each plug-in in its own process* isolates every plug-in on its own, so a crash loses only that plug-in (a little more CPU).
+  That is crash isolation only, not a security sandbox: plug-ins run with your user rights, so load only plug-ins you trust.
+- **Saving**: a song with plug-ins or mixer groups saved as `.gp` asks once: `.gp` with the settings inside
+  (recommended), a clean `.gp` plus a small `.tfaudio` file (no extra entry inside the `.gp`), or `.tforge`.
+
+| Plug-in wiring | MIDI processing |
+|---|---|
+| [![Audio and MIDI pin routing](docs/screenshots/plugin-wiring.png)](docs/screenshots/plugin-wiring.png) | [![MIDI processor chain](docs/screenshots/midi-processing.png)](docs/screenshots/midi-processing.png) |
+
+Plug-in wiring selects audio input channels, the MIDI source/channel filter, sidechain input (VST2 with four or
+more inputs) and MIDI output forwarding to another track.
+
+- **Serial MIDI chain:** MIDI flows through the plug-in list in order, so MIDI-effect plug-ins
+  shape the notes for the next slot; instruments add their audio, effects process everything before them.
+- **Group buses and master FX:** each mixer group has an effects bus, and the mixer's Master row has an FX chain,
+  pan and volume over the whole mix. The **Master row sits at the top** of the Mixer, under the column headers.
+- **Monitoring FX (MON)**: a **MON** button on the Master row (its own colour) opens a chain that is heard live only and is never rendered or exported. It applies to all projects by default; opt out per project to give a project its own monitoring chain.
+- **Per-plug-in MIDI processors** run right before their plug-in: note mapping, transposition, velocity,
+  humanisation, delay, CC tools, scale/chord tools, arpeggiator, randomizers, LFOs, step sequencer, audio-to-MIDI
+  drum trigger and loopers. Each has an "Applies to" note filter, the window has whole-list presets (with
+  built-ins) and a search that indexes every parameter. All is saved with the song.
+
+[![Allow again](docs/screenshots/fx-allow-again.png)](docs/screenshots/fx-allow-again.png)
+
+[![Preferences, Audio and VST](docs/screenshots/prefs-audio.png)](docs/screenshots/prefs-audio.png)
+
+#### MIDI processing
 
 Every plug-in slot has its own **MIDI processing** chain. Open it with the **MIDI…** button in the FX chain. Processors run top to bottom, before the plug-in, on everything it plays: the song, live keys and other tracks routed to it. On an effect plug-in, they shape the MIDI that plug-in and the ones after it receive.
 
@@ -195,241 +460,7 @@ A note-off always follows its note-on, so nothing hangs. Each processor can be b
 
 ![MIDI routed into an instrument plug-in](docs/screenshots/midi-routing.png)
 
-## Why it exists
-
-The author wanted a fast, keyboard-driven way of writing tabs — with freedom to move sections around,
-customise the look and save ideas without fighting the program. The longer-term idea is to blur the line a
-little between writing a song and the first steps of a demo (recorded ideas, a VST on a track, drum
-plug-ins), only where it is genuinely useful.
-
----
-
-## Feature tour
-
-### 1. The workspace
-
-[![Main window](docs/screenshots/main-window.png)](docs/screenshots/main-window.png)
-
-- **Document tabs in the title bar**, like a browser: several songs open at once, and **several song tabs can play at the same time** — each tab keeps playing when you focus another; drag a tab to reorder it,
-  drag it out to open it in its own window, or drop it onto another TabForge window.
-- **Score** in the middle (standard notation + TAB, or either alone), **fretboard** on top,
-  **arrangement timeline** and track list at the bottom, **tool palette** and **sections** on the right.
-  Every panel can be docked, floated, resized or hidden.
-
-### Light and dark themes
-
-
-**Dark**, **Light** and **System** are theme presets: one click sets the interface, accent, icons, transport
-buttons and score page together (the light theme is a soft grey, with a wood-coloured fretboard). Every single
-colour — score paper, notation, staff lines, playback colours, fonts — can still be changed afterwards
-(Settings > Appearance & colours).
-
-### Customisable interface
-
-The whole workspace can be rearranged to suit how you write:
-
-- **Drag any panel by its tab** (Tools, Structure, Rhythm, Layout, Sections, Practice / Mixer, Zoom,
-  the fretboard or the arrangement). While you drag, the place it will land is highlighted in blue.
-- **Drop on the middle of a panel** to add it as another tab there, or **near an edge** to split that area and
-  put the panel beside, above or below it. The tool palette pages can sit side by side instead of as tabs.
-- **Drop outside the window** to float the panel as its own window (e.g. on a second screen); drag it back to
-  re-dock it.
-- **Resize** any split by dragging the divider; hide panels you do not use from the View menu.
-- The layout is remembered between sessions, and **Reset all panels to original positions** (View menu) puts everything back.
-- Colours, theme, fonts, interface scale, score spacing and every hotkey are customisable too (see Settings).
-
-### 2. Menus
-
-| | | |
-|---|---|---|
-| [![File](docs/screenshots/menu-file.png)](docs/screenshots/menu-file.png) | [![Edit](docs/screenshots/menu-edit.png)](docs/screenshots/menu-edit.png) | [![Bar](docs/screenshots/menu-bar.png)](docs/screenshots/menu-bar.png) |
-| [![Track](docs/screenshots/menu-track.png)](docs/screenshots/menu-track.png) | [![Note](docs/screenshots/menu-note.png)](docs/screenshots/menu-note.png) | [![Effects](docs/screenshots/menu-effects.png)](docs/screenshots/menu-effects.png) |
-| [![Sections](docs/screenshots/menu-sections.png)](docs/screenshots/menu-sections.png) | [![Tools](docs/screenshots/menu-tools.png)](docs/screenshots/menu-tools.png) | [![Sound](docs/screenshots/menu-sound.png)](docs/screenshots/menu-sound.png) |
-| [![View](docs/screenshots/menu-view.png)](docs/screenshots/menu-view.png) | [![Options](docs/screenshots/menu-options.png)](docs/screenshots/menu-options.png) | [![Help](docs/screenshots/menu-help.png)](docs/screenshots/menu-help.png) |
-
-Familiar menu order and shortcuts for people coming from other tab editors (a "Classic" shortcut preset is included); every command shows its shortcut (tooltips too, in brackets), and every shortcut can be
-changed (see [Hotkeys](#8-settings)).
-
-### 3. Writing and editing
-
-[![Entering notes in the score](docs/animations/score-entry.gif)](docs/animations/score-entry.gif)
-
-*Entering notes with the keyboard.*
-
-- **Keyboard-first entry**: type frets (two quick digits for 10+), arrows move by beat/string,
-  `+` / `-` make a note shorter / longer (reversible in Settings), `.` dots it.
-- **Free rhythm entry**: a note can be lengthened even past the end of the bar — the bar turns red instead
-  of the change being refused (a strict mode is available). **Check bars (F4)** lists every bar that does
-  not add up, using the same rule as the red highlight.
-- **30+ techniques**: bends (with curves), slides, hammer-ons/pull-offs, palm mute, let ring, vibrato and
-  wide vibrato, natural/artificial/pinch/tapped harmonics, dead and ghost notes, tremolo picking, trills,
-  fades, accents, staccato, tenuto, grace notes, arpeggio/brush strokes, tapping, slap and pop.
-- **Edits during playback** are heard from the next bar. Bars you edit stay complete (*Fill incomplete bars with rests*, on by default); typing on a rest writes your remembered duration; *Advance after entering a note* (off by default) moves the caret on.
-- **Two voices per bar**, tuplets, ties, rests, fermatas, chord names, text and lyrics.
-- **Mix table points (F10)**: tempo, volume and pan changes inside a song.
-- Copy/cut/paste beats and bars, repeat selections, insert/delete beats that keep the bar length, full undo.
-
-### 4. Arrangement timeline and sections
-
-[![Arrangement timeline](docs/screenshots/arrangement-timeline.png)](docs/screenshots/arrangement-timeline.png)
-
-[![Dragging bars on the arrangement timeline](docs/animations/arrangement-drag.gif)](docs/animations/arrangement-drag.gif)
-
-*Dragging bars across the arrangement timeline.*
-
-- One block per bar and track shows at a glance where each instrument plays.
-- **Sections** (Intro, Verse, Chorus…) as coloured bars across the top. Sections of the same type share a
-  colour; the section list on the right always shows the same colours.
-- **Drag a section to move its marker** — the section starts somewhere else while the bars stay put.
-  **Ctrl+drag** moves the section *with* its bars (all tracks together; playback continues seamlessly).
-- **Add a section** with `M`, the Sections panel, or right-click on the section lane → *Add section at bar N*.
-- **Drag a section's edge to resize it**: shrinking leaves empty bars, growing pushes the next section along.
-- **Drag across bars to select an area**: copy, cut, paste, move, delete, loop it, or skip it during
-  playback. `Esc` clears the selection.
-- Right-click menus for bars, tracks and sections; drag tracks up or down to reorder them.
-- **Delete on bars** opens one prompt: clear (leave a gap), remove (close the gap) or insert a gap before or after, for all tracks or this track; Ctrl+Delete closes the gap, Ctrl+Shift+Space inserts a gap.
-- **Add-track lane**: a strip under the last track (click it, or drop audio or MIDI files on it) that adds an audio track or opens the Add track window; hide it in Preferences > Timeline & Tracks.
-- **Sections carry their clips**: moving, copying or duplicating a section takes the clips inside it; the song grows to fit clips that run past its end.
-
-[![Sections panel](docs/screenshots/sections-panel.png)](docs/screenshots/sections-panel.png)
-
-[![Moving a section](docs/animations/section-move.gif)](docs/animations/section-move.gif)
-
-*Moving a section to a new position.*
-
-**Tool palette** (redrawn icons) — durations, dynamics, effects and bar structure (plus rhythm and layout tools), grouped in tabs; right-click a tool to pin it to the quick strip:
-
-[![Tool palette](docs/screenshots/tool-palette.png)](docs/screenshots/tool-palette.png)
-
-### 5. Fretboard, keyboard and scale finder
-
-[![Fretboard](docs/screenshots/fretboard.png)](docs/screenshots/fretboard.png)
-
-[![Fretboard lighting up during playback](docs/animations/fretboard-playback.gif)](docs/animations/fretboard-playback.gif)
-
-*The fretboard following playback.*
-
-- **Matches the instrument**: stringed instruments (guitar, bass, oud, cello, violin, ukulele, mandolin,
-  banjo…) get a fretboard with the track's own strings — a 5-string bass shows five; drums get a
-  **percussion map** that lights up on each hit and writes a hit on click; piano, winds, brass and synths get a
-  **keyboard** (88 keys by default; 76/61/49/37/25 from the right-click menu). Right-click to show one track or
-  all tracks differently; the default is in Settings > Fretboard.
-- **Note marker size** (Settings > Fretboard & Keyboard > Appearance, 60% to 160%) scales the note circles and numbers together.
-  ![The fretboard with note markers at 140%](docs/screenshots/fretboard-marker-size.png)
-- Follows playback: the sounding note glows, the next notes are outlined, a line shows where the hand
-  moves next. Chords move as one shape.
-- Click to write a note; hover previews where it would go. Left-handed view, note names, 12 or 24 frets,
-  scale highlighting, alternative preview layouts.
-- **String spacing** (right-click > *Appearance*, also in Settings > Fretboard and bindable): *Compact*, *Natural* (default) or *Wide*. The board keeps natural proportions in any pane shape: a tall pane centres it and a narrow pane scales the drawing down instead of squeezing the frets.
-- **Appearance** (right-click > *Appearance*, saved for every song): scale highlight as shaded cells,
-  **circles** or rings, in the colour you choose; fret-marker dots in any of several colours and
-  brightness levels; keyboard keys grey or white (matching the theme by default).
-
-| | |
-|---|---|
-| [![Keyboard view](docs/screenshots/instrument-keyboard.png)](docs/screenshots/instrument-keyboard.png) | [![Drum view](docs/screenshots/instrument-drums.png)](docs/screenshots/instrument-drums.png) |
-
-[![Keyboard view during playback](docs/animations/keyboard-view.gif)](docs/animations/keyboard-view.gif)
-
-*The keyboard view following playback.*
-
-**Scale finder** — the **Scales** button beside the fretboard, its right-click menu (*Select scale* /
-*Find scale…*) or Tools > Scale finder. *Likely scales* analyses the notes of the **selection** (score or
-timeline) or the **entire song**, for one track or all, and lists every key and scale they fit, best first
-(usually several do); *All scales* picks any key and scale directly. The choice is highlighted on the fretboard
-or the keyboard (root marked more strongly); *Scale > Clear selection* removes it.
-
-[![Scale finder](docs/screenshots/scale-finder.png)](docs/screenshots/scale-finder.png)
-
-### 6. Tracks, instruments and tuning
-
-| | |
-|---|---|
-| [![Track properties — guitar](docs/screenshots/track-properties-guitar.png)](docs/screenshots/track-properties-guitar.png) | [![Track properties — bass](docs/screenshots/track-properties-bass.png)](docs/screenshots/track-properties-bass.png) |
-| [![Track properties — drums](docs/screenshots/track-properties-drums.png)](docs/screenshots/track-properties-drums.png) | [![Instrument picker](docs/screenshots/instrument-picker.png)](docs/screenshots/instrument-picker.png) |
-
-- **Add track** (the **+ Track** button): the same window as Track properties for the new track — pick the
-  instrument from the catalogue, set tuning, mixer and details — plus **where it goes**: last, first, after the
-  selected track, or as track number N.
-- **Instrument picker** with the full General MIDI set, pictures, categories and search.
-- **Tuning editor**: per-string `−`/`+`, double-click a string to type a note (e.g. `Eb3`), presets for
-  4-/5-/6-/7-string bass and 6-/7-/8-/9-string guitar, `+ / − Low string` to change the number of strings.
-  Extended-range instruments are named by string count, e.g. *Electric Bass (Finger) (5 strings)*.
-  Choose whether retuning keeps the fret numbers or the sounding pitches.
-- **Drum notation presets** (.gp5, .gpx/.gp, line-per-instrument drum tab) plus a fully
-  custom map: TAB line, TAB text, staff position and notehead for every GM drum sound.
-- **Global tuning** shifts every track at once, e.g. the whole song down a half step.
-- **Instrument and tool icons** are original artwork.
-
-- **Audio tracks** have no notation and no instrument picker: they hold audio and MIDI clips and are silent unless an instrument plug-in plays them. Convert one to an instrument track at any time.
-- **Track menu**: right-click a track row for Cut, Copy, Paste, Duplicate, Delete, Rename, Colour and Properties. A track row in focus takes Ctrl+C, Ctrl+X, Ctrl+V, Ctrl+D and Delete.
-
-[![Track list with an audio track](docs/screenshots/audio-track-main.png)](docs/screenshots/audio-track-main.png)
-
-[![Add track](docs/screenshots/add-track.png)](docs/screenshots/add-track.png)
-
-[![Reordering tracks by dragging](docs/animations/track-reorder.gif)](docs/animations/track-reorder.gif)
-
-*Reordering tracks by dragging.*
-
-[![Global tuning](docs/screenshots/global-tuning.png)](docs/screenshots/global-tuning.png)
-
-### 7. Playback and practice
-
-- MIDI playback with mute/solo/volume/pan per track, live while playing: bends, slides, let ring,
-  palm mute, ghost/dead notes and triplet feel/swing.
-- **Song structure (repeats, endings, D.C./D.S.) played as written:** repeats (up to x99, several closes, multi-pass endings such as
-  1.2.3.), D.S. / D.C. / Coda / Fine, and tempo changes that last until the next one, including changes partway
-  through a bar. Covered by synthetic test songs that run on every build.
-- **Metronome and count-in** with their own sounds and levels, subdivisions, count-in before every loop.
-- **Seamless looping** of the song, a section or any selected area; set a number of loops; a **speed
-  trainer** that raises the tempo each pass; skip areas during playback.
-- **Score follow**: the view keeps the playing bar in sight and stops if you scroll by hand. Right-click the
-  score > *Follow playback*: **Page turn** (default: jumps half a page or to the next line near the edge) or
-  **Smooth page turn** (the same turns, glided at the display refresh rate and idle in between).
-- **Two score views**, both on the right-click menu: *Score layout* (page / continuous) and *Score scrolling* —
-  **vertical** (bars wrap into lines, scroll down) or **horizontal** (the whole song on one line that scrolls and
-  follows to the right, centred vertically in page mode). Only the bars near the view are drawn, so even long songs
-  stay light.
-
-[![Horizontal score scrolling](docs/screenshots/score-horizontal.png)](docs/screenshots/score-horizontal.png)
-
-[![Mix table](docs/screenshots/mix-table.png)](docs/screenshots/mix-table.png)
-
-### 8. Recording, clip lanes and grouping
-
-Recording is here to help you capture song ideas quickly and turn them into notation and tab, so an idea isn't lost while you're writing. It is a sketchpad for songwriting, not a replacement for a full recording studio or DAW, and that isn't a goal of TabForge.
-
-[![Recording lanes and track controls](docs/screenshots/recording-layout.png)](docs/screenshots/recording-layout.png)
-
-[![Recording a take](docs/animations/recording.gif)](docs/animations/recording.gif)
-
-*Recording a take onto a track.*
-
-- **Ctrl+R** records armed tracks into audio or MIDI clips; choose an audio input or *MIDI (all inputs)*,
-  watch the input meter, and toggle live monitoring from the lane. Recording stops at the take's start.
-- **Multiple lanes per track** keep overlapping and loop-recorded takes separate. Click a take to choose
-  what plays; Ctrl+click to layer takes. Waveforms and MIDI notes appear while recording.
-- Click anywhere on a lane to seek to that bar, just as on a notation row; clicking a take also selects it.
-- **Split, glue and fade clips**: S splits at the cursor, Ctrl+Shift+G glues, fade handles sit at the top corners. An armed audio track plays live MIDI through its instrument plug-in.
-- **Snap** clips to a beat grid, playhead or other clip edges; move, trim, mute, duplicate, or edit clip
-  properties. MIDI clips can be written into the track's notation.
-- **Track groups** can be shown as collapsible headers in the track list with arm, mute, solo, level,
-  pan and FX power controls. The mixer offers instrument-based, compact or ungrouped views.
-
-[![Mixer groups and track controls](docs/screenshots/mixer.png)](docs/screenshots/mixer.png)
-
-[![Adjusting the mixer](docs/animations/mixer.gif)](docs/animations/mixer.gif)
-
-*Adjusting levels in the mixer.*
-
-[![MIDI take lanes](docs/screenshots/recording-lanes.png)](docs/screenshots/recording-lanes.png)
-
-[![Editing an audio clip](docs/animations/clip-edit.gif)](docs/animations/clip-edit.gif)
-
-*Splitting and fading an audio clip.*
-
-### 9. Settings
+### Settings and shortcuts
 
 - Every command has **two shortcuts** (Hotkey 1 and Hotkey 2); *Check now* in General > Updates looks for a newer release.
 - **Mute and Solo**: solo wins (only soloed tracks play); a track both muted and soloed plays. Muted tracks are drawn grey (Appearance > Muted track dimming).
@@ -467,84 +498,32 @@ is listed with its path, and changes preview live before you apply them:
 [![Project settings](docs/screenshots/project-settings.png)](docs/screenshots/project-settings.png)
 [![Score text style](docs/screenshots/score-text-style.png)](docs/screenshots/score-text-style.png)
 
-### 10. Files and compatibility
+[![Common settings](docs/screenshots/preferences-common-settings.png)](docs/screenshots/preferences-common-settings.png)
 
-TabForge supports GP files: it opens .gp3, .gp4, .gp5, .gpx and .gp, and saves .gp.
+[![Settings search](docs/screenshots/preferences-search.png)](docs/screenshots/preferences-search.png)
 
-| Format | Open | Save |
-|---|---|---|
-| `.gp3`, `.gp4`, `.gp5` | ✔ | |
-| `.gpx` | ✔ | |
-| `.gp` | ✔ | ✔ (default) |
-| TabForge project (`.tforge`) | ✔ | ✔ |
-| Standard MIDI file (`.mid`) | | export |
-| ASCII tab (`.txt`) | | export |
+[![Command palette](docs/screenshots/command-palette.png)](docs/screenshots/command-palette.png)
 
-Drum parts import from every format, including `.gpx` extended articulations and .gp
-(`.gp`) drum kits; the import is covered by synthetic round-trip tests that run on every build. Known
-limit: .gp3/.gp4/.gp5 files open with up to 20,000 bars per track. `.gtp` and `.tg` files are not supported.
+The **command palette** (Ctrl+Shift+A) fuzzy-searches every command by name and shows its key.
 
-A `.gp` saved by TabForge follows the `.gp` file format, **and** carries the complete TabForge project inside it
-(an extra entry other readers can ignore), so reopening it in TabForge loses nothing — drum map, section sizes,
-score styles, mix points. Imports are checked against the reference parser (alphaTab) note-for-note on real
-.gp3/.gp4/.gp5/GPX files.
+### More features
 
-Saved `.gp` files carry correct zip checksums and keep the album, copyright, tab author, music, words and instructions fields.
+- **Live editing**: an edit made during playback is heard from the next bar, with no stop or jump.
+- **Type exact knob values**: double-click, right-click or press F2 on any round knob and type "-6 dB", "75%" or "L30". Ctrl+click resets.
+- **Sound that never goes silent**: if a VST instrument stops playing, the track falls back to the built-in General MIDI sound; renders pass through a transparent safety limiter.
+- **Cleaner Delete in the score**: a bar left without notes becomes one whole-bar rest.
+- **Smooth with long songs and clips**: the timeline draws only the bars near the view.
+- **Fretboard note marker size** (60% to 160%) and **Scale highlight strength** in Settings > Fretboard & Keyboard.
+- **Two shortcuts per command** (Hotkey 1 and Hotkey 2), with menus showing the keys you set; Shift+F10 or the Menu key opens the right-click menu in the score, timeline and fretboard.
 
-### 11. Mixer, VST plug-ins and FX chains
+## Feature reference
 
-[![Track FX chain](docs/screenshots/fx-chain.png)](docs/screenshots/fx-chain.png)
-
-- **Mixer** (fader button beside the tuning fork): every track as a row, grouped **by instrument** (guitars,
-  basses, keys, drums, other), **compact** (guitars, basses, drums, everything else) or not at all. Each group row
-  sets level, pan and pitch for all its tracks at once; tracks can be moved between groups.
-- **FX chains**: the **FX** button on each track (and in the mixer) opens the chain; its power
-  switch plays the track through the chain or plain Windows MIDI. A chain is a **VST2 or VST3 instrument** followed
-  by **effects** in series, each with bypass, wet/dry and its own plug-in window. With effects but no VST
-  instrument, the track's own General MIDI sound is played through the effects (rendered from Windows' own sound
-  bank); a *MIDI sound* switch turns it off.
-- **Audio output**: WASAPI (shared / exclusive), ASIO or DirectSound, with device, sample rate and buffer size in
-  **Settings > Audio & VST**. Plug-in folders are added by browsing (no automatic scan unless you turn it on).
-- **Safety**: plug-ins never run inside the editor. They run in a separate audio engine process that starts only
-  when a track uses plug-ins; if a plug-in crashes or freezes, TabForge names it, switches it off and carries on.
-  *Run each plug-in in its own process* isolates every plug-in on its own, so a crash loses only that plug-in (a little more CPU).
-  That is crash isolation only, not a security sandbox: plug-ins run with your user rights, so load only plug-ins you trust.
-- **Saving**: a song with plug-ins or mixer groups saved as `.gp` asks once: `.gp` with the settings inside
-  (recommended), a clean `.gp` plus a small `.tfaudio` file (no extra entry inside the `.gp`), or `.tforge`.
-
-| Plug-in wiring | MIDI processing |
-|---|---|
-| [![Audio and MIDI pin routing](docs/screenshots/plugin-wiring.png)](docs/screenshots/plugin-wiring.png) | [![MIDI processor chain](docs/screenshots/midi-processing.png)](docs/screenshots/midi-processing.png) |
-
-Plug-in wiring selects audio input channels, the MIDI source/channel filter, sidechain input (VST2 with four or
-more inputs) and MIDI output forwarding to another track.
-
-- **Serial MIDI chain:** MIDI flows through the plug-in list in order, so MIDI-effect plug-ins
-  shape the notes for the next slot; instruments add their audio, effects process everything before them.
-- **Group buses and master FX:** each mixer group has an effects bus, and the mixer's Master row has an FX chain,
-  pan and volume over the whole mix. The **Master row sits at the top** of the Mixer, under the column headers.
-- **Monitoring FX (MON)**: a **MON** button on the Master row (its own colour) opens a chain that is heard live only and is never rendered or exported. It applies to all projects by default; opt out per project to give a project its own monitoring chain.
-- **Per-plug-in MIDI processors** run right before their plug-in: note mapping, transposition, velocity,
-  humanisation, delay, CC tools, scale/chord tools, arpeggiator, randomizers, LFOs, step sequencer, audio-to-MIDI
-  drum trigger and loopers. Each has an "Applies to" note filter, the window has whole-list presets (with
-  built-ins) and a search that indexes every parameter. All is saved with the song.
-
-### 12. Render to audio
-
-[![Render dialog](docs/screenshots/render.png)](docs/screenshots/render.png)
-
-**File > Render…** (`Ctrl+Alt+R`) exports the master mix, track stems or both, for the full song,
-a selection or a custom range. Choose tail length, file-name wildcards and WAV 16/24/32-bit float;
-MP3 bit rates are offered when Windows has an encoder. Rendering supports progress and cancellation.
-
----
-
-## Complete feature list
+Everything TabForge does, by area. Every command can be found in the menus, the command palette and Settings > Hotkeys.
 
 Everything TabForge does, by area. Every command below can be found in the menus, the command palette and
 Settings > Hotkeys (all rebindable).
 
-### Files, tabs and export
+#### Files, tabs and export
 - **New**, **New tab**, **Open**, **Open in new tab**, **Save**, **Save as**, **Close tab**, **Duplicate tab**, Exit.
 - **Templates**: File > *New from template* (built-in and your own) and *Save as template* (your templates live in `%APPDATA%\TabForge\Templates`).
 
@@ -564,7 +543,7 @@ Settings > Hotkeys (all rebindable).
 - **Command line**: `TabForge.exe song.gp5 [more files]` opens files as tabs (Explorer double-click hands over to the running instance, or opens a new window, as you choose); `--theme dark|light|system` starts with that theme (kept in your settings).
 - Drag-and-drop tabs between windows; **Windows 11 Snap Layouts** on the maximise button; full-screen mode (F11).
 
-### Editing and notation
+#### Editing and notation
 - **Notation and playback** covered by automated tests: engraving (bends, whammy diagrams, grace notes, key/time signatures, tempo marks, dynamics) and playback (repeats, jumps, tempo changes, tremolo, strokes, bend channel).
 - Note entry: fret digits, arrow navigation, **durations** (whole to 64th, increase/decrease, dotted, double dotted, triplet), rest, tie, fermata, accent, staccato, tenuto, **shift pitch** by semitone, **move to higher/lower string** (Alt+Up/Down in the score), copy last beat.
 - **Effects**: dead, ghost, palm mute, let ring, hammer/pull, bend, legato and shift slide, vibrato, wide vibrato, tremolo bar, natural and artificial harmonics, tapping, slap, pop, trill, tremolo picking, fade in/out, wah open/close, brush and arpeggio up/down, grace note, chord names, beat text, lyrics.
@@ -579,7 +558,7 @@ Settings > Hotkeys (all rebindable).
 - **Score views**: tab + standard, tab only, standard only; dark or light score page; continuous line or individual notes; page/continuous layout; vertical or horizontal scrolling; zoom 75 / 100 / 150 % and Ctrl+/- zoom; **stylesheet** (F7).
 - **Screen-reader support**: the tab editor announces track, bar, beat, string, fret and note name as the cursor moves, and every control has an accessible name and a stable id.
 
-### Side panes and panels
+#### Side panes and panels
 - **Tools** (durations, dynamics, effects, bar structure), **Structure**, **Rhythm** and **Layout** palette pages, pinnable quick strip.
 - **Sections** panel; **Lyrics**; **Practice / Mixer**; **Song stats**; **Chord finder**; **Scale highlight**.
 - **Zoom & speed**: one compact row with zoom out/in, zoom box and the single playback-speed box (25 to 200 %, presets 50 to 200 %).
@@ -590,7 +569,7 @@ Settings > Hotkeys (all rebindable).
 - **Layouts**: Compose, Practice and Mix (Ctrl+1/2/3), save, delete, reset; show/hide the side panel and the fretboard; *Reset all panels to original positions*.
 - Practice / learn mode, loop settings (loop count, speed trainer that raises the tempo each pass), metronome and count-in settings (volume, click sound, subdivision, accent).
 
-### Fretboard, keyboard and drums
+#### Fretboard, keyboard and drums
 - Fretboard, 88-key (or 76/61/49/37/25) keyboard and drum percussion map; left-handed view, note names, 12/24 frets, scale highlight and *Clear selection*, appearance options (circles or rings, colours, fret-marker dots, key colours).
 - **Number size** (Small, Medium, Large) under right-click > Appearance and in Settings; **Lock fretboard size** (off by default, right-click menu and hotkey); the pane scales its drawing when resized; alternative preview layouts.
 
@@ -598,7 +577,7 @@ Settings > Hotkeys (all rebindable).
 
 - **Show / hide the fretboard** (toolbar button and hotkey), *Switch instrument view*, per-track or all-tracks instrument view.
 
-### Tracks and Mixer
+#### Tracks and Mixer
 - **Add** Guitar, Bass, Drums, Keys or any instrument (**+ Track**, with position choice), delete, move up/down, **Track properties** (F6), instrument picker, tuning editor, drum notation presets, **Global tuning**, next/previous track, multitrack (F3) and global (F8) views.
 - **Track list**: arm, mute, solo, level, pan, FX button (red "!" if a plug-in was switched off), collapsible **groups**, *Show tracks in groups* (right-click empty space or from the Mixer), *Auto-resize track list to fit*, Alt+Up/Down to reorder.
 
@@ -610,11 +589,11 @@ Settings > Hotkeys (all rebindable).
 
 - **Selected-track routing** and MIDI output device; detailed track mixer; test selected track output; MIDI / audio setup.
 
-### Recording and clips
+#### Recording and clips
 - **Record** (Ctrl+R) audio or MIDI clips, arm track, input meter, live monitoring, multiple take lanes, loop-recorded takes, recording offset.
 - **Clip commands** (bindable): delete, deselect, move (coarse and fine), move between lanes, copy, cut, paste, duplicate, mute, properties (F2), **Snap** on/off (Alt+S).
 
-### Plug-ins and audio engine
+#### Plug-ins and audio engine
 - **VST2 / VST3** instruments and effects, serial chains, wiring window, MIDI processing (many processors, presets, search), **group bus FX** and **master FX** chains, plug-in trust and *Review* prompts, crash isolation with a per-plug-in process option, automatic pitch matching, startup tracks.
 - **Audio output**: WASAPI, ASIO, DirectSound; **Windows MIDI latency** with a **Measure** button; every song plays through the audio engine by default (a Settings toggle).
 
@@ -622,14 +601,14 @@ Settings > Hotkeys (all rebindable).
 
 - **Render window**: range, stems checklist, tail length, file names, WAV / MP3, progress and cancel.
 
-### Playback and practice
+#### Playback and practice
 - Play / pause, play from start, stop, loop (F9), first/last bar, previous/next section, go to section.
 - Repeats up to x99, D.S./D.C./Coda/Fine, tempo changes (also mid-bar), mix-table fades, dynamics, technique playback; **score follow** with page turn or smooth page turn (stops only on a genuine manual scroll).
 
-### Settings and help
+#### Settings and help
 - Preferences (F12) with search, themes (Dark, Light, System), colours, fonts, interface scale, project settings, import/export of all settings, **Keyboard shortcuts** (F1) with TabForge, Classic and Alternative presets, **Check for updates**, About, Windows file-association option.
 
-### Menus, panels and windows in detail
+#### Menus, panels and windows in detail
 
 **Score / tab editor right-click menu**
 - Show standard notation, pitch up / down a semitone, move to the string above / below, delete note, zoom in / out / fit width and zoom percentages, *Score options*.
@@ -688,6 +667,8 @@ Settings > Hotkeys (all rebindable).
 
 **Preferences: Advanced page**
 - An informational page only (no runtime toggles): it points to settings import / export, reset page and reset all, which are always available from the Preferences window footer.
+
+---
 
 ## Quality checks
 
