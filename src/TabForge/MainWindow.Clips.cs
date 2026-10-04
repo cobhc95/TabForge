@@ -88,6 +88,12 @@ public partial class MainWindow
     /// <summary>Clip keys are active while a clip is selected, or a lane was clicked and the timeline has focus.</summary>
     private bool ClipContextActive => Arrangement.SelectedClip is not null || (_clips.LaneCursor is not null && Arrangement.TimelineHasFocus);
 
+    /// <summary>Runs a Range.* command on the bars selected in the shared selection; false when no bars are selected.</summary>
+    // No bar range: the timeline's current bar is the range, so Delete on one bar asks the same question as on a selection.
+    private bool RunRangeHotkey(string id) =>
+        _selection.BarRange is { } range ? _sections.Range.RunCommand(Doc, id, range.Start, range.End)
+            : Editor.SelectedMeasure >= 0 && _sections.Range.RunCommand(Doc, id, Editor.SelectedMeasure, Editor.SelectedMeasure);
+
     private void ShowClipMenu(int trackIndex, AudioClip? clip, double sec)
     {
         if (trackIndex < 0 || trackIndex >= _project.Tracks.Count) return;
@@ -106,6 +112,9 @@ public partial class MainWindow
                     break;
                 case TimelineCommand.ClipPaste: _clips.Paste(doc, track, lane, sec); break;
                 case TimelineCommand.ClipDuplicate when clip is not null: _clips.Duplicate(doc, track, clip); break;
+                case TimelineCommand.ClipSplit when clip is not null: _clips.SplitAt(doc, track, clip, sec); break;
+                case TimelineCommand.ClipGlue when clip is not null: _clips.Glue(doc, track, clip); break;
+                case TimelineCommand.ClipFadeReset when clip is not null: _clips.ResetFades(doc, clip); break;
                 case TimelineCommand.ClipDelete when clip is not null: _clips.Remove(doc, track, clip, null, clearSelection: true); break;
                 case TimelineCommand.ClipMute when clip is not null: _clips.Edit(doc, () => clip.Muted = !clip.Muted); break;
                 case TimelineCommand.ClipProperties when clip is not null: _clips.EditProperties(doc, clip); break;

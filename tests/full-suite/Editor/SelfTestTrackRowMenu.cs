@@ -49,7 +49,7 @@ public static partial class SelfTest
         Check("track row menu: a rebound key shows in the menu",
             TrackRowMenus.Build(new TrackRowMenuState(false, true, true, ""), id => HotkeyCatalog.DisplayAll(rebound, id)).First(i => i.Id == TrackRowMenus.Copy).Shortcut.Contains("K"));
         Check("track row menu: the Colour submenu marks the track's colour",
-            TrackRowMenus.Build(new TrackRowMenuState(false, true, true, ArrangementPanel.TrackColourPalette[0].Hex), Key).First(i => i.Id is null && i.Header == "Colour").Children!.Count(c => c.Checked) == 1);
+            TrackRowMenus.Build(new TrackRowMenuState(false, true, true, TrackControlWidgets.TrackColourPalette[0].Hex), Key).First(i => i.Id is null && i.Header == "Colour").Children!.Count(c => c.Checked) == 1);
 
         // The right-click on the row asks the host for this menu (all kinds), instead of opening Track properties.
         var song = OrderedSong();

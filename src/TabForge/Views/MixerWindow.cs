@@ -560,7 +560,7 @@ public sealed class MixerWindow : Window
         swatch.Click += (_, _) =>
         {
             var menu = new ContextMenu { PlacementTarget = swatch };
-            foreach (var (colourName, hex) in ArrangementPanel.TrackColourPalette)
+            foreach (var (colourName, hex) in TrackControlWidgets.TrackColourPalette)
             {
                 var item = new MenuItem { Header = colourName, Icon = new Border { Width = 14, Height = 14, CornerRadius = new CornerRadius(3), Background = BrushOf(hex) } };
                 item.Click += (_, _) => { _host.SetGroupColour(group, hex); Rebuild(); };
@@ -758,9 +758,9 @@ public sealed class MixerWindow : Window
         System.Windows.Automation.AutomationProperties.SetName(slider, tip);
         slider.PreviewMouseLeftButtonDown += (_, _) => { if (!_building) _host.BeginMixerEdit(); };
         slider.PreviewKeyDown += (_, e) => { if (e.Key is Key.Left or Key.Right or Key.Up or Key.Down or Key.Home or Key.End && !_building) _host.BeginMixerEdit(); };
-        ArrangementPanel.AttachSmoothDrag(slider, defaultValue);
+        TrackControlWidgets.AttachSmoothDrag(slider, defaultValue);
         slider.PreviewMouseWheel += (_, e) => { if (e.Delta != 0 && !_building) _host.BeginMixerEdit(); };
-        ArrangementPanel.AttachWheelStep(slider); // 1 unit per notch (Ctrl: 8), never scrolls the mixer
+        TrackControlWidgets.AttachWheelStep(slider); // 1 unit per notch (Ctrl: 8), never scrolls the mixer
         slider.LostMouseCapture += (_, _) =>
         {
             if (_rebuildAfterDrag) Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Input, new Action(() => { if (_rebuildAfterDrag) Rebuild(); }));
@@ -822,7 +822,7 @@ public sealed class MixerWindow : Window
         var row = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 6, 0, 0) };
         Button Toggle(string icon, bool on, Func<bool> get, Action<bool> set, string tip)
         {
-            var b = ArrangementPanel.ToggleIconButton(icon, on, () =>
+            var b = TrackControlWidgets.ToggleIconButton(icon, on, () =>
             {
                 _host.BeginMixerEdit();
                 if (_building) return;

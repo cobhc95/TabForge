@@ -25,6 +25,12 @@ public sealed class AudioClip
     /// <summary>Playback speed (1 = original; pitch unchanged).</summary>
     public double Speed { get; set; } = 1;
     public bool Muted { get; set; }
+    /// <summary>Fade-in length on the timeline, in seconds (0 = none); a gain ramp from silence at the clip's start.</summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public double FadeInSec { get; set; }
+    /// <summary>Fade-out length on the timeline, in seconds (0 = none); a gain ramp to silence at the clip's end.</summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public double FadeOutSec { get; set; }
     /// <summary>Which of the track's clip lanes (under its row) the clip sits on; 0 = the first.</summary>
     public int Lane { get; set; }
     /// <summary>A MIDI clip's notes (times in seconds from the source start); null for an audio clip.</summary>
@@ -41,7 +47,7 @@ public sealed class AudioClip
     public AudioClip Clone() => new()
     {
         File = File, Name = Name, StartSec = StartSec, OffsetSec = OffsetSec, SourceLengthSec = SourceLengthSec,
-        FileLengthSec = FileLengthSec, GainDb = GainDb, Pitch = Pitch, Speed = Speed, Muted = Muted, Lane = Lane,
+        FileLengthSec = FileLengthSec, GainDb = GainDb, Pitch = Pitch, Speed = Speed, Muted = Muted, Lane = Lane, FadeInSec = FadeInSec, FadeOutSec = FadeOutSec,
         Notes = Notes?.Select(n => n with { }).ToList(),
     };
 

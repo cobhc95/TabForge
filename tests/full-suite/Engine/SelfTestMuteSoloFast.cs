@@ -64,8 +64,8 @@ public static partial class SelfTest
         // The button shows its new state before the toggle callback (and any follow-up work) runs.
         var seen = new List<string>();
         Button? mute = null, solo = null;
-        mute = ArrangementPanel.ToggleIconButton("IconMute", false, () => seen.Add($"M:{mute!.ToolTip}"), "Mute track");
-        solo = ArrangementPanel.ToggleIconButton("IconSolo", false, () => seen.Add($"S:{solo!.ToolTip}"), "Solo track");
+        mute = TrackControlWidgets.ToggleIconButton("IconMute", false, () => seen.Add($"M:{mute!.ToolTip}"), "Mute track");
+        solo = TrackControlWidgets.ToggleIconButton("IconSolo", false, () => seen.Add($"S:{solo!.ToolTip}"), "Solo track");
         mute.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         solo.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         var labels = ((TextBlock)mute.Content).Text + ((TextBlock)solo.Content).Text;

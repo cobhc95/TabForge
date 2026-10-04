@@ -75,7 +75,7 @@ internal sealed class EditorInputController
         var gridCell = Math.Clamp((int)hitSlot, 0, _host.SlotsFor(measure) - 1);
         var measureModel = track.Measures[measure];
         var cell = TabEditorControl.ResolveBeatHitCell(measureModel, hitSlot, gridCell,
-            _host.CellsFor(measureModel, create: _host.ActiveVoiceIndex == 1));
+            _host.CellsFor(measureModel, create: _host.ActiveVoiceIndex == 1), _host.SlotsFor(measure));
         var stringIndex = Math.Clamp((int)Math.Round((p.Y - _host.TabTop(system)) / _host.StringGap), 0, Math.Max(0, track.StringTunings.Count - 1));
         return (measure, cell, stringIndex);
     }

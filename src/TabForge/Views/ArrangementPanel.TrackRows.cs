@@ -15,6 +15,11 @@ using TabForge.Plugins;
 using TabForge.Services;
 using TabForge.Visualization;
 
+using static TabForge.Views.TrackControlWidgets;
+using static TabForge.Views.TrackColumnLayout;
+
+using static TabForge.Views.TrackRowWidgets;
+
 namespace TabForge.Views;
 
 // ArrangementPanel: track tint and building the per-track control rows.
@@ -83,10 +88,8 @@ public sealed partial class ArrangementPanel
         _controls.Children.Clear();
         _mixSliders.Clear();
         _inputMeters.Clear();
-        _rowGrids.Clear();
+        _columns.ClearRows();
         _trackCells.Clear();
-        _columnRowCells.Clear();
-        _rowSeparators.Clear();
         _trackRows.Clear();
         _renameStarters.Clear();
         _rowTransforms.Clear();
@@ -112,8 +115,7 @@ public sealed partial class ArrangementPanel
             _rowTransforms.Add((TranslateTransform)row.RenderTransform);
             System.Windows.Automation.AutomationProperties.SetName(row, $"Track {index + 1}: {track.Name}{(track.Mute ? ", muted" : "")}{(track.Solo ? ", solo" : "")}");
             var grid = new Grid { Margin = new Thickness(RowGridLeft, 0, RowGridRight, 0) };
-            AddColumnDefinitions(grid);
-            _rowGrids.Add(grid);
+            _columns.AddRowGrid(grid);
             var cells = new Dictionary<string, FrameworkElement>();
 
             // Record-arm (where the colour square was); the track colour is on the number's right-click menu.
@@ -248,7 +250,7 @@ public sealed partial class ArrangementPanel
                 track.Volume = midi;
                 MixChanged?.Invoke(this, EventArgs.Empty);
             };
-            AttachMixEditGestures(volume);
+            _rowWidgets.AttachMixEditGestures(volume);
             _mixSliders.Add((volume, () => track.Volume));
             AttachSmoothDrag(volume, 100);
             AttachWheelStep(volume);
@@ -274,7 +276,7 @@ public sealed partial class ArrangementPanel
                 var knob = new KnobControl
                 {
                     Minimum = 0, Maximum = 127, DefaultValue = 64, Origin = 64, Value = track.Pan,
-                    Label = "Pan", Format = PanText, Parse = KnobValueParser.ParsePan, HorizontalAlignment = HorizontalAlignment.Left,
+                    Label = "Pan", Format = TrackRowWidgets.PanText, Parse = KnobValueParser.ParsePan, HorizontalAlignment = HorizontalAlignment.Left,
                     VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(6, 0, 4, 0)
                 };
                 knob.ValueChanged += (_, e) => { track.Pan = (int)e.NewValue; MixChanged?.Invoke(this, EventArgs.Empty); };
@@ -298,16 +300,16 @@ public sealed partial class ArrangementPanel
                     track.Pan = midi;
                     MixChanged?.Invoke(this, EventArgs.Empty);
                 };
-                AttachMixEditGestures(pan);
+                _rowWidgets.AttachMixEditGestures(pan);
                 _mixSliders.Add((pan, () => Math.Clamp(track.Pan, 0, 127) - 64));
                 AttachSmoothDrag(pan, 0);
                 AttachWheelStep(pan);
                 panControl = pan;
             }
-            panControl.ContextMenu = PanContextMenu(track, panControl);
+            panControl.ContextMenu = _rowWidgets.PanContextMenu(track, panControl);
             cells["pan"] = panControl;
 
-            FrameworkElement instrument = track.IsAudio ? AudioKindCell() : InstrumentButton(track, selected =>
+            FrameworkElement instrument = track.IsAudio ? AudioKindCell() : TrackRowWidgets.InstrumentButton(track, selected =>
             {
                 TrackEditRequested?.Invoke(new TrackEditRequest(index, TrackEditKind.SelectInstrument, selected));
                 ProjectEdited?.Invoke(this, EventArgs.Empty);
@@ -316,7 +318,7 @@ public sealed partial class ArrangementPanel
             // An explicitly muted track reads grey: its name and controls are dimmed (the M box stays full strength, red).
             _trackCells[track] = cells;
             ApplyRowDim(project, track, cells);
-            PlaceCells(grid, cells);
+            _columns.PlaceCells(grid, cells);
 
             if (HasAudioLane(track))
             {
@@ -374,6 +376,6 @@ public sealed partial class ArrangementPanel
             _trackRows.Add(row);
             _controls.Children.Add(row);
         }
-        if (BuildAddLane() is { } addLane) _controls.Children.Add(addLane);   // rows end flush against it
+        if (_addLane.Build() is { } addLane) _controls.Children.Add(addLane);   // rows end flush against it
     }
 }

@@ -113,17 +113,20 @@ public sealed class RoutedMidiOutput : IMidiOutput
     /// <summary>Live input: straight to the device, or to the engine stamped "already due" so it plays in the next block.</summary>
     public void SendLive(int deviceId, int status, int data1, int data2)
     {
+        if (!SendLiveEngineOnly(status, data1, data2)) _inner.Send(deviceId, status, data1, data2);
+    }
+
+    /// <summary>Live input to the channel's engine slot only; false (nothing sent) when the channel is not routed or the engine is not running.</summary>
+    public bool SendLiveEngineOnly(int status, int data1, int data2)
+    {
         var channel = status & 0x0F;
-        if (status < 0xF0 && _routes[channel] is var slot && slot >= 0 && _engine.IsRunning)
+        if (status >= 0xF0 || _routes[channel] is not (var slot and >= 0) || !_engine.IsRunning) return false;
+        _engine.Write(new TimedMidi
         {
-            _engine.Write(new TimedMidi
-            {
-                Timestamp = Stopwatch.GetTimestamp() - _engine.LatencyTicks, Slot = slot,
-                Status = (byte)status, Data1 = (byte)data1, Data2 = (byte)data2
-            });
-            return;
-        }
-        _inner.Send(deviceId, status, data1, data2);
+            Timestamp = Stopwatch.GetTimestamp() - _engine.LatencyTicks, Slot = slot,
+            Status = (byte)status, Data1 = (byte)data1, Data2 = (byte)data2
+        });
+        return true;
     }
 
     public void ResetAll()

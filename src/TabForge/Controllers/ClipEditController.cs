@@ -39,7 +39,7 @@ internal interface IClipHost
     DropItem ReadDroppedMidi(string file, bool transient);
 }
 
-// Owns: the commands of the timeline's clip lanes: delete, nudge, lane moves, copy, cut, paste, duplicate, mute, properties,
+// Owns: the commands of the timeline's clip lanes: delete, nudge, lane moves, copy, cut, paste, duplicate, split, glue, fades, mute, properties,
 //     moves between tracks, MIDI clip to notation, dropped files.
 // Does not own: clip drawing and hit testing (arrangement views) and the clipboard format (ClipboardService).
 // Tests: TestClipAndSectionEdits, TestDocumentOperations.
@@ -104,6 +104,9 @@ internal sealed class ClipEditController
             case "Clip.Duplicate": Duplicate(doc, track, clip); return true;
             case "Clip.Mute": Edit(doc, () => clip.Muted = !clip.Muted, clip.Muted ? $"Unmuted {clip.Name}" : $"Muted {clip.Name}"); return true;
             case "Clip.Properties": EditProperties(doc, clip); return true;
+            case "Clip.Split": SplitAtCursor(doc, track, clip); return true;
+            case "Clip.Glue": Glue(doc, track, clip); return true;
+            case "Clip.FadeReset": ResetFades(doc, clip); return true;
         }
         return false;
     }
@@ -210,6 +213,45 @@ internal sealed class ClipEditController
         if (!_host.ShowClipProperties(clip)) return;
         if (clip.GainDb == before.GainDb && clip.Pitch == before.Pitch && clip.Speed == before.Speed && clip.Muted == before.Muted && clip.Name == before.Name) return;
         Changed(doc);
+    }
+
+    /// <summary>S: splits the clip at the edit cursor (the last clicked lane spot) when that is on the clip, else under the playhead.</summary>
+    public void SplitAtCursor(DocumentSession doc, TrackModel track, AudioClip clip)
+    {
+        var at = LaneCursor is { } cursor && ReferenceEquals(cursor.Track, track) && cursor.Lane == clip.Lane && ClipSplitGlue.CanSplit(clip, cursor.Sec) ? cursor.Sec : doc.Playback.Clock.CurrentSec;
+        SplitAt(doc, track, clip, at);
+    }
+
+    /// <summary>Splits the clip at a song time (both parts keep offset, gain, pitch and speed); one undo step. Says why when the time is not inside the clip.</summary>
+    public void SplitAt(DocumentSession doc, TrackModel track, AudioClip clip, double sec)
+    {
+        if (!_host.IsShown(doc)) return;
+        if (!ClipSplitGlue.CanSplit(clip, sec)) { _host.SetStatus("Put the edit cursor (click the clip) or the playhead inside the clip to split it"); return; }
+        Edit(doc, () =>
+        {
+            var second = ClipSplitGlue.Split(track, clip, sec)!;
+            _host.SelectedClip = second;
+            LaneCursor = new LaneCursor(track, clip.Lane, sec);
+        }, $"Split {clip.Name}");
+    }
+
+    /// <summary>Glues the selected clip with the clips that continue it on its lane (non-destructive); says why when none does.</summary>
+    public void Glue(DocumentSession doc, TrackModel track, AudioClip clip)
+    {
+        if (!_host.IsShown(doc)) return;
+        if (ClipSplitGlue.Chain(track, clip).Count < 2)
+        {
+            _host.SetStatus("Nothing to glue: the next clip must touch this one on the lane, from the same file at the same speed, pitch and level (merging different recordings into a new file is not available)");
+            return;
+        }
+        Edit(doc, () => _host.SelectedClip = ClipSplitGlue.Glue(track, clip), $"Glued {clip.Name}");
+    }
+
+    /// <summary>Removes both fades of the clip (one undo step); does nothing when it has none.</summary>
+    public void ResetFades(DocumentSession doc, AudioClip clip)
+    {
+        if (clip.FadeInSec == 0 && clip.FadeOutSec == 0) { _host.SetStatus("This clip has no fades"); return; }
+        Edit(doc, () => { clip.FadeInSec = 0; clip.FadeOutSec = 0; }, $"Fades of {clip.Name} reset");
     }
 
     public void Duplicate(DocumentSession doc, TrackModel track, AudioClip clip) => Edit(doc, () =>

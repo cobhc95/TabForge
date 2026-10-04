@@ -36,8 +36,8 @@ Generated from the registry. Each test is registered once in `SelfTest.Run` and 
 | architecture | 4 | `--selftest <log> --areas architecture` |
 | audioaudit | 2 | `--selftest <log> --areas audioaudit` |
 | document-context | 1 | `--selftest <log> --areas document-context` |
-| document-operations | 5 | `--selftest <log> --areas document-operations` |
-| engine | 41 | `--selftest <log> --areas engine` |
+| document-operations | 7 | `--selftest <log> --areas document-operations` |
+| engine | 42 | `--selftest <log> --areas engine` |
 | fuzz | 1 | `--selftest <log> --areas fuzz` |
 | guitarpro | 24 | `--selftest <log> --areas guitarpro` |
 | hygiene | 11 | `--selftest <log> --areas hygiene` |
@@ -47,12 +47,12 @@ Generated from the registry. Each test is registered once in `SelfTest.Run` and 
 | notation | 2 | `--selftest <log> --areas notation` |
 | persistence | 30 | `--selftest <log> --areas persistence` |
 | playback | 25 | `--selftest <log> --areas playback` |
-| recording | 10 | `--selftest <log> --areas recording` |
+| recording | 11 | `--selftest <log> --areas recording` |
 | settings | 10 | `--selftest <log> --areas settings` |
-| smoke | 5 | `--selftest <log> --areas smoke` |
+| smoke | 6 | `--selftest <log> --areas smoke` |
 | synthetic | 2 | `--selftest <log> --areas synthetic` |
 | tutorial | 6 | `--selftest <log> --areas tutorial` |
-| ui | 100 | `--selftest <log> --areas ui` |
+| ui | 101 | `--selftest <log> --areas ui` |
 | window-lifetime | 1 | `--selftest <log> --areas window-lifetime` |
 
 ### Groups
@@ -153,6 +153,8 @@ A group is a named set of tests with a minimum check count; `--require ci` makes
 | --- | --- | --- |
 | TestAddTrackMenu | document-operations | `tests/full-suite/Editor/SelfTestAddTrackLane.cs` |
 | TestAudioTrackClips | document-operations | `tests/full-suite/Recording/SelfTestAudioTrackClips.cs` |
+| TestBarDeleteGuards |  | `tests/full-suite/Editor/SelfTestBarDeleteGuards.cs` |
+| TestBarRangeGaps |  | `tests/full-suite/Editor/SelfTestBarRangeGaps.cs` |
 | TestClipAndSectionEdits | document-operations | `tests/full-suite/Lifecycle/SelfTestClipSectionEdits.cs` |
 | TestDocumentOperations | document-operations | `tests/full-suite/Lifecycle/SelfTestDocumentOperations.cs` |
 | TestSectionClips |  | `tests/full-suite/Lifecycle/SelfTestSectionClips.cs` |
@@ -161,6 +163,7 @@ A group is a named set of tests with a minimum check count; `--require ci` makes
 
 | Test | Group | File |
 | --- | --- | --- |
+| TestAudioTrackLiveMidi |  | `tests/full-suite/Engine/SelfTestAudioTrackRouting.cs` |
 | TestAudioTrackRouting |  | `tests/full-suite/Engine/SelfTestAudioTrackRouting.cs` |
 | TestAutoGmEveryPath |  | `tests/full-suite/Engine/SelfTestAutoGm.cs` |
 | TestCallbackMetrics |  | `tests/full-suite/Recording/SelfTestRecording.cs` |
@@ -352,6 +355,7 @@ A group is a named set of tests with a minimum check count; `--require ci` makes
 | --- | --- | --- |
 | TestCaptureResampling |  | `tests/full-suite/Engine/SelfTestEngineWatchdog.cs` |
 | TestClipMoves |  | `tests/full-suite/Recording/SelfTestClipMove.cs` |
+| TestClipSplitGlueFades |  | `tests/full-suite/Recording/SelfTestClipSplitGlueFades.cs` |
 | TestClips |  | `tests/full-suite/Recording/SelfTestClips.cs` |
 | TestMediaDropPlan |  | `tests/full-suite/Recording/SelfTestMediaDrop.cs` |
 | TestMidiFileToClip |  | `tests/full-suite/Recording/SelfTestMediaDrop.cs` |
@@ -382,6 +386,7 @@ A group is a named set of tests with a minimum check count; `--require ci` makes
 | --- | --- | --- |
 | TestEditorEntry |  | `src/TabForge/SelfTests/Smoke/SelfTestSmoke.cs` |
 | TestEverySettingIsWired |  | `src/TabForge/SelfTests/Settings/SelfTestSettingsAudit.cs` |
+| TestFretMarkerSize |  | `src/TabForge/SelfTests/Settings/SelfTestFretMarkerSize.cs` |
 | TestHeadlessDeviceReconfigure |  | `src/TabForge/SelfTests/Engine/SelfTestEngineHeadless.cs` |
 | TestModelRoundTrip |  | `src/TabForge/SelfTests/Smoke/SelfTestSmoke.cs` |
 | TestProjectRoundtrip |  | `src/TabForge/SelfTests/Smoke/SelfTestSmoke.cs` |
@@ -428,6 +433,7 @@ A group is a named set of tests with a minimum check count; `--require ci` makes
 | TestColourHexEquivalence |  | `tests/full-suite/Views/SelfTestColourHex.cs` |
 | TestContextMenuLayouts |  | `tests/full-suite/Editor/SelfTestSelection.cs` |
 | TestContextMenuLean |  | `tests/full-suite/Editor/SelfTestSelection.cs` |
+| TestDeleteBarClean |  | `tests/full-suite/Editor/SelfTestRestMerge.cs` |
 | TestDialogEscape |  | `tests/full-suite/Views/SelfTestDialogEscape.cs` |
 | TestDockRatioNotRewrittenByAutoFit |  | `tests/full-suite/Views/SelfTestDockRatio.cs` |
 | TestDrumEntryAndQuickAddBars |  | `tests/full-suite/Editor/SelfTestEditorInput.cs` |

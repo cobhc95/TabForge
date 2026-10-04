@@ -303,7 +303,7 @@ internal sealed class RecordingController
             // Each armed MIDI track plays with its own sound: set its program now (playback may not be running).
             var channels = ChannelAllocator.Assign(project);
             for (var i = 0; i < project.Tracks.Count; i++)
-                if (project.Tracks[i].RecordArm && AudioInputs.IsMidi(project.Tracks[i].AudioInput) && channels[i] >= 0)
+                if (project.Tracks[i].RecordArm && AudioInputs.IsMidi(project.Tracks[i].AudioInput) && channels[i] >= 0 && !project.Tracks[i].IsAudio)   // an audio track's instrument plug-in keeps its own sound
                     _host.Document.Playback.Engine.SendLive(project.Tracks[i].MidiOutputDeviceId, 0xC0 | (channels[i] & 0x0F), project.Tracks[i].MidiProgram, 0);
         }
         else if (!wanted && _midiInput.IsOpen) _midiInput.Close();
@@ -325,12 +325,25 @@ internal sealed class RecordingController
             {
                 var track = project.Tracks[i];
                 if (!track.RecordArm || !AudioInputs.IsMidi(track.AudioInput)) continue;
-                if (track.MonitorInput && channels[i] >= 0) source.Playback.Engine.SendLive(track.MidiOutputDeviceId, type | (channels[i] & 0x0F), Math.Clamp(data1 + (type is 0x80 or 0x90 ? track.Transpose : 0), 0, 127), data2);
+                if (MonitorsLive(track, channels[i]))
+                {
+                    var pitch = Math.Clamp(data1 + (type is 0x80 or 0x90 ? track.Transpose : 0), 0, 127);
+                    if (track.IsAudio) source.Playback.Routing?.SendLiveEngineOnly(type | (channels[i] & 0x0F), pitch, data2);   // Q1: its instrument plug-in or nothing
+                    else source.Playback.Engine.SendLive(track.MidiOutputDeviceId, type | (channels[i] & 0x0F), pitch, data2);
+                }
                 if (_recording && _midiTakes.TryGetValue(track, out var take) && !double.IsNaN(heardSec)) Keep(take, type, data1, data2, heardSec);
             }
             if (type == 0x90 && data2 > 0) { _midiLevel = Math.Max(_midiLevel, data2 / 127.0); _lastMidiStamp = stamp; }
         });
     }
+
+    /// <summary>
+    /// An armed MIDI-input track with monitoring on plays what is played live. An audio track does so only through an enabled instrument
+    /// plug-in (its channel is assigned only then), sent to its engine slot and never to the General MIDI / Windows synth.
+    /// </summary>
+    internal static bool MonitorsLive(TrackModel track, int channel) =>
+        track.RecordArm && AudioInputs.IsMidi(track.AudioInput) && track.MonitorInput && channel >= 0
+        && (!track.IsAudio || MixerGroups.InstrumentPlays(track));
 
     private double HeardDelaySec()
     {

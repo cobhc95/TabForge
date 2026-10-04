@@ -2,6 +2,32 @@
 
 TabForge is actively developed; please report anything odd on the Issues page.
 
+## 0.5.3 — 2026-10-04
+Clip editing, a Delete prompt for bars on the timeline, cleaner Delete in the score, and a lighter, smoother timeline with long songs and long clips. The code behind the main window, the arrangement panel and the timeline was split into smaller owned parts.
+
+### New features
+- Clips: S splits the selected clip at the edit cursor (the spot last clicked on the lane) or under the playhead; both parts keep their file position, level, pitch and speed. Ctrl+Shift+G glues the clip with the clips that continue it on its lane. Fade-in and fade-out handles sit at the clip's top corners (drag to set the length; also played in renders). The clip menu has Split at cursor, Glue and Reset fade in / out.
+- Bars selected on the timeline: Delete, or "Delete…" in the range menu, opens one themed prompt: clear the bars (leave a gap), remove them (close the gap), or insert a gap the size of the selection before or after it, for all tracks (the default) or this track; each option shows its key and the prompt notes any clips affected. Deleting a single bar (menu "Delete bar…" or Delete with no range) opens the same prompt. A drag across bars gives the timeline the keyboard, so Delete acts on the bars of every track instead of the score's track. Ctrl+Delete removes and closes the gap and Ctrl+Shift+Space inserts a gap before (all tracks); "Insert a gap after" is bindable. Clips follow (moved, cut at an edge, removed inside), one undo step each, and "Remember my answer" (action and scope) / Settings > Editing > Safety > "Ask what Delete does on bars" choose whether Delete asks.
+- Delete on selected whole bars that hold only rests asks "Delete N empty bars?" (Cancel is the default) and removes them in one undo step; the timeline selection menu has "Delete empty bars", which removes only the empty bars of the range.
+- Deleting bars (bar, section, selection) under audio or MIDI clips shows a warning first with how many clips on which tracks overlap, and Cancel leaves everything as it was.
+- Settings > Fretboard & Keyboard > Appearance > "Note marker size" (60% to 160%, default 100%) scales the fretboard note circles and their numbers together; large sizes stop at the gap between strings.
+- An armed audio track with MIDI input and monitoring on plays the MIDI keyboard live through its instrument plug-in; without one it stays silent.
+
+### Editing fixes
+- Delete in the score leaves merged rests by default (Settings > Editing > "When deleting notes, leave"), and a bar left without notes always becomes one whole-bar rest, including bars with tuplets or off-grid beats; Delete on rests collapses them into the fewest rests.
+- A full bar offers only its beats as cursor positions: no extra narrow slot after the last beat for clicks, arrows, Shift-extend and drag selection, including the last bar of the song.
+- Bars cleared in place show as empty on the timeline at once instead of keeping their old note summary.
+- The acoustic drum map is listed as "Acoustic kit map (unverified)"; chains saved with its earlier name still use it.
+
+### Architecture and performance
+- Zooming the timeline stays smooth with a long audio clip that runs off-screen: the drawn waveform is scaled while zooming and redrawn once the zoom settles.
+- The timeline draws only the bars within one viewport of the visible span, so a long song zoomed in no longer sends every bar to the render thread on each zoom step.
+- The timeline is cached as a GPU texture only when that helps (static and under 8,000 device pixels, never during zoom or lane animation); mix points are recomputed only when the song changes.
+- Long clips (wider than the view) clip their contents with a plain rectangle instead of a huge rounded mask, and the waveform is drawn as one filled outline instead of one stroked line per column, so zooming and dragging with long clips stay responsive.
+- Pressing and dragging a clip responds at once, also during playback.
+- MainWindow, ArrangementPanel and TrackTimeline each hand their jobs to owned controllers behind host interfaces, with no behaviour change: MainWindow 8,523 to about 7,100 lines and 236 to 197 fields; ArrangementPanel 3,849 to about 2,850 lines and 89 to 61 fields; TrackTimeline about 3,000 to about 2,600 lines and 126 to about 104 fields.
+- The automated check set is split: a basic set runs on every build and push, the full suite runs weekly (and on demand) in CI and is archived; several engine-sync, add-lane and render checks were made more robust, and the public CI workflow was fixed.
+
 ## 0.5.2 — 2026-10-03
 A larger update to 0.5.1: audio tracks and the Add-track lane, a track right-click menu, two shortcuts per command, live editing during playback, and a reorganised, faster core.
 - Playback, mixer and view options are passed in explicitly instead of read from shared global state; each open song owns its audio-engine transport, so open songs no longer interrupt each other.

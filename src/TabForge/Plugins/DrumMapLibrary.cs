@@ -28,7 +28,11 @@ public static class DrumMapLibrary
 
     public static void Reload() { lock (Gate) _cache = null; }
 
-    public static DrumMap? Find(string name) => string.IsNullOrEmpty(name) ? null : All().FirstOrDefault(m => string.Equals(m.Name, name, StringComparison.OrdinalIgnoreCase));
+    public static DrumMap? Find(string name) => string.IsNullOrEmpty(name) ? null : All().FirstOrDefault(m => string.Equals(m.Name, Current(name), StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>The current name of a shipped map saved in older chains under its earlier name.</summary>
+    private static string Current(string name) =>
+        string.Equals(name, "Superior Drummer 3 (unverified)", StringComparison.OrdinalIgnoreCase) ? "Acoustic kit map (unverified)" : name;
 
     private static List<DrumMap> Load()
     {

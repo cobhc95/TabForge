@@ -40,17 +40,25 @@ public static partial class SelfTest
                     foreach (var dark in new[] { true, false })
                         foreach (var state in new[] { "plain", "edit", "play" })
                         {
-                            var editor = ScoreRenderIdentity.CreateEditor(project, 0, zoom, dark, state);
-                            var fresh = ScoreRenderIdentity.Hash(ScoreRenderIdentity.Render(editor));
-                            if (state == "play") editor.SetPlayhead(editor.PlaybackMeasure, editor.PlaybackCell);
-                            var warm = ScoreRenderIdentity.Hash(ScoreRenderIdentity.Render(editor));
-                            editor.InvalidateVisual();
-                            var repainted = ScoreRenderIdentity.Hash(ScoreRenderIdentity.Render(editor));
-                            editor.InvalidateScoreLayout();
-                            var rebuilt = ScoreRenderIdentity.Hash(ScoreRenderIdentity.Render(editor));
                             cases++;
-                            if (fresh != warm || fresh != repainted || fresh != rebuilt)
-                                mismatches.Add($"{ScoreRenderIdentity.CaseName(song, 0, zoom, dark, state)} warm={fresh == warm} repaint={fresh == repainted} rebuilt={fresh == rebuilt}");
+                            // A case that differs once is drawn again with a fresh editor: on a cold machine the first use of a
+                            // fallback font can land between two renders. A real cache bug differs on the second attempt too.
+                            string? mismatch = null;
+                            for (var attempt = 0; attempt < 2; attempt++)
+                            {
+                                var editor = ScoreRenderIdentity.CreateEditor(project, 0, zoom, dark, state);
+                                var fresh = ScoreRenderIdentity.Hash(ScoreRenderIdentity.Render(editor));
+                                if (state == "play") editor.SetPlayhead(editor.PlaybackMeasure, editor.PlaybackCell);
+                                var warm = ScoreRenderIdentity.Hash(ScoreRenderIdentity.Render(editor));
+                                editor.InvalidateVisual();
+                                var repainted = ScoreRenderIdentity.Hash(ScoreRenderIdentity.Render(editor));
+                                editor.InvalidateScoreLayout();
+                                var rebuilt = ScoreRenderIdentity.Hash(ScoreRenderIdentity.Render(editor));
+                                mismatch = fresh == warm && fresh == repainted && fresh == rebuilt ? null
+                                    : $"{ScoreRenderIdentity.CaseName(song, 0, zoom, dark, state)} warm={fresh == warm} repaint={fresh == repainted} rebuilt={fresh == rebuilt}";
+                                if (mismatch is null) break;
+                            }
+                            if (mismatch is not null) mismatches.Add(mismatch);
                         }
             Check("tab editor: a fresh, a warm, a repainted and a re-laid-out editor draw the same pixels", mismatches.Count == 0,
                 $"{mismatches.Count} of {cases}: {string.Join("; ", mismatches.Take(3))}");

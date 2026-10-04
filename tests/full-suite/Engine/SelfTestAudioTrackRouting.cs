@@ -1,3 +1,4 @@
+using TabForge.Audio;
 using TabForge.Controllers;
 using TabForge.Models;
 using TabForge.Playback;
@@ -131,5 +132,59 @@ public static partial class SelfTest
     {
         var copy = new TrackModel { Name = source.Name, Kind = source.Kind, MidiChannel = source.MidiChannel, MidiOutputDeviceId = source.MidiOutputDeviceId, Measures = TemplateFactory.Measures(1) };
         return copy;
+    }
+
+    // Live MIDI input on an audio track (Q1): only through its enabled instrument plug-in (engine slot), never Windows MIDI; instrument tracks unchanged.
+    private sealed class LiveCountingOutput : IMidiOutput
+    {
+        public int Sent;
+        public IReadOnlyList<MidiOutputDeviceInfo> Devices => Array.Empty<MidiOutputDeviceInfo>();
+        public void Send(int deviceId, int status, int data1, int data2) => Sent++;
+        public void ResetAll() { }
+        public void Close() { }
+        public void Dispose() { }
+    }
+
+    private static void TestAudioTrackLiveMidi()
+    {
+        var song = new SongProject { Tempo = 120 };
+        var tracks = new TrackController();
+        var guitar = tracks.CreateTrack(song, TrackKind.Guitar);
+        song.Tracks.Add(guitar);
+        var audio = tracks.CreateTrack(song, TrackKind.Audio);
+        song.Tracks.Add(audio);
+        foreach (var t in song.Tracks) { t.AudioInput = AudioInputs.Midi; t.RecordArm = true; t.MonitorInput = true; }
+
+        var channels = ChannelAllocator.Assign(song);
+        Check("audio live MIDI: an armed, monitoring audio track without an instrument plug-in plays nothing", channels[1] == -1 && !RecordingController.MonitorsLive(audio, channels[1]));
+        Check("audio live MIDI: an armed, monitoring instrument track still plays live", RecordingController.MonitorsLive(guitar, channels[0]));
+
+        audio.SoundSource = SoundSources.Plugins;
+        audio.Rig.Plugins.Add(new PluginSlot { Name = "Synth", Path = "", Type = PluginSlotType.Instrument, Format = "VST3" });
+        channels = ChannelAllocator.Assign(song);
+        Check("audio live MIDI: with an enabled instrument plug-in the armed audio track plays live", channels[1] >= 0 && RecordingController.MonitorsLive(audio, channels[1]));
+        audio.MonitorInput = false;
+        Check("audio live MIDI: monitoring off: nothing live", !RecordingController.MonitorsLive(audio, channels[1]));
+        audio.MonitorInput = true; audio.RecordArm = false;
+        Check("audio live MIDI: unarmed: nothing live", !RecordingController.MonitorsLive(audio, channels[1]));
+        audio.RecordArm = true; audio.Rig.Plugins[0].Enabled = false;
+        Check("audio live MIDI: a bypassed instrument plug-in: nothing live", !RecordingController.MonitorsLive(audio, ChannelAllocator.Assign(song)[1]));
+        audio.Rig.Plugins[0].Enabled = true;
+
+        // The routed output: the audio track's live note goes to its engine slot or nowhere; an instrument track still falls back to Windows MIDI.
+        var inner = new LiveCountingOutput();
+        var engine = AudioEngineClient.Instance;
+        var routed = new RoutedMidiOutput(inner, engine);
+        var routes = Enumerable.Repeat(-1, 16).ToArray();
+        routes[channels[1]] = 5;
+        routed.SetRoutes(routes);
+        if (!engine.IsRunning)
+        {
+            var sentToEngine = routed.SendLiveEngineOnly(0x90 | channels[1], 60, 100) | routed.SendLiveEngineOnly(0x80 | channels[1], 60, 0);
+            Check("audio live MIDI: engine not running: the audio track's note-on/off are dropped, never sent to Windows MIDI", !sentToEngine && inner.Sent == 0);
+        }
+        Check("audio live MIDI: an unrouted channel is dropped too", !routed.SendLiveEngineOnly(0x90 | channels[0], 60, 100) && inner.Sent == 0);
+        routed.SendLive(0, 0x90 | channels[0], 60, 100); routed.SendLive(0, 0x80 | channels[0], 60, 0);
+        Check("audio live MIDI: an instrument track's live notes still reach Windows MIDI", inner.Sent == 2);
     }
 }

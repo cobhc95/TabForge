@@ -62,7 +62,8 @@ internal sealed partial class TrackTimeline
 
         // --- ruler ---
         var labelEvery = MeasureWidth < 18 ? 8 : MeasureWidth < 28 ? 4 : 1;
-        for (var b = 0; b < bars; b++)
+        var (firstBar, endBar) = DrawnBars(bars);
+        for (var b = firstBar; b < endBar; b++)
         {
             var x = XOfBar(b);
             var w = WidthOfBar(b);
@@ -179,7 +180,7 @@ internal sealed partial class TrackTimeline
 
                 var trackColor = Parse(track.ColorHex, _theme.Accent);
                 if (Silenced(t)) trackColor = Desaturate(trackColor, Dim);
-                for (var b = 0; b < (track.IsAudio ? 0 : bars); b++)   // an audio track's row shows its clip lanes only: no bar cells
+                for (var b = _animatingLanes ? 0 : firstBar; b < (track.IsAudio ? 0 : _animatingLanes ? bars : endBar); b++)   // an audio track's row shows its clip lanes only: no bar cells
                 {
                     var x2 = XOfBar(b);
                     var w = WidthOfBar(b);
@@ -263,19 +264,26 @@ internal sealed partial class TrackTimeline
         // into an overlay child that sits on top of them.
         _overlayGridTop = gridTop; _overlayWidth = width; _overlayHeight = height; _overlayBars = bars;
         // Mix Table points are gathered on a full render only; overlay-only frames reuse the list.
-        _mixPoints.Clear();
-        for (var t = 0; t < project.Tracks.Count; t++)
+        // The mix points change only with the song: a zoom or scroll redraw reuses them instead of scanning every cell again.
+        if (!ReferenceEquals(_mixPointsProject, project) || _mixPointsRevision != project.TimelineRevision)
         {
-            var measures = project.Tracks[t].Measures;
-            for (var b = 0; b < measures.Count; b++)
-                if (measures[b].Cells.Any(c => c.Mix is not null) || measures[b].Voice2Cells.Any(c => c.Mix is not null))
-                    _mixPoints.Add((t, b));
+            _mixPointsProject = project; _mixPointsRevision = project.TimelineRevision;
+            _mixPoints.Clear();
+            for (var t = 0; t < project.Tracks.Count; t++)
+            {
+                var measures = project.Tracks[t].Measures;
+                for (var b = 0; b < measures.Count; b++)
+                    if (measures[b].Cells.Any(c => c.Mix is not null) || measures[b].Voice2Cells.Any(c => c.Mix is not null))
+                        _mixPoints.Add((t, b));
+            }
         }
         _shiftedFrom = _animatingLanes ? DragTrackFrom : -1;
         using (var overlayDc = OpenLaneOverlay()) DrawLaneOverlay(overlayDc);
     }
 
     private readonly List<(int Track, int Bar)> _mixPoints = new();
+    private SongProject? _mixPointsProject;
+    private int _mixPointsRevision = -1;
     private bool[] _audible = Array.Empty<bool>();
     /// <summary>The track is explicitly muted (and not soloed): its lane is drawn grey and dim. Silence implied by another track's solo is not drawn.</summary>
     private bool Silenced(int track) => track >= 0 && track < _audible.Length && !_audible[track] && Project is { } p && track < p.Tracks.Count && p.Tracks[track].Mute;
@@ -344,9 +352,9 @@ internal sealed partial class TrackTimeline
             }
         }
         // --- move-area drop caret ---
-        if (_areaMoving && _areaMoveTarget >= 0)
+        if (AreaMove.Active && AreaMove.Target >= 0)
         {
-            var cx = XOfBar(Math.Clamp(_areaMoveTarget, 0, bars));
+            var cx = XOfBar(Math.Clamp(AreaMove.Target, 0, bars));
             dc.DrawRectangle(Draw.Solid(Color.FromRgb(0x4C, 0xB8, 0xFF)), null, new Rect(cx - 1.5, ArrangementPanel.RulerHeight, 3, height - ArrangementPanel.RulerHeight));
         }
         // --- bars skipped during playback: dim overlay ---
@@ -446,9 +454,10 @@ internal sealed partial class TrackTimeline
         var runStart = -1;
         var glowOuter = ShowBarGlow ? Draw.Pen(Colors.White, 4, 0.055) : null;
         var glowInner = ShowBarGlow ? Draw.Pen(Colors.White, 2, 0.10) : null;
-        for (var bar = 0; bar <= BarCount; bar++)
+        var (first, end) = _animatingLanes ? (0, BarCount) : DrawnBars(BarCount);   // only the runs near the visible span
+        for (var bar = first; bar <= end; bar++)
         {
-            var occupied = bar < track.Measures.Count &&
+            var occupied = bar < end && bar < track.Measures.Count &&
                 (track.Measures[bar].SimileOneBar || track.Measures[bar].SimileTwoBar ||
                  ActivityOf(trackIndex, bar, track.Measures[bar]).HasContent);
             if (occupied)

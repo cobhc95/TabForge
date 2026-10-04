@@ -122,7 +122,7 @@ public partial class App : Application
         ["--probe-record"] = (w, v) => new WindowProbes(w).RunRecordingProbe(v),
         ["--probe-menus"] = (w, v) => new WindowProbes(w).RunMenuProbe(v),
         ["--probe-update"] = (w, v) => new WindowProbes(w).RunUpdateProbe(v),
-        ["--probe-instrument-menu"] = (w, v) => w.RunInstrumentMenuProbe(v),
+        ["--probe-instrument-menu"] = (w, v) => new WindowProbes(w).RunInstrumentMenuProbe(v),
         ["--probe-countin"] = (w, v) => new WindowProbes(w).RunCountInProbe(v),
     };
 

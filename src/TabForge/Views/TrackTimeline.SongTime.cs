@@ -15,7 +15,7 @@ internal sealed partial class TrackTimeline
         return bar > 0 && s <= 0 && bar >= BarCount ? SecOfBar(bar - 1) + 2 : s;
     }
 
-    private double XOfSec(double sec)
+    public double XOfSec(double sec)
     {
         if (BarOfSec is null) return sec / 2.0 * MeasureWidth;
         var (bar, fraction) = BarOfSec(sec);
@@ -25,7 +25,7 @@ internal sealed partial class TrackTimeline
         return XOfBar(bar) + fraction * WidthOfBar(bar);
     }
 
-    private double SecOfX(double x)
+    public double SecOfX(double x)
     {
         if (BarOfSec is null) return Math.Max(0, x / MeasureWidth * 2.0);
         if (BarCount > 0 && x >= XOfBar(BarCount))

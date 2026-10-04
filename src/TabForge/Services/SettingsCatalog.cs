@@ -184,7 +184,7 @@ public static class SettingsCatalog
     {
         (General, "Updates", "general.checkupdates general.checknow"),
         (General, "Window", "general.restorewindow"),
-        (General, "Confirmations", "general.confirmclose general.confirmdiscardsettings editing.confirmdelete timeline.confirmdelete"),
+        (General, "Confirmations", "general.confirmclose general.confirmdiscardsettings editing.confirmdelete editing.bardelete timeline.confirmdelete"),
 
         (Appearance, "Theme", "appearance.thememode"),
         (Appearance, "Size and text", "appearance.uiscale appearance.density appearance.font* appearance.fontsize* appearance.iconsize* appearance.toolbaricons*"),
@@ -203,7 +203,7 @@ public static class SettingsCatalog
         (Fretboard, "Guitar fretboard", "editing.frets editing.lefthanded editing.notenames"),
         (Fretboard, "Keyboard", "fretboard.keyboardkeys fretboard.keyboardcolours*"),
         (Fretboard, "Practice aids", "editing.horizon.enabled editing.scale follow.fretboard editing.horizon* audio.fretboardstyle*"),
-        (Fretboard, "Appearance", "fretboard.scalestyle* fretboard.scalecolour* fretboard.scalestrength* fretboard.markercolour* fretboard.markerbrightness* fretboard.numbersize* fretboard.stringspacing*"),
+        (Fretboard, "Appearance", "fretboard.scalestyle* fretboard.scalecolour* fretboard.scalestrength* fretboard.markercolour* fretboard.markerbrightness* fretboard.numbersize* fretboard.markersize* fretboard.stringspacing*"),
 
         (Timeline, "Track list", "timeline.volumestyle timeline.panstyle timeline.autofit timeline.trackgroups timeline.addtracklane"),
         (Timeline, "Clip lanes", "timeline.removeemptylanes"),
@@ -625,6 +625,8 @@ public static class SettingsCatalog
                 new[] { "A rest of the same length", "Merged rests" }, "Used with \"Fill incomplete bars with rests\". A rest of the same length keeps the deleted note's value. Merged rests join the deleted notes and the rests beside them into the fewest rests that fill the bar (a cleared bar becomes one whole-bar rest).", "delete notes rest merge whole bar clear"),
             Bool(Editing, "Safety", "editing.confirmdelete", "Confirm before deleting a bar", v => ed.ConfirmDeleteBar = v, () => ed.ConfirmDeleteBar,
                 "Ask before deleting a bar and shifting later content.", "confirm delete bar prompt", hotkey: "Bar.Delete"),
+            Choice(Editing, "Safety", "editing.bardelete", "Ask what Delete does on bars", v => ed.BarRangeDelete = BarRangePromptText.FromChoice(v), () => BarRangePromptText.ToChoice(ed.BarRangeDelete),
+                BarRangePromptText.Choices, "Delete on bars selected on the timeline opens a prompt (clear, remove and close the gap, or insert a gap). Pick an answer here to make Delete do it directly; \"Remember my answer\" in the prompt sets this too.", "delete bars timeline prompt ask clear remove gap remember"),
             Int(Editing, "Navigation", "editing.scorewheel", "Score wheel scroll distance", v => ed.ScoreWheelScrollPixels = v, () => ed.ScoreWheelScrollPixels, 12, 96,
                 "Pixels moved per mouse-wheel notch over the score page.", "score page mouse wheel scroll", "px"),
 
@@ -735,6 +737,9 @@ public static class SettingsCatalog
                 FretNumberSizes.All,
                 "Size of the fret numbers, technique tags and note bubbles on the fretboard (Large is the standard size).",
                 "fret number size small medium large bubble label"),
+            Int(Fretboard, "Appearance", "fretboard.markersize", "Note marker size", v => ed.FretMarkerSizePercent = v, () => ed.FretMarkerSizePercent, 60, 160,
+                "Size of the note circles and their numbers on the fretboard (100% is the standard). Large sizes stop growing at the gap between strings.",
+                "note marker size circle bubble number bigger smaller", "%"),
             Choice(Fretboard, "Appearance","fretboard.stringspacing", "String spacing", v => ed.FretStringSpacing = v, () => ed.FretStringSpacing,
                 FretStringSpacings.All,
                 "How far apart the strings are drawn relative to the fret width. Natural keeps real-fretboard proportions in any window shape; Wide stretches up to 1.5x natural.",

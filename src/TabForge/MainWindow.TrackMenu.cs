@@ -11,7 +11,6 @@ namespace TabForge;
 public partial class MainWindow
 {
     private TrackClipboardFlow? _trackFlow;
-    private Dictionary<string, string> _trackRowHotkeyMap = new(StringComparer.OrdinalIgnoreCase);
 
     private TrackClipboardFlow TrackFlow => _trackFlow ??= new TrackClipboardFlow(new TrackClipboardHost(this), ClipboardService.Shared, _trackController);
 
@@ -22,7 +21,7 @@ public partial class MainWindow
 
     /// <summary>The track-row command a key runs right now (null: the key keeps its score or timeline meaning).</summary>
     private bool TryRunTrackRowHotkey(string gesture) =>
-        TrackClipboardFlow.Route(TrackListFocused, ClipContextActive, _trackRowHotkeyMap, gesture) is { } id
+        TrackClipboardFlow.Route(TrackListFocused, ClipContextActive, _hotkeys.TrackRow, gesture) is { } id
         && TrackFlow.RunHotkey(id, TrackMixerGrid.SelectedIndex);
 
     internal System.Windows.Controls.ContextMenu TrackRowMenu(int index)

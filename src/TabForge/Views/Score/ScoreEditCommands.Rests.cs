@@ -19,8 +19,12 @@ public sealed partial class ScoreEditCommands
         for (var m = Math.Max(0, m1); m <= Math.Min(m2, track.Measures.Count - 1); m++)
         {
             var barCells = CellsFor(track.Measures[m]);
-            var resized = resize ? BarFill.ResizeRests(barCells, SlotsFor(m), set) : null;   // rests keep the value they were given
-            if ((resized ?? BarFill.MergeRestRuns(barCells, SlotsFor(m), set, wholeRuns)) is not var (first, last)) continue;
+            // A bar left without notes whose beats were all touched (or whose tuplets / off-grid beats the merge cannot lay out) is one whole-bar rest.
+            var resetBar = !resize && barCells.Any(set.Contains) && (barCells.All(c => set.Contains(c) || (!c.IsRest && c.Notes.Count == 0)) || !BarFill.IsPlain(barCells) || barCells.Count > SlotsFor(m));
+            var cleared = resetBar ? BarFill.ResetEmptyVoice(barCells, SlotsFor(m), wholeRest: _activeVoiceIndex != 1) : null;
+            var resized = cleared is null && resize ? BarFill.ResizeRests(barCells, SlotsFor(m), set) : null;   // rests keep the value they were given
+            if ((cleared ?? resized ?? BarFill.MergeRestRuns(barCells, SlotsFor(m), set, wholeRuns)) is not var (first, last)) continue;
+            if (cleared is not null) { if (m == m1) c1 = 0; if (m == m2) c2 = 0; continue; }
             if (m == m1) c1 = Math.Min(c1, first);
             if (m == m2) c2 = resized is null ? Math.Max(c2, last) : last;   // after a resize the selection ends on the resized rests, not the filler
         }

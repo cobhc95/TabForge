@@ -16,6 +16,9 @@ using TabForge.Plugins;
 using TabForge.Services;
 using TabForge.Visualization;
 
+using static TabForge.Views.TrackControlWidgets;
+using static TabForge.Views.TrackColumnLayout;
+
 namespace TabForge.Views;
 
 /// <summary>
@@ -52,7 +55,13 @@ public sealed partial class ArrangementPanel : Grid
     public const double ControlsWidth = 580;
 
     private readonly TrackTimeline _timeline = new();
+    private readonly TrackColumnLayout _columns;
+    private readonly TuningButtonController _tuning;
+    private readonly AddLaneController _addLane;
+    private readonly GroupDragController _groupDrag;
+    private readonly TrackRowWidgets _rowWidgets;
     private InputGate<double> _rowScrollInputs;
+    private SettleAction? _waveSettle;   // zoom steps draw cached waveforms scaled; one rebuild after the zoom settles
     private SettleAction? _extentSettle;   // pane height changes (splitter drags) re-fit the Add-track lane once, after the drag settles
     internal void FlushExtent() { _extentSettle?.Cancel(); RefreshTimelineExtent(); }
     private ResizeShade? _resizePreview;
@@ -113,29 +122,6 @@ public sealed partial class ArrangementPanel : Grid
         foreach (var child in _hiddenForResize) child.Visibility = Visibility.Visible;
         _hiddenForResize.Clear();
     }
-
-    /// <summary>The drag shade: the panel drawn once from the song, stretched vertically (rows only) to the live height.</summary>
-    private sealed class ResizeShade : FrameworkElement
-    {
-        private readonly System.Windows.Media.Drawing _drawing;
-        private readonly IReadOnlyList<(System.Windows.Media.FormattedText Text, double Centre)> _names;
-        private readonly double _startHeight, _header;
-        public ResizeShade(System.Windows.Media.Drawing drawing, IReadOnlyList<(System.Windows.Media.FormattedText, double)> names, double startHeight, double header)
-        { _drawing = drawing; _names = names; _startHeight = startHeight; _header = header; SizeChanged += (_, _) => InvalidateVisual(); }
-        protected override void OnRender(System.Windows.Media.DrawingContext dc)
-        {
-            dc.DrawRectangle(Draw.Solid(System.Windows.Media.Color.FromRgb(0x14, 0x17, 0x1C), 1), null, new Rect(0, 0, ActualWidth, ActualHeight));
-            var scale = Math.Max(0.1, (ActualHeight - _header) / Math.Max(1, _startHeight - _header));
-            dc.PushClip(new System.Windows.Media.RectangleGeometry(new Rect(0, 0, ActualWidth, ActualHeight)));
-            dc.PushTransform(new System.Windows.Media.ScaleTransform(1, scale, 0, _header));
-            dc.DrawDrawing(_drawing);
-            dc.Pop();
-            // Names stay at their real size: only their position follows the stretched rows.
-            foreach (var (text, centre) in _names) dc.DrawText(text, new Point(56, _header + (centre - _header) * scale - text.Height / 2));
-            dc.Pop();
-        }
-    }
-
     private void RequestExtentSettle() => (_extentSettle ??= new SettleAction(RefreshTimelineExtent, 120)).Request();
 
     /// <summary>The shared view options (track tint) the rows and the timeline read; the main window hands in the application's.</summary>
@@ -315,13 +301,13 @@ public sealed partial class ArrangementPanel : Grid
     internal void RefreshEmptyAreaMenus()
     {
         _controlsHeader.ContextMenu = BuildEmptyAreaMenu();
-        if (_columnHeader is not null) _columnHeader.ContextMenu = BuildEmptyAreaMenu(new Control[] { ResetColumnsItem() });
+        if (_columns.Header is { } columnHeader) columnHeader.ContextMenu = BuildEmptyAreaMenu(new Control[] { ResetColumnsItem() });
         _controlsScroll.ContextMenu = BuildEmptyAreaMenu(new Control[] { AutoFitItem() });
     }
 
     /// <summary>Self-test hook: every empty-area menu (header strip, column header row, empty rows area) starts with "Show tracks in groups".</summary>
     internal bool EmptyAreaMenusHaveGroupsItem() =>
-        new[] { _controlsHeader.ContextMenu, _columnHeader?.ContextMenu, _controlsScroll.ContextMenu }
+        new[] { _controlsHeader.ContextMenu, _columns.Header?.ContextMenu, _controlsScroll.ContextMenu }
             .All(m => m is { Items.Count: > 0 } && m.Items[0] is MenuItem { Header: "Show tracks in groups" });
 
     private MenuItem ResetColumnsItem()
@@ -347,7 +333,7 @@ public sealed partial class ArrangementPanel : Grid
     public event EventHandler? ClipEditStarting;
     public event EventHandler<AudioClip>? ClipEdited;
     /// <summary>Esc while dragging a clip: cancel the drag. False when none is being dragged.</summary>
-    public bool CancelClipDrag() => _timeline.CancelClipDrag();
+    public bool CancelClipDrag() => _timeline.ClipGestures.Cancel();
     public event Action<int, AudioClip?, double>? ClipContextRequested;
     public event Action<int, AudioClip>? ClipPropertiesRequested;
     /// <summary>Audio / MIDI files dropped on the timeline: where they land (see <see cref="MediaDrop.Plan"/>).</summary>
@@ -362,7 +348,10 @@ public sealed partial class ArrangementPanel : Grid
     /// <summary>Repaints only the overlay layer (live takes), not the lanes.</summary>
     public void RefreshLiveTakes() => _timeline.RefreshOverlay();
 
-    public bool TimelineHasFocus => _timeline.IsKeyboardFocused;
+    /// <summary>The timeline holds the focus (keyboard focus, or the window's logical focus while another window is in front).</summary>
+    /// <summary>Gives the timeline the focus, so the keys for its selected bars (Delete, Ctrl+Delete...) act on them.</summary>
+    public void FocusTimeline() { if (!_timeline.Focus()) FocusManager.SetFocusedElement(FocusManager.GetFocusScope(_timeline), _timeline); }   // window in the background: its focus on return
+    public bool TimelineHasFocus => _timeline.IsKeyboardFocused || (Window.GetWindow(_timeline) is { } w && FocusManager.GetFocusedElement(w) == _timeline);
 
     /// <summary>Song time of bars, for placing audio clips (from the song clock).</summary>
     public void SetSongTime(Func<int, double> barStartSec, Func<double, (int Bar, double Fraction)> barOfSec)
@@ -534,6 +523,11 @@ public sealed partial class ArrangementPanel : Grid
 
     public ArrangementPanel()
     {
+        _columns = new TrackColumnLayout(this);
+        _tuning = new TuningButtonController(this);
+        _addLane = new AddLaneController(this, _timeline);
+        _groupDrag = new GroupDragController(this);
+        _rowWidgets = new TrackRowWidgets(this);
         lock (AllPanels) { AllPanels.RemoveAll(w => !w.TryGetTarget(out _)); AllPanels.Add(new WeakReference<ArrangementPanel>(this)); }
         SetResourceReference(BackgroundProperty, "PanelBrush");
         ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(ControlsWidth) });
@@ -548,7 +542,7 @@ public sealed partial class ArrangementPanel : Grid
             BorderThickness = new Thickness(0, 0, 1, 1)
         };
         var headerStack = new DockPanel();
-        var columnStrip = BuildColumnHeader();
+        var columnStrip = _columns.BuildHeader();
         DockPanel.SetDock(columnStrip, Dock.Bottom);
         headerStack.Children.Add(columnStrip);
         headerStack.Children.Add(BuildControlsHeader());
@@ -570,7 +564,7 @@ public sealed partial class ArrangementPanel : Grid
         _controlsScroll.ContextMenuOpening += (_, e) =>
         {
             for (var d = e.OriginalSource as DependencyObject; d is not null; d = d is Visual or System.Windows.Media.Media3D.Visual3D ? VisualTreeHelper.GetParent(d) : LogicalTreeHelper.GetParent(d))
-                if (d is UIElement el && el != _controls && !ReferenceEquals(el, _addLaneRow) && _controls.Children.Contains(el)) { e.Handled = true; return; }   // the Add-track lane is empty space: it keeps the pane's menu
+                if (d is UIElement el && el != _controls && !ReferenceEquals(el, _addLane.Row) && _controls.Children.Contains(el)) { e.Handled = true; return; }   // the Add-track lane is empty space: it keeps the pane's menu
             _controlsScroll.ContextMenu = BuildEmptyAreaMenu(new Control[] { AutoFitItem() });
         };
         // The header strip (gaps between the buttons, column header row): the same "Show tracks in groups" item above the pane's items.
@@ -722,15 +716,16 @@ public sealed partial class ArrangementPanel : Grid
         _timeline.SectionLaneContextRequested += (_, at) => SectionLaneContextRequested?.Invoke(this, at);
         _timeline.ContextRequested += (_, context) => TimelineContextRequested?.Invoke(this, context);
         _timeline.KeyboardContextRequested += (_, _) => TimelineKeyboardContextRequested?.Invoke(this, EventArgs.Empty);
-        _timeline.ClipEditStarting += (_, _) => ClipEditStarting?.Invoke(this, EventArgs.Empty);
-        _timeline.ClipEdited += (_, clip) => ClipEdited?.Invoke(this, clip);
-        _timeline.ClipContextRequested += (track, clip, sec) => ClipContextRequested?.Invoke(track, clip, sec);
-        _timeline.ClipPropertiesRequested += (track, clip) => ClipPropertiesRequested?.Invoke(track, clip);
+        var clipGestures = _timeline.ClipGestures;
+        clipGestures.ClipEditStarting += (_, _) => ClipEditStarting?.Invoke(this, EventArgs.Empty);
+        clipGestures.ClipEdited += (_, clip) => ClipEdited?.Invoke(this, clip);
+        clipGestures.ClipContextRequested += (track, clip, sec) => ClipContextRequested?.Invoke(track, clip, sec);
+        clipGestures.ClipPropertiesRequested += (track, clip) => ClipPropertiesRequested?.Invoke(track, clip);
         _timeline.MediaDropped += plan => MediaDropped?.Invoke(plan);
-        _timeline.ClipMoveRequested += (clip, from, plan, copy) => ClipMoveRequested?.Invoke(clip, from, plan, copy);
-        _timeline.MidiClipToNotation += (clip, from, to) => MidiClipToNotation?.Invoke(clip, from, to);
-        _timeline.LaneClicked += (track, lane, sec) => LaneClicked?.Invoke(track, lane, sec);
-        _timeline.ClipLaneSelected += (track, lane, midi, ctrl) => ClipLaneSelected?.Invoke(track, lane, midi, ctrl);
+        clipGestures.ClipMoveRequested += (clip, from, plan, copy) => ClipMoveRequested?.Invoke(clip, from, plan, copy);
+        clipGestures.MidiClipToNotation += (clip, from, to) => MidiClipToNotation?.Invoke(clip, from, to);
+        clipGestures.LaneClicked += (track, lane, sec) => LaneClicked?.Invoke(track, lane, sec);
+        clipGestures.ClipLaneSelected += (track, lane, midi, ctrl) => ClipLaneSelected?.Invoke(track, lane, midi, ctrl);
         _timeline.TrackDragPreviewChanged += (_, preview) =>
         {
             if (!preview.active)
@@ -773,7 +768,7 @@ public sealed partial class ArrangementPanel : Grid
     // Include a small per-row allowance for device-pixel rounding/borders so the final track is not
     // clipped at fractional DPI scales.
     public double PreferredHeight(int trackCount) =>
-        RulerHeight + SectionHeight + (_project is { } p ? RowsHeight(p) : trackCount * TrackRowHeight) + AddLaneExtra + 2;
+        RulerHeight + SectionHeight + (_project is { } p ? RowsHeight(p) : trackCount * TrackRowHeight) + _addLane.Extra + 2;
 
     /// <summary>Test hook: the laid-out height of each track-control row.</summary>
     internal IReadOnlyList<double> TrackRowActualHeights => _trackRows.Select(r => r.ActualHeight).ToList();
@@ -873,7 +868,7 @@ public sealed partial class ArrangementPanel : Grid
     }
 
     /// <summary>Caches the timeline grid as a GPU texture (see MainWindow.ApplyGpuLayerCaches).</summary>
-    public void SetTimelineCache(CacheMode cache) => _timeline.CacheMode = cache;
+    public void SetTimelineCache(CacheMode cache) => _timeline.SetGpuCache(cache);
 
     public void SetPlaybar(UIElement playbar)
     {
@@ -938,7 +933,7 @@ public sealed partial class ArrangementPanel : Grid
             Background = (Brush)Application.Current.FindResource("Panel2Brush"),
             BorderBrush = (Brush)Application.Current.FindResource("BorderBrush"),
             BorderThickness = new Thickness(1),
-            Content = TuningButtonContent(), ToolTip = "Global tuning: click to open the tuning window · double-click to type a semitone shift · right-click for quick options (tune up or down a semitone, back to original)"
+            Content = _tuning.BuildContent(), ToolTip = "Global tuning: click to open the tuning window · double-click to type a semitone shift · right-click for quick options (tune up or down a semitone, back to original)"
         };
         TuningButton.SetResourceReference(Control.BackgroundProperty, "Panel2Brush");
         TuningButton.SetResourceReference(Control.BorderBrushProperty, "BorderBrush");
@@ -986,7 +981,7 @@ public sealed partial class ArrangementPanel : Grid
         mixer.Click += (_, _) => MixerRequested?.Invoke(this, EventArgs.Empty);
         DockPanel.SetDock(mixer, Dock.Right);
         panel.Children.Add(mixer);
-        AttachTuningGestures();
+        _tuning.Attach(TuningButton);
         DockPanel.SetDock(_playbarHost, Dock.Left);
         panel.Children.Add(_playbarHost);
         return panel;

@@ -39,8 +39,7 @@ public partial class MainWindow
     private AppSettings _settings { get => _settingsStore.Settings; set => _settingsStore.Replace(value, this); }
     /// <summary>The settings file could not be read: defaults are active and nothing is saved until Preferences are applied.</summary>
     private bool _settingsLoadFailed => _settingsStore.LoadFailed;
-    private Dictionary<string, string> _hotkeyMap = new(StringComparer.OrdinalIgnoreCase);
-    private Dictionary<string, string> _clipHotkeyMap = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HotkeyMaps _hotkeys = new();
     private bool _confirmOnClose = true;
 
     private NotationMode PreferredNotation =>
@@ -72,7 +71,7 @@ public partial class MainWindow
             if (!_settings.General.PlaybackControllerDocked)
                 _dockWorkspace.FloatPanelAt("playback", new Point(100, 100), 340, 180);
         }
-        ApplyInstrumentSizeLock();
+        WorkspaceLayouts.ApplyInstrumentSizeLock();
         // Full notation + TAB is the fallback. Retain a valid mode from older settings even if its
         // explicit-preference marker predates the current schema.
         if (!_settings.NotationPreferenceSet)
@@ -89,7 +88,7 @@ public partial class MainWindow
         _settings.General.AssociateFiles = Environment.ProcessPath is { } exePath && FileAssociations.IsRegistered(exePath); // registry is the truth
         SyncFromSettings(applyWindowSize: true);
         _suppressWorkspaceSave = false;
-        RefreshDockPanelsMenu();
+        WorkspaceLayouts.RefreshDockPanelsMenu();
     }
 
     /// <summary>
@@ -98,17 +97,15 @@ public partial class MainWindow
     /// </summary>
     private void OnSharedSettingsChanged(object? source)
     {
-        if (ReferenceEquals(source, this) || !_mainWindowInitialized || _sharedSettingsRefreshQueued) return;
-        _sharedSettingsRefreshQueued = true;   // coalesced: many saves in a row cost one refresh
+        if (ReferenceEquals(source, this) || !_mainWindowInitialized || _applied.SharedRefreshQueued) return;
+        _applied.SharedRefreshQueued = true;   // coalesced: many saves in a row cost one refresh
         PostIfOpen(() =>
         {
-            _sharedSettingsRefreshQueued = false;
+            _applied.SharedRefreshQueued = false;
             BuildHotkeyMap();
             RefreshHotkeyTooltips();
         }, DispatcherPriority.Background);
     }
-
-    private bool _sharedSettingsRefreshQueued;
 
     private void OnSharedSettingsSaveFailed(object? source, Exception error)
     {
@@ -119,29 +116,25 @@ public partial class MainWindow
     /// <summary>Pushes settings into runtime state, the view toggles, the theme and the hotkey map.</summary>
     // What the visual settings looked like when last applied: re-theming and re-laying-out the score is
     // skipped when a settings change did not touch them (it would stutter the playhead while playing).
-    private string? _appliedVisualSettings;
-    private bool _visualSettingsChanged = true;
+    private readonly AppliedSettings _applied = new();
 
     private void SyncFromSettings(bool applyWindowSize)
     {
-        var visualKey = JsonSerializer.Serialize(_settings.Appearance) + JsonSerializer.Serialize(_settings.Follow) +
-                        JsonSerializer.Serialize(_settings.Timeline);
-        _visualSettingsChanged = !string.Equals(visualKey, _appliedVisualSettings, StringComparison.Ordinal);
-        _appliedVisualSettings = visualKey;
+        _applied.TakeVisual(_settings);
         var s = _settings;
 
-        _leftHanded = s.Editing.LeftHanded;
-        _showNoteNames = s.Editing.ShowNoteNames;
+        InstrumentPane.LeftHanded = s.Editing.LeftHanded;
+        InstrumentPane.ShowNoteNames = s.Editing.ShowNoteNames;
         _previewNotes = s.Audio.PreviewNotes;
-        var instrumentBefore = (_previewHorizon, _scaleHighlight, _fretboardFrets, _leftHanded, _showNoteNames,
+        var instrumentBefore = (InstrumentPane.PreviewHorizon, InstrumentPane.ScaleHighlight, InstrumentPane.FretboardFrets, InstrumentPane.LeftHanded, InstrumentPane.ShowNoteNames,
             _options.Visual.Gp5Mode);
-        _previewHorizon = s.Editing.PreviewNotesEnabled ? Math.Clamp(s.Editing.PreviewHorizon, 1, 10) : 0;
+        InstrumentPane.PreviewHorizon = s.Editing.PreviewNotesEnabled ? Math.Clamp(s.Editing.PreviewHorizon, 1, 10) : 0;
         ApplyFretboardStyle(s.Audio.FretboardStyle);
-        _scaleHighlight = s.Editing.ScaleHighlight;
-        _fretboardFrets = s.Editing.FretboardFrets is 12 or 24 ? s.Editing.FretboardFrets : 24;
+        InstrumentPane.ScaleHighlight = s.Editing.ScaleHighlight;
+        InstrumentPane.FretboardFrets = s.Editing.FretboardFrets is 12 or 24 ? s.Editing.FretboardFrets : 24;
         _scoreWheelScrollPixels = Math.Clamp(s.Editing.ScoreWheelScrollPixels, 12, 96);
         // Fretboard options only showed after the next note/playhead move; redraw it now when one changed.
-        if (instrumentBefore != (_previewHorizon, _scaleHighlight, _fretboardFrets, _leftHanded, _showNoteNames,
+        if (instrumentBefore != (InstrumentPane.PreviewHorizon, InstrumentPane.ScaleHighlight, InstrumentPane.FretboardFrets, InstrumentPane.LeftHanded, InstrumentPane.ShowNoteNames,
                 _options.Visual.Gp5Mode) && _mainWindowInitialized)
             RefreshInstrument();
         Editor.CurrentDurationDenominator = new[] { 1, 2, 4, 8, 16, 32, 64 }.Contains(s.Editing.DefaultDuration)
@@ -210,7 +203,7 @@ public partial class MainWindow
         TabEditorControl.ConfigureScoreTextStyle(s.Appearance.ScoreFontFamily, s.Appearance.ScoreTextSize,
             s.Appearance.ScoreTextBold, s.Appearance.ScoreTextItalic);
         TabEditorControl.ConfigureTextAreas(s.Appearance.ScoreTextAreas);
-        if (_visualSettingsChanged) Editor.InvalidateScoreLayout();
+        if (_applied.VisualChanged) Editor.InvalidateScoreLayout();
         Arrangement.SectionBracketThickness = Math.Clamp(s.Appearance.SectionBracketThickness, 1, 24);
         Arrangement.SectionGlowIntensity = Math.Clamp(follow.SectionGlowIntensity, 0, 1);
         Arrangement.ShowBarNumbers = s.Timeline.ShowBarNumbers;
@@ -231,7 +224,7 @@ public partial class MainWindow
         Arrangement.ShowAddTrackLane = s.Timeline.ShowAddTrackLane;
         ArrangementIndividualNotesMenu.IsChecked = Arrangement.ShowIndividualNotes;
         ArrangementContinuousBlocksMenu.IsChecked = Arrangement.ShowContinuousBlocks;
-        if (_mainWindowInitialized) ApplyInstrumentSizeLock();   // "Lock fretboard size" is a Preferences row too
+        if (_mainWindowInitialized) WorkspaceLayouts.ApplyInstrumentSizeLock();   // "Lock fretboard size" is a Preferences row too
         SetSectionGlowResources(Arrangement.SectionGlowIntensity);
         ApplyIconSize(s.Appearance.IconSize); // UI scale is applied to the whole window by ThemeService
 
@@ -248,12 +241,12 @@ public partial class MainWindow
             ? fretboardPosition
             : FretboardHorizontalPosition.Centre;
         ArrangementMenu.IsChecked = s.Appearance.ShowArrangementOverview;
-        PracticeNamesCheck.IsChecked = _showNoteNames;
-        LeftHandedCheck.IsChecked = _leftHanded;
-        PracticePreviewCheck.IsChecked = _previewHorizon > 0;
+        PracticeNamesCheck.IsChecked = InstrumentPane.ShowNoteNames;
+        LeftHandedCheck.IsChecked = InstrumentPane.LeftHanded;
+        PracticePreviewCheck.IsChecked = InstrumentPane.PreviewHorizon > 0;
         PreviewNotesMenu.IsChecked = _previewNotes;
-        PreviewHorizonSlider.Value = _previewHorizon;
-        FretboardFretsCombo.SelectedIndex = _fretboardFrets == 12 ? 1 : 0;
+        PreviewHorizonSlider.Value = InstrumentPane.PreviewHorizon;
+        FretboardFretsCombo.SelectedIndex = InstrumentPane.FretboardFrets == 12 ? 1 : 0;
         MetronomeMenu.IsChecked = _transport.Metronome;
         SetTransportActive(MetronomeButton, _transport.Metronome);
         CountInMenu.IsChecked = _transport.CountIn;
@@ -261,56 +254,20 @@ public partial class MainWindow
 
         Tabs.Settings = _tabSettings;
         Tabs.Refresh();
-        if (_visualSettingsChanged) ApplyAppearance();
+        if (_applied.VisualChanged) ApplyAppearance();
         if (_mainWindowInitialized) ApplyNotationFromSettings(); // default score display changed in Settings
-        SyncInstrumentViewSetting();
+        InstrumentPane.SyncInstrumentViewSetting();
         RefreshToolsPalette();
         ApplyPanelVisibility();
         BuildHotkeyMap();
         RefreshHotkeyTooltips();
         // A changed audio driver, device, channel pair or rate reaches the engine now (only when a setting differs).
-        var asioNow = string.Equals(_settings.Plugins.Driver, AudioDrivers.Asio, StringComparison.Ordinal);
         if (_mainWindowInitialized && _settings.Plugins.PlayAllThroughEngine != _engine.Mixer.PlayAllThroughEngine)
             _settings.Plugins.PlayAllSetAutomatically = false; // the user changed it by hand: a manual choice is kept
-        if (asioNow && !_asioWasSelected) AutoEnablePlayAllThroughEngine(); // ASIO just selected (or active at start)
-        else if (!asioNow && _asioWasSelected) AutoDisablePlayAllThroughEngine(); // ASIO deselected
-        _asioWasSelected = asioNow;
         var routeChanged = _engine.Mixer.PlayAllThroughEngine != _settings.Plugins.PlayAllThroughEngine;
         _engine.Mixer.PlayAllThroughEngine = _settings.Plugins.PlayAllThroughEngine;
         TabForge.Audio.RoutedMidiOutput.WindowsMidiLatencyMs = _settings.Plugins.WindowsMidiLatencyMs;
         if (_mainWindowInitialized) { SyncAudioEngine(); if (routeChanged) _midi.Rebuild(_project); }
-    }
-
-    private bool _asioWasSelected;
-    private int _pluginTotal = -1;
-
-    private int CountPlugins() => _project?.Tracks.Sum(t => t.Rig.Plugins.Count) ?? 0;
-
-    /// <summary>
-    /// Trigger events only (plug-in added, ASIO selected, song with plug-ins opened): with "turn on automatically" set, really ticks
-    /// "play the whole song through the engine". Never runs continuously, so the user can untick it afterwards.
-    /// </summary>
-    private void AutoEnablePlayAllThroughEngine()
-    {
-        // The engine is on by default for every song and driver; only the user's own Settings toggle changes it, so a manual
-        // "off" is never switched back on by adding a plug-in or selecting ASIO.
-    }
-
-    /// <summary>
-    /// The reverse trigger (last plug-in removed, ASIO deselected, song without plug-ins opened): Windows MIDI is preferred again,
-    /// but only when the automatic rule itself turned the option on, the driver is not ASIO and no track has a plug-in.
-    /// </summary>
-    private void AutoDisablePlayAllThroughEngine()
-    {
-        // No automatic switch-off any more (removing the last plug-in or leaving ASIO used to turn the engine off).
-    }
-
-    /// <summary>Song opened or switched: a song with plug-ins turns the option on, and the plug-in count restarts from this song.</summary>
-    private void AutoEnableForSong()
-    {
-        _pluginTotal = CountPlugins();
-        if (_pluginTotal > 0 || string.Equals(_settings.Plugins.Driver, AudioDrivers.Asio, StringComparison.Ordinal)) AutoEnablePlayAllThroughEngine();
-        else AutoDisablePlayAllThroughEngine();
     }
 
     /// <summary>Applies the Appearance settings to the live UI (colours, font, density, paper).</summary>
@@ -354,15 +311,13 @@ public partial class MainWindow
         Tabs.Visibility = _settings.Appearance.ShowTabStrip ? Visibility.Visible : Visibility.Collapsed;
         InstrumentViewMenu.IsChecked = _dockWorkspace?.IsPanelVisible("instrument") == true;
         ArrangementMenu.IsChecked = _dockWorkspace?.IsPanelVisible("timeline") == true;
-        RefreshDockPanelsMenu();
+        WorkspaceLayouts.RefreshDockPanelsMenu();
     }
 
     /// <summary>Maps every effective key gesture to its command id.</summary>
     private void BuildHotkeyMap()
     {
-        _hotkeyMap = HotkeyCatalog.BuildMap(_settings.Hotkeys);
-        _clipHotkeyMap = HotkeyCatalog.BuildMap(_settings.Hotkeys, clipContext: true);
-        _trackRowHotkeyMap = HotkeyCatalog.BuildMap(_settings.Hotkeys, trackRowContext: true);
+        _hotkeys.Rebuild(_settings.Hotkeys);
         RefreshMenuGestures();
     }
 
@@ -374,6 +329,7 @@ public partial class MainWindow
     {
         // Note/beat commands belong to the editor (and are tested there without a window).
         if (Editor.TryRunNoteCommand(id)) return true;
+        if (RunPaneHotkey(id)) return true;
         var args = new RoutedEventArgs();
         switch (id)
         {
@@ -431,30 +387,11 @@ public partial class MainWindow
             case "Bar.Check": CheckBars_Click(this, args); return true;
             case "Bar.ScoreInfo": ScoreInfo_Click(this, args); return true;
             case "Section.Add": AddSectionAt(Editor.SelectedMeasure); return true;
-            case "View.InstrumentView": CycleInstrumentView(); return true;
-            case "Tools.ScaleFinder": OpenScaleFinder(); return true;
             case "Tools.Transpose": Transpose_Click(this, args); return true;
             case "Tools.Tuner": Tuner_Click(this, args); return true;
-            case "View.ClearScale": ClearScaleHighlight(); return true;
-            case "View.ScaleHighlightBrighter":
-            case "View.ScaleHighlightDimmer":
-            {
-                var step = id =="View.ScaleHighlightBrighter" ? ScaleHighlightStyles.StrengthStep : -ScaleHighlightStyles.StrengthStep;
-                _settings.Editing.ScaleHighlightStrength = Math.Clamp(_settings.Editing.ScaleHighlightStrength + step, ScaleHighlightStyles.MinStrength, ScaleHighlightStyles.MaxStrength);
-                SetInstrumentAppearance();
-                StatusText.Text = $"Scale highlight strength: {_settings.Editing.ScaleHighlightStrength}%";
-                return true;
-            }
-            case "View.CycleStringSpacing": SetInstrumentAppearance(stringSpacing: FretStringSpacings.Next(_settings.Editing.FretStringSpacing)); StatusText.Text = $"Fretboard string spacing: {_settings.Editing.FretStringSpacing}"; return true;
             case "View.ToggleAddTrackLane": ToggleAddTrackLane(); return true;
             case "View.CyclePlayheadStyle": _settings.Timeline.PlayheadStyle = PlayheadStyles.Next(_settings.Timeline.PlayheadStyle); Arrangement.PlayheadStyle = _settings.Timeline.PlayheadStyle; SaveSettings(); StatusText.Text = $"Playback position marker: {_settings.Timeline.PlayheadStyle}"; return true;
             case "View.Mixer": OpenMixer(); return true;
-            case "View.SidePanel": ToggleSidePanel(); return true;
-            case "View.InstrumentPanel": ToggleInstrumentPanel(); return true;
-            case "View.LockInstrumentSize": ToggleInstrumentSizeLock(); return true;
-            case "View.LayoutCompose": SwitchLayout("Compose"); return true;
-            case "View.LayoutPractice": SwitchLayout("Practice"); return true;
-            case "View.LayoutMix": SwitchLayout("Mix"); return true;
             case "Transport.Record": ToggleRecording(); return true;
             case "Timeline.Snap": _settings.Timeline.Snap.Enabled = !_settings.Timeline.Snap.Enabled; Arrangement.UpdateSnapButton(); SaveSettings(); StatusText.Text = _settings.Timeline.Snap.Enabled ? "Snapping on" : "Snapping off"; return true;
             case "Track.Arm": if (SelectedTrack is { } armTrack) ToggleArm(armTrack); return true;
@@ -483,6 +420,7 @@ public partial class MainWindow
             case "Note.Text": Text_Click(this, args); return true;
             case "Track.Add": AddGuitar_Click(this, args); return true;
             case "Track.Delete": DeleteTrack_Click(this, args); return true;
+            case var range when HotkeyCatalog.IsRangeAction(range): return RunRangeHotkey(range);   // from the command palette: the selected bars
             case "TrackRow.Copy": case "TrackRow.Cut": case "TrackRow.Paste": case "TrackRow.Duplicate": case "TrackRow.Delete":
                 return TrackFlow.RunHotkey(id, TrackMixerGrid.SelectedIndex);   // from the command palette: the selected track
             case "Track.Properties": TrackProps_Click(this, args); return true;
@@ -490,12 +428,40 @@ public partial class MainWindow
             case "Track.Previous": SelectTrack(-1); return true;
             case "View.Multitrack": Multitrack_Click(this, args); return true;
             case "View.Global": GlobalView_Click(this, args); return true;
-            case "View.Fullscreen": Fullscreen_Click(this, args); return true;
             case "View.SmoothFollow": SetSmoothFollow(!_follow.Continuous); return true;
             case "View.HorizontalScroll": SetHorizontalScoreView(!Editor.HorizontalScroll); return true;
             case "View.PlayingBar": SetPlayingBar(!_settings.Follow.PlayingBarEnabled); return true;
-            case "View.ZoomIn": ZoomBy(1); return true;
-            case "View.ZoomOut": ZoomBy(-1); return true;
+        }
+        return false;
+    }
+
+    /// <summary>The fretboard, workspace layout and zoom commands of <see cref="RunHotkey"/>.</summary>
+    private bool RunPaneHotkey(string id)
+    {
+        switch (id)
+        {
+            case "View.InstrumentView": InstrumentPane.CycleInstrumentView(); return true;
+            case "Tools.ScaleFinder": InstrumentPane.OpenScaleFinder(); return true;
+            case "View.ClearScale": InstrumentPane.ClearScaleHighlight(); return true;
+            case "View.ScaleHighlightBrighter":
+            case "View.ScaleHighlightDimmer":
+            {
+                var step = id =="View.ScaleHighlightBrighter" ? ScaleHighlightStyles.StrengthStep : -ScaleHighlightStyles.StrengthStep;
+                _settings.Editing.ScaleHighlightStrength = Math.Clamp(_settings.Editing.ScaleHighlightStrength + step, ScaleHighlightStyles.MinStrength, ScaleHighlightStyles.MaxStrength);
+                InstrumentPane.SetInstrumentAppearance();
+                StatusText.Text = $"Scale highlight strength: {_settings.Editing.ScaleHighlightStrength}%";
+                return true;
+            }
+            case "View.CycleStringSpacing": InstrumentPane.SetInstrumentAppearance(stringSpacing: FretStringSpacings.Next(_settings.Editing.FretStringSpacing)); StatusText.Text = $"Fretboard string spacing: {_settings.Editing.FretStringSpacing}"; return true;
+            case "View.SidePanel": WorkspaceLayouts.ToggleSidePanel(); return true;
+            case "View.InstrumentPanel": ToggleInstrumentPanel(); return true;
+            case "View.LockInstrumentSize": WorkspaceLayouts.ToggleInstrumentSizeLock(); return true;
+            case "View.LayoutCompose": WorkspaceLayouts.SwitchLayout("Compose"); return true;
+            case "View.LayoutPractice": WorkspaceLayouts.SwitchLayout("Practice"); return true;
+            case "View.LayoutMix": WorkspaceLayouts.SwitchLayout("Mix"); return true;
+            case "View.Fullscreen": WorkspaceLayouts.ToggleFullscreen(); return true;
+            case "View.ZoomIn": ScoreZoom.ZoomBy(1); return true;
+            case "View.ZoomOut": ScoreZoom.ZoomBy(-1); return true;
         }
         return false;
     }
@@ -507,9 +473,7 @@ public partial class MainWindow
     private void RefreshHotkeyTooltips()
     {
         Views.TooltipShortcuts.SetHotkeys(_settings.Hotkeys);
-        // Palette tooltips carry their key too; rebuilt here so a rebind shows at once.
-        foreach (var tool in AllPaletteTools())
-            if (_paletteButtons.TryGetValue(tool.Id, out var palette)) palette.Button.ToolTip = PaletteToolTip(tool);
+        ToolPalette.RefreshTooltips();
     }
 
     /// <summary>Parses "#RRGGBB", falling back to a sane default rather than throwing.</summary>
@@ -549,27 +513,27 @@ public partial class MainWindow
             s.ShowInstrument = InstrumentViewMenu.IsChecked;
             s.ShowArrangement = ArrangementMenu.IsChecked;
             s.DarkPaper = Editor.DarkPaper;
-            s.LeftHanded = _leftHanded;
-            s.ShowNoteNames = _showNoteNames;
+            s.LeftHanded = InstrumentPane.LeftHanded;
+            s.ShowNoteNames = InstrumentPane.ShowNoteNames;
             s.PreviewNotes = _previewNotes;
-            s.PreviewHorizon = _previewHorizon;
-            s.ScaleHighlight = _scaleHighlight;
-            s.FretboardFrets = _fretboardFrets;
-            s.ZoomFactor = _zoomFactor;
+            s.PreviewHorizon = InstrumentPane.PreviewHorizon;
+            s.ScaleHighlight = InstrumentPane.ScaleHighlight;
+            s.FretboardFrets = InstrumentPane.FretboardFrets;
+            s.ZoomFactor = ScoreZoom.Factor;
             s.Metronome = _transport.Metronome;
             s.CountIn = _transport.CountIn;
             s.Speed = _transport.Speed;
 
-            s.Editing.LeftHanded = _leftHanded;
-            s.Editing.ShowNoteNames = _showNoteNames;
+            s.Editing.LeftHanded = InstrumentPane.LeftHanded;
+            s.Editing.ShowNoteNames = InstrumentPane.ShowNoteNames;
             s.Editing.DefaultDuration = Editor.CurrentDurationDenominator;
             s.Editing.AutoAdvance = Editor.AutoAdvanceAfterEntry;
-            s.Editing.PreviewHorizon = _previewHorizon == 0
+            s.Editing.PreviewHorizon = InstrumentPane.PreviewHorizon == 0
                 ? Math.Clamp(s.Editing.PreviewHorizon, 1, 10)
-                : _previewHorizon;
-            s.Editing.PreviewNotesEnabled = _previewHorizon > 0;
-            s.Editing.ScaleHighlight = _scaleHighlight;
-            s.Editing.FretboardFrets = _fretboardFrets;
+                : InstrumentPane.PreviewHorizon;
+            s.Editing.PreviewNotesEnabled = InstrumentPane.PreviewHorizon > 0;
+            s.Editing.ScaleHighlight = InstrumentPane.ScaleHighlight;
+            s.Editing.FretboardFrets = InstrumentPane.FretboardFrets;
             s.Editing.ScoreWheelScrollPixels = _scoreWheelScrollPixels;
             s.Audio.PreviewNotes = _previewNotes;
             s.Audio.Metronome = _transport.Metronome;
@@ -637,22 +601,20 @@ public partial class MainWindow
         ApplyNotationFromSettings();
     }
 
-    private NotationMode? _appliedNotationPreference;
-
     private void ApplyNotationFromSettings()
     {
         var s = _settings;
         // The default display applies to new tabs; changing it in Settings also switches the open tab
         // (like the View menu). Other settings changes leave each tab's own display alone.
         var preferred = PreferredNotation;
-        if (_appliedNotationPreference is { } previous && previous != preferred)
+        if (_applied.Notation is { } previous && previous != preferred)
         {
             Editor.Notation = preferred;
             Doc.Notation = preferred;
             Editor.InvalidateMeasure();
             Editor.InvalidateScoreLayout();
         }
-        _appliedNotationPreference = preferred;
+        _applied.Notation = preferred;
         Editor.DarkPaper = !string.Equals(s.Appearance.ScorePaper, "Light", StringComparison.OrdinalIgnoreCase);
     }
 

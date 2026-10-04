@@ -98,7 +98,7 @@ public partial class MainWindow
         internal void MetronomeButton_PreviewMouseRightButtonUp(object sender, MouseButtonEventArgs e) => _window.MetronomeButton_PreviewMouseRightButtonUp(sender, e);
         internal System.Windows.Controls.Primitives.Popup MetronomeSettingsPopup => _window.MetronomeSettingsPopup;
         internal Task OpenDocumentFromPath(string path, bool replaceCurrent = false, bool replaceAll = false) => _window.OpenDocumentFromPath(path, replaceCurrent, replaceAll);
-        internal void OpenScaleFinder() => _window.OpenScaleFinder();
+        internal void OpenScaleFinder() => _window.InstrumentPane.OpenScaleFinder();
         internal void OpenStartupFile(string path, bool background = true) => _window.OpenStartupFile(path, background);
         internal void PlayFromStart() => _window.PlayFromStart();
         internal DocumentPlaybackState Playback => _window.Playback;
@@ -109,7 +109,7 @@ public partial class MainWindow
         internal RecordingController Recorder => _window.Recorder;
         internal void RefreshArrangement() => _window.RefreshArrangement();
         internal void RefreshInstrument() => _window.RefreshInstrument();
-        internal void RefreshLayoutsMenu() => _window.RefreshLayoutsMenu();
+        internal void RefreshLayoutsMenu() => _window.WorkspaceLayouts.RefreshLayoutsMenu();
         internal void RefreshTracks() => _window.RefreshTracks();
         internal void ScoreInfo_Click(object sender, RoutedEventArgs e) => _window.ScoreInfo_Click(sender, e);
         internal System.Windows.Controls.ScrollViewer ScoreScroll => _window.ScoreScroll;
@@ -118,7 +118,7 @@ public partial class MainWindow
         internal TrackModel? SelectedTrack => _window.SelectedTrack;
         internal void SetContinuousScoreView(bool continuous) => _window.SetContinuousScoreView(continuous);
         internal void SetHorizontalScoreView(bool horizontal) => _window.SetHorizontalScoreView(horizontal);
-        internal void SetInstrumentView(string? view, TrackModel? track = null) => _window.SetInstrumentView(view, track);
+        internal void SetInstrumentView(string? view, TrackModel? track = null) => _window.InstrumentPane.SetInstrumentView(view, track);
         internal void SetLoopActive(bool loop) => _window.SetLoopActive(loop);
         internal void SetNotation(NotationMode mode) => _window.SetNotation(mode);
         internal void SetPaper(bool dark) => _window.SetPaper(dark);
@@ -132,7 +132,7 @@ public partial class MainWindow
         internal Audio.SongClock SongClock => _window.SongClock;
         internal System.Windows.Controls.TextBlock StatusText => _window.StatusText;
         internal void StopPlayback() => _window.StopPlayback();
-        internal void SwitchLayout(string name) => _window.SwitchLayout(name);
+        internal void SwitchLayout(string name) => _window.WorkspaceLayouts.SwitchLayout(name);
         internal void SyncFromSettings(bool applyWindowSize) => _window.SyncFromSettings(applyWindowSize);
         internal System.Windows.Controls.Border TitleBar => _window.TitleBar;
         internal void ToggleArm(TrackModel track) => _window.ToggleArm(track);
@@ -147,14 +147,14 @@ public partial class MainWindow
         internal DockWorkspace? _dockWorkspace { get => _window._dockWorkspace; set => _window._dockWorkspace = value; }
         internal DocumentManager _documents => _window._documents;
         internal ScoreFollowCoordinator _follow => _window._follow;
-        internal MenuItem? _layoutsMenu { get => _window._layoutsMenu; set => _window._layoutsMenu = value; }
+        internal MenuItem? _layoutsMenu { get => _window.WorkspaceLayouts.LayoutsMenu; set => _window.WorkspaceLayouts.LayoutsMenu = value; }
         internal PlaybackEngine _midi => _window._midi;
-        internal Dictionary<string, FrameworkElement> _palettePanelContents => _window._palettePanelContents;
+        internal Dictionary<string, FrameworkElement> _palettePanelContents => _window.ToolPalette.PanelContents;
         internal int _playheadBar { get => _window._playheadBar; set => _window._playheadBar = value; }
         internal double _playheadFraction { get => _window._playheadFraction; set => _window._playheadFraction = value; }
         internal bool _probeNoSave { get => _window._probeNoSave; set => _window._probeNoSave = value; }
         internal SongProject _project { get => _window._project; set => _window._project = value; }
-        internal string? _scaleHighlight { get => _window._scaleHighlight; set => _window._scaleHighlight = value; }
+        internal string? _scaleHighlight { get => _window.InstrumentPane.ScaleHighlight; set => _window.InstrumentPane.ScaleHighlight = value; }
         internal SelectionModel _selection => _window._selection;
         internal AppSettings _settings { get => _window._settings; set => _window._settings = value; }
     }

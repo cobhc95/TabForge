@@ -75,6 +75,8 @@ public sealed class InstrumentVisualState
     public double NumberScale = 0.85;
     /// <summary>Multiplier (0.75 .. 1.5) of the natural string-gap cap; see <see cref="FretboardGeometry.MaxGapToFretWidth"/>.</summary>
     public double StringSpacing = 1.0;
+    /// <summary>Scale (0.6 .. 1.6) of the note bubbles and their numbers; 1.0 is the original size.</summary>
+    public double MarkerScale = 1.0;
 }
 
 public enum InstrumentKind { Guitar, Bass, Drums, Keyboard, Unknown }

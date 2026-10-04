@@ -240,7 +240,7 @@ public sealed record MidiProcSpec(string Type, bool Enabled, string ParamsJson);
 public sealed record EngineConfig(string Driver, string Device, int SampleRate, int BufferSize, bool SeparateProcessPerPlugin, string InputDevice = "", int AsioInput = 0, int AsioOutput = 0, int AsioInputLast = 1, bool AsioInputs = true, bool FollowWindowsVolume = true, int AsioOutputLast = 1);
 
 /// <summary>One audio clip to play on a track: file, song position and processing.</summary>
-public sealed record ClipSpec(string File, double StartSec, double OffsetSec, double SourceLengthSec, double GainDb, double Pitch, double Speed);
+public sealed record ClipSpec(string File, double StartSec, double OffsetSec, double SourceLengthSec, double GainDb, double Pitch, double Speed, double FadeInSec = 0, double FadeOutSec = 0);
 
 /// <summary>
 /// Framing: [int32 length][byte type][payload]. Payloads use BinaryWriter primitives. Every read is bounded so a
@@ -324,7 +324,7 @@ public static class Frames
         w.Write(clips.Count);
         foreach (var c in clips)
         {
-            w.WriteString(c.File); w.Write(c.StartSec); w.Write(c.OffsetSec); w.Write(c.SourceLengthSec); w.Write(c.GainDb); w.Write(c.Pitch); w.Write(c.Speed);
+            w.WriteString(c.File); w.Write(c.StartSec); w.Write(c.OffsetSec); w.Write(c.SourceLengthSec); w.Write(c.GainDb); w.Write(c.Pitch); w.Write(c.Speed); w.Write(c.FadeInSec); w.Write(c.FadeOutSec);
         }
     }
 
@@ -338,7 +338,7 @@ public static class Frames
             var file = r.ReadBoundedString(1024);
             double Finite(double v, double min, double max) => double.IsFinite(v) ? Math.Clamp(v, min, max) : min;
             list.Add(new ClipSpec(file, Finite(r.ReadDouble(), 0, 86_400), Finite(r.ReadDouble(), 0, 86_400), Finite(r.ReadDouble(), 0, 86_400),
-                Finite(r.ReadDouble(), -96, 24), Finite(r.ReadDouble(), -24, 24), Finite(r.ReadDouble(), 0.25, 4)));
+                Finite(r.ReadDouble(), -96, 24), Finite(r.ReadDouble(), -24, 24), Finite(r.ReadDouble(), 0.25, 4), Finite(r.ReadDouble(), 0, 3_600), Finite(r.ReadDouble(), 0, 3_600)));
         }
         return list;
     }

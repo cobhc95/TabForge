@@ -89,7 +89,7 @@ public partial class MainWindow
     {
         _project.IsDirty = true;
         _midi.RefreshMix(_project);       // live volume/pan, no timeline rebuild
-        _mixerWindow?.SyncValues();       // an open mixer follows the track list: values in place, rebuild only on structure change
+        MixerWindows.Mixer?.SyncValues();       // an open mixer follows the track list: values in place, rebuild only on structure change
         RefreshTabs();
         UpdateTitle();
     }
@@ -122,7 +122,7 @@ public partial class MainWindow
         Arrangement.SetLoopEnabled(ShowLoopOnTimeline);
         StatusText.Text = _loop
             ? $"Looping bars {start + 1}-{end + 1}"
-            : $"Loop range set to bars {start + 1}-{end + 1} (press {TooltipShortcuts.Append("Loop", "Transport.Loop")} to play in loops)";
+            : BarRangePromptText.Tip(start, end, MenuKey);
     }
 
     /// <summary>Song or track selection changed: keep the mixer, FX windows and audio engine in step.</summary>
@@ -208,7 +208,7 @@ public partial class MainWindow
 
     private void RefreshScaleHighlightCombo()
     {
-        var previous = _scaleHighlight;
+        var previous = InstrumentPane.ScaleHighlight;
         ScaleHighlightCombo.Items.Clear();
         ScaleHighlightCombo.Items.Add("Off");
         foreach (var root in MusicTheoryService.NoteNames)
@@ -258,7 +258,8 @@ public partial class MainWindow
         var label = s == e ? $"bar {s + 1}" : $"bars {s + 1}-{e + 1}";
         var skipped = _skipRanges.Any(r => r.Start == s && r.End == e);
         var state = new SelectionMenuState(s == e ? $"Bar {s + 1} selected" : $"Bars {s + 1}-{e + 1} selected",
-            TimelineClips.CanPasteOnTimeline(ClipboardService.Shared.TryGetClip(out _)), _loop, skipped, _skipRanges.Count > 0);
+            TimelineClips.CanPasteOnTimeline(ClipboardService.Shared.TryGetClip(out _)), _loop, skipped, _skipRanges.Count > 0,
+            EmptyBars.InRange(_project, s, e).Count);
         return NewTimelineMenu("Arrangement timeline selection options", TimelineMenus.Selection(state, MenuKey), command =>
         {
             switch (command)
@@ -267,7 +268,8 @@ public partial class MainWindow
                 case TimelineCommand.CopySelection: _sections.CopyArea(Doc, s, e); break;
                 case TimelineCommand.CutSelection: _sections.CopyArea(Doc, s, e); _sections.DeleteArea(Doc, s, e, "Cut"); break;
                 case TimelineCommand.PasteSelection: _sections.PasteAreaAt(Doc, s); break;
-                case TimelineCommand.DeleteSelection: _sections.DeleteArea(Doc, s, e, "Deleted"); break;
+                case TimelineCommand.DeleteSelection: _sections.Range.Delete(Doc, s, e); break;
+                case TimelineCommand.DeleteEmptyBars: _sections.DeleteEmptyInRange(Doc, s, e); break;
                 case TimelineCommand.LoopSelection: SetLoopActive(!_loop); break;
                 case TimelineCommand.MoveSelection: Arrangement.BeginAreaMove(s, e); break;
                 case TimelineCommand.SkipSelection:
@@ -333,8 +335,7 @@ public partial class MainWindow
                 case TimelineCommand.PasteSectionHere: _sections.PasteSectionAt(Doc, bar); break;
                 case TimelineCommand.InsertBarBefore: _sections.InsertBar(Doc, bar); break;
                 case TimelineCommand.InsertBarAfter: _sections.InsertBar(Doc, bar + 1); break;
-                case TimelineCommand.DeleteBar: _sections.DeleteBar(Doc, bar, selectedTrack, allTracks: false); break;
-                case TimelineCommand.DeleteBarAllTracks: _sections.DeleteBar(Doc, bar, selectedTrack, allTracks: true); break;
+                case TimelineCommand.DeleteBar or TimelineCommand.DeleteBarAllTracks: _sections.Range.Delete(Doc, bar, bar); break;   // the same prompt as a selection
                 case TimelineCommand.ToggleSectionLockAtBar when section is not null:
                     DocumentEdits.Run(Doc, _ => { section.LockPosition = !section.LockPosition; return true; });
                     RefreshAfterEdit(EditRefresh.Arrangement | EditRefresh.Markers);
@@ -441,7 +442,16 @@ public partial class MainWindow
     {
         private readonly MainWindow _window;
 
-        public SectionHost(MainWindow window) => _window = window;
+        public SectionHost(MainWindow window)
+        {
+            _window = window;
+            // The Delete key on selected whole bars without notes asks to remove the bars before it clears beats.
+            window.Editor.BeforeDelete = () =>
+            {
+                var (m1, c1, m2, c2) = window.Editor.SelectionCellRange;
+                return window.Editor.HasSelection && window._sections.TryDeleteSelectedEmpty(window.Doc, window.Editor.SelectedTrackIndex, m1, c1, m2, c2);
+            };
+        }
 
         public AppSettings Settings => _window._settings;
         public void SaveSettings() => _window.SaveSettings();
@@ -475,6 +485,11 @@ public partial class MainWindow
 
         public bool ConfirmWarning(string text, string caption) =>
             MessageBox.Show(_window, text, caption, MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) == MessageBoxResult.Yes;
+
+        public bool Ask(string title, string text, string yesText, bool withUndoHint) => ConfirmPrompt.Ask(_window, title, text, yesText, withUndoHint);
+
+        public BarRangeAnswer? AskBarRange(string text, BarRangeAction preselect, bool allTracks) =>
+            BarRangePrompt.Ask(_window, text, preselect, allTracks, id => _window.MenuKey(id));
 
         public void ShowLastBarWarning() => MessageBox.Show(_window,
             "The last remaining bar cannot be removed from a song.", "Section not removed",

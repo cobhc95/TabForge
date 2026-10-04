@@ -5,6 +5,9 @@ on:
     branches: ['**']
     tags: ['v*']
   pull_request:
+  # The full suite (tests/full-suite) runs weekly and on manual dispatch; pushes and pull requests run the basic set.
+  schedule:
+    - cron: '0 3 * * 1'
   workflow_dispatch:
 
 permissions:
@@ -20,6 +23,8 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 20
     env:
+      # 'true' on the weekly schedule and manual dispatch: the full suite is compiled in and run.
+      FULL_SUITE: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
       # Run as on a clean checkout: the copyrighted sample songs in Tabs/ are not part of the repository, so every
       # check that needs them must skip (reported in the log), never fail.
       TABFORGE_NO_LOCAL_SONGS: '1'
@@ -37,8 +42,11 @@ jobs:
         run: dotnet restore TabForge.sln --locked-mode
 
       - name: Build (Release)
-        # CI is the full gate: the full suite (tests/full-suite) is compiled in with TabForgeFullSuite.
-        run: dotnet build TabForge.sln -c Release --no-restore -p:TabForgeFullSuite=true
+        # The full suite (tests/full-suite) is compiled in with TabForgeFullSuite only on schedule or dispatch.
+        shell: pwsh
+        run: |
+          $full = if ($env:FULL_SUITE -eq 'true') { '-p:TabForgeFullSuite=true' } else { '-p:TabForgeFullSuite=false' }
+          dotnet build TabForge.sln -c Release --no-restore $full
 
       - name: Self-test (headless)
         shell: pwsh
@@ -49,7 +57,10 @@ jobs:
           # tree or installer script cannot be found (the working directory is the repository root).
           # TabForge.exe is a WPF (GUI-subsystem) executable: start it and wait for it to exit. --selftest opens no
           # main window, needs no audio device (the engine tests use the headless harness and a null output).
-          $p = Start-Process -FilePath $exe -ArgumentList @('--selftest', "`"$log`"", '--require', 'ci') -Wait -PassThru
+          # The basic set (a normal build) requires only the groups it contains; the full suite requires every CI group.
+          $testArgs = if ($env:FULL_SUITE -eq 'true') { @('--selftest', "`"$log`"", '--require', 'ci') }
+            else { @('--selftest', "`"$log`"", '--areas', 'basic', '--require', 'source-hygiene,installer-parity,architecture') }
+          $p = Start-Process -FilePath $exe -ArgumentList $testArgs -Wait -PassThru
           "self-test exit code: $($p.ExitCode)"
           if (-not (Test-Path -LiteralPath $log)) { Write-Error 'self-test log was not written'; exit 2 }
           Select-String -Path $log -Pattern '^\s+(SKIP|FAIL)\s|self-test:' | ForEach-Object { $_.Line }

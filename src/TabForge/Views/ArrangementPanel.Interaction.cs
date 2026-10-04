@@ -15,6 +15,8 @@ using TabForge.Plugins;
 using TabForge.Services;
 using TabForge.Visualization;
 
+using static TabForge.Views.TrackRowWidgets;
+
 namespace TabForge.Views;
 
 // ArrangementPanel: track-row drag to reorder and inline track-name editing.
@@ -110,32 +112,6 @@ public sealed partial class ArrangementPanel
         _dragTargetTrack = -1;
         _dragArmed = false;
         UpdateDragVisual();
-    }
-
-    private static bool IsInside(DependencyObject? element, DependencyObject ancestor)
-    {
-        while (element is not null)
-        {
-            if (ReferenceEquals(element, ancestor)) return true;
-            element = VisualTreeHelper.GetParent(element);
-        }
-        return false;
-    }
-
-    private static bool IsInteractiveTrackControl(DependencyObject? element, Border row)
-    {
-        while (element is not null && !ReferenceEquals(element, row))
-        {
-            if (element is ButtonBase or Slider or ComboBox or ComboBoxItem or KnobControl or Thumb or FxSplitButton or RecordArmButton or MonitorButton) return true;
-            if (element is TextBox textBox && !textBox.IsReadOnly) return true;
-            // Dropdown items live in a popup: its visual tree ends at the popup root, not the row,
-            // but the click still routes here. Treat anything inside a popup as interactive.
-            var parent = VisualTreeHelper.GetParent(element);
-            if (parent is null && element is FrameworkElement { Parent: System.Windows.Controls.Primitives.Popup }) return true;
-            if (parent is null && element.GetType().Name == "PopupRoot") return true;
-            element = parent;
-        }
-        return false;
     }
 
     private void FinishTrackNameEdit(TextBox name, TrackModel track, bool commit)

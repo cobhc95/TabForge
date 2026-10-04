@@ -403,7 +403,7 @@ public static partial class SelfTest
             foreach (var r in new[] { MessageBoxResult.No, MessageBoxResult.No, MessageBoxResult.Cancel }) answers.Enqueue(r);
             w.Close();
             SettleLifetimeDispatcher();
-            var discardSet = LtField<System.Collections.IEnumerable>(w, "_discardOnClose")!.Cast<object>().Count();
+            var discardSet = LtField<System.Collections.IEnumerable>(LtField<object>(w, "_closeFlow")!, "_discardOnClose")!.Cast<object>().Count();
             Check("document context: with three dirty tabs the window asks about each; Cancel at the third leaves the window open, every tab dirty and nothing marked as discarded",
                 dirtyCount == 3 && asked.Count == 3 && w.IsVisible && w.OpenDocuments.Count == 3 && w.OpenDocuments.All(d => d.HasUnsavedChanges) && discardSet == 0,
                 $"dirty {dirtyCount}, asked {asked.Count}, visible {w.IsVisible}, tabs {w.OpenDocuments.Count}, still dirty {w.OpenDocuments.Count(d => d.HasUnsavedChanges)}, discard marks {discardSet}");

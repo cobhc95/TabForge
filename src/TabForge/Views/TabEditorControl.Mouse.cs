@@ -27,10 +27,10 @@ public sealed partial class TabEditorControl
     /// any other click snaps to the nearest allowed position.
     /// </summary>
     internal static int ResolveBeatHitCell(MeasureModel measure, double slotPosition, int fallbackCell,
-        IReadOnlyList<TabCell>? voiceCells = null)
+        IReadOnlyList<TabCell>? voiceCells = null, int barSlots = 0)
     {
         if (!double.IsFinite(slotPosition)) return fallbackCell;
-        return CursorPositions.Resolve(voiceCells ?? measure.Cells, slotPosition);
+        return CursorPositions.Resolve(voiceCells ?? measure.Cells, slotPosition, barSlots);
     }
 
     /// <summary>True when the beat (measure, cell) lies inside the current score selection (false without a selection).</summary>

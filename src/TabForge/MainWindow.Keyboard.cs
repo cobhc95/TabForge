@@ -54,7 +54,7 @@ public partial class MainWindow
             if (!e.IsRepeat)
             {
                 if (IsRecording) ToggleRecording();   // Space ends a recording (and playback, if Record started it)
-                else if (_hotkeyMap.TryGetValue(gesture, out var spaceAction) && RunHotkey(spaceAction)) { }
+                else if (_hotkeys.Global.TryGetValue(gesture, out var spaceAction) && RunHotkey(spaceAction)) { }
                 else if (mods == ModifierKeys.Shift) PlayFromStart();
                 else TogglePlayback();
             }
@@ -67,13 +67,20 @@ public partial class MainWindow
         if (!inText && mods.HasFlag(ModifierKeys.Control) && !mods.HasFlag(ModifierKeys.Alt)
             && e.Key is Key.OemPlus or Key.Add or Key.OemMinus or Key.Subtract)
         {
-            ZoomBy(e.Key is Key.OemPlus or Key.Add ? 1 : -1);
+            ScoreZoom.ZoomBy(e.Key is Key.OemPlus or Key.Add ? 1 : -1);
             e.Handled = true;
             return;
         }
 
         // A selected clip (or a clicked clip lane) owns its keys first: Delete, arrows, Esc, Ctrl+C/X/V/D...
-        if (!inText && ClipContextActive && _clipHotkeyMap.TryGetValue(gesture, out var clipAction) && _clips.RunHotkey(Doc, clipAction))
+        if (!inText && ClipContextActive && _hotkeys.Clip.TryGetValue(gesture, out var clipAction) && _clips.RunHotkey(Doc, clipAction))
+        {
+            e.Handled = true;
+            return;
+        }
+
+        // Bars selected on the timeline (and the timeline focused) own Delete, Ctrl+Delete and the gap keys.
+        if (!inText && BarRangeFlow.Route(Arrangement.TimelineHasFocus, _selection.HasRange, ClipContextActive, _hotkeys.Range, gesture) is { } rangeId && RunRangeHotkey(rangeId))
         {
             e.Handled = true;
             return;
@@ -128,7 +135,7 @@ public partial class MainWindow
         // (file/print/tab). Everything else belongs to the text box.
         if (inText)
         {
-            if (_hotkeyMap.TryGetValue(gesture, out var textAction)
+            if (_hotkeys.Global.TryGetValue(gesture, out var textAction)
                 && HotkeyCatalog.AllowsInTextBox(textAction)
                 && RunHotkey(textAction))
                 e.Handled = true;
@@ -143,7 +150,7 @@ public partial class MainWindow
 
         // A bound Ctrl / Alt chord, then the editor's note entry and score navigation, then the other bindings (the map is
         // rebuilt whenever the hotkey settings change). Alt chords arrive as Key.System; the router reads the real key.
-        var target = WindowKeyRouter.Dispatch(e.Key, e.SystemKey, mods, Editor, _hotkeyMap, RunHotkey);
+        var target = WindowKeyRouter.Dispatch(e.Key, e.SystemKey, mods, Editor, _hotkeys.Global, RunHotkey);
         if (target == WindowKeyRouter.Target.Editor)
         {
             if (!Keyboard.IsKeyToggled(Key.NumLock) && rawKey is Key.Insert or Key.End or Key.Down or Key.Next or Key.Left or Key.Clear or Key.Right or Key.Home or Key.Up or Key.Prior)
@@ -187,7 +194,7 @@ public partial class MainWindow
         // Never waits here: a running or requested save cancels this close and closes again when it is done (MainWindow.File.cs).
         // Closing only decides (it can be cancelled here or by any other handler). The window's playback, observers and attachments to
         // longer-lived objects are released in Closed (ReleaseWindowResources), so a cancelled close leaves the window fully working.
-        if (!ConfirmWindowClose()) e.Cancel = true;
+        if (!CloseFlow.ConfirmWindowClose()) e.Cancel = true;
     }
 
     private void SetPlayIcon(bool playing)
@@ -199,8 +206,8 @@ public partial class MainWindow
     private void RefreshPlayingIndicators() => Tabs.SetPlayingDocuments(
         _documents.Documents.Where(session => session.Playback.Engine.IsPlaying && !session.Playback.Engine.IsPaused));
 
-    private void ZoomInButton_Click(object sender, RoutedEventArgs e) => ZoomBy(1);
-    private void ZoomOutButton_Click(object sender, RoutedEventArgs e) => ZoomBy(-1);
+    private void ZoomInButton_Click(object sender, RoutedEventArgs e) => ScoreZoom.ZoomBy(1);
+    private void ZoomOutButton_Click(object sender, RoutedEventArgs e) => ScoreZoom.ZoomBy(-1);
 
     // The instant flag: the exact content check (serialises the whole song) runs after undo/redo and
     // before closing, not on every edit.
@@ -226,7 +233,7 @@ public partial class MainWindow
         UpdateTitle();
     }
 
-    private void UpdateTitle() => Title = $"TabForge - {_project.Title}{(_project.IsDirty ? " *" : "")}{DegradedTitleSuffix}";
+    private void UpdateTitle() => Title = $"TabForge - {_project.Title}{(_project.IsDirty ? " *" : "")}{CloseFlow.DegradedTitleSuffix}";
 
     private static string SanitizeFileName(string text) => TabForge.Audio.Contracts.SafeFileNames.SafeFileName(text, "Untitled");
 }

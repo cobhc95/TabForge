@@ -25,25 +25,25 @@ public static partial class SelfTest
         int seeks = 0, tracks = 0, takes = 0;
         timeline.BarClicked += (_, _) => seeks++;
         timeline.TrackClicked += (_, _) => tracks++;
-        timeline.ClipLaneSelected += (_, _, _, _) => takes++;
+        timeline.ClipGestures.ClipLaneSelected += (_, _, _, _) => takes++;
         var x = timeline.XOfBar(2) + 20;
         var gridTop = ArrangementPanel.RulerHeight + ArrangementPanel.SectionHeight;
         Point? hit = null;
         for (var y = gridTop; y < gridTop + 400 && hit is null; y += 4)
         {
             var down = new MouseButtonEventArgs(Mouse.PrimaryDevice, 0, MouseButton.Left) { RoutedEvent = UIElement.MouseLeftButtonDownEvent };
-            if (timeline.ClipMouseDown(down, new Point(x, y)) && timeline.ClipDragActive) hit = new Point(x, y);
+            if (timeline.ClipGestures.MouseDown(down, new Point(x, y)) && timeline.ClipGestures.DragActive) hit = new Point(x, y);
         }
         Check("clip press: the press starts the drag", hit is not null);
         Check("clip press: no seek, track switch or take change before the drag", seeks == 0 && tracks == 0 && takes == 0);
         Check("clip press: a mouse move with the button released ends the drag",
-            timeline.ClipMouseMove(new MouseEventArgs(Mouse.PrimaryDevice, 0), hit ?? default) && !timeline.ClipDragActive);
+            timeline.ClipGestures.MouseMove(new MouseEventArgs(Mouse.PrimaryDevice, 0), hit ?? default) && !timeline.ClipGestures.DragActive);
         if (hit is { } p)
         {
             var down = new MouseButtonEventArgs(Mouse.PrimaryDevice, 0, MouseButton.Left) { RoutedEvent = UIElement.MouseLeftButtonDownEvent };
-            timeline.ClipMouseDown(down, p);
-            Check("clip press: a lost capture ends the drag", timeline.ClipCaptureLost() && !timeline.ClipDragActive && seeks == 0);
-            timeline.ClipMouseDown(down, p);
+            timeline.ClipGestures.MouseDown(down, p);
+            Check("clip press: a lost capture ends the drag", timeline.ClipGestures.CaptureLost() && !timeline.ClipGestures.DragActive && seeks == 0);
+            timeline.ClipGestures.MouseDown(down, p);
             var up = new MouseButtonEventArgs(Mouse.PrimaryDevice, 0, MouseButton.Left) { RoutedEvent = UIElement.MouseLeftButtonUpEvent };
             timeline.RaiseEvent(up);
             Check("clip press: a click (release without drag) seeks and selects", seeks == 1 && tracks == 1 && takes == 1);

@@ -87,6 +87,15 @@ public static partial class SelfTest
         Operation("lane down", d => Hotkey(d, "Clip.LaneDown"));
         Operation("mute", d => Hotkey(d, "Clip.Mute"));
         Operation("duplicate", d => Hotkey(d, "Clip.Duplicate"));
+        Operation("split at the edit cursor", d =>
+        {
+            CseClips(window).LaneCursor = new LaneCursor(d.Project.Tracks[0], 0, 0.4);
+            return Hotkey(d, "Clip.Split") && d.Project.Tracks[0].AudioClips.Count == 2 && Math.Abs(d.Project.Tracks[0].AudioClips[1].StartSec - 0.4) < 1e-9;
+        });
+        Operation("glue", d => Hotkey(d, "Clip.Glue") && d.Project.Tracks[0].AudioClips.Count == 1,
+            d => { var t = d.Project.Tracks[0]; arrangement.SelectedClip = ClipSplitGlue.Split(t, t.AudioClips[0], 0.4); });
+        Operation("reset fades", d => Hotkey(d, "Clip.FadeReset") && d.Project.Tracks[0].AudioClips[0].FadeInSec == 0,
+            d => d.Project.Tracks[0].AudioClips[0].FadeInSec = 0.2);
         Operation("cut", d => Hotkey(d, "Clip.Cut"));
         Operation("paste", d => Hotkey(d, "Clip.Paste"), d => Check("clip edits: copy is handled and edits nothing", Hotkey(d, "Clip.Copy")));
         Operation("move to another track", d =>
@@ -200,7 +209,7 @@ public static partial class SelfTest
         ["section move"] = "hash 4F875DF7, undo steps 1, dirty True, timeline invalidations 1, selection 0/6/0/2; status 'Section moved'",
         ["copy area"] = "hash 9F0ED3DE, undo steps 0, dirty False, timeline invalidations 0, selection 0/1/0/2; status 'Copied bars 2-3 (clipboard busy: paste works inside TabForge only)'",
         ["delete area"] = "hash A67E1EB3, undo steps 1, dirty True, timeline invalidations 1, selection 0/1/0/2; status 'Deleted bars 2-3'",
-        ["paste area"] = "hash DB9EEF48, undo steps 1, dirty True, timeline invalidations 1, selection 0/5/0/2; status 'Loop range set to bars 6-7 (press Loop (F9) to play in loops)'",
+        ["paste area"] = "hash DB9EEF48, undo steps 1, dirty True, timeline invalidations 1, selection 0/5/0/2; status 'Bars 6-7 selected · Delete asks what to do · Ctrl+Delete removes and closes the gap · right-click for more'",
         ["move area"] = "hash 229B372F, undo steps 1, dirty True, timeline invalidations 1, selection 0/4/0/2; status 'Moved bars 2-3 to bar 5'",
     };
 

@@ -19,14 +19,10 @@ public sealed partial class ArrangementPanel
         _horizontal.DragOver += OnMediaDragOver;
         _horizontal.DragLeave += (_, _) => _timeline.MediaDragLeave();
         _horizontal.Drop += OnMediaDrop;
-        _timeline.AddLaneShown = _showAddTrackLane;
-        _timeline.AddLaneClicked += RaiseTimelineAddLane;
-        _timeline.AddLaneHotChanged += hot => { _addLaneHot = hot; ApplyAddLaneState(); };
-        _timeline.AddLaneDragChanged += _ => ApplyAddLaneState();
         _timeline.DropPreviewChanged += preview => { if (!_simulatingGhost) _dropGhost.Show(preview); };
     }
 
-    private static bool AltHeld(DragEventArgs e) => (e.KeyStates & DragDropKeyStates.AltKey) != 0;
+    internal static bool AltHeld(DragEventArgs e) => (e.KeyStates & DragDropKeyStates.AltKey) != 0;
 
     private void OnMediaDragOver(object sender, DragEventArgs e)
     {
@@ -77,13 +73,13 @@ public sealed partial class ArrangementPanel
     internal DropPreview? SimulateClipMove(AudioClip clip, int fromTrack, Point press, Point to, bool copy = false, bool alt = false)
     {
         _simulatingGhost = true;   // the timeline's own event would start the fade-in; the render wants the ghost at once
-        try { _dropGhost.Show(_timeline.SimulateClipMove(clip, fromTrack, press, to, copy, alt), animate: false); }
+        try { _dropGhost.Show(_timeline.ClipGestures.SimulateMove(clip, fromTrack, press, to, copy, alt), animate: false); }
         finally { _simulatingGhost = false; }
         var preview = _timeline.CurrentDropPreview;
         return preview;
     }
 
-    internal void EndSimulatedClipMove() { _timeline.CancelClipDrag(); _dropGhost.Show(null, animate: false); }
+    internal void EndSimulatedClipMove() { _timeline.ClipGestures.Cancel(); _dropGhost.Show(null, animate: false); }
 
     internal void EndSimulatedMediaDrag() => _dropGhost.Show(null, animate: false);
 }

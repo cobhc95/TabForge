@@ -36,7 +36,7 @@ internal sealed partial class TrackTimeline
         return new Rect(XOfBar(bar), top + 1, Math.Max(1, WidthOfBar(bar) - 1), ArrangementPanel.RowHeightFor(Project) - 2);
     }
 
-    private bool HoverSuppressed => _dragging || _areaMoving || _sectionDragging || _markerDragging || _resizeMarker is not null ||
+    private bool HoverSuppressed => _dragging || AreaMove.Active || _sectionDragging || SectionEdges.MarkerDragging || SectionEdges.ResizeMarker is not null ||
         Mouse.LeftButton == MouseButtonState.Pressed;
 
     private void UpdateHover(Point p)

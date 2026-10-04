@@ -10,28 +10,19 @@ namespace TabForge;
 
 // MainWindow: the Mixer window (groups, levels, sound source) and per-track FX chain windows. The windows
 // only see IMixerHost / IFxChainHost; plug-in hosting itself lives behind the audio engine client.
-public partial class MainWindow : IMixerHost, IFxChainHost
+public partial class MainWindow : IMixerHost, IFxChainHost, IMixerWindowsHost
 {
-    private MixerWindow? _mixerWindow;
-    private readonly Dictionary<TrackModel, FxChainWindow> _fxWindows = new(ReferenceEqualityComparer.Instance);
+    private MixerWindowsController? _mixerWindows;
+    private MixerWindowsController MixerWindows => _mixerWindows ??= new MixerWindowsController(this);
+    IMixerHost IMixerWindowsHost.MixerHost => this;
+    IFxChainHost IMixerWindowsHost.FxHost => this;
+    void IMixerWindowsHost.MixerSliderDragEnded() => _engineSync.MixerSliderDragEnded();
 
     /// <summary>Mixer button / hotkey: opens the mixer, or brings it forward.</summary>
-    private void OpenMixer()
-    {
-        if (_mixerWindow is { IsLoaded: true })
-        {
-            _mixerWindow.Rebuild();
-            _mixerWindow.Activate();
-            return;
-        }
-        _mixerWindow = new MixerWindow(this, this);
-        _mixerWindow.Closed += (_, _) => _mixerWindow = null;
-        _mixerWindow.SliderDragEnded += _engineSync.MixerSliderDragEnded;
-        _mixerWindow.Show();
-    }
+    private void OpenMixer() => MixerWindows.OpenMixer();
 
     /// <summary>The song or its tracks changed: keep an open mixer in step (cheap: only on structure changes).</summary>
-    private void RefreshMixerWindow() => _mixerWindow?.Rebuild();
+    private void RefreshMixerWindow() => MixerWindows.Mixer?.Rebuild();
 
     SongProject IMixerHost.Project => _project;
 
@@ -41,7 +32,7 @@ public partial class MainWindow : IMixerHost, IFxChainHost
     {
         _project.IsDirty = true;
         if (recompile) _midi.Rebuild(_project); else _midi.RefreshMix(_project);   // the MIDI sound follows at once
-        if (!recompile && _mixerWindow is { IsDraggingSlider: true })
+        if (!recompile && MixerWindows.Mixer is { IsDraggingSlider: true })
         {
             // A slider drag: as light as a track-list drag. The track list's matching slider moves in place, the plug-in
             // engine sync is coalesced to once per frame, and the full list / timeline refresh waits for the drag's end.
@@ -76,16 +67,16 @@ public partial class MainWindow : IMixerHost, IFxChainHost
         {
             _muteSoloFollowUp = false;
             if (_project.Tracks.Any(t => t.AudioClips.Count > 0 || t.MonitorInput || t.RecordArm)) SyncAudioEngine();   // clips and monitoring follow mute and solo
-            _mixerWindow?.SyncValues();
+            MixerWindows.Mixer?.SyncValues();
             if (!wasDirty) { UpdateTitle(); RefreshTabs(); }
         }));
     }
 
-    string? IMixerHost.HotkeyAction(string gesture) => _hotkeyMap.TryGetValue(gesture, out var id) ? id : null;
+    string? IMixerHost.HotkeyAction(string gesture) => _hotkeys.Global.TryGetValue(gesture, out var id) ? id : null;
 
     /// <summary>Everything that shows the track order, captured before an order change (see <see cref="PlayOrderAnimation"/>).</summary>
     private (Dictionary<object, double> List, Dictionary<object, double>? Mixer) CaptureOrderLayout() =>
-        (Arrangement.CaptureRowTops(), _mixerWindow?.CaptureLayout());
+        (Arrangement.CaptureRowTops(), MixerWindows.Mixer?.CaptureLayout());
 
     /// <summary>
     /// The track list and the open mixer show the same new order: the mixer is rebuilt in it and both start their movement
@@ -93,9 +84,9 @@ public partial class MainWindow : IMixerHost, IFxChainHost
     /// </summary>
     private void PlayOrderAnimation((Dictionary<object, double> List, Dictionary<object, double>? Mixer) before)
     {
-        _mixerWindow?.Rebuild();
+        MixerWindows.Mixer?.Rebuild();
         Arrangement.AnimateReorder(before.List);
-        _mixerWindow?.AnimateReorder(before.Mixer);
+        MixerWindows.Mixer?.AnimateReorder(before.Mixer);
     }
 
     bool IMixerHost.ReorderFromMixer(Func<SongProject, bool> apply, string status)
@@ -141,7 +132,7 @@ public partial class MainWindow : IMixerHost, IFxChainHost
     void IFxChainHost.SetMonitorUseGlobal(bool useGlobal)
     {
         if (_project.Mixer.MonitorUseGlobal == useGlobal) return;
-        foreach (var (track, window) in _fxWindows.ToList()) if (MixerBuses.IsMonitor(track)) window.Close();
+        MixerWindows.CloseFxWindows(MixerBuses.IsMonitor);
         DocumentEdits.Run(Doc, p => { p.Mixer.MonitorUseGlobal = useGlobal; return true; }, invalidatesTimeline: false);
         SyncAudioEngine();
         RefreshMixerWindow();
@@ -158,7 +149,7 @@ public partial class MainWindow : IMixerHost, IFxChainHost
         SyncAudioEngine();
         RefreshTracks();
         RefreshArrangement();
-        _mixerWindow?.SyncValues();
+        MixerWindows.Mixer?.SyncValues();
         UpdateTitle();
         StatusText.Text = $"{group} bus effects {(bus.On ? "on" : "bypassed")}";
     }
@@ -199,7 +190,7 @@ public partial class MainWindow : IMixerHost, IFxChainHost
             RefreshArrangement();
             ScheduleFitTimelineToTracks(); // group headers add rows: grow / shrink the arrangement dock to fit
             UpdateTitle();
-            _mixerWindow?.SyncValues();    // the mixer's "Groups in track list" box follows (one setting, two places)
+            MixerWindows.Mixer?.SyncValues();    // the mixer's "Groups in track list" box follows (one setting, two places)
             return;
         }
         var hidden = _settings.Timeline.HiddenTrackColumns;
@@ -251,23 +242,10 @@ public partial class MainWindow : IMixerHost, IFxChainHost
         Views.TrackColoursDialog.Show(this, _project, () => { if (!captured) { CheckpointUndo(); captured = true; } }, TrackColoursChanged);
     }
 
-    private static System.Windows.Controls.Border Swatch(string hex)
-    {
-        return new System.Windows.Controls.Border { Width = 14, Height = 14, CornerRadius = new CornerRadius(3), Background = Visualization.ColourText.BrushOr(hex) };
-    }
-
     void IMixerHost.OpenAudioSettings() => OpenSettingsCategory(SettingsCatalog.AudioVst);
 
     /// <summary>FX button on a track row / mixer strip / hotkey: that track's chain window.</summary>
-    internal void OpenFxChain(TrackModel? track)
-    {
-        if (track is null) return;
-        if (_fxWindows.TryGetValue(track, out var open) && open.IsLoaded) { open.Activate(); return; }
-        var window = new FxChainWindow(this, track, this);
-        window.Closed += (_, _) => _fxWindows.Remove(track);
-        _fxWindows[track] = window;
-        window.Show();
-    }
+    internal void OpenFxChain(TrackModel? track) => MixerWindows.OpenFxChain(track);
 
     /// <summary>The FX power switch: plays the track through its chain, or back on Windows MIDI.</summary>
     internal void ToggleTrackChain(TrackModel track)
@@ -282,7 +260,7 @@ public partial class MainWindow : IMixerHost, IFxChainHost
     {
         if (track is null) return;
         OpenFxChain(track);
-        if (_fxWindows.TryGetValue(track, out var window)) window.OpenWiring();
+        MixerWindows.FxWindowOf(track)?.OpenWiring();
     }
 
     /// <summary>Track.MidiProcessing: the FX window of the track, with the MIDI processing window of its selected (else first) plug-in on top.</summary>
@@ -290,7 +268,7 @@ public partial class MainWindow : IMixerHost, IFxChainHost
     {
         if (track is null) return;
         OpenFxChain(track);
-        if (_fxWindows.TryGetValue(track, out var window)) window.OpenMidiProcessing();
+        MixerWindows.FxWindowOf(track)?.OpenMidiProcessing();
     }
 
     IReadOnlyList<TrackModel> IFxChainHost.Tracks => _project.Tracks;
@@ -303,10 +281,6 @@ public partial class MainWindow : IMixerHost, IFxChainHost
         if (track.IsBus) MixerBuses.SyncBack(track);   // the FX window's power / plug-ins belong to the bus
         if (MixerBuses.IsMonitor(track) && _project.Mixer.MonitorUseGlobal) SaveSettings();   // the app-wide monitor chain lives in the settings, not the song
         else _project.IsDirty = true;
-        var pluginTotal = CountPlugins();
-        if (pluginTotal > _pluginTotal) AutoEnablePlayAllThroughEngine(); // a plug-in was added
-        else if (pluginTotal == 0 && _pluginTotal > 0) AutoDisablePlayAllThroughEngine(); // the last plug-in was removed
-        _pluginTotal = pluginTotal;
         SyncAudioEngine();
         _midi.Rebuild(_project);
         RefreshTracks();
@@ -343,12 +317,10 @@ public partial class MainWindow : IMixerHost, IFxChainHost
     /// <summary>Song switched or restored (undo): rebuild the mixer, close chain windows of tracks no longer shown.</summary>
     private void SyncMixerWindows()
     {
-        AutoEnableForSong();
         SyncAudioEngine();
         RefreshMixerWindow();
-        foreach (var (track, window) in _fxWindows.ToList())
-            if (!_project.Tracks.Contains(track) && !MixerBuses.IsCurrent(_project, track)
-                && !(MixerBuses.IsMonitor(track) && ReferenceEquals(track.Bus, ((IMixerHost)this).MonitorChain))) window.Close();
+        MixerWindows.CloseFxWindows(track => !_project.Tracks.Contains(track) && !MixerBuses.IsCurrent(_project, track)
+            && !(MixerBuses.IsMonitor(track) && ReferenceEquals(track.Bus, ((IMixerHost)this).MonitorChain)));
     }
 
     /// <summary>The window as the host of its <see cref="EngineSyncController"/>.</summary>

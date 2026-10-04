@@ -51,7 +51,7 @@ public static class BarFill
     private static bool IsBeat(TabCell cell) => cell.Notes.Count > 0 || cell.IsRest || cell.HasAnnotation;
 
     /// <summary>A bar the fill does not touch: free-timed positions or tuplets make its gaps ambiguous.</summary>
-    private static bool IsPlain(IReadOnlyList<TabCell> cells)
+    public static bool IsPlain(IReadOnlyList<TabCell> cells)
         => cells.All(cell => cell.RhythmicPosition is null && cell.Tuplet.Item1 <= 0);
 
     /// <summary>Puts rests into every gap of one voice. <paramref name="always"/>: an empty voice becomes one whole-bar rest (voice 1); otherwise an empty voice stays empty.</summary>
@@ -92,6 +92,16 @@ public static class BarFill
             rest.IsTriplet = false; rest.TupletNumerator = 0; rest.TupletDenominator = 0;
             at += size.Size;
         }
+    }
+
+    /// <summary>A voice with no notes and no beat text becomes a clean grid of <paramref name="slots"/> beats: one whole-bar rest (<paramref name="wholeRest"/>) or empty. Tuplets, off-grid positions and extra beats go too. Returns the result's first and last cell; null when the voice still holds notes.</summary>
+    public static (int First, int Last)? ResetEmptyVoice(List<TabCell> cells, int slots, bool wholeRest)
+    {
+        if (slots <= 0 || cells.Any(cell => cell.Notes.Count > 0 || cell.HasAnnotation)) return null;
+        cells.Clear();
+        for (var i = 0; i < slots; i++) cells.Add(new TabCell());
+        if (wholeRest) FillCells(cells, slots, always: true);
+        return (0, wholeRest ? 0 : slots - 1);
     }
 
     /// <summary>

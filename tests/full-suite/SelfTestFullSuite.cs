@@ -42,6 +42,8 @@ public static partial class SelfTest
         Guard(TestAnalyzeBar);
         Guard(TestBarIncompleteMarking);
         Guard(TestCursorSnap);
+        Guard(TestBarDeleteGuards);
+        Guard(TestBarRangeGaps);
         Guard(TestBarGridPlacement);
         Section("Duplicate bar, time and key signatures");
         Guard(TestDuplicateBarAllTracks);
@@ -72,6 +74,7 @@ public static partial class SelfTest
         Guard(TestTrackRowMenu);
         Guard(TestClipDragPress);
         Guard(TestClipWaveformSpan);
+        Guard(TestClipSplitGlueFades);
         Guard(TestKeyRoutingOrder);
         Guard(TestHotkeyTwoSlots);
         Guard(TestHotkeySettingsMigration);
@@ -177,6 +180,7 @@ public static partial class SelfTest
         Guard(TestWritingDuration);
         Guard(TestSelectionWholeBeats);
         Guard(TestRestMerge);
+        Guard(TestDeleteBarClean);
         Guard(TestNoteEditAudit);
         Guard(TestReadableTextTokens);
         Guard(TestColourChoiceEntries);
@@ -311,6 +315,7 @@ public static partial class SelfTest
         Guard(TestRoutingCycles);
         Guard(TestAutoGmEveryPath);
         Guard(TestAudioTrackRouting);
+        Guard(TestAudioTrackLiveMidi);
         Guard(TestReaperChainImport);
         Guard(TestSettingsWithInlinePluginStates);
         Guard(TestDataIntegrityLeftovers);
@@ -381,6 +386,8 @@ public static partial class SelfTest
         ["TestCellSlots"] = "core",
         ["TestCommandPaletteAndPdf"] = "core",
         ["TestCursorSnap"] = "core",
+        ["TestBarDeleteGuards"] = "document-operations",
+        ["TestBarRangeGaps"] = "document-operations",
         ["TestDataIntegrityLeftovers"] = "core",
         ["TestDocuments"] = "core",
         ["TestDuplicateBarAllTracks"] = "core",
@@ -426,6 +433,7 @@ public static partial class SelfTest
         ["TestDocumentOperations"] = "document-operations",
         ["TestSectionClips"] = "document-operations",
         ["TestAudioTrackRouting"] = "engine",
+        ["TestAudioTrackLiveMidi"] = "engine",
         ["TestAutoGmEveryPath"] = "engine",
         ["TestCallbackMetrics"] = "engine",
         ["TestChildProcessJob"] = "engine",
@@ -557,6 +565,7 @@ public static partial class SelfTest
         ["TestTypedNotePreview"] = "playback",
         ["TestCaptureResampling"] = "recording",
         ["TestClipMoves"] = "recording",
+        ["TestClipSplitGlueFades"] = "recording",
         ["TestClips"] = "recording",
         ["TestMediaDropPlan"] = "recording",
         ["TestMidiFileToClip"] = "recording",
@@ -643,6 +652,7 @@ public static partial class SelfTest
         ["TestRenderGuardContainment"] = "ui",
         ["TestResizeDuringPlayback"] = "ui",
         ["TestRestMerge"] = "ui",
+        ["TestDeleteBarClean"] = "ui",
         ["TestNoteEditAudit"] = "ui",
         ["TestRuntimeIconAndResourceKeys"] = "ui",
         ["TestScaleFinder"] = "ui",

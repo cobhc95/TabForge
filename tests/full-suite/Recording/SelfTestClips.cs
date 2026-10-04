@@ -119,7 +119,7 @@ public static partial class SelfTest
 
         // ---- mixer scales (track list and mixer share them) ----
         Check("volume 104 is step 13 of 16 and pan 64 is centre",
-            ArrangementPanel.VolumeStep(104) == 13 && ArrangementPanel.PanStep(64) == 0 && ArrangementPanel.PanStep(0) == -8 && ArrangementPanel.PanStep(127) == 8);
+            TrackControlWidgets.VolumeStep(104) == 13 && TrackControlWidgets.PanStep(64) == 0 && TrackControlWidgets.PanStep(0) == -8 && TrackControlWidgets.PanStep(127) == 8);
 
         // ---- group rows in the track list ----
         var groups = new SongProject();

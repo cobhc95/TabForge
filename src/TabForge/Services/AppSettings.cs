@@ -496,6 +496,8 @@ public sealed class EditingSettings
     public string FretMarkerBrightness { get; set; } = FretMarkerLevels.Original;
     /// <summary>Size of the fret numbers and note bubbles: "Small" (75%), "Medium" (85%) or "Large" (100%, default).</summary>
     public string FretNumberSize { get; set; } = FretNumberSizes.Large;
+    /// <summary>Note marker (bubble and number) size, 60 to 160 percent in 10% steps; 100 is the original look.</summary>
+    public int FretMarkerSizePercent { get; set; } = 100;
     /// <summary>Fretboard string spacing relative to the fret width: "Compact", "Natural" (default) or "Wide" (at most 1.5x natural).</summary>
     public string FretStringSpacing { get; set; } = FretStringSpacings.Natural;
     public int FretboardFrets { get; set; } = 24;
@@ -512,13 +514,17 @@ public sealed class EditingSettings
     /// <summary>Edits keep every bar complete: gaps become rests, a deleted beat becomes a rest. Off: bars may stay incomplete (shown red).</summary>
     public bool FillBarsWithRests { get; set; } = true;
     /// <summary>When deleting notes with the rest fill on: false leaves a rest of the same length, true leaves merged rests.</summary>
-    public bool MergeRestsOnDelete { get; set; }
+    public bool MergeRestsOnDelete { get; set; } = true;
     /// <summary>Remembered paste answers (docs/COPY_PASTE_DESIGN.md Q1..Q5): "Ask" (default) or an option id, see <see cref="PasteQuestionInfo"/>.</summary>
     public string PasteBeatsOntoNotes { get; set; } = PasteQuestionInfo.Ask;
     public string PasteOctave { get; set; } = PasteQuestionInfo.Ask;
     public string PasteBarsOntoNotes { get; set; } = PasteQuestionInfo.Ask;
     public string PasteBarSettings { get; set; } = PasteQuestionInfo.Ask;
     public string PasteDrums { get; set; } = PasteQuestionInfo.Ask;
+    /// <summary>What Delete does on bars selected on the timeline: "Ask" (default, opens the choice prompt) or a remembered <see cref="BarRangeAction"/> name.</summary>
+    public string BarRangeDelete { get; set; } = "Ask";
+    /// <summary>The option the Delete prompt preselects (the last one chosen), a <see cref="BarRangeAction"/> name.</summary>
+    public string BarRangeLastChoice { get; set; } = nameof(BarRangeAction.Clear);
 }
 
 /// <summary>Timeline and section presentation/interaction preferences.</summary>

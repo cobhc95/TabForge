@@ -483,7 +483,7 @@ public sealed class MidiProcessingWindow : Window
                 var current = values[p.Key]!.GetValue<string>();
                 combo.Items.Add(new ComboBoxItem { Content = "(none: notes unchanged)", Tag = DrumMapLibrary.None });
                 foreach (var map in DrumMapLibrary.All()) combo.Items.Add(new ComboBoxItem { Content = map.IsUser ? $"★ {map.Name}" : map.Name, Tag = map.Name });
-                combo.SelectedItem = combo.Items.Cast<ComboBoxItem>().FirstOrDefault(i => (string?)i.Tag == current) ?? combo.Items[0];
+                combo.SelectedItem = combo.Items.Cast<ComboBoxItem>().FirstOrDefault(i => (string?)i.Tag == (DrumMapLibrary.Find(current)?.Name ?? current)) ?? combo.Items[0];
                 combo.SelectionChanged += (_, _) =>
                 {
                     if (combo.SelectedItem is not ComboBoxItem { Tag: string name }) return;

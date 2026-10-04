@@ -18,7 +18,7 @@ using TabForge.Visualization;
 namespace TabForge.Views;
 
 /// <summary>Custom-drawn timeline: ruler, sections, one precise cell per measure per track.</summary>
-internal sealed partial class TrackTimeline : FrameworkElement
+internal sealed partial class TrackTimeline : FrameworkElement, IAreaMoveHost
 {
     /// <summary>The shared view options (track tint): the main window hands in the application's; a timeline on its own keeps private ones.</summary>
     public TabForge.Visualization.VisualOptions ViewOptions { get; set; } = new();
@@ -66,42 +66,17 @@ internal sealed partial class TrackTimeline : FrameworkElement
     public bool AreaVisible;
     internal double BarX(int bar) => XOfBar(Math.Clamp(bar, 0, Math.Max(0, BarCount)));
 
-    private bool _areaMoving;
-    private int _areaMoveStart, _areaMoveEnd, _areaMoveTarget = -1;
     public event EventHandler<int>? AreaMoveFinished;
-
-    public void BeginAreaMove(int start, int end)
-    {
-        _areaMoving = true;
-        _areaMoveStart = start;
-        _areaMoveEnd = end;
-        _areaMoveTarget = -1;
-        Focusable = true;
-        Focus();
-        Cursor = Cursors.SizeWE;
-    }
-
-    private void FinishAreaMove(int target)
-    {
-        _areaMoving = false;
-        _areaMoveTarget = -1;
-        Cursor = null;
-        InvalidateVisual();
-        AreaMoveFinished?.Invoke(this, target);
-    }
-
-    // Insert-before position nearest the pointer (bar boundary).
-    private int AreaMoveTargetAt(double x)
-    {
-        var bar = BarAt(x);
-        return x - XOfBar(bar) > (XOfBar(bar + 1) - XOfBar(bar)) / 2 ? bar + 1 : bar;
-    }
+    /// <summary>Moving the selected bar range: AreaMoveController.</summary>
+    internal AreaMoveController AreaMove => _areaMove ??= new AreaMoveController(this);
+    private AreaMoveController? _areaMove;
+    void IAreaMoveHost.RaiseAreaMoveFinished(int target) => AreaMoveFinished?.Invoke(this, target);
 
     protected override void OnKeyDown(KeyEventArgs e)
     {
         base.OnKeyDown(e);
-        if (e.Key == Key.Escape && CancelClipDrag()) { e.Handled = true; return; }
-        if (_areaMoving && e.Key == Key.Escape) { FinishAreaMove(-1); e.Handled = true; return; }
+        if (e.Key == Key.Escape && ClipGestures.Cancel()) { e.Handled = true; return; }
+        if (AreaMove.Active && e.Key == Key.Escape) { AreaMove.Finish(-1); e.Handled = true; return; }
         // F10 arrives as a "system" key.
         if (TryHandleContextMenuKey(e.Key == Key.System ? e.SystemKey : e.Key, Keyboard.Modifiers)) e.Handled = true;
     }
@@ -142,6 +117,16 @@ internal sealed partial class TrackTimeline : FrameworkElement
     /// <summary>A plain click (no drag past the threshold) on the grid, ruler, section lane or a lane: clears the selection.</summary>
     public event EventHandler? PlainClicked;
     public event EventHandler<(int start, int end)>? RangeDragged;
+
+    /// <summary>Test seam: a press on a lane (or the ruler, <paramref name="track"/> -1) at <paramref name="fromBar"/> dragged to <paramref name="toBar"/>, raising what the mouse raises
+    /// (<paramref name="afterPress"/> runs between the press and the drag, as the dispatcher does while the mouse moves).</summary>
+    internal void SimulateRangeDrag(int track, int fromBar, int toBar, Action? afterPress = null)
+    {
+        BarClicked?.Invoke(this, fromBar);
+        if (track >= 0) TrackClicked?.Invoke(this, track);
+        afterPress?.Invoke();
+        RangeDragged?.Invoke(this, (Math.Min(fromBar, toBar), Math.Max(fromBar, toBar)));
+    }
     public event EventHandler<(int from, int to)>? TrackReordered;
     /// <summary>A track drag has started moving (the model is untouched until the drop).</summary>
     public event EventHandler<(int from, int insertBefore)>? SectionReordered;
@@ -170,10 +155,6 @@ internal sealed partial class TrackTimeline : FrameworkElement
     private int _sectionPressOriginIndex = -1;
     private bool _sectionDragging;
     // Plain drag (no Ctrl): only the section tab moves. No lane animation, no content preview, bars untouched.
-    private bool _markerDragging;
-    private SectionHit _markerDragHit;
-    private double _markerDragX;
-    private int _markerDragTargetBar = -1;
     private int _sectionDropBefore = -1;
     private bool _sectionSettling;
     private bool _renderingSectionPreview;
@@ -202,7 +183,23 @@ internal sealed partial class TrackTimeline : FrameworkElement
 
     private readonly Dictionary<int, Drawing> _dragLanes = new();
     private double _dragLaneScroll = double.NaN;
-    private CacheMode? _cacheBeforeDrag;
+    private CacheMode? _wantedCache;
+
+    /// <summary>The GPU texture cache the window asks for (playback composites the playhead over it); applied only when it can help.</summary>
+    internal void SetGpuCache(CacheMode? cache) { _wantedCache = cache; UpdateCache(); }
+
+    /// <summary>
+    /// The timeline is one texture only while it is static and small enough for the GPU: never during a zoom or a lane animation (the
+    /// texture would be re-rendered every step), and never wider than 8,000 device pixels (a long song zoomed in) — a texture over the
+    /// GPU's size limit falls back to slow software drawing on every change.
+    /// </summary>
+    internal void UpdateCache()
+    {
+        var dpi = VisualTreeHelper.GetDpi(this).PixelsPerDip;
+        var fits = Math.Max(ActualWidth, TotalWidth) * dpi <= 8000 && ActualHeight * dpi <= 8000;
+        var cache = _wantedCache is not null && fits && !_animatingLanes && !_waveZooming ? _wantedCache : null;
+        if (!ReferenceEquals(CacheMode, cache)) CacheMode = cache;
+    }
     private bool _animatingLanes;
 
     /// <summary>
@@ -214,8 +211,7 @@ internal sealed partial class TrackTimeline : FrameworkElement
         if (_animatingLanes) return;
         _animatingLanes = true;
         _dragLanes.Clear();
-        _cacheBeforeDrag = CacheMode;
-        CacheMode = null;
+        UpdateCache();
     }
 
     private void EndLaneAnimation()
@@ -225,8 +221,7 @@ internal sealed partial class TrackTimeline : FrameworkElement
         _dragLanes.Clear();
         ReleaseLaneVisuals();
         InvalidateVisual();
-        CacheMode = _cacheBeforeDrag;
-        _cacheBeforeDrag = null;
+        UpdateCache();
     }
 
     private int _laneAnimToken;

@@ -1,6 +1,7 @@
 using TabForge.Documents;
 using TabForge.Models;
 using TabForge.Services;
+using TabForge.Views;
 
 namespace TabForge.Controllers;
 
@@ -43,6 +44,10 @@ internal interface ISectionEditHost
     /// <summary>A yes/no question with "No" as the default; true on yes.</summary>
     bool ConfirmWarning(string text, string caption);
     void ShowLastBarWarning();
+    /// <summary>A themed question with a destructive <paramref name="yesText"/> button and Cancel as the default; true on yes.</summary>
+    bool Ask(string title, string text, string yesText, bool withUndoHint);
+    /// <summary>The Delete-on-bars choice prompt (null on Cancel).</summary>
+    BarRangeAnswer? AskBarRange(string text, BarRangeAction preselect, bool allTracks);
 }
 
 // Owns: the bar, section and area commands of the arrangement timeline: copy, cut, paste, duplicate, insert, delete and move.
@@ -57,12 +62,28 @@ internal sealed class SectionEditFlow
 {
     private readonly ISectionEditHost _host;
     private readonly ArrangementController _arrangement;
+    private readonly EmptyBarFlow _empty;
 
     public SectionEditFlow(ISectionEditHost host, ArrangementController arrangement)
     {
         _host = host;
         _arrangement = arrangement;
+        _empty = new EmptyBarFlow(host, arrangement);
+        Range = new BarRangeFlow(host);
     }
+
+    /// <summary>The bar-range commands (clear, remove, insert a gap) and the Delete prompt.</summary>
+    public BarRangeFlow Range { get; }
+
+    /// <summary>The Delete key on selected whole bars without notes: asks, then removes them (true = handled).</summary>
+    public bool TryDeleteSelectedEmpty(DocumentSession doc, int trackIndex, int m1, int c1, int m2, int c2) => _empty.TryDeleteSelectedEmpty(doc, trackIndex, m1, c1, m2, c2);
+
+    public void DeleteEmptyInRange(DocumentSession doc, int start, int end) => _empty.DeleteEmptyInRange(doc, start, end);
+
+    /// <summary>Warns before bars are deleted under audio or MIDI clips; false when the user cancels.</summary>
+    private bool ConfirmClips(SongProject project, int start, int endInclusive) =>
+        ClipDeleteImpact.Find(project, new[] { (start, endInclusive) }) is not { } impact
+        || _host.Ask("Delete bars", ClipDeleteImpact.Describe(impact), "Continue", withUndoHint: false);
 
     private static string WithNote(string status, string note) => note.Length > 0 ? $"{status} ({note})" : status;
 
@@ -184,6 +205,7 @@ internal sealed class SectionEditFlow
                 $"Delete the '{marker.Title}' section and its bars and notes from every track? Undo can restore them.", "Delete Section"))
             return;
 
+        if (_arrangement.TryGetSectionBounds(doc.Project, marker, out var from, out var to) && !ConfirmClips(doc.Project, from, to - 1)) return;
         var caret = _host.Caret;
         if (_arrangement.DeleteSection(doc, marker, takeClips).Value is not { } removal) return;
         var mappedSelection = caret.Bar >= 0 && caret.Bar < removal.OldToNewBar.Length
@@ -217,6 +239,7 @@ internal sealed class SectionEditFlow
         {
             if (BarRangeEditor.MaxMeasures(project) <= 1) return;
             if (_host.Settings.Editing.ConfirmDeleteBar && !_host.ConfirmWarning($"Delete bar {bar + 1} from every track?", "Delete bar")) return;
+            if (!ConfirmClips(project, bar, bar)) return;
             var oldBars = BarRangeEditor.MaxMeasures(project);
             if (!_arrangement.DeleteBar(doc, bar, -1, allTracks: true, moveMarkers: true).Changed) return;
             if (BarRangeEditor.MaxMeasures(project) < oldBars) _host.RemapSelection(SelectionModel.RemoveMap(oldBars, bar, bar));
@@ -259,6 +282,7 @@ internal sealed class SectionEditFlow
     public void DeleteArea(DocumentSession doc, int start, int end, string verb)
     {
         if (!_host.IsShown(doc)) return;
+        if (!ConfirmClips(doc.Project, start, end)) return;
         if (_arrangement.DeleteBars(doc, start, end).Value is not { } map) { _host.ShowLastBarWarning(); return; }
         _host.EndLoop();
         _host.ClearSelection();   // score and timeline drop the deleted range together

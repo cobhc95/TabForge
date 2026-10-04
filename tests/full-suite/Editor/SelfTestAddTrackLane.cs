@@ -38,7 +38,7 @@ public static partial class SelfTest
         var song = AtlSong();
         var panel = new ArrangementPanel();
         panel.Bind(song, Array.Empty<Playback.MidiOutputDeviceInfo>());
-        var window = new Window { Content = panel, Width = 1100, Height = 500 };
+        var window = new Window { Content = panel, Width = 1000, Height = 500 };   // inside the CI work area (1024x728)
         using var alive = KeepAlive();
         try
         {
@@ -56,7 +56,8 @@ public static partial class SelfTest
             var gridTop = ArrangementPanel.RulerHeight + ArrangementPanel.SectionHeight;
             var rows = ArrangementPanel.RowsHeight(song);
             // The lane is the whole empty zone below the last row (at least one row), at several pane sizes.
-            foreach (var h in new[] { 260.0, 500, 900 })
+            // Heights stay inside the work area: Windows clamps a taller window (small CI screens).
+            foreach (var h in new[] { 260.0, 500, 700 })
             {
                 window.Height = h;
                 window.UpdateLayout();

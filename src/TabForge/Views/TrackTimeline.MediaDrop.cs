@@ -33,10 +33,10 @@ internal sealed partial class TrackTimeline
     private int _dropLeaveToken;
     private (SongProject Project, (int, int) Key, SongQuarterMap Map)? _quarterMap;
 
-    internal DropPreview? CurrentDropPreview => _dropPreview;
+    public DropPreview? CurrentDropPreview => _dropPreview;
 
     /// <summary>Song seconds and quarter notes (cached per song timeline).</summary>
-    private SongQuarterMap QuarterMap()
+    public SongQuarterMap QuarterMap()
     {
         var project = Project!;
         var key = SongClock.TimelineKey(project);
@@ -121,7 +121,7 @@ internal sealed partial class TrackTimeline
     /// <summary>Test / render hook: the drag is these items (as if they had just entered).</summary>
     internal void SetDropItemsForTest(MediaDropSession? session) { _dropSession?.Dispose(); _dropSession = session; _dropKey = null; ForgetDropData(); }
 
-    private void SetDropPreview(DropPreview? preview)
+    public void SetDropPreview(DropPreview? preview)
     {
         if (preview is null) { _dropKey = null; SetAddLaneDrag(false); }
         if (ReferenceEquals(preview, _dropPreview)) return;
@@ -153,7 +153,7 @@ internal sealed partial class TrackTimeline
         return DropGeometry(plan, p, items);
     }
 
-    private DropPreview DropGeometry(MediaDropPlan plan, Point p, IReadOnlyList<DropItem> items)
+    public DropPreview DropGeometry(MediaDropPlan plan, Point p, IReadOnlyList<DropItem> items)
     {
         var project = Project!;
         var laneHeight = ArrangementPanel.AudioLaneHeight;

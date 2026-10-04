@@ -19,7 +19,7 @@ internal static class TrackRowMenus
 
     public static List<MenuSpec> Build(TrackRowMenuState s, Func<string, string> key)
     {
-        var colours = ArrangementPanel.TrackColourPalette.Select(c => new MenuSpec
+        var colours = TrackControlWidgets.TrackColourPalette.Select(c => new MenuSpec
         {
             Header = c.Name, Id = Colour, Arg = c.Hex, Checkable = true, Radio = true,
             Checked = string.Equals(c.Hex, s.ColourHex, StringComparison.OrdinalIgnoreCase), NoSetting = "state of one track (saved in the song)"

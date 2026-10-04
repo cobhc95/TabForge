@@ -26,7 +26,7 @@ public partial class MainWindow
             return _settings.Plugins.Quarantined.ToList();
         },
         CheckForUpdatesNow = CheckForUpdatesFromSettings,   // Settings > General > Updates > Check now
-        ShowAllTracksAs = view => SetInstrumentView(view, null),   // Settings > Fretboard > Show all tracks as
+        ShowAllTracksAs = view => InstrumentPane.SetInstrumentView(view, null),   // Settings > Fretboard > Show all tracks as
     };
 
     private void UpdateMediaApprovalBar() => _services.Approvals.UpdateMediaApprovalBar();

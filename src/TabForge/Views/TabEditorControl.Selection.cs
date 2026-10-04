@@ -31,10 +31,10 @@ public sealed partial class TabEditorControl
         var track = Track; if (track is null) return;
         // Steps over the allowed cursor positions (beat starts and the append slot), like the arrow keys.
         if (m < 0 || m >= track.Measures.Count) return;
-        var step = direction > 0 ? CursorPositions.Next(CellsFor(track.Measures[m]), c) : CursorPositions.Previous(CellsFor(track.Measures[m]), c);
+        var step = direction > 0 ? CursorPositions.Next(CellsFor(track.Measures[m]), c, SlotsFor(m)) : CursorPositions.Previous(CellsFor(track.Measures[m]), c, SlotsFor(m));
         if (step >= 0) c = step;
         else if (direction > 0) { m++; c = 0; }
-        else { m--; c = m >= 0 ? CursorPositions.Allowed(CellsFor(track.Measures[m])).Last() : 0; }
+        else { m--; c = m >= 0 ? CursorPositions.Allowed(CellsFor(track.Measures[m]), SlotsFor(m)).Last() : 0; }
         if (m < 0 || m >= track.Measures.Count) return;
         _sel.SetEnd(m, c);
         InvalidateVisual();

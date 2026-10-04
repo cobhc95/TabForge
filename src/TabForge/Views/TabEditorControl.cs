@@ -110,7 +110,7 @@ public sealed partial class TabEditorControl : FrameworkElement, IScoreLayoutHos
     /// <summary>Fill incomplete bars with rests (the setting): edits keep every edited bar complete.</summary>
     public bool FillBarsWithRests { get; set; }
     /// <summary>Deleting notes leaves merged rests (the fewest that fill the bar) instead of a rest of the same length.</summary>
-    public bool MergeRestsOnDelete { get; set; }
+    public bool MergeRestsOnDelete { get; set; } = true;
     private void PlusDuration() { if (ReversePlusMinusDuration) Longer(); else Shorter(); }
     private void MinusDuration() { if (ReversePlusMinusDuration) Shorter(); else Longer(); }
     public int CurrentDots { get; set; } = 0;

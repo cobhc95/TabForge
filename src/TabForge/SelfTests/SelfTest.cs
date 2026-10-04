@@ -67,6 +67,7 @@ public static partial class SelfTest
         Guard(TestProjectRoundtrip);
         Guard(TestEditorEntry);
         Guard(TestEverySettingIsWired);
+        Guard(TestFretMarkerSize);
         Guard(TestHeadlessDeviceReconfigure);
         Section("Basic set: repository hygiene");
         Guard(TestSourceControlCharacters);
@@ -132,7 +133,7 @@ public static partial class SelfTest
         ["TestArchitectureDocumentOperations"] = "architecture", ["TestArchitectureGuards"] = "architecture", ["TestArchitectureLayering"] = "architecture", ["TestEveryTestHasAnArea"] = "architecture",
         ["TestDebuggingDocInSync"] = "hygiene", ["TestFeatureMapInSync"] = "hygiene", ["TestInstallerAssociationParity"] = "hygiene", ["TestLooseSoundTouchAndLicenseTexts"] = "hygiene",
         ["TestOnlyOption"] = "hygiene", ["TestPublicDocsConsistency"] = "hygiene", ["TestRequireArgumentStrings"] = "hygiene", ["TestRequiredGroupGate"] = "hygiene",
-        ["TestSourceControlCharacters"] = "hygiene", ["TestStartHereAndRecipesInSync"] = "hygiene", ["TestEditorEntry"] = "smoke", ["TestEverySettingIsWired"] = "smoke",
+        ["TestSourceControlCharacters"] = "hygiene", ["TestStartHereAndRecipesInSync"] = "hygiene", ["TestEditorEntry"] = "smoke", ["TestEverySettingIsWired"] = "smoke", ["TestFretMarkerSize"] = "smoke",
         ["TestHeadlessDeviceReconfigure"] = "smoke", ["TestModelRoundTrip"] = "smoke", ["TestProjectRoundtrip"] = "smoke",
         };
         AddFullSuiteAreas(areas);

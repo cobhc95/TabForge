@@ -264,6 +264,14 @@ These share keys with score commands on purpose: they act only while a clip is s
 | Copy / cut / paste track | While a track row of the track list has the focus (not the score or timeline); Paste goes after the focused track under a unique name. Also in the track row's right-click menu. | `TrackRow.Copy` / `TrackRow.Cut` / `TrackRow.Paste` | Ctrl+C / Ctrl+X / Ctrl+V |
 | Duplicate track | Right after itself, while a track row has the focus. | `TrackRow.Duplicate` | Ctrl+D |
 | Delete track (track row) | Asks first (Enter keeps the track); undo restores it. | `TrackRow.Delete` | Delete |
+| Delete selected bars | While bars are selected on the timeline and the timeline has the focus (a drag across bars gives it the focus), or "Delete…" in the range menu: opens a prompt (clear, remove and close the gap, insert a gap before or after; All tracks (default) or This track; arrows, Enter, Esc). "Remember my answer" makes Delete do that directly (Settings > Editing > Safety turns the prompt back on). | `Range.Delete` | Delete |
+| Delete selected bars (leave a gap) | Empties the bars of every track and leaves a gap (the bar count, sections and clips stay). | `Range.Clear` | |
+| Delete selected bars (close the gap) | Removes the bars and closes the gap: later bars, sections, markers and clips move earlier, clips inside go, clips across an edge are cut. One track: that track shifts left and empty bars fill its end. | `Range.Remove` | Ctrl+Delete |
+| Insert a gap before the selection | Empty bars as long as the selection in front of it; the selection and later clips move later. | `Range.InsertBefore` | Ctrl+Shift+Space |
+| Insert a gap after the selection | Empty bars as long as the selection right after it. | `Range.InsertAfter` | |
+| Split clip | At the edit cursor (the spot last clicked on the lane), or under the playhead; both parts keep offset, gain, pitch and speed. | `Clip.Split` | S |
+| Glue clips | Joins the clip with the clips that continue it on its lane (same file, speed, pitch and level). | `Clip.Glue` | Ctrl+Shift+G |
+| Reset clip fades | Removes the fade-in and fade-out (drag the handles at the clip's top corners to set them). | `Clip.FadeReset` | |
 | Mute clip | Mute or unmute. | `Clip.Mute` | Ctrl+M |
 | Clip properties | Name, volume, pitch, speed. | `Clip.Properties` | F2 |
 | View | Mixer | Open the mixer: track and group levels, pan, pitch, sound source and FX chains. | `View.Mixer` | — |  |

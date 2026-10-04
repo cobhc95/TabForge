@@ -23,6 +23,8 @@ public sealed partial class ArrangementPanel
     private void SetMeasureWidth(double width)
     {
         if (Math.Abs(MeasureWidth - width) < 0.01) return;
+        SlowTrace.ZoomStep();
+        using var slowTrace = SlowTrace.Measure("zoom step (set width, extent)", 2);
         MeasureWidth = width;
         _timeline.MeasureWidth = width;
         _timeline.ClearHover();
@@ -64,6 +66,8 @@ public sealed partial class ArrangementPanel
         var oldWidth = MeasureWidth;
         if (Math.Abs(oldWidth - width) < 0.01) return;
         var oldContentAnchor = _horizontal.HorizontalOffset + viewportAnchorX;
+        _timeline.SetWaveZooming(true);
+        (_waveSettle ??= new SettleAction(() => _timeline.SetWaveZooming(false), 150)).Request();
         SetMeasureWidth(width);
         var scale = MeasureWidth / oldWidth;
         var generation = ++_zoomGeneration;
@@ -106,6 +110,9 @@ public sealed partial class ArrangementPanel
         _timeline.Project = project;
         _timeline.MeasureWidth = MeasureWidth;
         _timeline.ValidateTimelineGeometry();
+        // A structural edit (bars cleared in place, inserted or removed) can keep the same bar objects: the bar cells' note
+        // summaries are recomputed so emptied bars show empty.
+        _timeline.InvalidateActivities();
         RebuildControls();
         RefreshEmptyAreaMenus();
         RefreshTimelineExtent();
@@ -423,7 +430,7 @@ public sealed partial class ArrangementPanel
         _areaMoveOutline.Visibility = Visibility.Visible;
         _areaMoveOutline.BeginAnimation(OpacityProperty, new System.Windows.Media.Animation.DoubleAnimation(1, 0.25,
             TimeSpan.FromMilliseconds(420)) { AutoReverse = true, RepeatBehavior = System.Windows.Media.Animation.RepeatBehavior.Forever });
-        _timeline.BeginAreaMove(start, end);
+        _timeline.AreaMove.Begin(start, end);
     }
 
     private void EndAreaMoveVisual(int target)
@@ -483,11 +490,12 @@ public sealed partial class ArrangementPanel
 
     private void RefreshTimelineExtent()
     {
+        _timeline.UpdateCache();   // the song's width decides whether the timeline can be one GPU texture
         var width = Math.Max(200, _timeline.TotalWidth);
         if (_horizontal.ActualWidth > 0) width = Math.Max(width, _horizontal.ActualWidth);
         var fill = AddLaneFillHeight;
         _timeline.AddLaneFill = fill;
-        if (_addLaneRow is { } laneRow && Math.Abs(laneRow.Height - fill) > 0.01) laneRow.Height = fill;
+        if (_addLane.Row is { } laneRow && Math.Abs(laneRow.Height - fill) > 0.01) laneRow.Height = fill;
         var height = RulerHeight + SectionHeight + RowsHeight(_project) + fill + 2;
         _timelineHost.Width = width;
         _timelineHost.Height = height;

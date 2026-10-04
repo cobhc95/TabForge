@@ -16,6 +16,10 @@ namespace TabForge.Views;
 internal static class SlowTrace
 {
     private const string Area = "ui";
+    private static long _lastZoom;
+
+    /// <summary>A timeline zoom step happened now: frame gaps are watched for the next second.</summary>
+    public static void ZoomStep() { if (Trace.IsOn(Area)) Volatile.Write(ref _lastZoom, Stopwatch.GetTimestamp()); }
 
     /// <summary>Times the work until disposal; logs it with a short caller chain when it took at least <paramref name="thresholdMs"/>.</summary>
     public static Scope Measure(string what, double thresholdMs = 4) => Trace.IsOn(Area) ? new Scope(what, thresholdMs, Stopwatch.GetTimestamp()) : default;
@@ -69,8 +73,10 @@ internal static class SlowTrace
         {
             var now = Stopwatch.GetTimestamp();
             var held = System.Windows.Input.Mouse.LeftButton == System.Windows.Input.MouseButtonState.Pressed;
-            if (held && last != 0) { var gap = Stopwatch.GetElapsedTime(last, now).TotalMilliseconds; if (gap >= 12) Trace.Write(Area, $"FRAME gap {gap:0} ms (button held)"); }
-            last = held ? now : 0;
+            var zooming = Stopwatch.GetElapsedTime(Volatile.Read(ref _lastZoom), now).TotalMilliseconds < 1000;
+            var watch = held || zooming;
+            if (watch && last != 0) { var gap = Stopwatch.GetElapsedTime(last, now).TotalMilliseconds; if (gap >= 12) Trace.Write(Area, $"FRAME gap {gap:0} ms ({(zooming ? "zooming" : "button held")})"); }
+            last = watch ? now : 0;
         };
     }
 }

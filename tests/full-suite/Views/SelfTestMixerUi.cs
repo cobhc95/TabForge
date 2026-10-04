@@ -164,7 +164,7 @@ public static partial class SelfTest
     }
 
     /// <summary>
-    /// The screen point whose x maps exactly to <paramref name="value"/>: the inverse of ArrangementPanel.SliderValueAt with the
+    /// The screen point whose x maps exactly to <paramref name="value"/>: the inverse of TrackControlWidgets.SliderValueAt with the
     /// real handle width, so every integer is hit on any DPI, window size or slider width (no assumed 18-px handle, no pixel rounding).
     /// </summary>
     private static Point SliderScreenPoint(Slider slider, double value)
@@ -181,7 +181,7 @@ public static partial class SelfTest
         foreach (var dx in new[] { 0.0, -1, 1, -2, 2 })
         {
             var px = new Point(Math.Round(exact.X) + dx, Math.Round(exact.Y));
-            if (Math.Abs(ArrangementPanel.SliderValueAt(slider, slider.PointFromScreen(px).X) - value) < 0.001) return px;
+            if (Math.Abs(TrackControlWidgets.SliderValueAt(slider, slider.PointFromScreen(px).X) - value) < 0.001) return px;
         }
         return exact;
     }
@@ -343,11 +343,11 @@ public static partial class SelfTest
         try
         {
             ShowTestWindow(window);
-            Check("slider mapping: the left end of the handle's travel is the minimum", Math.Abs(ArrangementPanel.SliderValueAt(slider, 9) - -64) < 0.01);
-            Check("slider mapping: the right end of the handle's travel is the maximum", Math.Abs(ArrangementPanel.SliderValueAt(slider, slider.ActualWidth - 9) - 63) < 0.01);
-            Check("slider mapping: the middle is the middle", Math.Abs(ArrangementPanel.SliderValueAt(slider, slider.ActualWidth / 2) - -0.5) < 0.6);
-            Check("slider mapping: beyond the ends clamps", ArrangementPanel.SliderValueAt(slider, -50) == -64 && ArrangementPanel.SliderValueAt(slider, 999) == 63);
-            ArrangementPanel.AttachSmoothDrag(slider, 0);
+            Check("slider mapping: the left end of the handle's travel is the minimum", Math.Abs(TrackControlWidgets.SliderValueAt(slider, 9) - -64) < 0.01);
+            Check("slider mapping: the right end of the handle's travel is the maximum", Math.Abs(TrackControlWidgets.SliderValueAt(slider, slider.ActualWidth - 9) - 63) < 0.01);
+            Check("slider mapping: the middle is the middle", Math.Abs(TrackControlWidgets.SliderValueAt(slider, slider.ActualWidth / 2) - -0.5) < 0.6);
+            Check("slider mapping: beyond the ends clamps", TrackControlWidgets.SliderValueAt(slider, -50) == -64 && TrackControlWidgets.SliderValueAt(slider, 999) == 63);
+            TrackControlWidgets.AttachSmoothDrag(slider, 0);
             Check("slider is keyboard focusable and steps by 1", slider.Focusable && slider.SmallChange == 1);
         }
         finally { window.Close(); }

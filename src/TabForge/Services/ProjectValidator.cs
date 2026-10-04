@@ -286,7 +286,8 @@ public static class ProjectValidator
                 if (!double.IsFinite(clip.StartSec) || !double.IsFinite(clip.OffsetSec) || !double.IsFinite(clip.SourceLengthSec) || !double.IsFinite(clip.FileLengthSec)
                     || clip.StartSec is < 0 or > 86_400 || clip.OffsetSec < 0 || clip.SourceLengthSec is <= 0 or > 86_400 || clip.FileLengthSec < 0
                     || !double.IsFinite(clip.GainDb) || clip.GainDb is < -96 or > 24 || !double.IsFinite(clip.Pitch) || clip.Pitch is < -24 or > 24
-                    || !double.IsFinite(clip.Speed) || clip.Speed is < 0.25 or > 4)
+                    || !double.IsFinite(clip.Speed) || clip.Speed is < 0.25 or > 4
+                    || !double.IsFinite(clip.FadeInSec) || clip.FadeInSec is < 0 or > 3_600 || !double.IsFinite(clip.FadeOutSec) || clip.FadeOutSec is < 0 or > 3_600)
                     throw Invalid("An audio clip has values outside the supported range.");
             }
             if (track.Lanes is null || track.Lanes.Count > 256 || track.Lanes.Any(l => l is null)) throw Invalid("A track has an invalid clip lane list.");

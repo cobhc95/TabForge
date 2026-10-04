@@ -75,7 +75,7 @@ internal static partial class DiagnosticCommands
     }
 
     /// <summary>The render's existing clip: a MIDI clip on track 1 over bars 3-6, so a drop there needs a new lane.</summary>
-    private static void AddDropRenderClip(Models.SongProject project)
+    internal static void AddDropRenderClip(Models.SongProject project)
     {
         if (project.Tracks.Count == 0) return;
         var clock = new Audio.SongClock(Audio.AudioEngineClient.Instance);
@@ -88,7 +88,7 @@ internal static partial class DiagnosticCommands
     }
 
     /// <summary>The render's clip dragged (moved, with the faint original and the ghost) to the second track's lane at bar 9.</summary>
-    private static void SimulateMoveForRender(Views.ArrangementPanel panel, Models.SongProject project)
+    internal static void SimulateMoveForRender(Views.ArrangementPanel panel, Models.SongProject project)
     {
         if (project.Tracks.Count < 2 || project.Tracks[0].AudioClips.Count == 0) return;
         var timeline = panel.TimelineForTest;
@@ -100,7 +100,7 @@ internal static partial class DiagnosticCommands
     }
 
     /// <summary>A two-bar MIDI groove dragged over the timeline (drop, dropnew or dropbelow), drawn without fades.</summary>
-    private static void SimulateDropForRender(Views.ArrangementPanel panel, Models.SongProject project, string mode)
+    internal static void SimulateDropForRender(Views.ArrangementPanel panel, Models.SongProject project, string mode)
     {
         var groove = new MidiFileData
         {

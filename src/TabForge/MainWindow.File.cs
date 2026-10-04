@@ -27,7 +27,7 @@ using TabForge.Visualization;
 namespace TabForge;
 
 // MainWindow, file commands: new, open, save, export, print.
-public partial class MainWindow
+public partial class MainWindow : IWindowCloseHost
 {
     // ---------- file ----------
 
@@ -122,7 +122,7 @@ public partial class MainWindow
         // Only .tforge and .gp can be written; a song opened from .gp3/.gp4/.gp5/.gpx asks where to save.
         if (!DocumentSaveFlow.CanSaveInPlace(doc.Path)) return SaveAsAsync(doc, hold);
         var current = doc.Path!;
-        if (_degraded && File.Exists(current) && !_degradedConfirmedPaths.Contains(current))
+        if (CloseFlow.MustConfirmOverwrite(current) && File.Exists(current))
         {
             // After an unexpected error the model may be damaged: overwriting the user's file is opt-in.
             var name = Path.GetFileName(current);
@@ -133,16 +133,35 @@ public partial class MainWindow
             var answer = DialogHost.ShowModal(dialog) == true ? dialog.Result : MessageBoxResult.Cancel;
             if (answer == MessageBoxResult.Cancel) return Task.FromResult(false);
             if (answer == MessageBoxResult.Yes) return SaveAsAsync(doc, hold);
-            _degradedConfirmedPaths.Add(current);
+            CloseFlow.ConfirmedWhileDegraded(current);
         }
         return SaveToAsync(doc, current, hold);
     }
 
-    // ---------- degraded mode (after an unexpected error) ----------
+    // ---------- degraded mode, saving vs. closing (WindowCloseFlow) ----------
 
-    private bool _degraded;
-    /// <summary>Files the user already chose to write while degraded (overwrite confirmed, or the new file saved as): no second prompt.</summary>
-    private readonly HashSet<string> _degradedConfirmedPaths = new(StringComparer.OrdinalIgnoreCase);
+    private WindowCloseFlow? _closeFlow;
+    private WindowCloseFlow CloseFlow => _closeFlow ??= new WindowCloseFlow(this);
+    IReadOnlyList<DocumentSession> IWindowCloseHost.Documents => _documents.Documents;
+    DocumentSession IWindowCloseHost.Shown => Doc;
+    bool IWindowCloseHost.IsSaving => _documentController.IsSaving;
+    bool IWindowCloseHost.ConfirmOnClose => _confirmOnClose;
+    bool IWindowCloseHost.IsClosed => _isClosed;
+    DiscardAnswer IWindowCloseHost.AskSaveChanges(string message) => ShowSaveChangesConfirmation(message) switch
+    {
+        MessageBoxResult.Cancel => DiscardAnswer.Keep,
+        MessageBoxResult.Yes => DiscardAnswer.SaveFirst,
+        _ => DiscardAnswer.Close,
+    };
+    Task<bool> IWindowCloseHost.SaveDocumentAsync(DocumentSession doc) => SaveDocumentAsync(doc);
+    void IWindowCloseHost.PostClose(Action closed) => Dispatcher.BeginInvoke(new Action(() =>
+    {
+        closed();
+        if (PresentationSource.FromVisual(this) is not null) Close();   // not when it already closed meanwhile
+    }), DispatcherPriority.Background);
+    void IWindowCloseHost.Post(Action work) => Dispatcher.BeginInvoke(work);
+    Cursor? IWindowCloseHost.Cursor { get => Cursor; set => Cursor = value; }
+    void IWindowCloseHost.SetStatus(string text) => StatusText.Text = text;
 
     /// <summary>
     /// Called by the crash handler after an unhandled UI exception: the model may be inconsistent, so the title says so and the next
@@ -150,86 +169,13 @@ public partial class MainWindow
     /// </summary>
     internal void MarkDegraded()
     {
-        _degraded = true;
+        CloseFlow.MarkDegraded();
         UpdateTitle();
     }
 
-    private string DegradedTitleSuffix => _degraded ? "  [after an error: restart recommended]" : "";
-
-    // ---------- saving vs. closing (no nested dispatcher frames) ----------
-
-    /// <summary>Saves and multi-tab closes in progress; the window closes only when none is running.</summary>
-    private int _documentOperations;
-    /// <summary>A close was requested while an operation ran: close when the last one ends.</summary>
-    private bool _closeWhenIdle;
-    private bool _closeScheduled;
-    private Cursor? _cursorBeforeSave;
-
-    private void BeginDocumentOperation() => _documentOperations++;
-
-    private void EndDocumentOperation()
-    {
-        _documentOperations = Math.Max(0, _documentOperations - 1);
-        if (_documentOperations == 0 && _closeWhenIdle) { _closeWhenIdle = false; RequestClose(); }
-    }
-
-    /// <summary>Closes the window once no save / close operation runs (Closing then asks as usual).</summary>
-    private void RequestClose()
-    {
-        if (_documentOperations > 0) { _closeWhenIdle = true; return; }
-        if (_closeScheduled) return;
-        _closeScheduled = true;
-        Dispatcher.BeginInvoke(new Action(() =>
-        {
-            _closeScheduled = false;
-            if (PresentationSource.FromVisual(this) is not null) Close();   // not when it already closed meanwhile
-        }), DispatcherPriority.Background);
-    }
-
-    /// <summary>
-    /// Window Closing: it needs a synchronous answer, so it never waits. While a save runs the close is cancelled and retried when the
-    /// save ends; "Save" in the prompt cancels it, saves with a real await, then closes again (the prompt is skipped: the song is clean).
-    /// </summary>
-    private bool ConfirmWindowClose()
-    {
-        if (_documentOperations > 0 || _documentController.IsSaving)
-        {
-            _closeWhenIdle = true;
-            StatusText.Text = "Closing when the save has finished…";
-            return false;
-        }
-        if (!_confirmOnClose) return true;
-        // Every document in this window with unsaved changes is asked about, not only the displayed tab. All answers are collected before
-        // anything happens: Cancel at any point leaves every document and the window exactly as they were (DocumentCloseFlow).
-        var plan = DocumentCloseFlow.Plan(_documents.Documents, _discardOnClose, (doc, asked) =>
-        {
-            var message = asked == 1 && ReferenceEquals(doc, Doc) ? "Save changes to the current project?" : $"Save changes to {doc.DisplayName}?";
-            return ShowSaveChangesConfirmation(message) switch
-            {
-                MessageBoxResult.Cancel => DiscardAnswer.Keep,
-                MessageBoxResult.Yes => DiscardAnswer.SaveFirst,
-                _ => DiscardAnswer.Close,
-            };
-        });
-        if (plan.Cancel) return false;
-        foreach (var doc in plan.Discard) _discardOnClose.Add(doc);   // answered "don't save": the close that follows the saves does not ask again
-        if (plan.Save.Count == 0) return true;
-        Dispatcher.BeginInvoke(new Action(() => SaveThenCloseWindow(plan.Save)));
-        return false;
-    }
-
-    /// <summary>Documents the user chose to discard in the window-close prompt (so the close that follows the saves of the others does not ask again).</summary>
-    private readonly HashSet<DocumentSession> _discardOnClose = new();
-
-    private async void SaveThenCloseWindow(IReadOnlyList<DocumentSession> documents)
-    {
-        if (!await DocumentCloseFlow.SaveAllAsync(documents, SaveDocumentAsync))
-        {
-            _discardOnClose.Clear();   // a save did not complete: the window stays open and every answer is asked again at the next close
-            return;
-        }
-        if (!_isClosed) RequestClose();
-    }
+    private void BeginDocumentOperation() => CloseFlow.BeginDocumentOperation();
+    private void EndDocumentOperation() => CloseFlow.EndDocumentOperation();
+    private void RequestClose() => CloseFlow.RequestClose();
 
     private DiscardAnswer AskDiscardDocument(DocumentSession doc)
     {
@@ -286,39 +232,23 @@ public partial class MainWindow
         ActivateDocument(_documents.Active);
     }
 
-    /// <summary>While a save runs the window takes no keyboard or mouse input (no edits, tab closes or commands mid-save); Alt+F4 still reaches Closing, which waits for the save.</summary>
-    private int _saveGateDepth;
-
-    private void BeginSaveInputGate()
-    {
-        if (_saveGateDepth++ > 0) return;
-        _cursorBeforeSave = Cursor;
-        Cursor = Cursors.AppStarting;
-    }
-
-    private void EndSaveInputGate()
-    {
-        if (_saveGateDepth == 0 || --_saveGateDepth > 0) return;
-        Cursor = _cursorBeforeSave;
-    }
-
     // The gate is the window's own class handlers for the preview events: they run before every handler added to the window (the key handler
     // of the window itself included), so a key or click the gate swallows reaches nothing.
     protected override void OnPreviewKeyDown(KeyEventArgs e)
     {
-        if (_saveGateDepth > 0 && !(e.Key == Key.System && e.SystemKey == Key.F4)) e.Handled = true;
+        if (CloseFlow.InputGated && !(e.Key == Key.System && e.SystemKey == Key.F4)) e.Handled = true;
         base.OnPreviewKeyDown(e);
     }
 
     protected override void OnPreviewTextInput(TextCompositionEventArgs e)
     {
-        if (_saveGateDepth > 0) e.Handled = true;
+        if (CloseFlow.InputGated) e.Handled = true;
         base.OnPreviewTextInput(e);
     }
 
     protected override void OnPreviewMouseDown(MouseButtonEventArgs e)
     {
-        if (_saveGateDepth > 0) e.Handled = true;
+        if (CloseFlow.InputGated) e.Handled = true;
         base.OnPreviewMouseDown(e);
     }
 
@@ -358,7 +288,7 @@ public partial class MainWindow
     private async Task<bool> SaveToAsync(DocumentSession doc, string path, DocumentController.SaveHold hold)
     {
         BeginDocumentOperation();   // a window close waits for this save instead of interrupting it
-        BeginSaveInputGate();       // no edits, tab closes or other commands in this window until it is done (dialogs are their own windows)
+        CloseFlow.BeginSaveInputGate();       // no edits, tab closes or other commands in this window until it is done (dialogs are their own windows)
         try
         {
             // The lyrics as they are now: the box belongs to the displayed tab only (input is gated until the write is done).
@@ -366,7 +296,7 @@ public partial class MainWindow
             var outcome = await SaveFlow.SaveAsync(doc, path, lyrics, new SaveDialogs(this), CollectStatesAsync, text => StatusText.Text = text, hold);
             if (outcome.Message.Length > 0) StatusText.Text = outcome.Message;
             if (outcome.Cancelled) return false;
-            if (_degraded && doc.Path is { } written) _degradedConfirmedPaths.Add(written);   // the file the user chose while degraded
+            if (doc.Path is { } written) CloseFlow.ConfirmedWhileDegraded(written);   // the file the user chose while degraded
             UpdateTitle();
             return outcome.Saved;
         }
@@ -378,7 +308,7 @@ public partial class MainWindow
         }
         finally
         {
-            EndSaveInputGate();
+            CloseFlow.EndSaveInputGate();
             EndDocumentOperation();
         }
     }
@@ -396,7 +326,7 @@ public partial class MainWindow
         if (dlg.ShowDialog(this) != true) return false;
         var path = dlg.FileName;
         BeginDocumentOperation();
-        BeginSaveInputGate();
+        CloseFlow.BeginSaveInputGate();
         try
         {
             var lyrics = ReferenceEquals(_documents.Active, doc) ? LyricsBox.Text : doc.Project.Lyrics;
@@ -407,7 +337,7 @@ public partial class MainWindow
         catch (Exception ex) { StatusText.Text = "Export failed"; DialogHost.ShowError(this, ex.Message, ".gp export failed"); return false; }
         finally
         {
-            EndSaveInputGate();
+            CloseFlow.EndSaveInputGate();
             EndDocumentOperation();
         }
     }

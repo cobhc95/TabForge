@@ -478,12 +478,12 @@ public sealed partial class AudioEngineClient : IDisposable
             if (c.IsMidi || !ClipLanes.Audible(track, c)) continue;
             // UI thread: no file-system call. A clip whose classification is still being resolved is left out now and judged again when MediaAccess.Resolved arrives (RefreshClips).
             if (MediaAccess.EvaluateNoWait(c.File, media) is not { Allowed: true } access) continue;
-            clips.Add(new ClipSpec(access.Verdict.FullPath, c.StartSec, c.OffsetSec, c.SourceLengthSec, c.GainDb, c.Pitch, c.Speed));
+            clips.Add(new ClipSpec(access.Verdict.FullPath, c.StartSec, c.OffsetSec, c.SourceLengthSec, c.GainDb, c.Pitch, c.Speed, c.FadeInSec, c.FadeOutSec));
         }
         var armMode = Array.IndexOf(AudioInputs.Audio, track.AudioInput);
         var armed = track.RecordArm && armMode >= 0;   // MIDI input is recorded by the editor, not the engine
         var ownerId = _slotOwners.TryGetValue(slot, out var slotOwner) ? OwnerIdOf(slotOwner) : 0;
-        var key = $"{ownerId}|{mix.Volume}|{mix.Pan}|{armed}|{armMode}|{track.MonitorInput}|" + string.Join("|", clips.Select(c => $"{c.File}@{c.StartSec:0.###}+{c.OffsetSec:0.###}/{c.SourceLengthSec:0.###}/{c.GainDb:0.##}/{c.Pitch:0.##}/{c.Speed:0.###}"));
+        var key = $"{ownerId}|{mix.Volume}|{mix.Pan}|{armed}|{armMode}|{track.MonitorInput}|" + string.Join("|", clips.Select(c => $"{c.File}@{c.StartSec:0.###}+{c.OffsetSec:0.###}/{c.SourceLengthSec:0.###}/{c.GainDb:0.##}/{c.Pitch:0.##}/{c.Speed:0.###}/{c.FadeInSec:0.###}/{c.FadeOutSec:0.###}"));
         if (_sentAudio.TryGetValue(slot, out var sent) && sent == key) return;
         _sentAudio[slot] = key;
         Send(EngineCommand.SetTrackMix, w => { w.Write(slot); w.Write(mix.Volume); w.Write(mix.Pan); });

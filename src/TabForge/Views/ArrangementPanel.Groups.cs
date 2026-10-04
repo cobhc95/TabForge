@@ -15,16 +15,19 @@ using TabForge.Plugins;
 using TabForge.Services;
 using TabForge.Visualization;
 
+using static TabForge.Views.TrackControlWidgets;
+using static TabForge.Views.TrackColumnLayout;
+
+using static TabForge.Views.TrackRowWidgets;
+
 namespace TabForge.Views;
 
 // ArrangementPanel: group headers in the track list (collapse, drag the whole group).
-public sealed partial class ArrangementPanel
+public sealed partial class ArrangementPanel : IGroupDragHost
 {
     // ---------- groups in the track list: a header per run of one group (collapse; drag the whole group) ----------
-    private int _groupDragStart = -1, _groupDragCount, _groupDragTarget = -1;
-    private Point _groupDragOrigin;
-    private readonly List<UIElement> _groupDragElements = new();
-    private Border? _groupDragCaret;
+    Panel IGroupDragHost.TrackListPanel => _controls;
+    void IGroupDragHost.RaiseGroupMoved(int start, int count, int target) => GroupMoved?.Invoke(start, count, target);
 
     private FrameworkElement GroupHeader(SongProject project, int start)
     {
@@ -42,8 +45,7 @@ public sealed partial class ArrangementPanel
         header.SetResourceReference(Border.BorderBrushProperty, "BorderBrush");
         // Laid out on the same columns as the track rows (the chevron sits in the settings column, the name in the name column).
         var dock = new Grid { Margin = new Thickness(RowGridLeft - 3, 0, RowGridRight - 8, 0) };
-        AddColumnDefinitions(dock);
-        _rowGrids.Add(dock);
+        _columns.AddRowGrid(dock);
         var cells = new Dictionary<string, FrameworkElement>();
         var chevron = new Button
         {
@@ -116,7 +118,7 @@ public sealed partial class ArrangementPanel
                 set(project.Mixer.Edit(group), v);
                 MixChanged?.Invoke(this, EventArgs.Empty);
             };
-            AttachMixEditGestures(slider);
+            _rowWidgets.AttachMixEditGestures(slider);
             _mixSliders.Add((slider, () => get(project.Mixer.Levels(group))));
             AttachSmoothDrag(slider, def);
             AttachWheelStep(slider);
@@ -126,52 +128,11 @@ public sealed partial class ArrangementPanel
             "Group level in percent of each track's own volume (100 = unchanged)");
         cells["pan"] = GroupSlider(-64, 63, levels.Pan, 0, (l, v) => l.Pan = v, l => l.Pan,
             "Moves every track in the group left or right (−64 … +63)");
-        PlaceCells(dock, cells);
+        _columns.PlaceCells(dock, cells);
         header.Child = dock;
         header.MouseEnter += (_, _) => header.SetResourceReference(Border.BackgroundProperty, "HoverBrush");
         header.MouseLeave += (_, _) => header.SetResourceReference(Border.BackgroundProperty, "Panel2Brush");
-        header.PreviewMouseLeftButtonDown += (_, e) =>
-        {
-            if (IsInside(e.OriginalSource as DependencyObject, chevron) || IsInteractiveTrackControl(e.OriginalSource as DependencyObject, header)) return;
-            _groupDragStart = start; _groupDragCount = count; _groupDragTarget = -1;
-            _groupDragOrigin = e.GetPosition(_controls);
-            header.CaptureMouse();
-            e.Handled = true;
-        };
-        header.MouseMove += (_, e) =>
-        {
-            if (_groupDragStart != start || !header.IsMouseCaptured) return;
-            var p = e.GetPosition(_controls);
-            var dy = p.Y - _groupDragOrigin.Y;
-            if (_groupDragTarget < 0 && Math.Abs(dy) < 4) return;
-            // The header and its rows follow the pointer; a caret shows where the group will land.
-            if (_groupDragElements.Count == 0)
-            {
-                var from = _controls.Children.IndexOf(header);
-                for (var k = from; k < _controls.Children.Count; k++)
-                {
-                    var el = _controls.Children[k];
-                    if (k > from && el is Border { Tag: "group-header" or "add-lane" }) break;
-                    _groupDragElements.Add(el);
-                    if (el is UIElement u) { u.Opacity = 0.85; Panel.SetZIndex(u, 10); }
-                }
-            }
-            foreach (var el in _groupDragElements)
-                if (el.RenderTransform is TranslateTransform t) t.Y = dy; else el.RenderTransform = new TranslateTransform(0, dy);
-            _groupDragTarget = GroupDropIndex(project, p.Y);
-            ShowGroupCaret(project, _groupDragTarget);
-            e.Handled = true;
-        };
-        header.PreviewMouseLeftButtonUp += (_, e) =>
-        {
-            if (_groupDragStart != start) return;
-            var target = _groupDragTarget;
-            EndGroupDrag();
-            header.ReleaseMouseCapture();
-            if (target >= 0 && (target < start || target > start + count)) GroupMoved?.Invoke(start, count, target);
-            e.Handled = true;
-        };
-        header.LostMouseCapture += (_, _) => { if (_groupDragStart == start) EndGroupDrag(); };
+        _groupDrag.Attach(header, project, start, count, e => IsInside(e.OriginalSource as DependencyObject, chevron) || IsInteractiveTrackControl(e.OriginalSource as DependencyObject, header));
         // Right-click anywhere on the row opens the Mixer at this group, except on a control with its own menu.
         header.MouseRightButtonUp += (_, e) =>
         {
@@ -291,50 +252,4 @@ public sealed partial class ArrangementPanel
 
     /// <summary>The track list and the Mixer play their reorder animation with this duration, started in the same UI turn.</summary>
     internal const double OrderAnimationMilliseconds = 160;
-
-    /// <summary>Where a dragged group goes: before the group header (or the end) nearest the pointer.</summary>
-    private static int GroupDropIndex(SongProject project, double y)
-    {
-        var best = project.Tracks.Count; var bestDistance = double.MaxValue;
-        foreach (var run in GroupRuns(project).Select(r => r.Start).Append(project.Tracks.Count))
-        {
-            var top = run < project.Tracks.Count ? RowTopOf(project, run) - GroupHeaderHeight : RowsHeight(project);
-            var distance = Math.Abs(y - top);
-            if (distance < bestDistance) { bestDistance = distance; best = run; }
-        }
-        return best;
-    }
-
-    private void ShowGroupCaret(SongProject project, int target)
-    {
-        if (_groupDragCaret is null)
-        {
-            _groupDragCaret = new Border { Height = 3, CornerRadius = new CornerRadius(1.5), IsHitTestVisible = false, Margin = new Thickness(4, 0, 4, 0) };
-            _groupDragCaret.SetResourceReference(Border.BackgroundProperty, "AccentBrush");
-        }
-        _controls.Children.Remove(_groupDragCaret);
-        var before = target < project.Tracks.Count ? RowTopOf(project, target) - GroupHeaderHeight : RowsHeight(project);
-        _groupDragCaret.RenderTransform = new TranslateTransform(0, 0);
-        // Put the caret into the panel next to the element at that height (StackPanel order).
-        var index = 0; double y = 0;
-        foreach (UIElement el in _controls.Children)
-        {
-            if (y >= before - 0.5) break;
-            y += el.Visibility == Visibility.Collapsed ? 0 : (el as FrameworkElement)?.ActualHeight + ((el as FrameworkElement)?.Margin.Top ?? 0) ?? 0;
-            index++;
-        }
-        _controls.Children.Insert(Math.Min(index, _controls.Children.Count), _groupDragCaret);
-    }
-
-    private void EndGroupDrag()
-    {
-        foreach (var el in _groupDragElements) { el.Opacity = 1; Panel.SetZIndex(el, 0); if (el.RenderTransform is TranslateTransform t) t.Y = 0; }
-        _groupDragElements.Clear();
-        if (_groupDragCaret is not null) _controls.Children.Remove(_groupDragCaret);
-        _groupDragStart = -1;
-        _groupDragTarget = -1;
-    }
-
-    // The track keeps its own instrument (guitar, bass...) whatever plug-ins its FX chain holds.
-    private static string InstrumentLabel(TrackModel track) => track.InstrumentName;
 }

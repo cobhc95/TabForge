@@ -27,7 +27,7 @@ using TabForge.Visualization;
 namespace TabForge;
 
 // MainWindow, view: dock workspace, theme/notation/clipboard, zoom, fullscreen, practice and panel toggles.
-public partial class MainWindow
+public partial class MainWindow : IDockLayoutHost, IScoreZoomHost
 {
     private void InitializeDockWorkspace()
     {
@@ -55,14 +55,14 @@ public partial class MainWindow
         })
             if (string.IsNullOrEmpty(System.Windows.Automation.AutomationProperties.GetName(pane))) System.Windows.Automation.AutomationProperties.SetName(pane, title);
         _dockWorkspace.RegisterPanel("instrument", "Fretboard", InstrumentHost, 360, 150, "instrument", "score-editor");
-        ApplyInstrumentMinHeight();
-        Instrument.RequiredHeightChanged += _ => ApplyInstrumentMinHeight();
-        Instrument.MaximumHeightChanged += _ => ApplyInstrumentMaxHeight();
+        WorkspaceLayouts.ApplyInstrumentMinHeight();
+        Instrument.RequiredHeightChanged += _ => WorkspaceLayouts.ApplyInstrumentMinHeight();
+        Instrument.MaximumHeightChanged += _ => WorkspaceLayouts.ApplyInstrumentMaxHeight();
         _dockWorkspace.RegisterPanel("timeline", "Arrangement", ArrangementHost, 440, 112, "timeline", "score-editor");
         _dockWorkspace.RegisterPanel("tools", "Tools", ToolsPanelContent, 210, 150, "tools", "structure");
-        _dockWorkspace.RegisterPanel("structure", "Structure", _palettePanelContents["structure"], 210, 150, "tools", "tools");
-        _dockWorkspace.RegisterPanel("rhythm", "Rhythm", _palettePanelContents["rhythm"], 210, 140, "tools", "tools");
-        _dockWorkspace.RegisterPanel("layout", "Layout", _palettePanelContents["layout"], 210, 140, "tools", "tools");
+        _dockWorkspace.RegisterPanel("structure", "Structure", ToolPalette.PanelContents["structure"], 210, 150, "tools", "tools");
+        _dockWorkspace.RegisterPanel("rhythm", "Rhythm", ToolPalette.PanelContents["rhythm"], 210, 140, "tools", "tools");
+        _dockWorkspace.RegisterPanel("layout", "Layout", ToolPalette.PanelContents["layout"], 210, 140, "tools", "tools");
         // The Sections pane fills its cell, or scrolls when the cell is shorter than the content's minimum (large UI scale).
         SectionsPanelContent.SizeChanged += (_, e) =>
             SectionsPanelGrid.Height = Math.Max(0, e.NewSize.Height - SectionsPanelContent.Padding.Top - SectionsPanelContent.Padding.Bottom);
@@ -84,197 +84,31 @@ public partial class MainWindow
         {
             InstrumentViewMenu.IsChecked = _dockWorkspace.IsPanelVisible("instrument");
             ArrangementMenu.IsChecked = _dockWorkspace.IsPanelVisible("timeline");
-            RefreshDockPanelsMenu();
+            WorkspaceLayouts.RefreshDockPanelsMenu();
             if (!_suppressWorkspaceSave) SaveSettings();
         };
-        BuildDockPanelsMenu();
+        WorkspaceLayouts.BuildDockPanelsMenu();
         _dockWorkspace.RestoreLayout(null);
         _trackListFit = new TrackListFitController(this, this);
-        BuildLayoutsMenu();
+        WorkspaceLayouts.BuildLayoutsMenu();
     }
 
-    // ---------- saved workspace layouts ----------
+    // ---------- workspace layouts (DockLayoutController) ----------
 
-    private static readonly string[] BuiltInLayoutNames = { "Compose", "Practice", "Mix" };
-    private static readonly string[] AllDockPanelIds =
-        { "tools", "structure", "rhythm", "layout", "sections", "practice", "playback", "instrument", "timeline" };
-    private const int MaxSavedLayouts = 24;
-    private MenuItem? _layoutsMenu;
+    Window IPaneHost.Window => this;
+    AppSettings IPaneHost.Settings => _settings;
+    TabEditorControl IPaneHost.Editor => Editor;
+    SongProject IPaneHost.Project => _project;
+    TrackModel? IPaneHost.SelectedTrack => SelectedTrack;
+    void IPaneHost.SaveSettings() => SaveSettings();
+    void IPaneHost.SetStatus(string text) => StatusText.Text = text;
 
-    private static DockWorkspaceState BuiltInLayout(string name)
-    {
-        static DockNodeState Tools() => DockWorkspace.Tabs("default-tool-palette", "tools", "structure", "rhythm", "layout");
-        static DockNodeState Side(string selected, params string[] ids)
-        {
-            var host = DockWorkspace.Tabs("default-sections-practice-playback", ids);
-            host.SelectedPanel = selected;
-            return host;
-        }
-        var score = DockWorkspace.EditorNode();
-        var instrument = DockWorkspace.Tabs("default-instrument", "instrument");
-        var timeline = DockWorkspace.Tabs("default-timeline", "timeline");
-        var root = name switch
-        {
-            // Score + tab editor large; fretboard/keyboard and tools beside it; arrangement small.
-            "Compose" => DockWorkspace.Split("Vertical", 0.86,
-                DockWorkspace.Split("Horizontal", 0.78, DockWorkspace.Split("Vertical", 0.68, score, instrument), Tools()),
-                timeline),
-            // Score/tab + fretboard large; transport and practice panels visible; arrangement and mixer window closed.
-            "Practice" => DockWorkspace.Split("Horizontal", 0.78,
-                DockWorkspace.Split("Vertical", 0.60, score, instrument),
-                Side("playback", "playback", "sections", "practice")),
-            // Arrangement + mixer large; score small.
-            _ => DockWorkspace.Split("Vertical", 0.30, score,
-                DockWorkspace.Split("Horizontal", 0.74, timeline, Side("practice", "practice", "sections", "playback")))
-        };
-        var state = new DockWorkspaceState { Root = root };
-        var present = DockWorkspace.PanelsOf(state).ToHashSet(StringComparer.Ordinal);
-        state.ClosedPanels = AllDockPanelIds.Where(id => !present.Contains(id)).ToList();
-        return state;
-    }
-
-    private SavedLayout? FindSavedLayout(string name) =>
-        _settings.SavedLayouts.FirstOrDefault(l => string.Equals(l.Name, name, StringComparison.OrdinalIgnoreCase));
-
-    private void BuildLayoutsMenu()
-    {
-        if (DockPanelsMenu.Parent is not ItemsControl parent) return;
-        if (_layoutsMenu is null)
-        {
-            _layoutsMenu = new MenuItem { Header = "Layouts" };
-            parent.Items.Insert(Math.Max(0, parent.Items.IndexOf(DockPanelsMenu)), _layoutsMenu);
-            _layoutsMenu.SubmenuOpened += (_, _) => RefreshLayoutsMenu();
-        }
-        RefreshLayoutsMenu();
-    }
-
-    private void RefreshLayoutsMenu()
-    {
-        if (_layoutsMenu is null) return;
-        _layoutsMenu.Items.Clear();
-        string GestureText(string id) => HotkeyCatalog.DisplayAll(_settings.Hotkeys, id);
-        MenuItem Entry(string name, string? hotkeyId)
-        {
-            var item = new MenuItem
-            {
-                Header = name, IsCheckable = true,
-                IsChecked = string.Equals(_settings.LastLayout, name, StringComparison.OrdinalIgnoreCase),
-                InputGestureText = hotkeyId is null ? "" : GestureText(hotkeyId)
-            };
-            item.Click += (_, _) => SwitchLayout(name);
-            return item;
-        }
-        _layoutsMenu.Items.Add(Entry("Compose", "View.LayoutCompose"));
-        _layoutsMenu.Items.Add(Entry("Practice", "View.LayoutPractice"));
-        _layoutsMenu.Items.Add(Entry("Mix", "View.LayoutMix"));
-        var custom = _settings.SavedLayouts.Where(l => !BuiltInLayoutNames.Contains(l.Name, StringComparer.OrdinalIgnoreCase)).ToList();
-        if (custom.Count > 0) _layoutsMenu.Items.Add(new Separator());
-        foreach (var l in custom) _layoutsMenu.Items.Add(Entry(l.Name, null));
-        _layoutsMenu.Items.Add(new Separator());
-        var save = new MenuItem { Header = "Save current layout as…" };
-        save.Click += (_, _) => SaveCurrentLayoutAs();
-        _layoutsMenu.Items.Add(save);
-        var delete = new MenuItem { Header = "Delete layout", IsEnabled = _settings.SavedLayouts.Count > 0 };
-        foreach (var l in _settings.SavedLayouts.ToList())
-        {
-            var name = l.Name;
-            var d = new MenuItem { Header = BuiltInLayoutNames.Contains(name, StringComparer.OrdinalIgnoreCase) ? name + " (back to built-in)" : name };
-            d.Click += (_, _) =>
-            {
-                _settings.SavedLayouts.RemoveAll(x => string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase));
-                if (string.Equals(_settings.LastLayout, name, StringComparison.OrdinalIgnoreCase) && !BuiltInLayoutNames.Contains(name, StringComparer.OrdinalIgnoreCase))
-                    _settings.LastLayout = null;
-                SaveSettings();
-                StatusText.Text = $"Layout \"{name}\" deleted";
-            };
-            delete.Items.Add(d);
-        }
-        _layoutsMenu.Items.Add(delete);
-        var reset = new MenuItem { Header = "Reset built-in layouts" };
-        reset.Click += (_, _) =>
-        {
-            _settings.SavedLayouts.RemoveAll(x => BuiltInLayoutNames.Contains(x.Name, StringComparer.OrdinalIgnoreCase));
-            SaveSettings();
-            StatusText.Text = "Built-in layouts reset";
-        };
-        _layoutsMenu.Items.Add(reset);
-    }
-
-    /// <summary>Instantly applies a layout (panels, dock sizes, window state); documents are not touched.</summary>
-    private void SwitchLayout(string name)
-    {
-        if (_dockWorkspace is null) return;
-        var saved = FindSavedLayout(name);
-        DockWorkspaceState? state = saved?.State;
-        if (state?.Root is null)
-        {
-            if (!BuiltInLayoutNames.Contains(name, StringComparer.OrdinalIgnoreCase)) { StatusText.Text = $"Layout \"{name}\" not found"; return; }
-            state = BuiltInLayout(BuiltInLayoutNames.First(n => string.Equals(n, name, StringComparison.OrdinalIgnoreCase)));
-            saved = null;
-        }
-        _settings.LastLayout = saved?.Name ?? BuiltInLayoutNames.FirstOrDefault(n => string.Equals(n, name, StringComparison.OrdinalIgnoreCase)) ?? name;
-        _dockWorkspace.ApplyLayout(state);
-        if (saved is not null && saved.WindowWidth > 0)
-        {
-            if (saved.Maximised) WindowState = WindowState.Maximized;
-            else
-            {
-                WindowState = WindowState.Normal;
-                Width = Math.Max(MinWidth, saved.WindowWidth);
-                Height = Math.Max(MinHeight, saved.WindowHeight);
-            }
-        }
-        SaveSettings();
-        StatusText.Text = $"Layout: {_settings.LastLayout}";
-    }
-
-    private void SaveCurrentLayoutAs()
-    {
-        if (_dockWorkspace is null) return;
-        var name = GpDialogs.Prompt("Save layout", "Layout name:", _settings.LastLayout ?? "My layout")?.Trim();
-        if (string.IsNullOrEmpty(name)) return;
-        if (name.Length > 40) name = name[..40];
-        var existing = FindSavedLayout(name);
-        if (existing is null && _settings.SavedLayouts.Count >= MaxSavedLayouts) { StatusText.Text = "Too many saved layouts; delete one first"; return; }
-        if (existing is null) _settings.SavedLayouts.Add(existing = new SavedLayout());
-        existing.Name = BuiltInLayoutNames.FirstOrDefault(n => string.Equals(n, name, StringComparison.OrdinalIgnoreCase)) ?? name;
-        existing.State = _dockWorkspace.CaptureLayout();
-        existing.Maximised = WindowState == WindowState.Maximized;
-        existing.WindowWidth = WindowState == WindowState.Maximized ? RestoreBounds.Width : Width;
-        existing.WindowHeight = WindowState == WindowState.Maximized ? RestoreBounds.Height : Height;
-        _settings.LastLayout = existing.Name;
-        SaveSettings();
-        StatusText.Text = $"Layout \"{existing.Name}\" saved";
-    }
-
-    private void BuildDockPanelsMenu()
-    {
-        DockPanelsMenu.Items.Clear();
-        foreach (var (id, title) in new[]
-        {
-            ("tools", "Tools"), ("structure", "Structure"), ("rhythm", "Rhythm"), ("layout", "Layout"),
-            ("sections", "Sections"), ("practice", "Practice / Mixer"), ("playback", "Zoom & speed"),
-            ("instrument", "Fretboard"), ("timeline", "Arrangement")
-        })
-        {
-            var item = new MenuItem { Header = title, IsCheckable = true, IsChecked = true, Tag = id };
-            item.Click += (_, _) =>
-            {
-                if (item.Tag is string panelId) _dockWorkspace?.SetPanelVisible(panelId, item.IsChecked);
-                RefreshDockPanelsMenu();
-            };
-            DockPanelsMenu.Items.Add(item);
-        }
-        RefreshDockPanelsMenu();
-    }
-
-    private void RefreshDockPanelsMenu()
-    {
-        if (_dockWorkspace is null) return;
-        foreach (var item in DockPanelsMenu.Items.OfType<MenuItem>())
-            if (item.Tag is string id) item.IsChecked = _dockWorkspace.IsPanelVisible(id);
-    }
-
+    private DockLayoutController? _workspaceLayouts;
+    private DockLayoutController WorkspaceLayouts => _workspaceLayouts ??= new DockLayoutController(this);
+    DockWorkspace? IDockLayoutHost.Dock => _dockWorkspace;
+    MenuItem IDockLayoutHost.DockPanelsMenu => DockPanelsMenu;
+    InstrumentPanel IDockLayoutHost.Instrument => Instrument;
+    Border IDockLayoutHost.InstrumentHost => InstrumentHost;
 
     // ---------- theme / notation / clipboard ----------
 
@@ -302,7 +136,7 @@ public partial class MainWindow
         Doc.Notation = mode;
         _settings.Notation = mode.ToString();
         _settings.NotationPreferenceSet = true;
-        _appliedNotationPreference = mode;
+        _applied.Notation = mode;
         Editor.InvalidateMeasure();
         Editor.InvalidateScoreLayout();
         StatusText.Text = "Notation: " + mode switch
@@ -438,226 +272,38 @@ public partial class MainWindow
     }
 
 
-    // ---------- view ----------
+    // ---------- view: zoom and page width (ScoreZoomController) ----------
 
-    private void ZoomCombo_Changed(object sender, SelectionChangedEventArgs e)
-    {
-        if (_zoomSync || !IsLoaded || _restoring || ZoomCombo.SelectedItem is not ComboBoxItem item) return;
-        ApplyZoomText(item.Content?.ToString() ?? "Fit width");
-    }
+    private ScoreZoomController? _scoreZoom;
+    private ScoreZoomController ScoreZoom => _scoreZoom ??= new ScoreZoomController(this);
+    ComboBox IScoreZoomHost.ZoomCombo => ZoomCombo;
+    ScrollViewer IScoreZoomHost.ScoreScroll => ScoreScroll;
+    Border IScoreZoomHost.ScorePage => ScorePage;
+    ScoreFollowCoordinator IScoreZoomHost.Follow => _follow;
+    bool IScoreZoomHost.Restoring => _restoring;
 
-    private bool _zoomSync;
-
-    private void ZoomCombo_ReSync(object sender, RoutedEventArgs e) => UpdateZoomControl();
-
+    private void ZoomCombo_Changed(object sender, SelectionChangedEventArgs e) => ScoreZoom.OnComboChanged();
+    private void ZoomCombo_ReSync(object sender, RoutedEventArgs e) => ScoreZoom.UpdateZoomControl();
     private void ZoomCombo_VisibleReSync(object sender, DependencyPropertyChangedEventArgs e)
     {
-        if (e.NewValue is true) UpdateZoomControl();
+        if (e.NewValue is true) ScoreZoom.UpdateZoomControl();
     }
-
-    private void ZoomCombo_LostFocus(object sender, RoutedEventArgs e) => CommitCustomZoom();
-
+    private void ZoomCombo_LostFocus(object sender, RoutedEventArgs e) => ScoreZoom.CommitCustomZoom();
     private void ZoomCombo_PreviewKeyDown(object sender, KeyEventArgs e)
     {
         if (e.Key != Key.Enter) return;
-        CommitCustomZoom();
+        ScoreZoom.CommitCustomZoom();
         e.Handled = true;
     }
 
-    private void CommitCustomZoom()
-    {
-        if (!IsLoaded || _restoring || ZoomCombo.SelectedItem is ComboBoxItem) return;
-        ApplyZoomText(ZoomCombo.Text);
-    }
-
-    private void ApplyZoomText(string text, Point? zoomAnchor = null)
-    {
-        var trimmed = text.Trim();
-        if (trimmed.StartsWith("Fit", StringComparison.OrdinalIgnoreCase))
-        {
-            _zoomFactor = 0;
-        }
-        else if (double.TryParse(trimmed.TrimEnd('%').Trim(), out var percent) && double.IsFinite(percent))
-        {
-            percent = Math.Clamp(percent, 50, 200);
-            _zoomFactor = percent / 100.0;
-        }
-        else
-        {
-            UpdateZoomControl();
-            return;
-        }
-
-        UpdateZoomControl();
-        ApplyPageWidth(zoomAnchor);
-        StatusText.Text = _zoomFactor <= 0 ? "Zoom: fit width" : $"Zoom: {_zoomFactor * 100:0}%";
-        SaveSettings();
-    }
-
-    private void UpdateZoomControl()
-    {
-        if (ZoomCombo is null) return;
-        // Root cause of the blank box: the editable text box only exists once the template is applied
-        // (the box lives in a dock pane that starts collapsed), so Text set earlier was lost; startup
-        // also forced SelectedIndex = 0 over the restored zoom. Apply the template first, guard
-        // re-entrancy, and re-sync when the box loads or becomes visible.
-        var was = _zoomSync;
-        _zoomSync = true;
-        try { ShowZoomOn(ZoomCombo, _zoomFactor); }
-        finally { _zoomSync = was; }
-    }
-
     /// <summary>Makes an editable zoom combo display the given zoom (0 = fit width); returns the text shown.</summary>
-    internal static string ShowZoomOn(ComboBox combo, double zoomFactor)
-    {
-        combo.ApplyTemplate();
-        var label = zoomFactor <= 0 ? "Fit width" : $"{Math.Clamp(zoomFactor * 100, 50, 200):0}%";
-        var preset = combo.Items.OfType<ComboBoxItem>()
-            .FirstOrDefault(item => string.Equals(item.Content?.ToString(), label, StringComparison.Ordinal));
-        combo.SelectedItem = preset;
-        if (preset is null) combo.SelectedIndex = -1;
-        combo.Text = label;
-        return label;
-    }
+    internal static string ShowZoomOn(ComboBox combo, double zoomFactor) => ScoreZoomController.ShowZoomOn(combo, zoomFactor);
+    private void ScoreScroll_SizeChanged(object sender, SizeChangedEventArgs e) => ScoreZoom.OnScrollSizeChanged();
+    private void Zoom75_Click(object sender, RoutedEventArgs e) => ScoreZoom.ApplyZoomText("75%");
+    private void Zoom100_Click(object sender, RoutedEventArgs e) => ScoreZoom.ApplyZoomText("100%");
+    private void Zoom150_Click(object sender, RoutedEventArgs e) => ScoreZoom.ApplyZoomText("150%");
 
-    private void ScoreScroll_SizeChanged(object sender, SizeChangedEventArgs e)
-    {
-        // A height-only change (a splitter drag, a window drag) leaves the page layout alone; one-line mode only re-centres once the drag settles.
-        if (_pageInputs.Changed((Math.Round(ScoreScroll.ActualWidth, 1), _zoomFactor, Editor.HorizontalScroll, Editor.CenterSystems))) { ApplyPageWidth(); return; }
-        if (Editor.HorizontalScroll) (_centreSettle ??= new SettleAction(CentreHorizontalPage)).Request();
-    }
-
-    /// <summary>Applies either fixed-paper zoom or continuous viewport reflow using one shared layout path.</summary>
-    private void ApplyPageWidth(Point? zoomAnchor = null)
-    {
-        _follow.OnScoreLayoutChanging();
-        ScorePage.HorizontalAlignment = HorizontalAlignment.Center;
-        ScoreScroll.HorizontalContentAlignment = HorizontalAlignment.Center;
-        // ViewportWidth still describes the previous layout during a resize. ActualWidth is the
-        // new constraint here; using the old viewport leaves continuous systems at the narrow width.
-        var viewport = ScoreScroll.ActualWidth > 1 ? ScoreScroll.ActualWidth : ScoreScroll.ViewportWidth;
-        if (viewport <= 1) { Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(_follow.ReanchorAfterZoom)); return; }
-        if (Editor.HorizontalScroll)
-        {
-            // One continuous line: the score sizes itself to the line (so edits that lengthen it just
-            // grow the scroll range); it starts at the left and scrolls/follows horizontally.
-            Editor.Zoom = Math.Clamp(_zoomFactor <= 0 ? 1.0 : _zoomFactor, 0.5, 2.0);
-            Editor.Width = double.NaN;
-            ScorePage.Width = double.NaN;
-            ScorePage.HorizontalAlignment = HorizontalAlignment.Left;
-            ScoreScroll.HorizontalContentAlignment = HorizontalAlignment.Left;
-            ScoreScroll.HorizontalScrollBarVisibility = ScrollBarVisibility.Auto;
-            Editor.InvalidateScoreLayout();
-            Editor.InvalidateMeasure();
-            // Both page and seamless one-line layouts use the available vertical space.
-            Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new Action(CentreHorizontalPage));
-            Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(_follow.ReanchorAfterZoom));
-            return;
-        }
-        ScorePage.Margin = new Thickness(0);
-        var oldFactor = Editor.Zoom;
-        var factor = Editor.CenterSystems
-            ? Math.Clamp(_zoomFactor <= 0 ? 1.0 : _zoomFactor, 0.5, 2.0)
-            : Math.Clamp(_zoomFactor <= 0
-                ? Math.Max(1, viewport - 2) / TabEditorControl.BasePageWidth
-                : _zoomFactor, 0.5, 2.0);
-        // Page mode keeps a stable logical sheet and scales that sheet as one object. Continuous
-        // mode instead changes composition width with zoom, then centres every resulting system.
-        var pageWidth = Editor.CenterSystems
-            ? Math.Max(380, Math.Max(1, viewport - 2) / factor)
-            : TabEditorControl.BasePageWidth;
-        var width = pageWidth * factor;
-        var oldRenderedWidth = Editor.ActualWidth > 1 ? Editor.ActualWidth : TabEditorControl.BasePageWidth * oldFactor;
-        var oldPageLeft = oldRenderedWidth + 2 < viewport
-            ? (viewport - oldRenderedWidth - 2) / 2
-            : 0;
-        var newPageLeft = width + 2 < viewport ? (viewport - width - 2) / 2 : 0;
-        var oldHorizontalOffset = ScoreScroll.HorizontalOffset;
-        var oldVerticalOffset = ScoreScroll.VerticalOffset;
-        var anchor = zoomAnchor ?? new Point(ScoreScroll.ViewportWidth / 2, 0);
-
-        Editor.PageWidthOverride = pageWidth;
-        Editor.Zoom = factor;
-        Editor.Width = width;
-        ScorePage.Width = width + 2;
-        ScoreScroll.HorizontalScrollBarVisibility = width + 2 > viewport + 1 ? ScrollBarVisibility.Auto : ScrollBarVisibility.Disabled;
-        Editor.InvalidateMeasure();
-        Editor.InvalidateScoreLayout();
-        if (Math.Abs(factor - oldFactor) > 0.001)
-        {
-            Dispatcher.BeginInvoke(new Action(() =>
-            {
-                ScoreScroll.ScrollToHorizontalOffset((oldHorizontalOffset + anchor.X - oldPageLeft) * factor / oldFactor
-                    - (anchor.X - newPageLeft));
-                ScoreScroll.ScrollToVerticalOffset((oldVerticalOffset + anchor.Y) * factor / oldFactor - anchor.Y);
-                // The zoom-induced scroll is not the user's: keep following and re-anchor on the playhead.
-                Dispatcher.BeginInvoke(new Action(_follow.ReanchorAfterZoom), DispatcherPriority.Background);
-            }), System.Windows.Threading.DispatcherPriority.Loaded);
-        }
-        else Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(_follow.ReanchorAfterZoom));
-
-        var layoutLog = Environment.GetEnvironmentVariable("TABFORGE_LAYOUT_LOG") == "1" ? Path.Combine(Path.GetTempPath(), "tabforge-layout.log")
-            : Services.Trace.IsOn(Services.Trace.Layout) ? Services.Trace.PathFor(Services.Trace.Layout) : null;
-        if (layoutLog is not null)
-        {
-            try
-            {
-                DiagnosticFileService.AppendCappedLine(layoutLog,
-                    $"dpi={VisualTreeHelper.GetDpi(this).DpiScaleX:0.##} window={ActualWidth:0}x{ActualHeight:0} " +
-                    $"viewport={viewport:0} page={width:0} editorActual={Editor.ActualWidth:0} " +
-                    $"hOffset={ScoreScroll.HorizontalOffset:0} extent={ScoreScroll.ExtentWidth:0}",
-                    InputLimits.MaxLayoutLogBytes);
-            }
-            catch (Exception ex) { Debug.WriteLine($"Opt-in layout log write failed: {ex}"); }
-        }
-    }
-
-    private void CentreHorizontalPage()
-    {
-        if (!Editor.HorizontalScroll) return;
-        var viewport = ScoreScroll.ViewportHeight;
-        var page = ScorePage.ActualHeight;
-        var top = viewport > 1 && page > 1 ? Math.Max(0, Math.Floor((viewport - page) / 2)) : 0;
-        if (Math.Abs(ScorePage.Margin.Top - top) > 0.5) ScorePage.Margin = new Thickness(0, top, 0, 0);
-    }
-
-    private void Zoom75_Click(object sender, RoutedEventArgs e) => SetZoom(75);
-    private void Zoom100_Click(object sender, RoutedEventArgs e) => SetZoom(100);
-    private void Zoom150_Click(object sender, RoutedEventArgs e) => SetZoom(150);
-    private void SetZoom(int z)
-    {
-        ApplyZoomText($"{z}%");
-    }
-
-    // Saved bounds/state so exiting fullscreen restores the previous layout exactly (and keeps the
-    // custom WindowChrome - setting SingleBorderWindow here used to add a native title bar).
-    private Rect _preFullscreenBounds;
-    private WindowState _preFullscreenState = WindowState.Normal;
-
-    private void Fullscreen_Click(object sender, RoutedEventArgs e)
-    {
-        _fullscreen = !_fullscreen;
-        if (_fullscreen)
-        {
-            _preFullscreenState = WindowState;
-            _preFullscreenBounds = RestoreBounds;
-            WindowState = WindowState.Maximized;
-            StatusText.Text = TooltipShortcuts.Append("Full screen", "View.Fullscreen");
-        }
-        else
-        {
-            WindowState = WindowState.Normal;
-            if (_preFullscreenBounds.Width > 1 && _preFullscreenBounds.Height > 1)
-            {
-                Left = _preFullscreenBounds.Left;
-                Top = _preFullscreenBounds.Top;
-                Width = _preFullscreenBounds.Width;
-                Height = _preFullscreenBounds.Height;
-            }
-            if (_preFullscreenState == WindowState.Maximized) WindowState = WindowState.Maximized;
-            StatusText.Text = "Full screen off";
-        }
-    }
+    private void Fullscreen_Click(object sender, RoutedEventArgs e) => WorkspaceLayouts.ToggleFullscreen();
 
     private void Multitrack_Click(object sender, RoutedEventArgs e) { TrackMixerGrid.BringIntoView(); StatusText.Text = "Multitrack: all tracks in the mixer; click a color block to jump"; }
     /// <summary>View > Mixer / VST: the same command as the Mixer button and hotkey (opens the Mixer window, or raises it); the docked Practice tab only shows practice tools.</summary>
@@ -708,7 +354,7 @@ public partial class MainWindow
             Arrangement.VolumeKnobs = settings.Audio.VolumeKnobs;
             RefreshArrangement();
         }
-        if (_visualSettingsChanged) RepaintAfterVisualSettings();
+        if (_applied.VisualChanged) RepaintAfterVisualSettings();
         SaveSettings();
     }
 
@@ -734,7 +380,7 @@ public partial class MainWindow
             Arrangement.VolumeKnobs = settings.Audio.VolumeKnobs;
             RefreshArrangement();
         }
-            if (_visualSettingsChanged) RepaintAfterVisualSettings();
+            if (_applied.VisualChanged) RepaintAfterVisualSettings();
         }
         finally { _suppressWorkspaceSave = false; }
     }
@@ -765,14 +411,6 @@ public partial class MainWindow
         RefreshInstrument();
     }
 
-    /// <summary>Steps the zoom combo (used by the configurable Zoom in/out commands).</summary>
-    private void ZoomBy(int direction, Point? zoomAnchor = null)
-    {
-        var currentPercent = Editor.Zoom * 100;
-        var nextPercent = Math.Clamp(Math.Round(currentPercent / 10, MidpointRounding.AwayFromZero) * 10 + direction * 10, 50, 200);
-        ApplyZoomText($"{nextPercent:0}%", zoomAnchor);
-    }
-
     private void Tutorial_Click(object sender, RoutedEventArgs e) => Views.TutorialWindow.ShowOrActivate(this);
     private void TutorialDetailed_Click(object sender, RoutedEventArgs e) => Views.TutorialWindow.ShowOrActivate(this, TabForge.Services.TutorialGuide.Detailed);
 
@@ -789,11 +427,11 @@ public partial class MainWindow
     private void PracticeOption_Changed(object sender, RoutedEventArgs e)
     {
         if (!IsLoaded) return;
-        _showNoteNames = PracticeNamesCheck.IsChecked == true;
-        _leftHanded = LeftHandedCheck.IsChecked == true;
-        _previewHorizon = PracticePreviewCheck.IsChecked == true ? (int)Math.Round(PreviewHorizonSlider.Value) : 0;
-        _scaleHighlight = ScaleHighlightCombo.SelectedIndex <= 0 ? null : ScaleHighlightCombo.SelectedItem?.ToString();
-        _fretboardFrets = FretboardFretsCombo.SelectedIndex == 1 ? 12 : 24;
+        InstrumentPane.ShowNoteNames = PracticeNamesCheck.IsChecked == true;
+        InstrumentPane.LeftHanded = LeftHandedCheck.IsChecked == true;
+        InstrumentPane.PreviewHorizon = PracticePreviewCheck.IsChecked == true ? (int)Math.Round(PreviewHorizonSlider.Value) : 0;
+        InstrumentPane.ScaleHighlight = ScaleHighlightCombo.SelectedIndex <= 0 ? null : ScaleHighlightCombo.SelectedItem?.ToString();
+        InstrumentPane.FretboardFrets = FretboardFretsCombo.SelectedIndex == 1 ? 12 : 24;
         RefreshInstrument();
         SaveSettings();
     }
@@ -814,10 +452,10 @@ public partial class MainWindow
         var track = SelectedTrack;
         if (track is null) return;
         var drums = !Instrument.CanRepositionFretboard && !Instrument.ShowsKeyboard;
-        var current = _trackInstrumentViews.TryGetValue(track, out var own) ? own : _instrumentViewOverride ?? _settings.Editing.InstrumentView;
+        var current = InstrumentPane.ViewFor(track);
         var state = new InstrumentMenuState(Instrument.ShowsKeyboard, drums, track.Name, current, InstrumentViews.All.ToList(),
-            MusicTheoryService.NoteNames.ToList(), MusicTheoryService.Scales.Keys.ToList(), _scaleHighlight, _showNoteNames,
-            _previewHorizon > 0, _leftHanded, _settings.Appearance.LockInstrumentSize);
+            MusicTheoryService.NoteNames.ToList(), MusicTheoryService.Scales.Keys.ToList(), InstrumentPane.ScaleHighlight, InstrumentPane.ShowNoteNames,
+            InstrumentPane.PreviewHorizon > 0, InstrumentPane.LeftHanded, _settings.Appearance.LockInstrumentSize);
         var menu = NewSpecMenu("Fretboard options", InstrumentMenus.Build(state, MenuKey), spec => RunInstrumentCommand(spec, track), Instrument);
         Instrument.ContextMenu = menu;
         OpenContextMenu(menu, Instrument, new Point(8, 8), fromKeyboard);
@@ -827,10 +465,10 @@ public partial class MainWindow
     {
         switch (spec.Id)
         {
-            case InstrumentMenus.ViewId: SetInstrumentView(spec.Arg, track); break;
-            case InstrumentMenus.ScaleId: SetScaleHighlight(spec.Arg); break;
-            case InstrumentMenus.FindScaleId: OpenScaleFinder(); break;
-            case InstrumentMenus.ClearScaleId: ClearScaleHighlight(); break;
+            case InstrumentMenus.ViewId: InstrumentPane.SetInstrumentView(spec.Arg, track); break;
+            case InstrumentMenus.ScaleId: InstrumentPane.SetScaleHighlight(spec.Arg); break;
+            case InstrumentMenus.FindScaleId: InstrumentPane.OpenScaleFinder(); break;
+            case InstrumentMenus.ClearScaleId: InstrumentPane.ClearScaleHighlight(); break;
             case InstrumentMenus.NoteNamesId:
                 PracticeNamesCheck.IsChecked = !spec.Checked;
                 PracticeOption_Changed(PracticeNamesCheck, new RoutedEventArgs());
@@ -843,119 +481,13 @@ public partial class MainWindow
                 LeftHandedCheck.IsChecked = !spec.Checked;
                 PracticeOption_Changed(LeftHandedCheck, new RoutedEventArgs());
                 break;
-            case InstrumentMenus.LockId: ToggleInstrumentSizeLock(); break;
+            case InstrumentMenus.LockId: WorkspaceLayouts.ToggleInstrumentSizeLock(); break;
             case InstrumentMenus.SettingsId: OpenSettings(SettingsCatalog.Fretboard, InstrumentMenus.SettingsRow); break;
         }
     }
 
 
-    /// <summary>The panels on the side (tools, structure, rhythm, layout, sections, practice, metronome).</summary>
-    private static readonly string[] SidePanelIds = { "tools", "structure", "rhythm", "layout", "sections", "practice", "playback" };
-    private List<string>? _hiddenSidePanels;
-
-    /// <summary>Side panel button / hotkey: hides every side panel, or brings back exactly the ones that were shown.</summary>
-    private void ToggleSidePanel_Click(object sender, RoutedEventArgs e) => ToggleSidePanel();
-
-    /// <summary>The whole layout as it was when the side panel was hidden, brought back exactly on show.</summary>
-    private TabForge.Docking.DockWorkspaceState? _layoutBeforeSideHide
-    {
-        get => _settings.WorkspaceBeforeSideHide;
-        set => _settings.WorkspaceBeforeSideHide = value;
-    }
-
-    private void ToggleSidePanel()
-    {
-        if (_dockWorkspace is null) return;
-        var shown = SidePanelIds.Where(_dockWorkspace.IsPanelVisible).ToList();
-        if (shown.Count > 0)
-        {
-            _hiddenSidePanels = shown;
-            _layoutBeforeSideHide = _dockWorkspace.CaptureLayout();   // placement, tab order and sizes
-            _dockWorkspace.HidePanels(shown);                          // one rebuild, not one per panel
-            SaveSettings();
-            StatusText.Text = "Side panel hidden";
-        }
-        else if (_layoutBeforeSideHide is { } saved && OnlySidePanelsDiffer(saved))
-        {
-            _dockWorkspace.ApplyLayout(saved);
-            _layoutBeforeSideHide = null; _hiddenSidePanels = null;
-            SaveSettings();
-            StatusText.Text = "Side panel shown";
-        }
-        else
-        {
-            // Other panels were opened or closed meanwhile: bring back the side panels to their places.
-            var restore = _hiddenSidePanels is { Count: > 0 } list ? list : SidePanelIds.ToList();
-            foreach (var id in restore) _dockWorkspace.SetPanelVisible(id, true);
-            _layoutBeforeSideHide = null; _hiddenSidePanels = null;
-            StatusText.Text = "Side panel shown";
-        }
-    }
-
-    /// <summary>True when every panel outside the side panel is where it was (so the saved layout can be restored whole).</summary>
-    private bool OnlySidePanelsDiffer(TabForge.Docking.DockWorkspaceState saved)
-    {
-        var visibleNow = _dockWorkspace!.CaptureLayout();
-        static HashSet<string> Others(TabForge.Docking.DockWorkspaceState state, IEnumerable<string> side) =>
-            Views.DockWorkspace.PanelsOf(state).Where(p => !side.Contains(p)).ToHashSet();
-        return Others(saved, SidePanelIds).SetEquals(Others(visibleNow, SidePanelIds));
-    }
-
-    private void ApplyInstrumentMinHeight()
-    {
-        _dockWorkspace?.SetPanelContentMinHeight("instrument",
-            Instrument.RequiredHeight + InstrumentHost.BorderThickness.Top + InstrumentHost.BorderThickness.Bottom);
-        ApplyInstrumentMaxHeight();
-    }
-
-    /// <summary>The fretboard pane cannot grow past its maximum stretch (no empty space above and below the board).</summary>
-    private void ApplyInstrumentMaxHeight() =>
-        _dockWorkspace?.SetPanelContentMaxHeight("instrument", double.IsPositiveInfinity(Instrument.MaximumHeight) ? null
-            : Instrument.MaximumHeight + InstrumentHost.BorderThickness.Top + InstrumentHost.BorderThickness.Bottom);
-
-    /// <summary>
-    /// Applies Appearance.LockInstrumentSize: locked = the pane keeps its saved height (splitter not draggable);
-    /// unlocked = resizable, the drawing scales with the pane. With no saved height yet, the current height
-    /// is taken once the window has laid out.
-    /// </summary>
-    private void ApplyInstrumentSizeLock()
-    {
-        if (_dockWorkspace is null) return;
-        var appearance = _settings.Appearance;
-        if (!appearance.LockInstrumentSize) { _dockWorkspace.SetPanelFixedHeight("instrument", null); return; }
-        if (appearance.InstrumentPaneHeight > 0)
-        {
-            _dockWorkspace.SetPanelFixedHeight("instrument", Math.Max(appearance.InstrumentPaneHeight, InstrumentMinContentHeight()));
-            return;
-        }
-        Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () =>
-        {
-            if (!_settings.Appearance.LockInstrumentSize || _settings.Appearance.InstrumentPaneHeight > 0) return;
-            // Fresh profile: the "medium" size computed from the size model (about 1.1x natural), not the dock's split ratio.
-            _settings.Appearance.InstrumentPaneHeight = Math.Ceiling(Instrument.MediumHeight()
-                + InstrumentHost.BorderThickness.Top + InstrumentHost.BorderThickness.Bottom);
-            ApplyInstrumentSizeLock();
-            SaveSettings();
-        });
-    }
-
-    private double InstrumentMinContentHeight() =>
-        Instrument.RequiredHeight + InstrumentHost.BorderThickness.Top + InstrumentHost.BorderThickness.Bottom;
-
-    /// <summary>Instrument right-click menu "Lock fretboard size" and the View.LockInstrumentSize hotkey.</summary>
-    private void ToggleInstrumentSizeLock()
-    {
-        var appearance = _settings.Appearance;
-        appearance.LockInstrumentSize = !appearance.LockInstrumentSize;
-        // Locking keeps the size the pane has now (the size the user chose while unlocked).
-        if (appearance.LockInstrumentSize && InstrumentHost.ActualHeight > 0)
-            appearance.InstrumentPaneHeight = Math.Ceiling(InstrumentHost.ActualHeight);
-        ApplyInstrumentSizeLock();
-        SaveSettings();
-        StatusText.Text = appearance.LockInstrumentSize
-            ? "Fretboard size locked"
-            : "Fretboard size unlocked: drag the pane's edge to resize (the drawing scales)";
-    }
+    private void ToggleSidePanel_Click(object sender, RoutedEventArgs e) => WorkspaceLayouts.ToggleSidePanel();
 
     /// <summary>View menu "Instrument view", the toolbar fretboard button and the View.InstrumentPanel hotkey.</summary>
     private void ToggleInstrumentView_Click(object sender, RoutedEventArgs e) => ToggleInstrumentPanel();

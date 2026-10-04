@@ -27,7 +27,7 @@ using TabForge.Visualization;
 namespace TabForge;
 
 // MainWindow, tracks and mixer: mixer header menu, global tuning, mixer drag-reorder, add/delete/move tracks.
-public partial class MainWindow : ITrackListFitHost
+public partial class MainWindow : ITrackListFitHost, ITrackGridDragHost
 {
     private MenuItem MixerMenuItem(string header, Action action)
     {
@@ -93,7 +93,7 @@ public partial class MainWindow : ITrackListFitHost
             _settings.Audio.MasterVolume = (int)e.NewValue;
             _midi.SetMasterVolume(_project, (int)e.NewValue);
             if (_mainWindowInitialized) SyncAudioEngine(); // plug-in tracks follow the master too
-            _mixerWindow?.SyncValues();                    // the mixer's Master row follows the knob
+            MixerWindows.Mixer?.SyncValues();                    // the mixer's Master row follows the knob
             StatusText.Text = $"Master volume {(int)e.NewValue}%";
             QueueMetronomeSettingsSave();
         };
@@ -212,56 +212,14 @@ public partial class MainWindow : ITrackListFitHost
         Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, FitTimelineToTracks);
 
 
-    // --- drag a mixer row to reorder tracks ---
-    private Point _mixerDragStart;
-    private int _mixerDragFrom = -1;
-    private int _mixerDragTarget = -1;
-    private bool _mixerDragArmed;
-
-    private void TrackMixerGrid_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-    {
-        _mixerDragFrom = RowIndexAt(e.OriginalSource as DependencyObject);
-        _mixerDragTarget = _mixerDragFrom;
-        _mixerDragArmed = false;
-        _mixerDragStart = e.GetPosition(TrackMixerGrid);
-    }
-
-    private void TrackMixerGrid_PreviewMouseMove(object sender, MouseEventArgs e)
-    {
-        if (_mixerDragFrom < 0 || e.LeftButton != MouseButtonState.Pressed) return;
-        var p = e.GetPosition(TrackMixerGrid);
-        if (!_mixerDragArmed && Math.Abs(p.Y - _mixerDragStart.Y) < 6) return;
-        _mixerDragArmed = true;
-        var target = RowIndexAt(TrackMixerGrid.InputHitTest(p) as DependencyObject);
-        if (target >= 0 && target != _mixerDragTarget)
-        {
-            _mixerDragTarget = target;
-            TrackMixerGrid.SelectedIndex = target;   // live feedback: selection follows the drag
-        }
-        e.Handled = true;
-    }
-
-    private void TrackMixerGrid_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
-    {
-        var from = _mixerDragFrom;
-        var to = _mixerDragTarget;
-        var armed = _mixerDragArmed;
-        _mixerDragFrom = -1;
-        _mixerDragTarget = -1;
-        _mixerDragArmed = false;
-        if (armed && from >= 0 && to >= 0 && to != from)
-        {
-            MoveTrackTo(from, to);
-            e.Handled = true;
-        }
-    }
-
-    private static int RowIndexAt(DependencyObject? source)
-    {
-        while (source is not null and not DataGridRow)
-            source = VisualTreeHelper.GetParent(source);
-        return source is DataGridRow row ? row.GetIndex() : -1;
-    }
+    // --- drag a mixer row to reorder tracks (TrackGridDragController) ---
+    private TrackGridDragController? _trackGridDrag;
+    private TrackGridDragController TrackGridDrag => _trackGridDrag ??= new TrackGridDragController(this);
+    DataGrid ITrackGridDragHost.TrackGrid => TrackMixerGrid;
+    void ITrackGridDragHost.MoveTrackTo(int from, int to) => MoveTrackTo(from, to);
+    private void TrackMixerGrid_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e) => TrackGridDrag.OnPreviewMouseLeftButtonDown(e);
+    private void TrackMixerGrid_PreviewMouseMove(object sender, MouseEventArgs e) => TrackGridDrag.OnPreviewMouseMove(e);
+    private void TrackMixerGrid_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e) => TrackGridDrag.OnPreviewMouseLeftButtonUp(e);
 
     private Views.SettleAction? _trackSwitchSync;
 

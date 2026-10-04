@@ -67,12 +67,15 @@ public static partial class SelfTest
         try
         {
             var (trackB, trackC) = (sessionB.Project.Tracks[0], sessionC.Project.Tracks[0]);
+            IxPumpUntil(() => client.SlotOf(trackB) >= 0 && client.SlotOf(trackC) >= 0 && ReferenceEquals(client.CurrentOwner, sessionC), 5000);
+            SettleLifetimeDispatcher();
             var loaded = client.SlotOf(trackB) >= 0 && client.SlotOf(trackC) >= 0 && ReferenceEquals(client.CurrentOwner, sessionC);
             // The restart: the client forgets every chain (as its crash path does) and tells the windows.
             LtCall(client, "Cleanup");
             client.AttachFakeForTest();
             var lost = client.SlotOf(trackB) == -1 && client.SlotOf(trackC) == -1;
             LtField<Action<string>>(client, "PluginCrashed")?.Invoke("");
+            IxPumpUntil(() => client.SlotOf(trackB) >= 0 && client.SlotOf(trackC) >= 0, 5000);
             SettleLifetimeDispatcher();
             Check("engine sync: before the restart both windows' chains are loaded and window C's song owns the engine", loaded && lost,
                 $"loaded {loaded}, slots lost after cleanup {lost}");
@@ -102,6 +105,9 @@ public static partial class SelfTest
             var (trackB, trackC) = (sessionB.Project.Tracks[0], sessionC.Project.Tracks[0]);
             var pathB = trackB.Rig.Plugins[0].Path;
             var slotCrash = typeof(AudioEngineClient).GetProperty("CrashLeftEngineRunning", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)!;
+            // Both windows' first syncs finish before the cleanup, so no late open-time sync is mistaken for a crash sync.
+            IxPumpUntil(() => client.SlotOf(trackB) >= 0 && client.SlotOf(trackC) >= 0, 5000);
+            SettleLifetimeDispatcher();
             LtCall(client, "Cleanup");
             client.AttachFakeForTest();
             slotCrash.SetValue(client, true);
@@ -109,6 +115,7 @@ public static partial class SelfTest
             SettleLifetimeDispatcher();
             Check("engine sync: a plug-in crash that no open song uses syncs no window", client.SlotOf(trackB) == -1 && client.SlotOf(trackC) == -1, $"slots B {client.SlotOf(trackB)}, C {client.SlotOf(trackC)}");
             LtField<Action<string>>(client, "PluginCrashed")?.Invoke(pathB);
+            IxPumpUntil(() => client.SlotOf(trackB) >= 0, 5000);
             SettleLifetimeDispatcher();
             Check("engine sync: a single plug-in crash syncs the window whose song uses it and not the other window", client.SlotOf(trackB) >= 0 && client.SlotOf(trackC) == -1, $"slots B {client.SlotOf(trackB)}, C {client.SlotOf(trackC)}");
             slotCrash.SetValue(client, false);

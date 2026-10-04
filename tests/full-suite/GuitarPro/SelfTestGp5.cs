@@ -284,7 +284,7 @@ public static partial class SelfTest
     private static void TestRuntimeIconAndResourceKeys()
     {
         var loader = typeof(SvgIconView).GetMethod("LoadAsset", BindingFlags.NonPublic | BindingFlags.Static);
-        var paletteKeys = typeof(MainWindow)
+        var paletteKeys = typeof(TabForge.Views.ToolPaletteController)
             .GetFields(BindingFlags.NonPublic | BindingFlags.Static)
             .Where(field => field.FieldType.IsArray && field.FieldType.GetElementType()?.Name == "PaletteTool")
             .SelectMany(field => ((System.Collections.IEnumerable?)field.GetValue(null) ?? Array.Empty<object>()).Cast<object>())

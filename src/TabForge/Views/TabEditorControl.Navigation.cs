@@ -30,7 +30,7 @@ public sealed partial class TabEditorControl
     private void MoveForwardBeat(TrackModel track)
     {
         if (SelectedMeasure >= track.Measures.Count) return;
-        var next = CursorPositions.Next(CellsFor(track.Measures[SelectedMeasure]), SelectedCell);
+        var next = CursorPositions.Next(CellsFor(track.Measures[SelectedMeasure]), SelectedCell, SlotsFor(SelectedMeasure));
         if (next >= 0) SelectedCell = next;
         else if (SelectedMeasure + 1 < track.Measures.Count) { SelectedMeasure++; SelectedCell = Snap(SelectedMeasure, 0); }
         else return;
@@ -40,12 +40,12 @@ public sealed partial class TabEditorControl
     private void MoveBackBeat(TrackModel track)
     {
         if (SelectedMeasure >= track.Measures.Count) return;
-        var prev = CursorPositions.Previous(CellsFor(track.Measures[SelectedMeasure]), SelectedCell);
+        var prev = CursorPositions.Previous(CellsFor(track.Measures[SelectedMeasure]), SelectedCell, SlotsFor(SelectedMeasure));
         if (prev >= 0) SelectedCell = prev;
         else if (SelectedMeasure > 0)
         {
             SelectedMeasure--;
-            SelectedCell = CursorPositions.Allowed(CellsFor(track.Measures[SelectedMeasure])).Last();
+            SelectedCell = CursorPositions.Allowed(CellsFor(track.Measures[SelectedMeasure]), SlotsFor(SelectedMeasure)).Last();
         }
         else SelectedCell = Snap(0, 0);
         SelectionChangedNow();
@@ -100,7 +100,7 @@ public sealed partial class TabEditorControl
     }
 
     /// <summary>The allowed cursor cell (a real beat or the append slot) of a bar for the grid cell <paramref name="cell"/>.</summary>
-    private int Snap(int measure, int cell) => Track is { } t && measure >= 0 && measure < t.Measures.Count ? CursorPositions.Snap(CellsFor(t.Measures[measure]), cell) : 0;
+    private int Snap(int measure, int cell) => Track is { } t && measure >= 0 && measure < t.Measures.Count ? CursorPositions.Snap(CellsFor(t.Measures[measure]), cell, SlotsFor(measure)) : 0;
 
     public void MoveToBarStart() { if (Track is { Measures.Count: > 0 } track) SetPosition(SelectedMeasure, Snap(SelectedMeasure, 0), SelectedString); }
 
@@ -108,7 +108,7 @@ public sealed partial class TabEditorControl
     {
         var track = Track;
         if (track is null) return;
-        SelectedCell = CursorPositions.Allowed(CellsFor(track.Measures[Math.Clamp(SelectedMeasure, 0, track.Measures.Count - 1)])).Last();
+        SelectedCell = CursorPositions.Allowed(CellsFor(track.Measures[Math.Clamp(SelectedMeasure, 0, track.Measures.Count - 1)]), SlotsFor(Math.Clamp(SelectedMeasure, 0, track.Measures.Count - 1))).Last();
         SelectionChangedNow();
     }
 

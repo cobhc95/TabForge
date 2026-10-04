@@ -17,6 +17,9 @@ public sealed partial class TabEditorControl
 {
     // ---------- keyboard ----------
 
+    /// <summary>Asked before the Delete key clears beats; true when the host handled the key itself (deleting whole empty bars).</summary>
+    public Func<bool>? BeforeDelete { get; set; }
+
     protected override void OnKeyDown(KeyEventArgs e)
     {
         base.OnKeyDown(e);
@@ -81,7 +84,7 @@ public sealed partial class TabEditorControl
         // Insert (Insert beat) is the catalogued command Edit.InsertBeat; Insert / Delete with a modifier belong to the bar,
         // section and track commands, so the plain handlers below only take the bare key.
         if (key == Key.Back && !ctrl && !alt && !shift) { DeleteNote(); return true; }
-        if (key == Key.Delete && !ctrl && !alt && !shift) { DeleteBeat(); return true; }
+        if (key == Key.Delete && !ctrl && !alt && !shift) { if (BeforeDelete?.Invoke() != true) DeleteBeat(); return true; }
 
         // Digits (Shift+1..9 are reserved for the effect shortcuts below).
         if (!ctrl && !alt && !shift && TryDigit(key, out var digit))

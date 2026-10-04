@@ -361,7 +361,7 @@ public partial class MainWindow
     {
         if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
         {
-            if (e.Delta != 0) ZoomBy(Math.Sign(e.Delta), e.GetPosition(ScoreScroll));
+            if (e.Delta != 0) ScoreZoom.ZoomBy(Math.Sign(e.Delta), e.GetPosition(ScoreScroll));
             e.Handled = true;
             return;
         }

@@ -47,8 +47,14 @@ public static class HotkeyCatalog
     /// <summary>Track-row context commands (see <see cref="CategoryTrackRows"/>).</summary>
     public static bool IsTrackRowAction(string id) => id.StartsWith("TrackRow.", StringComparison.OrdinalIgnoreCase);
 
-    /// <summary>0 = the global map, 1 = clip context, 2 = track-row context: keys only collide inside one context.</summary>
-    public static int ContextOf(string id) => IsClipAction(id) ? 1 : IsTrackRowAction(id) ? 2 : 0;
+    /// <summary>Bar-range commands: they only act while bars are selected and the timeline has the focus, so they may share keys with score commands (Delete, Ctrl+Delete).</summary>
+    public const string CategoryRange = "Selected bars (while the timeline has the focus)";
+
+    /// <summary>Bar-range context commands (see <see cref="CategoryRange"/>).</summary>
+    public static bool IsRangeAction(string id) => id.StartsWith("Range.", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>0 = the global map, 1 = clip context, 2 = track-row context, 3 = bar-range context: keys only collide inside one context.</summary>
+    public static int ContextOf(string id) => IsClipAction(id) ? 1 : IsTrackRowAction(id) ? 2 : IsRangeAction(id) ? 3 : 0;
 
     /// <summary>Two commands can share a key when they act in different contexts.</summary>
     public static bool SameContext(string a, string b) => ContextOf(a) == ContextOf(b);
@@ -150,12 +156,20 @@ public static class HotkeyCatalog
         new("Clip.Paste", CategoryClips, "Paste clip", "Ctrl+V", "Paste the copied clip at the lane position last clicked."),
         new("Clip.Duplicate", CategoryClips, "Duplicate clip", "Ctrl+D", "Duplicate the selected clip right after itself."),
         new("Clip.Mute", CategoryClips, "Mute clip", "Ctrl+M", "Mute or unmute the selected clip."),
+        new("Clip.Split", CategoryClips, "Split clip at the cursor", "S", "Cut the selected clip in two at the edit cursor (the spot last clicked on the lane), or under the playhead."),
+        new("Clip.Glue", CategoryClips, "Glue clips", "Ctrl+Shift+G", "Join the selected clip with the clips that continue it on its lane (same file, speed, pitch and level) into one."),
+        new("Clip.FadeReset", CategoryClips, "Reset clip fades", "", "Remove the fade-in and fade-out of the selected clip."),
         new("Clip.Properties", CategoryClips, "Clip properties", "F2", "Volume, pitch, speed and name of the selected clip."),
         new("TrackRow.Copy", CategoryTrackRows, "Copy track", "Ctrl+C", "Copy the focused track (notation, clips, mixer settings, FX chain, colour and name)."),
         new("TrackRow.Cut", CategoryTrackRows, "Cut track", "Ctrl+X", "Copy the focused track and remove it from the song."),
         new("TrackRow.Paste", CategoryTrackRows, "Paste track", "Ctrl+V", "Paste the copied track after the focused track, with a unique name."),
         new("TrackRow.Duplicate", CategoryTrackRows, "Duplicate track", "Ctrl+D", "Duplicate the focused track right after itself."),
         new("TrackRow.Delete", CategoryTrackRows, "Delete track (track row)", "Delete", "Delete the focused track after a confirmation."),
+        new("Range.Delete", CategoryRange, "Delete selected bars", "Delete", "Asks what to do with the selected bars (clear, remove and close the gap, insert a gap); \"Remember my answer\" makes it do that directly."),
+        new("Range.Clear", CategoryRange, "Delete selected bars (leave a gap)", "", "Empty the selected bars on every track); the bar count and the clips stay."),
+        new("Range.Remove", CategoryRange, "Delete selected bars (close the gap)", "Ctrl+Delete", "Remove the selected bars; later bars, sections and clips move earlier, clips inside go and clips across an edge are cut."),
+        new("Range.InsertBefore", CategoryRange, "Insert a gap before the selection", "Ctrl+Shift+Space", "Insert empty bars as long as the selection in front of it; the selection and everything after move later."),
+        new("Range.InsertAfter", CategoryRange, "Insert a gap after the selection", "", "Insert empty bars as long as the selection right after it."),
         new("Timeline.Snap", CategoryView, "Snap clips on / off", "Alt+S", "Turn snapping of audio and MIDI clips on or off (right-click the snap button for its settings)."),
         new("Track.Arm", CategoryTransport, "Arm track for recording", "", "Monitor the audio input through the selected track (and record it with Record)."),
         new("View.SidePanel", CategoryView, "Show / hide side panel", "", "Hide the side panel (tools, sections, practice) for more score space, or bring it back."),
@@ -255,9 +269,9 @@ public static class HotkeyCatalog
 
     /// <summary>The effective gesture for an action: the user's binding, else the catalogue default.</summary>
     /// <summary>Every effective gesture mapped to its command id (what the window dispatches on).</summary>
-    public static Dictionary<string, string> BuildMap(HotkeySettings settings, bool clipContext = false, bool trackRowContext = false)
+    public static Dictionary<string, string> BuildMap(HotkeySettings settings, bool clipContext = false, bool trackRowContext = false, bool rangeContext = false)
     {
-        var context = clipContext ? 1 : trackRowContext ? 2 : 0;
+        var context = clipContext ? 1 : trackRowContext ? 2 : rangeContext ? 3 : 0;
         var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (var action in All)
         {

@@ -332,6 +332,10 @@ public sealed class ArrangementController
     public EditResult<int[]> DeleteBars(DocumentSession document, int first, int last) =>
         DocumentEdits.Run<int[]>(document, project => BarRangeEditor.Remove(project, first, last));
 
+    /// <summary>Removes the given empty bars from every track in one undo step; the value is the old-to-new bar mapping.</summary>
+    public EditResult<int[]> DeleteEmptyBars(DocumentSession document, IReadOnlyList<int> bars) =>
+        DocumentEdits.Run<int[]>(document, project => bars.Count == 0 ? null : EmptyBars.Remove(project, bars));
+
     public EditResult<BarMove> MoveBars(DocumentSession document, int first, int last, int insertBefore) =>
         DocumentEdits.Run<BarMove>(document, project => BarRangeEditor.Move(project, first, last, insertBefore) is var (at, map) ? new BarMove(at, map) : null);
 

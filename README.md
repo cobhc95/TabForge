@@ -1,4 +1,4 @@
-# TabForge 0.5.2
+# TabForge 0.5.3
 
 **A keyboard-driven tablature and notation editor for Windows. Opens and saves GP files (.gp, .gp3–.gp5, .gpx).** Write, import and play back guitar,
 bass, drum and keyboard parts, with a live fretboard / keyboard, an arrangement timeline, audio and MIDI
@@ -9,7 +9,7 @@ recording lanes, mixer groups, VST effects and instruments, and offline audio re
 *The main screenshot shows TabForge's own demo song and a third-party VST3 plug-in (Superior Drummer 3 by Toontrack, sold separately) as an example of plug-in hosting. TabForge does not include that plug-in and is not affiliated with Toontrack.*
 
 > [!NOTE]
-> **TabForge 0.5.2 is an official release.** Keep backups of your projects and your original song files,
+> **TabForge 0.5.3 is an official release.** Keep backups of your projects and your original song files,
 > especially before using recording or third-party plug-ins, and report anything odd on the Issues page.
 
 TabForge is an independent project, not affiliated with any other software maker.
@@ -18,7 +18,7 @@ TabForge is an independent project, not affiliated with any other software maker
 
 Get the latest build from [Releases](https://github.com/cobhc95/TabForge/releases):
 
-**0.5.2 downloads:** [Windows installer](https://github.com/cobhc95/TabForge/releases/download/v0.5.2/TabForge-0.5.2-setup.exe) · [Portable ZIP](https://github.com/cobhc95/TabForge/releases/download/v0.5.2/TabForge-0.5.2-win-x64-portable.zip) · [SHA-256 checksums](https://github.com/cobhc95/TabForge/releases/download/v0.5.2/TabForge-0.5.2-SHA256.txt)
+**0.5.3 downloads:** [Windows installer](https://github.com/cobhc95/TabForge/releases/download/v0.5.3/TabForge-0.5.3-setup.exe) · [Portable ZIP](https://github.com/cobhc95/TabForge/releases/download/v0.5.3/TabForge-0.5.3-win-x64-portable.zip) · [SHA-256 checksums](https://github.com/cobhc95/TabForge/releases/download/v0.5.3/TabForge-0.5.3-SHA256.txt)
 
 Installer, portable ZIP, SHA-256 checksums and release notes are on the [Releases page](https://github.com/cobhc95/TabForge/releases).
 
@@ -42,6 +42,26 @@ or any MIDI output you choose, or through TabForge's audio engine.
 Includes an original demo song, *Ashen Meridian* (CC0), used in all screenshots.
 
 A `licenses/` folder beside `TabForge.exe` (portable zip and installer) holds the full licence texts of every bundled component. SoundTouch.Net (LGPL-2.1) ships as a separate, replaceable `SoundTouch.Net.dll`; each release attaches its source.
+
+## What's new in 0.5.3
+
+- **Clip editing.** Press **S** to split the selected clip at the edit cursor, **Ctrl+Shift+G** to glue it with the clips that continue it, and drag the fade handles at its top corners to fade in and out.
+
+  ![An audio clip split in two, with fade handles and shaded fades](docs/screenshots/clip-edit-fades.png)
+
+- **Delete on timeline bars asks what you mean.** Clear the bars, remove them and close the gap, or insert a gap before or after, for all tracks or this track. Ctrl+Delete closes the gap and Ctrl+Shift+Space inserts a gap; the prompt can remember your answer.
+
+  ![The Delete prompt over selected timeline bars](docs/screenshots/timeline-delete-prompt.png)
+
+- **Fretboard note marker size** (60% to 160%) in Settings > Fretboard & Keyboard > Appearance.
+
+  ![The fretboard with note markers at 140%](docs/screenshots/fretboard-marker-size.png)
+
+- **Live MIDI on audio tracks.** An armed audio track with MIDI input and monitoring plays your keyboard through its instrument plug-in.
+- **Cleaner Delete in the score.** A bar left without notes becomes one whole-bar rest, and Delete leaves merged rests by default.
+- **Smoother with long songs and clips.** Zooming and dragging stay responsive; the timeline draws only the bars near the view.
+
+Full notes: [0.5.3 release notes](https://github.com/cobhc95/TabForge/releases/tag/v0.5.3) and the [changelog](CHANGELOG.md).
 
 ## What's new in 0.5.2
 
@@ -259,6 +279,7 @@ changed (see [Hotkeys](#8-settings)).
 - **Drag across bars to select an area**: copy, cut, paste, move, delete, loop it, or skip it during
   playback. `Esc` clears the selection.
 - Right-click menus for bars, tracks and sections; drag tracks up or down to reorder them.
+- **Delete on bars** opens one prompt: clear (leave a gap), remove (close the gap) or insert a gap before or after, for all tracks or this track; Ctrl+Delete closes the gap, Ctrl+Shift+Space inserts a gap.
 - **Add-track lane**: a strip under the last track (click it, or drop audio or MIDI files on it) that adds an audio track or opens the Add track window; hide it in Preferences > Timeline & Tracks.
 - **Sections carry their clips**: moving, copying or duplicating a section takes the clips inside it; the song grows to fit clips that run past its end.
 
@@ -277,6 +298,8 @@ changed (see [Hotkeys](#8-settings)).
   **percussion map** that lights up on each hit and writes a hit on click; piano, winds, brass and synths get a
   **keyboard** (88 keys by default; 76/61/49/37/25 from the right-click menu). Right-click to show one track or
   all tracks differently; the default is in Settings > Fretboard.
+- **Note marker size** (Settings > Fretboard & Keyboard > Appearance, 60% to 160%) scales the note circles and numbers together.
+  ![The fretboard with note markers at 140%](docs/screenshots/fretboard-marker-size.png)
 - Follows playback: the sounding note glows, the next notes are outlined, a line shows where the hand
   moves next. Chords move as one shape.
 - Click to write a note; hover previews where it would go. Left-handed view, note names, 12 or 24 frets,
@@ -360,6 +383,7 @@ Recording is here to help you capture song ideas quickly and turn them into nota
 - **Multiple lanes per track** keep overlapping and loop-recorded takes separate. Click a take to choose
   what plays; Ctrl+click to layer takes. Waveforms and MIDI notes appear while recording.
 - Click anywhere on a lane to seek to that bar, just as on a notation row; clicking a take also selects it.
+- **Split, glue and fade clips**: S splits at the cursor, Ctrl+Shift+G glues, fade handles sit at the top corners. An armed audio track plays live MIDI through its instrument plug-in.
 - **Snap** clips to a beat grid, playhead or other clip edges; move, trim, mute, duplicate, or edit clip
   properties. MIDI clips can be written into the track's notation.
 - **Track groups** can be shown as collapsible headers in the track list with arm, mute, solo, level,

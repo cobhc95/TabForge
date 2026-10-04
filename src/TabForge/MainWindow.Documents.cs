@@ -148,8 +148,8 @@ public partial class MainWindow
                 Editor.PlaybackBarRemap = null;
             }
             RefreshToolsPalette();
-            _zoomFactor = session.ZoomFactor;
-            UpdateZoomControl();
+            ScoreZoom.Factor = session.ZoomFactor;
+            ScoreZoom.UpdateZoomControl();
             RefreshTracks(fromDocument: true);
             RefreshPluginChain();
             RefreshMarkers();
@@ -164,7 +164,7 @@ public partial class MainWindow
             if (!firstLoad) StatusText.Text = $"Switched to {session.DisplayName}";
         }
         finally { _restoring = false; }
-        ApplyPageWidth();
+        ScoreZoom.ApplyPageWidth();
         _playbackView.ShowActiveDocument();
         RefreshPlayingIndicators();
         // A freshly opened song should show the notation, not the title block at the top of the page.
@@ -188,7 +188,7 @@ public partial class MainWindow
     /// <summary>Stores the view state of the document on show so switching tabs is lossless; <paramref name="leaving"/> also settles the typed boxes on it.</summary>
     private void CaptureDocumentState(bool leaving = false)
     {
-        if (ViewBinder.Shown is { } shown) shown.ZoomFactor = _zoomFactor;
+        if (ViewBinder.Shown is { } shown) shown.ZoomFactor = ScoreZoom.Factor;
         ViewBinder.Capture(leaving);
     }
 

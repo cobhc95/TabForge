@@ -22,11 +22,15 @@ internal sealed class ThemedConfirmDialog : Window
         string? rememberText = null,
         string yesText = "Yes",
         string noText = "No",
-        bool defaultIsNo = false)
+        bool defaultIsNo = false,
+        IReadOnlyList<string>? choices = null,
+        int defaultChoice = 0,
+        IReadOnlyList<string>? scopes = null,
+        int defaultScope = 0)
     {
         _defaultIsNo = defaultIsNo;
         Title = title;
-        Width = 420;
+        Width = choices is { Count: > 0 } ? 560 : 420;
         SizeToContent = SizeToContent.Height;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         WindowStyle = WindowStyle.None;
@@ -127,8 +131,25 @@ internal sealed class ThemedConfirmDialog : Window
             Margin = new Thickness(10, 0, 0, 0),
             Foreground = ResourceBrush("TextBrush")
         };
-        Grid.SetColumn(messageText, 1);
-        body.Children.Add(messageText);
+        if (choices is { Count: > 0 })
+        {
+            var stack = new StackPanel { Margin = new Thickness(10, 0, 0, 0) };
+            messageText.Margin = new Thickness(0, 0, 0, 8);
+            stack.Children.Add(messageText);
+            _choiceButtons = AddRadios(stack, choices, defaultChoice, "choice", Orientation.Vertical);
+            if (scopes is { Count: > 0 })
+            {
+                stack.Children.Add(new TextBlock { Text = "Apply to", Margin = new Thickness(0, 10, 0, 2), Foreground = ResourceBrush("MutedBrush") });
+                _scopeButtons = AddRadios(stack, scopes, defaultScope, "scope", Orientation.Horizontal);
+            }
+            Grid.SetColumn(stack, 1);
+            body.Children.Add(stack);
+        }
+        else
+        {
+            Grid.SetColumn(messageText, 1);
+            body.Children.Add(messageText);
+        }
         Grid.SetRow(body, 1);
         layout.Children.Add(body);
 
@@ -156,7 +177,8 @@ internal sealed class ThemedConfirmDialog : Window
             {
                 Content = rememberText, FontSize = 12, Margin = new Thickness(16, 0, 16, 12),
                 Foreground = ResourceBrush("MutedBrush"),
-                ToolTip = "You can turn this warning back on in Settings → General → Safety."
+                ToolTip = choices is { Count: > 0 } ? "Delete then does this directly. Turn the prompt back on in Settings > Editing > Safety > Ask what Delete does on bars."
+                    : "You can turn this warning back on in Settings → General → Safety."
             };
             footerStack.Children.Add(_remember);
         }
@@ -179,10 +201,52 @@ internal sealed class ThemedConfirmDialog : Window
             else return;
             e.Handled = true;
         };
-        Loaded += (_, _) => actions.Children[defaultIsNo ? 1 : 0].Focus();
+        Loaded += (_, _) =>
+        {
+            if (_choiceButtons is { Count: > 0 }) _choiceButtons[Math.Clamp(defaultChoice, 0, _choiceButtons.Count - 1)].Focus();
+            else actions.Children[defaultIsNo ? 1 : 0].Focus();
+        };
     }
 
     private readonly bool _defaultIsNo;
+    private readonly List<RadioButton>? _choiceButtons;
+    private readonly List<RadioButton>? _scopeButtons;
+
+    /// <summary>The index of the option picked in the choice list (0 without one).</summary>
+    public int SelectedChoice => Math.Max(0, _choiceButtons?.FindIndex(r => r.IsChecked == true) ?? 0);
+    /// <summary>The index of the option picked in the scope row (0 without one).</summary>
+    public int SelectedScope => Math.Max(0, _scopeButtons?.FindIndex(r => r.IsChecked == true) ?? 0);
+
+    /// <summary>Test seam: picks options as arrow keys would.</summary>
+    internal void PickForTest(int choice, int? scope = null)
+    {
+        if (_choiceButtons is { } c && choice >= 0 && choice < c.Count) c[choice].IsChecked = true;
+        if (scope is int s && _scopeButtons is { } sc && s >= 0 && s < sc.Count) sc[s].IsChecked = true;
+    }
+
+    /// <summary>Test seam: ticks the "remember" box.</summary>
+    internal void RememberForTest(bool on) { if (_remember is not null) _remember.IsChecked = on; }
+
+    private List<RadioButton> AddRadios(StackPanel host, IReadOnlyList<string> labels, int selected, string group, Orientation orientation)
+    {
+        var panel = new StackPanel { Orientation = orientation };
+        KeyboardNavigation.SetDirectionalNavigation(panel, KeyboardNavigationMode.Cycle);
+        var list = new List<RadioButton>();
+        for (var i = 0; i < labels.Count; i++)
+        {
+            var radio = new RadioButton
+            {
+                Content = labels[i], GroupName = group, IsChecked = i == Math.Clamp(selected, 0, labels.Count - 1),
+                Margin = new Thickness(0, 2, orientation == Orientation.Horizontal ? 16 : 0, 2), Foreground = ResourceBrush("TextBrush")
+            };
+            System.Windows.Automation.AutomationProperties.SetName(radio, labels[i]);
+            radio.GotKeyboardFocus += (_, _) => radio.IsChecked = true;   // arrows move the choice
+            list.Add(radio);
+            panel.Children.Add(radio);
+        }
+        host.Children.Add(panel);
+        return list;
+    }
 
     public MessageBoxResult Result => _result;
 

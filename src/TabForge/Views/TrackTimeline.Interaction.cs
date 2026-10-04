@@ -18,17 +18,17 @@ using TabForge.Visualization;
 namespace TabForge.Views;
 
 // TrackTimeline: interaction (section hits, edge resizing, section drag preview, tooltips, mouse).
-internal sealed partial class TrackTimeline
+internal sealed partial class TrackTimeline : ISectionTipHost, ISectionEdgeHost
 {
     // ---------- interaction ----------
 
-    private int BarAt(double x) => Project is null ? 0 : EnsureTimelineGeometry().BarAt(x);
+    public int BarAt(double x) => Project is null ? 0 : EnsureTimelineGeometry().BarAt(x);
 
-    private readonly record struct SectionHit(MarkerModel Marker, int MarkerIndex, int FirstBar,
+    internal readonly record struct SectionHit(MarkerModel Marker, int MarkerIndex, int FirstBar,
         Rect Bounds, Color Color, string Title, bool Locked);
     private static readonly List<SectionHit> EmptySectionHits = new();
 
-    private List<SectionHit> SectionHits()
+    public List<SectionHit> SectionHits()
     {
         var project = Project;
         var bars = BarCount;
@@ -64,7 +64,7 @@ internal sealed partial class TrackTimeline
         return result;
     }
 
-    public void InvalidateSectionHits() { _sectionHitsCache = null; _dragLanes.Clear(); _hoverSectionIndex = -1; CloseSectionTip(); }
+    public void InvalidateSectionHits() { _sectionHitsCache = null; _dragLanes.Clear(); _hoverSectionIndex = -1; SectionTip.Close(); }
 
     // ---- section edge resizing ----
     public event EventHandler? SectionResizeStarting;
@@ -73,32 +73,9 @@ internal sealed partial class TrackTimeline
     public event EventHandler<(int markerIndex, int bar)>? SectionMarkerMoved;
     /// <summary>Right-click on the section lane: (section ordinal or -1 for empty lane, bar).</summary>
     public event EventHandler<(int markerIndex, int bar)>? SectionLaneContextRequested;
-    private MarkerModel? _resizeMarker;
-    private bool _resizeRightEdge;
-    private int _resizeLastBar = -1;
-    private const double EdgeGrip = 6;
-
-    /// <summary>Section edge under the pointer: (marker, right edge?) or null.</summary>
-    private (MarkerModel Marker, bool Right)? SectionEdgeAt(Point p)
-    {
-        if (p.Y < ArrangementPanel.RulerHeight || p.Y > ArrangementPanel.RulerHeight + ArrangementPanel.SectionHeight) return null;
-        foreach (var hit in SectionHits())
-        {
-            if (hit.Locked) continue;
-            if (Math.Abs(p.X - hit.Bounds.Right) <= EdgeGrip) return (hit.Marker, true);
-            if (Math.Abs(p.X - hit.Bounds.Left) <= EdgeGrip && hit.FirstBar > 0) return (hit.Marker, false);
-        }
-        return null;
-    }
-
-    // Model rule lives in SectionLayout.ResizeEdge; the control only snaps and repaints.
-    private void ResizeSectionTo(int boundary)
-    {
-        if (Project is not { } project || _resizeMarker is null) return;
-        SectionLayout.ResizeEdge(project, _resizeMarker, _resizeRightEdge, boundary);
-        InvalidateSectionHits();
-        InvalidateVisual();
-    }
+    /// <summary>Section edge resize and Ctrl+drag marker-only move: SectionEdgeController.</summary>
+    internal SectionEdgeController SectionEdges => _sectionEdges ??= new SectionEdgeController(this);
+    private SectionEdgeController? _sectionEdges;
 
     private static int ActiveSectionIndex(IReadOnlyList<SectionHit> sections, int playheadBar)
     {
@@ -373,103 +350,35 @@ internal sealed partial class TrackTimeline
     internal int SectionMarkerAt(double x, double y)
         => SectionAt(new Point(x, y))?.MarkerIndex ?? -1;
 
-    private void UpdateMarkerDrag(double pointerX)
-    {
-        // The tab lands where its left edge is and snaps bar by bar, so the timeline repaints only when
-        // the target bar changes (never per mouse move).
-        // Only through free bars: the same range the move itself uses (no overlap, no space = no move).
-        if (Project is null || SectionLayout.MoveRange(Project, _markerDragHit.Marker) is not var (min, max)) return;
-        var target = Math.Clamp(BarAt(pointerX - _sectionDragGrabOffset + 1), min, max);
-        if (target == _markerDragTargetBar) return;
-        _markerDragTargetBar = target;
-        _markerDragX = XOfBar(target) + 1;
-        InvalidateVisual();
-    }
-
-    private void EndMarkerDrag()
-    {
-        _markerDragging = false;
-        _markerDragTargetBar = -1;
-        InvalidateVisual();
-    }
-
     // Ghost of the dragged section tab plus the bar it will start on (plain drag only).
     private void DrawMarkerDragGhost(DrawingContext dc)
     {
-        if (!_markerDragging || _markerDragHit.Marker is null) return;
-        var bounds = _markerDragHit.Bounds;
-        var ghost = new Rect(_markerDragX, bounds.Y, bounds.Width, bounds.Height);
+        var edges = SectionEdges;
+        if (!edges.MarkerDragging || edges.MarkerHit.Marker is null) return;
+        var bounds = edges.MarkerHit.Bounds;
+        var ghost = new Rect(edges.MarkerX, bounds.Y, bounds.Width, bounds.Height);
         dc.PushOpacity(0.78);
-        DrawSectionBlock(dc, _markerDragHit, ghost, true, -1);
+        DrawSectionBlock(dc, edges.MarkerHit, ghost, true, -1);
         dc.Pop();
-        if (_markerDragTargetBar >= 0)
+        if (edges.MarkerTargetBar >= 0)
         {
-            var x = Math.Round(XOfBar(_markerDragTargetBar)) + 0.5;
+            var x = Math.Round(XOfBar(edges.MarkerTargetBar)) + 0.5;
             dc.DrawLine(Draw.Pen(_theme.Accent, 2), new Point(x, ArrangementPanel.RulerHeight), new Point(x, ArrangementPanel.RulerHeight + ArrangementPanel.SectionHeight));
         }
     }
 
-    /// <summary>What dragging this particular section will do (plain drag needs free bars beside it).</summary>
-    private string SectionTipFor(int sectionIndex)
-    {
-        var sorted = Project is null ? new List<MarkerModel>() : SectionLayout.Sorted(Project);
-        if (sectionIndex < 0 || sectionIndex >= sorted.Count) return "";
-        var marker = sorted[sectionIndex];
-        var title = string.IsNullOrWhiteSpace(marker.Title) ? "Section" : marker.Title;
-        var addHint = TooltipShortcuts.Append("Add section", "Section.Add");   // the key follows rebinding
-        if (marker.LockPosition) return $"{title} (position locked)\nRight-click: section options · {addHint}";
-        string plain;
-        if (SectionLayout.MoveRange(Project!, marker) is var (min, max))
-        {
-            var left = min < marker.MeasureIndex; var right = max > marker.MeasureIndex;
-            var where = left && right ? "left or right" : left ? "left" : "right";
-            plain = $"Ctrl+drag: move only the {title} marker {where} into the free bars (its bars stay, a gap is left behind)";
-        }
-        else plain = $"Ctrl+drag: no free bars next to {title} for its marker alone";
-        return $"{plain}\nCtrl+drag: move {title} together with its bars (other sections make room)\n" +
-               $"Drag an edge: resize · Right-click: section options · {addHint}";
-    }
-
-    // The section lane shows its hint through its own ToolTip, opened after a short hover: a tooltip
-    // assigned while the pointer is already inside the timeline never opens on its own in WPF.
-    private System.Windows.Controls.ToolTip? _sectionTip;
-    private System.Windows.Threading.DispatcherTimer? _sectionTipTimer;
-
-    private void ScheduleSectionTip(int sectionIndex)
-    {
-        _sectionTipTimer?.Stop();
-        if (_sectionTip is not null) _sectionTip.IsOpen = false;
-        if (sectionIndex < 0 || _dragging || _markerDragging || _sectionDragging) return;
-        _sectionTipTimer ??= new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(400) };
-        _sectionTipTimer.Tick -= SectionTipTimer_Tick;
-        _sectionTipTimer.Tick += SectionTipTimer_Tick;
-        _sectionTipTimer.Start();
-    }
-
-    private void SectionTipTimer_Tick(object? sender, EventArgs e)
-    {
-        _sectionTipTimer?.Stop();
-        if (_hoverSectionIndex < 0 || !IsMouseOver || _dragging || _markerDragging || _sectionDragging) return;
-        _sectionTip ??= new System.Windows.Controls.ToolTip
-        {
-            Placement = System.Windows.Controls.Primitives.PlacementMode.Mouse, PlacementTarget = this
-        };
-        _sectionTip.Content = SectionTipFor(_hoverSectionIndex);
-        _sectionTip.IsOpen = true;
-    }
-
-    private void CloseSectionTip()
-    {
-        _sectionTipTimer?.Stop();
-        if (_sectionTip is not null) _sectionTip.IsOpen = false;
-    }
+    // The section lane's hover hint: SectionTipController.
+    private SectionTipController SectionTip => _sectionTipController ??= new SectionTipController(this, this);
+    private SectionTipController? _sectionTipController;
+    bool ISectionTipHost.SectionGestureActive => _dragging || SectionEdges.MarkerDragging || _sectionDragging;
+    int ISectionTipHost.HoverSectionIndex => _hoverSectionIndex;
 
     private void UpdateSectionHover(int sectionIndex)
     {
         if (_hoverSectionIndex != sectionIndex)
         {
             _hoverSectionIndex = sectionIndex;
-            ScheduleSectionTip(sectionIndex);
+            SectionTip.Schedule(sectionIndex);
             RefreshOverlay();
         }
         var hits = SectionHits();
@@ -480,7 +389,7 @@ internal sealed partial class TrackTimeline
             : sectionIndex >= 0 ? Cursors.Hand : Cursors.Arrow;
     }
 
-    private int TrackAt(double y)
+    public int TrackAt(double y)
     {
         var gridTop = ArrangementPanel.RulerHeight + ArrangementPanel.SectionHeight;
         if (Project is null || y < gridTop) return -1;
@@ -489,22 +398,20 @@ internal sealed partial class TrackTimeline
 
     protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
     {
-        CloseSectionTip();
+        SectionTip.Close();
         base.OnMouseLeftButtonDown(e);
         var p = e.GetPosition(this);
         if (IsInAddLane(p)) { e.Handled = true; Dispatcher.BeginInvoke(new Action(RaiseAddLaneClicked)); return; }   // the Add-track lane: not a bar, a track or a clip
-        if (!_areaMoving && ClipMouseDown(e, p)) return;
-        if (!_areaMoving && SectionEdgeAt(p) is { } edge)
+        if (!AreaMove.Active && ClipGestures.MouseDown(e, p)) return;
+        if (!AreaMove.Active && SectionEdges.EdgeAt(p) is { } edge)
         {
-            _resizeMarker = edge.Marker;
-            _resizeRightEdge = edge.Right;
-            _resizeLastBar = -1;
+            SectionEdges.BeginResize(edge.Marker, edge.Right);
             SectionResizeStarting?.Invoke(this, EventArgs.Empty);
             CaptureMouse();
             e.Handled = true;
             return;
         }
-        if (_areaMoving) { FinishAreaMove(AreaMoveTargetAt(p.X)); e.Handled = true; return; }
+        if (AreaMove.Active) { AreaMove.Finish(AreaMove.TargetAt(p.X)); e.Handled = true; return; }
         var section = SectionAt(p);
         _sectionPressOriginIndex = section?.MarkerIndex ?? -1;
         _pressedSectionIndex = _sectionPressOriginIndex;
@@ -532,19 +439,16 @@ internal sealed partial class TrackTimeline
         base.OnMouseMove(e);
         var p = e.GetPosition(this);
         UpdateHover(p);
-        var inLane = !_dragging && _resizeMarker is null && IsInAddLane(p);
+        var inLane = !_dragging && SectionEdges.ResizeMarker is null && IsInAddLane(p);
         NotifyAddLaneHot(inLane);
         if (inLane) { Cursor = Cursors.Hand; return; }
-        if (!_dragging && _resizeMarker is null && ClipMouseMove(e, p)) return;
-        if (_resizeMarker is not null)
+        if (!_dragging && SectionEdges.ResizeMarker is null && ClipGestures.MouseMove(e, p)) return;
+        if (SectionEdges.ResizeMarker is not null)
         {
-            // Snap to the nearest bar boundary; repaint only when it changes.
-            var bar = BarAt(p.X);
-            var boundary = p.X - XOfBar(bar) > (XOfBar(bar + 1) - XOfBar(bar)) / 2 ? bar + 1 : bar;
-            if (boundary != _resizeLastBar) { _resizeLastBar = boundary; ResizeSectionTo(boundary); }
+            SectionEdges.ResizeMove(p.X);
             return;
         }
-        var edgeUnderPointer = SectionEdgeAt(p);
+        var edgeUnderPointer = SectionEdges.EdgeAt(p);
         Cursor = edgeUnderPointer is not null ? Cursors.SizeWE : null;
         if (edgeUnderPointer is not null && !_dragging)
         {
@@ -552,11 +456,10 @@ internal sealed partial class TrackTimeline
             Cursor = Cursors.SizeWE;
             return;
         }
-        if (_areaMoving)
+        if (AreaMove.Active)
         {
             // Only repaint when the drop position changes bar boundary.
-            var target = AreaMoveTargetAt(p.X);
-            if (target != _areaMoveTarget) { _areaMoveTarget = target; RefreshOverlay(); }
+            AreaMove.PointerMoved(p.X);
             return;
         }
         if (_sectionDragging)
@@ -564,9 +467,9 @@ internal sealed partial class TrackTimeline
             UpdateSectionDragPointer(p.X);
             return;
         }
-        if (_markerDragging)
+        if (SectionEdges.MarkerDragging)
         {
-            UpdateMarkerDrag(p.X);
+            SectionEdges.UpdateMarkerDrag(p.X);
             return;
         }
         var section = SectionAt(p);
@@ -581,10 +484,7 @@ internal sealed partial class TrackTimeline
                 if (_sectionPressOriginIndex >= hits.Count) return;
                 if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
                 {
-                    _markerDragging = true;
-                    _markerDragHit = hits[_sectionPressOriginIndex];
-                    _sectionDragGrabOffset = _dragStart.X - _markerDragHit.Bounds.X;
-                    UpdateMarkerDrag(p.X);
+                    SectionEdges.BeginMarkerDrag(hits[_sectionPressOriginIndex], _dragStart.X, p.X);
                     return;
                 }
                 _sectionDragMarker = hits[_sectionPressOriginIndex].Marker;
@@ -656,10 +556,10 @@ internal sealed partial class TrackTimeline
     protected override void OnMouseLeftButtonUp(MouseButtonEventArgs e)
     {
         base.OnMouseLeftButtonUp(e);
-        if (ClipMouseUp()) { e.Handled = true; return; }
-        if (_resizeMarker is not null)
+        if (ClipGestures.MouseUp()) { e.Handled = true; return; }
+        if (SectionEdges.ResizeMarker is not null)
         {
-            _resizeMarker = null;
+            SectionEdges.EndResize();
             ReleaseMouseCapture();
             SectionResized?.Invoke(this, EventArgs.Empty);
             e.Handled = true;
@@ -671,11 +571,11 @@ internal sealed partial class TrackTimeline
         var to = _dragTrackTo;
         var sectionFrom = _sectionPressOriginIndex;
         var sectionDrop = _sectionDropBefore;
-        if (_markerDragging)
+        if (SectionEdges.MarkerDragging)
         {
-            var targetBar = _markerDragTargetBar;
-            var ordinal = _markerDragHit.MarkerIndex;
-            EndMarkerDrag();
+            var targetBar = SectionEdges.MarkerTargetBar;
+            var ordinal = SectionEdges.MarkerHit.MarkerIndex;
+            SectionEdges.EndMarkerDrag();
             _dragging = false;
             _pressedSectionIndex = -1;
             _sectionPressOriginIndex = -1;
@@ -727,8 +627,8 @@ internal sealed partial class TrackTimeline
     protected override void OnLostMouseCapture(MouseEventArgs e)
     {
         base.OnLostMouseCapture(e);
-        ClipCaptureLost();
-        if (_markerDragging) { EndMarkerDrag(); _dragging = false; _sectionPressOriginIndex = -1; return; }
+        ClipGestures.CaptureLost();
+        if (SectionEdges.MarkerDragging) { SectionEdges.EndMarkerDrag(); _dragging = false; _sectionPressOriginIndex = -1; return; }
         if (!_sectionDragging) return;
         _dragging = false;
         _pressedSectionIndex = -1;
@@ -760,8 +660,8 @@ internal sealed partial class TrackTimeline
     {
         base.OnMouseRightButtonUp(e);
         var p = e.GetPosition(this);
-        if (_areaMoving) { FinishAreaMove(-1); e.Handled = true; return; }
-        if (ClipRightClick(p)) { e.Handled = true; return; }
+        if (AreaMove.Active) { AreaMove.Finish(-1); e.Handled = true; return; }
+        if (ClipGestures.RightClick(p)) { e.Handled = true; return; }
         var section = SectionAt(p);
         var onSectionLane = p.Y >= ArrangementPanel.RulerHeight && p.Y < ArrangementPanel.RulerHeight + ArrangementPanel.SectionHeight;
         if (onSectionLane)

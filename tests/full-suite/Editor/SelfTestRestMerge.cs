@@ -110,6 +110,37 @@ public static partial class SelfTest
         e8.Longer();
         Check("rest merge: + on a rest never drops the notes next to it", b8.Sum(c => c.Notes.Count) == 2);
 
-        Check("delete option: the default leaves a rest of the same length", !new EditingSettings().MergeRestsOnDelete);
+        Check("delete option: the default leaves merged rests", new EditingSettings().MergeRestsOnDelete);
+    }
+
+    /// <summary>Score Delete on a whole selected bar: notes clear into the fewest rests (one whole-bar rest), a second Delete on rests or empty beats always collapses them; 4/4 sixteenths, mixed values, 3/4, both "leave" options.</summary>
+    private static void TestDeleteBarClean()
+    {
+        static TabCell Note(int denominator, int fret) => new() { DurationDenominator = denominator, Notes = { new TabNote { StringIndex = 1, Fret = fret, MidiValue = 50 + fret } } };
+        foreach (var merge in new[] { false, true })
+        foreach (var kind in new[] { "16ths", "mixed", "3/4", "empty", "offgrid", "triplet" })
+        {
+            var project = Presets.TemplateFactory.Create("Rock Band");
+            var m = project.Tracks[0].Measures[0];
+            if (kind == "3/4") { m.TimeSigNum = 3; m.TimeSigDenom = 4; }
+            var slots = MusicTime.BarSlots(project, 0);
+            var e = new Views.TabEditorControl { Project = project, SelectedTrackIndex = 0, FillBarsWithRests = true, MergeRestsOnDelete = merge, AutoAdvanceAfterEntry = false };
+            var bar = m.Cells;
+            bar.Clear();
+            for (var i = 0; i < slots; i++) bar.Add(kind switch { "16ths" => Note(16, i % 5), "empty" => new TabCell(), _ => new TabCell() });
+            if (kind == "mixed") { bar[0] = Note(4, 1); bar[4] = Note(8, 2); bar[6] = Note(16, 3); bar[7] = Note(16, 4); bar[8] = Note(2, 5); }
+            if (kind == "3/4") { bar[0] = Note(4, 1); bar[4] = Note(8, 2); bar[6] = Note(8, 3); bar[8] = Note(4, 4); }
+            if (kind == "offgrid") { for (var i = 0; i < slots; i++) bar[i] = Note(16, i % 5); bar[3].RhythmicPosition = 3.0; }   // an imported bar with explicit beat positions
+            if (kind == "triplet") { for (var i = 0; i < slots; i++) bar[i] = Note(16, i % 5); bar[0] = Note(8, 1); bar[0].IsTriplet = true; }
+            bool OneRest() => bar.Count == slots && bar.Count(c => c.IsRest) == 1 && bar[0].IsRest && MusicTime.CellSlotsRounded(bar[0]) == slots && bar.All(c => c.Notes.Count == 0) && !MusicTime.AnalyzeBar(project, 0).Marked;
+            e.SelectRange(0, 0, 0, bar.Count - 1);
+            e.DeleteBeat();
+            var first = bar.All(c => c.Notes.Count == 0) && (merge ? OneRest() : kind is "offgrid" or "triplet" || !MusicTime.AnalyzeBar(project, 0).Marked);   // rests of the same length keep an imported bar's timing
+            Check($"delete bar clean ({kind}, merge {merge}): first Delete clears the notes{(merge ? " into one whole-bar rest" : "")}", first);
+            e.SelectRange(0, 0, 0, bar.Count - 1);
+            e.DeleteBeat();
+            Check($"delete bar clean ({kind}, merge {merge}): Delete again gives exactly one whole-bar rest", OneRest());
+        }
+        Check("delete option: the default leaves merged rests", new EditingSettings().MergeRestsOnDelete && new Views.TabEditorControl().MergeRestsOnDelete);
     }
 }

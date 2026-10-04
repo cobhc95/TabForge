@@ -12,8 +12,8 @@ internal static class CursorPositions
 {
     public static bool IsBeatCell(TabCell cell) => cell.Notes.Count > 0 || cell.IsRest || cell.HasAnnotation;
 
-    /// <summary>Allowed cursor cells in ascending order; never empty.</summary>
-    public static List<int> Allowed(IReadOnlyList<TabCell> cells)
+    /// <summary>Allowed cursor cells in ascending order; never empty. <paramref name="barSlots"/> is the bar's length in slots (0 = the cell count); a full bar has no append slot.</summary>
+    public static List<int> Allowed(IReadOnlyList<TabCell> cells, int barSlots = 0)
     {
         var allowed = new List<int>();
         var end = 0.0;
@@ -24,16 +24,17 @@ internal static class CursorPositions
             end = Math.Max(end, ScoreEditCommands.BeatStart(cells[i], i) + MusicTime.CellSlots(cells[i]));
         }
         var append = (int)Math.Ceiling(end - 0.001);
-        if (append < cells.Count && !allowed.Contains(append)) allowed.Add(append);
+        var capacity = barSlots > 0 ? Math.Min(barSlots, cells.Count) : cells.Count;
+        if (end < capacity - 0.001 && append < capacity && !allowed.Contains(append)) allowed.Add(append);
         if (allowed.Count == 0) allowed.Add(0);
         allowed.Sort();
         return allowed;
     }
 
     /// <summary>The allowed cell for a click at a slot position: the beat it lies inside, otherwise the nearest allowed position.</summary>
-    public static int Resolve(IReadOnlyList<TabCell> cells, double slotPosition)
+    public static int Resolve(IReadOnlyList<TabCell> cells, double slotPosition, int barSlots = 0)
     {
-        var allowed = Allowed(cells);
+        var allowed = Allowed(cells, barSlots);
         foreach (var index in allowed)
         {
             if (!IsBeatCell(cells[index])) continue;
@@ -70,11 +71,11 @@ internal static class CursorPositions
     }
 
     /// <summary>The allowed cursor cell for the grid cell <paramref name="cell"/> of a bar: the beat that holds it, otherwise the nearest allowed position.</summary>
-    public static int Snap(IReadOnlyList<TabCell> cells, int cell) => Resolve(cells, Math.Clamp(cell, 0, Math.Max(0, cells.Count - 1)));
+    public static int Snap(IReadOnlyList<TabCell> cells, int cell, int barSlots = 0) => Resolve(cells, Math.Clamp(cell, 0, Math.Max(0, cells.Count - 1)), barSlots);
 
     /// <summary>The next allowed cell after <paramref name="cell"/> in the bar, or -1.</summary>
-    public static int Next(IReadOnlyList<TabCell> cells, int cell) => Allowed(cells).FirstOrDefault(c => c > cell, -1);
+    public static int Next(IReadOnlyList<TabCell> cells, int cell, int barSlots = 0) => Allowed(cells, barSlots).FirstOrDefault(c => c > cell, -1);
 
     /// <summary>The previous allowed cell before <paramref name="cell"/> in the bar, or -1.</summary>
-    public static int Previous(IReadOnlyList<TabCell> cells, int cell) => Allowed(cells).LastOrDefault(c => c < cell, -1);
+    public static int Previous(IReadOnlyList<TabCell> cells, int cell, int barSlots = 0) => Allowed(cells, barSlots).LastOrDefault(c => c < cell, -1);
 }

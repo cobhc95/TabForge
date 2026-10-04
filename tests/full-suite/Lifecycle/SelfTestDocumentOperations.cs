@@ -876,7 +876,7 @@ public static partial class SelfTest
             w.Close();
             DoPumpUntil(() => errors.Count > 0);
             SettleLifetimeDispatcher();
-            var discard = LtField<System.Collections.IEnumerable>(w, "_discardOnClose")!.Cast<object>().Count();
+            var discard = LtField<System.Collections.IEnumerable>(LtField<object>(w, "_closeFlow")!, "_discardOnClose")!.Cast<object>().Count();
             Check("document operations: closing with three unsaved songs asks about each, saves them in order and stops at the one that fails: the window stays open",
                 asked.Count == 3 && errors.SequenceEqual(new[] { "Save failed" }) && w.IsVisible && docs.Count == 3, $"asked {asked.Count}, errors [{string.Join(",", errors)}], visible {w.IsVisible}");
             Check("document operations: the song saved before the failure is on disk and clean; the failing one keeps its file and its unsaved changes; the one after it was not attempted",

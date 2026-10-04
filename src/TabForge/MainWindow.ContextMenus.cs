@@ -57,9 +57,9 @@ public partial class MainWindow
                 case ScoreMenus.PasteId: Paste_Click(this, new RoutedEventArgs()); break;
                 case ScoreMenus.PasteSpecialId: PasteSpecial_Click(this, new RoutedEventArgs()); break;
                 case ScoreMenus.NotationId: SetNotation(spec.Checked ? NotationMode.TabOnly : NotationMode.TabAndStaff); break;
-                case ScoreMenus.ZoomInId: ZoomBy(1); break;
-                case ScoreMenus.ZoomOutId: ZoomBy(-1); break;
-                case ScoreMenus.FitWidthId: ApplyZoomText("Fit width"); break;
+                case ScoreMenus.ZoomInId: ScoreZoom.ZoomBy(1); break;
+                case ScoreMenus.ZoomOutId: ScoreZoom.ZoomBy(-1); break;
+                case ScoreMenus.FitWidthId: ScoreZoom.ApplyZoomText("Fit width"); break;
                 case ScoreMenus.LayoutId:
                     switch (spec.Arg)
                     {
@@ -106,11 +106,11 @@ public partial class MainWindow
         MenuItem Group(string header, string category, bool radio = false)
         {
             var group = new MenuItem { Header = header, Style = (Style)FindResource(typeof(MenuItem)) };
-            foreach (var tool in PaletteTools.Where(t => t.Group == category && t.Supported))
+            foreach (var tool in ToolPaletteController.PaletteTools.Where(t => t.Group == category && t.Supported))
             {
                 var durationKey = tool.Id.StartsWith("duration:", StringComparison.Ordinal) ? tool.Id[9..] : null;
-                var enabled = (durationKey is null || Editor.CanSetDurationForTool(durationKey)) && PaletteToolEnabled(tool.Id);
-                group.Items.Add(Item(tool.Label, () => RunTool(tool.Id), PaletteToolState(tool.Id), enabled, radio: radio));
+                var enabled = (durationKey is null || Editor.CanSetDurationForTool(durationKey)) && ToolPalette.PaletteToolEnabled(tool.Id);
+                group.Items.Add(Item(tool.Label, () => RunTool(tool.Id), ToolPalette.PaletteToolState(tool.Id), enabled, radio: radio));
             }
             return group;
         }
@@ -171,7 +171,7 @@ public partial class MainWindow
         Doc.HorizontalScoreView = horizontal;
         _settings.PreferredHorizontalScoreView = horizontal;
         Editor.HorizontalScroll = horizontal;
-        ApplyPageWidth();
+        ScoreZoom.ApplyPageWidth();
         ScoreScroll.ScrollToVerticalOffset(0);
         ScrollToCursor();
         SaveSettings();
@@ -185,7 +185,7 @@ public partial class MainWindow
         Doc.ContinuousScoreView = continuous;
         _settings.PreferredContinuousScoreView = continuous;
         Editor.CenterSystems = continuous;
-        ApplyPageWidth(new Point(ScoreScroll.ViewportWidth / 2, 0));
+        ScoreZoom.ApplyPageWidth(new Point(ScoreScroll.ViewportWidth / 2, 0));
         SaveSettings();
         StatusText.Text = continuous ? "Score layout: continuous" : "Score layout: page";
     }

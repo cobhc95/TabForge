@@ -53,27 +53,15 @@ public partial class MainWindow : Window
     private int _loopStartCell { get => Doc.LoopStartCell; set => Doc.LoopStartCell = value; }
     private int _loopEndCell { get => Doc.LoopEndCell; set => Doc.LoopEndCell = value; }
     private bool _mainWindowInitialized;
-    private bool _fullscreen;
-    private bool _instrumentDragArmed;
-    private bool _instrumentDragging;
-    private bool _instrumentGestureMoved;
-    private Point _instrumentDragStart;
     private UndoSnapshot? _sectionUndoSnapshot;
     private UndoSnapshot? _trackUndoSnapshot;
     private UndoController.UndoTransaction? _mixUndoTransaction;
     private bool _mixUndoChanged;
     private UndoController.UndoTransaction? _trackEditUndoTransaction;
     private bool _previewNotes = true;
-    private double _zoomFactor;
     // ---- keep-the-score-in-view ----
     private readonly ScoreFollowCoordinator _follow;
-    private InputGate<(double Width, double Zoom, bool Horizontal, bool Centre)> _pageInputs;   // the score layout reacts to these, not to height
-    private SettleAction? _centreSettle;
-    private bool _leftHanded;
     private bool _suppressWorkspaceSave;
-    private bool _showNoteNames;
-    private int _previewHorizon = 4;
-    private string? _scaleHighlight;
 
     // These aliases keep the active editor concise while the backing state stays with its document.
     private DocumentPlaybackState Playback => Doc.Playback;
@@ -90,7 +78,6 @@ public partial class MainWindow : Window
 
     // The engine reports ~60 times a second; the playback view applies the newest position once per rendered frame.
     private readonly PlaybackViewController _playbackView;
-    private int _fretboardFrets = 24;
     private int _scoreWheelScrollPixels = 32;
 
     // Per-document state is kept in the active DocumentSession.
@@ -128,8 +115,8 @@ public partial class MainWindow : Window
         _clips = new ClipEditController(new ClipHost(this), _trackController);
         _sections = new SectionEditFlow(new SectionHost(this), _arrangementController);
         Loaded += (_, _) => _services.Update.ScheduleAutomaticUpdateCheck();
-        BuildToolsPalette();
-        BuildPinnedToolStrip();
+        ToolPalette.BuildToolsPalette();
+        ToolPalette.BuildPinnedToolStrip();
         Arrangement.SetPlaybar(PlaybarControls);
         // The right-click popups are declared next to the floating bar, which stays hidden once the
         // playbar moves into the arrangement header; move them along so they can actually open.
@@ -193,15 +180,15 @@ public partial class MainWindow : Window
         Arrangement.SelectionClearRequested += (_, _) => _selection.Clear(SelectionOrigin.Timeline);
         InitSelectionModel();
 
-        Instrument.PreviewMouseLeftButtonDown += Instrument_MouseLeftButtonDown;
-        Instrument.PreviewMouseMove += Instrument_MouseMove;
-        Instrument.PreviewMouseLeftButtonUp += Instrument_MouseLeftButtonUp;
-        Instrument.LostMouseCapture += Instrument_LostMouseCapture;
+        Instrument.PreviewMouseLeftButtonDown += (_, e) => InstrumentPane.OnMouseLeftButtonDown(e);
+        Instrument.PreviewMouseMove += (_, e) => InstrumentPane.OnMouseMove(e);
+        Instrument.PreviewMouseLeftButtonUp += (_, e) => InstrumentPane.OnMouseLeftButtonUp(e);
+        Instrument.LostMouseCapture += (_, _) => InstrumentPane.OnLostMouseCapture();
         Instrument.MouseRightButtonUp += Instrument_MouseRightButtonUp;
         Instrument.ContextMenuKeyPressed += (_, _) => ShowInstrumentContextMenu(fromKeyboard: true);
         Arrangement.TimelineKeyboardContextRequested += (_, _) => ShowTimelineContextMenuFromKeyboard();
-        Instrument.LegendAnchorChanged += PlaceScaleFinderButton;
-        InstrumentOverlay.SizeChanged += (_, _) => PlaceScaleFinderButton(_scaleButtonAnchor);
+        Instrument.LegendAnchorChanged += InstrumentPane.PlaceScaleFinderButton;
+        InstrumentOverlay.SizeChanged += (_, _) => InstrumentPane.ReplaceScaleFinderButton();
         Arrangement.BarSelected += (_, bar) =>
         {
             // Only moves the caret (the ruler seeks). Clearing the range is the timeline's plain-click event:
@@ -218,6 +205,7 @@ public partial class MainWindow : Window
         {
             var queued = pendingRange is not null;
             pendingRange = range;
+            _clips.LaneCursor = null; Arrangement.FocusTimeline();   // a dragged bar range takes the keys (the press gave them to the score): Delete acts on the bars
             if (queued) return;
             Dispatcher.BeginInvoke(DispatcherPriority.Render, new Action(() =>
             {
@@ -340,7 +328,7 @@ public partial class MainWindow : Window
         };
         // Right-click on a group row opens the mixer at that group; the empty-area menus toggle "Show tracks in groups" (the mixer's
         // "Groups in track list" box is the same setting).
-        Arrangement.GroupMixerRequested += group => { OpenMixer(); _mixerWindow?.RevealGroup(group); };
+        Arrangement.GroupMixerRequested += group => { OpenMixer(); MixerWindows.Mixer?.RevealGroup(group); };
         Arrangement.GroupsShownState = () => _project.Mixer.ShowGroupsInTrackList;
         Arrangement.GroupsToggleRequested += on => ((IMixerHost)this).SetTrackListShows("groups", on);
         Arrangement.ColourByGroupRequested += ColourTracksByGroup;
@@ -374,7 +362,7 @@ public partial class MainWindow : Window
         LoadSettings();
         ApplyPreferredScoreView(_documents.Active);
         UpdateSpeedControls();
-        UpdateZoomControl();
+        ScoreZoom.UpdateZoomControl();
         RefreshTheoryCombos();
         RefreshScaleHighlightCombo();
         RefreshMidiDevices();
@@ -395,7 +383,7 @@ public partial class MainWindow : Window
         ActivateDocument(_documents.Active, firstLoad: true, focusTabSelection: true);
         Loaded += (_, _) =>
         {
-            ApplyPageWidth();
+            ScoreZoom.ApplyPageWidth();
             ApplyLayout();
             ReturnFocusToEditorAfterMouseClicks();
             UpdateMaximiseGlyph();

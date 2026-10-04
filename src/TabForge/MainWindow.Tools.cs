@@ -69,7 +69,7 @@ public partial class MainWindow
     }
 
     // Tools > Scale finder: likely scales for the selection / song, or any scale, shown on the fretboard.
-    private void ScaleFinder_Click(object sender, RoutedEventArgs e) => OpenScaleFinder();
+    private void ScaleFinder_Click(object sender, RoutedEventArgs e) => InstrumentPane.OpenScaleFinder();
 
     /// <summary>Shows (and focuses) the Practice / Mixer panel and scrolls to one of its sections.</summary>
     private void ShowInPracticePanel(FrameworkElement target)

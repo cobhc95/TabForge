@@ -399,7 +399,7 @@ public sealed class FretboardRenderer : IInstrumentRenderer
         var staticKey = (bounds, placement.Position, placement.HorizontalOffset, placement.PlacementWidth, strings, frets,
             firstFret, lastFret, state.ShowStringLabels, state.ShowNoteNames, state.LeftHanded, SequenceHash(state.Tuning),
             SequenceHash(state.ScalePitchClasses), theme, VisualTheme.IsLight, Draw.DpiKey,
-            (state.ScaleStyle, state.ScaleColour, state.MarkerColour, state.MarkerBrightness, state.ScaleName, state.NumberScale, state.StringSpacing, state.ScaleStrength));
+            (state.ScaleStyle, state.ScaleColour, state.MarkerColour, state.MarkerBrightness, state.ScaleName, state.NumberScale, state.StringSpacing, state.ScaleStrength, state.MarkerScale));
         if (!Equals(_staticKey, staticKey) || _staticBoard is null)
         {
             var group = new DrawingGroup();
@@ -566,7 +566,7 @@ public sealed class FretboardRenderer : IInstrumentRenderer
             if (note.Fret < firstFret - 1 || note.Fret > lastFret + 1) continue;
             var x = note.Fret == 0 ? boardRect.Left - 14 : FretX(note.Fret);
             var y = StringY(note.StringIndex);
-            RenderMarker(dc, note, x, y, theme, fretWidth, state.Pulse, state.ShowNoteNames, state.NumberScale, bounds.Y, bounds.X + 34, state.Notes, WhereIs);
+            RenderMarker(dc, note, x, y, theme, fretWidth, state.Pulse, state.ShowNoteNames, state.NumberScale, bounds.Y, bounds.X + 34, state.Notes, WhereIs, state.MarkerScale, stringGap);
         }
 
         if (placement.SnapPreview is { } snapPreview)
@@ -617,7 +617,7 @@ public sealed class FretboardRenderer : IInstrumentRenderer
 
     private static void RenderMarker(DrawingContext dc, VisualNote note, double x, double y, VisualTheme theme, double fretWidth, double pulse,
         bool showNoteNames = false, double numberScale = 1, double topLimit = double.NegativeInfinity, double leftLimit = double.NegativeInfinity,
-        IReadOnlyList<VisualNote>? others = null, Func<VisualNote, Point>? whereIs = null)
+        IReadOnlyList<VisualNote>? others = null, Func<VisualNote, Point>? whereIs = null, double markerScale = 1, double stringGap = 0)
     {
         _ = pulse;
         var color = note.Role switch
@@ -633,6 +633,8 @@ public sealed class FretboardRenderer : IInstrumentRenderer
             : note.Role == VisualRole.Next ? Math.Min(13, fretWidth * 0.36)
             : Math.Min(12, fretWidth * 0.32);
         radius *= numberScale;   // the bubble scales with its number so the number always fits
+        var markerFactor = MarkerSizing.Factor(markerScale, radius, stringGap);
+        radius *= markerFactor;
 
         // Sounding note: a tight halo. Nothing else glows, so a marker can only look "on" while it is
         // actually sounding (the next/recent markers are outlines).
@@ -670,7 +672,7 @@ public sealed class FretboardRenderer : IInstrumentRenderer
             : note.Fret == 0 ? "0" : note.Fret.ToString();
         var textColor = note.Role is VisualRole.Current or VisualRole.Selected or VisualRole.Next ? theme.Background
             : emphasis > 0.55 ? theme.Text : theme.Muted;
-        var size = numberScale * note.Role switch
+        var size = numberScale * markerFactor * note.Role switch
         {
             VisualRole.Current => 13,
             VisualRole.Selected => 13,

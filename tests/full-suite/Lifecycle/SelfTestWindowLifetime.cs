@@ -203,6 +203,10 @@ public static partial class SelfTest
     private static T? LtField<T>(object target, string name) =>
         (T?)target.GetType().GetField(name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)!.GetValue(target);
 
+    /// <summary>The window's instrument panel controller (it holds the view choice).</summary>
+    private static object LtPane(object window) =>
+        window.GetType().GetProperty("InstrumentPane", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(window)!;
+
     private static void LtSet(object target, string name, object? value) =>
         target.GetType().GetField(name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)!.SetValue(target, value);
 
@@ -466,14 +470,14 @@ public static partial class SelfTest
         Check("window lifetime: after a cancelled close the window's media review notice still reacts to approval changes", bar is { Visibility: Visibility.Visible }, $"bar {(bar is null ? "missing" : bar.Visibility.ToString())}");
 
         // Preferences: the actions still reach B (and only B).
-        var overrideBefore = LtField<string>(b, "_instrumentViewOverride");
-        var overrideA = LtField<string>(a, "_instrumentViewOverride");
+        var overrideBefore = LtField<string>(LtPane(b), "_instrumentViewOverride");
+        var overrideA = LtField<string>(LtPane(a), "_instrumentViewOverride");
         var prefs = OpenPreferencesCaptured(b, context, "fretboard.showallas");
         var pressed = prefs is not null && PressRowButton(prefs, "Apply to all tracks");
-        var overrideAfter = LtField<string>(b, "_instrumentViewOverride");
+        var overrideAfter = LtField<string>(LtPane(b), "_instrumentViewOverride");
         Check("window lifetime: after a cancelled close the window's Preferences still apply their actions to it (and not to window A)",
-            pressed && overrideBefore is null && overrideAfter is not null && LtField<string>(a, "_instrumentViewOverride") == overrideA,
-            $"pressed {pressed}, before '{overrideBefore}', after '{overrideAfter}', A '{LtField<string>(a, "_instrumentViewOverride")}'");
+            pressed && overrideBefore is null && overrideAfter is not null && LtField<string>(LtPane(a), "_instrumentViewOverride") == overrideA,
+            $"pressed {pressed}, before '{overrideBefore}', after '{overrideAfter}', A '{LtField<string>(LtPane(a), "_instrumentViewOverride")}'");
         prefs?.Close();
 
         // Playback: the transport still starts and stops (the window's own playback wiring is intact). A silent output replaces the Windows synth.
@@ -713,12 +717,12 @@ public static partial class SelfTest
         var pa = OpenPreferencesCaptured(a, context, "fretboard.showallas");
         var pb = OpenPreferencesCaptured(b, context, "fretboard.showallas");
         if (order == "A first") { pa?.Close(); pb?.Close(); } else { pb?.Close(); pa?.Close(); }
-        LtSet(a, "_instrumentViewOverride", null); LtSet(b, "_instrumentViewOverride", null);
+        LtSet(LtPane(a), "_instrumentViewOverride", null); LtSet(LtPane(b), "_instrumentViewOverride", null);
 
-        var viewA = LtField<string>(a, "_instrumentViewOverride"); var viewB = LtField<string>(b, "_instrumentViewOverride");
+        var viewA = LtField<string>(LtPane(a), "_instrumentViewOverride"); var viewB = LtField<string>(LtPane(b), "_instrumentViewOverride");
         var again = OpenPreferencesCaptured(a, context, "fretboard.showallas");
         var applied = again is not null && PressRowButton(again, "Apply to all tracks");
-        var afterA = LtField<string>(a, "_instrumentViewOverride"); var afterB = LtField<string>(b, "_instrumentViewOverride");
+        var afterA = LtField<string>(LtPane(a), "_instrumentViewOverride"); var afterB = LtField<string>(LtPane(b), "_instrumentViewOverride");
         Check($"window lifetime: Preferences opened from A and B and closed ({order}): the 'Apply to all tracks' action reaches the window that opened it (A), not B",
             applied && afterA is not null && afterB == viewB, $"applied {applied}, A '{viewA}' -> '{afterA}', B '{viewB}' -> '{afterB}'");
 
@@ -738,10 +742,10 @@ public static partial class SelfTest
         AddUnapprovedClip(a);
         var bRef = PreferencesFromTwoWindows(a, context);
         SettleLifetimeDispatcher();
-        var before = LtField<string>(a, "_instrumentViewOverride");
+        var before = LtField<string>(LtPane(a), "_instrumentViewOverride");
         var survivor = OpenPreferencesCaptured(a, context, "fretboard.showallas");
         var applied = survivor is not null && PressRowButton(survivor, "Apply to all tracks");
-        Check("window lifetime: after the other window closed, the surviving window's Preferences actions still reach it", applied && LtField<string>(a, "_instrumentViewOverride") is not null, $"applied {applied}, was '{before}'");
+        Check("window lifetime: after the other window closed, the surviving window's Preferences actions still reach it", applied && LtField<string>(LtPane(a), "_instrumentViewOverride") is not null, $"applied {applied}, was '{before}'");
         survivor?.Close();
         foreach (var dialog in context.Captured.ToArray()) { try { dialog.Close(); } catch (InvalidOperationException) { } }
         context.Captured.Clear();

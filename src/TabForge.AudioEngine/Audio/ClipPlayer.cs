@@ -17,6 +17,7 @@ public sealed class ClipPlayer : IDisposable
     private readonly int _rate;
     public ClipSpec Spec { get; }
     private readonly float _gain;
+    private readonly bool _fades;
 
     // Shared between the audio thread and the disk thread.
     private volatile float[]? _ring;
@@ -44,6 +45,21 @@ public sealed class ClipPlayer : IDisposable
         _rate = rate;
         _offline = offline;
         _gain = (float)Gain.FromDb(spec.GainDb);
+        _fades = spec.FadeInSec > 0 || spec.FadeOutSec > 0;
+    }
+
+    /// <summary>
+    /// The fade gain (0..1) at <paramref name="t"/> seconds into a clip that is <paramref name="length"/> long on the timeline: a linear ramp up over
+    /// <paramref name="fadeIn"/> and down over <paramref name="fadeOut"/> (together never longer than the clip). Allocation-free.
+    /// </summary>
+    public static float FadeGain(double t, double length, double fadeIn, double fadeOut)
+    {
+        var total = fadeIn + fadeOut;
+        if (total > length && total > 0) { var k = length / total; fadeIn *= k; fadeOut *= k; }
+        var g = 1.0;
+        if (fadeIn > 0 && t < fadeIn) g = Math.Max(0, t) / fadeIn;
+        if (fadeOut > 0 && t > length - fadeOut) g = Math.Min(g, Math.Max(0, length - t) / fadeOut);
+        return (float)g;
     }
 
     /// <summary>Offline: seeks (when the position jumped) and decodes exactly what this block needs, then copies it.</summary>
@@ -66,8 +82,9 @@ public sealed class ClipPlayer : IDisposable
         for (var i = 0; i < count; i++)
         {
             var at = (int)((_read + i) & (RingFrames - 1)) * 2;
-            left[from + i] += ring[at] * _gain;
-            right[from + i] += ring[at + 1] * _gain;
+            var g = _fades ? _gain * FadeGain((wantedSec - Spec.StartSec) + (double)i / _rate, Length, Spec.FadeInSec, Spec.FadeOutSec) : _gain;
+            left[from + i] += ring[at] * g;
+            right[from + i] += ring[at + 1] * g;
         }
         _read += Math.Max(0, count);
     }
@@ -112,8 +129,9 @@ public sealed class ClipPlayer : IDisposable
         for (var i = 0; i < count; i++)
         {
             var at = (int)((read + i) & (RingFrames - 1)) * 2;
-            left[from + i] += ring[at] * _gain;
-            right[from + i] += ring[at + 1] * _gain;
+            var g = _fades ? _gain * FadeGain((wantedSec - start) + (double)i / _rate, Length, Spec.FadeInSec, Spec.FadeOutSec) : _gain;
+            left[from + i] += ring[at] * g;
+            right[from + i] += ring[at + 1] * g;
         }
         Volatile.Write(ref _read, read + Math.Max(0, count));
         Volatile.Write(ref _lastUsed, Environment.TickCount64);

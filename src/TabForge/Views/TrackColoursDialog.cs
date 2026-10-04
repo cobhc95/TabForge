@@ -71,7 +71,7 @@ public static class TrackColoursDialog
         };
 
         var captured = false;
-        foreach (var (name, hex) in ArrangementPanel.TrackColourPalette)
+        foreach (var (name, hex) in TrackControlWidgets.TrackColourPalette)
         {
             var button = new Button { Width = 30, Height = 24, Margin = new Thickness(0, 0, 4, 4), ToolTip = $"{name}: colour the ticked tracks", Padding = new Thickness(0) };
             button.Content = new Border { Width = 22, Height = 16, CornerRadius = new CornerRadius(3), Background = Brush(hex) };

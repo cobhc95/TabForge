@@ -11,7 +11,7 @@ public static partial class SelfTest
         (Views.TabEditorControl Editor, SongProject Project, Func<int> Steps) Make(bool fill)
         {
             var project = Presets.TemplateFactory.Create("Rock Band");
-            var e = new Views.TabEditorControl { Project = project, SelectedTrackIndex = 0, FillBarsWithRests = fill, AutoAdvanceAfterEntry = false };
+            var e = new Views.TabEditorControl { Project = project, SelectedTrackIndex = 0, FillBarsWithRests = fill, MergeRestsOnDelete = false, AutoAdvanceAfterEntry = false };
             var steps = 0;
             e.EditStarting += (_, _) => steps++;
             return (e, project, () => steps);
