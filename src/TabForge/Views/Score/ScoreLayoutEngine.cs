@@ -20,8 +20,8 @@ internal interface IScoreLayoutHost
     double GridWidth { get; }
     double FretFontSize { get; }
 
-    /// <summary>The height a system needs changed: the host measures again.</summary>
-    void ExtentChanged();
+    /// <summary>The score layout or its system height changed: the host measures again.</summary>
+    void LayoutChanged();
 }
 
 /// <summary>
@@ -29,13 +29,14 @@ internal interface IScoreLayoutHost
 /// layouts the drawing reuses, and the facts derived once per score (passages, dynamics, markers, bar states). Everything is cached
 /// against a generation that <see cref="Invalidate"/> advances, so a repaint never lays anything out again.
 /// </summary>
-internal sealed class ScoreLayoutEngine
+internal sealed partial class ScoreLayoutEngine
 {
     internal const double PagePad = 44;
     internal const double RhythmicPixelsPerSlot = 7.5;
 
     private readonly IScoreLayoutHost _host;
     private readonly StaffNotationRenderer _staff;
+    private readonly ScoreLayoutIncrementalState _incremental = new();
 
     private ScorePageLayout? _scoreLayout;
     private TrackModel? _scoreLayoutTrack;
@@ -58,13 +59,11 @@ internal sealed class ScoreLayoutEngine
     private int _markerCacheGeneration = -1;
     private StaffNotationMeasureLayout?[,]? _staffLayoutCache;
     private StaffLayoutCacheKey[,]? _staffLayoutKeys;
-
     // ---- vertical room for the stacked markings: measured once per layout from the track's own content ----
     private double _extraAbove, _extraBelow, _extraTabBelow;
     private double _scanTabBelow;
     private double _scanTop, _scanBottom, _scanRows;
     private bool _scanVolta;
-
     internal ScoreLayoutEngine(IScoreLayoutHost host, StaffNotationRenderer staff)
     {
         _host = host;
@@ -98,6 +97,7 @@ internal sealed class ScoreLayoutEngine
     /// <summary>Forgets every cached layout and fact after the score content or a layout setting changed.</summary>
     internal void Invalidate()
     {
+        SlowTrace.Mark("score relayout requested");
         _scoreLayout = null;
         _scoreGeneration++;
         _scoreFactsGeneration = -1;
@@ -113,6 +113,8 @@ internal sealed class ScoreLayoutEngine
         _markerCacheGeneration = -1;
         _staffLayoutCache = null;
         _staffLayoutKeys = null;
+        ClearIncrementalCaches();
+        _host.LayoutChanged();
     }
 
     /// <summary>The window that hosted the editor closed for good: forgets the song and every cache that points into it.</summary>
@@ -145,19 +147,13 @@ internal sealed class ScoreLayoutEngine
 #if DEBUG
         using var performance = RenderPerformance.Measure(RenderPerformance.PerformanceCategory.ScoreLayout);
 #endif
-        var widths = new double[track.Measures.Count];
+        using var relayoutTrace = SlowTrace.Measure("score relayout", 0);
+        var extraBefore = (_extraAbove, _extraBelow, _extraTabBelow);
         var palmMutePassages = _host.Project is null
             ? Array.Empty<PalmMutePassage>()
             : EnsureScoreFacts(track, _host.Project).PalmMutePassages;
-        BeginMarkExtentScan();
-        for (var i = 0; i < widths.Length; i++)
-        {
-            widths[i] = NaturalMeasureWidth(track, track.Measures[i], i, palmMutePassages) * _host.Appearance.MeasureHorizontalSpacing;
-            if (!_host.HorizontalScroll) widths[i] = Math.Min(widths[i], _host.GridWidth);   // a bar never runs past the page, however crowded its marks
-        }
-        var extraBefore = (_extraAbove, _extraBelow, _extraTabBelow);
-        EndMarkExtentScan();
-        if ((_extraAbove, _extraBelow, _extraTabBelow) != extraBefore) _host.ExtentChanged();   // the system height follows the content
+        var widths = MeasureNaturalWidths(track, palmMutePassages);
+        if ((_extraAbove, _extraBelow, _extraTabBelow) != extraBefore) _host.LayoutChanged();   // the system height follows the content
         var forceLineBreaks = new bool[track.Measures.Count];
         var preventLineBreaks = new bool[track.Measures.Count];
         for (var measure = 0; measure < track.Measures.Count; measure++)
@@ -185,6 +181,8 @@ internal sealed class ScoreLayoutEngine
         _scoreLayoutSpacing = _host.Appearance.ScoreSpacing;
         _scoreLayoutSystemSpacing = _host.Appearance.SystemVerticalSpacing;
         _scoreLayoutMeasureSpacing = _host.Appearance.MeasureHorizontalSpacing;
+        SaveIncrementalWidths(track, widths, forceLineBreaks, preventLineBreaks);
+        SlowTrace.Mark($"score relayout {(_incremental.LastRelayoutWasPartial ? "partial" : "full")}: measured {_incremental.LastNaturalMeasureCount}/{track.Measures.Count} bars");
         return _scoreLayout;
     }
 
@@ -211,20 +209,26 @@ internal sealed class ScoreLayoutEngine
             {
                 _scanTop = Math.Min(_scanTop, n.Y - 6);
                 _scanBottom = Math.Max(_scanBottom, n.Y + 6);
+                _incremental.MeasureScanTop = Math.Min(_incremental.MeasureScanTop, n.Y - 6);
+                _incremental.MeasureScanBottom = Math.Max(_incremental.MeasureScanBottom, n.Y + 6);
             }
             if (beat.IsDrum)
-                foreach (var y in StaffNotationRenderer.DrumHeadYs(beat)) { _scanTop = Math.Min(_scanTop, y - 7); _scanBottom = Math.Max(_scanBottom, y + 7); }
+                foreach (var y in StaffNotationRenderer.DrumHeadYs(beat)) { _scanTop = Math.Min(_scanTop, y - 7); _scanBottom = Math.Max(_scanBottom, y + 7); _incremental.MeasureScanTop = Math.Min(_incremental.MeasureScanTop, y - 7); _incremental.MeasureScanBottom = Math.Max(_incremental.MeasureScanBottom, y + 7); }
             if (beat.HasStem)
             {
-                _scanTop = Math.Min(_scanTop, Math.Min(beat.StemStartY, beat.StemEndY) - (beat.Flags > 0 ? 2 : 0));
-                _scanBottom = Math.Max(_scanBottom, Math.Max(beat.StemStartY, beat.StemEndY) + 2);
+                var top = Math.Min(beat.StemStartY, beat.StemEndY) - (beat.Flags > 0 ? 2 : 0);
+                var bottom = Math.Max(beat.StemStartY, beat.StemEndY) + 2;
+                _scanTop = Math.Min(_scanTop, top);
+                _scanBottom = Math.Max(_scanBottom, bottom);
+                _incremental.MeasureScanTop = Math.Min(_incremental.MeasureScanTop, top);
+                _incremental.MeasureScanBottom = Math.Max(_incremental.MeasureScanBottom, bottom);
             }
-            if (beat.LowerStemTopY is not null) _scanBottom = Math.Max(_scanBottom, beat.LowerStemEndY + 2);
-            foreach (var grace in beat.GraceNotes) _scanTop = Math.Min(_scanTop, grace.Y - 18);
+            if (beat.LowerStemTopY is not null) { _scanBottom = Math.Max(_scanBottom, beat.LowerStemEndY + 2); _incremental.MeasureScanBottom = Math.Max(_incremental.MeasureScanBottom, beat.LowerStemEndY + 2); }
+            foreach (var grace in beat.GraceNotes) { _scanTop = Math.Min(_scanTop, grace.Y - 18); _incremental.MeasureScanTop = Math.Min(_incremental.MeasureScanTop, grace.Y - 18); }
         }
         // Voice 2's marks go below voice 1's at the same beat (the drawing offsets them by voice 1's extent - 8).
         var voiceOneMax = layout.IsSecondVoice ? measure.Cells.Select(c => ScoreMarkText.FingeringExtent(c) > 0 ? ScoreMarkText.FingeringExtent(c) - 8 : 0).DefaultIfEmpty(0).Max() : 0;
-        foreach (var b in layout.Beats) { var ext = ScoreMarkText.FingeringExtent(b.Cell); if (ext > 0) _scanTabBelow = Math.Max(_scanTabBelow, ext + voiceOneMax + 2); }   // finger rings / letters / harmonic values reach this far under the strings
+        foreach (var b in layout.Beats) { var ext = ScoreMarkText.FingeringExtent(b.Cell); if (ext > 0) { _scanTabBelow = Math.Max(_scanTabBelow, ext + voiceOneMax + 2); _incremental.MeasureScanTabBelow = Math.Max(_incremental.MeasureScanTabBelow, ext + voiceOneMax + 2); } }   // finger rings / letters / harmonic values reach this far under the strings
         var lyricLines = 0; var fingering = 0.0;
         foreach (var b in layout.Beats)
         {
@@ -232,7 +236,7 @@ internal sealed class ScoreLayoutEngine
             lyricLines = Math.Max(lyricLines, Math.Min(3, b.Cell.Lyrics.Split('\n').Length));
             fingering = Math.Max(fingering, layout.Beats.Max(o => Math.Abs(o.CenterX - b.CenterX) < 60 ? ScoreMarkText.FingeringHeight(o.Cell) : 0));
         }
-        if (lyricLines > 0) _scanTabBelow = Math.Max(_scanTabBelow, 29 + fingering + (lyricLines - 1) * 14.5);   // first row 13 px under the strings + fingering, 14.5 px per row, 14 px of text
+        if (lyricLines > 0) { _scanTabBelow = Math.Max(_scanTabBelow, 29 + fingering + (lyricLines - 1) * 14.5); _incremental.MeasureScanTabBelow = Math.Max(_incremental.MeasureScanTabBelow, 29 + fingering + (lyricLines - 1) * 14.5); }   // first row 13 px under the strings + fingering, 14.5 px per row, 14 px of text
         var cell = measure;
         var kinds = 0;
         bool Any(Func<TabCell, bool> test) => layout.Beats.Any(b => test(b.Cell));
@@ -246,226 +250,9 @@ internal sealed class ScoreLayoutEngine
         if (Any(c => !string.IsNullOrWhiteSpace(c.ChordName))) kinds++;
         if (Any(c => !string.IsNullOrWhiteSpace(c.Text))) kinds++;
         _scanRows = Math.Max(_scanRows, kinds);
-        if (cell.AlternateEnding > 0 || cell.AlternateEndingMask != 0) _scanVolta = true;
+        _incremental.MeasureScanRows = Math.Max(_incremental.MeasureScanRows, kinds);
+        if (cell.AlternateEnding > 0 || cell.AlternateEndingMask != 0) { _scanVolta = true; _incremental.MeasureScanVolta = true; }
     }
-
-    internal double NaturalMeasureWidth(TrackModel track, MeasureModel measure, int measureIndex,
-        IReadOnlyList<PalmMutePassage> palmMutePassages)
-    {
-        var slots = SlotsFor(measureIndex);
-        var numerator = measure.TimeSigNum ?? _host.Project?.TimeSignatureNumerator ?? 4;
-        var denominator = measure.TimeSigDenom ?? _host.Project?.TimeSignatureDenominator ?? 4;
-        var keySignature = measure.KeySignature ?? _host.Project?.KeySignature ?? 0;
-        var notation = _staff.CreateLayout(track, measure, measureIndex, slots, 0, 0, 1,
-            numerator, denominator, keySignature, _host.Appearance.ScoreSpacing);
-        var notationBeats = notation.Beats.AsEnumerable();
-        ScanMarkExtents(notation, measure);
-        if (Voice2HasContent(measure))
-        {
-            var voice2 = _staff.CreateLayout(track, measure, measureIndex, slots, 0, 0, 1,
-                numerator, denominator, keySignature, _host.Appearance.ScoreSpacing, measure.Voice2Cells);
-            ScanMarkExtents(voice2, measure);
-            notationBeats = notationBeats.Concat(voice2.Beats).OrderBy(beat => beat.StartSlots);
-        }
-
-        var events = new List<MeasureEventWidth>();
-        foreach (var beat in notationBeats)
-        {
-            if (events.Count == 0 || Math.Abs(events[^1].StartSlots - beat.StartSlots) > 0.001)
-                events.Add(new MeasureEventWidth(beat.StartSlots, beat.StartSlots + beat.DurationSlots, 7, 7));
-            var eventIndex = events.Count - 1;
-            var current = events[eventIndex];
-            var left = current.Left;
-            var right = current.Right;
-
-            if (beat.IsRest)
-            {
-                left = Math.Max(left, 10);
-                right = Math.Max(right, 10);
-            }
-
-            if (beat.HasStem)
-            {
-                var stemOffset = beat.StemX - beat.CenterX;
-                left = Math.Max(left, 1 - stemOffset);
-                right = Math.Max(right, 1 + stemOffset);
-            }
-
-            var ghostRoom = StaffNotationRenderer.GhostRoom(notation.StaffTop, beat);   // voice 2 shares the staff top
-            foreach (var note in beat.Notes)
-            {
-                var offset = note.X - beat.CenterX;
-                left = Math.Max(left, 6 - offset);
-                right = Math.Max(right, 6 + offset);
-                if (note.Accidental is not null)
-                {
-                    var accidentalWidth = ScoreText.MakeText(note.Accidental, 15, ScoreText.Brush(Colors.White)).Width;
-                    left = Math.Max(left, 12.1 + note.AccidentalColumn * 10 + accidentalWidth / 2 - (beat.Notes.Min(n => n.X) - beat.CenterX) + ghostRoom); // accidentals hang off the chord's leftmost head, outside any ghost bracket
-                }
-
-                if (note.Source.Ghost) { left = Math.Max(left, 11 + ghostRoom - offset); right = Math.Max(right, 3 + ghostRoom + offset); }   // the ghost brackets
-                var fret = note.Source.Dead ? "X"
-                    : track.Kind == TrackKind.Drums ? DrumMaps.For(track, note.Source.MidiValue > 0 ? note.Source.MidiValue : note.Source.Fret).Label
-                    : note.Source.Fret.ToString(CultureInfo.InvariantCulture);
-                var fretWidth = ScoreText.MakeTextIn(ScoreTextArea.Fret, fret, _host.FretFontSize, ScoreText.Brush(Colors.White), FontWeights.Normal, "Consolas").Width;
-                left = Math.Max(left, (fretWidth + 4) / 2);
-                right = Math.Max(right, (fretWidth + 4) / 2);
-
-                if (note.Source.Tied || beat.Cell.IsTied)
-                {
-                    left = Math.Max(left, 12);
-                    right = Math.Max(right, 12);
-                }
-                if (TabSlideNotation.HasOutgoing(note.Source)) right = Math.Max(right, 14);
-                if (TabSlideNotation.HasIncoming(note.Source)) left = Math.Max(left, 14);
-                if (note.Source.Techniques.Contains("Bend") ||
-                    note.Source.Techniques.Contains("Harmonic") || note.Source.Techniques.Contains("ArtificialHarmonic"))
-                    right = Math.Max(right, 14);
-            }
-
-            // Chords and layered notation need additional local air around an onset. This padding is
-            // applied after combining voices so a shared beat is charged once, and simple notes keep
-            // the original rhythmic baseline. The actual glyph extents above still dominate for wide
-            // accidentals, text, and fret labels.
-            var complexityPadding = Math.Min(5.0, Math.Max(0, beat.Cell.Notes.Count - 1) * 1.5);
-            if (beat.Cell.Notes.Any(note => note.Dead)) complexityPadding += 0.5;
-            if (beat.Cell.Notes.Any(note => note.Tied) || beat.Cell.IsTied) complexityPadding += 0.75;
-            if (beat.Notes.Any(note => note.Accidental is not null)) complexityPadding += 0.5;
-            if (beat.Cell.Notes.Any(note => note.Ghost)) complexityPadding += 0.5;
-            if (beat.Cell.Notes.Count > 1 && beat.HasStem) complexityPadding += 0.25;
-            if (beat.Cell.Notes.Count > 1 && beat.BeamGroupIndex >= 0) complexityPadding += 0.25;
-            if (beat.Cell.IsTriplet || beat.Cell.TupletNumerator > 0) complexityPadding += 0.75;
-            complexityPadding = Math.Min(5.0, complexityPadding);
-
-            var techniqueLabel = ScoreMarkText.TechniqueLabel(beat.Cell.Notes, includeFade: false);
-            if (techniqueLabel.Length > 0)
-            {
-                var width = ScoreText.MakeTextIn(ScoreTextArea.Technique, techniqueLabel, 9, ScoreText.Brush(Colors.White)).Width;
-                left = Math.Max(left, width / 2 + 2);
-                right = Math.Max(right, width / 2 + 2);
-            }
-
-            if (!string.IsNullOrWhiteSpace(beat.Cell.ChordName))
-            {
-                var width = ScoreText.MakeTextIn(ScoreTextArea.Chord, beat.Cell.ChordName!, 10, ScoreText.Brush(Colors.White), FontWeights.SemiBold).Width;
-                left = Math.Max(left, width / 2 + 3);
-                right = Math.Max(right, width / 2 + 3);
-            }
-            // Beat text (comments above the staff) runs over neighbouring beats; letting it
-            // reserve its full width stretched a bar with a long comment across the whole line.
-            if (!string.IsNullOrWhiteSpace(beat.Cell.Lyrics))
-            {
-                var width = beat.Cell.Lyrics.Split('\n').Max(text => ScoreText.MakeTextIn(ScoreTextArea.Lyrics, text, 10, ScoreText.Brush(Colors.White)).Width);
-                left = Math.Max(left, width / 2 + 3);
-                right = Math.Max(right, width / 2 + 3);
-            }
-            if (DynamicMarks.TryGetValue(beat.Cell, out var dynamicName))
-            {
-                // The marking is centred under the beat: keep neighbouring markings and notes apart.
-                var width = ScoreText.DynamicText(dynamicName, Colors.White).Width;
-                left = Math.Max(left, width / 2 + 2);
-                right = Math.Max(right, width / 2 + 2);
-            }
-            if (beat.Cell.Fermata || beat.Cell.IsGrace) right = Math.Max(right, 13);
-            if (beat.GraceNotes.Count > 0) left = Math.Max(left, StaffNotationRenderer.GraceOffset(beat, StaffNotationRenderer.GhostRoom(notation.StaffTop, beat)) + 9 * (Math.Min(3, beat.GraceNotes.Count) - 1) + 6 + (beat.Cell.Notes.Any(g => ScoreMarkText.GraceTransitionShown(track, beat.Cell, g)) ? 6 : 0));   // a line / arc between the grace fret and the main fret needs room
-            if (beat.Cell.Dots > 0) right = Math.Max(right, 11 + beat.Cell.Dots * 4);
-
-            events[eventIndex] = current with
-            {
-                EndSlots = Math.Max(current.EndSlots, beat.StartSlots + beat.DurationSlots),
-                Left = left,
-                Right = right,
-                ComplexityPadding = Math.Max(current.ComplexityPadding, complexityPadding)
-            };
-        }
-
-        for (var i = 0; i < events.Count; i++)
-        {
-            var item = events[i];
-            events[i] = item with
-            {
-                Left = item.Left + item.ComplexityPadding,
-                Right = item.Right + item.ComplexityPadding
-            };
-        }
-
-        // The extender is phrase-level, so reserve room only for the single P.M. label that starts
-        // each contiguous effect run. Reserving it on every flagged note needlessly stretches bars.
-        var labelWidth = ScoreText.MakeTextIn(ScoreTextArea.Technique, "P.M.", 9, ScoreText.Brush(Colors.White)).Width;
-        foreach (var passage in palmMutePassages)
-        {
-            if (passage.FirstMeasure != measureIndex) continue;
-            var eventIndex = events.FindIndex(item => Math.Abs(item.StartSlots - passage.FirstStartSlots) < 0.001);
-            if (eventIndex < 0) continue;
-            var item = events[eventIndex];
-            events[eventIndex] = item with { Left = Math.Max(item.Left, labelWidth / 2 + 12) };
-        }
-
-        var lead = 16.0;
-        var keyChanges = KeySignatureChanges(track, measureIndex);
-        var timeShown = TimeSignatureShown(track, measureIndex);
-        var clefChanged = ScoreClefKey.ClefChanges(track, measureIndex);
-        if (keyChanges || timeShown || clefChanged)
-        {
-            lead = 28;
-            if (clefChanged) lead += ScoreClefKey.ClefChangeWidth;
-            if (keyChanges) lead += KeySignatureWidth(track, measureIndex);
-            if (timeShown) lead += TimeSignatureWidth(measure) + 6;
-        }
-        var tempoText = TempoText(measure, measureIndex);
-        if (tempoText is not null)
-            lead = Math.Max(lead, 22 + ScoreText.MakeTextIn(ScoreTextArea.BarInfo, tempoText, 9, ScoreText.Brush(Colors.White), FontWeights.Bold).Width + 6);
-        var sectionTitle = MarkerForMeasure(measureIndex)?.Title ?? measure.SectionName;
-        if (_host.Appearance.ShowSectionHeadings && !string.IsNullOrWhiteSpace(sectionTitle))
-            lead = Math.Max(lead, ScoreText.MakeTextIn(ScoreTextArea.BarInfo, sectionTitle, 10, ScoreText.Brush(Colors.White), FontWeights.Bold).Width + 8);
-        if (measure.RepeatStart) lead = Math.Max(lead, 22);
-        if (measure.AlternateEnding > 0) lead = Math.Max(lead, 34);
-        var tripletFeel = TripletFeels.Effective(measure);
-        if (tripletFeel != TripletFeels.None)
-            lead = Math.Max(lead, ScoreText.MakeTextIn(ScoreTextArea.BarInfo, ScoreMarkText.SwingSymbol(tripletFeel), 9, ScoreText.Brush(Colors.White)).Width + 8);
-        var trail = measure.RepeatEnd
-            ? ScoreText.MakeTextIn(ScoreTextArea.BarInfo, $"×{measure.RepeatCount}:|", 10, ScoreText.Brush(Colors.White), FontWeights.Bold).Width + 8
-            : 10;
-        if (measure.IsDoubleBar) trail += 4;
-        // Duration-based spacing (standard): gaps are weighted by duration^0.62, see MeasureWarp.
-        var warp = WarpFor(track, measureIndex);
-        var rhythmicSpacing = RhythmicPixelsPerSlot * _host.Appearance.ScoreSpacing;
-        // Floor: sparse bars (long notes, rests, empty bars) keep at least 70% of their old width.
-        var temporalWidth = (events.Count == 0 ? slots : Math.Max(warp.TotalWeight, slots * 0.7)) * rhythmicSpacing;
-        var required = lead + trail;
-        var gaps = new List<(double Start, double Clearance)>();
-        if (events.Count > 0)
-        {
-            var first = events[0];
-            required += MeasureWarp.Weight(first.StartSlots) * rhythmicSpacing + first.Left;
-            for (var i = 1; i < events.Count; i++)
-            {
-                var previous = events[i - 1];
-                var current = events[i];
-                var onsetGap = Math.Max(0, current.StartSlots - previous.StartSlots);
-                var rhythmicGap = MeasureWarp.Weight(onsetGap) * rhythmicSpacing;
-                var clearanceGap = previous.Right + current.Left + 2.5;
-                required += Math.Max(rhythmicGap, clearanceGap);
-                if (onsetGap > 0.001) gaps.Add((previous.StartSlots, clearanceGap));
-            }
-            var last = events[^1];
-            required += last.Right + MeasureWarp.Weight(Math.Max(0, slots - last.EndSlots)) * rhythmicSpacing;
-        }
-
-        // Note positions are mapped back to a uniform slot grid when the measure is drawn. The
-        // pairwise event clearances above can enlarge a measure's natural width without guaranteeing
-        // that a one-slot onset gap receives that same clearance. Keep the grid itself wide enough
-        // for the densest adjacent events so beamed noteheads and their annotations cannot collapse.
-        var minimumGridWidth = warp.WidthFor(gaps);
-        return Math.Max(70, Math.Max(Math.Max(lead + trail + temporalWidth, required), minimumGridWidth));
-    }
-
-    internal readonly record struct ScoreFacts(IReadOnlyList<PalmMutePassage> PalmMutePassages,
-        IReadOnlyList<FadePassage> FadePassages);
-
-    private readonly record struct StaffLayoutCacheKey(TrackModel Track, MeasureModel Measure,
-        IReadOnlyList<TabCell> Cells, int MeasureIndex, int Slots, int Numerator, int Denominator,
-        int KeySignature, double X, double StaffTop, double SlotWidth, double StaffScale, MeasureWarp Warp);
 
     // ---- duration-based spacing (one warp per bar, rebuilt when the score changes) ----
     private readonly Dictionary<MeasureModel, (int Generation, int Slots, MeasureWarp Warp)> _warps = new();
@@ -610,9 +397,6 @@ internal sealed class ScoreLayoutEngine
         return layout;
     }
 
-    private readonly record struct MeasureEventWidth(
-        double StartSlots, double EndSlots, double Left, double Right, double ComplexityPadding = 0);
-
     /// <summary>Voice 2 is engraved (notes and rests) only when it holds real content in the bar.</summary>
     internal static bool Voice2HasContent(MeasureModel measure)
     {
@@ -620,56 +404,6 @@ internal sealed class ScoreLayoutEngine
         for (var i = 0; i < cells.Count; i++)
             if (cells[i].Notes.Count > 0 || cells[i].HasAnnotation) return true;
         return false;
-    }
-
-    internal bool KeySignatureChanges(TrackModel track, int measureIndex)
-    {
-        if (_host.Project is null) return false;
-        if (measureIndex <= 0) return true;
-        var previous = track.Measures[measureIndex - 1];
-        var current = track.Measures[measureIndex];
-        return (current.KeySignature ?? _host.Project.KeySignature) != (previous.KeySignature ?? _host.Project.KeySignature) ||
-               (current.KeySignatureMinor ?? _host.Project.KeySignatureMinor) != (previous.KeySignatureMinor ?? _host.Project.KeySignatureMinor);
-    }
-
-    internal int PreviousKeySignature(TrackModel track, int measureIndex)
-        => measureIndex <= 0 || _host.Project is null ? 0
-            : track.Measures[measureIndex - 1].KeySignature ?? _host.Project.KeySignature;
-
-    internal double KeySignatureWidth(TrackModel track, int measureIndex)
-    {
-        var current = track.Measures[measureIndex].KeySignature ?? _host.Project?.KeySignature ?? 0;
-        var (naturals, accidentals) = ScoreClefKey.KeySignatureGlyphs(PreviousKeySignature(track, measureIndex), current);
-        var count = naturals + accidentals;
-        return count == 0 ? 0 : count * 10.5 + (naturals > 0 && accidentals > 0 ? 3 : 0) + 6;
-    }
-
-    internal bool TimeSignatureShown(TrackModel track, int measureIndex)
-    {
-        if (_host.Project is null) return false;
-        if (measureIndex <= 0) return true;
-        var current = track.Measures[measureIndex];
-        var previous = track.Measures[measureIndex - 1];
-        return (current.TimeSigNum ?? _host.Project.TimeSignatureNumerator) != (previous.TimeSigNum ?? _host.Project.TimeSignatureNumerator) ||
-               (current.TimeSigDenom ?? _host.Project.TimeSignatureDenominator) != (previous.TimeSigDenom ?? _host.Project.TimeSignatureDenominator);
-    }
-
-    internal (string Num, string Den) TimeSignatureParts(MeasureModel measure)
-        => ((measure.TimeSigNum ?? _host.Project?.TimeSignatureNumerator ?? 4).ToString(),
-            (measure.TimeSigDenom ?? _host.Project?.TimeSignatureDenominator ?? 4).ToString());
-
-    internal double TimeSignatureWidth(MeasureModel measure)
-    {
-        var (num, den) = TimeSignatureParts(measure);
-        return Math.Max(ScoreText.MakeTextIn(ScoreTextArea.BarInfo, num, 22, ScoreText.Brush(Colors.White), FontWeights.Bold).Width,
-                        ScoreText.MakeTextIn(ScoreTextArea.BarInfo, den, 22, ScoreText.Brush(Colors.White), FontWeights.Bold).Width);
-    }
-
-    /// <summary>Tempo mark at the start of the song and at every tempo change (the reference style "♩ = 120").</summary>
-    internal string? TempoText(MeasureModel measure, int measureIndex)
-    {
-        if (measure.TempoChange.HasValue) return $"♩ = {measure.TempoChange}";
-        return measureIndex == 0 && _host.Project is not null && _host.Project.Tempo > 0 ? $"♩ = {_host.Project.Tempo}" : null;
     }
 
 }

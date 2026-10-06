@@ -633,15 +633,12 @@ public partial class MainWindow
     /// Startup file replaces the initial blank document so the requested song is the only tab.
     /// </summary>
     /// <summary>A song double-clicked in Explorer while this window runs: open it in a new tab and come forward.</summary>
-    public void OpenFromAnotherLaunch(string path)
+    public void OpenFromAnotherLaunch(string path, bool activate = true)
     {
         if (!SingleInstanceService.IsOpenableSong(path)) { TabForge.Services.Trace.Write("ui", $"OPEN hand-over refused {path}"); return; }
         TabForge.Services.Trace.Write("ui", $"OPEN hand-over opening {path}");
         OpenDocumentFromPath(path);
-        if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;
-        Activate();
-        Topmost = true; Topmost = false; // bring to the front even when another app has focus
-        Focus();
+        if (activate) OwnerActivation.BringToFront(this);
     }
 
     /// <param name="background">False for probe / tour launches, which expect the song open when this returns.</param>

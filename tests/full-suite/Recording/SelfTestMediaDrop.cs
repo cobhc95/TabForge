@@ -297,10 +297,24 @@ public static partial class SelfTest
         var preview = timeline.DropPreviewAt(items, p);
         Check("drop preview: the block starts on the snapped bar line and is as long as the file (4 s = 2 bars)",
             preview.Valid && Near(preview.Block.X, timeline.XOfBar(3)) && Near(preview.Block.Width, 60) && Near(preview.Plan.StartSec, 6));
-        Check("drop preview: on a track without lanes the block sits in a new lane slot under the row",
-            preview.Plan.NewLane && preview.Slot is { } slot && Near(slot.Y, gridTop + row * 2) && Near(preview.Block.Y, slot.Y + 3) && preview.Detail.Contains("new lane"));
+        Check("drop preview: on a track without lanes the block stays in the row and marks the new lane",
+            preview.Plan.NewLane && preview.Slot is { } slot && Near(slot.Y, gridTop + ArrangementPanel.RowTopOf(song, 1))
+            && preview.Block.Y >= slot.Y && preview.Block.Bottom <= slot.Bottom && preview.Block.Height <= slot.Height - 6
+            && preview.Detail.Contains("new lane"));
         Check("drop preview: the label is the file name and the length", preview.Label == "Loop" && preview.Detail.StartsWith(TrackTimeline.LengthText(4.0)));
         Check("drop preview: Alt turns snapping off", Near(timeline.DropPreviewAt(items, p, altHeld: true).Block.X, p.X, 1e-6));
+
+        // An empty audio track displays a compact controls row until its first lane is added. The preview stays inside that row,
+        // instead of appearing over the next track where the clip would not land.
+        song.Tracks[1].Kind = TrackKind.Audio;
+        var emptyAudioTop = gridTop + ArrangementPanel.RowTopOf(song, 1);
+        var emptyAudio = timeline.DropPreviewAt(items, new Point(timeline.XOfBar(3) + 9, emptyAudioTop + 10));
+        Check("drop preview: first lane on empty audio track stays in the hovered row",
+            emptyAudio.Plan.TrackIndex == 1 && emptyAudio.Plan.NewLane && emptyAudio.Slot is { } emptySlot
+            && Near(emptySlot.Y, emptyAudioTop) && Near(emptySlot.Height, ArrangementPanel.RowHeightOf(song, song.Tracks[1]))
+            && emptyAudio.Block.Y >= emptySlot.Y && emptyAudio.Block.Bottom <= emptySlot.Bottom
+            && emptyAudio.Block.Height <= emptySlot.Height - 6);
+        song.Tracks[1].Kind = TrackKind.Guitar;
 
         timeline.MeasureWidth = 60;
         var zoomed = timeline.DropPreviewAt(items, new Point(timeline.XOfBar(3) + 18, p.Y));
@@ -309,7 +323,9 @@ public static partial class SelfTest
         timeline.VerticalScrollOffset = row;
         var scrolled = timeline.DropPreviewAt(items, p);
         Check("drop preview: after scrolling one row the same point is the next track, and the block follows the scroll",
-            scrolled.Plan.TrackIndex == 2 && Near(scrolled.Block.Y, gridTop + row * 3 - row + 3));
+            scrolled.Plan.TrackIndex == 2 && scrolled.Slot is { } scrolledSlot
+            && Near(scrolledSlot.Y, gridTop + ArrangementPanel.RowTopOf(song, 2) - row)
+            && scrolled.Block.Y >= scrolledSlot.Y && scrolled.Block.Bottom <= scrolledSlot.Bottom);
         timeline.VerticalScrollOffset = 0;
 
         song.Tracks[1].AudioClips.Add(LaneClip(4, 8, 0));
@@ -318,8 +334,10 @@ public static partial class SelfTest
         var onLane = timeline.DropPreviewAt(items, new Point(timeline.XOfBar(7) + 2, laneY));
         Check("drop preview: a free stretch of an existing lane uses it (no slot)", onLane.Plan.Lane == 0 && !onLane.Plan.NewLane && onLane.Slot is null);
         var overlap = timeline.DropPreviewAt(items, new Point(timeline.XOfBar(3) + 2, laneY));
-        Check("drop preview: over the existing clip the block drops to a new lane 2 slot",
-            overlap.Plan.Lane == 1 && overlap.Plan.NewLane && overlap.Slot is { } s2 && Near(s2.Y, gridTop + row * 2 + ArrangementPanel.AudioLaneHeight) && Near(overlap.Block.Y, s2.Y + 3));
+        Check("drop preview: over the existing clip the block marks a new lane inside the hovered lane",
+            overlap.Plan.Lane == 1 && overlap.Plan.NewLane && overlap.Slot is { } s2
+            && Near(s2.Y, gridTop + row * 2) && Near(s2.Height, ArrangementPanel.AudioLaneHeight)
+            && overlap.Block.Y >= s2.Y && overlap.Block.Bottom <= s2.Bottom && overlap.Detail.Contains("new lane"));
 
         var below = timeline.DropPreviewAt(new[] { MidiItem("Drum fill", 4, 9) }, new Point(40, gridTop + ArrangementPanel.RowsHeight(song) + 15));
         Check("drop preview: below the last track a new audio track slot opens with the block in its lane",
@@ -329,6 +347,65 @@ public static partial class SelfTest
         Check("drop preview: over the ruler the block shows the reason and is not a drop target", !ruler.Valid && ruler.Label == "Drop on a track");
         var many = timeline.DropPreviewAt(new[] { AudioItem("A", 2), AudioItem("B", 2) }, new Point(timeline.XOfBar(8) + 1, gridTop + 5));
         Check("drop preview: several files show as one block with a divider per file", many.Label == "2 files" && many.Splits.Length == 1 && Near(many.Splits[0], 30) && Near(many.Block.Width, 60));
+
+        // The clip starts in the first pass and ends after a repeat. Its visible body remains continuous across the repeated bars.
+        var repeatSong = DropSong(1, 8);
+        var repeatTrack = repeatSong.Tracks[0];
+        repeatTrack.Kind = TrackKind.Audio;
+        repeatTrack.Measures[0].RepeatStart = true;
+        repeatTrack.Measures[2].RepeatEnd = true;
+        repeatTrack.Measures[2].RepeatCount = 2;
+        var repeatedClip = LaneClip(3, 6, 0);
+        repeatedClip.Name = "Across repeat";
+        repeatTrack.AudioClips.Add(repeatedClip);
+        ClipLanes.Ensure(repeatTrack, 1);
+        var firstStarts = new[] { 0.0, 2, 4, 12, 14, 16, 18, 20 };
+        var performed = new (int Bar, double Start)[] { (0, 0), (1, 2), (2, 4), (0, 6), (1, 8), (2, 10), (3, 12), (4, 14), (5, 16), (6, 18), (7, 20) };
+        (int Bar, double Fraction) RepeatedBarAt(double sec)
+        {
+            foreach (var occurrence in performed)
+                if (sec < occurrence.Start + 2) return (occurrence.Bar, Math.Clamp((sec - occurrence.Start) / 2, 0, 1));
+            return (7, 1);
+        }
+        var repeatTimeline = new TrackTimeline
+        {
+            Project = repeatSong, MeasureWidth = 30,
+            BarStartSec = bar => firstStarts[bar], BarOfSec = RepeatedBarAt,
+            Snap = new SnapSettings { Enabled = true, Grid = "Bar", ToGrid = true, ToItems = false, ToPlayhead = false, GridAtAnyDistance = true },
+        };
+        var repeatedEndX = repeatTimeline.ClipEndX(repeatedClip.StartSec, repeatedClip.EndSec);
+        var oldEndX = repeatTimeline.XOfSec(repeatedClip.EndSec);
+        var foldedSnap = repeatTimeline.SnapSec(repeatedClip.EndSec, repeatedClip, out _);
+        var anchoredSnap = repeatTimeline.ClipGestures.SnapClipSec(repeatedClip.StartSec, repeatedClip.EndSec, repeatedClip, out _);
+        var repeatedPlan = MediaDrop.Plan(repeatSong, new[] { AudioItem("Span", 6) }, 0, 0, 3, SongQuarterMap.For(repeatSong));
+        var repeatedGhost = repeatTimeline.DropGeometry(repeatedPlan, new Point(repeatTimeline.XOfSec(3), repeatTimeline.LaneTop(0, 0) + 10), new[] { AudioItem("Span", 6) });
+        var repeatedHit = repeatTimeline.ClipGestures.LaneHitAt(new Point(repeatedEndX - 2, repeatTimeline.LaneTop(0, 0) + 20));
+        repeatedClip.FadeInSec = 1;
+        repeatedClip.FadeOutSec = 1;
+        repeatTimeline.SelectedClip = repeatedClip;
+        var fadeInX = repeatTimeline.ClipEndX(repeatedClip.StartSec, repeatedClip.StartSec + repeatedClip.FadeInSec);
+        var fadeOutX = repeatTimeline.ClipEndX(repeatedClip.StartSec, repeatedClip.EndSec - repeatedClip.FadeOutSec);
+        var fadeInHit = repeatTimeline.ClipGestures.LaneHitAt(new Point(fadeInX, repeatTimeline.LaneTop(0, 0) + 5));
+        var fadeOutHit = repeatTimeline.ClipGestures.LaneHitAt(new Point(fadeOutX, repeatTimeline.LaneTop(0, 0) + 5));
+        repeatTimeline.Measure(new Size(400, 300));
+        repeatTimeline.Arrange(new Rect(0, 0, 400, 300));
+        repeatTimeline.UpdateLayout();
+        var bitmap = new System.Windows.Media.Imaging.RenderTargetBitmap(400, 300, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+        bitmap.Render(repeatTimeline);
+        var pixel = new int[1];
+        bitmap.CopyPixels(new Int32Rect(100, (int)(repeatTimeline.LaneTop(0, 0) + 20), 1, 1), pixel, 4, 0);
+        var paintedInsideSpan = pixel[0];
+        bitmap.CopyPixels(new Int32Rect(165, (int)(repeatTimeline.LaneTop(0, 0) + 20), 1, 1), pixel, 4, 0);
+        Check("repeat-spanning clip: ghost, painted body, end hit and fade handles share its continuous endpoint",
+            repeatedEndX > oldEndX + 20 && Near(repeatedGhost.Block.Right, repeatedEndX)
+            && repeatedHit is { Clip: not null, Gesture: ClipGesture.TrimEnd }
+            && fadeInHit is { Clip: not null, Gesture: ClipGesture.FadeIn }
+            && fadeOutHit is { Clip: not null, Gesture: ClipGesture.FadeOut }
+            && Near(repeatTimeline.ClipSecOfX(repeatedClip.StartSec, repeatedEndX), repeatedClip.EndSec, 0.05)
+            && paintedInsideSpan != pixel[0]);
+        Check("repeat-spanning clip: end snapping follows the continuous endpoint instead of folding to the repeated bar",
+            Near(foldedSnap, 2) && Near(anchoredSnap, 8)
+            && Near(repeatTimeline.ClipEndX(repeatedClip.StartSec, anchoredSnap), 120));
 
         // The drag cycle through a real file drop: measured once, the same spot does not recompute, the drop hands over the plan.
         var folder = Path.Combine(Path.GetTempPath(), "tf-selftest-dropcycle-" + Guid.NewGuid().ToString("N"));
@@ -341,6 +418,20 @@ public static partial class SelfTest
             var wav = Path.Combine(folder, "Take.wav");
             WriteTestWav(wav, 1.0);
             var data = new DataObject(DataFormats.FileDrop, new[] { wav });
+            var dropZoneX = timeline.XOfBar(3) + 2;
+            var notationPoint = new Point(dropZoneX, gridTop + ArrangementPanel.RowTopOf(song, 1) + 10);
+            var lanePoint = new Point(dropZoneX, timeline.LaneTop(1, 0) + 10);
+            timeline.MediaDragOver(data, notationPoint, false);
+            var notationZone = timeline.CurrentDropPreview;
+            timeline.MediaDragOver(data, lanePoint, false);
+            var laneZone = timeline.CurrentDropPreview;
+            Check("drop cycle: moving from a notation row to lane 1 at the same time updates the bounded new-lane ghost",
+                notationZone is { Valid: true, Plan.NewLane: true, Slot: { } notationSlot }
+                && laneZone is { Valid: true, Plan.NewLane: true, Slot: { } laneSlot }
+                && !ReferenceEquals(notationZone, laneZone) && Near(notationSlot.Y, gridTop + ArrangementPanel.RowTopOf(song, 1))
+                && Near(notationSlot.Height, ArrangementPanel.RowHeightFor(song))
+                && Near(laneSlot.Y, timeline.LaneTop(1, 0)) && Near(laneSlot.Height, ArrangementPanel.AudioLaneHeight)
+                && laneZone.Block.Y >= laneSlot.Y && laneZone.Block.Bottom <= laneSlot.Bottom);
             MediaDropPlan? dropped = null;
             timeline.MediaDropped += plan => dropped = plan;
             var at = new Point(timeline.XOfBar(9) + 1, gridTop + 5);

@@ -354,6 +354,7 @@ Presets are stored as *differences* from the defaults (`HotkeyPresets` in `Servi
 
 ## Add track
 - The arrangement's **+ Track** button opens the Add track window: the same window as Track properties (instrument catalogue via *Change…*, MIDI program/channel, mixer, tuning, frets, capo, name, colour, notes) plus **Position**: last (default), first, after the selected track, or as track number N. *Add track* adds it; Cancel adds nothing. Track > Add Guitar/Bass/Drums/Keys still add a default track instantly.
+- In Sections, **Add at cursor…** shows the starting bar before adding a marker. Click a section or select it and press Enter to navigate. Edit opens its displayed colour; with similar-section matching enabled, a colour change applies to that name group.
 
 ## Instrument panel and scale finder
 - The instrument panel matches the track out of the box: a fretboard with the track's own strings for stringed instruments (guitar, bass, oud, cello, violin, ukulele, mandolin, banjo… by name or GM program), drum pads for drums, and a keyboard (88 keys) for piano, winds, brass, synths and everything else. Settings > Fretboard & Keyboard > *Default instrument view* can instead always show a fretboard, keyboard or drums; *Keyboard size* picks 88/76/61/49/37/25 keys (smaller keyboards follow the notes).

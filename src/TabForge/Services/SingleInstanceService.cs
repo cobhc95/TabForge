@@ -13,11 +13,17 @@ namespace TabForge.Services;
 /// "Open files from Explorer in a new tab": a second TabForge launch with a song file hands the path to the
 /// TabForge already running and exits. The hand-off is a named pipe that only the same Windows account can
 /// open (PipeOptions.CurrentUserOnly, name derived from the account); the receiver accepts one bounded message,
-/// which must be an existing file with a supported extension, and opens it through the normal import path.
+/// which must be an existing file with a supported extension, and opens it through the normal import path. A test-only profile switch
+/// adds the isolated profile hash to the pipe name; production launches keep the account-wide name.
 /// </summary>
 public static class SingleInstanceService
 {
     private const int MaxMessageBytes = 64 * 1024;
+    private const string ProfileTestSwitch = "TABFORGE_TEST_SINGLE_INSTANCE";
+
+    internal static bool ProfileHandoverTestEnabled =>
+        string.Equals(Environment.GetEnvironmentVariable(ProfileTestSwitch), "1", StringComparison.Ordinal)
+        && UserPaths.IsProfile && !UserPaths.ProfileIsRealUserFolder;
 
     private static string PipeName
     {
@@ -25,7 +31,10 @@ public static class SingleInstanceService
         {
             var sid = WindowsIdentity.GetCurrent().User?.Value ?? Environment.UserName;
             var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(sid)))[..16];
-            return $"TabForge.Open.{hash}";
+            if (!ProfileHandoverTestEnabled) return $"TabForge.Open.{hash}";
+            var profile = Path.TrimEndingDirectorySeparator(Path.GetFullPath(UserPaths.ProfileRoot!));
+            var profileHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(profile)))[..16];
+            return $"TabForge.Open.{hash}.{profileHash}";
         }
     }
 
@@ -46,7 +55,7 @@ public static class SingleInstanceService
     }
 
     /// <summary>Listens for paths from later launches; <paramref name="open"/> is called on a background thread.</summary>
-    public static void StartServer(Action<string> open, CancellationToken cancellation)
+    public static void StartServer(Action<string> open, CancellationToken cancellation, Action? listening = null)
     {
         _ = Task.Run(async () =>
         {
@@ -57,6 +66,7 @@ public static class SingleInstanceService
                 {
                     server = new NamedPipeServerStream(PipeName, PipeDirection.In, 1, PipeTransmissionMode.Byte,
                         PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
+                    listening?.Invoke();
                 }
                 catch (IOException) { return; } // another TabForge already receives: this one stays a plain window
                 using (server)

@@ -58,7 +58,7 @@ internal sealed partial class TrackTimeline : IClipGestureHost
     /// <summary>The grid line nearest to a song time, on the song's own bars (each bar's length and time signature).</summary>
     private double GridSec(double sec, string grid)
     {
-        var (bar, fraction) = BarOfSec is null ? (0, 0.0) : BarOfSec(sec);
+        var (bar, fraction) = BarOfSec is null ? (0, 0.0) : BarAtSec(sec);
         var slots = Math.Max(1, TabForge.Services.MusicTime.BarSlots(Project!, Math.Clamp(bar, 0, Math.Max(0, BarCount - 1))));
         var step = grid switch { "Bar" => slots, "1/2" => 8.0, "1/4" => 4.0, "1/8" => 2.0, "1/16" => 1.0, "1/32" => 0.5, _ => 4.0 };
         var snapped = Math.Round(fraction * slots / step) * step;
@@ -136,7 +136,7 @@ internal sealed partial class TrackTimeline : IClipGestureHost
         foreach (var clip in track.AudioClips)
         {
             var x1 = XOfSec(clip.StartSec);
-            var x2 = XOfSec(clip.EndSec);
+            var x2 = ClipEndX(clip.StartSec, clip.EndSec);
             if (x2 < 0 || x1 > width) continue;
             var laneTop = rowTop + notation + clip.Lane * ArrangementPanel.AudioLaneHeight;
             var box = new Rect(x1, laneTop + 3, Math.Max(3, x2 - x1), ArrangementPanel.AudioLaneHeight - 6);
@@ -182,15 +182,15 @@ internal sealed partial class TrackTimeline : IClipGestureHost
             geometry.Freeze();
             dc.DrawGeometry(Draw.Solid(_theme.Background, 0.55), Draw.Pen(_theme.Text, 1, 0.8), geometry);
         }
-        if (clip.FadeInSec > 0) Shade(box.X, XOfSec(clip.StartSec + clip.FadeInSec));
-        if (clip.FadeOutSec > 0) Shade(XOfSec(clip.EndSec), XOfSec(clip.EndSec - clip.FadeOutSec));
+        if (clip.FadeInSec > 0) Shade(box.X, ClipEndX(clip.StartSec, clip.StartSec + clip.FadeInSec));
+        if (clip.FadeOutSec > 0) Shade(ClipEndX(clip.StartSec, clip.EndSec), ClipEndX(clip.StartSec, clip.EndSec - clip.FadeOutSec));
     }
 
     /// <summary>The small square handles at the top corners (drag to set the fade lengths).</summary>
     private void DrawFadeHandles(DrawingContext dc, AudioClip clip, Rect box, double alpha)
     {
         var half = FadeHandleSize / 2;
-        foreach (var x in new[] { XOfSec(clip.StartSec + clip.FadeInSec), XOfSec(clip.EndSec - clip.FadeOutSec) })
+        foreach (var x in new[] { ClipEndX(clip.StartSec, clip.StartSec + clip.FadeInSec), ClipEndX(clip.StartSec, clip.EndSec - clip.FadeOutSec) })
             dc.DrawRectangle(Draw.Solid(_theme.Text, 0.9 * alpha), Draw.Pen(_theme.Background, 1, 0.9 * alpha), new Rect(x - half, box.Y - 1, FadeHandleSize, FadeHandleSize));
     }
 
@@ -239,8 +239,10 @@ internal sealed partial class TrackTimeline : IClipGestureHost
         foreach (var n in notes)
         {
             if (n.StartSec + n.LengthSec <= clip.OffsetSec || n.StartSec >= end) continue;
-            var x1 = XOfSec(clip.StartSec + (Math.Max(n.StartSec, clip.OffsetSec) - clip.OffsetSec) / speed);
-            var x2 = XOfSec(clip.StartSec + (Math.Min(n.StartSec + n.LengthSec, end) - clip.OffsetSec) / speed);
+            var noteStart = clip.StartSec + (Math.Max(n.StartSec, clip.OffsetSec) - clip.OffsetSec) / speed;
+            var noteEnd = clip.StartSec + (Math.Min(n.StartSec + n.LengthSec, end) - clip.OffsetSec) / speed;
+            var x1 = ClipEndX(clip.StartSec, noteStart);
+            var x2 = ClipEndX(clip.StartSec, noteEnd);
             if (x2 < 0 || x1 > width) continue;
             var y = top + (1 - (n.Pitch - low) / (double)(high - low)) * (h - 2);
             dc.DrawRectangle(brush, null, new Rect(x1, y, Math.Max(1.5, x2 - x1), 2));
@@ -257,7 +259,7 @@ internal sealed partial class TrackTimeline : IClipGestureHost
             var t = Project.Tracks.IndexOf(take.Track);
             if (t < 0) continue;
             var x1 = XOfSec(take.StartSec);
-            var x2 = XOfSec(Math.Max(take.StartSec, take.EndSec));
+            var x2 = ClipEndX(take.StartSec, Math.Max(take.StartSec, take.EndSec));
             if (x2 < 0 || x1 > width) continue;
             var box = new Rect(x1, LaneTop(t, take.Lane) + 3, Math.Max(2, x2 - x1), ArrangementPanel.AudioLaneHeight - 6);
             var colour = Readable(Parse(take.Track.ColorHex, _theme.Accent));

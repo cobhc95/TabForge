@@ -37,7 +37,7 @@ Generated from the registry. Each test is registered once in `SelfTest.Run` and 
 | audioaudit | 2 | `--selftest <log> --areas audioaudit` |
 | document-context | 1 | `--selftest <log> --areas document-context` |
 | document-operations | 8 | `--selftest <log> --areas document-operations` |
-| engine | 43 | `--selftest <log> --areas engine` |
+| engine | 44 | `--selftest <log> --areas engine` |
 | fuzz | 1 | `--selftest <log> --areas fuzz` |
 | guitarpro | 24 | `--selftest <log> --areas guitarpro` |
 | hygiene | 15 | `--selftest <log> --areas hygiene` |
@@ -46,13 +46,14 @@ Generated from the registry. Each test is registered once in `SelfTest.Run` and 
 | midi | 1 | `--selftest <log> --areas midi` |
 | notation | 2 | `--selftest <log> --areas notation` |
 | persistence | 32 | `--selftest <log> --areas persistence` |
-| playback | 25 | `--selftest <log> --areas playback` |
-| recording | 11 | `--selftest <log> --areas recording` |
+| playback | 26 | `--selftest <log> --areas playback` |
+| recording | 14 | `--selftest <log> --areas recording` |
+| release | 1 | `--selftest <log> --areas release` |
 | settings | 10 | `--selftest <log> --areas settings` |
 | smoke | 20 | `--selftest <log> --areas smoke` |
 | synthetic | 2 | `--selftest <log> --areas synthetic` |
 | tutorial | 6 | `--selftest <log> --areas tutorial` |
-| ui | 105 | `--selftest <log> --areas ui` |
+| ui | 108 | `--selftest <log> --areas ui` |
 | window-lifetime | 2 | `--selftest <log> --areas window-lifetime` |
 
 ### Groups
@@ -70,7 +71,7 @@ A group is a named set of tests with a minimum check count; `--require ci` makes
 | interactions | TestInteractions |
 | long-import | TestLongGuitarPro35Import, TestImportPlausibility |
 | synthetic-fixtures | TestSyntheticFixtures |
-| window-lifetime | TestWindowLifetime, TestStartupFileOpen |
+| window-lifetime | TestWindowLifetime, TestStartupFileOpen, TestSingleInstanceProcessHandover |
 
 ### Every test
 
@@ -184,6 +185,7 @@ A group is a named set of tests with a minimum check count; `--require ci` makes
 | TestEngineOwnerTransports |  | `src/TabForge/SelfTests/Engine/SelfTestEngineHeadless.cs` |
 | TestEnginePluginEditAndStatesByIdentity |  | `tests/full-suite/Engine/SelfTestEngineIdentity.cs` |
 | TestEngineSlotsFollowTrackIdentity |  | `tests/full-suite/Engine/SelfTestEngineIdentity.cs` |
+| TestEngineSyncDeferredRequests |  | `tests/full-suite/Engine/SelfTestEngineSyncDeferred.cs` |
 | TestEngineWarmOwnership |  | `tests/full-suite/Settings/SelfTestSettingsStore.cs` |
 | TestGainBitIdentical |  | `tests/full-suite/Engine/SelfTestGain.cs` |
 | TestGainRenderHash |  | `tests/full-suite/Engine/SelfTestGainRender.cs` |
@@ -343,6 +345,7 @@ A group is a named set of tests with a minimum check count; `--require ci` makes
 | TestNoOpOptionChangesDoNotRestartPlayback |  | `tests/full-suite/Playback/SelfTestPlayback.cs` |
 | TestPlaybackDepth |  | `tests/full-suite/Playback/SelfTestPlayback.cs` |
 | TestPlaybackOrderSpec |  | `tests/full-suite/Playback/SelfTestPlaybackOrderSpec.cs` |
+| TestPlaybackScheduleReuse |  | `tests/full-suite/Playback/SelfTestPlaybackScheduleReuse.cs` |
 | TestRenderBarRanges |  | `tests/full-suite/Notation/SelfTestRenderBounds.cs` |
 | TestRepositionPathsSoundFirstNoteOnce |  | `tests/full-suite/Playback/SelfTestPlayback.cs` |
 | TestSeekWhilePlayingSoundsFirstNote |  | `tests/full-suite/Playback/SelfTestPlayback.cs` |
@@ -362,17 +365,26 @@ A group is a named set of tests with a minimum check count; `--require ci` makes
 
 | Test | Group | File |
 | --- | --- | --- |
+| TestAudioGrowthReservation |  | `tests/full-suite/Playback/SelfTestAudioGrowthReservation.cs` |
 | TestCaptureResampling |  | `tests/full-suite/Engine/SelfTestEngineWatchdog.cs` |
 | TestClipMoves |  | `tests/full-suite/Recording/SelfTestClipMove.cs` |
 | TestClipSplitGlueFades |  | `tests/full-suite/Recording/SelfTestClipSplitGlueFades.cs` |
 | TestClips |  | `tests/full-suite/Recording/SelfTestClips.cs` |
+| TestLongAudioClipGrowthPlayback |  | `tests/full-suite/Editor/SelfTestLongAudioPlayback.cs` |
 | TestMediaDropPlan |  | `tests/full-suite/Recording/SelfTestMediaDrop.cs` |
 | TestMidiFileToClip |  | `tests/full-suite/Recording/SelfTestMediaDrop.cs` |
 | TestRecordingPipeline |  | `tests/full-suite/Recording/SelfTestRecording.cs` |
 | TestSongExtent |  | `tests/full-suite/Recording/SelfTestSongExtent.cs` |
 | TestSongFileDropRouting |  | `tests/full-suite/Recording/SelfTestMediaDrop.cs` |
+| TestTimelineSongTimeRepeatGrowth |  | `tests/full-suite/Recording/SelfTestTimelineSongTime.cs` |
 | TestVirtualFileDrop |  | `tests/full-suite/Recording/SelfTestMediaDrop.cs` |
 | TestWaveformCacheBounds |  | `tests/full-suite/Recording/SelfTestMediaAccess.cs` |
+
+#### release
+
+| Test | Group | File |
+| --- | --- | --- |
+| TestSingleInstanceProcessHandover | window-lifetime | `tests/full-suite/Lifecycle/SelfTestSingleInstanceProcess.cs` |
 
 #### settings
 
@@ -482,6 +494,7 @@ A group is a named set of tests with a minimum check count; `--require ci` makes
 | TestMarkStacking |  | `tests/full-suite/Notation/SelfTestMarkStacking.cs` |
 | TestMediaDropPreviewGeometry |  | `tests/full-suite/Recording/SelfTestMediaDrop.cs` |
 | TestMenuGestureTextFollowsBindings |  | `tests/full-suite/Editor/SelfTestMenuKeys.cs` |
+| TestMenuPopupWarmup |  | `tests/full-suite/Views/SelfTestMenuPopupWarmup.cs` |
 | TestMidiClipMoves |  | `tests/full-suite/Recording/SelfTestMidiClipMove.cs` |
 | TestMoveNoteToAdjacentString |  | `tests/full-suite/Editor/SelfTestMenuKeys.cs` |
 | TestNewBindableCommands |  | `tests/full-suite/Editor/SelfTestMenuKeys.cs` |
@@ -504,6 +517,8 @@ A group is a named set of tests with a minimum check count; `--require ci` makes
 | TestRuntimeIconAndResourceKeys |  | `tests/full-suite/GuitarPro/SelfTestGp5.cs` |
 | TestScaleFinder |  | `tests/full-suite/Notation/SelfTestScaleFinder.cs` |
 | TestScoreContextMenuByKeyboard |  | `tests/full-suite/Editor/SelfTestKeyboardContextMenu.cs` |
+| TestScoreLayoutPartial |  | `tests/full-suite/Notation/SelfTestScoreLayoutPartial.cs` |
+| TestSectionColourEditing |  | `tests/full-suite/Playback/SelfTestSectionColourEditing.cs` |
 | TestSectionDeleteWording |  | `tests/full-suite/Editor/SelfTestMenuKeys.cs` |
 | TestSelectionClipboardMatrix |  | `tests/full-suite/Editor/SelfTestSelectionClipboardMatrix.cs` |
 | TestSelectionScope |  | `tests/full-suite/Editor/SelfTestSelectionScope.cs` |

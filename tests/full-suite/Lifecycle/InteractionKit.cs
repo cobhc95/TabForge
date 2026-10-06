@@ -115,7 +115,11 @@ public static partial class SelfTest
         var source = PresentationSource.FromVisual(window) ?? throw new InvalidOperationException("the window has no presentation source");
         for (var attempt = 1; ; attempt++)
         {
-            IxPumpUntil(() => Keyboard.Modifiers == ModifierKeys.None, 5000);
+            if (!IxPumpUntil(() => Keyboard.Modifiers == ModifierKeys.None, 5000))
+            {
+                Check($"interactions: key {key} waits for physical modifiers to clear", false, "modifiers remained held for 5 s");
+                return false;
+            }
             var args = new KeyEventArgs(Keyboard.PrimaryDevice, source, Environment.TickCount, key) { RoutedEvent = Keyboard.PreviewKeyDownEvent };
             var modifiers = Keyboard.Modifiers;
             IxEditor(window).RaiseEvent(args);
@@ -146,6 +150,10 @@ public static partial class SelfTest
         }
         return done();
     }
+
+    /// <summary>Waits for measurable playback progress or a stop, while sampling the same trace used by no-jump and no-replay checks.</summary>
+    private static bool IxWaitForPlaybackProgress(DocumentSession session, double from, double minimumBars, int timeoutMs, Action? each = null) =>
+        IxPumpUntil(() => !session.Playback.Engine.IsPlaying || IxPosition(session) >= from + minimumBars, timeoutMs, each);
 
     // ---------- playhead ----------
 

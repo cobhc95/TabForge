@@ -64,9 +64,10 @@ public partial class MainWindow
         if (rebuildPlayback) _midi.Rebuild(_project);
         RefreshTracks();
         TrackMixerGrid.SelectedIndex = selectIndex;
+        _trackSwitchSync?.Cancel();
         RefreshArrangement();
         RefreshInstrument();
-        SyncAudioEngine();
+        _engineSync.ScheduleSync(Doc);
         ScheduleFitTimelineToTracks();
         UpdateTitle();
     }

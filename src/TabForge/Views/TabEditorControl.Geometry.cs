@@ -90,12 +90,10 @@ public sealed partial class TabEditorControl
     /// <summary>Invalidate the natural-width and system-break cache after score content changes.</summary>
     public void InvalidateScoreLayout()
     {
-        TabForge.Views.SlowTrace.Mark("score relayout requested");
-        InvalidateStructure();
         _layout.Invalidate();
-        InvalidateMeasure();
-        InvalidateVisual();
     }
+
+    void IScoreLayoutHost.LayoutChanged() { InvalidateStructure(); InvalidateMeasure(); InvalidateVisual(); }
 
     /// <summary>
     /// The window that hosted this editor has closed for good: forget the song and every cache that points into it. A UI Automation client can keep this

@@ -183,12 +183,15 @@ public static partial class SelfTest
         };
         var gridTop = ArrangementPanel.RulerHeight + ArrangementPanel.SectionHeight;
         var row = ArrangementPanel.DefaultTrackRowHeight;
-        var lane = ArrangementPanel.AudioLaneHeight;
         var press = new Point(timeline.XOfBar(2) + 10, gridTop + row + 10);
-        var toTrack3 = new Point(timeline.XOfBar(4) + 10, gridTop + row + lane + row + 10);   // track 3 (index 2): no lanes
+        var toTrack3 = new Point(timeline.XOfBar(4) + 10, gridTop + ArrangementPanel.RowTopOf(song, 2) + 10);   // track 3 (index 2): no lanes yet
         var preview = timeline.ClipGestures.SimulateMove(clip, 0, press, toTrack3);
         Check("clip ghost: dragged onto a track without lanes it shows a new-lane slot there, on the snapped bar",
-            preview is { Valid: true } && preview.Plan.TrackIndex == 2 && preview.Plan.NewLane && preview.Slot is not null && Near(preview.Block.X, timeline.XOfBar(4)) && Near(preview.Plan.StartSec, 8));
+            preview is { Valid: true } && preview.Plan.TrackIndex == 2 && preview.Plan.NewLane && preview.Slot is { } audioSlot
+            && Near(audioSlot.Y, gridTop + ArrangementPanel.RowTopOf(song, 2))
+            && Near(audioSlot.Height, ArrangementPanel.RowHeightOf(song, song.Tracks[2]))
+            && preview.Block.Y >= audioSlot.Y && preview.Block.Bottom <= audioSlot.Bottom
+            && Near(preview.Block.X, timeline.XOfBar(4)) && Near(preview.Plan.StartSec, 8));
         Check("clip ghost: the clip itself has not moved while dragging", Near(clip.StartSec, 4) && clip.Lane == 0 && song.Tracks[0].AudioClips.Count == 1);
         var again = timeline.ClipGestures.SimulateMove(clip, 0, press, new Point(toTrack3.X + 1, toTrack3.Y + 2));
         Check("clip ghost: staying on the same snapped target does not rebuild the ghost", ReferenceEquals(preview, again));
@@ -197,6 +200,31 @@ public static partial class SelfTest
         var below = timeline.ClipGestures.SimulateMove(clip, 0, press, new Point(toTrack3.X, gridTop + ArrangementPanel.RowsHeight(song) + 20));
         Check("clip ghost: below the last track it shows a new track", below is { Valid: true } && below.Plan.NewTrack && below.Slot is not null);
         Check("clip ghost: the ruler is not a place for a clip", timeline.ClipGestures.SimulateMove(clip, 0, press, new Point(toTrack3.X, 4)) is { Valid: false });
+        timeline.ClipGestures.Cancel();
+
+        // An audio clip stays a lane move over an instrument's notation row, but that preview zone differs from lane 1.
+        song.Tracks[1].AudioClips.Add(MoveClip("Occupied", 4, 8, 0));
+        ClipLanes.Ensure(song.Tracks[1], 1);
+        var targetX = timeline.XOfBar(3) + 10;
+        var targetRow = gridTop + ArrangementPanel.RowTopOf(song, 1);
+        var notationMove = timeline.ClipGestures.SimulateMove(clip, 0, press, new Point(targetX, targetRow + 5));
+        var notationSlot = notationMove?.Slot;
+        var laneMove = timeline.ClipGestures.SimulateMove(clip, 0, press, new Point(targetX, timeline.LaneTop(1, 0) + 5));
+        Check("clip ghost: same-time move from notation area to lane 1 refreshes the bounded lane preview",
+            notationMove is { Valid: true, Plan.NewLane: true } && notationSlot is { } scoreRow
+            && laneMove is { Valid: true, Plan.NewLane: true, Slot: { } clipLane }
+            && !ReferenceEquals(notationMove, laneMove) && Near(scoreRow.Y, targetRow)
+            && Near(scoreRow.Height, ArrangementPanel.RowHeightFor(song))
+            && Near(clipLane.Y, timeline.LaneTop(1, 0)) && Near(clipLane.Height, ArrangementPanel.AudioLaneHeight)
+            && laneMove.Block.Y >= clipLane.Y && laneMove.Block.Bottom <= clipLane.Bottom);
+        timeline.ClipGestures.Cancel();
+        song.Tracks[2].Kind = TrackKind.Audio;
+        var emptyAudioTop = gridTop + ArrangementPanel.RowTopOf(song, 2);
+        var emptyAudioMove = timeline.ClipGestures.SimulateMove(clip, 0, press, new Point(toTrack3.X, emptyAudioTop + 10));
+        Check("clip ghost: first lane on an empty audio track stays in its compact row",
+            emptyAudioMove is { Valid: true, Plan.NewLane: true } && emptyAudioMove.Slot is { } compactSlot
+            && Near(compactSlot.Y, emptyAudioTop) && Near(compactSlot.Height, ArrangementPanel.RowHeightOf(song, song.Tracks[2]))
+            && emptyAudioMove.Block.Y >= compactSlot.Y && emptyAudioMove.Block.Bottom <= compactSlot.Bottom);
         Check("clip ghost: Esc cancels (ghost gone, clip untouched)", timeline.ClipGestures.Cancel() && timeline.CurrentDropPreview is null && Near(clip.StartSec, 4) && !timeline.ClipGestures.Cancel());
     }
 }

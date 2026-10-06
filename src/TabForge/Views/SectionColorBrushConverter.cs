@@ -43,7 +43,9 @@ public sealed class SectionColorValueConverter : IValueConverter
     internal static Color SectionColour(object value) => value switch
     {
         MarkerModel marker => SectionColours.DisplayFor(marker)
-                              ?? (ColourText.TryParse(marker.ColorHex, out var own) ? Draw.Tame(own) : DefaultSectionColour),
+                              ?? (ColourText.TryParse(marker.ColorHex, out var own)
+                                  ? marker.ColorIsExplicit ? own : Draw.Tame(own)
+                                  : DefaultSectionColour),
         string hex when ColourText.TryParse(hex, out var colour) => Draw.Tame(colour),
         _ => DefaultSectionColour,
     };

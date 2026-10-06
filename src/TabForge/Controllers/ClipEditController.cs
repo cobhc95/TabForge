@@ -149,7 +149,7 @@ internal sealed class ClipEditController
             return true;
         }, invalidatesTimeline: false);
         _host.SelectedClip = placed;
-        if (plan.NewTrack) doc.Playback.Engine.Rebuild(project);
+        if (plan.NewTrack && !CanAddAudioTrackWithoutMidiRebuild(project, target, new[] { placed })) doc.Playback.Engine.Rebuild(project);
         Changed(doc, true);
         if (plan.NewTrack) _host.ShowNewTrack(project.Tracks.Count - 1);
         _host.SetStatus($"{(copy ? "Copied" : "Moved")} {clip.Name} to {(plan.NewTrack ? $"a new track ({target.Name})" : target.Name)}, lane {placed.Lane + 1}" + TakeExtentNote());
@@ -180,9 +180,17 @@ internal sealed class ClipEditController
         if (_host.Settings.Timeline.AutoRemoveEmptyLanes)
             foreach (var track in project.Tracks) ClipLanes.Compact(track);   // empty lanes close up (armed tracks are skipped inside)
         using (TabForge.Views.SlowTrace.Measure("clip waveform cancel", 2)) WaveformCache.CancelUnused(project.Tracks.SelectMany(t => t.AudioClips).Where(c => !c.IsMidi).Select(c => c.File), doc.Media);   // a removed clip stops being read
+        var hasMidiClips = project.Tracks.Any(t => t.AudioClips.Any(c => c.IsMidi));
+        var growthRefreshStarted = false;
+        if (extent.BarsAdded > 0 && doc.Playback.Engine.IsPlaying && !hasMidiClips && !_midiClipsPlayed)
+        {
+            var barCount = project.Tracks.Count == 0 ? 0 : project.Tracks.Max(t => t.Measures.Count);
+            var map = doc.Playback.PlaybackBarRemap ?? Enumerable.Range(0, barCount).ToArray();
+            growthRefreshStarted = doc.Playback.Engine.RefreshArrangementForAudioGrowth(project, map);
+        }
         _host.SyncAudioEngine();
-        if (extent.BarsAdded > 0 || project.Tracks.Any(t => t.AudioClips.Any(c => c.IsMidi)) || _midiClipsPlayed) doc.Playback.Engine.Rebuild(project);
-        _midiClipsPlayed = project.Tracks.Any(t => t.AudioClips.Any(c => c.IsMidi));
+        if (!growthRefreshStarted && (extent.BarsAdded > 0 || hasMidiClips || _midiClipsPlayed)) doc.Playback.Engine.Rebuild(project);
+        _midiClipsPlayed = hasMidiClips;
         if (refreshRows) _host.RefreshTracks();
         if (extent.BarsAdded > 0) _host.RefreshAfterSongGrew();
         _host.RefreshArrangement();
@@ -205,6 +213,10 @@ internal sealed class ClipEditController
             foreach (var clip in track.AudioClips) end = Math.Max(end, clip.EndSec);
         return SongExtent.EnsureCovers(project, end);
     }
+
+    private bool CanAddAudioTrackWithoutMidiRebuild(SongProject project, TrackModel target, IEnumerable<AudioClip> addedClips) =>
+        target.IsAudio && addedClips.All(clip => !clip.IsMidi) && !_midiClipsPlayed &&
+        !project.Tracks.Any(track => track.AudioClips.Any(existing => existing.IsMidi));
 
     public void EditProperties(DocumentSession doc, AudioClip clip)
     {
@@ -421,7 +433,7 @@ internal sealed class ClipEditController
             if (MediaPathPolicy.Classify(clip.File, media.BaseDirectory) is { Remote: true } picked) MediaAccess.Approve(picked, media);
         MediaDrop.AddClips(track, clips, final.Lane);
         _host.SelectedClip = clips[^1];
-        if (plan.NewTrack) doc.Playback.Engine.Rebuild(project);
+        if (plan.NewTrack && !CanAddAudioTrackWithoutMidiRebuild(project, track, clips)) doc.Playback.Engine.Rebuild(project);
         Changed(doc, true);
         if (plan.NewTrack) _host.ShowNewTrack(trackIndex);
         var what = clips.Count == 1 ? clips[0].Name : $"{clips.Count} files";

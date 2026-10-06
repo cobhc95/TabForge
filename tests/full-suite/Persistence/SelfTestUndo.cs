@@ -18,7 +18,72 @@ public static partial class SelfTest
         TestUndoMultiTrackHistory();
         TestUndoRestoreRechecksLiveBars();
         TestUndoFingerprints();
+        TestPasteUndoScope();
         TestUndoLatency();
+    }
+
+    private static void TestPasteUndoScope()
+    {
+        var document = DocumentSession.FromProject(TemplateFactory.Blank(), null);
+        DocumentSession? sibling = null;
+        try
+        {
+            sibling = DocumentSession.FromProject(TemplateFactory.Blank(), null);
+            TestPasteUndoScope(document, sibling);
+        }
+        finally
+        {
+            document.DisposePlayback();
+            sibling?.DisposePlayback();
+        }
+    }
+
+    private static void TestPasteUndoScope(DocumentSession document, DocumentSession sibling)
+    {
+        var source = TemplateFactory.Blank();
+        source.Tracks[0].Measures[0].Cells[0] = new TabCell
+        {
+            DurationDenominator = 4,
+            Notes = { new TabNote { StringIndex = 2, Fret = 7, MidiValue = source.Tracks[0].PitchOf(2, 7) } }
+        };
+        var clip = ClipboardService.CaptureBeats(source, 0, 0, 0, 0, 0, 0);
+        document.MarkClean(); sibling.MarkClean();
+        var (original, siblingOriginal) = (ProjectService.Snapshot(document.Project), ProjectService.Snapshot(sibling.Project));
+        var (siblingProject, siblingRevision) = (sibling.Project, sibling.Project.TimelineRevision);
+        var revision = document.Project.TimelineRevision;
+        var outcome = EditCommands.RunPaste(document, clip, new PasteTarget(0, 0, 1, 0), new EditingSettings(), new RecommendedPasteAnswers());
+        var pastedProject = document.Project;
+        var pasted = ProjectService.Snapshot(pastedProject);
+        var pasteOk = outcome.Changed && pasted != original && pastedProject.Tracks[0].Measures[1].Cells[0].Notes.Single().Fret == 7 &&
+            document.Undo.UndoCount == 1 && document.Undo.RedoCount == 0 && document.IsDirty && document.HasUnsavedChanges &&
+            pastedProject.TimelineRevision == revision + 1;
+        Check("paste through the document path changes content, marks dirty, stores one undo step and invalidates once", pasteOk,
+            $"changed {outcome.Changed}, dirty {document.IsDirty}, undo {document.Undo.UndoCount}, revision +{pastedProject.TimelineRevision - revision}");
+
+        var undoSource = document.Project;
+        revision = undoSource.TimelineRevision;
+        var undo = DocumentEdits.Undo(document);
+        var restored = document.Project;
+        var undoRevision = ReferenceEquals(undoSource, restored) ? restored.TimelineRevision == revision + 1 : restored.TimelineRevision == 1;
+        Check("document undo restores the clean pre-paste content and invalidates timing", undo is not null &&
+            ProjectService.Snapshot(restored) == original && !document.IsDirty && !document.HasUnsavedChanges && undoRevision &&
+            document.Undo.UndoCount == 0 && document.Undo.RedoCount == 1,
+            $"clean {!document.HasUnsavedChanges}, revision {revision} -> {restored.TimelineRevision}, replaced {!ReferenceEquals(undoSource, restored)}");
+
+        var redoSource = document.Project;
+        revision = redoSource.TimelineRevision;
+        var redo = DocumentEdits.Redo(document);
+        var redone = document.Project;
+        var redoRevision = ReferenceEquals(redoSource, redone) ? redone.TimelineRevision == revision + 1 : redone.TimelineRevision == 1;
+        Check("document redo restores the pasted content, marks dirty and invalidates timing", redo is not null &&
+            ProjectService.Snapshot(redone) == pasted && document.IsDirty && document.HasUnsavedChanges && redoRevision &&
+            document.Undo.UndoCount == 1 && document.Undo.RedoCount == 0,
+            $"dirty {document.IsDirty}, revision {revision} -> {redone.TimelineRevision}, replaced {!ReferenceEquals(redoSource, redone)}");
+
+        Check("paste, undo and redo leave a sibling document and its history untouched",
+            ReferenceEquals(sibling.Project, siblingProject) && ProjectService.Snapshot(sibling.Project) == siblingOriginal &&
+            !sibling.IsDirty && !sibling.HasUnsavedChanges && sibling.Project.TimelineRevision == siblingRevision &&
+            sibling.Undo.UndoCount == 0 && sibling.Undo.RedoCount == 0);
     }
 
     private static void TestUndoBarCodecCoverage()

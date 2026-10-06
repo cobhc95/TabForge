@@ -110,8 +110,10 @@ public static partial class SelfTest
             IxCommand(w, "File.Save");
             IxTrace("I-3 save returned");
             var controller = IxController(w);
-            var waiting = (LtField<System.Collections.IDictionary>(AudioEngineClient.Instance, "_stateRequests")!).Count;
-            Check($"interactions: {label}: the save is held waiting for A's plug-in state (the writer is gated)", controller.IsSaving && waiting >= 1 && !File.Exists(a.Path), $"saving {controller.IsSaving}, requests {waiting}, file {File.Exists(a.Path)}");
+            var stateRequests = LtField<System.Collections.IDictionary>(AudioEngineClient.Instance, "_stateRequests")!;
+            var saveHeld = IxPumpUntil(() => controller.IsSaving && stateRequests.Count >= 1, 10000);
+            var waiting = stateRequests.Count;
+            Check($"interactions: {label}: the save is held waiting for A's plug-in state (the writer is gated)", saveHeld && controller.IsSaving && waiting >= 1 && !File.Exists(a.Path), $"held {saveHeld}, saving {controller.IsSaving}, requests {waiting}, file {File.Exists(a.Path)}");
             if (extension == ".gp") Check($"interactions: {label}: the save asked how to save a song with audio data, then what a clean .gp leaves out", asked.SequenceEqual(new[] { "audio data", "preflight" }) || asked.SequenceEqual(new[] { "audio data" }), string.Join(",", asked));
 
             // While it is held: B is displayed, a key typed in B reaches nothing, and A's tab cannot be closed.
@@ -280,8 +282,9 @@ public static partial class SelfTest
             Check("interactions: I-6: after the move the playhead is on the same musical content (the verse is now bars 1-8, so its bar number dropped by 8)",
                 engine.IsPlaying && original.Playback.PlayheadBar >= barBefore - 8 && original.Playback.PlayheadBar <= barBefore - 8 + 1 && IxBarContent(project, barBefore - 8) == contentUnderPlayhead,
                 $"playhead {barBefore} -> {original.Playback.PlayheadBar}, playing {engine.IsPlaying}");
-            IxPump(300, Tick);
-            Check("interactions: I-6: playback runs on after the move", engine.IsPlaying);
+            var positionAfterMove = IxPosition(original);
+            var progressedAfterMove = IxWaitForPlaybackProgress(original, positionAfterMove, 0.25, 10000, Tick);
+            Check("interactions: I-6: playback runs on after the move", progressedAfterMove && engine.IsPlaying, $"progressed {progressedAfterMove}, position {positionAfterMove:0.00} -> {IxPosition(original):0.00}, playing {engine.IsPlaying}");
             Check("interactions: I-6: the audio clip keeps its time in seconds (it does not follow its section)", clip.StartSec == 10 && original.Project.Tracks[1].AudioClips[0].StartSec == 10);
 
             // Stop (the editor can be compared to a new one only without a playhead), then each step's render.

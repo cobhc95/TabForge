@@ -660,7 +660,7 @@ public static class SettingsCatalog
 
             // Timeline & sections
             Bool(Timeline, "Sections", "timeline.similarcolours", "Same colour for similar sections", v => timeline.MatchSimilarSectionColours = v, () => timeline.MatchSimilarSectionColours,
-                "Sections with the same base name (Verse 1, Verse 2, Chorus x2) are shown in the first one's colour.", "section colour similar verse chorus match same"),
+                "Sections with the same base name (Verse 1, Verse 2, Chorus x2) share a colour. Changing it in the section editor updates that group.", "section colour similar verse chorus match same"),
             Bool(Timeline, "Sections", "timeline.brackets", "Show section brackets", v => timeline.ShowSectionBrackets = v, () => timeline.ShowSectionBrackets,
                 "Draw [ ] brackets around the section being played or edited.", "section brackets indicator highlight outline"),
             Bool(Timeline, "Sections", "timeline.names", "Show section names", v => timeline.ShowSectionNames = v, () => timeline.ShowSectionNames,

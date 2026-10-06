@@ -7,13 +7,18 @@ namespace TabForge.Controllers;
 
 // Owns: the timeline's bar-range commands (clear, remove and close the gap, insert a gap before / after): the Delete prompt and its remembered answer, the clip
 //     warning, one undo step per command, and the selection afterwards.
-// Does not own: the bar and clip edits (BarRangeGaps), the prompt window (BarRangePrompt) or key maps (HotkeyMaps).
+// Does not own: the bar and clip edits (BarRangeGaps) or key maps (HotkeyMaps).
 // Tests: TestBarRangeGaps.
 internal sealed class BarRangeFlow
 {
     private readonly ISectionEditHost _host;
+    private readonly BarRangePrompt _prompt;
 
-    public BarRangeFlow(ISectionEditHost host) => _host = host;
+    public BarRangeFlow(ISectionEditHost host)
+    {
+        _host = host;
+        _prompt = new BarRangePrompt(host);
+    }
 
     /// <summary>The command for a key while bars are selected and the timeline (not a clip, the score or a text box) has the focus; null otherwise.</summary>
     public static string? Route(bool timelineFocused, bool hasRange, bool clipContextActive, IReadOnlyDictionary<string, string> rangeMap, string gesture) =>
@@ -45,7 +50,7 @@ internal sealed class BarRangeFlow
         if (BarRangeGaps.ClipsUnder(doc.Project, start, end, -1) is { } impact)
             text += " " + ClipDeleteImpact.DescribeRange(impact);
         var last = Enum.TryParse<BarRangeAction>(editing.BarRangeLastChoice, out var previous) ? previous : BarRangeAction.Clear;
-        if (_host.AskBarRange(text, last, allTracksDefault) is not { } answer) return;
+        if (_prompt.Ask(text, last, allTracksDefault) is not { } answer) return;
         editing.BarRangeLastChoice = answer.Action.ToString();
         if (answer.Remember) editing.BarRangeDelete = BarRangePromptText.Store(answer.Action, answer.AllTracks);
         _host.SaveSettings();

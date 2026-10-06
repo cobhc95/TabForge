@@ -5,7 +5,7 @@ using TabForge.Plugins;
 namespace TabForge.Models;
 
 // standard score model. New fields all have defaults so old .tforge files still load.
-public sealed class SongProject
+public sealed partial class SongProject
 {
     private int _formatVersion = 2;
     /// <summary>File schema: 3 exactly while the song has an audio track, otherwise the loaded value (3 reads as 2), so songs without audio write what older releases read.</summary>
@@ -61,84 +61,6 @@ public sealed class SongProject
     public MixerSettings Mixer { get; set; } = new();
     public string? ImportedFrom { get; set; }
 
-    private bool _isDirty;
-    [JsonIgnore]
-    public bool IsDirty
-    {
-        get => _isDirty;
-        set { if (value) _contentRevision++; if (_isDirty == value) return; _isDirty = value; DisplayStateChanged?.Invoke(this, EventArgs.Empty); }
-    }
-
-    private int _contentRevision;
-    /// <summary>
-    /// Changes with every edit (each one marks the song changed, also when it already was) and with every timeline change. Views that cache
-    /// what bars contain (the timeline's bar cells) key on it, so no edit path can leave them stale. Not saved; read on the UI thread.
-    /// </summary>
-    [JsonIgnore]
-    public int ContentRevision => _contentRevision + TimelineRevision;
-
-    private int _timelineRevision;
-    /// <summary>
-    /// Changes whenever something that affects timing may have changed (tempos and ramps, time signatures, repeats, endings,
-    /// directions, bars inserted/deleted/moved, undo/redo). Timing caches (SongClock) key on it. Not saved; read from any thread.
-    /// </summary>
-    [JsonIgnore]
-    public int TimelineRevision => Volatile.Read(ref _timelineRevision);
-
-    /// <summary>Invalidates every timing cache built for this project. Called by each edit ending (editor, window, arrangement) and by undo/redo.</summary>
-    public void MarkTimelineChanged()
-    {
-        if (_timelineBatchDepth > 0) { _timelineBatchMarked = true; return; }
-        Interlocked.Increment(ref _timelineRevision);
-        TimelineMarked?.Invoke(this);
-    }
-
-    /// <summary>
-    /// Raised after the timeline revision changed (outside a batch), on the thread that marked it. Edits mark on the thread that owns the song,
-    /// so a subscriber can take an immutable copy of the song here and hand that copy to other threads instead of letting them read the live song.
-    /// </summary>
-    public event Action<SongProject>? TimelineMarked;
-
-    private int _timelineBatchDepth;
-    private bool _timelineBatchMarked;
-
-    /// <summary>
-    /// One logical edit, however many model steps mark the timeline inside it (a bar grid change marks itself, the edit marks too): the marks made
-    /// until the returned scope is disposed count as one, applied when the outermost scope ends. A mid-edit state is therefore never published under a
-    /// new revision. UI thread only (edits are).
-    /// </summary>
-    public IDisposable BeginTimelineBatch()
-    {
-        _timelineBatchDepth++;
-        return new TimelineBatch(this);
-    }
-
-    private sealed class TimelineBatch : IDisposable
-    {
-        private SongProject? _project;
-        public TimelineBatch(SongProject project) => _project = project;
-
-        public void Dispose()
-        {
-            var project = Interlocked.Exchange(ref _project, null);
-            if (project is null || --project._timelineBatchDepth > 0) return;
-            if (!project._timelineBatchMarked) return;
-            project._timelineBatchMarked = false;
-            Interlocked.Increment(ref project._timelineRevision);
-            project.TimelineMarked?.Invoke(project);
-        }
-    }
-
-    /// <summary>A shallow copy without the tracks added from startup templates (what is written to a .tforge file).</summary>
-    public SongProject WithoutStartupTracks()
-    {
-        var copy = (SongProject)MemberwiseClone();
-        copy.DisplayStateChanged = null;
-        copy.TimelineMarked = null;
-        copy.Tracks = Tracks.Where(t => t.StartupTemplateId is null).ToList();
-        return copy;
-    }
-
     /// <summary>
     /// Moves the track at <paramref name="from"/> to <paramref name="to"/>, shifting the rest to keep
     /// the order contiguous. Returns false when the move is a no-op or out of range. The track order is
@@ -161,6 +83,9 @@ public sealed class MarkerModel
     public int MeasureIndex { get; set; }
     public string Title { get; set; } = "Section";
     public string ColorHex { get; set; } = "#2E74B5";
+    /// <summary>Preserves an exact colour chosen in the section editor across automatic family colour resolution.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool ColorIsExplicit { get; set; }
     /// <summary>Prevents this section from being moved by timeline drag-and-drop.</summary>
     public bool LockPosition { get; set; }
     /// <summary>

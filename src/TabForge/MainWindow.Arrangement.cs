@@ -401,13 +401,9 @@ public partial class MainWindow
 
     private void EditSectionTitle(MarkerModel marker)
     {
-        // Preselect the section's current colour: its own colour if valid, otherwise the colour the timeline shows.
-        var currentHex = Visualization.ColourText.TryParse(marker.ColorHex, out _) ? marker.ColorHex
-            : SectionColours.DisplayFor(marker) is { } shown ? Visualization.ColourText.Hex(shown) : "#2E74B5";
-        var edited = GpDialogs.Marker(marker.Title, currentHex, "Save");
-        if (edited is null || (string.Equals(edited.Value.title, marker.Title, StringComparison.Ordinal) &&
-                               string.Equals(edited.Value.color, marker.ColorHex, StringComparison.OrdinalIgnoreCase))) return;
-        DocumentEdits.Run(Doc, _ => { marker.Title = edited.Value.title; marker.ColorHex = edited.Value.color; return true; });
+        var edited = GpDialogs.EditMarker(marker, Arrangement.MatchSimilarSectionColours);
+        if (edited is null || SectionColours.IsUnchangedEdit(marker, edited.Value.title, edited.Value.color)) return;
+        DocumentEdits.Run(Doc, project => SectionColours.ApplyEdit(project.Markers, marker, edited.Value.title, edited.Value.color, Arrangement.MatchSimilarSectionColours));
         RefreshAfterEdit(EditRefresh.Score | EditRefresh.Arrangement | EditRefresh.Markers);
     }
 
@@ -455,6 +451,7 @@ public partial class MainWindow
         }
 
         public AppSettings Settings => _window._settings;
+        Window IBarRangePromptHost.Owner => _window;
         public void SaveSettings() => _window.SaveSettings();
         public bool IsShown(DocumentSession document) => ReferenceEquals(document, _window.Doc);
         public ClipboardService Clipboard => ClipboardService.Shared;
@@ -489,8 +486,6 @@ public partial class MainWindow
 
         public bool Ask(string title, string text, string yesText, bool withUndoHint) => ConfirmPrompt.Ask(_window, title, text, yesText, withUndoHint);
 
-        public BarRangeAnswer? AskBarRange(string text, BarRangeAction preselect, bool allTracks) =>
-            BarRangePrompt.Ask(_window, text, preselect, allTracks, id => _window.MenuKey(id));
 
         public void ShowLastBarWarning() => MessageBox.Show(_window,
             "The last remaining bar cannot be removed from a song.", "Section not removed",

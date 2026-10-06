@@ -24,7 +24,9 @@ Start-Process -Wait out-full\TabForge.exe -ArgumentList '--selftest','full.log',
 ## Layout
 - `SelfTestFullSuite.cs`: the registrations (`RunFullSuite`) and the area table of these tests. The basic set's are in `src/TabForge/SelfTests/SelfTest.cs`.
 - `SelfTestCore.cs` and the topic folders (`Editor/`, `Engine/`, `GuitarPro/`, `Lifecycle/`, `Notation/`, `Persistence/`, `Playback/`, `Recording/`, `Settings/`, `Views/`, `Fuzz/`): the tests.
+- `Lifecycle/SelfTestWindowLifetime.cs` contains the shared fixture and subscription/automation lifetime scenarios; `SelfTestWindowLifetimeCloseAndTransfer.cs` contains close, transfer, preferences and engine-chain scenarios.
 - Helpers shared with the basic set (`NewEditor`, `TwoBarSong`, `BuildRichProject`, `PumpUi`, the headless engine kit in `src/TabForge/SelfTests/Engine/`) stay in `src/`.
 - Full-suite-only diagnostic commands (`--gp-compare`, `--roundtrip-diff`, `--write-gp-fixture` and the like, `--pair-save-probe`) exist only in a full-suite build.
+- `TestSingleInstanceProcessHandover` launches two isolated app processes to check an Explorer-style file handover and shutdown after the final window closes; it uses a generated `.tforge` fixture.
 
 Adding a test: write it here, register it in `SelfTestFullSuite.cs`, give it an area, run `TabForge.exe --feature-map` and commit `docs/FEATURE_MAP.md`.

@@ -18,7 +18,7 @@ The basic set also holds the **essential-action smoke checks** (`SelfTests/Smoke
 
 ## Release gate (`--areas release`)
 
-`--areas release` is the curated release set: the basic set plus saving, atomic writes and recovery, import and malformed-input containment, playback and editing interaction, document context, plug-in trust and input limits (the list is `ReleaseTestNames` in `src/TabForge/SelfTests/SelfTestRelease.cs`). It needs a full-suite build and runs in about 2 minutes. `tools/Package-Release.ps1` (and so `.github/workflows/release.yml`) always builds a separate full-suite test build, runs it with `--areas release` and refuses to package on any failure; the packaged build is the normal one. The maintainer's local rebuild script has a `release` option that runs the same gate. Push CI stays on the basic set; the full suite runs weekly.
+`--areas release` is the curated release set: the basic set plus saving, atomic writes and recovery, import and malformed-input containment, playback and editing interaction, document context, plug-in trust and input limits, and the real two-process Explorer handover plus final-window shutdown check (the list is `ReleaseTestNames` in `src/TabForge/SelfTests/SelfTestRelease.cs`). It needs a full-suite build and runs in about 2 minutes. `tools/Package-Release.ps1` (and so `.github/workflows/release.yml`) always builds a separate full-suite test build, runs it with `--areas release` and refuses to package on any failure; the packaged build is the normal one. The maintainer's local rebuild script has a `release` option that runs the same gate. Push CI stays on the basic set; the full suite runs weekly.
 
 ## Run it
 

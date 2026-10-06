@@ -419,6 +419,7 @@ public sealed class ArrangementController
     {
         Title = marker.Title,
         ColorHex = marker.ColorHex,
+        ColorIsExplicit = marker.ColorIsExplicit,
         LockPosition = marker.LockPosition
     };
 

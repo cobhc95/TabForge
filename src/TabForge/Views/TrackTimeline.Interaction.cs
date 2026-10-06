@@ -40,10 +40,8 @@ internal sealed partial class TrackTimeline : ISectionTipHost, ISectionEdgeHost
         var markers = project.Markers.OrderBy(marker => marker.MeasureIndex).ToList();
         var result = new List<SectionHit>(markers.Count);
         var geometry = EnsureTimelineGeometry();
-        // Optional: sections that share a base name ("Verse 1", "Verse 2") share the first one's colour.
-        // Different section types never share a colour: if a new type's own colour is already taken by
-        // another type (e.g. Bridge saved with Chorus's purple), it gets the next unused distinct colour.
-        // The same rule the section list uses, so both always show the same colour.
+        // Similar section names share their family's colour. Automatic colours stay distinct;
+        // an explicit editor choice is preserved. The section list uses the same resolver.
         var colours = SectionColours.Resolve(markers, MatchSimilarSectionColours, _theme.Accent);
         Color ColourOf(MarkerModel marker) => colours[marker];
         for (var index = 0; index < markers.Count; index++)

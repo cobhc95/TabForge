@@ -43,6 +43,7 @@ public static class SectionReorderService
             MeasureIndex = at,
             Title = marker.Title,
             ColorHex = marker.ColorHex,
+            ColorIsExplicit = marker.ColorIsExplicit,
             LockPosition = marker.LockPosition
         });
         project.Markers = project.Markers.OrderBy(existing => existing.MeasureIndex).ToList();

@@ -18,8 +18,11 @@ public static partial class SelfTest
         "TestEmbeddedProjectLimit", "TestAudioDataSizeLimit", "TestMediaPathPolicy",
         "TestGuitarProFiles", "TestGuitarProImportContainment", "TestGuitarProImportWorker", "TestSyntheticGuitarProFixture", "TestSyntheticFixtures",
         "TestImportPlausibility", "TestMalformedInputFuzz", "TestScoreClipRejectsUntrustedInput",
-        "TestPlaybackOrderSpec", "TestNoHangingNotes", "TestSeekWhilePlayingSoundsFirstNote", "TestEditCommands", "TestEditorCopyPaste", "TestUndoController", "TestDocuments",
-        "TestDocumentOperations", "TestDocumentContext", "TestStartupFileOpen", "TestSelectionClipboardMatrix",
+        "TestPlaybackOrderSpec", "TestNoHangingNotes", "TestSeekWhilePlayingSoundsFirstNote", "TestEditCommands", "TestEditorCopyPaste", "TestUndoController", "TestUndoDeltaStates", "TestDocuments",
+        "TestDocumentOperations", "TestDocumentContext", "TestStartupFileOpen", "TestSingleInstanceProcessHandover", "TestSelectionClipboardMatrix", "TestSongExtent", "TestEngineSyncDeferredRequests",
+        "TestLongAudioClipGrowthPlayback", "TestAudioGrowthReservation",
+        "TestMediaDropPlan", "TestMediaDropPreviewGeometry", "TestClipMoveGhost", "TestMidiClipMoves", "TestTimelineSongTimeRepeatGrowth",
+        "TestSectionColourEditing",
         "TestSecurityInputBoundaries", "TestNightPluginApproval", "TestPairMarkerIsUntrusted", "TestQuarantineAllowAgain", "TestPluginStateCollection", "TestPluginRightsNotice",
     };
 

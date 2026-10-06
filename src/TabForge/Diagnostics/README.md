@@ -13,7 +13,8 @@ Headless commands run from the command line, for checking the app without a pers
 - `FeatureMapGenerator`: writes `docs/FEATURE_MAP.md`.
 - `AudioAudit`, `MidiTimingAudit`, `PitchAudit`: playback and timing checks.
 - `LayoutAudit`, `BarAuditRunner`: notation checks.
-- `WindowProbes` (partial files): screenshots and window checks; `WindowProbes.SpeedAudit*.cs` is the action speed timer (see docs/DEBUGGING.md).
+- `WindowProbes` (partial files): screenshots and window checks; `WindowProbes.SpeedAudit*.cs` times actual modal display, native clip/row popups and long WAV drops while stopped and playing (see docs/DEBUGGING.md).
+- `ProfileHandoverTestStatus` (`IProfileHandoverStatusHost`): profile-local window and document snapshots for the real-process handover release test; the host keeps window state behind an interface.
 
 ## Pathway
 Add a command to `DiagnosticCommands`, one line in `docs/DEBUGGING.md`, and a test if it checks behaviour. Commands print nothing; read the log file. The full list: `docs/DEBUGGING.md`.

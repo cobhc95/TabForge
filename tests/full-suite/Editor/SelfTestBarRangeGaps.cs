@@ -100,5 +100,6 @@ public static partial class SelfTest
             && BarRangeFlow.Route(true, false, false, range, "Delete") == "Range.Delete" && BarRangeFlow.Route(true, true, true, range, "Delete") is null);
 
         TestBarRangeGapsInWindow();
+        TestReusableBarRangePrompt();
     }
 }

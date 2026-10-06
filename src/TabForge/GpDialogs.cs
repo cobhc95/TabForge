@@ -12,7 +12,7 @@ public static class GpDialogs
 {
     public static string? Prompt(string title, string label, string initial = "")
     {
-        var w = new Window { Title = title, Width = 380, Height = 160, WindowStartupLocation = WindowStartupLocation.CenterOwner, ResizeMode = ResizeMode.NoResize };
+        var w = new Window { Title = title, Width = 380, SizeToContent = SizeToContent.Height, WindowStartupLocation = WindowStartupLocation.CenterOwner, ResizeMode = ResizeMode.NoResize };
         var panel = new StackPanel { Margin = new Thickness(10) };
         panel.Children.Add(new TextBlock { Text = label });
         var box = new TextBox { Text = initial, Margin = new Thickness(0, 6, 0, 8) };
@@ -188,14 +188,22 @@ public static class GpDialogs
         }
     }
 
-    public static (string title, string color)? Marker(string title = "", string color = "#2E74B5", string action = "Add")
+    public static (string title, string color)? EditMarker(Models.MarkerModel marker, bool matchSimilar) =>
+        Marker(marker.Title, SectionColours.EditorColourHex(marker), "Save", marker.MeasureIndex,
+            matchSimilar ? "Colour changes apply to similar-named sections." : null);
+
+    public static (string title, string color)? Marker(string title = "", string color = "#2E74B5", string action = "Add", int? bar = null, string? colourHint = null)
     {
-        var w = new Window { Title = $"{action} score marker", Width = 340, Height = 190, WindowStartupLocation = WindowStartupLocation.CenterOwner };
+        var w = new Window { Title = $"{action} score marker", Width = 340, SizeToContent = SizeToContent.Height, WindowStartupLocation = WindowStartupLocation.CenterOwner };
         var panel = new StackPanel { Margin = new Thickness(12) };
         panel.Children.Add(new TextBlock { Text = "Marker name" });
         var nameBox = new TextBox { Text = title, Margin = new Thickness(0, 4, 0, 10) };
         panel.Children.Add(nameBox);
+        if (bar is { } startBar)
+            panel.Children.Add(new TextBlock { Text = $"Starts at bar {startBar + 1}", Margin = new Thickness(0, 0, 0, 8) });
         panel.Children.Add(new TextBlock { Text = "Colour" });
+        if (!string.IsNullOrWhiteSpace(colourHint))
+            panel.Children.Add(new TextBlock { Text = colourHint, TextWrapping = TextWrapping.Wrap, Opacity = 0.75, Margin = new Thickness(0, 0, 0, 4) });
         var colors = new ColourChoice[]
         {
             new("Blue", "#2E74B5"), new("Green", "#3FB950"), new("Gold", "#D8A032"), new("Violet", "#8B5CF6"),
@@ -212,7 +220,7 @@ public static class GpDialogs
         }
         combo.SelectedItem = current ?? colors[0];
         panel.Children.Add(combo);
-        var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
+        var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 4, 0, 0) };
         var ok = new Button { Content = action, Width = 75, IsDefault = true };
         var cancel = new Button { Content = "Cancel", Width = 75, IsCancel = true, Margin = new Thickness(6, 0, 0, 0) };
         (string, string)? result = null;

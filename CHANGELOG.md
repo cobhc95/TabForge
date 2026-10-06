@@ -2,6 +2,21 @@
 
 TabForge is actively developed; please report anything odd on the Issues page.
 
+## 0.5.6 — 2026-10-06
+
+- Add at cursor shows the section’s exact starting bar. The redundant Go button is removed; clicking a section or pressing Enter keeps the existing cursor navigation.
+- Section editing opens the displayed colour; colour changes persist across similar-named sections when matching is enabled, including after saving and reopening the project.
+- Section and text-entry dialogs keep their action buttons fully visible at larger interface scales.
+- Audio and MIDI drag previews identify the target lane without covering adjacent track rows.
+- Clip placement and drag handles remain aligned through repeats and timeline growth.
+
+- Automated checks cover file handover between running instances, cursor beat slots, paste undo/redo, and window cleanup after failed interaction tests.
+- Edit refreshes coalesce engine synchronization, and clip moves reuse measured song timing while checking for timing changes.
+- Local score edits reuse unchanged bar layouts when spacing and cross-bar notation allow it.
+- Delete-bars prompts reuse their owner’s window, refresh choices and shortcuts, and release hidden windows when the owner closes.
+- Compatible playback seeks reuse the running schedule, preserve pause state, and discard superseded targets.
+- Audio-only clip growth extends the future playback schedule without restarting MIDI or resuming a paused song.
+
 ## 0.5.5 — 2026-10-04
 
 Track conversion both ways and a round of speed work guided by a new timing audit of about 50 actions.

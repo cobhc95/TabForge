@@ -314,13 +314,12 @@ public partial class MainWindow : IMixerHost, IFxChainHost, IMixerWindowsHost
 
     private void SyncAudioEngine() => _engineSync.Sync();
 
-    /// <summary>Song switched or restored (undo): rebuild the mixer, close chain windows of tracks no longer shown.</summary>
-    private void SyncMixerWindows()
+    /// <summary>Refreshes mixer windows and closes stale FX windows, optionally syncing the restored document once after the frame.</summary>
+    private void SyncMixerWindows(bool deferEngineSync = false)
     {
-        SyncAudioEngine();
+        _engineSync.SyncOrSchedule(Doc, deferEngineSync);
         RefreshMixerWindow();
-        MixerWindows.CloseFxWindows(track => !_project.Tracks.Contains(track) && !MixerBuses.IsCurrent(_project, track)
-            && !(MixerBuses.IsMonitor(track) && ReferenceEquals(track.Bus, ((IMixerHost)this).MonitorChain)));
+        MixerWindows.CloseStaleFxWindows(_project);
     }
 
     /// <summary>The window as the host of its <see cref="EngineSyncController"/>.</summary>

@@ -33,21 +33,33 @@ public static partial class SelfTest
 
     private static void RunInteractionCases(LifetimeContext context)
     {
-        RunInteractionCase("I-1a editing during playback", () => IxEditDuringPlaybackCase(context));
-        RunInteractionCase("I-2 switching documents during a save", () => IxSwitchDuringSaveCase(context));
-        RunInteractionCase("I-3 undo, save, reopen identity", () => IxUndoSaveReopenCase(context));
-        RunInteractionCase("I-4 tab transfer during playback", () => IxTabTransferCase(context));
-        RunInteractionCase("I-5 plug-in change during playback", () => IxPluginChangeCase(context));
-        RunInteractionCase("I-6 section move with undo and redo across a save", () => IxSectionMoveCase(context));
-        RunInteractionCase("I-7 a tab switch keeps per-tab view state", () => IxViewStateCase(context));
-        RunInteractionCase("I-8 a tab switch while recording", () => IxRecordingTabSwitchCase(context));
+        RunInteractionCase("I-1a editing during playback", context, () => IxEditDuringPlaybackCase(context));
+        RunInteractionCase("I-2 switching documents during a save", context, () => IxSwitchDuringSaveCase(context));
+        RunInteractionCase("I-3 undo, save, reopen identity", context, () => IxUndoSaveReopenCase(context));
+        RunInteractionCase("I-4 tab transfer during playback", context, () => IxTabTransferCase(context));
+        RunInteractionCase("I-5 plug-in change during playback", context, () => IxPluginChangeCase(context));
+        RunInteractionCase("I-6 section move with undo and redo across a save", context, () => IxSectionMoveCase(context));
+        RunInteractionCase("I-7 a tab switch keeps per-tab view state", context, () => IxViewStateCase(context));
+        RunInteractionCase("I-8 a tab switch while recording", context, () => IxRecordingTabSwitchCase(context));
     }
 
-    private static void RunInteractionCase(string name, Action body)
+    private static void RunInteractionCase(string name, LifetimeContext context, Action body)
     {
+        var windowsBefore = AllMainWindows();
+        var capturedBefore = context.Captured.Count;
         IxTrace($"case {name}");
         try { body(); }
         catch (Exception ex) { Check($"interactions: {name} completed without throwing", false, $"{ex.GetType().Name}: {ex.Message} at {string.Join(" <- ", (ex.StackTrace ?? "").Split('\n').Take(4).Select(l => l.Trim()))}"); }
+        finally
+        {
+            var closeFailures = CloseWindowsOpenedSince(windowsBefore).ToList();
+            foreach (var dialog in context.Captured.Skip(capturedBefore).ToArray())
+            {
+                try { dialog.Close(); }
+                catch (Exception ex) { closeFailures.Add($"{dialog.GetType().Name}: dialog close threw ({ex.GetType().Name}: {ex.Message})"); }
+            }
+            Check($"interactions: {name} closes every window it created", closeFailures.Count == 0, string.Join("; ", closeFailures));
+        }
     }
 
     // ---------- I-1a: editing during playback ----------
@@ -99,7 +111,8 @@ public static partial class SelfTest
             var pitch = song.Tracks[0].PitchOf(1, 5);
             IxCursor(w, 0, 0, 0, 1);
             IxCommand(w, "Transport.PlayFromStart");
-            IxPumpUntil(() => IxPosition(session) >= 2.0, 15000);
+            var reachedEditStart = IxPumpUntil(() => IxPosition(session) >= 2.0, 15000);
+            Check("interactions: I-1b: playback reaches the edit point before typing", reachedEditStart && engine.IsPlaying, $"position {IxPosition(session):0.00}, playing {engine.IsPlaying}");
             IxCursor(w, 0, 5, 0, 1);
             IxKey(w, Key.D5);
             Check("interactions: I-1a pin: the note was typed while the song played", session.Project.Tracks[0].Measures[5].Cells[0].Notes.Count == 1 && engine.IsPlaying);
@@ -117,7 +130,8 @@ public static partial class SelfTest
             var pasted = IxCommand(w, "Edit.Paste");
             settings.Editing.PasteBeatsOntoNotes = previousAnswer;
             Check("interactions: I-1b: the note was pasted into that beat while the song played", pasteCell > 0 && session.Project.Tracks[0].Measures[pasteBar].Cells[pasteCell].Notes.Count == 1, $"copy {copied}, paste {pasted}, status \"{LtField<System.Windows.Controls.TextBlock>(w, "StatusText")?.Text}\"");
-            IxPumpUntil(() => IxPosition(session) >= Math.Max(6.9, pasteBar + 1.9) || !engine.IsPlaying, 15000);
+            var passedPaste = IxPumpUntil(() => IxPosition(session) >= Math.Max(6.9, pasteBar + 1.9) || !engine.IsPlaying, 15000);
+            Check("interactions: I-1b: playback reaches the typed and pasted note positions", passedPaste && engine.IsPlaying && IxPosition(session) >= Math.Max(6.9, pasteBar + 1.9), $"playing {engine.IsPlaying}, position {IxPosition(session):0.00}");
             var pastedOnsets = engine.Timeline?.Notes.Where(n => n.TrackIndex == 0 && n.Bar == pasteBar && n.Cell == pasteCell && n.Midi == pitch).Select(n => n.OnsetMs).ToArray() ?? Array.Empty<double>();
             var pastedHeard = pastedOnsets.Sum(onset => engine.DispatchLog.Count(r => r.IsNoteOn && r.TrackIndex == 0 && r.Data1 == pitch && Math.Abs(r.StreamMs - onset) < 2));
             Check("interactions: I-1b: a note pasted ahead of the playhead during playback is heard on that pass", pastedHeard >= 1 && pastedHeard <= pastedOnsets.Length, $"in timeline {pastedOnsets.Length}x, heard {pastedHeard}x, playhead {IxPosition(session):0.00}");
@@ -130,9 +144,9 @@ public static partial class SelfTest
             IxCursor(w, 0, 4, 0, 1);
             IxCommand(w, "Transport.PlayPause");
             var restarted = IxPumpUntil(() => IxPosition(session) < 5.5 && engine.IsPlaying, 30000);   // the new run has started (the old position was past bar 6); a loaded machine may take a while
-            if (!restarted) Log.Add($"  info  I-1a pin: the new run had not started after 30 s (position {IxPosition(session):0.00}, playing {engine.IsPlaying})");
-            IxPumpUntil(() => restarted && (IxHeard(engine, 0, 5, pitch).Heard >= 1 || IxPosition(session) >= 7.5 || !engine.IsPlaying), 30000);   // only the new run counts: the old position is already past bar 6
-            IxPump(300);   // a second send of the same note would show now
+            Check("interactions: I-1b: playback restarts before the edited notes", restarted, $"position {IxPosition(session):0.00}, playing {engine.IsPlaying}");
+            var secondPassReachedNotes = restarted && IxPumpUntil(() => IxPosition(session) >= 7.5 || !engine.IsPlaying, 30000);   // the new run must pass both notes; the previous position was already past bar 6
+            Check("interactions: I-1b: restarted playback advances past both edited notes", secondPassReachedNotes && engine.IsPlaying && IxPosition(session) >= 7.5, $"position {IxPosition(session):0.00}, playing {engine.IsPlaying}");
             var afterRestart = IxHeard(engine, 0, 5, pitch);
             Check("interactions: I-1b: playing again from before the notes sounds each exactly once (the typed and the pasted one)", afterRestart.Heard == 2, $"in timeline {afterRestart.InTimeline}x, heard {afterRestart.Heard}x");
         }
@@ -173,7 +187,8 @@ public static partial class SelfTest
             IxCommand(w, "Transport.PlayFromStart");
             var trace = new IxPlayheadTrace(session);
             Check($"interactions: {label}: playback started from bar 1", engine.IsPlaying);
-            IxPumpUntil(() => IxPosition(session) >= 2.0, 15000, trace.Sample);
+            var reachedEditStart = IxPumpUntil(() => IxPosition(session) >= 2.0, 15000, trace.Sample);
+            Check($"interactions: {label}: playback reaches the edit point before typing", reachedEditStart && engine.IsPlaying, $"position {IxPosition(session):0.00}, playing {engine.IsPlaying}");
             var glitches = IxGlitches.Take(context, session);
             var contentBefore = IxContentHash(song);
             Check($"interactions: {label}: bar 6 beat 1 is empty before the edit", track.Measures[5].Cells[0].Notes.Count == 0);
@@ -191,7 +206,8 @@ public static partial class SelfTest
             if (advance)
             {
                 Check($"interactions: {label}: typing a note ahead of the playhead leaves playback where it is (no jump to the cursor)", jump < 1.0 && engine.IsPlaying, $"playhead {positionAtEdit:0.00} -> {IxPosition(session):0.00}, playing {engine.IsPlaying}");
-                IxPump(200, trace.Sample);
+                var progressed = IxWaitForPlaybackProgress(session, positionAtEdit, 0.25, 5000, trace.Sample);
+                Check($"interactions: {label}: playback continues after the edit", progressed && engine.IsPlaying, $"playhead {positionAtEdit:0.00} -> {IxPosition(session):0.00}, playing {engine.IsPlaying}");
                 Log.Add($"  info  {label}: after the entry the playhead is at {IxPosition(session):0.00} (was {positionAtEdit:0.00}); {trace}");
                 engine.Stop();
                 return;
@@ -209,7 +225,9 @@ public static partial class SelfTest
             Check($"interactions: {label}: palm mute under the playhead adds one undo entry, keeps the song dirty and invalidates the timeline once",
                 session.Undo.UndoCount == undo + 1 && session.IsDirty && song.TimelineRevision == revision + 1 && track.Measures[bar].Cells[Math.Max(0, cell)].Notes.Any(x => x.Techniques.Contains("PalmMute")),
                 $"undo +{session.Undo.UndoCount - undo}, dirty {session.IsDirty}, revision +{song.TimelineRevision - revision}");
-            IxPump(150, trace.Sample);
+            var positionAfterMute = IxPosition(session);
+            var progressedAfterMute = IxWaitForPlaybackProgress(session, positionAfterMute, 0.25, 5000, trace.Sample);
+            Check($"interactions: {label}: playback continues while the timeline resyncs after the mute edit", progressedAfterMute && engine.IsPlaying, $"playhead {positionAfterMute:0.00} -> {IxPosition(session):0.00}, playing {engine.IsPlaying}");
 
             // 3. one undo takes the palm mute back; the typed note stays.
             var projectBeforeUndo = session.Project;
@@ -222,10 +240,13 @@ public static partial class SelfTest
             var after = session.Project;
             Check($"interactions: {label}: after the undo the typed note is still there and the palm mute is gone",
                 after.Tracks[0].Measures[5].Cells[0].Notes.Count == 1 && !after.Tracks[0].Measures[bar].Cells.Any(c => c.Notes.Any(x => x.Techniques.Contains("PalmMute"))));
+            var positionAfterUndo = IxPosition(session);
+            var progressedAfterUndo = IxWaitForPlaybackProgress(session, positionAfterUndo, 0.25, 5000, trace.Sample);
+            Check($"interactions: {label}: playback continues after the timeline resync from undo", progressedAfterUndo && engine.IsPlaying, $"playhead {positionAfterUndo:0.00} -> {IxPosition(session):0.00}, playing {engine.IsPlaying}");
 
             // 4. playing on to bar 8.
-            IxPumpUntil(() => IxPosition(session) >= 7.5 || !engine.IsPlaying, 15000, trace.Sample);
-            Check($"interactions: {label}: playback ran on to bar 8 without stopping", engine.IsPlaying && IxPosition(session) >= 7.5, $"playing {engine.IsPlaying}, at {IxPosition(session):0.00}");
+            var reachedBarEight = IxPumpUntil(() => IxPosition(session) >= 7.5 || !engine.IsPlaying, 15000, trace.Sample);
+            Check($"interactions: {label}: playback ran on to bar 8 without stopping", reachedBarEight && engine.IsPlaying && IxPosition(session) >= 7.5, $"playing {engine.IsPlaying}, at {IxPosition(session):0.00}");
             Check($"interactions: {label}: the playhead only moved forward, without jumps or stalls, across the edits and the undo", trace.Backward == 0 && trace.Jumps == 0 && trace.Stalls == 0 && trace.Samples >= 15, trace.ToString());
             var (replayed, rewinds) = IxReplays(engine);
             Check($"interactions: {label}: no note of an already played bar was sent again", replayed == 0 && rewinds == 0, $"duplicates {replayed}, rewinds {rewinds}");

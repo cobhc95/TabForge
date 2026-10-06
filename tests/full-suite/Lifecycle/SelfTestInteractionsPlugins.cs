@@ -51,22 +51,22 @@ public static partial class SelfTest
             IxCursor(w, 0, 0, 0, 1);
             IxCommand(w, "Transport.PlayFromStart");
             var trace = new IxPlayheadTrace(session) { BackwardTolerance = 0.15 };
-            IxPumpUntil(() => IxPosition(session) >= 1.0, 10000, trace.Sample);
+            var playbackReady = IxPumpUntil(() => IxPosition(session) >= 1.0, 10000, trace.Sample);
             var glitches = IxGlitches.Take(context, session);
             var slot = new PluginSlot { Name = "Test FX", Path = EP.Vst2Plugin.TestEffect.PathName, Format = "VST2", Type = PluginSlotType.Effect, Enabled = true };
-            Check("interactions: I-5: the song plays and the track has no plug-in yet", engine.IsPlaying && track.Rig.Plugins.Count == 0);
+            Check("interactions: I-5: the song reaches the edit point and the track has no plug-in yet", playbackReady && engine.IsPlaying && track.Rig.Plugins.Count == 0, $"ready {playbackReady}, position {IxPosition(session):0.00}, playing {engine.IsPlaying}");
 
             void Step(string name, Action change, Func<bool> modelIs, bool toggle = false)
             {
-                var (undo, revision, timeline) = (session.Undo.UndoCount, session.Project.TimelineRevision, engine.Timeline);
+                var (undo, revision, timeline, positionBefore) = (session.Undo.UndoCount, session.Project.TimelineRevision, engine.Timeline, IxPosition(session));
                 IxChainEdit(w, track, change, toggle);
-                IxPump(250, trace.Sample);
+                var progressed = IxWaitForPlaybackProgress(session, positionBefore, 0.25, 10000, trace.Sample);
                 // A bypass switch is live on the engine: the song is not recompiled for it, so the notes play on.
                 if (toggle) Check($"interactions: I-5: {name} does not restart playback (the compiled timeline stays, nothing is cut or sent again)", ReferenceEquals(engine.Timeline, timeline), $"playback restarted: {!ReferenceEquals(engine.Timeline, timeline)}");
                 else Log.Add($"  info  I-5: {name}: playback restarted {!ReferenceEquals(engine.Timeline, timeline)}");
                 // The rule today: a plug-in change is one undo step (taken once per idle period by the host) and dirties the song; it does not touch the score timeline.
                 Check($"interactions: I-5: {name}: the model has the change, and it is one undo step and dirty", modelIs() && session.Undo.UndoCount == undo + 1 && session.IsDirty, $"undo +{session.Undo.UndoCount - undo}, dirty {session.IsDirty}");
-                Check($"interactions: I-5: {name}: the score timeline is not invalidated and playback goes on", session.Project.TimelineRevision == revision && engine.IsPlaying, $"revision +{session.Project.TimelineRevision - revision}, playing {engine.IsPlaying}");
+                Check($"interactions: I-5: {name}: the score timeline is not invalidated and playback goes on", session.Project.TimelineRevision == revision && progressed && engine.IsPlaying, $"revision +{session.Project.TimelineRevision - revision}, progressed {progressed}, position {IxPosition(session):0.00}, playing {engine.IsPlaying}");
             }
 
             Step("inserting the effect", () => { track.Rig.Plugins.Add(slot); track.SoundSource = SoundSources.Plugins; }, () => track.Rig.Plugins.Count == 1 && track.SoundSource == SoundSources.Plugins);
@@ -77,11 +77,12 @@ public static partial class SelfTest
             // Save with the plug-in's state read from the engine, then reopen: the chain and the state come back exactly.
             const string blob = "AAECAwQFBgcICQoLDA0ODw==";
             IxCommand(w, "File.Save");
-            var held = IxController(w).IsSaving;
+            var stateRequests = LtField<System.Collections.IDictionary>(client, "_stateRequests")!;
+            var held = IxPumpUntil(() => IxController(w).IsSaving && stateRequests.Count > 0, 10000);
             var answered = false;
             if (held)
             {
-                foreach (var request in LtField<System.Collections.IDictionary>(client, "_stateRequests")!.Values.Cast<AudioEngineClient.StateRequest>().ToArray())
+                foreach (var request in stateRequests.Values.Cast<AudioEngineClient.StateRequest>().ToArray())
                 {
                     var stream = new MemoryStream();
                     Frames.Write(stream, (byte)EngineEvent.PluginState, wr => { wr.Write(request.Slot); wr.Write(request.Id); wr.Write(0); wr.Write(1); wr.Write((byte)PluginStateStatus.Captured); wr.WriteString(blob); });
@@ -106,7 +107,9 @@ public static partial class SelfTest
             var loadsBefore = client.ChainLoadsSentForTest;
             IxActivate(w, session);
             IxCommand(w, "Edit.Undo");
-            IxPump(300, trace.Sample);
+            var afterUndoPosition = IxPosition(session);
+            var progressedAfterUndo = IxWaitForPlaybackProgress(session, afterUndoPosition, 0.25, 10000, trace.Sample);
+            Check("interactions: I-5: playback continues after the plug-in undo", progressedAfterUndo && engine.IsPlaying, $"position {afterUndoPosition:0.00} -> {IxPosition(session):0.00}, playing {engine.IsPlaying}");
             Check("interactions: I-5: undoing a plug-in step does not reload the song's engine chains (the engine matches tracks by identity, not by object)", client.ChainLoadsSentForTest == loadsBefore, $"chain loads sent by the undo: {client.ChainLoadsSentForTest - loadsBefore}");
             Check("interactions: I-5: the undo goes back one plug-in step in the model (the effect is switched on or off as before it)", session.Project.Tracks[0].Rig.Plugins.Count == 1, $"{session.Project.Tracks[0].Rig.Plugins.Count} plug-ins");
 
@@ -114,10 +117,10 @@ public static partial class SelfTest
             void Step2Remove()
             {
                 var current = session.Project.Tracks[0];
-                var (undo, revision) = (session.Undo.UndoCount, session.Project.TimelineRevision);
+                var (undo, revision, positionBefore) = (session.Undo.UndoCount, session.Project.TimelineRevision, IxPosition(session));
                 IxChainEdit(w, current, () => current.Rig.Plugins.Clear());
-                IxPump(250, trace.Sample);
-                Check("interactions: I-5: removing the effect is one undo step, dirty, and playback goes on", current.Rig.Plugins.Count == 0 && session.Undo.UndoCount == undo + 1 && session.IsDirty && session.Project.TimelineRevision == revision && engine.IsPlaying);
+                var progressed = IxWaitForPlaybackProgress(session, positionBefore, 0.25, 10000, trace.Sample);
+                Check("interactions: I-5: removing the effect is one undo step, dirty, and playback goes on", current.Rig.Plugins.Count == 0 && session.Undo.UndoCount == undo + 1 && session.IsDirty && session.Project.TimelineRevision == revision && progressed && engine.IsPlaying, $"progressed {progressed}, position {IxPosition(session):0.00}, playing {engine.IsPlaying}");
             }
 
             Check("interactions: I-5: the playhead only moved forward through all plug-in steps (no jump, stall or step back; a restart from the playhead is not one)", trace.Backward == 0 && trace.Jumps == 0 && trace.Stalls == 0, trace.ToString());

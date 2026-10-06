@@ -68,12 +68,19 @@ public static partial class SelfTest
             IxCursor(w1, 0, 0, 0, 1);
             IxCommand(w1, "Transport.PlayFromStart");
             var trace = new IxPlayheadTrace(a);
-            IxPumpUntil(() => IxPosition(a) >= 2.0, 15000, trace.Sample);
+            var playbackReady = IxPumpUntil(() => IxPosition(a) >= 2.0, 15000, trace.Sample);
             var ownerBefore = IxSlotOwner(songA.Tracks[0]);
             var transportId = AudioEngineClient.Instance.ExistingOwnerId(a);
             var timeline = engine.Timeline;
             // The resets the start of playback queues run on a pool thread: wait until none is left to come.
-            for (var last = -1; last != output.Resets;) { last = output.Resets; IxPump(300, trace.Sample); }
+            var lastReset = output.Resets;
+            var quietSince = System.Diagnostics.Stopwatch.GetTimestamp();
+            var resetsSettled = IxPumpUntil(() =>
+            {
+                if (output.Resets != lastReset) { lastReset = output.Resets; quietSince = System.Diagnostics.Stopwatch.GetTimestamp(); }
+                return System.Diagnostics.Stopwatch.GetElapsedTime(quietSince).TotalMilliseconds >= 100;
+            }, 5000, trace.Sample);
+            Check("interactions: I-4: playback reaches the transfer point and its engine resets settle", playbackReady && resetsSettled && engine.IsPlaying, $"ready {playbackReady}, resets settled {resetsSettled}, playing {engine.IsPlaying}");
             var resets = output.Resets;
             var glitches = IxGlitches.Take(context, a);
             Check("interactions: I-4: the song plays in the first window and owns its engine slot", engine.IsPlaying && ReferenceEquals(ownerBefore, a), $"playing {engine.IsPlaying}, owner {(ownerBefore is null ? "none" : ownerBefore.GetType().Name)}");
@@ -81,11 +88,18 @@ public static partial class SelfTest
             // Tear it off through the tab strip's entry point (the held drag needs the mouse button; its transfer is this one).
             var windowsBefore = Application.Current.Windows.OfType<MainWindow>().ToHashSet();
             LtCall(w1, "DetachDocumentToNewWindow", IxIndexOf(w1, a));
-            w2 = Application.Current.Windows.OfType<MainWindow>().First(w => !windowsBefore.Contains(w));
-            IxPump(300, trace.Sample);
+            var targetReady = IxPumpUntil(() =>
+            {
+                w2 = Application.Current.Windows.OfType<MainWindow>().FirstOrDefault(w => !windowsBefore.Contains(w));
+                return w2 is { IsLoaded: true } && PresentationSource.FromVisual(w2) is not null;
+            }, 5000, trace.Sample);
+            Check("interactions: I-4: the torn-off window becomes ready", targetReady && w2 is not null, w2 is null ? "no target window appeared" : $"loaded {w2.IsLoaded}");
+            if (!targetReady || w2 is null) throw new InvalidOperationException("torn-off window did not become ready within 5 s");
+            var positionBeforeTransferCheck = IxPosition(a);
+            var progressedAfterTransfer = IxWaitForPlaybackProgress(a, positionBeforeTransferCheck, 0.25, 10000, trace.Sample);
             var documents1 = LtField<DocumentManager>(w1, "_documents")!;
             Check("interactions: I-4: the song is in the new window and no longer in the first, and it kept playing without a restart (same timeline, no reset)",
-                w2.OpenDocuments.Contains(a) && !w1.OpenDocuments.Contains(a) && engine.IsPlaying && ReferenceEquals(engine.Timeline, timeline) && output.Resets == resets,
+                w2.OpenDocuments.Contains(a) && !w1.OpenDocuments.Contains(a) && progressedAfterTransfer && engine.IsPlaying && ReferenceEquals(engine.Timeline, timeline) && output.Resets == resets,
                 $"in new {w2.OpenDocuments.Contains(a)}, in old {w1.OpenDocuments.Contains(a)}, playing {engine.IsPlaying}, same timeline {ReferenceEquals(engine.Timeline, timeline)}, resets {output.Resets - resets}");
             Check("interactions: I-4: the playhead only moved forward across the transfer, with no jump or stall", trace.Backward == 0 && trace.Jumps == 0 && trace.Stalls == 0, trace.ToString());
             var owners = IxSlotOwner(songA.Tracks[0]);
@@ -102,9 +116,9 @@ public static partial class SelfTest
             foreach (var document in w1.OpenDocuments) document.MarkClean();
             w1.Close();
             SettleLifetimeDispatcher();
-            IxPumpUntil(() => IxPosition(a) >= 5.0 || !engine.IsPlaying, 15000, trace.Sample);
+            var reachedAfterClose = IxPumpUntil(() => IxPosition(a) >= 5.0 || !engine.IsPlaying, 15000, trace.Sample);
             Check("interactions: I-4: closing the first window leaves the moved song playing on, in order, with one run of the scheduler (no note sent twice, nothing rewound)",
-                engine.IsPlaying && IxReplays(engine) is (0, 0) && trace.Backward == 0 && trace.Jumps == 0, $"{trace}; replays {IxReplays(engine)}");
+                reachedAfterClose && engine.IsPlaying && IxPosition(a) >= 5.0 && IxReplays(engine) is (0, 0) && trace.Backward == 0 && trace.Jumps == 0, $"{trace}; position {IxPosition(a):0.00}; replays {IxReplays(engine)}");
             Check("interactions: I-4: the engine slot is still the moved song's, and the output was neither disposed nor reset", ReferenceEquals(IxSlotOwner(songA.Tracks[0]), a) && !output.Disposed && output.Resets == resets, $"disposed {output.Disposed}, resets {output.Resets - resets}");
             Check("interactions: I-4: the glitch counters are unchanged across the transfer and the close", IxGlitches.Take(context, a) == glitches, $"{IxGlitches.Take(context, a)} vs {glitches}");
             Check("interactions: I-4: the new window is still playing the moved song and shows it", w2.IsVisible && ReferenceEquals(LtField<DocumentManager>(w2, "_documents")!.Active, a));
@@ -209,7 +223,8 @@ public static partial class SelfTest
             LtCall(w, "ApplySpeed", 1.0);
             IxCommand(w, "Transport.Record");
             Check("interactions: I-8: Record starts the recording and plays the song", w.IsRecording && a.Playback.Engine.IsPlaying, $"recording {w.IsRecording}, playing {a.Playback.Engine.IsPlaying}");
-            IxPump(200);
+            var recordingProgressed = IxWaitForPlaybackProgress(a, IxPosition(a), 0.25, 5000);
+            Check("interactions: I-8: recording playback advances before switching tabs", recordingProgressed && w.IsRecording && a.Playback.Engine.IsPlaying, $"recording {w.IsRecording}, position {IxPosition(a):0.00}");
 
             // Another tab is shown while the recording runs; then Record is pressed again.
             IxActivate(w, b);

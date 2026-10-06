@@ -54,6 +54,8 @@ internal sealed class EngineSyncController : IDisposable
     private readonly OwnedSubscriptions _attached = new();
     private bool _hooked, _disposed;
     private bool _syncPending, _followUpPending, _dragRefreshHeld, _undoCaptured;
+    private long _syncRequestId;
+    private WeakReference<DocumentSession>? _pendingSyncDocument;
 
     public EngineSyncController(IEngineSyncHost host, AudioEngineClient engine)
     {
@@ -70,11 +72,23 @@ internal sealed class EngineSyncController : IDisposable
     /// </summary>
     public void Sync()
     {
+        if (_disposed) return;
+        CancelPendingSync();
+        SyncDocument(_host.ActiveDocument);
+    }
+
+    /// <summary>Uses a captured-document request for edit refreshes and the existing immediate path for song and selection changes.</summary>
+    public void SyncOrSchedule(DocumentSession document, bool deferred)
+    {
+        if (deferred) ScheduleSync(document); else Sync();
+    }
+
+    private void SyncDocument(DocumentSession doc)
+    {
         using var slowTrace = TabForge.Views.SlowTrace.Measure("engine sync", 0);
         if (_disposed) return;
         Hook();
         var settings = _host.Settings;
-        var doc = _host.ActiveDocument;
         _engine.Mixer.AutoGmSound = settings.Plugins.AutoGmSound;
         var playAll = settings.Plugins.PlayAllThroughEngine;
         if (_engine.Mixer.PlayAllThroughEngine != playAll)
@@ -98,9 +112,33 @@ internal sealed class EngineSyncController : IDisposable
     /// <summary>At most one engine sync per frame while a mixer slider is dragged (only changed values are sent).</summary>
     public void ScheduleSync()
     {
-        if (_syncPending) return;
+        if (_disposed) return;
+        ScheduleSync(_host.ActiveDocument);
+    }
+
+    /// <summary>Runs at most one sync for the requested song this frame; a tab change or close drops its stale request.</summary>
+    public void ScheduleSync(DocumentSession document)
+    {
+        if (_disposed || !ReferenceEquals(document, _host.ActiveDocument) || !_host.Documents.Contains(document)) return;
+        if (_syncPending && _pendingSyncDocument is { } pending && pending.TryGetTarget(out var prior) && ReferenceEquals(prior, document)) return;
         _syncPending = true;
-        _host.Post(() => { _syncPending = false; Sync(); }, DispatcherPriority.Render);
+        _pendingSyncDocument = new WeakReference<DocumentSession>(document);
+        var requestId = ++_syncRequestId;
+        _host.Post(() =>
+        {
+            if (_disposed || requestId != _syncRequestId) return;
+            var pending = _pendingSyncDocument;
+            _syncPending = false;
+            _pendingSyncDocument = null;
+            if (pending is not null && pending.TryGetTarget(out var target) && ReferenceEquals(target, _host.ActiveDocument) && _host.Documents.Contains(target)) SyncDocument(target);
+        }, DispatcherPriority.Render);
+    }
+
+    private void CancelPendingSync()
+    {
+        _syncRequestId++;
+        _syncPending = false;
+        _pendingSyncDocument = null;
     }
 
     /// <summary>
@@ -260,6 +298,7 @@ internal sealed class EngineSyncController : IDisposable
     {
         if (_disposed) return;
         _disposed = true;
+        CancelPendingSync();
         _attached.Dispose();
     }
 }

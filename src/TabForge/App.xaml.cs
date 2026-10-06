@@ -64,7 +64,8 @@ public partial class App : Application
 
         // A song double-clicked in Explorer while TabForge runs: hand it to that window as a new tab (the
         // default; Settings > General can open a separate window instead) and exit without a second window.
-        if (StartupSongPath(args) is { } song && OpensInNewTab(settings) && !UserPaths.IsProfile && SingleInstanceService.TrySendToRunningInstance(song))
+        var profileHandoverTest = SingleInstanceService.ProfileHandoverTestEnabled;
+        if (StartupSongPath(args) is { } song && OpensInNewTab(settings) && (!UserPaths.IsProfile || profileHandoverTest) && SingleInstanceService.TrySendToRunningInstance(song))
         {
             TabForge.Services.Trace.Write("ui", $"OPEN sent to the running TabForge: {song}");
             Shutdown(0);
@@ -94,20 +95,30 @@ public partial class App : Application
         }
         var window = new MainWindow(Audio.AudioEngineClient.Instance, new Shell.AppOptions());
         MainWindow = window;
-        if (captureScript is null && speedAudit < 0) ApplyRequestedWindowSize(window, args); else new WindowProbes(window).PrepareOffscreenCapture();
+        if (profileHandoverTest) new WindowProbes(window).PrepareOffscreenCapture();
+        else if (captureScript is null && speedAudit < 0) ApplyRequestedWindowSize(window, args); else new WindowProbes(window).PrepareOffscreenCapture();
         window.Show();
-        window.Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ApplicationIdle, new Action(Views.ThemedConfirmDialog.Prewarm));
+        var prewarmReady = profileHandoverTest ? new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously) : null;
+        window.Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ApplicationIdle, new Action(() =>
+        {
+            Views.ThemedConfirmDialog.Prewarm();
+            prewarmReady?.TrySetResult();
+        }));
         if (captureScript is not null) new WindowProbes(window).RunCaptureScript(captureScript, captureOut!);
         OpenStartupFile(window, args);
         if (!args.Any(a => a.StartsWith("--", StringComparison.Ordinal)))
             window.Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, window.OfferAutosaveRecovery);   // songs a crash left behind
-        if (!args.Any(a => a.StartsWith("--", StringComparison.Ordinal)) && !UserPaths.IsProfile)
+        if (!args.Any(a => a.StartsWith("--", StringComparison.Ordinal)) && (!UserPaths.IsProfile || profileHandoverTest))
             SingleInstanceService.StartServer(path => Dispatcher.BeginInvoke(() =>
             {
                 var target = HandOverTarget();
                 TabForge.Services.Trace.Write("ui", $"OPEN hand-over received {path} -> {(target is null ? "no window" : "window")} (windows: {Current?.Windows.Count})");
-                target?.OpenFromAnotherLaunch(path);
-            }), _serverStop.Token);
+                target?.OpenFromAnotherLaunch(path, activate: !profileHandoverTest);
+            }), _serverStop.Token, profileHandoverTest ? () =>
+            {
+                _ = prewarmReady!.Task.ContinueWith(_ => Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle,
+                    new Action(() => _profileHandoverStatus ??= new ProfileHandoverTestStatus(window))), TaskScheduler.Default);
+            } : null);
         // Window options that take one value run in registration order; each uses the first occurrence of its option.
         foreach (var (option, run) in WindowCommands)
         {
@@ -139,6 +150,7 @@ public partial class App : Application
     };
 
     private readonly CancellationTokenSource _serverStop = new();
+    private ProfileHandoverTestStatus? _profileHandoverStatus;
 
     private int? _diagnosticExitCode;
 
@@ -150,6 +162,7 @@ public partial class App : Application
         AppSettingsStore.FlushShared();   // a debounced settings save still pending is written now
         TabForge.Audio.AudioEngineClient.Instance.Stop(); // no-op when the engine never started; ends the R-10 warm period too
         _serverStop.Cancel();
+        _profileHandoverStatus?.Dispose();
         base.OnExit(e);
     }
 

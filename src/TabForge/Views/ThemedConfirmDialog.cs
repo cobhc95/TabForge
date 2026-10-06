@@ -4,6 +4,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using System.Windows.Shell;
+using System.ComponentModel;
 
 namespace TabForge.Views;
 
@@ -43,8 +44,30 @@ internal sealed class ThemedConfirmDialog : Window
         int defaultChoice = 0,
         IReadOnlyList<string>? scopes = null,
         int defaultScope = 0)
+        : this(false, title, message, yesToolTip, noToolTip, details, showCancel, rememberText,
+            yesText, noText, defaultIsNo, choices, defaultChoice, scopes, defaultScope)
+    {
+    }
+
+    internal ThemedConfirmDialog(
+        bool hideOnAnswer,
+        string title,
+        string message,
+        string yesToolTip = "Save the changes",
+        string noToolTip = "Discard the changes",
+        IReadOnlyList<string>? details = null,
+        bool showCancel = true,
+        string? rememberText = null,
+        string yesText = "Yes",
+        string noText = "No",
+        bool defaultIsNo = false,
+        IReadOnlyList<string>? choices = null,
+        int defaultChoice = 0,
+        IReadOnlyList<string>? scopes = null,
+        int defaultScope = 0)
     {
         _defaultIsNo = defaultIsNo;
+        _hideOnAnswer = hideOnAnswer;
         Title = title;
         Width = choices is { Count: > 0 } ? 560 : 420;
         SizeToContent = SizeToContent.Height;
@@ -139,7 +162,7 @@ internal sealed class ThemedConfirmDialog : Window
             VerticalAlignment = VerticalAlignment.Center
         });
         body.Children.Add(icon);
-        var messageText = new TextBlock
+        _messageText = new TextBlock
         {
             Text = message,
             TextWrapping = TextWrapping.Wrap,
@@ -150,8 +173,8 @@ internal sealed class ThemedConfirmDialog : Window
         if (choices is { Count: > 0 })
         {
             var stack = new StackPanel { Margin = new Thickness(10, 0, 0, 0) };
-            messageText.Margin = new Thickness(0, 0, 0, 8);
-            stack.Children.Add(messageText);
+            _messageText.Margin = new Thickness(0, 0, 0, 8);
+            stack.Children.Add(_messageText);
             _choiceButtons = AddRadios(stack, choices, defaultChoice, "choice", Orientation.Vertical);
             if (scopes is { Count: > 0 })
             {
@@ -163,8 +186,8 @@ internal sealed class ThemedConfirmDialog : Window
         }
         else
         {
-            Grid.SetColumn(messageText, 1);
-            body.Children.Add(messageText);
+            Grid.SetColumn(_messageText, 1);
+            body.Children.Add(_messageText);
         }
         Grid.SetRow(body, 1);
         layout.Children.Add(body);
@@ -219,14 +242,67 @@ internal sealed class ThemedConfirmDialog : Window
         };
         Loaded += (_, _) =>
         {
-            if (_choiceButtons is { Count: > 0 }) _choiceButtons[Math.Clamp(defaultChoice, 0, _choiceButtons.Count - 1)].Focus();
+            if (!ShowActivated && !IsActive) return;
+            if (_choiceButtons is { Count: > 0 }) FocusDefaultChoice();
             else actions.Children[defaultIsNo ? 1 : 0].Focus();
         };
+        Activated += (_, _) => FocusDefaultChoice();
+        if (_hideOnAnswer) Closing += HandleReusableClosing;
     }
 
     private readonly bool _defaultIsNo;
     private readonly List<RadioButton>? _choiceButtons;
     private readonly List<RadioButton>? _scopeButtons;
+    private readonly TextBlock _messageText;
+    private readonly bool _hideOnAnswer;
+    private bool _disposingReusable;
+    private bool _dialogHostPrepared;
+
+    /// <summary>Refreshes the reusable choice dialog without closing its owner-bound window.</summary>
+    internal void ResetReusable(string message, IReadOnlyList<string> choices, int defaultChoice, int defaultScope)
+    {
+        if (!_hideOnAnswer || _choiceButtons is null || _scopeButtons is null)
+            throw new InvalidOperationException("Only a reusable choice dialog accepts per-show values.");
+        if (choices.Count != _choiceButtons.Count) throw new ArgumentException("The reusable choice count must stay fixed.", nameof(choices));
+        _messageText.Text = message;
+        for (var i = 0; i < choices.Count; i++)
+        {
+            _choiceButtons[i].Content = choices[i];
+            System.Windows.Automation.AutomationProperties.SetName(_choiceButtons[i], choices[i]);
+            _choiceButtons[i].IsChecked = i == Math.Clamp(defaultChoice, 0, choices.Count - 1);
+        }
+        for (var i = 0; i < _scopeButtons.Count; i++)
+            _scopeButtons[i].IsChecked = i == Math.Clamp(defaultScope, 0, _scopeButtons.Count - 1);
+        if (_remember is not null) _remember.IsChecked = false;
+        _result = MessageBoxResult.Cancel;
+    }
+
+    internal bool BeginDialogHostPreparation()
+    {
+        if (_dialogHostPrepared) return false;
+        _dialogHostPrepared = true;
+        return true;
+    }
+
+    internal void CloseReusable()
+    {
+        if (!_hideOnAnswer || _disposingReusable) return;
+        _disposingReusable = true;
+        Close();
+    }
+
+    private void FocusDefaultChoice()
+    {
+        if (!ShowActivated && !IsActive) return;
+        if (_choiceButtons is { Count: > 0 }) _choiceButtons[Math.Clamp(SelectedChoice, 0, _choiceButtons.Count - 1)].Focus();
+    }
+
+    private void HandleReusableClosing(object? sender, CancelEventArgs e)
+    {
+        if (_disposingReusable) return;
+        e.Cancel = true;
+        SetResult(MessageBoxResult.Cancel);
+    }
 
     /// <summary>The index of the option picked in the choice list (0 without one).</summary>
     public int SelectedChoice => Math.Max(0, _choiceButtons?.FindIndex(r => r.IsChecked == true) ?? 0);
@@ -267,7 +343,11 @@ internal sealed class ThemedConfirmDialog : Window
     public MessageBoxResult Result => _result;
 
     /// <summary>Test seam: answers the prompt as a click on that button would (the dialog is never shown).</summary>
-    internal void AnswerForTest(MessageBoxResult answer) => _result = answer;
+    internal void AnswerForTest(MessageBoxResult answer)
+    {
+        if (_hideOnAnswer && IsVisible) SetResult(answer);
+        else _result = answer;
+    }
 
     private CheckBox? _remember;
     /// <summary>The user ticked "don't ask again" (only meaningful together with a Yes result).</summary>
@@ -335,6 +415,7 @@ internal sealed class ThemedConfirmDialog : Window
     /// <summary>Shows the prompt without blocking the owner; <paramref name="done"/> gets the answer (Cancel when closed another way).</summary>
     public void ShowModeless(Action<MessageBoxResult> done)
     {
+        if (_hideOnAnswer) throw new InvalidOperationException("A reusable prompt must be shown modally.");
         _modeless = true;
         Closed += (_, _) => done(_result);
         Show();
@@ -344,6 +425,7 @@ internal sealed class ThemedConfirmDialog : Window
     {
         _result = result;
         if (_modeless) Close();
+        else if (_hideOnAnswer) Hide();
         else DialogResult = true;
     }
 

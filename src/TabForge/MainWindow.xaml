@@ -456,9 +456,9 @@
                     <GroupBox Header="Sections">
                         <DockPanel Margin="5">
                             <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal">
-                                <Button x:Name="AddSectionButton" Content="Add" Click="AddMarker_Click" AutomationProperties.Name="Add new section" ToolTip="Add new section at the cursor bar" local:TooltipShortcuts.Command="Section.Add"/><Button Content="Go" Click="MarkerGo_Click"/><Button Content="Edit" Click="MarkerEdit_Click"/><Button Content="Remove" Click="MarkerDel_Click" AutomationProperties.Name="Remove section marker" ToolTip="Remove the selected section marker. The bars and notes stay (use Delete section and its bars in the timeline menu to remove them too)"/>
+                                <Button x:Name="AddSectionButton" Content="Add at cursor…" Click="AddMarker_Click" AutomationProperties.Name="Add section at cursor" ToolTip="Add a section starting at the cursor bar. The dialog shows the exact bar." local:TooltipShortcuts.Command="Section.Add"/><Button Content="Edit" Click="MarkerEdit_Click"/><Button Content="Remove" Click="MarkerDel_Click" AutomationProperties.Name="Remove section marker" ToolTip="Remove the selected section marker. The bars and notes stay (use Delete section and its bars in the timeline menu to remove them too)"/>
                             </StackPanel>
-                            <ListBox x:Name="MarkerList" PreviewMouseLeftButtonUp="MarkerList_PreviewMouseLeftButtonUp">
+                            <ListBox x:Name="MarkerList" PreviewMouseLeftButtonUp="MarkerList_PreviewMouseLeftButtonUp" PreviewKeyDown="MarkerList_PreviewKeyDown">
                                 <ListBox.ItemContainerStyle>
                                     <Style TargetType="ListBoxItem">
                                         <Setter Property="Background" Value="Transparent"/>

@@ -22,12 +22,15 @@ internal interface IClipGestureHost
     void InvalidateVisual();
     double SecOfX(double x);
     double XOfSec(double sec);
+    double ClipEndX(double startSec, double endSec);
+    double ClipSecOfX(double startSec, double x);
     int BarAt(double x);
     int TrackAt(double y);
     double LaneTop(int track, int lane);
     double SnapSec(double sec, AudioClip? except, out double distancePx, bool? altHeld = null);
     SongQuarterMap QuarterMap();
     DropPreview DropGeometry(MediaDropPlan plan, Point p, IReadOnlyList<DropItem> items);
+    DropPreview NotationDropGeometry(MediaDropPlan plan, int trackIndex, double startSec, double endSec);
     void SetDropPreview(DropPreview? preview);
     /// <summary>A click on a lane seeks: bar clicked, then track clicked.</summary>
     void RaiseSeek(int bar, int track);
@@ -60,6 +63,15 @@ internal sealed class ClipGestureController
 
     private double GrabToCentre(int track, AudioClip clip, Point press) =>
         _host.LaneTop(track, clip.Lane) + ArrangementPanel.AudioLaneHeight / 2 - press.Y;
+
+    internal double SnapClipSec(double anchorStartSec, double sec, AudioClip? except, out double distancePx, bool? altHeld = null)
+    {
+        var x = _host.ClipEndX(anchorStartSec, sec);
+        var axisSec = _host.SecOfX(x);
+        var snappedAxisSec = _host.SnapSec(axisSec, except, out distancePx, altHeld);
+        return _host.ClipSecOfX(anchorStartSec, _host.XOfSec(snappedAxisSec));
+    }
+
     private bool _clipChanged;
     private double _clipLastX = double.NaN;
     private int _clipFromTrack = -1;
@@ -68,7 +80,7 @@ internal sealed class ClipGestureController
     private bool _clipMoveActive;
     private bool _moveCopy;
     private MediaDropPlan? _movePlan;
-    private (int Track, int Lane, bool Notation, double Start, double Scroll, double Zoom, int Revision, bool Copy)? _moveKey;
+    private (int Track, int Lane, bool Notation, int Zone, double Start, double Scroll, double Zoom, int Revision, bool Copy)? _moveKey;
     private (int Track, int Lane, bool Midi)? _clipPendingSelect;
     private int _clipPendingBar;
     private bool _clipPendingCtrl;
@@ -116,13 +128,13 @@ internal sealed class ClipGestureController
         {
             if (clips[i].Lane != lane) continue;
             var x1 = _host.XOfSec(clips[i].StartSec);
-            var x2 = Math.Max(x1 + 3, _host.XOfSec(clips[i].EndSec));
+            var x2 = Math.Max(x1 + 3, _host.ClipEndX(clips[i].StartSec, clips[i].EndSec));
             if (p.X < x1 - 2 || p.X > x2 + 2) continue;
             var top = _host.LaneTop(track, lane) + 3;
             if (p.Y >= top - 2 && p.Y <= top + FadeHandleSize + 3 && (ReferenceEquals(clips[i], _host.SelectedClip) || clips[i].FadeInSec > 0 || clips[i].FadeOutSec > 0))
             {
-                var inX = _host.XOfSec(clips[i].StartSec + clips[i].FadeInSec);
-                var outX = _host.XOfSec(clips[i].EndSec - clips[i].FadeOutSec);
+                var inX = _host.ClipEndX(clips[i].StartSec, clips[i].StartSec + clips[i].FadeInSec);
+                var outX = _host.ClipEndX(clips[i].StartSec, clips[i].EndSec - clips[i].FadeOutSec);
                 var nearIn = Math.Abs(p.X - inX); var nearOut = Math.Abs(p.X - outX);
                 if (Math.Min(nearIn, nearOut) <= FadeHandleSize) return (track, lane, clips[i], nearIn <= nearOut ? ClipGesture.FadeIn : ClipGesture.FadeOut);
             }
@@ -204,7 +216,7 @@ internal sealed class ClipGestureController
         if (_clipGesture == ClipGesture.Move) { UpdateMove(clip, p, Keyboard.Modifiers.HasFlag(ModifierKeys.Alt), Keyboard.Modifiers.HasFlag(ModifierKeys.Control)); return true; }
         if (Math.Abs(p.X - _clipLastX) < 1) return true;   // repaint only when something visible changed
         _clipLastX = p.X;
-        var delta = _host.SecOfX(p.X) - _clipPressSec;
+        var delta = _host.ClipSecOfX(_clipOrigin.Start, p.X) - _host.ClipSecOfX(_clipOrigin.Start, _clipPressPoint.X);
         var speed = Math.Clamp(clip.Speed, 0.25, 4);
         var fileLength = clip.FileLengthSec > 0 ? clip.FileLengthSec : _clipOrigin.Offset + _clipOrigin.Length;
         switch (_clipGesture)
@@ -219,10 +231,10 @@ internal sealed class ClipGestureController
                 clip.StartSec = _clipOrigin.Start + fileDelta / speed;
                 break;
             }
-            case ClipGesture.FadeIn: ClipSplitGlue.SetFades(clip, _host.SecOfX(p.X) - clip.StartSec, null); break;
-            case ClipGesture.FadeOut: ClipSplitGlue.SetFades(clip, null, clip.EndSec - _host.SecOfX(p.X)); break;
+            case ClipGesture.FadeIn: ClipSplitGlue.SetFades(clip, _host.ClipSecOfX(clip.StartSec, p.X) - clip.StartSec, null); break;
+            case ClipGesture.FadeOut: ClipSplitGlue.SetFades(clip, null, clip.EndSec - _host.ClipSecOfX(clip.StartSec, p.X)); break;
             case ClipGesture.TrimEnd:
-                var endSec = _host.SnapSec(_clipOrigin.Start + (_clipOrigin.Length + delta * speed) / speed, clip, out _);
+                var endSec = SnapClipSec(_clipOrigin.Start, _clipOrigin.Start + (_clipOrigin.Length + delta * speed) / speed, clip, out _);
                 clip.SourceLengthSec = Math.Clamp((endSec - _clipOrigin.Start) * speed, 0.05,
                     clip.IsMidi ? 86_400 : Math.Max(0.05, fileLength - _clipOrigin.Offset));
                 break;
@@ -301,7 +313,7 @@ internal sealed class ClipGestureController
         var start = Math.Max(0, _clipOrigin.Start + _host.SecOfX(p.X) - _clipPressSec);
         var length = clip.LengthSec;
         var byStart = _host.SnapSec(start, clip, out var startDistance, alt);
-        var byEnd = _host.SnapSec(start + length, clip, out var endDistance, alt) - length;
+        var byEnd = SnapClipSec(start, start + length, clip, out var endDistance, alt) - length;
         start = Math.Max(0, endDistance < startDistance ? byEnd : byStart);
 
         var gridTop = ArrangementPanel.RulerHeight + ArrangementPanel.SectionHeight;
@@ -318,7 +330,14 @@ internal sealed class ClipGestureController
             if (offset < 0) notation = clip.IsMidi && lanes > 0 && !project.Tracks[track].IsAudio && offset >= -ArrangementPanel.NotationHeightOf(project, project.Tracks[track]);
             else lane = Math.Min((int)(offset / ArrangementPanel.AudioLaneHeight), Math.Max(0, lanes - 1));
         }
-        var key = (track, lane, notation, start, _host.VerticalScrollOffset, _host.MeasureWidth, project.TimelineRevision, copy);
+        var zone = 0;
+        if (track >= 0 && track < project.Tracks.Count)
+        {
+            var offset = y - _host.LaneTop(track, 0);
+            if (offset < 0) zone = -1;
+            else zone = Math.Min((int)(offset / ArrangementPanel.AudioLaneHeight), Math.Max(0, ArrangementPanel.LaneCountOf(project.Tracks[track]) - 1));
+        }
+        var key = (track, lane, notation, zone, start, _host.VerticalScrollOffset, _host.MeasureWidth, project.TimelineRevision, copy);
         if (_clipMoveActive && _moveKey == key) return;
         var redraw = !_clipMoveActive || copy != _moveCopy || notation != (_moveKey?.Notation ?? false);
         _moveKey = key; _moveCopy = copy; _clipMoveActive = true; _clipChanged = true;
@@ -326,14 +345,19 @@ internal sealed class ClipGestureController
         {
             _movePlan = null;
             _clipDropTarget = (track, 0, true);
-            _host.SetDropPreview(null);
+            var labelPlan = new MediaDropPlan
+            {
+                TrackIndex = track, Lane = 0, StartSec = start, EndSec = start + length,
+                Clips = new[] { new PlannedClip(MoveGhostItems[0], start, length) },
+            };
+            _host.SetDropPreview(_host.NotationDropGeometry(labelPlan, track, start, start + length));
         }
         else
         {
             _clipDropTarget = null;
             var sourceKind = _clipFromTrack >= 0 && _clipFromTrack < project.Tracks.Count ? project.Tracks[_clipFromTrack].Kind : TrackKind.Guitar;
             _movePlan = MediaDrop.PlanMove(project, clip, sourceKind, track, lane, start, _host.QuarterMap(), copy);
-            _host.SetDropPreview(_host.DropGeometry(_movePlan, p, MoveGhostItems));
+            _host.SetDropPreview(_host.DropGeometry(_movePlan, new Point(p.X, y), MoveGhostItems));
         }
         if (redraw) _host.InvalidateVisual();
     }

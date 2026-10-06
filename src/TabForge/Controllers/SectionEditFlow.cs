@@ -9,9 +9,8 @@ namespace TabForge.Controllers;
 internal readonly record struct EditorCaret(int Bar, int Cell, int String);
 
 /// <summary>What the bar, section and area commands of the timeline need from the window that shows the song they edit.</summary>
-internal interface ISectionEditHost
+internal interface ISectionEditHost : IBarRangePromptHost
 {
-    AppSettings Settings { get; }
     void SaveSettings();
     /// <summary>True while <paramref name="document"/> is the song the window shows (false for a background or a closed song).</summary>
     bool IsShown(DocumentSession document);
@@ -46,8 +45,6 @@ internal interface ISectionEditHost
     void ShowLastBarWarning();
     /// <summary>A themed question with a destructive <paramref name="yesText"/> button and Cancel as the default; true on yes.</summary>
     bool Ask(string title, string text, string yesText, bool withUndoHint);
-    /// <summary>The Delete-on-bars choice prompt (null on Cancel).</summary>
-    BarRangeAnswer? AskBarRange(string text, BarRangeAction preselect, bool allTracks);
 }
 
 // Owns: the bar, section and area commands of the arrangement timeline: copy, cut, paste, duplicate, insert, delete and move.

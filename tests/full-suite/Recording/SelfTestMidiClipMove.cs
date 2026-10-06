@@ -67,7 +67,15 @@ public static partial class SelfTest
             if (!audio)
             {
                 timeline.ClipGestures.SimulateMove(clip, 1, press, new Point(timeline.XOfSec(9), top - ArrangementPanel.NotationHeightOf(song, song.Tracks[1]) / 2 - (ArrangementPanel.AudioLaneHeight / 2 - 4)));   // the clip's centre mid-row
-                Check("MIDI clip move: dragged well into its notation row it is still written into the score", timeline.ClipGestures.DropTarget is { NotationRow: true, Track: 1 });
+                var notationPreview = timeline.CurrentDropPreview;
+                Check("MIDI clip move: notation target shows a bounded Write notes preview",
+                    timeline.ClipGestures.DropTarget is { NotationRow: true, Track: 1 }
+                    && notationPreview is { Valid: true, Label: "Write notes", SlotLabel: "Notation row" }
+                    && notationPreview.Slot is { } notationSlot && notationPreview.Block.Y >= notationSlot.Y
+                    && notationPreview.Block.Bottom <= notationSlot.Bottom);
+                var lanePreview = timeline.ClipGestures.SimulateMove(clip, 1, press, new Point(timeline.XOfSec(9), top + 10));
+                Check("MIDI clip move: leaving the notation row restores its lane preview",
+                    timeline.ClipGestures.DropTarget is null && lanePreview is { Valid: true, Label: "Midi", Slot: null });
             }
             timeline.ClipGestures.Cancel();
         }

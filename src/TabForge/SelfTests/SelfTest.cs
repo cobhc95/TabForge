@@ -169,6 +169,13 @@ public static partial class SelfTest
         ["TestEssentialPlayback"] = "smoke",
         ["TestEssentialWindowsAndPrompts"] = "smoke",
         ["TestEssentialExports"] = "smoke",
+        ["TestSingleInstanceProcessHandover"] = "release",
+        ["TestEngineSyncDeferredRequests"] = "engine",
+        ["TestScoreLayoutPartial"] = "ui", ["TestPlaybackScheduleReuse"] = "playback",
+        ["TestMenuPopupWarmup"] = "ui",
+        ["TestTimelineSongTimeRepeatGrowth"] = "recording",
+        ["TestSectionColourEditing"] = "ui",
+        ["TestLongAudioClipGrowthPlayback"] = "recording", ["TestAudioGrowthReservation"] = "recording",
         ["TestHeadlessDeviceReconfigure"] = "smoke", ["TestModelRoundTrip"] = "smoke", ["TestProjectRoundtrip"] = "smoke",
         };
         AddFullSuiteAreas(areas);

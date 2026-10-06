@@ -29,6 +29,8 @@ Start-Process -Wait src\TabForge\bin\Release\net8.0-windows\TabForge.exe -Argume
 ```
 
 - `TABFORGE_SPEED_ONLY="open Preferences;Delete bars"` (environment) limits `--speed-audit` to the actions whose names contain one of the fragments.
+- `TABFORGE_TIMELINE_SPEED_PROFILE=<song path>` adds cold, cached and revision timing measurements to `TestTimelineSongTimeRepeatGrowth` in a full-suite test build.
+- `TABFORGE_DIALOG_EVIDENCE=<absolute PNG path>` saves the scaled marker dialog during `TestDialogEscape` in a full-suite test build.
 - `--only <TestName>[,<TestName>...]` runs just the named tests. A name is the test method as written in the `Guard(...)` or `GuardGroup(...)` call in `src/TabForge/SelfTests/SelfTest.cs` (basic set) or `tests/full-suite/SelfTestFullSuite.cs`. Names are exact and case-sensitive. A full-suite test is known only to a build made with `-p:TabForgeFullSuite=true`; the maintainer's local rebuild script builds that for you when `TABFORGE_SELFTEST_ONLY=TestA,TestB` is set.
 - The log ends with the usual line, `TabForge self-test: N passed, M failed`. Search the log for `FAIL`; the exit code alone is not the result.
 - An unknown name fails the run before any test starts and lists the closest registered names.
@@ -47,9 +49,11 @@ Start-Process -Wait src\TabForge\bin\Release\net8.0-windows\TabForge.exe -Argume
 
 The gate needs a full-suite build (CI builds it with `-p:TabForgeFullSuite=true`; the maintainer's local rebuild script has a `fullsuite` option for it). `--require ci` is what CI (`.github/workflows/windows-ci.yml`) and the release packaging run. It makes the CI groups and two hygiene checks mandatory: a group that did not run, threw, or ran fewer checks than its minimum fails the run. The registry is `src/TabForge/SelfTests/SelfTestRequirements.cs`. Fixture-dependent groups use synthetic songs generated in code, so the gate needs no local song files.
 
+The maintainer-only public-tree release gate compiles a separate full-suite copy before it runs the curated `--areas release` set. Its `-CheckDecisions` option verifies that build selection, the selected-revision doc refresh and the 35-minute process budget without building or publishing.
+
 ## Small-screen mode
 
-CI runs on a 1024 x 728 desktop at 100% scale. Set `TABFORGE_SELFTEST_SMALLSCREEN=1` and your PC judges test windows by the same screen, so a layout that fits your monitor but not CI fails locally too. `TABFORGE_NO_LOCAL_SONGS=1` ignores any local song folder, as on a clean checkout.
+CI runs on a 1024 x 728 desktop at 100% scale. Set `TABFORGE_SELFTEST_SMALLSCREEN=1` and your PC judges test windows by the same screen, so a layout that fits your monitor but not CI fails locally too. `TABFORGE_NO_LOCAL_SONGS=1` ignores any local song folder, as on a clean checkout. `TABFORGE_TEST_SINGLE_INSTANCE=1` is reserved for `TestSingleInstanceProcessHandover`; it enables a profile-scoped pipe only with a non-real `--profile`.
 
 ## Headless diagnostics
 
@@ -111,4 +115,4 @@ Three options open the main window and need `--profile <scratch folder>`:
 | --- | --- |
 | `--capture <script.json> <outDir>` | Drives the window off-screen from a script and saves screenshots. |
 | `--screenshots <folder>` | Photographs menus, panels, settings and dialogs, then exits. |
-| `--speed-audit <report.md>` | Times every common action (clicks, scrolling, zoom, resizes, windows, menus, editing, tracks, clips, save, open, tabs) on the off-screen window with the demo song and a long audio clip, stopped and playing, and writes a table: median and worst time to idle, synchronous work, worst frame gap, flags above 50 ms or 33 ms. Set `TABFORGE_TRACE=ui` to add the slow-funnel lines with their callers. Silent (master volume 0); works on a copy of the song. |
+| `--speed-audit <report.md>` | Times every common action (clicks, scrolling, zoom, resizes, windows, menus, editing, tracks, clips, save, open, tabs) on the off-screen window with the demo song and a long audio clip, stopped and playing, and writes a table: median and worst time to idle, synchronous work, worst frame gap, flags above 50 ms or 33 ms. Clip and track-row menus open a real non-activating popup; long WAV drops extend every track in both transport states. Set `TABFORGE_TRACE=ui` to add the slow-funnel lines with their callers. Silent (master volume 0); works on a copy of the song. |

@@ -35,7 +35,11 @@ public static partial class SelfTest
             for (var i = 0; i < LifecycleCycles; i++)
             {
                 OpenAndCloseDocumentWindows(wav, mixers, panels, timelines, shells);
-                if (i == 0) Thread.Sleep(80);   // the first cycle lets the waveform read finish and raise its redraw
+                if (i == 0)
+                {
+                    var waveformReady = Audio.WaveformCache.WaitIdle(5000);
+                    Check("open/close warm-up waits for the waveform read to settle", waveformReady);
+                }
                 PumpUi();
                 if (i == 2) afterWarmUp = CollectFully();
             }
@@ -70,22 +74,32 @@ public static partial class SelfTest
         host.Project.Tracks[1].AudioClips.Add(new AudioClip { File = wav, Name = "clip 2", StartSec = 0.1, SourceLengthSec = 0.25, FileLengthSec = 0.25 });
 
         var panel = new ArrangementPanel();
-        panel.Bind(host.Project, Array.Empty<Playback.MidiOutputDeviceInfo>());
-        var shell = new Window { Content = panel, Width = 900, Height = 500, ShowInTaskbar = false, Left = -5000, Top = -5000 };
-        var mixer = new MixerWindow(host, null);
-        mixer.SizeToContent = SizeToContent.Manual; mixer.Width = 800; mixer.Height = 600;
-        ShowTestWindow(shell);
-        ShowTestWindow(mixer);
-        shell.UpdateLayout(); mixer.UpdateLayout();
-        PumpUi();
+        Window? shell = null;
+        MixerWindow? mixer = null;
+        try
+        {
+            panel.Bind(host.Project, Array.Empty<Playback.MidiOutputDeviceInfo>());
+            shell = new Window { Content = panel, Width = 900, Height = 500, ShowInTaskbar = false, Left = -5000, Top = -5000 };
+            mixer = new MixerWindow(host, null);
+            mixer.SizeToContent = SizeToContent.Manual; mixer.Width = 800; mixer.Height = 600;
+            ShowTestWindow(shell);
+            ShowTestWindow(mixer);
+            shell.UpdateLayout(); mixer.UpdateLayout();
+            PumpUi();
 
-        mixers.Add(new WeakReference(mixer));
-        panels.Add(new WeakReference(panel));
-        shells.Add(new WeakReference(shell));
-        foreach (var timeline in VisualDescendants<TrackTimeline>(panel)) timelines.Add(new WeakReference(timeline));
-        mixer.Close();
-        shell.Close();
-        shell.Content = null;
+            mixers.Add(new WeakReference(mixer));
+            panels.Add(new WeakReference(panel));
+            shells.Add(new WeakReference(shell));
+            foreach (var timeline in VisualDescendants<TrackTimeline>(panel)) timelines.Add(new WeakReference(timeline));
+        }
+        finally
+        {
+            List<Exception>? closeErrors = null;
+            try { mixer?.Close(); } catch (Exception ex) { (closeErrors ??= new()).Add(ex); }
+            try { shell?.Close(); } catch (Exception ex) { (closeErrors ??= new()).Add(ex); }
+            if (shell is not null) shell.Content = null;
+            if (closeErrors is { Count: > 0 }) throw new AggregateException("lifecycle test windows did not close cleanly", closeErrors);
+        }
     }
 
     /// <summary>

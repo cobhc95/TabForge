@@ -65,6 +65,41 @@ public static partial class SelfTest
         Check("the right arrow steps beat, beat, append slot", a == 8 && b == 12, $"{a},{b}");
         editor.MoveBeat(-1);
         Check("the left arrow steps back", editor.SelectedCell == 8, editor.SelectedCell.ToString());
+
+        track.Measures.AddRange(Presets.TemplateFactory.Measures(5));
+
+        var tied = track.Measures[4];
+        for (var i = 0; i < tied.Cells.Count; i++) tied.Cells[i] = new TabCell();
+        Beat(tied, 0, 8); Beat(tied, 2, 8); tied.Cells[0].Notes[0].Tied = true; tied.Cells[2].IsTied = true;
+        editor.SetPosition(4, 0, 0);
+        editor.MoveBeat(1); var tie = editor.SelectedCell; editor.MoveBeat(1); var tiedAppend = editor.SelectedCell;
+        editor.MoveBeat(1); var empty = (editor.SelectedMeasure, editor.SelectedCell); editor.MoveBeat(-1);
+        Check("Right visits a tied continuation then the append slot", tie == 2 && tiedAppend == 4, $"{tie},{tiedAppend}");
+        Check("right and left cross the tied bar and empty bar boundary", empty == (5, 0) && editor.SelectedMeasure == 4 && editor.SelectedCell == 4, $"{empty} -> {editor.SelectedMeasure}:{editor.SelectedCell}");
+
+        var triplets = track.Measures[6];
+        for (var i = 0; i < triplets.Cells.Count; i++) triplets.Cells[i] = new TabCell();
+        for (var i = 0; i < 3; i++) { Beat(triplets, i, 8); triplets.Cells[i].TupletNumerator = 3; triplets.Cells[i].TupletDenominator = 2; triplets.Cells[i].RhythmicPosition = i * MusicTime.CellSlots(triplets.Cells[i]); }
+        Check("fractional triplet onsets are the cursor stops plus one append slot",
+            CursorPositions.Allowed(triplets.Cells).SequenceEqual(new[] { 0, 1, 2, 4 }));
+        editor.SetPosition(6, 0, 0);
+        editor.MoveBeat(1); var tripletSecond = editor.SelectedCell; editor.MoveBeat(1); var tripletThird = editor.SelectedCell;
+        editor.MoveBeat(1); var tripletAppend = editor.SelectedCell;
+        Check("Right steps across all triplet starts and then the append slot",
+            tripletSecond == 1 && tripletThird == 2 && tripletAppend == 4,
+            $"{tripletSecond},{tripletThird},{tripletAppend}");
+        Check("a click on a fractional triplet onset resolves to its beat cell",
+            TabEditorControl.ResolveBeatHitCell(triplets, triplets.Cells[1].RhythmicPosition!.Value, 1) == 1);
+
+        var fullTriplets = track.Measures[7];
+        for (var i = 0; i < fullTriplets.Cells.Count; i++) fullTriplets.Cells[i] = new TabCell();
+        for (var i = 0; i < 12; i++) { Beat(fullTriplets, i, 8); fullTriplets.Cells[i].TupletNumerator = 3; fullTriplets.Cells[i].TupletDenominator = 2; fullTriplets.Cells[i].RhythmicPosition = i * MusicTime.CellSlots(fullTriplets.Cells[i]); }
+        Check("a full bar of eighth-triplets has no append slot",
+            CursorPositions.Allowed(fullTriplets.Cells).SequenceEqual(Enumerable.Range(0, 12)));
+        editor.SetPosition(7, 11, 0);
+        editor.MoveBeat(1);
+        Check("Right at a full tuplet bar's last beat crosses to the next bar", editor.SelectedMeasure == 8 && editor.SelectedCell == 0, $"{editor.SelectedMeasure}:{editor.SelectedCell}");
+        editor.MoveBeat(-1); Check("Left returns from the empty bar to the full triplet bar's last beat", editor.SelectedMeasure == 7 && editor.SelectedCell == 11, $"{editor.SelectedMeasure}:{editor.SelectedCell}");
     }
 
     /// <summary>Note-editing audit: fret entry, durations, marks, string moves, cut and keyboard navigation keep bars complete, keep notes and use one undo step.</summary>

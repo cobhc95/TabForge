@@ -8,7 +8,8 @@ namespace TabForge.Views;
 /// <summary>
 /// The colour a section is shown in, shared by the arrangement timeline and the sidebar section list.
 /// Optionally, sections with the same base name ("Verse 1", "Verse 2") share the first one's colour, and a
-/// different section type whose colour looks too similar gets the next distinct colour instead.
+/// different section type whose colour looks too similar gets the next distinct colour instead. An explicit family
+/// choice takes precedence over automatic collision separation and is precomputed when section hits are rebuilt.
 /// </summary>
 public static class SectionColours
 {
@@ -19,19 +20,28 @@ public static class SectionColours
     {
         var result = new Dictionary<MarkerModel, Color>(ReferenceEqualityComparer.Instance);
         var familyColours = new Dictionary<string, Color>(StringComparer.OrdinalIgnoreCase);
+        var explicitFamilyColours = new Dictionary<string, Color>(StringComparer.OrdinalIgnoreCase);
         var usedColours = new HashSet<Color>();
+        if (matchSimilar)
+            foreach (var marker in sortedMarkers)
+                if (marker.ColorIsExplicit && Family(marker.Title) is { Length: > 0 } family &&
+                    !explicitFamilyColours.ContainsKey(family) && ColourText.TryParse(marker.ColorHex, out var chosen))
+                    explicitFamilyColours.Add(family, chosen);
+
         foreach (var marker in sortedMarkers)
         {
-            var colour = ColourText.TryParse(marker.ColorHex, out var parsed) ? Draw.Tame(parsed) : fallback;
+            var colour = ColourText.TryParse(marker.ColorHex, out var parsed)
+                ? marker.ColorIsExplicit ? parsed : Draw.Tame(parsed)
+                : fallback;
             var family = matchSimilar ? Family(marker.Title) : "";
             if (family.Length > 0)
             {
                 if (familyColours.TryGetValue(family, out var shared)) colour = shared;
                 else
                 {
-                    var own = colour;
-                    if (usedColours.Any(used => LooksAlike(used, own)))
-                        colour = DistinctSectionColours.FirstOrDefault(c => !usedColours.Any(used => LooksAlike(used, c)), own);
+                    if (explicitFamilyColours.TryGetValue(family, out var chosen)) colour = chosen;
+                    else if (usedColours.Any(used => LooksAlike(used, colour)))
+                        colour = DistinctSectionColours.FirstOrDefault(c => !usedColours.Any(used => LooksAlike(used, c)), colour);
                     familyColours[family] = colour;
                     usedColours.Add(colour);
                 }
@@ -44,6 +54,45 @@ public static class SectionColours
 
     /// <summary>The colour last resolved for this marker (null until the timeline or list resolved it).</summary>
     public static Color? DisplayFor(MarkerModel marker) => Resolved.TryGetValue(marker, out var colour) ? (Color)colour : null;
+
+    /// <summary>The editor's current visible RGB value, including a resolved family or collision colour.</summary>
+    public static string EditorColourHex(MarkerModel marker)
+    {
+        if (DisplayFor(marker) is { } shown) return ColourText.Hex(shown);
+        if (!ColourText.TryParse(marker.ColorHex, out var own)) return "#2E74B5";
+        return ColourText.Hex(marker.ColorIsExplicit ? own : Draw.Tame(own));
+    }
+
+    /// <summary>Checks whether saving the editor would change the name or the currently visible colour.</summary>
+    public static bool IsUnchangedEdit(MarkerModel marker, string title, string colourHex) =>
+        string.Equals(title, marker.Title, StringComparison.Ordinal) &&
+        ColourText.TryParse(colourHex, out var chosen) &&
+        ColourText.TryParse(EditorColourHex(marker), out var shown) && chosen == shown;
+
+    /// <summary>Applies an explicit RGB choice to the selected section family when matching is enabled.</summary>
+    public static void ApplyExplicitChoice(IReadOnlyList<MarkerModel> markers, MarkerModel selected, string title, string colourHex, bool matchSimilar)
+    {
+        selected.Title = title;
+        var family = matchSimilar ? Family(title) : "";
+        foreach (var marker in markers)
+        {
+            if (!ReferenceEquals(marker, selected) &&
+                (family.Length == 0 || !string.Equals(Family(marker.Title), family, StringComparison.OrdinalIgnoreCase))) continue;
+            marker.ColorHex = colourHex;
+            marker.ColorIsExplicit = true;
+        }
+    }
+
+    /// <summary>Applies an editor result; an unchanged visible value is a no-op, and a rename alone keeps family resolution.</summary>
+    public static bool ApplyEdit(IReadOnlyList<MarkerModel> markers, MarkerModel selected, string title, string colourHex, bool matchSimilar)
+    {
+        if (IsUnchangedEdit(selected, title, colourHex)) return false;
+        var colourChanged = !ColourText.TryParse(colourHex, out var chosen) ||
+                            !ColourText.TryParse(EditorColourHex(selected), out var shown) || chosen != shown;
+        if (colourChanged) ApplyExplicitChoice(markers, selected, title, colourHex, matchSimilar);
+        else selected.Title = title;
+        return true;
+    }
 
     /// <summary>"Verse 2" / "Chorus (x2)" / "Intro II" -> the section type ("Verse", "Chorus", "Intro").</summary>
     public static string Family(string? title)

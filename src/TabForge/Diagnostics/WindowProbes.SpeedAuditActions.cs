@@ -25,6 +25,7 @@ internal sealed partial class WindowProbes
         {
             _state = state;
             await ClicksAsync();
+            await TimeAsync("long audio drop", LongAudioDrop, Undo, reps: 3, note: "valid generated WAV; starts at measured song end and extends every track");
         }
 
         private async Task ClicksAsync()
@@ -65,8 +66,8 @@ internal sealed partial class WindowProbes
             await TimeAsync("context menu: timeline bar", () => { _w.ShowArrangementContextMenu(4, 0); return null; });
             await TimeAsync("context menu: timeline range", () => { SelectBars(3, 6); return Call(_w.Window, "BuildSelectionMenu"); }, async () => { _w._selection.Clear(SelectionOrigin.Command); await _w.Settle(50); });
             await TimeAsync("context menu: section", () => Call(_w.Window, "ShowSectionContextMenu", 1, null));
-            await TimeAsync("context menu: clip", () => Call(_w.Window, "ShowClipMenu", _audioTrack, _longClip, 20.0));
-            await TimeAsync("context menu: track row", () => _w.Window.TrackRowMenu(0));
+            await TimeAsync("context menu: clip", () => MeasureClipPopup());
+            await TimeAsync("context menu: track row", () => MeasureTrackRowPopup());
             // mixer state
             await TimeAsync("mute toggle", () => TrackEdit(TrackEditKind.ToggleMute), async () => { if (_rep++ % 2 == 0) { TrackEdit(TrackEditKind.ToggleMute); await _w.Settle(80); } });
             await TimeAsync("solo toggle", () => TrackEdit(TrackEditKind.ToggleSolo), async () => { TrackEdit(TrackEditKind.ToggleSolo); await _w.Settle(80); });
@@ -129,7 +130,7 @@ internal sealed partial class WindowProbes
             await TimeAsync("open FX chain", () => Open("FxChain"), () => Close("FxChain"), reps: 3);
             await TimeAsync("open track properties", () => Open("TrackProperties"), () => Close("TrackProperties"), reps: 3);
             await TimeAsync("select bars (range)", () => { SelectBars(5, 6); return null; }, async () => { _w._selection.Clear(SelectionOrigin.Command); await _w.Settle(50); });
-            await TimeAsync("Delete bars prompt", () => { SelectBars(5, 6); Window? shown = null; DialogHost.Capture = d => { shown = d; Offscreen(d); return false; }; Hotkey("Range.Delete"); DialogHost.Capture = _ => false; shown?.Close(); return null; });
+            await DeleteBarsPromptAsync();
             await TimeAsync("delete track confirm", () => { Window? shown = null; DialogHost.Capture = d => { shown = d; Offscreen(d); return false; }; Hotkey("Track.Delete"); DialogHost.Capture = _ => false; shown?.Close(); return null; });
             await NoteEditsAsync();
         }

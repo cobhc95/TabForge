@@ -146,7 +146,7 @@ public partial class MainWindow
         var gridOwnsArrows = TrackMixerGrid.IsKeyboardFocusWithin || MarkerList.IsKeyboardFocusWithin
             || ChordResultList.IsKeyboardFocusWithin ;
         var isArrow = e.Key is Key.Left or Key.Right or Key.Up or Key.Down;
-        if (isArrow && gridOwnsArrows && mods == ModifierKeys.None) return;
+        if (mods == ModifierKeys.None && (isArrow && gridOwnsArrows || e.Key == Key.Enter && MarkerList.IsKeyboardFocusWithin)) return;
 
         // A bound Ctrl / Alt chord, then the editor's note entry and score navigation, then the other bindings (the map is
         // rebuilt whenever the hotkey settings change). Alt chords arrive as Key.System; the router reads the real key.

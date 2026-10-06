@@ -19,6 +19,9 @@ public static class SongExtent
     /// <summary>The end of the song in seconds as performed, and the length of one more bar (last bar's time signature, tempo in effect at the end).</summary>
     public static (double EndSec, double BarSec) Measure(SongProject project)
     {
+        var cache = project.SongExtentMeasures;
+        if (cache.TryGet(project, out var measured)) return measured;
+
         var timeline = MidiTimelineBuilder.Build(project, new PlaybackOptions { RepeatExpansion = true, RespectMuteSolo = false, SkipClips = true });
         var endSec = timeline.Bars.Count == 0 ? 0 : timeline.Bars[^1].EndMs / 1000;
         var tempo = timeline.Bars.Count == 0 ? project.Tempo : timeline.Bars[^1].Tempo;
@@ -28,7 +31,9 @@ public static class SongExtent
         var den = last?.TimeSigDenom ?? project.TimeSignatureDenominator;
         if (num <= 0) num = 4;
         if (den <= 0) den = 4;
-        return (endSec, TempoMath.BeatsToSeconds(num * (4.0 / den), tempo));
+        measured = (endSec, TempoMath.BeatsToSeconds(num * (4.0 / den), tempo));
+        cache.Store(project, measured);
+        return measured;
     }
 
     /// <summary>Appends enough bars (up to the song-length cap) that the song reaches <paramref name="endSec"/>; does nothing when it already does.</summary>
@@ -41,7 +46,11 @@ public static class SongExtent
         var bars = BarRangeEditor.MaxMeasures(project);
         var room = Math.Min(InputLimits.MaxMeasuresPerTrack - bars, InputLimits.MaxTotalMeasures / project.Tracks.Count - bars);
         var add = Math.Max(0, Math.Min(wanted, room));
-        if (add > 0) BarGrid.AppendBars(project, add);
+        if (add > 0)
+        {
+            BarGrid.AppendBars(project, add);
+            project.MarkTimelineChanged();
+        }
         return new ExtentResult(add, add < wanted);
     }
 

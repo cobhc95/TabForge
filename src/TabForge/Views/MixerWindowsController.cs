@@ -63,4 +63,8 @@ internal sealed class MixerWindowsController
         foreach (var (track, window) in _fxWindows.ToList())
             if (close(track)) window.Close();
     }
+
+    /// <summary>Closes FX windows for removed chains while keeping the shared monitor chain attached to the current song.</summary>
+    public void CloseStaleFxWindows(SongProject project) => CloseFxWindows(track => !project.Tracks.Contains(track) && !MixerBuses.IsCurrent(project, track)
+        && !(MixerBuses.IsMonitor(track) && ReferenceEquals(track.Bus, _host.MixerHost.MonitorChain)));
 }

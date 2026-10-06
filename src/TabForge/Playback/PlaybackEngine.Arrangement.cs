@@ -11,10 +11,12 @@ using TempoMath = TabForge.Audio.Contracts.TempoMath;
 namespace TabForge.Playback;
 
 /// <summary>Live arrangement refresh: swaps the future part of the running timeline without restarting playback.</summary>
-public sealed partial class PlaybackEngine : IDisposable
+public sealed partial class PlaybackEngine : IDisposable, IAudioGrowthRefreshHost
 {
     private sealed record ArrangementRefresh(ScoreTimeline Timeline, double BoundaryMs, SongProject Project);
     private sealed record LoopRefresh(ScoreTimeline Timeline, SongProject Project, int Seq);
+
+    internal bool HasReservedArrangementRefresh { get { lock (_gate) return _arrangementRefreshRequested; } }
 
     /// <summary>
     /// Recompiles traversal after the currently playing bar using the live arrangement. The existing
@@ -75,18 +77,18 @@ public sealed partial class PlaybackEngine : IDisposable
         var timeline = _timeline;
         var options = _options;
         if (timeline is null || options is null || !_running || baseToCurrentBar.Length == 0) return true;
-
-        var position = Playhead();
         if (timeline.Bars.Count == 0) return true;
-        var activeBar = timeline.BarAt(position.ElapsedMs);
-        if (activeBar.EndMs <= position.ElapsedMs) return true;
-        if (activeBar.EndMs - position.ElapsedMs < minLeadMs) return false;
-        if (live && (activeBar.Bar < 0 || activeBar.Bar >= baseToCurrentBar.Length || baseToCurrentBar[activeBar.Bar] < 0)) return true;   // the playing bar is gone: the structure edit that removed it chose where to continue
+        ScoreBar activeBar;
 
         int seq;
         lock (_gate)
         {
             if (!_running || !ReferenceEquals(_timeline, timeline)) return true;
+            var position = Playhead();
+            activeBar = timeline.BarAt(position.ElapsedMs);
+            if (activeBar.EndMs <= position.ElapsedMs) return true;
+            if (activeBar.EndMs - position.ElapsedMs < minLeadMs) return false;
+            if (live && (activeBar.Bar < 0 || activeBar.Bar >= baseToCurrentBar.Length || baseToCurrentBar[activeBar.Bar] < 0)) return true;   // the playing bar is gone: the structure edit that removed it chose where to continue
             seq = ++_refreshSeq;
             _arrangementRefreshBoundaryMs = activeBar.EndMs;
             _arrangementRefreshRequested = true;
@@ -97,48 +99,16 @@ public sealed partial class PlaybackEngine : IDisposable
 
         try
         {
-            var currentBar = activeBar.Bar >= 0 && activeBar.Bar < baseToCurrentBar.Length
-                ? baseToCurrentBar[activeBar.Bar]
-                : activeBar.Bar;
-            var liveOptions = options.Clone();
-            liveOptions.StartBar = 0;
-            liveOptions.StartCell = 0;
-            liveOptions.CountIn = false;
-            var order = PlaybackOrder.Build(source, liveOptions);
-            var activeTimelineIndex = timeline.Bars.FindIndex(bar => Math.Abs(bar.StartMs - activeBar.StartMs) < 0.001);
-            var occurrence = activeTimelineIndex < 0 ? 0 : timeline.Bars
-                .Take(activeTimelineIndex + 1).Count(bar => bar.Bar == activeBar.Bar) - 1;
-            var matchingPositions = order.Select((bar, index) => (bar, index))
-                .Where(entry => entry.bar == currentBar).Select(entry => entry.index).ToArray();
-            var removedActiveBar = currentBar < 0;
-            var activeOrderIndex = removedActiveBar
-                ? order.FindIndex(bar => bar >= Math.Max(0, continueAtBar ?? 0)) - 1
-                : matchingPositions.Length > 0
-                ? matchingPositions[Math.Clamp(occurrence, 0, matchingPositions.Length - 1)]
-                : order.FindIndex(bar => bar > currentBar) - 1;
-            var hasContinuation = removedActiveBar
-                ? order.Any(bar => bar >= Math.Max(0, continueAtBar ?? 0))
-                : order.Any(bar => bar > currentBar);
-            if (activeOrderIndex < 0 && order.Count > 0 && !hasContinuation)
-                activeOrderIndex = order.Count - 1;
-            var futureOrder = order.Skip(activeOrderIndex + 1).ToArray();
-
-            liveOptions.Metronome = true;
-            liveOptions.LiveMetronomeEvents = true;
-            var future = futureOrder.Length == 0
-                ? new ScoreTimeline()
-                : MidiTimelineBuilder.Build(source, liveOptions, futureOrder);
-            var revised = SpliceArrangementFuture(timeline, future, activeBar.EndMs, baseToCurrentBar);
+            var plan = ArrangementRefreshCompiler.CompileFuture(timeline, source, options, baseToCurrentBar, activeBar, continueAtBar);
             lock (_gate)
             {
                 if (!_running || !ReferenceEquals(_timeline, timeline) || seq != _refreshSeq || !_arrangementRefreshRequested) return true;   // superseded, or the bar line passed first
-                _pendingArrangementRefresh = new ArrangementRefresh(revised, activeBar.EndMs, project);
+                _pendingArrangementRefresh = new ArrangementRefresh(plan.Timeline, activeBar.EndMs, project);
             }
             if (compileLoop && options.Loop)
             {
                 // The loop wraps back over bars the splice keeps as they were: the whole song is compiled again for the next wrap.
-                var whole = MidiTimelineBuilder.Build(source, liveOptions, order.ToArray());
-                RemapBarsToBase(whole, baseToCurrentBar);
+                var whole = ArrangementRefreshCompiler.CompileLoop(source, baseToCurrentBar, plan);
                 lock (_gate)
                 {
                     if (!_running || !ReferenceEquals(_timeline, timeline) || seq != _refreshSeq) return true;
@@ -162,118 +132,76 @@ public sealed partial class PlaybackEngine : IDisposable
         }
     }
 
-    /// <summary>The bar numbers of a freshly compiled timeline (current score bars) in the numbering the running timeline uses (the bars it started with).</summary>
-    private static void RemapBarsToBase(ScoreTimeline timeline, int[] baseToCurrentBar)
+    /// <summary>
+    /// Reserves the active bar's end on the calling thread before a caller starts a potentially slow audio upload.
+    /// The song snapshot is also captured here; all timeline compilation runs on that immutable copy.
+    /// </summary>
+    internal bool RefreshArrangementForAudioGrowth(SongProject project, int[] baseToCurrentBar)
     {
-        var inverseBars = new Dictionary<int, int>();
-        for (var baseBar = 0; baseBar < baseToCurrentBar.Length; baseBar++)
-            inverseBars.TryAdd(baseToCurrentBar[baseBar], baseBar);
-        for (var i = 0; i < timeline.Bars.Count; i++)
-            if (inverseBars.TryGetValue(timeline.Bars[i].Bar, out var baseBar)) timeline.Bars[i] = timeline.Bars[i] with { Bar = baseBar };
-        foreach (var note in timeline.Notes)
-            if (inverseBars.TryGetValue(note.Bar, out var baseBar)) note.Bar = baseBar;
+        var timeline = _timeline;
+        var options = _options;
+        if (!_running || timeline is null || options is null || timeline.Bars.Count == 0 || baseToCurrentBar.Length == 0) return false;
+
+        AudioGrowthReservation reservation;
+        lock (_gate)
+        {
+            if (!_running || !ReferenceEquals(_timeline, timeline)) return false;
+            var position = Playhead();
+            var activeBar = timeline.BarAt(Math.Min(position.ElapsedMs, timeline.TotalMs));
+            var atFinalBoundary = Math.Abs(activeBar.EndMs - timeline.TotalMs) < 0.01 &&
+                position.ElapsedMs <= timeline.TotalMs + 2.0;
+            if (activeBar.EndMs <= position.ElapsedMs && !atFinalBoundary) return false;
+
+            var sequence = ++_refreshSeq;
+            _arrangementRefreshBoundaryMs = activeBar.EndMs;
+            _arrangementRefreshRequested = true;
+            _arrangementRefreshLive = false;
+            _pendingArrangementRefresh = null;
+            _pendingLoopRefresh = null;
+            reservation = new AudioGrowthReservation(
+                Volatile.Read(ref _generation), sequence, timeline, options.Clone(), activeBar, project);
+        }
+
+        try
+        {
+            var snapshot = SongSnapshot.Take(project).Song;
+            var map = baseToCurrentBar.ToArray();
+            new AudioGrowthRefreshFlow(this).Start(reservation, snapshot, map);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            ((IAudioGrowthRefreshHost)this).CompleteAudioGrowthRefresh(reservation, null, null, ex.Message);
+            if (ex is OutOfMemoryException) throw;
+            return false;
+        }
     }
 
-    private static ScoreTimeline SpliceArrangementFuture(ScoreTimeline current, ScoreTimeline future,
-        double boundaryMs, int[] baseToCurrentBar)
+    void IAudioGrowthRefreshHost.CompleteAudioGrowthRefresh(AudioGrowthReservation reservation,
+        ArrangementRefreshCompiler.Plan? plan, ScoreTimeline? loopTimeline, string? failure)
     {
-        var revised = new ScoreTimeline
+        var canceled = false;
+        lock (_gate)
         {
-            CountInMs = current.CountInMs,
-            PlayFromMs = current.PlayFromMs,
-            TotalMs = boundaryMs + future.TotalMs,
-            TieMerges = current.TieMerges + future.TieMerges,
-            TieOrphans = current.TieOrphans + future.TieOrphans,
-            LetRingExtensions = current.LetRingExtensions + future.LetRingExtensions,
-            MaxLetRingExtensionMs = Math.Max(current.MaxLetRingExtensionMs, future.MaxLetRingExtensionMs)
-        };
-        revised.ChannelSetup.AddRange(current.ChannelSetup);
-        revised.Bars.AddRange(current.Bars.Where(bar => bar.EndMs <= boundaryMs + 0.001));
-        revised.Notes.AddRange(current.Notes.Where(note => note.OnsetMs < boundaryMs));
-
-        var activeNotes = new Dictionary<(int Device, int Channel, int Pitch), int>();
-        var activeMetronomePairs = new HashSet<int>();
-        foreach (var e in current.Events.Where(e => e.TimeMs < boundaryMs))
-        {
-            if (e.IsMetronome)
+            var current = _running && reservation.Generation == Volatile.Read(ref _generation) &&
+                ReferenceEquals(_timeline, reservation.Timeline) && reservation.Sequence == _refreshSeq &&
+                _arrangementRefreshRequested && !_arrangementRefreshLive;
+            if (current && plan is not null)
             {
-                if (e.IsNoteOn) activeMetronomePairs.Add(e.MetronomePairId);
-                else if (e.IsNoteOff) activeMetronomePairs.Remove(e.MetronomePairId);
-                continue;
+                _pendingArrangementRefresh = new ArrangementRefresh(plan.Timeline, reservation.ActiveBar.EndMs, reservation.Project);
+                if (loopTimeline is not null)
+                    _pendingLoopRefresh = new LoopRefresh(loopTimeline, reservation.Project, reservation.Sequence);
             }
-            if (e.IsNoteOn)
+            else if (current)
             {
-                var key = (e.DeviceId, e.Status & 0x0F, e.Data1);
-                activeNotes.TryGetValue(key, out var count);
-                activeNotes[key] = count + 1;
-            }
-            else if (e.IsNoteOff)
-            {
-                var key = (e.DeviceId, e.Status & 0x0F, e.Data1);
-                if (activeNotes.TryGetValue(key, out var count) && count > 1) activeNotes[key] = count - 1;
-                else activeNotes.Remove(key);
+                _refreshSeq++;
+                _arrangementRefreshRequested = false;
+                _pendingArrangementRefresh = null;
+                _pendingLoopRefresh = null;
+                canceled = true;
             }
         }
-
-        revised.Events.AddRange(current.Events.Where(e => e.TimeMs < boundaryMs));
-        var preservedFutureReleases = new List<ScoreEvent>();
-        foreach (var e in current.Events.Where(e => e.TimeMs >= boundaryMs))
-        {
-            var keep = false;
-            if (e.IsMetronome && e.IsNoteOff)
-                keep = activeMetronomePairs.Remove(e.MetronomePairId);
-            else if (e.IsNoteOff)
-            {
-                var key = (e.DeviceId, e.Status & 0x0F, e.Data1);
-                if (activeNotes.TryGetValue(key, out var count) && count > 0)
-                {
-                    keep = true;
-                    if (count > 1) activeNotes[key] = count - 1;
-                    else activeNotes.Remove(key);
-                }
-            }
-            else if (!e.IsMetronome && PlaybackEngine.IsEssentialReleaseOrReset(e))
-                keep = true;
-            if (keep)
-            {
-                revised.Events.Add(e);
-                preservedFutureReleases.Add(e);
-            }
-        }
-
-        var inverseBars = new Dictionary<int, int>();
-        for (var baseBar = 0; baseBar < baseToCurrentBar.Length; baseBar++)
-            inverseBars.TryAdd(baseToCurrentBar[baseBar], baseBar);
-        var metronomePairOffset = current.Events.Where(e => e.IsMetronome)
-            .Select(e => e.MetronomePairId).DefaultIfEmpty(0).Max();
-        foreach (var e in future.Events)
-        {
-            if (e.IsSetup) continue;
-            e.TimeMs += boundaryMs;
-            if (e.IsMetronome) e.MetronomePairId += metronomePairOffset;
-            revised.Events.Add(e);
-        }
-        foreach (var bar in future.Bars)
-            revised.Bars.Add(bar with
-            {
-                Bar = inverseBars.TryGetValue(bar.Bar, out var baseBar) ? baseBar : bar.Bar,
-                StartMs = bar.StartMs + boundaryMs,
-                EndMs = bar.EndMs + boundaryMs
-            });
-        foreach (var note in future.Notes)
-        {
-            note.OnsetMs += boundaryMs;
-            if (inverseBars.TryGetValue(note.Bar, out var baseBar)) note.Bar = baseBar;
-            revised.Notes.Add(note);
-        }
-        revised.TotalMs = Math.Max(revised.TotalMs,
-            preservedFutureReleases.Where(e => e.IsNoteOff).Select(e => e.TimeMs).DefaultIfEmpty(boundaryMs).Max());
-        revised.LongestSoundingNoteMs = revised.Notes.Select(note => note.DurationMs).DefaultIfEmpty(0).Max();
-        revised.LongestSoundingNoteAtBar = revised.Notes
-            .Where(note => Math.Abs(note.DurationMs - revised.LongestSoundingNoteMs) < 0.001)
-            .Select(note => (double)note.Bar).FirstOrDefault();
-        SustainResolver.SortEvents(revised);
-        revised.Notes.Sort((left, right) => left.OnsetMs.CompareTo(right.OnsetMs));
-        return revised;
+        if (canceled) Debug.WriteLine($"Audio growth arrangement refresh was canceled; existing playback schedule resumes ({failure}).");
     }
+
 }

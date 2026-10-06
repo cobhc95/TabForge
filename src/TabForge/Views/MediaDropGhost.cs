@@ -130,7 +130,8 @@ internal sealed class MediaDropGhost : FrameworkElement
         foreach (var split in preview.Splits)
             dc.DrawLine(Draw.Pen(colour, 1, 0.8), new Point(Math.Round(split) + 0.5, box.Top + 2), new Point(Math.Round(split) + 0.5, box.Bottom - 2));
         var text = Draw.Solid(_theme.Text, 0.92);
-        if (box.Width > 24) Draw.At(dc, preview.Label, box.X + 6, box.Y + 3, 11, text, bold: true);
+        var label = preview.SlotLabel == "New lane" ? "New lane · " + preview.Label : preview.Label;
+        if (box.Width > 24) Draw.At(dc, label, box.X + 6, box.Y + 3, 11, text, bold: true);
         if (preview.Detail.Length > 0)
         {
             // The length (and "new lane") only when it fits: a cut-off number would read as a different length.

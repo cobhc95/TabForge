@@ -85,7 +85,7 @@ public partial class MainWindow : TabForge.Views.Score.IScoreEditHost
 
     private void RefreshAfterRestore(UndoSnapshot snapshot, int selected)
     {
-        _restoring = true;
+        _restoring = true; _trackSwitchSync?.Cancel();
         try
         {
             TempoBox.Text = _project.Tempo.ToString();
@@ -93,7 +93,7 @@ public partial class MainWindow : TabForge.Views.Score.IScoreEditHost
             Editor.Project = _project;
             RefreshTracks();
             if (_project.Tracks.Count > 0) TrackMixerGrid.SelectedIndex = Math.Clamp(selected, 0, _project.Tracks.Count - 1);
-            RefreshPluginChain(); RefreshArrangement(); RefreshMarkers(); RefreshInstrument(); RefreshStatus(); UpdateTitle(); UpdateTuningLabel();
+            SyncMixerWindows(deferEngineSync: true); RefreshArrangement(); RefreshMarkers(); RefreshInstrument(); RefreshStatus(); UpdateTitle(); UpdateTuningLabel();
             ScheduleFitTimelineToTracks();
             RefreshToolsPalette();
             ApplyRestoredPlaybackBarMapping(snapshot);
@@ -407,21 +407,23 @@ public partial class MainWindow : TabForge.Views.Score.IScoreEditHost
             EditSectionTitle(existing); // one section per bar: edit the one that is already there
             return;
         }
-        var marker = GpDialogs.Marker("Section", "#2E74B5");
+        var marker = GpDialogs.Marker("Section", "#2E74B5", bar: bar);
         if (marker is null) return;
         DocumentEdits.Run(Doc, p => { p.Markers.Add(new MarkerModel { MeasureIndex = bar, Title = marker.Value.title, ColorHex = marker.Value.color }); return true; });
         RefreshAfterEdit(EditRefresh.Score | EditRefresh.Markers | EditRefresh.Arrangement);
         StatusText.Text = $"Added section \"{marker.Value.title}\" at bar {bar + 1}";
     }
 
-    private void MarkerGo_Click(object sender, RoutedEventArgs e)
-    {
-        if (MarkerList.SelectedItem is MarkerModel marker) JumpToMarker(marker);
-    }
-
     private void MarkerEdit_Click(object sender, RoutedEventArgs e)
     {
         if (MarkerList.SelectedItem is MarkerModel marker) EditSectionTitle(marker);
+    }
+
+    private void MarkerList_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Enter || MarkerList.SelectedItem is not MarkerModel marker) return;
+        JumpToMarker(marker);
+        e.Handled = true;
     }
 
     private void MarkerList_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)

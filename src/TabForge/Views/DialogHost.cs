@@ -41,9 +41,11 @@ public static class DialogHost
     /// </summary>
     internal static void Prepare(Window dialog)
     {
+        if (dialog is ThemedConfirmDialog confirm && !confirm.BeginDialogHostPreparation()) return;
         dialog.ContentRendered += (_, _) =>
         {
-            if (!dialog.IsActive) dialog.Activate();
+            if (dialog.ShowActivated && !dialog.IsActive) dialog.Activate();
+            if (!dialog.ShowActivated && !dialog.IsActive) return;
             if (dialog.IsKeyboardFocusWithin) return;
             dialog.MoveFocus(new System.Windows.Input.TraversalRequest(System.Windows.Input.FocusNavigationDirection.First));
         };

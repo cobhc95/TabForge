@@ -231,7 +231,7 @@ public partial class MainWindow : ITrackListFitHost, ITrackGridDragHost
         _selection.SetTrack(TrackMixerGrid.SelectedIndex);
         // Selecting a track changes no sound: the engine and mixer sync runs just after the frame (one for a burst of switches),
         // so a click that also starts a drag (a clip, a bar range) or opens a menu draws at once.
-        (_trackSwitchSync ??= new Views.SettleAction(RefreshPluginChain, 30)).Request();
+        if (!_restoring) (_trackSwitchSync ??= new Views.SettleAction(RefreshPluginChain, 30)).Request();
         RefreshInstrument();
         RefreshArrangementSelection();
         SyncSelectedOutput();

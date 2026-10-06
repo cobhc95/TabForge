@@ -53,18 +53,18 @@ public sealed partial class TabEditorControl
     private bool RunEdit(Func<bool> mutate, bool markTimeline = true)
     {
         if (_project is null) return false;
-        if (Services.EditorGuard.Blocks(_project, SelectedTrackIndex)) { StatusMessage?.Invoke(this, Services.EditorGuard.Hint); return false; }   // an audio track has no notation
+        if (!ScoreEditPreparation.TryPrepare(this, mutate, out mutate)) { StatusMessage?.Invoke(this, Services.EditorGuard.Hint); return false; }
+        _layout.CaptureMeasureRange(AffectedMeasureRange);
         bool changed;
-        // With the rest fill on, the bars this edit touches stay complete, inside the same undo step.
-        if (FillBarsWithRests) mutate = Services.BarFill.Wrap(_project, SelectedTrackIndex, HasSelection ? SelectionRange() : (SelectedMeasure, 0, SelectedMeasure, 0), mutate);
-        if (EditHostNow is { } host) changed = host.Run(_ => mutate(), markTimeline);
+        if (EditHostNow is { } host) changed = host.Run(_ => ScoreEditPreparation.RunMutation(mutate, _layout), markTimeline);
         else
         {
             EditStarting?.Invoke(this, EventArgs.Empty);
-            changed = mutate();
+            changed = ScoreEditPreparation.RunMutation(mutate, _layout);
             if (changed) MarkSongChanged(markTimeline);
         }
-        if (changed) FinishEdit();
+        if (changed) FinishEdit(knownRange: true);
+        else _layout.InvalidatePendingMeasures(changed: false);
         return changed;
     }
 
@@ -77,11 +77,11 @@ public sealed partial class TabEditorControl
     }
 
     /// <summary>After the song changed: indices valid again, then the host hears <see cref="Edited"/>, then the score redraws.</summary>
-    private void FinishEdit()
+    private void FinishEdit(bool knownRange = false)
     {
         CoerceSelection();
         Edited?.Invoke(this, EventArgs.Empty);
-        InvalidateScoreLayout();
+        _layout.InvalidatePendingMeasures(useCapturedRange: knownRange);
     }
 
     /// <summary>The song already changed through <see cref="DocumentEdits.Run"/> (a paste): the host hears <see cref="Edited"/> and the score redraws.</summary>
@@ -128,7 +128,6 @@ public sealed partial class TabEditorControl
     double IScoreLayoutHost.FretFontSize => FretFontSize;
     SongProject? IScoreLayoutHost.Project => _project;
     TrackModel? IScoreLayoutHost.Track => Track;
-    void IScoreLayoutHost.ExtentChanged() => InvalidateMeasure();
 
     void IScoreAppearanceHost.AppearanceChanged(ScoreAppearanceChange change)
     {

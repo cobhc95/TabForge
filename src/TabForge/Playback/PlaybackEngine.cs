@@ -92,6 +92,9 @@ public sealed partial class PlaybackEngine : IDisposable
     private LoopRefresh? _pendingLoopRefresh;       // under _gate: the whole song recompiled, swapped in at the next loop wrap
     private int _liveRefreshMissed;                 // set by the scheduler when a live refresh was not ready at its bar line
     private double _lastLiveCompileMs;
+    private PlaybackScheduleReuse? _scheduleReuse;
+    private PendingPlaybackSeek? _pendingSeek;
+    private long _seekRequestId;
 
     public PlaybackEngine() : this(new SharedMidiOutput()) { }
     public PlaybackEngine(IMidiOutput output, PlaybackPreferences? preferences = null)
@@ -112,6 +115,7 @@ public sealed partial class PlaybackEngine : IDisposable
     public int CurrentBar { get; private set; }
     public int CurrentCell { get; private set; }
     public ScoreTimeline? Timeline => _timeline;
+    internal int SchedulerThreadId => _thread?.ManagedThreadId ?? 0;
     public double TotalMs => _timeline?.TotalMs ?? 0;
 
     // ---------- diagnostics ----------
@@ -211,6 +215,7 @@ public sealed partial class PlaybackEngine : IDisposable
         }
         var timeline = MidiTimelineBuilder.Build(project, compilerOptions);
         _timeline = timeline;
+        _scheduleReuse = PlaybackScheduleReuse.Capture(project, options, timeline);
         lock (_gate)
         {
             _pendingArrangementRefresh = null;
@@ -258,96 +263,6 @@ public sealed partial class PlaybackEngine : IDisposable
         _thread.Start();
         TimelineChanged?.Invoke(timeline);
     }
-
-    public void Pause()
-    {
-        if (!_running || _paused) return;
-        lock (_gate)
-        {
-            _anchorMs += _clock.Elapsed.TotalMilliseconds * _clockRate;
-            _clock.Reset();
-            _paused = true;
-            // Queue the reset before a concurrent Resume can make the scheduler enqueue rearm setup.
-            PanicAsync();
-        }
-        _timer.Set(false);   // RT-10: paused is idle
-    }
-
-    public void Resume()
-    {
-        if (!_running || !_paused) return;
-        _timer.Set(true);
-        lock (_gate)
-        {
-            _clock.Restart();
-            _paused = false;
-        }
-        // Pause sent a device reset, which can clear controllers/bank state on some synths, so
-        // restore program/volume/pan before the next note (on the scheduler thread).
-        _rearm = true;
-    }
-
-    public void Stop()
-    {
-        var generation = ++_generation;
-        _running = false;
-        _paused = false;
-        var thread = _thread;
-        _thread = null;
-        if (thread is not null && thread.IsAlive && thread != Thread.CurrentThread)
-        {
-            // Never block the caller (normally the UI thread) waiting for MIDI work.
-            if (!thread.Join(150)) Task.Run(() => thread.Join(1500));
-        }
-        PanicAsync();
-        _timeline = null;
-        lock (_gate)
-        {
-            _pendingArrangementRefresh = null;
-            _pendingLoopRefresh = null;
-            _arrangementRefreshRequested = false;
-        }
-        _activeMetronomeNotes.Clear();
-        _clock.Reset();
-        lock (_gate) { _anchorMs = 0; }
-        _currentStreamMs = 0;
-        _timer.Set(false);   // RT-10: stopped is idle
-    }
-
-    /// <summary>Rebuild the timeline from a new musical position, preserving play/pause state.</summary>
-    public void Seek(SongProject project, int bar, int cell)
-    {
-        var opts = _options;
-        if (opts is null) return;
-        var wasPaused = _paused;
-        opts.StartBar = Math.Max(0, bar);
-        opts.StartCell = Math.Max(0, cell);
-        RestartKeepingState(project, opts, wasPaused);
-    }
-
-    /// <summary>Change the relative speed, preserving the current musical position.</summary>
-    public void SetSpeed(SongProject project, double speed)
-    {
-        var clamped = Math.Clamp(speed, 0.25, 2.0);
-        Speed = clamped;
-        var opts = _options;
-        if (opts is null || !_running || opts.Speed.Equals(clamped)) return; // unchanged: never restart
-        var pos = Playhead();
-        opts.Speed = clamped;
-        opts.StartBar = pos.Bar;
-        opts.StartCell = pos.Cell;
-        RestartKeepingState(project, opts, _paused);
-    }
-
-    private void RestartKeepingState(SongProject project, PlaybackOptions opts, bool wasPaused)
-    {
-        var onPosition = _onPosition ?? (_ => { });
-        var onFinished = _onFinished ?? (() => { });
-        opts.CountIn = false; // seeks / speed / option changes mid-song never replay the count-in
-        Start(project, opts, onPosition, onFinished, startPaused: wasPaused);
-    }
-
-    public void SetLoop(bool loop) { if (_options is not null) _options.Loop = loop; }
 
     /// <summary>Loop count, count-in per loop and speed trainer; see <see cref="PlaybackPreferences.Loop"/>.</summary>
     public sealed record LoopBehaviour(int Count = 0, bool CountInEachLoop = false,

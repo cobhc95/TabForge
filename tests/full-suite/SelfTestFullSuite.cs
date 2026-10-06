@@ -29,6 +29,7 @@ public static partial class SelfTest
         Section("Window lifetime (real main windows)");
         GuardGroup("window-lifetime", TestWindowLifetime);
         GuardGroup("window-lifetime", TestStartupFileOpen);   // a command-line song and a second-launch hand-over open in a fresh window (.gp, .gp5, .tforge)   // repeated close, cancelled close, queued work, tab transfer, Preferences owners, engine chains
+        GuardGroup("window-lifetime", TestSingleInstanceProcessHandover);   // Explorer-style hand-over between two real app processes and last-window shutdown
         Section("Document context (media, approvals, close)");
         GuardGroup("document-context", TestDocumentContext);   // R2: explicit media / approval context, stale work, Save As, close with several dirty tabs
         Section("Document operations (explicit-document edits, entry-point parity)");
@@ -74,6 +75,7 @@ public static partial class SelfTest
         Guard(TestVoice2HopoSlurWithLongerVoice);
         Guard(TestNewBindableCommands);
         Guard(TestTrackRowMenu);
+        Guard(TestMenuPopupWarmup);
         Guard(TestSelectionScope);
         Guard(TestSelectionClipboardMatrix);
         Guard(TestTimelineCellsCurrent);
@@ -194,6 +196,7 @@ public static partial class SelfTest
         Guard(TestUserTemplatesAndFaultedChain);
         Section("Standard-notation engraving layout");
         Guard(TestNotationLayout);
+        Guard(TestScoreLayoutPartial);
         Section("Project IO / export");
         Guard(TestTrackReorder);
         Guard(TestAsciiExport);
@@ -217,6 +220,7 @@ public static partial class SelfTest
         Section("Arrangement geometry (precision)");
         Guard(TestArrangementGeometry);
         Guard(TestArrangementFollowGeometry);
+        Guard(TestSectionColourEditing);
         Section("Guitar Pro compatibility (real files)");
         GuardGroup("gp-fixtures", TestSyntheticGuitarProFixture);
         Guard(TestGuitarProFiles);
@@ -234,6 +238,7 @@ public static partial class SelfTest
         Guard(TestFullDemoSong);
         Section("Playback depth (timing / ties / channels)");
         Guard(TestPlaybackDepth);
+        Guard(TestPlaybackScheduleReuse);
         Guard(TestNoOpOptionChangesDoNotRestartPlayback);
         Guard(TestSeekWhilePlayingSoundsFirstNote);
         Guard(TestSeekWhilePlayingSoundsTargetNoteOnce);
@@ -292,6 +297,7 @@ public static partial class SelfTest
         Guard(TestMonitorFx);
         Guard(TestEngineSlotsFollowTrackIdentity);
         Guard(TestEnginePluginEditAndStatesByIdentity);
+        Guard(TestEngineSyncDeferredRequests);
         Guard(TestGainBitIdentical);
         Guard(TestGainRenderHash);
         Guard(TestSharedRingProducers);
@@ -353,10 +359,13 @@ public static partial class SelfTest
         Guard(TestPlayheadStyleSetting);
         Guard(TestTimelineHoverAndBarMarker);
         Guard(TestMediaDropPreviewGeometry);
+        Guard(TestTimelineSongTimeRepeatGrowth);
         Guard(TestClipMoves);
         Guard(TestClipMoveGhost);
         Guard(TestMidiClipMoves);
         Guard(TestSongExtent);
+        Guard(TestLongAudioClipGrowthPlayback);
+        Guard(TestAudioGrowthReservation);
         Guard(TestSectionClips);
         Section("Malformed-input fuzzing and lifecycle");
         GuardGroup("fuzz", TestMalformedInputFuzz);
@@ -463,6 +472,7 @@ public static partial class SelfTest
         ["TestEngineOwnerTransports"] = "engine",
         ["TestEnginePluginEditAndStatesByIdentity"] = "engine",
         ["TestEngineSlotsFollowTrackIdentity"] = "engine",
+        ["TestEngineSyncDeferredRequests"] = "engine",
         ["TestEngineWarmOwnership"] = "engine",
         ["TestGainBitIdentical"] = "engine",
         ["TestGainRenderHash"] = "engine",
@@ -562,6 +572,7 @@ public static partial class SelfTest
         ["TestMidiExportTiming"] = "playback",
         ["TestNoHangingNotes"] = "playback",
         ["TestNoOpOptionChangesDoNotRestartPlayback"] = "playback",
+        ["TestPlaybackScheduleReuse"] = "playback",
         ["TestPlaybackDepth"] = "playback",
         ["TestPlaybackOrderSpec"] = "playback",
         ["TestRenderBarRanges"] = "playback",
@@ -586,6 +597,8 @@ public static partial class SelfTest
         ["TestMidiFileToClip"] = "recording",
         ["TestRecordingPipeline"] = "recording",
         ["TestSongExtent"] = "recording",
+        ["TestLongAudioClipGrowthPlayback"] = "recording",
+        ["TestAudioGrowthReservation"] = "recording",
         ["TestSongFileDropRouting"] = "recording",
         ["TestVirtualFileDrop"] = "recording",
         ["TestWaveformCacheBounds"] = "recording",
@@ -609,6 +622,7 @@ public static partial class SelfTest
         ["TestTutorialWindow"] = "tutorial",
         ["TestAddTrackLane"] = "ui",
         ["TestArrangementFollowGeometry"] = "ui",
+        ["TestSectionColourEditing"] = "ui",
         ["TestArrangementGeometry"] = "ui",
         ["TestAudioInstrumentPanel"] = "ui",
         ["TestAudioTrackEditorGuards"] = "ui",
@@ -650,11 +664,13 @@ public static partial class SelfTest
         ["TestKeyboardContextMenuPlacement"] = "ui",
         ["TestMarkStacking"] = "ui",
         ["TestMediaDropPreviewGeometry"] = "ui",
+        ["TestTimelineSongTimeRepeatGrowth"] = "recording",
         ["TestMenuGestureTextFollowsBindings"] = "ui",
         ["TestMoveNoteToAdjacentString"] = "ui",
         ["TestNewBindableCommands"] = "ui",
         ["TestNoHardWiredKeyText"] = "ui",
         ["TestNotationLayout"] = "ui",
+        ["TestScoreLayoutPartial"] = "ui",
         ["TestNoteEvents"] = "ui",
         ["TestNoteMapper"] = "ui",
         ["TestPasteCommands"] = "ui",
@@ -695,6 +711,7 @@ public static partial class SelfTest
         ["TestTimelineAndInstrumentContextMenuByKeyboard"] = "ui",
         ["TestTimelineClipsShareClipboard"] = "ui",
         ["TestTimelineContextMenus"] = "ui",
+        ["TestMenuPopupWarmup"] = "ui",
         ["TestTimelineHoverAndAudioRows"] = "ui",
         ["TestTimelineHoverAndBarMarker"] = "ui",
         ["TestTimelineSectionCopiesAsBars"] = "ui",
@@ -708,5 +725,6 @@ public static partial class SelfTest
         ["TestWritingDuration"] = "ui",
         ["TestWindowLifetime"] = "window-lifetime",
         ["TestStartupFileOpen"] = "window-lifetime",
+        ["TestSingleInstanceProcessHandover"] = "release",
     };
 }
