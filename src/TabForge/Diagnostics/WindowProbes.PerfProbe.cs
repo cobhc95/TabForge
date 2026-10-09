@@ -19,6 +19,7 @@ internal sealed partial class WindowProbes : MainWindow.ProbeAccess
             try
             {
                 await Task.Delay(2000);
+                report.AppendLine(MemoryLine("opened"));
                 foreach (var (horizontal, continuous) in new[] { (false, false), (false, true), (true, false), (true, true) })
                 {
                     SetHorizontalScoreView(horizontal);
@@ -41,10 +42,22 @@ internal sealed partial class WindowProbes : MainWindow.ProbeAccess
                 }
             }
             catch (Exception ex) { report.AppendLine($"probe failed: {ex.GetBaseException().Message}"); }
+            report.AppendLine(MemoryLine("after playback"));
+            GC.Collect(2, GCCollectionMode.Forced, true, true);
+            report.AppendLine(MemoryLine("after full GC"));
             DiagnosticFileService.WriteText(path, report.ToString());
             _confirmOnClose = false;
             Application.Current.Shutdown(0);
         }));
+    }
+
+    /// <summary>One line of managed versus process memory, so a change to a cache shows in the report.</summary>
+    private static string MemoryLine(string when)
+    {
+        var info = GC.GetGCMemoryInfo();
+        var p = Process.GetCurrentProcess();
+        return $"memory {when}: managed {GC.GetTotalMemory(false) / 1048576.0:0} MB, heap committed {info.TotalCommittedBytes / 1048576.0:0} MB, " +
+               $"working set {p.WorkingSet64 / 1048576.0:0} MB, private {p.PrivateMemorySize64 / 1048576.0:0} MB";
     }
 
     /// <summary>`--probe-countin <report>`: turn count-in on through the real button handler, press Play the

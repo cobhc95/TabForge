@@ -293,6 +293,9 @@ public static partial class SelfTest
         Guard(TestBandSettings);
         Guard(TestBandLanesInSync);
         Guard(TestBandVerticalLanes);
+        Guard(TestBandRowsSamePage);
+        Guard(TestBandRowsSamePageHorizontal);
+        Guard(TestBandRowsSamePageDemo);
         Guard(TestBandLaneZoom);
         Guard(TestBandViewReset);
         Guard(TestBandWideLaneSync);
@@ -790,7 +793,7 @@ public static partial class SelfTest
         ["TestFretboardGeometry"] = "ui",
         ["TestFretboardPaneSize"] = "ui", ["TestScoreScaleMatchesFretboard"] = "ui", ["TestDockDefaultsAndFretboardPosition"] = "ui",
         ["TestKeyboardPaneSize"] = "ui",
-        ["TestBandViewRows"] = "ui", ["TestBandLaneCache"] = "ui", ["TestBandLaneClick"] = "ui", ["TestBandViewLifecycle"] = "ui", ["TestBandLayoutPreset"] = "ui", ["TestBandNeverDocked"] = "ui",
+        ["TestBandViewRows"] = "ui", ["TestBandRowsSamePage"] = "ui", ["TestBandRowsSamePageHorizontal"] = "ui", ["TestBandRowsSamePageDemo"] = "ui", ["TestBandLaneCache"] = "ui", ["TestBandLaneClick"] = "ui", ["TestBandViewLifecycle"] = "ui", ["TestBandLayoutPreset"] = "ui", ["TestBandNeverDocked"] = "ui",
         ["TestBandPillsAndRows"] = "ui", ["TestBandRowSizing"] = "ui", ["TestBandReorder"] = "ui", ["TestBandNoteGlow"] = "ui", ["TestBandStoppedInstruments"] = "ui",
         ["TestBandLayoutSaved"] = "ui", ["TestBandLayoutSafety"] = "ui", ["TestBandSettings"] = "ui", ["TestBandLanesInSync"] = "ui", ["TestBandInstrumentRows"] = "ui", ["TestBandVerticalLanes"] = "ui", ["TestBandLaneZoom"] = "ui", ["TestBandViewReset"] = "ui", ["TestBandWideLaneSync"] = "ui", ["TestBandMenu"] = "ui", ["TestBandFollow"] = "ui", ["TestBandLaneContent"] = "ui", ["TestBandReorderAutoScroll"] = "ui", ["TestBandEmptyState"] = "ui",
         ["TestBandPillContrast"] = "ui", ["TestFramedIconContrast"] = "ui", ["TestFretMarkerLabelContrast"] = "ui", ["TestFretStrumArrow"] = "ui", ["TestEffectEditorOkContrast"] = "ui", ["TestTrackNameEllipsis"] = "ui", ["TestHoverSurfaceContrast"] = "ui",

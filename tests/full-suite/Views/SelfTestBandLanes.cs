@@ -1,4 +1,4 @@
-using TabForge.Models;
+﻿using TabForge.Models;
 using TabForge.Services;
 using TabForge.Views.Band;
 
@@ -138,5 +138,110 @@ public static partial class SelfTest
         var catalog = SettingsCatalog.Build(host.Settings).Select(d => d.Key).ToHashSet();
         Check("band vertical: Preferences has the layout row", catalog.Contains("band.lanelayout"));
         Check("band vertical: the menu has the layout items", TabForge.Views.BandMenus.Build(new TabForge.Views.BandMenuState("Tab", "Full neck", 3, true), _ => "").Any(m => m.Header == "Lane layout" && m.Children?.Count == 2));
+    }
+
+    private static void TestBandRowsSamePage()
+    {
+        var project = BandUnevenSong(120);
+        var host = new FakeBandHost(project);
+        host.Settings.Timeline.Band = new BandSettings { WidthPerRow = true };
+        using var band = new BandViewController(host);
+        BandStage(band, 1000, 900);
+        band.Tick();
+        BandStage(band, 1000, 900);
+        // Rows with different instrument widths leave their lanes different widths.
+        band.State.SetWidth(project.Tracks[2], 380);
+        band.State.SetWidth(project.Tracks[0], 120);
+        band.Tick();
+        BandStage(band, 1000, 900);
+        var lanes = band.View.Rows.Select(r => r.Lane).ToList();
+        Check("band page: the lanes really differ in width", lanes.Select(l => Math.Round(l.ActualWidth)).Distinct().Count() > 1);
+        var bad = "";
+        for (var bar = 0; bar < 120 && bad == ""; bar++)
+        {
+            if (lanes.Select(l => l.SystemOf(bar)).Distinct().Count() > 1) bad = "bar " + bar + " is in systems " + string.Join("/", lanes.Select(l => l.SystemOf(bar)));
+            else if (lanes.Select(l => Math.Round(l.Editor.Zoom, 4)).Distinct().Count() > 1) bad = "zoom " + string.Join("/", lanes.Select(l => l.Editor.Zoom));
+        }
+        Check("band page: every row has the same bars on a page and the same tab scale", bad == "", bad);
+    }
+
+    private static void TestBandRowsSamePageHorizontal()
+    {
+        var project = BandSong(120);
+        foreach (var t in project.Tracks.Take(2)) t.StringTunings = new List<int> { 64, 59, 55, 50, 45, 40, 35 };
+        var host = new FakeBandHost(project);
+        host.Settings.Timeline.Band = new BandSettings { WidthPerRow = true, LaneLayout = BandChoices.Horizontal };
+        host.Settings.Follow.Mode = FollowModes.Jump;
+        using var band = new BandViewController(host);
+        BandStage(band, 2000, 1100);
+        band.Tick();
+        BandStage(band, 2000, 1100);
+        band.State.SetWidth(project.Tracks[0], 300);
+        band.State.SetWidth(project.Tracks[1], 520);
+        band.State.SetWidth(project.Tracks[2], 400);
+        band.Tick();
+        BandStage(band, 2000, 1100);
+        var lanes = band.View.Rows.Select(r => r.Lane).ToList();
+        Check("band page horizontal: the lanes differ in width", lanes.Select(l => Math.Round(l.ActualWidth)).Distinct().Count() > 1);
+        var bad = "";
+        foreach (var bar in new[] { 5, 40, 89, 90, 91, 92, 93 })
+        {
+            band.Apply(bar, 0.0, bar * 2000.0, true, false);
+            var z = lanes.Select(l => l.Editor.Zoom).ToList();
+            var x = lanes.Select(l => l.PlayheadAtLane.X).ToList();
+            var o = lanes.Select(l => l.Offset).ToList();
+            var bx = lanes.Select(l => l.Editor.Layout.GetLayout(l.Editor.Track).Measure(bar).X * l.Editor.Zoom).ToList();
+            if (bx.Max() - bx.Min() > 0.5) { bad = $"bar {bar}: bar x {string.Join("/", bx.Select(v => v.ToString("0.0")))}"; break; }
+            if (z.Max() - z.Min() > 1e-6) bad = $"bar {bar}: zoom {string.Join("/", z)}";
+            else if (o.Max() - o.Min() > 1e-6) bad = $"bar {bar}: offset {string.Join("/", o)}";
+            else if (x.Max() - x.Min() > 2) bad = $"bar {bar}: playhead x {string.Join("/", x.Select(v => v.ToString("0")))}";
+            if (bad != "") break;
+        }
+        Check("band page horizontal: same scale, same first bar, playheads within 2 px", bad == "", bad);
+    }
+
+    private static void TestBandRowsSamePageDemo()
+    {
+        var project = TabForge.Presets.FullDemoSongFactory.Create();
+        var host = new FakeBandHost(project);
+        host.Settings.Timeline.Band = new BandSettings { WidthPerRow = true, LaneLayout = BandChoices.Horizontal };
+        host.Settings.Follow.Mode = FollowModes.Jump;
+        using var band = new BandViewController(host);
+        BandStage(band, 2000, 1100);
+        band.Tick();
+        ClickPill(band, 3);
+        band.ChangeRowsPerScreen(1);
+        band.Tick();
+        BandStage(band, 2000, 1100);
+        band.State.SetWidth(project.Tracks[0], 300);
+        band.State.SetWidth(project.Tracks[1], 520);
+        band.State.SetWidth(project.Tracks[2], 400);
+        band.Tick();
+        BandStage(band, 2000, 1100);
+        var lanes = band.View.Rows.Select(r => r.Lane).ToList();
+        var bad = "";
+        band.View.Rows[2].RequestHeight(140);
+        BandStage(band, 2000, 1100);
+        band.View.Rows[2].RequestReset();
+        BandStage(band, 2000, 1100);
+        BandStage(band, 1700, 1000);
+        BandStage(band, 2000, 1100);
+        for (var step = 0; step < 100 && bad == ""; step++)
+        {
+            var bar = 84 + step / 10;
+            band.Apply(bar, step % 10 / 10.0, bar * 2000.0, true, false);
+            BandStage(band, 2000, 1100);
+            new System.Windows.Media.Imaging.RenderTargetBitmap(2000, 1100, 96, 96, System.Windows.Media.PixelFormats.Pbgra32).Render(band.View);
+            band.Tick();
+            BandStage(band, 2000, 1100);
+            band.Apply(bar, step % 10 / 10.0, bar * 2000.0, true, false);
+            var z = lanes.Select(l => l.Editor.Zoom).ToList();
+            var o = lanes.Select(l => l.Offset).ToList();
+            var bx = lanes.Select(l => l.Editor.Layout.GetLayout(l.Editor.Track).Measure(bar).X * l.Editor.Zoom).ToList();
+            if (z.Max() - z.Min() > 1e-6) bad = $"bar {bar}: zoom {string.Join("/", z.Select(v => v.ToString("0.000")))}";
+            else if (o.Max() - o.Min() > 1e-6) bad = $"bar {bar}: offset {string.Join("/", o)}";
+            else if (bx.Max() - bx.Min() > 0.5) bad = $"bar {bar}: bar x {string.Join("/", bx.Select(v => v.ToString("0.0")))}";
+        }
+        Check("band demo: four rows share the scale, the first bar and the bar positions", lanes.Count == 4 && bad == "", lanes.Count + " rows " + bad);
     }
 }

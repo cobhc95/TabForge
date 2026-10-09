@@ -407,7 +407,7 @@ public sealed partial class ArrangementPanel
                 TrackOptionsRequested?.Invoke(this, index);
                 e.Handled = true;
             };
-            _trackRows.Add(row);
+            _trackRows.Add(row); TrackRowHover.Attach(row, index, _timeline);
             _controls.Children.Add(row);
         }
         if (_addLane.Build() is { } addLane) _controls.Children.Add(addLane);   // rows end flush against it

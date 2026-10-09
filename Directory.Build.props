@@ -2,7 +2,7 @@
   <!-- Build settings shared by every TabForge project (app, audio engine, contracts), so they cannot drift. -->
   <PropertyGroup>
     <!-- Release version: the one place it is set. Shown in About/Settings, stamped into every assembly and the installer. -->
-    <Version>0.6.1</Version>
+    <Version>0.6.2</Version>
     <!-- true marks a pre-release build even without a version suffix (About/Settings text, update check). 0.5 is the official release. -->
     <PreRelease>false</PreRelease>
     <Nullable>enable</Nullable>

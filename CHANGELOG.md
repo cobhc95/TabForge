@@ -2,6 +2,11 @@
 
 TabForge is actively developed; please report anything odd on the Issues page.
 
+## 0.6.2 — 2026-10-09
+
+- Hovering a track row in the track list shows a subtle hover shade; the selected track keeps its stronger highlight.
+- Band view: every row now shows the same bars, turns the page together and draws its tab at the same scale, even when the rows have different widths.
+
 ## 0.6.1 — 2026-10-09
 
 - With many tracks, the track list now takes at most about half the height, so the score always shows at least one full line of tab and notation; further tracks scroll.

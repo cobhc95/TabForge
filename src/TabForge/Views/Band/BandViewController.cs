@@ -421,24 +421,38 @@ internal sealed class BandViewController : IDisposable
         try
         {
             var rows = View.Rows;
-            double[]? widest = null;
-            var cap = 4.0;
-            for (var i = 0; i < rows.Count; i++)
+            // A lane that refits at the new cap or width may want another zoom (its system height is not exactly linear): settle in a few passes.
+            for (var pass = 0; pass < 4; pass++)
             {
-                var lane = rows[i].Lane;
-                var natural = lane.NaturalBarWidths();
-                if (natural is null) continue;
-                cap = Math.Min(cap, lane.WantedZoom);
-                if (widest is null) widest = (double[])natural.Clone();
-                else
+                double[]? widest = null;
+                var cap = 4.0;
+                var narrow = double.MaxValue;
+                for (var i = 0; i < rows.Count; i++)
                 {
-                    if (natural.Length > widest.Length) Array.Resize(ref widest, natural.Length);
-                    for (var b = 0; b < natural.Length; b++) widest[b] = Math.Max(widest[b], natural[b]);
+                    var lane = rows[i].Lane;
+                    var natural = lane.NaturalBarWidths();
+                    if (natural is null) continue;
+                    cap = Math.Min(cap, lane.WantedZoom);
+                    if (lane.ActualWidth > 1) narrow = Math.Min(narrow, lane.ActualWidth);
+                    if (widest is null) widest = (double[])natural.Clone();
+                    else
+                    {
+                        if (natural.Length > widest.Length) Array.Resize(ref widest, natural.Length);
+                        for (var b = 0; b < natural.Length; b++) widest[b] = Math.Max(widest[b], natural[b]);
+                    }
                 }
+                if (widest is not null && (_floor is null || !_floor.AsSpan().SequenceEqual(widest))) _floor = widest;
+                else if (widest is null) _floor = null;
+                var changed = false;
+                for (var i = 0; i < rows.Count; i++)
+                {
+                    var lane = rows[i].Lane;
+                    var before = (lane.WantedZoom, lane.Editor.Zoom);
+                    lane.ShareBarWidths(_floor); lane.ZoomCap = cap; lane.SharedWidth = narrow < double.MaxValue ? narrow : 0;
+                    if (before != (lane.WantedZoom, lane.Editor.Zoom)) changed = true;
+                }
+                if (!changed) break;
             }
-            if (widest is not null && (_floor is null || !_floor.AsSpan().SequenceEqual(widest))) _floor = widest;
-            else if (widest is null) _floor = null;
-            for (var i = 0; i < rows.Count; i++) { rows[i].Lane.ShareBarWidths(_floor); rows[i].Lane.ZoomCap = cap; }
             _lastBar = -2;
         }
         finally { _aligning = false; }

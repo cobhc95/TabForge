@@ -1,4 +1,4 @@
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -105,8 +105,16 @@ internal sealed class BandLane : Border
     /// <summary>The zoom this lane would use alone (the score's text scale, shrunk to fit its height).</summary>
     internal double WantedZoom { get; private set; } = 1;
 
-    /// <summary>Raised when the zoom this lane wants changed: the controller then settles the shared cap.</summary>
+    /// <summary>Raised when the zoom this lane wants or its width changed: the controller then settles the shared cap and page width.</summary>
     internal event Action? WantedZoomChanged;
+
+    private double _shareWidth, _lastWidth;
+    /// <summary>Vertical layout: the page width (the narrowest lane's) every lane wraps its systems at, so each system starts on the same bar in all lanes.</summary>
+    internal double SharedWidth
+    {
+        get => _shareWidth;
+        set { if (Math.Abs(value - _shareWidth) < 0.5) return; _shareWidth = value; Refit(); }
+    }
 
     /// <summary>Hands the lane the bar widths all lanes share (the widest of each bar), so the bars line up between lanes.</summary>
     internal void ShareBarWidths(double[]? widths)
@@ -220,6 +228,7 @@ internal sealed class BandLane : Border
     internal void Refit()
     {
         if (ActualHeight < 20) return;
+        _editor.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));   // the system height follows marks found while laying out (tempo, text): read it settled
         var unit = _editor.Zoom > 0 ? _editor.SystemHeightNow / _editor.Zoom : 0;
         if (unit <= 0) return;
         // Only a tab-only strip may overflow (its empty top padding is cut); a strip with notation scales to fit whole.
@@ -229,7 +238,7 @@ internal sealed class BandLane : Border
         WantedZoom = wanted;
         var zoom = Math.Min(wanted, _zoomCap);
         if (Math.Abs(zoom - _editor.Zoom) > 0.001) _editor.Zoom = zoom;
-        if (_vertical) _editor.PageWidthOverride = Math.Max(300, ActualWidth / zoom);
+        if (_vertical) _editor.PageWidthOverride = Math.Max(300, (_shareWidth > 1 ? _shareWidth : ActualWidth) / zoom);
         _editor.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
         // Centred when it fits; a taller system keeps its tab staff (at the bottom) and loses top padding.
         var spare = ActualHeight - _editor.SystemHeightNow * VisibleSystems;
@@ -239,7 +248,9 @@ internal sealed class BandLane : Border
         _shownBar = -2;   // the strip and the line go back to the last asked position now
         if (_wantBar >= -1) Place(_wantBar, _wantFraction, _pos);
         PlaceGlow();
-        if (wantedChanged) WantedZoomChanged?.Invoke();
+        var widthChanged = _vertical && Math.Abs(ActualWidth - _lastWidth) > 0.5;
+        _lastWidth = ActualWidth;
+        if (wantedChanged || widthChanged) WantedZoomChanged?.Invoke();
     }
 
     /// <summary>How many whole systems the lane shows at once (always 1 for a horizontal strip).</summary>
