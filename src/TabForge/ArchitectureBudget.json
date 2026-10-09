@@ -25,10 +25,10 @@
   "classes": {
     "TabForge.Audio.AudioEngineClient": {"files": ["src/TabForge/Audio/AudioEngineClient.cs", "src/TabForge/Audio/AudioEngineClient.*.cs"], "lines": 1559, "fileCount": 4, "fields": 46, "methods": 110, "il": 24388},
     "TabForge.Diagnostics.DiagnosticCommands": {"files": ["src/TabForge/Diagnostics/DiagnosticCommands.cs", "src/TabForge/Diagnostics/DiagnosticCommands.*.cs"], "lines": 944, "fileCount": 7, "fields": 0, "methods": 50, "il": 41262},
-    "TabForge.MainWindow": {"files": ["src/TabForge/MainWindow.cs", "src/TabForge/MainWindow.*.cs"], "lines": 7137, "fileCount": 31, "fields": 187, "methods": 690, "il": 101508},
+    "TabForge.MainWindow": {"files": ["src/TabForge/MainWindow.cs", "src/TabForge/MainWindow.*.cs"], "lines": 7137, "fileCount": 31, "fields": 187, "methods": 690, "il": 101747},
     "TabForge.Playback.PlaybackEngine": {"files": ["src/TabForge/Playback/PlaybackEngine.cs", "src/TabForge/Playback/PlaybackEngine.*.cs"], "lines": 1772, "fileCount": 8, "fields": 62, "methods": 87, "il": 17659},
     "TabForge.Presets.FullDemoSongFactory": {"files": ["src/TabForge/Presets/FullDemoSong/FullDemoSongFactory.cs", "src/TabForge/Presets/FullDemoSong/FullDemoSongFactory.*.cs"], "lines": 2505, "fileCount": 6, "fields": 0, "methods": 97, "il": 52561},
-    "TabForge.SelfTest": {"files": ["src/TabForge/SelfTests/*.cs", "src/TabForge/SelfTests/**/*.cs", "tests/full-suite/*.cs", "tests/full-suite/**/*.cs"], "ceiling": true, "lines": 53099, "fileCount": 257},
+    "TabForge.SelfTest": {"files": ["src/TabForge/SelfTests/*.cs", "src/TabForge/SelfTests/**/*.cs", "tests/full-suite/*.cs", "tests/full-suite/**/*.cs"], "ceiling": true, "lines": 53126, "fileCount": 257},
     "TabForge.Views.ArrangementPanel": {"files": ["src/TabForge/Views/ArrangementPanel.cs", "src/TabForge/Views/ArrangementPanel.*.cs"], "lines": 2859, "fileCount": 12, "fields": 59, "methods": 231, "il": 35387},
     "TabForge.Views.DockWorkspace": {"files": ["src/TabForge/Views/DockWorkspace.cs"], "lines": 1051, "fileCount": 1, "fields": 16, "methods": 84, "il": 14034},
     "TabForge.Views.PreferencesWindow": {"files": ["src/TabForge/Views/PreferencesWindow.xaml.cs"], "lines": 962, "fileCount": 1, "fields": 39, "methods": 79, "il": 13395},
@@ -63,7 +63,7 @@
   },
   "methodIlThreshold": 4000,
   "largeMethods": {
-    "TabForge.Diagnostics.WindowProbes.CaptureRun.FrameAction": 4134,
+    "TabForge.Diagnostics.WindowProbes.CaptureRun.FrameAction": 4311,
     "TabForge.AudioEngine.EngineHost.HandleCommand": 4219,
     "TabForge.AudioEngine.Mixing.OfflineRenderer.Run": 4461,
     "TabForge.AudioEngine.Synth.DlsToSoundFont.Sf2Writer.Write": 4264,

@@ -205,6 +205,7 @@ public partial class MainWindow : ITrackListFitHost, ITrackGridDragHost
     DockWorkspace ITrackListFitHost.Dock => _dockWorkspace!;
     void ITrackListFitHost.SaveSettings() => SaveSettings();
     void ITrackListFitHost.SetStatus(string text) => StatusText.Text = text;
+    double ITrackListFitHost.MinScoreHeight => Editor.SystemHeightNow + 40;
 
     private void FitTimelineToTracks() => _trackListFit?.FitToTracks();
 

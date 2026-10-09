@@ -2,6 +2,13 @@
 
 TabForge is actively developed; please report anything odd on the Issues page.
 
+## 0.6.1 — 2026-10-09
+
+- With many tracks, the track list now takes at most about half the height, so the score always shows at least one full line of tab and notation; further tracks scroll.
+- A song opened in a short score pane shows its first line of music instead of only the title.
+- When the score pane is shorter than one line of music, the view keeps the TAB and cursor in sight instead of the empty space above the notation.
+- Lines of music sit slightly closer together in the vertical page view.
+
 ## 0.6.0 — 2026-10-08
 
 A big update since 0.5.6: a new Band view, editors for every note effect, live sound preview, mixer groups you can shape yourself, a fresh look with new icons, and a long list of editing, playback and audio fixes.

@@ -11,7 +11,7 @@ using TabForge.Views;
 namespace TabForge.Diagnostics;
 
 // Owns: the capture step "frames" (an animated sequence written as numbered PNGs plus <prefix>.frames.json with the time of each frame).
-//   {"frames":"name","action":"playback|track-drag|section-drag|area-move|record|clip-edit|type-notes","p":[...],"count":40,"interval":50,"hold":8,
+//   {"frames":"name","action":"playback|band-playback|track-drag|section-drag|area-move|record|clip-edit|type-notes","p":[...],"count":40,"interval":50,"hold":8,
 //    "target":"window","region":[x,y,w,h]}
 // Each frame applies the action at progress t (0..1) through the simulation seams (no pressed mouse button needed), waits, and renders the target.
 // Does not own: single shots (WindowProbes.CaptureShots.cs) or the GIF assembly (done outside the app from the PNGs).
@@ -44,6 +44,7 @@ internal sealed partial class WindowProbes
                 var t = Math.Clamp(i / (double)Math.Max(1, count - 1), 0, 1);
                 if (i < count) frame.Step(i, t); else frame.Hold(i - count);
                 await _w.Settle(interval);
+                ScrubHardwareNames();   // playback rewrites the status bar's device text: hide it on every frame, not only the first
                 RenderTreeFresh(element);
                 var bitmap = Render(element, element.ActualWidth, element.ActualHeight, region);
                 times.Add(clock.ElapsedMilliseconds);
@@ -88,6 +89,13 @@ internal sealed partial class WindowProbes
                     }
                     return new FrameScript((_, t) => At(p[0] + (p[1] - p[0]) * t), _ => { }, () => w._isPlayingVisual = false);
                 }
+                case "band-playback":   // p = [from, to] as bar + fraction (1-based); the Band view follows with its lanes and instruments
+                    return new FrameScript((_, t) =>
+                    {
+                        var pos = p[0] + (p[1] - p[0]) * t;
+                        var bar = (int)Math.Floor(pos);
+                        BandPlaying(bar - 1, pos - bar);
+                    }, _ => { }, () => w.Window.Band.ProbePlay = null);
                 case "track-drag":   // p = [from, to] (0-based track rows)
                 {
                     int from = (int)p[0], to = (int)p[1];

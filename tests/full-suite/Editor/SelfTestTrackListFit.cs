@@ -38,6 +38,7 @@ public static partial class SelfTest
         public DockWorkspace Dock { get; init; } = null!;
         public System.Windows.Threading.Dispatcher Dispatcher => System.Windows.Threading.Dispatcher.CurrentDispatcher;
         public int Saves;
+        public double MinScoreHeight { get; init; }
         public void SaveSettings() => Saves++;
         public void SetStatus(string text) { }
     }
@@ -172,6 +173,31 @@ public static partial class SelfTest
         foreach (var (tracks, groups, height) in new[] { (1, false, 1500), (4, false, 1500), (4, true, 1500), (20, false, 1700), (20, false, 800) })
             TrackListDragLimits(tracks, groups, height);
         Check("track list fit: 'Reset track row height' is a bindable command", HotkeyCatalog.All.Any(a => a.Id == "View.ResetTrackRowHeight"));
+    }
+
+    /// <summary>A 1300x800 window with 10 tracks: the track list stops at 45% of the space and the score pane keeps one system.</summary>
+    private static void TestTrackListFitCapsAtScore()
+    {
+        var song = new SongProject();
+        for (var i = 0; i < 10; i++) song.Tracks.Add(MixerTestTrack("T" + i, TrackKind.Guitar, 30));
+        var panel = new ArrangementPanel();
+        panel.Bind(song, Array.Empty<Playback.MidiOutputDeviceInfo>());
+        var workspace = new DockWorkspace(new Window());
+        var window = new FitStage(workspace, 1300, 800);
+        var score = new Border();
+        workspace.SetEditorContent(score, 460, 0);
+        workspace.RegisterPanel("timeline", "Arrangement", panel, 440, 112, "timeline", "score-editor");
+        workspace.RestoreLayout(null);
+        using var alive = KeepAlive();
+        try
+        {
+            window.UpdateLayout(); PumpUi();
+            var fit = new TrackListFitController(new FitHost { Arrangement = panel, Dock = workspace, MinScoreHeight = 240 }, workspace);
+            fit.FitToTracks(); PumpUi(); window.UpdateLayout();
+            Check("track list cap: the score pane keeps at least one system", score.ActualHeight >= 240, $"score {score.ActualHeight:0}px, list {panel.ActualHeight:0}px");
+            Check("track list cap: the track list stays within 45% of the space (rows scroll)", panel.ActualHeight <= 800 * 0.45 + 4 && panel.ActualHeight + 2 >= ArrangementPanel.CollapsedPaneHeight, $"{panel.ActualHeight:0}px");
+        }
+        finally { window.Close(); }
     }
 
     private static void TwoPanelsKeepTheirOwnRowHeight()

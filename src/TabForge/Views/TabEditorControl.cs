@@ -31,11 +31,11 @@ public sealed partial class TabEditorControl : FrameworkElement, IScoreLayoutHos
     // read on stage without touching the code. The defaults reproduce the original fixed layout.
     private double StaffGap => 9.0 * Appearance.ScoreSpacing;
     private double StringGap => 15.0 * Appearance.ScoreSpacing;
-    private double StaffMarginTop => (46.0 + _layout.ExtraAbove) * Appearance.ScoreSpacing;
+    private double StaffMarginTop => (38.0 + _layout.ExtraAbove) * Appearance.ScoreSpacing;
     private double StaffHeight => 4 * StaffGap;
     // Keep a generous clear band between standard notation and tablature, matching printed scores (grown when low notes reach into it).
     private double StaveGap => (52.0 + _layout.ExtraBelow) * Appearance.ScoreSpacing * Appearance.SystemVerticalSpacing;
-    private double SystemHeight => StaffMarginTop + StaffToTab + (TabStringCount - 1) * StringGap + Math.Max(28.0 * Appearance.ScoreSpacing, _layout.ExtraTabBelow);
+    private double SystemHeight => StaffMarginTop + StaffToTab + (TabStringCount - 1) * StringGap + Math.Max(20.0 * Appearance.ScoreSpacing, _layout.ExtraTabBelow);
     /// <summary>Strings of the shown track (6 when there is none): the tab part of a system follows it.</summary>
     private int TabStringCount => Math.Max(1, Track?.StringTunings.Count is > 0 and var n ? n : 6);
 

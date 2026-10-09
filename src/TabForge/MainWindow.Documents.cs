@@ -175,6 +175,8 @@ public partial class MainWindow
                 ScoreScroll.UpdateLayout();
                 ScoreScroll.ScrollToHorizontalOffset(0);
                 ScrollToCursor();
+                // a pane shorter than title + one system shows the cursor's system, not the title block
+                if (!_follow.BarInView(Editor.SelectedMeasure) && ScoreScroll.ViewportHeight > 1) _follow.JumpTo(_follow.FocusTop(Editor.SystemTopForMeasure(Editor.SelectedMeasure)));
                 ScoreScroll.ScrollToHorizontalOffset(0);
             }), System.Windows.Threading.DispatcherPriority.ContextIdle);
         Dispatcher.BeginInvoke(new Action(() =>

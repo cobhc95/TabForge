@@ -71,12 +71,14 @@ internal sealed class ScoreFollowCoordinator
             if (_isPlayingVisual() || _editor.HorizontalScroll || _editor.Track is not { Measures.Count: > 0 } || _scroll.ViewportHeight <= 1) return;
             var top = _editor.SystemTopForMeasure(_editor.SelectedMeasure);
             var height = _editor.SystemHeightNow;
+            // A pane shorter than one system keeps the TAB (the system's lower part) in view.
+            if (_scroll.ViewportHeight > 1 && height > _scroll.ViewportHeight) { var focus = FocusTop(top); if (Math.Abs(_scroll.VerticalOffset - focus) > 2) JumpTo(focus); return; }
             var shown = Math.Min(top + height, _scroll.VerticalOffset + _scroll.ViewportHeight) - Math.Max(top, _scroll.VerticalOffset);
             var quarter = Math.Min(height, _scroll.ViewportHeight) / 4;
             if (shown >= quarter) return;
             // The usual target keeps headings above the system in view; a pane too short for both shows the system itself.
             var offset = _editor.ScrollOffsetForMeasure(_editor.SelectedMeasure);
-            JumpTo(top < offset || top + quarter > offset + _scroll.ViewportHeight ? top : offset);
+            JumpTo(top < offset || top + quarter > offset + _scroll.ViewportHeight ? FocusTop(top) : offset);
         });
     }
 
@@ -415,10 +417,19 @@ internal sealed class ScoreFollowCoordinator
         return ScoreVerticalFollow.GlideStep(current, target, dt);
     }
 
+    /// <summary>Where to scroll for a system starting at <paramref name="top"/>: its top, or, in a pane shorter than the system, its lower part so the TAB stays in view.</summary>
+    public double FocusTop(double top)
+    {
+        var height = _editor.SystemHeightNow;
+        var viewport = _scroll.ViewportHeight;
+        return height > viewport && viewport > 1 ? top + height - viewport : top;
+    }
+
     private double? NextVerticalOffset(int bar)
     {
         var viewport = _scroll.ViewportHeight;
         if (viewport <= 1) return null;
+        if (_editor.SystemHeightNow > viewport) return FocusTop(_editor.SystemTopForMeasure(bar));   // a pane shorter than one system follows the TAB
         return ScoreVerticalFollow.NextOffset(_scroll.VerticalOffset, viewport,
             _editor.SystemTopForMeasure(bar), _editor.SystemHeightNow, _scroll.ExtentHeight,
             _marginPercent, _settings().VerticalTriggerPercent);

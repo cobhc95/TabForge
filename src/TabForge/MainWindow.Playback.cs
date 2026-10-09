@@ -341,7 +341,8 @@ public partial class MainWindow
     {
         var track = SelectedTrack;
         if (track is null || track.Measures.Count == 0) return;
-        _follow.JumpTo(Editor.ScrollOffsetForMeasure(Editor.SelectedMeasure));
+        var bar = Math.Clamp(Editor.SelectedMeasure, 0, track.Measures.Count - 1);
+        _follow.JumpTo(ScoreScroll.ViewportHeight > 1 && Editor.SystemHeightNow > ScoreScroll.ViewportHeight ? _follow.FocusTop(Editor.SystemTopForMeasure(bar)) : Editor.ScrollOffsetForMeasure(bar));
         // One-line mode: bring the cursor bar into view unless it already is.
         if (Editor.HorizontalScroll)
         {

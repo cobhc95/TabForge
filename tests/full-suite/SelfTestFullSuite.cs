@@ -165,6 +165,7 @@ public static partial class SelfTest
         Guard(TestThemedCheckBoxAndProgressBar);
         Guard(TestDockRatioNotRewrittenByAutoFit);
         Guard(TestTrackListFit);
+        Guard(TestTrackListFitCapsAtScore);
         Guard(TestTrackListCollapse);
         Guard(TestResizeDuringPlayback);
         Guard(TestTrackRowsEndFlush);
@@ -871,7 +872,7 @@ public static partial class SelfTest
         ["TestTimelineSectionCopiesAsBars"] = "ui",
         ["TestTooltips"] = "ui",
         ["TestTrackColumnHeaderFit"] = "ui",
-        ["TestTrackListFit"] = "ui", ["TestTrackListCollapse"] = "ui",
+        ["TestTrackListFit"] = "ui", ["TestTrackListFitCapsAtScore"] = "ui", ["TestTrackListCollapse"] = "ui",
         ["TestTrackRowRightClick"] = "ui", ["TestTrackRowMenu"] = "ui", ["TestSelectionScope"] = "ui", ["TestSelectionClipboardMatrix"] = "ui", ["TestTimelineCellsCurrent"] = "ui", ["TestClipDragPress"] = "ui", ["TestClipWaveformSpan"] = "ui",
         ["TestTrackRowsEndFlush"] = "ui",
         ["TestViewMenuWording"] = "ui",

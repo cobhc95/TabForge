@@ -14,6 +14,8 @@ internal interface ITrackListFitHost
     Dispatcher Dispatcher { get; }
     void SaveSettings();
     void SetStatus(string text);
+    /// <summary>The least height the score pane keeps (one full system); 0 when unknown.</summary>
+    double MinScoreHeight => 0;
 }
 
 // Owns: the track-list dock height: fitting it to its rows and turning a splitter drag into a row height.
@@ -31,6 +33,7 @@ internal sealed class TrackListFitController
     internal const double Chrome = 2;
     private readonly ITrackListFitHost _host;
     private bool _fitting, _dragging, _fitPending;
+    private bool _uncapped;   // a dragged-to height is the user's: the cap does not pull it back
     private bool _userShort;   // the user dragged the dock shorter than its rows: leave it there until the tracks change
 
     public TrackListFitController(ITrackListFitHost host, FrameworkElement owner)
@@ -82,11 +85,21 @@ internal sealed class TrackListFitController
         _fitting = true;
         try
         {
-            var want = _host.Arrangement.PreferredHeight();
+            var want = CappedHeight();
             if (!allowGrow && _host.Arrangement.ActualHeight + Chrome <= want + 1) return;
             _host.Dock.FitPanelHeight(PanelId, want);
         }
         finally { _fitting = false; }
+    }
+
+    /// <summary>The rows' height, capped at 45% of the space shared with the score and leaving the score one system; never below the collapsed height. Extra rows scroll.</summary>
+    private double CappedHeight()
+    {
+        var want = _host.Arrangement.PreferredHeight();
+        var shared = _host.Dock.ActualHeight;
+        if (shared <= 1 || _host.MinScoreHeight <= 0 || _uncapped) return want;
+        var cap = Math.Min(shared * 0.45, shared - _host.MinScoreHeight);
+        return Math.Min(want, Math.Max(ArrangementPanel.CollapsedPaneHeight, cap));
     }
 
     /// <summary>Back to the default row height and a dock that fits the rows.</summary>
@@ -118,7 +131,7 @@ internal sealed class TrackListFitController
                 _userShort = _host.Arrangement.ActualHeight + Chrome < _host.Arrangement.PreferredHeight() - 1;
                 var kept = _userShort ? Math.Round(_host.Arrangement.ActualHeight + Chrome) : 0;
                 if (Math.Abs(_host.Timeline.TrackListHeight - kept) > 0.5) { _host.Timeline.TrackListHeight = kept; _host.SaveSettings(); }
-                if (!_userShort) Fit(allowGrow: true);   // past the maximum row height: snap back to the rows
+                if (!_userShort) { _uncapped = true; try { Fit(allowGrow: true); } finally { _uncapped = false; } }   // past the maximum row height: snap back to the rows
                 break;
             case DockSplitterPhase.DoubleClick: ResetRowHeight(); break;
         }
