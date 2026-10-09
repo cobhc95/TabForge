@@ -1,0 +1,78 @@
+diff --git a/packages/alphatab/src/model/Note.ts b/packages/alphatab/src/model/Note.ts
+index df63ee7..09feec0 100644
+--- a/packages/alphatab/src/model/Note.ts
++++ b/packages/alphatab/src/model/Note.ts
+@@ -517,6 +517,27 @@ export class Note {
+      */
+     public isTieDestination: boolean = false;
+ 
++    /**
++     * TabForge patch: true when the file marks this note as a hammer-on/pull-off origin but no destination follows it,
++     * so {@link isHammerPullOrigin} was cleared on finish.
++     * @json_ignore
++     */
++    public unlinkedHammerPullOrigin: boolean = false;
++
++    /**
++     * TabForge patch: the shift or legato slide the file gives this note when no next note on the line completes it,
++     * so {@link slideOutType} was reset to None on finish.
++     * @json_ignore
++     */
++    public unlinkedSlideOutType: SlideOutType = SlideOutType.None;
++
++    /**
++     * TabForge patch: true when the file marks this note as tied but no note before it can be the origin,
++     * so {@link isTieDestination} was cleared on finish.
++     * @json_ignore
++     */
++    public unlinkedTieDestination: boolean = false;
++
+     public get isTieOrigin(): boolean {
+         return this.tieDestination !== null;
+     }
+@@ -897,6 +918,7 @@ export class Note {
+         if (this.isHammerPullOrigin) {
+             const hammerPullDestination = Note.findHammerPullDestination(this);
+             if (!hammerPullDestination) {
++                this.unlinkedHammerPullOrigin = true;
+                 this.isHammerPullOrigin = false;
+             } else {
+                 this.hammerPullDestination = hammerPullDestination;
+@@ -912,6 +934,7 @@ export class Note {
+                 }
+ 
+                 if (!this.slideTarget) {
++                    this.unlinkedSlideOutType = this.slideOutType;
+                     this.slideOutType = SlideOutType.None;
+                 } else {
+                     this.slideTarget.slideOrigin = this;
+@@ -1250,6 +1273,7 @@ export class Note {
+ 
+             const tieOrigin = this.tieOrigin ?? Note.findTieOrigin(this);
+             if (!tieOrigin) {
++                this.unlinkedTieDestination = true;
+                 this.isTieDestination = false;
+             } else {
+                 tieOrigin.tieDestination = this;
+diff --git a/packages/csharp/src/Directory.Build.props b/packages/csharp/src/Directory.Build.props
+index 4788b10..100841b 100644
+--- a/packages/csharp/src/Directory.Build.props
++++ b/packages/csharp/src/Directory.Build.props
+@@ -2,14 +2,14 @@
+   <PropertyGroup>
+     <DebugType>portable</DebugType>
+     <DebugSymbols>true</DebugSymbols>
+-    <Version>1.8.4-tabforge.3</Version>
+-    <AssemblyVersion>1.8.4.3</AssemblyVersion>
++    <Version>1.8.4-tabforge.4</Version>
++    <AssemblyVersion>1.8.4.4</AssemblyVersion>
+     <FileVersion>$(AssemblyVersion)</FileVersion>
+     <Authors>Danielku15</Authors>
+     <Company>CoderLine</Company>
+     <Product>AlphaTab</Product>
+     <NeutralLanguage>en</NeutralLanguage>
+-    <Description>TabForge build of alphaTab 1.8.4 (MPL-2.0): upstream plus three patches: a per-import Guitar Pro 3-5 bar limit (ImporterSettings.MaxGp3To5BarCount), exact GPIF mixer volume/balance (PlaybackInformation.VolumeFraction/BalanceFraction) and the GPIF trill speed (note XProperty). Not the upstream package.</Description>
++    <Description>TabForge build of alphaTab 1.8.4 (MPL-2.0): upstream plus four patches: a per-import Guitar Pro 3-5 bar limit (ImporterSettings.MaxGp3To5BarCount), exact GPIF mixer volume/balance (PlaybackInformation.VolumeFraction/BalanceFraction) the GPIF trill speed (note XProperty) and the Guitar Pro 3-5 link marks with no partner note (Note.Unlinked*). Not the upstream package.</Description>
+     <Copyright>Copyright © 2025, Daniel Kuschny and Contributors</Copyright>
+     <PackageLicenseExpression>MPL-2.0</PackageLicenseExpression>
+     <PackageProjectUrl>https://www.alphatab.net</PackageProjectUrl>

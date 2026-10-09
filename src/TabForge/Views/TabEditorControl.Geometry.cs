@@ -58,8 +58,9 @@ public sealed partial class TabEditorControl
     {
         var track = Track;
         if (track is null || track.Measures.Count == 0) return 0;
-        var system = GetScoreLayout(track).SystemForMeasure(Math.Clamp(measure, 0, track.Measures.Count - 1));
-        return Math.Max(0, SystemTop(system) - 20) * _zoom;
+        var system = Layout.GetLayout(track).SystemForMeasure(Math.Clamp(measure, 0, track.Measures.Count - 1));
+        // The first system scrolls to the top so the title and tuning block above it stay in view.
+        return system == 0 ? 0 : Math.Max(0, SystemTop(system) - 20) * _zoom;
     }
 
     /// <summary>Left edge (rendered pixels) of a measure, for horizontal scrolling to the cursor.</summary>
@@ -67,7 +68,7 @@ public sealed partial class TabEditorControl
     {
         var track = Track;
         if (track is null || track.Measures.Count == 0) return 0;
-        var layout = GetScoreLayout(track);
+        var layout = Layout.GetLayout(track);
         var index = Math.Clamp(measure, 0, track.Measures.Count - 1);
         return Math.Max(0, layout.Measure(index).X - 60) * _zoom;
     }
@@ -77,7 +78,7 @@ public sealed partial class TabEditorControl
     {
         var track = Track;
         if (track is null || track.Measures.Count == 0) return 0;
-        var system = GetScoreLayout(track).SystemForMeasure(Math.Clamp(measure, 0, track.Measures.Count - 1));
+        var system = Layout.GetLayout(track).SystemForMeasure(Math.Clamp(measure, 0, track.Measures.Count - 1));
         return SystemTop(system) * _zoom;
     }
 
@@ -87,10 +88,13 @@ public sealed partial class TabEditorControl
         return p is null ? 16 : MusicTime.BarSlots(p, measure);
     }
 
-    /// <summary>Invalidate the natural-width and system-break cache after score content changes.</summary>
+    /// <summary>A cursor cell kept inside a bar: past the bar's slots only on a real beat of an overfull bar, otherwise the nearest allowed position.</summary>
+    private int CoerceCell(int measure, int cell) => cell < SlotsFor(measure) ? Math.Max(0, cell) : Snap(measure, cell);
+
+    /// <summary>Invalidate the natural-width and system-break cache after score content changes; the cursor is clamped into the changed song (a shorter time signature, fewer bars).</summary>
     public void InvalidateScoreLayout()
     {
-        _layout.Invalidate();
+        CoerceSelection(); _layout.Invalidate();
     }
 
     void IScoreLayoutHost.LayoutChanged() { InvalidateStructure(); InvalidateMeasure(); InvalidateVisual(); }
@@ -119,7 +123,6 @@ public sealed partial class TabEditorControl
     private List<TabCell> CellsFor(MeasureModel measure, bool create = false)
         => measure.CellsForVoice(_activeVoiceIndex, create);
 
-    internal ScorePageLayout GetScoreLayout(TrackModel? track = null) => _layout.GetLayout(track);
 
 
     public void SetPosition(int measure, int cell, int @string, bool seekPlayback = true)
@@ -127,7 +130,7 @@ public sealed partial class TabEditorControl
         var track = Track;
         if (track is null) return;
         SelectedMeasure = Math.Clamp(measure, 0, Math.Max(0, track.Measures.Count - 1));
-        SelectedCell = Math.Clamp(cell, 0, SlotsFor(SelectedMeasure) - 1);
+        SelectedCell = CoerceCell(SelectedMeasure, cell);
         SelectedString = Math.Clamp(@string, 0, Math.Max(0, track.StringTunings.Count - 1));
         SelectionChangedNow(seekPlayback);
     }

@@ -46,8 +46,9 @@ public partial class MainWindow
         {
             if (index >= 0 && index < _project.Tracks.Count) _clips.LaneCursor = new LaneCursor(_project.Tracks[index], lane, sec);
         };
-        Arrangement.ClipEditStarting += (_, _) => CheckpointUndo();
-        Arrangement.ClipEdited += (_, _) => _clips.Changed(Doc, true);
+        Arrangement.ClipEditStarting += (_, _) => { CheckpointUndo(); _clips.BeginClipGesture(Doc); };
+        Arrangement.ClipEdited += (_, _) => _clips.FinishClipGesture(Doc);
+        Arrangement.ClipEdgeMoved += (_, _) => { if (SongExtent.EnsureCoversClips(_project).BarsAdded > 0) RefreshAfterEdit(EditRefresh.Score | EditRefresh.TimelineGeometry); };
         Arrangement.ClipPropertiesRequested += (_, clip) => _clips.EditProperties(Doc, clip);
         Arrangement.ClipContextRequested += ShowClipMenu;
         Arrangement.MediaDropped += plan => _clips.ApplyMediaDrop(Doc, plan);
@@ -129,7 +130,7 @@ public partial class MainWindow
                     break;
             }
         });
-        OpenContextMenu(menu, Arrangement, null, fromKeyboard: false);
+        SpecMenus.Open(menu, Arrangement, null, fromKeyboard: false);
     }
 
     private sealed class ClipHost : IClipHost

@@ -56,6 +56,17 @@ internal static class DockLayoutTree
         return node;
     }
 
+    /// <summary>A saved layout may name panels that no longer exist (the removed Practice and Zoom panes): they are dropped and the rest is kept.</summary>
+    internal static void DropPanels(DockWorkspaceState state, Func<string, bool> isRegistered)
+    {
+        foreach (var id in EnumerateAllPanels(state).Where(id => !isRegistered(id)).Distinct().ToList())
+        {
+            state.Root = RemovePanel(state.Root, id);
+            foreach (var f in state.Floating) f.Root = RemovePanel(f.Root, id);
+        }
+        state.Floating.RemoveAll(f => f.Root is null);
+    }
+
     internal static void AddToTabs(DockNodeState host, string panelId, int? index = null)
     {
         if (host.Kind != "tabs") return;
@@ -124,7 +135,9 @@ internal static class DockLayoutTree
         if (!Walk(state.Root, true)) return false;
         foreach (var floating in state.Floating)
             if (floating.Root is null || !Walk(floating.Root, false)) return false;
-        if (ids.Count(i => i == "$editor") != 1) return false;
+        // The Band view fills the editor's place in the Band layout, so a layout holding it may have no editor.
+        var editors = ids.Count(i => i == "$editor");
+        if (editors > 1 || (editors == 0 && !ids.Contains("band"))) return false;
         var panels = ids.Where(i => i != "$editor").ToList();
         if (panels.Count != panels.Distinct(StringComparer.Ordinal).Count()) return false;
         foreach (var id in state.ClosedPanels)
@@ -182,7 +195,7 @@ internal static class DockLayoutTree
     {
         var toolHost = Tabs("default-tool-palette", "tools", "structure", "rhythm", "layout");
         toolHost.SelectedPanel = "tools";
-        var sideHost = Tabs("default-sections-practice-playback", "sections", "practice", "playback");
+        var sideHost = Tabs("default-sections-practice", "sections");
         sideHost.SelectedPanel = "sections";
         var right = Split("Vertical", 0.44, toolHost, sideHost);
         var instrumentAndScore = Split("Vertical", 0.26, Tabs("default-instrument", "instrument"), EditorNode());
@@ -205,14 +218,15 @@ internal static class DockLayoutTree
             else InsertAtRightOfEditor(state, id);
         }
         else if (defaultHost == "instrument") InsertAroundEditor(state, id, DockDropZone.Top);
-        else if (defaultHost == "timeline") InsertAtRootEdge(state, id, DockDropZone.Bottom);
+        else if (defaultHost == "instrument-bottom") InsertAroundEditor(state, id, DockDropZone.Bottom);
+        else if (defaultHost is "timeline" or "band") InsertAtRootEdge(state, id, DockDropZone.Bottom);
         else InsertAtRightOfEditor(state, id);
     }
 
     private static void InsertAtRightOfEditor(DockWorkspaceState state, string id)
     {
         var target = FindNode(state.Root, "score-editor");
-        if (target is null) return;
+        if (target is null) { InsertAtRootEdge(state, id, DockDropZone.Right); return; }   // a layout without the score (Band)
         ReplaceNode(state, target.HostId,
             Split("Horizontal", 0.70, CloneNode(target)!, Tabs("restore-" + Guid.NewGuid().ToString("N"), id)));
     }
@@ -220,7 +234,7 @@ internal static class DockLayoutTree
     private static void InsertAroundEditor(DockWorkspaceState state, string id, DockDropZone zone)
     {
         var target = FindNode(state.Root, "score-editor");
-        if (target is null) return;
+        if (target is null) { InsertAtRootEdge(state, id, zone); return; }
         var panelNode = Tabs("restore-" + Guid.NewGuid().ToString("N"), id);
         var split = zone is DockDropZone.Top or DockDropZone.Bottom ? "Vertical" : "Horizontal";
         var before = zone is DockDropZone.Left or DockDropZone.Top;

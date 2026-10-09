@@ -1,8 +1,16 @@
-namespace TabForge.Views;
+﻿namespace TabForge.Views;
 
 /// <summary>Threshold-based vertical follow policy for the music-sheet viewport.</summary>
 internal static class ScoreVerticalFollow
 {
+    /// <summary>One time-based glide step toward <paramref name="target"/>: ~95% in 120 ms, landed within ~250 ms at any frame rate.</summary>
+    internal static double GlideStep(double current, double target, double dtSeconds)
+    {
+        var delta = target - current;
+        if (Math.Abs(delta) < 4) return target;
+        return current + delta * (1 - Math.Exp(-Math.Max(0, dtSeconds) / 0.04));
+    }
+
     /// <summary>
     /// Returns a new vertical offset only when the active system approaches a viewport edge.
     /// The system is placed inside a comfortable band, and offsets are clamped to the actual

@@ -56,12 +56,20 @@ internal sealed partial class ScoreRenderer
     private void PrepareMarkSkyline(TrackModel track, MeasureModel measure, int measureIndex, double x, double staffTop, double slotWidth, int slots, bool showStaff, double tabTop)
     {
         _sky.Clear();
+        // With a TAB, the palm-mute label and dashed line take their lane just above the strings; vibrato, accents, technique labels and let ring stack above it, one row each.
+        if (_host.Notation != NotationMode.StaffOnly)
+            for (var v = 0; v < (ScoreLayoutEngine.Voice2HasContent(measure) ? 2 : 1); v++)
+            {
+                var cells = v == 0 ? measure.Cells : measure.Voice2Cells;
+                for (var i = 0; i < cells.Count; i++)
+                {
+                    if (!cells[i].Notes.Any(ScoreMarkText.ShowsPalmMute)) continue;
+                    var cx = CellCenterX(measureIndex, i, v);   // the beat's stretch of the lane, from the "P.M." label left of it to its end
+                    _sky.Claim(cx - 26, Math.Min(cx + slotWidth * MusicTime.CellSlots(cells[i]) + 2, x + slotWidth * slots), tabTop - 24, tabTop - 10);
+                }
+            }
         if (!showStaff)
         {
-            // Tab only: the palm-mute label and dashed line take their lane just above the strings; accents, let ring and technique labels stack above it.
-            var hasPalmMute = measure.Cells.Concat(ScoreLayoutEngine.Voice2HasContent(measure) ? measure.Voice2Cells : Enumerable.Empty<TabCell>())
-                .Any(c => c.Notes.Any(n => n.Techniques.Any(ScoreMarkText.IsPalmMute)));
-            if (hasPalmMute) _sky.Claim(x, x + slotWidth * slots, tabTop - 24, tabTop - 10);
             foreach (var fade in _layout.FadePassages)
                 if (measureIndex >= fade.FirstMeasure && measureIndex <= fade.LastMeasure) { _sky.Claim(x, x + slotWidth * slots, tabTop - 13, tabTop - 3); break; }   // the fade wedge sits just above the strings
             return;
@@ -70,9 +78,11 @@ internal sealed partial class ScoreRenderer
         var denominator = measure.TimeSigDenom ?? _host.Project?.TimeSignatureDenominator ?? 4;
         var keySignature = measure.KeySignature ?? _host.Project?.KeySignature ?? 0;
         if (SimileHidesNotes(measure, measureIndex)) return;   // only the sign is drawn: hidden notes claim no space
-        foreach (var cells in ScoreLayoutEngine.Voice2HasContent(measure) ? new[] { measure.Cells, measure.Voice2Cells } : new[] { measure.Cells })
+        // Both voices without a per-bar array (this runs for the playing system on every playback tick).
+        for (var v = 0; v < (ScoreLayoutEngine.Voice2HasContent(measure) ? 2 : 1); v++)
         {
-            var layout = _layout.StaffLayoutFor(track, measure, measureIndex, slots, x, staffTop, slotWidth, numerator, denominator, keySignature, cells);
+            var cells = v == 0 ? measure.Cells : measure.Voice2Cells;
+            var layout = _layout.StaffLayoutFor(track, measure, measureIndex, slots, x, staffTop, slotWidth, numerator, denominator, keySignature, DrawnCells(measure, cells, slots));
             layout.Skyline = _sky;
             StaffNotationRenderer.SeedSkyline(layout);
         }
@@ -142,9 +152,11 @@ internal sealed partial class ScoreRenderer
             ? markerColor : accent;
         var tempoText = _host.Project is null ? null : _layout.TempoText(measure, measureIndex);
         double tempoRight = x + 2;
-        if (_host.Appearance.ShowBarNumbers && measureIndex % Math.Max(1, _host.Appearance.BarNumberFrequency) == 0)
+        // The reference colours the number of a bar whose rhythm does not add up (overfull or short) red; such a bar always shows it.
+        var marked = _layout.BarStateFor(track, measureIndex).Marked;
+        if (marked || (_host.Appearance.ShowBarNumbers && measureIndex % Math.Max(1, _host.Appearance.BarNumberFrequency) == 0))
         {
-            var numberText = ScoreText.MakeTextIn(ScoreTextArea.BarInfo, (measureIndex + 1).ToString(), 9, ScoreText.Brush(accent));
+            var numberText = ScoreText.MakeTextIn(ScoreTextArea.BarInfo, (measureIndex + 1).ToString(), 9, ScoreText.Brush(marked ? _errorColor : accent));
             StackTextAbove(dc, numberText, 9, x + 2, staffTop, 14);
             tempoRight = x + 2 + numberText.Width + 6;
         }
@@ -298,6 +310,66 @@ internal sealed partial class ScoreRenderer
             DrawCenteredV(dc, symbol, x + slot * 10.5 + 4 + (naturals > 0 ? 3 : 0), staffTop + offsets[i], 15, brush, null, "Segoe UI Symbol");
     }
 
+    /// <summary>True when <paramref name="cells"/> hold nothing but the rests the rest fill puts into an empty bar of <paramref name="slots"/> (or nothing at all).</summary>
+    /// <paramref name="fills"/> keeps each bar length's fill so a repaint allocates nothing (the playing system is drawn on every playback tick).
+    internal static bool OnlyFillRests(IReadOnlyList<TabCell> cells, int slots, Dictionary<int, List<TabCell>>? fills = null)
+    {
+        if (slots <= 0) return false;
+        var anyRest = false;
+        for (var i = 0; i < cells.Count; i++)
+        {
+            var c = cells[i];
+            if (c.Notes.Count > 0 || c.HasAnnotation || c.Fermata || c.Mix is not null || c.IsTied || c.RhythmicPosition is not null || c.Tuplet.Item1 > 0) return false;
+            anyRest |= c.IsRest;
+        }
+        if (!anyRest) return true;
+        if (fills is null || !fills.TryGetValue(slots, out var fill))
+        {
+            fill = new List<TabCell>();
+            BarFill.FillCells(fill, slots, always: true);
+            if (fills is not null) fills[slots] = fill;
+        }
+        for (var i = 0; i < Math.Max(cells.Count, fill.Count); i++)
+        {
+            var rest = i < cells.Count && cells[i].IsRest;
+            if (rest != (i < fill.Count && fill[i].IsRest)) return false;
+            if (rest && (cells[i].DurationDenominator != fill[i].DurationDenominator || cells[i].Dots != fill[i].Dots)) return false;
+        }
+        return true;
+    }
+
+    private readonly Dictionary<int, List<TabCell>> _fillRests = new();   // OnlyFillRests: the fill of an empty bar per length
+
+    /// <summary>
+    /// The cells drawn for a voice: the reference draws an empty bar empty, so a first voice holding only the rest fill's rests draws nothing
+    /// (written rests still draw). The skyline pass and the drawing both use this, so they share one cached staff layout per bar.
+    /// </summary>
+    private IReadOnlyList<TabCell> DrawnCells(MeasureModel measure, IReadOnlyList<TabCell> cells, int slots) =>
+        ReferenceEquals(cells, measure.Cells) && !ScoreLayoutEngine.Voice2HasContent(measure) && OnlyFillRests(cells, slots, _fillRests) ? Array.Empty<TabCell>() : cells;
+
+    private static bool HasVibrato(TabCell cell)
+    {
+        for (var i = 0; i < cell.Notes.Count; i++)
+            if (cell.Notes[i].Techniques.Contains("Vibrato") || cell.Notes[i].Techniques.Contains("WideVibrato")) return true;
+        return false;
+    }
+
+    /// <summary>Where the vibrato line of <paramref name="beat"/> ends when the next beat of its voice (in this bar or the first of the next bar on the same line) also has vibrato; null otherwise.</summary>
+    private double? VibratoRunsOnTo(int measureIndex, StaffNotationMeasureLayout layout, StaffNotationBeat beat, int voice)
+    {
+        var beats = layout.Beats;
+        for (var i = 0; i < beats.Count - 1; i++)
+            if (ReferenceEquals(beats[i], beat)) return HasVibrato(beats[i + 1].Cell) ? beats[i + 1].CenterX - 6 : null;
+        var track = _host.Track;
+        if (track is null || measureIndex + 1 >= track.Measures.Count) return null;
+        var scoreLayout = _layout.GetLayout(track);
+        if (scoreLayout.SystemForMeasure(measureIndex + 1) != scoreLayout.SystemForMeasure(measureIndex)) return null;
+        var next = VoiceCells(track.Measures[measureIndex + 1], voice);
+        for (var c = 0; c < next.Count; c++)
+            if (next[c].Notes.Count > 0 || next[c].IsRest) return HasVibrato(next[c]) ? CellCenterX(measureIndex + 1, c, voice) - 6 : null;
+        return null;
+    }
+
     // Wavy vibrato line (a sawtooth-sine polyline), thicker and taller for wide vibrato.
     private static void DrawVibratoLine(DrawingContext dc, double left, double right, double y, bool wide, Brush brush)
     {
@@ -307,9 +379,11 @@ internal sealed partial class ScoreRenderer
         var geometry = new StreamGeometry();
         using (var g = geometry.Open())
         {
-            g.BeginFigure(new Point(left, y), false, false);
+            // The phase follows the page x, so the pieces of one run of vibrato notes join into a single wave.
+            // The phase follows the page x, so the pieces of one run of vibrato notes join into a single wave.
+            g.BeginFigure(new Point(left, y - Math.Sin(left / period * 2 * Math.PI) * amplitude), false, false);
             for (var px = left + 1; px <= right; px += 1)
-                g.LineTo(new Point(px, y - Math.Sin((px - left) / period * 2 * Math.PI) * amplitude), true, true);
+                g.LineTo(new Point(px, y - Math.Sin(px / period * 2 * Math.PI) * amplitude), true, true);
         }
         geometry.Freeze();
         dc.DrawGeometry(null, new Pen(brush, wide ? 2.2 : 1.5) { LineJoin = PenLineJoin.Round }, geometry);

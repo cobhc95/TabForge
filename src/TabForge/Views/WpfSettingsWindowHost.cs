@@ -16,6 +16,8 @@ internal sealed class SettingsWindowActions
     public Func<Window, List<string>>? ManageQuarantine { get; init; }
     /// <summary>Applies the default instrument view to every track of the window's open song.</summary>
     public Action<string>? ShowAllTracksAs { get; init; }
+    /// <summary>Opens the mixer group rules editor (Settings > Appearance > Track group colours > Group rules).</summary>
+    public Action<Window>? EditGroupRules { get; init; }
     /// <summary>Runs the manual update check now (even with the automatic check off); its dialog is owned by the given Settings window.</summary>
     public Action<Window>? CheckForUpdatesNow { get; init; }
 }

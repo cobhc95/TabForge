@@ -18,8 +18,9 @@ internal static class StaffNotationArcs
         track is not null && measureIndex >= 0 && measureIndex < track.Measures.Count && (track.Measures[measureIndex].SimileOneBar || track.Measures[measureIndex].SimileTwoBar);
 
     internal static List<StaffNotationTie> BuildTies(TrackModel? track, int measureIndex, int measureSlots,
-        IReadOnlyList<StaffNotationBeat> beats, int voiceIndex, double staffTop)
+        IReadOnlyList<StaffNotationBeat> beats, int voiceIndex, double staffTop, double left = double.NaN, double right = double.NaN)
     {
+        // A tie crossing the barline is two half arcs that meet at the barline (one arc on a system; split at a system break, as GP5).
         var ties = new List<StaffNotationTie>();
         foreach (var beat in beats.Where(b => b.Notes.Count > 0))
         foreach (var note in beat.Notes)
@@ -46,7 +47,7 @@ internal static class StaffNotationArcs
                         stubX = Math.Min(stubX, leftmost - HeadRadiusX - 6.5 - room - other.AccidentalColumn * 10 - 4.5 + 4);
                     }
                     if (note.Source.Ghost) stubX = Math.Min(stubX, note.X - HeadRadiusX - GhostOpenGap - 1.5 - (OnLedgerAt(staffTop, note) ? GhostLedgerPad : 0) + 4);
-                    ties.Add(new StaffNotationTie(stubX, note.Y, stubX, note.Y,
+                    ties.Add(new StaffNotationTie(stubX, note.Y, double.IsNaN(left) ? stubX - 13 : left, note.Y,
                         Above: !beat.StemUp, IsStub: true, TowardLeft: true));
                 }
             }
@@ -59,7 +60,7 @@ internal static class StaffNotationArcs
             if (nextBar is { } destination && destination.StartSlots < PositionEpsilon &&
                 (destination.Cell.IsTied || destination.Note.Tied))
                 ties.Add(new StaffNotationTie(note.Source.Ghost ? note.X + HeadRadiusX + 3 + (OnLedgerAt(staffTop, note) ? GhostLedgerPad : 0) : note.X, note.Y,
-                    note.Source.Ghost ? note.X + HeadRadiusX + 3 + (OnLedgerAt(staffTop, note) ? GhostLedgerPad : 0) : note.X, note.Y,
+                    double.IsNaN(right) ? note.X + 13 : right, note.Y,
                     Above: !beat.StemUp, IsStub: true, TowardLeft: false));
         }
         return ties;
@@ -159,6 +160,7 @@ internal static class StaffNotationArcs
     /// <summary>
     /// The editor's H toggle only sets a generic "HOPO" bit (no origin/destination pair). Same rule as the tab arc: the first such note
     /// on a string starts a phrase that runs over the following notes on that string that carry the bit; one slur from start to end.
+    /// A single marked note slurs to the next note on its string (the reference's hammer-on to the following note).
     /// </summary>
     internal static void AddLegacyHopoSlurs(IReadOnlyList<StaffNotationBeat> beats, double staffTop, List<StaffNotationSlur> result)
     {
@@ -182,7 +184,7 @@ internal static class StaffNotationArcs
             {
                 var next = ordered[j].Notes.FirstOrDefault(n => n.Source.StringIndex == stringIndex);
                 if (next is null) continue;
-                if (!next.Source.Techniques.Contains("HOPO")) break;
+                if (!next.Source.Techniques.Contains("HOPO")) { last ??= (ordered[j], next); break; }
                 last = (ordered[j], next);
             }
             if (last is { } end && MakeHopoSlur(ordered[i], note, end.Beat, end.Note, staffTop) is { } slur) result.Add(slur);

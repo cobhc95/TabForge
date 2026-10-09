@@ -1,7 +1,7 @@
 namespace TabForge.Views;
 
 /// <summary>
-/// The score note menu's top-level order (docs/CONTEXT_MENU_AUDIT.md). The score empty-area menu and the fretboard menu are
+/// The score note menu's top-level order. The score empty-area menu and the fretboard menu are
 /// data too: <see cref="ScoreMenus"/> and <see cref="InstrumentMenus"/>. The menus in MainWindow are assembled from these, and
 /// the self-test checks them, so a layout cannot drift from the decisions. <see cref="Sep"/> is a separator.
 /// </summary>

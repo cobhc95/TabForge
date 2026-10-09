@@ -141,7 +141,12 @@ internal sealed partial class TrackPropertiesDialog
 
     private string CurrentInstrument => (string?)_instrument.SelectedItem ?? _track.InstrumentName;
 
-    private TrackKind CurrentKind => TrackPropertiesWindow.KindOf(CurrentInstrument, _track);
+    // The chosen instrument decides the kind (a kit is drums, anything else is pitched), not the track's old channel.
+    private TrackKind CurrentKind => InstrumentCatalog.Find(CurrentInstrument) is { IsDrumKit: true } ? TrackKind.Drums
+        : TrackSetup.KindOf(CurrentInstrument, -1, _track.Kind == TrackKind.Drums || _track.MidiChannel == 9 ? TrackSetup.PitchedKindFor(CurrentInstrument) : _track.Kind);
+
+    /// <summary>The chosen instrument is in the other family than the track now (drums to pitched or back).</summary>
+    private bool FamilyChanges => _add is null && !_track.IsAudio && TrackSetup.IsDrumFamily(_track) != (CurrentKind == TrackKind.Drums);
 
     // ---------- left: picture + identity ----------
 
@@ -271,10 +276,11 @@ internal sealed partial class TrackPropertiesDialog
         var newKind = CurrentKind;
         if (newKind != _lastKind)
         {
-            if (!_trackHadNotes && TrackSetup.DefaultStrings(newKind) is { } defaults) { _tunings = defaults; RebuildStrings(); RefreshPresets(); }
+            if ((!_trackHadNotes || FamilyChanges) && TrackSetup.DefaultStrings(newKind) is { } defaults) { _tunings = defaults; RebuildStrings(); RefreshPresets(); }
             _lastKind = newKind;
         }
-        _stringsStayHint.Visibility = _trackHadNotes && newKind != _track.Kind && newKind != TrackKind.Drums ? Visibility.Visible : Visibility.Collapsed;
+        _drumCard.Visibility = newKind == TrackKind.Drums ? Visibility.Visible : Visibility.Collapsed;
+        _stringsStayHint.Visibility = _trackHadNotes && !FamilyChanges && newKind != _track.Kind && newKind != TrackKind.Drums ? Visibility.Visible : Visibility.Collapsed;
         RedrawPicture();
     }
 
@@ -590,6 +596,7 @@ internal sealed partial class TrackPropertiesDialog
             }
             else _add.InsertIndex = _add.TrackCount;
         }
+        if (FamilyChanges && !FamilyChangePrompt.Confirm(_w, _track, CurrentInstrument, CurrentKind == TrackKind.Drums)) return;
         ApplyToTrack(prog, ch, fr, cp);
         _accepted = true;
         _w.DialogResult = true;
@@ -610,8 +617,12 @@ internal sealed partial class TrackPropertiesDialog
         track.InstrumentName = InstrumentNaming.ForStringCount(selected, TrackPropertiesWindow.KindOf(selected, track), _tunings.Count);
         if (preset is not null) { track.Rig.Name = preset.Rig; track.Rig.ArticulationMap = preset.Map; }
         else if (picked is not null) { track.Rig.Name = picked.Name; track.Rig.ArticulationMap = picked.Map; }
+        var convert = FamilyChanges;   // before the channel changes: it reads the track's current family
+        var toDrums = CurrentKind == TrackKind.Drums;
         track.MidiProgram = prog;
         track.MidiChannel = ch;
+        track.NumberOfFrets = fr;
+        if (convert) TrackSetup.ConvertFamily(track, toDrums, CurrentKind, _tunings);
         if (_drumCard.Visibility == Visibility.Visible && (_drumPreset.SelectedItem as ComboBoxItem)?.Tag is string chosenDrumPreset)
         {
             track.CustomDrumMap = _customMap;

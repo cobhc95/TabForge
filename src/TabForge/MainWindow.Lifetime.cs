@@ -41,6 +41,7 @@ public partial class MainWindow : IDiscardPromptHost
         _transport.FlushPendingSave();
         _isClosed = true;
         _playbackView.Dispose();
+        _band?.Dispose();
         _follow.Halt();
         // The documents still in this window are closed for good (a tab moved to another window left _documents when it moved, and is
         // not touched here): their playback stops and their engine chains are unloaded now, not parked.

@@ -41,6 +41,12 @@ public interface IMixerHost
     /// both refresh and play their movement animation together. Returns true when something changed.
     /// </summary>
     bool ReorderFromMixer(Func<SongProject, bool> apply, string status);
+    /// <summary>Collapses / expands mixer groups (one undo step, shared with the track list); <paramref name="collapsed"/> null toggles each.</summary>
+    void SetGroupsCollapsed(IReadOnlyCollection<string> groups, bool? collapsed) { }
+    /// <summary>Sets one track's colour (one undo step); the track list, timeline and Band view follow.</summary>
+    void SetTrackColour(TrackModel track, string hex) { }
+    /// <summary>Stores group rules app-wide (app settings) and makes the open song follow them.</summary>
+    void SetAppGroupRules(GroupRulesResult result) { }
 }
 
 /// <summary>
@@ -49,11 +55,11 @@ public interface IMixerHost
 /// also chooses its sound source (Windows MIDI or its plug-in chain) and opens its FX chain.
 /// Built once per structure change; slider drags only update values (no rebuild, no per-frame work).
 /// </summary>
-public sealed class MixerWindow : Window
+public sealed partial class MixerWindow : Window
 {
     private readonly IMixerHost _host;
     private readonly StackPanel _groups = new() { Orientation = Orientation.Vertical };
-    private readonly ComboBox _grouping = new() { Width = 150, ItemsSource = MixerGrouping.All };
+    private readonly ComboBox _grouping = new() { Width = 150, ItemsSource = MixerGrouping.Offered };
     private bool _building;
     private bool _rebuildAfterDrag;   // a rebuild was asked for while a slider was dragged
 
@@ -64,7 +70,7 @@ public sealed class MixerWindow : Window
         {
             var typing = Keyboard.FocusedElement is System.Windows.Controls.Primitives.TextBoxBase || Keyboard.FocusedElement is ComboBox;
             if (e.Key == Key.Escape && !typing) { e.Handled = true; Close(); return; }
-            // Move the selected row (Track.MoveUp / Track.MoveDown, Alt+Up / Alt+Down by default; follows rebinding).
+            // Move the selected row (Track.MoveUp / Track.MoveDown, Alt+Shift+Up / Alt+Shift+Down by default; follows rebinding).
             var action = typing ? null : _host.HotkeyAction(WpfHotkeyGestureAdapter.FromEvent(e));
             if (action is "Track.MoveUp" or "Track.MoveDown")
             {
@@ -95,6 +101,7 @@ public sealed class MixerWindow : Window
             _host.MixerChanged(recompile: true);
             Rebuild();
         };
+        AddGroupButtons(groupingRow);
         top.Children.Add(groupingRow);
         // What the main track list shows (the track list itself stays unchanged unless these are changed).
         var shows = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(16, 0, 0, 0) };
@@ -156,6 +163,7 @@ public sealed class MixerWindow : Window
         foreach (var t in project.Tracks)
             sb.Append('|').Append(t.Name).Append('/').Append(t.InstrumentName).Append('/').Append(MixerGroups.GroupOf(project, t))
               .Append('/').Append(t.SoundSource).Append('/').Append(t.MidiSound).Append('/').Append(t.Rig.Plugins.Count);
+        foreach (var g in project.Mixer.CollapsedGroups) sb.Append("|c:").Append(g);
         return sb.ToString();
     }
 
@@ -251,6 +259,7 @@ public sealed class MixerWindow : Window
     private void SelectRow(TrackModel? track, string? group)
     {
         _selTrack = track; _selGroup = track is null ? group : null;
+        if (track is null && group is not null && _groupRows.TryGetValue(group, out var focusRow)) focusRow.Focus();
         foreach (var (t, row) in _trackRows) MarkSelected(row, ReferenceEquals(t, _selTrack), $"Mixer strip: {t.Name}");
         foreach (var (g, row) in _groupRows) MarkSelected(row, g == _selGroup, $"Mixer group: {g}");
     }
@@ -293,6 +302,8 @@ public sealed class MixerWindow : Window
         handle.PreviewMouseLeftButtonDown += (_, e) =>
         {
             if (IsInteractive(e.OriginalSource as DependencyObject, handle)) return;
+            // A double-click on a group row collapses or expands it, as its arrow does.
+            if (e.ClickCount == 2 && track is null && group is not null) { e.Handled = true; _host.SetGroupsCollapsed(new[] { group }, null); return; }
             SelectRow(track, group);
             _dragCapture = handle; _dragMoving = moving; _dragArmed = false; _drop = null;
             _dragOrigin = PointerSource.Position(e, _groups);
@@ -360,7 +371,7 @@ public sealed class MixerWindow : Window
         if (_drop is not { } drop) return;
         var panels = _groups.Children.OfType<Border>().Where(b => b.Tag is string n && _groupPanels.ContainsKey(n)).OrderBy(b => LayoutTop(b, _groups)).ToList();
         if (panels.Count == 0) return;
-        static double Slot(FrameworkElement e) => e.ActualHeight + e.Margin.Top + e.Margin.Bottom;
+        static double Slot(FrameworkElement e) => e.Visibility == Visibility.Collapsed ? 0 : e.ActualHeight + e.Margin.Top + e.Margin.Bottom;
         var members = new Dictionary<string, List<TrackModel>>();
         foreach (var p in panels)
         {
@@ -431,8 +442,9 @@ public sealed class MixerWindow : Window
         var name = (string)target.Tag;
         var rows = _trackRows.Where(r => _trackGroup.TryGetValue(r.Key, out var g) && g == name && !ReferenceEquals(r.Key, track))
             .Select(r => r.Value).OrderBy(r => LayoutTop(r, _groups)).ToList();
-        var at = rows.Count(r => LayoutTop(r, _groups) + r.ActualHeight / 2 < y);
-        var caretY = rows.Count == 0 ? LayoutTop(target, _groups) + 40
+        // A collapsed group has no visible rows: the track joins at its end.
+        var at = IsCollapsed(name) ? rows.Count : rows.Count(r => LayoutTop(r, _groups) + r.ActualHeight / 2 < y);
+        var caretY = rows.Count == 0 || IsCollapsed(name) ? LayoutTop(target, _groups) + 40
             : at < rows.Count ? LayoutTop(rows[at], _groups) : LayoutTop(rows[^1], _groups) + rows[^1].ActualHeight;
         return (name, at, caretY);
     }
@@ -473,7 +485,7 @@ public sealed class MixerWindow : Window
         try
         {
             var project = _host.Project;
-            _grouping.SelectedItem = project.Mixer.Grouping;
+            _grouping.SelectedItem = project.Mixer.Grouping == MixerGrouping.Compact ? MixerGrouping.ByInstrument : project.Mixer.Grouping;
             _groups.Children.Clear();
             _syncers.Clear();
             _trackRows.Clear(); _trackGroup.Clear(); _groupRows.Clear(); _groupPanels.Clear();
@@ -487,6 +499,8 @@ public sealed class MixerWindow : Window
                 _groups.Children.Add(new TextBlock { Text = "This song has no tracks.", Margin = new Thickness(8) });
         }
         finally { _building = false; }
+        UpdateCollapseAll();
+        Services.ThemeService.EnsureReadableText(this);   // accent names fall back to plain text where the accent reads poorly (light theme)
     }
 
     // Columns shared by group and track rows: name | FX | pitch | pan | volume | M S.
@@ -525,9 +539,11 @@ public sealed class MixerWindow : Window
         var rows = new StackPanel();
         var groupRow = (Border)GroupRow(group, members.Count);
         rows.Children.Add(groupRow);
+        var collapsed = IsCollapsed(group);
         foreach (var track in members)
         {
             var row = (Border)TrackRow(track);
+            if (collapsed) row.Visibility = Visibility.Collapsed;
             _trackGroup[track] = group;
             rows.Children.Add(row);
         }
@@ -541,6 +557,7 @@ public sealed class MixerWindow : Window
         _groupPanels[group] = panel;
         _groupRows[group] = groupRow;
         AttachDrag(groupRow, null, group, panel);
+        AttachGroupCollapse(groupRow, group);
         MarkSelected(groupRow, group == _selGroup, $"Mixer group: {group}");
         return panel;
     }
@@ -559,16 +576,12 @@ public sealed class MixerWindow : Window
         };
         swatch.Click += (_, _) =>
         {
-            var menu = new ContextMenu { PlacementTarget = swatch };
-            foreach (var (colourName, hex) in TrackControlWidgets.TrackColourPalette)
-            {
-                var item = new MenuItem { Header = colourName, Icon = new Border { Width = 14, Height = 14, CornerRadius = new CornerRadius(3), Background = BrushOf(hex) } };
-                item.Click += (_, _) => { _host.SetGroupColour(group, hex); Rebuild(); };
-                menu.Items.Add(item);
-            }
-            menu.IsOpen = true;
+            ShowColourMenu(swatch, _host.GroupColour(group), hex => { _host.SetGroupColour(group, hex); Rebuild(); });
         };
         DockPanel.SetDock(swatch, Dock.Left);
+        var chevron = Chevron(group);
+        DockPanel.SetDock(chevron, Dock.Left);
+        colourRow.Children.Add(chevron);
         colourRow.Children.Add(swatch);
         colourRow.Children.Add(name);
         Put(grid, colourRow, 0);
@@ -647,8 +660,13 @@ public sealed class MixerWindow : Window
     {
         var grid = RowGrid();
         var title = NameBlock(track.Name, track.InstrumentName, accent: false);
-        title.Margin = new Thickness(18, 0, 4, 0); // indented under its group
-        Put(grid, title, 0);
+        title.Margin = new Thickness(0, 0, 4, 0);
+        var chip = ColourChip(track);   // indented under its group
+        var nameRow = new DockPanel();
+        DockPanel.SetDock(chip, Dock.Left);
+        nameRow.Children.Add(chip);
+        nameRow.Children.Add(title);
+        Put(grid, nameRow, 0);
 
         // Split button: "FX" opens the chain, the power part switches chain / plain MIDI.
         var fx = new FxSplitButton
@@ -696,19 +714,20 @@ public sealed class MixerWindow : Window
         // Right-click: move the track to another group (its choice is saved with the song).
         var menu = new ContextMenu();
         var project = _host.Project;
-        foreach (var group in MixerGroups.Names(project.Mixer.Grouping))
+        foreach (var group in MixerGroups.Names(project.Mixer))
         {
             var target = group;
             var item = new MenuItem { Header = $"Move to {group}", IsCheckable = true, IsChecked = MixerGroups.GroupOf(project, track) == group };
             item.Click += (_, _) =>
             {
                 _host.BeginMixerEdit();
-                track.MixerGroup = MixerGroups.Family(track) == target ? null : target;
+                TrackOrdering.AssignGroup(project, track, target);
                 _host.MixerChanged(recompile: true);
                 Dispatcher.BeginInvoke(Rebuild);
             };
             menu.Items.Add(item);
         }
+        AddTrackMenuItems(menu, track, chip);
         row.ContextMenu = menu;
         var stripName = $"Mixer strip: {track.Name}{(track.Mute ? ", muted" : "")}{(track.Solo ? ", solo" : "")}";
         MarkSelected(row, ReferenceEquals(track, _selTrack), stripName);

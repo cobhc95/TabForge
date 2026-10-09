@@ -40,19 +40,13 @@ public partial class MainWindow
             _project, track, _timeline, _playheadMs, _isPlayingVisual, _midi.IsPaused,
             InstrumentPane.PreviewHorizon, InstrumentPane.LeftHanded, InstrumentPane.ShowNoteNames, InstrumentPane.ScaleHighlight, InstrumentPane.FretboardFrets, options: _options.Visual);
         var editingSelection = InstrumentVisualizer.BuildEditingSelection(
-            track, Editor.CurrentCell(), InstrumentPane.LeftHanded, InstrumentPane.ShowNoteNames, InstrumentPane.ScaleHighlight, InstrumentPane.FretboardFrets, options: _options.Visual);
+            track, Editor.Effects.CurrentCell(), InstrumentPane.LeftHanded, InstrumentPane.ShowNoteNames, InstrumentPane.ScaleHighlight, InstrumentPane.FretboardFrets, options: _options.Visual);
         Instrument.Title = track?.Name ?? "Instrument"; Instrument.AudioTrack = audioSelected;
         InstrumentPane.ApplyInstrumentView(state);
         InstrumentPane.ApplyInstrumentView(editingSelection);
         Instrument.SetState(state);
         Instrument.SetEditingSelection(editingSelection);
 
-        var cell = Editor.CurrentCell();
-        var chord = cell?.ChordName;
-        PracticeHint.Text = audioSelected ? Services.EditorGuard.Message : track is null
-            ? "Select a track"
-            : $"{track.Name} · {track.StringTunings.Count} strings · capo {track.Capo}" +
-              (string.IsNullOrWhiteSpace(chord) ? "" : $"\nchord: {chord}");
     }
 
     /// <summary>The TAB line a clicked drum pad writes to (see <see cref="InstrumentPanelController.PercussionPadLine"/>).</summary>

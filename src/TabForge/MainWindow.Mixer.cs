@@ -166,6 +166,64 @@ public partial class MainWindow : IMixerHost, IFxChainHost, IMixerWindowsHost
         if (DocumentEdits.Run(Doc, p => Services.TrackColouring.Group(p, group, hex) > 0, invalidatesTimeline: false).Changed) TrackColoursChanged();
     }
 
+    void IMixerHost.SetTrackColour(TrackModel track, string hex)
+    {
+        if (DocumentEdits.Run(Doc, _ => Services.TrackColouring.SetColour(track, hex), invalidatesTimeline: false).Changed) TrackColoursChanged();
+    }
+
+    /// <summary>Gives a song the app-wide group rules it follows when it has none of its own.</summary>
+    private void AttachAppRules(SongProject project) => project.Mixer.App = _settings.MixerRules;
+
+    void IMixerHost.SetAppGroupRules(GroupRulesResult result)
+    {
+        DocumentEdits.Run(Doc, p =>
+        {
+            Models.MixerRules.ApplyAppWide(_settings.MixerRules, p, result.Groups, result.Fallback, result.Renamed);
+            return true;
+        }, invalidatesTimeline: false);
+        foreach (var doc in _documents.Documents) AttachAppRules(doc.Project);
+        SaveSettings();
+        ((IMixerHost)this).MixerChanged(recompile: true);
+        RefreshTracks();
+        RefreshArrangement();
+        UpdateTitle();
+    }
+
+    void IMixerHost.SetGroupsCollapsed(IReadOnlyCollection<string> groups, bool? collapsed) => SetGroupsCollapsed(groups, collapsed);
+
+    /// <summary>
+    /// Collapses or expands mixer groups (null: toggles each). View state: not an undo step and not an unsaved change; the song
+    /// saves it with the rest. The track list and the mixer follow.
+    /// </summary>
+    internal void SetGroupsCollapsed(IReadOnlyCollection<string> groups, bool? collapsed)
+    {
+        var list = _project.Mixer.CollapsedGroups;
+        var changed = false;
+        foreach (var group in groups)
+        {
+            var on = collapsed ?? !list.Contains(group);
+            if (on && !list.Contains(group)) { list.Add(group); changed = true; }
+            else if (!on && list.Remove(group)) changed = true;
+        }
+        if (!changed) return;
+        RefreshTracks();
+        RefreshArrangement();
+        ScheduleFitTimelineToTracks();
+        UpdateTitle();
+        MixerWindows.Mixer?.Rebuild();
+    }
+
+    /// <summary>Mixer.CollapseAllGroups / Mixer.ExpandAllGroups: every group of the open song.</summary>
+    internal void SetAllGroupsCollapsed(bool collapsed) =>
+        SetGroupsCollapsed(Models.TrackOrdering.Layout(_project).Select(l => l.Group).ToList(), collapsed);
+
+    /// <summary>Mixer.GroupRules: opens the mixer and its group rules editor.</summary>
+    internal void OpenGroupRules()
+    {
+        OpenMixer();
+        MixerWindows.Mixer?.EditGroupRules();
+    }
+
     private void TrackColoursChanged()
     {
         _project.IsDirty = true;

@@ -51,6 +51,13 @@ public sealed partial class ScoreEditCommands
         return true;
     }
 
+    /// <summary>Inside an edit: dots on a selection, then the fill rests of the touched bars follow the new lengths as after +/- (session 12 step 20, quiet l6 f01).</summary>
+    private void DotSelection(IReadOnlyList<TabCell> cells)
+    {
+        Services.EditCommands.ApplyDots(cells, CurrentDots);
+        if (!CloseUpSelection(cells)) NormaliseRests(cells, resize: true);
+    }
+
     /// <summary>After the edit: the selection covers the cells the merge produced, so they can be edited or deleted again.</summary>
     private void RestoreRestSelection()
     {

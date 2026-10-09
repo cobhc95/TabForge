@@ -45,7 +45,7 @@ public static partial class SelfTest
         scroll.ScrollToVerticalOffset(120);
         var menu = new System.Windows.Controls.ContextMenu();
         var anchor = new Point(1030, 580);
-        MainWindow.PlaceContextMenuAt(menu, editor, anchor);
+        Views.SpecMenus.PlaceAt(menu, editor, anchor);
         Check("keyboard menu placement: the target is the editor itself (whose coordinates the anchor is in)", ReferenceEquals(menu.PlacementTarget, editor));
         Check("keyboard menu placement: the anchor is a PlacementRectangle (carried through scroll, UI scale and DPI), not offsets",
             menu.Placement == System.Windows.Controls.Primitives.PlacementMode.Bottom && menu.PlacementRectangle.Location == anchor &&

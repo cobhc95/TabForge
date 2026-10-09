@@ -129,6 +129,7 @@ internal sealed partial class TrackTimeline
 
         // --- track rows ---
         // Draw the floating lane last so it stays above the rows it is sliding over.
+        dc.PushClip(new RectangleGeometry(new Rect(0, gridTop, width, Math.Max(0, height - gridTop))));   // rows scroll under the pinned ruler and section strip
         var barGlowOuter = ShowBarGlow ? Draw.Pen(Colors.White, 2, 0.07) : null;
         var barGlowInner = ShowBarGlow ? Draw.Pen(Colors.White, 0.8, 0.16) : null;
         for (var drawIndex = 0; drawIndex < trackCount; drawIndex++)
@@ -255,15 +256,16 @@ internal sealed partial class TrackTimeline
                 if (ShowContinuousBlocks)
                     DrawContinuousRuns(dc, t, track, rowTop, trackColor);
                 var notationEnd = rowTop + ArrangementPanel.NotationHeightOf(Project, track);
-                if (notationEnd > rowTop) dc.DrawLine(Draw.Pen(_theme.BoardEdge, 0.6, 0.7), new Point(0, notationEnd - 0.5), new Point(width, notationEnd - 0.5));
+                if (ShowTrackLines && notationEnd > rowTop) dc.DrawLine(TrackLinePen, new Point(0, notationEnd - 0.5), new Point(width, notationEnd - 0.5));
                 DrawAudioLane(dc, track, rowTop, width, trackColor);
             }
             if (!_animatingLanes) dc.Pop();
         }
+        dc.Pop();
         if (_animatingLanes) TrimLaneVisuals(trackCount);
         // Anything drawn after the lanes must stay above them, so while lanes are child visuals it goes
         // into an overlay child that sits on top of them.
-        _overlayGridTop = gridTop; _overlayWidth = width; _overlayHeight = height; _overlayBars = bars;
+        _overlayGridTop = gridTop; _overlayWidth = width; _overlayHeight = height;
         // Mix Table points are gathered on a full render only; overlay-only frames reuse the list.
         // The mix points change only with the song: a zoom or scroll redraw reuses them instead of scanning every cell again.
         if (!ReferenceEquals(_mixPointsProject, project) || _mixPointsRevision != project.TimelineRevision)
@@ -298,14 +300,15 @@ internal sealed partial class TrackTimeline
         return Color.FromRgb((byte)(c.R + (g - c.R) * amount), (byte)(c.G + (g - c.G) * amount), (byte)(c.B + (g - c.B) * amount));
     }
     private double _overlayGridTop, _overlayWidth, _overlayHeight;
-    private int _overlayBars;
 
     private void DrawLaneOverlay(DrawingContext dc)
     {
-        var gridTop = _overlayGridTop; var width = _overlayWidth; var height = _overlayHeight; var bars = _overlayBars;
+        var gridTop = _overlayGridTop; var width = _overlayWidth; var height = _overlayHeight; var bars = BarCount;   // live: an overlay-only frame after a bar delete must not use the last full render's count
         // The Add-track lane lives in the overlay: its hover and drag states repaint this small layer, never the whole grid.
+        dc.PushClip(new RectangleGeometry(new Rect(0, gridTop, width, Math.Max(0, height - gridTop))));
         DrawAddLane(dc, width);
         DrawLiveTakes(dc, width);
+        dc.Pop();
         DrawSectionHover(dc);
 
         // --- track drag: the moving lane border is a Canvas overlay above the complete lane rendering. ---
@@ -324,12 +327,13 @@ internal sealed partial class TrackTimeline
         // --- score selection mirrored into the timeline ---
         // A one-track selection (made in the score) shades only that track's row; an all-track one the full height.
         var (bandTop, bandHeight) = SelectionBand(gridTop, height);
+        if (bandTop < gridTop) { bandHeight -= gridTop - bandTop; bandTop = gridTop; }   // never over the pinned ruler and sections
         if (ScoreSelectionStart >= 0 && ScoreSelectionEnd >= ScoreSelectionStart && ScoreSelectionEnd < bars)
         {
             var sx = XOfBar(ScoreSelectionStart);
             var sw = XOfBar(ScoreSelectionEnd + 1) - sx;
             dc.DrawRectangle(Draw.Solid(_theme.Accent, 0.12), Draw.Pen(_theme.Accent, 1.2, 0.7),
-                new Rect(sx + 0.5, bandTop + 0.5, sw - 1, Math.Max(1, bandHeight - 1)));
+                new Rect(sx + 0.5, bandTop + 0.5, Math.Max(0, sw - 1), Math.Max(1, bandHeight - 1)));
         }
 
         // --- selected area / loop region: drawn over the selection's own rows (one track or all), brighter while looping. Looping never
@@ -340,19 +344,21 @@ internal sealed partial class TrackTimeline
             var sw = XOfBar(LoopEnd + 1) - sx;
             var strength = LoopEnabled ? 1.0 : 0.6;
             dc.DrawRectangle(Draw.Solid(_theme.Accent, 0.10 * strength), Draw.Pen(_theme.Accent, 1.4, strength),
-                new Rect(sx + 0.5, bandTop + 0.5, sw - 1, Math.Max(1, bandHeight - 1)));
+                new Rect(sx + 0.5, bandTop + 0.5, Math.Max(0, sw - 1), Math.Max(1, bandHeight - 1)));
             dc.DrawRectangle(Draw.Solid(_theme.Accent, 0.85 * strength), null, new Rect(sx, LoopEnabled ? ArrangementPanel.RulerHeight - 3 : bandTop, sw, LoopEnabled ? 3 : 2));
         }
         // --- Mix Table points: a small red dot at the top-left of the bar in that track's lane ---
         if (_mixPoints.Count > 0)
         {
             var dot = Draw.Solid(Color.FromRgb(0xE0, 0x3B, 0x3B));
+            dc.PushClip(new RectangleGeometry(new Rect(0, gridTop, width, Math.Max(0, height - gridTop))));
             foreach (var (t, b) in _mixPoints)
             {
                 var rowTop = gridTop + ArrangementPanel.RowTopOf(Project, t) - VerticalScrollOffset;
                 if (b >= bars || rowTop + ArrangementPanel.RowHeightFor(Project) < gridTop || rowTop > height) continue;
                 dc.DrawEllipse(dot, null, new Point(XOfBar(b) + 5, rowTop + 6), 3, 3);
             }
+            dc.Pop();
         }
         // --- move-area drop caret ---
         if (AreaMove.Active && AreaMove.Target >= 0)
@@ -406,7 +412,7 @@ internal sealed partial class TrackTimeline
             // Re-add the overlay after the lanes so it stays on top.
             var overlay = OverlayVisual;
             RemoveVisualChild(overlay);
-            _laneLayer = new ContainerVisual();
+            _laneLayer = new ContainerVisual { Clip = new RectangleGeometry(new Rect(0, _overlayGridTop, Math.Max(1, _overlayWidth), Math.Max(1, _overlayHeight - _overlayGridTop))) };
             AddVisualChild(_laneLayer);
             AddVisualChild(overlay);
         }

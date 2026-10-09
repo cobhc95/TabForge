@@ -473,9 +473,9 @@ public sealed partial class ArrangementPanel
         if (viewport <= 1) return;
         var offset = _horizontal.HorizontalOffset;
         var barCount = _project is null || _project.Tracks.Count == 0 ? 0 : _project.Tracks.Max(t => t.Measures.Count);
-        var endBar = Math.Min(barCount, _playheadBar + 3);
-        var threeBarMargin = endBar > _playheadBar
-            ? _timeline.XOfBar(endBar) - _timeline.XOfBar(_playheadBar)
+        // Near the song end fewer than three bars remain: the trigger keeps its full three-bar room, so the playhead stays on screen.
+        var threeBarMargin = barCount - _playheadBar >= 3
+            ? _timeline.XOfBar(_playheadBar + 3) - _timeline.XOfBar(_playheadBar)
             : MeasureWidth * 3;
         if (ArrangementFollowGeometry.ShouldAdvance(x, offset, viewport, threeBarMargin))
         {
@@ -491,8 +491,27 @@ public sealed partial class ArrangementPanel
         }
     }
 
+    /// <summary>Keeps the Add-track lane inside the viewport when the rows are taller than the pane (both halves).</summary>
+    private void PinAddLane()
+    {
+        var view = _controlsScroll.ViewportHeight;
+        var vp = view > 0 ? RulerHeight + SectionHeight + view : 0;
+        if (Math.Abs(_timeline.ViewportHeight - vp) > 0.01)
+        {
+            // The lane is drawn in the overlay: a viewport change that moves it redraws only that layer, never the lanes (a resize step stays cheap).
+            var top = _timeline.AddLaneTop;
+            _timeline.ViewportHeight = vp;
+            if (Math.Abs(_timeline.AddLaneTop - top) > 0.01) _timeline.RefreshOverlay();
+        }
+        if (_addLane.Row is not { } row || _project is null) return;
+        var natural = RowsHeight(_project);
+        var shift = view > 0 ? Math.Min(0, _controlsScroll.VerticalOffset + view - AddTrackLane.Height - natural) : 0;
+        row.RenderTransform = shift == 0 ? Transform.Identity : new TranslateTransform(0, shift);
+    }
+
     private void RefreshTimelineExtent()
     {
+        PinAddLane();
         _timeline.UpdateCache();   // the song's width decides whether the timeline can be one GPU texture
         var width = Math.Max(200, _timeline.TotalWidth);
         if (_horizontal.ActualWidth > 0) width = Math.Max(width, _horizontal.ActualWidth);
@@ -510,8 +529,8 @@ public sealed partial class ArrangementPanel
         _sectionDragOverlay.Height = height;
         _sectionInsertionIndicator.Width = width;
         _sectionInsertionIndicator.Height = height;
-        _dropGhost.Width = width;
-        _dropGhost.Height = height;
+        _mediaDrop.Ghost.Width = width;
+        _mediaDrop.Ghost.Height = height;
         _timelineHost.InvalidateMeasure();
         SyncTimelineScrollBar();
         LayoutDragLaneOutline();

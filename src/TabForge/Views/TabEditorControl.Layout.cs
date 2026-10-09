@@ -21,7 +21,7 @@ public sealed partial class TabEditorControl
     protected override Size MeasureOverride(Size availableSize)
     {
         var track = Track;
-        var systems = track is null || track.IsAudio ? 1 : GetScoreLayout(track).SystemCount;   // an audio track has no notation: one short page with its message
+        var systems = track is null || track.IsAudio ? 1 : Layout.GetLayout(track).SystemCount;   // an audio track has no notation: one short page with its message
         var width = PageWidth;
         return new Size(width * _zoom, (HeaderHeight + systems * SystemHeight + 48) * _zoom);
     }
@@ -38,7 +38,7 @@ public sealed partial class TabEditorControl
             _sel.Coerce(track.Measures.Count, last >= 0 ? Math.Max(0, SlotsFor(last) - 1) : 0);
         }
         SelectedMeasure = Math.Clamp(SelectedMeasure, 0, Math.Max(0, track.Measures.Count - 1));
-        SelectedCell = Math.Clamp(SelectedCell, 0, SlotsFor(SelectedMeasure) - 1);
+        SelectedCell = CoerceCell(SelectedMeasure, SelectedCell);
         SelectedString = Math.Clamp(SelectedString, 0, Math.Max(0, track.StringTunings.Count - 1));
     }
 
@@ -50,13 +50,13 @@ public sealed partial class TabEditorControl
     /// the dirty flag, the timeline invalidation) and returns whether it changed anything; the selection is coerced, then <see cref="Edited"/> fires.
     /// An editor with no host (a standalone control) reports the start of the edit through <see cref="EditStarting"/> and marks the timeline itself.
     /// </summary>
-    private bool RunEdit(Func<bool> mutate, bool markTimeline = true)
+    private bool RunEdit(Func<bool> mutate, bool markTimeline = true, bool continuesLastStep = false)
     {
         if (_project is null) return false;
         if (!ScoreEditPreparation.TryPrepare(this, mutate, out mutate)) { StatusMessage?.Invoke(this, Services.EditorGuard.Hint); return false; }
         _layout.CaptureMeasureRange(AffectedMeasureRange);
         bool changed;
-        if (EditHostNow is { } host) changed = host.Run(_ => ScoreEditPreparation.RunMutation(mutate, _layout), markTimeline);
+        if (EditHostNow is { } host) changed = host.Run(_ => ScoreEditPreparation.RunMutation(mutate, _layout), markTimeline, continuesLastStep);
         else
         {
             EditStarting?.Invoke(this, EventArgs.Empty);
@@ -154,10 +154,10 @@ public sealed partial class TabEditorControl
     int IScoreRenderHost.HoverMeasure => _sel.HoverMeasure;
     int IScoreRenderHost.HoverCell => _sel.HoverCell;
     int IScoreRenderHost.ActiveVoiceIndex => _activeVoiceIndex;
-    bool IScoreRenderHost.PlaybackActive => PlaybackActive;
-    int IScoreRenderHost.PlaybackMeasure => PlaybackMeasure;
-    int IScoreRenderHost.PlaybackCell => PlaybackCell;
-    double IScoreRenderHost.PlaybackFraction => PlaybackFraction;
+    bool IScoreRenderHost.PlaybackActive => _playback.Active;
+    int IScoreRenderHost.PlaybackMeasure => _playback.Measure;
+    int IScoreRenderHost.PlaybackCell => _playback.Cell;
+    double IScoreRenderHost.PlaybackFraction => _playback.Fraction;
     HashSet<(int bar, int cell, int s)> IScoreRenderHost.SoundingNotes => _playback.Sounding;
     HashSet<(int bar, int cell, int s)> IScoreRenderHost.StruckNotes => _playback.Struck;
     (Rect Rect, Brush Brush)? IScoreRenderHost.PlayingBarBand(TrackModel track, ScoreSystemPosition system, ScoreMeasurePosition position) => _playback.PlayingBarBand(track, system, position);

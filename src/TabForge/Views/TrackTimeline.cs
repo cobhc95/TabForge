@@ -130,6 +130,12 @@ internal sealed partial class TrackTimeline : FrameworkElement, IAreaMoveHost
     public bool ShowContinuousBlocks;
     public bool HideEmptyTimelineGrid = true;
     public bool ShowBarGlow = true;
+    /// <summary>Thin horizontal lines between track rows and audio lanes (off: rows are told apart by their alternating fill).</summary>
+    public bool ShowTrackLines;
+    /// <summary>The line between tracks: one pixel of text colour at low opacity, so it reads faintly on both themes.</summary>
+    private Pen TrackLinePen => Draw.Pen(_theme.Text, 1, 0.14);
+    /// <summary>The alternate row shade of the track rows (the track list uses it for odd rows while the lines are hidden).</summary>
+    internal Color RowAlt => _theme.RowAlt;
     public double SectionGlowIntensity = 0.45;
     public bool ShowSectionNames = true;
     public bool ShowBarNumbers = true;
@@ -185,7 +191,7 @@ internal sealed partial class TrackTimeline : FrameworkElement, IAreaMoveHost
     private int _pressedSectionIndex = -1;
     private int _sectionPressOriginIndex = -1;
     private bool _sectionDragging;
-    // Plain drag (no Ctrl): only the section tab moves. No lane animation, no content preview, bars untouched.
+    // Ctrl+drag moves only the section marker (bars untouched); a plain drag moves the section with its bars.
     private int _sectionDropBefore = -1;
     private bool _sectionSettling;
     private bool _renderingSectionPreview;

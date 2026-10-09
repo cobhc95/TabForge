@@ -5,7 +5,7 @@ using TabForge.AudioEngine.Plugins;
 namespace TabForge.AudioEngine.Mixing;
 
 /// <summary>
-/// Faster-than-realtime render of the engine's loaded track chains (see docs/history/RENDER_PLAN.md).
+/// Faster-than-realtime render of the engine's loaded track chains.
 /// Chains are independent offline, so each worker thread renders whole chains ahead into bounded per-chain block queues
 /// (a chain always runs on the same worker, one crash breadcrumb per worker); one mixer thread pops the blocks in
 /// lockstep, sums the master (fixed order: bit-identical whatever the thread count), writes master and stems in the

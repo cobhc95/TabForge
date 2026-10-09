@@ -8,7 +8,9 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
+using TabForge.Docking;
 using TabForge.Models;
+using TabForge.Playback;
 using TabForge.Services;
 using TabForge.Views;
 
@@ -96,6 +98,8 @@ internal sealed partial class WindowProbes : MainWindow.ProbeAccess
         private double _uiScale = 1;
         private string? _selection, _page, _menu, _window;
         private Size _size = new(1600, 1000);
+        private DockWorkspaceState? _savedWorkspace;   // the profile's layout at start, for "restore-saved"
+        private string? _savedLayoutName;
 
         public CaptureRun(WindowProbes w, string outDir)
         {
@@ -120,6 +124,11 @@ internal sealed partial class WindowProbes : MainWindow.ProbeAccess
             await _w.Settle(1200);
             SetSize(_size);
             ApplyTheme("dark");
+            // A reused scratch profile must not carry an earlier run's layout into the first shot ("restore-saved" brings it back).
+            _savedWorkspace = _w._dockWorkspace?.CaptureLayout();
+            _savedLayoutName = _w._settings.LastLayout;
+            _w._settings.LastLayout = null;
+            _w._dockWorkspace?.ApplyLayout(new DockWorkspaceState());
             OpenSong("demo");
             await _w.Settle(900);
             var n = 0;
@@ -202,13 +211,35 @@ internal sealed partial class WindowProbes : MainWindow.ProbeAccess
                 case "audio-track": await AddExampleAudioTrackAsync(); break;
                 case "timeline-drag": TimelineDrag(value.GetString() ?? "drop"); await _w.Settle(400); break;
                 case "playhead-style": _w.Arrangement.PlayheadStyle = value.GetString() ?? "Line"; await _w.Settle(300); break;
+                case "collapse-groups": CollapseGroups(value); await _w.Settle(500); break;
+                case "mixer-rules": MixerRulesExample(value.GetString() == "reset"); await _w.Settle(500); break;
+                case "scroll-mixer": (_tools.GetValueOrDefault("Mixer") as MixerWindow)?.ScrollToEnd(); await _w.Settle(300); break;
                 case "solo": _w._project.Tracks[value.GetInt32()].Solo = true; _w.RefreshTracks(); await _w.Settle(300); break;
-                case "clip-edit": case "delete-prompt": case "marker-size": await ExtraStepAsync(verb, value); break;
                 case "frames": await FramesAsync(value.GetString() ?? "frames", args); break;
                 case "wait": await _w.Settle(value.GetInt32()); break;
                 case "shot": await ShotAsync(value.GetString() ?? "shot", args); break;
-                default: throw new InvalidOperationException($"unknown step '{verb}'");
+                default: await ExtraStepAsync(verb, value); break;   // clip-edit, delete-prompt, marker-size, effect, timeline-height, section-tip, restore-saved; anything else is unknown
             }
+        }
+
+        /// <summary>true / false: collapse / expand every mixer group; a name: collapse that group only.</summary>
+        private void CollapseGroups(JsonElement value)
+        {
+            if (value.ValueKind == JsonValueKind.String) _w.SetGroupsCollapsed(new[] { value.GetString() ?? "" }, true);
+            else _w.SetAllGroupsCollapsed(value.GetBoolean());
+            (_tools.GetValueOrDefault("Mixer") as MixerWindow)?.Rebuild();
+        }
+
+        /// <summary>Example custom groups for the shots: a Piano group and a Pads group beside the defaults.</summary>
+        private void MixerRulesExample(bool reset)
+        {
+            if (reset) { Models.MixerRules.ResetToApp(_w._project); _w.RefreshTracks(); (_tools.GetValueOrDefault("Mixer") as MixerWindow)?.Rebuild(); return; }
+            var groups = Models.MixerRules.Defaults();
+            groups.Add(new Models.MixerGroupDef { Name = "Piano", Rules = { new(Models.MixerRules.KindFamily, Models.MixerRules.Piano) } });
+            groups.Add(new Models.MixerGroupDef { Name = "Pads & strings", Rules = { new(Models.MixerRules.KindProgram, "88-95"), new(Models.MixerRules.KindFamily, Models.MixerRules.Strings), new(Models.MixerRules.KindName, "pad") } });
+            Models.MixerRules.Apply(_w._project, groups, Models.MixerRules.DefaultFallback);
+            _w.RefreshTracks();
+            (_tools.GetValueOrDefault("Mixer") as MixerWindow)?.Rebuild();
         }
 
         private void SetSize(Size size)
@@ -292,7 +323,9 @@ internal sealed partial class WindowProbes : MainWindow.ProbeAccess
         private void ShowPanel(string spec)
         {
             var dock = _w._dockWorkspace ?? throw new InvalidOperationException("no dock workspace");
+            if (spec.Equals("hide:band", StringComparison.OrdinalIgnoreCase)) { if (dock.IsPanelVisible("band")) _w.ToggleBandView(); return; }   // leaves the Band layout, as the toolbar button does
             if (spec.StartsWith("hide:", StringComparison.OrdinalIgnoreCase)) { dock.SetPanelVisible(spec[5..], false); return; }
+            if (spec == "band") { if (!dock.IsPanelVisible(spec)) _w.ToggleBandView(); return; }   // the Band layout, as the menu does
             if (!dock.IsPanelVisible(spec)) dock.SetPanelVisible(spec, true);
             dock.SelectPanel(spec);
         }
@@ -311,12 +344,12 @@ internal sealed partial class WindowProbes : MainWindow.ProbeAccess
             var index = Math.Max(0, bar - 1);
             w._playheadBar = index;
             w._playheadFraction = fraction;
-            w.Editor.PlaybackActive = true;
-            w.Editor.PlaybackTrackIndex = Math.Max(0, w.Editor.SelectedTrackIndex);
-            w.Editor.PlaybackFraction = fraction;
-            w.Editor.SetPlayhead(index, 0);
+            w.Editor.Playback.Active = true;
+            w.Editor.Playback.TrackIndex = Math.Max(0, w.Editor.SelectedTrackIndex);
+            w.Editor.Playback.Fraction = fraction;
+            w.Editor.Playback.SetPlayhead(index, 0);
             w.Arrangement.SetPlayhead(index, fraction, playbackActive: true);
-            w.Playhead.SetGeometry(w.Editor.PlayheadGeometry());
+            w.Playhead.SetGeometry(w.Editor.Playback.PlayheadGeometry());
         }
 
         /// <summary>Writes the song's sections, track summary and bar structure (time signatures, tempo changes, repeats) to &lt;script&gt;.song.txt, to confirm bar numbers.</summary>

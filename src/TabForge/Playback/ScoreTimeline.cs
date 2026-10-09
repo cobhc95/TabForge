@@ -70,6 +70,8 @@ public sealed class NoteEvent
     public string? ChordName;
     /// <summary>Short playing-technique tag shown on the fretboard (e.g. "TAP", "H/P"), or null.</summary>
     public string? Technique;
+    /// <summary>Strummed chord: 1 = down-stroke (toward the high strings), -1 = up-stroke, 0 = not strummed.</summary>
+    public sbyte Strum;
 
     /// <summary>Indices into <see cref="ScoreTimeline.Events"/> of every note-off for this note.</summary>
     public List<int> OffEventIndices { get; } = new();

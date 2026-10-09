@@ -130,11 +130,11 @@ A floating panel is a window of its own, so you can drag it onto a second screen
 *Goal: save a layout, switch away and back, then delete it.*
 
 1. Press `Ctrl+2` to switch to the Practice layout.
-2. Choose **View > Panels > Practice / Mixer**. The tick clears, and the panel closes.
+2. Choose **View > Panels > Sections**. The tick clears, and the panel closes.
 3. Choose **View > Layouts > Save current layout as…**. A **Save layout** prompt opens.
 4. Type `Study` in the name box and click **OK**. The status bar says the layout is saved.
 5. Press `Ctrl+1` to switch to the Compose layout.
-6. Choose **View > Layouts > Study**. The window returns to your arrangement, without the **Practice / Mixer** panel.
+6. Choose **View > Layouts > Study**. The window returns to your arrangement, without the **Sections** panel.
 7. Choose **View > Layouts > Delete layout > Study** to remove it.
 8. Choose **View > Reset all panels to default positions**.
 

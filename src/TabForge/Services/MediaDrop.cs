@@ -24,6 +24,9 @@ public sealed class DropItem
     /// <summary>A virtual file whose contents the source gives only on drop (a placeholder until then).</summary>
     public bool Deferred { get; init; }
 
+    /// <summary>A local file whose length (or MIDI content) is read off the UI thread while the drag hovers; the ghost shows an estimate until then.</summary>
+    public bool Pending { get; init; }
+
     public bool IsMidi => Kind == DropItemKind.Midi;
 }
 

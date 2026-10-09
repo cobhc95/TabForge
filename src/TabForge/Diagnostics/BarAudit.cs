@@ -37,7 +37,7 @@ internal sealed class TrackViewAudit
         Staff = view != "tab"; Tab = view != "notation";
         Editor = new TabEditorControl
         {
-            Project = project, SelectedTrackIndex = trackIndex, DarkPaper = false, HideCursor = true, PlaybackMeasure = -1,
+            Project = project, SelectedTrackIndex = trackIndex, Appearance = { DarkPaper = false }, HideCursor = true,
             Notation = view == "notation" ? NotationMode.StaffOnly : view == "tab" ? NotationMode.TabOnly : NotationMode.TabAndStaff
         };
         Editor.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
@@ -51,7 +51,7 @@ internal sealed class TrackViewAudit
             _items[system] = list;
         }
         Layout = Editor.AuditLayout();
-        var previous = -1;
+        var previous = Dynamics.NearestIndex(Dynamics.Forte);   // the default dynamic is not marked
         for (var b = 0; b < Track.Measures.Count; b++)
             foreach (var cell in Track.Measures[b].Cells)
             {
@@ -337,12 +337,12 @@ internal sealed class BarChecker
         var simileSlashes = Items.Count(i => i.Kind == Kind.Line && Diagonal(i) && Thick(i, 2.6, 0.1) && Math.Abs(CenterX(i) - (X + W / 2)) < 12);
         Count("simile", similes, simileSlashes, "repeat-bar sign slashes");
 
-        // dynamics (first note of the track, then each change)
+        // dynamics (each change from the unmarked default)
         var expectedDynamics = V.Editor.Appearance.ShowDynamics ? V.DynamicsFor(Bar) : new List<string>();
         var left = new List<string>(expectedDynamics);
         foreach (var name in Texts.Where(t => t.Font.Contains("Times", StringComparison.OrdinalIgnoreCase)).Select(t => t.Label))
             if (!left.Remove(name)) Extra("dynamic", $"\"{name}\" is drawn but not in the data");
-        foreach (var name in left) Miss("dynamic", $"\"{name}\" (first note or change of dynamic)");
+        foreach (var name in left) Miss("dynamic", $"\"{name}\" (change of dynamic)");
 
         // chord names, beat text, lyrics
         foreach (var (voice, index, cell) in Cells)
@@ -514,7 +514,7 @@ internal sealed class BarChecker
         if (T)
             foreach (var (voice, index, cell) in sounding)
             {
-                var label = ScoreMarkText.DrawnTechniqueLabel(cell.Notes, !N);
+                var label = ScoreMarkText.DrawnTechniqueLabel(cell.Notes);
                 if (label.Length > 0 && !HasText(label)) Miss("technique-label", $"\"{label}\" on beat {index + 1}");
             }
 

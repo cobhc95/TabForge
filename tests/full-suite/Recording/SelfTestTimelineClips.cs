@@ -15,14 +15,14 @@ public static partial class SelfTest
 
         // Bar menu: outside a section, several tracks. This track first, then "All tracks", then the one settings door.
         var bar = Views.TimelineMenus.Bar(new Views.BarMenuState(true, true, 3, true, true, false, false, true, true), key);
-        Check("bar menu: this-track Copy / Paste / Delete, Insert bar, All tracks, Timeline settings (6 top-level items)",
-            string.Join("|", Top(bar)) == "Copy bar (this track)|Paste bar (this track)|Delete bar…|Insert bar|All tracks|Timeline settings…", string.Join("|", Top(bar)));
+        Check("bar menu: this-track Copy / Paste / Delete, Insert bar, All tracks, Lines between tracks, Reset track list height, Timeline settings (8 top-level items)",
+            string.Join("|", Top(bar)) == "Copy bar (this track)|Paste bar (this track)|Delete bar…|Insert bar|All tracks|Lines between tracks|Reset track list height|Timeline settings…", string.Join("|", Top(bar)));
         var allTracksAt = bar.FindIndex(x => x.Header == "All tracks");
         Check("'All tracks' comes after the this-track items and a separator", allTracksAt > 4 && bar[allTracksAt - 1].IsSeparator && bar[0].Header.StartsWith("Copy bar"));
         Check("bar menu shows the user's Copy shortcut", bar[0].Shortcut == "Ctrl+C");
         var oneTrack = Views.TimelineMenus.Bar(new Views.BarMenuState(true, true, 1, true, false, true, true, false, false), key);
         Check("with one track the labels stay plain, there is no 'All tracks >', and inside a section 'Section >' appears",
-            string.Join("|", Top(oneTrack)) == "Copy bar|Paste bar|Delete bar…|Insert bar|Section|Timeline settings…", string.Join("|", Top(oneTrack)));
+            string.Join("|", Top(oneTrack)) == "Copy bar|Paste bar|Delete bar…|Insert bar|Section|Lines between tracks|Reset track list height|Timeline settings…", string.Join("|", Top(oneTrack)));
         var allBar = new[] { bar, oneTrack }.SelectMany(Views.TimelineMenus.Leaves).Select(x => x.Command).ToHashSet();
         Check("bar menus keep every bar command reachable", new[]
         {
@@ -33,7 +33,7 @@ public static partial class SelfTest
         Check("the timeline appearance toggles are Preferences rows, no longer in any menu",
             !Views.TimelineMenus.Leaves(bar).Any(x => x.Header.Contains("notes") || x.Header.Contains("glow") || x.Header.Contains("grid")));
         var noBar = Views.TimelineMenus.Bar(new Views.BarMenuState(false, false, 0, false, false, false, false, false, false), key);
-        Check("bar menu on an empty song hides the bar-only groups", Top(noBar).Length == 4 && !Top(noBar).Contains("Insert bar"), string.Join("|", Top(noBar)));
+        Check("bar menu on an empty song hides the bar-only groups", Top(noBar).Length == 6 && !Top(noBar).Contains("Insert bar"), string.Join("|", Top(noBar)));
 
         // Selection menu.
         var sel = Views.TimelineMenus.Selection(new Views.SelectionMenuState("Bars 3-6 selected", true, false, false, true), key);

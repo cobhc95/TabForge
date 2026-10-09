@@ -4,7 +4,7 @@ using System.Windows.Shapes;
 
 namespace TabForge.Views;
 
-// Owns: the waveform icon of an audio track (track-list row, properties picture). Does not touch the instrument icons.
+// Owns: the waveform picture of an audio track in Track properties (the track-list row uses TrackSilhouette). Does not touch the instrument icons.
 // Tests: TestAddTrackLane (an audio row shows it).
 /// <summary>A small drawn waveform: vertical bars of different heights, filled with a theme brush (follows light and dark).</summary>
 internal static class AudioTrackIcon

@@ -53,8 +53,9 @@ public static partial class SelfTest
     {
         var settings = new AppSettings();
         var catalog = SettingsCatalog.Build(settings);
-        var expectedKeys = PasteQuestionInfo.All.ToDictionary(q => q, PasteQuestionInfo.SettingKey);
-        Check("paste settings: one row per question with a distinct key", expectedKeys.Values.Distinct().Count() == 5
+        // Beats onto notes has no row: pasting onto written beats always inserts; only Paste special still offers Replace.
+        var expectedKeys = PasteQuestionInfo.All.Where(q => q != PasteQuestion.BeatsOntoNotes).ToDictionary(q => q, PasteQuestionInfo.SettingKey);
+        Check("paste settings: one row per question with a distinct key", expectedKeys.Values.Distinct().Count() == 4
             && expectedKeys.Values.All(k => catalog.Count(d => d.Key == k) == 1));
         foreach (var (q, key) in expectedKeys)
         {

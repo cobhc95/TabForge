@@ -61,13 +61,14 @@ public partial class MainWindow
         // Opening "in the current tab" (Ctrl+O) replaces it even while it plays: stop that tab first.
         if (replaceTarget is not null && ReferenceEquals(replaceTarget, _documents.Active) && replaceTarget.Playback.Engine.IsPlaying) StopPlayback();
 
+        AttachAppRules(project);
         Plugins.AutoChains.Apply(_settings.Plugins, project);
         Plugins.StartupTracks.Apply(_settings.Plugins, project);   // not armed, not saved, and MarkClean below keeps the song clean
         var doc = DocumentSession.FromProject(project, path);
         if (sourcePath is not null) doc.Media.SetSourceDirectory(System.IO.Path.GetDirectoryName(sourcePath));   // an imported song has no native path yet: its relative media resolves here
         doc.Notation = PreferredNotation;
         ApplyPreferredScoreView(doc);
-        if (replaceAll) doc.ZoomFactor = 1.0;
+        if (replaceAll) doc.ZoomFactor = 0;
         doc.MarkClean();
         if (clearHistory) doc.Undo.Clear();
         // Where the song goes (replace the target, open beside, replace everything) is DocumentPlacement's decision; the window only reacts to it.
@@ -103,6 +104,7 @@ public partial class MainWindow
     {
         // The one switch entry point: the document on show is captured here (callers need not), and what was typed for it in the boxes is settled on it.
         if (ViewBinder.Shown is { } outgoing) CaptureDocumentState(leaving: !ReferenceEquals(outgoing, session));
+        AttachAppRules(session.Project);
         if (applyPlaybackSwitchPolicy) ApplyPlaybackSwitchPolicy(session);
 
         _playbackView.StopTick();
@@ -128,7 +130,7 @@ public partial class MainWindow
             // The score's range goes with it (silently: the editor still holds the previous song here).
             Editor.ClearSelection(notify: false);
             _selection.Clear(SelectionOrigin.Document);
-            _loopHasArea = false;
+            _selLoop.Drop();
             SyncAreaVisuals();
             UpdateTuningLabel();
             SetTransportActive(LoopButton, _loop);
@@ -138,14 +140,14 @@ public partial class MainWindow
             if (session.Playback.IsPlayingVisual && session.Playback.Engine.IsPlaying)
             {
                 _timeline = session.Playback.Timeline ?? MidiTimelineBuilder.Build(_project, BuildOptions());
-                Editor.Timeline = _timeline;
-                Editor.PlaybackBarRemap = session.Playback.PlaybackBarRemap;
-                Editor.PlaybackActive = true;
+                Editor.Playback.Timeline = _timeline;
+                Editor.Playback.BarRemap = session.Playback.PlaybackBarRemap;
+                Editor.Playback.Active = true;
             }
             else
             {
-                Editor.PlaybackActive = false;
-                Editor.PlaybackBarRemap = null;
+                Editor.Playback.Active = false;
+                Editor.Playback.BarRemap = null;
             }
             RefreshToolsPalette();
             ScoreZoom.Factor = session.ZoomFactor;
@@ -157,7 +159,6 @@ public partial class MainWindow
             if (!session.Playback.IsPlayingVisual) RebuildVisualTimeline();
             RefreshStatus();
             RefreshInstrument();
-            RefreshScaleHighlightCombo();
             SyncSelectedOutput();
             RefreshTabs();
             UpdateTitle();

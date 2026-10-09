@@ -1,17 +1,17 @@
-# TabForge.AlphaTab: alphaTab 1.8.4 plus three patches
+# TabForge.AlphaTab: alphaTab 1.8.4 plus four patches
 
 TabForge reads and writes score files with [alphaTab](https://www.alphatab.net/) (MPL-2.0). Upstream alphaTab refuses a
 .gp3/.gp4/.gp5 file with more than 1,000 bars through a hard-coded constant that no setting can change, so TabForge ships its own
-build of alphaTab 1.8.4 with **three small changes**: (1) that limit became a setting of the individual import
+build of alphaTab 1.8.4 with **four small changes**: (1) that limit became a setting of the individual import
 (`ImporterSettings.MaxGp3To5BarCount`, default 1,000 = unchanged); (2) a .gp file's exact mixer volume and balance are kept
-(`PlaybackInformation.VolumeFraction`/`BalanceFraction`, see below); (3) the trill speed is written and read (note XProperty 688062467). This folder holds everything needed to see, rebuild and verify it.
+(`PlaybackInformation.VolumeFraction`/`BalanceFraction`, see below); (3) the trill speed is written and read (note XProperty 688062467); (4) a Guitar Pro 3-5 hammer-on, shift/legato slide or tie with no partner note is kept on the note (Note.Unlinked*). This folder holds everything needed to see, rebuild and verify it.
 
 | | |
 |---|---|
-| Package / assembly | `TabForge.AlphaTab` / `TabForge.AlphaTab.dll`, assembly version 1.8.4.3, package version `1.8.4-tabforge.3` (upstream's is `AlphaTab`; this is a different package and file name on purpose) |
+| Package / assembly | `TabForge.AlphaTab` / `TabForge.AlphaTab.dll`, assembly version 1.8.4.4, package version `1.8.4-tabforge.4` (upstream's is `AlphaTab`; this is a different package and file name on purpose) |
 | Upstream | https://github.com/CoderLine/alphaTab, tag `v1.8.4`, commit `022a45c8e42370f9e12e68949d11eada370da83d` |
 | Licence | Mozilla Public License 2.0, as upstream (copyright (c) 2025 Daniel Kuschny and contributors); text in `src/TabForge/licenses/MPL-2.0_alphaTab.txt` |
-| Source Code Form | upstream tag above **plus** `0001-per-import-gp3-5-bar-limit-and-tabforge-identity.patch` , `0002-gpif-exact-mixer-volume-and-balance.patch` and `0003-gpif-trill-speed.patch` in this folder, applied in order (the complete difference, 29 + 28 + 50 changed lines) |
+| Source Code Form | upstream tag above **plus** `0001-per-import-gp3-5-bar-limit-and-tabforge-identity.patch` , `0002-gpif-exact-mixer-volume-and-balance.patch`, `0003-gpif-trill-speed.patch` and `0004-keep-unlinked-gp3-5-note-links.patch` in this folder, applied in order (the complete difference, 29 + 28 + 50 + 30 changed lines) |
 | Built by | `tools/Build-AlphaTab.ps1` (clone of the pinned commit, `git apply`, `npm ci`, alphaTab's own transpiler, `dotnet build`) |
 | Consumed as | local NuGet source `vendor/alphatab` (see `nuget.config`; the id `TabForge.AlphaTab` is mapped to this folder only), locked in `src/TabForge/packages.lock.json` |
 
@@ -56,6 +56,19 @@ trill to 1/16, so a 1/32 trill reopened as 1/16.
 
 The gp-fidelity self-test (`TestGpTrillSpeed`) checks the written ticks, the exact round trip of 1/8, 1/16, 1/32 and 1/64, jittered values as the .gp format writes them, and a file without the XProperty.
 
+## Patch 0004 (`0004-keep-unlinked-gp3-5-note-links.patch`)
+
+A Guitar Pro 5 file keeps a hammer-on, a shift or legato slide and a tie as flags on the note itself, and Guitar Pro writes them while the
+partner note does not exist yet (a hammer-on or slide typed on the last note, a tie on the very first note). alphaTab's `Note.finish`
+links each one to its partner and, when none is found, clears the flag, so TabForge read such a note without its mark.
+
+1. `model/Note.ts`: three new fields, `unlinkedHammerPullOrigin`, `unlinkedSlideOutType` and `unlinkedTieDestination` (`@json_ignore`),
+   set exactly where `finish`/`chain` clear `isHammerPullOrigin`, `slideOutType` and `isTieDestination` for want of a partner.
+   Nothing else changes: the cleared fields, the links and the serialised model are what upstream gives.
+2. `Directory.Build.props`: package version 1.8.4-tabforge.4, assembly version 1.8.4.4, description.
+
+TabForge reads the three fields as a fallback (`GuitarProBeatReader`, `GuitarProBarConverter`); `TestGp5OwnFilesImport` checks them on files Guitar Pro 5 saved.
+
 ## Rebuild and verify
 
 Needs git, Node.js (LTS) and npm, and the .NET 8 SDK; everything comes from github.com/CoderLine/alphaTab, npmjs.org and nuget.org.
@@ -70,7 +83,7 @@ byte-identical to the nuget.org `AlphaTab` DLL: the compiler build and the patch
 `long-import` compares the complete model (every property alphaTab serialises) of generated .gp3, .gp4, .gp5.00 and .gp5.10 files and of the
 demo song with the SHA-256 recorded from the unpatched upstream package.
 
-Changing the patch means a new version: add a patch file that raises the suffix (next: `1.8.4-tabforge.4`, assembly version 1.8.4.4), in the
+Changing the patch means a new version: add a patch file that raises the suffix (next: `1.8.4-tabforge.5`, assembly version 1.8.4.5), in the
 `PackageReference` in `TabForge.csproj`, in `AlphaTabBoundary.RequiredVersion` and in `nuget.config`'s consumers, because NuGet caches
 packages by version and would otherwise keep serving the old one.
 

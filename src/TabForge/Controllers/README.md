@@ -11,9 +11,10 @@ One responsibility moved out of a window, each behind a host interface. A contro
 ## Key types
 - `EngineSyncController`: keeps the audio engine in step with the shown song and resends state after an engine restart.
 - `PlaybackViewController`, `TransportControlsController`: playback display and transport buttons.
+- `SelectionLoopController`: the selected (loop) area and the shared-selection to timeline sync.
 - `TrackController`, `ArrangementController`, `ClipEditController`, `SectionEditFlow`: track, timeline and clip edits. `BarRangeFlow`: the timeline bar-range commands and one owner-scoped reusable Delete prompt. `EmptyBarFlow`: deleting bars that hold no notes (with the question and the clip warning).
 - `TrackClipboardFlow`: whole-track copy, cut, paste, duplicate and delete (track row menu and track-row hotkeys).
-- `AutosaveController`, `UpdateCheckController`, `RecordingController`: autosave, update check, recording.
+- `AutosaveController`, `UpdateCheckController`, `RecordingController`: autosave, update check, recording. `ImportQueueController`: the background score-import queue and its status wiring.
 - `WindowKeyRouter`: keyboard routing order. `HotkeyMaps`: the window's gesture maps (everywhere, clip, track list).
 - `WindowCloseFlow`: saves and closes in progress, the window-close questions, the input gate while a save runs, degraded mode.
 - `AppliedSettings`: what the window last applied from the settings, so a sync only redoes what changed.

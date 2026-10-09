@@ -98,7 +98,7 @@ public partial class MainWindow : IWindowCloseHost
                 if (!loaded)
                 {
                     stopped = true;
-                    foreach (var other in batch) Imports.Cancel(other);
+                    foreach (var other in batch) Imports.Queue.Cancel(other);
                     return;
                 }
                 StatusText.Text = opened.ImportedFromGuitarPro

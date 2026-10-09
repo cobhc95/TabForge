@@ -69,13 +69,13 @@ public static partial class SelfTest
         var trumpet = Track("Trumpet", TrackKind.Keys, 56);
         song.Tracks.AddRange(new[] { lead, bass, piano, organ, drums, trumpet });
 
-        Check("tracks are grouped by instrument family (guitars, basses, keys, drums)",
+        Check("tracks are grouped by instrument family (guitars, basses, drums; everything else together)",
             MixerGroups.GroupOf(song, lead) == MixerGroups.Guitars && MixerGroups.GroupOf(song, bass) == MixerGroups.Basses
-            && MixerGroups.GroupOf(song, piano) == MixerGroups.Keys && MixerGroups.GroupOf(song, organ) == MixerGroups.Keys
+            && MixerGroups.GroupOf(song, piano) == MixerGroups.AllButGuitarsAndBass && MixerGroups.GroupOf(song, organ) == MixerGroups.AllButGuitarsAndBass
             && MixerGroups.GroupOf(song, drums) == MixerGroups.Drums);
 
         song.Mixer.Grouping = MixerGrouping.Compact;
-        Check("compact grouping puts everything but guitars, basses and drums together",
+        Check("the older compact grouping is the same as by instrument",
             MixerGroups.GroupOf(song, piano) == MixerGroups.AllButGuitarsAndBass && MixerGroups.GroupOf(song, lead) == MixerGroups.Guitars);
         song.Mixer.Grouping = MixerGrouping.ByInstrument;
 
@@ -87,8 +87,8 @@ public static partial class SelfTest
             $"{MixerGroups.Volume(song, lead)}/{MixerGroups.Pan(song, lead)}/{MixerGroups.Transpose(song, lead)}");
         Check("other groups are unaffected", MixerGroups.Volume(song, bass) == bass.Volume && MixerGroups.Transpose(song, bass) == 0);
 
-        lead.MixerGroup = MixerGroups.Other;
-        Check("a track moved to another group follows that group", MixerGroups.GroupOf(song, lead) == MixerGroups.Other && MixerGroups.Volume(song, lead) == 100);
+        lead.MixerGroup = MixerGroups.Drums;
+        Check("a track moved to another group follows that group", MixerGroups.GroupOf(song, lead) == MixerGroups.Drums && MixerGroups.Volume(song, lead) == 100);
         lead.MixerGroup = null;
 
         song.Mixer.Edit(MixerGroups.Basses).Solo = true;

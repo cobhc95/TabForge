@@ -28,13 +28,13 @@ public partial class MainWindow
     {
         var track = _project.Tracks[index];
         var state = new TrackRowMenuState(track.IsAudio, TrackFlow.CanPaste, _project.Tracks.Count > 1, track.ColorHex);
-        return NewSpecMenu("Track options", TrackRowMenus.Build(state, MenuKey), spec => RunTrackRowCommand(spec, index), Arrangement);
+        return SpecMenus.New("Track options", TrackRowMenus.Build(state, MenuKey), spec => RunTrackRowCommand(spec, index), Arrangement);
     }
 
     private void ShowTrackRowMenu(int index)
     {
         if (index < 0 || index >= _project.Tracks.Count) return;
-        OpenContextMenu(TrackRowMenu(index), Arrangement, null, false);
+        SpecMenus.Open(TrackRowMenu(index), Arrangement, null, false);
     }
 
     private void RunTrackRowCommand(MenuSpec spec, int index)

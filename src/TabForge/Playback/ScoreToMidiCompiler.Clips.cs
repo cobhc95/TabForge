@@ -33,14 +33,15 @@ internal sealed partial class ScoreToMidiCompiler
             {
                 if (!clip.IsMidi || clip.Muted) continue;
                 var speed = Math.Clamp(clip.Speed, 0.25, 4);
+                foreach (var piece in TabForge.Services.ClipLoop.Pieces(clip))   // a clip longer than its media loops: one pass per piece
                 foreach (var note in clip.Notes!)
                 {
                     // Only the part of the note inside the (trimmed) clip plays.
-                    var srcOn = Math.Max(note.StartSec, clip.OffsetSec);
-                    var srcOff = Math.Min(note.StartSec + note.LengthSec, clip.OffsetSec + clip.SourceLengthSec);
-                    if (srcOff <= srcOn || note.StartSec < clip.OffsetSec - 1e-6) continue;
-                    var onMs = (clip.StartSec + (srcOn - clip.OffsetSec) / speed) * 1000 * _speedScale - offsetMs;
-                    var offMs = (clip.StartSec + (srcOff - clip.OffsetSec) / speed) * 1000 * _speedScale - offsetMs;
+                    var srcOn = Math.Max(note.StartSec, piece.OffsetSec);
+                    var srcOff = Math.Min(note.StartSec + note.LengthSec, piece.OffsetSec + piece.SourceLengthSec);
+                    if (srcOff <= srcOn || note.StartSec < piece.OffsetSec - 1e-6) continue;
+                    var onMs = (piece.StartSec + (srcOn - piece.OffsetSec) / speed) * 1000 * _speedScale - offsetMs;
+                    var offMs = (piece.StartSec + (srcOff - piece.OffsetSec) / speed) * 1000 * _speedScale - offsetMs;
                     if (onMs < fromMs - 0.5 || onMs >= _timeline.TotalMs) continue;
                     var pitch = Math.Clamp(note.Pitch + (int)Math.Round(clip.Pitch) + track.Transpose, 0, 127);
                     var velocity = Math.Clamp((int)Math.Round(note.Velocity * Gain.FromDb(clip.GainDb)), 1, 127);

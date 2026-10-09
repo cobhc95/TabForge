@@ -58,7 +58,7 @@ Source: `src/TabForge/packages.lock.json`
 | System.Security.AccessControl | 4.7.0 | Transitive | `JECvTt5aFF3WT3gHpfofL2MNNP6v84sxtXxpqhLBCcDRzqsPBmHhQ6shv4DwwN2tRlzsUxtb3G9M3763rbXKDg==` |
 | System.Security.Cryptography.Pkcs | 8.0.1 | Transitive | `CoCRHFym33aUSf/NtWSVSZa99dkd0Hm7OCZUxORBjRB16LNhIEOf8THPqzIYlvKM0nNDAPTRBa1FxEECrgaxxA==` |
 | System.Security.Principal.Windows | 4.7.0 | Transitive | `ojD0PX0XhneCsUbAZVKdb7h/70vyYMDYs85lwEI+LngEONe/17A0cFaRFqZU+sOEidcVswYWikYOQ9PPfjlbtQ==` |
-| TabForge.AlphaTab | 1.8.4-tabforge.3 | Direct | `TZqwYwTqL6eebCnCTANFLahjLau+Zk9YwtkkbbSTvk5e+huvmopECA+Uib2+cFM1nJ878W6NYbyvGYvnTjT0+A==` |
+| TabForge.AlphaTab | 1.8.4-tabforge.4 | Direct | `QLiUUcMuXfaCPUWxE+E3EuNcGiq7iX5nujmrX113zv+G/GcjQUNUl0SJb6ZJmpDEFjr7R3Md8gv+0V4UYgaQxw==` |
 
 ## Native components
 

@@ -243,6 +243,8 @@ public sealed class TrackController
         track.Rig.Name = preset?.Rig ?? track.InstrumentName;
         track.Rig.ArticulationMap = preset?.Map ?? entry!.Map;
         var drum = entry?.IsDrumKit ?? preset!.Map == "GM Drums";
+        // Another family (drums to pitched or back): the whole track follows, notes re-mapped.
+        if (TrackSetup.IsDrumFamily(track) != drum) TrackSetup.ConvertFamily(track, drum, TrackSetup.PitchedKindFor(track.InstrumentName));
         if (drum && track.MidiChannel != 9) track.MidiChannel = 9;
         else if (!drum && track.MidiChannel == 9) track.MidiChannel = FindMidiChannel(project);
         // An empty track takes the kind and default strings of the new instrument (a bass sound gets 4 strings);

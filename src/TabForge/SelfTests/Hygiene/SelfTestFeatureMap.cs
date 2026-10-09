@@ -11,32 +11,30 @@ public static partial class SelfTest
     private static readonly Regex TypeToken = new(@"^(?<type>[A-Z][A-Za-z0-9]*)(?:\.[A-Z][A-Za-z0-9]*)?$", RegexOptions.Compiled);
 
     /// <summary>
-    /// The feature map (docs/FEATURE_MAP.md) agrees with the code: its generated test block equals what the registry produces, every test it
-    /// names is registered, every type it names is declared, and every area or group it names exists. Fix: <c>TabForge.exe --feature-map</c>.
+    /// The feature map agrees with the code: the index links every page, the generated tests page is current, and every test, area,
+    /// group and type named by hand exists. Fix: <c>TabForge.exe --feature-map</c>.
     /// </summary>
     private static void TestFeatureMapInSync()
     {
         var root = FindRepositoryRoot();
-        var path = root is null ? null : Path.Combine(root, "docs", "FEATURE_MAP.md");
-        if (path is null || !File.Exists(path)) { Skip("feature map agrees with the test registry", "no source checkout / feature map found", "source-hygiene"); return; }
+        var indexPath = root is null ? null : Path.Combine(root, "docs", "FEATURE_MAP.md");
+        if (indexPath is null || !File.Exists(indexPath)) { Skip("feature map agrees with the test registry", "no source checkout / feature map found", "source-hygiene"); return; }
 
-        var document = File.ReadAllText(path);
         var registry = FeatureMapGenerator.ReadRegistry(root!);
         Check("feature map: the registry lists tests", registry.Count > 100, $"{registry.Count} tests parsed");
-        Check("feature map: every registered test is declared in a test file", registry.All(e => e.File != "(not found)"),
-            string.Join(", ", registry.Where(e => e.File == "(not found)").Select(e => e.Test).Take(5)));
+        Check("feature map: every registered test is declared in a test file", registry.All(e => e.File != "(not found)"), string.Join(", ", registry.Where(e => e.File == "(not found)").Select(e => e.Test).Take(5)));
 
-        var actual = FeatureMapGenerator.ExtractBlock(document);
-        Check("feature map: has the generated block markers", actual is not null);
-        if (actual is null) return;
-        var expected = FeatureMapGenerator.RenderBlock(registry);
-        Check("feature map: the generated test block is current (run TabForge.exe --feature-map)", actual == expected, FirstDifference(expected, actual));
+        var actual = File.Exists(Path.Combine(root!, FeatureMapGenerator.GeneratedRelativePath)) ? File.ReadAllText(Path.Combine(root!, FeatureMapGenerator.GeneratedRelativePath)).Replace("\r\n", "\n") : "";
+        var expected = FeatureMapGenerator.RenderDocument(registry).Replace("\r\n", "\n");
+        Check("feature map: docs/feature-map/tests.md is current (run TabForge.exe --feature-map)", actual == expected, FirstDifference(expected, actual));
 
-        // The hand-kept text: everything outside the generated block.
-        var text = document.Replace("\r\n", "\n");
-        var begin = text.IndexOf(FeatureMapGenerator.BeginMarker, StringComparison.Ordinal);
-        var end = text.IndexOf(FeatureMapGenerator.EndMarker, StringComparison.Ordinal) + FeatureMapGenerator.EndMarker.Length;
-        var handKept = text[..begin] + text[end..];
+        // Every feature page is linked from the index, and every page the index links exists.
+        var linked = Regex.Matches(File.ReadAllText(indexPath), @"\]\((feature-map/[^)\s]+\.md)\)").Select(m => m.Groups[1].Value).Distinct().ToList();
+        var pages = FeatureMapGenerator.PageFiles(root!).Select(p => p["docs/".Length..]).ToList();
+        Check("feature map: every feature page is linked from the index, and every link resolves", pages.Count > 0 && pages.All(linked.Contains) && linked.All(pages.Contains), string.Join(", ", pages.Except(linked).Concat(linked.Except(pages)).Take(8)));
+
+        // The hand-kept text: the index and every feature page.
+        var handKept = string.Join("\n", FeatureMapGenerator.HandKeptFiles(root!).Select(f => File.ReadAllText(f).Replace("\r\n", "\n")));
 
         var tests = new HashSet<string>(registry.Select(e => e.Test), StringComparer.Ordinal);
         var unknownTests = Regex.Matches(handKept, @"\bTest[A-Z]\w+").Select(m => m.Value).Distinct().Where(t => !tests.Contains(t)).ToList();

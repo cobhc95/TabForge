@@ -29,6 +29,14 @@ public static class SettingsValidator
             if (!SnapSettings.Grids.Contains(timeline.Snap.Grid)) timeline.Snap.Grid = "1/4";
             timeline.Snap.DistancePx = Math.Clamp(timeline.Snap.DistancePx, 1, 40);
             timeline.PlayheadStyle = PlayheadStyles.Normalize(timeline.PlayheadStyle);
+            timeline.Band ??= new BandSettings();
+            timeline.Band.InstrumentSize = BandChoices.NormalizeSize(timeline.Band.InstrumentSize);
+            timeline.Band.LaneContent = BandChoices.NormalizeContent(timeline.Band.LaneContent);
+            timeline.Band.LaneLayout = BandChoices.NormalizeLayout(timeline.Band.LaneLayout);
+            timeline.Band.RowsPerScreen = Math.Clamp(timeline.Band.RowsPerScreen, 1, 5);
+            timeline.Band.PlayheadLine = BandChoices.NormalizePlayhead(timeline.Band.PlayheadLine);
+            timeline.Band.LaneZoom = BandChoices.ClampZoom(timeline.Band.LaneZoom);
+            if (timeline.Band.InstrumentWidth != 0) timeline.Band.InstrumentWidth = BandChoices.ClampWidth(timeline.Band.InstrumentWidth);
         }
         plugins.AsioOutputChannel = Math.Clamp(plugins.AsioOutputChannel, 0, 62);
         plugins.AsioOutputLastChannel = Math.Clamp(plugins.AsioOutputLastChannel, 0, 63);
@@ -83,9 +91,6 @@ public static class SettingsValidator
     {
         value.OpenFromExplorer = string.Equals(value.OpenFromExplorer, "A new window", StringComparison.OrdinalIgnoreCase) ? "A new window" : "A new tab";
         value.AutosaveMinutes = AutosaveService.NormalizeMinutes(value.AutosaveMinutes);
-        value.PlaybackControllerX = Clamp(value.PlaybackControllerX, -32_768, 32_768, defaults.PlaybackControllerX);
-        value.PlaybackControllerY = Clamp(value.PlaybackControllerY, -32_768, 32_768, defaults.PlaybackControllerY);
-        value.PlaybackControllerHeight = Clamp(value.PlaybackControllerHeight, 80, 2_048, defaults.PlaybackControllerHeight);
         value.TutorialLastGuide = string.Equals(value.TutorialLastGuide, "detailed", StringComparison.OrdinalIgnoreCase) ? "detailed" : "basic";
         value.TutorialLastChapter = SafeText(value.TutorialLastChapter, 80, "") ?? "";
         value.TutorialWindowWidth = value.TutorialWindowWidth <= 0 ? 0 : Clamp(value.TutorialWindowWidth, 520, 7_680, 0);
@@ -105,6 +110,8 @@ public static class SettingsValidator
         value.FretboardPosition = Choice(value.FretboardPosition, defaults.FretboardPosition, "Left", "Centre", "Right");
         if (!double.IsFinite(value.InstrumentPaneHeight) || value.InstrumentPaneHeight < 0 || value.InstrumentPaneHeight > 4000)
             value.InstrumentPaneHeight = 0;
+        if (!double.IsFinite(value.KeyboardPaneHeight) || value.KeyboardPaneHeight < 0 || value.KeyboardPaneHeight > 4000)
+            value.KeyboardPaneHeight = 0;
 
         value.UiScale = Clamp(value.UiScale, 0.8, 1.5, defaults.UiScale);
         value.AnimationSpeed = Clamp(value.AnimationSpeed, 0.25, 2, defaults.AnimationSpeed);

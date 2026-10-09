@@ -54,6 +54,18 @@ public static class SongExtent
         return new ExtentResult(add, add < wanted);
     }
 
+    /// <summary>The end in seconds of the last clip on any track (0 when there are none).</summary>
+    public static double ClipsEnd(SongProject project)
+    {
+        var end = 0.0;
+        foreach (var track in project.Tracks)
+            foreach (var clip in track.AudioClips) end = Math.Max(end, clip.EndSec);
+        return end;
+    }
+
+    /// <summary>Appends the bars the song needs to hold every clip on every track.</summary>
+    public static ExtentResult EnsureCoversClips(SongProject project) => EnsureCovers(project, ClipsEnd(project));
+
     /// <summary>The status-bar note for a result ("" when nothing was added).</summary>
     public static string Describe(ExtentResult r) =>
         r.BarsAdded == 0 && !r.Capped ? "" :

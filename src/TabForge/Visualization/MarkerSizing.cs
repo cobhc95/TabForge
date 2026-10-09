@@ -6,7 +6,7 @@ public static class MarkerSizing
 {
     public const int MinPercent = 60;
     public const int MaxPercent = 160;
-    public const int DefaultPercent = 100;
+    public const int DefaultPercent = 90;
 
     /// <summary>Percent snapped to 10% steps inside the allowed range.</summary>
     public static int Normalise(int percent) => Math.Clamp((int)(Math.Round(percent / 10.0) * 10), MinPercent, MaxPercent);

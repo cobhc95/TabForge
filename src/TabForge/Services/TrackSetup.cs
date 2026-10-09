@@ -9,7 +9,7 @@ namespace TabForge.Services;
 /// Per-track setup rules shared by the Track properties / Add track window and the track row's Instrument button:
 /// which kind an instrument belongs to, the default strings of each kind, and the capo.
 /// </summary>
-public static class TrackSetup
+public static partial class TrackSetup
 {
     /// <summary>High to low, like <see cref="TrackModel.StringTunings"/>. Same values as the Track menu's quick add.</summary>
     public static readonly IReadOnlyList<int> GuitarStrings = new[] { 64, 59, 55, 50, 45, 40 };

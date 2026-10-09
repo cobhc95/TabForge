@@ -13,10 +13,9 @@ public partial class MainWindow : IInstrumentPanelHost
     private InstrumentPanelController? _instrumentPane;
     private InstrumentPanelController InstrumentPane => _instrumentPane ??= new InstrumentPanelController(this);
     InstrumentPanel IInstrumentPanelHost.Instrument => Instrument;
-    System.Windows.Controls.ComboBox IInstrumentPanelHost.ScaleHighlightCombo => ScaleHighlightCombo;
     FrameworkElement IInstrumentPanelHost.ScaleFinderButton => ScaleFinderButton;
     FrameworkElement IInstrumentPanelHost.InstrumentOverlay => InstrumentOverlay;
-    (int Start, int End)? IInstrumentPanelHost.LoopBars => _loopHasArea ? (_loopStartBar, _loopEndBar) : null;
+    (int Start, int End)? IInstrumentPanelHost.LoopBars => _selLoop.HasArea ? (_selLoop.StartBar, _selLoop.EndBar) : null;
     bool IInstrumentPanelHost.IsInitialized => _mainWindowInitialized;
     void IInstrumentPanelHost.RefreshInstrument() => RefreshInstrument();
 

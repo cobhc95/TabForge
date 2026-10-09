@@ -51,8 +51,6 @@ public sealed partial class TabEditorControl : FrameworkElement, IScoreLayoutHos
     private SongProject? _project;
     private int _selectedTrackIndex;
     private int _activeVoiceIndex;
-    private DateTime _lastDigit = DateTime.MinValue;
-    private int _lastDigitMeasure = -1, _lastDigitCell = -1, _lastDigitString = -1;
     private double _zoom = 1.0;
     private readonly EditorSelectionState _sel = new();
     private readonly EditorInputController _input;
@@ -79,6 +77,8 @@ public sealed partial class TabEditorControl : FrameworkElement, IScoreLayoutHos
     public event EventHandler? Edited;
     public event EventHandler? SelectionChanged;
     public event EventHandler? PlayRequested;
+    /// <summary>Set by the host: appends a bar and moves the caret into it (Right arrow past the last beat).</summary>
+    public Action? AppendBarAtEnd { get; set; }
     public event EventHandler<NotePreviewEventArgs>? NotePreview;
 
     public NotationMode Notation
@@ -111,8 +111,8 @@ public sealed partial class TabEditorControl : FrameworkElement, IScoreLayoutHos
     public bool FillBarsWithRests { get; set; }
     /// <summary>Deleting notes leaves merged rests (the fewest that fill the bar) instead of a rest of the same length.</summary>
     public bool MergeRestsOnDelete { get; set; } = true;
-    private void PlusDuration() { if (ReversePlusMinusDuration) Longer(); else Shorter(); }
-    private void MinusDuration() { if (ReversePlusMinusDuration) Shorter(); else Longer(); }
+    private void PlusDuration() { if (ReversePlusMinusDuration) _edits.Longer(); else _edits.Shorter(); }
+    private void MinusDuration() { if (ReversePlusMinusDuration) _edits.Shorter(); else _edits.Longer(); }
     public int CurrentDots { get; set; } = 0;
     public bool CurrentTriplet { get; set; }
     public int CurrentTupletNumerator { get; private set; }
@@ -129,22 +129,7 @@ public sealed partial class TabEditorControl : FrameworkElement, IScoreLayoutHos
     internal bool HideCursor { get; set; }
 
     // ---- playback feedback (state lives in PlaybackOverlay) ----
-    public int PlaybackMeasure { get => _playback.Measure; set => _playback.Measure = value; }
-    public int PlaybackCell { get => _playback.Cell; set => _playback.Cell = value; }
-    /// <summary>Timeline being played, used to highlight the exact sounding notes.</summary>
-    public ScoreTimeline? Timeline { get => _playback.Timeline; set => _playback.Timeline = value; }
-    /// <summary>Track whose notes should be highlighted (the selected track).</summary>
-    public int PlaybackTrackIndex { get => _playback.TrackIndex; set => _playback.TrackIndex = value; }
-    /// <summary>Absolute playback time in milliseconds.</summary>
-    public double PlaybackMs { get => _playback.Ms; set => _playback.Ms = value; }
-    /// <summary>Fraction through the playing bar (0..1) for the exact caret position.</summary>
-    public double PlaybackFraction { get => _playback.Fraction; set => _playback.Fraction = value; }
-    /// <summary>Maps source-bar indexes from an already-running timeline to the reordered score.</summary>
-    public int[]? PlaybackBarRemap { get => _playback.BarRemap; set => _playback.BarRemap = value; }
-    /// <summary>True while the transport is running (playing or paused): dims the edit cursor so the
-    /// green playhead is the only tracker. Start and stop only, never per tick.</summary>
-    public bool PlaybackActive { get => _playback.Active; set => _playback.Active = value; }
-
+    // ---- playback feedback: state and geometry live in PlaybackOverlay (the Playback property) ----
     private readonly PlaybackOverlay _playback;
     private readonly ScoreLayoutEngine _layout;
     private readonly ScoreRenderer _renderer;
@@ -152,13 +137,6 @@ public sealed partial class TabEditorControl : FrameworkElement, IScoreLayoutHos
     /// <summary>How the score looks: colours, spacing, labels and the playing-bar band.</summary>
     internal ScoreAppearance Appearance { get; }
 
-    // The settings other windows still reach through the editor.
-    public bool DarkPaper { get => Appearance.DarkPaper; set => Appearance.DarkPaper = value; }
-    public LedgerLineMode LedgerLines { get => Appearance.LedgerLines; set => Appearance.LedgerLines = value; }
-    public bool CenterSystems { get => Appearance.CenterSystems; set => Appearance.CenterSystems = value; }
-    public bool PlayingBarEnabled { get => Appearance.PlayingBarEnabled; set => Appearance.PlayingBarEnabled = value; }
-    public Color DurationGlowColor { get => Appearance.DurationGlowColor; set => Appearance.DurationGlowColor = value; }
-    public double DurationGlowOpacity { get => Appearance.DurationGlowOpacity; set => Appearance.DurationGlowOpacity = value; }
     internal ScoreLayoutEngine Layout => _layout;
 
     public TabEditorControl()

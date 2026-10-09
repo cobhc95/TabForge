@@ -95,7 +95,7 @@ public static partial class SelfTest
                 SelectedTrackIndex = 0,
                 PageWidthOverride = 1920
             };
-            var composed = responsiveEditor.GetScoreLayout();
+            var composed = responsiveEditor.Layout.GetLayout();
             var openingMutePassages = ScorePassages.BuildPalmMutePassages(project.Tracks[0], project);
             var openingWidths = Enumerable.Range(0, Math.Min(12, project.Tracks[0].Measures.Count))
                 .Select(index => $"{index + 1}:{responsiveEditor.Layout.NaturalMeasureWidth(project.Tracks[0], project.Tracks[0].Measures[index], index,
@@ -118,7 +118,7 @@ public static partial class SelfTest
                 SelectedTrackIndex = 0,
                 PageWidthOverride = TabEditorControl.BasePageWidth
             };
-            var screenshotWidthLayout = screenshotWidthEditor.GetScoreLayout();
+            var screenshotWidthLayout = screenshotWidthEditor.Layout.GetLayout();
             Log.Add("  info  reference song A: 1280-DIP reference composition -> " +
                 string.Join(" | ", screenshotWidthLayout.Systems.Select(system =>
                     $"bars {system.FirstMeasure + 1}-{system.LastMeasure + 1} ({system.Width:0}px)")));
@@ -258,7 +258,7 @@ public static partial class SelfTest
         var horizontalProject = new SongProject { Tracks = new List<TrackModel> { spacingTrack } };
         for (var extra = 0; extra < 30; extra++) spacingTrack.Measures.Add(NewMeasure());
         var horizontalEditor = new TabEditorControl { Project = horizontalProject, SelectedTrackIndex = 0, HorizontalScroll = true };
-        var oneLine = horizontalEditor.GetScoreLayout(spacingTrack);
+        var oneLine = horizontalEditor.Layout.GetLayout(spacingTrack);
         horizontalEditor.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
         Check("horizontal score scrolling lays every bar out on one line wider than a page",
             oneLine.SystemCount == 1 && horizontalEditor.DesiredSize.Width > TabEditorControl.BasePageWidth,
@@ -580,8 +580,8 @@ public static partial class SelfTest
         lone.Cells[0] = NotationCell(4, 60);
         lone.Cells[0].Notes[0].Techniques.Add("HOPO");
         lone.Cells[4] = NotationCell(4, 62);
-        Check("a plain H/P toggle on a single note draws no staff slur (as in the tab)",
-            Layout(renderer, lone, kind: TrackKind.Other).HopoSlurs.Count == 0);
+        Check("a plain H/P toggle on a single note slurs to the next note on its string (as in the tab)",
+            Layout(renderer, lone, kind: TrackKind.Other).HopoSlurs.Count == 1);
     }
 
     private static MeasureModel NewMeasure() => new()

@@ -39,9 +39,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- alphaTab 1.8.4 plus three patches (a per-import Guitar Pro 3-5 bar limit, exact GPIF mixer volume and balance, the GPIF trill speed), built from source under its own package and
+    <!-- alphaTab 1.8.4 plus four patches (a per-import Guitar Pro 3-5 bar limit, exact GPIF mixer volume and balance, the GPIF trill speed, Guitar Pro 3-5 link marks without a partner note), built from source under its own package and
          assembly name so it cannot be taken for the upstream AlphaTab package: vendor/alphatab/README.md, tools/Build-AlphaTab.ps1. -->
-    <PackageReference Include="TabForge.AlphaTab" Version="1.8.4-tabforge.3" />
+    <PackageReference Include="TabForge.AlphaTab" Version="1.8.4-tabforge.4" />
     <!-- Tutorial PDF export (MIT): PDF writer + layout. The WPF build needs no GDI+ and no browser engine. -->
     <PackageReference Include="PDFsharp-MigraDoc-wpf" Version="6.2.4" />
   </ItemGroup>
@@ -63,6 +63,10 @@
     <!-- GM instrument artwork (132 vector badges) and its manifest (names, categories, programs). -->
     <Content Include="Assets\Icons\Instruments\SVG\**\*.svg"
              Link="Assets\Instruments\SVG\%(RecursiveDir)%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <!-- Track-list instrument icons: the owner's line art as vector paths (TrackSilhouette). -->
+    <Content Include="Assets\Icons\TrackRows\owner-icons.json"
+             Link="Assets\TrackRowIcons\owner-icons.json"
              CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <!-- Drum map presets for the MIDI note-map processor (JSON; user maps live in the app data folder). -->
     <Content Include="Resources\DrumMaps\*.json"

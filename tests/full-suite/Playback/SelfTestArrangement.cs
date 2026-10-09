@@ -36,6 +36,7 @@ public static partial class SelfTest
         TestBarRangeEditor();
         TestSectionLayout();
         TestInstrumentNamingAndSectionColours();
+        TestExplicitSectionColourCopies();
     }
 
     private static void TestInstrumentNamingAndSectionColours()
@@ -199,6 +200,29 @@ public static partial class SelfTest
         try { ProjectService.RestoreBytes(ProjectService.SnapshotBytes(hostile)); }
         catch (System.IO.InvalidDataException) { rejected = true; }
         Check("an out-of-range section length is rejected by validation", rejected);
+    }
+
+    private static void TestExplicitSectionColourCopies()
+    {
+        var project = new SongProject();
+        project.Tracks.Add(new TrackModel
+        {
+            Name = "Track",
+            Measures = Enumerable.Range(0, 6).Select(index => new MeasureModel { Number = index + 1, Cells = new List<TabCell> { new() } }).ToList()
+        });
+        var explicitMarker = new MarkerModel { MeasureIndex = 2, Title = "Verse", ColorHex = "#C24B5A", ColorIsExplicit = true };
+        var other = new MarkerModel { MeasureIndex = 4, Title = "Chorus", ColorHex = "#3F9B4F" };
+        project.Markers.AddRange(new[] { explicitMarker, other });
+
+        SectionReorderService.Move(project, from: 2, insertBefore: 4);
+        Check("section reorder keeps an explicit section colour",
+            explicitMarker.ColorIsExplicit && explicitMarker.ColorHex == "#C24B5A" && !other.ColorIsExplicit);
+
+        var section = new List<List<MeasureModel>> { new() { new MeasureModel { Number = 1, Cells = new List<TabCell> { new() } } } };
+        SectionReorderService.Insert(project, 6, section, explicitMarker);
+        var copy = project.Markers.FirstOrDefault(marker => marker.MeasureIndex == 6);
+        Check("section duplicate keeps an explicit section colour",
+            copy is not null && copy.ColorIsExplicit && copy.ColorHex == "#C24B5A");
     }
 
     private static void TestSectionReorder()

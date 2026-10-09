@@ -67,7 +67,7 @@ public partial class MainWindow
         _trackSwitchSync?.Cancel();
         RefreshArrangement();
         RefreshInstrument();
-        _engineSync.ScheduleSync(Doc);
+        _engineSync.SyncOrSchedule(Doc, deferred: !Doc.Playback.Engine.IsPlaying);
         ScheduleFitTimelineToTracks();
         UpdateTitle();
     }

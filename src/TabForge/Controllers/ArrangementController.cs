@@ -323,18 +323,18 @@ public sealed class ArrangementController
         });
 
     public EditResult DeleteBar(DocumentSession document, int bar, int trackIndex, bool allTracks, bool moveMarkers) =>
-        DocumentEdits.Run(document, project => DeleteBar(project, bar, trackIndex, allTracks, moveMarkers));
+        DocumentEdits.Run(document, project => { var removed = DeleteBar(project, bar, trackIndex, allTracks, moveMarkers); if (removed) SongExtent.EnsureCoversClips(project); return removed; });
 
     /// <summary>Copies bars <paramref name="first"/>..<paramref name="last"/> to right after themselves in every track; the value is the old-to-new bar mapping.</summary>
     public EditResult<int[]> DuplicateBars(DocumentSession document, int first, int last) =>
         DocumentEdits.Run<int[]>(document, project => DuplicateBars(project, first, last));
 
     public EditResult<int[]> DeleteBars(DocumentSession document, int first, int last) =>
-        DocumentEdits.Run<int[]>(document, project => BarRangeEditor.Remove(project, first, last));
+        DocumentEdits.Run<int[]>(document, project => KeepClipsCovered(project, BarRangeEditor.Remove(project, first, last)));
 
     /// <summary>Removes the given empty bars from every track in one undo step; the value is the old-to-new bar mapping.</summary>
     public EditResult<int[]> DeleteEmptyBars(DocumentSession document, IReadOnlyList<int> bars) =>
-        DocumentEdits.Run<int[]>(document, project => bars.Count == 0 ? null : EmptyBars.Remove(project, bars));
+        DocumentEdits.Run<int[]>(document, project => bars.Count == 0 ? null : KeepClipsCovered(project, EmptyBars.Remove(project, bars)));
 
     public EditResult<BarMove> MoveBars(DocumentSession document, int first, int last, int insertBefore) =>
         DocumentEdits.Run<BarMove>(document, project => BarRangeEditor.Move(project, first, last, insertBefore) is var (at, map) ? new BarMove(at, map) : null);
@@ -351,6 +351,13 @@ public sealed class ArrangementController
             if (map is not null && !carried.IsEmpty) GrowToCover(project, SectionClips.Place(project, carried, map[carried.Start], add: false));
             return FollowBars(document, map);
         }, before);
+
+    /// <summary>A clip past the song end always extends the song: bars removed from under a clip are appended again (same undo step).</summary>
+    private static int[]? KeepClipsCovered(SongProject project, int[]? map)
+    {
+        if (map is not null) SongExtent.EnsureCoversClips(project);
+        return map;
+    }
 
     private static void GrowToCover(SongProject project, double clipEndSec)
     {

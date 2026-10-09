@@ -130,7 +130,7 @@ public sealed partial class PlaybackEngine : IDisposable
     private void SendChannelSetupCore(ScoreTimeline timeline)
     {
         foreach (var e in timeline.ChannelSetup)
-            _output.Send(e.DeviceId, e.Status, e.Data1, MasterScaled(e.Status, e.Data1, e.Data2));
+            _output.Send(e.DeviceId, e.Status, ProgramFor(e.Status, e.Data1), MasterScaled(e.Status, e.Data1, e.Data2));
     }
 
     // Preview notes: one token per (device, channel, pitch). A new preview of the same key retriggers (off, then on) and

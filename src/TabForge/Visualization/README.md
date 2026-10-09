@@ -13,7 +13,9 @@ Fretboard, drum and keyboard displays: geometry and drawing for the instrument p
 - `InstrumentVisualState`, `VisualNote`: what is sounding now.
 - `FretboardGeometry`: string and fret positions.
 - `FretboardRenderer`, `DrumRenderer`, `KeyboardRenderer`: the drawings.
+- `FretboardStrum`: a strummed chord's stroke arrow and merged tag pill on the fretboard.
 - `VisualOptions`: colours and display options.
+- `MarkerInk`: white or near-black marker numbers, whichever reads on the marker's real surface.
 
 ## Pathway
 `InstrumentPanel` (`src/TabForge/Views/`) feeds the visual state from playback; the renderers only draw it. Drawing stays lightweight, with no layout work per frame.

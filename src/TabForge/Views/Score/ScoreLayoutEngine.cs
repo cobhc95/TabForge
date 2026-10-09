@@ -41,6 +41,10 @@ internal sealed partial class ScoreLayoutEngine
     private ScorePageLayout? _scoreLayout;
     private TrackModel? _scoreLayoutTrack;
     private SongProject? _scoreLayoutProject;
+    private double[]? _scoreLayoutFloor;
+    private double[]? _minBarWidths;
+    /// <summary>Bar widths the layout may not go under (layout units, by bar), or null; the Band view lanes share one set so a bar sits at the same place in every lane. A new array lays the score out again.</summary>
+    internal double[]? MinBarWidths { get => _minBarWidths; set { if (ReferenceEquals(_minBarWidths, value)) return; _minBarWidths = value; Invalidate(); } }
     private double _scoreLayoutGridWidth = double.NaN;
     private bool _scoreLayoutHorizontal;
     private double _scoreLayoutSpacing = double.NaN;
@@ -52,8 +56,7 @@ internal sealed partial class ScoreLayoutEngine
     private int _scoreFactsGeneration = -1;
     private IReadOnlyList<PalmMutePassage> _palmMutePassages = Array.Empty<PalmMutePassage>();
     private IReadOnlyList<FadePassage> _fadePassages = Array.Empty<FadePassage>();
-    private BarState[]? _barStateCache;
-    private bool[]? _barStateComputed;
+    private Dictionary<(TrackModel Track, int Bar), BarState>? _barStateCache;
     private MarkerModel?[]? _markerByMeasure;
     private SongProject? _markerCacheProject;
     private int _markerCacheGeneration = -1;
@@ -107,7 +110,6 @@ internal sealed partial class ScoreLayoutEngine
         _fadePassages = Array.Empty<FadePassage>();
         DynamicMarks = new Dictionary<TabCell, string>(ReferenceEqualityComparer.Instance);
         _barStateCache = null;
-        _barStateComputed = null;
         _markerByMeasure = null;
         _markerCacheProject = null;
         _markerCacheGeneration = -1;
@@ -132,12 +134,15 @@ internal sealed partial class ScoreLayoutEngine
 
     private int SlotsFor(int measure) => _host.Project is { } project ? MusicTime.BarSlots(project, measure) : 16;
 
+    /// <summary>The bars' own widths of the last layout, before any shared floor (null before the first layout).</summary>
+    internal double[]? NaturalWidths => _incremental.NaturalMeasureWidths;
+
     internal ScorePageLayout GetLayout(TrackModel? track = null)
     {
         track ??= _host.Track;
         if (track is null) return ScorePageLayout.Create(_host.GridLeft, _host.GridWidth, Array.Empty<double>());
         if (_scoreLayout is not null && ReferenceEquals(_scoreLayoutTrack, track) &&
-            ReferenceEquals(_scoreLayoutProject, _host.Project) && _scoreLayoutHorizontal == _host.HorizontalScroll &&
+            ReferenceEquals(_scoreLayoutProject, _host.Project) && _scoreLayoutHorizontal == _host.HorizontalScroll && ReferenceEquals(_scoreLayoutFloor, MinBarWidths) &&
             (_host.HorizontalScroll || Math.Abs(_scoreLayoutGridWidth - _host.GridWidth) < 0.1) &&
             Math.Abs(_scoreLayoutSpacing - _host.Appearance.ScoreSpacing) < 0.001 &&
             Math.Abs(_scoreLayoutSystemSpacing - _host.Appearance.SystemVerticalSpacing) < 0.001 &&
@@ -154,6 +159,9 @@ internal sealed partial class ScoreLayoutEngine
             : EnsureScoreFacts(track, _host.Project).PalmMutePassages;
         var widths = MeasureNaturalWidths(track, palmMutePassages);
         if ((_extraAbove, _extraBelow, _extraTabBelow) != extraBefore) _host.LayoutChanged();   // the system height follows the content
+        var natural = widths;
+        var floor = MinBarWidths;
+        if (floor is not null) widths = widths.Select((w, i) => i < floor.Length ? Math.Max(w, floor[i]) : w).ToArray();
         var forceLineBreaks = new bool[track.Measures.Count];
         var preventLineBreaks = new bool[track.Measures.Count];
         for (var measure = 0; measure < track.Measures.Count; measure++)
@@ -172,16 +180,17 @@ internal sealed partial class ScoreLayoutEngine
         }
         else
             _scoreLayout = ScorePageLayout.Create(_host.GridLeft, _host.GridWidth, widths,
-                forceLineBreaks, preventLineBreaks, centerRows: _host.Appearance.CenterSystems);
+                forceLineBreaks, preventLineBreaks);
         _scoreLayoutHorizontal = _host.HorizontalScroll;
         _scoreLayoutTrack = track;
         _scoreLayoutProject = _host.Project;
+        _scoreLayoutFloor = floor;
         // (horizontal mode sizes the page from the line, so it never compares the grid width)
         _scoreLayoutGridWidth = _host.GridWidth;
         _scoreLayoutSpacing = _host.Appearance.ScoreSpacing;
         _scoreLayoutSystemSpacing = _host.Appearance.SystemVerticalSpacing;
         _scoreLayoutMeasureSpacing = _host.Appearance.MeasureHorizontalSpacing;
-        SaveIncrementalWidths(track, widths, forceLineBreaks, preventLineBreaks);
+        SaveIncrementalWidths(track, natural, forceLineBreaks, preventLineBreaks);
         SlowTrace.Mark($"score relayout {(_incremental.LastRelayoutWasPartial ? "partial" : "full")}: measured {_incremental.LastNaturalMeasureCount}/{track.Measures.Count} bars");
         return _scoreLayout;
     }
@@ -252,6 +261,19 @@ internal sealed partial class ScoreLayoutEngine
         _scanRows = Math.Max(_scanRows, kinds);
         _incremental.MeasureScanRows = Math.Max(_incremental.MeasureScanRows, kinds);
         if (cell.AlternateEnding > 0 || cell.AlternateEndingMask != 0) { _scanVolta = true; _incremental.MeasureScanVolta = true; }
+        if (_host.Notation == NotationMode.TabAndStaff)
+        {
+            // Between the staff and the TAB each effect takes its own row (P.M., vibrato, technique label, let ring; a dynamic two):
+            // past three rows the gap grows, so the rows stack instead of overprinting.
+            var lanes = (Any(c => c.Notes.Any(ScoreMarkText.ShowsPalmMute)) ? 1 : 0)
+                + (Any(c => c.Notes.Any(n => n.Techniques.Contains("Vibrato") || n.Techniques.Contains("WideVibrato"))) ? 1 : 0)
+                + (Any(c => ScoreMarkText.DrawnTechniqueLabel(c.Notes).Length > 0) ? 1 : 0)
+                + (Any(c => c.Notes.Any(n => n.Techniques.Contains("LetRing"))) ? 1 : 0)
+                + (Any(DynamicMarks.ContainsKey) ? 2 : 0);
+            var laneBottom = 4 * StaffNotationRenderer.StaffGap + Math.Max(0, lanes - 3) * 13 - 6;
+            _scanBottom = Math.Max(_scanBottom, laneBottom);
+            _incremental.MeasureScanBottom = Math.Max(_incremental.MeasureScanBottom, laneBottom);
+        }
     }
 
     // ---- duration-based spacing (one warp per bar, rebuilt when the score changes) ----
@@ -289,8 +311,9 @@ internal sealed partial class ScoreLayoutEngine
         // The first note always clears the barline (the reference spacing); grace notes before the first beat need extra room.
         var lead = (measure.RepeatStart ? 1.8 : 0) + HeaderLeadWeight(track, measureIndex);
         var firstContent = measure.Cells.FirstOrDefault(c => c.Notes.Count > 0 || c.IsRest);
-        if (firstContent is not null && firstContent.Notes.Any(n => n.IsGraceNote) && firstContent.Notes.Any(n => !n.IsGraceNote)) lead += 3.0;
         lead = Math.Max(lead, 1.6);
+        // The grace room adds to the plain lead once: after a clef, key or time signature it does not stack a second lead.
+        if (firstContent is not null && firstContent.Notes.Any(n => n.IsGraceNote) && firstContent.Notes.Any(n => !n.IsGraceNote)) lead += 1.4;
         // An overfull bar (more music than its time signature) squeezes everything inside the bar,
         // instead of letting the last beats spill into the next bar.
         static double ContentEnd(List<TabCell> cells)
@@ -331,26 +354,15 @@ internal sealed partial class ScoreLayoutEngine
         return new ScoreFacts(_palmMutePassages, _fadePassages);
     }
 
-    internal BarState BarStateFor(int measureIndex)
+    /// <summary>The bar's fill state in this track's own view (another track's short bar is not marked here).</summary>
+    internal BarState BarStateFor(TrackModel track, int measureIndex)
     {
         var project = _host.Project;
-        if (project is null || measureIndex < 0)
-            return project is null ? default : MusicTime.AnalyzeBar(project, measureIndex);
-        if (_barStateCache is null)
-        {
-            var count = 0;
-            for (var track = 0; track < project.Tracks.Count; track++)
-                count = Math.Max(count, project.Tracks[track].Measures.Count);
-            _barStateCache = new BarState[count];
-            _barStateComputed = new bool[count];
-        }
-        if (measureIndex >= _barStateCache.Length) return MusicTime.AnalyzeBar(project, measureIndex);
-        if (!_barStateComputed![measureIndex])
-        {
-            _barStateCache[measureIndex] = MusicTime.AnalyzeBar(project, measureIndex);
-            _barStateComputed[measureIndex] = true;
-        }
-        return _barStateCache[measureIndex];
+        if (project is null) return default;
+        _barStateCache ??= new();
+        if (!_barStateCache.TryGetValue((track, measureIndex), out var state))
+            _barStateCache[(track, measureIndex)] = state = MusicTime.AnalyzeBar(project, measureIndex, track);
+        return state;
     }
 
     internal MarkerModel? MarkerForMeasure(int measureIndex)

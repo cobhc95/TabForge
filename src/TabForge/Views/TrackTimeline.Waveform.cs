@@ -103,12 +103,20 @@ internal sealed partial class TrackTimeline
             var half = box.Height / 2 - 6;
             // One filled outline (top edge left to right, bottom edge back), not one stroked line per column: a stroke under the zoom's
             // x-scale is re-widened on the render thread every frame, a filled shape scales for free and looks the same at 1 px columns.
+            var loops = ClipLoop.Loops(clip);
+            var period = ClipLoop.PeriodSec(clip);
             var tops = new List<Point>((int)(to - from) + 1);
             var built = 0;
             for (var x = from; x < to; x += 1, built++)
                 {
-                    var fileFrom = clip.OffsetSec + (x - box.X) / box.Width * clip.SourceLengthSec;
-                    var fileTo = clip.OffsetSec + (x + 1 - box.X) / box.Width * clip.SourceLengthSec;
+                    var fileFrom = (x - box.X) / box.Width * clip.SourceLengthSec;
+                    var fileTo = (x + 1 - box.X) / box.Width * clip.SourceLengthSec;
+                    if (loops)   // past the end of the media the waveform repeats
+                    {
+                        fileFrom %= period;
+                        fileTo = fileFrom + (fileTo - (x - box.X) / box.Width * clip.SourceLengthSec);
+                    }
+                    fileFrom += clip.OffsetSec; fileTo += clip.OffsetSec;
                     var i0 = Math.Max(0, (int)(fileFrom / WaveformCache.SecondsPerPeak));
                     var i1 = Math.Min(peaks.Length, Math.Max(i0 + 1, (int)Math.Ceiling(fileTo / WaveformCache.SecondsPerPeak)));
                     var peak = 0f;
@@ -132,5 +140,28 @@ internal sealed partial class TrackTimeline
         dc.PushTransform(new TranslateTransform(0, box.Y + box.Height / 2 + 4));
         dc.DrawGeometry(Draw.Solid(colour, 0.9 * alpha), null, cache.Geometry);
         dc.Pop();
+    }
+
+    /// <summary>A looping clip: a thin dashed line where each pass of the media ends (drawn over the waveform or notes, outside the cached outline).</summary>
+    private void DrawLoopMarkers(DrawingContext dc, AudioClip clip, Rect box, double alpha, double width)
+    {
+        if (!ClipLoop.Loops(clip)) return;
+        var speed = Math.Clamp(clip.Speed, 0.25, 4);
+        var period = ClipLoop.PeriodSec(clip);
+        var pen = Draw.DashedPen(Color.FromArgb((byte)(140 * alpha), _theme.Text.R, _theme.Text.G, _theme.Text.B), 1, 3, 3);
+        var g = new StreamGeometry();
+        using (var ctx = g.Open())
+            for (var k = 1; k < ClipLoop.MaxPieces; k++)
+            {
+                var sec = clip.StartSec + k * period / speed;
+                if (sec >= clip.EndSec - 1e-6) break;
+                var x = ClipEndX(clip.StartSec, sec);
+                if (x > Math.Min(box.Right, width)) break;
+                if (x < 0 || (_viewWidth > 0 && x < _viewFrom - _viewWidth)) continue;
+                ctx.BeginFigure(new Point(x, box.Y + 2), false, false);
+                ctx.LineTo(new Point(x, box.Bottom - 2), true, false);
+            }
+        g.Freeze();
+        dc.DrawGeometry(null, pen, g);
     }
 }

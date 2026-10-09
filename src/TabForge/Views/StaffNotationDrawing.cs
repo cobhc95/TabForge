@@ -82,7 +82,7 @@ internal static class StaffNotationDrawing
                 var playBrush = RenderDraw.Solid(notePlaybackColor);
                 var noteBrush = isSounding
                     ? playBrush
-                    : RenderDraw.Solid(note.Source.Dead ? Color.FromRgb(110, 118, 128) : engravingInk);
+                    : RenderDraw.Solid(engravingInk);
 
                 if (isSounding)
                     dc.DrawEllipse(RenderDraw.Solid(Color.FromArgb(isStruck ? (byte)85 : (byte)42,
@@ -93,7 +93,9 @@ internal static class StaffNotationDrawing
                 dc.PushTransform(new RotateTransform(-20, note.X, note.Y));
                 if (note.Source.Dead)
                 {
+                    dc.PushTransform(new RotateTransform(20, note.X, note.Y));   // the reference's x head stands upright, in the notehead's place
                     DrawDeadNoteHead(dc, note.X, note.Y, noteBrush);
+                    dc.Pop();
                 }
                 else if (HasHarmonic(note.Source.Techniques))
                 {
@@ -134,7 +136,7 @@ internal static class StaffNotationDrawing
             }
             DrawGraceNotes(dc, beat, inkBrush, GhostRoom(layout.StaffTop, beat));
             var harmonicCaption = beat.Notes.Select(n => ScoreMarkText.HarmonicCaption(n.Source.Techniques)).FirstOrDefault(c => c.Length > 0);
-            if (!string.IsNullOrEmpty(harmonicCaption)) // The reference: the caption sits below the staff
+            if (!string.IsNullOrEmpty(harmonicCaption) && !layout.HarmonicCaptionsOnTab) // notation only: the caption sits below the staff
                 DrawStackedBelow(dc, layout, harmonicCaption, 8.5, FontWeights.SemiBold, beat.CenterX, 8, inkBrush);
             DrawBeatMarks(dc, layout, beat, inkBrush);
 
@@ -311,9 +313,9 @@ internal static class StaffNotationDrawing
 
     internal static void DrawDeadNoteHead(DrawingContext dc, double x, double y, Brush brush)
     {
-        var pen = RenderDraw.RoundPen(brush, 1.4);
-        dc.DrawLine(pen, new Point(x - 4.2, y - 3.2), new Point(x + 4.2, y + 3.2));
-        dc.DrawLine(pen, new Point(x - 4.2, y + 3.2), new Point(x + 4.2, y - 3.2));
+        var pen = RenderDraw.RoundPen(brush, 1.8);
+        dc.DrawLine(pen, new Point(x - 3.8, y - 3.8), new Point(x + 3.8, y + 3.8));
+        dc.DrawLine(pen, new Point(x - 3.8, y + 3.8), new Point(x + 3.8, y - 3.8));
     }
 
     internal static void DrawStemsAndFlags(DrawingContext dc, StaffNotationMeasureLayout layout, Brush brush)
@@ -374,10 +376,15 @@ internal static class StaffNotationDrawing
                 var numberY = up ? blockTop + 4.5 : blockTop + 10.5;
                 var lineY = up ? blockTop + 10.5 : blockTop + 4.5;
                 var bracketPen = RenderDraw.Pen(brush, 0.9);
-                dc.DrawLine(bracketPen, new Point(x0, lineY), new Point(Math.Max(x0, mid - 8), lineY));
-                dc.DrawLine(bracketPen, new Point(Math.Min(x1, mid + 8), lineY), new Point(x1, lineY));
-                dc.DrawLine(bracketPen, new Point(x0, lineY), new Point(x0, lineY + tick));
-                dc.DrawLine(bracketPen, new Point(x1, lineY), new Point(x1, lineY + tick));
+                // An incomplete group (fewer beats than its number) or one too short for the line on both sides of the
+                // number: the reference shows the number alone.
+                if (tuplet.Beats.Count >= tuplet.Numerator && x1 - x0 >= 24)
+                {
+                    dc.DrawLine(bracketPen, new Point(x0, lineY), new Point(Math.Max(x0, mid - 8), lineY));
+                    dc.DrawLine(bracketPen, new Point(Math.Min(x1, mid + 8), lineY), new Point(x1, lineY));
+                    dc.DrawLine(bracketPen, new Point(x0, lineY), new Point(x0, lineY + tick));
+                    dc.DrawLine(bracketPen, new Point(x1, lineY), new Point(x1, lineY + tick));
+                }
                 DrawCentered(dc, numberText, mid, numberY, 11, brush, FontWeights.SemiBold);
             }
             else
@@ -391,21 +398,18 @@ internal static class StaffNotationDrawing
                 var lineY = up ? blockTop + 11 : blockTop + 5;
                 var tickY = up ? lineY + 5 : lineY - 5;
                 var pen = RenderDraw.Pen(brush, 1);
-                dc.DrawLine(pen, new Point(left, lineY), new Point(right, lineY));
-                dc.DrawLine(pen, new Point(left, lineY), new Point(left, tickY));
-                dc.DrawLine(pen, new Point(right, lineY), new Point(right, tickY));
+                if (tuplet.Beats.Count > 1 && tuplet.Beats.Count >= tuplet.Numerator)   // an incomplete group: the number alone, as in the reference
+                {
+                    dc.DrawLine(pen, new Point(left, lineY), new Point(right, lineY));
+                    dc.DrawLine(pen, new Point(left, lineY), new Point(left, tickY));
+                    dc.DrawLine(pen, new Point(right, lineY), new Point(right, tickY));
+                }
                 DrawCentered(dc, numberText, (left + right) / 2, up ? blockTop + 4.5 : blockTop + 11.5, 11, brush, FontWeights.SemiBold);
             }
         }
     }
 
     /// <summary>Rests are drawn as vector shapes (not font glyphs): full-size, black, the same on every machine.</summary>
-    internal static readonly TabCell WholeRestCell = new() { IsRest = true, DurationDenominator = 1 };
-
-    /// <summary>The whole rest an empty bar shows (the reference engraves one in an empty first voice).</summary>
-    internal static void DrawWholeBarRest(DrawingContext dc, double cx, double staffTop, Color ink) =>
-        DrawRest(dc, WholeRestCell, cx, staffTop, RenderDraw.Solid(ink));
-
     internal static void DrawRest(DrawingContext dc, TabCell cell, double cx, double staffTop, Brush brush)
     {
         var duration = NormalizeDuration(cell.DurationDenominator);
@@ -545,8 +549,9 @@ internal static class StaffNotationDrawing
         foreach (var tie in ties)
         {
             // A stub reaching back over the key / time signature is left to the previous bar's outgoing stub.
-            if (tie.IsStub && tie.TowardLeft && tie.X1 - 13 < contentLeft) continue;
-            if (tie.IsStub) DrawTieStub(dc, tie.X1, tie.Y1, tie.TowardLeft, tie.Above, brush);
+            var edge = tie.TowardLeft ? Math.Max(tie.X2, contentLeft + 2) : tie.X2;
+            if (tie.IsStub && tie.TowardLeft && edge > tie.X1 - 13) continue;
+            if (tie.IsStub) DrawTieStub(dc, tie.X1, tie.Y1, edge, tie.TowardLeft, tie.Above, brush);
             else DrawTie(dc, tie.X1, tie.Y1, tie.X2, tie.Y2, tie.Above, brush, tie.StartInset, tie.EndInset);
         }
     }
@@ -568,16 +573,21 @@ internal static class StaffNotationDrawing
         dc.DrawGeometry(null, RenderDraw.Pen(brush, 1.2), geometry);
     }
 
-    internal static void DrawTieStub(DrawingContext dc, double x, double y, bool towardLeft, bool above, Brush brush)
+    /// <summary>Half a tie: from the note to <paramref name="edgeX"/> (the barline or the system edge), ending level at the arc's
+    /// peak, so the halves on both sides of a barline join into one arc.</summary>
+    internal static void DrawTieStub(DrawingContext dc, double x, double y, double edgeX, bool towardLeft, bool above, Brush brush)
     {
         var dir = above ? -1.0 : 1.0;
         var sign = towardLeft ? -1.0 : 1.0;
         var yb = y + dir * 6;
-        var figure = new PathFigure { StartPoint = new Point(x + sign * 5, yb), IsClosed = false };
+        var sx = x + sign * 5;
+        var span = Math.Max(8, sign * (edgeX - sx)) * sign;
+        var peak = yb + dir * 7;
+        var figure = new PathFigure { StartPoint = new Point(sx, yb), IsClosed = false };
         figure.Segments.Add(new BezierSegment(
-            new Point(x + sign * 11, yb + dir * 6),
-            new Point(x + sign * 13, yb + dir * 10),
-            new Point(x + sign * 11, yb + dir * 12), true));
+            new Point(sx + span * 0.3, yb + dir * 4.5),
+            new Point(sx + span * 0.65, peak),
+            new Point(sx + span, peak), true));
         var geometry = new PathGeometry();
         geometry.Figures.Add(figure);
         dc.DrawGeometry(null, RenderDraw.Pen(brush, 1.2), geometry);

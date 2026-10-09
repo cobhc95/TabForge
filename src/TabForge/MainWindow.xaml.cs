@@ -48,10 +48,6 @@ public partial class MainWindow : Window
     private bool _restoring;
     // Loop state belongs to the song (DocumentSession); these forward to the active tab.
     private bool _loop { get => Doc.LoopEnabled; set => Doc.LoopEnabled = value; }
-    private int _loopStartBar { get => Doc.LoopStartBar; set => Doc.LoopStartBar = value; }
-    private int _loopEndBar { get => Doc.LoopEndBar; set => Doc.LoopEndBar = value; }
-    private int _loopStartCell { get => Doc.LoopStartCell; set => Doc.LoopStartCell = value; }
-    private int _loopEndCell { get => Doc.LoopEndCell; set => Doc.LoopEndCell = value; }
     private bool _mainWindowInitialized;
     private UndoSnapshot? _sectionUndoSnapshot;
     private UndoSnapshot? _trackUndoSnapshot;
@@ -93,6 +89,7 @@ public partial class MainWindow : Window
 
     public MainWindow(Audio.AudioEngineClient engine, AppOptions? options = null)
     {
+        _selLoop = new SelectionLoopController(this);   // before InitializeComponent: early handlers may read loop state
         _engine = engine;
         _options = options ?? new AppOptions();
         _documents = new DocumentManager(_options.Playback);
@@ -144,6 +141,7 @@ public partial class MainWindow : Window
         DataContext = this;
         WireTabs();
 
+        Editor.EditHost = this;   // edits record undo whichever window shows the editor (a floating pane or a window not yet shown has no MainWindow ancestor)
         Editor.Edited += (_, _) =>
         {
             var changed = Editor.AffectedMeasureRange;
@@ -153,14 +151,17 @@ public partial class MainWindow : Window
             PushEditorSelectionToModel();
             RefreshInstrument();
             RefreshStatus();
+            if (StatusText.Text == Views.Score.ScoreEditCommands.NoNoteMessage) StatusText.Text = "";   // a stale miss is gone once an edit lands
             RefreshTabs();
             UpdateTitle();
             RefreshToolsPalette();
         };
         Editor.SelectionChanged += (_, _) => OnEditorSelectionChanged();
         Editor.PlayRequested += (_, _) => TogglePlayback();
+        Editor.AppendBarAtEnd = () => { if (_midi.IsPlaying) return; AppendBar(); Editor.MoveToBarStart(MaxMeasures() - 1); };
         Editor.NotePreview += OnNotePreview;
         Editor.StatusMessage += (_, msg) => StatusText.Text = msg;
+        Editor.CursorMovedByKey += (_, _) => { if (Editor.HorizontalScroll || !_follow.BarInView(Editor.SelectedMeasure)) ScrollToCursor(); };
         Editor.ContextMenuRequested += (_, args) =>
         {
             if (args.OnNote || args.InsideSelection) ShowNoteContextMenu(args);
@@ -238,6 +239,7 @@ public partial class MainWindow : Window
             else
                 _undo.Cancel(transaction);
         };
+        Arrangement.InstrumentPreview += (track, name) => TabForge.Controllers.InstrumentLivePreview.Apply(_midi, track, name);
         Arrangement.MixEditStarting += (_, _) =>
         {
             _mixUndoTransaction ??= _undo.BeginTransaction(_project);
@@ -298,19 +300,7 @@ public partial class MainWindow : Window
         HookAudioLanes();
         HookAddTrackLane();
         Arrangement.AddTrackMenuRequested += ShowAddTrackMenu;
-        Arrangement.GroupCollapseToggled += group =>
-        {
-            DocumentEdits.Run(Doc, p =>
-            {
-                var collapsed = p.Mixer.CollapsedGroups;
-                if (!collapsed.Remove(group)) collapsed.Add(group);
-                return true;
-            }, invalidatesTimeline: false);
-            RefreshTracks();
-            RefreshArrangement();
-            ScheduleFitTimelineToTracks();
-            UpdateTitle();
-        };
+        Arrangement.GroupCollapseToggled += group => SetGroupsCollapsed(new[] { group }, null);
         Arrangement.GroupMoved += (start, count, before) =>
         {
             if (start < 0 || count <= 0 || start + count > _project.Tracks.Count) return;
@@ -363,8 +353,6 @@ public partial class MainWindow : Window
         ApplyPreferredScoreView(_documents.Active);
         UpdateSpeedControls();
         ScoreZoom.UpdateZoomControl();
-        RefreshTheoryCombos();
-        RefreshScaleHighlightCombo();
         RefreshMidiDevices();
         // Optional capture of every dispatched MIDI message for offline jitter analysis.
         var midiLogPath = Environment.GetEnvironmentVariable("TABFORGE_MIDI_LOG");

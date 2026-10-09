@@ -146,7 +146,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { Write-Error "dotnet list package failed ($LASTEXITCODE)"; exit 1 }
           if ($out -match 'has the following vulnerable packages') { Write-Error 'vulnerable packages found (see above)'; exit 1 }
 
-  # TabForge.AlphaTab (alphaTab 1.8.4 plus one patch) is built from source and checked in as vendor/alphatab/*.nupkg. This rebuilds it
+  # TabForge.AlphaTab (alphaTab 1.8.4 plus four patches) is built from source and checked in as vendor/alphatab/*.nupkg. This rebuilds it
   # from the pinned upstream commit and the patch (github.com/CoderLine/alphaTab, npmjs.org, nuget.org) and fails when the rebuilt
   # DLL is not the one inside the committed package (vendor/alphatab/README.md).
   alphatab-reproducible:

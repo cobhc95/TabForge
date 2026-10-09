@@ -266,7 +266,7 @@ public static partial class SelfTest
             EH.Collect();
 
             // Waits (bounded) until the slot's meter shows signal; the disk thread can lag behind under load.
-            float Heard(int slot, int ms = 1500)
+            float Heard(int slot, int ms = 5000)
             {
                 var best = 0f;
                 var until = DateTime.UtcNow.AddMilliseconds(ms);

@@ -24,14 +24,10 @@ public interface IScoreEditContext
     int CurrentTupletNumerator { get; set; }
     int CurrentTupletDenominator { get; set; }
     int CurrentVelocity { get; set; }
-    DateTime LastDigitTime { get; set; }
-    int LastDigitMeasure { get; set; }
-    int LastDigitCell { get; set; }
-    int LastDigitString { get; set; }
     List<TabCell> CellsFor(MeasureModel measure, bool create = false);
     int SlotsFor(int measure);
     /// <summary>Runs one command as one edit (see <see cref="IScoreEditHost.Run"/>), then coerces the cursor, raises Edited and redraws; returns whether the song changed.</summary>
-    bool RunEdit(Func<bool> mutate, bool markTimeline = true);
+    bool RunEdit(Func<bool> mutate, bool markTimeline = true, bool continuesLastStep = false);
     void PreviewNote(TabNote note);
     /// <summary>The tool state changed without a song edit: toolbars re-read it.</summary>
     void NotifyState();
@@ -42,6 +38,8 @@ public interface IScoreEditContext
     bool FillBarsWithRests { get; }
     bool MergeRestsOnDelete { get; }
     void SelectRange(int startMeasure, int startCell, int endMeasure, int endCell);
+    /// <summary>Ends the selection (a command that consumed it, Undo / Redo); the cursor stays.</summary>
+    void ClearSelection();
     (int m1, int c1, int m2, int c2) SelectionRange();
     void SetPosition(int measure, int cell, int stringIndex);
     void MoveForwardBeat(TrackModel track);
@@ -53,6 +51,9 @@ public interface IScoreEditContext
 /// </summary>
 public sealed partial class ScoreEditCommands
 {
+    /// <summary>Status shown when a note command finds no note under the cursor; the host clears it once an edit succeeds.</summary>
+    public const string NoNoteMessage = "No note on this string";
+
     private readonly IScoreEditContext _c;
 
     public ScoreEditCommands(IScoreEditContext context) => _c = context;
@@ -72,13 +73,12 @@ public sealed partial class ScoreEditCommands
     private int CurrentTupletNumerator { get => _c.CurrentTupletNumerator; set => _c.CurrentTupletNumerator = value; }
     private int CurrentTupletDenominator { get => _c.CurrentTupletDenominator; set => _c.CurrentTupletDenominator = value; }
     private int CurrentVelocity { get => _c.CurrentVelocity; set => _c.CurrentVelocity = value; }
-    private DateTime _lastDigit { get => _c.LastDigitTime; set => _c.LastDigitTime = value; }
-    private int _lastDigitMeasure { get => _c.LastDigitMeasure; set => _c.LastDigitMeasure = value; }
-    private int _lastDigitCell { get => _c.LastDigitCell; set => _c.LastDigitCell = value; }
-    private int _lastDigitString { get => _c.LastDigitString; set => _c.LastDigitString = value; }
+    // The quick two-digit fret entry window: the last digit typed and where.
+    private DateTime _lastDigit = DateTime.MinValue;
+    private int _lastDigitMeasure = -1, _lastDigitCell = -1, _lastDigitString = -1;
     private List<TabCell> CellsFor(MeasureModel measure, bool create = false) => _c.CellsFor(measure, create);
     private int SlotsFor(int measure) => _c.SlotsFor(measure);
-    private bool RunEdit(Func<bool> mutate, bool markTimeline = true) => _c.RunEdit(mutate, markTimeline);
+    private bool RunEdit(Func<bool> mutate, bool markTimeline = true, bool continuesLastStep = false) { ForgetWritingMarks(); return _c.RunEdit(mutate, markTimeline, continuesLastStep); }
     private void PreviewNote(TabNote note) => _c.PreviewNote(note);
     private void InvalidateVisual() => _c.Redraw();
     private bool AutoAdvanceAfterEntry => _c.AutoAdvanceAfterEntry;
@@ -110,7 +110,7 @@ public sealed partial class ScoreEditCommands
         if (toolId.StartsWith("duration:", StringComparison.Ordinal))
         {
             var key = toolId[9..];
-            var populated = cells.Where(cell => (cell.Notes.Count > 0 || cell.IsRest) && !WritingDuration.ToolsShowWriting(cell, HasSelection)).ToList();
+            var populated = cells.Where(cell => (cell.Notes.Count > 0 || cell.IsRest) && !(!HasSelection && Placeholder(cell))).ToList();
             return key switch
             {
                 "whole" or "half" or "quarter" or "eighth" or "sixteenth" or "thirtysecond" or "sixtyfourth" =>
@@ -263,6 +263,8 @@ public sealed partial class ScoreEditCommands
     public void SetTuplet(int numerator, int denominator)
     {
         if (numerator < 2 || denominator < 1 || numerator > 13 || denominator > 12) return;
+        var targets = ToolCells().Where(c => c.Notes.Count > 0 || c.IsRest).ToList();
+        if (targets.Count > 0 && targets.All(c => c.Tuplet == (numerator, denominator))) { numerator = 0; denominator = 0; }   // the lit ratio again clears it
         if (!CanSetTuplet((numerator, denominator))) return;
         CurrentTriplet = numerator == 3 && denominator == 2;
         CurrentTupletNumerator = numerator;
@@ -334,20 +336,15 @@ public sealed partial class ScoreEditCommands
             case "Note.Rest": ToggleRest(); return true;
             case "Note.Tie": ToggleTie(); return true;
             case "Note.Fermata": ToggleFermata(); return true;
-            case "Note.Accent": CycleAccent(); return true;
+            case "Note.Accent": SetAccent(1); return true;
             case "Note.Staccato": ToggleStaccato(); return true;
             case "Note.Tenuto": ToggleTenuto(); return true;
-            case "Note.Bend": ToggleTechnique(TechniqueNames.Bend); return true;
             case "Note.HammerPull": ToggleTechnique(TechniqueNames.Hopo); return true;
             case "Note.Vibrato": ToggleTechnique(TechniqueNames.Vibrato); return true;
             case "Note.Slide": ToggleTechnique(TechniqueNames.LegatoSlide); return true;
             case "Note.LetRing": ToggleTechnique(TechniqueNames.LetRing); return true;
             case "Note.Dead": ToggleDead(); return true;
             case "Note.Ghost": ToggleGhost(); return true;
-            case "Note.Harmonic": ToggleTechnique(TechniqueNames.Harmonic); return true;
-            case "Note.Trill": ToggleTechnique(TechniqueNames.Trill); return true;
-            case "Note.TremoloBar": ToggleTechnique(TechniqueNames.TremoloBar); return true;
-            case "Note.Grace": ToggleTechnique("GraceBefore"); return true;
             case "Note.PalmMute": ToggleTechnique(TechniqueNames.PalmMute); return true;
             case "Note.FadeIn": ToggleTechnique(TechniqueNames.FadeIn); return true;
             case "Note.FadeOut": ToggleTechnique(TechniqueNames.FadeOut); return true;
@@ -360,9 +357,9 @@ public sealed partial class ScoreEditCommands
         return false;
     }
 
-    /// <summary>Highest typed/clicked number: a fret (36), or on a drum track the GM percussion note itself (up to 127).</summary>
+    /// <summary>Highest typed/clicked number: the track's last fret, or on a drum track the GM percussion note itself (up to 127).</summary>
     private static int MaxEntryNumber(TrackModel track) =>
-        track.MidiChannel == 9 || track.Kind == TrackKind.Drums ? 127 : 36;
+        track.MidiChannel == 9 || track.Kind == TrackKind.Drums ? 127 : track.NumberOfFrets > 0 ? track.NumberOfFrets : 24;
 
     public void EnterFret(int digit, bool autoAdvance = true)
     {
@@ -370,16 +367,18 @@ public sealed partial class ScoreEditCommands
         var cell = CurrentCell(create: true);
         if (track is null || cell is null) return;
         var editingExistingNote = false;
+        var prior = cell.Notes.FirstOrDefault(n => n.StringIndex == SelectedString);
+        var append = prior is not null && (DateTime.UtcNow - _lastDigit).TotalMilliseconds < 700   // the second digit of a two-digit fret: one undo step with the first
+                     && _lastDigitMeasure == SelectedMeasure && _lastDigitCell == SelectedCell
+                     && _lastDigitString == SelectedString && prior.Fret < 10 && prior.Fret > 0;
         RunEdit(() =>
         {
             ApplyPendingDuration(cell);
+            SplitBeatTie(cell, SelectedString);
 
             var existing = cell.Notes.FirstOrDefault(n => n.StringIndex == SelectedString);
             editingExistingNote = existing is not null;
-            var append = existing is not null && (DateTime.UtcNow - _lastDigit).TotalMilliseconds < 700
-                         && _lastDigitMeasure == SelectedMeasure && _lastDigitCell == SelectedCell
-                         && _lastDigitString == SelectedString && existing.Fret < 10 && existing.Fret > 0;
-            var fret = Math.Clamp(append ? existing!.Fret * 10 + digit : digit, 0, MaxEntryNumber(track));
+            var fret = Math.Clamp(append && existing is not null && existing.Fret * 10 + digit <= MaxEntryNumber(track) ? existing.Fret * 10 + digit : digit, 0, MaxEntryNumber(track));   // two digits past the last fret: the second replaces the first
             if (existing is null)
             {
                 existing = new TabNote { StringIndex = SelectedString, Velocity = CurrentVelocity };
@@ -392,7 +391,7 @@ public sealed partial class ScoreEditCommands
 
             PreviewNote(existing);
             return true;
-        });
+        }, continuesLastStep: append);
         // Auto-advance is useful for entering a passage, but changing an existing
         // note should leave the edit cursor on that note for further adjustments.
         if (!editingExistingNote && autoAdvance && AutoAdvanceAfterEntry) MoveForwardBeat(track);
@@ -420,6 +419,7 @@ public sealed partial class ScoreEditCommands
             else
             {
                 ApplyPendingDuration(cell);
+                SplitBeatTie(cell, stringIndex);
                 cell.IsRest = false;
                 var midi = MidiOf(track, stringIndex, fret);
                 if (sameString.Count == 0)
@@ -477,22 +477,6 @@ public sealed partial class ScoreEditCommands
     // Drum tracks: the number typed is the GM percussion note itself (as in the reference); otherwise tuning + capo + fret.
     internal static int MidiOf(TrackModel track, int stringIndex, int fret) => Services.EditCommands.NoteMidi(track, stringIndex, fret);
 
-    private void ApplyPendingDuration(TabCell cell)
-    {
-        // A note keeps its own length; a rest or empty slot takes the remembered writing duration (the rest fill, when on, refills the remainder).
-        if (!WritingDuration.Applies(cell))
-        {
-            cell.IsRest = false;
-            return;
-        }
-        cell.DurationDenominator = CurrentDurationDenominator;
-        cell.Dots = CurrentDots;
-        cell.IsTriplet = CurrentTriplet;
-        cell.TupletNumerator = CurrentTupletNumerator;
-        cell.TupletDenominator = CurrentTupletDenominator;
-        cell.IsRest = false;
-    }
-
     public void SetDuration(int denominator) => SetDuration(denominator, force: false);
 
     // force: +/- step the selected beat, even when the bar then over/underfills
@@ -501,10 +485,11 @@ public sealed partial class ScoreEditCommands
     {
         if (Array.IndexOf(MusicTime.AllDenominators, denominator) < 0) return;
         if ((!force || PreventBarOverflow) && !CanSetDuration(denominator)) return;
+        if (force) RememberWritingForUndo();   // as GP5, +/- on an empty spot is an undo step of its own
         CurrentDurationDenominator = denominator;
-        if (ApplyToolSelection(cells => { if (RefillSelectedRests(cells, denominator)) return; Services.EditCommands.ApplyDuration(cells, denominator); NormaliseRests(cells, resize: true); })) { RestoreRestSelection(); return; }
+        if (ApplyToolSelection(cells => { if (RefillSelectedRests(cells, denominator)) return; Services.EditCommands.ApplyDuration(cells, denominator); if (!CloseUpSelection(cells)) NormaliseRests(cells, resize: true); })) { RestoreRestSelection(); return; }
         var cell = CurrentCell();
-        if (cell is not null && (cell.Notes.Count > 0 || cell.IsRest))
+        if (cell is not null && (cell.Notes.Count > 0 || cell.IsRest) && !Placeholder(cell))   // an empty slot or placeholder rest: the value is the writing duration only
         {
             RunEdit(() => { cell.DurationDenominator = denominator; NormaliseRests(new[] { cell }, resize: true); return true; });
         }
@@ -522,58 +507,56 @@ public sealed partial class ScoreEditCommands
     public void Longer() => SetDuration(MusicTime.Longer(StepBaseDuration()), force: true);
     public void Shorter() => SetDuration(MusicTime.Shorter(StepBaseDuration()), force: true);
 
-    // +/- step from the selected beat's own value (not a stale toolbar value).
-    private int StepBaseDuration()
-    {
-        var selected = ToolCells().FirstOrDefault(c => c.Notes.Count > 0 || c.IsRest);
-        if (selected is not null) return selected.DurationDenominator;
-        var cell = CurrentCell();
-        return cell is not null && (cell.Notes.Count > 0 || cell.IsRest) ? cell.DurationDenominator : CurrentDurationDenominator;
-    }
-
+    /// <summary>The "." key: toggles the single dot (double dots have their own command).</summary>
     public void ToggleDot()
     {
-        var dots = (CurrentDots + 1) % 3;
+        var dots = BeatDots() == 1 ? 0 : 1;
         if (!CanSetDots(dots)) return;
+        RememberWritingForUndo();
         CurrentDots = dots;
-        if (ApplyToolSelection(cells => Services.EditCommands.ApplyDots(cells, CurrentDots))) return;
+        if (ApplyToolSelection(DotSelection)) { RestoreRestSelection(); return; }
         var cell = CurrentCell();
-        if (cell is null) { NotifyState(); InvalidateVisual(); return; }
-        RunEdit(() => { cell.Dots = CurrentDots; return true; });
+        if (cell is null || Placeholder(cell)) { NotifyState(); InvalidateVisual(); return; }   // as GP5: an empty spot's dot is the next note's
+        RunEdit(() => { cell.Dots = CurrentDots; NormaliseRests(new[] { cell }, resize: true); return true; });
     }
 
     public void SetDots(int dots)
     {
         dots = Math.Clamp(dots, 0, 2);
+        if (dots > 0 && BeatDots() == dots && ToolCells().All(c => c.Dots == dots)) dots = 0;   // clicking the active dot button removes it
         if (!CanSetDots(dots)) return;
         CurrentDots = dots;
-        if (ApplyToolSelection(cells => Services.EditCommands.ApplyDots(cells, CurrentDots))) return;
+        if (ApplyToolSelection(DotSelection)) { RestoreRestSelection(); return; }
         var cell = CurrentCell();
-        if (cell is null) { NotifyState(); InvalidateVisual(); return; }
-        RunEdit(() => { cell.Dots = CurrentDots; return true; });
+        if (cell is null || Placeholder(cell)) { NotifyState(); InvalidateVisual(); return; }
+        RunEdit(() => { cell.Dots = CurrentDots; NormaliseRests(new[] { cell }, resize: true); return true; });
     }
 
     public void ToggleTriplet()
     {
-        var selectionCells = HasSelection ? ToolCells() : new List<TabCell>();
-        var triplet = selectionCells.Count > 0
-            ? Services.EditCommands.NextTriplet(selectionCells)
+        var beats = ToolCells().Where(c => c.Notes.Count > 0 || c.IsRest).ToList();   // the beat's own state, not the pending entry state
+        var triplet = beats.Count > 0
+            ? Services.EditCommands.NextTriplet(beats)
             : !CurrentTriplet;
         if (!CanSetTuplet(triplet ? (3, 2) : (0, 0))) return;
+        RememberWritingForUndo();
         CurrentTriplet = triplet;
         CurrentTupletNumerator = triplet ? 3 : 0;
         CurrentTupletDenominator = triplet ? 2 : 0;
         if (ApplyToolSelection(cells =>
             {
                 foreach (var selected in cells) Services.EditCommands.ApplyTriplet(selected, CurrentTriplet);
+                foreach (var measure in Track!.Measures)   // the later beats of each bar follow on, as GP5 times them
+                    if (CellsFor(measure) is var barCells && barCells.FindIndex(cells.Contains) is >= 0 and var first) Services.EditCommands.RetimeFrom(barCells, first);
             })) return;
         var cell = CurrentCell();
-        if (cell is null) { NotifyState(); InvalidateVisual(); return; }
+        if (cell is null || Placeholder(cell)) { NotifyState(); InvalidateVisual(); return; }   // as GP5: an empty spot's triplet is the next note's
         RunEdit(() =>
         {
             cell.IsTriplet = CurrentTriplet;
             cell.TupletNumerator = CurrentTriplet ? 3 : 0;
             cell.TupletDenominator = CurrentTriplet ? 2 : 0;
+            if (Track is { } track && SelectedMeasure < track.Measures.Count) Services.EditCommands.RetimeFrom(CellsFor(track.Measures[SelectedMeasure]), SelectedCell);   // GP5 b05
             return true;
         });
     }

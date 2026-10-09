@@ -28,7 +28,7 @@ public static partial class SelfTest
         "nuget.config", "README.md", "CHANGELOG.md",
         // documents the export must ship (add them to Export-Public.ps1 when they are added here)
         "SECURITY.md", "ARCHITECTURE.md", "TOOLS_AND_HOTKEYS.md", "CONTRIBUTING.md", "docs/SBOM.md", "docs/TESTING.md", "docs/DEBUGGING.md", "docs/FEATURE_MAP.md", "docs/RECIPES.md", "START_HERE.md", "docs/COMPATIBILITY.md",
-        "docs/REPRODUCIBLE_BUILDS.md", "docs/screenshots/", "docs/animations/", "docs/tutorial/",
+        "docs/REPRODUCIBLE_BUILDS.md", "docs/screenshots/", "docs/animations/", "docs/tutorial/", "docs/feature-map/",
         "src/", "tests/full-suite/", "samples/", "vendor/alphatab/",
         ".github/workflows/windows-ci.yml", ".github/workflows/release.yml", ".github/workflows/build-bridge.yml", ".github/workflows/fuzz-weekly.yml",
         "tools/Compare-Release.ps1", "tools/Build-AlphaTab.ps1", "tools/Compare-NativeBridge.ps1", "tools/Package-Release.ps1", "tools/Publish.ps1", "tools/Write-Sbom.ps1",
@@ -96,6 +96,12 @@ public static partial class SelfTest
             .Where(f => !f.Contains(Path.DirectorySeparatorChar + "bin" + Path.DirectorySeparatorChar) && !f.Contains(Path.DirectorySeparatorChar + "obj" + Path.DirectorySeparatorChar))
             .Select(f => Path.GetRelativePath(root, f).Replace('\\', '/'));
 
+    /// <summary>The feature-map pages (docs/feature-map/*.md, forward slashes): checked like the public documents.</summary>
+    private static IEnumerable<string> FeatureMapPages(string root) =>
+        Directory.Exists(Path.Combine(root, "docs", "feature-map"))
+            ? Directory.EnumerateFiles(Path.Combine(root, "docs", "feature-map"), "*.md").Select(f => Path.GetRelativePath(root, f).Replace('\\', '/'))
+            : Enumerable.Empty<string>();
+
     /// <summary>Repository-relative files (forward slashes) outside build output and local-only folders.</summary>
     private static List<string> DocRepositoryFiles(string root)
     {
@@ -131,7 +137,7 @@ public static partial class SelfTest
         var problems = new List<string>();
         var docsChecked = 0;
 
-        foreach (var doc in PublicDocFiles.Concat(FolderReadmeFiles(root)))
+        foreach (var doc in PublicDocFiles.Concat(FolderReadmeFiles(root)).Concat(TabForge.Diagnostics.FeatureMapGenerator.PageFiles(root)))
         {
             var full = Path.Combine(root, doc.Replace('/', Path.DirectorySeparatorChar));
             if (!File.Exists(full)) continue;
@@ -213,7 +219,7 @@ public static partial class SelfTest
         Check("Directory.Build.props sets one <Version>", version.Length > 0, props.Length.ToString());
 
         var problems = new List<string>();
-        foreach (var doc in PublicDocFiles.Concat(FolderReadmeFiles(root)).Append("README.md"))
+        foreach (var doc in PublicDocFiles.Concat(FolderReadmeFiles(root)).Concat(TabForge.Diagnostics.FeatureMapGenerator.PageFiles(root)).Append("README.md"))
         {
             var full = Path.Combine(root, doc.Replace('/', Path.DirectorySeparatorChar));
             if (!File.Exists(full)) continue;

@@ -55,7 +55,7 @@ Use these instead of writing a new route.
 
 ## Find a feature
 
-1. `docs/FEATURE_MAP.md`: feature to main code, pathway and self-tests.
+1. `docs/FEATURE_MAP.md`: index of features. Each feature's page in `docs/feature-map/` gives main code, pathway and self-tests.
 2. `docs/RECIPES.md`: exact file lists for the usual changes (technique, setting, command, export, engine command, song field, dialog).
 3. `CONTRIBUTING.md`: naming, comment style, test rules, pull request checklist.
 4. `ARCHITECTURE.md`: processes, threads, IPC limits, state ownership, persistence.
@@ -71,7 +71,7 @@ dotnet build src\TabForge\TabForge.csproj -c Release -v q -p:TabForgeFullSuite=t
 Start-Process -Wait out-full\TabForge.exe -ArgumentList '--selftest','one.log','--only','TestEditCommands','--profile','scratch-profile'
 ```
 
-- `--only <TestName>[,<TestName>]` runs just those tests; `--areas <area>` runs one area. Names: `docs/FEATURE_MAP.md`.
+- `--only <TestName>[,<TestName>]` runs just those tests; `--areas <area>` runs one area. Names: `docs/feature-map/tests.md`.
 - The program prints nothing. Read the last line of the log (`N passed, M failed, K skipped`) and search it for FAIL. The exit code alone is not the result.
 - `--profile <folder>` keeps your own settings untouched. Always use it.
 - A normal build runs only the small basic set (`--selftest <log>`; architecture, hygiene, smoke tests). Narrow tests of the big suite (`tests/full-suite/`) need the `-p:TabForgeFullSuite=true` build above; the full gate (`--selftest <log> --require ci,document-context` on that build) is for major redesigns only. All headless commands: `docs/DEBUGGING.md`.
@@ -84,6 +84,6 @@ Self-tests fail the build of a change that breaks these.
 - **Size and shape budgets.** `src/TabForge/ArchitectureBudget.json` caps file and class sizes and lists naming exceptions. A budget may only go down; do not raise one to make room for new code, move the code out instead.
 - **Naming.** XController, XFlow, IXHost and XService as in `CONTRIBUTING.md`.
 - **Find a feature fast.** `TabForge.exe --find <keyword> out.txt` lists matching features, files and tests in at most 40 lines; read that instead of the whole feature map.
-- **Tests.** Every test has an area in the AreaOf table in `src/TabForge/SelfTests/SelfTest.cs`; after adding or renaming tests run `TabForge.exe --feature-map` and commit `docs/FEATURE_MAP.md`.
+- **Tests.** Every test has an area in the AreaOf table in `src/TabForge/SelfTests/SelfTest.cs`; after adding or renaming tests run `TabForge.exe --feature-map` and commit `docs/feature-map/tests.md`.
 - **Docs.** A document that names a file, type, test or command must name one that exists. This page and `docs/RECIPES.md` are checked the same way (`TestStartHereAndRecipesInSync`), and this page stays within 150 lines.
 - **Text.** Sources contain no stray control characters; comments describe the code as it is, without history.

@@ -2,7 +2,7 @@ using TabForge.AudioEngine.Synth;
 
 namespace TabForge;
 
-/// <summary>Pins the measured GM engine level calibration (docs/LEVEL_MATCH_2026-09-29.md): engine-only, offline, deterministic.</summary>
+/// <summary>Pins the measured GM engine level calibration: engine-only, offline, deterministic.</summary>
 public static partial class SelfTest
 {
     private static void TestGmLevelCalibration()

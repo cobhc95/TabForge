@@ -177,7 +177,7 @@ Press `Ctrl+A` to select the whole track. Press `Esc` to clear the selection. Wh
 - **Bar > Delete bar** (`Ctrl+Delete`) removes the cursor bar from every track. The last bar cannot be deleted.
 - **Bar > Duplicate bar** copies the cursor bar and puts the copy after it, on every track. With bars selected, it copies the whole selection after its last bar and selects the copy. A section label is not repeated on the copy.
 
-Pitch has its own keys. `Shift+Up` and `Shift+Down` raise or lower the note under the cursor by a semitone, which is one fret. `Alt+Shift+Up` and `Alt+Shift+Down` instead move the note to the next higher or lower string and keep its pitch, so the fret number changes. If the pitch cannot be played there, or the string already has a note on that beat, nothing moves and the status bar says why. `Alt+Left` and `Alt+Right` step to the previous or next note you have entered.
+Pitch has its own keys. `Shift+Up` and `Shift+Down` raise or lower the note under the cursor by a semitone, which is one fret. `Alt+Up` and `Alt+Down` instead move the note to the next higher or lower string and keep its pitch, so the fret number changes. If the pitch cannot be played there, or the string already has a note on that beat, nothing moves and the status bar says why. On an empty spot they move the cursor to the next string. `Alt+Left` and `Alt+Right` step to the previous or next note you have entered.
 
 > **Tip:** `Shift+F10`, or the `Menu` key, opens the right-click menu at the cursor, so you can reach it without the mouse. Clicking empty paper in the score keeps the keyboard working in the score.
 

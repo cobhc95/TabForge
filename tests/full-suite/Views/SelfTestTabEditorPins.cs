@@ -48,7 +48,7 @@ public static partial class SelfTest
                             {
                                 var editor = ScoreRenderIdentity.CreateEditor(project, 0, zoom, dark, state);
                                 var fresh = ScoreRenderIdentity.Hash(ScoreRenderIdentity.Render(editor));
-                                if (state == "play") editor.SetPlayhead(editor.PlaybackMeasure, editor.PlaybackCell);
+                                if (state == "play") editor.Playback.SetPlayhead(editor.Playback.Measure, editor.Playback.Cell);
                                 var warm = ScoreRenderIdentity.Hash(ScoreRenderIdentity.Render(editor));
                                 editor.InvalidateVisual();
                                 var repainted = ScoreRenderIdentity.Hash(ScoreRenderIdentity.Render(editor));
@@ -92,10 +92,10 @@ public static partial class SelfTest
             var project = DemoSongFactory.Create();
             var editor = ScoreRenderIdentity.CreateEditor(project, 0, 1.0, true, "play");
             ScoreRenderIdentity.Render(editor);
-            var bar = editor.PlaybackMeasure;
+            var bar = editor.Playback.Measure;
             void Tick(int i)
             {
-                editor.SetPlayhead(bar, i & 1);
+                editor.Playback.SetPlayhead(bar, i & 1);
                 editor.UpdateLayout();
             }
             for (var i = 0; i < 40; i++) Tick(i);
@@ -110,7 +110,7 @@ public static partial class SelfTest
             }
         }
         Log.Add($"  PERF  tab editor playback repaint: {perRepaint:N0} bytes allocated per repaint (cheapest of 4 batches of 100; demo song, 1.0x, dark, play state)");
-        const long BudgetBytes = 110_000;   // recorded: about 105,000 alone and in a full run (main windows left open by earlier tests are closed first)
+        const long BudgetBytes = 114_000;   // recorded: about 111,000 alone and in a full run (main windows left open by earlier tests are closed first); 0.6 overfull red lines, joined vibrato and TAB slurs add ~6 KB of drawing per repaint
         Check("tab editor: a playback repaint allocates no more than the recorded budget", perRepaint <= BudgetBytes, $"{perRepaint:N0} bytes, budget {BudgetBytes:N0}");
     }
 
@@ -144,10 +144,10 @@ public static partial class SelfTest
             (ReferenceEquals(before, editor.AuditLayout()) ? kept : rebuilt).Add(name);
         }
         Probe("Zoom", () => editor.Zoom = 1.5);
-        Probe("DarkPaper", () => editor.DarkPaper = false);
-        Probe("PlaybackActive", () => editor.PlaybackActive = true);
-        Probe("SetPlayhead", () => editor.SetPlayhead(3, 0));
-        Probe("PlayingBarEnabled", () => editor.PlayingBarEnabled = true);
+        Probe("DarkPaper", () => editor.Appearance.DarkPaper = false);
+        Probe("PlaybackActive", () => editor.Playback.Active = true);
+        Probe("SetPlayhead", () => editor.Playback.SetPlayhead(3, 0));
+        Probe("PlayingBarEnabled", () => editor.Appearance.PlayingBarEnabled = true);
         Probe("SetPosition", () => editor.SetPosition(2, 0, 1, false));
         Probe("SelectMeasureRange", () => editor.SelectMeasureRange(1, 3));
         Probe("ClearSelection", () => editor.ClearSelection());
@@ -188,18 +188,18 @@ public static partial class SelfTest
         var (editor, _, lastOfFirst) = FrozenEditor();
         var next = lastOfFirst + 1;
         var log = new StringBuilder();
-        editor.PlaybackActive = true;
-        editor.SetPlayhead(0, 0);
+        editor.Playback.Active = true;
+        editor.Playback.SetPlayhead(0, 0);
         var a = Frozen(editor);
         log.Append($"cached after first tick: {string.Join(",", a.Keys)}; ");
         Check("tab editor (frozen): with two systems, the system holding the playhead is drawn live and the other is retained", a.Count >= 1 && !a.ContainsKey(0) && a.ContainsKey(1), string.Join(",", a.Keys));
-        editor.SetPlayhead(0, 1);
+        editor.Playback.SetPlayhead(0, 1);
         var b = Frozen(editor);
         Check("tab editor (frozen): a tick inside the playing bar keeps the other system's retained drawing", ReferenceEquals(a[1], b[1]));
-        editor.SetPlayhead(next, 0);
+        editor.Playback.SetPlayhead(next, 0);
         var c = Frozen(editor);
         Check("tab editor (frozen): moving the playhead into the other system retains the first and draws the second live", c.ContainsKey(0) && !c.ContainsKey(1), string.Join(",", c.Keys));
-        editor.SetPlayhead(next, 1);
+        editor.Playback.SetPlayhead(next, 1);
         var d = Frozen(editor);
         Check("tab editor (frozen): a tick inside that bar keeps the first system's drawing", ReferenceEquals(c[0], d[0]));
 
@@ -219,9 +219,9 @@ public static partial class SelfTest
         var i = Frozen(editor);
         Check("tab editor (frozen): a layout rebuild clears them", !ReferenceEquals(h[0], i[0]));
         var before = editor.Playback.PlayingBarBuilds;
-        editor.SetPlayhead(next, 0);
-        editor.SetPlayhead(next, 1);
-        editor.SetPlayhead(next, 0);
+        editor.Playback.SetPlayhead(next, 0);
+        editor.Playback.SetPlayhead(next, 1);
+        editor.Playback.SetPlayhead(next, 0);
         Check("tab editor (frozen): ticks inside one bar do not rebuild the playing-bar band", editor.Playback.PlayingBarBuilds <= before + 1, $"{editor.Playback.PlayingBarBuilds - before}");
     }
 
@@ -263,16 +263,19 @@ public static partial class SelfTest
         Step("shiftClick", () => editor.ShiftClickExtend(2, 0, 1));
         Step("rangeBars", () => { editor.SelectMeasureRange(1, 2); return null; });
         Step("selectAllClear", () => { editor.ClearSelection(); return null; });
-        Step("dur8", () => { editor.SetDuration(8); return null; });
-        Step("dot", () => { editor.ToggleDot(); return null; });
-        Step("delete", () => { editor.DeleteNote(); return null; });
+        Step("dur8", () => { editor.Effects.SetDuration(8); return null; });
+        Step("dot", () => { editor.Effects.ToggleDot(); return null; });
+        Step("delete", () => { editor.Effects.DeleteNote(); return null; });
         Step("voice2", () => { editor.SetActiveVoice(1); return null; });
         Step("voice1", () => { editor.SetActiveVoice(0); return null; });
         var cell = project.Tracks[0].Measures.SelectMany(m => m.Cells).FirstOrDefault(c => c.Notes.Count > 0);
         log.Append($"firstNoteFret={(cell is null ? "none" : cell.Notes[0].Fret.ToString())}");
         var observed = log.ToString();
         Log.Add("  INFO  tab editor input script: " + observed);
-        const string Expected = "right:1 pos=1.0.0 sel=none ev=0/0/1|right:1 pos=2.0.0 sel=none ev=0/0/1|down:1 pos=2.0.1 sel=none ev=0/0/1|fret5:1 pos=2.4.1 sel=none ev=1/1/1|right:1 pos=3.0.1 sel=none ev=0/0/1|shiftRight:1 pos=3.0.1 sel=none ev=0/0/0|shiftRight:1 pos=3.0.1 sel=none ev=0/0/0|clear:- pos=3.0.1 sel=none ev=0/0/0|home:1 pos=3.0.1 sel=none ev=0/0/1|end:1 pos=3.0.1 sel=none ev=0/0/1|ctrlA:0 pos=3.0.1 sel=none ev=0/0/0|shiftClick:1 pos=2.0.1 sel=2.0-3.0 ev=0/0/1|rangeBars:- pos=1.0.1 sel=1.0-2.0 ev=0/0/1|selectAllClear:- pos=1.0.1 sel=none ev=0/0/1|dur8:- pos=1.0.1 sel=none ev=0/0/1|dot:- pos=1.0.1 sel=none ev=1/1/0|delete:- pos=1.0.1 sel=none ev=1/1/0|voice2:- pos=1.0.1 sel=none ev=0/0/1|voice1:- pos=1.0.1 sel=none ev=0/0/1|firstNoteFret=5";
+        // Re-recorded for the GP5 entry rules: Shift+Right on the empty spot of the empty last bar selects that spot (one event for the
+        // range, one for the cursor, as Shift+Left), so "clear" then ends it; dot on an empty spot sets the writing duration (a tool-state
+        // event, no edit); Backspace on an empty spot changes nothing.
+        const string Expected = "right:1 pos=1.0.0 sel=none ev=0/0/1|right:1 pos=2.0.0 sel=none ev=0/0/1|down:1 pos=2.0.1 sel=none ev=0/0/1|fret5:1 pos=2.4.1 sel=none ev=1/1/1|right:1 pos=3.0.1 sel=none ev=0/0/1|shiftRight:1 pos=3.0.1 sel=3.0-3.0 ev=0/0/2|shiftRight:1 pos=3.0.1 sel=3.0-3.0 ev=0/0/2|clear:- pos=3.0.1 sel=none ev=0/0/1|home:1 pos=3.0.1 sel=none ev=0/0/1|end:1 pos=3.0.1 sel=none ev=0/0/1|ctrlA:0 pos=3.0.1 sel=none ev=0/0/0|shiftClick:1 pos=2.0.1 sel=2.0-3.0 ev=0/0/1|rangeBars:- pos=1.0.1 sel=1.0-2.0 ev=0/0/1|selectAllClear:- pos=1.0.1 sel=none ev=0/0/1|dur8:- pos=1.0.1 sel=none ev=0/0/1|dot:- pos=1.0.1 sel=none ev=0/0/1|delete:- pos=1.0.1 sel=none ev=0/0/0|voice2:- pos=1.0.1 sel=none ev=0/0/1|voice1:- pos=1.0.1 sel=none ev=0/0/1|firstNoteFret=5";
         Check("tab editor: the scripted keyboard and selection sequence gives the recorded cursor, selection and events", observed == Expected, observed);
     }
 
@@ -293,7 +296,7 @@ public static partial class SelfTest
                 {
                     log.Append($"{{{barPeer.GetName()}:{string.Join("/", (barPeer.GetChildren() ?? new List<AutomationPeer>()).Select(b => b.GetName() + "=" + b.GetItemStatus()))}}}");
                 }
-                log.Append($"<{editor.DescribeCursor()}|{editor.DescribePosition()}|{editor.DescribeBar()}>");
+                log.Append($"<{editor.Describer.Cursor()}|{editor.Describer.Position()}|{editor.Describer.Bar()}>");
             }
             var observed = log.ToString();
             Log.Add("  INFO  tab editor automation: " + observed);
@@ -357,22 +360,22 @@ public static partial class SelfTest
         playhead.Ms = 1234;
         playhead.SetPlayhead(3, 1);
         Check("tab editor playhead: the surface sets the editor's playback state",
-            editor.PlaybackActive && ReferenceEquals(editor.Timeline, timeline) && ReferenceEquals(editor.PlaybackBarRemap, remap) && editor.PlaybackTrackIndex == 0 &&
-            editor.PlaybackFraction == 0.5 && editor.PlaybackMs == 1234 && editor.PlaybackMeasure == 3 && editor.PlaybackCell == 1);
+            editor.Playback.Active && ReferenceEquals(editor.Playback.Timeline, timeline) && ReferenceEquals(editor.Playback.BarRemap, remap) && editor.Playback.TrackIndex == 0 &&
+            editor.Playback.Fraction == 0.5 && editor.Playback.Ms == 1234 && editor.Playback.Measure == 3 && editor.Playback.Cell == 1);
         Check("tab editor playhead: the geometry the surface returns is the editor's",
-            playhead.PlayheadGeometry() == editor.PlayheadGeometry() && playhead.PlaybackDurationGeometries().Count == editor.PlaybackDurationGeometries().Count &&
-            playhead.PlaybackHorizontalGeometry(3, 0.5) == editor.PlaybackHorizontalGeometry(3, 0.5) && playhead.NeedsRepaint(0, 5000) == editor.PlaybackNeedsRepaint(0, 5000));
+            playhead.PlayheadGeometry() == editor.Playback.PlayheadGeometry() && playhead.PlaybackDurationGeometries().Count == editor.Playback.DurationGeometries().Count &&
+            playhead.PlaybackHorizontalGeometry(3, 0.5) == editor.Playback.HorizontalGeometry(3, 0.5) && playhead.NeedsRepaint(0, 5000) == editor.Playback.NeedsRepaint(0, 5000));
         playhead.Clear();
-        Check("tab editor playhead: clearing removes the playhead", editor.PlaybackMeasure < 0 && editor.PlaybackCell < 0);
+        Check("tab editor playhead: clearing removes the playhead", editor.Playback.Measure < 0 && editor.Playback.Cell < 0);
 
         var before = editor.AuditLayout();
         editor.Appearance.PlayingBarOpacity = 0.4;
         Check("tab editor appearance: a playing-bar setting repaints and keeps the layout", ReferenceEquals(before, editor.AuditLayout()));
         editor.Appearance.ScoreSpacing = 1.3;
         Check("tab editor appearance: a spacing setting rebuilds the layout", !ReferenceEquals(before, editor.AuditLayout()));
-        editor.DarkPaper = false;
-        editor.CenterSystems = true;
-        editor.PlayingBarEnabled = true;
+        editor.Appearance.DarkPaper = false;
+        editor.Appearance.CenterSystems = true;
+        editor.Appearance.PlayingBarEnabled = true;
         Check("tab editor appearance: the editor's forwarding settings write the appearance",
             !editor.Appearance.DarkPaper && editor.Appearance.CenterSystems && editor.Appearance.PlayingBarEnabled);
     }

@@ -95,8 +95,10 @@ public static partial class SelfTest
                 () => Pat(1, 2) == barPat && Pitches(1, 2) == Pitches(1, 4) && Pat(0, 2) == Pat(0, 3) && Pat(2, 2) == Pat(2, 3) && Counts() == 8);
             Case("score/this track/bars: paste into another track", () => { Caret(2, 2, 0); Key("Paste_Click"); },
                 () => Pat(2, 2) == barPat && Pat(1, 2) == Pat(1, 3) && Counts() == 8);
-            Case("score/this track/bars: paste over existing content (track 3, bar 7)", () => { Caret(2, 6, 0); Key("Paste_Click"); },
-                () => Pat(2, 6) == barPat && Counts() == 8);
+            // As GP5 (quiet runs l6, l6b): beats pasted onto written notes insert before the cursor beat in the same bar, with no question.
+            var bar7Before = "";
+            Case("score/this track/bars: paste onto written notes inserts in the bar (track 3, bar 7; GP5)", () => { bar7Before = Pat(2, 6); Caret(2, 6, 0); Key("Paste_Click"); },
+                () => Pat(2, 6) != bar7Before && Counts() == 8 && LtField<TextBlock>(window, "StatusText")!.Text.Contains("inserted"));
             Case("score/this track/bars: cut clears that track's bar only", () => { Score(1, 4, 0, 4, -1); Key("Cut_Click"); },
                 () => !BrwNoteAt(doc!.Project, 1, 4) && BrwNoteAt(doc.Project, 0, 4) && BrwNoteAt(doc.Project, 2, 4) && Counts() == 8
                     && ClipboardService.Shared.TryGetClip(out _) is { Tracks.Count: 1 });

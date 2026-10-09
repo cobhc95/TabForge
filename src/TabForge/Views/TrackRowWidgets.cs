@@ -20,9 +20,9 @@ internal interface ITrackRowWidgetHost
     void RaisePanStyleChanged(bool knobs);
 }
 
-// Owns: the per-row mix widgets' behaviour: pan text and pan menu, mix-edit gesture bracketing on sliders, the instrument picker button.
+// Owns: the per-row mix widgets' behaviour: pan text and pan menu, mix-edit gesture bracketing on sliders, the instrument icon button.
 // Does not own: building the row and placing cells (ArrangementPanel.TrackRows), applying the edits (MainWindow via the panel's events).
-// Tests: TestTrackRowMenu, TestTrackRowRightClick, TestMuteSoloFast.
+// Tests: TestTrackRowMenu, TestTrackRowRightClick, TestMuteSoloFast, TestTrackIconButton.
 internal sealed class TrackRowWidgets
 {
     private readonly ITrackRowWidgetHost _host;
@@ -89,98 +89,69 @@ internal sealed class TrackRowWidgets
         slider.LostKeyboardFocus += (_, _) => _host.RaiseMixEditEnded();
     }
 
-    // standard instrument selector: the current sound as a button; click opens six quick picks, a
-    // separator, then every GM family as a hover submenu (with the instrument badges), and VST plug-ins.
-    public static Button InstrumentButton(TrackModel track, Action<string> choose)
+    /// <summary>Size (DIPs) of the instrument icon in a track row; the row's default height (34) leaves room around it.</summary>
+    public const double IconSize = 24;
+
+    // Hover, pressed and keyboard-focus states for the icon button only (the global button styles stay untouched).
+    internal static readonly ControlTemplate IconButtonTemplate = (ControlTemplate)System.Windows.Markup.XamlReader.Parse(
+        "<ControlTemplate xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation' TargetType='Button'>" +
+        "<Border x:Name='Chrome' xmlns:x='http://schemas.microsoft.com/winfx/2006/xaml' Background='Transparent' BorderBrush='Transparent' BorderThickness='1.5' CornerRadius='5' Padding='1'>" +
+        "<ContentPresenter HorizontalAlignment='Center' VerticalAlignment='Center'/></Border>" +
+        "<ControlTemplate.Triggers>" +
+        "<Trigger Property='IsMouseOver' Value='True'><Setter TargetName='Chrome' Property='Background' Value='{DynamicResource HoverBrush}'/>" +
+        "<Setter TargetName='Chrome' Property='BorderBrush' Value='{DynamicResource BorderBrush}'/></Trigger>" +
+        "<Trigger Property='IsPressed' Value='True'><Setter TargetName='Chrome' Property='Background' Value='{DynamicResource PressBrush}'/></Trigger>" +
+        "<Trigger Property='IsKeyboardFocused' Value='True'><Setter TargetName='Chrome' Property='BorderBrush' Value='{DynamicResource AccentBrush}'/></Trigger>" +
+        "</ControlTemplate.Triggers></ControlTemplate>");
+
+    /// <summary>The icon key of a track's instrument: one icon per catalogue sound, whatever else differs between the tracks.</summary>
+    public static string IconKeyOf(TrackModel track)
     {
-        var label = track.InstrumentName;   // the track keeps its own instrument whatever plug-ins its FX chain holds
-        var entry = TabForge.Services.InstrumentCatalog.ForTrack(track.InstrumentName, track.MidiProgram, track.MidiChannel == 9);
-        var content = new DockPanel { LastChildFill = true };
-        var arrow = new TextBlock { Text = "▾", Margin = new Thickness(4, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
-        DockPanel.SetDock(arrow, Dock.Right);
-        content.Children.Add(arrow);
-        var icon = TabForge.Views.InstrumentIcon.Element(entry, 16); // family colour, not the track colour
-        icon.Margin = new Thickness(0, 0, 5, 0);
-        DockPanel.SetDock(icon, Dock.Left);
-        content.Children.Add(icon);
-        content.Children.Add(new TextBlock { Text = label, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center });
+        var drum = track.MidiChannel == 9;
+        return TabForge.Services.InstrumentCatalog.ForTrack(track.InstrumentName, track.MidiProgram, drum) is { } entry
+            ? TrackSilhouette.KeyFor(entry) : TrackSilhouette.KeyFor(track.MidiProgram, drum);
+    }
+
+    /// <summary>
+    /// The instrument icon between the cogwheel and the record button: a click opens the instrument catalogue on the instrument's
+    /// family (the other families collapsed, the search box focused) and <paramref name="choose"/> receives the chosen sound.
+    /// </summary>
+    public static Button InstrumentIconButton(TrackModel track, Action<string> choose, Action<string?>? preview = null)
+    {
         var button = new Button
         {
-            Content = content, Margin = new Thickness(4, 2, 4, 2), FontSize = 11, Padding = new Thickness(5, 1, 5, 1),
-            HorizontalContentAlignment = HorizontalAlignment.Stretch, ToolTip = "Instrument / VST for this track",
-            VerticalAlignment = VerticalAlignment.Center, MaxHeight = 30,   // stays a button-sized control when rows are tall
+            Content = TrackSilhouette.Element(IconKeyOf(track), IconSize), Template = IconButtonTemplate,
+            Width = IconSize + 7, Height = IconSize + 5, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center,
+            ToolTip = $"{track.InstrumentName} — click to change", Cursor = Cursors.Hand, FocusVisualStyle = null,
         };
+        AutomationProperties.SetName(button, $"Instrument: {track.InstrumentName}");
         button.Click += (_, _) =>
         {
-            var menu = new ContextMenu { Style = (Style)Application.Current.FindResource(typeof(ContextMenu)), PlacementTarget = button,
-                Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom };
-            MenuItem Item(TabForge.Services.InstrumentEntry e)
+            var colour = ColorConverter.ConvertFromString(track.ColorHex) is Color c ? c : Colors.SteelBlue;
+            // The catalogue opens on the sound the track plays (its name, or its program when the name is not a catalogue sound).
+            var current = TabForge.Services.InstrumentCatalog.ForTrack(track.InstrumentName, track.MidiProgram, track.MidiChannel == 9)?.Name ?? track.InstrumentName;
+            string? picked = null;
+            try { picked = InstrumentPickerWindow.Show(Window.GetWindow(button), current, colour, focusFamily: true, preview: n => preview?.Invoke(n)); }
+            finally
             {
-                var item = new MenuItem
-                {
-                    Header = e.Name, Style = (Style)Application.Current.FindResource(typeof(MenuItem)),
-                    Icon = TabForge.Views.InstrumentIcon.Element(e, 18), IsCheckable = true,
-                    IsChecked = string.Equals(e.Name, label, StringComparison.OrdinalIgnoreCase),
-                };
-                item.Click += (_, _) => choose(e.Name);
-                return item;
+                if (picked is not null && !string.Equals(picked, current, StringComparison.OrdinalIgnoreCase)
+                    && FamilyChangePrompt.Confirm(Window.GetWindow(button), track, picked, TabForge.Services.InstrumentCatalog.Find(picked)?.IsDrumKit == true)) choose(picked);
+                preview?.Invoke(null);   // after the commit: the engine returns to the track's (new or original) program
             }
-            // Top: every sound in the current instrument's family; then a clear divider and all families.
-            var currentFamily = entry?.Category;
-            var siblings = currentFamily is null ? new List<TabForge.Services.InstrumentEntry>()
-                : TabForge.Services.InstrumentCatalog.All.Where(e => e.Category == currentFamily).ToList();
-            if (siblings.Count > 0)
-            {
-                menu.Items.Add(MenuHeader(currentFamily!.ToUpperInvariant()));
-                foreach (var e in siblings) menu.Items.Add(Item(e));
-                menu.Items.Add(new Separator { Style = (Style)Application.Current.FindResource(MenuItem.SeparatorStyleKey) });
-            }
-            menu.Items.Add(MenuHeader("ALL INSTRUMENT FAMILIES"));
-            foreach (var family in TabForge.Services.InstrumentCatalog.Categories)
-            {
-                var members = TabForge.Services.InstrumentCatalog.All.Where(e => e.Category == family).ToList();
-                var sub = new MenuItem
-                {
-                    Header = family, Style = (Style)Application.Current.FindResource(typeof(MenuItem)),
-                    Icon = TabForge.Views.InstrumentIcon.Element(members[0], 18),
-                };
-                // Built on first hover so opening the menu stays instant.
-                sub.Items.Add(new MenuItem());
-                sub.SubmenuOpened += (_, _) =>
-                {
-                    if (sub.Items.Count == members.Count) return;
-                    sub.Items.Clear();
-                    foreach (var e in members) sub.Items.Add(Item(e));
-                };
-                menu.Items.Add(sub);
-            }
-            menu.IsOpen = true;
         };
         return button;
     }
 
-    private static MenuItem MenuHeader(string text)
+    /// <summary>An audio track's row shows the waveform icon where an instrument track has its instrument button (not clickable).</summary>
+    public static FrameworkElement AudioIcon()
     {
-        var label = new TextBlock { Text = text, FontSize = Services.ThemeService.MinFontSize, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 2, 0, 1) };
-        label.SetResourceReference(TextBlock.ForegroundProperty, "SecondaryTextBrush");
-        return new MenuItem { Header = label, IsEnabled = false, IsHitTestVisible = false, Focusable = false,
-            Style = (Style)Application.Current.FindResource(typeof(MenuItem)) };
-    }
-
-    /// <summary>An audio track's row shows a waveform and "Audio" where an instrument track has its instrument picker.</summary>
-    public static FrameworkElement AudioKindCell()
-    {
-        var content = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 2, 4, 2) };
-        var icon = AudioTrackIcon.Element(16);
-        icon.Margin = new Thickness(0, 0, 6, 0);
-        icon.VerticalAlignment = VerticalAlignment.Center;
-        content.Children.Add(icon);
-        var text = new TextBlock { Text = "Audio", FontSize = 11, VerticalAlignment = VerticalAlignment.Center };
-        text.SetResourceReference(TextBlock.ForegroundProperty, "LegibleBrush");
-        content.Children.Add(text);
-        content.ToolTip = "Audio track: audio and MIDI clips, no notation";
-        AutomationProperties.SetName(content, "Audio track");
-        return content;
+        var icon = new Border
+        {
+            Child = TrackSilhouette.Element(TrackSilhouette.AudioKey, IconSize), Background = Brushes.Transparent, ToolTip = "Audio track",
+            HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Padding = new Thickness(3, 2, 3, 2),
+        };
+        AutomationProperties.SetName(icon, "Audio track");
+        return icon;
     }
 
     internal static bool IsInside(DependencyObject? element, DependencyObject ancestor)

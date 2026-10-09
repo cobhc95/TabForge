@@ -25,8 +25,8 @@ internal sealed class DocumentViewSurface : IDocumentViewHost
         doc.ActiveVoiceIndex = _editor.ActiveVoiceIndex;
         doc.TrackIndex = Math.Max(0, _trackGrid.SelectedIndex);
         doc.Notation = _editor.Notation;
-        doc.DarkPaper = _editor.DarkPaper;
-        doc.ContinuousScoreView = _editor.CenterSystems;
+        doc.DarkPaper = _editor.Appearance.DarkPaper;
+        doc.ContinuousScoreView = _editor.Appearance.CenterSystems;
         doc.HorizontalScoreView = _editor.HorizontalScroll;
         doc.DurationDenominator = _editor.CurrentDurationDenominator;
         doc.DurationDots = _editor.CurrentDots;
@@ -41,14 +41,14 @@ internal sealed class DocumentViewSurface : IDocumentViewHost
         _lyricsBox.Text = doc.Project.Lyrics ?? "";
         _editor.Project = doc.Project;
         _editor.Notation = doc.Notation;
-        _editor.CenterSystems = doc.ContinuousScoreView;
+        _editor.Appearance.CenterSystems = doc.ContinuousScoreView;
         _editor.HorizontalScroll = doc.HorizontalScoreView;
         doc.DarkPaper = darkPaper;   // score paper is an app-wide appearance choice, not per tab
-        _editor.DarkPaper = darkPaper;
+        _editor.Appearance.DarkPaper = darkPaper;
         _editor.CurrentDurationDenominator = doc.DurationDenominator;
         _editor.CurrentDots = doc.DurationDots;
         _editor.CurrentTriplet = doc.DurationTriplet;
-        _editor.SetTupletEntryState(doc.TupletNumerator, doc.TupletDenominator);
+        _editor.Effects.SetTupletEntryState(doc.TupletNumerator, doc.TupletDenominator);
         _editor.SelectedTrackIndex = Math.Max(0, doc.TrackIndex);
         _editor.SetPosition(doc.CursorBar, doc.CursorCell, doc.CursorString);
         _editor.SetActiveVoice(doc.ActiveVoiceIndex);

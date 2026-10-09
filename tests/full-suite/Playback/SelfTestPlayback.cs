@@ -333,12 +333,12 @@ public static partial class SelfTest
         editor.SelectedTrackIndex = 0;
         editor.SetPosition(0, 0, 0);
 
-        Check("playhead: no overlay geometry while stopped", editor.PlayheadGeometry() is null);
+        Check("playhead: no overlay geometry while stopped", editor.Playback.PlayheadGeometry() is null);
 
-        editor.SetPlayhead(1, 0);
-        editor.PlaybackFraction = 0.5;
-        editor.PlaybackActive = true;
-        var geometry = editor.PlayheadGeometry();
+        editor.Playback.SetPlayhead(1, 0);
+        editor.Playback.Fraction = 0.5;
+        editor.Playback.Active = true;
+        var geometry = editor.Playback.PlayheadGeometry();
         Check("playhead: overlay geometry exists while playing", geometry is not null);
         if (geometry is { } g)
         {
@@ -347,13 +347,13 @@ public static partial class SelfTest
         }
         project.Tracks[0].Kind = TrackKind.Audio;
         Check("playhead: an audio track (no notation) shows no score playhead or note glow",
-            editor.PlayheadGeometry() is null && editor.PlaybackDurationGeometries().Count == 0);
+            editor.Playback.PlayheadGeometry() is null && editor.Playback.DurationGeometries().Count == 0);
         project.Tracks[0].Kind = TrackKind.Guitar;
-        editor.PlaybackActive = false;
-        Check("playhead: stored position is hidden again when stopped", editor.PlayheadGeometry() is null);
-        editor.ClearPlayhead();
+        editor.Playback.Active = false;
+        Check("playhead: stored position is hidden again when stopped", editor.Playback.PlayheadGeometry() is null);
+        editor.Playback.Clear();
         Check("playhead: explicit clear removes the score highlight position",
-            editor.PlaybackMeasure == -1 && editor.PlaybackCell == -1 && editor.PlayheadGeometry() is null);
+            editor.Playback.Measure == -1 && editor.Playback.Cell == -1 && editor.Playback.PlayheadGeometry() is null);
 
         var s0 = editor.SystemTopForMeasure(0);
         var s8 = editor.SystemTopForMeasure(8);
@@ -1197,11 +1197,11 @@ public static partial class SelfTest
         var defaultKeys = HotkeyCatalog.BuildMap(new HotkeySettings());
         bool PressKey(TabEditorControl editor, Key key, ModifierKeys mods) =>
             editor.TryHandleKey(key, mods) ||
-            (defaultKeys.TryGetValue(WpfHotkeyGestureAdapter.Format(key, mods), out var id) && editor.TryRunNoteCommand(id));
+            (defaultKeys.TryGetValue(WpfHotkeyGestureAdapter.Format(key, mods), out var id) && editor.Effects.TryRunNoteCommand(id));
 
         // + / - change the note value; the plain '-' must not swallow the shifted variants.
         var e1 = Editor(out _, out _);
-        e1.SetDuration(8);
+        e1.Effects.SetDuration(8);
         PressKey(e1, Key.OemPlus, ModifierKeys.None);
         Eq("hotkey: + shortens the note", 16, e1.CurrentDurationDenominator);
         PressKey(e1, Key.OemMinus, ModifierKeys.None);
@@ -1217,26 +1217,28 @@ public static partial class SelfTest
         Eq("hotkey: reversed numpad + lengthens", 4, e1.CurrentDurationDenominator);
         e1.TryHandleKey(Key.Subtract, ModifierKeys.None);
         e1.ReversePlusMinusDuration = false;
-        Check("hotkey: Shift+- toggles tenuto (not duration)", PressKey(e1, Key.OemMinus, ModifierKeys.Shift) && e1.CurrentCell()!.Tenuto);
+        Check("hotkey: Shift+- toggles tenuto (not duration)", PressKey(e1, Key.OemMinus, ModifierKeys.Shift) && e1.Effects.CurrentCell()!.Tenuto);
         Eq("hotkey: Shift+- left the duration unchanged", 8, e1.CurrentDurationDenominator);
 
         // Shift+1 toggles staccato and does not type fret 1.
         var e2 = Editor(out _, out _);
-        Check("hotkey: Shift+1 toggles staccato", PressKey(e2, Key.D1, ModifierKeys.Shift) && e2.CurrentCell()!.Staccato);
-        Eq("hotkey: Shift+1 types no fret", 0, e2.CurrentCell()!.Notes.Count);
+        e2.Effects.SetDuration(4);
+        e2.Effects.EnterFret(3, autoAdvance: false);   // staccato needs a note: on an empty spot it does nothing
+        Check("hotkey: Shift+1 toggles staccato", PressKey(e2, Key.D1, ModifierKeys.Shift) && e2.Effects.CurrentCell()!.Staccato);
+        Eq("hotkey: Shift+1 types no fret", 1, e2.Effects.CurrentCell()!.Notes.Count);
 
         // Plain digits still write frets (EnterFret auto-advances, so read the cell it wrote to).
         var e3 = Editor(out _, out var t3);
-        e3.SetDuration(4);
+        e3.Effects.SetDuration(4);
         e3.TryHandleKey(Key.D5, ModifierKeys.None);
         var written = t3.Measures[0].Cells[0].Notes;
         Check("hotkey: digit writes a fret", written.Count == 1 && written[0].Fret == 5);
 
         // Shift+. / Shift+, toggle the fades (previously shadowed by the plain dot handler).
         var e4 = Editor(out _, out _);
-        e4.SetDuration(4);
-        e4.EnterFret(3, autoAdvance: false);
-        var note4 = e4.CurrentCell()!.Notes.FirstOrDefault();
+        e4.Effects.SetDuration(4);
+        e4.Effects.EnterFret(3, autoAdvance: false);
+        var note4 = e4.Effects.CurrentCell()!.Notes.FirstOrDefault();
         Check("hotkey: Shift+. toggles fade out",
             PressKey(e4, Key.OemPeriod, ModifierKeys.Shift) && note4 is not null && note4.Techniques.Contains(TechniqueNames.FadeOut));
         Check("hotkey: Shift+, toggles fade in",
@@ -1244,16 +1246,18 @@ public static partial class SelfTest
 
         // The main '/' key toggles triplets (only the shifted/numpad variants used to work).
         var e5 = Editor(out _, out _);
-        Check("hotkey: / toggles triplet", PressKey(e5, Key.OemQuestion, ModifierKeys.None) && e5.CurrentCell()!.IsTriplet);
+        e5.Effects.SetDuration(4);
+        e5.Effects.EnterFret(3, autoAdvance: false);   // a triplet needs a note: on an empty spot the key only sets the writing duration
+        Check("hotkey: / toggles triplet", PressKey(e5, Key.OemQuestion, ModifierKeys.None) && e5.Effects.CurrentCell()!.IsTriplet);
         Check("hotkey presets: TuxGuitar rebinds and the classic preset matches the TabForge defaults",
             HotkeyPresets.Override(HotkeyPresets.TuxGuitar, "Note.Dot") == "Multiply" &&
             HotkeyPresets.Override(HotkeyPresets.GuitarPro5, "Note.Dot") is null);
 
         // Shift+Up/Down shift the pitch by a semitone.
         var e6 = Editor(out _, out _);
-        e6.SetDuration(4);
-        e6.EnterFret(5, autoAdvance: false);
-        var note6 = e6.CurrentCell()!.Notes.FirstOrDefault();
+        e6.Effects.SetDuration(4);
+        e6.Effects.EnterFret(5, autoAdvance: false);
+        var note6 = e6.Effects.CurrentCell()!.Notes.FirstOrDefault();
         PressKey(e6, Key.Up, ModifierKeys.Shift);
         Check("hotkey: Shift+Up raises the pitch a semitone", note6 is not null && note6.Fret == 6);
         PressKey(e6, Key.Down, ModifierKeys.Shift);
@@ -1261,12 +1265,12 @@ public static partial class SelfTest
 
         // Insert beat is the Insert key (a catalogued command); Delete beats is a command with no key.
         var e7 = Editor(out _, out var t7);
-        e7.SetDuration(4);
-        e7.EnterFret(1, autoAdvance: false);
+        e7.Effects.SetDuration(4);
+        e7.Effects.EnterFret(1, autoAdvance: false);
         Check("hotkey: Insert is bound to Insert beat", defaultKeys.TryGetValue("Insert", out var insertId) && insertId == "Edit.InsertBeat");
-        e7.TryRunNoteCommand("Edit.InsertBeat");
+        e7.Effects.TryRunNoteCommand("Edit.InsertBeat");
         Eq("hotkey: Insert inserts a beat without changing the bar length", 16, t7.Measures[0].Cells.Count);
-        e7.TryRunNoteCommand("Edit.DeleteBeats");
+        e7.Effects.TryRunNoteCommand("Edit.DeleteBeats");
         Eq("hotkey: the Delete beats command deletes a beat without changing the bar length", 16, t7.Measures[0].Cells.Count);
 
         // Ctrl+A selects the whole track (TuxGuitar "select all").
@@ -1290,11 +1294,13 @@ public static partial class SelfTest
         var s8 = editor.ScrollOffsetForMeasure(7);
         var s16 = editor.ScrollOffsetForMeasure(14);
         Check("scroll: the first system starts near the top", s0 >= 0 && s0 < s8, $"s0={s0} s8={s8}");
+        // The first system's offset includes the title and tuning block above it, so spacing is compared from the second system on.
+        var s22 = editor.ScrollOffsetForMeasure(21);
         Check("scroll: systems are evenly spaced",
-            Math.Abs((s8 - s0) - (s16 - s8)) < 0.001, $"{s8 - s0} vs {s16 - s8}");
+            Math.Abs((s16 - s8) - (s22 - s16)) < 0.001, $"{s16 - s8} vs {s22 - s16}");
         Check("scroll: a system step is a full system tall", s8 - s0 > 100, $"{s8 - s0}");
 
-        var horizontalGeometry = editor.PlaybackHorizontalGeometry(0, 0.5);
+        var horizontalGeometry = editor.Playback.HorizontalGeometry(0, 0.5);
         Check("sheet follow: playback geometry follows the scaled system layout",
             horizontalGeometry is { SystemIndex: 0, BarWidth: > 0, SystemRight: > 0 });
 

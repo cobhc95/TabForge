@@ -40,7 +40,7 @@ public sealed partial class TabEditorControl
         return new AuditSystemBox(SystemTop(system), staffTop, staffTop + 4 * StaffGap, tabTop, tabTop + (strings - 1) * StringGap, SystemTop(system) + SystemHeight, PageWidth, StringGap);
     }
 
-    internal ScorePageLayout AuditLayout() => GetScoreLayout(Track);
+    internal ScorePageLayout AuditLayout() => Layout.GetLayout(Track);
 
     /// <summary>Text size factor (the score text size setting over its 12 pt reference).</summary>
     internal static double AuditTextScale => ScoreText.TextSize / 12.0;
@@ -65,7 +65,7 @@ public sealed partial class TabEditorControl
     {
         var track = Track;
         if (track is null) return 0;
-        var layout = GetScoreLayout(track);
+        var layout = Layout.GetLayout(track);
         if (system < 0 || system >= layout.SystemCount) return 0;
         var measures = layout.Systems[system].Measures;
         var hit = measures.FirstOrDefault(m => x >= m.X && x < m.X + m.Width);

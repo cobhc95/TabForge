@@ -510,7 +510,8 @@ public sealed class FretboardRenderer : IInstrumentRenderer
                     var label = state.ShowNoteNames && s < state.Tuning.Count
                         ? MusicTheoryService.NoteName(state.Tuning[s])
                         : (s + 1).ToString();
-                    Draw.At(dc, label, bounds.X + 12, y, 14.5 * state.NumberScale, Draw.Solid(theme.Legible));
+                    // Beside the nut (the gutter's left part), so the labels move with a centred or snapped board.
+                    Draw.At(dc, label, boardRect.Left - FretboardGeometry.LeftGutter + 12, y, 14.5 * state.NumberScale, Draw.Solid(theme.Legible));
                 }
             }
         }
@@ -566,9 +567,9 @@ public sealed class FretboardRenderer : IInstrumentRenderer
             if (note.Fret < firstFret - 1 || note.Fret > lastFret + 1) continue;
             var x = note.Fret == 0 ? boardRect.Left - 14 : FretX(note.Fret);
             var y = StringY(note.StringIndex);
-            RenderMarker(dc, note, x, y, theme, fretWidth, state.Pulse, state.ShowNoteNames, state.NumberScale, bounds.Y, bounds.X + 34, state.Notes, WhereIs, state.MarkerScale, stringGap);
+            RenderMarker(dc, note, x, y, theme, fretWidth, state.Pulse, state.ShowNoteNames, state.NumberScale, bounds.Y, bounds.X + 34, state.Notes, WhereIs, state.MarkerScale, stringGap, showTag: note.Strum == 0);
         }
-
+        FretboardStrum.Draw(dc, state.Notes, StringY, boardRect.Left - FretboardGeometry.LeftGutter + 6, bounds, theme, state.NumberScale);   // strummed chord: one arrow, one pill
         if (placement.SnapPreview is { } snapPreview)
             DrawSnapPreview(dc, state, bounds, theme, placement.PlacementWidth, snapPreview);
 
@@ -617,7 +618,7 @@ public sealed class FretboardRenderer : IInstrumentRenderer
 
     private static void RenderMarker(DrawingContext dc, VisualNote note, double x, double y, VisualTheme theme, double fretWidth, double pulse,
         bool showNoteNames = false, double numberScale = 1, double topLimit = double.NegativeInfinity, double leftLimit = double.NegativeInfinity,
-        IReadOnlyList<VisualNote>? others = null, Func<VisualNote, Point>? whereIs = null, double markerScale = 1, double stringGap = 0)
+        IReadOnlyList<VisualNote>? others = null, Func<VisualNote, Point>? whereIs = null, double markerScale = 1, double stringGap = 0, bool showTag = true)
     {
         _ = pulse;
         var color = note.Role switch
@@ -635,6 +636,9 @@ public sealed class FretboardRenderer : IInstrumentRenderer
         radius *= numberScale;   // the bubble scales with its number so the number always fits
         var markerFactor = MarkerSizing.Factor(markerScale, radius, stringGap);
         radius *= markerFactor;
+        // Fill per role, kept out of the mid tones where neither white nor dark numbers reach 4.5:1 (TestFretMarkerLabelContrast).
+        var fill = note.Dead || note.Released ? 0 : note.Role == VisualRole.Next ? 0.30
+            : note.Role == VisualRole.Upcoming ? 0.45 + 0.15 * emphasis : note.Role == VisualRole.Past ? 0.7 + 0.2 * emphasis : emphasis;
 
         // Sounding note: a tight halo. Nothing else glows, so a marker can only look "on" while it is
         // actually sounding (the next/recent markers are outlines).
@@ -650,7 +654,7 @@ public sealed class FretboardRenderer : IInstrumentRenderer
         else if (note.Role == VisualRole.Next)
         {
             // The next note is an outline, never a filled/glowing note.
-            dc.DrawEllipse(Draw.Solid(color, 0.12), Draw.Pen(color, 1.8, 0.6), new Point(x, y), radius, radius);
+            dc.DrawEllipse(Draw.Solid(color, 0.30), Draw.Pen(color, 2.2, 1.0), new Point(x, y), radius, radius);
         }
         else if (note.Released)
         {
@@ -659,7 +663,7 @@ public sealed class FretboardRenderer : IInstrumentRenderer
         }
         else if (note.Role is VisualRole.Upcoming or VisualRole.Past)
         {
-            dc.DrawEllipse(Draw.Solid(color, Math.Max(0.14, emphasis * 0.5)), Draw.Pen(color, 1.1, Math.Max(0.25, emphasis)), new Point(x, y), radius, radius);
+            dc.DrawEllipse(Draw.Solid(color, fill), Draw.Pen(color, 1.2, Math.Max(0.6, emphasis)), new Point(x, y), radius, radius);
         }
         else
         {
@@ -670,9 +674,9 @@ public sealed class FretboardRenderer : IInstrumentRenderer
         // Note names mode labels each marker with its pitch name instead of the fret number.
         var label = showNoteNames ? (note.Dead ? "x" : Audio.Contracts.NoteNames.MarkerPitchClass(note.Midi))
             : note.Fret == 0 ? "0" : note.Fret.ToString();
-        var textColor = note.Role is VisualRole.Current or VisualRole.Selected or VisualRole.Next ? theme.Background
-            : emphasis > 0.55 ? theme.Text : theme.Muted;
-        var size = numberScale * markerFactor * note.Role switch
+        var textColor = MarkerInk.On(Blend(note.Fret == 0 ? theme.Background : theme.Wood, color, fill));   // reads on the marker's real surface
+        // Smaller bubbles keep their number at the full size (it still fits two digits), so it reads like the score's tab digits.
+        var size = numberScale * Math.Max(markerFactor, 1.0) * note.Role switch
         {
             VisualRole.Current => 13,
             VisualRole.Selected => 13,
@@ -680,11 +684,11 @@ public sealed class FretboardRenderer : IInstrumentRenderer
             VisualRole.Past => 11,
             _ => 10
         };
-        Draw.Centered(dc, label, x, y - size / 2 - 1, size, Draw.Solid(textColor, Math.Max(0.45, emphasis)), note.Role is VisualRole.Current or VisualRole.Selected);
+        Draw.Centered(dc, label, x, y - size / 2 - 1, size, Draw.Solid(textColor, note.Released ? 0.75 : 1.0), note.Role is VisualRole.Current or VisualRole.Selected);
 
         // Technique tag (TAP, H/P, BEND…): a small pill above the sounding, selected or next note only,
         // so upcoming/recent markers don't clutter the neck.
-        if (note.Technique is { Length: > 0 } tag && note.Role is VisualRole.Current or VisualRole.Selected or VisualRole.Next && !note.Released)
+        if (showTag && note.Technique is { Length: > 0 } tag && note.Role is VisualRole.Current or VisualRole.Selected or VisualRole.Next && !note.Released)
         {
             var pillWidth = Math.Max(22, tag.Length * 6.2 + 10) * numberScale;
             var pill = new Rect(x - pillWidth / 2, y - radius - 17 * numberScale, pillWidth, 13 * numberScale);
@@ -696,9 +700,8 @@ public sealed class FretboardRenderer : IInstrumentRenderer
                 var right = new Rect(x + radius + 3, left.Y, pillWidth, left.Height);
                 pill = left.X >= leftLimit && !PillHitsOther(left, note, others, whereIs, fretWidth * 0.44 * numberScale) ? left : right;
             }
-            var alpha = note.Role == VisualRole.Next ? 0.7 : 1.0;
-            dc.DrawRoundedRectangle(Draw.Solid(theme.Background, 0.88 * alpha), Draw.Pen(color, 1, 0.9 * alpha), pill, 6.5 * numberScale, 6.5 * numberScale);
-            Draw.Centered(dc, tag, pill.X + pill.Width / 2, pill.Y + 1.5 * numberScale, 8.5 * numberScale, Draw.Solid(color, alpha), bold: true);
+            dc.DrawRoundedRectangle(Draw.Solid(theme.Background, 0.92), Draw.Pen(color, 1.4), pill, 6.5 * numberScale, 6.5 * numberScale);
+            Draw.Centered(dc, tag, pill.X + pill.Width / 2, pill.Y + 1.5 * numberScale, 8.5 * numberScale, Draw.Solid(theme.Text), bold: true);   // theme text on the theme surface; the role shows in the outline
         }
     }
 }
@@ -908,10 +911,7 @@ public sealed class KeyboardRenderer : IInstrumentRenderer
     public void Render(DrawingContext dc, InstrumentVisualState state, Rect bounds, VisualTheme theme, InstrumentRenderPlacement placement)
     {
         // Standard keyboard sizes; smaller ones shift by octaves to keep the sounding notes in view.
-        var (lowest, highest) = state.KeyboardKeys switch
-        {
-            76 => (28, 103), 61 => (36, 96), 49 => (36, 84), 37 => (48, 84), 25 => (48, 72), _ => (21, 108)
-        };
+        var (lowest, highest) = KeyboardPaneSizing.RangeFor(state.KeyboardKeys);
         if (state.Notes.Count > 0 && highest - lowest < 87)
         {
             var low = state.Notes.Min(n => n.Midi); var high = state.Notes.Max(n => n.Midi);

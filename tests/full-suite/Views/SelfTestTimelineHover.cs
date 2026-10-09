@@ -107,4 +107,35 @@ public static partial class SelfTest
         }
         finally { window.Close(); }
     }
+
+    /// <summary>The section hover tip: plain drag moves the section with its bars, Ctrl+drag moves only the marker.</summary>
+    private static void TestSectionTipWording()
+    {
+        var song = HoverSong(3, 12);
+        song.Markers.Add(new MarkerModel { MeasureIndex = 2, Title = "Verse 1" });
+        var tip = new SectionTipController(new TipHost { Project = song }, new System.Windows.Controls.Border());
+        var addHint = TooltipShortcuts.Append("Add section", "Section.Add");
+        Eq("section tip with free bars: plain drag, Ctrl+drag marker move, then edge/menu/add",
+            "Drag: move Verse 1 with its bars (other sections make room)\n" +
+            "Ctrl+drag: move only the Verse 1 marker left into the free bars (its bars stay, a gap is left behind)\n" +
+            "Drag an edge: resize · Right-click: section options · " + addHint,
+            tip.TextFor(0));
+
+        var packed = HoverSong(3, 12);
+        packed.Markers.Add(new MarkerModel { MeasureIndex = 0, Title = "Verse 1" });
+        var packedTip = new SectionTipController(new TipHost { Project = packed }, new System.Windows.Controls.Border());
+        Eq("section tip with no free bars: plain drag still works, Ctrl+drag says why it cannot move alone",
+            "Drag: move Verse 1 with its bars (other sections make room)\n" +
+            "Ctrl+drag: can't move the marker alone (no empty bars beside Verse 1)\n" +
+            "Drag an edge: resize · Right-click: section options · " + addHint,
+            packedTip.TextFor(0));
+    }
+
+    private sealed class TipHost : ISectionTipHost
+    {
+        public SongProject? Project { get; init; }
+        public bool IsMouseOver => false;
+        public bool SectionGestureActive => false;
+        public int HoverSectionIndex => -1;
+    }
 }

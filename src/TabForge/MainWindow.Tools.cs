@@ -71,13 +71,6 @@ public partial class MainWindow
     // Tools > Scale finder: likely scales for the selection / song, or any scale, shown on the fretboard.
     private void ScaleFinder_Click(object sender, RoutedEventArgs e) => InstrumentPane.OpenScaleFinder();
 
-    /// <summary>Shows (and focuses) the Practice / Mixer panel and scrolls to one of its sections.</summary>
-    private void ShowInPracticePanel(FrameworkElement target)
-    {
-        _dockWorkspace?.SetPanelVisible("practice", true);
-        _dockWorkspace?.SelectPanel("practice");
-        Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new Action(() => target.BringIntoView()));
-    }
     private void Tuner_Click(object sender, RoutedEventArgs e)
     {
         // Chromatic tuner: the engine listens to the armed input; the window follows the selected track's tuning.
@@ -332,31 +325,17 @@ public partial class MainWindow
             icon.IconColor = active ? accent : Color.FromRgb(0x9A, 0xA6, 0xB2);
     }
 
-    // ---------- chords/scales tab ----------
+    // Tools > Chord finder… and Tools > Song stats…: small windows (Views/ChordFinderWindow, Views/SongStatsWindow).
+    private void ChordFinder_Click(object sender, RoutedEventArgs e) => Views.ChordFinderWindow.Show(this, InsertChordName);
 
-    private void ChordShow_Click(object sender, RoutedEventArgs e)
-    {
-        var root = ChordRootCombo.SelectedItem?.ToString() ?? "C";
-        var type = ChordTypeCombo.SelectedItem?.ToString() ?? "Maj";
-        if (!MusicTheoryService.Chords.TryGetValue(type, out var iv)) iv = new[] { 0, 4, 7 };
-        var rootIdx = Array.FindIndex(MusicTheoryService.NoteNames, n => n == root);
-        var notes = iv.Select(i => MusicTheoryService.NoteNames[(rootIdx + i) % 12]).ToList();
-        ChordResultList.ItemsSource = notes.Select((n, i) => $"{n}  (tone {iv[i]})").ToList();
-    }
+    private void SongStats_Click(object sender, RoutedEventArgs e) => Views.SongStatsWindow.Show(this, _project, _currentPath);
 
-    private void ChordInsert_Click(object sender, RoutedEventArgs e)
+    /// <summary>Attaches a chord name to the beat under the cursor; false when there is no cursor cell.</summary>
+    private bool InsertChordName(string name)
     {
-        var c = Editor.CurrentCell(); if (c is null) return;
-        var root = ChordRootCombo.SelectedItem?.ToString() ?? "C";
-        var type = ChordTypeCombo.SelectedItem?.ToString() ?? "Maj";
-        DocumentEdits.Run(Doc, _ => { c.ChordName = $"{root}{type}"; return true; }); RefreshAfterEdit(EditRefresh.Score);
-    }
-
-    private void ScaleShow_Click(object sender, RoutedEventArgs e)
-    {
-        var root = ScaleRootCombo.SelectedItem?.ToString() ?? "C";
-        var name = ScaleNameCombo.SelectedItem?.ToString() ?? "Major";
-        ScaleResultText.Text = $"{root} {name}: {string.Join(" – ", MusicTheoryService.ScaleNotes(root, name))}";
+        var c = Editor.Effects.CurrentCell(); if (c is null) return false;
+        DocumentEdits.Run(Doc, _ => { c.ChordName = name; return true; }); RefreshAfterEdit(EditRefresh.Score);
+        return true;
     }
 
     private void LyricsBox_LostFocus(object sender, RoutedEventArgs e)

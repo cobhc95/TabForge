@@ -120,7 +120,7 @@ internal static class StaffNotationLayoutBuilder
         var tuplets = BuildTupletGroups(beats, beamGroups);
         ResolveAccidentals(beats, keyAlterations);
         AssignAccidentalColumns(beats);
-        var ties = BuildTies(track, measureIndex, slots, beats, voiceIndex, staffTop);
+        var ties = BuildTies(track, measureIndex, slots, beats, voiceIndex, staffTop, x, x + slotWidth * Math.Max(1, slots));
         var slurs = BuildHopoSlurs(beats, staffTop);
 
         return new StaffNotationMeasureLayout
@@ -212,9 +212,7 @@ internal static class StaffNotationLayoutBuilder
             if (!tie.IsStub) sky.Claim(tie.X1, tie.X2, Math.Min(tie.Y1, tie.Y2) - (tie.Above ? 21 : 0), Math.Max(tie.Y1, tie.Y2) + (tie.Above ? 0 : 21));
             else
             {
-                var sign = tie.TowardLeft ? -1.0 : 1.0;
-                var xa = tie.X1 + sign * 5; var xb = tie.X1 + sign * 13;
-                sky.Claim(Math.Min(xa, xb), Math.Max(xa, xb), tie.Y1 - (tie.Above ? 18 : 0), tie.Y1 + (tie.Above ? 0 : 18));
+                sky.Claim(Math.Min(tie.X1, tie.X2), Math.Max(tie.X1, tie.X2), tie.Y1 - (tie.Above ? 16 : 0), tie.Y1 + (tie.Above ? 0 : 16));
             }
     }
 
@@ -545,9 +543,11 @@ internal static class StaffNotationLayoutBuilder
         {
             if (ratio.Numerator >= 2)
             {
-                for (var offset = 0; offset + ratio.Numerator <= run.Count; offset += ratio.Numerator)
+                // Full groups of the tuplet's count; each beat of the remainder (an unfinished tuplet) gets its own number, as in the reference (session 04 step 23).
+                var full = run.Count - run.Count % ratio.Numerator;
+                for (var offset = 0; offset < run.Count; offset += offset < full ? ratio.Numerator : 1)
                 {
-                    var members = run.Skip(offset).Take(ratio.Numerator).ToArray();
+                    var members = run.Skip(offset).Take(offset < full ? ratio.Numerator : 1).ToArray();
                     var groupIndex = members[0].BeamGroupIndex;
                     var beamed = groupIndex >= 0 && members.All(b => b.BeamGroupIndex == groupIndex);
                     result.Add(new StaffNotationTupletGroup
@@ -586,6 +586,7 @@ internal static class StaffNotationLayoutBuilder
         foreach (var beat in beats)
         foreach (var note in beat.Notes.OrderBy(n => n.StaffStep))
         {
+            if (note.Source.Dead) continue;   // an x head has no pitch: no accidental, and it leaves the bar's accidental state alone
             var signatureAlteration = keyAlterations[note.Letter];
             var key = (note.Letter, note.Octave);
             var current = state.TryGetValue(key, out var prior) ? prior : signatureAlteration;

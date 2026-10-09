@@ -87,7 +87,7 @@ public static partial class SelfTest
 
             // a simile bar hides its notes, but shows them while the edit cursor is inside it (nothing the user edits is invisible)
             {
-                var editor = new Views.TabEditorControl { Project = restMarks, SelectedTrackIndex = 0, DarkPaper = false, PlaybackMeasure = -1 };
+                var editor = new Views.TabEditorControl { Project = restMarks, SelectedTrackIndex = 0, Appearance = { DarkPaper = false }, PlaybackMeasure = -1 };
                 editor.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
                 editor.Arrange(new System.Windows.Rect(editor.DesiredSize));
                 editor.UpdateLayout();

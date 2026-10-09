@@ -5,8 +5,8 @@ namespace TabForge.Diagnostics;
 
 /// <summary>
 /// `TabForge.exe --find &lt;keyword&gt; [out.txt]`: prints the features, owning files and tests that match a keyword, in at most
-/// <see cref="MaxLines"/> lines, so a reader does not have to open the whole feature map. Sources: the hand-kept lines of
-/// <c>docs/FEATURE_MAP.md</c>, the registered tests (name, area, group, file) and the folder READMEs.
+/// <see cref="MaxLines"/> lines, so a reader does not have to open the whole feature map. Sources: the hand-kept feature map
+/// (<c>docs/FEATURE_MAP.md</c> and <c>docs/feature-map/</c>), the registered tests (name, area, group, file) and the folder READMEs.
 /// Owns: the lookup and its formatting. Does not own: the map itself (<see cref="FeatureMapGenerator"/>).
 /// Tests: TestFindCommand.
 /// </summary>
@@ -20,15 +20,11 @@ internal static class FeatureFinder
         var lines = new List<string>();
         bool Hit(string s) => s.Contains(keyword, StringComparison.OrdinalIgnoreCase);
 
-        var mapPath = Path.Combine(root, "docs", "FEATURE_MAP.md");
-        if (File.Exists(mapPath))
+        foreach (var mapPath in FeatureMapGenerator.HandKeptFiles(root))
         {
-            var text = File.ReadAllText(mapPath).Replace("\r\n", "\n");
-            var begin = text.IndexOf(FeatureMapGenerator.BeginMarker, StringComparison.Ordinal);
-            var end = text.IndexOf(FeatureMapGenerator.EndMarker, StringComparison.Ordinal);
-            if (begin >= 0 && end > begin) text = text[..begin] + text[(end + FeatureMapGenerator.EndMarker.Length)..];
-            foreach (var l in text.Split('\n').Where(l => l.Length > 0 && !l.StartsWith('#') && Hit(l)))
-                lines.Add("map   " + Trim(l));
+            var name = Path.GetRelativePath(root, mapPath).Replace('\\', '/');
+            foreach (var l in File.ReadAllLines(mapPath).Where(l => l.Length > 0 && !l.StartsWith('#') && Hit(l)))
+                lines.Add($"{name}: {Trim(l)}");
         }
 
         foreach (var e in FeatureMapGenerator.ReadRegistry(root).Where(e => Hit(e.Test) || Hit(e.File) || Hit(e.Area) || (e.Group is not null && Hit(e.Group))))

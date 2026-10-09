@@ -53,6 +53,7 @@ internal sealed class ClipEditController
     private readonly IClipHost _host;
     private readonly TrackController _tracks;
     private string _extentNote = "";
+    private double _gestureEnd = double.NaN;
     private bool _midiClipsPlayed;
 
     public ClipEditController(IClipHost host, TrackController tracks)
@@ -133,6 +134,7 @@ internal sealed class ClipEditController
         if (!source.AudioClips.Contains(clip)) return;
         if (!plan.NewTrack && (plan.TrackIndex < 0 || plan.TrackIndex >= project.Tracks.Count)) return;
         var settings = _host.Settings;
+        var endBefore = SongExtent.ClipsEnd(project);
         TrackModel target = null!;
         AudioClip placed = null!;
         DocumentEdits.Run(doc, p =>
@@ -150,7 +152,7 @@ internal sealed class ClipEditController
         }, invalidatesTimeline: false);
         _host.SelectedClip = placed;
         if (plan.NewTrack && !CanAddAudioTrackWithoutMidiRebuild(project, target, new[] { placed })) doc.Playback.Engine.Rebuild(project);
-        Changed(doc, true);
+        Changed(doc, true, SongExtent.ClipsEnd(project) < endBefore - 1e-6);
         if (plan.NewTrack) _host.ShowNewTrack(project.Tracks.Count - 1);
         _host.SetStatus($"{(copy ? "Copied" : "Moved")} {clip.Name} to {(plan.NewTrack ? $"a new track ({target.Name})" : target.Name)}, lane {placed.Lane + 1}" + TakeExtentNote());
     }
@@ -159,8 +161,9 @@ internal sealed class ClipEditController
     public void Edit(DocumentSession doc, Action change, string? status = null)
     {
         if (!_host.IsShown(doc)) return;
+        var endBefore = SongExtent.ClipsEnd(doc.Project);
         DocumentEdits.Run(doc, _ => { change(); return true; }, invalidatesTimeline: false);
-        Changed(doc, true);
+        Changed(doc, true, SongExtent.ClipsEnd(doc.Project) < endBefore - 1e-6);
         var note = TakeExtentNote();
         if (status is not null) _host.SetStatus(status + note);
         else if (note.Length > 0) _host.SetStatus(note.Trim(' ', '(', ')'));
@@ -170,13 +173,28 @@ internal sealed class ClipEditController
     public void Remove(DocumentSession doc, TrackModel track, AudioClip clip, string? status, bool clearSelection) =>
         Edit(doc, () => { track.AudioClips.Remove(clip); if (clearSelection) _host.SelectedClip = null; }, status);
 
-    /// <summary>After any clip change: mark dirty, tell the engine (and the MIDI timeline), redraw.</summary>
-    public void Changed(DocumentSession doc, bool refreshRows = false)
+    /// <summary>A clip trim or fade drag begins: remembers where the clips end, so the release knows whether they shrank.</summary>
+    public void BeginClipGesture(DocumentSession doc) => _gestureEnd = SongExtent.ClipsEnd(doc.Project);
+
+    /// <summary>The clip trim or fade drag ended: <see cref="Changed"/>, trimming the empty end bars when the clips now end earlier.</summary>
+    public void FinishClipGesture(DocumentSession doc)
+    {
+        var before = _gestureEnd;
+        _gestureEnd = double.NaN;
+        Changed(doc, true, SongExtent.ClipsEnd(doc.Project) < before - 1e-6);
+    }
+
+    /// <summary>
+    /// After any clip change: mark dirty, tell the engine (and the MIDI timeline), redraw. <paramref name="clipsShrank"/> (a clip was deleted,
+    /// cropped or moved earlier) also removes the empty bars at the end of the song when that setting is on, in the same undo step.
+    /// </summary>
+    public void Changed(DocumentSession doc, bool refreshRows = false, bool clipsShrank = false)
     {
         var project = doc.Project;
         project.IsDirty = true;
         using var changedTrace = TabForge.Views.SlowTrace.Measure("clip change total", 4);
         ExtentResult extent; using (TabForge.Views.SlowTrace.Measure("clip extend", 2)) extent = ExtendSongToClips(project);
+        var barsRemoved = clipsShrank && _host.Settings.Editing.TrimEmptyBarsAtEnd ? TrailingBars.Trim(project) : 0;
         if (_host.Settings.Timeline.AutoRemoveEmptyLanes)
             foreach (var track in project.Tracks) ClipLanes.Compact(track);   // empty lanes close up (armed tracks are skipped inside)
         using (TabForge.Views.SlowTrace.Measure("clip waveform cancel", 2)) WaveformCache.CancelUnused(project.Tracks.SelectMany(t => t.AudioClips).Where(c => !c.IsMidi).Select(c => c.File), doc.Media);   // a removed clip stops being read
@@ -189,13 +207,13 @@ internal sealed class ClipEditController
             growthRefreshStarted = doc.Playback.Engine.RefreshArrangementForAudioGrowth(project, map);
         }
         _host.SyncAudioEngine();
-        if (!growthRefreshStarted && (extent.BarsAdded > 0 || hasMidiClips || _midiClipsPlayed)) doc.Playback.Engine.Rebuild(project);
+        if (!growthRefreshStarted && (extent.BarsAdded > 0 || barsRemoved > 0 || hasMidiClips || _midiClipsPlayed)) doc.Playback.Engine.Rebuild(project);
         _midiClipsPlayed = hasMidiClips;
         if (refreshRows) _host.RefreshTracks();
-        if (extent.BarsAdded > 0) _host.RefreshAfterSongGrew();
+        if (extent.BarsAdded > 0 || barsRemoved > 0) _host.RefreshAfterSongGrew();
         _host.RefreshArrangement();
         using (TabForge.Views.SlowTrace.Measure("clip title", 2)) _host.UpdateTitle();
-        _extentNote = SongExtent.Describe(extent);
+        _extentNote = SongExtent.Describe(extent) + (barsRemoved > 0 ? $" (removed {barsRemoved} empty bar{(barsRemoved == 1 ? "" : "s")} at the end)" : "");
         if (extent.Capped) _host.SetStatus("A clip ends after the last bar" + _extentNote);
     }
 
@@ -206,13 +224,7 @@ internal sealed class ClipEditController
     /// The song always covers every clip: when a clip (dropped, moved, pasted, nudged, recorded) ends after the last bar, whole empty bars are
     /// appended to every track in the same undo step as the change (its undo state was taken before). The song never shrinks by itself.
     /// </summary>
-    private static ExtentResult ExtendSongToClips(SongProject project)
-    {
-        var end = 0.0;
-        foreach (var track in project.Tracks)
-            foreach (var clip in track.AudioClips) end = Math.Max(end, clip.EndSec);
-        return SongExtent.EnsureCovers(project, end);
-    }
+    private static ExtentResult ExtendSongToClips(SongProject project) => SongExtent.EnsureCoversClips(project);
 
     private bool CanAddAudioTrackWithoutMidiRebuild(SongProject project, TrackModel target, IEnumerable<AudioClip> addedClips) =>
         target.IsAudio && addedClips.All(clip => !clip.IsMidi) && !_midiClipsPlayed &&

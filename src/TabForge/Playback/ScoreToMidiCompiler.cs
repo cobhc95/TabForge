@@ -80,7 +80,9 @@ internal sealed partial class ScoreToMidiCompiler
         _timeline.PlayFromMs = cursorMs + FermataSpan.Warp(
             FermataTime.Spans(_project, order[0], _speedScale, MusicTime.TempoAt(_project, order[0])), startSlot * (firstBarMs / firstSlots));
 
+        ChaseBarsBeforeStart(order[0]);
         EmitChannelSetup(_timeline.PlayFromMs);
+        var setupEnd = _timeline.Events.Count;
 
         var firstPerformedBar = true;
         // Tempo carries on in playback order until the next change (the reference semantics), so repeats and
@@ -127,6 +129,7 @@ internal sealed partial class ScoreToMidiCompiler
             cursorMs += performedMs;
         }
 
+        ApplyChase(setupEnd);
         _timeline.TotalMs = cursorMs;
         EmitClipNotes();
         EmitFadeInEnvelopes();
@@ -206,6 +209,7 @@ internal sealed partial class ScoreToMidiCompiler
                 if (isBeat)
                 {
                     var slotsForCell = MusicTime.ConsumeSlots(cell);
+                    if (i < skipSlots && cell.Mix is { IsEmpty: false } skipped) ChaseMix(skipped, trackIndex);
                     if (i >= skipSlots && cell.Mix is { IsEmpty: false } mix)
                         EmitMix(mix, trackIndex, barStart + (mapped ? At(cursor) : cursor * slotMs), slotMs * 4);
                     if (i >= skipSlots && cell.Notes.Count > 0)
@@ -363,6 +367,7 @@ internal sealed partial class ScoreToMidiCompiler
 
     private void Add(int device, int channel, int statusBase, int data1, int data2, double timeMs, int trackIndex)
     {
+        if (_chasing) { RecordChase(channel, statusBase, data1, data2, trackIndex); return; }
         if (timeMs < 0) timeMs = 0;
         _timeline.Events.Add(new ScoreEvent
         {

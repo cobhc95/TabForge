@@ -79,6 +79,9 @@ public static class DocumentEdits
         if (invalidatesTimeline) document.Project.MarkTimelineChanged();
     }
 
+    /// <summary>The fingerprint of the document's song as it is now (what an undo step's snapshot of it would carry).</summary>
+    public static string Fingerprint(DocumentSession document) => document.Undo.Snapshot(document.Project).Fingerprint;
+
     /// <summary>Undo one step. Returns the restored state (the view then refreshes), or null when there is nothing to undo.</summary>
     public static UndoSnapshot? Undo(DocumentSession document)
     {

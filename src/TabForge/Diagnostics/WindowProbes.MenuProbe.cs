@@ -185,7 +185,7 @@ internal sealed partial class WindowProbes : MainWindow.ProbeAccess
                 for (var s = 0; s < 6; s++)
                 {
                     Editor.SelectForEdit(measure, cell, s);
-                    if (Editor.HasEditableNotes) return;
+                    if (Editor.Effects.HasEditableNotes) return;
                 }
     }
 

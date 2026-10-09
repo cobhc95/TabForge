@@ -27,7 +27,8 @@ public static class ClipSplitGlue
         var firstSource = (sec - clip.StartSec) * speed;
         var second = clip.Clone();
         second.StartSec = sec;
-        second.OffsetSec = clip.OffsetSec + firstSource;
+        // A looping clip is cut inside a pass: the second part starts at that spot of the media (never past its end).
+        second.OffsetSec = clip.OffsetSec + (ClipLoop.Loops(clip) ? firstSource % ClipLoop.PeriodSec(clip) : firstSource);
         second.SourceLengthSec = clip.SourceLengthSec - firstSource;
         second.FadeInSec = 0;
         clip.SourceLengthSec = firstSource;

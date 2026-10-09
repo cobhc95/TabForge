@@ -26,6 +26,7 @@ internal sealed partial class WindowProbes
             _state = state;
             await ClicksAsync();
             await TimeAsync("long audio drop", LongAudioDrop, Undo, reps: 3, note: "valid generated WAV; starts at measured song end and extends every track");
+            await DragStartAsync();
         }
 
         private async Task ClicksAsync()
@@ -78,8 +79,8 @@ internal sealed partial class WindowProbes
         {
             var e = _w.Editor;
             // editing
-            await TimeAsync("note entry (fret digit)", () => { e.SetPosition(8, 0, 2, seekPlayback: false); e.EnterFret(5, autoAdvance: false); return null; }, Undo);
-            await TimeAsync("duration change", () => { e.SetPosition(8, 0, 2, seekPlayback: false); e.SetDuration(_rep++ % 2 == 0 ? 8 : 4); return null; }, Undo);
+            await TimeAsync("note entry (fret digit)", () => { e.SetPosition(8, 0, 2, seekPlayback: false); e.Effects.EnterFret(5, autoAdvance: false); return null; }, Undo);
+            await TimeAsync("duration change", () => { e.SetPosition(8, 0, 2, seekPlayback: false); e.Effects.SetDuration(_rep++ % 2 == 0 ? 8 : 4); return null; }, Undo);
         }
 
         private (int start, int end) Section(int index)
@@ -142,7 +143,7 @@ internal sealed partial class WindowProbes
             await TimeAsync("copy note", () => { e.SetPosition(4, 0, 2, seekPlayback: false); return Hotkey("Edit.Copy"); });
             await TimeAsync("paste note", () => { e.SetPosition(9, 0, 2, seekPlayback: false); return Hotkey("Edit.Paste"); }, Undo);
             await TimeAsync("cut note", () => { e.SetPosition(4, 0, 2, seekPlayback: false); return Hotkey("Edit.Cut"); }, Undo);
-            await TimeAsync("delete note", () => { e.SetPosition(4, 0, 2, seekPlayback: false); e.DeleteNote(); return null; }, Undo);
+            await TimeAsync("delete note", () => { e.SetPosition(4, 0, 2, seekPlayback: false); e.Effects.DeleteNote(); return null; }, Undo);
             await TimeAsync("undo", () => Hotkey("Edit.Undo"), async () => { Hotkey("Edit.Redo"); await _w.Settle(80); }, note: "after a delete note");
             await TimeAsync("redo", () => { Hotkey("Edit.Undo"); return Hotkey("Edit.Redo"); }, note: "undo+redo pair");
             await RangeEditsAsync();

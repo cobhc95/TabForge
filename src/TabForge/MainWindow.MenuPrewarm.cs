@@ -24,7 +24,7 @@ public partial class MainWindow
                 new() { Header = "Radio", Checkable = true, Radio = true },
                 new() { Header = "Menu", Children = new List<MenuSpec> { new() { Header = "Child" } } },
             };
-            var menu = NewSpecMenu("prewarm", specs, _ => { }, Arrangement);
+            var menu = SpecMenus.New("prewarm", specs, _ => { }, Arrangement);
             menu.ApplyTemplate();
             foreach (var item in menu.Items.OfType<MenuItem>()) { item.ApplyTemplate(); item.Measure(new Size(300, 100)); }
             // The clip and track-row menus are built once too (never shown), so their first right-click skips the cold build.

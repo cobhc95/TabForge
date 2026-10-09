@@ -35,8 +35,8 @@ Generated from the source (`MainWindow.xaml.cs` palette tables and `Services/Hot
 | Dynamic | `Dynamic/ff` | ff | `dynamic:ff` | Tool.dynamic:ff |
 | Dynamic | `Dynamic/fff` | fff | `dynamic:fff` | Tool.dynamic:fff |
 | Effects | `Effects/vibrato` | Vibrato | `effect:vibrato` | existing command (see below) |
-| Effects | `Effects/bend` | Bend | `effect:bend` | existing command (see below) |
-| Effects | `Effects/tremolo_bar` | Tremolo bar | `effect:tremolo_bar` | existing command (see below) |
+| Effects | `Effects/bend` | Bend (opens the bend editor) | `effect:bend` | existing command (see below) |
+| Effects | `Effects/tremolo_bar` | Tremolo bar (opens the tremolo bar editor) | `effect:tremolo_bar` | existing command (see below) |
 | Effects | `Effects/slides` | Slide | `effect:slides` | existing command (see below) |
 | Effects | `Effects/dead_note` | Dead note | `effect:dead_note` | existing command (see below) |
 | Effects | `Effects/hammer_on_pull_off` | Hammer-on / pull-off | `effect:hammer_on_pull_off` | existing command (see below) |
@@ -150,12 +150,12 @@ Default keys are the **TabForge** preset, currently identical to the **Classic**
 | Editing | Undo | Undo the last edit. | `Edit.Undo` | Ctrl+Z |  |
 | Editing | Redo | Redo the last undone edit. | `Edit.Redo` | Ctrl+Y |  |
 | Editing | Copy | Copy the selected beats or bars, or the beat at the cursor. | `Edit.Copy` | Ctrl+C |  |
-| Editing | Cut | Cut the selected beats or bars (beats become rests, bars are emptied). | `Edit.Cut` | Ctrl+X |  |
+| Editing | Cut | Cut the selected beats or bars (later beats move up; whole bars are removed, or emptied on one track of several). | `Edit.Cut` | Ctrl+X |  |
 | Editing | Paste | Paste at the cursor; asks only what the paste needs. | `Edit.Paste` | Ctrl+V |  |
 | Editing | Paste special | Paste with a repeat count, replace or insert, octave shift, keep string and fret, and bar settings. | `Edit.PasteSpecial` | Ctrl+Shift+V | — |
 | Editing | Select whole track | Select every bar of the track. | `Edit.SelectAll` | Ctrl+A |  |
 | Editing | Insert beat | Insert an empty beat at the cursor and push the rest of the bar right (the bar keeps its length). | `Edit.InsertBeat` | Insert |  |
-| Editing | Delete beats (shift left) | Remove the beat at the cursor and pull the rest of the bar left. The Delete key only empties the beat. | `Edit.DeleteBeats` | — | Also Edit > Delete beats. |
+| Editing | Delete beats (shift left) | Remove the beat at the cursor and pull the rest of the bar left. Remove the beat at the cursor and pull the rest of the bar left. The Delete key clears the notes first, and removes an empty beat the same way. | `Edit.DeleteBeats` | — | Also Edit > Delete beats. |
 | Editing | Repeat selection | Repeat the selected bars. | `Edit.RepeatSelection` | Ctrl+Shift+R | Was Ctrl+R; Ctrl+R now records. |
 | Transport | Play / pause | Start or pause playback. | `Transport.PlayPause` | Space |  |
 | Transport | Play from the start | Restart playback from the beginning. | `Transport.PlayFromStart` | Shift+Space |  |
@@ -175,7 +175,7 @@ Default keys are the **TabForge** preset, currently identical to the **Classic**
 | Bars and sections | Read current bar | Announce every beat of the current bar (for screen readers; also shown in the status bar). | `Reader.ReadBar` | Ctrl+Alt+B |  |
 | Bars and sections | Read position | Announce the track, bar, beat, string, section, time signature, tempo and time of the cursor (for screen readers; also shown in the status bar). | `Reader.ReadPosition` | Ctrl+Alt+P |  |
 | Bars and sections | First bar | Jump to the first bar. | `Bar.First` | Ctrl+Home | Ctrl+Shift+Left |
-| Bars and sections | Last bar | Jump to the last bar. | `Bar.Last` | Ctrl+End | Ctrl+Shift+Right |
+| Bars and sections | Last bar | Jump to the last written beat of the last bar. | `Bar.Last` | Ctrl+End | Ctrl+Shift+Right |
 | Bars and sections | Check bars | Report bars that do not fill their time signature. | `Bar.Check` | F4 |  |
 | Bars and sections | Score information | Edit title, artist and other score information. | `Bar.ScoreInfo` | F5 |  |
 | Bars and sections | Section editor | Add or edit a section marker. | `Section.Edit` | Shift+Insert |  |
@@ -189,8 +189,8 @@ Default keys are the **TabForge** preset, currently identical to the **Classic**
 | Transport | Speed up | Playback speed to the next preset (50, 75, 100, 125, 150, 200 %). | `Playback.SpeedUp` | Ctrl+Alt+Up |  |
 | Transport | Slow down | Playback speed to the previous preset (50, 75, 100, 125, 150, 200 %). | `Playback.SpeedDown` | Ctrl+Alt+Down |  |
 | Transport | Reset speed to 100 % | Play at the song's own tempo (100 %). | `Playback.SpeedReset` | Ctrl+Alt+D0 |  |
-| Notes and tracks | Move track up | Move the selected track up one place in the track list. In the Mixer window it moves the selected mixer row (a track, or a whole group) up; a track passing the top of its group joins the group above. | `Track.MoveUp` | Alt+Up |  |
-| Notes and tracks | Move track down | Move the selected track down one place in the track list. In the Mixer window it moves the selected mixer row (a track, or a whole group) down; a track passing the end of its group joins the group below. | `Track.MoveDown` | Alt+Down |  |
+| Notes and tracks | Move track up | Move the selected track up one place in the track list. In the Mixer window it moves the selected mixer row (a track, or a whole group) up; a track passing the top of its group joins the group above. | `Track.MoveUp` | Alt+Shift+Up |  |
+| Notes and tracks | Move track down | Move the selected track down one place in the track list. In the Mixer window it moves the selected mixer row (a track, or a whole group) down; a track passing the end of its group joins the group below. | `Track.MoveDown` | Alt+Shift+Down |  |
 | Notes and tracks | Transpose | Transpose the notes of the selected track (or only the selected bars) by a number of semitones, in every voice. Drum tracks are skipped. One undo step. | `Tools.Transpose` | — |  |
 | Notes and tracks | Convert track to audio track | Turn the selected instrument track into an audio track; its notation becomes a MIDI clip. | `Track.ConvertToAudio` | — | No default key. |
 | Notes and tracks | Next track | Select the next track. | `Track.Next` | Ctrl+Shift+Down |  |
@@ -205,25 +205,30 @@ Default keys are the **TabForge** preset, currently identical to the **Classic**
 | Durations | Shorter note value | Make the note value one step shorter (quarter to 8th to 16th...). Numpad + and Shift+= do the same. Preferences > Editing > "Reverse + / - duration keys" swaps the two default keys. | `Note.Shorter` | OemPlus (the + / = key) |  |
 | Notes and tracks | Shift pitch up (semitone) | Raise the selected note by a semitone. | `Note.PitchUp` | Shift+Up |  |
 | Notes and tracks | Shift pitch down (semitone) | Lower the selected note by a semitone. | `Note.PitchDown` | Shift+Down |  |
-| Notes and tracks | Move note to higher string | Move the selected note(s) to the next higher string, keeping the pitch (the fret is recalculated). Nothing changes when the pitch cannot be played there or the string is taken in that beat. The plain Up arrow moves only the cursor. | `Note.MoveStringUp` | Alt+Shift+Up |  |
-| Notes and tracks | Move note to lower string | Move the selected note(s) to the next lower string, keeping the pitch (the fret is recalculated). Nothing changes when the pitch cannot be played there or the string is taken in that beat. The plain Down arrow moves only the cursor. | `Note.MoveStringDown` | Alt+Shift+Down |  |
+| Notes and tracks | Move note to higher string | Move the selected note(s) to the next higher string, keeping the pitch (the fret is recalculated). Nothing changes when the pitch cannot be played there or the string is taken in that beat. On an empty spot the cursor moves to the higher string. The plain Up arrow moves only the cursor. | `Note.MoveStringUp` | Alt+Up |  |
+| Notes and tracks | Move note to lower string | Move the selected note(s) to the next lower string, keeping the pitch (the fret is recalculated). Nothing changes when the pitch cannot be played there or the string is taken in that beat. On an empty spot the cursor moves to the lower string. The plain Down arrow moves only the cursor. | `Note.MoveStringDown` | Alt+Down |  |
 | Notes and tracks | Rest | Turn the beat into a rest (or back). | `Note.Rest` | R |  |
 | Notes and tracks | Tie note | Tie the note to the previous one. | `Note.Tie` | L |  |
 | Notes and tracks | Fermata | Hold the beat. | `Note.Fermata` | F | — |
-| Note effects | Accent | Cycle none / accent / heavy accent. | `Note.Accent` | Oem1 |  |
+| Note effects | Accent | Toggle an accent on the beat or selection (same as the Accent tool). | `Note.Accent` | Oem1 |  |
 | Note effects | Staccato | Play the note short. | `Note.Staccato` | Shift+D1 |  |
 | Note effects | Tenuto | Hold the note for its full value. | `Note.Tenuto` | Shift+OemMinus |  |
-| Note effects | Bend | Add or remove a bend. | `Note.Bend` | B |  |
+| Note effects | Bend | Open the bend editor (same as the Bend tool). | `Note.Bend` | B |  |
+| Note effects | Bend editor | Open the bend editor: draw the bend curve or pick a preset. | `Note.BendEditor` |  |  |
 | Note effects | Hammer-on / pull-off | Legato to the next note. | `Note.HammerPull` | H |  |
 | Note effects | Vibrato | Left-hand vibrato. | `Note.Vibrato` | V |  |
 | Note effects | Legato slide | Slide into the next note. | `Note.Slide` | S |  |
 | Note effects | Let ring | Let the note ring over. | `Note.LetRing` | I |  |
 | Note effects | Dead note | Muted, percussive note. | `Note.Dead` | X |  |
 | Note effects | Ghost note | Very soft note in brackets. | `Note.Ghost` | O |  |
-| Note effects | Natural harmonic | Natural harmonic. | `Note.Harmonic` | Y |  |
-| Note effects | Trill | Trill with another fret. | `Note.Trill` | N |  |
-| Note effects | Tremolo bar | Whammy bar effect. | `Note.TremoloBar` | W |  |
-| Note effects | Grace note | Add a grace note before the beat. | `Note.Grace` | G |  |
+| Note effects | Natural harmonic | Open the harmonic editor (same as the Harmonic tool); on a note that has a harmonic, remove it. | `Note.Harmonic` | Y |  |
+| Note effects | Trill | Open the trill editor (same as the Trill tool). | `Note.Trill` | N |  |
+| Note effects | Tremolo bar | Open the tremolo bar editor (same as the Tremolo bar tool). | `Note.TremoloBar` | W |  |
+| Note effects | Tremolo bar editor | Open the tremolo bar editor: draw the whammy curve or pick a preset. | `Note.TremoloBarEditor` |  |  |
+| Note effects | Grace note | Open the grace note editor (same as the Grace tool). | `Note.Grace` | G |  |
+| Note effects | Trill editor | Open the trill editor: set the trill fret and speed or pick a preset. | `Note.TrillEditor` |  |  |
+| Note effects | Grace note editor | Open the grace note editor: fret, position, duration, dynamic and transition. | `Note.GraceEditor` |  |  |
+| Note effects | Harmonic editor | Open the harmonic editor: pick the harmonic type and its fret. | `Note.HarmonicEditor` |  |  |
 | Note effects | Palm mute | Palm-muted note. | `Note.PalmMute` | P |  |
 | Note effects | Fade in | Volume swell in. | `Note.FadeIn` | Shift+OemComma | F |
 | Note effects | Fade out | Volume swell out. | `Note.FadeOut` | Shift+OemPeriod |  |
@@ -235,9 +240,19 @@ Default keys are the **TabForge** preset, currently identical to the **Classic**
 | View | Switch instrument view | Cycle the instrument panel between fretboard, keyboard and drum pads (this session; the default is in Settings > Fretboard & Keyboard). | `View.InstrumentView` | — |  |
 | View | Show / hide side panel | Hide the side panel (tools, sections, practice) for more score space, or bring it back. | `View.SidePanel` | — |  |
 | View | Show / hide fretboard / keyboard | Hide the instrument panel (fretboard, keyboard or drum map) for more score space, or bring it back (same as View > Instrument view). | `View.InstrumentPanel` | — | Also the fretboard button next to the side-panel button in the toolbar. |
+| View | Show / hide Band view | Switch to the Band layout (every track's instrument and tab in rows, with the arrangement below), or back to the layout you left (same as View > Band view). | `View.BandView` | — |  |
+| View | Band view: show / hide the selected track's row | Add the selected track's row to the Band view, or take it out (the same as clicking its pill at the top of the Band view). | `Band.ToggleTrackRow` | — |  |
+| View | Band view: more rows per screen | Show one more Band view row on the screen at once (1 to 5, 3 by default); further rows scroll. | `Band.RowsMore` | — |  |
+| View | Band view: fewer rows per screen | Show one fewer Band view row on the screen at once (1 to 5, 3 by default), so each row is taller. | `Band.RowsFewer` | — |  |
+| View | Band view: lane content (Tab / Notation / Both) | Switch what the Band view lanes show: the tab, the notation, or both. | `Band.CycleLaneContent` | — |  |
+| View | Band view: lane layout (Vertical / Horizontal) | Switch the Band view lanes between lines stacked down the lane (vertical) and one line that slides sideways (horizontal). | `Band.CycleLaneLayout` | — |  |
+| View | Band view: instrument size | Switch the Band view instruments between the full neck (or keyboard), the first 12 frets, and a small keyboard. | `Band.CycleInstrumentSize` | — |  |
+| View | Band view: smooth / page follow | Switch the Band view lanes between following like the score (its Follow settings) and the Band view own smooth or page-by-page follow. | `Band.ToggleSmoothFollow` | — |  |
+| View | Band view: reset row heights | Give every Band view row the shared height again (undoes rows resized one by one). | `Band.ResetRowHeights` | — |  |
+| View | Fretboard position: toggle top / bottom | Move the fretboard / keyboard pane between above the score (default) and below it, above the timeline (same as the fretboard's right-click menu > Position). | `View.FretboardPosition` | — | Also in Settings > Fretboard & Keyboard. |
 | View | Lock fretboard size | Lock or unlock the fretboard / keyboard pane's height. Unlocked, dragging its edge resizes it and the drawing scales to fit; locked, it keeps its size. | `View.LockInstrumentSize` | — | Also in the fretboard's right-click menu; unlocked by default. |
 | View | Layout: Compose | Switch to the Compose workspace layout (score and tab editor large, fretboard and tools, small arrangement). | `View.LayoutCompose` | Ctrl+D1 |  |
-| View | Layout: Practice | Switch to the Practice workspace layout (score and fretboard large, transport and practice panels). | `View.LayoutPractice` | Ctrl+D2 |  |
+| View | Layout: Practice | Switch to the Practice workspace layout (score and fretboard large, sections panel). | `View.LayoutPractice` | Ctrl+D2 |  |
 | View | Layout: Mix | Switch to the Mix workspace layout (arrangement and mixer large, small score). | `View.LayoutMix` | Ctrl+D3 |  |
 | Transport | Record | Record every armed track while the song plays; press again to stop. | `Transport.Record` | Ctrl+R |  |
 | View | Snap clips on / off | Turn snapping of audio and MIDI clips on or off (right-click the snap button for its settings). | `Timeline.Snap` | Alt+S | Common default. |
@@ -289,15 +304,21 @@ These share keys with score commands on purpose: they act only while a clip is s
 | View | Manage linked audio approvals | Open the Linked audio window: folders on network locations or removable drives this song is waiting on, and the approvals you gave earlier (revoke them there). Also in Preferences > Files & Backups. | `Media.ManageApprovals` | — |  |
 | View | Master FX chain | Open the master effects chain (applied to the whole mix after the group buses). | `Mixer.MasterFx` | — |  |
 | View | Mixer: Monitor FX | Open the monitoring effects chain (e.g. speaker calibration). It plays after the master, live only: never included in renders or exports. | `Mixer.MonitorFx` | — |  |
+| View | Mixer: collapse all groups | Collapse every mixer group to its group row (the track list's group boxes follow). | `Mixer.CollapseAllGroups` | — |  |
+| View | Mixer: expand all groups | Expand every mixer group to show its tracks. | `Mixer.ExpandAllGroups` | — |  |
+| View | Mixer: group rules | Open the group rules editor: which instruments go in which mixer group. | `Mixer.GroupRules` | — |  |
 | View | Group bus FX chain | Open the effects bus chain of the selected track's mixer group (its tracks sum into it before the master). | `Mixer.GroupFx` | — |  |
 | View | Plug-in MIDI processing | Open the MIDI processing window (filter, transpose, drum map, velocity, humanize, delay, program / CC, log) of the selected track's selected plug-in. | `Track.MidiProcessing` | — |  |
 | View | Clear scale highlight | Remove the highlighted scale from the fretboard and keyboard. | `View.ClearScale` | — |  |
 | View | Scale highlight brighter | Make the scale highlight on the fretboard and keyboard 10% stronger (up to 150%). The same setting as Preferences > Fretboard > Appearance > Scale highlight strength. | `View.ScaleHighlightBrighter` | — |  |
 | View | Scale highlight dimmer | Make the scale highlight on the fretboard and keyboard 10% weaker (down to 10%). The same setting as Preferences > Fretboard > Appearance > Scale highlight strength. | `View.ScaleHighlightDimmer` | — |  |
 | View | Show or hide the Add-track lane | Show or hide the Add track strip under the last track. The same setting as Preferences > Timeline & Tracks > Show the Add-track lane. | `View.ToggleAddTrackLane` | — |  |
+| View | Toggle lines between tracks | Show or hide the thin lines between track rows in the timeline and the track list. The same setting as Preferences > Timeline & Tracks > Show lines between tracks. | `View.ToggleTrackLines` | — |  |
 | View | Cycle playback position marker | Switch the timeline's playback position marker between Line (default), Bar marker and Both. The same setting as Preferences > Timeline & Tracks > Playback position marker. | `View.CyclePlayheadStyle` | — |  |
 | View | Cycle fretboard string spacing | Switch the fretboard string spacing between Compact, Natural (default) and Wide (at most 1.5x natural). The same setting as right-click the fretboard > Appearance > String spacing. | `View.CycleStringSpacing` | — |  |
 | View | Scale finder | Find which scales the selected notes (or the whole song) fit, or pick any scale, and highlight it on the fretboard. | `Tools.ScaleFinder` | — |  |
+| View | Chord finder | Show the notes of a chord for a root and type, and insert its name on the beat under the score cursor. | `Tools.ChordFinder` | — |  |
+| View | Song stats | Show the number of tracks, bars, notes and sections in the song. | `Tools.SongStats` | — |  |
 | View | Tuner | Open the chromatic tuner: the note and cents of the sound on the armed input, with the selected track's string tunings. | `Tools.Tuner` | — |  |
 | View | Tutorial | Open the Beginner's Guide: searchable chapters with pictures, and a PDF export (Help > Tutorial). | `Help.Tutorial` | — | Also Help > Tutorial…; F1 stays with Keyboard shortcuts. Inside the window: Ctrl+F search, Esc clears it, Alt+Left / Alt+Right back / forward; the switch at the top changes between the Basic and the Detailed guide. |
 | View | Detailed guide | Open the Tutorial window on the Detailed Guide, the full reference to every feature (Help > Detailed guide). | `Help.TutorialDetailed` | — | Also Help > Detailed guide…; unbound by default. |

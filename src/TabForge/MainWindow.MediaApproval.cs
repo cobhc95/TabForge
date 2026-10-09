@@ -25,6 +25,7 @@ public partial class MainWindow
             });
             return _settings.Plugins.Quarantined.ToList();
         },
+        EditGroupRules = _ => OpenGroupRules(),
         CheckForUpdatesNow = CheckForUpdatesFromSettings,   // Settings > General > Updates > Check now
         ShowAllTracksAs = view => InstrumentPane.SetInstrumentView(view, null),   // Settings > Fretboard > Show all tracks as
     };

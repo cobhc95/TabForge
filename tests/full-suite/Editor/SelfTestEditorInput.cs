@@ -40,13 +40,13 @@ public static partial class SelfTest
             var bar = i / 4;
             editor.SetPosition(bar, (i % 4) * 4, 0, false);
             var line = MainWindow.PercussionPadLine(drums, pads[i]);
-            Check($"drum pad {pads[i]} is written", editor.ToggleFretAtPosition(line, pads[i]));
+            Check($"drum pad {pads[i]} is written", editor.Effects.ToggleFretAtPosition(line, pads[i]));
             written.Add(drums.Measures.SelectMany(m => m.Cells).SelectMany(c => c.Notes).Count(n => n.MidiValue == pads[i] && n.Fret == pads[i]));
         }
         Check("every pad from 27 to 87 stored its own note number", written.All(w => w == 1), string.Join(",", written));
 
         editor.SetPosition(3, 12, 1, false);
-        editor.EnterFret(3, autoAdvance: false); editor.EnterFret(8, autoAdvance: false);
+        editor.Effects.EnterFret(3, autoAdvance: false); editor.Effects.EnterFret(8, autoAdvance: false);
         var typed = drums.Measures[3].Cells[12].Notes.FirstOrDefault();
         Check("typing 38 on a drum line gives the snare (38), not 36", typed is { Fret: 38, MidiValue: 38 }, $"{typed?.Fret}");
 
@@ -82,16 +82,18 @@ public static partial class SelfTest
             ed.Measure(new Size(1200, 800));
             ed.Arrange(new Rect(0, 0, 1200, 800));
             ed.SetPosition(0, 0, 1, false);
-            ed.SetDuration(8);
+            ed.Effects.SetDuration(8);
             var action = name switch
             {
-                "technique" => (Action)(() => ed.ToggleTechnique(TechniqueNames.Vibrato)),
-                "dead note" => () => ed.ToggleDead(),
-                _ => () => ed.ToggleGhost(),
+                "technique" => (Action)(() => ed.Effects.ToggleTechnique(TechniqueNames.Vibrato)),
+                "dead note" => () => ed.Effects.ToggleDead(),
+                _ => () => ed.Effects.ToggleGhost(),
             };
             action();
             var cell = fresh.Tracks[0].Measures[0].Cells.FirstOrDefault(c => c.Notes.Count > 0);
-            Check($"effect key on an empty beat ({name}) applies the current note value", cell is { DurationDenominator: 8 }, $"{cell?.DurationDenominator}");
+            // As GP5: X writes a dead note at the current note value; a technique or ghost key on an empty string adds no note.
+            if (name == "dead note") Check($"effect key on an empty beat ({name}) applies the current note value", cell is { DurationDenominator: 8 }, $"{cell?.DurationDenominator}");
+            else Check($"effect key on an empty beat ({name}) adds no note", cell is null, $"{cell?.Notes.Count} notes");
         }
 
         var existing = Presets.TemplateFactory.Create("Rock Band");
@@ -100,10 +102,10 @@ public static partial class SelfTest
         ed2.Arrange(new Rect(0, 0, 1200, 800));
         existing.Tracks[0].Measures[0].Cells[0] = new TabCell { DurationDenominator = 4, Notes = { new TabNote { StringIndex = 1, Fret = 5 } } };
         ed2.SetPosition(0, 0, 1, false);
-        ed2.SetDuration(8);
+        ed2.Effects.SetDuration(8);
         existing.Tracks[0].Measures[0].Cells[0].DurationDenominator = 4;
         ed2.SetPosition(0, 0, 2, false);
-        ed2.ToggleTechnique(TechniqueNames.Vibrato);
+        ed2.Effects.ToggleTechnique(TechniqueNames.Vibrato);
         Check("effect key on an existing beat keeps its duration", existing.Tracks[0].Measures[0].Cells[0].DurationDenominator == 4);
     }
 }

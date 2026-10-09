@@ -55,7 +55,7 @@ internal sealed class ScorePageLayout
     /// <param name="fixedMeasuresPerSystem">Optional fixed-count organization; null/zero uses automatic packing.</param>
     public static ScorePageLayout Create(double gridLeft, double availableWidth, IReadOnlyList<double> naturalWidths,
         IReadOnlyList<bool>? forceLineBreaks = null, IReadOnlyList<bool>? preventLineBreaks = null,
-        int? fixedMeasuresPerSystem = null, bool centerRows = false)
+        int? fixedMeasuresPerSystem = null)
     {
         ArgumentNullException.ThrowIfNull(naturalWidths);
         var usableWidth = double.IsFinite(availableWidth) ? Math.Max(1, availableWidth) : 1;
@@ -124,7 +124,7 @@ internal sealed class ScorePageLayout
             var expansionLimit = fillFullWidth ? double.PositiveInfinity : ExpansionLimit(indexes.Count, finalSystem);
             var justifiedTotal = Math.Min(usableWidth, naturalTotal * expansionLimit);
             var extra = Math.Max(0, justifiedTotal - naturalTotal);
-            var rowLeft = left + (centerRows ? Math.Max(0, (usableWidth - justifiedTotal) / 2) : 0);
+            var rowLeft = left;   // every system starts at the left margin next to its clef and TAB label, however few bars it holds
             var x = rowLeft;
             var rowMeasures = new List<ScoreMeasurePosition>(indexes.Count);
             for (var column = 0; column < indexes.Count; column++)

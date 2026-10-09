@@ -8,11 +8,13 @@ namespace TabForge.Views;
 
 /// <summary>
 /// Instrument catalogue: every sound with its badge, grouped by family, with a search box that filters
-/// as you type. Double-click or Select picks the instrument.
+/// as you type. Double-click or Select picks the instrument. With <c>focusFamily</c> (the track-row instrument icon) only the
+/// current instrument's family is open; the other family headers open with a click, and a search shows matches in every family.
 /// </summary>
 public static class InstrumentPickerWindow
 {
-    public static string? Show(Window? owner, string? current, Color trackColour)
+    /// <param name="preview">Called with the tile's name on every click (a live audition); the caller ends it after the dialog closes.</param>
+    public static string? Show(Window? owner, string? current, Color trackColour, bool focusFamily = false, Action<string>? preview = null)
     {
         var w = new Window
         {
@@ -51,6 +53,8 @@ public static class InstrumentPickerWindow
         Border? chosenTile = null;
         var tiles = new List<(InstrumentEntry Entry, Border Tile)>();
         var headers = new List<(string Family, TextBlock Header, WrapPanel Panel)>();
+        var currentFamily = InstrumentCatalog.Find(current)?.Category;
+        var open = InstrumentCatalog.Categories.ToDictionary(f => f, f => !focusFamily || currentFamily is null || f == currentFamily);
 
         void Select(InstrumentEntry entry, Border tile)
         {
@@ -65,6 +69,12 @@ public static class InstrumentPickerWindow
         {
             var header = new TextBlock { Text = family, FontSize = 13, FontWeight = FontWeights.SemiBold, Margin = new Thickness(2, 10, 0, 4) };
             header.SetResourceReference(TextBlock.ForegroundProperty, "MutedBrush");
+            if (focusFamily)
+            {
+                header.Cursor = Cursors.Hand;
+                var name = family;
+                header.MouseLeftButtonDown += (_, _) => { open[name] = !open[name]; Refresh(); };
+            }
             var panel = new WrapPanel();
             host.Children.Add(header);
             host.Children.Add(panel);
@@ -83,6 +93,7 @@ public static class InstrumentPickerWindow
                 tile.MouseLeftButtonDown += (_, e) =>
                 {
                     Select(entry, tile);
+                    if (e.ClickCount == 1) preview?.Invoke(entry.Name);
                     if (e.ClickCount == 2) w.DialogResult = true;
                 };
                 panel.Children.Add(tile);
@@ -91,8 +102,8 @@ public static class InstrumentPickerWindow
             }
         }
 
-        // Live filter: name or family contains every typed word.
-        search.TextChanged += (_, _) =>
+        // Live filter: name or family contains every typed word; while searching, matches show in every family.
+        void Refresh()
         {
             var words = search.Text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
             searchHint.Visibility = search.Text.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
@@ -101,13 +112,17 @@ public static class InstrumentPickerWindow
                 var hay = entry.Name + " " + entry.Category;
                 tile.Visibility = words.All(wd => hay.Contains(wd, StringComparison.OrdinalIgnoreCase)) ? Visibility.Visible : Visibility.Collapsed;
             }
-            foreach (var (_, header, panel) in headers)
+            foreach (var (family, header, panel) in headers)
             {
                 var any = panel.Children.OfType<UIElement>().Any(c => c.Visibility == Visibility.Visible);
-                header.Visibility = panel.Visibility = any ? Visibility.Visible : Visibility.Collapsed;
+                var shown = any && (words.Length > 0 || open[family]);
+                header.Visibility = any ? Visibility.Visible : Visibility.Collapsed;
+                panel.Visibility = shown ? Visibility.Visible : Visibility.Collapsed;
+                if (focusFamily) header.Text = (shown ? "▾ " : "▸ ") + family;
             }
-            scroll.ScrollToTop();
-        };
+        }
+        search.TextChanged += (_, _) => { Refresh(); scroll.ScrollToTop(); };
+        Refresh();
         search.KeyDown += (_, e) =>
         {
             if (e.Key != Key.Enter) return;
@@ -116,6 +131,7 @@ public static class InstrumentPickerWindow
         };
         ok.Click += (_, _) => w.DialogResult = true;
         w.Content = root;
+        FocusManager.SetFocusedElement(w, search);   // the search box is ready to type into
         w.Loaded += (_, _) =>
         {
             search.Focus();

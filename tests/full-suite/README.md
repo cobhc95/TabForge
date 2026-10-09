@@ -19,7 +19,7 @@ Start-Process -Wait out-full\TabForge.exe -ArgumentList '--selftest','full.log',
 
 - Everything: `REBUILD.cmd auto fresh fullsuite` (a separate test build, then the playtest; the launched app stays the normal build).
 - Narrow: `--only TestA,TestB`, or `TABFORGE_SELFTEST_ONLY=TestA,TestB` with `REBUILD.cmd`.
-- One area: `--areas ui` (area names and every test: `docs/FEATURE_MAP.md`). `--areas basic` selects only the basic set.
+- One area: `--areas ui` (area names and every test: `docs/feature-map/tests.md`). `--areas basic` selects only the basic set.
 
 ## Layout
 - `SelfTestFullSuite.cs`: the registrations (`RunFullSuite`) and the area table of these tests. The basic set's are in `src/TabForge/SelfTests/SelfTest.cs`.
@@ -27,6 +27,7 @@ Start-Process -Wait out-full\TabForge.exe -ArgumentList '--selftest','full.log',
 - `Lifecycle/SelfTestWindowLifetime.cs` contains the shared fixture and subscription/automation lifetime scenarios; `SelfTestWindowLifetimeCloseAndTransfer.cs` contains close, transfer, preferences and engine-chain scenarios.
 - Helpers shared with the basic set (`NewEditor`, `TwoBarSong`, `BuildRichProject`, `PumpUi`, the headless engine kit in `src/TabForge/SelfTests/Engine/`) stay in `src/`.
 - Full-suite-only diagnostic commands (`--gp-compare`, `--roundtrip-diff`, `--write-gp-fixture` and the like, `--pair-save-probe`) exist only in a full-suite build.
+- `--areas workflow` runs the editing stories (`TestWorkflow`, seconds; `Editor/SelfTestWorkflow.cs`, helpers in `Editor/WorkflowKit.cs`) and the seeded human monkey (`TestWorkflowMonkey`, about 7 minutes); `--monkey-seeds N` and `--monkey-actions N` scale the monkey (default 20 x 1300) and `--monkey-first N` starts at seed N to replay one seed. A failure names the seed, step and last 15 actions.
 - `TestSingleInstanceProcessHandover` launches two isolated app processes to check an Explorer-style file handover and shutdown after the final window closes; it uses a generated `.tforge` fixture.
 
-Adding a test: write it here, register it in `SelfTestFullSuite.cs`, give it an area, run `TabForge.exe --feature-map` and commit `docs/FEATURE_MAP.md`.
+Adding a test: write it here, register it in `SelfTestFullSuite.cs`, give it an area, run `TabForge.exe --feature-map` and commit `docs/feature-map/tests.md`.

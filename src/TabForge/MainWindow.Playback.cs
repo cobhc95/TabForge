@@ -36,7 +36,7 @@ public partial class MainWindow
         var (ls, le) = GetLoopRange();
         _midi.SetSectionStarts(_project.Markers.Select(marker => marker.MeasureIndex).Where(bar => bar > 0));
         _midi.SetMasterVolume(_project, _settings.Audio.MasterVolume);
-        return _transport.BuildOptions(Editor.SelectedMeasure, Editor.SelectedCell, _loop, ls, le, _loopStartCell, _loopEndCell);
+        return _transport.BuildOptions(Editor.SelectedMeasure, Editor.SelectedCell, _loop, ls, le, _selLoop.StartCell, _selLoop.EndCell);
     }
 
     private void Play_Click(object sender, RoutedEventArgs e) => TogglePlayback();
@@ -103,17 +103,17 @@ public partial class MainWindow
         MidiLed.Fill = Brushes.LimeGreen;
         playback.IsPlayingVisual = true;
         playback.ClearPending();
-        Editor.PlaybackActive = true;
+        Editor.Playback.Active = true;
         Arrangement.SetPlayhead(Editor.SelectedMeasure, 0, playbackActive: true);
         UpdatePlayingSectionMarker(Editor.SelectedMeasure);
         var options = BuildOptions();
-        Editor.PlaybackTrackIndex = Math.Max(0, Editor.SelectedTrackIndex);
+        Editor.Playback.TrackIndex = Math.Max(0, Editor.SelectedTrackIndex);
         Arrangement.SetLoopRange(GetLoopRange().start, GetLoopRange().end);
         _playbackView.StartTick();
         _follow.ResetForPlayback();
         playback.PlaybackBarMappingsBySnapshot.Clear();
         playback.PlaybackBarRemap = Enumerable.Range(0, MaxMeasures()).ToArray();
-        Editor.PlaybackBarRemap = playback.PlaybackBarRemap;
+        Editor.Playback.BarRemap = playback.PlaybackBarRemap;
         Playback.RememberBarMapping(_undo.Snapshot(_project));
         var songProject = session.Project;
         var clock = playback.Clock;   // the song's own clock, not this window's: the engine keeps this callback when the tab moves to another window
@@ -169,15 +169,15 @@ public partial class MainWindow
     private void RebuildVisualTimeline()
     {
         _timeline = MidiTimelineBuilder.Build(_project, BuildOptions());
-        Editor.Timeline = _timeline;
+        Editor.Playback.Timeline = _timeline;
         _playheadMs = 0;
     }
 
     private (int start, int end) GetLoopRange()
     {
         var max = Math.Max(0, MaxMeasures() - 1);
-        var s = Math.Clamp(_loopStartBar, 0, max);
-        var e2 = Math.Clamp(_loopEndBar, 0, max);
+        var s = Math.Clamp(_selLoop.StartBar, 0, max);
+        var e2 = Math.Clamp(_selLoop.EndBar, 0, max);
         if (s > e2) (s, e2) = (e2, s);
         return (s, e2);
     }
@@ -190,16 +190,16 @@ public partial class MainWindow
         SongClock.Stopped();
         Playback.ClearPlaybackPosition();
         _follow.ResetRow();
-        Editor.PlaybackBarRemap = null;
-        Editor.PlaybackActive = false;
+        Editor.Playback.BarRemap = null;
+        Editor.Playback.Active = false;
         UpdatePlayingSectionMarker(-1);
         Playhead.SetGeometry(null);
         Playhead.SetDurationGeometry(null);
         _playheadBar = -1;
         _playbackView.StopTick();
         _follow.Halt();
-        Editor.ClearPlayhead();
-        Editor.PlaybackMs = 0;
+        Editor.Playback.Clear();
+        Editor.Playback.Ms = 0;
         SyncArrangementPlayhead();
         SetPlayIcon(false);
         StatusText.Text = "Stopped";
@@ -207,8 +207,6 @@ public partial class MainWindow
         RefreshInstrument();
         RefreshStatus();
     }
-
-    private bool _loopHasArea;
 
     private void Loop_Click(object sender, RoutedEventArgs e) => SetLoopActive(!_loop);
 
@@ -224,19 +222,16 @@ public partial class MainWindow
             // The loop never changes the scope: the model's own scope while it holds a range, else the score's (one track).
             ApplyLoopRange(range.StartMeasure, range.EndMeasure, range.StartCell, range.EndCell, _selection.HasRange ? _selection.Scope : SelectionScope.ThisTrack);
         }
-        else if (loop && !_loopHasArea)
+        else if (loop && !_selLoop.HasArea)
         {
             // No selected area: loop the whole song, or (opt-in) the section being played.
             var lastBar = Math.Max(0, MaxMeasures() - 1);
             var (start, end) = _settings.Audio.LoopButtonLoopsSection
                 ? TransportControlsController.DefaultLoopArea(_project, _settings.Audio.LoopDefaultScope, _isPlayingVisual && _playheadBar >= 0 ? _playheadBar : Editor.SelectedMeasure)
                 : (0, lastBar);
-            _loopStartBar = start;
-            _loopEndBar = end;
-            _loopStartCell = 0;
-            _loopEndCell = -1;
+            _selLoop.SetRange(start, end, 0, -1);
             Arrangement.SetLoopRange(start, end);
-            _midi.SetLoopRange(start, end, _loopStartCell, _loopEndCell);
+            _midi.SetLoopRange(start, end, 0, -1);
         }
         // Keep the selected loop range when toggling looping off. Turning the transport mode off
         // should not discard the user's selection; pressing the button again reuses that range.
@@ -245,14 +240,14 @@ public partial class MainWindow
         Arrangement.SetLoopEnabled(ShowLoopOnTimeline);
         _midi.SetLoop(_loop);
         SyncAreaVisuals();
-        StatusText.Text = _loop ? $"Looping bars {_loopStartBar + 1}-{_loopEndBar + 1}" : "Loop off";
+        StatusText.Text = _loop ? $"Looping bars {_selLoop.StartBar + 1}-{_selLoop.EndBar + 1}" : "Loop off";
     }
 
     private void LoopButton_PreviewMouseRightButtonUp(object sender, MouseButtonEventArgs e)
     {
         _transport.SyncingLoopSettings = true;
-        LoopRangeText.Text = _loopHasArea || _loop
-            ? $"Loop area: bars {_loopStartBar + 1}-{_loopEndBar + 1}{(_loop ? "" : " (loop off)")}"
+        LoopRangeText.Text = _selLoop.HasArea || _loop
+            ? $"Loop area: bars {_selLoop.StartBar + 1}-{_selLoop.EndBar + 1}{(_loop ? "" : " (loop off)")}"
             : "No loop area selected";
         LoopScopeCombo.SelectedItem = LoopScopeCombo.Items.OfType<ComboBoxItem>()
             .FirstOrDefault(i => (string)i.Tag == _settings.Audio.LoopDefaultScope) ?? LoopScopeCombo.Items[0];
@@ -288,7 +283,7 @@ public partial class MainWindow
         StatusText.Text = "Loop area cleared";
     }
 
-    // The one speed control is SpeedCombo (Zoom & speed pane, "100%"); the transport controller holds the speed and draws it.
+    // The one speed control is SpeedCombo (toolbar, "100%"); the transport controller holds the speed and draws it.
     private void SpeedCombo_Changed(object sender, SelectionChangedEventArgs e) => _transport.OnSpeedComboChanged();
     private void SpeedCombo_ReSync(object sender, RoutedEventArgs e) => _transport.ShowSpeed();
 
@@ -385,10 +380,7 @@ public partial class MainWindow
                 _follow.SetScrollBarDrag(true);
         }), true);
         ScoreScroll.AddHandler(PreviewMouseLeftButtonUpEvent, new MouseButtonEventHandler((_, _) => _follow.SetScrollBarDrag(false)), true);
-        ScoreScroll.AddHandler(LostMouseCaptureEvent, new MouseEventHandler((_, _) =>
-        {
-            if (Mouse.LeftButton != MouseButtonState.Pressed) _follow.SetScrollBarDrag(false);
-        }), true);
+        ScoreScroll.AddHandler(LostMouseCaptureEvent, new MouseEventHandler((_, _) => _follow.SetScrollBarDrag(false)), true);
         ScoreScroll.AddHandler(PreviewKeyDownEvent, new KeyEventHandler((_, e) =>
         {
             if (e.Key is Key.PageUp or Key.PageDown or Key.Home or Key.End or Key.Up or Key.Down or Key.Left or Key.Right)
@@ -413,7 +405,7 @@ public partial class MainWindow
         public DocumentSession ActiveDocument => _window.Doc;
         public IScorePlayhead Score => _window.Editor.Playback;
         public int ScoreTrackIndex => Math.Max(0, _window.Editor.SelectedTrackIndex);
-        public void SelectScoreTrack() => _window.Editor.PlaybackTrackIndex = ScoreTrackIndex;
+        public void SelectScoreTrack() => _window.Editor.Playback.TrackIndex = ScoreTrackIndex;
         public bool OnUiThread => _window.Dispatcher.CheckAccess();
         public void Post(Action work) => _window.PostIfOpen(work, DispatcherPriority.Normal);
 
@@ -428,26 +420,26 @@ public partial class MainWindow
         public void ShowPlayheadGeometry()
         {
             var window = _window;
-            window.Playhead.SetGeometry(window.Editor.PlayheadGeometry());
+            window.Playhead.SetGeometry(window.Editor.Playback.PlayheadGeometry());
             // The duration glow is off by default; don't compute its geometry every frame when it is hidden.
             window.Playhead.SetDurationGeometries(window._settings.Follow.DurationTintEnabled
-                ? window.Editor.PlaybackDurationGeometries()
+                ? window.Editor.Playback.DurationGeometries()
                 : Array.Empty<(double, double, double, double)>());
         }
 
         public void ShowTimeline(ScoreTimeline timeline, bool rebaseBarMappings)
         {
             _window._timeline = timeline;
-            _window.Editor.Timeline = timeline;
+            _window.Editor.Playback.Timeline = timeline;
             if (rebaseBarMappings) _window.RebasePlaybackBarMappings();
         }
 
         public void ShowStopped()
         {
             var window = _window;
-            window.Editor.PlaybackActive = false;
-            window.Editor.PlaybackBarRemap = null;
-            window.Editor.ClearPlayhead();
+            window.Editor.Playback.Active = false;
+            window.Editor.Playback.BarRemap = null;
+            window.Editor.Playback.Clear();
             window.Playhead.SetGeometry(null);
             window.Playhead.SetDurationGeometry(null);
             window.SyncArrangementPlayhead();
@@ -466,13 +458,13 @@ public partial class MainWindow
         {
             var window = _window;
             window._follow.ResetRow();
-            window.Editor.PlaybackBarRemap = null;
+            window.Editor.Playback.BarRemap = null;
             window.UpdatePlayingSectionMarker(-1);
-            window.Editor.PlaybackActive = false;
+            window.Editor.Playback.Active = false;
             window.Playhead.SetGeometry(null);
             window.Playhead.SetDurationGeometry(null);
             window._follow.Halt();
-            window.Editor.ClearPlayhead();
+            window.Editor.Playback.Clear();
             window.SyncArrangementPlayhead();
             window.SetPlayIcon(false);
             window.StatusText.Text = "Playback finished";
@@ -481,6 +473,7 @@ public partial class MainWindow
         }
 
         public void HaltFollow() => _window._follow.Halt();
+        public void ReattachFollow() => _window._follow.ResetForPlayback();
         public void ResetFollowRow() => _window._follow.ResetRow();
     }
 }

@@ -18,7 +18,7 @@ public static partial class SelfTest
     {
         var project = new SongProject { Tempo = 120 };
         project.Tracks.Add(new TrackModel { Name = "Gtr", Measures = TemplateFactory.Measures(12) });
-        var editor = new TabEditorControl { Project = project, SelectedTrackIndex = 0, DarkPaper = dark, Zoom = zoom, HideCursor = true };
+        var editor = new TabEditorControl { Project = project, SelectedTrackIndex = 0, Appearance = { DarkPaper = dark }, Zoom = zoom, HideCursor = true };
         editor.Measure(new Size(arrangeWidth, 700));
         editor.Arrange(new Rect(0, 0, arrangeWidth, 700));
         editor.UpdateLayout();
@@ -53,7 +53,7 @@ public static partial class SelfTest
     private static void TestPlayingBarFrozenSystems()
     {
         var editor = PlayingBarEditor(true, 1.0, 1800);
-        var layout = editor.GetScoreLayout(editor.Project!.Tracks[0]);
+        var layout = editor.Layout.GetLayout(editor.Project!.Tracks[0]);
         int b0 = layout.Systems[0].LastMeasure, b1 = b0 + 1;
         Check("playing bar (frozen): the test song wraps onto a second system", layout.Measure(b1).SystemIndex == 1);
         byte[] Shot(out int w) { var p = PlayingBarPixels(editor, out w, out var h, null, 700); return p; }
@@ -66,14 +66,14 @@ public static partial class SelfTest
         }
         HashSet<int> Tinted(byte[] shot) => new[] { b0, b1 }.Where(b => shot[At(b)] != reference[At(b)] || shot[At(b) + 1] != reference[At(b) + 1]).ToHashSet();
 
-        editor.PlayingBarEnabled = true;
-        editor.PlaybackActive = true;
-        editor.SetPlayhead(b0, 0);
+        editor.Appearance.PlayingBarEnabled = true;
+        editor.Playback.Active = true;
+        editor.Playback.SetPlayhead(b0, 0);
         var first = Tinted(Shot(out _));
         Check("playing bar (frozen): the last bar of system A is banded", first.SetEquals(new[] { b0 }), $"tinted {{{string.Join(",", first)}}} b0={b0} b1={b1}");
-        editor.SetPlayhead(b1, 0);
+        editor.Playback.SetPlayhead(b1, 0);
         Check("playing bar (frozen): crossing into system B moves the band; A keeps no stale copy", Tinted(Shot(out _)).SetEquals(new[] { b1 }));
-        editor.SetPlayhead(b0, 0);
+        editor.Playback.SetPlayhead(b0, 0);
         Check("playing bar (frozen): a jump back moves it again", Tinted(Shot(out _)).SetEquals(new[] { b0 }));
 
         editor.Appearance.PlayingBarColor = Color.FromRgb(0x20, 0xA0, 0x40);
@@ -82,17 +82,17 @@ public static partial class SelfTest
         editor.Appearance.PlayingBarOpacity = 0.55;
         var stronger = Shot(out _);
         Check("playing bar (frozen): an opacity change repaints at once", stronger[At(b0) + 1] != recoloured[At(b0) + 1]);
-        editor.PlayingBarEnabled = false;
+        editor.Appearance.PlayingBarEnabled = false;
         Check("playing bar (frozen): turning it off removes the band at once", Tinted(Shot(out _)).Count == 0);
-        editor.PlayingBarEnabled = true;
+        editor.Appearance.PlayingBarEnabled = true;
         Check("playing bar (frozen): turning it on again shows it at once", Tinted(Shot(out _)).SetEquals(new[] { b0 }));
 
-        editor.PlaybackActive = false;   // stop without any other repaint request
+        editor.Playback.Active = false;   // stop without any other repaint request
         Check("playing bar (frozen): stop removes the band from the frozen copy", Tinted(Shot(out _)).Count == 0);
 
         editor.HideCursor = false;
         editor.Appearance.PlayingBarWhenStopped = true;
-        editor.PlaybackMeasure = -1;
+        editor.Playback.Measure = -1;
         editor.SetPosition(b0, 0, 0, false);
         Check("playing bar (frozen): 'when stopped' bands the cursor's bar", Tinted(Shot(out _)).SetEquals(new[] { b0 }));
         editor.SetPosition(b1, 0, 0, false);
@@ -121,14 +121,14 @@ public static partial class SelfTest
         {
             var name = $"{(dark ? "dark" : "light")}-{zoom:0.0}x";
             var editor = PlayingBarEditor(dark, zoom);
-            editor.SetPlayhead(2, 0);
-            editor.PlaybackActive = true;
+            editor.Playback.SetPlayhead(2, 0);
+            editor.Playback.Active = true;
             Check($"playing bar ({name}): no band while off", editor.Playback.PlayingBarRect() is null);
             var offPixels = PlayingBarPixels(editor, out var w, out var h, outDir is null ? null : Path.Combine(outDir, $"off-{name}.png"));
 
-            editor.PlayingBarEnabled = true;
+            editor.Appearance.PlayingBarEnabled = true;
             editor.InvalidateVisual();
-            var layout = editor.GetScoreLayout(editor.Project!.Tracks[0]);
+            var layout = editor.Layout.GetLayout(editor.Project!.Tracks[0]);
             var position = layout.Measure(2);
             var rect = editor.Playback.PlayingBarRect();
             Check($"playing bar ({name}): one band covers the playing bar's x-range", rect is { } r && Math.Abs(r.X - position.X) < 0.01 && Math.Abs(r.Width - position.Width) < 0.01);
@@ -149,12 +149,12 @@ public static partial class SelfTest
             var builds = editor.Playback.PlayingBarBuilds;
             for (var tick = 0; tick < 200; tick++)
             {
-                editor.PlaybackFraction = tick / 200.0;
-                editor.SetPlayhead(2, tick % 4);
+                editor.Playback.Fraction = tick / 200.0;
+                editor.Playback.SetPlayhead(2, tick % 4);
                 _ = editor.Playback.PlayingBarRect();
             }
             Check($"playing bar ({name}): 200 ticks within one bar rebuild the band 0 times", editor.Playback.PlayingBarBuilds == builds, $"{editor.Playback.PlayingBarBuilds - builds} rebuilds");
-            editor.SetPlayhead(3, 0);
+            editor.Playback.SetPlayhead(3, 0);
             _ = editor.Playback.PlayingBarRect();
             Check($"playing bar ({name}): moving to the next bar rebuilds it exactly once", editor.Playback.PlayingBarBuilds == builds + 1);
             editor.Appearance.PlayingBarColor = Color.FromRgb(0x20, 0xA0, 0x40);
@@ -162,8 +162,8 @@ public static partial class SelfTest
             _ = editor.Playback.PlayingBarRect();
             Check($"playing bar ({name}): a new colour or opacity is applied", editor.Playback.PlayingBarBuilds == builds + 2);
 
-            editor.PlaybackActive = false;
-            editor.ClearPlayhead();
+            editor.Playback.Active = false;
+            editor.Playback.Clear();
             Check($"playing bar ({name}): hidden when stopped", editor.Playback.PlayingBarRect() is null);
             editor.HideCursor = false;
             editor.Appearance.PlayingBarWhenStopped = true;

@@ -135,18 +135,21 @@
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
 
-                                    <!-- playing badge: shown only for the tab whose score is playing -->
-                                    <Path x:Name="PlayingBadge" Grid.Column="0" Margin="0,0,5,0"
-                                          VerticalAlignment="Center" Width="8" Height="9" Stretch="Uniform"
-                                          Fill="{DynamicResource PlayBrush}" Visibility="{Binding PlayingVisibility}"
-                                          Data="M0,3 L3,3 L6,0 L6,9 L3,6 L0,6 Z"
-                                          ToolTip="This tab is playing"/>
+                                    <!-- speaker icon: shown only for the tab whose score is playing; collapsed = no width -->
+                                    <Path x:Name="PlayingIcon" Grid.Column="0" Margin="0,0,5,0"
+                                          VerticalAlignment="Center" Width="13" Height="13" Stretch="Uniform"
+                                          Data="{StaticResource IconSpeaker}"
+                                          Fill="{DynamicResource TextStrongBrush}" Stroke="{DynamicResource TextStrongBrush}"
+                                          StrokeThickness="1.2" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                          Visibility="{Binding PlayingVisibility}"
+                                          ToolTip="Playing" AutomationProperties.Name="Playing"/>
 
                                     <TextBlock x:Name="TabTitle" Grid.Column="1" Text="{Binding Title}"
                                                TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
                                                Foreground="{DynamicResource MutedBrush}"/>
 
-                                    <Ellipse x:Name="DirtyDot" Grid.Column="2" Width="7" Height="7" Fill="{DynamicResource CursorBrush}"
+                                    <Ellipse x:Name="DirtyDot" Grid.Column="2" Width="8" Height="8" Fill="{DynamicResource CursorBrush}"
+                                             Stroke="{DynamicResource MutedBrush}" StrokeThickness="1"
                                              VerticalAlignment="Center" Margin="7,0,0,0"
                                              Visibility="{Binding DirtyVisibility}"
                                              ToolTip="Unsaved changes"/>
@@ -154,7 +157,7 @@
                                     <Button x:Name="TabClose" Grid.Column="3"
                                             Click="TabClose_Click" AutomationProperties.Name="Close tab"
                                             ToolTip="Close tab" local:TooltipShortcuts.Command="Tab.Close">
-                                        <Path Data="{StaticResource IconClose}" Stroke="#B4BEC8" StrokeThickness="1.4"
+                                        <Path Data="{StaticResource IconClose}" Stroke="{DynamicResource MutedBrush}" StrokeThickness="1.4"
                                               StrokeStartLineCap="Round" StrokeEndLineCap="Round"
                                               Width="10" Height="10" Stretch="Uniform" Fill="Transparent"/>
                                         <Button.Style>

@@ -53,7 +53,7 @@ internal static class ScoreRenderIdentity
     /// <summary>A fresh editor in the given state, laid out and ready to render.</summary>
     internal static TabEditorControl CreateEditor(SongProject project, int track, double zoom, bool dark, string state)
     {
-        var editor = new TabEditorControl { Project = project, SelectedTrackIndex = track, DarkPaper = dark, Zoom = zoom, PageWidthOverride = PageWidth };
+        var editor = new TabEditorControl { Project = project, SelectedTrackIndex = track, Appearance = { DarkPaper = dark }, Zoom = zoom, PageWidthOverride = PageWidth };
         ApplyState(editor, state);
         return editor;
     }
@@ -84,16 +84,16 @@ internal static class ScoreRenderIdentity
         var project = editor.Project!;
         var timeline = MidiTimelineBuilder.Build(project, new PlaybackOptions());
         var notes = timeline.NotesFor(editor.SelectedTrackIndex);
-        editor.Timeline = timeline;
-        editor.PlaybackTrackIndex = editor.SelectedTrackIndex;
-        editor.PlayingBarEnabled = true;
-        editor.PlaybackActive = true;
-        if (notes.Length == 0) { editor.SetPlayhead(0, 0); return; }
+        editor.Playback.Timeline = timeline;
+        editor.Playback.TrackIndex = editor.SelectedTrackIndex;
+        editor.Appearance.PlayingBarEnabled = true;
+        editor.Playback.Active = true;
+        if (notes.Length == 0) { editor.Playback.SetPlayhead(0, 0); return; }
         var note = notes[notes.Length / 3];
         var ms = note.OnsetMs + Math.Min(30, note.DurationMs / 2);
-        editor.PlaybackMs = ms;
-        editor.PlaybackFraction = timeline.Bars.Count > 0 ? timeline.BarAt(ms).SlotFraction(ms) : 0;
-        editor.SetPlayhead(Math.Clamp(note.Bar, 0, track.Measures.Count - 1), note.Cell);
+        editor.Playback.Ms = ms;
+        editor.Playback.Fraction = timeline.Bars.Count > 0 ? timeline.BarAt(ms).SlotFraction(ms) : 0;
+        editor.Playback.SetPlayhead(Math.Clamp(note.Bar, 0, track.Measures.Count - 1), note.Cell);
     }
 
     /// <summary>Lays the editor out and renders its top part (at most 3000 x 3000 pixels) at 96 dpi.</summary>

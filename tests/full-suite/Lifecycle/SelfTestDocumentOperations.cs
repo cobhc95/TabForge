@@ -373,7 +373,7 @@ public static partial class SelfTest
             var before = DoHash(document);
             var revision = document.Project.TimelineRevision;
             bool ran;
-            try { ran = editor.TryRunNoteCommand(id); }
+            try { ran = editor.Effects.TryRunNoteCommand(id); }
             catch (Exception ex) { offenders.Add($"{id}: threw {ex.GetType().Name}"); continue; }
             if (!ran) continue;
             handled++;
@@ -464,7 +464,7 @@ public static partial class SelfTest
         Check("document operations (no control): a pitch step up is one fret on the same string", EditCommands.PlanPitchShift(steps, stepCell, stepNote, 1) is (2, 6));
         stepNote.Fret = 0; stepNote.MidiValue = steps.PitchOf(2, 0);
         var down = EditCommands.PlanPitchShift(steps, stepCell, stepNote, -1);
-        Check("document operations (no control): below the open string the same pitch goes to the next lower free string", down is { StringIndex: 3 } && steps.PitchOf(3, down.Value.Fret) == steps.PitchOf(2, 0) - 1, down.ToString());
+        Check("document operations (no control): below the open string the note stays (GP5)", down is null, down.ToString());
         stepNote.StringIndex = 5; stepNote.Fret = 0;
         Check("document operations (no control): the lowest playable pitch cannot go lower", EditCommands.PlanPitchShift(steps, stepCell, stepNote, -1) is null);
         EditCommands.ApplyPitchShift(steps, stepNote, 5, 3);

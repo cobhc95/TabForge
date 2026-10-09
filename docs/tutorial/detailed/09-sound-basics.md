@@ -83,9 +83,9 @@ The **Master** row is the first row in the window. It holds the **Master volume*
 
 Each group has its own row above its tracks. Its volume is a percentage of every track's own level, from 0% to 200%, where 100% means no change. Its pan and pitch are offsets added to every track in the group. This lets you lower all the guitars at once without moving each one.
 
-To move a track to another group, right-click its row and choose **Move to** followed by the group name. You can also drag a row to a new place, or select a row and press `Alt+Up` or `Alt+Down`. Press `Esc` to close the Mixer.
+To move a track to another group, right-click its row and choose **Move to** followed by the group name. You can also drag a row to a new place, or select a row and press `Alt+Shift+Up` or `Alt+Shift+Down`. Press `Esc` to close the Mixer.
 
-> **Note:** TabForge has a second table called **Track mixer (detailed)**, in the **Practice / Mixer** panel. It edits the same tracks, but this guide always means the Mixer window unless it names the other one.
+> **Note:** When this guide talks about the mixer, it means the Mixer window (**View > Mixer / VST**).
 
 ## Balance a mix
 

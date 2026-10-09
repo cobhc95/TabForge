@@ -27,7 +27,7 @@ public static class SettingsFileService
 
     private static readonly HashSet<string> DockPanelIds = new(StringComparer.Ordinal)
     {
-        "instrument", "timeline", "tools", "structure", "rhythm", "layout", "sections", "practice", "playback"
+        "instrument", "timeline", "tools", "structure", "rhythm", "layout", "sections", "practice", "playback", "band"
     };
 
     public static AppSettings Load(string path)

@@ -38,7 +38,7 @@ internal sealed class SectionTipController
         _placementTarget = placementTarget;
     }
 
-    /// <summary>What dragging this particular section will do (plain drag needs free bars beside it).</summary>
+    /// <summary>What dragging this particular section will do (Ctrl+drag, the marker-only move, needs free bars beside it).</summary>
     internal string TextFor(int sectionIndex)
     {
         var project = _host.Project;
@@ -48,15 +48,17 @@ internal sealed class SectionTipController
         var title = string.IsNullOrWhiteSpace(marker.Title) ? "Section" : marker.Title;
         var addHint = TooltipShortcuts.Append("Add section", "Section.Add");   // the key follows rebinding
         if (marker.LockPosition) return $"{title} (position locked)\nRight-click: section options · {addHint}";
-        string plain;
+        // Plain drag moves the section with its bars; Ctrl+drag moves only the marker (needs free bars beside it).
+        var drag = $"Drag: move {title} with its bars (other sections make room)";
+        string ctrl;
         if (SectionLayout.MoveRange(project!, marker) is var (min, max))
         {
             var left = min < marker.MeasureIndex; var right = max > marker.MeasureIndex;
             var where = left && right ? "left or right" : left ? "left" : "right";
-            plain = $"Ctrl+drag: move only the {title} marker {where} into the free bars (its bars stay, a gap is left behind)";
+            ctrl = $"Ctrl+drag: move only the {title} marker {where} into the free bars (its bars stay, a gap is left behind)";
         }
-        else plain = $"Ctrl+drag: no free bars next to {title} for its marker alone";
-        return $"{plain}\nCtrl+drag: move {title} together with its bars (other sections make room)\n" +
+        else ctrl = $"Ctrl+drag: can't move the marker alone (no empty bars beside {title})";
+        return $"{drag}\n{ctrl}\n" +
                $"Drag an edge: resize · Right-click: section options · {addHint}";
     }
 

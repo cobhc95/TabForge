@@ -45,7 +45,7 @@ internal static class ScorePdfExporter
         Services.AudioTrackExport.RequireNotation(project, "a PDF score");
         if (trackIndex < 0 || trackIndex >= project.Tracks.Count || project.Tracks[trackIndex].IsAudio)
             trackIndex = project.Tracks.IndexOf(project.FirstNotationTrack!);
-        var editor = new TabEditorControl { Project = project, SelectedTrackIndex = Math.Max(0, trackIndex), DarkPaper = false, HideCursor = true, PlaybackMeasure = -1 };
+        var editor = new TabEditorControl { Project = project, SelectedTrackIndex = Math.Max(0, trackIndex), Appearance = { DarkPaper = false }, HideCursor = true };
         editor.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
         editor.Arrange(new Rect(editor.DesiredSize));
         editor.UpdateLayout();

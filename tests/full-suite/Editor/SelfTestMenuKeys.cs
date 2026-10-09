@@ -31,7 +31,8 @@ public static partial class SelfTest
         // Alt chords arrive as Key.System with the real key in SystemKey; the bindings must still be found.
         Eq("routing: Alt+Shift+Left (reported as Key.System) runs Previous section", "Section.Previous", Route(Key.System, Key.Left, ModifierKeys.Alt | ModifierKeys.Shift));
         Eq("routing: Alt+Shift+Right (Key.System) runs Next section", "Section.Next", Route(Key.System, Key.Right, ModifierKeys.Alt | ModifierKeys.Shift));
-        Eq("routing: Alt+Up (Key.System) runs Move track up", "Track.MoveUp", Route(Key.System, Key.Up, ModifierKeys.Alt));
+        Eq("routing: Alt+Up (Key.System) runs Move note to higher string (GP5)", "Note.MoveStringUp", Route(Key.System, Key.Up, ModifierKeys.Alt));
+        Eq("routing: Alt+Shift+Up (Key.System) runs Move track up", "Track.MoveUp", Route(Key.System, Key.Up, ModifierKeys.Alt | ModifierKeys.Shift));
         Eq("routing: Ctrl+Alt+Up (Key.System) runs Speed up", "Playback.SpeedUp", Route(Key.System, Key.Up, ModifierKeys.Control | ModifierKeys.Alt));
         Eq("routing: Alt+Left (Key.System), unbound by default, reaches the editor's step-to-entered-note", "<editor>", Route(Key.System, Key.Left, ModifierKeys.Alt));
         var tux = new HotkeySettings { Preset = HotkeyPresets.TuxGuitar };
@@ -45,7 +46,7 @@ public static partial class SelfTest
         var secondMap = HotkeyCatalog.BuildMap(second);
         Eq("routing: a Hotkey 2 chord (Key.System) runs its command", "Section.Previous", Route(Key.System, Key.F3, ModifierKeys.Control | ModifierKeys.Alt, secondMap));
         Eq("routing: a Hotkey 2 Alt+Left runs its command ahead of the editor", "Section.Next", Route(Key.System, Key.Left, ModifierKeys.Alt, secondMap));
-        Eq("routing: a Hotkey 1 is not displaced by a Hotkey 2 on the same key", "Track.MoveUp",
+        Eq("routing: a Hotkey 1 is not displaced by a Hotkey 2 on the same key", "Note.MoveStringUp",
             Route(Key.System, Key.Up, ModifierKeys.Alt, HotkeyCatalog.BuildMap(new HotkeySettings { Bindings2 = { ["Section.Next"] = "Alt+Up" } })));
 
         // Insert / Delete with modifiers belong to their own commands, never to Insert beat / Delete beat.
@@ -81,37 +82,37 @@ public static partial class SelfTest
         editor.SetPosition(0, 0, 2, false);
         var pitch = track.PitchOf(2, 5);
 
-        Check("string move: lower string moves the note (index + 1) and recalculates the fret", editor.MoveNotesToAdjacentString(1)
+        Check("string move: lower string moves the note (index + 1) and recalculates the fret", editor.Effects.MoveNotesToAdjacentString(1)
             && cell.Notes.Count == 1 && cell.Notes[0].StringIndex == 3 && track.PitchOf(3, cell.Notes[0].Fret) == pitch && cell.Notes[0].MidiValue == pitch,
             $"string={cell.Notes[0].StringIndex} fret={cell.Notes[0].Fret}");
         Eq("string move: exactly one undo step for one move", 1, edits);
         Eq("string move: the cursor follows the note", 3, editor.SelectedString);
-        Check("string move: higher string moves it back to the original fret", editor.MoveNotesToAdjacentString(-1) && cell.Notes[0].StringIndex == 2 && cell.Notes[0].Fret == 5);
+        Check("string move: higher string moves it back to the original fret", editor.Effects.MoveNotesToAdjacentString(-1) && cell.Notes[0].StringIndex == 2 && cell.Notes[0].Fret == 5);
 
         // Pitch not playable: open B string to the high E string would need fret -5.
         cell.Notes[0].StringIndex = 1; cell.Notes[0].Fret = 0; cell.Notes[0].MidiValue = track.PitchOf(1, 0);
         editor.SetPosition(0, 0, 1, false);
         edits = 0; status = null;
         Check("string move: a pitch below the open string is refused with a message and no change",
-            !editor.MoveNotesToAdjacentString(-1) && cell.Notes[0].StringIndex == 1 && cell.Notes[0].Fret == 0 && edits == 0 && status is { Length: > 0 }, status);
+            !editor.Effects.MoveNotesToAdjacentString(-1) && cell.Notes[0].StringIndex == 1 && cell.Notes[0].Fret == 0 && edits == 0 && status is { Length: > 0 }, status);
         // Past the last fret.
         cell.Notes[0].StringIndex = 0; cell.Notes[0].Fret = track.NumberOfFrets; cell.Notes[0].MidiValue = track.PitchOf(0, track.NumberOfFrets);
         editor.SetPosition(0, 0, 0, false);
         status = null;
-        Check("string move: a fret past the last fret is refused", !editor.MoveNotesToAdjacentString(1) && cell.Notes[0].StringIndex == 0 && cell.Notes[0].Fret == track.NumberOfFrets && edits == 0 && status is { Length: > 0 });
-        Check("string move: no string above the highest string", !editor.MoveNotesToAdjacentString(-1) && edits == 0);
+        Check("string move: a fret past the last fret is refused", !editor.Effects.MoveNotesToAdjacentString(1) && cell.Notes[0].StringIndex == 0 && cell.Notes[0].Fret == track.NumberOfFrets && edits == 0 && status is { Length: > 0 });
+        Check("string move: no string above the highest string", !editor.Effects.MoveNotesToAdjacentString(-1) && edits == 0);
 
         // The target string is taken in that beat.
         cell.Notes.Clear();
         cell.Notes.Add(new TabNote { StringIndex = 2, Fret = 3, MidiValue = track.PitchOf(2, 3) });
         cell.Notes.Add(new TabNote { StringIndex = 3, Fret = 0, MidiValue = track.PitchOf(3, 0) });
         editor.SetPosition(0, 0, 2, false);
-        Check("string move: an occupied target string refuses the move", !editor.MoveNotesToAdjacentString(1) && cell.Notes[0].StringIndex == 2 && cell.Notes[1].StringIndex == 3 && edits == 0);
+        Check("string move: an occupied target string refuses the move", !editor.Effects.MoveNotesToAdjacentString(1) && cell.Notes[0].StringIndex == 2 && cell.Notes[1].StringIndex == 3 && edits == 0);
 
         // A selection moves every note together (a chord on adjacent strings shifts down as one).
         editor.SelectAll();
         Check("string move: a selected chord shifts to the lower strings together, in one undo step",
-            editor.MoveNotesToAdjacentString(1) && cell.Notes.Select(n => n.StringIndex).OrderBy(i => i).SequenceEqual(new[] { 3, 4 }) && edits == 1);
+            editor.Effects.MoveNotesToAdjacentString(1) && cell.Notes.Select(n => n.StringIndex).OrderBy(i => i).SequenceEqual(new[] { 3, 4 }) && edits == 1);
         Check("string move: pitches are unchanged after the chord shift", cell.Notes.Select(n => n.MidiValue).OrderBy(m => m).SequenceEqual(new[] { track.PitchOf(2, 3), track.PitchOf(3, 0) }.OrderBy(m => m)));
 
         // The plain arrow still moves only the cursor.
@@ -123,8 +124,8 @@ public static partial class SelfTest
         Check("string move: the cursor-only command leaves the notes alone", edits == 0 && editor.SelectedString == 2 && cell.Notes.Select(n => (n.StringIndex, n.Fret)).SequenceEqual(before));
 
         var map = HotkeyCatalog.BuildMap(new HotkeySettings());
-        Check("string move: default keys Alt+Shift+Up / Down are the move-note commands",
-            map.GetValueOrDefault("Alt+Shift+Up") == "Note.MoveStringUp" && map.GetValueOrDefault("Alt+Shift+Down") == "Note.MoveStringDown");
+        Check("string move: default keys Alt+Up / Down are the move-note commands (GP5)",
+            map.GetValueOrDefault("Alt+Up") == "Note.MoveStringUp" && map.GetValueOrDefault("Alt+Down") == "Note.MoveStringDown");
     }
 
     /// <summary>MainWindow.xaml of the source tree the build sits in (or TABFORGE_SOURCE_DIR); null when it is not around.</summary>
@@ -228,7 +229,7 @@ public static partial class SelfTest
         Eq("menu gestures: Longer note value shows -", "-", Text("Longer note value"));
         Eq("menu gestures: Shorter note value shows +", "+", Text("Shorter note value"));
         Eq("menu gestures: Accent shows ; (not Oem1)", ";", Text("Accent"));
-        Eq("menu gestures: Move to higher string shows Alt+Shift+Up", "Alt+Shift+Up", Text("Move to higher string"));
+        Eq("menu gestures: Move to higher string shows Alt+Up", "Alt+Up", Text("Move to higher string"));
 
         keys.Preset = HotkeyPresets.TuxGuitar;
         Verify("TuxGuitar preset", keys);

@@ -22,12 +22,13 @@ using TabForge.Presets;
 using TabForge.Services;
 using TabForge.Shell;
 using TabForge.Views;
+using TabForge.Views.Band;
 using TabForge.Visualization;
 
 namespace TabForge;
 
-// MainWindow, view: dock workspace, theme/notation/clipboard, zoom, fullscreen, practice and panel toggles.
-public partial class MainWindow : IDockLayoutHost, IScoreZoomHost
+// MainWindow, view: dock workspace, theme/notation/clipboard, zoom, fullscreen, fretboard options and panel toggles.
+public partial class MainWindow : IDockLayoutHost, IScoreZoomHost, IBandViewHost
 {
     private void InitializeDockWorkspace()
     {
@@ -51,7 +52,7 @@ public partial class MainWindow : IDockLayoutHost, IScoreZoomHost
         foreach (var (pane, title) in new (FrameworkElement Element, string Title)[]
         {
             (InstrumentHost, "Fretboard pane"), (ArrangementHost, "Arrangement pane"), (ToolsPanelContent, "Tools pane"),
-            (SectionsPanelContent, "Sections pane"), (LowerPanelScroll, "Practice and mixer pane"), (ControllerPanel, "Zoom and speed pane")
+            (SectionsPanelContent, "Sections pane")
         })
             if (string.IsNullOrEmpty(System.Windows.Automation.AutomationProperties.GetName(pane))) System.Windows.Automation.AutomationProperties.SetName(pane, title);
         _dockWorkspace.RegisterPanel("instrument", "Fretboard", InstrumentHost, 360, 150, "instrument", "score-editor");
@@ -59,6 +60,7 @@ public partial class MainWindow : IDockLayoutHost, IScoreZoomHost
         Instrument.RequiredHeightChanged += _ => WorkspaceLayouts.ApplyInstrumentMinHeight();
         Instrument.MaximumHeightChanged += _ => WorkspaceLayouts.ApplyInstrumentMaxHeight();
         _dockWorkspace.RegisterPanel("timeline", "Arrangement", ArrangementHost, 440, 112, "timeline", "score-editor");
+        _dockWorkspace.RegisterPanel("band", "Band", Band.View, 520, 240, "band", "score-editor", startsClosed: true);
         _dockWorkspace.RegisterPanel("tools", "Tools", ToolsPanelContent, 210, 150, "tools", "structure");
         _dockWorkspace.RegisterPanel("structure", "Structure", ToolPalette.PanelContents["structure"], 210, 150, "tools", "tools");
         _dockWorkspace.RegisterPanel("rhythm", "Rhythm", ToolPalette.PanelContents["rhythm"], 210, 140, "tools", "tools");
@@ -67,14 +69,9 @@ public partial class MainWindow : IDockLayoutHost, IScoreZoomHost
         SectionsPanelContent.SizeChanged += (_, e) =>
             SectionsPanelGrid.Height = Math.Max(0, e.NewSize.Height - SectionsPanelContent.Padding.Top - SectionsPanelContent.Padding.Bottom);
         SectionsPanelGrid.Height = 0;
-        _dockWorkspace.RegisterPanel("sections", "Sections", SectionsPanelContent, 190, 180, "side", "practice");
-        _dockWorkspace.RegisterPanel("practice", "Practice / Mixer", LowerPanelScroll, 220, 180, "side", "sections");
-        _dockWorkspace.RegisterPanel("playback", "Zoom & speed", ControllerPanel, 262, 44, "side", "sections");
-        LowerPanelScroll.Visibility = Visibility.Visible;
-        ControllerPanel.Visibility = Visibility.Visible;
-        ControllerPanel.Width = double.NaN;
-        ControllerPanel.HorizontalAlignment = HorizontalAlignment.Stretch;
-        ControllerPanel.VerticalAlignment = VerticalAlignment.Stretch;
+        _dockWorkspace.RegisterPanel("sections", "Sections", SectionsPanelContent, 190, 180, "side", "score-editor");
+        // The score zoom and playback speed live in the top toolbar; a narrow window sheds them in steps there.
+        new ToolbarZoomSpeedFit(MainToolbar, MainMenu, PinnedToolStrip, ToolbarTempoGroup, ZoomSpeedGroup).Update(MainToolbar.ActualWidth);
 
         DockLayout.Children.Clear();
         DockLayout.RowDefinitions.Clear();
@@ -84,6 +81,7 @@ public partial class MainWindow : IDockLayoutHost, IScoreZoomHost
         {
             InstrumentViewMenu.IsChecked = _dockWorkspace.IsPanelVisible("instrument");
             ArrangementMenu.IsChecked = _dockWorkspace.IsPanelVisible("timeline");
+            BandViewMenu.IsChecked = _dockWorkspace.IsPanelVisible("band");
             WorkspaceLayouts.RefreshDockPanelsMenu();
             if (!_suppressWorkspaceSave) SaveSettings();
         };
@@ -110,6 +108,18 @@ public partial class MainWindow : IDockLayoutHost, IScoreZoomHost
     InstrumentPanel IDockLayoutHost.Instrument => Instrument;
     Border IDockLayoutHost.InstrumentHost => InstrumentHost;
 
+    // ---------- Band view (BandViewController) ----------
+
+    private BandViewController? _band;
+    internal BandViewController Band => _band ??= new BandViewController(this);
+    private void ToggleBandView_Click(object sender, RoutedEventArgs e) => WorkspaceLayouts.ToggleBandView();
+    DocumentSession IBandViewHost.ActiveDocument => Doc;
+    (bool LeftHanded, bool ShowNoteNames, string? Scale, int Horizon) IBandViewHost.InstrumentOptions =>
+        (InstrumentPane.LeftHanded, InstrumentPane.ShowNoteNames, InstrumentPane.ScaleHighlight, InstrumentPane.PreviewHorizon);
+    VisualOptions? IBandViewHost.Visual => _options.Visual;
+    void IBandViewHost.MoveSongTrack(int from, int to) => MoveTrackTo(from, to);
+    void IBandViewHost.ShowCursor(int trackIndex, int bar, int cell) { TrackMixerGrid.SelectedIndex = trackIndex; Editor.SetPosition(bar, cell, 0); }
+
     // ---------- theme / notation / clipboard ----------
 
     private void ThemeDark_Click(object sender, RoutedEventArgs e) => SetPaper(dark: true);
@@ -117,7 +127,7 @@ public partial class MainWindow : IDockLayoutHost, IScoreZoomHost
 
     private void SetPaper(bool dark)
     {
-        Editor.DarkPaper = dark;
+        Editor.Appearance.DarkPaper = dark;
         Doc.DarkPaper = dark;
         _settings.Appearance.ScorePaper = dark ? "Dark" : "Light";
         ApplyScorePageBackground();
@@ -150,7 +160,7 @@ public partial class MainWindow : IDockLayoutHost, IScoreZoomHost
 
     private void SetLedgerLines(LedgerLineMode mode)
     {
-        Editor.LedgerLines = mode;
+        Editor.Appearance.LedgerLines = mode;
         _settings.Appearance.LedgerLines = mode.ToString();
         Editor.InvalidateScoreLayout();
         SaveSettings();
@@ -163,8 +173,12 @@ public partial class MainWindow : IDockLayoutHost, IScoreZoomHost
         StatusText.Text = _previewNotes ? "Note preview on" : "Note preview off";
     }
 
+    /// <summary>True when the selection is a timeline range over every track: the keys then act like the timeline menu.</summary>
+    private bool AllTracksRange => _selection.HasRange && _selection.Scope == SelectionScope.AllTracks;
+
     private void Copy_Click(object sender, RoutedEventArgs e)
     {
+        if (AllTracksRange) { _sections.CopyArea(Doc, _selection.StartBar, _selection.EndBar, _selection.ScopeTrack); return; }
         if (CopyScoreSelection(out _) is { } status) StatusText.Text = status;
     }
 
@@ -183,14 +197,23 @@ public partial class MainWindow : IDockLayoutHost, IScoreZoomHost
 
     private void Cut_Click(object sender, RoutedEventArgs e)
     {
+        if (AllTracksRange) { _sections.CutArea(Doc, _selection.StartBar, _selection.EndBar, _selection.ScopeTrack); return; }
         var status = CopyScoreSelection(out var clip);
         if (clip is null) { if (status is not null) StatusText.Text = status; return; }
+        if (EditCommands.CutTakesBars(Doc.Project, clip.Kind, Editor.SelectedTrackIndex, Editor.ActiveVoiceIndex, Editor.SelectionCellRange, Editor.SelectionIsWholeBars) is var (m1, m2))
+        {   // as GP5 (one track: the bars go; the cursor stays on its bar number, the start of what is there now: quiet runs b02, b09)
+            var bar = Editor.SelectedMeasure;
+            _sections.CutArea(Doc, m1, m2, Editor.SelectedTrackIndex);
+            if (Editor.Track is { Measures.Count: > 0 } t) Editor.SelectForEdit(Math.Min(bar, t.Measures.Count - 1), 0, Editor.SelectedString);
+            return;
+        }
         Editor.CutSelection(clip);
         StatusText.Text = "Cut" + status!["Copied".Length..];
     }
 
     private void Paste_Click(object sender, RoutedEventArgs e)
     {
+        if (AllTracksRange) { _sections.PasteAreaAt(Doc, _selection.StartBar); return; }
         if (ClipboardService.Shared.TryGetClip(out var error) is not { } clip) { StatusText.Text = error ?? ClipboardService.NotTabForgeNotesMessage; return; }
         if (Editor.Track is null) return;
         var target = Editor.PasteTarget;
@@ -217,6 +240,7 @@ public partial class MainWindow : IDockLayoutHost, IScoreZoomHost
         if (!outcome.Changed) { StatusText.Text = outcome.Status; return; }
         if (outcome.BarMap is { } map) FinishSectionStructureEdit(outcome.Status, map);
         Editor.NotifyEdited();
+        if (outcome.CursorBar >= 0) Editor.SelectForEdit(outcome.CursorBar, outcome.CursorCell, Editor.SelectedString);   // as GP5: the cursor sits on the last pasted beat
         StatusText.Text = outcome.Status;
     }
 
@@ -305,8 +329,8 @@ public partial class MainWindow : IDockLayoutHost, IScoreZoomHost
 
     private void Fullscreen_Click(object sender, RoutedEventArgs e) => WorkspaceLayouts.ToggleFullscreen();
 
-    private void Multitrack_Click(object sender, RoutedEventArgs e) { TrackMixerGrid.BringIntoView(); StatusText.Text = "Multitrack: all tracks in the mixer; click a color block to jump"; }
-    /// <summary>View > Mixer / VST: the same command as the Mixer button and hotkey (opens the Mixer window, or raises it); the docked Practice tab only shows practice tools.</summary>
+    private void Multitrack_Click(object sender, RoutedEventArgs e) { OpenMixer(); StatusText.Text = "Multitrack: all tracks in the mixer; click a color block to jump"; }
+    /// <summary>View > Mixer / VST: the same command as the Mixer button and hotkey (opens the Mixer window, or raises it).</summary>
     private void ShowMixer_Click(object sender, RoutedEventArgs e) => OpenMixer();
 
     private void Stylesheet_Click(object sender, RoutedEventArgs e) => Prefs_Click(sender, e);
@@ -344,6 +368,7 @@ public partial class MainWindow : IDockLayoutHost, IScoreZoomHost
         _settings = settings;
         _settingsStore.AcceptCurrentAsReplacement();   // reviewed and applied: it may now replace an unreadable settings file
         if (workspaceChanged) _dockWorkspace?.RestoreLayout(settings.Workspace);
+        if (settings.Appearance.FretboardAtBottom != _dockWorkspace?.InstrumentAtBottom) _dockWorkspace?.SetInstrumentPosition(settings.Appearance.FretboardAtBottom);
         if (fretboardVisibilityChanged) _dockWorkspace?.SetPanelVisible("instrument", settings.Appearance.ShowFretboard);
         if (arrangementVisibilityChanged) _dockWorkspace?.SetPanelVisible("timeline", settings.Appearance.ShowArrangementOverview);
         SyncFromSettings(applyWindowSize: false);
@@ -424,14 +449,9 @@ public partial class MainWindow : IDockLayoutHost, IScoreZoomHost
 
     // ---------- practice / view toggles ----------
 
-    private void PracticeOption_Changed(object sender, RoutedEventArgs e)
+    /// <summary>Redraws the fretboard and saves after a practice display option changed in its menu.</summary>
+    private void PracticeOptionChanged()
     {
-        if (!IsLoaded) return;
-        InstrumentPane.ShowNoteNames = PracticeNamesCheck.IsChecked == true;
-        InstrumentPane.LeftHanded = LeftHandedCheck.IsChecked == true;
-        InstrumentPane.PreviewHorizon = PracticePreviewCheck.IsChecked == true ? (int)Math.Round(PreviewHorizonSlider.Value) : 0;
-        InstrumentPane.ScaleHighlight = ScaleHighlightCombo.SelectedIndex <= 0 ? null : ScaleHighlightCombo.SelectedItem?.ToString();
-        InstrumentPane.FretboardFrets = FretboardFretsCombo.SelectedIndex == 1 ? 12 : 24;
         RefreshInstrument();
         SaveSettings();
     }
@@ -455,10 +475,10 @@ public partial class MainWindow : IDockLayoutHost, IScoreZoomHost
         var current = InstrumentPane.ViewFor(track);
         var state = new InstrumentMenuState(Instrument.ShowsKeyboard, drums, track.Name, current, InstrumentViews.All.ToList(),
             MusicTheoryService.NoteNames.ToList(), MusicTheoryService.Scales.Keys.ToList(), InstrumentPane.ScaleHighlight, InstrumentPane.ShowNoteNames,
-            InstrumentPane.PreviewHorizon > 0, InstrumentPane.LeftHanded, _settings.Appearance.LockInstrumentSize);
-        var menu = NewSpecMenu("Fretboard options", InstrumentMenus.Build(state, MenuKey), spec => RunInstrumentCommand(spec, track), Instrument);
+            InstrumentPane.PreviewHorizon > 0, InstrumentPane.LeftHanded, _settings.Appearance.LockInstrumentSize, _settings.Appearance.FretboardAtBottom);
+        var menu = SpecMenus.New("Fretboard options", InstrumentMenus.Build(state, MenuKey), spec => RunInstrumentCommand(spec, track), Instrument);
         Instrument.ContextMenu = menu;
-        OpenContextMenu(menu, Instrument, new Point(8, 8), fromKeyboard);
+        SpecMenus.Open(menu, Instrument, new Point(8, 8), fromKeyboard);
     }
 
     private void RunInstrumentCommand(MenuSpec spec, TrackModel track)
@@ -469,18 +489,14 @@ public partial class MainWindow : IDockLayoutHost, IScoreZoomHost
             case InstrumentMenus.ScaleId: InstrumentPane.SetScaleHighlight(spec.Arg); break;
             case InstrumentMenus.FindScaleId: InstrumentPane.OpenScaleFinder(); break;
             case InstrumentMenus.ClearScaleId: InstrumentPane.ClearScaleHighlight(); break;
-            case InstrumentMenus.NoteNamesId:
-                PracticeNamesCheck.IsChecked = !spec.Checked;
-                PracticeOption_Changed(PracticeNamesCheck, new RoutedEventArgs());
-                break;
+            // Look-ahead off keeps the chosen length in Settings; turning it back on restores that length.
+            case InstrumentMenus.NoteNamesId: InstrumentPane.ShowNoteNames = !spec.Checked; PracticeOptionChanged(); break;
             case InstrumentMenus.PreviewId:
-                PracticePreviewCheck.IsChecked = !spec.Checked;
-                PracticeOption_Changed(PracticePreviewCheck, new RoutedEventArgs());
+                InstrumentPane.PreviewHorizon = spec.Checked ? 0 : Math.Clamp(_settings.Editing.PreviewHorizon, 1, 10);
+                PracticeOptionChanged();
                 break;
-            case InstrumentMenus.LeftHandedId:
-                LeftHandedCheck.IsChecked = !spec.Checked;
-                PracticeOption_Changed(LeftHandedCheck, new RoutedEventArgs());
-                break;
+            case InstrumentMenus.LeftHandedId: InstrumentPane.LeftHanded = !spec.Checked; PracticeOptionChanged(); break;
+            case InstrumentMenus.PositionId: WorkspaceLayouts.SetInstrumentPosition(spec.Arg == "bottom"); break;
             case InstrumentMenus.LockId: WorkspaceLayouts.ToggleInstrumentSizeLock(); break;
             case InstrumentMenus.SettingsId: OpenSettings(SettingsCatalog.Fretboard, InstrumentMenus.SettingsRow); break;
         }
@@ -522,13 +538,5 @@ public partial class MainWindow : IDockLayoutHost, IScoreZoomHost
         ArrangementIndividualNotesMenu.IsChecked = Arrangement.ShowIndividualNotes;
         ArrangementContinuousBlocksMenu.IsChecked = Arrangement.ShowContinuousBlocks;
         SaveTimelineAppearance();
-    }
-
-    private void ShowPractice_Click(object sender, RoutedEventArgs e)
-    {
-        _dockWorkspace?.SetPanelVisible("practice", true);
-        _dockWorkspace?.SelectPanel("practice");
-        PracticePreviewCheck.IsChecked = true;
-        StatusText.Text = "Practice and mixer panel";
     }
 }

@@ -52,9 +52,9 @@ The **Sections** panel lists every section in its colour. Click a name to jump t
 
 ## Move and resize sections
 
-Sections can move in two different ways. Drag a block to move only its marker: the bars stay where they are, and the section takes the place of free bars beside it. Hold `Ctrl` and drag to move the section together with its bars, and the sections around it make room.
+Sections can move in two different ways. Drag a block to move the section together with its bars, and the sections around it make room. Hold `Ctrl` and drag to move only its marker: the bars stay where they are, and the section takes the place of free bars beside it.
 
-A plain drag needs free bars next to the section. In a song where sections fill every bar, hover over a block to read its hint. If no free bars exist, the hint says the section cannot move on its own. Use `Ctrl` and drag instead.
+A `Ctrl` drag needs free bars next to the section. In a song where sections fill every bar, hover over a block to read its hint. If no free bars exist, the hint says the section cannot move on its own. Drag it without `Ctrl` to move it with its bars.
 
 To resize a section, drag its left or right edge. Making a section shorter leaves bars that belong to no section. Making it longer pushes the sections after it along. A locked section does not move or resize. To unlock one, right-click it and untick **Lock section position**.
 
@@ -65,7 +65,7 @@ To resize a section, drag its left or right edge. Making a section shorter leave
 1. Choose **File > Open…**, go to the `Samples` folder beside `TabForge.exe`, choose `TabForge Demo - Ashen Meridian.gp` and click **Open**.
 2. Turn the mouse wheel up over the timeline until the blocks in the section lane are wide enough to grab.
 3. Find the block named **Chorus 1**, which starts at bar 40.
-4. Hold `Ctrl` and drag the **Chorus 1** block to the right, past **Post-chorus**. The sections beside it move to make room.
+4. Drag the **Chorus 1** block to the right, past **Post-chorus**. The sections beside it move to make room.
 5. Press `Ctrl+Z`. The chorus jumps back to bar 40, and the song is as it was.
 
 The song you opened is an unsaved copy, so the sample file on disk never changed.
@@ -140,9 +140,9 @@ On the first pass the song plays the first ending. At the repeat sign it jumps b
 
 ## Reorder tracks and groups
 
-The track list sits at the left of the timeline. To change the order, drag a track's number up or down. You can also select a track and choose **Track > Move up** or **Track > Move down**, or press `Alt+Up` or `Alt+Down`. Playback carries on while you do it.
+The track list sits at the left of the timeline. To change the order, drag a track's number up or down. You can also select a track and choose **Track > Move up** or **Track > Move down**, or press `Alt+Shift+Up` or `Alt+Shift+Down`. Playback carries on while you do it.
 
-The track list always fits its rows. Drag the splitter under the list to make the rows taller or shorter, between 30 and 90 pixels, and double-click the splitter to reset them. The command to reset the row height is in the **View** menu and has no default key.
+The timeline pane can be shrunk to about three track rows. Then its track list and lanes scroll together with the mouse wheel, and the height you choose is saved. Drag the splitter under the list to make the rows taller or shorter, between 30 and 90 pixels, and double-click the splitter to reset them. The command to reset the row height is in the **View** menu and has no default key.
 
 Groups keep a big song tidy. Right-click empty space in the track list and tick **Show tracks in groups**. A header appears for each group, such as guitars or drums. Click the arrow on a header to collapse its tracks, or drag the header to move the whole group.
 
@@ -182,9 +182,11 @@ When you record with the loop on, every pass becomes its own take on its own lan
 
 ## Work with clips
 
-The song grows to fit its clips. If you drop, import, move, paste or record a clip that ends after the last bar, TabForge adds whole empty bars so that nothing is cut off. One **Undo** removes the clip and the added bars. The song never shrinks on its own.
+The song grows to fit its clips. If you drop, import, move, paste or record a clip that ends after the last bar, TabForge adds whole empty bars so that nothing is cut off. One **Undo** removes the clip and the added bars.
 
-A recording or an audio file on the timeline is a clip. Click a clip to select it. Drag its body to move it, even onto another track. Drag its left or right edge to trim it. Right-click it for a menu with **Copy**, **Cut**, **Paste**, **Duplicate**, **Delete**, **Mute** and **Properties…**.
+With **Settings > Editing > Clips > Remove empty bars at the end when clips shrink** (on by default), deleting, cropping or moving clips earlier also drops the empty bars at the end of the song. One **Undo** restores the clip and the bars together.
+
+A recording or an audio file on the timeline is a clip. Click a clip to select it. Drag its body to move it, even onto another track. Drag its left or right edge to trim it, or drag an edge past the end of the media to repeat it. A dashed line marks each pass, and the song grows to hold the clip. Right-click it for a menu with **Copy**, **Cut**, **Paste**, **Duplicate**, **Delete**, **Mute** and **Properties…**.
 
 Some keys work while a clip is selected. `Left` and `Right` nudge it by one beat. `Shift+Left` and `Shift+Right` nudge it by 10 milliseconds. `Ctrl+D` duplicates it, `Ctrl+M` mutes it and `F2` opens its properties.
 
@@ -203,7 +205,7 @@ A MIDI clip can become real notation. Right-click it and choose **Write into the
 ## Quick recap
 
 - The timeline shows one row per track, a ruler, a section lane and the playback marker, and the wheel zooms it.
-- Add a section with `M`. Drag moves a marker into free bars, and `Ctrl` with drag moves the bars too.
+- Add a section with `M`. Drag moves the section with its bars, and `Ctrl` with drag moves only its marker into free bars.
 - Drag across bars to select an area across every track. It is also the loop area, and `Esc` clears it.
 - Three right-click menus copy, cut, paste, move and skip bars. `Shift+F10` opens them from the keyboard.
 - Removing a section's bars deletes its notes from every track, so undo at once if it was a mistake.

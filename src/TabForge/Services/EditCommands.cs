@@ -61,6 +61,30 @@ public static partial class EditCommands
         foreach (var cell in cells) cell.DurationDenominator = denominator;
     }
 
+    /// <summary>
+    /// Lays the beats of a plain bar end to end from its first beat by their written lengths, so a changed duration moves the beats after it
+    /// (GP5 closes up instead of leaving gaps). Rests after the last note go unless <paramref name="keep"/> holds them (the rest fill refills the end).
+    /// False, and nothing changes, for a bar with tuplets or free positions.
+    /// </summary>
+    public static bool CloseUp(List<TabCell> cells, int slots, IReadOnlySet<TabCell> keep)
+    {
+        if (!BarFill.IsPlain(cells)) return false;
+        var beats = cells.Where(c => c.Notes.Count > 0 || c.IsRest || c.HasAnnotation).ToList();
+        if (beats.Count == 0) return false;
+        var start = cells.IndexOf(beats[0]);
+        var last = beats.FindLastIndex(c => !c.IsRest || c.HasAnnotation || keep.Contains(c));
+        beats.RemoveRange(last + 1, beats.Count - last - 1);
+        cells.Clear();
+        foreach (var beat in beats)
+        {
+            while (cells.Count < start) cells.Add(new TabCell());
+            cells.Add(beat);
+            start += Math.Max(1, MusicTime.CellSlotsRounded(beat));
+        }
+        while (cells.Count < Math.Max(slots, start)) cells.Add(new TabCell());
+        return true;
+    }
+
     /// <summary>Whether toggling the triplet should turn it on: off only when every cell is already a tuplet.</summary>
     public static bool NextTriplet(IReadOnlyCollection<TabCell> cells)
         => !cells.All(cell => cell.IsTriplet || cell.TupletNumerator > 0);
@@ -71,6 +95,26 @@ public static partial class EditCommands
         cell.IsTriplet = triplet;
         if (!triplet) { cell.TupletNumerator = 0; cell.TupletDenominator = 0; }
         else if (cell.TupletNumerator == 0) { cell.TupletNumerator = 3; cell.TupletDenominator = 2; }
+    }
+
+    /// <summary>
+    /// Times the beats of a bar's voice from cell <paramref name="from"/> on one after another, each where the one before ends, as GP5 times
+    /// them after a beat's length changed (triplet taken off the middle of a group: quiet GP5 b05 / b06). Cells keep their indices; a beat whose
+    /// cell the onset rule already puts there loses its written position.
+    /// </summary>
+    public static void RetimeFrom(IReadOnlyList<TabCell> cells, int from)
+    {
+        static bool IsBeat(TabCell c) => c.Notes.Count > 0 || c.IsRest || c.HasAnnotation;
+        var onsets = BarGrid.Onsets(cells);
+        double? end = null;   // where the beat before ends; the first beat keeps its onset
+        for (var i = 0; i < Math.Min(from, cells.Count); i++) if (IsBeat(cells[i])) end = onsets[i] + MusicTime.CellSlots(cells[i]);
+        for (var i = Math.Max(0, from); i < cells.Count; i++)
+        {
+            if (!IsBeat(cells[i])) continue;
+            var pos = end ?? onsets[i];
+            cells[i].RhythmicPosition = Math.Abs(Math.Max(i, end ?? 0) - pos) < 1e-6 ? null : pos;
+            end = pos + MusicTime.CellSlots(cells[i]);
+        }
     }
 
     /// <summary>Staccato toggle over a selection: on unless every beat already has it.</summary>

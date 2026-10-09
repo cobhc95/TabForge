@@ -164,7 +164,7 @@ internal static partial class DiagnosticCommands
             var trackIndex = args.Length > 5 && int.TryParse(args[5], out var ti) ? Math.Clamp(ti, 0, Math.Max(0, project.Tracks.Count - 1)) : 0;
             var editor = new Views.TabEditorControl { Project = project, SelectedTrackIndex = trackIndex };
             // Look checks: TF_RENDER_LIGHT=1 draws the light paper; TF_RENDER_STAFFOPACITY=0..1 scales the staff-line (and ledger-line) opacity.
-            if (Environment.GetEnvironmentVariable("TF_RENDER_LIGHT") == "1") editor.DarkPaper = false;
+            if (Environment.GetEnvironmentVariable("TF_RENDER_LIGHT") == "1") editor.Appearance.DarkPaper = false;
             if (double.TryParse(Environment.GetEnvironmentVariable("TF_RENDER_STAFFOPACITY"), NumberStyles.Float, CultureInfo.InvariantCulture, out var staffOpacity))
             {
                 static System.Windows.Media.Color Fade(System.Windows.Media.Color c, double o) => System.Windows.Media.Color.FromArgb((byte)Math.Round(255 * Math.Clamp(o, 0, 1)), c.R, c.G, c.B);

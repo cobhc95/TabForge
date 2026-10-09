@@ -38,7 +38,7 @@ public partial class MainWindow : IRecordingHost
     ArrangementPanel IRecordingHost.Arrangement => Arrangement;
     string? IRecordingHost.CurrentPath => _currentPath;
     bool IRecordingHost.LoopOn => _loop;
-    int IRecordingHost.LoopStartCell => _loopStartCell;
+    int IRecordingHost.LoopStartCell => _selLoop.StartCell;
     (int start, int end) IRecordingHost.GetLoopRange() => GetLoopRange();
     (int Measure, int Cell, int String) IRecordingHost.Cursor => (Editor.SelectedMeasure, Editor.SelectedCell, Editor.SelectedString);
     void IRecordingHost.RestoreCursor(int measure, int cell, int stringIndex)

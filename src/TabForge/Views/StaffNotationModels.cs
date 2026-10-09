@@ -47,6 +47,8 @@ internal sealed class StaffNotationMeasureLayout
     public double ContentLeft { get; set; } = double.NegativeInfinity;
     /// <summary>Row stacking of the markings around this staff; shared by both voices of a bar (set by the editor, else private to the layout).</summary>
     public MarkSkyline Skyline { get; set; } = new();
+    /// <summary>The TAB is shown: harmonic captions ("Harm.", "A.H.") are printed over the TAB fret instead of under the staff (set by the editor).</summary>
+    public bool HarmonicCaptionsOnTab { get; set; }
     /// <summary>Voice 2 only: voice 1's layout of the same bar (set by the editor before drawing), so a fermata both voices hold can be drawn once in the TAB.</summary>
     public StaffNotationMeasureLayout? FirstVoice { get; set; }
     public StaffNotationBeat? BeatForCell(int cellIndex) => Beats.FirstOrDefault(b => b.CellIndex == cellIndex);

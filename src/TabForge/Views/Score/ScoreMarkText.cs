@@ -256,6 +256,9 @@ internal static class ScoreMarkText
 
     internal static bool IsPalmMute(string technique) => TechniqueNames.IsPalmMute(technique);
 
+    /// <summary>The note shows P.M.: a tied continuation never does (as in the reference), even when it carries the mark.</summary>
+    internal static bool ShowsPalmMute(TabNote note) => !note.Tied && note.Techniques.Any(IsPalmMute);
+
     /// <summary>the standard swing indicator, e.g. "(♫ = ♩♪)".</summary>
     internal static string SwingSymbol(string feel) => feel == TripletFeels.Sixteenth ? "(♬ = ♪♬)" : "(♫ = ♩♪)";
 

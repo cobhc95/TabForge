@@ -35,7 +35,7 @@ public partial class MainWindow
     private string MenuKey(string id) => HotkeyCatalog.DisplayAll(_settings.Hotkeys, id);
 
     /// <summary>
-    /// Right-click on empty page (docs/CONTEXT_MENU_AUDIT.md section 6). With a <paramref name="target"/> over a beat the beat is
+    /// Right-click on empty page. With a <paramref name="target"/> over a beat the beat is
     /// selected (no seek) and Paste / Paste special appear first when the clipboard holds a clip. Lean (owner decisions
     /// 2026-09-30): notation, zoom, page layout and ONE "Score settings..." door; paper, ledger lines, page turns, colours and
     /// text fonts are Preferences rows.
@@ -49,8 +49,8 @@ public partial class MainWindow
             RefreshToolsPalette();
         }
         var state = new ScoreEmptyState(overBeat, ClipboardService.Shared.CanPaste, Editor.Notation != NotationMode.TabOnly,
-            Editor.CenterSystems, Editor.HorizontalScroll);
-        var menu = NewSpecMenu("Score options", ScoreMenus.Empty(state, MenuKey), spec =>
+            Editor.Appearance.CenterSystems, Editor.HorizontalScroll);
+        var menu = SpecMenus.New("Score options", ScoreMenus.Empty(state, MenuKey), spec =>
         {
             switch (spec.Id)
             {
@@ -72,7 +72,7 @@ public partial class MainWindow
                 case ScoreMenus.SettingsId: OpenSettings(SettingsCatalog.Score, ScoreMenus.SettingsRow); break;
             }
         }, Editor);
-        OpenContextMenu(menu, Editor, target?.Anchor, target?.FromKeyboard == true);
+        SpecMenus.Open(menu, Editor, target?.Anchor, target?.FromKeyboard == true);
     }
 
     /// <summary>
@@ -109,24 +109,24 @@ public partial class MainWindow
             foreach (var tool in ToolPaletteController.PaletteTools.Where(t => t.Group == category && t.Supported))
             {
                 var durationKey = tool.Id.StartsWith("duration:", StringComparison.Ordinal) ? tool.Id[9..] : null;
-                var enabled = (durationKey is null || Editor.CanSetDurationForTool(durationKey)) && ToolPalette.PaletteToolEnabled(tool.Id);
+                var enabled = (durationKey is null || Editor.Effects.CanSetDurationForTool(durationKey)) && ToolPalette.PaletteToolEnabled(tool.Id);
                 group.Items.Add(Item(tool.Label, () => RunTool(tool.Id), ToolPalette.PaletteToolState(tool.Id), enabled, radio: radio));
             }
             return group;
         }
 
         var pitchAndString = new MenuItem { Header = ContextMenuLayouts.PitchAndString, Style = (Style)FindResource(typeof(MenuItem)) };
-        pitchAndString.Items.Add(Item("Pitch up a semitone", () => Editor.ShiftPitch(1), gesture: MenuKey("Note.PitchUp")));
-        pitchAndString.Items.Add(Item("Pitch down a semitone", () => Editor.ShiftPitch(-1), gesture: MenuKey("Note.PitchDown")));
-        pitchAndString.Items.Add(Item("Move note to higher string", () => Editor.MoveNotesToAdjacentString(-1), gesture: MenuKey("Note.MoveStringUp")));
-        pitchAndString.Items.Add(Item("Move note to lower string", () => Editor.MoveNotesToAdjacentString(1), gesture: MenuKey("Note.MoveStringDown")));
+        pitchAndString.Items.Add(Item("Pitch up a semitone", () => Editor.Effects.ShiftPitch(1), gesture: MenuKey("Note.PitchUp")));
+        pitchAndString.Items.Add(Item("Pitch down a semitone", () => Editor.Effects.ShiftPitch(-1), gesture: MenuKey("Note.PitchDown")));
+        pitchAndString.Items.Add(Item("Move note to higher string", () => Editor.Effects.MoveNotesToAdjacentString(-1), gesture: MenuKey("Note.MoveStringUp")));
+        pitchAndString.Items.Add(Item("Move note to lower string", () => Editor.Effects.MoveNotesToAdjacentString(1), gesture: MenuKey("Note.MoveStringDown")));
         var parts = new Dictionary<string, Func<MenuItem>>
         {
             [ContextMenuLayouts.Copy] = () => Item("Copy", () => Copy_Click(this, new RoutedEventArgs()), gesture: MenuKey("Edit.Copy")),
             [ContextMenuLayouts.Cut] = () => Item("Cut", () => Cut_Click(this, new RoutedEventArgs()), gesture: MenuKey("Edit.Cut")),
             [ContextMenuLayouts.Paste] = () => Item("Paste", () => Paste_Click(this, new RoutedEventArgs()), gesture: MenuKey("Edit.Paste")),
             [ContextMenuLayouts.PasteSpecial] = () => Item("Paste special…", () => PasteSpecial_Click(this, new RoutedEventArgs()), gesture: MenuKey("Edit.PasteSpecial")),
-            [ContextMenuLayouts.Delete] = () => Item("Delete", () => Editor.DeleteNote(), gesture: ContextMenuLayouts.FixedKeys.DeleteNote),
+            [ContextMenuLayouts.Delete] = () => Item("Delete", () => Editor.Effects.DeleteNote(), gesture: ContextMenuLayouts.FixedKeys.DeleteNote),
             [ContextMenuLayouts.Duration] = () => Group("Duration", "Duration", radio: true),
             [ContextMenuLayouts.Dynamics] = () => Group("Dynamics", "Dynamic", radio: true),
             [ContextMenuLayouts.Effects] = () => Group("Effects", "Effects"),
@@ -135,12 +135,12 @@ public partial class MainWindow
         };
         foreach (var id in ContextMenuLayouts.NoteMenu(ClipboardService.Shared.CanPaste))
         {
-            if (id == ContextMenuLayouts.Sep) menu.Items.Add(MenuSeparator());
+            if (id == ContextMenuLayouts.Sep) menu.Items.Add(SpecMenus.Separator(this));
             else menu.Items.Add(parts[id]());
         }
         menu.Closed += (_, _) => RefreshToolsPalette();
         menu.PlacementTarget = Editor;
-        OpenContextMenu(menu, Editor, target.Anchor, target.FromKeyboard);
+        SpecMenus.Open(menu, Editor, target.Anchor, target.FromKeyboard);
     }
 
     private void SetSmoothFollow(bool smooth)
@@ -155,7 +155,7 @@ public partial class MainWindow
     private void SetPlayingBar(bool on)
     {
         _settings.Follow.PlayingBarEnabled = on;
-        Editor.PlayingBarEnabled = on;
+        Editor.Appearance.PlayingBarEnabled = on;
         PlayingBarMenu.IsChecked = on;
         Editor.InvalidateVisual();
         SaveSettings();
@@ -184,7 +184,7 @@ public partial class MainWindow
         CaptureDocumentState();
         Doc.ContinuousScoreView = continuous;
         _settings.PreferredContinuousScoreView = continuous;
-        Editor.CenterSystems = continuous;
+        Editor.Appearance.CenterSystems = continuous;
         ScoreZoom.ApplyPageWidth(new Point(ScoreScroll.ViewportWidth / 2, 0));
         SaveSettings();
         StatusText.Text = continuous ? "Score layout: continuous" : "Score layout: page";
@@ -255,9 +255,9 @@ public partial class MainWindow
 
     private void SetDurationGlowOpacity(double opacity)
     {
-        Editor.DurationGlowOpacity = Math.Clamp(opacity, 0, 1);
+        Editor.Appearance.DurationGlowOpacity = Math.Clamp(opacity, 0, 1);
         Editor.InvalidateVisual();
-        Playhead.SetDurationStyle(Editor.DurationGlowColor, Editor.DurationGlowOpacity, _settings.Follow.DurationTintEnabled);
+        Playhead.SetDurationStyle(Editor.Appearance.DurationGlowColor, Editor.Appearance.DurationGlowOpacity, _settings.Follow.DurationTintEnabled);
         SaveSettings();
     }
 }

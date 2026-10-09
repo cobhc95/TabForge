@@ -29,7 +29,7 @@ public static partial class SelfTest
         ed.CurrentDurationDenominator = 4;
         var bar0 = song.Tracks[0].Measures[0].Cells;
         var bar1Before = song.Tracks[0].Measures[1].Cells.Count(c => c.IsRest);
-        ed.EnterFret(3);
+        ed.Effects.EnterFret(3);
         Check("rest fill: a note in an empty bar completes the bar with rests (no red), one undo step",
             bar0[0].Notes.Count == 1 && !bar0[0].IsRest && bar0[4].IsRest && bar0[8].IsRest && bar0[8].DurationDenominator == 2 &&
             !MusicTime.AnalyzeBar(song, 0).Marked && steps() == 1);
@@ -37,17 +37,17 @@ public static partial class SelfTest
 
         // Delete turns the beat into a rest of the same length.
         ed.SetPosition(0, 0, 1, false);
-        ed.DeleteBeat();
+        ed.Effects.DeleteBeat();
         Check("rest fill: Delete turns the beat into a rest of the same length", bar0[0].IsRest && bar0[0].Notes.Count == 0 && bar0[0].DurationDenominator == 4 && !MusicTime.AnalyzeBar(song, 0).Marked);
 
         // Empty bar: one whole-bar rest.
-        ed.EmptyBar();
+        ed.Effects.EmptyBar();
         Check("rest fill: an emptied bar is one whole-bar rest", bar0[0].IsRest && bar0[0].DurationDenominator == 1 && bar0.Skip(1).All(c => !c.IsRest) && !MusicTime.AnalyzeBar(song, 0).Marked);
 
         // A note typed onto the rest splits it.
         ed.CurrentDurationDenominator = 8;
         ed.SetPosition(0, 0, 1, false);
-        ed.EnterFret(5);
+        ed.Effects.EnterFret(5);
         Check("rest fill: a note typed onto the whole-bar rest takes its own length and the rest is refilled",
             bar0[0].Notes.Count == 1 && bar0[0].DurationDenominator == 8 && bar0[2].IsRest && !MusicTime.AnalyzeBar(song, 0).Marked);
 
@@ -57,9 +57,9 @@ public static partial class SelfTest
         cells2[0] = Note(4, 1);
         ed2.CurrentDurationDenominator = 4;
         ed2.SetPosition(0, 0, 1, false);
-        ed2.EnterFret(1);                       // quarter note, rest of the bar filled
+        ed2.Effects.EnterFret(1);                       // quarter note, rest of the bar filled
         ed2.SetPosition(0, 0, 1, false);
-        ed2.InsertBeat();
+        ed2.Effects.InsertBeat();
         Check("rest fill: insert beat moves the note right, takes the room from the rests and the bar still adds up",
             cells2[0].IsRest && cells2[4].Notes.Count == 1 && NoteCount(cells2) == 1 && !MusicTime.AnalyzeBar(song2, 0).Marked);
 
@@ -69,17 +69,18 @@ public static partial class SelfTest
         for (var i = 0; i < 4; i++) cells3[i * 4] = Note(4, i + 1);
         ed3.CurrentDurationDenominator = 4;
         ed3.SetPosition(0, 0, 1, false);
-        ed3.InsertBeat();
+        ed3.Effects.InsertBeat();
         Check("rest fill: insert into a full bar never drops a note, the bar shows red", NoteCount(song3.Tracks[0].Measures[0].Cells) == 4 && MusicTime.AnalyzeBar(song3, 0).Marked);
 
         // Off: the old behaviour (a half-empty bar is short and red).
         var (ed4, song4, _) = Make(false);
         ed4.CurrentDurationDenominator = 4;
-        ed4.EnterFret(3);
+        ed4.SetPosition(0, 0, 1, false);
+        ed4.Effects.EnterFret(3);
         var cells4 = song4.Tracks[0].Measures[0].Cells;
         Check("rest fill off: no rests are added and the half-empty bar is marked", !cells4[4].IsRest && !cells4.Skip(1).Any(c => c.IsRest) && MusicTime.AnalyzeBar(song4, 0).Marked);
         ed4.SetPosition(0, 0, 1, false);
-        ed4.DeleteBeat();
+        ed4.Effects.DeleteBeat();
         Check("rest fill off: Delete leaves an empty beat, not a rest", !cells4[0].IsRest && cells4[0].Notes.Count == 0);
 
         // Insert bar: with the fill on the new bar is one whole-bar rest in every track; off it stays empty.

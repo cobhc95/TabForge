@@ -109,23 +109,6 @@ public partial class MainWindow
     private void ApplyLoopRange(int start, int end, int startCell = 0, int endCell = -1, SelectionScope? scope = null) =>
         _selection.SetRange(Editor.SelectedTrackIndex, start, end, SelectionOrigin.Command, startCell, endCell, scope);
 
-    /// <summary>Only <see cref="ApplySelectionToTimeline"/> calls this: the area always equals the shared selection.</summary>
-    private void ApplyLoopArea(int start, int end, int startCell, int endCell)
-    {
-        _loopStartBar = start;
-        _loopEndBar = end;
-        _loopStartCell = Math.Max(0, startCell);
-        _loopEndCell = endCell;
-        _loopHasArea = true;
-        Arrangement.SetLoopRange(start, end);
-        SyncAreaVisuals();
-        _midi.SetLoopRange(start, end, _loopStartCell, _loopEndCell);
-        Arrangement.SetLoopEnabled(ShowLoopOnTimeline);
-        StatusText.Text = _loop
-            ? $"Looping bars {start + 1}-{end + 1}"
-            : BarRangePromptText.Tip(start, end, MenuKey);
-    }
-
     /// <summary>Song or track selection changed: keep the mixer, FX windows and audio engine in step.</summary>
     private void RefreshPluginChain() => SyncMixerWindows();
 
@@ -152,7 +135,7 @@ public partial class MainWindow
             Editor.SetPosition(mapping[selectedBar], Editor.SelectedCell, Editor.SelectedString, seekPlayback: false);
         if (Playback.ApplySectionMove(mapping))   // the document's remap and playhead bar; the views follow below
         {
-            Editor.PlaybackBarRemap = _playbackBarRemap;
+            Editor.Playback.BarRemap = _playbackBarRemap;
             var engine = Playback.Engine;
             _ = engine.RefreshArrangementInBackground(_project, _playbackBarRemap!);   // copies the song here; the pool thread compiles the copy
         }
@@ -162,9 +145,9 @@ public partial class MainWindow
         UpdateTitle();
         if (_isPlayingVisual && _playheadBar >= 0)
         {
-            Editor.SetPlayhead(_playheadBar, _playheadCell);
-            Playhead.SetGeometry(Editor.PlayheadGeometry());
-            Playhead.SetDurationGeometries(Editor.PlaybackDurationGeometries());
+            Editor.Playback.SetPlayhead(_playheadBar, _playheadCell);
+            Playhead.SetGeometry(Editor.Playback.PlayheadGeometry());
+            Playhead.SetDurationGeometries(Editor.Playback.DurationGeometries());
         }
         SyncAudioEngine();   // clips that moved with the section
         StatusText.Text = "Section moved";
@@ -188,43 +171,11 @@ public partial class MainWindow
         }
     }
 
-    private void RefreshSongStats()
-    {
-        var notes = _project.Tracks.Sum(t => t.Measures.Sum(m => m.Cells.Sum(c => c.Notes.Count)));
-        var maxM = _project.Tracks.Count == 0 ? 0 : _project.Tracks.Max(t => t.Measures.Count);
-        SongStatsText.Text = $"Tracks {_project.Tracks.Count}   Bars {maxM}   Notes {notes}   Sections {_project.Markers.Count}";
-        OverviewTitle.Text = string.IsNullOrWhiteSpace(_currentPath)
-            ? $"{_project.Title} (unsaved)"
-            : $"{_project.Title} — {Path.GetFileName(_currentPath)}";
-    }
-
-    private void RefreshTheoryCombos()
-    {
-        foreach (var n in MusicTheoryService.NoteNames) { ChordRootCombo.Items.Add(n); ScaleRootCombo.Items.Add(n); }
-        foreach (var k in MusicTheoryService.Chords.Keys) ChordTypeCombo.Items.Add(k);
-        foreach (var k in MusicTheoryService.Scales.Keys) ScaleNameCombo.Items.Add(k);
-        ChordRootCombo.SelectedIndex = 0; ChordTypeCombo.SelectedIndex = 0;
-        ScaleRootCombo.SelectedIndex = 0; ScaleNameCombo.SelectedIndex = 0;
-    }
-
-    private void RefreshScaleHighlightCombo()
-    {
-        var previous = InstrumentPane.ScaleHighlight;
-        ScaleHighlightCombo.Items.Clear();
-        ScaleHighlightCombo.Items.Add("Off");
-        foreach (var root in MusicTheoryService.NoteNames)
-            foreach (var scale in new[] { "Major", "Natural Minor", "Minor Pentatonic", "Major Pentatonic", "Dorian", "Mixolydian", "Blues" })
-                ScaleHighlightCombo.Items.Add($"{root} {scale}");
-        if (previous is not null && ScaleHighlightCombo.Items.Contains(previous)) ScaleHighlightCombo.SelectedItem = previous;
-        else ScaleHighlightCombo.SelectedIndex = 0;
-    }
 
 
     // ---------- selected area (bar range picked by dragging the timeline or selecting in the score) ----------
 
     private List<(int Start, int End)> _skipRanges => Doc.SkipRanges;
-
-    private bool AreaContains(int bar) => _loopHasArea && bar >= _loopStartBar && bar <= _loopEndBar;
 
     /// <summary>
     /// The timeline marks the loop only when it is a real selection (an area, or the section loop). Looping
@@ -235,7 +186,7 @@ public partial class MainWindow
         get
         {
             if (!_loop) return false;
-            if (_loopHasArea) return true;
+            if (_selLoop.HasArea) return true;
             var (start, end) = GetLoopRange();
             return start > 0 || end < Math.Max(0, MaxMeasures() - 1);
         }
@@ -246,7 +197,7 @@ public partial class MainWindow
 
     private void SyncAreaVisuals()
     {
-        Arrangement.SetAreaVisible(_loopHasArea);
+        Arrangement.SetAreaVisible(_selLoop.HasArea);
         Arrangement.SetLoopEnabled(ShowLoopOnTimeline);
         Arrangement.SetSkipRanges(_skipRanges);
         _midi.SetSkipRanges(_skipRanges);
@@ -255,7 +206,7 @@ public partial class MainWindow
     /// <summary>The selection menu (owner request: Copy / Cut / Paste / Delete on top, the rest in submenus).</summary>
     private ContextMenu BuildSelectionMenu()
     {
-        var (s, e) = (_loopStartBar, _loopEndBar);
+        var (s, e) = (_selLoop.StartBar, _selLoop.EndBar);
         var label = s == e ? $"bar {s + 1}" : $"bars {s + 1}-{e + 1}";
         var skipped = _skipRanges.Any(r => r.Start == s && r.End == e);
         var state = new SelectionMenuState(s == e ? $"Bar {s + 1} selected" : $"Bars {s + 1}-{e + 1} selected",
@@ -292,7 +243,7 @@ public partial class MainWindow
     private void ShowTimelineContextMenuFromKeyboard()
     {
         if (MaxMeasures() == 0) return;
-        var bar = _loopHasArea ? _loopStartBar
+        var bar = _selLoop.HasArea ? _selLoop.StartBar
             : _isPlayingVisual && _playheadBar >= 0 ? _playheadBar : Editor.SelectedMeasure;
         ShowArrangementContextMenu(bar, Math.Max(0, TrackMixerGrid.SelectedIndex), fromKeyboard: true);
     }
@@ -313,7 +264,7 @@ public partial class MainWindow
 
         // Inside the selected bars: the selection menu only. Outside it: the single-bar menu, and the selection stays.
         Point? anchor = fromKeyboard && bar >= 0 ? Arrangement.TimelineBarAnchor(bar) : null;
-        if (AreaContains(bar)) { OpenContextMenu(BuildSelectionMenu(), Arrangement, anchor, fromKeyboard); return; }
+        if (_selLoop.Contains(bar)) { SpecMenus.Open(BuildSelectionMenu(), Arrangement, anchor, fromKeyboard); return; }
 
         var selectedTrack = hasTrack ? _project.Tracks[trackIndex] : SelectedTrack;
         var hasBar = bar >= 0;
@@ -322,12 +273,14 @@ public partial class MainWindow
         var canPasteBars = TimelineClips.CanPasteOnTimeline(barsClip);
         var state = new BarMenuState(hasBar, selectedTrack is not null, _project.Tracks.Count,
             selectedTrack is not null && selectedTrack.Measures.Count > 1, MaxMeasures() > 1,
-            section is not null, section?.LockPosition ?? false, canPasteBars, canPasteBars && barsClip!.Tracks.Count > 1);
+            section is not null, section?.LockPosition ?? false, canPasteBars, canPasteBars && barsClip!.Tracks.Count > 1, _settings.Timeline.ShowTrackLines);
         var menu = NewTimelineMenu("Arrangement timeline options", TimelineMenus.Bar(state, MenuKey), command =>
         {
             switch (command)
             {
                 case TimelineCommand.TimelineSettings: OpenSettings(SettingsCatalog.Timeline, TimelineMenus.TimelineSettingsRow); break;
+                case TimelineCommand.ToggleTrackLines: Arrangement.ToggleTrackLines(); SaveTimelineAppearance(); break;
+                case TimelineCommand.ResetTrackListHeight: Arrangement.RequestResetTrackListHeight(); break;
                 case TimelineCommand.CopyBar: _sections.CopyBar(Doc, bar, selectedTrack, allTracks: false); break;
                 case TimelineCommand.CopyBarAllTracks: _sections.CopyBar(Doc, bar, selectedTrack, allTracks: true); break;
                 case TimelineCommand.CopySection: _sections.CopySectionAt(Doc, bar); break;
@@ -343,7 +296,7 @@ public partial class MainWindow
                     break;
             }
         });
-        OpenContextMenu(menu, Arrangement, anchor, fromKeyboard);
+        SpecMenus.Open(menu, Arrangement, anchor, fromKeyboard);
     }
 
     /// <summary>Right-click on the section lane: a section's menu, or just "Add section" on an empty stretch.</summary>
@@ -368,7 +321,7 @@ public partial class MainWindow
         if (markerIndex < 0 || markerIndex >= markers.Count) return;
         var marker = markers[markerIndex];
         var sectionLastBar = Math.Max(marker.MeasureIndex, SectionLayout.End(markers, markerIndex, MaxMeasures()) - 1);
-        var sectionLooped = _loop && _loopStartBar == marker.MeasureIndex && _loopEndBar == sectionLastBar;
+        var sectionLooped = _loop && _selLoop.StartBar == marker.MeasureIndex && _selLoop.EndBar == sectionLastBar;
         int? addAt = clickedBar is int atBar && atBar != marker.MeasureIndex ? atBar : null;
         var state = new SectionMenuState(addAt, TimelineClips.CanPasteOnTimeline(ClipboardService.Shared.TryGetClip(out _)),
             sectionLooped, marker.LockPosition);
@@ -396,7 +349,7 @@ public partial class MainWindow
                     break;
             }
         });
-        OpenContextMenu(menu, Arrangement, null, fromKeyboard: false);
+        SpecMenus.Open(menu, Arrangement, null, fromKeyboard: false);
     }
 
     private void EditSectionTitle(MarkerModel marker)
@@ -413,7 +366,7 @@ public partial class MainWindow
         _selection.Remap(oldToNewBar, MaxMeasures());   // the selected range follows its bars
         if (Playback.ApplyStructureEdit(oldToNewBar, MaxMeasures()))
         {
-            Editor.PlaybackBarRemap = _playbackBarRemap;
+            Editor.Playback.BarRemap = _playbackBarRemap;
             Playback.Engine.RefreshArrangement(_project, _playbackBarRemap!, continueAtBar);
         }
         Editor.InvalidateScoreLayout();
@@ -423,9 +376,9 @@ public partial class MainWindow
         UpdateTitle();
         if (_isPlayingVisual && _playheadBar >= 0)
         {
-            Editor.SetPlayhead(_playheadBar, _playheadCell);
-            Playhead.SetGeometry(Editor.PlayheadGeometry());
-            Playhead.SetDurationGeometries(Editor.PlaybackDurationGeometries());
+            Editor.Playback.SetPlayhead(_playheadBar, _playheadCell);
+            Playhead.SetGeometry(Editor.Playback.PlayheadGeometry());
+            Playhead.SetDurationGeometries(Editor.Playback.DurationGeometries());
         }
         else
         {

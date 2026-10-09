@@ -10,7 +10,7 @@ Headless commands run from the command line, for checking the app without a pers
 
 ## Key types
 - `DiagnosticCommands` (partial files): the command table, `--selftest`, `--playtest`, renders.
-- `FeatureMapGenerator`: writes `docs/FEATURE_MAP.md`.
+- `FeatureMapGenerator`: writes `docs/feature-map/tests.md`; `FeatureFinder` (`--find`) reads the map.
 - `AudioAudit`, `MidiTimingAudit`, `PitchAudit`: playback and timing checks.
 - `LayoutAudit`, `BarAuditRunner`: notation checks.
 - `WindowProbes` (partial files): screenshots and window checks; `WindowProbes.SpeedAudit*.cs` times actual modal display, native clip/row popups and long WAV drops while stopped and playing (see docs/DEBUGGING.md).

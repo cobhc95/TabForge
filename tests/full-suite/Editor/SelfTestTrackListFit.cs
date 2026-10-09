@@ -114,7 +114,7 @@ public static partial class SelfTest
             song.Mixer.ShowGroupsInTrackList = true;
             panel.Bind(song, Array.Empty<Playback.MidiOutputDeviceInfo>());
             fit.FitToTracks();
-            Check("track list fit: group header rows are counted", Math.Abs(Gap()) < 1.5 && panel.PreferredHeight() > ArrangementPanel.RulerHeight + ArrangementPanel.SectionHeight + 7 * 30, $"{Gap():0.0}px");
+            Check("track list fit: group header rows are counted", Math.Abs(Gap()) < 1.5 && panel.PreferredHeight() > ArrangementPanel.RulerHeight + ArrangementPanel.SectionHeight + 7 * ArrangementPanel.DefaultTrackRowHeight, $"{Gap():0.0}px");
             song.Mixer.ShowGroupsInTrackList = false;
             song.Tracks.Add(MixerTestTrack("T7", TrackKind.Guitar, 30));
             panel.Bind(song, Array.Empty<Playback.MidiOutputDeviceInfo>());
@@ -128,10 +128,10 @@ public static partial class SelfTest
             var defaultPane = panel.PreferredHeight();
             TrackFitPng(window, "default");
             workspace.SimulateSplitterDrag("timeline", defaultPane + 140, complete: false); PumpUi();
-            Check("track list fit: while dragging the rows keep their height (no relayout per step)", Math.Abs(panel.TrackRowHeight - 30) < 0.06, $"{panel.TrackRowHeight:0.0}");
+            Check("track list fit: while dragging the rows keep their height (no relayout per step)", Math.Abs(panel.TrackRowHeight - ArrangementPanel.DefaultTrackRowHeight) < 0.06, $"{panel.TrackRowHeight:0.0}");
             workspace.SimulateSplitterDrag("timeline", defaultPane + 140, complete: true); PumpUi();
             var stretched = panel.TrackRowHeight;
-            Check("track list fit: releasing a taller splitter makes the rows taller", stretched > 30 + 10, $"{stretched:0.0}");
+            Check("track list fit: releasing a taller splitter makes the rows taller", stretched > ArrangementPanel.DefaultTrackRowHeight + 10, $"{stretched:0.0}");
             var heights = panel.TrackRowActualHeights;
             Check("track list fit: the track controls and the timeline lanes stay aligned",
                 heights.Count == 7 && heights.All(h => Math.Abs(h - stretched) < 0.6) &&
@@ -147,23 +147,23 @@ public static partial class SelfTest
                 Math.Abs(panel.TrackRowHeight - ArrangementPanel.MaxTrackRowHeight) < 0.06 && Math.Abs(Gap()) < 1.5, $"{panel.TrackRowHeight:0.0}, {Gap():0.0}px");
 
             workspace.SimulateSplitterDrag("timeline", 100, complete: true); PumpUi();
-            Check("track list fit: dragging smaller than the rows stops where every row fits at the default height",
-                Math.Abs(panel.TrackRowHeight - 30) < 0.06 && Math.Abs(Gap()) < 1.5, $"{panel.TrackRowHeight:0.0}, {Gap():0.0}px");
+            Check("track list fit: dragging smaller than the rows stops at the 3-row collapsed height with the default row height",
+                Math.Abs(panel.TrackRowHeight - ArrangementPanel.DefaultTrackRowHeight) < 0.06 && Math.Abs(Gap() - (ArrangementPanel.CollapsedPaneHeight - panel.PreferredHeight())) < 1.5, $"{panel.TrackRowHeight:0.0}, {Gap():0.0}px");
 
             // Persistence and reset.
-            host.Timeline.TrackRowHeight = 55;
-            panel.SetTrackRowHeight(30);
+            host.Timeline.TrackRowHeight = 48; host.Timeline.TrackListHeight = 0;
+            panel.SetTrackRowHeight(ArrangementPanel.DefaultTrackRowHeight);
             fit.FitToTracks();
             Check("track list fit: the saved row height is applied and the dock fits it",
-                Math.Abs(panel.TrackRowHeight - 55) < 0.06 && Math.Abs(Gap()) < 1.5, $"{panel.TrackRowHeight:0.0}, {Gap():0.0}px");
+                Math.Abs(panel.TrackRowHeight - 48) < 0.06 && Math.Abs(Gap()) < 1.5, $"{panel.TrackRowHeight:0.0}, {Gap():0.0}px");
             fit.ResetRowHeight();
             Check("track list fit: reset returns to the default height and fits",
-                Math.Abs(panel.TrackRowHeight - 30) < 0.06 && Math.Abs(host.Timeline.TrackRowHeight - 30) < 0.06 && Math.Abs(Gap()) < 1.5, $"{panel.TrackRowHeight:0.0}, {Gap():0.0}px");
+                Math.Abs(panel.TrackRowHeight - ArrangementPanel.DefaultTrackRowHeight) < 0.06 && Math.Abs(host.Timeline.TrackRowHeight - ArrangementPanel.DefaultTrackRowHeight) < 0.06 && Math.Abs(Gap()) < 1.5, $"{panel.TrackRowHeight:0.0}, {Gap():0.0}px");
 
             // Auto-fit off: nothing moves.
             host.Timeline.AutoFitTrackList = false;
             workspace.SimulateSplitterDrag("timeline", defaultPane + 140, complete: true); PumpUi();
-            Check("track list fit: with auto-fit off a drag leaves the row height alone", Math.Abs(panel.TrackRowHeight - 30) < 0.06, $"{panel.TrackRowHeight:0.0}");
+            Check("track list fit: with auto-fit off a drag leaves the row height alone", Math.Abs(panel.TrackRowHeight - ArrangementPanel.DefaultTrackRowHeight) < 0.06, $"{panel.TrackRowHeight:0.0}");
             window.Height = 1900; window.UpdateLayout(); PumpUi(); fit.Flush();
             Check("track list fit: with auto-fit off the window resize is not refitted", Math.Abs(Gap()) > 5, $"{Gap():0.0}px");
         }
@@ -187,11 +187,11 @@ public static partial class SelfTest
         try
         {
             window.Measure(new Size(900, 700)); window.Arrange(new Rect(0, 0, 900, 700)); window.UpdateLayout(); PumpUi();
-            a.SetTrackRowHeight(60); PumpUi(); window.Measure(new Size(900, 700)); window.Arrange(new Rect(0, 0, 900, 700)); window.UpdateLayout();
-            Check("two track lists: stretching one leaves the other's row height alone", Math.Abs(b.TrackRowHeight - 30) < 0.01 && Math.Abs(a.TrackRowHeight - 60) < 0.01, $"{a.TrackRowHeight} / {b.TrackRowHeight}");
+            a.SetTrackRowHeight(50); PumpUi(); window.Measure(new Size(900, 700)); window.Arrange(new Rect(0, 0, 900, 700)); window.UpdateLayout();
+            Check("two track lists: stretching one leaves the other's row height alone", Math.Abs(b.TrackRowHeight - ArrangementPanel.DefaultTrackRowHeight) < 0.01 && Math.Abs(a.TrackRowHeight - 50) < 0.01, $"{a.TrackRowHeight} / {b.TrackRowHeight}");
             Check("two track lists: the other one's track rows and timeline lanes stay aligned at the default",
-                b.TrackRowActualHeights.All(h => Math.Abs(h - 30) < 0.6) && Math.Abs(ArrangementPanel.RowTopOf(songB, 2) - 60) < 0.01 &&
-                a.TrackRowActualHeights.All(h => Math.Abs(h - 60) < 0.6) && Math.Abs(ArrangementPanel.RowTopOf(songA, 2) - 120) < 0.01,
+                b.TrackRowActualHeights.All(h => Math.Abs(h - ArrangementPanel.DefaultTrackRowHeight) < 0.6) && Math.Abs(ArrangementPanel.RowTopOf(songB, 2) - 2 * ArrangementPanel.DefaultTrackRowHeight) < 0.01 &&
+                a.TrackRowActualHeights.All(h => Math.Abs(h - 50) < 0.6) && Math.Abs(ArrangementPanel.RowTopOf(songA, 2) - 100) < 0.01,
                 string.Join(",", b.TrackRowActualHeights.Select(h => h.ToString("0.0"))));
         }
         finally { }
@@ -223,13 +223,16 @@ public static partial class SelfTest
             var minPane = panel.PreferredHeightAt(ArrangementPanel.DefaultTrackRowHeight);
             var maxPane = panel.PreferredHeightAt(ArrangementPanel.MaxTrackRowHeight);
             var tooShort = windowHeight < 1000 && trackCount > 10;
+            // Dragging down stops at the 3-row collapsed height (or at the rows when there are fewer than 3).
+            var floorGap = Math.Min(ArrangementPanel.CollapsedPaneHeight, minPane) - minPane;
+            bool AtFloor() => tooShort || Math.Abs(Gap() - floorGap) < 1.5;
 
             workspace.SimulateSplitterDrag("timeline", 40, complete: false); PumpUi();
-            var heldMin = tooShort || Math.Abs(Gap()) < 1.5;
-            Check($"{label}: dragging down stops where every row fits ({(tooShort ? "window too short: capped by the other panes" : "no clipped row")})", heldMin && (trackCount == 1 ? panel.TrackRowHeight >= 30 : Math.Abs(panel.TrackRowHeight - 30) < 0.06),   // one row: the pane's own minimum height stretches it a little
+            var heldMin = AtFloor();
+            Check($"{label}: dragging down stops where every row fits ({(tooShort ? "window too short: capped by the other panes" : "no clipped row")})", heldMin && (trackCount == 1 ? panel.TrackRowHeight >= ArrangementPanel.DefaultTrackRowHeight : Math.Abs(panel.TrackRowHeight - ArrangementPanel.DefaultTrackRowHeight) < 0.06),   // one row: the pane's own minimum height stretches it a little
                  $"{Gap():0.0}px, rows {panel.TrackRowHeight:0.0}");
             workspace.SimulateSplitterDrag("timeline", 40, complete: true); PumpUi();
-            Check($"{label}: no snapping after release at the minimum", tooShort || Math.Abs(Gap()) < 1.5, $"{Gap():0.0}px");
+            Check($"{label}: no snapping after release at the minimum", AtFloor(), $"{Gap():0.0}px");
 
             workspace.SimulateSplitterDrag("timeline", 4000, complete: false); PumpUi();
             workspace.SimulateSplitterDrag("timeline", 4000, complete: true); PumpUi();
@@ -240,7 +243,7 @@ public static partial class SelfTest
             // After a window resize and a track change the limits still hold.
             window.Height = windowHeight + 100; window.UpdateLayout(); PumpUi(); fit.Flush();
             workspace.SimulateSplitterDrag("timeline", 40, complete: true); PumpUi();
-            Check($"{label}: the limit still holds after the window is resized", tooShort || Math.Abs(Gap()) < 1.5, $"{Gap():0.0}px");
+            Check($"{label}: the limit still holds after the window is resized", AtFloor(), $"{Gap():0.0}px");
         }
         finally { window.Close(); }
     }

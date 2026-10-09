@@ -380,7 +380,6 @@ public static partial class SelfTest
             ["bar.tempoChange"] = "a tempo marking that restates the tempo already running is not kept as a change on import (bar.tempo, the tempo actually played, is compared strictly)",
             // capability row A23: the sub-type is re-derived from the curve, so a whammy tag can change name. The demo song (whammy beats of a sub-type the technique song lacks)
             // reads back one as TremBarCustom; the allowance was removed once as "never fired" (the technique song and 78 others do not show it) and the demo round trip failed.
-            ["note.technique:TremBarCustom.extra"] = "A23: alphaTab re-derives the whammy sub-type (Dip, Dive, ...) from the curve; the tag may change name (whammy.shape is compared strictly)",
             ["note.technique:TremBar.extra"] ="alphaTab re-derives the whammy sub-type (Dip, Dive, ...) from the curve; the tag may change name (whammy.shape is compared strictly)",
             ["note.technique:TremBarDip.extra"] = "alphaTab re-derives the whammy sub-type (Dip, Dive, ...) from the curve; the tag may change name (whammy.shape is compared strictly)",
             ["note.technique:TremBarCustom.missing"] = "alphaTab re-derives the whammy sub-type (Dip, Dive, ...) from the curve; the tag may change name (whammy.shape is compared strictly)",
@@ -668,6 +667,7 @@ public static partial class SelfTest
         bus.Rig.Plugins.Add(new PluginSlot { Name = "Bus comp", Path = @"C:\Nowhere\BusComp.vst3", Format = "VST3", SidechainTrackId = Id(2), State = "BUS=" });
         song.Mixer.Master.Rig.Plugins.Add(new PluginSlot { Name = "Limiter", Path = @"C:\Nowhere\Lim.vst3", Format = "VST3", SidechainTrackId = Id(0), State = "TQ==" });
         song.Mixer.MasterPan = 5;
+        SongExtent.EnsureCoversClips(song);   // a song always covers its clips, so a reopen adds no bar
         song.IsDirty = false;
         return song;
     }

@@ -41,6 +41,9 @@ public sealed class PasteOutcome
     public NoteMapReport? Mapping { get; init; }
     public int DroppedBeats { get; init; }
     public int TracksLeftOut { get; init; }
+    /// <summary>Where the cursor goes after the paste (the last pasted beat of an in-bar insert, as GP5); -1 = unchanged.</summary>
+    public int CursorBar { get; init; } = -1;
+    public int CursorCell { get; init; } = -1;
 }
 
 // Copy / cut / paste of score clips (COPY_PASTE_DESIGN.md chunk C4): NoteMapper maps, BarGrid places.
@@ -98,8 +101,11 @@ public static partial class EditCommands
         var to = InstrumentLayout.Of(track);
         var beats = source.Events.Select(e => e.Cell).ToList();
 
+        var appendAt = OverfullEnd(p, target, voice);
         var needed = MapperQuestions(from, to, beats);
-        if (HasNotesInSpan(p, target.TrackIndex, voice, anchor, anchor + length)) needed.Add(PasteQuestion.BeatsOntoNotes);
+        // As GP5 (quiet runs l6, l6b): beats pasted onto written notes are inserted before the cursor beat inside the same bar, without a question.
+        // Paste Special still chooses Replace or the song-wide Insert explicitly.
+        var inBar = appendAt is null && explicitChoice is null && HasNotesInSpan(p, target.TrackIndex, voice, anchor, anchor + length);
         if (!Resolve(needed, settings, asker, explicitChoice, out var choice, out var asked))
             return new PasteOutcome { Cancelled = true, Status = "Paste cancelled", Needed = needed, Asked = asked };
 
@@ -108,17 +114,87 @@ public static partial class EditCommands
             return new PasteOutcome { Status = RefusedText(from, to), Needed = needed, Asked = asked, Mapping = mapped.Report };
         var sameTrack = source.SourceTrackId != Guid.Empty && source.SourceTrackId == track.Id;
         var run = new BeatRun(source.Events.Select((e, i) => new ClipBeat(e.OffsetSlots, Prepare(mapped.Beats[i], sameTrack))).ToList(), length);
-        var placed = BarGrid.PlaceBeats(p, target.TrackIndex, voice, anchor, run, choice.Beats);
+        var cursorCell = -1;
+        var placed = appendAt is { } end ? AppendInBar(p, target, voice, end, run)
+            : inBar ? InsertInBar(p, target, voice, anchor, run, out cursorCell)
+            : BarGrid.PlaceBeats(p, target.TrackIndex, voice, anchor, run, choice.Beats);
         if (!placed.Ok)
             return new PasteOutcome { Status = placed.Error ?? "Nothing pasted.", Needed = needed, Asked = asked, Mapping = mapped.Report };
 
-        var status = $"Pasted {Plural(beats.Count, "beat")} at bar {target.Bar + 1}" + (copies > 1 ? $" ({copies} copies)" : "") + (choice.Beats == BeatPasteMode.Insert ? " (inserted)" : "")
+        var status = $"Pasted {Plural(beats.Count, "beat")} at bar {target.Bar + 1}" + (copies > 1 ? $" ({copies} copies)" : "") + (inBar || choice.Beats == BeatPasteMode.Insert ? " (inserted)" : "")
             + Tail(mapped.Report, placed.DroppedBeats, placed.BarsAppended, 0);
         return new PasteOutcome
         {
             Changed = true, Status = status, FirstBar = placed.FirstBar, LastBar = placed.LastBar, BarMap = placed.BarMap,
-            Needed = needed, Asked = asked, Mapping = mapped.Report, DroppedBeats = placed.DroppedBeats
+            Needed = needed, Asked = asked, Mapping = mapped.Report, DroppedBeats = placed.DroppedBeats,
+            CursorBar = cursorCell >= 0 ? target.Bar : -1, CursorCell = cursorCell
         };
+    }
+
+    /// <summary>Inserts a beat run before the cursor beat of one voice, inside its bar: the beats from the cursor on move later, the bar may overfill (shown red), nothing moves to the next bar. <paramref name="cursorCell"/> is the last pasted beat's cell.</summary>
+    private static PlacementResult InsertInBar(SongProject p, PasteTarget target, int voice, double anchor, BeatRun run, out int cursorCell)
+    {
+        cursorCell = -1;
+        var measure = p.Tracks[target.TrackIndex].Measures[target.Bar];
+        var cells = measure.CellsForVoice(voice);
+        var onsets = BarGrid.Onsets(cells);
+        var at = anchor - BarGrid.BarStart(p, target.Bar);
+        var shift = run.LengthSlots;
+        var beats = new List<(double Pos, TabCell Cell)>();
+        for (var i = 0; i < cells.Count; i++)
+            if (IsBeat(cells[i])) beats.Add((onsets[i] >= at - 1e-6 ? onsets[i] + shift : onsets[i], cells[i]));
+        TabCell? last = null;
+        // Only real beats are inserted (like the bar's own beats above): an empty copied spot would become a free-timed empty cell, and the cursor must land on a beat.
+        var lastOffset = double.NegativeInfinity;
+        foreach (var b in run.Beats)
+        {
+            if (!IsBeat(b.Cell)) continue;
+            var cell = b.Cell.Clone();
+            cell.RhythmicPosition = null;
+            beats.Add((at + b.OffsetSlots, cell));
+            if (b.OffsetSlots >= lastOffset) (last, lastOffset) = (cell, b.OffsetSlots);
+        }
+        if (beats.Count > InputLimits.MaxCellsPerMeasure) return PlacementResult.Refused($"Bar {target.Bar + 1} would hold too many beats.");
+        var written = BarGrid.WriteBar(beats, MusicTime.BarSlots(p, target.Bar));
+        if (voice == 0) measure.Cells = written; else measure.Voice2Cells = written;
+        cursorCell = written.FindIndex(c => ReferenceEquals(c, last));
+        return new PlacementResult(true, null, target.Bar, target.Bar, 0, 0, 0);
+    }
+
+    /// <summary>
+    /// Where an overfull bar's beats end, when the paste cursor is at or past that end; null otherwise. As GP5 (quiet run j07, session 15
+    /// step 56), a paste there goes on in the same bar instead of starting the next bar after the overflow's rests.
+    /// </summary>
+    private static double? OverfullEnd(SongProject p, PasteTarget target, int voice)
+    {
+        var measures = p.Tracks[target.TrackIndex].Measures;
+        if (target.Bar < 0 || target.Bar >= measures.Count) return null;
+        var cells = measures[target.Bar].CellsForVoice(voice);
+        var onsets = BarGrid.Onsets(cells);
+        var end = 0.0;
+        for (var i = 0; i < cells.Count; i++)
+            if (IsBeat(cells[i])) end = Math.Max(end, onsets[i] + MusicTime.CellSlots(cells[i]));
+        var at = target.Cell >= 0 && target.Cell < cells.Count ? onsets[target.Cell] : target.Cell;
+        return end > MusicTime.BarSlots(p, target.Bar) + 1e-6 && at >= end - 1e-6 ? end : null;
+    }
+
+    /// <summary>Appends a beat run to one voice of a bar at slot <paramref name="end"/> (the bar grows; nothing moves to the next bar).</summary>
+    private static PlacementResult AppendInBar(SongProject p, PasteTarget target, int voice, double end, BeatRun run)
+    {
+        var measure = p.Tracks[target.TrackIndex].Measures[target.Bar];
+        var cells = measure.CellsForVoice(voice);
+        var onsets = BarGrid.Onsets(cells);
+        var beats = cells.Select((c, i) => (Pos: onsets[i], Cell: c)).Where(x => IsBeat(x.Cell)).ToList();
+        foreach (var b in run.Beats)
+        {
+            var cell = b.Cell.Clone();
+            cell.RhythmicPosition = null;
+            beats.Add((end + b.OffsetSlots, cell));
+        }
+        if (beats.Count > InputLimits.MaxCellsPerMeasure) return PlacementResult.Refused($"Bar {target.Bar + 1} would hold too many beats.");
+        var written = BarGrid.WriteBar(beats, MusicTime.BarSlots(p, target.Bar));
+        if (voice == 0) measure.Cells = written; else measure.Voice2Cells = written;
+        return new PlacementResult(true, null, target.Bar, target.Bar, 0, 0, 0);
     }
 
     /// <summary>True when a beat with notes in one voice of a track sounds inside [from, to) (rests and empty cells do not count).</summary>
@@ -350,8 +426,9 @@ public static partial class EditCommands
     // ---------- cut ----------
 
     /// <summary>
-    /// Clears what a cut took (design 3.7, owner decision): a Bars clip empties both voices of those bars on this track (bars stay);
-    /// a Beats clip clears the selected beats of one voice to rests without moving the beats after them. Returns true when anything changed.
+    /// Takes out what a cut took, as GP5: a Bars clip empties both voices of those bars on this track (removing the bars is the caller's,
+    /// see MainWindow Cut_Click: a one-track song); a Beats clip removes the selected beats of one voice and the beats after them move
+    /// left (the rest fill closes the bar). Returns true when anything changed.
     /// </summary>
     public static bool CutClear(SongProject p, ScoreClipKind kind, int trackIndex, int voice, int startBar, int startCell, int endBar, int endCell)
     {
@@ -372,24 +449,50 @@ public static partial class EditCommands
         for (var bar = Math.Max(0, startBar); bar <= endBar && bar < track.Measures.Count; bar++)
         {
             var cells = track.Measures[bar].CellsForVoice(voice);
-            if (cells.Count == 0) continue;
-            var before = BarGrid.Onsets(cells);
-            var cleared = new bool[cells.Count];
-            for (var i = 0; i < cells.Count; i++)
-            {
-                var inRange = (bar > startBar || i >= startCell) && (bar < endBar || endCell < 0 || i <= endCell);
-                if (!inRange || !IsBeat(cells[i])) continue;
-                cells[i] = new TabCell();
-                cleared[i] = true;
-                changed = true;
-            }
-            // Beats after a cleared one keep their onsets (the grid rule places a beat at max(index, previous end)).
-            var after = BarGrid.Onsets(cells);
-            for (var i = 0; i < cells.Count; i++)
-                if (!cleared[i] && IsBeat(cells[i]) && Math.Abs(after[i] - before[i]) > 1e-6)
-                    cells[i].RhythmicPosition = before[i];
+            var beats = Enumerable.Range(0, cells.Count)
+                .Where(i => (bar > startBar || i >= startCell) && (bar < endBar || endCell < 0 || i <= endCell) && IsBeat(cells[i])).ToList();
+            if (beats.Count == 0) continue;
+            // The cut beats and the slots up to the next beat go; later beats move left by that time (a packed bar by the grid rule, a free one by position).
+            var (first, last, slots) = (beats[0], beats[^1], Math.Max(cells.Count, MusicTime.BarSlots(p, bar)));
+            var stop = last + 1;
+            while (stop < cells.Count && !IsBeat(cells[stop])) stop++;
+            var onsets = BarGrid.Onsets(cells);
+            var span = (stop < cells.Count ? onsets[stop] : onsets[last] + MusicTime.CellSlots(cells[last])) - onsets[first];
+            for (var i = stop; i < cells.Count; i++)
+                if (cells[i].RhythmicPosition is { } position) cells[i].RhythmicPosition = Math.Max(0, position - span);
+            cells.RemoveRange(first, stop - first);
+            while (cells.Count < slots) cells.Add(new TabCell());
+            // Only rests left (the fill's, which moved up): the bar is empty, as GP5's, so a later paste gets no leading rests (s004869).
+            if (cells.Any(c => c.IsRest)) BarFill.ResetEmptyVoice(cells, MusicTime.BarSlots(p, bar), wholeRest: voice == 0);
+            changed = true;
         }
         return changed;
+    }
+
+    /// <summary>
+    /// The bars a cut takes whole (first, last), or null when it takes beats. Only a whole-bar selection (<paramref name="wholeBars"/>: made
+    /// as bars, or crossing a barline) takes bars: a Bars clip, or in a one-track song a voice-1 selection from a bar's start, every bar it
+    /// touches. Beats selected inside one bar stay beats, even every beat of a full bar (GP5 quiet runs j04, b01, b07 keep the bar;
+    /// b02, b08, b09 cut the bars, b09 with a beat left after the selection's end).
+    /// </summary>
+    public static (int First, int Last)? CutTakesBars(SongProject p, ScoreClipKind kind, int trackIndex, int voice, (int StartBar, int StartCell, int EndBar, int EndCell) range, bool wholeBars)
+    {
+        if (!wholeBars) return null;
+        var (startBar, startCell, endBar, endCell) = range;
+        if (endBar < startBar || (endBar == startBar && endCell >= 0 && endCell < startCell)) (startBar, startCell, endBar, endCell) = (endBar, endCell, startBar, startCell);
+        startBar = Math.Max(0, startBar);
+        if (kind == ScoreClipKind.Bars)   // every bar of a one-track song: cleared, not removed (a song keeps a bar)
+            return p.Tracks.Count > 1 || endBar - startBar + 1 < BarRangeEditor.MaxMeasures(p) ? (startBar, endBar) : null;
+        if (p.Tracks.Count != 1 || voice != 0 || startCell > 0 || trackIndex != 0) return null;
+        endBar = Math.Min(endBar, p.Tracks[0].Measures.Count - 1);   // a selection past the song's end ends with its last bar
+        // Every bar selected: a song never loses its last bar. An empty last bar stays and the bars before go (TestGp5EditStories G5);
+        // otherwise the bars stay and the beats go.
+        if (endBar - startBar + 1 >= p.Tracks[0].Measures.Count)
+        {
+            if (p.Tracks[0].Measures[endBar].Cells.Any(c => c.Notes.Count > 0 || c.HasAnnotation)) return null;
+            endBar--;
+        }
+        return endBar >= startBar ? (startBar, endBar) : null;
     }
 
     private static bool IsBeat(TabCell cell) => cell.Notes.Count > 0 || cell.IsRest || cell.HasAnnotation;

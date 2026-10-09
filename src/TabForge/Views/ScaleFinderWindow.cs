@@ -59,8 +59,7 @@ public static class ScaleFinderWindow
         DockPanel.SetDock(buttons, Dock.Bottom);
         var clear = new Button { Content = "Clear highlight", Padding = new Thickness(12, 4, 12, 4), Margin = new Thickness(0, 0, 8, 0) };
         var apply = new Button { Content = "Show on fretboard", Padding = new Thickness(12, 4, 12, 4), Margin = new Thickness(0, 0, 8, 0), IsDefault = true };
-        apply.SetResourceReference(Control.BackgroundProperty, "AccentBrush");
-        apply.Foreground = Brushes.White;
+        apply.SetResourceReference(FrameworkElement.StyleProperty, "AccentButton");
         var close = new Button { Content = "Close", Padding = new Thickness(12, 4, 12, 4), IsCancel = true };
         buttons.Children.Add(clear);
         buttons.Children.Add(apply);

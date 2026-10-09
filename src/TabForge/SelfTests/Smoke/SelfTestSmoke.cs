@@ -52,8 +52,8 @@ public static partial class SelfTest
         var editor = NewEditor(out var project, out var track);
         editor.AutoAdvanceAfterEntry = true;   // the advance option (off by default) is what this entry checks
         editor.SetPosition(0, 0, 0);
-        editor.SetDuration(4);
-        editor.EnterFret(5);
+        editor.Effects.SetDuration(4);
+        editor.Effects.EnterFret(5);
 
         var cell = track.Measures[0].Cells[0];
         Eq("fret written", 5, cell.Notes[0].Fret);
@@ -66,23 +66,23 @@ public static partial class SelfTest
         var editorExisting = NewEditor(out _, out var trackExisting);
         trackExisting.Measures[0].Cells[0].Notes.Add(new TabNote { StringIndex = 0, Fret = 3 });
         editorExisting.SetPosition(0, 0, 0);
-        editorExisting.EnterFret(7);
+        editorExisting.Effects.EnterFret(7);
         Eq("existing note fret edited", 7, trackExisting.Measures[0].Cells[0].Notes[0].Fret);
         Eq("cursor stays on edited note", 0, editorExisting.SelectedCell);
 
         // Two digits typed quickly on the same beat make a two-digit fret.
         var editor2 = NewEditor(out _, out var track2);
         editor2.SetPosition(0, 0, 0);
-        editor2.EnterFret(1, autoAdvance: false);
-        editor2.EnterFret(2, autoAdvance: false);
+        editor2.Effects.EnterFret(1, autoAdvance: false);
+        editor2.Effects.EnterFret(2, autoAdvance: false);
         Eq("two-digit fret 12", 12, track2.Measures[0].Cells[0].Notes[0].Fret);
 
         // A second string on the same beat builds a chord.
         var editor3 = NewEditor(out _, out var track3);
         editor3.SetPosition(0, 0, 0);
-        editor3.EnterFret(3);
+        editor3.Effects.EnterFret(3);
         editor3.SetPosition(0, 0, 2);
-        editor3.EnterFret(5, autoAdvance: false);
+        editor3.Effects.EnterFret(5, autoAdvance: false);
         Eq("chord has two notes", 2, track3.Measures[0].Cells[0].Notes.Count);
     }
 

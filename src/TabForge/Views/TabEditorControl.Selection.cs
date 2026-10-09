@@ -31,12 +31,12 @@ public sealed partial class TabEditorControl
         var track = Track; if (track is null) return;
         // Steps over the allowed cursor positions (beat starts and the append slot), like the arrow keys.
         if (m < 0 || m >= track.Measures.Count) return;
-        var step = direction > 0 ? CursorPositions.Next(CellsFor(track.Measures[m]), c, SlotsFor(m)) : CursorPositions.Previous(CellsFor(track.Measures[m]), c, SlotsFor(m));
+        var (step, onSpot) = CursorPositions.SelectionStep(CellsFor(track.Measures[m]), c, SlotsFor(m), direction, _sel.OnEmptySpot, m + 1 >= track.Measures.Count);
         if (step >= 0) c = step;
-        else if (direction > 0) { m++; c = 0; }
+        else if (direction > 0) { if (m + 1 < track.Measures.Count) { m++; c = 0; } }
         else { m--; c = m >= 0 ? CursorPositions.Allowed(CellsFor(track.Measures[m]), SlotsFor(m)).Last() : 0; }
         if (m < 0 || m >= track.Measures.Count) return;
-        _sel.SetEnd(m, c);
+        _sel.SetEnd(m, c, onSpot); _sel.MarkDragged();   // Shift+arrows back onto the anchor keep that one beat selected, as GP5
         InvalidateVisual();
         SelectionChanged?.Invoke(this, EventArgs.Empty);
     }
@@ -61,6 +61,12 @@ public sealed partial class TabEditorControl
         }
     }
 
+    /// <summary>True when the selection is whole bars (made as bars, or crossing a barline) rather than beats inside one bar.</summary>
+    public bool SelectionIsWholeBars => _sel.IsWholeBars;
+
+    /// <summary>True while Shift+arrows (or a drag) hold a selection, even one of a single beat (the cursor's own).</summary>
+    public bool IsSelecting => _sel.Selecting;
+
     /// <summary>Selects a whole-bar range, for range selections initiated in the arrangement timeline.</summary>
     public void SelectMeasureRange(int startMeasure, int endMeasure) =>
         SelectRange(Math.Min(startMeasure, endMeasure), 0, Math.Max(startMeasure, endMeasure), -1);
@@ -74,7 +80,7 @@ public sealed partial class TabEditorControl
         if (ClampRange(startMeasure, startCell, endMeasure, endCell) is not var (m1, c1, m2, c2)) return;
         SelectedMeasure = m1;
         SelectedCell = c1;
-        _sel.Set(m1, c1, m2, c2);
+        _sel.Set(m1, c1, m2, c2, wholeBars: startCell <= 0 && endCell < 0);
         SelectionChangedNow(seekPlayback: false);
     }
 
@@ -146,13 +152,16 @@ public sealed partial class TabEditorControl
 
     /// <summary>
     /// Cut: clears what <paramref name="clip"/> (just captured from the selection) took, as one undo step: whole bars are emptied
-    /// (not deleted), beats become rests in the active voice. Returns true when anything changed.
+    /// (not deleted), beats are taken out of the active voice; the selection ends with the cursor where it started (GP5, quiet run j01).
+    /// Returns true when anything changed.
     /// </summary>
     public bool CutSelection(ScoreClip clip)
     {
         if (_project is null || Track is null) return false;
         var (m1, c1, m2, c2) = SelectionCellRange;
-        return RunEdit(() => EditCommands.CutClear(_project, clip.Kind, SelectedTrackIndex, ActiveVoiceIndex, m1, c1, m2, HasSelection ? c2 : c1));
+        if (!RunEdit(() => EditCommands.CutClear(_project, clip.Kind, SelectedTrackIndex, ActiveVoiceIndex, m1, c1, m2, HasSelection ? c2 : c1))) return false;
+        ClearSelection(); SetPosition(m1, c1, SelectedString);
+        return true;
     }
 
     /// <summary>Tells the host the project changed outside the editor's own commands (paste), and refreshes the score.</summary>

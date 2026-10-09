@@ -102,7 +102,7 @@ public partial class MainWindow
                 return;
             }
             // First Esc clears a selected area; the loop button stays on and loops the song again.
-            if (_selection.HasRange || _loopHasArea || Editor.HasSelection)
+            if (_selection.HasRange || _selLoop.HasArea || Editor.HasSelection)
             {
                 _selection.Clear(SelectionOrigin.Command);   // clears score, timeline and area together
                 if (Editor.HasSelection) Editor.ClearSelection();
@@ -117,8 +117,8 @@ public partial class MainWindow
             }
             else
             {
-                Editor.PlaybackActive = false;
-                Editor.ClearPlayhead();
+                Editor.Playback.Active = false;
+                Editor.Playback.Clear();
                 Playhead.SetGeometry(null);
                 Playhead.SetDurationGeometry(null);
                 Playback.ClearPending();
@@ -143,8 +143,7 @@ public partial class MainWindow
         }
 
         // A focused grid owns the arrow keys.
-        var gridOwnsArrows = TrackMixerGrid.IsKeyboardFocusWithin || MarkerList.IsKeyboardFocusWithin
-            || ChordResultList.IsKeyboardFocusWithin ;
+        var gridOwnsArrows = TrackMixerGrid.IsKeyboardFocusWithin || MarkerList.IsKeyboardFocusWithin;
         var isArrow = e.Key is Key.Left or Key.Right or Key.Up or Key.Down;
         if (mods == ModifierKeys.None && (isArrow && gridOwnsArrows || e.Key == Key.Enter && MarkerList.IsKeyboardFocusWithin)) return;
 
@@ -231,6 +230,7 @@ public partial class MainWindow
         if (refresh.HasFlag(EditRefresh.Instrument)) RefreshInstrument();
         if (refresh.HasFlag(EditRefresh.Palette)) RefreshToolsPalette();
         UpdateTitle();
+        _follow.KeepCursorInSight();
     }
 
     private void UpdateTitle() => Title = $"TabForge - {_project.Title}{(_project.IsDirty ? " *" : "")}{CloseFlow.DegradedTitleSuffix}";

@@ -37,9 +37,9 @@ internal sealed partial class TrackTimeline : IClipGestureHost
         var snap = Snap;
         if (snap is not { Enabled: true } || Project is null || (altHeld ?? Keyboard.Modifiers.HasFlag(ModifierKeys.Alt))) return sec;
         var best = sec; var bestDistance = double.PositiveInfinity;
-        void Consider(double candidate, double limitPx)
+        void Consider(double candidate, double limitPx, double? candidateX = null)
         {
-            var d = Math.Abs(XOfSec(candidate) - XOfSec(sec));
+            var d = Math.Abs((candidateX ?? XOfSec(candidate)) - XOfSec(sec));
             if (d <= limitPx && d < bestDistance) { best = candidate; bestDistance = d; }
         }
         if (snap.ToItems)
@@ -47,7 +47,10 @@ internal sealed partial class TrackTimeline : IClipGestureHost
                 foreach (var other in track.AudioClips)
                 {
                     if (ReferenceEquals(other, except)) continue;
-                    Consider(other.StartSec, snap.DistancePx); Consider(other.EndSec, snap.DistancePx);
+                    Consider(other.StartSec, snap.DistancePx);
+                    // The end snaps where it is drawn (repeats, fermatas and the part past the last bar make the second-based x differ).
+                    var endX = ClipEndX(other.StartSec, other.EndSec);
+                    Consider(SecOfX(endX), snap.DistancePx, endX);
                 }
         if (snap.ToPlayhead && PlayheadSec is { } playhead) Consider(playhead(), snap.DistancePx);
         if (snap.ToGrid) Consider(GridSec(sec, snap.Grid), snap.GridAtAnyDistance ? double.PositiveInfinity : snap.DistancePx);
@@ -120,7 +123,7 @@ internal sealed partial class TrackTimeline : IClipGestureHost
             dc.DrawRectangle(Draw.Solid(trackColor, ClipLanes.Plays(track, lane) ? 0.08 : 0.03), null, laneRect);
             if (ClipGestures.DropTarget is { NotationRow: false } target && target.Track == trackIndex && target.Lane == lane && ClipGestures.FromTrack != trackIndex)
                 dc.DrawRectangle(Draw.Solid(_theme.Accent, 0.16), Draw.Pen(_theme.Accent, 1, 0.8), laneRect);
-            dc.DrawLine(Draw.Pen(_theme.BoardEdge, 0.6, 0.7), new Point(0, laneRect.Bottom - 0.5), new Point(width, laneRect.Bottom - 0.5));
+            if (ShowTrackLines) dc.DrawLine(TrackLinePen, new Point(0, laneRect.Bottom - 0.5), new Point(width, laneRect.Bottom - 0.5));
         }
         if (track.RecordArm && track.AudioClips.Count == 0 && !LiveTakes.Any(t => ReferenceEquals(t.Track, track)))
             Draw.At(dc, AudioInputs.IsMidi(track.AudioInput) ? "Armed (MIDI): press Record to record here" : "Armed: press Record to record here, or drop audio files",
@@ -152,6 +155,7 @@ internal sealed partial class TrackTimeline : IClipGestureHost
             dc.PushClip(LongerThanView(box) ? new RectangleGeometry(box) : new RectangleGeometry(box, 3, 3));
             if (clip.IsMidi) DrawMidiNotes(dc, clip, box, colour, alpha, width);
             else DrawWaveform(dc, clip, box, colour, alpha, width);
+            DrawLoopMarkers(dc, clip, box, alpha, width);
             var label = clip.Muted ? $"{clip.Name} (muted)" : clip.Name;
             if (!clip.IsMidi && WaveformCache.StatusOf(clip.File, Media) is { State: WaveState.NeedsApproval or WaveState.Failed } problem)
                 label = $"{label}: {problem.Message}";
@@ -235,17 +239,20 @@ internal sealed partial class TrackTimeline : IClipGestureHost
         var top = box.Y + 13; var h = box.Height - 16;
         var speed = Math.Clamp(clip.Speed, 0.25, 4);
         var brush = Draw.Solid(colour, 0.95 * alpha);
-        var end = clip.OffsetSec + clip.SourceLengthSec;
-        foreach (var n in notes)
+        foreach (var piece in ClipLoop.Pieces(clip))   // a looping clip repeats its notes
         {
-            if (n.StartSec + n.LengthSec <= clip.OffsetSec || n.StartSec >= end) continue;
-            var noteStart = clip.StartSec + (Math.Max(n.StartSec, clip.OffsetSec) - clip.OffsetSec) / speed;
-            var noteEnd = clip.StartSec + (Math.Min(n.StartSec + n.LengthSec, end) - clip.OffsetSec) / speed;
-            var x1 = ClipEndX(clip.StartSec, noteStart);
-            var x2 = ClipEndX(clip.StartSec, noteEnd);
-            if (x2 < 0 || x1 > width) continue;
-            var y = top + (1 - (n.Pitch - low) / (double)(high - low)) * (h - 2);
-            dc.DrawRectangle(brush, null, new Rect(x1, y, Math.Max(1.5, x2 - x1), 2));
+            var end = piece.OffsetSec + piece.SourceLengthSec;
+            foreach (var n in notes)
+            {
+                if (n.StartSec + n.LengthSec <= piece.OffsetSec || n.StartSec >= end) continue;
+                var noteStart = piece.StartSec + (Math.Max(n.StartSec, piece.OffsetSec) - piece.OffsetSec) / speed;
+                var noteEnd = piece.StartSec + (Math.Min(n.StartSec + n.LengthSec, end) - piece.OffsetSec) / speed;
+                var x1 = ClipEndX(clip.StartSec, noteStart);
+                var x2 = ClipEndX(clip.StartSec, noteEnd);
+                if (x2 < 0 || x1 > width) continue;
+                var y = top + (1 - (n.Pitch - low) / (double)(high - low)) * (h - 2);
+                dc.DrawRectangle(brush, null, new Rect(x1, y, Math.Max(1.5, x2 - x1), 2));
+            }
         }
     }
 

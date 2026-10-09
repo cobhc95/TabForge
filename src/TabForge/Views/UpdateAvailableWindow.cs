@@ -63,8 +63,7 @@ public static class UpdateAvailableWindow
         if (release is not null)
         {
             var download = new Button { Content = "Open download page", Padding = new Thickness(14, 5, 14, 5), Margin = new Thickness(0, 0, 8, 0), IsDefault = true };
-            download.SetResourceReference(Control.BackgroundProperty, "AccentBrush");
-            download.Foreground = Brushes.White;
+            download.SetResourceReference(FrameworkElement.StyleProperty, "AccentButton");
             download.Click += (_, _) => { open = true; w.DialogResult = true; };
             buttons.Children.Add(download);
         }

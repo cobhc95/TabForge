@@ -12,7 +12,7 @@ namespace TabForge.Services;
 /// The one place where TabForge configures and checks the alphaTab dependency for importing Guitar Pro files (audit R4).
 /// </summary>
 /// <remarks>
-/// TabForge ships alphaTab 1.8.4 built from source plus three patches (package and assembly <c>TabForge.AlphaTab</c>, see
+/// TabForge ships alphaTab 1.8.4 built from source plus four patches (package and assembly <c>TabForge.AlphaTab</c>, see
 /// vendor/alphatab/README.md): <see cref="ImporterSettings.MaxGp3To5BarCount"/> replaces upstream's hard-coded 1,000-bar
 /// threshold for Guitar Pro 3-5 files. The limit is a property of the <see cref="Settings"/> object of one import, so
 /// imports running at the same time cannot influence each other, and it never exceeds
@@ -23,8 +23,8 @@ internal static class AlphaTabBoundary
 {
     /// <summary>Assembly (and package) name of the patched alphaTab; upstream's is "AlphaTab".</summary>
     internal const string RequiredAssemblyName = "TabForge.AlphaTab";
-    /// <summary>The patched build is assembly version 1.8.4.3 (the fourth number counts TabForge's patch revisions).</summary>
-    internal static readonly Version RequiredVersion = new(1, 8, 4, 3);
+    /// <summary>The patched build is assembly version 1.8.4.4 (the fourth number counts TabForge's patch revisions).</summary>
+    internal static readonly Version RequiredVersion = new(1, 8, 4, 4);
 
     private static readonly Lazy<string?> InstalledProblem = new(() => Inspect(typeof(ScoreLoader).Assembly));
 
@@ -55,6 +55,10 @@ internal static class AlphaTabBoundary
         foreach (var fractionName in new[] { "VolumeFraction", "BalanceFraction" })
             if (info?.GetProperty(fractionName, BindingFlags.Public | BindingFlags.Instance) is not { CanRead: true, CanWrite: true } fraction || fraction.PropertyType != typeof(double))
                 return "The score reader component lacks the exact mixer volume and balance TabForge needs for .gp files. Reinstall TabForge.";
+        var note = alphaTab.GetType("AlphaTab.Model.Note");
+        foreach (var unlinked in new[] { "UnlinkedHammerPullOrigin", "UnlinkedSlideOutType", "UnlinkedTieDestination" })
+            if (note?.GetProperty(unlinked, BindingFlags.Public | BindingFlags.Instance) is not { CanRead: true })
+                return "The score reader component lacks the Guitar Pro 3-5 hammer-on, slide and tie marks TabForge keeps. Reinstall TabForge.";
         return null;
     }
 

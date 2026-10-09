@@ -13,7 +13,7 @@ using TabForge.Visualization;
 namespace TabForge;
 
 /// <summary>
-/// The fretboard pane opens at a "medium" size computed from the size model, and cannot be made taller than the
+/// The fretboard pane opens at a "medium" size computed from the size model (at most the score's text scale), and cannot be made taller than the
 /// board's maximum stretch (no empty space above and below it) nor smaller than its full-draw minimum.
 /// Set TABFORGE_FRETPANE_PNG to a folder to also get pictures (default, minimum, maximum; light and dark).
 /// </summary>
@@ -49,12 +49,12 @@ public static partial class SelfTest
 
                 // Medium default: string spacing about 29 px at the wide window, from the size model (not a pixel constant).
                 var medium = panel.MediumHeight();
-                var scale = Math.Min(InstrumentPanel.MediumScale, panel.ActualWidth / InstrumentPanel.NaturalWidth);
+                var scale = Math.Min(Math.Min(InstrumentPanel.MediumScale, panel.ScaleCap), panel.ActualWidth / InstrumentPanel.NaturalWidth);
                 var gap = (medium / scale - FretboardGeometry.TopPad - FretboardGeometry.BottomPad) / (strings - 1);
                 Log.Add($"  info  fretboard pane {tag}: panel width {panel.ActualWidth:0}, required {panel.RequiredHeight:0}, medium {medium:0}, max {panel.MaximumHeight:0}, string gap {gap * scale:0.0}px");
                 Check($"fretboard pane {tag}: the default is between the minimum and the maximum", medium >= panel.RequiredHeight - 0.5 && medium <= panel.MaximumHeight + 0.5);
                 if (width >= 2000)
-                    Check($"fretboard pane {tag}: the medium default gives about 29 px string spacing", gap * scale is > 27 and < 32, $"{gap * scale:0.0}");
+                    Check($"fretboard pane {tag}: the medium default draws at the score's scale (about 23 px string spacing at 100%)", gap * scale is > 21 and < 26, $"{gap * scale:0.0}");
                 if (png is { Length: > 0 }) FretPanePng(stage, png, $"default-{tag}", width, height, "instrument", workspace, medium + 2);
 
                 // Splitter/ratio far too tall: the pane stops at its maximum and the board has no empty band.
@@ -91,9 +91,11 @@ public static partial class SelfTest
             }
         }
 
-        // Other instruments share the host: the keyboard and drum map have no maximum.
-        Check("fretboard pane: a keyboard or drum map has no maximum height", double.IsPositiveInfinity(InstrumentPanel.MaximumPaneHeight(
-            new InstrumentVisualState { Kind = InstrumentKind.Keyboard }, 1500, 120)));
+        // Other instruments share the host: the keyboard stops at its tallest keys, the drum map has no maximum.
+        Check("fretboard pane: a keyboard stops at its tallest keys", InstrumentPanel.MaximumPaneHeight(
+            new InstrumentVisualState { Kind = InstrumentKind.Keyboard }, 1500, 120) == TabForge.Visualization.KeyboardPaneSizing.MaxKeyHeight);
+        Check("fretboard pane: a drum map has no maximum height", double.IsPositiveInfinity(InstrumentPanel.MaximumPaneHeight(
+            new InstrumentVisualState { Kind = InstrumentKind.Drums }, 1500, 120)));
         foreach (var n in new[] { 4, 7, 8 })
         {
             var natural = InstrumentPanel.RequiredHeightFor(null, 900);

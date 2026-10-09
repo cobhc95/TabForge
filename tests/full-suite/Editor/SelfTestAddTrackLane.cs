@@ -112,14 +112,14 @@ public static partial class SelfTest
             panel.SimulateAddLaneState(false, false);
             Check("add lane: back to idle afterwards", panel.AddLaneState == "idle" && VisualDescendants<TextBlock>(lane).Any(t => t.Text == "Add track") && lane.BorderThickness.Top == 0);
 
-            // The audio row: a waveform and "Audio" instead of the instrument picker.
+            // The audio row: the waveform icon instead of the instrument icon button.
             var guitarRow = VisualDescendants<Border>(panel).First(b => (System.Windows.Automation.AutomationProperties.GetName(b) ?? "").StartsWith("Track 1:"));
             var audioRow = VisualDescendants<Border>(panel).First(b => (System.Windows.Automation.AutomationProperties.GetName(b) ?? "").StartsWith("Track 2:"));
-            bool Picker(Border row) => VisualDescendants<Button>(row).Any(b => (b.ToolTip as string ?? "") == "Instrument / VST for this track");
-            Check("audio row: an instrument track has the instrument picker, an audio track has none", Picker(guitarRow) && !Picker(audioRow));
-            Check("audio row: it shows a waveform icon and the word Audio",
-                VisualDescendants<System.Windows.Shapes.Path>(audioRow).Any(p => System.Windows.Automation.AutomationProperties.GetName(p) == "Audio track") && VisualDescendants<TextBlock>(audioRow).Any(t => t.Text == "Audio"));
-            Check("audio row: an instrument row has no waveform icon", !VisualDescendants<System.Windows.Shapes.Path>(guitarRow).Any(p => System.Windows.Automation.AutomationProperties.GetName(p) == "Audio track"));
+            bool Picker(Border row) => VisualDescendants<Button>(row).Any(b => (System.Windows.Automation.AutomationProperties.GetName(b) ?? "").StartsWith("Instrument:"));
+            bool Waveform(Border row) => VisualDescendants<Border>(row).Any(b => System.Windows.Automation.AutomationProperties.GetName(b) == "Audio track");
+            Check("audio row: an instrument track has the instrument icon button, an audio track has none", Picker(guitarRow) && !Picker(audioRow));
+            Check("audio row: it shows the waveform icon", Waveform(audioRow));
+            Check("audio row: an instrument row has no waveform icon", !Waveform(guitarRow));
 
             // Right-click on the audio row offers Convert to instrument track.
             var asked = -1;
@@ -231,14 +231,14 @@ public static partial class SelfTest
         var said = "";
         editor.StatusMessage += (_, text) => said = text;
         editor.SetPosition(0, 0, 1, seekPlayback: false);
-        editor.EnterFret(5);
+        editor.Effects.EnterFret(5);
         var audioNotes = audio.Measures.Sum(m => m.Cells.Sum(c => c.Notes.Count));
         Check("guards: typing a fret on an audio track enters no note and says why", audioNotes == 0 && said == EditorGuard.Hint, $"{audioNotes} '{said}'");
         Check("guards: no note preview on an audio track", previews == 0);
-        Check("guards: note commands on an audio track change nothing", !editor.ToggleFretAtPosition(1, 3) && audio.Measures.All(m => m.Cells.All(c => c.Notes.Count == 0)));
+        Check("guards: note commands on an audio track change nothing", !editor.Effects.ToggleFretAtPosition(1, 3) && audio.Measures.All(m => m.Cells.All(c => c.Notes.Count == 0)));
         editor.SelectedTrackIndex = 0;
         editor.SetPosition(1, 0, 1, seekPlayback: false);
-        editor.EnterFret(5);
+        editor.Effects.EnterFret(5);
         Check("guards: the same entry on the instrument track still works", song.Tracks[0].Measures[1].Cells.Any(c => c.Notes.Count > 0));
     }
 
@@ -313,8 +313,6 @@ public static partial class SelfTest
             grid.SelectedIndex = 1;
             var position = LtField<TextBlock>(a, "PositionText")!.Text;
             Check("audio track selected: the status bar shows Audio track — no notation", position.Contains(EditorGuard.Message), position);
-            var hint = LtField<TextBlock>(a, "PracticeHint")!.Text;
-            Check("audio track selected: the instrument panel shows its no-track state", hint == EditorGuard.Message, hint);
         }
         finally { DialogHost.Capture = previous; }
     });

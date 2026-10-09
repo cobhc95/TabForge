@@ -324,8 +324,8 @@ public static partial class SelfTest
         var liveHashes = IxEditorHashes(window, reveal, liveLines);
         var fresh = new TabEditorControl
         {
-            Project = project, SelectedTrackIndex = track, DarkPaper = live.DarkPaper, HideCursor = true, PlaybackMeasure = -1,
-            Notation = live.Notation, Zoom = live.Zoom, CenterSystems = live.CenterSystems, HorizontalScroll = live.HorizontalScroll,
+            Project = project, SelectedTrackIndex = track, Appearance = { DarkPaper = live.Appearance.DarkPaper, CenterSystems = live.Appearance.CenterSystems }, HideCursor = true, PlaybackMeasure = -1,
+            Notation = live.Notation, Zoom = live.Zoom, HorizontalScroll = live.HorizontalScroll,
             PageWidthOverride = live.PageWidthOverride, Width = live.Width,
         };
         var width = Math.Max(1, live.ActualWidth); var height = Math.Max(1, live.ActualHeight);

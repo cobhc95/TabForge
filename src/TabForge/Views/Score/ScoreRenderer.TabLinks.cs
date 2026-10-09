@@ -28,13 +28,8 @@ internal sealed partial class ScoreRenderer
         if (track is null || measureIndex < 0 || measureIndex >= track.Measures.Count) return 0;
         var measure = track.Measures[measureIndex];
         var voiceCells = VoiceCells(measure, voice);
-        var slots = _host.SlotsFor(measureIndex);
         var position = _layout.GetLayout(track).Measure(measureIndex);
-        var slotWidth = position.Width / Math.Max(1, slots);
-        var startSlots = cellIndex >= 0 && cellIndex < voiceCells.Count
-            ? voiceCells[cellIndex].RhythmicPosition ?? cellIndex
-            : Math.Max(0, cellIndex);
-        return position.X + _layout.WarpFor(track, measureIndex).CenterFraction(Math.Max(0, startSlots)) * position.Width;
+        return position.X + _layout.WarpFor(track, measureIndex).CenterFraction(CursorPositions.DrawnStart(voiceCells, cellIndex)) * position.Width;
     }
 
     private double CellBoundaryX(int measureIndex, double endSlots)
@@ -86,19 +81,24 @@ internal sealed partial class ScoreRenderer
 
         // Hammer-on / pull-off groups as a legato slur in the tablature,
         // not as a repeated "H/P" text label over every note.
-        // The reference draws the slur above the numbers.
-        var start = new Point(startX + 3, y - 7);
-        var end = new Point(endX - 3, y - 7);
+        // The reference draws the slur above the numbers on the upper strings and below them on the lower strings.
+        var below = TabSlurBelow(note.StringIndex);
+        var side = below ? 1 : -1;
+        var start = new Point(startX + 3, y + side * 7);
+        var end = new Point(endX - 3, y + side * 7);
         var arc = Math.Clamp((endX - startX) * 0.10, 5, 10);
         var figure = new PathFigure { StartPoint = start, IsClosed = false };
         figure.Segments.Add(new BezierSegment(
-            new Point(startX + (endX - startX) * 0.28, y - 7 - arc),
-            new Point(startX + (endX - startX) * 0.72, y - 7 - arc),
+            new Point(startX + (endX - startX) * 0.28, y + side * (7 + arc)),
+            new Point(startX + (endX - startX) * 0.72, y + side * (7 + arc)),
             end, true));
         var geometry = new PathGeometry();
         geometry.Figures.Add(figure);
         dc.DrawGeometry(null, RenderDraw.Pen(ink, 0.9), geometry);
     }
+
+    /// <summary>A TAB slur on the lower half of the strings curves below the fret numbers (as in the reference).</summary>
+    internal bool TabSlurBelow(int stringIndex) => stringIndex >= Math.Max(1, _host.Track?.StringTunings.Count ?? 6) / 2;
 
     private void DrawTabSlides(DrawingContext dc, TrackModel track, int measureIndex,
         StaffNotationMeasureLayout layout, IReadOnlyList<TabCell> cells, int strings, double tabTop, Color ink)
@@ -155,11 +155,12 @@ internal sealed partial class ScoreRenderer
                     {
                         // Legato slide = the slide line plus a slur; a shift slide is the line alone.
                         var arcHeight = Math.Clamp((endX - startX) * 0.12, 4, 9);
+                        var side = TabSlurBelow(mark.Source.StringIndex) ? 1 : -1;
                         var slur = new StreamGeometry();
                         using (var c = slur.Open())
                         {
-                            c.BeginFigure(new Point(startX, y - 8), false, false);
-                            c.QuadraticBezierTo(new Point((startX + endX) / 2, y - 8 - arcHeight * 2), new Point(endX, endY - 8), true, false);
+                            c.BeginFigure(new Point(startX, y + side * 8), false, false);
+                            c.QuadraticBezierTo(new Point((startX + endX) / 2, y + side * (8 + arcHeight * 2)), new Point(endX, endY + side * 8), true, false);
                         }
                         slur.Freeze();
                         dc.DrawGeometry(null, pen, slur);
@@ -231,7 +232,7 @@ internal sealed partial class ScoreRenderer
             {
                 var next = cells[cell].Notes.FirstOrDefault(candidate => candidate.StringIndex == stringIndex);
                 if (next is null) continue;
-                if (!next.Techniques.Contains("HOPO")) return last;
+                if (!next.Techniques.Contains("HOPO")) return last ?? (measure, cell, next);   // a single marked note slurs to the next note
                 last = (measure, cell, next);
             }
         }
@@ -257,9 +258,6 @@ internal sealed partial class ScoreRenderer
 
     internal static double CellStartSlots(MeasureModel measure, int cellIndex, IReadOnlyList<TabCell>? voiceCells = null)
     {
-        var cells = voiceCells ?? measure.Cells;
-        return cellIndex >= 0 && cellIndex < cells.Count
-            ? Math.Max(0, cells[cellIndex].RhythmicPosition ?? cellIndex)
-            : Math.Max(0, cellIndex);
+        return CursorPositions.DrawnStart(voiceCells ?? measure.Cells, cellIndex);   // the x the beat's notes are drawn at, also in an overfull bar
     }
 }

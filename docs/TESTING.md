@@ -6,7 +6,7 @@ TabForge has one headless test suite, built into the executable. It needs no aud
 > **How to run a test (canonical)**
 > - Every build: the basic area. `src\TabForge\bin\Release\net8.0-windows\TabForge.exe --selftest <log> --areas basic`, then read the "N passed, M failed" line (the exe prints nothing; read the log).
 > - One test (`--only TestX`): most tests live in `tests/full-suite`, so first build a full-suite copy: `dotnet build src/TabForge/TabForge.csproj -c Release -p:TabForgeFullSuite=true -o <dir>`, then run `<dir>\TabForge.exe --selftest <log> --only TestX`. A normal build reports "0 run" or an unknown name.
-> - Register a test: add an `AreaOf` entry in `src/TabForge/SelfTests/SelfTest.cs`, and register it in `tests/full-suite/SelfTestFullSuite.cs` (not a `Guard` in `SelfTest.cs`). Then run `--feature-map` into `docs/FEATURE_MAP.md`.
+> - Register a test: add an `AreaOf` entry in `src/TabForge/SelfTests/SelfTest.cs`, and register it in `tests/full-suite/SelfTestFullSuite.cs` (not a `Guard` in `SelfTest.cs`). Then run `--feature-map` (regenerates `docs/feature-map/tests.md`).
 > - Before a release: `--areas release` (full-suite build). The full suite (`--require ci,document-context`) runs weekly and at manager checkpoints only.
 <!-- TEST-BOX-END -->
 

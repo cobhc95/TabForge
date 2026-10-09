@@ -26,12 +26,12 @@ internal interface ITrackColumnHost
 internal sealed class TrackColumnLayout
 {
     // "name" is the flexible column; every other column has a stored width.
-    public static readonly string[] DefaultOrder = { "settings", "colour", "number", "name", "fx", "mute", "solo", "volume", "pan", "instrument" };
+    public static readonly string[] DefaultOrder = { "settings", "kind", "colour", "number", "name", "fx", "mute", "solo", "volume", "pan" };
     private static readonly Dictionary<string, (string label, double width, double min, double max)> ColumnSpecs = WithHeaderMinimums(new()
     {
         ["colour"] = ("●", 22, 18, 40), ["settings"] = ("⚙", 24, 20, 40), ["number"] = ("#", 28, 22, 50),
         ["name"] = ("TRACK", 0, 0, 0), ["fx"] = ("FX", 56, 50, 80), ["mute"] = ("M", 26, 22, 44), ["solo"] = ("S", 26, 22, 44),
-        ["volume"] = ("VOLUME", 82, 40, 240), ["pan"] = ("PAN", 82, 28, 240), ["instrument"] = ("INSTRUMENT", 132, 80, 280)
+        ["volume"] = ("VOLUME", 82, 40, 240), ["pan"] = ("PAN", 82, 28, 240), ["kind"] = ("♪", 32, 30, 44)
     });
 
     /// <summary>Header label font size (DIPs); the minimum column widths are measured at it.</summary>
@@ -95,6 +95,13 @@ internal sealed class TrackColumnLayout
         get => (_columnOrder.ToList(), new Dictionary<string, double>(_columnWidths), _host.ControlsAreaWidth);
         set
         {
+            // Layouts saved with the instrument dropdown column: the instrument icon column replaces it, next to the cogwheel.
+            if (value.order is { } withDropdown && withDropdown.Contains("instrument"))
+            {
+                withDropdown = withDropdown.Where(id => id is not ("instrument" or "kind")).ToList();
+                withDropdown.Insert(withDropdown.IndexOf("settings") + 1, "kind");
+                value = (withDropdown, value.widths, value.area);
+            }
             // Layouts saved before the FX column existed: put it just before Mute.
             if (value.order is { } saved && !saved.Contains("fx") && saved.Count == DefaultOrder.Length - 1)
             {
@@ -198,7 +205,7 @@ internal sealed class TrackColumnLayout
         var line = new Border
         {
             Width = 1, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 5, 0, 5),
-            Opacity = 0.22, IsHitTestVisible = false
+            Opacity = 0, IsHitTestVisible = false
         };
         line.SetResourceReference(Border.BackgroundProperty, "BorderBrush");
         Grid.SetColumn(line, column);
@@ -248,9 +255,17 @@ internal sealed class TrackColumnLayout
                 Margin = new Thickness(id == "name" ? 4 : 0, 0, 0, 0), IsHitTestVisible = false
             };
             label.SetResourceReference(TextBlock.ForegroundProperty, "LegibleBrush");
+            UIElement content = label;
+            if (id == "settings")
+            {
+                // The settings column shows the same gear as each row's cog (the "⚙" text glyph renders as a different shape per font).
+                var cog = new System.Windows.Shapes.Path { Data = (Geometry)Application.Current.FindResource("IconCog"), Stretch = Stretch.Uniform, Width = 12, Height = 12, IsHitTestVisible = false };
+                cog.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, "LegibleBrush");
+                content = cog;
+            }
             var cell = new Border
             {
-                Background = Brushes.Transparent, Child = label, CornerRadius = new CornerRadius(3), Margin = new Thickness(1, 1, 1, 1),
+                Background = Brushes.Transparent, Child = content, CornerRadius = new CornerRadius(3), Margin = new Thickness(1, 1, 1, 1),
                 RenderTransform = _columnTransforms[c], BorderThickness = new Thickness(1), BorderBrush = Brushes.Transparent,
                 ToolTip = "Press and drag to move this column · drag a divider to resize · right-click to reset",
                 Visibility = _hiddenColumns.Contains(id) ? Visibility.Collapsed : Visibility.Visible

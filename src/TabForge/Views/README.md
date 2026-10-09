@@ -11,8 +11,8 @@ WPF controls and windows. Layout and drawing live here; data and rules do not.
 - `TabEditorControl` (with `StaffNotationRenderer`): the score and tab editor. `ScoreEditPreparation` owns edit guards and rest-fill wrapping before a transaction. `ScoreLayoutEngine` partials and `ScoreLayoutIncrementalState` own per-bar widths, signature context and conservative stable-range reuse; page systems recompose globally when geometry can move. Tests: `TestScoreLayoutPartial`, `TestNotationLayout`.
 - `ArrangementPanel` (partial files): the timeline of tracks and clips. Owned helpers behind host interfaces: `TrackColumnLayout`
   (`ITrackColumnHost`: column order, widths, header, column drag), `AddLaneController` (`IAddLaneHost`: the Add-track lane),
-  `GroupDragController` (`IGroupDragHost`: group header drag), `TuningButtonController` (`ITuningButtonHost`), `TrackRowWidgets`
-  (`ITrackRowWidgetHost`: pan menu, mix-edit gestures, instrument picker), `ResizeShade`, `ArrangementAutomation.cs` (screen-reader peers).
+  `GroupDragController` (`IGroupDragHost`: group header drag), `MediaDropController` (`IMediaDropHost`: file drops and the drop ghost), `TuningButtonController` (`ITuningButtonHost`), `TrackRowWidgets`
+  (`ITrackRowWidgetHost`: pan menu, mix-edit gestures, the instrument icon button), `TrackSilhouette` (the track-row instrument icons: the owner's line art from `src/TabForge/Assets/Icons/TrackRows/owner-icons.json` and the program-to-icon map), `SectionAutoScrollController` (edge scroll during a section drag), `ResizePreviewController` (splitter-drag shade) with `ResizeShade`, `ArrangementAutomation.cs` (screen-reader peers).
   `TrackControlWidgets`: stateless sliders, M/S buttons and colour palette shared with the Mixer.
 - `TrackTimeline` (partial files): the arrangement's drawing surface; it renders, dispatches mouse input and keeps the public API. Gesture state lives in owned helpers that reach it through small host interfaces:
   - `DropPreviewGeometryController` and `TrackTimelineSongTimeMapController`: bounded drop feedback and cached repeat-aware clip endpoints.
@@ -20,9 +20,9 @@ WPF controls and windows. Layout and drawing live here; data and rules do not.
   - `SectionEdgeController` (`ISectionEdgeHost`): section edge resize and Ctrl+drag marker-only moves.
   - `SectionTipController` (`ISectionTipHost`): the section lane's hover hint.
   - `AreaMoveController` (`IAreaMoveHost`): moving the selected bar range.
-- `InstrumentPanel`: fretboard, drum and keyboard display.
-- `PreferencesWindow`, `MixerWindow`, `FxChainWindow`: settings, mixer and plug-in chains.
-- `CommandPalette`, `DialogHost`, `ContextMenuLayouts`, `BarRangePrompt`: command search, owner-scoped reusable choice prompts, dialogs and menus.
+- `InstrumentPanel`: fretboard, drum and keyboard display (drum key map in `InstrumentPanel.Percussion.cs`); it draws at most at the score's text scale (set by `ScoreZoomController`; test `TestScoreScaleMatchesFretboard`). `BandViewController` (`IBandViewHost`; with `BandView`, `BandRow`, `BandLane`, `BandFollow`, `BandNoteGlow` in the Band folder): one row per track; a lane engraves its track once and follows the playhead with the score's follow settings, glowing the sounding notes. `BandLayoutState` keeps the rows' layout in the song (`SongProject.BandLayout`). Tests: `TestBandViewRows`, `TestBandLaneCache`, `TestBandLaneClick`, `TestBandLayoutPreset`, `TestBandLayoutSaved`, `TestBandSettings`.
+- `PreferencesWindow`, `MixerWindow` (collapse, colour chip and rules entry in `MixerWindow.Groups.cs`; the rules editor is `GroupRulesDialog`), `FxChainWindow`: settings, mixer and plug-in chains. `ChordFinderWindow`, `SongStatsWindow`, `TrackOutputWindow`: small Tools and Sound windows.
+- `CommandPalette`, `DialogHost`, `ContextMenuLayouts`, `BarRangePrompt`: command search, owner-scoped reusable choice prompts, dialogs and menus. `EffectEditorFlow` (Views/EffectEditors, own README): bend and tremolo bar editors.
 - `TrackRowMenus`, `DeleteTrackPrompt`, `ConvertTrackPrompts`: track-row menus and themed questions. `MenuPopupWarmup` opens a temporary diagnostic popup to measure its real HWND/template path without activation.
 - Main-window panes, each behind a host interface deriving from `IPaneHost`: `DockLayoutController` (layouts, Panels menu, side panel,
   fretboard pane size, full screen), `ScoreZoomController` (zoom box, page width), `ToolPaletteController` (palettes, pinned tools),

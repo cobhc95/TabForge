@@ -125,11 +125,11 @@ public static class GmSynthTuning
     // The Windows GS synth plays no reverb / chorus tail even when a track sends CC91 / CC93 (measured: drums are
     // silent 0.5 s after the hit), so the engine's copy runs dry too: reverb and chorus are fixed off (which also saves their CPU per track).
     public const bool ReverbAndChorus = false;
-    /// <summary>Applies the measured per-program / per-drum-note level calibration (see docs/LEVEL_MATCH_2026-09-29.md).</summary>
+    /// <summary>Applies the measured per-program / per-drum-note level calibration.</summary>
     public static bool Calibrate { get; set; } = true;
 
     /// <summary>Measured correction per GM program, dB (positive = make the engine louder); NaN = not measured (family average).</summary>
-    // Measurement method (docs/LEVEL_MATCH_2026-09-29.md): engine minus GS negated, mean of velocities 40/64/90/110/127
+    // Measurement method: engine minus GS negated, mean of velocities 40/64/90/110/127
     // (the velocity curves are identical: spread <= 0.2 dB per program), path offset from a steady tone (-32.21 dB).
     // The engine plays the sound bank as it is, except for the two things heard as different from the Windows synth:
     // snares quieter (+2.5 dB) and crashes louder (-4 dB), set by ear. The program table is empty: a full measured

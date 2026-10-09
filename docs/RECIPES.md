@@ -1,6 +1,6 @@
 # Recipes
 
-Exact file lists for the usual changes. Paths are from the repository root. Each recipe ends with the self-tests to run; how to run them is in `docs/DEBUGGING.md` (`--only`, `--areas`). `START_HERE.md` explains the pathways named here, and `docs/FEATURE_MAP.md` lists the tests by area. Names of methods are written with parentheses; search for the name to find the line.
+Exact file lists for the usual changes. Paths are from the repository root. Each recipe ends with the self-tests to run; how to run them is in `docs/DEBUGGING.md` (`--only`, `--areas`). `START_HERE.md` explains the pathways named here, and `docs/feature-map/` lists the tests by area. Names of methods are written with parentheses; search for the name to find the line.
 
 ## Add a note technique
 
@@ -18,9 +18,9 @@ It must show in the tab and be heard in playback.
 
 Example: a preference "zoom for new tabs".
 
-1. Field and default: `src/TabForge/Services/AppSettings.cs` (the settings class of the right section).
+1. Field and default: the section's settings class in `src/TabForge/Services/` (e.g. `EditingSettings.cs`, `TimelineSettings.cs`; `AppSettings.cs` holds the root).
 2. Bound: `src/TabForge/Services/SettingsValidator.cs`. Old files: `src/TabForge/Services/SettingsMigration.cs`.
-3. Preferences row and search entry: `src/TabForge/Services/SettingsCatalog.cs` and the page builder in `src/TabForge/Views/Preferences/` (see `src/TabForge/Views/Preferences/CommonPages.cs`, `src/TabForge/Views/Preferences/SettingEditors.cs`).
+3. Preferences row and search entry: the page's `src/TabForge/Services/SettingsCatalog.<Page>.cs` (rows) and the page builder in `src/TabForge/Views/Preferences/` (see `src/TabForge/Views/Preferences/CommonPages.cs`, `src/TabForge/Views/Preferences/SettingEditors.cs`).
 4. Use: read it from the shared `AppSettingsStore`, never from a copy. A new document starts at `DocumentSession.ZoomFactor`; the open path is in `src/TabForge/MainWindow.Documents.cs`.
 5. Test: change the value, check it is stored, survives a reload and changes nothing else.
 6. Tests: `TestEverySettingIsWired`, `TestPreferencesCatalog`, `TestSettingsStoreSharedAcrossWindows`; run with `--areas settings`.
@@ -79,3 +79,15 @@ Example: a song key.
 3. A multi-step operation (prompts, several outcomes) is a flow class with an interaction interface, as `DocumentSaveFlow` and `ISaveInteractions`; the window implements the interface with dialogs.
 4. Size: a test window must fit 1024 x 728. Escape cancels. A new setting-like option also gets a Preferences row.
 5. Tests: `TestDialogEscape`, `TestPasteOptionsDialog`; a Flow is driven through a fake interaction object without a window.
+
+## Add a note-effect editor
+
+A dialog for one effect (bend, tremolo bar, trill, grace note and harmonic exist; the last three keep numbers in `EffectPresetEntry.Values` and use `ValuesEffectDialog` and `EffectEditorFlow.OpenOrnament`). Folder guide: `src/TabForge/Views/EffectEditors/README.md`.
+
+1. Kind and presets: add the member to `EffectEditorKind` (`src/TabForge/Views/EffectEditors/EffectCurve.cs`) and its built-in list to `EffectPresetStore.BuiltIn` (`src/TabForge/Views/EffectEditors/EffectPresetStore.cs`); user presets are stored by kind in `AppSettings.EffectPresets` (numbers go in `EffectPresetEntry.Values`).
+2. Dialog: a class like `CurveEffectDialog` that builds the controls and hands them to `ThemedEditorDialog` (OK / Clean / Cancel, Enter, Esc, tab order). A curve effect reuses `EffectCurveEditor`.
+3. Model write: `EffectEdits` (an apply and a clean method per effect; pure; they return whether anything changed) and one case in `EffectEditorFlow.Open` that finds the notes (`ScoreEditCommands.EffectNotes`) and runs the write through `ScoreEditCommands.EditEffect` (one undo step).
+4. Entry points: the `effect:` case in `src/TabForge/MainWindow.Palette.cs`, a menu item in `src/TabForge/MainWindow.xaml` (handler in `src/TabForge/MainWindow.EffectEditors.cs`), a command id in `src/TabForge/Services/HotkeyCatalog.cs` with no default key, its case in the hotkey switch of `src/TabForge/MainWindow.Settings.cs`, and the rows in `TOOLS_AND_HOTKEYS.md`.
+5. Files and sound: the model fields must already round-trip (`.tforge` serialises the model; `.gp` import and export are in `src/TabForge/Services/GuitarProBeatReader.cs` and `GuitarProExporter.cs`); playback is `src/TabForge/Playback/ScoreToMidiCompiler.Techniques.cs`.
+6. Tests: `TestEffectCurveMath`, `TestEffectEditors`, `TestEffectEditorFiles` (register new ones per `docs/DEBUGGING.md`; a saving or import test also goes into the release list in `src/TabForge/SelfTests/SelfTestRelease.cs`).
+

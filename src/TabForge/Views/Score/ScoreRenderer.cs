@@ -33,6 +33,7 @@ internal sealed partial class ScoreRenderer
         IReadOnlyList<PalmMutePassage> palmMutePassages, IReadOnlyList<FadePassage> fadePassages)
     {
         var system = systemLayout.Index;
+        _errorColor = errorColor;
         var staffTop = _host.StaffTop(system);
         var tabTop = _host.TabTop(system);
         var strings = Math.Max(1, track.StringTunings.Count);
@@ -66,13 +67,19 @@ internal sealed partial class ScoreRenderer
         {
             if (!_host.InHorizontalBand(measurePosition)) continue;
             var measureIndex = measurePosition.MeasureIndex;
-            var state = _layout.BarStateFor(measureIndex);
-            var barPen = state.Marked ? RenderDraw.Pen(errorColor, 1.6) : thick;
+            // The reference marks an overfull bar by drawing its staff and string lines red (the bar number is red too, see DrawBarLabels).
+            if (_layout.BarStateFor(track, measureIndex).Error)
+            {
+                var red = StaffNotationRenderer.StaffLinePen(errorColor);
+                var (left, right) = (measurePosition.X, measurePosition.X + measurePosition.Width);
+                if (showStaff) for (var l = 0; l < 5; l++) dc.DrawLine(red, new Point(left, staffTop + l * _host.StaffGap), new Point(right, staffTop + l * _host.StaffGap));
+                if (showTab) for (var s = 0; s < strings; s++) dc.DrawLine(red, new Point(left, tabTop + s * _host.StringGap), new Point(right, tabTop + s * _host.StringGap));
+            }
 
             // Snap vertical bar lines to the pixel grid so they render as crisp 1 px lines.
             var barX = Math.Round(measurePosition.X) + 0.5;
-            if (showStaff) dc.DrawLine(barPen, new Point(barX, staffTop - 4), new Point(barX, staffTop + 4 * _host.StaffGap + 4));
-            if (showTab) dc.DrawLine(barPen, new Point(barX, tabTop - 4), new Point(barX, tabTop + (strings - 1) * _host.StringGap + 4));
+            if (showStaff) dc.DrawLine(thick, new Point(barX, staffTop - 4), new Point(barX, staffTop + 4 * _host.StaffGap + 4));
+            if (showTab) dc.DrawLine(thick, new Point(barX, tabTop - 4), new Point(barX, tabTop + (strings - 1) * _host.StringGap + 4));
             if (track.Measures[measureIndex].IsDoubleBar)
             {
                 var doubleX = Math.Round(measurePosition.X + measurePosition.Width) + 3.5;
@@ -148,13 +155,6 @@ internal sealed partial class ScoreRenderer
             // Opt-in playing-bar band: behind everything that follows (selection, notes, marks).
             if (_host.PlayingBarBand(track, systemLayout, measurePosition) is { } playingBar)
                 dc.DrawRectangle(playingBar.Brush, null, playingBar.Rect);
-
-            var isError = _layout.BarStateFor(measureIndex).Marked;
-            if (isError && measureIndex != _host.SelectedMeasure)
-            {
-                var tint = ScoreText.Brush(Color.FromArgb(38, errorColor.R, errorColor.G, errorColor.B));
-                dc.DrawRectangle(tint, null, new Rect(x + 1, staffTop - 6, measureWidth - 2, (showTab ? tabTop + (strings - 1) * _host.StringGap : staffTop + 4 * _host.StaffGap) - staffTop + 18));
-            }
 
             // Selection range overlay
             if (_host.HasSelection)
@@ -237,7 +237,7 @@ internal sealed partial class ScoreRenderer
         }
         DrawVoltaBrackets(dc, voltas, ink);
 
-        if (showTab || showStaff) DrawPalmMutePassages(dc, palmMutePassages, track, systemLayout, tabTop, ink, showStaff ? staffTop + 4 * _host.StaffGap : null);
+        if (showTab || showStaff) DrawPalmMutePassages(dc, palmMutePassages, track, systemLayout, tabTop, ink, showTab ? null : staffTop + 4 * _host.StaffGap);
         DrawFadePassages(dc, fadePassages, track, systemLayout, staffTop, tabTop, ink, showTab);
     }
 
@@ -246,6 +246,7 @@ internal sealed partial class ScoreRenderer
     {
         // A simile bar shows only its sign (the notes behind it are a copy kept for playback and export).
         if (SimileHidesNotes(measure, measureIndex)) cells = Array.Empty<TabCell>();
+        cells = DrawnCells(measure, cells, slots);
         if (inactiveVoice)
         {
             var gray = Color.FromRgb(0x6F, 0x7A, 0x89);
@@ -262,6 +263,7 @@ internal sealed partial class ScoreRenderer
         var layout = _layout.StaffLayoutFor(track, measure, measureIndex, slots, x, staffTop, slotWidth,
             numerator, denominator, keySignature, cells);
         layout.Skyline = _sky;
+        layout.HarmonicCaptionsOnTab = showTab;   // the reference prints "Harm." just above the TAB fret, not under the staff
         layout.FirstVoice = layout.IsSecondVoice ? _layout.CachedStaffLayout(measureIndex, 0) : null;
         {
             var signatureRight = double.NegativeInfinity;
@@ -277,8 +279,6 @@ internal sealed partial class ScoreRenderer
         if (showStaff)
             _staff.DrawMeasure(dc, layout, measureIndex, ink, faint, accent, playColor, bg, staffLine, _host.Appearance.LedgerLines,
                 _host.SoundingNotes, _host.StruckNotes);
-        if (showStaff && layout.Beats.Count == 0 && !layout.IsSecondVoice && !ScoreLayoutEngine.Voice2HasContent(measure) && !measure.SimileOneBar && !measure.SimileTwoBar)
-            StaffNotationRenderer.DrawWholeBarRest(dc, x + measureWidth / 2, staffTop, ink);   // an empty bar reads as a whole-bar rest
         if (showTab)
             DrawTabSlides(dc, track, measureIndex, layout, cells, strings, tabTop, ink);
 
@@ -316,7 +316,7 @@ internal sealed partial class ScoreRenderer
             }
 
             {
-                    var techniqueLabel = showTab ? ScoreMarkText.DrawnTechniqueLabel(cell.Notes, !showStaff) : "";
+                    var techniqueLabel = showTab ? ScoreMarkText.DrawnTechniqueLabel(cell.Notes) : "";
                     if (!string.IsNullOrWhiteSpace(cell.ChordName))
                     {
                         var chordFt = ScoreText.MakeTextIn(ScoreTextArea.Chord, cell.ChordName!, 10, ScoreText.Brush(accent), FontWeights.SemiBold);
@@ -324,25 +324,29 @@ internal sealed partial class ScoreRenderer
                     }
             // The reference vibrato: a wavy line along the note's duration, above the staff and above the TAB.
             var vibratoWide = cell.Notes.Any(n => n.Techniques.Contains("WideVibrato"));
-            if (vibratoWide || cell.Notes.Any(n => n.Techniques.Contains("Vibrato")))
+            if (HasVibrato(cell))
             {
                 var right = beat.CenterX + Math.Max(18, beat.DurationSlots * (measureWidth / Math.Max(1, slots)) * 0.8);
                 right = Math.Max(Math.Min(right, x + measureWidth - 3), beat.CenterX + 8);   // the line ends inside its bar (and so inside the page)
+                // Consecutive vibrato notes share one unbroken line, as in the reference: this piece runs on to where the next one starts.
+                // The skyline claim stops short of the join so the next piece is placed on the same row.
+                var claimRight = right;
+                if (VibratoRunsOnTo(measureIndex, layout, beat, ReferenceEquals(cells, measure.Voice2Cells) ? 1 : 0) is { } joined) (right, claimRight) = (joined, Math.Max(cx, joined - 6));
                 // Stack above whatever already sits over the note instead of drawing across it:
                 // staff: above the chord-name / text lanes when present; TAB: above the technique label
                 // and the P.M. lane.
+                // Above the staff the next bar's marks (its number, high notes) set its own row: the staff piece stops at the barline.
+                var staffRight = Math.Min(right, x + measureWidth - 3);
                 var staffLane = staffTop - 16;
                 if (showStaff)
                 {
                     // Stacked above the staff's marks for this column (the wavy line is about 8 px tall).
-                    var vibTop = _sky.PlaceAbove(cx - 6, right, vibratoWide ? 9 : 7, staffTop - 8);
+                    var vibTop = _sky.PlaceAbove(cx - 6, Math.Min(claimRight, staffRight), vibratoWide ? 9 : 7, staffTop - 8);
                     staffLane = vibTop + (vibratoWide ? 4.5 : 3.5);
                 }
-                var pm = cell.Notes.Any(note => note.Techniques.Any(ScoreMarkText.IsPalmMute));
-                var tabLane = tabTop - 12;
-                if (pm && !showStaff) tabLane = tabTop - 30;
-                if (ScoreMarkText.DrawnTechniqueLabel(cell.Notes, !showStaff).Length > 0) tabLane = tabTop - (pm && !showStaff ? 34 : 20) - 9;
-                if (showStaff) DrawVibratoLine(dc, cx - 6, right, staffLane, vibratoWide, ScoreText.Brush(ink));
+                // TAB: its own row above the P.M. lane and anything else already stacked over the beat.
+                var tabLane = showTab ? _sky.PlaceAbove(cx - 6, claimRight, vibratoWide ? 9 : 7, tabTop - 8) + (vibratoWide ? 4.5 : 3.5) : 0;
+                if (showStaff) DrawVibratoLine(dc, cx - 6, staffRight, staffLane, vibratoWide, ScoreText.Brush(ink));
                 if (showTab) DrawVibratoLine(dc, cx - 6, right, tabLane, vibratoWide, ScoreText.Brush(ink));
             }
             // Mix Table point (F10): a red marker with a white core above the beat dot.
@@ -392,9 +396,9 @@ internal sealed partial class ScoreRenderer
                         if (note.StringIndex < 0 || note.StringIndex >= strings) continue;
                         var isSounding = _host.SoundingNotes.Contains((measureIndex, i, note.StringIndex));
                         var isStruck = _host.StruckNotes.Contains((measureIndex, i, note.StringIndex));
-                        // The reference prints no fret number for a tied-to note in the TAB (the tie is in the notation); the selected beat keeps it so it can still be edited.
+                        // The reference prints no fret number for a tied-to note in the TAB (the tie is in the notation), not even under the cursor.
                         // Tab only: there is no notation to show the tie, so the number stays.
-                        var tiedTo = (note.Tied || cell.IsTied) && !note.IsGraceNote && track.Kind != TrackKind.Drums && _host.Notation != NotationMode.TabOnly && !(measureIndex == _host.SelectedMeasure && i == _host.SelectedCell);
+                        var tiedTo = (note.Tied || cell.IsTied) && !note.IsGraceNote && track.Kind != TrackKind.Drums && _host.Notation != NotationMode.TabOnly;
                         if (showTab && !tiedTo)
                         {
                             var sy = tabTop + note.StringIndex * _host.StringGap;
@@ -423,13 +427,7 @@ internal sealed partial class ScoreRenderer
 
                             if (isSounding)
                             {
-                                // Exact note being played: a bright pill behind the fret number.
-                                var glow = ScoreText.Brush(Color.FromArgb(isStruck ? (byte)90 : (byte)46, playColor.R, playColor.G, playColor.B));
-                                dc.DrawRoundedRectangle(glow, RenderDraw.Pen(playColor, isStruck ? 1.8 : 1.0),
-                                    new Rect(gx - chipWidth / 2 - 2, sy - chipHeight / 2 - 2, chipWidth + 4, chipHeight + 4), 4, 4);
-                                if (isStruck)
-                                    dc.DrawRoundedRectangle(null, RenderDraw.Pen(playColor, 1.0),
-                                        new Rect(gx - chipWidth / 2 - 5, sy - chipHeight / 2 - 3, chipWidth + 10, chipHeight + 6), 5, 5);
+                                ScorePlayedChip.Draw(dc, playColor, isStruck, gx, sy, chipWidth, chipHeight);
                             }
                             else
                             {
@@ -444,7 +442,7 @@ internal sealed partial class ScoreRenderer
                     {
                         // One complete, width-reserved annotation per beat prevents chord techniques
                         // from being overprinted and keeps simultaneous marks together.
-                        var hasPalmMute = cell.Notes.Any(note => note.Techniques.Any(ScoreMarkText.IsPalmMute));
+                        var hasPalmMute = cell.Notes.Any(ScoreMarkText.ShowsPalmMute);
                         var techniqueY = tabTop - (hasPalmMute && !showStaff ? 34 : 20);
                         var techniqueFt = ScoreText.MakeTextIn(ScoreTextArea.Technique, techniqueLabel, 9, ScoreText.Brush(ink),
                             techniqueLabel.Split(' ').Contains("T") ? FontWeights.SemiBold : FontWeights.Normal);
@@ -475,6 +473,7 @@ internal sealed partial class ScoreRenderer
     private readonly List<Rect> _textSpill = new();   // the parts of stacked texts that run past their bar's right edge, claimed again in the next bar
 
     private double _barRight;
+    private Color _errorColor;   // this system's red for marked bars (theme-dependent)
 
     /// <summary>The page header: title, artist, authors and the tuning block.</summary>
     internal void DrawHeader(DrawingContext dc, SongProject project, TrackModel track, Color ink, Color faint)

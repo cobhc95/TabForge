@@ -17,6 +17,18 @@ public sealed class MixerSettings
     public bool ShowGroupsInTrackList { get; set; }
     /// <summary>Groups collapsed in the track list (their tracks' rows are hidden).</summary>
     public List<string> CollapsedGroups { get; set; } = new();
+    /// <summary>"By instrument" groups with their rules, in priority order; null = the defaults (<see cref="MixerRules.Defaults"/>).</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<MixerGroupDef>? Rules { get; set; }
+    /// <summary>Runtime only: the app-wide rules this song follows when it has no <see cref="Rules"/> of its own (attached by the window that shows the song).</summary>
+    [JsonIgnore]
+    public MixerAppRules? App { get; set; }
+    /// <summary>The song has its own group rules (it does not follow the app-wide ones).</summary>
+    [JsonIgnore]
+    public bool HasOwnRules => Rules is not null;
+    /// <summary>Name of the group for tracks no rule matches; null = "Other instruments".</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Fallback { get; set; }
 
     /// <summary>Group name → its effects bus (the group's tracks sum into it before the master). Missing: no bus effects.</summary>
     public Dictionary<string, BusChain> Buses { get; set; } = new();
@@ -33,7 +45,7 @@ public sealed class MixerSettings
     public BusChain MonitorFx { get; set; } = new();
 
     [JsonIgnore]
-    public bool IsDefault => Groups.Values.All(g => g.IsDefault) && !ShowGroupsInTrackList && CollapsedGroups.Count == 0
+    public bool IsDefault => Groups.Values.All(g => g.IsDefault) && !ShowGroupsInTrackList && CollapsedGroups.Count == 0 && Rules is null && Fallback is null
         && Buses.Values.All(b => b.IsDefault) && Master.IsDefault && MasterPan == 0 && MonitorUseGlobal && (MonitorFx?.IsDefault ?? true);
 
     /// <summary>The group's bus chain (created on first use).</summary>
@@ -230,13 +242,15 @@ public static class RoutingLinks
 
 public static class MixerGrouping
 {
-    /// <summary>Guitars, Basses, Keys, Drums, Other.</summary>
+    /// <summary>Groups by rule: Guitars, Basses, Drums and Other instruments unless the song defines its own rules.</summary>
     public const string ByInstrument = "By instrument";
-    /// <summary>Guitars, Basses, Drums, and everything else together.</summary>
+    /// <summary>Older songs: the same as <see cref="ByInstrument"/> (kept so they still load).</summary>
     public const string Compact = "Compact";
     /// <summary>Every track in one group.</summary>
     public const string None = "No groups";
     public static readonly string[] All = { ByInstrument, Compact, None };
+    /// <summary>The modes the mixer offers.</summary>
+    public static readonly string[] Offered = { ByInstrument, None };
 }
 
 /// <summary>Where a track's MIDI is played.</summary>
@@ -276,44 +290,31 @@ public static class MixerGroups
     public const string Audio = "Audio";
 
     /// <summary><see cref="Names"/> plus the Audio family (unless the grouping is "All tracks"): every group a track can be in.</summary>
-    public static IReadOnlyList<string> AllNames(string grouping) =>
-        grouping == MixerGrouping.None ? Names(grouping) : Names(grouping).Append(Audio).ToList();
+    public static IReadOnlyList<string> AllNames(string grouping) => AllNames(new MixerSettings { Grouping = grouping });
+
+    public static IReadOnlyList<string> AllNames(MixerSettings mixer) =>
+        mixer.Grouping == MixerGrouping.None ? Names(mixer) : Names(mixer).Append(Audio).Distinct().ToList();
 
     /// <summary>The groups a grouping mode can produce, in display order.</summary>
-    public static IReadOnlyList<string> Names(string grouping) => grouping switch
-    {
-        MixerGrouping.Compact => new[] { Guitars, Basses, Drums, AllButGuitarsAndBass },
-        MixerGrouping.None => new[] { Everything },
-        _ => new[] { Guitars, Basses, Keys, Drums, Other },
-    };
+    public static IReadOnlyList<string> Names(string grouping) => Names(new MixerSettings { Grouping = grouping });
 
-    /// <summary>The group a track belongs to (its own choice first, else by instrument).</summary>
+    public static IReadOnlyList<string> Names(MixerSettings mixer) =>
+        mixer.Grouping == MixerGrouping.None ? new[] { Everything } : MixerRules.Names(mixer);
+
+    /// <summary>The group a track belongs to: its own (manual) choice first, else the first group whose rules match.</summary>
     public static string GroupOf(SongProject project, TrackModel track)
     {
-        var grouping = project.Mixer.Grouping;
-        if (grouping == MixerGrouping.None) return Everything;
-        if (!string.IsNullOrWhiteSpace(track.MixerGroup) && AllNames(grouping).Contains(track.MixerGroup)) return track.MixerGroup;
-        var family = Family(track);
-        if (family == Audio) return Audio;
-        if (grouping == MixerGrouping.Compact)
-            return family is Guitars or Basses or Drums ? family : AllButGuitarsAndBass;
-        return family;
+        var mixer = project.Mixer;
+        if (mixer.Grouping == MixerGrouping.None) return Everything;
+        if (!string.IsNullOrWhiteSpace(track.MixerGroup) && AllNames(mixer).Contains(track.MixerGroup)) return track.MixerGroup;
+        return MixerRules.Classify(mixer, track);
     }
 
-    /// <summary>Instrument family from the track type, GM program and name.</summary>
-    public static string Family(TrackModel track)
+    /// <summary>The default group of a track by instrument (Guitars, Basses, Drums, Audio, else Other instruments).</summary>
+    public static string Family(TrackModel track) => track.IsAudio ? Audio : MixerRules.FamilyOf(track) switch
     {
-        if (track.IsAudio) return Audio;
-        if (track.Kind == TrackKind.Drums || track.MidiChannel == 9) return Drums;
-        var program = track.MidiProgram;
-        var name = " " + System.Text.RegularExpressions.Regex.Replace((track.InstrumentName ?? "").ToLowerInvariant(), "[^a-z]+", " ");
-        if (track.Kind == TrackKind.Bass || program is >= 32 and <= 39 || name.Contains(" bass ") && !name.Contains("contrabass")) return Basses;
-        if (track.Kind == TrackKind.Guitar || program is >= 24 and <= 31 || name.Contains(" guitar")) return Guitars;
-        // Keyboard-like: pianos, chromatic percussion, organs, synth leads / pads / keys.
-        if (track.Kind == TrackKind.Keys || program is >= 0 and <= 23 or >= 80 and <= 95
-            || name.Contains(" piano") || name.Contains(" organ") || name.Contains(" synth") || name.Contains(" keys")) return Keys;
-        return Other;
-    }
+        MixerRules.Guitar => Guitars, MixerRules.Bass => Basses, MixerRules.Drums => Drums, _ => AllButGuitarsAndBass,
+    };
 
     /// <summary>The group's controls for a track.</summary>
     public static MixerGroupLevels LevelsFor(SongProject project, TrackModel track) =>

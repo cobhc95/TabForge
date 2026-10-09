@@ -72,7 +72,7 @@ internal sealed partial class ScoreRenderer
         const double terminalTickLength = 5.0;
         var pen = RenderDraw.DashedPen(phraseInk, 1.0, 5.0, 2.5);
         var endPen = RenderDraw.Pen(phraseInk, 1.0);
-        // The reference puts "P.M. - - |" under the notation staff; without a staff it stays above the TAB.
+        // "P.M. - - |" sits in the lowest lane just above the TAB (the skyline reserves it); without a TAB it goes under the staff.
         var lineY = belowStaffBottom is { } bottom ? bottom + 32 : tabTop - 12;
         var baseLineY = lineY;
         var labelY = lineY - 10;

@@ -22,7 +22,7 @@ internal interface IDockHost
 /// <param name="ContentSized">MinHeight is the content's own full-draw height (set by <c>DockWorkspace.SetPanelContentMinHeight</c>); host chrome is added.</param>
 internal sealed record DockPanelRegistration(string Id, string Title, FrameworkElement Content,
     double MinWidth, double MinHeight, string DefaultHost, string DefaultAnchor, bool ContentSized = false,
-    double? FixedHeight = null, double? MaxHeight = null);
+    double? FixedHeight = null, double? MaxHeight = null, bool StartsClosed = false);
 
 internal sealed record DockDropDestination(string HostId, DockDropZone Zone, string? FloatingId,
     Rect Preview, double Fraction, int? TabIndex);
@@ -262,7 +262,7 @@ internal sealed class DockTabSurface : Border
         }
         if (Child is TextBlock label)
         {
-            if (selected) label.SetResourceReference(TextBlock.ForegroundProperty, "AccentBrush");
+            if (selected) label.SetResourceReference(TextBlock.ForegroundProperty, "TextStrongBrush");   // accent text on the accent tint is under 3:1
             else label.SetResourceReference(TextBlock.ForegroundProperty, "LegibleBrush");
         }
     }

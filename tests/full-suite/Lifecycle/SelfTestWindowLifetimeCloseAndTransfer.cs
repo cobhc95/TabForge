@@ -168,6 +168,9 @@ public static partial class SelfTest
         var touched = barCreated();
         Check("window lifetime: an approval notification queued before the window closed does not touch the closed window", !touched, "the closed window's media notice bar was built after it closed");
         Check("window lifetime: a waveform completion and an approval notification dispatched after the close throw nothing", context.Failures.Count == failuresBefore, string.Join(" | ", context.Failures.Skip(failuresBefore).Take(3)));
+        // The fixture's own list still names the Preferences windows closed by earlier cases; a closed one shares template parts with
+        // other windows' controls, so the fixture lets go of them before asking whether this window is collectable.
+        context.Captured.RemoveAll(w => w is PreferencesWindow && !w.IsVisible);
         CollectUntilStable(() => weak.IsAlive ? 1 : 0);
         Check("window lifetime: the window closed with queued work is collectable once the queue ran", !weak.IsAlive);
         // The surviving window still reacts.

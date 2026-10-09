@@ -18,8 +18,7 @@ public static partial class SelfTest
             ("instrument", "instrument", "score-editor"), ("timeline", "timeline", "score-editor"),
             ("tools", "tools", "structure"), ("structure", "tools", "tools"),
             ("rhythm", "tools", "tools"), ("layout", "tools", "tools"),
-            ("sections", "side", "practice"), ("practice", "side", "sections"),
-            ("playback", "side", "sections")
+            ("sections", "side", "score-editor")
         })
             workspace.RegisterPanel(id, id, new Border(), 180, 100, host, anchor);
         workspace.RestoreLayout(null);

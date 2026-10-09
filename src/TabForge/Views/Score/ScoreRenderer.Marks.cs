@@ -395,10 +395,12 @@ internal sealed partial class ScoreRenderer
             if (hasStaff) labelY = _sky.PlaceAbove(startX, startX + text.Width, 10.5, tabTop - 19) - 1;
             else labelY = _sky.PlaceAbove(startX, Math.Max(endX, startX + text.Width), 10.5, tabTop - 13);   // tab only: the whole line clears accents, technique labels and the P.M. lane
             TabForge.Visualization.Draw.DrawText(dc, text, new Point(startX, labelY));
-            endX = Math.Max(endX, startX + text.Width + 4);   // a short span: the end tick sits after the label, not through it
             var lineY = labelY + text.Height / 2;
-            if (endX > startX + text.Width + 3) dc.DrawLine(pen, new Point(startX + text.Width + 3, lineY), new Point(endX, lineY));
-            dc.DrawLine(endPen, new Point(endX, lineY - 4), new Point(endX, lineY + 4));
+            if (j > i && endX > startX + text.Width + 3)   // one beat, or a span no longer than its label, is the label alone (the reference draws no dashes or end tick)
+            {
+                dc.DrawLine(pen, new Point(startX + text.Width + 3, lineY), new Point(endX, lineY));
+                dc.DrawLine(endPen, new Point(endX, lineY - 4), new Point(endX, lineY + 4));
+            }
             i = j + 1;
         }
     }

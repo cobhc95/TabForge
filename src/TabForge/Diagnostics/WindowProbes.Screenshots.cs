@@ -197,9 +197,6 @@ internal sealed partial class WindowProbes : MainWindow.ProbeAccess
             Shoot(Arrangement, "track-list-groups");
         }
         finally { ((IMixerHost)Window).SetTrackListShows("groups", showedGroups); }
-        _dockWorkspace?.SelectPanel("playback");
-        await Settle(400);
-        Shoot(ControllerPanel, "zoom-and-speed");
         // Fretboard context menu (lean: view, scale, practice toggles, lock, settings), then its Scale submenu.
         Instrument_MouseRightButtonUp(Instrument, new MouseButtonEventArgs(Mouse.PrimaryDevice, Environment.TickCount, MouseButton.Right)
             { RoutedEvent = UIElement.MouseRightButtonUpEvent });

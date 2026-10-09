@@ -47,7 +47,7 @@ public static class MusicTime
 
     /// <summary>Slots consumed by the cell at index, or 1 for an implicit rest.</summary>
     public static double ConsumeSlots(TabCell cell) =>
-        cell.Notes.Count > 0 || cell.IsRest || cell.HasAnnotation ? CellSlots(cell) : 1.0;
+        cell.Notes.Count > 0 || cell.IsRest || cell.IsTied || cell.HasAnnotation ? CellSlots(cell) : 1.0;
 
     /// <summary>
     /// Cell indices that carry a beat (notes or an explicit rest), in order. This is the authoritative
@@ -85,7 +85,12 @@ public static class MusicTime
     /// <summary>Tolerance of a bar's fill check: a few file ticks (1/240 slot each).</summary>
     private const double TickSlack = 0.012;
 
-    public static BarState AnalyzeBar(SongProject p, int measureIndex)
+    /// <summary>
+    /// The bar's fill state. Over-full or overlapping in any voice is an error; the bar is short when voice 1 of a track
+    /// has beats summing to less than the time signature. Voice 2 is optional and never makes a bar short. Grace notes
+    /// take no bar time. With <paramref name="only"/> the bar is judged on that track alone (the track's own view).
+    /// </summary>
+    public static BarState AnalyzeBar(SongProject p, int measureIndex, TrackModel? only = null)
     {
         var bar = BarOf(p, measureIndex);
         var slots = BarSlots(p, measureIndex);
@@ -93,44 +98,52 @@ public static class MusicTime
         if (bar.FreeTime) return new BarState(slots, slots, true, false);
         if (bar.SimileOneBar || bar.SimileTwoBar) return new BarState(slots, slots, true, false);
 
-        // A bar is measured over the union of all tracks: the longest content wins.
-        double used = 0, maxCover = 0; var tooLong = false; var overlap = false; var anyBeat = false;
+        // Used is the union of all tracks (the longest content); short is judged per track on voice 1.
+        double used = 0; var shortVoice1 = false; var tooLong = false; var overlap = false; var anyBeat = false;
         foreach (var track in p.Tracks)
         {
-            if (measureIndex >= track.Measures.Count) continue;
+            if (measureIndex >= track.Measures.Count || (only is not null && !ReferenceEquals(track, only))) continue;
             var m = track.Measures[measureIndex];
             var voices = m.Voice2Cells.Count == 0
                 ? new[] { (IReadOnlyList<TabCell>)m.Cells }
                 : new[] { (IReadOnlyList<TabCell>)m.Cells, m.Voice2Cells };
             foreach (var cells in voices)
             {
-                double consumed = 0, cover = 0;
+                double consumed = 0, beatsEnd = 0, cover = 0; var hasNotes = false;
                 for (var i = 0; i < cells.Count; i++)
                 {
                     var cell = cells[i];
-                    var isBeat = cell.Notes.Count > 0 || cell.IsRest || cell.HasAnnotation;
+                    var isBeat = cell.Notes.Count > 0 || cell.IsRest || cell.IsTied || cell.HasAnnotation;   // a tied beat holds its time
                     if (!isBeat)
                     {
                         if (consumed <= i) consumed = i + 1;
                         continue;
                     }
+                    // A beat of grace notes only takes no bar time; an imported grace is merged into its main beat's cell
+                    // (the cell is flagged IsGrace too), and that cell keeps the main beat's length.
+                    if (cell.IsGrace && cell.Notes.Count > 0 && cell.Notes.TrueForAll(n => n.IsGraceNote)) continue;
                     var start = cell.RhythmicPosition ?? Math.Max(i, consumed);
                     var d = ConsumeSlots(cell);
-                    anyBeat = true; cover += d;
+                    anyBeat = true; cover += d; hasNotes |= cell.Notes.Count > 0;
                     // Imported beats sit on whole file ticks (240 per slot), so the exact tuplet lengths (a 9:8 thirty-second is
                     // 0.444 slot) drift by up to a tick against the next beat's position: that is not an overfull bar.
                     if (start + d > slots + TickSlack) { tooLong = true; consumed = Math.Max(consumed, start + d); break; }
-                    if (cell.Notes.Count > 0 && start < consumed - TickSlack) overlap = true;
+                    // Overlap is judged against the beats only: an empty cell before a beat timed earlier than its cell (moved up after a
+                    // length change, see EditCommands.RetimeFrom) holds no time of its own.
+                    if (cell.Notes.Count > 0 && start < beatsEnd - TickSlack) overlap = true;
                     consumed = Math.Max(consumed, start + d);
+                    beatsEnd = Math.Max(beatsEnd, start + d);
                 }
                 used = Math.Max(used, Math.Min(consumed, slots + 64));
-                maxCover = Math.Max(maxCover, cover);
+                // A rest-only voice plays as silence (an imported empty bar is one quarter rest): not short.
+                if (ReferenceEquals(cells, m.Cells) && hasNotes && cover < slots - TickSlack && !m.FreeTime && !m.SimileOneBar && !m.SimileTwoBar)
+                    shortVoice1 = true;
             }
         }
         var complete = !tooLong && !overlap && used >= slots - TickSlack;
         var error = tooLong || overlap;
         // Content shorter than the time signature (half-empty); a bar with no beat at all and a pickup bar are not marked.
-        var isShort = !error && anyBeat && !bar.Anacrusis && maxCover < slots - TickSlack;
+        var isShort = !error && anyBeat && !bar.Anacrusis && shortVoice1;
         return new BarState(slots, used, complete && !isShort, error, isShort);
     }
 

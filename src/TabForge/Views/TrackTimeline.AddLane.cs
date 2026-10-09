@@ -33,8 +33,18 @@ internal sealed partial class TrackTimeline
     internal double AddLaneHeight => _addLaneShown ? Math.Max(AddTrackLane.Height, _addLaneFill) : 0;
 
     /// <summary>Top of the lane in timeline coordinates (rows end flush against it).</summary>
-    internal double AddLaneTop =>
-        ArrangementPanel.RulerHeight + ArrangementPanel.SectionHeight + ArrangementPanel.RowsHeight(Project) - VerticalScrollOffset;
+    internal double AddLaneTop
+    {
+        get
+        {
+            var natural = ArrangementPanel.RulerHeight + ArrangementPanel.SectionHeight + ArrangementPanel.RowsHeight(Project) - VerticalScrollOffset;
+            // A pane shorter than its rows pins the lane to the bottom of the viewport.
+            return ViewportHeight > 0 ? Math.Min(natural, ViewportHeight - AddTrackLane.Height) : natural;
+        }
+    }
+
+    /// <summary>Height of the visible timeline area (0 until the panel sets it); the lane stays inside it.</summary>
+    internal double ViewportHeight { get; set; }
 
     /// <summary>The point is inside the lane (timeline coordinates).</summary>
     internal bool IsInAddLane(Point p)

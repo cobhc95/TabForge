@@ -478,7 +478,11 @@ public sealed partial class AudioEngineClient : IDisposable
             if (c.IsMidi || !ClipLanes.Audible(track, c)) continue;
             // UI thread: no file-system call. A clip whose classification is still being resolved is left out now and judged again when MediaAccess.Resolved arrives (RefreshClips).
             if (MediaAccess.EvaluateNoWait(c.File, media) is not { Allowed: true } access) continue;
-            clips.Add(new ClipSpec(access.Verdict.FullPath, c.StartSec, c.OffsetSec, c.SourceLengthSec, c.GainDb, c.Pitch, c.Speed, c.FadeInSec, c.FadeOutSec));
+            // A clip dragged past the end of its media loops: it plays as one engine clip per pass (fades only on the first start and the last end).
+            var pieces = TabForge.Services.ClipLoop.Pieces(c);
+            for (var i = 0; i < pieces.Count; i++)
+                clips.Add(new ClipSpec(access.Verdict.FullPath, pieces[i].StartSec, pieces[i].OffsetSec, pieces[i].SourceLengthSec, c.GainDb, c.Pitch, c.Speed,
+                    i == 0 ? c.FadeInSec : 0, i == pieces.Count - 1 ? c.FadeOutSec : 0));
         }
         var armMode = Array.IndexOf(AudioInputs.Audio, track.AudioInput);
         var armed = track.RecordArm && armMode >= 0;   // MIDI input is recorded by the editor, not the engine

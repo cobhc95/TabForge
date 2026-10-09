@@ -98,10 +98,11 @@ public sealed class SvgIconView : FrameworkElement
         {
             StartPoint = new Point(0, 0), EndPoint = new Point(0, 1)
         };
-        panelBrush.GradientStops.Add(new GradientStop(asset.PanelTop, 0));
-        panelBrush.GradientStops.Add(new GradientStop(asset.PanelBottom, 1));
+        var light = TabForge.Visualization.VisualTheme.IsLight;
+        panelBrush.GradientStops.Add(new GradientStop(FrameFill(asset.PanelTop, light), 0));
+        panelBrush.GradientStops.Add(new GradientStop(FrameFill(asset.PanelBottom, light), 1));
         if (ShowFrame)
-            dc.DrawRoundedRectangle(panelBrush, new Pen(new SolidColorBrush(asset.Border), 2),
+            dc.DrawRoundedRectangle(panelBrush, new Pen(new SolidColorBrush(light ? ForTheme(asset.Border) ?? asset.Border : asset.Border), 2),
                 new Rect(5, 5, 86, 86), 18, 18);
 
         DrawShapes(dc, asset.Shapes, IconColor);
@@ -364,11 +365,15 @@ public sealed class SvgIconView : FrameworkElement
         geometry.Transform = new RotateTransform(values[0], values.Length > 1 ? values[1] : 0, values.Length > 2 ? values[2] : 0);
     }
 
-    // The icon art is drawn for dark surfaces (pale strokes). On the light grey theme, pale unframed
-    // shapes would vanish, so they are darkened: greys become charcoal, tints keep their hue.
-    private Color? ForTheme(Color? color)
+    // A frame's translucent dark tint turns a muddy mid-grey over the light theme; there it becomes an opaque pale tint of the same hue.
+    internal static Color FrameFill(Color c, bool light) =>
+        light ? Color.FromRgb((byte)(c.R + (255 - c.R) * 0.78), (byte)(c.G + (255 - c.G) * 0.78), (byte)(c.B + (255 - c.B) * 0.78)) : c;
+
+    // The icon art is drawn for dark surfaces (pale strokes). On the light grey theme, pale shapes
+    // would vanish, so they are darkened: greys become charcoal, tints keep their hue.
+    internal static Color? ForTheme(Color? color)
     {
-        if (color is not { } c || ShowFrame || !TabForge.Visualization.VisualTheme.IsLight) return color;
+        if (color is not { } c || !TabForge.Visualization.VisualTheme.IsLight) return color;
         var luminance = (0.2126 * c.R + 0.7152 * c.G + 0.0722 * c.B) / 255.0;
         var spread = Math.Max(c.R, Math.Max(c.G, c.B)) - Math.Min(c.R, Math.Min(c.G, c.B));
         if (spread < 48) return luminance < 0.55 ? c : Color.FromArgb(c.A, 0x2B, 0x30, 0x36);

@@ -31,7 +31,7 @@ internal static class LayoutAudit
     /// <summary>Collisions for one track of a project.</summary>
     public static List<Collision> Run(SongProject project, int trackIndex, double? pageWidth = null)
     {
-        var editor = new TabEditorControl { Project = project, SelectedTrackIndex = trackIndex, DarkPaper = false, HideCursor = true };
+        var editor = new TabEditorControl { Project = project, SelectedTrackIndex = trackIndex, Appearance = { DarkPaper = false }, HideCursor = true };
         if (pageWidth is { } w) editor.PageWidthOverride = w;
         editor.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
         editor.Arrange(new Rect(editor.DesiredSize));

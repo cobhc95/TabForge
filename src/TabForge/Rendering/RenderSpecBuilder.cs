@@ -71,7 +71,7 @@ public static class RenderBarRange
     }
 }
 
-/// <summary>Turns a song into a <see cref="RenderSpec"/> and its event file (see docs/history/RENDER_PLAN.md).</summary>
+/// <summary>Turns a song into a <see cref="RenderSpec"/> and its event file.</summary>
 public static class RenderSpecBuilder
 {
     /// <summary>The song as MIDI, from bar 0, with no metronome, count-in or loop and ignoring mute/solo (the render applies those itself).</summary>

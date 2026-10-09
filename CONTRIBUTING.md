@@ -71,7 +71,7 @@ That line is the result. The exit code alone is not enough. A failing check is w
 | Headless commands and tests | `src/TabForge/Diagnostics/`, `src/TabForge/SelfTests/` (the basic set) and `tests/full-suite/` (the full suite) |
 | Build, packaging, CI | `Directory.Build.props`, `tools/`, `installer/`, `.github/workflows/` |
 
-To find the code, the pathway and the self-tests for a feature, start with `docs/FEATURE_MAP.md`. Its test tables are generated (`TabForge.exe --feature-map`) and a self-test keeps them current.
+To find the code, the pathway and the self-tests for a feature, start with `docs/FEATURE_MAP.md` and the feature's page in `docs/feature-map/`. The test tables in `docs/feature-map/tests.md` are generated (`TabForge.exe --feature-map`) and a self-test keeps them current.
 
 A command is made bindable in `HotkeyCatalog`, in the hotkey presets and in `TOOLS_AND_HOTKEYS.md`. A setting lives in the settings classes, `SettingsValidator` and `SettingsMigration`, and has a Preferences row.
 

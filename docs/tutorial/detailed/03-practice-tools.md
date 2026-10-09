@@ -20,7 +20,7 @@ In this chapter you use the demo song to learn the main melody of its first chor
 - Loop the whole song, a section or a few bars, and set how many times it repeats.
 - Use the speed trainer so each pass is faster than the last.
 - Skip parts of a song and jump between sections.
-- Use the Practice panel to preview the next notes on the fretboard.
+- Right-click the fretboard to preview the next notes on it.
 
 ## Before you start
 
@@ -40,9 +40,9 @@ The song has a written tempo, shown in the **BPM** box in the toolbar. Ashen Mer
 
 The **Speed** box is different. It is a listening percentage from 25% to 200%, and it only changes how fast the song plays back. The written tempo and the pitch of the notes do not change. At 50% the song plays like 75 BPM, and at 75% it plays like 112 BPM.
 
-The **Speed** box lives in the **Zoom & speed** tab of the side panel, next to the score zoom controls.
+The **Speed** box lives in the top toolbar, left of the tempo box, next to the score zoom box.
 
-1. Click the **Zoom & speed** tab in the side panel.
+1. Find the **Speed** box in the top toolbar.
 2. Click the arrow in the **Speed** box. A list opens with 50%, 75%, 100%, 125%, 150% and 200%.
 3. Choose `75%`. The song now plays at three quarters of its speed.
 
@@ -148,7 +148,7 @@ Right-click the **Loop** button and choose **Speed trainer** instead of **Simple
 
 1. Click the **Lead Gtr** track in the track list. The score and the fretboard now show the lead guitar.
 2. On the timeline, right-click the **Chorus 1** section (bars 40 to 47) and choose **Loop section**. The **Loop** button lights up.
-3. In the **Zoom & speed** tab, type `60` in the **Speed** box and press `Enter`.
+3. In the top toolbar, type `60` in the **Speed** box and press `Enter`.
 4. Click the **Metronome** button, then the **Count-in** button, so that both light up.
 5. Right-click the **Loop** button and choose **Speed trainer**. Set **Tempo** from `60` to `100` and **Increase tempo each loop by** `10`. Click outside the popup to close it.
 6. Press `Space` and play along. Each pass is a little faster: 60%, 70%, 80%, 90%, then 100%.
@@ -164,17 +164,17 @@ Sometimes you want to play past a part rather than repeat it. Select the bars, r
 
 To jump forward by section, click the **Next section** button. Hover it to see its key. To jump to any bar or section, press `Ctrl+G`, type a bar number or part of a section name, and press `Enter`. You can also click a section in the **Sections** panel.
 
-## Use the Practice panel
+## Fretboard practice aids
 
-The **Practice / Mixer** tab collects the aids for learning a song. Open it with **Options > Practice / learn mode**.
+The fretboard's right-click menu collects the aids for learning a song.
 
 - **Preview next notes** outlines the next notes on the fretboard before you reach them. The **Preview** slider sets how many, from 1 to 10.
 - **Note names** writes the name of each note on the fretboard.
 - **Left-handed** flips the fretboard for left-handed players.
 - **Scale highlight** shades the notes of a scale on the fretboard. **Chapter 4: Reading tab and notation** shows how to find a scale.
-- **Song stats**, **Chord finder** and **Scale finder** sit lower in the same tab.
+- **Song stats**, **Chord finder** and **Scale finder** are in the **Tools** menu.
 
-Open **Preferences > Fretboard & Keyboard** to change **Look-ahead notes**, or how strong the scale highlight looks with **Scale highlight strength** (10% to 150%). The **Mixer…** button in this tab opens the mixer, which **Chapter 9: Shaping the sound** explains.
+Open **Preferences > Fretboard & Keyboard** to change **Look-ahead notes**, or how strong the scale highlight looks with **Scale highlight strength** (10% to 150%). The mixer, which **Chapter 9: Shaping the sound** explains, opens from **View > Mixer / VST**.
 
 ## A practice routine that works
 

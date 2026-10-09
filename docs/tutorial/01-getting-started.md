@@ -59,7 +59,7 @@ The status bar along the bottom shows where you are: the bar number, the track n
 
 ## Zoom the score
 
-If the notes look too small or too large, change the zoom. Open the **Zoom & speed** page of the side panel. It has a zoom box with presets, including **Fit width**, and you can type your own value. The zoom buttons in the same panel step the size up and down. Hover them to see their shortcuts.
+If the notes look too small or too large, change the zoom. The top toolbar has a zoom box with presets, including **Fit width**, and you can type your own value. The zoom buttons beside it step the size up and down. Hover them to see their shortcuts.
 
 Zoom changes only how big the score looks. It never changes the song.
 
@@ -75,7 +75,7 @@ Zoom changes only how big the score looks. It never changes the song.
 4. Press `Space` again to pause.
 5. Click a beat further along the score, then press `Space`. Playback starts from that beat.
 6. Press `Space` to pause, then click the **Rewind to beginning** button.
-7. Open the **Zoom & speed** page of the side panel and pick another zoom value. The score changes size.
+7. Pick another zoom value in the top toolbar. The score changes size.
 
 You know it worked when the song played from the place you clicked. Close the tab when you finish. Nothing needs saving.
 
@@ -84,7 +84,7 @@ You know it worked when the song played from the place you clicked. Close the ta
 - **File > Open…** (`Ctrl+O`) opens a song, and **File > Open in new tab…** keeps your current one.
 - `Space` plays and pauses. **Stop** and **Rewind to beginning** are on the transport.
 - Click a beat to place the edit cursor, and use the arrow keys to move it.
-- The **Zoom & speed** page changes the size of the score.
+- The zoom box in the top toolbar changes the size of the score.
 - Hover any control to see its name and its shortcut.
 
 ## What next

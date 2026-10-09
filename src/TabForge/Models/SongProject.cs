@@ -58,8 +58,16 @@ public sealed partial class SongProject
     [JsonIgnore] public TrackModel? MasterBarTrack => FirstNotationTrack ?? (Tracks.Count > 0 ? Tracks[0] : null);
     public List<MarkerModel> Markers { get; set; } = new();
     /// <summary>Mixer groups (levels, pan and pitch per instrument group).</summary>
-    public MixerSettings Mixer { get; set; } = new();
+    public MixerSettings Mixer
+    {
+        get => _mixer;
+        set { value.App ??= _mixer?.App; _mixer = value; }   // a replaced mixer (undo, audio sidecar) keeps following the app-wide rules
+    }
+    private MixerSettings _mixer = new();
     public string? ImportedFrom { get; set; }
+    /// <summary>The Band view's rows for this song; null until the Band layout is changed.</summary>
+    [JsonConverter(typeof(TolerantBandLayoutConverter))]
+    public BandLayoutData? BandLayout { get; set; }
 
     /// <summary>
     /// Moves the track at <paramref name="from"/> to <paramref name="to"/>, shifting the rest to keep
@@ -289,6 +297,9 @@ public sealed class TabCell
         : IsTriplet ? (3, 2)
         : (0, 0);
     public bool IsRest { get; set; }
+    /// <summary>A rest the user wrote (R) rather than one the rest fill placed: navigation treats it as a written beat, as GP5.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool WrittenRest { get; set; }
     public bool IsTied { get; set; }
     /// <summary>Independent sounding duration percentage; 100 preserves the normal note gate.</summary>
     public int SoundDurationPercent { get; set; } = 100;
@@ -334,6 +345,7 @@ public sealed class TabCell
         TupletNumerator = TupletNumerator,
         TupletDenominator = TupletDenominator,
         IsRest = IsRest,
+        WrittenRest = WrittenRest,
         IsTied = IsTied,
         SoundDurationPercent = SoundDurationPercent,
         OctaveShiftSemitones = OctaveShiftSemitones,

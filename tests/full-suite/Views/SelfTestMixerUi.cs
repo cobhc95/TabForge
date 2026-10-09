@@ -73,6 +73,7 @@ public static partial class SelfTest
     /// </summary>
     private static void ShowTestWindow(Window window, bool offScreen = true, [System.Runtime.CompilerServices.CallerMemberName] string caller = "")
     {
+        window.WindowState = WindowState.Normal;   // restored settings may say Maximized, which a non-activated window cannot show
         window.ShowActivated = false;
         window.ShowInTaskbar = false;
         window.Topmost = false;
@@ -123,12 +124,26 @@ public static partial class SelfTest
             Reorders++;
             return true;
         }
+        public int Collapses, ColourEdits;
+        public void SetGroupsCollapsed(IReadOnlyCollection<string> groups, bool? collapsed)
+        {
+            Collapses++;
+            foreach (var g in groups)
+            {
+                var on = collapsed ?? !Project.Mixer.CollapsedGroups.Contains(g);
+                if (on && !Project.Mixer.CollapsedGroups.Contains(g)) Project.Mixer.CollapsedGroups.Add(g);
+                else if (!on) Project.Mixer.CollapsedGroups.Remove(g);
+            }
+            Window?.Rebuild();
+        }
+        public MixerWindow? Window;
+        public void SetTrackColour(TrackModel track, string hex) { ColourEdits++; track.ColorHex = hex; }
     }
 
     private static string? HotkeyGestureToAction(string gesture) => gesture switch
     {
-        "Alt+Up" or "Up" => "Track.MoveUp",       // (plain Up / Down: the test cannot hold Alt)
-        "Alt+Down" or "Down" => "Track.MoveDown",
+        "Alt+Shift+Up" or "Up" => "Track.MoveUp",       // (plain Up / Down: the test cannot hold Alt)
+        "Alt+Shift+Down" or "Down" => "Track.MoveDown",
         _ => null,
     };
 
@@ -398,7 +413,7 @@ public static partial class SelfTest
         var p = OrderedSong();
         var lead = p.Tracks[0]; var rhythm = p.Tracks[1]; var bass = p.Tracks[2];
         Check("mixer layout follows the track list: groups by first appearance",
-            string.Join("|", TrackOrdering.Layout(p).Select(l => l.Group + ":" + string.Join("+", l.Tracks.Select(t => t.Name)))) == "Guitars:Lead+Rhythm|Basses:Bass|Keys:Piano");
+            string.Join("|", TrackOrdering.Layout(p).Select(l => l.Group + ":" + string.Join("+", l.Tracks.Select(t => t.Name)))) == "Guitars:Lead+Rhythm|Basses:Bass|Other instruments:Piano");
         Check("moving a track within its group reorders the track list", TrackOrdering.MoveTrackToGroup(p, lead, "Guitars", 1) && Names(p) == "Rhythm,Lead,Bass,Piano");
         Check("dropping a track into another group joins that group at that place",
             TrackOrdering.MoveTrackToGroup(p, rhythm, "Basses", 1) && Names(p) == "Lead,Bass,Rhythm,Piano" && MixerGroups.GroupOf(p, rhythm) == "Basses" && rhythm.MixerGroup == "Basses");
@@ -412,7 +427,7 @@ public static partial class SelfTest
         Check("nudge down past the end of a group joins the next group", TrackOrdering.Nudge(p, lead, 1) && MixerGroups.GroupOf(p, lead) == "Basses" && Names(p) == "Rhythm,Lead,Bass,Piano");
         Check("nudge up at the very top does nothing", !TrackOrdering.Nudge(p, p.Tracks[0], -1));
         p = OrderedSong();
-        Check("nudging a group swaps it with its neighbour", TrackOrdering.NudgeGroup(p, "Guitars", 1) && Names(p) == "Bass,Lead,Rhythm,Piano" && !TrackOrdering.NudgeGroup(p, "Keys", 1));
+        Check("nudging a group swaps it with its neighbour", TrackOrdering.NudgeGroup(p, "Guitars", 1) && Names(p) == "Bass,Lead,Rhythm,Piano" && !TrackOrdering.NudgeGroup(p, "Other instruments", 1));
     }
 
     private static void TestMixerDragAndDrop()
@@ -424,14 +439,14 @@ public static partial class SelfTest
         try
         {
             ShowTestWindow(window);
-            Check("mixer lists the tracks in the track list's order", string.Join(",", MixerTrackOrder(window)) == "Lead,Rhythm,Bass,Piano" && string.Join(",", MixerGroupOrder(window)) == "Guitars,Basses,Keys");
+            Check("mixer lists the tracks in the track list's order", string.Join(",", MixerTrackOrder(window)) == "Lead,Rhythm,Bass,Piano" && string.Join(",", MixerGroupOrder(window)) == "Guitars,Basses,Other instruments");
 
-            // Reverse direction: the track list reorders (a drag or Alt+Up there) and the open mixer follows.
+            // Reverse direction: the track list reorders (a drag or Alt+Shift+Up there) and the open mixer follows.
             host.Project.MoveTrack(3, 0);
             window.SyncValues();
             PumpUi(); window.UpdateLayout(); PumpUi();
             Check("track list reorder shows in the open mixer (order and groups)",
-                string.Join(",", MixerTrackOrder(window)) == "Piano,Lead,Rhythm,Bass" && string.Join(",", MixerGroupOrder(window)) == "Keys,Guitars,Basses",
+                string.Join(",", MixerTrackOrder(window)) == "Piano,Lead,Rhythm,Bass" && string.Join(",", MixerGroupOrder(window)) == "Other instruments,Guitars,Basses",
                 string.Join(",", MixerTrackOrder(window)) + " / " + string.Join(",", MixerGroupOrder(window)));
             host.Project.MoveTrack(0, 3);
             window.SyncValues(); PumpUi(); window.UpdateLayout(); PumpUi();
@@ -496,8 +511,8 @@ public static partial class SelfTest
         finally { window.Close(); }
 
         var defaults = HotkeyCatalog.BuildMap(new HotkeySettings());
-        Check("Track.MoveUp / Track.MoveDown are bindable commands on Alt+Up / Alt+Down",
-            defaults.TryGetValue("Alt+Up", out var up) && up == "Track.MoveUp" && defaults.TryGetValue("Alt+Down", out var down) && down == "Track.MoveDown");
+        Check("Track.MoveUp / Track.MoveDown are bindable commands on Alt+Shift+Up / Alt+Shift+Down",
+            defaults.TryGetValue("Alt+Shift+Up", out var up) && up == "Track.MoveUp" && defaults.TryGetValue("Alt+Shift+Down", out var down) && down == "Track.MoveDown");
     }
 
     /// <summary>A group move animates the track list's rows and group headers and the timeline lanes, and speed presets step.</summary>

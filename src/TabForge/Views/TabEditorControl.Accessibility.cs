@@ -22,11 +22,8 @@ public sealed partial class TabEditorControl : IEditorDescribeHost
 
     SongProject? IEditorDescribeHost.Project => _project;
     (int m1, int c1, int m2, int c2) IEditorDescribeHost.SelectionRange() => SelectionRange();
-    ScorePageLayout IEditorDescribeHost.PageLayout(TrackModel track) => GetScoreLayout(track);
+    ScorePageLayout IEditorDescribeHost.PageLayout(TrackModel track) => Layout.GetLayout(track);
 
-    public string DescribeCursor() => Describer.Cursor();
-    public string DescribePosition() => Describer.Position();
-    public string DescribeBar() => Describer.Bar();
 
     /// <summary>Speaks a text through the editor peer (the "read" commands); the peer is created on demand here.</summary>
     public void AnnounceText(string text)
@@ -38,7 +35,7 @@ public sealed partial class TabEditorControl : IEditorDescribeHost
     internal (double PageWidth, double HeaderHeight, double SystemHeight, int Systems) ExportMetrics()
     {
         var track = Track;
-        var systems = track is null ? 0 : GetScoreLayout(track).SystemCount;   // first: the layout scan sets the system height
+        var systems = track is null ? 0 : Layout.GetLayout(track).SystemCount;   // first: the layout scan sets the system height
         return (PageWidth, HeaderHeight, SystemHeight, systems);
     }
 

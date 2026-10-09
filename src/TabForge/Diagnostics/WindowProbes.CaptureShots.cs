@@ -54,6 +54,7 @@ internal sealed partial class WindowProbes
             {
                 switch (name.ToLowerInvariant())
                 {
+                    case "grouprules": Adopt(new GroupRulesDialog(w.Window, w._project.Mixer)); break;
                     case "mixer": Adopt(new MixerWindow(w.Window, w.Window) { Width = 1180, Height = 560 }); break;
                     case "render": w._settings.Render.Directory = "Renders"; Adopt(new RenderWindow(new RenderContext { Project = w._project, Settings = w._settings, Engine = Audio.AudioEngineClient.Instance }, w.Window)); break;
                     case "preferences":
@@ -73,9 +74,12 @@ internal sealed partial class WindowProbes
                     case "instrumentpicker": InstrumentPickerWindow.Show(w.Window, w.SelectedTrack?.InstrumentName, Colors.SteelBlue); break;
                     case "scoretextstyle": w.ShowScoreTextStyleWindow(); break;
                     case "mixtable": w.ShowMixTable(); break;
+                    case "chordfinder": ChordFinderWindow.Show(w.Window, _ => false); break;
+                    case "songstats": SongStatsWindow.Show(w.Window, w._project, "demo.tforge"); break;
                     case "newfromtemplate": w.ApplyTemplate_Click(w, new RoutedEventArgs()); break;
                     case "commandpalette": Adopt(new Views.CommandPalette(w.Window, w._settings.Hotkeys) { KeepOpen = true }); break;
                     case "addplugin": PluginBrowser.Choose(w.Window, w.Window); break;
+                    case "pasteoptions": Adopt(new PasteOptionsDialog(new[] { PasteQuestion.BeatsOntoNotes, PasteQuestion.Octave })); break;
                     case "shortcuts":
                         _toolName = "Preferences";
                         PreferencesWindow.InitialCategory = SettingsCatalog.Hotkeys;
@@ -261,7 +265,8 @@ internal sealed partial class WindowProbes
                     case "fretboard": _w.ShowInstrumentContextMenu(fromKeyboard: false); break;
                     case "timeline-empty": caught = _w.Arrangement.BuildEmptyAreaMenu(); break;
                     case "track-row": caught = _w.Window.TrackRowMenu(Math.Clamp(_track, 0, _w._project.Tracks.Count - 1)); break;
-                    default: throw new InvalidOperationException($"unknown context menu '{kind}' (score, note, timeline, fretboard, timeline-empty, track-row)");
+                    case "mixer-colour": caught = Views.MixerWindow.ColourMenu(_w._project.Tracks[Math.Clamp(_track, 0, _w._project.Tracks.Count - 1)].ColorHex, _ => { }); break;
+                    default: throw new InvalidOperationException($"unknown context menu '{kind}' (score, note, timeline, fretboard, timeline-empty, track-row, mixer-colour)");
                 }
             }
             finally { ContextMenuCapture = null; }
@@ -368,7 +373,7 @@ internal sealed partial class WindowProbes
             var content = id.ToLowerInvariant() switch
             {
                 "instrument" or "fretboard" => (FrameworkElement)_w.InstrumentHost, "timeline" => _w.ArrangementHost, "tools" => _w.ToolsPanelContent,
-                "sections" => _w.SectionsPanelContent, "practice" => _w.LowerPanelScroll, "playback" => _w.ControllerPanel,
+                "sections" => _w.SectionsPanelContent,
                 "structure" or "rhythm" or "layout" => _w._palettePanelContents[id.ToLowerInvariant()],
                 _ => throw new InvalidOperationException($"unknown dock panel '{id}'")
             };

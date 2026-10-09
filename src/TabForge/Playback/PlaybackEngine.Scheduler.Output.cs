@@ -86,6 +86,7 @@ public sealed partial class PlaybackEngine : IDisposable
             }
         }
         data2 = MasterScaled(status, data1, data2);
+        data1 = ProgramFor(status, data1);
         lock (_outputGate)
         {
             _output.Send(e.DeviceId, status, data1, data2);
@@ -111,7 +112,8 @@ public sealed partial class PlaybackEngine : IDisposable
             if (IsChannelStateMessage(e)) latest[ChannelStateKey(e)] = e;
 
         var events = timeline.Events;
-        for (var i = FirstIndexAtOrAfter(events, startMs); i < events.Count && events[i].TimeMs <= timeMs; i++)
+        // The scan always starts at the timeline origin: a seek target or loop start must not hide earlier mix-table events.
+        for (var i = FirstIndexAtOrAfter(events, Math.Min(startMs, timeline.PlayFromMs)); i < events.Count && events[i].TimeMs <= timeMs; i++)
         {
             var e = events[i];
             if (!e.IsSetup && IsChannelStateMessage(e)) latest[ChannelStateKey(e)] = e;
@@ -119,7 +121,8 @@ public sealed partial class PlaybackEngine : IDisposable
 
         lock (_outputGate)
             foreach (var e in latest.Values.OrderBy(e => e.TimeMs))
-                _output.Send(e.DeviceId, e.Status, e.Data1, MasterScaled(e.Status, e.Data1, e.Data2));
+                _output.Send(e.DeviceId, e.Status, ProgramFor(e.Status, e.Data1), MasterScaled(e.Status, e.Data1, e.Data2));
+        if (Trace.IsOn(Trace.Playback)) Trace.Write(Trace.Playback, RestoreTrace.Describe(timeMs, latest.Values));
     }
 
     private static bool IsChannelStateMessage(ScoreEvent e)

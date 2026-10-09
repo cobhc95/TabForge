@@ -77,13 +77,13 @@ Ties are a different tool. A tie joins two notes of the same pitch into one long
 
 These techniques move the pitch of a note while it sounds.
 
-- **Bend** (`B`): the string is pushed sideways and the note rises. TAB shows a bend curve over the fret number.
+- **Bend** (`B`): the string is pushed sideways and the note rises. TAB shows a bend curve over the fret number. The **Bend editor** in the **Effects** menu draws the curve on a grid, with presets such as Bend/Release and Pre-Bend.
 - **Vibrato** (`V`): a small, steady wobble in the pitch. A wavy line marks it.
 - **Wide vibrato**: a bigger wobble. Choose **Effects > Wide vibrato**.
-- **Tremolo bar** (`W`): the whammy lever dips the pitch. TAB shows a whammy diagram.
-- **Trill** (`N`): the note flicks quickly between itself and a note above it.
+- **Tremolo bar** (`W`): the whammy lever dips the pitch. TAB shows a whammy diagram. The **Tremolo bar editor** in the **Effects** menu draws the dip, with presets such as Dip and Dive.
+- **Trill** (`N`): the note flicks quickly between itself and a note above it. The **Trill editor** sets the trill fret and its speed.
 
-> **Note:** TabForge marks a bend or a tremolo bar with a standard shape. You cannot draw your own curve in the editor. Songs you open can carry custom bend curves, whammy curves and other detail, and TabForge shows and plays those exactly.
+> **Note:** Bend and tremolo bar curves are saved with the song, and TabForge shows and plays custom curves from songs you open exactly.
 
 ### Try it: A slide and a vibrato
 
@@ -100,7 +100,7 @@ Vibrato marks one note at a time, which is why step 5 marks the second note of t
 
 ## Harmonics
 
-A harmonic is a bell-like ringing note made by touching the string lightly instead of pressing it down. Press `Y` to mark a natural harmonic. TAB shows a **Harm.** caption above the note.
+A harmonic is a bell-like ringing note made by touching the string lightly instead of pressing it down. Press `Y` to mark a natural harmonic. TAB shows a **Harm.** caption above the note. The **Harmonic editor** in the **Effects** menu picks the kind, Natural, Artificial, Tapped, Pinch or Semi, with a fret box where one is needed.
 
 The other kinds of harmonic, artificial, pinch, tapped and semi, come from songs you open. TabForge reads, draws and plays them. In standard notation they are written at the fretted pitch with a diamond note head.
 
@@ -131,7 +131,7 @@ Fades change loudness gradually across a note. Press `Shift+Comma` to fade in an
 You can add chord names and short text above a beat. Neither is played; they are labels for the reader.
 
 - **Chord name** (`A`): a window named **Chord** opens. Type a name such as `Am` or `G7` and click **OK**. TabForge prints names only; it does not draw chord diagrams.
-- **Chord finder**: in the **Chord finder** group of the side panel's **Practice** tab, pick a root and a type, click **Show** to see the notes, and click **Insert name** to put the name on the cursor beat.
+- **Chord finder**: under **Tools > Chord finder…**, pick a root and a type, click **Show** to see the notes, and click **Insert name** to put the name on the cursor beat.
 - **Beat text** (`T`): a window named **Text** opens. Type a short word, such as `chorus`, and click **OK**.
 
 The **Lyrics** box is for the song as a whole. Open the **Sections** tab in the side panel and expand **Lyrics**. Type your words there. They are one block of text that is saved with the song, not tied to individual beats.
@@ -188,7 +188,7 @@ How long a let-ring note may keep ringing is a setting. Open **Preferences > Pla
 - Select a stretch of beats and apply a technique once to mark every note in it.
 - Reach techniques by key, the **Effects** menu, the palette, or the right-click menu.
 - On an empty beat, a technique key writes a new note that carries the technique.
-- Bends and the tremolo bar use a standard shape. Custom curves come only from songs you open.
+- Bends and the tremolo bar open editors where you draw the curve or pick a preset.
 - The **Dynamic** group sets loudness. Fades use `Shift+Comma` and `Shift+Full stop`.
 - Most marks change the sound. Tenuto, tapping, pick strokes, chord names and text only mark the score.
 

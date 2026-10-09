@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using TabForge.Views;
 
 namespace TabForge;
 
@@ -12,6 +13,8 @@ public static partial class SelfTest
         try
         {
             if (window.SectionsPanelContent is not ScrollViewer sv) { Check("sections pane: is a scroll viewer", false); return; }
+            // The built-in layout, so a saved workspace that hides the Sections pane does not decide the result.
+            LtField<DockWorkspace>(window, "_dockWorkspace")!.RestoreLayout(null); window.UpdateLayout();
             // The pane's cell is capped (a short pane is what UI scale 1.5 on a laptop screen gives), then released.
             sv.MaxHeight = 120; window.UpdateLayout(); window.UpdateLayout();
             Check("sections pane: a short pane scrolls", sv.ScrollableHeight > 0, $"{sv.ScrollableHeight:0} (viewport {sv.ViewportHeight:0}, extent {sv.ExtentHeight:0})");

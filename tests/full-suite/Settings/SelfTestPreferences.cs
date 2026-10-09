@@ -3,9 +3,10 @@ using TabForge.Views;
 
 namespace TabForge;
 
-/// <summary>Preferences catalogue integrity (docs/PREFERENCES_AUDIT.md 6.1): every row still has a home, findable, reachable by deep link.</summary>
+/// <summary>Preferences catalogue integrity: every row still has a home, findable, reachable by deep link.</summary>
 public static partial class SelfTest
 {
+    // Retired on purpose (not listed below): editing.paste.beats, because pasting beats onto written beats now always inserts in the bar.
     // Every row key of the Preferences window before the reorganisation (docs/PREFERENCES_MIGRATION.txt). None may disappear.
     private const string OldPreferenceKeys =
         "general.checkupdates general.checknow general.openfromexplorer general.autosave general.saveformat general.associate general.toolbar general.statusbar " +
@@ -31,10 +32,10 @@ public static partial class SelfTest
         "fretboard.markerbrightness fretboard.numbersize fretboard.stringspacing audio.fretboardstyle editing.horizon editing.scale follow.fretboard " +
         "general.restorewindow appearance.tabstrip tabs.style tabs.width tabs.maxwidth tabs.minwidth tabs.height tabs.fontsize tabs.closebutton " +
         "tabs.doubleclick tabs.middleclick tabs.middlebar tabs.lastclosed tabs.newposition tabs.openincurrent tabs.playbackonswitch tabs.detach " +
-        "tabs.merge tabs.playing editing.paste.beats editing.paste.octave editing.paste.bars editing.paste.barsettings editing.paste.drums " +
+        "tabs.merge tabs.playing editing.paste.octave editing.paste.bars editing.paste.barsettings editing.paste.drums " +
         // rows added for the menu options earlier the same night
         "score.pagelayout score.scrolling score.textfonts timeline.individualnotes timeline.continuousline timeline.hideemptygrid timeline.barglow " +
-        "timeline.playheadstyle timeline.trackgroups fretboard.locksize fretboard.showallas appearance.groupcolour.guitars appearance.groupcolour.basses " +
+        "timeline.playheadstyle timeline.trackgroups fretboard.locksize fretboard.dockposition fretboard.showallas appearance.groupcolour.guitars appearance.groupcolour.basses " +
         "appearance.groupcolour.keys appearance.groupcolour.drums appearance.groupcolour.other appearance.groupcolour.other-instruments";
 
     private static void TestPreferencesCatalog()

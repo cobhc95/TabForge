@@ -9,6 +9,10 @@ internal sealed class ScoreLayoutIncrementalState
     internal bool[]? ForceLineBreaks;
     internal bool[]? PreventLineBreaks;
     internal bool[]? LayoutRisk;
+    internal bool[]? BoundaryRisk;
+    internal long[]? MeasureSignatures;
+    internal long[]? PendingSignatures;
+    internal bool BlockedReason;
     internal MeasureMarkExtents[]? MeasureExtents;
     internal (int First, int Last)? PendingMeasureRange;
     internal (int First, int Last)? CapturedMeasureRange;

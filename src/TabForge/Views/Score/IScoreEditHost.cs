@@ -15,4 +15,7 @@ public interface IScoreEditHost
     /// Returns whether the song changed.
     /// </summary>
     bool Run(Func<SongProject, bool> edit, bool invalidatesTimeline = true);
+
+    /// <summary>As <see cref="Run(Func{SongProject, bool}, bool)"/>; <paramref name="continuesLastStep"/>: the edit joins the latest undo step (the second digit of a two-digit fret).</summary>
+    bool Run(Func<SongProject, bool> edit, bool invalidatesTimeline, bool continuesLastStep) => Run(edit, invalidatesTimeline);
 }

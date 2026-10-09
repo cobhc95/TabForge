@@ -22,7 +22,7 @@ internal interface ITrackListFitHost
 /// <summary>
 /// Keeps the track-list dock exactly as tall as its rows (no empty band under the last track) and turns a drag of its
 /// splitter into a row height: the rows (track controls and timeline lanes) stretch to fill the dock, between the default
-/// height and 3x; dragging smaller keeps the default height and the list scrolls. Only while the auto-fit setting is on.
+/// height and 1.5x; dragging smaller keeps the default height and the list scrolls. Only while the auto-fit setting is on.
 /// </summary>
 internal sealed class TrackListFitController
 {
@@ -40,10 +40,11 @@ internal sealed class TrackListFitController
         host.Arrangement.SizeChanged += (_, _) => ScheduleShrink();
         host.Dock.LayoutChanged += (_, _) => ScheduleShrink();
         host.Dock.SplitterInteraction += OnSplitter;
+        host.Arrangement.ResetTrackListHeightRequested += ResetRowHeight;
         // While auto-fit is on the splitter stops where every row fits at the default height (above: no clipped rows) and at the
         // largest row height (below: no empty space).
         host.Dock.SetPanelHeightLimits(PanelId, () => Enabled
-            ? (host.Arrangement.PreferredHeightAt(ArrangementPanel.DefaultTrackRowHeight), host.Arrangement.PreferredHeightAt(ArrangementPanel.MaxTrackRowHeight))
+            ? (Math.Min(ArrangementPanel.CollapsedPaneHeight, host.Arrangement.PreferredHeightAt(ArrangementPanel.DefaultTrackRowHeight)), host.Arrangement.PreferredHeightAt(ArrangementPanel.MaxTrackRowHeight))
             : null);
     }
 
@@ -56,8 +57,11 @@ internal sealed class TrackListFitController
     /// <summary>Tracks, groups or the document changed: size the dock to the rows (grow or shrink).</summary>
     public void FitToTracks()
     {
-        _userShort = false;
         ApplyRowHeight();
+        // A pane the user collapsed stays at its saved height (never past the rows); anything else fits the rows.
+        var saved = _host.Timeline.TrackListHeight;
+        _userShort = Enabled && saved > 0 && saved < _host.Arrangement.PreferredHeight() - 1;
+        if (_userShort) { _host.Dock.FitPanelHeight(PanelId, saved); return; }
         Fit(allowGrow: true);
     }
 
@@ -89,6 +93,7 @@ internal sealed class TrackListFitController
     public void ResetRowHeight()
     {
         _host.Timeline.TrackRowHeight = ArrangementPanel.DefaultTrackRowHeight;
+        _host.Timeline.TrackListHeight = 0;
         _host.SaveSettings();
         FitToTracks();
         _host.SetStatus("Track row height reset");
@@ -111,6 +116,8 @@ internal sealed class TrackListFitController
                 var rowHeight = _host.Arrangement.TrackRowHeight;
                 if (Math.Abs(_host.Timeline.TrackRowHeight - rowHeight) > 0.05) { _host.Timeline.TrackRowHeight = rowHeight; _host.SaveSettings(); }
                 _userShort = _host.Arrangement.ActualHeight + Chrome < _host.Arrangement.PreferredHeight() - 1;
+                var kept = _userShort ? Math.Round(_host.Arrangement.ActualHeight + Chrome) : 0;
+                if (Math.Abs(_host.Timeline.TrackListHeight - kept) > 0.5) { _host.Timeline.TrackListHeight = kept; _host.SaveSettings(); }
                 if (!_userShort) Fit(allowGrow: true);   // past the maximum row height: snap back to the rows
                 break;
             case DockSplitterPhase.DoubleClick: ResetRowHeight(); break;

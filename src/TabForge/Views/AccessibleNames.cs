@@ -124,7 +124,6 @@ internal static class AccessibleNames
         "Scroll" or "TabStrip" or "Tabs" => "Tabs",
         "PlaybarControls" or "ControllerPanel" => "Transport",
         "SectionsPanelContent" or "MarkerList" => "Sections",
-        "LowerPanelScroll" => "Practice",
         "ScoreScroll" or "ScorePage" => "Score",
         _ => null
     };

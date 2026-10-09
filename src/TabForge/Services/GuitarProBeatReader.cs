@@ -16,7 +16,7 @@ namespace TabForge.Services;
 
 // Owns: converting one imported beat's annotations, cell marks and note techniques into the song model.
 // Does not own: bar structure and the file reading.
-// Tests: TestGuitarProFiles, TestTupletImport.
+// Tests: TestGuitarProFiles, TestTupletImport, TestGp5OwnFilesImport.
 /// <summary>Reads the expression of a beat and its notes: marks, techniques, slides, bends, pitch effects, mix changes and annotations.</summary>
 internal static class GuitarProBeatReader
 {
@@ -139,7 +139,8 @@ internal static class GuitarProBeatReader
         if (GetBool(sourceNote, "IsPalmMute", false)) t.Add("PalmMute");
         if (GetBool(sourceNote, "IsDead", false)) { t.Add("Dead"); note.Dead = true; }
         if (GetBool(sourceNote, "IsGhost", false)) { t.Add("Ghost"); note.Ghost = true; }
-        if (GetBool(sourceNote, "IsLetRing", false) || GetBool(beat, "IsLetRing", false)) t.Add("LetRing");
+        // Let ring is a note property; alphaTab's beat-level flag is "any note rings", which would spread it over the chord.
+        if (GetBool(sourceNote, "IsLetRing", false)) t.Add("LetRing");
         if (GetBool(beat, "DeadSlapped", false))
         {
             t.Add("DeadSlapped");
@@ -147,7 +148,8 @@ internal static class GuitarProBeatReader
             t.Add("Dead");
             note.Dead = true;
         }
-        if (GetBool(sourceNote, "IsHammerPullOrigin", false))
+        // A hammer-on the file writes on a note with nothing after it yet stays (alphaTab clears it and keeps it as Unlinked*, patch 0004).
+        if (GetBool(sourceNote, "IsHammerPullOrigin", false) || GetBool(sourceNote, "UnlinkedHammerPullOrigin", false))
         {
             t.Add("HOPO");
             t.Add("HOPOOrigin");
@@ -279,7 +281,10 @@ internal static class GuitarProBeatReader
             case "IntoFromAbove": techniques.Add("SlideInAbove"); break;
         }
 
-        switch (Get(sourceNote, "SlideOutType")?.ToString())
+        var slideOut = Get(sourceNote, "SlideOutType")?.ToString();
+        // A shift or legato slide with no next note yet: alphaTab resets it to None and keeps the file's value as UnlinkedSlideOutType (patch 0004).
+        if (slideOut is null or "None") slideOut = Get(sourceNote, "UnlinkedSlideOutType")?.ToString();
+        switch (slideOut)
         {
             case "Shift": techniques.Add("ShiftSlide"); break;
             case "Legato": techniques.Add("LegatoSlide"); break;

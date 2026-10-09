@@ -42,6 +42,7 @@ internal interface IPlaybackViewHost
     /// <summary>The shown song played to its end.</summary>
     void ShowPlaybackFinished();
     void HaltFollow();
+    void ReattachFollow();
     void ResetFollowRow();
 }
 
@@ -236,7 +237,7 @@ internal sealed class PlaybackViewController : IDisposable
         _lastMs = double.NegativeInfinity;
         playback.ReportPosition(engine.Playhead());
         StartTick();
-        _host.HaltFollow();
+        _host.ReattachFollow();   // shown again while playing: following is armed again, even after a manual scroll
         Apply();
         _host.ShowArrangementPlayhead(Math.Max(0, playback.PlayheadBar), playback.PlayheadFraction, engine.IsPaused);
         _host.ShowTransportRunning(engine.IsPaused);

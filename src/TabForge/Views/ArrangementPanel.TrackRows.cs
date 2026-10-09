@@ -63,6 +63,23 @@ public sealed partial class ArrangementPanel
     /// <summary>Test probe: the opacity of a track row's name cell.</summary>
     internal double RowNameOpacityForTest(TrackModel track) => _trackCells.TryGetValue(track, out var cells) && cells.TryGetValue("name", out var name) ? name.Opacity : -1;
 
+    /// <summary>Test probe: the bottom border width and background of each track row.</summary>
+    internal IReadOnlyList<(double Bottom, Brush Background)> TrackRowLooksForTest => _trackRows.Select(r => (r.BorderThickness.Bottom, r.Background)).ToList();
+
+    /// <summary>While the lines are hidden an odd row takes the timeline's alternate row shade under its tint, matching its lane, so each track still reads as its own row.</summary>
+    private Brush RowBackground(int index)
+    {
+        if (ShowTrackLines || index % 2 == 0) return TintBrush(index);
+        var alt = _timeline.RowAlt;
+        if (_project is not { } p || index >= p.Tracks.Count || TintColour(p.Tracks[index], ViewOptions) is not { } c) return Draw.Solid(alt);
+        var a = c.A / 255.0;
+        byte Mix(byte top, byte under) => (byte)Math.Round(top * a + under * (1 - a));
+        return Draw.Solid(Color.FromRgb(Mix(c.R, alt.R), Mix(c.G, alt.G), Mix(c.B, alt.B)));
+    }
+
+    /// <summary>The track row's border: a right edge, plus a bottom line while the lines between tracks are shown.</summary>
+    private Thickness RowBorder => ShowTrackLines ? new Thickness(0, 0, 1, 1) : new Thickness(0, 0, 1, 0);
+
     private Brush TintBrush(int index) =>
         _project is { } p && index >= 0 && index < p.Tracks.Count && TintColour(p.Tracks[index], ViewOptions) is { } c ? Draw.Solid(c) : Brushes.Transparent;
 
@@ -123,8 +140,8 @@ public sealed partial class ArrangementPanel
                 Height = RowHeightOf(project, track),
                 Visibility = IsCollapsed(project, i) ? Visibility.Collapsed : Visibility.Visible,
                 BorderBrush = (Brush)Application.Current.FindResource("BorderSoftBrush"),
-                BorderThickness = new Thickness(0, 0, 1, 1),
-                Background = TintBrush(i),
+                BorderThickness = RowBorder,
+                Background = RowBackground(i),
                 Cursor = Cursors.Arrow, Focusable = true, FocusVisualStyle = null,
                 RenderTransform = new TranslateTransform()
             };
@@ -158,14 +175,13 @@ public sealed partial class ArrangementPanel
             }
             var settings = new Button
             {
-                Width = 18, Height = 18, Padding = new Thickness(1), HorizontalAlignment = HorizontalAlignment.Center,
-                Style = (Style)Application.Current.FindResource("TransportButton"),
-                Background = Brushes.Transparent, BorderThickness = new Thickness(0),
+                // The same hover shade as the instrument icon button beside it.
+                Width = 24, Height = 24, HorizontalAlignment = HorizontalAlignment.Center, Template = TrackRowWidgets.IconButtonTemplate, FocusVisualStyle = null,
                 VerticalAlignment = VerticalAlignment.Center,
                 Content = new System.Windows.Shapes.Path
                 {
                     Data = (Geometry)Application.Current.FindResource("IconCog"),
-                    Style = (Style)Application.Current.FindResource("IconPath"),
+                    Style = (Style)Application.Current.FindResource("IconFillPath"),
                     Width = 13, Height = 13, Stretch = Stretch.Uniform
                 }
             };
@@ -187,11 +203,12 @@ public sealed partial class ArrangementPanel
                 // double-clicking anywhere else on the row opens the track properties.
                 Text = track.Name, Margin = new Thickness(0, 2, 4, 2), Padding = new Thickness(4, 1, 4, 1),
                 HorizontalAlignment = HorizontalAlignment.Left,
-                FontSize = 11, VerticalContentAlignment = VerticalAlignment.Center, ToolTip = "Double-click to edit; drag to reorder",
+                FontSize = 11, VerticalContentAlignment = VerticalAlignment.Center, ToolTip = track.Name + Environment.NewLine + "Double-click to edit; drag to reorder",
                 IsReadOnly = true, Cursor = Cursors.Arrow, Focusable = false,
                 Background = Brushes.Transparent, BorderBrush = Brushes.Transparent,
                 BorderThickness = new Thickness(0), Effect = null
             };
+            name.SetResourceReference(StyleProperty, "TrimmedNameBox");   // a narrow column ends the name in "…"
             void BeginRename()
             {
                 _editingTrackName = name;
@@ -199,6 +216,7 @@ public sealed partial class ArrangementPanel
                 name.Focusable = true;
                 name.HorizontalAlignment = HorizontalAlignment.Stretch;
                 name.IsReadOnly = false;
+                name.ApplyTemplate();   // the editable template, so the caret and selection land in it
                 name.Cursor = Cursors.IBeam;
                 name.SetResourceReference(System.Windows.Controls.Control.BackgroundProperty, "WindowBrush");
                 name.SetResourceReference(System.Windows.Controls.Control.BorderBrushProperty, "BorderBrush");
@@ -325,12 +343,12 @@ public sealed partial class ArrangementPanel
             panControl.ContextMenu = _rowWidgets.PanContextMenu(track, panControl);
             cells["pan"] = panControl;
 
-            FrameworkElement instrument = track.IsAudio ? AudioKindCell() : TrackRowWidgets.InstrumentButton(track, selected =>
+            // The instrument icon (between the cogwheel and the record button): a click opens the instrument catalogue.
+            cells["kind"] = track.IsAudio ? TrackRowWidgets.AudioIcon() : TrackRowWidgets.InstrumentIconButton(track, selected =>
             {
                 TrackEditRequested?.Invoke(new TrackEditRequest(index, TrackEditKind.SelectInstrument, selected));
                 ProjectEdited?.Invoke(this, EventArgs.Empty);
-            });
-            cells["instrument"] = instrument;
+            }, name => InstrumentPreview?.Invoke(track, name));
             // An explicitly muted track reads grey: its name and controls are dimmed (the M box stays full strength, red).
             _trackCells[track] = cells;
             ApplyRowDim(project, track, cells);

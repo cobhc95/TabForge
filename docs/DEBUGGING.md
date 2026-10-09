@@ -8,7 +8,7 @@ Run every command from the repository root (the source-scanning tests read the f
 > **How to run a test (canonical)**
 > - Every build: the basic area. `src\TabForge\bin\Release\net8.0-windows\TabForge.exe --selftest <log> --areas basic`, then read the "N passed, M failed" line (the exe prints nothing; read the log).
 > - One test (`--only TestX`): most tests live in `tests/full-suite`, so first build a full-suite copy: `dotnet build src/TabForge/TabForge.csproj -c Release -p:TabForgeFullSuite=true -o <dir>`, then run `<dir>\TabForge.exe --selftest <log> --only TestX`. A normal build reports "0 run" or an unknown name.
-> - Register a test: add an `AreaOf` entry in `src/TabForge/SelfTests/SelfTest.cs`, and register it in `tests/full-suite/SelfTestFullSuite.cs` (not a `Guard` in `SelfTest.cs`). Then run `--feature-map` into `docs/FEATURE_MAP.md`.
+> - Register a test: add an `AreaOf` entry in `src/TabForge/SelfTests/SelfTest.cs`, and register it in `tests/full-suite/SelfTestFullSuite.cs` (not a `Guard` in `SelfTest.cs`). Then run `--feature-map` (regenerates `docs/feature-map/tests.md`).
 > - Before a release: `--areas release` (full-suite build). The full suite (`--require ci,document-context`) runs weekly and at manager checkpoints only.
 <!-- TEST-BOX-END -->
 
@@ -29,6 +29,7 @@ Start-Process -Wait src\TabForge\bin\Release\net8.0-windows\TabForge.exe -Argume
 ```
 
 - `TABFORGE_SPEED_ONLY="open Preferences;Delete bars"` (environment) limits `--speed-audit` to the actions whose names contain one of the fragments.
+- `TABFORGE_SPEED_ONLY="drag start"` times the two drag-start entries (`Diagnostics/WindowProbes.SpeedAuditDrag.cs`): a three-file drag entering the timeline and the first move of a clip drag, each from the pointer event to the ghost in place plus idle.
 - `TABFORGE_TIMELINE_SPEED_PROFILE=<song path>` adds cold, cached and revision timing measurements to `TestTimelineSongTimeRepeatGrowth` in a full-suite test build.
 - `TABFORGE_DIALOG_EVIDENCE=<absolute PNG path>` saves the scaled marker dialog during `TestDialogEscape` in a full-suite test build.
 - `--only <TestName>[,<TestName>...]` runs just the named tests. A name is the test method as written in the `Guard(...)` or `GuardGroup(...)` call in `src/TabForge/SelfTests/SelfTest.cs` (basic set) or `tests/full-suite/SelfTestFullSuite.cs`. Names are exact and case-sensitive. A full-suite test is known only to a build made with `-p:TabForgeFullSuite=true`; the maintainer's local rebuild script builds that for you when `TABFORGE_SELFTEST_ONLY=TestA,TestB` is set.
@@ -67,7 +68,7 @@ Each mode is the first argument. They open no window (the two window options bel
 | `--render <song> <out.png>` | The first track's score, drawn off-screen to a PNG. |
 | `--render-bars <song> <outdir>` | One PNG per track, bar and view, plus a checks file; exit 1 when a check fails. |
 | `--render-fretboard <song> <out.png>` | The fretboard view at a given moment, with scale and style options. |
-| `--render-timeline <song> <out.png>` | The arrangement timeline, with optional hover and drag states. |
+| `--render-timeline <song> <out.png>` | The arrangement timeline, with optional hover and drag states; `lines`, `clips` and `scroll` add the lines between tracks, MIDI clips on tracks 1, 4 and 7, and the collapsed three-row pane scrolled down. |
 | `--render-gp-export-dialog <out.png>` | The `.gp` export dialog as an image. |
 | `--render-identity <outDir>` | Writes an identity file of rendering hashes over a fixed song corpus (`--png` adds images). |
 | `--render-identity-compare <a> <b>` | Compares two identity folders; any change in drawing shows up as a differing case. |
@@ -94,7 +95,7 @@ Each mode is the first argument. They open no window (the two window options bel
 | `--write-tutorial-starters <dir>` | Writes the starter songs the tutorial uses. |
 | `--gendemo [out]` | Writes the built-in demo song as a project file. |
 | `--gendiag [dir]` | Writes the purpose-built diagnostic songs with their expected note-on times. |
-| `--feature-map [file]` | Regenerates `docs/FEATURE_MAP.md`; run it after adding or renaming a test. |
+| `--feature-map [file]` | Regenerates `docs/feature-map/tests.md`; run it after adding or renaming a test. |
 | `--find <keyword> [out.txt]` | Prints (and writes) at most 40 lines: matching features, owning files and tests from the feature map, test registry and folder READMEs. |
 | `--tutorial-shot <folder> <out.png>` | One tutorial page as an image. |
 | `--tutorial-pdf <folder> <out.pdf>` | The tutorial as a PDF. |
@@ -115,4 +116,5 @@ Three options open the main window and need `--profile <scratch folder>`:
 | --- | --- |
 | `--capture <script.json> <outDir>` | Drives the window off-screen from a script and saves screenshots. |
 | `--screenshots <folder>` | Photographs menus, panels, settings and dialogs, then exits. |
+| `TABFORGE_TRACE=playback` | After every seek, loop wrap or resync the trace line `restore@<ms>ms` lists each channel's program (`prog`), volume (`cc7`) and pan (`cc10`) just sent; check it when a mix-table change seems lost after a jump. |
 | `--speed-audit <report.md>` | Times every common action (clicks, scrolling, zoom, resizes, windows, menus, editing, tracks, clips, save, open, tabs) on the off-screen window with the demo song and a long audio clip, stopped and playing, and writes a table: median and worst time to idle, synchronous work, worst frame gap, flags above 50 ms or 33 ms. Clip and track-row menus open a real non-activating popup; long WAV drops extend every track in both transport states. Set `TABFORGE_TRACE=ui` to add the slow-funnel lines with their callers. Silent (master volume 0); works on a copy of the song. |

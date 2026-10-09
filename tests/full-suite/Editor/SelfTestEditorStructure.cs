@@ -64,7 +64,7 @@ public static partial class SelfTest
             Check("structure: asking again does not rebuild", Views.TabEditorControl.StructureBuilds == builds);
 
             // Invalidation: a real edit (toggle a technique) makes the beat name change without any manual reset.
-            editor.ToggleTechnique(TechniqueNames.Vibrato);
+            editor.Effects.ToggleTechnique(TechniqueNames.Vibrato);
             var rebuilt = StructureBeats(peer.GetChildren().First(b => b.GetName().StartsWith("Bar 2")));
             Check("structure: the tree is rebuilt after an edit (new technique appears)",
                 Views.TabEditorControl.StructureBuilds > builds && rebuilt[0].GetName().Contains("palm mute") && rebuilt[0].GetName().Contains("vibrato"),
@@ -82,10 +82,10 @@ public static partial class SelfTest
 
             // Read commands.
             editor.SetPosition(1, 0, 1, false);
-            var bar = editor.DescribeBar();
+            var bar = editor.Describer.Bar();
             Check("read current bar: header and every beat", bar.StartsWith("Bar 2, 4/4, tempo 120") && bar.Contains("string 2 fret 9") && bar.Contains("quarter rest"), bar);
             editor.SetPosition(3, 0, 1, false);
-            var pos = editor.DescribePosition();
+            var pos = editor.Describer.Position();
             Check("read position: bar, beat, section, signature, tempo and time",
                 pos.Contains("bar 4 of 6") && pos.Contains("beat 1") && pos.Contains("section Verse") && pos.Contains("time signature 4/4") && pos.Contains("tempo 120") && pos.Contains("about 0:"), pos);
             Check("read commands are bindable, unique and documented",

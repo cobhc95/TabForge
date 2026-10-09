@@ -27,10 +27,10 @@ it without rebuilding TabForge. TabForge only calls it through its public API.
 ## alphaTab (MPL-2.0)
 
 TabForge uses alphaTab for reading score files and writing `.gp`, as its own **modified build** of alphaTab 1.8.4,
-shipped as the assembly `TabForge.AlphaTab.dll` (NuGet package `TabForge.AlphaTab` 1.8.4-tabforge.3). It is not the upstream
+shipped as the assembly `TabForge.AlphaTab.dll` (NuGet package `TabForge.AlphaTab` 1.8.4-tabforge.4). It is not the upstream
 `AlphaTab` package and carries a different name on purpose.
 
-- The modifications (MPL-2.0 section 3.2: the Source Code Form of the modified files stays available, see below), three patches:
+- The modifications (MPL-2.0 section 3.2: the Source Code Form of the modified files stays available, see below), four patches:
   (1) alphaTab refuses a .gp3/.gp4/.gp5 file with more than 1,000 bars through a hard-coded constant. The patch turns that constant into
   a setting of each individual import (`ImporterSettings.MaxGp3To5BarCount`, default 1,000, i.e. unchanged); TabForge sets it to its own
   per-track limit of 20,000 bars. It also pins the build date stamped into the library and renames the package and assembly.
@@ -40,9 +40,13 @@ shipped as the assembly `TabForge.AlphaTab.dll` (NuGet package `TabForge.AlphaTa
   (3) A .gp file stores a trill's speed in a note XProperty (id 688062467, the note value in ticks); alphaTab neither wrote it
   nor read it (every trill read as 1/16). The patch writes it for every trill and reads it back as the nearest note value; it also raises
   the package version to 1.8.4-tabforge.3.
-  The patches are `vendor/alphatab/0001-per-import-gp3-5-bar-limit-and-tabforge-identity.patch` (29 changed lines in 5 files) and
-  `vendor/alphatab/0002-gpif-exact-mixer-volume-and-balance.patch` (28 changed lines in 4 files) and
-  `vendor/alphatab/0003-gpif-trill-speed.patch` (50 changed lines in 3 files); every release also carries them as
+  (4) A .gp3/.gp4/.gp5 note can carry a hammer-on, a slide or a tie whose partner note does not exist yet; alphaTab cleared the flag. The
+  patch keeps the file's value in three new note fields (`Note.UnlinkedHammerPullOrigin`, `UnlinkedSlideOutType`, `UnlinkedTieDestination`)
+  and raises the package version to 1.8.4-tabforge.4.
+  The patches are `vendor/alphatab/0001-per-import-gp3-5-bar-limit-and-tabforge-identity.patch` (29 changed lines in 5 files),
+  `vendor/alphatab/0002-gpif-exact-mixer-volume-and-balance.patch` (28 changed lines in 4 files),
+  `vendor/alphatab/0003-gpif-trill-speed.patch` (50 changed lines in 3 files) and
+  `vendor/alphatab/0004-keep-unlinked-gp3-5-note-links.patch` (30 changed lines in 2 files); every release also carries them as
   `licenses/alphaTab-<patch name>`.
 - Corresponding source (the Source Code Form of the modified files): upstream tag `v1.8.4`, commit
   `022a45c8e42370f9e12e68949d11eada370da83d`, plus those patches, applied in order. `tools/Build-AlphaTab.ps1` rebuilds the DLL from them (and

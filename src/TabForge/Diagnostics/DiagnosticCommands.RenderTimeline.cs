@@ -13,16 +13,19 @@ internal static partial class DiagnosticCommands
     /// Both; write Bar-marker as BarMarker) and, when given, the hover shade on the 1-based bar and track. Add <c>light</c> for the light theme.
     /// Add <c>drop</c>, <c>dropnew</c> or <c>dropbelow</c> to draw a two-bar MIDI groove being dragged over the timeline: onto a free stretch
     /// of track 1's lane, onto a stretch where track 1 already has a clip (a new lane opens), or below the last track (a new track).
+    /// Add <c>lines</c> to draw the lines between tracks, <c>clips</c> for MIDI clips on tracks 1, 4 and 7, and <c>scroll</c> for the
+    /// collapsed three-row pane scrolled down two rows.
     /// </summary>
     private static int RunRenderTimeline(string[] args)
     {
-        if (args.Length < 3) return Usage("--render-timeline <song> <out.png> [bar] [Line|BarMarker|Both] [hoverBar hoverTrack] [light] [drop|dropnew|dropbelow|move]");
+        if (args.Length < 3) return Usage("--render-timeline <song> <out.png> [bar] [Line|BarMarker|Both] [hoverBar hoverTrack] [light] [drop|dropnew|dropbelow|move] [lines] [clips] [scroll]");
         return Guard("Render timeline", () =>
         {
             var outPath = FilePathPolicy.OutputFile(args[2], "timeline render", ".png");
             var project = LoadAny(args[1]);
             var light = args.Any(a => a.Equals("light", StringComparison.OrdinalIgnoreCase));
-            var keywords = new[] { "light", "drop", "dropnew", "dropbelow", "move", "mute" };
+            var keywords = new[] { "light", "drop", "dropnew", "dropbelow", "move", "mute", "lines", "clips", "scroll" };
+            bool Has(string k) => args.Skip(3).Any(a => a.Equals(k, StringComparison.OrdinalIgnoreCase));
             double? mutedDim = null;
             if (args.Skip(3).FirstOrDefault(a => a.StartsWith("dim", StringComparison.OrdinalIgnoreCase)) is { } dimArg && int.TryParse(dimArg[3..], out var dimPercent))
                 mutedDim = Math.Clamp(dimPercent, 0, 100) / 100.0;   // `dim35`: the muted-track dimming strength
@@ -40,12 +43,14 @@ internal static partial class DiagnosticCommands
             ThemeService.Apply(appearance);
 
             if (drop is not null || move) AddDropRenderClip(project);
-            var panel = new Views.ArrangementPanel { PlayheadStyle = style };
+            if (Has("clips")) foreach (var t in new[] { 0, 3, 6 }.Where(t => t < project.Tracks.Count)) AddDropRenderClip(project, t);
+            var panel = new Views.ArrangementPanel { PlayheadStyle = style, ShowTrackLines = Has("lines") };
             if (mutedDim is { } dim) panel.ViewOptions = new Visualization.VisualOptions { MutedDim = dim };
             panel.Bind(project, Array.Empty<Playback.MidiOutputDeviceInfo>());
             var clock = new Audio.SongClock(Audio.AudioEngineClient.Instance);
             panel.SetSongTime(b => clock.BarStartSec(project, b), sec => clock.BarAt(project, sec));
             var width = 1300; var height = (int)Math.Min(560, 40 + 24 + Views.ArrangementPanel.RowsHeight(project) + (drop == "dropbelow" ? 110 : 60));
+            if (Has("scroll")) height = (int)Views.ArrangementPanel.CollapsedPaneHeight + 40;
             var window = new Window
             {
                 Content = panel, Width = width, Height = height, ShowInTaskbar = false, ShowActivated = false,
@@ -62,6 +67,8 @@ internal static partial class DiagnosticCommands
                 if (hoverBar >= 0 && hoverTrack >= 0 && panel.CellCentre(hoverBar, hoverTrack) is { } centre) panel.SimulateHover(centre);
                 if (drop is not null) SimulateDropForRender(panel, project, drop);
                 if (move) SimulateMoveForRender(panel, project);
+                if (Has("scroll"))
+                    panel.LanesScroll.RaiseEvent(new System.Windows.Input.MouseWheelEventArgs(System.Windows.Input.Mouse.PrimaryDevice, Environment.TickCount, -120) { RoutedEvent = UIElement.PreviewMouseWheelEvent });
                 window.UpdateLayout(); Pump();
                 var bitmap = new System.Windows.Media.Imaging.RenderTargetBitmap(width, height, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
                 bitmap.Render(window);
@@ -75,14 +82,14 @@ internal static partial class DiagnosticCommands
     }
 
     /// <summary>The render's existing clip: a MIDI clip on track 1 over bars 3-6, so a drop there needs a new lane.</summary>
-    internal static void AddDropRenderClip(Models.SongProject project)
+    internal static void AddDropRenderClip(Models.SongProject project, int trackIndex = 0)
     {
-        if (project.Tracks.Count == 0) return;
+        if (project.Tracks.Count <= trackIndex) return;
         var clock = new Audio.SongClock(Audio.AudioEngineClient.Instance);
         var start = clock.BarStartSec(project, 2);
         var end = clock.BarStartSec(project, 6);
         var notes = Enumerable.Range(0, 16).Select(i => new Models.ClipNote(i * (end - start) / 16, (end - start) / 20, 40 + i % 5 * 3, 100)).ToList();
-        var track = project.Tracks[0];
+        var track = project.Tracks[trackIndex];
         track.AudioClips.Add(new Models.AudioClip { Name = "Existing take", StartSec = start, SourceLengthSec = end - start, FileLengthSec = end - start, Notes = notes });
         Models.ClipLanes.Ensure(track, 1);
     }

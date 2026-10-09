@@ -3,12 +3,13 @@
 Musical logic, file formats, settings, limits and path policy. No WPF.
 
 ## How to change me
-1. Entry files: `SettingsCatalog.cs`, `AppSettings*.cs`, `HotkeyCatalog.cs`, `ProjectService.cs`.
+1. Entry files: `SettingsCatalog.cs` (page layout, Build) with `SettingsCatalog.General.cs`, `SettingsCatalog.Appearance.cs`, `SettingsCatalog.Score.cs`, `SettingsCatalog.Playback.cs`, `SettingsCatalog.Audio.cs`, `SettingsCatalog.Editing.cs`, `SettingsCatalog.Timeline.cs`, `SettingsCatalog.Fretboard.cs` and `SettingsCatalog.Tabs.cs` holding the rows, `AppSettings.cs` plus one file per settings class (`FollowSettings.cs`, `GeneralSettings.cs`, `AppearanceSettings.cs`, `PluginSettings.cs`, `AudioSettings.cs`, `EditingSettings.cs`, `TimelineSettings.cs`), `HotkeyCatalog.cs`, `ProjectService.cs`.
 2. Owner class: `AppSettingsStore` (settings), `FilePathPolicy` (writes), `EditCommands` (edits).
 3. Tests to run: `TestSettingsStoreSharedAcrossWindows`, `TestHotkeySettingsMigration` (full-suite build); `--areas settings,persistence`, plus `--areas architecture,hygiene` (see the test box in `docs/TESTING.md`).
 4. Docs to update: `TOOLS_AND_HOTKEYS.md` and hotkey presets for commands, `CHANGELOG.md`, `docs/RECIPES.md`.
 
 ## Key types
+- `ClipLoop`, `ClipTrim`, `TrailingBars`: a clip longer than its media loops (the pieces it plays as); the edge-trim arithmetic; the empty bars removed at the end when clips shrink. `SongExtent` grows the song to hold the clips.
 - `AppSettingsStore`: the one shared settings store; `SettingsValidator` bounds values, `SettingsMigration` upgrades old files, `SettingsFileService` reads and writes.
 - `FilePathPolicy`: atomic writes, leftover sweeps, reserved-name checks. `InputLimits` bounds every read.
 - `ProjectService`: the .tforge format; `GuitarProImporter` and `GuitarProExporter`: .gp and .gp5.

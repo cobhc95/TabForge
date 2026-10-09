@@ -52,6 +52,8 @@ internal sealed class SettingEditors
             case "general.checknow":
                 return RowButton(descriptor, "Check now", _host.Actions?.CheckForUpdatesNow is not null,
                     () => _host.Actions?.CheckForUpdatesNow?.Invoke(_window));
+            case "mixer.grouprules":
+                return RowButton(descriptor, "Group rules…", _host.Actions?.EditGroupRules is not null, () => _host.Actions?.EditGroupRules?.Invoke(_window));
             case "vst.quarantine":
                 return BuildQuarantineButton(descriptor);
             default:

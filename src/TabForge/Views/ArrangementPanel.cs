@@ -33,9 +33,9 @@ public sealed partial class ArrangementPanel : Grid
     public const double ColumnHeaderHeight = 18;
     public const double SectionHeight = 24;
     /// <summary>A track row's height when nothing was stretched (the minimum).</summary>
-    public const double DefaultTrackRowHeight = 30;
-    /// <summary>The tallest a stretched track row gets (3x the default).</summary>
-    public const double MaxTrackRowHeight = DefaultTrackRowHeight * 3;
+    public const double DefaultTrackRowHeight = 34;
+    /// <summary>The tallest a stretched track row gets (1.5x the default).</summary>
+    public const double MaxTrackRowHeight = DefaultTrackRowHeight * 1.5;
     // The stretched row height belongs to the panel showing a song (keyed by the song it is bound to, so another window's
     // panel is never touched); the static geometry helpers read it through the project they are given.
     private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<SongProject, StrongBox<double>> RowHeights = new();
@@ -49,6 +49,8 @@ public sealed partial class ArrangementPanel : Grid
     public double TrackRowHeight => RowHeightFor(_project);
     /// <summary>Height of a track's audio lane (under its row when it has audio or is armed).</summary>
     public const double AudioLaneHeight = 54;
+    /// <summary>Shortest height the pane can be dragged to: header, ruler, section strip, 3 track rows and the Add track row (the rows scroll below that).</summary>
+    public const double CollapsedPaneHeight = RulerHeight + SectionHeight + 3 * DefaultTrackRowHeight + Services.AddTrackLane.Height + 2;
     /// <summary>Height of an audio row's controls (they share lane 0 with its armed strip).</summary>
     public const double AudioControlsHeight = DefaultTrackRowHeight;
 
@@ -64,73 +66,20 @@ public sealed partial class ArrangementPanel : Grid
     private SettleAction? _waveSettle;   // zoom steps draw cached waveforms scaled; one rebuild after the zoom settles
     private SettleAction? _extentSettle;   // pane height changes (splitter drags) re-fit the Add-track lane once, after the drag settles
     internal void FlushExtent() { _extentSettle?.Cancel(); RefreshTimelineExtent(); }
-    private ResizeShade? _resizePreview;
-    private readonly List<UIElement> _hiddenForResize = new();
+    private ResizePreviewController? _resizePreview;   // while the dock splitter is dragged, a light shade stands in for the rows
 
-    /// <summary>
-    /// While the dock splitter above the panel is dragged, the real rows are collapsed and a light shade is drawn instead: one
-    /// translucent band per track in its colour, scaled with the live height (like the section-drag shadow). A drag step costs
-    /// one tiny redraw, no layout; the real rows come back once, at the final size, when the drag ends.
-    /// </summary>
-    internal void BeginResizePreview()
-    {
-        if (_resizePreview is not null || _project is null || ActualHeight < 1) return;
-        var header = RulerHeight + SectionHeight;
-        var listWidth = ColumnDefinitions.Count > 0 ? ColumnDefinitions[0].ActualWidth : ControlsWidth;
-        var scroll = _horizontal.HorizontalOffset;
-        var viewWidth = Math.Max(0, ActualWidth - listWidth);
-        // Built once from the song (not from the controls): per track a band with its name, and in the timeline one cell per
-        // visible bar, filled where the bar has notes; drawn later with a vertical scale only.
-        var drawing = new System.Windows.Media.DrawingGroup();
-        var names = new List<(System.Windows.Media.FormattedText Text, double Centre)>();
-        using (var dc = drawing.Open())
-        {
-            dc.DrawRectangle(Draw.Solid(System.Windows.Media.Color.FromRgb(0x22, 0x26, 0x2D), 1), null, new Rect(0, 0, ActualWidth, header));
-            var top = header;
-            var typeface = new System.Windows.Media.Typeface("Segoe UI");
-            for (var t = 0; t < _project.Tracks.Count; t++)
-            {
-                var track = _project.Tracks[t];
-                var h = RowHeightOf(_project, track);
-                var colour = Draw.Tame(ParseColour(track.ColorHex));
-                dc.DrawRectangle(Draw.Solid(colour, 0.16), null, new Rect(0, top, ActualWidth, h));
-                names.Add((new System.Windows.Media.FormattedText(track.Name ?? "", System.Globalization.CultureInfo.CurrentUICulture, FlowDirection.LeftToRight,
-                    typeface, 12, Draw.Solid(System.Windows.Media.Colors.White, 0.55), 1.0), top + h / 2));
-                for (var bar = 0; bar < track.Measures.Count; bar++)
-                {
-                    var x = listWidth + _timeline.XOfBar(bar) - scroll; var x2 = listWidth + _timeline.XOfBar(bar + 1) - scroll;
-                    if (x2 < listWidth) continue; if (x > ActualWidth) break;
-                    var filled = track.Measures[bar].Cells.Any(c => c.Notes.Count > 0);
-                    dc.DrawRoundedRectangle(Draw.Solid(colour, filled ? 0.55 : 0.12), null, new Rect(Math.Max(listWidth, x + 1), top + 2, Math.Max(0, x2 - x - 2), Math.Max(1, h - 4)), 3, 3);
-                }
-                top += h;
-            }
-        }
-        drawing.Freeze();
-        foreach (UIElement child in Children) { if (child.Visibility == Visibility.Visible) { child.Visibility = Visibility.Collapsed; _hiddenForResize.Add(child); } }
-        _resizePreview = new ResizeShade(drawing, names, ActualHeight, header) { IsHitTestVisible = false };
-        SetColumnSpan(_resizePreview, Math.Max(1, ColumnDefinitions.Count)); SetRowSpan(_resizePreview, Math.Max(1, RowDefinitions.Count));
-        Children.Add(_resizePreview);
-    }
+    internal void BeginResizePreview() => (_resizePreview ??= new ResizePreviewController(this, _horizontal, _timeline)).Begin();
 
     /// <summary>Ends the resize preview: the real rows come back (laid out once at the final size).</summary>
-    internal void EndResizePreview()
-    {
-        if (_resizePreview is null) return;
-        Children.Remove(_resizePreview);
-        _resizePreview = null;
-        foreach (var child in _hiddenForResize) child.Visibility = Visibility.Visible;
-        _hiddenForResize.Clear();
-    }
+    internal void EndResizePreview() => _resizePreview?.End();
     private void RequestExtentSettle() => (_extentSettle ??= new SettleAction(RefreshTimelineExtent, 120)).Request();
 
     /// <summary>The shared view options (track tint) the rows and the timeline read; the main window hands in the application's.</summary>
     public TabForge.Visualization.VisualOptions ViewOptions { get => _timeline.ViewOptions; set => _timeline.ViewOptions = value; }
     private readonly SectionDragOverlay _sectionDragOverlay = new();
-    private readonly MediaDropGhost _dropGhost = new();
+    private MediaDropController _mediaDrop = null!;
     private readonly SectionInsertionIndicator _sectionInsertionIndicator = new();
-    private bool _sectionDragAutoScroll;
-    private double _sectionDragPointerViewportX;
+    private SectionAutoScrollController? _sectionAutoScroll;   // scrolls the timeline while a section is dragged to its edge
     private readonly Canvas _timelineHost = new();
     private readonly System.Windows.Shapes.Path _sectionHighlight = new()
     {
@@ -238,6 +187,8 @@ public sealed partial class ArrangementPanel : Grid
     /// <summary>Track colour changed; this is visual-only and does not require an audio rebuild.</summary>
     public event EventHandler? TrackColorChanged;
     public event Action<TrackEditRequest>? TrackEditRequested;
+    /// <summary>The instrument catalogue auditions a sound on a track (name) or ends the audition (null).</summary>
+    public event Action<TrackModel, string?>? InstrumentPreview;
     /// <summary>Volume/pan changed live (a cheap CC update, not a structural edit that needs a rebuild).</summary>
     public event EventHandler? MixChanged;
     public event EventHandler? MixEditStarting;
@@ -332,6 +283,8 @@ public sealed partial class ArrangementPanel : Grid
     public event Action<int, int, bool, bool>? ClipLaneSelected;
     public event EventHandler? ClipEditStarting;
     public event EventHandler<AudioClip>? ClipEdited;
+    /// <summary>A clip's end is being dragged: the window grows the song to hold it.</summary>
+    public event EventHandler<AudioClip>? ClipEdgeMoved;
     /// <summary>Esc while dragging a clip: cancel the drag. False when none is being dragged.</summary>
     public bool CancelClipDrag() => _timeline.ClipGestures.Cancel();
     public event Action<int, AudioClip?, double>? ClipContextRequested;
@@ -426,6 +379,20 @@ public sealed partial class ArrangementPanel : Grid
             _timeline.InvalidateVisual();
         }
     }
+    /// <summary>Thin lines between track rows in the timeline and the track list (Preferences > Timeline & Tracks; off by default).</summary>
+    public bool ShowTrackLines
+    {
+        get => _timeline.ShowTrackLines;
+        set
+        {
+            if (_timeline.ShowTrackLines == value) return;
+            _timeline.ShowTrackLines = value;
+            _timeline.InvalidateVisual();
+            RebuildControls();
+            UpdateDragVisual();   // a rebuild drops the selected row's highlight
+        }
+    }
+    public void ToggleTrackLines() => ShowTrackLines = !ShowTrackLines;
     public bool HideEmptyTimelineGrid
     {
         get => _timeline.HideEmptyTimelineGrid;
@@ -581,6 +548,7 @@ public sealed partial class ArrangementPanel : Grid
         };
         _controlsScroll.ScrollChanged += (_, e) =>
         {
+            PinAddLane();
             // A viewport-only change (the dock or window resizing) leaves the offset alone: nothing to redraw.
             if (!_rowScrollInputs.Changed(Math.Round(e.VerticalOffset, 2))) return;
             _timeline.VerticalScrollOffset = e.VerticalOffset;
@@ -635,8 +603,7 @@ public sealed partial class ArrangementPanel : Grid
         _timelineHost.Children.Add(_selectedTrackPlayMarker);
         _timelineHost.Children.Add(_dragLaneOutline);
         _timelineHost.Children.Add(_areaMoveOutline);
-        _timelineHost.Children.Add(_dropGhost);
-        HookMediaDrop();
+        AttachMediaDrop();
         _timeline.AreaMoveFinished += (_, target) => EndAreaMoveVisual(target);
         _timeline.SizeChanged += (_, e) =>
         {
@@ -665,7 +632,7 @@ public sealed partial class ArrangementPanel : Grid
 
         _horizontal.PreviewMouseWheel += (_, e) =>
         {
-            // Wheel over the timeline zooms around the pointer so the bar under the cursor stays put.
+            // Wheel over the timeline zooms around the pointer so the bar under the cursor stays put (the track list scrolls the rows).
             var pointer = e.GetPosition(_horizontal);
             ZoomTimeline(ZoomStep(e.Delta > 0), pointer.X);
             e.Handled = true;
@@ -696,18 +663,7 @@ public sealed partial class ArrangementPanel : Grid
         {
             _sectionDragOverlay.SetPreview(preview);
             _sectionInsertionIndicator.SetPreview(preview);
-            if (preview is null)
-            {
-                if (_sectionDragAutoScroll) CompositionTarget.Rendering -= AdvanceSectionAutoScroll;
-                _sectionDragAutoScroll = false;
-                return;
-            }
-            _sectionDragPointerViewportX = preview.PointerX - _horizontal.HorizontalOffset;
-            if (!_sectionDragAutoScroll)
-            {
-                CompositionTarget.Rendering += AdvanceSectionAutoScroll;
-                _sectionDragAutoScroll = true;
-            }
+            (_sectionAutoScroll ??= new SectionAutoScrollController(_horizontal, _timeline)).Track(preview?.PointerX);
         };
         _timeline.SectionContextRequested += (_, markerIndex) => SectionContextRequested?.Invoke(this, markerIndex);
         _timeline.SectionResizeStarting += (_, _) => SectionResizeStarting?.Invoke(this, EventArgs.Empty);
@@ -719,6 +675,7 @@ public sealed partial class ArrangementPanel : Grid
         var clipGestures = _timeline.ClipGestures;
         clipGestures.ClipEditStarting += (_, _) => ClipEditStarting?.Invoke(this, EventArgs.Empty);
         clipGestures.ClipEdited += (_, clip) => ClipEdited?.Invoke(this, clip);
+        clipGestures.ClipEdgeMoved += clip => ClipEdgeMoved?.Invoke(this, clip);
         clipGestures.ClipContextRequested += (track, clip, sec) => ClipContextRequested?.Invoke(track, clip, sec);
         clipGestures.ClipPropertiesRequested += (track, clip) => ClipPropertiesRequested?.Invoke(track, clip);
         _timeline.MediaDropped += plan => MediaDropped?.Invoke(plan);
@@ -744,24 +701,6 @@ public sealed partial class ArrangementPanel : Grid
         };
     }
 
-    private void AdvanceSectionAutoScroll(object? sender, EventArgs e)
-    {
-        var viewport = _horizontal.ViewportWidth;
-        if (viewport <= 1) return;
-        const double edge = 38;
-        var direction = _sectionDragPointerViewportX < edge ? -1 :
-            _sectionDragPointerViewportX > viewport - edge ? 1 : 0;
-        if (direction == 0) return;
-        var penetration = direction < 0
-            ? Math.Clamp((edge - _sectionDragPointerViewportX) / edge, 0, 1)
-            : Math.Clamp((_sectionDragPointerViewportX - (viewport - edge)) / edge, 0, 1);
-        var nextOffset = Math.Clamp(_horizontal.HorizontalOffset + direction * (3 + 15 * penetration),
-            0, _horizontal.ScrollableWidth);
-        if (Math.Abs(nextOffset - _horizontal.HorizontalOffset) < 0.1) return;
-        _horizontal.ScrollToHorizontalOffset(nextOffset);
-        _timeline.UpdateSectionDragPointer(_sectionDragPointerViewportX + nextOffset);
-    }
-
     public void AttachTimelineScrollBar(ContentControl host) => host.Content = _timelineScrollBar;
 
     /// <summary>Height that shows the header plus exactly <paramref name="trackCount"/> track rows.</summary>
@@ -769,6 +708,12 @@ public sealed partial class ArrangementPanel : Grid
     // clipped at fractional DPI scales.
     public double PreferredHeight(int trackCount) =>
         RulerHeight + SectionHeight + (_project is { } p ? RowsHeight(p) : trackCount * TrackRowHeight) + _addLane.Extra + 2;
+
+    /// <summary>Test hooks: the track list's vertical offset, the lanes' offset and the lanes' scroll viewer (wheel target).</summary>
+    internal double RowScrollOffset => _controlsScroll.VerticalOffset;
+    internal double LaneScrollOffset => _timeline.VerticalScrollOffset;
+    internal UIElement LanesScroll => _horizontal;
+    internal UIElement RowsScroll => _controlsScroll;
 
     /// <summary>Test hook: the laid-out height of each track-control row.</summary>
     internal IReadOnlyList<double> TrackRowActualHeights => _trackRows.Select(r => r.ActualHeight).ToList();

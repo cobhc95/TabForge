@@ -150,6 +150,10 @@ public sealed partial class ArrangementPanel : IGroupDragHost
     /// "Show tracks in groups" first (the same setting as the Mixer's "Groups in track list"), then the area's own
     /// items, then the dock pane's (reset / close panel).
     /// </summary>
+    /// <summary>"Reset track list height" in the track list and timeline menus (TrackListFitController resets it).</summary>
+    public event Action? ResetTrackListHeightRequested;
+    public void RequestResetTrackListHeight() => ResetTrackListHeightRequested?.Invoke();
+
     internal ContextMenu BuildEmptyAreaMenu(IEnumerable<Control>? own = null)
     {
         var menu = new ContextMenu { Style = (Style)Application.Current.FindResource(typeof(ContextMenu)) };
@@ -177,6 +181,13 @@ public sealed partial class ArrangementPanel : IGroupDragHost
         var ownItems = own?.ToList() ?? new List<Control>();
         if (ownItems.Count > 0) { menu.Items.Add(new Separator()); foreach (var item in ownItems) menu.Items.Add(item); }
         menu.Items.Add(new Separator());
+        var resetHeight = new MenuItem
+        {
+            Header = "Reset track list height", Style = (Style)Application.Current.FindResource(typeof(MenuItem)),
+            ToolTip = "Back to the default row height with every track in view (the same as double-clicking the border above the track list)"
+        };
+        resetHeight.Click += (_, _) => ResetTrackListHeightRequested?.Invoke();
+        menu.Items.Add(resetHeight);
         var settings = new MenuItem
         {
             Header = "Track list settings…", Style = (Style)Application.Current.FindResource(typeof(MenuItem)),

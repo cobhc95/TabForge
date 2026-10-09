@@ -21,14 +21,14 @@ public static partial class EditCommands
         foreach (var cell in cells) cell.Tenuto = value;
     }
 
-    /// <summary>Inserts <paramref name="beat"/> at <paramref name="at"/>, shifting the rest of the bar right; beats pushed past <paramref name="slots"/> are dropped.</summary>
+    /// <summary>Inserts <paramref name="beat"/> at <paramref name="at"/>, shifting the rest of the bar right; only empty trailing cells fall off; a full bar keeps its notes and overflows.</summary>
     public static void InsertBeatAt(List<TabCell> cells, int at, int slots, TabCell beat)
     {
         at = Math.Clamp(at, 0, Math.Max(0, slots - 1));
         for (var i = at; i < cells.Count; i++)
             if (cells[i].RhythmicPosition is { } position) cells[i].RhythmicPosition = position + 1;
         cells.Insert(Math.Min(at, cells.Count), beat);
-        while (cells.Count > slots) cells.RemoveAt(cells.Count - 1);
+        while (cells.Count > slots && cells[^1].Notes.Count == 0) cells.RemoveAt(cells.Count - 1);
         while (cells.Count < slots) cells.Add(new TabCell());
     }
 

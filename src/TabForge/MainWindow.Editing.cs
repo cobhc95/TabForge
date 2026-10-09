@@ -35,6 +35,9 @@ public partial class MainWindow : TabForge.Views.Score.IScoreEditHost
     bool TabForge.Views.Score.IScoreEditHost.Run(Func<SongProject, bool> edit, bool invalidatesTimeline) =>
         DocumentEdits.Run(Doc, edit, invalidatesTimeline: invalidatesTimeline).Changed;
 
+    bool TabForge.Views.Score.IScoreEditHost.Run(Func<SongProject, bool> edit, bool invalidatesTimeline, bool continuesLastStep) =>
+        DocumentEdits.Run(Doc, edit, before: continuesLastStep ? Doc.Undo.Latest : null, invalidatesTimeline: invalidatesTimeline).Changed;
+
     // ---------- undo ----------
 
     /// <summary>The undo step for a change that follows (a drag, a dialog): <see cref="DocumentEdits.Checkpoint"/>, except while the window is applying a restored state, when the controls it refreshes must not record.</summary>
@@ -44,13 +47,13 @@ public partial class MainWindow : TabForge.Views.Score.IScoreEditHost
     private void ApplyRestoredPlaybackBarMapping(UndoSnapshot snapshot)
     {
         if (Playback.RestoreBarMapping(snapshot, MaxMeasures(), Playback.Engine.Playhead().Bar) is not { } restored) return;
-        Editor.PlaybackBarRemap = restored.Remap;
+        Editor.Playback.BarRemap = restored.Remap;
         if (restored.PlayheadMoved)
         {
-            Editor.SetPlayhead(_playheadBar, _playheadCell);
+            Editor.Playback.SetPlayhead(_playheadBar, _playheadCell);
             Arrangement.SetPlayhead(_playheadBar, _playheadFraction, playbackActive: true, playbackPaused: _midi.IsPaused);
-            Playhead.SetGeometry(Editor.PlayheadGeometry());
-            Playhead.SetDurationGeometries(Editor.PlaybackDurationGeometries());
+            Playhead.SetGeometry(Editor.Playback.PlayheadGeometry());
+            Playhead.SetDurationGeometries(Editor.Playback.DurationGeometries());
         }
         UpdatePlayingSectionMarker(_playheadBar, forceRefresh: true);
         Playback.Engine.RefreshArrangement(_project, restored.Remap, restored.PriorLiveBar);
@@ -60,30 +63,33 @@ public partial class MainWindow : TabForge.Views.Score.IScoreEditHost
     private void RebasePlaybackBarMappings()
     {
         Playback.RebaseBarMappings(MaxMeasures(), () => _undo.Snapshot(_project));
-        Editor.PlaybackBarRemap = _playbackBarRemap;
+        Editor.Playback.BarRemap = _playbackBarRemap;
     }
 
 
     // The model half (history, restore, clean / dirty, timeline invalidation) is DocumentEdits.Undo / Redo on the displayed document; the view refresh is below.
     private void Undo_Click(object sender, RoutedEventArgs e)
     {
+        if (Editor.Effects.UndoWritingMark()) { StatusText.Text = "Undo"; return; }   // "." / triplet on an empty spot is its own step (GP5)
         if (!_undo.CanUndo) return;
-        var selected = TrackMixerGrid.SelectedIndex;
+        var selected = TrackMixerGrid.SelectedIndex; var cursorBeat = Editor.Effects.CursorBeatForUndo(DocumentEdits.Fingerprint(Doc));
         if (DocumentEdits.Undo(Doc) is not { } target) return;
-        RefreshAfterRestore(target, selected);
+        RefreshAfterRestore(target, selected, () => Editor.Effects.AfterRestore(cursorBeat));
         StatusText.Text = "Undo";
     }
 
     private void Redo_Click(object sender, RoutedEventArgs e)
     {
+        if (Editor.Effects.RedoWritingMark()) { StatusText.Text = "Redo"; return; }
         if (!_undo.CanRedo) return;
-        var selected = TrackMixerGrid.SelectedIndex;
+        var selected = TrackMixerGrid.SelectedIndex; var cursorBeat = Editor.Effects.CursorBeat();
         if (DocumentEdits.Redo(Doc) is not { } target) return;
-        RefreshAfterRestore(target, selected);
+        RefreshAfterRestore(target, selected, () => Editor.Effects.AfterRestore(cursorBeat, target.Fingerprint));
         StatusText.Text = "Redo";
     }
 
-    private void RefreshAfterRestore(UndoSnapshot snapshot, int selected)
+    /// <summary><paramref name="placeCursor"/>: where Undo / Redo leave the cursor (GP5), run once the editor shows the restored song.</summary>
+    private void RefreshAfterRestore(UndoSnapshot snapshot, int selected, Action placeCursor)
     {
         _restoring = true; _trackSwitchSync?.Cancel();
         try
@@ -91,12 +97,15 @@ public partial class MainWindow : TabForge.Views.Score.IScoreEditHost
             TempoBox.Text = _project.Tempo.ToString();
             LyricsBox.Text = _project.Lyrics ?? "";
             Editor.Project = _project;
+            placeCursor();
+            Editor.Effects.FollowCursorBeat();
             RefreshTracks();
             if (_project.Tracks.Count > 0) TrackMixerGrid.SelectedIndex = Math.Clamp(selected, 0, _project.Tracks.Count - 1);
             SyncMixerWindows(deferEngineSync: true); RefreshArrangement(); RefreshMarkers(); RefreshInstrument(); RefreshStatus(); UpdateTitle(); UpdateTuningLabel();
             ScheduleFitTimelineToTracks();
             RefreshToolsPalette();
             ApplyRestoredPlaybackBarMapping(snapshot);
+            _follow.KeepCursorInSight();
         }
         finally { _restoring = false; }
     }
@@ -104,18 +113,19 @@ public partial class MainWindow : TabForge.Views.Score.IScoreEditHost
 
     // ---------- edit ----------
 
-    private void InsertBeat_Click(object sender, RoutedEventArgs e) { Editor.InsertBeat(); StatusText.Text = "Inserted beat"; }
-    private void DeleteBeats_Click(object sender, RoutedEventArgs e) { Editor.DeleteBeats(); StatusText.Text = "Deleted beats"; }
+    private void InsertBeat_Click(object sender, RoutedEventArgs e) { Editor.Effects.InsertBeat(); StatusText.Text = "Inserted beat"; }
+    private void DeleteBeats_Click(object sender, RoutedEventArgs e) { Editor.Effects.DeleteBeats(); StatusText.Text = "Deleted beats"; }
     // Same command as the C shortcut (EditCommands.CopyLastBeat through the editor): one behaviour, one undo step.
-    private void CopyBeats_Click(object sender, RoutedEventArgs e) => Editor.CopyLastBeat();
+    private void CopyBeats_Click(object sender, RoutedEventArgs e) => Editor.Effects.CopyLastBeat();
 
     // ---------- measure ----------
 
     private void InsertBar_Click(object sender, RoutedEventArgs e)
     {
+        if (Editor.IsSelecting) { StatusText.Text = "Insert bar works at the cursor; clear the selection first"; return; }   // as GP5 (quiet l6 i01, i03, i04)
         var at = Math.Clamp(Editor.SelectedMeasure, 0, MaxMeasures());
         _arrangementController.InsertBar(Doc, at, Editor.SelectedMeasure, moveMarkers: false, fillRests: _settings.Editing.FillBarsWithRests);
-        RefreshAfterEdit(EditRefresh.Score | EditRefresh.Arrangement); StatusText.Text = $"Inserted bar {at + 1}";
+        RefreshAfterEdit(EditRefresh.Score | EditRefresh.Arrangement); Editor.MoveToBarStart(at); Editor.Effects.WriteLikeBeatBefore(at); StatusText.Text = $"Inserted bar {at + 1}";   // beat 1 of the new bar, the length of the beat before it (GP5)
     }
 
     /// <summary>Adds an empty bar after the last one (the standard "Add bar"), keeping the cursor where it is.</summary>
@@ -258,16 +268,16 @@ public partial class MainWindow : TabForge.Views.Score.IScoreEditHost
 
     // Repeat open/close share EditCommands with the [ and ] shortcuts (through the editor): the same bar change in every
     // track and one undo step. The menu only adds the count prompt when a repeat end is being added.
-    private void RepeatOpen_Click(object sender, RoutedEventArgs e) => Editor.ToggleRepeatOpen();
+    private void RepeatOpen_Click(object sender, RoutedEventArgs e) => Editor.Effects.ToggleRepeatOpen();
 
     private void RepeatClose_Click(object sender, RoutedEventArgs e)
     {
         var bar = CurBar(); if (bar is null) return;
-        if (bar.RepeatEnd) { Editor.ToggleRepeatClose(); StatusText.Text = "Repeat end removed"; return; }
+        if (bar.RepeatEnd) { Editor.Effects.ToggleRepeatClose(); StatusText.Text = "Repeat end removed"; return; }
         var txt = GpDialogs.Prompt("Repeat close", "Repeat times (2-99):", bar.RepeatCount.ToString());
         if (txt is null) return;
         var n = Math.Clamp(int.TryParse(txt, out var v) ? v : 2, 2, TabForge.Playback.PlaybackOrder.MaxRepeats);
-        Editor.ToggleRepeatClose(n);
+        Editor.Effects.ToggleRepeatClose(n);
         StatusText.Text = $"Repeat ×{n}";
     }
 
@@ -322,65 +332,65 @@ public partial class MainWindow : TabForge.Views.Score.IScoreEditHost
     private void Dur16_Click(object sender, RoutedEventArgs e) => SetDur(16);
     private void Dur32_Click(object sender, RoutedEventArgs e) => SetDur(32);
     private void Dur64_Click(object sender, RoutedEventArgs e) => SetDur(64);
-    private void SetDur(int d) { Editor.SetDuration(d); RefreshStatus(); StatusText.Text = $"Note value: {MusicTime.DurationName(d)}"; }
-    private void DurLonger_Click(object sender, RoutedEventArgs e) { Editor.Longer(); RefreshStatus(); StatusText.Text = $"Note value: {MusicTime.DurationName(Editor.CurrentDurationDenominator)}"; }
-    private void DurShorter_Click(object sender, RoutedEventArgs e) { Editor.Shorter(); RefreshStatus(); StatusText.Text = $"Note value: {MusicTime.DurationName(Editor.CurrentDurationDenominator)}"; }
-    private void PitchUp_Click(object sender, RoutedEventArgs e) => Editor.ShiftPitch(1);
-    private void PitchDown_Click(object sender, RoutedEventArgs e) => Editor.ShiftPitch(-1);
-    private void MoveUpString_Click(object sender, RoutedEventArgs e) => Editor.MoveNotesToAdjacentString(-1);
-    private void MoveDownString_Click(object sender, RoutedEventArgs e) => Editor.MoveNotesToAdjacentString(1);
-    private void FxArpDown_Click(object sender, RoutedEventArgs e) => Editor.ToggleTechnique(TechniqueNames.ArpeggioDown);
-    private void FxArpUp_Click(object sender, RoutedEventArgs e) => Editor.ToggleTechnique(TechniqueNames.ArpeggioUp);
+    private void SetDur(int d) { Editor.Effects.SetDuration(d); RefreshStatus(); StatusText.Text = $"Note value: {MusicTime.DurationName(d)}"; }
+    private void DurLonger_Click(object sender, RoutedEventArgs e) { Editor.Effects.Longer(); RefreshStatus(); StatusText.Text = $"Note value: {MusicTime.DurationName(Editor.CurrentDurationDenominator)}"; }
+    private void DurShorter_Click(object sender, RoutedEventArgs e) { Editor.Effects.Shorter(); RefreshStatus(); StatusText.Text = $"Note value: {MusicTime.DurationName(Editor.CurrentDurationDenominator)}"; }
+    private void PitchUp_Click(object sender, RoutedEventArgs e) => Editor.Effects.ShiftPitch(1);
+    private void PitchDown_Click(object sender, RoutedEventArgs e) => Editor.Effects.ShiftPitch(-1);
+    private void MoveUpString_Click(object sender, RoutedEventArgs e) => Editor.Effects.MoveNotesToAdjacentString(-1);
+    private void MoveDownString_Click(object sender, RoutedEventArgs e) => Editor.Effects.MoveNotesToAdjacentString(1);
+    private void FxArpDown_Click(object sender, RoutedEventArgs e) => Editor.Effects.ToggleTechnique(TechniqueNames.ArpeggioDown);
+    private void FxArpUp_Click(object sender, RoutedEventArgs e) => Editor.Effects.ToggleTechnique(TechniqueNames.ArpeggioUp);
 
     private void EmptyBar_Click(object sender, RoutedEventArgs e)
     {
-        Editor.EmptyBar();
+        Editor.Effects.EmptyBar();
         StatusText.Text = "Bar emptied";
     }
     // The editor runs its commands through DocumentEdits (one undo step each); nothing is captured here.
-    private void Dot_Click(object sender, RoutedEventArgs e) { Editor.ToggleDot(); RefreshStatus(); }
-    private void DoubleDot_Click(object sender, RoutedEventArgs e) { Editor.SetDots(2); RefreshStatus(); }
-    private void Triplet_Click(object sender, RoutedEventArgs e) { Editor.ToggleTriplet(); RefreshStatus(); }
-    private void Tie_Click(object sender, RoutedEventArgs e) => Editor.ToggleTie();
-    private void Rest_Click(object sender, RoutedEventArgs e) => Editor.ToggleRest();
-    private void Fermata_Click(object sender, RoutedEventArgs e) => Editor.ToggleFermata();
-    private void Accent_Click(object sender, RoutedEventArgs e) => Editor.CycleAccent();
+    private void Dot_Click(object sender, RoutedEventArgs e) { Editor.Effects.ToggleDot(); RefreshStatus(); }
+    private void DoubleDot_Click(object sender, RoutedEventArgs e) { Editor.Effects.SetDots(2); RefreshStatus(); }
+    private void Triplet_Click(object sender, RoutedEventArgs e) { Editor.Effects.ToggleTriplet(); RefreshStatus(); }
+    private void Tie_Click(object sender, RoutedEventArgs e) => Editor.Effects.ToggleTie();
+    private void Rest_Click(object sender, RoutedEventArgs e) => Editor.Effects.ToggleRest();
+    private void Fermata_Click(object sender, RoutedEventArgs e) => Editor.Effects.ToggleFermata();
+    private void Accent_Click(object sender, RoutedEventArgs e) => Editor.Effects.CycleAccent();
     // Staccato and tenuto: the same editor commands as their shortcuts (one undo step).
-    private void Staccato_Click(object sender, RoutedEventArgs e) => Editor.ToggleStaccato();
-    private void Tenuto_Click(object sender, RoutedEventArgs e) => Editor.ToggleTenuto();
+    private void Staccato_Click(object sender, RoutedEventArgs e) => Editor.Effects.ToggleStaccato();
+    private void Tenuto_Click(object sender, RoutedEventArgs e) => Editor.Effects.ToggleTenuto();
 
     // ---------- effects ----------
 
-    private void PalmMute_Click(object sender, RoutedEventArgs e) => Editor.ToggleTechnique(TechniqueNames.PalmMute);
-    private void Hopo_Click(object sender, RoutedEventArgs e) => Editor.ToggleTechnique(TechniqueNames.Hopo);
-    private void Bend_Click(object sender, RoutedEventArgs e) => Editor.ToggleTechnique(TechniqueNames.Bend);
-    private void Slide_Click(object sender, RoutedEventArgs e) => Editor.ToggleTechnique(TechniqueNames.LegatoSlide);
-    private void Vibrato_Click(object sender, RoutedEventArgs e) => Editor.ToggleTechnique(TechniqueNames.Vibrato);
-    private void LetRing_Click(object sender, RoutedEventArgs e) => Editor.ToggleTechnique(TechniqueNames.LetRing);
-    private void FxDead_Click(object sender, RoutedEventArgs e) => Editor.ToggleDead();
-    private void FxGhost_Click(object sender, RoutedEventArgs e) => Editor.ToggleGhost();
-    private void FxShiftSlide_Click(object sender, RoutedEventArgs e) => Editor.ToggleTechnique(TechniqueNames.ShiftSlide);
-    private void FxWideVib_Click(object sender, RoutedEventArgs e) => Editor.ToggleTechnique(TechniqueNames.WideVibrato);
-    private void FxTremBar_Click(object sender, RoutedEventArgs e) => Editor.ToggleTechnique(TechniqueNames.TremoloBar);
-    private void FxHarm_Click(object sender, RoutedEventArgs e) => Editor.ToggleTechnique(TechniqueNames.Harmonic);
-    private void FxArtHarm_Click(object sender, RoutedEventArgs e) => Editor.ToggleTechnique(TechniqueNames.ArtificialHarmonic);
-    private void FxTap_Click(object sender, RoutedEventArgs e) => Editor.ToggleTechnique(TechniqueNames.Tapping);
-    private void FxSlap_Click(object sender, RoutedEventArgs e) => Editor.ToggleTechnique(TechniqueNames.Slap);
-    private void FxPop_Click(object sender, RoutedEventArgs e) => Editor.ToggleTechnique(TechniqueNames.Pop);
-    private void FxTrill_Click(object sender, RoutedEventArgs e) => Editor.ToggleTechnique(TechniqueNames.Trill);
-    private void FxTremPick_Click(object sender, RoutedEventArgs e) => Editor.ToggleTechnique(TechniqueNames.TremoloPick);
-    private void FxFadeIn_Click(object sender, RoutedEventArgs e) => Editor.ToggleTechnique(TechniqueNames.FadeIn);
-    private void FxFadeOut_Click(object sender, RoutedEventArgs e) => Editor.ToggleTechnique(TechniqueNames.FadeOut);
-    private void FxWahOpen_Click(object sender, RoutedEventArgs e) => Editor.ToggleTechnique(TechniqueNames.WahOpen);
-    private void FxWahClose_Click(object sender, RoutedEventArgs e) => Editor.ToggleTechnique(TechniqueNames.WahClose);
-    private void FxBrushDown_Click(object sender, RoutedEventArgs e) => Editor.ToggleTechnique(TechniqueNames.BrushDown);
-    private void FxBrushUp_Click(object sender, RoutedEventArgs e) => Editor.ToggleTechnique(TechniqueNames.BrushUp);
+    private void PalmMute_Click(object sender, RoutedEventArgs e) => Editor.Effects.ToggleTechnique(TechniqueNames.PalmMute);
+    private void Hopo_Click(object sender, RoutedEventArgs e) => Editor.Effects.ToggleTechnique(TechniqueNames.Hopo);
+    private void Bend_Click(object sender, RoutedEventArgs e) => Editor.Effects.ToggleTechnique(TechniqueNames.Bend);
+    private void Slide_Click(object sender, RoutedEventArgs e) => Editor.Effects.ToggleTechnique(TechniqueNames.LegatoSlide);
+    private void Vibrato_Click(object sender, RoutedEventArgs e) => Editor.Effects.ToggleTechnique(TechniqueNames.Vibrato);
+    private void LetRing_Click(object sender, RoutedEventArgs e) => Editor.Effects.ToggleTechnique(TechniqueNames.LetRing);
+    private void FxDead_Click(object sender, RoutedEventArgs e) => Editor.Effects.ToggleDead();
+    private void FxGhost_Click(object sender, RoutedEventArgs e) => Editor.Effects.ToggleGhost();
+    private void FxShiftSlide_Click(object sender, RoutedEventArgs e) => Editor.Effects.ToggleTechnique(TechniqueNames.ShiftSlide);
+    private void FxWideVib_Click(object sender, RoutedEventArgs e) => Editor.Effects.ToggleTechnique(TechniqueNames.WideVibrato);
+    private void FxTremBar_Click(object sender, RoutedEventArgs e) => Editor.Effects.ToggleTechnique(TechniqueNames.TremoloBar);
+    private void FxHarm_Click(object sender, RoutedEventArgs e) => Editor.Effects.ToggleTechnique(TechniqueNames.Harmonic);
+    private void FxArtHarm_Click(object sender, RoutedEventArgs e) => Editor.Effects.ToggleTechnique(TechniqueNames.ArtificialHarmonic);
+    private void FxTap_Click(object sender, RoutedEventArgs e) => Editor.Effects.ToggleTechnique(TechniqueNames.Tapping);
+    private void FxSlap_Click(object sender, RoutedEventArgs e) => Editor.Effects.ToggleTechnique(TechniqueNames.Slap);
+    private void FxPop_Click(object sender, RoutedEventArgs e) => Editor.Effects.ToggleTechnique(TechniqueNames.Pop);
+    private void FxTrill_Click(object sender, RoutedEventArgs e) => Editor.Effects.ToggleTechnique(TechniqueNames.Trill);
+    private void FxTremPick_Click(object sender, RoutedEventArgs e) => Editor.Effects.ToggleTechnique(TechniqueNames.TremoloPick);
+    private void FxFadeIn_Click(object sender, RoutedEventArgs e) => Editor.Effects.ToggleTechnique(TechniqueNames.FadeIn);
+    private void FxFadeOut_Click(object sender, RoutedEventArgs e) => Editor.Effects.ToggleTechnique(TechniqueNames.FadeOut);
+    private void FxWahOpen_Click(object sender, RoutedEventArgs e) => Editor.Effects.ToggleTechnique(TechniqueNames.WahOpen);
+    private void FxWahClose_Click(object sender, RoutedEventArgs e) => Editor.Effects.ToggleTechnique(TechniqueNames.WahClose);
+    private void FxBrushDown_Click(object sender, RoutedEventArgs e) => Editor.Effects.ToggleTechnique(TechniqueNames.BrushDown);
+    private void FxBrushUp_Click(object sender, RoutedEventArgs e) => Editor.Effects.ToggleTechnique(TechniqueNames.BrushUp);
     // Same command as the G shortcut (Note.Grace): the per-note GraceBefore technique.
-    private void FxGrace_Click(object sender, RoutedEventArgs e) => Editor.ToggleTechnique("GraceBefore");
+    private void FxGrace_Click(object sender, RoutedEventArgs e) => Editor.Effects.ToggleTechnique("GraceBefore");
 
     private void Chord_Click(object sender, RoutedEventArgs e)
     {
-        var c = Editor.CurrentCell(); if (c is null) return;
+        var c = Editor.Effects.CurrentCell(); if (c is null) return;
         var txt = GpDialogs.Prompt("Chord name", "Chord name (e.g. Am, G7):", c.ChordName ?? "");
         if (txt is null) return;
         DocumentEdits.Run(Doc, _ => { c.ChordName = txt; return true; }); RefreshAfterEdit(EditRefresh.Score);
@@ -388,7 +398,7 @@ public partial class MainWindow : TabForge.Views.Score.IScoreEditHost
 
     private void Text_Click(object sender, RoutedEventArgs e)
     {
-        var c = Editor.CurrentCell(); if (c is null) return;
+        var c = Editor.Effects.CurrentCell(); if (c is null) return;
         var txt = GpDialogs.Prompt("Beat text", "Beat text:", c.Text ?? "");
         if (txt is null) return;
         DocumentEdits.Run(Doc, _ => { c.Text = txt; return true; }); RefreshAfterEdit(EditRefresh.Score);

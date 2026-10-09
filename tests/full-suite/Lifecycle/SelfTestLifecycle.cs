@@ -44,7 +44,7 @@ public static partial class SelfTest
                 if (i == 2) afterWarmUp = CollectFully();
             }
             var finalHeap = CollectFully();
-            for (var round = 0; round < 4 && (Alive(mixers) > 0 || Alive(timelines) > 0 || Alive(shells) > 0); round++) { PumpUi(); CollectFully(); }
+            for (var round = 0; round < 4 && (Alive(mixers) > 0 || Alive(timelines) > 0 || Alive(shells) > 0); round++) { System.Windows.Threading.Dispatcher.CurrentDispatcher.Invoke(System.Windows.Threading.DispatcherPriority.SystemIdle, new Action(() => { })); CollectFully(); }
 
             var growth = finalHeap - afterWarmUp;
             var readyGrowth = WaveformReadySubscribers() - readyBefore;

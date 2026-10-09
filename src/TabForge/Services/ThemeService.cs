@@ -45,10 +45,12 @@ public static class ThemeService
         Set(resources, "TabActiveBrush", activeTab);
         Set(resources, "TabHoverBrush", hoverTab);
         Set(resources, "BorderBrush", Shade(panel, light ? 0.78 : 1.55));
+        // Checkbox outline: a stronger grey in light themes so the empty box shows on grey panels; dark keeps BorderBrush.
+        Set(resources, "CheckBoxBorderBrush", Shade(panel, light ? 0.55 : 1.55));
         Set(resources, "BorderSoftBrush", Shade(panel, light ? 0.88 : 1.28));
         // Light theme hover/press need a stronger step than dark to be visible on grey panels.
-        Set(resources, "HoverBrush", Shade(panel, light ? 0.86 : 1.35));
-        Set(resources, "PressBrush", Shade(panel, light ? 0.76 : 1.50));
+        Set(resources, "HoverBrush", Shade(panel, light ? 0.82 : 1.85));   // at least 1.3:1 against the Panel2 cards (TestHoverSurfaceContrast)
+        Set(resources, "PressBrush", Shade(panel, light ? 0.72 : 2.05));
         Set(resources, "TextBrush", text);
         Set(resources, "TextStrongBrush", light ? "#111111" : "#FFFFFF");
         Set(resources, "MutedBrush", muted);
@@ -56,6 +58,8 @@ public static class ThemeService
         Set(resources, "SecondaryTextBrush", Blend(muted, text, 0.45));
         Set(resources, "AccentBrush", a.Accent);
         Set(resources, "AccentSoftBrush", Blend(a.Accent, background, 0.55));
+        // Label ink on accent fills (the AccentButton style): white or near-black, whichever reads at 4.5:1 on this accent.
+        if (TryParse(a.Accent, out var accent)) { var ink = Visualization.MarkerInk.On(accent); Set(resources, "OnAccentBrush", $"#{ink.R:X2}{ink.G:X2}{ink.B:X2}"); }
         Set(resources, "SelectionBrush", a.SelectionColour);
         Set(resources, "HoverAccentBrush", a.HoverColour);
         Set(resources, "TimelineScrollTrackBrush", Shade(panel, light ? 0.88 : 0.82));
@@ -151,7 +155,7 @@ public static class ThemeService
         return 0.2126 * Ch(c.R) + 0.7152 * Ch(c.G) + 0.0722 * Ch(c.B);
     }
 
-    private static double Contrast(Color a, Color b)
+    internal static double Contrast(Color a, Color b)
     {
         var la = Luminance(a); var lb = Luminance(b);
         return (Math.Max(la, lb) + 0.05) / (Math.Min(la, lb) + 0.05);

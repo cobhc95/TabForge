@@ -42,6 +42,8 @@ public sealed class UndoController
     public int RedoCount => _redo.Count;
     public bool CanUndo => _undo.Count > 0;
     public bool CanRedo => _redo.Count > 0;
+    /// <summary>The newest undo state; an edit that passes it as its earlier state joins that step instead of adding one.</summary>
+    public UndoSnapshot? Latest => _undo.TryPeek(out var top) ? top : null;
 
     /// <summary>
     /// Bytes charged to the history: what each state stored first. The document's baseline state (its first capture) is not

@@ -66,30 +66,34 @@ internal sealed partial class ToolPaletteController
                     HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
                     Content = host
                 };
-                PanelContents[id] = new Border
+                // Live resource references: these panes are off the visual tree until their tab is chosen, so a theme
+                // switch cannot re-link a captured brush (they stayed dark in the light theme).
+                var card = new Border
                 {
-                    Background = (Brush)_host.Window.FindResource("Panel2Brush"),
-                    BorderBrush = (Brush)_host.Window.FindResource("BorderSoftBrush"),
                     BorderThickness = new Thickness(1),
                     CornerRadius = new CornerRadius(4),
                     Padding = new Thickness(7),
                     Margin = new Thickness(8),
                     Child = scroll
                 };
+                card.SetResourceReference(Border.BackgroundProperty, "Panel2Brush");
+                card.SetResourceReference(Border.BorderBrushProperty, "BorderSoftBrush");
+                PanelContents[id] = card;
             }
 
             host.Children.Clear();
             foreach (var group in paletteTools.GroupBy(tool => tool.Group))
             {
                 var section = new StackPanel { Margin = new Thickness(0, 0, 0, 6) };
-                section.Children.Add(new TextBlock
+                var heading = new TextBlock
                 {
                     Text = group.Key,
                     FontSize = TabForge.Services.ThemeService.MinFontSize,
                     FontWeight = FontWeights.SemiBold,
-                    Foreground = (Brush)_host.Window.FindResource("SecondaryTextBrush"),
                     Margin = new Thickness(2, 2, 2, 3)
-                });
+                };
+                heading.SetResourceReference(TextBlock.ForegroundProperty, "SecondaryTextBrush");
+                section.Children.Add(heading);
                 var buttons = new WrapPanel();
                 // One Tab stop per group; the arrow keys move between its buttons (across wrapped rows too).
                 KeyboardNavigation.SetTabNavigation(buttons, KeyboardNavigationMode.Once);
@@ -180,9 +184,9 @@ internal sealed partial class ToolPaletteController
 
     public bool? PaletteToolState(string id)
     {
-        if (!id.StartsWith("gp:", StringComparison.Ordinal)) return _host.Editor.GetToolState(id);
+        if (!id.StartsWith("gp:", StringComparison.Ordinal)) return _host.Editor.Effects.GetToolState(id);
         var bar = _host.CurrentBar;
-        var cell = _host.Editor.CurrentCell();
+        var cell = _host.Editor.Effects.CurrentCell();
         var selectedNote = cell?.Notes.FirstOrDefault(note => note.StringIndex == _host.Editor.SelectedString);
         return id switch
         {
@@ -196,23 +200,23 @@ internal sealed partial class ToolPaletteController
             "gp:force_line_break" => bar?.ForceLineBreak,
             "gp:prevent_line_break" => bar?.PreventLineBreak,
             "gp:add_marker" or "gp:marker_list" or "gp:previous_marker" or "gp:next_marker" => false,
-            "gp:custom_ntuplet" => _host.Editor.GetToolState("duration:tuplet"),
+            "gp:custom_ntuplet" => _host.Editor.Effects.GetToolState("duration:tuplet"),
             "gp:tie_note" => selectedNote is not null && (selectedNote.Tied || cell!.IsTied),
             "gp:tie_beat" => cell is { Notes.Count: > 0 } && cell.Notes.All(note => note.Tied || cell.IsTied),
-            "gp:sound_duration" => _host.Editor.GetNoteCellToolState(noteCell => noteCell.SoundDurationPercent != 100),
-            "gp:octave_8va" => _host.Editor.GetNoteCellToolState(noteCell => noteCell.OctaveShiftSemitones == 12),
-            "gp:octave_8vb" => _host.Editor.GetNoteCellToolState(noteCell => noteCell.OctaveShiftSemitones == -12),
-            "gp:octave_15ma" => _host.Editor.GetNoteCellToolState(noteCell => noteCell.OctaveShiftSemitones == 24),
-            "gp:octave_15mb" => _host.Editor.GetNoteCellToolState(noteCell => noteCell.OctaveShiftSemitones == -24),
+            "gp:sound_duration" => _host.Editor.Effects.GetNoteCellToolState(noteCell => noteCell.SoundDurationPercent != 100),
+            "gp:octave_8va" => _host.Editor.Effects.GetNoteCellToolState(noteCell => noteCell.OctaveShiftSemitones == 12),
+            "gp:octave_8vb" => _host.Editor.Effects.GetNoteCellToolState(noteCell => noteCell.OctaveShiftSemitones == -12),
+            "gp:octave_15ma" => _host.Editor.Effects.GetNoteCellToolState(noteCell => noteCell.OctaveShiftSemitones == 24),
+            "gp:octave_15mb" => _host.Editor.Effects.GetNoteCellToolState(noteCell => noteCell.OctaveShiftSemitones == -24),
             "gp:voice_1" => _host.Editor.ActiveVoiceIndex == 0,
             "gp:voice_2" => _host.Editor.ActiveVoiceIndex == 1,
             "gp:inactive_voice_gray" => _host.Project.GrayInactiveVoice,
-            "gp:beam_auto" => _host.Editor.GetNoteCellToolState(noteCell => noteCell.BeamMode == BeamMode.Auto && !noteCell.BreakSecondaryBeamBefore),
-            "gp:beam_force" => _host.Editor.GetNoteCellToolState(noteCell => noteCell.BeamMode == BeamMode.Force),
-            "gp:beam_break" => _host.Editor.GetNoteCellToolState(noteCell => noteCell.BeamMode == BeamMode.Break),
-            "gp:beam_break_secondary" => _host.Editor.GetNoteCellToolState(noteCell => noteCell.BreakSecondaryBeamBefore),
-            "gp:stem_auto" => _host.Editor.GetNoteCellToolState(noteCell => noteCell.StemDirection == StemDirection.Auto),
-            "gp:stem_invert" => _host.Editor.GetNoteCellToolState(noteCell => noteCell.StemDirection == StemDirection.Invert),
+            "gp:beam_auto" => _host.Editor.Effects.GetNoteCellToolState(noteCell => noteCell.BeamMode == BeamMode.Auto && !noteCell.BreakSecondaryBeamBefore),
+            "gp:beam_force" => _host.Editor.Effects.GetNoteCellToolState(noteCell => noteCell.BeamMode == BeamMode.Force),
+            "gp:beam_break" => _host.Editor.Effects.GetNoteCellToolState(noteCell => noteCell.BeamMode == BeamMode.Break),
+            "gp:beam_break_secondary" => _host.Editor.Effects.GetNoteCellToolState(noteCell => noteCell.BreakSecondaryBeamBefore),
+            "gp:stem_auto" => _host.Editor.Effects.GetNoteCellToolState(noteCell => noteCell.StemDirection == StemDirection.Auto),
+            "gp:stem_invert" => _host.Editor.Effects.GetNoteCellToolState(noteCell => noteCell.StemDirection == StemDirection.Invert),
             _ => null
         };
     }
@@ -230,14 +234,14 @@ internal sealed partial class ToolPaletteController
             "gp:marker_list" => true,
             "gp:previous_marker" => _host.Project.Markers.Any(marker => marker.MeasureIndex < _host.Editor.SelectedMeasure),
             "gp:next_marker" => _host.Project.Markers.Any(marker => marker.MeasureIndex > _host.Editor.SelectedMeasure),
-            "gp:custom_ntuplet" => _host.Editor.CanSetTuplet((3, 2)),
-            "gp:tie_note" => _host.Editor.CanTieSelectedNote(),
-            "gp:tie_beat" => _host.Editor.CanTieSelectedBeat(),
-            "gp:sound_duration" or "gp:octave_8va" or "gp:octave_8vb" or "gp:octave_15ma" or "gp:octave_15mb" => _host.Editor.HasEditableNotes,
+            "gp:custom_ntuplet" => _host.Editor.Effects.CanSetTuplet((3, 2)),
+            "gp:tie_note" => _host.Editor.Effects.CanTieSelectedNote(),
+            "gp:tie_beat" => _host.Editor.Effects.CanTieSelectedBeat(),
+            "gp:sound_duration" or "gp:octave_8va" or "gp:octave_8vb" or "gp:octave_15ma" or "gp:octave_15mb" => _host.Editor.Effects.HasEditableNotes,
             "gp:voice_1" or "gp:voice_2" => _host.SelectedTrack is not null,
             "gp:inactive_voice_gray" => _host.SelectedTrack is not null,
-            "gp:beam_auto" or "gp:beam_force" or "gp:beam_break" or "gp:stem_auto" or "gp:stem_invert" => _host.Editor.HasEditableNotes,
-            "gp:beam_break_secondary" => _host.Editor.HasSecondaryBeamEligibleNotes,
+            "gp:beam_auto" or "gp:beam_force" or "gp:beam_break" or "gp:stem_auto" or "gp:stem_invert" => _host.Editor.Effects.HasEditableNotes,
+            "gp:beam_break_secondary" => _host.Editor.Effects.HasSecondaryBeamEligibleNotes,
             _ => true
         };
     }
@@ -256,7 +260,7 @@ internal sealed partial class ToolPaletteController
             var durationKey = tool.Id.StartsWith("duration:", StringComparison.Ordinal)
                 ? tool.Id[9..] : null;
             controls.Button.IsEnabled = tool.Supported &&
-                (durationKey is null || _host.Editor.CanSetDurationForTool(durationKey)) && PaletteToolEnabled(tool.Id);
+                (durationKey is null || _host.Editor.Effects.CanSetDurationForTool(durationKey)) && PaletteToolEnabled(tool.Id);
             controls.Button.Background = active ? accentSoft : Brushes.Transparent;
             controls.Button.BorderBrush = active ? new SolidColorBrush(accent) : Brushes.Transparent;
             // The active tool is marked by shape as well as colour: a thick underline, and "active" in its automation name.

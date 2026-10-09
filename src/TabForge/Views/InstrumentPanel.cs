@@ -251,14 +251,14 @@ public sealed partial class InstrumentPanel : FrameworkElement
     {
         get
         {
-            if (_state is null || _state.Kind == InstrumentKind.Drums || NaturalHeight <= 0) return 1;
+            if (_state is null || _state.Kind is InstrumentKind.Drums or InstrumentKind.Keyboard || NaturalHeight <= 0) return 1;
             var h = ActualHeight > 0 ? ActualHeight : NaturalHeight;
             var scale = h / NaturalHeight;
             // Fretboard: a narrow pane must not blow the drawing up by its height alone (that squeezed the frets
             // and stretched the strings); the virtual width never drops below NaturalWidth unless MinScale forces it.
             if (_state.Kind is InstrumentKind.Guitar or InstrumentKind.Bass && ActualWidth > 0)
                 scale = Math.Min(scale, ActualWidth / NaturalWidth);
-            return Math.Clamp(scale, MinScale, MaxScale);
+            return Math.Clamp(Math.Min(scale, ScaleCap), MinScale, MaxScale);
         }
     }
 
@@ -267,10 +267,31 @@ public sealed partial class InstrumentPanel : FrameworkElement
     public double RequiredHeight { get; private set; } = MinimumPaneHeight(null, RequiredHeightFor(null, 900));
 
     private static double MinimumPaneHeight(InstrumentVisualState? state, double natural) =>
-        state?.Kind == InstrumentKind.Drums
+        state?.Kind == InstrumentKind.Keyboard ? KeyboardPaneSizing.MinKeyHeight
+        : state?.Kind == InstrumentKind.Drums
             ? natural
             // Scaled drawing, plus the unscaled Scales button (24 px) under the scaled legend.
             : Math.Ceiling(Math.Max(natural * MinScale, (10 + 4 * 18 + 8) * MinScale + 24 + 6));
+
+    /// <summary>Drawing scale per unit of score text scale: fret numbers (13.5 px at scale 1) stay about 1.1x the score's tab digits
+    /// (11 px x zoom x tab spacing), so the board, its labels and legend read in the same family of sizes as the score.</summary>
+    public const double ScoreTextRatio = 0.9;
+    private double _contentScale = 1;
+    /// <summary>The score's text scale (zoom x tab spacing; 1 in Band rows). The drawing never grows past it times
+    /// <see cref="ScoreTextRatio"/>, so a tall or wide pane spreads the strings instead of blowing the text up.</summary>
+    public double ContentScale
+    {
+        get => _contentScale;
+        set
+        {
+            if (!double.IsFinite(value) || Math.Abs(value - _contentScale) < 0.001) return;
+            _contentScale = value;
+            UpdateRequiredHeight();
+            InvalidateVisual();
+        }
+    }
+    /// <summary>Largest drawing scale at the current <see cref="ContentScale"/>.</summary>
+    public double ScaleCap => Math.Clamp(_contentScale * ScoreTextRatio, MinScale, MaxScale);
 
     /// <summary>Default ("medium") drawing scale of a fresh profile: about 1.1x, i.e. string spacing near 29 px at a wide window.</summary>
     public const double MediumScale = 1.1;
@@ -283,11 +304,11 @@ public sealed partial class InstrumentPanel : FrameworkElement
     /// <summary>Raised when <see cref="MaximumHeight"/> changes (width, string count or spacing).</summary>
     public event Action<double>? MaximumHeightChanged;
 
-    /// <summary>Pane height of a fresh profile: natural height at <see cref="MediumScale"/> (limited by the width like <see cref="DrawScale"/>),
+    /// <summary>Pane height of a fresh profile: natural height at <see cref="MediumScale"/> or <see cref="ScaleCap"/> if smaller (limited by the width like <see cref="DrawScale"/>),
     /// never below <see cref="RequiredHeight"/> nor above <see cref="MaximumHeight"/>.</summary>
     public double MediumHeight()
     {
-        var scale = MediumScale;
+        var scale = Math.Min(MediumScale, ScaleCap);
         if (_state?.Kind is InstrumentKind.Guitar or InstrumentKind.Bass && ActualWidth > 0)
             scale = Math.Min(scale, ActualWidth / NaturalWidth);
         scale = Math.Max(scale, MinScale);
@@ -296,11 +317,12 @@ public sealed partial class InstrumentPanel : FrameworkElement
 
     /// <summary>Pane height at which the fretboard stops growing: the drawing is at its largest scale and each string gap
     /// at its widest (natural gap times the spacing factor); see <see cref="FretboardGeometry.Compute"/>.</summary>
-    public static double MaximumPaneHeight(InstrumentVisualState? state, double width, double natural)
+    public static double MaximumPaneHeight(InstrumentVisualState? state, double width, double natural, double cap = MaxScale)
     {
+        if (state?.Kind == InstrumentKind.Keyboard) return KeyboardPaneSizing.MaxKeyHeight;
         if (state is not null && state.Kind is not (InstrumentKind.Guitar or InstrumentKind.Bass)) return double.PositiveInfinity;
         var w = width > 0 ? width : NaturalWidth;
-        var scale = Math.Clamp(Math.Min(MaxScale, w / NaturalWidth), MinScale, MaxScale);
+        var scale = Math.Clamp(Math.Min(cap, w / NaturalWidth), MinScale, MaxScale);
         var strings = state is null ? 6 : Math.Max(1, state.Tuning.Count);
         var frets = state is null ? 24 : (state.DisplayFrets is 12 or 24 ? state.DisplayFrets : 24);
         if (state is not null) frets = Math.Max(12, Math.Min(frets, Math.Max(12, state.FretCount)));
@@ -335,9 +357,8 @@ public sealed partial class InstrumentPanel : FrameworkElement
                 return Math.Ceiling(Math.Max(10 + rows * MinPercussionRow + 2, 8 + 24 + 4));
             }
             case InstrumentKind.Keyboard:
-                // Legend plate over the keys plus the Scales button; the keys themselves need the white-key
-                // labels (bottom - 16) and scale marks (bottom - 30) below the black keys (60 % of the height).
-                return Math.Ceiling(Math.Max(LegendAndScalesButton, 100));
+                // Natural key height from the key width (60-120 px, see KeyboardPaneSizing).
+                return Math.Ceiling(KeyboardPaneSizing.HeightFor(width, KeyboardPaneSizing.WhiteKeysFor(state.KeyboardKeys)));
             default:
             {
                 // Fretboard (also the placeholder before a track is chosen: six strings, so the pane does
@@ -359,7 +380,7 @@ public sealed partial class InstrumentPanel : FrameworkElement
     private void UpdateRequiredHeight()
     {
         NaturalHeight = RequiredHeightFor(_state, ActualWidth);
-        var maximum = MaximumPaneHeight(_state, ActualWidth, NaturalHeight);
+        var maximum = MaximumPaneHeight(_state, ActualWidth, NaturalHeight, ScaleCap);
         if (!(Math.Abs(maximum - MaximumHeight) < 0.5) && !(double.IsPositiveInfinity(maximum) && double.IsPositiveInfinity(MaximumHeight)))
         {
             MaximumHeight = maximum;
@@ -376,7 +397,7 @@ public sealed partial class InstrumentPanel : FrameworkElement
         base.OnRenderSizeChanged(sizeInfo);
         // Only the drum key map's row count depends on the width.
         // The fretboard's maximum height also follows the width.
-        if (sizeInfo.WidthChanged && _state?.Kind is InstrumentKind.Drums or InstrumentKind.Guitar or InstrumentKind.Bass) UpdateRequiredHeight();
+        if (sizeInfo.WidthChanged && _state?.Kind is InstrumentKind.Drums or InstrumentKind.Guitar or InstrumentKind.Bass or InstrumentKind.Keyboard) UpdateRequiredHeight();
     }
 
     protected override Size MeasureOverride(Size availableSize)
@@ -438,7 +459,7 @@ public sealed partial class InstrumentPanel : FrameworkElement
         var content = FretboardContent(state, w, h, s);
         _renderer.Render(dc, state, content, _theme,
             new InstrumentRenderPlacement(_horizontalPosition, offset, w, _snapPreview));
-        if (state.Kind == InstrumentKind.Keyboard)
+        if (state.Kind == InstrumentKind.Keyboard && h >= LegendAndScalesButton)
         {
             // Same legend as the fretboard, at the same (unscaled) size, on a backing plate in the strip the keys leave free
             // at the right (see FretboardContent); the hide (X) button's corner strip is also kept clear. Real pixels, so a tall
@@ -474,75 +495,6 @@ public sealed partial class InstrumentPanel : FrameworkElement
         finally { dc.Pop(); }
     }
 
-    public static readonly string[] PercussionNames =
-    {
-        "High Q", "Slap", "Scratch Push", "Scratch Pull", "Sticks", "Square Click", "Metronome Click", "Metronome Bell",
-        "Acoustic Bass Drum", "Bass Drum 1", "Side Stick", "Acoustic Snare", "Hand Clap", "Electric Snare", "Low Floor Tom",
-        "Closed Hi-Hat", "High Floor Tom", "Pedal Hi-Hat", "Low Tom", "Open Hi-Hat", "Low-Mid Tom", "Hi-Mid Tom",
-        "Crash Cymbal 1", "High Tom", "Ride Cymbal 1", "Chinese Cymbal", "Ride Bell", "Tambourine", "Splash Cymbal",
-        "Cowbell", "Crash Cymbal 2", "Vibraslap", "Ride Cymbal 2", "High Bongo", "Low Bongo", "Mute Hi Conga",
-        "Open Hi Conga", "Low Conga", "High Timbale", "Low Timbale", "High Agogo", "Low Agogo", "Cabasa", "Maracas",
-        "Short Whistle", "Long Whistle", "Short Guiro", "Long Guiro", "Claves", "Hi Wood Block", "Low Wood Block",
-        "Mute Cuica", "Open Cuica", "Mute Triangle", "Open Triangle", "Shaker", "Jingle Bell", "Bell Tree",
-        "Castinets", "Mute Surdo", "Open Surdo",
-    };
-    private const int FirstPercussion = 27;
-    /// <summary>Drum tracks: the label the track's drum preset writes on the TAB for a sound (shown in the key map).</summary>
-    public Func<int, string>? DrumLabel { get; set; }
-
-    private (int Columns, int Rows, double CellW, double CellH) PercussionGrid(double w, double h)
-    {
-        var count = PercussionNames.Length;
-        var columns = Math.Clamp((int)(w / 190), 4, 13);
-        var rows = (int)Math.Ceiling(count / (double)columns);
-        return (columns, rows, (w - 16) / columns, (h - 10) / rows);
-    }
-
-    /// <summary>GM percussion note under a point of the key map (drum tracks), for click-to-write.</summary>
-    public bool TryHitPercussion(Point point, out int midi)
-    {
-        midi = 0;
-        if (_state?.Kind != InstrumentKind.Drums) return false;
-        var (columns, rows, cw, ch) = PercussionGrid(ActualWidth <= 0 ? 900 : ActualWidth, ActualHeight <= 0 ? 168 : ActualHeight);
-        var col = (int)((point.X - 8) / cw); var row = (int)((point.Y - 5) / ch);
-        if (col < 0 || col >= columns || row < 0 || row >= rows) return false;
-        var index = col * rows + row;
-        if (index >= PercussionNames.Length) return false;
-        midi = FirstPercussion + index;
-        return true;
-    }
-
-    /// <summary>True while a drum hit is still fading, so the host redraws per frame only then.</summary>
-    public bool IsAnimating { get; private set; }
-
-    private void DrawPercussionMap(DrawingContext dc, InstrumentVisualState state, double w, double h)
-    {
-        var (columns, rows, cw, ch) = PercussionGrid(w, h);
-        // Hit recently (within 260 ms of its onset) -> glow that fades; sounding -> steady highlight.
-        var glow = new Dictionary<int, double>();
-        foreach (var note in state.Notes)
-        {
-            var age = state.NowMs - note.OnsetMs;
-            if (age < -5 || age > 260) continue;
-            var strength = 1 - Math.Clamp(age / 260, 0, 1);
-            glow[note.Midi] = Math.Max(glow.GetValueOrDefault(note.Midi), strength);
-        }
-        IsAnimating = glow.Count > 0;
-        var fontSize = Math.Clamp(ch * 0.62, 9, 13);
-        for (var i = 0; i < PercussionNames.Length; i++)
-        {
-            var col = i / rows; var row = i % rows;
-            var rect = new Rect(8 + col * cw, 5 + row * ch, cw - 4, ch - 1);
-            var midi = FirstPercussion + i;
-            if (glow.TryGetValue(midi, out var g) && g > 0)
-                dc.DrawRoundedRectangle(Draw.Solid(_theme.Current, 0.25 + 0.55 * g), Draw.Pen(_theme.Current, 1, 0.9), rect, 3, 3);
-            var mapped = DrumLabel?.Invoke(midi);
-            var text = string.IsNullOrEmpty(mapped) || mapped == midi.ToString() ? $"{midi} - {PercussionNames[i]}" : $"{midi} - {PercussionNames[i]}  [{mapped}]";
-            Draw.At(dc, text, rect.X + 4, rect.Y + (ch - fontSize * 1.35) / 2, fontSize,
-                Draw.Solid(g > 0 ? _theme.Text : _theme.Muted), g > 0.3);
-        }
-    }
-
     private static Rect FretboardContent(InstrumentVisualState state, double width, double height, double scale = 1)
     {
         var content = new Rect(0, 0, width, height);
@@ -550,8 +502,7 @@ public sealed partial class InstrumentPanel : FrameworkElement
         {
             // The keys stop short of the legend plate (real pixels: the plate is not scaled with the drawing).
             var reserve = (FretboardGeometry.LegendWidth - FretboardGeometry.CornerReserve + 4 + FretboardGeometry.CornerReserve) / Math.Max(0.1, scale);
-            content.Width = Math.Max(120, width - reserve);
-            return content;
+            return KeyboardPaneSizing.KeysRect(width, height, state.KeyboardKeys, reserve);
         }
         if (state.Kind is not (InstrumentKind.Guitar or InstrumentKind.Bass)) return content;
 
@@ -593,7 +544,7 @@ public sealed partial class InstrumentPanel : FrameworkElement
         {
             var (color, text) = items[i];
             var lineY = y + i * 18;
-            dc.DrawEllipse(Draw.Solid(color), null, new Point(x + 4, lineY + 7), 4, 4);
+            dc.DrawEllipse(Draw.Solid(color), Draw.Pen(theme.Wood, 1.5), new Point(x + 4, lineY + 7), 4.5, 4.5);   // ringed in the board colour, as the markers sit on it
             Draw.At(dc, text, x + 14, lineY, 13.5, Draw.Solid(theme.Legible));
         }
     }

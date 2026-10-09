@@ -49,9 +49,15 @@ public static partial class SelfTest
                 && first.Dialog is { IsVisible: false }, first.Error?.ToString());
 
             hostA.DeleteGesture = "Alt+Delete";
+            // The reused dialog was dragged away by the user; the next Show must put it back over the owner.
+            if (first.Dialog is Window moved) { moved.Left = 5; moved.Top = 5; }
             var second = ShowPrompt(owner, promptA, "Bars 8-9 are selected. What should Delete do?", BarRangeAction.InsertAfter, allTracks: true, dialog =>
             {
                 var labels = Logical<RadioButton>(dialog).Select(button => button.Content?.ToString() ?? "").ToArray();
+                Check("bar prompt reuse: a reused dialog re-centres on its owner at each show",
+                    Math.Abs(dialog.Left - (owner.Left + (owner.ActualWidth - dialog.ActualWidth) / 2)) < 2 &&
+                    Math.Abs(dialog.Top - (owner.Top + (owner.ActualHeight - dialog.ActualHeight) / 2)) < 2,
+                    $"{dialog.Left},{dialog.Top} over {owner.Left},{owner.Top}");
                 Check("bar prompt reuse: each show refreshes wording, keys, preselection, scope and remembered flag",
                     ReferenceEquals(dialog, first.Dialog)
                     && Logical<TextBlock>(dialog).Any(block => block.Text.Contains("Bars 8-9 are selected"))

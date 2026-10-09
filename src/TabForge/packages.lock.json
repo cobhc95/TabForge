@@ -15,9 +15,9 @@
       },
       "TabForge.AlphaTab": {
         "type": "Direct",
-        "requested": "[1.8.4-tabforge.3, )",
-        "resolved": "1.8.4-tabforge.3",
-        "contentHash": "TZqwYwTqL6eebCnCTANFLahjLau+Zk9YwtkkbbSTvk5e+huvmopECA+Uib2+cFM1nJ878W6NYbyvGYvnTjT0+A==",
+        "requested": "[1.8.4-tabforge.4, )",
+        "resolved": "1.8.4-tabforge.4",
+        "contentHash": "QLiUUcMuXfaCPUWxE+E3EuNcGiq7iX5nujmrX113zv+G/GcjQUNUl0SJb6ZJmpDEFjr7R3Md8gv+0V4UYgaQxw==",
         "dependencies": {
           "AlphaSkia": "3.4.135",
           "Microsoft.CSharp": "4.7.0",
@@ -181,7 +181,7 @@
           "MeltySynth": "[2.4.1, )",
           "NAudio": "[2.2.1, )",
           "SoundTouch.Net": "[2.3.2, )",
-          "TabForge.Audio.Contracts": "[0.5.1, )"
+          "TabForge.Audio.Contracts": "[0.6.0, )"
         }
       }
     },

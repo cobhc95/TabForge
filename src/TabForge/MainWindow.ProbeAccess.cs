@@ -92,7 +92,6 @@ public partial class MainWindow
         internal System.Windows.Controls.Button LoopButton => _window.LoopButton;
         internal void LoopButton_PreviewMouseRightButtonUp(object sender, MouseButtonEventArgs e) => _window.LoopButton_PreviewMouseRightButtonUp(sender, e);
         internal System.Windows.Controls.Primitives.Popup LoopSettingsPopup => _window.LoopSettingsPopup;
-        internal System.Windows.Controls.ScrollViewer LowerPanelScroll => _window.LowerPanelScroll;
         internal int MaxMeasures() => _window.MaxMeasures();
         internal System.Windows.Controls.Button MetronomeButton => _window.MetronomeButton;
         internal void MetronomeButton_PreviewMouseRightButtonUp(object sender, MouseButtonEventArgs e) => _window.MetronomeButton_PreviewMouseRightButtonUp(sender, e);
@@ -123,6 +122,8 @@ public partial class MainWindow
         internal void SetNotation(NotationMode mode) => _window.SetNotation(mode);
         internal void SetPaper(bool dark) => _window.SetPaper(dark);
         internal void ShowArrangementContextMenu(int bar, int trackIndex, bool fromKeyboard = false) => _window.ShowArrangementContextMenu(bar, trackIndex, fromKeyboard);
+        internal void SetGroupsCollapsed(IReadOnlyCollection<string> groups, bool? collapsed) => _window.SetGroupsCollapsed(groups, collapsed);
+        internal void SetAllGroupsCollapsed(bool collapsed) => _window.SetAllGroupsCollapsed(collapsed);
         internal void ShowGlobalTuningWindow() => _window.ShowGlobalTuningWindow();
         internal void ShowInstrumentContextMenu(bool fromKeyboard) => _window.ShowInstrumentContextMenu(fromKeyboard);
         internal void ShowMixTable() => _window.ShowMixTable();
@@ -133,6 +134,7 @@ public partial class MainWindow
         internal System.Windows.Controls.TextBlock StatusText => _window.StatusText;
         internal void StopPlayback() => _window.StopPlayback();
         internal void SwitchLayout(string name) => _window.WorkspaceLayouts.SwitchLayout(name);
+        internal void ToggleBandView() => _window.WorkspaceLayouts.ToggleBandView();
         internal void SyncFromSettings(bool applyWindowSize) => _window.SyncFromSettings(applyWindowSize);
         internal System.Windows.Controls.Border TitleBar => _window.TitleBar;
         internal void ToggleArm(TrackModel track) => _window.ToggleArm(track);

@@ -108,9 +108,9 @@ internal sealed class PasteOptionsDialog : Window
         var paste = new Button
         {
             Content = "Paste", MinWidth = 76, Height = 28, Margin = new Thickness(8, 0, 0, 0), Padding = new Thickness(14, 0, 14, 0),
-            IsDefault = true, ToolTip = "Paste with these choices (Enter)",
-            Background = ResourceBrush("AccentBrush"), BorderBrush = ResourceBrush("AccentBrush"), Foreground = Brushes.White
+            IsDefault = true, ToolTip = "Paste with these choices (Enter)"
         };
+        paste.SetResourceReference(StyleProperty, "AccentButton");
         AutomationProperties.SetName(paste, "Paste");
         UiIds.Id(paste, "Paste.Ok");
         paste.Click += (_, _) => Finish(true);

@@ -237,8 +237,8 @@ public sealed partial class ArrangementPanel
             row.Opacity = 1.0;
             row.Effect = null;
             row.BorderBrush = soft;
-            row.BorderThickness = new Thickness(0, 0, 1, 1);
-            row.Background = i == _selectedTrackIndex ? accentSoft : TintBrush(i);
+            row.BorderThickness = RowBorder;
+            row.Background = i == _selectedTrackIndex ? accentSoft : RowBackground(i);
         }
     }
 }

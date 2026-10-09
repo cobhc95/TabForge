@@ -212,10 +212,21 @@ public static class ProjectValidator
         _ => null
     };
 
+    /// <summary>The Band layout is view state: its lists never hold more entries than the song has tracks (at most 1000), whatever a file says.</summary>
+    private static void CapBandLayout(SongProject project)
+    {
+        if (project?.BandLayout is not { } layout) return;
+        var cap = Math.Min(1000, project.Tracks?.Count ?? 0);
+        layout.Order = (layout.Order ?? new()).Take(cap).ToList();
+        layout.Shown = (layout.Shown ?? new()).Take(cap).ToList();
+        layout.Heights = (layout.Heights ?? new()).Take(cap).ToDictionary(h => h.Key, h => h.Value);
+    }
+
     public static void Validate(SongProject project)
     {
         if (project is null) throw Invalid("The project is empty or invalid.");
         if (project.FormatVersion is < 1 or > 3) throw Invalid("This project uses an unsupported format version.");
+        CapBandLayout(project);
         RequireText(project.Title, InputLimits.MaxTitleLength, "project title");
         RequireText(project.Subtitle, InputLimits.MaxTitleLength, "project subtitle");
         RequireText(project.Artist, InputLimits.MaxTitleLength, "artist name");
@@ -354,6 +365,16 @@ public static class ProjectValidator
         if (!MixerGrouping.All.Contains(mixer.Grouping)) throw Invalid("The mixer uses an unknown grouping.");
         var groups = mixer.Groups ?? throw Invalid("The mixer has no valid group list.");
         if (groups.Count > 32) throw Invalid("The mixer has too many groups.");
+        if (mixer.Rules is { } defs)
+        {
+            if (defs.Count > 64) throw Invalid("The mixer has too many group rules.");
+            foreach (var def in defs)
+            {
+                if (def is null || def.Rules is null || def.Rules.Count > 64) throw Invalid("A mixer group has invalid rules.");
+                RequireText(def.Name, 64, "mixer group name", allowLineBreaks: false);
+                foreach (var rule in def.Rules) { if (rule is null || !MixerRules.RuleKinds.Contains(rule.Kind)) throw Invalid("A mixer group rule is unknown."); RequireText(rule.Value ?? "", 64, "mixer rule value", allowLineBreaks: false); }
+            }
+        }
         foreach (var (name, levels) in groups)
         {
             RequireText(name, 64, "mixer group name", allowLineBreaks: false);

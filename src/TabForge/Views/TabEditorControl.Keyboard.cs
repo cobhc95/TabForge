@@ -26,7 +26,18 @@ public sealed partial class TabEditorControl
         if (TryHandleKey(e.Key, Keyboard.Modifiers)) e.Handled = true;
     }
 
+    /// <summary>Raised after a keyboard key moved the cursor (arrows, Home/End, Page Up/Down), so the host can bring it into view.</summary>
+    public event EventHandler? CursorMovedByKey;
+
     public bool TryHandleKey(Key key, ModifierKeys mods)
+    {
+        if (!HandleKey(key, mods)) return false;
+        if (key is Key.Left or Key.Right or Key.Up or Key.Down or Key.Home or Key.End or Key.PageUp or Key.PageDown)
+            CursorMovedByKey?.Invoke(this, EventArgs.Empty);
+        return true;
+    }
+
+    private bool HandleKey(Key key, ModifierKeys mods)
     {
         var track = Track;
         if (track is null) return false;
@@ -51,10 +62,13 @@ public sealed partial class TabEditorControl
         if (key == Key.Left && alt && !ctrl) { MoveToEnteredNote(-1); return true; }
         if (key == Key.Right && alt && !ctrl) { MoveToEnteredNote(1); return true; }
         if (key == Key.Left && ctrl && !alt) { MoveBar(-1); return true; }
+        // Ctrl+Right on the last bar goes on to a new bar, like Right at the song end.
+        if (key == Key.Right && ctrl && !alt && AppendBarAtEnd is not null && SelectedMeasure >= track.Measures.Count - 1) { AppendBarAtEnd(); return true; }
         if (key == Key.Right && ctrl && !alt) { MoveBar(1); return true; }
-        if (key == Key.Left && shift && !alt) { ExtendSelection(-1); MoveBeat(-1); return true; }
-        if (key == Key.Right && shift && !alt) { ExtendSelection(1); MoveBeat(1); return true; }
+        if (key == Key.Left && shift && !alt) { ExtendSelection(-1); MoveBeat(-1, keepSelection: true); return true; }
+        if (key == Key.Right && shift && !alt) { ExtendSelection(1); SetPosition(_sel.EndMeasure, _sel.EndCell, SelectedString); return true; }   // the cursor stays on the selection's end (GP5)
         if (key == Key.Left && !alt) { MoveBeat(-1); return true; }
+        if (key == Key.Right && !alt && !ctrl && AppendBarAtEnd is not null && AtSongEnd()) { AppendBarAtEnd(); return true; }
         if (key == Key.Right && !alt) { MoveBeat(1); return true; }
         // Up/down move between strings.
         if (key == Key.Up && ctrl && !shift && !alt) { MoveLine(-1); return true; }
@@ -76,21 +90,23 @@ public sealed partial class TabEditorControl
         // Numpad 2/4/6/8 arrive as Down/Left/Right/Up and must stay navigation.
         if (!ctrl && !alt && !shift && !Keyboard.IsKeyToggled(Key.NumLock) && TryNumpadNavAsDigit(key, out var navDigit))
         {
-            if (Notation == NotationMode.StaffOnly) EnterStringOnStaff(navDigit);
-            else EnterFret(navDigit);
+            ClearSelection();   // typing a fret ends the selection (GP5)
+            if (Notation == NotationMode.StaffOnly) _edits.EnterStringOnStaff(navDigit);
+            else _edits.EnterFret(navDigit);
             return true;
         }
 
         // Insert (Insert beat) is the catalogued command Edit.InsertBeat; Insert / Delete with a modifier belong to the bar,
         // section and track commands, so the plain handlers below only take the bare key.
-        if (key == Key.Back && !ctrl && !alt && !shift) { DeleteNote(); return true; }
-        if (key == Key.Delete && !ctrl && !alt && !shift) { if (BeforeDelete?.Invoke() != true) DeleteBeat(); return true; }
+        if (key == Key.Back && !ctrl && !alt && !shift) { _edits.DeleteNote(); return true; }
+        if (key == Key.Delete && !ctrl && !alt && !shift) { if (BeforeDelete?.Invoke() != true) _edits.DeleteBeat(); return true; }
 
         // Digits (Shift+1..9 are reserved for the effect shortcuts below).
         if (!ctrl && !alt && !shift && TryDigit(key, out var digit))
         {
-            if (Notation == NotationMode.StaffOnly) EnterStringOnStaff(digit);
-            else EnterFret(digit);
+            ClearSelection();   // typing a fret ends the selection (GP5)
+            if (Notation == NotationMode.StaffOnly) _edits.EnterStringOnStaff(digit);
+            else _edits.EnterFret(digit);
             return true;
         }
 
@@ -102,7 +118,7 @@ public sealed partial class TabEditorControl
             case Key.T when !ctrl: return false;         // handled by the window (text dialog)
             case Key.D when !ctrl: return false;         // directions dialog
             case Key.K when !ctrl: return false;         // clef
-            case Key.Divide when !ctrl: ToggleTriplet(); return true;        // numpad /
+            case Key.Divide when !ctrl: _edits.ToggleTriplet(); return true;        // numpad /
         }
         return false;
     }
@@ -128,7 +144,7 @@ public sealed partial class TabEditorControl
         var track = Track;
         if (track is null || !Services.EditorGuard.CanEdit(track)) return;   // no track, or an audio track (no notation)
         var midi = note.MidiValue > 0 ? note.MidiValue : Score.ScoreEditCommands.MidiOf(track, note.StringIndex, note.Fret);
-        var cell = CurrentCell();
+        var cell = _edits.CurrentCell();
         var ms = cell is not null && Project is { } project ? MusicTime.NoteLengthMs(project, SelectedMeasure, SelectedCell, cell) : 0;
         NotePreview?.Invoke(this, new NotePreviewEventArgs(midi, track.MidiOutputDeviceId, track.MidiChannel, track.MidiProgram, ms));
     }

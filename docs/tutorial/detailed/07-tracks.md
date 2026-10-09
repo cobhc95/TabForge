@@ -186,7 +186,7 @@ Double-click the number beside the fork to type a shift in semitones. Right-clic
 
 - **Rename.** Double-click the track name, type a new one and press `Enter`. Press `Esc` to cancel.
 - **Recolour.** Right-click the track number. A menu lists 16 colours. You can also pick a colour in **Track properties**.
-- **Reorder.** Drag a row up or down by an empty part of it. You can also choose **Track > Move up** or **Track > Move down**, or press `Alt+Up` or `Alt+Down`. Playback carries on while you move a track.
+- **Reorder.** Drag a row up or down by an empty part of it. You can also choose **Track > Move up** or **Track > Move down**, or press `Alt+Shift+Up` or `Alt+Shift+Down`. Playback carries on while you move a track.
 - **Delete.** Choose **Track > Delete track** (`Ctrl+Shift+Delete`). TabForge does not ask first, so press `Ctrl+Z` to bring the track back. The last track cannot be deleted.
 
 `Ctrl+Shift+Up` and `Ctrl+Shift+Down` select the previous and next track, and `Ctrl+Shift+Insert` adds a track.

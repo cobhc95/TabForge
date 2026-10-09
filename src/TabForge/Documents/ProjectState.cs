@@ -229,6 +229,8 @@ internal sealed class ProjectStateEncoder
         var used = new HashSet<MeasureModel>(ReferenceEqualityComparer.Instance);
         var renumbered = new List<(MeasureModel Measure, int Number)>();
         var project = ProjectService.RestoreUndoSongHeader(state.Song.Bytes);
+        project.BandLayout = live?.BandLayout;   // view state: an undo never rewinds it
+        project.Mixer.CollapsedGroups = new List<string>(live?.Mixer.CollapsedGroups ?? new List<string>());   // likewise the collapsed groups
         var liveBars = new MeasureModel?[state.Tracks.Length][];
         try
         {
@@ -489,7 +491,7 @@ internal static class BarCodec
         [typeof(TabCell)] = new[]
         {
             nameof(TabCell.Notes), nameof(TabCell.RhythmicPosition), nameof(TabCell.DurationDenominator), nameof(TabCell.Dots), nameof(TabCell.IsTriplet),
-            nameof(TabCell.TupletNumerator), nameof(TabCell.TupletDenominator), nameof(TabCell.IsRest), nameof(TabCell.IsTied),
+            nameof(TabCell.TupletNumerator), nameof(TabCell.TupletDenominator), nameof(TabCell.IsRest), nameof(TabCell.WrittenRest), nameof(TabCell.IsTied),
             nameof(TabCell.SoundDurationPercent), nameof(TabCell.OctaveShiftSemitones), nameof(TabCell.BeamMode), nameof(TabCell.BreakSecondaryBeamBefore),
             nameof(TabCell.StemDirection), nameof(TabCell.IsGrace), nameof(TabCell.GraceBeforeBeat), nameof(TabCell.Fermata), nameof(TabCell.Accent),
             nameof(TabCell.Staccato), nameof(TabCell.Tenuto), nameof(TabCell.WhammyPoints), nameof(TabCell.TremoloPickDenominator), nameof(TabCell.BrushStepSlots), nameof(TabCell.ChordName),
@@ -553,7 +555,7 @@ internal static class BarCodec
         {
             if (c is null) { w.VarU(0); continue; }
             w.VarU((ulong)(1 | Bit(c.IsTriplet, 1) | Bit(c.IsRest, 2) | Bit(c.IsTied, 3) | Bit(c.BreakSecondaryBeamBefore, 4) | Bit(c.IsGrace, 5) |
-                           Bit(c.GraceBeforeBeat, 6) | Bit(c.Fermata, 7) | Bit(c.Staccato, 8) | Bit(c.Tenuto, 9)));
+                           Bit(c.GraceBeforeBeat, 6) | Bit(c.Fermata, 7) | Bit(c.Staccato, 8) | Bit(c.Tenuto, 9) | Bit(c.WrittenRest, 10)));
             w.Int(c.DurationDenominator);
             w.Int(c.Dots);
             w.Int(c.TupletNumerator);
@@ -672,7 +674,7 @@ internal static class BarCodec
             var c = new TabCell
             {
                 IsTriplet = F(1), IsRest = F(2), IsTied = F(3), BreakSecondaryBeamBefore = F(4), IsGrace = F(5),
-                GraceBeforeBeat = F(6), Fermata = F(7), Staccato = F(8), Tenuto = F(9),
+                GraceBeforeBeat = F(6), Fermata = F(7), Staccato = F(8), Tenuto = F(9), WrittenRest = F(10),
                 DurationDenominator = r.Int(), Dots = r.Int(), TupletNumerator = r.Int(), TupletDenominator = r.Int(),
                 SoundDurationPercent = r.Int(), OctaveShiftSemitones = r.Int(), Accent = r.Int(), TremoloPickDenominator = r.Int(), BrushStepSlots = r.Dbl(),
                 BeamMode = (BeamMode)r.Int(), StemDirection = (StemDirection)r.Int(),

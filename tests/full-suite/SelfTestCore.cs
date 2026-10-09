@@ -146,6 +146,21 @@ public static partial class SelfTest
 
     // ---------- Editor ----------
 
+    private static void TestRightArrowAppendsBarAtEnd()
+    {
+        var editor = NewEditor(out var _, out var track);
+        editor.SetPosition(track.Measures.Count - 1, 0, 0);
+        while (!editor.AtSongEnd()) editor.MoveBeat(1);
+        var before = track.Measures.Count;
+        editor.AppendBarAtEnd = () => { track.Measures.Add(new MeasureModel { Number = track.Measures.Count + 1 }); editor.MoveToBarStart(track.Measures.Count - 1); };
+        editor.AppendBarAtEnd();
+        Eq("append hook adds one bar", before + 1, track.Measures.Count);
+        Eq("cursor lands on the new bar", before, editor.SelectedMeasure);
+        Eq("cursor on first beat", 0, editor.SelectedCell);
+        editor.SetPosition(0, 0, 0);
+        if (before > 1 && editor.AtSongEnd()) throw new Exception("first bar is not the song end");
+    }
+
     private static void TestEditorNavigation()
     {
         var editor = NewEditor(out var _, out var track);
@@ -167,7 +182,7 @@ public static partial class SelfTest
         editor.SetPosition(2, 0, 0);
         editor.MoveBar(-1);
         Eq("ctrl-left moves a whole bar", 1, editor.SelectedMeasure);
-        var layout = editor.GetScoreLayout(track);
+        var layout = editor.Layout.GetLayout(track);
         var sourcePosition = layout.Measure(editor.SelectedMeasure);
         var nextSystem = Math.Min(sourcePosition.SystemIndex + 1, layout.SystemCount - 1);
         var nextRow = layout.Systems[nextSystem];
@@ -205,31 +220,32 @@ public static partial class SelfTest
     {
         var editor = NewEditor(out var _, out var track);
         editor.SetPosition(0, 0, 0);
-        editor.SetDuration(4);
+        editor.Effects.SetDuration(4);
         Eq("quarter selected", 4, editor.CurrentDurationDenominator);
-        editor.Longer();
+        editor.Effects.Longer();
         Eq("+ makes it longer", 2, editor.CurrentDurationDenominator);
-        editor.Shorter();
-        editor.Shorter();
+        editor.Effects.Shorter();
+        editor.Effects.Shorter();
         Eq("- makes it shorter", 8, editor.CurrentDurationDenominator);
 
-        editor.ToggleDot();
+        editor.Effects.ToggleDot();
         Eq("dot applied to selection", 1, editor.CurrentDots);
-        editor.SetDuration(8);
-        Eq("dotted eighth written", 1, track.Measures[0].Cells[0].Dots);
+        editor.Effects.SetDuration(8);
+        // As GP5, dot and duration on an empty spot set the writing duration; no beat is written until a note is typed.
+        Check("dotted eighth is the writing duration", editor.CurrentDots == 1 && editor.CurrentDurationDenominator == 8, $"{editor.CurrentDurationDenominator} dots {editor.CurrentDots}");
 
-        editor.ToggleTriplet();
+        editor.Effects.ToggleTriplet();
         Check("triplet toggles on", editor.CurrentTriplet);
 
-        editor.ToggleRest();
+        editor.Effects.ToggleRest();
         Check("rest applied", track.Measures[0].Cells[0].IsRest);
         Check("rest clears notes", track.Measures[0].Cells[0].Notes.Count == 0);
 
         // Insert / delete beats keep the bar length stable.
         var before = track.Measures[0].Cells.Count;
-        editor.InsertBeat();
+        editor.Effects.InsertBeat();
         Eq("insert beat keeps bar slots", before, track.Measures[0].Cells.Count);
-        editor.DeleteBeats();
+        editor.Effects.DeleteBeats();
         Eq("delete beat keeps bar slots", before, track.Measures[0].Cells.Count);
 
         var constrained = NewEditor(out _, out var constrainedTrack);
@@ -243,12 +259,12 @@ public static partial class SelfTest
         constrained.PreventBarOverflow = true;
         constrained.SetPosition(0, 4, 0);
         Check("duration validation respects imported fractional beat spacing",
-            !constrained.CanSetDurationForTool("sixteenth") && constrained.CanSetDurationForTool("thirtysecond") &&
-            constrained.CanSetDurationForTool("sixtyfourth"));
-        constrained.SetDuration(16);
+            !constrained.Effects.CanSetDurationForTool("sixteenth") && constrained.Effects.CanSetDurationForTool("thirtysecond") &&
+            constrained.Effects.CanSetDurationForTool("sixtyfourth"));
+        constrained.Effects.SetDuration(16);
         Check("an invalid subdivision leaves the duration tool and note unchanged",
             constrained.CurrentDurationDenominator == 4 && measure.Cells[4].DurationDenominator == 8);
-        constrained.SetDuration(32);
+        constrained.Effects.SetDuration(32);
         Eq("a valid smaller subdivision applies at the same beat", 32, measure.Cells[4].DurationDenominator);
 
         var barEnd = NewEditor(out _, out var barEndTrack);
@@ -258,7 +274,7 @@ public static partial class SelfTest
         barEnd.PreventBarOverflow = true;
         barEnd.SetPosition(0, 14, 0);
         Check("duration validation uses the remaining slots in the measure",
-            !barEnd.CanSetDurationForTool("quarter") && barEnd.CanSetDurationForTool("eighth"));
+            !barEnd.Effects.CanSetDurationForTool("quarter") && barEnd.Effects.CanSetDurationForTool("eighth"));
 
         var midBeat = NewEditor(out _, out var midBeatTrack);
         var midBeatMeasure = midBeatTrack.Measures[0];
@@ -273,11 +289,11 @@ public static partial class SelfTest
         midBeat.PreventBarOverflow = true;
         midBeat.SetPosition(0, 1, 0);
         Check("duration tools reject a subdivision cursor placed inside the active eighth-note span",
-            !midBeat.CanSetDurationForTool("sixteenth") && !midBeat.CanSetDurationForTool("thirtysecond") &&
-            !midBeat.CanSetDurationForTool("sixtyfourth"));
+            !midBeat.Effects.CanSetDurationForTool("sixteenth") && !midBeat.Effects.CanSetDurationForTool("thirtysecond") &&
+            !midBeat.Effects.CanSetDurationForTool("sixtyfourth"));
         midBeat.SetPosition(0, TabEditorControl.ResolveBeatHitCell(midBeatMeasure, 1.0, 1), 0);
         Check("the same smaller duration is checked against the actual note onset and next beat",
-            midBeat.CanSetDurationForTool("sixteenth") && !midBeat.CanSetDurationForTool("quarter"));
+            midBeat.Effects.CanSetDurationForTool("sixteenth") && !midBeat.Effects.CanSetDurationForTool("quarter"));
 
         var glowEditor = NewEditor(out _, out var glowTrack);
         glowTrack.Measures[0].Cells[4].DurationDenominator = 8;
@@ -309,43 +325,43 @@ public static partial class SelfTest
             StringIndex = 0, Fret = 10, Midi = 74
         });
         glowTimeline.LongestSoundingNoteMs = 140;
-        glowEditor.PlaybackActive = true;
-        glowEditor.PlaybackMeasure = 0;
-        glowEditor.PlaybackCell = 4;
-        glowEditor.PlaybackFraction = 0.30;
-        glowEditor.PlaybackTrackIndex = 0;
-        glowEditor.Timeline = glowTimeline;
-        glowEditor.PlaybackMs = 260;
-        var playhead = glowEditor.PlayheadGeometry();
-        var durationGlow = glowEditor.PlaybackDurationGeometries();
+        glowEditor.Playback.Active = true;
+        glowEditor.Playback.Measure = 0;
+        glowEditor.Playback.Cell = 4;
+        glowEditor.Playback.Fraction = 0.30;
+        glowEditor.Playback.TrackIndex = 0;
+        glowEditor.Playback.Timeline = glowTimeline;
+        glowEditor.Playback.Ms = 260;
+        var playhead = glowEditor.Playback.PlayheadGeometry();
+        var durationGlow = glowEditor.Playback.DurationGeometries();
         Check("duration glow spans the full active chord and contains the live playback line",
             playhead is not null && durationGlow.Count == 1 &&
             durationGlow[0].X < playhead.Value.X && durationGlow[0].EndX > playhead.Value.X);
         var initialGlow = durationGlow.Count > 0 ? durationGlow[0] : default;
-        glowEditor.PlaybackMs = 380;
-        glowEditor.PlaybackFraction = 0.38;
-        playhead = glowEditor.PlayheadGeometry();
-        durationGlow = glowEditor.PlaybackDurationGeometries();
+        glowEditor.Playback.Ms = 380;
+        glowEditor.Playback.Fraction = 0.38;
+        playhead = glowEditor.Playback.PlayheadGeometry();
+        durationGlow = glowEditor.Playback.DurationGeometries();
         Check("active chord duration bounds stay fixed as the playback line advances",
             playhead is not null && durationGlow.Count == 1 &&
             Math.Abs(durationGlow[0].X - initialGlow.X) < 0.01 &&
             Math.Abs(durationGlow[0].EndX - initialGlow.EndX) < 0.01 &&
             durationGlow[0].X < playhead.Value.X && durationGlow[0].EndX > playhead.Value.X);
-        glowEditor.PlaybackMs = 390;
+        glowEditor.Playback.Ms = 390;
         Check("duration glow ends with the last note in the chord",
-            glowEditor.PlaybackDurationGeometries().Count == 0);
-        glowEditor.PlaybackMs = 510;
-        var repeatedGlow = glowEditor.PlaybackDurationGeometries();
-        glowEditor.PlaybackMs = 620;
-        var repeatedGlowLater = glowEditor.PlaybackDurationGeometries();
+            glowEditor.Playback.DurationGeometries().Count == 0);
+        glowEditor.Playback.Ms = 510;
+        var repeatedGlow = glowEditor.Playback.DurationGeometries();
+        glowEditor.Playback.Ms = 620;
+        var repeatedGlowLater = glowEditor.Playback.DurationGeometries();
         Check("repeated note starts a new stable duration block for its own event",
             repeatedGlow.Count == 1 && repeatedGlowLater.Count == 1 &&
             Math.Abs(repeatedGlow[0].X - repeatedGlowLater[0].X) < 0.01 &&
             Math.Abs(repeatedGlow[0].EndX - repeatedGlowLater[0].EndX) < 0.01 &&
             Math.Abs(repeatedGlow[0].X - initialGlow.X) > 0.01);
-        glowEditor.PlaybackMs = 625;
+        glowEditor.Playback.Ms = 625;
         Check("repeated event duration shading clears at its actual end",
-            glowEditor.PlaybackDurationGeometries().Count == 0);
+            glowEditor.Playback.DurationGeometries().Count == 0);
 
         var tiedEditor = NewEditor(out _, out var tiedTrack);
         tiedTrack.Measures[0].Cells[14].Notes.Add(new TabNote { StringIndex = 0, Fret = 3, MidiValue = 67 });
@@ -358,20 +374,20 @@ public static partial class SelfTest
             StringIndex = 0, Fret = 3, Midi = 67
         });
         tiedTimeline.LongestSoundingNoteMs = 375;
-        tiedEditor.PlaybackActive = true;
-        tiedEditor.PlaybackTrackIndex = 0;
-        tiedEditor.Timeline = tiedTimeline;
-        tiedEditor.PlaybackMs = 900;
-        var tiedGlow = tiedEditor.PlaybackDurationGeometries();
-        tiedEditor.PlaybackMs = 1200;
-        var tiedGlowLater = tiedEditor.PlaybackDurationGeometries();
+        tiedEditor.Playback.Active = true;
+        tiedEditor.Playback.TrackIndex = 0;
+        tiedEditor.Playback.Timeline = tiedTimeline;
+        tiedEditor.Playback.Ms = 900;
+        var tiedGlow = tiedEditor.Playback.DurationGeometries();
+        tiedEditor.Playback.Ms = 1200;
+        var tiedGlowLater = tiedEditor.Playback.DurationGeometries();
         Check("tied duration shading continues across the bar boundary without shrinking",
             tiedGlow.Count == 2 && tiedGlowLater.Count == 2 &&
             Enumerable.Range(0, 2).All(i => Math.Abs(tiedGlow[i].X - tiedGlowLater[i].X) < 0.01 &&
                 Math.Abs(tiedGlow[i].EndX - tiedGlowLater[i].EndX) < 0.01));
-        tiedEditor.PlaybackMs = 1250;
+        tiedEditor.Playback.Ms = 1250;
         Check("tied duration shading clears at the sustained event end",
-            tiedEditor.PlaybackDurationGeometries().Count == 0);
+            tiedEditor.Playback.DurationGeometries().Count == 0);
     }
 
     private static void TestPlaybackGlowIntensity()
@@ -430,11 +446,11 @@ public static partial class SelfTest
         cell.DurationDenominator = 8;
         cell.Notes.Add(new TabNote { StringIndex = 3, Fret = 9, MidiValue = 59, Techniques = { "Bend" } });
         editor.SetPosition(0, 4, 3);
-        editor.CopyLastBeat();
+        editor.Effects.CopyLastBeat();
         Eq("copy last beat lands on the next slot", 0, track.Measures[0].Cells[5].Notes.Count);
 
         editor.SetPosition(0, 8, 0);
-        editor.CopyLastBeat();
+        editor.Effects.CopyLastBeat();
         Eq("copy last beat duplicates the fret", 9, track.Measures[0].Cells[8].Notes[0].Fret);
         Check("copy last beat keeps techniques", track.Measures[0].Cells[8].Notes[0].Techniques.Contains("Bend"));
 
@@ -527,7 +543,8 @@ public static partial class SelfTest
                 var project = GuitarProImporter.Import(file, importContext);
                 var tracks = project.Tracks.Count;
                 var measures = project.Tracks.Count == 0 ? 0 : project.Tracks.Max(t => t.Measures.Count);
-                var notes = project.Tracks.Sum(t => t.Measures.Sum(m => m.Cells.Sum(c => c.Notes.Count)));
+                // Voice 2 lives in Voice2Cells; counting only Cells dropped every second-voice note (57 here).
+                var notes = project.Tracks.Sum(t => t.Measures.Sum(m => m.Cells.Concat(m.Voice2Cells).Sum(c => c.Notes.Count)));
                 var techniques = project.Tracks.Sum(t => t.Measures.Sum(m => m.Cells.Sum(c => c.Notes.Sum(n => n.Techniques.Count))));
                 var techniqueHistogram = project.Tracks
                     .SelectMany(t => t.Measures).SelectMany(m => m.Cells).SelectMany(c => c.Notes).SelectMany(n => n.Techniques)
@@ -547,7 +564,7 @@ public static partial class SelfTest
                     Check($"{name}: compressed history is at least 10x smaller than raw JSON",
                         packed.Length * 10 < rawBytes, $"{packed.Length / 1024} KB vs {rawBytes / 1024} KB");
                     Check($"{name}: a compressed snapshot restores every note",
-                        ProjectService.RestoreBytes(packed).Tracks.Sum(t => t.Measures.Sum(m => m.Cells.Sum(c => c.Notes.Count))) == notes);
+                        ProjectService.RestoreBytes(packed).Tracks.Sum(t => t.Measures.Sum(m => m.Cells.Concat(m.Voice2Cells).Sum(c => c.Notes.Count))) == notes);
 
                     // 250 one-bar edits on a copy through the same controller used by documents.
                     var edited = ProjectService.RestoreBytes(packed);
@@ -589,7 +606,7 @@ public static partial class SelfTest
                 var restored = ProjectService.Restore(ProjectService.Snapshot(project));
                 Check($"{name}: project round-trip keeps tracks and notes",
                     restored.Tracks.Count == tracks &&
-                    restored.Tracks.Sum(t => t.Measures.Sum(m => m.Cells.Sum(c => c.Notes.Count))) == notes);
+                    restored.Tracks.Sum(t => t.Measures.Sum(m => m.Cells.Concat(m.Voice2Cells).Sum(c => c.Notes.Count))) == notes);
 
                 var options = new PlaybackOptions();
                 var timeline = MidiTimelineBuilder.Build(restored, options);
@@ -732,12 +749,13 @@ public static partial class SelfTest
                         var tuning = CheckTuningConsistency(score);
                         Log.Add($"  info  {name}: tuning check -> {tuning.Checked} notes, {tuning.Mismatched} mismatches");
                         Check($"{name}: string + fret lands on alphaTab's sounding pitch", tuning.Mismatched == 0,
-                            $"{tuning.Mismatched}/{tuning.Checked}: {tuning.FirstMismatch}");                        var allCells = project.Tracks.SelectMany(t => t.Measures).SelectMany(m => m.Cells).ToList();
+                            $"{tuning.Mismatched}/{tuning.Checked}: {tuning.FirstMismatch}");                        // Voice 2 cells included. Grace notes are stored per note (IsGraceNote) as well as on the cell.
+                        var allCells = project.Tracks.SelectMany(t => t.Measures).SelectMany(m => m.Cells.Concat(m.Voice2Cells)).ToList();
                         var tfChords = allCells.Count(c => !string.IsNullOrWhiteSpace(c.ChordName));
                         var tfTexts = allCells.Count(c => !string.IsNullOrWhiteSpace(c.Text));
                         var tfLyrics = allCells.Count(c => !string.IsNullOrWhiteSpace(c.Lyrics));
                         var tfFermata = allCells.Count(c => c.Fermata);
-                        var tfGraces = allCells.Count(c => c.IsGrace);
+                        var tfGraces = allCells.Count(c => c.IsGrace || c.Notes.Any(n => n.IsGraceNote));
                         var tfFades = allCells.Sum(c => c.Notes.Count(n => n.Techniques.Contains("FadeIn") || n.Techniques.Contains("FadeOut")));
                         Log.Add($"  info  {name}: annotations alphaTab(c={annotations.Chords} t={annotations.Texts} l={annotations.Lyrics} f={annotations.Fermata} g={annotations.Graces}) " +
                                 $"TabForge(c={tfChords} t={tfTexts} l={tfLyrics} f={tfFermata} g={tfGraces})");
@@ -1138,6 +1156,18 @@ public static partial class SelfTest
         }
     }
 
+    private static void TestPlayingSpeakerTab()
+    {
+        var playing = new TabItemModel { Session = DocumentSession.Blank(), IsPlaying = true };
+        var idle = new TabItemModel { Session = DocumentSession.Blank() };
+        Check("a playing tab shows the speaker icon", playing.PlayingVisibility == System.Windows.Visibility.Visible);
+        Check("an idle tab hides the speaker icon", idle.PlayingVisibility == System.Windows.Visibility.Collapsed);
+        playing.IsPlaying = false;
+        playing.Raise(nameof(TabItemModel.IsPlaying));
+        Check("the icon hides again when playback stops", playing.PlayingVisibility == System.Windows.Visibility.Collapsed);
+        Check("the speaker geometry is a theme resource", System.Windows.Application.Current?.TryFindResource("IconSpeaker") is System.Windows.Media.Geometry);
+    }
+
     private static void TestTabUi()
     {
         var settings = new AppSettings();
@@ -1153,21 +1183,8 @@ public static partial class SelfTest
         Check("opening or switching tabs continues previous playback by default",
             settings.Tabs.PlaybackOnTabSwitch == TabPlaybackActions.ContinuePlayingPrevious &&
             TabPlaybackActions.Resolve(settings.Tabs.PlaybackOnTabSwitch) == TabPlaybackAction.Continue);
-        Check("zoom controller defaults docked in the right sidebar",
-            settings.General.PlaybackControllerDocked && settings.General.PlaybackControllerHeight == 100);
         Check("fretboard position defaults to centre", settings.Appearance.FretboardPosition == "Centre");
         Check("score paper defaults to dark styling", settings.Appearance.ScorePaper == "Dark");
-        settings.General.PlaybackControllerDocked = false;
-        settings.General.PlaybackControllerX = 315.5;
-        settings.General.PlaybackControllerY = 426.25;
-        settings.General.PlaybackControllerHeight = 118;
-        var controllerReload = System.Text.Json.JsonSerializer.Deserialize<AppSettings>(
-            System.Text.Json.JsonSerializer.Serialize(settings))!;
-        Check("zoom controller dock state and floating position persist",
-            !controllerReload.General.PlaybackControllerDocked &&
-            controllerReload.General.PlaybackControllerX == 315.5 &&
-            controllerReload.General.PlaybackControllerY == 426.25 &&
-            controllerReload.General.PlaybackControllerHeight == 118);
         var paletteHost = DockWorkspace.Tabs("palette-host", "tools", "structure", "rhythm", "layout");
         paletteHost.SelectedPanel = "rhythm";
         settings.Workspace = new Docking.DockWorkspaceState
@@ -1180,11 +1197,11 @@ public static partial class SelfTest
             {
                 new Docking.DockFloatingState
                 {
-                    Id = "floating-playback", Root = DockWorkspace.Tabs("floating-host", "playback"),
+                    Id = "floating-rhythm", Root = DockWorkspace.Tabs("floating-host", "rhythm"),
                     Left = 1450, Top = 260, Width = 380, Height = 210
                 }
             },
-            ClosedPanels = new() { "practice" }
+            ClosedPanels = new() { "sections" }
         };
         settings.Audio.Speed = 0.75;
         settings.Audio.MetronomeVolume = 63;
@@ -1203,7 +1220,7 @@ public static partial class SelfTest
         Check("floating panel bounds and closed state persist",
             savedFloatingPanels?.Left == 1450 &&
             savedFloatingPanels.Width == 380 &&
-            workspaceReload.Workspace?.ClosedPanels.SequenceEqual(new[] { "practice" }) == true);
+            workspaceReload.Workspace?.ClosedPanels.SequenceEqual(new[] { "sections" }) == true);
         Check("workspace state is isolated from theme and audio settings",
             workspaceReload.Audio.Speed == 0.75 && workspaceReload.Appearance.Accent == "#2468AC");
         Check("metronome volume, accent, click and subdivision persist",
@@ -1218,12 +1235,11 @@ public static partial class SelfTest
             ("instrument", "instrument", "score-editor"), ("timeline", "timeline", "score-editor"),
             ("tools", "tools", "structure"), ("structure", "tools", "tools"),
             ("rhythm", "tools", "tools"), ("layout", "tools", "tools"),
-            ("sections", "side", "practice"), ("practice", "side", "sections"),
-            ("playback", "side", "sections")
+            ("sections", "side", "score-editor")
         })
             dockWorkspace.RegisterPanel(id, id, new Border(), 180, 100, defaultHost, anchor);
         dockWorkspace.RestoreLayout(null);
-        var centreDocked = dockWorkspace.DockPanelTo("rhythm", "default-sections-practice-playback", Docking.DockDropZone.Center);
+        var centreDocked = dockWorkspace.DockPanelTo("rhythm", "default-sections-practice", Docking.DockDropZone.Center);
         var centreHost = FindHost(dockWorkspace.CaptureLayout().Root, "rhythm");
         Check("docking centre merges a panel as a selected tab",
             centreDocked && centreHost?.Panels.Contains("sections") == true && centreHost.SelectedPanel == "rhythm");
@@ -1239,11 +1255,11 @@ public static partial class SelfTest
         Check("reset-this-panel restores only the selected panel to its default host",
             FindNode(dockWorkspace.CaptureLayout().Root, "default-tool-palette")?.Panels.Contains("rhythm") == true &&
             dockWorkspace.IsPanelFloating("tools") == false);
-        dockWorkspace.SetPanelVisible("practice", false);
-        var closedPractice = dockWorkspace.CaptureLayout().ClosedPanels.Contains("practice");
-        dockWorkspace.SetPanelVisible("practice", true);
-        Check("closed panels can reopen in their original tab host",
-            closedPractice && FindNode(dockWorkspace.CaptureLayout().Root, "default-sections-practice-playback")?.Panels.Contains("practice") == true);
+        dockWorkspace.SetPanelVisible("sections", false);
+        var closedSections = dockWorkspace.CaptureLayout().ClosedPanels.Contains("sections");
+        dockWorkspace.SetPanelVisible("sections", true);
+        Check("closed panels can reopen (the Sections pane has no other side pane to share a host with)",
+            closedSections && dockWorkspace.IsPanelVisible("sections"));
         dockWorkspace.ResetAllPanels();
         var resetWorkspace = dockWorkspace.CaptureLayout();
         Check("reset-all restores the complete default workspace without floating panels",
@@ -1282,7 +1298,7 @@ public static partial class SelfTest
         });
         settings.Appearance.LedgerLines = savedLedgerSetting;
         Check("ledger lines default to minimal and all modes persist", savedLedgerSetting == "Minimal" && ledgerModesPersist &&
-            new TabEditorControl().LedgerLines == LedgerLineMode.Minimal);
+            new TabEditorControl().Appearance.LedgerLines == LedgerLineMode.Minimal);
         Check("new scores default to standard notation plus tablature",
             new TabEditorControl().Notation == NotationMode.TabAndStaff &&
             Documents.DocumentSession.Blank().Notation == NotationMode.TabAndStaff);

@@ -27,6 +27,8 @@ public sealed class VisualNote
     public string? ChordName;
     /// <summary>Short playing-technique tag drawn above the marker (e.g. "TAP"), or null.</summary>
     public string? Technique;
+    /// <summary>Strummed chord: 1 = down-stroke (toward the high strings), -1 = up-stroke, 0 = not strummed.</summary>
+    public sbyte Strum;
 }
 
 /// <summary>What an instrument visualisation needs to draw one frame.</summary>
@@ -326,7 +328,8 @@ public static class InstrumentVisualizer
             Dead = note.Dead,
             Ghost = note.Ghost,
             ChordName = cell.ChordName,
-            Technique = TechniqueTag.From(note.Techniques)
+            Technique = TechniqueTag.From(note.Techniques),
+            Strum = TechniqueTag.StrumOf(cell.Notes)
         }).ToList();
         state.Notes = selected;
         state.Current = selected.Count > 0 ? selected[0] : null;
@@ -382,6 +385,7 @@ public static class InstrumentVisualizer
         Dead = n.Dead,
         Ghost = n.Ghost,
         ChordName = n.ChordName,
-        Technique = n.Technique
+        Technique = n.Technique,
+        Strum = n.Strum
     };
 }

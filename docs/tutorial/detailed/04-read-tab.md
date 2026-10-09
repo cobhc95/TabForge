@@ -150,7 +150,7 @@ With the score selected, press `Tab` to move to the next view and `Shift+Tab` to
 
 > **Note:** In **Standard notation only** view, a digit you type chooses a string, not a fret. Switch to a view with TAB when you want to write frets (see **Chapter 5: Writing your first riff**).
 
-To change the size of the score, choose **Fit width** or a percentage in the zoom box in the **Zoom & speed** tab, or press `Ctrl+Plus` and `Ctrl+Minus`. **View > Dark score page** and **Light score page** change the paper. The score is one continuous page that scrolls down; right-click empty paper for **Page layout** to scroll sideways instead.
+To change the size of the score, choose **Fit width** or a percentage in the zoom box in the top toolbar, or press `Ctrl+Plus` and `Ctrl+Minus`. **View > Dark score page** and **Light score page** change the paper. The score is one continuous page that scrolls down; right-click empty paper for **Page layout** to scroll sideways instead.
 
 ### Try it: Three views
 
@@ -174,7 +174,7 @@ A legend in the bottom right corner explains the colours: **now** for sounding n
 
 On a guitar or bass, click a fret to write a note at the edit cursor. The keyboard view is for reading, and does not write notes. Every pad of the drum map writes its hit at the cursor, on the line given by the track's drum notation preset.
 
-Right-click the panel to open the fretboard menu, or focus the panel and press `Shift+F10` or the `Menu` key. It offers **Show this track as** (fretboard, keyboard or drums), **Scale**, **Note names**, **Preview next notes**, **Left-handed** and **Fretboard settings…**. The **Fretboard** box in the **Practice / Mixer** tab shows 12 or 24 frets.
+Right-click the panel to open the fretboard menu, or focus the panel and press `Shift+F10` or the `Menu` key. It offers **Show this track as** (fretboard, keyboard or drums), **Scale**, **Note names**, **Preview next notes**, **Left-handed** and **Fretboard settings…**. **Fretboard settings…** chooses 12 or 24 frets.
 
 ## Find the right notes with scales
 

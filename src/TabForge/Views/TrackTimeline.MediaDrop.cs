@@ -33,6 +33,7 @@ internal sealed partial class TrackTimeline : IDropPreviewGeometryHost
     {
         _dropLeaveToken++;
         if (Project is null || SessionFor(data) is not { } session) { SetDropPreview(null); return null; }
+        _lastDropPoint = p; _lastDropAlt = altHeld;
         var preview = DropPreviewAt(session.Items, p, altHeld);
         SetDropPreview(preview);
         SetAddLaneDrag(IsInAddLane(p) && preview.Valid);
@@ -62,6 +63,7 @@ internal sealed partial class TrackTimeline : IDropPreviewGeometryHost
             _dropSession = session = reread;
             _dropKey = null;
         }
+        if (session.HasPending) { session.MeasurePending(Media); _dropKey = null; }   // the drop needs the real lengths (waits for a running measurement)
         var preview = DropPreviewAt(session.Items, p, altHeld);
         SetDropPreview(null);
         try { if (preview.Valid) MediaDropped?.Invoke(preview.Plan); }
@@ -85,14 +87,39 @@ internal sealed partial class TrackTimeline : IDropPreviewGeometryHost
 
         MediaDropSession? Resolve()
         {
-            var key = MediaDropSession.KeyOf(data);
+            var key = MediaDropSession.KeyOf(data, out var files);
             if (key is null) return null;
             if (_dropSession is { } current && current.Key == key) return current;   // the same drag re-entering the window
             _dropSession?.Dispose();
             _dropKey = null;
-            _dropSession = MediaDropSession.From(data, media: Media);
+            // Local files are placeholders (estimated length) so the ghost shows at once; their headers are read off the UI thread.
+            _dropSession = MediaDropSession.From(data, media: Media, measureLater: true, knownKey: key, knownFiles: files);
+            if (_dropSession is { HasPending: true } fresh) MeasureInBackground(fresh);
             return _dropSession;
         }
+    }
+
+    private Point _lastDropPoint;
+    private bool _lastDropAlt;
+
+    private void MeasureInBackground(MediaDropSession session)
+    {
+        var media = Media;
+        Task.Run(() => session.MeasurePending(media)).ContinueWith(_ =>
+        {
+            // Still the same drag and the ghost showing: it takes the real lengths.
+            if (!ReferenceEquals(_dropSession, session) || _dropPreview is null) return;
+            _dropKey = null;
+            SetDropPreview(DropPreviewAt(session.Items, _lastDropPoint, _lastDropAlt));
+        }, TaskScheduler.FromCurrentSynchronizationContext());
+    }
+
+    /// <summary>Warms the drop planner and the ghost geometry once the timeline is up, so the first drag does not pay for cold code.</summary>
+    internal void PrewarmDrop()
+    {
+        if (Project is not { Tracks.Count: > 0 }) return;
+        var items = new[] { new DropItem { Path = "", Name = "", Seconds = 1 } };
+        DropGeometry(MediaDrop.Plan(Project, items, 0, 0, 0, QuarterMap()), new Point(0, 0), items);
     }
 
     private IDataObject? _dropSessionData;

@@ -9,8 +9,9 @@ using TabForge.Views;
 
 namespace TabForge.Views;
 
-/// <summary>What the score zoom controller needs from its window.</summary>
-internal interface IScoreZoomHost : IPaneHost
+/// <summary>What the score zoom controller needs from its window (the instrument host gives it the fretboard / keyboard pane,
+/// which draws at the score's text scale).</summary>
+internal interface IScoreZoomHost : IInstrumentPanelHost
 {
     ComboBox ZoomCombo { get; }
     ScrollViewer ScoreScroll { get; }
@@ -21,8 +22,9 @@ internal interface IScoreZoomHost : IPaneHost
 }
 
 // Owns: the score zoom factor, the zoom box, and the page width / one-line layout of the score page in its scroll viewer.
+// Also hands the score's text scale (zoom x tab spacing) to the instrument pane, so both read at one size.
 // Does not own: the score drawing (TabEditorControl), follow scrolling (ScoreFollowCoordinator), per-document view state.
-// Tests: TestZoomComboShowsValue, TestFollowSurvivesZoom, TestResizeDuringPlayback.
+// Tests: TestZoomComboShowsValue, TestFollowSurvivesZoom, TestResizeDuringPlayback, TestScoreScaleMatchesFretboard.
 internal sealed class ScoreZoomController
 {
     private readonly IScoreZoomHost _host;
@@ -110,7 +112,7 @@ internal sealed class ScoreZoomController
     {
         var editor = _host.Editor;
         // A height-only change (a splitter drag, a window drag) leaves the page layout alone; one-line mode only re-centres once the drag settles.
-        if (_pageInputs.Changed((Math.Round(_host.ScoreScroll.ActualWidth, 1), Factor, editor.HorizontalScroll, editor.CenterSystems))) { ApplyPageWidth(); return; }
+        if (_pageInputs.Changed((Math.Round(_host.ScoreScroll.ActualWidth, 1), Factor, editor.HorizontalScroll, editor.Appearance.CenterSystems))) { ApplyPageWidth(); return; }
         if (editor.HorizontalScroll) (_centreSettle ??= new SettleAction(CentreHorizontalPage)).Request();
     }
 
@@ -130,7 +132,8 @@ internal sealed class ScoreZoomController
         {
             // One continuous line: the score sizes itself to the line (so edits that lengthen it just
             // grow the scroll range); it starts at the left and scrolls/follows horizontally.
-            editor.Zoom = Math.Clamp(Factor <= 0 ? 1.0 : Factor, 0.5, 2.0);
+            editor.Zoom = Math.Clamp(Factor <= 0 ? FitZoom(viewport) : Factor, 0.5, 2.0);
+            _host.Instrument.ContentScale = editor.Zoom * editor.Appearance.ScoreSpacing;
             editor.Width = double.NaN;
             page.Width = double.NaN;
             page.HorizontalAlignment = HorizontalAlignment.Left;
@@ -145,14 +148,14 @@ internal sealed class ScoreZoomController
         }
         page.Margin = new Thickness(0);
         var oldFactor = editor.Zoom;
-        var factor = editor.CenterSystems
-            ? Math.Clamp(Factor <= 0 ? 1.0 : Factor, 0.5, 2.0)
+        var factor = editor.Appearance.CenterSystems
+            ? Math.Clamp(Factor <= 0 ? FitZoom(viewport) : Factor, 0.5, 2.0)
             : Math.Clamp(Factor <= 0
                 ? Math.Max(1, viewport - 2) / TabEditorControl.BasePageWidth
                 : Factor, 0.5, 2.0);
         // Page mode keeps a stable logical sheet and scales that sheet as one object. Continuous
         // mode instead changes composition width with zoom, then centres every resulting system.
-        var pageWidth = editor.CenterSystems
+        var pageWidth = editor.Appearance.CenterSystems
             ? Math.Max(380, Math.Max(1, viewport - 2) / factor)
             : TabEditorControl.BasePageWidth;
         var width = pageWidth * factor;
@@ -167,6 +170,7 @@ internal sealed class ScoreZoomController
 
         editor.PageWidthOverride = pageWidth;
         editor.Zoom = factor;
+        _host.Instrument.ContentScale = editor.Zoom * editor.Appearance.ScoreSpacing;
         editor.Width = width;
         page.Width = width + 2;
         scroll.HorizontalScrollBarVisibility = width + 2 > viewport + 1 ? ScrollBarVisibility.Auto : ScrollBarVisibility.Disabled;
@@ -187,6 +191,14 @@ internal sealed class ScoreZoomController
 
         WriteLayoutLog(viewport, width);
     }
+
+    /// <summary>Viewport width (DIPs) up to which "Fit width" in the continuous views shows the score at 100%.</summary>
+    public const double FitReferenceWidth = 1600;
+
+    /// <summary>"Fit width" in the continuous views: 100% up to <see cref="FitReferenceWidth"/>, then growing with the viewport
+    /// (10% steps, at most 150%), so a large window shows the score larger instead of mostly empty space.</summary>
+    public static double FitZoom(double viewport) =>
+        Math.Clamp(Math.Round(viewport / FitReferenceWidth * 10, MidpointRounding.AwayFromZero) / 10, 1.0, 1.5);
 
     private void WriteLayoutLog(double viewport, double width)
     {

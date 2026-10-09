@@ -2,6 +2,107 @@
 
 TabForge is actively developed; please report anything odd on the Issues page.
 
+## 0.6.0 — 2026-10-08
+
+A big update since 0.5.6: a new Band view, editors for every note effect, live sound preview, mixer groups you can shape yourself, a fresh look with new icons, and a long list of editing, playback and audio fixes.
+
+### ✨ New features
+- **Band view** (View > Band view, Layouts > Band): one row per track with its fretboard, keyboard or drum pads beside that track's own tab; see the Band view section below.
+- **Note effect editors**: bend and tremolo bar open a grid editor (drag, add and remove points) with built-in presets such as Bend, Bend/Release, Pre-Bend, Dip and Dive, plus "Save as preset". Trill, grace note and harmonic have their own editors in the same style. Every editor offers OK / Clean / Cancel and is one undo step, and the curves play back as drawn.
+- **Live sound preview**: while the song plays, clicking an instrument or drum kit in the instrument catalogue switches the track's sound at once. Select keeps it, Cancel brings the original back with no change to the song.
+- **Change drums to an instrument (and back)**: the whole track follows (type, channel, tuning, fretboard or keyboard, track properties); notes keep their pitch and are re-fingered, after a confirmation, as one undo step.
+- **Mixer group rules**: groups for Guitars, Basses, Drums and Other instruments by default, and a Group rules editor to add, rename, reorder and colour any number of groups with several rules each, for all songs or one song.
+- **Fretboard position**: the fretboard / keyboard can sit above the score (default) or below it.
+- **Chord finder and Song stats** open from the Tools menu.
+- Many new commands you can bind to keys: Band view options, mixer collapse, fretboard position, every note effect editor and track lines.
+
+### 🎸 Band view
+- One row per track: the instrument on the left shows the notes sounding now and next, the tab or notation on the right follows playback like the score, and the notes being played glow.
+- Every row shows the same bar at the same place and turns the page together, after seeks and jumps too.
+- Vertical lanes by default (lines stack down each row and only whole lines show) or one horizontal line.
+- Band view never docks under the timeline, and seeks land at once; the keyboard pane is sized from its key width.
+- Track buttons choose which rows show (three by default, a fourth still fits on screen); rows per screen from 1 to 5, each row resizable, rows reordered by dragging their names.
+- Hide one row's instrument (×) or show it again from its header; drag the border between instrument and tab to resize all rows at once, or one row from the right-click menu.
+- Zoom the tab with Ctrl+mouse wheel or the right-click Zoom menu.
+- The green playhead covers the tab only (or the full row if you prefer).
+- Right-click menu: lanes, instrument size, rows per screen, follow, zoom, playhead line, Reset view and Band settings.
+- The Band button in the toolbar stays lit while the Band view is shown, and leaving it brings back exactly the panels you had.
+- The Band layout is saved with each song.
+
+### ✏️ Editing & score — fixes
+- **Delete** on one note of a chord removes only that note (nothing on an empty string); on an empty beat or a selection, Delete or Backspace removes the beats, the following notes move left and the selection ends.
+- **Dotted and double-dotted** turn off when clicked again; the **.** key toggles one dot on the beat.
+- **Paste** onto existing notes inserts the copied beats in the bar, without asking, with the cursor on the last pasted beat (Paste special still offers Replace).
+- **Y** removes an existing harmonic; semitone down on fret 0 leaves the note.
+- A strummed chord on the fretboard shows one stroke arrow by the nut with one combined technique tag.
+- A lone hammer-on slurs to the next note; low-string slurs are drawn below; incomplete triplets show their number; P.M. is not shown on tied notes.
+- **Triplet and tuplet** read the beat itself, so one click on a triplet beat removes it.
+- **Accent, heavy accent and fermata** turn off when applied again. **Ties** work per string: L ties the note on the cursor string (L again removes it), Tie beat (Ctrl+L) ties the whole beat and keeps it tied.
+- **Slide and hammer-on / pull-off** buttons no longer stay lit.
+- **Vibrato, palm mute, ghost note and other techniques** no longer add a stray 0 (or 5) on an empty string; the status line says "No note on this string".
+- **Effect keys** (bend, harmonic, trill, tremolo bar, grace) open the same editor as their buttons; the accent key matches its button.
+- **Drag select** inside one chord selects that whole beat, ready to delete, cut or copy.
+- **Insert beat** never loses the last note of a full bar.
+- **Copy, cut and paste** with all tracks selected on the timeline act on every track.
+- **Undo** always records score edits.
+- **Short bars** are marked red per track (a short bar was hidden when another track was full); a partly filled second voice and grace notes never mark a bar.
+- Grace notes always sound for the standard short length, so a saved and reopened song plays the same; Backspace and moving notes up or down say when nothing could change; a new song shows its title and tuning from the start.
+
+### 🎯 Editing now behaves like the classic desktop tab editors
+- **Cursor:** Alt+Up / Alt+Down move the note to another string, or the cursor on an empty spot, wrapping past the top and bottom strings.
+- **Cursor:** Right from the last note goes to the empty spot after it, then on into the next bar; End and Ctrl+End go to the last written beat.
+- **Cursor:** Insert bar puts the cursor on beat 1 of the new bar; Undo and Redo end a selection and put the cursor back where it was.
+- **Cursor:** Shift+Right selects the empty spot after the last beat, then crosses into the next bar.
+- **Typing:** a typed note takes the duration you chose, and a new beat after Right takes the length of the beat before it.
+- **Typing:** "." and the triplet key on an empty spot set the duration of the next note; Undo takes it back.
+- **Typing:** R writes a rest that stays a rest, and a fret typed over a rest keeps its length.
+- **Ties:** the tie key on an empty beat or rest writes a tied note; Tie beat on a tied beat keeps the tie instead of removing it.
+- **Cut, copy and paste:** Cut removes the beats and the later beats move up; cutting whole bars removes them, while a cut inside a bar keeps the bar.
+- **Cut, copy and paste:** a paste past the end of an overfull bar stays in that bar.- **Opening files:** .gp3, .gp4 and .gp5 files keep hammer-ons, slides and ties that have no partner note, every beat of an overfull bar, and let ring on the notes that have it.
+- **How bars and symbols look:** overfull bars show a red bar number and red staff lines; fill-only bars are drawn empty; a dead note is an upright x; a lone triplet keeps its "3".
+- **Tracks:** Move track up / down is now Alt+Shift+Up / Alt+Shift+Down.
+- **Stability:** Undo and Redo after a long overfull bar no longer crash, and notes are no longer lost when a bar is overfull.
+
+### 🎨 Icons & appearance
+- New instrument icons on every track row (about 50, covering the General MIDI families); clicking one opens the instrument catalogue.
+- New solid cogwheel for every settings button, and a new Bend tool icon.
+- A speaker icon marks the tab whose song is playing.
+- Cleaner track list: no column divider lines, no lines between tracks by default, taller rows (34 px) that stretch to at most 1.5×, long names end in "…".
+- One visual scale: zooming the score zooms the fretboard and Band view with it; new songs open at Fit width.
+- Fretboard note circles slightly smaller by default (90%), clearer now / next markers, readable numbers on every circle.
+- Light theme fixes: side panes, buttons, hovers, dialogs, the tab close cross and the Band view all follow the theme with readable contrast.
+- Score zoom and playback speed moved to the top toolbar; narrow windows keep them.
+
+### 🎚️ Mixer & timeline
+- Collapse and expand mixer groups (arrow, keys or right-click), collapse / expand all, drag a collapsed group as one.
+- A colour chip on every mixer track opens the track colour palette.
+- Timeline: the ruler and section strip stay pinned while a collapsed track list scrolls; the resize preview shows rows at their real height.
+- The Add track row stays pinned under a short track list.
+- The mouse wheel over the timeline lanes zooms while the track list scrolls.
+- Reset track list height is in the right-click menus.
+- Drag a section to move it with its bars; Ctrl+drag moves only its marker.
+- Clips: edges extend and loop past the media, snap to beats when snapping is on, and the song grows to hold them (empty end bars are trimmed when clips shrink).
+- Dropping a file on the timeline shows its ghost straight away.
+- The Practice / Mixer side tab is gone; its tools moved to the Tools menu.
+
+### 🔊 Playback & audio — fixes
+- Playback follow resumes after a loop, a seek or switching tabs.
+- Switching track, tab or zoom during playback lands on the playing bar at once, and the vertical page turn glides quickly.
+- Mix-table changes (instrument, volume, pan) stay in effect after jumping ahead.
+- An audio track added while the song plays joins playback at once.
+- Audio clips: repeats are marked, splitting a looping clip keeps the second part inside the audio, trimming the left edge keeps the audio in place.
+- Reused dialogs keep their focus and position.
+
+### ⚙️ Settings
+- Timeline & Tracks > Band view: instrument size, lane content and layout, follow, rows per screen, lane zoom, playhead line, order sync.
+- Timeline & Tracks > Show lines between tracks; Fretboard & Keyboard > Fretboard position; Editing > Clips > Remove empty bars at the end; Appearance > Track colours > group rules.
+
+### 🧱 Under the hood
+- 135 changes since 0.5.6 across about 400 files.
+- The main window and score editor were split into small focused controllers (drop, resize preview, section scrolling, import queue, selection loop, Band view and more); settings are organised per page.
+- About 70 new automatic checks (Band view, mixer groups, editing tools, bar marking, live preview, delete and more) run on every build.
+- Faster partial relayout after edits, a lighter Band view renderer, and leak checks for closed windows.
+
 ## 0.5.6 — 2026-10-06
 
 - Add at cursor shows the section’s exact starting bar. The redundant Go button is removed; clicking a section or pressing Enter keeps the existing cursor navigation.

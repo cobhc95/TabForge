@@ -10,7 +10,7 @@ public static partial class EditCommands
     public static int NoteMidi(TrackModel track, int stringIndex, int fret)
     {
         if (track.StringTunings.Count == 0 || track.MidiChannel == 9 || track.Kind == TrackKind.Drums) return fret;
-        return track.PitchOf(stringIndex, fret);
+        return Math.Clamp(track.PitchOf(stringIndex, fret), 0, 127);   // a high fret on a high octave "string" (keys) stays a valid MIDI note
     }
 
     public sealed record StringMove(TabNote Note, int Target, int Fret);
@@ -56,23 +56,13 @@ public static partial class EditCommands
     }
 
     /// <summary>
-    /// The string and fret a note takes when it moves <paramref name="semitones"/> up or down: the same string, one fret per semitone; below the open string
-    /// the same pitch on the next lower free string, as a guitarist would. Null when it cannot move (already the lowest playable pitch).
+    /// The string and fret a note takes when it moves <paramref name="semitones"/> up or down: the same string, one fret per semitone. Null below the
+    /// open string (as GP5, the note stays where it is).
     /// </summary>
     public static (int StringIndex, int Fret)? PlanPitchShift(TrackModel track, TabCell cell, TabNote note, int semitones)
     {
         var fret = note.Fret + semitones;
-        var stringIndex = note.StringIndex;
-        if (fret < 0)
-        {
-            var target = NoteMidi(track, note.StringIndex, note.Fret) + semitones;
-            var lower = Enumerable.Range(note.StringIndex + 1, Math.Max(0, track.StringTunings.Count - note.StringIndex - 1))
-                .FirstOrDefault(s => NoteMidi(track, s, 0) <= target && cell.Notes.All(n => n.StringIndex != s), -1);
-            if (lower < 0) return null;
-            stringIndex = lower;
-            fret = target - NoteMidi(track, lower, 0);
-        }
-        return (stringIndex, fret);
+        return fret < 0 ? null : (note.StringIndex, fret);   // as GP5: below the open string the note stays
     }
 
     public static void ApplyPitchShift(TrackModel track, TabNote note, int stringIndex, int fret)
@@ -82,14 +72,23 @@ public static partial class EditCommands
         note.MidiValue = NoteMidi(track, stringIndex, fret);
     }
 
-    /// <summary>An effect over a selection: on when any note lacks it, otherwise off for every note.</summary>
+    private static readonly string[] SlideFamily = { "Slide", "LegatoSlide", "ShiftSlide", "SlideInBelow", "SlideInAbove", "SlideOutUp", "SlideOutDown", "PickSlideUp", "PickSlideDown" };
+    private static readonly string[] HopoFamily = { "HOPO", "HOPOOrigin", "HOPODestination" };
+
+    /// <summary>The tags that count as the same tool as <paramref name="technique"/> (the lit state of Slide and Hammer-pull covers every kind), or just the tag.</summary>
+    private static string[] FamilyOf(string technique) =>
+        SlideFamily.Contains(technique, StringComparer.OrdinalIgnoreCase) ? SlideFamily
+        : HopoFamily.Contains(technique, StringComparer.OrdinalIgnoreCase) ? HopoFamily : new[] { technique };
+
+    /// <summary>An effect over a selection: on when any note lacks it, otherwise off for every note. A family tool (slide, hammer-pull) counts any member as on and clears every member when turned off.</summary>
     public static void ToggleTechnique(IReadOnlyList<TabNote> notes, string technique)
     {
-        var add = notes.Any(note => !note.Techniques.Contains(technique));
+        var family = FamilyOf(technique);
+        var add = notes.Any(note => !family.Any(note.Techniques.Contains));
         foreach (var note in notes)
         {
             if (add) note.Techniques.Add(technique);
-            else note.Techniques.Remove(technique);
+            else foreach (var member in family) note.Techniques.Remove(member);
         }
     }
 }

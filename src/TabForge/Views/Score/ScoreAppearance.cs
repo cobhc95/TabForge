@@ -41,6 +41,8 @@ internal sealed class ScoreAppearance
     public Color DarkStaffLineColor { get; set; } = Color.FromRgb(0x34, 0x39, 0x40);
     public Color LightStaffLineColor { get; set; } = Color.FromRgb(0xD5, 0xD5, 0xD5);
     public Color AccentColor { get; set; } = Color.FromRgb(0x4C, 0x9A, 0xFF);
+    /// <summary>Red of a bar whose rhythm does not add up (number, overfull staff lines): at least 4.5:1 on either paper.</summary>
+    public Color ErrorColor => DarkPaper ? Color.FromRgb(0xFF, 0x6B, 0x6B) : Color.FromRgb(0xB7, 0x1C, 0x1C);
     public Color CursorColor { get; set; } = Color.FromRgb(0xF2, 0xC1, 0x4E);
     /// <summary>Colour of sounding notes, fret numbers and the playhead.</summary>
     public Color PlaybackColor { get; set; } = Color.FromRgb(0x3F, 0xB9, 0x50);
@@ -95,7 +97,7 @@ internal sealed class ScoreAppearance
         }
     }
 
-    /// <summary>Centres each engraved system in continuous, viewport-reflowing score mode.</summary>
+    /// <summary>Continuous, viewport-reflowing score mode (systems still start at the left margin).</summary>
     public bool CenterSystems
     {
         get => _centerSystems;

@@ -17,7 +17,7 @@ namespace TabForge.Services;
 
 // Owns: converting one imported bar (tick positions, durations, tuplets) into a measure.
 // Does not own: beat details (GuitarProBeatReader) and track conversion.
-// Tests: TestGuitarProFiles, TestTupletImport.
+// Tests: TestGuitarProFiles, TestTupletImport, TestGp5OwnFilesImport.
 /// <summary>Converts the beats of one alphaTab bar into the cells of a <see cref="MeasureModel"/>: placement on the slot grid, durations, tuplets, voices and notes.</summary>
 internal static class GuitarProBarConverter
 {
@@ -69,6 +69,16 @@ internal static class GuitarProBarConverter
             {
                 if (++beatsInMeasure > InputLimits.MaxBeatsPerMeasure)
                     throw new InvalidDataException("A score measure contains too many beats.");
+                // Guitar Pro writes an empty bar (and an unused second voice) as one "empty" beat, which alphaTab also calls a rest:
+                // it is no beat at all, so the bar stays empty for the fill and the drawing instead of holding a rest. Its text, chord
+                // or mix change still lands on the cell at its position.
+                if (GetBool(beat, "IsEmpty", false))
+                {
+                    var emptyStart = BeatStartTicks(beat);
+                    var emptySlot = Math.Max(lastSlot + 1, emptyStart >= 0 ? (int)Math.Round(emptyStart / (double)TicksPerSlot) : 0);
+                    if (emptySlot < cells.Count) ReadAnnotations(beat, cells[emptySlot], budget);
+                    continue;
+                }
                 var start = BeatStartTicks(beat);
                 var graceBeat = Get(beat, "GraceType")?.ToString() is "BeforeBeat" or "OnBeat" or "BendGrace";
                 var displayStart = graceBeat ? GetInt(beat, "DisplayStart", start) : start;
@@ -81,8 +91,13 @@ internal static class GuitarProBarConverter
                 // Bars with more beats than sixteenth cells (32nds, 64ths) get extra cells; the true timing
                 // lives in RhythmicPosition. Clamping here used to merge/drop the bar's last notes.
                 var slot = Math.Max(0, Math.Max(tickSlot, lastSlot + 1));
-                if (!graceBeat)
-                    while (slot >= cells.Count && cells.Count < slots * 8) cells.Add(new TabCell());
+                // A bar overfull past the grid's reach (eight times its length) is still read beat for beat: each further beat takes
+                // the next free cell and keeps its true time in RhythmicPosition (a grace beat the cell its principal beat takes next).
+                // The cells stop at MaxCellsPerMeasure, which the project validator enforces; a beat beyond that is dropped.
+                var remapped = slot >= slots * 8;
+                if (remapped) slot = lastSlot + 1;
+                // A grace beat comes before its principal, so it opens the principal's cell when that is past the cells so far.
+                    while (slot >= cells.Count && cells.Count < InputLimits.MaxCellsPerMeasure) { cells.Add(new TabCell()); budget.AddCells(1); }
                 // Grace beats use their notated display position to share the principal beat's
                 // rhythmic cell; their distinct playback offset remains stored on the grace note.
                 // They must not advance the voice cursor before the principal note is merged.
@@ -143,7 +158,8 @@ internal static class GuitarProBarConverter
                     // Fretted instruments number their strings 1..n; piano/keys/other instruments
                     // have no string at all. Those notes must still be imported (their pitch lives
                     // in RealValue), otherwise whole tracks silently lose their content.
-                    var tiedDestination = GetBool(sourceNote, "IsTieDestination", false);
+                    // A tie with no note before it (alphaTab clears it and keeps it as UnlinkedTieDestination, patch 0004) stays as the file wrote it.
+                    var tiedDestination = GetBool(sourceNote, "IsTieDestination", false) || GetBool(sourceNote, "UnlinkedTieDestination", false);
                     // The standard drum ties often have no pitch or articulation on the destination at all.
                     // alphaTab retains the original note in TieOrigin; using the drum kit's default
                     // tuning here fabricates a crash cymbal (49) instead of continuing the real hit.
@@ -153,10 +169,12 @@ internal static class GuitarProBarConverter
                     var stringIndex = gpString > 0
                         ? Math.Clamp(track.StringTunings.Count - gpString, 0, Math.Max(0, track.StringTunings.Count - 1))
                         : 0;
-                    var rawFret = GetInt(pitchSource, "Fret", 0);
+                    // A tie with no note before it on its string reads fret 0 (the reference reader's rule), not the fret byte the file holds.
+                    var unlinkedTie = tiedDestination && pitchSource == sourceNote && track.Kind != TrackKind.Drums;
+                    var rawFret = unlinkedTie ? 0 : GetInt(pitchSource, "Fret", 0);
                     var fret = Math.Max(0, rawFret);
                     var computed = track.StringTunings.Count > stringIndex ? track.PitchOf(stringIndex, fret) : fret;   // tuning + capo + fret, the shared rule
-                    var real = GetInt(pitchSource, "RealValue", 0);
+                    var real = unlinkedTie ? 0 : GetInt(pitchSource, "RealValue", 0);
                     // A dead note has fret -1 in alphaTab, so its RealValue is a semitone below the string; it is unpitched,
                     // and the exported file (fret 0) reads back as the open string, so use the string's own pitch.
                     var midi = real > 0 && rawFret >= 0 ? real : computed;

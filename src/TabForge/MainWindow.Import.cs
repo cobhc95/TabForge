@@ -1,27 +1,16 @@
 using System.IO;
 using System.Windows;
+using TabForge.Controllers;
 using TabForge.Documents;
 
 namespace TabForge;
 
 // MainWindow, background Guitar Pro import (audit A5-07): the parse runs off the UI thread with a status "Importing <name>…"
 // and a Cancel button in the status bar; the song is opened on the UI thread only when the import succeeded.
-public partial class MainWindow
+public partial class MainWindow : IImportQueueHost
 {
-    private ScoreImportQueue? _imports;
-
-    private ScoreImportQueue Imports
-    {
-        get
-        {
-            if (_imports is not null) return _imports;
-            _imports = ScoreImportQueue.WithImportWorker(_documentController);
-            _imports.Changed += RefreshImportStatus;
-            _imports.ConfirmInProcess = ConfirmImportInProcess;
-            Closed += (_, _) => _imports.CancelAll();   // a result arriving after the window closed is never applied
-            return _imports;
-        }
-    }
+    private ImportQueueController? _importQueue;
+    private ImportQueueController Imports => _importQueue ??= new ImportQueueController(this, _documentController);
 
     /// <summary>
     /// Opens a score: a .tforge synchronously; a Guitar Pro file in the background. <paramref name="opened"/> runs on the UI
@@ -35,7 +24,7 @@ public partial class MainWindow
         var replaceTarget = replaceCurrent && _documents.Documents.Count > 0 ? Doc : null;
         // A .tforge opens at once, unless imports are still running: then it queues behind them so tabs keep the requested order.
         // background = false: the synchronous open for probe / tour launches.
-        if (!background || (!ScoreImportQueue.RunsInBackground(path) && (_imports?.Pending.Count ?? 0) == 0))
+        if (!background || (!ScoreImportQueue.RunsInBackground(path) && Imports.PendingCount == 0))
         {
             OpenedScore result;
             try { result = _documentController.Open(path); }
@@ -45,7 +34,7 @@ public partial class MainWindow
             return null;
         }
 
-        return Imports.Start(path,
+        return Imports.Queue.Start(path,
             (_, result) =>
             {
                 bool loaded;
@@ -61,7 +50,7 @@ public partial class MainWindow
     }
 
     /// <summary>A6-03: the protected import could not start; opening in this process needs the user's yes for this file (default No).</summary>
-    private bool ConfirmImportInProcess(ScoreImportJob job, string reason) =>
+    bool IImportQueueHost.ConfirmImportInProcess(ScoreImportJob job, string reason) =>
         IsLoaded && MessageBox.Show(this,
             $"The protected import process could not start ({reason}).\n\nOpening {job.Name} inside TabForge is less protected against damaged files. Open it anyway?",
             "Open without protection?", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) == MessageBoxResult.Yes;
@@ -72,9 +61,8 @@ public partial class MainWindow
         TabForge.Views.DialogHost.ShowError(this, $"Could not open {Path.GetFileName(path)}.\n\n{ex.Message}", "Open failed");
     }
 
-    private void RefreshImportStatus()
+    void IImportQueueHost.ShowPendingImports(IReadOnlyList<ScoreImportJob> pending)
     {
-        var pending = _imports?.Pending ?? Array.Empty<ScoreImportJob>();
         CancelImportButton.Visibility = pending.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
         if (pending.Count == 0) { StatusText.ToolTip = "Last action or current state"; return; }
         StatusText.Text = pending.Count == 1 ? $"Importing {pending[0].Name}…" : $"Importing {pending.Count} files…";
@@ -82,5 +70,5 @@ public partial class MainWindow
         Views.TooltipShortcuts.SetText(CancelImportButton, pending.Count == 1 ? $"Cancel importing {pending[0].Name}" : $"Cancel the {pending.Count} imports in progress");   // keeps the key bracket, and a rebind cannot revert it
     }
 
-    private void CancelImport_Click(object sender, RoutedEventArgs e) => _imports?.CancelAll();
+    private void CancelImport_Click(object sender, RoutedEventArgs e) => _importQueue?.CancelAll();
 }

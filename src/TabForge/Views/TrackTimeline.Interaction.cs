@@ -610,7 +610,7 @@ internal sealed partial class TrackTimeline : ISectionTipHost, ISectionEdgeHost
         else if (sectionDragged)
         {
             _sectionHitsCache = null;
-            // This mode only starts with Ctrl held: the section moves together with its bars.
+            // A plain drag moves the section together with its bars.
             if (sectionFrom >= 0 && sectionDrop >= 0) SectionReordered?.Invoke(this, (sectionFrom, sectionDrop));
             if (sectionMarker is not null)
                 SettleSectionPreview();

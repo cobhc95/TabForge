@@ -91,6 +91,8 @@ internal sealed class ClipGestureController
     public event Action<int, int, bool, bool>? ClipLaneSelected;
     /// <summary>A clip drag begins (the host captures undo).</summary>
     public event EventHandler? ClipEditStarting;
+    /// <summary>A trim moved a clip's end: the host grows the song so it holds the clip while dragging.</summary>
+    public event Action<AudioClip>? ClipEdgeMoved;
     /// <summary>A clip drag finished and changed the clip.</summary>
     public event EventHandler<AudioClip>? ClipEdited;
     /// <summary>Right-click on a lane: track, clip (null on empty lane space), song seconds.</summary>
@@ -189,6 +191,7 @@ internal sealed class ClipGestureController
         _clipDropTarget = null;
         _clipMoveActive = false; _movePlan = null; _moveKey = null;
         if (hit.Gesture != ClipGesture.Move) ClipEditStarting?.Invoke(_host, EventArgs.Empty);   // a move captures undo when it lands
+        if (hit.Gesture == ClipGesture.TrimEnd && clip.FileLengthSec <= 0) clip.FileLengthSec = ClipLoop.MediaLengthSec(clip);   // a clip with no known media (a recording) loops what it holds now
         _host.CaptureMouse();
         _host.InvalidateVisual();
         e.Handled = true;
@@ -218,25 +221,17 @@ internal sealed class ClipGestureController
         _clipLastX = p.X;
         var delta = _host.ClipSecOfX(_clipOrigin.Start, p.X) - _host.ClipSecOfX(_clipOrigin.Start, _clipPressPoint.X);
         var speed = Math.Clamp(clip.Speed, 0.25, 4);
-        var fileLength = clip.FileLengthSec > 0 ? clip.FileLengthSec : _clipOrigin.Offset + _clipOrigin.Length;
         switch (_clipGesture)
         {
             case ClipGesture.TrimStart:
-            {
-                var snappedStart = _host.SnapSec(_clipOrigin.Start + delta, clip, out _);
-                var fileDelta = Math.Clamp((snappedStart - _clipOrigin.Start) * speed, -_clipOrigin.Offset, _clipOrigin.Length - 0.05);
-                if (_clipOrigin.Start + fileDelta / speed < 0) fileDelta = -_clipOrigin.Start * speed;
-                clip.OffsetSec = _clipOrigin.Offset + fileDelta;
-                clip.SourceLengthSec = _clipOrigin.Length - fileDelta;
-                clip.StartSec = _clipOrigin.Start + fileDelta / speed;
+                ClipTrim.TrimStart(clip, _clipOrigin, _host.SnapSec(_clipOrigin.Start + delta, clip, out _));
                 break;
-            }
             case ClipGesture.FadeIn: ClipSplitGlue.SetFades(clip, _host.ClipSecOfX(clip.StartSec, p.X) - clip.StartSec, null); break;
             case ClipGesture.FadeOut: ClipSplitGlue.SetFades(clip, null, clip.EndSec - _host.ClipSecOfX(clip.StartSec, p.X)); break;
             case ClipGesture.TrimEnd:
-                var endSec = SnapClipSec(_clipOrigin.Start, _clipOrigin.Start + (_clipOrigin.Length + delta * speed) / speed, clip, out _);
-                clip.SourceLengthSec = Math.Clamp((endSec - _clipOrigin.Start) * speed, 0.05,
-                    clip.IsMidi ? 86_400 : Math.Max(0.05, fileLength - _clipOrigin.Offset));
+                // No upper limit: past the end of the media the clip loops, and the song grows to hold it.
+                ClipTrim.TrimEnd(clip, _clipOrigin.Start, SnapClipSec(_clipOrigin.Start, _clipOrigin.Start + (_clipOrigin.Length + delta * speed) / speed, clip, out _));
+                ClipEdgeMoved?.Invoke(clip);
                 break;
         }
         _clipChanged = true;

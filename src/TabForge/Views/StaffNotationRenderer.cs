@@ -56,9 +56,6 @@ internal sealed class StaffNotationRenderer
     internal static (double Start, double Control1, double Control2, double End, double BowSpan) ArcShape(double x1, double x2, double startInset, double endInset) =>
         StaffNotationGeometry.ArcShape(x1, x2, startInset, endInset);
 
-    internal static void DrawWholeBarRest(DrawingContext dc, double cx, double staffTop, Color ink) =>
-        StaffNotationDrawing.DrawWholeBarRest(dc, cx, staffTop, ink);
-
     internal static IEnumerable<double> DrumHeadYs(StaffNotationBeat beat) => StaffNotationGeometry.DrumHeadYs(beat);
 
     internal static Color EngravingInkColor(Color ink, Color paper) => StaffNotationDrawing.EngravingInkColor(ink, paper);

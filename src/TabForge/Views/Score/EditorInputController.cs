@@ -109,6 +109,7 @@ internal sealed class EditorInputController
         if (track is null || measure < 0 || measure >= track.Measures.Count) return false;
         if (!_sel.Selecting) _host.BeginSelection();
         _sel.SetEnd(measure, cell);
+        _sel.MarkDragged();   // as GP5: a shift-click on the anchor's own beat selects that one beat
         _host.SetCursor(measure, cell, stringIndex);
         _host.SelectionChangedNow(true);
         return true;
@@ -185,12 +186,12 @@ internal sealed class EditorInputController
             return;
         }
         var pointer = e.GetPosition((IInputElement)sender);
-        var horizontalDrag = Math.Abs(pointer.X - _leftMouseDownPoint.X);
+        var horizontalDrag = Math.Max(Math.Abs(pointer.X - _leftMouseDownPoint.X), Math.Abs(pointer.Y - _leftMouseDownPoint.Y));
         // A normal click can move a few pixels while the button is down. Do not turn that
         // pointer jitter into a score range; time-range selection requires an intentional drag.
         if (horizontalDrag < Math.Max(10, SystemParameters.MinimumHorizontalDragDistance * 2)) return;
         if (!_sel.Selecting && Environment.TickCount64 - _leftMouseDownTicks < RangeSelectHoldMs) return;
-        if (!_sel.Selecting) _host.BeginSelection();
+        if (!_sel.Selecting) { _host.BeginSelection(); _sel.MarkDragged(); _host.SelectionChangedNow(false); }
         if (p.Y < _host.HeaderHeight) return;
         var (measure, cell, _) = HitTest(p);
         // Pointer moves inside the same cell change nothing: no repaint, no status/fretboard refresh.

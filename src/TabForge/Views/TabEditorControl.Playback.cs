@@ -18,16 +18,10 @@ public sealed partial class TabEditorControl
 {
     // ---------- playback (state and geometry live in PlaybackOverlay) ----------
 
-    public void SetPlayhead(int measure, int cell) => _playback.SetPlayhead(measure, cell);
+    bool IEditorInputHost.PlaybackActive => _playback.Active;
 
-    public void ClearPlayhead() => _playback.Clear();
-
-    public bool PlaybackNeedsRepaint(double fromMs, double toMs) => _playback.NeedsRepaint(fromMs, toMs);
-
-    public (double X, double Top, double Bottom)? PlayheadGeometry() => _playback.PlayheadGeometry();
-
-    public IReadOnlyList<(double X, double EndX, double Top, double Bottom)> PlaybackDurationGeometries() => _playback.DurationGeometries();
-
+    // Kept for the Band lanes (Views/Band), which still call these two.
+    public int PlaybackMeasure { get => _playback.Measure; set => _playback.Measure = value; }
     public (int SystemIndex, double SystemLeft, double SystemRight, double PlayheadX, double BarWidth)?
         PlaybackHorizontalGeometry(int measure, double fraction) => _playback.HorizontalGeometry(measure, fraction);
 

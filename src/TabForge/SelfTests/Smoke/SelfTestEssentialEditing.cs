@@ -34,29 +34,53 @@ public static partial class SelfTest
             ed.SelectedTrackIndex = 0;
             SmStep("type notes", () =>
             {
-                ed.SetPosition(0, 0, 0); ed.SetDuration(4); ed.EnterFret(5, autoAdvance: false);
-                ed.SetPosition(0, 4, 0); ed.EnterFret(7, autoAdvance: false);
+                ed.SetPosition(0, 0, 0); ed.Effects.SetDuration(4); ed.Effects.EnterFret(5, autoAdvance: false);
+                ed.SetPosition(0, 4, 0); ed.Effects.EnterFret(7, autoAdvance: false);
                 Check("type notes: both frets are in the bar", SmCell(doc, 0, 0).Notes.Count == 1 && SmCell(doc, 0, 4).Notes.Count == 1 && SmCell(doc, 0, 4).Notes[0].Fret == 7);
             });
             SmStep("change duration", () =>
             {
-                ed.SetPosition(0, 4, 0); ed.SetDuration(8);
+                ed.SetPosition(0, 4, 0); ed.Effects.SetDuration(8);
                 Check("change duration: the beat takes the new value", SmCell(doc, 0, 4).DurationDenominator == 8, $"was {SmCell(doc, 0, 4).DurationDenominator}");
             });
             SmStep("undo and redo", () =>
             {
-                var before = SmCell(doc, 0, 4).DurationDenominator;
+                var before = SmCell(doc, 0, 4).DurationDenominator; Check("undo and redo: the editor records edits through the main window", ReferenceEquals(ed.EditHost, w) && doc.Undo.CanUndo);
                 SmClick(w, "Undo_Click");
                 var undone = SmCell(doc, 0, 4).DurationDenominator != before || SmCell(doc, 0, 4).Notes.Count == 0;
+                var afterUndo = $"{SmCell(doc, 0, 4).DurationDenominator}/{SmCell(doc, 0, 4).Notes.Count}";
                 SmClick(w, "Redo_Click");
-                Check("undo and redo: undo changes the song, redo brings the edit back", undone && SmCell(doc, 0, 4).DurationDenominator == before && SmCell(doc, 0, 4).Notes.Count == 1);
+                Check("undo and redo: undo changes the song, redo brings the edit back", undone && SmCell(doc, 0, 4).DurationDenominator == before && SmCell(doc, 0, 4).Notes.Count == 1,
+                    $"before {before}, after undo {afterUndo}, after redo {SmCell(doc, 0, 4).DurationDenominator}/{SmCell(doc, 0, 4).Notes.Count}");
             });
             SmStep("delete with rest merge", () =>
             {
-                ed.SetPosition(0, 4, 0); ed.DeleteNote();
+                ed.SetPosition(0, 4, 0); ed.Effects.DeleteNote();
                 Check("delete: the note is gone and the beat is a rest", SmCell(doc, 0, 4).Notes.Count == 0 && SmCell(doc, 0, 0).Notes.Count == 1);
-                ed.SetPosition(0, 0, 0); ed.DeleteBeat();
+                ed.SetPosition(0, 0, 0); ed.Effects.DeleteBeat();
                 Check("delete beat: the first beat is a rest too", SmCell(doc, 0, 0).Notes.Count == 0);
+            });
+            SmStep("delete one chord note / empty beat", () =>
+            {
+                ed.SetPosition(0, 8, 0); ed.Effects.EnterFret(7, autoAdvance: false);
+                ed.SetPosition(0, 8, 1); ed.Effects.EnterFret(3, autoAdvance: false);
+                ed.SetPosition(0, 8, 2); ed.Effects.EnterFret(3, autoAdvance: false);
+                var dur = SmCell(doc, 0, 8).DurationDenominator; var count = doc.Project.Tracks[0].Measures[0].Cells.Count;
+                ed.SetPosition(0, 8, 0); ed.Effects.DeleteBeat();
+                Check("delete chord note: only that note goes, beat keeps place and length",
+                    SmCell(doc, 0, 8).Notes.Count == 2 && SmCell(doc, 0, 8).DurationDenominator == dur && !SmCell(doc, 0, 8).IsRest && doc.Project.Tracks[0].Measures[0].Cells.Count == count);
+                var next = SmCell(doc, 0, 8);
+                ed.SetPosition(0, 6, 0); ed.Effects.DeleteBeat();
+                Check("delete empty beat: following beats move left", ReferenceEquals(SmCell(doc, 0, 7), next) || SmCell(doc, 0, 7).Notes.Count == 2 || SmCell(doc, 0, 8).Notes.Count == 0);
+                // A selected rest, on a clean bar: Delete removes the beat and the chord after it moves left.
+                TabCell? At(int c) => doc.Project.Tracks[0].Measures.ElementAtOrDefault(1)?.Cells.ElementAtOrDefault(c);
+                ed.SetPosition(1, 0, 0); ed.Effects.SetDuration(8); ed.Effects.EnterFret(5, autoAdvance: false); ed.Effects.ToggleRest();
+                var slot = At(0) is { } rest ? Math.Max(1, MusicTime.CellSlotsRounded(rest)) : 2;
+                ed.SetPosition(1, slot, 0); ed.Effects.EnterFret(7, autoAdvance: false); ed.SetPosition(1, slot, 1); ed.Effects.EnterFret(3, autoAdvance: false);
+                var setup = $"bars {doc.Project.Tracks[0].Measures.Count}, slot {slot}, cells {string.Join(" ", doc.Project.Tracks[0].Measures.ElementAtOrDefault(1)?.Cells.Select(c => c.Notes.Count + "/" + c.DurationDenominator) ?? Array.Empty<string>())}";
+                var restBefore = At(0)?.Notes.Count == 0 && At(slot)?.Notes.Count == 2;
+                ed.SelectRange(1, 0, 1, 0); ed.Effects.DeleteBeat();
+                Check("delete selected rests: the beats go and the chord moves left", restBefore && At(0)?.Notes.Count == 2, setup);
             });
         }
         finally { SmCloseWindow(w); }
@@ -73,8 +97,8 @@ public static partial class SelfTest
             var doc = SmOpenSong(w, SmBlankSong());
             var ed = SmField<TabEditorControl>(w, "Editor")!;
             ed.SelectedTrackIndex = 0;
-            ed.SetPosition(0, 0, 0); ed.SetDuration(4); ed.EnterFret(3, autoAdvance: false);
-            ed.SetPosition(0, 4, 0); ed.EnterFret(5, autoAdvance: false);
+            ed.SetPosition(0, 0, 0); ed.Effects.SetDuration(4); ed.Effects.EnterFret(3, autoAdvance: false);
+            ed.SetPosition(0, 4, 0); ed.Effects.EnterFret(5, autoAdvance: false);
             SmStep("score selection copy and paste", () =>
             {
                 ed.SelectMeasureRange(0, 0); SmClick(w, "Copy_Click");
@@ -83,8 +107,9 @@ public static partial class SelfTest
             });
             SmStep("score selection cut and paste", () =>
             {
-                ed.SelectMeasureRange(0, 0); SmClick(w, "Cut_Click");
-                var cut = SmCell(doc, 0, 0).Notes.Count == 0;
+                var before = doc.Project.Tracks[0].Measures.Count;
+                ed.SelectMeasureRange(0, 0); SmClick(w, "Cut_Click");   // as GP5: a one-track song loses the cut bar
+                var cut = SmCell(doc, 0, 0).Notes.Count == 0 && doc.Project.Tracks[0].Measures.Count == before - 1;
                 ed.SelectForEdit(3, 0, 0); SmClick(w, "Paste_Click");
                 Check("score cut and paste: the bar leaves its place and arrives on the target", cut && SmCell(doc, 3, 0).Notes.Count == 1 && SmCell(doc, 3, 4).Notes.Count == 1, SmStatus(w));
             });
@@ -92,7 +117,7 @@ public static partial class SelfTest
             {
                 var sections = SmField<SectionEditFlow>(w, "_sections")!;
                 var bars = doc.Project.Tracks[0].Measures.Count;
-                sections.CopyArea(doc, 2, 2);
+                sections.CopyArea(doc, 3, 3);   // the bar the score paste filled (the score cut took bar 1 out)
                 sections.PasteAreaAt(doc, 1);
                 Check("timeline copy and paste: a bar is inserted with the copied notes", doc.Project.Tracks[0].Measures.Count == bars + 1 && SmCell(doc, 1, 0).Notes.Count == 1, SmStatus(w) + $" bars {doc.Project.Tracks[0].Measures.Count} of {bars}");
                 var n = doc.Project.Tracks[0].Measures.Count;

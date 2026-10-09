@@ -145,7 +145,7 @@ To choose what happens to the first song when you switch, open **Preferences > P
 
 ## Speed and tempo at a glance
 
-Two different numbers set how fast a song plays. The **BPM** box in the toolbar is the song's written tempo, in beats per minute. The **Speed** box on the **Zoom & speed** tab slows or speeds up playback without changing the song. Ashen Meridian is written at 150 BPM, which is fast for a beginner. **Chapter 3: Practice tools** shows how to slow it down.
+Two different numbers set how fast a song plays. The **BPM** box in the toolbar is the song's written tempo, in beats per minute. The **Speed** box in the top toolbar slows or speeds up playback without changing the song. Ashen Meridian is written at 150 BPM, which is fast for a beginner. **Chapter 3: Practice tools** shows how to slow it down.
 
 ## Quick recap
 

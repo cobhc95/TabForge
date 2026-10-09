@@ -58,7 +58,7 @@ The window has nine regions. They are numbered, and the rest of this section fol
 
 **5. Score.** The large area in the middle shows the song as tablature (TAB) and standard notation. This is where you read and write music.
 
-**6. Side panel.** The panel on the right is two stacks of pages, each with tabs. The upper stack is the tool palette: **Tools**, **Structure**, **Rhythm** and **Layout**. The lower stack holds **Sections**, **Practice / Mixer** and **Zoom & speed**, with **Sections** showing first.
+**6. Side panel.** The panel on the right is two stacks of pages, each with tabs. The upper stack is the tool palette: **Tools**, **Structure**, **Rhythm** and **Layout**. The lower stack holds **Sections**, and the zoom and speed boxes sit in the top toolbar.
 
 **7. Timeline and track list.** The strip at the bottom shows the whole song at a glance: one row per track and a coloured lane of sections across the top. The track list on its left names each track and carries its buttons. You can open the timeline from **View > Arrangement overview**.
 
@@ -82,7 +82,7 @@ Here is the list as a table, with the chapter that teaches each region.
 | Toolbar | Tempo, time signature, key, panel buttons | **Chapter 5: Writing your first riff** |
 | Fretboard | Show and enter notes on the instrument | **Chapter 4: Reading tab and notation** |
 | Score | Read and write TAB and notation | **Chapter 4: Reading tab and notation** |
-| Side panel | Tools, sections, zoom and speed | **Chapter 3: Practice tools** |
+| Side panel | Tools and sections | **Chapter 3: Practice tools** |
 | Timeline and track list | See and arrange the whole song | **Chapter 11: Arranging and recording** |
 | Transport | Play, loop, count in | **Chapter 2: Opening and playing a song** |
 
@@ -90,13 +90,13 @@ Here is the list as a table, with the chapter that teaches each region.
 
 Click a beat in the score to put the edit cursor there. Clicking only moves the cursor; it never adds a note. Roll the mouse wheel to scroll the score. Hold `Ctrl` and roll the wheel to zoom it in or out.
 
-The zoom box lives on the **Zoom & speed** tab of the side panel. Its presets run from 50% to 200%, and **Fit width** is the first entry and the default. You can also type a value from 50 to 200, or use `Ctrl+Plus` and `Ctrl+Minus`.
+The zoom box lives in the top toolbar, left of the tempo box. Its presets run from 50% to 200%, and **Fit width** is the first entry and the default. You can also type a value from 50 to 200, or use `Ctrl+Plus` and `Ctrl+Minus`.
 
 > **Note:** The mouse wheel over the timeline zooms the timeline. It does not scroll it. To move along the timeline, drag the scroll bar in the middle of the status bar.
 
 ## Show, hide and move panels
 
-A panel is any block of the window you can rearrange. The two toolbar buttons at the right end of the menu bar show and hide the side panel and the fretboard. **View > Panels** lists all nine panels, **Tools**, **Structure**, **Rhythm**, **Layout**, **Sections**, **Practice / Mixer**, **Zoom & speed**, **Fretboard** and **Arrangement**, each with a tick you can switch.
+A panel is any block of the window you can rearrange. The two toolbar buttons at the right end of the menu bar show and hide the side panel and the fretboard. **View > Panels** lists the panels, **Tools**, **Structure**, **Rhythm**, **Layout**, **Sections**, **Fretboard** and **Arrangement**, each with a tick you can switch.
 
 To move a panel, drag it by its tab. Where you let go decides what happens, and a blue highlight shows the result before you release the mouse button.
 
@@ -104,7 +104,7 @@ To move a panel, drag it by its tab. Where you let go decides what happens, and 
 - Drop near an edge, and the panel splits off beside, above or below.
 - Drop outside the window, and the panel floats as a window of its own.
 
-In the default layout the **Fretboard** and **Arrangement** panels sit alone in their areas and have no tab of their own, so practise dragging with a side panel tab such as **Sections** or **Zoom & speed**. Right-click any panel tab for **Reset this panel to default position**, **Close panel** and **Reset all panels to default positions**.
+In the default layout the **Fretboard** and **Arrangement** panels sit alone in their areas and have no tab of their own, so practise dragging with a side panel tab such as **Sections** or **Tools**. Right-click any panel tab for **Reset this panel to default position**, **Close panel** and **Reset all panels to default positions**.
 
 > **Tip:** If a panel goes missing, **View > Reset all panels to default positions** brings every panel back. It never touches your song.
 
@@ -113,8 +113,8 @@ In the default layout the **Fretboard** and **Arrangement** panels sit alone in 
 Moving panels one by one is slow when you change tasks. A layout is a saved arrangement of panels, and TabForge has three. Switch with **View > Layouts**, or press `Ctrl+1`, `Ctrl+2` or `Ctrl+3` on the number row.
 
 - **Compose** (`Ctrl+1`) gives the score most of the room, with the fretboard and the tool palette beside it and a small timeline. It suits writing.
-- **Practice** (`Ctrl+2`) keeps the score and fretboard large, with **Zoom & speed**, **Sections** and **Practice / Mixer** at the right. The timeline is closed to make room. It suits learning a part.
-- **Mix** (`Ctrl+3`) makes the timeline and **Practice / Mixer** large and the score small. It suits balancing tracks.
+- **Practice** (`Ctrl+2`) keeps the score and fretboard large, with **Sections** at the right. The timeline is closed to make room. It suits learning a part.
+- **Mix** (`Ctrl+3`) makes the timeline large and the score small. It suits balancing tracks.
 
 Switching layouts moves panels only. Your song is never changed. The status bar confirms the switch, for example "Layout: Practice". **Chapter 13: Make TabForge yours** shows how to save a layout of your own.
 

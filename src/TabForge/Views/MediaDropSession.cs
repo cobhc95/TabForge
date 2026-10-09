@@ -27,16 +27,21 @@ public static class DroppedSongs
 /// </summary>
 public sealed class MediaDropSession : IDisposable
 {
+    private readonly DropItem[] _items;
+    private readonly object _measureLock = new();
+
     private MediaDropSession(string key, List<DropItem> items, int unsupported, string? staging)
     {
-        Key = key; Items = items; Unsupported = unsupported; StagingFolder = staging;
+        Key = key; _items = items.ToArray(); Unsupported = unsupported; StagingFolder = staging;
     }
 
     /// <summary>A drag of items already measured (tests and the off-screen render).</summary>
     public static MediaDropSession FromItems(IEnumerable<DropItem> items) => new("items|" + Guid.NewGuid().ToString("N"), items.ToList(), 0, null);
 
     public string Key { get; }
-    public IReadOnlyList<DropItem> Items { get; }
+    public IReadOnlyList<DropItem> Items => _items;
+    /// <summary>Some files still wait for <see cref="MeasurePending"/>.</summary>
+    public bool HasPending => Array.Exists(_items, i => i.Pending);
     /// <summary>Files in the drop that are neither audio, MIDI nor songs.</summary>
     public int Unsupported { get; }
     public string? StagingFolder { get; private set; }
@@ -44,12 +49,19 @@ public sealed class MediaDropSession : IDisposable
     public bool HasDeferred => Items.Any(i => i.Deferred);
 
     /// <summary>A cheap identity for a drag (the same drag re-entering the timeline is not measured again).</summary>
-    public static string? KeyOf(System.Windows.IDataObject data)
+    public static string? KeyOf(System.Windows.IDataObject data) => KeyOf(data, out _);
+
+    /// <summary>The key, and the file list when the drag is a file drop (read from the source once, not once per caller).</summary>
+    public static string? KeyOf(System.Windows.IDataObject data, out string[]? files)
     {
+        files = null;
         try
         {
-            if (data.GetDataPresent(System.Windows.DataFormats.FileDrop) && data.GetData(System.Windows.DataFormats.FileDrop) is string[] files)
-                return "files|" + string.Join("|", files);
+            if (data.GetDataPresent(System.Windows.DataFormats.FileDrop) && data.GetData(System.Windows.DataFormats.FileDrop) is string[] dropped)
+            {
+                files = dropped;
+                return "files|" + string.Join("|", dropped);
+            }
             if (VirtualFileDrop.Descriptors(data) is { Count: > 0 } virtuals)
                 return "virtual|" + string.Join("|", virtuals.Select(v => $"{v.Name}:{v.Size}"));
         }
@@ -62,16 +74,19 @@ public sealed class MediaDropSession : IDisposable
     /// <paramref name="contentsAt"/> replaces the virtual-file reader (tests).
     /// </summary>
     /// <paramref name="onDrop"/> true reads every virtual file now (the drop); while dragging only <see cref="VirtualFileDrop.HoverBudgetBytes"/> are read.
-    public static MediaDropSession? From(System.Windows.IDataObject data, Func<int, Stream?>? contentsAt = null, bool onDrop = false, MediaContext? media = null)
+    /// <paramref name="measureLater"/> true makes local files placeholders (<see cref="DropItem.Pending"/>) that the caller measures off the UI thread with <see cref="MeasurePending"/>.
+    /// <paramref name="knownKey"/> and <paramref name="knownFiles"/> carry a <see cref="KeyOf(System.Windows.IDataObject, out string[])"/> read already made.
+    public static MediaDropSession? From(System.Windows.IDataObject data, Func<int, Stream?>? contentsAt = null, bool onDrop = false, MediaContext? media = null,
+        bool measureLater = false, string? knownKey = null, string[]? knownFiles = null)
     {
-        var key = KeyOf(data);
+        var key = knownKey ?? KeyOf(data, out knownFiles);
         if (key is null) return null;
         var items = new List<DropItem>();
         var unsupported = 0;
         string? staging = null;
         if (key.StartsWith("files|", StringComparison.Ordinal))
         {
-            var files = (string[])data.GetData(System.Windows.DataFormats.FileDrop)!;
+            var files = knownFiles ?? (string[])data.GetData(System.Windows.DataFormats.FileDrop)!;
             var measured = 0;
             foreach (var file in files.Take(64))
                 switch (MediaDrop.RoleOf(file))
@@ -80,6 +95,8 @@ public sealed class MediaDropSession : IDisposable
                     case MediaDrop.FileRole.Audio when measured++ >= 16:
                         items.Add(new DropItem { Path = file, Name = Path.GetFileNameWithoutExtension(file), Kind = DropItemKind.Audio, Transient = MediaDrop.IsTransient(file) });
                         break;
+                    case MediaDrop.FileRole.Audio when measureLater: items.Add(Placeholder(file, DropItemKind.Audio)); break;
+                    case MediaDrop.FileRole.Midi when measureLater: items.Add(Placeholder(file, DropItemKind.Midi)); break;
                     case MediaDrop.FileRole.Audio: items.Add(Measure(file, DropItemKind.Audio, MediaDrop.IsTransient(file), media)); break;
                     case MediaDrop.FileRole.Midi: items.Add(Measure(file, DropItemKind.Midi, MediaDrop.IsTransient(file), media)); break;
                     case MediaDrop.FileRole.Unsupported: unsupported++; break;
@@ -101,6 +118,20 @@ public sealed class MediaDropSession : IDisposable
             if (items.Count == 0 && unsupported == 0) { TryDelete(staging); return null; }
         }
         return new MediaDropSession(key, items, unsupported, staging);
+    }
+
+    private static DropItem Placeholder(string file, DropItemKind kind) =>
+        new() { Path = file, Name = Path.GetFileNameWithoutExtension(file), Kind = kind, Transient = MediaDrop.IsTransient(file), Pending = true };
+
+    /// <summary>
+    /// Measures the placeholders (header or MIDI reads, path checks). Safe from any thread and idempotent: the drop calls it too and
+    /// waits for a measurement already running.
+    /// </summary>
+    public void MeasurePending(MediaContext? media)
+    {
+        lock (_measureLock)
+            for (var i = 0; i < _items.Length; i++)
+                if (_items[i].Pending) _items[i] = Measure(_items[i].Path, _items[i].Kind, _items[i].Transient, media);
     }
 
     /// <summary>Measures a file once: audio length (local files only; a network file is measured on drop), or the MIDI file read.</summary>

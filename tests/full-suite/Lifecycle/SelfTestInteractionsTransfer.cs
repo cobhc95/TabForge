@@ -110,7 +110,7 @@ public static partial class SelfTest
                 !ReferenceEquals(documents1.Active, a) && w1.OpenDocuments.All(d => !ReferenceEquals(d, a) && !d.Playback.Engine.IsPlaying), $"active '{documents1.Active.DisplayName}'");
             var documents2 = LtField<DocumentManager>(w2, "_documents")!;
             var tick = LtField<Controllers.PlaybackViewController>(w2, "_playbackView")?.IsTicking == true;
-            Check("interactions: I-4: the new window follows the playing song (its playback display runs, the editor shows the playhead)", ReferenceEquals(documents2.Active, a) && tick && IxEditor(w2).PlaybackActive, $"active {ReferenceEquals(documents2.Active, a)}, tick {tick}, editor active {IxEditor(w2).PlaybackActive}");
+            Check("interactions: I-4: the new window follows the playing song (its playback display runs, the editor shows the playhead)", ReferenceEquals(documents2.Active, a) && tick && IxEditor(w2).Playback.Active, $"active {ReferenceEquals(documents2.Active, a)}, tick {tick}, editor active {IxEditor(w2).Playback.Active}");
 
             // The first window closes.
             foreach (var document in w1.OpenDocuments) document.MarkClean();

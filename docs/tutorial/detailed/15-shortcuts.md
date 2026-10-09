@@ -89,7 +89,7 @@ Type a fret number with the digit keys. For a fret above 9, type both digits qui
 | Staccato | `Shift+1` | **Note > Staccato** |
 | Tenuto | `Shift+Minus` | **Note > Tenuto** |
 | Shift the note up or down a semitone | `Shift+Up` or `Shift+Down` | **Note > Shift pitch up (semitone)** or **Note > Shift pitch down (semitone)** |
-| Move the note to the next higher or lower string, keeping its pitch | `Alt+Shift+Up` or `Alt+Shift+Down` | **Note > Move to higher string** or **Note > Move to lower string** |
+| Move the note to the next higher or lower string, keeping its pitch (on an empty spot, the cursor moves) | `Alt+Up` or `Alt+Down` | **Note > Move to higher string** or **Note > Move to lower string** |
 | Chord name | `A` | **Effects > Chord…** |
 | Text above a beat | `T` | **Effects > Text…** |
 
@@ -135,7 +135,7 @@ Each technique key switches the technique on, and pressing it again switches it 
 | Add a track | `Ctrl+Shift+Insert` | Command palette |
 | Delete the track | `Ctrl+Shift+Delete` | **Track > Delete track** |
 | Previous or next track | `Ctrl+Shift+Up` or `Ctrl+Shift+Down` | None |
-| Move the track up or down in the track list | `Alt+Up` or `Alt+Down` | **Track > Move up** or **Track > Move down** |
+| Move the track up or down in the track list | `Alt+Shift+Up` or `Alt+Shift+Down` | **Track > Move up** or **Track > Move down** |
 
 ## Playback and practice
 

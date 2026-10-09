@@ -217,9 +217,12 @@ public static partial class SelfTest
             // 2. palm mute on the beat under the playhead.
             var playing = engine.Playhead();
             var bar = playing.Bar;
-            var cell = track.Measures[bar].Cells.FindIndex(c => c.Notes.Count > 0 && !c.Notes.Any(x => x.Techniques.Contains("PalmMute")));
+            // Palm mute acts on the cursor string's note, and (as GP5) never on a tied note: aim at an untied, unmuted note.
+            static bool Mutable(TabNote x) => !x.Tied && !x.Techniques.Contains("PalmMute");
+            var cell = track.Measures[bar].Cells.FindIndex(c => !c.IsTied && c.Notes.Any(Mutable));
             Check($"interactions: {label}: the bar under the playhead has a beat to mute", cell >= 0, $"bar {bar + 1}");
-            IxCursor(w, 0, bar, Math.Max(0, cell), 1);
+            var muteString = cell >= 0 ? track.Measures[bar].Cells[cell].Notes.First(Mutable).StringIndex : 1;
+            IxCursor(w, 0, bar, Math.Max(0, cell), muteString);
             (undo, revision) = (session.Undo.UndoCount, song.TimelineRevision);
             IxCommand(w, "Note.PalmMute");
             Check($"interactions: {label}: palm mute under the playhead adds one undo entry, keeps the song dirty and invalidates the timeline once",

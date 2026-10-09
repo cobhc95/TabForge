@@ -32,7 +32,8 @@ public sealed class DocumentController
             var limit = AutosaveService.IsRecoveryCopy(path, RecoveryFolder) ? InputLimits.MaxRecoveryProjectBytes : InputLimits.MaxTforgeFileBytes;
             // A cut-short save of the .gp + .tforge pair is resolved first (the marker belongs to the .gp beside it), exactly as for the .gp.
             var projectRecovery = RecoverInterruptedPairFor(path);
-            return new OpenedScore(ProjectService.Load(path, limit), path, false, projectRecovery);
+            var loaded = ProjectService.Load(path, limit);
+            return new OpenedScore(loaded, path, false, Join(projectRecovery, CoverClips(loaded)));
         }
 
         var notices = new List<string>();
@@ -55,7 +56,20 @@ public sealed class DocumentController
         if (path.EndsWith(".gp", StringComparison.OrdinalIgnoreCase) && File.Exists(AudioDataFile.PathFor(path)) && GuitarProExporter.HasEmbeddedEntry(path))
             notices.Add($"{Path.GetFileName(AudioDataFile.PathFor(path))} was not applied: {Path.GetFileName(path)} holds its own TabForge project, and the .tfaudio is from an earlier save");
         else if (path.EndsWith(".gp", StringComparison.OrdinalIgnoreCase)) AudioDataFile.TryApply(project, path, notices);
+        if (CoverClips(project) is { } extended) notices.Add(extended);
         return new OpenedScore(project, null, true, notices.Count == 0 ? null : string.Join("; ", notices), path);   // no native save path yet: relative media resolves against the imported file's folder
+    }
+
+    private static string? Join(string? a, string? b) => a is null ? b : b is null ? a : a + "; " + b;
+
+    /// <summary>
+    /// A clip past the last bar always extends the song, also in a file saved before that rule: the bars are added to the loaded model
+    /// before the document exists, so the opened song is not marked changed; the notice tells the user. Null when nothing was added.
+    /// </summary>
+    private static string? CoverClips(SongProject project)
+    {
+        var added = SongExtent.EnsureCoversClips(project).BarsAdded;
+        return added == 0 ? null : $"{added} bar{(added == 1 ? "" : "s")} added at the end so the song covers its audio clips";
     }
 
     /// <summary>

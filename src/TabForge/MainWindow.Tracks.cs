@@ -103,7 +103,7 @@ public partial class MainWindow : ITrackListFitHost, ITrackGridDragHost
             var text = GpDialogs.Prompt("Master volume", "Master volume for all tracks (0–100 %):", ((int)master.Value).ToString());
             if (int.TryParse(text?.Trim().TrimEnd('%'), out var value)) master.Value = Math.Clamp(value, 0, 100);
         }));
-        masterMenu.Items.Add(MenuSeparator());
+        masterMenu.Items.Add(SpecMenus.Separator(this));
         foreach (var preset in new[] { 100, 75, 50, 25 })
             masterMenu.Items.Add(MixerMenuItem(preset == 100 ? "Reset to 100%" : $"{preset}%", () => master.Value = preset));
         master.ContextMenu = masterMenu;
@@ -114,7 +114,7 @@ public partial class MainWindow : ITrackListFitHost, ITrackGridDragHost
             menu.Items.Add(MixerMenuItem("Tune up a semitone (+1)", () => RetuneAllTracks(1)));
             menu.Items.Add(MixerMenuItem("Tune down a semitone (−1)", () => RetuneAllTracks(-1)));
             menu.Items.Add(MixerMenuItem("Global tuning window…", ShowGlobalTuningWindow));
-            menu.Items.Add(MenuSeparator());
+            menu.Items.Add(SpecMenus.Separator(this));
             var reset = MixerMenuItem("Back to original tuning", () => RetuneStrings(_globalStringOffsets.Select(o => -o).ToArray()));
             reset.IsEnabled = _globalStringOffsets.Any(o => o != 0);
             menu.Items.Add(reset);
@@ -125,7 +125,7 @@ public partial class MainWindow : ITrackListFitHost, ITrackGridDragHost
         Arrangement.TuningNumberClicked += (_, _) => ShowGlobalTuningWindow();
         Arrangement.TuningIconClicked += (_, _) => ShowGlobalTuningWindow();
         Arrangement.TuningShiftEdited += (_, shift) => SetUniformTuningShift(shift);
-        Arrangement.AreaMoveDropped += (_, target) => _sections.MoveArea(Doc, _loopStartBar, _loopEndBar, target);
+        Arrangement.AreaMoveDropped += (_, target) => _sections.MoveArea(Doc, _selLoop.StartBar, _selLoop.EndBar, target);
     }
 
     // Per-string shift from the song's original tuning, six-string reference (high to low).
@@ -225,13 +225,20 @@ public partial class MainWindow : ITrackListFitHost, ITrackGridDragHost
 
     private void TrackMixerGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)    {
         if (TrackMixerGrid.SelectedIndex < 0) return;
-        Editor.SelectedTrackIndex = TrackMixerGrid.SelectedIndex;
+        Editor.SelectedTrackIndex = TrackMixerGrid.SelectedIndex; _follow.KeepCursorInSight();
         Doc.TrackIndex = TrackMixerGrid.SelectedIndex;
         // The selected bars stay selected on the new track: the model re-applies them to the score.
         _selection.SetTrack(TrackMixerGrid.SelectedIndex);
         // Selecting a track changes no sound: the engine and mixer sync runs just after the frame (one for a burst of switches),
         // so a click that also starts a drag (a clip, a bar range) or opens a menu draws at once.
         if (!_restoring) (_trackSwitchSync ??= new Views.SettleAction(RefreshPluginChain, 30)).Request();
+        // The scroll to the cursor bar waits for the new track's layout, so one click lands on it (stopped; playback follows its own bar).
+        if (!_restoring) Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, new Action(() =>
+        {
+            if (_isPlayingVisual) return;
+            ScoreScroll.UpdateLayout();
+            ScrollToCursor();
+        }));
         RefreshInstrument();
         RefreshArrangementSelection();
         SyncSelectedOutput();
@@ -252,7 +259,6 @@ public partial class MainWindow : ITrackListFitHost, ITrackGridDragHost
     private void SyncSelectedOutput()
     {
         if (SelectedTrack is null) return;
-        SelectedOutputCombo.SelectedValue = SelectedTrack.MidiOutputDeviceId;
         OutputStatusText.Text = MidiDevices.FirstOrDefault(d => d.DeviceId == SelectedTrack.MidiOutputDeviceId)?.Name ?? "MIDI output";
     }
 
@@ -273,7 +279,7 @@ public partial class MainWindow : ITrackListFitHost, ITrackGridDragHost
         var bar = MusicTime.BarOf(_project, shownBar);
         var num = bar?.TimeSigNum ?? _project.TimeSignatureNumerator;
         var den = bar?.TimeSigDenom ?? _project.TimeSignatureDenominator;
-        var state = MusicTime.AnalyzeBar(_project, shownBar);
+        var state = MusicTime.AnalyzeBar(_project, shownBar, track);
         BarStateText.Text = $"{num}/{den}  {state.Used:0.##}:{state.Slots}";
         BarStateText.Foreground = state.Marked
             ? new SolidColorBrush(Color.FromRgb(229, 72, 77))

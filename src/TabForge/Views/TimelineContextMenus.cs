@@ -34,7 +34,7 @@ internal enum TimelineCommand
 {
     None,
     // bar menu
-    CopyBar, PasteBar, DeleteBar, InsertBarBefore, InsertBarAfter, CopyBarAllTracks, PasteBarAllTracks, DeleteBarAllTracks,
+    CopyBar, PasteBar, DeleteBar, InsertBarBefore, InsertBarAfter, CopyBarAllTracks, PasteBarAllTracks, DeleteBarAllTracks, ToggleTrackLines, ResetTrackListHeight,
     CopySection, PasteSectionHere, ToggleSectionLockAtBar,
     // selection menu
     CopySelection, CutSelection, PasteSelection, DeleteSelection, DeleteEmptyBars, LoopSelection, MoveSelection, SkipSelection,
@@ -49,7 +49,7 @@ internal enum TimelineCommand
 }
 
 internal sealed record BarMenuState(bool HasBar, bool HasTrack, int TrackCount, bool CanDeleteThisTrack, bool CanDeleteAllTracks,
-    bool InSection, bool SectionLocked, bool CanPaste, bool CanPasteAllTracks);
+    bool InSection, bool SectionLocked, bool CanPaste, bool CanPasteAllTracks, bool TrackLines = false);
 
 internal sealed record SelectionMenuState(string Label, bool CanPaste, bool Looping, bool Skipped, bool AnySkipped, int EmptyBars = 0);
 
@@ -58,7 +58,7 @@ internal sealed record SectionMenuState(int? AddAtBar, bool CanPaste, bool Loope
 internal sealed record ClipMenuState(bool HasClip, bool IsMidi, bool CanPaste, bool Muted);
 
 /// <summary>
-/// The arrangement-timeline right-click menus (owner request 2026-09-30, docs/CONTEXT_MENU_AUDIT.md and _2): Copy / Cut / Paste /
+/// The arrangement-timeline right-click menus: Copy / Cut / Paste /
 /// Delete stay on top, this-track items come before "All tracks", items that do not apply are hidden, shortcuts come from the
 /// user's bindings (<c>key</c> maps a hotkey id to its display text), and every appearance option lives in Preferences behind ONE
 /// "Timeline settings..." entry.
@@ -114,6 +114,8 @@ internal static class TimelineMenus
             }
         }
         list.Add(MenuSpec.Separator());
+        list.Add(new MenuSpec { Command = TimelineCommand.ToggleTrackLines, Header = "Lines between tracks", Shortcut = key("View.ToggleTrackLines"), Checkable = true, Checked = s.TrackLines, SettingKey = "timeline.tracklines" });
+        list.Add(new MenuSpec { Command = TimelineCommand.ResetTrackListHeight, Header = "Reset track list height", Shortcut = key("View.ResetTrackRowHeight"), ToolTip = "Back to the default row height with every track in view (the same as double-clicking the border above the track list)" });
         list.Add(SettingsEntry(TimelineCommand.TimelineSettings));
         return list;
     }

@@ -28,7 +28,7 @@ public static partial class SelfTest
         {
             var playback = session.Playback;
             playback.IsPlayingVisual = true;
-            LtField<TabForge.Views.TabEditorControl>(window, "Editor")!.PlaybackActive = true;
+            LtField<TabForge.Views.TabEditorControl>(window, "Editor")!.Playback.Active = true;
             var tick = (Action)Delegate.CreateDelegate(typeof(Action), window, typeof(MainWindow).GetMethod("ApplyPendingPlayhead", BindingFlags.Instance | BindingFlags.NonPublic)!);
             var positions = new PlaybackPosition[260];
             for (var i = 0; i < positions.Length; i++)

@@ -184,13 +184,13 @@ internal sealed partial class WindowProbes
                         if (!begun)
                         {
                             w.Editor.SetPosition((int)p[0] - 1, 0, notes[0].s, seekPlayback: false);
-                            if (p.Length > 1) w.Editor.SetDuration((int)p[1]);
+                            if (p.Length > 1) w.Editor.Effects.SetDuration((int)p[1]);
                             begun = true;
                         }
                         if (i % 2 != 0 || i / 2 >= notes.Length) return;
                         var (s, f) = notes[i / 2];
                         w.Editor.SetPosition(w.Editor.SelectedMeasure, w.Editor.SelectedCell, s, seekPlayback: false);
-                        foreach (var digit in f.ToString()) w.Editor.EnterFret(digit - '0', autoAdvance: false);
+                        foreach (var digit in f.ToString()) w.Editor.Effects.EnterFret(digit - '0', autoAdvance: false);
                         w.Editor.MoveBeat(1);
                     }, _ => { }, () => { });
                 }

@@ -18,7 +18,7 @@ public static class ProjectService
         WriteIndented = true,
         PropertyNameCaseInsensitive = true,
         MaxDepth = InputLimits.MaxJsonDepth,
-        TypeInfoResolver = LosslessCompactResolver()
+        TypeInfoResolver = new System.Text.Json.Serialization.Metadata.DefaultJsonTypeInfoResolver { Modifiers = { OmitInitialValues, OmitViewState } }
     };
 
     /// <summary>
@@ -397,8 +397,24 @@ public static class ProjectService
         WriteIndented = false,
         PropertyNameCaseInsensitive = true,
         MaxDepth = InputLimits.MaxJsonDepth,
-        TypeInfoResolver = new System.Text.Json.Serialization.Metadata.DefaultJsonTypeInfoResolver { Modifiers = { OmitInitialValues, OmitScoreBody } }
+        TypeInfoResolver = new System.Text.Json.Serialization.Metadata.DefaultJsonTypeInfoResolver { Modifiers = { OmitInitialValues, OmitScoreBody, OmitViewState } }
     };
+
+    /// <summary>
+    /// View state (the Band layout and the collapsed mixer groups) is neither part of the unsaved-changes hash nor of an undo state:
+    /// undo keeps the live values. The disk form still writes both.
+    /// </summary>
+    private static void OmitViewState(System.Text.Json.Serialization.Metadata.JsonTypeInfo info)
+    {
+        if (info.Type == typeof(SongProject)) RemoveProperty(info, nameof(SongProject.BandLayout));
+        else if (info.Type == typeof(MixerSettings)) RemoveProperty(info, nameof(MixerSettings.CollapsedGroups));
+    }
+
+    private static void RemoveProperty(System.Text.Json.Serialization.Metadata.JsonTypeInfo info, string name)
+    {
+        for (var index = info.Properties.Count - 1; index >= 0; index--)
+            if (info.Properties[index].Name == name) info.Properties.RemoveAt(index);
+    }
 
     private static void OmitScoreBody(System.Text.Json.Serialization.Metadata.JsonTypeInfo info)
     {

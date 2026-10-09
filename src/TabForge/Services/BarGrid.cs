@@ -351,7 +351,7 @@ public static class BarGrid
 
     /// <summary>A fresh voice grid for one bar holding the given beats at their in-bar positions. A beat sits on its own
     /// slot index when the onset rule gives that slot anyway; otherwise it keeps its exact onset in RhythmicPosition.</summary>
-    private static List<TabCell> WriteBar(List<(double Pos, TabCell Cell)> beats, int barSlots)
+    internal static List<TabCell> WriteBar(List<(double Pos, TabCell Cell)> beats, int barSlots)
     {
         var cells = Enumerable.Range(0, barSlots).Select(_ => new TabCell()).ToList();
         var last = -1; var cursor = 0.0;

@@ -38,7 +38,7 @@ public sealed partial class TabEditorControl
         var accent = Appearance.AccentColor;
         var cursorColor = Appearance.CursorColor;
         var playColor = Appearance.PlaybackColor;
-        var errorColor = C("#E5484D");
+        var errorColor = Appearance.ErrorColor;
 
         dc.DrawRectangle(ScoreText.Brush(bg), null, new Rect(0, 0, PageWidth, Math.Max(400, ActualHeight / _zoom)));
 
@@ -60,7 +60,7 @@ public sealed partial class TabEditorControl
         }
         _renderer.DrawHeader(dc, _project, track, ink, faint);
 
-        var scoreLayout = GetScoreLayout(track);
+        var scoreLayout = Layout.GetLayout(track);
         var systems = scoreLayout.SystemCount;
         // One lookup per render for the exact sounding notes.
         _playback.RebuildSoundingSets();
@@ -74,7 +74,7 @@ public sealed partial class TabEditorControl
         _drawnFirstSystem = firstSystem;
         _drawnLastSystem = lastSystem;
         _systemCache.Bind(scoreLayout, TabForge.Visualization.Draw.DpiKey);
-        var activeSystem = PlaybackMeasure >= 0 && PlaybackMeasure < track.Measures.Count ? scoreLayout.SystemForMeasure(PlaybackMeasure) : -1;
+        var activeSystem = _playback.Measure >= 0 && _playback.Measure < track.Measures.Count ? scoreLayout.SystemForMeasure(_playback.Measure) : -1;
         for (var s = firstSystem; s <= lastSystem; s++)
         {
             var system = scoreLayout.Systems[s];
@@ -148,6 +148,9 @@ public sealed partial class TabEditorControl
         }
     }
 
+    /// <summary>A Band lane slides its whole engraved line itself: no ancestor scroll viewer decides which bars or systems are drawn.</summary>
+    internal bool IgnoreAncestorViewport { get; init; }
+
     private ScrollViewer? _viewport;
     private bool _viewportHooked;
     private int _drawnFirstSystem;
@@ -159,7 +162,7 @@ public sealed partial class TabEditorControl
         var last = systems - 1;
         if (_viewport is null)
         {
-            _viewport = FindAncestorScrollViewer(this);
+            _viewport = IgnoreAncestorViewport ? null : FindAncestorScrollViewer(this);
             if (_viewport is not null && !_viewportHooked)
             {
                 _viewportHooked = true;

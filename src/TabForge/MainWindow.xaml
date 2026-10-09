@@ -34,13 +34,12 @@
                      off the right edge; the tab strip fills whatever is left, as in Edge / Firefox. -->
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Height="44"
                             WindowChrome.IsHitTestVisibleInChrome="True">
-                    <!-- Title-bar settings button: Segoe Fluent Icons gear (E713, 17px). -->
+                    <!-- Title-bar settings button: the IconCog gear, 16px, in the caption glyph colour. -->
                     <Button x:Name="TitleSettingsButton" Style="{StaticResource ChromeCaptionButton}" Click="Prefs_Click"
                             WindowChrome.IsHitTestVisibleInChrome="True" Width="40"
                             ToolTip="Settings" local:TooltipShortcuts.Command="App.Preferences" AutomationProperties.Name="Settings">
-                        <TextBlock Text="&#xE713;" FontFamily="Segoe Fluent Icons" FontSize="17"
-                                   Foreground="{DynamicResource ChromeGlyphBrush}"
-                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <Path Data="{StaticResource IconCog}" Fill="{DynamicResource ChromeGlyphBrush}" Stretch="Uniform" Width="16" Height="16"
+                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Button>
                     <Button x:Name="MinButton" Style="{StaticResource ChromeCaptionButton}" Click="MinButton_Click"
                             WindowChrome.IsHitTestVisibleInChrome="True"
@@ -233,12 +232,17 @@
                         <MenuItem Header="Let ring" Click="LetRing_Click" local:MenuHotkey.Id="Note.LetRing"/>
                         <MenuItem Header="Hammer / pull" Click="Hopo_Click" local:MenuHotkey.Id="Note.HammerPull"/>
                         <MenuItem Header="Bend" Click="Bend_Click" local:MenuHotkey.Id="Note.Bend"/>
+                        <MenuItem Header="Bend editor…" Tag="Bend" Click="EffectEditor_Click" local:MenuHotkey.Id="Note.BendEditor"/>
                         <MenuItem Header="Legato slide" Click="Slide_Click" local:MenuHotkey.Id="Note.Slide"/>
                         <MenuItem Header="Shift slide" Click="FxShiftSlide_Click"/>
                         <MenuItem Header="Vibrato" Click="Vibrato_Click" local:MenuHotkey.Id="Note.Vibrato"/>
                         <MenuItem Header="Wide vibrato" Click="FxWideVib_Click"/>
                         <MenuItem Header="Tremolo bar" Click="FxTremBar_Click" local:MenuHotkey.Id="Note.TremoloBar"/>
+                        <MenuItem Header="Tremolo bar editor…" Tag="TremoloBar" Click="EffectEditor_Click" local:MenuHotkey.Id="Note.TremoloBarEditor"/>
                         <MenuItem Header="Natural harmonic" Click="FxHarm_Click" local:MenuHotkey.Id="Note.Harmonic"/>
+                        <MenuItem Header="Harmonic editor…" Tag="Harmonic" Click="EffectEditor_Click" local:MenuHotkey.Id="Note.HarmonicEditor"/>
+                        <MenuItem Header="Trill editor…" Tag="Trill" Click="EffectEditor_Click" local:MenuHotkey.Id="Note.TrillEditor"/>
+                        <MenuItem Header="Grace note editor…" Tag="Grace" Click="EffectEditor_Click" local:MenuHotkey.Id="Note.GraceEditor"/>
                         <MenuItem Header="Artificial harmonic" Click="FxArtHarm_Click"/>
                         <MenuItem Header="Tapping" Click="FxTap_Click"/>
                         <MenuItem Header="Slap" Click="FxSlap_Click"/>
@@ -268,6 +272,8 @@
                         <MenuItem Header="Check bar duration" Click="CheckBars_Click" local:MenuHotkey.Id="Bar.Check"/>
                         <MenuItem Header="Transpose…" Click="Transpose_Click" local:MenuHotkey.Id="Tools.Transpose"/>
                         <MenuItem Header="Scale finder…" Click="ScaleFinder_Click" local:MenuHotkey.Id="Tools.ScaleFinder"/>
+                        <MenuItem Header="Chord finder…" Click="ChordFinder_Click" local:MenuHotkey.Id="Tools.ChordFinder"/>
+                        <MenuItem Header="Song stats…" Click="SongStats_Click" local:MenuHotkey.Id="Tools.SongStats"/>
                         <MenuItem Header="Tuner…" Click="Tuner_Click" local:MenuHotkey.Id="Tools.Tuner"/>
                         <Separator/>
                         <MenuItem x:Name="MetronomeMenu" Header="Metronome" Click="Metronome_Click" local:MenuHotkey.Id="Transport.Metronome" IsCheckable="True"/>
@@ -294,6 +300,7 @@
                         <Separator/>
                         <MenuItem x:Name="InstrumentViewMenu" Header="Instrument view" Click="ToggleInstrumentView_Click" local:MenuHotkey.Id="View.InstrumentPanel" IsCheckable="True" IsChecked="True"/>
                         <MenuItem x:Name="ArrangementMenu" Header="Arrangement overview" Click="ToggleArrangement_Click" local:MenuHotkey.Id="View.Global" IsCheckable="True" IsChecked="True"/>
+                        <MenuItem x:Name="BandViewMenu" Header="Band view" Click="ToggleBandView_Click" local:MenuHotkey.Id="View.BandView" IsCheckable="True"/>
                         <MenuItem x:Name="ArrangementIndividualNotesMenu" Header="Show the notes in each track lane" Click="ArrangementIndividualNotesMenu_Click" IsCheckable="True"/>
                         <MenuItem x:Name="ArrangementContinuousBlocksMenu" Header="Show one continuous line per track lane" Click="ArrangementContinuousBlocksMenu_Click" IsCheckable="True"/>
                         <MenuItem x:Name="PlayingBarMenu" Header="Highlight playing bar" Click="PlayingBarMenu_Click" local:MenuHotkey.Id="View.PlayingBar" IsCheckable="True"/>
@@ -308,7 +315,6 @@
                         <MenuItem Header="Full screen" Click="Fullscreen_Click" local:MenuHotkey.Id="View.Fullscreen"/>
                     </MenuItem>
                     <MenuItem Header="_Options">
-                        <MenuItem Header="Practice / learn mode" Click="ShowPractice_Click"/>
                         <MenuItem Header="Stylesheet…" Click="Stylesheet_Click"/>
                         <MenuItem Header="Preferences…" Click="Prefs_Click" local:MenuHotkey.Id="App.Preferences"/>
                     </MenuItem>
@@ -324,7 +330,7 @@
                 <StackPanel x:Name="PinnedToolStrip" DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center" Margin="14,0,0,0"/>
                 <!-- Tempo and song-wide readouts remain in the main toolbar; only metronome and
                      score zoom are hosted by the movable controller. -->
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0">
+                <StackPanel x:Name="ToolbarTempoGroup" DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0">
                     <TextBox x:Name="TempoBox" Width="52" Text="120" ToolTip="Tempo (BPM)" LostFocus="TempoBox_LostFocus" PreviewKeyDown="TempoBox_PreviewKeyDown"/>
                     <TextBlock Text="BPM" VerticalAlignment="Center" Margin="4,0,8,0" Foreground="{DynamicResource MutedBrush}"/>
                     <Separator Style="{StaticResource BarSeparator}"/>
@@ -338,10 +344,58 @@
                             AutomationProperties.Name="Show or hide the fretboard / keyboard">
                         <Path Style="{StaticResource IconPath}" Data="{StaticResource IconFretboard}"/>
                     </Button>
+                    <!-- Lit (accent fill and border) while the Band view is shown; follows View > Band view's check. -->
+                    <Button ToolTip="Band view: a row per track" local:TooltipShortcuts.Command="View.BandView" Click="ToggleBandView_Click"
+                            AutomationProperties.Name="Show or hide the Band view">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource ToolButton}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsChecked, ElementName=BandViewMenu}" Value="True">
+                                        <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}"/>
+                                        <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                        <Path Style="{StaticResource IconPath}" Data="M3,4 H21 V8.5 H3 Z M3,10 H21 V14.5 H3 Z M3,16 H21 V20.5 H3 Z"/>
+                    </Button>
                     <Button Style="{StaticResource ToolButton}" ToolTip="Project settings: song info, credits, tempo, key" Click="ProjectSettings_Click"
                             AutomationProperties.Name="Project settings">
                         <Path Style="{StaticResource IconPath}" Data="{StaticResource IconPrefs}"/>
                     </Button>
+                </StackPanel>
+                <!-- Score zoom and playback speed sit left of the tempo box. Narrow windows shed it in steps (ToolbarZoomSpeedFit). -->
+                <StackPanel x:Name="ZoomSpeedGroup" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,6,0">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0">
+                                <Button Style="{StaticResource TransportButton}" Width="26" Height="26" MinWidth="26" Padding="0" ToolTip="Zoom out" local:TooltipShortcuts.Command="View.ZoomOut" Click="ZoomOutButton_Click" AutomationProperties.Name="Zoom out">
+                                    <local:SvgIconView Icon="zoom_minus" Width="20" Height="20" IsHitTestVisible="False" ButtonHovered="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                                </Button>
+                                <ComboBox x:Name="ZoomCombo" Width="76" Height="26" ToolTip="Score zoom. Choose a preset or type 50–200%."
+                                          AutomationProperties.AutomationId="ZoomCombo" AutomationProperties.Name="Zoom"
+                                          Loaded="ZoomCombo_ReSync" IsVisibleChanged="ZoomCombo_VisibleReSync"
+                                          IsEditable="True" IsTextSearchEnabled="False"
+                                          SelectionChanged="ZoomCombo_Changed" LostFocus="ZoomCombo_LostFocus"
+                                          PreviewKeyDown="ZoomCombo_PreviewKeyDown">
+                                    <ComboBoxItem Content="Fit width"/><ComboBoxItem Content="50%"/><ComboBoxItem Content="60%"/>
+                                    <ComboBoxItem Content="75%"/><ComboBoxItem Content="80%"/><ComboBoxItem Content="90%"/>
+                                    <ComboBoxItem Content="100%"/><ComboBoxItem Content="110%"/><ComboBoxItem Content="125%"/>
+                                    <ComboBoxItem Content="150%"/><ComboBoxItem Content="175%"/><ComboBoxItem Content="200%"/>
+                                </ComboBox>
+                                <Button Style="{StaticResource TransportButton}" Width="26" Height="26" MinWidth="26" Padding="0" ToolTip="Zoom in" local:TooltipShortcuts.Command="View.ZoomIn" Click="ZoomInButton_Click" AutomationProperties.Name="Zoom in">
+                                    <local:SvgIconView Icon="zoom_plus" Width="20" Height="20" IsHitTestVisible="False" ButtonHovered="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                                </Button>
+                            </StackPanel>
+                            <Border Width="1" Height="18" Background="{DynamicResource BorderSoftBrush}" VerticalAlignment="Center" Margin="6,0"/>
+                            <TextBlock Text="Speed" FontSize="11" VerticalAlignment="Center" Margin="0,0,3,0" Foreground="{DynamicResource MutedBrush}" ToolTip="Playback speed"/>
+                            <ComboBox x:Name="SpeedCombo" Width="76" Height="26" ToolTip="Playback speed. Choose a preset or type 25–200%."
+                                      AutomationProperties.AutomationId="Transport.Speed" AutomationProperties.Name="Playback speed"
+                                      Loaded="SpeedCombo_ReSync" IsVisibleChanged="SpeedCombo_VisibleReSync"
+                                      IsEditable="True" IsTextSearchEnabled="False"
+                                      SelectionChanged="SpeedCombo_Changed" LostFocus="SpeedCombo_LostFocus"
+                                      PreviewKeyDown="SpeedCombo_PreviewKeyDown">
+                                <ComboBoxItem Content="50%"/><ComboBoxItem Content="75%"/><ComboBoxItem Content="100%"/>
+                                <ComboBoxItem Content="125%"/><ComboBoxItem Content="150%"/><ComboBoxItem Content="200%"/>
+                            </ComboBox>
                 </StackPanel>
             </DockPanel>
         </Border>
@@ -564,51 +618,8 @@
                         </StackPanel>
                     </Border>
                 </Grid>
-                <ScrollViewer x:Name="LowerPanelScroll" Grid.Row="2" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                    <StackPanel Margin="8">
-                        <TextBlock Text="Tools" FontSize="13" FontWeight="SemiBold" Margin="2,0,0,6"/>
-                        <GroupBox Header="Practice" Margin="0,0,0,8">
-                            <StackPanel Margin="8">
-                                <CheckBox x:Name="PracticePreviewCheck" Content="Preview next notes" IsChecked="True" Margin="0,2" Checked="PracticeOption_Changed" Unchecked="PracticeOption_Changed"/>
-                                <CheckBox x:Name="PracticeNamesCheck" Content="Note names" Margin="0,2" Checked="PracticeOption_Changed" Unchecked="PracticeOption_Changed"/>
-                                <CheckBox x:Name="LeftHandedCheck" Content="Left-handed" Margin="0,2" Checked="PracticeOption_Changed" Unchecked="PracticeOption_Changed"/>
-                                <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
-                                    <TextBlock Text="Preview" VerticalAlignment="Center" Foreground="{DynamicResource MutedBrush}"/>
-                                    <Slider x:Name="PreviewHorizonSlider" Width="86" Minimum="1" Maximum="10" Value="6" Margin="6,0,0,0" VerticalAlignment="Center" ToolTip="How many upcoming movements to preview" ValueChanged="PracticeOption_Changed"/>
-                                </StackPanel>
-                                <TextBlock Text="Scale highlight" Margin="0,6,0,2" Foreground="{DynamicResource MutedBrush}"/>
-                                <ComboBox x:Name="ScaleHighlightCombo" SelectionChanged="PracticeOption_Changed"><ComboBoxItem Content="Off"/></ComboBox>
-                                <TextBlock Text="Fretboard" Margin="0,6,0,2" Foreground="{DynamicResource MutedBrush}"/>
-                                <ComboBox x:Name="FretboardFretsCombo" SelectionChanged="PracticeOption_Changed"><ComboBoxItem Content="24 frets"/><ComboBoxItem Content="12 frets"/></ComboBox>
-                                <TextBlock x:Name="PracticeHint" Text="" TextWrapping="Wrap" Margin="0,8,0,0" FontSize="11" Foreground="{DynamicResource MutedBrush}"/>
-                            </StackPanel>
-                        </GroupBox>
-                        <Border Background="{DynamicResource Panel2Brush}" BorderBrush="{DynamicResource BorderSoftBrush}" BorderThickness="1" CornerRadius="4" Padding="8,6" Margin="0,0,0,8">
-                            <StackPanel><TextBlock x:Name="SongStatsText" Text="Song stats" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" ToolTip="Notes, tracks and bars in the current score"/><TextBlock x:Name="OverviewTitle" Text="" TextWrapping="Wrap" Margin="0,6,0,0" FontWeight="SemiBold"/></StackPanel>
-                        </Border>
-                        <GroupBox Header="Chord finder" Margin="0,0,0,8">
-                            <StackPanel Margin="6">
-                                <WrapPanel><TextBlock Text="Root" VerticalAlignment="Center"/><ComboBox x:Name="ChordRootCombo" Width="64" Margin="4,0"/><TextBlock Text="Type" VerticalAlignment="Center"/><ComboBox x:Name="ChordTypeCombo" Width="96" Margin="4,0"/></WrapPanel>
-                                <ListBox x:Name="ChordResultList" Height="84" Margin="0,6,0,0"/>
-                                <WrapPanel Margin="0,6,0,0"><Button Content="Show" Click="ChordShow_Click"/><Button Content="Insert name" Click="ChordInsert_Click"/></WrapPanel>
-                            </StackPanel>
-                        </GroupBox>
-                        <GroupBox Header="Scale finder" Margin="0,0,0,8">
-                            <StackPanel Margin="6">
-                                <StackPanel Orientation="Horizontal"><TextBlock Text="Root" VerticalAlignment="Center"/><ComboBox x:Name="ScaleRootCombo" Width="64" Margin="4,0"/><TextBlock Text="Scale" VerticalAlignment="Center"/><ComboBox x:Name="ScaleNameCombo" Width="130" Margin="4,0"/></StackPanel>
-                                <TextBlock x:Name="ScaleResultText" Text="—" TextWrapping="Wrap" Margin="0,6,0,0"/>
-                                <Button Content="Show scale" Click="ScaleShow_Click" HorizontalAlignment="Left" Margin="0,6,0,0"/>
-                            </StackPanel>
-                        </GroupBox>
-                        <GroupBox Header="Selected track routing" Margin="0,0,0,8">
-                            <StackPanel Margin="6"><TextBlock Text="MIDI output device" Foreground="{DynamicResource MutedBrush}"/><ComboBox x:Name="SelectedOutputCombo" ItemsSource="{Binding MidiDevices}" DisplayMemberPath="Name" SelectedValuePath="DeviceId" SelectionChanged="SelectedOutputCombo_SelectionChanged"/><WrapPanel Margin="0,6,0,0"><Button Content="Test sound" Click="TestMidi_Click"/><Button Content="Refresh devices" Click="RefreshMidiDevices_Click"/></WrapPanel></StackPanel>
-                        </GroupBox>
-                        <GroupBox Header="Track FX" Margin="0,0,0,8" ToolTip="VST instruments and effects for the selected track, and the mixer.">
-                            <WrapPanel Margin="5"><Button Content="Open FX chain…" Click="OpenSelectedFxChain_Click" ToolTip="Open the selected track's FX (plug-in) chain" local:TooltipShortcuts.Command="Track.FxChain"/><Button Content="Mixer…" Click="OpenMixer_Click" ToolTip="Open the mixer" local:TooltipShortcuts.Command="View.Mixer"/></WrapPanel>
-                        </GroupBox>
-                        <GroupBox Header="Track mixer (detailed)">
-                            <DockPanel Margin="5">
-                                <TextBlock DockPanel.Dock="Bottom" Text="Drag a row up or down to reorder tracks." Foreground="{DynamicResource MutedBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,0"/>
+                <Grid x:Name="TrackModelHost" Grid.Row="2" Visibility="Collapsed">
+                    <!-- The track list model (not shown): the timeline and the score select tracks through TrackMixerGrid. -->
                                 <DataGrid x:Name="TrackMixerGrid" AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False" HeadersVisibility="Column" RowHeaderWidth="0" SelectionMode="Single" SelectionUnit="FullRow" SelectionChanged="TrackMixerGrid_SelectionChanged" CellEditEnding="TrackMixerGrid_CellEditEnding" Height="150" PreviewMouseLeftButtonDown="TrackMixerGrid_PreviewMouseLeftButtonDown" PreviewMouseMove="TrackMixerGrid_PreviewMouseMove" PreviewMouseLeftButtonUp="TrackMixerGrid_PreviewMouseLeftButtonUp" ToolTip="Drag a row up or down to reorder tracks">
                                     <DataGrid.Columns>
                                         <DataGridTextColumn Binding="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Width="90"><DataGridTextColumn.Header><TextBlock Text="Name" ToolTip="Track name"/></DataGridTextColumn.Header></DataGridTextColumn>
@@ -623,10 +634,7 @@
                                         <DataGridTextColumn Binding="{Binding Transpose, UpdateSourceTrigger=PropertyChanged}" Width="30"><DataGridTextColumn.Header><TextBlock Text="Tr" ToolTip="Transpose (semitones)"/></DataGridTextColumn.Header></DataGridTextColumn>
                                     </DataGrid.Columns>
                                 </DataGrid>
-                            </DockPanel>
-                        </GroupBox>
-                    </StackPanel>
-                </ScrollViewer>
+                </Grid>
             </Grid>
             <Canvas x:Name="ControllerFloatLayer" Grid.Row="0" Grid.Column="0" Grid.RowSpan="3" Grid.ColumnSpan="3"
                     Panel.ZIndex="50" ClipToBounds="False">
@@ -691,36 +699,6 @@
                                     <TextBlock x:Name="LoopCountBadge" Visibility="Collapsed" VerticalAlignment="Center" Margin="2,0,4,0" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
                                 </StackPanel>
                             </Border>
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0">
-                                <Button Style="{StaticResource TransportButton}" Width="26" Height="26" MinWidth="26" Padding="0" ToolTip="Zoom out" local:TooltipShortcuts.Command="View.ZoomOut" Click="ZoomOutButton_Click" AutomationProperties.Name="Zoom out">
-                                    <local:SvgIconView Icon="zoom_minus" Width="20" Height="20" IsHitTestVisible="False" ButtonHovered="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=Button}}"/>
-                                </Button>
-                                <ComboBox x:Name="ZoomCombo" Width="76" Height="26" ToolTip="Score zoom. Choose a preset or type 50–200%."
-                                          AutomationProperties.AutomationId="ZoomCombo" AutomationProperties.Name="Zoom"
-                                          Loaded="ZoomCombo_ReSync" IsVisibleChanged="ZoomCombo_VisibleReSync"
-                                          IsEditable="True" IsTextSearchEnabled="False"
-                                          SelectionChanged="ZoomCombo_Changed" LostFocus="ZoomCombo_LostFocus"
-                                          PreviewKeyDown="ZoomCombo_PreviewKeyDown">
-                                    <ComboBoxItem Content="Fit width"/><ComboBoxItem Content="50%"/><ComboBoxItem Content="60%"/>
-                                    <ComboBoxItem Content="75%"/><ComboBoxItem Content="80%"/><ComboBoxItem Content="90%"/>
-                                    <ComboBoxItem Content="100%"/><ComboBoxItem Content="110%"/><ComboBoxItem Content="125%"/>
-                                    <ComboBoxItem Content="150%"/><ComboBoxItem Content="175%"/><ComboBoxItem Content="200%"/>
-                                </ComboBox>
-                                <Button Style="{StaticResource TransportButton}" Width="26" Height="26" MinWidth="26" Padding="0" ToolTip="Zoom in" local:TooltipShortcuts.Command="View.ZoomIn" Click="ZoomInButton_Click" AutomationProperties.Name="Zoom in">
-                                    <local:SvgIconView Icon="zoom_plus" Width="20" Height="20" IsHitTestVisible="False" ButtonHovered="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=Button}}"/>
-                                </Button>
-                            </StackPanel>
-                            <Border Width="1" Height="20" Background="{DynamicResource BorderSoftBrush}" VerticalAlignment="Center" Margin="6,0"/>
-                            <TextBlock Text="Speed" FontSize="11" VerticalAlignment="Center" Margin="0,0,3,0" Foreground="{DynamicResource MutedBrush}" ToolTip="Playback speed"/>
-                            <ComboBox x:Name="SpeedCombo" Width="76" Height="26" ToolTip="Playback speed. Choose a preset or type 25–200%."
-                                      AutomationProperties.AutomationId="Transport.Speed" AutomationProperties.Name="Playback speed"
-                                      Loaded="SpeedCombo_ReSync" IsVisibleChanged="SpeedCombo_VisibleReSync"
-                                      IsEditable="True" IsTextSearchEnabled="False"
-                                      SelectionChanged="SpeedCombo_Changed" LostFocus="SpeedCombo_LostFocus"
-                                      PreviewKeyDown="SpeedCombo_PreviewKeyDown">
-                                <ComboBoxItem Content="50%"/><ComboBoxItem Content="75%"/><ComboBoxItem Content="100%"/>
-                                <ComboBoxItem Content="125%"/><ComboBoxItem Content="150%"/><ComboBoxItem Content="200%"/>
-                            </ComboBox>
                         </StackPanel>
                         <Popup x:Name="MetronomeSettingsPopup" PlacementTarget="{Binding ElementName=MetronomeButton}"
                                Placement="Bottom" StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade">

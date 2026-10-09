@@ -8,7 +8,7 @@ namespace TabForge;
 public static partial class SelfTest
 {
     /// <summary>
-    /// Score note menu, score empty-area menu and fretboard menu (docs/CONTEXT_MENU_AUDIT.md 5-7): the top-level layouts, the
+    /// Score note menu, score empty-area menu and fretboard menu: the top-level layouts, the
     /// paste items only with a clip, and a right-click inside the selection is recognised (so the selection is kept).
     /// </summary>
     private static void TestContextMenuLayouts()
@@ -34,10 +34,10 @@ public static partial class SelfTest
         Views.InstrumentMenuState Instrument(bool keyboard, bool drums) => new(keyboard, drums, "Guitar", "Fretboard", views,
             new[] { "C", "D" }, new[] { "Major", "Minor" }, null, true, false, false, true);
         var fretboard = Top(Views.InstrumentMenus.Build(Instrument(false, false), noKeys));
-        Check("fretboard menu: view, scale, note names, preview, left-handed, lock, settings (7 entries)",
-            string.Join("|", fretboard) == "Show this track as|Scale|Note names|Preview next notes|Left-handed|Lock fretboard size|Fretboard settings…", string.Join("|", fretboard));
-        Eq("keyboard menu: 6 entries (no left-handed)", 6, Top(Views.InstrumentMenus.Build(Instrument(true, false), noKeys)).Length);
-        Eq("drum pads menu: 4 entries", 4, Top(Views.InstrumentMenus.Build(Instrument(false, true), noKeys)).Length);
+        Check("fretboard menu: view, scale, note names, preview, left-handed, lock, position, settings (8 entries)",
+            string.Join("|", fretboard) == "Show this track as|Scale|Note names|Preview next notes|Left-handed|Lock fretboard size|Position|Fretboard settings…", string.Join("|", fretboard));
+        Eq("keyboard menu: 7 entries (no left-handed)", 7, Top(Views.InstrumentMenus.Build(Instrument(true, false), noKeys)).Length);
+        Eq("drum pads menu: 5 entries", 5, Top(Views.InstrumentMenus.Build(Instrument(false, true), noKeys)).Length);
 
         var editor = NewEditor(out _, out var selTrack);
         for (var i = 0; i < 3; i++) selTrack.Measures[0].Cells[i].Notes.Add(new TabNote { StringIndex = 0, Fret = 3, MidiValue = 67 });   // the cursor steps over real beats only
@@ -426,19 +426,19 @@ public static partial class SelfTest
         cells[2] = Beat(7);
         cells[15] = Beat(9);
         ed.SetPosition(0, 5, 1, false);
-        ed.CopyLastBeat();
+        ed.Effects.CopyLastBeat();
         Check("repeat beat: copies the previous beat onto the cursor slot, leaves slot 15 alone, one undo step",
             cells[5].Notes.Count == 1 && cells[5].Notes[0].Fret == 7 && cells[15].Notes[0].Fret == 9 && steps() == 1 && ed.SelectedCell > 5);
         var before = steps();
         ed.SetPosition(0, 1, 1, false);
-        ed.CopyLastBeat();
+        ed.Effects.CopyLastBeat();
         Check("repeat beat: nothing earlier to copy means no change and no undo step", cells[1].Notes.Count == 0 && steps() == before);
 
         // The shortcut id and the direct call give the same result.
         var (ed2, song2, _) = Make();
         song2.Tracks[0].Measures[0].Cells[2] = Beat(7);
         ed2.SetPosition(0, 5, 1, false);
-        ed2.TryRunNoteCommand("Note.RepeatBeat");
+        ed2.Effects.TryRunNoteCommand("Note.RepeatBeat");
         Check("repeat beat: the Note.RepeatBeat shortcut gives the same cell as CopyLastBeat",
             song2.Tracks[0].Measures[0].Cells[5].Notes.Count == 1 && song2.Tracks[0].Measures[0].Cells[5].Notes[0].Fret == 7);
 
@@ -449,7 +449,7 @@ public static partial class SelfTest
         bar3.CellsForVoice(1, create: true)[1] = Beat(12);
         ed3.SetActiveVoice(1);
         ed3.SetPosition(0, 4, 1, false);
-        ed3.CopyLastBeat();
+        ed3.Effects.CopyLastBeat();
         Check("repeat beat: follows the active voice (voice 2 copy, voice 1 unchanged)",
             bar3.Voice2Cells[4].Notes.Count == 1 && bar3.Voice2Cells[4].Notes[0].Fret == 12 && bar3.Cells[4].Notes.Count == 0);
 
@@ -464,30 +464,49 @@ public static partial class SelfTest
         var bar4 = song4.Tracks[0].Measures[0];
         bar4.Cells[0] = Beat(4);
         ed4.SetPosition(0, 0, 1, false);
-        ed4.TryRunNoteCommand("Note.DoubleDot");
+        ed4.Effects.TryRunNoteCommand("Note.DoubleDot");
         Check("double dot: sets two dots with exactly one undo step", bar4.Cells[0].Dots == 2 && steps4() == 1);
         ed4.PreventBarOverflow = true;
         bar4.Cells[0] = new TabCell { DurationDenominator = 1, Notes = { new TabNote { StringIndex = 1, Fret = 4 } } };
         var before4 = steps4();
-        ed4.SetDots(2);
+        ed4.Effects.SetDots(2);
         Check("double dot: refused when the beat would not fit the bar (CanSetDots), nothing captured",
-            !ed4.CanSetDots(2) && bar4.Cells[0].Dots == 0 && steps4() == before4);
+            !ed4.Effects.CanSetDots(2) && bar4.Cells[0].Dots == 0 && steps4() == before4);
+
+        // Dot toggles: the key ignores a stale toolbar value; the tool button removes an active dot.
+        var (edD, songD, _) = Make();
+        var barD = songD.Tracks[0].Measures[0];
+        barD.Cells[0] = Beat(4);
+        barD.Cells[0].Dots = 1;
+        edD.SetPosition(0, 0, 1, false);
+        edD.CurrentDots = 0;
+        edD.Effects.TryRunNoteCommand("Note.Dot");
+        Check("dot key: a dotted beat with a stale toolbar value goes to plain", barD.Cells[0].Dots == 0);
+        edD.Effects.TryRunNoteCommand("Note.Dot");
+        Check("dot key: plain goes to dotted (never double-dotted)", barD.Cells[0].Dots == 1);
+        edD.Effects.SetDots(0);
+        edD.Effects.SetDots(1);
+        edD.Effects.SetDots(1);
+        Check("dotted tool: clicking it on a dotted beat removes the dot", barD.Cells[0].Dots == 0);
+        edD.Effects.SetDots(2);
+        edD.Effects.SetDots(2);
+        Check("double-dotted tool: clicking it again removes the dots", barD.Cells[0].Dots == 0);
 
         // Repeat open / close: same change in every track, one undo step, the menu's count honoured.
         var (ed5, song5, steps5) = Make();
         ed5.SetPosition(1, 0, 1, false);
-        ed5.TryRunNoteCommand("Bar.RepeatOpen");
+        ed5.Effects.TryRunNoteCommand("Bar.RepeatOpen");
         Check("repeat open: toggles the bar in every track with one undo step",
             song5.Tracks.All(t => t.Measures[1].RepeatStart) && steps5() == 1);
-        ed5.TryRunNoteCommand("Bar.RepeatOpen");
+        ed5.Effects.TryRunNoteCommand("Bar.RepeatOpen");
         Check("repeat open: toggling again removes it everywhere", song5.Tracks.All(t => !t.Measures[1].RepeatStart) && steps5() == 2);
         ed5.SetPosition(2, 0, 1, false);
-        ed5.TryRunNoteCommand("Bar.RepeatClose");
+        ed5.Effects.TryRunNoteCommand("Bar.RepeatClose");
         Check("repeat close (shortcut): turns the end on with a count of at least 2 in every track",
             song5.Tracks.All(t => t.Measures[2].RepeatEnd && t.Measures[2].RepeatCount >= 2) && steps5() == 3);
-        ed5.ToggleRepeatClose();
+        ed5.Effects.ToggleRepeatClose();
         Check("repeat close: toggling off clears it", song5.Tracks.All(t => !t.Measures[2].RepeatEnd));
-        ed5.ToggleRepeatClose(4);
+        ed5.Effects.ToggleRepeatClose(4);
         Check("repeat close (menu, count from the prompt): same change with the chosen count",
             song5.Tracks.All(t => t.Measures[2].RepeatEnd && t.Measures[2].RepeatCount == 4) && steps5() == 5);
 
@@ -497,10 +516,10 @@ public static partial class SelfTest
         bar6.Cells[0] = Beat(1); bar6.Cells[3] = new TabCell { IsRest = true, DurationDenominator = 4 };
         bar6.CellsForVoice(1, create: true)[0] = Beat(8);
         ed6.SetPosition(0, 0, 1, false);
-        ed6.EmptyBar();
+        ed6.Effects.EmptyBar();
         Check("empty bar: clears the active voice, keeps the other voice, one undo step",
             bar6.Cells.All(c => c.Notes.Count == 0 && !c.IsRest) && bar6.Voice2Cells[0].Notes.Count == 1 && steps6() == 1);
-        ed6.EmptyBar();
+        ed6.Effects.EmptyBar();
         Check("empty bar: an already empty bar captures no undo step", steps6() == 1);
 
         // Note toggles and rhythm changes (A5-15 batch 2): the menu handler calls the editor method, the shortcut runs the
@@ -509,12 +528,11 @@ public static partial class SelfTest
             c.Staccato, c.Tenuto, c.Accent, string.Join(",", c.Notes.Select(n => $"{n.StringIndex}:{n.Fret}:{string.Join("+", n.Techniques.OrderBy(t => t))}")));
         var pairs = new (string Id, Action<Views.TabEditorControl> Menu)[]
         {
-            ("Note.Staccato", e => e.ToggleStaccato()), ("Note.Tenuto", e => e.ToggleTenuto()),
-            ("Note.Triplet", e => e.ToggleTriplet()), ("Note.Dot", e => e.ToggleDot()), ("Note.DoubleDot", e => e.SetDots(2)),
-            ("Note.Tie", e => e.ToggleTie()), ("Note.Rest", e => e.ToggleRest()), ("Note.Dead", e => e.ToggleDead()),
-            ("Note.Ghost", e => e.ToggleGhost()), ("Note.Accent", e => e.CycleAccent()),
-            ("Note.LetRing", e => e.ToggleTechnique(TechniqueNames.LetRing)), ("Note.PalmMute", e => e.ToggleTechnique(TechniqueNames.PalmMute)),
-            ("Note.Grace", e => e.ToggleTechnique("GraceBefore")),
+            ("Note.Staccato", e => e.Effects.ToggleStaccato()), ("Note.Tenuto", e => e.Effects.ToggleTenuto()),
+            ("Note.Triplet", e => e.Effects.ToggleTriplet()), ("Note.Dot", e => e.Effects.ToggleDot()), ("Note.DoubleDot", e => e.Effects.SetDots(2)),
+            ("Note.Tie", e => e.Effects.ToggleTie()), ("Note.Rest", e => e.Effects.ToggleRest()), ("Note.Dead", e => e.Effects.ToggleDead()),
+            ("Note.Ghost", e => e.Effects.ToggleGhost()), ("Note.Accent", e => e.Effects.SetAccent(1)),
+            ("Note.LetRing", e => e.Effects.ToggleTechnique(TechniqueNames.LetRing)), ("Note.PalmMute", e => e.Effects.ToggleTechnique(TechniqueNames.PalmMute)),
         };
         foreach (var (id, menu) in pairs)
         {
@@ -526,7 +544,7 @@ public static partial class SelfTest
                 e.SetPosition(0, 1, 1, false);
             }
             menu(em);
-            es.TryRunNoteCommand(id);
+            es.Effects.TryRunNoteCommand(id);
             Check($"{id}: menu and shortcut give the same beat, one undo step each",
                 Sig(sm.Tracks[0].Measures[0].Cells[1]) == Sig(ss.Tracks[0].Measures[0].Cells[1]) && stm() == 1 && sts() == 1,
                 $"menu={Sig(sm.Tracks[0].Measures[0].Cells[1])} ({stm()}) shortcut={Sig(ss.Tracks[0].Measures[0].Cells[1])} ({sts()})");
@@ -534,9 +552,9 @@ public static partial class SelfTest
         var (edd, sd, std) = Make();
         sd.Tracks[0].Measures[0].Cells[0] = Beat(5);
         edd.SetPosition(0, 0, 1, false);
-        edd.Longer();
+        edd.Effects.Longer();
         var afterLonger = sd.Tracks[0].Measures[0].Cells[0].DurationDenominator;
-        edd.Shorter(); edd.SetDuration(16);
+        edd.Effects.Shorter(); edd.Effects.SetDuration(16);
         Check("duration: longer/shorter/set each change the beat with one undo step",
             afterLonger == 4 && sd.Tracks[0].Measures[0].Cells[0].DurationDenominator == 16 && std() == 3,
             $"longer={afterLonger} final={sd.Tracks[0].Measures[0].Cells[0].DurationDenominator} steps={std()}");
@@ -632,7 +650,7 @@ public static partial class SelfTest
             string.Join(" | ", found.Take(5)));
     }
 
-    /// <summary>Dynamics are engraved only where the dynamic changes (and on the first note), and the layout audit finds no collision with lyrics, beat text or palm mutes.</summary>
+    /// <summary>Dynamics are engraved only where the dynamic changes (the default forte is unmarked), and the layout audit finds no collision with lyrics, beat text or palm mutes.</summary>
     private static void TestDynamicsEngraving()
     {
         var song = new SongProject { Title = "Dynamics", Tempo = 100 };
@@ -648,8 +666,8 @@ public static partial class SelfTest
         cells[1].Lyrics = "la"; cells[2].Lyrics = "ooh-ooh"; cells[5].Lyrics = "yeah"; cells[7].Text = "big hit"; cells[14].Lyrics = "end";
 
         var marks = ScorePassages.BuildDynamicMarks(lead);
-        var expected = new (int Cell, string Name)[] { (0, "f"), (2, "p"), (5, "mf"), (7, "ff"), (14, "pp") };
-        Check("dynamics are marked on the first note and only where the dynamic changes",
+        var expected = new (int Cell, string Name)[] { (2, "p"), (5, "mf"), (7, "ff"), (14, "pp") };
+        Check("dynamics are marked only where the dynamic changes (the default forte is unmarked)",
             marks.Count == expected.Length && expected.All(e => marks.TryGetValue(cells[e.Cell], out var n) && n == e.Name),
             string.Join(",", marks.Values));
         Check("a repeated dynamic is not marked again", !marks.ContainsKey(cells[1]) && !marks.ContainsKey(cells[6]) && !marks.ContainsKey(cells[15]));
@@ -662,7 +680,7 @@ public static partial class SelfTest
         };
         bool Engraves(bool show)
         {
-            var editor = new Views.TabEditorControl { Project = song, SelectedTrackIndex = 0, DarkPaper = false, HideCursor = true, Appearance = { ShowDynamics = show } };
+            var editor = new Views.TabEditorControl { Project = song, SelectedTrackIndex = 0, Appearance = { DarkPaper = false, ShowDynamics = show }, HideCursor = true };
             editor.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
             editor.Arrange(new System.Windows.Rect(editor.DesiredSize));
             editor.UpdateLayout();
@@ -714,7 +732,7 @@ public static partial class SelfTest
         cells[1] = new TabCell { DurationDenominator = 8, WhammyPoints = { new BendPointModel { Offset = 0, Value = 0 }, new BendPointModel { Offset = 30, Value = -4 }, new BendPointModel { Offset = 60, Value = 0 } },
             Notes = { new TabNote { StringIndex = 2, Fret = 5, IsGraceNote = true }, new TabNote { StringIndex = 2, Fret = 7, Techniques = { "TremBar", "Trill", "LetRing" }, LeftHandFinger = 1, RightHandFinger = 2 } } };
         cells[2] = new TabCell { DurationDenominator = 4, Accent = 2, Notes = { new TabNote { StringIndex = 3, Fret = 9, Ghost = true, Techniques = { "WahOpen", "ArpeggioDown", "PickUp", "LegatoSlide" } } } };
-        var editor = new Views.TabEditorControl { Project = project, SelectedTrackIndex = 0, DarkPaper = false };
+        var editor = new Views.TabEditorControl { Project = project, SelectedTrackIndex = 0, Appearance = { DarkPaper = false } };
         try
         {
             editor.Measure(new System.Windows.Size(1000, 4000));
@@ -756,7 +774,7 @@ public static partial class SelfTest
         var project = Presets.TemplateFactory.Create("Blank");
         var editor = new Views.TabEditorControl { Project = project, SelectedTrackIndex = 0 };
         Check("editor describes its cursor for screen readers",
-            editor.DescribeCursor().Contains("bar 1") && editor.DescribeCursor().Contains("string 1"));
+            editor.Describer.Cursor().Contains("bar 1") && editor.Describer.Cursor().Contains("string 1"));
         var path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "tf-pdf-" + Guid.NewGuid().ToString("N") + ".pdf");
         try
         {

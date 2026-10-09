@@ -27,11 +27,11 @@ internal sealed partial class ScoreToMidiCompiler
         var importedGraceNotes = cell.Notes.Where(candidate => candidate.IsGraceNote).ToArray();
         // A before-the-beat grace needs room before the beat: at the very start of the song there is none, so it
         // plays on the beat instead (taking a slice off the principal note) rather than before time zero.
-        var beforeBeatFits = onset >= Math.Max(20, GraceSlots * slotMs);
+        var beforeBeatFits = onset >= Math.Max(20, importedGraceNotes.Select(GraceLengthSlots).DefaultIfEmpty(GraceSlots).Max() * slotMs);
         var graceDelaySlots = importedGraceNotes.Select(g => GraceDelaySlots(g, beforeBeatFits)).DefaultIfEmpty(0).Max();
         if (note.IsGraceNote)
         {
-            var graceMs = Math.Max(20, GraceSlots * slotMs);
+            var graceMs = Math.Max(20, GraceLengthSlots(note) * slotMs);
             noteMs = graceMs;
             if (note.GraceBeforeBeat && beforeBeatFits)
             {
@@ -132,7 +132,8 @@ internal sealed partial class ScoreToMidiCompiler
             StringIndex = note.StringIndex, Fret = note.Fret, Midi = midi, Velocity = velocity,
             Dead = note.Dead, Ghost = note.Ghost, LetRing = t.Contains("LetRing"),
             FadeIn = t.Contains("FadeIn"), ChordName = cell.ChordName,
-            Technique = TechniqueTag.From(t)
+            Technique = TechniqueTag.From(t),
+            Strum = TechniqueTag.StrumOf(cell.Notes)
         };
         _timeline.Notes.Add(noteEvent);
 
@@ -211,7 +212,11 @@ internal sealed partial class ScoreToMidiCompiler
 
     /// <summary>How far a grace note pushes the principal note later: only an on-the-beat grace does.</summary>
     private static double GraceDelaySlots(TabNote graceNote, bool beforeBeatFits) =>
-        (graceNote.GraceBeforeBeat && beforeBeatFits) || graceNote.Dead ? 0 : GraceSlots;
+        (graceNote.GraceBeforeBeat && beforeBeatFits) || graceNote.Dead ? 0 : GraceLengthSlots(graceNote);
+
+    /// <summary>The written length of a grace note in sixteenth slots; the default when none is set; a .gp file reads every grace back as an eighth (2 slots), which also keeps the default.</summary>
+    // A grace note always sounds for the short standard length: GP files cannot keep a written grace length, so playback never depends on it.
+    private static double GraceLengthSlots(TabNote graceNote) => GraceSlots;
 
     /// <summary>
     /// Grace-note transition: a grace note that slides or bends (grace bend) moves to the principal note's pitch.

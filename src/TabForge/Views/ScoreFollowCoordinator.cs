@@ -7,6 +7,7 @@ namespace TabForge.Views;
 /// Keeps the played music in view while playback runs (vertical system follow, horizontal row follow)
 /// and stops following when the user scrolls by hand. Owns all follow state and its render-cadence
 /// timer. It only observes playback (bar/fraction/paused come from the host) and never affects timing.
+/// While stopped it also brings the cursor bar back on screen after any edit or cursor move.
 /// </summary>
 internal sealed class ScoreFollowCoordinator
 {
@@ -32,6 +33,9 @@ internal sealed class ScoreFollowCoordinator
     private DateTime _setAt = DateTime.MinValue;
     private DateTime _ignoreScrollUntil = DateTime.MinValue;
     private DateTime _lastFollowCheck = DateTime.MinValue;
+    private int _lastBar = -1;
+    private double _lastExtent = -1;
+    private bool _followPending;
 
     public ScoreFollowCoordinator(ScrollViewer scroll, TabEditorControl editor, Func<bool> isPlayingVisual,
         Func<bool> isPaused, Func<int> playheadBar, Func<double> playheadFraction, Func<int> barCount,
@@ -46,6 +50,34 @@ internal sealed class ScoreFollowCoordinator
         _barCount = barCount;
         _settings = settings;
         _timer.Tick += (_, _) => Tick();
+        // Any cursor move or edit (typing with auto-advance, paste, bar insert/delete, undo, a relayout) keeps the cursor bar on screen.
+        _editor.Edited += (_, _) => KeepCursorInSight();
+        _editor.SelectionChanged += (_, _) => KeepCursorInSight();
+    }
+
+    private bool _sightPending;
+
+    /// <summary>
+    /// Once the current action is done (and laid out), scrolls to the cursor bar when less than a quarter of its system is on
+    /// screen. Playback has its own follow; one-line mode scrolls on keys (MainWindow.ScrollToCursor).
+    /// </summary>
+    public void KeepCursorInSight()
+    {
+        if (_sightPending) return;
+        _sightPending = true;
+        _scroll.Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, () =>
+        {
+            _sightPending = false;
+            if (_isPlayingVisual() || _editor.HorizontalScroll || _editor.Track is not { Measures.Count: > 0 } || _scroll.ViewportHeight <= 1) return;
+            var top = _editor.SystemTopForMeasure(_editor.SelectedMeasure);
+            var height = _editor.SystemHeightNow;
+            var shown = Math.Min(top + height, _scroll.VerticalOffset + _scroll.ViewportHeight) - Math.Max(top, _scroll.VerticalOffset);
+            var quarter = Math.Min(height, _scroll.ViewportHeight) / 4;
+            if (shown >= quarter) return;
+            // The usual target keeps headings above the system in view; a pane too short for both shows the system itself.
+            var offset = _editor.ScrollOffsetForMeasure(_editor.SelectedMeasure);
+            JumpTo(top < offset || top + quarter > offset + _scroll.ViewportHeight ? top : offset);
+        });
     }
 
     public string Mode { get; private set; } = FollowModes.Smooth;
@@ -85,22 +117,35 @@ internal sealed class ScoreFollowCoordinator
     /// <summary>Stops any pending smooth scroll (pause, stop, tab switch, close).</summary>
     public void Halt()
     {
+        _glideAt = DateTime.MinValue;
         _timer.Stop();
         _verticalTarget = -1;
         _horizontalTarget = -1;
+        _followPending = false;
     }
 
-    /// <summary>A fresh play: follow again from the current row.</summary>
+    /// <summary>A fresh play, or a playing song shown again (tab switch back): follow again from its playhead.</summary>
     public void ResetForPlayback()
     {
         Halt();
         _following = true;
         _horizontalSystem = -1;
+        _lastBar = -1;
         _lastFollowCheck = DateTime.MinValue;
+        ArmSnap();
     }
 
+    // A relayout, zoom, tab or track switch puts the page at the playhead in one step: turns inside this window jump, not glide.
+    private DateTime _snapUntil = DateTime.MinValue;
+    private void ArmSnap() => _snapUntil = DateTime.UtcNow.AddMilliseconds(600);
+    private bool Snapping => DateTime.UtcNow < _snapUntil;
+
     /// <summary>Resuming from pause re-enables following after a manual scroll.</summary>
-    public void Resume() => _following = true;
+    public void Resume()
+    {
+        if (!_following) Services.Trace.Write("ui", "follow resumed by play");
+        _following = true;
+    }
 
     /// <summary>Forget the row used for horizontal follow (playback stopped, finished or re-attached).</summary>
     public void ResetRow() => _horizontalSystem = -1;
@@ -117,12 +162,48 @@ internal sealed class ScoreFollowCoordinator
     public void OnPlayheadBar(int bar)
     {
         if (Mode == FollowModes.Off || !_isPlayingVisual() || _isPaused()) return;
+        if (bar >= 0)
+        {
+            // A loop wrap, repeat or seek reads as a backward or non-contiguous bar: follow the playhead again.
+            if (!_following && _lastBar >= 0 && (bar < _lastBar || bar > _lastBar + 1))
+            {
+                _following = true;
+                Services.Trace.Write("ui", $"follow resumed: playhead moved to bar {bar + 1}");
+            }
+            _lastBar = bar;
+        }
+        // A relayout moves the systems under the playhead: forget the cached row and targets.
+        if (Math.Abs(_scroll.ExtentHeight - _lastExtent) >= 0.5)
+        {
+            _lastExtent = _scroll.ExtentHeight;
+            ForgetLayoutCache();
+        }
         var now = DateTime.UtcNow;
-        if ((now - _lastFollowCheck).TotalMilliseconds < 50) return;
+        // A check inside the 50 ms window is kept and applied by the next render tick, not dropped.
+        if ((now - _lastFollowCheck).TotalMilliseconds < 50)
+        {
+            _followPending = true;
+            _timer.Start();
+            return;
+        }
         _lastFollowCheck = now;
+        ApplyPlayhead(bar);
+    }
+
+    private void ApplyPlayhead(int bar)
+    {
         if (Continuous) { QueueSmoothTurns(bar); return; }
         FollowHorizontally(bar);
         QueueVertical(bar);
+    }
+
+    private void ForgetLayoutCache()
+    {
+        ArmSnap();
+        _horizontalSystem = -1;
+        _horizontalTarget = -1;
+        _verticalTarget = -1;
+        _lastFollowCheck = DateTime.MinValue;
     }
 
     /// <summary>True while playback follow is armed (a manual scroll or Off mode clears it).</summary>
@@ -143,6 +224,7 @@ internal sealed class ScoreFollowCoordinator
         _layoutPendingSince = now;
         _ignoreScrollUntil = now.AddMilliseconds(500);
         _horizontalSystem = -1;
+        ArmSnap();
         Halt();
         _lastFollowCheck = DateTime.MinValue;
     }
@@ -159,6 +241,7 @@ internal sealed class ScoreFollowCoordinator
     {
         _layoutPending = false;
         _ignoreScrollUntil = DateTime.UtcNow.AddMilliseconds(600);
+        ArmSnap();
         _following = _followingBeforeLayout;
         _horizontalSystem = -1;
         _horizontalTarget = -1;
@@ -192,6 +275,7 @@ internal sealed class ScoreFollowCoordinator
             (_setHorizontalOffset < 0 || Math.Abs(e.HorizontalOffset - _setHorizontalOffset) >= 2);
         if (manualVertical || manualHorizontal)
         {
+            if (_following) Services.Trace.Write("ui", "follow paused by a manual scroll");
             _following = false;
             Halt();
         }
@@ -220,6 +304,7 @@ internal sealed class ScoreFollowCoordinator
     /// <summary>Queues a vertical scroll only when the active system leaves its comfortable viewport band.</summary>
     private void QueueVertical(int bar)
     {
+        _verticalTarget = -1;
         if (!CanFollowVertically || bar < 0) return;
         if (_stopAtEnd && EndOfScoreVisible(Math.Max(1, _barCount()), bar)) return;
         if (NextVerticalOffset(bar) is not double target) return;
@@ -233,9 +318,18 @@ internal sealed class ScoreFollowCoordinator
         else _timer.Start();
     }
 
+    internal void PumpForTest() => Tick();
+
     /// <summary>Animates a threshold-triggered vertical follow target at the render cadence.</summary>
     private void Tick()
     {
+        if (_followPending)
+        {
+            if ((DateTime.UtcNow - _lastFollowCheck).TotalMilliseconds < 50) return;
+            _followPending = false;
+            _lastFollowCheck = DateTime.UtcNow;
+            ApplyPlayhead(_playheadBar());
+        }
         if (Continuous) { ContinuousTick(); return; }
         var bar = _playheadBar();
         if (!CanFollowVertically || bar < 0 || (_stopAtEnd && EndOfScoreVisible(Math.Max(1, _barCount()), bar)))
@@ -243,16 +337,14 @@ internal sealed class ScoreFollowCoordinator
             Halt();
             return;
         }
-        if (NextVerticalOffset(bar) is double nextTarget) _verticalTarget = nextTarget;
+        // A target the playhead no longer needs stops the ease at once, instead of gliding to a stale target.
+        _verticalTarget = NextVerticalOffset(bar) ?? -1;
         if (_verticalTarget < 0) { _timer.Stop(); return; }
 
         var offset = _scroll.VerticalOffset;
         var delta = _verticalTarget - offset;
         if (Math.Abs(delta) < 0.5) { Halt(); return; }
-        // Ease toward the target without scrolling on each tiny playhead movement.
-        var step = delta * 0.22;
-        if (Math.Abs(step) < 0.6) step = Math.Sign(delta) * 0.6;
-        SetOffset(offset + step);
+        SetOffset(VerticalGlideNext(offset, _verticalTarget));
     }
 
     // Smooth page turn: the same half-page (horizontal) and next-line (vertical) turns as the default
@@ -262,7 +354,7 @@ internal sealed class ScoreFollowCoordinator
         if (!_following || bar < 0) return;
         var settings = _settings();
         if (settings.HorizontalFollow && _scroll.ViewportWidth > 1 &&
-            _editor.PlaybackHorizontalGeometry(bar, _playheadFraction()) is { } row)
+            _editor.Playback.HorizontalGeometry(bar, _playheadFraction()) is { } row)
         {
             var from = _horizontalTarget >= 0 ? _horizontalTarget : _scroll.HorizontalOffset;
             if (_horizontalSystem >= 0 && row.SystemIndex != _horizontalSystem) from = 0; // new line starts at the left
@@ -289,13 +381,14 @@ internal sealed class ScoreFollowCoordinator
         var moving = false;
         if (_horizontalTarget >= 0)
         {
-            var next = Glide(_scroll.HorizontalOffset, _horizontalTarget);
+            var next = Snapping ? null : Glide(_scroll.HorizontalOffset, _horizontalTarget);
             if (next is double x) { SetHorizontalOffset(x); moving = true; } else { SetHorizontalOffset(_horizontalTarget); _horizontalTarget = -1; }
         }
         if (_verticalTarget >= 0)
         {
-            var next = Glide(_scroll.VerticalOffset, _verticalTarget);
-            if (next is double y) { SetOffset(y); moving = true; } else { SetOffset(_verticalTarget); _verticalTarget = -1; }
+            var y = VerticalGlideNext(_scroll.VerticalOffset, _verticalTarget);
+            SetOffset(y);
+            if (y == _verticalTarget) _verticalTarget = -1; else moving = true;
         }
         if (!moving) _timer.Stop(); // idle between turns: no per-frame work
     }
@@ -310,6 +403,18 @@ internal sealed class ScoreFollowCoordinator
         return current + step;
     }
 
+    // Vertical turns glide by elapsed time (a turn lands in ~250 ms at any frame rate), not by frame count.
+    private DateTime _glideAt = DateTime.MinValue;
+
+    private double VerticalGlideNext(double current, double target)
+    {
+        if (Snapping) return target;
+        var now = DateTime.UtcNow;
+        var dt = _glideAt == DateTime.MinValue ? 1.0 / 60 : Math.Min((now - _glideAt).TotalSeconds, 0.1);
+        _glideAt = now;
+        return ScoreVerticalFollow.GlideStep(current, target, dt);
+    }
+
     private double? NextVerticalOffset(int bar)
     {
         var viewport = _scroll.ViewportHeight;
@@ -317,6 +422,14 @@ internal sealed class ScoreFollowCoordinator
         return ScoreVerticalFollow.NextOffset(_scroll.VerticalOffset, viewport,
             _editor.SystemTopForMeasure(bar), _editor.SystemHeightNow, _scroll.ExtentHeight,
             _marginPercent, _settings().VerticalTriggerPercent);
+    }
+
+    /// <summary>True when the whole system holding <paramref name="bar"/> is inside the score viewport (keyboard moves scroll only when it is not).</summary>
+    public bool BarInView(int bar)
+    {
+        var top = _editor.SystemTopForMeasure(bar);
+        var offset = _scroll.VerticalOffset;
+        return top >= offset && top + _editor.SystemHeightNow <= offset + _scroll.ViewportHeight;
     }
 
     /// <summary>True once the last system fits entirely in the usable score viewport.</summary>
@@ -338,7 +451,7 @@ internal sealed class ScoreFollowCoordinator
     {
         if (!_settings().HorizontalFollow || !_following || !_isPlayingVisual() || _isPaused() || bar < 0 || _scroll.ViewportWidth <= 1)
             return;
-        if (_editor.PlaybackHorizontalGeometry(bar, _playheadFraction()) is not { } row) return;
+        if (_editor.Playback.HorizontalGeometry(bar, _playheadFraction()) is not { } row) return;
 
         var offset = _scroll.HorizontalOffset;
         if (_horizontalSystem >= 0 && row.SystemIndex != _horizontalSystem)
@@ -358,16 +471,17 @@ internal sealed class ScoreFollowCoordinator
     private void SetOffset(double y)
     {
         y = Math.Max(0, y);
-        _setOffset = y;
-        _setAt = DateTime.UtcNow;
         _scroll.ScrollToVerticalOffset(y);
+        // The viewer stops at its extent, which can be behind the request: remember the offset it will show.
+        _setOffset = Math.Min(y, Math.Max(0, _scroll.ExtentHeight - _scroll.ViewportHeight));
+        _setAt = DateTime.UtcNow;
     }
 
     private void SetHorizontalOffset(double x)
     {
         x = Math.Max(0, x);
-        _setHorizontalOffset = x;
-        _setAt = DateTime.UtcNow;
         _scroll.ScrollToHorizontalOffset(x);
+        _setHorizontalOffset = Math.Min(x, Math.Max(0, _scroll.ExtentWidth - _scroll.ViewportWidth));
+        _setAt = DateTime.UtcNow;
     }
 }

@@ -34,7 +34,13 @@ internal sealed class BarRangePrompt : IDisposable
     /// <summary>Asks what to do; null on Cancel / Esc. Each owner keeps its own hidden reusable window.</summary>
     public BarRangeAnswer? Ask(string text, BarRangeAction preselect, bool allTracks)
     {
-        if (_disposed || _showing || !_host.Owner.IsLoaded) return null;
+        if (_disposed || !_host.Owner.IsLoaded) return null;
+        if (_showing)
+        {
+            // The open prompt's modal loop is running: bring it forward rather than stacking a second one.
+            _dialog?.BringToFront();
+            return null;
+        }
         _showing = true;
         try
         {

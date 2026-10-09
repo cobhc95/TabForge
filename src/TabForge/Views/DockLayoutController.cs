@@ -19,14 +19,15 @@ internal interface IDockLayoutHost : IPaneHost
 // Owns: saved and built-in workspace layouts (the Layouts menu), the Panels menu, the side-panel hide/show toggle,
 //   the fretboard pane's height limits and size lock, and full screen.
 // Does not own: the dock workspace itself (DockWorkspace), panel registration, layout persistence on change.
-// Tests: TestFretboardPaneSize, TestDockRatioNotRewrittenByAutoFit, TestViewMenuWording.
+//   The Band layout (Band view and timeline only) and the View > Band view toggle.
+// Tests: TestFretboardPaneSize, TestDockRatioNotRewrittenByAutoFit, TestViewMenuWording, TestBandLayoutPreset, TestBandNeverDocked.
 internal sealed class DockLayoutController
 {
-    public static readonly string[] BuiltInLayoutNames = { "Compose", "Practice", "Mix" };
+    public static readonly string[] BuiltInLayoutNames = { "Compose", "Practice", "Mix", "Band" };
     private static readonly string[] AllDockPanelIds =
-        { "tools", "structure", "rhythm", "layout", "sections", "practice", "playback", "instrument", "timeline" };
-    /// <summary>The panels on the side (tools, structure, rhythm, layout, sections, practice, metronome).</summary>
-    private static readonly string[] SidePanelIds = { "tools", "structure", "rhythm", "layout", "sections", "practice", "playback" };
+        { "tools", "structure", "rhythm", "layout", "sections", "instrument", "timeline", "band" };
+    /// <summary>The panels on the side (tools, structure, rhythm, layout, sections).</summary>
+    private static readonly string[] SidePanelIds = { "tools", "structure", "rhythm", "layout", "sections" };
     private const int MaxSavedLayouts = 24;
 
     private readonly IDockLayoutHost _host;
@@ -46,12 +47,12 @@ internal sealed class DockLayoutController
 
     // ---------- saved workspace layouts ----------
 
-    private static DockWorkspaceState BuiltInLayout(string name)
+    internal static DockWorkspaceState BuiltInLayout(string name)
     {
         static DockNodeState Tools() => DockWorkspace.Tabs("default-tool-palette", "tools", "structure", "rhythm", "layout");
         static DockNodeState Side(string selected, params string[] ids)
         {
-            var host = DockWorkspace.Tabs("default-sections-practice-playback", ids);
+            var host = DockWorkspace.Tabs("default-sections-practice", ids);
             host.SelectedPanel = selected;
             return host;
         }
@@ -64,13 +65,15 @@ internal sealed class DockLayoutController
             "Compose" => DockWorkspace.Split("Vertical", 0.86,
                 DockWorkspace.Split("Horizontal", 0.78, DockWorkspace.Split("Vertical", 0.68, score, instrument), Tools()),
                 timeline),
-            // Score/tab + fretboard large; transport and practice panels visible; arrangement and mixer window closed.
+            // Score/tab + fretboard large; sections panel visible; arrangement and mixer window closed.
             "Practice" => DockWorkspace.Split("Horizontal", 0.78,
                 DockWorkspace.Split("Vertical", 0.60, score, instrument),
-                Side("playback", "playback", "sections", "practice")),
+                Side("sections", "sections")),
+            // Band view and arrangement only: no score, no fretboard pane, no side panel.
+            "Band" => DockWorkspace.Split("Vertical", 0.80, DockWorkspace.Tabs("default-band", "band"), timeline),
             // Arrangement + mixer large; score small.
             _ => DockWorkspace.Split("Vertical", 0.30, score,
-                DockWorkspace.Split("Horizontal", 0.74, timeline, Side("practice", "practice", "sections", "playback")))
+                DockWorkspace.Split("Horizontal", 0.74, timeline, Side("sections", "sections")))
         };
         var state = new DockWorkspaceState { Root = root };
         var present = DockWorkspace.PanelsOf(state).ToHashSet(StringComparer.Ordinal);
@@ -112,6 +115,7 @@ internal sealed class DockLayoutController
         LayoutsMenu.Items.Add(Entry("Compose", "View.LayoutCompose"));
         LayoutsMenu.Items.Add(Entry("Practice", "View.LayoutPractice"));
         LayoutsMenu.Items.Add(Entry("Mix", "View.LayoutMix"));
+        LayoutsMenu.Items.Add(Entry("Band", "View.BandView"));
         var custom = Settings.SavedLayouts.Where(l => !BuiltInLayoutNames.Contains(l.Name, StringComparer.OrdinalIgnoreCase)).ToList();
         if (custom.Count > 0) LayoutsMenu.Items.Add(new Separator());
         foreach (var l in custom) LayoutsMenu.Items.Add(Entry(l.Name, null));
@@ -143,6 +147,48 @@ internal sealed class DockLayoutController
             _host.SetStatus("Built-in layouts reset");
         };
         LayoutsMenu.Items.Add(reset);
+    }
+
+    /// <summary>Settings and the instrument menu: puts the pane above (default) or below the score and saves the choice.</summary>
+    public void SetInstrumentPosition(bool bottom)
+    {
+        Settings.Appearance.FretboardAtBottom = bottom;
+        _host.Dock?.SetInstrumentPosition(bottom);
+        _host.SaveSettings();
+    }
+
+    /// <summary>The bindable View.FretboardPosition command.</summary>
+    public void ToggleInstrumentPosition()
+    {
+        SetInstrumentPosition(!Settings.Appearance.FretboardAtBottom);
+        _host.SetStatus(Settings.Appearance.FretboardAtBottom ? "Fretboard below the score" : "Fretboard above the score");
+    }
+
+    private (string? Name, DockWorkspaceState State)? _layoutBeforeBand;
+
+    /// <summary>View > Band view and View.BandView: enters the Band layout, or goes back to the exact panels it replaced.</summary>
+    public void ToggleBandView()
+    {
+        if (_host.Dock is not { } dock) return;
+        if (dock.IsPanelVisible("band"))
+        {
+            if (string.Equals(Settings.LastLayout, "Band", StringComparison.OrdinalIgnoreCase)) LeaveBandLayout(dock);
+            else dock.SetPanelVisible("band", false);   // docked by hand in another layout: only close it
+            return;
+        }
+        // The current panels as they are (the first-start layout has no name), not the named layout rebuilt.
+        _layoutBeforeBand = string.Equals(Settings.LastLayout, "Band", StringComparison.OrdinalIgnoreCase) ? null : (Settings.LastLayout, dock.CaptureLayout());
+        SwitchLayout("Band");
+    }
+
+    /// <summary>Puts back the panels the Band layout replaced, or the Compose layout when the app started in it.</summary>
+    private void LeaveBandLayout(DockWorkspace dock)
+    {
+        if (_layoutBeforeBand is not { } before) { SwitchLayout("Compose"); return; }
+        Settings.LastLayout = before.Name;
+        dock.ApplyLayout(before.State);
+        _host.SaveSettings();
+        _host.SetStatus(before.Name is { } name ? $"Layout: {name}" : "Band view closed");
     }
 
     /// <summary>Instantly applies a layout (panels, dock sizes, window state); documents are not touched.</summary>
@@ -201,14 +247,16 @@ internal sealed class DockLayoutController
         foreach (var (id, title) in new[]
         {
             ("tools", "Tools"), ("structure", "Structure"), ("rhythm", "Rhythm"), ("layout", "Layout"),
-            ("sections", "Sections"), ("practice", "Practice / Mixer"), ("playback", "Zoom & speed"),
-            ("instrument", "Fretboard"), ("timeline", "Arrangement")
+            ("sections", "Sections"),
+            ("instrument", "Fretboard"), ("timeline", "Arrangement"), ("band", "Band view")
         })
         {
             var item = new MenuItem { Header = title, IsCheckable = true, IsChecked = true, Tag = id };
             item.Click += (_, _) =>
             {
-                if (item.Tag is string panelId) _host.Dock?.SetPanelVisible(panelId, item.IsChecked);
+                // Band view has its own layout: the Panels entry switches to it and back, never docks it into this one.
+                if (item.Tag is "band") ToggleBandView();
+                else if (item.Tag is string panelId) _host.Dock?.SetPanelVisible(panelId, item.IsChecked);
                 RefreshDockPanelsMenu();
             };
             menu.Items.Add(item);
@@ -216,9 +264,27 @@ internal sealed class DockLayoutController
         RefreshDockPanelsMenu();
     }
 
+    /// <summary>True when a built layout has neither the score nor the Band view (an empty workspace before the first restore is not one): closing the Band view in the Band layout leaves that.</summary>
+    internal static bool NeedsScoreBack(DockWorkspaceState state)
+    {
+        static bool HasEditor(DockNodeState? node) => node is not null && (node.Kind == "editor" || HasEditor(node.First) || HasEditor(node.Second));
+        return state.Root is not null && !HasEditor(state.Root) && !DockWorkspace.PanelsOf(state).Contains("band");
+    }
+
+    private bool _leavingBand;
+
     public void RefreshDockPanelsMenu()
     {
         if (_host.Dock is not { } dock) return;
+        if (!_leavingBand && NeedsScoreBack(dock.CaptureLayout()))
+        {
+            _leavingBand = true;   // closed from the Band layout: the layout before it comes back, after this change has settled
+            _host.Window.Dispatcher.BeginInvoke(() =>
+            {
+                try { LeaveBandLayout(dock); }
+                finally { _leavingBand = false; }
+            });
+        }
         foreach (var item in _host.DockPanelsMenu.Items.OfType<MenuItem>())
             if (item.Tag is string id) item.IsChecked = dock.IsPanelVisible(id);
     }
@@ -279,6 +345,19 @@ internal sealed class DockLayoutController
     {
         _host.Dock?.SetPanelContentMinHeight("instrument", _host.Instrument.RequiredHeight + HostBorder);
         ApplyInstrumentMaxHeight();
+        // A locked pane takes the saved height of the view now on screen (keyboard or fretboard).
+        if (Settings.Appearance.LockInstrumentSize) ApplyInstrumentSizeLock();
+    }
+
+    /// <summary>The locked pane height of the view on screen: the keyboard's own value for a keyboard track, the fretboard's otherwise.</summary>
+    private double SavedPaneHeight
+    {
+        get => _host.Instrument.ShowsKeyboard ? Settings.Appearance.KeyboardPaneHeight : Settings.Appearance.InstrumentPaneHeight;
+        set
+        {
+            if (_host.Instrument.ShowsKeyboard) Settings.Appearance.KeyboardPaneHeight = value;
+            else Settings.Appearance.InstrumentPaneHeight = value;
+        }
     }
 
     /// <summary>The fretboard pane cannot grow past its maximum stretch (no empty space above and below the board).</summary>
@@ -296,16 +375,16 @@ internal sealed class DockLayoutController
         if (_host.Dock is not { } dock) return;
         var appearance = Settings.Appearance;
         if (!appearance.LockInstrumentSize) { dock.SetPanelFixedHeight("instrument", null); return; }
-        if (appearance.InstrumentPaneHeight > 0)
+        if (SavedPaneHeight > 0)
         {
-            dock.SetPanelFixedHeight("instrument", Math.Max(appearance.InstrumentPaneHeight, _host.Instrument.RequiredHeight + HostBorder));
+            dock.SetPanelFixedHeight("instrument", Math.Max(SavedPaneHeight, _host.Instrument.RequiredHeight + HostBorder));
             return;
         }
         _host.Window.Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () =>
         {
-            if (!Settings.Appearance.LockInstrumentSize || Settings.Appearance.InstrumentPaneHeight > 0) return;
-            // Fresh profile: the "medium" size computed from the size model (about 1.1x natural), not the dock's split ratio.
-            Settings.Appearance.InstrumentPaneHeight = Math.Ceiling(_host.Instrument.MediumHeight() + HostBorder);
+            if (!Settings.Appearance.LockInstrumentSize || SavedPaneHeight > 0) return;
+            // Fresh profile: the "medium" size computed from the size model (natural size at the score's scale), not the dock's split ratio.
+            SavedPaneHeight = Math.Ceiling(_host.Instrument.MediumHeight() + HostBorder);
             ApplyInstrumentSizeLock();
             _host.SaveSettings();
         });
@@ -318,7 +397,7 @@ internal sealed class DockLayoutController
         appearance.LockInstrumentSize = !appearance.LockInstrumentSize;
         // Locking keeps the size the pane has now (the size the user chose while unlocked).
         if (appearance.LockInstrumentSize && _host.InstrumentHost.ActualHeight > 0)
-            appearance.InstrumentPaneHeight = Math.Ceiling(_host.InstrumentHost.ActualHeight);
+            SavedPaneHeight = Math.Ceiling(_host.InstrumentHost.ActualHeight);
         ApplyInstrumentSizeLock();
         _host.SaveSettings();
         _host.SetStatus(appearance.LockInstrumentSize

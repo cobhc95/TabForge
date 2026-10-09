@@ -246,7 +246,13 @@ internal sealed class ThemedConfirmDialog : Window
             if (_choiceButtons is { Count: > 0 }) FocusDefaultChoice();
             else actions.Children[defaultIsNo ? 1 : 0].Focus();
         };
-        Activated += (_, _) => FocusDefaultChoice();
+        // The default choice gets focus once per Show; re-activating the window keeps wherever the user has moved focus.
+        Activated += (_, _) =>
+        {
+            if (!_focusDefaultOnActivate) return;
+            _focusDefaultOnActivate = false;
+            FocusDefaultChoice();
+        };
         if (_hideOnAnswer) Closing += HandleReusableClosing;
     }
 
@@ -257,6 +263,7 @@ internal sealed class ThemedConfirmDialog : Window
     private readonly bool _hideOnAnswer;
     private bool _disposingReusable;
     private bool _dialogHostPrepared;
+    private bool _focusDefaultOnActivate = true;
 
     /// <summary>Refreshes the reusable choice dialog without closing its owner-bound window.</summary>
     internal void ResetReusable(string message, IReadOnlyList<string> choices, int defaultChoice, int defaultScope)
@@ -273,6 +280,8 @@ internal sealed class ThemedConfirmDialog : Window
         }
         for (var i = 0; i < _scopeButtons.Count; i++)
             _scopeButtons[i].IsChecked = i == Math.Clamp(defaultScope, 0, _scopeButtons.Count - 1);
+        _focusDefaultOnActivate = true;
+        CentreOnOwner();
         if (_remember is not null) _remember.IsChecked = false;
         _result = MessageBoxResult.Cancel;
     }
@@ -289,6 +298,22 @@ internal sealed class ThemedConfirmDialog : Window
         if (!_hideOnAnswer || _disposingReusable) return;
         _disposingReusable = true;
         Close();
+    }
+
+    /// <summary>Centres on the owner at each Show: WPF applies CenterOwner only the first time a window is shown.</summary>
+    private void CentreOnOwner()
+    {
+        if (Owner is not { IsLoaded: true } owner) return;
+        UpdateLayout();
+        WindowStartupLocation = WindowStartupLocation.Manual;
+        Left = owner.Left + (owner.ActualWidth - ActualWidth) / 2;
+        Top = owner.Top + (owner.ActualHeight - ActualHeight) / 2;
+    }
+
+    /// <summary>Brings an open reusable choice dialog to the front.</summary>
+    internal void BringToFront()
+    {
+        if (IsVisible) Activate();
     }
 
     private void FocusDefaultChoice()
@@ -400,12 +425,7 @@ internal sealed class ThemedConfirmDialog : Window
             ToolTip = (toolTip ?? (result == MessageBoxResult.Yes ? "Save the changes" : result == MessageBoxResult.No ? "Discard the changes" : "Return without closing"))
                 + (result == MessageBoxResult.Yes ? (_defaultIsNo ? "" : "  (Y / Enter)") : result == MessageBoxResult.No ? (_defaultIsNo ? "  (N / Enter / Esc)" : "  (N)") : "  (Esc)")
         };
-        if (isDefault)
-        {
-            button.Background = ResourceBrush("AccentBrush");
-            button.BorderBrush = ResourceBrush("AccentBrush");
-            button.Foreground = Brushes.White;
-        }
+        if (isDefault) button.SetResourceReference(StyleProperty, "AccentButton");
         button.Click += (_, _) => SetResult(result);
         return button;
     }

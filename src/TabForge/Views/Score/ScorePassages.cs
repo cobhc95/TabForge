@@ -29,7 +29,7 @@ internal static class ScorePassages
             for (var cellIndex = 0; cellIndex < measure.Cells.Count && cellIndex < slots; cellIndex++)
             {
                 var cell = measure.Cells[cellIndex];
-                if (!cell.Notes.Any(note => note.Techniques.Any(ScoreMarkText.IsPalmMute))) continue;
+                if (!cell.Notes.Any(ScoreMarkText.ShowsPalmMute)) continue;
                 var rawStart = cell.RhythmicPosition ?? cellIndex;
                 var start = Math.Clamp(double.IsFinite(rawStart) ? rawStart : cellIndex, 0, slots);
                 var end = Math.Min(slots, start + MusicTime.CellSlots(cell));
@@ -143,11 +143,11 @@ internal static class ScorePassages
         return passages.Distinct().ToArray();
     }
 
-    /// <summary>The beats that carry a dynamics marking: the first note of the track, then every change of dynamic.</summary>
+    /// <summary>The beats that carry a dynamics marking: every change of dynamic, starting from the default (forte, unmarked).</summary>
     internal static Dictionary<TabCell, string> BuildDynamicMarks(TrackModel track)
     {
         var marks = new Dictionary<TabCell, string>(ReferenceEqualityComparer.Instance);
-        var previous = -1;
+        var previous = Dynamics.NearestIndex(Dynamics.Forte);   // the default dynamic is not marked
         foreach (var measure in track.Measures)
             foreach (var cell in measure.Cells)
             {

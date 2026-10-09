@@ -64,14 +64,14 @@ public static partial class SelfTest
             editor.SetPosition(0, 0, 1, false);
             for (var i = 0; i < 6; i++)
             {
-                editor.EnterFret(3);
+                editor.Effects.EnterFret(3);
                 if (i == 2) project.MarkTimelineChanged();   // an edit's recompile / live-splice notification
             }
             Check($"typed preview: six typed quarter notes each report 500 ms at 120 bpm (rest fill {(fill ? "on" : "off")})",
                 lengths.Count == 6 && lengths.All(l => Math.Abs(l - 500) <= 2), string.Join(",", lengths));
             editor.CurrentDurationDenominator = 8;
             lengths.Clear();
-            editor.EnterFret(5);
+            editor.Effects.EnterFret(5);
             Check($"typed preview: an eighth note reports 250 ms (rest fill {(fill ? "on" : "off")})", lengths.Count == 1 && Math.Abs(lengths[0] - 250) <= 2, string.Join(",", lengths));
         }
     }

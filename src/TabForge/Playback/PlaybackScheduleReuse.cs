@@ -27,7 +27,7 @@ internal sealed class PlaybackScheduleReuse
         _contentRevision = project.ContentRevision;
         _optionsStamp = OptionsStamp(options);
         _traversal = timeline.Bars.Select(bar => bar.Bar).ToArray();
-        _trackRoutes = project.Tracks.Select(TrackRouteStamp).ToArray();
+        _trackRoutes = RouteStamps(project);
         (_loopStart, _loopEnd) = options.Loop ? PlaybackOrder.LoopRange(project, options) : (-1, -1);
         var ambiguousTraversal = options.SkipClips || project.Tracks
             .SelectMany(track => track.Measures)
@@ -66,9 +66,19 @@ internal sealed class PlaybackScheduleReuse
     private bool RoutesMatch(SongProject project)
     {
         if (project.Tracks.Count != _trackRoutes.Length) return false;
+        var current = RouteStamps(project);
         for (var i = 0; i < _trackRoutes.Length; i++)
-            if (!string.Equals(_trackRoutes[i], TrackRouteStamp(project.Tracks[i]), StringComparison.Ordinal)) return false;
+            if (!string.Equals(_trackRoutes[i], current[i], StringComparison.Ordinal)) return false;
         return true;
+    }
+
+    // Group volume/pan/transpose and the channel assignment decide the compiled setup events, so they belong to the stamp.
+    private static string[] RouteStamps(SongProject project)
+    {
+        var channels = ChannelAllocator.Assign(project);
+        return project.Tracks.Select((track, i) => TrackRouteStamp(track) + "," + string.Join(",",
+            MixerGroups.Volume(project, track), MixerGroups.Pan(project, track), MixerGroups.Transpose(project, track),
+            i < channels.Length ? channels[i] : -1)).ToArray();
     }
 
     private static string TrackRouteStamp(TrackModel track) => string.Join(",",

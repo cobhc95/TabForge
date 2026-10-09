@@ -1,11 +1,11 @@
 <#
 .SYNOPSIS
-    Builds TabForge.AlphaTab (alphaTab 1.8.4 plus three patches) from the upstream source, or verifies the committed package.
+    Builds TabForge.AlphaTab (alphaTab 1.8.4 plus four patches) from the upstream source, or verifies the committed package.
 .DESCRIPTION
     alphaTab's .NET library is generated from its TypeScript by alphaTab's own transpiler. This script reproduces what
     upstream CI does (npm ci; generate-typescript; transpile; dotnet build) on a clean checkout of the pinned upstream
     commit with vendor/alphatab/*.patch applied, and packs the result as the NuGet package TabForge.AlphaTab
-    (assembly TabForge.AlphaTab.dll, version 1.8.4.3, package version 1.8.4-tabforge.3), so it can never be mistaken for the
+    (assembly TabForge.AlphaTab.dll, version 1.8.4.4, package version 1.8.4-tabforge.4), so it can never be mistaken for the
     upstream AlphaTab package.
 
       .\tools\Build-AlphaTab.ps1            build, then check the DLL equals the one inside the committed package
@@ -27,7 +27,7 @@ $vendor = Join-Path $repo 'vendor\alphatab'
 $upstream = 'https://github.com/CoderLine/alphaTab.git'
 $tag = 'v1.8.4'
 $commit = '022a45c8e42370f9e12e68949d11eada370da83d'
-$packageFile = 'TabForge.AlphaTab.1.8.4-tabforge.3.nupkg'
+$packageFile = 'TabForge.AlphaTab.1.8.4-tabforge.4.nupkg'
 
 function Invoke-Native([string]$What, [scriptblock]$Command) {
     # Windows PowerShell 5.1 turns native stderr text (npm notices, git advice) into terminating errors under 'Stop'.

@@ -11,7 +11,6 @@ namespace TabForge.Views;
 internal interface IInstrumentPanelHost : IPaneHost
 {
     InstrumentPanel Instrument { get; }
-    ComboBox ScaleHighlightCombo { get; }
     FrameworkElement ScaleFinderButton { get; }
     FrameworkElement InstrumentOverlay { get; }
     /// <summary>The loop area's first and last bar, or null without one.</summary>
@@ -24,7 +23,7 @@ internal interface IInstrumentPanelHost : IPaneHost
 // Owns: the practice display options (note names, left-handed, look-ahead, scale highlight, fret count), the view choice
 //   (fretboard / keyboard / drums, per track and for all tracks), the scale finder, the instrument appearance choices,
 //   and the fretboard's click / drag gesture (note entry, repositioning).
-// Does not own: drawing (InstrumentPanel, InstrumentVisualizer), the right-click menu wiring, the practice check boxes.
+// Does not own: drawing (InstrumentPanel, InstrumentVisualizer), the right-click menu wiring.
 // Tests: TestFretboardGeometry, TestAudioInstrumentPanel, TestTimelineAndInstrumentContextMenuByKeyboard.
 internal sealed class InstrumentPanelController
 {
@@ -89,11 +88,10 @@ internal sealed class InstrumentPanelController
     /// <summary>Highlights a scale ("E Natural Minor") on the fretboard, or clears it with null.</summary>
     public void SetScaleHighlight(string? scale)
     {
-        var item = scale ?? "Off";
-        var combo = _host.ScaleHighlightCombo;
-        if (!combo.Items.Contains(item)) combo.Items.Add(item);
-        combo.SelectedItem = item; // runs PracticeOption_Changed: stores, redraws and saves
-        if (!Equals(ScaleHighlight, scale)) { ScaleHighlight = scale; _host.RefreshInstrument(); _host.SaveSettings(); }
+        if (Equals(ScaleHighlight, scale)) return;
+        ScaleHighlight = scale;
+        _host.RefreshInstrument();
+        _host.SaveSettings();
     }
 
     /// <summary>Hotkey / menu: clears the scale highlight.</summary>
@@ -131,14 +129,20 @@ internal sealed class InstrumentPanelController
             InstrumentViews.Fretboard => natural == InstrumentKind.Bass ? InstrumentKind.Bass : InstrumentKind.Guitar,
             _ => natural,
         };
-        state.KeyboardKeys = Settings.Editing.KeyboardKeys;
-        state.GreyKeys = Settings.Editing.KeyboardKeyColours switch
+        ApplyAppearance(state, Settings);
+    }
+
+    /// <summary>The keyboard size, key colours and fretboard look from the settings (shared by every instrument view, also the Band view's rows).</summary>
+    public static void ApplyAppearance(InstrumentVisualState state, AppSettings settings)
+    {
+        state.KeyboardKeys = settings.Editing.KeyboardKeys;
+        state.GreyKeys = settings.Editing.KeyboardKeyColours switch
         {
             KeyboardKeyStyles.Grey => true,
             KeyboardKeyStyles.White => false,
             _ => !VisualTheme.IsLight,
         };
-        var ed = Settings.Editing;
+        var ed = settings.Editing;
         state.ScaleStyle = ed.ScaleHighlightStyle;
         state.ScaleColour = ThemeService.ScaleHighlightColour(ed.ScaleHighlightColour, VisualTheme.IsLight);
         state.ScaleStrength = ScaleHighlightStyles.StrengthFactor(ed.ScaleHighlightStrength);
@@ -215,7 +219,7 @@ internal sealed class InstrumentPanelController
             Instrument.TryHitPercussion(e.GetPosition(Instrument), out var percussion))
         {
             var line = PercussionPadLine(drumTrack, percussion);
-            if (editor.ToggleFretAtPosition(line, percussion)) editor.Focus();
+            if (editor.Effects.ToggleFretAtPosition(line, percussion)) editor.Focus();
             e.Handled = true;
             return;
         }
@@ -294,7 +298,7 @@ internal sealed class InstrumentPanelController
         if (track is null || track.Kind is TrackKind.Drums or TrackKind.Keys) return false;
         if (!Instrument.TryHitFret(point, out var stringIndex, out var fret)) return false;
         if (track.StringTunings.Count == 0 || track.Measures.Count == 0) return false;
-        if (!_host.Editor.ToggleFretAtPosition(stringIndex, fret)) return false;
+        if (!_host.Editor.Effects.ToggleFretAtPosition(stringIndex, fret)) return false;
         _host.Editor.Focus();
         return true;
     }

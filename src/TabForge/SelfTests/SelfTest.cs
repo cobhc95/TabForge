@@ -172,7 +172,7 @@ public static partial class SelfTest
         ["TestSingleInstanceProcessHandover"] = "release",
         ["TestEngineSyncDeferredRequests"] = "engine",
         ["TestScoreLayoutPartial"] = "ui", ["TestPlaybackScheduleReuse"] = "playback",
-        ["TestMenuPopupWarmup"] = "ui",
+        ["TestMenuPopupWarmup"] = "ui", ["TestToolbarZoomAndSpeed"] = "ui", ["TestToolbarZoomSpeedNarrow"] = "ui", ["TestMixPointsSurviveSeek"] = "playback",
         ["TestTimelineSongTimeRepeatGrowth"] = "recording",
         ["TestSectionColourEditing"] = "ui",
         ["TestLongAudioClipGrowthPlayback"] = "recording", ["TestAudioGrowthReservation"] = "recording",

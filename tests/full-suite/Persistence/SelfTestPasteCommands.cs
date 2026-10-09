@@ -51,44 +51,40 @@ public static partial class SelfTest
         Check("paste: beats onto an empty bar ask nothing and land at the cursor",
             r.Changed && asker.Calls.Count == 0 && Frets(p, 0).SequenceEqual(new[] { 2, 3 }) && p.Tracks[0].Measures[0].Cells[4].Notes.Count == 1);
 
-        // Q1 Replace vs Insert, cancel, remembered answers.
+        // Beats onto notes: as GP5 (quiet runs l6, l6b) they are inserted before the cursor beat inside the same bar, with no question;
+        // the bar may overfill, nothing moves to the next bar, and the cursor goes to the last pasted beat. Paste Special still chooses Replace.
         SongProject Full() { var s = Song(2); for (var i = 0; i < 4; i++) s.Tracks[0].Measures[0].Cells[i * 4] = Q(10 + i); return s; }
         p = Full();
         var before = Snap(p);
         asker = new FakePasteAsker { Reply = _ => null };
         r = EditCommands.Paste(p, twoBeats, new PasteTarget(0, 0, 0, 0), new EditingSettings(), asker);
-        Check("paste: Q1 asked for beats onto notes; cancel changes nothing",
-            asker.Last.SequenceEqual(new[] { PasteQuestion.BeatsOntoNotes }) && r.Cancelled && !r.Changed && Snap(p) == before);
-        asker = new FakePasteAsker { Reply = _ => new PasteAnswers(BeatsOntoNotes: BeatsOntoNotesAnswer.Replace) };
-        EditCommands.Paste(p, twoBeats, new PasteTarget(0, 0, 0, 0), new EditingSettings(), asker);
-        Check("paste: Replace overwrites the notes at the cursor", Frets(p, 0).SequenceEqual(new[] { 2, 3, 12, 13 }));
+        Check("paste: beats onto notes ask nothing and insert in the bar (GP5), the next bar untouched, the cursor on the last pasted beat",
+            r.Changed && asker.Calls.Count == 0 && Frets(p, 0).SequenceEqual(new[] { 2, 3, 10, 11, 12, 13 }) && Frets(p, 1).Count == 0
+            && r.CursorBar == 0 && p.Tracks[0].Measures[0].Cells[r.CursorCell].Notes[0].Fret == 3);
         p = Full();
-        var settings = new EditingSettings();
-        asker = new FakePasteAsker { Reply = _ => new PasteAnswers(BeatsOntoNotes: BeatsOntoNotesAnswer.Insert, RememberBeatsOntoNotes: true) };
-        EditCommands.Paste(p, twoBeats, new PasteTarget(0, 0, 0, 0), settings, asker);
-        Check("paste: Insert pushes the following notes along (into the next bar)",
+        r = EditCommands.Paste(p, twoBeats, new PasteTarget(0, 0, 0, 8), new EditingSettings(), asker);
+        Check("paste: inserting at the third beat keeps the earlier beats (GP5)", Frets(p, 0).SequenceEqual(new[] { 10, 11, 2, 3, 12, 13 }));
+        p = Full();
+        EditCommands.PasteSpecial(p, twoBeats, new PasteTarget(0, 0, 0, 0), new PasteSpecialOptions(BeatMode: BeatPasteMode.Replace), new EditingSettings());
+        Check("paste special: Replace overwrites the notes at the cursor", Frets(p, 0).SequenceEqual(new[] { 2, 3, 12, 13 }));
+        p = Full();
+        EditCommands.PasteSpecial(p, twoBeats, new PasteTarget(0, 0, 0, 0), new PasteSpecialOptions(BeatMode: BeatPasteMode.Insert), new EditingSettings());
+        Check("paste special: Insert pushes the following notes along (into the next bar)",
             Frets(p, 0).SequenceEqual(new[] { 2, 3, 10, 11 }) && Frets(p, 1).SequenceEqual(new[] { 12, 13 }));
-        Check("paste: a ticked 'Remember my choice' is stored", settings.PasteBeatsOntoNotes == nameof(BeatsOntoNotesAnswer.Insert));
-        p = Full();
-        asker = new FakePasteAsker { Reply = _ => null };
-        r = EditCommands.Paste(p, twoBeats, new PasteTarget(0, 0, 0, 0), settings, asker);
-        Check("paste: a remembered answer skips the asker", r.Changed && asker.Calls.Count == 0 && Frets(p, 1).SequenceEqual(new[] { 12, 13 }));
 
-        // Q2 guitar -> bass (keep pitch / shift octave), every combination with Q1.
-        foreach (var beatsAnswer in new[] { BeatsOntoNotesAnswer.Replace, BeatsOntoNotesAnswer.Insert })
-            foreach (var octave in new[] { OctaveAnswer.KeepPitch, OctaveAnswer.ShiftOctave })
-            {
-                var song = Song(2, new TrackModel { Name = "Guitar" }, Bass());
-                song.Tracks[1].Measures[0].Cells[0] = new TabCell { DurationDenominator = 4, Notes = { new TabNote { StringIndex = 3, Fret = 0, MidiValue = 28 } } };
-                asker = new FakePasteAsker { Reply = _ => new PasteAnswers(BeatsOntoNotes: beatsAnswer, Octave: octave) };
-                r = EditCommands.Paste(song, twoBeats, new PasteTarget(1, 0, 0, 0), new EditingSettings(), asker);
-                var pitches = song.Tracks[1].Measures[0].Cells.Where(c => c.Notes.Count > 0).Select(c => c.Notes[0].MidiValue).ToList();
-                var want = octave == OctaveAnswer.KeepPitch ? new[] { 66, 67 } : new[] { 54, 55 };
-                Check($"paste: guitar to bass {beatsAnswer}/{octave} asks Q1+Q2 and maps the pitch",
-                    r.Changed && asker.Last.SequenceEqual(new[] { PasteQuestion.BeatsOntoNotes, PasteQuestion.Octave }) &&
-                    pitches.Take(2).SequenceEqual(want) && song.Tracks[1].Measures[0].Cells.SelectMany(c => c.Notes).All(n => n.StringIndex < 4) &&
-                    (beatsAnswer == BeatsOntoNotesAnswer.Insert) == pitches.Contains(28));
-            }
+        // Q2 guitar -> bass (keep pitch / shift octave); the bass bar's note moves along (the in-bar insert).
+        foreach (var octave in new[] { OctaveAnswer.KeepPitch, OctaveAnswer.ShiftOctave })
+        {
+            var song = Song(2, new TrackModel { Name = "Guitar" }, Bass());
+            song.Tracks[1].Measures[0].Cells[0] = new TabCell { DurationDenominator = 4, Notes = { new TabNote { StringIndex = 3, Fret = 0, MidiValue = 28 } } };
+            asker = new FakePasteAsker { Reply = _ => new PasteAnswers(Octave: octave) };
+            r = EditCommands.Paste(song, twoBeats, new PasteTarget(1, 0, 0, 0), new EditingSettings(), asker);
+            var pitches = song.Tracks[1].Measures[0].Cells.Where(c => c.Notes.Count > 0).Select(c => c.Notes[0].MidiValue).ToList();
+            var want = octave == OctaveAnswer.KeepPitch ? new[] { 66, 67 } : new[] { 54, 55 };
+            Check($"paste: guitar to bass {octave} asks Q2 and maps the pitch",
+                r.Changed && asker.Last.SequenceEqual(new[] { PasteQuestion.Octave }) &&
+                pitches.Take(2).SequenceEqual(want) && song.Tracks[1].Measures[0].Cells.SelectMany(c => c.Notes).All(n => n.StringIndex < 4) && pitches.Contains(28));
+        }
 
         // Q5 guitar -> drums.
         foreach (var drums in new[] { DrumsAnswer.RhythmOntoOneSound, DrumsAnswer.DontPaste })
@@ -150,7 +146,7 @@ public static partial class SelfTest
         Check("paste: a rests-only bar and bars past the end paste without a question",
             r.Changed && r2.Changed && asker.Calls.Count == 0 && rests.Tracks[0].Measures.Count == 2 && Frets(rests, 1).SequenceEqual(new[] { 1, 2, 3, 4 }));
 
-        // Cut: whole bars are emptied (not deleted); beats become rests and the following beats keep their onsets.
+        // Cut: whole bars are emptied here (removing them is the window's, in a one-track song); beats are taken out and the following beats move up (as GP5).
         var cut = Song(2);
         for (var i = 0; i < 4; i++) cut.Tracks[0].Measures[0].Cells[i] = Q(i + 1);   // packed: onsets 0, 4, 8, 12 by the grid rule
         cut.Tracks[0].Measures[1].Cells[0] = Q(5);
@@ -158,8 +154,8 @@ public static partial class SelfTest
         var onsetsBefore = BarGrid.Onsets(cut.Tracks[0].Measures[0].Cells);
         var beatsCut = EditCommands.CutClear(cut, ScoreClipKind.Beats, 0, 0, 0, 1, 0, 2);
         var onsetsAfter = BarGrid.Onsets(cut.Tracks[0].Measures[0].Cells);
-        Check("cut: beats are cleared and the following beat keeps its onset",
-            beatsCut && Frets(cut, 0).SequenceEqual(new[] { 1, 4 }) && Math.Abs(onsetsAfter[3] - onsetsBefore[3]) < 1e-6);
+        Check("cut: beats are taken out and the following beat moves up to the first cut beat's onset",
+            beatsCut && Frets(cut, 0).SequenceEqual(new[] { 1, 4 }) && Math.Abs(onsetsAfter[1] - onsetsBefore[1]) < 1e-6);
         var barsCut = EditCommands.CutClear(cut, ScoreClipKind.Bars, 0, 0, 1, 0, 1, -1);
         Check("cut: whole bars are emptied in both voices, not deleted",
             barsCut && cut.Tracks[0].Measures.Count == 2 && cut.Tracks[0].Measures[1].Cells.All(c => c.Notes.Count == 0) &&

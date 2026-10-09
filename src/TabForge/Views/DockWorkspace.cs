@@ -98,13 +98,13 @@ public sealed class DockWorkspace : Grid, IDockHost, IDockDragHost
 
 
     public void RegisterPanel(string id, string title, FrameworkElement content,
-        double minWidth = 190, double minHeight = 120, string defaultHost = "side", string defaultAnchor = "tools")
+        double minWidth = 190, double minHeight = 120, string defaultHost = "side", string defaultAnchor = "tools", bool startsClosed = false)
     {
         if (string.IsNullOrWhiteSpace(id)) throw new ArgumentException("A dock panel needs a stable id.", nameof(id));
         if (_panels.ContainsKey(id)) throw new InvalidOperationException($"Dock panel '{id}' is already registered.");
         DetachFromParent(content);
         _panels.Add(id, new DockPanelRegistration(id, title, content,
-            Math.Max(120, minWidth), Math.Max(40, minHeight), defaultHost, defaultAnchor));
+            Math.Max(120, minWidth), Math.Max(40, minHeight), defaultHost, defaultAnchor, StartsClosed: startsClosed));
     }
 
     /// <summary>
@@ -297,6 +297,7 @@ public sealed class DockWorkspace : Grid, IDockHost, IDockDragHost
         try
         {
             _state = saved?.Root is null ? CreateDefaultState() : Clone(saved);
+            DropPanels(_state, _panels.ContainsKey);
             if (!ValidateState(_state)) _state = CreateDefaultState();
             _state.ClosedPanels = _state.ClosedPanels
                 .Where(_panels.ContainsKey).Distinct(StringComparer.Ordinal).ToList();
@@ -304,7 +305,7 @@ public sealed class DockWorkspace : Grid, IDockHost, IDockDragHost
             var present = EnumerateAllPanels(_state).ToHashSet(StringComparer.Ordinal);
             foreach (var id in _panels.Keys)
             {
-                if (present.Contains(id) || _state.ClosedPanels.Contains(id, StringComparer.Ordinal)) continue;
+                if (present.Contains(id) || _state.ClosedPanels.Contains(id, StringComparer.Ordinal) || _panels[id].StartsClosed) continue;
                 RestorePanelToDefault(id, notify: false);
             }
             RebuildVisualTree();
@@ -479,13 +480,23 @@ public sealed class DockWorkspace : Grid, IDockHost, IDockDragHost
         NotifyLayoutChanged();
     }
 
+    /// <summary>Where the fretboard / keyboard pane returns to when it is opened or the layout is rebuilt: below the score (above the timeline) instead of above it.</summary>
+    public bool InstrumentAtBottom { get; set; }
+
+    /// <summary>Moves the instrument pane above or below the score now (when it is shown) and remembers the side for later openings.</summary>
+    public void SetInstrumentPosition(bool bottom)
+    {
+        InstrumentAtBottom = bottom;
+        if (_panels.ContainsKey("instrument") && IsPanelVisible("instrument") && !IsPanelFloating("instrument")) RestorePanelToDefault("instrument", notify: true);
+    }
+
     private void RestorePanelToDefault(string id, bool notify)
     {
         RemovePanelFromAllRoots(id);
         _state.ClosedPanels.Remove(id);
         if (!_panels.TryGetValue(id, out var panel)) return;
 
-        PlaceAtDefault(_state, id, panel.DefaultHost, panel.DefaultAnchor);
+        PlaceAtDefault(_state, id, id == "instrument" && InstrumentAtBottom ? "instrument-bottom" : panel.DefaultHost, panel.DefaultAnchor);
         RebuildVisualTree();
         if (notify) NotifyLayoutChanged();
     }

@@ -153,8 +153,8 @@ internal static partial class FullDemoSongFactory
             new() { Midi = 53, TabLine = 0, Label = "RB", StaffStep = DrumMaps.Default(DrumMaps.GuitarPro5, 53).StaffStep, Head = "diamond" },
         };
         song.Tracks.Add(drums);
-        song.Tracks.Add(T(Pad, TrackKind.Keys, keys, 89, 7, 70, 64, 80, 40, "Keys", "#7FC8A0", "Pad", "Piano"));
-        song.Tracks.Add(T(Piano, TrackKind.Keys, keys, 0, 8, 80, 44, 64, 0, "Keys", "#E8E0D0", "Grand", "Piano"));
+        song.Tracks.Add(T(Pad, TrackKind.Keys, keys, 89, 7, 70, 64, 80, 40, "Keys", "#7FC8A0", "Pad", "Piano", frets: 36));   // chord voicings push notes down an octave "string": up to fret 33
+        song.Tracks.Add(T(Piano, TrackKind.Keys, keys, 0, 8, 80, 44, 64, 0, "Keys", "#E8E0D0", "Grand", "Piano", frets: 36));
 
         // T25 group levels; the explicit MixerGroup names above override the by-instrument grouping.
         song.Mixer.Grouping = MixerGrouping.ByInstrument;

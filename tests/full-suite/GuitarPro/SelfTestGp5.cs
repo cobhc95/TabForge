@@ -384,10 +384,8 @@ public static partial class SelfTest
             weightedRow.Width < 1000);
 
         var defaultAligned = ScorePageLayout.Create(50, 800, new[] { 100d });
-        var centeredAligned = ScorePageLayout.Create(50, 800, new[] { 100d }, centerRows: true);
-        Check("continuous score mode centres short systems while page mode preserves paper-grid alignment",
-            defaultAligned.Systems[0].X == 50 && centeredAligned.Systems[0].X > defaultAligned.Systems[0].X &&
-            Math.Abs(centeredAligned.Systems[0].X - (50 + (800 - centeredAligned.Systems[0].Width) / 2)) < 0.001);
+        Check("a short system starts at the left margin (next to its clef), not centred",
+            defaultAligned.Systems[0].X == 50 && defaultAligned.Systems[0].Width < 800);
 
         var incomplete = ScorePageLayout.Create(0, 400, Enumerable.Repeat(100d, 5).ToArray());
         Check("the final two-measure system stays compact and leaves unused right-side space",

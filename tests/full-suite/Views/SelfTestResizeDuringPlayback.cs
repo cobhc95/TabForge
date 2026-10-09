@@ -83,6 +83,7 @@ public static partial class SelfTest
             Check("splitter drag: the playhead keeps its place", worstJump < 0.5, $"{worstJump:0.00}px");
             Check("splitter drag: the score keeps its size", editor.ActualHeight > 10 && editor.ActualWidth > 10, $"{editor.ActualWidth:0}x{editor.ActualHeight:0}");
 
+            Check("splitter drag: the shade keeps the real row height (cropped, never scaled)", ResizeShade.RowScale == 1);
             var before = Generation();
             var scroll = LtField<System.Windows.Controls.ScrollViewer>(window, "ScoreScroll")!; scroll.Width = scroll.ActualWidth - 100; window.UpdateLayout(); SettleLifetimeDispatcher();
             Log.Add($"  info  splitter drag: a width change laid the score out {Generation() - before} time(s)");

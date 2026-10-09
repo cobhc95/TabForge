@@ -23,4 +23,15 @@ public static class TechniqueTag
         if (t.Contains("LetRing")) return "L.R.";
         return null;
     }
+
+    /// <summary>A chord's stroke: 1 = down (brush, arpeggio, pick stroke or rasgueado), -1 = up, 0 = none or a single note.</summary>
+    public static sbyte StrumOf(IReadOnlyCollection<TabForge.Models.TabNote> notes)
+    {
+        if (notes.Count < 2) return 0;
+        foreach (var n in notes)
+            if (n.Techniques.Contains("BrushUp") || n.Techniques.Contains("ArpeggioUp") || n.Techniques.Contains("PickUp")) return -1;
+        foreach (var n in notes)
+            if (n.Techniques.Contains("BrushDown") || n.Techniques.Contains("ArpeggioDown") || n.Techniques.Contains("PickDown") || n.Techniques.Contains("Rasgueado")) return 1;
+        return 0;
+    }
 }
