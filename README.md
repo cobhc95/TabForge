@@ -20,6 +20,8 @@
 
 ### New in 0.7
 
+[<img src="docs/screenshots/keyboard-mode.png" alt="Keyboard mode with falling notes" width="860">](docs/screenshots/keyboard-mode.png)
+
 - **Keyboard mode (experimental)**: any track's notes fall onto a realistic piano keyboard; play along on a MIDI keyboard and get green or red feedback per note. Turn it on from the toolbar or View > Keyboard mode. The selected track is silenced and your own playing is heard through its sound, a *Wait for me* mode holds the song until you play the right notes, and speed, loop, hands, zoom and note names sit in a control bar. Left and right hands are worked out automatically, the MIDI input defaults to any available device, and the view can pop out into its own window with full screen.
 - **Video export and recording**: File > Export > Video (MP4) turns a song into a video that plays itself, with the full audio mix; the Record video button in the title bar (next to Settings, Ctrl+Alt+V) records the window with the live sound.
 - **Band view** and playback are crisper: playheads and scrolling stay sharp at every display scale.
