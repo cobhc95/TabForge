@@ -7,7 +7,8 @@ using TabForge.Services;
 
 namespace TabForge.Views.Score;
 
-// ScoreEditCommands: per-beat marks, ties, techniques, beat and bar operations and the tool-state queries for them.
+// Owns: the per-beat marks, ties, techniques, beat and bar operations and their tool-state queries: octave shift, beam mode, sound duration and secondary beam break.
+// Does not own: the duration entry (ScoreEditCommands.Entry.cs) or the rest fill (ScoreEditCommands.Rests.cs). Tests: TestMarkStacking, TestTiePerString.
 public sealed partial class ScoreEditCommands
 {
     public bool HasEditableNotes

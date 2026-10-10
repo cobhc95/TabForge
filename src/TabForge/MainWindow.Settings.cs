@@ -26,7 +26,9 @@ using TabForge.Visualization;
 
 namespace TabForge;
 
-// MainWindow, settings: load, apply, save; hotkeys; MIDI devices and VST browser.
+// Owns: the window settings flow: load, the ordered apply (SyncFromSettings; the appliers are in MainWindow.SettingsApply.cs), save, panel visibility, hotkeys and menu gestures, and MIDI output devices.
+// Does not own: the settings store and file (AppSettingsStore, SettingsFileService) and the Preferences editors.
+// Tests: TestSettingsStoreSharedAcrossWindows.
 public partial class MainWindow
 {
     // ---------- settings ----------
@@ -121,153 +123,27 @@ public partial class MainWindow
     // skipped when a settings change did not touch them (it would stutter the playhead while playing).
     private readonly AppliedSettings _applied = new();
 
+    // The call order is the original order of one long method; keep it. One data dependency: the playhead's duration glow reads
+    // the colour and opacity that ApplyFollowSettings put on Editor.Appearance. The window size applies only at load. The refreshes
+    // run after every value is in place, and the engine route is last.
     private void SyncFromSettings(bool applyWindowSize)
     {
         foreach (var doc in _documents.Documents) AttachAppRules(doc.Project);   // the settings object may have been replaced
         _applied.TakeVisual(_settings);
         var s = _settings;
 
-        InstrumentPane.LeftHanded = s.Editing.LeftHanded;
-        InstrumentPane.ShowNoteNames = s.Editing.ShowNoteNames;
-        _previewNotes = s.Audio.PreviewNotes;
-        var instrumentBefore = (InstrumentPane.PreviewHorizon, InstrumentPane.ScaleHighlight, InstrumentPane.FretboardFrets, InstrumentPane.LeftHanded, InstrumentPane.ShowNoteNames,
-            _options.Visual.Gp5Mode);
-        InstrumentPane.PreviewHorizon = s.Editing.PreviewNotesEnabled ? Math.Clamp(s.Editing.PreviewHorizon, 1, 10) : 0;
-        ApplyFretboardStyle(s.Audio.FretboardStyle);
-        InstrumentPane.ScaleHighlight = s.Editing.ScaleHighlight;
-        InstrumentPane.FretboardFrets = s.Editing.FretboardFrets is 12 or 24 ? s.Editing.FretboardFrets : 24;
-        _scoreWheelScrollPixels = Math.Clamp(s.Editing.ScoreWheelScrollPixels, 12, 96);
-        // Fretboard options only showed after the next note/playhead move; redraw it now when one changed.
-        if (instrumentBefore != (InstrumentPane.PreviewHorizon, InstrumentPane.ScaleHighlight, InstrumentPane.FretboardFrets, InstrumentPane.LeftHanded, InstrumentPane.ShowNoteNames,
-                _options.Visual.Gp5Mode) && _mainWindowInitialized)
-            RefreshInstrument();
-        Editor.CurrentDurationDenominator = new[] { 1, 2, 4, 8, 16, 32, 64 }.Contains(s.Editing.DefaultDuration)
-            ? s.Editing.DefaultDuration : 4;
-        Editor.AutoAdvanceAfterEntry = s.Editing.AutoAdvance;
-        Editor.ReversePlusMinusDuration = s.Editing.ReversePlusMinusDuration;
-        s.Hotkeys.ReverseDurationKeys = s.Editing.ReversePlusMinusDuration;   // the default keys of Longer / Shorter swap with it
-        Editor.PreventBarOverflow = s.Editing.PreventBarOverflow;
-        Editor.FillBarsWithRests = s.Editing.FillBarsWithRests;
-        Editor.MergeRestsOnDelete = s.Editing.MergeRestsOnDelete;
-        _transport.Metronome = s.Audio.Metronome;
-        _transport.CountIn = s.Audio.CountIn;
-        s.Audio.MetronomeVolume = Math.Clamp(s.Audio.MetronomeVolume, 0, 100);
-        s.Audio.MetronomeAccentVolume = Math.Clamp(s.Audio.MetronomeAccentVolume, 0, 100);
-        s.Audio.MetronomeClickVolume = Math.Clamp(s.Audio.MetronomeClickVolume, 0, 100);
-        s.Audio.MetronomeSubdivision = s.Audio.MetronomeSubdivision is 1 or 2 or 3 or 4 ? s.Audio.MetronomeSubdivision : 1;
-        _transport.Speed = Math.Clamp(s.Audio.Speed <= 0 ? 1 : s.Audio.Speed, 0.25, 2.0);
-        UpdateSpeedControls();
-        if (_midi.IsPlaying) _midi.SetSpeed(_project, _transport.Speed);
-        SyncMetronomeSettingsPopup();
-        ApplyMetronomeSettingsToEngines();
-        _confirmOnClose = s.General.ConfirmOnClose;
-        _tabSettings = s.Tabs;
-
-        // Follow / highlight / readability.
-        var follow = s.Follow;
-        // Legacy compatibility: the old "keep the playhead in view" flag mapped to Off.
-        if (!s.General.AutoScroll && follow.Mode == FollowModes.Jump) follow.Mode = FollowModes.Off;
-        _follow.ApplySettings(follow);
-        Editor.Appearance.HighlightPlayedBeat = follow.HighlightPlayedBeat;
-        Editor.Appearance.PlaybackColor = ParseColour(follow.HighlightColour, Color.FromRgb(0x3F, 0xB9, 0x50));
-        Editor.Appearance.HighlightBackground = ParseColour(follow.HighlightBackground, Color.FromRgb(0x1E, 0x3A, 0x2A));
-        Editor.Appearance.DurationGlowColor = ParseColour(follow.DurationGlowColour, Color.FromRgb(0x3F, 0xB9, 0x50));
-        Editor.Appearance.DurationGlowOpacity = Math.Clamp(follow.DurationGlowOpacity, 0, 1);
-        Editor.Appearance.PlayingBarEnabled = follow.PlayingBarEnabled;
-        Editor.Appearance.PlayingBarColor = ParseColour(follow.PlayingBarColour, Color.FromRgb(0xFF, 0xE0, 0x66));
-        Editor.Appearance.PlayingBarOpacity = Math.Clamp(follow.PlayingBarOpacity, 0.05, 0.6);
-        Editor.Appearance.PlayingBarWhenStopped = follow.PlayingBarWhenStopped;
-        PlayingBarMenu.IsChecked = follow.PlayingBarEnabled;
-        Editor.Appearance.DarkPaperColor = ParseColour(s.Appearance.DarkScorePaperColour, Color.FromRgb(0x15, 0x18, 0x1D));
-        Editor.Appearance.LightPaperColor = ParseColour(s.Appearance.LightScorePaperColour, Colors.White);
-        Editor.Appearance.DarkInkColor = ParseColour(s.Appearance.DarkScoreInkColour, Color.FromRgb(0xE7, 0xEA, 0xEF));
-        Editor.Appearance.LightInkColor = ParseColour(s.Appearance.LightScoreInkColour, Color.FromRgb(0x11, 0x11, 0x11));
-        Editor.Appearance.DarkStaffLineColor = ApplyOpacity(ParseColour(s.Appearance.DarkScoreLinesColour, Color.FromRgb(0x34, 0x39, 0x40)), s.Appearance.StaffLineOpacity);
-        Editor.Appearance.LightStaffLineColor = ApplyOpacity(ParseColour(s.Appearance.LightScoreLinesColour, Color.FromRgb(0xD5, 0xD5, 0xD5)), s.Appearance.StaffLineOpacity);
-        Editor.Appearance.LedgerLines = Enum.TryParse<LedgerLineMode>(s.Appearance.LedgerLines, true, out var ledgerMode) &&
-                             Enum.IsDefined(typeof(LedgerLineMode), ledgerMode)
-            ? ledgerMode
-            : LedgerLineMode.Minimal;
-        Editor.Appearance.AccentColor = ParseColour(s.Appearance.Accent, Color.FromRgb(0x4C, 0x9A, 0xFF));
-        Editor.Appearance.SelectionColor = ParseColour(s.Appearance.SelectionColour, Color.FromRgb(0x4C, 0x9A, 0xFF));
-        Editor.Appearance.HoverColor = ParseColour(s.Appearance.HoverColour, Color.FromRgb(0x98, 0xA1, 0xAE));
-        Editor.Appearance.HoverHighlightIntensity = Math.Clamp(s.Appearance.HoverHighlightIntensity, 0, 1);
-        Editor.Appearance.SelectionHighlightIntensity = Math.Clamp(s.Appearance.SelectionHighlightIntensity, 0, 1);
-        Editor.Appearance.ShowBarNumbers = s.Appearance.ShowScoreBarNumbers;
-        Editor.Appearance.BarNumberFrequency = Math.Clamp(s.Appearance.ScoreBarNumberFrequency, 1, 16);
-        Editor.Appearance.ShowSectionHeadings = s.Appearance.ShowSectionHeadings;
-        Editor.Appearance.ShowDynamics = s.Appearance.ShowDynamics;
-        Editor.Appearance.CursorColor = ParseColour(s.Appearance.CursorColour, Color.FromRgb(0xF2, 0xC1, 0x4E));
-        Playhead.SetColor(ParseColour(follow.PlayheadColour, Color.FromRgb(0x3F, 0xB9, 0x50)));
-        Playhead.SetDurationStyle(Editor.Appearance.DurationGlowColor, Editor.Appearance.DurationGlowOpacity, follow.DurationTintEnabled);
-        Playhead.SetThickness(follow.PlayheadThickness);
-        Editor.Appearance.ScoreSpacing = s.Appearance.ScoreSpacing;
-        Editor.Appearance.SystemVerticalSpacing = s.Appearance.SystemVerticalSpacing;
-        Editor.Appearance.MeasureHorizontalSpacing = s.Appearance.MeasureHorizontalSpacing;
-        TabEditorControl.ConfigureScoreTextStyle(s.Appearance.ScoreFontFamily, s.Appearance.ScoreTextSize,
-            s.Appearance.ScoreTextBold, s.Appearance.ScoreTextItalic);
-        TabEditorControl.ConfigureTextAreas(s.Appearance.ScoreTextAreas);
-        if (_applied.VisualChanged) Editor.InvalidateScoreLayout();
-        Arrangement.SectionBracketThickness = Math.Clamp(s.Appearance.SectionBracketThickness, 1, 24);
-        Arrangement.SectionGlowIntensity = Math.Clamp(follow.SectionGlowIntensity, 0, 1);
-        Arrangement.ShowBarNumbers = s.Timeline.ShowBarNumbers;
-        Arrangement.ShowSectionNames = s.Timeline.ShowSectionNames;
-        Arrangement.ShowSectionBrackets = s.Timeline.ShowSectionBrackets;
-        if (Arrangement.MatchSimilarSectionColours != s.Timeline.MatchSimilarSectionColours)
-        {
-            Arrangement.MatchSimilarSectionColours = s.Timeline.MatchSimilarSectionColours;
-            if (_mainWindowInitialized) RefreshMarkers(); // section colours are resolved when the list is built
-        }
-        Arrangement.AnimateSectionDragging = s.Timeline.SectionDragAnimation;
-        // Timeline appearance (Preferences rows; the View menu keeps the two note-drawing toggles in step).
-        Arrangement.ShowContinuousBlocks = s.Timeline.ShowContinuousLine;
-        Arrangement.ShowIndividualNotes = s.Timeline.ShowIndividualNotes && !s.Timeline.ShowContinuousLine;
-        Arrangement.HideEmptyTimelineGrid = s.Timeline.HideEmptyGrid;
-        Arrangement.ShowTrackLines = s.Timeline.ShowTrackLines;
-        Arrangement.ShowBarGlow = s.Timeline.BarGlow;
-        Arrangement.PlayheadStyle = s.Timeline.PlayheadStyle;
-        Arrangement.ShowAddTrackLane = s.Timeline.ShowAddTrackLane;
-        ArrangementIndividualNotesMenu.IsChecked = Arrangement.ShowIndividualNotes;
-        ArrangementContinuousBlocksMenu.IsChecked = Arrangement.ShowContinuousBlocks;
-        if (_mainWindowInitialized) WorkspaceLayouts.ApplyInstrumentSizeLock();   // "Lock fretboard size" is a Preferences row too
-        SetSectionGlowResources(Arrangement.SectionGlowIntensity);
+        ApplyInstrumentAndEditingSettings(s);
+        ApplyTransportAndGeneralSettings(s);
+        ApplyFollowSettings(s);
+        ApplyScoreAppearanceSettings(s);
+        ApplyPlayheadSettings(s);
+        ApplyScoreLayoutSettings(s);
+        ApplyTimelineSettings(s);
         ApplyIconSize(s.Appearance.IconSize); // UI scale is applied to the whole window by ThemeService
-
-        if (applyWindowSize && s.General.RestoreWindow)
-        {
-            Width = Math.Max(MinWidth, s.WindowWidth);
-            Height = Math.Max(MinHeight, s.WindowHeight);
-            if (s.Maximised) WindowState = WindowState.Maximized;
-        }
-
-        InstrumentViewMenu.IsChecked = s.Appearance.ShowFretboard;
-        Instrument.HorizontalPosition = Enum.TryParse<FretboardHorizontalPosition>(s.Appearance.FretboardPosition, true, out var fretboardPosition) &&
-                                        Enum.IsDefined(typeof(FretboardHorizontalPosition), fretboardPosition)
-            ? fretboardPosition
-            : FretboardHorizontalPosition.Centre;
-        ArrangementMenu.IsChecked = s.Appearance.ShowArrangementOverview;
-        PreviewNotesMenu.IsChecked = _previewNotes;
-        MetronomeMenu.IsChecked = _transport.Metronome;
-        SetTransportActive(MetronomeButton, _transport.Metronome);
-        CountInMenu.IsChecked = _transport.CountIn;
-        SetTransportActive(CountInButton, _transport.CountIn);
-
-        Tabs.Settings = _tabSettings;
-        Tabs.Refresh();
-        if (_applied.VisualChanged) ApplyAppearance();
-        if (_mainWindowInitialized) ApplyNotationFromSettings(); // default score display changed in Settings
-        InstrumentPane.SyncInstrumentViewSetting();
-        RefreshToolsPalette();
-        ApplyPanelVisibility();
-        BuildHotkeyMap();
-        RefreshHotkeyTooltips();
-        // A changed audio driver, device, channel pair or rate reaches the engine now (only when a setting differs).
-        if (_mainWindowInitialized && _settings.Plugins.PlayAllThroughEngine != _engine.Mixer.PlayAllThroughEngine)
-            _settings.Plugins.PlayAllSetAutomatically = false; // the user changed it by hand: a manual choice is kept
-        var routeChanged = _engine.Mixer.PlayAllThroughEngine != _settings.Plugins.PlayAllThroughEngine;
-        _engine.Mixer.PlayAllThroughEngine = _settings.Plugins.PlayAllThroughEngine;
-        TabForge.Audio.RoutedMidiOutput.WindowsMidiLatencyMs = _settings.Plugins.WindowsMidiLatencyMs;
-        if (_mainWindowInitialized) { SyncAudioEngine(); if (routeChanged) _midi.Rebuild(_project); }
+        ApplyWindowSize(s, applyWindowSize);
+        ApplyViewToggleSettings(s);
+        RefreshAfterSettings();
+        ApplyAudioRouteSettings();
     }
 
     /// <summary>Applies the Appearance settings to the live UI (colours, font, density, paper).</summary>
@@ -324,132 +200,37 @@ public partial class MainWindow
     /// <summary>The key text beside every main-menu item, read from the live bindings (blank when the command is unbound).</summary>
     private void RefreshMenuGestures() => MenuHotkey.Apply(MainMenu, MenuKey);
 
-    /// <summary>Runs a catalogued command. Returns false when this window has no handler for it.</summary>
+    /// <summary>Runs a catalogued command: the routers, then the switch for commands with conditions, then the plain-command table. Returns false when this window has no handler for it.</summary>
     private bool RunHotkey(string id)
     {
         // Note/beat commands belong to the editor (and are tested there without a window).
         if (Editor.Effects.TryRunNoteCommand(id)) return true;
         if (RunPaneHotkey(id)) return true;
         if (RunEffectEditorHotkey(id)) return true;
-        var args = new RoutedEventArgs();
         switch (id)
         {
-            case "File.New": New_Click(this, args); return true;
-            case "File.NewFromTemplate": ApplyTemplate_Click(this, args); return true;
-            case "File.SaveAsTemplate": SaveAsTemplate_Click(this, args); return true;
             case var tool when tool.StartsWith("Tool.", StringComparison.Ordinal):
                 ToolsPaletteButton_Click(new Button { Tag = tool[5..] }, new RoutedEventArgs()); return true;
-            case "File.Open": Open_Click(this, args); return true;
-            case "File.OpenInNewTab": OpenInNewTab_Click(this, args); return true;
-            case "File.Save": Save_Click(this, args); return true;
-            case "File.SaveAs": SaveAs_Click(this, args); return true;
-            case "File.Print": Print_Click(this, args); return true;
-            case "File.Render": Render_Click(this, args); return true;
-            case "File.CancelImport": CancelImport_Click(this, args); return true;
-            case "File.ExportPdf": ExportPdf_Click(this, args); return true;
-            case "File.ExportMidi": ExportMidi_Click(this, args); return true;
-            case "File.ExportAscii": ExportAscii_Click(this, args); return true;
-            case "File.ExportGuitarPro": ExportGuitarPro_Click(this, args); return true;
-            case "File.ProjectSettings": ProjectSettings_Click(this, args); return true;
-            case "Transport.Metronome": Metronome_Click(this, args); return true;
-            case "Transport.CountIn": CountIn_Click(this, args); return true;
-            case "File.ExportMusicXml": ExportMusicXml_Click(this, args); return true;
-            case "App.CommandPalette": CommandPalette_Click(this, args); return true;
-            case "File.PrintPreview": PrintPreview_Click(this, args); return true;
-            case "Tab.New": NewTab_Click(this, args); return true;
-            case "Tab.Close": CloseTab_Click(this, args); return true;
-            case "Tab.Duplicate": DuplicateDocument(_documents.ActiveIndex); return true;
-            case "App.Preferences": Prefs_Click(this, args); return true;
-            case "App.Shortcuts": Shortcuts_Click(this, args); return true;
-            case "Edit.Undo": Undo_Click(this, args); return true;
-            case "Edit.Redo": Redo_Click(this, args); return true;
-            case "Edit.Copy": Copy_Click(this, args); return true;
-            case "Edit.Cut": Cut_Click(this, args); return true;
-            case "Edit.Paste": Paste_Click(this, args); return true;
-            case "Edit.PasteSpecial": PasteSpecial_Click(this, args); return true;
-            case "Edit.SelectAll": Editor.SelectAll(); return true;
-            case "Edit.RepeatSelection": RepeatSelection_Click(this, args); return true;
-            case "Transport.PlayPause": TogglePlayback(); return true;
-            case "Transport.PlayFromStart": PlayFromStart_Click(this, args); return true;
-            case "Transport.Stop": Stop_Click(this, args); return true;
-            case "Transport.Loop": Loop_Click(this, args); return true;
-            case "Bar.Insert": InsertBar_Click(this, args); return true;
-            case "Bar.Delete": DeleteBar_Click(this, args); return true;
-            case "Bar.TimeSignature": TimeSig_Click(this, args); return true;
-            case "Beat.MixTable": ShowMixTable(); return true;
-            case "Bar.KeySignature": KeySig_Click(this, args); return true;
-            case "Bar.Clef": Clef_Click(this, args); return true;
-            case "Bar.Directions": Directions_Click(this, args); return true;
-            case "Bar.GoTo": GoTo_Click(this, args); return true;
             case "Reader.ReadBar": { var text = Editor.Describer.Bar(); Editor.AnnounceText(text); StatusText.Text = text; return true; }
             case "Reader.ReadPosition": { var text = Editor.Describer.Position(); Editor.AnnounceText(text); StatusText.Text = text; return true; }
-            case "Bar.First": FirstBar_Click(this, args); return true;
-            case "Bar.Last": LastBar_Click(this, args); return true;
-            case "Bar.Check": CheckBars_Click(this, args); return true;
-            case "Bar.ScoreInfo": ScoreInfo_Click(this, args); return true;
-            case "Section.Add": AddSectionAt(Editor.SelectedMeasure); return true;
-            case "Tools.Transpose": Transpose_Click(this, args); return true;
-            case "Tools.Tuner": Tuner_Click(this, args); return true;
-            case "View.ToggleAddTrackLane": ToggleAddTrackLane(); return true;
             case "View.ToggleTrackLines": Arrangement.ToggleTrackLines(); SaveTimelineAppearance(); return true;
             case "View.CyclePlayheadStyle": _settings.Timeline.PlayheadStyle = PlayheadStyles.Next(_settings.Timeline.PlayheadStyle); Arrangement.PlayheadStyle = _settings.Timeline.PlayheadStyle; SaveSettings(); StatusText.Text = $"Playback position marker: {_settings.Timeline.PlayheadStyle}"; return true;
-            case "View.Mixer": OpenMixer(); return true;
-            case "Transport.Record": ToggleRecording(); return true;
             case "Timeline.Snap": _settings.Timeline.Snap.Enabled = !_settings.Timeline.Snap.Enabled; Arrangement.UpdateSnapButton(); SaveSettings(); StatusText.Text = _settings.Timeline.Snap.Enabled ? "Snapping on" : "Snapping off"; return true;
             case "Track.Arm": if (SelectedTrack is { } armTrack) ToggleArm(armTrack); return true;
-            case "Track.FxChain": OpenFxChain(SelectedTrack); return true;
-            case "View.AutoFitTrackList": ToggleAutoFitTrackList(); return true;
-            case "View.ResetTrackRowHeight": _trackListFit?.ResetRowHeight(); return true;
-            case "Track.Wiring": OpenWiring(SelectedTrack); return true;
-            case "Playback.SpeedUp": ApplySpeed(NextSpeedPreset(_transport.Speed, 1)); return true;
-            case "Playback.SpeedDown": ApplySpeed(NextSpeedPreset(_transport.Speed, -1)); return true;
-            case "Playback.SpeedReset": ApplySpeed(1.0); return true;
-            case "Track.MoveUp": MoveTrack(-1); return true;
-            case "Track.MoveDown": MoveTrack(1); return true;
-            case "View.ShowTrackGroups": ((IMixerHost)this).SetTrackListShows("groups", !_project.Mixer.ShowGroupsInTrackList); return true;
-            case "Media.ManageApprovals": ReviewLinkedAudio(this); return true;
-            case "Mixer.MasterFx": OpenBusFx(null); return true;
-            case "Mixer.CollapseAllGroups": SetAllGroupsCollapsed(true); return true;
-            case "Mixer.ExpandAllGroups": SetAllGroupsCollapsed(false); return true;
-            case "Mixer.GroupRules": OpenGroupRules(); return true;
-            case "Mixer.MonitorFx": OpenMonitorFx(); return true;
             case "Mixer.GroupFx": if (SelectedTrack is { } groupTrack) OpenBusFx(MixerGroups.GroupOf(_project, groupTrack)); return true;
-            case "Track.MidiProcessing": OpenMidiProcessing(SelectedTrack); return true;
-            case "Help.Tutorial": Tutorial_Click(this, args); return true;
-            case "Help.TutorialDetailed": TutorialDetailed_Click(this, args); return true;
-            case "Help.CheckForUpdates": _ = CheckForUpdatesAsync(manual: true); return true;
-            case "Section.Edit": Section_Click(this, args); return true;
-            case "Section.Previous": PrevSection_Click(this, args); return true;
-            case "Section.Next": NextSection_Click(this, args); return true;
-            case "Note.Chord": Chord_Click(this, args); return true;
-            case "Note.Text": Text_Click(this, args); return true;
-            case "Track.Add": AddGuitar_Click(this, args); return true;
-            case "Track.Delete": DeleteTrack_Click(this, args); return true;
+            case var clip when HotkeyCatalog.IsClipAction(clip): return _clips.RunHotkey(Doc, clip);   // from the command palette: the selected clip (keys reach it first through the clip map)
             case var range when HotkeyCatalog.IsRangeAction(range): return RunRangeHotkey(range);   // from the command palette: the selected bars
             case "Track.ConvertToAudio": case "TrackRow.Copy": case "TrackRow.Cut": case "TrackRow.Paste": case "TrackRow.Duplicate": case "TrackRow.Delete":
                 return TrackFlow.RunHotkey(id, TrackMixerGrid.SelectedIndex);   // from the command palette: the selected track
-            case "Track.Properties": TrackProps_Click(this, args); return true;
-            case "Track.Next": SelectTrack(1); return true;
-            case "Track.Previous": SelectTrack(-1); return true;
-            case "View.Multitrack": Multitrack_Click(this, args); return true;
-            case "View.Global": GlobalView_Click(this, args); return true;
-            case "View.SmoothFollow": SetSmoothFollow(!_follow.Continuous); return true;
-            case "View.HorizontalScroll": SetHorizontalScoreView(!Editor.HorizontalScroll); return true;
-            case "View.PlayingBar": SetPlayingBar(!_settings.Follow.PlayingBarEnabled); return true;
         }
-        return false;
+        return Commands.TryRun(id);   // the plain forwarding commands (MainWindow.Commands.cs)
     }
 
-    /// <summary>The fretboard, workspace layout and zoom commands of <see cref="RunHotkey"/>.</summary>
+    /// <summary>The scale-highlight, string-spacing and Band view commands of <see cref="RunHotkey"/>; the plain fretboard, layout and zoom commands are in the command table.</summary>
     private bool RunPaneHotkey(string id)
     {
         switch (id)
         {
-            case "View.InstrumentView": InstrumentPane.CycleInstrumentView(); return true;
-            case "Tools.ScaleFinder": InstrumentPane.OpenScaleFinder(); return true;
-            case "Tools.ChordFinder": ChordFinder_Click(this, new RoutedEventArgs()); return true;
-            case "Tools.SongStats": SongStats_Click(this, new RoutedEventArgs()); return true;
-            case "View.ClearScale": InstrumentPane.ClearScaleHighlight(); return true;
             case "View.ScaleHighlightBrighter":
             case "View.ScaleHighlightDimmer":
             {
@@ -460,18 +241,9 @@ public partial class MainWindow
                 return true;
             }
             case "View.CycleStringSpacing": InstrumentPane.SetInstrumentAppearance(stringSpacing: FretStringSpacings.Next(_settings.Editing.FretStringSpacing)); StatusText.Text = $"Fretboard string spacing: {_settings.Editing.FretStringSpacing}"; return true;
-            case "View.SidePanel": WorkspaceLayouts.ToggleSidePanel(); return true;
-            case "View.InstrumentPanel": ToggleInstrumentPanel(); return true;
-            case "View.BandView": WorkspaceLayouts.ToggleBandView(); return true;
-            case "Band.ToggleTrackRow": case "Band.RowsMore": case "Band.RowsFewer": case "Band.CycleLaneContent": case "Band.CycleLaneLayout": case "Band.CycleInstrumentSize": case "Band.ToggleSmoothFollow": case "Band.ResetRowHeights": return Band.Run(id);
-            case "View.FretboardPosition": WorkspaceLayouts.ToggleInstrumentPosition(); return true;
-            case "View.LockInstrumentSize": WorkspaceLayouts.ToggleInstrumentSizeLock(); return true;
-            case "View.LayoutCompose": WorkspaceLayouts.SwitchLayout("Compose"); return true;
-            case "View.LayoutPractice": WorkspaceLayouts.SwitchLayout("Practice"); return true;
-            case "View.LayoutMix": WorkspaceLayouts.SwitchLayout("Mix"); return true;
-            case "View.Fullscreen": WorkspaceLayouts.ToggleFullscreen(); return true;
-            case "View.ZoomIn": ScoreZoom.ZoomBy(1); return true;
-            case "View.ZoomOut": ScoreZoom.ZoomBy(-1); return true;
+            // The switch owns the Band.* keys: Band.Run returns false while the Band view is disposed, so the key is not consumed here.
+            // The Band feature module registers these ids for the catalogue only.
+            case "Band.ToggleTrackRow": case "Band.RowsMore": case "Band.RowsFewer": case "Band.CycleLaneContent": case "Band.CycleLaneLayout": case "Band.CycleInstrumentSize": case "Band.ToggleSmoothFollow": case "Band.ResetRowHeights": return Band.Run(id);   // false while the Band view is disposed, so the key is not consumed
         }
         return false;
     }
@@ -486,10 +258,6 @@ public partial class MainWindow
         ToolPalette.RefreshTooltips();
     }
 
-    /// <summary>Parses "#RRGGBB", falling back to a sane default rather than throwing.</summary>
-    private static Color ParseColour(string? hex, Color fallback) =>
-        ThemeService.TryParse(hex, out var colour) ? colour : fallback;
-
     private static Color ApplyOpacity(Color color, double opacity) =>
         Color.FromArgb((byte)Math.Clamp(Math.Round(color.A * Math.Clamp(opacity, 0, 1)), 0, 255),
             color.R, color.G, color.B);
@@ -502,9 +270,8 @@ public partial class MainWindow
     /// </summary>
     private void ApplyIconSize(double size)
     {
-        var clamped = Math.Clamp(size, 10, 22);
-        Resources["IconSize"] = clamped;
-        Application.Current.Resources["IconSize"] = clamped;
+        Resources["IconSize"] = size;
+        Application.Current.Resources["IconSize"] = size;
     }
 
     private bool _probeNoSave;
@@ -539,7 +306,7 @@ public partial class MainWindow
             s.Editing.DefaultDuration = Editor.CurrentDurationDenominator;
             s.Editing.AutoAdvance = Editor.AutoAdvanceAfterEntry;
             s.Editing.PreviewHorizon = InstrumentPane.PreviewHorizon == 0
-                ? Math.Clamp(s.Editing.PreviewHorizon, 1, 10)
+                ? s.Editing.PreviewHorizon
                 : InstrumentPane.PreviewHorizon;
             s.Editing.PreviewNotesEnabled = InstrumentPane.PreviewHorizon > 0;
             s.Editing.ScaleHighlight = InstrumentPane.ScaleHighlight;
@@ -549,12 +316,9 @@ public partial class MainWindow
             s.Audio.Metronome = _transport.Metronome;
             s.Audio.CountIn = _transport.CountIn;
             s.Audio.Speed = _transport.Speed;
-            s.Audio.MetronomeVolume = Math.Clamp(s.Audio.MetronomeVolume, 0, 100);
-            s.Audio.MetronomeAccentVolume = Math.Clamp(s.Audio.MetronomeAccentVolume, 0, 100);
-            s.Audio.MetronomeClickVolume = Math.Clamp(s.Audio.MetronomeClickVolume, 0, 100);
             s.Audio.MetronomeSubdivision = s.Audio.MetronomeSubdivision is 1 or 2 or 3 or 4 ? s.Audio.MetronomeSubdivision : 1;
             s.General.AutoScroll = _follow.Mode != FollowModes.Off;
-            var workspace = _dockWorkspace?.CaptureLayout();
+            var workspace = _learnMode?.RealLayout ?? _dockWorkspace?.CaptureLayout();   // Keyboard mode on: the arrangement it replaced
             s.Workspace = workspace;
             _follow.WriteSettings(s.Follow);
             s.Appearance.IconSize = _settings.Appearance.IconSize;
@@ -566,9 +330,9 @@ public partial class MainWindow
             s.Follow.HighlightBackground = ColourToHex(Editor.Appearance.HighlightBackground);
             s.Follow.PlayheadColour = ColourToHex(Playhead.CurrentColor);
             s.Follow.DurationGlowColour = ColourToHex(Editor.Appearance.DurationGlowColor);
-            s.Follow.DurationGlowOpacity = Math.Clamp(Editor.Appearance.DurationGlowOpacity, 0, 1);
+            s.Follow.DurationGlowOpacity = Editor.Appearance.DurationGlowOpacity;
             s.Follow.SectionGlowIntensity = Arrangement.SectionGlowIntensity;
-            s.Appearance.ShowFretboard = _dockWorkspace?.IsPanelVisible("instrument") == true;
+            s.Appearance.ShowFretboard = workspace is not null && DockWorkspace.PanelsOf(workspace).Contains("instrument");
             s.Appearance.ShowArrangementOverview = _dockWorkspace?.IsPanelVisible("timeline") == true;
             s.Appearance.ScorePaper = Editor.Appearance.DarkPaper ? "Dark" : "Light";
 
@@ -617,7 +381,7 @@ public partial class MainWindow
     }
 
     /// <summary>Opens a .tforge or Guitar Pro file into a new tab (used by the file argument).</summary>
-    /// <remarks>A Guitar Pro file imports in the background (A5-07) and opens when done; the returned task completes then.</remarks>
+    /// <remarks>A score file imports in the background and opens when done; the returned task completes then.</remarks>
     public Task OpenDocumentFromPath(string path, bool replaceCurrent = false, bool replaceAll = false)
     {
         var job = OpenScore(path, replaceCurrent, replaceAll, (opened, loaded) =>
@@ -717,6 +481,6 @@ public partial class MainWindow
             ? new System.Diagnostics.ProcessStartInfo("notepad.exe", $"\"{target}\"") { UseShellExecute = true }
             : new System.Diagnostics.ProcessStartInfo(target) { UseShellExecute = true };
         try { System.Diagnostics.Process.Start(start); }
-        catch { /* no browser or folder handler: nothing more to try */ }
+        catch  { Services.Trace.Error(Services.Trace.Ui, "open file or folder: no handler: failed"); /* no browser or folder handler: nothing more to try */ }
     }
 }

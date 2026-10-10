@@ -49,6 +49,11 @@ public interface IMixerHost
     void SetAppGroupRules(GroupRulesResult result) { }
 }
 
+// Owns: the mixer window: one strip per track inside its group (a group strip sets level, pan and pitch for the group's tracks), the
+//   grouping choice, the mute, solo and slider controls, and drag reordering.
+// Does not own: the song and its undo (IMixerHost, which the main window implements), the track ordering rules (TrackOrdering) and the
+//   playback recompile, which the host decides.
+// Tests: TestMixer, TestMixerDragAndDrop, TestMixerGroupCollapse.
 /// <summary>
 /// The mixer: one strip per track, grouped (guitars, basses, keys, drums, other — or compact), with a group
 /// strip in front of each group that sets level, pan and pitch for all its tracks at once. Each track strip

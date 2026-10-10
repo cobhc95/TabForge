@@ -91,6 +91,7 @@ public static partial class SelfTest
             SetWindowLongForTest(hwnd, GwlExStyle, GetWindowLong(hwnd, GwlExStyle) | WsExLayered | WsExNoActivate);
             SetLayeredWindowAttributes(hwnd, 0, 0, LwaAlpha);
         };
+        if (window is MainWindow main) main.Learn.HubOverride ??= new TabForge.Audio.MidiInputHub(new FakeMidiDevice { Devices = 0 });   // Keyboard mode never opens the real MIDI devices in a test
         window.Show();
         for (var i = 0; i < 50 && (PresentationSource.FromVisual(window) is null || !window.IsLoaded); i++) PumpUi();
         window.UpdateLayout();

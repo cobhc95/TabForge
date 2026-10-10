@@ -17,6 +17,12 @@ using TabForge.Visualization;
 
 namespace TabForge.Views;
 
+// Owns: the timeline control's state: the project and measure width, the selected and playhead bars, the score selection, the loop
+//   start, area visibility, the stale-cell and selection-band geometry, and the section-drag preview records.
+// Does not own: drawing (TrackTimeline.Render.cs), the pointer side (TrackTimeline.Interaction.cs), and the clips and media drops
+//   (their own partials).
+// Tests: TestTimelineCellsCurrent.
+
 /// <summary>Custom-drawn timeline: ruler, sections, one precise cell per measure per track.</summary>
 internal sealed partial class TrackTimeline : FrameworkElement, IAreaMoveHost
 {

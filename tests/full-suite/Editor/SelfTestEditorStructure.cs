@@ -23,7 +23,7 @@ public static partial class SelfTest
 
     private static List<AutomationPeer> StructureBeats(AutomationPeer bar) => bar.GetChildren() ?? new List<AutomationPeer>();
 
-    /// <summary>A5-13: the editor peer exposes bar -> beat elements for the current system, named in words, rebuilt after an edit, and costing nothing without a client.</summary>
+    /// <summary>The editor peer exposes bar -> beat elements for the current system, named in words, rebuilt after an edit, and costing nothing without a client.</summary>
     private static void TestEditorStructurePeer()
     {
         Views.TabEditorControl.AutomationListenerOverride = false;

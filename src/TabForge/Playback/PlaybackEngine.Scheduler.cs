@@ -10,6 +10,10 @@ using TempoMath = TabForge.Audio.Contracts.TempoMath;
 
 namespace TabForge.Playback;
 
+// Owns: the scheduler loop that sends timed events, the playhead and audible position, section and skip ranges, the trainer tempo rate and the loop bounds.
+// Does not own: compiling the timeline (ScoreToMidiCompiler.cs) or the output port (PlaybackEngine.MidiOut.cs, PlaybackEngine.Scheduler.Output.cs).
+// Tests: TestPlaybackScheduleReuse, TestNoHangingNotes, TestSeekWhilePlayingSoundsFirstNote.
+
 /// <summary>The scheduler thread: musical clock, event dispatch, loop wrap and the playhead read-outs.</summary>
 public sealed partial class PlaybackEngine : IDisposable
 {

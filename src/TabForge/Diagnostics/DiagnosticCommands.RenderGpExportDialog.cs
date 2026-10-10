@@ -4,6 +4,10 @@ using TabForge.Services;
 
 namespace TabForge.Diagnostics;
 
+// Owns: the `--render-gp-export-dialog` command: builds a sample lossy-export report and writes the export dialog to a PNG off-screen, in dark or light.
+// Does not own: the dialog (Views/GpExportPreflightDialog) or the export itself.
+// Tests: no named test.
+
 internal static partial class DiagnosticCommands
 {
     /// <summary>`--render-gp-export-dialog &lt;out.png&gt; [light] [save]`: the lossy-export dialog off-screen, with a sample report.</summary>

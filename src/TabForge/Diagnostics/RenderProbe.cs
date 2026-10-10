@@ -14,6 +14,9 @@ namespace TabForge.Diagnostics;
 // General MIDI test (a chord arpeggio) is rendered twice (parallel workers, then one worker) to <out.wav> and
 // <out>.2.wav, and checked for the exact file length, non-silence, a stem of the same length and bit-identical files.
 // The report goes to <out>.txt. Needs no audio device (the engine renders with its device closed).
+// Owns: the --render-probe check of the offline renderer through the engine process: length, silence, stems and repeatability.
+// Does not own: the renderer itself (src/TabForge.AudioEngine/EngineRender.cs).
+// Tests: listed in docs/DEBUGGING.md (--render-probe).
 internal static partial class DiagnosticCommands
 {
     private static int RunRenderProbe(string[] args)
@@ -116,7 +119,7 @@ internal static partial class DiagnosticCommands
             report.AppendLine(failures.Count == 0 ? "render probe passed" : "failures: " + string.Join("; ", failures));
             File.WriteAllText(Path.ChangeExtension(outPath, ".txt"), report.ToString());
             Console.WriteLine(report.ToString());
-            try { File.Delete(eventFile); } catch (IOException) { }
+            try { File.Delete(eventFile); } catch (IOException) { } // Not logged: probe cleanup of the event file.
             client.Sync(Array.Empty<TrackModel>(), settings);
             return failures.Count == 0 ? Ok : CheckFailed;
         });

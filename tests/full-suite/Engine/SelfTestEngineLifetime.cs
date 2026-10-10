@@ -13,7 +13,7 @@ namespace TabForge;
 public static partial class SelfTest
 {
     /// <summary>
-    /// A5-09: one wait deadline per callback (start + 75 % of the block) shared by the isolated plug-ins in it. Chain: two on-time
+    /// One wait deadline per callback (start + 75 % of the block) shared by the isolated plug-ins in it. Chain: two on-time
     /// children, twelve children that never answer, one more on-time child. The first late child uses what is left of the budget,
     /// the rest (including the last on-time one) are bypassed without a request, and the whole chain stays inside the budget.
     /// </summary>

@@ -34,6 +34,9 @@ public sealed record ConsistencyResult(double PlaybackTotalMs, double MidiFileTo
 
 public sealed record ListenMoment(double TimeSec, string Clock, int Bar, string Track, string Reason, double Severity);
 
+// Owns: the data model of the --audio-audit report, serialised as audio-report.json and rendered as audio-report.md.
+// Does not own: the audit that fills it (AudioAudit.cs).
+// Tests: listed in docs/DEBUGGING.md (--audio-audit).
 public sealed class AuditReport
 {
     public string Song { get; set; } = "";

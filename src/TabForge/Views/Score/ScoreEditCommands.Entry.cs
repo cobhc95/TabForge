@@ -3,6 +3,10 @@ using TabForge.Services;
 
 namespace TabForge.Views.Score;
 
+// Owns: the duration that note and rest entry writes: the writing duration of an empty slot or placeholder rest, the duration keys, and the base duration for steps.
+// Does not own: the rest-run merge (ScoreEditCommands.Rests.cs) or the marks, ties and beams (ScoreEditCommands.Marks.cs).
+// Tests: TestWritingDuration, TestEntryDurationWorkflow.
+
 // ScoreEditCommands: which duration note and rest entry writes, as in GP5 on top of the rest fill. An empty slot or a placeholder rest
 // (see WritingDuration) takes the writing duration and duration keys on it change only the writing duration; a note or a written rest keeps
 // its own length. After undo / redo the writing duration follows the beat under the cursor, so an undone value does not leak into new notes.

@@ -9,6 +9,10 @@ using RenderDraw = TabForge.Visualization.Draw;
 
 namespace TabForge.Views.Score;
 
+// Owns: the marks the score renderer draws over the tab: bend arrows and labels, whammy, harmonics, grace notes, fingering and let-ring spans.
+// Does not own: the bar furniture (ScoreRenderer.Bars.cs) or the note heads and stems (ScoreRenderer.cs).
+// Tests: no named test.
+
 // ScoreRenderer: the marks drawn over the tab (bends, whammy, harmonics, grace notes, fingering, let-ring spans).
 internal sealed partial class ScoreRenderer
 {

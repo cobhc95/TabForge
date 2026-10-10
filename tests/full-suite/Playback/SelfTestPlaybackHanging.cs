@@ -5,7 +5,7 @@ using TabForge.Playback;
 namespace TabForge;
 
 /// <summary>
-/// Hanging notes (Audit 7 corpus sweep): every note-on must have its note-off after it, in the final event order.
+/// Hanging notes (corpus sweep): every note-on must have its note-off after it, in the final event order.
 /// Causes fixed: a slide-in or before-the-beat grace note at the very start of the song pushed the previous/own
 /// note-off before time zero while its note-on was clamped to zero, and a slide-in after a tremolo-picked note cut
 /// the tremolo's note-offs to a time before the attacks that still came after the cut.

@@ -37,8 +37,8 @@ internal static class GuitarProReflection
             if (info is null) MissingNames.TryAdd(target.GetType().Name + "." + property, 0);
             return info?.GetValue(target);
         }
-        catch (AmbiguousMatchException) { return null; }
-        catch (TargetInvocationException) { return null; }
+        catch (AmbiguousMatchException) { return null; } // Not logged: optional alphaTab member probe: the fallback value is used
+        catch (TargetInvocationException) { return null; } // Not logged: optional alphaTab member probe: the fallback value is used
     }
 
     internal static IEnumerable<object> AsObjects(object? value)
@@ -62,14 +62,14 @@ internal static class GuitarProReflection
         var value = Get(target, property);
         if (value is null) return fallback;
         try { return Convert.ToDouble(value, CultureInfo.InvariantCulture); }
-        catch (Exception ex) when (IsConversionFailure(ex)) { return fallback; }
+        catch (Exception ex) when (IsConversionFailure(ex)) { return fallback; } // Not logged: optional alphaTab member probe: the fallback value is used
     }
 
     internal static int ConvertToInt(object? value, int fallback)
     {
         if (value is null) return fallback;
         try { return Convert.ToInt32(value, CultureInfo.InvariantCulture); }
-        catch (Exception ex) when (IsConversionFailure(ex)) { return fallback; }
+        catch (Exception ex) when (IsConversionFailure(ex)) { return fallback; } // Not logged: optional alphaTab member probe: the fallback value is used
     }
 
     internal static bool GetBool(object? target, string property, bool fallback)
@@ -77,7 +77,7 @@ internal static class GuitarProReflection
         var value = Get(target, property);
         if (value is null) return fallback;
         try { return Convert.ToBoolean(value, CultureInfo.InvariantCulture); }
-        catch (Exception ex) when (IsConversionFailure(ex)) { return fallback; }
+        catch (Exception ex) when (IsConversionFailure(ex)) { return fallback; } // Not logged: optional alphaTab member probe: the fallback value is used
     }
 
     internal static bool IsConversionFailure(Exception ex) =>

@@ -100,7 +100,7 @@ internal static class FeatureMapGenerator
         var files = new List<string> { Path.Combine(root, IndexRelativePath.Replace('/', Path.DirectorySeparatorChar)) };
         var folder = Path.Combine(root, PagesRelativePath.Replace('/', Path.DirectorySeparatorChar));
         if (Directory.Exists(folder))
-            files.AddRange(Directory.EnumerateFiles(folder, "*.md").Where(f => !f.EndsWith("tests.md", StringComparison.Ordinal)).OrderBy(f => f, StringComparer.Ordinal));
+            files.AddRange(Directory.EnumerateFiles(folder, "*.md").Where(f => !f.EndsWith("tests.md", StringComparison.Ordinal) && !f.EndsWith("files.md", StringComparison.Ordinal)).OrderBy(f => f, StringComparer.Ordinal));
         return files;
     }
 
@@ -126,6 +126,7 @@ internal static class FeatureMapGenerator
         if (root is null) { Console.Error.WriteLine("feature map: no repository root (TabForge.sln) found above the working directory"); return 2; }
         var path = args.Length > 1 ? FilePathPolicy.OutputFile(args[1], "feature map", ".md") : Path.Combine(root, GeneratedRelativePath.Replace('/', Path.DirectorySeparatorChar));
         File.WriteAllText(path, RenderDocument(ReadRegistry(root)), new UTF8Encoding(false));
+        if (args.Length <= 1) File.WriteAllText(Path.Combine(root, FileIndexGenerator.GeneratedRelativePath.Replace('/', Path.DirectorySeparatorChar)), FileIndexGenerator.Render(root), new UTF8Encoding(false));
         return 0;
     }
 }

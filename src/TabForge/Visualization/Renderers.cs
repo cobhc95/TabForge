@@ -5,6 +5,10 @@ using TabForge.Services;
 
 namespace TabForge.Visualization;
 
+// Owns: the code-drawn instrument visuals: the fretboard, drum and keyboard renderers, the shared Draw helpers and the Light / Dark
+//   colours of VisualTheme.
+// Does not own: the instrument state they draw (InstrumentVisualState) and the pane that hosts them (InstrumentPanel).
+// Tests: TestFretStrumArrow, TestFretboardPaneSize, TestKeyboardPaneSize.
 /// <summary>Pluggable instrument visualisation. New instruments implement this.</summary>
 public interface IInstrumentRenderer
 {
@@ -79,7 +83,7 @@ public static class Draw
 
     /// <summary>
     /// Device pixels per DIP (1.0 = 96 DPI) that text is shaped for right now: the value of the innermost <see cref="UseDpi(Visual)"/>
-    /// scope on this thread, else 1.0. A-03: each control opens a scope with its own <c>VisualTreeHelper.GetDpi(this)</c> while it draws,
+    /// scope on this thread, else 1.0. Each control opens a scope with its own <c>VisualTreeHelper.GetDpi(this)</c> while it draws,
     /// so windows on monitors with different scaling each get their own (it used to be one static, last writer wins).
     /// </summary>
     public static double PixelsPerDip => t_pixelsPerDip > 0 ? t_pixelsPerDip : 1.0;
@@ -92,7 +96,7 @@ public static class Draw
     {
         double value;
         try { value = VisualTreeHelper.GetDpi(visual).PixelsPerDip; }
-        catch (InvalidOperationException) { value = 1.0; }
+        catch (InvalidOperationException) { value = 1.0; } // Not logged: render path: no logging per frame
         return UseDpi(value);
     }
 
@@ -516,42 +520,14 @@ public sealed class FretboardRenderer : IInstrumentRenderer
             }
         }
 
-        // Movement path: exactly one segment, from the sounding note(s) to the next note(s), using the
-        // chord centroid for each. Previously it chained every upcoming note, which read as a glowing
-        // trajectory that did not correspond to anything being played.
-        // Drawn only when the hand actually moves: the next beat's fret positions differ from what is
-        // sounding now. A repeated chord (same strings and frets) gets no line. Released markers only
-        // stand in for "current" when nothing is sounding, so a lingering note can't skew the path.
-        var currentCount = 0;
-        var nextCount = 0;
-        var currentX = 0.0;
-        var currentY = 0.0;
-        var nextX = 0.0;
-        var nextY = 0.0;
-        var anyHeld = state.Notes.Any(n => n.Role == VisualRole.Current && !n.Released);
-        var currentShape = new HashSet<(int, int)>();
-        var nextShape = new HashSet<(int, int)>();
-        foreach (var note in state.Notes)
+        // Movement path: one segment from the changed sounding position(s) to the changed next position(s), via the
+        // centroid of each. FretboardConnector decides; a repeated or already-sounding shape gets no line.
+        if (!state.FollowScoreStyle && FretboardConnector.Between(state.Notes) is { } move)
         {
-            if (note.Role == VisualRole.Current && (!anyHeld || !note.Released))
-            {
-                currentShape.Add((note.StringIndex, note.Fret));
-                currentCount++;
-                currentX += note.Fret == 0 ? boardRect.Left - 14 : FretX(note.Fret);
-                currentY += StringY(note.StringIndex);
-            }
-            else if (note.Role == VisualRole.Next)
-            {
-                nextShape.Add((note.StringIndex, note.Fret));
-                nextCount++;
-                nextX += note.Fret == 0 ? boardRect.Left - 14 : FretX(note.Fret);
-                nextY += StringY(note.StringIndex);
-            }
-        }
-        if (currentCount > 0 && nextCount > 0 && !state.FollowScoreStyle && !currentShape.SetEquals(nextShape))
-        {
-            var from = new Point(currentX / currentCount, currentY / currentCount);
-            var to = new Point(nextX / nextCount, nextY / nextCount);
+            Point Centroid(List<(int String, int Fret)> shape) => new(
+                shape.Average(p => p.Fret == 0 ? boardRect.Left - 14 : FretX(p.Fret)), shape.Average(p => StringY(p.String)));
+            var from = Centroid(move.From);
+            var to = Centroid(move.To);
             var midY = (from.Y + to.Y) / 2 + (to.Y - from.Y) * 0.15;
             var fig = new PathFigure { StartPoint = from, IsClosed = false };
             fig.Segments.Add(new BezierSegment(new Point(from.X, midY), new Point(to.X, midY), to, true));

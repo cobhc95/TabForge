@@ -20,7 +20,7 @@ public sealed record ReleaseInfo(string Version, Uri Page);
 ///   TLS 1.2/1.3 with normal certificate validation, no redirects, no cookies, no credentials, no proxy
 ///   auto-configuration scripts beyond the system proxy, 10 s timeout, 256 KB response cap;
 /// - nothing is sent except the User-Agent GitHub requires ("TabForge/&lt;version&gt;");
-/// - only the "tag_name" and "draft" fields are read, and a tag must be a plain version (v1.2.3 or v1.2.3-beta.4);
+/// - only the "tag_name" and "draft" fields are read, and a tag must be a plain version (v1.2.3, optionally with a pre-release suffix);
 ///   no text, links or files from the reply are shown, opened or saved;
 /// - the page offered to open is built from constants + that validated version, on github.com/cobhc95/TabForge;
 /// - nothing is ever downloaded or installed by TabForge; the user downloads from GitHub in their browser.
@@ -106,12 +106,12 @@ public static class UpdateService
             }
             return best;
         }
-        catch (Exception ex) when (ex is JsonException or RegexMatchTimeoutException) { return null; }
+        catch (Exception ex) when (ex is JsonException or RegexMatchTimeoutException) { return null; } // Not logged: update check: offline is silent by design
     }
 
     public static bool IsNewer(string candidate, string current) => Compare(candidate, current) > 0;
 
-    /// <summary>Semantic-version order: 0.1.0-alpha.6 &lt; 0.1.0-beta.1 &lt; 0.1.0-beta.10 &lt; 0.1.0 &lt; 0.2.0.</summary>
+    /// <summary>Semantic-version order: 1.2.0-alpha.6 &lt; 1.2.0-alpha.10 &lt; 1.2.0 &lt; 1.3.0.</summary>
     public static int Compare(string a, string b)
     {
         if (!TryParse(a, out var x) || !TryParse(b, out var y)) return 0; // unknown formats are never "newer"

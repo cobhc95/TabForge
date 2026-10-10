@@ -11,6 +11,9 @@ namespace TabForge.Diagnostics;
 // Window probes, settings probe: `TabForge.exe <song> --probe-settings <report.txt>` changes every Settings row
 // in turn through the same live-preview path the Settings window uses, records errors and whether the
 // window visibly changed, then restores the original settings. Nothing is saved.
+// Owns: the --probe-settings check: each Settings row changed in turn through the live-preview path, then restored; nothing is saved.
+// Does not own: the Settings rows themselves (Views/Preferences).
+// Tests: listed in docs/DEBUGGING.md (--probe-settings).
 internal sealed partial class WindowProbes : MainWindow.ProbeAccess
 {
     public void RunSettingsProbe(string reportPath)
@@ -59,7 +62,7 @@ internal sealed partial class WindowProbes : MainWindow.ProbeAccess
                         if (visible) changed++; else unchanged++;
                         report.AppendLine($"{(visible ? "VISIBLE" : "no-visual")} {key} = {value}   [{row.Category} / {row.Title}]");
                     }
-                    catch (Exception ex)
+                    catch (Exception ex) // Not logged: diagnostic probe: the failure goes to its report, not errors.log
                     {
                         failed++;
                         report.AppendLine($"ERROR     {key} = {value}: {ex.GetBaseException().Message}");
@@ -72,7 +75,7 @@ internal sealed partial class WindowProbes : MainWindow.ProbeAccess
                 }
                 report.Insert(0, $"{rows.Count} rows: {changed} visibly changed the window, {unchanged} no visual change, {failed} errors\n");
             }
-            catch (Exception ex) { report.AppendLine($"probe failed: {ex}"); }
+            catch (Exception ex) { report.AppendLine($"probe failed: {ex}"); } // Not logged: diagnostic probe: the failure goes to its report, not errors.log
             DiagnosticFileService.WriteText(path, report.ToString());
             _confirmOnClose = false;
             Application.Current.Shutdown(0);
@@ -156,7 +159,7 @@ internal sealed partial class WindowProbes : MainWindow.ProbeAccess
                 await Task.Delay(300);
                 await Shot("playback-magenta");
             }
-            catch (Exception ex) { DiagnosticFileService.WriteText(System.IO.Path.Combine(dir, "error.txt"), ex.ToString()); }
+            catch (Exception ex) { DiagnosticFileService.WriteText(System.IO.Path.Combine(dir, "error.txt"), ex.ToString()); } // Not logged: diagnostic probe: the failure goes to its report, not errors.log
             PreviewPreferences(JsonSerializer.Deserialize<AppSettings>(original)!);
             _confirmOnClose = false;
             Application.Current.Shutdown(0);

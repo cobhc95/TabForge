@@ -8,6 +8,9 @@ namespace TabForge;
 
 // MainWindow: the track row's right-click menu and the track-row hotkeys (Ctrl+C/X/V/D, Delete while a track row has the focus).
 // The behaviour is TrackClipboardFlow; the menu contents are TrackRowMenus; this is the window's wiring and refresh around them.
+// Owns: the track row's right-click menu and track-row hotkeys (Ctrl+C/X/V/D, Delete), with their wiring and refresh.
+// Does not own: the behaviour (TrackClipboardFlow) and the menu contents (TrackRowMenus).
+// Tests: listed in docs/feature-map/timeline-and-clips.md.
 public partial class MainWindow
 {
     private TrackClipboardFlow? _trackFlow;

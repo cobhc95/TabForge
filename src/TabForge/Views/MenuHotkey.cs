@@ -13,6 +13,15 @@ public static class MenuHotkey
     public static readonly DependencyProperty IdProperty = DependencyProperty.RegisterAttached(
         "Id", typeof(string), typeof(MenuHotkey), new PropertyMetadata(null));
 
+    /// <summary>The menu row (at any depth) carrying hotkey id <paramref name="id"/>, or null.</summary>
+    public static System.Windows.Controls.MenuItem? Find(System.Windows.Controls.ItemCollection items, string id)
+    {
+        foreach (var item in items.OfType<System.Windows.Controls.MenuItem>())
+            if (GetId(item) == id) return item;
+            else if (Find(item.Items, id) is { } found) return found;
+        return null;
+    }
+
     public static string? GetId(DependencyObject d) => (string?)d.GetValue(IdProperty);
     public static void SetId(DependencyObject d, string? value) => d.SetValue(IdProperty, value);
 

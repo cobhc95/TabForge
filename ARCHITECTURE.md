@@ -288,9 +288,9 @@ raises about 60 Hz position callbacks; `MainWindow` coalesces them onto a `Dispa
 | Import and export | `Services/GuitarProImporter.cs`, `GuitarProExporter.cs`, `MidiExportService.cs`, `ProjectService.cs`, `AudioDataFile.cs` |
 | Input limits | `Services/InputLimits.cs`, `FilePathPolicy.cs`, `ProjectValidator` |
 | Documents | `Documents/*` (session, controller, undo history, tab transfer, playback-on-switch policy) |
-| Notation view | `Views/TabEditorControl.cs` (state, properties) with partials `.Geometry`, `.Playback`, `.Navigation`, `.Editing`, `.Selection`, `.Keyboard`, `.Mouse`, `.Accessibility` (incl. `EditorPeer`), `.Layout`, `.Rendering`, `.Marks`; `Views/StaffNotationRenderer.cs`; `Views/EditorEvents.cs`. One owner per partial file |
+| Notation view | `Views/TabEditorControl.cs` (state, properties) with partials `.Geometry`, `.Playback`, `.Navigation`, `.Editing`, `.Selection`, `.Keyboard`, `.Mouse`, `.Accessibility` (incl. `EditorPeer`), `.Layout`, `.Rendering`, `.Marks`; `Views/Score/StaffNotationRenderer.cs`; `Views/EditorEvents.cs`. One owner per partial file |
 | Arrangement panel | `Views/ArrangementPanel.cs` with partials `.RowGeometry`, `.Timeline`, `.Interaction`, `.TrackRows`, `.Groups`, `.TrackColumns`; `ArrangementFollowGeometry.cs`, `SectionDragOverlay.cs`, `SectionInsertionIndicator.cs` |
-| Arrangement timeline | `Views/TrackTimeline.cs` (state, geometry, activity cache) with partials `.Render`, `.Interaction`, `.Clips`, `.MediaDrop`, `.SongTime`; `Services/MediaDrop`, `Services/MidiFileImport`, `Views/MediaDropSession`, `Views/VirtualFileDrop`, `Views/MediaDropGhost` |
+| Arrangement timeline | `Views/TrackTimeline.cs` (state, geometry, activity cache) with partials `.Render`, `.Interaction`, `.Clips`, `.MediaDrop`, `.SongTime`; `Services/MediaDrop.cs`, `Services/MidiFileImport.cs`, `Views/MediaDropSession.cs`, `Views/VirtualFileDrop.cs`, `Views/MediaDropGhost.cs` |
 | MIDI compiler | `Playback/ScoreToMidiCompiler.cs` with partials `.Techniques` (note emission, dead, ghost and palm mute, grace, slides, trills, tremolo, bends, vibrato, whammy, fade-in), `.Clips`, `.Metronome` |
 | UI host | `MainWindow.xaml(.cs)` and `MainWindow.<Area>.cs` partials (composition root; model edits end in `CommitEdit`; no musical logic) |
 | Audio client | `Audio/AudioEngineClient.cs`, `AudioRouting.cs`, `AudioDevices.cs`, `RoutedMidiOutput.cs`, `SongClock.cs`, `WaveformCache.cs` |
@@ -330,6 +330,34 @@ Known limits:
   compensation for sidechain or buses. Vendor drum maps are unverified.
 - Rendering, device, DPI and native-window behaviour are confirmed by the live desktop pass, not by the headless suite.
 - Executables are not code-signed yet; see `docs/SBOM.md` and `native/BUILD_PROVENANCE.md` for supply-chain records.
+
+## 13. Feature modules, hosts and central tables
+
+A feature keeps its code in its own folder and adds its rows to the central tables through a feature module. Each window
+controller reaches the window only through a narrow host interface. Each central table is one list.
+
+Feature modules (`src/TabForge/Services/Features/`):
+- `IFeatureModule.cs`: the module shape (hotkeys, menu rows, Preferences groups, settings rows, commands, settings bounds); every member has a no-op default.
+- `FeatureRegistry.cs`: the module list (`Modules`), and the merge of their rows into the hotkey, layout, settings and command tables.
+- `src/TabForge/Services/Band/BandFeatureModule.cs`: the Band view hotkeys, commands and Preferences group.
+- `src/TabForge/Services/Video/VideoFeatureModule.cs`: File > Export video and Sound > Record video, their hotkeys, commands and settings bounds.
+
+Host classes (each implements one interface that its controller declares):
+- `src/TabForge/Views/MixerHost.cs`: `IMixerHost` (declared in `Views/MixerWindow.cs`), `IFxChainHost` and `IMixerWindowsHost` for the Mixer and FX chain windows.
+- `src/TabForge/Views/DockHost.cs`: `IDockLayoutHost` (declared in `Views/DockLayoutController.cs`) for the dock layout controller.
+- `src/TabForge/Views/Band/BandHost.cs`: `IBandViewHost` (declared in `Views/Band/BandViewController.cs`) for the Band view.
+
+Central tables:
+- Commands: `src/TabForge/MainWindow.Commands.cs` holds the id-to-handler lines for plain commands, registered in `src/TabForge/Services/CommandRegistry.cs` (duplicate ids are rejected). Module commands are added by `FeatureRegistry.AddCommands`. Routers that run first and multi-step cases stay in `MainWindow.Settings.cs` (`RunHotkey`).
+- Menus: `src/TabForge/Views/MainMenu/MenuTable.cs` (row and group shape, and the one-time build into the XAML skeleton); the rows are in `src/TabForge/MainWindow.Menus.cs`. The golden files `tests/full-suite/Menus/main-menu-tree.golden.txt` and `code-menus.golden.txt` pin the menu tree.
+- Settings appliers: `src/TabForge/MainWindow.SettingsApply.cs`, one named applier per settings area, called in the order that `SyncFromSettings` (`MainWindow.Settings.cs`) states.
+- Dock panes: `src/TabForge/Docking/DockPaneTable.cs` (id, titles, default placement, side-panel membership, in Panels-menu order).
+- Note techniques: `src/TabForge/Models/TechniqueInfo.cs` (one row per technique: mark text, playback numbers, score-format and MusicXML names, unsupported formats).
+
+Engine messages (`src/TabForge.Audio.Contracts/`):
+- `EngineMessages.cs`: one record and one Write/Read pair per fixed-shape engine command. The pair is the only place the field order is written.
+- `EngineMessageLists.cs`: the same for commands with lists, optional tails or nested records.
+- The UI client (`src/TabForge/Audio/AudioEngineClient.Commands.cs`) and the engine (`src/TabForge.AudioEngine/EngineHostCommands.cs`) both use these pairs. Round-trip and golden tests: `tests/full-suite/Engine/SelfTestEngineMessages.cs`.
 
 ## Dependency rules
 

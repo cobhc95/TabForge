@@ -12,7 +12,11 @@ using RenderDraw = TabForge.Visualization.Draw;
 
 namespace TabForge.Views;
 
-// TabEditorControl: keyboard input.
+// Owns: the editor's keyboard: OnKeyDown, the key map (HandleKey), notation cycling, the Delete guard (BeforeDelete), and the
+//   preview of an entered note.
+// Does not own: caret movement (TabEditorControl.Navigation.cs) and mouse input (Views/Score/EditorInputController.cs).
+// Tests: TestTabEditorInputScript, TestKeyMoveScrollsCursorIntoView.
+
 public sealed partial class TabEditorControl
 {
     // ---------- keyboard ----------

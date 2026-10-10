@@ -3,6 +3,10 @@ using TabForge.Models;
 
 namespace TabForge.Services;
 
+// Owns: the Paste Special choices (explicit answers, repeat count and octave shift, normalised to their ranges) and the paste that repeats a clip end to end with them without asking.
+// Does not own: the normal paste questions (EditCommands.Paste.cs) or the dialog.
+// Tests: TestPasteSpecial.
+
 /// <summary>
 /// What the Paste Special dialog chooses (docs/COPY_PASTE_DESIGN.md 3.6): every answer is explicit, so no question is asked.
 /// <see cref="BeatMode"/> applies to beats clips, <see cref="BarsMode"/> to bars clips.

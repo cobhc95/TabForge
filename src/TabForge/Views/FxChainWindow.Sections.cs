@@ -11,6 +11,10 @@ using TabForge.Services;
 
 namespace TabForge.Views;
 
+// Owns: the layout of the FX chain window, one builder per section: the options row, the chain list with add, remove and reorder, the selected plug-in pane, and the hooks for engine events, placement, the CPU timer and close clean-up.
+// Does not own: the chain logic and engine state (FxChainWindow.cs) or the plug-in editors (Views/EffectEditors).
+// Tests: no named test.
+
 // The FX chain window's layout, one builder per section (options row, chain list, selected plug-in pane).
 public sealed partial class FxChainWindow
 {
@@ -40,7 +44,7 @@ public sealed partial class FxChainWindow
                 else AutoChains.Remove(_host.PluginSettings, _track);
                 _host.SaveSettings();
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException) { _status.Text = "The auto-load chain could not be saved: " + ex.Message; }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException) { Services.Trace.Error(Services.Trace.Ui, "auto-load chain: save: " + ex.Message); _status.Text = "The auto-load chain could not be saved: " + ex.Message; }
         };
         _startup.IsChecked = StartupTracks.Has(_host.PluginSettings, _track);
         _startup.Click += async (_, _) =>
@@ -56,7 +60,7 @@ public sealed partial class FxChainWindow
                 else StartupTracks.Remove(_host.PluginSettings, _track);
                 _host.SaveSettings();
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException) { _status.Text = "The startup track could not be saved: " + ex.Message; }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException) { Services.Trace.Error(Services.Trace.Ui, "startup track: save: " + ex.Message); _status.Text = "The startup track could not be saved: " + ex.Message; }
         };
         Closed += async (_, _) =>
         {
@@ -71,7 +75,7 @@ public sealed partial class FxChainWindow
                     else _host.Engine.CollectStates(new[] { _track }, 2000);
                     _host.SaveSettings();
                 }
-                catch (Exception) { }
+                catch (Exception ex) { Services.Trace.Error(Services.Trace.Engine, "FX chain: save after edit: " + ex.Message); }
             }
             if (!_track.IsBus && StartupTracks.Has(_host.PluginSettings, _track))
             {
@@ -82,7 +86,7 @@ public sealed partial class FxChainWindow
                     StartupTracks.Save(_host.PluginSettings, _track);
                     _host.SaveSettings();
                 }
-                catch (Exception) { }
+                catch (Exception ex) { Services.Trace.Error(Services.Trace.Engine, "FX chain: save startup tracks: " + ex.Message); }
             }
         };
         _midiSound.Click += (_, _) => Edit(() =>
@@ -225,8 +229,8 @@ public sealed partial class FxChainWindow
         OwnerActivation.Attach(this);
         Closed += (_, _) =>
         {
-            try { _cpuTimer.Stop(); } catch (Exception) { }
-            try { _overlay?.Close(); _overlay = null; } catch (Exception) { }
+            try { _cpuTimer.Stop(); } catch (Exception) { } // Not logged: window teardown: the timer may already be stopped.
+            try { _overlay?.Close(); _overlay = null; } catch (Exception) { } // Not logged: window teardown: the overlay may already be closed.
             try
             {
                 _host.Engine.EditorClosed -= OnEditorClosed;

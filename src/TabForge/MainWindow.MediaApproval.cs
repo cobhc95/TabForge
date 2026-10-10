@@ -5,6 +5,9 @@ namespace TabForge;
 
 // MainWindow: the approval notices (linked audio, plug-ins) belong to ApprovalNoticeController, built by BackgroundServices (MainWindow.Autosave.cs);
 // this file keeps the entry points the rest of the window and its Settings dialogs call.
+// Owns: the window's entry points for approval notices (linked audio and plug-ins) and their bars in the Settings dialogs.
+// Does not own: the notice logic (ApprovalNoticeController, built by BackgroundServices).
+// Tests: listed in docs/feature-map/plug-ins.md.
 public partial class MainWindow
 {
     /// <summary>

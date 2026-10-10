@@ -9,7 +9,7 @@ namespace TabForge.Services;
 // Does not own: the conversion rules and the worker process (ImportWorker).
 // Tests: TestGuitarProImportContainment, TestGuitarProImportWorker.
 /// <summary>
-/// Cooperative limits for one Guitar Pro import (audit A5-07): cancellation, a wall-clock time budget and a managed-memory
+/// Cooperative limits for one score import: cancellation, a wall-clock time budget and a managed-memory
 /// watermark, checked between import stages and per converted bar. The importer receives it inside its
 /// <see cref="ImportContext"/>; headless tools run with a context that has no guard.
 /// </summary>
@@ -96,7 +96,7 @@ public sealed class ImportContext
 }
 
 /// <summary>
-/// Checks run on the raw bytes before alphaTab parses them (audit A5-07): the container of a GP7/8 .gp (zip) is inflated with
+/// Checks run on the raw bytes before alphaTab parses them: the container of a zip-based score file is inflated with
 /// hard caps, a GPX (BCFZ) declares its unpacked size up front, and a Guitar Pro 3-5 header must look like one.
 /// </summary>
 public static class GuitarProPreParse

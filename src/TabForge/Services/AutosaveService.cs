@@ -8,7 +8,7 @@ namespace TabForge.Services;
 // Does not own: the timer and notices (AutosaveController) and the user's own song files.
 // Tests: TestAutosaveRecovery, TestDataIntegrityLeftovers.
 /// <summary>
-/// Autosave (audit F-04): dirty songs are copied to the Recovery folder as "autosave-&lt;pid&gt;-&lt;id&gt;-&lt;name&gt;.tforge" on a timer. The
+/// Autosave: dirty songs are copied to the Recovery folder as "autosave-&lt;pid&gt;-&lt;id&gt;-&lt;name&gt;.tforge" on a timer. The
 /// user's own files are never touched. A normal save, tab close or exit deletes the copy; copies whose process is gone are what a
 /// crash leaves behind, and are offered at the next start.
 /// </summary>
@@ -52,7 +52,7 @@ public static class AutosaveService
             var dir = Path.GetDirectoryName(Path.GetFullPath(path));
             return dir is not null && string.Equals(dir.TrimEnd('\\', '/'), Path.GetFullPath(folder).TrimEnd('\\', '/'), StringComparison.OrdinalIgnoreCase);
         }
-        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException) { return false; }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException) { return false; } // Not logged: path comparison: false means another folder
     }
 
     /// <summary>Deletes an autosave file and its error list; never throws.</summary>
@@ -62,7 +62,7 @@ public static class AutosaveService
         foreach (var p in new[] { path, Path.ChangeExtension(path, ".errors.txt") })
         {
             try { if (File.Exists(p)) File.Delete(p); }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { Debug.WriteLine($"Autosave cleanup failed: {ex.Message}"); }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { Services.Trace.Error(Services.Trace.Ui, "autosave: cleanup: " + ex.Message); Debug.WriteLine($"Autosave cleanup failed: {ex.Message}"); }
         }
     }
 
@@ -83,7 +83,7 @@ public static class AutosaveService
     private static IEnumerable<string> Enumerate(string folder)
     {
         try { return Directory.Exists(folder) ? Directory.GetFiles(folder, "autosave-*.tforge") : Array.Empty<string>(); }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return Array.Empty<string>(); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { Services.Trace.Error(Services.Trace.Ui, "autosave: list folder: " + ex.Message); return Array.Empty<string>(); }
     }
 
     private static bool IsTabForgeRunning(int pid)
@@ -93,7 +93,7 @@ public static class AutosaveService
             using var p = Process.GetProcessById(pid);
             return !p.HasExited && p.ProcessName.StartsWith("TabForge", StringComparison.OrdinalIgnoreCase);
         }
-        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception) { return false; }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception) { return false; } // Not logged: process probe: the process is not running
     }
 }
 

@@ -14,7 +14,7 @@ using static TabForge.Diagnostics.AudioAuditDsp;
 
 namespace TabForge.Diagnostics;
 
-// `--audio-audit <song> <outdir>`: headless Audit 7 tool. Renders the whole song offline through the real engine process with the
+// `--audio-audit <song> <outdir>`: headless tool. Renders the whole song offline through the real engine process with the
 // Null (no device) driver and the built-in General MIDI synth, exactly the path File > Render uses, then writes mix.wav, one stem per
 // track, audio-report.json and audio-report.md. No window, no sound card.
 internal static partial class DiagnosticCommands
@@ -30,6 +30,10 @@ internal static partial class DiagnosticCommands
     }
 }
 
+// Owns: the headless --audio-audit tool: the offline render through the engine with the Null driver, one stem per track, the audio
+//   report (JSON and Markdown) and its problem checks.
+// Does not own: the command dispatch (DiagnosticCommands above), the measurements (AudioAuditDsp) and the File > Render path it mirrors.
+// Tests: TestAudioAudit, TestAudioAuditRepeatedSections.
 internal static class AudioAudit
 {
     private sealed record Section(string Name, int FirstBar, int LastBar, double StartMs, double EndMs);
@@ -59,7 +63,7 @@ internal static class AudioAudit
                 MixerGroups.IsAudible(project, t), file, noteOns[i]));
         }
         var mixPath = Path.Combine(outDir, "mix.wav");
-        foreach (var p in stemPaths.Values.Append(mixPath)) try { File.Delete(p); } catch (IOException) { }   // the render never overwrites
+        foreach (var p in stemPaths.Values.Append(mixPath)) try { File.Delete(p); } catch (IOException) { }   // the render never overwrites // Not logged: diagnostic cleanup loop: a locked stem is left behind.
 
         // ---- 1. Offline render (no device: the Null driver), through File > Render's own job.
         var client = AudioEngineClient.Instance;
@@ -99,7 +103,7 @@ internal static class AudioAudit
         finally
         {
             client.DeviceError -= onDeviceError;
-            try { client.Sync(Array.Empty<TrackModel>(), settings); } catch (Exception) { }   // WarmIdle zero: stops the engine
+            try { client.Sync(Array.Empty<TrackModel>(), settings); } catch (Exception ex) { Services.Trace.Error(Services.Trace.Engine, "audio audit: stop engine: " + ex.Message); }   // WarmIdle zero: stops the engine
             client.WarmIdle = previousWarm;
         }
 

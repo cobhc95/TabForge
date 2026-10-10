@@ -110,7 +110,7 @@ public static class ReaperChainImporter
             if (body.Count < len) return null;
             return body.Take(len).ToArray();
         }
-        catch (FormatException) { return null; }
+        catch (FormatException) { return null; } // Not logged: base64 chunk decode: the caller reports the chain as unreadable
     }
 
     private static List<string> Tokenize(string line)
@@ -131,7 +131,7 @@ public static class ReaperChainImporter
     {
         string text;
         try { text = Encoding.UTF8.GetString(InputLimits.ReadBoundedBytes(path, 16L * 1024 * 1024, "FX chain file")); }
-        catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException) { return null; }
+        catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException) { Services.Trace.Error(Services.Trace.Import, "FX chain import: read: " + ex.Message); return null; }
         var parsed = Parse(text);
         var cat = catalog.ToList();
         var chain = new List<PluginSlot>(); var notes = new List<string>(parsed.Notes);

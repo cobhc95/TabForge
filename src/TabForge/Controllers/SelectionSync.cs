@@ -1,11 +1,23 @@
 using TabForge.Models;
-using TabForge.Views;
 
 namespace TabForge.Controllers;
 
+/// <summary>What <see cref="SelectionSync"/> needs from the score editor.</summary>
+public interface ISelectionEditor
+{
+    bool HasSelection { get; }
+    int SelectedTrackIndex { get; }
+    TrackModel? Track { get; }
+    (int StartMeasure, int StartCell, int EndMeasure, int EndCell) SelectionCellRange { get; }
+    bool SelectionMatches(int startMeasure, int startCell, int endMeasure, int endCell);
+    void SelectRange(int startMeasure, int startCell, int endMeasure, int endCell);
+    void ClearSelection(bool notify = true);
+}
+
 // Owns: keeping the score editor and the arrangement timeline in step with one SelectionModel.
 // Does not own: the selection data itself (SelectionModel) and the views' drawing.
-// Tests: TestSelectionModel, TestEngravingHeader.
+// Needs from its host: ISelectionEditor (the score editor's selection), never a concrete view.
+// Tests: TestSelectionSyncFake, TestSelectionModel, TestEngravingHeader.
 /// <summary>
 /// Binds the score editor and the arrangement timeline to one <see cref="SelectionModel"/>. The editor pushes
 /// its selection with <see cref="PushFromEditor"/> (from its SelectionChanged); every other source writes the
@@ -15,11 +27,11 @@ namespace TabForge.Controllers;
 /// </summary>
 public sealed class SelectionSync
 {
-    private readonly TabEditorControl _editor;
+    private readonly ISelectionEditor _editor;
     private readonly Action<SelectionOrigin> _applyToTimeline;
     private bool _applyingToEditor;
 
-    public SelectionSync(SelectionModel model, TabEditorControl editor, Action<SelectionOrigin> applyToTimeline)
+    public SelectionSync(SelectionModel model, ISelectionEditor editor, Action<SelectionOrigin> applyToTimeline)
     {
         Model = model;
         _editor = editor;

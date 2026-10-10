@@ -5,7 +5,7 @@ using TabForge.Presets;
 
 namespace TabForge;
 
-/// <summary>GP5 effect channel (Audit 3 P-01): bent notes play on the track's second channel (part of <see cref="SelfTest"/>).</summary>
+/// <summary>Effect channel: bent notes play on the track's second channel (part of <see cref="SelfTest"/>).</summary>
 public static partial class SelfTest
 {
     private static TrackModel EffectChannelTrack(int midiChannel, bool bent)

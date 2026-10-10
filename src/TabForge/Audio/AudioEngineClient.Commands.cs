@@ -8,14 +8,32 @@ using TabForge.Services;
 
 namespace TabForge.Audio;
 
+// Owns: the commands sent to the engine: transport position and song transports per document, the master output tap, recording, editor windows, programs, pitch, state, offline render and live MIDI writes.
+// Does not own: the engine process and pipe (AudioEngineClient.cs) or the graph sync (AudioEngineClient.Sync.cs).
+// Tests: TestMasterTapProtocol.
+
 /// <summary>Commands sent to the engine: transport position, recording, editor windows, programs, pitch, state, offline render and live MIDI writes.</summary>
 public sealed partial class AudioEngineClient : IDisposable
 {
+    /// <summary>Switches the engine's master output tap (everything audible, as <see cref="MasterAudio"/> chunks). Off by default and off costs the engine nothing.</summary>
+    public void SetMasterTap(bool on) { if (IsRunning) Send(EngineCommand.SetMasterTap, new SetMasterTapMessage(on).Write); }
+
+    private void ReadMasterAudio(BinaryReader r)
+    {
+        var rate = r.ReadInt32(); var first = r.ReadInt64(); var frames = r.ReadInt32();
+        if (frames is < 1 or > MasterTapLimits.MaxChunkFrames || rate is < 8000 or > 384000) return;
+        var bytes = r.ReadBytes(frames * 8);
+        if (bytes.Length != frames * 8) return;
+        var samples = new float[frames * 2];
+        Buffer.BlockCopy(bytes, 0, samples, 0, bytes.Length);
+        MasterAudio?.Invoke(rate, first, samples, frames);
+    }
+
     /// <summary>Song position for audio clips (see <see cref="SongClock"/>).</summary>
     public void SetPosition(bool playing, double songSec, long stamp, int ownerId = 0)
     {
         _songIds.Record(ownerId, playing, songSec, stamp);
-        if (IsRunning) Send(EngineCommand.SetPosition, w => { w.Write(playing); w.Write(songSec); w.Write(stamp); w.Write(ownerId); });
+        if (IsRunning) Send(EngineCommand.SetPosition, new SetPositionMessage(playing, songSec, stamp, ownerId).Write);
     }
 
     /// <summary>The engine id of a document's song transport, allocated on first use (lowest free id); 0 (shared) when every id is taken. Any thread.</summary>
@@ -33,7 +51,7 @@ public sealed partial class AudioEngineClient : IDisposable
 
     private void StopSongTransport(int id)
     {
-        if (IsRunning) Send(EngineCommand.SetPosition, w => { w.Write(false); w.Write(0.0); w.Write(Stopwatch.GetTimestamp()); w.Write(id); });
+        if (IsRunning) Send(EngineCommand.SetPosition, new SetPositionMessage(false, 0.0, Stopwatch.GetTimestamp(), id).Write);
     }
 
     /// <summary>The id <see cref="OwnerIdOf"/> gave a document, or -1 when it has none (never synced, or released). Any thread.</summary>
@@ -52,7 +70,7 @@ public sealed partial class AudioEngineClient : IDisposable
     public void ResendPositions()
     {
         if (!IsRunning) return;
-        foreach (var (id, playing, sec, stamp) in _songIds.Positions()) Send(EngineCommand.SetPosition, w => { w.Write(playing); w.Write(sec); w.Write(stamp); w.Write(id); });
+        foreach (var (id, playing, sec, stamp) in _songIds.Positions()) Send(EngineCommand.SetPosition, new SetPositionMessage(playing, sec, stamp, id).Write);
     }
 
     /// <summary>Starts recording the armed tracks into <paramref name="folder"/>; false when nothing is armed.</summary>
@@ -61,19 +79,15 @@ public sealed partial class AudioEngineClient : IDisposable
         var armed = tracks.Where(t => t.RecordArm && !AudioInputs.IsMidi(t.AudioInput) && _slots.ContainsKey(t)).ToList();
         if (!IsRunning || armed.Count == 0) return false;
         _recordingTracks = armed.ToDictionary(t => _slots[t]);
-        Send(EngineCommand.Record, w =>
-        {
-            w.Write(true); w.WriteString(folder); w.Write(armed.Count);
-            foreach (var t in armed) { w.Write(_slots[t]); w.WriteString(t.Name); }
-            w.Write((double)RecordingOffsetMs);   // RT-09: the engine lines the take up with it
-            w.Write(_slotOwners.TryGetValue(_slots[armed[0]], out var recordingSong) ? Math.Max(0, _songIds.Existing(recordingSong)) : 0);   // the take aligns to the recording song's own position
-        });
+        var owner = _slotOwners.TryGetValue(_slots[armed[0]], out var recordingSong) ? Math.Max(0, _songIds.Existing(recordingSong)) : 0;   // the take aligns to the recording song's own position
+        // RT-09: the engine lines the take up with the recording offset
+        Send(EngineCommand.Record, new RecordMessage(true, folder, armed.Select(t => (_slots[t], t.Name)).ToList(), RecordingOffsetMs, owner).Write);
         return true;
     }
 
     public void StopRecording()
     {
-        if (IsRunning) Send(EngineCommand.Record, w => { w.Write(false); w.WriteString(""); w.Write(0); });
+        if (IsRunning) Send(EngineCommand.Record, RecordMessage.WriteStop);
     }
 
     /// <summary>The engine slot a track plays through, or -1 (Windows MIDI).</summary>
@@ -95,15 +109,15 @@ public sealed partial class AudioEngineClient : IDisposable
     /// <summary>All notes off on these slots only (one document's tracks): other documents that play at the same time keep sounding.</summary>
     public void Panic(IReadOnlyCollection<int> slots)
     {
-        if (IsRunning && slots.Count > 0) Send(EngineCommand.PanicSlots, w => { w.Write(slots.Count); foreach (var s in slots) w.Write(s); });
+        if (IsRunning && slots.Count > 0) Send(EngineCommand.PanicSlots, new PanicSlotsMessage(slots).Write);
     }
 
-    public void SetTransport(double tempo, bool playing) { if (IsRunning) Send(EngineCommand.SetTransport, w => { w.Write(tempo); w.Write(playing); }); }
+    public void SetTransport(double tempo, bool playing) { if (IsRunning) Send(EngineCommand.SetTransport, w => SetTransportMessage.WriteTempoOnly(w, tempo, playing)); }
 
     /// <summary>RT-04: tempo plus the song's bar map (time signature, bar start and tempo per performed bar) for plug-in transport.</summary>
     public void SetTransport(double tempo, bool playing, TransportBar[] bars, int ownerId = 0)
     {
-        if (IsRunning) Send(EngineCommand.SetTransport, w => { w.Write(tempo); w.Write(playing); TransportMap.Write(w, bars); w.Write(ownerId); });
+        if (IsRunning) Send(EngineCommand.SetTransport, new SetTransportMessage(tempo, playing, bars, ownerId).Write);
     }
 
     /// <summary>
@@ -113,24 +127,24 @@ public sealed partial class AudioEngineClient : IDisposable
     public bool OpenEditor(TrackModel track, PluginSlot slot, IntPtr window, bool dark, bool docked = false, bool onTop = false)
     {
         if (!TryAddress(track, slot, out var engineSlot, out var index)) return false;
-        Send(EngineCommand.OpenEditor, w => { w.Write(engineSlot); w.Write(index); w.Write((long)window); w.Write(dark); w.Write(docked); w.Write(onTop); });
+        Send(EngineCommand.OpenEditor, new OpenEditorMessage(engineSlot, index, (long)window, dark, docked, onTop).Write);
         return true;
     }
 
     public void CloseEditor(TrackModel track, PluginSlot slot)
     {
-        if (TryAddress(track, slot, out var engineSlot, out var index)) Send(EngineCommand.CloseEditor, w => { w.Write(engineSlot); w.Write(index); });
+        if (TryAddress(track, slot, out var engineSlot, out var index)) Send(EngineCommand.CloseEditor, new CloseEditorMessage(engineSlot, index).Write);
     }
 
     /// <summary>Asks for the plug-in's programs; the answer arrives as <see cref="ProgramsReceived"/>.</summary>
     public void RequestPrograms(TrackModel track, PluginSlot slot)
     {
-        if (TryAddress(track, slot, out var engineSlot, out var index)) Send(EngineCommand.GetPrograms, w => { w.Write(engineSlot); w.Write(index); });
+        if (TryAddress(track, slot, out var engineSlot, out var index)) Send(EngineCommand.GetPrograms, new GetProgramsMessage(engineSlot, index).Write);
     }
 
     public void SetProgram(TrackModel track, PluginSlot slot, int program)
     {
-        if (TryAddress(track, slot, out var engineSlot, out var index)) Send(EngineCommand.SetProgram, w => { w.Write(engineSlot); w.Write(index); w.Write(program); });
+        if (TryAddress(track, slot, out var engineSlot, out var index)) Send(EngineCommand.SetProgram, new SetProgramMessage(engineSlot, index, program).Write);
         PresetChanged?.Invoke(track, slot);
     }
 
@@ -141,14 +155,14 @@ public sealed partial class AudioEngineClient : IDisposable
     public void SetAutoPitch(TrackModel track, IReadOnlyList<(int Index, int Semitones)> list)
     {
         if (!IsRunning || !_slots.TryGetValue(track, out var engineSlot)) return;
-        Send(EngineCommand.SetAutoPitch, w => { w.Write(engineSlot); w.Write(list.Count); foreach (var (i, st) in list) { w.Write(i); w.Write(st); } });
+        Send(EngineCommand.SetAutoPitch, new SetAutoPitchMessage(engineSlot, list).Write);
     }
 
     /// <summary>Loads a saved state (a preset) into the running plug-in without reloading it.</summary>
     public void SetState(TrackModel track, PluginSlot slot, string state)
     {
         if (state.Length > InputLimits.MaxPluginStateChars) return;   // the one state size contract (the engine would refuse the frame)
-        if (TryAddress(track, slot, out var engineSlot, out var index)) Send(EngineCommand.SetState, w => { w.Write(engineSlot); w.Write(index); w.WriteString(state); });
+        if (TryAddress(track, slot, out var engineSlot, out var index)) Send(EngineCommand.SetState, new SetStateMessage(engineSlot, index, state).Write);
         PresetChanged?.Invoke(track, slot);
     }
 

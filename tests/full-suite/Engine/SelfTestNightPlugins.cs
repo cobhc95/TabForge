@@ -5,7 +5,7 @@ using TabForge.Services;
 
 namespace TabForge;
 
-/// <summary>Audit 5 H-5: <c>--approve-night-plugins</c> approves exactly the night plug-ins, only in a profile, and is refused without <c>--profile</c>.</summary>
+/// <summary><c>--approve-night-plugins</c> approves exactly the night plug-ins, only in a profile, and is refused without <c>--profile</c>.</summary>
 public static partial class SelfTest
 {
     private static void TestNightPluginApproval()

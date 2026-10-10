@@ -8,7 +8,7 @@ using TabForge.Views;
 
 namespace TabForge;
 
-/// <summary>Audit 6 A6-01 / A6-05: linked audio goes through the media policy; waveform decoding is bounded, cancellable and does not leak.</summary>
+/// <summary>Linked audio goes through the media policy; waveform decoding is bounded, cancellable and does not leak.</summary>
 public static partial class SelfTest
 {
     private sealed class FakeMediaFs : IMediaFileSystem

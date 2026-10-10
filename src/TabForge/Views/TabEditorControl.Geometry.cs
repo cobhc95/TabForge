@@ -13,7 +13,13 @@ using TabForge.Views.Score;
 
 namespace TabForge.Views;
 
-// TabEditorControl: page geometry, score layout, duration-based spacing and cursor positioning.
+// Owns: the score's page geometry: header height from the tuning rows, system, staff and TAB tops, the grid left and width, the
+//   horizontal page width, scroll offsets for a bar, the cell clamp (CoerceCell), and the position and voice setters (SetPosition,
+//   SetBar).
+// Does not own: measuring and arranging the layout (TabEditorControl.Layout.cs, ScoreLayoutEngine.cs) and drawing
+//   (TabEditorControl.Rendering.cs).
+// Tests: TestTabEditorLayoutMatrix.
+
 public sealed partial class TabEditorControl
 {
     // ---------- geometry ----------

@@ -4,7 +4,11 @@ using TabForge.Models;
 
 namespace TabForge.Views;
 
-// TrackTimeline: hover shade. Only the hovered cell index is tracked here; the panel moves one shared rectangle when it changes.
+// Owns: the hover shade: which bar cell the pointer is over (HoverCellAt, UpdateHover), the cell bounds, and the HoverCellChanged
+//   event.
+// Does not own: drawing the shade (the panel moves one shared rectangle) and the bar marker (ArrangementPanel.Timeline.cs).
+// Tests: TestTimelineHoverAndBarMarker.
+
 internal sealed partial class TrackTimeline
 {
     private int _hoverBar = -1, _hoverTrack = -1;

@@ -63,14 +63,14 @@ public sealed class SvgIconView : FrameworkElement
     protected override void OnRender(DrawingContext dc)
     {
         try { RenderGuard.Inject("SvgIconView"); RenderCore(dc); }
-        catch (Exception ex) when (RenderGuard.Contain(ex, "SvgIconView", dc, ActualWidth, ActualHeight)) { }
+        catch (Exception ex) when (RenderGuard.Contain(ex, "SvgIconView", dc, ActualWidth, ActualHeight)) { } // Not logged: render path: runs per frame.
     }
 
     private void RenderCore(DrawingContext dc)
     {
         SvgAsset? asset;
         try { asset = LoadAsset(Icon); }
-        catch (Exception ex)
+        catch (Exception ex) // Not logged: bundled SVG: the fallback is drawn
         {
             System.Diagnostics.Debug.WriteLine($"Bundled SVG could not be loaded: {ex}");
             return;
@@ -250,10 +250,10 @@ public sealed class SvgIconView : FrameworkElement
                         result.TryAdd(identifier, canonicalPath);
                         if (result.Count >= InputLimits.MaxBundledSvgAssets) break;
                     }
-                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException) { }
+                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException) { Services.Trace.Error(Services.Trace.Ui, "icon assets: index file: " + ex.Message); }
                 }
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException) { }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException) { Services.Trace.Error(Services.Trace.Ui, "icon assets: index file: " + ex.Message); }
         }
     }
 

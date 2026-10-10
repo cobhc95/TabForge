@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Media;
+using TabForge.Views.Rendering;
 
 namespace TabForge.Views;
 
@@ -89,7 +90,7 @@ public sealed class PlayheadOverlay : FrameworkElement
     protected override void OnRender(DrawingContext dc)
     {
         try { RenderGuard.Inject("PlayheadOverlay"); RenderCore(dc); }
-        catch (Exception ex) when (RenderGuard.Contain(ex, "PlayheadOverlay", dc, ActualWidth, ActualHeight)) { }
+        catch (Exception ex) when (RenderGuard.Contain(ex, "PlayheadOverlay", dc, ActualWidth, ActualHeight)) { } // Not logged: render path: runs per frame.
     }
 
     private void RenderCore(DrawingContext dc)
@@ -102,12 +103,41 @@ public sealed class PlayheadOverlay : FrameworkElement
                 var brush = new SolidColorBrush(Color.FromArgb(alpha, _durationColor.R, _durationColor.G, _durationColor.B));
                 foreach (var glow in _durationGeometries)
                     if (glow.EndX > glow.X)
-                        dc.DrawRectangle(brush, null, new Rect(glow.X, glow.Top, glow.EndX - glow.X, glow.Bottom - glow.Top));
+                        dc.DrawRectangle(brush, null, SnapToPixels ? SnappedBox(glow, VisualTreeHelper.GetDpi(this).PixelsPerDip) : new Rect(glow.X, glow.Top, glow.EndX - glow.X, glow.Bottom - glow.Top));
             }
         }
         if (_geometry is not { } g) return;
-        var pen = new Pen(new SolidColorBrush(_color), _thickness);
-        dc.DrawLine(pen, new Point(g.X, g.Top), new Point(g.X, g.Bottom));
-        dc.DrawEllipse(new SolidColorBrush(_color), null, new Point(g.X, g.Top - 3), 3.6, 3.6);
+        var (x, width) = SnapToPixels ? SnappedLine(g.X, _thickness, VisualTreeHelper.GetDpi(this).PixelsPerDip) : (g.X, _thickness);
+        var pen = new Pen(new SolidColorBrush(_color), width);
+        dc.DrawLine(pen, new Point(x, g.Top), new Point(x, g.Bottom));
+        dc.DrawEllipse(new SolidColorBrush(_color), null, new Point(x, g.Top - 3), 3.6, 3.6);
+    }
+
+    /// <summary>
+    /// True: the line and the duration glow sit on whole device pixels, so the moving caret keeps hard edges instead of two soft columns.
+    /// Off by default: a picture drawn for a file (the video frame) keeps its fixed pixels.
+    /// </summary>
+    public bool SnapToPixels
+    {
+        get => _snapToPixels;
+        set { if (_snapToPixels == value) return; _snapToPixels = value; InvalidateVisual(); }
+    }
+    private bool _snapToPixels;
+
+    /// <summary>The line's centre and width in DIPs, covering a whole number of device pixels (at least one).</summary>
+    internal static (double X, double Width) SnappedLine(double x, double thickness, double pixelsPerDip)
+    {
+        var pixels = Math.Max(1, Math.Round(thickness * pixelsPerDip));
+        var centre = x * pixelsPerDip;
+        // An odd width is centred on a pixel's middle, an even one on a pixel edge.
+        centre = pixels % 2 == 1 ? Math.Floor(centre) + 0.5 : Math.Round(centre);
+        return (centre / pixelsPerDip, pixels / pixelsPerDip);
+    }
+
+    private static Rect SnappedBox((double X, double EndX, double Top, double Bottom) box, double pixelsPerDip)
+    {
+        double x = PixelSnap.Snap(box.X, pixelsPerDip), right = PixelSnap.Snap(box.EndX, pixelsPerDip);
+        double top = PixelSnap.Snap(box.Top, pixelsPerDip), bottom = PixelSnap.Snap(box.Bottom, pixelsPerDip);
+        return new Rect(x, top, Math.Max(0, right - x), Math.Max(0, bottom - top));
     }
 }

@@ -10,6 +10,10 @@ using TempoMath = TabForge.Audio.Contracts.TempoMath;
 
 namespace TabForge.Playback;
 
+// Owns: the MIDI output side of playback: the device list, channel setup and its re-arm, panic, the output operation queue, the live note preview and raw live sends.
+// Does not own: the scheduled event stream (PlaybackEngine.Scheduler.cs) or the port driver (MidiOutputPort.cs).
+// Tests: TestColdStartSetupSurvivesPanic, TestTypedNotePreview.
+
 /// <summary>Everything the engine sends to the MIDI output: serialised output operations, channel setup, panic, live and preview notes, volume scaling.</summary>
 public sealed partial class PlaybackEngine : IDisposable
 {
@@ -38,7 +42,7 @@ public sealed partial class PlaybackEngine : IDisposable
             var timeline = MidiTimelineBuilder.Build(project, opts);
             lock (_outputGate) SendChannelSetupCore(timeline);
         }
-        catch (Exception ex) { Debug.WriteLine($"Channel setup refresh failed: {ex}"); }
+        catch (Exception ex) { Debug.WriteLine($"Channel setup refresh failed: {ex}"); } // Not logged: playback path: no logging on this path
     }
 
     /// <summary>All notes off, on a background thread so a slow driver cannot freeze the UI.</summary>
@@ -76,11 +80,11 @@ public sealed partial class PlaybackEngine : IDisposable
             _outputOperationTail = Task.Run(() =>
             {
                 try { previous.GetAwaiter().GetResult(); }
-                catch (Exception ex) { Debug.WriteLine($"Previous MIDI cleanup operation failed: {ex}"); }
+                catch (Exception ex) { Debug.WriteLine($"Previous MIDI cleanup operation failed: {ex}"); } // Not logged: playback path: no logging on this path
                 lock (_outputGate)
                 {
                     try { operation(); }
-                    catch (Exception ex) { Debug.WriteLine($"MIDI output cleanup operation failed: {ex}"); }
+                    catch (Exception ex) { Debug.WriteLine($"MIDI output cleanup operation failed: {ex}"); } // Not logged: playback path: no logging on this path
                 }
             });
             return _outputOperationTail;

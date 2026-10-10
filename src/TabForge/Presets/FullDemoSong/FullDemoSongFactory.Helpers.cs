@@ -8,6 +8,10 @@ using TabForge.Services;
 
 namespace TabForge.Presets;
 
+// Owns: the shared helpers of the full demo song: the section and hit-kind enums, the bar, slot and string conventions, note helpers,
+//   and the seeded humanising of velocities (Hv).
+// Does not own: the song's content, which the owner files FullDemoSongFactory.*.cs write, and the song model (Models).
+// Tests: TestFullDemoSong.
 // Shared helpers of the full demo song ("Ashen Meridian", docs/DEMO_SONG_PLAN.md section 6.2).
 // The signatures below are the contract between the four owners: do not change them, add new helpers instead.
 //
@@ -647,7 +651,7 @@ internal static partial class FullDemoSongFactory
                 if (all.Count < 2) continue;
                 // Both hands at once when the 7 octave strings have room (a pitch can only use strings at or below it); else each hand alone.
                 try { Place(t, all); }
-                catch (InvalidOperationException) { foreach (var v in voices) if (v.Count > 1) Place(t, v); }
+                catch (InvalidOperationException) { foreach (var v in voices) if (v.Count > 1) Place(t, v); } // Not logged: demo song factory: fallback placement, no failure path
             }
         }
     }

@@ -184,6 +184,7 @@ public static partial class SelfTest
         sections.Add(Map("asyncActiveReads", m.AsyncActiveReads));
         sections.Add(Set("ambientStatics", m.AmbientStatics));
         sections.Add(Set("namingExceptions", m.NamingViolations));
+        sections.Add(Set("ownershipHeaderExceptions", old.Set("ownershipHeaderExceptions").OrderBy(x => x, StringComparer.Ordinal)));
         sections.Add("  \"perf\": {}");
         sb.Append("{\n").Append(string.Join(",\n", sections)).Append("\n}\n");
         return sb.ToString();

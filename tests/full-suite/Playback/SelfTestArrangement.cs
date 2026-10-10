@@ -30,16 +30,16 @@ public static partial class SelfTest
             Math.Abs(ArrangementFollowGeometry.OffsetForBackwardSeek(offset + 600, viewport) - (offset + 150)) < 0.001 &&
             ArrangementFollowGeometry.OffsetForBackwardSeek(200, viewport) == 0);
 
-        TestTimelineGeometryCache();
-        TestArrangementSectionHitGeometry();
-        TestSectionReorder();
-        TestBarRangeEditor();
-        TestSectionLayout();
-        TestInstrumentNamingAndSectionColours();
+        CheckTimelineGeometryCache();
+        CheckArrangementSectionHitGeometry();
+        CheckSectionReorder();
+        CheckBarRangeEditor();
+        CheckSectionLayout();
+        CheckInstrumentNamingAndSectionColours();
         TestExplicitSectionColourCopies();
     }
 
-    private static void TestInstrumentNamingAndSectionColours()
+    private static void CheckInstrumentNamingAndSectionColours()
     {
         Check("an extended-range bass or guitar is named by its string count; standard ones are not",
             InstrumentNaming.ForStringCount("Electric Bass (Finger)", TrackKind.Bass, 5) == "Electric Bass (Finger) (5 strings)" &&
@@ -65,7 +65,7 @@ public static partial class SelfTest
             SectionColorValueConverter.SectionColour(markers[2]) == shared[markers[2]]);
     }
 
-    private static void TestSectionLayout()
+    private static void CheckSectionLayout()
     {
         // A: bars 0-3, B: bars 4-5 then gap bars 6-7, C: bars 8-9.
         static SongProject Song()
@@ -143,7 +143,7 @@ public static partial class SelfTest
             written.Contains("\"BeamMode\": \"Force\"") && written.Contains("\"StemDirection\": \"Invert\"") && !written.Contains("\"StemDirection\": \"Auto\""));
     }
 
-    private static void TestBarRangeEditor()
+    private static void CheckBarRangeEditor()
     {
         static SongProject Song()
         {
@@ -225,7 +225,7 @@ public static partial class SelfTest
             copy is not null && copy.ColorIsExplicit && copy.ColorHex == "#C24B5A");
     }
 
-    private static void TestSectionReorder()
+    private static void CheckSectionReorder()
     {
         static TrackModel TrackWithBars(int count) => new()
         {
@@ -304,10 +304,10 @@ public static partial class SelfTest
             SectionReorderService.Move(lockedProject, from: 1, insertBefore: 0) is null &&
             ReferenceEquals(lockedProject.Tracks[0].Measures[4], untouchedBar));
 
-        TestSectionContentOperations();
+        CheckSectionContentOperations();
     }
 
-    private static void TestSectionContentOperations()
+    private static void CheckSectionContentOperations()
     {
         static TrackModel Track(int count) => new()
         {
@@ -369,7 +369,7 @@ public static partial class SelfTest
             lastSectionProject.Tracks[0].Measures.Count == 2);
     }
 
-    private static void TestArrangementSectionHitGeometry()
+    private static void CheckArrangementSectionHitGeometry()
     {
         var project = new SongProject();
         project.Tracks.Add(new TrackModel
@@ -401,7 +401,7 @@ public static partial class SelfTest
             timeline.SectionStartBarAt(22, ArrangementPanel.RulerHeight) == -1);
     }
 
-    private static void TestTimelineGeometryCache()
+    private static void CheckTimelineGeometryCache()
     {
         var project = new SongProject { TimeSignatureNumerator = 4, TimeSignatureDenominator = 4 };
         var measures = Enumerable.Range(0, 6).Select(_ => new MeasureModel()).ToList();

@@ -18,7 +18,7 @@ namespace TabForge.Services;
 public static class AudioDataFile
 {
     public const string Extension = ".tfaudio";
-    /// <summary>A5-03: the one size limit of a .tfaudio, for writing and reading alike (a file TabForge writes can always be read back).</summary>
+    /// <summary>The one size limit of a .tfaudio, for writing and reading alike (a file TabForge writes can always be read back).</summary>
     public const long MaxBytes = 64L * 1024 * 1024;
 
     private static readonly JsonSerializerOptions Options = new() { WriteIndented = true, MaxDepth = 32 };
@@ -75,7 +75,7 @@ public static class AudioDataFile
 
     internal static string Mb(long bytes) => $"{bytes / (1024.0 * 1024):0.#} MB";
 
-    /// <summary>The (up to five) largest saved plug-in states of a project as "Plugin on Owner (n MB)", for size-limit messages (A5-03, A6-02).</summary>
+    /// <summary>The (up to five) largest saved plug-in states of a project as "Plugin on Owner (n MB)", for size-limit messages.</summary>
     internal static List<string> LargestPluginStates(SongProject project)
     {
         var states = new List<(string Owner, string Plugin, long Bytes)>();
@@ -115,7 +115,7 @@ public static class AudioDataFile
     {
         var path = PathFor(gpPath);
         if (!File.Exists(path)) return false;
-        // A5-03: a sidecar that exists but cannot be used is never skipped silently.
+        // A sidecar that exists but cannot be used is never skipped silently.
         string NotApplied(string why) => $"{Path.GetFileName(path)} was not applied ({why}): the mixer, plug-in and clip settings saved with this song are missing";
         Contents? contents;
         try
@@ -125,6 +125,7 @@ public static class AudioDataFile
         }
         catch (Exception ex) when (ex is IOException or JsonException or InvalidDataException or UnauthorizedAccessException)
         {
+            Services.Trace.Error(Services.Trace.Ui, "audio data file: read: " + ex.Message);
             notices?.Add(NotApplied(ex is JsonException ? "the file is damaged" : ex.Message.TrimEnd('.')));
             return false;
         }
@@ -136,10 +137,10 @@ public static class AudioDataFile
         {
             string? actual = null;
             try { actual = Sha256Hex(InputLimits.ReadBoundedBytes(gpPath, InputLimits.MaxGuitarProFileBytes, "score file")); }
-            catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException) { }
+            catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException) { Services.Trace.Error(Services.Trace.Import, "audio data file: hash score file: " + ex.Message); }
             if (!string.Equals(actual, expected, StringComparison.OrdinalIgnoreCase))
             {
-                // Conflict rule (R5): the .gp changed after the pair was saved (another program, or an older copy of the sidecar). The .gp is what holds
+                // Conflict rule: the score file changed after the pair was saved (another program, or an older copy of the sidecar). The score file is what holds
                 // the music and its own track levels, so its volume and pan win; the TabForge-only data (mixer groups, FX chains, clips, sound sources)
                 // is applied by track position and name, and the user is told to check it.
                 gpChanged = true;
@@ -187,8 +188,9 @@ public static class AudioDataFile
             notices?.AddRange(found);
             return true;
         }
-        catch (InvalidDataException)
+        catch (InvalidDataException ex)
         {
+            Services.Trace.Error(Services.Trace.Ui, "audio data file: restore mixer: " + ex.Message);
             project.Mixer = backup.Mixer;
             for (var i = 0; i < project.Tracks.Count; i++)
                 (project.Tracks[i].SoundSource, project.Tracks[i].MixerGroup, project.Tracks[i].Rig, project.Tracks[i].MidiSound, project.Tracks[i].AudioClips, project.Tracks[i].Lanes) = backup.Item2[i];

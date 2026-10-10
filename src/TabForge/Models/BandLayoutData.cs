@@ -14,7 +14,7 @@ internal sealed class TolerantBandLayoutConverter : JsonConverter<BandLayoutData
         using var document = JsonDocument.ParseValue(ref reader);
         if (document.RootElement.ValueKind != JsonValueKind.Object) return null;
         try { return JsonSerializer.Deserialize<BandLayoutData>(document.RootElement.GetRawText()); }
-        catch (Exception ex) when (ex is JsonException or NotSupportedException or FormatException) { return null; }
+        catch (Exception ex) when (ex is JsonException or NotSupportedException or FormatException) { return null; } // Not logged: layout probe: null means no saved layout
     }
 
     public override void Write(Utf8JsonWriter writer, BandLayoutData? value, JsonSerializerOptions options)

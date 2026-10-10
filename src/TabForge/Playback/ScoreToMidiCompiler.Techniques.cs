@@ -4,8 +4,8 @@ using TabForge.Services;
 
 namespace TabForge.Playback;
 
-// ScoreToMidiCompiler: note emission and technique-to-MIDI mapping (dead/ghost/palm mute, grace, slides,
-// tremolo picking, trills, bends, vibrato, whammy, expressions, fade-in).
+// Owns: the per-note output for the score: mutes, grace notes, tremolo picking, trills, bends, slides, vibrato, whammy, expression events and fade-in envelopes.
+// Does not own: the bar and cell walk that calls it (ScoreToMidiCompiler.cs) or the scheduler's timing (PlaybackEngine.Scheduler.cs). Tests: TestTechniquePlaybackGolden.
 internal sealed partial class ScoreToMidiCompiler
 {
     private void EmitNote(TrackModel track, int trackIndex, int voiceIndex, int playBar, int cellIndex, TabCell cell, TabNote note, double onset, double noteMs, double slotMs)
@@ -49,26 +49,26 @@ internal sealed partial class ScoreToMidiCompiler
         var velocity = Dynamics.Clamp(note.Velocity);
         // A hammer-on / pull-off transition on the grace note plays the principal note legato (softer, no new pick).
         if (!note.IsGraceNote && importedGraceNotes.Any(g => g.Techniques.Contains("HOPO") || g.Techniques.Contains("HOPOOrigin")))
-            velocity = Math.Max(1, (int)(velocity * 0.8));
+            velocity = Math.Max(1, (int)(velocity * TechniqueInfo.VelocityFactorOf(TechniqueNames.Hopo)));
         // A dead note keeps the full velocity (it is only very short), a ghost note and a
         // hammered-on / pulled-off note play at 80 % (95 -> 76).
-        if (note.Ghost) velocity = Math.Max(1, (int)(velocity * 0.8));
-        if (t.Contains("HOPODestination")) velocity = Math.Max(1, (int)(velocity * 0.8));
+        if (note.Ghost) velocity = Math.Max(1, (int)(velocity * TechniqueInfo.VelocityFactorOf("Ghost")));
+        if (t.Contains(TechniqueNames.HopoDestination)) velocity = Math.Max(1, (int)(velocity * TechniqueInfo.VelocityFactorOf(TechniqueNames.HopoDestination)));
         // Palm mute mostly shortens the note (below); only a slight level drop, so palm-muted rhythm parts
         // stay level with open playing (the old 72% made them much quieter than the reference).
-        if (TechniqueNames.HasPalmMute(t)) velocity = Math.Max(1, (int)Math.Round(velocity * 0.92));
-        if (t.Contains("Slap")) velocity = Math.Min(127, (int)(velocity * 1.15));
-        if (t.Contains("Pop")) velocity = Math.Min(127, (int)(velocity * 1.1));
+        if (TechniqueNames.HasPalmMute(t)) velocity = Math.Max(1, (int)Math.Round(velocity * TechniqueInfo.VelocityFactorOf(TechniqueNames.PalmMute)));
+        if (t.Contains("Slap")) velocity = Math.Min(127, (int)(velocity * TechniqueInfo.VelocityFactorOf(TechniqueNames.Slap)));
+        if (t.Contains("Pop")) velocity = Math.Min(127, (int)(velocity * TechniqueInfo.VelocityFactorOf(TechniqueNames.Pop)));
         if (cell.Accent == 1) velocity = Math.Min(127, velocity + 22);
         else if (cell.Accent == 2) velocity = Math.Min(127, velocity + 40);
 
         var length = noteMs * Math.Clamp(cell.SoundDurationPercent, 1, 200) / 100.0;
         if (cell.Staccato) length *= 0.5;
         // Dead notes are a short muted click; ghost notes (parenthesised) are just softer, full length.
-        if (note.Dead) length = Math.Min(length, slotMs * 0.16);   // 0.04 beat
+        if (note.Dead) length = Math.Min(length, slotMs * TechniqueInfo.MaxLengthSlotsOf("Dead"));   // 0.04 beat
         // Palm mute: a palm-muted note is capped at a quarter note (min(quarter, written)) so it
         // chugs instead of ringing the full written value.
-        if (TechniqueNames.HasPalmMute(t)) length = Math.Min(length, 4 * slotMs);
+        if (TechniqueNames.HasPalmMute(t)) length = Math.Min(length, TechniqueInfo.MaxLengthSlotsOf(TechniqueNames.PalmMute) * slotMs);
         length = Math.Max(20, length);
 
         var key = (trackIndex, voiceIndex, note.StringIndex);
@@ -452,7 +452,7 @@ internal sealed partial class ScoreToMidiCompiler
         // The mod wheel is put back to zero when the note ends, or every later note on the channel keeps the wah's vibrato.
         if (t.Contains("WahOpen") || t.Contains("WahClose"))
         {
-            Add(device, channel, 0xB0, 1, t.Contains("WahOpen") ? 110 : 10, onset, trackIndex);
+            Add(device, channel, 0xB0, 1, TechniqueInfo.ControllerValueOf(t.Contains("WahOpen") ? TechniqueNames.WahOpen : TechniqueNames.WahClose), onset, trackIndex);
             Add(device, channel, 0xB0, 1, 0, onset + Math.Max(1, length), trackIndex);
         }
         // (Skipped when there is no room before the beat: both events would clamp to time zero and the off would sort before its on.)

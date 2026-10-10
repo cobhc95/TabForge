@@ -4,6 +4,10 @@ using TabForge.Services;
 
 namespace TabForge.Diagnostics;
 
+// Owns: the `--tutorial-shot` and `--tutorial-pdf` commands: draw the Help tutorial window off-screen to a PNG, or export the tutorial to PDF, with theme, chapter, search and size options.
+// Does not own: the tutorial content (TutorialLibrary) or the window (Views/TutorialWindow.xaml.cs).
+// Tests: TestTutorialPdfExport, TestTutorialWindow.
+
 internal static partial class DiagnosticCommands
 {
     /// <summary>

@@ -9,9 +9,9 @@ using TabForge.Services;
 namespace TabForge;
 
 /// <summary>
-/// MIDI export timing (Audit 7, A7-A02): reading the exported file's own tempo events back must give the playback timeline's time at every
+/// MIDI export timing: reading the exported file's own tempo events back must give the playback timeline's time at every
 /// bar start and every note, and the file must last as long as the song, including notes that ring on past the last bar.
-/// Before the fix the tempo map used whole-BPM steps sampled per slot (ramps drifted up to 17 ms) and notes after the last bar were clipped to its end.
+/// The tempo map must not use whole-BPM steps sampled per slot (ramps would drift), and notes after the last bar must not be clipped to its end.
 /// </summary>
 public static partial class SelfTest
 {

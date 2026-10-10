@@ -9,6 +9,10 @@ using RenderDraw = TabForge.Visualization.Draw;
 
 namespace TabForge.Views.Score;
 
+// Owns: the bar furniture the score renderer draws: the tuning block, clef and signatures, tempo, section and volta labels, directions and dynamics.
+// Does not own: the marks over the tab (ScoreRenderer.Marks.cs) or the note heads and stems (ScoreRenderer.cs).
+// Tests: TestSimileBarHidesLinesAndTies, TestTempoBoxText.
+
 // ScoreRenderer: bar furniture (clef, signatures, tempo, section and volta labels, directions, dynamics).
 internal sealed partial class ScoreRenderer
 {
@@ -436,6 +440,11 @@ internal sealed partial class ScoreRenderer
         return tabBottom + 13 + extra + 3;
     }
 
+    /// <summary>
+    /// Dynamics markings (ppp..fff) engraved as bold italic letters under the staff (under the TAB when the
+    /// notation staff is hidden). A marking appears only where the dynamic changes. The marks come from the layout
+    /// (computed once per score generation) and take part in the bar's width and the palm-mute lane stacking.
+    /// </summary>
     private void DrawDynamics(DrawingContext dc, TrackModel track, MeasureModel measure, int measureIndex,
         StaffNotationMeasureLayout layout, double staffTop, double tabTop, int strings, Color ink, bool showStaff)
     {

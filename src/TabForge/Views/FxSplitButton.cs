@@ -96,7 +96,7 @@ public sealed class FxSplitButton : FrameworkElement
     protected override void OnRender(DrawingContext dc)
     {
         try { RenderGuard.Inject("FxSplitButton"); RenderCore(dc); }
-        catch (Exception ex) when (RenderGuard.Contain(ex, "FxSplitButton", dc, ActualWidth, ActualHeight)) { }
+        catch (Exception ex) when (RenderGuard.Contain(ex, "FxSplitButton", dc, ActualWidth, ActualHeight)) { } // Not logged: render path: runs per frame.
     }
 
     private void RenderCore(DrawingContext dc)

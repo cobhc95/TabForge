@@ -78,6 +78,9 @@ public sealed class MixEngine : ISampleProvider
 
     /// <summary>Live master safety limiter (-0.3 dBFS, 1.5 ms lookahead). Off by default; <see cref="SafetyLimiter"/>.</summary>
     public volatile bool LiveLimiter;
+
+    /// <summary>The master output tap (null: none); gets every finished block, after the master level and the clamp.</summary>
+    public volatile MasterTap? Tap;
     private readonly SafetyLimiter _limiter;
     private bool _limiterWasOn;
 
@@ -418,6 +421,7 @@ public sealed class MixEngine : ISampleProvider
                 buffer[offset + 2 * (done + i)] = Math.Clamp(_left[i] * master, -ceiling, ceiling);
                 buffer[offset + 2 * (done + i) + 1] = Math.Clamp(_right[i] * master, -ceiling, ceiling);
             }
+            Tap?.Write(buffer, offset + 2 * done, n);
             done += n;
         }
         Volatile.Write(ref _heartbeat, Stopwatch.GetTimestamp());

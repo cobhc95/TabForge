@@ -9,7 +9,7 @@ namespace TabForge.Services;
 // Does not own: the song model and the file conversion.
 // Tests: TestGuitarProImportWorker, TestLongGuitarPro35Import.
 /// <summary>
-/// The one place where TabForge configures and checks the alphaTab dependency for importing Guitar Pro files (audit R4).
+/// The one place where TabForge configures and checks the alphaTab dependency for importing score files.
 /// </summary>
 /// <remarks>
 /// TabForge ships alphaTab 1.8.4 built from source plus four patches (package and assembly <c>TabForge.AlphaTab</c>, see
@@ -103,9 +103,9 @@ internal static class AlphaTabBoundary
             var type = typeof(ScoreLoader).Assembly.GetType("AlphaTab.Importer.Gp3To5Importer");
             if (type is null || Activator.CreateInstance(type, true) is not ScoreImporter importer) return null;
             importer.Init(AlphaTab.Io.ByteBuffer.FromBuffer(data), CreateImportSettings(InputLimits.MaxMeasuresPerTrack));
-            try { importer.ReadScore(); } catch (Exception) { /* expected: the caller is locating this failure */ }
+            try { importer.ReadScore(); } catch (Exception) { /* expected: the caller is locating this failure */ } // Not logged: probe of an importer that may reject the data; the caller reports the outcome.
             return type.GetField("_score", BindingFlags.Instance | BindingFlags.NonPublic)?.GetValue(importer) as AlphaTab.Model.Score;
         }
-        catch (Exception ex) when (ex is not OutOfMemoryException) { return null; }
+        catch (Exception ex) when (ex is not OutOfMemoryException) { return null; } // Not logged: alphaTab probe: null means unavailable
     }
 }

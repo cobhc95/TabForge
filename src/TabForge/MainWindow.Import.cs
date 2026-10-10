@@ -5,8 +5,11 @@ using TabForge.Documents;
 
 namespace TabForge;
 
-// MainWindow, background Guitar Pro import (audit A5-07): the parse runs off the UI thread with a status "Importing <name>…"
+// MainWindow, background score import: the parse runs off the UI thread with a status "Importing <name>…"
 // and a Cancel button in the status bar; the song is opened on the UI thread only when the import succeeded.
+// Owns: background score import: the parse runs off the UI thread, with its status text and Cancel; the song opens on the UI thread only after a successful import.
+// Does not own: the import queue itself.
+// Tests: listed in docs/feature-map/import-and-export.md.
 public partial class MainWindow : IImportQueueHost
 {
     private ImportQueueController? _importQueue;
@@ -49,7 +52,7 @@ public partial class MainWindow : IImportQueueHost
             });
     }
 
-    /// <summary>A6-03: the protected import could not start; opening in this process needs the user's yes for this file (default No).</summary>
+    /// <summary>The protected import could not start; opening in this process needs the user's yes for this file (default No).</summary>
     bool IImportQueueHost.ConfirmImportInProcess(ScoreImportJob job, string reason) =>
         IsLoaded && MessageBox.Show(this,
             $"The protected import process could not start ({reason}).\n\nOpening {job.Name} inside TabForge is less protected against damaged files. Open it anyway?",

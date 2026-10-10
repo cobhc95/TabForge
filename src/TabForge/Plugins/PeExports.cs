@@ -18,7 +18,7 @@ public static class PeExports
             var names = ExportNames(path);
             return names.Contains("VSTPluginMain") || names.Contains("main");
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or ArgumentException or EndOfStreamException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or ArgumentException or EndOfStreamException) // Not logged: not a PE image with a VST entry point: expected for most DLLs
         {
             return false;
         }

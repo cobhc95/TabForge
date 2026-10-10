@@ -16,7 +16,7 @@ public readonly record struct UndoCapture(UndoSnapshot Snapshot, bool Stored);
 // Tests: TestUndoController.
 /// <summary>
 /// Owns one document's undo history and its memory budget. States share every unchanged bar with the state before them
-/// (Audit 3 M-06), so capturing and restoring cost what the edit changed rather than the whole song. UI thread only.
+/// so capturing and restoring cost what the edit changed rather than the whole song. UI thread only.
 /// </summary>
 public sealed class UndoController
 {

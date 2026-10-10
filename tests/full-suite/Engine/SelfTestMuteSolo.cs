@@ -11,7 +11,7 @@ using EP = TabForge.AudioEngine.Plugins;
 namespace TabForge;
 
 /// <summary>
-/// Mute / solo holds for every kind of track and across every way playback starts or jumps (0.5.2): the one shared rule
+/// Mute / solo holds for every kind of track and across every way playback starts or jumps: the one shared rule
 /// (<see cref="MixerGroups.IsAudible"/>), the engine's mute gate that a seek's MIDI volume message cannot lift, and the offline render.
 /// Part of <see cref="SelfTest"/>.
 /// </summary>

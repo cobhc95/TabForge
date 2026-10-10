@@ -14,7 +14,7 @@ public static class AudioDevices
     public static IReadOnlyList<string> InputNames()
     {
         try { return new MMDeviceEnumerator().EnumerateAudioEndPoints(DataFlow.Capture, DeviceState.Active).Select(d => d.FriendlyName).ToList(); }
-        catch (Exception ex) when (ex is System.Runtime.InteropServices.COMException or InvalidOperationException) { return Array.Empty<string>(); }
+        catch (Exception ex) when (ex is System.Runtime.InteropServices.COMException or InvalidOperationException) { return Array.Empty<string>(); } // Not logged: device or file probe: the caller uses its fallback value
     }
 
     /// <summary>
@@ -40,7 +40,7 @@ public static class AudioDevices
                     return found;
                 }
             }
-            catch (Exception ex) when (ex is System.Runtime.InteropServices.COMException or InvalidOperationException or NAudio.MmException or DllNotFoundException) { }
+            catch (Exception ex) when (ex is System.Runtime.InteropServices.COMException or InvalidOperationException or NAudio.MmException or DllNotFoundException) { Services.Trace.Error(Services.Trace.Engine, "audio devices: enumerate: " + ex.Message); }
         }
         return (Enumerable.Range(1, 8).Select(i => $"Input {i}").ToArray(), Enumerable.Range(1, 8).Select(i => $"Output {i}").ToArray());
     }
@@ -52,7 +52,7 @@ public static class AudioDevices
         static string Name(Func<string> f, string fallback)
         {
             try { return f(); }
-            catch (Exception ex) when (ex is System.Runtime.InteropServices.COMException or InvalidOperationException) { return fallback; }
+            catch (Exception ex) when (ex is System.Runtime.InteropServices.COMException or InvalidOperationException) { return fallback; } // Not logged: device or file probe: the caller uses its fallback value
         }
         return (Enumerable.Range(0, asio.DriverInputChannelCount).Select(i => Name(() => asio.AsioInputChannelName(i), $"Input {i + 1}")).ToArray(),
                 Enumerable.Range(0, asio.DriverOutputChannelCount).Select(i => Name(() => asio.AsioOutputChannelName(i), $"Output {i + 1}")).ToArray());
@@ -71,7 +71,7 @@ public static class AudioDevices
             asio.ShowControlPanel();
             return true;
         }
-        catch (Exception ex) when (ex is System.Runtime.InteropServices.COMException or InvalidOperationException or NAudio.MmException or DllNotFoundException)
+        catch (Exception ex) when (ex is System.Runtime.InteropServices.COMException or InvalidOperationException or NAudio.MmException or DllNotFoundException) // Not logged: control panel: the message is returned to the caller
         {
             message = "The driver did not open its control panel (it may be in use by the audio engine): " + ex.Message;
             return false;
@@ -89,7 +89,7 @@ public static class AudioDevices
                 _ => new MMDeviceEnumerator().EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active).Select(d => d.FriendlyName).ToList(),
             };
         }
-        catch (Exception ex) when (ex is System.Runtime.InteropServices.COMException or InvalidOperationException)
+        catch (Exception ex) when (ex is System.Runtime.InteropServices.COMException or InvalidOperationException) // Not logged: device or file probe: the caller uses its fallback value
         {
             return Array.Empty<string>();
         }

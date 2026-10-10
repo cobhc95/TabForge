@@ -9,8 +9,11 @@ using TabForge.Visualization;
 
 namespace TabForge.Views;
 
-// TrackTimeline waveform: owns drawing a clip's outline for the visible span only (plus one viewport of margin each side), cached per clip.
-// Does not own the peak data (WaveformCache) or the clip box (DrawAudioLane). Tests: TestClipWaveformSpan.
+// Owns: a clip's waveform outline, drawn for the visible span only (plus one viewport of margin each side), cached per clip
+//   (WaveCache), and the loop markers drawn on it.
+// Does not own: the peak data (Audio/WaveformCache.cs) and the clip box (TrackTimeline.Clips.cs).
+// Tests: TestClipWaveformSpan.
+
 internal sealed partial class TrackTimeline
 {
     private sealed class WaveGeometry

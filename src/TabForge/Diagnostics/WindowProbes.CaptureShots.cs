@@ -14,6 +14,10 @@ using TabForge.Views;
 
 namespace TabForge.Diagnostics;
 
+// Owns: the shots of a capture run: tool windows shown off-screen, the stand-in plug-in slots, the temporary audio track with a synthetic clip, the timeline media-drag and clip-move shots, and the 2x PNG output of a visual.
+// Does not own: the script steps and the run (WindowProbes.Capture.cs) or the animation and effect shots (WindowProbes.CaptureAnimation.cs, WindowProbes.CaptureEffects.cs).
+// Tests: TestCaptureMainWindowOffscreen.
+
 // Window probes, scripted off-screen capture: tool windows, menus and the shots (see WindowProbes.Capture.cs).
 internal sealed partial class WindowProbes
 {
@@ -55,7 +59,8 @@ internal sealed partial class WindowProbes
                 switch (name.ToLowerInvariant())
                 {
                     case "grouprules": Adopt(new GroupRulesDialog(w.Window, w._project.Mixer)); break;
-                    case "mixer": Adopt(new MixerWindow(w.Window, w.Window) { Width = 1180, Height = 560 }); break;
+                    case "mixer": Adopt(new MixerWindow(w.Window.MixerHost, w.Window) { Width = 1180, Height = 560 }); break;
+                    case "videoexport": Adopt(new VideoExportWindow(new RenderContext { Project = w._project, Settings = w._settings, Engine = Audio.AudioEngineClient.Instance }, w.Window)); break;
                     case "render": w._settings.Render.Directory = "Renders"; Adopt(new RenderWindow(new RenderContext { Project = w._project, Settings = w._settings, Engine = Audio.AudioEngineClient.Instance }, w.Window)); break;
                     case "preferences":
                         _page = args.TryGetValue("page", out var page) ? page.GetString() : null;
@@ -64,6 +69,7 @@ internal sealed partial class WindowProbes
                         break;
                     case "fxchain": case "fxchain-example": FxChain(name.EndsWith("example", StringComparison.OrdinalIgnoreCase)); break;
                     case "wiring": case "midiprocessing": ExampleRigWindow(name.Equals("wiring", StringComparison.OrdinalIgnoreCase)); break;
+                    case "learnpopout" or "keyboardmodepopout": KeyboardModePopoutShot(); break;
                     case "addtrack": w.AddTrackWithWindow(); break;
                     case "trackproperties": w.TrackProps_Click(w, new RoutedEventArgs()); break;
                     case "tuner": TunerWindow.Open(w.Window, Audio.AudioEngineClient.Instance, () => w.SelectedTrack); AdoptOpen<TunerWindow>(); break;
@@ -78,7 +84,7 @@ internal sealed partial class WindowProbes
                     case "songstats": SongStatsWindow.Show(w.Window, w._project, "demo.tforge"); break;
                     case "newfromtemplate": w.ApplyTemplate_Click(w, new RoutedEventArgs()); break;
                     case "commandpalette": Adopt(new Views.CommandPalette(w.Window, w._settings.Hotkeys) { KeepOpen = true }); break;
-                    case "addplugin": PluginBrowser.Choose(w.Window, w.Window); break;
+                    case "addplugin": PluginBrowser.Choose(w.Window, w.Window.MixerHost); break;
                     case "pasteoptions": Adopt(new PasteOptionsDialog(new[] { PasteQuestion.BeatsOntoNotes, PasteQuestion.Octave })); break;
                     case "shortcuts":
                         _toolName = "Preferences";
@@ -131,15 +137,15 @@ internal sealed partial class WindowProbes
         private void FxChain(bool example)
         {
             var track = example ? ExampleSlots().Track : _w.SelectedTrack ?? throw new InvalidOperationException("no track selected");
-            Adopt(new FxChainWindow(_w.Window, track, _w.Window));
+            Adopt(new FxChainWindow(_w.Window.MixerHost, track, _w.Window));
         }
 
         private void ExampleRigWindow(bool wiring)
         {
             var (instrument, _, track) = ExampleSlots();
             Window window = wiring
-                ? new WiringWindow(_w.Window, track, instrument, _w.Window, change => change())
-                : new MidiProcessingWindow(_w.Window, track, instrument, _w.Window, change => change());
+                ? new WiringWindow(_w.Window.MixerHost, track, instrument, _w.Window, change => change())
+                : new MidiProcessingWindow(_w.Window.MixerHost, track, instrument, _w.Window, change => change());
             Adopt(window);
         }
 
@@ -373,7 +379,7 @@ internal sealed partial class WindowProbes
             var content = id.ToLowerInvariant() switch
             {
                 "instrument" or "fretboard" => (FrameworkElement)_w.InstrumentHost, "timeline" => _w.ArrangementHost, "tools" => _w.ToolsPanelContent,
-                "sections" => _w.SectionsPanelContent,
+                "sections" => _w.SectionsPanelContent, "learn" => _w.Window.KeyboardModePane,
                 "structure" or "rhythm" or "layout" => _w._palettePanelContents[id.ToLowerInvariant()],
                 _ => throw new InvalidOperationException($"unknown dock panel '{id}'")
             };

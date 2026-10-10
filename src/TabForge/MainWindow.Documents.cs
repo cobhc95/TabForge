@@ -27,6 +27,9 @@ using TabForge.Visualization;
 namespace TabForge;
 
 // MainWindow, document activation: loading, switching and refreshing the active song.
+// Owns: document activation: loading, switching and refreshing the active song, its tracks and tabs.
+// Does not own: the song's edits and saves (DocumentSession, DocumentSaveFlow).
+// Tests: listed in docs/feature-map/windows-tabs-and-documents.md.
 public partial class MainWindow
 {
     private DocumentViewBinder? _viewBinder;
@@ -203,15 +206,12 @@ public partial class MainWindow
 
     private void RefreshTabs() => Tabs.Refresh();
 
-    private int _fittedTrackCount = -1;
-
     /// <param name="fromDocument">The list is rebuilt for another document: its own selected track is shown, not the one the previous document had selected.</param>
     private void RefreshTracks(bool fromDocument = false)
     {
         // Adding or removing a track resizes the arrangement to the new track count.
-        if (_project.Tracks.Count != _fittedTrackCount)
+        if (_gestures.TrackCountChanged(_project.Tracks.Count))
         {
-            _fittedTrackCount = _project.Tracks.Count;
             Dispatcher.BeginInvoke(DispatcherPriority.Loaded, FitTimelineToTracks);
         }
         var old = fromDocument ? -1 : TrackMixerGrid.SelectedIndex;

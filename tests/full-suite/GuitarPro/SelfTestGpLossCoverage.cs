@@ -7,7 +7,7 @@ using TabForge.Services;
 
 namespace TabForge;
 
-// Loss coverage (Astra review 4a/4b, prevention): what a clean .gp export actually loses must be listed by the save/export question.
+// Loss coverage (prevention): what a clean score export actually loses must be listed by the save/export question.
 // For every capability fixture (A01..A54), every Guitar Pro fixture (the 15 synthetic songs) and a few edge songs, the song is exported as a clean .gp,
 // reopened, and compared with the round-trip semantics (RtScoreFacts + RtAudioFacts, plus the mix change on a rest beat, which the score facts leave out).
 // Every measured difference that is a real loss (not a meaning-preserving allowance of the capability record) must be

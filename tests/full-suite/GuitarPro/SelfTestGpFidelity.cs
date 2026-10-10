@@ -8,7 +8,7 @@ using TabForge.Services;
 
 namespace TabForge;
 
-// R5 (Guitar Pro fidelity): required group `gp-fidelity` (--require gp-fidelity). Each family below has its own fixture, checks the
+// Score fidelity: required group `gp-fidelity` (--require gp-fidelity). Each family below has its own fixture, checks the
 // reopened clean .gp EXACTLY (no tolerance), and goes with the removal or narrowing of the loss allowance it used to need.
 // Clean means: no embedded TabForge project and no .tfaudio beside it (Gf*Clean verifies that before reading the file back).
 public static partial class SelfTest

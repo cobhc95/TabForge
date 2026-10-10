@@ -31,10 +31,10 @@ internal sealed partial class WindowProbes
             var full = Path.GetFullPath(reportPath);
             var runner = new CaptureRun(this, Path.GetDirectoryName(full)!);
             try { await runner.SpeedAuditAsync(full); }
-            catch (Exception ex) { exit = 1; runner.Log($"FAILED: {ex.GetBaseException()}"); }
+            catch (Exception ex) { exit = 1; runner.Log($"FAILED: {ex.GetBaseException()}"); } // Not logged: diagnostic probe: the failure goes to its report, not errors.log
             finally
             {
-                try { runner.Finish(); } catch (Exception ex) { Debug.WriteLine($"Speed audit clean-up failed: {ex}"); }
+                try { runner.Finish(); } catch (Exception ex) { Debug.WriteLine($"Speed audit clean-up failed: {ex}"); } // Not logged: diagnostic probe: the failure goes to its report, not errors.log
                 DialogHost.Capture = null;
                 ContextMenuCapture = null;
                 _confirmOnClose = false;
@@ -167,7 +167,7 @@ internal sealed partial class WindowProbes
                     await Task.Delay(200);
                     await _w.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
                 }
-                catch (Exception ex)
+                catch (Exception ex) // Not logged: diagnostic probe: the failure goes to its report, not errors.log
                 {
                     _timing = false;
                     Log($"{action} ({_state}) rep {i}: {ex.GetBaseException().Message}");
@@ -177,7 +177,7 @@ internal sealed partial class WindowProbes
                 _timing = false;
                 row.Sync.Add(sync); row.Idle.Add(idle); row.Gap.Add(_gapMax);
                 ReadTrace(trace, traceStart, row.Traces);
-                if (after is not null) { try { await after(); } catch (Exception ex) { Log($"{action} after: {ex.GetBaseException().Message}"); } }
+                if (after is not null) { try { await after(); } catch (Exception ex) { Log($"{action} after: {ex.GetBaseException().Message}"); } } // Not logged: diagnostic probe: the failure goes to its report, not errors.log
             }
             _speed.Add(row);
         }

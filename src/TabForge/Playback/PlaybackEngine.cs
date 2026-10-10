@@ -156,7 +156,7 @@ public sealed partial class PlaybackEngine : IDisposable
                 writer.Flush();
             }, createDirectory: true);
         }
-        catch (Exception ex) { Debug.WriteLine($"MIDI diagnostic log could not be saved: {ex}"); }
+        catch (Exception ex) { Services.Trace.Error(Services.Trace.Playback, "MIDI diagnostic log: save: " + ex.Message); Debug.WriteLine($"MIDI diagnostic log could not be saved: {ex}"); }
     }
 
     public IReadOnlyList<DispatchRecord> DispatchLog { get { lock (_logGate) return _dispatchLog.ToList(); } }
@@ -308,8 +308,47 @@ public sealed partial class PlaybackEngine : IDisposable
         var mask = AudibleMask(project);
         var previous = Volatile.Read(ref _audible);
         Volatile.Write(ref _audible, mask);
+        if (previous is null) return;
+        var practice = Volatile.Read(ref _practiceSilence);
+        CutSilenced(WithoutTrack(mask, practice), WithoutTrack(previous, practice));
+    }
+
+    private int _practiceSilence = -1;
+
+    /// <summary>Track index silenced by practice mode (-1 = none); independent of mute/solo and never saved.</summary>
+    public int PracticeSilence => Volatile.Read(ref _practiceSilence);
+
+    /// <summary>
+    /// Silences one track's playback (index into the project's tracks; -1 clears) without touching its mute state.
+    /// A running track gets All Notes Off; the setting survives Start/Stop until the caller clears it.
+    /// </summary>
+    public void SetPracticeSilence(int trackIndex)
+    {
+        trackIndex = Math.Max(-1, trackIndex);
+        var previousIndex = Interlocked.Exchange(ref _practiceSilence, trackIndex);
+        if (trackIndex != previousIndex && previousIndex >= 0 && _timeline is { } live && _running)
+        {
+            var at = Volatile.Read(ref _currentStreamMs);
+            EnqueueOutputOperation(() => RestoreChannelStateAt(live, live.PlayFromMs, at, previousIndex));   // the track's program, volume and bend the silence skipped
+        }
+        if (trackIndex < 0 || trackIndex == previousIndex || _project is not { } project) return;
+        var mask = Volatile.Read(ref _audible) ?? Enumerable.Repeat(true, project.Tracks.Count).ToArray();
+        CutSilenced(WithoutTrack(mask, trackIndex), mask);
+    }
+
+    private static bool[] WithoutTrack(bool[] mask, int track)
+    {
+        if (track < 0 || track >= mask.Length || !mask[track]) return mask;
+        var copy = (bool[])mask.Clone();
+        copy[track] = false;
+        return copy;
+    }
+
+    /// <summary>All Notes Off for tracks that were audible in <paramref name="previous"/> and are not in <paramref name="mask"/>.</summary>
+    private void CutSilenced(bool[] mask, bool[] previous)
+    {
         var timeline = _timeline;
-        if (timeline is null || !_running || previous is null) return;
+        if (timeline is null || !_running) return;
         // Every channel a track plays on (its own and its effect channel for bent notes).
         var channelsOf = timeline.ChannelSetup.Where(e => e.TrackIndex >= 0)
             .GroupBy(e => e.TrackIndex)
@@ -454,7 +493,7 @@ public sealed partial class PlaybackEngine : IDisposable
         StopDiagnostics();
         // Shutdown is best effort: a failing device must not stop the rest of the cleanup.
         try { EnqueueOutputOperation(_output.Dispose).GetAwaiter().GetResult(); }
-        catch (Exception ex) { Debug.WriteLine($"MIDI output shutdown failed: {ex}"); }
+        catch (Exception ex) { Debug.WriteLine($"MIDI output shutdown failed: {ex}"); } // Not logged: playback path: no logging on this path
         _timer.Set(false);
     }
 }

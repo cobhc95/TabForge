@@ -4,6 +4,9 @@ using TabForge.Services;
 namespace TabForge;
 
 // MainWindow: update check (Settings > General > Updates; Help > Check for updates); the check itself is UpdateCheckController, built by BackgroundServices (MainWindow.Autosave.cs).
+// Owns: the update check's entry points: Settings > General > Updates and Help > Check for updates.
+// Does not own: the check itself (UpdateCheckController, built by BackgroundServices).
+// Tests: listed in docs/feature-map/settings-and-preferences.md.
 public partial class MainWindow
 {
     private async void CheckForUpdates_Click(object sender, RoutedEventArgs e) => await CheckForUpdatesAsync(manual: true);

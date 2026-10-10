@@ -44,7 +44,7 @@ public static partial class SelfTest
         Eq("band width: a double-click resets it", 0.0, settings.InstrumentWidth);
 
         // Per row, saved with the song.
-        var menu = BandMenus.Build(new BandMenuState(BandChoices.Tab, BandChoices.FullNeck, 3, true), _ => "").SelectMany(m => m.Children is { } c ? c.Prepend(m) : new[] { m }).ToList();
+        var menu = AllMenuItems(BandMenus.Build(new BandMenuState(BandChoices.Tab, BandChoices.FullNeck, 3, true), _ => "")).ToList();
         band.RunMenu(menu.First(m => m.Id == BandMenus.WidthModeId && m.Arg == BandMenus.ThisRow));
         Check("band width: the menu switches to this row only", settings.WidthPerRow);
         row1.RequestWidth(260);
@@ -70,7 +70,7 @@ public static partial class SelfTest
         lane.ShowAt(1, 0.5, false);
         var tabOnly = lane.PlayheadSpan;
         Check("band playhead: tab only is shorter than the row", tabOnly.Height > 4 && tabOnly.Height < lane.ActualHeight - 4, $"{tabOnly.Height:0} of {lane.ActualHeight:0}");
-        band.RunMenu(menu.First(m => m.Id == BandMenus.PlayheadId && m.Arg == BandChoices.FullRow));
+        band.RunMenu(new TabForge.Views.MenuSpec { Id = BandMenus.PlayheadId, Arg = BandChoices.FullRow });
         Check("band playhead: full row spans the lane", Math.Abs(lane.PlayheadSpan.Height - lane.ActualHeight) < 1 && lane.PlayheadSpan.Top == 0);
     }
 }

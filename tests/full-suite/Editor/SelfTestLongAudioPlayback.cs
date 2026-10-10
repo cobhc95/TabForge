@@ -204,11 +204,11 @@ public static partial class SelfTest
 
     private static void TestLongAudioClipGrowthPlayback()
     {
-        TestLongAudioClipGrowthDuringPlayback();
-        TestLongAudioNewTrackWhilePaused();
+        CheckLongAudioClipGrowthDuringPlayback();
+        CheckLongAudioNewTrackWhilePaused();
     }
 
-    private static void TestLongAudioClipGrowthDuringPlayback()
+    private static void CheckLongAudioClipGrowthDuringPlayback()
     {
         using var f = LongAudioMakeFixture(withMarker: true);
         var initialTrackCount = f.Project.Tracks.Count;
@@ -260,7 +260,7 @@ public static partial class SelfTest
             $"undo steps={undoSteps}, undo={undo is not null}, restored={restored}, redo={redo is not null}, reapplied={reapplied}, sibling bars={f.Sibling.Project.Tracks[0].Measures.Count}");
     }
 
-    private static void TestLongAudioNewTrackWhilePaused()
+    private static void CheckLongAudioNewTrackWhilePaused()
     {
         using var f = LongAudioMakeFixture(withMarker: false);
         var initialTracks = f.Project.Tracks.Count;

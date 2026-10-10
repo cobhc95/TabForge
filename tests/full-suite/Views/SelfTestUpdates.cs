@@ -35,7 +35,7 @@ public static partial class SelfTest
             UpdateService.LatestVersionFrom("{\"message\":\"rate limited\"}") is null && UpdateService.LatestVersionFrom("not json") is null);
         Check("draft releases are ignored", UpdateService.LatestVersionFrom("""[{ "tag_name": "v9.9.9", "draft": true }]""") is null);
 
-        // 0.5 is the first final release: tag v0.5.0 equals version 0.5.0; a final-release user is offered 0.5.1 / 0.6.0 but never betas.
+        // Tag v1.2.0 equals version 1.2.0; a final-release user is offered 1.2.1 / 1.3.0 but never pre-releases.
         Check("tag v0.5.0 equals version 0.5.0", UpdateService.Compare("v0.5.0", "0.5.0") == 0 && !UpdateService.IsNewer("v0.5.0", "0.5.0"));
         Check("0.5.1 and 0.6.0 are newer than 0.5.0", UpdateService.IsNewer("v0.5.1", "0.5.0") && UpdateService.IsNewer("v0.6.0", "0.5.0"));
         const string finalReply = """
@@ -65,11 +65,11 @@ public static partial class SelfTest
         var first = SettingsCatalog.Build(new AppSettings()).First(d => d.Category == "General");
         Check("the update switch is the first row of Settings > General", first.Key == "general.checkupdates", first.Key);
         Check("Check for updates can be bound to a key", HotkeyCatalog.All.Any(a => a.Id == "Help.CheckForUpdates"));
-        TestUpdateCheckNowAndVersionLabel();
+        CheckUpdateCheckNowAndVersionLabel();
     }
 
     /// <summary>Settings > General > Updates > Check now, and the version label in the Settings bottom bar (light and dark, 1.0 and 1.5 zoom).</summary>
-    private static void TestUpdateCheckNowAndVersionLabel()
+    private static void CheckUpdateCheckNowAndVersionLabel()
     {
         var rows = SettingsCatalog.Build(new AppSettings()).Where(d => d.Category == SettingsCatalog.General && d.Group == "Updates").Select(d => d.Key).ToList();
         Check("Check now is a button row in General > Updates, after the automatic switch",

@@ -12,7 +12,7 @@ namespace TabForge;
 public static partial class SelfTest
 {
     /// <summary>
-    /// A5-07: Guitar Pro import is contained. Zip bombs, oversized GPX and damaged GP3-5 headers are refused before alphaTab
+    /// Score import is contained. Zip bombs, oversized files and damaged legacy-format headers are refused before alphaTab
     /// parses; the background import gives the same song as the synchronous one; Cancel and failures apply nothing; the calling
     /// (UI) thread keeps running while an import is slow; the time and memory budgets stop an import cleanly.
     /// </summary>
@@ -141,7 +141,7 @@ public static partial class SelfTest
             Check("import containment: a failed import applies nothing and reports its error",
                 !failApplied && failError is InvalidDataException { Message: "broken" } && failQueue.Pending.Count == 0);
 
-            // A6-04: six imports at once run at most two at a time and apply in start order; Cancel all drops the waiting ones.
+            // Six imports at once run at most two at a time and apply in start order; Cancel all drops the waiting ones.
             var running = 0;
             var peak = 0;
             var opens = 0;

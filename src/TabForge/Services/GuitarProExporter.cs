@@ -35,7 +35,7 @@ public static class GuitarProExporter
     /// <summary>The complete .gp file bytes (built in memory; nothing is written).</summary>
     public static byte[] ToBytes(SongProject project, bool embedProject = true)
     {
-        // A6-02: the embedded project is built (and size-checked) first, so an over-limit song fails before anything is exported or written.
+        // The embedded project is built (and size-checked) first, so an over-limit song fails before anything is exported or written.
         AudioTrackExport.RequireNotation(project, "a score file");
         var embeddedBytes = embedProject ? EmbeddedProjectBytes(project) : null;
         var settings = new AlphaTab.Settings();
@@ -51,7 +51,7 @@ public static class GuitarProExporter
         // for a lossless round trip.
         List<ZipPart> parts;
         try { parts = ReadZip(bytes); }
-        catch (InvalidDataException) { parts = new(); }
+        catch (InvalidDataException) { parts = new(); } // Not logged: not a zip we understand: alphaTab output kept untouched
         if (parts.Count == 0) return bytes; // not a zip we understand: keep alphaTab's output untouched
         for (var i = 0; i < parts.Count; i++)
             if (parts[i].Name.Equals(ScoreEntry, StringComparison.OrdinalIgnoreCase) && parts[i].Data is { Length: > 0 })
@@ -90,7 +90,7 @@ public static class GuitarProExporter
 
     /// <summary>
     /// The gzip project bytes for the embedded entry, held to the same limit the reader applies (<see cref="InputLimits.MaxTforgeFileBytes"/>).
-    /// Over it: an <see cref="InvalidDataException"/> naming the largest plug-in states, in the style of the .tfaudio size message (A5-03).
+    /// Over it: an <see cref="InvalidDataException"/> naming the largest plug-in states, in the style of the .tfaudio size message.
     /// </summary>
     internal static byte[] EmbeddedProjectBytes(SongProject project)
     {
@@ -172,7 +172,7 @@ public static class GuitarProExporter
             using var zip = new System.IO.Compression.ZipArchive(stream, System.IO.Compression.ZipArchiveMode.Read);
             return zip.GetEntry(EmbeddedProjectEntry) is not null;
         }
-        catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException) { return false; }
+        catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException) { return false; } // Not logged: embedded project probe: false means none
     }
 
     /// <summary>The TabForge project embedded in a .gp written by TabForge, or null for other .gp files.</summary>
@@ -182,9 +182,9 @@ public static class GuitarProExporter
         // with a hard cap (its declared size can lie), so a small crafted .gp cannot expand to gigabytes.
         byte[] file;
         try { file = InputLimits.ReadBoundedBytes(path, InputLimits.MaxGuitarProFileBytes, "score file"); }
-        catch (InvalidDataException) { return null; }
-        catch (IOException) { return null; }
-        catch (UnauthorizedAccessException) { return null; }
+        catch (InvalidDataException) { return null; } // Not logged: the plain import reports the damage
+        catch (IOException) { return null; } // Not logged: the plain import reports the damage
+        catch (UnauthorizedAccessException) { return null; } // Not logged: the plain import reports the damage
         return TryReadEmbedded(file);
     }
 
@@ -192,8 +192,8 @@ public static class GuitarProExporter
     internal static SongProject? TryReadEmbedded(byte[] file) => ReadEmbedded(file, out _);
 
     /// <summary>
-    /// A6-02: the embedded project of a .gp in memory. Null with <paramref name="rejected"/> null: there is none (not a TabForge-written .gp;
-    /// the normal Guitar Pro import applies, silently). Null with a reason in <paramref name="rejected"/>: one is present but cannot be used
+    /// The embedded project of a score file in memory. Null with <paramref name="rejected"/> null: there is none (not a TabForge-written score file;
+    /// the normal import applies, silently). Null with a reason in <paramref name="rejected"/>: one is present but cannot be used
     /// (over the size limit, damaged, unsupported version); the caller opens the file as plain Guitar Pro and tells the user why.
     /// </summary>
     internal static SongProject? ReadEmbedded(byte[] file, out string? rejected)
@@ -201,12 +201,12 @@ public static class GuitarProExporter
         rejected = null;
         System.IO.Compression.ZipArchive zip;
         try { zip = new System.IO.Compression.ZipArchive(new MemoryStream(file, writable: false), System.IO.Compression.ZipArchiveMode.Read); }
-        catch (InvalidDataException) { return null; }   // not a zip at all (Guitar Pro 3-5 ...): no embedded project
+        catch (InvalidDataException) { return null; }   // not a zip at all (Guitar Pro 3-5 ...): no embedded project // Not logged: not a zip: no embedded project
         using (zip)
         {
             System.IO.Compression.ZipArchiveEntry? entry;
             try { entry = zip.GetEntry(EmbeddedProjectEntry); }
-            catch (InvalidDataException) { return null; }   // directory unreadable: the plain import reports the damage
+            catch (InvalidDataException) { return null; }   // directory unreadable: the plain import reports the damage // Not logged: directory unreadable: the plain import reports the damage
             if (entry is null) return null;
             try
             {
@@ -229,6 +229,7 @@ public static class GuitarProExporter
             }
             catch (Exception ex) when (ex is InvalidDataException or IOException)
             {
+                Services.Trace.Error(Services.Trace.Import, "embedded project: restore: " + ex.Message);
                 rejected = ex.Message.Contains("size limit", StringComparison.Ordinal) ? TooBigReason
                     : ex.Message.Contains("unsupported format version", StringComparison.Ordinal) ? "it was saved by a newer or unknown version of TabForge"
                     : "the data is damaged or invalid";
@@ -530,10 +531,11 @@ public static class GuitarProExporter
         if (all.Contains("DeadSlapped")) beat.DeadSlapped = true;
         if (all.Contains("Slap") && !all.Contains("DeadSlapped")) beat.Slap = true;
         if (all.Contains("Pop")) beat.Pop = true;
-        if (all.Contains("FadeIn")) beat.Fade = FadeType.FadeIn; else if (all.Contains("FadeOut")) beat.Fade = FadeType.FadeOut;
-        if (all.Contains("WahOpen")) beat.WahPedal = WahPedal.Open; else if (all.Contains("WahClose")) beat.WahPedal = WahPedal.Closed;
+        // The value of each effect is the technique row's GpId (TechniqueInfo); the order of the names is the precedence when a beat carries more than one.
+        if (TechniqueInfo.GpValue<FadeType>(all, "Fade", "FadeIn", "FadeOut") is { } fade) beat.Fade = fade;
+        if (TechniqueInfo.GpValue<WahPedal>(all, "WahPedal", "WahOpen", "WahClose") is { } wah) beat.WahPedal = wah;
         // The importer tags an arpeggio stroke with BOTH its Arpeggio* name and a Brush* name, so the arpeggio must be tested first.
-        if (all.Contains("ArpeggioDown")) beat.BrushType = BrushType.ArpeggioDown; else if (all.Contains("ArpeggioUp")) beat.BrushType = BrushType.ArpeggioUp;
+        if (TechniqueInfo.GpValue<BrushType>(all, "BrushType", "ArpeggioDown", "ArpeggioUp") is { } arpeggio) beat.BrushType = arpeggio;
         else if (all.Contains("BrushDown")) beat.BrushType = BrushType.BrushDown; else if (all.Contains("BrushUp")) beat.BrushType = BrushType.BrushUp;
         // The stroke's spread: the importer reads BrushDuration back as 3 string steps (ticks / 3 / 240 = BrushStepSlots).
         // No spread set: none is written, so the reopened stroke keeps the player's default spread (a fixed 60 ticks made it faster).
@@ -612,12 +614,11 @@ public static class GuitarProExporter
             var dynamic = ToDynamicValue(TabForge.Models.Dynamics.NearestIndex(n.Velocity));
             note.Dynamics = dynamic;
             if (ReferenceEquals(n, cell.Notes[0])) beat.Dynamics = dynamic;
-            if (t.Contains("PinchHarmonic")) { note.HarmonicType = HarmonicType.Pinch; note.HarmonicValue = n.HarmonicFret ?? 12; }
-            else if (t.Contains("ArtificialHarmonic")) { note.HarmonicType = HarmonicType.Artificial; note.HarmonicValue = n.HarmonicFret ?? 12; }
-            else if (t.Contains("TapHarmonic")) { note.HarmonicType = HarmonicType.Tap; note.HarmonicValue = n.HarmonicFret ?? 12; }
-            else if (t.Contains("SemiHarmonic")) { note.HarmonicType = HarmonicType.Semi; note.HarmonicValue = n.HarmonicFret ?? 12; }
-            else if (t.Contains("FeedbackHarmonic")) { note.HarmonicType = HarmonicType.Feedback; note.HarmonicValue = n.HarmonicFret ?? 12; }
-            else if (t.Contains("Harmonic")) { note.HarmonicType = HarmonicType.Natural; note.HarmonicValue = n.HarmonicFret ?? n.Fret; }
+            if (TechniqueInfo.GpValue<HarmonicType>(t, "HarmonicType", "PinchHarmonic", "ArtificialHarmonic", "TapHarmonic", "SemiHarmonic", "FeedbackHarmonic", "Harmonic") is { } harmonic)
+            {
+                note.HarmonicType = harmonic;
+                note.HarmonicValue = n.HarmonicFret ?? (harmonic == HarmonicType.Natural ? n.Fret : 12);
+            }
             if (t.Contains("LeftTap")) note.IsLeftHandTapped = true;
             if (t.Contains("Trill"))
             {

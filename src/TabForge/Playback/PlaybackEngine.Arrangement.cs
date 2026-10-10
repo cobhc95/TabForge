@@ -10,6 +10,10 @@ using TempoMath = TabForge.Audio.Contracts.TempoMath;
 
 namespace TabForge.Playback;
 
+// Owns: refreshing the playing timeline after score edits: the background and live arrangement recompiles, the loop refresh and the refresh reserved for audio growth.
+// Does not own: compiling the timeline (ArrangementRefreshCompiler.cs, ScoreToMidiCompiler.cs) or dispatching its events (PlaybackEngine.Scheduler.cs).
+// Tests: TestLiveEditLoop, TestEngineSyncDeferredRequests.
+
 /// <summary>Live arrangement refresh: swaps the future part of the running timeline without restarting playback.</summary>
 public sealed partial class PlaybackEngine : IDisposable, IAudioGrowthRefreshHost
 {
@@ -117,7 +121,7 @@ public sealed partial class PlaybackEngine : IDisposable, IAudioGrowthRefreshHos
             }
             return true;
         }
-        catch
+        catch // Not logged: playback path: no logging on this path
         {
             lock (_gate)
             {
@@ -169,7 +173,7 @@ public sealed partial class PlaybackEngine : IDisposable, IAudioGrowthRefreshHos
             new AudioGrowthRefreshFlow(this).Start(reservation, snapshot, map);
             return true;
         }
-        catch (Exception ex)
+        catch (Exception ex) // Not logged: playback path: no logging on this path
         {
             ((IAudioGrowthRefreshHost)this).CompleteAudioGrowthRefresh(reservation, null, null, ex.Message);
             if (ex is OutOfMemoryException) throw;

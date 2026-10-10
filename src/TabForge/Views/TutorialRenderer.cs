@@ -258,7 +258,7 @@ internal sealed class TutorialRenderer
                     result = LoadBitmap(full);
             }
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException) { }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException) { Services.Trace.Error(Services.Trace.Ui, "tutorial: load image: " + ex.Message); }
         _imageCache[source] = result;
         return result;
     }
@@ -276,7 +276,7 @@ internal sealed class TutorialRenderer
             bmp.Freeze();
             return bmp;
         }
-        catch (Exception ex) when (ex is IOException or NotSupportedException or InvalidOperationException or FileFormatException or UriFormatException) { return null; }
+        catch (Exception ex) when (ex is IOException or NotSupportedException or InvalidOperationException or FileFormatException or UriFormatException) { return null; } // Not logged: render path: no logging per frame
     }
 
     private Block BuildCallout(TutorialCallout callout, TutorialChapter chapter, double size)

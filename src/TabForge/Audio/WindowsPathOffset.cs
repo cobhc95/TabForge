@@ -76,7 +76,7 @@ internal static class WindowsPathOffset
             LastTotalDb = total;
             return (offset, $"total {total:0.00} dB = endpoint {endpointDb:0.00} dB + session {sessionDb:0.00} dB + offset {offset:0.00} dB");
         }
-        catch (Exception ex) when (ex is System.Runtime.InteropServices.COMException or InvalidOperationException or ArgumentException or NotSupportedException)
+        catch (Exception ex) when (ex is System.Runtime.InteropServices.COMException or InvalidOperationException or ArgumentException or NotSupportedException) // Not logged: probe: the message is returned to the caller
         {
             return (null, ex.Message);
         }

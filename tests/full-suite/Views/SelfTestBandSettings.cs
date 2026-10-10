@@ -339,6 +339,10 @@ public static partial class SelfTest
         Check("band empty: a shown row hides the message", !band2.View.EmptyVisible);
     }
 
+    /// <summary>Every entry of a menu tree, submenu headers included, depth first (the Band menu nests two levels: Row sizes > Rows per screen).</summary>
+    private static IEnumerable<MenuSpec> AllMenuItems(IEnumerable<MenuSpec> items) =>
+        items.SelectMany(m => m.Children is { } c ? AllMenuItems(c).Prepend(m) : new[] { m });
+
     /// <summary>A right-click on the Band view opens its menu: lane content, instrument size, rows per screen, follow, zoom and the settings door.</summary>
     private static void TestBandMenu()
     {
@@ -360,7 +364,7 @@ public static partial class SelfTest
         band.Tick();
         band.View.RaiseEvent(new System.Windows.Input.MouseButtonEventArgs(System.Windows.Input.Mouse.PrimaryDevice, 0, System.Windows.Input.MouseButton.Right) { RoutedEvent = System.Windows.UIElement.MouseRightButtonUpEvent });
         Check("band menu: a right-click opens it", band.LastMenu is { Items.Count: > 5 });
-        var all = BandMenus.Build(new BandMenuState(BandChoices.Tab, BandChoices.FullNeck, 3, true), _ => "").SelectMany(m => m.Children is { } c ? c.Prepend(m) : new[] { m }).ToList();
+        var all = AllMenuItems(BandMenus.Build(new BandMenuState(BandChoices.Tab, BandChoices.FullNeck, 3, true), _ => "")).ToList();
         Check("band menu: lanes, instruments, rows, zoom and settings", new[] { BandMenus.Lanes, BandMenus.Instruments, BandMenus.Rows, ScoreMenus.Zoom, BandMenus.Settings }.All(h => all.Any(m => m.Header == h)));
         Check("band menu: the current lane content is ticked", all.Single(m => m.Id == BandMenus.ContentId && m.Checked).Arg == BandChoices.Tab);
         band.RunMenu(all.First(m => m.Id == BandMenus.ContentId && m.Arg == BandChoices.Both));

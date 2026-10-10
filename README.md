@@ -1,4 +1,4 @@
-# TabForge 0.6.2
+# TabForge 0.7.0
 
 **A keyboard-driven tablature and notation editor for Windows. Opens GP files (.gp3, .gp4, .gp5, .gpx, .gp) and saves .gp and its own .tforge projects.** Write, import and play back guitar, bass, drum and keyboard parts, with a live fretboard / keyboard, an arrangement timeline, audio and MIDI recording, a mixer, VST plug-ins and offline audio rendering.
 
@@ -17,6 +17,27 @@
 | [<img src="docs/animations/section-move.gif" alt="Moving a section" width="420">](docs/animations/section-move.gif) | [<img src="docs/animations/mixer.gif" alt="Adjusting the mixer" width="420">](docs/animations/mixer.gif) |
 | *Moving a section to a new position.* | *Adjusting levels in the mixer.* |
 
+
+### New in 0.7
+
+[<img src="docs/screenshots/keyboard-mode.png" alt="Keyboard mode with falling notes" width="860">](docs/screenshots/keyboard-mode.png)
+
+- **Keyboard mode (experimental)**: any track's notes fall onto a realistic piano keyboard; play along on a MIDI keyboard and get green or red feedback per note. Turn it on from the toolbar or View > Keyboard mode. The selected track is silenced and your own playing is heard through its sound, a *Wait for me* mode holds the song until you play the right notes, and speed, loop, hands, zoom and note names sit in a control bar. Left and right hands are worked out automatically, the MIDI input defaults to any available device, and the view can pop out into its own window with full screen.
+- **Video export and recording**: File > Export > Video (MP4) turns a song into a video that plays itself, with the full audio mix; the Record video button in the title bar (next to Settings, Ctrl+Alt+V) records the window with the live sound.
+- **Band view** and playback are crisper: playheads and scrolling stay sharp at every display scale.
+
+<table><tr>
+<td><a href="docs/screenshots/keyboard-mode-light.png"><img src="docs/screenshots/keyboard-mode-light.png" alt="Keyboard mode, light theme" width="420"></a></td>
+<td><a href="docs/screenshots/keyboard-mode-wait.png"><img src="docs/screenshots/keyboard-mode-wait.png" alt="Wait for me" width="420"></a></td>
+</tr><tr>
+<td><a href="docs/screenshots/keyboard-mode-popout.png"><img src="docs/screenshots/keyboard-mode-popout.png" alt="Keyboard mode in its own window" width="420"></a></td>
+<td><a href="docs/screenshots/video-export-dialog.png"><img src="docs/screenshots/video-export-dialog.png" alt="Video export" width="420"></a></td>
+</tr><tr>
+<td><a href="docs/screenshots/record-video-button.png"><img src="docs/screenshots/record-video-button.png" alt="Record video button next to Settings" width="420"></a></td>
+<td><a href="docs/screenshots/band-view-new.png"><img src="docs/screenshots/band-view-new.png" alt="Band view" width="420"></a></td>
+</tr></table>
+
+See the [changelog](CHANGELOG.md) for everything in 0.7.0.
 
 ### New in 0.6
 

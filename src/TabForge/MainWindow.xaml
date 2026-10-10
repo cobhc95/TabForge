@@ -34,6 +34,17 @@
                      off the right edge; the tab strip fills whatever is left, as in Edge / Firefox. -->
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Height="44"
                             WindowChrome.IsHitTestVisibleInChrome="True">
+                    <!-- Record video (Ctrl+Alt+V): a camera outline in the caption glyph colour, left of Settings; a red dot with a ring shows while recording. -->
+                    <Button x:Name="RecordVideoButton" Style="{StaticResource ChromeCaptionButton}" Click="RecordVideo_Click"
+                            WindowChrome.IsHitTestVisibleInChrome="True" Width="40"
+                            ToolTip="Record video" local:TooltipShortcuts.Command="Transport.RecordVideo" AutomationProperties.Name="Record video">
+                        <Grid Width="20" Height="20" IsHitTestVisible="False">
+                            <Path Data="M2,6 H15 V18 H2 Z M15,10 L22,6 V18 L15,14" Stroke="{DynamicResource ChromeGlyphBrush}" StrokeThickness="1.4" StrokeLineJoin="Round"
+                                  Stretch="Uniform" Width="17" Height="14" HorizontalAlignment="Left" VerticalAlignment="Center" SnapsToDevicePixels="True"/>
+                            <Ellipse x:Name="VideoRecDot" Width="9" Height="9" Fill="{DynamicResource DangerBrush}" Stroke="{DynamicResource ChromeStripBrush}" StrokeThickness="1.5"
+                                     HorizontalAlignment="Right" VerticalAlignment="Top" Visibility="Collapsed"/>
+                        </Grid>
+                    </Button>
                     <!-- Title-bar settings button: the IconCog gear, 16px, in the caption glyph colour. -->
                     <Button x:Name="TitleSettingsButton" Style="{StaticResource ChromeCaptionButton}" Click="Prefs_Click"
                             WindowChrome.IsHitTestVisibleInChrome="True" Width="40"
@@ -80,6 +91,8 @@
                         <TextBlock x:Name="StatusText" Text="Ready" MaxWidth="150" TextTrimming="CharacterEllipsis"
                                    VerticalAlignment="Center" ToolTip="Last action or current state"
                                    AutomationProperties.Name="Status" AutomationProperties.LiveSetting="Polite"/>
+                        <TextBlock x:Name="RecIndicator" Visibility="Collapsed" Margin="8,0,0,0" FontWeight="Bold" Foreground="{DynamicResource DangerBrush}" VerticalAlignment="Center"
+                                   Text="REC 00:00" ToolTip="Recording a video" AutomationProperties.Name="Video recording time" AutomationProperties.LiveSetting="Off"/>
                         <!-- A5-07: shown only while a score file imports in the background -->
                         <Button x:Name="CancelImportButton" Content="Cancel" Visibility="Collapsed" Margin="6,0,0,0" Padding="8,1" Focusable="True" IsTabStop="True"
                                 BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}" Background="{DynamicResource Panel2Brush}"
@@ -130,200 +143,38 @@
             <DockPanel>
                 <Menu x:Name="MainMenu" DockPanel.Dock="Left" Background="Transparent" VerticalAlignment="Center">
                     <MenuItem Header="_File">
-                        <MenuItem Header="_New" Click="New_Click" local:MenuHotkey.Id="File.New"/>
-                        <MenuItem Header="New from t_emplate…" Click="ApplyTemplate_Click" local:MenuHotkey.Id="File.NewFromTemplate"/>
-                        <MenuItem Header="New _tab" Click="NewTab_Click" local:MenuHotkey.Id="Tab.New"/>
-                        <MenuItem Header="_Open…" Click="Open_Click" local:MenuHotkey.Id="File.Open"/>
-                        <MenuItem Header="Open in new _tab…" Click="OpenInNewTab_Click" local:MenuHotkey.Id="File.OpenInNewTab"/>
-                        <MenuItem Header="_Save" Click="Save_Click" local:MenuHotkey.Id="File.Save"/>
-                        <MenuItem Header="Save _As…" Click="SaveAs_Click" local:MenuHotkey.Id="File.SaveAs"/>
-                        <MenuItem Header="Save as temp_late…" Click="SaveAsTemplate_Click" local:MenuHotkey.Id="File.SaveAsTemplate"/>
-                        <MenuItem Header="_Close tab" Click="CloseTab_Click" local:MenuHotkey.Id="Tab.Close"/>
-                        <Separator/>
-                        <MenuItem Header="Export _MIDI…" Click="ExportMidi_Click" local:MenuHotkey.Id="File.ExportMidi"/>
-                        <MenuItem Header="_Render to audio file…" Click="Render_Click" local:MenuHotkey.Id="File.Render"/>
-                        <MenuItem Header="Export _ASCII tab…" Click="ExportAscii_Click" local:MenuHotkey.Id="File.ExportAscii"/>
-                        <MenuItem Header="Export compatible .gp file…" Click="ExportGuitarPro_Click" local:MenuHotkey.Id="File.ExportGuitarPro"/>
-                        <MenuItem Header="Export P_DF…" Click="ExportPdf_Click" local:MenuHotkey.Id="File.ExportPdf"/>
-                        <MenuItem Header="Export Music_XML…" Click="ExportMusicXml_Click" local:MenuHotkey.Id="File.ExportMusicXml"/>
-                        <MenuItem Header="Command pa_lette…" Click="CommandPalette_Click" local:MenuHotkey.Id="App.CommandPalette"/>
-                        <Separator/>
-                        <MenuItem Header="Score _information…" Click="ScoreInfo_Click" local:MenuHotkey.Id="Bar.ScoreInfo"/>
-                        <MenuItem Header="Print _preview…" Click="PrintPreview_Click" local:MenuHotkey.Id="File.PrintPreview"/>
-                        <MenuItem Header="_Print…" Click="Print_Click" local:MenuHotkey.Id="File.Print"/>
-                        <Separator/><MenuItem Header="E_xit" Click="Exit_Click"/>
                     </MenuItem>
                     <MenuItem Header="_Edit">
-                        <MenuItem Header="_Undo" Click="Undo_Click" local:MenuHotkey.Id="Edit.Undo"/>
-                        <MenuItem Header="_Redo" Click="Redo_Click" local:MenuHotkey.Id="Edit.Redo"/>
-                        <Separator/>
-                        <MenuItem Header="_Copy" Click="Copy_Click" local:MenuHotkey.Id="Edit.Copy"/>
-                        <MenuItem Header="Cu_t" Click="Cut_Click" local:MenuHotkey.Id="Edit.Cut"/>
-                        <MenuItem Header="_Paste" Click="Paste_Click" local:MenuHotkey.Id="Edit.Paste"/>
-                        <MenuItem Header="Paste _special…" Click="PasteSpecial_Click" local:MenuHotkey.Id="Edit.PasteSpecial"/>
-                        <Separator/>
-                        <MenuItem Header="_Insert beat" Click="InsertBeat_Click" local:MenuHotkey.Id="Edit.InsertBeat"/>
-                        <MenuItem Header="_Delete beats" Click="DeleteBeats_Click" local:MenuHotkey.Id="Edit.DeleteBeats"/>
-                        <MenuItem Header="_Copy last beat" Click="CopyBeats_Click" local:MenuHotkey.Id="Note.RepeatBeat"/>
                     </MenuItem>
                     <MenuItem Header="_Bar">
-                        <MenuItem Header="Insert _bar" Click="InsertBar_Click" local:MenuHotkey.Id="Bar.Insert"/>
-                        <MenuItem Header="_Delete bar" Click="DeleteBar_Click" local:MenuHotkey.Id="Bar.Delete"/>
-                        <MenuItem Header="Duplicate bar" Click="DuplicateBar_Click"/>
-                        <MenuItem Header="Repeat selection as bars" Click="RepeatSelection_Click" local:MenuHotkey.Id="Edit.RepeatSelection"/>
-                        <Separator/>
-                        <MenuItem Header="_Time signature…" Click="TimeSig_Click" local:MenuHotkey.Id="Bar.TimeSignature"/>
-                        <MenuItem Header="_Key signature…" Click="KeySig_Click" local:MenuHotkey.Id="Bar.KeySignature"/>
-                        <MenuItem Header="_Clef" Click="Clef_Click" local:MenuHotkey.Id="Bar.Clef"/>
-                        <MenuItem Header="Triplet _feel" Click="TripletFeel_Click"/>
-                        <Separator/>
-                        <MenuItem Header="Repeat _open" Click="RepeatOpen_Click" local:MenuHotkey.Id="Bar.RepeatOpen"/>
-                        <MenuItem Header="Repeat _close…" Click="RepeatClose_Click" local:MenuHotkey.Id="Bar.RepeatClose"/>
-                        <MenuItem Header="_Directions / ending…" Click="Directions_Click" local:MenuHotkey.Id="Bar.Directions"/>
-                        <MenuItem Header="_Double bar" Click="DoubleBar_Click"/>
-                        <MenuItem Header="Repeat one _bar" Click="Simile1_Click"/>
-                        <MenuItem Header="Repeat two b_ars" Click="Simile2_Click"/>
-                        <Separator/>
-                        <MenuItem Header="_Section…" Click="Section_Click" local:MenuHotkey.Id="Section.Edit"/>
                     </MenuItem>
                     <MenuItem Header="_Track">
-                        <MenuItem Header="Add _Guitar" Click="AddGuitar_Click" local:MenuHotkey.Id="Track.Add"/>
-                        <MenuItem Header="Add _Bass" Click="AddBass_Click"/>
-                        <MenuItem Header="Add _Drums" Click="AddDrums_Click"/>
-                        <MenuItem Header="Add _Keys" Click="AddKeys_Click"/>
-                        <Separator/>
-                        <MenuItem Header="_Delete track" Click="DeleteTrack_Click" local:MenuHotkey.Id="Track.Delete"/>
-                        <MenuItem Header="Move _up" Click="MoveTrackUp_Click" local:MenuHotkey.Id="Track.MoveUp"/>
-                        <MenuItem Header="Move _down" Click="MoveTrackDown_Click" local:MenuHotkey.Id="Track.MoveDown"/>
-                        <Separator/>
-                        <MenuItem Header="_Properties…" Click="TrackProps_Click" local:MenuHotkey.Id="Track.Properties"/>
                     </MenuItem>
                     <MenuItem Header="_Note">
-                        <MenuItem Header="Whole" Click="Dur1_Click"/>
-                        <MenuItem Header="Half" Click="Dur2_Click"/>
-                        <MenuItem Header="Quarter" Click="Dur4_Click"/>
-                        <MenuItem Header="Eighth" Click="Dur8_Click"/>
-                        <MenuItem Header="Sixteenth" Click="Dur16_Click"/>
-                        <MenuItem Header="32nd" Click="Dur32_Click"/>
-                        <MenuItem Header="64th" Click="Dur64_Click"/>
-                        <Separator/>
-                        <MenuItem Header="Longer note value" Click="DurLonger_Click" local:MenuHotkey.Id="Note.Longer"/>
-                        <MenuItem Header="Shorter note value" Click="DurShorter_Click" local:MenuHotkey.Id="Note.Shorter"/>
-                        <MenuItem Header="Dotting" Click="Dot_Click" local:MenuHotkey.Id="Note.Dot"/>
-                        <MenuItem Header="Double dotting" Click="DoubleDot_Click" local:MenuHotkey.Id="Note.DoubleDot"/>
-                        <MenuItem Header="Triplet" Click="Triplet_Click" local:MenuHotkey.Id="Note.Triplet"/>
-                        <Separator/>
-                        <MenuItem Header="Tie note" Click="Tie_Click" local:MenuHotkey.Id="Note.Tie"/>
-                        <MenuItem Header="Rest" Click="Rest_Click" local:MenuHotkey.Id="Note.Rest"/>
-                        <MenuItem Header="Fermata" Click="Fermata_Click" local:MenuHotkey.Id="Note.Fermata"/>
-                        <MenuItem Header="Accent" Click="Accent_Click" local:MenuHotkey.Id="Note.Accent"/>
-                        <MenuItem Header="Staccato" Click="Staccato_Click" local:MenuHotkey.Id="Note.Staccato"/>
-                        <MenuItem Header="Tenuto" Click="Tenuto_Click" local:MenuHotkey.Id="Note.Tenuto"/>
-                        <Separator/>
-                        <MenuItem Header="Shift pitch up (semitone)" Click="PitchUp_Click" local:MenuHotkey.Id="Note.PitchUp"/>
-                        <MenuItem Header="Shift pitch down (semitone)" Click="PitchDown_Click" local:MenuHotkey.Id="Note.PitchDown"/>
-                        <MenuItem Header="Move to higher string" Click="MoveUpString_Click" local:MenuHotkey.Id="Note.MoveStringUp"/>
-                        <MenuItem Header="Move to lower string" Click="MoveDownString_Click" local:MenuHotkey.Id="Note.MoveStringDown"/>
                     </MenuItem>
                     <MenuItem Header="_Effects">
-                        <MenuItem Header="Dead note" Click="FxDead_Click" local:MenuHotkey.Id="Note.Dead"/>
-                        <MenuItem Header="Ghost note" Click="FxGhost_Click" local:MenuHotkey.Id="Note.Ghost"/>
-                        <MenuItem Header="Palm mute" Click="PalmMute_Click" local:MenuHotkey.Id="Note.PalmMute"/>
-                        <MenuItem Header="Let ring" Click="LetRing_Click" local:MenuHotkey.Id="Note.LetRing"/>
-                        <MenuItem Header="Hammer / pull" Click="Hopo_Click" local:MenuHotkey.Id="Note.HammerPull"/>
-                        <MenuItem Header="Bend" Click="Bend_Click" local:MenuHotkey.Id="Note.Bend"/>
-                        <MenuItem Header="Bend editor…" Tag="Bend" Click="EffectEditor_Click" local:MenuHotkey.Id="Note.BendEditor"/>
-                        <MenuItem Header="Legato slide" Click="Slide_Click" local:MenuHotkey.Id="Note.Slide"/>
-                        <MenuItem Header="Shift slide" Click="FxShiftSlide_Click"/>
-                        <MenuItem Header="Vibrato" Click="Vibrato_Click" local:MenuHotkey.Id="Note.Vibrato"/>
-                        <MenuItem Header="Wide vibrato" Click="FxWideVib_Click"/>
-                        <MenuItem Header="Tremolo bar" Click="FxTremBar_Click" local:MenuHotkey.Id="Note.TremoloBar"/>
-                        <MenuItem Header="Tremolo bar editor…" Tag="TremoloBar" Click="EffectEditor_Click" local:MenuHotkey.Id="Note.TremoloBarEditor"/>
-                        <MenuItem Header="Natural harmonic" Click="FxHarm_Click" local:MenuHotkey.Id="Note.Harmonic"/>
-                        <MenuItem Header="Harmonic editor…" Tag="Harmonic" Click="EffectEditor_Click" local:MenuHotkey.Id="Note.HarmonicEditor"/>
-                        <MenuItem Header="Trill editor…" Tag="Trill" Click="EffectEditor_Click" local:MenuHotkey.Id="Note.TrillEditor"/>
-                        <MenuItem Header="Grace note editor…" Tag="Grace" Click="EffectEditor_Click" local:MenuHotkey.Id="Note.GraceEditor"/>
-                        <MenuItem Header="Artificial harmonic" Click="FxArtHarm_Click"/>
-                        <MenuItem Header="Tapping" Click="FxTap_Click"/>
-                        <MenuItem Header="Slap" Click="FxSlap_Click"/>
-                        <MenuItem Header="Pop" Click="FxPop_Click"/>
-                        <MenuItem Header="Trill" Click="FxTrill_Click" local:MenuHotkey.Id="Note.Trill"/>
-                        <MenuItem Header="Tremolo picking" Click="FxTremPick_Click"/>
-                        <MenuItem Header="Fade in" Click="FxFadeIn_Click" local:MenuHotkey.Id="Note.FadeIn"/>
-                        <MenuItem Header="Fade out" Click="FxFadeOut_Click" local:MenuHotkey.Id="Note.FadeOut"/>
-                        <MenuItem Header="Wah open" Click="FxWahOpen_Click"/>
-                        <MenuItem Header="Wah close" Click="FxWahClose_Click"/>
-                        <MenuItem Header="Brush down" Click="FxBrushDown_Click"/>
-                        <MenuItem Header="Brush up" Click="FxBrushUp_Click"/>
-                        <MenuItem Header="Arpeggio down" Click="FxArpDown_Click"/>
-                        <MenuItem Header="Arpeggio up" Click="FxArpUp_Click"/>
-                        <MenuItem Header="Grace before beat" Click="FxGrace_Click" local:MenuHotkey.Id="Note.Grace"/>
-                        <Separator/>
-                        <MenuItem Header="Chord…" Click="Chord_Click" local:MenuHotkey.Id="Note.Chord"/>
-                        <MenuItem Header="Text…" Click="Text_Click" local:MenuHotkey.Id="Note.Text"/>
                     </MenuItem>
                     <MenuItem Header="_Sections">
-                        <MenuItem Header="Add section…" Click="AddMarker_Click" local:MenuHotkey.Id="Section.Add"/>
-                        <MenuItem Header="Go to…" Click="GoTo_Click" local:MenuHotkey.Id="Bar.GoTo"/>
-                        <MenuItem Header="Previous section" Click="PrevSection_Click" local:MenuHotkey.Id="Section.Previous"/>
-                        <MenuItem Header="Next section" Click="NextSection_Click" local:MenuHotkey.Id="Section.Next"/>
                     </MenuItem>
                     <MenuItem Header="_Tools">
-                        <MenuItem Header="Check bar duration" Click="CheckBars_Click" local:MenuHotkey.Id="Bar.Check"/>
-                        <MenuItem Header="Transpose…" Click="Transpose_Click" local:MenuHotkey.Id="Tools.Transpose"/>
-                        <MenuItem Header="Scale finder…" Click="ScaleFinder_Click" local:MenuHotkey.Id="Tools.ScaleFinder"/>
-                        <MenuItem Header="Chord finder…" Click="ChordFinder_Click" local:MenuHotkey.Id="Tools.ChordFinder"/>
-                        <MenuItem Header="Song stats…" Click="SongStats_Click" local:MenuHotkey.Id="Tools.SongStats"/>
-                        <MenuItem Header="Tuner…" Click="Tuner_Click" local:MenuHotkey.Id="Tools.Tuner"/>
-                        <Separator/>
                         <MenuItem x:Name="MetronomeMenu" Header="Metronome" Click="Metronome_Click" local:MenuHotkey.Id="Transport.Metronome" IsCheckable="True"/>
                         <MenuItem x:Name="CountInMenu" Header="Count-in" Click="CountIn_Click" local:MenuHotkey.Id="Transport.CountIn" IsCheckable="True"/>
                         <MenuItem x:Name="PreviewNotesMenu" Header="Preview note sound" Click="PreviewNotes_Click" IsCheckable="True" IsChecked="True"/>
                     </MenuItem>
                     <MenuItem Header="_Sound">
-                        <MenuItem Header="Play / pause" Click="Play_Click" local:MenuHotkey.Id="Transport.PlayPause"/>
-                        <MenuItem Header="Play from beginning" Click="PlayFromStart_Click" local:MenuHotkey.Id="Transport.PlayFromStart"/>
-                        <MenuItem Header="First bar" Click="FirstBar_Click" local:MenuHotkey.Id="Bar.First"/>
-                        <MenuItem Header="Last bar" Click="LastBar_Click" local:MenuHotkey.Id="Bar.Last"/>
-                        <Separator/>
-                        <MenuItem Header="Empty bar" Click="EmptyBar_Click"/>
-                        <MenuItem Header="MIDI / Audio setup" Click="ShowAudioTab_Click"/>
-                        <MenuItem Header="Test selected track output" Click="TestMidi_Click"/>
                     </MenuItem>
                     <MenuItem Header="_View">
-                        <MenuItem Header="Tablature + standard" Click="NotationBoth_Click"/>
-                        <MenuItem Header="Tablature only" Click="NotationTab_Click"/>
-                        <MenuItem Header="Standard notation only" Click="NotationStaff_Click"/>
-                        <Separator/>
-                        <MenuItem Header="Dark score page" Click="ThemeDark_Click"/>
-                        <MenuItem Header="Light score page" Click="ThemeLight_Click"/>
-                        <Separator/>
                         <MenuItem x:Name="InstrumentViewMenu" Header="Instrument view" Click="ToggleInstrumentView_Click" local:MenuHotkey.Id="View.InstrumentPanel" IsCheckable="True" IsChecked="True"/>
                         <MenuItem x:Name="ArrangementMenu" Header="Arrangement overview" Click="ToggleArrangement_Click" local:MenuHotkey.Id="View.Global" IsCheckable="True" IsChecked="True"/>
                         <MenuItem x:Name="BandViewMenu" Header="Band view" Click="ToggleBandView_Click" local:MenuHotkey.Id="View.BandView" IsCheckable="True"/>
                         <MenuItem x:Name="ArrangementIndividualNotesMenu" Header="Show the notes in each track lane" Click="ArrangementIndividualNotesMenu_Click" IsCheckable="True"/>
                         <MenuItem x:Name="ArrangementContinuousBlocksMenu" Header="Show one continuous line per track lane" Click="ArrangementContinuousBlocksMenu_Click" IsCheckable="True"/>
                         <MenuItem x:Name="PlayingBarMenu" Header="Highlight playing bar" Click="PlayingBarMenu_Click" local:MenuHotkey.Id="View.PlayingBar" IsCheckable="True"/>
-                        <MenuItem Header="Mixer / VST" Click="ShowMixer_Click" local:MenuHotkey.Id="View.Mixer"/>
-                        <Separator/>
                         <MenuItem x:Name="DockPanelsMenu" Header="Panels"/>
-                        <MenuItem Header="Reset all panels to default positions" Click="ResetDockWorkspace_Click"/>
-                        <Separator/>
-                        <MenuItem Header="Zoom 75%" Click="Zoom75_Click"/>
-                        <MenuItem Header="Zoom 100%" Click="Zoom100_Click"/>
-                        <MenuItem Header="Zoom 150%" Click="Zoom150_Click"/>
-                        <MenuItem Header="Full screen" Click="Fullscreen_Click" local:MenuHotkey.Id="View.Fullscreen"/>
                     </MenuItem>
                     <MenuItem Header="_Options">
-                        <MenuItem Header="Stylesheet…" Click="Stylesheet_Click"/>
-                        <MenuItem Header="Preferences…" Click="Prefs_Click" local:MenuHotkey.Id="App.Preferences"/>
                     </MenuItem>
                     <MenuItem Header="_Help">
-                        <MenuItem Header="Tutorial…" Click="Tutorial_Click" local:MenuHotkey.Id="Help.Tutorial"/>
-                        <MenuItem Header="Detailed guide…" Click="TutorialDetailed_Click" local:MenuHotkey.Id="Help.TutorialDetailed"/>
-                        <MenuItem Header="Keyboard shortcuts…" Click="Shortcuts_Click" local:MenuHotkey.Id="App.Shortcuts"/>
-                        <MenuItem Header="Check for updates…" Click="CheckForUpdates_Click" local:MenuHotkey.Id="Help.CheckForUpdates"/>
-                        <MenuItem Header="About" Click="About_Click"/>
                     </MenuItem>
                 </Menu>
                 <!-- Pinned tools: right-click any palette icon → "Pin to toolbar". Empty until the user pins. -->
@@ -358,6 +209,21 @@
                             </Style>
                         </Button.Style>
                         <Path Style="{StaticResource IconPath}" Data="M3,4 H21 V8.5 H3 Z M3,10 H21 V14.5 H3 Z M3,16 H21 V20.5 H3 Z"/>
+                    </Button>
+                    <!-- Lit while Keyboard mode (experimental) shows its layout; MainWindow.KeyboardMode.cs sets Tag to "on". Notes falling onto a hit line. -->
+                    <Button x:Name="KeyboardModeButton" ToolTip="Keyboard mode (experimental)" local:TooltipShortcuts.Command="View.LearnMode" Click="ToggleKeyboardMode_Click"
+                            AutomationProperties.Name="Show or hide Keyboard mode (experimental)">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource ToolButton}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="on">
+                                        <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}"/>
+                                        <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                        <Path Style="{StaticResource IconPath}" Data="M5,2.5 H9.5 V9 H5 Z M13.5,7 H18 V13.5 H13.5 Z M3,19.5 H21"/>
                     </Button>
                     <Button Style="{StaticResource ToolButton}" ToolTip="Project settings: song info, credits, tempo, key" Click="ProjectSettings_Click"
                             AutomationProperties.Name="Project settings">
@@ -471,7 +337,7 @@
                             HorizontalAlignment="Center" VerticalAlignment="Top" SnapsToDevicePixels="True">
                         <Grid>
                             <local:TabEditorControl x:Name="Editor"/>
-                            <local:PlayheadOverlay x:Name="Playhead"/>
+                            <local:PlayheadOverlay x:Name="Playhead" SnapToPixels="True"/>
                         </Grid>
                     </Border>
                 </ScrollViewer>

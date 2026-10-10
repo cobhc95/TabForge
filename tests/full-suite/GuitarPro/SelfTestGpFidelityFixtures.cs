@@ -10,7 +10,7 @@ using TabForge.Services;
 
 namespace TabForge;
 
-// R5 synthetic Guitar Pro fixtures: original songs written in code, each with hand-specified expected facts. `TabForge.exe --write-gp-fixtures <dir>` writes
+// Synthetic score fixtures: original songs written in code, each with hand-specified expected facts. `TabForge.exe --write-gp-fixtures <dir>` writes
 // clean .gp files (verified: no embedded project, no sidecar, in a fresh folder) plus MANIFEST.md listing every bar and beat. The self-test group
 // gp-fidelity checks each fixture exactly (pitch, onset, duration, rests, signatures, tempo, repeats...) against the reopened clean file.
 public static partial class SelfTest

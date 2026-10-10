@@ -286,7 +286,7 @@ public partial class TutorialWindow : Window
         if (Uri.TryCreate(href, UriKind.Absolute, out var uri) && uri.Scheme == Uri.UriSchemeHttps)
         {
             try { Process.Start(new ProcessStartInfo(uri.AbsoluteUri) { UseShellExecute = true }); }
-            catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception) { }
+            catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception) { Services.Trace.Error(Services.Trace.Ui, "tutorial: open link: " + ex.Message); }
         }
     }
 
@@ -464,9 +464,10 @@ public partial class TutorialWindow : Window
             var pages = await Task.Run(() => TutorialPdfExporter.Export(library, path, options, (done, total, text) => ((IProgress<(int, int, string)>)progress).Report((done, total, text)), cts.Token), cts.Token);
             ShowExportResult(path, pages);
         }
-        catch (OperationCanceledException) { SetStatus("PDF export cancelled."); DismissStatusButton.Visibility = Visibility.Visible; }
+        catch (OperationCanceledException) { SetStatus("PDF export cancelled."); DismissStatusButton.Visibility = Visibility.Visible; } // Not logged: PDF export cancelled: expected
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException or NotSupportedException)
         {
+            Services.Trace.Error(Services.Trace.Ui, "PDF export: write: " + ex.Message);
             SetStatus("The PDF could not be written: " + ex.Message);
             DismissStatusButton.Visibility = Visibility.Visible;
         }
@@ -485,9 +486,9 @@ public partial class TutorialWindow : Window
         StatusText.Inlines.Clear();
         StatusText.Inlines.Add(new Run($"Saved {Path.GetFileName(path)} ({pages} pages).  "));
         var open = new Hyperlink(new Run("Open it")) { ToolTip = "Open the PDF in your PDF viewer" };
-        open.Click += (_, _) => { try { Process.Start(new ProcessStartInfo(path) { UseShellExecute = true }); } catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception) { } };
+        open.Click += (_, _) => { try { Process.Start(new ProcessStartInfo(path) { UseShellExecute = true }); } catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception) { Services.Trace.Error(Services.Trace.Ui, "tutorial: open PDF: " + ex.Message); } };
         var folder = new Hyperlink(new Run("Show in folder")) { ToolTip = "Show the file in Explorer" };
-        folder.Click += (_, _) => { try { Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{path}\"") { UseShellExecute = true }); } catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception) { } };
+        folder.Click += (_, _) => { try { Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{path}\"") { UseShellExecute = true }); } catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception) { Services.Trace.Error(Services.Trace.Ui, "tutorial: show in folder: " + ex.Message); } };
         foreach (var link in new[] { open, folder }) link.SetResourceReference(TextElement.ForegroundProperty, "AccentBrush");
         StatusText.Inlines.Add(open);
         StatusText.Inlines.Add(new Run("   "));

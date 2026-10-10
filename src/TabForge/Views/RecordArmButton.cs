@@ -59,7 +59,7 @@ public sealed class RecordArmButton : FrameworkElement
     protected override void OnRender(DrawingContext dc)
     {
         try { RenderGuard.Inject("RecordArmButton"); RenderCore(dc); }
-        catch (Exception ex) when (RenderGuard.Contain(ex, "RecordArmButton", dc, ActualWidth, ActualHeight)) { }
+        catch (Exception ex) when (RenderGuard.Contain(ex, "RecordArmButton", dc, ActualWidth, ActualHeight)) { } // Not logged: render path: runs per frame.
     }
 
     private void RenderCore(DrawingContext dc)

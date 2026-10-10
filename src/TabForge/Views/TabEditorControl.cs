@@ -13,6 +13,12 @@ using TabForge.Views.Score;
 
 namespace TabForge.Views;
 
+// Owns: the control's public state: the strings and spacing of a system, the horizontal scroll and zoom, the edit host and the
+//   standalone-edit event, the font and text styles, and the editing preferences (auto-advance, bar overflow, fill with rests).
+// Does not own: the page maths (TabEditorControl.Geometry.cs), the edit runner (TabEditorControl.Layout.cs), drawing
+//   (TabEditorControl.Rendering.cs) and the score engine.
+// Tests: TestTabEditorLifetime.
+
 internal readonly record struct PalmMutePassage(
     int FirstMeasure, double FirstStartSlots,
     int LastMeasure, double LastEndSlots,

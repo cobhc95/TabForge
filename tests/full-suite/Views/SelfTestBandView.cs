@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media.Imaging;
@@ -5,7 +6,9 @@ using TabForge.Docking;
 using TabForge.Documents;
 using TabForge.Models;
 using TabForge.Presets;
+using TabForge.Rendering;
 using TabForge.Services;
+using TabForge.Shell;
 using TabForge.Views;
 using TabForge.Views.Band;
 using TabForge.Visualization;
@@ -87,6 +90,40 @@ public static partial class SelfTest
         Eq("band: the rows stay three", 3, band.View.Rows.Count);
         Eq("band: the rows were rebuilt once for it", 2, band.Rebuilds);
         Check("band: the instruments got their notes", band.InstrumentRefreshes > 0);
+    }
+
+    /// <summary>The live view refreshes its instruments at most every 33 ms of wall clock while playing; the frame-driven view (the export's) refreshes on every playing tick.</summary>
+    private static void TestBandFrameClock()
+    {
+        var project = BandSong(8);
+        var timeline = RenderSpecBuilder.Compile(project);
+        using var live = new BandViewController(new FakeBandHost(project));
+        BandStage(live, 900, 720);
+        live.Tick();
+        BandStage(live, 900, 720);
+        Check("band frame clock: the live view runs on the wall clock by default", !live.UseFrameClock);
+        // Two playing ticks on one bar: the stopwatch spans both, so a pair under 33 ms also has a gap under 33 ms on the controller's clock.
+        var paired = 0;
+        var throttled = 0;
+        for (var attempt = 0; attempt < 10 && paired < 3; attempt++)
+        {
+            var sw = Stopwatch.StartNew();
+            var before = live.InstrumentRefreshes;
+            live.ProbePlay = (attempt + 1, 0.1, 1000, timeline); live.Tick();
+            live.ProbePlay = (attempt + 1, 0.2, 1010, timeline); live.Tick();
+            var refreshes = live.InstrumentRefreshes - before;
+            if (sw.Elapsed.TotalMilliseconds >= 33) continue;
+            paired++;
+            if (refreshes == 1) throttled++;
+        }
+        Check("band frame clock: the live view refreshes once for two playing ticks within 33 ms", paired > 0 && throttled == paired, $"{throttled} of {paired} pairs");
+        using var frame = new BandViewController(new FakeBandHost(project)) { UseFrameClock = true };
+        BandStage(frame, 900, 720);
+        frame.Tick();
+        BandStage(frame, 900, 720);
+        var start = frame.InstrumentRefreshes;
+        for (var i = 0; i < 5; i++) { frame.ProbePlay = (3, 0.1 * i, 1000 + 10 * i, timeline); frame.Tick(); }
+        Eq("band frame clock: with the frame clock every playing tick refreshes", 5, frame.InstrumentRefreshes - start);
     }
 
     private static void TestBandLaneCache()
@@ -213,11 +250,11 @@ public static partial class SelfTest
         workspace.SetEditorContent(new Grid());
         foreach (var (id, host, anchor) in new[]
         {
-            ("instrument", "instrument", "score-editor"), ("timeline", "timeline", "score-editor"), ("band", "band", "score-editor"),
+            ("instrument", "instrument", "score-editor"), ("timeline", "timeline", "score-editor"), ("band", "band", "score-editor"), ("learn", "band", "score-editor"),
             ("tools", "tools", "structure"), ("structure", "tools", "tools"), ("rhythm", "tools", "tools"), ("layout", "tools", "tools"),
             ("sections", "side", "score-editor")
         })
-            workspace.RegisterPanel(id, id, new Border(), 180, 100, host, anchor, startsClosed: id == "band");
+            workspace.RegisterPanel(id, id, new Border(), 180, 100, host, anchor, startsClosed: id is "band" or "learn");
         workspace.RestoreLayout(null);
         Check("band layout: an older layout does not grow a Band view", !workspace.IsPanelVisible("band") && workspace.IsPanelVisible("instrument"));
         workspace.ApplyLayout(band);
@@ -229,6 +266,33 @@ public static partial class SelfTest
         Check("band layout: a panel opened from the Panels menu still appears", workspace.IsPanelVisible("tools"));
         workspace.ApplyLayout(DockLayoutController.BuiltInLayout("Compose"));
         Check("band layout: Compose brings the score back", HasEditorNode(workspace.CaptureLayout().Root) && !workspace.IsPanelVisible("band"));
+    }
+
+    private static void TestBandHostForwards()
+    {
+        var project = BandSong(8);
+        var pane = new FakeBandHost(project);
+        var documents = new DocumentManager();
+        var options = new AppOptions();
+        int? selected = null; (int From, int To)? moved = null; (string Category, string? Row)? opened = null;
+        IBandViewHost host = new BandHost(pane, documents, options, () => (true, false, "Major", 6),
+            (from, to) => moved = (from, to), i => selected = i, () => throw new InvalidOperationException("zoom"), (c, r) => opened = (c, r));
+        Check("band host: pane basics come from the window's own pane host", host.Project == project && host.Settings == pane.Settings && host.Editor == pane.Editor && host.Window == pane.Window && host.SelectedTrack == project.Tracks[0]);
+        Check("band host: the active song and the visual options are read live", host.ActiveDocument == documents.Active && host.Visual == options.Visual);
+        Check("band host: the instrument options come from the delegate", host.InstrumentOptions == (true, false, "Major", 6));
+        host.MoveSongTrack(2, 0);
+        Check("band host: the order sync moves the song's track", moved == (2, 0));
+        host.ShowCursor(1, 3, 4);
+        Check("band host: a lane click selects the track and puts the editor on the bar and cell", selected == 1 && pane.Editor.SelectedMeasure == 3 && pane.Editor.SelectedCell == 4, $"{selected} {pane.Editor.SelectedMeasure}/{pane.Editor.SelectedCell}");
+        host.RunScoreMenu(new MenuSpec { Id = BandMenus.SettingsId });
+        Check("band host: the Band settings item opens Timeline & Tracks at the Band row", opened == (SettingsCatalog.Timeline, BandMenus.SettingsRow));
+        opened = null;
+        host.RunScoreMenu(new MenuSpec { Id = "other" });
+        Check("band host: any other id does nothing", opened is null);
+        using var band = new BandViewController(host);
+        BandStage(band, 900, 720);
+        band.Tick();
+        Check("band host: the controller builds its rows through the host", band.View.Rows.Count == 3, band.View.Rows.Count.ToString());
     }
 
     private static bool HasEditorNode(DockNodeState? node) =>

@@ -22,7 +22,11 @@ using static TabForge.Views.TrackRowWidgets;
 
 namespace TabForge.Views;
 
-// ArrangementPanel: track tint and building the per-track control rows.
+// Owns: the look of the track rows: the track tint and muted-row opacity, row backgrounds and borders (track lines), the mute and
+//   solo dimming, the mixer slider sync, and the rebuild of the row controls when the row signature changes.
+// Does not own: the row geometry (ArrangementPanel.RowGeometry.cs), the column widgets (TrackRowWidgets.cs) and the track model.
+// Tests: TestTrackLinesRedraw.
+
 public sealed partial class ArrangementPanel
 {
     /// <summary>The track colour as a subtle row background (darker in the dark theme), or transparent.</summary>

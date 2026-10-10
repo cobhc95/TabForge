@@ -15,6 +15,9 @@ namespace TabForge;
 
 // MainWindow, command-line probes: the probes (TabForge.Diagnostics.WindowProbes) reach the window through ProbeAccess, a nested class, so the members
 // they use stay private to everything else. The few probe-related members the window itself uses are here too.
+// Owns: the command-line probes' access to the window: the nested ProbeAccess class and the probe members the window itself uses.
+// Does not own: the probes (TabForge.Diagnostics.WindowProbes).
+// Tests: the probe options in docs/DEBUGGING.md.
 public partial class MainWindow
 {
     /// <summary>`--theme Light|Dark|...` for test runs: switches the live theme without saving it.</summary>
@@ -122,8 +125,8 @@ public partial class MainWindow
         internal void SetNotation(NotationMode mode) => _window.SetNotation(mode);
         internal void SetPaper(bool dark) => _window.SetPaper(dark);
         internal void ShowArrangementContextMenu(int bar, int trackIndex, bool fromKeyboard = false) => _window.ShowArrangementContextMenu(bar, trackIndex, fromKeyboard);
-        internal void SetGroupsCollapsed(IReadOnlyCollection<string> groups, bool? collapsed) => _window.SetGroupsCollapsed(groups, collapsed);
-        internal void SetAllGroupsCollapsed(bool collapsed) => _window.SetAllGroupsCollapsed(collapsed);
+        internal void SetGroupsCollapsed(IReadOnlyCollection<string> groups, bool? collapsed) => _window.MixerHost.SetGroupsCollapsed(groups, collapsed);
+        internal void SetAllGroupsCollapsed(bool collapsed) => _window.MixerHost.SetAllGroupsCollapsed(collapsed);
         internal void ShowGlobalTuningWindow() => _window.ShowGlobalTuningWindow();
         internal void ShowInstrumentContextMenu(bool fromKeyboard) => _window.ShowInstrumentContextMenu(fromKeyboard);
         internal void ShowMixTable() => _window.ShowMixTable();

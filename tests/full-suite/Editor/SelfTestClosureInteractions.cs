@@ -11,7 +11,7 @@ using TabForge.Services;
 namespace TabForge;
 
 /// <summary>
-/// Closure audit (remediation plan section 10): the interaction cases that connect R1, R2, R4 and R5.
+/// Interaction cases that connect window lifetime, document context, score import and score export.
 /// (a) an imported long song with linked audio keeps its identity across a window transfer and Save As;
 /// (c) closing one window neither clears another window's approval nor stops its playback.
 /// (b) (a failed export leaves the original and the unsaved state intact) is covered in SelfTestGpFidelity ("preflight export: a failed write ...").

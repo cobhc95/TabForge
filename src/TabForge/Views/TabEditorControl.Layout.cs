@@ -13,7 +13,13 @@ using RenderDraw = TabForge.Visualization.Draw;
 
 namespace TabForge.Views;
 
-// TabEditorControl: measure override, selection coercion, edit/selection notifications and digit-key helpers.
+// Owns: measuring the control (MeasureOverride), the selection coercion after an edit, the edit runner (RunEdit, FinishEdit)
+//   through the host or standalone, the digit-entry helpers, and the host adapters the layout, render and input code read
+//   (IScoreLayoutHost, IScoreAppearanceHost, IScorePageHost, IScoreRenderHost, IEditorInputHost).
+// Does not own: the page maths (TabEditorControl.Geometry.cs), drawing (TabEditorControl.Rendering.cs) and the undo stack (the
+//   host's Run).
+// Tests: no named test.
+
 public sealed partial class TabEditorControl
 {
     // ---------- layout ----------

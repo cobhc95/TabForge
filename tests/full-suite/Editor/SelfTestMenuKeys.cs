@@ -152,7 +152,7 @@ public static partial class SelfTest
         Check("section delete: its tooltip says it asks first and that Undo restores it", destructive.ToolTip is { } tip && tip.Contains("Asks first") && tip.Contains("Undo"));
         Check("section delete: the confirmation is on by default", new AppSettings().General.ConfirmDeleteSection);
         var xamlPath = FindMainWindowXaml();
-        if (xamlPath is null) { Check("section delete: MainWindow.xaml not next to the build, panel wording audit skipped", true); return; }
+        if (xamlPath is null) { Skip("section delete: panel wording audit", "MainWindow.xaml not next to the build"); return; }
         System.Xml.Linq.XNamespace wpf = "http://schemas.microsoft.com/winfx/2006/xaml/presentation";
         var button = System.Xml.Linq.XDocument.Load(xamlPath).Descendants(wpf + "Button").FirstOrDefault(b => (string?)b.Attribute("Click") == "MarkerDel_Click");
         Check("section delete: the Sections panel button is \"Remove\" (marker only), not \"Delete\"",
@@ -163,14 +163,11 @@ public static partial class SelfTest
     /// <summary>The Zoom 100% menu item says what it does, and F3 / F8 are described as the panels they open.</summary>
     private static void TestViewMenuWording()
     {
-        var xamlPath = FindMainWindowXaml();
-        if (xamlPath is null) Check("view wording: MainWindow.xaml not next to the build, menu audit skipped", true);
-        else
+        WithMainWindow(window =>
         {
-            System.Xml.Linq.XNamespace wpf = "http://schemas.microsoft.com/winfx/2006/xaml/presentation";
-            var zoom = System.Xml.Linq.XDocument.Load(xamlPath).Descendants(wpf + "MenuItem").First(m => (string?)m.Attribute("Click") == "Zoom100_Click");
-            Eq("view wording: the zoom item is called Zoom 100% (it sets 100%, it does not fit the width)", "Zoom 100%", (string?)zoom.Attribute("Header"));
-        }
+            var row = window.MainMenuGroups().SelectMany(g => g.Rows).First(r => r.Click?.Method.Name == "Zoom100_Click");
+            Eq("view wording: the zoom item is called Zoom 100% (it sets 100%, it does not fit the width)", "Zoom 100%", row.Header);
+        });
         Eq("view wording: Zoom 100% shows 100% in the zoom box", "100%", MainWindow.ShowZoomOn(new System.Windows.Controls.ComboBox { IsEditable = true }, 1.0));
         var f3 = HotkeyCatalog.ById("View.Multitrack")!; var f8 = HotkeyCatalog.ById("View.Global")!;
         Check("view wording: F3 is described as the track list, not as a score view", f3.DefaultGesture == "F3" && f3.Name == "Show track list" && f3.Description.Contains("track list") && !f3.Description.Contains("in the score"));
@@ -181,7 +178,7 @@ public static partial class SelfTest
     private static void TestMenuGestureTextFollowsBindings()
     {
         var xamlPath = FindMainWindowXaml();
-        if (xamlPath is null) { Check("menu gestures: MainWindow.xaml not next to the build, source audit skipped", true); return; }
+        if (xamlPath is null) { Skip("menu gestures: source audit", "MainWindow.xaml not next to the build"); return; }
 
         System.Xml.Linq.XNamespace wpf = "http://schemas.microsoft.com/winfx/2006/xaml/presentation";
         System.Xml.Linq.XNamespace x = "http://schemas.microsoft.com/winfx/2006/xaml";
@@ -190,23 +187,21 @@ public static partial class SelfTest
         Check("menu gestures: no main-menu item types its own key text (InputGestureText)",
             !menuElement.DescendantsAndSelf().Any(e => e.Attribute("InputGestureText") is not null));
 
-        // Build the same tree as real MenuItems (header + command id), then walk it the way the window does.
-        var ids = new List<string>();
-        MenuItem Build(System.Xml.Linq.XElement e)
-        {
-            var item = new MenuItem { Header = (string?)e.Attribute("Header") };
-            var idAttr = e.Attributes().FirstOrDefault(a => a.Name.LocalName == "MenuHotkey.Id");
-            if (idAttr is not null) { MenuHotkey.SetId(item, idAttr.Value); ids.Add(idAttr.Value); }
-            foreach (var child in e.Elements(wpf + "MenuItem")) item.Items.Add(Build(child));
-            return item;
-        }
-        var menu = new Menu();
-        foreach (var top in menuElement.Elements(wpf + "MenuItem")) menu.Items.Add(Build(top));
+        // The real window's menu (skeleton plus table rows), walked the way the window does.
+        using var alive = KeepAlive();
+        var window = new MainWindow(Audio.AudioEngineClient.Instance, new Shell.AppOptions());
+        try { ShowTestWindow(window); MenuGestureAudit(window.MainMenu); }
+        finally { foreach (var s in window.OpenDocuments.ToList()) s.MarkClean(); window.Close(); }
+    }
+
+    private static void MenuGestureAudit(Menu menu)
+    {
+        IEnumerable<MenuItem> All(ItemsControl root) => root.Items.OfType<MenuItem>().SelectMany(i => new[] { i }.Concat(All(i)));
+        var ids = All(menu).Select(MenuHotkey.GetId).OfType<string>().Where(id => id.Length > 0).ToList();
         Check("menu gestures: the main menu carries command ids on its key-bearing items", ids.Count > 60, $"{ids.Count} ids");
         var unknown = ids.Where(id => HotkeyCatalog.ById(id) is null).ToList();
         Check("menu gestures: every id names a catalogued command", unknown.Count == 0, string.Join(", ", unknown));
 
-        IEnumerable<MenuItem> All(ItemsControl root) => root.Items.OfType<MenuItem>().SelectMany(i => new[] { i }.Concat(All(i)));
         string Live(HotkeySettings keys, string id) => HotkeyCatalog.Display(HotkeyCatalog.GestureFor(keys, id));
         void Verify(string scenario, HotkeySettings keys)
         {

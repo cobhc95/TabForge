@@ -14,7 +14,7 @@ namespace TabForge.Services;
 
 // Owns: reading the master-bar information of an imported file: section colours, double bars, tempo ramps, repeat endings.
 // Does not own: track and beat conversion.
-// Tests: TestGuitarProFiles, TestMixFadeAndAudiblePlayhead.
+// Tests: TestGuitarProFiles, CheckMixFadeAndAudiblePlayhead.
 /// <summary>Reads the score-level facts of a Guitar Pro file: tempo, time signature and the master bars (repeats, endings, sections, tempo map, key signatures).</summary>
 internal static class GuitarProScoreInfoReader
 {
@@ -52,7 +52,7 @@ internal static class GuitarProScoreInfoReader
             var end = tail.IndexOf("</MasterBar>"u8);
             return tail[..(end < 0 ? tail.Length : end)].IndexOf("<DoubleBar"u8) >= 0;
         }
-        catch (Exception ex) when (ex is InvalidDataException or IOException or NotSupportedException) { return false; }
+        catch (Exception ex) when (ex is InvalidDataException or IOException or NotSupportedException) { return false; } // Not logged: double-bar probe: false means none
     }
 
     /// <summary>The value of the tempo point a linear (progressive) point at automation index <paramref name="index"/> glides to, and the slots in between; null when there is none.</summary>

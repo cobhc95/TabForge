@@ -12,6 +12,10 @@ using TabForge.Views;
 
 namespace TabForge.Diagnostics;
 
+// Owns: the `--screenshots` tour: photographs the main window, every menu, the side panels, each Settings page with a search, and the main dialogs as PNG files.
+// Does not own: the windows and menus it photographs; dialogs are captured through DialogHost.
+// Tests: no named test.
+
 // Window probes, screenshot tour: `TabForge.exe <song> --screenshots <folder>` photographs the main window,
 // every menu, the side panels, each Settings page (plus a search) and the main dialogs as PNGs for the
 // README (docs/screenshots). Nothing is clicked for real: dialogs are captured through DialogHost.
@@ -27,7 +31,7 @@ internal sealed partial class WindowProbes : MainWindow.ProbeAccess
         Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, new Action(async () =>
         {
             try { await ScreenshotTourAsync(); }
-            catch (Exception ex) { StatusText.Text = $"Screenshot tour failed: {ex.GetBaseException().Message}"; }
+            catch (Exception ex) { StatusText.Text = $"Screenshot tour failed: {ex.GetBaseException().Message}"; } // Not logged: diagnostic probe: the failure goes to its report, not errors.log
             finally
             {
                 DialogHost.Capture = null;
@@ -140,7 +144,7 @@ internal sealed partial class WindowProbes : MainWindow.ProbeAccess
         _dialogName = "plugin-save";
         PluginSaveDialog.Ask(Window, "song.gp");
         // Mixer and a track's FX chain (modeless windows: shown off-screen, photographed, closed).
-        CaptureDialog(new MixerWindow(Window, Window) { Width = 1180, Height = 560 }, "mixer");
+        CaptureDialog(new MixerWindow(Window.MixerHost, Window) { Width = 1180, Height = 560 }, "mixer");
         CaptureDialog(new RenderWindow(new RenderContext { Project = _project, Settings = _settings, Engine = Audio.AudioEngineClient.Instance }, Window), "render");
         if (SelectedTrack is { } fxTrack)
         {
@@ -150,11 +154,11 @@ internal sealed partial class WindowProbes : MainWindow.ProbeAccess
             fxTrack.Rig.Plugins.Add(effect);
             try
             {
-                CaptureDialog(new FxChainWindow(Window, fxTrack, Window), "fx-chain");
-                CaptureDialog(new WiringWindow(Window, fxTrack, instrument, Window, change => change()), "plugin-wiring");
-                CaptureDialog(new MidiProcessingWindow(Window, fxTrack, instrument, Window, change => change()), "midi-processing");
+                CaptureDialog(new FxChainWindow(Window.MixerHost, fxTrack, Window), "fx-chain");
+                CaptureDialog(new WiringWindow(Window.MixerHost, fxTrack, instrument, Window, change => change()), "plugin-wiring");
+                CaptureDialog(new MidiProcessingWindow(Window.MixerHost, fxTrack, instrument, Window, change => change()), "midi-processing");
                 _dialogName = "add-plugin";
-                PluginBrowser.Choose(Window, Window);
+                PluginBrowser.Choose(Window, Window.MixerHost);
             }
             finally
             {
@@ -166,10 +170,10 @@ internal sealed partial class WindowProbes : MainWindow.ProbeAccess
         ApplyTemplate_Click(Window, new RoutedEventArgs());
         _dialogName = "command-palette";
         try { CaptureDialog(new Views.CommandPalette(Window, _settings.Hotkeys) { KeepOpen = true }); }
-        catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"palette shot failed: {ex}"); }
+        catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"palette shot failed: {ex}"); } // Not logged: diagnostic probe: the failure goes to its report, not errors.log
         DialogHost.Capture = null;
         try { await ShootNewerFeaturesAsync(); }
-        catch (Exception ex) { System.IO.File.WriteAllText(Path.Combine(_screenshotFolder!, "tour-error.txt"), ex.ToString()); }
+        catch (Exception ex) { System.IO.File.WriteAllText(Path.Combine(_screenshotFolder!, "tour-error.txt"), ex.ToString()); } // Not logged: diagnostic probe: the failure goes to its report, not errors.log
         DialogHost.Capture = CaptureDialog;
         _dialogName = "settings";
         Views.PreferencesWindow.InitialCategory = null;
@@ -188,15 +192,15 @@ internal sealed partial class WindowProbes : MainWindow.ProbeAccess
             Shoot(tuner, "tuner");
             tuner.Close();
         }
-        CaptureDialog(new MixerWindow(Window, Window) { Width = 1180, Height = 560 }, "mixer-groups");
+        CaptureDialog(new MixerWindow(Window.MixerHost, Window) { Width = 1180, Height = 560 }, "mixer-groups");
         var showedGroups = _project.Mixer.ShowGroupsInTrackList;
         try
         {
-            ((IMixerHost)Window).SetTrackListShows("groups", true);
+            Window.MixerHost.SetTrackListShows("groups", true);
             await Settle(400);
             Shoot(Arrangement, "track-list-groups");
         }
-        finally { ((IMixerHost)Window).SetTrackListShows("groups", showedGroups); }
+        finally { Window.MixerHost.SetTrackListShows("groups", showedGroups); }
         // Fretboard context menu (lean: view, scale, practice toggles, lock, settings), then its Scale submenu.
         Instrument_MouseRightButtonUp(Instrument, new MouseButtonEventArgs(Mouse.PrimaryDevice, Environment.TickCount, MouseButton.Right)
             { RoutedEvent = UIElement.MouseRightButtonUpEvent });
@@ -243,7 +247,7 @@ internal sealed partial class WindowProbes : MainWindow.ProbeAccess
         if (dialog is Views.CommandPalette) { FindVisual<TextBox>(dialog)?.SetCurrentValue(TextBox.TextProperty, "tun"); Pump(); }
         if (dialog is PreferencesWindow preferences) ShootSettingsPages(preferences);
         else Shoot(dialog, _dialogName);
-        try { dialog.Close(); } catch (InvalidOperationException) { }
+        try { dialog.Close(); } catch (InvalidOperationException) { } // Not logged: a dialog that is already closed is expected here.
         return false;
     }
 

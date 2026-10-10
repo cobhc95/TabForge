@@ -94,7 +94,7 @@ public static class InstrumentIcon
                 result = new Parsed(background, shapes);
             }
         }
-        catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"Instrument icon failed: {path}: {ex.Message}"); }
+        catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"Instrument icon failed: {path}: {ex.Message}"); } // Not logged: bundled icon: the fallback icon is drawn
         ParsedCache[path] = result;
         return result;
     }

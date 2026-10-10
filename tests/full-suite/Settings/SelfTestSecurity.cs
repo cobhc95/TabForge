@@ -16,9 +16,9 @@ public static partial class SelfTest
 {
     private static void TestSecurityInputBoundaries()
     {
-        TestEmbeddedGpProjectBomb();
-        TestPluginTrustBoundary();
-        TestDetachedVisualCoordinates();
+        CheckEmbeddedGpProjectBomb();
+        CheckPluginTrustBoundary();
+        CheckDetachedVisualCoordinates();
         var root = Path.Combine(Path.GetTempPath(), "TabForge-security-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try
@@ -191,7 +191,7 @@ public static partial class SelfTest
             Check("failed atomic settings serialization preserves the previous file",
                 File.ReadAllBytes(savedSettings).SequenceEqual(previousSettings));
 
-            TestVstReparseLoop(root);
+            CheckVstReparseLoop(root);
         }
         catch (Exception ex)
         {
@@ -240,7 +240,7 @@ public static partial class SelfTest
     }
 
     // Project-named plug-ins outside trusted locations must reach the engine as Skip until approved; UNC is never auto-trusted.
-    private static void TestPluginTrustBoundary()
+    private static void CheckPluginTrustBoundary()
     {
         var settings = new PluginSettings();
         var outside = Path.Combine(Path.GetTempPath(), "tabforge-untrusted-" + Guid.NewGuid().ToString("N"), "evil.dll");
@@ -256,14 +256,14 @@ public static partial class SelfTest
         Check("a scanned UNC path is not auto-trusted", !PluginTrust.IsTrusted(unc, scanned));
         PluginTrust.Approve(scanned, unc);
         Check("a UNC path is trusted once explicitly approved", PluginTrust.IsTrusted(unc, scanned));
-        TestPluginFingerprintTrust();
-        TestPluginBinaryIdentity();
-        TestPluginIdentifyTrustGate();
+        CheckPluginFingerprintTrust();
+        CheckPluginBinaryIdentity();
+        CheckPluginIdentifyTrustGate();
     }
 
     // Item 4 (source review): approval covers the exact binary; a same-size, same-time replacement is caught at load; a changed
     // remote binary does not inherit its path's approval; failures say what to do.
-    private static void TestPluginBinaryIdentity()
+    private static void CheckPluginBinaryIdentity()
     {
         var dir = Path.Combine(Path.GetTempPath(), "tabforge-identity-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
@@ -375,9 +375,9 @@ public static partial class SelfTest
         }
     }
 
-    // A5-01: identifying a plug-in (role / vendor) executes it, so an unapproved or changed file is never run to find out; an
+    // Identifying a plug-in (role / vendor) executes it, so an unapproved or changed file is never run to find out; an
     // approved file is probed with its approved hash, which the probe checks (fail closed) before loading.
-    private static void TestPluginIdentifyTrustGate()
+    private static void CheckPluginIdentifyTrustGate()
     {
         var dir = Path.Combine(Path.GetTempPath(), "tabforge-identify-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
@@ -432,7 +432,7 @@ public static partial class SelfTest
 
     // S-01: approval records (size, last-write, SHA-256, signer); a changed file is untrusted again; user-writable folders are not
     // folder-trusted; checks are cached by (path, size, last-write).
-    private static void TestPluginFingerprintTrust()
+    private static void CheckPluginFingerprintTrust()
     {
         var dir = Path.Combine(Path.GetTempPath(), "tabforge-trust-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
@@ -489,7 +489,7 @@ public static partial class SelfTest
         }
     }
 
-    private static void TestVstReparseLoop(string tempRoot)
+    private static void CheckVstReparseLoop(string tempRoot)
     {
         var root = Path.Combine(tempRoot, "vst-root");
         var container = Path.Combine(root, "Container");
@@ -572,7 +572,7 @@ public static partial class SelfTest
 
     // A crafted .gp whose embedded TabForge entry inflates past the project limit must be ignored
     // (falling back to the normal Guitar Pro import) instead of inflating into memory.
-    private static void TestEmbeddedGpProjectBomb()
+    private static void CheckEmbeddedGpProjectBomb()
     {
         var path = Path.Combine(Path.GetTempPath(), $"tabforge-bomb-{Guid.NewGuid():N}.gp");
         try
@@ -594,16 +594,16 @@ public static partial class SelfTest
 
     // Drag-and-drop crash: a tab/panel detached mid-drag made PointToScreen throw. The shared helper must
     // answer "not on screen" instead of throwing, so drags skip such elements.
-    private static void TestRenderNaming()
+    private static void CheckRenderNaming()
     {
         var now = new DateTime(2026, 9, 29, 14, 5, 9);
         var name = TabForge.Services.RenderNaming.Expand("$project - $tracknumber $track $date $time $bpm $x", "Sample Song", "Lead/Gtr", 3, now, 119.6);
         Check("render file names expand wildcards and drop illegal characters", name == "Sample Song - 03 Lead_Gtr 2026-09-29 14-05-09 120 $x");
-        TestRenderOwnership();
-        TestChainReadiness();
+        CheckRenderOwnership();
+        CheckChainReadiness();
     }
 
-    private static void TestRenderOwnership()
+    private static void CheckRenderOwnership()
     {
         var tempName = TabForge.Rendering.RenderStaging.TempName("Song.mp3", "ab12");
         Check("render staging names are job-tagged, hidden-style and keep the extension",
@@ -624,7 +624,7 @@ public static partial class SelfTest
         finally { try { Directory.Delete(dir, true); } catch (IOException) { } }
     }
 
-    private static void TestChainReadiness()
+    private static void CheckChainReadiness()
     {
         var ready = new TabForge.Rendering.ChainReadiness(new[] { (0, 2), (1, 1) });
         ChainAck Ack(int slot, int gen, params PluginLoadStatus[] statuses)
@@ -641,9 +641,9 @@ public static partial class SelfTest
             && ready.ProblemDescriptions.Count == 3, $"problems: {string.Join("; ", ready.ProblemDescriptions)}");
     }
 
-    private static void TestDetachedVisualCoordinates()
+    private static void CheckDetachedVisualCoordinates()
     {
-        TestRenderNaming();
+        CheckRenderNaming();
         var detached = new System.Windows.Controls.Border { Width = 40, Height = 20 };
         var threw = false;
         bool converted = true, back = true;

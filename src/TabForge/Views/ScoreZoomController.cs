@@ -214,7 +214,7 @@ internal sealed class ScoreZoomController
                 $"hOffset={scroll.HorizontalOffset:0} extent={scroll.ExtentWidth:0}",
                 InputLimits.MaxLayoutLogBytes);
         }
-        catch (Exception ex) { Debug.WriteLine($"Opt-in layout log write failed: {ex}"); }
+        catch (Exception ex) { Debug.WriteLine($"Opt-in layout log write failed: {ex}"); } // Not logged: opt-in layout log write: a logging failure
     }
 
     private void CentreHorizontalPage()

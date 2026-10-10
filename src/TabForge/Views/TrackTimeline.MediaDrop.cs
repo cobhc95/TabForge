@@ -7,9 +7,11 @@ using TabForge.Services;
 
 namespace TabForge.Views;
 
-// TrackTimeline: audio and MIDI files dragged from Windows or a plug-in. The drag is measured once when it enters (lengths, MIDI
-// files read, virtual files written to a staging folder); each DragOver only snaps the pointer, plans the lane and moves the
-// panel's one ghost element. The drop hands the plan to the host, which adds the clips as one undo step.
+// Owns: the timeline side of media drops: measuring a drag once on entry, planning the lane on each drag-over, the one ghost
+//   element, the hand-off of the plan (MediaDropped), and the song-time quarter map.
+// Does not own: the plan itself (MediaDropController.cs, Services/MediaDrop.cs) and adding the clips (the host).
+// Tests: TestMediaDropPreviewGeometry.
+
 internal sealed partial class TrackTimeline : IDropPreviewGeometryHost
 {
     /// <summary>Media dropped on the timeline (the plan says where; the host adds the clips).</summary>

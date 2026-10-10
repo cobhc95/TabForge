@@ -5,9 +5,11 @@ using TabForge.Models;
 
 namespace TabForge.Views;
 
-// TrackTimeline lane cache: owns the retained drawing of each track's audio/MIDI clips (boxes, waveform, labels, fades), reused
-// while nothing it draws changed, so a note edit or an unrelated invalidation does not redraw a long waveform.
-// Does not own the clip drawing itself (Clips) or the peak outline cache (Waveform). Tests: TestClipWaveformSpan.
+// Owns: the retained drawing of each track's audio and MIDI clips (boxes, waveform, labels, fades), reused while nothing it draws
+//   changed, and the hit counter (ClipDrawingHits).
+// Does not own: the clip drawing itself (TrackTimeline.Clips.cs) and the peak outline cache (TrackTimeline.Waveform.cs).
+// Tests: TestClipWaveformSpan.
+
 internal sealed partial class TrackTimeline
 {
     private readonly Dictionary<TrackModel, (int Key, Drawing Drawing)> _clipDrawings = new();

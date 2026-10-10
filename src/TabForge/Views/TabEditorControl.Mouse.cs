@@ -13,7 +13,11 @@ using TabForge.Views.Score;
 
 namespace TabForge.Views;
 
-// TabEditorControl: mouse input and hit testing.
+// Owns: the mouse seam of the editor: the beat hit cell for clicks on sustained notes (ResolveBeatHitCell), the selection test
+//   (IsInSelection), select-for-edit, shift-click extend, the caret's context-menu request and the drag-select flag.
+// Does not own: hit testing and drag gestures (Views/Score/EditorInputController.cs) and cursor snapping (CursorPositions.cs).
+// Tests: TestEditorShiftClickAndEffectDuration, TestCursorSnap.
+
 public sealed partial class TabEditorControl
 {
     // ---------- mouse (hit testing, clicks and drags live in EditorInputController) ----------

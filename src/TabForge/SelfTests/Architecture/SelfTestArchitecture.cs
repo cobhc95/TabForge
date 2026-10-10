@@ -8,7 +8,7 @@ namespace TabForge;
 
 public static partial class SelfTest
 {
-    /// <summary>WPF assemblies the model / playback / services layers must not use (A-04).</summary>
+    /// <summary>WPF assemblies the model / playback / services layers must not use.</summary>
     private static readonly HashSet<string> WpfAssemblies = new(StringComparer.OrdinalIgnoreCase)
         { "PresentationFramework", "PresentationCore", "WindowsBase" };
 
@@ -37,7 +37,7 @@ public static partial class SelfTest
     };
 
     /// <summary>
-    /// A-04: the layering rule, enforced. Walks every type's signatures and method-body IL tokens in the TabForge assembly:
+    /// The layering rule, enforced. Walks every type's signatures and method-body IL tokens in the TabForge assembly:
     /// Models / Playback / Services reference no WPF assembly, and TabForge.AudioEngine is referenced only from Program,
     /// TabForge.Diagnostics and the listed exceptions.
     /// </summary>
@@ -83,7 +83,7 @@ public static partial class SelfTest
             .Select(g => $"{g.Key} ({g.Count()}: {g.First()[(g.Key.Length + 4)..]}, ...)"));
     }
 
-    /// <summary>The document operations R3 extracted out of MainWindow: they take their document as an argument and know nothing of windows.</summary>
+    /// <summary>The document operations: they take their document as an argument and know nothing of windows.</summary>
     private static readonly string[] DocumentOperationTypes =
     {
         "TabForge.Documents.DocumentEdits", "TabForge.Documents.DocumentSaveFlow", "TabForge.Documents.DocumentCloseFlow", "TabForge.Documents.DocumentPlacement",
@@ -91,7 +91,7 @@ public static partial class SelfTest
     };
 
     /// <summary>
-    /// R3 boundaries: the document operations reference no WPF assembly, no view and no window; no static state names a document or a document list
+    /// Boundaries: the document operations reference no WPF assembly, no view and no window; no static state names a document or a document list
     /// (no new "current document"); and the window's save sequence is handed its document (it must not read whichever tab is displayed).
     /// No allow-list: every named type must pass.
     /// </summary>
@@ -222,21 +222,25 @@ public static partial class SelfTest
         // G13 naming: interfaces named *Host start with I; *Controller, *Flow and *Service names are classes
         r.Sets("G13", "types that break the Host / Controller / Flow / Service naming rule", m.NamingViolations, budget.Set("namingExceptions"), "namingExceptions");
 
-        // G14 ownership header: the main class of every Controllers / Services file and every *Flow / *Controller / *Service class
-        var headerProblems = OwnershipHeaderProblems(root!);
+        // G14 ownership header: the main class of every Controllers / Services / Views file and every *Flow / *Controller / *Service class
+        var headerProblems = OwnershipHeaderProblems(root!, out var viewsWithoutHeader);
         Check("G14 every Controllers / Services class and every *Flow / *Controller / *Service class has an Owns / Does not own / Tests header naming existing tests",
             headerProblems.Count == 0, string.Join("; ", headerProblems.Take(8)) + (headerProblems.Count > 8 ? $" (+{headerProblems.Count - 8} more)" : ""));
+        // G14 for Views: the Views main classes that still lack the header are a ratchet against ownershipHeaderExceptions (a new one fails; one that gains its header must leave the list)
+        r.Sets("G14", "Views main classes without an Owns / Does not own / Tests header", viewsWithoutHeader, budget.Set("ownershipHeaderExceptions"), "ownershipHeaderExceptions");
     }
 
     /// <summary>
     /// G14. The classes that need a three-line ownership header (<c>// Owns:</c>, <c>// Does not own:</c>, <c>// Tests:</c>) above their declaration: the main class of
-    /// each file under Controllers/ and Services/ (the class named like the file, else the first; partial parts after the first file are exempt) and every top-level
+    /// each file under Controllers/, Services/ and Views/ (the class named like the file, else the first; partial parts after the first file are exempt) and every top-level
     /// class named *Flow, *Controller or *Service anywhere in src/TabForge. Playback/, Audio/ and the self-tests are outside the rule. Every Test... name in a header
-    /// must be a self-test declared in the checkout. Returns one line per problem.
+    /// must be a self-test declared in the checkout. Returns one line per problem. A Views main class without a header is not a problem here: its file is returned in
+    /// <paramref name="viewsWithoutHeader"/> and held to the budget list instead.
     /// </summary>
-    private static List<string> OwnershipHeaderProblems(string root)
+    private static List<string> OwnershipHeaderProblems(string root, out List<string> viewsWithoutHeader)
     {
         var problems = new List<string>();
+        viewsWithoutHeader = new List<string>();
         var src = Path.Combine(root, "src", "TabForge");
         var declared = new HashSet<string>(StringComparer.Ordinal);
         foreach (var testsDir in SelfTestSourceFolders(root))
@@ -254,8 +258,13 @@ public static partial class SelfTest
             if (classes.Count == 0) continue;
             var required = new List<System.Text.RegularExpressions.Match>();
             var stem = Path.GetFileNameWithoutExtension(file);
-            if ((rel.StartsWith("Controllers/") || rel.StartsWith("Services/")) && !stem.Contains('.'))
-                required.Add(classes.FirstOrDefault(c => c.Groups[1].Value == stem) ?? classes[0]);
+            var inViews = rel.StartsWith("Views/", StringComparison.Ordinal);
+            System.Text.RegularExpressions.Match? main = null;
+            if ((rel.StartsWith("Controllers/") || rel.StartsWith("Services/") || inViews) && !stem.Contains('.'))
+            {
+                main = classes.FirstOrDefault(c => c.Groups[1].Value == stem) ?? classes[0];
+                required.Add(main);
+            }
             foreach (System.Text.RegularExpressions.Match c in classes)
                 if (suffixRx.IsMatch(c.Groups[1].Value) && !required.Contains(c)) required.Add(c);
             foreach (var c in required)
@@ -269,7 +278,12 @@ public static partial class SelfTest
                 while (i > 0 && above[i - 1].TrimStart().StartsWith("//") && !above[i - 1].TrimStart().StartsWith("///")) header.Insert(0, above[--i].Trim());
                 var block = string.Join("\n", header);
                 var name = $"{rel}: {c.Groups[1].Value}";
-                if (!block.Contains("// Owns:") || !block.Contains("// Does not own:") || !block.Contains("// Tests:")) { problems.Add($"{name} lacks the Owns / Does not own / Tests header"); continue; }
+                if (!block.Contains("// Owns:") || !block.Contains("// Does not own:") || !block.Contains("// Tests:"))
+                {
+                    if (inViews && ReferenceEquals(c, main)) viewsWithoutHeader.Add(rel);
+                    else problems.Add($"{name} lacks the Owns / Does not own / Tests header");
+                    continue;
+                }
                 foreach (System.Text.RegularExpressions.Match t in System.Text.RegularExpressions.Regex.Matches(block, @"\bTest[A-Z]\w*"))
                     if (!declared.Contains(t.Value)) problems.Add($"{name} names {t.Value}, which is not a self-test");
             }
@@ -344,7 +358,7 @@ public static partial class SelfTest
             if (method is MethodInfo mi) Add(mi.ReturnType);
             foreach (var p in method.GetParameters()) Add(p.ParameterType);
             MethodBody? body;
-            try { body = method.GetMethodBody(); } catch { body = null; }
+            try { body = method.GetMethodBody(); } catch { body = null; } // Not logged: self-test harness: the failure is recorded as a check result
             if (body is null) continue;
             foreach (var local in body.LocalVariables) Add(local.LocalType);
             var il = body.GetILAsByteArray();
@@ -364,7 +378,7 @@ public static partial class SelfTest
                         case ConstructorInfo c: Add(c.DeclaringType); break;
                     }
                 }
-                catch (Exception) { unresolved++; }
+                catch (Exception) { unresolved++; } // Not logged: self-test harness: the failure is recorded as a check result
             }
         }
         return found;

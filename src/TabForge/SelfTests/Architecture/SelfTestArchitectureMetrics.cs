@@ -107,7 +107,7 @@ public static partial class SelfTest
         foreach (var name in new[] { "TabForge.AudioEngine", "TabForge.Audio.Contracts" })
         {
             Assembly? a = null;
-            try { a = Assembly.Load(name); } catch (Exception) { }
+            try { a = Assembly.Load(name); } catch (Exception) { } // Not logged: optional assembly probe.
             if (a is not null) yield return a;
         }
     }
@@ -116,7 +116,7 @@ public static partial class SelfTest
     {
         Type[] types;
         try { types = assembly.GetTypes(); }
-        catch (ReflectionTypeLoadException ex) { types = ex.Types.Where(t => t is not null).ToArray()!; }
+        catch (ReflectionTypeLoadException ex) { types = ex.Types.Where(t => t is not null).ToArray()!; } // Not logged: self-test harness: the failure is recorded as a check result
         return types;
     }
 
@@ -298,7 +298,7 @@ public static partial class SelfTest
                     var name = ArchMethodName(type, method, generated, out var regular);
                     if (name is null) continue;
                     long il = 0;
-                    try { il = method.GetMethodBody()?.GetILAsByteArray()?.Length ?? 0; } catch (Exception) { }
+                    try { il = method.GetMethodBody()?.GetILAsByteArray()?.Length ?? 0; } catch (Exception) { } // Not logged: optional IL size probe.
                     ownerIl[ownerName] = ownerIl.GetValueOrDefault(ownerName) + il;
                     if (regular) ownerMethods[ownerName] = ownerMethods.GetValueOrDefault(ownerName) + 1;
                     if (!selfTest)

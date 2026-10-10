@@ -117,7 +117,7 @@ public static partial class SelfTest
             f[tk + "channel"] = track.MidiChannel.ToString(CultureInfo.InvariantCulture);
             // The EFFECTIVE level (track value with its mixer group's level/pan and the master pan applied), compared exactly in every format:
             // a clean .gp stores exactly that number (the gpif holds it as a float, TabForge.AlphaTab patch 0002) and a reopened file has no group.
-            // The track's own value and its group are kept separately by .tforge, the embedded project and the .tfaudio sidecar (tested in TestRoundTripMixerGroupNotDoubled).
+            // The track's own value and its group are kept separately by .tforge, the embedded project and the .tfaudio sidecar (tested in CheckRoundTripMixerGroupNotDoubled).
             f[tk + "volume"] = MixerGroups.Volume(p, track).ToString(CultureInfo.InvariantCulture);
             f[tk + "pan"] = MixerGroups.Pan(p, track).ToString(CultureInfo.InvariantCulture);
             f[tk + "mute"] = track.Mute ? "1" : "0"; f[tk + "solo"] = track.Solo ? "1" : "0";
@@ -436,7 +436,7 @@ public static partial class SelfTest
         return c;
     }
 
-    /// <summary>The scenario song with every feature the review named that Guitar Pro can carry, in plain code.</summary>
+    /// <summary>The scenario song with every feature the score format can carry, in plain code.</summary>
     private static SongProject RtDenseSong()
     {
         var song = new SongProject { Title = "RT dense", Artist = "TabForge self-test", Tempo = 100, KeySignature = 1 };
@@ -1062,7 +1062,7 @@ public static partial class SelfTest
 
     private static void RtCleanup(string folder) { try { Directory.Delete(folder, true); } catch (IOException) { } catch (UnauthorizedAccessException) { } }
 
-    private static void TestRoundTripSemantics()
+    private static void CheckRoundTripSemantics()
     {
         var folder = RtFolder();
         try
@@ -1102,7 +1102,7 @@ public static partial class SelfTest
         finally { RtCleanup(folder); }
     }
 
-    private static void TestRoundTripSemanticsMusicXml()
+    private static void CheckRoundTripSemanticsMusicXml()
     {
         foreach (var (name, song) in new[] { ("technique song", RtTechniqueSong()), ("showcase", RtShowcaseSong()), ("dense", RtDenseSong()) })
         {
@@ -1122,7 +1122,7 @@ public static partial class SelfTest
     }
 
     /// <summary>Import -> edit -> save -> reopen through the real document controller (the user's flow), on the dense song.</summary>
-    private static void TestRoundTripImportEditSaveReopen()
+    private static void CheckRoundTripImportEditSaveReopen()
     {
         var folder = RtFolder();
         try
@@ -1163,7 +1163,7 @@ public static partial class SelfTest
         finally { RtCleanup(folder); }
     }
 
-    private static void TestRoundTripAudioAndRouting()
+    private static void CheckRoundTripAudioAndRouting()
     {
         var folder = RtFolder();
         try
@@ -1205,7 +1205,7 @@ public static partial class SelfTest
         finally { RtCleanup(folder); }
     }
 
-    private static void TestRoundTripReorderRename()
+    private static void CheckRoundTripReorderRename()
     {
         var folder = RtFolder();
         try
@@ -1230,7 +1230,7 @@ public static partial class SelfTest
         finally { RtCleanup(folder); }
     }
 
-    private static void TestRoundTripLargeAndRepeated()
+    private static void CheckRoundTripLargeAndRepeated()
     {
         var folder = RtFolder();
         try
@@ -1289,7 +1289,7 @@ public static partial class SelfTest
     }
 
     /// <summary>Local extra: the user's own songs, if present. Never required, never committed, never named in results.</summary>
-    private static void TestRoundTripLocalExtra()
+    private static void CheckRoundTripLocalExtra()
     {
         var tabs = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "Tabs");
         var files = LocalSongsDisabled || !Directory.Exists(tabs) ? new List<string>()
@@ -1309,7 +1309,7 @@ public static partial class SelfTest
     }
 
     /// <summary>A mixer group's level/pan is an offset on each track's own value: it must count once, not twice, after .gp + .tfaudio save and reopen.</summary>
-    private static void TestRoundTripMixerGroupNotDoubled()
+    private static void CheckRoundTripMixerGroupNotDoubled()
     {
         var folder = RtFolder();
         try
@@ -1343,7 +1343,7 @@ public static partial class SelfTest
     }
 
     /// <summary>Open issues found while writing the suite: measured live and logged (KNOWN), so the numbers in COMPATIBILITY_RESULTS.md come from a run.</summary>
-    private static void TestRoundTripKnownIssues()
+    private static void CheckRoundTripKnownIssues()
     {
         var folder = RtFolder();
         try
@@ -1383,7 +1383,7 @@ public static partial class SelfTest
     }
 
     /// <summary>Negative controls: the comparer must notice each kind of musical change (otherwise "0 unexpected differences" would prove nothing).</summary>
-    private static void TestRoundTripComparerDetectsChanges()
+    private static void CheckRoundTripComparerDetectsChanges()
     {
         var baseline = RtScoreFacts(RtCopy(RtDenseSong()), out _, out _);
         var mutations = new (string Name, string Category, Action<SongProject> Apply)[]
@@ -1427,16 +1427,16 @@ public static partial class SelfTest
 
     private static void TestRoundTripSemanticsSuite()
     {
-        TestRoundTripComparerDetectsChanges();
-        TestRoundTripSemantics();
-        TestRoundTripSemanticsMusicXml();
-        TestRoundTripImportEditSaveReopen();
-        TestRoundTripAudioAndRouting();
-        TestRoundTripReorderRename();
-        TestRoundTripLargeAndRepeated();
-        TestRoundTripLocalExtra();
-        TestRoundTripMixerGroupNotDoubled();
-        TestRoundTripKnownIssues();
+        CheckRoundTripComparerDetectsChanges();
+        CheckRoundTripSemantics();
+        CheckRoundTripSemanticsMusicXml();
+        CheckRoundTripImportEditSaveReopen();
+        CheckRoundTripAudioAndRouting();
+        CheckRoundTripReorderRename();
+        CheckRoundTripLargeAndRepeated();
+        CheckRoundTripLocalExtra();
+        CheckRoundTripMixerGroupNotDoubled();
+        CheckRoundTripKnownIssues();
         // The allow-list is the contract: report what was actually lost, and any allowance that never fired (stale or too broad).
         foreach (var (profile, losses) in RtLossLog.OrderBy(x => x.Key))
             foreach (var (category, (count, reason, sample)) in losses.OrderBy(x => x.Key))

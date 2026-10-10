@@ -7,7 +7,7 @@ using TabForge.Models;
 namespace TabForge;
 
 /// <summary>
-/// `--render-bars` (Audit 7 visual audit): images and checks.json are produced for every bar and view, a clean synthetic score passes the
+/// `--render-bars` (visual audit): images and checks.json are produced for every bar and view, a clean synthetic score passes the
 /// data-versus-drawing consistency check, and a deliberately undrawable mark (a chord name on a rest) is reported.
 /// </summary>
 public static partial class SelfTest

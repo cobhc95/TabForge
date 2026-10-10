@@ -404,7 +404,7 @@ public static class BarGrid
     }
 
     /// <summary>
-    /// The bar settings a bars paste can carry (owner decision Q4): time signature, key, tempo (bar and mid-bar tempo
+    /// The bar settings a bars paste can carry: time signature, key, tempo (bar and mid-bar tempo
     /// changes), triplet feel, free time and pickup. Repeats, endings, directions and section names are form, not settings,
     /// and are never copied.
     /// </summary>

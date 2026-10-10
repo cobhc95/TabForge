@@ -13,7 +13,11 @@ using RenderDraw = TabForge.Visualization.Draw;
 
 namespace TabForge.Views;
 
-// TabEditorControl: cursor navigation (the reference behaviour).
+// Owns: caret movement: beat, bar, line and string moves, bar start and end, first and last bar, the move to an entered note, and
+//   the song-end test (AtSongEnd).
+// Does not own: the key map (TabEditorControl.Keyboard.cs) and the snapping rules (CursorPositions.cs).
+// Tests: TestEditorNavigation.
+
 public sealed partial class TabEditorControl
 {
     // ---------- navigation (the reference behaviour) ----------

@@ -100,6 +100,7 @@ public sealed class AppSettingsStore : IDisposable
         }
         catch (Exception ex)
         {
+            Services.Trace.Error(Services.Trace.Ui, "settings: load: " + ex.Message);
             Settings = new AppSettings();
             LoadFailed = true;
             Debug.WriteLine($"Settings file could not be loaded; defaults are active: {ex}");
@@ -151,12 +152,13 @@ public sealed class AppSettingsStore : IDisposable
         }
         catch (Exception ex)   // as before R-09: a failed settings save is reported, never fatal
         {
+            Services.Trace.Error(Services.Trace.Ui, "settings: save: " + ex.Message);
             Debug.WriteLine($"Settings could not be saved: {ex}");
             SaveFailed?.Invoke(_lastSource is { } weak && weak.TryGetTarget(out var source) ? source : null, ex);
             return false;
         }
         try { AfterSave?.Invoke(Settings); }
-        catch (Exception ex) { Debug.WriteLine($"After-save step failed: {ex}"); }
+        catch (Exception ex) { Services.Trace.Error(Services.Trace.Ui, "settings: after-save step: " + ex.Message); Debug.WriteLine($"After-save step failed: {ex}"); }
         return true;
     }
 

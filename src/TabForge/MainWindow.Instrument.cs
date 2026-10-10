@@ -27,27 +27,14 @@ using TabForge.Visualization;
 namespace TabForge;
 
 // MainWindow, fretboard / instrument panel interaction.
+// Owns: the fretboard and instrument panel's visualisation: the percussion pad lines and the instrument refresh.
+// Does not own: the panel itself (InstrumentPanel).
+// Tests: listed in docs/feature-map/editing-and-notation.md.
 public partial class MainWindow
 {
     // ---------- instrument visualisation ----------
 
-    private void RefreshInstrument()
-    {
-        var audioSelected = SelectedTrack is { IsAudio: true };
-        var track = audioSelected ? null : SelectedTrack;   // an audio track has no instrument: the panel shows its no-track state
-        Instrument.DrumLabel = track is { Kind: TrackKind.Drums } drums ? midi => Services.DrumMaps.For(drums, midi).Label : null;
-        var state = InstrumentVisualizer.Build(
-            _project, track, _timeline, _playheadMs, _isPlayingVisual, _midi.IsPaused,
-            InstrumentPane.PreviewHorizon, InstrumentPane.LeftHanded, InstrumentPane.ShowNoteNames, InstrumentPane.ScaleHighlight, InstrumentPane.FretboardFrets, options: _options.Visual);
-        var editingSelection = InstrumentVisualizer.BuildEditingSelection(
-            track, Editor.Effects.CurrentCell(), InstrumentPane.LeftHanded, InstrumentPane.ShowNoteNames, InstrumentPane.ScaleHighlight, InstrumentPane.FretboardFrets, options: _options.Visual);
-        Instrument.Title = track?.Name ?? "Instrument"; Instrument.AudioTrack = audioSelected;
-        InstrumentPane.ApplyInstrumentView(state);
-        InstrumentPane.ApplyInstrumentView(editingSelection);
-        Instrument.SetState(state);
-        Instrument.SetEditingSelection(editingSelection);
-
-    }
+    private void RefreshInstrument() => InstrumentPane.ShowInstrument();
 
     /// <summary>The TAB line a clicked drum pad writes to (see <see cref="InstrumentPanelController.PercussionPadLine"/>).</summary>
     internal static int PercussionPadLine(TrackModel drumTrack, int percussion) => InstrumentPanelController.PercussionPadLine(drumTrack, percussion);

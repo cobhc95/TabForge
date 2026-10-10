@@ -96,7 +96,7 @@ internal sealed class AutosaveController : IDisposable
                 recheck.Start();
             }
         }
-        catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"Autosave reconcile failed: {ex}"); }
+        catch (Exception ex) { Services.Trace.Error(Services.Trace.Ui, "autosave: reconcile: " + ex.Message); System.Diagnostics.Debug.WriteLine($"Autosave reconcile failed: {ex}"); }
     }
 
     private void AutosaveTick()
@@ -113,13 +113,13 @@ internal sealed class AutosaveController : IDisposable
             _autosavePlanner.Ran(DateTime.UtcNow);
             _ = RunAutosavePass();
         }
-        catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"Autosave failed: {ex}"); }
+        catch (Exception ex) { Services.Trace.Error(Services.Trace.Ui, "autosave: tick: " + ex.Message); System.Diagnostics.Debug.WriteLine($"Autosave failed: {ex}"); }
     }
 
     private async Task RunAutosavePass()
     {
         try { await _autosave.RunPassAsync(_host.Documents.Documents.ToArray(), AutosaveService.DefaultFolder); }
-        catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"Autosave pass failed: {ex}"); }
+        catch (Exception ex) { Services.Trace.Error(Services.Trace.Ui, "autosave: pass: " + ex.Message); System.Diagnostics.Debug.WriteLine($"Autosave pass failed: {ex}"); }
         UpdateAutosaveBar();
     }
 
@@ -165,6 +165,6 @@ internal sealed class AutosaveController : IDisposable
             AutosaveRegistry.Adopt(doc, file);
             _autosavePlanner.RunSoon();
         }
-        catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"Recovered song could not be opened: {ex}"); }
+        catch (Exception ex) { Services.Trace.Error(Services.Trace.Ui, "autosave: recovered song: " + ex.Message); System.Diagnostics.Debug.WriteLine($"Recovered song could not be opened: {ex}"); }
     }
 }

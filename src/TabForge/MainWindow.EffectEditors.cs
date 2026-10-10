@@ -6,6 +6,9 @@ using TabForge.Views.Score;
 namespace TabForge;
 
 // The note-effect editors' window side: the host interface and the menu / palette / hotkey entry (EffectEditorFlow does the work).
+// Owns: the note-effect editors' window side: the host interface and the menu, palette and hotkey entries.
+// Does not own: the editing work, which EffectEditorFlow does.
+// Tests: listed in docs/feature-map/editing-and-notation.md.
 public partial class MainWindow : IEffectEditorHost
 {
     private EffectEditorFlow? _effectEditors;

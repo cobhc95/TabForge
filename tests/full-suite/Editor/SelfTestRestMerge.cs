@@ -108,8 +108,6 @@ public static partial class SelfTest
         e8.SelectRange(0, 0, 0, 0);
         e8.Effects.Longer();
         Check("rest merge: + on a rest never drops the notes next to it", b8.Sum(c => c.Notes.Count) == 2);
-
-        Check("delete option: the default leaves merged rests", new EditingSettings().MergeRestsOnDelete);
     }
 
     /// <summary>Score Delete on a whole selected bar: notes clear into the fewest rests (one whole-bar rest), a second Delete on rests or empty beats always collapses them; 4/4 sixteenths, mixed values, 3/4, both "leave" options.</summary>

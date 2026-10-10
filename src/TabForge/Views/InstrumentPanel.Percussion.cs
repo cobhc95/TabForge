@@ -4,6 +4,10 @@ using TabForge.Visualization;
 
 namespace TabForge.Views;
 
+// Owns: the drum key map of the instrument panel: its grid, the label per sound, the click-to-write hit test and the hit glow that fades after a drum hit.
+// Does not own: the fretboard and keyboard drawing (InstrumentPanel.cs) or the writing of the note itself.
+// Tests: no named test.
+
 // InstrumentPanel: the drum key map (GM percussion 27-87 in columns), its click-to-write hit test and its hit glow.
 public sealed partial class InstrumentPanel
 {

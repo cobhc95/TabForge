@@ -58,7 +58,7 @@ internal sealed class ProfileHandoverTestStatus : IDisposable
             File.WriteAllText(temporary, JsonSerializer.Serialize(state));
             File.Move(temporary, path, overwrite: true);
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException) { }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException) { Services.Trace.Error(Services.Trace.Ui, "handover status: write: " + ex.Message); }
     }
 
     public void Dispose() => _timer.Stop();

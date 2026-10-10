@@ -8,28 +8,28 @@ using TabForge.Services;
 
 namespace TabForge;
 
-/// <summary>Audit 3 M-06: per-bar undo states (exact content, granularity, dirty flag, bar reuse, cost).</summary>
+/// <summary>Per-bar undo states (exact content, granularity, dirty flag, bar reuse, cost).</summary>
 public static partial class SelfTest
 {
     private static void TestUndoDeltaStates()
     {
-        TestUndoBarCodecCoverage();
-        TestUndoBarCodecRoundTrip();
-        TestUndoMultiTrackHistory();
-        TestUndoRestoreRechecksLiveBars();
-        TestUndoFingerprints();
-        TestPasteUndoScope();
-        TestUndoLatency();
+        CheckUndoBarCodecCoverage();
+        CheckUndoBarCodecRoundTrip();
+        CheckUndoMultiTrackHistory();
+        CheckUndoRestoreRechecksLiveBars();
+        CheckUndoFingerprints();
+        CheckPasteUndoScope();
+        CheckUndoLatency();
     }
 
-    private static void TestPasteUndoScope()
+    private static void CheckPasteUndoScope()
     {
         var document = DocumentSession.FromProject(TemplateFactory.Blank(), null);
         DocumentSession? sibling = null;
         try
         {
             sibling = DocumentSession.FromProject(TemplateFactory.Blank(), null);
-            TestPasteUndoScope(document, sibling);
+            CheckPasteUndoScope(document, sibling);
         }
         finally
         {
@@ -38,7 +38,7 @@ public static partial class SelfTest
         }
     }
 
-    private static void TestPasteUndoScope(DocumentSession document, DocumentSession sibling)
+    private static void CheckPasteUndoScope(DocumentSession document, DocumentSession sibling)
     {
         var source = TemplateFactory.Blank();
         source.Tracks[0].Measures[0].Cells[0] = new TabCell
@@ -86,7 +86,7 @@ public static partial class SelfTest
             sibling.Undo.UndoCount == 0 && sibling.Undo.RedoCount == 0);
     }
 
-    private static void TestUndoBarCodecCoverage()
+    private static void CheckUndoBarCodecCoverage()
     {
         foreach (var (type, handled) in BarCodec.Handled)
         {
@@ -120,7 +120,7 @@ public static partial class SelfTest
         Check("undo bar codec has an entry for every model type a bar holds", uncovered.Count == 0, string.Join(", ", uncovered));
     }
 
-    private static void TestUndoBarCodecRoundTrip()
+    private static void CheckUndoBarCodecRoundTrip()
     {
         var rng = new Random(20260929);
         var failures = new List<string>();
@@ -251,7 +251,7 @@ public static partial class SelfTest
         return song;
     }
 
-    private static void TestUndoMultiTrackHistory()
+    private static void CheckUndoMultiTrackHistory()
     {
         var doc = DocumentSession.FromProject(RichSong(4, 40, 1), null);
         doc.MarkClean();
@@ -347,7 +347,7 @@ public static partial class SelfTest
         return true;
     }
 
-    private static void TestUndoRestoreRechecksLiveBars()
+    private static void CheckUndoRestoreRechecksLiveBars()
     {
         var undo = new UndoController();
         var song = RichSong(2, 12, 3);
@@ -365,7 +365,7 @@ public static partial class SelfTest
             ProjectService.Snapshot(new UndoController().Restore(current)) != expected);
     }
 
-    private static void TestUndoFingerprints()
+    private static void CheckUndoFingerprints()
     {
         var song = RichSong(3, 20, 5);
         var a = new UndoController().Snapshot(song);
@@ -376,7 +376,7 @@ public static partial class SelfTest
             a.Fingerprint == b.Fingerprint && a.State.ContentEquals(b.State) && a.Fingerprint != c.Fingerprint && !a.State.ContentEquals(c.State));
     }
 
-    private static void TestUndoLatency()
+    private static void CheckUndoLatency()
     {
         foreach (var (tracks, bars, target) in new[] { (7, 167, 16.0), (20, 500, 50.0) })
         {

@@ -4,6 +4,10 @@ using TabForge.Services;
 
 namespace TabForge.Diagnostics;
 
+// Owns: the `--layout-audit` command: engraves each track (or one) with LayoutAudit, counts colliding texts and markings, and writes the report with incomplete or overfull bars.
+// Does not own: the collision rules (LayoutAudit) or the bar problem rules (MusicTime).
+// Tests: TestLayoutAuditTechniqueSong.
+
 internal static partial class DiagnosticCommands
 {
     /// <summary>`--layout-audit &lt;song&gt; &lt;report.txt&gt; [track]`: engraves every track (or one) and lists colliding texts and markings.</summary>

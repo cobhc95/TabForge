@@ -16,7 +16,7 @@ public sealed class WindowsScoreClipboard : IScoreClipboard
         get
         {
             try { return GetClipboardSequenceNumber(); }
-            catch (Exception ex) when (ex is DllNotFoundException or EntryPointNotFoundException) { return 0; }
+            catch (Exception ex) when (ex is DllNotFoundException or EntryPointNotFoundException) { return 0; } // Not logged: clipboard busy or empty: the caller retries or reports empty
         }
     }
 
@@ -30,7 +30,7 @@ public sealed class WindowsScoreClipboard : IScoreClipboard
             System.Windows.Clipboard.SetDataObject(data, copy: true);
             return true;
         }
-        catch (Exception ex) when (ex is ExternalException or ThreadStateException or InvalidOperationException) { return false; }
+        catch (Exception ex) when (ex is ExternalException or ThreadStateException or InvalidOperationException) { return false; } // Not logged: clipboard busy or empty: the caller retries or reports empty
     }
 
     public ScoreClipboardRead TryRead(int maxBytes)
@@ -43,12 +43,12 @@ public sealed class WindowsScoreClipboard : IScoreClipboard
             {
                 if (stream.Length > maxBytes) return new ScoreClipboardRead(true, null, TooLarge: true);
                 try { return new ScoreClipboardRead(true, new UTF8Encoding(false, throwOnInvalidBytes: true).GetString(stream.ToArray())); }
-                catch (DecoderFallbackException) { return new ScoreClipboardRead(true, null); }
+                catch (DecoderFallbackException) { return new ScoreClipboardRead(true, null); } // Not logged: clipboard busy or empty: the caller retries or reports empty
             }
             if (data.GetDataPresent(System.Windows.DataFormats.UnicodeText) && data.GetData(System.Windows.DataFormats.UnicodeText) is string text)
                 return text.Length > maxBytes ? new ScoreClipboardRead(true, null, TooLarge: true) : new ScoreClipboardRead(true, text);
             return new ScoreClipboardRead(true, null);
         }
-        catch (Exception ex) when (ex is ExternalException or ThreadStateException or InvalidOperationException) { return new ScoreClipboardRead(false, null); }
+        catch (Exception ex) when (ex is ExternalException or ThreadStateException or InvalidOperationException) { return new ScoreClipboardRead(false, null); } // Not logged: clipboard busy or empty: the caller retries or reports empty
     }
 }

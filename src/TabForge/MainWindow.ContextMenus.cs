@@ -27,6 +27,9 @@ using TabForge.Visualization;
 namespace TabForge;
 
 // MainWindow, score right-click menu.
+// Owns: the score's right-click menu, the playing-bar menu and the score view choices.
+// Does not own: the menu contents (ScoreMenus).
+// Tests: listed in docs/feature-map/editing-and-notation.md.
 public partial class MainWindow
 {
     // ---------- score context menu (right click) ----------
@@ -36,8 +39,8 @@ public partial class MainWindow
 
     /// <summary>
     /// Right-click on empty page. With a <paramref name="target"/> over a beat the beat is
-    /// selected (no seek) and Paste / Paste special appear first when the clipboard holds a clip. Lean (owner decisions
-    /// 2026-09-30): notation, zoom, page layout and ONE "Score settings..." door; paper, ledger lines, page turns, colours and
+    /// selected (no seek) and Paste / Paste special appear first when the clipboard holds a clip. The lean menu:
+    /// Notation, zoom, page layout and one "Score settings..." door; paper, ledger lines, page turns, colours and
     /// text fonts are Preferences rows.
     /// </summary>
     private void ShowScoreContextMenu(Point position, Views.ContextMenuEventArgs? target = null)
@@ -251,13 +254,5 @@ public partial class MainWindow
         intensity = Math.Clamp(intensity, 0, 1);
         Resources["SectionHoverGlowOpacity"] = intensity * 0.84;
         Resources["SectionActiveGlowOpacity"] = Math.Clamp(intensity * 1.6, 0, 1);
-    }
-
-    private void SetDurationGlowOpacity(double opacity)
-    {
-        Editor.Appearance.DurationGlowOpacity = Math.Clamp(opacity, 0, 1);
-        Editor.InvalidateVisual();
-        Playhead.SetDurationStyle(Editor.Appearance.DurationGlowColor, Editor.Appearance.DurationGlowOpacity, _settings.Follow.DurationTintEnabled);
-        SaveSettings();
     }
 }

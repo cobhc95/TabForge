@@ -141,7 +141,7 @@ public static class VirtualFileDrop
                 }
                 written.Add(target);
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or COMException or InvalidOperationException or ArgumentException)
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or COMException or InvalidOperationException or ArgumentException) // Not logged: unreadable name: the file is skipped in the drop
             {
                 unread.Add(name);
             }
@@ -158,7 +158,7 @@ public static class VirtualFileDrop
             {
                 if (data.GetData(Contents) is { } managed && ReadAll(managed, MaxFileBytes) is { } bytes) return new MemoryStream(bytes, writable: false);
             }
-            catch (Exception ex) when (ex is COMException or InvalidOperationException or OutOfMemoryException) { }
+            catch (Exception ex) when (ex is COMException or InvalidOperationException or OutOfMemoryException) { Services.Trace.Error(Services.Trace.Ui, "virtual file drop: read contents: " + ex.Message); }
         }
         return data is ComTypes.IDataObject com ? ComContents(com, index) : null;
     }
@@ -173,7 +173,7 @@ public static class VirtualFileDrop
         };
         ComTypes.STGMEDIUM medium;
         try { com.GetData(ref format, out medium); }
-        catch (Exception ex) when (ex is COMException or InvalidOperationException or NotImplementedException) { return null; }
+        catch (Exception ex) when (ex is COMException or InvalidOperationException or NotImplementedException) { return null; } // Not logged: probe: null means none
         try
         {
             if (medium.tymed == ComTypes.TYMED.TYMED_HGLOBAL && medium.unionmember != IntPtr.Zero)
@@ -247,7 +247,7 @@ public static class VirtualFileDrop
             foreach (var dir in Directory.EnumerateDirectories(MediaDrop.StagingRoot).Take(256))
                 if (Directory.GetLastWriteTimeUtc(dir) < DateTime.UtcNow.AddHours(-1)) MediaDropSession.TryDelete(dir);
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { } // Not logged: staging cleanup: a folder in use is left for the next pass.
     }
 
     [DllImport("kernel32.dll")] private static extern IntPtr GlobalLock(IntPtr hMem);

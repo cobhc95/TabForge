@@ -20,16 +20,38 @@ public static class ThemeService
         var resources = Application.Current?.Resources;
         if (resources is null) return;
 
-        // Dark / Light / System are presets: choosing one copies its palette into the settings (see
-        // ApplyPreset), and every colour stays user-editable. Apply always paints the stored colours.
-        var light = string.Equals(a.ThemeMode, "Custom", StringComparison.OrdinalIgnoreCase)
-            ? IsLightColour(a.Background) : IsLightTheme(a.ThemeMode);
         // Application resources are frozen by WPF, so a theme change replaces brush instances. Remember
         // the current ones so controls that captured them (StaticResource / FindResource in code) can be
         // re-linked to the new theme below.
         var previous = new Dictionary<Brush, string>(ReferenceEqualityComparer.Instance);
         foreach (var key in resources.Keys.OfType<string>())
             if (resources[key] is Brush b && !previous.ContainsKey(b)) previous[b] = key;
+        TabForge.Visualization.VisualTheme.IsLight = Paint(resources, a);
+        UiMotion.Configure(a.ReduceAnimations, a.AnimationSpeed);
+        RebindStaleBrushes(resources, previous);
+        if (Application.Current is not null)
+            foreach (Window w in Application.Current.Windows) EnsureReadableText(w);
+        Shell.WindowPolish.RefreshTitleBars();
+
+        if (window is not null)
+        {
+            try { window.FontFamily = new FontFamily(string.IsNullOrWhiteSpace(a.FontFamily) ? "Segoe UI" : a.FontFamily); }
+            catch (ArgumentException) { window.FontFamily = new FontFamily("Segoe UI"); } // Not logged: font fallback: the default family is used
+            // UI scale and density scale the whole window (layout, text, icons, spacing) as vectors, so
+            // nothing is left at the old size and icons stay sharp; font size is the unscaled base.
+            window.FontSize = Math.Clamp(a.FontSize, 8, 36);
+            ApplyLayoutScale(window, LayoutScale(a));
+        }
+    }
+
+    /// <summary>Writes the theme's brushes and sizes into <paramref name="resources"/> (the app's, or an off-screen tree's own, as the
+    /// video export uses) and returns whether the theme is light. Touches no window and no static.</summary>
+    internal static bool Paint(ResourceDictionary resources, AppearanceSettings a)
+    {
+        // Dark / Light / System are presets: choosing one copies its palette into the settings (see
+        // ApplyPreset), and every colour stays user-editable. Apply always paints the stored colours.
+        var light = string.Equals(a.ThemeMode, "Custom", StringComparison.OrdinalIgnoreCase)
+            ? IsLightColour(a.Background) : IsLightTheme(a.ThemeMode);
         var background = a.Background;
         var panel = a.Panel;
         var titleBar = a.TitleBarColour;
@@ -73,8 +95,6 @@ public static class ThemeService
         Set(resources, "MeterHotBrush", light ? "#C99A1E" : "#E6B93A");
         Set(resources, "PaperDarkBrush", a.DarkScorePaperColour);
         Set(resources, "PaperLightBrush", a.LightScorePaperColour);
-
-        TabForge.Visualization.VisualTheme.IsLight = light;
         Set(resources, "WorkspaceBrush", light ? "#8C8C8C" : "#0B0D10"); // workspace grey
         Set(resources, "InstrumentHostBrush", light ? "#C0C0C0" : "#12151A");
         ApplyDerivedBrushes(resources, light);
@@ -82,24 +102,10 @@ public static class ThemeService
         resources["ToolButtonHeight"] = density == "Compact" ? 23.0 : density == "Spacious" ? 32.0 : 27.0;
         resources["ToolButtonFontSize"] = density == "Compact" ? 12.0 : density == "Spacious" ? 14.0 : 13.0;
         resources["ToolButtonMinWidth"] = density == "Compact" ? 26.0 : density == "Spacious" ? 36.0 : 30.0;
-        UiMotion.Configure(a.ReduceAnimations, a.AnimationSpeed);
         // Settings-window palette aliases (the window uses these names).
         foreach (var (alias, source) in new[] { ("BrushWindow", "WindowBrush"), ("BrushRail", "PanelBrush"), ("BrushCard", "Panel2Brush"), ("BrushInput", "PanelBrush"), ("BrushSearch", "PanelBrush"), ("BrushBorder", "BorderBrush"), ("BrushBorderSoft", "BorderSoftBrush"), ("BrushInputBorder", "BorderBrush"), ("BrushText", "TextBrush"), ("BrushMuted", "MutedBrush"), ("BrushMuted2", "MutedBrush"), ("BrushAccentSoft", "AccentSoftBrush"), ("BrushNavHover", "HoverBrush"), ("BrushNavSelected", "AccentSoftBrush"), ("BrushFooter", "PanelBrush"), ("BrushSecondary", "Panel3Brush"), ("BrushSecondaryHover", "HoverBrush") })
             resources[alias] = resources[source];
-        RebindStaleBrushes(resources, previous);
-        if (Application.Current is not null)
-            foreach (Window w in Application.Current.Windows) EnsureReadableText(w);
-        Shell.WindowPolish.RefreshTitleBars();
-
-        if (window is not null)
-        {
-            try { window.FontFamily = new FontFamily(string.IsNullOrWhiteSpace(a.FontFamily) ? "Segoe UI" : a.FontFamily); }
-            catch (ArgumentException) { window.FontFamily = new FontFamily("Segoe UI"); }
-            // UI scale and density scale the whole window (layout, text, icons, spacing) as vectors, so
-            // nothing is left at the old size and icons stay sharp; font size is the unscaled base.
-            window.FontSize = Math.Clamp(a.FontSize, 8, 36);
-            ApplyLayoutScale(window, LayoutScale(a));
-        }
+        return light;
     }
 
     private static readonly DependencyProperty[] BrushProperties =
@@ -292,7 +298,7 @@ public static class ThemeService
     public static double LayoutScale(AppearanceSettings a)
     {
         var density = a.Density == "Compact" ? 0.92 : a.Density == "Spacious" ? 1.1 : 1.0;
-        return Math.Clamp(Math.Clamp(a.UiScale, 0.8, 1.5) * density, 0.7, 1.7);
+        return Math.Clamp(a.UiScale * density, 0.7, 1.7);
     }
 
     /// <summary>Current UI-scale transform, shared with popups and context menus (they live outside the window
@@ -336,7 +342,7 @@ public static class ThemeService
         }
     }
 
-    private static bool IsLightColour(string hex)
+    internal static bool IsLightColour(string hex)
     {
         return TryParse(hex, out var colour) && Luminance(colour) > 0.35;
     }
@@ -352,9 +358,9 @@ public static class ThemeService
             return key?.GetValue("AppsUseLightTheme") is int light && light != 0;
         }
         // Registry unavailable or locked down: fall back to dark.
-        catch (System.Security.SecurityException) { return false; }
-        catch (UnauthorizedAccessException) { return false; }
-        catch (System.IO.IOException) { return false; }
+        catch (System.Security.SecurityException) { return false; } // Not logged: theme probe: not a dark theme or not readable
+        catch (UnauthorizedAccessException) { return false; } // Not logged: theme probe: not a dark theme or not readable
+        catch (System.IO.IOException) { return false; } // Not logged: theme probe: not a dark theme or not readable
     }
 
     private static void Set(ResourceDictionary resources, string key, string hex)

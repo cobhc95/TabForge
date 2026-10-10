@@ -158,7 +158,7 @@ public static class ImportPlausibility
             }
             return damage;
         }
-        catch (Exception ex) when (ex is not OutOfMemoryException) { return 0; }
+        catch (Exception ex) when (ex is not OutOfMemoryException) { Services.Trace.Error(Services.Trace.Import, "import plausibility: " + ex.Message); return 0; }
     }
 
     /// <summary>

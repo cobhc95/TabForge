@@ -10,7 +10,11 @@ using TabForge.Services;
 
 namespace TabForge.Views;
 
-// ArrangementPanel: the track-column layout and tuning button (forwarded to their controllers) and the controls in the columns.
+// Owns: the track list's columns: their order, widths and hidden set, the header minimum widths (HeaderNeed), the tuning button
+//   and master volume knob, the pan style and the auto-fit state.
+// Does not own: the column layout maths (TrackColumnLayout.cs) and the row widgets (TrackRowWidgets.cs).
+// Tests: TestTrackColumnHeaderFit.
+
 public sealed partial class ArrangementPanel : ITrackColumnHost, ITuningButtonHost, ITrackRowWidgetHost
 {
     void ITrackRowWidgetHost.RaiseMixEditStarting() => MixEditStarting?.Invoke(this, EventArgs.Empty);

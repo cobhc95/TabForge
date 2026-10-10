@@ -27,6 +27,9 @@ using TabForge.Visualization;
 namespace TabForge;
 
 // MainWindow, document tabs in the title bar, moving tabs between windows, window chrome.
+// Owns: the window's wiring of the document tabs (DocumentTabsController does the work), moving tabs between windows (tear-off, adopt) and the window chrome.
+// Does not own: document lifetime (DocumentCloseFlow).
+// Tests: listed in docs/feature-map/windows-tabs-and-documents.md.
 public partial class MainWindow
 {
     // ---------- MIDI / VST ----------
@@ -53,16 +56,7 @@ public partial class MainWindow
         Tabs.CaptionDoubleClickRequested += (_, _) => ToggleMaximise();
     }
 
-    private void RefreshTabsAndActivate(DocumentSession session)
-    {
-        ActivateDocument(session, applyPlaybackSwitchPolicy: true);
-    }
-
-    private void ActivateTabAt(int index)
-    {
-        if (index < 0 || index >= _documents.Documents.Count || index == _documents.ActiveIndex) return;
-        ActivateDocument(_documents.Documents[index], applyPlaybackSwitchPolicy: true);
-    }
+    private void ActivateTabAt(int index) => DocTabs.ActivateAt(index);
 
     private void NewTab_Click(object sender, RoutedEventArgs e) => NewTab();
 
@@ -84,82 +78,33 @@ public partial class MainWindow
 
     private void CloseActiveTab() => CloseDocument(_documents.ActiveIndex);
 
-    private void DuplicateDocument(int index)
+    private DocumentTabsController DocTabs => new(new TabsHost(this));
+
+    private sealed class TabsHost : IDocumentTabsHost
     {
-        CaptureDocumentState();
-        var copy = _documents.Duplicate(index);
-        if (copy is null) return;
-        ActivateDocument(copy, focusTabSelection: true, applyPlaybackSwitchPolicy: true);
-        StatusText.Text = $"Duplicated {copy.DisplayName}";
+        private readonly MainWindow _window;
+        public TabsHost(MainWindow window) => _window = window;
+        public DocumentManager Documents => _window._documents;
+        public TabSettings TabSettings => _window._tabSettings;
+        public bool IsSaving => _window._documentController.IsSaving;
+        public void CaptureDocumentState() => _window.CaptureDocumentState();
+        public void RefreshTabs() => _window.RefreshTabs();
+        public void Activate(DocumentSession session, bool focusTabSelection, bool applyPlaybackSwitchPolicy) =>
+            _window.ActivateDocument(session, focusTabSelection: focusTabSelection, applyPlaybackSwitchPolicy: applyPlaybackSwitchPolicy);
+        public DiscardAnswer AskDiscard(DocumentSession doc) => _window.AskDiscardDocument(doc);
+        public Task<bool> SaveDocumentAsync(DocumentSession doc) => _window.SaveDocumentAsync(doc);
+        public void BeginDocumentOperation() => _window.BeginDocumentOperation();
+        public void EndDocumentOperation() => _window.EndDocumentOperation();
+        public void CloseWindow() => _window.Close();
+        public void SetStatus(string text) => _window.StatusText.Text = text;
     }
 
-    private void MoveDocument(int from, int to)
-    {
-        if (!_documents.Move(from, to)) return;
-        CaptureDocumentState();
-        RefreshTabs();
-    }
-
-    // Closing a tab with "Save" awaits the save (no nested dispatcher frame); the tab is found again by reference afterwards.
-    private async void CloseDocument(int index)
-    {
-        if (index < 0 || index >= _documents.Documents.Count) return;
-        CaptureDocumentState();
-        var doc = _documents.Documents[index];
-        if (!await ConfirmDiscardDocumentAsync(doc)) return;
-        index = _documents.IndexOf(doc);
-        if (index < 0) return;   // it went away while saving
-        if (_documents.Documents.Count == 1 && _tabSettings.LastTabClosed == LastTabActions.CloseWindow)
-        {
-            doc.DisposePlayback();
-            _documents.Detach(index);
-            Close();
-            return;
-        }
-        _documents.Close(index);
-        doc.DisposePlayback();
-        ActivateDocument(_documents.Active);
-        StatusText.Text = $"Closed {doc.DisplayName}";
-    }
-
-    private async void CloseOtherDocuments(int keep)
-    {
-        if (keep < 0 || keep >= _documents.Documents.Count) return;
-        CaptureDocumentState();
-        var kept = _documents.Documents[keep];
-        var others = _documents.Documents.Where(d => !ReferenceEquals(d, kept)).ToArray();
-        await CloseDocumentsAsync(others);
-        var at = _documents.IndexOf(kept);
-        ActivateDocument(_documents.Documents[Math.Clamp(at < 0 ? _documents.ActiveIndex : at, 0, _documents.Documents.Count - 1)]);
-        StatusText.Text = "Closed other tabs";
-    }
-
-    private async void CloseDocumentsToTheRight(int from)
-    {
-        CaptureDocumentState();
-        await CloseDocumentsAsync(_documents.Documents.Skip(from + 1).ToArray());
-        ActivateDocument(_documents.Documents[Math.Clamp(_documents.ActiveIndex, 0, _documents.Documents.Count - 1)]);
-        StatusText.Text = "Closed tabs to the right";
-    }
-
-    /// <summary>Closes <paramref name="targets"/> last-first, asking for each; one operation, so a window close waits for all of it.</summary>
-    private async Task CloseDocumentsAsync(IReadOnlyList<DocumentSession> targets)
-    {
-        BeginDocumentOperation();
-        try
-        {
-            for (var k = targets.Count - 1; k >= 0; k--)
-            {
-                var doc = targets[k];
-                if (!await ConfirmDiscardDocumentAsync(doc)) continue;
-                var i = _documents.IndexOf(doc);
-                if (i < 0) continue;
-                _documents.Close(i);
-                doc.DisposePlayback();
-            }
-        }
-        finally { EndDocumentOperation(); }
-    }
+    private void DuplicateDocument(int index) => DocTabs.Duplicate(index);
+    private void MoveDocument(int from, int to) => DocTabs.Move(from, to);
+    // The closes await the save (no nested dispatcher frame); the handlers stay async void like any event handler.
+    private async void CloseDocument(int index) => await DocTabs.CloseAsync(index);
+    private async void CloseOtherDocuments(int keep) => await DocTabs.CloseOthersAsync(keep);
+    private async void CloseDocumentsToTheRight(int from) => await DocTabs.CloseToTheRightAsync(from);
 
     // ---------- moving tabs between windows (TabTransferController; these are its entry points) ----------
 
@@ -258,12 +203,7 @@ public partial class MainWindow
             titleBar.CornerRadius = highlighted ? new CornerRadius(4) : new CornerRadius(0);
         }
 
-        public bool TryGetCursor(out Point screen)
-        {
-            if (GetCursorPos(out var native)) { screen = new Point(native.X, native.Y); return true; }
-            screen = default;
-            return false;
-        }
+        public bool TryGetCursor(out Point screen) => NativeWindowDrag.TryGetCursor(out screen);
 
         // Screen pixels -> this window's DIPs (per-monitor DPI; also correct below 100 % scaling).
         public Point ScreenToDip(Point screen) =>
@@ -304,7 +244,7 @@ public partial class MainWindow
         public bool DragWindowWithHeldPointer(Point screen, Action moved)
         {
             var hwnd = new System.Windows.Interop.WindowInteropHelper(_window).Handle;
-            if (hwnd == IntPtr.Zero || (GetAsyncKeyState(VK_LBUTTON) & 0x8000) == 0) return false;
+            if (hwnd == IntPtr.Zero || !NativeWindowDrag.LeftButtonDown) return false;
             if (_window.WindowState != WindowState.Normal)
             {
                 var drop = ScreenToDip(screen);
@@ -312,10 +252,10 @@ public partial class MainWindow
                 _window.Left = drop.X - 120;
                 _window.Top = drop.Y - 22;
             }
-            ReleaseCapture();
+            NativeWindowDrag.ReleaseMouseCapture();
             EventHandler onMoved = (_, _) => moved();
             _window.LocationChanged += onMoved;
-            try { SendMessage(hwnd, WM_NCLBUTTONDOWN, (IntPtr)HTCAPTION, IntPtr.Zero); }
+            try { NativeWindowDrag.BeginCaptionDrag(hwnd); }
             finally { _window.LocationChanged -= onMoved; }
             return true;
         }
@@ -337,26 +277,6 @@ public partial class MainWindow
         MaxIcon.Data = (Geometry)FindResource(WindowState == WindowState.Maximized ? "IconRestore" : "IconMaximise");
     }
 
-    private const int WM_NCLBUTTONDOWN = 0xA1;
-    private const int HTCAPTION = 2;
-    private const int VK_LBUTTON = 0x01;
-
-    [System.Runtime.InteropServices.DllImport("user32.dll")]
-    private static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
-
-    [System.Runtime.InteropServices.DllImport("user32.dll")]
-    private static extern short GetAsyncKeyState(int virtualKey);
-
-    [System.Runtime.InteropServices.DllImport("user32.dll")]
-    [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
-    private static extern bool GetCursorPos(out NativeScreenPoint point);
-
-    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
-    private struct NativeScreenPoint { public int X; public int Y; }
-
-    [System.Runtime.InteropServices.DllImport("user32.dll")]
-    private static extern bool ReleaseCapture();
-
     /// <summary>
     /// Starts a real caption drag through the non-client path, so Aero Snap, the double-click
     /// maximise and the right-click system menu keep working even though the caption is hit-testable.
@@ -365,6 +285,6 @@ public partial class MainWindow
     {
         var handle = new System.Windows.Interop.WindowInteropHelper(window).Handle;
         if (handle == IntPtr.Zero) return;
-        SendMessage(handle, WM_NCLBUTTONDOWN, (IntPtr)HTCAPTION, IntPtr.Zero);
+        NativeWindowDrag.BeginCaptionDrag(handle);
     }
 }

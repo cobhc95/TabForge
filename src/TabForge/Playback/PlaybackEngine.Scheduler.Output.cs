@@ -58,6 +58,9 @@ public sealed partial class PlaybackEngine : IDisposable
         // Live mute/solo: every track is compiled, silenced tracks simply do not start notes.
         if (e.IsNoteOn && e.TrackIndex >= 0 && Volatile.Read(ref _audible) is { } audible &&
             e.TrackIndex < audible.Length && !audible[e.TrackIndex]) return;
+        // Practice silence: the track's notes neither start nor end, so a song note-off never cuts a key the player holds on its channel (notes sounding when it was set got All Notes Off).
+        // Its bend, sustain, volume/expression and program messages are dropped too: they would land on the channel the player's live notes use (restored when the silence ends).
+        if (e.TrackIndex >= 0 && e.TrackIndex == Volatile.Read(ref _practiceSilence) && (e.IsNoteOn || e.IsNoteOff || IsPracticeSilencedState(e))) return;
         if (e.IsMetronome)
         {
             if (e.IsNoteOff)
@@ -105,18 +108,18 @@ public sealed partial class PlaybackEngine : IDisposable
     /// Reapply only the latest persistent channel messages at <paramref name="timeMs"/>. This avoids
     /// replaying a stale modulation ramp while ensuring a skipped reset cannot leave MIDI state stuck.
     /// </summary>
-    internal void RestoreChannelStateAt(ScoreTimeline timeline, double startMs, double timeMs)
+    internal void RestoreChannelStateAt(ScoreTimeline timeline, double startMs, double timeMs, int onlyTrack = -1)
     {
         var latest = new Dictionary<(int Device, int Status, int Data1), ScoreEvent>();
         foreach (var e in timeline.ChannelSetup)
-            if (IsChannelStateMessage(e)) latest[ChannelStateKey(e)] = e;
+            if (IsChannelStateMessage(e) && (onlyTrack < 0 || e.TrackIndex == onlyTrack)) latest[ChannelStateKey(e)] = e;
 
         var events = timeline.Events;
         // The scan always starts at the timeline origin: a seek target or loop start must not hide earlier mix-table events.
         for (var i = FirstIndexAtOrAfter(events, Math.Min(startMs, timeline.PlayFromMs)); i < events.Count && events[i].TimeMs <= timeMs; i++)
         {
             var e = events[i];
-            if (!e.IsSetup && IsChannelStateMessage(e)) latest[ChannelStateKey(e)] = e;
+            if (!e.IsSetup && IsChannelStateMessage(e) && (onlyTrack < 0 || e.TrackIndex == onlyTrack)) latest[ChannelStateKey(e)] = e;
         }
 
         lock (_outputGate)
@@ -124,6 +127,13 @@ public sealed partial class PlaybackEngine : IDisposable
                 _output.Send(e.DeviceId, e.Status, ProgramFor(e.Status, e.Data1), MasterScaled(e.Status, e.Data1, e.Data2));
         if (Trace.IsOn(Trace.Playback)) Trace.Write(Trace.Playback, RestoreTrace.Describe(timeMs, latest.Values));
     }
+
+    internal static bool IsPracticeSilencedState(ScoreEvent e) => (e.Status & 0xF0) switch
+    {
+        0xC0 or 0xE0 => true,
+        0xB0 => e.Data1 is 64 or 7 or 11,
+        _ => false
+    };
 
     private static bool IsChannelStateMessage(ScoreEvent e)
     {

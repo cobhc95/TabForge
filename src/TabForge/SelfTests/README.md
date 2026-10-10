@@ -12,6 +12,7 @@ The **basic set** of the self-tests, run with `TabForge.exe --selftest <log>`: t
 - `SelfTest`: the runner; Guard wraps each test so one failure does not stop the run.
 - `SelfTestOnly.cs`: `--only` and `--areas` selection.
 - `SelfTestRequirements.cs`: `--require` groups such as `ci` and `document-context`.
+- `SelfTestTiming.cs`: timing csv, core shard, group report and group-report merge options (see docs/TESTING.md).
 - The AreaOf table in `src/TabForge/SelfTests/SelfTest.cs` gives every test an area.
 
 ## Pathway

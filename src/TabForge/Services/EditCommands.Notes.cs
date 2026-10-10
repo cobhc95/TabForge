@@ -2,6 +2,10 @@ using TabForge.Models;
 
 namespace TabForge.Services;
 
+// Owns: the note rules of the score editor as pure model code: the MIDI value of a fret, string moves that keep the pitch (all or nothing), pitch steps and effect toggles.
+// Does not own: the undo and refresh events (the score editor brackets its edits with them) or any WPF control.
+// Tests: TestMoveNoteToAdjacentString.
+
 // The note rules the score editor used to hold inline (string moves, pitch steps, effect toggles): pure model code, planned first and applied after, so the
 // control only brackets them with its undo / refresh events and a test can run them without any WPF control.
 public static partial class EditCommands

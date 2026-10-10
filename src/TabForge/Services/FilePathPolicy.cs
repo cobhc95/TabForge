@@ -112,7 +112,7 @@ public static class FilePathPolicy
                 PairOutcome outcome;
                 try { outcome = ResolvePair(directory, first, second, marker, info, "restore:"); }
                 catch (Exception restoreError) when (restoreError is IOException or UnauthorizedAccessException)
-                { outcome = PairOutcome.Unresolved(restoreError.Message); }
+                { Services.Trace.Error(Services.Trace.Ui, "pair restore: " + restoreError.Message); outcome = PairOutcome.Unresolved(restoreError.Message); }
                 if (!outcome.Resolved)
                 {
                     keep = true;
@@ -228,7 +228,7 @@ public static class FilePathPolicy
     {
         string text;
         try { text = new System.Text.UTF8Encoding(false, throwOnInvalidBytes: true).GetString(bytes); }
-        catch (ArgumentException) { problem = "the marker is not valid text"; return null; }
+        catch (ArgumentException) { problem = "the marker is not valid text"; return null; } // Not logged: marker text check: the problem text is returned to the caller
         if (text.StartsWith("TabForge pair save v1", StringComparison.Ordinal)) { problem = "the marker is in the older format that stored file paths, which is no longer trusted"; return null; }
         problem = "the marker is incomplete or malformed";
         if (!text.EndsWith('\n') || text.Contains('\r') || text.Contains('\0')) return null;
@@ -295,6 +295,7 @@ public static class FilePathPolicy
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException or System.Security.SecurityException)
         {
+            Services.Trace.Error(Services.Trace.Ui, "interrupted save: recover: " + ex.Message);
             return null;
         }
     }
@@ -311,7 +312,7 @@ public static class FilePathPolicy
             marker = PairMarkerPath(first);
             if (!File.Exists(marker)) return null;
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException or System.Security.SecurityException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException or System.Security.SecurityException) // Not logged: no marker: nothing to recover
         {
             return null;   // no marker can be located for a path that does not resolve
         }
@@ -334,6 +335,7 @@ public static class FilePathPolicy
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException or System.Security.SecurityException)
         {
+            Services.Trace.Error(Services.Trace.Ui, "interrupted save: report: " + ex.Message);
             return $"An interrupted save of '{first}' could not be resolved now ({ex.Message}). Nothing further was changed; the recovery marker '{marker}' was kept and the next open retries.";
         }
     }
@@ -400,7 +402,7 @@ public static class FilePathPolicy
     private static void DeleteIfContent(string path, string sha256)
     {
         try { if (HashOrNull(path) == sha256) File.Delete(path); }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { } // Not logged: best-effort delete of a file whose content changed; it is kept.
     }
 
     /// <summary>The ids of files still needed by pending pair saves in <paramref name="directory"/>; null when any marker there cannot be read (then nothing is swept).</summary>
@@ -414,7 +416,7 @@ public static class FilePathPolicy
                 if (ReadMarkerBytes(marker, out _) is not { } bytes || ParseMarker(bytes, null, null, out _) is not { } info) return null;
                 ids.UnionWith(info.Ids);
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return null; }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return null; } // Not logged: best-effort id collection: the caller treats null as none
         }
         return ids;
     }
@@ -453,7 +455,7 @@ public static class FilePathPolicy
         if (File.Exists(fullPath))
         {
             try { File.Replace(temporaryPath, fullPath, backupPath, ignoreMetadataErrors: true); }
-            catch (PlatformNotSupportedException)
+            catch (PlatformNotSupportedException) // Not logged: platform without File.Replace: the copy path is used
             {
                 if (backupPath is not null) File.Copy(fullPath, backupPath, overwrite: true);
                 File.Move(temporaryPath, fullPath, overwrite: true);
@@ -491,10 +493,10 @@ public static class FilePathPolicy
                     File.Delete(file);
                     deleted++;
                 }
-                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { } // Not logged: sweep: a locked leftover is kept for the next sweep.
             }
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { Services.Trace.Error(Services.Trace.Import, "temp sweep: scan folder: " + ex.Message); }
         return deleted;
     }
 
@@ -513,8 +515,8 @@ public static class FilePathPolicy
     {
         if (path is null) return;
         try { if (File.Exists(path)) File.Delete(path); }
-        catch (IOException) { }
-        catch (UnauthorizedAccessException) { }
+        catch (IOException) { } // Not logged: best-effort delete of a leftover.
+        catch (UnauthorizedAccessException) { } // Not logged: best-effort delete of a leftover.
     }
 
     private static string FullPath(string path, string description)

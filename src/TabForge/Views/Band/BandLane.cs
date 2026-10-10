@@ -15,7 +15,7 @@ namespace TabForge.Views.Band;
 //   slid down to the top system. The click maps to a bar and cell.
 // Does not own: the song, playback timing, the row, the instrument beside it, the order of the rows, or the scroll position every lane
 //   shares (BandScroll hands it in, with a shared bar-width floor and zoom, so one bar has one place in every lane).
-// Tests: TestBandLaneCache, TestBandLaneClick, TestBandNoteGlow, TestBandLaneContent, TestBandLanesInSync, TestBandVerticalLanes.
+// Tests: TestBandLaneCache, TestBandLaneClick, TestBandNoteGlow, TestBandLaneContent, TestBandLanesInSync, TestBandEmptyBarLine, TestBandVerticalLanes.
 internal sealed class BandLane : Border
 {
     /// <summary>Where the playhead stands in the strip while the strip scrolls (fraction of the lane width).</summary>
@@ -384,7 +384,7 @@ internal sealed class BandLane : Border
     /// Puts the playhead on a bar and a fraction of it (time) and the strip at the shared scroll position <paramref name="pos"/>
     /// (see <see cref="BandScroll"/>). A slide changes two transforms only; the engraving is not touched.
     /// </summary>
-    public void Place(int bar, double fraction, double pos, double? systemsAboveBar = null)
+    public void Place(int bar, double fraction, double pos, double? systemsAboveBar = null, double? sharedSpaced = null)
     {
         // Vertical: the bar's own system stands the lead lane's number of systems below the top.
         if (_vertical && systemsAboveBar is { } above && SystemOf(bar) is >= 0 and var own) pos = Math.Max(0, own - above);
@@ -405,10 +405,29 @@ internal sealed class BandLane : Border
             _slide.Y = _yBase - (_editor.Track is { Measures.Count: > 0 } ? _editor.SystemTopForMeasure(0) : 0);
         }
         if (geometry is null) { _playhead.Visibility = Visibility.Collapsed; return; }
-        _playheadSlide.X = geometry.Value.PlayheadX - _offset - 1;
+        var playheadX = geometry.Value.PlayheadX;
+        // A bar with no notes has no spacing of its own: it takes the position the lanes with notes show, so one line crosses every lane.
+        if (sharedSpaced is { } spaced && !BarHasNotes(bar) && _editor.Track is { } t && _editor.Zoom > 0)
+        {
+            var at = _editor.Layout.GetLayout(t).Measure(bar);
+            playheadX = (at.X + spaced * at.Width) * _editor.Zoom;
+        }
+        _playheadSlide.X = playheadX - _offset - 1;
         PlacePlayhead(geometry.Value.SystemIndex);
         _playhead.Visibility = Visibility.Visible;
         Slides++;
+    }
+
+    /// <summary>True when <paramref name="bar"/> holds a note in this lane (either voice).</summary>
+    internal bool BarHasNotes(int bar) =>
+        _editor.Track is { } t && bar >= 0 && bar < t.Measures.Count && (t.Measures[bar].Cells.Any(c => c.Notes.Count > 0) || t.Measures[bar].Voice2Cells.Any(c => c.Notes.Count > 0));
+
+    /// <summary>The playhead's place in <paramref name="bar"/> as a 0..1 fraction of the bar width, from this lane's own note spacing.</summary>
+    internal double? SpacedFraction(int bar, double fraction)
+    {
+        if (bar < 0 || _editor.Track is not { IsAudio: false } t || _editor.Zoom <= 0 || _editor.PlaybackHorizontalGeometry(bar, fraction) is not { } g) return null;
+        var at = _editor.Layout.GetLayout(t).Measure(bar);
+        return at.Width > 0 ? (g.PlayheadX / _editor.Zoom - at.X) / at.Width : null;
     }
 
     /// <summary>A lane on its own: follows the playhead from where it stands (the Band view places every lane through <see cref="BandScroll"/>).</summary>

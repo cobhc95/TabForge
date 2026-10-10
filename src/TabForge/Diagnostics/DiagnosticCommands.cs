@@ -227,7 +227,7 @@ internal static partial class DiagnosticCommands
 
     private static string DescribeNote(object n) => string.Join(" ", n.GetType().GetProperties()
         .Where(p => p.GetIndexParameters().Length == 0 && (p.PropertyType.IsPrimitive || p.PropertyType.IsEnum))
-        .Select(p => { try { var v = p.GetValue(n); return v is null || (v is bool bv && !bv) || (v is double dv && dv == 0) ? null : $"{p.Name}={v}"; } catch { return null; } })
+        .Select(p => { try { var v = p.GetValue(n); return v is null || (v is bool bv && !bv) || (v is double dv && dv == 0) ? null : $"{p.Name}={v}"; } catch { return null; } }) // Not logged: diagnostic probe: the failure goes to its report, not errors.log
         .Where(x => x is not null));
 
     private static string ResolveViaMapper(AlphaTab.Model.Note n)
@@ -236,7 +236,7 @@ internal static partial class DiagnosticCommands
         var m = typeof(AlphaTab.Model.InstrumentArticulation).Assembly.GetType("AlphaTab.Model.PercussionMapper")
             ?.GetMethod("GetArticulation", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
         try { return m?.Invoke(null, new object[] { n }) is AlphaTab.Model.InstrumentArticulation a ? $"id{a.Id}/out{a.OutputMidiNumber}/{a.ElementType}" : "null"; }
-        catch (Exception ex) { return ex.GetBaseException().GetType().Name; }
+        catch (Exception ex) { return ex.GetBaseException().GetType().Name; } // Not logged: diagnostic probe: the failure goes to its report, not errors.log
     }
 
     /// <summary>
@@ -324,7 +324,7 @@ internal static partial class DiagnosticCommands
                     var flag = issues.Any(i => !i.StartsWith("(info")) || Math.Abs(totalOurs / Math.Max(1, totalTheirs) - 1) > 0.01 ? "TIMING" : "ok";
                     text.AppendLine($"{flag,-7} {Path.GetFileName(file)}: total ours {totalOurs / 1000:0.0}s vs {totalTheirs / 1000:0.0}s | midBarTempo={midBar} | {string.Join(" | ", issues)} | {mixText}");
                 }
-                catch (Exception ex) { text.AppendLine($"ERROR   {Path.GetFileName(file)}: {ex.GetBaseException().Message}"); }
+                catch (Exception ex) { text.AppendLine($"ERROR   {Path.GetFileName(file)}: {ex.GetBaseException().Message}"); } // Not logged: diagnostic probe: the failure goes to its report, not errors.log
             }
             DiagnosticFileService.WriteText(FilePathPolicy.OutputFile(args[2], "timing audit report"), text.ToString()); return Ok;
         });
@@ -390,8 +390,8 @@ internal static partial class DiagnosticCommands
                             var same = ours.Keys.Count == theirs.Keys.Count && ours.All(kv => theirs.TryGetValue(kv.Key, out var got) && got == kv.Value);
                             exportNote = same ? " | export .gp: identical drums" : $" | EXPORT-MISMATCH ours={ours.Values.Sum()} gp={theirs.Values.Sum()} ({string.Join(",", theirs.Where(kv => !ours.ContainsKey(kv.Key)).Select(kv => $"{kv.Key}x{kv.Value}").Take(6))})";
                         }
-                        catch (Exception ex) { exportNote = $" | EXPORT-ERROR {ex.GetBaseException().Message}"; }
-                        finally { try { File.Delete(tmp); } catch (IOException) { } }
+                        catch (Exception ex) { exportNote = $" | EXPORT-ERROR {ex.GetBaseException().Message}"; } // Not logged: diagnostic probe: the failure goes to its report, not errors.log
+                        finally { try { File.Delete(tmp); } catch (IOException) { } } // Not logged: cleanup of a temporary export file in finally.
                     }
                     // Every instrument, not only drums: notes per track against the reference reader.
                     var trackIssues = new List<string>();
@@ -418,7 +418,7 @@ internal static partial class DiagnosticCommands
                         $" | layout {layout} dupSkipped={skipped}{dupSamples}" + exportNote + (dropped.Count > 0 ? $" | dropped: {string.Join(", ", dropped.Take(12).Select(kv => $"{kv.Key} x{kv.Value}"))}" : "") +
                         (drums.Count > 0 || sourceDrums.Count > 0 ? $" | imported: {string.Join("; ", song.Tracks.Select(t => $"{t.Name}:{t.Kind}/ch{t.MidiChannel}"))}" : ""));
                 }
-                catch (Exception ex) { text.AppendLine($"ERROR    {Path.GetFileName(file)}: {ex.GetBaseException().Message}"); }
+                catch (Exception ex) { text.AppendLine($"ERROR    {Path.GetFileName(file)}: {ex.GetBaseException().Message}"); } // Not logged: diagnostic probe: the failure goes to its report, not errors.log
             }
             DiagnosticFileService.WriteText(FilePathPolicy.OutputFile(args[2], "drum audit report"), text.ToString()); return Ok;
         });
@@ -448,7 +448,7 @@ internal static partial class DiagnosticCommands
                     if (r.ShouldWarn) warned++;
                     report.AppendLine($"{(r.ShouldWarn ? "WARN" : "odd ")} {file} count={r.Count} text={r.TextBytes} first=bar {r.FirstBar} '{r.FirstTrack}' [{string.Join(", ", r.ByKind.Select(k => $"{k.Key}={k.Value}"))}]");
                 }
-                catch (Exception ex) { failed++; report.AppendLine($"ERROR   {file}: {ex.GetBaseException().Message}"); }
+                catch (Exception ex) { failed++; report.AppendLine($"ERROR   {file}: {ex.GetBaseException().Message}"); } // Not logged: diagnostic probe: the failure goes to its report, not errors.log
             }
             var summary = $"files={files.Count} clean={clean} below-threshold={odd - warned} WARN={warned} import-errors={failed} timeouts={timedOut} threshold={ImportPlausibility.WarnThreshold}";
             DiagnosticFileService.WriteText(FilePathPolicy.OutputFile(args[2], "plausibility report"), summary + Environment.NewLine + report);
@@ -564,7 +564,7 @@ internal static partial class DiagnosticCommands
     private static int Guard(string what, Func<int> run)
     {
         try { return run(); }
-        catch (Exception ex)
+        catch (Exception ex) // Not logged: diagnostic probe: the failure goes to its report, not errors.log
         {
             Debug.WriteLine($"{what} failed: {ex}");
             Console.Error.WriteLine($"{what} failed ({ex.GetBaseException().GetType().Name}: {ex.GetBaseException().Message}).");

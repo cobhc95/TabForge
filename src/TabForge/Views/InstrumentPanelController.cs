@@ -2,10 +2,14 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using TabForge.Models;
+using TabForge.Playback;
 using TabForge.Services;
 using TabForge.Visualization;
 
 namespace TabForge.Views;
+
+/// <summary>The playback state an instrument redraw reads (a value: no allocation per redraw).</summary>
+internal readonly record struct InstrumentFrame(ScoreTimeline? Timeline, double PlayheadMs, bool Playing, bool Paused, VisualOptions Options);
 
 /// <summary>What the instrument panel controller needs from its window.</summary>
 internal interface IInstrumentPanelHost : IPaneHost
@@ -18,6 +22,8 @@ internal interface IInstrumentPanelHost : IPaneHost
     bool IsInitialized { get; }
     /// <summary>Redraws the fretboard / keyboard / drums from the song, the playhead and the options here.</summary>
     void RefreshInstrument();
+    /// <summary>What the playback shows now (the timeline, the playhead, the transport state and the visual options).</summary>
+    InstrumentFrame Frame { get; }
 }
 
 // Owns: the practice display options (note names, left-handed, look-ahead, scale highlight, fret count), the view choice
@@ -57,6 +63,27 @@ internal sealed class InstrumentPanelController
     /// <summary>The view chosen for this track (or all tracks), else the Settings default.</summary>
     public string ViewFor(TrackModel track) =>
         _trackInstrumentViews.TryGetValue(track, out var own) ? own : _instrumentViewOverride ?? Settings.Editing.InstrumentView;
+
+    // ---------- drawing ----------
+
+    /// <summary>Redraws the fretboard / keyboard / drums from the song, the playhead and the options.</summary>
+    public void ShowInstrument()
+    {
+        var audioSelected = _host.SelectedTrack is { IsAudio: true };
+        var track = audioSelected ? null : _host.SelectedTrack;   // an audio track has no instrument: the panel shows its no-track state
+        Instrument.DrumLabel = track is { Kind: TrackKind.Drums } drums ? midi => DrumMaps.For(drums, midi).Label : null;
+        var frame = _host.Frame;
+        var state = InstrumentVisualizer.Build(
+            _host.Project, track, frame.Timeline, frame.PlayheadMs, frame.Playing, frame.Paused,
+            PreviewHorizon, LeftHanded, ShowNoteNames, ScaleHighlight, FretboardFrets, options: frame.Options);
+        var editingSelection = InstrumentVisualizer.BuildEditingSelection(
+            track, _host.Editor.Effects.CurrentCell(), LeftHanded, ShowNoteNames, ScaleHighlight, FretboardFrets, options: frame.Options);
+        Instrument.Title = track?.Name ?? "Instrument"; Instrument.AudioTrack = audioSelected;
+        ApplyInstrumentView(state);
+        ApplyInstrumentView(editingSelection);
+        Instrument.SetState(state);
+        Instrument.SetEditingSelection(editingSelection);
+    }
 
     // ---------- scale finder and highlight ----------
 

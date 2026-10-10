@@ -4,6 +4,10 @@ using TabForge.Models;
 
 namespace TabForge.Presets;
 
+// Owns: the rhythm section of the demo song: the two rhythm guitars, the bass and the sub drop, with their riffs and per-bar dynamics.
+// Does not own: the structure (FullDemoSongFactory.Skeleton.cs) or the drum and lead parts (FullDemoSongFactory.Drums.cs, FullDemoSongFactory.LeadKeys.cs).
+// Tests: TestFullDemoSong.
+
 // Owner (c1): Rhythm Gtr L (7-string drop A), Rhythm Gtr R (8-string, L plus the numbered deltas), Bass (5-string, BassFollow plus
 // the overrides) and the Sub Drop, plan sections 3.1-3.4. Every bar goes through Riff (slot sums asserted); chug jitter only via Hv.
 internal static partial class FullDemoSongFactory

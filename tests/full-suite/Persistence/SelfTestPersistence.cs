@@ -148,7 +148,7 @@ public static partial class SelfTest
         Check("one plug-in state contract: the song limit is 16 MiB raw in base64, and one state fits one IPC frame",
             InputLimits.MaxPluginStateChars == PluginStateLimits.MaxBase64Chars && PluginStateLimits.MaxBase64Chars == 22_369_624
             && PluginStateLimits.MaxBase64Chars + 1024 < Frames.MaxFrameBytes);
-        TestChainLoadStates();
+        CheckChainLoadStates();
 
         (byte, BinaryReader) Frame(Action<BinaryWriter> payload)
         {
@@ -201,7 +201,7 @@ public static partial class SelfTest
     }
 
     // Chain loads: spec without states, then one frame per plug-in state, then a commit (a chain's states may exceed one frame together).
-    private static void TestChainLoadStates()
+    private static void CheckChainLoadStates()
     {
         var raw = new byte[12 * 1024 * 1024];
         string State(int seed) { raw.AsSpan().Fill((byte)(seed + 1)); raw[0] = (byte)(0x80 | seed); return Convert.ToBase64String(raw); }
@@ -327,7 +327,7 @@ public static partial class SelfTest
         finally { try { Directory.Delete(folder, true); } catch (IOException) { } }
     }
 
-    // A5-03: one .tfaudio size limit for writing and reading. An oversized pair save fails before either file is touched (the song stays
+    // One .tfaudio size limit for writing and reading. An oversized pair save fails before either file is touched (the song stays
     // unsaved, the message names the large plug-in states); a sidecar that cannot be read is reported on open, never dropped silently.
     private static void TestAudioDataSizeLimit()
     {
@@ -377,7 +377,7 @@ public static partial class SelfTest
         finally { try { Directory.Delete(folder, true); } catch (IOException) { } }
     }
 
-    // A6-02: the project embedded in a .gp has one size limit for writing and reading. An over-limit save is refused before any file is
+    // The project embedded in a score file has one size limit for writing and reading. An over-limit save is refused before any file is
     // touched (song stays unsaved, message names the large plug-in state); a present-but-unusable embedded project is reported on open
     // (the file opens as plain Guitar Pro), an absent one is silent, and a normal round trip is unchanged.
     private static void TestEmbeddedProjectLimit()
@@ -462,7 +462,7 @@ public static partial class SelfTest
         finally { try { Directory.Delete(folder, true); } catch (IOException) { } }
     }
 
-    // A6-02 follow-up: a crash-recovery copy over the .tforge limit is written with the recovery bound and read back with the same bound,
+    // A crash-recovery copy over the .tforge limit is written with the recovery bound and read back with the same bound,
     // but only from the app's own Recovery folder (elsewhere the normal limit still applies).
     private static void TestRecoveryCopyOverTforgeLimit()
     {
@@ -501,7 +501,7 @@ public static partial class SelfTest
         finally { try { Directory.Delete(folder, true); } catch (IOException) { } }
     }
 
-    // A5-04: opening a .gp keeps the song's own title (clean and TabForge-embedded); only an empty title falls back to the file name.
+    // Opening a score file keeps the song's own title (clean and TabForge-embedded); only an empty title falls back to the file name.
     private static void TestGpOpenKeepsTitle()
     {
         var folder = Path.Combine(Path.GetTempPath(), $"tf-a504-{Guid.NewGuid():N}");

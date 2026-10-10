@@ -190,13 +190,13 @@ public static class WaveformCache
             }
             bool changed;
             try { changed = Process(s); }
-            catch (Exception ex) { Fail(s, "could not be read: " + ex.GetType().Name); changed = true; }   // never takes the worker (or the app) down
+            catch (Exception ex) { Services.Trace.Error(Services.Trace.Import, "waveform cache: read: " + ex.Message); Fail(s, "could not be read: " + ex.GetType().Name); changed = true; }   // never takes the worker (or the app) down
             lock (Gate) _active--;
             if (changed) RaiseReady(s.Raw);
         }
     }
 
-    private static void RaiseReady(string raw) { try { Ready?.Invoke(raw); } catch (Exception) { } }
+    private static void RaiseReady(string raw) { try { Ready?.Invoke(raw); } catch (Exception ex) { Services.Trace.Error(Services.Trace.Import, "waveform cache: ready handler: " + ex.Message); } }
 
     private static void Fail(Slot s, string message)
     {
@@ -237,7 +237,7 @@ public static class WaveformCache
             }
             else { size = 0; ticks = 0; }
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException) { Fail(s, "file not readable"); return true; }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException) { Fail(s, "file not readable"); return true; } // Not logged: file state: reported as the entry's state
         // Same file as last time (size and last-write unchanged): nothing to read again. A replaced file changes either.
         float[]? shared = null;
         lock (Gate)
@@ -317,7 +317,7 @@ public static class WaveformCache
             if (inPeak > 0) peaks.Add(current);
             return peaks.ToArray();
         }
-        catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException or System.Runtime.InteropServices.COMException or ArgumentException or FormatException or NotSupportedException)
+        catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException or System.Runtime.InteropServices.COMException or ArgumentException or FormatException or NotSupportedException) // Not logged: file state: reported as the entry's state
         {
             error = "could not be read as audio";
             return null;
@@ -466,7 +466,7 @@ public static class WaveformCache
             var seconds = reader.TotalSeconds;
             return seconds > 0 && seconds <= MaxSecondsOverride ? seconds : 0;
         }
-        catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException or System.Runtime.InteropServices.COMException or ArgumentException or FormatException or NotSupportedException) { return 0; }
+        catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException or System.Runtime.InteropServices.COMException or ArgumentException or FormatException or NotSupportedException) { return 0; } // Not logged: device or file probe: the caller uses its fallback value
     }
 
     public static readonly string[] Extensions = { ".wav", ".mp3", ".aif", ".aiff", ".flac", ".ogg", ".m4a", ".wma" };

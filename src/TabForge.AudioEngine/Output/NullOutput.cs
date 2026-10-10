@@ -12,7 +12,8 @@ namespace TabForge.AudioEngine.Output;
 public sealed class NullOutput : IWavePlayer
 {
     private readonly ISampleProvider _source;
-    private readonly float[] _buffer;
+    private readonly IWaveProvider _wave;
+    private readonly byte[] _buffer;
     private readonly bool _manual;
     private readonly object _pumpGate = new();
     private Thread? _thread;
@@ -23,7 +24,10 @@ public sealed class NullOutput : IWavePlayer
     {
         _source = source;
         BlockFrames = Math.Clamp(blockFrames, 16, 8192);
-        _buffer = new float[BlockFrames * source.WaveFormat.Channels];
+        // Read through the same byte wrapper the real drivers use: the mix then writes into a byte[] seen as float[] (NAudio's
+        // WaveBuffer), so code that copies from the output block behaves headless exactly as it does on a sound card.
+        _wave = source.ToWaveProvider();
+        _buffer = new byte[BlockFrames * source.WaveFormat.Channels * sizeof(float)];
         _manual = manual;
     }
 
@@ -74,7 +78,7 @@ public sealed class NullOutput : IWavePlayer
 
     private void ReadBlock()
     {
-        _source.Read(_buffer, 0, _buffer.Length);
+        _wave.Read(_buffer, 0, _buffer.Length);
         Interlocked.Increment(ref _blocks);
     }
 

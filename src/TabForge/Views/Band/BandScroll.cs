@@ -35,6 +35,9 @@ internal sealed class BandScroll
         // Vertical: lanes of different widths wrap into different systems, so each lane puts the playing bar's own system
         // at the same row of the lane (the lead's position of it) instead of reusing the lead's system number.
         double? rel = Vertical && lead is not null ? lead.SystemOf(bar) - _pos : null;
-        for (var i = 0; i < rows.Count; i++) rows[i].Lane.Place(bar, fraction, _pos, rel);
+        // The first lane with notes in the bar sets where in the bar the line stands for lanes that have none there.
+        double? spaced = null;
+        for (var i = 0; i < rows.Count && spaced is null; i++) if (rows[i].Lane.BarHasNotes(bar)) spaced = rows[i].Lane.SpacedFraction(bar, fraction);
+        for (var i = 0; i < rows.Count; i++) rows[i].Lane.Place(bar, fraction, _pos, rel, spaced);
     }
 }

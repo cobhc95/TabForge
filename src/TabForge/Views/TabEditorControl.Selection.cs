@@ -13,8 +13,12 @@ using RenderDraw = TabForge.Visualization.Draw;
 
 namespace TabForge.Views;
 
-// TabEditorControl: selection and clipboard.
-public sealed partial class TabEditorControl
+// Owns: the score's selection: the inclusive cell bounds, the whole-bar and held-selection flags, SelectRange and SelectAll, and
+//   the selection as a score clip for copy (a Bars or Beats clip).
+// Does not own: the shared selection model (Models/SelectionModel.cs) and the clipboard service.
+// Tests: TestEditorSelectionState, TestScoreClipCapture.
+
+public sealed partial class TabEditorControl : Controllers.ISelectionEditor
 {
     // ---------- selection / clipboard ----------
 
@@ -137,7 +141,7 @@ public sealed partial class TabEditorControl
                 ? ClipboardService.CaptureSelection(_project, SelectedTrackIndex, ActiveVoiceIndex, m1, c1, m2, c2, songId)
                 : ClipboardService.CaptureBeats(_project, SelectedTrackIndex, ActiveVoiceIndex, m1, c1, m1, c1, songId);
         }
-        catch (System.IO.InvalidDataException ex) { error = ex.Message; return null; }
+        catch (System.IO.InvalidDataException ex) { error = ex.Message; return null; } // Not logged: selection hit test: null means no hit
     }
 
     /// <summary>Where a paste lands: the active track and voice at the selection start (the cursor without a selection).</summary>

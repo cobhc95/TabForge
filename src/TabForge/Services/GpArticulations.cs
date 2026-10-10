@@ -20,7 +20,7 @@ internal static class GpArticulations
     public static InstrumentArticulation? Get(int id)
     {
         try { return ById?.Invoke(null, new object[] { (double)id }) as InstrumentArticulation; }
-        catch (TargetInvocationException) { return null; }
+        catch (TargetInvocationException) { return null; } // Not logged: articulation probe: null means none
     }
 
     /// <summary>The GM drum sound for a Guitar Pro articulation id, or 0 when unknown.</summary>

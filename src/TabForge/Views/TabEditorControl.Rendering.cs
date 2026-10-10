@@ -13,7 +13,13 @@ using TabForge.Views.Score;
 
 namespace TabForge.Views;
 
-// TabEditorControl: OnRender and the drawing helpers.
+// Owns: the score's draw loop: which systems are engraved for the viewport, the per-system draw with failure containment
+//   (DrawSystemContained: one bad mark shows a short note and the other systems still draw), the drawing-error counters, and the
+//   Band lane's horizontal slide.
+// Does not own: the engraving of individual marks (Views/Score/ScoreRenderer.*) and the playback overlay
+//   (TabEditorControl.Playback.cs).
+// Tests: TestTabEditorFrozenSystems.
+
 public sealed partial class TabEditorControl
 {
     // ================= rendering =================
@@ -96,6 +102,7 @@ public sealed partial class TabEditorControl
                 drawing = group;
                 _systemCache.Store(s, signature, drawing);
             }
+            if (_exportRange is var (from, to) && (s < from || s > to)) { dc.PushClip(EmptyClip); dc.DrawDrawing(drawing); dc.Pop(); } else
             dc.DrawDrawing(drawing);
         }
         // Forget systems that scrolled well out of view so the cache stays small.
@@ -133,7 +140,7 @@ public sealed partial class TabEditorControl
             RenderFaultInjection?.Invoke(system.Index);
             _renderer.DrawSystem(dc, track, system, ink, faint, line, accent, cursorColor, playColor, errorColor, palmMutePassages, fadePassages);
         }
-        catch (Exception ex) when (ex is not OutOfMemoryException)
+        catch (Exception ex) when (ex is not OutOfMemoryException) // Not logged: render path: no logging per frame; the fault is counted
         {
             ContainedRenderFailures++;
             var key = ex.GetType().FullName + "|" + ex.TargetSite + "|" + ex.Message;
@@ -141,16 +148,23 @@ public sealed partial class TabEditorControl
             {
                 System.Diagnostics.Debug.WriteLine($"Score drawing failed (system {system.Index + 1}): {ex}");
                 try { DiagnosticFileService.WriteText(FilePathPolicy.DefaultDiagnosticsPath($"render-error-{DateTime.Now:yyyyMMdd-HHmmss}.log"), $"{DateTime.Now:O}{Environment.NewLine}system {system.Index + 1}{Environment.NewLine}{ex}"); }
-                catch (Exception logError) { System.Diagnostics.Debug.WriteLine($"Render error log could not be written: {logError}"); }
+                catch (Exception logError) { System.Diagnostics.Debug.WriteLine($"Render error log could not be written: {logError}"); } // Not logged: render path: no logging per frame; the fault is counted
             }
             try { ScoreText.DrawIn(ScoreTextArea.Header, dc, "This line could not be drawn (details in the diagnostics log).", system.X + 4, StaffTop(system.Index), 10, ScoreText.Brush(errorColor)); }
-            catch (Exception noteError) { System.Diagnostics.Debug.WriteLine($"Render error note failed: {noteError}"); }
+            catch (Exception noteError) { System.Diagnostics.Debug.WriteLine($"Render error note failed: {noteError}"); } // Not logged: render path: no logging per frame; the fault is counted
         }
     }
 
     /// <summary>A Band lane slides its whole engraved line itself: no ancestor scroll viewer decides which bars or systems are drawn.</summary>
     internal bool IgnoreAncestorViewport { get; init; }
 
+    /// <summary>The video export shows one page of a score that sits in no scroll viewer: systems outside these (inclusive) are replayed under an empty clip,
+    /// so the rasteriser skips them while every system keeps its place in the drawing (the pixels of the page do not change).</summary>
+    internal (int First, int Last)? ExportSystemRange { get => _exportRange; set { _exportRange = value; base.InvalidateVisual(); } }
+    private (int First, int Last)? _exportRange;
+
+    private static readonly Geometry EmptyClip = FrozenEmptyClip();
+    private static Geometry FrozenEmptyClip() { var g = new RectangleGeometry(new Rect(0, 0, 0, 0)); g.Freeze(); return g; }
     private ScrollViewer? _viewport;
     private bool _viewportHooked;
     private int _drawnFirstSystem;

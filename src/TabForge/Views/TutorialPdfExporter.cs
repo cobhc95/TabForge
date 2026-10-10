@@ -92,7 +92,7 @@ public static class TutorialPdfExporter
             renderer.PdfDocument.Save(temp);
             File.Move(temp, outputPath, overwrite: true);
         }
-        finally { try { if (File.Exists(temp)) File.Delete(temp); } catch (IOException) { } }
+        finally { try { if (File.Exists(temp)) File.Delete(temp); } catch (IOException) { } } // Not logged: temp file cleanup.
         progress?.Invoke(library.Chapters.Count, library.Chapters.Count, "Done");
         return pages;
     }
@@ -554,7 +554,7 @@ public static class TutorialPdfExporter
                     if (File.Exists(path)) return path;
                 }
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException) { }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException) { } // Not logged: optional file probe in a loop.
             return null;
         }
 
@@ -569,7 +569,7 @@ public static class TutorialPdfExporter
                 if (!full.StartsWith(root.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)) return null;
                 return File.Exists(full) && ImageExtensions.Contains(Path.GetExtension(full), StringComparer.OrdinalIgnoreCase) ? full : null;
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException) { return null; }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException) { return null; } // Not logged: font probe: null means none
         }
 
         /// <summary>The pixel size of a raster picture, read without decoding it.</summary>
@@ -583,7 +583,7 @@ public static class TutorialPdfExporter
                 width = frame.PixelWidth; height = frame.PixelHeight;
                 return width > 0 && height > 0;
             }
-            catch (Exception ex) when (ex is IOException or NotSupportedException or InvalidOperationException or FileFormatException or UnauthorizedAccessException) { return false; }
+            catch (Exception ex) when (ex is IOException or NotSupportedException or InvalidOperationException or FileFormatException or UnauthorizedAccessException) { return false; } // Not logged: probe: false means none
         }
     }
 }

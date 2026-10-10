@@ -4,7 +4,11 @@ using TabForge.Views.Score;
 
 namespace TabForge.Views;
 
-// TabEditorControl: the editor's command API. The commands live in ScoreEditCommands; this is the control's public surface and the context they run in.
+// Owns: the edit context the score commands run in (IScoreEditContext): the selection, duration, velocity and entry flags, RunEdit
+//   through the host, and the Effects property the note-effect editor dialogs use.
+// Does not own: the commands (Views/Score/ScoreEditCommands.cs) and the edit host (IScoreEditHost, which runs the undo step).
+// Tests: TestEffectEditors.
+
 public sealed partial class TabEditorControl : IScoreEditContext
 {
     private ScoreEditCommands? _editsOwned;

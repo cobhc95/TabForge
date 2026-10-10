@@ -10,9 +10,9 @@ namespace TabForge;
 public static partial class SelfTest
 {
     /// <summary>
-    /// A5-07: the out-of-process import worker. A song imported through it equals the in-process import; a worker stuck inside the
+    /// The out-of-process import worker. A song imported through it equals the in-process import; a worker stuck inside the
     /// parse is killed by Cancel and by the time budget and its process is gone; an oversize result is refused; when the worker
-    /// or its Job Object cannot be set up, nothing is parsed in-process unless the user agrees for that file (A6-03).
+    /// or its Job Object cannot be set up, nothing is parsed in-process unless the user agrees for that file.
     /// </summary>
     private static void TestGuitarProImportWorker()
     {
@@ -104,7 +104,7 @@ public static partial class SelfTest
             Check("import worker: an import error in the worker reaches the caller with the importer's message",
                 brokenMessage?.Contains("damaged header", StringComparison.Ordinal) == true, brokenMessage);
 
-            // 4. A6-03: the worker cannot start, or its Job Object cannot be created / assigned: never a silent in-process parse.
+            // 4. The worker cannot start, or its Job Object cannot be created / assigned: never a silent in-process parse.
             var missing = new ImportWorkerOptions { ExecutablePath = Path.Combine(folder, "missing-worker.exe") };
             Check("import worker: a missing worker program, a failed job creation and a failed job assignment each report 'unavailable'",
                 ThrowsUnavailable(gp, missing) && ThrowsUnavailable(gp, new ImportWorkerOptions { TestFailJobCreate = true }) &&
@@ -127,7 +127,7 @@ public static partial class SelfTest
         catch (ImportWorkerUnavailableException) { return true; }
     }
 
-    /// <summary>A6-03 through the queue (no synchronization context: callbacks run on the pool): prompt per file, default no.</summary>
+    /// <summary>Through the queue (no synchronization context: callbacks run on the pool): prompt per file, default no.</summary>
     private static void ConsentChecks(DocumentController controller, string gp, SongProject expected)
     {
         var failAssign = new ImportWorkerOptions { TestFailJobAssign = true };

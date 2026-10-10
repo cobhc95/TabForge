@@ -10,7 +10,7 @@ namespace TabForge;
 /// <summary>GP5 mix-table fades (transition beats, all-tracks flag) and the audible-playhead latency conversion.</summary>
 public static partial class SelfTest
 {
-    private static void TestMixFadeAndAudiblePlayhead()
+    private static void CheckMixFadeAndAudiblePlayhead()
     {
         // Latency is wall-clock time: the compiled timeline already runs at the playback speed (50% included),
         // so only the speed-trainer clock rate scales it.

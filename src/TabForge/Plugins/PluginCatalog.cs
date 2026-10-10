@@ -65,12 +65,12 @@ public static class PluginCatalog
             using var process = Process.Start(start);
             if (process is null) return null;
             var output = process.StandardOutput.ReadLineAsync();
-            if (!process.WaitForExit(timeoutMs)) { try { process.Kill(); } catch (InvalidOperationException) { } return null; }
+            if (!process.WaitForExit(timeoutMs)) { try { process.Kill(); } catch (InvalidOperationException ex) { Services.Trace.Error(Services.Trace.Engine, "plug-in scan: stop timed-out probe: " + ex.Message); } return null; }
             if (process.ExitCode != 0 || !output.Wait(1000) || output.Result is not { } line) return null;
             var parts = line.Split('|');
             if (parts.Length < 3 || parts[0] is not ("Instrument" or "Effect")) return null;
             return (parts[0], parts[1].Length > 256 ? parts[1][..256] : parts[1], parts[2].Length > 256 ? parts[2][..256] : parts[2]);
         }
-        catch (Exception ex) when (ex is IOException or InvalidOperationException or System.ComponentModel.Win32Exception) { return null; }
+        catch (Exception ex) when (ex is IOException or InvalidOperationException or System.ComponentModel.Win32Exception) { return null; } // Not logged: catalog line parse: a bad line is skipped
     }
 }

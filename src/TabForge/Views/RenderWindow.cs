@@ -28,6 +28,10 @@ public sealed class RenderContext
     /// <summary>Re-sync the engine after the render.</summary>
     public Action? Restore { get; init; }
     public Action? SaveSettings { get; init; }
+    /// <summary>The score view mode on show (the video export draws the score the same way).</summary>
+    public NotationMode Notation { get; init; } = NotationMode.TabAndStaff;
+    /// <summary>The live score's look, for exports that draw the score (video).</summary>
+    internal Score.ScoreAppearance? Look { get; init; }
 }
 
 /// <summary>File > Render (Ctrl+Alt+R): source, bounds + tail, output, options, format.</summary>
@@ -141,7 +145,10 @@ public sealed class RenderWindow : Window
 
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 8, 0, 0) };
         _render.Margin = new Thickness(0, 0, 8, 0);
-        buttons.Children.Add(_render); buttons.Children.Add(_cancel);
+        var video = new Button { Content = "Video (MP4)…", Padding = new Thickness(14, 4, 14, 4), Margin = new Thickness(0, 0, 8, 0), ToolTip = "Export the song as an MP4 video instead" };
+        UiIds.Id(video, "Render.Video");
+        video.Click += (_, _) => { if (_cts is not null) return; Close(); VideoExportWindow.OpenDialog(_ctx, Owner); };
+        buttons.Children.Add(video); buttons.Children.Add(_render); buttons.Children.Add(_cancel);
         _bar.Margin = new Thickness(0, 8, 0, 4);
         _bar.SetResourceReference(StyleProperty, "ThemedProgressBar");   // no bright default strip on the dark theme
         _bar.Height = 10;
@@ -292,7 +299,7 @@ public sealed class RenderWindow : Window
         _tailMs.IsEnabled = _tail.SelectedIndex != 0;
         _stemPanel.Visibility = _source.SelectedIndex == 1 ? Visibility.Visible : Visibility.Collapsed;
         _preview.Items.Clear();
-        try { foreach (var f in Plan().Files) _preview.Items.Add(f); } catch (Exception) { }
+        try { foreach (var f in Plan().Files) _preview.Items.Add(f); } catch (Exception ex) { Services.Trace.Error(Services.Trace.Ui, "render window: build preview: " + ex.Message); }
     }
 
     private (List<string> Files, string? Master, Dictionary<TrackModel, string> Stems) Plan()
@@ -369,8 +376,8 @@ public sealed class RenderWindow : Window
             _status.Text = $"Done: {plan.Files.Count} file(s), {result.Seconds:0.0} s of audio in {result.ElapsedSeconds:0.0} s ({result.Seconds / Math.Max(0.001, result.ElapsedSeconds):0.#}x realtime)" + (clipped > 0 ? $"; {clipped} samples clipped." : ".");
             if (_open.IsChecked == true) Process.Start(new ProcessStartInfo("explorer.exe", $"\"{_dir.Text}\"") { UseShellExecute = true });
         }
-        catch (RenderException ex) { _status.Text = ex.Cancelled ? "Render cancelled." : "Render failed: " + ex.Message + (string.IsNullOrEmpty(ex.PluginPath) ? "" : $" (plug-in: {Path.GetFileName(ex.PluginPath)}; try Threads: 1)"); }
-        catch (Exception ex) { _status.Text = "Render failed: " + ex.Message; }
+        catch (RenderException ex) { if (!ex.Cancelled) Services.Trace.Error(Services.Trace.Ui, "render: " + ex.Message); _status.Text = ex.Cancelled ? "Render cancelled." : "Render failed: " + ex.Message + (string.IsNullOrEmpty(ex.PluginPath) ? "" : $" (plug-in: {Path.GetFileName(ex.PluginPath)}; try Threads: 1)"); }
+        catch (Exception ex) { if (ex is not OperationCanceledException) Services.Trace.Error(Services.Trace.Ui, "render: " + ex.Message); _status.Text = "Render failed: " + ex.Message; }
         finally { _cts?.Dispose(); _cts = null; _render.IsEnabled = true; _cancel.Content = "Close"; UiIds.Id(_cancel, "Render.Close"); Changed(); }
     }
 

@@ -10,6 +10,11 @@ using TabForge.AudioEngine.Synth;
 
 namespace TabForge.AudioEngine;
 
+// Owns: one engine run's per-slot state (song transports, clip specs, mixes, arms, MIDI input routes and processors, loaded chains) and
+//   the command handlers that change it, on the engine main thread.
+// Does not own: the process side (pipe, shared block, command reader and watchdog, in EngineHost), and the mixing and plug-in hosting
+//   (MixEngine, TrackChain).
+// Tests: TestEngineSlotsFollowTrackIdentity, TestEnginePluginEditAndStatesByIdentity.
 /// <summary>
 /// The engine's per-session state and its command handlers, one instance per engine run. <see cref="EngineHost.Run"/> creates it;
 /// the headless harness uses the one created with the process. <see cref="EngineHost"/> keeps only the process and IPC side (pipe,
@@ -216,6 +221,9 @@ internal sealed partial class EngineSession
     /// <summary>The live master safety limiter (off by default); survives a device change.</summary>
     public bool LiveLimiter { get; private set; }
 
+    /// <summary>The master output tap (off until TabForge asks); outlives device changes.</summary>
+    public readonly Mixing.MasterTap Tap = new();
+
     public void SetLiveLimiter(bool on)
     {
         AssertMain();
@@ -401,7 +409,10 @@ internal sealed partial class EngineSession
             var previous = Loaded.Values.ToList();
             Volatile.Write(ref Mix, new MixEngine(Shared!, SampleRate, maxBlock, Transports));   // the reader thread reads it (Panic)
             Mix!.LiveLimiter = LiveLimiter;
+            Mix.Tap = Tap;
             if (config.Driver == AudioOutputFactory.WasapiShared) Mix!.Ceiling = 8f;   // +18 dB: the Windows float mixer clips after its volume
+            // The recording is the nominal mix on every driver (what File > Render writes), not the 1/ceiling level Windows plays at: the safety limiter keeps hot material under full scale.
+            Tap.Gain = 1f;
             // Chains depend on the sample rate and block size (their buffers): rebuild every requested chain for the new engine.
             foreach (var (slot, request) in Requested.ToList()) BuildChain(slot, request.Track, request.UseMidiSynth, request.Specs);
             // The fresh mix never held the previous chains (SetChain returned null), and the old device is stopped: nothing can be

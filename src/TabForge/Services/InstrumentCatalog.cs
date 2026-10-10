@@ -71,7 +71,7 @@ public static class InstrumentCatalog
         }
         // The catalogue still works from the GM names below, just without artwork.
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException
-                                       or KeyNotFoundException or InvalidOperationException) { }
+                                       or KeyNotFoundException or InvalidOperationException) { Services.Trace.Error(Services.Trace.Ui, "instrument catalog: load artwork: " + ex.Message); }
 
         string? Svg(string file) => string.IsNullOrEmpty(file) ? null : Path.Combine(AssetRoot, file.Replace('/', Path.DirectorySeparatorChar));
         var byProgram = manifest.Where(m => m.Program >= 0).GroupBy(m => m.Program).ToDictionary(g => g.Key, g => g.First());

@@ -4,6 +4,10 @@ using TabForge.Services;
 
 namespace TabForge.Presets;
 
+// Owns: the drum part of the demo song in every bar: fills, ramps, rolls, beam groups and the hit velocities.
+// Does not own: the structure and marks (FullDemoSongFactory.Skeleton.cs) or the rhythm and lead parts (FullDemoSongFactory.Rhythm.cs, FullDemoSongFactory.LeadKeys.cs).
+// Tests: TestFullDemoSong.
+
 // Owner (b): the drum part, plan section 3.9, every one of the 144 bars. All velocities come from the Grid / Fill / Roll helpers
 // (which humanise through Hv) or from Hv directly; there is no other source of variation, so every build is identical.
 internal static partial class FullDemoSongFactory

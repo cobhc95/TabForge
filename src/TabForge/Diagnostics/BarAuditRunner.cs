@@ -51,7 +51,7 @@ internal static class BarAuditRunner
                         foreach (var item in audit.BarItems(b).Concat(audit.AllSystemItems(audit.Layout.Measure(b).SystemIndex).Where(i => i.Kind is LayoutAudit.Kind.DashedLine or LayoutAudit.Kind.Line && i.Box.Width is > 5 and < 200 && i.Box.Height < 2)))
                             dump.AppendLine($"t{t + 1} b{b + 1} {view} {item.Kind} \"{item.Label}\" size={item.Size:0.0} w={item.Thickness:0.0} font={item.Font} base={item.BaseY:0.0} box=[{item.Box.X:0.0},{item.Box.Y:0.0},{item.Box.Width:0.0},{item.Box.Height:0.0}]");
                     try { record.Issues.AddRange(new BarChecker(audit, b).Run()); }
-                    catch (Exception ex) { record.Issues.Add(new BarIssue(view, "audit-error", ex.GetBaseException().Message)); }
+                    catch (Exception ex) { record.Issues.Add(new BarIssue(view, "audit-error", ex.GetBaseException().Message)); } // Not logged: diagnostic probe: the failure goes to its report, not errors.log
                     if (!images) continue;
                     var name = $"{b + 1:000}-{view}.png";
                     record.Images[view] = $"{folder}/{name}";

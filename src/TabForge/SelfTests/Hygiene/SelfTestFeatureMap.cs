@@ -62,6 +62,17 @@ public static partial class SelfTest
         Check("feature map: every type named by hand is declared in the source", unknownTypes.Count == 0, string.Join(", ", unknownTypes.Take(8)));
     }
 
+    /// <summary>The generated file index (docs/feature-map/files.md) matches the source tree. Fix: <c>TabForge.exe --feature-map</c>.</summary>
+    private static void TestFileIndexInSync()
+    {
+        var root = FindRepositoryRoot();
+        if (root is null || !Directory.Exists(Path.Combine(root, "docs", "feature-map"))) { Skip("file index agrees with the source tree", "no source checkout / feature map found", "source-hygiene"); return; }
+        var path = Path.Combine(root, FileIndexGenerator.GeneratedRelativePath);
+        var actual = File.Exists(path) ? File.ReadAllText(path).Replace("\r\n", "\n") : "";
+        var expected = FileIndexGenerator.Render(root).Replace("\r\n", "\n");
+        Check("file index: docs/feature-map/files.md is current (run TabForge.exe --feature-map)", actual == expected, FirstDifference(expected, actual));
+    }
+
     private static string FirstDifference(string expected, string actual)
     {
         var a = expected.Split('\n');

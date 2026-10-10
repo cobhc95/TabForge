@@ -123,7 +123,10 @@ public sealed class ClipPlayer : IDisposable
         if (ring is null || double.IsNaN(ringStart)) { Volatile.Write(ref _request, wantedSec); return; }
         var index = (long)Math.Round((wantedSec - ringStart) * _rate);
         var read = Volatile.Read(ref _read);
-        if (Math.Abs(index - read) > 256) { Volatile.Write(ref _request, wantedSec); return; } // jumped: re-seek
+        // The disk thread answers a seek while the song keeps running, so a fresh ring is usually a little behind the playhead:
+        // skip the stale frames when the ring already holds the wanted one (otherwise a busy machine re-seeks forever and the clip never starts).
+        if (index > read + 256 && index < Volatile.Read(ref _write)) { read = index; Volatile.Write(ref _read, read); }
+        else if (Math.Abs(index - read) > 256) { Volatile.Write(ref _request, wantedSec); return; } // jumped: re-seek
         var available = Volatile.Read(ref _write) - read;
         var count = (int)Math.Min(Math.Min(frames - from, available), (long)((end - wantedSec) * _rate) + 1);
         for (var i = 0; i < count; i++)

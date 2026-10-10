@@ -8,7 +8,7 @@ using TabForge.Presets;
 namespace TabForge;
 
 /// <summary>
-/// The headless audio audit (`--audio-audit`, Audit 7) on the synthetic showcase fixture: offline render through the engine process with no
+/// The headless audio audit (`--audio-audit`) on the synthetic showcase fixture: offline render through the engine process with no
 /// audio device, every file and both reports written, clean content free of clipping and of timing errors above the threshold,
 /// and the playback compile, MIDI export and render tempo map in agreement. The audit runs as its own process (as the command line does),
 /// so the engine state earlier tests leave behind in this process cannot affect it.

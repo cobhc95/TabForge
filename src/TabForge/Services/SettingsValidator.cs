@@ -78,6 +78,7 @@ public static class SettingsValidator
         NormalizeTabs(settings.Tabs, defaults.Tabs);
         NormalizeHotkeys(settings.Hotkeys);
         settings.Timeline ??= new TimelineSettings();
+        Features.FeatureRegistry.Normalize(settings);
 
         if (settings.Workspace is not null && !SettingsFileService.NormalizeWorkspace(settings.Workspace))
             settings.Workspace = null;

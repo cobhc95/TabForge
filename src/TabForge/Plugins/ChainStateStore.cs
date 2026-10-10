@@ -62,7 +62,7 @@ public static class ChainStateStore
                 if (!Convert.ToHexString(SHA256.HashData(bytes)).Equals(hash, StringComparison.OrdinalIgnoreCase)) continue;
                 p.State = Encoding.ASCII.GetString(bytes);
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException) { }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException) { Services.Trace.Error(Services.Trace.Engine, "plug-in state: read: " + ex.Message); }
         }
     }
 
@@ -73,7 +73,7 @@ public static class ChainStateStore
             var bytes = InputLimits.ReadBoundedBytes(path, PluginStateLimits.MaxBase64Chars, "plug-in state");
             return Convert.ToHexString(SHA256.HashData(bytes)).Equals(hash, StringComparison.OrdinalIgnoreCase);
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException) { return false; }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException) { Services.Trace.Error(Services.Trace.Engine, "plug-in state: verify: " + ex.Message); return false; }
     }
 
     private static bool IsHashName(string hash) => hash.Length == 64 && hash.All(char.IsAsciiHexDigit);
@@ -109,10 +109,10 @@ public static class ChainStateStore
                     File.Delete(file);
                     deleted++;
                 }
-                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { } // Not logged: garbage collection: a locked state file is kept for the next sweep.
             }
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { Services.Trace.Error(Services.Trace.Engine, "plug-in state: sweep folder: " + ex.Message); }
         return deleted;
     }
 }

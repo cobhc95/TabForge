@@ -44,7 +44,7 @@ public static class GpExportPreflightDialog
         void Finish(GpExportChoice choice)
         {
             handle.Choice = choice;
-            try { w.DialogResult = choice != GpExportChoice.Cancel; } catch (InvalidOperationException) { w.Close(); }   // not shown (tests, captures)
+            try { w.DialogResult = choice != GpExportChoice.Cancel; } catch (InvalidOperationException) { w.Close(); }   // not shown (tests, captures) // Not logged: dialog close: the window is already closed
         }
 
         var root = new StackPanel { Margin = new Thickness(16) };

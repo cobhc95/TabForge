@@ -20,7 +20,7 @@ public sealed class DocumentController
     public OpenedScore Open(string path) => Open(path, null);
 
     /// <param name="importGuitarPro">Parses a Guitar Pro file (null = <see cref="GuitarProImporter.Import"/> in this process); it may add
-    /// notices. The background import passes the out-of-process worker (A5-07); the pair recovery and .tfaudio stay in this process.</param>
+    /// notices. The background import passes the out-of-process worker; the pair recovery and .tfaudio stay in this process.</param>
     /// <param name="context">The import's limits and reported notices (the in-process parse uses it; null = a fresh one without limits).</param>
     public OpenedScore Open(string path, Func<string, List<string>, SongProject>? importGuitarPro, ImportContext? context = null)
     {
@@ -44,14 +44,14 @@ public sealed class DocumentController
         {
             context ??= new ImportContext();
             project = GuitarProImporter.Import(path, context);
-            // A6-02: an embedded TabForge project that was present but unusable is reported (the worker path adds it through its own notices).
+            // An embedded TabForge project that is present but unusable is reported (the worker path adds it through its own notices).
             context.AddNoticesTo(notices);
         }
         else project = importGuitarPro(path, notices);
-        // A5-04: the song's own title wins (also for a TabForge-embedded project); the file name only fills an empty one.
+        // The song's own title wins (also for a TabForge-embedded project); the file name only fills an empty one.
         if (string.IsNullOrWhiteSpace(project.Title)) project.Title = Path.GetFileNameWithoutExtension(path);
         // A clean .gp saved with its TabForge audio data beside it ("song.tfaudio"): bring the mixer and FX back.
-        // R5: each mode reads only its own data. TabForge never writes a sidecar with an embedded .gp, so a .tfaudio beside one is left over from an
+        // Each mode reads only its own data. TabForge never writes a sidecar with an embedded score file, so a .tfaudio beside one is left over from an
         // earlier clean save of that name: it must not replace the embedded project's (newer) mixer and FX.
         if (path.EndsWith(".gp", StringComparison.OrdinalIgnoreCase) && File.Exists(AudioDataFile.PathFor(path)) && GuitarProExporter.HasEmbeddedEntry(path))
             notices.Add($"{Path.GetFileName(AudioDataFile.PathFor(path))} was not applied: {Path.GetFileName(path)} holds its own TabForge project, and the .tfaudio is from an earlier save");
@@ -84,7 +84,7 @@ public sealed class DocumentController
             if (path.EndsWith(".gp", StringComparison.OrdinalIgnoreCase)) return FilePathPolicy.RecoverInterruptedPair(path);
             if (path.EndsWith(FileTypes.Project, StringComparison.OrdinalIgnoreCase)) return FilePathPolicy.RecoverInterruptedPair(Path.ChangeExtension(path, ".gp"));
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException) { }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException) { Services.Trace.Error(Services.Trace.Import, "document open: recover interrupted save: " + ex.Message); }
         return null;
     }
 
@@ -119,7 +119,7 @@ public sealed class DocumentController
     public sealed record GuitarProExportResult(string? CompatiblePath, string? NativeCopyPath, string Notice);
 
     /// <summary>
-    /// Writes a clean Guitar Pro file after the lossy-export preflight (R5). <paramref name="choice"/> is what the person picked when
+    /// Writes a clean score-format export after the lossy-export preflight. <paramref name="choice"/> is what the person picked when
     /// <see cref="GpExportPreflight.Analyze"/> found something a clean .gp cannot hold (pass <see cref="GpExportChoice.ExportCompatible"/> when it found nothing).
     /// Native copy first, then the compatible file; nothing is overwritten that holds native content. The document changes only as the plan says: an Export
     /// never touches it, and a compatible-only Save leaves it unsaved so native content is never reported as preserved.

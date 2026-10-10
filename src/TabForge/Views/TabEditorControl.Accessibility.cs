@@ -6,8 +6,12 @@ using TabForge.Views.Score;
 
 namespace TabForge.Views;
 
-// TabEditorControl: screen-reader support. The texts and the peers live in Views/Score/EditorAutomation.cs; nothing is built
-// until a client asks for the children, and cursor announcements cost nothing while no automation client listens.
+// Owns: the editor's automation: the peer over the describer (EditorPeer, EditorDescriber), the spoken announcements
+//   (AnnounceText, AnnounceCursor), the structure rebuild, the export metrics for the pages, and the self-test seam that overrides
+//   the 'clients listening' answer.
+// Does not own: the peer and the describer themselves (Views/Score/EditorAutomation.cs).
+// Tests: TestTabEditorAutomationSnapshot.
+
 public sealed partial class TabEditorControl : IEditorDescribeHost
 {
     /// <summary>Self-test hook: null uses the real "is any automation client listening" answer.</summary>

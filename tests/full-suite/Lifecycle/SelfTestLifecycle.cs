@@ -103,7 +103,7 @@ public static partial class SelfTest
     }
 
     /// <summary>
-    /// Audit 7 memory trend: a closed tab's plug-in chains were parked like a background tab's (5 min warm period), so opening and
+    /// Memory trend: a closed tab's plug-in chains were parked like a background tab's (5 min warm period), so opening and
     /// closing a song with a large sampler every 30 s held ~10 loaded copies (engine ~3.9 GB, rising callback load). Closing a document
     /// must unload its chains at once and drop the engine client's reference to it; a background (switched-away) tab still parks.
     /// </summary>

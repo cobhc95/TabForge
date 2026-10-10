@@ -9,20 +9,17 @@ public static partial class EngineHost
 {
     private static void ReadMeasurePitch(BinaryReader r)
     {
-        var slot = r.ReadInt32(); var index = r.ReadInt32(); var requestId = r.ReadInt32(); var channel = r.ReadInt32() & 0x0F;
-        var count = r.ReadInt32();
-        if (count is < 1 or > 8) throw new InvalidDataException("Bad test note count.");
-        var notes = new int[count];
-        for (var i = 0; i < count; i++) notes[i] = Math.Clamp(r.ReadInt32(), 0, 127);
+        var m = MeasurePitchMessage.Read(r);
+        var (slot, index, requestId) = (m.Slot, m.Index, m.RequestId); var channel = m.Channel & 0x0F;
+        var notes = m.Notes.Select(n => Math.Clamp(n, 0, 127)).ToArray();
         EngineThreads.Post(() => _session.StartMeasurePitch(slot, index, requestId, channel, notes));
     }
 
     private static void ReadSetAutoPitch(BinaryReader r)
     {
-        var slot = r.ReadInt32(); var count = r.ReadInt32();
-        if (count is < 0 or > 64) throw new InvalidDataException("Bad auto-pitch count.");
-        var list = new (int Index, int Semitones)[count];
-        for (var i = 0; i < count; i++) list[i] = (r.ReadInt32(), Math.Clamp(r.ReadInt32(), -48, 48));
+        var m = SetAutoPitchMessage.Read(r);
+        var slot = m.Slot;
+        var list = m.Transposes.Select(t => (t.Index, Semitones: Math.Clamp(t.Semitones, -48, 48))).ToArray();
         EngineThreads.Post(() => _session.SetAutoPitch(slot, list));
     }
 

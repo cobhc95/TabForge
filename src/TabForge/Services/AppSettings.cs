@@ -54,9 +54,15 @@ public sealed class AppSettings
     public EditingSettings Editing { get; set; } = new();
     /// <summary>Last-used File > Render options.</summary>
     public Rendering.RenderSettings Render { get; set; } = new();
+    /// <summary>Last-used File > Export > Video options.</summary>
+    public Video.VideoSettings Video { get; set; } = new();
     public HotkeySettings Hotkeys { get; set; } = new();
     public FollowSettings Follow { get; set; } = new();
     public TimelineSettings Timeline { get; set; } = new();
+    /// <summary>Live video recording (the Record video button).</summary>
+    public Video.LiveVideoSettings LiveVideo { get; set; } = new();
+    /// <summary>Keyboard mode (experimental): look-ahead and note size.</summary>
+    public KeyboardMode.KeyboardModeSettings Learn { get; set; } = new();
     /// <summary>Dock tree, selected tabs, closed panels, and floating-window bounds.</summary>
     public DockWorkspaceState? Workspace { get; set; }
     /// <summary>The layout as it was when the side panel was hidden, so showing it again restores it exactly (even after a restart).</summary>

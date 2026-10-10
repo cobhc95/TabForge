@@ -50,7 +50,7 @@ public sealed class ScoreClip
     /// <summary>One entry per copied track, in the source track order. Beats clips hold exactly one.</summary>
     public List<ScoreClipTrack> Tracks { get; set; } = new();
 
-    /// <summary>True when this clip was converted from the pre-beta.6 clipboard text (a raw project snapshot, no instrument info).</summary>
+    /// <summary>True when this clip was converted from the legacy clipboard text (a raw project snapshot, no instrument info).</summary>
     [JsonIgnore] public bool IsLegacy { get; private set; }
 
     /// <summary>Number of bars in a Bars clip (every track holds the same count); 0 for a Beats clip.</summary>
@@ -150,7 +150,7 @@ public sealed class ScoreClip
         error = null;
         if (string.IsNullOrWhiteSpace(text)) { error = ClipboardService.NotTabForgeNotesMessage; return false; }
         try { clip = Parse(text); return true; }
-        catch (InvalidDataException ex) { error = ex.Message; return false; }
+        catch (InvalidDataException ex) { error = ex.Message; return false; } // Not logged: clipboard text: the message is returned to the caller
     }
 
     // ---- Validation (untrusted input) ----
@@ -251,7 +251,7 @@ public sealed class ScoreClip
     // ---- Legacy clipboard text ----
 
     /// <summary>
-    /// Converts the pre-beta.6 clipboard text (a whole-project snapshot of one track; already validated by
+    /// Converts the legacy clipboard text (a whole-project snapshot of one track; already validated by
     /// <see cref="ProjectService.Restore"/>). One bar holding one beat was a single copied beat and becomes a Beats clip; anything
     /// else becomes a Bars clip. The old text carried no instrument, so the track header is the snapshot's (default guitar).
     /// </summary>

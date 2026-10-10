@@ -175,7 +175,7 @@ public static partial class SelfTest
         Check("save then load keeps every note",
             fromDisk.Tracks.Sum(t => t.Measures.Sum(m => m.Cells.Sum(c => c.Notes.Count))) ==
             rich.Tracks.Sum(t => t.Measures.Sum(m => m.Cells.Sum(c => c.Notes.Count))));
-        try { File.Delete(path); } catch { }
+        try { File.Delete(path); } catch { } // Not logged: test cleanup of a temporary file.
     }
 
     /// <summary>Builds a project that sets every field a save would have to preserve.</summary>

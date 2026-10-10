@@ -63,7 +63,7 @@ public static class GuitarProImporter
             var reached = partial.Tracks.Select(t => t.Staves.Count > 0 ? t.Staves[0].Bars.Count : 0).DefaultIfEmpty(0).Max();
             return Math.Max(1, (int)reached);
         }
-        catch (Exception) { return null; }
+        catch (Exception) { return null; } // Not logged: bar count hint only
     }
 
     /// <summary>
@@ -77,7 +77,7 @@ public static class GuitarProImporter
     {
         path = FilePathPolicy.ExistingFile(path, "score file", SupportedExtensions);
         context ??= new ImportContext();
-        // Cooperative limits (A5-07): the guard of a background import; none for synchronous headless use.
+        // Cooperative limits: the guard of a background import; none for synchronous headless use.
         context.Check();
         var raw = InputLimits.ReadBoundedBytes(path, InputLimits.MaxGuitarProFileBytes, "score file");
         return ImportBytes(raw, path, context);
@@ -102,7 +102,7 @@ public static class GuitarProImporter
         GuitarProPreParse.Validate(WithoutLeadingJunk(raw), context);
         context.Check();
         // A .gp saved by TabForge carries its complete project: load that for a lossless round trip.
-        // A6-02: one that is present but rejected (too big, damaged, bad version) is reported, not silently treated as absent.
+        // An embedded project that is present but rejected (too big, damaged, bad version) is reported, not silently treated as absent.
         context.EmbeddedRejection = null;
         context.DamageNotice = null;
         if (path.EndsWith(".gp", StringComparison.OrdinalIgnoreCase))
@@ -161,7 +161,7 @@ public static class GuitarProImporter
         var channel = 0;
         // Mix-table transitions / all-tracks flags alphaTab drops (a reference fade-out lives there).
         try { context.RawMixes = score is AlphaTab.Model.Score typed ? GuitarProMixTableScanner.Scan(data, typed) : null; }
-        catch (Exception ex) when (ex is not OutOfMemoryException) { context.RawMixes = null; }
+        catch (Exception ex) when (ex is not OutOfMemoryException) { Services.Trace.Error(Services.Trace.Import, "mix-table scan: " + ex.Message); context.RawMixes = null; }
         try
         {
             foreach (var sourceTrack in sourceTracks)

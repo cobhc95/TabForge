@@ -36,6 +36,9 @@ Each folder README is one page: purpose, key types, pathway, what the folder mus
 - Application: `src/TabForge/Models/README.md`, `src/TabForge/Services/README.md`, `src/TabForge/Playback/README.md`, `src/TabForge/Documents/README.md`, `src/TabForge/Controllers/README.md`, `src/TabForge/Views/README.md`, `src/TabForge/Audio/README.md`, `src/TabForge/Rendering/README.md`.
 - Also: `src/TabForge/Shell/README.md`, `src/TabForge/Docking/README.md`, `src/TabForge/Plugins/README.md`, `src/TabForge/Presets/README.md`, `src/TabForge/Visualization/README.md`, `src/TabForge/Diagnostics/README.md`, `src/TabForge/SelfTests/README.md`, `src/TabForge/Resources/README.md`.
 - Engine and contracts: `src/TabForge.AudioEngine/README.md`, `src/TabForge.Audio.Contracts/README.md`.
+- Project root: `src/TabForge/README.md` (every root file). Views and services: `src/TabForge/Views/Score/README.md`, `src/TabForge/Views/Band/README.md`, `src/TabForge/Views/Preferences/README.md`, `src/TabForge/Services/Video/README.md`, `src/TabForge/KeyboardMode/README.md`, `src/TabForge/Views/Video/README.md`, `src/TabForge/Services/Features/README.md`, `src/TabForge/Services/Log/README.md`, `src/TabForge/Playback/Models/README.md`, `src/TabForge/Presets/FullDemoSong/README.md`.
+- Engine sub-folders: `src/TabForge.AudioEngine/Audio/README.md`, `src/TabForge.AudioEngine/Editors/README.md`, `src/TabForge.AudioEngine/Isolation/README.md`, `src/TabForge.AudioEngine/Midi/README.md`, `src/TabForge.AudioEngine/Midi/Processors/README.md`, `src/TabForge.AudioEngine/Mixing/README.md`, `src/TabForge.AudioEngine/Output/README.md`, `src/TabForge.AudioEngine/Plugins/README.md`, `src/TabForge.AudioEngine/Synth/README.md`.
+- Self-test sub-folders: `src/TabForge/SelfTests/Architecture/README.md`, `src/TabForge/SelfTests/Engine/README.md`, `src/TabForge/SelfTests/Hygiene/README.md`, `src/TabForge/SelfTests/Settings/README.md`, `src/TabForge/SelfTests/Smoke/README.md`.
 
 `MainWindow` (many partial files) and `TabEditorControl` are composition roots. They wire things together; new behaviour goes into a small class with a host interface, never into another partial file.
 
@@ -51,16 +54,18 @@ Use these instead of writing a new route.
 - **Subscribe to events.** Through `OwnedSubscriptions`, so a closed window can be collected.
 - **Settings.** One shared `AppSettingsStore`. Bounds in `SettingsValidator`, old files in `SettingsMigration`, rows in `PreferencesWindow`.
 - **Files.** Write with `FilePathPolicy.WriteAtomically`; bound every read with `InputLimits`.
-- **Commands.** Bindable through `HotkeyCatalog`, listed in the presets and in `TOOLS_AND_HOTKEYS.md`.
+- **Commands.** Bindable through `HotkeyCatalog`, listed in the presets and in `TOOLS_AND_HOTKEYS.md`. A plain command is one line in `BuildCommands()` (`MainWindow.Commands.cs`); one with conditions or several steps is a case in the `RunHotkey(...)` switch (`MainWindow.Settings.cs`). Steps: `docs/RECIPES.md`.
+- **New feature.** A module in the feature's own folder implementing `IFeatureModule`, added to `src/TabForge/Services/Features/FeatureRegistry.cs`. The window gets thin hooks only. Steps: `docs/RECIPES.md`, "Add a feature module".
 
 ## Find a feature
 
-1. `docs/FEATURE_MAP.md`: index of features. Each feature's page in `docs/feature-map/` gives main code, pathway and self-tests.
+1. `docs/FEATURE_MAP.md`: index of features. Each feature's page in `docs/feature-map/` gives main code, pathway and self-tests. `docs/feature-map/files.md` lists every source file by folder with its purpose (generated).
 2. `docs/RECIPES.md`: exact file lists for the usual changes (technique, setting, command, export, engine command, song field, dialog).
 3. `CONTRIBUTING.md`: naming, comment style, test rules, pull request checklist.
 4. `ARCHITECTURE.md`: processes, threads, IPC limits, state ownership, persistence.
 5. The folder README (purpose, key types, pathway, tests) of the folder you are about to change; the list is under "Folder READMEs".
 5a. Compatibility and format notes: `docs/COMPATIBILITY.md`.
+5b. Symptom to first file, first test and first log: `docs/DEBUG_SYMPTOMS.md`.
 
 ## Run one test
 
@@ -81,7 +86,7 @@ Start-Process -Wait out-full\TabForge.exe -ArgumentList '--selftest','one.log','
 Self-tests fail the build of a change that breaks these.
 
 - **Layering.** Models, Services and Playback have no WPF; the app reaches the engine only through the client; the contracts project has no dependencies.
-- **Size and shape budgets.** `src/TabForge/ArchitectureBudget.json` caps file and class sizes and lists naming exceptions. A budget may only go down; do not raise one to make room for new code, move the code out instead.
+- **Size and shape budgets.** `src/TabForge/ArchitectureBudget.json` caps file and class sizes and lists naming exceptions. Lower a budget when a change shrinks the code. Raise one only with a reason in the commit message, and never cut behaviour to fit a budget. New files stay at 500 lines or fewer, so move code into a new class instead of growing a large file.
 - **Naming.** XController, XFlow, IXHost and XService as in `CONTRIBUTING.md`.
 - **Find a feature fast.** `TabForge.exe --find <keyword> out.txt` lists matching features, files and tests in at most 40 lines; read that instead of the whole feature map.
 - **Tests.** Every test has an area in the AreaOf table in `src/TabForge/SelfTests/SelfTest.cs`; after adding or renaming tests run `TabForge.exe --feature-map` and commit `docs/feature-map/tests.md`.

@@ -57,7 +57,7 @@ public static class RenderJob
             EnsureMf();
             return MediaFoundationEncoder.GetEncodeBitrates(AudioSubtypes.MFAudioFormat_MP3, 44100, 2).Length > 0;
         }
-        catch (Exception) { return false; }
+        catch (Exception) { return false; } // Not logged: job probe: false is reported by the caller
     }
 
     public static async Task<RenderResult> RunAsync(RenderRequest r, IProgress<RenderProgressInfo>? progress, CancellationToken cancel, AudioEngineClient engine)
@@ -161,16 +161,16 @@ public static class RenderJob
         {
             engine.Rendering = false;
             mixer.PlayAllThroughEngine = previousPlayAll;
-            try { r.Restore?.Invoke(); } catch (Exception) { }
-            try { ResendPrograms(r, engine); } catch (Exception) { }
+            try { r.Restore?.Invoke(); } catch (Exception) { Services.Trace.Error(Services.Trace.Engine, "render: restore engine state: failed"); }
+            try { ResendPrograms(r, engine); } catch (Exception) { Services.Trace.Error(Services.Trace.Engine, "render: resend programs: failed"); }
             if (!succeeded)
             {
                 // Cancelled or failed: delete only what this job created (its staging files and anything it already published),
                 // never a planned final path that might belong to someone else.
-                foreach (var p in owned.Concat(published)) try { File.Delete(p); } catch (Exception) { }
+                foreach (var p in owned.Concat(published)) try { File.Delete(p); } catch (Exception) { } // Not logged: cleanup of files this job created; leftovers go to the temp sweep.
             }
-            try { File.Delete(eventFile); } catch (Exception) { }
-            if (temp.Length > 0) try { Directory.Delete(temp, true); } catch (Exception) { }
+            try { File.Delete(eventFile); } catch (Exception) { } // Not logged: cleanup of files this job created; leftovers go to the temp sweep.
+            if (temp.Length > 0) try { Directory.Delete(temp, true); } catch (Exception) { } // Not logged: cleanup of files this job created; leftovers go to the temp sweep.
         }
     }
 
@@ -188,6 +188,6 @@ public static class RenderJob
                 engine.Write(new TimedMidi { Timestamp = Stopwatch.GetTimestamp(), Slot = slot, Status = (byte)e.Status, Data1 = (byte)e.Data1, Data2 = (byte)e.Data2 });
             }
         }
-        catch (Exception) { /* best effort */ }
+        catch (Exception) { /* best effort */ } // Not logged: per-event MIDI feed on the render path; a full buffer is expected under load.
     }
 }

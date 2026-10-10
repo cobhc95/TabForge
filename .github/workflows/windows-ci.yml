@@ -25,6 +25,8 @@ jobs:
     env:
       # 'true' on the weekly schedule and manual dispatch: the full suite is compiled in and run.
       FULL_SUITE: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
+      # The weekly and dispatch full suite runs all 20 workflow monkey seeds; pushes and pull requests run the basic set only.
+      TABFORGE_MONKEY_FULL: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && '1' || '0' }}
       # Run as on a clean checkout: the copyrighted sample songs in Tabs/ are not part of the repository, so every
       # check that needs them must skip (reported in the log), never fail.
       TABFORGE_NO_LOCAL_SONGS: '1'

@@ -3,6 +3,8 @@ using TabForge.Models;
 
 namespace TabForge.Services;
 
+// Owns: the paste choices: the answers resolved from remembered answers and the dialog, the paste target, the paste result and the headless asker that takes the recommended answers.
+// Does not own: the paste pipeline the result comes from (EditCommands.cs and its other partials) or the paste dialog (Views/). Tests: TestPasteCommands, TestPasteOptionsDialog, TestPasteSettingsRows.
 /// <summary>The paste choices after remembered answers and the dialog, with the recommended option for anything not asked.</summary>
 public sealed record ResolvedPaste(BeatPasteMode Beats, OctavePolicy Octave, BarsOntoNotesAnswer Bars, bool CopyBarSettings, DrumPastePolicy Drums,
     PasteMappingMode Mapping = PasteMappingMode.KeepPitch, int OctaveSemitones = 0)
@@ -46,7 +48,6 @@ public sealed class PasteOutcome
     public int CursorCell { get; init; } = -1;
 }
 
-// Copy / cut / paste of score clips (COPY_PASTE_DESIGN.md chunk C4): NoteMapper maps, BarGrid places.
 public static partial class EditCommands
 {
     /// <summary>

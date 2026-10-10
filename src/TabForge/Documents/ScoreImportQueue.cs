@@ -16,15 +16,15 @@ public sealed class ScoreImportJob
 }
 
 /// <summary>
-/// Background Guitar Pro import (audit A5-07). Parsing and conversion run on the thread pool under an <see cref="ImportGuard"/>;
+/// Background score import. Parsing and conversion run on the thread pool under an <see cref="ImportGuard"/>;
 /// the result is handed back on the caller's synchronization context (the UI thread), in the order the opens were started, so
 /// tab order matches the selection. A cancelled or failed job never reaches <c>apply</c>, so it can leave no half-open tab.
 /// </summary>
 public sealed class ScoreImportQueue
 {
-    /// <summary>A6-04: imports running at once by default; the others wait (in order) for a free slot.</summary>
+    /// <summary>Imports running at once by default; the others wait (in order) for a free slot.</summary>
     public const int DefaultMaxConcurrent = 2;
-    /// <summary>A6-04: all running import workers together stay within this committed memory (split evenly across the slots).</summary>
+    /// <summary>All running import workers together stay within this committed memory (split evenly across the slots).</summary>
     public const long TotalWorkerMemoryBytes = 3L * 1024 * 1024 * 1024;
 
     private readonly Func<string, ImportContext, OpenedScore> _open;
@@ -35,7 +35,7 @@ public sealed class ScoreImportQueue
 
     /// <param name="open">The synchronous open (DocumentController.Open), given the import's context; a test passes a synthetic slow one.</param>
     /// <param name="maxConcurrent">How many opens run at once; later ones wait for a slot (results still apply in start order).</param>
-    /// <param name="openInProcess">A6-03: the unprotected in-process open (path, reason) used only when <paramref name="open"/> threw
+    /// <param name="openInProcess">The unprotected in-process open (path, reason) used only when <paramref name="open"/> threw
     /// <see cref="ImportWorkerUnavailableException"/> and <see cref="ConfirmInProcess"/> agreed for that file.</param>
     public ScoreImportQueue(Func<string, ImportContext, OpenedScore> open, int maxConcurrent = DefaultMaxConcurrent, Func<string, string, ImportContext, OpenedScore>? openInProcess = null)
     {
@@ -48,7 +48,7 @@ public sealed class ScoreImportQueue
     /// The app's queue: each Guitar Pro file is parsed in the import worker process (<see cref="ImportWorker"/>), killed on Cancel
     /// or at the time budget, at most <see cref="DefaultMaxConcurrent"/> at once with <see cref="TotalWorkerMemoryBytes"/> split
     /// between them. When the worker or its Job Object cannot be set up, the file opens in this process only if
-    /// <see cref="ConfirmInProcess"/> says yes for that file (A6-03).
+    /// <see cref="ConfirmInProcess"/> says yes for that file.
     /// </summary>
     public static ScoreImportQueue WithImportWorker(DocumentController documents, ImportWorkerOptions? options = null)
     {
@@ -58,7 +58,7 @@ public sealed class ScoreImportQueue
     }
 
     /// <summary>
-    /// A6-03: asked on the caller's context (the UI thread) with the job and the reason when the protected import could not start;
+    /// Asked on the caller's context (the UI thread) with the job and the reason when the protected import could not start;
     /// true = open this one file inside TabForge. Null or false: the file is not opened (reported as cancelled).
     /// </summary>
     public Func<ScoreImportJob, string, bool>? ConfirmInProcess { get; set; }
@@ -107,19 +107,19 @@ public sealed class ScoreImportQueue
         var holdsSlot = false;
         try
         {
-            // A6-04: a bounded pool; a job cancelled while it waits never starts.
+            // A bounded pool; a job cancelled while it waits never starts.
             await _slots.WaitAsync(job.Cancellation.Token);
             holdsSlot = true;
             try { opened = await ImportAsync(job.Path, _open, job.Cancellation.Token, TimeBudget, MemoryBudgetBytes, StuckGrace); }
             catch (ImportWorkerUnavailableException unavailable) when (_openInProcess is not null && !job.IsCancelled)
             {
-                // A6-03: never a silent in-process parse; the user decides per file (this runs on the caller's context).
+                // Never a silent in-process parse; the user decides per file (this runs on the caller's context).
                 var reason = unavailable.Message;
                 if (ConfirmInProcess?.Invoke(job, reason) != true || job.IsCancelled) throw new OperationCanceledException();
                 opened = await ImportAsync(job.Path, (path, context) => _openInProcess(path, reason, context), job.Cancellation.Token, TimeBudget, MemoryBudgetBytes, StuckGrace);
             }
         }
-        catch (Exception ex) { error = ex; }
+        catch (Exception ex) { error = ex; } // Not logged: the error is handed to the caller that awaits the import
         finally { if (holdsSlot) _slots.Release(); }
         try
         {

@@ -172,7 +172,7 @@ internal sealed class PasteOptionsDialog : Window
         _confirmed = paste;
         if (!IsLoaded && !IsVisible) return;
         try { DialogResult = paste; }
-        catch (InvalidOperationException) { Close(); }
+        catch (InvalidOperationException) { Close(); } // Not logged: dialog close: the dialog is already closed
     }
 
     /// <summary>The answers as chosen; null when the paste was cancelled.</summary>

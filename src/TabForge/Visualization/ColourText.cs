@@ -23,9 +23,9 @@ public static class ColourText
             colour = parsed;
             return true;
         }
-        catch (FormatException) { return false; }
-        catch (NotSupportedException) { return false; }
-        catch (InvalidOperationException) { return false; }
+        catch (FormatException) { return false; } // Not logged: render path: no logging per frame
+        catch (NotSupportedException) { return false; } // Not logged: render path: no logging per frame
+        catch (InvalidOperationException) { return false; } // Not logged: render path: no logging per frame
     }
 
     /// <summary>A brush of the colour text, or <paramref name="fallback"/> (default gray) when it does not parse.</summary>

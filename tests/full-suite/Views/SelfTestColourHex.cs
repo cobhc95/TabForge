@@ -1,5 +1,6 @@
 using System.Windows.Media;
 using TabForge.Models;
+using TabForge.Services;
 using TabForge.Visualization;
 
 namespace TabForge;
@@ -92,5 +93,36 @@ public static partial class SelfTest
         if (value.Length is not (7 or 9)) return "fail";
         var r = ReferenceColourParse(value);
         return r.Ok ? $"{r.A:X2}{r.R:X2}{r.G:X2}{r.B:X2}" : "fail";
+    }
+
+    /// <summary>
+    /// The window's settings colours (ColourText.ParseOr, which replaced a private copy) and the track-row colours
+    /// (TrackControlWidgets.ParseColour) are two parsers on purpose: settings accept names and 3/4-digit hex, track colours only strict hex.
+    /// </summary>
+    private static void TestSettingsColourParsers()
+    {
+        var fallback = Color.FromRgb(1, 2, 3);
+        var grey = Color.FromRgb(0x80, 0x80, 0x80);
+        var inputs = new string?[]
+        {
+            null, "", "  ", "#", "#abc", "#ABCD", "#3FB950", "#803FB950", "3FB950", "#12345", "#1234567", "#GGGGGG", " #3FB950 ",
+            "red", "Red", "Transparent", "NotAColour", "sc#1,0.5,0.25,0",
+        };
+        int settingsMismatch = 0, trackMismatch = 0;
+        string? first = null;
+        foreach (var input in inputs)
+        {
+            var removedCopy = ThemeService.TryParse(input, out var parsed) ? parsed : fallback;   // the body of the removed MainWindow.ParseColour
+            if (ColourText.ParseOr(input, fallback) != removedCopy) { settingsMismatch++; first ??= $"settings '{input}'"; }
+            var strict = ColourText.TryParseHex(input, out var hex) ? hex : grey;
+            if (TabForge.Views.TrackControlWidgets.ParseColour(input) != strict) { trackMismatch++; first ??= $"track '{input}'"; }
+        }
+        Check("settings colour parse: ColourText.ParseOr equals the removed window copy over null, empty, hex of 3/4/6/8 digits, names and junk",
+            settingsMismatch == 0, first ?? "");
+        Check("track colour parse: TrackControlWidgets.ParseColour stays strict hex with a grey fallback",
+            trackMismatch == 0, first ?? "");
+        Check("the two parsers differ on short hex and names (so they are not merged)",
+            ColourText.ParseOr("#abc", fallback) == Color.FromRgb(0xAA, 0xBB, 0xCC) && TabForge.Views.TrackControlWidgets.ParseColour("#abc") == grey &&
+            ColourText.ParseOr("red", fallback) == Colors.Red && TabForge.Views.TrackControlWidgets.ParseColour("red") == grey);
     }
 }

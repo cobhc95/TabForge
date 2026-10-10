@@ -50,7 +50,7 @@ public static class DrumMapLibrary
             foreach (var file in Directory.EnumerateFiles(folder, "*.json").Take(200))
                 if (Parse(file, user) is { } map && !into.Any(m => m.Name == map.Name)) into.Add(map);
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { Services.Trace.Error(Services.Trace.Engine, "drum maps: read folder: " + ex.Message); }
     }
 
     private static DrumMap? Parse(string file, bool user)
@@ -70,7 +70,7 @@ public static class DrumMapLibrary
                     if (int.TryParse(p.Name, out var note) && note is >= 0 and <= 127 && p.Value.ValueKind == JsonValueKind.String) notes[note] = p.Value.GetString() ?? "";
             return new DrumMap(name, verified, user, notes);
         }
-        catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException or InvalidDataException) { return null; }
+        catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException or InvalidDataException) { Services.Trace.Error(Services.Trace.Engine, "drum map: read: " + ex.Message); return null; }
     }
 
     /// <summary>The 128-entry note table that converts from one map to another (unnamed or unmatched notes stay as they are), then applies "36>38, 40>37" style overrides.</summary>

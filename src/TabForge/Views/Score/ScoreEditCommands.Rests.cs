@@ -3,6 +3,10 @@ using TabForge.Services;
 
 namespace TabForge.Views.Score;
 
+// Owns: the rest fill of the score editor: merging the rest runs of touched bars into the fewest standard rests, refilling a selection of rests with a new duration, and keeping the selection over the result.
+// Does not own: the duration entry (ScoreEditCommands.Entry.cs) or the marks (ScoreEditCommands.Marks.cs).
+// Tests: TestRestMerge.
+
 // ScoreEditCommands: with the rest fill on, a duration change or a delete leaves the touched bars' rests merged into the fewest standard rests
 // (the model is BarFill.MergeRestRuns) and keeps the selection over the result.
 public sealed partial class ScoreEditCommands

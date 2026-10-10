@@ -249,10 +249,10 @@ public static partial class EngineHost
                 // Parse on this thread (bounded reads), act on the main thread.
                 switch ((EngineCommand)type)
                 {
-                    case EngineCommand.Ping: { var seq = r.ReadInt32(); EngineThreads.Post(() => Send(EngineEvent.Pong, w => w.Write(seq))); break; }   // answered by the main thread: a deaf main thread misses it
+                    case EngineCommand.Ping: { var seq = PingMessage.Read(r).Seq; EngineThreads.Post(() => Send(EngineEvent.Pong, w => w.Write(seq))); break; }   // answered by the main thread: a deaf main thread misses it
                     case EngineCommand.TestHang:
                     {
-                        var seconds = Math.Clamp(r.ReadInt32(), 1, 120);
+                        var seconds = Math.Clamp(TestHangMessage.Read(r).Seconds, 1, 120);
                         if (!TestHooks) { EngineLog.Write("test hang ignored (test hooks are off)"); break; }
                         EngineThreads.Post(() => { EngineLog.Write($"test hook: main thread sleeps {seconds} s"); Thread.Sleep(seconds * 1000); });
                         break;
@@ -270,149 +270,98 @@ public static partial class EngineHost
                         EngineThreads.Post(() => _session.CommitChain(ready));
                         break;
                     }
-                    case EngineCommand.RemoveTrack: { var slot = r.ReadInt32(); EngineThreads.Post(() => _session.RemoveChain(slot)); break; }
+                    case EngineCommand.RemoveTrack: { var slot = RemoveTrackMessage.Read(r).Slot; EngineThreads.Post(() => _session.RemoveChain(slot)); break; }
                     case EngineCommand.OpenEditor:
                     {
-                        var slot = r.ReadInt32(); var index = r.ReadInt32(); var window = new IntPtr(r.ReadInt64()); var dark = r.ReadBoolean();
-                        var docked = r.ReadBoolean(); var onTop = r.ReadBoolean();
-                        EngineThreads.Post(() => _session.OpenEditor(slot, index, window, dark, docked, onTop));
+                        var m = OpenEditorMessage.Read(r); var window = new IntPtr(m.Window);
+                        EngineThreads.Post(() => _session.OpenEditor(m.Slot, m.Index, window, m.Dark, m.Docked, m.OnTop));
                         break;
                     }
                     case EngineCommand.SetTrackMix:
                     {
-                        var slot = r.ReadInt32(); var volume = r.ReadInt32(); var pan = r.ReadInt32();
+                        var (slot, volume, pan) = SetTrackMixMessage.Read(r);
                         if (slot < 0 || slot >= MixEngine.TotalSlots) throw new InvalidDataException($"SetTrackMix: slot {slot} out of range");
                         EngineThreads.Post(() => _session.SetTrackMix(slot, volume, pan));
                         break;
                     }
                     case EngineCommand.SetPluginGain:
                     {
-                        var slot = r.ReadInt32(); var index = r.ReadInt32(); var db = r.ReadDouble();
+                        var (slot, index, db) = SetPluginGainMessage.Read(r);
                         var gain = db <= -59.9 ? 0f : (float)Math.Pow(10, Math.Clamp(db, -60, 12) / 20);
                         EngineThreads.Post(() => _session.SetPluginGain(slot, index, gain));
                         break;
                     }
                     case EngineCommand.SetPluginBypass:
                     {
-                        var slot = r.ReadInt32(); var index = r.ReadInt32(); var enabled = r.ReadBoolean();
+                        var (slot, index, enabled) = SetPluginBypassMessage.Read(r);
                         EngineThreads.Post(() => _session.SetPluginBypass(slot, index, enabled));
                         break;
                     }
                     case EngineCommand.SetSynth:
                     {
-                        var slot = r.ReadInt32(); var on = r.ReadBoolean();
+                        var (slot, on) = SetSynthMessage.Read(r);
                         if (slot < 0 || slot >= MixEngine.TotalSlots) break;
                         EngineThreads.Post(() => _session.SetSynth(slot, on));
                         break;
                     }
                     case EngineCommand.SetMidiRoute:
                     {
-                        var slot = r.ReadInt32(); var index = r.ReadInt32(); var source = r.ReadInt32(); var mask = r.ReadInt32() & 0xFFFF;
+                        var (slot, index, source, rawMask) = SetMidiRouteMessage.Read(r); var mask = rawMask & 0xFFFF;
                         if (source < -2 || source >= MixEngine.MaxSlots || slot < 0 || slot >= MixEngine.MaxSlots) break;
                         EngineThreads.Post(() => _session.SetMidiRoute(slot, index, source, mask));
                         break;
                     }
                     case EngineCommand.SetPluginWiring:
                     {
-                        var slot = r.ReadInt32(); var index = r.ReadInt32(); var flags = r.ReadInt32();
+                        var (slot, index, flags) = SetPluginWiringMessage.Read(r);
                         if (slot < 0 || slot >= MixEngine.TotalSlots) break;
                         EngineThreads.Post(() => _session.SetPluginWiring(slot, index, flags));
                         break;
                     }
-                    case EngineCommand.SetMidiProcessors:
-                    {
-                        var slot = r.ReadInt32(); var count = r.ReadInt32();
-                        if (slot < 0 || slot >= MixEngine.TotalSlots || count is < 0 or > 64) break;
-                        var lists = new Dictionary<int, List<MidiProcSpec>>();
-                        for (var i = 0; i < count; i++) { var index = r.ReadInt32(); var specs = r.ReadMidiProcs(); if (index is >= 0 and < 64 && specs.Count > 0) lists[index] = specs; }
-                        EngineThreads.Post(() => _session.SetMidiProcessors(slot, lists));
-                        break;
-                    }
-                    case EngineCommand.SetGraph:
-                    {
-                        static int Slot(int s, int max) => s >= 0 && s < max ? s : -1;
-                        var dests = new Dictionary<int, int>(); var sides = new Dictionary<(int, int), int>(); var fwds = new Dictionary<(int, int), int>();
-                        var n = Math.Clamp(r.ReadInt32(), 0, MixEngine.MaxSlots);
-                        for (var i = 0; i < n; i++) { var s = r.ReadInt32(); var d = r.ReadInt32(); if (Slot(s, MixEngine.MaxSlots) >= 0 && d >= MixEngine.BusBase && d < MixEngine.MasterSlot) dests[s] = d; }
-                        n = Math.Clamp(r.ReadInt32(), 0, 4096);
-                        for (var i = 0; i < n; i++) { var s = r.ReadInt32(); var x = r.ReadInt32(); var src = r.ReadInt32(); if (Slot(s, MixEngine.MaxSlots) >= 0 && Slot(src, MixEngine.MaxSlots) >= 0) sides[(s, x)] = src; }
-                        n = Math.Clamp(r.ReadInt32(), 0, 4096);
-                        for (var i = 0; i < n; i++) { var s = r.ReadInt32(); var x = r.ReadInt32(); var dst = r.ReadInt32(); if (Slot(s, MixEngine.MaxSlots) >= 0 && Slot(dst, MixEngine.MaxSlots) >= 0) fwds[(s, x)] = dst; }
-                        EngineThreads.Post(() => _session.SetGraph(dests, sides, fwds));
-                        break;
-                    }
+                    case EngineCommand.SetMidiProcessors: ReadSetMidiProcessors(r); break;
+                    case EngineCommand.SetGraph: ReadSetGraph(r); break;
                     case EngineCommand.SetMidiLogWatch:
                     {
-                        var slot = r.ReadInt32(); var watch = r.ReadBoolean();
+                        var (slot, watch) = SetMidiLogWatchMessage.Read(r);
                         if (slot < 0 || slot >= MixEngine.MaxSlots) break;
                         EngineThreads.Post(() => _session.SetMidiLogWatch(slot, watch));
                         break;
                     }
-                    case EngineCommand.SetClips:
-                    {
-                        var slot = r.ReadInt32(); var clips = r.ReadClips(); var owner = r.ReadOwnerTail();
-                        if (slot < 0 || slot >= MixEngine.MaxSlots) throw new InvalidDataException($"SetClips: track slot {slot} out of range");
-                        EngineThreads.Post(() => _session.SetClips(slot, clips, owner));
-                        break;
-                    }
+                    case EngineCommand.SetClips: ReadSetClips(r); break;
                     case EngineCommand.SetArm:
                     {
-                        var slot = r.ReadInt32(); var armed = r.ReadBoolean(); var mode = Math.Clamp(r.ReadInt32(), 0, 2); var monitor = r.ReadBoolean();
+                        var (slot, armed, rawMode, monitor) = SetArmMessage.Read(r); var mode = Math.Clamp(rawMode, 0, 2);
                         if (slot < 0 || slot >= MixEngine.MaxSlots) throw new InvalidDataException($"SetArm: track slot {slot} out of range");
                         EngineThreads.Post(() => _session.SetArm(slot, armed, mode, monitor));
                         break;
                     }
-                    case EngineCommand.SetPosition:
-                    {
-                        var playing = r.ReadBoolean(); var songSec = r.ReadDouble(); var stamp = r.ReadInt64(); var owner = r.ReadOwnerTail();
-                        // Reader thread. The position lives in the owner's SongTransport (not in the MixEngine, which Configure
-                        // replaces on the main thread), published as one immutable record: never torn, never lost to a mixer swap.
-                        if (double.IsFinite(songSec)) _session.Transports[owner].SetPosition(playing, Math.Max(0, songSec), stamp);
-                        break;
-                    }
-                    case EngineCommand.Record:
-                    {
-                        var start = r.ReadBoolean(); var folder = r.ReadBoundedString(1024); var names = new Dictionary<int, string>();
-                        var count = Math.Clamp(r.ReadInt32(), 0, 256);
-                        for (var i = 0; i < count; i++)
-                        {
-                            var slot = r.ReadInt32(); var name = r.ReadBoundedString(256);
-                            if (slot < 0 || slot >= MixEngine.MaxSlots) throw new InvalidDataException($"Record: track slot {slot} out of range");
-                            names[slot] = name;
-                        }
-                        // The user's recording offset (ms, double) follows; an older sender has none.
-                        var offsetMs = r.BaseStream.Position < r.BaseStream.Length ? r.ReadDouble() : 0;
-                        if (!double.IsFinite(offsetMs)) throw new InvalidDataException("Record: offset is not a number");
-                        offsetMs = Math.Clamp(offsetMs, -Audio.TakeAlignment.MaxOffsetMs, Audio.TakeAlignment.MaxOffsetMs);
-                        var owner = r.ReadOwnerTail();   // the recording song's transport (absent: owner 0)
-                        EngineThreads.Post(() => _session.Record(start, folder, names, offsetMs, owner));
-                        break;
-                    }
+                    case EngineCommand.SetPosition: ReadSetPosition(r); break;
+                    case EngineCommand.Record: ReadRecord(r); break;
                     case EngineCommand.CloseEditor:
                     {
-                        var slot = r.ReadInt32(); var index = r.ReadInt32();
+                        var (slot, index) = CloseEditorMessage.Read(r);
                         EngineThreads.Post(() => _session.CloseEditor(slot, index));
                         break;
                     }
                     case EngineCommand.GetPrograms:
                     {
-                        var slot = r.ReadInt32(); var index = r.ReadInt32();
+                        var (slot, index) = GetProgramsMessage.Read(r);
                         EngineThreads.Post(() => _session.SendPrograms(slot, index));
                         break;
                     }
                     case EngineCommand.SetProgram:
                     {
-                        var slot = r.ReadInt32(); var index = r.ReadInt32(); var program = r.ReadInt32();
+                        var (slot, index, program) = SetProgramMessage.Read(r);
                         EngineThreads.Post(() => _session.SetProgram(slot, index, program));
                         break;
                     }
                     case EngineCommand.SetState:
                     {
-                        var slot = r.ReadInt32(); var index = r.ReadInt32(); var state = r.ReadBoundedString(PluginStateLimits.MaxBase64Chars);
+                        var (slot, index, state) = SetStateMessage.Read(r);
                         EngineThreads.Post(() => _session.SetState(slot, index, state));
                         break;
                     }
-                    case EngineCommand.GetStates: { var slot = r.ReadInt32(); var requestId = r.ReadInt32(); EngineThreads.Post(() => _session.SendStates(slot, requestId)); break; }
+                    case EngineCommand.GetStates: { var (slot, requestId) = GetStatesMessage.Read(r); EngineThreads.Post(() => _session.SendStates(slot, requestId)); break; }
                     case EngineCommand.RenderOffline:
                     {
                         RenderSpec spec;
@@ -427,30 +376,13 @@ public static partial class EngineHost
                     }
                     case EngineCommand.RenderCancel: _session.RenderCancel = true; break;   // reader thread: works while the engine renders
                     case EngineCommand.Panic: { var s = _session; if (!s.RenderActive) Volatile.Read(ref s.Mix)?.Panic(); break; }
-                    case EngineCommand.PanicSlots:
-                    {
-                        var s = _session;
-                        var count = r.ReadInt32();
-                        if (count is < 0 or > 4096) break;
-                        var mix = s.RenderActive ? null : Volatile.Read(ref s.Mix);
-                        for (var i = 0; i < count; i++) { var slot = r.ReadInt32(); mix?.ChainAt(slot)?.Panic(); }
-                        break;
-                    }
-                    case EngineCommand.SetTransport:
-                    {
-                        var tempo = r.ReadDouble(); r.ReadBoolean();   // playing: SetPosition carries it
-                        // The song's bar map (time signatures, bar starts, tempo per bar) follows; an older sender has none.
-                        var bars = r.BaseStream.Position < r.BaseStream.Length ? TransportMap.Read(r) : null;
-                        var owner = r.ReadOwnerTail();
-                        var transport = _session.Transports[owner];
-                        if (double.IsFinite(tempo)) transport.SetTempo(Math.Clamp(tempo, 1, 2000));
-                        if (bars is not null) transport.SetMap(bars);
-                        break;
-                    }
+                    case EngineCommand.PanicSlots: ReadPanicSlots(r); break;
+                    case EngineCommand.SetTransport: ReadSetTransport(r); break;
                     case EngineCommand.MeasurePitch: ReadMeasurePitch(r); break;
                     case EngineCommand.SetAutoPitch: ReadSetAutoPitch(r); break;
-                    case EngineCommand.SetWindowsPathOffset: { var db = Math.Clamp(r.ReadSingle(), -60f, 12f); EngineThreads.Post(() => _session.SetWindowsPathOffset(db)); break; }
-                    case EngineCommand.SetLiveLimiter: { var on = r.ReadBoolean(); EngineThreads.Post(() => _session.SetLiveLimiter(on)); break; }
+                    case EngineCommand.SetWindowsPathOffset: { var db = Math.Clamp(SetWindowsPathOffsetMessage.Read(r).Db, -60f, 12f); EngineThreads.Post(() => _session.SetWindowsPathOffset(db)); break; }
+                    case EngineCommand.SetLiveLimiter: { var on = SetLiveLimiterMessage.Read(r).On; EngineThreads.Post(() => _session.SetLiveLimiter(on)); break; }
+                    case EngineCommand.SetMasterTap: { var on = SetMasterTapMessage.Read(r).On; EngineThreads.Post(() => { _session.Tap.Sink ??= SendMasterAudio; _session.Tap.Enable(on, _session.SampleRate); }); break; }
                     case EngineCommand.Shutdown: _exit = true; break;
                 }
     }
@@ -461,6 +393,9 @@ public static partial class EngineHost
         try { if (_pipe is { IsConnected: true } pipe) Frames.Write(pipe, (byte)type, payload); }
         catch (IOException) { _exit = true; }
     }
+
+    private static void SendMasterAudio(int rate, long firstFrame, float[] data, int frames) =>
+        Send(EngineEvent.MasterAudio, w => { w.Write(rate); w.Write(firstFrame); w.Write(frames); w.Write(System.Runtime.InteropServices.MemoryMarshal.AsBytes(data.AsSpan(0, frames * 2))); });
 
     private static void Shutdown()
     {

@@ -52,7 +52,7 @@ public static partial class SelfTest
     }
 
     /// <summary>
-    /// Lean context menus (owner decisions 2026-09-30): at most two submenu levels, no submenu inside a same-named one, every
+    /// Lean context menus: at most two submenu levels, no submenu inside a same-named one, every
     /// setting-like (checkable) item either maps to a SettingsCatalog row or says why not, and each menu has ONE "settings..." door
     /// that deep-links to a real row on the right page. Also the deep-link API and the one menu separator (100 / 125 / 150%).
     /// </summary>
@@ -74,6 +74,7 @@ public static partial class SelfTest
             ["Timeline selection"] = Views.TimelineMenus.Selection(new Views.SelectionMenuState("Bars 1-2 selected", true, true, true, true), noKeys),
             ["Timeline section"] = Views.TimelineMenus.Section(new Views.SectionMenuState(2, true, true, true), noKeys),
             ["Timeline clip"] = Views.TimelineMenus.Clip(new Views.ClipMenuState(true, true, true, true), noKeys),
+            ["Band view"] = Views.BandMenus.Build(new Views.BandMenuState(Services.BandChoices.Tab, Services.BandChoices.FullNeck, 3, true), noKeys),
         };
 
         // The mapping table: every checkable (setting-like) item -> its Preferences row, or the reason it has none.
@@ -108,6 +109,7 @@ public static partial class SelfTest
             ("Timeline bar", Views.TimelineMenus.TimelineSettingsRow, Services.SettingsCatalog.Timeline),
             ("Timeline selection", Views.TimelineMenus.TimelineSettingsRow, Services.SettingsCatalog.Timeline),
             ("Timeline section", Views.TimelineMenus.SectionSettingsRow, Services.SettingsCatalog.Timeline),
+            ("Band view", Views.BandMenus.SettingsRow, Services.SettingsCatalog.Timeline),
         };
         foreach (var (menu, row, page) in doors)
         {
@@ -144,11 +146,11 @@ public static partial class SelfTest
             colourLink.SelectedCategory == Services.SettingsCatalog.Appearance, colourLink.SelectedCategory);
         colourLink.Close();
 
-        TestMenuSeparatorGeometry();
+        CheckMenuSeparatorGeometry();
     }
 
     /// <summary>One separator style for every menu: the rule is 1px, sits inside its own slot (8,4 margin) and is not clipped at 100 / 125 / 150% UI scale.</summary>
-    private static void TestMenuSeparatorGeometry()
+    private static void CheckMenuSeparatorGeometry()
     {
         var app = System.Windows.Application.Current;
         if (app?.TryFindResource(System.Windows.Controls.MenuItem.SeparatorStyleKey) is not System.Windows.Style style)
@@ -192,6 +194,7 @@ public static partial class SelfTest
     /// </summary>
     private static void TestFollowSurvivesZoom()
     {
+        const double PaneHeight = 700;   // taller than one system at 2x (about 440): the whole system must then be in view
         var editor = new Views.TabEditorControl();
         var project = new SongProject { Tempo = 120 };
         var track = new TrackModel { Name = "Guitar", Measures = TemplateFactory.Measures(48) };
@@ -200,14 +203,14 @@ public static partial class SelfTest
         editor.SelectedTrackIndex = 0;
         var scroll = new System.Windows.Controls.ScrollViewer
         {
-            Width = 900, Height = 320, Content = editor,
+            Width = 900, Height = PaneHeight, Content = editor,
             VerticalScrollBarVisibility = System.Windows.Controls.ScrollBarVisibility.Auto,
             HorizontalScrollBarVisibility = System.Windows.Controls.ScrollBarVisibility.Auto
         };
         void Layout()
         {
-            scroll.Measure(new System.Windows.Size(900, 320));
-            scroll.Arrange(new System.Windows.Rect(0, 0, 900, 320));
+            scroll.Measure(new System.Windows.Size(900, scroll.Height));
+            scroll.Arrange(new System.Windows.Rect(0, 0, 900, scroll.Height));
             scroll.UpdateLayout();
         }
         Layout();
@@ -237,6 +240,21 @@ public static partial class SelfTest
                 top >= offset - 0.5 && top < offset + scroll.ViewportHeight,
                 $"systemTop={top:0} offset={offset:0} viewport={scroll.ViewportHeight:0}");
         }
+        // A pane shorter than one system follows its lower part (the TAB) instead of the system top.
+        editor.Zoom = 2.0;
+        editor.InvalidateScoreLayout();
+        editor.InvalidateMeasure();
+        scroll.Height = 250;
+        Layout();
+        follow.ReanchorAfterZoom();
+        Layout();
+        var shortTop = editor.SystemTopForMeasure(bar);
+        var shortWanted = Math.Min(follow.FocusTop(shortTop), scroll.ExtentHeight - scroll.ViewportHeight);
+        Check("a pane shorter than the system follows the system's lower part",
+            editor.SystemHeightNow > scroll.ViewportHeight && Math.Abs(scroll.VerticalOffset - shortWanted) < 1,
+            $"offset={scroll.VerticalOffset:0} wanted={shortWanted:0} system={editor.SystemHeightNow:0} viewport={scroll.ViewportHeight:0}");
+        scroll.Height = PaneHeight;
+        Layout();
         // A layout/panel pass that moves the offset after every timing window has expired (the fragile case:
         // follow used to infer "user" from ScrollChanged + timing) must not stop follow without a gesture.
         System.Threading.Thread.Sleep(700);
@@ -522,7 +540,7 @@ public static partial class SelfTest
         ed6.Effects.EmptyBar();
         Check("empty bar: an already empty bar captures no undo step", steps6() == 1);
 
-        // Note toggles and rhythm changes (A5-15 batch 2): the menu handler calls the editor method, the shortcut runs the
+        // Note toggles and rhythm changes: the menu handler calls the editor method, the shortcut runs the
         // catalogued id; both must leave the same model and take exactly one undo step.
         static string Sig(TabCell c) => string.Join("|", c.DurationDenominator, c.Dots, c.IsTriplet, c.TupletNumerator, c.IsRest, c.IsTied,
             c.Staccato, c.Tenuto, c.Accent, string.Join(",", c.Notes.Select(n => $"{n.StringIndex}:{n.Fret}:{string.Join("+", n.Techniques.OrderBy(t => t))}")));
@@ -692,7 +710,7 @@ public static partial class SelfTest
         Check("layout audit: dynamics with lyrics, beat text and palm mutes collide with nothing", found.Count == 0, string.Join(" | ", found.Take(5)));
     }
 
-    /// <summary>Audit 3 section 6a engraving helpers (bends, whammy, tremolo, harmonics, trill, swing) and a render smoke test.</summary>
+    /// <summary>Engraving helpers (bends, whammy, tremolo, harmonics, trill, swing) and a render smoke test.</summary>
     private static void TestTechniqueEngraving()
     {
         Check("bend amounts use the conventional text (1/4, 1/2, 3/4, full, 1 1/2, 2)",

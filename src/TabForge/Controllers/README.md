@@ -13,10 +13,13 @@ One responsibility moved out of a window, each behind a host interface. A contro
 - `PlaybackViewController`, `TransportControlsController`: playback display and transport buttons.
 - `SelectionLoopController`: the selected (loop) area and the shared-selection to timeline sync.
 - `TrackController`, `ArrangementController`, `ClipEditController`, `SectionEditFlow`: track, timeline and clip edits. `BarRangeFlow`: the timeline bar-range commands and one owner-scoped reusable Delete prompt. `EmptyBarFlow`: deleting bars that hold no notes (with the question and the clip warning).
+- `ArrangementGestureState`: the arrangement gestures' pending undo steps (track edit, mix edit, track and section drags), the playing section and the fitted track count, against `IArrangementGestureHost`.
 - `TrackClipboardFlow`: whole-track copy, cut, paste, duplicate and delete (track row menu and track-row hotkeys).
-- `AutosaveController`, `UpdateCheckController`, `RecordingController`: autosave, update check, recording. `ImportQueueController`: the background score-import queue and its status wiring.
+- `BarCommandFlow`: the Bar menu commands (insert, append, delete, time and key signature, clef, triplet feel, directions, double bar, repeat-bar marks, section name) against `IBarCommandHost`. `GlobalTuningController`: retuning every pitched track at once and the tuning button label. `TimelineMenuController`: the timeline right-click menus (selection, bar, section, clip) and their commands, against `ITimelineMenuHost`.
+- `AutosaveController`, `UpdateCheckController`, `RecordingController`: autosave, update check, recording. `LiveMidiThru`: one live MIDI message to a track's sound (transpose, audio vs MIDI output). `ImportQueueController`: the background score-import queue and its status wiring.
 - `WindowKeyRouter`: keyboard routing order. `HotkeyMaps`: the window's gesture maps (everywhere, clip, track list).
 - `WindowCloseFlow`: saves and closes in progress, the window-close questions, the input gate while a save runs, degraded mode.
+- `DocumentTabsController`: the tab commands (switch, duplicate, reorder, close one / others / to the right, Save-then-close). `ScoreExportController`: File > Export MIDI / ASCII / MusicXML / PDF and Save as template.
 - `AppliedSettings`: what the window last applied from the settings, so a sync only redoes what changed.
 - Window panes that build WPF controls live in `src/TabForge/Views/` with the same host pattern (`IPaneHost`): `DockLayoutController`,
   `ScoreZoomController`, `ToolPaletteController`, `InstrumentPanelController`, `MixerWindowsController`, `TrackGridDragController`.

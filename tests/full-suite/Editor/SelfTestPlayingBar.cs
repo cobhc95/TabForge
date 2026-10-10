@@ -50,7 +50,7 @@ public static partial class SelfTest
     }
 
     /// <summary>The frozen per-system drawings never keep or miss a band: bar changes across systems, settings changes and stop.</summary>
-    private static void TestPlayingBarFrozenSystems()
+    private static void CheckPlayingBarFrozenSystems()
     {
         var editor = PlayingBarEditor(true, 1.0, 1800);
         var layout = editor.Layout.GetLayout(editor.Project!.Tracks[0]);
@@ -103,7 +103,7 @@ public static partial class SelfTest
 
     private static void TestPlayingBar()
     {
-        TestPlayingBarFrozenSystems();
+        CheckPlayingBarFrozenSystems();
         var defaults = new FollowSettings();
         Check("playing bar: off by default, 20% opacity, 'when stopped' off", !defaults.PlayingBarEnabled && !defaults.PlayingBarWhenStopped && Math.Abs(defaults.PlayingBarOpacity - 0.20) < 1e-9);
         var legacy = System.Text.Json.JsonSerializer.Deserialize<FollowSettings>("{\"Mode\":\"Jump\"}")!;

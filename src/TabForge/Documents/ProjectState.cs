@@ -9,8 +9,12 @@ using TabForge.Services;
 
 namespace TabForge.Documents;
 
+// Owns: one immutable undo state of a song: the header chunk and one chunk per bar, shared with the previous state when unchanged, the
+//   encoder that writes and restores them (ProjectStateEncoder, BarCodec), and the content fingerprint and equality.
+// Does not own: the undo stack that keeps the states, and the song model (Models).
+// Tests: TestUndoFingerprints, TestUndoBarCodecRoundTrip.
 /// <summary>
-/// One immutable undo state of a song (Audit 3 M-06). The song header and each track header are compact JSON; every bar is a
+/// One immutable undo state of a song. The song header and each track header are compact JSON; every bar is a
 /// separate binary chunk. Chunks whose content did not change are shared with the previous state, so an edit stores (and later
 /// restores) only the bars it touched instead of the whole song. Equal content always gives equal <see cref="ContentEquals"/> and
 /// <see cref="Fingerprint"/>, exactly like the full JSON snapshots this replaces.

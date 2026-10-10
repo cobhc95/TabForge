@@ -29,8 +29,8 @@ internal interface IBandViewHost : IPaneHost
 //   row heights live in BandLayoutState), the shared playhead position handed to every lane, the instruments' notes (now and next while
 //   playing, the cursor's notes when stopped), the lanes' sounding-note glow and the Band preferences (instrument size, lane content, follow
 //   mode, rows per screen, order sync) applied to the rows.
-// Does not own: playback timing (read from the document), the engraving (BandLane), the dock panel, the layout preset or the song's track order.
-// Tests: TestBandViewRows, TestBandLaneCache, TestBandLaneClick, TestBandLayoutPreset, TestBandPillsAndRows, TestBandReorder, TestBandNoteGlow, TestBandSettings.
+// Does not own: the lane alignment (BandLaneAligner), playback timing (read from the document), the engraving (BandLane), the dock panel, the layout preset or the song's track order.
+// Tests: TestBandViewRows, TestBandFrameClock, TestBandLaneCache, TestBandLaneClick, TestBandLayoutPreset, TestBandPillsAndRows, TestBandReorder, TestBandNoteGlow, TestBandSettings.
 internal sealed class BandViewController : IDisposable
 {
     private const double InstrumentIntervalMs = 33;
@@ -61,9 +61,11 @@ internal sealed class BandViewController : IDisposable
     private BandFollow _follow = BandFollow.Continuous;
     private readonly BandScroll _scroll = new();
     private string _layoutName = "";
-    private bool _aligning;
-    private double[]? _floor;
+    private readonly BandLaneAligner _aligner = new();
     private int _fittedRows;
+
+    /// <summary>Export only: while playing, every tick checks the rows and refreshes the instruments, instead of waiting for the wall clock, so a frame's pixels do not depend on the machine's speed. The live view leaves it off.</summary>
+    internal bool UseFrameClock { get; set; }
 
     public BandViewController(IBandViewHost host)
     {
@@ -284,7 +286,7 @@ internal sealed class BandViewController : IDisposable
             _glowShown = playing;
         }
         var now = _clock.Elapsed.TotalMilliseconds;
-        var due = _instrumentsDirty || bar != _lastBar || cell != _lastCell || (playing && now - _lastInstrumentMs >= InstrumentIntervalMs);
+        var due = _instrumentsDirty || bar != _lastBar || cell != _lastCell || (playing && (UseFrameClock || now - _lastInstrumentMs >= InstrumentIntervalMs));
         _lastBar = bar; _lastFraction = fraction; _lastCell = cell;
         if (!due) return;
         _instrumentsDirty = false;
@@ -299,7 +301,7 @@ internal sealed class BandViewController : IDisposable
         var rows = View.Rows;
         // While playing, a frame with no edit and no change of rows skips the checks below; they run at least every QuietCheckMs.
         var nowMs = _clock.Elapsed.TotalMilliseconds;
-        if (_playing && ReferenceEquals(project, _project) && project.ContentRevision == _revision && _state.Version == _checkedVersion
+        if (!UseFrameClock && _playing && ReferenceEquals(project, _project) && project.ContentRevision == _revision && _state.Version == _checkedVersion
             && _changedAt < 0 && nowMs - _checkedAt < QuietCheckMs) return;
         _checkedAt = nowMs;
         _state.Sync(project);
@@ -321,7 +323,7 @@ internal sealed class BandViewController : IDisposable
         // Edits arrive in bursts: the lanes engrave again once the song has been quiet for a moment.
         var now = _clock.Elapsed.TotalMilliseconds;
         if (changed) _changedAt = now;
-        var engrave = _changedAt >= 0 && now - _changedAt >= EngraveQuietMs;
+        var engrave = _changedAt >= 0 && (UseFrameClock || now - _changedAt >= EngraveQuietMs);
         if (engrave) _changedAt = -1;
         for (var i = 0; i < rows.Count; i++)
         {
@@ -416,46 +418,8 @@ internal sealed class BandViewController : IDisposable
     /// <summary>Gives every lane the widest of each bar and the smallest wanted zoom, so one bar has the same place and size in all of them.</summary>
     internal void AlignLanes()
     {
-        if (_aligning || _disposed) return;
-        _aligning = true;
-        try
-        {
-            var rows = View.Rows;
-            // A lane that refits at the new cap or width may want another zoom (its system height is not exactly linear): settle in a few passes.
-            for (var pass = 0; pass < 4; pass++)
-            {
-                double[]? widest = null;
-                var cap = 4.0;
-                var narrow = double.MaxValue;
-                for (var i = 0; i < rows.Count; i++)
-                {
-                    var lane = rows[i].Lane;
-                    var natural = lane.NaturalBarWidths();
-                    if (natural is null) continue;
-                    cap = Math.Min(cap, lane.WantedZoom);
-                    if (lane.ActualWidth > 1) narrow = Math.Min(narrow, lane.ActualWidth);
-                    if (widest is null) widest = (double[])natural.Clone();
-                    else
-                    {
-                        if (natural.Length > widest.Length) Array.Resize(ref widest, natural.Length);
-                        for (var b = 0; b < natural.Length; b++) widest[b] = Math.Max(widest[b], natural[b]);
-                    }
-                }
-                if (widest is not null && (_floor is null || !_floor.AsSpan().SequenceEqual(widest))) _floor = widest;
-                else if (widest is null) _floor = null;
-                var changed = false;
-                for (var i = 0; i < rows.Count; i++)
-                {
-                    var lane = rows[i].Lane;
-                    var before = (lane.WantedZoom, lane.Editor.Zoom);
-                    lane.ShareBarWidths(_floor); lane.ZoomCap = cap; lane.SharedWidth = narrow < double.MaxValue ? narrow : 0;
-                    if (before != (lane.WantedZoom, lane.Editor.Zoom)) changed = true;
-                }
-                if (!changed) break;
-            }
-            _lastBar = -2;
-        }
-        finally { _aligning = false; }
+        if (_disposed) return;
+        if (_aligner.Align(View.Rows)) _lastBar = -2;
     }
 
     /// <summary>A grip drag: the shared width, or this row's own in "this row only" mode (widths change on drag only, never per frame).</summary>

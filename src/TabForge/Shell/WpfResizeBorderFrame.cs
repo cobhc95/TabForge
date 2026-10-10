@@ -175,7 +175,7 @@ internal sealed class WpfResizeBorderFrame : IDisposable
             handled = true;
             return new IntPtr(hit);
         }
-        catch
+        catch // Not logged: pointer or hit-test path: no logging per pointer move
         {
             // Leave WPF's built-in WindowChrome hit testing in charge if the frame is transitioning.
             return IntPtr.Zero;

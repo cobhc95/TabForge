@@ -3,6 +3,10 @@ using TabForge.Services;
 
 namespace TabForge.Views;
 
+// Owns: turning a WPF key event, or a key with its modifiers, into the hotkey gesture text the bindings and menus use.
+// Does not own: the bindings table and presets (Views/Preferences/HotkeyPage.cs) or the key routing (Controllers/WindowKeyRouter.cs).
+// Tests: TestMenuGestureTextFollowsBindings.
+
 internal static class WpfHotkeyGestureAdapter
 {
     public static string FromEvent(KeyEventArgs args)

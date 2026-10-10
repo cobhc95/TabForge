@@ -7,7 +7,7 @@ using TabForge.Services;
 namespace TabForge.Diagnostics;
 
 /// <summary>
-/// Compares an exported MIDI file with the playback timeline it was written from (Audit 7, A7-A02): every performed bar's start,
+/// Compares an exported MIDI file with the playback timeline it was written from: every performed bar's start,
 /// every note-on, and the end of the song. The file's own tempo events are read back, so the numbers are what another sequencer would play.
 /// </summary>
 internal static class MidiTimingAudit

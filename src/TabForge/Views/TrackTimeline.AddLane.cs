@@ -5,8 +5,11 @@ using TabForge.Visualization;
 
 namespace TabForge.Views;
 
-// TrackTimeline: the timeline half of the Add-track lane (the strip under the last row; the track list draws the other half).
-// A click on it asks the host to add a track; media dropped on it makes an audio track (see DropPreviewAt).
+// Owns: the timeline's half of the Add-track lane: its shown state and height, hit testing (IsInAddLane), the hot and drag state,
+//   and drawing the lane strip.
+// Does not own: the track list's half of the lane (ArrangementPanel.AddLane.cs) and the add action (AddLaneController.cs).
+// Tests: TestAddTrackLane.
+
 internal sealed partial class TrackTimeline
 {
     private bool _addLaneShown;

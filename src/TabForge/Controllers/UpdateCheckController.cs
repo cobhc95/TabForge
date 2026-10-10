@@ -89,7 +89,7 @@ internal sealed class UpdateCheckController : IDisposable
             using var cancel = new CancellationTokenSource(TimeSpan.FromSeconds(15));
             release = await _source.CheckAsync(AppInfo.Version, cancel.Token);
         }
-        catch (Exception ex) when (ex is System.Net.Http.HttpRequestException or TaskCanceledException or OperationCanceledException
+        catch (Exception ex) when (ex is System.Net.Http.HttpRequestException or TaskCanceledException or OperationCanceledException // Not logged: offline or blocked: silent for the automatic check, by design
                                    or System.IO.IOException or System.Security.Authentication.AuthenticationException)
         {
             reached = false; // offline or blocked: silent for the automatic check
@@ -125,6 +125,7 @@ internal sealed class UpdateCheckController : IDisposable
         try { Process.Start(new ProcessStartInfo(page.AbsoluteUri) { UseShellExecute = true }); }
         catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
         {
+            Services.Trace.Error(Services.Trace.Ui, "open browser: " + ex.Message);
             _host.SetStatus($"Could not open the browser: {page.AbsoluteUri}");
         }
     }

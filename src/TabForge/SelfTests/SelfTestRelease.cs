@@ -13,10 +13,10 @@ public static partial class SelfTest
     /// </summary>
     private static readonly string[] ReleaseTestNames =
     {
-        "TestMixerGroupRules", "TestMixerAppGroupRules", "TestSaveTransactions", "TestAsyncSaveSequencing", "TestPairSaveRecovery", "TestPairSaveEveryStage", "TestAutosaveRecovery", "TestEmergencyRecoveryNames",
-        "TestDirectTforgeOpenRecovers", "TestRecoveryCopyOverTforgeLimit", "TestDataIntegrityLeftovers", "TestTforgeCompression", "TestPersistenceSchema",
+        "TestMixerGroupRules", "TestMixerAppGroupRules", "TestSaveTransactions", "TestAsyncSaveSequencing", "TestPairSaveRecovery", "TestPairSaveEveryStage", "TestAutosaveRecovery", "TestAutosaveCopies", "TestAutosaveController", "TestWindowCloseFlow", "TestDocumentTabsController", "TestEmergencyRecoveryNames",
+        "TestVideoEncoderGolden", "TestDirectTforgeOpenRecovers", "TestRecoveryCopyOverTforgeLimit", "TestDataIntegrityLeftovers", "TestTforgeCompression", "TestPersistenceSchema",
         "TestEmbeddedProjectLimit", "TestAudioDataSizeLimit", "TestMediaPathPolicy",
-        "TestGuitarProFiles", "TestGpRoundTripCounts", "TestGuitarProImportContainment", "TestGuitarProImportWorker", "TestSyntheticGuitarProFixture", "TestSyntheticFixtures", "TestGp5OwnFilesImport", "TestGp5TieGraceImport",
+        "TestGuitarProFiles", "TestTechniqueCoverage", "TestGpRoundTripCounts", "TestGuitarProImportContainment", "TestGuitarProImportWorker", "TestSyntheticGuitarProFixture", "TestSyntheticFixtures", "TestGp5OwnFilesImport", "TestGp5TieGraceImport",
         "TestImportPlausibility", "TestMalformedInputFuzz", "TestScoreClipRejectsUntrustedInput",
         "TestPlaybackOrderSpec", "TestNoHangingNotes", "TestSeekWhilePlayingSoundsFirstNote", "TestMixPointsSurviveSeek", "TestEditCommands", "TestEditorCopyPaste", "TestUndoController", "TestUndoDeltaStates", "TestDocuments",
         "TestDocumentOperations", "TestDocumentContext", "TestStartupFileOpen", "TestSingleInstanceProcessHandover", "TestSelectionClipboardMatrix", "TestSongExtent", "TestSongCoversClipsOnLoadAndDelete","TestEngineSyncDeferredRequests",
@@ -24,7 +24,7 @@ public static partial class SelfTest
         "TestMediaDropPlan", "TestClipEdgesAndLoops", "TestTrimEmptyBars", "TestMediaDropPreviewGeometry", "TestClipMoveGhost", "TestMidiClipMoves", "TestTimelineSongTimeRepeatGrowth",
         "TestSectionColourEditing", "TestEffectEditorFiles", "TestEffectEditors", "TestOrnamentEditorFiles", "TestOrnamentEditors",
         "TestSecurityInputBoundaries", "TestNightPluginApproval", "TestPairMarkerIsUntrusted", "TestQuarantineAllowAgain", "TestPluginStateCollection", "TestPluginRightsNotice",
-        "TestBandLayoutSaved", "TestBandLayoutSafety", "TestMixerCollapseIsViewState",
+        "TestBandLayoutSaved", "TestBandLayoutSafety", "TestMixerCollapseIsViewState", "TestEngineMessagesGolden", "TestEngineMessagesRoundTrip", "TestMasterTapRestartWaitsForOldRun", "TestClipPlayerCatchesUpAfterSeek", "TestLiveAudioFidelity", "TestLiveRecordingLoudness", "TestFxChainWindow",
     };
 
     private static readonly HashSet<string> _releaseRan = new(StringComparer.Ordinal);

@@ -21,6 +21,11 @@ using static TabForge.Views.TrackColumnLayout;
 
 namespace TabForge.Views;
 
+// Owns: the arrangement overview's layout: the ruler and section strip, the per-track controls on the left, the timeline beside them,
+//   the playhead, the stretched track row height and the Add-track row.
+// Does not own: the timeline's drawing and hit testing (TrackTimeline), the column layout (TrackColumnLayout), the tuning, add-lane and
+//   group-drag controllers, and the song model.
+// Tests: TestArrangementFollowGeometry.
 /// <summary>
 /// Bottom arrangement overview: one precise grid cell per measure per track,
 /// a section strip above, compact per-track controls on the left and a playhead
@@ -108,9 +113,11 @@ public sealed partial class ArrangementPanel : Grid
         IsHitTestVisible = false,
         Visibility = Visibility.Collapsed
     };
+    private const double PlayheadLineWidth = 3;
     private readonly System.Windows.Shapes.Rectangle _playheadLine = new()
     {
-        Width = 3,
+        Width = PlayheadLineWidth,
+        SnapsToDevicePixels = true,
         Fill = Brushes.White,
         Effect = new System.Windows.Media.Effects.DropShadowEffect
         {

@@ -45,7 +45,7 @@ public sealed class SettingDescriptor
 /// <summary>Declarative catalogue of settings exposed in the Settings window.</summary>
 public static partial class SettingsCatalog
 {
-    // Pages, in rail order (Preferences reorganisation, owner decisions 2026-09-30). The display name is the page key.
+    // Pages, in rail order. The display name is the page key.
     public const string Home = "Common settings";
     public const string General = "General";
     public const string Appearance = "Appearance";
@@ -130,7 +130,7 @@ public static partial class SettingsCatalog
         {
             names.AddRange(TabForge.Audio.AudioDevices.Names(settings.Driver));
         }
-        catch (Exception ex) when (ex is System.Runtime.InteropServices.COMException or InvalidOperationException or TypeInitializationException)
+        catch (Exception ex) when (ex is System.Runtime.InteropServices.COMException or InvalidOperationException or TypeInitializationException) // Not logged: device list probe for a settings row: an empty list is shown
         {
             System.Diagnostics.Debug.WriteLine($"audio device list failed: {ex.Message}");
         }
@@ -221,7 +221,6 @@ public static partial class SettingsCatalog
         (Timeline, "Track list", "timeline.volumestyle timeline.panstyle timeline.autofit timeline.trackgroups* timeline.addtracklane*"),
         (Timeline, "Clip lanes", "timeline.removeemptylanes*"),
         (Timeline, "Timeline display", "appearance.arrangement timeline.numbers timeline.individualnotes timeline.continuousline* timeline.hideemptygrid* timeline.tracklines* timeline.barglow* timeline.playheadstyle* appearance.timelinescrollbar*"),
-        (Timeline, "Band view", "band.instrumentsize band.lanecontent band.followscore* band.lanelayout* band.lanezoom* band.playheadline* band.smoothfollow* band.rowsperscreen* band.syncorder*"),
         (Timeline, "Sections", "timeline.similarcolours timeline.brackets timeline.names follow.sectionglow* appearance.sectionbracket*"),
 
         (Editing, "Note entry", "editing.duration editing.advance editing.reverseplusminus* editing.preventoverflow* editing.fillrests* editing.deleteleaves*"),
@@ -263,7 +262,7 @@ public static partial class SettingsCatalog
     {
         var places = new Dictionary<string, Place>(StringComparer.OrdinalIgnoreCase);
         var order = 0;
-        foreach (var (page, group, keys) in Layout)
+        foreach (var (page, group, keys) in Features.FeatureRegistry.MergeLayout(Layout))
             foreach (var entry in keys.Split(' ', StringSplitOptions.RemoveEmptyEntries))
             {
                 var more = entry.EndsWith('*');
@@ -315,6 +314,7 @@ public static partial class SettingsCatalog
         list.AddRange(AudioRows(s));
         list.AddRange(EditingRows(s));
         list.AddRange(TimelineRows(s));
+        list.AddRange(Features.FeatureRegistry.SettingRows(s));
         list.AddRange(FretboardRows(s));
         list.AddRange(TabsRows(s));
 

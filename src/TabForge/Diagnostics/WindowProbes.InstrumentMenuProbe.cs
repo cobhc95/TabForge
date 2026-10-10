@@ -3,6 +3,10 @@ using TabForge.Services;
 
 namespace TabForge.Diagnostics;
 
+// Owns: the `--probe-instrument-menu` check: opens the instrument panel's right-click menu in the fretboard, keyboard and drum views and writes each menu's items and checked state.
+// Does not own: the instrument panel (Views/InstrumentPanel*.cs) or the menu it builds.
+// Tests: no named test.
+
 // Window probes, instrument panel menu probe.
 internal sealed partial class WindowProbes : MainWindow.ProbeAccess
 {
@@ -38,7 +42,7 @@ internal sealed partial class WindowProbes : MainWindow.ProbeAccess
                     else report.AppendLine("  (no menu)");
                 }
             }
-            catch (Exception ex) { report.AppendLine($"probe failed: {ex}"); }
+            catch (Exception ex) { report.AppendLine($"probe failed: {ex}"); } // Not logged: diagnostic probe: the failure goes to its report, not errors.log
             DiagnosticFileService.WriteText(path, report.ToString());
             _confirmOnClose = false;
             Application.Current.Shutdown(0);

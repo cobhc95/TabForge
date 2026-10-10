@@ -13,11 +13,16 @@ using TabForge.Models;
 using TabForge.Playback;
 using TabForge.Plugins;
 using TabForge.Services;
+using TabForge.Views.Rendering;
 using TabForge.Visualization;
 
 namespace TabForge.Views;
 
-// ArrangementPanel: timeline zoom, binding and refresh, playhead and follow, bar/track/range selection, area move.
+// Owns: the timeline's zoom and width (measure width, fit-all, zoom steps and anchoring), the scroll bar sync, the bind and
+//   refresh calls into the timeline, the playhead line and its follow, and the hover cell and bar marker.
+// Does not own: the timeline's drawing and hit testing (TrackTimeline.*.cs) and the playhead clock (the playback engine).
+// Tests: TestArrangementFollowGeometry.
+
 public sealed partial class ArrangementPanel
 {
     private void SetMeasureWidth(double width)
@@ -331,6 +336,10 @@ public sealed partial class ArrangementPanel
             return;
         }
         var x = _timeline.XOfBar(_playheadBar) + _timeline.BarWidthOf(_playheadBar) * Math.Clamp(_playheadFraction, 0, 1);
+        // Whole device pixels: a line between two pixels is drawn as two soft columns while it moves.
+        var pixelsPerDip = PixelSnap.Dpi(this);
+        x = PixelSnap.Snap(x, pixelsPerDip);
+        _playheadLine.Width = PixelSnap.Snap(PlayheadLineWidth, pixelsPerDip);
         _playheadLine.Visibility = Visibility.Visible;
         Canvas.SetLeft(_playheadLine, x);
         Canvas.SetTop(_playheadLine, 0);

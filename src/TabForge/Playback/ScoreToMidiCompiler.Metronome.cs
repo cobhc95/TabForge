@@ -5,6 +5,9 @@ using TabForge.Services;
 namespace TabForge.Playback;
 
 // ScoreToMidiCompiler: channel setup, count-in and the metronome click.
+// Owns: the channel setup, the count-in and the metronome click of the MIDI compile.
+// Does not own: the playback that plays them (PlaybackEngine) and the metronome settings.
+// Tests: listed in docs/feature-map/playback.md.
 internal sealed partial class ScoreToMidiCompiler
 {
     // ---------- setup / metronome ----------

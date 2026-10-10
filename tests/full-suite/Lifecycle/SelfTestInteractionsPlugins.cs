@@ -25,7 +25,7 @@ public static partial class SelfTest
     /// <summary>One chain edit as the FX chain window makes it: the host captures the undo step, the change is made to the model, the host is told.</summary>
     private static void IxChainEdit(MainWindow window, TrackModel track, Action change, bool switched = false)
     {
-        var host = (IFxChainHost)window;
+        var host = window.MixerHost;
         host.BeginChainEdit();
         change();
         if (switched) host.PluginSwitched(track); else host.ChainChanged(track);

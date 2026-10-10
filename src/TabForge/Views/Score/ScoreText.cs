@@ -34,7 +34,7 @@ internal static class ScoreText
     {
         var family = string.IsNullOrWhiteSpace(fontFamily) ? "Segoe UI" : fontFamily.Trim();
         try { _ = new FontFamily(family); }
-        catch (ArgumentException) { family = "Segoe UI"; } // not a usable family name
+        catch (ArgumentException) { family = "Segoe UI"; } // not a usable family name // Not logged: render path: no logging per frame
         var clampedSize = Math.Clamp(size, 8, 24);
         if (_fontFamily == family && Math.Abs(_textSize - clampedSize) < 0.001 &&
             _textBold == bold && _textItalic == italic) return;

@@ -58,7 +58,7 @@ public static class PluginLibrary
             var db = preset.OutputDb is { } v && double.IsFinite(v) && v is >= -60 and <= 12 ? v : (double?)null;
             return (state, db);
         }
-        catch (Exception ex) when (ex is JsonException or IOException or InvalidDataException) { return null; }
+        catch (Exception ex) when (ex is JsonException or IOException or InvalidDataException) { Services.Trace.Error(Services.Trace.Engine, "plug-in preset: read: " + ex.Message); return null; }
     }
 
     public static void DeletePreset(PluginSlot slot, string name)
@@ -87,6 +87,6 @@ public static class PluginLibrary
             ProjectValidator.Validate(probe);
             return chain;
         }
-        catch (Exception ex) when (ex is JsonException or IOException or InvalidDataException) { return null; }
+        catch (Exception ex) when (ex is JsonException or IOException or InvalidDataException) { Services.Trace.Error(Services.Trace.Engine, "plug-in chain: read: " + ex.Message); return null; }
     }
 }

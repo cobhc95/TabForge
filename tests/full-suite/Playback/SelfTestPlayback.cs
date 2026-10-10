@@ -41,38 +41,38 @@ public static partial class SelfTest
 
     private static void TestPlaybackDepth()
     {
-        TestTieMerging();
-        TestTupletOnsets();
-        TestDottedDuration();
-        TestTempoChange();
-        TestChordSimultaneity();
-        TestChannelAllocation();
-        TestLoopBounds();
-        TestSeekOffsets();
-        TestDeterminism();
-        TestMetronomeAndVelocity();
-        TestLetRing();
-        TestRepeatEndings();
-        TestPlayheadMapper();
-        TestMidiExportTicks();
-        TestChordVisualisation();
-        TestEditingSelectionVisualisation();
-        TestNoteTimelineQueries();
-        TestEditorScrollGeometry();
-        TestHotkeys();
-        TestEngineParity();
-        TestLiveArrangementReorder();
-        TestLiveMetronomeSettings();
-        TestLoopPositionUpdates();
-        TestMixFadeAndAudiblePlayhead();
+        CheckTieMerging();
+        CheckTupletOnsets();
+        CheckDottedDuration();
+        CheckTempoChange();
+        CheckChordSimultaneity();
+        CheckChannelAllocation();
+        CheckLoopBounds();
+        CheckSeekOffsets();
+        CheckDeterminism();
+        CheckMetronomeAndVelocity();
+        CheckLetRing();
+        CheckRepeatEndings();
+        CheckPlayheadMapper();
+        CheckMidiExportTicks();
+        CheckChordVisualisation();
+        CheckEditingSelectionVisualisation();
+        CheckNoteTimelineQueries();
+        CheckEditorScrollGeometry();
+        CheckHotkeys();
+        CheckEngineParity();
+        CheckLiveArrangementReorder();
+        CheckLiveMetronomeSettings();
+        CheckLoopPositionUpdates();
+        CheckMixFadeAndAudiblePlayhead();
         TestGmLevelCalibration();
-        TestDocumentPlaybackSwitchPolicy();
-        TestTechniqueTranslation();
-        TestReferenceABar56PlaybackState();
-        TestPlayheadGeometry();
+        CheckDocumentPlaybackSwitchPolicy();
+        CheckTechniqueTranslation();
+        CheckReferenceABar56PlaybackState();
+        CheckPlayheadGeometry();
     }
 
-    private static void TestLiveMetronomeSettings()
+    private static void CheckLiveMetronomeSettings()
     {
         var project = SingleTrack(5, 400);
         var output = new RecordingMidiOutput();
@@ -86,13 +86,16 @@ public static partial class SelfTest
         Check("live metronome timeline contains marked downbeat candidates",
             candidateAccents.Length >= 2, string.Join(",", candidateAccents.Select(time => time.ToString("0.0"))));
         engine.SetMetronomeSettings(true, 100, 100, 76, 33, 34, 1);
-        Thread.Sleep(185);
-        var classicClick = output.Messages.Any(message => (message.Status & 0xF0) == 0x90 &&
+        Func<bool> sawClassicClick = () => output.Messages.Any(message => (message.Status & 0xF0) == 0x90 &&
             message.Data1 == 34 && message.Data2 == 123);
+        Poll.Until(sawClassicClick, 185);
+        var classicClick = sawClassicClick();
 
         engine.SetMetronomeSettings(true, 50, 100, 50, 76, 77, 4);
         engine.SetLoop(true);
-        Thread.Sleep(1450);
+        Poll.Until(() => output.Messages.Any(m => (m.Status & 0xF0) == 0x90 && m.Data1 == 77 && m.Data2 is > 0 and < 84) &&
+            output.Messages.Any(m => (m.Status & 0xF0) == 0x90 && m.Data1 == 76 && m.Data2 > 0) &&
+            engine.CurrentBar == 1, 1450);   // the loop wrap is part of the wait
         var messages = output.Messages.ToArray();
         var woodblockEvents = messages.Where(message => (message.Status & 0xF0) == 0x90 && message.Data2 > 0 &&
                 message.Data1 is 76 or 77)
@@ -116,7 +119,7 @@ public static partial class SelfTest
     /// Machine load only ever delays the loop, so one clean run proves the code can wrap cleanly: the checks judge the first of up to
     /// three attempts that wraps and resumes in time. A real regression (a pause at every wrap) fails every attempt.
     /// </summary>
-    private static void TestLoopPositionUpdates()
+    private static void CheckLoopPositionUpdates()
     {
         double[] reported = Array.Empty<double>();
         var wrap = -1;
@@ -176,7 +179,7 @@ public static partial class SelfTest
             $"attacks={bestAttacks}; best largest inter-attack gap={bestGap:0.0} ms over {attemptsRun} attempt(s) (limit 220 ms; best of up to 6, the machine load varies)");
     }
 
-    private static void TestLiveArrangementReorder()
+    private static void CheckLiveArrangementReorder()
     {
         var project = SingleTrack(bars: 3, bpm: 400);
         Beat(project, 0, 0, 0, 1, 60);
@@ -292,7 +295,7 @@ public static partial class SelfTest
         return session;
     }
 
-    private static void TestDocumentPlaybackSwitchPolicy()
+    private static void CheckDocumentPlaybackSwitchPolicy()
     {
         foreach (var (preference, action) in new[]
                  {
@@ -324,7 +327,7 @@ public static partial class SelfTest
     }
 
     /// <summary>The playhead overlay geometry must be inside the playing measure and never null while playing.</summary>
-    private static void TestPlayheadGeometry()
+    private static void CheckPlayheadGeometry()
     {
         var editor = new TabEditorControl();
         var project = new SongProject { Tempo = 120 };
@@ -361,7 +364,7 @@ public static partial class SelfTest
     }
 
     /// <summary>Techniques that used to be display-only must actually reach MIDI.</summary>
-    private static void TestTechniqueTranslation()
+    private static void CheckTechniqueTranslation()
     {
         // --- swing (triplet feel) ---
         var swing = SingleTrack();
@@ -455,10 +458,10 @@ public static partial class SelfTest
             combinedTimeline.Events.Where(e => !e.IsSetup && e.TrackIndex == 0 && (e.Status & 0xF0) == 0xB0)
                 .All(e => e.Data1 != 1));
 
-        TestVibratoPitchWheel();
+        CheckVibratoPitchWheel();
     }
 
-    private static void TestVibratoPitchWheel()
+    private static void CheckVibratoPitchWheel()
     {
         static (ScoreTimeline Timeline, NoteEvent Note, List<ScoreEvent> Wheel) VibratoSong(string technique)
         {
@@ -497,9 +500,9 @@ public static partial class SelfTest
         }
     }
 
-    private static void TestReferenceABar56PlaybackState()
+    private static void CheckReferenceABar56PlaybackState()
     {
-        TestVibratoBarStartSynthetic();
+        CheckVibratoBarStartSynthetic();
 
         var path = LocalReferenceSongs.Resolve("reference-a");
         if (path is null)
@@ -734,7 +737,7 @@ public static partial class SelfTest
     }
 
     /// <summary>Synthetic stand-in for the reference song A bar 56 case: a vibrato note at the start of a later bar sounds the same pitch and expression whether playback starts at that bar or runs through from bar 1.</summary>
-    private static void TestVibratoBarStartSynthetic()
+    private static void CheckVibratoBarStartSynthetic()
     {
         var project = SingleTrack(bars: 3);
         var bar = 1;
@@ -761,7 +764,7 @@ public static partial class SelfTest
     }
 
     /// <summary>Playback behaviours of the compiled sequence: palm-mute length, channel setup and neutral resets.</summary>
-    private static void TestEngineParity()
+    private static void CheckEngineParity()
     {
         // Palm mute: a palm-muted note is capped at a quarter note.
         var p = SingleTrack();
@@ -792,11 +795,11 @@ public static partial class SelfTest
         Check("setup: program, mix, modulation, bend range and centre are sent",
             tl2.ChannelSetup.Count(e => e.TrackIndex == 0) == 14, $"{tl2.ChannelSetup.Count(e => e.TrackIndex == 0)}");
 
-        TestStalePitchResetRecovery();
-        TestStaleResetSchedulerDispatch();
+        CheckStalePitchResetRecovery();
+        CheckStaleResetSchedulerDispatch();
     }
 
-    private static void TestStalePitchResetRecovery()
+    private static void CheckStalePitchResetRecovery()
     {
         var output = new RecordingMidiOutput();
         using var engine = new PlaybackEngine(output);
@@ -840,7 +843,7 @@ public static partial class SelfTest
             modulationValues.LastOrDefault() == 0 && restoredBend is { Data1: 0, Data2: 64 });
     }
 
-    private static void TestStaleResetSchedulerDispatch()
+    private static void CheckStaleResetSchedulerDispatch()
     {
         var project = SingleTrack(bpm: 400);
         var first = Beat(project, 0, 0, 0, 16, 60).Notes[0];
@@ -969,7 +972,7 @@ public static partial class SelfTest
         var loopOut = new DelayedRecordingOutput(25);
         using var loopEngine = new PlaybackEngine(loopOut);
         loopEngine.Start(fast, new PlaybackOptions { Loop = true, LoopStartBar = 0, LoopEndBar = 1 }, _ => { }, () => { });
-        Thread.Sleep(5300);
+        Poll.Until(() => loopOut.AttackTimes(60).Length >= 3, 5300);
         var times = loopOut.AttackTimes(60);
         var gaps = times.Zip(times.Skip(1), (a, b) => (b - a) * 1000.0 / Stopwatch.Frequency).ToArray();
         Check("loop wrap: the first note sounds once per pass", times.Length >= 3 && gaps.All(g => Math.Abs(g - 2000) < 200),
@@ -1028,7 +1031,7 @@ public static partial class SelfTest
             while (Stopwatch.GetTimestamp() - start < freq * 38 / 1000) Thread.SpinWait(50); // the thread is in its final spin
             line.Clear();
             line.Push(start + freq * 42 / 1000, 0, 0x90, 60, 100); // the note the seek lands on
-            Thread.Sleep(120);
+            Poll.Until(() => output.Messages.Any(m => m.Data1 == 60), 120, 2);   // the cleared note (due earlier) would have been sent by then
             var sent = output.Messages;
             if (!sent.Any(m => m.Data1 == 60) || sent.Any(m => m.Data1 == 50)) lost++;
         }
@@ -1178,7 +1181,7 @@ public static partial class SelfTest
     /// Guards the key map after the hotkey audit: shifted shortcuts that used to be shadowed by the
     /// plain handlers (Shift+1 staccato, Shift+- tenuto, Shift+. fade, main '/' triplet).
     /// </summary>
-    private static void TestHotkeys()
+    private static void CheckHotkeys()
     {
         static TabEditorControl Editor(out SongProject project, out TrackModel track)
         {
@@ -1280,7 +1283,7 @@ public static partial class SelfTest
         Check("hotkey: Ctrl+A selects the whole track", e8.HasSelection && e8.CaptureClip(out _) is not null);
     }
 
-    private static void TestEditorScrollGeometry()
+    private static void CheckEditorScrollGeometry()
     {
         // The window scrolls the score with the editor's own geometry; a mismatch (the old code used a
         // different system height) made auto-scroll drift during playback.
@@ -1343,7 +1346,7 @@ public static partial class SelfTest
             verticalHighTriggerHold is null && Math.Abs(verticalEarlyTrigger.GetValueOrDefault(-1) - 100) < 0.001);
     }
 
-    private static void TestNoteTimelineQueries()
+    private static void CheckNoteTimelineQueries()
     {
         var p = TwoBarSong(120);
         var tl = MidiTimelineBuilder.Build(p, new PlaybackOptions());
@@ -1372,7 +1375,7 @@ public static partial class SelfTest
             visualCurrent.Count == 1 && Math.Abs(visualCurrent[0] - 500) < 0.001, string.Join(",", visualCurrent));
     }
 
-    private static void TestChordVisualisation()
+    private static void CheckChordVisualisation()
     {
         // A chord must appear as one movement: every note at the same onset shares its role, so the
         // fretboard never animates a chord as a strummed sequence of separate notes.
@@ -1392,7 +1395,7 @@ public static partial class SelfTest
             state.Notes.Where(n => n.Role == VisualRole.Current).Select(n => n.OnsetMs).Distinct().Count() == 1);
     }
 
-    private static void TestEditingSelectionVisualisation()
+    private static void CheckEditingSelectionVisualisation()
     {
         var p = SingleTrack();
         var chord = Beat(p, 0, 0, 0, 4, 60, 0, 0);
@@ -1411,7 +1414,7 @@ public static partial class SelfTest
         Check("edit selection: a rest does not retain highlights from the previous beat", emptyBeat.Notes.Count == 0);
     }
 
-    private static void TestTieMerging()
+    private static void CheckTieMerging()
     {
         // A tie destination must not attack: the origin sustains through it.
         var p = SingleTrack();
@@ -1447,7 +1450,7 @@ public static partial class SelfTest
         Eq("no tie: two attacks", 2, MidiTimelineBuilder.Build(plain, new PlaybackOptions()).Events.Count(e => e.IsNoteOn));
     }
 
-    private static void TestTupletOnsets()
+    private static void CheckTupletOnsets()
     {
         // Three eighth-note triplets fill one quarter (500 ms at 120 bpm): onsets 0, 166.67, 333.33.
         var p = SingleTrack();
@@ -1465,7 +1468,7 @@ public static partial class SelfTest
         Near("triplet duration", 500.0 / 3.0, tl.Notes.OrderBy(n => n.OnsetMs).First().DurationMs);
     }
 
-    private static void TestDottedDuration()
+    private static void CheckDottedDuration()
     {
         var p = SingleTrack();
         var c = Beat(p, 0, 0, 0, 4, 64);
@@ -1474,7 +1477,7 @@ public static partial class SelfTest
         Near("dotted quarter = 750 ms", 750, tl.Notes[0].DurationMs);
     }
 
-    private static void TestTempoChange()
+    private static void CheckTempoChange()
     {
         var p = SingleTrack(2, 120);
         p.Tracks[0].Measures[1].TempoChange = 60;
@@ -1485,7 +1488,7 @@ public static partial class SelfTest
         Near("tempo change: total 6000 ms", 6000, tl.TotalMs);
     }
 
-    private static void TestChordSimultaneity()
+    private static void CheckChordSimultaneity()
     {
         var p = SingleTrack();
         var cell = Beat(p, 0, 0, 0, 4, 60);
@@ -1497,7 +1500,7 @@ public static partial class SelfTest
         Eq("chord: all six share one onset", 1, distinct);
     }
 
-    private static void TestChannelAllocation()
+    private static void CheckChannelAllocation()
     {
         var p = new SongProject { Tempo = 120 };
         for (var t = 0; t < 2; t++)
@@ -1520,7 +1523,7 @@ public static partial class SelfTest
             tl.Events.Where(e => (e.Status & 0xF0) == 0xC0).Select(e => e.Status & 0x0F).Distinct().Count() == 3);
     }
 
-    private static void TestLoopBounds()
+    private static void CheckLoopBounds()
     {
         var p = SingleTrack(4);
         var opt = new PlaybackOptions { Loop = true, LoopStartBar = 1, LoopEndBar = 2 };
@@ -1538,7 +1541,7 @@ public static partial class SelfTest
         Near("loop: ends after the selected final cell within bar 3", 5000, end);
     }
 
-    private static void TestSeekOffsets()
+    private static void CheckSeekOffsets()
     {
         var p = TwoBarSong(120);
         var tl = MidiTimelineBuilder.Build(p, new PlaybackOptions { StartBar = 1, StartCell = 4 });
@@ -1549,7 +1552,7 @@ public static partial class SelfTest
         Check("seek: no note starts before the play-from point", onsets.All(o => o >= tl.PlayFromMs - 0.001));
     }
 
-    private static void TestDeterminism()
+    private static void CheckDeterminism()
     {
         var p = SingleTrack(3);
         for (var b = 0; b < 3; b++)
@@ -1566,7 +1569,7 @@ public static partial class SelfTest
         Check("determinism: identical event stream on rebuild", same);
     }
 
-    private static void TestMetronomeAndVelocity()
+    private static void CheckMetronomeAndVelocity()
     {
         var p = TwoBarSong(120);
         var tl = MidiTimelineBuilder.Build(p, new PlaybackOptions { Metronome = true });
@@ -1583,7 +1586,7 @@ public static partial class SelfTest
         Check("ghost note is quieter than a normal note", ons[0].Data2 < ons[1].Data2, $"{ons[0].Data2} vs {ons[1].Data2}");
     }
 
-    private static void TestLetRing()
+    private static void CheckLetRing()
     {
         // A let-ring note keeps ringing past its written value, until the next note on the same
         // string - but the ring is capped so it can never become a multi-second drone.
@@ -1620,7 +1623,7 @@ public static partial class SelfTest
             string.Join(",", repeatedOffTimes.Select(time => time.ToString("0.#"))));
     }
 
-    private static void TestRepeatEndings()
+    private static void CheckRepeatEndings()
     {
         var p = SingleTrack(4);
         p.Tracks[0].Measures[0].RepeatStart = true;
@@ -1726,7 +1729,7 @@ public static partial class SelfTest
             MusicTime.TempoAt(tempo, 1) == 60 && MusicTime.TempoAt(tempo, 2) == 60, $"{MusicTime.TempoAt(tempo, 1)}/{MusicTime.TempoAt(tempo, 2)}");
     }
 
-    private static void TestPlayheadMapper()
+    private static void CheckPlayheadMapper()
     {
         var p = TwoBarSong(120);
         var tl = MidiTimelineBuilder.Build(p, new PlaybackOptions());
@@ -1744,7 +1747,7 @@ public static partial class SelfTest
         Eq("playhead: cell 4 at one third of a 3/4 bar", 4, third.Cell);
     }
 
-    private static void TestMidiExportTicks()
+    private static void CheckMidiExportTicks()
     {
         var p = TwoBarSong(120);
         var tl = MidiTimelineBuilder.Build(p, new PlaybackOptions());
@@ -1841,7 +1844,7 @@ public static partial class SelfTest
         using var engine = new PlaybackEngine(new NullMidiOutput());
         engine.StartDiagnostics();
         engine.Start(project, new PlaybackOptions { CountIn = true, CountInBars = 1, Metronome = false }, _ => { }, () => { });
-        Thread.Sleep(1400);
+        Poll.Until(() => engine.DispatchLog.Count(r => r.IsNoteOn && (r.Status & 0x0F) == 9) >= 3, 1400);
         engine.Stop();
         var clicks = engine.DispatchLog.Count(r => r.IsNoteOn && (r.Status & 0x0F) == 9);
         Check("count-in clicks are sent when Play starts with count-in on (metronome off)", clicks >= 3, $"{clicks} count-in clicks");

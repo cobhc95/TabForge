@@ -15,7 +15,7 @@ Note-effect editor dialogs: Bend, Tremolo bar, Trill, Grace note and Harmonic. E
 - `EffectPresetStore`: built-in lists per `EffectEditorKind` and user presets in `AppSettings.EffectPresets` (curve `Points` and/or named `Values`).
 - `EffectEdits`: `ApplyBend` / `CleanBend`, `ApplyTremolo` / `CleanTremolo` on notes or beats.
 - Value editors (trill, grace note, harmonic): `ValuesEffectDialog` (fields + presets in `EffectPresetEntry.Values`), `OrnamentEditors` (the fields per editor), `EffectFieldControls` (`NumberField`, `ChoiceField`), `OrnamentEdits` (model writes), `EffectEditorFlow.Ornaments.cs` (`OpenOrnament`).
-- Selection and the edit pipeline: `ScoreEditCommands.Effects.cs` (`EffectNotes`, `EffectCells`, `EditEffect` which runs `RunEdit`, i.e. `DocumentEdits.Run`).
+- Selection and the edit pipeline: `src/TabForge/Views/Score/ScoreEditCommands.Effects.cs` (`EffectNotes`, `EffectCells`, `EditEffect` which runs `RunEdit`, i.e. `DocumentEdits.Run`).
 
 ## Add another editor in four steps (trill, grace note and harmonic follow it)
 1. Add the kind to `EffectEditorKind`; list its built-in presets in `EffectPresetStore.BuiltIn` (non-curve editors keep numbers in `EffectPresetEntry.Values`).

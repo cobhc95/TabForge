@@ -131,7 +131,7 @@ public static partial class SelfTest
         Check("P-03: a referenced state still resolves after GC", resolvedKept.State == State(3));
     }
 
-    // F-04: autosave timer logic, file naming, crash-orphan detection, and the snapshot -> recovery copy -> load round trip.
+    // Autosave timer logic, file naming, crash-orphan detection, and the snapshot -> recovery copy -> load round trip.
     private static void AutosaveTimerAndRoundTrip(string dir)
     {
         var t0 = new DateTime(2026, 9, 29, 12, 0, 0, DateTimeKind.Utc);

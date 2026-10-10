@@ -16,6 +16,10 @@ using TabForge.Views;
 
 namespace TabForge.Diagnostics;
 
+// Owns: the scripted `--capture` run: off-screen window setup (PrepareOffscreenCapture), dispatch of the JSON script's steps through the UI's own methods, and the capture report and log.
+// Does not own: the shots (WindowProbes.CaptureShots.cs), the animation and effect shots (WindowProbes.CaptureAnimation.cs, WindowProbes.CaptureEffects.cs).
+// Tests: TestCaptureMainWindowOffscreen.
+
 // Window probes, scripted off-screen capture (test / documentation tooling, never used in normal runs):
 //   TabForge.exe --profile <scratch> --capture <script.json> <outDir>
 // The real main window is created far off-screen (never activated, no taskbar button), a JSON script drives it through the same
@@ -57,7 +61,7 @@ internal sealed partial class WindowProbes : MainWindow.ProbeAccess
     private static void TryRootDpi(Visual visual)
     {
         try { VisualTreeHelper.SetRootDpi(visual, new DpiScale(CaptureScale, CaptureScale)); }
-        catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"Root DPI not set: {ex.Message}"); }
+        catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"Root DPI not set: {ex.Message}"); } // Not logged: diagnostic probe: the failure goes to its report, not errors.log
     }
 
     /// <summary>Runs <paramref name="scriptPath"/> after the window is up, writes capture-report.json / capture.log in <paramref name="outDir"/>, then exits.</summary>
@@ -68,10 +72,10 @@ internal sealed partial class WindowProbes : MainWindow.ProbeAccess
             var exit = 0;
             var runner = new CaptureRun(this, outDir);
             try { await runner.RunAsync(scriptPath); }
-            catch (Exception ex) { exit = 1; runner.Log($"FAILED: {ex.GetBaseException().GetType().Name}: {ex.GetBaseException().Message}"); }
+            catch (Exception ex) { exit = 1; runner.Log($"FAILED: {ex.GetBaseException().GetType().Name}: {ex.GetBaseException().Message}"); } // Not logged: diagnostic probe: the failure goes to its report, not errors.log
             finally
             {
-                try { runner.Finish(); } catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"Capture clean-up failed: {ex}"); }
+                try { runner.Finish(); } catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"Capture clean-up failed: {ex}"); } // Not logged: diagnostic probe: the failure goes to its report, not errors.log
                 DialogHost.Capture = null;
                 ContextMenuCapture = null;
                 _confirmOnClose = false;
@@ -141,7 +145,7 @@ internal sealed partial class WindowProbes : MainWindow.ProbeAccess
                 var value = props[0].Value;
                 var args = props.Skip(1).ToDictionary(p => p.Name, p => p.Value, StringComparer.OrdinalIgnoreCase);
                 try { await StepAsync(verb, value, args); }
-                catch (Exception ex)
+                catch (Exception ex) // Not logged: diagnostic probe: the failure goes to its report, not errors.log
                 {
                     // A failed step is logged and the script goes on (one missing page must not lose the other shots); the exit code reports it.
                     Log($"step {n} {verb}: FAILED {ex.GetBaseException().Message}");
@@ -155,7 +159,7 @@ internal sealed partial class WindowProbes : MainWindow.ProbeAccess
         {
             foreach (var tool in _tools.Values.ToList()) CloseWindow(tool);
             _tools.Clear();
-            foreach (var undo in _cleanup) { try { undo(); } catch (Exception ex) { Log($"clean-up failed: {ex.Message}"); } }
+            foreach (var undo in _cleanup) { try { undo(); } catch (Exception ex) { Log($"clean-up failed: {ex.Message}"); } } // Not logged: diagnostic probe: the failure goes to its report, not errors.log
             var report = new Dictionary<string, object> { ["shots"] = _shots };
             File.WriteAllText(Path.Combine(_out, _name + ".report.json"), JsonSerializer.Serialize(report, new JsonSerializerOptions { WriteIndented = true }), new UTF8Encoding(false));
             File.WriteAllText(Path.Combine(_out, _name + ".log"), _log.ToString(), new UTF8Encoding(false));
@@ -163,7 +167,7 @@ internal sealed partial class WindowProbes : MainWindow.ProbeAccess
 
         private static void CloseWindow(Window window)
         {
-            try { window.Close(); } catch (InvalidOperationException) { }
+            try { window.Close(); } catch (InvalidOperationException) { } // Not logged: a window that is already closed is expected here.
         }
 
         // ---------- steps ----------
@@ -324,6 +328,8 @@ internal sealed partial class WindowProbes : MainWindow.ProbeAccess
         {
             var dock = _w._dockWorkspace ?? throw new InvalidOperationException("no dock workspace");
             if (spec.Equals("hide:band", StringComparison.OrdinalIgnoreCase)) { if (dock.IsPanelVisible("band")) _w.ToggleBandView(); return; }   // leaves the Band layout, as the toolbar button does
+            if (spec.Equals("hide:learn", StringComparison.OrdinalIgnoreCase)) { _w.Window.KeyboardMode.Exit(); return; }
+            if (spec == "learn") { _w.Window.KeyboardMode.Enter(); return; }   // the Keyboard mode layout, as the toolbar button does
             if (spec.StartsWith("hide:", StringComparison.OrdinalIgnoreCase)) { dock.SetPanelVisible(spec[5..], false); return; }
             if (spec == "band") { if (!dock.IsPanelVisible(spec)) _w.ToggleBandView(); return; }   // the Band layout, as the menu does
             if (!dock.IsPanelVisible(spec)) dock.SetPanelVisible(spec, true);

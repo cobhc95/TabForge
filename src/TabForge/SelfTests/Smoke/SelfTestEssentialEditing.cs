@@ -148,8 +148,8 @@ public static partial class SelfTest
             });
             SmStep("mute and solo", () =>
             {
-                tracks[0].Mute = true; tracks[1].Solo = true; SmCall(w, "ApplyMuteSolo");
-                tracks[0].Mute = false; tracks[1].Solo = false; SmCall(w, "ApplyMuteSolo");
+                tracks[0].Mute = true; tracks[1].Solo = true; w.MixerHost.ApplyMuteSolo();
+                tracks[0].Mute = false; tracks[1].Solo = false; w.MixerHost.ApplyMuteSolo();
             });
             SmStep("convert instrument to audio and back", () =>
             {

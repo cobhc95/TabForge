@@ -7,7 +7,7 @@ using TabForge.Services;
 
 namespace TabForge;
 
-// Audit 5 A5-14: synthetic fixtures for the checks that used to need the user's own songs (whole-folder import, reference songs,
+// Synthetic fixtures for the checks that would otherwise need the user's own songs (whole-folder import, reference songs,
 // tuplets.gp5, the round-trip local extra) and therefore skipped on CI. Every song here is built in code at test time, saved and
 // re-imported through .tforge and .gp (embedded and clean), and compared with the semantic comparer of SelfTestRoundTripSemantics.
 // The PERFORMED bar order and the bar-to-ms timeline are asserted as behaviour (what plays, when), not as implementation detail,

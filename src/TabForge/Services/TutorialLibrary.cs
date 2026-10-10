@@ -90,7 +90,7 @@ public sealed class TutorialLibrary
                 if (HasChapters(candidate)) return candidate;
             }
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { Services.Trace.Error(Services.Trace.Ui, "tutorial library: scan folder: " + ex.Message); }
         return shipped;
     }
 
@@ -105,7 +105,7 @@ public sealed class TutorialLibrary
     private static bool HasChapters(string folder)
     {
         try { return Directory.Exists(folder) && Directory.EnumerateFiles(folder, "*.md").Any(IsChapterFile); }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return false; }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return false; } // Not logged: probe: the folder has no chapters
     }
 
     /// <summary>Chapter files are "NN-slug.md" (and "A1-slug.md" for appendices); a read-me or the maintenance notes are not chapters. Only the folder's own files count, so the Basic Guide never picks up the <c>detailed</c> subfolder.</summary>
@@ -123,7 +123,7 @@ public sealed class TutorialLibrary
         var skipped = 0;
         IEnumerable<string> files;
         try { files = Directory.EnumerateFiles(folder, "*.md").Where(IsChapterFile).OrderBy(f => f, StringComparer.OrdinalIgnoreCase).ToList(); }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return Empty(folder); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { Services.Trace.Error(Services.Trace.Ui, "tutorial library: list: " + ex.Message); return Empty(folder); }
         foreach (var file in files)
         {
             try
@@ -132,7 +132,7 @@ public sealed class TutorialLibrary
                 if (new FileInfo(file).Length > 2_000_000) { skipped++; continue; }
                 chapters.Add(Parse(file, File.ReadAllText(file, Encoding.UTF8)));
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { skipped++; }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { Services.Trace.Error(Services.Trace.Ui, "tutorial library: chapter skipped: " + ex.Message); skipped++; }
         }
         var ordered = chapters.OrderBy(c => c.Order).ThenBy(c => c.FileName, StringComparer.OrdinalIgnoreCase).ToList();
         return new TutorialLibrary(folder, ordered) { SkippedFiles = skipped };

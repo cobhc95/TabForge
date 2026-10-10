@@ -10,6 +10,12 @@ using TabForge.Visualization;
 
 namespace TabForge.Views;
 
+// Owns: the clip lanes under each track: edge snapping (SnapSec), drawing audio and MIDI clips and their fades, the live takes
+//   being recorded, the selected clip and the clip edit gesture state.
+// Does not own: the waveform outline (TrackTimeline.Waveform.cs), the retained lane drawings (TrackTimeline.LaneCache.cs) and the
+//   clip gestures (ClipGestureController.cs).
+// Tests: TestClipDragPress, TestClipMoves, TestClipEdgesAndLoops.
+
 /// <summary>What a clip edit gesture is doing.</summary>
 internal enum ClipGesture { Move, TrimStart, TrimEnd, FadeIn, FadeOut }
 

@@ -36,7 +36,7 @@ internal sealed class AudioGrowthRefreshFlow
     {
         Task<(ArrangementRefreshCompiler.Plan Plan, ScoreTimeline? Loop)>? compile = null;
         try { compile = Task.Run(() => Build(reservation, source, baseToCurrentBar)); }
-        catch (Exception ex)
+        catch (Exception ex) // Not logged: playback path: no logging on this path
         {
             _host.CompleteAudioGrowthRefresh(reservation, null, null, ex.Message);
             if (ex is OutOfMemoryException) throw;

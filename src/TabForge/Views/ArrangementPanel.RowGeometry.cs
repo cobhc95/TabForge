@@ -17,7 +17,11 @@ using TabForge.Visualization;
 
 namespace TabForge.Views;
 
-// ArrangementPanel: row geometry, one place for every row position (rows can carry an audio lane).
+// Owns: the track list's row geometry as static functions of the project: the notation and audio-lane heights, group headers, row
+//   tops, and the row or group found at a y position.
+// Does not own: drawing the rows (ArrangementPanel.TrackRows.cs) and the timeline's own geometry (TimelineGeometry.cs).
+// Tests: TestArrangementGeometry.
+
 public sealed partial class ArrangementPanel
 {
     // ---------- row geometry: one place for every row position (rows can carry an audio lane) ----------

@@ -77,6 +77,9 @@ public static partial class EngineHost
 
         public static NullOutput? Output => _session.Player as NullOutput;
         public static MixEngine? Mix => _session.Mix;
+
+        /// <summary>The master output tap (a test sets its Sink; the SetMasterTap command switches it).</summary>
+        public static MasterTap Tap => _session.Tap;
         public static int SampleRate => _session.SampleRate;
         public static TrackChain? ChainAt(int slot) => _session.Loaded.GetValueOrDefault(slot);
         public static int Retiring => _session.Retired.Count;

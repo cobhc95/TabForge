@@ -5,6 +5,10 @@ using TabForge.Services;
 
 namespace TabForge.Diagnostics;
 
+// Owns: the `--render-timeline` command and the scenes it draws: playhead and marker style, hover shade, a media drop in three modes, a clip move, track lines, MIDI clips and the scrolled collapsed pane.
+// Does not own: the timeline and its drag handling (Views/ArrangementPanel*.cs, Views/TrackTimeline*.cs).
+// Tests: no named test.
+
 internal static partial class DiagnosticCommands
 {
     /// <summary>

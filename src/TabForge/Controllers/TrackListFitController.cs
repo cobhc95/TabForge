@@ -9,8 +9,8 @@ namespace TabForge.Controllers;
 internal interface ITrackListFitHost
 {
     TimelineSettings Timeline { get; }
-    ArrangementPanel Arrangement { get; }
-    DockWorkspace Dock { get; }
+    ITrackListRows Arrangement { get; }
+    ITrackListDock Dock { get; }
     Dispatcher Dispatcher { get; }
     void SaveSettings();
     void SetStatus(string text);
@@ -18,8 +18,37 @@ internal interface ITrackListFitHost
     double MinScoreHeight => 0;
 }
 
+/// <summary>What the fit controller needs from the arrangement panel (the track rows).</summary>
+internal interface ITrackListRows
+{
+    double ActualHeight { get; }
+    double TrackRowHeight { get; }
+    double DefaultRowHeight { get; }
+    double MaxRowHeight { get; }
+    double CollapsedHeight { get; }
+    event SizeChangedEventHandler SizeChanged;
+    event Action? ResetTrackListHeightRequested;
+    double PreferredHeight();
+    double PreferredHeightAt(double rowHeight);
+    double RowHeightForPaneHeight(double paneHeight);
+    bool SetTrackRowHeight(double height);
+    void BeginResizePreview();
+    void EndResizePreview();
+}
+
+/// <summary>What the fit controller needs from the dock workspace.</summary>
+internal interface ITrackListDock
+{
+    double ActualHeight { get; }
+    event EventHandler? LayoutChanged;
+    event EventHandler<DockSplitterEventArgs>? SplitterInteraction;
+    bool FitPanelHeight(string panelId, double height);
+    void SetPanelHeightLimits(string panelId, Func<(double Min, double Max)?>? limits);
+}
+
 // Owns: the track-list dock height: fitting it to its rows and turning a splitter drag into a row height.
 // Does not own: the track row controls and the dock layout persistence.
+// Needs from its host: ITrackListFitHost (settings, status, dispatcher) with ITrackListRows and ITrackListDock; never a concrete view.
 // Tests: TestTrackListFit.
 /// <summary>
 /// Keeps the track-list dock exactly as tall as its rows (no empty band under the last track) and turns a drag of its
@@ -47,7 +76,7 @@ internal sealed class TrackListFitController
         // While auto-fit is on the splitter stops where every row fits at the default height (above: no clipped rows) and at the
         // largest row height (below: no empty space).
         host.Dock.SetPanelHeightLimits(PanelId, () => Enabled
-            ? (Math.Min(ArrangementPanel.CollapsedPaneHeight, host.Arrangement.PreferredHeightAt(ArrangementPanel.DefaultTrackRowHeight)), host.Arrangement.PreferredHeightAt(ArrangementPanel.MaxTrackRowHeight))
+            ? (Math.Min(host.Arrangement.CollapsedHeight, host.Arrangement.PreferredHeightAt(host.Arrangement.DefaultRowHeight)), host.Arrangement.PreferredHeightAt(host.Arrangement.MaxRowHeight))
             : null);
     }
 
@@ -55,7 +84,7 @@ internal sealed class TrackListFitController
 
     /// <summary>Applies the saved row height (the default while auto-fit is off) without touching the dock.</summary>
     public void ApplyRowHeight() =>
-        _host.Arrangement.SetTrackRowHeight(Enabled ? _host.Timeline.TrackRowHeight : ArrangementPanel.DefaultTrackRowHeight);
+        _host.Arrangement.SetTrackRowHeight(Enabled ? _host.Timeline.TrackRowHeight : _host.Arrangement.DefaultRowHeight);
 
     /// <summary>Tracks, groups or the document changed: size the dock to the rows (grow or shrink).</summary>
     public void FitToTracks()
@@ -99,13 +128,13 @@ internal sealed class TrackListFitController
         var shared = _host.Dock.ActualHeight;
         if (shared <= 1 || _host.MinScoreHeight <= 0 || _uncapped) return want;
         var cap = Math.Min(shared * 0.45, shared - _host.MinScoreHeight);
-        return Math.Min(want, Math.Max(ArrangementPanel.CollapsedPaneHeight, cap));
+        return Math.Min(want, Math.Max(_host.Arrangement.CollapsedHeight, cap));
     }
 
     /// <summary>Back to the default row height and a dock that fits the rows.</summary>
     public void ResetRowHeight()
     {
-        _host.Timeline.TrackRowHeight = ArrangementPanel.DefaultTrackRowHeight;
+        _host.Timeline.TrackRowHeight = _host.Arrangement.DefaultRowHeight;
         _host.Timeline.TrackListHeight = 0;
         _host.SaveSettings();
         FitToTracks();

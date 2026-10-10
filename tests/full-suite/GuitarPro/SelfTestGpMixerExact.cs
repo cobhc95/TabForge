@@ -8,7 +8,7 @@ using TabForge.Services;
 
 namespace TabForge;
 
-// R5 rows A03/A04 (group "gp-fidelity"): the exact track volume and pan in a clean .gp. The gpif stores them as floats (RSE ChannelStrip
+// The exact track volume and pan in a clean score file (group "gp-fidelity"). The gpif stores them as floats (the channel strip
 // Parameters, entries 12 = balance and 13 = volume); alphaTab's own model keeps only a 0..16 step, so TabForge ships TabForge.AlphaTab
 // patch 0002 (PlaybackInformation.VolumeFraction/BalanceFraction) and maps 0..127 <-> fraction as v/128 (GpMixerScale).
 public static partial class SelfTest

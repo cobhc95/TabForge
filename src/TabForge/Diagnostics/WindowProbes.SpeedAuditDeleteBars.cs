@@ -7,6 +7,9 @@ using TabForge.Views;
 
 namespace TabForge.Diagnostics;
 
+// Owns: the delete-bars prompt's timing in the speed audit: the real modal show and answer calls, repeated.
+// Does not own: the rest of the speed audit (WindowProbes.SpeedAudit) and the prompt itself.
+// Tests: listed in docs/DEBUGGING.md (--speed-audit).
 internal sealed partial class WindowProbes
 {
     private sealed partial class CaptureRun

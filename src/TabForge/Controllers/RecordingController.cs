@@ -10,7 +10,7 @@ using TabForge.Views;
 
 namespace TabForge.Controllers;
 
-/// <summary>What the recording controller needs from its window (MainWindow implements it; A-01).</summary>
+/// <summary>What the recording controller needs from its window (MainWindow implements it).</summary>
 internal interface IRecordingHost
 {
     /// <summary>The song shown now (read on every use: switching tabs swaps it). Recording remembers the one that was armed when it started.</summary>
@@ -62,7 +62,7 @@ internal sealed class RecordingController
     private DocumentSession? _recordingDoc;
     private int _recordStartMeasure, _recordStartCell, _recordStartString;
     private bool _frameHooked;
-    private readonly MidiInputCapture _midiInput = new();
+    private readonly IMidiInputSource _midiInput;
     /// <summary>Loop range in song seconds while recording with the loop on (every pass is a take).</summary>
     private (double Start, double End)? _recordLoop;
     /// <summary>How many times the loop has wrapped since recording began (each lap is a take).</summary>
@@ -75,7 +75,7 @@ internal sealed class RecordingController
 
     private readonly AudioEngineClient _engine;
 
-    public RecordingController(IRecordingHost host, AudioEngineClient engine) { _host = host; _engine = engine; }
+    public RecordingController(IRecordingHost host, AudioEngineClient engine) { _host = host; _engine = engine; _midiInput = engine.MidiInput.CreateClient(); }
 
     public bool IsRecording => _recording;
 
@@ -232,7 +232,7 @@ internal sealed class RecordingController
         {
             Arrangement.LiveTakes.RemoveAll(t => !t.Midi && ReferenceEquals(t.Track, track));
             Arrangement.RefreshLiveTakes();
-            if (lengthSec < 0.05) { try { File.Delete(file); } catch (IOException) { } return; }
+            if (lengthSec < 0.05) { try { File.Delete(file); } catch (IOException) { } return; } // Not logged: best-effort removal of a discarded take.
             if (_host.OpenDocuments.FirstOrDefault(d => d.Project.Tracks.Contains(track)) is not { } owner) return;   // the song was closed: the take file stays in its media folder
             var name = Path.GetFileNameWithoutExtension(file);
             var passes = Services.RecordingPasses.Split(startSec, lengthSec, _recordLoop);
@@ -303,8 +303,8 @@ internal sealed class RecordingController
             // Each armed MIDI track plays with its own sound: set its program now (playback may not be running).
             var channels = ChannelAllocator.Assign(project);
             for (var i = 0; i < project.Tracks.Count; i++)
-                if (project.Tracks[i].RecordArm && AudioInputs.IsMidi(project.Tracks[i].AudioInput) && channels[i] >= 0 && !project.Tracks[i].IsAudio)   // an audio track's instrument plug-in keeps its own sound
-                    _host.Document.Playback.Engine.SendLive(project.Tracks[i].MidiOutputDeviceId, 0xC0 | (channels[i] & 0x0F), project.Tracks[i].MidiProgram, 0);
+                if (project.Tracks[i].RecordArm && AudioInputs.IsMidi(project.Tracks[i].AudioInput) && channels[i] >= 0)
+                    LiveMidiThru.SetProgram(_host.Document, project.Tracks[i], channels[i]);
         }
         else if (!wanted && _midiInput.IsOpen) _midiInput.Close();
     }
@@ -327,9 +327,7 @@ internal sealed class RecordingController
                 if (!track.RecordArm || !AudioInputs.IsMidi(track.AudioInput)) continue;
                 if (MonitorsLive(track, channels[i]))
                 {
-                    var pitch = Math.Clamp(data1 + (type is 0x80 or 0x90 ? track.Transpose : 0), 0, 127);
-                    if (track.IsAudio) source.Playback.Routing?.SendLiveEngineOnly(type | (channels[i] & 0x0F), pitch, data2);   // Q1: its instrument plug-in or nothing
-                    else source.Playback.Engine.SendLive(track.MidiOutputDeviceId, type | (channels[i] & 0x0F), pitch, data2);
+                    LiveMidiThru.Send(source, track, channels[i], status, data1, data2);
                 }
                 if (_recording && _midiTakes.TryGetValue(track, out var take) && !double.IsNaN(heardSec)) Keep(take, type, data1, data2, heardSec);
             }

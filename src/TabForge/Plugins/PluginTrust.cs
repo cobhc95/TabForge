@@ -82,7 +82,7 @@ public static class PluginTrust
     public static string Normalize(string path)
     {
         if (string.IsNullOrWhiteSpace(path)) return "";
-        try { path = Path.GetFullPath(path.Trim()); } catch (Exception) { return path.Trim().Replace('/', '\\'); }
+        try { path = Path.GetFullPath(path.Trim()); } catch (Exception) { return path.Trim().Replace('/', '\\'); } // Not logged: path normalise: the trimmed raw path is used
         var root = Path.GetPathRoot(path) ?? "";
         while (path.Length > root.Length && (path[^1] is '\\' or '/')) path = path[..^1];
         return path;
@@ -97,7 +97,7 @@ public static class PluginTrust
         return RemoteRoots.GetOrAdd(root, r =>
         {
             try { return new DriveInfo(r).DriveType is not DriveType.Fixed; }
-            catch (Exception) { return true; }
+            catch (Exception) { return true; } // Not logged: drive type probe, cached per root: remote is the safe default
         });
     }
 
@@ -163,7 +163,7 @@ public static class PluginTrust
             using var stream = new FileStream(bin, FileMode.Open, FileAccess.Read, FileShare.Read, 1 << 16, FileOptions.SequentialScan);
             return PluginIdentity.Sha256Hex(stream);
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return ""; }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { Services.Trace.Error(Services.Trace.Engine, "plug-in hash: " + ex.Message); return ""; }
     }
 
     /// <summary>Approves a path and records the fingerprint of the file as it is now: the new baseline, taken only on this explicit action.</summary>
@@ -406,7 +406,7 @@ public static class PluginTrust
             var norm = Normalize(final);
             return !IsRemote(norm) && ProtectedBases.Any(b => norm.StartsWith(b, StringComparison.OrdinalIgnoreCase));
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException) { return false; }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException) { Services.Trace.Error(Services.Trace.Engine, "folder trust check: " + ex.Message); return false; }
     }
 
     private static (long Size, long Ticks)? Stat(string bin)
@@ -417,7 +417,7 @@ public static class PluginTrust
             if (info.LinkTarget is not null && info.ResolveLinkTarget(returnFinalTarget: true) is FileInfo target) info = target;
             return info.Exists ? (info.Length, info.LastWriteTimeUtc.Ticks) : null;
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException) { return null; }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException) { Services.Trace.Error(Services.Trace.Engine, "plug-in file info: " + ex.Message); return null; }
     }
 
     /// <summary>SHA-256 and valid Authenticode signer of a binary, cached by (path, size, last-write); null when unreadable. <paramref name="fresh"/> (approve and scan, the moments a baseline is taken) ignores the cache: a file replaced with the same size and time must not inherit an older hash.</summary>
@@ -435,7 +435,7 @@ public static class PluginTrust
             Fingerprints[bin] = fp;
             return fp;
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return null; }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { Services.Trace.Error(Services.Trace.Engine, "plug-in fingerprint: " + ex.Message); return null; }
     }
 
     private const string KeyPrefix = "spki-sha256:";
@@ -456,7 +456,7 @@ public static class PluginTrust
             var text = KeyPrefix + key + "; " + subject;
             return text.Length > 512 ? text[..512] : text;
         }
-        catch (CryptographicException) { return ""; }
+        catch (CryptographicException ex) { Services.Trace.Error(Services.Trace.Engine, "plug-in signer: " + ex.Message); return ""; }
     }
 
     /// <summary>The comparable part of a recorded signer ("" for none, unsigned, or the older subject-only format, which never matches).</summary>
@@ -485,7 +485,7 @@ public static class PluginTrust
             var action = new Guid("00AAC56B-CD44-11d0-8CC2-00C04FC295EE");   // WINTRUST_ACTION_GENERIC_VERIFY_V2
             return WinVerifyTrust(new IntPtr(-1), ref action, ref data) == 0;
         }
-        catch (Exception ex) when (ex is DllNotFoundException or EntryPointNotFoundException) { return false; }
+        catch (Exception ex) when (ex is DllNotFoundException or EntryPointNotFoundException) { return false; } // Not logged: WinVerifyTrust unavailable on this system: not signed
         finally
         {
             if (filePtr != IntPtr.Zero) Marshal.FreeHGlobal(filePtr);

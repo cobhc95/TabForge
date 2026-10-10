@@ -12,6 +12,9 @@ namespace TabForge;
 // MainWindow: the clip lanes on the timeline: arm / input choice, lane play buttons and the wiring of the lane events. The clip commands (delete, nudge, lane
 // up/down, copy, cut, paste, duplicate, mute, properties, moves between tracks, MIDI clips into notation, dropped audio files) belong to ClipEditController;
 // ClipHost is the window's side of it.
+// Owns: the clip lanes on the timeline: arm and input choice, lane play buttons and the wiring of the lane events.
+// Does not own: the clip commands (ClipEditController); ClipHost is the window's side of them.
+// Tests: listed in docs/feature-map/timeline-and-clips.md.
 public partial class MainWindow
 {
     private void HookAudioLanes()
@@ -95,43 +98,7 @@ public partial class MainWindow
         _selection.BarRange is { } range ? _sections.Range.RunCommand(Doc, id, range.Start, range.End, _selection.Scope == SelectionScope.AllTracks)
             : Editor.SelectedMeasure >= 0 && _sections.Range.RunCommand(Doc, id, Editor.SelectedMeasure, Editor.SelectedMeasure);
 
-    private void ShowClipMenu(int trackIndex, AudioClip? clip, double sec)
-    {
-        if (trackIndex < 0 || trackIndex >= _project.Tracks.Count) return;
-        var doc = Doc;
-        var track = _project.Tracks[trackIndex];
-        var lane = _clips.LaneCursor is { } cursor && ReferenceEquals(cursor.Track, track) ? cursor.Lane : clip?.Lane ?? 0;
-        var state = new ClipMenuState(clip is not null, clip?.IsMidi ?? false, ClipClipboard.HasClip, clip?.Muted ?? false);
-        var menu = NewTimelineMenu(clip is null ? "Empty lane options" : "Clip options", TimelineMenus.Clip(state, MenuKey), command =>
-        {
-            switch (command)
-            {
-                case TimelineCommand.ClipCopy when clip is not null: ClipClipboard.Copy(clip); break;
-                case TimelineCommand.ClipCut when clip is not null:
-                    ClipClipboard.Copy(clip);
-                    _clips.Remove(doc, track, clip, null, clearSelection: false);
-                    break;
-                case TimelineCommand.ClipPaste: _clips.Paste(doc, track, lane, sec); break;
-                case TimelineCommand.ClipDuplicate when clip is not null: _clips.Duplicate(doc, track, clip); break;
-                case TimelineCommand.ClipSplit when clip is not null: _clips.SplitAt(doc, track, clip, sec); break;
-                case TimelineCommand.ClipGlue when clip is not null: _clips.Glue(doc, track, clip); break;
-                case TimelineCommand.ClipFadeReset when clip is not null: _clips.ResetFades(doc, clip); break;
-                case TimelineCommand.ClipDelete when clip is not null: _clips.Remove(doc, track, clip, null, clearSelection: true); break;
-                case TimelineCommand.ClipMute when clip is not null: _clips.Edit(doc, () => clip.Muted = !clip.Muted); break;
-                case TimelineCommand.ClipProperties when clip is not null: _clips.EditProperties(doc, clip); break;
-                case TimelineCommand.ClipWriteNotation when clip is not null: _clips.WriteNotation(doc, track, clip); break;
-                case TimelineCommand.ClipAddAudioFile:
-                    var dialog = new Microsoft.Win32.OpenFileDialog
-                    {
-                        Filter = "Audio files|" + string.Join(";", WaveformCache.Extensions.Select(x => "*" + x)) + "|All files|*.*",
-                        Multiselect = true
-                    };
-                    if (dialog.ShowDialog(this) == true) _clips.AddAudioFiles(doc, trackIndex, sec, dialog.FileNames);
-                    break;
-            }
-        });
-        SpecMenus.Open(menu, Arrangement, null, fromKeyboard: false);
-    }
+    private void ShowClipMenu(int trackIndex, AudioClip? clip, double sec) => TimelineMenusFlow.ShowClipMenu(trackIndex, clip, sec);
 
     private sealed class ClipHost : IClipHost
     {

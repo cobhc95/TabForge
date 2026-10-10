@@ -235,7 +235,7 @@ public static partial class SelfTest
         return set;
     }
 
-    private static void TestShowcaseGuitarProFixture()
+    private static void CheckShowcaseGuitarProFixture()
     {
         var folder = Path.Combine(Path.GetTempPath(), "tabforge-gpshowcase-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(folder);
@@ -279,7 +279,7 @@ public static partial class SelfTest
     }
 
     /// <summary>alphaTab's zip writer stores bogus CRC-32s; every entry of a saved .gp must carry the real one.</summary>
-    private static void TestGpZipCrcs(SongProject source)
+    private static void CheckGpZipCrcs(SongProject source)
     {
         foreach (var embed in new[] { false, true })
         {
@@ -341,8 +341,8 @@ public static partial class SelfTest
             var restored = ProjectService.Restore(ProjectService.Snapshot(imported));
             var timeline = Playback.MidiTimelineBuilder.Build(restored, new Playback.PlaybackOptions());
             Check("synthetic .gp: imported song compiles a playback timeline", timeline.TotalMs > 0 && timeline.Events.Count > 0);
-            TestGpZipCrcs(source);
-            TestShowcaseGuitarProFixture();
+            CheckGpZipCrcs(source);
+            CheckShowcaseGuitarProFixture();
         }
         finally { try { Directory.Delete(folder, true); } catch (IOException) { } catch (UnauthorizedAccessException) { } }
     }

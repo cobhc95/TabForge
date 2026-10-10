@@ -134,7 +134,7 @@ public static partial class SelfTest
                 foreach (var a in new[] { "--selftest", log, "--profile", Path.Combine(work, "profile"), "--only", only }) info.ArgumentList.Add(a);
                 if (require is not null) { info.ArgumentList.Add("--require"); info.ArgumentList.Add(require); }
                 using var child = Process.Start(info)!;
-                if (!child.WaitForExit(120_000)) { try { child.Kill(true); } catch (InvalidOperationException) { } return "TIMED OUT"; }
+                if (!child.WaitForExit(120_000)) { try { child.Kill(true); } catch (InvalidOperationException) { } return "TIMED OUT"; } // Not logged: kill of a child that may have exited; the timeout result is reported.
                 return File.Exists(log) ? File.ReadAllText(log) : "no log";
             }
             static string Last(string log) => log.Split('\n').LastOrDefault(l => l.Contains("self-test")) ?? log;
@@ -147,6 +147,6 @@ public static partial class SelfTest
             Check("--only: --require of a group that is not fully selected gives the clear message",
                 partial.Contains("works with --only only when the whole group is selected"), Last(partial));
         }
-        finally { try { Directory.Delete(work, true); } catch (IOException) { } catch (UnauthorizedAccessException) { } }
+        finally { try { Directory.Delete(work, true); } catch (IOException) { } catch (UnauthorizedAccessException) { } } // Not logged: test cleanup of a temporary folder.
     }
 }

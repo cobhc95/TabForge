@@ -51,7 +51,7 @@ public static class SingleInstanceService
             client.Flush();
             return true;
         }
-        catch (Exception ex) when (ex is TimeoutException or IOException or UnauthorizedAccessException) { return false; }
+        catch (Exception ex) when (ex is TimeoutException or IOException or UnauthorizedAccessException) { return false; } // Not logged: no running instance to hand over to: expected
     }
 
     /// <summary>Listens for paths from later launches; <paramref name="open"/> is called on a background thread.</summary>
@@ -68,7 +68,7 @@ public static class SingleInstanceService
                         PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
                     listening?.Invoke();
                 }
-                catch (IOException) { return; } // another TabForge already receives: this one stays a plain window
+                catch (IOException) { return; } // another TabForge already receives: this one stays a plain window // Not logged: another instance already receives: expected
                 using (server)
                 {
                     try
@@ -85,8 +85,8 @@ public static class SingleInstanceService
                         var path = Encoding.UTF8.GetString(buffer.GetBuffer(), 0, (int)buffer.Length).Trim();
                         if (IsOpenableSong(path)) open(path);
                     }
-                    catch (OperationCanceledException) { return; }
-                    catch (IOException) { /* the sender went away: wait for the next one */ }
+                    catch (OperationCanceledException) { return; } // Not logged: cancelled on shutdown: the receive loop ends
+                    catch (IOException ex) { Services.Trace.Error(Services.Trace.Ui, "single instance: receive path: " + ex.Message); /* the sender went away: wait for the next one */ }
                 }
             }
         }, cancellation);

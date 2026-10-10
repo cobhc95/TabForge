@@ -1,6 +1,6 @@
 # TabForge icons, commands and hotkeys
 
-Generated from the source (`MainWindow.xaml.cs` palette tables and `Services/HotkeyCatalog.cs`). Every item here can be bound to a key in **Settings → Shortcuts**; palette icons are registered automatically as `Tool.<id>` commands, so new icons become mappable without editing this list.
+Generated from the source (the palette rows in `Views/ToolPaletteController.Tools.cs`, the palette command handling in `MainWindow.Palette.cs`, and `Services/HotkeyCatalog.cs`). Every item here can be bound to a key in **Settings → Shortcuts**; palette icons are registered automatically as `Tool.<id>` commands, so new icons become mappable without editing this list.
 
 ## Tools palette
 
@@ -134,6 +134,7 @@ Default keys are the **TabForge** preset, currently identical to the **Classic**
 | File and tabs | Cancel import | Cancel the score import(s) running in the background (same as the status-bar Cancel button). | `File.CancelImport` | — | Unbound by default; Esc is used by other commands. |
 | File and tabs | Export PDF | Export the engraved score (notation and tab) as a PDF file. | `File.ExportPdf` | — | Also File > Export PDF. |
 | File and tabs | Export MusicXML | Export the song as uncompressed MusicXML (.musicxml): a part per track with notation and a tab staff. | `File.ExportMusicXml` | — | Also File > Export MusicXML. |
+| File and tabs | Export video (MP4) | Export the song as an MP4 video of the score, its instrument and the Band view, with the full audio mix, in 1080p or 4K at 30, 60 or 120 frames per second. | `File.ExportVideo` | — | Also File > Export video. |
 | File and tabs | Export MIDI | Export the song as a standard MIDI file (File > Export MIDI). | `File.ExportMidi` | — | Also File > Export MIDI. |
 | File and tabs | Export ASCII tab | Export the tablature as a plain-text ASCII tab file (File > Export ASCII tab). | `File.ExportAscii` | — | Also File > Export ASCII tab. |
 | File and tabs | Export compatible .gp file | Write a compatible .gp copy for other programs. If the song uses something that file cannot hold, you choose first: keep a full TabForge copy, export the compatible file only, or cancel. | `File.ExportGuitarPro` | — | Also File > Export compatible .gp file. |
@@ -241,6 +242,12 @@ Default keys are the **TabForge** preset, currently identical to the **Classic**
 | View | Show / hide side panel | Hide the side panel (tools, sections, practice) for more score space, or bring it back. | `View.SidePanel` | — |  |
 | View | Show / hide fretboard / keyboard | Hide the instrument panel (fretboard, keyboard or drum map) for more score space, or bring it back (same as View > Instrument view). | `View.InstrumentPanel` | — | Also the fretboard button next to the side-panel button in the toolbar. |
 | View | Show / hide Band view | Switch to the Band layout (every track's instrument and tab in rows, with the arrangement below), or back to the layout you left (same as View > Band view). | `View.BandView` | — |  |
+| View | Show / hide Keyboard mode (experimental) | Show or hide the Keyboard mode pane: the notes of the selected track fall onto a key strip in time with playback (same as View > Keyboard mode (experimental)). | `View.LearnMode` | Ctrl+Alt+L | Plus and minus (or Ctrl + wheel) change the look-ahead while the pane has focus; the pane's control bar has play, speed, wait, loop, hands, look-ahead, note names, fingers and the MIDI input. |
+| View | Keyboard mode: wait for the right notes | Turn on or off the pause at each chord in Keyboard mode until its notes are pressed (the Preferences setting of the same name). | `Learn.ToggleWait` | Ctrl+Alt+W |  |
+| View | Keyboard mode: skip the awaited chord | Give up the chord the song is waiting for (a miss) and carry on. | `Learn.WaitSkip` | Ctrl+Alt+Q |  |
+| View | Keyboard mode: more seconds ahead (shorter notes) | Show one more second of notes above the keys in Keyboard mode: the notes get shorter and you see further ahead (the + of its control bar). | `Learn.LookAheadLonger` | Ctrl+Alt+OemPlus | Also plus over the view, or Ctrl + mouse wheel down. |
+| View | Keyboard mode: fewer seconds ahead (longer notes) | Show one second fewer of notes above the keys in Keyboard mode: the notes get longer and easier to read (the - of its control bar). | `Learn.LookAheadShorter` | Ctrl+Alt+OemMinus | Also minus over the view, or Ctrl + mouse wheel up. |
+| View | Keyboard mode: view in its own window | Open the falling-notes view in its own window, or bring it back (Keyboard mode on; F11 in the window toggles full screen, Esc leaves it). | `View.LearnPopout` | Ctrl+Alt+O |  |
 | View | Band view: show / hide the selected track's row | Add the selected track's row to the Band view, or take it out (the same as clicking its pill at the top of the Band view). | `Band.ToggleTrackRow` | — |  |
 | View | Band view: more rows per screen | Show one more Band view row on the screen at once (1 to 5, 3 by default); further rows scroll. | `Band.RowsMore` | — |  |
 | View | Band view: fewer rows per screen | Show one fewer Band view row on the screen at once (1 to 5, 3 by default), so each row is taller. | `Band.RowsFewer` | — |  |
@@ -255,6 +262,7 @@ Default keys are the **TabForge** preset, currently identical to the **Classic**
 | View | Layout: Practice | Switch to the Practice workspace layout (score and fretboard large, sections panel). | `View.LayoutPractice` | Ctrl+D2 |  |
 | View | Layout: Mix | Switch to the Mix workspace layout (arrangement and mixer large, small score). | `View.LayoutMix` | Ctrl+D3 |  |
 | Transport | Record | Record every armed track while the song plays; press again to stop. | `Transport.Record` | Ctrl+R |  |
+| Transport | Record video | Play the song and record the screen and the sound to an MP4 (Settings > General > Video recording: resolution, frame rate, what to record, folder); press again, or Stop, to finish. | `Transport.RecordVideo` | Ctrl+Alt+V | Also Sound > Record video. |
 | View | Snap clips on / off | Turn snapping of audio and MIDI clips on or off (right-click the snap button for its settings). | `Timeline.Snap` | Alt+S | Common default. |
 | Transport | Arm track for recording | Monitor the input (audio or MIDI) through the selected track and record it with Record. | `Track.Arm` | — | No default key for this either. |
 

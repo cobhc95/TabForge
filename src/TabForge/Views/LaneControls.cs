@@ -44,7 +44,7 @@ public sealed class InputMeter : FrameworkElement
     protected override void OnRender(DrawingContext dc)
     {
         try { RenderGuard.Inject("InputMeter"); RenderCore(dc); }
-        catch (Exception ex) when (RenderGuard.Contain(ex, "InputMeter", dc, ActualWidth, ActualHeight)) { }
+        catch (Exception ex) when (RenderGuard.Contain(ex, "InputMeter", dc, ActualWidth, ActualHeight)) { } // Not logged: render path: runs per frame.
     }
 
     private void RenderCore(DrawingContext dc)
@@ -93,7 +93,7 @@ public sealed class MonitorButton : FrameworkElement
     protected override void OnRender(DrawingContext dc)
     {
         try { RenderGuard.Inject("MonitorButton"); RenderCore(dc); }
-        catch (Exception ex) when (RenderGuard.Contain(ex, "MonitorButton", dc, ActualWidth, ActualHeight)) { }
+        catch (Exception ex) when (RenderGuard.Contain(ex, "MonitorButton", dc, ActualWidth, ActualHeight)) { } // Not logged: render path: runs per frame.
     }
 
     private void RenderCore(DrawingContext dc)

@@ -27,6 +27,9 @@ using TabForge.Visualization;
 namespace TabForge;
 
 // MainWindow, transport: play/pause/stop, playhead sync, score following, loop and speed.
+// Owns: transport: play, pause, stop, playhead sync, score following, loop and speed.
+// Does not own: playback itself (PlaybackEngine).
+// Tests: listed in docs/feature-map/playback.md.
 public partial class MainWindow
 {
     // ---------- playback (standard: Space = play/pause, click to reposition) ----------
@@ -185,6 +188,7 @@ public partial class MainWindow
     private void Stop_Click(object sender, RoutedEventArgs e) => StopPlayback();
     private void StopPlayback()
     {
+        VideoRecordTransportStopped();
         if (IsRecording) ToggleRecording();
         _midi.Stop();
         SongClock.Stopped();
@@ -245,35 +249,15 @@ public partial class MainWindow
 
     private void LoopButton_PreviewMouseRightButtonUp(object sender, MouseButtonEventArgs e)
     {
-        _transport.SyncingLoopSettings = true;
-        LoopRangeText.Text = _selLoop.HasArea || _loop
+        TransportSettings.OpenLoopSettings(_selLoop.HasArea || _loop
             ? $"Loop area: bars {_selLoop.StartBar + 1}-{_selLoop.EndBar + 1}{(_loop ? "" : " (loop off)")}"
-            : "No loop area selected";
-        LoopScopeCombo.SelectedItem = LoopScopeCombo.Items.OfType<ComboBoxItem>()
-            .FirstOrDefault(i => (string)i.Tag == _settings.Audio.LoopDefaultScope) ?? LoopScopeCombo.Items[0];
-        LoopClearOnDisableCheck.IsChecked = _settings.Audio.LoopClearAreaOnDisable;
-        LoopButtonSectionCheck.IsChecked = _settings.Audio.LoopButtonLoopsSection;
-        SyncLoopBehaviourControls();
-        _transport.SyncingLoopSettings = false;
-        LoopSettingsPopup.IsOpen = true;
+            : "No loop area selected");
         e.Handled = true;
     }
 
-
     private void CloseLoopSettings_Click(object sender, RoutedEventArgs e) => LoopSettingsPopup.IsOpen = false;
-
-    private void LoopScope_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        if (_transport.SyncingLoopSettings || LoopScopeCombo.SelectedItem is not ComboBoxItem { Tag: string scope }) return;
-        _settings.Audio.LoopDefaultScope = scope;
-        SaveSettings();
-    }
-
-    private void LoopClearOnDisable_Click(object sender, RoutedEventArgs e)
-    {
-        _settings.Audio.LoopClearAreaOnDisable = LoopClearOnDisableCheck.IsChecked == true;
-        SaveSettings();
-    }
+    private void LoopScope_SelectionChanged(object sender, SelectionChangedEventArgs e) => TransportSettings.OnLoopScope(LoopScopeCombo);
+    private void LoopClearOnDisable_Click(object sender, RoutedEventArgs e) => TransportSettings.OnLoopClearOnDisable(LoopClearOnDisableCheck);
 
     private void ClearLoopArea_Click(object sender, RoutedEventArgs e)
     {
@@ -332,69 +316,19 @@ public partial class MainWindow
         TempoBox.Text = _project.Tempo.ToString();
     }
 
-    private void Beginning_Click(object sender, RoutedEventArgs e) { Editor.MoveToFirstBar(); ScrollToCursor(); }
-    private void Previous_Click(object sender, RoutedEventArgs e) { Editor.MoveBar(-1); ScrollToCursor(); }
-    private void Next_Click(object sender, RoutedEventArgs e) { Editor.MoveBar(1); ScrollToCursor(); }
+    // Score pane scrolling (ScoreScrollController): the wheel step, the gestures that make the follow stand down, the cursor into view.
+    private ScoreScrollController? _scoreScroll;
+    private ScoreScrollController ScoreScrolling => _scoreScroll ??= new ScoreScrollController(this);
 
-    /// <summary>Keeps the playhead / cursor visible by scrolling the score pane.</summary>
-    private void ScrollToCursor()
-    {
-        var track = SelectedTrack;
-        if (track is null || track.Measures.Count == 0) return;
-        var bar = Math.Clamp(Editor.SelectedMeasure, 0, track.Measures.Count - 1);
-        _follow.JumpTo(ScoreScroll.ViewportHeight > 1 && Editor.SystemHeightNow > ScoreScroll.ViewportHeight ? _follow.FocusTop(Editor.SystemTopForMeasure(bar)) : Editor.ScrollOffsetForMeasure(bar));
-        // One-line mode: bring the cursor bar into view unless it already is.
-        if (Editor.HorizontalScroll)
-        {
-            var x = Editor.HorizontalOffsetForMeasure(Editor.SelectedMeasure);
-            if (x < ScoreScroll.HorizontalOffset || x > ScoreScroll.HorizontalOffset + ScoreScroll.ViewportWidth - 120)
-                ScoreScroll.ScrollToHorizontalOffset(x);
-        }
-    }
-
+    private void ScrollToCursor() => ScoreScrolling.ScrollToCursor();
     private void ScoreScroll_ScrollChanged(object sender, ScrollChangedEventArgs e) => _follow.OnScrollChanged(e);
-
-    /// <summary>Use a tunable, smaller pixel step instead of WPF's coarse default score-wheel jump.</summary>
     private void ScoreScroll_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
     {
-        if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
-        {
-            if (e.Delta != 0) ScoreZoom.ZoomBy(Math.Sign(e.Delta), e.GetPosition(ScoreScroll));
-            e.Handled = true;
-            return;
-        }
-        _follow.NoteUserScrollGesture();
-        var distance = _scoreWheelScrollPixels * (e.Delta / 120.0);
-        if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
-            ScoreScroll.ScrollToHorizontalOffset(ScoreScroll.HorizontalOffset - distance);
-        else
-            ScoreScroll.ScrollToVerticalOffset(ScoreScroll.VerticalOffset - distance);
+        if (!Keyboard.Modifiers.HasFlag(ModifierKeys.Control)) { ScoreScrolling.OnMouseWheel(e, _scoreWheelScrollPixels); return; }
+        if (e.Delta != 0) ScoreZoom.ZoomBy(Math.Sign(e.Delta), e.GetPosition(ScoreScroll));
         e.Handled = true;
     }
-
-    /// <summary>Scroll gestures that are not the wheel: scrollbar press/drag, scroll keys and touch pan.</summary>
-    private void WireScoreScrollGestures()
-    {
-        ScoreScroll.AddHandler(PreviewMouseLeftButtonDownEvent, new MouseButtonEventHandler((_, e) =>
-        {
-            if (e.OriginalSource is DependencyObject d && FindAncestor<System.Windows.Controls.Primitives.ScrollBar>(d) is not null)
-                _follow.SetScrollBarDrag(true);
-        }), true);
-        ScoreScroll.AddHandler(PreviewMouseLeftButtonUpEvent, new MouseButtonEventHandler((_, _) => _follow.SetScrollBarDrag(false)), true);
-        ScoreScroll.AddHandler(LostMouseCaptureEvent, new MouseEventHandler((_, _) => _follow.SetScrollBarDrag(false)), true);
-        ScoreScroll.AddHandler(PreviewKeyDownEvent, new KeyEventHandler((_, e) =>
-        {
-            if (e.Key is Key.PageUp or Key.PageDown or Key.Home or Key.End or Key.Up or Key.Down or Key.Left or Key.Right)
-                _follow.NoteUserScrollGesture();
-        }), true);
-        ScoreScroll.AddHandler(PreviewTouchMoveEvent, new EventHandler<TouchEventArgs>((_, _) => _follow.NoteUserScrollGesture()), true);
-    }
-
-    private static T? FindAncestor<T>(DependencyObject? d) where T : DependencyObject
-    {
-        while (d is not null && d is not T) d = d is Visual or System.Windows.Media.Media3D.Visual3D ? VisualTreeHelper.GetParent(d) : LogicalTreeHelper.GetParent(d);
-        return d as T;
-    }
+    private void WireScoreScrollGestures() => ScoreScrolling.WireGestures();
 
     /// <summary>The window as the host of its <see cref="PlaybackViewController"/>.</summary>
     private sealed class PlaybackViewHost : IPlaybackViewHost
@@ -468,6 +402,7 @@ public partial class MainWindow
             window.Editor.Playback.Clear();
             window.SyncArrangementPlayhead();
             window.SetPlayIcon(false);
+            window.VideoRecordTransportStopped();
             window.StatusText.Text = "Playback finished";
             window.MidiLed.Fill = Brushes.Gray;
             window.RefreshInstrument();

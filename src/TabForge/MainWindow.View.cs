@@ -20,6 +20,7 @@ using TabForge.Playback;
 using TabForge.Plugins;
 using TabForge.Presets;
 using TabForge.Services;
+using TabForge.Services.Band;
 using TabForge.Shell;
 using TabForge.Views;
 using TabForge.Views.Band;
@@ -28,7 +29,10 @@ using TabForge.Visualization;
 namespace TabForge;
 
 // MainWindow, view: dock workspace, theme/notation/clipboard, zoom, fullscreen, fretboard options and panel toggles.
-public partial class MainWindow : IDockLayoutHost, IScoreZoomHost, IBandViewHost
+// Owns: the dock workspace, theme, notation and clipboard commands, zoom, full screen, fretboard options and panel toggles.
+// Does not own: the dock layout (Docking/) and the theme service (Services/ThemeService).
+// Tests: listed in docs/feature-map/windows-tabs-and-documents.md.
+public partial class MainWindow : IScoreZoomHost, IBandCommandHost
 {
     private void InitializeDockWorkspace()
     {
@@ -55,21 +59,19 @@ public partial class MainWindow : IDockLayoutHost, IScoreZoomHost, IBandViewHost
             (SectionsPanelContent, "Sections pane")
         })
             if (string.IsNullOrEmpty(System.Windows.Automation.AutomationProperties.GetName(pane))) System.Windows.Automation.AutomationProperties.SetName(pane, title);
-        _dockWorkspace.RegisterPanel("instrument", "Fretboard", InstrumentHost, 360, 150, "instrument", "score-editor");
-        WorkspaceLayouts.ApplyInstrumentMinHeight();
-        Instrument.RequiredHeightChanged += _ => WorkspaceLayouts.ApplyInstrumentMinHeight();
-        Instrument.MaximumHeightChanged += _ => WorkspaceLayouts.ApplyInstrumentMaxHeight();
-        _dockWorkspace.RegisterPanel("timeline", "Arrangement", ArrangementHost, 440, 112, "timeline", "score-editor");
-        _dockWorkspace.RegisterPanel("band", "Band", Band.View, 520, 240, "band", "score-editor", startsClosed: true);
-        _dockWorkspace.RegisterPanel("tools", "Tools", ToolsPanelContent, 210, 150, "tools", "structure");
-        _dockWorkspace.RegisterPanel("structure", "Structure", ToolPalette.PanelContents["structure"], 210, 150, "tools", "tools");
-        _dockWorkspace.RegisterPanel("rhythm", "Rhythm", ToolPalette.PanelContents["rhythm"], 210, 140, "tools", "tools");
-        _dockWorkspace.RegisterPanel("layout", "Layout", ToolPalette.PanelContents["layout"], 210, 140, "tools", "tools");
         // The Sections pane fills its cell, or scrolls when the cell is shorter than the content's minimum (large UI scale).
         SectionsPanelContent.SizeChanged += (_, e) =>
             SectionsPanelGrid.Height = Math.Max(0, e.NewSize.Height - SectionsPanelContent.Padding.Top - SectionsPanelContent.Padding.Bottom);
         SectionsPanelGrid.Height = 0;
-        _dockWorkspace.RegisterPanel("sections", "Sections", SectionsPanelContent, 190, 180, "side", "score-editor");
+        // One row per pane in DockPaneTable; the window supplies each pane's element.
+        DockPaneSetup.RegisterAll(_dockWorkspace, id => id switch
+        {
+            "instrument" => InstrumentHost, "timeline" => ArrangementHost, "band" => Band.View, "learn" => KeyboardModePane, "tools" => ToolsPanelContent,
+            "sections" => SectionsPanelContent, _ => ToolPalette.PanelContents[id]
+        });
+        WorkspaceLayouts.ApplyInstrumentMinHeight();
+        Instrument.RequiredHeightChanged += _ => WorkspaceLayouts.ApplyInstrumentMinHeight();
+        Instrument.MaximumHeightChanged += _ => WorkspaceLayouts.ApplyInstrumentMaxHeight();
         // The score zoom and playback speed live in the top toolbar; a narrow window sheds them in steps there.
         new ToolbarZoomSpeedFit(MainToolbar, MainMenu, PinnedToolStrip, ToolbarTempoGroup, ZoomSpeedGroup).Update(MainToolbar.ActualWidth);
 
@@ -85,6 +87,7 @@ public partial class MainWindow : IDockLayoutHost, IScoreZoomHost, IBandViewHost
             WorkspaceLayouts.RefreshDockPanelsMenu();
             if (!_suppressWorkspaceSave) SaveSettings();
         };
+        WorkspaceLayouts.ToggleLearn = ToggleKeyboardMode;
         WorkspaceLayouts.BuildDockPanelsMenu();
         _dockWorkspace.RestoreLayout(null);
         _trackListFit = new TrackListFitController(this, this);
@@ -102,23 +105,19 @@ public partial class MainWindow : IDockLayoutHost, IScoreZoomHost, IBandViewHost
     void IPaneHost.SetStatus(string text) => StatusText.Text = text;
 
     private DockLayoutController? _workspaceLayouts;
-    private DockLayoutController WorkspaceLayouts => _workspaceLayouts ??= new DockLayoutController(this);
-    DockWorkspace? IDockLayoutHost.Dock => _dockWorkspace;
-    MenuItem IDockLayoutHost.DockPanelsMenu => DockPanelsMenu;
-    InstrumentPanel IDockLayoutHost.Instrument => Instrument;
-    Border IDockLayoutHost.InstrumentHost => InstrumentHost;
+    private DockLayoutController WorkspaceLayouts =>
+        _workspaceLayouts ??= new DockLayoutController(new DockHost(this, () => _dockWorkspace, DockPanelsMenu, Instrument, InstrumentHost));
 
     // ---------- Band view (BandViewController) ----------
 
     private BandViewController? _band;
-    internal BandViewController Band => _band ??= new BandViewController(this);
+    internal BandViewController Band => _band ??= new BandViewController(new BandHost(this, _documents, _options,
+        () => (InstrumentPane.LeftHanded, InstrumentPane.ShowNoteNames, InstrumentPane.ScaleHighlight, InstrumentPane.PreviewHorizon),
+        MoveTrackTo, i => TrackMixerGrid.SelectedIndex = i, () => ScoreZoom, OpenSettings));
     private void ToggleBandView_Click(object sender, RoutedEventArgs e) => WorkspaceLayouts.ToggleBandView();
-    DocumentSession IBandViewHost.ActiveDocument => Doc;
-    (bool LeftHanded, bool ShowNoteNames, string? Scale, int Horizon) IBandViewHost.InstrumentOptions =>
-        (InstrumentPane.LeftHanded, InstrumentPane.ShowNoteNames, InstrumentPane.ScaleHighlight, InstrumentPane.PreviewHorizon);
-    VisualOptions? IBandViewHost.Visual => _options.Visual;
-    void IBandViewHost.MoveSongTrack(int from, int to) => MoveTrackTo(from, to);
-    void IBandViewHost.ShowCursor(int trackIndex, int bar, int cell) { TrackMixerGrid.SelectedIndex = trackIndex; Editor.SetPosition(bar, cell, 0); }
+
+    /// <summary>Runs one Band.* command for the feature module (Services/Band); the same handler as the RunHotkey switch.</summary>
+    public void RunBandCommand(string id) => Band.Run(id);
 
     // ---------- theme / notation / clipboard ----------
 
@@ -457,8 +456,8 @@ public partial class MainWindow : IDockLayoutHost, IScoreZoomHost, IBandViewHost
     }
 
     /// <summary>
-    /// Right-click on the fretboard / keyboard / drum pads: the lean menu of <see cref="InstrumentMenus"/> (owner decisions
-    /// 2026-09-30). Appearance, sizes, colours and look-ahead live in Preferences behind "Fretboard settings...".
+    /// Right-click on the fretboard / keyboard / drum pads: the lean menu of <see cref="InstrumentMenus"/>.
+    /// Appearance, sizes, colours and look-ahead live in Preferences behind "Fretboard settings...".
     /// </summary>
     private void Instrument_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
     {

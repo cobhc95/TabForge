@@ -87,7 +87,7 @@ public static partial class SelfTest
         }
         finally { try { Directory.Delete(folder, true); } catch { } }
 
-        // A5-02: a drop becomes silence at the position where the input was lost, after the older queued audio (stalled writer).
+        // A drop becomes silence at the position where the input was lost, after the older queued audio (stalled writer).
         var gapFolder = Path.Combine(Path.GetTempPath(), $"tf-rec-gap-{Guid.NewGuid():N}");
         try
         {

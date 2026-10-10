@@ -27,6 +27,9 @@ using TabForge.Visualization;
 namespace TabForge;
 
 // MainWindow, window-level keyboard handling and closing.
+// Owns: window-level keyboard routing (numpad and Tab keys work even when the mixer grid or a button has focus) and window closing.
+// Does not own: text editing, which a TextBox keeps.
+// Tests: listed in docs/feature-map/windows-tabs-and-documents.md.
 public partial class MainWindow
 {
     // ---------- keyboard ----------

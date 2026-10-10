@@ -9,6 +9,10 @@ using TabForge.Services;
 
 namespace TabForge;
 
+// Owns: application startup and exit: the window commands and `--size`, opening the startup file, handing a second launch's song to the open window, crash handlers and the recovery copies of unsaved songs.
+// Does not own: the main window (MainWindow*.cs) or the settings store (AppSettingsStore).
+// Tests: TestSingleInstanceProcessHandover, TestEmergencyRecoveryNames, TestRecoveryCopyOverTforgeLimit, TestStartupFileOpen.
+
 public partial class App : Application
 {
     protected override void OnStartup(StartupEventArgs e)
@@ -16,7 +20,7 @@ public partial class App : Application
         ClipboardService.Compose(new Views.WindowsScoreClipboard());   // the one score clipboard of this process; every window and diagnostic run shares it
         // --profile <folder> (already applied in Program.Main) is removed; the rest are the app's own arguments.
         var args = UserPaths.ApplyProfileArgument(e.Args);
-        // --approve-night-plugins (Audit 5 H-5) only works together with --profile; alone it is refused before anything is loaded or written.
+        // --approve-night-plugins only works together with --profile; alone it is refused before anything is loaded or written.
         var approveNightPlugins = TabForge.Plugins.NightPluginApproval.Requested(args);
         if (approveNightPlugins && (!UserPaths.IsProfile || UserPaths.ProfileIsRealUserFolder))
         {
@@ -128,7 +132,7 @@ public partial class App : Application
     }
 
     /// <summary>
-    /// `--option &lt;value&gt;` → handler on the opened main window (A-05). Enumerated in insertion order (nothing is ever
+    /// `--option &lt;value&gt;` → handler on the opened main window. Enumerated in insertion order (nothing is ever
     /// removed), so `--theme` is applied before any probe or the screenshot tour starts.
     /// </summary>
     private static readonly Dictionary<string, Action<MainWindow, string>> WindowCommands = new(StringComparer.OrdinalIgnoreCase)
@@ -250,7 +254,7 @@ public partial class App : Application
                 var op = Dispatcher.BeginInvoke(new Action(() => SaveRecoveryCopies()));
                 op.Wait(TimeSpan.FromSeconds(3));   // the UI thread may be the one that is stuck
             }
-            catch (Exception ex) { Debug.WriteLine($"Recovery after a fatal error failed: {ex}"); }
+            catch (Exception ex) { Services.Trace.Error(Services.Trace.Ui, "fatal error recovery: " + ex.Message); Debug.WriteLine($"Recovery after a fatal error failed: {ex}"); }
         };
         TaskScheduler.UnobservedTaskException += (_, args) =>
         {
@@ -272,7 +276,7 @@ public partial class App : Application
             foreach (var window in Current.Windows.OfType<MainWindow>())
             {
                 try { window.MarkDegraded(); }
-                catch (Exception ex) { Debug.WriteLine($"Could not mark a window degraded: {ex}"); }
+                catch (Exception ex) { Services.Trace.Error(Services.Trace.Ui, "mark window degraded: " + ex.Message); Debug.WriteLine($"Could not mark a window degraded: {ex}"); }
             }
             var message = "TabForge hit an unexpected error and may not work correctly until it is restarted.\n\n" +
                           $"{args.Exception.GetBaseException().Message}\n\n" +
@@ -303,7 +307,7 @@ public partial class App : Application
                 written.Add(path);
             }
             // One damaged song must not stop the others being rescued.
-            catch (Exception ex) { Debug.WriteLine($"Recovery copy failed for {document.DisplayName}: {ex}"); }
+            catch (Exception ex) { Services.Trace.Error(Services.Trace.Ui, "recovery copy: " + ex.Message); Debug.WriteLine($"Recovery copy failed for {document.DisplayName}: {ex}"); }
         }
         return written;
     }
@@ -322,9 +326,9 @@ public partial class App : Application
         {
             var toWrite = project;
             try { if (project.Tracks?.Any(t => t?.StartupTemplateId is not null) == true) toWrite = project.WithoutStartupTracks(); }
-            catch (Exception ex) { errors = $"Startup tracks could not be left out ({ex.GetType().Name}): {ex.Message}"; }
+            catch (Exception ex) { Services.Trace.Error(Services.Trace.Ui, "startup: leave out startup tracks: " + ex.Message); errors = $"Startup tracks could not be left out ({ex.GetType().Name}): {ex.Message}"; }
             try { ProjectValidator.Validate(toWrite); }
-            catch (Exception ex) { errors = (errors is null ? "" : errors + Environment.NewLine) + $"{ex.GetType().Name}: {ex.Message}"; }
+            catch (Exception ex) { Services.Trace.Error(Services.Trace.Ui, "recovery: validate copy: " + ex.Message); errors = (errors is null ? "" : errors + Environment.NewLine) + $"{ex.GetType().Name}: {ex.Message}"; }
             project.IsDirty = false;   // the file on disk records a saved project, as a normal save would
             // PersistBytes is the disk JSON (every property, FormatVersion included), gzip-wrapped: the same format a .tforge save
             // writes since M-03, so it is written as is (ProjectService.Load detects the gzip header).
@@ -338,7 +342,7 @@ public partial class App : Application
             var text = System.Text.Encoding.UTF8.GetBytes(
                 $"This recovery copy was written without validation. It failed validation with:{Environment.NewLine}{errors}{Environment.NewLine}");
             try { FilePathPolicy.WriteAtomically(sidecar, s => s.Write(text)); }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { Debug.WriteLine($"Recovery error list not written: {ex}"); }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { Services.Trace.Error(Services.Trace.Ui, "recovery: error list: " + ex.Message); Debug.WriteLine($"Recovery error list not written: {ex}"); }
         }
         return errors;
     }
@@ -353,6 +357,7 @@ public partial class App : Application
         }
         catch (Exception logError)
         {
+            Services.Trace.Error(Services.Trace.Ui, "crash log: write: " + logError.Message);
             Debug.WriteLine($"Crash log could not be written: {logError}");
             return null;
         }

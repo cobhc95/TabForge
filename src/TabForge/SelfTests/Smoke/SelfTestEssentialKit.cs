@@ -38,7 +38,7 @@ public static partial class SelfTest
         return folder;
     }
 
-    private static void SmClean(string folder) { try { Directory.Delete(folder, true); } catch (IOException) { } catch (UnauthorizedAccessException) { } }
+    private static void SmClean(string folder) { try { Directory.Delete(folder, true); } catch (IOException) { } catch (UnauthorizedAccessException) { } } // Not logged: test cleanup of a temporary folder.
 
     private static object? SmCall(object target, string method, params object?[] args)
     {
@@ -135,7 +135,7 @@ public static partial class SelfTest
         var dispatcher = Dispatcher.CurrentDispatcher;
         dispatcher.UnhandledException += OnUnhandled;
         try { step(); SmSettle(); }
-        catch (Exception ex) { raised ??= ex; }
+        catch (Exception ex) { raised ??= ex; } // Not logged: self-test harness: the failure is recorded as a check result
         finally { dispatcher.UnhandledException -= OnUnhandled; }
         Check(name, raised is null, raised is null ? null : $"{raised.GetType().Name}: {raised.Message}");
     }

@@ -183,49 +183,8 @@ internal static class ScoreMarkText
         : cell.Notes.Any(n => n.RightHandFinger is >= 0 and <= 4) ? 11 : 0)
         + (cell.Notes.Any(n => HarmonicFretText(n).Length > 0) ? HarmonicRowHeight : 0);
 
-    internal static string ShortTechnique(string t) => t switch
-    {
-        "LetRing" => "let ring",
-        "Harmonic" => "H",
-        "ArtificialHarmonic" => "A.H.",
-        "PinchHarmonic" => "P.H.",
-        "TapHarmonic" => "T.H.",
-        "SemiHarmonic" => "S.H.",
-        "FeedbackHarmonic" => "F.B.",
-        "Vibrato" => "", // drawn as a wavy line
-        "WideVibrato" => "",
-        "TremBar" => "T",
-        "Bend" => "b",
-        "LegatoSlide" => "/",
-        "ShiftSlide" => "S",
-        "SlideInBelow" => "↗",
-        "SlideInAbove" => "↘",
-        "SlideOutUp" => "↗",
-        "SlideOutDown" => "↘",
-        "PickSlideUp" => "P.S.↑",
-        "PickSlideDown" => "P.S.↓",
-        "DeadSlapped" => "D.S.",
-        "HOPO" or "HOPOOrigin" or "HOPODestination" => "",
-        "Tapping" or "LeftTap" => "",
-        "Slap" => "S",
-        "Pop" => "P",
-        "Trill" => "tr",
-        "TremoloPick" => "𝄆",
-        "GraceOnBeat" => "gr",
-        "GraceBend" => "grb",
-        "Ghost" => "G",
-        "Dead" => "X",
-        "FadeIn" => "<",
-        "FadeOut" => ">",
-        "WahOpen" => "wah",
-        "WahClose" => "wah",
-        "GraceBefore" => "gr",
-        "BrushDown" => "↓",
-        "BrushUp" => "↑",
-        "ArpeggioDown" => "arp↓",
-        "ArpeggioUp" => "arp↑",
-        _ => ""
-    };
+    /// <summary>The short engraved text of a technique, from the technique table; "" when it has none (a mark drawn as geometry) or the name is unknown.</summary>
+    internal static string ShortTechnique(string t) => TechniqueInfo.MarkOf(t);
 
     internal static bool HasTapTechnique(TabNote note) =>
         note.Techniques.Contains("Tapping") || note.Techniques.Contains("LeftTap");

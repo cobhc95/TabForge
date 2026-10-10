@@ -8,6 +8,10 @@ using TabForge.Services;
 
 namespace TabForge.Views.Score;
 
+// Owns: the key and time signature positions and widths per bar, and the tempo text shown at the song start and at each tempo change.
+// Does not own: the page layout (ScoreLayoutEngine.cs, ScoreLayoutEngine.Incremental.cs) or the drawing of the signatures (ScoreRenderer.Bars.cs).
+// Tests: TestKeySignaturesCarryForward.
+
 internal sealed partial class ScoreLayoutEngine
 {
     internal bool KeySignatureChanges(TrackModel track, int measureIndex)

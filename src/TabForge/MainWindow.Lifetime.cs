@@ -5,12 +5,15 @@ using TabForge.Views;
 
 namespace TabForge;
 
-// MainWindow, lifetime (R1): what this window attaches to objects that outlive it, and the one place that undoes it.
+// MainWindow, lifetime: what this window attaches to objects that outlive it, and the one place that undoes it.
 //
 // Rules: (1) anything attached to a static or shared object (a static event, the shared audio engine client, the shared settings store,
 // a registration) goes through Subscribe / _lifetime.Add, so its detach is recorded next to its attach; (2) the detach runs once, from
 // Closed (a cancelled close raises no Closed, so a window that stays open keeps every attachment); (3) work another thread or object
 // queues for this window goes through PostIfOpen, so it never touches a window that has closed meanwhile.
+// Owns: what this window attaches to objects that outlive it, and the one place that undoes it.
+// Does not own: the shared objects themselves (static events, the audio engine client, the settings store).
+// Tests: listed in docs/feature-map/windows-tabs-and-documents.md.
 public partial class MainWindow : IDiscardPromptHost
 {
     /// <summary>Everything attached to a longer-lived object; undone once, newest first, when the window has really closed.</summary>
@@ -42,6 +45,9 @@ public partial class MainWindow : IDiscardPromptHost
         _isClosed = true;
         _playbackView.Dispose();
         _band?.Dispose();
+        _learnMode?.Exit();   // the arrangement Keyboard mode replaced is back before the window goes
+        _learnMode?.Dispose();
+        _learn?.Dispose();
         _follow.Halt();
         // The documents still in this window are closed for good (a tab moved to another window left _documents when it moved, and is
         // not touched here): their playback stops and their engine chains are unloaded now, not parked.

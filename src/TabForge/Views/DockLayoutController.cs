@@ -24,10 +24,9 @@ internal interface IDockLayoutHost : IPaneHost
 internal sealed class DockLayoutController
 {
     public static readonly string[] BuiltInLayoutNames = { "Compose", "Practice", "Mix", "Band" };
-    private static readonly string[] AllDockPanelIds =
-        { "tools", "structure", "rhythm", "layout", "sections", "instrument", "timeline", "band" };
+    private static readonly string[] AllDockPanelIds = DockPaneTable.Ids.ToArray();
     /// <summary>The panels on the side (tools, structure, rhythm, layout, sections).</summary>
-    private static readonly string[] SidePanelIds = { "tools", "structure", "rhythm", "layout", "sections" };
+    private static readonly string[] SidePanelIds = DockPaneTable.SideIds.ToArray();
     private const int MaxSavedLayouts = 24;
 
     private readonly IDockLayoutHost _host;
@@ -164,11 +163,17 @@ internal sealed class DockLayoutController
         _host.SetStatus(Settings.Appearance.FretboardAtBottom ? "Fretboard below the score" : "Fretboard above the score");
     }
 
+    /// <summary>Set by a mode that shows a temporary arrangement (Keyboard mode): the real layout to save, and what puts it back before a layout is switched.</summary>
+    internal Func<DockWorkspaceState?>? RealLayout { get; set; }
+    internal Action? LeaveTemporaryLayout { get; set; }
+    internal Action? ToggleLearn { get; set; }
+
     private (string? Name, DockWorkspaceState State)? _layoutBeforeBand;
 
     /// <summary>View > Band view and View.BandView: enters the Band layout, or goes back to the exact panels it replaced.</summary>
     public void ToggleBandView()
     {
+        LeaveTemporaryLayout?.Invoke();
         if (_host.Dock is not { } dock) return;
         if (dock.IsPanelVisible("band"))
         {
@@ -194,6 +199,7 @@ internal sealed class DockLayoutController
     /// <summary>Instantly applies a layout (panels, dock sizes, window state); documents are not touched.</summary>
     public void SwitchLayout(string name)
     {
+        LeaveTemporaryLayout?.Invoke();
         if (_host.Dock is not { } dock) return;
         var saved = FindSavedLayout(name);
         DockWorkspaceState? state = saved?.State;
@@ -231,7 +237,7 @@ internal sealed class DockLayoutController
         if (existing is null) Settings.SavedLayouts.Add(existing = new SavedLayout());
         var w = _host.Window;
         existing.Name = BuiltInLayoutNames.FirstOrDefault(n => string.Equals(n, name, StringComparison.OrdinalIgnoreCase)) ?? name;
-        existing.State = dock.CaptureLayout();
+        existing.State = RealLayout?.Invoke() ?? dock.CaptureLayout();
         existing.Maximised = w.WindowState == WindowState.Maximized;
         existing.WindowWidth = w.WindowState == WindowState.Maximized ? w.RestoreBounds.Width : w.Width;
         existing.WindowHeight = w.WindowState == WindowState.Maximized ? w.RestoreBounds.Height : w.Height;
@@ -244,18 +250,14 @@ internal sealed class DockLayoutController
     {
         var menu = _host.DockPanelsMenu;
         menu.Items.Clear();
-        foreach (var (id, title) in new[]
-        {
-            ("tools", "Tools"), ("structure", "Structure"), ("rhythm", "Rhythm"), ("layout", "Layout"),
-            ("sections", "Sections"),
-            ("instrument", "Fretboard"), ("timeline", "Arrangement"), ("band", "Band view")
-        })
+        foreach (var (id, title) in DockPaneTable.Rows.Select(r => (r.Id, r.MenuTitle)))
         {
             var item = new MenuItem { Header = title, IsCheckable = true, IsChecked = true, Tag = id };
             item.Click += (_, _) =>
             {
                 // Band view has its own layout: the Panels entry switches to it and back, never docks it into this one.
                 if (item.Tag is "band") ToggleBandView();
+                else if (item.Tag is "learn") ToggleLearn?.Invoke();   // Keyboard mode swaps the layout; it is never docked by hand
                 else if (item.Tag is string panelId) _host.Dock?.SetPanelVisible(panelId, item.IsChecked);
                 RefreshDockPanelsMenu();
             };
@@ -268,7 +270,7 @@ internal sealed class DockLayoutController
     internal static bool NeedsScoreBack(DockWorkspaceState state)
     {
         static bool HasEditor(DockNodeState? node) => node is not null && (node.Kind == "editor" || HasEditor(node.First) || HasEditor(node.Second));
-        return state.Root is not null && !HasEditor(state.Root) && !DockWorkspace.PanelsOf(state).Contains("band");
+        return state.Root is not null && !HasEditor(state.Root) && !DockWorkspace.PanelsOf(state).Contains("band") && !DockWorkspace.PanelsOf(state).Contains("learn");
     }
 
     private bool _leavingBand;

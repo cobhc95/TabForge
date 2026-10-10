@@ -13,7 +13,7 @@ using TabForge.Services;
 
 namespace TabForge;
 
-// R5 (work/archive/night-2026-10-02/R5_CAPABILITY.md): the capability probe. One minimal fixture per loss allowance of the semantic round trip
+// The capability probe. One minimal fixture per loss allowance of the semantic round trip
 // (SelfTestRoundTripSemantics.cs) and per tolerance of the GP fix tests (SelfTestGpRoundTripFixes.cs): what the model holds, the gpif XML
 // the exporter wrote, what TabForge reads back. `TabForge.exe --gp-capability <out.md> [gp-folder]` writes the record; the class and cause
 // of each case live here, next to the fixture, so the record cannot drift from the code.

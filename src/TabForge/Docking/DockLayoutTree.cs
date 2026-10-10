@@ -135,9 +135,9 @@ internal static class DockLayoutTree
         if (!Walk(state.Root, true)) return false;
         foreach (var floating in state.Floating)
             if (floating.Root is null || !Walk(floating.Root, false)) return false;
-        // The Band view fills the editor's place in the Band layout, so a layout holding it may have no editor.
+        // The Band view (and the Keyboard mode pane in its full-size layouts) fills the editor's place, so a layout holding it may have no editor.
         var editors = ids.Count(i => i == "$editor");
-        if (editors > 1 || (editors == 0 && !ids.Contains("band"))) return false;
+        if (editors > 1 || (editors == 0 && !ids.Contains("band") && !ids.Contains("learn"))) return false;
         var panels = ids.Where(i => i != "$editor").ToList();
         if (panels.Count != panels.Distinct(StringComparer.Ordinal).Count()) return false;
         foreach (var id in state.ClosedPanels)

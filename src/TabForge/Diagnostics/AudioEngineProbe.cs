@@ -328,7 +328,7 @@ internal static partial class DiagnosticCommands
                 report.AppendLine($"input: opened without error={inputError is null}{(inputError is null ? "" : " (" + inputError + ")")}, record started={recordStarted}, take {length:0.00} s, file ok={fileOk}, input peak {inputPeak:0.000}");
                 if (inputError is not null) failures.Add("input: " + inputError);
                 else if (!fileOk || length < 1.0) failures.Add($"recording produced no usable take ({length:0.00} s)");
-                try { if (Directory.Exists(folder)) Directory.Delete(folder, true); } catch (IOException) { }
+                try { if (Directory.Exists(folder)) Directory.Delete(folder, true); } catch (IOException) { } // Not logged: probe cleanup of a temporary folder.
                 client.Sync(Array.Empty<TrackModel>(), settings);
             }
 

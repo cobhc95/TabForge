@@ -34,8 +34,8 @@ public static partial class SelfTest
     private sealed class FitHost : ITrackListFitHost
     {
         public TimelineSettings Timeline { get; } = new();
-        public ArrangementPanel Arrangement { get; init; } = null!;
-        public DockWorkspace Dock { get; init; } = null!;
+        public ITrackListRows Arrangement { get; init; } = null!;
+        public ITrackListDock Dock { get; init; } = null!;
         public System.Windows.Threading.Dispatcher Dispatcher => System.Windows.Threading.Dispatcher.CurrentDispatcher;
         public int Saves;
         public double MinScoreHeight { get; init; }

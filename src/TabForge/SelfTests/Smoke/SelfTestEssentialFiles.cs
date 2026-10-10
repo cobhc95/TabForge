@@ -104,7 +104,7 @@ public static partial class SelfTest
             if (b.Content is StackPanel p && p.Children.OfType<TextBlock>().FirstOrDefault()?.Text.StartsWith("Clean .gp file", StringComparison.Ordinal) == true
                 || System.Windows.Automation.AutomationProperties.GetAutomationId(b) == GpExportPreflightDialog.CompatibleId)
             {
-                try { b.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent)); } catch (InvalidOperationException) { }
+                try { b.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent)); } catch (InvalidOperationException) { } // Not logged: test driver: a dialog that is already closed is expected.
                 return true;
             }
         return false;

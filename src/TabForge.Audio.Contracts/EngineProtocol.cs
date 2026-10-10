@@ -81,6 +81,11 @@ public enum EngineCommand : byte
     PanicSlots = 39,
     /// <summary>Live master safety limiter on / off (bool). Off by default (A7-A01); renders have their own switch in the render spec.</summary>
     SetLiveLimiter = 40,
+    /// <summary>
+    /// The master output tap on / off (bool). While on, the engine sends the audible master output (after the master level, the live limiter and
+    /// the output clamp: everything heard, live input and plug-ins included) as <see cref="EngineEvent.MasterAudio"/> frames. Off by default; off costs nothing.
+    /// </summary>
+    SetMasterTap = 41,
     Shutdown = 99,
 }
 
@@ -199,6 +204,17 @@ public enum EngineEvent : byte
     PluginMisbehaved = 22,
     /// <summary>A recording lost input to a slow disk (the take keeps its length; the lost stretches are silence): one summary line (message), sent after the Recorded events.</summary>
     RecordingLoss = 23,
+    /// <summary>
+    /// A chunk of the master output tap (see <see cref="EngineCommand.SetMasterTap"/>): sample rate (int), first frame (long, frames since the tap
+    /// was switched on: the audio clock), frame count (int, 1..<see cref="MasterTapLimits.MaxChunkFrames"/>), then count x 2 interleaved float32 (left, right).
+    /// </summary>
+    MasterAudio = 24,
+}
+
+/// <summary>Bounds of one <see cref="EngineEvent.MasterAudio"/> chunk.</summary>
+public static class MasterTapLimits
+{
+    public const int MaxChunkFrames = 8192;
 }
 
 /// <summary>What the engine could read for one plug-in's state.</summary>

@@ -11,7 +11,7 @@ using TabForge.Views;
 namespace TabForge;
 
 /// <summary>
-/// R3 (remediation plan section 4): the document and editing operations that used to live in MainWindow handlers run for an explicit document without
+/// The document and editing operations run for an explicit document without
 /// a window, and every entry point of one logical edit (keyboard, menu, context menu, timeline gesture) gives the same model, one undo step, one dirty
 /// change and one timeline invalidation.
 /// </summary>
@@ -295,16 +295,16 @@ public static partial class SelfTest
             Check($"document operations: {name}: one undo step, dirty, {revisions} timeline invalidation(s), and one undo restores the song", ok && DoHash(document) == before && document.Undo.UndoCount == 0, $"{outcome}; undone {DoHash(document) == before}");
         }
 
-        Site("palette: dim inactive voice", _ => LtCall(window, "ToggleInactiveVoiceGray"), 1);
-        Site("palette: cycle triplet feel", _ => LtCall(window, "CycleTripletFeel"), 1);
-        Site("palette: line break", _ => LtCall(window, "ToggleLineBreak", true), 1);
-        Site("palette: simile", _ => LtCall(window, "ToggleSimile", 1), 1);
+        Site("palette: dim inactive voice", _ => LtCall(LtTools(window), "ToggleInactiveVoiceGray"), 1);
+        Site("palette: cycle triplet feel", _ => LtCall(LtTools(window), "CycleTripletFeel"), 1);
+        Site("palette: line break", _ => LtCall(LtTools(window), "ToggleLineBreak", true), 1);
+        Site("palette: simile", _ => LtCall(LtTools(window), "ToggleSimile", 1), 1);
         Site("Bar menu: clef", _ => LtCall(window, "Clef_Click", window, new RoutedEventArgs()), 1);
         Site("Bar menu: double bar", _ => LtCall(window, "DoubleBar_Click", window, new RoutedEventArgs()), 1);
         Site("Bar menu: triplet feel", _ => LtCall(window, "TripletFeel_Click", window, new RoutedEventArgs()), 1);
         Site("Bar menu: simile (one bar)", _ => LtCall(window, "Simile1_Click", window, new RoutedEventArgs()), 1);
-        Site("bus effects on / off", d => LtCall(window, "ToggleBus", Models.MixerGroups.GroupOf(d.Project, d.Project.Tracks[0])), 0);
-        Site("track FX power switch", d => LtCall(window, "ToggleTrackChain", d.Project.Tracks[0]), 0);
+        Site("bus effects on / off", d => window.MixerHost.ToggleBus(Models.MixerGroups.GroupOf(d.Project, d.Project.Tracks[0])), 0);
+        Site("track FX power switch", d => window.MixerHost.ToggleTrackChain(d.Project.Tracks[0]), 0);
         Site("track input monitor (clip lanes)", d => DocumentEdits.Run(d, p => { p.Tracks[0].MonitorInput = !p.Tracks[0].MonitorInput; return true; }, invalidatesTimeline: false), 0);
         Site("clip edit (mute a clip)", d =>
         {

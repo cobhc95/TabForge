@@ -27,6 +27,9 @@ using TabForge.Visualization;
 namespace TabForge;
 
 // MainWindow, tracks and mixer: mixer header menu, global tuning, mixer drag-reorder, add/delete/move tracks.
+// Owns: adding, deleting and moving tracks, the mixer header menu, the global-tuning forwards (GlobalTuningController with its host) and mixer drag-reorder.
+// Does not own: the track model work (TrackController).
+// Tests: listed in docs/feature-map/timeline-and-clips.md.
 public partial class MainWindow : ITrackListFitHost, ITrackGridDragHost
 {
     private MenuItem MixerMenuItem(string header, Action action)
@@ -93,7 +96,7 @@ public partial class MainWindow : ITrackListFitHost, ITrackGridDragHost
             _settings.Audio.MasterVolume = (int)e.NewValue;
             _midi.SetMasterVolume(_project, (int)e.NewValue);
             if (_mainWindowInitialized) SyncAudioEngine(); // plug-in tracks follow the master too
-            MixerWindows.Mixer?.SyncValues();                    // the mixer's Master row follows the knob
+            MixerHost.Windows.Mixer?.SyncValues();                    // the mixer's Master row follows the knob
             StatusText.Text = $"Master volume {(int)e.NewValue}%";
             QueueMetronomeSettingsSave();
         };
@@ -111,11 +114,11 @@ public partial class MainWindow : ITrackListFitHost, ITrackGridDragHost
         Arrangement.TuningMenuRequested += (_, _) =>
         {
             var menu = MixerMenu();
-            menu.Items.Add(MixerMenuItem("Tune up a semitone (+1)", () => RetuneAllTracks(1)));
-            menu.Items.Add(MixerMenuItem("Tune down a semitone (−1)", () => RetuneAllTracks(-1)));
+            menu.Items.Add(MixerMenuItem("Tune up a semitone (+1)", () => GlobalTuning.RetuneAll(1)));
+            menu.Items.Add(MixerMenuItem("Tune down a semitone (−1)", () => GlobalTuning.RetuneAll(-1)));
             menu.Items.Add(MixerMenuItem("Global tuning window…", ShowGlobalTuningWindow));
             menu.Items.Add(SpecMenus.Separator(this));
-            var reset = MixerMenuItem("Back to original tuning", () => RetuneStrings(_globalStringOffsets.Select(o => -o).ToArray()));
+            var reset = MixerMenuItem("Back to original tuning", GlobalTuning.ResetToOriginal);
             reset.IsEnabled = _globalStringOffsets.Any(o => o != 0);
             menu.Items.Add(reset);
             menu.PlacementTarget = Arrangement.TuningButton;
@@ -124,72 +127,39 @@ public partial class MainWindow : ITrackListFitHost, ITrackGridDragHost
         };
         Arrangement.TuningNumberClicked += (_, _) => ShowGlobalTuningWindow();
         Arrangement.TuningIconClicked += (_, _) => ShowGlobalTuningWindow();
-        Arrangement.TuningShiftEdited += (_, shift) => SetUniformTuningShift(shift);
+        Arrangement.TuningShiftEdited += (_, shift) => GlobalTuning.SetUniformShift(shift);
         Arrangement.AreaMoveDropped += (_, target) => _sections.MoveArea(Doc, _selLoop.StartBar, _selLoop.EndBar, target);
     }
 
     // Per-string shift from the song's original tuning, six-string reference (high to low).
     private int[] _globalStringOffsets => Doc.TuningShift;
 
-    private bool TuningIsUniform => _globalStringOffsets.All(o => o == _globalStringOffsets[0]);
+    private bool TuningIsUniform => GlobalTuningController.IsUniform(_globalStringOffsets);
 
-    private void SetUniformTuningShift(int shift) =>
-        RetuneStrings(_globalStringOffsets.Select(o => shift - o).ToArray());
+    private GlobalTuningController? _globalTuning;
+    private GlobalTuningController GlobalTuning => _globalTuning ??= new GlobalTuningController(new GlobalTuningHost(this));
 
-    private void ShowGlobalTuningWindow()
+    private void RetuneStrings(int[] delta) => GlobalTuning.Retune(delta);
+    private void ShowGlobalTuningWindow() => GlobalTuning.ChooseAndRetune();
+    private void UpdateTuningLabel() => GlobalTuning.UpdateLabel();
+
+    private sealed class GlobalTuningHost : IGlobalTuningHost
     {
-        var current = Views.GlobalTuningWindow.StandardE.Select((p, i) => p + _globalStringOffsets[i]).ToArray();
-        var chosen = Views.GlobalTuningWindow.Show(this, current);
-        if (chosen is null) return;
-        RetuneStrings(chosen.Select((p, i) => p - current[i]).ToArray());
-    }
+        private readonly MainWindow _window;
+        public GlobalTuningHost(MainWindow window) => _window = window;
+        public DocumentSession Document => _window.Doc;
+        public void SetTuningLabel(int shift) => _window.Arrangement.SetTuningLabel(shift);
+        public void SetTuningLabel(string name) => _window.Arrangement.SetTuningLabel(name);
+        public void SetStatus(string text) => _window.StatusText.Text = text;
+        public int[]? ChooseTuning(int[] current) => Views.GlobalTuningWindow.Show(_window, current);
 
-    private void RetuneAllTracks(int semitones) => RetuneStrings(Enumerable.Repeat(semitones, 6).ToArray());
-
-    /// <summary>
-    /// Retunes every pitched track by a per-string change (six-string reference, high to low): string
-    /// tunings and sounding pitches move together and fret numbers stay the same, like physically
-    /// retuning the instrument. Strings map from the lowest string up, so a bass follows the four
-    /// lowest strings and extra low strings on 7/8-strings follow the lowest.
-    /// </summary>
-    private void RetuneStrings(int[] delta)
-    {
-        if (delta.All(d => d == 0)) return;
-        DocumentEdits.Run(Doc, project =>
+        public void AfterRetune()
         {
-        foreach (var track in project.Tracks.Where(t => t.MidiChannel != 9))
-        {
-            var count = track.StringTunings.Count;
-            int DeltaOf(int stringIndex) => delta[Math.Clamp(count <= 6 ? stringIndex + (6 - count) : Math.Min(stringIndex, 5), 0, 5)];
-            track.StringTunings = track.StringTunings.Select((p, s) => Math.Clamp(p + DeltaOf(s), 0, 127)).ToList();
-            foreach (var measure in track.Measures)
-                foreach (var cell in measure.Cells.Concat(measure.Voice2Cells))
-                    foreach (var note in cell.Notes)
-                    {
-                        var d = DeltaOf(note.StringIndex);
-                        note.MidiValue = Math.Clamp(note.MidiValue + d, 0, 127);
-                        if (note.SlideTargetMidi > 0) note.SlideTargetMidi = Math.Clamp(note.SlideTargetMidi + d, 0, 127);
-                        if (note.TrillTargetMidi > 0) note.TrillTargetMidi = Math.Clamp(note.TrillTargetMidi + d, 0, 127);
-                    }
+            _window.RefreshAfterEdit(EditRefresh.Score | EditRefresh.Arrangement | EditRefresh.Instrument);
+            _window._midi.Rebuild(_window._project);
         }
-        for (var i = 0; i < 6; i++) _globalStringOffsets[i] += delta[i];   // the document's tuning-shift readout (session state, not part of the undo snapshot)
-        return true;
-        });
-        UpdateTuningLabel();
-        RefreshAfterEdit(EditRefresh.Score | EditRefresh.Arrangement | EditRefresh.Instrument);
-        _midi.Rebuild(_project);
-        StatusText.Text = _globalStringOffsets.All(o => o == 0) ? "Original tuning"
-            : TuningIsUniform ? $"All tracks retuned {(_globalTuneOffset > 0 ? "+" : "")}{_globalTuneOffset} semitones"
-            : "All tracks retuned (custom per-string tuning)";
     }
 
-    private void UpdateTuningLabel()
-    {
-        if (TuningIsUniform) { Arrangement.SetTuningLabel(_globalStringOffsets[0]); return; }
-        var tuning = Views.GlobalTuningWindow.StandardE.Select((p, i) => p + _globalStringOffsets[i]).ToArray();
-        var preset = Views.TrackPropertiesWindow.SixStringPresets.FirstOrDefault(p => p.HighToLow.SequenceEqual(tuning));
-        Arrangement.SetTuningLabel(preset.Name?.Split(" (")[0] ?? "Custom");
-    }
     /// <summary>Sizes the arrangement dock so every track row fits with no empty space below.</summary>
     private void ToggleAutoFitTrackList()
     {
@@ -201,8 +171,8 @@ public partial class MainWindow : ITrackListFitHost, ITrackGridDragHost
 
     private TrackListFitController? _trackListFit;
     TimelineSettings ITrackListFitHost.Timeline => _settings.Timeline;
-    ArrangementPanel ITrackListFitHost.Arrangement => Arrangement;
-    DockWorkspace ITrackListFitHost.Dock => _dockWorkspace!;
+    ITrackListRows ITrackListFitHost.Arrangement => Arrangement;
+    ITrackListDock ITrackListFitHost.Dock => _dockWorkspace!;
     void ITrackListFitHost.SaveSettings() => SaveSettings();
     void ITrackListFitHost.SetStatus(string text) => StatusText.Text = text;
     double ITrackListFitHost.MinScoreHeight => Editor.SystemHeightNow + 40;
@@ -361,17 +331,16 @@ public partial class MainWindow : ITrackListFitHost, ITrackGridDragHost
     {
         if (from < 0 || from >= _project.Tracks.Count || from == Math.Clamp(to, 0, _project.Tracks.Count - 1)) return;
         var name = _project.Tracks[from].Name;
-        var orderBefore = CaptureOrderLayout();
+        var orderBefore = MixerHost.CaptureOrderLayout();
         // The undo state was taken when the drag started (the model is unchanged until now).
-        var dragSnapshot = _trackUndoSnapshot;
-        _trackUndoSnapshot = null;
+        var dragSnapshot = _gestures.TakeTrackSnapshot();
         if (!_trackController.MoveTrack(Doc, from, to, dragSnapshot is { } && !_restoring ? dragSnapshot : null).Changed) return;
         to = Math.Clamp(to, 0, _project.Tracks.Count - 1);
         RefreshTracks();
         TrackMixerGrid.SelectedIndex = to;
         RefreshArrangement();
         UpdateTitle();
-        PlayOrderAnimation(orderBefore);   // the open mixer reorders with it, animating at the same time
+        MixerHost.PlayOrderAnimation(orderBefore);   // the open mixer reorders with it, animating at the same time
         // Note events carry the track index: hand the new order to the engine, which swaps it in at the
         // next bar boundary without stopping playback (no restart, no audible gap).
         if (_midi.IsPlaying)
@@ -383,7 +352,7 @@ public partial class MainWindow : ITrackListFitHost, ITrackGridDragHost
     {
         var t = SelectedTrack; if (t is null) return;
         var capture = CheckpointUndo();
-        if (Views.TrackPropertiesWindow.Show(this, t)) { _project.IsDirty = true; Editor.InvalidateScoreLayout(); _midi.Rebuild(_project); RefreshTracks(); RefreshArrangement(); RefreshInstrument(); RefreshStatus(); UpdateTitle(); }
+        if (Views.TrackPropertiesWindow.Show(this, t, OpenFxChain)) { _project.IsDirty = true; Editor.InvalidateScoreLayout(); _midi.Rebuild(_project); RefreshTracks(); RefreshArrangement(); RefreshInstrument(); RefreshStatus(); UpdateTitle(); }
         else if (capture is { } cancelled) _undo.Discard(cancelled);
     }
 }

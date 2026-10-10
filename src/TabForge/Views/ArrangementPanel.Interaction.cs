@@ -19,7 +19,12 @@ using static TabForge.Views.TrackRowWidgets;
 
 namespace TabForge.Views;
 
-// ArrangementPanel: track-row drag to reorder and inline track-name editing.
+// Owns: the pointer side of the track rows: the track handle, the drag that reorders tracks (armed, drag visual, target index),
+//   track-name editing and track selection by index.
+// Does not own: the timeline's gestures (TrackTimeline.Interaction.cs), the group drag (GroupDragController.cs) and the track
+//   model edits (TrackController.cs).
+// Tests: TestTrackReorder.
+
 public sealed partial class ArrangementPanel
 {
     private readonly List<Border> _trackRows = new();

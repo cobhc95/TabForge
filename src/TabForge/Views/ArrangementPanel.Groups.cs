@@ -22,7 +22,12 @@ using static TabForge.Views.TrackRowWidgets;
 
 namespace TabForge.Views;
 
-// ArrangementPanel: group headers in the track list (collapse, drag the whole group).
+// Owns: the track list's group headers: the group header rows, the empty-area menu, the group-move and reset-height events, and
+//   the animation that slides rows to their new tops after a reorder.
+// Does not own: the group drag gesture (GroupDragController.cs) and the group runs and row heights
+//   (ArrangementPanel.RowGeometry.cs).
+// Tests: TestTrackListGroupRows, TestTrackListCollapse.
+
 public sealed partial class ArrangementPanel : IGroupDragHost
 {
     // ---------- groups in the track list: a header per run of one group (collapse; drag the whole group) ----------

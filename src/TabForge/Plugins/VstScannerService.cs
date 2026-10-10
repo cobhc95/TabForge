@@ -11,7 +11,7 @@ public sealed record VstPluginInfo(string Name, string Path, string Format = "VS
 
 // Owns: discovering VST3 bundles and VST2 DLLs by file inspection, without loading plug-in code.
 // Does not own: plug-in trust decisions (PluginTrust) and hosting.
-// Tests: TestVstReparseLoop, TestMixer.
+// Tests: CheckVstReparseLoop, TestMixer.
 /// <summary>
 /// Discovers VST3 bundles and VST2 DLLs; it never loads or executes plug-in code (a DLL counts as VST2 only when
 /// its export table lists the VST2 entry point, read straight from the file).
@@ -45,12 +45,15 @@ public static class VstScannerService
                 var fullPath = Path.GetFullPath(root);
                 if (queued.Add(fullPath)) pending.Push((fullPath, 0));
             }
-            catch (Exception ex) when (IsFilesystemFailure(ex)) { }
+            catch (Exception ex) when (IsFilesystemFailure(ex)) { Services.Trace.Error(Services.Trace.Engine, "VST scan: resolve root: " + ex.Message); }
         }
 
         var visitedDirectories = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var results = new Dictionary<string, VstPluginInfo>(StringComparer.OrdinalIgnoreCase);
         var entriesVisited = 0;
+        var unreadable = 0;   // unreadable folders and entries are counted, and one summary line is logged after the scan
+        string? firstUnreadable = null;
+        void Unreadable(string what, string path, Exception ex) { unreadable++; firstUnreadable ??= $"{what} {path}: {ex.Message}"; }
         while (pending.Count > 0 && entriesVisited < InputLimits.MaxVstScanEntries && results.Count < InputLimits.MaxVstPlugins)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -58,14 +61,14 @@ public static class VstScannerService
             progress?.Report((results.Count, directory));
             FileAttributes directoryAttributes;
             try { directoryAttributes = File.GetAttributes(directory); }
-            catch (Exception ex) when (IsFilesystemFailure(ex)) { continue; }
+            catch (Exception ex) when (IsFilesystemFailure(ex)) { Unreadable("folder attributes", directory, ex); continue; }
             if ((directoryAttributes & FileAttributes.Directory) == 0 ||
                 (directoryAttributes & FileAttributes.ReparsePoint) != 0 ||
                 !visitedDirectories.Add(directory)) continue;
 
             IEnumerable<string> children;
             try { children = Directory.EnumerateFileSystemEntries(directory, "*", SearchOption.TopDirectoryOnly); }
-            catch (Exception ex) when (IsFilesystemFailure(ex)) { continue; }
+            catch (Exception ex) when (IsFilesystemFailure(ex)) { Unreadable("list folder", directory, ex); continue; }
 
             try
             {
@@ -75,7 +78,7 @@ public static class VstScannerService
                     if (++entriesVisited > InputLimits.MaxVstScanEntries) break;
                     FileAttributes attributes;
                     try { attributes = File.GetAttributes(entry); }
-                    catch (Exception ex) when (IsFilesystemFailure(ex)) { continue; }
+                    catch (Exception ex) when (IsFilesystemFailure(ex)) { Unreadable("entry attributes", entry, ex); continue; }
 
                     // Ignore junctions and symlinks entirely, including links that resemble bundles.
                     if ((attributes & FileAttributes.ReparsePoint) != 0) continue;
@@ -104,8 +107,9 @@ public static class VstScannerService
                     }
                 }
             }
-            catch (Exception ex) when (IsFilesystemFailure(ex)) { }
+            catch (Exception ex) when (IsFilesystemFailure(ex)) { Services.Trace.Error(Services.Trace.Engine, "VST scan: read folder: " + ex.Message); }
         }
+        if (unreadable > 0) Services.Trace.Error(Services.Trace.Engine, $"plug-in scan: {unreadable} folders or entries could not be read; first: {firstUnreadable}");
 
         cancellationToken.ThrowIfCancellationRequested();
         var list = results.Values.OrderBy(plugin => plugin.Name, StringComparer.OrdinalIgnoreCase)
@@ -153,7 +157,7 @@ public static class VstScannerService
                 var full = Path.GetFullPath(Environment.ExpandEnvironmentVariables(p.Trim()).TrimEnd('\\', '/'));
                 if (Directory.Exists(full) && seen.Add(full)) list.Add(full);
             }
-            catch (Exception ex) when (ex is ArgumentException or NotSupportedException or IOException) { }
+            catch (Exception ex) when (ex is ArgumentException or NotSupportedException or IOException) { Services.Trace.Error(Services.Trace.Engine, "VST scan: parse scan roots: " + ex.Message); }
         }
         return list;
     }
@@ -202,14 +206,14 @@ public static class VstScannerService
                 }
             return (vendor, role);
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Text.Json.JsonException or InvalidOperationException) { return ("", ""); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Text.Json.JsonException or InvalidOperationException) { return ("", ""); } // Not logged: vendor is optional metadata: left blank
     }
 
     /// <summary>Vendor of a VST2 DLL from its version resource (read from the file, not executed).</summary>
     public static string Vst2Vendor(string dll)
     {
         try { return System.Diagnostics.FileVersionInfo.GetVersionInfo(dll).CompanyName?.Trim() ?? ""; }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException) { return ""; }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException) { return ""; } // Not logged: vendor is optional metadata: left blank
     }
 
     private static bool IsFilesystemFailure(Exception exception) => exception is

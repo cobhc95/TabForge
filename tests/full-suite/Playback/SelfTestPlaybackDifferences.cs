@@ -6,7 +6,7 @@ using TabForge.Services;
 namespace TabForge;
 
 /// <summary>
-/// Audit 3 section 6b: playback behaviours that were measured against the reference's own MIDI export. Each test compiles
+/// Playback behaviours that were measured against the reference's own MIDI export. Each test compiles
 /// a tiny project (120 BPM: a sixteenth slot is 125 ms, a beat 500 ms) and asserts the MIDI events.
 /// </summary>
 public static partial class SelfTest

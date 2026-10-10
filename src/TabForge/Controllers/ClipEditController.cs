@@ -408,6 +408,7 @@ internal sealed class ClipEditController
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException or ArgumentException)
             {
+                Services.Trace.Error(Services.Trace.Ui, "clip edit: keep item: " + ex.Message);
                 problems.Add($"{item.Name} could not be kept: {ex.Message}");
             }
         }

@@ -31,9 +31,12 @@ public static partial class SelfTest
         GuardGroup("window-lifetime", TestStartupFileOpen);   // a command-line song and a second-launch hand-over open in a fresh window (.gp, .gp5, .tforge)   // repeated close, cancelled close, queued work, tab transfer, Preferences owners, engine chains
         GuardGroup("window-lifetime", TestSingleInstanceProcessHandover);   // Explorer-style hand-over between two real app processes and last-window shutdown
         Section("Document context (media, approvals, close)");
-        GuardGroup("document-context", TestDocumentContext);   // R2: explicit media / approval context, stale work, Save As, close with several dirty tabs
+        GuardGroup("document-context", TestDocumentContext);   // Explicit media / approval context, stale work, Save As, close with several dirty tabs
+        GuardGroup("document-context", TestWindowCloseFlow);   // WindowCloseFlow headless: the save-or-close questions, Cancel, deferred close, save gate, degraded overwrite
+        GuardGroup("document-context", TestDocumentTabsController);   // DocumentTabsController headless: closes (one, others, right), Cancel, Save, busy save, last tab, Save-then-close, duplicate, reorder
+        GuardGroup("document-context", TestScoreExportController);   // ScoreExportController headless: MIDI / ASCII / PDF / MusicXML export, cancel, failed write
         Section("Document operations (explicit-document edits, entry-point parity)");
-        GuardGroup("document-operations", TestDocumentOperations);   // R3: shared edits, keyboard vs menu, save / open / close sequences without a window
+        GuardGroup("document-operations", TestDocumentOperations);   // Shared edits, keyboard vs menu, save / open / close sequences without a window
         GuardGroup("document-operations", TestConvertToInstrumentFlow);
         GuardGroup("document-operations", TestAddTrackMenu);   // the Add-track lane prompt, the + Track menu, converting an audio track, through a real window
         GuardGroup("document-operations", TestTrackIconButton);   // the track-row instrument icon: the catalogue it opens, one undo step, the audio icon
@@ -49,6 +52,9 @@ public static partial class SelfTest
         Guard(TestCursorSnap);
         Guard(TestInsertBeatKeepsNotes);
         Guard(TestBarDeleteGuards);
+        Guard(TestGlobalTuningController);
+        Guard(TestBarCommandFlow);
+        Guard(TestTimelineMenuSkipRanges);
         Guard(TestBarRangeGaps);
         Guard(TestReusableBarRangePrompt);
         Guard(TestBarGridPlacement);
@@ -83,7 +89,29 @@ public static partial class SelfTest
         Guard(TestVoice2HopoSlurWithLongerVoice);
         Guard(TestNewBindableCommands);
         Guard(TestTrackRowMenu);
+        Guard(TestArrangementGestureState);
         Guard(TestMenuPopupWarmup);
+        Guard(TestMainMenuTreeGolden);
+        Guard(TestMainMenuTable);
+        Guard(TestFeatureModuleContributions);
+        Guard(TestKeyboardModeNoteStream);
+        Guard(TestPixelSnap);
+        Guard(TestKeyboardModeKeyboardSource);
+        Guard(TestKeyboardHands);
+        Guard(TestKeyboardHandsAccuracy);
+        Guard(TestKeyboardModeJudge);
+        Guard(TestKeyboardModeScore);
+        Guard(TestKeyboardModeMidiListener);
+        Guard(TestKeyboardModePracticeTrack);
+        Guard(TestKeyboardModeControlBar);
+        Guard(TestMidiInputDeviceFilter);
+        Guard(TestKeyboardModeLayout);
+        Guard(TestKeyboardModeWaitMode);
+        Guard(TestKeyboardModeWaitChord);
+        Guard(TestKeyboardModeWaitTransport);
+        Guard(TestKeyboardModeTolerance);
+        Guard(TestKeyboardModeKeyView);
+        Guard(TestKeyboardModePopout);
         Guard(TestSelectionScope);
         Guard(TestSelectionClipboardMatrix);
         Guard(TestTimelineCellsCurrent);
@@ -93,6 +121,8 @@ public static partial class SelfTest
         Guard(TestClipEdgesAndLoops);
         Guard(TestTrimEmptyBars);
         Guard(TestKeyRoutingOrder);
+        Guard(TestEveryHotkeyIdHasHandler);
+        Guard(TestCommandRegistryRouting);
         Guard(TestHotkeyTwoSlots);
         Guard(TestHotkeySettingsMigration);
         Guard(TestNoHardWiredKeyText);
@@ -140,6 +170,9 @@ public static partial class SelfTest
         Guard(TestCapoRepitchesNotes);
         Guard(TestContextMenuLayouts);
         Guard(TestContextMenuLean);
+        Guard(TestNoteMenuClipboardActions);
+        Guard(TestNoteMenuEditActions);
+        Guard(TestNoteMenuItemsRouted);
         Guard(TestPreferencesCatalog);
         Guard(TestSettingsFileSplitSnapshots);
         Guard(TestRenderGuardContainment);
@@ -165,6 +198,8 @@ public static partial class SelfTest
         Guard(TestThemedCheckBoxAndProgressBar);
         Guard(TestDockRatioNotRewrittenByAutoFit);
         Guard(TestTrackListFit);
+        Guard(TestTrackListFitFake);
+        Guard(TestSelectionSyncFake);
         Guard(TestTrackListFitCapsAtScore);
         Guard(TestTrackListCollapse);
         Guard(TestResizeDuringPlayback);
@@ -182,12 +217,15 @@ public static partial class SelfTest
         Guard(TestFollowIgnoresClampedScroll);
         Guard(TestZoomComboShowsValue);
         Guard(TestSpeedControl);
+        Guard(TestPlayDomainFlows);
         Guard(TestToolbarZoomAndSpeed);
         Guard(TestToolbarZoomSpeedNarrow);
         Guard(TestMixerSliders);
         Guard(TestMixerSlidersRealInput);
         Guard(TestMixerMuteSoloClick);
         Guard(TestTrackListFollowsMixerInPlace);
+        Guard(TestMixerHost);
+        Guard(TestFxChainWindow);
         Guard(TestSliderMappingAndGroupValues);
         Guard(TestTrackOrderingModel);
         Guard(TestMixerDragAndDrop);
@@ -279,11 +317,20 @@ public static partial class SelfTest
         Guard(TestDockDefaultsAndFretboardPosition);
         Guard(TestKeyboardPaneSize);
         Guard(TestBandViewRows);
+        Guard(TestMotionSharpnessScore);
+        Guard(TestMotionSharpnessBand);
+        Guard(TestMotionSharpnessRowDrag);
+        Guard(TestMotionSharpnessTimeline);
+        Guard(TestMotionSharpnessPlayhead);
+        Guard(TestMotionSharpnessScoreCaret);
+        Guard(TestBandFrameClock);
         Guard(TestBandLaneCache);
         Guard(TestBandLaneClick);
         Guard(TestBandViewLifecycle);
         Guard(TestBandLayoutPreset);
         Guard(TestBandNeverDocked);
+        Guard(TestBandHostForwards);
+        Guard(TestDockPaneTable);
         Guard(TestBandPillsAndRows);
         Guard(TestBandRowSizing);
         Guard(TestBandReorder);
@@ -292,6 +339,7 @@ public static partial class SelfTest
         Guard(TestBandLayoutSaved);
         Guard(TestBandSettings);
         Guard(TestBandLanesInSync);
+        Guard(TestBandEmptyBarLine);
         Guard(TestBandVerticalLanes);
         Guard(TestBandRowsSamePage);
         Guard(TestBandRowsSamePageHorizontal);
@@ -310,6 +358,7 @@ public static partial class SelfTest
         Guard(TestFramedIconContrast);
         Guard(TestFretMarkerLabelContrast);
         Guard(TestFretStrumArrow);
+        Guard(TestFretboardConnector);
         Guard(TestEffectEditorOkContrast);
         Guard(TestTrackNameEllipsis);
         Guard(TestHoverSurfaceContrast);
@@ -358,6 +407,28 @@ public static partial class SelfTest
         Guard(TestMixer);
         Guard(TestMidiProcessors);
         Guard(TestRecordingPipeline);
+        Guard(TestVideoEncoderMp4);
+        Guard(TestVideoEncoder4k60);
+        Guard(TestVideoEncoderBenchmark);
+        Guard(TestVideoEncoderGolden);
+        Guard(TestVideoEncoderOptions);
+        Guard(TestClipPlayerCatchesUpAfterSeek);
+        Guard(TestMasterTapProtocol);
+        Guard(TestMasterTapRestartWaitsForOldRun);
+        Guard(TestLiveVideoRecord);
+        Guard(TestLiveVideoRegionFit);
+        Guard(TestVideoAudioPitch);
+        Guard(TestVideoAudioPitchEngine);
+        Guard(TestMasterTapHotLevel);
+        Guard(TestDxgiGrabber);
+        Guard(TestLiveAudioContinuity);
+        Guard(TestLiveAudioNoHiss);
+        Guard(TestLiveAudioFidelity);
+        Guard(TestLiveRecordingLoudness);
+        Guard(TestGrabberRepeatsLastFrame);
+        Guard(TestVideoExport);
+        Guard(TestVideoFrameGolden);
+        Guard(TestVideoFrameSourceGolden);
         Guard(TestSaveTransactions);
         Guard(TestPairSaveRecovery);
         Guard(TestPairMarkerIsUntrusted);
@@ -405,6 +476,7 @@ public static partial class SelfTest
         Guard(TestMuteSoloTruthTable);
         Guard(TestMuteSoloIsInstant);
         Guard(TestMuteSoloDoesNotDisturbPlayback);
+        Guard(TestPracticeSilence);
         Guard(TestMuteDimmingIsInstant);
         Guard(TestMutedTrackDimmingSetting);
         Guard(TestMuteHoldsAcrossSeekAndRestart);
@@ -418,6 +490,8 @@ public static partial class SelfTest
         Guard(TestPluginFactorySingleSource);
         Guard(TestWatchdogPolicy);
         Guard(TestCommandFrameRobustness);
+        Guard(TestEngineMessagesRoundTrip);
+        Guard(TestEngineMessagesGolden);
         Guard(TestPumpOnce);
         Guard(TestTunerPitchDetection);
         Guard(TestEffectChannel);
@@ -434,6 +508,8 @@ public static partial class SelfTest
         Guard(TestSettingsWithInlinePluginStates);
         Guard(TestDataIntegrityLeftovers);
         Guard(TestAutosaveRecovery);
+        Guard(TestAutosaveCopies);
+        Guard(TestAutosaveController);
         Guard(TestEmergencyRecoveryNames);
         Guard(TestCallbackMetrics);
         Guard(TestAudioAudit);
@@ -477,9 +553,16 @@ public static partial class SelfTest
         Section("Repository hygiene");
         Guard(TestScreenGuard);
         Guard(TestTrimMerges);
+        Guard(TestTechniqueCoverage);
+        Guard(TestTechniqueInfoTable);
+        Guard(TestTechniqueGpExportGolden);
+        Guard(TestTechniqueMusicXmlGolden);
+        Guard(TestTechniquePlaybackGolden);
         Section("Architecture (layering)");
         Guard(TestColourHexEquivalence);
+        Guard(TestSettingsColourParsers);
         Guard(TestTraceSwitchAreas);
+        Guard(TestErrorLog);
         Guard(TestPlayingBar);
         Guard(TestTabEditorRenderInvariance);
         Guard(TestTabEditorPlaybackAllocation);
@@ -513,6 +596,9 @@ public static partial class SelfTest
         ["TestCursorSnap"] = "core",
         ["TestInsertBeatKeepsNotes"] = "core",
         ["TestBarDeleteGuards"] = "document-operations",
+        ["TestGlobalTuningController"] = "document-operations",
+        ["TestBarCommandFlow"] = "document-operations",
+        ["TestTimelineMenuSkipRanges"] = "document-operations",
         ["TestBarRangeGaps"] = "document-operations",
         ["TestReusableBarRangePrompt"] = "document-operations",
         ["TestExplicitSectionColourCopies"] = "core",
@@ -550,10 +636,14 @@ public static partial class SelfTest
         ["TestSliderMappingAndGroupValues"] = "core",
         ["TestSnapLayoutHitTest"] = "core",
         ["TestSpeedControl"] = "core",
+        ["TestPlayDomainFlows"] = "core",
         ["TestTechniqueEngraving"] = "core",
         ["TestTemplateKeepsSetupOnly"] = "core",
+        ["TestErrorLog"] = "core",
         ["TestTraceSwitchAreas"] = "core",
         ["TestTrackListFollowsMixerInPlace"] = "core",
+        ["TestMixerHost"] = "core",
+        ["TestFxChainWindow"] = "core",
         ["TestTrackListGroupRows"] = "core",
         ["TestTrackOrderingModel"] = "core",
         ["TestTrackReorder"] = "core",
@@ -580,6 +670,8 @@ public static partial class SelfTest
         ["TestAudioTrackAddDuringPlayback"] = "engine",
         ["TestColdStartSetupSurvivesPanic"] = "engine",
         ["TestCommandFrameRobustness"] = "engine",
+        ["TestEngineMessagesGolden"] = "engine",
+        ["TestEngineMessagesRoundTrip"] = "engine",
         ["TestDiskStreamerIdle"] = "engine",
         ["TestDrumAndMelodicDispatchTogether"] = "engine",
         ["TestEffectChannel"] = "engine",
@@ -603,6 +695,7 @@ public static partial class SelfTest
         ["TestMuteDimmingIsInstant"] = "engine",
         ["TestMuteHoldsAcrossSeekAndRestart"] = "engine",
         ["TestMuteSoloDoesNotDisturbPlayback"] = "engine",
+        ["TestPracticeSilence"] = "engine",
         ["TestMuteSoloIsInstant"] = "engine",
         ["TestMuteSoloTruthTable"] = "engine",
         ["TestMutedTrackDimmingSetting"] = "engine",
@@ -661,6 +754,11 @@ public static partial class SelfTest
         ["TestAudioTrackModel"] = "persistence",
         ["TestAudioTrackPersistence"] = "persistence",
         ["TestAutosaveRecovery"] = "persistence",
+        ["TestAutosaveCopies"] = "persistence",
+        ["TestAutosaveController"] = "persistence",
+        ["TestWindowCloseFlow"] = "document-context",
+        ["TestDocumentTabsController"] = "document-context",
+        ["TestScoreExportController"] = "document-context",
         ["TestEmergencyRecoveryNames"] = "persistence",
         ["TestClipboardServiceFallback"] = "persistence",
         ["TestDirectTforgeOpenRecovers"] = "persistence",
@@ -723,6 +821,28 @@ public static partial class SelfTest
         ["TestMediaDropPlan"] = "recording",
         ["TestMidiFileToClip"] = "recording",
         ["TestRecordingPipeline"] = "recording",
+        ["TestVideoEncoderMp4"] = "recording",
+        ["TestVideoEncoder4k60"] = "recording",
+        ["TestVideoEncoderBenchmark"] = "bench",
+        ["TestVideoEncoderGolden"] = "recording",
+        ["TestVideoEncoderOptions"] = "recording",
+        ["TestClipPlayerCatchesUpAfterSeek"] = "recording",
+        ["TestMasterTapProtocol"] = "recording",
+        ["TestMasterTapRestartWaitsForOldRun"] = "recording",
+        ["TestLiveVideoRecord"] = "recording",
+        ["TestLiveVideoRegionFit"] = "recording",
+        ["TestVideoAudioPitch"] = "recording",
+        ["TestVideoAudioPitchEngine"] = "recording",
+        ["TestMasterTapHotLevel"] = "recording",
+        ["TestDxgiGrabber"] = "recording",
+        ["TestLiveAudioContinuity"] = "recording",
+        ["TestLiveAudioNoHiss"] = "recording",
+        ["TestLiveAudioFidelity"] = "recording",
+        ["TestLiveRecordingLoudness"] = "recording",
+        ["TestGrabberRepeatsLastFrame"] = "recording",
+        ["TestVideoExport"] = "recording",
+        ["TestVideoFrameGolden"] = "recording",
+        ["TestVideoFrameSourceGolden"] = "recording",
         ["TestSongExtent"] = "recording",
         ["TestSongCoversClipsOnLoadAndDelete"] = "recording",
         ["TestDragStartPlaceholdersAndAuditEntries"] = "recording",
@@ -770,8 +890,10 @@ public static partial class SelfTest
         ["TestClosedTimelineIsCollected"] = "ui",
         ["TestColourChoiceEntries"] = "ui",
         ["TestColourHexEquivalence"] = "ui",
+        ["TestSettingsColourParsers"] = "ui",
         ["TestContextMenuLayouts"] = "ui",
         ["TestContextMenuLean"] = "ui",
+        ["TestNoteMenuClipboardActions"] = "ui", ["TestNoteMenuEditActions"] = "ui", ["TestNoteMenuItemsRouted"] = "ui",
         ["TestDialogEscape"] = "ui",
         ["TestDockRatioNotRewrittenByAutoFit"] = "ui",
         ["TestDrumEntryAndQuickAddBars"] = "ui",
@@ -793,16 +915,18 @@ public static partial class SelfTest
         ["TestFretboardGeometry"] = "ui",
         ["TestFretboardPaneSize"] = "ui", ["TestScoreScaleMatchesFretboard"] = "ui", ["TestDockDefaultsAndFretboardPosition"] = "ui",
         ["TestKeyboardPaneSize"] = "ui",
-        ["TestBandViewRows"] = "ui", ["TestBandRowsSamePage"] = "ui", ["TestBandRowsSamePageHorizontal"] = "ui", ["TestBandRowsSamePageDemo"] = "ui", ["TestBandLaneCache"] = "ui", ["TestBandLaneClick"] = "ui", ["TestBandViewLifecycle"] = "ui", ["TestBandLayoutPreset"] = "ui", ["TestBandNeverDocked"] = "ui",
+        ["TestBandViewRows"] = "ui", ["TestMotionSharpnessScore"] = "ui", ["TestMotionSharpnessBand"] = "ui", ["TestMotionSharpnessRowDrag"] = "ui", ["TestMotionSharpnessTimeline"] = "ui",  ["TestMotionSharpnessPlayhead"] = "ui", ["TestMotionSharpnessScoreCaret"] = "ui", ["TestBandFrameClock"] = "ui",["TestBandRowsSamePage"] = "ui", ["TestBandRowsSamePageHorizontal"] = "ui", ["TestBandRowsSamePageDemo"] = "ui", ["TestBandLaneCache"] = "ui", ["TestBandLaneClick"] = "ui", ["TestBandViewLifecycle"] = "ui", ["TestBandLayoutPreset"] = "ui", ["TestBandNeverDocked"] = "ui", ["TestBandHostForwards"] = "ui", ["TestDockPaneTable"] = "ui",
         ["TestBandPillsAndRows"] = "ui", ["TestBandRowSizing"] = "ui", ["TestBandReorder"] = "ui", ["TestBandNoteGlow"] = "ui", ["TestBandStoppedInstruments"] = "ui",
-        ["TestBandLayoutSaved"] = "ui", ["TestBandLayoutSafety"] = "ui", ["TestBandSettings"] = "ui", ["TestBandLanesInSync"] = "ui", ["TestBandInstrumentRows"] = "ui", ["TestBandVerticalLanes"] = "ui", ["TestBandLaneZoom"] = "ui", ["TestBandViewReset"] = "ui", ["TestBandWideLaneSync"] = "ui", ["TestBandMenu"] = "ui", ["TestBandFollow"] = "ui", ["TestBandLaneContent"] = "ui", ["TestBandReorderAutoScroll"] = "ui", ["TestBandEmptyState"] = "ui",
-        ["TestBandPillContrast"] = "ui", ["TestFramedIconContrast"] = "ui", ["TestFretMarkerLabelContrast"] = "ui", ["TestFretStrumArrow"] = "ui", ["TestEffectEditorOkContrast"] = "ui", ["TestTrackNameEllipsis"] = "ui", ["TestHoverSurfaceContrast"] = "ui",
+        ["TestBandLayoutSaved"] = "ui", ["TestBandLayoutSafety"] = "ui", ["TestBandSettings"] = "ui", ["TestBandLanesInSync"] = "ui", ["TestBandEmptyBarLine"] = "ui", ["TestBandInstrumentRows"] = "ui", ["TestBandVerticalLanes"] = "ui", ["TestBandLaneZoom"] = "ui", ["TestBandViewReset"] = "ui", ["TestBandWideLaneSync"] = "ui", ["TestBandMenu"] = "ui", ["TestBandFollow"] = "ui", ["TestBandLaneContent"] = "ui", ["TestBandReorderAutoScroll"] = "ui", ["TestBandEmptyState"] = "ui",
+        ["TestBandPillContrast"] = "ui", ["TestFramedIconContrast"] = "ui", ["TestFretMarkerLabelContrast"] = "ui", ["TestFretStrumArrow"] = "ui", ["TestFretboardConnector"] = "ui", ["TestEffectEditorOkContrast"] = "ui", ["TestTrackNameEllipsis"] = "ui", ["TestHoverSurfaceContrast"] = "ui",
         ["TestGp5SvgIcons"] = "ui",
         ["TestHarmonicNoteheadPositions"] = "ui",
         ["TestInstrumentArtwork"] = "ui",
         ["TestInstrumentChoiceStrings"] = "ui",
         ["TestInstrumentVisualState"] = "ui",
         ["TestKeyRoutingOrder"] = "ui",
+        ["TestEveryHotkeyIdHasHandler"] = "ui",
+        ["TestCommandRegistryRouting"] = "ui",
         ["TestKeyTextFollowsBindings"] = "ui",
         ["TestKeyboardContextMenuPlacement"] = "ui",
         ["TestMarkStacking"] = "ui",
@@ -868,6 +992,27 @@ public static partial class SelfTest
         ["TestTimelineClipsShareClipboard"] = "ui",
         ["TestTimelineContextMenus"] = "ui",
         ["TestMenuPopupWarmup"] = "ui",
+        ["TestMainMenuTreeGolden"] = "ui",
+        ["TestMainMenuTable"] = "ui",
+        ["TestFeatureModuleContributions"] = "ui",
+        ["TestKeyboardModeNoteStream"] = "ui",
+        ["TestPixelSnap"] = "ui",
+        ["TestKeyboardModeKeyboardSource"] = "ui",
+        ["TestKeyboardHands"] = "ui",
+        ["TestKeyboardHandsAccuracy"] = "ui",
+        ["TestKeyboardModeJudge"] = "ui",
+        ["TestKeyboardModeScore"] = "ui",
+        ["TestKeyboardModeMidiListener"] = "ui",
+        ["TestKeyboardModePracticeTrack"] = "ui",
+        ["TestKeyboardModeControlBar"] = "ui",
+        ["TestMidiInputDeviceFilter"] = "ui",
+        ["TestKeyboardModeLayout"] = "ui",
+        ["TestKeyboardModeWaitMode"] = "ui",
+        ["TestKeyboardModeWaitChord"] = "ui",
+        ["TestKeyboardModeWaitTransport"] = "ui",
+        ["TestKeyboardModeTolerance"] = "ui",
+        ["TestKeyboardModeKeyView"] = "ui",
+        ["TestKeyboardModePopout"] = "ui",
         ["TestTimelineHoverAndAudioRows"] = "ui",
         ["TestTimelineHoverAndBarMarker"] = "ui",
         ["TestTrackLinesRedraw"] = "ui",
@@ -875,8 +1020,9 @@ public static partial class SelfTest
         ["TestTimelineSectionCopiesAsBars"] = "ui",
         ["TestTooltips"] = "ui",
         ["TestTrackColumnHeaderFit"] = "ui",
+        ["TestTrackListFitFake"] = "ui", ["TestSelectionSyncFake"] = "ui",
         ["TestTrackListFit"] = "ui", ["TestTrackListFitCapsAtScore"] = "ui", ["TestTrackListCollapse"] = "ui",
-        ["TestTrackRowRightClick"] = "ui", ["TestTrackRowMenu"] = "ui", ["TestSelectionScope"] = "ui", ["TestSelectionClipboardMatrix"] = "ui", ["TestTimelineCellsCurrent"] = "ui", ["TestClipDragPress"] = "ui", ["TestClipWaveformSpan"] = "ui",
+        ["TestTrackRowRightClick"] = "ui", ["TestTrackRowMenu"] = "ui", ["TestArrangementGestureState"] = "ui", ["TestSelectionScope"] = "ui", ["TestSelectionClipboardMatrix"] = "ui", ["TestTimelineCellsCurrent"] = "ui", ["TestClipDragPress"] = "ui", ["TestClipWaveformSpan"] = "ui",
         ["TestTrackRowsEndFlush"] = "ui",
         ["TestViewMenuWording"] = "ui",
         ["TestVoice2HopoSlurWithLongerVoice"] = "ui",

@@ -13,7 +13,7 @@ public static class InputLimits
     // These caps are intentionally far above ordinary songs while bounding parser and object-graph growth.
     public const long MaxTforgeFileBytes = 128L * 1024 * 1024;
     public const long MaxGuitarProFileBytes = 128L * 1024 * 1024;
-    /// <summary>A6-02 follow-up: the JSON size of a crash-recovery copy, written and read back from the app's own Recovery folder only (a song over <see cref="MaxTforgeFileBytes"/> must still be recoverable).</summary>
+    /// <summary>The JSON size of a crash-recovery copy, written and read back from the app's own Recovery folder only (a song over <see cref="MaxTforgeFileBytes"/> must still be recoverable).</summary>
     public const long MaxRecoveryProjectBytes = 1024L * 1024 * 1024;
     public const long MaxSettingsJsonBytes = 2L * 1024 * 1024;
     /// <summary>Score clips read from the clipboard (untrusted, <see cref="ScoreClip"/>): size and count caps.</summary>

@@ -209,7 +209,7 @@ public static class MediaDrop
     public static bool IsTransient(string path)
     {
         string full;
-        try { full = System.IO.Path.GetFullPath(path); } catch (Exception) { return false; }
+        try { full = System.IO.Path.GetFullPath(path); } catch (Exception) { return false; } // Not logged: path probe: not a transient path
         if (MediaPathPolicy.IsInside(full, MediaPathPolicy.Normalize(System.IO.Path.GetTempPath()))) return true;
         if (MediaPathPolicy.IsInside(full, StagingRoot)) return true;
         var folder = System.IO.Path.GetDirectoryName(full) ?? "";

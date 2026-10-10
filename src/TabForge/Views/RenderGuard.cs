@@ -49,7 +49,7 @@ internal static class RenderGuard
             if (FaultInjection is null)
             {
                 try { DiagnosticFileService.WriteText(FilePathPolicy.DefaultDiagnosticsPath($"render-error-{DateTime.Now:yyyyMMdd-HHmmss}.log"), $"{DateTime.Now:O}{Environment.NewLine}{control}{Environment.NewLine}{ex}"); }
-                catch (Exception logError) { System.Diagnostics.Debug.WriteLine($"Render error log could not be written: {logError}"); }
+                catch (Exception logError) { System.Diagnostics.Debug.WriteLine($"Render error log could not be written: {logError}"); } // Not logged: the render error log itself failed
             }
         }
         try
@@ -57,7 +57,7 @@ internal static class RenderGuard
             if (width > 3 && height > 3 && !double.IsInfinity(width) && !double.IsInfinity(height))
                 dc.DrawRectangle(null, PlaceholderPen, new Rect(1, 1, width - 2, height - 2));
         }
-        catch (Exception noteError) { System.Diagnostics.Debug.WriteLine($"Render placeholder failed: {noteError}"); }
+        catch (Exception noteError) { System.Diagnostics.Debug.WriteLine($"Render placeholder failed: {noteError}"); } // Not logged: placeholder note failed: the render is already marked
         return true;
     }
 }

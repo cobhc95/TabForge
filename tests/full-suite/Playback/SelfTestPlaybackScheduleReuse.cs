@@ -98,13 +98,13 @@ public static partial class SelfTest
         Check("playback schedule: a compatible seek sends the target note once",
             targetHeard && targetCount == 1, $"heard {targetHeard}, target note-on count {targetCount}");
 
-        TestLatestSeekDuringBlockedReset();
-        TestStopDuringBlockedSeekReset();
-        TestDisposeDuringBlockedSeekReset();
-        TestSeekReturnsWhileOutputSendBlocks();
-        TestSeekClockWaitsForSetupSend();
-        TestBackwardSeekBeforeFinalReleaseFinishes();
-        TestLiveEditReservedAfterPendingSeek();
+        CheckLatestSeekDuringBlockedReset();
+        CheckStopDuringBlockedSeekReset();
+        CheckDisposeDuringBlockedSeekReset();
+        CheckSeekReturnsWhileOutputSendBlocks();
+        CheckSeekClockWaitsForSetupSend();
+        CheckBackwardSeekBeforeFinalReleaseFinishes();
+        CheckLiveEditReservedAfterPendingSeek();
 
         var loopProject = SingleTrack(3, 400);
         Beat(loopProject, 0, 1, 0, 4, 69);
@@ -191,7 +191,7 @@ public static partial class SelfTest
             $"timeline changes {outsideChanges}");
     }
 
-    private static void TestLatestSeekDuringBlockedReset()
+    private static void CheckLatestSeekDuringBlockedReset()
     {
         var project = SingleTrack(4, 400);
         Beat(project, 0, 1, 0, 4, 67);
@@ -226,7 +226,7 @@ public static partial class SelfTest
         }
     }
 
-    private static void TestStopDuringBlockedSeekReset()
+    private static void CheckStopDuringBlockedSeekReset()
     {
         var project = SingleTrack(3, 400);
         Beat(project, 0, 1, 0, 4, 68);
@@ -254,7 +254,7 @@ public static partial class SelfTest
         }
     }
 
-    private static void TestDisposeDuringBlockedSeekReset()
+    private static void CheckDisposeDuringBlockedSeekReset()
     {
         var project = SingleTrack(3, 400);
         Beat(project, 0, 1, 0, 4, 68);
@@ -287,7 +287,7 @@ public static partial class SelfTest
         }
     }
 
-    private static void TestSeekReturnsWhileOutputSendBlocks()
+    private static void CheckSeekReturnsWhileOutputSendBlocks()
     {
         var project = SingleTrack(4, 400);
         Beat(project, 0, 0, 0, 4, 68);
@@ -319,7 +319,7 @@ public static partial class SelfTest
         }
     }
 
-    private static void TestSeekClockWaitsForSetupSend()
+    private static void CheckSeekClockWaitsForSetupSend()
     {
         var project = SingleTrack(6, 400);
         Beat(project, 0, 2, 0, 4, 72);
@@ -352,7 +352,7 @@ public static partial class SelfTest
         }
     }
 
-    private static void TestBackwardSeekBeforeFinalReleaseFinishes()
+    private static void CheckBackwardSeekBeforeFinalReleaseFinishes()
     {
         var project = SingleTrack(4, 400);
         Beat(project, 0, 0, 0, 1, 72);
@@ -389,7 +389,7 @@ public static partial class SelfTest
         }
     }
 
-    private static void TestLiveEditReservedAfterPendingSeek()
+    private static void CheckLiveEditReservedAfterPendingSeek()
     {
         var project = SingleTrack(4, 400);
         Beat(project, 0, 1, 0, 4, 66);

@@ -18,7 +18,7 @@ internal sealed record InstrumentMenuState(bool Keyboard, bool Drums, string Tra
     IReadOnlyList<string> Roots, IReadOnlyList<string> ScaleNames, string? Scale, bool NoteNames, bool PreviewNext, bool LeftHanded, bool Locked, bool AtBottom = false);
 
 /// <summary>
-/// The fretboard / keyboard / drum-pad right-click menu as data (owner decisions 2026-09-30). Lean: the per-track view, the scale,
+/// The fretboard / keyboard / drum-pad right-click menu as data. Lean: the per-track view, the scale,
 /// the practice toggles and ONE "Fretboard settings..." door to Preferences. Appearance, sizes, colours and the "all tracks"
 /// view live in Preferences. At most two submenu levels (Scale > key > scale), no submenu repeats its parent's name.
 /// </summary>
@@ -157,33 +157,30 @@ internal static class ScoreMenus
 
 internal sealed record BandMenuState(string Content, string Size, int Rows, bool FollowsScore, bool WidthPerRow = false, string PlayheadLine = BandChoices.TabOnly, string Layout = BandChoices.Vertical);
 
-/// <summary>The Band view's right-click menu as data: lane content, instrument size, rows per screen, follow, zoom (the score's) and ONE "Band settings..." door.</summary>
+/// <summary>
+/// The Band view's right-click menu as data: lanes, lane layout, zoom (the score's), follow like the score, a Row sizes submenu
+/// (rows per screen, instrument size and width, the two row resets), reset view and ONE "Band settings..." door. The playhead line
+/// is set in Settings only; <see cref="BandMenuState.PlayheadLine"/> stays for the Band host's call site.
+/// </summary>
 internal static class BandMenus
 {
     public const string ContentId = "bandcontent", SizeId = "bandsize", RowsId = "bandrows", FollowId = "bandfollow", ResetHeightsId = "bandheights", SettingsId = "bandsettings", WidthModeId = "bandwidthmode", ResetWidthsId = "bandwidths", PlayheadId = "bandplayhead", LayoutId = "bandlayout", ResetViewId = "bandresetview", LaneZoomInId = "bandlanezoomin", LaneZoomOutId = "bandlanezoomout", LaneZoomResetId = "bandlanezoomreset";
     public const string AllRows = "All rows", ThisRow = "This row only";
-    public const string Lanes = "Lanes show", Instruments = "Instrument size", Rows = "Rows per screen", Follow = "Follow like the score", Settings = "Band settings…";
+    public const string Lanes = "Lanes show", RowSizes = "Row sizes", Instruments = "Instrument size", Rows = "Rows per screen", Follow = "Follow like the score", Settings = "Band settings…";
     /// <summary>The row "Band settings..." scrolls to: the first row of the Band view group.</summary>
     public const string SettingsRow = "band.instrumentsize";
 
     private static MenuSpec Radio(string id, string header, bool on, string settingKey) =>
         new() { Id = id, Header = header, Arg = header, Checkable = true, Checked = on, Radio = true, SettingKey = settingKey };
 
+    /// <summary>The width choice has no Preferences row: it says which rows a width drag changes, and is made in this menu.</summary>
+    private static MenuSpec WidthMode(string header, bool on) =>
+        new() { Id = WidthModeId, Header = header, Arg = header, Checkable = true, Checked = on, Radio = true, NoSetting = "which rows a width drag changes (chosen in this menu)" };
+
     public static List<MenuSpec> Build(BandMenuState s, Func<string, string> key) => new()
     {
         new() { Header = Lanes, Shortcut = key("Band.CycleLaneContent"), Children = BandChoices.Contents.Select(c => Radio(ContentId, c, c == s.Content, "band.lanecontent")).ToList() },
         new() { Header = "Lane layout", Shortcut = key("Band.CycleLaneLayout"), Children = BandChoices.Layouts.Select(c => Radio(LayoutId, c, c == s.Layout, "band.lanelayout")).ToList() },
-        new() { Header = Instruments, Shortcut = key("Band.CycleInstrumentSize"), Children = BandChoices.Sizes.Select(c => Radio(SizeId, c, c == s.Size, "band.instrumentsize")).ToList() },
-        new() { Header = Rows, Children = Enumerable.Range(BandLayoutState.MinRowsPerScreen, BandLayoutState.MaxRowsPerScreen - BandLayoutState.MinRowsPerScreen + 1).Select(n => Radio(RowsId, n.ToString(), n == s.Rows, "band.rowsperscreen")).ToList() },
-        new() { Id = ResetHeightsId, Header = "Reset row heights", Shortcut = key("Band.ResetRowHeights") },
-        new() { Header = "Instrument width", Children = new List<MenuSpec>
-            {
-                new() { Id = WidthModeId, Header = AllRows, Arg = AllRows, Checkable = true, Checked = !s.WidthPerRow, Radio = true },
-                new() { Id = WidthModeId, Header = ThisRow, Arg = ThisRow, Checkable = true, Checked = s.WidthPerRow, Radio = true },
-            } },
-        new() { Id = ResetWidthsId, Header = "Reset row widths" },
-        new() { Header = "Playhead line", Children = BandChoices.PlayheadLines.Select(c => Radio(PlayheadId, c, c == s.PlayheadLine, "band.playheadline")).ToList() },
-        new() { Id = FollowId, Header = Follow, Checkable = true, Checked = s.FollowsScore, Shortcut = key("Band.ToggleSmoothFollow"), SettingKey = "band.followscore" },
         new()
         {
             Header = ScoreMenus.Zoom,
@@ -192,6 +189,21 @@ internal static class BandMenus
                 new() { Id = LaneZoomInId, Header = "Zoom in", ToolTip = "Make the tab or notation in every Band lane bigger (the mouse wheel with the zoom modifier over the Band view)", Shortcut = "Ctrl+Wheel", SettingKey = "band.lanezoom" },
                 new() { Id = LaneZoomOutId, Header = "Zoom out", SettingKey = "band.lanezoom" },
                 new() { Id = LaneZoomResetId, Header = "Reset zoom", SettingKey = "band.lanezoom" },
+            }
+        },
+        new() { Id = FollowId, Header = Follow, Checkable = true, Checked = s.FollowsScore, Shortcut = key("Band.ToggleSmoothFollow"), SettingKey = "band.followscore" },
+        MenuSpec.Separator(),
+        new()
+        {
+            Header = RowSizes,
+            Children = new List<MenuSpec>
+            {
+                new() { Header = Rows, Children = Enumerable.Range(BandLayoutState.MinRowsPerScreen, BandLayoutState.MaxRowsPerScreen - BandLayoutState.MinRowsPerScreen + 1).Select(n => Radio(RowsId, n.ToString(), n == s.Rows, "band.rowsperscreen")).ToList() },
+                new() { Header = Instruments, Shortcut = key("Band.CycleInstrumentSize"), Children = BandChoices.Sizes.Select(c => Radio(SizeId, c, c == s.Size, "band.instrumentsize")).ToList() },
+                new() { Header = "Instrument width", Children = new List<MenuSpec> { WidthMode(AllRows, !s.WidthPerRow), WidthMode(ThisRow, s.WidthPerRow) } },
+                MenuSpec.Separator(),
+                new() { Id = ResetHeightsId, Header = "Reset row heights", Shortcut = key("Band.ResetRowHeights") },
+                new() { Id = ResetWidthsId, Header = "Reset row widths" },
             }
         },
         new() { Id = ResetViewId, Header = "Reset view", ToolTip = "Row heights, instrument widths, rows per screen, hidden instruments, lane zoom, layout and playhead line back to their defaults; the shown tracks and their order stay" },

@@ -3,7 +3,7 @@ using System.IO;
 namespace TabForge.Services;
 
 // Owns: the opt-in debug trace switch and its output to the diagnostics folder.
-// Does not own: the traced code and the logging of errors.
+// Does not own: the traced code; errors.log is ErrorLog's.
 // Tests: TestTraceSwitchAreas.
 /// <summary>
 /// One opt-in debug switch: <c>TABFORGE_TRACE=area,area</c> (areas: playback, engine, layout, import, ui, or all).
@@ -43,12 +43,19 @@ internal static class Trace
     /// <summary>The trace file for an area (or a named capture inside it) in the user diagnostics folder.</summary>
     public static string PathFor(string area) => FilePathPolicy.DefaultDiagnosticsPath($"trace-{area}.log");
 
+    /// <summary>Records a swallowed error: always into errors.log, and into the area's trace file too when the area is on. Never throws.</summary>
+    public static void Error(string area, string line)
+    {
+        ErrorLog.Sink.Write(area, line);
+        Write(area, line);
+    }
+
     /// <summary>Appends one time-stamped line to the area's trace file when the area is on. Never throws.</summary>
     public static void Write(string area, string line)
     {
         if (!IsOn(area)) return;
         try { DiagnosticFileService.AppendCappedLine(PathFor(area), $"{DateTime.Now:HH:mm:ss.fff} {line}", InputLimits.MaxLayoutLogBytes); }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidDataException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidDataException) // Not logged: the log cannot log its own failure
         {
             System.Diagnostics.Debug.WriteLine($"{Variable} write failed: {ex.Message}");
         }

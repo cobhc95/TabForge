@@ -46,7 +46,7 @@ internal sealed class DockHostView
     // Groups that only ever host a single, fixed panel: their tab header strip is pure
     // chrome (one button, nothing to switch between), so it is collapsed and the panel's
     // right-click menu is mirrored onto the content area instead.
-    private static readonly HashSet<string> SoloPanelIds = new(StringComparer.Ordinal) { "instrument", "timeline" };
+    private static readonly HashSet<string> SoloPanelIds = new(StringComparer.Ordinal) { "instrument", "timeline", "learn" };
     public static bool IsSoloPanel(string id) => SoloPanelIds.Contains(id);
     public const double TabHeaderMinHeight = 36;
 
@@ -370,7 +370,7 @@ internal sealed class DockDragGhostWindow : Window
             var transform = PresentationSource.FromVisual(_coordinateWindow)?.CompositionTarget?.TransformFromDevice;
             if (transform.HasValue) position = transform.Value.Transform(screenPoint);
         }
-        catch (InvalidOperationException) { } // window closing: its presentation source is gone
+        catch (InvalidOperationException) { } // window closing: its presentation source is gone // Not logged: runs on every pointer move; a closing window is expected.
         Left = position.X + 10;
         Top = position.Y + 12;
     }

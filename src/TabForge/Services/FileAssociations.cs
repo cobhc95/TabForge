@@ -20,7 +20,7 @@ public static class FileAssociations
 
     internal static string ProgIdFor(string extension) => $"{ProgIdPrefix}{extension}"; // e.g. TabForge.gp5
 
-    // installer/TabForge.iss [Registry] repeats these keys; the self-test compares the two (B-05).
+    // installer/TabForge.iss [Registry] repeats these keys; the self-test compares the two.
     internal static string Description(string extension) => extension == ".tforge"
         ? "TabForge project"
         : $"Score file ({extension})";

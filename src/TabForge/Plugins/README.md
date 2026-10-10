@@ -10,6 +10,7 @@ Plug-in discovery, trust, chain state and rigs. Plug-ins run only in isolated pr
 
 ## Key types
 - `PluginTrust`: records size, time, SHA-256 and signer; a changed file needs re-approval.
+- `MidiProcessorCatalog` (lookup, search, defaults) with `MidiProcessorCatalog.Entries.cs` (the processor table).
 - `VstScannerService`, `PluginCatalog`, `PluginLibrary`: scan and list plug-ins.
 - `ChainStateStore`: plug-in states kept in checked files and cleaned up when unused.
 - `PluginQuarantine`: plug-ins set aside after a failure.

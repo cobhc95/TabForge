@@ -159,7 +159,7 @@ public sealed class TunerWindow : Window
         protected override void OnRender(DrawingContext dc)
         {
             try { RenderGuard.Inject("TunerGauge"); RenderCore(dc); }
-            catch (Exception ex) when (RenderGuard.Contain(ex, "TunerGauge", dc, ActualWidth, ActualHeight)) { }
+            catch (Exception ex) when (RenderGuard.Contain(ex, "TunerGauge", dc, ActualWidth, ActualHeight)) { } // Not logged: render path: runs per frame.
         }
 
         private void RenderCore(DrawingContext dc)

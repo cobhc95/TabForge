@@ -7,7 +7,7 @@ using TabForge.Services;
 
 namespace TabForge;
 
-// R5 row A17 (group "gp-fidelity"): the trill speed in a clean .gp. Guitar Pro stores it in a note XProperty (id 688062467, an Int: the note value
+// The trill speed in a clean score file (group "gp-fidelity"). The score format stores it in a note XProperty (id 688062467, an Int: the note value
 // in ticks of a 960-tick quarter; a real Guitar Pro 7 file holds 471-474 for an 8th and 240 for a 16th). TabForge.AlphaTab patch 0003 writes and reads it.
 public static partial class SelfTest
 {

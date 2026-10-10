@@ -9,30 +9,30 @@ using EP = TabForge.AudioEngine.Plugins;
 namespace TabForge;
 
 /// <summary>
-/// WP-5 real-time polish (audit 2026-09-29 RT-01..RT-08, M-05, D10/RT-10, C6, C11/M-01): the audio-thread paths are allocation-free and
+/// The audio-thread paths are allocation-free and
 /// lock-free, bad plug-in audio never reaches the mix, and the transport carries the song's meter. Part of <see cref="SelfTest"/>.
 /// </summary>
 public static partial class SelfTest
 {
     private static void TestRealtimePolish()
     {
-        TestPinModes();
-        TestDenormalsFlushed();
-        TestNonFiniteAudio();
-        TestTransportMap();
-        TestVst2ChannelsAndFailure();
-        TestBreadcrumbPathCache();
-        TestMidiOverflowCounted();
-        TestNativeTimerRefCount();
-        TestGmPolyphony();
-        TestEngineLogRotation();
-        TestHeadlessRealtime();
-        TestSafetyLimiter();
-        TestAuditClickDetector();
+        CheckPinModes();
+        CheckDenormalsFlushed();
+        CheckNonFiniteAudio();
+        CheckTransportMap();
+        CheckVst2ChannelsAndFailure();
+        CheckBreadcrumbPathCache();
+        CheckMidiOverflowCounted();
+        CheckNativeTimerRefCount();
+        CheckGmPolyphony();
+        CheckEngineLogRotation();
+        CheckHeadlessRealtime();
+        CheckSafetyLimiter();
+        CheckAuditClickDetector();
     }
 
     /// <summary>A7-A03: the audio audit's click detector ignores steep edges that repeat at a steady period (a saw) and still flags an isolated step.</summary>
-    private static void TestAuditClickDetector()
+    private static void CheckAuditClickDetector()
     {
         const int rate = 48000;
         var empty = Array.Empty<bool>();
@@ -51,7 +51,7 @@ public static partial class SelfTest
     }
 
     /// <summary>A7-A01: the master safety limiter holds the -0.3 dBFS ceiling, leaves quiet audio untouched, allocates nothing, and is on for renders / off for live playback by default.</summary>
-    private static void TestSafetyLimiter()
+    private static void CheckSafetyLimiter()
     {
         const int rate = 48000, block = 256;
         var ceiling = EM.SafetyLimiter.DefaultCeiling;
@@ -226,7 +226,7 @@ public static partial class SelfTest
     }
 
     /// <summary>RT-01: pin labels map once to an enum; the wiring is right and the chain renders without allocating.</summary>
-    private static void TestPinModes()
+    private static void CheckPinModes()
     {
         const int frames = 256;
         var parsed = EM.PinModes.Parse("Stereo") == EM.PinMode.Stereo && EM.PinModes.Parse("Mono (L+R)") == EM.PinMode.Mono
@@ -262,7 +262,7 @@ public static partial class SelfTest
     private static volatile float _tiny = 1e-30f, _small = 1e-10f;
 
     /// <summary>RT-02: the audio thread flushes denormals (FTZ and DAZ); an unmarked thread does not.</summary>
-    private static void TestDenormalsFlushed()
+    private static void CheckDenormalsFlushed()
     {
         float marked = -1, unmarked = -1; var flagged = false;
         var t1 = new Thread(() => { TabForge.AudioEngine.EngineThreads.MarkAudioThread(); flagged = TabForge.AudioEngine.EngineThreads.DenormalsFlushed; marked = _tiny * _small; });
@@ -273,7 +273,7 @@ public static partial class SelfTest
     }
 
     /// <summary>RT-02: a NaN plug-in is skipped (its input passes on), reported once, and gets another chance when switched on again.</summary>
-    private static void TestNonFiniteAudio()
+    private static void CheckNonFiniteAudio()
     {
         const int frames = 128;
         using var shared = SharedBlock.Create($"tf-selftest-{Guid.NewGuid():N}");
@@ -317,7 +317,7 @@ public static partial class SelfTest
     }
 
     /// <summary>RT-04: the bar map locates ppq, bar start and meter (odd meters, past the end), round-trips and rejects bad maps.</summary>
-    private static void TestTransportMap()
+    private static void CheckTransportMap()
     {
         var bars = new[]
         {
@@ -351,7 +351,7 @@ public static partial class SelfTest
     }
 
     /// <summary>RT-05: channel pointer arrays as declared; more than 128 refused with effClose after effOpen.</summary>
-    private static void TestVst2ChannelsAndFailure()
+    private static void CheckVst2ChannelsAndFailure()
     {
         var wide = EP.Vst2Plugin.TestEffect.Create(48000, 256, inputs: 40, outputs: 6);
         var channels = wide.InputChannels;
@@ -370,7 +370,7 @@ public static partial class SelfTest
     }
 
     /// <summary>RT-07: the breadcrumb copies the path only when the path instance changes.</summary>
-    private static void TestBreadcrumbPathCache()
+    private static void CheckBreadcrumbPathCache()
     {
         using var shared = SharedBlock.Create($"tf-selftest-{Guid.NewGuid():N}");
         var path = new string('a', 40);
@@ -388,7 +388,7 @@ public static partial class SelfTest
     }
 
     /// <summary>M-05: MIDI dropped by a full chain buffer is counted and reaches the metrics snapshot.</summary>
-    private static void TestMidiOverflowCounted()
+    private static void CheckMidiOverflowCounted()
     {
         using var chain = new EM.TrackChain(0, -1, null, Array.Empty<EM.TrackChain.Effect>(), 256);
         new EM.CallbackMetrics().TakeAndReset();   // start from zero
@@ -400,7 +400,7 @@ public static partial class SelfTest
     }
 
     /// <summary>D10 / RT-10: one reference-counted owner of the 1 ms timer resolution.</summary>
-    private static void TestNativeTimerRefCount()
+    private static void CheckNativeTimerRefCount()
     {
         var base0 = NativeTimer.Holds;
         NativeTimer.Acquire(); NativeTimer.Acquire();
@@ -420,7 +420,7 @@ public static partial class SelfTest
     }
 
     /// <summary>C6: the per-track GM synth is capped at 32 voices with reverb / chorus off.</summary>
-    private static void TestGmPolyphony()
+    private static void CheckGmPolyphony()
     {
         TabForge.AudioEngine.Synth.GmSynth synth;
         try { synth = new TabForge.AudioEngine.Synth.GmSynth(48000, 256); }
@@ -436,7 +436,7 @@ public static partial class SelfTest
     }
 
     /// <summary>M-01 / C11: queued PID-prefixed lines written by the background writer; the log rotates instead of being deleted.</summary>
-    private static void TestEngineLogRotation()
+    private static void CheckEngineLogRotation()
     {
         var path = Path.Combine(Path.GetTempPath(), $"tf-selftest-log-{Guid.NewGuid():N}.log");
         var rotated = Path.ChangeExtension(path, ".1.log");
@@ -469,7 +469,7 @@ public static partial class SelfTest
     }
 
     /// <summary>RT-03 / RT-04 / RT-08 / RT-02 through the real engine (headless harness, manual null output, hosted VST2 test effect).</summary>
-    private static void TestHeadlessRealtime()
+    private static void CheckHeadlessRealtime()
     {
         var shared = SharedBlock.Create($"tf-selftest-{Guid.NewGuid():N}");
         EH.Attach(shared, (spec, rate, block) => spec.Path == EP.Vst2Plugin.TestEffect.PathName

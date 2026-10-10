@@ -27,6 +27,9 @@ using TabForge.Visualization;
 namespace TabForge;
 
 // MainWindow, arrangement timeline: refresh, section moves, selected area and context menus.
+// Owns: the arrangement timeline's refresh, section moves, selected area and the section lane menu; the other timeline menus are TimelineMenuController (its host is here).
+// Does not own: the timeline control (ArrangementPanel) and the song's section model.
+// Tests: listed in docs/feature-map/timeline-and-clips.md.
 public partial class MainWindow
 {
     // ---------- arrangement ----------
@@ -90,18 +93,19 @@ public partial class MainWindow
     {
         _project.IsDirty = true;
         _midi.RefreshMix(_project);       // live volume/pan, no timeline rebuild
-        MixerWindows.Mixer?.SyncValues();       // an open mixer follows the track list: values in place, rebuild only on structure change
+        MixerHost.Windows.Mixer?.SyncValues();       // an open mixer follows the track list: values in place, rebuild only on structure change
         RefreshTabs();
         UpdateTitle();
     }
 
-    private void CompleteTrackEditUndo()
+    private sealed class ArrangementGestureHost : IArrangementGestureHost
     {
-        if (_trackEditUndoTransaction is not { } transaction) return;
-        var capture = _undo.Commit(transaction);
-        if (capture.Stored) Playback.RememberBarMapping(capture.Snapshot);
-        _trackEditUndoTransaction = null;
+        private readonly MainWindow _window;
+        public ArrangementGestureHost(MainWindow window) => _window = window;
+        public DocumentSession Document => _window.Doc;
     }
+
+    private void CompleteTrackEditUndo() => _gestures.CompleteTrackEdit();
 
     /// <summary>
     /// Selects bars start…end in both views; the selection is the loop area (applied by the model's observer).
@@ -126,8 +130,7 @@ public partial class MainWindow
     private void MoveSection(int from, int insertBefore)
     {
         var selectedBar = Editor.SelectedMeasure;
-        var dragStart = _sectionUndoSnapshot;
-        _sectionUndoSnapshot = null;
+        var dragStart = _gestures.TakeSectionSnapshot();
         if (_arrangementController.MoveSection(Doc, from, insertBefore, dragStart).Value is not { } mapping) return;   // one undo step, one dirty change, one timeline invalidation
         _selection.Remap(mapping, MaxMeasures());   // the selected range follows its bars
         SyncAreaVisuals();   // the skipped areas moved with them (in the controller)
@@ -158,17 +161,8 @@ public partial class MainWindow
         var current = _isPlayingVisual && bar >= 0
             ? SectionLayout.At(_project, bar)
             : null;
-        var changed = !ReferenceEquals(current, _playingSectionMarker);
-        if (!changed && !forceRefresh) return;
-
-        _playingSectionMarker = current;
-        if (current is not null)
-        {
-            _syncingPlayingSectionSelection = true;
-            MarkerList.SelectedItem = current;
-            _syncingPlayingSectionSelection = false;
-            if (changed) MarkerList.ScrollIntoView(current);
-        }
+        var changed = _gestures.ShowPlayingSection(current, forceRefresh, marker => MarkerList.SelectedItem = marker);
+        if (changed && current is not null) MarkerList.ScrollIntoView(current);
     }
 
 
@@ -192,9 +186,6 @@ public partial class MainWindow
         }
     }
 
-    /// <summary>Drops the selected area; an active loop falls back to its no-area range (the whole song).</summary>
-    private void ClearLoopAreaKeepLoop() => _selection.Clear(SelectionOrigin.Command);
-
     private void SyncAreaVisuals()
     {
         Arrangement.SetAreaVisible(_selLoop.HasArea);
@@ -203,100 +194,66 @@ public partial class MainWindow
         _midi.SetSkipRanges(_skipRanges);
     }
 
-    /// <summary>The selection menu (owner request: Copy / Cut / Paste / Delete on top, the rest in submenus).</summary>
-    private ContextMenu BuildSelectionMenu()
+    private TimelineMenuController? _timelineMenus;
+    private TimelineMenuController TimelineMenusFlow => _timelineMenus ??= new TimelineMenuController(new TimelineMenuHost(this), _selection, _selLoop, _sections, _arrangementController, _clips);
+
+    /// <summary>The selection menu (Copy / Cut / Paste / Delete on top, the rest in submenus).</summary>
+    private ContextMenu BuildSelectionMenu() => TimelineMenusFlow.BuildSelectionMenu();
+
+    private void ShowTimelineContextMenuFromKeyboard() => TimelineMenusFlow.ShowFromKeyboard();
+
+    private void ShowArrangementContextMenu(int bar, int trackIndex, bool fromKeyboard = false) => TimelineMenusFlow.ShowBarMenu(bar, trackIndex, fromKeyboard);
+
+    private void ShowSectionContextMenu(int markerIndex, int? clickedBar = null) => TimelineMenusFlow.ShowSectionMenu(markerIndex, clickedBar);
+
+    private sealed class TimelineMenuHost : ITimelineMenuHost
     {
-        var (s, e) = (_selLoop.StartBar, _selLoop.EndBar);
-        var label = s == e ? $"bar {s + 1}" : $"bars {s + 1}-{e + 1}";
-        var skipped = _skipRanges.Any(r => r.Start == s && r.End == e);
-        var state = new SelectionMenuState(s == e ? $"Bar {s + 1} selected" : $"Bars {s + 1}-{e + 1} selected",
-            TimelineClips.CanPasteOnTimeline(ClipboardService.Shared.TryGetClip(out _)), _loop, skipped, _skipRanges.Count > 0,
-            EmptyBars.InRange(_project, s, e).Count);
-        return NewTimelineMenu("Arrangement timeline selection options", TimelineMenus.Selection(state, MenuKey), command =>
+        private readonly MainWindow _window;
+        public TimelineMenuHost(MainWindow window) => _window = window;
+        public DocumentSession Document => _window.Doc;
+        public AppSettings Settings => _window._settings;
+        public bool LoopOn => _window._loop;
+        public int SelectedTrackRow => _window.TrackMixerGrid.SelectedIndex;
+        public TrackModel? SelectedTrack => _window.SelectedTrack;
+        public int KeyboardMenuBar => _window._isPlayingVisual && _window._playheadBar >= 0 ? _window._playheadBar : _window.Editor.SelectedMeasure;
+        public string MenuKey(string id) => _window.MenuKey(id);
+        public ContextMenu NewMenu(string name, IEnumerable<MenuSpec> specs, Action<TimelineCommand> run) => _window.NewTimelineMenu(name, specs, run);
+        public void OpenMenu(ContextMenu menu, Point? anchor, bool fromKeyboard) => SpecMenus.Open(menu, _window.Arrangement, anchor, fromKeyboard);
+        public Point? BarAnchor(int bar) => _window.Arrangement.TimelineBarAnchor(bar);
+        public void OpenSettings(string category, string row) => _window.OpenSettings(category, row);
+        public void SetLoopActive(bool loop) => _window.SetLoopActive(loop);
+        public void ApplyLoopRange(int start, int end, SelectionScope scope) => _window.ApplyLoopRange(start, end, scope: scope);
+        public void SyncAreaVisuals() => _window.SyncAreaVisuals();
+        public void SetStatus(string text) => _window.StatusText.Text = text;
+        public void BeginAreaMove(int start, int end) => _window.Arrangement.BeginAreaMove(start, end);
+        public void ResetTrackListHeight() => _window.Arrangement.RequestResetTrackListHeight();
+        public void Refresh(EditViews views) => _window.RefreshAfterEdit((EditRefresh)(int)views);
+        public void AddSectionAt(int bar) => _window.AddSectionAt(bar);
+        public void RenameSection(MarkerModel marker) => _window.EditSectionTitle(marker);
+        public void GoToSection(MarkerModel marker) => _window.JumpToMarker(marker);
+
+        public void ToggleTrackLines()
         {
-            switch (command)
+            _window.Arrangement.ToggleTrackLines();
+            _window.SaveTimelineAppearance();
+        }
+
+        public void PlaceCaretAfterOpen(int trackIndex, int bar) =>
+            _window.Dispatcher.BeginInvoke(DispatcherPriority.ContextIdle, () =>
             {
-                case TimelineCommand.TimelineSettings: OpenSettings(SettingsCatalog.Timeline, TimelineMenus.TimelineSettingsRow); break;
-                case TimelineCommand.CopySelection: _sections.CopyArea(Doc, s, e, _selection.ScopeTrack); break;
-                case TimelineCommand.CutSelection: _sections.CutArea(Doc, s, e, _selection.ScopeTrack); break;
-                case TimelineCommand.PasteSelection: _sections.PasteAreaAt(Doc, s); break;
-                case TimelineCommand.DeleteSelection: _sections.Range.Delete(Doc, s, e, _selection.Scope == SelectionScope.AllTracks); break;
-                case TimelineCommand.DeleteEmptyBars: _sections.DeleteEmptyInRange(Doc, s, e); break;
-                case TimelineCommand.LoopSelection: SetLoopActive(!_loop); break;
-                case TimelineCommand.MoveSelection: Arrangement.BeginAreaMove(s, e); break;
-                case TimelineCommand.SkipSelection:
-                    if (skipped) _skipRanges.RemoveAll(r => r.Start == s && r.End == e);
-                    else _skipRanges.Add((s, e));
-                    SyncAreaVisuals();
-                    StatusText.Text = skipped ? $"Playing {label} again" : $"Skipping {label} during playback";
-                    break;
-                case TimelineCommand.PlaySkippedAgain: _skipRanges.Clear(); SyncAreaVisuals(); break;
-                case TimelineCommand.ClearSelection: ClearLoopAreaKeepLoop(); break;
-            }
-        });
-    }
+                if (trackIndex >= 0 && _window.TrackMixerGrid.SelectedIndex != trackIndex) _window.TrackMixerGrid.SelectedIndex = trackIndex;
+                if (bar >= 0) _window.Editor.SetBar(bar, seekPlayback: false);
+            });
 
-    /// <summary>
-    /// Shift+F10 / the Menu key on the timeline: the selection menu when bars are selected, otherwise the bar menu for the playhead's bar
-    /// (while playing) or the current bar of the selected track, at that bar's top-left with the first item focused.
-    /// </summary>
-    private void ShowTimelineContextMenuFromKeyboard()
-    {
-        if (MaxMeasures() == 0) return;
-        var bar = _selLoop.HasArea ? _selLoop.StartBar
-            : _isPlayingVisual && _playheadBar >= 0 ? _playheadBar : Editor.SelectedMeasure;
-        ShowArrangementContextMenu(bar, Math.Max(0, TrackMixerGrid.SelectedIndex), fromKeyboard: true);
-    }
-
-    private void ShowArrangementContextMenu(int bar, int trackIndex, bool fromKeyboard = false)
-    {
-        using var slowTrace = TabForge.Views.SlowTrace.Measure("timeline menu build+open", 0);
-        var hasTrack = trackIndex >= 0 && trackIndex < _project.Tracks.Count;
-        bar = MaxMeasures() > 0 ? Math.Clamp(bar, 0, MaxMeasures() - 1) : -1;
-        // The menu opens first; the track switch and caret placement (score relayout) follow once it is on screen.
-        // Placing the caret never seeks or rebuilds the engine (notably for the section-lock menu item).
-        var caretBar = bar;
-        Dispatcher.BeginInvoke(DispatcherPriority.ContextIdle, () =>
+        public string[]? PickAudioFiles()
         {
-            if (hasTrack && TrackMixerGrid.SelectedIndex != trackIndex) TrackMixerGrid.SelectedIndex = trackIndex;
-            if (caretBar >= 0) Editor.SetBar(caretBar, seekPlayback: false);
-        });
-
-        // Inside the selected bars: the selection menu only. Outside it: the single-bar menu, and the selection stays.
-        Point? anchor = fromKeyboard && bar >= 0 ? Arrangement.TimelineBarAnchor(bar) : null;
-        if (_selLoop.Contains(bar)) { SpecMenus.Open(BuildSelectionMenu(), Arrangement, anchor, fromKeyboard); return; }
-
-        var selectedTrack = hasTrack ? _project.Tracks[trackIndex] : SelectedTrack;
-        var hasBar = bar >= 0;
-        var section = hasBar ? _arrangementController.SectionAt(_project, bar) : null;
-        var barsClip = ClipboardService.Shared.TryGetClip(out _);
-        var canPasteBars = TimelineClips.CanPasteOnTimeline(barsClip);
-        var state = new BarMenuState(hasBar, selectedTrack is not null, _project.Tracks.Count,
-            selectedTrack is not null && selectedTrack.Measures.Count > 1, MaxMeasures() > 1,
-            section is not null, section?.LockPosition ?? false, canPasteBars, canPasteBars && barsClip!.Tracks.Count > 1, _settings.Timeline.ShowTrackLines);
-        var menu = NewTimelineMenu("Arrangement timeline options", TimelineMenus.Bar(state, MenuKey), command =>
-        {
-            switch (command)
+            var dialog = new Microsoft.Win32.OpenFileDialog
             {
-                case TimelineCommand.TimelineSettings: OpenSettings(SettingsCatalog.Timeline, TimelineMenus.TimelineSettingsRow); break;
-                case TimelineCommand.ToggleTrackLines: Arrangement.ToggleTrackLines(); SaveTimelineAppearance(); break;
-                case TimelineCommand.ResetTrackListHeight: Arrangement.RequestResetTrackListHeight(); break;
-                case TimelineCommand.CopyBar: _sections.CopyBar(Doc, bar, selectedTrack, allTracks: false); break;
-                case TimelineCommand.CopyBarAllTracks: _sections.CopyBar(Doc, bar, selectedTrack, allTracks: true); break;
-                case TimelineCommand.CopySection: _sections.CopySectionAt(Doc, bar); break;
-                case TimelineCommand.PasteBar: _sections.PasteBar(Doc, bar, selectedTrack, allTracks: false); break;
-                case TimelineCommand.PasteBarAllTracks: _sections.PasteBar(Doc, bar, selectedTrack, allTracks: true); break;
-                case TimelineCommand.PasteSectionHere: _sections.PasteSectionAt(Doc, bar); break;
-                case TimelineCommand.InsertBarBefore: _sections.InsertBar(Doc, bar); break;
-                case TimelineCommand.InsertBarAfter: _sections.InsertBar(Doc, bar + 1); break;
-                case TimelineCommand.DeleteBar or TimelineCommand.DeleteBarAllTracks: _sections.Range.Delete(Doc, bar, bar); break;   // the same prompt as a selection
-                case TimelineCommand.ToggleSectionLockAtBar when section is not null:
-                    DocumentEdits.Run(Doc, _ => { section.LockPosition = !section.LockPosition; return true; });
-                    RefreshAfterEdit(EditRefresh.Arrangement | EditRefresh.Markers);
-                    break;
-            }
-        });
-        SpecMenus.Open(menu, Arrangement, anchor, fromKeyboard);
+                Filter = "Audio files|" + string.Join(";", Audio.WaveformCache.Extensions.Select(x => "*" + x)) + "|All files|*.*",
+                Multiselect = true
+            };
+            return dialog.ShowDialog(_window) == true ? dialog.FileNames : null;
+        }
     }
 
     /// <summary>Right-click on the section lane: a section's menu, or just "Add section" on an empty stretch.</summary>
@@ -313,43 +270,6 @@ public partial class MainWindow
         add.Click += (_, _) => AddSectionAt(bar);
         menu.Items.Add(add);
         menu.IsOpen = true;
-    }
-
-    private void ShowSectionContextMenu(int markerIndex, int? clickedBar = null)
-    {
-        var markers = _project.Markers.OrderBy(marker => marker.MeasureIndex).ToList();
-        if (markerIndex < 0 || markerIndex >= markers.Count) return;
-        var marker = markers[markerIndex];
-        var sectionLastBar = Math.Max(marker.MeasureIndex, SectionLayout.End(markers, markerIndex, MaxMeasures()) - 1);
-        var sectionLooped = _loop && _selLoop.StartBar == marker.MeasureIndex && _selLoop.EndBar == sectionLastBar;
-        int? addAt = clickedBar is int atBar && atBar != marker.MeasureIndex ? atBar : null;
-        var state = new SectionMenuState(addAt, TimelineClips.CanPasteOnTimeline(ClipboardService.Shared.TryGetClip(out _)),
-            sectionLooped, marker.LockPosition);
-        var menu = NewTimelineMenu("Section options", TimelineMenus.Section(state, MenuKey), command =>
-        {
-            switch (command)
-            {
-                case TimelineCommand.SectionSettings: OpenSettings(SettingsCatalog.Timeline, TimelineMenus.SectionSettingsRow); break;
-                case TimelineCommand.AddSectionHere when addAt is int at: AddSectionAt(at); break;
-                case TimelineCommand.CopySectionMenu: _sections.CopySection(Doc, marker); break;
-                case TimelineCommand.CutSection: _sections.CutSection(Doc, marker); break;
-                case TimelineCommand.PasteSectionAfter: _sections.PasteSectionAfter(Doc, marker); break;
-                case TimelineCommand.DuplicateSection: _sections.DuplicateSection(Doc, marker); break;
-                case TimelineCommand.DeleteSection: _sections.DeleteSection(Doc, marker, confirm: true); break;
-                case TimelineCommand.LoopSection:
-                    if (sectionLooped) { SetLoopActive(false); break; } // ticked: clicking again turns the loop off
-                    SetLoopActive(true);
-                    ApplyLoopRange(marker.MeasureIndex, sectionLastBar, scope: SelectionScope.AllTracks);
-                    break;
-                case TimelineCommand.RenameSection: EditSectionTitle(marker); break;
-                case TimelineCommand.GoToSection: JumpToMarker(marker); break;
-                case TimelineCommand.ToggleSectionLock:
-                    DocumentEdits.Run(Doc, _ => { marker.LockPosition = !marker.LockPosition; return true; });
-                    RefreshAfterEdit(EditRefresh.Arrangement | EditRefresh.Markers);
-                    break;
-            }
-        });
-        SpecMenus.Open(menu, Arrangement, null, fromKeyboard: false);
     }
 
     private void EditSectionTitle(MarkerModel marker)

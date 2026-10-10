@@ -685,7 +685,7 @@ public partial class BrowserTabBar : UserControl
         }
         catch
         {
-            // Corrupt payload: ignore the drop rather than crashing.
+            Services.Trace.Error(Services.Trace.Ui, "tab drop: corrupt payload ignored"); // Corrupt payload: ignore the drop rather than crashing.
         }
     }
 

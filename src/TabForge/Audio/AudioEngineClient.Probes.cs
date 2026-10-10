@@ -8,6 +8,10 @@ using TabForge.Services;
 
 namespace TabForge.Audio;
 
+// Owns: the engine client's diagnostics and probes: plug-in state collection, pitch measurement, the Windows audio path offset sent to the engine, and the hooks the self-tests use.
+// Does not own: the command send path (AudioEngineClient.Commands.cs) or the graph sync (AudioEngineClient.Sync.cs).
+// Tests: no named test.
+
 /// <summary>Diagnostics and probes: plug-in state collection, pitch measurement, the Windows path-offset probe and the hooks the self-tests use.</summary>
 public sealed partial class AudioEngineClient : IDisposable
 {
@@ -31,7 +35,7 @@ public sealed partial class AudioEngineClient : IDisposable
         {
             if (_pathOffsetSentTo == pid) return;
             _pathOffsetSentTo = pid;
-            Send(EngineCommand.SetWindowsPathOffset, w => w.Write(offset));
+            Send(EngineCommand.SetWindowsPathOffset, new SetWindowsPathOffsetMessage(offset).Write);
             return;
         }
         if (_measuringPathOffset) return;
@@ -62,7 +66,7 @@ public sealed partial class AudioEngineClient : IDisposable
         if (!TryAddress(track, slot, out var engineSlot, out var index)) return 0;
         var id = ++_pitchRequest;
         var channel = Math.Clamp(track.MidiChannel, 0, 15);
-        Send(EngineCommand.MeasurePitch, w => { w.Write(engineSlot); w.Write(index); w.Write(id); w.Write(channel); w.Write(notes.Count); foreach (var n in notes) w.Write(n); });
+        Send(EngineCommand.MeasurePitch, new MeasurePitchMessage(engineSlot, index, id, channel, notes).Write);
         return id;
     }
 
@@ -91,7 +95,7 @@ public sealed partial class AudioEngineClient : IDisposable
         {
             if (!_slots.TryGetValue(track, out var slot)) continue;
             var request = BeginStateRequest(slot);
-            Send(EngineCommand.GetStates, w => { w.Write(slot); w.Write(request.Id); });
+            Send(EngineCommand.GetStates, new GetStatesMessage(slot, request.Id).Write);
             pending.Add((track, request));
         }
         var deadline = Stopwatch.GetTimestamp() + timeoutMs * Stopwatch.Frequency / 1000;
@@ -169,7 +173,7 @@ public sealed partial class AudioEngineClient : IDisposable
     /// <summary>Test hook (--probe-audio): ends the engine abruptly, as a crashing plug-in would.</summary>
     internal void KillEngineForTest()
     {
-        try { _process?.Kill(); } catch (InvalidOperationException) { }
+        try { _process?.Kill(); } catch (InvalidOperationException) { } // Not logged: test hook: the engine process may already have exited.
     }
 
     /// <summary>Test hook: forget earlier crashes (each probe case starts fresh).</summary>
@@ -208,7 +212,7 @@ public sealed partial class AudioEngineClient : IDisposable
     }
 
     /// <summary>Self-test hook: the engine main thread sleeps (honoured only with TABFORGE_ENGINE_TEST_HOOKS=1).</summary>
-    internal void SendTestHangForTest(int seconds) => Send(EngineCommand.TestHang, w => w.Write(seconds));
+    internal void SendTestHangForTest(int seconds) => Send(EngineCommand.TestHang, new TestHangMessage(seconds).Write);
     /// <summary>Self-test hook: when the engine last proved alive (pong / Ready), Stopwatch ticks.</summary>
     internal long LastAliveForTest => Volatile.Read(ref _lastAlive);
     internal bool ConnectedForTest { get { lock (_sendGate) return _pipe is not null && _queued is null; } }

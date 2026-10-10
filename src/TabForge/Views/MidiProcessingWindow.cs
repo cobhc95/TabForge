@@ -12,6 +12,11 @@ using EM = TabForge.AudioEngine.Midi;
 
 namespace TabForge.Views;
 
+// Owns: one plug-in's MIDI processing window: the searchable processor catalog, the ordered processor list (tick, move, remove), the
+//   selected processor's parameters, the list's presets, and the log view, which the engine feeds only while the window is open.
+// Does not own: what a processor does (MidiProcessorCatalog and the engine's MIDI processors) and the undo and engine update, which the
+//   FX chain window's edit delegate performs.
+// Tests: TestMidiProcessors, TestNoteNames.
 /// <summary>
 /// One plug-in's MIDI processing list (opened from the wiring window's "Configure MIDI input…" and by the Track.MidiProcessing hotkey):
 /// a searchable catalog on the left, the ordered list in the middle (tick to enable, move, remove), and the selected processor's
@@ -570,7 +575,7 @@ public sealed class MidiProcessingWindow : Window
         open.Click += (_, _) =>
         {
             try { Directory.CreateDirectory(DrumMapLibrary.UserFolder); Process.Start(new ProcessStartInfo(DrumMapLibrary.UserFolder) { UseShellExecute = true }); }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.ComponentModel.Win32Exception) { }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.ComponentModel.Win32Exception) { Services.Trace.Error(Services.Trace.Ui, "MIDI processing: open presets folder: " + ex.Message); }
         };
         var reload = new Button { Content = "Reload maps", Padding = new Thickness(10, 3, 10, 3), ToolTip = "Read the drum map files again" };
         reload.Click += (_, _) => { DrumMapLibrary.Reload(); ShowSelected(); };
@@ -607,7 +612,7 @@ public sealed class MidiProcessingWindow : Window
             if (Directory.Exists(PresetFolder))
                 foreach (var file in Directory.EnumerateFiles(PresetFolder, "*.json").Take(200)) list.Add((System.IO.Path.GetFileNameWithoutExtension(file), file));
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { Services.Trace.Error(Services.Trace.Ui, "MIDI processing: list presets: " + ex.Message); }
         return list.OrderBy(p => p.Item1, StringComparer.OrdinalIgnoreCase).ToList();
     }
 
@@ -641,7 +646,7 @@ public sealed class MidiProcessingWindow : Window
                 if (new FileInfo(file).Length <= 512 * 1024)
                     list = System.Text.Json.JsonSerializer.Deserialize<List<PluginMidiProcessor>>(File.ReadAllText(file));
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Text.Json.JsonException) { }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Text.Json.JsonException) { Services.Trace.Error(Services.Trace.Ui, "MIDI processing: read preset: " + ex.Message); }
         }
         if (list is null) { MessageBox.Show(this, "That preset could not be read.", Title, MessageBoxButton.OK, MessageBoxImage.Warning); return; }
         list = list.Where(p => p is not null && p.Params.Length <= PluginMidiProcessor.MaxParamsChars).Take(MaxProcessors).ToList();
@@ -662,14 +667,14 @@ public sealed class MidiProcessingWindow : Window
             TabForge.Services.FilePathPolicy.WriteAtomically(file, s => s.Write(bytes));   // a failed write leaves the previous preset intact
             RefreshPresets(file);
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException) { MessageBox.Show(this, ex.Message, Title, MessageBoxButton.OK, MessageBoxImage.Warning); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException) { MessageBox.Show(this, ex.Message, Title, MessageBoxButton.OK, MessageBoxImage.Warning); } // Not logged: the message is shown in a dialog
     }
 
     private void DeletePreset()
     {
         if (_presets.SelectedItem is not ComboBoxItem { Tag: string file }) return;
         if (MessageBox.Show(this, $"Delete the preset \"{System.IO.Path.GetFileNameWithoutExtension(file)}\"?", Title, MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
-        try { File.Delete(file); } catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+        try { File.Delete(file); } catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { Services.Trace.Error(Services.Trace.Ui, "MIDI processing: delete preset: " + ex.Message); }
         RefreshPresets(null);
     }
 

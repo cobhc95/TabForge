@@ -2,7 +2,11 @@ using TabForge.Models;
 
 namespace TabForge.Views;
 
-// TrackTimeline: song seconds <-> timeline x, for audio and MIDI clips (the host supplies the bar mapping).
+// Owns: converting song seconds to timeline x and back (XOfSec, SecOfX, ClipEndX), the bar start seconds from the host's
+//   BarStartSec and BarOfSec hooks, and the song-time map.
+// Does not own: the bar mapping (the host supplies it) and clip edits.
+// Tests: TestTimelineSongTimeRepeatGrowth.
+
 internal sealed partial class TrackTimeline : ITimelineSongTimeMapHost
 {
     private TrackTimelineSongTimeMapController? _songTimeMap;

@@ -48,6 +48,9 @@ public static partial class SelfTest
             var menuRight = window.MainMenu.TranslatePoint(new Point(window.MainMenu.ActualWidth, 0), window.MainToolbar).X;
             Check($"{width} px: zoom out / in stay in the toolbar (step {fit.Step}, room {fit.LastFit.Room:0}, needed {fit.LastFit.Needed:0}, menu ends {menuRight:0}, group ends {groupRight:0}, tempo starts {tempoLeft:0})",
                 window.ZoomSpeedGroup.IsVisible && FindNamedButton(window.ZoomSpeedGroup, "Zoom in")?.IsVisible == true && groupRight <= tempoLeft + 1);
+            Check($"{width} px: Record video stays in the title bar left of Settings",
+                window.RecordVideoButton.IsVisible && window.RecordVideoButton.IsDescendantOf(window.TitleBar) && !window.RecordVideoButton.IsDescendantOf(window.MainToolbar) &&
+                window.RecordVideoButton.TranslatePoint(new Point(0, 0), window.TitleBar).X < window.TitleSettingsButton.TranslatePoint(new Point(0, 0), window.TitleBar).X);
             if (width >= 1280) Check("1280 px shows the speed box and its label", window.SpeedCombo.IsVisible && window.ZoomSpeedGroup.Children.OfType<TextBlock>().Single().IsVisible);
             if (width <= 864) Check("864 px hides the time and key signature readouts", !window.TimeSigLabel.IsVisible && !window.KeyLabelText.IsVisible);
             if (window.ZoomCombo.IsVisible)

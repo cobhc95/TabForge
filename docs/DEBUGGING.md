@@ -4,6 +4,8 @@ How to run one test, one area, the CI gate, and the headless diagnostics. `docs/
 
 Run every command from the repository root (the source-scanning tests read the folder they start in) and give it a scratch settings folder with `--profile <folder>` so your own settings stay untouched. A run that cannot start exits with 2, a run that found a problem with 1, success is 0.
 
+For the route from a symptom to its first file, test and log, see `docs/DEBUG_SYMPTOMS.md`.
+
 <!-- TEST-BOX-START -->
 > **How to run a test (canonical)**
 > - Every build: the basic area. `src\TabForge\bin\Release\net8.0-windows\TabForge.exe --selftest <log> --areas basic`, then read the "N passed, M failed" line (the exe prints nothing; read the log).
@@ -30,6 +32,7 @@ Start-Process -Wait src\TabForge\bin\Release\net8.0-windows\TabForge.exe -Argume
 
 - `TABFORGE_SPEED_ONLY="open Preferences;Delete bars"` (environment) limits `--speed-audit` to the actions whose names contain one of the fragments.
 - `TABFORGE_SPEED_ONLY="drag start"` times the two drag-start entries (`Diagnostics/WindowProbes.SpeedAuditDrag.cs`): a three-file drag entering the timeline and the first move of a clip drag, each from the pointer event to the ghost in place plus idle.
+- `TABFORGE_VIDEO_PERF=<file>` appends one line per layout to the file during `TestVideoExport` in a full-suite test build: ms per frame in each drawing phase (layout, bake, instrument, Band, raster, copy, compose), the hand-off to the encoder (UI-blocked time, including queue waits) and the bake count. Off, the frame source takes no timings.
 - `TABFORGE_TIMELINE_SPEED_PROFILE=<song path>` adds cold, cached and revision timing measurements to `TestTimelineSongTimeRepeatGrowth` in a full-suite test build.
 - `TABFORGE_DIALOG_EVIDENCE=<absolute PNG path>` saves the scaled marker dialog during `TestDialogEscape` in a full-suite test build.
 - `--only <TestName>[,<TestName>...]` runs just the named tests. A name is the test method as written in the `Guard(...)` or `GuardGroup(...)` call in `src/TabForge/SelfTests/SelfTest.cs` (basic set) or `tests/full-suite/SelfTestFullSuite.cs`. Names are exact and case-sensitive. A full-suite test is known only to a build made with `-p:TabForgeFullSuite=true`; the maintainer's local rebuild script builds that for you when `TABFORGE_SELFTEST_ONLY=TestA,TestB` is set.
@@ -116,5 +119,32 @@ Three options open the main window and need `--profile <scratch folder>`:
 | --- | --- |
 | `--capture <script.json> <outDir>` | Drives the window off-screen from a script and saves screenshots. |
 | `--screenshots <folder>` | Photographs menus, panels, settings and dialogs, then exits. |
+| `errors.log` | Always on, no switch: every swallowed error from a catch (`Trace.Error`) goes to `errors.log` in the diagnostics folder (256 KB, then `errors.1.log`); identical lines within 1 s are counted, not repeated. Render and pointer-move paths stay silent. |
 | `TABFORGE_TRACE=playback` | After every seek, loop wrap or resync the trace line `restore@<ms>ms` lists each channel's program (`prog`), volume (`cc7`) and pan (`cc10`) just sent; check it when a mix-table change seems lost after a jump. |
 | `--speed-audit <report.md>` | Times every common action (clicks, scrolling, zoom, resizes, windows, menus, editing, tracks, clips, save, open, tabs) on the off-screen window with the demo song and a long audio clip, stopped and playing, and writes a table: median and worst time to idle, synchronous work, worst frame gap, flags above 50 ms or 33 ms. Clip and track-row menus open a real non-activating popup; long WAV drops extend every track in both transport states. Set `TABFORGE_TRACE=ui` to add the slow-funnel lines with their callers. Silent (master volume 0); works on a copy of the song. |
+
+## Other flags
+
+Internal launches are started by TabForge itself; do not run them by hand. The probes open the main window after a song, like the options above; add `--profile <scratch folder>` too.
+
+- `--approve-night-plugins [all]`: pre-approves the named stress-run plug-ins in the profile's trust store (`all`: every plug-in the scanner finds). Refused without `--profile`. Use for unattended stress runs only.
+- `--audio-engine <session> <pid>`: internal. The audio engine process that plug-in playback runs in (no window).
+- `--corpus <dir>`: with `--render-identity`, adds the song files in that folder to the corpus (default: environment variable `TF_RENDER_CORPUS`). Use to include your own songs in the identity check.
+- `--import-worker <pipe> [parentPid]`: internal. Runs one song import out of process: one request, one reply, then exit. TabForge kills it on cancel or timeout.
+- `--pair-save-probe <gp> <tfaudio> <stage> <signal> <new gp> <new audio>`: full-suite builds only. Child of the pair-save kill test: stops at a stage, writes the signal file, waits to be killed.
+- `--perf-follow <report>`: plays the song in each score-follow style and records CPU and memory. Use when changing score following.
+- `--plugin-host <id> <enginePid> <rate> <block> <1|0> <format> <path> [sha256|none]`: internal. Runs one plug-in per process for the audio engine, so a crashing plug-in ends only its process.
+- `--plugin-info <path> <sha256>`: internal. Loads one approved plug-in in a throwaway process and prints `role|vendor|name`; exit 5 when the file is missing or changed.
+- `--probe-countin <report>`: turns count-in on through the real button, presses Play and records the channel-10 clicks sent before the music. Use when count-in timing changes.
+- `--probe-gm <report>`: headless (no window, no audio device). Feeds the engine's GM synth the score's technique messages and measures pitch, level and tail; exit 1 on any FAIL.
+- `--probe-instrument-menu <report>`: opens the instrument panel's right-click menu in each view and reports it.
+- `--probe-menus <folder>`: clicks every main-menu item on a temporary copy of the song, photographs the dialogs, cancels them and reports what changed. Skips Exit and Check for updates.
+- `--probe-playback-visuals <folder>`: photographs playback with default colours, then with magenta and thicker values, to confirm the settings reach the screen.
+- `--probe-record <report>`: records MIDI while the song plays, then checks the clip, its lane, playback, notation and loop takes. Closes the window afterwards.
+- `--probe-settings <report>`: changes each Settings row through the live-preview path, records errors and visible change, then restores the originals. Nothing is saved.
+- `--probe-update <report>`: one real update check against GitHub, as an old and as the current version. Needs network; nothing opens.
+- `--size WxH` (or `--size=WxH`): restores the main window at that size in DIPs, at position 20,20. Ignored with `--capture` or `--speed-audit`.
+- `--software-render`: forces WPF software rendering. Use in unattended runs with the monitor off, where hardware rendering leaves the window black.
+- `--theme <preset>`: applies a Settings theme preset (for example Dark or Light) to the open window. Use for screenshots in each theme.
+- `--tracks all|1,3,5-7`: `--render-bars` option: which tracks to render (default `all`).
+- `--views notation,tab,both`: `--render-bars` option: which views to render (default `notation,tab`).

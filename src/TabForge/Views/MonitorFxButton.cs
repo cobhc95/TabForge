@@ -50,7 +50,7 @@ public sealed class MonitorFxButton : FrameworkElement
     protected override void OnRender(DrawingContext dc)
     {
         try { RenderGuard.Inject("MonitorFxButton"); RenderCore(dc); }
-        catch (Exception ex) when (RenderGuard.Contain(ex, "MonitorFxButton", dc, ActualWidth, ActualHeight)) { }
+        catch (Exception ex) when (RenderGuard.Contain(ex, "MonitorFxButton", dc, ActualWidth, ActualHeight)) { } // Not logged: render path: runs per frame.
     }
 
     private void RenderCore(DrawingContext dc)

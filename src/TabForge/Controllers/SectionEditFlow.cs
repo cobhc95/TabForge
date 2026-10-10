@@ -119,7 +119,7 @@ internal sealed class SectionEditFlow
             var written = _host.Clipboard.Copy(capture());
             _host.SetStatus(written ? status : status + " (clipboard busy: paste works inside TabForge only)");
         }
-        catch (System.IO.InvalidDataException ex) { _host.SetStatus(ex.Message); }
+        catch (System.IO.InvalidDataException ex) { _host.SetStatus(ex.Message); } // Not logged: status line shows the message; the edit is refused
     }
 
     /// <summary>Copies the section that contains <paramref name="bar"/>; does nothing on a bar outside every section.</summary>
@@ -137,7 +137,7 @@ internal sealed class SectionEditFlow
             if (_arrangement.CopySection(doc.Project, marker, _host.Clipboard, out var written) is null) return;
             _host.SetStatus(written ? $"Copied section '{marker.Title}'" : $"Copied section '{marker.Title}' (clipboard busy: paste works inside TabForge only)");
         }
-        catch (System.IO.InvalidDataException ex) { _host.SetStatus(ex.Message); }
+        catch (System.IO.InvalidDataException ex) { _host.SetStatus(ex.Message); } // Not logged: status line shows the message; the edit is refused
     }
 
     public void CutSection(DocumentSession doc, MarkerModel marker)

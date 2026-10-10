@@ -3,6 +3,10 @@ using TabForge.Services;
 
 namespace TabForge.Diagnostics;
 
+// Owns: the `--probe-update` check: one real update check against GitHub, as an old and as the current version, writing the report without opening anything.
+// Does not own: the update check logic itself.
+// Tests: TestUpdateCheck.
+
 // Window probes, update probe.
 internal sealed partial class WindowProbes : MainWindow.ProbeAccess
 {
@@ -21,7 +25,7 @@ internal sealed partial class WindowProbes : MainWindow.ProbeAccess
                     var found = await UpdateService.CheckAsync(asVersion, cancel.Token);
                     report.AppendLine($"as {asVersion}: {(found is null ? "no newer release" : $"newer {found.Version} at {found.Page}")}");
                 }
-                catch (Exception ex) { report.AppendLine($"as {asVersion}: {ex.GetType().Name}: {ex.GetBaseException().Message}"); }
+                catch (Exception ex) { report.AppendLine($"as {asVersion}: {ex.GetType().Name}: {ex.GetBaseException().Message}"); } // Not logged: diagnostic probe: the failure goes to its report, not errors.log
             }
             DiagnosticFileService.WriteText(path, report.ToString());
             _confirmOnClose = false;

@@ -27,7 +27,7 @@ internal sealed class SettingsNavigationIcon : FrameworkElement
     protected override void OnRender(DrawingContext context)
     {
         try { RenderGuard.Inject("SettingsNavigationIcon"); RenderCore(context); }
-        catch (Exception ex) when (RenderGuard.Contain(ex, "SettingsNavigationIcon", context, ActualWidth, ActualHeight)) { }
+        catch (Exception ex) when (RenderGuard.Contain(ex, "SettingsNavigationIcon", context, ActualWidth, ActualHeight)) { } // Not logged: render path: runs per frame.
     }
 
     private void RenderCore(DrawingContext context)

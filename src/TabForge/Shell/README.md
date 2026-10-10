@@ -16,6 +16,7 @@ Window plumbing shared by every window: lifetime, tab tear-off, frame timing.
 - `FrameTicker`: one frame timer for the playhead.
 - `AppOptions`: the playback and view options every window and song shares (created by `App`, handed to each `MainWindow`).
 - `WindowPolish`: caption and resize-border handling.
+- `NativeWindowDrag`: the user32 calls of a tab drag between windows (cursor, left button, caption drag).
 
 ## Pathway
 Subscribe to events through `OwnedSubscriptions`, never with a bare `+=` that outlives the window. Helpers held by a window keep their host in interface-typed fields (`ChildEventRelease` clears delegate fields).

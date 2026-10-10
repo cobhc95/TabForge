@@ -5,7 +5,7 @@ namespace TabForge.Services;
 
 // Owns: the GP4/GP5 mix-table details the score library discards (transition lengths, apply-to-all flags, chorus and reverb).
 // Does not own: the rest of the import.
-// Tests: TestMixFadeAndAudiblePlayhead.
+// Tests: CheckMixFadeAndAudiblePlayhead.
 /// <summary>
 /// GP4/GP5 mix-table details alphaTab reads and throws away: the transition length (in beats) of each
 /// value, the "apply to all tracks" flags, and chorus / reverb / phaser / tremolo. A reference fade-out is exactly

@@ -273,7 +273,7 @@ internal sealed class PluginBrowserDialog
             _all = commonRoots is null ? found
                 : _all.Concat(found).GroupBy(p => p.Path, StringComparer.OrdinalIgnoreCase).Select(g => g.First()).OrderBy(p => p.Name, StringComparer.OrdinalIgnoreCase).ToList();
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or OperationCanceledException) { }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or OperationCanceledException) { Services.Trace.Error(Services.Trace.Engine, "plug-in browser: scan folders: " + ex.Message); }
         _scanning = false;
         if (commonRoots is not null) _status.Text = $"Scanned {roots.Count} common folder(s): {_all.Count} plug-ins in the list ({_all.Count - before} new).";
         _progress.Visibility = Visibility.Collapsed;

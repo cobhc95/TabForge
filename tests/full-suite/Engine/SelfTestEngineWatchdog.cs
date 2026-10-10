@@ -111,7 +111,7 @@ public static partial class SelfTest
         finally { EH.Detach(); shared.Dispose(); }
     }
 
-    /// <summary>Audit 2 D9: the shared message-loop turn runs the idle hook at its cadence and ends the loop when it says so.</summary>
+    /// <summary>The shared message-loop turn runs the idle hook at its cadence and ends the loop when it says so.</summary>
     private static void TestPumpOnce()
     {
         int calls = 0; bool first = true, second = false, third = true; long elapsedMs = -1;
@@ -131,7 +131,7 @@ public static partial class SelfTest
             !first && second && third && calls == 2 && elapsedMs is >= 0 and < 1000, $"first {first}, second {second}, third {third}, idle calls {calls}, {elapsedMs} ms");
     }
 
-    /// <summary>Audit 2 D8: one plug-in factory; nothing else constructs VST2 / VST3 instances.</summary>
+    /// <summary>One plug-in factory; nothing else constructs VST2 / VST3 instances.</summary>
     private static void TestPluginFactorySingleSource()
     {
         var detection = EP.PluginFactory.IsVst3(@"C:\x\Synth.vst3", "") && EP.PluginFactory.IsVst3(@"C:\x\Synth.dll", "vst3")

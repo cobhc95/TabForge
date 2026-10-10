@@ -8,6 +8,13 @@ using TabForge.Views.Score;
 
 namespace TabForge.Views;
 
+// Owns: the read-only layout audit hooks the bar audit reads (Diagnostics/BarAudit.cs): the system drawings, system bands, beat
+//   centres per bar and the bar under a page x. Nothing is recorded while drawing. The 'pure helpers' and 'drawing' section
+//   headings have no code under them.
+// Does not own: the technique engraving (bends, whammy, tremolo, trills, grace notes), which lives in Views/Score/ScoreRenderer.*
+//   and ScoreMarkText.cs.
+// Tests: no named test.
+
 /// <summary>
 /// standard technique engraving for the TAB staff: bend curves, whammy diagrams, tremolo slashes,
 /// trills, grace frets, wah, pick strokes, brush/arpeggio arrows and let-ring spans. Everything here is

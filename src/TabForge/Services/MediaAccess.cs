@@ -35,7 +35,7 @@ public static class MediaAccess
     public static MediaDecision Decide(MediaVerdict v, MediaContext context)
     {
         if (v.Refused) return new(MediaAccessState.Refused, v, $"not loaded ({v.Problem})");
-        // "Inside the project folder" counts only for the folder of a deliberately opened or saved song (as before R2). The folder an
+        // "Inside the project folder" counts only for the folder of a deliberately opened or saved song. The folder an
         // imported song came from, or a duplicate's inherited folder, resolves relative paths but grants nothing on a network or removable drive.
         if (v.Location == MediaLocation.Local || (v.InProject && context.IsSaved) || IsApproved(v, context)) return new(MediaAccessState.Allowed, v, "");
         var where = v.Location == MediaLocation.Network ? "a network location" : "a removable drive";
@@ -110,10 +110,10 @@ public static class MediaAccess
                     Cache[(key.File, key.Folder)] = (verdict, Environment.TickCount64);
                     if (!had || !old.Verdict.Equals(verdict)) changed = true;
                 }
-                catch (Exception) { /* an unreadable path stays unresolved: asked again on the next sync */ }
+                catch (Exception ex) { Services.Trace.Error(Services.Trace.Import, "media access: check path: " + ex.Message); /* an unreadable path stays unresolved: asked again on the next sync */ }
                 finally { Queued.TryRemove(key, out _); }
             }
-            if (changed) { try { Resolved?.Invoke(); } catch (Exception) { } }
+            if (changed) { try { Resolved?.Invoke(); } catch (Exception ex) { Services.Trace.Error(Services.Trace.Import, "media access: resolved handler: " + ex.Message); } }
             Volatile.Write(ref _resolverRunning, 0);
             if (ResolveQueue.IsEmpty || Interlocked.CompareExchange(ref _resolverRunning, 1, 0) != 0) return;
         }
@@ -175,7 +175,7 @@ public static class MediaAccess
         Changed?.Invoke();
     }
 
-    /// <summary>Ends an approval: a stored one (any song's, as listed in the review window) or this unsaved song's session approval.</summary>
+    /// <summary>Ends an approval: a stored one (any song's, as listed in the approvals window) or this unsaved song's session approval.</summary>
     public static void Revoke(MediaApproval approval, MediaContext context)
     {
         var removed = false;
@@ -184,7 +184,7 @@ public static class MediaAccess
         if (removed) Changed?.Invoke();
     }
 
-    /// <summary>The approvals that apply to this song, for the review window: stored ones for its path plus its session's.</summary>
+    /// <summary>The approvals that apply to this song, for the approvals window: stored ones for its path plus its session's.</summary>
     public static List<MediaApproval> ApprovalsOf(MediaContext context)
     {
         var result = new List<MediaApproval>();

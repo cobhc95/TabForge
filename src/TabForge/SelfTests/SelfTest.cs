@@ -54,10 +54,15 @@ public static partial class SelfTest
         Log.Clear(); _pass = 0; _fail = 0; _skip = 0; GroupStates.Clear();
         // The last test window to close must not make the application begin its shutdown (after that no window can load its XAML any more);
         // App.OnStartup ends the process explicitly with the exit code.
-        try { if (Application.Current is { } app) app.ShutdownMode = ShutdownMode.OnExplicitShutdown; } catch (InvalidOperationException) { }
+        try { if (Application.Current is { } app) app.ShutdownMode = ShutdownMode.OnExplicitShutdown; } catch (InvalidOperationException) { } // Not logged: no application object: nothing to set.
         _required = ParseRequirements();
         _areas = ParseAreas();
         _only = ParseOnly(Environment.GetCommandLineArgs()); _skippedByOnly = 0;
+        var cliArgs = Environment.GetCommandLineArgs();
+        _coreShard = ParseCoreShard(cliArgs); _skippedByArea = 0;
+        var timingPath = OptionValue(cliArgs, "--timing"); _timing = timingPath is null ? null : new List<TimingRow>();
+        var wall = System.Diagnostics.Stopwatch.StartNew();
+        if (OptionValue(cliArgs, "--merge-group-reports") is { } mergeList) return RunMerge(outputPath, mergeList);   // pure merge: no test runs
         if (!ValidateOnly()) return FinishRun(outputPath, "");   // an unknown --only name stops the run before any test executes
         if (_areas is not null) Log.Add($"  info  areas: core + {string.Join(", ", _areas.OrderBy(x => x))}");
         if (_required.Count > 0) Log.Add($"  info  required: {string.Join(", ", _required.OrderBy(x => x))}");
@@ -89,9 +94,11 @@ public static partial class SelfTest
         Guard(TestInstallerAssociationParity);
         Guard(TestPublicDocsConsistency);
         Guard(TestFeatureMapInSync);
+        Guard(TestFileIndexInSync);
         Guard(TestRequireArgumentStrings);
         Guard(TestRequiredGroupGate);
         Guard(TestOnlyOption);
+        Guard(TestRunnerTimingAndShardOptions);
         Guard(TestDebuggingDocInSync);
         Guard(TestStartHereAndRecipesInSync);
         Guard(TestDocImagesAreReferenced);
@@ -115,6 +122,8 @@ public static partial class SelfTest
 
         ReportRequirements(RequiredGroupsFullyIncluded(_required), _unknownRequired);   // required groups ran with enough checks; unknown --require names fail
         ReportReleaseGate();
+        WriteTiming(timingPath, wall.ElapsedMilliseconds);
+        WriteGroupReport(OptionValue(cliArgs, "--group-report"));
         var summary = $"TabForge self-test: {_pass} passed, {_fail} failed" + (_skip > 0 ? $", {_skip} skipped" : "");
         if (_skippedByArea > 0) summary += $" ({_skippedByArea} test groups outside the selected areas not run)";
         if (_skippedByOnly > 0) summary += $" ({_skippedByOnly} tests not named by --only not run)";
@@ -127,7 +136,7 @@ public static partial class SelfTest
         Log.Add("");
         Log.Add(summary);
         try { DiagnosticFileService.WriteText(outputPath, string.Join(Environment.NewLine, Log)); }
-        catch (Exception ex)
+        catch (Exception ex) // Not logged: self-test harness: the failure is recorded as a check result
         {
             System.Diagnostics.Debug.WriteLine($"Self-test log could not be written: {ex}");
             return 2;
@@ -142,7 +151,7 @@ public static partial class SelfTest
     /// <summary>
     /// Test areas (<c>--areas engine,recording</c> runs only those plus the untagged core; no flag or <c>all</c> runs
     /// everything, as CI and release packaging do). REBUILD picks the areas from the source files changed since the last
-    /// full pass (tools/Select-TestAreas.ps1 maps folders to these names).
+    /// full pass (see tools/Select-TestAreas.ps1: it maps folders to these names).
     /// </summary>
     private static readonly Dictionary<string, string> AreaOf = BuildAreaOf();
 
@@ -151,9 +160,9 @@ public static partial class SelfTest
         var areas = new Dictionary<string, string>(StringComparer.Ordinal)
         {
         ["TestArchitectureDocumentOperations"] = "architecture", ["TestArchitectureGuards"] = "architecture", ["TestArchitectureLayering"] = "architecture", ["TestEveryTestHasAnArea"] = "architecture",
-        ["TestDocImagesAreReferenced"] = "hygiene", ["TestDebuggingDocInSync"] = "hygiene", ["TestFeatureMapInSync"] = "hygiene", ["TestInstallerAssociationParity"] = "hygiene", ["TestLooseSoundTouchAndLicenseTexts"] = "hygiene",
-        ["TestHotkeyIdsDocumented"] = "hygiene", ["TestNoMojibakeInSources"] = "hygiene", ["TestFindCommand"] = "hygiene",
-        ["TestOnlyOption"] = "hygiene", ["TestPublicDocsConsistency"] = "hygiene", ["TestRequireArgumentStrings"] = "hygiene", ["TestRequiredGroupGate"] = "hygiene",
+        ["TestDocImagesAreReferenced"] = "hygiene", ["TestDebuggingDocInSync"] = "hygiene", ["TestFeatureMapInSync"] = "hygiene", ["TestFileIndexInSync"] = "hygiene", ["TestInstallerAssociationParity"] = "hygiene", ["TestLooseSoundTouchAndLicenseTexts"] = "hygiene",
+        ["TestTechniqueCoverage"] = "hygiene", ["TestTechniqueInfoTable"] = "hygiene", ["TestTechniqueGpExportGolden"] = "hygiene", ["TestTechniqueMusicXmlGolden"] = "hygiene", ["TestTechniquePlaybackGolden"] = "hygiene", ["TestHotkeyIdsDocumented"] = "hygiene",["TestNoMojibakeInSources"] = "hygiene", ["TestFindCommand"] = "hygiene",
+        ["TestOnlyOption"] = "hygiene", ["TestRunnerTimingAndShardOptions"] = "hygiene", ["TestPublicDocsConsistency"] = "hygiene", ["TestRequireArgumentStrings"] = "hygiene", ["TestRequiredGroupGate"] = "hygiene",
         ["TestSourceControlCharacters"] = "hygiene", ["TestStartHereAndRecipesInSync"] = "hygiene", ["TestEditorEntry"] = "smoke", ["TestEverySettingIsWired"] = "smoke", ["TestFretMarkerSize"] = "smoke",
         ["TestEssentialStartNoFile"] = "smoke",
         ["TestEssentialStartupFiles"] = "smoke",
@@ -212,22 +221,26 @@ public static partial class SelfTest
     /// <summary>Runs a test inside the area filter and failure containment; false when it threw. (A test outside --areas counts as not thrown.)</summary>
     private static bool GuardRan(Action test, string name)
     {
+        var nested = _guardDepth > 0;   // a Guard inside a running test belongs to it: the area, core-shard and --only filters judged the outer test already
         var area = AreaOf.TryGetValue(test.Method.Name, out var a) ? a : "core";
-        if (_areas is not null && (area != "core" || _basicOnly) && !_areas.Contains(area) && _releaseTests?.Contains(test.Method.Name) != true) { _skippedByArea++; return true; }
-        if (OutsideOnly(test.Method.Name)) { _skippedByOnly++; return true; }
+        if (!nested && _areas is not null && (area != "core" || _basicOnly) && !_areas.Contains(area) && _releaseTests?.Contains(test.Method.Name) != true) { _skippedByArea++; return true; }
+        if (!nested && !RunsCore(_coreShard) && area == "core") { _skippedByArea++; return true; }   // --core-shard other than 0: the core tests run in shard 0 only
+        if (!nested && OutsideOnly(test.Method.Name)) { _skippedByOnly++; return true; }
         if (_releaseTests?.Contains(test.Method.Name) == true) _releaseRan.Add(test.Method.Name);
         var watch = System.Diagnostics.Stopwatch.StartNew();
         var ok = true;
         var windowsBefore = VisibleMainWindows();
-        try { test(); }
-        catch (Exception ex) { ok = false; Check($"{name} completed without throwing", false, $"{ex.GetType().Name}: {ex.Message}"); }
+        var passBefore = _pass; var failBefore = _fail;
+        _guardDepth++; try { test(); }
+        catch (Exception ex) { ok = false; Check($"{name} completed without throwing", false, $"{ex.GetType().Name}: {ex.Message}"); } finally { _guardDepth--; }   // Not logged: self-test harness: the failure is recorded as a check result
         var leftOpen = VisibleMainWindows().Count(w => !windowsBefore.Contains(w));
         if (leftOpen > 0) Log.Add($"  WARN  {name} [{area}] left {leftOpen} visible main window(s) open");
+        _timing?.Add(new TimingRow(area, test.Method.Name, watch.ElapsedMilliseconds, _pass + _fail - passBefore - failBefore, _fail - failBefore));
         if (watch.ElapsedMilliseconds >= 1000) Log.Add($"  time  {name} [{area}] {watch.Elapsed.TotalSeconds:0.0} s");
         return ok;
     }
 
-    private static int _skippedByArea;
+    private static int _skippedByArea, _guardDepth;
 
     private static HashSet<MainWindow> VisibleMainWindows() =>
         Application.Current?.Windows.OfType<MainWindow>().Where(w => w.IsVisible).ToHashSet() ?? new HashSet<MainWindow>();

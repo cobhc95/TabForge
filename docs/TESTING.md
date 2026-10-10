@@ -97,3 +97,30 @@ When a local song folder exists, the real files are used instead of the stand-in
 - Text files in the repository have no control characters other than tab, CR and LF (a hygiene test checks).
 - Documentation is tested too: every file, script and command a public document names must exist in the repository and be part of the public tree, and version claims must match `Directory.Build.props` (`src/TabForge/SelfTests/Hygiene/SelfTestDocsConsistency.cs`).
 - Every file in `docs/screenshots` and `docs/animations` is named by a Markdown file; the public export copies only referenced pictures (`TestDocImagesAreReferenced`).
+
+## Runner options for measured and sharded runs
+
+- `--timing <csv>`: records wall-clock for every test and area (columns `area,test,ms,checks,failed`; area rows use `(area)`, the last row `(total wall)`) and logs the 20 slowest tests and the total.
+- `--core-shard <n>`: the untagged core tests run only when `n` is 0; other values skip them. `--areas` runs include core unless this flag says otherwise.
+- `--group-report <json>`: writes each `--require` group's state (name, Ran, Threw, Partial, Checks) at the end of the run.
+- `--merge-group-reports <a.json,b.json> --require ci`: runs no test; sums Checks, ORs Ran/Threw/Partial per group, prints the same `required: group ...` gate lines and exits non-zero when a required group is missing or below its minimum.
+
+## Sharded full suite (the `run-suite` script in `tools`)
+
+The local-only `run-suite` script (PowerShell, in `tools`) builds the full-suite copy once (`%TEMP%\tf-suite-build`) and runs the suite as parallel child `TabForge.exe` processes, each with its own `--profile`, log, `--timing` csv and `--group-report` json under `%TEMP%\tf-suite-<lane>.*`, started in the repository root. It then merges the group reports with `--merge-group-reports ... --require ci,document-context`, prints one line per lane, a `TOTAL TabForge self-test: N passed, M failed` line and the 10 slowest tests, and exits 1 when any lane failed or timed out (exit 124 inside the lane) or the merged gate fails. The whole run holds one build slot (`%TEMP%\tf-slot1..3.lock`); the children need the machine to themselves.
+
+| Lane | Contents | Order |
+| --- | --- | --- |
+| L0a / L0b | window-lifetime group, basic set (architecture, hygiene, smoke) and the core tests (`--core-shard 0`); then the single-instance hand-over (`--areas release --only ...`, so the curated release tests do not repeat) | first, alone |
+| P1 | engine, playback, ui | parallel |
+| P2 | guitarpro, interactions, document-operations, persistence, document-context, synthetic | parallel |
+| P3 | settings, notation, midi, leaks, fuzz, tutorial | parallel |
+| W | the workflow area without the monkey (listed by name from `docs/feature-map/tests.md`) | parallel |
+| M1..M2 | `TestWorkflowMonkey` seed ranges (`--monkey-first` / `--monkey-seeds`): 8 seeds in 2 shards of 4; with `TABFORGE_MONKEY_FULL=1` 20 seeds (the serial default) in 4 shards of 5 | parallel |
+| R | recording, audioaudit, bench | last, alone |
+
+R runs last and alone because the recording tests use real-time audio and failed under load before (an older run: master tap peak 0); the other lanes only compete for CPU, R would also compete for audio callbacks. Every lane except L0a passes `--core-shard 1`. At start the script checks that every area in `tests.md` is in exactly one lane, so a new area fails the run until it is placed in the lane table at the top of the script.
+
+Options: `-Lanes L0,P3` (subset; the merged gate is then not enforced), `-DryRun` (lane table, exact commands and coverage check, nothing built or run), `-Quick` (skips R and the monkey), `-MaxParallel n` (default min(4, CPUs/3)), `-Timeout minutes` (default 45 per child). Measured: `-Lanes L0,P3` reported 1174 passed; the serial runner on the same areas (`--areas window-lifetime,basic,settings,notation,midi,leaks,fuzz,tutorial`) reports 1167, which is L0a (888) plus P3 (279); L0b adds the 7 hand-over checks.
+
+CI is unchanged: `windows-ci.yml` runs the full suite serially in one step of `build-and-selftest` (20-minute job limit, `FULL_SUITE=true` on schedule and manual dispatch). To use the lanes there, replace the `--require ci` run in that step by a call to the `run-suite` script and raise `timeout-minutes`; the script builds its own full-suite copy, so the separate `-p:TabForgeFullSuite=true` Build step could then be dropped. The script writes its logs to `$env:TEMP`, so the upload step would need `path: $env:TEMP/tf-suite-*.log`. That change needs a CI run to confirm and is left to the owner.

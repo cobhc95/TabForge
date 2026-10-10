@@ -4,7 +4,12 @@ using TabForge.Services;
 
 namespace TabForge.Views;
 
-// ArrangementPanel: media drops, forwarded to MediaDropController.
+// Owns: the panel's share of media drops: attaching the drop handlers, the drop-ghost and simulated-drag seams the tests read, and
+//   the timeline those seams point at (TimelineForTest).
+// Does not own: drop planning and measuring (MediaDropController.cs, Services/MediaDrop.cs) and the timeline's drop handling
+//   (TrackTimeline.MediaDrop.cs).
+// Tests: TestMediaDropPreviewGeometry.
+
 public sealed partial class ArrangementPanel : IMediaDropHost
 {
     private void AttachMediaDrop()

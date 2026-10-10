@@ -17,7 +17,10 @@ using TabForge.Visualization;
 
 namespace TabForge.Views;
 
-// TrackTimeline: interaction (section hits, edge resizing, section drag preview, tooltips, mouse).
+// Owns: the timeline's pointer side: section hit testing and the bar under the pointer, section edge resizing, the section drag preview,
+//   and the section tooltip (ISectionTipHost, ISectionEdgeHost).
+// Does not own: drawing (TrackTimeline.Render), the timeline geometry (TimelineGeometry) and the section edits, which the timeline requests from its host.
+// Tests: TestTimelineHoverAndBarMarker, TestSectionTipWording.
 internal sealed partial class TrackTimeline : ISectionTipHost, ISectionEdgeHost
 {
     // ---------- interaction ----------

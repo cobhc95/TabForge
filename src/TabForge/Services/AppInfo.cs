@@ -8,20 +8,20 @@ namespace TabForge.Services;
 /// <summary>Product identity shown in About, Settings and the window; the version comes from the csproj.</summary>
 public static class AppInfo
 {
-    /// <summary>e.g. "0.1.0-beta.2" (the csproj Version, without the build hash).</summary>
+    /// <summary>e.g. "1.2.3-suffix.4" (the csproj Version, without the build hash).</summary>
     public static string Version { get; } =
         (typeof(AppInfo).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.0.0")
         .Split('+')[0];
 
-    /// <summary>Set by the PreRelease build property (Directory.Build.props): a plain version such as 0.5.0 can still be a pre-release.</summary>
+    /// <summary>Set by the PreRelease build property (Directory.Build.props): a plain version such as 1.2.3 can still be a pre-release.</summary>
     private static bool PreReleaseFlag { get; } =
         typeof(AppInfo).Assembly.GetCustomAttributes<AssemblyMetadataAttribute>()
             .Any(a => a.Key == "PreRelease" && string.Equals(a.Value, "true", StringComparison.OrdinalIgnoreCase));
 
     public static bool IsPreRelease => Version.Contains('-') || PreReleaseFlag;
 
-    /// <summary>"0.5" for a final release with patch 0 (0.5.0), "0.5.1" for other final releases,
-    /// "0.6.0 beta.1 (pre-release)" for a suffixed version, "0.5.0 (pre-release)" for a plain version marked pre-release.</summary>
+    /// <summary>"1.2" for a final release with patch 0 (1.2.0), "1.2.1" for other final releases,
+    /// "1.2.0 suffix.1 (pre-release)" for a suffixed version, "1.2.0 (pre-release)" for a plain version marked pre-release.</summary>
     public static string DisplayVersion => FormatDisplay(Version, PreReleaseFlag);
     /// <summary>The version line of the About box and the Settings bottom bar.</summary>
     public static string VersionLine => $"TabForge {DisplayVersion}";

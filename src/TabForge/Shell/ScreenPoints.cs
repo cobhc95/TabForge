@@ -18,7 +18,7 @@ internal static class ScreenPoints
         screen = default;
         if (!IsOnScreen(visual)) return false;
         try { screen = visual.PointToScreen(local); return true; }
-        catch (InvalidOperationException) { return false; } // detached between the check and the call
+        catch (InvalidOperationException) { return false; } // detached between the check and the call // Not logged: pointer or hit-test path: no logging per pointer move
     }
 
     public static bool TryFromScreen(Visual visual, Point screen, out Point local)
@@ -26,7 +26,7 @@ internal static class ScreenPoints
         local = default;
         if (!IsOnScreen(visual)) return false;
         try { local = visual.PointFromScreen(screen); return true; }
-        catch (InvalidOperationException) { return false; }
+        catch (InvalidOperationException) { return false; } // Not logged: pointer or hit-test path: no logging per pointer move
     }
 
     /// <summary>The element's bounds on screen, or <see cref="Rect.Empty"/> when it is not shown.</summary>

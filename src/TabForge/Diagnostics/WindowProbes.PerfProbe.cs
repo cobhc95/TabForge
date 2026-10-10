@@ -6,6 +6,10 @@ using TabForge.Services;
 
 namespace TabForge.Diagnostics;
 
+// Owns: the `--perf-follow` resource probe (plays the song in each score follow style and records process CPU and memory) and the `--probe-countin` probe (the count-in clicks the engine actually sends).
+// Does not own: the playback engine that sends the notes (Playback/PlaybackEngine*.cs) or the recording of video (LiveVideoRecordController).
+// Tests: no named test.
+
 // Window probes, resource probe: `TabForge.exe <song> --perf-follow <report.txt>` plays the song in each score
 // follow style and records the process CPU and memory, so a change to following is measured, not guessed.
 internal sealed partial class WindowProbes : MainWindow.ProbeAccess
@@ -41,7 +45,9 @@ internal sealed partial class WindowProbes : MainWindow.ProbeAccess
                     await Task.Delay(500);
                 }
             }
-            catch (Exception ex) { report.AppendLine($"probe failed: {ex.GetBaseException().Message}"); }
+            catch (Exception ex) { report.AppendLine($"probe failed: {ex.GetBaseException().Message}"); } // Not logged: diagnostic probe: the failure goes to its report, not errors.log
+            try { foreach (var line in await PlaybackFpsLinesAsync()) report.AppendLine(line); }
+            catch (Exception ex) { report.AppendLine($"fps probe failed: {ex.GetBaseException().Message}"); } // Not logged: diagnostic probe: the failure goes to its report, not errors.log
             report.AppendLine(MemoryLine("after playback"));
             GC.Collect(2, GCCollectionMode.Forced, true, true);
             report.AppendLine(MemoryLine("after full GC"));
@@ -85,7 +91,7 @@ internal sealed partial class WindowProbes : MainWindow.ProbeAccess
                 report.AppendLine($"channel-10 clicks={clicks.Count} firstClickMs={(clicks.Count > 0 ? clicks[0].StreamMs : -1):0} firstNoteMs={(first.Status != 0 ? first.StreamMs : -1):0} timelineCountInMs={_timeline?.CountInMs ?? -1:0}");
                 StopPlayback();
             }
-            catch (Exception ex) { report.AppendLine($"probe failed: {ex}"); }
+            catch (Exception ex) { report.AppendLine($"probe failed: {ex}"); } // Not logged: diagnostic probe: the failure goes to its report, not errors.log
             DiagnosticFileService.WriteText(path, report.ToString());
             _confirmOnClose = false;
             Application.Current.Shutdown(0);

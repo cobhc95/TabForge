@@ -27,7 +27,7 @@ public static class AudioRouting
         // RT-04: with the song's bar map, plug-ins get the real meter, bar start and ppq position (arpeggiators, synced LFOs, gates).
         TransportBar[] bars;
         try { bars = SongClock.TransportBars(project); }
-        catch (Exception ex) when (ex is InvalidOperationException or ArgumentException or IndexOutOfRangeException) { bars = Array.Empty<TransportBar>(); }
+        catch (Exception ex) when (ex is InvalidOperationException or ArgumentException or IndexOutOfRangeException) { bars = Array.Empty<TransportBar>(); } // Not logged: layout probe: no bars are drawn
         engine.SetTransport(project.Tempo, false, bars, engine.OwnerIdOf(owner ?? project));
     }
 

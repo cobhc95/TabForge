@@ -9,14 +9,14 @@ public static partial class SelfTest
 {
     private static void TestAudioGrowthReservation()
     {
-        TestAudioGrowthCanceledDuringUpload(dispose: false);
-        TestAudioGrowthCanceledDuringUpload(dispose: true);
-        TestLatestAudioGrowthWins();
-        TestAudioGrowthPreservesLoop();
-        TestAudioGrowthSnapshotFailure();
+        CheckAudioGrowthCanceledDuringUpload(dispose: false);
+        CheckAudioGrowthCanceledDuringUpload(dispose: true);
+        CheckLatestAudioGrowthWins();
+        CheckAudioGrowthPreservesLoop();
+        CheckAudioGrowthSnapshotFailure();
     }
 
-    private static void TestAudioGrowthCanceledDuringUpload(bool dispose)
+    private static void CheckAudioGrowthCanceledDuringUpload(bool dispose)
     {
         using var f = LongAudioMakeFixture(withMarker: false);
         f.Engine.Start(f.Project, new PlaybackOptions(), _ => { }, f.Finished.Set, startPaused: true);
@@ -35,7 +35,7 @@ public static partial class SelfTest
             $"ready {ready}, reserved before upload {reservedBeforeUpload}, playing {f.Engine.IsPlaying}, revisions {f.TimelineRevisions}");
     }
 
-    private static void TestLatestAudioGrowthWins()
+    private static void CheckLatestAudioGrowthWins()
     {
         using var f = LongAudioMakeFixture(withMarker: false);
         f.Engine.Start(f.Project, new PlaybackOptions { Speed = 2 }, _ => { }, f.Finished.Set, startPaused: true);
@@ -59,7 +59,7 @@ public static partial class SelfTest
             $"ready {ready}, accepted {first}/{second}, reserved {reserved}, latest {latestPublished}, total {f.Engine.TotalMs}/{latestEnd}, revisions {f.TimelineRevisions}, resets {resets}/{f.Output.ResetCount}");
     }
 
-    private static void TestAudioGrowthSnapshotFailure()
+    private static void CheckAudioGrowthSnapshotFailure()
     {
         using var f = LongAudioMakeFixture(withMarker: false);
         f.Engine.Start(f.Project, new PlaybackOptions { Speed = 2 }, _ => { }, f.Finished.Set, startPaused: true);
@@ -73,7 +73,7 @@ public static partial class SelfTest
             $"ready {ready}, accepted {accepted}, released {released}, finished {finished}, revisions {f.TimelineRevisions}");
     }
 
-    private static void TestAudioGrowthPreservesLoop()
+    private static void CheckAudioGrowthPreservesLoop()
     {
         using var f = LongAudioMakeFixture(withMarker: false);
         var loops = 0;

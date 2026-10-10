@@ -20,6 +20,7 @@ using TabForge.Playback;
 using TabForge.Plugins;
 using TabForge.Presets;
 using TabForge.Services;
+using TabForge.Services.Export;
 using TabForge.Shell;
 using TabForge.Views;
 using TabForge.Visualization;
@@ -27,7 +28,10 @@ using TabForge.Visualization;
 namespace TabForge;
 
 // MainWindow, file commands: new, open, save, export, print.
-public partial class MainWindow : IWindowCloseHost
+// Owns: file commands: new, open, save, export and print, with the degraded-mode and save-or-close prompts.
+// Does not own: the save and close steps (DocumentSaveFlow, WindowCloseFlow).
+// Tests: listed in docs/feature-map/windows-tabs-and-documents.md.
+public partial class MainWindow : IWindowCloseHost, IExportCommandHost
 {
     // ---------- file ----------
 
@@ -56,21 +60,7 @@ public partial class MainWindow : IWindowCloseHost
         StatusText.Text = $"Created template: {name}";
     }
 
-    /// <summary>File > Save as template: stores a copy of the active score in the templates folder.</summary>
-    private void SaveAsTemplate_Click(object sender, RoutedEventArgs e)
-    {
-        var name = GpDialogs.Prompt("Save as template", "Template name", string.IsNullOrWhiteSpace(_project.Title) ? "My template" : _project.Title);
-        if (UserTemplates.CleanName(name) is null) return;
-        try
-        {
-            var stored = UserTemplates.Save(name!, _project);
-            StatusText.Text = $"Saved template \"{stored}\" (File > New from template)";
-        }
-        catch (Exception ex) when (ex is IOException or InvalidDataException or ArgumentException or UnauthorizedAccessException)
-        {
-            MessageBox.Show(this, $"Could not save the template.\n\n{ex.Message}", "Save as template", MessageBoxButton.OK, MessageBoxImage.Error);
-        }
-    }
+    public void SaveAsTemplate() => Exports.SaveAsTemplate();
 
     // Ctrl+O follows "Open projects in the current tab" (Settings > Tabs); Ctrl+Shift+O always opens a new tab.
     private void Open_Click(object sender, RoutedEventArgs e) => OpenFiles(inNewTab: !_settings.Tabs.OpenInCurrentTab);
@@ -86,7 +76,7 @@ public partial class MainWindow : IWindowCloseHost
         };
         if (dlg.ShowDialog(this) != true) return;
         var replaceCurrent = !inNewTab;
-        // Guitar Pro files import in the background (A5-07); results open in the selected order. "Keep" on the replace prompt
+        // Score files import in the background; results open in the selected order. "Keep" on the replace prompt
         // stops the rest of this selection, as before.
         var batch = new List<ScoreImportJob>();
         var stopped = false;
@@ -189,22 +179,6 @@ public partial class MainWindow : IWindowCloseHost
         };
     }
 
-    /// <summary>Asks before a tab closes; "Save" saves it with a real await. True when the document may close now.</summary>
-    private async Task<bool> ConfirmDiscardDocumentAsync(DocumentSession doc)
-    {
-        if (_documentController.IsSaving && doc.HasUnsavedChanges)
-        {
-            StatusText.Text = "Saving… close that tab when the save has finished";
-            return false;
-        }
-        switch (AskDiscardDocument(doc))
-        {
-            case DiscardAnswer.Keep: return false;
-            case DiscardAnswer.Close: return true;
-        }
-        return await SaveDocumentAsync(doc) && !doc.HasUnsavedChanges;
-    }
-
     /// <summary>
     /// Saves <paramref name="doc"/> even when it is not the displayed tab. The document is an argument all the way down (path, dialogs, the plug-in
     /// states, the write): the displayed tab is never switched to borrow the "current document" aliases, so nothing is re-read from whichever tab is shown.
@@ -222,15 +196,7 @@ public partial class MainWindow : IWindowCloseHost
     }
 
     /// <summary>"Save" when a song replaces this tab: the new song opened beside it; this tab closes once its save succeeded.</summary>
-    private async void SaveThenCloseDocument(DocumentSession doc)
-    {
-        if (!await SaveDocumentAsync(doc) || doc.HasUnsavedChanges) return;   // not saved: the tab stays open with its changes
-        var index = _documents.IndexOf(doc);
-        if (index < 0 || _documents.Documents.Count <= 1) return;
-        _documents.Close(index);
-        doc.DisposePlayback();
-        ActivateDocument(_documents.Active);
-    }
+    private async void SaveThenCloseDocument(DocumentSession doc) => await DocTabs.SaveThenCloseAsync(doc);
 
     // The gate is the window's own class handlers for the preview events: they run before every handler added to the window (the key handler
     // of the window itself included), so a key or click the gate swallows reaches nothing.
@@ -314,7 +280,7 @@ public partial class MainWindow : IWindowCloseHost
     }
 
     /// <summary>File > Export compatible Guitar Pro file: a copy for other programs. Never changes this song's file or unsaved state.</summary>
-    private void ExportGuitarPro_Click(object sender, RoutedEventArgs e) => _ = SaveFlow.RunClaimedAsync(hold => ExportGuitarProAsync(Doc, hold), ShowSaveBusy);   // claimed before the file dialog, like a save; the song is the one this command started for, even if another tab is selected while the dialogs are open
+    public void ExportGuitarPro() => _ = SaveFlow.RunClaimedAsync(hold => ExportGuitarProAsync(Doc, hold), ShowSaveBusy);   // claimed before the file dialog, like a save; the song is the one this command started for, even if another tab is selected while the dialogs are open
 
     private async Task<bool> ExportGuitarProAsync(DocumentSession doc, DocumentController.SaveHold hold)
     {
@@ -342,56 +308,46 @@ public partial class MainWindow : IWindowCloseHost
         }
     }
 
-    private void ExportMidi_Click(object sender, RoutedEventArgs e)
+    private ScoreExportController Exports => new(new ExportHost(this));
+
+    private sealed class ExportHost : IScoreExportHost
     {
-        var dlg = new SaveFileDialog { Title = "Export MIDI", Filter = "MIDI (*.mid)|*.mid", DefaultExt = ".mid", AddExtension = true, FileName = SanitizeFileName(_project.Title) };
-        if (dlg.ShowDialog(this) != true) return;
-        try { MidiExportService.Export(_project, dlg.FileName); StatusText.Text = $"Exported MIDI {Path.GetFileName(dlg.FileName)}"; }
-        catch (Exception ex) { MessageBox.Show(this, ex.Message, "MIDI export failed", MessageBoxButton.OK, MessageBoxImage.Error); }
+        private readonly MainWindow _window;
+        public ExportHost(MainWindow window) => _window = window;
+        public SongProject Project => _window._project;
+        public string? PickSavePath(string title, string filter, string defaultExt, string suggestedName)
+        {
+            var dlg = new SaveFileDialog { Title = title, Filter = filter, DefaultExt = defaultExt, AddExtension = true, FileName = suggestedName };
+            return dlg.ShowDialog(_window) == true ? dlg.FileName : null;
+        }
+        public string? PromptTemplateName(string suggested) => GpDialogs.Prompt("Save as template", "Template name", suggested);
+        public int WritePdf(string path) => Views.ScorePdfExporter.Export(Project, _window.Editor.SelectedTrackIndex, path);
+        public void ShowError(string title, string message) => MessageBox.Show(_window, message, title, MessageBoxButton.OK, MessageBoxImage.Error);
+        public void SetStatus(string text) => _window.StatusText.Text = text;
     }
 
-    private void Render_Click(object sender, RoutedEventArgs e)
+    public void ExportMidi() => Exports.ExportMidi();
+
+    private void Render_Click(object sender, RoutedEventArgs e) => new Views.RenderWindow(RenderContext(), this).ShowDialog();
+
+    /// <summary>What the Render and Video export windows need: the song, its selection and the audio engine.</summary>
+    private Views.RenderContext RenderContext()
     {
         var sel = Editor.HasSelection ? Editor.SelectionCellRange : default;
         var selected = Editor.SelectedTrackIndex is >= 0 && Editor.SelectedTrackIndex < _project.Tracks.Count ? new[] { _project.Tracks[Editor.SelectedTrackIndex] } : Array.Empty<Models.TrackModel>();
-        var ctx = new Views.RenderContext
+        return new Views.RenderContext
         {
-            Project = _project, Media = Doc.Media, Settings = _settings, Engine = _engine, SelectedTracks = selected,
+            Project = _project, Media = Doc.Media, Settings = _settings, Engine = _engine, SelectedTracks = selected, Notation = Editor.Notation, Look = Editor.Appearance,
             Selection = Editor.HasSelection ? (sel.StartMeasure, sel.StartCell, sel.EndMeasure, sel.EndCell) : null,
             StopPlayback = () => { if (_midi.IsPlaying) StopPlayback(); },
             Restore = () => { SyncAudioEngine(); _midi.RearmChannelSetup(); },
             SaveSettings = SaveSettings,
         };
-        new Views.RenderWindow(ctx, this).ShowDialog();
     }
 
-    private void ExportAscii_Click(object sender, RoutedEventArgs e)
-    {
-        var dlg = new SaveFileDialog { Title = "Export ASCII tab", Filter = "Text (*.txt)|*.txt", DefaultExt = ".txt", AddExtension = true, FileName = SanitizeFileName(_project.Title) };
-        if (dlg.ShowDialog(this) != true) return;
-        try { AsciiExportService.Export(_project, dlg.FileName); StatusText.Text = $"Exported ASCII {Path.GetFileName(dlg.FileName)}"; }
-        catch (Exception ex) { MessageBox.Show(this, ex.Message, "ASCII export failed", MessageBoxButton.OK, MessageBoxImage.Error); }
-    }
-
-    private void ExportMusicXml_Click(object sender, RoutedEventArgs e)
-    {
-        var dlg = new SaveFileDialog { Title = "Export MusicXML", Filter = "MusicXML (*.musicxml;*.xml)|*.musicxml;*.xml", DefaultExt = ".musicxml", AddExtension = true, FileName = SanitizeFileName(_project.Title) };
-        if (dlg.ShowDialog(this) != true) return;
-        try { MusicXmlExportService.Export(_project, dlg.FileName); StatusText.Text = $"Exported MusicXML {Path.GetFileName(dlg.FileName)}"; }
-        catch (Exception ex) { MessageBox.Show(this, ex.Message, "MusicXML export failed", MessageBoxButton.OK, MessageBoxImage.Error); }
-    }
-
-    private void ExportPdf_Click(object sender, RoutedEventArgs e)
-    {
-        var dlg = new SaveFileDialog { Title = "Export PDF", Filter = "PDF (*.pdf)|*.pdf", DefaultExt = ".pdf", AddExtension = true, FileName = SanitizeFileName(_project.Title) };
-        if (dlg.ShowDialog(this) != true) return;
-        try
-        {
-            var pages = Views.ScorePdfExporter.Export(_project, Editor.SelectedTrackIndex, dlg.FileName);
-            StatusText.Text = $"Exported PDF {Path.GetFileName(dlg.FileName)} ({pages} page{(pages == 1 ? "" : "s")})";
-        }
-        catch (Exception ex) { MessageBox.Show(this, ex.Message, "PDF export failed", MessageBoxButton.OK, MessageBoxImage.Error); }
-    }
+    public void ExportAscii() => Exports.ExportAscii();
+    public void ExportMusicXml() => Exports.ExportMusicXml();
+    public void ExportPdf() => Exports.ExportPdf();
 
     private void CommandPalette_Click(object sender, RoutedEventArgs e)
     {

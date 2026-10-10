@@ -52,6 +52,9 @@ internal sealed class TransportControlsController : IDisposable
         };
     }
 
+    /// <summary>The playback behaviour every song's engine reads (the transport settings popups write to it).</summary>
+    public PlaybackPreferences Preferences => _host.Preferences;
+
     /// <summary>Playback speed, 0.25 to 2.0 (1.0 is the written tempo).</summary>
     public double Speed { get; set; } = 1.0;
     public bool CountIn { get; set; }

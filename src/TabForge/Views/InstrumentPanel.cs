@@ -22,6 +22,8 @@ public sealed partial class InstrumentPanel : FrameworkElement
     private InstrumentVisualState? _editingSelection;
     private InstrumentVisualState? _playbackState;
     private readonly VisualTheme _theme = new();
+    /// <summary>The panel's ground when it sits on another surface (the video export draws it on the score paper); the theme's when null.</summary>
+    internal Color? Surface { get; set; }
     private FretboardHorizontalPosition _horizontalPosition = FretboardHorizontalPosition.Centre;
     private FretboardHorizontalPosition? _snapPreview;
     private double _horizontalDragOffset;
@@ -418,13 +420,13 @@ public sealed partial class InstrumentPanel : FrameworkElement
             if (IsKeyboardFocused && ActualWidth > 6 && ActualHeight > 6)
                 dc.DrawRectangle(null, Draw.Pen(_theme.Accent, 2), new Rect(1, 1, ActualWidth - 2, ActualHeight - 2));
         }
-        catch (Exception ex) when (RenderGuard.Contain(ex, "InstrumentPanel", dc, ActualWidth, ActualHeight)) { }
+        catch (Exception ex) when (RenderGuard.Contain(ex, "InstrumentPanel", dc, ActualWidth, ActualHeight)) { } // Not logged: render path: runs per frame.
     }
 
     private void RenderCore(DrawingContext dc)
     {
         _legendDrawnThisFrame = false;
-        using var dpiScope = Draw.UseDpi(this);   // A-03: text shaped for this window's monitor
+        using var dpiScope = Draw.UseDpi(this);   // Text shaped for this window's monitor
         try { RenderPanel(dc); }
         finally { if (!_legendDrawnThisFrame) SetLegendAnchor(null); }
     }
@@ -433,7 +435,7 @@ public sealed partial class InstrumentPanel : FrameworkElement
     {
         var w = ActualWidth <= 0 ? 900 : ActualWidth;
         var h = ActualHeight <= 0 ? 168 : ActualHeight;
-        dc.DrawRectangle(Draw.Solid(_theme.Background), null, new Rect(0, 0, w, h));
+        dc.DrawRectangle(Draw.Solid(Surface ?? _theme.Background), null, new Rect(0, 0, w, h));
         dc.DrawLine(Draw.Pen(_theme.BoardEdge, 1), new Point(0, h - 0.5), new Point(w, h - 0.5));
 
         var state = _state;

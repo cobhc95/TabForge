@@ -27,7 +27,7 @@ public static class ProjectValidator
     public static void ValidateJsonShape(ReadOnlySpan<byte> json)
     {
         // Invalid UTF-8 surfaces as System.Text.DecoderFallbackException (directly or as InvalidOperationException's
-        // inner exception); a malformed file must always be an InvalidDataException (Audit 3 M-07).
+        // inner exception); a malformed file must always be an InvalidDataException.
         try { ValidateJsonShapeCore(json); }
         catch (System.Text.DecoderFallbackException ex)
         {

@@ -1,0 +1,375 @@
+# code-built menus (MenuSpec data), several states each; regenerate with TABFORGE_RECORD_MENU_GOLDEN=1
+== track row, instrument
+Cut | key=Ctrl+X | id=TrackRow.Cut | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=Copies the track and removes it from the song
+Copy | key=Ctrl+C | id=TrackRow.Copy | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+Paste (after this track) | key=Ctrl+V | id=TrackRow.Paste | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=Inserts the copied track after this one
+Duplicate | key=Ctrl+D | id=TrackRow.Duplicate | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+Delete… | key=Delete | id=TrackRow.Delete | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=Asks first; undo brings the track back
+---
+Rename | key= | id=TrackRow.Rename | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+Colour | key= | id= | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+  Red | key= | id=TrackRow.Colour | arg=#B8403A | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=state of one track (saved in the song) | tip=
+  Orange | key= | id=TrackRow.Colour | arg=#C46A2B | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=state of one track (saved in the song) | tip=
+  Amber | key= | id=TrackRow.Colour | arg=#B8902A | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=state of one track (saved in the song) | tip=
+  Yellow | key= | id=TrackRow.Colour | arg=#A89A2E | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=state of one track (saved in the song) | tip=
+  Olive | key= | id=TrackRow.Colour | arg=#7A8A34 | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=state of one track (saved in the song) | tip=
+  Green | key= | id=TrackRow.Colour | arg=#3F8F4E | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=state of one track (saved in the song) | tip=
+  Teal | key= | id=TrackRow.Colour | arg=#2E8A7E | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=state of one track (saved in the song) | tip=
+  Turquoise | key= | id=TrackRow.Colour | arg=#2A96A6 | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=state of one track (saved in the song) | tip=
+  Blue | key= | id=TrackRow.Colour | arg=#3A6FB8 | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=state of one track (saved in the song) | tip=
+  Indigo | key= | id=TrackRow.Colour | arg=#5357B0 | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=state of one track (saved in the song) | tip=
+  Purple | key= | id=TrackRow.Colour | arg=#7A4FB0 | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=state of one track (saved in the song) | tip=
+  Magenta | key= | id=TrackRow.Colour | arg=#A4468E | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=state of one track (saved in the song) | tip=
+  Pink | key= | id=TrackRow.Colour | arg=#B8577A | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=state of one track (saved in the song) | tip=
+  Brown | key= | id=TrackRow.Colour | arg=#8A5E3C | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=state of one track (saved in the song) | tip=
+  Grey | key= | id=TrackRow.Colour | arg=#6E7580 | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=state of one track (saved in the song) | tip=
+  Slate | key= | id=TrackRow.Colour | arg=#4A5563 | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=state of one track (saved in the song) | tip=
+Properties… | key=F6 | id=TrackRow.Properties | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+---
+Convert to audio track… | key= | id=Track.ConvertToAudio | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=The notation becomes a MIDI clip on the track; existing clips stay
+== track row, audio
+Cut | key=Ctrl+X | id=TrackRow.Cut | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=Copies the track and removes it from the song
+Copy | key=Ctrl+C | id=TrackRow.Copy | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+Paste (after this track) | key=Ctrl+V | id=TrackRow.Paste | arg= | cmd=None | enabled=False | checkable=False | radio=False | label=False | setting= | tip=Inserts the copied track after this one
+Duplicate | key=Ctrl+D | id=TrackRow.Duplicate | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+Delete… | key=Delete | id=TrackRow.Delete | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=Asks first; undo brings the track back
+---
+Rename | key= | id=TrackRow.Rename | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+Colour | key= | id= | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+  Red | key= | id=TrackRow.Colour | arg=#B8403A | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=state of one track (saved in the song) | tip=
+  Orange | key= | id=TrackRow.Colour | arg=#C46A2B | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=state of one track (saved in the song) | tip=
+  Amber | key= | id=TrackRow.Colour | arg=#B8902A | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=state of one track (saved in the song) | tip=
+  Yellow | key= | id=TrackRow.Colour | arg=#A89A2E | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=state of one track (saved in the song) | tip=
+  Olive | key= | id=TrackRow.Colour | arg=#7A8A34 | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=state of one track (saved in the song) | tip=
+  Green | key= | id=TrackRow.Colour | arg=#3F8F4E | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=state of one track (saved in the song) | tip=
+  Teal | key= | id=TrackRow.Colour | arg=#2E8A7E | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=state of one track (saved in the song) | tip=
+  Turquoise | key= | id=TrackRow.Colour | arg=#2A96A6 | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=state of one track (saved in the song) | tip=
+  Blue | key= | id=TrackRow.Colour | arg=#3A6FB8 | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=state of one track (saved in the song) | tip=
+  Indigo | key= | id=TrackRow.Colour | arg=#5357B0 | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=state of one track (saved in the song) | tip=
+  Purple | key= | id=TrackRow.Colour | arg=#7A4FB0 | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=state of one track (saved in the song) | tip=
+  Magenta | key= | id=TrackRow.Colour | arg=#A4468E | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=state of one track (saved in the song) | tip=
+  Pink | key= | id=TrackRow.Colour | arg=#B8577A | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=state of one track (saved in the song) | tip=
+  Brown | key= | id=TrackRow.Colour | arg=#8A5E3C | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=state of one track (saved in the song) | tip=
+  Grey | key= | id=TrackRow.Colour | arg=#6E7580 | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=state of one track (saved in the song) | tip=
+  Slate | key= | id=TrackRow.Colour | arg=#4A5563 | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=state of one track (saved in the song) | tip=
+Properties… | key=F6 | id=TrackRow.Properties | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+---
+Convert to instrument track… | key= | id=TrackRow.Convert | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=Choose an instrument; the track keeps its audio and MIDI clips
+== track row, last track
+Cut | key=Ctrl+X | id=TrackRow.Cut | arg= | cmd=None | enabled=False | checkable=False | radio=False | label=False | setting= | tip=Copies the track and removes it from the song
+Copy | key=Ctrl+C | id=TrackRow.Copy | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+Paste (after this track) | key=Ctrl+V | id=TrackRow.Paste | arg= | cmd=None | enabled=False | checkable=False | radio=False | label=False | setting= | tip=Inserts the copied track after this one
+Duplicate | key=Ctrl+D | id=TrackRow.Duplicate | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+Delete… | key=Delete | id=TrackRow.Delete | arg= | cmd=None | enabled=False | checkable=False | radio=False | label=False | setting= | tip=Asks first; undo brings the track back
+---
+Rename | key= | id=TrackRow.Rename | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+Colour | key= | id= | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+  Red | key= | id=TrackRow.Colour | arg=#B8403A | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=state of one track (saved in the song) | tip=
+  Orange | key= | id=TrackRow.Colour | arg=#C46A2B | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=state of one track (saved in the song) | tip=
+  Amber | key= | id=TrackRow.Colour | arg=#B8902A | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=state of one track (saved in the song) | tip=
+  Yellow | key= | id=TrackRow.Colour | arg=#A89A2E | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=state of one track (saved in the song) | tip=
+  Olive | key= | id=TrackRow.Colour | arg=#7A8A34 | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=state of one track (saved in the song) | tip=
+  Green | key= | id=TrackRow.Colour | arg=#3F8F4E | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=state of one track (saved in the song) | tip=
+  Teal | key= | id=TrackRow.Colour | arg=#2E8A7E | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=state of one track (saved in the song) | tip=
+  Turquoise | key= | id=TrackRow.Colour | arg=#2A96A6 | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=state of one track (saved in the song) | tip=
+  Blue | key= | id=TrackRow.Colour | arg=#3A6FB8 | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=state of one track (saved in the song) | tip=
+  Indigo | key= | id=TrackRow.Colour | arg=#5357B0 | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=state of one track (saved in the song) | tip=
+  Purple | key= | id=TrackRow.Colour | arg=#7A4FB0 | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=state of one track (saved in the song) | tip=
+  Magenta | key= | id=TrackRow.Colour | arg=#A4468E | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=state of one track (saved in the song) | tip=
+  Pink | key= | id=TrackRow.Colour | arg=#B8577A | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=state of one track (saved in the song) | tip=
+  Brown | key= | id=TrackRow.Colour | arg=#8A5E3C | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=state of one track (saved in the song) | tip=
+  Grey | key= | id=TrackRow.Colour | arg=#6E7580 | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=state of one track (saved in the song) | tip=
+  Slate | key= | id=TrackRow.Colour | arg=#4A5563 | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=state of one track (saved in the song) | tip=
+Properties… | key=F6 | id=TrackRow.Properties | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+---
+Convert to audio track… | key= | id=Track.ConvertToAudio | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=The notation becomes a MIDI clip on the track; existing clips stay
+== bar, full
+Copy bar (this track) | key=Ctrl+C | id= | arg= | cmd=CopyBar | enabled=True | checkable=False | radio=False | label=False | setting= | tip=Copies this bar of the selected track
+Paste bar (this track) | key=Ctrl+V | id= | arg= | cmd=PasteBar | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+Delete bar… | key=Delete | id= | arg= | cmd=DeleteBar | enabled=True | checkable=False | radio=False | label=False | setting= | tip=Asks what to do: delete the bar and leave or close the gap, or insert a gap; all tracks or this track
+---
+Insert bar | key= | id= | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+  Before this bar | key=Ctrl+Insert | id= | arg= | cmd=InsertBarBefore | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+  After this bar | key= | id= | arg= | cmd=InsertBarAfter | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+Section | key= | id= | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+  Copy section | key= | id= | arg= | cmd=CopySection | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+  Paste section here | key= | id= | arg= | cmd=PasteSectionHere | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+  Lock section position | key= | id= | arg= | cmd=ToggleSectionLockAtBar | enabled=True | checkable=True | radio=False | label=False | setting=state of one section (saved in the song) | tip=
+---
+All tracks | key= | id= | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+  Copy bar (all tracks) | key= | id= | arg= | cmd=CopyBarAllTracks | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+  Paste bar into all tracks | key= | id= | arg= | cmd=PasteBarAllTracks | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+---
+Lines between tracks | key= | id= | arg= | cmd=ToggleTrackLines | enabled=True | checkable=True | radio=False | label=False | setting=timeline.tracklines | tip=
+Reset track list height | key= | id= | arg= | cmd=ResetTrackListHeight | enabled=True | checkable=False | radio=False | label=False | setting= | tip=Back to the default row height with every track in view (the same as double-clicking the border above the track list)
+Timeline settings… | key= | id= | arg= | cmd=TimelineSettings | enabled=True | checkable=False | radio=False | label=False | setting= | tip=Open Settings > Timeline & Tracks (appearance of the timeline, sections and track list)
+== bar, none
+Copy bar | key=Ctrl+C | id= | arg= | cmd=CopyBar | enabled=False | checkable=False | radio=False | label=False | setting= | tip=Copies this bar of the selected track
+Paste bar | key=Ctrl+V | id= | arg= | cmd=PasteBar | enabled=False | checkable=False | radio=False | label=False | setting= | tip=
+Delete bar… | key=Delete | id= | arg= | cmd=DeleteBar | enabled=False | checkable=False | radio=False | label=False | setting= | tip=Asks what to do: delete the bar and leave or close the gap, or insert a gap; all tracks or this track
+---
+Lines between tracks | key= | id= | arg= | cmd=ToggleTrackLines | enabled=True | checkable=True | radio=False | label=False | setting=timeline.tracklines | tip=
+Reset track list height | key= | id= | arg= | cmd=ResetTrackListHeight | enabled=True | checkable=False | radio=False | label=False | setting= | tip=Back to the default row height with every track in view (the same as double-clicking the border above the track list)
+Timeline settings… | key= | id= | arg= | cmd=TimelineSettings | enabled=True | checkable=False | radio=False | label=False | setting= | tip=Open Settings > Timeline & Tracks (appearance of the timeline, sections and track list)
+== selection, active
+2 bars | key= | id= | arg= | cmd=None | enabled=False | checkable=False | radio=False | label=True | setting= | tip=
+Copy | key=Ctrl+C | id= | arg= | cmd=CopySelection | enabled=True | checkable=False | radio=False | label=False | setting= | tip=Copies the selected bars: of every track for a timeline selection, of its track for a score selection
+Cut | key=Ctrl+X | id= | arg= | cmd=CutSelection | enabled=True | checkable=False | radio=False | label=False | setting= | tip=Cut copies the bars, then removes them and closes the gap (every track) or clears them (one track)
+Paste | key=Ctrl+V | id= | arg= | cmd=PasteSelection | enabled=True | checkable=False | radio=False | label=False | setting= | tip=Bars of every track are inserted in front of the selection; one track's bars go onto the selected track
+Delete… | key=Delete | id= | arg= | cmd=DeleteSelection | enabled=True | checkable=False | radio=False | label=False | setting= | tip=Asks what to do: clear the bars, remove them and close the gap, or insert a gap (all tracks or this track)
+Delete empty bars | key= | id= | arg= | cmd=DeleteEmptyBars | enabled=True | checkable=False | radio=False | label=False | setting= | tip=Deletes only the selected bars that hold no notes on any track
+---
+Loop selection | key=F9 | id= | arg= | cmd=LoopSelection | enabled=True | checkable=True | radio=False | label=False | setting=transport state (not saved as a preference) | tip=
+Arrange | key= | id= | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+  Move selection… | key= | id= | arg= | cmd=MoveSelection | enabled=True | checkable=False | radio=False | label=False | setting= | tip=Then click the new position on the timeline
+  Skip during playback | key= | id= | arg= | cmd=SkipSelection | enabled=True | checkable=True | radio=False | label=False | setting=state of the selected bars (this session) | tip=
+  Play all skipped areas again | key= | id= | arg= | cmd=PlaySkippedAgain | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+---
+Clear selection | key=Escape | id= | arg= | cmd=ClearSelection | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+---
+Timeline settings… | key= | id= | arg= | cmd=TimelineSettings | enabled=True | checkable=False | radio=False | label=False | setting= | tip=Open Settings > Timeline & Tracks (appearance of the timeline, sections and track list)
+== selection, plain
+1 bar | key= | id= | arg= | cmd=None | enabled=False | checkable=False | radio=False | label=True | setting= | tip=
+Copy | key=Ctrl+C | id= | arg= | cmd=CopySelection | enabled=True | checkable=False | radio=False | label=False | setting= | tip=Copies the selected bars: of every track for a timeline selection, of its track for a score selection
+Cut | key=Ctrl+X | id= | arg= | cmd=CutSelection | enabled=True | checkable=False | radio=False | label=False | setting= | tip=Cut copies the bars, then removes them and closes the gap (every track) or clears them (one track)
+Paste | key=Ctrl+V | id= | arg= | cmd=PasteSelection | enabled=False | checkable=False | radio=False | label=False | setting= | tip=Bars of every track are inserted in front of the selection; one track's bars go onto the selected track
+Delete… | key=Delete | id= | arg= | cmd=DeleteSelection | enabled=True | checkable=False | radio=False | label=False | setting= | tip=Asks what to do: clear the bars, remove them and close the gap, or insert a gap (all tracks or this track)
+---
+Loop selection | key=F9 | id= | arg= | cmd=LoopSelection | enabled=True | checkable=True | radio=False | label=False | setting=transport state (not saved as a preference) | tip=
+Arrange | key= | id= | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+  Move selection… | key= | id= | arg= | cmd=MoveSelection | enabled=True | checkable=False | radio=False | label=False | setting= | tip=Then click the new position on the timeline
+  Skip during playback | key= | id= | arg= | cmd=SkipSelection | enabled=True | checkable=True | radio=False | label=False | setting=state of the selected bars (this session) | tip=
+---
+Clear selection | key=Escape | id= | arg= | cmd=ClearSelection | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+---
+Timeline settings… | key= | id= | arg= | cmd=TimelineSettings | enabled=True | checkable=False | radio=False | label=False | setting= | tip=Open Settings > Timeline & Tracks (appearance of the timeline, sections and track list)
+== section, at bar
+Add section at bar 4 | key=M | id= | arg= | cmd=AddSectionHere | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+---
+Copy section | key=Ctrl+C | id= | arg= | cmd=CopySectionMenu | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+Cut section | key=Ctrl+X | id= | arg= | cmd=CutSection | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+Paste section | key=Ctrl+V | id= | arg= | cmd=PasteSectionAfter | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+Duplicate section | key= | id= | arg= | cmd=DuplicateSection | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+Delete section and its bars… | key= | id= | arg= | cmd=DeleteSection | enabled=True | checkable=False | radio=False | label=False | setting= | tip=Removes the section marker and its bars and notes from every track. Asks first (Preferences > Timeline and Tracks > Confirm section deletion); Undo restores it. To remove only the marker use Remove in the Sections panel.
+---
+Loop section | key=F9 | id= | arg= | cmd=LoopSection | enabled=True | checkable=True | radio=False | label=False | setting=transport state (not saved as a preference) | tip=
+Rename / recolour section… | key= | id= | arg= | cmd=RenameSection | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+Go to section | key= | id= | arg= | cmd=GoToSection | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+Lock section position | key= | id= | arg= | cmd=ToggleSectionLock | enabled=True | checkable=True | radio=False | label=False | setting=state of one section (saved in the song) | tip=
+---
+Timeline settings… | key= | id= | arg= | cmd=SectionSettings | enabled=True | checkable=False | radio=False | label=False | setting= | tip=Open Settings > Timeline & Tracks (appearance of the timeline, sections and track list)
+== section, inside
+Copy section | key=Ctrl+C | id= | arg= | cmd=CopySectionMenu | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+Cut section | key=Ctrl+X | id= | arg= | cmd=CutSection | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+Paste section | key=Ctrl+V | id= | arg= | cmd=PasteSectionAfter | enabled=False | checkable=False | radio=False | label=False | setting= | tip=
+Duplicate section | key= | id= | arg= | cmd=DuplicateSection | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+Delete section and its bars… | key= | id= | arg= | cmd=DeleteSection | enabled=True | checkable=False | radio=False | label=False | setting= | tip=Removes the section marker and its bars and notes from every track. Asks first (Preferences > Timeline and Tracks > Confirm section deletion); Undo restores it. To remove only the marker use Remove in the Sections panel.
+---
+Loop section | key=F9 | id= | arg= | cmd=LoopSection | enabled=True | checkable=True | radio=False | label=False | setting=transport state (not saved as a preference) | tip=
+Rename / recolour section… | key= | id= | arg= | cmd=RenameSection | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+Go to section | key= | id= | arg= | cmd=GoToSection | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+Lock section position | key= | id= | arg= | cmd=ToggleSectionLock | enabled=True | checkable=True | radio=False | label=False | setting=state of one section (saved in the song) | tip=
+---
+Timeline settings… | key= | id= | arg= | cmd=SectionSettings | enabled=True | checkable=False | radio=False | label=False | setting= | tip=Open Settings > Timeline & Tracks (appearance of the timeline, sections and track list)
+== clip, audio
+Copy | key=Ctrl+C | id= | arg= | cmd=ClipCopy | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+Cut | key=Ctrl+X | id= | arg= | cmd=ClipCut | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+Paste | key=Ctrl+V | id= | arg= | cmd=ClipPaste | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+Duplicate | key=Ctrl+D | id= | arg= | cmd=ClipDuplicate | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+Split at cursor | key=S | id= | arg= | cmd=ClipSplit | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+Glue | key=Ctrl+Shift+G | id= | arg= | cmd=ClipGlue | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+Reset fade in / out | key= | id= | arg= | cmd=ClipFadeReset | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+Delete | key=Delete | id= | arg= | cmd=ClipDelete | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+---
+Mute | key=Ctrl+M | id= | arg= | cmd=ClipMute | enabled=True | checkable=True | radio=False | label=False | setting=state of one clip (saved in the song) | tip=
+Properties… | key=F2 | id= | arg= | cmd=ClipProperties | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+== clip, midi muted
+Copy | key=Ctrl+C | id= | arg= | cmd=ClipCopy | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+Cut | key=Ctrl+X | id= | arg= | cmd=ClipCut | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+Paste | key=Ctrl+V | id= | arg= | cmd=ClipPaste | enabled=False | checkable=False | radio=False | label=False | setting= | tip=
+Duplicate | key=Ctrl+D | id= | arg= | cmd=ClipDuplicate | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+Split at cursor | key=S | id= | arg= | cmd=ClipSplit | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+Glue | key=Ctrl+Shift+G | id= | arg= | cmd=ClipGlue | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+Reset fade in / out | key= | id= | arg= | cmd=ClipFadeReset | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+Delete | key=Delete | id= | arg= | cmd=ClipDelete | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+---
+Mute | key=Ctrl+M | id= | arg= | cmd=ClipMute | enabled=True | checkable=True | radio=False | label=False | setting=state of one clip (saved in the song) | tip=
+Properties… | key=F2 | id= | arg= | cmd=ClipProperties | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+Write into the track's notation | key= | id= | arg= | cmd=ClipWriteNotation | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+== clip, none
+Paste | key=Ctrl+V | id= | arg= | cmd=ClipPaste | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+---
+Add audio file… | key= | id= | arg= | cmd=ClipAddAudioFile | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+== fretboard
+Show this track as | key= | id= | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+  Standard | key= | id=view | arg=Standard | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=fretboard.instrumentview | tip=
+  Notes | key= | id=view | arg=Notes | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=fretboard.instrumentview | tip=
+Scale | key= | id= | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+  C | key= | id= | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+    Major | key= | id=scale | arg=C Major | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=editing.scale | tip=
+    Minor | key= | id=scale | arg=C Minor | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=editing.scale | tip=
+  D | key= | id= | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+    Major | key= | id=scale | arg=D Major | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=editing.scale | tip=
+    Minor | key= | id=scale | arg=D Minor | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=editing.scale | tip=
+  E | key= | id= | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+    Major | key= | id=scale | arg=E Major | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=editing.scale | tip=
+    Minor | key= | id=scale | arg=E Minor | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=editing.scale | tip=
+  ---
+  Find scale… | key= | id=findscale | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+  Clear scale | key= | id=clearscale | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+---
+Note names | key= | id=notenames | arg= | cmd=None | enabled=True | checkable=True | radio=False | label=False | setting=editing.notenames | tip=
+Preview next notes | key= | id=preview | arg= | cmd=None | enabled=True | checkable=True | radio=False | label=False | setting=editing.horizon.enabled | tip=
+Left-handed | key= | id=lefthanded | arg= | cmd=None | enabled=True | checkable=True | radio=False | label=False | setting=editing.lefthanded | tip=
+---
+Lock fretboard size | key= | id=locksize | arg= | cmd=None | enabled=True | checkable=True | radio=False | label=False | setting=fretboard.locksize | tip=Locked: dragging the edge does not resize the fretboard / keyboard. Unlocked: the drawing scales with the pane.
+Position | key= | id= | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+  Top | key= | id=position | arg=top | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=fretboard.dockposition | tip=
+  Bottom | key= | id=position | arg=bottom | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=fretboard.dockposition | tip=
+Fretboard settings… | key= | id=settings | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=Open Settings > Fretboard & Keyboard (appearance, sizes, colours, look-ahead, default view)
+== keyboard
+Show this track as | key= | id= | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+  Keys | key= | id=view | arg=Keys | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=fretboard.instrumentview | tip=
+Scale | key= | id= | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+  C | key= | id= | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+    Major | key= | id=scale | arg=C Major | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=editing.scale | tip=
+    Minor | key= | id=scale | arg=C Minor | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=editing.scale | tip=
+  D | key= | id= | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+    Major | key= | id=scale | arg=D Major | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=editing.scale | tip=
+    Minor | key= | id=scale | arg=D Minor | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=editing.scale | tip=
+  E | key= | id= | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+    Major | key= | id=scale | arg=E Major | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=editing.scale | tip=
+    Minor | key= | id=scale | arg=E Minor | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=editing.scale | tip=
+  ---
+  Find scale… | key= | id=findscale | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+  Clear scale | key= | id=clearscale | arg= | cmd=None | enabled=False | checkable=False | radio=False | label=False | setting= | tip=
+---
+Note names | key= | id=notenames | arg= | cmd=None | enabled=True | checkable=True | radio=False | label=False | setting=editing.notenames | tip=
+Preview next notes | key= | id=preview | arg= | cmd=None | enabled=True | checkable=True | radio=False | label=False | setting=editing.horizon.enabled | tip=
+---
+Lock fretboard size | key= | id=locksize | arg= | cmd=None | enabled=True | checkable=True | radio=False | label=False | setting=fretboard.locksize | tip=Locked: dragging the edge does not resize the fretboard / keyboard. Unlocked: the drawing scales with the pane.
+Position | key= | id= | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+  Top | key= | id=position | arg=top | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=fretboard.dockposition | tip=
+  Bottom | key= | id=position | arg=bottom | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=fretboard.dockposition | tip=
+Fretboard settings… | key= | id=settings | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=Open Settings > Fretboard & Keyboard (appearance, sizes, colours, look-ahead, default view)
+== drums
+Show this track as | key= | id= | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+  Pads | key= | id=view | arg=Pads | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=fretboard.instrumentview | tip=
+Scale | key= | id= | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+  C | key= | id= | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+    Major | key= | id=scale | arg=C Major | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=editing.scale | tip=
+    Minor | key= | id=scale | arg=C Minor | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=editing.scale | tip=
+  D | key= | id= | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+    Major | key= | id=scale | arg=D Major | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=editing.scale | tip=
+    Minor | key= | id=scale | arg=D Minor | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=editing.scale | tip=
+  E | key= | id= | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+    Major | key= | id=scale | arg=E Major | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=editing.scale | tip=
+    Minor | key= | id=scale | arg=E Minor | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=editing.scale | tip=
+  ---
+  Find scale… | key= | id=findscale | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+  Clear scale | key= | id=clearscale | arg= | cmd=None | enabled=False | checkable=False | radio=False | label=False | setting= | tip=
+---
+Lock fretboard size | key= | id=locksize | arg= | cmd=None | enabled=True | checkable=True | radio=False | label=False | setting=fretboard.locksize | tip=Locked: dragging the edge does not resize the fretboard / keyboard. Unlocked: the drawing scales with the pane.
+Position | key= | id= | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+  Top | key= | id=position | arg=top | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=fretboard.dockposition | tip=
+  Bottom | key= | id=position | arg=bottom | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=fretboard.dockposition | tip=
+Fretboard settings… | key= | id=settings | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=Open Settings > Fretboard & Keyboard (appearance, sizes, colours, look-ahead, default view)
+== score, over beat
+Paste | key=Ctrl+V | id=paste | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+Paste special… | key=Ctrl+Shift+V | id=pastespecial | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+---
+Show standard notation | key= | id=notation | arg= | cmd=None | enabled=True | checkable=True | radio=False | label=False | setting=score.defaultnotation | tip=
+Zoom | key= | id= | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+  Zoom in | key=Ctrl++ | id=zoomin | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+  Zoom out | key=Ctrl+- | id=zoomout | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+  Fit width | key= | id=fitwidth | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+Page layout | key= | id= | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+  Page | key= | id=layout | arg=page | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=score.pagelayout | tip=
+  Continuous | key= | id=layout | arg=continuous | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=score.pagelayout | tip=
+  ---
+  Vertical | key= | id=layout | arg=vertical | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=score.scrolling | tip=
+  Horizontal | key= | id=layout | arg=horizontal | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=score.scrolling | tip=
+---
+Score settings… | key= | id=settings | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=Open Settings > Score & Notation (what is shown, spacing, text and fonts, paper, ink and ledger lines)
+== score, empty area
+Show standard notation | key= | id=notation | arg= | cmd=None | enabled=True | checkable=True | radio=False | label=False | setting=score.defaultnotation | tip=
+Zoom | key= | id= | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+  Zoom in | key=Ctrl++ | id=zoomin | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+  Zoom out | key=Ctrl+- | id=zoomout | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+  Fit width | key= | id=fitwidth | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+Page layout | key= | id= | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+  Page | key= | id=layout | arg=page | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=score.pagelayout | tip=
+  Continuous | key= | id=layout | arg=continuous | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=score.pagelayout | tip=
+  ---
+  Vertical | key= | id=layout | arg=vertical | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=score.scrolling | tip=
+  Horizontal | key= | id=layout | arg=horizontal | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=score.scrolling | tip=
+---
+Score settings… | key= | id=settings | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=Open Settings > Score & Notation (what is shown, spacing, text and fonts, paper, ink and ledger lines)
+== band
+Lanes show | key= | id= | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+  Tab | key= | id=bandcontent | arg=Tab | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=band.lanecontent | tip=
+  Notation | key= | id=bandcontent | arg=Notation | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=band.lanecontent | tip=
+  Both | key= | id=bandcontent | arg=Both | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=band.lanecontent | tip=
+Lane layout | key= | id= | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+  Vertical | key= | id=bandlayout | arg=Vertical | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=band.lanelayout | tip=
+  Horizontal | key= | id=bandlayout | arg=Horizontal | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=band.lanelayout | tip=
+Zoom | key= | id= | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+  Zoom in | key=Ctrl+Wheel | id=bandlanezoomin | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting=band.lanezoom | tip=Make the tab or notation in every Band lane bigger (the mouse wheel with the zoom modifier over the Band view)
+  Zoom out | key= | id=bandlanezoomout | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting=band.lanezoom | tip=
+  Reset zoom | key= | id=bandlanezoomreset | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting=band.lanezoom | tip=
+Follow like the score | key= | id=bandfollow | arg= | cmd=None | enabled=True | checkable=True | radio=False | label=False | setting=band.followscore | tip=
+---
+Row sizes | key= | id= | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+  Rows per screen | key= | id= | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+    1 | key= | id=bandrows | arg=1 | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=band.rowsperscreen | tip=
+    2 | key= | id=bandrows | arg=2 | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=band.rowsperscreen | tip=
+    3 | key= | id=bandrows | arg=3 | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=band.rowsperscreen | tip=
+    4 | key= | id=bandrows | arg=4 | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=band.rowsperscreen | tip=
+    5 | key= | id=bandrows | arg=5 | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=band.rowsperscreen | tip=
+  Instrument size | key= | id= | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+    Full neck | key= | id=bandsize | arg=Full neck | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=band.instrumentsize | tip=
+    12 frets | key= | id=bandsize | arg=12 frets | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=band.instrumentsize | tip=
+    Small keyboard | key= | id=bandsize | arg=Small keyboard | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=band.instrumentsize | tip=
+  Instrument width | key= | id= | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+    All rows | key= | id=bandwidthmode | arg=All rows | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=which rows a width drag changes (chosen in this menu) | tip=
+    This row only | key= | id=bandwidthmode | arg=This row only | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=which rows a width drag changes (chosen in this menu) | tip=
+  ---
+  Reset row heights | key= | id=bandheights | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+  Reset row widths | key= | id=bandwidths | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+Reset view | key= | id=bandresetview | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=Row heights, instrument widths, rows per screen, hidden instruments, lane zoom, layout and playhead line back to their defaults; the shown tracks and their order stay
+---
+Band settings… | key= | id=bandsettings | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=Open Settings > Timeline > Band view (instrument size, lanes, follow, rows, order)
+== band, per row
+Lanes show | key= | id= | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+  Tab | key= | id=bandcontent | arg=Tab | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=band.lanecontent | tip=
+  Notation | key= | id=bandcontent | arg=Notation | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=band.lanecontent | tip=
+  Both | key= | id=bandcontent | arg=Both | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=band.lanecontent | tip=
+Lane layout | key= | id= | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+  Vertical | key= | id=bandlayout | arg=Vertical | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=band.lanelayout | tip=
+  Horizontal | key= | id=bandlayout | arg=Horizontal | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=band.lanelayout | tip=
+Zoom | key= | id= | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+  Zoom in | key=Ctrl+Wheel | id=bandlanezoomin | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting=band.lanezoom | tip=Make the tab or notation in every Band lane bigger (the mouse wheel with the zoom modifier over the Band view)
+  Zoom out | key= | id=bandlanezoomout | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting=band.lanezoom | tip=
+  Reset zoom | key= | id=bandlanezoomreset | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting=band.lanezoom | tip=
+Follow like the score | key= | id=bandfollow | arg= | cmd=None | enabled=True | checkable=True | radio=False | label=False | setting=band.followscore | tip=
+---
+Row sizes | key= | id= | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+  Rows per screen | key= | id= | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+    1 | key= | id=bandrows | arg=1 | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=band.rowsperscreen | tip=
+    2 | key= | id=bandrows | arg=2 | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=band.rowsperscreen | tip=
+    3 | key= | id=bandrows | arg=3 | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=band.rowsperscreen | tip=
+    4 | key= | id=bandrows | arg=4 | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=band.rowsperscreen | tip=
+    5 | key= | id=bandrows | arg=5 | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=band.rowsperscreen | tip=
+  Instrument size | key= | id= | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+    Full neck | key= | id=bandsize | arg=Full neck | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=band.instrumentsize | tip=
+    12 frets | key= | id=bandsize | arg=12 frets | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=band.instrumentsize | tip=
+    Small keyboard | key= | id=bandsize | arg=Small keyboard | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=band.instrumentsize | tip=
+  Instrument width | key= | id= | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+    All rows | key= | id=bandwidthmode | arg=All rows | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=which rows a width drag changes (chosen in this menu) | tip=
+    This row only | key= | id=bandwidthmode | arg=This row only | cmd=None | enabled=True | checkable=True | radio=True | label=False | setting=which rows a width drag changes (chosen in this menu) | tip=
+  ---
+  Reset row heights | key= | id=bandheights | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+  Reset row widths | key= | id=bandwidths | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
+Reset view | key= | id=bandresetview | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=Row heights, instrument widths, rows per screen, hidden instruments, lane zoom, layout and playhead line back to their defaults; the shown tracks and their order stay
+---
+Band settings… | key= | id=bandsettings | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=Open Settings > Timeline > Band view (instrument size, lanes, follow, rows, order)

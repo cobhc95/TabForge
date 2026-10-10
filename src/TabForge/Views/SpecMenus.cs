@@ -6,7 +6,7 @@ namespace TabForge.Views;
 
 // Owns: turning MenuSpec trees into themed WPF context menus, the menu separator, and opening a menu at the mouse or (from the keyboard) at an anchor.
 // Does not own: what a menu holds (the *Menus spec builders) or what its items do (the caller's run action).
-// Tests: TestKeyboardContextMenu, TestBandMenu.
+// Tests: TestKeyboardContextMenuPlacement, TestBandMenu.
 internal static class SpecMenus
 {
     /// <summary>The one menu separator style (App.xaml, MenuItem.SeparatorStyleKey) for menus that build their items by hand.</summary>

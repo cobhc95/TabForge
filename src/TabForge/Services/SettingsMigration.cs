@@ -7,7 +7,7 @@ namespace TabForge.Services;
 
 // Owns: normalising settings files written by older versions.
 // Does not own: validation of values and file access.
-// Tests: TestDocumentContextLeftovers, TestTrimMerges.
+// Tests: CheckDocumentContextLeftovers, TestTrimMerges.
 /// <summary>Normalizes current and legacy settings documents without discarding unknown supported fields.</summary>
 public static class SettingsMigration
 {
@@ -21,6 +21,8 @@ public static class SettingsMigration
         settings.Editing ??= new EditingSettings();
         settings.Follow ??= new FollowSettings();
         settings.Timeline ??= new TimelineSettings();
+        settings.LiveVideo ??= new Video.LiveVideoSettings();
+        settings.Learn ??= new KeyboardMode.KeyboardModeSettings();
         settings.Hotkeys ??= new HotkeySettings();
         settings.Hotkeys.Bindings ??= new Dictionary<string, string>();
         settings.Hotkeys.DisabledActions ??= new List<string>();
@@ -45,7 +47,7 @@ public static class SettingsMigration
                 foreach (var chain in plugins.AutoChains ?? new()) TabForge.Plugins.ChainStateStore.Externalise(chain.Plugins ?? new());
                 foreach (var track in plugins.StartupTracks ?? new()) TabForge.Plugins.ChainStateStore.Externalise(track.Plugins ?? new());
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { /* keep inline; retried next load */ }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { Services.Trace.Error(Services.Trace.Engine, "settings migration: externalise plug-in state: " + ex.Message); /* keep inline; retried next load */ }
         }
 
         // Files written before the second hotkey slot load as Hotkey 1 only.
@@ -128,9 +130,6 @@ public static class SettingsMigration
 
         if (!Has(root, "Tabs")) settings.Tabs = new TabSettings();
         if (settings.Tabs is null) settings.Tabs = new TabSettings();
-        settings.Appearance.UiScale = Math.Clamp(settings.Appearance.UiScale, 0.8, 1.5);
-        settings.Appearance.AnimationSpeed = Math.Clamp(settings.Appearance.AnimationSpeed, 0.25, 2);
-        settings.Follow.VerticalTriggerPercent = Math.Clamp(settings.Follow.VerticalTriggerPercent, 40, 95);
         settings.Appearance.RecentColours = settings.Appearance.RecentColours
             .Where(IsColour).Distinct(StringComparer.OrdinalIgnoreCase).Take(InputLimits.MaxRecentColours).ToList();
 

@@ -54,8 +54,8 @@ public sealed record GpExportPlan(bool Proceed, string CompatiblePath, string? N
 // Does not own: the dialog and the writing (GuitarProExporter).
 // Tests: TestGpLossCoverage, TestGpFidelity.
 /// <summary>
-/// R5 lossy-export preflight (owner-approved): for a clean .gp export, find what the Guitar Pro format (as written through alphaTab) cannot hold,
-/// and decide the files and document state for each of three choices. Pure logic: the dialog is Iris's (see docs), the writes are DocumentController's.
+/// Lossy-export preflight: for a clean score export, find what the score format (as written through alphaTab) cannot hold,
+/// and decide the files and document state for each of three choices. Pure logic: the dialog lives in the views (see docs), the writes are DocumentController's.
 /// The rules: shown only when something is lost; Export never changes the document; the original is never overwritten by a lossy copy; and a document
 /// is marked clean only when the file it now points at holds everything (the native copy), never because a compatible .gp was written.
 /// </summary>
@@ -172,7 +172,7 @@ public static class GpExportPreflight
             if (!path.EndsWith(".gp", StringComparison.OrdinalIgnoreCase)) return false;
             return GuitarProExporter.TryReadEmbedded(path) is not null || (!ignoreSidecar && File.Exists(AudioDataFile.PathFor(path)));
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return true; }   // unreadable: assume it matters, never overwrite
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return true; }   // unreadable: assume it matters, never overwrite // Not logged: embedded project probe: false means none
     }
 
     /// <summary>"name (full copy).tforge", then "(full copy 2)" ...: the first path that does not exist.</summary>

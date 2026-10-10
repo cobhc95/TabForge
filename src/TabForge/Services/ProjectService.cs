@@ -66,13 +66,13 @@ public static class ProjectService
         object prototype;
         // A type whose constructor cannot run standalone simply keeps default (full) serialization.
         try { prototype = info.CreateObject(); }
-        catch (Exception ex) when (ex is InvalidOperationException or NotSupportedException or MissingMethodException) { return; }
+        catch (Exception ex) when (ex is InvalidOperationException or NotSupportedException or MissingMethodException) { return; } // Not logged: type cannot run standalone: default serialization is kept
         foreach (var property in info.Properties)
         {
             if (property.Get is null || property.Set is null) continue;
             object? initial;
             try { initial = property.Get(prototype); }
-            catch (Exception ex) when (ex is InvalidOperationException or NotSupportedException) { continue; }
+            catch (Exception ex) when (ex is InvalidOperationException or NotSupportedException) { continue; } // Not logged: property without a readable initial value: serialized as before
             property.ShouldSerialize = (_, value) => !SameAsInitial(value, initial);
         }
     }
@@ -104,7 +104,7 @@ public static class ProjectService
     {
         var toWrite = project.Tracks.Any(t => t.StartupTemplateId is not null) ? project.WithoutStartupTracks() : project;   // startup-template tracks are not saved
         ProjectValidator.Validate(toWrite);
-        // gzip-compressed on disk (Audit 3 M-03: ~35x smaller); the limit applies to the JSON size.
+        // gzip-compressed on disk (about 35x smaller); the limit applies to the JSON size.
         using var gzip = new GZipStream(stream, CompressionLevel.Optimal, leaveOpen: true);
         using var sink = new HashingLimitStream(gzip, InputLimits.MaxTforgeFileBytes);
         SerializeChunked(sink, toWrite, DiskOptions);
@@ -257,8 +257,8 @@ public static class ProjectService
     };
 
     /// <summary>
-    /// Whole-song snapshot (the memory report and self-tests; undo keeps per-bar <see cref="TabForge.Documents.ProjectState"/>s
-    /// since Audit 3 M-06): compact UTF-8 JSON, gzip-compressed. It runs on the CALLER's thread: the serialising happens on a pool
+    /// Whole-song snapshot for the memory report and self-tests. Undo keeps per-bar <see cref="TabForge.Documents.ProjectState"/>s instead.
+    /// Compact UTF-8 JSON, gzip-compressed. It runs on the CALLER's thread: the serialising happens on a pool
     /// thread but the caller waits for it, so on the UI thread it blocks the UI for the whole serialise + compress. Autosave no
     /// longer uses it: it captures a cheap immutable ProjectState on the UI thread and serialises that on a worker. A realistic score serialises to
     /// megabytes of text (and twice that as a .NET string), so keeping it raw would let the history
@@ -285,7 +285,7 @@ public static class ProjectService
 
     /// <summary>
     /// The project embedded in a TabForge-written .gp: gzip of the full disk JSON (FormatVersion always written, no compaction).
-    /// A6-02: the JSON is held to <see cref="InputLimits.MaxTforgeFileBytes"/>, the same limit the .tforge save and the embedded-project
+    /// The JSON is held to <see cref="InputLimits.MaxTforgeFileBytes"/>, the same limit the .tforge save and the embedded-project
     /// reader (<see cref="RestorePersistedBytes"/>) apply, so a .gp TabForge writes can always be read back. Throws
     /// an <see cref="InvalidDataException"/> with <see cref="SizeLimitMessage"/> when it is over.
     /// </summary>

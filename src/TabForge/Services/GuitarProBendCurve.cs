@@ -92,7 +92,7 @@ internal static class GuitarProBendCurve
     internal static byte[] Patch(byte[] gpif, Score score)
     {
         try { return PatchCore(gpif, score); }
-        catch (Exception ex) when (ex is System.Xml.XmlException or InvalidOperationException or ArgumentException or FormatException or IndexOutOfRangeException or NullReferenceException) { return gpif; }
+        catch (Exception ex) when (ex is System.Xml.XmlException or InvalidOperationException or ArgumentException or FormatException or IndexOutOfRangeException or NullReferenceException) { return gpif; } // Not logged: bend curve: the unshaped curve is kept
     }
 
     private static byte[] PatchCore(byte[] gpif, Score score)

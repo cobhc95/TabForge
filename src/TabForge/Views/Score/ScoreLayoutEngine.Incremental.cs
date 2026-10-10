@@ -3,6 +3,10 @@ using TabForge.Models;
 
 namespace TabForge.Views.Score;
 
+// Owns: the incremental page layout: the captured measure range, invalidation of measures after an edit, the natural bar widths, and the widths kept for unchanged warps.
+// Does not own: the full layout pass (ScoreLayoutEngine.cs) or the key, time and tempo widths (ScoreLayoutEngine.Signatures.cs).
+// Tests: TestScoreLayoutPartial.
+
 internal sealed partial class ScoreLayoutEngine
 {
     /// <summary>Number of natural bar widths measured by the last rebuilt page layout.</summary>

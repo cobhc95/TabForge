@@ -5,7 +5,7 @@ using TabForge.Services;
 
 namespace TabForge;
 
-/// <summary>Audit 5 H-1: with <c>--profile &lt;folder&gt;</c> every per-user path resolves inside that folder and the real user folders are left byte-identical.</summary>
+/// <summary>With <c>--profile &lt;folder&gt;</c> every per-user path resolves inside that folder and the real user folders are left byte-identical.</summary>
 public static partial class SelfTest
 {
     private static string FolderFingerprint(string folder)

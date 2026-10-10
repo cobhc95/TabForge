@@ -5,6 +5,10 @@ using TabForge.Services;
 
 namespace TabForge.Presets;
 
+// Owns: everything in the demo song that is not a note: the performed bar order, time signatures, tempo, keys, repeats, directions, section markers, line breaks and bar flags, written on every track.
+// Does not own: any note (FullDemoSongFactory.Drums.cs, FullDemoSongFactory.LeadKeys.cs, FullDemoSongFactory.Rhythm.cs).
+// Tests: TestFullDemoSong.
+
 // Owner (a): everything that is not a note (plan 1.2–1.5, 2.1–2.4, 5.1, 6.3). Structure is written on EVERY track here and
 // nowhere else, so the builders never touch time signatures, tempo, keys, repeats, directions or bar flags.
 internal static partial class FullDemoSongFactory

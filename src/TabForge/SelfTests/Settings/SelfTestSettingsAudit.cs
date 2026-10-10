@@ -40,7 +40,7 @@ public static partial class SelfTest
             var value = AlternativeValue(row);
             if (value is null) continue;
             try { row.Set(value); }
-            catch (Exception ex) { notRoundTripped.Add($"{row.Key} (threw {ex.GetType().Name})"); continue; }
+            catch (Exception ex) { notRoundTripped.Add($"{row.Key} (threw {ex.GetType().Name})"); continue; } // Not logged: self-test harness: the failure is recorded as a check result
             if (!SameValue(row.Get(), value)) { notRoundTripped.Add($"{row.Key} (set {Format(value)}, got {Format(row.Get())})"); continue; }
             expected[row.Key] = row.Get();
             if (SettingsWithSideEffects.Contains(row.Key)) continue;
@@ -60,7 +60,7 @@ public static partial class SelfTest
                 if (expected.TryGetValue(row.Key, out var want) && !SameValue(row.Get(), want))
                     notPersisted.Add($"{row.Key} (saved {Format(want)}, loaded {Format(row.Get())})");
         }
-        finally { try { File.Delete(path); } catch (IOException) { } }
+        finally { try { File.Delete(path); } catch (IOException) { } } // Not logged: test cleanup of a temporary file.
 
         Check("every setting row stores the value it is given", notRoundTripped.Count == 0, string.Join("; ", notRoundTripped));
         Check("every setting survives save, reload and validation", notPersisted.Count == 0, string.Join("; ", notPersisted));
@@ -108,6 +108,7 @@ public static partial class SelfTest
                 {
                     "vst.folders" => string.Equals(current?.ToString(), @"C:\Plugins", StringComparison.Ordinal) ? @"C:\VST" : @"C:\Plugins",
                     "vst.commonfolders" => string.Equals(current?.ToString(), @"C:\VST", StringComparison.Ordinal) ? @"C:\Plugins" : @"C:\VST",
+                    "video.folder" => string.Equals(current?.ToString(), @"C:\Videos", StringComparison.Ordinal) ? @"C:\Clips" : @"C:\Videos",
                     _ => null
                 };
         }

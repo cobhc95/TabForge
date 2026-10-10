@@ -47,7 +47,7 @@ internal static class ImportMeasure
                                     Thread.Sleep(15);
                                 }
                             }
-                            catch (Exception ex) when (ex is InvalidOperationException or ArgumentException or System.ComponentModel.Win32Exception) { }
+                            catch (Exception ex) when (ex is InvalidOperationException or ArgumentException or System.ComponentModel.Win32Exception) { } // Not logged: retry loop: the next attempt reports the failure.
                         }) { IsBackground = true }.Start();
                     },
                 };
@@ -56,7 +56,7 @@ internal static class ImportMeasure
             else project = GuitarProImporter.Import(song);
             Line($"import: ok in {watch.Elapsed.TotalSeconds:0.0} s");
         }
-        catch (Exception ex) when (ex is not OutOfMemoryException)
+        catch (Exception ex) when (ex is not OutOfMemoryException) // Not logged: diagnostic probe: the failure goes to its report, not errors.log
         {
             Line($"import: FAILED after {watch.Elapsed.TotalSeconds:0.0} s: {ex.GetType().Name}: {ex.Message}");
         }
@@ -82,7 +82,7 @@ internal static class ImportMeasure
             var (full, compact) = ProjectService.MeasureJsonBytes(project);
             Line($"JSON size: disk form (every property) {full:N0} bytes = {full / 1048576.0:0.0} MiB; compact form {compact:N0} bytes = {compact / 1048576.0:0.0} MiB; limit {InputLimits.MaxTforgeFileBytes / 1048576} MiB");
             try { var bytes = ProjectService.PersistBytes(project); Line($"PersistBytes (the worker's reply, embedded .gp snapshot): ok, {bytes.Length:N0} bytes compressed"); }
-            catch (InvalidDataException ex) { Line($"PersistBytes: {ex.Message}"); }
+            catch (InvalidDataException ex) { Line($"PersistBytes: {ex.Message}"); } // Not logged: diagnostic probe: the failure goes to its report, not errors.log
         }
         using (var self = Process.GetCurrentProcess())
             Line($"this process: peak working set {self.PeakWorkingSet64 / 1048576.0:0} MiB, private bytes {self.PrivateMemorySize64 / 1048576.0:0} MiB, managed heap {GC.GetTotalMemory(false) / 1048576.0:0} MiB");

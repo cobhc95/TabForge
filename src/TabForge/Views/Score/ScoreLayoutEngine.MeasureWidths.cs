@@ -8,6 +8,9 @@ using TabForge.Services;
 
 namespace TabForge.Views.Score;
 
+// Owns: the natural width of a measure: each beat's room for glyphs, accidentals, ghost brackets, beat text and grace notes.
+// Does not own: the layout pass that places the measures (ScoreLayoutEngine.cs) and the drawing.
+// Tests: listed in docs/feature-map/editing-and-notation.md.
 internal sealed partial class ScoreLayoutEngine
 {
     internal double NaturalMeasureWidth(TrackModel track, MeasureModel measure, int measureIndex,

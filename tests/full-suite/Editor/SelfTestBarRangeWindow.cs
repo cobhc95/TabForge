@@ -47,7 +47,7 @@ public static partial class SelfTest
 
     private static bool BrwNoteAt(SongProject p, int track, int bar) => bar < p.Tracks[track].Measures.Count && p.Tracks[track].Measures[bar].Cells.Any(c => c.Notes.Count > 0);
 
-    private static void TestBarRangeGapsInWindow() => RunInWindowFixture((window, context) =>
+    private static void CheckBarRangeGapsInWindow() => RunInWindowFixture((window, context) =>
     {
         var settings = LtField<AppSettingsStore>(window, "_settingsStore")!.Settings;
         var arrangement = LtField<ArrangementPanel>(window, "Arrangement")!;

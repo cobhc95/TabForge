@@ -22,7 +22,8 @@ namespace TabForge;
 //     with the song's invariants checked after every action. A broken invariant is recorded (seed, step, last 15 actions) and
 //     the run continues; one check per invariant reports the count and the shortest repro.
 // Does not own: the input helpers (WorkflowKit.cs), product fixes.
-// Tests: TestWorkflowMonkey (--areas workflow; --monkey-seeds N and --monkey-actions N scale it).
+// Tests: TestWorkflowMonkey (--areas workflow; default 8 seeds, TABFORGE_MONKEY_FULL=1 runs all 20; --monkey-seeds N,
+//     --monkey-first N and --monkey-actions N override both).
 public static partial class SelfTest
 {
     private sealed record MonkeyFailure(int Seed, int Step, string Song, string Detail, string[] Recent) { public int Count; }
@@ -37,7 +38,10 @@ public static partial class SelfTest
 
     private static void TestWorkflowMonkey()
     {
-        var seeds = MonkeyArg("--monkey-seeds", 20);
+        // The checkpoint default is 8 seeds (about 4 minutes); TABFORGE_MONKEY_FULL=1 (the weekly CI job sets it) runs all 20.
+        var full = Environment.GetEnvironmentVariable("TABFORGE_MONKEY_FULL") == "1";
+        var first = MonkeyArg("--monkey-first", 1);
+        var seeds = MonkeyArg("--monkey-seeds", full ? 20 : 8);
         var actions = MonkeyArg("--monkey-actions", 1300);
         var failures = new Dictionary<string, MonkeyFailure>(StringComparer.Ordinal);
         var total = 0;
@@ -45,11 +49,13 @@ public static partial class SelfTest
         var scratch = SmScratch();
         try
         {
-            for (var seed = MonkeyArg("--monkey-first", 1); seed <= seeds; seed++)
+            for (var seed = first; seed <= seeds; seed++)
                 total += MonkeyRun(seed, actions, seed % 3 == 0, failures, scratch);   // every third seed edits the demo song (about 4x slower per action)
         }
         finally { SmClean(scratch); }
-        Log.Add($"  info  workflow monkey: {seeds} seeds x {actions} actions = {total} actions in {watch.Elapsed.TotalSeconds:0} s, {failures.Values.Sum(f => f.Count)} failures, {failures.Count} distinct invariants broken");
+        var ran = Math.Max(0, seeds - first + 1);
+        var howToRunAll = full ? "" : "; TABFORGE_MONKEY_FULL=1 runs all 20 seeds";
+        Log.Add($"  info  workflow monkey: {ran} seeds ({first} to {seeds}) x {actions} actions = {total} actions in {watch.Elapsed.TotalSeconds:0} s, {failures.Values.Sum(f => f.Count)} failures, {failures.Count} distinct invariants broken{howToRunAll}");
         foreach (var (invariant, f) in failures.OrderByDescending(kv => kv.Value.Count))
             Check($"workflow monkey: {invariant}", false,
                 $"{f.Count} times; shortest repro seed {f.Seed} ({f.Song}) step {f.Step}: {f.Detail}; last actions: {string.Join(" > ", f.Recent)}");

@@ -10,7 +10,7 @@ using EP = TabForge.AudioEngine.Plugins;
 namespace TabForge;
 
 /// <summary>
-/// Engine lifecycle tests that need no device (audit 2026-09-29 T-01): the real engine code driven in process through the
+/// Engine lifecycle tests that need no device: the real engine code driven in process through the
 /// headless harness and the null output. Device reconfigure (R-01), clip churn under streaming (R-02), several producers on
 /// the MIDI ring (R-03) and engine-exit cleanup on the UI thread (R-04). Part of <see cref="SelfTest"/>.
 /// </summary>
@@ -80,7 +80,7 @@ public static partial class SelfTest
             while (!Volatile.Read(ref stop))
             {
                 try { client.Write(new TimedMidi { Timestamp = writes, Slot = 0, Status = 0x80 }); writes++; }
-                catch (Exception ex) { if (Interlocked.Increment(ref writerErrors) == 1) firstError = $"{ex.GetType().Name}: {ex.Message}"; }
+                catch (Exception ex) { if (Interlocked.Increment(ref writerErrors) == 1) firstError = $"{ex.GetType().Name}: {ex.Message}"; } // Not logged: self-test harness: the failure is recorded as a check result
             }
         }) { IsBackground = true, Name = "selftest scheduler writer" };
         var untouchedOffUi = true;
@@ -123,7 +123,7 @@ public static partial class SelfTest
             {
                 foreach (var (work, done) in _work.GetConsumingEnumerable())
                 {
-                    try { done.SetResult(work()); } catch (Exception ex) { done.SetException(ex); }
+                    try { done.SetResult(work()); } catch (Exception ex) { done.SetException(ex); } // Not logged: self-test harness: the failure is recorded as a check result
                 }
             }) { IsBackground = true, Name = "selftest audio callback" };
             _thread.Start();
@@ -241,7 +241,7 @@ public static partial class SelfTest
             EH.Detach();
             SettleDisk();
             shared.Dispose();
-            try { File.Delete(wav); } catch (IOException) { }
+            try { File.Delete(wav); } catch (IOException) { } // Not logged: test cleanup of a temporary file.
         }
     }
 
@@ -287,7 +287,7 @@ public static partial class SelfTest
             Check("owners: with song two also playing (at 0 s) both songs are heard at once, each at its own position", both0 > 0.01f && both1 > 0.01f, $"two {both0:0.####}, one {both1:0.####}");
 
             EH.SetPlaying(2, false, 0.0);
-            Thread.Sleep(700);   // the meter holds its last peak for a moment
+            Poll.Until(() => { EH.Collect(); return shared.Peak(1) < 0.002f; }, 700, 2);   // the meter holds its last peak for a moment
             var oneAfter = Heard(0);
             var twoAfter = Silent(1);
             Check("owners: stopping song two leaves song one playing and silences only song two", oneAfter > 0.01f && twoAfter < 0.002f, $"one {oneAfter:0.####}, two {twoAfter:0.####}");
@@ -300,7 +300,7 @@ public static partial class SelfTest
             EH.Detach();
             SettleDisk();
             shared.Dispose();
-            try { File.Delete(wav); } catch (IOException) { }
+            try { File.Delete(wav); } catch (IOException) { } // Not logged: test cleanup of a temporary file.
         }
     }
 
@@ -357,7 +357,7 @@ public static partial class SelfTest
         finally { client.SentForTest = null; client.Stop(); }
     }
 
-    /// <summary>Audit 2 C9: the disk thread parks with no players and wakes at the idle interval (not 1 ms) while clips sit stopped.</summary>
+    /// <summary>The disk thread parks with no players and wakes at the idle interval (not 1 ms) while clips sit stopped.</summary>
     private static void TestDiskStreamerIdle()
     {
         var shared = SharedBlock.Create($"tf-selftest-{Guid.NewGuid():N}");
@@ -395,7 +395,7 @@ public static partial class SelfTest
             EH.Detach();
             SettleDisk();
             shared.Dispose();
-            try { File.Delete(wav); } catch (IOException) { }
+            try { File.Delete(wav); } catch (IOException) { } // Not logged: test cleanup of a temporary file.
         }
     }
 
@@ -440,7 +440,7 @@ public static partial class SelfTest
             EH.Detach();
             SettleDisk();
             shared.Dispose();
-            foreach (var f in new[] { wavA, wavB }) { try { File.Delete(f); } catch (IOException) { } }
+            foreach (var f in new[] { wavA, wavB }) { try { File.Delete(f); } catch (IOException) { } } // Not logged: test cleanup of temporary files.
         }
     }
 
@@ -479,7 +479,7 @@ public static partial class SelfTest
             EH.Detach();
             SettleDisk();
             shared.Dispose();
-            try { File.Delete(wav); } catch (IOException) { }
+            try { File.Delete(wav); } catch (IOException) { } // Not logged: test cleanup of a temporary file.
         }
     }
 }

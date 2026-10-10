@@ -99,7 +99,7 @@ public static partial class SelfTest
             BarRangeFlow.Route(true, true, false, range, "Ctrl+Delete") == "Range.Remove" && BarRangeFlow.Route(false, true, false, range, "Ctrl+Delete") is null
             && BarRangeFlow.Route(true, false, false, range, "Delete") == "Range.Delete" && BarRangeFlow.Route(true, true, true, range, "Delete") is null);
 
-        TestBarRangeGapsInWindow();
+        CheckBarRangeGapsInWindow();
         TestReusableBarRangePrompt();
     }
 }

@@ -48,7 +48,7 @@ public static partial class SelfTest
         Check("piled-up marks stack without overlapping", found.Count == 0, string.Join("; ", found.Take(3).Select(c => c.ToString())));
     }
 
-    // Corpus crash (Audit 7): a voice-2 hammer-on looked its neighbours up in voice 1's cell list, so a second voice
+    // A hammer-on looks its neighbours up in the cell list of its own voice, so a second voice
     // with more cells than the first threw ArgumentOutOfRange while drawing (the editor crashed on opening the song).
     private static void TestVoice2HopoSlurWithLongerVoice()
     {

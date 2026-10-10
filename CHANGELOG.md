@@ -2,6 +2,50 @@
 
 TabForge is actively developed; please report anything odd on the Issues page.
 
+## 0.7.0
+
+### Video
+
+- File > Export > Video (MP4) exports the song as a video that plays itself, with the full audio mix. Choose the range (whole song, selection, bars or a section), the layout (one track with its fretboard, keyboard or drums; score only; Band view; or score and Band view), the tracks, dark or light, 1080p or 4K and 30, 60 or 120 frames per second. Also reachable from the Render window.
+- The export progress bar runs 0 to 100% over the audio render and the frames, and shows the phase and time left.
+- The score-only layout exports about twice as fast.
+- Exported frames no longer change with the display scale, and Band layouts give the same frames on every machine.
+- Experimental encoder options (hardware, fast export, low latency) are off by default.
+- Record video (camera icon in the title bar, left of the Settings gear; Ctrl+Alt+V; also Sound > Record video) plays the song and records the chosen part of the screen (score, Band view, whole window, or score with instrument) and everything you hear to an MP4 at 1080p or 4K, 30, 60 or 120 fps.
+- A red REC time shows in the status bar while recording; stopping saves the file in Videos\TabForge and offers to open the folder. The button shows a red dot while recording.
+- The whole window is recorded by default, scaled whole into the frame. A portrait region records a portrait 1080x1920 or 2160x3840 video.
+- Recorded sound is at the song's nominal playback level on every driver, clean, with a safety limiter against clipping.
+
+### Keyboard mode (experimental)
+
+- View > Keyboard mode (experimental), Ctrl+Alt+L or the toolbar button next to Band view shows the selected track, whatever its kind, as notes falling onto a piano keyboard in time with playback (tempo, speed and loop followed). It switches the layout like Band mode and puts it back when turned off.
+- A real piano keyboard with true key proportions and black-key positions, more octaves, and lit keys that glow only inside their own outline.
+- Longer note bars by default (4 s ahead), with zoom from the bar, Ctrl + mouse wheel, or Ctrl+Alt+Plus / Minus. Look-ahead and size are also in Settings > Fretboard.
+- Hand colours, note names and finger numbers. A hand detection engine decides which notes the left and right hand play, for any track and without settings.
+- Play along with a MIDI keyboard: a MIDI input menu defaults to Any available device and shows a connected dot. The selected track is silenced and your keys play its sound live; its mute is never changed.
+- Correct notes are marked green with a check and wrong ones red with a cross, with a large accuracy figure, streak and progress line.
+- A timing tolerance setting (Strict, Normal, Relaxed; Relaxed by default).
+- Wait for me (Ctrl+Alt+W) pauses the song at each chord until its notes are pressed, in any order and over any time, ignores wrong keys, and has a Skip button (Ctrl+Alt+Q). Changing it, speed, hands or loop does not change whether the song is playing.
+- Speed, loop and hands controls sit in a control bar in the pane.
+- Pop out (Ctrl+Alt+O) shows the falling notes in their own window with a small control strip; F11 toggles full screen and Esc leaves it.
+
+### Band view
+
+- The right-click menu is grouped like the score's menus, with a Row sizes submenu; the playhead line is set in Settings.
+- A lane whose bar holds no notes draws its playing line at the same place as the other lanes.
+
+### Playback and audio
+
+- Moving things stay sharp at every display scale: the score playhead, the timeline playhead and a dragged Band row are drawn on whole screen pixels.
+- Playback of an audio clip starts at once when the machine is busy.
+- The command palette runs the clip commands (copy, cut, split, nudge...) on the selected clip.
+
+### Fixes
+
+- At narrow window widths, zoom stays reachable: Record video steps out of the toolbar before the zoom buttons do.
+- The fretboard preview no longer flashes a short movement line between notes of a repeated chord.
+- Swallowed errors are recorded in errors.log in the diagnostics folder, with the previous file kept as errors.1.log.
+
 ## 0.6.2 — 2026-10-09
 
 - Hovering a track row in the track list shows a subtle hover shade; the selected track keeps its stronger highlight.

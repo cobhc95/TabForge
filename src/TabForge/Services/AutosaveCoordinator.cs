@@ -248,7 +248,7 @@ public sealed class AutosaveRunner
                 // Saved (or never changed): no copy needed. Project.IsDirty is the cheap flag; no content hash on the UI thread.
                 if (!doc.Project.IsDirty) { state.MarkSaved(); continue; }
                 try { jobs.Add(new Job(doc, state, doc.Undo.Snapshot(doc.Project).State, doc.DisplayName)); }
-                catch (Exception ex) { captureError ??= ex; Debug.WriteLine($"Autosave capture failed for {doc.DisplayName}: {ex}"); }
+                catch (Exception ex) { captureError ??= ex; Trace.Error(Trace.Ui, "autosave: capture: " + ex.Message); Debug.WriteLine($"Autosave capture failed for {doc.DisplayName}: {ex}"); }
             }
             LastCaptureMs = watch.Elapsed.TotalMilliseconds;
             if (jobs.Count == 0 && captureError is null)
@@ -282,6 +282,7 @@ public sealed class AutosaveRunner
         }
         catch (Exception ex)
         {
+            Trace.Error(Trace.Ui, "autosave: pass: " + ex.Message);
             Debug.WriteLine($"Autosave pass failed: {ex}");
             Health.Failed(clock(), ex);
             return null;
@@ -323,6 +324,7 @@ public sealed class AutosaveRunner
         }
         catch (Exception ex)
         {
+            Trace.Error(Trace.Ui, "autosave: copy: " + ex.Message);
             Debug.WriteLine($"Autosave copy failed: {ex.Message}");
             return (Outcome.Failed, ex);
         }

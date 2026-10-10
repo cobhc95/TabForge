@@ -105,8 +105,8 @@ public static class NightPluginApproval
                     foreach (var entry in Directory.EnumerateFileSystemEntries(place, "FabFilter *.vst3"))
                         Add(entry);
             }
-            catch (IOException) { }
-            catch (UnauthorizedAccessException) { }
+            catch (IOException ex) { Services.Trace.Error(Services.Trace.Engine, "plug-in approval: scan folder: " + ex.Message); }
+            catch (UnauthorizedAccessException ex) { Services.Trace.Error(Services.Trace.Engine, "plug-in approval: scan folder: " + ex.Message); }
         }
 
         // REAPER's bundled FX: the VST DLLs in Plugins\FX of the install (not the reaper_*.dll extensions, not ReaPlugs).
@@ -141,13 +141,13 @@ public static class NightPluginApproval
                 if (File.Exists(nested) || (file is null && Directory.Exists(nested))) return nested;
             }
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { } // Not logged: optional file probe in a loop.
         return null;
     }
 
     private static IEnumerable<string> SafeFiles(string folder)
     {
         try { return Directory.Exists(folder) ? Directory.EnumerateFiles(folder, "*.dll").OrderBy(f => f, StringComparer.OrdinalIgnoreCase).ToList() : new List<string>(); }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return new List<string>(); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { Services.Trace.Error(Services.Trace.Engine, "night approval: list folder: " + ex.Message); return new List<string>(); }
     }
 }

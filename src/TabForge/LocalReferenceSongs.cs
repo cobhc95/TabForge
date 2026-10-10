@@ -47,7 +47,7 @@ internal static class LocalReferenceSongs
                 if (!File.Exists(map)) continue;
                 Dictionary<string, string>? parsed = null;
                 try { parsed = JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(map)); }
-                catch { /* unreadable map: treat as missing */ }
+                catch  { Services.Trace.Error(Services.Trace.Import, "reference songs: unreadable map: failed"); /* unreadable map: treat as missing */ }
                 if (parsed is null) continue;
                 var found = false;
                 foreach (var pair in parsed)

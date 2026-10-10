@@ -6,6 +6,10 @@ using TabForge.Visualization;
 
 namespace TabForge.Diagnostics;
 
+// Owns: the `--render-fretboard` command: reads its size and key=value options (track, now, scale, strength, style, colour, spacing, view) and writes the instrument panel to a PNG off-screen.
+// Does not own: the instrument panel itself (Views/InstrumentPanel*.cs).
+// Tests: no named test.
+
 internal static partial class DiagnosticCommands
 {
     /// <summary>

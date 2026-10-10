@@ -12,7 +12,7 @@ namespace TabForge.Services;
 // Does not own: the rest of the project file (ProjectService).
 // Tests: TestProjectRoundtrip.
 /// <summary>
-/// R5 metadata safety. A .gp written by TabForge carries its whole project in one extra zip entry. Guitar Pro drops entries it does not know,
+/// Metadata safety. A score file written by TabForge carries its whole project in one extra zip entry. The score format drops entries it does not know,
 /// but another program may keep them while editing the score: the embedded project would then be older than the score and, because it wins on
 /// open, would silently replace the newer music. The binding is a small record next to the project: the SHA-256 of the score part
 /// (Content/score.gpif) and of the project bytes it was saved with.
@@ -42,7 +42,7 @@ internal static class EmbeddedBinding
     {
         ZipArchiveEntry? entry;
         try { entry = zip.GetEntry(GuitarProExporter.EmbeddedBindingEntry); }
-        catch (InvalidDataException) { return "the data is damaged or invalid"; }
+        catch (InvalidDataException ex) { Services.Trace.Error(Services.Trace.Import, "embedded binding: read: " + ex.Message); return "the data is damaged or invalid"; }
         if (entry is null) return null;
         Record? record;
         try
@@ -51,7 +51,7 @@ internal static class EmbeddedBinding
             using var stream = entry.Open();
             record = JsonSerializer.Deserialize<Record>(stream, new JsonSerializerOptions { MaxDepth = 4 });
         }
-        catch (Exception ex) when (ex is JsonException or InvalidDataException or IOException) { return "the data is damaged or invalid"; }
+        catch (Exception ex) when (ex is JsonException or InvalidDataException or IOException) { return "the data is damaged or invalid"; } // Not logged: damaged binding: the reason is returned to the caller
         if (record is null || record.Version != Version) return "it was saved by a newer or unknown version of TabForge";
         if (!string.Equals(record.ProjectSha256, Convert.ToHexString(SHA256.HashData(projectBytes)), StringComparison.OrdinalIgnoreCase)) return "the data is damaged or invalid";
         var score = FindScore(zip);
@@ -70,13 +70,13 @@ internal static class EmbeddedBinding
             }
             return string.Equals(Convert.ToHexString(hash.GetHashAndReset()), record.ScoreSha256, StringComparison.OrdinalIgnoreCase) ? null : StaleReason;
         }
-        catch (Exception ex) when (ex is InvalidDataException or IOException) { return StaleReason; }
+        catch (Exception ex) when (ex is InvalidDataException or IOException) { Services.Trace.Error(Services.Trace.Import, "embedded binding: verify: " + ex.Message); return StaleReason; }
     }
 
     private static ZipArchiveEntry? FindScore(ZipArchive zip)
     {
         try { return zip.Entries.FirstOrDefault(e => e.FullName.Equals(GuitarProExporter.ScoreEntry, StringComparison.OrdinalIgnoreCase)); }
-        catch (InvalidDataException) { return null; }
+        catch (InvalidDataException) { return null; } // Not logged: entry lookup: null means not present
     }
 
     /// <summary>
@@ -98,6 +98,6 @@ internal static class EmbeddedBinding
             var expected = Math.Max(1, project.Tracks.Count == 0 ? 1 : project.Tracks.Max(t => t.Measures.Count));
             return bars > 0 && bars != expected;
         }
-        catch (Exception ex) when (ex is XmlException or InvalidDataException or IOException) { return false; }
+        catch (Exception ex) when (ex is XmlException or InvalidDataException or IOException) { Services.Trace.Error(Services.Trace.Import, "embedded binding: bar count: " + ex.Message); return false; }
     }
 }

@@ -14,6 +14,9 @@ namespace TabForge.Diagnostics;
 // through its real handler (on a temporary copy of the song), and records whether the song, the view or
 // the settings changed, which dialog or message appeared, and whether Undo restores an edit. Dialogs are
 // photographed and cancelled; Windows file/print dialogs and message boxes are closed automatically.
+// Owns: the --probe-menus check: every main-menu item clicked on a temporary copy of the song, with what changed and which dialog appeared.
+// Does not own: the menus (MainWindow.xaml) and the dialogs it photographs.
+// Tests: listed in docs/DEBUGGING.md (--probe-menus).
 internal sealed partial class WindowProbes : MainWindow.ProbeAccess
 {
     // Exit would close the app; Check for updates would contact GitHub (tested headlessly without network).
@@ -105,7 +108,7 @@ internal sealed partial class WindowProbes : MainWindow.ProbeAccess
                         item.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent, item));
                         await Task.Delay(450);
                     }
-                    catch (Exception ex) { error = ex.GetBaseException().Message; }
+                    catch (Exception ex) { error = ex.GetBaseException().Message; } // Not logged: diagnostic probe: the failure goes to its report, not errors.log
 
                     var projectAfter = Convert.ToHexString(ProjectService.ContentHash(_project));
                     var effects = new List<string>();
@@ -140,7 +143,7 @@ internal sealed partial class WindowProbes : MainWindow.ProbeAccess
                 }
                 report.Insert(0, $"{paths.Count} menu items: {ok} did something, {noEffect} no visible effect, {failed} errors\n");
             }
-            catch (Exception ex) { report.AppendLine($"probe failed: {ex}"); }
+            catch (Exception ex) { report.AppendLine($"probe failed: {ex}"); } // Not logged: diagnostic probe: the failure goes to its report, not errors.log
             finally
             {
                 closer.Stop();
@@ -202,7 +205,7 @@ internal sealed partial class WindowProbes : MainWindow.ProbeAccess
             using var stream = File.Create(file);
             encoder.Save(stream);
         }
-        catch (Exception ex) when (ex is IOException or InvalidOperationException) { }
+        catch (Exception ex) when (ex is IOException or InvalidOperationException) { Services.Trace.Error(Services.Trace.Ui, "capture: save image: " + ex.Message); }
     }
 
     // ---- native dialogs (file pickers, print, MessageBox): note their title and text, then cancel them ----

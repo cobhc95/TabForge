@@ -70,7 +70,7 @@ internal static class WindowsMidiLatency
             if (median is < MinPlausibleMs or > MaxPlausibleMs) return (null, $"implausible reading {median:0.0} ms (expected {MinPlausibleMs}-{MaxPlausibleMs} ms); not stored");
             return (median, $"{results.Count} trial(s): {string.Join(", ", results.Select(r => r.ToString("0.0")))} ms; median {median:0.0} ms");
         }
-        catch (Exception ex) when (ex is System.Runtime.InteropServices.COMException or InvalidOperationException or ArgumentException or NotSupportedException)
+        catch (Exception ex) when (ex is System.Runtime.InteropServices.COMException or InvalidOperationException or ArgumentException or NotSupportedException) // Not logged: probe: the message is returned to the caller
         {
             return (null, ex.Message);
         }

@@ -600,7 +600,7 @@ public static partial class SelfTest
                 var missing = frettedNotes.Count(n => n.MidiValue <= 0);
                 Check($"{name}: every fretted note has a midi pitch", missing == 0,
                     $"{missing} of {frettedNotes.Count} notes lack a pitch");
-                TestImportedNotationLayouts(name, project);
+                CheckImportedNotationLayouts(name, project);
 
                 // The redesign must not regress the document semantics: round-trip and play it.
                 var restored = ProjectService.Restore(ProjectService.Snapshot(project));

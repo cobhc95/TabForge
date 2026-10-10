@@ -11,8 +11,8 @@ using TabForge.Visualization;
 namespace TabForge;
 
 /// <summary>
-/// WP-4 (engineering audit 2026-09-29): one settings store shared by every window (R-09), one explicit owner of a warm
-/// audio engine (R-10) and per-control text DPI (A-03). All UI-free: no window, no engine process.
+/// Settings store shared by every window, one explicit owner of a warm
+/// audio engine and per-control text DPI. All UI-free: no window, no engine process.
 /// </summary>
 public static partial class SelfTest
 {
@@ -226,7 +226,7 @@ public static partial class SelfTest
     }
 
     /// <summary>
-    /// Multi-tab playback (beta.4): two open songs play through the engine at once. Focusing the second tab keeps the first one's
+    /// Multi-tab playback: two open songs play through the engine at once. Focusing the second tab keeps the first one's
     /// tracks live on their own slots, both songs' notes reach the engine, and stopping one silences only its own slots.
     /// </summary>
     private static void TestEngineMultiTabPlayback()
@@ -328,7 +328,7 @@ public static partial class SelfTest
         }
     }
 
-    /// <summary>A-03: text is shaped for the DPI of the control drawing it (a nested scope), not one app-wide value.</summary>
+    /// <summary>Text is shaped for the DPI of the control drawing it (a nested scope), not one app-wide value.</summary>
     private static void TestPerControlTextDpi()
     {
         var brush = Draw.Solid(Colors.White);

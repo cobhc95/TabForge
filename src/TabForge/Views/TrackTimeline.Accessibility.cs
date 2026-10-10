@@ -5,7 +5,11 @@ using System.Windows.Automation.Provider;
 
 namespace TabForge.Views;
 
-// TrackTimeline: accessibility. The timeline exposes its extent (bars, tracks, clips) and the selected bar / track.
+// Owns: the timeline's accessibility: its one-sentence description (DescribeTimeline) and the timeline's automation peer
+//   (TimelinePeer, value provider).
+// Does not own: the arrangement's description (ArrangementPanel.Accessibility.cs).
+// Tests: no named test.
+
 internal sealed partial class TrackTimeline
 {
     internal string DescribeTimeline()

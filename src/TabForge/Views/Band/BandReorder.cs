@@ -4,6 +4,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
+using TabForge.Views.Rendering;
 
 namespace TabForge.Views.Band;
 
@@ -87,6 +88,9 @@ internal sealed class BandReorder
         _started = false;
     }
 
+    /// <summary>The texture a held row is moved as: composited on whole device pixels, with ClearType text, so a fractional move or glide does not resample it.</summary>
+    internal static BitmapCache DragCache(double pixelsPerDip) => new(pixelsPerDip) { EnableClearType = true, SnapsToDevicePixels = true };
+
     /// <summary>The pointer moved to <paramref name="y"/> (stack coordinates); the held row follows and the others make room.</summary>
     internal void Move(double y)
     {
@@ -99,7 +103,7 @@ internal sealed class BandReorder
         var total = _tops[^1] + _pitch[^1];
         var top = Math.Clamp(y - _grab, 0, Math.Max(0, total - _pitch[_from]));
         _row.Shift.BeginAnimation(TranslateTransform.YProperty, null);
-        _row.Shift.Y = top - _tops[_from];
+        _row.Shift.Y = PixelSnap.Snap(top - _tops[_from], PixelSnap.Dpi(_row!));
         var target = BandLayoutState.DropIndex(_pitch, _from, top);
         if (target == _target) return;
         _target = target;
@@ -155,7 +159,7 @@ internal sealed class BandReorder
         _started = true;
         _autoScroll.Start();
         foreach (var r in rows) r.Shift.BeginAnimation(TranslateTransform.YProperty, null);
-        _row!.CacheMode = new BitmapCache(VisualTreeHelper.GetDpi(_row!).PixelsPerDip);
+        _row!.CacheMode = DragCache(PixelSnap.Dpi(_row!));
         Panel.SetZIndex(_row, 1);
     }
 

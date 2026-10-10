@@ -8,8 +8,11 @@ using TabForge.Services;
 
 namespace TabForge.Views;
 
-// ArrangementPanel: the Add-track lane forwarders (AddLaneController owns the lane) and the audio-track row parts
-// (waveform label instead of the instrument picker, the row's right-click menu with "Convert to instrument track").
+// Owns: the track list's half of the Add-track row: its clicks, hot and drag state, the host adapter (IAddLaneHost) and the audio-
+//   track row menu.
+// Does not own: the lane controller (AddLaneController.cs) and the timeline's half of the lane (TrackTimeline.AddLane.cs).
+// Tests: TestAddTrackLane, TestAddTrackMenu.
+
 public sealed partial class ArrangementPanel : IAddLaneHost
 {
     /// <summary>The Add-track lane was clicked (either half): the host asks Audio or Instrument.</summary>

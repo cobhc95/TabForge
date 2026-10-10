@@ -625,10 +625,8 @@ public static class MusicXmlExportService
         if (first && cell.Tenuto) articulations.Add("tenuto");
         if (t is not null && !isChord)
         {
-            if (t.Contains("SlideInBelow")) articulations.Add("scoop");
-            if (t.Contains("SlideInAbove")) articulations.Add("plop");
-            if (t.Contains("SlideOutUp")) articulations.Add("doit");
-            if (t.Contains("SlideOutDown")) articulations.Add("falloff");
+            foreach (var row in TechniqueInfo.MusicXmlArticulations)
+                if (t.Contains(row.Name)) articulations.Add(row.MusicXmlArticulation);
         }
         if (articulations.Count > 0)
             notations.Add(() =>

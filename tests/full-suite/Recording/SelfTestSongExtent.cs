@@ -10,7 +10,7 @@ public static partial class SelfTest
 {
     private static void TestSongExtent()
     {
-        TestSongExtentMeasureCache();
+        CheckSongExtentMeasureCache();
 
         // 12 bars of 4/4 at 120 = 2 s per bar = 24 s.
         var song = DropSong();
@@ -75,7 +75,7 @@ public static partial class SelfTest
         Check("extent: no clip ending and no tracks are harmless", SongExtent.EnsureCovers(new SongProject(), 50).BarsAdded == 0 && SongExtent.EnsureCovers(DropSong(), 0).BarsAdded == 0);
     }
 
-    private static void TestSongExtentMeasureCache()
+    private static void CheckSongExtentMeasureCache()
     {
         var clips = DropSong(3, 2);
         var clip = MoveClip("cached", 0, 1, 0);

@@ -46,6 +46,29 @@ public static partial class SelfTest
         return "";
     }
 
+    private static void TestBandEmptyBarLine()
+    {
+        // A lane whose bar holds no notes has no spacing of its own: its line stands where the lanes with notes put it.
+        var project = BandUnevenSong(12);
+        foreach (var measure in project.Tracks[2].Measures.Skip(3).Take(3))
+            foreach (var cell in measure.Cells) cell.Notes.Clear();
+        var host = new FakeBandHost(project);
+        host.Settings.Timeline.Band = new BandSettings();
+        using var band = new BandViewController(host);
+        BandStage(band, 1000, 900);
+        band.Tick();
+        BandStage(band, 1000, 900);
+        var lanes = band.View.Rows.Select(r => r.Lane).ToList();
+        var bad = "";
+        for (var bar = 3; bar < 6; bar++)
+        {
+            band.Apply(bar, 0.4, bar * 2000.0, true, false);
+            var gap = Math.Abs(lanes[2].PlayheadAtLane.X - lanes[0].PlayheadAtLane.X);
+            if (lanes[2].BarHasNotes(bar) || gap > 1.5) { bad = $"bar {bar}: empty lane x {lanes[2].PlayheadAtLane.X:0.0} vs {lanes[0].PlayheadAtLane.X:0.0}"; break; }
+        }
+        Check("band lanes: a lane with an empty bar draws its line at the same x as the lanes with notes", bad == "", bad);
+    }
+
     private static void TestBandLanesInSync()
     {
         var project = BandUnevenSong(150);

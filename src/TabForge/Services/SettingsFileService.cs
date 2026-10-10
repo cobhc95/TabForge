@@ -25,10 +25,6 @@ public static class SettingsFileService
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
     };
 
-    private static readonly HashSet<string> DockPanelIds = new(StringComparer.Ordinal)
-    {
-        "instrument", "timeline", "tools", "structure", "rhythm", "layout", "sections", "practice", "playback", "band"
-    };
 
     public static AppSettings Load(string path)
     {
@@ -118,10 +114,11 @@ public static class SettingsFileService
 
     internal static bool NormalizeWorkspace(DockWorkspaceState workspace)
     {
+        if (!KeyboardMode.KeyboardModeLayoutSwap.Sanitise(workspace)) return false;   // the Keyboard mode pane is never part of a saved layout
         if (workspace.Version != 1 || workspace.Floating is null || workspace.ClosedPanels is null ||
             workspace.Floating.Count > InputLimits.MaxWorkspaceFloatingWindows ||
             workspace.ClosedPanels.Count > InputLimits.MaxWorkspaceClosedPanels ||
-            workspace.ClosedPanels.Any(id => !DockPanelIds.Contains(id))) return false;
+            workspace.ClosedPanels.Any(id => !DockPaneTable.IsSavedId(id))) return false;
 
         var nodes = 0;
         var hosts = new HashSet<string>(StringComparer.Ordinal);
@@ -160,7 +157,7 @@ public static class SettingsFileService
         else if (node.Kind == "tabs")
         {
             if (node.First is not null || node.Second is not null ||
-                node.Panels.Any(id => !DockPanelIds.Contains(id) || !panels.Add(id))) return false;
+                node.Panels.Any(id => !DockPaneTable.IsSavedId(id) || !panels.Add(id))) return false;
             if (node.SelectedPanel is not null && !node.Panels.Contains(node.SelectedPanel, StringComparer.Ordinal)) return false;
         }
         else if (node.Kind == "editor")

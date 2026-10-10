@@ -17,7 +17,12 @@ using TabForge.Visualization;
 
 namespace TabForge.Views;
 
-// TrackTimeline: measure and render (ruler, sections strip, rows, overlays, playhead), lane visuals and bar miniatures.
+// Owns: measure and render of the timeline: the ruler, section strip, track rows, lane visuals, the overlay layer and the
+//   playhead; the mute and solo dimming of silenced tracks; RenderCount for the render probe.
+// Does not own: the clip drawing (TrackTimeline.Clips.cs), the waveform (TrackTimeline.Waveform.cs) and the geometry
+//   (TimelineGeometry.cs).
+// Tests: TestAddTrackLane and TestTimelineHoverAndAudioRows (both read RenderCount).
+
 internal sealed partial class TrackTimeline
 {
     protected override Size MeasureOverride(Size availableSize)
@@ -41,7 +46,7 @@ internal sealed partial class TrackTimeline
         RenderCount++;
         ValidateActivityCache();   // tracks added, removed or reordered since the last bind: the bar-cell cache follows the track list
         try { RenderGuard.Inject("TrackTimeline"); RenderCore(dc); }
-        catch (Exception ex) when (RenderGuard.Contain(ex, "TrackTimeline", dc, ActualWidth, ActualHeight)) { }
+        catch (Exception ex) when (RenderGuard.Contain(ex, "TrackTimeline", dc, ActualWidth, ActualHeight)) { } // Not logged: render path: runs per frame.
     }
 
     private void RenderCore(DrawingContext dc)
@@ -49,7 +54,7 @@ internal sealed partial class TrackTimeline
 #if DEBUG
         using var performance = RenderPerformance.Measure(RenderPerformance.PerformanceCategory.Arrangement);
 #endif
-        using var dpiScope = Draw.UseDpi(this);   // A-03: text shaped for this window's monitor
+        using var dpiScope = Draw.UseDpi(this);   // Text shaped for this window's monitor
         var project = Project;
         var width = Math.Max(ActualWidth, TotalWidth);
         var height = ActualHeight;

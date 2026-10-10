@@ -42,6 +42,6 @@ internal sealed class ConvertToInstrumentFlow
 
     private static Color ColourOf(TrackModel track)
     {
-        try { return (Color)ColorConverter.ConvertFromString(track.ColorHex); } catch { return Colors.SteelBlue; }
+        try { return (Color)ColorConverter.ConvertFromString(track.ColorHex); } catch { return Colors.SteelBlue; } // Not logged: colour fallback for a missing swatch
     }
 }

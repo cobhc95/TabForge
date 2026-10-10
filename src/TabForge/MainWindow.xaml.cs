@@ -26,6 +26,9 @@ using TabForge.Visualization;
 
 namespace TabForge;
 
+// Owns: the window's constructor and start-up wiring: the controllers, background services and engine client it creates, plus the fretboard style, GPU layer caches and memory trim.
+// Does not own: the layout in MainWindow.xaml, and the controllers themselves.
+// Tests: listed in docs/feature-map/windows-tabs-and-documents.md.
 public partial class MainWindow : Window
 {
     private readonly DocumentManager _documents;
@@ -37,7 +40,6 @@ public partial class MainWindow : Window
     private readonly BackgroundServices _services;
     private readonly Audio.AudioEngineClient _engine;
     private readonly EngineSyncController _engineSync;
-    private bool _muteSoloFollowUp;
     private readonly TransportControlsController _transport;
     private readonly ClipEditController _clips;
     private readonly SectionEditFlow _sections;
@@ -49,11 +51,7 @@ public partial class MainWindow : Window
     // Loop state belongs to the song (DocumentSession); these forward to the active tab.
     private bool _loop { get => Doc.LoopEnabled; set => Doc.LoopEnabled = value; }
     private bool _mainWindowInitialized;
-    private UndoSnapshot? _sectionUndoSnapshot;
-    private UndoSnapshot? _trackUndoSnapshot;
-    private UndoController.UndoTransaction? _mixUndoTransaction;
-    private bool _mixUndoChanged;
-    private UndoController.UndoTransaction? _trackEditUndoTransaction;
+    private readonly ArrangementGestureState _gestures;
     private bool _previewNotes = true;
     // ---- keep-the-score-in-view ----
     private readonly ScoreFollowCoordinator _follow;
@@ -69,8 +67,6 @@ public partial class MainWindow : Window
     private int _playheadCell { get => Playback.PlayheadCell; set => Playback.PlayheadCell = value; }
     private double _playheadFraction { get => Playback.PlayheadFraction; set => Playback.PlayheadFraction = value; }
     private bool _isPlayingVisual { get => Playback.IsPlayingVisual; set => Playback.IsPlayingVisual = value; }
-    private MarkerModel? _playingSectionMarker;
-    private bool _syncingPlayingSectionSelection;
 
     // The engine reports ~60 times a second; the playback view applies the newest position once per rendered frame.
     private readonly PlaybackViewController _playbackView;
@@ -89,6 +85,7 @@ public partial class MainWindow : Window
 
     public MainWindow(Audio.AudioEngineClient engine, AppOptions? options = null)
     {
+        _gestures = new ArrangementGestureState(new ArrangementGestureHost(this));   // before InitializeComponent: the arrangement events read it
         _selLoop = new SelectionLoopController(this);   // before InitializeComponent: early handlers may read loop state
         _engine = engine;
         _options = options ?? new AppOptions();
@@ -100,6 +97,7 @@ public partial class MainWindow : Window
         _playbackView = new PlaybackViewController(new PlaybackViewHost(this));
         _tabTransfer = new TabTransferController(new TabTransferHost(this));
         InitializeComponent();
+        BuildMainMenuFromTable();   // the plain commands of MainWindow.xaml's menu skeleton, before anything reads the menus
         Arrangement.ViewOptions = _options.Visual;
         Arrangement.QuarantinedPlugins = () => _settings.Plugins.Quarantined;   // faulted FX icon on tracks whose plug-in crashed
         _follow = new ScoreFollowCoordinator(ScoreScroll, Editor, () => _isPlayingVisual, () => _midi.IsPaused,
@@ -224,7 +222,7 @@ public partial class MainWindow : Window
         Arrangement.MuteSoloChanged += (_, _) =>
         {
             CompleteTrackEditUndo();   // the undo step; the sound follows in ApplyMuteSolo
-            ApplyMuteSolo();
+            MixerHost.ApplyMuteSolo();
         };
         Arrangement.TrackColorChanged += (_, _) =>
         {
@@ -233,46 +231,28 @@ public partial class MainWindow : Window
         };
         Arrangement.TrackEditRequested += request =>
         {
-            var transaction = _undo.BeginTransaction(_project);
-            if (_trackController.ApplyEdit(_project, request))
-                _trackEditUndoTransaction = transaction;
-            else
-                _undo.Cancel(transaction);
+            _gestures.BeginTrackEdit(() => _trackController.ApplyEdit(_project, request));
         };
         Arrangement.InstrumentPreview += (track, name) => TabForge.Controllers.InstrumentLivePreview.Apply(_midi, track, name);
-        Arrangement.MixEditStarting += (_, _) =>
-        {
-            _mixUndoTransaction ??= _undo.BeginTransaction(_project);
-        };
+        Arrangement.MixEditStarting += (_, _) => _gestures.MixEditStarting();
         Arrangement.MixChanged += (_, _) =>
         {
-            if (_mixUndoTransaction is not null) _mixUndoChanged = true;
+            _gestures.MixChanged();
             if (Arrangement.InMuteSoloGesture) return;   // a group mute/solo: ApplyMuteSolo follows with the sound
             OnArrangementMixChanged();
             SyncAudioEngine(); // cheap: only changed levels are sent
         };
-        Arrangement.MixEditEnded += (_, _) =>
-        {
-            if (_mixUndoTransaction is not { } transaction) return;
-            if (_mixUndoChanged)
-            {
-                var capture = _undo.Commit(transaction);
-                if (capture.Stored) Playback.RememberBarMapping(capture.Snapshot);
-            }
-            else _undo.Cancel(transaction);
-            _mixUndoTransaction = null;
-            _mixUndoChanged = false;
-        };
+        Arrangement.MixEditEnded += (_, _) => _gestures.MixEditEnded();
         Arrangement.AddTrackRequested += (_, _) => AddTrackWithWindow();
         // Drag starts take the undo state before the drop edits the model (it only costs the bars changed since the last state).
-        Arrangement.TrackDragStarted += (_, _) => _trackUndoSnapshot = _undo.Snapshot(_project);
+        Arrangement.TrackDragStarted += (_, _) => _gestures.TrackDragStarted();
         Arrangement.TrackReordered += (_, move) => MoveTrackTo(move.from, move.to);
-        Arrangement.SectionDragStarted += (_, _) => _sectionUndoSnapshot = _undo.Snapshot(_project);
-        Arrangement.SectionDragCancelled += (_, _) => _sectionUndoSnapshot = null;
+        Arrangement.SectionDragStarted += (_, _) => _gestures.SectionDragStarted();
+        Arrangement.SectionDragCancelled += (_, _) => _gestures.SectionDragCancelled();
         Arrangement.SectionReordered += (_, move) => MoveSection(move.from, move.insertBefore);
         Arrangement.SectionContextRequested += (_, markerIndex) => ShowSectionContextMenu(markerIndex);
         // A resize edits markers live during the drag: the state is taken before the first change.
-        Arrangement.SectionResizeStarting += (_, _) => _sectionUndoSnapshot = _undo.Snapshot(_project);
+        Arrangement.SectionResizeStarting += (_, _) => _gestures.SectionDragStarted();
         Arrangement.SectionMarkerMoved += (_, move) =>
         {
             var sections = SectionLayout.Sorted(_project);
@@ -284,27 +264,26 @@ public partial class MainWindow : Window
         Arrangement.SectionLaneContextRequested += (_, at) => ShowSectionLaneMenu(at.markerIndex, at.bar);
         Arrangement.SectionResized += (_, _) =>
         {
-            var resizeStart = _sectionUndoSnapshot;
-            _sectionUndoSnapshot = null;
+            var resizeStart = _gestures.TakeSectionSnapshot();
             // The drag changed the markers live; the state taken at its start is the undo step.
             if (resizeStart is { } before) DocumentEdits.Run(Doc, _ => true, before);
             RefreshAfterEdit(EditRefresh.Score | EditRefresh.Arrangement);
         };
         Arrangement.MixerRequested += (_, _) => OpenMixer();
         Arrangement.FxChainRequested += (_, index) => { if (index >= 0 && index < _project.Tracks.Count) OpenFxChain(_project.Tracks[index]); };
-        Arrangement.FxPowerRequested += (_, index) => { if (index >= 0 && index < _project.Tracks.Count) ToggleTrackChain(_project.Tracks[index]); };
+        Arrangement.FxPowerRequested += (_, index) => { if (index >= 0 && index < _project.Tracks.Count) MixerHost.ToggleTrackChain(_project.Tracks[index]); };
         Arrangement.BusFxRequested += (_, group) => OpenBusFx(group);
-        Arrangement.BusPowerRequested += (_, group) => ToggleBus(group);
+        Arrangement.BusPowerRequested += (_, group) => MixerHost.ToggleBus(group);
         Arrangement.TrackOptionsRequested += (_, index) => { TrackMixerGrid.SelectedIndex = index; TrackProps_Click(this, new RoutedEventArgs()); };
         Arrangement.TimelineContextRequested += (_, context) => ShowArrangementContextMenu(context.bar, context.track);
         HookAudioLanes();
         HookAddTrackLane();
         Arrangement.AddTrackMenuRequested += ShowAddTrackMenu;
-        Arrangement.GroupCollapseToggled += group => SetGroupsCollapsed(new[] { group }, null);
+        Arrangement.GroupCollapseToggled += group => MixerHost.SetGroupsCollapsed(new[] { group }, null);
         Arrangement.GroupMoved += (start, count, before) =>
         {
             if (start < 0 || count <= 0 || start + count > _project.Tracks.Count) return;
-            var orderBefore = CaptureOrderLayout();
+            var orderBefore = MixerHost.CaptureOrderLayout();
             var moving = _project.Tracks.GetRange(start, count);
             if (!DocumentEdits.Run(Doc, p => Models.TrackOrdering.MoveRun(p, start, count, before)).Changed) return;   // the first track (time signatures) may have changed: the timeline is invalidated
             SyncAudioEngine();
@@ -313,16 +292,16 @@ public partial class MainWindow : Window
             RefreshArrangement();
             Editor.InvalidateScoreLayout();
             UpdateTitle();
-            PlayOrderAnimation(orderBefore);   // the open mixer reorders with it, animating at the same time
+            MixerHost.PlayOrderAnimation(orderBefore);   // the open mixer reorders with it, animating at the same time
             StatusText.Text = $"Moved the {Models.MixerGroups.GroupOf(_project, moving[0]).ToLowerInvariant()} group";
         };
         // Right-click on a group row opens the mixer at that group; the empty-area menus toggle "Show tracks in groups" (the mixer's
         // "Groups in track list" box is the same setting).
-        Arrangement.GroupMixerRequested += group => { OpenMixer(); MixerWindows.Mixer?.RevealGroup(group); };
+        Arrangement.GroupMixerRequested += group => { OpenMixer(); MixerHost.Windows.Mixer?.RevealGroup(group); };
         Arrangement.GroupsShownState = () => _project.Mixer.ShowGroupsInTrackList;
-        Arrangement.GroupsToggleRequested += on => ((IMixerHost)this).SetTrackListShows("groups", on);
-        Arrangement.ColourByGroupRequested += ColourTracksByGroup;
-        Arrangement.ColourTracksRequested += ColourTracksWithDialog;
+        Arrangement.GroupsToggleRequested += on => MixerHost.SetTrackListShows("groups", on);
+        Arrangement.ColourByGroupRequested += MixerHost.ColourTracksByGroup;
+        Arrangement.ColourTracksRequested += MixerHost.ColourTracksWithDialog;
         Arrangement.TrackListSettingsRequested += () => OpenSettings(SettingsCatalog.Timeline, "timeline.trackgroups");
         Arrangement.DockMenuItems = () => _dockWorkspace?.PanelMenuItems("timeline") ?? new List<System.Windows.Controls.Control>();
         _documents.Changed += (_, _) => RefreshTabs();
@@ -330,7 +309,7 @@ public partial class MainWindow : Window
         PreviewKeyDown += MainWindow_PreviewKeyDown;
         Closing += MainWindow_Closing;
         Loaded += (_, _) => _tabTransfer.Register();
-        // Drawn text is shaped per control for that control's own display DPI (A-03: Draw.UseDpi in each OnRender), so two
+        // Drawn text is shaped per control for that control's own display DPI (Draw.UseDpi in each OnRender), so two
         // windows on monitors with different scaling no longer share one value. Moving to another monitor re-renders.
         Loaded += (_, _) => ApplyGpuLayerCaches(VisualTreeHelper.GetDpi(this).PixelsPerDip);
         DpiChanged += (_, e) =>

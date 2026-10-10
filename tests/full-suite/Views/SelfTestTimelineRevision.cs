@@ -5,7 +5,7 @@ using TabForge.Services;
 
 namespace TabForge;
 
-/// <summary>A5-08: timing caches (SongClock map, plug-in transport map) key on SongProject.TimelineRevision, so every timing edit rebuilds them.</summary>
+/// <summary>Timing caches (SongClock map, plug-in transport map) key on SongProject.TimelineRevision, so every timing edit rebuilds them.</summary>
 public static partial class SelfTest
 {
     private static void TestTimelineRevision()

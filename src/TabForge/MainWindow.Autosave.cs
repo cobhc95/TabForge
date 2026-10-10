@@ -9,6 +9,9 @@ namespace TabForge;
 
 // MainWindow, background services: the autosave (dirty songs are copied to the Recovery folder), the update check and the approval notices. BackgroundServices builds
 // each controller and is its host; the controllers are disposed with the window's owned subscriptions.
+// Owns: the window's background services: the autosave to the Recovery folder, the update check and the approval notices.
+// Does not own: the work itself; BackgroundServices builds the controllers that do it.
+// Tests: listed in docs/feature-map/windows-tabs-and-documents.md.
 public partial class MainWindow
 {
     private sealed class BackgroundServices : IAutosaveHost, IUpdateCheckHost, IApprovalHost
@@ -65,7 +68,7 @@ public partial class MainWindow
         public AppSettings Settings => _window._settings;
         public void SyncAudioEngine() => _window.SyncAudioEngine();
         public void RefreshArrangement() => _window.RefreshArrangement();
-        public void RefreshMixerWindow() => _window.RefreshMixerWindow();
+        public void RefreshMixerWindow() => _window.MixerHost.RefreshWindow();
         public void Post(Action work) => _window.PostIfOpen(work);
         public void ShowLinkedAudioReview(LinkedAudioReview review) => LinkedAudioReviewWindow.Show(_window, review);
         public void ShowPluginReview(PluginReview review) => PluginReviewWindow.Show(_window, review);

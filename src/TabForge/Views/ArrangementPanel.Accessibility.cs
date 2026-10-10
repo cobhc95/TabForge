@@ -3,7 +3,11 @@ using System.Windows.Automation.Peers;
 
 namespace TabForge.Views;
 
-// ArrangementPanel: the screen-reader summary (ArrangementAutomation.cs holds the peers).
+// Owns: the panel's accessibility: the one-sentence description of the tracks, bars and clips (DescribeArrangement) and the
+//   panel's automation peer.
+// Does not own: the peer class (ArrangementAutomation.cs) and the timeline's own description (TrackTimeline.Accessibility.cs).
+// Tests: no named test.
+
 public sealed partial class ArrangementPanel
 {
     /// <summary>Tracks, bars and clips in one sentence (also the panel peer's Value).</summary>

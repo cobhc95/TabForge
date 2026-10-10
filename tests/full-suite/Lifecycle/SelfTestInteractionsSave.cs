@@ -210,7 +210,7 @@ public static partial class SelfTest
         IxTrace("I-3 edit 3 done");
         IxCommand(w, "Track.Add");                                              // 4: a new track
         IxTrace("I-3 edit 4 done");
-        var host = (IMixerHost)w;
+        var host = w.MixerHost;
         host.BeginMixerEdit();                                                  // 5: one mixer volume drag = one transaction
         for (var volume = 95; volume >= 70; volume -= 5) { session.Project.Tracks[0].Volume = volume; host.MixerChanged(false); }
         SettleLifetimeDispatcher();

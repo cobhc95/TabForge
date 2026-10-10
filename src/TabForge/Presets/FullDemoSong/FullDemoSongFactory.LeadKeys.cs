@@ -3,6 +3,10 @@ using TabForge.Models;
 
 namespace TabForge.Presets;
 
+// Owns: the lead, lead harmony, clean, pad and piano parts of the demo song: their notes and beats, lyrics, chord names, octave shifts, voices and stem overrides.
+// Does not own: the structure and mix-table points (FullDemoSongFactory.Skeleton.cs) or the rhythm section (FullDemoSongFactory.Rhythm.cs).
+// Tests: TestFullDemoSong.
+
 // Owner (c2): Lead, Lead Harmony, Clean, Pad and Piano (plan 3.5–3.8), with lyrics (B20), chord names (B18), octave shifts (B25),
 // voices (B23) and stem overrides (B26). Structure and mix-table points belong to the skeleton; this file only writes notes and beats.
 //

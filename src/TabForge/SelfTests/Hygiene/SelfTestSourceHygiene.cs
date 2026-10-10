@@ -10,7 +10,7 @@ public static partial class SelfTest
         new(StringComparer.OrdinalIgnoreCase) { "bin", "obj", "build", "dist", "third_party", "Tabs", "backup", "work" };   // plus every dot-folder (tool data, other checkouts), see EnumerateHygieneFiles
 
     /// <summary>
-    /// H-02: a scripted edit once ran escape processing on a Windows path ("native\fetch" became a form feed).
+    /// A scripted edit must not run escape processing on a Windows path ("native\fetch" would become a form feed).
     /// Fails on any control character other than tab, CR and LF in the repository's text sources.
     /// Skipped (a failure with --require source-hygiene) when the executable does not run from inside a source checkout (installed copy).
     /// </summary>
@@ -44,7 +44,7 @@ public static partial class SelfTest
     }
 
     /// <summary>
-    /// B-05: installer/TabForge.iss writes the file associations itself ([Registry]); they must match
+    /// installer/TabForge.iss writes the file associations itself ([Registry]); they must match
     /// <see cref="Services.FileAssociations.Extensions"/> (same extensions, ProgIDs, descriptions, icon and open command).
     /// </summary>
     private static void TestInstallerAssociationParity()

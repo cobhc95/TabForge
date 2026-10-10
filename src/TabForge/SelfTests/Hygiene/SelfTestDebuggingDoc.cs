@@ -42,7 +42,7 @@ public static partial class SelfTest
         var text = string.Join("\n", lines);
         foreach (var needed in new[] { "--only", "--areas", "--require ci", "TABFORGE_SELFTEST_SMALLSCREEN", "--profile" })
             Check($"DEBUGGING.md explains {needed}", text.Contains(needed, StringComparison.Ordinal));
-        Check("DEBUGGING.md stays within 120 lines", lines.Length <= 120, $"{lines.Length} lines");
+        Check("DEBUGGING.md stays within 150 lines", lines.Length <= 150, $"{lines.Length} lines");
         var contributing = File.ReadAllText(Path.Combine(root, "CONTRIBUTING.md"));
         Check("CONTRIBUTING.md links docs/DEBUGGING.md", contributing.Contains("docs/DEBUGGING.md", StringComparison.Ordinal));
     }

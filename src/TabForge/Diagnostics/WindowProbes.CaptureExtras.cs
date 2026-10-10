@@ -5,9 +5,9 @@ using TabForge.Views;
 
 namespace TabForge.Diagnostics;
 
-// Owns: the capture steps "clip-edit" (fades and a split on the example audio clip), "delete-prompt" (the bar-range Delete prompt as a tool window), "marker-size" (fretboard note marker size), "band-playing" (the Band view shown as playing), "effect" (a note-effect editor dialog, see WindowProbes.CaptureEffects.cs),
+// Owns: the capture steps "clip-edit" (fades and a split on the example audio clip), "delete-prompt" (the bar-range Delete prompt as a tool window), "marker-size" (fretboard note marker size), "band-playing" (the Band view shown as playing), "learn-playing" (the Keyboard mode pane shown as playing; a third value "keys" or "keys-wait" shows a keyboard track with made-up play-along state, see WindowProbes.CaptureKeyboardModeKeys.cs), "learn-midi-menu" (its MIDI input list), "effect" (a note-effect editor dialog, see WindowProbes.CaptureEffects.cs),
 //   "timeline-height" (the timeline pane squeezed to a height, as when the user collapses it), "section-tip" (the section lane's hover hint),
-//   "restore-saved" (the layout the profile started with, as after a restart) and "tab-strip" (a title-bar tab strip with idle, playing, unsaved and long-titled tabs, as the tool window "TabStrip").
+//   "restore-saved" (the layout the profile started with, as after a restart) "rec-state" (the title-bar Record video button's red dot and the status bar's REC time, shown without recording) and "tab-strip" (a title-bar tab strip with idle, playing, unsaved and long-titled tabs, as the tool window "TabStrip").
 // Does not own: step dispatch (WindowProbes.Capture.cs) or the shots themselves (WindowProbes.CaptureShots.cs).
 // Tests: none (diagnostics only; run through --capture).
 internal sealed partial class WindowProbes
@@ -24,6 +24,12 @@ internal sealed partial class WindowProbes
                 case "effect": EffectShot(value.GetString() ?? "bend"); break;
                 case "band-hide-instrument": _w.Window.Band.ToggleInstrumentOf(value.GetInt32()); break;
                 case "band-playing": BandPlaying(value[0].GetInt32() - 1, value[1].GetDouble()); break;
+                case "learn-playing":   // a third value ("keys" or "keys-wait") turns the selected track into a two-hand riff with made-up play-along state
+                    UseExampleMidi();
+                    if (value.GetArrayLength() > 2) KeyboardModeKeysPlaying(value[0].GetInt32() - 1, value[1].GetDouble(), value[2].GetString() == "keys-wait");
+                    else KeyboardModePlaying(value[0].GetInt32() - 1, value[1].GetDouble());
+                    break;
+                case "learn-midi-menu": KeyboardModeMidiMenu(); break;   // the Keyboard mode MIDI input list (then target "menu")
                 case "timeline-height":
                     _w._settings.Timeline.TrackListHeight = value.GetDouble();   // a user-collapsed pane: the auto-fit keeps it short
                     // Diagnostics only: the window's fit controller is private and the probe bridge stays as it is.
@@ -32,6 +38,7 @@ internal sealed partial class WindowProbes
                 case "section-tip": SectionTip(value.GetInt32()); break;
                 case "restore-saved": _w._settings.LastLayout = _savedLayoutName; _w._dockWorkspace?.ApplyLayout(_savedWorkspace ?? new()); break;   // as after a restart
                 case "tab-strip": TabStrip(value.GetDouble()); break;
+                case "rec-state": _w.Window.RecIndicator.Text = "REC 01:15"; _w.Window.RecIndicator.Visibility = _w.Window.VideoRecDot.Visibility = value.GetBoolean() ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed; break;   // the Record video REC state, no recording runs
                 default: throw new InvalidOperationException($"unknown step '{verb}'");
             }
             await _w.Settle(500);
@@ -91,6 +98,14 @@ internal sealed partial class WindowProbes
             var timeline = MidiTimelineBuilder.Build(_w._project, new PlaybackOptions());
             var span = timeline.Bars[Math.Clamp(bar, 0, timeline.Bars.Count - 1)];
             _w.Window.Band.ProbePlay = (bar, fraction, span.StartMs + fraction * (span.EndMs - span.StartMs), timeline);
+        }
+
+        /// <summary>Shows the Keyboard mode pane as playing the selected track (whatever its kind) at a bar and a fraction of it, at that moment of the song's timeline (select the <c>learn</c> panel first).</summary>
+        private void KeyboardModePlaying(int bar, double fraction)
+        {
+            var timeline = MidiTimelineBuilder.Build(_w._project, new PlaybackOptions());
+            var span = timeline.Bars[Math.Clamp(bar, 0, timeline.Bars.Count - 1)];
+            _w.Window.Learn.ProbePlay = (span.StartMs + fraction * (span.EndMs - span.StartMs), timeline);
         }
 
         /// <summary>Gives the example clip a fade-in and fade-out, splits it near the middle and selects the first piece.</summary>

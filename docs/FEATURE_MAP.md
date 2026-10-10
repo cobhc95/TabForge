@@ -4,6 +4,7 @@ Index. Find a feature here, then open its page for the main code, the pathway to
 
 - Feature pages (hand-kept): `docs/feature-map/<feature>.md`.
 - Every test, area and group (generated, do not edit): [docs/feature-map/tests.md](feature-map/tests.md). Refresh with `TabForge.exe --feature-map`.
+- Every source file with its folder and a one-line purpose (generated, same command): [docs/feature-map/files.md](feature-map/files.md).
 - Find a keyword across the map, tests and folder READMEs: `TabForge.exe --find <keyword>`.
 
 Run a self-test area with `TabForge.exe --selftest <log> --areas <area>`, then read the last line of the log (`N passed, M failed, K skipped`). A group runs with the whole suite and `--require ci`.
@@ -24,3 +25,8 @@ Run a self-test area with `TabForge.exe --selftest <log> --areas <area>`, then r
 | Tutorial | Tutorial window, guide library, PDF export | [tutorial.md](feature-map/tutorial.md) |
 | Band view | One row per track: instrument beside a tab lane, and the Band layout | [band-view.md](feature-map/band-view.md) |
 | Rendering to file | Render jobs and the offline renderer | [rendering-to-file.md](feature-map/rendering-to-file.md) |
+| Video | Video export (MP4), frame source, encoder and live Record video | [video.md](feature-map/video.md) |
+| Instrument views | Fretboard, keyboard and drum views of the instrument panel, and the view choice | [instrument-views.md](feature-map/instrument-views.md) |
+| Note right-click menu | Note and score empty-area right-click menus, and Shift+F10 on the score | [note-context-menu.md](feature-map/note-context-menu.md) |
+| Feature modules and hosts | Feature module shape and registry, the Band and Video modules, the Mixer, Dock and Band host classes | [feature-modules-and-hosts.md](feature-map/feature-modules-and-hosts.md) |
+| Menus and commands | Command table, main-menu table and golden files, settings appliers, dock pane and technique tables, engine message pairs | [menus-and-commands.md](feature-map/menus-and-commands.md) |

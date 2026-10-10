@@ -357,7 +357,7 @@ internal sealed class SettingEditors
             result.Text = "Measuring (about 5 s)…";
             (double? Ms, string Detail) outcome;
             try { outcome = await Task.Run(() => TabForge.Audio.WindowsMidiLatency.Measure(new TabForge.Playback.SharedMidiOutput())); }
-            catch (Exception ex) { outcome = (null, ex.Message); }
+            catch (Exception ex) { outcome = (null, ex.Message); } // Not logged: latency measurement: the detail is shown in the dialog
             if (outcome.Ms is { } ms)
             {
                 var rounded = (int)Math.Round(ms);
@@ -515,7 +515,7 @@ internal sealed class SettingEditors
             var result = Convert.ToDouble(value, CultureInfo.InvariantCulture);
             return double.IsFinite(result) ? result : fallback;
         }
-        catch (Exception ex) when (ex is FormatException or InvalidCastException or OverflowException) { return fallback; }
+        catch (Exception ex) when (ex is FormatException or InvalidCastException or OverflowException) { return fallback; } // Not logged: value parse fallback: the default is used
     }
 
     private static string FormatNumber(double value, int decimals)

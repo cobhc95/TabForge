@@ -5,6 +5,10 @@ using TabForge.Services;
 
 namespace TabForge.Playback;
 
+// Owns: placing the recorded MIDI clips of a track's clip lanes into the timeline, in song time, with the timeline's start offset.
+// Does not own: the score note emission (ScoreToMidiCompiler.cs, ScoreToMidiCompiler.Techniques.cs).
+// Tests: TestClipEdgesAndLoops.
+
 // ScoreToMidiCompiler: recorded MIDI clips on a track's clip lanes.
 internal sealed partial class ScoreToMidiCompiler
 {

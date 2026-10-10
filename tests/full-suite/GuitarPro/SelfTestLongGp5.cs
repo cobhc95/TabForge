@@ -12,7 +12,7 @@ using TabForge.Services;
 namespace TabForge;
 
 /// <summary>
-/// Long-song Guitar Pro 3-5 import (audit R4, required group "long-import"). alphaTab 1.8.4 refuses a Guitar Pro 3-5 file over 1,000
+/// Long-song import of the older binary score formats (required group "long-import"). alphaTab 1.8.4 refuses a file of those formats over 1,000
 /// bars with a hard-coded "'bar count' ... internal safety threshold of 1000". TabForge ships alphaTab 1.8.4 built from source with
 /// one patch (package and assembly TabForge.AlphaTab, vendor/alphatab/README.md) that makes the threshold a setting of the one
 /// import, and <see cref="AlphaTabBoundary"/> sets it to TabForge's own limit (<see cref="InputLimits.MaxMeasuresPerTrack"/>).

@@ -14,12 +14,13 @@ internal sealed class ToolbarZoomSpeedFit
 {
     private const double Gap = 8;            // breathing room between the group and its neighbours
     private const double ComboWide = 76, ComboNarrow = 62;
+    internal const int KeyboardModeButtonSteps = 5;
     internal const int Collapsed = 7;       // 0 = everything shown ... 7 = the group collapsed
 
     private readonly FrameworkElement _menu, _pinned, _tempo, _group;
 
     // The group's parts and the tempo group's readouts, found by name or kind in the toolbar markup.
-    private readonly FrameworkElement? _speedLabel, _speedSeparator, _zoomCombo, _speedCombo;
+    private readonly FrameworkElement? _speedLabel, _speedSeparator, _zoomCombo, _speedCombo, _learnButton;
     private readonly FrameworkElement[] _readouts;
 
     /// <summary>The room and the menu + group width at the last step tried (for tests).</summary>
@@ -38,6 +39,7 @@ internal sealed class ToolbarZoomSpeedFit
         _speedSeparator = parts.OfType<System.Windows.Controls.Border>().FirstOrDefault();
         _zoomCombo = Named(group, "ZoomCombo");
         _speedCombo = Named(group, "SpeedCombo");
+        _learnButton = Named(tempo, "KeyboardModeButton");
         _readouts = new[] { Named(tempo, "TimeSigLabel"), Named(tempo, "KeyLabelText") }.OfType<FrameworkElement>().ToArray();
         bar.SizeChanged += (_, e) => Update(e.NewSize.Width);
     }
@@ -86,6 +88,7 @@ internal sealed class ToolbarZoomSpeedFit
         Show(_speedSeparator, step < 4);
         Show(_speedCombo, step < 4);
         foreach (var readout in _readouts) Show(readout, step < 5);
+        Show(_learnButton, step < KeyboardModeButtonSteps);   // the Keyboard mode button goes first: the menu row and the hotkey stay
         Show(_zoomCombo, step < 6);
     }
 }

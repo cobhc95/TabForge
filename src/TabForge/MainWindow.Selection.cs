@@ -9,6 +9,9 @@ namespace TabForge;
 // Every selection change (score mouse/keys, timeline drag or click, Esc, area commands, track switch, undo,
 // bar insert/delete, tab switch) is written to _selection; SelectionSync applies it to the editor and
 // SelectionLoopController to the timeline highlight and the selected (loop) area.
+// Owns: the shared selection: the score editor and the arrangement timeline both mirror one SelectionModel.
+// Does not own: the sync between them (SelectionSync).
+// Tests: listed in docs/feature-map/editing-and-notation.md.
 public partial class MainWindow : ISelectionLoopHost
 {
     private readonly SelectionModel _selection = new();

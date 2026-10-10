@@ -27,6 +27,9 @@ using TabForge.Visualization;
 namespace TabForge;
 
 // MainWindow, score editing commands: undo, bars, measures, notes, effects, markers.
+// Owns: the window's score editing handlers: undo, bar commands (forwards to BarCommandFlow with its host), notes, effects and markers, with the view refresh after each.
+// Does not own: the edit transaction, which is DocumentEdits.Run.
+// Tests: listed in docs/feature-map/editing-and-notation.md.
 public partial class MainWindow : TabForge.Views.Score.IScoreEditHost
 {
     // ---------- edits made in the score editor ----------
@@ -120,22 +123,13 @@ public partial class MainWindow : TabForge.Views.Score.IScoreEditHost
 
     // ---------- measure ----------
 
-    private void InsertBar_Click(object sender, RoutedEventArgs e)
-    {
-        if (Editor.IsSelecting) { StatusText.Text = "Insert bar works at the cursor; clear the selection first"; return; }   // as GP5 (quiet l6 i01, i03, i04)
-        var at = Math.Clamp(Editor.SelectedMeasure, 0, MaxMeasures());
-        _arrangementController.InsertBar(Doc, at, Editor.SelectedMeasure, moveMarkers: false, fillRests: _settings.Editing.FillBarsWithRests);
-        RefreshAfterEdit(EditRefresh.Score | EditRefresh.Arrangement); Editor.MoveToBarStart(at); Editor.Effects.WriteLikeBeatBefore(at); StatusText.Text = $"Inserted bar {at + 1}";   // beat 1 of the new bar, the length of the beat before it (GP5)
-    }
+    private BarCommandFlow? _barCommands;
+    private BarCommandFlow BarCommands => _barCommands ??= new BarCommandFlow(new BarCommandHost(this), _arrangementController);
+
+    private void InsertBar_Click(object sender, RoutedEventArgs e) => BarCommands.InsertBar();
 
     /// <summary>Adds an empty bar after the last one (the standard "Add bar"), keeping the cursor where it is.</summary>
-    private void AppendBar()
-    {
-        var at = MaxMeasures();
-        _arrangementController.InsertBar(Doc, at, Math.Max(0, at - 1), moveMarkers: false, fillRests: _settings.Editing.FillBarsWithRests);
-        RefreshAfterEdit(EditRefresh.Score | EditRefresh.Arrangement);
-        StatusText.Text = $"Added bar {at + 1} at the end";
-    }
+    private void AppendBar() => BarCommands.AppendBar();
 
     /// <summary>
     /// The standard step buttons: move one beat. While playing it steps playback too, landing on the
@@ -150,17 +144,7 @@ public partial class MainWindow : TabForge.Views.Score.IScoreEditHost
         StatusText.Text = $"Bar {Editor.SelectedMeasure + 1}, beat {Editor.SelectedCell + 1}";
     }
 
-    private void DeleteBar_Click(object sender, RoutedEventArgs e)
-    {
-        if (MaxMeasures() <= 1) { StatusText.Text = "Cannot delete the last bar"; return; }
-        if (_settings.Editing.ConfirmDeleteBar && MessageBox.Show(this,
-                $"Delete bar {Editor.SelectedMeasure + 1} from every track?",
-                "Delete bar", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes)
-            return;
-        _arrangementController.DeleteBar(Doc, Editor.SelectedMeasure, -1, allTracks: true, moveMarkers: false);
-        Editor.SetPosition(Math.Max(0, Editor.SelectedMeasure - 1), 0, Editor.SelectedString);
-        RefreshArrangement(); Editor.InvalidateScoreLayout(); UpdateTitle(); StatusText.Text = "Deleted bar";
-    }
+    private void DeleteBar_Click(object sender, RoutedEventArgs e) => BarCommands.DeleteBar();
 
     private int MaxMeasures() => BarRangeEditor.MaxMeasures(_project);
 
@@ -196,75 +180,10 @@ public partial class MainWindow : TabForge.Views.Score.IScoreEditHost
         StatusText.Text = "Project settings updated";
     }
 
-    private void TimeSig_Click(object sender, RoutedEventArgs e)
-    {
-        var current = CurBar();
-        var range = SelectedBarRange();
-        var r = GpDialogs.TimeSignature(current?.TimeSigNum ?? _project.TimeSignatureNumerator,
-            current?.TimeSigDenom ?? _project.TimeSignatureDenominator, range is { } sel ? $"bars {sel.First + 1}-{sel.Last + 1}" : null);
-        if (r is null) return;
-        var first = range?.First ?? Editor.SelectedMeasure;
-        var last = first;
-        DocumentEdits.Run(Doc, p =>
-        {
-            last = range is { } span
-                ? BarSignatures.SetTimeRange(p, span.First, span.Last, r.Value.num, r.Value.denom)
-                : BarSignatures.SetTime(p, first, r.Value.num, r.Value.denom, !r.Value.onlyThisBar);
-            return true;
-        });
-        RefreshAfterEdit(EditRefresh.Score | EditRefresh.TimelineGeometry | EditRefresh.Palette | EditRefresh.Status);
-        StatusText.Text = $"Time signature {r.Value.num}/{r.Value.denom} {SignatureSpan(first, last)}";
-    }
-
-    /// <summary>The selected bars when the selection spans more than one bar (a signature change then applies to exactly those bars).</summary>
-    private (int First, int Last)? SelectedBarRange()
-    {
-        if (!_selection.HasRange) return null;
-        var count = MaxMeasures();
-        if (count == 0) return null;
-        var (first, last) = (Math.Clamp(Math.Min(_selection.StartBar, _selection.EndBar), 0, count - 1), Math.Clamp(Math.Max(_selection.StartBar, _selection.EndBar), 0, count - 1));
-        return last > first ? (first, last) : null;
-    }
-
-    /// <summary>"for bar 5", "from bar 5 to bar 9" or "from bar 5 to the end" (the bars a signature change reached).</summary>
-    private string SignatureSpan(int first, int last) =>
-        last <= first ? $"for bar {first + 1}" : last >= MaxMeasures() - 1 ? $"from bar {first + 1} to the end" : $"from bar {first + 1} to bar {last + 1}";
-
-    private void KeySig_Click(object sender, RoutedEventArgs e)
-    {
-        var current = CurBar();
-        var range = SelectedBarRange();
-        var r = GpDialogs.KeySignature(current?.KeySignature ?? _project.KeySignature,
-            current?.KeySignatureMinor ?? _project.KeySignatureMinor, range is { } sel ? $"bars {sel.First + 1}-{sel.Last + 1}" : null);
-        if (r is null) return;
-        var first = range?.First ?? Editor.SelectedMeasure;
-        var last = first;
-        DocumentEdits.Run(Doc, p =>
-        {
-            last = range is { } span
-                ? BarSignatures.SetKeyRange(p, span.First, span.Last, r.Value.signature, r.Value.minor)
-                : BarSignatures.SetKey(p, first, r.Value.signature, r.Value.minor, !r.Value.onlyThisBar);
-            return true;
-        });
-        RefreshAfterEdit(EditRefresh.Score | EditRefresh.Palette | EditRefresh.Status);
-        StatusText.Text = $"Key signature changed {SignatureSpan(first, last)}";
-    }
-
-    private void Clef_Click(object sender, RoutedEventArgs e)
-    {
-        if (CurBar() is null) return;
-        var clef = "";
-        if (!DocumentEdits.Run(Doc, p => _arrangementController.TryCycleClef(p, TrackMixerGrid.SelectedIndex, Editor.SelectedMeasure, out clef)).Changed) return;
-        RefreshAfterEdit(EditRefresh.Score); StatusText.Text = $"Clef {clef}";
-    }
-
-    private void TripletFeel_Click(object sender, RoutedEventArgs e)
-    {
-        if (CurBar() is null) return;
-        var v = false;
-        if (!DocumentEdits.Run(Doc, p => _arrangementController.TryToggleTripletFeel(p, TrackMixerGrid.SelectedIndex, Editor.SelectedMeasure, out v)).Changed) return;
-        RefreshAfterEdit(EditRefresh.None); StatusText.Text = v ? "Triplet feel on" : "Triplet feel off";
-    }
+    private void TimeSig_Click(object sender, RoutedEventArgs e) => BarCommands.SetTimeSignature();
+    private void KeySig_Click(object sender, RoutedEventArgs e) => BarCommands.SetKeySignature();
+    private void Clef_Click(object sender, RoutedEventArgs e) => BarCommands.CycleClef();
+    private void TripletFeel_Click(object sender, RoutedEventArgs e) => BarCommands.ToggleTripletFeel();
 
     // Repeat open/close share EditCommands with the [ and ] shortcuts (through the editor): the same bar change in every
     // track and one undo step. The menu only adds the count prompt when a repeat end is being added.
@@ -281,47 +200,44 @@ public partial class MainWindow : TabForge.Views.Score.IScoreEditHost
         StatusText.Text = $"Repeat ×{n}";
     }
 
-    private void Directions_Click(object sender, RoutedEventArgs e)
-    {
-        var bar = CurBar(); if (bar is null) return;
-        var txt = GpDialogs.Directions(bar.Directions, bar.AlternateEnding, out var ending);
-        if (txt is null) return;
-        DocumentEdits.Run(Doc, p => _arrangementController.TrySetDirections(p, Editor.SelectedMeasure, txt, ending));
-        RefreshAfterEdit(EditRefresh.Score | EditRefresh.Palette);
-    }
+    private void Directions_Click(object sender, RoutedEventArgs e) => BarCommands.EditDirections();
+    private void DoubleBar_Click(object sender, RoutedEventArgs e) => BarCommands.ToggleDoubleBar();
+    private void Simile1_Click(object sender, RoutedEventArgs e) => BarCommands.ToggleSimile(1);
+    private void Simile2_Click(object sender, RoutedEventArgs e) => BarCommands.ToggleSimile(2);
+    private void Section_Click(object sender, RoutedEventArgs e) => BarCommands.RenameSection();
 
-    private void DoubleBar_Click(object sender, RoutedEventArgs e)
+    private sealed class BarCommandHost : IBarCommandHost
     {
-        if (CurBar() is null) return;
-        if (!DocumentEdits.Run(Doc, p => _arrangementController.TryToggleDoubleBar(p, TrackMixerGrid.SelectedIndex, Editor.SelectedMeasure, out _)).Changed) return;
-        RefreshAfterEdit(EditRefresh.Score | EditRefresh.Palette);
-    }
+        private readonly MainWindow _window;
+        public BarCommandHost(MainWindow window) => _window = window;
+        public DocumentSession Document => _window.Doc;
+        public EditingSettings Editing => _window._settings.Editing;
+        public MeasureModel? CurrentBar => _window.CurBar();
+        public int SelectedBar => _window.Editor.SelectedMeasure;
+        public int SelectedString => _window.Editor.SelectedString;
+        public int SelectedTrackIndex => _window.TrackMixerGrid.SelectedIndex;
+        public bool IsSelecting => _window.Editor.IsSelecting;
+        public (int Start, int End)? SelectedBars => _window._selection.HasRange ? (_window._selection.StartBar, _window._selection.EndBar) : null;
+        public void SetPosition(int bar, int cell, int stringIndex) => _window.Editor.SetPosition(bar, cell, stringIndex);
+        public void MoveToBarStart(int bar) => _window.Editor.MoveToBarStart(bar);
+        public void WriteLikeBeatBefore(int bar) => _window.Editor.Effects.WriteLikeBeatBefore(bar);
+        public void Refresh(EditViews views) => _window.RefreshAfterEdit((EditRefresh)(int)views);
+        public void SetStatus(string text) => _window.StatusText.Text = text;
+        public (int num, int denom, bool onlyThisBar)? AskTimeSignature(int num, int denom, string? selectedBars) => GpDialogs.TimeSignature(num, denom, selectedBars);
+        public (int signature, bool minor, bool onlyThisBar)? AskKeySignature(int signature, bool minor, string? selectedBars) => GpDialogs.KeySignature(signature, minor, selectedBars);
+        public string? AskDirections(string current, int ending, out int selectedEnding) => GpDialogs.Directions(current, ending, out selectedEnding);
+        public string? AskText(string title, string label, string initial) => GpDialogs.Prompt(title, label, initial);
 
-    private void Simile1_Click(object sender, RoutedEventArgs e)
-    {
-        if (CurBar() is null) return;
-        if (!DocumentEdits.Run(Doc, p => _arrangementController.TrySetSimile(p, Editor.SelectedMeasure, 1,
-                !p.Tracks[TrackMixerGrid.SelectedIndex].Measures[Editor.SelectedMeasure].SimileOneBar)).Changed) return;
-        RefreshAfterEdit(EditRefresh.Score);
-    }
+        public bool ConfirmDeleteBar(int barNumber) => MessageBox.Show(_window, $"Delete bar {barNumber} from every track?",
+            "Delete bar", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) == MessageBoxResult.Yes;
 
-    private void Simile2_Click(object sender, RoutedEventArgs e)
-    {
-        if (CurBar() is null) return;
-        if (!DocumentEdits.Run(Doc, p => _arrangementController.TrySetSimile(p, Editor.SelectedMeasure, 2,
-                !p.Tracks[TrackMixerGrid.SelectedIndex].Measures[Editor.SelectedMeasure].SimileTwoBar)).Changed) return;
-        RefreshAfterEdit(EditRefresh.Score);
+        public void RefreshAfterBarDelete()
+        {
+            _window.RefreshArrangement();
+            _window.Editor.InvalidateScoreLayout();
+            _window.UpdateTitle();
+        }
     }
-
-    private void Section_Click(object sender, RoutedEventArgs e)
-    {
-        var bar = CurBar(); if (bar is null) return;
-        var txt = GpDialogs.Prompt("Section", "Section name:", bar.SectionName);
-        if (txt is null) return;
-        DocumentEdits.Run(Doc, p => _arrangementController.TrySetSectionName(p, Editor.SelectedMeasure, txt));
-        RefreshAfterEdit(EditRefresh.Score | EditRefresh.Arrangement);
-    }
-
 
     // ---------- note ----------
 
@@ -438,7 +354,7 @@ public partial class MainWindow : TabForge.Views.Score.IScoreEditHost
 
     private void MarkerList_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
-        if (_restoring || _syncingPlayingSectionSelection) return;
+        if (_restoring || _gestures.SyncingPlayingSelection) return;
         if (ItemsControl.ContainerFromElement(MarkerList, e.OriginalSource as DependencyObject) is ListBoxItem { DataContext: MarkerModel marker })
         {
             MarkerList.SelectedItem = marker;

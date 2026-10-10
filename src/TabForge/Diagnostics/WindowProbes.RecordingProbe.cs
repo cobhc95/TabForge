@@ -10,6 +10,9 @@ namespace TabForge.Diagnostics;
 // plays, without needing a keyboard: timed messages go through the same handler the MIDI driver uses. It then checks
 // the MIDI clip, its lane, playback of the clip through the MIDI timeline, the conversion to notation, and a loop
 // recording (takes on separate lanes, the newest playing). The window closes afterwards.
+// Owns: the --probe-record check: MIDI recorded into the song while it plays, then its clip, lane, playback, notation and loop takes.
+// Does not own: the recording itself (the MIDI capture and the recording controller).
+// Tests: listed in docs/DEBUGGING.md (--probe-record).
 internal sealed partial class WindowProbes : MainWindow.ProbeAccess
 {
     public void RunRecordingProbe(string reportPath)
@@ -121,7 +124,7 @@ internal sealed partial class WindowProbes : MainWindow.ProbeAccess
                 }
                 SetLoopActive(false);
             }
-            catch (Exception ex) { report.AppendLine($"probe failed: {ex}"); failures++; }
+            catch (Exception ex) { report.AppendLine($"probe failed: {ex}"); failures++; } // Not logged: diagnostic probe: the failure goes to its report, not errors.log
             report.AppendLine(failures == 0 ? "recording probe: all checks passed" : $"recording probe: {failures} failure(s)");
             DiagnosticFileService.WriteText(path, report.ToString());
             _confirmOnClose = false;

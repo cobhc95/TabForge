@@ -33,6 +33,11 @@ public interface IFxChainHost
     AudioEngineClient Engine { get; }
 }
 
+// Owns: a track's FX chain window: the chain list (reorder, enable, add, remove, save and load chains), the selected plug-in's bar
+//   (presets, wiring, role, wet and dry, bypass, volume), its docked view, and the chain's default and startup options.
+// Does not own: the chain and plug-in state (IFxChainHost and the song), the engine client, the MIDI processors (MidiProcessingWindow)
+//   and the wiring (WiringWindow).
+// Tests: none named yet.
 /// <summary>
 /// A track's FX chain window: the chain on the left (drag to reorder, tick to enable,
 /// double-click to float a plug-in's window), and for the selected plug-in a bar with its presets (+ to save),
@@ -598,6 +603,7 @@ public sealed partial class FxChainWindow : Window
         try { PluginLibrary.SavePreset(slot, name.Trim(), state); }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
         {
+            Services.Trace.Error(Services.Trace.Ui, "FX preset: save: " + ex.Message);
             MessageBox.Show(this, "The preset could not be saved: " + ex.Message, "Save preset", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
@@ -654,7 +660,7 @@ public sealed partial class FxChainWindow : Window
         {
             _status.Text = "";
             try { MessageBox.Show(this, "The plug-in could not be added: " + ex.GetBaseException().Message, "Add plug-in", MessageBoxButton.OK, MessageBoxImage.Warning); }
-            catch (Exception) { }
+            catch (Exception) { Services.Trace.Error(Services.Trace.Ui, "FX chain: show add error: failed"); }
         }
     }
 
@@ -711,6 +717,7 @@ public sealed partial class FxChainWindow : Window
         try { PluginLibrary.SaveChain(dialog.FileName, _track.Rig.Plugins); }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
         {
+            Services.Trace.Error(Services.Trace.Ui, "FX chain: save: " + ex.Message);
             MessageBox.Show(this, "The FX chain could not be saved: " + ex.Message, "Save FX chain", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }

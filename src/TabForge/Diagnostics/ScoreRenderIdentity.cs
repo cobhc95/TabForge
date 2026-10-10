@@ -231,7 +231,7 @@ internal static class ScoreRenderIdentity
                 SavePng(image, Path.Combine(dirB, "diff", name + ".png"));
             }
         }
-        catch (Exception ex) when (ex is IOException or NotSupportedException or UnauthorizedAccessException) { Console.WriteLine("diff images skipped: " + ex.Message); }
+        catch (Exception ex) when (ex is IOException or NotSupportedException or UnauthorizedAccessException) { Console.WriteLine("diff images skipped: " + ex.Message); } // Not logged: diagnostic probe: the failure goes to its report, not errors.log
     }
 
     private static BitmapSource Decode(string path)

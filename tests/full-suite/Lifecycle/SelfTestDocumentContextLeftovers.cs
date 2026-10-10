@@ -13,12 +13,12 @@ using TabForge.Views;
 namespace TabForge;
 
 /// <summary>
-/// R3 (the R2 review's leftovers): the draw path never waits on the file system, a render in progress is respected by the engine's clip refresh,
+/// The draw path never waits on the file system, a render in progress is respected by the engine's clip refresh,
 /// Preferences merges instead of overwriting the approvals, a closed song's outlines leave the cache, and the slow plug-in prompt exists once.
 /// </summary>
 public static partial class SelfTest
 {
-    private static void TestDocumentContextLeftovers()
+    private static void CheckDocumentContextLeftovers()
     {
         RunDcCase("the draw path and the approval-change handler never wait on the file system", DcDrawPathNeverBlocksCase);
         RunDcCase("the UI thread never waits for a path to resolve", DcUiThreadNeverWaitsCase);

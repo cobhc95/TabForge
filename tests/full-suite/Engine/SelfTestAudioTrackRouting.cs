@@ -72,21 +72,7 @@ public static partial class SelfTest
             song.Mixer.Groups.Count == groupsBefore && !MixerGroups.Names(MixerGrouping.ByInstrument).Contains(MixerGroups.Audio) && MixerGroups.AllNames(MixerGrouping.ByInstrument).Contains(MixerGroups.Audio));
         Check("audio routing: the Audio group has a bus slot", MixerBuses.SlotOf(MixerGroups.Audio) >= 0);
 
-        // Mute / solo truth table with an audio track (any track, same rule).
-        var bad = new List<string>();
-        for (var bits = 0; bits < 16; bits++)
-        {
-            for (var i = 0; i < 2; i++) { song.Tracks[i].Mute = (bits & (1 << i)) != 0; song.Tracks[i].Solo = (bits & (1 << (i + 2))) != 0; }
-            var anySolo = song.Tracks.Take(2).Any(t => t.Solo);
-            var othersSolo = song.Tracks.Skip(2).Any(t => t.Solo);
-            for (var i = 0; i < 2; i++)
-            {
-                var expected = anySolo ? song.Tracks[i].Solo : !song.Tracks[i].Mute;
-                if (MixerGroups.IsAudible(song, song.Tracks[i]) != expected) bad.Add($"bits {bits} track {i}");
-            }
-            _ = othersSolo;
-        }
-        Check("audio routing: mute/solo truth table holds for a guitar and an audio track (" + (bad.Count == 0 ? "16 combinations" : string.Join(", ", bad)) + ")", bad.Count == 0);
+        // The mute/solo truth table (SelfTestMuteSolo.cs, 3 tracks x 64 combinations) covers the same rule for any track kind.
         foreach (var t in song.Tracks) { t.Mute = false; t.Solo = false; }
         audio.Solo = true;
         Check("audio routing: soloed audio track silences the guitar, the mute fast-path mask agrees", !MixerGroups.IsAudible(song, guitar) && PlaybackEngine.AudibleMask(song) is { } mask && mask[1] && !mask[0]);

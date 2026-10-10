@@ -298,7 +298,7 @@ public sealed class KnobControl : FrameworkElement
         _editor = box;
         _popup = new Popup { Child = box, PlacementTarget = this, Placement = PlacementMode.Center, StaysOpen = false, AllowsTransparency = false };
         _popup.Closed += (_, _) => FinishEdit(true);
-        try { _popup.IsOpen = true; } catch (InvalidOperationException) { }
+        try { _popup.IsOpen = true; } catch (InvalidOperationException ex) { Services.Trace.Error(Services.Trace.Ui, "knob: open editor: " + ex.Message); }
         Dispatcher.BeginInvoke(new Action(() => { if (_editor == box) { box.Focus(); Keyboard.Focus(box); box.SelectAll(); } }), System.Windows.Threading.DispatcherPriority.Input);
     }
 
@@ -371,7 +371,7 @@ public sealed class KnobControl : FrameworkElement
     protected override void OnRender(DrawingContext dc)
     {
         try { RenderGuard.Inject("KnobControl"); RenderCore(dc); }
-        catch (Exception ex) when (RenderGuard.Contain(ex, "KnobControl", dc, ActualWidth, ActualHeight)) { }
+        catch (Exception ex) when (RenderGuard.Contain(ex, "KnobControl", dc, ActualWidth, ActualHeight)) { } // Not logged: render path: runs per frame.
     }
 
     private void RenderCore(DrawingContext dc)

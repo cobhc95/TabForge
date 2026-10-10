@@ -685,9 +685,10 @@ public partial class PreferencesWindow : Window, IPreferencesHost
             RebuildPage();
             StatusText.Text = "Settings imported · review, then Apply";
         }
-        catch (InvalidDataException ex) { StatusText.Text = $"Import failed: {ex.Message}"; }
+        catch (InvalidDataException ex) { Services.Trace.Error(Services.Trace.Ui, "settings import: " + ex.Message); StatusText.Text = $"Import failed: {ex.Message}"; }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Text.Json.JsonException)
         {
+            Services.Trace.Error(Services.Trace.Ui, "settings import: read: " + ex.Message);
             StatusText.Text = "Import failed: the settings file could not be read.";
         }
     }
@@ -708,7 +709,7 @@ public partial class PreferencesWindow : Window, IPreferencesHost
             SettingsFileService.SaveAtomic(dialog.FileName, _settings);
             StatusText.Text = $"Settings exported to {Path.GetFileName(dialog.FileName)}";
         }
-        catch (Exception ex) { StatusText.Text = $"Export failed: {ex.GetBaseException().Message}"; }
+        catch (Exception ex) { Services.Trace.Error(Services.Trace.Ui, "settings export: " + ex.Message); StatusText.Text = $"Export failed: {ex.GetBaseException().Message}"; }
     }
 
     private void ReplaceDescriptorMap()
@@ -951,8 +952,8 @@ public partial class PreferencesWindow : Window, IPreferencesHost
             // Caption follows the app theme (dark or light), like every other TabForge window.
             TabForge.Shell.WindowPolish.ApplyTitleBarTheme(this);
         }
-        catch (DllNotFoundException) { }
-        catch (EntryPointNotFoundException) { }
+        catch (DllNotFoundException) { } // Not logged: older Windows without this API keeps the default caption.
+        catch (EntryPointNotFoundException) { } // Not logged: older Windows without this API keeps the default caption.
     }
 
     [DllImport("dwmapi.dll", PreserveSig = true)]

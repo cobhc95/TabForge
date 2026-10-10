@@ -9,11 +9,12 @@ namespace TabForge;
 /// <summary>Guards the file split of SettingsCatalog and AppSettings: catalogue ids, order and pages, and the settings JSON, are unchanged.</summary>
 public static partial class SelfTest
 {
-    // Re-recorded when the Band view lane/playhead rows, track lines and the Basic/Advanced placement of the Timeline rows changed.
-    private const string CatalogSnapshotHash = "85F5A11014ADD318";
-    private const int CatalogSnapshotCount = 216;
-    private const string DefaultJsonSnapshotHash = "7D57A7EFE5724FB5";
-    private const string PopulatedJsonSnapshotHash = "32178CA59C72E506";
+    // Covers the General page's Video recording rows (video.resolution, video.fps, video.region, video.folder, video.encoder, video.fastexport, video.lowlatency) and the Video and LiveVideo settings objects in the JSON. Also the Keyboard mode rows (learn.lookahead, learn.sizekeys, learn.playalong, learn.wait) and the Learn settings object.
+    // Re-record: run this test once, copy the three values it reports into these constants.
+    private const string CatalogSnapshotHash = "43D61D25DFE2D673";
+    private const int CatalogSnapshotCount = 231;
+    private const string DefaultJsonSnapshotHash = "E61B178058B2888A";
+    private const string PopulatedJsonSnapshotHash = "1C99611522374C71";
 
     private static string ShortHash(string text) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(text)))[..16];
 

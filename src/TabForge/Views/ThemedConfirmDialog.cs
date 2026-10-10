@@ -26,7 +26,7 @@ internal sealed class ThemedConfirmDialog : Window
                 warm.Close();   // a never-shown window still counts as open and would keep the app alive after the last main window closes
             }
         }
-        catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"Dialog prewarm skipped: {ex.Message}"); }
+        catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"Dialog prewarm skipped: {ex.Message}"); } // Not logged: dialog prewarm: optional
     }
 
     public ThemedConfirmDialog(

@@ -5,7 +5,7 @@ using TabForge.Services;
 
 namespace TabForge;
 
-/// <summary>Audit 3 M-01/M-02/M-03/M-07: importer property names, shared dynamics, gzip .tforge, invalid UTF-8.</summary>
+/// <summary>Importer property names, shared dynamics, gzip .tforge, invalid UTF-8.</summary>
 public static partial class SelfTest
 {
     /// <summary>Names the importer once read that alphaTab 1.8.4 does not have; they must never come back.</summary>
@@ -62,7 +62,7 @@ public static partial class SelfTest
         finally { try { Directory.Delete(folder, true); } catch (IOException) { } catch (UnauthorizedAccessException) { } }
     }
 
-    // Audit 3 M-04: features a clean .gp export used to drop, checked import -> export -> import.
+    // Features that a clean score export can drop, checked import -> export -> import.
     private static void TestCleanGpExportKeepsFeatures()
     {
         var folder = Path.Combine(Path.GetTempPath(), "tabforge-gpm04-" + Guid.NewGuid().ToString("N"));

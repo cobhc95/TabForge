@@ -6,7 +6,11 @@ using TabForge.Models;
 
 namespace TabForge.Views;
 
-// ArrangementPanel: the track row's right-click menu request and the keyboard focus of the rows (track-row hotkeys act on the focused row).
+// Owns: the track row's menu and keyboard actions: the row menu request, row focus, rename start, track colour, and the right
+//   click on a row background (RightClickTrackRow).
+// Does not own: the menu items and the track edits (TrackController.cs).
+// Tests: TestTrackRowRightClick.
+
 public sealed partial class ArrangementPanel
 {
     /// <summary>Right-click on a track row's background (track index): the host opens the row menu. Without a subscriber the row keeps its

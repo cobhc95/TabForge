@@ -46,7 +46,7 @@ public static class UserTemplates
                 .Select(n => n!)
                 .ToList();
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return Array.Empty<string>(); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { Services.Trace.Error(Services.Trace.Ui, "user templates: list: " + ex.Message); return Array.Empty<string>(); }
     }
 
     /// <summary>Saves a copy of the project as a template (the open score keeps its own dirty state). Returns the stored name.</summary>

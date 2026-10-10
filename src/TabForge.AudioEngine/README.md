@@ -3,7 +3,7 @@
 The audio engine, a separate process: mixer, synth, plug-in hosting, recording and offline render.
 
 ## Key types
-- `EngineHost`, `EngineSession`: the process entry and one connection to the app.
+- `EngineHost`, `EngineSession`: the process entry and one connection to the app. `EngineHostCommands.cs` (partial of `EngineHost`): reader-thread parsing of the commands with lists or tails, using the message records of the contracts project.
 - `MixEngine`, `TrackChain`: mixing and per-track chains.
 - `GmSynth`: the built-in synthesiser.
 - `OfflineRenderer`, `SafetyLimiter`: file render and the master limiter.

@@ -1,7 +1,7 @@
 namespace TabForge;
 
 // The "Guitar Pro 8 result" column of the capability record (--gp-capability), kept next to the cases so a regenerated record keeps it.
-// Evidence, all from the night-2026-10-02 desktop session (Guitar Pro 8.1.5 trial):
+// Evidence, all from one manual session with a trial build of another score program:
 //   * the 15 clean fixture songs (gp-fixtures) were opened in Guitar Pro 8, checked visually by the orchestrator, and saved from Guitar Pro 8;
 //   * `TabForge.exe --gp-compare <original> <gp8 re-save>` reads both through TabForge's importer and compares every round-trip fact
 //     (pitch, rhythm, techniques, bends, whammy, fingering, mixer, tempo, repeats ... ~900 facts per song, no tolerance): 0 differences in 14 songs,

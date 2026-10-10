@@ -7,7 +7,7 @@ namespace TabForge;
 
 public static partial class SelfTest
 {
-    private static void TestImportedNotationLayouts(string name, SongProject project)
+    private static void CheckImportedNotationLayouts(string name, SongProject project)
     {
         var renderer = new StaffNotationRenderer();
         var selectedBars = new[]

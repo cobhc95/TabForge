@@ -13,11 +13,16 @@ using static TabForge.Docking.FloatingWindowPlacement;
 
 namespace TabForge.Views;
 
+// Owns: the split and tab workspace: the registered panels, the split and tab chrome (rebuilt only after a completed drop), the floating
+//   panel windows and the saved geometry (a short debounced save).
+// Does not own: drag and drop rules (DockDragController), the split tree (DockLayoutTree), floating placement (FloatingWindowPlacement)
+//   and the visuals (DockVisuals).
+// Tests: TestDockDefaultsAndFretboardPosition, TestDockRatioNotRewrittenByAutoFit.
 /// <summary>
 /// Reusable WPF split/tab workspace. Registered content has one owner and is moved between
 /// ContentPresenters; only the lightweight split/tab chrome is rebuilt after a completed drop.
 /// </summary>
-public sealed class DockWorkspace : Grid, IDockHost, IDockDragHost
+public sealed class DockWorkspace : Grid, IDockHost, IDockDragHost, Controllers.ITrackListDock
 {
     private const double SplitterSize = DockDragController.SplitterSize;
     private const double GrabPad = 2;
@@ -166,7 +171,7 @@ public sealed class DockWorkspace : Grid, IDockHost, IDockDragHost
         return Math.Max(max, min) + chrome;
     }
 
-    /// <summary>Pixel height of a tab host holding a size-locked panel (chrome included), or null.</summary>
+    /// <summary>Height in pixels of a tab host holding a size-locked panel (chrome included), or null.</summary>
     private double? FixedHostHeight(DockNodeState node)
     {
         if (node.Kind != "tabs") return null;
@@ -906,7 +911,7 @@ public sealed class DockWorkspace : Grid, IDockHost, IDockDragHost
                 return (dips.X, dips.Y);
             }
         }
-        catch (InvalidOperationException) { } // window closing: its presentation source is gone
+        catch (InvalidOperationException) { } // window closing: its presentation source is gone // Not logged: runs on every pointer move; a closing window is expected.
         return (point.X, point.Y);
     }
 

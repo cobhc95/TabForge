@@ -5,7 +5,7 @@ namespace TabForge;
 
 public static partial class SelfTest
 {
-    /// <summary>D2, D4, D6 (Audit 2): one file-type list, one file-name sanitiser, EnsureSections never changes present values.</summary>
+    /// <summary>One file-type list, one file-name sanitiser, EnsureSections never changes present values.</summary>
     private static void TestTrimMerges()
     {
         // D2: the lists agree; the installer comparison (TestInstallerAssociationParity) reads FileAssociations.Extensions, which is FileTypes.AllOpenable.

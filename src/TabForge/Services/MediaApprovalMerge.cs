@@ -2,7 +2,7 @@ namespace TabForge.Services;
 
 // Owns: merging a staged settings copy's media approvals with the live approvals.
 // Does not own: the approval decisions and the dialogs.
-// Tests: TestDocumentContextLeftovers.
+// Tests: CheckDocumentContextLeftovers.
 /// <summary>
 /// Preferences works on a staged copy of the settings while the live approvals keep changing (another window's "Allow", a revoke in the
 /// Linked audio window). Handing the staged copy back as-is would drop an approval that moved while the dialog was open, so each

@@ -24,7 +24,7 @@ namespace TabForge.Services;
 /// keep their old value.
 /// </para>
 /// <para>
-/// Engineering decisions (2026-10-01): a bar without a key of its own (a one-bar change, or a song saved before keys carried forward)
+/// A bar without a key of its own (a one-bar change, or a song whose bars carry no key)
 /// is in the song's key everywhere, the exports included; saved songs are not rewritten on load. With a bar range selected, a
 /// signature change applies to exactly the selected bars. A duplicated bar never repeats the section label or the pickup mark.
 /// </para>

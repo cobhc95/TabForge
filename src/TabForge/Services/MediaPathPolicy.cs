@@ -47,7 +47,7 @@ internal sealed class RealMediaFileSystem : IMediaFileSystem
     public DriveType DriveTypeOf(string root) => Drives.GetOrAdd(root, r =>
     {
         try { return new DriveInfo(r).DriveType; }
-        catch (Exception) { return DriveType.Unknown; }
+        catch (Exception) { return DriveType.Unknown; } // Not logged: drive type probe: unknown
     });
 
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, ExactSpelling = true, SetLastError = true)]
@@ -62,7 +62,7 @@ internal sealed class RealMediaFileSystem : IMediaFileSystem
             var n = GetFinalPathNameByHandleW(handle.DangerousGetHandle(), buffer, (uint)buffer.Length, 0);
             return n == 0 || n >= buffer.Length ? null : new string(buffer, 0, (int)n);
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException) { return null; }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException) { return null; } // Not logged: final path probe: null means unknown
     }
 }
 
@@ -117,7 +117,7 @@ public static class MediaPathPolicy
         }
         string full;
         try { full = Path.GetFullPath(p); }
-        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException or IOException)
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException or IOException) // Not logged: path check: the reason is returned to the caller
         { return Bad(MediaLocation.Invalid, "the path is not valid"); }
         if (IsDeviceForm(full)) return Bad(MediaLocation.Device, "device paths are never opened");
         foreach (var segment in full.Split('\\', StringSplitOptions.RemoveEmptyEntries))
@@ -158,7 +158,7 @@ public static class MediaPathPolicy
     public static string Normalize(string path)
     {
         if (string.IsNullOrWhiteSpace(path)) return "";
-        try { path = Path.GetFullPath(path.Trim()); } catch (Exception) { return path.Trim().Replace('/', '\\'); }
+        try { path = Path.GetFullPath(path.Trim()); } catch (Exception) { return path.Trim().Replace('/', '\\'); } // Not logged: normalise: the trimmed raw path is used
         var root = Path.GetPathRoot(path) ?? "";
         while (path.Length > root.Length && (path[^1] is '\\' or '/')) path = path[..^1];
         return path;

@@ -9,7 +9,7 @@ namespace TabForge;
 
 // `TabForge.exe --gp-compare <a.gp> <b.gp> [report.txt]`: compares two Guitar Pro files as TabForge reads them (the same round-trip FACTS the semantic suite
 // compares: pitch, rhythm, techniques, bends, fingering, mixer ...) and, separately, what each gpif holds (which elements and note/beat properties
-// appear how often). Made for "an original and the same song re-saved by Guitar Pro 8" (work/archive/night-2026-10-02). No tolerance: any difference is listed.
+// appear how often). Made for "an original and the same song re-saved by a score program". No tolerance: any difference is listed.
 // Facts that TabForge's importer does not read cannot show up in the first part; the second part is the check on those.
 public static partial class SelfTest
 {

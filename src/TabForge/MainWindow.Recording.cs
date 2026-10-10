@@ -7,8 +7,11 @@ using TabForge.Views;
 
 namespace TabForge;
 
-// MainWindow: record-arm and recording. The state and logic live in Controllers/RecordingController (A-01); the
+// MainWindow: record-arm and recording. The state and logic live in Controllers/RecordingController; the
 // window keeps the XAML wiring (Record button, record pulse) and forwards to it through IRecordingHost.
+// Owns: record-arm and recording: the Record button, the record pulse and the forwarding to the recording controller.
+// Does not own: the recording state and logic (Controllers/RecordingController).
+// Tests: listed in docs/feature-map/recording.md.
 public partial class MainWindow : IRecordingHost
 {
     private RecordingController? _recorder;

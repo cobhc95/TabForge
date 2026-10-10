@@ -3,6 +3,10 @@ using TabForge.Services;
 
 namespace TabForge.Diagnostics;
 
+// Owns: the `--render-bars` command: parses --tracks and --views, writes one PNG per track, bar and view, plus checks.json and summary.md.
+// Does not own: drawing the notation and tab views (Views/Score, Views/TabEditorControl*) or the checks' thresholds.
+// Tests: no named test.
+
 internal static partial class DiagnosticCommands
 {
     /// <summary>

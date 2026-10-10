@@ -90,7 +90,7 @@ public static class RenderStaging
         {
             var target = Path.Combine(dir, Services.RenderNaming.Unique(dir, name));
             try { File.Move(tempPath, target, overwrite: false); return target; }
-            catch (IOException) when (File.Exists(target)) { /* lost the race: pick the next free name */ }
+            catch (IOException) when (File.Exists(target)) { /* lost the race: pick the next free name */ } // Not logged: name collision: the next free name is tried.
         }
         throw new IOException("Could not find a free file name for " + name);
     }

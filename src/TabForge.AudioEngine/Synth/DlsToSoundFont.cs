@@ -3,6 +3,10 @@ using System.Buffers.Binary;
 
 namespace TabForge.AudioEngine.Synth;
 
+// Owns: converting the Windows General MIDI bank (gm.dls) into an in-memory SoundFont 2 image for MeltySynth: parsing the untrusted
+//   file, mapping articulation, the gain calibration, and the cached load.
+// Does not own: the synthesiser (MeltySynth) and the General MIDI synth that plays the bank (GmSynth).
+// Tests: TestGmPolyphony.
 /// <summary>
 /// Converts a Downloadable Sounds (DLS Level 1/2) bank - in practice the Windows General MIDI bank
 /// <c>%WINDIR%\System32\drivers\gm.dls</c> used by the Microsoft GS Wavetable Synth - into an in-memory

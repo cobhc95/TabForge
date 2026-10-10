@@ -11,6 +11,7 @@ The dockable panel workspace: layout tree, drag and drop, floating windows.
 ## Key types
 - `DockLayoutTree`: the layout as a tree of panels and splits.
 - `DockWorkspaceState`: the saved layout.
+- `DockPaneTable`: one row per dock pane (id, titles, default placement, side-panel membership); the Panels menu, the built-in layouts and the settings validator read it.
 - `DockDragController`: drag, drop zones and the drag ghost.
 - `DockHostView`: the control that shows the tree.
 - `FloatingWindowPlacement`: where a floating panel opens on screen.
@@ -24,4 +25,4 @@ Layout changes are made on `DockLayoutTree` and saved through `DockWorkspaceStat
 Song data, playback or the audio engine.
 
 ## Tests
-`TestDockRatioNotRewrittenByAutoFit`, `TestBrowserTabShell`, `TestTabUi`.
+`TestDockRatioNotRewrittenByAutoFit`, `TestDockPaneTable`, `TestBrowserTabShell`, `TestTabUi`.

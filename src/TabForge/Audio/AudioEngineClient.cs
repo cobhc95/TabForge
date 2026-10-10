@@ -48,6 +48,9 @@ public sealed partial class AudioEngineClient : IDisposable
     /// <summary>How tracks sound (route, auto GM) for this engine: the settings applier writes it, every routing decision reads it. One per client, never a static.</summary>
     public TabForge.Models.MixerOptions Mixer { get; } = new();
 
+    /// <summary>The MIDI input devices, shared by recording and Keyboard mode (each takes a client; the devices open while one holds them).</summary>
+    public MidiInputHub MidiInput { get; } = new(new MidiInputCapture());
+
     public AudioEngineClient() { MediaAccess.Changed += OnMediaApprovalChanged; MediaAccess.Resolved += OnMediaResolved; }
 
     /// <summary>A background classification finished (worker thread): clips that waited for it are judged again on the UI thread. Nothing to do before the first Sync (no slots, no UI context yet).</summary>
@@ -219,6 +222,8 @@ public sealed partial class AudioEngineClient : IDisposable
     public event Action<string>? InputError;
     /// <summary>A recording lost input to a slow disk: one summary line (UI thread), after the take's Recorded event.</summary>
     public event Action<string>? RecordingLoss;
+    /// <summary>The master output tap delivered a chunk (sample rate, first frame, interleaved stereo floats, frame count). Raised on the reader thread; the array belongs to the handler.</summary>
+    public event Action<int, long, float[], int>? MasterAudio;
 
     private readonly object _writeGate = new();
     /// <summary>The block of an engine that ended; disposed at the next Start (under the write lock), never while a writer holds it.</summary>
@@ -289,6 +294,7 @@ public sealed partial class AudioEngineClient : IDisposable
         catch (Exception ex) when (ex is IOException or InvalidOperationException or TimeoutException or AggregateException
             or UnauthorizedAccessException or System.ComponentModel.Win32Exception)
         {
+            Services.Trace.Error(Services.Trace.Engine, "engine: start: " + ex.Message);
             RaiseOnUi(() => DeviceError?.Invoke($"The audio engine could not start: {ex.GetBaseException().Message}"));
             KillQuietly(_process);
             Cleanup();
@@ -305,7 +311,7 @@ public sealed partial class AudioEngineClient : IDisposable
             await pipe.WaitForConnectionAsync().WaitAsync(TimeSpan.FromMilliseconds(ConnectTimeoutMs)).ConfigureAwait(false);
             connected = true;
         }
-        catch (Exception ex) when (ex is TimeoutException or IOException or ObjectDisposedException or OperationCanceledException or InvalidOperationException) { }
+        catch (Exception ex) when (ex is TimeoutException or IOException or ObjectDisposedException or OperationCanceledException or InvalidOperationException) { Services.Trace.Error(Services.Trace.Engine, "engine: wait for pipe connection: " + ex.Message); }
         if (!connected)
         {
             if (!ReferenceEquals(pipe, _pipe)) return;   // stopped meanwhile
@@ -323,7 +329,7 @@ public sealed partial class AudioEngineClient : IDisposable
         {
             if (!ReferenceEquals(pipe, _pipe)) return;
             try { foreach (var frame in _queued ?? new List<byte[]>()) pipe.Write(frame); pipe.Flush(); }
-            catch (Exception ex) when (ex is IOException or ObjectDisposedException) { /* the engine is gone; OnEngineEnded handles it */ }
+            catch (Exception ex) when (ex is IOException or ObjectDisposedException) { Services.Trace.Error(Services.Trace.Engine, "engine: send queued frames: " + ex.Message); /* the engine is gone; OnEngineEnded handles it */ }
             _queued = null;
         }
         Volatile.Write(ref _lastAlive, Stopwatch.GetTimestamp());
@@ -360,13 +366,13 @@ public sealed partial class AudioEngineClient : IDisposable
             KillQuietly(process);
             return;
         }
-        Send(EngineCommand.Ping, w => w.Write(Interlocked.Increment(ref _pingSeq)));
+        Send(EngineCommand.Ping, new PingMessage(Interlocked.Increment(ref _pingSeq)).Write);
     }
 
     private static void KillQuietly(Process? process)
     {
         try { if (process is { HasExited: false }) process.Kill(); }
-        catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception or NotSupportedException) { }
+        catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception or NotSupportedException) { Services.Trace.Error(Services.Trace.Engine, "engine: kill process: " + ex.Message); }
     }
 
     /// <summary>Stops the engine now (app exit, or the warm period ended; see <see cref="WarmIdle"/>). A Sync without engine tracks no longer does.</summary>
@@ -376,7 +382,7 @@ public sealed partial class AudioEngineClient : IDisposable
         _stopping = true;
         Send(EngineCommand.Shutdown);
         try { if (_process is { HasExited: false } p && !p.WaitForExit(1500)) p.Kill(); }
-        catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception) { }
+        catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception) { Services.Trace.Error(Services.Trace.Engine, "engine: wait for exit: " + ex.Message); }
         Cleanup();
         RaiseOnUi(() => StatusChanged?.Invoke());
     }
@@ -418,7 +424,7 @@ public sealed partial class AudioEngineClient : IDisposable
     private static int? ExitCodeOf(Process? process)
     {
         try { return process is { HasExited: true } ? process.ExitCode : null; }
-        catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception) { return null; }
+        catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception) { return null; } // Not logged: exit code probe: null when not exited or not accessible
     }
 
     /// <summary>After a crash the app calls Sync again; this says whether restarting is still sensible.</summary>
@@ -451,7 +457,7 @@ public sealed partial class AudioEngineClient : IDisposable
         lock (_sendGate)
         {
             _queued = null;
-            try { _pipe?.Dispose(); } catch (IOException) { }
+            try { _pipe?.Dispose(); } catch (IOException) { } // Not logged: pipe dispose during teardown: the pipe may already be closed.
             _pipe = null;
         }
         _awaitingReady = false;
@@ -487,8 +493,8 @@ public sealed partial class AudioEngineClient : IDisposable
         var pipe = _pipe;
         if (pipe is not { IsConnected: true }) return;
         try { Frames.Write(pipe, (byte)command, payload); }
-        catch (IOException) { /* the engine is gone; OnEngineEnded handles it */ }
-        catch (ObjectDisposedException) { }
+        catch (IOException ex) { Services.Trace.Error(Services.Trace.Engine, "engine: send command: " + ex.Message); /* the engine is gone; OnEngineEnded handles it */ }
+        catch (ObjectDisposedException ex) { Services.Trace.Error(Services.Trace.Engine, "engine: send command: " + ex.Message); }
     }
 
     private void ReadEvents(NamedPipeServerStream pipe)
@@ -570,6 +576,7 @@ public sealed partial class AudioEngineClient : IDisposable
                         break;
                     }
                     case EngineEvent.InputError: { var message = r.ReadBoundedString(); RaiseOnUi(() => InputError?.Invoke(message)); break; }
+                    case EngineEvent.MasterAudio: ReadMasterAudio(r); break;
                     case EngineEvent.RecordingLoss: { var message = r.ReadBoundedString(); RaiseOnUi(() => RecordingLoss?.Invoke(message)); break; }
                     case EngineEvent.EditorClosed: RaiseOnUi(() => EditorClosed?.Invoke()); break;
                     case EngineEvent.EditorSize:
@@ -631,7 +638,7 @@ public sealed partial class AudioEngineClient : IDisposable
                 }
             }
         }
-        catch (Exception ex) when (ex is IOException or InvalidDataException or EndOfStreamException or ObjectDisposedException) { }
+        catch (Exception ex) when (ex is IOException or InvalidDataException or EndOfStreamException or ObjectDisposedException) { Services.Trace.Error(Services.Trace.Engine, "engine: read frames: " + ex.Message); }
     }
 
     /// <summary>Reader thread: a plug-in in <paramref name="slot"/> reported a parameter edit; the UI thread tells the slot's owner.</summary>

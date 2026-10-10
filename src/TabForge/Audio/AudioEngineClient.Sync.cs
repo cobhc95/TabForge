@@ -8,6 +8,10 @@ using TabForge.Services;
 
 namespace TabForge.Audio;
 
+// Owns: keeping the engine's graph in step with the open documents: slots, ownership and warm parking of chains, wiring, MIDI routes and processors, gain, bypass and audio clips.
+// Does not own: the command send path (AudioEngineClient.Commands.cs) or the engine process (AudioEngineClient.cs).
+// Tests: TestEngineSyncDeferredRequests, TestEngineWarmOwnership.
+
 /// <summary>Keeps the engine's graph in step with the documents: slots, ownership and warm parking, wiring, MIDI routes and processors, gain, bypass and audio clips.</summary>
 public sealed partial class AudioEngineClient : IDisposable
 {
@@ -64,7 +68,7 @@ public sealed partial class AudioEngineClient : IDisposable
         {
             _limiterSent = (enginePid, settings.LiveLimiter);
             var liveLimiter = settings.LiveLimiter;
-            Send(EngineCommand.SetLiveLimiter, w => w.Write(liveLimiter));
+            Send(EngineCommand.SetLiveLimiter, new SetLiveLimiterMessage(liveLimiter).Write);
         }
         var now = WarmClock();
         foreach (var parked in _parkedSince.Keys.Where(s => !_slots.ContainsValue(s)).ToList()) _parkedSince.Remove(parked);   // a crash cleared the slots
@@ -176,18 +180,18 @@ public sealed partial class AudioEngineClient : IDisposable
         _sentWiring.Remove(slot);
         _sentBypass.Remove(slot);
         _sentGain.Remove(slot);
-        if (_sentSynth.Remove(slot)) Send(EngineCommand.SetSynth, w => { w.Write(slot); w.Write(true); });   // the slot's next track starts with GM on
-        Send(EngineCommand.RemoveTrack, w => w.Write(slot));
+        if (_sentSynth.Remove(slot)) Send(EngineCommand.SetSynth, new SetSynthMessage(slot, true).Write);   // the slot's next track starts with GM on
+        Send(EngineCommand.RemoveTrack, new RemoveTrackMessage(slot).Write);
     }
 
     /// <summary>A parked slot is silent: level 0, no clips, not armed. Its chain (and any open editor) stays as it is.</summary>
     private void ParkAudio(int slot)
     {
         _sentAudio[slot] = "parked";   // the owner's next Sync of this track sends its real level, clips and arm again
-        Send(EngineCommand.SetTrackMix, w => { w.Write(slot); w.Write(0); w.Write(64); });
+        Send(EngineCommand.SetTrackMix, new SetTrackMixMessage(slot, 0, 64).Write);
         var ownerId = _slotOwners.TryGetValue(slot, out var parkedOwner) ? OwnerIdOf(parkedOwner) : 0;
-        Send(EngineCommand.SetClips, w => { w.Write(slot); w.Write(new List<ClipSpec>()); w.Write(ownerId); });
-        Send(EngineCommand.SetArm, w => { w.Write(slot); w.Write(false); w.Write(0); w.Write(false); });
+        Send(EngineCommand.SetClips, new SetClipsMessage(slot, new List<ClipSpec>(), ownerId).Write);
+        Send(EngineCommand.SetArm, new SetArmMessage(slot, false, 0, false).Write);
     }
 
     private void ScheduleWarmCheck()
@@ -277,12 +281,7 @@ public sealed partial class AudioEngineClient : IDisposable
         var key = string.Join(",", dests) + "|" + string.Join(",", sides) + "|" + string.Join(",", fwds);
         if (key == _sentGraph) return;
         _sentGraph = key;
-        Send(EngineCommand.SetGraph, w =>
-        {
-            w.Write(dests.Count); foreach (var (a, b) in dests) { w.Write(a); w.Write(b); }
-            w.Write(sides.Count); foreach (var (a, b, c) in sides) { w.Write(a); w.Write(b); w.Write(c); }
-            w.Write(fwds.Count); foreach (var (a, b, c) in fwds) { w.Write(a); w.Write(b); w.Write(c); }
-        });
+        Send(EngineCommand.SetGraph, new SetGraphMessage(dests, sides, fwds).Write);
     }
 
     /// <summary>Serial-chain options of every plug-in (pass MIDI on, MIDI output on, instrument audio add / replace): light live message, never part of the rebuild key.</summary>
@@ -298,7 +297,7 @@ public sealed partial class AudioEngineClient : IDisposable
         for (var i = 0; i < flags.Count; i++)
         {
             var index = i; var f = flags[i];
-            Send(EngineCommand.SetPluginWiring, w => { w.Write(slot); w.Write(index); w.Write(f); });
+            Send(EngineCommand.SetPluginWiring, new SetPluginWiringMessage(slot, index, f).Write);
         }
     }
 
@@ -317,7 +316,7 @@ public sealed partial class AudioEngineClient : IDisposable
         var key = string.Join("#", lists.Select(l => $"{l.Index}|" + string.Join("|", l.Specs.Select(p => $"{p.Type}:{p.Enabled}:{p.ParamsJson}"))));
         if (!force && (_sentProcessors.TryGetValue(slot, out var sent) ? sent == key : key.Length == 0)) { _sentProcessors[slot] = key; return; }
         _sentProcessors[slot] = key;
-        Send(EngineCommand.SetMidiProcessors, w => { w.Write(slot); w.Write(lists.Count); foreach (var (index, specs) in lists) { w.Write(index); w.Write(specs); } });
+        Send(EngineCommand.SetMidiProcessors, new SetMidiProcessorsMessage(slot, lists.Select(l => (l.Index, (IReadOnlyList<MidiProcSpec>)l.Specs)).ToList()).Write);
     }
 
     /// <summary>Pushes a plug-in's MIDI processor list to the engine now (the MIDI processing window calls it after every edit).</summary>
@@ -329,7 +328,7 @@ public sealed partial class AudioEngineClient : IDisposable
     /// <summary>Starts / stops the engine sending this track's MIDI log (about 20 times a second while watched).</summary>
     public void WatchMidiLog(TrackModel track, bool watch)
     {
-        if (IsRunning && _slots.TryGetValue(track, out var slot)) Send(EngineCommand.SetMidiLogWatch, w => { w.Write(slot); w.Write(watch); });
+        if (IsRunning && _slots.TryGetValue(track, out var slot)) Send(EngineCommand.SetMidiLogWatch, new SetMidiLogWatchMessage(slot, watch).Write);
     }
 
     /// <summary>
@@ -359,7 +358,7 @@ public sealed partial class AudioEngineClient : IDisposable
         var key = $"{index}|{source}|{mask}";
         if (_sentRoutes.TryGetValue(slot, out var sent) ? sent == key : index < 0 || (source == -1 && mask == 0xFFFF)) { _sentRoutes[slot] = key; return; }
         _sentRoutes[slot] = key;
-        if (index >= 0) Send(EngineCommand.SetMidiRoute, w => { w.Write(slot); w.Write(index); w.Write(source); w.Write(mask); });
+        if (index >= 0) Send(EngineCommand.SetMidiRoute, new SetMidiRouteMessage(slot, index, source, mask).Write);
     }
 
     /// <summary>A plug-in's output volume while its knob is dragged: one small message, no chain rebuild.</summary>
@@ -367,7 +366,7 @@ public sealed partial class AudioEngineClient : IDisposable
     {
         var index = track.Rig.Plugins.IndexOf(plugin);
         if (IsRunning && index >= 0 && _slots.TryGetValue(track, out var slot))
-            Send(EngineCommand.SetPluginGain, w => { w.Write(slot); w.Write(index); w.Write(plugin.OutputDb); });
+            Send(EngineCommand.SetPluginGain, new SetPluginGainMessage(slot, index, plugin.OutputDb).Write);
     }
 
     /// <summary>Live bypass: the plug-in stays loaded (editor included); the engine just stops processing it.</summary>
@@ -392,7 +391,7 @@ public sealed partial class AudioEngineClient : IDisposable
         {
             if (before is not null && i < before.Length && before[i] == now[i]) continue;
             var index = i; var db = track.Rig.Plugins[i].OutputDb;
-            Send(EngineCommand.SetPluginGain, w => { w.Write(slot); w.Write(index); w.Write(db); });
+            Send(EngineCommand.SetPluginGain, new SetPluginGainMessage(slot, index, db).Write);
         }
     }
 
@@ -441,7 +440,7 @@ public sealed partial class AudioEngineClient : IDisposable
         {
             if (before is not null && i < before.Length && before[i] == now[i].ToString()) continue;
             var index = i; var enabled = now[i];
-            Send(EngineCommand.SetPluginBypass, w => { w.Write(slot); w.Write(index); w.Write(enabled); });
+            Send(EngineCommand.SetPluginBypass, new SetPluginBypassMessage(slot, index, enabled).Write);
         }
     }
 
@@ -450,7 +449,7 @@ public sealed partial class AudioEngineClient : IDisposable
     {
         if ((_sentSynth.TryGetValue(slot, out var sent) ? sent : true) == on) return;
         _sentSynth[slot] = on;
-        Send(EngineCommand.SetSynth, w => { w.Write(slot); w.Write(on); });
+        Send(EngineCommand.SetSynth, new SetSynthMessage(slot, on).Write);
     }
 
     /// <summary>Sends each loaded track's level at once (a mute/solo toggle is heard within a block); the full <see cref="Sync"/> that follows reconciles.</summary>
@@ -461,7 +460,7 @@ public sealed partial class AudioEngineClient : IDisposable
         {
             if (track.IsBus || !_slots.TryGetValue(track, out var slot)) continue;
             var (volume, pan) = mix(track);
-            Send(EngineCommand.SetTrackMix, w => { w.Write(slot); w.Write(volume); w.Write(pan); });
+            Send(EngineCommand.SetTrackMix, new SetTrackMixMessage(slot, volume, pan).Write);
         }
     }
 
@@ -490,9 +489,9 @@ public sealed partial class AudioEngineClient : IDisposable
         var key = $"{ownerId}|{mix.Volume}|{mix.Pan}|{armed}|{armMode}|{track.MonitorInput}|" + string.Join("|", clips.Select(c => $"{c.File}@{c.StartSec:0.###}+{c.OffsetSec:0.###}/{c.SourceLengthSec:0.###}/{c.GainDb:0.##}/{c.Pitch:0.##}/{c.Speed:0.###}/{c.FadeInSec:0.###}/{c.FadeOutSec:0.###}"));
         if (_sentAudio.TryGetValue(slot, out var sent) && sent == key) return;
         _sentAudio[slot] = key;
-        Send(EngineCommand.SetTrackMix, w => { w.Write(slot); w.Write(mix.Volume); w.Write(mix.Pan); });
+        Send(EngineCommand.SetTrackMix, new SetTrackMixMessage(slot, mix.Volume, mix.Pan).Write);
         ClipsSentForTest?.Invoke(slot, clips);
-        Send(EngineCommand.SetClips, w => { w.Write(slot); w.Write(clips); w.Write(ownerId); });
-        Send(EngineCommand.SetArm, w => { w.Write(slot); w.Write(armed); w.Write(Math.Max(0, armMode)); w.Write(track.MonitorInput); });
+        Send(EngineCommand.SetClips, new SetClipsMessage(slot, clips, ownerId).Write);
+        Send(EngineCommand.SetArm, new SetArmMessage(slot, armed, Math.Max(0, armMode), track.MonitorInput).Write);
     }
 }

@@ -16,7 +16,7 @@ public static class DroppedSongs
                 ? files.Where(f => MediaDrop.RoleOf(f) == MediaDrop.FileRole.Song).ToArray()
                 : Array.Empty<string>();
         }
-        catch (Exception ex) when (ex is System.Runtime.InteropServices.COMException or InvalidOperationException or OutOfMemoryException) { return Array.Empty<string>(); }
+        catch (Exception ex) when (ex is System.Runtime.InteropServices.COMException or InvalidOperationException or OutOfMemoryException) { return Array.Empty<string>(); } // Not logged: drop probe: no files
     }
 
 }
@@ -65,7 +65,7 @@ public sealed class MediaDropSession : IDisposable
             if (VirtualFileDrop.Descriptors(data) is { Count: > 0 } virtuals)
                 return "virtual|" + string.Join("|", virtuals.Select(v => $"{v.Name}:{v.Size}"));
         }
-        catch (Exception ex) when (ex is System.Runtime.InteropServices.COMException or InvalidOperationException or OutOfMemoryException or IOException) { }
+        catch (Exception ex) when (ex is System.Runtime.InteropServices.COMException or InvalidOperationException or OutOfMemoryException or IOException) { } // Not logged: drag-over path: runs on every pointer move.
         return null;
     }
 
@@ -162,7 +162,7 @@ public sealed class MediaDropSession : IDisposable
         var name = Path.GetFileNameWithoutExtension(file);
         const DropItemKind kind = DropItemKind.Midi;
         try { return new DropItem { Path = file, Name = name, Kind = kind, Midi = MidiFileImport.Read(file), Transient = transient }; }
-        catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+        catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException or ArgumentException or NotSupportedException) // Not logged: the problem is shown in the drop list
         { return new DropItem { Path = file, Name = name, Kind = kind, Transient = transient, Problem = $"{name}: {ex.Message}" }; }
     }
 
@@ -180,6 +180,6 @@ public sealed class MediaDropSession : IDisposable
             if (MediaPathPolicy.IsInside(MediaPathPolicy.Normalize(folder), MediaPathPolicy.Normalize(MediaDrop.StagingRoot)) && Directory.Exists(folder))
                 Directory.Delete(folder, recursive: true);
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { } // Not logged: temp file cleanup.
     }
 }

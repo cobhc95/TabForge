@@ -9,7 +9,7 @@ using TabForge.Models;
 
 namespace TabForge.Services;
 
-/// <summary>Settings of one out-of-process Guitar Pro import (A5-07); <see cref="Default"/> is what the app uses.</summary>
+/// <summary>Settings of one out-of-process score import; <see cref="Default"/> is what the app uses.</summary>
 public sealed class ImportWorkerOptions
 {
     public static ImportWorkerOptions Default { get; } = new();
@@ -26,14 +26,14 @@ public sealed class ImportWorkerOptions
     internal bool TestHang { get; init; }
     /// <summary>Self-test seam: called with the worker process right after it started.</summary>
     internal Action<Process>? Started { get; init; }
-    /// <summary>Self-test seams (A6-03): the Job Object cannot be created / the started worker cannot be assigned to it.</summary>
+    /// <summary>Self-test seams: the Job Object cannot be created / the started worker cannot be assigned to it.</summary>
     internal bool TestFailJobCreate { get; init; }
     internal bool TestFailJobAssign { get; init; }
 }
 
 /// <summary>
 /// The import worker could not be started, did not connect, or could not be confined to its Job Object. The caller may import
-/// in-process only with the user's consent for that file (A6-03).
+/// in-process only with the user's consent for that file.
 /// </summary>
 public sealed class ImportWorkerUnavailableException : Exception
 {
@@ -44,7 +44,7 @@ public sealed class ImportWorkerUnavailableException : Exception
 // Does not own: the conversion rules (GuitarProImporter).
 // Tests: TestGuitarProImportWorker, TestLongGuitarPro35Import.
 /// <summary>
-/// Out-of-process Guitar Pro import (audit A5-07). <c>TabForge.exe --import-worker &lt;pipe&gt; &lt;parent id&gt;</c> (the same exe, like the
+/// Out-of-process score import. <c>TabForge.exe --import-worker &lt;pipe&gt; &lt;parent id&gt;</c> (the same exe, like the
 /// audio engine and plug-in host modes) receives the file bytes over a current-user-only pipe with a random name, parses them with
 /// alphaTab and the importer, and returns the project in the compact transfer form (gzip JSON, ProjectService.TransferBytes). Every message is a bounded frame
 /// (kind byte + 32-bit length, checked before anything is allocated). The worker runs in a Job Object with a memory and a CPU-time
@@ -62,7 +62,7 @@ public static class ImportWorker
     private const int FlagTestHang = 1;
 
     /// <summary>
-    /// A6-03: the in-process parse, used by the background import only after the user agreed for this file (the worker or its
+    /// The in-process parse, used by the background import only after the user agreed for this file (the worker or its
     /// containment could not be set up; <paramref name="reason"/> says why). The opened score carries a notice.
     /// </summary>
     public static SongProject ImportInProcess(string path, List<string> notices, string reason, ImportContext? context = null)
@@ -94,7 +94,7 @@ public static class ImportWorker
         var pipeName = PipePrefix + Guid.NewGuid().ToString("N");
         var cpuLimit = TimeSpan.FromTicks(Math.Max(budget.Ticks, TimeSpan.FromSeconds(10).Ticks) * 2);
         using var job = new ChildProcessJob(options.JobMemoryLimitBytes, cpuLimit);
-        // A6-03: no worker without its Job Object (memory / CPU limits, kill-on-close); the caller asks before parsing in-process.
+        // No worker without its Job Object (memory / CPU limits, kill-on-close); the caller asks before parsing in-process.
         if (!job.IsActive || options.TestFailJobCreate) throw new ImportWorkerUnavailableException("its memory and time limits could not be set up");
         using var pipe = new NamedPipeServerStream(pipeName, PipeDirection.InOut, 1, PipeTransmissionMode.Byte,
             PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
@@ -118,7 +118,7 @@ public static class ImportWorker
         {
             if (Interlocked.Exchange(ref killed, 1) != 0) return;
             job.Dispose();   // kill-on-close: ends the worker and anything it started
-            try { process.Kill(entireProcessTree: true); } catch (Exception ex) when (ex is InvalidOperationException or Win32Exception or NotSupportedException) { }
+            try { process.Kill(entireProcessTree: true); } catch (Exception ex) when (ex is InvalidOperationException or Win32Exception or NotSupportedException) { } // Not logged: kill-on-close: the process may have exited already.
         }
 
         using (process)
@@ -134,7 +134,7 @@ public static class ImportWorker
                 var connect = pipe.WaitForConnectionAsync(token);
                 var exited = process.WaitForExitAsync(token);
                 try { Task.WaitAny(new Task[] { connect, exited }, options.ConnectTimeout); }
-                catch (ObjectDisposedException) { }
+                catch (ObjectDisposedException ex) { Services.Trace.Error(Services.Trace.Import, "import worker: wait for connection: " + ex.Message); }
                 token.ThrowIfCancellationRequested();
                 if (!connect.IsCompletedSuccessfully)
                     throw new ImportWorkerUnavailableException(process.HasExited ? "it ended at start" : "it did not answer");
@@ -152,7 +152,7 @@ public static class ImportWorker
                     pipe.Flush();
 
                     var kind = ReadHeader(pipe, out var length);
-                    // A6-02: the worker reports an embedded TabForge project it found but could not use, before its result.
+                    // The worker reports an embedded TabForge project it found but could not use, before its result.
                     while (kind == FrameNotice)
                     {
                         if (length > MaxErrorBytes) throw new InvalidDataException("The import process sent an invalid reply.");
@@ -184,7 +184,7 @@ public static class ImportWorker
             finally
             {
                 Kill();
-                try { process.WaitForExit(5_000); } catch (Exception ex) when (ex is InvalidOperationException or Win32Exception or SystemException) { }
+                try { process.WaitForExit(5_000); } catch (Exception ex) when (ex is InvalidOperationException or Win32Exception or SystemException) { } // Not logged: finally after kill: the process may have exited.
             }
         }
     }
@@ -230,6 +230,7 @@ public static class ImportWorker
             }
             catch (Exception ex) when (ex is not OutOfMemoryException)
             {
+                Services.Trace.Error(Services.Trace.Import, "import worker: damage notice: " + ex.Message);
                 var message = ex is InvalidDataException ? ex.Message : "This score file is invalid, truncated, or unsupported.";
                 if (message.Length > 2_000) message = message[..2_000];
                 reply = Encoding.UTF8.GetBytes(message);
@@ -241,6 +242,7 @@ public static class ImportWorker
         }
         catch (Exception ex) when (ex is IOException or TimeoutException or UnauthorizedAccessException or ObjectDisposedException)
         {
+            Services.Trace.Error(Services.Trace.Import, "import worker: pipe: " + ex.Message);
             return 1;
         }
     }
@@ -251,7 +253,7 @@ public static class ImportWorker
         new Thread(() =>
         {
             try { using var parent = Process.GetProcessById(parentId); parent.WaitForExit(); }
-            catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or Win32Exception) { }
+            catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or Win32Exception) { } // Not logged: parent watch: the parent may have exited already.
             Environment.Exit(4);
         }) { IsBackground = true, Name = "TabForge import worker parent watch" }.Start();
     }

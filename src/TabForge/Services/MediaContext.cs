@@ -73,7 +73,7 @@ public sealed class MediaContext
     public bool IsClosed { get { lock (_gate) return _closed; } }
 
     /// <summary>The approvals store (null when none is available: nothing is approved).</summary>
-    public AudioSettings? Settings { get { try { return _settings(); } catch (Exception) { return null; } } }
+    public AudioSettings? Settings { get { try { return _settings(); } catch (Exception) { return null; } } } // Not logged: approvals getter: nothing approved is the safe default
 
     /// <summary>True while work that captured <paramref name="revision"/> is still wanted (the song is open and its path did not change).</summary>
     public bool IsCurrent(int revision) { lock (_gate) return !_closed && _revision == revision; }
@@ -150,6 +150,6 @@ public sealed class MediaContext
 
     internal bool RemoveSessionFolder(string folder) { lock (_gate) return _sessionFolders.Remove(folder); }
 
-    /// <summary>The folders this unsaved song's session was allowed to read (for the review window).</summary>
+    /// <summary>The folders this unsaved song's session was allowed to read (for the approvals window).</summary>
     public IReadOnlyList<string> SessionFolders() { lock (_gate) return _sessionFolders.ToList(); }
 }

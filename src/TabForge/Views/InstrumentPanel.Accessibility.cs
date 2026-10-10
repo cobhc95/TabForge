@@ -7,6 +7,10 @@ using TabForge.Visualization;
 
 namespace TabForge.Views;
 
+// Owns: the accessibility of the instrument panel: the description of the notes shown now and the automation peer that reports them read-only.
+// Does not own: the drawing of the instrument (InstrumentPanel.cs, InstrumentPanel.Percussion.cs).
+// Tests: TestAutomationPeers.
+
 // InstrumentPanel: accessibility. The fretboard / keyboard / drum map is named and reports the notes currently shown.
 public sealed partial class InstrumentPanel
 {

@@ -13,7 +13,11 @@ using TabForge.Views.Score;
 
 namespace TabForge.Views;
 
-// TabEditorControl: playhead and the retained per-system drawings.
+// Owns: the editor's playback surface (IScorePlayhead): the playing bar and fraction, the playhead geometry for a system, the
+//   playback overlay and its repaint hooks, and the reset of the system drawing cache.
+// Does not own: the playhead clock (the playback engine) and the overlay drawing (Views/Score/PlaybackOverlay.cs).
+// Tests: TestTabEditorPlayheadAndAppearance, TestTabEditorPlaybackAllocation.
+
 public sealed partial class TabEditorControl
 {
     // ---------- playback (state and geometry live in PlaybackOverlay) ----------

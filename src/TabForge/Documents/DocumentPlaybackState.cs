@@ -173,7 +173,7 @@ public sealed class DocumentPlaybackState : IDisposable
                 await Task.Delay(retryInMs);
             }
         }
-        catch (Exception ex) when (ex is not OutOfMemoryException) { System.Diagnostics.Debug.WriteLine($"live edit refresh failed: {ex.Message}"); }   // the edit stays in the song; the next play pass has it
+        catch (Exception ex) when (ex is not OutOfMemoryException) { System.Diagnostics.Debug.WriteLine($"live edit refresh failed: {ex.Message}"); }   // the edit stays in the song; the next play pass has it // Not logged: playback-side refresh: the next edit retries it
         finally { _liveBusy = false; _liveDirty = false; }
     }
 

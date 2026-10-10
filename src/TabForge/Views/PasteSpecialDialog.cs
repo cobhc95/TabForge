@@ -246,7 +246,7 @@ internal sealed class PasteSpecialDialog : Window
         _confirmed = paste;
         if (!IsLoaded && !IsVisible) return;
         try { DialogResult = paste; }
-        catch (InvalidOperationException) { Close(); }
+        catch (InvalidOperationException) { Close(); } // Not logged: dialog close: the dialog is already closed
     }
 
     /// <summary>Height the window takes for its content at <see cref="DialogWidth"/>.</summary>

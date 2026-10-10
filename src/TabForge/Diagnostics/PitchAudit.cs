@@ -82,7 +82,7 @@ internal static class PitchAudit
             Console.WriteLine($"Wrote {outPath} ({candidates.Count} instruments)");
             return 0;
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or InvalidDataException or ArgumentException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or InvalidDataException or ArgumentException) // Not logged: diagnostic probe: the failure goes to its report, not errors.log
         {
             Console.Error.WriteLine($"Pitch audit could not run: {ex.Message}");
             return 2;
@@ -94,7 +94,7 @@ internal static class PitchAudit
     {
         if (!File.Exists(path)) return new PluginSettings();
         try { return SettingsFileService.Load(path).Plugins; }
-        catch (InvalidDataException)
+        catch (InvalidDataException) // Not logged: diagnostic probe: the failure goes to its report, not errors.log
         {
             var result = new PluginSettings();
             using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(path));

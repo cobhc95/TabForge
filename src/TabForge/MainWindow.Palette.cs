@@ -27,7 +27,10 @@ using TabForge.Visualization;
 namespace TabForge;
 
 // MainWindow, tool palette: tool definitions, palette panels, pinned strip and tool actions.
-public partial class MainWindow : IToolPaletteHost
+// Owns: the tool palette's host side: tool definitions, palette panels, the pinned strip and tool actions.
+// Does not own: the palette controller (ToolPaletteController).
+// Tests: listed in docs/feature-map/editing-and-notation.md.
+public partial class MainWindow : IToolActionsHost
 {
     private ToolPaletteController? _toolPalette;
     private ToolPaletteController ToolPalette => _toolPalette ??= new ToolPaletteController(this);
@@ -46,50 +49,36 @@ public partial class MainWindow : IToolPaletteHost
     private void ToolsPaletteButton_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not Button { Tag: string id }) return;
-        switch (id)
+        if (!ToolActions.TryRun(id)) switch (id)
         {
             case "edit:pointer": Editor.ClearSelection(); Editor.Focus(); break;
             case "edit:erase_note": Editor.Effects.DeleteNote(); break;
             case "gp:key_signature": KeySig_Click(sender, e); break;
-            case "gp:triplet_feel": CycleTripletFeel(); break;
-            case "gp:free_time": ToggleMeasureProperty(measure => measure.FreeTime,
-                (measure, value) => measure.FreeTime = value, "Free-time measure"); break;
             case "gp:double_barline": DoubleBar_Click(sender, e); break;
-            case "gp:repeat_one_bar": ToggleSimile(1); break;
-            case "gp:repeat_two_bars": ToggleSimile(2); break;
             case "gp:directions": Directions_Click(sender, e); break;
             case "gp:insert_bar": InsertBar_Click(sender, e); break;
             case "gp:append_bar": AppendBar(); break;
             case "gp:duplicate_bar": DuplicateBar_Click(sender, e); break;
             case "gp:delete_bar": DeleteBar_Click(sender, e); break;
-            case "gp:check_bars": CheckBars_Click(sender, e); break;
             case "gp:step_back": StepBeat(-1); break;
             case "gp:step_forward": StepBeat(1); break;
-            case "gp:force_line_break": ToggleLineBreak(force: true); break;
-            case "gp:prevent_line_break": ToggleLineBreak(force: false); break;
             case "gp:add_marker": AddMarker_Click(sender, e); break;
-            case "gp:marker_list": FocusMarkerList(); break;
             case "gp:previous_marker": JumpSection(-1); break;
             case "gp:next_marker": JumpSection(1); break;
-            case "gp:custom_ntuplet": ChooseTuplet(); break;
             case "gp:tie_note": Editor.Effects.TieSelectedNote(); break;
             case "gp:tie_beat": Editor.Effects.TieSelectedBeat(); break;
-            case "gp:sound_duration": SetSoundDuration(); break;
             case "gp:octave_8va": Editor.Effects.SetOctaveShift(12); break;
             case "gp:octave_8vb": Editor.Effects.SetOctaveShift(-12); break;
             case "gp:octave_15ma": Editor.Effects.SetOctaveShift(24); break;
             case "gp:octave_15mb": Editor.Effects.SetOctaveShift(-24); break;
             case "gp:voice_1": Editor.SetActiveVoice(0); break;
             case "gp:voice_2": Editor.SetActiveVoice(1); break;
-            case "gp:inactive_voice_gray": ToggleInactiveVoiceGray(); break;
             case "gp:beam_auto": Editor.Effects.SetBeamMode(BeamMode.Auto); Editor.Effects.SetSecondaryBeamBreak(false); break;
             case "gp:beam_force": Editor.Effects.SetBeamMode(BeamMode.Force); break;
             case "gp:beam_break": Editor.Effects.SetBeamMode(BeamMode.Break); break;
             case "gp:beam_break_secondary": Editor.Effects.SetSecondaryBeamBreak(Editor.Effects.GetNoteCellToolState(cell => cell.BreakSecondaryBeamBefore) != true); break;
             case "gp:stem_auto": Editor.Effects.SetStemDirection(StemDirection.Auto); break;
-            case "gp:stem_invert": ToggleStemDirection(); break;
             case "composition:time_signature": TimeSig_Click(sender, e); break;
-            case "composition:tempo": SetMeasureTempo(); break;
             case "composition:repeat_open": RepeatOpen_Click(sender, e); break;
             case "composition:repeat_close": RepeatClose_Click(sender, e); break;
             case "composition:alternate_ending": Directions_Click(sender, e); break;
@@ -104,7 +93,6 @@ public partial class MainWindow : IToolPaletteHost
             case "duration:double-dotted": Editor.Effects.SetDots(2); break;
             case "duration:tie": Editor.Effects.ToggleTie(); break;
             case "duration:tuplet": Editor.Effects.ToggleTriplet(); break;
-            case "duration:tuplet-menu": ChooseTuplet(); break;
             case "dynamic:ppp": Editor.Effects.SetDynamicVelocity(16); break;
             case "dynamic:pp": Editor.Effects.SetDynamicVelocity(33); break;
             case "dynamic:p": Editor.Effects.SetDynamicVelocity(49); break;
@@ -144,113 +132,33 @@ public partial class MainWindow : IToolPaletteHost
         RefreshToolsPalette();
     }
 
-    private void ToggleMeasureProperty(Func<MeasureModel, bool> getter, Action<MeasureModel, bool> setter, string label)
+    private ToolActionsFlow? _toolActions;
+    private ToolActionsFlow ToolActions => _toolActions ??= new ToolActionsFlow(this);
+    DocumentSession IToolActionsHost.ActiveDocument => Doc;
+    int IToolActionsHost.SelectedTrackRow => TrackMixerGrid.SelectedIndex;
+    ArrangementController IToolActionsHost.Arrangement => _arrangementController;
+    void IToolActionsHost.FocusMarkerList(MarkerModel? marker)
     {
-        if (CurBar() is null) return;
-        var value = false;
-        if (!DocumentEdits.Run(Doc, p => _arrangementController.TryToggleMeasureProperty(p, TrackMixerGrid.SelectedIndex,
-                Editor.SelectedMeasure, getter, setter, out value)).Changed) return;
-        RefreshAfterEdit(EditRefresh.Score | EditRefresh.Arrangement | EditRefresh.Palette);
-        StatusText.Text = value ? $"{label} on" : $"{label} off";
-    }
-
-    private void CycleTripletFeel()
-    {
-        if (CurBar() is null) return;
-        var next = "";
-        if (!DocumentEdits.Run(Doc, p => _arrangementController.TryCycleTripletFeel(p, TrackMixerGrid.SelectedIndex,
-                Editor.SelectedMeasure, out next)).Changed) return;
-        RefreshAfterEdit(EditRefresh.Score | EditRefresh.Palette);
-        StatusText.Text = next switch { "None" => "Straight feel", "Triplet8th" => "Eighth-note swing", _ => "Sixteenth-note swing" };
-    }
-
-    private void ToggleSimile(int barCount)
-    {
-        if (CurBar() is null || Editor.SelectedMeasure < barCount) return;
-        var enabled = false;
-        if (!DocumentEdits.Run(Doc, p => _arrangementController.TryToggleSimile(p, TrackMixerGrid.SelectedIndex,
-                Editor.SelectedMeasure, barCount, out enabled)).Changed) return;
-        RefreshAfterEdit(EditRefresh.Score | EditRefresh.Arrangement | EditRefresh.Palette);
-        StatusText.Text = enabled ? $"Repeating previous {barCount} bar{(barCount == 1 ? "" : "s")}" : "Simile repeat removed";
-    }
-
-    private void ToggleLineBreak(bool force)
-    {
-        if (CurBar() is null) return;
-        var enabled = false;
-        if (!DocumentEdits.Run(Doc, p => _arrangementController.TryToggleLineBreak(p, TrackMixerGrid.SelectedIndex,
-                Editor.SelectedMeasure, force, out enabled)).Changed) return;
-        RefreshAfterEdit(EditRefresh.Score | EditRefresh.Palette);
-        StatusText.Text = force
-            ? enabled ? "System break forced before this measure" : "Forced system break removed"
-            : enabled ? "Automatic system break prevented before this measure" : "System-break prevention removed";
-    }
-
-    private void ToggleInactiveVoiceGray()
-    {
-        DocumentEdits.Run(Doc, p => { p.GrayInactiveVoice = !p.GrayInactiveVoice; return true; });
-        RefreshAfterEdit(EditRefresh.Repaint | EditRefresh.Palette);
-        StatusText.Text = _project.GrayInactiveVoice ? "Inactive voice dimmed" : "Inactive voice at normal brightness";
-    }
-
-    private void ToggleStemDirection()
-    {
-        var cell = Editor.Effects.CurrentCell();
-        if (cell is null || !Editor.Effects.HasEditableNotes) return;
-        Editor.Effects.SetStemDirection(cell.StemDirection == StemDirection.Invert ? StemDirection.Auto : StemDirection.Invert);
-    }
-
-    private void SetSoundDuration()
-    {
-        var cell = Editor.Effects.CurrentCell();
-        if (cell is null || !Editor.Effects.HasEditableNotes) return;
-        var text = GpDialogs.Prompt("Sound duration", "Sounding duration (% of written value, 1–200):",
-            cell.SoundDurationPercent.ToString());
-        if (text is null || !int.TryParse(text, out var percent)) return;
-        Editor.Effects.SetSoundDurationPercent(Math.Clamp(percent, 1, 200));
-        StatusText.Text = $"Sound duration {Math.Clamp(percent, 1, 200)}%";
-    }
-
-    private void FocusMarkerList()
-    {
-        var selected = _project.Markers.OrderBy(marker => marker.MeasureIndex)
-            .FirstOrDefault(marker => marker.MeasureIndex >= Editor.SelectedMeasure)
-            ?? _project.Markers.OrderBy(marker => marker.MeasureIndex).LastOrDefault();
-        if (selected is not null)
+        if (marker is not null)
         {
-            MarkerList.SelectedItem = selected;
-            MarkerList.ScrollIntoView(selected);
+            MarkerList.SelectedItem = marker;
+            MarkerList.ScrollIntoView(marker);
         }
         Keyboard.Focus(MarkerList);
-        StatusText.Text = _project.Markers.Count == 0 ? "No markers yet" : "Marker list focused";
     }
 
-    private void ChooseTuplet()
-    {
-        var current = Editor.Effects.CurrentCell()?.Tuplet ?? (3, 2);
-        var numeratorText = GpDialogs.Prompt("Tuplet", "Notes in the tuplet (numerator):", current.Numerator.ToString());
-        if (numeratorText is null || !int.TryParse(numeratorText, out var numerator)) return;
-        var denominatorText = GpDialogs.Prompt("Tuplet", "Normal note value (denominator):", current.Denominator.ToString());
-        if (denominatorText is null || !int.TryParse(denominatorText, out var denominator)) return;
-        Editor.Effects.SetTuplet(numerator, denominator);
-    }
+    void IToolActionsHost.RefreshAfterEdit(ToolRefresh refresh) => RefreshAfterEdit(
+        (refresh.HasFlag(ToolRefresh.Score) ? EditRefresh.Score : 0) | (refresh.HasFlag(ToolRefresh.Repaint) ? EditRefresh.Repaint : 0) |
+        (refresh.HasFlag(ToolRefresh.Arrangement) ? EditRefresh.Arrangement : 0) | (refresh.HasFlag(ToolRefresh.Palette) ? EditRefresh.Palette : 0) |
+        (refresh.HasFlag(ToolRefresh.Instrument) ? EditRefresh.Instrument : 0));
 
-    private void SetMeasureTempo()
+    void IToolActionsHost.RefreshAfterTempoChange()
     {
-        var measure = Editor.Effects.CurrentMeasure();
-        if (measure is null) return;
-        var value = GpDialogs.Prompt("Tempo change", "Tempo in beats per minute (20–400):",
-            (measure.TempoChange ?? _project.Tempo).ToString());
-        if (value is null || !int.TryParse(value, out var tempo)) return;
-        tempo = Math.Clamp(tempo, 20, 400);
-        DocumentEdits.Run(Doc, p => { _arrangementController.TrySetTempoChange(p, Editor.SelectedMeasure, tempo); return true; });
-        Editor.InvalidateScoreLayout();
         RebuildVisualTimeline();
         _midi.Rebuild(_project);
         RefreshArrangement();
         RefreshStatus();
         RefreshToolsPalette();
         UpdateTitle();
-        StatusText.Text = $"Tempo change: ♩={tempo}";
     }
 }

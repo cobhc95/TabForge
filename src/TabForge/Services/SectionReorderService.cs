@@ -5,7 +5,7 @@ namespace TabForge.Services;
 
 // Owns: moving sections to a new order.
 // Does not own: the arrangement drawing and undo capture.
-// Tests: TestSectionReorder, TestSectionLayout.
+// Tests: CheckSectionReorder, CheckSectionLayout.
 /// <summary>Atomically reorders complete section ranges across every track and remaps old bar indexes.</summary>
 public static class SectionReorderService
 {

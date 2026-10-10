@@ -6,6 +6,9 @@ namespace TabForge;
 
 // MainWindow: adding an audio track (the Add-track lane's prompt, the + Track button's menu) and turning an audio track into an instrument track.
 // The model work is TrackController (CreateTrack / ConvertAudioToInstrument); this is only the window's refresh around it.
+// Owns: adding an audio track from the Add-track lane or the + Track menu, and turning an audio track into an instrument track, as the window's refresh around them.
+// Does not own: the track work itself (TrackController).
+// Tests: listed in docs/feature-map/mixer-and-audio-engine.md.
 public partial class MainWindow
 {
     private void HookAddTrackLane()

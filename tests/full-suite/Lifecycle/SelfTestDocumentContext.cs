@@ -15,7 +15,7 @@ using TabForge.Views;
 namespace TabForge;
 
 /// <summary>
-/// R2 (remediation plan section 3): media, approval and settings operations take the owning document's context explicitly. The matrix:
+/// Media, approval and settings operations take the owning document's context explicitly. The matrix:
 /// per-document relative paths, approval isolation (network, cache, unsaved songs, legacy empty-path approvals), imported songs without a
 /// save path, background playback, stale and queued work (close, Save As, revoke), Save As / duplicate / move / reopen, and a window-close
 /// that asks about every dirty document. File-system, probe and decoder seams count every attempt; fixtures are synthetic and the remote
@@ -81,7 +81,7 @@ public static partial class SelfTest
         RunDcCase("Save As, duplicate, move and reopen keep scopes explicit", DcSaveAsCase);
         RunDcCase("the shared engine judges every document's clips with its own context", DcEngineCase);
         RunDcCase("closure (a): an imported long song with linked audio keeps its identity across a window transfer and Save As", ClosureImportedLongSongIdentityCase);
-        TestDocumentContextLeftovers();   // R3: the R2 review's leftovers
+        CheckDocumentContextLeftovers();   // Leftover cases of the document context
         RunInWindowFixture((a, context) =>
         {
             RunDcCase("the linked-audio review is bound to the song it opened for", () => DcReviewTargetCase(context));
@@ -182,7 +182,7 @@ public static partial class SelfTest
         Check("document context: relative media of an imported song resolves against its source folder (no save path yet)", verdict.Allowed && verdict.Verdict.FullPath == @"C:\imports\song\audio\drums.wav", verdict.Message);
         Check("document context: without a source folder or save path a relative path is refused (never resolved against another folder)", !MediaAccess.Evaluate(@"audio\drums.wav", TestMediaContext(settings, null)).Allowed);
         // The network-project policy is not broadened: only a saved song's own folder counts as "the project"; a song imported from a share
-        // (or a duplicate inheriting that folder) resolves there but still needs its own approval, as before R2.
+        // (or a duplicate inheriting that folder) resolves there but still needs its own approval.
         var remoteImport = TestMediaContext(settings, null);
         remoteImport.SetSourceDirectory(@"\\tf-dc-server\share");
         var remote = MediaAccess.Evaluate("take.wav", remoteImport);
@@ -350,7 +350,7 @@ public static partial class SelfTest
         }
     }
 
-    // ---------- 12: the review window belongs to the song it was opened for ----------
+    // ---------- 12: the approvals window belongs to the song it was opened for ----------
 
     private static void DcReviewTargetCase(LifetimeContext context)
     {
@@ -363,7 +363,7 @@ public static partial class SelfTest
         var before = context.Captured.Count;
         LtCall(w, "ReviewLinkedAudio", w);                    // opened for the first tab
         var review = context.Captured.Skip(before).FirstOrDefault(x => x.Title == "Linked audio");
-        LtCall(w, "ActivateTabAt", 1);                        // focus moves to the second tab while the review is open
+        LtCall(w, "ActivateTabAt", 1);                        // focus moves to the second tab while the approvals window is open
         var box = review is null ? null : Logical<CheckBox>(review).FirstOrDefault();
         if (box is not null) box.IsChecked = true;
         var allow = review is null ? null : Logical<Button>(review).FirstOrDefault(x => x.Content as string == "Allow selected");

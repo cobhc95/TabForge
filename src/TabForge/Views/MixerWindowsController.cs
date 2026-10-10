@@ -5,8 +5,10 @@ using TabForge.Services;
 namespace TabForge.Views;
 
 /// <summary>What the mixer and FX chain windows need from the main window.</summary>
-internal interface IMixerWindowsHost : IPaneHost
+internal interface IMixerWindowsHost
 {
+    /// <summary>The main window: owner of the mixer and FX chain windows.</summary>
+    Window Window { get; }
     IMixerHost MixerHost { get; }
     IFxChainHost FxHost { get; }
     /// <summary>A mixer slider drag ended: the deferred engine sync and refresh follow.</summary>

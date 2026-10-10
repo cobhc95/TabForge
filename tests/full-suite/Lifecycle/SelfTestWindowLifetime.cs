@@ -19,7 +19,7 @@ using TabForge.Views;
 namespace TabForge;
 
 /// <summary>
-/// R1 (remediation plan): lifetime of REAL <see cref="MainWindow"/> instances. Window A stays open while window B is created and closed;
+/// Lifetime of REAL <see cref="MainWindow"/> instances. Window A stays open while window B is created and closed;
 /// everything B attached to a longer-lived object (static events and callbacks, the shared audio engine client, the shared settings store,
 /// registries, queued dispatcher work) must be gone when B has really closed, B and its closed documents must be collectable, a cancelled
 /// close must leave B working (wired exactly once), a tab moved to another window keeps its document, undo history and playback, and the
@@ -257,6 +257,10 @@ public static partial class SelfTest
     /// <summary>The window's instrument panel controller (it holds the view choice).</summary>
     private static object LtPane(object window) =>
         window.GetType().GetProperty("InstrumentPane", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(window)!;
+
+    /// <summary>The window's tool actions (the palette tools that edit through a dialog or a bar property).</summary>
+    private static object LtTools(object window) =>
+        window.GetType().GetProperty("ToolActions", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(window)!;
 
     private static void LtSet(object target, string name, object? value) =>
         target.GetType().GetField(name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)!.SetValue(target, value);

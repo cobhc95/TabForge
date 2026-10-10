@@ -350,11 +350,11 @@ public static partial class SelfTest
         Check("drum map overrides change or drop notes", overrideTable[36] == 38 && overrideTable[40] == -1 && overrideTable[41] == 41);
         if (DrumMapLibrary.Find("General MIDI") is { } gm) Check("the General MIDI drum map ships and is verified", gm.Verified && gm.Notes[38] == "Acoustic Snare" && DrumMapLibrary.All().Where(m => m.Name.Contains("unverified")).All(m => !m.Verified));
         else Skip("shipped drum maps", "Resources/DrumMaps not next to the test executable");
-        TestMidiGenerators();
-        TestMidiAudioProcessors();
+        CheckMidiGenerators();
+        CheckMidiAudioProcessors();
     }
 
-    private static void TestMidiGenerators()
+    private static void CheckMidiGenerators()
     {
         static List<string> Ons(List<string> o) => o.Where(s => s.Split(':')[1] == "90").ToList();
 
@@ -406,7 +406,7 @@ public static partial class SelfTest
         Check("note randomizer stays in range, velocity variation sets the base, the note-off follows", int.Parse(rp[2]) is >= 50 and <= 52 && rp[3] == "90" && rndOut[1] == $"5:80:{rp[2]}:0", string.Join(",", rndOut));
     }
 
-    private static void TestMidiAudioProcessors()
+    private static void CheckMidiAudioProcessors()
     {
         static List<string> Run(EM.MidiProcessorChain c, float[] l, float[] r, params EP.BlockMidi[] input)
         {

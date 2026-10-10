@@ -8,6 +8,9 @@ namespace TabForge;
 // MainWindow, context-menu prewarm: once at idle after the first song opens, builds and discards one hidden menu with every
 // item kind (plain, checkable, radio, sub-menu) so the styles and templates are loaded before the first right-click.
 // Does not own the menus themselves (ScoreMenus, TrackRowMenus, timeline menus).
+// Owns: context-menu prewarm: once at idle after the first song opens, one hidden menu with every item kind is built and discarded.
+// Does not own: the menus themselves (ScoreMenus, TrackRowMenus, timeline menus).
+// Tests: listed in docs/feature-map/windows-tabs-and-documents.md.
 public partial class MainWindow
 {
     private bool _menusPrewarmed;

@@ -176,33 +176,20 @@ internal static class GuitarProBeatReader
         ReadSlideTechniques(sourceNote, t);
         AddEnumTechnique(sourceNote, t, "HarmonicType", "Harmonic", "Artificial", "ArtificialHarmonic");
         AddEnumTechnique(beat, t, "BrushType", "BrushDown", "Up", "BrushUp");
-        switch (Get(beat, "BrushType")?.ToString()) { case "ArpeggioDown": t.Add("ArpeggioDown"); break; case "ArpeggioUp": t.Add("ArpeggioUp"); break; }
-        switch (Get(beat, "WahPedal")?.ToString()) { case "Open": t.Add("WahOpen"); break; case "Closed": t.Add("WahClose"); break; }
+        AddGpTechnique(beat, t, "BrushType");   // the arpeggio strokes (the brush strokes are added above)
+        AddGpTechnique(beat, t, "WahPedal");
         AddEnumTechnique(beat, t, "PickStroke", "PickDown", "Up", "PickUp");
         // A legato slur starts on this beat (the next beat is its destination); a rasgueado is a strumming pattern, kept as "Rasgueado" (the first pattern, ii_1) or "Rasgueado" plus "Rasgueado<pattern>".
         if (GetBool(beat, "IsLegatoOrigin", false)) t.Add("Legato");
         if (GetBool(beat, "HasRasgueado", false) && Get(beat, "Rasgueado")?.ToString() is { Length: > 0 } rasgueado && rasgueado != "None") { t.Add("Rasgueado"); if (rasgueado != "Ii") t.Add("Rasgueado" + rasgueado); }
-        switch (Get(beat, "GraceType")?.ToString())
-        {
-            case "BeforeBeat": t.Add("GraceBefore"); break;
-            case "OnBeat": t.Add("GraceOnBeat"); break;
-            case "BendGrace": t.Add("GraceBend"); break;
-        }
+        AddGpTechnique(beat, t, "GraceType");
 
         var tremoloPicking = Get(beat, "TremoloPicking");
         if (GetBool(beat, "IsTremolo", false) || IsSet(tremoloPicking)) t.Add("TremoloPick");
 
         // Harmonic kinds are kept distinct for display only: alphaTab's RealValue already contains the
         // harmonic sounding pitch (e.g. a fret-14 artificial harmonic is RealValue 74, fretted 62).
-        switch (Get(sourceNote, "HarmonicType")?.ToString())
-        {
-            case "Natural": t.Add("Harmonic"); break;
-            case "Artificial": t.Add("ArtificialHarmonic"); break;
-            case "Pinch": t.Add("PinchHarmonic"); break;
-            case "Tap": t.Add("TapHarmonic"); break;
-            case "Semi": t.Add("SemiHarmonic"); break;
-            case "Feedback": t.Add("FeedbackHarmonic"); break;
-        }
+        AddGpTechnique(sourceNote, t, "HarmonicType");
 
         if (Get(sourceNote, "BendPoints") is IEnumerable bends && bends.Cast<object>().Any())
         {
@@ -322,6 +309,12 @@ internal static class GuitarProBeatReader
             if (note.BendPoints.Count > 0 && note.BendPoints[^1].Offset == offset && note.BendPoints[^1].Value == value) continue;
             note.BendPoints.Add(new BendPointModel { Offset = offset, Value = value });
         }
+    }
+
+    /// <summary>Adds the technique the table maps the source's alphaTab enum value to (see <see cref="TechniqueInfo.FromGp"/>); a value with no technique adds nothing.</summary>
+    private static void AddGpTechnique(object source, HashSet<string> target, string enumName)
+    {
+        if (Get(source, enumName)?.ToString() is { } value && TechniqueInfo.FromGp(enumName, value) is { } technique) target.Add(technique);
     }
 
     internal static void AddEnumTechnique(object source, HashSet<string> target, string property, string label, string matchFragment, string matchedLabel)

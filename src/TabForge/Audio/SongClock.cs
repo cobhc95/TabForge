@@ -155,7 +155,7 @@ public sealed class SongClock
         if (ReferenceEquals(_snapshotProject, project) && _snapshotRevision == project.TimelineRevision) return;   // this revision is already copied
         SnapshotJob job;
         try { job = new SnapshotJob(project, TimelineKey(project), SongSnapshot.Take(project, _encoder)); }
-        catch { return; }   // the previous map stays in use
+        catch { return; }   // the previous map stays in use // Not logged: audio thread: no logging on this path
         _snapshotProject = project;
         _snapshotRevision = job.Snapshot.Revision;
         Volatile.Write(ref _job, job);
@@ -174,7 +174,7 @@ public sealed class SongClock
                 continue;
             }
             try { Publish(new BarMap(job.Project, job.Key, CompileBars(job.Snapshot.Song))); }
-            catch { /* the previous map stays in use */ }
+            catch  { Services.Trace.Error(Services.Trace.Playback, "song clock: publish bar map: failed"); /* the previous map stays in use */ }
         }
     }
 
@@ -314,7 +314,7 @@ public sealed class SongClock
     }
 
     /// <summary>
-    /// A5-08: the key both timing caches use: the project's <see cref="SongProject.TimelineRevision"/> (bumped by every edit ending and by
+    /// The key both timing caches use: the project's <see cref="SongProject.TimelineRevision"/> (bumped by every edit ending and by
     /// undo/redo) plus the bar count as a cheap guard for a path that forgot to bump. Compared exactly, so it cannot collide like a hash.
     /// </summary>
     internal static (int Revision, int Measures) TimelineKey(SongProject project)
