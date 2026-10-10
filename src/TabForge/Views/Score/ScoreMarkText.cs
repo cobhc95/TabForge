@@ -158,6 +158,8 @@ internal static class ScoreMarkText
     /// <summary>How far below the last string the beat's harmonic / fingering marks actually reach (the rings end 26 px down, the right-hand letters under them 37 px).</summary>
     /// <summary>Beat text above the staff: a little larger than the old 9 pt, and mixed toward the ink so it reads as well as other secondary text.</summary>
     internal const double BeatTextSize = 10.75;
+    /// <summary>Tempo marks ("♩ = 112") at the song start and at tempo changes: a third larger than the 9 pt bar-row labels, bold, one size for drawing and for the bar's lead width.</summary>
+    internal const double TempoSize = 12;
     internal static System.Windows.Media.Color BeatTextColor(System.Windows.Media.Color ink, System.Windows.Media.Color faint) => System.Windows.Media.Color.FromRgb(
         (byte)((ink.R + faint.R * 2) / 3), (byte)((ink.G + faint.G * 2) / 3), (byte)((ink.B + faint.B * 2) / 3));
 

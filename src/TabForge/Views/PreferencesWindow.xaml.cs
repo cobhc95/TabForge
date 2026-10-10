@@ -615,9 +615,10 @@ public partial class PreferencesWindow : Window, IPreferencesHost
         RebuildPage();
     }
 
-    private static void CopySettings(AppSettings source, AppSettings target)
+    internal static void CopySettings(AppSettings source, AppSettings target)
     {
         var copy = SettingsMigration.Clone(source);
+        SettingsCopy.CopyRowSections(copy, target);
         target.InstrumentHeight = copy.InstrumentHeight;
         target.ArrangementHeight = copy.ArrangementHeight;
         target.BottomTabsWidth = copy.BottomTabsWidth;

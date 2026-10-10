@@ -170,6 +170,7 @@ public partial class MainWindow : IScoreZoomHost, IBandCommandHost
         _previewNotes = !_previewNotes;
         PreviewNotesMenu.IsChecked = _previewNotes;
         StatusText.Text = _previewNotes ? "Note preview on" : "Note preview off";
+        SaveSettings();
     }
 
     /// <summary>True when the selection is a timeline range over every track: the keys then act like the timeline menu.</summary>
@@ -347,6 +348,7 @@ public partial class MainWindow : IScoreZoomHost, IBandCommandHost
     private void Prefs_Click(object sender, RoutedEventArgs e)
     {
         // Approvals can change while the dialog is open (another window, the Linked audio window): each preview / apply merges with the live list instead of replacing it.
+        CaptureWindowState();   // the rows start from what the menus and transport show now, not from the last save
         var approvals = new MediaApprovalMerge(() => _settings.Audio.ApprovedMedia);
         StatusText.Text = _settingsWindowHost.Show(_settings, staged => { approvals.Stage(staged); ApplyPreferences(staged); }, staged => { approvals.Stage(staged); PreviewPreferences(staged); }) switch
         {
@@ -371,13 +373,6 @@ public partial class MainWindow : IScoreZoomHost, IBandCommandHost
         if (fretboardVisibilityChanged) _dockWorkspace?.SetPanelVisible("instrument", settings.Appearance.ShowFretboard);
         if (arrangementVisibilityChanged) _dockWorkspace?.SetPanelVisible("timeline", settings.Appearance.ShowArrangementOverview);
         SyncFromSettings(applyWindowSize: false);
-        ScheduleFitTimelineToTracks();   // auto-fit or the row height may have changed
-        if (Arrangement.PanKnobs != settings.Audio.PanKnobs || Arrangement.VolumeKnobs != settings.Audio.VolumeKnobs)
-        {
-            Arrangement.PanKnobs = settings.Audio.PanKnobs;
-            Arrangement.VolumeKnobs = settings.Audio.VolumeKnobs;
-            RefreshArrangement();
-        }
         if (_applied.VisualChanged) RepaintAfterVisualSettings();
         SaveSettings();
     }
@@ -398,12 +393,6 @@ public partial class MainWindow : IScoreZoomHost, IBandCommandHost
                 _dockWorkspace?.SetPanelVisible("timeline", settings.Appearance.ShowArrangementOverview);
             }
             SyncFromSettings(applyWindowSize: false);
-        if (Arrangement.PanKnobs != settings.Audio.PanKnobs || Arrangement.VolumeKnobs != settings.Audio.VolumeKnobs)
-        {
-            Arrangement.PanKnobs = settings.Audio.PanKnobs;
-            Arrangement.VolumeKnobs = settings.Audio.VolumeKnobs;
-            RefreshArrangement();
-        }
             if (_applied.VisualChanged) RepaintAfterVisualSettings();
         }
         finally { _suppressWorkspaceSave = false; }

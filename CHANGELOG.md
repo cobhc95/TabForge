@@ -2,6 +2,16 @@
 
 TabForge is actively developed; please report anything odd on the Issues page.
 
+## 0.7.1
+
+- The status bar's tempo shows the tempo in force at the playhead or the selected bar, so it follows the song's tempo changes during playback and after a seek; the toolbar BPM box still shows the song's base tempo.
+- Tempo marks in the score ("♩ = 112") are a third larger and bold, and they move aside for the labels around them.
+- Settings > Score page layout and Score scrolling now change the open songs at once, the same as the score's right-click menu (before, they only applied to songs opened afterwards).
+- Settings: Reset all settings and Import settings now also cover the audio device, plug-in folder, video and keyboard mode rows (approvals and the quarantine list are never copied), and a second TabForge window follows a change made in the first window's Settings.
+- Settings: the Settings window opens with what the menus and transport show right now (note preview, count-in, note value), the fretboard and keyboard options redraw the instrument as soon as they change, and the track list re-fits as soon as Auto-resize or the Add-track lane changes.
+- Count-in and note preview toggled from the menu are saved at once.
+- Settings: a second open window now follows settings changed in the first; fretboard and keyboard rows (scale style, colours, markers, number size, string spacing, keyboard size, left-handed, note names) redraw at once; the pan/volume knob style and track list fit apply when previewed or imported.
+
 ## 0.7.0
 
 ### Video

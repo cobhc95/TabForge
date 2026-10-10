@@ -10,6 +10,7 @@ The pages of the Settings window: setting rows, shortcut rows, the colour picker
 | `HotkeyPage.cs` | The Shortcuts page and its search rows: two slots per command, capture, conflicts, per-row reset |
 | `IPreferencesHost.cs` | `IPreferencesHost` and `PageRow`: one built row of the open page, with the element to scroll to and highlight |
 | `PreferencesCards.cs` | Card, note and brush helpers shared by the page builders |
+| `SettingsCopy.cs` | The sections Reset all and Import copy beyond the core ones: video, keyboard mode, render and the plug-in rows (never approvals or the quarantine list) |
 | `SettingEditors.cs` | The editor control of each setting row (switch, choice, number, text, colour, button); changes go to the host |
 
 ## Pathway

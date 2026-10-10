@@ -83,17 +83,13 @@ public partial class MainWindow
         InstrumentPane.LeftHanded = s.Editing.LeftHanded;
         InstrumentPane.ShowNoteNames = s.Editing.ShowNoteNames;
         _previewNotes = s.Audio.PreviewNotes;
-        var instrumentBefore = (InstrumentPane.PreviewHorizon, InstrumentPane.ScaleHighlight, InstrumentPane.FretboardFrets, InstrumentPane.LeftHanded, InstrumentPane.ShowNoteNames,
-            _options.Visual.Gp5Mode);
         InstrumentPane.PreviewHorizon = s.Editing.PreviewNotesEnabled ? s.Editing.PreviewHorizon : 0;
         ApplyFretboardStyle(s.Audio.FretboardStyle);
         InstrumentPane.ScaleHighlight = s.Editing.ScaleHighlight;
         InstrumentPane.FretboardFrets = s.Editing.FretboardFrets is 12 or 24 ? s.Editing.FretboardFrets : 24;
         _scoreWheelScrollPixels = s.Editing.ScoreWheelScrollPixels;
-        // Fretboard options only showed after the next note/playhead move; redraw it now when one changed.
-        if (instrumentBefore != (InstrumentPane.PreviewHorizon, InstrumentPane.ScaleHighlight, InstrumentPane.FretboardFrets, InstrumentPane.LeftHanded, InstrumentPane.ShowNoteNames,
-                _options.Visual.Gp5Mode) && _mainWindowInitialized)
-            RefreshInstrument();
+        // Any fretboard or keyboard option (look-ahead, scale, colours, sizes, style) redraws the instrument now, not at the next note move.
+        if (_applied.TakeInstrument(s) && _mainWindowInitialized) RefreshInstrument();
         Editor.CurrentDurationDenominator = new[] { 1, 2, 4, 8, 16, 32, 64 }.Contains(s.Editing.DefaultDuration)
             ? s.Editing.DefaultDuration : 4;
         Editor.AutoAdvanceAfterEntry = s.Editing.AutoAdvance;
@@ -143,6 +139,13 @@ public partial class MainWindow
         Arrangement.ShowAddTrackLane = s.Timeline.ShowAddTrackLane;
         ArrangementIndividualNotesMenu.IsChecked = Arrangement.ShowIndividualNotes;
         ArrangementContinuousBlocksMenu.IsChecked = Arrangement.ShowContinuousBlocks;
+        if (Arrangement.PanKnobs != s.Audio.PanKnobs || Arrangement.VolumeKnobs != s.Audio.VolumeKnobs)
+        {
+            Arrangement.PanKnobs = s.Audio.PanKnobs;
+            Arrangement.VolumeKnobs = s.Audio.VolumeKnobs;
+            if (_mainWindowInitialized) RefreshArrangement();
+        }
+        if (_mainWindowInitialized && _applied.TakeTrackListFit(s.Timeline)) ScheduleFitTimelineToTracks();   // auto-fit or the Add-track lane changed the rows
         if (_mainWindowInitialized) WorkspaceLayouts.ApplyInstrumentSizeLock();   // "Lock fretboard size" is a Preferences row too
         SetSectionGlowResources(Arrangement.SectionGlowIntensity);
     }
@@ -186,6 +189,29 @@ public partial class MainWindow
         ApplyPanelVisibility();
         BuildHotkeyMap();
         RefreshHotkeyTooltips();
+    }
+
+    /// <summary>
+    /// The page layout and scrolling choices are the layout every song opens with and the one the open songs show. Changing one in
+    /// Preferences moves every open tab to it through the same setters as the score's right-click menu (which also record it in
+    /// <see cref="AppliedSettings"/>, so a later sync sees no change).
+    /// </summary>
+    private void ApplyScoreViewFromSettings()
+    {
+        var continuous = _settings.PreferredContinuousScoreView;
+        var horizontal = _settings.PreferredHorizontalScoreView;
+        var continuousChanged = _applied.ContinuousView is { } c && c != continuous;
+        var horizontalChanged = _applied.HorizontalView is { } h && h != horizontal;
+        _applied.ContinuousView = continuous;
+        _applied.HorizontalView = horizontal;
+        foreach (var doc in _documents.Documents)
+        {
+            if (ReferenceEquals(doc, Doc)) continue;   // the shown tab goes through the setters below (they read its old value)
+            if (continuousChanged) doc.ContinuousScoreView = continuous;
+            if (horizontalChanged) doc.HorizontalScoreView = horizontal;
+        }
+        if (continuousChanged) SetContinuousScoreView(continuous);
+        if (horizontalChanged) SetHorizontalScoreView(horizontal);
     }
 
     /// <summary>A changed audio driver, device, channel pair or rate reaches the engine now (only when a setting differs).</summary>

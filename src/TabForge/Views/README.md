@@ -9,7 +9,7 @@ WPF controls and windows. Layout and drawing live here; data and rules do not.
 
 ## Key types
 - `TabEditorControl` (with `StaffNotationRenderer`, in the Score folder): the score and tab editor. `ScoreEditPreparation` owns edit guards and rest-fill wrapping before a transaction. `ScoreLayoutEngine` partials and `ScoreLayoutIncrementalState` own per-bar widths, signature context and conservative stable-range reuse; page systems recompose globally when geometry can move. Tests: `TestScoreLayoutPartial`, `TestNotationLayout`.
-- `ArrangementPanel` (partial files): the timeline of tracks and clips. Owned helpers behind host interfaces: `TrackColumnLayout`
+- `ArrangementPanel` (partial files): the timeline of tracks and clips; `MasterInfoLabel` is the status bar's tempo readout (`TestLiveTempoStatus`). Owned helpers behind host interfaces: `TrackColumnLayout`
   (`ITrackColumnHost`: column order, widths, header, column drag), `AddLaneController` (`IAddLaneHost`: the Add-track lane),
   `GroupDragController` (`IGroupDragHost`: group header drag), `MediaDropController` (`IMediaDropHost`: file drops and the drop ghost), `TuningButtonController` (`ITuningButtonHost`), `TrackRowWidgets`
   (`ITrackRowWidgetHost`: pan menu, mix-edit gestures, the instrument icon button), `TrackSilhouette` (the track-row instrument icons: the owner's line art from `src/TabForge/Assets/Icons/TrackRows/owner-icons.json` and the program-to-icon map), `SectionAutoScrollController` (edge scroll during a section drag), `ResizePreviewController` (splitter-drag shade) with `ResizeShade`, `ArrangementAutomation.cs` (screen-reader peers).

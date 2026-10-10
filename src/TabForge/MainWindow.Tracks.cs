@@ -263,7 +263,7 @@ public partial class MainWindow : ITrackListFitHost, ITrackGridDragHost
         var shownKey = bar?.KeySignature ?? _project.KeySignature;
         TimeSigLabel.Text = $"{num}/{den}";
         KeyLabelText.Text = KeyLabel(shownKey);
-        MasterInfoText.Text = $"♩={_project.Tempo}  ·  {KeyLabel(shownKey)}  ·  {MusicTime.DurationName(Editor.CurrentDurationDenominator)}{(Editor.CurrentDots == 1 ? " dotted" : Editor.CurrentDots >= 2 ? " double-dotted" : "")}{(Editor.CurrentTriplet ? " triplet" : "")}";
+        Views.MasterInfoLabel.Update(MasterInfoText, MusicTime.TempoAt(_project, shownBar), KeyLabel(shownKey), MusicTime.DurationName(Editor.CurrentDurationDenominator), Editor.CurrentDots, Editor.CurrentTriplet);
     }
 
     private static string KeyLabel(int k) => k == 0 ? "C major" : k > 0 ? $"{k}♯" : $"{-k}♭";

@@ -173,6 +173,7 @@ public partial class MainWindow
         CaptureDocumentState();
         Doc.HorizontalScoreView = horizontal;
         _settings.PreferredHorizontalScoreView = horizontal;
+        _applied.HorizontalView = horizontal;
         Editor.HorizontalScroll = horizontal;
         ScoreZoom.ApplyPageWidth();
         ScoreScroll.ScrollToVerticalOffset(0);
@@ -187,6 +188,7 @@ public partial class MainWindow
         CaptureDocumentState();
         Doc.ContinuousScoreView = continuous;
         _settings.PreferredContinuousScoreView = continuous;
+        _applied.ContinuousView = continuous;
         Editor.Appearance.CenterSystems = continuous;
         ScoreZoom.ApplyPageWidth(new Point(ScoreScroll.ViewportWidth / 2, 0));
         SaveSettings();

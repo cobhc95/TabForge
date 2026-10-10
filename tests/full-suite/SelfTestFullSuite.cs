@@ -165,6 +165,7 @@ public static partial class SelfTest
         Guard(TestTrackSilhouetteMap);
         Guard(TestAudioTrackEditorGuards);
         Guard(TestAudioTrackProperties);
+        Guard(TestLiveTempoStatus);
         Guard(TestInstrumentChoiceStrings);
         Guard(TestTransposeAllVoices);
         Guard(TestCapoRepitchesNotes);
@@ -289,6 +290,7 @@ public static partial class SelfTest
         Guard(TestUserTemplatesAndFaultedChain);
         Section("Standard-notation engraving layout");
         Guard(TestNotationLayout);
+        Guard(TestTempoMarkSize);
         Guard(TestScoreLayoutPartial);
         Section("Project IO / export");
         Guard(TestTrackReorder);
@@ -397,6 +399,12 @@ public static partial class SelfTest
         Guard(TestPasteOptionsDialog);
         Guard(TestPasteSettingsRows);
         Guard(TestSettingsStoreSharedAcrossWindows);
+        Guard(TestSettingsWiringAudit);
+        Guard(TestSettingsLoadBoundsEveryRow);
+        Guard(TestSettingsRowsResetToDefault);
+        Guard(TestSettingsEntryPointsInSync);
+        Guard(TestSettingsEveryRowAppliesInWindow);
+        Guard(TestSettingsResetAndImportCoverEveryRow);
         Guard(TestEngineWarmOwnership);
         Guard(TestEngineMultiTabPlayback);
         Guard(TestEngineDefaultOnAndManualOffSticks);
@@ -533,6 +541,7 @@ public static partial class SelfTest
         Guard(TestWaveformCacheBounds);
         Guard(TestClosedTimelineIsCollected);
         Guard(TestPlayheadStyleSetting);
+        Guard(TestSettingsEntryPointParity);
         Guard(TestTimelineHoverAndBarMarker);
         Guard(TestTrackLinesSetting);
         Guard(TestTrackLinesRedraw);
@@ -858,11 +867,18 @@ public static partial class SelfTest
         ["TestInstrumentSizeUnlockedByDefault"] = "settings",
         ["TestPasteSettingsRows"] = "settings",
         ["TestPlayheadStyleSetting"] = "settings",
+        ["TestSettingsEntryPointParity"] = "settings",
         ["TestTrackLinesSetting"] = "settings",
         ["TestPreferencesCatalog"] = "settings",
         ["TestSettingsFileSplitSnapshots"] = "settings",
         ["TestQuarantineAllowAgain"] = "settings",
         ["TestSettingsStoreSharedAcrossWindows"] = "settings",
+        ["TestSettingsWiringAudit"] = "settings",
+        ["TestSettingsLoadBoundsEveryRow"] = "settings",
+        ["TestSettingsRowsResetToDefault"] = "settings",
+        ["TestSettingsEntryPointsInSync"] = "settings",
+        ["TestSettingsEveryRowAppliesInWindow"] = "settings",
+        ["TestSettingsResetAndImportCoverEveryRow"] = "settings",
         ["TestFullDemoSong"] = "synthetic",
         ["TestSyntheticFixtures"] = "synthetic",
         ["TestTutorialCommandAndSettings"] = "tutorial",
@@ -879,6 +895,7 @@ public static partial class SelfTest
         ["TestAudioInstrumentPanel"] = "ui",
         ["TestAudioTrackEditorGuards"] = "ui",
         ["TestAudioTrackProperties"] = "ui",
+        ["TestLiveTempoStatus"] = "ui",
         ["TestAutomationIds"] = "ui",
         ["TestBarAuditTool"] = "ui",
         ["TestBarFill"] = "ui",
@@ -937,6 +954,7 @@ public static partial class SelfTest
         ["TestNewBindableCommands"] = "ui",
         ["TestNoHardWiredKeyText"] = "ui",
         ["TestNotationLayout"] = "ui",
+        ["TestTempoMarkSize"] = "ui",
         ["TestScoreLayoutPartial"] = "ui",
         ["TestNoteEvents"] = "ui",
         ["TestNoteMapper"] = "ui",

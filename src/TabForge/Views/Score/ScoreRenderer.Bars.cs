@@ -166,9 +166,9 @@ internal sealed partial class ScoreRenderer
         }
         if (tempoText is not null)
         {
-            var tempoFt = ScoreText.MakeTextIn(ScoreTextArea.BarInfo, tempoText, 9, ScoreText.Brush(accent), FontWeights.Bold);
+            var tempoFt = ScoreText.MakeTextIn(ScoreTextArea.BarInfo, tempoText, ScoreMarkText.TempoSize, ScoreText.Brush(accent), FontWeights.Bold);
             var at = Math.Max(x + 22, tempoRight);
-            StackTextAbove(dc, tempoFt, 9, at, staffTop, 14);
+            StackTextAbove(dc, tempoFt, ScoreMarkText.TempoSize, at, staffTop, 14);
             tempoRight = at + tempoFt.Width + 8;
         }
         var feel = TripletFeels.Effective(measure);
@@ -184,10 +184,10 @@ internal sealed partial class ScoreRenderer
             var warp = _layout.WarpFor(track, measureIndex);
             foreach (var point in midTempos)
             {
-                var midFt = ScoreText.MakeTextIn(ScoreTextArea.BarInfo, $"♩ = {point.Tempo}", 9, ScoreText.Brush(accent), FontWeights.Bold);
+                var midFt = ScoreText.MakeTextIn(ScoreTextArea.BarInfo, $"♩ = {point.Tempo}", ScoreMarkText.TempoSize, ScoreText.Brush(accent), FontWeights.Bold);
                 var midX = point.Slot <= 0 ? Math.Max(x + 22, tempoRight) : x + warp.Fraction(point.Slot) * measureWidth;
                 midX = Math.Min(midX, x + measureWidth - midFt.Width - 1);
-                StackTextAbove(dc, midFt, 9, midX, staffTop, 14);
+                StackTextAbove(dc, midFt, ScoreMarkText.TempoSize, midX, staffTop, 14);
             }
         }
         double titleRight = x + 2;

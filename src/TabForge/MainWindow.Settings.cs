@@ -97,8 +97,8 @@ public partial class MainWindow
     }
 
     /// <summary>
-    /// Another window changed the shared settings: key bindings take effect here at once. Everything else is applied on this
-    /// window's next settings sync (a full re-apply here would also move the audio engine to this window's song; see R-10).
+    /// Another window changed the shared settings: key bindings take effect here at once, and a replaced settings object (its Settings
+    /// window previewed, applied or cancelled) is applied here too, except the audio route (a re-apply of that would move the engine to this window's song; see R-10).
     /// </summary>
     private void OnSharedSettingsChanged(object? source)
     {
@@ -109,6 +109,10 @@ public partial class MainWindow
             _applied.SharedRefreshQueued = false;
             BuildHotkeyMap();
             RefreshHotkeyTooltips();
+            // Another window's Settings window replaced the shared object: show it here too (the audio engine stays with this window's song).
+            if (ReferenceEquals(_applied.Settings, _settings)) return;
+            SyncFromSettings(applyWindowSize: false, applyAudioRoute: false);
+            if (_applied.VisualChanged) RepaintAfterVisualSettings();
         }, DispatcherPriority.Background);
     }
 
@@ -126,10 +130,11 @@ public partial class MainWindow
     // The call order is the original order of one long method; keep it. One data dependency: the playhead's duration glow reads
     // the colour and opacity that ApplyFollowSettings put on Editor.Appearance. The window size applies only at load. The refreshes
     // run after every value is in place, and the engine route is last.
-    private void SyncFromSettings(bool applyWindowSize)
+    private void SyncFromSettings(bool applyWindowSize, bool applyAudioRoute = true)
     {
         foreach (var doc in _documents.Documents) AttachAppRules(doc.Project);   // the settings object may have been replaced
         _applied.TakeVisual(_settings);
+        _applied.Settings = _settings;
         var s = _settings;
 
         ApplyInstrumentAndEditingSettings(s);
@@ -143,7 +148,7 @@ public partial class MainWindow
         ApplyWindowSize(s, applyWindowSize);
         ApplyViewToggleSettings(s);
         RefreshAfterSettings();
-        ApplyAudioRouteSettings();
+        if (applyAudioRoute) ApplyAudioRouteSettings();
     }
 
     /// <summary>Applies the Appearance settings to the live UI (colours, font, density, paper).</summary>
@@ -286,61 +291,7 @@ public partial class MainWindow
         }
         try
         {
-            var s = _settings;
-            s.ShowInstrument = InstrumentViewMenu.IsChecked;
-            s.ShowArrangement = ArrangementMenu.IsChecked;
-            s.DarkPaper = Editor.Appearance.DarkPaper;
-            s.LeftHanded = InstrumentPane.LeftHanded;
-            s.ShowNoteNames = InstrumentPane.ShowNoteNames;
-            s.PreviewNotes = _previewNotes;
-            s.PreviewHorizon = InstrumentPane.PreviewHorizon;
-            s.ScaleHighlight = InstrumentPane.ScaleHighlight;
-            s.FretboardFrets = InstrumentPane.FretboardFrets;
-            s.ZoomFactor = ScoreZoom.Factor;
-            s.Metronome = _transport.Metronome;
-            s.CountIn = _transport.CountIn;
-            s.Speed = _transport.Speed;
-
-            s.Editing.LeftHanded = InstrumentPane.LeftHanded;
-            s.Editing.ShowNoteNames = InstrumentPane.ShowNoteNames;
-            s.Editing.DefaultDuration = Editor.CurrentDurationDenominator;
-            s.Editing.AutoAdvance = Editor.AutoAdvanceAfterEntry;
-            s.Editing.PreviewHorizon = InstrumentPane.PreviewHorizon == 0
-                ? s.Editing.PreviewHorizon
-                : InstrumentPane.PreviewHorizon;
-            s.Editing.PreviewNotesEnabled = InstrumentPane.PreviewHorizon > 0;
-            s.Editing.ScaleHighlight = InstrumentPane.ScaleHighlight;
-            s.Editing.FretboardFrets = InstrumentPane.FretboardFrets;
-            s.Editing.ScoreWheelScrollPixels = _scoreWheelScrollPixels;
-            s.Audio.PreviewNotes = _previewNotes;
-            s.Audio.Metronome = _transport.Metronome;
-            s.Audio.CountIn = _transport.CountIn;
-            s.Audio.Speed = _transport.Speed;
-            s.Audio.MetronomeSubdivision = s.Audio.MetronomeSubdivision is 1 or 2 or 3 or 4 ? s.Audio.MetronomeSubdivision : 1;
-            s.General.AutoScroll = _follow.Mode != FollowModes.Off;
-            var workspace = _learnMode?.RealLayout ?? _dockWorkspace?.CaptureLayout();   // Keyboard mode on: the arrangement it replaced
-            s.Workspace = workspace;
-            _follow.WriteSettings(s.Follow);
-            s.Appearance.IconSize = _settings.Appearance.IconSize;
-            s.Appearance.ScoreSpacing = Editor.Appearance.ScoreSpacing;
-            s.Appearance.LedgerLines = Editor.Appearance.LedgerLines.ToString();
-            s.Appearance.FretboardPosition = Instrument.HorizontalPosition.ToString();
-            s.Follow.HighlightPlayedBeat = Editor.Appearance.HighlightPlayedBeat;
-            s.Follow.HighlightColour = ColourToHex(Editor.Appearance.PlaybackColor);
-            s.Follow.HighlightBackground = ColourToHex(Editor.Appearance.HighlightBackground);
-            s.Follow.PlayheadColour = ColourToHex(Playhead.CurrentColor);
-            s.Follow.DurationGlowColour = ColourToHex(Editor.Appearance.DurationGlowColor);
-            s.Follow.DurationGlowOpacity = Editor.Appearance.DurationGlowOpacity;
-            s.Follow.SectionGlowIntensity = Arrangement.SectionGlowIntensity;
-            s.Appearance.ShowFretboard = workspace is not null && DockWorkspace.PanelsOf(workspace).Contains("instrument");
-            s.Appearance.ShowArrangementOverview = _dockWorkspace?.IsPanelVisible("timeline") == true;
-            s.Appearance.ScorePaper = Editor.Appearance.DarkPaper ? "Dark" : "Light";
-
-            s.WindowWidth = WindowState == WindowState.Maximized ? RestoreBounds.Width : Width;
-            s.WindowHeight = WindowState == WindowState.Maximized ? RestoreBounds.Height : Height;
-            s.Maximised = WindowState == WindowState.Maximized;
-            s.Tabs = _tabSettings;
-
+            CaptureWindowState();
             // R-09: the shared store writes the file (debounced, atomic) and collects plug-in state files after it; a failure comes
             // back through OnSharedSettingsSaveFailed.
             _settingsStore.MarkChanged(this);
@@ -350,6 +301,65 @@ public partial class MainWindow
             Debug.WriteLine($"Settings could not be saved: {ex}");
             StatusText.Text = "Settings could not be saved. Check access to the TabForge settings folder.";
         }
+    }
+
+    /// <summary>Copies the window's own state (menu toggles, current note value, speed, layout, window size) into the shared settings, so a save or the Settings window starts from what the window shows.</summary>
+    private void CaptureWindowState()
+    {
+        var s = _settings;
+        s.ShowInstrument = InstrumentViewMenu.IsChecked;
+        s.ShowArrangement = ArrangementMenu.IsChecked;
+        s.DarkPaper = Editor.Appearance.DarkPaper;
+        s.LeftHanded = InstrumentPane.LeftHanded;
+        s.ShowNoteNames = InstrumentPane.ShowNoteNames;
+        s.PreviewNotes = _previewNotes;
+        s.PreviewHorizon = InstrumentPane.PreviewHorizon;
+        s.ScaleHighlight = InstrumentPane.ScaleHighlight;
+        s.FretboardFrets = InstrumentPane.FretboardFrets;
+        s.ZoomFactor = ScoreZoom.Factor;
+        s.Metronome = _transport.Metronome;
+        s.CountIn = _transport.CountIn;
+        s.Speed = _transport.Speed;
+
+        s.Editing.LeftHanded = InstrumentPane.LeftHanded;
+        s.Editing.ShowNoteNames = InstrumentPane.ShowNoteNames;
+        s.Editing.DefaultDuration = Editor.CurrentDurationDenominator;
+        s.Editing.AutoAdvance = Editor.AutoAdvanceAfterEntry;
+        s.Editing.PreviewHorizon = InstrumentPane.PreviewHorizon == 0
+            ? s.Editing.PreviewHorizon
+            : InstrumentPane.PreviewHorizon;
+        s.Editing.PreviewNotesEnabled = InstrumentPane.PreviewHorizon > 0;
+        s.Editing.ScaleHighlight = InstrumentPane.ScaleHighlight;
+        s.Editing.FretboardFrets = InstrumentPane.FretboardFrets;
+        s.Editing.ScoreWheelScrollPixels = _scoreWheelScrollPixels;
+        s.Audio.PreviewNotes = _previewNotes;
+        s.Audio.Metronome = _transport.Metronome;
+        s.Audio.CountIn = _transport.CountIn;
+        s.Audio.Speed = _transport.Speed;
+        s.Audio.MetronomeSubdivision = s.Audio.MetronomeSubdivision is 1 or 2 or 3 or 4 ? s.Audio.MetronomeSubdivision : 1;
+        s.General.AutoScroll = _follow.Mode != FollowModes.Off;
+        var workspace = _learnMode?.RealLayout ?? _dockWorkspace?.CaptureLayout();   // Keyboard mode on: the arrangement it replaced
+        s.Workspace = workspace;
+        _follow.WriteSettings(s.Follow);
+        s.Appearance.IconSize = _settings.Appearance.IconSize;
+        s.Appearance.ScoreSpacing = Editor.Appearance.ScoreSpacing;
+        s.Appearance.LedgerLines = Editor.Appearance.LedgerLines.ToString();
+        s.Appearance.FretboardPosition = Instrument.HorizontalPosition.ToString();
+        s.Follow.HighlightPlayedBeat = Editor.Appearance.HighlightPlayedBeat;
+        s.Follow.HighlightColour = ColourToHex(Editor.Appearance.PlaybackColor);
+        s.Follow.HighlightBackground = ColourToHex(Editor.Appearance.HighlightBackground);
+        s.Follow.PlayheadColour = ColourToHex(Playhead.CurrentColor);
+        s.Follow.DurationGlowColour = ColourToHex(Editor.Appearance.DurationGlowColor);
+        s.Follow.DurationGlowOpacity = Editor.Appearance.DurationGlowOpacity;
+        s.Follow.SectionGlowIntensity = Arrangement.SectionGlowIntensity;
+        s.Appearance.ShowFretboard = workspace is not null && DockWorkspace.PanelsOf(workspace).Contains("instrument");
+        s.Appearance.ShowArrangementOverview = _dockWorkspace?.IsPanelVisible("timeline") == true;
+        s.Appearance.ScorePaper = Editor.Appearance.DarkPaper ? "Dark" : "Light";
+
+        s.WindowWidth = WindowState == WindowState.Maximized ? RestoreBounds.Width : Width;
+        s.WindowHeight = WindowState == WindowState.Maximized ? RestoreBounds.Height : Height;
+        s.Maximised = WindowState == WindowState.Maximized;
+        s.Tabs = _tabSettings;
     }
 
     private void ResetDockWorkspace_Click(object sender, RoutedEventArgs e)
@@ -378,6 +388,7 @@ public partial class MainWindow
         }
         _applied.Notation = preferred;
         Editor.Appearance.DarkPaper = !string.Equals(s.Appearance.ScorePaper, "Light", StringComparison.OrdinalIgnoreCase);
+        ApplyScoreViewFromSettings();
     }
 
     /// <summary>Opens a .tforge or Guitar Pro file into a new tab (used by the file argument).</summary>

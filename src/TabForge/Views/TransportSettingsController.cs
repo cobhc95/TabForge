@@ -146,6 +146,7 @@ internal sealed class TransportSettingsController
         SendSectionStarts();
         // Takes effect the next time playback starts from silence; toggling it never interrupts playback.
         if (!_host.Engine.IsPlaying) _host.Engine.UpdateOptions(_host.Project, o => o.CountIn = Transport.CountIn);
+        _host.SaveSettings();
     }
 
     private void SendSectionStarts() =>

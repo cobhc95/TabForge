@@ -178,7 +178,7 @@ internal sealed partial class ScoreLayoutEngine
         }
         var tempoText = TempoText(measure, measureIndex);
         if (tempoText is not null)
-            lead = Math.Max(lead, 22 + ScoreText.MakeTextIn(ScoreTextArea.BarInfo, tempoText, 9, ScoreText.Brush(Colors.White), FontWeights.Bold).Width + 6);
+            lead = Math.Max(lead, 22 + ScoreText.MakeTextIn(ScoreTextArea.BarInfo, tempoText, ScoreMarkText.TempoSize, ScoreText.Brush(Colors.White), FontWeights.Bold).Width + 6);
         var sectionTitle = MarkerForMeasure(measureIndex)?.Title ?? measure.SectionName;
         if (_host.Appearance.ShowSectionHeadings && !string.IsNullOrWhiteSpace(sectionTitle))
             lead = Math.Max(lead, ScoreText.MakeTextIn(ScoreTextArea.BarInfo, sectionTitle, 10, ScoreText.Brush(Colors.White), FontWeights.Bold).Width + 8);
