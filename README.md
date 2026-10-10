@@ -20,59 +20,11 @@
 
 ### New in 0.7
 
-[<img src="docs/screenshots/keyboard-mode.png" alt="Keyboard mode with falling notes" width="860">](docs/screenshots/keyboard-mode.png)
-
 - **Keyboard mode (experimental)**: any track's notes fall onto a realistic piano keyboard; play along on a MIDI keyboard and get green or red feedback per note. Turn it on from the toolbar or View > Keyboard mode. The selected track is silenced and your own playing is heard through its sound, a *Wait for me* mode holds the song until you play the right notes, and speed, loop, hands, zoom and note names sit in a control bar. Left and right hands are worked out automatically, the MIDI input defaults to any available device, and the view can pop out into its own window with full screen.
 - **Video export and recording**: File > Export > Video (MP4) turns a song into a video that plays itself, with the full audio mix; the Record video button in the title bar (next to Settings, Ctrl+Alt+V) records the window with the live sound.
 - **Band view** and playback are crisper: playheads and scrolling stay sharp at every display scale.
 
-<table><tr>
-<td><a href="docs/screenshots/keyboard-mode-light.png"><img src="docs/screenshots/keyboard-mode-light.png" alt="Keyboard mode, light theme" width="420"></a></td>
-<td><a href="docs/screenshots/keyboard-mode-wait.png"><img src="docs/screenshots/keyboard-mode-wait.png" alt="Wait for me" width="420"></a></td>
-</tr><tr>
-<td><a href="docs/screenshots/keyboard-mode-popout.png"><img src="docs/screenshots/keyboard-mode-popout.png" alt="Keyboard mode in its own window" width="420"></a></td>
-<td><a href="docs/screenshots/video-export-dialog.png"><img src="docs/screenshots/video-export-dialog.png" alt="Video export" width="420"></a></td>
-</tr><tr>
-<td><a href="docs/screenshots/record-video-button.png"><img src="docs/screenshots/record-video-button.png" alt="Record video button next to Settings" width="420"></a></td>
-<td><a href="docs/screenshots/band-view-new.png"><img src="docs/screenshots/band-view-new.png" alt="Band view" width="420"></a></td>
-</tr></table>
-
 See the [changelog](CHANGELOG.md) for everything in 0.7.0.
-
-### New in 0.6
-
-[<img src="docs/animations/band-view.gif" alt="Band view during playback" width="860">](docs/animations/band-view.gif)
-
-- **Band view**: every track gets its own row with an instrument view and a scrolling tab lane, three rows per screen by default; open it from the toolbar or View > Band view.
-- **Effect editors** for bends, tremolo bar, trills, grace notes and harmonics, each with presets.
-- **Mixer groups** collapse to one row and follow group rules you set for one song or all songs; a track's colour chip opens its colour palette.
-- New instrument icons and a new bend tool icon; the picture below right shows the **light theme**.
-
-<table><tr>
-<td><a href="docs/screenshots/band-view.png"><img src="docs/screenshots/band-view.png" alt="Band view" width="420"></a></td>
-<td><a href="docs/screenshots/effect-bend.png"><img src="docs/screenshots/effect-bend.png" alt="Bend editor" width="420"></a></td>
-</tr><tr>
-<td><a href="docs/screenshots/mixer-group-rules.png"><img src="docs/screenshots/mixer-group-rules.png" alt="Mixer group rules" width="420"></a></td>
-<td><a href="docs/screenshots/main-window-light.png"><img src="docs/screenshots/main-window-light.png" alt="Light theme" width="420"></a></td>
-</tr></table>
-
-<details><summary>More pictures</summary>
-
-<table><tr>
-<td><a href="docs/screenshots/band-view-playing.png"><img src="docs/screenshots/band-view-playing.png" alt="Band view while playing" width="420"></a></td>
-<td><a href="docs/screenshots/mixer-groups-collapsed.png"><img src="docs/screenshots/mixer-groups-collapsed.png" alt="Mixer with a collapsed group" width="420"></a></td>
-</tr><tr>
-<td><a href="docs/screenshots/effect-tremolobar.png"><img src="docs/screenshots/effect-tremolobar.png" alt="Tremolo bar editor" width="420"></a></td>
-<td><a href="docs/screenshots/effect-trill.png"><img src="docs/screenshots/effect-trill.png" alt="Trill editor" width="420"></a></td>
-</tr><tr>
-<td><a href="docs/screenshots/effect-grace.png"><img src="docs/screenshots/effect-grace.png" alt="Grace note editor" width="420"></a></td>
-<td><a href="docs/screenshots/effect-harmonic.png"><img src="docs/screenshots/effect-harmonic.png" alt="Harmonic editor" width="420"></a></td>
-</tr><tr>
-<td><a href="docs/screenshots/mixer-colour-menu.png"><img src="docs/screenshots/mixer-colour-menu.png" alt="Mixer colour chip menu" width="200"></a></td>
-<td></td>
-</tr></table>
-
-</details>
 
 ## Download
 
@@ -113,6 +65,17 @@ Type frets with the keyboard and the notation and tab update together.
 - The **Tuner** (Tools menu) detects the pitch of the armed input and shows the note, a cents needle and the track's string tunings.
 - **Effect editors**: bend and tremolo bar curves are drawn on a grid with presets; trill, grace note and harmonic editors set their options the same way. Each applies as one undo step.
 - The **Tools** menu also holds **Chord finder** and **Song stats**.
+
+<table><tr>
+<td><a href="docs/screenshots/effect-bend.png"><img src="docs/screenshots/effect-bend.png" alt="Bend editor" width="420"></a></td>
+<td><a href="docs/screenshots/effect-tremolobar.png"><img src="docs/screenshots/effect-tremolobar.png" alt="Tremolo bar editor" width="420"></a></td>
+</tr><tr>
+<td><a href="docs/screenshots/effect-trill.png"><img src="docs/screenshots/effect-trill.png" alt="Trill editor" width="420"></a></td>
+<td><a href="docs/screenshots/effect-grace.png"><img src="docs/screenshots/effect-grace.png" alt="Grace note editor" width="420"></a></td>
+</tr><tr>
+<td><a href="docs/screenshots/effect-harmonic.png"><img src="docs/screenshots/effect-harmonic.png" alt="Harmonic editor" width="420"></a></td>
+<td></td>
+</tr></table>
 
 [![Tuner](docs/screenshots/tuner.png)](docs/screenshots/tuner.png)
 
@@ -305,6 +268,7 @@ Every track is a row with level, pan, mute, solo and FX; the Master row sits at 
 - **Tuning editor**: per-string `−`/`+`, double-click a string to type a note (e.g. `Eb3`), presets for 4-/5-/6-/7-string bass and 6-/7-/8-/9-string guitar, `+ / − Low string` to change the string count. Choose whether retuning keeps the fret numbers or the sounding pitches.
 - **Drum notation presets** plus a fully custom map: TAB line, TAB text, staff position and notehead for every GM drum sound.
 - **Track menu**: right-click a track row for Cut, Copy, Paste, Duplicate, Delete, Rename, Colour and Properties; whole tracks (notation, clips, mixer settings, FX chain) copy and paste. A focused track row takes Ctrl+C, Ctrl+X, Ctrl+V, Ctrl+D and Delete.
+- **Mixer groups** collapse to one row and follow group rules you set for one song or all songs; a track's colour chip opens its colour palette.
 - **Instrument and tool icons** are original artwork.
 
 <table><tr>
@@ -321,7 +285,10 @@ Every track is a row with level, pan, mute, solo and FX; the Master row sits at 
 <td><a href="docs/screenshots/track-row-menu.png"><img src="docs/screenshots/track-row-menu.png" alt="Track right-click menu" width="420"></a></td>
 </tr><tr>
 <td><a href="docs/screenshots/track-groups-menu.png"><img src="docs/screenshots/track-groups-menu.png" alt="Track list groups menu" width="420"></a></td>
-<td></td>
+<td><a href="docs/screenshots/mixer-colour-menu.png"><img src="docs/screenshots/mixer-colour-menu.png" alt="Mixer colour chip menu" width="420"></a></td>
+</tr><tr>
+<td><a href="docs/screenshots/mixer-group-rules.png"><img src="docs/screenshots/mixer-group-rules.png" alt="Mixer group rules" width="420"></a></td>
+<td><a href="docs/screenshots/mixer-groups-collapsed.png"><img src="docs/screenshots/mixer-groups-collapsed.png" alt="Mixer with a collapsed group" width="420"></a></td>
 </tr></table>
 
 </details>
@@ -352,6 +319,46 @@ Play along with a metronome and count-in, loop any section, and let the speed tr
 </tr></table>
 
 </details>
+
+#### Keyboard mode (experimental)
+
+[<img src="docs/screenshots/keyboard-mode.png" alt="Keyboard mode with falling notes" width="860">](docs/screenshots/keyboard-mode.png)
+
+Practise a part by playing it along with a MIDI keyboard. Turn it on from the toolbar or **View > Keyboard mode** (Ctrl+Alt+L).
+
+- **Falling notes** on a realistic piano keyboard, in time with playback (tempo, speed and loop are followed), for any track.
+- **Play along**: the MIDI input defaults to any available device. The selected track is silenced and your keys play its sound live; its mute is never changed. Correct notes turn green with a check, wrong ones red with a cross, with an accuracy figure and streak.
+- **Wait for me** (Ctrl+Alt+W) holds the song at each chord until its notes are pressed, in any order; wrong keys are ignored and Skip (Ctrl+Alt+Q) moves on. A **timing tolerance** setting (Strict, Normal or Relaxed; Relaxed by default) sets how close a press must be.
+- **Control bar**: speed, loop, hands and zoom sit in the pane. Left and right hands are worked out automatically and shown in hand colours, with note names and finger numbers.
+- **Pop out** (Ctrl+Alt+O) shows the falling notes in their own window with a small control strip; F11 makes it full screen and Esc leaves it.
+
+<table><tr>
+<td><a href="docs/screenshots/keyboard-mode-light.png"><img src="docs/screenshots/keyboard-mode-light.png" alt="Keyboard mode, light theme" width="420"></a></td>
+<td><a href="docs/screenshots/keyboard-mode-wait.png"><img src="docs/screenshots/keyboard-mode-wait.png" alt="Wait for me" width="420"></a></td>
+</tr><tr>
+<td><a href="docs/screenshots/keyboard-mode-popout.png"><img src="docs/screenshots/keyboard-mode-popout.png" alt="Keyboard mode in its own window" width="420"></a></td>
+<td></td>
+</tr></table>
+
+*Keyboard mode is experimental and has not been tried with every MIDI device. Please report anything odd.*
+
+### Band view
+
+[<img src="docs/animations/band-view.gif" alt="Band view during playback" width="860">](docs/animations/band-view.gif)
+
+Band view gives every track its own row: an instrument view and a scrolling tab lane, three rows per screen by default. Open it from the toolbar or **View > Band view**.
+
+- The right-click menu is grouped like the score's menus, with a **Row sizes** submenu; the playhead line is set in Settings.
+- A lane whose bar holds no notes draws its playing line at the same place as the other lanes.
+- Playheads and dragged Band rows are drawn on whole screen pixels, so they stay sharp at every display scale.
+
+<table><tr>
+<td><a href="docs/screenshots/band-view-new.png"><img src="docs/screenshots/band-view-new.png" alt="Band view" width="420"></a></td>
+<td><a href="docs/screenshots/band-view.png"><img src="docs/screenshots/band-view.png" alt="Band view" width="420"></a></td>
+</tr><tr>
+<td><a href="docs/screenshots/band-view-playing.png"><img src="docs/screenshots/band-view-playing.png" alt="Band view while playing" width="420"></a></td>
+<td></td>
+</tr></table>
 
 ### Import, export and GP files
 
@@ -387,16 +394,32 @@ A `.gp` saved by TabForge follows the `.gp` file format **and** carries the comp
 
 </details>
 
+#### Video export and recording
+
+<table><tr>
+<td><a href="docs/screenshots/video-export-dialog.png"><img src="docs/screenshots/video-export-dialog.png" alt="Video export" width="420"></a></td>
+<td><a href="docs/screenshots/record-video-button.png"><img src="docs/screenshots/record-video-button.png" alt="Record video button next to Settings" width="420"></a></td>
+</tr></table>
+
+- **Export a video**: File > Export > Video (MP4) renders the song as a video that plays itself, with the full audio mix. Choose the range (whole song, selection, bars or a section), the layout (one track with its fretboard, keyboard or drums; score only; Band view; or score and Band view), the tracks, dark or light, 1080p or 4K, and 30, 60 or 120 frames per second. Also reachable from the Render window.
+- **Record video**: the camera button in the title bar, left of Settings (Ctrl+Alt+V; also Sound > Record video), plays the song and records the chosen part of the screen (score, Band view, whole window, or score with instrument) and everything you hear, to MP4 at 1080p or 4K.
+- A red REC time shows in the status bar while recording; stopping saves the file in Videos\TabForge.
+- Score-only export is about twice as fast, and the progress bar shows the phase and time left.
+
 ### Workspace, themes and menus
 
 <table><tr>
 <td><a href="docs/screenshots/main-window.png"><img src="docs/screenshots/main-window.png" alt="Main window" width="420"></a></td>
 <td><a href="docs/screenshots/tutorial-basic.png"><img src="docs/screenshots/tutorial-basic.png" alt="Tutorial window" width="420"></a></td>
+</tr><tr>
+<td><a href="docs/screenshots/main-window-light.png"><img src="docs/screenshots/main-window-light.png" alt="Light theme" width="420"></a></td>
+<td></td>
 </tr></table>
 
 - **Document tabs in the title bar**, like a browser: several songs open at once and **several tabs can play at the same time**; drag a tab to reorder, out to a new window, or onto another TabForge window.
 - **Every panel can be docked, floated, resized or hidden**; layouts are remembered.
-- **Dark, Light and System** themes with every colour adjustable.
+- **Dark, Light and System** themes with every colour adjustable; the light theme is shown above.
+- **New instrument icons** and a new bend tool icon.
 - **Help > Tutorial**: a Basic Guide (seven short chapters) and a Detailed Guide with search and **Export PDF**.
 
 <details><summary>More details</summary>
