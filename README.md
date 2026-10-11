@@ -30,13 +30,13 @@ See the [changelog](CHANGELOG.md) for everything in 0.7.0.
 
 ## Download
 
-Get the newest version from [Releases](https://github.com/cobhc95/TabForge/releases) (0.7.1 is a pre-release; the latest stable release is 0.6.2): a **setup installer** (no administrator rights needed) or a **portable ZIP** (extract, run `TabForge.exe`).
+Get the [latest release](https://github.com/cobhc95/TabForge/releases/latest): a **setup installer** (no administrator rights needed) or a **portable ZIP** (extract, run `TabForge.exe`).
 Windows 10/11, 64-bit; no separate .NET install. Not code-signed: see [Verify your download](#verify-your-download).
 
 TabForge is a notation-first tab editor that also behaves like a small DAW, built for fast keyboard writing and for keeping song ideas (a recorded take, a VST on a track) next to the tab. It is an independent project, not affiliated with any other software maker. Includes an original demo song, *Ashen Meridian* (CC0), used in all screenshots. Release notes: [GitHub Releases](https://github.com/cobhc95/TabForge/releases) and [CHANGELOG.md](CHANGELOG.md).
 
 > [!NOTE]
-> **This is a pre-release (0.7.1).** It is still being tested. Keep backups of your projects and original song files, especially before recording or using third-party plug-ins, and report anything odd on the Issues page.
+> **This is an official release.** Keep backups of your projects and original song files, especially before recording or using third-party plug-ins, and report anything odd on the Issues page.
 
 ## Feature tour
 
