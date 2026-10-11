@@ -19,6 +19,7 @@ internal sealed partial class ScoreRenderer
     private readonly IScoreRenderHost _host;
     private readonly ScoreLayoutEngine _layout;
     private readonly StaffNotationRenderer _staff;
+    private readonly HashSet<(int bar, int cell, int s)> _noNotes = new();   // what glows when the song is not playing: nothing
 
     internal ScoreRenderer(IScoreRenderHost host, ScoreLayoutEngine layout, StaffNotationRenderer staff)
     {
@@ -46,7 +47,7 @@ internal sealed partial class ScoreRenderer
         if (showStaff) for (var l = 0; l < 5; l++) dc.DrawLine(thin, new Point(systemLayout.X, staffTop + l * _host.StaffGap), new Point(systemRight, staffTop + l * _host.StaffGap));
         if (showTab) for (var s = 0; s < strings; s++) dc.DrawLine(thin, new Point(systemLayout.X, tabTop + s * _host.StringGap), new Point(systemRight, tabTop + s * _host.StringGap));
 
-        if (showStaff) DrawClef(dc, systemLayout.Measures.Count > 0 ? track.Measures[systemLayout.Measures[0].MeasureIndex].Clef : null, _host.GridLeft - 26, staffTop, 22, ink);
+        if (showStaff) DrawClef(dc, ScoreClefKey.SystemClef(track, systemLayout.Measures.Count > 0 ? track.Measures[systemLayout.Measures[0].MeasureIndex].Clef : null), track.Kind == TrackKind.Drums ? systemLayout.X + (systemLayout.Measures.Count > 0 && track.Measures[systemLayout.Measures[0].MeasureIndex].RepeatStart ? 17 : 7) : _host.GridLeft - 26, staffTop, 22, ink);   // the narrow percussion clef sits inside the staff, between the opening barline (or its repeat dots) and the bar's signatures
         if (showTab)
         {
             if (track.Kind == TrackKind.Drums && DrumMaps.LineNames(track.DrumMapPreset) is { } lineNames)
@@ -164,10 +165,11 @@ internal sealed partial class ScoreRenderer
                 if (measureIndex >= m1 && measureIndex <= m2 && editingCells.Count > 0)
                 {
                     var from = measureIndex == m1 ? c1 : 0;
-                    var to = measureIndex == m2 ? c2 : slots - 1;
+                    var to = measureIndex == m2 ? c2 : CursorPositions.LastCell(editingCells, slots);
                     var startSlots = CellStartSlots(measure, from, editingCells);
                     var endCell = editingCells[Math.Clamp(to, 0, editingCells.Count - 1)];
-                    var endSlots = Math.Min(slots, CellStartSlots(measure, to, editingCells) + Math.Max(1, MusicTime.CellSlots(endCell)));
+                    // A beat shorter than a sixteenth ends where it ends; an overfull bar's selection runs on to its last beat.
+                    var endSlots = Math.Min(Math.Max(slots, CursorPositions.End(editingCells)), CellStartSlots(measure, to, editingCells) + (CursorPositions.IsBeatCell(endCell) ? MusicTime.CellSlots(endCell) : 1));
                     var sx = SlotX(startSlots);
                     var sw = Math.Max(4, SlotX(endSlots) - sx);
                     var selected = _host.Appearance.SelectionColor;
@@ -208,24 +210,17 @@ internal sealed partial class ScoreRenderer
 
             // Hover: a faint outline shows which beat a click would act on, without looking like the
             // edit cursor, the selection or the playhead.
-            if (measureIndex == _host.HoverMeasure && _host.HoverCell >= 0 && _host.HoverCell < editingCells.Count && !_host.PlaybackActive)
+            if (measureIndex == _host.HoverMeasure && _host.HoverCell >= 0 && _host.HoverCell < editingCells.Count && !_host.PlaybackActive && _host.Appearance.ShowNoteOutline)
             {
-                var hoverRect = CellHighlightRect(measure, editingCells, _host.HoverCell, x, slotWidth, warp, measureWidth,
+                var hoverRect = HoverRect(measure, editingCells, _host.HoverCell, x, warp, measureWidth,
                     staffTop - 4, (showTab ? tabTop + (strings - 1) * _host.StringGap : staffTop + 4 * _host.StaffGap) - staffTop + 12);
                 var hoverAlpha = (byte)Math.Clamp(Math.Round(255 * Math.Clamp(_host.Appearance.HoverHighlightIntensity, 0, 1)), 0, 255);
                 dc.DrawRectangle(null, RenderDraw.Pen(Color.FromArgb(hoverAlpha, _host.Appearance.HoverColor.R, _host.Appearance.HoverColor.G, _host.Appearance.HoverColor.B), 1), hoverRect);
             }
 
-            // Cursor (dimmed while the transport runs so the green playhead is the tracker)
-            if (measureIndex == _host.SelectedMeasure && !_host.HideCursor)
-            {
-                var cy = showTab ? tabTop + _host.SelectedString * _host.StringGap - 8 : staffTop;
-                var height = showTab ? 16 : 4 * _host.StaffGap;
-                var cursorAlpha = _host.PlaybackActive ? (byte)70 : (byte)255;
-                var cursorPen = RenderDraw.Pen(Color.FromArgb(cursorAlpha, cursorColor.R, cursorColor.G, cursorColor.B), _host.PlaybackActive ? 1.1 : 1.6);
-                dc.DrawRectangle(null, cursorPen,
-                    CursorRect(measure, editingCells, _host.SelectedCell, x, warp, measureWidth, cy, height));
-            }
+            // Cursor: a solid yellow box on the TAB lane (hidden while the song plays; the staff box is drawn in DrawMeasure)
+            if (measureIndex == _host.SelectedMeasure && showTab && ScoreCursorBox.Shown(_host))
+                ScoreCursorBox.DrawTab(dc, CursorRect(measure, editingCells, _host.SelectedCell, x, warp, measureWidth, tabTop + _host.SelectedString * _host.StringGap - 8, 16));
 
             DrawMeasure(dc, track, measure, measureIndex, x, measureWidth, staffTop, tabTop, slotWidth, slots, strings, ink, faint, line, accent, playColor, showStaff, showTab,
                 measure.Cells, inactiveVoice: _host.Project?.GrayInactiveVoice == true && _host.ActiveVoiceIndex != 0);
@@ -276,9 +271,10 @@ internal sealed partial class ScoreRenderer
             layout.ContentLeft = signatureRight;
         }
         if (showStaff) DrawDynamics(dc, track, measure, measureIndex, layout, staffTop, tabTop, strings, ink, showStaff);   // nearest the staff: claims its row first
+        if (showStaff) ScoreCursorBox.DrawStaff(dc, _host, layout, measureIndex, ink);
         if (showStaff)
             _staff.DrawMeasure(dc, layout, measureIndex, ink, faint, accent, playColor, bg, staffLine, _host.Appearance.LedgerLines,
-                _host.SoundingNotes, _host.StruckNotes);
+                _host.PlaybackActive ? _host.SoundingNotes : _noNotes, _host.PlaybackActive ? _host.StruckNotes : _noNotes);   // the green note glow is a playback mark only
         if (showTab)
             DrawTabSlides(dc, track, measureIndex, layout, cells, strings, tabTop, ink);
 
@@ -394,8 +390,8 @@ internal sealed partial class ScoreRenderer
                     foreach (var note in cell.Notes)
                     {
                         if (note.StringIndex < 0 || note.StringIndex >= strings) continue;
-                        var isSounding = _host.SoundingNotes.Contains((measureIndex, i, note.StringIndex));
-                        var isStruck = _host.StruckNotes.Contains((measureIndex, i, note.StringIndex));
+                        var isSounding = _host.PlaybackActive && _host.SoundingNotes.Contains((measureIndex, i, note.StringIndex));
+                        var isStruck = _host.PlaybackActive && _host.StruckNotes.Contains((measureIndex, i, note.StringIndex));
                         // The reference prints no fret number for a tied-to note in the TAB (the tie is in the notation), not even under the cursor.
                         // Tab only: there is no notation to show the tie, so the number stays.
                         var tiedTo = (note.Tied || cell.IsTied) && !note.IsGraceNote && track.Kind != TrackKind.Drums && _host.Notation != NotationMode.TabOnly;
@@ -431,8 +427,9 @@ internal sealed partial class ScoreRenderer
                             }
                             else
                             {
-                                dc.DrawRectangle(ScoreText.Brush(bg), null,
-                                    new Rect(gx - chipWidth / 2, sy - chipHeight / 2, chipWidth, chipHeight));
+                                var chip = new Rect(gx - chipWidth / 2, sy - chipHeight / 2, chipWidth, chipHeight);
+                                dc.DrawRectangle(ScoreText.Brush(bg), null, chip);
+                                if (ScoreCursorBox.OnNote(_host, measureIndex, i, note.StringIndex)) dc.DrawRectangle(ScoreCursorBox.Highlight, null, chip);
                             }
                             TabForge.Visualization.Draw.DrawText(dc, ft, new Point(gx - ft.Width / 2, sy - ft.Height / 2));
                             if (isGraceNote && ScoreMarkText.GraceTransitionShown(track, cell, note)) DrawTabGraceTransition(dc, cell, note, gx, ft.Width, cx, sy, tabTop, ink);

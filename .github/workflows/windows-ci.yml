@@ -61,7 +61,7 @@ jobs:
           # main window, needs no audio device (the engine tests use the headless harness and a null output).
           # The basic set (a normal build) requires only the groups it contains; the full suite requires every CI group.
           $testArgs = if ($env:FULL_SUITE -eq 'true') { @('--selftest', "`"$log`"", '--require', 'ci') }
-            else { @('--selftest', "`"$log`"", '--areas', 'basic', '--require', 'source-hygiene,installer-parity,architecture') }
+            else { @('--selftest', "`"$log`"", '--areas', 'basic,essential', '--require', 'source-hygiene,installer-parity,architecture') }
           $p = Start-Process -FilePath $exe -ArgumentList $testArgs -Wait -PassThru
           "self-test exit code: $($p.ExitCode)"
           if (-not (Test-Path -LiteralPath $log)) { Write-Error 'self-test log was not written'; exit 2 }

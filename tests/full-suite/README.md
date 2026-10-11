@@ -7,7 +7,7 @@ The archived, rarely used **full suite**: about 5,800 checks (editor, notation, 
 - CI and, on request, release packaging (`tools/Package-Release.ps1 -FullSuite`).
 - To run one narrow test of a feature you changed (`--only <TestName>`).
 
-Everyday work does not run it: a normal build and every `REBUILD.cmd` run only the basic set (about 550 checks, seconds), plus the narrow tests you name.
+Everyday work does not run it: a normal build and every `REBUILD.cmd` run only the basic set (about 580 checks, about 5 seconds), plus the narrow tests you name.
 
 ## How to build and run it
 It is compiled in only with the MSBuild switch `TabForgeFullSuite` (this adds `tests/full-suite/**/*.cs` and the `FULL_SUITE` define):

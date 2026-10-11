@@ -32,6 +32,8 @@ internal interface IPlaybackViewHost
     void RefreshStatus();
     /// <summary>Moves the playhead overlay to the score's current playhead geometry.</summary>
     void ShowPlayheadGeometry();
+    /// <summary>Raised after the score is laid out again.</summary>
+    event EventHandler ScoreLayoutUpdated;
 
     /// <summary>The compiled timeline of the song on show changed or was revised: the score and the window's timeline copy take it.</summary>
     void ShowTimeline(ScoreTimeline timeline, bool rebaseBarMappings);
@@ -67,6 +69,7 @@ internal sealed class PlaybackViewController : IDisposable
     private DateTime _lastEditorUpdate = DateTime.MinValue;
     private DateTime _lastInstrumentUpdate = DateTime.MinValue;
     private bool _disposed;
+    private bool _layoutHooked;
 
     public PlaybackViewController(IPlaybackViewHost host)
     {
@@ -84,10 +87,14 @@ internal sealed class PlaybackViewController : IDisposable
 
     public void StopTick() => _ticker.Stop();
 
+    /// <summary>The score was edited or re-laid out: a playing or paused playhead is placed again from the new layout (a paused one gets no tick that would).</summary>
+    public void RefreshOverlay() { if (!_disposed && _host.Score.Active) _host.ShowPlayheadGeometry(); }
+
     /// <summary>Listens to the playback events of <paramref name="session"/> and to no other song's.</summary>
     public void Observe(DocumentSession session)
     {
         if (_disposed || ReferenceEquals(_observed, session)) return;
+        if (!_layoutHooked) { _layoutHooked = true; _host.ScoreLayoutUpdated += OnScoreLayoutUpdated; }   // a paused playhead gets no tick: the line follows each re-layout
         Detach();
         _observed = session;
         session.Playback.TimelineChanged += OnTimelineChanged;
@@ -100,6 +107,7 @@ internal sealed class PlaybackViewController : IDisposable
         _disposed = true;
         _ticker.Stop();
         _ticker.Tick -= OnTick;
+        if (_layoutHooked) _host.ScoreLayoutUpdated -= OnScoreLayoutUpdated;
         Detach();
     }
 
@@ -112,6 +120,8 @@ internal sealed class PlaybackViewController : IDisposable
     }
 
     private void OnTick(object? sender, EventArgs e) => Apply();
+
+    private void OnScoreLayoutUpdated(object? sender, EventArgs e) => RefreshOverlay();
 
     /// <summary>Receives the engine's compiled timeline (also after a seek or a speed change).</summary>
     private void OnTimelineChanged(ScoreTimeline timeline)

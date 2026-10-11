@@ -4,7 +4,7 @@ namespace TabForge.Services;
 public enum PasteQuestion { BeatsOntoNotes, Octave, BarsOntoNotes, BarSettings, Drums }
 
 /// <summary>Q1: pasting beats onto existing notes.</summary>
-public enum BeatsOntoNotesAnswer { Replace, Insert }
+public enum BeatsOntoNotesAnswer { Replace, Insert, ReplaceBar }
 /// <summary>Q2: pasting between instruments of different range.</summary>
 public enum OctaveAnswer { KeepPitch, ShiftOctave }
 /// <summary>Q3: pasting whole bars onto bars that have notes.</summary>
@@ -86,7 +86,8 @@ public static class PasteQuestionInfo
     {
         PasteQuestion.BeatsOntoNotes => new PasteOption[]
         {
-            new(nameof(BeatsOntoNotesAnswer.Replace), "Replace the notes at the cursor"),
+            new(nameof(BeatsOntoNotesAnswer.Replace), "Overwrite the selection only"),
+            new(nameof(BeatsOntoNotesAnswer.ReplaceBar), "Overwrite the whole bar"),
             new(nameof(BeatsOntoNotesAnswer.Insert), "Insert and push the following notes along"),
         },
         PasteQuestion.Octave => new PasteOption[]

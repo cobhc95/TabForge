@@ -36,14 +36,14 @@ internal sealed class KeyboardModeControlBar : Border
         Child = _row;
         AutomationProperties.SetName(this, "Keyboard mode controls");
 
-        _play = Add(Make("Play", "Play or pause the song (Space)", controls.PlayPause));
+        _play = Add(Make("Play", "Play or pause the song", controls.PlayPause, "Transport.PlayPause"));
         Add(Make("■ Stop", "Stop the song", controls.Stop), "Stop");
         Group("Speed", _speed, "Playback speed: slower to learn, faster to challenge yourself (the play bar's speed)");
         foreach (var s in KeyboardModeControls.SpeedPresets) _speed.Items.Add(new ComboBoxItem { Content = Percent(s), Tag = s });
         _speed.SelectionChanged += (_, _) => { if (!_syncing && _speed.SelectedItem is ComboBoxItem { Tag: double s }) controls.SetSpeed(s); };
-        _wait = Add(Make("Wait for me", "Wait for me: the song stops at each chord until you play its notes (Ctrl+Alt+W)", controls.ToggleWait), gap: 12);
-        Add(Make("Skip", "Skip the chord the song is waiting for (a miss) and carry on (Ctrl+Alt+Q)", controls.Skip), "Skip the awaited chord");
-        _loop = Add(Make("Loop", "Loop the selected bars, or the section at the cursor (F9)", controls.ToggleLoop));
+        _wait = Add(Make("Wait for me", "Wait for me: the song stops at each chord until you play its notes", controls.ToggleWait, KeyboardModeFeatureModule.WaitCommandId), gap: 12);
+        Add(Make("Skip", "Skip the chord the song is waiting for (a miss) and carry on", controls.Skip, KeyboardModeFeatureModule.SkipCommandId), "Skip the awaited chord");
+        _loop = Add(Make("Loop", "Loop the selected bars, or the section at the cursor", controls.ToggleLoop, "Transport.Loop"));
         Group("Hands", _hands, "Which hand you practise: its notes are judged; the other hand's are faded, or hidden with \"only\"");
         foreach (var name in KeyboardHands.FilterNames) _hands.Items.Add(name);
         _hands.SelectionChanged += (_, _) => { if (!_syncing && _hands.SelectedIndex >= 0) controls.SetHands((KeyboardHandsFilter)_hands.SelectedIndex); };
@@ -130,9 +130,10 @@ internal sealed class KeyboardModeControlBar : Border
 
     private static string Percent(double speed) => Math.Round(speed * 100).ToString(CultureInfo.InvariantCulture) + " %";
 
-    private static Button Make(string text, string tip, Action run)
+    private static Button Make(string text, string tip, Action run, string? commandId = null)
     {
         var b = new Button { Content = text, ToolTip = tip, Padding = new Thickness(8, 1, 8, 1), MinHeight = 26 };
+        if (commandId is not null) Views.TooltipShortcuts.Bind(b, tip, commandId);   // the key shown follows the live bindings
         b.Click += (_, _) => run();
         return b;
     }

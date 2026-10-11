@@ -37,7 +37,16 @@ internal sealed class PlaybackOverlay : IScorePlayhead
     public bool Active
     {
         get => _active;
-        set { if (_active == value) return; _active = value; _host.RepaintAll(); }
+        set { if (_active == value) return; _active = value; if (!value) _paused = false; _host.RepaintAll(); }
+    }
+
+    private bool _paused;
+
+    /// <summary>True while the transport is paused: the playback marks (green glow, playing bar) go and the edit cursor shows, as when stopped.</summary>
+    public bool Paused
+    {
+        get => _paused;
+        set { if (_paused == value) return; _paused = value; _host.RepaintAll(); }
     }
 
     /// <summary>Notes sounding at the current time, as (bar, cell, string).</summary>
@@ -139,6 +148,12 @@ internal sealed class PlaybackOverlay : IScorePlayhead
 
     // ---- geometry ----
 
+    /// <summary>
+    /// Slots the bar's playing time spans. The playhead's time fraction is a fraction of the bar's nominal length, while an
+    /// overfull bar's warp spans its whole (longer) content: scaling by the nominal slots puts the line on each beat's onset.
+    /// </summary>
+    private double TimeSlots(MeasureWarp warp, int measure) => Math.Min(warp.Slots, _host.SlotsFor(measure));
+
     private double Top(int system, bool showStaff) => (showStaff ? _host.StaffTop(system) : _host.TabTop(system)) - 12;
 
     private double Bottom(TrackModel track, int system, bool showTab)
@@ -154,7 +169,7 @@ internal sealed class PlaybackOverlay : IScorePlayhead
         var measurePosition = layout.GetLayout(track).Measure(Measure);
         var system = measurePosition.SystemIndex;
         var caretWarp = layout.WarpFor(track, Measure);
-        var x = measurePosition.X + caretWarp.Fraction(Math.Clamp(Fraction, 0, 1) * caretWarp.Slots) * measurePosition.Width;
+        var x = measurePosition.X + caretWarp.Fraction(Math.Clamp(Fraction, 0, 1) * TimeSlots(caretWarp, Measure)) * measurePosition.Width;
         var zoom = _host.Zoom;
         return (x * zoom, Top(system, _host.Notation != NotationMode.TabOnly) * zoom, Bottom(track, system, _host.Notation != NotationMode.StaffOnly) * zoom);
     }
@@ -219,9 +234,9 @@ internal sealed class PlaybackOverlay : IScorePlayhead
             if (endSlot <= startSlot + 0.001) continue;
 
             var system = measurePosition.SystemIndex;
-            var durationWarp = engine.WarpFor(track, bar.Bar);
-            var left = measurePosition.X + durationWarp.Fraction(startSlot / bar.Slots * durationWarp.Slots) * measurePosition.Width;
-            var right = measurePosition.X + durationWarp.Fraction(endSlot / bar.Slots * durationWarp.Slots) * measurePosition.Width;
+            var durationWarp = engine.WarpFor(track, bar.Bar); var timeSlots = TimeSlots(durationWarp, bar.Bar);
+            var left = measurePosition.X + durationWarp.Fraction(startSlot / bar.Slots * timeSlots) * measurePosition.Width;
+            var right = measurePosition.X + durationWarp.Fraction(endSlot / bar.Slots * timeSlots) * measurePosition.Width;
             geometries.Add((left * zoom, right * zoom, Top(system, showStaff) * zoom, Bottom(track, system, showTab) * zoom));
         }
         return geometries;
@@ -240,7 +255,7 @@ internal sealed class PlaybackOverlay : IScorePlayhead
         fraction = double.IsFinite(fraction) ? Math.Clamp(fraction, 0, 1) : 0;
         // Time fraction -> spaced position (notes are spaced by duration, not uniformly).
         var warp = engine.WarpFor(track, measure);
-        var spaced = warp.Fraction(fraction * warp.Slots);
+        var spaced = warp.Fraction(fraction * TimeSlots(warp, measure));
         var zoom = _host.Zoom;
         return (system.Index, system.X * zoom, (system.X + system.Width) * zoom,
             (bar.X + spaced * bar.Width) * zoom, bar.Width * zoom);

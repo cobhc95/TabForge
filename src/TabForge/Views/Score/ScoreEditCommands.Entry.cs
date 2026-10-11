@@ -79,14 +79,23 @@ public sealed partial class ScoreEditCommands
     {
         var track = Track;
         if (track is null || !FillBars || selected.Count == 0) return false;
-        var (m1, _, m2, _) = SelectionRangeOrdered();
+        var (m1, _, m2, _) = HasSelection ? SelectionRangeOrdered() : (SelectedMeasure, 0, SelectedMeasure, 0);
         m1 = Math.Max(0, m1); m2 = Math.Min(m2, track.Measures.Count - 1);
         var bars = Enumerable.Range(m1, Math.Max(0, m2 - m1 + 1)).Select(m => (M: m, Cells: CellsFor(track.Measures[m], create: _activeVoiceIndex == 1))).ToList();
-        if (bars.Count == 0 || !bars.All(b => BarFill.IsPlain(b.Cells))) return false;
+        if (bars.Count == 0 || !bars.All(b => BarFill.IsPlain(b.Cells) || ShortNoteFill.Packed(b.Cells))) return false;
         var keep = selected.ToHashSet();
         foreach (var (m, cells) in bars) Services.EditCommands.CloseUp(cells, SlotsFor(m), keep);
+        if (!HasSelection) { SelectedCell = Math.Max(0, bars[0].Cells.IndexOf(selected[0])); return true; }   // the cursor stays on its beat
         _restSelection = (m1, Math.Max(0, bars[0].Cells.IndexOf(selected[0])), m2, Math.Max(0, bars[^1].Cells.IndexOf(selected[^1])));
         return true;
+    }
+
+    /// <summary>Inside an edit, after the length of the beat under the cursor changed: a note's bar closes up (the beats after it follow, the freed time
+    /// goes to the fill rests at the bar end); a rest is resized in place.</summary>
+    private void FollowLengthChange(TabCell cell)
+    {
+        var touched = new[] { cell };
+        if (cell.Notes.Count == 0 || !CloseUpSelection(touched)) NormaliseRests(touched, resize: true);
     }
 
     /// <summary>After undo / redo: the writing duration takes the value of the note or written rest under the cursor (the toolbar already shows it).</summary>

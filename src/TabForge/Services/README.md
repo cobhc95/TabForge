@@ -14,6 +14,7 @@ Musical logic, file formats, settings, limits and path policy. No WPF.
 - `FilePathPolicy`: atomic writes, leftover sweeps, reserved-name checks. `InputLimits` bounds every read.
 - `ProjectService`: the .tforge format; `GuitarProImporter` and `GuitarProExporter`: .gp and .gp5.
 - `EditCommands` (partial files): the note, bar and paste edits the editor calls.
+- `BarLocalPaste`: places a beats paste inside one bar (over a selection, over the whole bar, or inserted); a bar the beats do not fit stays over full.
 - `CommandRegistry`: the `id -> action` table behind the window's plain commands (filled in `MainWindow.Commands.cs`).
 - `HotkeyCatalog`: every bindable command (`HotkeySettings` holds the user's Hotkey 1 and Hotkey 2); `MediaContext` and `MediaPathPolicy`: a song's audio files.
 - `MusicXmlExportService`, `MidiExportService`, `AsciiExportService`: exports.

@@ -41,7 +41,7 @@ public sealed partial class TabEditorControl
         if (_sel.Selecting)
         {
             var last = track.Measures.Count - 1;
-            _sel.Coerce(track.Measures.Count, last >= 0 ? Math.Max(0, SlotsFor(last) - 1) : 0);
+            _sel.Coerce(track.Measures.Count, last >= 0 ? CursorPositions.LastCell(CellsFor(track.Measures[last]), SlotsFor(last)) : 0);
         }
         SelectedMeasure = Math.Clamp(SelectedMeasure, 0, Math.Max(0, track.Measures.Count - 1));
         SelectedCell = CoerceCell(SelectedMeasure, SelectedCell);
@@ -160,7 +160,7 @@ public sealed partial class TabEditorControl
     int IScoreRenderHost.HoverMeasure => _sel.HoverMeasure;
     int IScoreRenderHost.HoverCell => _sel.HoverCell;
     int IScoreRenderHost.ActiveVoiceIndex => _activeVoiceIndex;
-    bool IScoreRenderHost.PlaybackActive => _playback.Active;
+    bool IScoreRenderHost.PlaybackActive => _playback.Active && !_playback.Paused;
     int IScoreRenderHost.PlaybackMeasure => _playback.Measure;
     int IScoreRenderHost.PlaybackCell => _playback.Cell;
     double IScoreRenderHost.PlaybackFraction => _playback.Fraction;

@@ -208,7 +208,7 @@ public static partial class SelfTest
         IxTrace("I-3 edit 2 done");
         LtCall(w, "MoveSection", 1, 3);                                         // 3: a section move (the drag's entry point)
         IxTrace("I-3 edit 3 done");
-        IxCommand(w, "Track.Add");                                              // 4: a new track
+        LtCall(w, "AddTrack", TrackKind.Guitar);                                      // 4: a new track
         IxTrace("I-3 edit 4 done");
         var host = w.MixerHost;
         host.BeginMixerEdit();                                                  // 5: one mixer volume drag = one transaction

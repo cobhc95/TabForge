@@ -279,6 +279,7 @@ Paste | key=Ctrl+V | id=paste | arg= | cmd=None | enabled=True | checkable=False
 Paste special… | key=Ctrl+Shift+V | id=pastespecial | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
 ---
 Show standard notation | key= | id=notation | arg= | cmd=None | enabled=True | checkable=True | radio=False | label=False | setting=score.defaultnotation | tip=
+Show note length outline | key= | id=noteoutline | arg= | cmd=None | enabled=True | checkable=True | radio=False | label=False | setting=score.noteoutline | tip=
 Zoom | key= | id= | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
   Zoom in | key=Ctrl++ | id=zoomin | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
   Zoom out | key=Ctrl+- | id=zoomout | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
@@ -293,6 +294,7 @@ Page layout | key= | id= | arg= | cmd=None | enabled=True | checkable=False | ra
 Score settings… | key= | id=settings | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=Open Settings > Score & Notation (what is shown, spacing, text and fonts, paper, ink and ledger lines)
 == score, empty area
 Show standard notation | key= | id=notation | arg= | cmd=None | enabled=True | checkable=True | radio=False | label=False | setting=score.defaultnotation | tip=
+Show note length outline | key= | id=noteoutline | arg= | cmd=None | enabled=True | checkable=True | radio=False | label=False | setting=score.noteoutline | tip=
 Zoom | key= | id= | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
   Zoom in | key=Ctrl++ | id=zoomin | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
   Zoom out | key=Ctrl+- | id=zoomout | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=

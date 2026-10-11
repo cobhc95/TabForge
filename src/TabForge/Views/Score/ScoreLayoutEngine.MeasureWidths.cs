@@ -160,7 +160,9 @@ internal sealed partial class ScoreLayoutEngine
         {
             if (passage.FirstMeasure != measureIndex) continue;
             var eventIndex = events.FindIndex(item => Math.Abs(item.StartSlots - passage.FirstStartSlots) < 0.001);
-            if (eventIndex < 0) continue;
+            // Only a label at the bar start needs room (it must clear the lead); a mid-bar label sits in its own lane over the
+            // previous note's slot, and the uniform slot grid would multiply any extra left room across the whole bar.
+            if (eventIndex != 0) continue;
             var item = events[eventIndex];
             events[eventIndex] = item with { Left = Math.Max(item.Left, labelWidth / 2 + 12) };
         }

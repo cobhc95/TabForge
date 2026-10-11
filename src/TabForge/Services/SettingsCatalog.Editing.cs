@@ -24,7 +24,7 @@ public static partial class SettingsCatalog
                 "Off (default): + makes the note shorter (8th to 16th), - makes it longer. On: the opposite.", "plus minus duration shorter longer reverse gp5"),
             Bool(Editing, "Entry", "editing.preventoverflow", "Prevent rhythms that overfill a bar", v => ed.PreventBarOverflow = v, () => ed.PreventBarOverflow,
                 "Off (default): notes can be made longer freely and a bar that no longer adds up turns red. On: such changes are refused.", "red bar overfill duration longer block prevent"),
-            Bool(Editing, "Entry", "editing.fillrests", "Fill incomplete bars with rests", v => ed.FillBarsWithRests = v, () => ed.FillBarsWithRests,
+            Bool(Editing, "Entry", "editing.fillrests", "Add rests automatically to fill bars", v => ed.FillBarsWithRests = v, () => ed.FillBarsWithRests,
                 "On (default): a bar you edit always adds up. Empty space becomes rests, a deleted beat becomes a rest of the same length, and a typed note takes its place inside a rest. Off: bars may stay incomplete and show red.", "rest fill complete bar incomplete red empty gap"),
             Choice(Editing, "Entry", "editing.deleteleaves", "When deleting notes, leave", v => ed.MergeRestsOnDelete = v == "Merged rests", () => ed.MergeRestsOnDelete ? "Merged rests" : "A rest of the same length",
                 new[] { "A rest of the same length", "Merged rests" }, "Used with \"Fill incomplete bars with rests\". A rest of the same length keeps the deleted note's value. Merged rests join the deleted notes and the rests beside them into the fewest rests that fill the bar (a cleared bar becomes one whole-bar rest).", "delete notes rest merge whole bar clear"),

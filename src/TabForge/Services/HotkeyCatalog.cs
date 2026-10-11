@@ -205,7 +205,7 @@ public static partial class HotkeyCatalog
         return Format(text, mods);
     }
 
-    /// <summary>The live keys of a command for menus and tooltips: Hotkey 1, then Hotkey 2 when it is set ("Ctrl+Alt+T, Ctrl+Shift+Insert"); "" when unbound.</summary>
+    /// <summary>The live keys of a command for menus and tooltips: Hotkey 1, then Hotkey 2 when it is set ("Ctrl+T, Ctrl+Shift+Insert"); "" when unbound.</summary>
     public static string DisplayAll(HotkeySettings settings, string id)
     {
         var first = Display(GestureFor(settings, id));
@@ -319,7 +319,7 @@ public static class HotkeyPresets
     /// <summary>The preset's key for one slot of an action, or null when the preset uses the catalogue default. The Classic layout keeps Add track on its familiar key as Hotkey 1.</summary>
     public static string? Override(string? preset, string id, int slot)
     {
-        if (preset == GuitarPro5 && id == "Track.Add") return slot == 2 ? "Ctrl+Alt+T" : "Ctrl+Shift+Insert";
+        if (preset == GuitarPro5 && id == "Track.Add") return slot == 2 ? "Ctrl+T" : "Ctrl+Shift+Insert";
         if (slot == 2) return null;
         var map = preset switch
         {

@@ -39,9 +39,22 @@ public static partial class EditCommands
         last = Math.Max(first, last);
         var tail = last < cells.Count ? Math.Max(1, MusicTime.CellSlotsRounded(cells[last])) : 1;
         var count = last + tail - first;
-        for (var i = Math.Min(first + count, cells.Count); i < cells.Count; i++)
-            if (cells[i].RhythmicPosition is { } position) cells[i].RhythmicPosition = Math.Max(0, position - count);
+        // Positioned beats after the range move left by the time removed, not by the cell count (short notes and tuplets hold less than a slot per cell), so they keep distinct onsets.
+        var stop = Math.Min(first + count, cells.Count);
+        var onsets = BarGrid.Onsets(cells);
+        var span = stop < cells.Count && first < stop ? Math.Min(count, Math.Max(0, onsets[stop] - onsets[first])) : count;
+        for (var i = stop; i < cells.Count; i++)
+            if (cells[i].RhythmicPosition is { } position) cells[i].RhythmicPosition = Math.Max(0, position - span);
         for (var i = 0; i < count && first < cells.Count; i++) cells.RemoveAt(first);
+        // No positioned beat starts inside the beat before it: it follows that beat's end by its real length (a tuplet's remaining members included).
+        var end = 0.0;
+        for (var i = 0; i < cells.Count; i++)
+        {
+            var cell = cells[i];
+            if (cell.Notes.Count == 0 && !cell.IsRest && !cell.HasAnnotation) continue;
+            if (cell.RhythmicPosition is { } at && at < end - 1e-6) cell.RhythmicPosition = end;
+            end = Math.Max(end, cell.RhythmicPosition ?? Math.Max(i, end)) + MusicTime.CellSlots(cell);
+        }
         while (cells.Count < slots) cells.Add(new TabCell());
     }
 }

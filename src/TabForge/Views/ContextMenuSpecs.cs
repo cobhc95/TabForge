@@ -100,7 +100,7 @@ internal static class InstrumentMenus
     }
 }
 
-internal sealed record ScoreEmptyState(bool OverBeat, bool CanPaste, bool ShowNotation, bool Continuous, bool Horizontal);
+internal sealed record ScoreEmptyState(bool OverBeat, bool CanPaste, bool ShowNotation, bool Continuous, bool Horizontal, bool ShowOutline = true);
 
 /// <summary>
 /// The score's empty-area right-click menu as data: paste (over a beat, with a clip), standard notation, zoom, page layout and ONE
@@ -109,8 +109,8 @@ internal sealed record ScoreEmptyState(bool OverBeat, bool CanPaste, bool ShowNo
 internal static class ScoreMenus
 {
     public const string PasteId = "paste", PasteSpecialId = "pastespecial", NotationId = "notation", ZoomInId = "zoomin", ZoomOutId = "zoomout",
-        FitWidthId = "fitwidth", LayoutId = "layout", SettingsId = "settings";
-    public const string ShowNotation = "Show standard notation", Zoom = "Zoom", PageLayout = "Page layout", Settings = "Score settings…";
+        FitWidthId = "fitwidth", LayoutId = "layout", SettingsId = "settings", OutlineId = "noteoutline";
+    public const string ShowNotation = "Show standard notation", ShowOutline = "Show note length outline", Zoom = "Zoom", PageLayout = "Page layout", Settings = "Score settings…";
     /// <summary>The row "Score settings..." scrolls to: the first row of the Page layout group.</summary>
     public const string SettingsRow = "score.pagelayout";
 
@@ -127,6 +127,7 @@ internal static class ScoreMenus
             list.Add(MenuSpec.Separator());
         }
         list.Add(new MenuSpec { Id = NotationId, Header = ShowNotation, Checkable = true, Checked = s.ShowNotation, SettingKey = "score.defaultnotation" });
+        list.Add(new MenuSpec { Id = OutlineId, Header = ShowOutline, Checkable = true, Checked = s.ShowOutline, SettingKey = "score.noteoutline" });
         list.Add(new MenuSpec
         {
             Header = Zoom,

@@ -144,6 +144,12 @@ public static partial class SelfTest
         Section("Editor");
         Guard(TestEditorNavigation);
         Guard(TestRightArrowAppendsBarAtEnd);
+        Guard(TestRightAppendsOneBar);
+        Guard(TestAppendBarWhilePlaying);
+        Guard(TestRightFromOverfullLastBar);
+        Guard(TestRightFromOverfullMidBar);
+        Guard(TestRightAppendsAnyMeter);
+        Guard(TestRightAppendsFromFullLastBar);
         Guard(TestEditorDurations);
         Guard(TestPlaybackGlowIntensity);
         Guard(TestEditorCopyPaste);
@@ -266,6 +272,9 @@ public static partial class SelfTest
         Guard(TestDefaultDynamicUnmarked);
         Guard(TestGp5DiffReplay);   // GP5 differential harness: replays action sequences (tools/gp5diff); a short self-check without TABFORGE_GP5DIFF_DIR
         Guard(TestBarFill);
+        Guard(TestGapRestCloseUp);
+        Guard(TestSixteenthBarEntry);
+        Guard(TestShortNoteEntry);
         Guard(TestWritingDuration);
         Guard(TestWorkflow);   // workflow area: a guitarist's editing stories through real keys and tools (--areas workflow)
         Guard(TestEntryDurationWorkflow);   // workflow area: entry durations against GP5 with the rest fill on
@@ -275,6 +284,10 @@ public static partial class SelfTest
         Guard(TestGp5CursorStories);   // workflow area: Right makes a bar at the end, the cursor after Undo / Redo, paste after a selection, End after a restore, a bar keeps adding, against GP5
         Guard(TestGp5SelectionEndStories);   // workflow area: overfull cursor box, Undo / Redo / Backspace / Delete end the selection, Redo of a paste, against GP5
         Guard(TestGp5CutPasteStories);   // workflow area: cut inside a bar, paste past an overfull bar, Undo of Longer, palm mute on a tie, against a quiet GP5
+        Guard(TestSilentBarAfterSeekBack);   // workflow area: a seek back inside the start bar keeps its earlier beats
+        Guard(TestPlayheadAfterEdit);   // workflow area: the paused playhead line follows the re-layout after paste, undo, bar insert and delete
+        Guard(TestSelectionDelete);
+        Guard(TestPasteIntoBar);
         Guard(TestGp5Batch5Stories);   // workflow area: cut beats vs bars, triplet off in a group, dead and harmonic, against a quiet GP5
         Guard(TestGp5Batch6Stories);   // workflow area: Alt+Up/Down wrap, Dot shrinks fill rests, delete beat length, Insert bar with a selection (quiet GP5)
         Guard(TestGp5Batch6RegressionStories);   // workflow area: overfull triplet bars, End and Shift+Right on the empty spot, Undo of a dot, against a quiet GP5
@@ -290,7 +303,9 @@ public static partial class SelfTest
         Guard(TestUserTemplatesAndFaultedChain);
         Section("Standard-notation engraving layout");
         Guard(TestNotationLayout);
+        Guard(TestDrumStaff);
         Guard(TestTempoMarkSize);
+        Guard(TestSixteenthBarWidth);
         Guard(TestScoreLayoutPartial);
         Section("Project IO / export");
         Guard(TestTrackReorder);
@@ -574,6 +589,9 @@ public static partial class SelfTest
         Guard(TestErrorLog);
         Guard(TestPlayingBar);
         Guard(TestTabEditorRenderInvariance);
+        Guard(TestScoreCursorBox);
+        Guard(TestCursorBoxCentreOnFret);
+        Guard(TestPlayheadCursorPlacement);
         Guard(TestTabEditorPlaybackAllocation);
         Guard(TestTabEditorLayoutMatrix);
         Guard(TestTabEditorFrozenSystems);
@@ -899,6 +917,9 @@ public static partial class SelfTest
         ["TestAutomationIds"] = "ui",
         ["TestBarAuditTool"] = "ui",
         ["TestBarFill"] = "ui",
+        ["TestGapRestCloseUp"] = "ui",
+        ["TestSixteenthBarEntry"] = "ui",
+        ["TestShortNoteEntry"] = "ui",
         ["TestBrowserTabShell"] = "ui",
         ["TestCaptureMainWindowOffscreen"] = "ui",
         ["TestClefShapesAndChanges"] = "ui",
@@ -923,7 +944,7 @@ public static partial class SelfTest
         ["TestOrnamentEditorFiles"] = "persistence",
         ["TestEditorCopyPaste"] = "ui",
         ["TestEditorDurations"] = "ui",
-        ["TestEditorNavigation"] = "ui", ["TestRightArrowAppendsBarAtEnd"] = "ui",
+        ["TestEditorNavigation"] = "ui", ["TestRightArrowAppendsBarAtEnd"] = "ui", ["TestRightAppendsOneBar"] = "ui", ["TestAppendBarWhilePlaying"] = "playback", ["TestRightFromOverfullLastBar"] = "ui", ["TestRightFromOverfullMidBar"] = "ui", ["TestRightAppendsAnyMeter"] = "ui", ["TestRightAppendsFromFullLastBar"] = "ui",
         ["TestEditorShiftClickAndEffectDuration"] = "ui",
         ["TestEditorStructurePeer"] = "ui",
         ["TestEngravingCollisions"] = "ui",
@@ -954,7 +975,9 @@ public static partial class SelfTest
         ["TestNewBindableCommands"] = "ui",
         ["TestNoHardWiredKeyText"] = "ui",
         ["TestNotationLayout"] = "ui",
+        ["TestDrumStaff"] = "ui",
         ["TestTempoMarkSize"] = "ui",
+        ["TestSixteenthBarWidth"] = "ui",
         ["TestScoreLayoutPartial"] = "ui",
         ["TestNoteEvents"] = "ui",
         ["TestNoteMapper"] = "ui",
@@ -1002,6 +1025,9 @@ public static partial class SelfTest
         ["TestTabEditorPlaybackAllocation"] = "ui",
         ["TestTabEditorPlayheadAndAppearance"] = "ui",
         ["TestTabEditorRenderInvariance"] = "ui",
+        ["TestScoreCursorBox"] = "ui",
+        ["TestCursorBoxCentreOnFret"] = "ui",
+        ["TestPlayheadCursorPlacement"] = "ui",
         ["TestTabUi"] = "ui",
         ["TestPlayingSpeakerTab"] = "ui",
         ["TestTempoBoxText"] = "ui",
@@ -1054,6 +1080,10 @@ public static partial class SelfTest
         ["TestGp5CursorStories"] = "workflow",
         ["TestGp5SelectionEndStories"] = "workflow",
         ["TestGp5CutPasteStories"] = "workflow",
+        ["TestSilentBarAfterSeekBack"] = "workflow",
+        ["TestPlayheadAfterEdit"] = "workflow",
+        ["TestSelectionDelete"] = "workflow",
+        ["TestPasteIntoBar"] = "workflow",
         ["TestGp5Batch5Stories"] = "workflow",
         ["TestGp5Batch6Stories"] = "workflow",
         ["TestGp5Batch6RegressionStories"] = "workflow",

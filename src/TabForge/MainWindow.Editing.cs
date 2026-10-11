@@ -129,7 +129,13 @@ public partial class MainWindow : TabForge.Views.Score.IScoreEditHost
     private void InsertBar_Click(object sender, RoutedEventArgs e) => BarCommands.InsertBar();
 
     /// <summary>Adds an empty bar after the last one (the standard "Add bar"), keeping the cursor where it is.</summary>
-    private void AppendBar() => BarCommands.AppendBar();
+    private void AppendBar()
+    {
+        var before = MaxMeasures();
+        BarCommands.AppendBar();
+        // While playing the new bar joins the running song the way any bar insertion does: same position, state and loop.
+        if (MaxMeasures() > before && (_midi.IsPlaying || _isPlayingVisual)) FinishSectionStructureEdit(StatusText.Text, Enumerable.Range(0, before).ToArray());
+    }
 
     /// <summary>
     /// The standard step buttons: move one beat. While playing it steps playback too, landing on the

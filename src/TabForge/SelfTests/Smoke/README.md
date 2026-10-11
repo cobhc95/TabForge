@@ -1,6 +1,6 @@
 # SelfTests/Smoke
 
-Smoke checks of the essential actions, run in the basic set: editing, files, windows and playback, plus the model round trip. The `SelfTestEssential*` files are partial files of `SelfTest`, and `SelfTestEssentialKit.cs` holds their shared helpers. Does not own the features they check.
+Smoke checks of the essential actions (area `essential`: `--areas essential`, the release gate and the full suite; not the basic set): editing, files, windows and playback. Plus the basic-set smoke tests such as the model round trip. The `SelfTestEssential*` files are partial files of `SelfTest`, and `SelfTestEssentialKit.cs` holds their shared helpers. Does not own the features they check.
 
 ## Files
 | File | Purpose |

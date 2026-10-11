@@ -49,38 +49,41 @@ public static partial class SelfTest
     private static void TestKeyTextFollowsBindings()
     {
         var keys = new HotkeySettings();
-        Eq("Add track shows its default Hotkey 1 and Hotkey 2", "Ctrl+Alt+T, Ctrl+Shift+Insert", HotkeyCatalog.DisplayAll(keys, "Track.Add"));
-        Eq("a tooltip shows both keys", "Add track (Ctrl+Alt+T, Ctrl+Shift+Insert)", HotkeyCatalog.TooltipWithKey(keys, "Add track", "Track.Add"));
+        Eq("Add track shows its default Hotkey 1 and Hotkey 2", "Ctrl+T, Ctrl+Shift+Insert", HotkeyCatalog.DisplayAll(keys, "Track.Add"));
+        Eq("a tooltip shows both keys", "Add track (Ctrl+T, Ctrl+Shift+Insert)", HotkeyCatalog.TooltipWithKey(keys, "Add track", "Track.Add"));
         keys.Disable("Track.Add", 2);
-        Eq("a cleared Hotkey 2 is not shown", "Add track (Ctrl+Alt+T)", HotkeyCatalog.TooltipWithKey(keys, "Add track", "Track.Add"));
+        Eq("a cleared Hotkey 2 is not shown", "Add track (Ctrl+T)", HotkeyCatalog.TooltipWithKey(keys, "Add track", "Track.Add"));
         keys.Set("Track.Add", 1, "Ctrl+Alt+K");
         Eq("a rebound Hotkey 1 is shown at once", "Add track (Ctrl+Alt+K)", HotkeyCatalog.TooltipWithKey(keys, "Add track", "Track.Add"));
         keys.Disable("Track.Add");
         Eq("an unbound command shows no key", "Add track", HotkeyCatalog.TooltipWithKey(keys, "Add track", "Track.Add"));
         var classic = new HotkeySettings();
         HotkeyPresets.Apply(classic, HotkeyPresets.GuitarPro5);
-        Eq("the Classic preset keeps the familiar Add track key as Hotkey 1", "Ctrl+Shift+Insert, Ctrl+Alt+T", HotkeyCatalog.DisplayAll(classic, "Track.Add"));
+        Eq("the Classic preset keeps the familiar Add track key as Hotkey 1", "Ctrl+Shift+Insert, Ctrl+T", HotkeyCatalog.DisplayAll(classic, "Track.Add"));
 
         var missing = ShortcutHelp.Ids.Where(id => HotkeyCatalog.ById(id) is null).ToList();
         Check("every command in the shortcuts help exists in the catalogue", missing.Count == 0, string.Join(", ", missing));
-        Check("the shortcuts help shows the live keys", ShortcutHelp.Build(new HotkeySettings()).Contains("Add track Ctrl+Alt+T, Ctrl+Shift+Insert", StringComparison.Ordinal));
+        Check("the shortcuts help shows the live keys", ShortcutHelp.Build(new HotkeySettings()).Contains("Add track Ctrl+T, Ctrl+Shift+Insert", StringComparison.Ordinal));
     }
 
     private static void TestAddTrackKeys()
     {
         var map = HotkeyCatalog.BuildMap(new HotkeySettings());
-        Check("Ctrl+Alt+T runs Add track", map.TryGetValue("Ctrl+Alt+T", out var a) && a == "Track.Add");
+        Check("Ctrl+T runs Add track", map.TryGetValue("Ctrl+T", out var a) && a == "Track.Add");
         Check("Ctrl+Shift+Insert still runs Add track", map.TryGetValue("Ctrl+Shift+Insert", out var b) && b == "Track.Add");
         // AltGr arrives as Ctrl+Alt: a text box lets only AllowsInTextBox commands through, so a typed AltGr character is never taken.
         Check("Add track does not run while a text box has focus (AltGr typing is safe)", !HotkeyCatalog.AllowsInTextBox("Track.Add"));
-        Check("Ctrl+Alt+T is the Add track key only (no other command uses it)", HotkeyCatalog.All.Count(x => HotkeyCatalog.Canonical(HotkeyCatalog.DefaultFor(x, 1)) == "Ctrl+Alt+T" || HotkeyCatalog.Canonical(HotkeyCatalog.DefaultFor(x, 2)) == "Ctrl+Alt+T") == 1);
+        Check("Ctrl+T is the Add track key only (no other command uses it)", HotkeyCatalog.All.Count(x => HotkeyCatalog.Canonical(HotkeyCatalog.DefaultFor(x, 1)) == "Ctrl+T" || HotkeyCatalog.Canonical(HotkeyCatalog.DefaultFor(x, 2)) == "Ctrl+T") == 1);
 
-        // An old file that binds Ctrl+Alt+T to another command keeps it; Add track does not take it.
+        // An old file that binds Ctrl+T to another command keeps it; Add track does not take it.
         var keys = new HotkeySettings();
-        keys.Bindings["View.ZoomIn"] = "Ctrl+Alt+T";
+        keys.Bindings["View.ZoomIn"] = "Ctrl+T";
         SettingsMigration.KeepUserKeysOverNewDefaults(keys, HotkeyCatalog.All);
-        Check("an old binding of Ctrl+Alt+T is kept, Add track's Hotkey 1 stands aside", keys.IsDisabled("Track.Add", 1) && HotkeyCatalog.BuildMap(keys)["Ctrl+Alt+T"] == "View.ZoomIn");
+        Check("an old binding of Ctrl+T is kept, Add track's Hotkey 1 stands aside", keys.IsDisabled("Track.Add", 1) && HotkeyCatalog.BuildMap(keys)["Ctrl+T"] == "View.ZoomIn");
         Check("Add track keeps Ctrl+Shift+Insert as Hotkey 2", HotkeyCatalog.GestureFor(keys, "Track.Add", 2) == "Ctrl+Shift+Insert");
+        // The numpad decimal key toggles the dotted note, and the main period key still does.
+        var dotMap = HotkeyCatalog.BuildMap(new HotkeySettings());
+        Check("numpad decimal and the period key both toggle the dotted note", dotMap.TryGetValue("Decimal", out var nd) && nd == "Note.Dot" && dotMap.TryGetValue("OemPeriod", out var pd) && pd == "Note.Dot");
 
         // An old file that moved Add track off Ctrl+Shift+Insert keeps its own key and gets no default Hotkey 2.
         var moved = new HotkeySettings();

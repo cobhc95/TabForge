@@ -155,7 +155,7 @@ internal sealed class EditorInputController
                 if (item.MeasureIndex == measure) { system = s; placement = (item.MeasureIndex, item.X, item.Width); break; }
         if (system < 0) return false;
         var cells = _host.CellsFor(track.Measures[measure], create: false);
-        var cell = Math.Clamp(_host.SelectedCell, 0, Math.Max(0, _host.SlotsFor(measure) - 1));
+        var cell = Math.Clamp(_host.SelectedCell, 0, CursorPositions.LastCell(cells, _host.SlotsFor(measure)));
         var x = placement.X + _host.Layout.WarpFor(track, measure).Fraction(ScoreRenderer.CellStartSlots(track.Measures[measure], cell, cells)) * placement.Width;
         var stringIndex = Math.Clamp(_host.SelectedString, 0, Math.Max(0, track.StringTunings.Count - 1));
         var y = _host.TabTop(system) + stringIndex * _host.StringGap + _host.StringGap / 2;
@@ -215,6 +215,13 @@ internal sealed class EditorInputController
     }
 
     /// <summary>The hover highlight is not drawn while a song plays, so a hover change then repaints nothing (the score is not redrawn under the playhead).</summary>
+    /// <summary>A key moved the cursor: the hover outline goes to the cursor's beat until the mouse moves again.</summary>
+    public void CursorMovedByKey()
+    {
+        if (_sel.HoverMeasure == _host.SelectedMeasure && _sel.HoverCell == _host.SelectedCell) return;
+        _sel.HoverMeasure = _host.SelectedMeasure; _sel.HoverCell = _host.SelectedCell; RepaintHover();
+    }
+
     private void RepaintHover()
     {
         if (!_host.PlaybackActive) _host.RepaintAll();

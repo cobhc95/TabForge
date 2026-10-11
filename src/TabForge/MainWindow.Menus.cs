@@ -40,7 +40,7 @@ public partial class MainWindow
             Item("Previous section", PrevSection_Click, "Section.Previous"),
             Item("Next section", NextSection_Click, "Section.Next")),
         new("_Track", null,
-            Item("Add _Guitar", AddGuitar_Click, "Track.Add"),
+            Item("Add _track…", AddTrack_Click, "Track.Add"),
             Item("Add _Bass", AddBass_Click),
             Item("Add _Drums", AddDrums_Click),
             Item("Add _Keys", AddKeys_Click),

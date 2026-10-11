@@ -26,7 +26,7 @@ internal sealed class KeyboardModePopoutWindow : Window
         AutomationProperties.SetName(this, "Keyboard mode keyboard view");
 
         Bar = new KeyboardModeControlBar(controls);
-        _full.ToolTip = "Full screen on or off (F11; Esc leaves it)";
+        _full.ToolTip = "Full screen on or off: F11, and Esc leaves it";
         AutomationProperties.SetName(_full, "Toggle full screen");
         _full.Click += (_, _) => ToggleFullScreen();
         Bar.AddExtra(_full);

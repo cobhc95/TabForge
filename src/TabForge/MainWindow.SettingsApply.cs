@@ -47,7 +47,7 @@ public partial class MainWindow
         Editor.Appearance.AccentColor = ColourText.ParseOr(s.Appearance.Accent, Color.FromRgb(0x4C, 0x9A, 0xFF));
         Editor.Appearance.SelectionColor = ColourText.ParseOr(s.Appearance.SelectionColour, Color.FromRgb(0x4C, 0x9A, 0xFF));
         Editor.Appearance.HoverColor = ColourText.ParseOr(s.Appearance.HoverColour, Color.FromRgb(0x98, 0xA1, 0xAE));
-        Editor.Appearance.HoverHighlightIntensity = s.Appearance.HoverHighlightIntensity;
+        Editor.Appearance.HoverHighlightIntensity = s.Appearance.HoverHighlightIntensity; Editor.Appearance.ShowNoteOutline = s.Appearance.ShowNoteOutline;
         Editor.Appearance.SelectionHighlightIntensity = s.Appearance.SelectionHighlightIntensity;
         Editor.Appearance.ShowBarNumbers = s.Appearance.ShowScoreBarNumbers;
         Editor.Appearance.BarNumberFrequency = s.Appearance.ScoreBarNumberFrequency;

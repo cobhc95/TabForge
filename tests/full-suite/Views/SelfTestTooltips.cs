@@ -106,7 +106,7 @@ public static partial class SelfTest
             Check("every bound control with a key shows it in brackets at the end of its tooltip", missing.Count == 0, string.Join(", ", missing));
             var snap = bound.First(x => x.Command == "Timeline.Snap").Element;
             var tabNew = bound.First(x => x.Command == "Tab.New").Element;
-            Check("the new-tab button shows its default key", tabNew.ToolTip is string t && t.EndsWith("(Ctrl+T)"), tabNew.ToolTip as string);
+            Check("the new-tab button shows its default key", tabNew.ToolTip is string t && t.EndsWith("(Ctrl+Alt+T)"), tabNew.ToolTip as string);
 
             keys.Bindings["Tab.New"] = "Ctrl+Alt+K";
             keys.Disable("Timeline.Snap");

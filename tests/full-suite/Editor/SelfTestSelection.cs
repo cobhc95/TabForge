@@ -25,10 +25,10 @@ public static partial class SelfTest
         string[] Top(IEnumerable<Views.MenuSpec> m) => m.Where(x => !x.IsSeparator).Select(x => x.Header).ToArray();
         Func<string, string> noKeys = _ => "";
         var overBeat = Top(Views.ScoreMenus.Empty(new Views.ScoreEmptyState(true, true, true, true, false), noKeys));
-        Check("score empty menu over a beat with a clip: Paste, Paste special, notation, Zoom, Page layout, Score settings (6 entries)",
-            string.Join("|", overBeat) == "Paste|Paste special…|Show standard notation|Zoom|Page layout|Score settings…", string.Join("|", overBeat));
-        Eq("score empty menu with the clipboard empty: 4 entries", 4, Top(Views.ScoreMenus.Empty(new Views.ScoreEmptyState(true, false, true, true, false), noKeys)).Length);
-        Eq("score empty menu off a beat: 4 entries", 4, Top(Views.ScoreMenus.Empty(new Views.ScoreEmptyState(false, true, true, true, false), noKeys)).Length);
+        Check("score empty menu over a beat with a clip: Paste, Paste special, notation, note outline, Zoom, Page layout, Score settings (7 entries)",
+            string.Join("|", overBeat) == "Paste|Paste special…|Show standard notation|Show note length outline|Zoom|Page layout|Score settings…", string.Join("|", overBeat));
+        Eq("score empty menu with the clipboard empty: 5 entries", 5,Top(Views.ScoreMenus.Empty(new Views.ScoreEmptyState(true, false, true, true, false), noKeys)).Length);
+        Eq("score empty menu off a beat: 5 entries", 5,Top(Views.ScoreMenus.Empty(new Views.ScoreEmptyState(false, true, true, true, false), noKeys)).Length);
 
         var views = new[] { "Match the instrument", "Fretboard", "Keyboard", "Drums" };
         Views.InstrumentMenuState Instrument(bool keyboard, bool drums) => new(keyboard, drums, "Guitar", "Fretboard", views,

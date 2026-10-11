@@ -75,11 +75,11 @@ public partial class MainWindow
     {
         if (_midi.IsPlaying && !_midi.IsPaused)
         {
-            _midi.Pause();
+            _midi.Pause(); PlayheadCursorPlacement.MoveCursorToPlayhead(Editor);
             SongClock.Paused();
             _follow.Halt();
             Arrangement.SetPlayhead(Math.Max(0, _playheadBar), _playheadFraction, playbackActive: true, playbackPaused: true);
-            SetPlayIcon(false);
+            SetPlayIcon(false); Editor.Playback.Paused = true;
             StatusText.Text = "Paused";
             MidiLed.Fill = Brushes.Gray;
             return;
@@ -89,7 +89,7 @@ public partial class MainWindow
             _midi.Resume();
             _follow.Resume();
             Arrangement.SetPlayhead(Math.Max(0, _playheadBar), _playheadFraction, playbackActive: true);
-            SetPlayIcon(true);
+            SetPlayIcon(true); Editor.Playback.Paused = false;
             StatusText.Text = "Playing";
             MidiLed.Fill = Brushes.LimeGreen;
             return;
@@ -201,7 +201,7 @@ public partial class MainWindow
         Playhead.SetDurationGeometry(null);
         _playheadBar = -1;
         _playbackView.StopTick();
-        _follow.Halt();
+        _follow.Halt(); PlayheadCursorPlacement.MoveCursorToPlayhead(Editor);
         Editor.Playback.Clear();
         Editor.Playback.Ms = 0;
         SyncArrangementPlayhead();
@@ -352,9 +352,17 @@ public partial class MainWindow
         public void RefreshInstrument() => _window.RefreshInstrument();
         public void RefreshStatus() => _window.RefreshStatus();
 
+        public event EventHandler ScoreLayoutUpdated { add => _window.Editor.LayoutUpdated += value; remove => _window.Editor.LayoutUpdated -= value; }
+
         public void ShowPlayheadGeometry()
         {
             var window = _window;
+            if (!window._isPlayingVisual || window._midi.IsPaused)   // the line shows only while the song plays; the edit cursor marks the place otherwise
+            {
+                window.Playhead.SetGeometry(null);
+                window.Playhead.SetDurationGeometry(null);
+                return;
+            }
             window.Playhead.SetGeometry(window.Editor.Playback.PlayheadGeometry());
             // The duration glow is off by default; don't compute its geometry every frame when it is hidden.
             window.Playhead.SetDurationGeometries(window._settings.Follow.DurationTintEnabled
@@ -384,7 +392,7 @@ public partial class MainWindow
 
         public void ShowTransportRunning(bool paused)
         {
-            _window.SetPlayIcon(!paused);
+            _window.SetPlayIcon(!paused); _window.Editor.Playback.Paused = paused;
             _window.MidiLed.Fill = paused ? Brushes.Gray : Brushes.LimeGreen;
             _window.StatusText.Text = paused ? "Paused" : "Playing";
         }

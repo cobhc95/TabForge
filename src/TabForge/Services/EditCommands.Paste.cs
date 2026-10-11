@@ -10,7 +10,7 @@ public sealed record ResolvedPaste(BeatPasteMode Beats, OctavePolicy Octave, Bar
     PasteMappingMode Mapping = PasteMappingMode.KeepPitch, int OctaveSemitones = 0)
 {
     public static ResolvedPaste From(PasteAnswers a) => new(
-        a.BeatsOntoNotes == BeatsOntoNotesAnswer.Insert ? BeatPasteMode.Insert : BeatPasteMode.Replace,
+        a.BeatsOntoNotes switch { BeatsOntoNotesAnswer.Insert => BeatPasteMode.Insert, BeatsOntoNotesAnswer.ReplaceBar => BeatPasteMode.ReplaceBar, _ => BeatPasteMode.Replace },
         a.Octave == OctaveAnswer.ShiftOctave ? OctavePolicy.ShiftByOctave : OctavePolicy.KeepExactPitch,
         a.BarsOntoNotes ?? BarsOntoNotesAnswer.Overwrite,
         a.BarSettings != BarSettingsAnswer.KeepTarget,
@@ -23,8 +23,8 @@ public sealed class RecommendedPasteAnswers : IPasteQuestionAsker
     public PasteAnswers? Ask(IReadOnlyCollection<PasteQuestion> questions) => new();
 }
 
-/// <summary>Where a paste lands: the active track and voice, and the cursor (or the selection start).</summary>
-public sealed record PasteTarget(int TrackIndex, int Voice, int Bar, int Cell);
+/// <summary>Where a paste lands. <paramref name="EndBar"/> and <paramref name="EndCell"/> are the last selected beat when the paste is aimed at a selection (-1: no selection).</summary>
+public sealed record PasteTarget(int TrackIndex, int Voice, int Bar, int Cell, int EndBar = -1, int EndCell = -1);
 
 /// <summary>Result of <see cref="EditCommands.Paste"/>. When <see cref="Changed"/> is false the project is unchanged.</summary>
 public sealed class PasteOutcome
@@ -60,6 +60,7 @@ public static partial class EditCommands
     {
         if (target.TrackIndex < 0 || target.TrackIndex >= p.Tracks.Count) return new PasteOutcome { Status = "No track to paste into." };
         if (clip.Tracks.Count == 0) return new PasteOutcome { Status = ClipboardService.NotTabForgeNotesMessage };
+        clip = BarLocalPaste.AsBeatsOnPartialSelection(p, clip, target);
         return clip.Kind == ScoreClipKind.Beats
             ? PasteBeats(p, clip, target, settings, asker)
             : PasteBars(p, clip, target, settings, asker);
@@ -102,11 +103,13 @@ public static partial class EditCommands
         var to = InstrumentLayout.Of(track);
         var beats = source.Events.Select(e => e.Cell).ToList();
 
-        var appendAt = OverfullEnd(p, target, voice);
+        var appendAt = BarLocalPaste.OverfullEnd(p, target, voice);
         var needed = MapperQuestions(from, to, beats);
+        var onSelection = explicitChoice is null && target.EndBar >= 0;
+        if (onSelection) needed.Add(PasteQuestion.BeatsOntoNotes);
         // As GP5 (quiet runs l6, l6b): beats pasted onto written notes are inserted before the cursor beat inside the same bar, without a question.
         // Paste Special still chooses Replace or the song-wide Insert explicitly.
-        var inBar = appendAt is null && explicitChoice is null && HasNotesInSpan(p, target.TrackIndex, voice, anchor, anchor + length);
+        var inBar = appendAt is null && explicitChoice is null && target.EndBar < 0 && HasNotesInSpan(p, target.TrackIndex, voice, anchor, anchor + length);
         if (!Resolve(needed, settings, asker, explicitChoice, out var choice, out var asked))
             return new PasteOutcome { Cancelled = true, Status = "Paste cancelled", Needed = needed, Asked = asked };
 
@@ -116,14 +119,17 @@ public static partial class EditCommands
         var sameTrack = source.SourceTrackId != Guid.Empty && source.SourceTrackId == track.Id;
         var run = new BeatRun(source.Events.Select((e, i) => new ClipBeat(e.OffsetSlots, Prepare(mapped.Beats[i], sameTrack))).ToList(), length);
         var cursorCell = -1;
-        var placed = appendAt is { } end ? AppendInBar(p, target, voice, end, run)
+        var local = explicitChoice is null && appendAt is null && !inBar && BarLocalPaste.Applies(p, target, anchor, run, onSelection) ? BarLocalPaste.For(p, target, voice, run, choice.Beats, onSelection) : null;
+        var placed = appendAt is { } end ? BarLocalPaste.AppendInBar(p, target, voice, end, run)
+            : local is not null ? local.Placement
             : inBar ? InsertInBar(p, target, voice, anchor, run, out cursorCell)
             : BarGrid.PlaceBeats(p, target.TrackIndex, voice, anchor, run, choice.Beats);
+        if (local is not null && onSelection) cursorCell = local.CursorCell;
         if (!placed.Ok)
             return new PasteOutcome { Status = placed.Error ?? "Nothing pasted.", Needed = needed, Asked = asked, Mapping = mapped.Report };
 
         var status = $"Pasted {Plural(beats.Count, "beat")} at bar {target.Bar + 1}" + (copies > 1 ? $" ({copies} copies)" : "") + (inBar || choice.Beats == BeatPasteMode.Insert ? " (inserted)" : "")
-            + Tail(mapped.Report, placed.DroppedBeats, placed.BarsAppended, 0);
+            + Tail(mapped.Report, placed.DroppedBeats, placed.BarsAppended, 0) + (BarLocalPaste.IsOverfull(p, target.TrackIndex, target.Bar, voice) ? $"; bar {target.Bar + 1} is over full (shown red)" : "");
         return new PasteOutcome
         {
             Changed = true, Status = status, FirstBar = placed.FirstBar, LastBar = placed.LastBar, BarMap = placed.BarMap,
@@ -159,42 +165,6 @@ public static partial class EditCommands
         var written = BarGrid.WriteBar(beats, MusicTime.BarSlots(p, target.Bar));
         if (voice == 0) measure.Cells = written; else measure.Voice2Cells = written;
         cursorCell = written.FindIndex(c => ReferenceEquals(c, last));
-        return new PlacementResult(true, null, target.Bar, target.Bar, 0, 0, 0);
-    }
-
-    /// <summary>
-    /// Where an overfull bar's beats end, when the paste cursor is at or past that end; null otherwise. As GP5 (quiet run j07, session 15
-    /// step 56), a paste there goes on in the same bar instead of starting the next bar after the overflow's rests.
-    /// </summary>
-    private static double? OverfullEnd(SongProject p, PasteTarget target, int voice)
-    {
-        var measures = p.Tracks[target.TrackIndex].Measures;
-        if (target.Bar < 0 || target.Bar >= measures.Count) return null;
-        var cells = measures[target.Bar].CellsForVoice(voice);
-        var onsets = BarGrid.Onsets(cells);
-        var end = 0.0;
-        for (var i = 0; i < cells.Count; i++)
-            if (IsBeat(cells[i])) end = Math.Max(end, onsets[i] + MusicTime.CellSlots(cells[i]));
-        var at = target.Cell >= 0 && target.Cell < cells.Count ? onsets[target.Cell] : target.Cell;
-        return end > MusicTime.BarSlots(p, target.Bar) + 1e-6 && at >= end - 1e-6 ? end : null;
-    }
-
-    /// <summary>Appends a beat run to one voice of a bar at slot <paramref name="end"/> (the bar grows; nothing moves to the next bar).</summary>
-    private static PlacementResult AppendInBar(SongProject p, PasteTarget target, int voice, double end, BeatRun run)
-    {
-        var measure = p.Tracks[target.TrackIndex].Measures[target.Bar];
-        var cells = measure.CellsForVoice(voice);
-        var onsets = BarGrid.Onsets(cells);
-        var beats = cells.Select((c, i) => (Pos: onsets[i], Cell: c)).Where(x => IsBeat(x.Cell)).ToList();
-        foreach (var b in run.Beats)
-        {
-            var cell = b.Cell.Clone();
-            cell.RhythmicPosition = null;
-            beats.Add((end + b.OffsetSlots, cell));
-        }
-        if (beats.Count > InputLimits.MaxCellsPerMeasure) return PlacementResult.Refused($"Bar {target.Bar + 1} would hold too many beats.");
-        var written = BarGrid.WriteBar(beats, MusicTime.BarSlots(p, target.Bar));
-        if (voice == 0) measure.Cells = written; else measure.Voice2Cells = written;
         return new PlacementResult(true, null, target.Bar, target.Bar, 0, 0, 0);
     }
 

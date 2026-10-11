@@ -323,11 +323,16 @@ internal static class StaffNotationDrawing
         var stemPen = RenderDraw.Pen(brush, 0.9);
         foreach (var beat in layout.Beats)
         {
-            if (!beat.HasStem) continue;
+            if (!beat.HasStem || beat.IsDrum) continue;   // a percussion staff draws its stems below
             dc.DrawLine(stemPen, new Point(beat.StemX, beat.StemStartY), new Point(beat.StemX, beat.StemEndY));
             if (beat.LowerStemTopY is { } lowerTop && beat.BeamGroupIndex < 0)
                 dc.DrawLine(stemPen, new Point(beat.CenterX - 5, lowerTop), new Point(beat.CenterX - 5, beat.LowerStemEndY));
             if (beat.BeamGroupIndex < 0) DrawFlags(dc, beat, brush);
+        }
+        foreach (var stem in layout.DrumStems)
+        {
+            dc.DrawLine(stemPen, new Point(stem.StemX, stem.StemStartY), new Point(stem.StemX, stem.StemEndY));
+            if (stem.BeamGroupIndex < 0) DrawFlags(dc, stem, brush);
         }
     }
 
@@ -335,7 +340,7 @@ internal static class StaffNotationDrawing
     {
         for (var f = 0; f < beat.Flags; f++)
         {
-            var y = beat.StemUp ? beat.StemEndY + f * BeamGap : beat.StemEndY - f * BeamGap;
+            var y = beat.StemUp ? beat.StemEndY + f * FlagGap : beat.StemEndY - f * FlagGap;
             dc.DrawGeometry(brush, null, FlagGeometry(beat.StemX, y, beat.StemUp));
         }
     }

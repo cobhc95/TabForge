@@ -102,8 +102,8 @@ public sealed partial class TabEditorControl : Controllers.ISelectionEditor
         var last = track.Measures.Count - 1;
         var m1 = Math.Clamp(startMeasure, 0, last);
         var m2 = Math.Clamp(endMeasure, m1, last);
-        var c1 = Math.Clamp(startCell, 0, Math.Max(0, SlotsFor(m1) - 1));
-        var lastCell = Math.Max(0, SlotsFor(m2) - 1);
+        var c1 = Math.Clamp(startCell, 0, CursorPositions.LastCell(CellsFor(track.Measures[m1]), SlotsFor(m1)));
+        var lastCell = CursorPositions.LastCell(CellsFor(track.Measures[m2]), SlotsFor(m2));
         var c2 = endCell < 0 ? lastCell : Math.Clamp(endCell, 0, lastCell);
         if (m1 == m2 && c2 < c1) c2 = c1;
         return _sel.Snapped(m1, c1, m2, c2);
@@ -115,7 +115,7 @@ public sealed partial class TabEditorControl : Controllers.ISelectionEditor
         var track = Track;
         if (track is null || track.Measures.Count == 0) return;
         var lastBar = track.Measures.Count - 1;
-        _sel.Set(0, 0, lastBar, Math.Max(0, SlotsFor(lastBar) - 1));
+        _sel.Set(0, 0, lastBar, CursorPositions.LastCell(CellsFor(track.Measures[lastBar]), SlotsFor(lastBar)));
         InvalidateVisual();
         SelectionChanged?.Invoke(this, EventArgs.Empty);
     }
@@ -149,8 +149,8 @@ public sealed partial class TabEditorControl : Controllers.ISelectionEditor
     {
         get
         {
-            var (m1, c1, _, _) = SelectionCellRange;
-            return new PasteTarget(SelectedTrackIndex, ActiveVoiceIndex, m1, c1);
+            var (m1, c1, m2, c2) = SelectionCellRange;
+            return HasSelection ? new PasteTarget(SelectedTrackIndex, ActiveVoiceIndex, m1, c1, m2, c2) : new PasteTarget(SelectedTrackIndex, ActiveVoiceIndex, m1, c1);
         }
     }
 

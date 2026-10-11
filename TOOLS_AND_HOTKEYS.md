@@ -143,7 +143,7 @@ Default keys are the **TabForge** preset, currently identical to the **Classic**
 | File and tabs | Render to audio file | Render the song to WAV / MP3 (master mix and / or stems) faster than realtime. | `File.Render` | Ctrl+Alt+R |  |
 | File and tabs | Print | Print the active score. | `File.Print` | Ctrl+P |  |
 | File and tabs | Print preview | Preview the printed page. | `File.PrintPreview` | Ctrl+Shift+P |  |
-| File and tabs | New tab | Open another score in a new tab. | `Tab.New` | Ctrl+T |  |
+| File and tabs | New tab | Open another score in a new tab. | `Tab.New` | Ctrl+Alt+T |  |
 | File and tabs | Close tab | Close the active tab. | `Tab.Close` | Ctrl+W |  |
 | File and tabs | Duplicate tab | Duplicate the active tab as an unsaved copy. | `Tab.Duplicate` | Ctrl+Shift+D | — |
 | File and tabs | Preferences | Open this settings window. | `App.Preferences` | F12 | F7 |
@@ -152,7 +152,7 @@ Default keys are the **TabForge** preset, currently identical to the **Classic**
 | Editing | Redo | Redo the last undone edit. | `Edit.Redo` | Ctrl+Y |  |
 | Editing | Copy | Copy the selected beats or bars, or the beat at the cursor. | `Edit.Copy` | Ctrl+C |  |
 | Editing | Cut | Cut the selected beats or bars (later beats move up; whole bars are removed, or emptied on one track of several). | `Edit.Cut` | Ctrl+X |  |
-| Editing | Paste | Paste at the cursor; asks only what the paste needs. | `Edit.Paste` | Ctrl+V |  |
+| Editing | Paste | Paste at the cursor, or over the selected beats (asks to overwrite the selection, the whole bar, or insert); notes that do not fit stay in the bar, which shows red. | `Edit.Paste` | Ctrl+V |  |
 | Editing | Paste special | Paste with a repeat count, replace or insert, octave shift, keep string and fret, and bar settings. | `Edit.PasteSpecial` | Ctrl+Shift+V | — |
 | Editing | Select whole track | Select every bar of the track. | `Edit.SelectAll` | Ctrl+A |  |
 | Editing | Insert beat | Insert an empty beat at the cursor and push the rest of the bar right (the bar keeps its length). | `Edit.InsertBeat` | Insert |  |
@@ -184,7 +184,7 @@ Default keys are the **TabForge** preset, currently identical to the **Classic**
 | Bars and sections | Next section | Jump to the next section. | `Section.Next` | Alt+Shift+Right | Alt+Right |
 | Notes and tracks | Chord name | Attach a chord name to the beat. | `Note.Chord` | A |  |
 | Notes and tracks | Beat text | Attach text to the beat. | `Note.Text` | T |  |
-| Notes and tracks | Add track | Add a new track. | `Track.Add` | Ctrl+Alt+T (Hotkey 1), Ctrl+Shift+Insert (Hotkey 2) | The Classic preset swaps them: Ctrl+Shift+Insert is Hotkey 1. Menus and tooltips show whichever keys are set. |
+| Notes and tracks | Add track | Open the Add track window. | `Track.Add` | Ctrl+T (Hotkey 1), Ctrl+Shift+Insert (Hotkey 2) | The Classic preset swaps them: Ctrl+Shift+Insert is Hotkey 1. Menus and tooltips show whichever keys are set. |
 | Notes and tracks | Delete track | Delete the selected track. | `Track.Delete` | Ctrl+Shift+Delete |  |
 | Notes and tracks | Track properties | Edit the selected track's properties. | `Track.Properties` | F6 |  |
 | Transport | Speed up | Playback speed to the next preset (50, 75, 100, 125, 150, 200 %). | `Playback.SpeedUp` | Ctrl+Alt+Up |  |
@@ -233,7 +233,7 @@ Default keys are the **TabForge** preset, currently identical to the **Classic**
 | Note effects | Palm mute | Palm-muted note. | `Note.PalmMute` | P |  |
 | Note effects | Fade in | Volume swell in. | `Note.FadeIn` | Shift+OemComma | F |
 | Note effects | Fade out | Volume swell out. | `Note.FadeOut` | Shift+OemPeriod |  |
-| Durations | Dotted | Add or remove a dot. | `Note.Dot` | OemPeriod | Multiply |
+| Durations | Dotted | Add or remove a dot. | `Note.Dot` | OemPeriod (Hotkey 1), Decimal = numpad . (Hotkey 2) | Multiply |
 | Durations | Double dotted | Make the beat double-dotted. | `Note.DoubleDot` | — |  |
 | Durations | Triplet | Toggle triplet (numpad / also works). | `Note.Triplet` | OemQuestion |  |
 | Bars and sections | Repeat start | Start a repeated passage. | `Bar.RepeatOpen` | OemOpenBrackets |  |

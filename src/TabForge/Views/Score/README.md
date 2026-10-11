@@ -34,10 +34,12 @@ Parts of the score and tab editor (`TabEditorControl` in `Views/` is the host): 
 | `ScoreRenderer.cs` | Draws one system: staff and tab frames, every bar, the passages and the cursor |
 | `ScoreRenderer.Bars.cs` | Bar furniture: clef, signatures, tempo, section and volta labels, directions, simile bars |
 | `ScoreRenderer.Cursor.cs` | Cursor and highlight geometry (not the cursor drawing) |
+| `ScoreCursorBox.cs` | The solid edit-cursor boxes: yellow on the tab lane, grey behind a staff notehead; hidden while playing |
 | `ScoreRenderer.Marks.cs` | Bend arrows with amounts, and the other marks drawn on notes |
 | `ScoreRenderer.Passages.cs` | Drawing of the two passage kinds that span bars |
 | `ScoreRenderer.TabLinks.cs` | Tab links between notes |
 | `ScoreText.cs` | `ScoreTextArea`: the areas of a score that carry their own text style |
+| `StaffDrumStems.cs` | Stems and beams of a percussion staff: hands up, feet down, each beamed on its own |
 | `StaffNotationArcs.cs` | Builds the ties, hammer-on/pull-off slurs and slide strokes of a measure layout |
 | `StaffNotationDrawing.cs` | Draws glyphs and the already-resolved geometry of a measure layout; no rhythmic decisions happen here |
 | `StaffNotationGeometry.cs` | Glyph metrics and pure geometry shared by staff layout and drawing: staff constants, durations, ledger lines |

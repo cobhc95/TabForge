@@ -88,8 +88,8 @@ public partial class MainWindow
         }
         if (string.Equals(_settings.Hotkeys["Tab.New"], "Ctrl+Shift+T", StringComparison.OrdinalIgnoreCase))
             _settings.Hotkeys["Tab.New"] = "";
-        if (string.Equals(_settings.Hotkeys["Bar.TimeSignature"], "Ctrl+T", StringComparison.OrdinalIgnoreCase))
-            _settings.Hotkeys["Bar.TimeSignature"] = "Ctrl+Shift+T";
+        // A command the user bound to Ctrl+T keeps it: Add track's default Hotkey 1 stands aside.
+        SettingsMigration.KeepUserKeysOverNewDefaults(_settings.Hotkeys, HotkeyCatalog.All);
         _settings.General.AssociateFiles = Environment.ProcessPath is { } exePath && FileAssociations.IsRegistered(exePath); // registry is the truth
         SyncFromSettings(applyWindowSize: true);
         _suppressWorkspaceSave = false;

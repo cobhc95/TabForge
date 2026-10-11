@@ -12,6 +12,9 @@ internal static class CursorPositions
 {
     public static bool IsBeatCell(TabCell cell) => cell.Notes.Count > 0 || cell.IsRest || cell.HasAnnotation;
 
+    /// <summary>The last cell index of a bar: a bar that holds more cells than slots (short notes, an overfull bar) ends at its last cell.</summary>
+    public static int LastCell(IReadOnlyList<TabCell> cells, int barSlots) => Math.Max(0, Math.Max(barSlots, cells.Count) - 1);
+
     /// <summary>Allowed cursor cells in ascending order; never empty. <paramref name="barSlots"/> is the bar's length in slots (0 = the cell count); a full bar has no append slot.</summary>
     public static List<int> Allowed(IReadOnlyList<TabCell> cells, int barSlots = 0)
     {
@@ -121,7 +124,9 @@ internal static class CursorPositions
     }
 
     /// <summary>The allowed cursor cell for the grid cell <paramref name="cell"/> of a bar: the beat that holds it, otherwise the nearest allowed position.</summary>
-    public static int Snap(IReadOnlyList<TabCell> cells, int cell, int barSlots = 0) => Resolve(cells, Math.Clamp(cell, 0, Math.Max(0, cells.Count - 1)), barSlots);
+    public static int Snap(IReadOnlyList<TabCell> cells, int cell, int barSlots = 0)
+        // A packed bar (notes shorter than a sixteenth) has more cells than slots: a beat cell past the slot count is itself a position.
+        => barSlots > 0 && cell >= barSlots && cell < cells.Count && IsBeatCell(cells[cell]) ? cell : Resolve(cells, Math.Clamp(cell, 0, Math.Max(0, cells.Count - 1)), barSlots);
 
     /// <summary>
     /// Where Shift+Right extends a selection inside the bar, or -1 for the next bar: the next written beat. The empty spot is not selectable, so from

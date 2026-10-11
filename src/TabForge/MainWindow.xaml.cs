@@ -156,7 +156,7 @@ public partial class MainWindow : Window
         };
         Editor.SelectionChanged += (_, _) => OnEditorSelectionChanged();
         Editor.PlayRequested += (_, _) => TogglePlayback();
-        Editor.AppendBarAtEnd = () => { if (_midi.IsPlaying) return; AppendBar(); Editor.MoveToBarStart(MaxMeasures() - 1); };
+        Editor.AppendBarAtEnd = () => { var before = MaxMeasures(); AppendBar(); if (MaxMeasures() > before) Editor.MoveToBarStart(MaxMeasures() - 1); };
         Editor.NotePreview += OnNotePreview;
         Editor.StatusMessage += (_, msg) => StatusText.Text = msg;
         Editor.CursorMovedByKey += (_, _) => { if (Editor.HorizontalScroll || !_follow.BarInView(Editor.SelectedMeasure)) ScrollToCursor(); };

@@ -45,6 +45,7 @@ internal static class StaffNotationLayoutBuilder
         var sourceCells = cellsOverride ?? measure.Cells;
         var voiceIndex = ReferenceEquals(sourceCells, measure.Voice2Cells) ? 1 : 0;
         var twoVoices = measure.Voice2Cells.Any(c => c.Notes.Count > 0);
+        var otherVoiceOnsets = isDrum ? StaffDrumStems.NoteOnsets(voiceIndex == 1 ? measure.Cells : measure.Voice2Cells) : null;
         for (var i = 0; i < sourceCells.Count; i++)
         {
             var cell = sourceCells[i];
@@ -54,6 +55,7 @@ internal static class StaffNotationLayoutBuilder
             var start = Math.Max(0, double.IsFinite(rawStart) ? rawStart : i);
             var duration = MusicTime.CellSlots(cell);
             inferredCursor = Math.Max(inferredCursor, start + duration);
+            if (otherVoiceOnsets is not null && cell.Notes.Count == 0 && otherVoiceOnsets.Any(o => Math.Abs(o - start) < PositionEpsilon)) continue;   // a percussion rest never lands on the other voice's heads
             var centerX = centerOf?.Invoke(start) ?? x + (start + 0.5) * slotWidth;
             var notes = new List<StaffNotationNote>();
             var graceNotes = new List<StaffNotationNote>();
@@ -116,11 +118,16 @@ internal static class StaffNotationLayoutBuilder
             return onset != 0 ? onset : a.CellIndex.CompareTo(b.CellIndex);
         });
 
-        var metricGroups = BuildMetricGroups(numerator, denominator, slots);
-        var beamGroups = BuildBeamGroups(beats, metricGroups);
+        // An overfull bar has beats past its nominal end; the metric pattern covers them too.
+        var coveredSlots = beats.Count == 0 ? slots : Math.Max(slots, (int)Math.Ceiling(beats.Max(beat => beat.StartSlots + beat.DurationSlots)));
+        var metricGroups = BuildMetricGroups(numerator, denominator, coveredSlots);
+        var beamGroups = isDrum ? new List<StaffNotationBeamGroup>() : BuildBeamGroups(beats, metricGroups);
         AssignBeamStemDirections(beamGroups, staffTop + MiddleLineOffset);
         AssignNoteheadsAndStems(beats, staffTop, staffBottom, isDrum);
-        var beamSegments = BuildBeamSegments(beamGroups);
+        var drumStems = new List<StaffNotationBeat>();
+        List<StaffNotationBeamSegment> beamSegments;
+        if (isDrum) { drumStems = StaffDrumStems.Build(beats, metricGroups, out beamGroups, out beamSegments); }
+        else beamSegments = BuildBeamSegments(beamGroups);
         var tuplets = BuildTupletGroups(beats, beamGroups);
         ResolveAccidentals(beats, keyAlterations);
         AssignAccidentalColumns(beats);
@@ -136,6 +143,7 @@ internal static class StaffNotationLayoutBuilder
             Beats = beats,
             BeamGroups = beamGroups,
             BeamSegments = beamSegments,
+            DrumStems = drumStems,
             TupletGroups = tuplets,
             Ties = ties,
             HopoSlurs = slurs,
@@ -199,7 +207,7 @@ internal static class StaffNotationLayoutBuilder
                 var bottom = Math.Max(beat.StemStartY, beat.StemEndY);
                 sky.Claim(beat.StemX - 1, beat.StemX + 1, top, bottom);
                 if (beat.Flags > 0 && beat.BeamGroupIndex < 0)
-                    sky.Claim(beat.StemX - 0.5, beat.StemX + 8.5, beat.StemUp ? top : bottom - 15 - (beat.Flags - 1) * BeamGap, beat.StemUp ? top + 15 + (beat.Flags - 1) * BeamGap : bottom);
+                    sky.Claim(beat.StemX - 0.5, beat.StemX + 8.5, beat.StemUp ? top : bottom - 15 - (beat.Flags - 1) * FlagGap, beat.StemUp ? top + 15 + (beat.Flags - 1) * FlagGap : bottom);
                 if (beat.LowerStemTopY is { } lowerTop) sky.Claim(beat.CenterX - 6, beat.CenterX - 4, lowerTop, beat.LowerStemEndY);
             }
             if (beat.GraceNotes.Count > 0)
@@ -236,30 +244,7 @@ internal static class StaffNotationLayoutBuilder
         var middleY = staffTop + MiddleLineOffset;
         foreach (var beat in beats)
         {
-            if (isDrum)
-            {
-                // Percussion staff: each sound sits at its mapped position (kick low, snare middle,
-                // hi-hat/cymbals above); one up-stem joins the beat's notes.
-                var ys = beat.Cell.Notes.Select(n => staffTop + (beat.DrumMap?.Invoke(n.MidiValue > 0 ? n.MidiValue : n.Fret).StaffStep ?? 4) * StaffGap / 2).ToList();
-                beat.MinY = ys.Count > 0 ? ys.Min() : middleY;
-                beat.MaxY = ys.Count > 0 ? ys.Max() : middleY;
-                if (!beat.HasStem) continue;
-                beat.StemUp = true;
-                beat.StemX = beat.CenterX + 5;
-                beat.StemStartY = beat.MaxY;
-                beat.StemEndY = Math.Min(beat.MinY, middleY) - StemLength;
-                var upperYs = ys.Where(y => y <= middleY).ToList();
-                var lowerYs = ys.Where(y => y > middleY).ToList();
-                if (upperYs.Count > 0 && lowerYs.Count > 0)
-                {
-                    // Two voices drum notation: cymbals up, drums down, so no stem runs the whole staff.
-                    beat.StemStartY = upperYs.Max();
-                    beat.StemEndY = upperYs.Min() - StemLength;
-                    beat.LowerStemTopY = lowerYs.Min();
-                    beat.LowerStemEndY = lowerYs.Max() + StemLength * 0.85;
-                }
-                continue;
-            }
+            if (isDrum) continue;   // percussion stems and beams: StaffDrumStems
             if (beat.Notes.Count == 0) continue;
 
             // Whole notes have no stems, but still need full notehead and pitch geometry.
@@ -338,7 +323,7 @@ internal static class StaffNotationLayoutBuilder
 
     internal static List<StaffNotationBeamGroup> BuildBeamGroups(
         IReadOnlyList<StaffNotationBeat> beats,
-        IReadOnlyList<MetricGroup> metricGroups)
+        IReadOnlyList<MetricGroup> metricGroups, int firstIndex = 0)
     {
         var result = new List<StaffNotationBeamGroup>();
         var pending = new List<StaffNotationBeat>();
@@ -351,7 +336,7 @@ internal static class StaffNotationLayoutBuilder
                 var metric = metricGroups[pendingMetric];
                 var group = new StaffNotationBeamGroup
                 {
-                    Index = result.Count,
+                    Index = firstIndex + result.Count,
                     Beats = pending.ToArray(),
                     StemUp = false,
                     MetricStart = metric.Start,
@@ -427,10 +412,11 @@ internal static class StaffNotationLayoutBuilder
             pattern.AddRange(Enumerable.Repeat(unit, numerator));
         }
 
+        // The pattern repeats until it covers `slots`; the cap bounds a corrupt bar (32 nominal beats plus 64 overflow beats).
         var groups = new List<MetricGroup>();
         var at = 0.0;
         var patternIndex = 0;
-        while (at < slots - PositionEpsilon && groups.Count < 64)
+        while (at < slots - PositionEpsilon && groups.Count < 96)
         {
             var width = pattern[patternIndex % pattern.Count];
             var end = Math.Min(slots, at + width);
@@ -458,32 +444,37 @@ internal static class StaffNotationLayoutBuilder
         {
             var first = group.Beats[0];
             var last = group.Beats[^1];
-            var firstNatural = NaturalStemEnd(first, group.StemUp);
-            var lastNatural = NaturalStemEnd(last, group.StemUp);
+            var stemLength = BeamedStemLength(group.MaxFlags);
+            var minStem = MinBeamedStemLength(group.MaxFlags);
+            var firstNatural = NaturalStemEnd(first, group.StemUp, stemLength);
+            var lastNatural = NaturalStemEnd(last, group.StemUp, stemLength);
             var dx = last.StemX - first.StemX;
             var slope = Math.Abs(dx) < 0.01 ? 0 : Math.Clamp((lastNatural - firstNatural) / dx, -0.22, 0.22);
-            var intercept = group.Beats.Average(b => NaturalStemEnd(b, group.StemUp) - slope * (b.StemX - first.StemX));
+            var intercept = group.Beats.Average(b => NaturalStemEnd(b, group.StemUp, stemLength) - slope * (b.StemX - first.StemX));
 
             // Preserve a normal minimum stem length after limiting the slope.
             foreach (var beat in group.Beats)
             {
                 var relativeX = beat.StemX - first.StemX;
-                if (group.StemUp) intercept = Math.Min(intercept, beat.MinY - 18 - slope * relativeX);
-                else intercept = Math.Max(intercept, beat.MaxY + 18 - slope * relativeX);
+                if (group.StemUp) intercept = Math.Min(intercept, beat.MinY - minStem - slope * relativeX);
+                else intercept = Math.Max(intercept, beat.MaxY + minStem - slope * relativeX);
             }
 
             group.Slope = slope;
             group.Intercept = intercept;
             foreach (var beat in group.Beats) beat.StemEndY = group.BaseYAt(beat.StemX);
 
+            // A segment runs along the centre of its beam; the stem ends on the outer edge of the first beam.
+            var inward = group.StemUp ? 1 : -1;
+            var half = BeamThickness / 2 * inward;
             segments.Add(new StaffNotationBeamSegment(group.Index, 1, first.CellIndex, last.CellIndex,
-                first.StemX, group.BaseYAt(first.StemX), last.StemX, group.BaseYAt(last.StemX), false));
+                first.StemX, group.BaseYAt(first.StemX) + half, last.StemX, group.BaseYAt(last.StemX) + half, false));
 
             for (var level = 2; level <= group.MaxFlags; level++)
             {
-                    // The secondary beam fills the beat. Each additional flag level divides that
-                    // beat once more (32nds group their third beam by half-beat, 64ths by eighth).
-                    var subdivision = group.MetricWidth / Math.Pow(2, level - 2);
+                // Every beam level runs unbroken across the beat; a run ends only where a note has fewer flags,
+                // at an explicit break or at a gap in time.
+                var subdivision = group.MetricWidth;
                 var eligible = group.Beats.Where(b => b.Flags >= level).ToList();
                 var cursor = 0;
                 while (cursor < eligible.Count)
@@ -500,7 +491,7 @@ internal static class StaffNotationLayoutBuilder
                         next++;
                     }
 
-                    var offset = (level - 1) * BeamGap * (group.StemUp ? 1 : -1);
+                    var offset = (level - 1) * BeamGap * inward + half;
                     if (run.Count >= 2)
                     {
                         var a = run[0];
@@ -532,8 +523,8 @@ internal static class StaffNotationLayoutBuilder
     internal static int SubdivisionIndex(double start, double groupStart, double width)
         => width <= PositionEpsilon ? 0 : (int)Math.Floor((start - groupStart + PositionEpsilon) / width);
 
-    internal static double NaturalStemEnd(StaffNotationBeat beat, bool up)
-        => up ? beat.MinY - StemLength : beat.MaxY + StemLength; // measured from the farthest note of a chord
+    internal static double NaturalStemEnd(StaffNotationBeat beat, bool up, double stemLength)
+        => up ? beat.MinY - stemLength : beat.MaxY + stemLength; // measured from the farthest note of a chord
 
     internal static List<StaffNotationTupletGroup> BuildTupletGroups(
         IReadOnlyList<StaffNotationBeat> beats,

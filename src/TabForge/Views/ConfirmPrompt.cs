@@ -2,7 +2,7 @@ using System.Windows;
 
 namespace TabForge.Views;
 
-// Owns: a themed question with a destructive action button and a Cancel default (Enter and Esc cancel).
+// Owns: a themed question with the action button as the highlighted default (Enter confirms, Esc cancels) and a neutral Cancel.
 // Tests: TestBarDeleteGuards (answers through DialogHost.Capture).
 internal static class ConfirmPrompt
 {
@@ -15,7 +15,7 @@ internal static class ConfirmPrompt
             text += undoKey.Length == 0 ? " You can undo this." : $" You can undo this with {undoKey}.";
         }
         var dialog = new ThemedConfirmDialog(title, text, yesToolTip: yesText, noToolTip: "Leave things as they are", showCancel: false,
-            yesText: yesText, noText: "Cancel", defaultIsNo: true);
+            yesText: yesText, noText: "Cancel", defaultIsNo: false);
         if (owner is { IsLoaded: true }) dialog.Owner = owner;
         return DialogHost.ShowModal(dialog) == true && dialog.Result == MessageBoxResult.Yes;
     }

@@ -12,9 +12,9 @@ TabForge has one headless test suite, built into the executable. It needs no aud
 
 ## Basic set and full suite
 
-A normal build contains the **basic set**: the architecture and hygiene checks and a few smoke tests. It runs in seconds and is what every rebuild runs. The **full suite** (`tests/full-suite/`, see its README) is compiled in only with `-p:TabForgeFullSuite=true`; CI builds it that way, and so does the maintainer's local rebuild script (`fullsuite` option). The sections below describe the full suite; to run any test of it, build with that switch.
+A normal build contains the **basic set**: the architecture and hygiene checks and a few sub-second smoke tests (model round trip, project save and load, one editor entry, settings wiring, one headless engine start). It holds about 580 checks, runs in about 5 seconds and is what every rebuild runs; `--selftest <log>` with no `--areas` or `--only` on a normal build selects it. Nothing that opens a window, renders, imports or plays belongs in it. The **full suite** (`tests/full-suite/`, see its README) is compiled in only with `-p:TabForgeFullSuite=true`; CI builds it that way, and so does the maintainer's local rebuild script (`fullsuite` option). The sections below describe the full suite; to run any test of it, build with that switch.
 
-The basic set also holds the **essential-action smoke checks** (`SelfTests/Smoke/SelfTestEssential*.cs`, about 15 s): start with and without a file, a startup file argument (.tforge, .gp, .gp5), a second file, tabs, close with unsaved changes, save and reopen, autosave, note editing, copy and paste, tracks, bar ranges, clips, playback on a silent engine, every window and prompt, and the exports. They run in the basic area, the release area and the full suite.
+The **essential-action smoke checks** (`SelfTests/Smoke/SelfTestEssential*.cs`, area `essential`, about 15 s) are compiled into every build but are not part of the basic set, because each opens a window: start with and without a file, a startup file argument (.tforge, .gp, .gp5), a second file, tabs, close with unsaved changes, save and reopen, autosave, note editing, copy and paste, tracks, bar ranges, clips, playback on a silent engine, every window and prompt, and the exports. They run with `--areas essential` (or `--only`), in push CI (`--areas basic,essential`), in the release area and in the full suite.
 
 ## Release gate (`--areas release`)
 
@@ -39,6 +39,7 @@ The exit code alone is not the result: the log must say `0 failed`. Lines that s
 | Option | Effect |
 | --- | --- |
 | `--areas basic` | the basic set only (architecture, hygiene, smoke; no untagged tests) |
+| `--areas essential` | the essential-action checks (normal build too) |
 | `--areas ui,settings` | run only those areas (plus the tests with no area); omit it, or use `all`, for everything |
 | `--require ci` | make the gate groups mandatory (see below); CI and release packaging use it |
 | `--profile <folder>` | use a throw-away settings folder, so your own settings are untouched |

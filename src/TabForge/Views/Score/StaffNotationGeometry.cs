@@ -14,8 +14,16 @@ internal static class StaffNotationGeometry
 {
     public const double StaffGap = 9.0;
     internal const double StemLength = 3.0 * StaffGap;
-    internal const double BeamThickness = 1.7;
-    internal const double BeamGap = 3.4;
+    /// <summary>Every beam level is a little over a third of a staff space thick: bold, without filling the staff on a dark page.</summary>
+    internal const double BeamThickness = 0.36 * StaffGap;
+    /// <summary>Distance from one beam level to the next: the beam plus a quarter-space of clear gap.</summary>
+    internal const double BeamGap = 0.62 * StaffGap;
+    /// <summary>Distance between the stacked flags of an unbeamed note.</summary>
+    internal const double FlagGap = 3.4;
+    /// <summary>Stem length of a beamed note, to the outer edge of the outermost beam: the beams stack toward the notehead, so each level past the second adds one beam step.</summary>
+    internal static double BeamedStemLength(int beams) => StaffGap * 3.5 + Math.Max(0, beams - 2) * BeamGap;
+    /// <summary>Shortest beamed stem: the innermost beam stays one staff space clear of the notehead.</summary>
+    internal static double MinBeamedStemLength(int beams) => StaffGap + BeamThickness + Math.Max(0, beams - 1) * BeamGap;
     internal const double HeadRadiusX = StaffGap * 0.56;
     internal const double HeadRadiusY = StaffGap * 0.38;
     internal const double MiddleLineOffset = 2 * StaffGap;
@@ -209,6 +217,10 @@ internal static class StaffNotationGeometry
         }
 
         var result = new List<StaffLedgerLineSegment>();
+        foreach (var drum in layout.Beats.Where(b => b.IsDrum && !b.IsRest))
+        foreach (var y in DrumHeadYs(drum).Distinct())
+        foreach (var ledgerY in LedgerLinePositions(y, layout.StaffTop))
+            result.Add(new StaffLedgerLineSegment(drum.CenterX - halfWidth, drum.CenterX + halfWidth, ledgerY));
         foreach (var onset in onsets)
         {
             var lineYs = new Dictionary<int, double>();

@@ -26,7 +26,7 @@ A document tab holds one open song.
 | Open in a new document tab | `Ctrl+Shift+O` | **File > Open in new tab…** |
 | Save | `Ctrl+S` | **File > Save** |
 | Save under a new name | `Ctrl+Shift+S` | **File > Save As…** |
-| New document tab | `Ctrl+T` | **File > New tab** |
+| New document tab | `Ctrl+Alt+T` | **File > New tab** |
 | Close the document tab | `Ctrl+W` | **File > Close tab** |
 | Duplicate the document tab | `Ctrl+Shift+D` | Right-click the document tab |
 | Score information | `F5` | **File > Score information…** |
@@ -80,7 +80,7 @@ Type a fret number with the digit keys. For a fret above 9, type both digits qui
 | Write a fret on the cursor's string | `0` to `9` | None |
 | Rest | `R` | **Note > Rest** |
 | Tie to the previous note | `L` | **Note > Tie note** |
-| Dotted note | `Full stop` | **Note > Dotting** |
+| Dotted note | `Full stop` or numpad `Num .` | **Note > Dotting** |
 | Triplet | `Slash` | **Note > Triplet** |
 | Longer note value | `Minus` | **Note > Longer note value** |
 | Shorter note value | `Plus` | **Note > Shorter note value** |

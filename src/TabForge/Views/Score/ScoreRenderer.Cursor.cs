@@ -15,12 +15,9 @@ namespace TabForge.Views.Score;
 internal sealed partial class ScoreRenderer
 {
     /// <summary>
-    /// Shared horizontal bounds for the edit cursor and note hover. A populated cell occupies its
-    /// actual rhythmic duration; empty cells retain the one-slot cursor width.
-    /// </summary>
-    /// <summary>
-    /// The edit cursor box: always centred on the beat head (the same x the fret number or notehead is drawn at) and as wide as its glyph,
-    /// never the beat's duration span. A cell that is not a beat (a stale or empty slot) shows at the nearest allowed beat.
+    /// The edit cursor box, also used for the hover outline: centred on the beat head (the same x the fret number or notehead
+    /// is drawn at) and as wide as its glyph, never the beat's duration span. A cell that is not a beat (a stale or empty slot)
+    /// shows at the nearest allowed beat.
     /// </summary>
     internal static Rect CursorRect(MeasureModel measure, IReadOnlyList<TabCell> cells, int cellIndex,
         double measureX, MeasureWarp warp, double measureWidth, double y, double height)
@@ -36,6 +33,21 @@ internal sealed partial class ScoreRenderer
         var width = Math.Max(14, 7 * digits + 6);
         var centre = measureX + warp.CenterFraction(CellStartSlots(measure, cellIndex, cells)) * measureWidth;
         return new Rect(centre - width / 2, y, width, height);
+    }
+
+    /// <summary>
+    /// The hover outline: the cursor box, widened to the cell's duration span when the cell holds notes or a rest. Its left edge stays
+    /// on the cursor box; its right edge is the span's end, never past the bar. An empty cell keeps the cursor box.
+    /// </summary>
+    internal static Rect HoverRect(MeasureModel measure, IReadOnlyList<TabCell> cells, int cellIndex,
+        double measureX, MeasureWarp warp, double measureWidth, double y, double height)
+    {
+        var box = CursorRect(measure, cells, cellIndex, measureX, warp, measureWidth, y, height);
+        var cell = cellIndex >= 0 && cellIndex < cells.Count ? cells[cellIndex] : null;
+        if (cell is null || (cell.Notes.Count == 0 && !cell.IsRest)) return box;
+        // The beat's own length from where it is drawn: a note shorter than a sixteenth ends at the next note's column.
+        var right = Math.Min(measureX + measureWidth, measureX + warp.Fraction(CellStartSlots(measure, cellIndex, cells) + MusicTime.CellSlots(cell)) * measureWidth);
+        return new Rect(box.X, y, Math.Max(box.Width, right - box.X), height);
     }
 
     internal static Rect CellHighlightRect(MeasureModel measure, IReadOnlyList<TabCell> cells, int cellIndex,

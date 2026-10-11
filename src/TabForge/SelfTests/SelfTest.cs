@@ -74,7 +74,7 @@ public static partial class SelfTest
         Guard(TestEverySettingIsWired);
         Guard(TestFretMarkerSize);
         Guard(TestHeadlessDeviceReconfigure);
-        Section("Basic set: essential actions");
+        Section("Essential actions");   // area essential: outside the basic set (they open windows); --areas essential, the release gate and the full suite run them
         Guard(TestEssentialStartNoFile);
         Guard(TestEssentialStartupFiles);
         Guard(TestEssentialSecondFileAndTabs);
@@ -164,20 +164,20 @@ public static partial class SelfTest
         ["TestTechniqueCoverage"] = "hygiene", ["TestTechniqueInfoTable"] = "hygiene", ["TestTechniqueGpExportGolden"] = "hygiene", ["TestTechniqueMusicXmlGolden"] = "hygiene", ["TestTechniquePlaybackGolden"] = "hygiene", ["TestHotkeyIdsDocumented"] = "hygiene",["TestNoMojibakeInSources"] = "hygiene", ["TestFindCommand"] = "hygiene",
         ["TestOnlyOption"] = "hygiene", ["TestRunnerTimingAndShardOptions"] = "hygiene", ["TestPublicDocsConsistency"] = "hygiene", ["TestRequireArgumentStrings"] = "hygiene", ["TestRequiredGroupGate"] = "hygiene",
         ["TestSourceControlCharacters"] = "hygiene", ["TestStartHereAndRecipesInSync"] = "hygiene", ["TestEditorEntry"] = "smoke", ["TestEverySettingIsWired"] = "smoke", ["TestFretMarkerSize"] = "smoke",
-        ["TestEssentialStartNoFile"] = "smoke",
-        ["TestEssentialStartupFiles"] = "smoke",
-        ["TestEssentialSecondFileAndTabs"] = "smoke",
-        ["TestEssentialCloseTabUnsaved"] = "smoke",
-        ["TestEssentialSaveAndReopen"] = "smoke",
-        ["TestEssentialAutosaveAndRecovery"] = "smoke",
-        ["TestEssentialNoteEditing"] = "smoke",
-        ["TestEssentialSelectionCopyPaste"] = "smoke",
-        ["TestEssentialTracks"] = "smoke",
-        ["TestEssentialTimelineEdits"] = "smoke",
-        ["TestEssentialClips"] = "smoke",
-        ["TestEssentialPlayback"] = "smoke",
-        ["TestEssentialWindowsAndPrompts"] = "smoke",
-        ["TestEssentialExports"] = "smoke",
+        ["TestEssentialStartNoFile"] = "essential",
+        ["TestEssentialStartupFiles"] = "essential",
+        ["TestEssentialSecondFileAndTabs"] = "essential",
+        ["TestEssentialCloseTabUnsaved"] = "essential",
+        ["TestEssentialSaveAndReopen"] = "essential",
+        ["TestEssentialAutosaveAndRecovery"] = "essential",
+        ["TestEssentialNoteEditing"] = "essential",
+        ["TestEssentialSelectionCopyPaste"] = "essential",
+        ["TestEssentialTracks"] = "essential",
+        ["TestEssentialTimelineEdits"] = "essential",
+        ["TestEssentialClips"] = "essential",
+        ["TestEssentialPlayback"] = "essential",
+        ["TestEssentialWindowsAndPrompts"] = "essential",
+        ["TestEssentialExports"] = "essential",
         ["TestSingleInstanceProcessHandover"] = "release",
         ["TestEngineSyncDeferredRequests"] = "engine",
         ["TestScoreLayoutPartial"] = "ui", ["TestPlaybackScheduleReuse"] = "playback",
@@ -199,7 +199,7 @@ public static partial class SelfTest
 
     private static HashSet<string>? _areas;   // null: every area
     private static bool _basicOnly;   // --areas basic: untagged core tests do not run
-    /// <summary>The areas that make up the basic set (the tests compiled into every build): hygiene checks, architecture checks and a few smoke tests.</summary>
+    /// <summary>The areas that make up the basic set (the tests compiled into every build): hygiene checks, architecture checks and a few sub-second smoke tests. It stays under about ten seconds.</summary>
     private static readonly string[] BasicAreas = { "architecture", "hygiene", "smoke" };
 
     private static HashSet<string>? ParseAreas()
@@ -209,10 +209,13 @@ public static partial class SelfTest
             if (args[i].Equals("--areas", StringComparison.OrdinalIgnoreCase))
             {
                 var set = args[i + 1].Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToHashSet(StringComparer.OrdinalIgnoreCase);
-                if (set.Contains("release")) { _basicOnly = true; _releaseTests = new HashSet<string>(ReleaseTestNames, StringComparer.Ordinal); set.UnionWith(BasicAreas); }   // the release gate: basic plus the curated release tests
+                if (set.Contains("release")) { _basicOnly = true; _releaseTests = new HashSet<string>(ReleaseTestNames, StringComparer.Ordinal); set.UnionWith(BasicAreas); set.Add("essential"); }   // the release gate: basic, the essential actions and the curated release tests
                 if (set.Contains("basic")) { _basicOnly = true; set.UnionWith(BasicAreas); }   // the basic set: only the tests tagged with these areas, no untagged core
                 return set.Contains("all") ? null : set;
             }
+#if !FULL_SUITE
+        if (OptionValue(args, "--only") is null) { _basicOnly = true; return new HashSet<string>(BasicAreas, StringComparer.OrdinalIgnoreCase); }   // a normal build with no selection runs the basic set
+#endif
         return null;
     }
 

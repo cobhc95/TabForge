@@ -45,7 +45,7 @@ public static class TechniqueInfo
     /// <summary>Every technique: one row per <see cref="TechniqueNames"/> constant, then the importer-only names.</summary>
     public static IReadOnlyList<TechniqueRow> All { get; } = new TechniqueRow[]
     {
-        new(TechniqueNames.PalmMute, "", PlaybackEffect.Velocity | PlaybackEffect.Length, "", "play/mute palm") { VelocityFactor = 0.92, MaxLengthSlots = 4 },
+        new(TechniqueNames.PalmMute, "", PlaybackEffect.Velocity | PlaybackEffect.Length, "", "play/mute palm") { VelocityFactor = 0.80, MaxLengthSlots = 4 },
         new(TechniqueNames.LetRing, "let ring", PlaybackEffect.Length, "", "GP processing instruction letring"),
         new(TechniqueNames.Hopo, "", PlaybackEffect.Velocity | PlaybackEffect.Grace, "", "notations/hammer-on or pull-off") { VelocityFactor = 0.8 },
         new(TechniqueNames.HopoOrigin, "", PlaybackEffect.Velocity | PlaybackEffect.Grace, "", "notations/hammer-on or pull-off") { VelocityFactor = 0.8 },

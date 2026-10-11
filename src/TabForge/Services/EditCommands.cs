@@ -68,6 +68,7 @@ public static partial class EditCommands
     /// </summary>
     public static bool CloseUp(List<TabCell> cells, int slots, IReadOnlySet<TabCell> keep)
     {
+        if (ShortNoteFill.Packed(cells)) return ShortNoteFill.CloseUp(cells, slots, keep);
         if (!BarFill.IsPlain(cells)) return false;
         var beats = cells.Where(c => c.Notes.Count > 0 || c.IsRest || c.HasAnnotation).ToList();
         if (beats.Count == 0) return false;

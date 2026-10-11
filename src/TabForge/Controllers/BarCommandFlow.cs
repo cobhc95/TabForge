@@ -73,6 +73,7 @@ internal sealed class BarCommandFlow
     public void AppendBar()
     {
         var at = MaxMeasures;
+        if (at >= Services.InputLimits.MaxMeasuresPerTrack) { _host.SetStatus($"The song is at its limit of {Services.InputLimits.MaxMeasuresPerTrack} bars"); return; }
         _arrangement.InsertBar(Doc, at, Math.Max(0, at - 1), moveMarkers: false, fillRests: _host.Editing.FillBarsWithRests);
         _host.Refresh(EditViews.Score | EditViews.Arrangement);
         _host.SetStatus($"Added bar {at + 1} at the end");

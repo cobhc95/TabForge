@@ -26,6 +26,9 @@ internal static class ScoreClefKey
         return (ClefShape.Treble, below);
     }
 
+    /// <summary>The clef drawn at a system start: a drum track always shows the percussion clef, whatever its bars say.</summary>
+    internal static string? SystemClef(TrackModel track, string? barClef) => track.Kind == TrackKind.Drums ? Clefs.Percussion : barClef;
+
     /// <summary>Whether a bar's clef differs from the previous bar's (the bar then starts with a smaller clef).</summary>
     internal static bool ClefChanges(TrackModel track, int measureIndex) =>
         measureIndex > 0 && measureIndex < track.Measures.Count &&

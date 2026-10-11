@@ -18,7 +18,9 @@ public enum BeatPasteMode
     /// <summary>Overwrite the notes at the cursor over the clip's span.</summary>
     Replace,
     /// <summary>Push the following notes of this voice along by the clip's length.</summary>
-    Insert
+    Insert,
+    /// <summary>Overwrite the whole bar (every bar of a selection) with the clip.</summary>
+    ReplaceBar
 }
 
 /// <summary>Outcome of a placement. On refusal (<see cref="Ok"/> false) the project is unchanged.</summary>

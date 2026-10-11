@@ -45,6 +45,8 @@ public static partial class SettingsCatalog
                 "Engrave dynamics markings (ppp to fff) under the staff where the dynamic changes.", "dynamics markings forte piano ppp mf fff loudness"),
             Number(Score, "Highlighting", "score.hoverintensity", "Hover-highlight intensity", v => a.HoverHighlightIntensity = v / 100, () => a.HoverHighlightIntensity * 100, 0, 100,
                 "Strength of the score hover outline.", "hover pointer highlight opacity percent", "%", 1, 0),
+            Bool(Score, "Highlighting", "score.noteoutline", "Show the note length outline on the cell under the cursor", v => a.ShowNoteOutline = v, () => a.ShowNoteOutline,
+                "Draw a thin outline around the score cell under the mouse; its width shows the note length.", "hover outline cursor note length box cell"),
             Number(Score, "Highlighting", "score.selectionintensity", "Selection-highlight intensity", v => a.SelectionHighlightIntensity = v / 100, () => a.SelectionHighlightIntensity * 100, 0, 100,
                 "Opacity of the selected score range.", "selected range highlight opacity percent", "%", 1, 0),
             Choice(Score, "Score colours", "appearance.paper", "Score paper", v => a.ScorePaper = v, () => a.ScorePaper,

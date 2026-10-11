@@ -25,6 +25,8 @@ public static class Clefs
     public const string Treble = "G";
     public const string Bass = "F4";
     public const string Alto = "C";
+    /// <summary>The unpitched percussion clef (drawn on every drum track whatever the bar says).</summary>
+    public const string Percussion = "Percussion";
     public static readonly string[] Cycle = { Guitar, Treble, Bass, Alto };
 }
 

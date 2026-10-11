@@ -18,7 +18,7 @@ public static partial class SelfTest
         "TestEmbeddedProjectLimit", "TestAudioDataSizeLimit", "TestMediaPathPolicy",
         "TestGuitarProFiles", "TestTechniqueCoverage", "TestGpRoundTripCounts", "TestGuitarProImportContainment", "TestGuitarProImportWorker", "TestSyntheticGuitarProFixture", "TestSyntheticFixtures", "TestGp5OwnFilesImport", "TestGp5TieGraceImport",
         "TestImportPlausibility", "TestMalformedInputFuzz", "TestScoreClipRejectsUntrustedInput",
-        "TestPlaybackOrderSpec", "TestNoHangingNotes", "TestSeekWhilePlayingSoundsFirstNote", "TestMixPointsSurviveSeek", "TestEditCommands", "TestEditorCopyPaste", "TestUndoController", "TestUndoDeltaStates", "TestDocuments",
+        "TestPlaybackOrderSpec", "TestNoHangingNotes", "TestSeekWhilePlayingSoundsFirstNote", "TestSilentBarAfterSeekBack", "TestSelectionDelete", "TestPasteIntoBar", "TestPlayheadAfterEdit", "TestMixPointsSurviveSeek", "TestEditCommands", "TestEditorCopyPaste", "TestUndoController", "TestUndoDeltaStates", "TestDocuments",
         "TestDocumentOperations", "TestDocumentContext", "TestStartupFileOpen", "TestSingleInstanceProcessHandover", "TestSelectionClipboardMatrix", "TestSongExtent", "TestSongCoversClipsOnLoadAndDelete","TestEngineSyncDeferredRequests",
         "TestLongAudioClipGrowthPlayback", "TestAudioGrowthReservation",
         "TestMediaDropPlan", "TestClipEdgesAndLoops", "TestTrimEmptyBars", "TestMediaDropPreviewGeometry", "TestClipMoveGhost", "TestMidiClipMoves", "TestTimelineSongTimeRepeatGrowth",

@@ -1,4 +1,4 @@
-# TabForge 0.7.1
+# TabForge 0.7.2
 
 **A keyboard-driven tablature and notation editor for Windows. Opens GP files (.gp3, .gp4, .gp5, .gpx, .gp) and saves .gp and its own .tforge projects.** Write, import and play back guitar, bass, drum and keyboard parts, with a live fretboard / keyboard, an arrangement timeline, audio and MIDI recording, a mixer, VST plug-ins and offline audio rendering.
 
@@ -18,15 +18,18 @@
 | *Moving a section to a new position.* | *Adjusting levels in the mixer.* |
 
 
-### New in 0.7
+### New in 0.7.2
 
 [<img src="docs/screenshots/keyboard-mode.png" alt="Keyboard mode with falling notes" width="860">](docs/screenshots/keyboard-mode.png)
 
-- **Keyboard mode (experimental)**: any track's notes fall onto a realistic piano keyboard; play along on a MIDI keyboard and get green or red feedback per note. Turn it on from the toolbar or View > Keyboard mode. The selected track is silenced and your own playing is heard through its sound, a *Wait for me* mode holds the song until you play the right notes, and speed, loop, hands, zoom and note names sit in a control bar. Left and right hands are worked out automatically, the MIDI input defaults to any available device, and the view can pop out into its own window with full screen.
-- **Video export and recording**: File > Export > Video (MP4) turns a song into a video that plays itself, with the full audio mix; the Record video button in the title bar (next to Settings, Ctrl+Alt+V) records the window with the live sound.
-- **Band view** and playback are crisper: playheads and scrolling stay sharp at every display scale.
+- **Tidy bars:** with "Add rests automatically to fill bars" on, changing a note's length moves the notes after it along, and the rests at the end of the bar take up the change.
+- **32nd and 64th notes** typed back to back beam together, and a bar holds 32 or 64 of them.
+- **Edit cursor:** a see-through yellow highlight on the tab and a grey box behind the selected note on the staff; pausing or stopping moves it to where playback stopped.
+- **Add track on Ctrl+T**; New tab moves to Ctrl+Alt+T, and your own key choices are kept.
+- **Drum staff:** the percussion clef sits inside the staff, every drum note has a stem, and notes in one voice share a stem and beam.
+- **Playback marks:** the green glow on playing notes and the green playback line show only while the song plays.
 
-See the [changelog](CHANGELOG.md) for everything in 0.7.0.
+See the [changelog](CHANGELOG.md) for everything in 0.7.2.
 
 ## Download
 
@@ -308,6 +311,7 @@ Play along with a metronome and count-in, loop any section, and let the speed tr
 - **Metronome and count-in** with their own sounds, levels and subdivisions.
 - **Seamless looping** of the song, a section or a selection; a **speed trainer**; skip areas.
 - **Zoom and speed** boxes sit in the top toolbar, left of the tempo box.
+- **Status bar tempo** follows the tempo in force at the playhead or the selected bar, so it tracks tempo changes during playback and after a seek; the toolbar box still shows the song's base tempo.
 
 <details><summary>More details</summary>
 
@@ -460,6 +464,7 @@ Every setting is searchable, every command can be rebound, and the command palet
 - **Searchable settings** with live preview before you apply.
 - **Hotkeys**: two shortcuts per command, presets for TabForge, Classic and Alternative, conflict warnings.
 - **Updates**: an optional daily check (see [Security](#security-and-safety)); Help > *Check for updates…* checks now.
+- **Score layout and scrolling** in Settings > Score apply to open songs at once. **Reset all** and **Import** cover every section, and a second TabForge window follows settings changed in the first.
 - Import/export all settings as a file.
 
 <details><summary>More details</summary>

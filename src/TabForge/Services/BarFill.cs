@@ -9,7 +9,7 @@ namespace TabForge.Services;
 public static class BarFill
 {
     // Rest sizes in 16th slots, largest first, with the slot alignment each size sits on (a dotted rest sits on its plain value's grid).
-    private static readonly (int Size, int Denominator, int Dots, int Align)[] Sizes =
+    internal static readonly (int Size, int Denominator, int Dots, int Align)[] Sizes =
     {
         (16, 1, 0, 16), (12, 2, 1, 8), (8, 2, 0, 8), (6, 4, 1, 4), (4, 4, 0, 4), (3, 8, 1, 2), (2, 8, 0, 2), (1, 16, 0, 1)
     };
@@ -57,9 +57,10 @@ public static class BarFill
     /// <summary>Puts rests into every gap of one voice. <paramref name="always"/>: an empty voice becomes one whole-bar rest (voice 1); otherwise an empty voice stays empty.</summary>
     public static bool FillCells(List<TabCell> cells, int slots, bool always)
     {
+        if (ShortNoteFill.Applies(cells)) return ShortNoteFill.Fill(cells, slots);
         if (!IsPlain(cells)) return false;
         if (!always && !cells.Any(IsBeat)) return false;
-        var changed = false;
+        var changed = DropStaleFillRests(cells, slots);
         while (cells.Count < slots) { cells.Add(new TabCell()); changed = true; }
         var consumed = 0;
         for (var i = 0; i < slots; i++)
@@ -77,6 +78,30 @@ public static class BarFill
             changed = true;
             consumed = end;
             i = end - 1;
+        }
+        return changed;
+    }
+
+    /// <summary>
+    /// A rest the fill added (not a written rest) that lies under an earlier beat, runs into a later beat or runs past the bar end is stale: it goes,
+    /// and the gap pass lays the right rests. The filler therefore follows the notes whenever they grow, never making the bar overfull.
+    /// </summary>
+    private static bool DropStaleFillRests(List<TabCell> cells, int slots)
+    {
+        var changed = false;
+        var consumed = 0;
+        for (var i = 0; i < cells.Count; i++)
+        {
+            var cell = cells[i];
+            if (!IsBeat(cell)) continue;
+            var size = MusicTime.CellSlotsRounded(cell);
+            if (cell.IsRest && cell.Notes.Count == 0 && !cell.HasAnnotation && !cell.WrittenRest)
+            {
+                var next = i + 1;
+                while (next < cells.Count && !IsBeat(cells[next])) next++;
+                if (i < consumed || i + size > slots || (next < cells.Count && next < i + size)) { cell.IsRest = false; changed = true; continue; }
+            }
+            consumed = Math.Max(consumed, i) + size;
         }
         return changed;
     }

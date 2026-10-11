@@ -186,9 +186,13 @@ public sealed class DocumentSession
     public static DocumentSession FromProject(SongProject project, string? path) =>
         new() { Project = project, Path = path, IsNew = path is null };
 
+    /// <summary>How many empty bars a new file starts with.</summary>
+    public const int NewSongBars = 4;
+
     public static DocumentSession Blank()
     {
         var p = TemplateFactory.Blank();
+        foreach (var t in p.Tracks) t.Measures = t.Measures.Take(NewSongBars).ToList();   // a new song starts short; Right at the end adds bars
         var session = new DocumentSession { Project = p, IsNew = true };
         session.MarkClean();
         return session;

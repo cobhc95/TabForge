@@ -35,7 +35,7 @@ public sealed partial class TabEditorControl
 
     public bool TryHandleKey(Key key, ModifierKeys mods)
     {
-        if (!HandleKey(key, mods)) return false;
+        var cursor = (SelectedMeasure, SelectedCell, SelectedString); if (!HandleKey(key, mods)) return false; if (cursor != (SelectedMeasure, SelectedCell, SelectedString)) _input.CursorMovedByKey();
         if (key is Key.Left or Key.Right or Key.Up or Key.Down or Key.Home or Key.End or Key.PageUp or Key.PageDown)
             CursorMovedByKey?.Invoke(this, EventArgs.Empty);
         return true;

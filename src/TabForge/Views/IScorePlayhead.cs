@@ -19,6 +19,10 @@ internal interface IScorePlayhead
     /// <summary>Removes the playhead.</summary>
     void Clear();
 
+    /// <summary>The score bar and cell of the playhead, or -1 when none is shown.</summary>
+    int Measure { get; }
+    int Cell { get; }
+
     // ---- per tick ----
 
     /// <summary>Moves the playhead to a bar and cell; repaints only the systems whose playback state changed.</summary>

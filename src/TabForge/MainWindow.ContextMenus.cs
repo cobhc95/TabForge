@@ -52,14 +52,14 @@ public partial class MainWindow
             RefreshToolsPalette();
         }
         var state = new ScoreEmptyState(overBeat, ClipboardService.Shared.CanPaste, Editor.Notation != NotationMode.TabOnly,
-            Editor.Appearance.CenterSystems, Editor.HorizontalScroll);
+            Editor.Appearance.CenterSystems, Editor.HorizontalScroll, Editor.Appearance.ShowNoteOutline);
         var menu = SpecMenus.New("Score options", ScoreMenus.Empty(state, MenuKey), spec =>
         {
             switch (spec.Id)
             {
                 case ScoreMenus.PasteId: Paste_Click(this, new RoutedEventArgs()); break;
                 case ScoreMenus.PasteSpecialId: PasteSpecial_Click(this, new RoutedEventArgs()); break;
-                case ScoreMenus.NotationId: SetNotation(spec.Checked ? NotationMode.TabOnly : NotationMode.TabAndStaff); break;
+                case ScoreMenus.NotationId: SetNotation(spec.Checked ? NotationMode.TabOnly : NotationMode.TabAndStaff); break; case ScoreMenus.OutlineId: _settings.Appearance.ShowNoteOutline = Editor.Appearance.ShowNoteOutline = !spec.Checked; Editor.InvalidateScoreLayout(); break;
                 case ScoreMenus.ZoomInId: ScoreZoom.ZoomBy(1); break;
                 case ScoreMenus.ZoomOutId: ScoreZoom.ZoomBy(-1); break;
                 case ScoreMenus.FitWidthId: ScoreZoom.ApplyZoomText("Fit width"); break;

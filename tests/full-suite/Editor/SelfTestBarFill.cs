@@ -109,6 +109,35 @@ public static partial class SelfTest
                 outcome.Changed && NoteCount(pasted) == 2 && pasted[8].IsRest && !MusicTime.AnalyzeBar(doc.Project, 1).Marked);
         }
 
+        // A stale fill rest (under a lengthened note, or running into / past the end of a bar) never makes the bar overfull; a written rest stays.
+        {
+            var stale = new List<TabCell>();
+            for (var i = 0; i < 16; i++) stale.Add(new TabCell());
+            stale[0] = Note(4, 1); stale[2] = new TabCell { IsRest = true, DurationDenominator = 8 };      // rest under the quarter
+            stale[4] = Note(4, 2); stale[8] = Note(4, 3); stale[12] = Note(4, 4); stale[14] = new TabCell { IsRest = true, DurationDenominator = 4 };   // rest past the end, under a note
+            BarFill.FillCells(stale, 16, always: true);
+            Check("rest fill: stale automatic rests under a note or past the bar end are dropped, the bar adds up", !stale[2].IsRest && !stale[14].IsRest && stale.Sum(c => c.Notes.Count) == 4);
+            var written = new List<TabCell>();
+            for (var i = 0; i < 16; i++) written.Add(new TabCell());
+            written[0] = Note(4, 1); written[2] = new TabCell { IsRest = true, WrittenRest = true, DurationDenominator = 8 };
+            BarFill.FillCells(written, 16, always: true);
+            Check("rest fill: a written rest is never touched by the filler", written[2].IsRest && written[2].WrittenRest);
+            // Editor path: eighths, then lengthen the first to a quarter and back; the bar is never red.
+            var (ed5, song5, _) = Make(true);
+            ed5.CurrentDurationDenominator = 8;
+            foreach (var at in new[] { 0, 2, 4, 6 }) { ed5.SetPosition(0, at, 1, false); ed5.Effects.EnterFret(3); }
+            var c5 = song5.Tracks[0].Measures[0].Cells;
+            c5[0].DurationDenominator = 16; c5[0].DurationDenominator = 8;
+            ed5.SetPosition(0, 1, 1, false); ed5.CurrentDurationDenominator = 16; ed5.Effects.EnterFret(4);
+            ed5.SetPosition(0, 1, 1, false); ed5.Effects.DeleteBeat();
+            Check("rest fill: eighths then an inserted sixteenth never leave the bar red", !MusicTime.AnalyzeBar(song5, 0).Marked);
+            var (ed6, song6, _) = Make(false);
+            ed6.CurrentDurationDenominator = 8;
+            foreach (var at in new[] { 0, 2, 4 }) { ed6.SetPosition(0, at, 1, false); ed6.Effects.EnterFret(3); }
+            ed6.SetPosition(0, 2, 1, false); ed6.Effects.DeleteBeat();
+            Check("rest fill off: entering and deleting notes creates no rest", !song6.Tracks[0].Measures[0].Cells.Any(c => c.IsRest));
+        }
+
         // The setting defaults on and the model fill leaves a bar that is already complete alone.
         Check("rest fill: the setting is on by default", new EditingSettings().FillBarsWithRests);
         var full = new List<TabCell> { Note(1, 1) };

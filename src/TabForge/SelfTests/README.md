@@ -1,6 +1,6 @@
 # SelfTests
 
-The **basic set** of the self-tests, run with `TabForge.exe --selftest <log>`: the architecture and hygiene checks and a few smoke tests and the essential-action smoke checks (`Smoke/SelfTestEssential*.cs`, helpers `Sm*` in `SelfTestEssentialKit.cs`), partial files of `SelfTest`. The big full suite lives in `tests/full-suite/` and is compiled in only with `-p:TabForgeFullSuite=true`.
+The **basic set** of the self-tests, run with `TabForge.exe --selftest <log>`: the architecture and hygiene checks and a few sub-second smoke tests, partial files of `SelfTest`. The essential-action smoke checks (`Smoke/SelfTestEssential*.cs`, helpers `Sm*` in `SelfTestEssentialKit.cs`) are compiled in too but run only with `--areas essential`, the release gate and the full suite. The big full suite lives in `tests/full-suite/` and is compiled in only with `-p:TabForgeFullSuite=true`.
 
 ## How to change me
 1. Entry files: `SelfTest.cs` (the AreaOf table), `tests/full-suite/SelfTestFullSuite.cs`.

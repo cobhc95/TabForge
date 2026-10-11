@@ -261,7 +261,7 @@ public static partial class SelfTest
 
         Parity("insert bar", "Bar.Insert", () => DoSong(), () => OnBar(2));
         Parity("delete bar", "Bar.Delete", () => DoSong(), () => OnBar(2));
-        Parity("add track", "Track.Add", () => DoSong(), () => OnTrack(0));
+        // Track.Add opens the Add track window (modal), so it has no keyboard/menu parity run here.
         Parity("delete track", "Track.Delete", () => DoSong(3), () => OnTrack(1));
         Parity("move track up", "Track.MoveUp", () => DoSong(3), () => OnTrack(2));
         Parity("palm mute (effect change)", "Note.PalmMute", () => DoSong(), () => { OnTrack(0); editor.SetPosition(0, 0, 2, false); });
@@ -521,7 +521,7 @@ public static partial class SelfTest
     {
         var document = DoOpen(window, DoSong(3));
         var revision = document.Project.TimelineRevision;
-        LtCall(window, "AddGuitar_Click", window, new RoutedEventArgs());
+        LtCall(window, "AddTrack", TrackKind.Guitar);
         Check("document operations: adding a track invalidates the playback timeline (it did not before the shared edit)", document.Project.TimelineRevision == revision + 1, $"+{document.Project.TimelineRevision - revision}");
         revision = document.Project.TimelineRevision;
         LtCall(window, "MoveTrackTo", 0, 2);

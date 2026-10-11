@@ -60,6 +60,8 @@ internal sealed class PlaybackScheduleReuse
 
         var cell = Math.Clamp(requestedCell, 0, Math.Max(1, first.Slots) - 1);
         targetMs = first.MsAtFraction((double)cell / Math.Max(1, first.Slots));
+        // The compile of the first performed bar left out the beats before its start cell: a target before them needs a fresh compile.
+        if (requestedBar == _traversal[0] && targetMs < timeline.PlayFromMs - 0.001) return false;
         return targetMs >= first.StartMs && targetMs < first.EndMs + 0.001;
     }
 

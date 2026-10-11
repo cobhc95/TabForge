@@ -36,6 +36,8 @@ internal sealed class StaffNotationMeasureLayout
     public required IReadOnlyList<StaffNotationBeat> Beats { get; init; }
     public required IReadOnlyList<StaffNotationBeamGroup> BeamGroups { get; init; }
     public required IReadOnlyList<StaffNotationBeamSegment> BeamSegments { get; init; }
+    /// <summary>Percussion staff: the up and down stems of every drum beat (own x, ends on the beam), drawn instead of the beats' own stems.</summary>
+    public IReadOnlyList<StaffNotationBeat> DrumStems { get; init; } = Array.Empty<StaffNotationBeat>();
     public required IReadOnlyList<StaffNotationTupletGroup> TupletGroups { get; init; }
     public required IReadOnlyList<StaffNotationTie> Ties { get; init; }
     public required IReadOnlyList<StaffNotationSlur> HopoSlurs { get; init; }
@@ -84,9 +86,9 @@ internal sealed class StaffNotationBeat
     public required int CellIndex { get; init; }
     public required TabCell Cell { get; init; }
     public required double StartSlots { get; init; }
-    public required double DurationSlots { get; init; }
+    public required double DurationSlots { get; set; }
     public required double CenterX { get; init; }
-    public required int Flags { get; init; }
+    public required int Flags { get; set; }
     public required List<StaffNotationNote> Notes { get; init; }
     /// <summary>Grace notes of this beat (drawn small, before the main note; not part of the beat's stem, beam or accidentals).</summary>
     public List<StaffNotationNote> GraceNotes { get; init; } = new();

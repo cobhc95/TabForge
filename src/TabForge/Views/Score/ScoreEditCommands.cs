@@ -491,7 +491,7 @@ public sealed partial class ScoreEditCommands
         var cell = CurrentCell();
         if (cell is not null && (cell.Notes.Count > 0 || cell.IsRest) && !Placeholder(cell))   // an empty slot or placeholder rest: the value is the writing duration only
         {
-            RunEdit(() => { cell.DurationDenominator = denominator; NormaliseRests(new[] { cell }, resize: true); return true; });
+            RunEdit(() => { cell.DurationDenominator = denominator; FollowLengthChange(cell); return true; });
         }
         else
         {
@@ -517,7 +517,7 @@ public sealed partial class ScoreEditCommands
         if (ApplyToolSelection(DotSelection)) { RestoreRestSelection(); return; }
         var cell = CurrentCell();
         if (cell is null || Placeholder(cell)) { NotifyState(); InvalidateVisual(); return; }   // as GP5: an empty spot's dot is the next note's
-        RunEdit(() => { cell.Dots = CurrentDots; NormaliseRests(new[] { cell }, resize: true); return true; });
+        RunEdit(() => { cell.Dots = CurrentDots; FollowLengthChange(cell); return true; });
     }
 
     public void SetDots(int dots)
@@ -529,7 +529,7 @@ public sealed partial class ScoreEditCommands
         if (ApplyToolSelection(DotSelection)) { RestoreRestSelection(); return; }
         var cell = CurrentCell();
         if (cell is null || Placeholder(cell)) { NotifyState(); InvalidateVisual(); return; }
-        RunEdit(() => { cell.Dots = CurrentDots; NormaliseRests(new[] { cell }, resize: true); return true; });
+        RunEdit(() => { cell.Dots = CurrentDots; FollowLengthChange(cell); return true; });
     }
 
     public void ToggleTriplet()

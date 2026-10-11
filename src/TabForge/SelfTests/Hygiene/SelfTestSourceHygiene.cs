@@ -9,6 +9,10 @@ public static partial class SelfTest
     private static readonly HashSet<string> HygieneSkippedFolders =
         new(StringComparer.OrdinalIgnoreCase) { "bin", "obj", "build", "dist", "third_party", "Tabs", "backup", "work" };   // plus every dot-folder (tool data, other checkouts), see EnumerateHygieneFiles
 
+    /// <summary>Every control character (char.IsControl: 0x00-0x1F and 0x7F-0x9F) except tab, LF and CR.</summary>
+    private static readonly System.Buffers.SearchValues<char> StrayControlCharacters = System.Buffers.SearchValues.Create(
+        Enumerable.Range(0, 0xA0).Select(i => (char)i).Where(c => char.IsControl(c) && c is not ('\t' or '\n' or '\r')).ToArray());
+
     /// <summary>
     /// A scripted edit must not run escape processing on a Windows path ("native\fetch" would become a form feed).
     /// Fails on any control character other than tab, CR and LF in the repository's text sources.
@@ -25,18 +29,8 @@ public static partial class SelfTest
         {
             scanned++;
             var text = File.ReadAllText(file);
-            var line = 1;
-            for (var i = 0; i < text.Length; i++)
-            {
-                var c = text[i];
-                if (c == '\n') { line++; continue; }
-                if (c == '\t' || c == '\r' || c == '﻿') continue;
-                if (char.IsControl(c))
-                {
-                    offenders.Add($"{Path.GetRelativePath(root, file)}:{line} (0x{(int)c:X2})");
-                    break;
-                }
-            }
+            var at = text.AsSpan().IndexOfAny(StrayControlCharacters);   // vectorised: the sweep covers every text source
+            if (at >= 0) offenders.Add($"{Path.GetRelativePath(root, file)}:{text.AsSpan(0, at).Count('\n') + 1} (0x{(int)text[at]:X2})");
         }
         Log.Add($"  info  scanned {scanned} source file(s) under {root} for control characters");
         Check("source files contain no stray control characters (tab/CR/LF only)", offenders.Count == 0,

@@ -198,6 +198,7 @@ public partial class MainWindow : IScoreZoomHost, IBandCommandHost
     private void Cut_Click(object sender, RoutedEventArgs e)
     {
         if (AllTracksRange) { _sections.CutArea(Doc, _selection.StartBar, _selection.EndBar, _selection.ScopeTrack); return; }
+        if (Editor.BeforeDelete?.Invoke() == true) return;   // selected empty bars: Cut removes them as Delete does
         var status = CopyScoreSelection(out var clip);
         if (clip is null) { if (status is not null) StatusText.Text = status; return; }
         if (EditCommands.CutTakesBars(Doc.Project, clip.Kind, Editor.SelectedTrackIndex, Editor.ActiveVoiceIndex, Editor.SelectionCellRange, Editor.SelectionIsWholeBars) is var (m1, m2))

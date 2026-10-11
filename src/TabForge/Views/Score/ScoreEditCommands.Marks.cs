@@ -314,7 +314,7 @@ public sealed partial class ScoreEditCommands
         });
     }
 
-    /// <summary>Delete: clears the beat under the cursor (with the rest fill on it becomes a rest, merged when the setting says so). A selection's beats are removed and the following beats move left, as GP5, and the selection ends.</summary>
+    /// <summary>Delete: clears the beat under the cursor (with the rest fill on it becomes a rest, merged when the setting says so). A selection's beats are removed and the following beats move left, as GP5, and the selection ends. One selected beat that holds notes is cleared where it stands (it becomes a rest) and nothing after it moves.</summary>
     public void DeleteBeat()
     {
         void Clear(IReadOnlyList<TabCell> cells)
@@ -325,7 +325,7 @@ public sealed partial class ScoreEditCommands
         }
         // A selection: its beats are removed and the following beats move left (GP5); beats with text or markers are cleared instead.
         var start = SelectionRangeOrdered();
-        if (HasSelection && ToolCells(createVoice: false) is { Count: > 0 } picked && !picked.Any(c => c.HasAnnotation)) { DeleteBeats(); EndSelection(start.M1, start.C1); return; }
+        if (HasSelection && ToolCells(createVoice: false) is { Count: > 0 } picked && !picked.Any(c => c.HasAnnotation) && !(picked.Count == 1 && picked[0].Notes.Count > 0)) { DeleteBeats(); EndSelection(start.M1, start.C1); return; }
         if (ApplyToolSelection(Clear)) { EndSelection(start.M1, start.C1); return; }
         var cell = CurrentCell(); if (cell is null) return;
         // Cursor on one note of a chord: only that note goes, the beat keeps its other notes and its length.
@@ -392,7 +392,7 @@ public sealed partial class ScoreEditCommands
             {
                 var cells = CellsFor(track.Measures[m], create: _activeVoiceIndex == 1);
                 var slots = SlotsFor(m);
-                edit(cells, m == m1 ? c1 : 0, m == m2 ? c2 : slots - 1, slots);
+                edit(cells, m == m1 ? c1 : 0, m == m2 ? c2 : CursorPositions.LastCell(cells, slots), slots);
             }
             return true;
         });

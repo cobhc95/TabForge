@@ -76,6 +76,8 @@ public sealed class AppearanceSettings
     /// <summary>Opacity of the staff lines and the ledger lines (one unit, 0..1); 1.0 shows the staff-line colour as chosen.</summary>
     public double StaffLineOpacity { get; set; } = 1.0;
     public double HoverHighlightIntensity { get; set; } = 0.27;
+    /// <summary>Draw the thin outline around the cell under the mouse, sized to the note length.</summary>
+    public bool ShowNoteOutline { get; set; } = true;
     public double SelectionHighlightIntensity { get; set; } = 0.25;
     public string PlayheadColour { get; set; } = "#3FB950";
     public string CursorColour { get; set; } = "#F2C14E";

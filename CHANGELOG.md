@@ -2,6 +2,21 @@
 
 TabForge is actively developed; please report anything odd on the Issues page.
 
+## 0.7.2
+
+- **Short notes:** 32nd and 64th notes typed one after another follow each other without a gap, beam together, and a bar holds 32 or 64 of them.
+- **Tidy bars:** with "Add rests automatically to fill bars" on, changing a note's length or dot moves the notes after it along; automatic rests sit only at the end of the bar and go when they are no longer needed, and a rest you typed stays.
+- **Selections in full bars:** every note in a bar can be selected, including notes past the 16th and notes in a bar that holds more than its time signature allows; changing the length of a selection keeps every note, and Delete removes every selected note.
+- **Edit cursor:** a see-through yellow highlight on the tab lane (also on an empty cell) and a grey box behind the selected note on the staff, hidden while the song plays. Pausing or stopping moves it to the beat where playback stopped.
+- **Note length outline:** the thin outline around the cell under the cursor is centred on the fret number, follows keyboard moves and is as wide as the note. Switch it off with "Show note length outline" in the score's right-click menu or in Preferences.
+- **Beams:** bold beams; 32nd and 64th beams run unbroken across the beat, stems follow the number of beams, and notes past the end of an overfull bar beam like the rest.
+- **Drum staff:** the percussion clef sits inside the staff, every drum note has a stem, notes written in one voice share a stem and beam, and each note keeps its own length.
+- **Playback marks:** the green line and the green glow on playing notes show only while the song plays, and the line stays on the sounding note in an overfull bar. Moving the cursor back inside the bar playback started in no longer leaves that bar silent.
+- **Keys:** Ctrl+T opens the Add track window (also in the Track menu and the command palette) and New tab moves to Ctrl+Alt+T; the numpad decimal key toggles the dotted note; Keyboard mode tooltips show the keys currently bound. Your own key choices are kept.
+- **Paste, cut and delete:** pasted notes that do not fit stay in their bar, which shows red when overfull, with no tie added; with beats selected, Paste asks whether to overwrite the selection, overwrite the whole bar or insert. Delete on one beat turns it into a rest in place, and Cut on empty bars removes them.
+- **Palm mute:** palm-muted notes play slightly softer, and their labels no longer widen the bar.
+- **Small changes:** new files start with 4 empty bars, Right at the end of the song adds a bar (also during playback), and delete confirmations make Delete the default button.
+
 ## 0.7.1
 
 - The status bar's tempo shows the tempo in force at the playhead or the selected bar, so it follows the song's tempo changes during playback and after a seek; the toolbar BPM box still shows the song's base tempo.

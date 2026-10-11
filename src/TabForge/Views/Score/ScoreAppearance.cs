@@ -56,6 +56,8 @@ internal sealed class ScoreAppearance
     public bool ShowBarNumbers { get; set; } = true;
     public int BarNumberFrequency { get; set; } = 1;
     public double HoverHighlightIntensity { get; set; } = 0.27;
+    /// <summary>Draw the thin outline around the hovered cell, sized to the note length.</summary>
+    public bool ShowNoteOutline { get; set; } = true;
     public double SelectionHighlightIntensity { get; set; } = 0.25;
     public Color SelectionColor { get; set; } = Color.FromRgb(0x4C, 0x9A, 0xFF);
     public Color HoverColor { get; set; } = Color.FromRgb(0x98, 0xA1, 0xAE);

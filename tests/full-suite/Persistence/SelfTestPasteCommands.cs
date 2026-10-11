@@ -99,14 +99,14 @@ public static partial class SelfTest
                     : r.Changed && song.Tracks[0].Measures[0].Cells.Where(c => c.Notes.Count > 0).All(c => c.Notes[0].MidiValue == NoteMapper.DefaultDrumSound)));
         }
 
-        // Beats into 3/8 bars: flow by the target meter with a tie across the bar line.
+        // Beats into 3/8 bars: a beat that would have to be cut by the bar line stays in its bar (red), with no tie and nothing in the next bar.
         var eighths = Song(3);
         foreach (var m in eighths.Tracks[0].Measures) { m.TimeSigNum = 3; m.TimeSigDenom = 8; m.Cells = Enumerable.Range(0, 6).Select(_ => new TabCell()).ToList(); }
         var threeQuarters = ClipboardService.CaptureBeats(src, 0, 0, 0, 0, 0, 8);
         r = EditCommands.Paste(eighths, threeQuarters, new PasteTarget(0, 0, 0, 0), new EditingSettings(), new FakePasteAsker());
-        Check("paste: quarters into 3/8 bars flow by the target meter and tie over the bar line",
-            r.Changed && Frets(eighths, 0).SequenceEqual(new[] { 1, 2 }) && eighths.Tracks[0].Measures[1].Cells[0].Notes.Any(n => n.Tied) &&
-            Frets(eighths, 1).Contains(3) && BarGrid.Onsets(eighths.Tracks[0].Measures[1].Cells).Length == 6);
+        Check("paste: quarters into 3/8 bars stay in the bar (over full), with no tie and the next bar empty",
+            r.Changed && Frets(eighths, 0).SequenceEqual(new[] { 1, 2, 3 }) && !eighths.Tracks[0].Measures[1].Cells.Any(c => c.Notes.Any(n => n.Tied)) &&
+            Frets(eighths, 1).Count() == 0 && r.Status.Contains("over full"));
 
         // Bars: Q3 every answer x Q4 every answer, on two tracks; one undo reverts each.
         TrackModel Guitar2() => new() { Name = "Rhythm" };

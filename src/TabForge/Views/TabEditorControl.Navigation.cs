@@ -26,7 +26,8 @@ public sealed partial class TabEditorControl
     public bool AtSongEnd()
     {
         var track = Track;
-        if (track is null || track.Measures.Count == 0 || SelectedMeasure != track.Measures.Count - 1) return false;
+        if (track is null || track.Measures.Count == 0 || SelectedMeasure < track.Measures.Count - 1) return false;
+        if (SelectedMeasure >= track.Measures.Count) return true;   // the caret is past a shorter track: Right goes on to a new bar
         return CursorPositions.AtEnd(CellsFor(track.Measures[SelectedMeasure]), SelectedCell, SlotsFor(SelectedMeasure));
     }
 
@@ -148,13 +149,13 @@ public sealed partial class TabEditorControl
             if (direction > 0)
             {
                 c++;
-                if (c >= SlotsFor(m)) { m++; c = 0; }
+                if (c > CursorPositions.LastCell(CellsFor(track.Measures[m]), SlotsFor(m))) { m++; c = 0; }
                 if (m >= track.Measures.Count) return;
             }
             else
             {
                 c--;
-                if (c < 0) { m--; if (m < 0) return; c = SlotsFor(m) - 1; }
+                if (c < 0) { m--; if (m < 0) return; c = CursorPositions.LastCell(CellsFor(track.Measures[m]), SlotsFor(m)); }
             }
             var cells = m < track.Measures.Count ? CellsFor(track.Measures[m]) : new List<TabCell>();
             if (m < track.Measures.Count && c < cells.Count && cells[c].Notes.Count > 0)

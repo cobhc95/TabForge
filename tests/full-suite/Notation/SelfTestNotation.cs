@@ -320,11 +320,31 @@ public static partial class SelfTest
             thirtySeconds.Cells[i].RhythmicPosition = i * 0.5;
         }
         var thirtySecondLayout = Layout(renderer, thirtySeconds);
-        Check("32nds use three beam levels with the tertiary beam grouped by half-beat",
+        Check("32nds use three beam levels, each one unbroken across the beat",
             thirtySecondLayout.BeamGroups.Count == 1 &&
-            thirtySecondLayout.BeamSegments.Count(segment => segment.Level == 1) == 1 &&
-            thirtySecondLayout.BeamSegments.Count(segment => segment.Level == 2 && !segment.IsPartial) == 1 &&
-            thirtySecondLayout.BeamSegments.Count(segment => segment.Level == 3 && !segment.IsPartial) == 2);
+            Enumerable.Range(1, 3).All(level => thirtySecondLayout.BeamSegments.Count(segment => segment.Level == level) == 1) &&
+            thirtySecondLayout.BeamSegments.All(segment => !segment.IsPartial && segment.FirstCell == 0 && segment.LastCell == 7));
+        MeasureModel OverfullBar(int denominator, int count, double step)
+        {
+            var bar = new MeasureModel { Clef = "G2", Cells = Enumerable.Range(0, count).Select(_ => new TabCell()).ToList() };
+            for (var i = 0; i < count; i++)
+            {
+                bar.Cells[i] = NotationCell(denominator, 60 + i % 12);
+                bar.Cells[i].RhythmicPosition = i * step;
+            }
+            return bar;
+        }
+        foreach (var (denominator, count, step, perGroup) in new[] { (32, 48, 0.5, 8), (8, 12, 2.0, 2), (16, 24, 1.0, 4) })
+        {
+            var overfullLayout = Layout(renderer, OverfullBar(denominator, count, step));
+            Check($"an overfull 4/4 bar beams 1/{denominator} notes past its nominal end in per-beat groups of {perGroup}",
+                overfullLayout.BeamGroups.Count == 6 &&
+                overfullLayout.BeamGroups.All(group => group.Beats.Count == perGroup) &&
+                overfullLayout.BeamGroups.Sum(group => group.Beats.Count) == count);
+        }
+        Check("beams are clearly heavier than a staff line, thinner than half a space, with a quarter-space gap",
+            StaffNotationGeometry.BeamThickness > 2.5 && StaffNotationGeometry.BeamThickness < StaffNotationGeometry.StaffGap / 2 &&
+            Math.Abs(StaffNotationGeometry.BeamGap - StaffNotationGeometry.BeamThickness - StaffNotationGeometry.StaffGap / 4) < 0.5);
 
         var chordedSixteenths = NewMeasure();
         chordedSixteenths.Cells[0] = NotationCell(16, 60);

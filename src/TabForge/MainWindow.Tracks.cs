@@ -271,7 +271,7 @@ public partial class MainWindow : ITrackListFitHost, ITrackGridDragHost
 
     // ---------- track ----------
 
-    private void AddGuitar_Click(object sender, RoutedEventArgs e) => AddTrack(TrackKind.Guitar);
+    private void AddTrack_Click(object sender, RoutedEventArgs e) => AddTrackWithWindow();
     private void AddBass_Click(object sender, RoutedEventArgs e) => AddTrack(TrackKind.Bass);
     private void AddDrums_Click(object sender, RoutedEventArgs e) => AddTrack(TrackKind.Drums);
     private void AddKeys_Click(object sender, RoutedEventArgs e) => AddTrack(TrackKind.Keys);

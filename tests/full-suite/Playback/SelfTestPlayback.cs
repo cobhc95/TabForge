@@ -326,6 +326,52 @@ public static partial class SelfTest
         }
     }
 
+    /// <summary>At each sounding beat's start time the playhead line is at that beat's onset position, also in an overfull bar and a tuplet bar.</summary>
+    private static void CheckPlayheadOnBeats()
+    {
+        var p = SingleTrack(3);
+        var bars = p.Tracks[0].Measures;
+        for (var i = 0; i < 20; i++)   // bar 0: 20 sixteenths in 4/4 (overfull)
+        {
+            if (i >= bars[0].Cells.Count) bars[0].Cells.Add(new TabCell());
+            Beat(p, 0, 0, i, 16, 60);
+        }
+        for (var i = 0; i < 3; i++)    // bar 1: a sixteenth-triplet group, then eighths
+        {
+            var c = Beat(p, 0, 1, i, 16, 62);
+            c.IsTriplet = true;
+            c.RhythmicPosition = i * 2.0 / 3.0;
+        }
+        for (var i = 2; i < 16; i += 2) Beat(p, 0, 1, i, 8, 62);
+        for (var i = 0; i < 16; i += 2) Beat(p, 0, 2, i, 8, 64);   // bar 2: plain eighths
+
+        var editor = new TabEditorControl { Project = p, SelectedTrackIndex = 0 };
+        editor.SetPosition(0, 0, 0);
+        var track = p.Tracks[0];
+        var tl = MidiTimelineBuilder.Build(p, new PlaybackOptions());
+        editor.Playback.Active = true;
+        var worst = 0.0; var plain = 0.0; var counts = new int[3];
+        foreach (var n in tl.Notes)
+        {
+            var bar = tl.BarAt(n.OnsetMs);
+            if (bar.Bar != n.Bar || n.Bar > 2) continue;   // beats past an overfull bar's time are not part of its playhead travel
+            counts[n.Bar]++;
+            var fraction = bar.SlotFraction(n.OnsetMs);
+            editor.Playback.SetPlayhead(n.Bar, n.Cell);
+            editor.Playback.Fraction = fraction;
+            var position = editor.Layout.GetLayout(track).Measure(n.Bar);
+            var warp = editor.Layout.WarpFor(track, n.Bar);
+            var onset = BarGrid.Onsets(bars[n.Bar].Cells)[n.Cell];
+            var x = editor.Playback.PlayheadGeometry()!.Value.X;
+            worst = Math.Max(worst, Math.Abs(x - (position.X + warp.Fraction(onset) * position.Width) * editor.Zoom));
+            worst = Math.Max(worst, Math.Abs(x - editor.Playback.HorizontalGeometry(n.Bar, fraction)!.Value.PlayheadX));
+            if (n.Bar == 2) plain = Math.Max(plain, Math.Abs(x - (position.X + warp.Fraction(fraction * warp.Slots) * position.Width) * editor.Zoom));
+        }
+        Check("playhead: every sounding beat of the overfull, tuplet and plain bars is visited", counts[0] >= 16 && counts[1] == 10 && counts[2] == 8, string.Join(",", counts));
+        Check("playhead: the line is on each beat's onset (overfull and tuplet bars; the scroll follow agrees)", worst <= 1, $"worst={worst:0.##} px");
+        Check("playhead: a plain bar of eighths keeps its line positions", plain <= 0.5, $"worst={plain:0.##} px");
+    }
+
     /// <summary>The playhead overlay geometry must be inside the playing measure and never null while playing.</summary>
     private static void CheckPlayheadGeometry()
     {
@@ -357,6 +403,8 @@ public static partial class SelfTest
         editor.Playback.Clear();
         Check("playhead: explicit clear removes the score highlight position",
             editor.Playback.Measure == -1 && editor.Playback.Cell == -1 && editor.Playback.PlayheadGeometry() is null);
+
+        CheckPlayheadOnBeats();
 
         var s0 = editor.SystemTopForMeasure(0);
         var s8 = editor.SystemTopForMeasure(8);

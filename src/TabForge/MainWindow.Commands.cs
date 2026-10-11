@@ -71,7 +71,7 @@ public partial class MainWindow
         Click("Section.Next", NextSection_Click);
         Click("Note.Chord", Chord_Click);
         Click("Note.Text", Text_Click);
-        Click("Track.Add", AddGuitar_Click);
+        Click("Track.Add", AddTrack_Click);
         Click("Track.Delete", DeleteTrack_Click);
         Click("Track.Properties", TrackProps_Click);
         Click("View.Multitrack", Multitrack_Click);
