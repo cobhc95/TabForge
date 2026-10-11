@@ -32,6 +32,9 @@ public sealed class TabSettings
     /// <summary>Ctrl+O replaces the active tab instead of opening another tab.</summary>
     public bool OpenInCurrentTab { get; set; } = true;
 
+    /// <summary>A song file dropped on the window opens in a new tab instead of replacing the selected tab.</summary>
+    public bool DropOpensInNewTab { get; set; }
+
     /// <summary>What happens to playback in other tabs when a different tab is opened or selected.</summary>
     public string PlaybackOnTabSwitch { get; set; } = TabPlaybackActions.ContinuePlayingPrevious;
 

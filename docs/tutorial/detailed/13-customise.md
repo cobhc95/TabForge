@@ -142,7 +142,7 @@ You know it worked when step 6 brought back your arrangement and the **Study** e
 
 ## Tabs and windows
 
-The **Tabs & Windows** page controls the document tabs. In **Opening and closing tabs**, **Open projects in the current tab** is on by default, so **File > Open…** replaces the current song. Untick it, and **Open…** always uses a new tab. **New tab position** puts a new tab next to the current one or at the end. **When the last tab is closed** opens a fresh blank tab or closes the window. **Show playing badge** marks a tab whose song is playing.
+The **Tabs & Windows** page controls the document tabs. In **Opening and closing tabs**, **Open projects in the current tab** is on by default, so **File > Open…** replaces the current song. Untick it, and **Open…** always uses a new tab. A file dragged onto the window follows the same rule, unless **Open dropped files in a new tab** is ticked, which always opens it in a new tab. **New tab position** puts a new tab next to the current one or at the end. **When the last tab is closed** opens a fresh blank tab or closes the window. **Show playing badge** marks a tab whose song is playing.
 
 Behind **More options** you can choose whether a double-click closes a tab, what a middle-click on a tab does, and whether tabs can be dragged out to a new window or onto another TabForge window. To choose whether songs opened from Windows Explorer arrive in a new tab or a new window, use **Files & Backups > Opening and saving > Open songs from Explorer in**.
 

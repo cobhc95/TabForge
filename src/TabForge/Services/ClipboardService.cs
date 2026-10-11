@@ -191,8 +191,10 @@ public sealed class ClipboardService
         {
             var measure = track.Measures[m];
             var cells = voice == 0 ? measure.Cells : measure.Voice2Cells;
+            var barEnd = 0.0;   // an overfull bar runs to its last beat's end, so the next bar's beats follow it in the clip
             foreach (var (index, source, start) in BeatOnsets(cells))
             {
+                barEnd = Math.Max(barEnd, start + MusicTime.CellSlots(source));
                 var inRange = (m > startBar || index >= startCell) && (m < endBar || endCell < 0 || index <= endCell);
                 if (!inRange) continue;
                 var at = barStart + start;
@@ -206,7 +208,8 @@ public sealed class ClipboardService
                     throw new InvalidDataException($"Copy at most {InputLimits.MaxClipEvents} beats at once.");
                 end = Math.Max(end, at + MusicTime.CellSlots(cell));
             }
-            barStart += MusicTime.BarSlots(project, m);
+            var barSlots = MusicTime.BarSlots(project, m);
+            barStart += barEnd > barSlots + 1e-6 ? barEnd : barSlots;
         }
         if (first is not { } origin) throw new InvalidDataException("Nothing to copy.");
         foreach (var entry in clipTrack.Events) entry.OffsetSlots -= origin;

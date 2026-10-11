@@ -48,6 +48,8 @@ public static partial class SettingsCatalog
                 new[] { NewTabPositions.AfterCurrent, NewTabPositions.AtEnd }, "Open next to the active tab or at the end.", "new tab order"),
             Bool(Tabs, "Opening", "tabs.openincurrent", "Open projects in the current tab", v => tabs.OpenInCurrentTab = v, () => tabs.OpenInCurrentTab,
                 "Replace the active tab when opening a project.", "open project replace ctrl o"),
+            Bool(Tabs, "Opening", "tabs.dropnewtab", "Open dropped files in a new tab", v => tabs.DropOpensInNewTab = v, () => tabs.DropOpensInNewTab,
+                "Off (default): a file dragged onto the window opens in the selected tab. On: it opens in a new tab.", "drag drop file tab new"),
             Choice(Tabs, "Playback", "tabs.playbackonswitch", "When opening/switching to another tab while music is playing", v => tabs.PlaybackOnTabSwitch = v, () => tabs.PlaybackOnTabSwitch,
                 new[] { TabPlaybackActions.ContinuePlayingPrevious, TabPlaybackActions.PausePrevious, TabPlaybackActions.StopPrevious },
                 "Choose whether playback in other tabs continues, pauses or stops.", "audio playback switch"),

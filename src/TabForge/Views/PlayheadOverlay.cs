@@ -28,6 +28,7 @@ public sealed class PlayheadOverlay : FrameworkElement
 
     public void SetGeometry((double X, double Top, double Bottom)? geometry)
     {
+        if (_geometry is null && geometry is null) return;   // clearing a cleared line redraws nothing: a redraw from a layout handler would cause the next layout pass
         if (_geometry is { } a && geometry is { } b &&
             Math.Abs(a.X - b.X) < 0.2 && Math.Abs(a.Top - b.Top) < 0.2 && Math.Abs(a.Bottom - b.Bottom) < 0.2)
             return;

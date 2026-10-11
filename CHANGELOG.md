@@ -11,11 +11,11 @@ TabForge is actively developed; please report anything odd on the Issues page.
 - **Note length outline:** the thin outline around the cell under the cursor is centred on the fret number, follows keyboard moves and is as wide as the note. Switch it off with "Show note length outline" in the score's right-click menu or in Preferences.
 - **Beams:** bold beams; 32nd and 64th beams run unbroken across the beat, stems follow the number of beams, and notes past the end of an overfull bar beam like the rest.
 - **Drum staff:** the percussion clef sits inside the staff, every drum note has a stem, notes written in one voice share a stem and beam, and each note keeps its own length.
-- **Playback marks:** the green line and the green glow on playing notes show only while the song plays, and the line stays on the sounding note in an overfull bar. Moving the cursor back inside the bar playback started in no longer leaves that bar silent.
+- **Playback marks:** the green line and the green glow on playing notes show only while the song plays, and the line stays on the sounding note in an overfull bar. Moving the cursor back inside the bar playback started in no longer leaves that bar silent. The score keeps following the playing bar after a zoom change or a window resize.
 - **Keys:** Ctrl+T opens the Add track window (also in the Track menu and the command palette) and New tab moves to Ctrl+Alt+T; the numpad decimal key toggles the dotted note; Keyboard mode tooltips show the keys currently bound. Your own key choices are kept.
 - **Paste, cut and delete:** pasted notes that do not fit stay in their bar, which shows red when overfull, with no tie added; with beats selected, Paste asks whether to overwrite the selection, overwrite the whole bar or insert. Delete on one beat turns it into a rest in place, and Cut on empty bars removes them.
 - **Palm mute:** palm-muted notes play slightly softer, and their labels no longer widen the bar.
-- **Small changes:** new files start with 4 empty bars, Right at the end of the song adds a bar (also during playback), and delete confirmations make Delete the default button.
+- **Small changes:** a file dragged onto the window opens in the selected tab (Preferences has "Open dropped files in a new tab" for the old behaviour); new files start with 4 empty bars, Right at the end of the song adds a bar (also during playback), and delete confirmations make Delete the default button.
 
 ## 0.7.1
 

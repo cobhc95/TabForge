@@ -255,6 +255,29 @@ public static partial class SelfTest
             $"offset={scroll.VerticalOffset:0} wanted={shortWanted:0} system={editor.SystemHeightNow:0} viewport={scroll.ViewportHeight:0}");
         scroll.Height = PaneHeight;
         Layout();
+        // A re-layout nobody announces (extent change only: no zoom hook, no playhead tick) with the playing system out of view
+        // brings it back by itself and keeps the follow on.
+        bool PlayingSystemInView() => editor.SystemTopForMeasure(bar) >= scroll.VerticalOffset - 0.5 && editor.SystemTopForMeasure(bar) < scroll.VerticalOffset + scroll.ViewportHeight;
+        scroll.ScrollToVerticalOffset(0);
+        Layout();
+        var awayBefore = !PlayingSystemInView();
+        editor.Zoom = 1.4;
+        editor.InvalidateScoreLayout();
+        editor.InvalidateMeasure();
+        Layout();
+        Layout();
+        Check("a re-layout during playback brings the playing system back into view", awayBefore && PlayingSystemInView() && follow.IsFollowing,
+            $"awayBefore={awayBefore} systemTop={editor.SystemTopForMeasure(bar):0} offset={scroll.VerticalOffset:0} following={follow.IsFollowing}");
+        // Gliding follow: a turn queued by one playhead report still lands while later reports wait inside their check window.
+        follow.ApplySettings(new Services.FollowSettings { Mode = Services.FollowModes.Smooth });
+        scroll.ScrollToVerticalOffset(0);
+        Layout();
+        follow.OnPlayheadBar(bar);
+        follow.OnPlayheadBar(bar);
+        follow.PumpForTest();
+        Layout();
+        Check("a queued page turn lands while playhead reports keep arriving", PlayingSystemInView(), $"offset={scroll.VerticalOffset:0}");
+        follow.ApplySettings(new Services.FollowSettings { Mode = Services.FollowModes.Jump });
         // A layout/panel pass that moves the offset after every timing window has expired (the fragile case:
         // follow used to infer "user" from ScrollChanged + timing) must not stop follow without a gesture.
         System.Threading.Thread.Sleep(700);

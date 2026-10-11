@@ -151,17 +151,9 @@ public partial class MainWindow
         e.Handled = true;
     }
 
-    /// <summary>Song files dropped on the window (anywhere, the timeline and tab strip included): each opens in a new tab.</summary>
-    private void OpenDroppedSongs(string[] songs)
-    {
-        foreach (var file in songs)
-            OpenScore(file, replaceCurrent: false, replaceAll: false, (opened, loaded) =>
-            {
-                if (!loaded) return;
-                StatusText.Text = opened.ImportedFromGuitarPro ? $"Imported {Path.GetFileName(file)}" : $"Opened {Path.GetFileName(file)}";
-                if (opened.Notice is { } notice) StatusText.Text += $" — {notice}";
-            });
-    }
+    /// <summary>Song files dropped on the window (anywhere, the timeline and tab strip included): the first replaces the selected tab unless the setting opens drops in new tabs; the rest open in new tabs.</summary>
+    private void OpenDroppedSongs(string[] songs) => DroppedSongsFlow.Open(songs, _settings.Tabs.DropOpensInNewTab,
+        (file, replace, opened) => OpenScore(file, replace, replaceAll: false, opened), Imports.Queue, text => StatusText.Text = text);
 
     private void Window_Drop(object sender, DragEventArgs e)
     {

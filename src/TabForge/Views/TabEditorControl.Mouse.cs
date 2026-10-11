@@ -52,7 +52,7 @@ public sealed partial class TabEditorControl
     public void SelectForEdit(int measure, int cell, int stringIndex)
     {
         ClearSelection(notify: false);
-        SelectedMeasure = measure; SelectedCell = cell; SelectedString = stringIndex;
+        SelectedMeasure = measure; SelectedCell = CoerceCell(measure, cell); SelectedString = stringIndex;
         SelectionChangedNow(seekPlayback: false);
     }
 

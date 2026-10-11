@@ -54,9 +54,14 @@ public static partial class SelfTest
     /// <summary>Runs a window's click handler by name (the menu or button that calls it passes the same arguments).</summary>
     private static void SmClick(MainWindow window, string handler) { SmCall(window, handler, window, new RoutedEventArgs()); SmSettle(); }
 
+    /// <summary>Lets queued UI work finish. A dispatcher that never goes idle (a layout or render loop) throws, so the test fails and does not hang.</summary>
     private static void SmSettle()
     {
-        for (var i = 0; i < 3; i++) Dispatcher.CurrentDispatcher.Invoke(DispatcherPriority.ApplicationIdle, new Action(() => { }));
+        for (var i = 0; i < 3; i++)
+        {
+            try { Dispatcher.CurrentDispatcher.Invoke(() => { }, DispatcherPriority.ApplicationIdle, CancellationToken.None, TimeSpan.FromSeconds(5)); }
+            catch (TimeoutException) { throw new TimeoutException("the UI did not go idle within 5 s: a layout or render loop keeps the dispatcher busy"); }
+        }
     }
 
     /// <summary>Pumps the UI until the condition holds (true) or the time runs out (false).</summary>

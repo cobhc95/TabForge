@@ -22,7 +22,7 @@
   "classes": {
     "TabForge.Audio.AudioEngineClient": {"files": ["src/TabForge/Audio/AudioEngineClient.cs", "src/TabForge/Audio/AudioEngineClient.*.cs"], "lines": 1588, "fileCount": 4, "fields": 46, "methods": 112, "il": 24794},
     "TabForge.Diagnostics.DiagnosticCommands": {"files": ["src/TabForge/Diagnostics/DiagnosticCommands.cs", "src/TabForge/Diagnostics/DiagnosticCommands.*.cs"], "lines": 968, "fileCount": 7, "fields": 0, "methods": 50, "il": 41262},
-    "TabForge.MainWindow": {"files": ["src/TabForge/MainWindow.cs", "src/TabForge/MainWindow.*.cs"], "lines": 6499, "fileCount": 36, "fields": 194, "methods": 669, "il": 79378},
+    "TabForge.MainWindow": {"files": ["src/TabForge/MainWindow.cs", "src/TabForge/MainWindow.*.cs"], "lines": 6491, "fileCount": 36, "fields": 194, "methods": 669, "il": 79154},
     "TabForge.Playback.PlaybackEngine": {"files": ["src/TabForge/Playback/PlaybackEngine.cs", "src/TabForge/Playback/PlaybackEngine.*.cs"], "lines": 1846, "fileCount": 8, "fields": 63, "methods": 93, "il": 18259},
     "TabForge.Presets.FullDemoSongFactory": {"files": ["src/TabForge/Presets/FullDemoSong/FullDemoSongFactory.cs", "src/TabForge/Presets/FullDemoSong/FullDemoSongFactory.*.cs"], "lines": 2525, "fileCount": 6, "fields": 0, "methods": 97, "il": 52561},
     "TabForge.SelfTest": {"files": ["src/TabForge/SelfTests/*.cs", "src/TabForge/SelfTests/**/*.cs", "tests/full-suite/*.cs", "tests/full-suite/**/*.cs"], "ceiling": true, "lines": 62600, "fileCount": 329},
@@ -33,7 +33,7 @@
     "TabForge.Views.StaffNotationDrawing": {"files": ["src/TabForge/Views/Score/StaffNotationDrawing.cs"], "lines": 641, "fileCount": 1, "fields": 0, "methods": 28, "il": 11123},
     "TabForge.Views.StaffNotationGeometry": {"files": ["src/TabForge/Views/Score/StaffNotationGeometry.cs"], "lines": 308, "fileCount": 1, "fields": 0, "methods": 23, "il": 4457},
     "TabForge.Views.StaffNotationLayoutBuilder": {"files": ["src/TabForge/Views/Score/StaffNotationLayoutBuilder.cs"], "lines": 684, "fileCount": 1, "fields": 0, "methods": 18, "il": 12049},
-    "TabForge.Views.TabEditorControl": {"files": ["src/TabForge/Views/TabEditorControl.cs", "src/TabForge/Views/TabEditorControl.*.cs"], "lines": 1594, "fileCount": 12, "fields": 24, "methods": 228, "il": 12043},
+    "TabForge.Views.TabEditorControl": {"files": ["src/TabForge/Views/TabEditorControl.cs", "src/TabForge/Views/TabEditorControl.*.cs"], "lines": 1594, "fileCount": 12, "fields": 24, "methods": 228, "il": 12050},
     "TabForge.Views.TrackTimeline": {"files": ["src/TabForge/Views/TrackTimeline.cs", "src/TabForge/Views/TrackTimeline.*.cs"], "lines": 2887, "fileCount": 12, "fields": 108, "methods": 182, "il": 34975}
   },
   "maxFileLines": 500,

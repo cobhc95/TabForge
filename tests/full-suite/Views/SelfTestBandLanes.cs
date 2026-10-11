@@ -7,7 +7,7 @@ namespace TabForge;
 /// <summary>Band lanes stand on the same bar at the same place (horizontal and vertical); the vertical layout wraps, follows, glows and hit-tests.</summary>
 public static partial class SelfTest
 {
-    /// <summary>A band song whose bass is denser in every third bar, so the tracks' own bar widths differ.</summary>
+    /// <summary>A band song whose bass is denser in every third bar (sixteen sixteenths: a full bar, not an overfull one), so the tracks' own bar widths differ.</summary>
     private static SongProject BandUnevenSong(int bars)
     {
         var project = BandSong(bars);
@@ -16,8 +16,8 @@ public static partial class SelfTest
             for (var i = 0; i < 16; i++)
             {
                 var cell = bass.Measures[b].Cells[i];
+                cell.DurationDenominator = 16;   // the song's quarter notes shorten too: left as quarters the bar holds 28 slots of music
                 if (cell.Notes.Count > 0) continue;
-                cell.DurationDenominator = 16;
                 cell.Notes.Add(new TabNote { StringIndex = 1, Fret = i % 5, MidiValue = 45 + i % 5 });
             }
         return project;

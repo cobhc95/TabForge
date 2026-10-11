@@ -5,8 +5,8 @@ using TabForge.Views;
 
 namespace TabForge;
 
-// Owns: a paused transport's green playhead line follows the score's re-layout after every edit (paste, cut, delete, bar insert and delete, undo, redo):
-//     the overlay's drawn position equals the position the score computes now, and sits in the bar the editor cursor is in.
+// Owns: a paused transport draws no green playhead line, and the score's re-layout after every edit (paste, cut, delete, bar insert and delete, undo, redo)
+//     does not bring it back or keep the window laying out; the edit cursor marks the place while paused.
 // Does not own: the overlay (PlayheadOverlay), the tick (PlaybackViewController), the input helpers (WorkflowKit.cs).
 // Tests: TestPlayheadAfterEdit (--areas workflow).
 public static partial class SelfTest
@@ -39,9 +39,7 @@ public static partial class SelfTest
                 s.Ctrl(Key.V);   // a first paste for undo to take back, and the layout to change
                 act(s);
                 var drawn = (ValueTuple<double, double, double>?)typeof(PlayheadOverlay).GetField("_geometry", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(SmField<PlayheadOverlay>(w, "Playhead"));
-                var now = s.Ed.Playback.PlayheadGeometry();
-                s.Expect("the green line is where the score puts it now", drawn is { } d && now is { } n && Math.Abs(d.Item1 - n.X) < 0.6 && Math.Abs(d.Item2 - n.Top) < 0.6,
-                    "line follows the layout", $"drawn {drawn?.Item1:0.#} computed {now?.X:0.#}");
+                s.Expect("no green line is drawn while paused", drawn is null, "the line shows only while the song plays", $"drawn {drawn?.Item1:0.#}");
                 SmCall(w, "StopPlayback");
             }
         }

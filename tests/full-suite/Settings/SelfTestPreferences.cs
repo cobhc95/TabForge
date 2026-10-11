@@ -31,7 +31,7 @@ public static partial class SelfTest
         "fretboard.instrumentview fretboard.keyboardkeys fretboard.keyboardcolours fretboard.scalestyle fretboard.scalecolour fretboard.markercolour " +
         "fretboard.markerbrightness fretboard.numbersize fretboard.stringspacing audio.fretboardstyle editing.horizon editing.scale follow.fretboard " +
         "general.restorewindow appearance.tabstrip tabs.style tabs.width tabs.maxwidth tabs.minwidth tabs.height tabs.fontsize tabs.closebutton " +
-        "tabs.doubleclick tabs.middleclick tabs.middlebar tabs.lastclosed tabs.newposition tabs.openincurrent tabs.playbackonswitch tabs.detach " +
+        "tabs.doubleclick tabs.middleclick tabs.middlebar tabs.lastclosed tabs.newposition tabs.openincurrent tabs.dropnewtab tabs.playbackonswitch tabs.detach " +
         "tabs.merge tabs.playing editing.paste.octave editing.paste.bars editing.paste.barsettings editing.paste.drums " +
         // rows added for the menu options earlier the same night
         "score.pagelayout score.scrolling score.textfonts timeline.individualnotes timeline.continuousline timeline.hideemptygrid timeline.barglow " +

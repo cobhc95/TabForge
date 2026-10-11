@@ -1174,6 +1174,7 @@ public static partial class SelfTest
         Check("tab settings default to browser behaviour",
             settings.Tabs!.CloseOnDoubleClick && settings.Tabs.DetachToNewWindow && settings.Tabs.MiddleClickTitleBarNewTab && settings.Tabs.IsRounded);
         Check("opening projects replaces the active tab by default", settings.Tabs.OpenInCurrentTab);
+        Check("dropped files replace the active tab by default", settings.Tabs.DropOpensInNewTab == false);
         var playingTab = new TabItemModel { Session = DocumentSession.Blank(), IsPlaying = true };
         Check("the playing badge setting controls tab play-state visibility",
             playingTab.PlayingVisibility == System.Windows.Visibility.Visible);

@@ -172,5 +172,26 @@ public static partial class SelfTest
         var played = Playback.MidiTimelineBuilder.Build(project, new Playback.PlaybackOptions()).Notes.Where(n => n.TrackIndex == trackIndex && n.Bar == 0)
             .Select(n => Math.Round(n.OnsetMs / sixteenthMs * 2) / 2).OrderBy(x => x).ToList();
         Check("short notes: the eight 32nds play one after another", played.SequenceEqual(Steps(8).Select(i => i * 0.5)), string.Join(",", played));
+
+        // An overfull bar with empty cells between its last two beats: a cursor placed on such a cell past the bar's slots (a paste's landing cell) moves to an allowed position.
+        var note = drums.Measures[0].Cells.First(c => c.Notes.Count > 0);
+        var over = Enumerable.Range(0, 25).Select(_ => new TabCell()).ToList();
+        (over[0], over[24]) = (note.Clone(), note.Clone());
+        over[0].RhythmicPosition = over[24].RhythmicPosition = null; over[0].DurationDenominator = 1;
+        drums.Measures[1].Cells = over;
+        de.InvalidateScoreLayout();
+        de.SelectForEdit(1, 20, line);
+        Check("short notes: a cursor set on an empty cell past the end of an overfull bar lands on an allowed position",
+            de.SelectedMeasure == 1 && Views.Score.CursorPositions.Allowed(over, MusicTime.BarSlots(project, 1)).Contains(de.SelectedCell), $"cell {de.SelectedCell}");
+        // Beats copied from the part of an overfull bar past its nominal end and on into the next bar: the clip's offsets start at zero and go up.
+        if (drums.Measures.Count > 2)
+        {
+            drums.Measures[2].Cells[0] = note.Clone();
+            var offsets = ClipboardService.CaptureBeats(project, project.Tracks.IndexOf(drums), 0, 1, 24, 2, 0).Tracks[0].Events.Select(e => e.OffsetSlots).ToList();
+            Check("short notes: beats copied from past an overfull bar's end and the next bar keep offsets from zero upward",
+                offsets.Count == 2 && offsets[0] == 0 && offsets[1] > 0, string.Join(",", offsets));
+        }
+        else Check("short notes: the drum track has a third bar for the overfull copy check", false);
+        Check("short notes: every beat of the edited bars has a position of zero or more", drums.Measures.SelectMany(m => m.Cells).All(c => !(c.RhythmicPosition < 0)));
     }
 }

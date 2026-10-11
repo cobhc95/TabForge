@@ -26,15 +26,11 @@ internal sealed class ScoreFollowCoordinator
     private bool _stopOnManualScroll = true;
     private bool _stopAtEnd = true;
     private bool _following = true;
-    private double _setOffset = -1;
-    private double _setHorizontalOffset = -1;
-    private double _verticalTarget = -1;
+    private double _setOffset = -1, _setHorizontalOffset = -1, _verticalTarget = -1;
     private int _horizontalSystem = -1;
-    private DateTime _setAt = DateTime.MinValue;
-    private DateTime _ignoreScrollUntil = DateTime.MinValue;
-    private DateTime _lastFollowCheck = DateTime.MinValue;
+    private DateTime _setAt = DateTime.MinValue, _ignoreScrollUntil = DateTime.MinValue, _lastFollowCheck = DateTime.MinValue;
     private int _lastBar = -1;
-    private double _lastExtent = -1;
+    private double _lastExtent = -1, _lastViewport = -1, _lastWidth = -1;
     private bool _followPending;
 
     public ScoreFollowCoordinator(ScrollViewer scroll, TabEditorControl editor, Func<bool> isPlayingVisual,
@@ -53,6 +49,7 @@ internal sealed class ScoreFollowCoordinator
         // Any cursor move or edit (typing with auto-advance, paste, bar insert/delete, undo, a relayout) keeps the cursor bar on screen.
         _editor.Edited += (_, _) => KeepCursorInSight();
         _editor.SelectionChanged += (_, _) => KeepCursorInSight();
+        _editor.LayoutUpdated += (_, _) => OnLayoutUpdated();
     }
 
     private bool _sightPending;
@@ -174,12 +171,6 @@ internal sealed class ScoreFollowCoordinator
             }
             _lastBar = bar;
         }
-        // A relayout moves the systems under the playhead: forget the cached row and targets.
-        if (Math.Abs(_scroll.ExtentHeight - _lastExtent) >= 0.5)
-        {
-            _lastExtent = _scroll.ExtentHeight;
-            ForgetLayoutCache();
-        }
         var now = DateTime.UtcNow;
         // A check inside the 50 ms window is kept and applied by the next render tick, not dropped.
         if ((now - _lastFollowCheck).TotalMilliseconds < 50)
@@ -208,6 +199,24 @@ internal sealed class ScoreFollowCoordinator
         _lastFollowCheck = DateTime.MinValue;
     }
 
+    /// <summary>
+    /// A measured re-layout (zoom, window or pane resize, notation shown or hidden) moves the systems under the playhead:
+    /// the cached row and targets are forgotten and the playing bar's system is put back in view at once, without
+    /// waiting for a playhead tick. Runs once per changed layout; an unchanged layout pass costs three compares.
+    /// </summary>
+    private void OnLayoutUpdated()
+    {
+        var (extent, viewport, width) = (_scroll.ExtentHeight, _scroll.ViewportHeight, _scroll.ExtentWidth);
+        if (extent == _lastExtent && viewport == _lastViewport && width == _lastWidth) return;
+        (_lastExtent, _lastViewport, _lastWidth) = (extent, viewport, width);
+        if (Mode == FollowModes.Off || !_isPlayingVisual() || _isPaused()) return;
+        ForgetLayoutCache();
+        var bar = _playheadBar();
+        if (bar < 0 || !_following || UserScrollGestureActive) return;
+        FollowHorizontally(bar);
+        if (CanFollowVertically && !(_stopAtEnd && EndOfScoreVisible(Math.Max(1, _barCount()), bar)) && NextVerticalOffset(bar) is double y) SetOffset(y);
+    }
+
     /// <summary>True while playback follow is armed (a manual scroll or Off mode clears it).</summary>
     internal bool IsFollowing => _following;
 
@@ -225,14 +234,11 @@ internal sealed class ScoreFollowCoordinator
         _layoutPending = true;
         _layoutPendingSince = now;
         _ignoreScrollUntil = now.AddMilliseconds(500);
-        _horizontalSystem = -1;
-        ArmSnap();
         Halt();
-        _lastFollowCheck = DateTime.MinValue;
+        ForgetLayoutCache();
     }
 
-    private bool _followingBeforeLayout = true;
-    private bool _layoutPending;
+    private bool _followingBeforeLayout = true, _layoutPending;
     private DateTime _layoutPendingSince = DateTime.MinValue;
 
     /// <summary>
@@ -243,12 +249,8 @@ internal sealed class ScoreFollowCoordinator
     {
         _layoutPending = false;
         _ignoreScrollUntil = DateTime.UtcNow.AddMilliseconds(600);
-        ArmSnap();
         _following = _followingBeforeLayout;
-        _horizontalSystem = -1;
-        _horizontalTarget = -1;
-        _verticalTarget = -1;
-        _lastFollowCheck = DateTime.MinValue;
+        ForgetLayoutCache();
         if (_isPlayingVisual() && !_isPaused()) OnPlayheadBar(_playheadBar());
     }
 
@@ -327,10 +329,10 @@ internal sealed class ScoreFollowCoordinator
     {
         if (_followPending)
         {
-            if ((DateTime.UtcNow - _lastFollowCheck).TotalMilliseconds < 50) return;
-            _followPending = false;
-            _lastFollowCheck = DateTime.UtcNow;
-            ApplyPlayhead(_playheadBar());
+            // A check still inside its 50 ms window waits; a glide under way keeps stepping meanwhile.
+            var waiting = (DateTime.UtcNow - _lastFollowCheck).TotalMilliseconds < 50;
+            if (waiting && _verticalTarget < 0 && _horizontalTarget < 0) return;
+            if (!waiting) { _followPending = false; _lastFollowCheck = DateTime.UtcNow; ApplyPlayhead(_playheadBar()); }
         }
         if (Continuous) { ContinuousTick(); return; }
         var bar = _playheadBar();

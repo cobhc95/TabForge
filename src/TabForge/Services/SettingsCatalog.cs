@@ -210,7 +210,7 @@ public static partial class SettingsCatalog
         (Score, "What is shown", "score.defaultnotation score.pagelayout score.scrolling score.barnumbers score.sectionheadings score.dynamics score.barnumberfrequency* score.ledger*"),
         (Score, "Spacing and size", "appearance.spacing score.systemspacing* score.measurespacing*"),
         (Score, "Text and fonts", "appearance.scorefont appearance.scorefontsize score.textfonts appearance.scorebold* appearance.scoreitalic*"),
-        (Score, "Appearance", "appearance.paper appearance.scorepaper.dark* appearance.scorepaper.light* appearance.scoreink.dark* appearance.scoreink.light* appearance.scorelines.dark* appearance.scorelines.light* appearance.cursor* score.staffopacity* appearance.selection* appearance.hover* score.hoverintensity* score.selectionintensity*"),
+        (Score, "Appearance", "appearance.paper appearance.scorepaper.dark* appearance.scorepaper.light* appearance.scoreink.dark* appearance.scoreink.light* appearance.scorelines.dark* appearance.scorelines.light* appearance.cursor* score.staffopacity* appearance.selection* appearance.hover* score.hoverintensity* score.noteoutline* score.selectionintensity*"),
 
         (Fretboard, "Panel", "appearance.fretboard fretboard.position fretboard.instrumentview fretboard.showallas fretboard.dockposition fretboard.locksize"),
         (Fretboard, "Guitar fretboard", "editing.frets editing.lefthanded editing.notenames"),
@@ -243,7 +243,7 @@ public static partial class SettingsCatalog
         (Recording, "Input device", "vst.input vst.asio.inputs vst.asio.infirst* vst.asio.inlast*"),
         (Recording, "Timing", "vst.recordoffset*"),
 
-        (Tabs, "Opening and closing tabs", "tabs.closebutton tabs.lastclosed tabs.newposition tabs.openincurrent tabs.playing"),
+        (Tabs, "Opening and closing tabs", "tabs.closebutton tabs.lastclosed tabs.newposition tabs.openincurrent tabs.dropnewtab tabs.playing"),
         (Tabs, "Tab look", "tabs.style* tabs.width* tabs.maxwidth* tabs.minwidth* tabs.height* tabs.fontsize*"),
         (Tabs, "Mouse actions", "tabs.doubleclick* tabs.middleclick* tabs.middlebar*"),
         (Tabs, "Dragging between windows", "tabs.detach* tabs.merge*"),
