@@ -712,7 +712,7 @@ Downloads and release notes: [Releases](https://github.com/cobhc95/TabForge/rele
 
 ## Licence
 
-TabForge is an independent project, not affiliated with any other software maker. The demo song in the screenshots, *Ashen Meridian*, is original and included (CC0).
+The demo song in the screenshots, *Ashen Meridian*, is original and included (CC0).
 
 MIT — see [LICENSE](LICENSE). Score file reading/writing uses [alphaTab](https://github.com/CoderLine/alphaTab) (MPL-2.0);
 see [THIRD_PARTY.md](THIRD_PARTY.md). Full licence texts ship in the `licenses/` folder (SoundTouch.Net, LGPL-2.1, is a replaceable DLL). TabForge is an independent project and is not affiliated with, sponsored or endorsed by any other software maker.
