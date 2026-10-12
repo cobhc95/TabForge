@@ -35,10 +35,6 @@ A short tour of what changed. Click a picture for the full size.
 </tr>
 </table>
 
-- **All audio inputs:** every input of a multi-input audio device can be used for recording and live input, with a setting for which ones are shown.
-- **Pop protection:** changing the audio device or its settings fades the sound out and back in, so speakers do not pop; a playing song carries on by itself afterwards.
-- **Track list:** the toolbar wraps onto a second row when the column is narrow, and arming a track brings its input options into view.
-
 See the [changelog](CHANGELOG.md) for everything in 0.7.5.
 
 ## Download
