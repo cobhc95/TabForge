@@ -6,6 +6,15 @@
 
 *The plug-in shown is a third-party example (Superior Drummer 3 by Toontrack): not included and not affiliated.*
 
+## Download
+
+> [!TIP]
+> **[Setup installer](https://github.com/cobhc95/TabForge/releases/download/v0.7.5/TabForge-0.7.5-setup.exe)** · no administrator rights needed
+>
+> **[Portable ZIP](https://github.com/cobhc95/TabForge/releases/download/v0.7.5/TabForge-0.7.5-win-x64-portable.zip)** · extract and run `TabForge.exe`
+
+Windows 10 or 11, 64-bit, nothing else to install. Not code-signed: see [Verify your download](#verify-your-download). Older versions: [Releases](https://github.com/cobhc95/TabForge/releases).
+
 ### See it in action
 
 <table>
@@ -17,15 +26,6 @@
 </table>
 
 **Contents:** [Download](#download) · [New in 0.7.5](#new-in-075) · [What sets it apart](#what-sets-it-apart) · [Writing tab and notation](#writing-tab-and-notation) · [Instruments on screen](#instruments-on-screen) · [Arrangement and tracks](#arrangement-and-tracks) · [Recording and live input](#recording-and-live-input) · [Playback and practice](#playback-and-practice) · [Band view, Keyboard mode and compact mode](#band-view-keyboard-mode-and-compact-mode) · [Sound](#sound) · [Export](#export) · [Customising](#customising) · [Files, safety and updates](#files-safety-and-updates) · [Full feature reference](#full-feature-reference) · [Verify your download](#verify-your-download) · [Building from source](#building-from-source) · [Licence](#licence)
-
-## Download
-
-> [!TIP]
-> **[Setup installer](https://github.com/cobhc95/TabForge/releases/download/v0.7.5/TabForge-0.7.5-setup.exe)** · no administrator rights needed
->
-> **[Portable ZIP](https://github.com/cobhc95/TabForge/releases/download/v0.7.5/TabForge-0.7.5-win-x64-portable.zip)** · extract and run `TabForge.exe`
-
-Windows 10 or 11, 64-bit, nothing else to install. Not code-signed: see [Verify your download](#verify-your-download). Older versions: [Releases](https://github.com/cobhc95/TabForge/releases).
 
 ## New in 0.7.5
 
