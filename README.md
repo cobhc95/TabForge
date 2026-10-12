@@ -44,11 +44,7 @@ See the [changelog](CHANGELOG.md) for everything in 0.7.5.
 >
 > **[Portable ZIP](https://github.com/cobhc95/TabForge/releases/download/v0.7.5/TabForge-0.7.5-win-x64-portable.zip)** · extract and run `TabForge.exe`
 
-- Windows 10 or 11, 64-bit. Nothing else to install.
-- Not code-signed: see [Verify your download](#verify-your-download).
-- All versions and release notes: [Releases](https://github.com/cobhc95/TabForge/releases) · [Changelog](CHANGELOG.md).
-
-TabForge is an independent project, not affiliated with any other software maker. The demo song in the screenshots, *Ashen Meridian*, is original and included (CC0).
+Windows 10 or 11, 64-bit, nothing else to install. Not code-signed: see [Verify your download](#verify-your-download). Older versions: [Releases](https://github.com/cobhc95/TabForge/releases).
 
 ## What sets it apart
 
@@ -715,6 +711,8 @@ Downloads and release notes: [Releases](https://github.com/cobhc95/TabForge/rele
 [Issues](https://github.com/cobhc95/TabForge/issues) - the song file and the steps to reproduce help a lot.
 
 ## Licence
+
+TabForge is an independent project, not affiliated with any other software maker. The demo song in the screenshots, *Ashen Meridian*, is original and included (CC0).
 
 MIT — see [LICENSE](LICENSE). Score file reading/writing uses [alphaTab](https://github.com/CoderLine/alphaTab) (MPL-2.0);
 see [THIRD_PARTY.md](THIRD_PARTY.md). Full licence texts ship in the `licenses/` folder (SoundTouch.Net, LGPL-2.1, is a replaceable DLL). TabForge is an independent project and is not affiliated with, sponsored or endorsed by any other software maker.
