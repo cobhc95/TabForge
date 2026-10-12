@@ -16,17 +16,7 @@
 </tr>
 </table>
 
-**Contents:** [What sets it apart](#what-sets-it-apart) · [New in 0.7.5](#new-in-075) · [Download](#download) · [Writing tab and notation](#writing-tab-and-notation) · [Instruments on screen](#instruments-on-screen) · [Arrangement and tracks](#arrangement-and-tracks) · [Recording and live input](#recording-and-live-input) · [Playback and practice](#playback-and-practice) · [Band view, Keyboard mode and compact mode](#band-view-keyboard-mode-and-compact-mode) · [Sound](#sound) · [Export](#export) · [Customising](#customising) · [Files, safety and updates](#files-safety-and-updates) · [Full feature reference](#full-feature-reference) · [Verify your download](#verify-your-download) · [Building from source](#building-from-source) · [Licence](#licence)
-
-## What sets it apart
-
-- **One window:** tab editing, audio and MIDI recording, a mixer and VST2 / VST3 plug-ins on the tracks of a tab.
-- **Band view and Keyboard mode:** every track on its own instrument following playback, or falling notes with play-along scoring and *Wait for me*.
-- **Live input:** one button plays a guitar or MIDI keyboard through an FX chain, with no track and no recording.
-- **Video from the score:** export a self-playing MP4, or record the score with the sound you hear.
-- **MIDI processing before every plug-in:** arpeggiator, step sequencer, humaniser, drum trigger and more.
-- **Yours to arrange:** remappable shortcuts with a command palette, dockable panes, and songs as tabs that move between windows.
-- **Plug-in safety:** plug-ins load only once approved and run outside the editor; one that crashes is switched off.
+**Contents:** [New in 0.7.5](#new-in-075) · [Download](#download) · [What sets it apart](#what-sets-it-apart) · [Writing tab and notation](#writing-tab-and-notation) · [Instruments on screen](#instruments-on-screen) · [Arrangement and tracks](#arrangement-and-tracks) · [Recording and live input](#recording-and-live-input) · [Playback and practice](#playback-and-practice) · [Band view, Keyboard mode and compact mode](#band-view-keyboard-mode-and-compact-mode) · [Sound](#sound) · [Export](#export) · [Customising](#customising) · [Files, safety and updates](#files-safety-and-updates) · [Full feature reference](#full-feature-reference) · [Verify your download](#verify-your-download) · [Building from source](#building-from-source) · [Licence](#licence)
 
 ## New in 0.7.5
 
@@ -60,6 +50,16 @@ TabForge is a notation-first tab editor that also behaves like a small DAW, buil
 
 > [!NOTE]
 > **This is an official release.** Keep backups of your projects and original song files, especially before recording or using third-party plug-ins, and report anything odd on the Issues page.
+
+## What sets it apart
+
+- **One window:** tab editing, audio and MIDI recording, a mixer and VST2 / VST3 plug-ins on the tracks of a tab.
+- **Band view and Keyboard mode:** every track on its own instrument following playback, or falling notes with play-along scoring and *Wait for me*.
+- **Live input:** one button plays a guitar or MIDI keyboard through an FX chain, with no track and no recording.
+- **Video from the score:** export a self-playing MP4, or record the score with the sound you hear.
+- **MIDI processing before every plug-in:** arpeggiator, step sequencer, humaniser, drum trigger and more.
+- **Yours to arrange:** remappable shortcuts with a command palette, dockable panes, and songs as tabs that move between windows.
+- **Plug-in safety:** plug-ins load only once approved and run outside the editor; one that crashes is switched off.
 
 ## Writing tab and notation
 
