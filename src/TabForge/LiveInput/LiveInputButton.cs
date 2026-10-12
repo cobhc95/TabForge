@@ -12,6 +12,8 @@ namespace TabForge.LiveInput;
 // Tests: TestLiveInput, TestCompactMode.
 public sealed class LiveInputButton : Button
 {
+    /// <summary>The microphone outline (also drawn by the mixer's live input row).</summary>
+    internal const string MicGlyph = "M9,3.5 a3,3 0 0 1 6,0 V11 a3,3 0 0 1 -6,0 Z M6,10.5 a6,6 0 0 0 12,0 M12,16.5 V20 M8.5,20 H15.5";
     private readonly System.Windows.Shapes.Path _icon;
     private LiveInputController? _controller;
 
@@ -24,7 +26,7 @@ public sealed class LiveInputButton : Button
         BorderThickness = new Thickness(1);
         _icon = new System.Windows.Shapes.Path
         {
-            Data = Geometry.Parse("M9,3.5 a3,3 0 0 1 6,0 V11 a3,3 0 0 1 -6,0 Z M6,10.5 a6,6 0 0 0 12,0 M12,16.5 V20 M8.5,20 H15.5"),
+            Data = Geometry.Parse(MicGlyph),
             Style = (Style)Application.Current.FindResource("IconPath"),
             Width = 20, Height = 20, IsHitTestVisible = false,
         };

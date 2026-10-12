@@ -34,8 +34,8 @@ public sealed partial class TabEditorControl
 
     // ---- retained per-system engraving ----
     // Each engraved system is kept as a frozen drawing and replayed while its playback state (sounding/struck notes,
-    // playing-bar band) is unchanged; the system holding the playhead is always re-engraved. Any other repaint request
-    // (edits, selection, cursor, hover, colours, zoom, layout) clears the cache.
+    // playing-bar band, hovered beat) is unchanged; the system holding the playhead is always re-engraved. Any other repaint
+    // request (edits, selection, cursor, colours, zoom, layout) clears the cache.
     private readonly SystemDrawingCache _systemCache = new();
 
     /// <summary>Requests a full repaint (drops cached system drawings).</summary>
@@ -46,5 +46,5 @@ public sealed partial class TabEditorControl
     }
 
     void IScorePageHost.RepaintAll() => InvalidateVisual();
-    void IPlaybackOverlayHost.RepaintPlaybackOnly() => base.InvalidateVisual();
+    void IScorePageHost.RepaintKeepingDrawings() => base.InvalidateVisual();
 }

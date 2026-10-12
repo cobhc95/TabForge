@@ -355,7 +355,7 @@ public sealed unsafe partial class Vst2Plugin : IPluginInstance
 
     public byte[]? GetState()
     {
-        if ((_effect->flags & FlagProgramChunks) == 0) return null;
+        if ((_effect->flags & FlagProgramChunks) == 0) return GetParameterListState();
         IntPtr data;
         var size = (long)Dispatch(EffGetChunk, 0, IntPtr.Zero, (IntPtr)(&data), 0);
         if (size <= 0 || data == IntPtr.Zero) return null;
@@ -368,7 +368,8 @@ public sealed unsafe partial class Vst2Plugin : IPluginInstance
 
     public void SetState(byte[] state)
     {
-        if ((_effect->flags & FlagProgramChunks) == 0 || state.Length == 0) return;
+        if (state.Length == 0) return;
+        if ((_effect->flags & FlagProgramChunks) == 0) { TrySetParameterListState(state); return; }
         fixed (byte* p = state) Dispatch(EffSetChunk, 0, state.Length, (IntPtr)p, 0);
     }
 

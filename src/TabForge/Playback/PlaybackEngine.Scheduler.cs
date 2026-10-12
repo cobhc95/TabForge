@@ -113,6 +113,13 @@ public sealed partial class PlaybackEngine : IDisposable
 
         // Start clean: kill anything left from a previous run, then restore deterministic channel state.
         ResetAndSetup(timeline, generation);
+        if (_countInBeforeStart)
+        {
+            // Count-in before a start inside a loop: the clock anchors at the start position only after these bars.
+            _countInBeforeStart = false;
+            for (var bar = 0; bar < Math.Clamp(opts.CountInBars, 1, 4) && _running && generation == Volatile.Read(ref _generation); bar++)
+                PlayLoopCountIn(timeline, startMs, generation);
+        }
 
         // The reset above waits for every queued device reset (Stop() of the previous run queues one
         // per jump while playing, and a driver can take hundreds of ms to flush sounding notes). The

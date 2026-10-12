@@ -49,6 +49,10 @@ public sealed unsafe class Vst3Plugin : IPluginInstance
     private IntPtr _handle;
     private int _maxBlock;
     private readonly int _classIndex;
+    /// <summary>Which of the file's audio classes this instance is (see <see cref="Vst3ClassInfo"/>).</summary>
+    public int ClassIndex => _classIndex;
+    /// <summary>The native instance exists, so its module is loaded and initialised in this process.</summary>
+    public bool IsLive => _handle != IntPtr.Zero && !_disposed;
     private bool _disposed;
     private readonly float*[] _in = new float*[2];
     private readonly float*[] _out = new float*[2];

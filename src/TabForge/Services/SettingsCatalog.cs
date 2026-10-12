@@ -197,7 +197,7 @@ public static partial class SettingsCatalog
     {
         (General, "Updates", "general.checkupdates general.checknow"),
         (General, "Window", "general.restorewindow"),
-        (General, "Confirmations", "general.confirmclose general.confirmdiscardsettings editing.confirmdelete editing.bardelete timeline.confirmdelete"),
+        (General, "Confirmations", "general.confirmclose general.confirmdiscardsettings general.confirmdeletepresets editing.confirmdelete editing.bardelete timeline.confirmdelete"),
 
         (Appearance, "Theme", "appearance.thememode"),
         (Appearance, "Size and text", "appearance.uiscale appearance.density appearance.font* appearance.fontsize* appearance.iconsize* appearance.toolbaricons*"),
@@ -238,7 +238,7 @@ public static partial class SettingsCatalog
 
         (AudioVst, "Output device", "vst.driver vst.device vst.buffer vst.renderlimiter vst.samplerate* vst.asio.out* vst.asio.outlast* vst.followvolume* vst.livelimiter* vst.popguard*"),
         (AudioVst, "Playback engine", "vst.playall* vst.autogm* vst.winmidilatency*"),
-        (AudioVst, "Plug-ins", "vst.folders vst.commonfolders* vst.rememberscan* vst.dock* vst.ontop* vst.scanstandard* vst.isolate* vst.autopitch* vst.startuptracks* vst.quarantine*"),
+        (AudioVst, "Plug-ins", "vst.folders vst.commonfolders* vst.rememberscan* vst.dock* vst.ontop* vst.scanstandard* vst.allowinstalled* vst.isolate* vst.autopitch* vst.startuptracks* vst.quarantine*"),
 
         (Recording, "Input device", "vst.input vst.asio.inputs vst.asio.infirst* vst.asio.oneinput* vst.allinputs* vst.inputsshown*"),
         (Recording, "Timing", "vst.recordoffset*"),

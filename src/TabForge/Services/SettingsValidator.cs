@@ -40,6 +40,7 @@ public static class SettingsValidator
             timeline.Band.LaneZoom = BandChoices.ClampZoom(timeline.Band.LaneZoom);
             if (timeline.Band.InstrumentWidth != 0) timeline.Band.InstrumentWidth = BandChoices.ClampWidth(timeline.Band.InstrumentWidth);
         }
+        plugins.FxListWidth = Clamp(plugins.FxListWidth, 180, 2_000, 290);
         plugins.AsioOutputChannel = Math.Clamp(plugins.AsioOutputChannel, 0, 62);
         plugins.AsioOutputLastChannel = Math.Clamp(plugins.AsioOutputLastChannel, 0, 63);
         plugins.SampleRate = AudioDrivers.SampleRates.Contains(plugins.SampleRate) ? plugins.SampleRate : 48000;

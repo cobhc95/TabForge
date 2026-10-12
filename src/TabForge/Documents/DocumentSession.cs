@@ -78,7 +78,7 @@ public sealed class DocumentSession
     public int ActiveVoiceIndex { get; set; }
     public int TrackIndex { get; set; }
     public NotationMode Notation { get; set; } = NotationMode.TabAndStaff;
-    public double ZoomFactor { get; set; }     // 0 = fit width (new documents); otherwise the zoom (1 = 100%)
+    public double ZoomFactor { get; set; } = 1.0;   // 1 = 100% (the default); 0 = fit width
     public bool ContinuousScoreView { get; set; } = true;
     /// <summary>Score as one line scrolling right instead of wrapped lines scrolling down.</summary>
     public bool HorizontalScoreView { get; set; }

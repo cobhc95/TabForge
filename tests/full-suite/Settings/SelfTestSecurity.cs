@@ -476,8 +476,8 @@ public static partial class SelfTest
             var vst3 = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonProgramFiles), "VST3");
             var inProtected = Path.Combine(vst3, "tabforge-selftest-" + Guid.NewGuid().ToString("N") + ".vst3");
             Check("a plug-in under Common Files\\VST3 is folder-trusted when that folder is scanned",
-                PluginTrust.IsProtectedLocation(PluginTrust.Normalize(inProtected)) && PluginTrust.IsTrusted(inProtected, new PluginSettings { Folders = new() { vst3 } })
-                && !PluginTrust.IsTrusted(inProtected, new PluginSettings()));
+                PluginTrust.IsProtectedLocation(PluginTrust.Normalize(inProtected)) && PluginTrust.IsTrusted(inProtected, new PluginSettings { Folders = new() { vst3 }, AllowInstalledPlugins = false })
+                && !PluginTrust.IsTrusted(inProtected, new PluginSettings { AllowInstalledPlugins = false }) && PluginTrust.IsTrusted(inProtected, new PluginSettings()));   // the default loads installed plug-ins without a scan
             Check("the temp folder is not a protected location", !PluginTrust.IsProtectedLocation(PluginTrust.Normalize(dropped)));
         }
         catch (Exception ex) { Check("plug-in fingerprint trust tests complete", false, ex.GetBaseException().Message); }

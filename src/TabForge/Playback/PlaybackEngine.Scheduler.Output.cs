@@ -32,7 +32,8 @@ public sealed partial class PlaybackEngine : IDisposable
         if (Math.Round(barMs / quarter) is < 1 or > 12) quarter = TempoMath.MsPerBeat(Math.Max(20, bar.Tempo));
         var beats = Math.Clamp((int)Math.Round(barMs / quarter), 1, 12);
         var beatMs = quarter / Math.Max(0.1, _clockRate);
-        var device = timeline.ChannelSetup.Count > 0 ? timeline.ChannelSetup[0].DeviceId : 0;
+        // The clicks go to the device the compiled count-in clicks use (the metronome's own destination, never a song channel's route).
+        var device = timeline.Events.FirstOrDefault(e => e.IsCountInClick)?.DeviceId ?? (timeline.ChannelSetup.Count > 0 ? timeline.ChannelSetup[0].DeviceId : 0);
         var clock = System.Diagnostics.Stopwatch.StartNew();
         for (var beat = 0; beat < beats && _running && generation == Volatile.Read(ref _generation); beat++)
         {
@@ -42,11 +43,12 @@ public sealed partial class PlaybackEngine : IDisposable
             var velocity = MetronomeVelocity(Math.Clamp((int)Math.Round(127 * Preferences.CountInVolume / 100.0), 1, 127), 9);
             lock (_outputGate)
             {
-                _output.Send(device, 0x99, note, velocity);
-                if (Preferences.MetronomeBoost) foreach (var layer in BoostLayers) if (layer != note) _output.Send(device, 0x99, layer, velocity);
+                _output.SendMetronome(device, 0x99, note, velocity);
+                if (Preferences.MetronomeBoost) foreach (var layer in BoostLayers) if (layer != note) _output.SendMetronome(device, 0x99, layer, velocity);
             }
             var until = (beat + 1) * beatMs;
-            while (clock.Elapsed.TotalMilliseconds < until - 1) Thread.Sleep(1);
+            while (clock.Elapsed.TotalMilliseconds < until - 2) Thread.Sleep(1);
+            while (clock.Elapsed.TotalMilliseconds < until) Thread.SpinWait(40);   // the last stretch exactly: the next click, or the song's first note, follows on the beat
         }
     }
 
@@ -92,10 +94,14 @@ public sealed partial class PlaybackEngine : IDisposable
         data1 = ProgramFor(status, data1);
         lock (_outputGate)
         {
-            _output.Send(e.DeviceId, status, data1, data2);
-            if (e.IsMetronome && Preferences.MetronomeBoost)
-                foreach (var layer in BoostLayers)
-                    if (layer != data1) _output.Send(e.DeviceId, status, layer, data2);
+            if (e.IsMetronome)
+            {
+                _output.SendMetronome(e.DeviceId, status, data1, data2);
+                if (Preferences.MetronomeBoost)
+                    foreach (var layer in BoostLayers)
+                        if (layer != data1) _output.SendMetronome(e.DeviceId, status, layer, data2);
+            }
+            else _output.Send(e.DeviceId, status, data1, data2);
         }
         if (!_diagnostics) return;
         var wall = _diagnosticClock.Elapsed.TotalMilliseconds - _playbackStartWallMs;

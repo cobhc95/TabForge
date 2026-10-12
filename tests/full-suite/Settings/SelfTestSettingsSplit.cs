@@ -11,10 +11,10 @@ public static partial class SelfTest
 {
     // Covers the General page's Video recording rows (video.resolution, video.fps, video.region, video.folder, video.encoder, video.fastexport, video.lowlatency) and the Video and LiveVideo settings objects in the JSON. Also the Keyboard mode rows (learn.lookahead, learn.sizekeys, learn.playalong, learn.wait) and the Learn settings object.
     // Re-record: run this test once, copy the three values it reports into these constants.
-    private const string CatalogSnapshotHash = "E198797033B43B83";
-    private const int CatalogSnapshotCount = 243;
-    private const string DefaultJsonSnapshotHash = "AF14871545CC4F8A";
-    private const string PopulatedJsonSnapshotHash = "47502CE287A87ED2";
+    private const string CatalogSnapshotHash = "F3D59F9C92356FEA";
+    private const int CatalogSnapshotCount = 245;
+    private const string DefaultJsonSnapshotHash = "A07E91EC8C68B2BA";
+    private const string PopulatedJsonSnapshotHash = "25BF805AA30FB727";
 
     private static string ShortHash(string text) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(text)))[..16];
 

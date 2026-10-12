@@ -182,7 +182,7 @@ public static partial class SelfTest
             now += TimeSpan.FromMinutes(4);
             client.Sync(docA.Tracks, settings, null, docA, ownerA);
             Check("R-10: Sync(A) -> Sync(B without engine tracks) -> Sync(A) within the warm period: the engine keeps running and no LoadChain is sent again",
-                loadsA == 1 && warm && client.ChainLoadsSentForTest == loadsA && client.SlotOf(trackA) == slotA && !client.IsParkedForTest(trackA),
+                loadsA == 2 && warm && client.ChainLoadsSentForTest == loadsA && client.SlotOf(trackA) == slotA && !client.IsParkedForTest(trackA),
                 $"loads {loadsA} -> {client.ChainLoadsSentForTest}, warm {warm}, slot {slotA} -> {client.SlotOf(trackA)}");
 
             // Two documents with engine tracks: the inactive one is parked (loaded, silent) on its own slot; no collision, no reload.

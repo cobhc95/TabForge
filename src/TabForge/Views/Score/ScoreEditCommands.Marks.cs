@@ -370,7 +370,7 @@ public sealed partial class ScoreEditCommands
     /// <summary>Delete the beat(s) at the cursor, or the selected beats of every selected bar, shifting the rest of each bar left.</summary>
     public void DeleteBeats()
     {
-        if (HasSelection) { EditSelectedBars((cells, first, last, slots) => Services.EditCommands.DeleteBeatsAt(cells, first, last, slots)); return; }
+        if (HasSelection) { EditSelectedBars((cells, first, last, slots) => { var hadNotes = cells.Skip(first).Take(last - first + 1).Any(c => c.Notes.Count > 0); Services.EditCommands.DeleteBeatsAt(cells, first, last, slots); if (hadNotes) Services.EditCommands.TidyAfterRemoval(cells, slots, wholeRest: _activeVoiceIndex != 1); }); return; }
         var measure = CurrentMeasure(); if (measure is null) return;
         var cells = CellsFor(measure, create: true);
         var slots = SlotsFor(SelectedMeasure);

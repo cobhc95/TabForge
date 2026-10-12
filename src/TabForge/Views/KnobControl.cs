@@ -275,6 +275,19 @@ public sealed class KnobControl : FrameworkElement
     }
 
     /// <summary>Opens the small inline editor on the knob: pre-filled with the displayed value, all selected, focused.</summary>
+    /// <summary>Makes a double click on the value text beside the knob type a value, as a double click on the knob does.</summary>
+    public void TypeOnDoubleClick(TextBlock valueText)
+    {
+        valueText.Background = Brushes.Transparent;   // the whole label takes the click, not only its glyphs
+        valueText.ToolTip = "Double-click to type a value";
+        valueText.MouseLeftButtonDown += (_, e) =>
+        {
+            if (e.ClickCount != 2) return;
+            e.Handled = true;
+            Dispatcher.BeginInvoke(new Action(BeginTypeValue), System.Windows.Threading.DispatcherPriority.Input);
+        };
+    }
+
     public void BeginTypeValue()
     {
         if (!IsEnabled || _editor is not null) return;

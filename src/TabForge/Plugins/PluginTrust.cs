@@ -117,6 +117,7 @@ public static class PluginTrust
             var remote = IsRemote(full);
             var isProtected = !remote && IsProtectedLocation(full) && ResolvesInsideProtected(full);
             if (!isProtected && ChangedAtLoad.ContainsKey(full)) return new(false, ReasonChanged);
+            if (isProtected && settings.AllowInstalledPlugins) return TrustVerdict.Yes;   // installed where only an administrator can write: no approval step
             if (index.Approved.Contains(full))
                 return isProtected ? TrustVerdict.Yes : remote ? (index.Records.ContainsKey(full) ? TrustVerdict.Yes : new(false, ReasonNoBaseline)) : Verify(full, index, settings);
             if (remote) return new(false, ReasonRemote);
@@ -221,7 +222,7 @@ public static class PluginTrust
         foreach (var p in plugins)
         {
             var untrusted = !IsTrusted(p.Path, settings);   // once per slot
-            specs.Add(new PluginSpec(p.Path, p.Format, p.Type == PluginSlotType.Instrument, p.Enabled, p.Wet, p.State, p.Name, p.Pins, p.OutputDb, p.Id,
+            specs.Add(new PluginSpec(p.Path, p.Format, p.Type == PluginSlotType.Instrument, p.Plays, p.Wet, p.State, p.Name, p.Pins, p.OutputDb, p.Id,
                 untrusted || quarantined.Contains(p.Path, StringComparer.OrdinalIgnoreCase), Untrusted: untrusted,
                 ExpectedSha256: untrusted || string.IsNullOrWhiteSpace(p.Path) ? "" : ExpectedHashFor(p.Path, settings)));   // the engine hashes the file it loads against this
         }

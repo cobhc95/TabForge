@@ -1,4 +1,4 @@
-# TabForge 0.7.5
+# TabForge 0.7.6
 
 **A keyboard-driven tablature and notation editor for Windows. Opens GP files (.gp3, .gp4, .gp5, .gpx, .gp) and saves .gp and its own .tforge projects.** Write, import and play back guitar, bass, drum and keyboard parts, with a live fretboard / keyboard, an arrangement timeline, audio and MIDI recording, a mixer, VST plug-ins and offline audio and video rendering.
 
@@ -9,9 +9,9 @@
 ## Download
 
 > [!TIP]
-> **[Setup installer](https://github.com/cobhc95/TabForge/releases/download/v0.7.5/TabForge-0.7.5-setup.exe)** · no administrator rights needed
+> **[Setup installer](https://github.com/cobhc95/TabForge/releases/download/v0.7.6/TabForge-0.7.6-setup.exe)** · no administrator rights needed
 >
-> **[Portable ZIP](https://github.com/cobhc95/TabForge/releases/download/v0.7.5/TabForge-0.7.5-win-x64-portable.zip)** · extract and run `TabForge.exe`
+> **[Portable ZIP](https://github.com/cobhc95/TabForge/releases/download/v0.7.6/TabForge-0.7.6-win-x64-portable.zip)** · extract and run `TabForge.exe`
 
 Windows 10 or 11, 64-bit, nothing else to install. Not code-signed: see [Verify your download](#verify-your-download). Older versions: [Releases](https://github.com/cobhc95/TabForge/releases).
 
@@ -25,9 +25,9 @@ Windows 10 or 11, 64-bit, nothing else to install. Not code-signed: see [Verify 
 </tr>
 </table>
 
-**Contents:** [Download](#download) · [New in 0.7.5](#new-in-075) · [What sets it apart](#what-sets-it-apart) · [Writing tab and notation](#writing-tab-and-notation) · [Instruments on screen](#instruments-on-screen) · [Arrangement and tracks](#arrangement-and-tracks) · [Recording and live input](#recording-and-live-input) · [Playback and practice](#playback-and-practice) · [Band view, Keyboard mode and compact mode](#band-view-keyboard-mode-and-compact-mode) · [Sound](#sound) · [Export](#export) · [Customising](#customising) · [Files, safety and updates](#files-safety-and-updates) · [Full feature reference](#full-feature-reference) · [Verify your download](#verify-your-download) · [Building from source](#building-from-source) · [Licence](#licence)
+**Contents:** [Download](#download) · [New since 0.7.5](#new-since-075) · [What sets it apart](#what-sets-it-apart) · [Writing tab and notation](#writing-tab-and-notation) · [Instruments on screen](#instruments-on-screen) · [Arrangement and tracks](#arrangement-and-tracks) · [Recording and live input](#recording-and-live-input) · [Playback and practice](#playback-and-practice) · [Band view, Keyboard mode and compact mode](#band-view-keyboard-mode-and-compact-mode) · [Sound](#sound) · [Export](#export) · [Customising](#customising) · [Files, safety and updates](#files-safety-and-updates) · [Full feature reference](#full-feature-reference) · [Verify your download](#verify-your-download) · [Building from source](#building-from-source) · [Licence](#licence)
 
-## New in 0.7.5
+## New since 0.7.5
 
 A short tour of what changed. Click a picture for the full size.
 
@@ -44,7 +44,7 @@ A short tour of what changed. Click a picture for the full size.
 </tr>
 </table>
 
-See the [changelog](CHANGELOG.md) for everything in 0.7.5.
+See the [changelog](CHANGELOG.md) for everything since.
 
 ## What sets it apart
 
@@ -54,7 +54,7 @@ See the [changelog](CHANGELOG.md) for everything in 0.7.5.
 - **Video from the score:** export a self-playing MP4, or record the score with the sound you hear.
 - **MIDI processing before every plug-in:** arpeggiator, step sequencer, humaniser, drum trigger and more.
 - **Yours to arrange:** remappable shortcuts with a command palette, dockable panes, and songs as tabs that move between windows.
-- **Plug-in safety:** plug-ins load only once approved and run outside the editor; one that crashes is switched off.
+- **Plug-in safety:** plug-ins outside Program Files load only once approved, and all run outside the editor; one that crashes is switched off.
 
 ## Writing tab and notation
 
@@ -170,7 +170,7 @@ One block per bar and track, with coloured sections across the top. Sections, ba
 </table>
 
 - **Add a track** from the Track menu, Ctrl+T, the Add track lane under the last track, or *Add track…* in the track list's right-click menu.
-- **Master track lane** (track list right-click > *Show master track*): an overview above the first track, pictured under [New in 0.7.5](#new-in-075).
+- **Master track lane** (track list right-click > *Show master track*): an overview above the first track, pictured under [New since 0.7.5](#new-since-075).
 - **Selection scope:** a timeline selection covers every track; bars selected in the score cover just that track, and copy, cut, paste and loop follow it.
 
 <details><summary>More details</summary>
@@ -276,7 +276,7 @@ Practise a part by playing it along with a MIDI keyboard. Turn it on from the to
 
 ### Compact mode
 
-Compact mode gives the score the room. It hides the track rows and the menu row, and shows the master track lane at twice its height. A strip of track capsules under the title bar selects the track (the selected one is lit); right-click the strip, or click its caption, for the menus and tools, and the track controls become a slim column of three rows of buttons. Turn it on from the toolbar button beside Keyboard mode or **View > Compact mode** (Ctrl+Alt+C); pressing it again brings the tracks back as they were. It is pictured under [New in 0.7.5](#new-in-075).
+Compact mode gives the score the room. It hides the track rows and the menu row, and shows the master track lane at twice its height. A strip of track capsules under the title bar selects the track (the selected one is lit); right-click the strip, or click its caption, for the menus and tools, and the track controls become a slim column of three rows of buttons. Turn it on from the toolbar button beside Keyboard mode or **View > Compact mode** (Ctrl+Alt+C); pressing it again brings the tracks back as they were. It is pictured under [New since 0.7.5](#new-since-075).
 
 ## Sound
 
@@ -284,18 +284,18 @@ Every track has level, pan, mute, solo and an FX chain. VST2 and VST3 instrument
 
 <table>
 <tr>
-<td width="33%" valign="top"><a href="docs/screenshots/mixer.png"><img src="docs/screenshots/mixer.png" alt="Mixer groups and track controls" width="215"></a><br><b>Mixer</b><br>A row per track with the Master row at the top. Mute and solo are instant: solo wins, muted tracks are drawn grey.</td>
+<td width="33%" valign="top"><a href="docs/screenshots/mixer.png"><img src="docs/screenshots/mixer.png" alt="Mixer groups and track controls" width="215"></a><br><b>Mixer</b><br>A row per track, with the Master row at the top and a live input row under it. Mute and solo are instant: solo wins, muted tracks are drawn grey.</td>
 <td width="33%" valign="top"><a href="docs/animations/mixer.gif"><img src="docs/animations/mixer.gif" alt="Adjusting levels in the mixer" width="215"></a><br><b>Levels and pan</b><br>Sliders on one fine scale. Double-click a knob and type "-6 dB", "75%" or "L30"; Ctrl+click resets.</td>
 <td width="33%" valign="top"><a href="docs/screenshots/mixer-groups-collapsed.png"><img src="docs/screenshots/mixer-groups-collapsed.png" alt="Mixer with a collapsed group" width="215"></a><br><b>Groups</b><br>Group rows set level, pan and pitch for all their tracks, collapse to one row, and each has an effects bus.</td>
 </tr>
 <tr>
 <td width="33%" valign="top"><a href="docs/screenshots/mixer-group-rules.png"><img src="docs/screenshots/mixer-group-rules.png" alt="Mixer group rules" height="150"></a><br><b>Group rules</b><br>Rules decide which tracks fall into which group, for one song or all songs.</td>
 <td width="33%" valign="top"><a href="docs/screenshots/mixer-colour-menu.png"><img src="docs/screenshots/mixer-colour-menu.png" alt="Mixer colour chip menu" height="150"></a><br><b>Track colours</b><br>A track's colour chip opens its colour palette.</td>
-<td width="33%" valign="top"><a href="docs/screenshots/fx-chain.png"><img src="docs/screenshots/fx-chain.png" alt="Track FX chain" width="215"></a><br><b>FX chains</b><br>One instrument, then effects in series, each with bypass, wet/dry and its own window. Chains save and load as files.</td>
+<td width="33%" valign="top"><a href="docs/screenshots/fx-chain.png"><img src="docs/screenshots/fx-chain.png" alt="Track FX chain" width="215"></a><br><b>FX chains</b><br>One instrument, then effects in series, each with bypass, wet/dry and its own window. Group plug-ins in containers; chains save and load as files, including .RfxChain files for other hosts.</td>
 </tr>
 <tr>
 <td width="33%" valign="top"><a href="docs/screenshots/plugin-wiring.png"><img src="docs/screenshots/plugin-wiring.png" alt="Audio and MIDI pin routing" height="150"></a><br><b>Wiring</b><br>Audio channels, MIDI source and channel filter, sidechain, and MIDI forwarding to another track.</td>
-<td width="33%" valign="top"><a href="docs/screenshots/fx-allow-again.png"><img src="docs/screenshots/fx-allow-again.png" alt="Allow again" width="215"></a><br><b>Plug-in approval</b><br>A plug-in that crashes or freezes is named and switched off; you choose when to allow it again.</td>
+<td width="33%" valign="top"><a href="docs/screenshots/fx-allow-again.png"><img src="docs/screenshots/fx-allow-again.png" alt="Allow again" width="215"></a><br><b>Plug-in approval</b><br>Plug-ins under Program Files load without asking by default; others need your approval. A plug-in that crashes or freezes is named and switched off until you allow it again.</td>
 <td width="33%" valign="top"><a href="docs/screenshots/prefs-audio.png"><img src="docs/screenshots/prefs-audio.png" alt="Preferences, audio" height="150"></a><br><b>Audio output</b><br>WASAPI (shared or exclusive), ASIO or DirectSound, with device, sample rate and buffer size.</td>
 </tr>
 <tr>
@@ -330,7 +330,7 @@ Every track has level, pan, mute, solo and an FX chain. VST2 and VST3 instrument
 **MIDI processors** (the **MIDI…** button in the FX chain):
 
 - **Velocity**: scale and offset, fixed value, compressor mode, variation accents.
-- **Pitch**: transpose (±64), note map for drum maps, snap to scale / key, chord (up to four voices).
+- **Pitch**: transpose (±64), note map for drum maps (with an editor and a "Tabs to SD3" map), snap to scale / key, chord (up to four voices).
 - **Timing**: humanizer, MIDI delay (ms, beats or samples).
 - **Filtering and routing**: channel filter / remap and router, note range filter, choke and choke group, duplicate-note sanitizer, note hold.
 - **Controllers**: program / bank select, CC sender and mapper, LFO to any CC or pitch wheel.
@@ -338,7 +338,7 @@ Every track has level, pan, mute, solo and an FX chain. VST2 and VST3 instrument
 - **Audio-coupled**: audio-to-MIDI drum trigger, MIDI EQ ducker, loop sampler, synchronized looper.
 - **Utilities**: All notes off / Panic and a live **MIDI log**.
 
-**Every parameter is searchable**: one box finds processors and individual parameters ("Processor › Parameter"); Enter adds the processor or jumps to the parameter. Processors can be limited to some notes and to an input channel. A note-off always follows its note-on, so nothing hangs. Each processor can be bypassed, reordered by dragging, and set by typing into its knobs. Whole chains save as **presets**, built-in ones such as "Humanize light" and your own.
+**Every parameter is searchable**: one box finds processors and individual parameters ("Processor › Parameter"); Enter adds the processor or jumps to the parameter. Processors can be limited to some notes and to an input channel. A note-off always follows its note-on, so nothing hangs. Each processor can be bypassed, reordered by dragging, and set by typing into its knobs. Whole chains save as **presets**, built-in ones such as "Humanize light" and your own. Presets can be organised in their drop-downs and in a preset manager (**Tools > Preset manager…**).
 
 </details>
 
@@ -476,7 +476,7 @@ A `.gp` saved by TabForge follows the `.gp` file format **and** carries the comp
 
 - **Safe saving:** files are written to a temporary file and swapped in atomically; a `.gp` plus `.tfaudio` pair is restored to its last complete state if a save is interrupted.
 - **Untrusted input:** every file, clipboard paste and settings file is size-checked and validated before use.
-- **Plug-ins** load only after you scan or approve them, and only while the file is the one you approved.
+- **Plug-ins** outside Program Files load only after you scan or approve them, and only while the file is the one you approved. Plug-ins installed under Program Files load without asking by default (Preferences > Audio & plug-ins: "Load installed plug-ins without asking").
 - **No telemetry, no auto-updates, no analytics.** The update check is the only network access: one anonymous HTTPS GET, at most once a day, to `https://api.github.com/repos/cobhc95/TabForge/releases`. Switch it off in **Settings > General > Updates**; Help > *Check for updates…* checks now.
 - **Windows integration** ("Open .gp and .tforge files with TabForge") is opt-in and reversible.
 - **Command line:** `TabForge.exe song.gp5 [more files]` opens files as tabs; `--theme dark|light|system` starts with that theme.

@@ -44,9 +44,14 @@ internal sealed partial class WindowProbes
                     (typeof(MainWindow).GetField("_trackListFit", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.GetValue(_w.Window)
                         as Controllers.TrackListFitController ?? throw new InvalidOperationException("no track list fit")).FitToTracks(); break;
                 case "section-tip": SectionTip(value.GetInt32()); break;
+                case "note-map-editor": _toolName = "NoteMapEditor"; { var editor = new Views.NoteMaps.DrumMapEditorWindow(Plugins.DrumMapLibrary.Find("Tabs to SD3"), Plugins.DrumMapLibrary.Find("General MIDI")); Adopt(editor); editor.CaptureShow(value.GetString() ?? ""); } break;   // the drum map editor as the tool window "NoteMapEditor": "shipped", "copy", "advanced", "error"
+                case "preset-panel": PresetPanel(value.GetString() ?? ""); break;   // see WindowProbes.CapturePresetPanel.cs
+                case "preset-manager": PresetManagerShot(value.GetString() ?? ""); break;   // see WindowProbes.CapturePresetPanel.cs
+                case "fx-list":FxList(value.GetString() ?? ""); break;   // see WindowProbes.CaptureFxList.cs
+                case "fx-list-width": _w.Window.MixerHost.PluginSettings.FxListWidth = value.GetDouble(); break;   // the FX chain window's plug-in list width (before the window opens)
                 case "restore-saved": _w._settings.LastLayout = _savedLayoutName; _w._dockWorkspace?.ApplyLayout(_savedWorkspace ?? new()); break;   // as after a restart
                 case "tab-strip": TabStrip(value.GetDouble()); break;
-                case "message-box": _toolName = "MessageBox"; Adopt(ThemedMessageBox.Build(_w.Window, "You closed the last tab with unsaved changes.\nRestore it?", "Restore tab", System.Windows.MessageBoxButton.YesNoCancel, value.GetString() == "warning" ? System.Windows.MessageBoxImage.Warning : System.Windows.MessageBoxImage.Question, System.Windows.MessageBoxResult.Yes, _ => { })); break;   // the themed message box as the tool window "MessageBox"
+                case "message-box": _toolName = "MessageBox"; Adopt(value.GetString() == "delete" ? PresetDeleteBox() : ThemedMessageBox.Build(_w.Window, "You closed the last tab with unsaved changes.\nRestore it?", "Restore tab", System.Windows.MessageBoxButton.YesNoCancel, value.GetString() == "warning" ? System.Windows.MessageBoxImage.Warning : System.Windows.MessageBoxImage.Question, System.Windows.MessageBoxResult.Yes, _ => { })); break;   // the themed message box as the tool window "MessageBox"; "delete" is the preset delete question with its tick
                 case "rec-state": _w.Window.RecIndicator.Text = "REC 01:15"; _w.Window.RecIndicator.Visibility = _w.Window.VideoRecDot.Visibility = value.GetBoolean() ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed; break;   // the Record video REC state, no recording runs
                 default: throw new InvalidOperationException($"unknown step '{verb}'");
             }

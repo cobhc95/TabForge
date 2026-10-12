@@ -27,6 +27,9 @@ public sealed class LiveInputArm
     /// <summary>Raised when live input turns on or off.</summary>
     public event Action? Changed;
 
+    /// <summary>Raised when the stand-in's own volume, pan or mute changes (every mixer shows the same values).</summary>
+    public event Action? LevelChanged;
+
     public bool IsOn => Track.RecordArm;
 
     /// <summary>The MIDI keyboard of live input (the first window's controller makes it; every window shares it).</summary>
@@ -76,6 +79,21 @@ public sealed class LiveInputArm
     /// <summary>True while the stand-in is in the engine with the plug-in at <paramref name="path"/> in its chain (a crash of it needs a sync).</summary>
     public bool Uses(string path) => _wanted && Track.Rig.Plugins.Any(p => string.Equals(p.Path, path, StringComparison.OrdinalIgnoreCase));
 
-    /// <summary>Engine sync: the stand-in's level and pan: its own volume under the master volume (0 silences it, as it does a song's tracks) and its pan under the master pan.</summary>
-    public (int Volume, int Pan) Mix => (Math.Clamp(Track.Volume * Math.Clamp(MasterPercent, 0, 100) / 100, 0, 127), Math.Clamp(Track.Pan + MasterPan, 0, 127));
+    /// <summary>Sets the stand-in's own volume and pan (0-127 each, pan 64 centre); the engine gets them at the next sync.</summary>
+    public void SetLevel(int volume, int pan)
+    {
+        Track.Volume = Math.Clamp(volume, 0, 127);
+        Track.Pan = Math.Clamp(pan, 0, 127);
+        LevelChanged?.Invoke();
+    }
+
+    /// <summary>Silences the stand-in without disarming it: its volume is kept and comes back on unmute.</summary>
+    public void SetMute(bool mute)
+    {
+        Track.Mute = mute;
+        LevelChanged?.Invoke();
+    }
+
+    /// <summary>Engine sync: the stand-in's level and pan: its own volume under the master volume (0 silences it, as it does a song's tracks, and when muted) and its pan under the master pan.</summary>
+    public (int Volume, int Pan) Mix => (Track.Mute ? 0 : Math.Clamp(Track.Volume * Math.Clamp(MasterPercent, 0, 100) / 100, 0, 127), Math.Clamp(Track.Pan + MasterPan, 0, 127));
 }

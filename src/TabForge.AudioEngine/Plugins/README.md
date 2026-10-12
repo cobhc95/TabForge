@@ -8,7 +8,9 @@ In-process plug-in hosting: the instance interface, the one loader that builds a
 | `IPluginInstance.cs` | The plug-in instance interface and `BlockMidi` (a MIDI message at a frame inside the block) |
 | `PluginLoading.cs` | The one place that turns a plug-in file into an in-process instance, used by the engine, the isolated host and the scan probe |
 | `Vst2Plugin.cs` | Hosts a 64-bit VST2 plug-in through its C interface; buffers are allocated once, `Process` does not allocate |
+| `Vst2Plugin.ParameterState.cs` | State of a VST2 plug-in without chunks: the list of its parameter values (mark, then one float each) |
 | `Vst2TestEffect.cs` | Headless test effect: a managed pass-through behind the real VST2 interface, with no DLL on disk |
+| `Vst3ClassInfo.cs` | What a loaded plug-in reports about itself (`LoadedPluginInfo`): VST2 id, pin counts and names from the instance; VST3 class id, name and vendor from the module's class factory |
 | `Vst3Plugin.cs` | Hosts a VST3 plug-in through `tfvst3.dll`, a small C interface over the VST3 SDK |
 
 ## Pathway

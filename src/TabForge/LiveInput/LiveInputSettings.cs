@@ -21,13 +21,20 @@ public sealed class LiveInputSettings
     /// <summary>Open the live FX chain window each time live input is turned on.</summary>
     public bool OpenFxOnTurnOn { get; set; } = true;
     /// <summary>Whether a new session restores <see cref="Chain"/>: one of <see cref="RestoreChoices"/>.</summary>
-    public string Restore { get; set; } = RestoreAsk;
+    public string Restore { get; set; } = RestoreAlways;
+    /// <summary>The live input's own volume (0-127, as a track's) and pan (0-127, 64 centre) in the mixer's live input row.</summary>
+    public int Volume { get; set; } = 100;
+    public int Pan { get; set; } = 64;
+    /// <summary>The mixer's Master row is collapsed: its live input row is hidden.</summary>
+    public bool MixerCollapsed { get; set; }
 
     /// <summary>Brings loaded values back to valid ones.</summary>
     public void Normalize()
     {
         Chain ??= new RigPreset();
         if (Input != "" && !AudioInputs.TryParse(Input, out _, out _)) Input = AudioInputs.Input1;   // well-formed is enough: the device's list may not be known yet
-        if (!RestoreChoices.Contains(Restore)) Restore = RestoreAsk;
+        if (!RestoreChoices.Contains(Restore)) Restore = RestoreAlways;
+        Volume = Math.Clamp(Volume, 0, 127);
+        Pan = Math.Clamp(Pan, 0, 127);
     }
 }

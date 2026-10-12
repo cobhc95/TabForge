@@ -19,7 +19,7 @@ public static class PluginLibrary
     public static string Root => RootOverride ?? TabForge.Services.UserPaths.Roaming;
     public static string ChainsFolder => Path.Combine(Root, "FxChains");
 
-    private static string PresetFolder(PluginSlot slot) => Path.Combine(Root, "Presets", Safe(slot.Name.Length > 0 ? slot.Name : Path.GetFileNameWithoutExtension(slot.Path)));
+    internal static string PresetFolder(PluginSlot slot) => Path.Combine(Root, "Presets", Safe(slot.Name.Length > 0 ? slot.Name : Path.GetFileNameWithoutExtension(slot.Path)));
 
     private static string Safe(string name)
     {
@@ -29,13 +29,8 @@ public static class PluginLibrary
     /// <summary>A user preset: the plug-in's state and its Volume knob (OutputDb; null in presets saved before it was stored).</summary>
     public sealed record Preset(string Name, string State, double? OutputDb = null);
 
-    public static IReadOnlyList<string> PresetNames(PluginSlot slot)
-    {
-        var folder = PresetFolder(slot);
-        return Directory.Exists(folder)
-            ? Directory.EnumerateFiles(folder, "*.tfpreset").Select(Path.GetFileNameWithoutExtension).OfType<string>().OrderBy(n => n, StringComparer.OrdinalIgnoreCase).Take(1000).ToList()
-            : Array.Empty<string>();
-    }
+    /// <summary>The plug-in's saved presets in the user's order (alphabetical until they are reordered).</summary>
+    public static IReadOnlyList<string> PresetNames(PluginSlot slot) => PresetFolderStore.Plugin(slot).Names();
 
     public static void SavePreset(PluginSlot slot, string name, string state)
     {
@@ -68,9 +63,12 @@ public static class PluginLibrary
     }
 
     /// <summary>Saves a whole chain (plug-ins, order, roles, wiring, wet and states).</summary>
-    public static void SaveChain(string path, IReadOnlyList<PluginSlot> chain)
+    public static void SaveChain(string path, IReadOnlyList<PluginSlot> chain, IReadOnlyList<ChainContainer>? containers = null)
     {
-        var bytes = JsonSerializer.SerializeToUtf8Bytes(chain, Json);
+        // The file stays a list of plug-ins; containers ride on the first one, so a reader that does not know them loads the flat chain.
+        var node = JsonSerializer.SerializeToNode(chain, Json)!.AsArray();
+        if (ChainTree.Valid(containers, chain.Count) is { Count: > 0 } valid && node.Count > 0) node[0]!["ChainContainers"] = JsonSerializer.SerializeToNode(valid, Json);
+        var bytes = System.Text.Encoding.UTF8.GetBytes(node.ToJsonString(Json));
         FilePathPolicy.WriteAtomically(path, s => s.Write(bytes));   // a failed write leaves the previous chain file intact
     }
 
@@ -85,6 +83,7 @@ public static class PluginLibrary
             var probe = Presets.TemplateFactory.Blank();
             probe.Tracks[0].Rig.Plugins = chain;
             ProjectValidator.Validate(probe);
+            ChainTree.Pack(chain, probe.Tracks[0].Rig.Containers);   // validated; they stay with the list until it lands on a track
             return chain;
         }
         catch (Exception ex) when (ex is JsonException or IOException or InvalidDataException) { Services.Trace.Error(Services.Trace.Engine, "plug-in chain: read: " + ex.Message); return null; }

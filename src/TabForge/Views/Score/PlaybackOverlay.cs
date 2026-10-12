@@ -8,9 +8,6 @@ namespace TabForge.Views.Score;
 /// <summary>What the playback overlay reads from the editor that owns it.</summary>
 internal interface IPlaybackOverlayHost : IScorePageHost
 {
-
-    /// <summary>Repaints without dropping the retained system drawings.</summary>
-    void RepaintPlaybackOnly();
 }
 
 /// <summary>
@@ -82,7 +79,7 @@ internal sealed class PlaybackOverlay : IScorePlayhead
         Measure = measure;
         Cell = cell;
         // Playback-only repaint: keeps the cached engraving of systems whose playback state is unchanged.
-        _host.RepaintPlaybackOnly();
+        _host.RepaintKeepingDrawings();
     }
 
     public void Clear()

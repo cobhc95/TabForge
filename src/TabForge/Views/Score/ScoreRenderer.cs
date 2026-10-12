@@ -210,7 +210,7 @@ internal sealed partial class ScoreRenderer
 
             // Hover: a faint outline shows which beat a click would act on, without looking like the
             // edit cursor, the selection or the playhead.
-            if (measureIndex == _host.HoverMeasure && _host.HoverCell >= 0 && _host.HoverCell < editingCells.Count && !_host.PlaybackActive && _host.Appearance.ShowNoteOutline)
+            if (measureIndex == _host.HoverMeasure && _host.HoverCell >= 0 && _host.HoverCell < editingCells.Count && _host.Appearance.ShowNoteOutline)
             {
                 var hoverRect = HoverRect(measure, editingCells, _host.HoverCell, x, warp, measureWidth,
                     staffTop - 4, (showTab ? tabTop + (strings - 1) * _host.StringGap : staffTop + 4 * _host.StaffGap) - staffTop + 12);

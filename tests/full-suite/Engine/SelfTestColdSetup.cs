@@ -83,4 +83,62 @@ public static partial class SelfTest
             piano > 0 && strings > 0 && Math.Abs(piano - strings) / Math.Max(piano, strings) > 0.05, $"piano {piano:0.###}, strings {strings:0.###}");
         gm.Dispose();
     }
+
+    /// <summary>A mixer slot reused by another song's track: the previous track's channel state (volume, expression, program) must not reach the new chain.</summary>
+    private static void TestSlotReuseDrumLevel()
+    {
+        const int frames = 256;
+        try { new ES.GmSynth(48000, frames).Dispose(); }
+        catch (Exception ex) when (ex is IOException or InvalidOperationException or FileNotFoundException) { Skip("slot reuse: drum level after another song", ex.Message); return; }
+
+        // The drum track of a song in slot 0: its level as the chain reports it, and the RMS of one kick, in dB.
+        // leftover: a controller the slot's previous track sent (channel, controller, value); none: a fresh engine.
+        // setupFirst: the new song's channel setup arrives before its chain is in the slot (a chain that loads after Play).
+        (int Volume, double Db) Drum((byte Ch, byte Cc, byte Value)? leftover, bool setupFirst)
+        {
+            using var shared = SharedBlock.Create($"tf-selftest-{Guid.NewGuid():N}");
+            var mix = new EM.MixEngine(shared, 48000, frames);
+            mix.SetGraph(new EM.MixEngine.RenderGraph(new[] { 0 }, EM.MixEngine.RenderGraph.NewDest(), Array.Empty<int>()));
+            var buffer = new float[2 * frames];
+            void Send(int status, int d1, int d2) => shared.TryWrite(new TimedMidi { Timestamp = 0, Slot = 0, Status = (byte)status, Data1 = (byte)d1, Data2 = (byte)d2 });
+            void Block() => mix.Read(buffer, 0, buffer.Length);
+            EM.TrackChain? previous = null;
+            if (leftover is { } l)
+            {
+                previous = new EM.TrackChain(0, -1, new ES.GmSynth(48000, frames), Array.Empty<EM.TrackChain.Effect>(), frames);
+                mix.SetChain(0, previous);
+                Send(0xB0 | l.Ch, l.Cc, l.Value);
+                Block();
+                mix.SetChain(0, null);   // the previous song's track is unloaded
+            }
+            using var chain = new EM.TrackChain(0, -1, new ES.GmSynth(48000, frames), Array.Empty<EM.TrackChain.Effect>(), frames);
+            chain.SetMix(127, 64);
+            if (!setupFirst) { mix.SetChain(0, chain); Block(); }
+            Send(0xC0 | 9, 0, 0); Send(0xB0 | 9, 7, 127); Send(0xB0 | 9, 10, 64);   // the percussion channel's setup, as a song start sends it
+            if (setupFirst) { Block(); mix.SetChain(0, chain); }
+            Block();
+            Send(0x90 | 9, 36, 110);
+            double sum = 0;
+            for (var b = 0; b < 40; b++) { Block(); foreach (var s in buffer) sum += s * s; }
+            previous?.Dispose();
+            return (chain.GetMix().Volume, 10 * Math.Log10(Math.Max(1e-20, sum / (40 * buffer.Length))));
+        }
+
+        var fresh = Drum(null, setupFirst: true);
+        var cases = new (string Name, (byte, byte, byte) Leftover)[]
+        {
+            ("volume 40 on channel 13", (12, 7, 40)), ("volume 40 on channel 3", (2, 7, 40)), ("expression 30 on the drum channel", (9, 11, 30)),
+        };
+        var report = new List<string> { $"fresh {fresh.Volume} / {fresh.Db:0.0} dB" };
+        var worst = 0.0;
+        foreach (var (name, leftover) in cases)
+            foreach (var setupFirst in new[] { true, false })
+            {
+                var got = Drum(leftover, setupFirst);
+                worst = Math.Max(worst, Math.Abs(got.Db - fresh.Db));
+                report.Add($"{name}, {(setupFirst ? "setup before chain" : "chain before setup")}: {got.Volume} / {got.Db:0.0} dB");
+            }
+        Check("slot reuse: a drum chain in a slot another song's track used plays at the level of a fresh engine (within 1 dB), whatever that track left behind",
+            fresh.Db > -80 && worst <= 1.0, string.Join("; ", report));
+    }
 }

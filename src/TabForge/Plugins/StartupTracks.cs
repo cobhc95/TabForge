@@ -50,6 +50,7 @@ public static class StartupTracks
             SoundSource = track.SoundSource, MidiSound = track.MidiSound, AudioInput = track.AudioInput,
             MonitorInput = track.MonitorInput, ColorHex = track.ColorHex, Plugins = Clone(track.Rig.Plugins, keepIds: true)
         });
+        ChainTree.Pack(settings.StartupTracks[^1].Plugins, track.Rig.Containers);   // on the copy: the containers travel with the list
         ChainStateStore.Externalise(settings.StartupTracks[^1].Plugins);   // states go to their own files, not into settings.json
     }
 
@@ -78,6 +79,7 @@ public static class StartupTracks
                 Measures = TemplateFactory.Measures(measures), Rig = new RigPreset { Name = t.Name, Plugins = Clone(t.Plugins, keepIds: false) }
             });
             ChainStateStore.Resolve(project.Tracks[^1].Rig.Plugins);
+            ChainTree.Refresh(project.Tracks[^1].Rig);
             added = true;
         }
         return added;

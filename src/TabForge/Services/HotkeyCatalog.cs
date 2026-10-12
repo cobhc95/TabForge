@@ -53,8 +53,14 @@ public static partial class HotkeyCatalog
     /// <summary>Bar-range context commands (see <see cref="CategoryRange"/>).</summary>
     public static bool IsRangeAction(string id) => id.StartsWith("Range.", StringComparison.OrdinalIgnoreCase);
 
-    /// <summary>0 = the global map, 1 = clip context, 2 = track-row context, 3 = bar-range context: keys only collide inside one context.</summary>
-    public static int ContextOf(string id) => IsClipAction(id) ? 1 : IsTrackRowAction(id) ? 2 : IsRangeAction(id) ? 3 : 0;
+    /// <summary>FX chain window commands: they only act while that window has the focus, so they may share keys with main-window commands.</summary>
+    public const string CategoryFxChain = "FX chain window (while it has the focus)";
+
+    /// <summary>FX chain window commands (see <see cref="CategoryFxChain"/>).</summary>
+    public static bool IsFxChainAction(string id) => id.StartsWith("FxChain.", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>0 = the global map, 1 = clip context, 2 = track-row context, 3 = bar-range context, 4 = FX chain window: keys only collide inside one context.</summary>
+    public static int ContextOf(string id) => IsClipAction(id) ? 1 : IsTrackRowAction(id) ? 2 : IsRangeAction(id) ? 3 : IsFxChainAction(id) ? 4 : 0;
 
     /// <summary>Two commands can share a key when they act in different contexts.</summary>
     public static bool SameContext(string a, string b) => ContextOf(a) == ContextOf(b);
@@ -84,16 +90,17 @@ public static partial class HotkeyCatalog
     private static readonly HashSet<string> TextBoxSafe = new(StringComparer.OrdinalIgnoreCase)
     {
         "File.New", "File.Open", "File.OpenInNewTab", "File.Save", "File.SaveAs", "File.Print", "File.PrintPreview",
-        "Tab.New", "Tab.Close", "Tab.Duplicate", "App.Preferences", "App.Shortcuts", "App.CommandPalette"
+        "Tab.New", "Tab.Close", "Tab.Duplicate", "App.Preferences", "App.Shortcuts", "App.CommandPalette",
+        "FxChain.Save", "FxChain.Load"
     };
 
     public static bool AllowsInTextBox(string id) => TextBoxSafe.Contains(id);
 
     /// <summary>The effective gesture for an action: the user's binding, else the catalogue default.</summary>
     /// <summary>Every effective gesture mapped to its command id (what the window dispatches on).</summary>
-    public static Dictionary<string, string> BuildMap(HotkeySettings settings, bool clipContext = false, bool trackRowContext = false, bool rangeContext = false)
+    public static Dictionary<string, string> BuildMap(HotkeySettings settings, bool clipContext = false, bool trackRowContext = false, bool rangeContext = false, bool fxChainContext = false)
     {
-        var context = clipContext ? 1 : trackRowContext ? 2 : rangeContext ? 3 : 0;
+        var context = clipContext ? 1 : trackRowContext ? 2 : rangeContext ? 3 : fxChainContext ? 4 : 0;
         var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (var action in All)
         {

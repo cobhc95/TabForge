@@ -25,6 +25,7 @@ public static partial class SelfTest
         new("SetWindowsPathOffset", w => w.Write(-3.5f), w => new SetWindowsPathOffsetMessage(-3.5f).Write(w), r => SetWindowsPathOffsetMessage.Read(r) == new SetWindowsPathOffsetMessage(-3.5f), "000060C0"),
         new("RemoveTrack", w => w.Write(9), w => new RemoveTrackMessage(9).Write(w), r => RemoveTrackMessage.Read(r) == new RemoveTrackMessage(9), "09000000"),
         new("GetStates", w => { w.Write(2); w.Write(5); }, w => new GetStatesMessage(2, 5).Write(w), r => GetStatesMessage.Read(r) == new GetStatesMessage(2, 5), "0200000005000000"),
+        new("GetPluginInfo", w => { w.Write(2); w.Write(5); }, w => new GetPluginInfoMessage(2, 5).Write(w), r => GetPluginInfoMessage.Read(r) == new GetPluginInfoMessage(2, 5), "0200000005000000"),
         new("CloseEditor", w => { w.Write(2); w.Write(1); }, w => new CloseEditorMessage(2, 1).Write(w), r => CloseEditorMessage.Read(r) == new CloseEditorMessage(2, 1), "0200000001000000"),
         new("GetPrograms", w => { w.Write(2); w.Write(1); }, w => new GetProgramsMessage(2, 1).Write(w), r => GetProgramsMessage.Read(r) == new GetProgramsMessage(2, 1), "0200000001000000"),
         new("SetProgram", w => { w.Write(2); w.Write(1); w.Write(40); }, w => new SetProgramMessage(2, 1, 40).Write(w), r => SetProgramMessage.Read(r) == new SetProgramMessage(2, 1, 40), "020000000100000028000000"),

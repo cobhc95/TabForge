@@ -10,7 +10,9 @@ The app's only way to reach the audio engine process, plus device and capture he
 
 ## Key types
 - `AudioEngineClient` (partial files: core, Sync, Commands, Probes): sends commands, receives events.
+- `AudioEngineClient.PluginInfo.cs`: asks the engine what each loaded plug-in of a chain reports about itself (ids, pin counts, names); no answer (an engine without the request, a plug-in that is not loaded) is "not available", never an error.
 - `AudioDevices`, `AudioRouting`: devices and routing.
+- `ClickDestination`: the metronome and count-in click's own hidden engine slot (a General MIDI synth, no chain, in no song); `RoutedMidiOutput.SendMetronome` writes the clicks there while the engine runs; the sync in `AudioEngineClient.Sync.cs` keeps it.
 - `MidiInputCapture`, `MidiInputHub`, `RoutedMidiOutput`: MIDI in and out. Clients can pick one device by name (`IMidiInputClient.Device`); `Rescan()` picks up devices connected or removed while open. The hub (one per engine client, `AudioEngineClient.MidiInput`) owns the single set of input handles and hands each listener (recording, Keyboard mode) a client; the devices open while one client holds them and close with the last.
 - `SongClock`: playback position shared by the views.
 - `DeviceChangePause`: pauses playing songs while the audio device is reopened and resumes them when it is ready.

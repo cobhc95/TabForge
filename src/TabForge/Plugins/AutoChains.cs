@@ -26,6 +26,7 @@ public static class AutoChains
     {
         Remove(settings, track);
         var plugins = Clone(track.Rig.Plugins);
+        ChainTree.Pack(plugins, track.Rig.Containers);   // on the copy: the containers travel with the list
         ChainStateStore.Externalise(plugins);   // states go to their own files, not into settings.json
         settings.AutoChains.Add(new AutoChain { Key = KeyOf(track), MidiSound = track.MidiSound, Plugins = plugins });
     }
@@ -38,6 +39,7 @@ public static class AutoChains
         if (track.IsAudio || track.Rig.Plugins.Count > 0 || Find(settings, track) is not { Plugins.Count: > 0 } auto) return false;
         track.Rig.Plugins = Clone(auto.Plugins);
         ChainStateStore.Resolve(track.Rig.Plugins);
+        ChainTree.Refresh(track.Rig);
         track.SoundSource = SoundSources.Plugins;
         track.MidiSound = auto.MidiSound;
         return true;

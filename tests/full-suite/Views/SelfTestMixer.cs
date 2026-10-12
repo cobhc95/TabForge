@@ -343,8 +343,8 @@ public static partial class SelfTest
         MixerBuses.SetOn(guitarBus, false);
         Check("a group bus with plug-ins runs in its fixed engine slot; power off bypasses it",
             busTrack is { IsBus: true, BusSlot: >= MixerBuses.BusBase and < MixerBuses.MasterSlot } && MixerBuses.Active(busSong).Count == 0 && busTrack.SoundSource == SoundSources.Midi);
-        Check("drum maps: the acoustic kit map ships under its neutral name, and chains saved with its earlier name still find it",
-            DrumMapLibrary.Find("Acoustic kit map (unverified)") is { } kit && DrumMapLibrary.Find("Superior Drummer 3 (unverified)") == kit
+        Check("drum maps: the shipped kit map is Tabs to SD3, and chains saved under its earlier names still find it",
+            DrumMapLibrary.Find("Tabs to SD3") is { } kit && DrumMapLibrary.Find("Acoustic kit map (unverified)") == kit && DrumMapLibrary.Find("Superior Drummer 3 (unverified)") == kit
             && DrumMapLibrary.All().All(m => !m.Name.Contains("Superior", StringComparison.OrdinalIgnoreCase)));
         var overrideTable = DrumMapLibrary.BuildTable("", "", "36>38, 40>x");
         Check("drum map overrides change or drop notes", overrideTable[36] == 38 && overrideTable[40] == -1 && overrideTable[41] == 41);

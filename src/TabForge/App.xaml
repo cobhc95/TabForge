@@ -517,7 +517,7 @@
                                      Foreground="{TemplateBinding Foreground}" CaretBrush="{TemplateBinding Foreground}"
                                      AutomationProperties.Name="{Binding (AutomationProperties.Name), RelativeSource={RelativeSource TemplatedParent}}"/>
                             <Popup x:Name="PART_Popup" IsOpen="{TemplateBinding IsDropDownOpen}" Placement="Bottom"
-                                   AllowsTransparency="True" Focusable="False" PopupAnimation="Slide">
+                                   AllowsTransparency="True" Focusable="False" PopupAnimation="None">
                                 <Border LayoutTransform="{DynamicResource UiScaleTransform}" Background="{DynamicResource Panel2Brush}" BorderBrush="{DynamicResource BorderBrush}"
                                         BorderThickness="1" CornerRadius="3" MinWidth="{TemplateBinding ActualWidth}"
                                         MaxHeight="{TemplateBinding MaxDropDownHeight}">
@@ -627,7 +627,7 @@
                                 <Path x:Name="sub" Grid.Column="3" Data="M 0 0 L 4 4 L 0 8 Z" Fill="{DynamicResource MutedBrush}"
                                       Margin="0,0,6,0" VerticalAlignment="Center" Visibility="Collapsed"/>
                                 <Popup x:Name="PART_Popup" IsOpen="{TemplateBinding IsSubmenuOpen}" Placement="Bottom"
-                                       AllowsTransparency="True" Focusable="False" PopupAnimation="Fade">
+                                       AllowsTransparency="True" Focusable="False" PopupAnimation="None">
                                     <Border LayoutTransform="{DynamicResource UiScaleTransform}" Background="{DynamicResource Panel2Brush}" BorderBrush="{DynamicResource BorderBrush}"
                                             BorderThickness="1" CornerRadius="4" Padding="4" Margin="0,2,0,0">
                                         <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Cycle"/>
@@ -672,6 +672,9 @@
             </Setter>
         </Style>
         <ScaleTransform x:Key="UiScaleTransform" ScaleX="1" ScaleY="1"/>
+        <!-- Right-click menus and tooltips open at once: these keys replace the Windows menu animation setting for this app. -->
+        <PopupAnimation x:Key="{x:Static SystemParameters.MenuPopupAnimationKey}">None</PopupAnimation>
+        <PopupAnimation x:Key="{x:Static SystemParameters.ToolTipPopupAnimationKey}">None</PopupAnimation>
         <Style TargetType="ContextMenu">
             <Setter Property="LayoutTransform" Value="{DynamicResource UiScaleTransform}"/>
             <Setter Property="Background" Value="{DynamicResource Panel2Brush}"/>

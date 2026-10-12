@@ -94,7 +94,7 @@ public sealed partial class MixerWindow : Window
         var root = new DockPanel { Margin = new Thickness(10) };
         var top = new DockPanel { Margin = new Thickness(0, 0, 0, 8) };
         DockPanel.SetDock(top, Dock.Top);
-        var groupingRow = new StackPanel { Orientation = Orientation.Horizontal };
+        var groupingRow = new WrapPanel { Orientation = Orientation.Horizontal };   // a narrow window wraps the options onto another line instead of clipping them
         groupingRow.Children.Add(new TextBlock { Text = "Group tracks", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0) });
         groupingRow.Children.Add(_grouping);
         _grouping.ToolTip = "By instrument: guitars, basses, keys (piano, organ, synth), drums, other.\nCompact: guitars, basses, drums, and all other instruments together.\nNo groups: one group for the whole song.";
@@ -109,7 +109,6 @@ public sealed partial class MixerWindow : Window
         AddGroupButtons(groupingRow);
         top.Children.Add(groupingRow);
         // What the main track list shows (the track list itself stays unchanged unless these are changed).
-        var shows = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(16, 0, 0, 0) };
         foreach (var (what, label, tip) in new[]
         {
             ("volume", "Volume in track list", "Show the volume column in the main track list"),
@@ -117,14 +116,13 @@ public sealed partial class MixerWindow : Window
             ("groups", "Groups in track list", "Show the mixer groups in the main track list: a box per group, which can be collapsed and dragged as a whole"),
         })
         {
-            var box = new CheckBox { Content = label, IsChecked = _host.TrackListShows(what), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 12, 0) };
+            var box = new CheckBox { Content = label, IsChecked = _host.TrackListShows(what), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(what == "volume" ? 16 : 0, 3, 12, 3) };
             TooltipShortcuts.Bind(box, tip, what == "groups" ? "View.ShowTrackGroups" : null);
             box.Click += (_, _) => _host.SetTrackListShows(what, box.IsChecked == true);
             _showBoxes.Add((what, box));
-            shows.Children.Add(box);
+            groupingRow.Children.Add(box);
         }
-        groupingRow.Children.Add(shows);
-        var settings = new Button { Content = "Audio & Plug-ins settings…", Padding = new Thickness(10, 3, 10, 3), HorizontalAlignment = HorizontalAlignment.Right };
+        var settings = new Button { Content = "Audio & Plug-ins settings…", Padding = new Thickness(10, 3, 10, 3), HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top };
         settings.Click += (_, _) => _host.OpenAudioSettings();
         DockPanel.SetDock(settings, Dock.Right);
         top.Children.Insert(0, settings);
@@ -509,7 +507,7 @@ public sealed partial class MixerWindow : Window
     }
 
     // Columns shared by group and track rows: name | FX | pitch | pan | volume | M S.
-    private static Grid RowGrid()
+    internal static Grid RowGrid()
     {
         var grid = new Grid();
         foreach (var width in new[] { 190.0, 66, 58, 112, 150, -1, 84 })
@@ -517,7 +515,7 @@ public sealed partial class MixerWindow : Window
         return grid;
     }
 
-    private static void Put(Grid grid, FrameworkElement element, int column)
+    internal static void Put(Grid grid, FrameworkElement element, int column)
     {
         Grid.SetColumn(element, column);
         element.VerticalAlignment = VerticalAlignment.Center;
@@ -630,13 +628,14 @@ public sealed partial class MixerWindow : Window
         return fx;
     }
 
-    private bool MonitorActive() => _host.MonitorChain is { On: true } c && c.Rig.Plugins.Any(p => p.Enabled);
+    private bool MonitorActive() => _host.MonitorChain is { On: true } c && c.Rig.Plugins.Any(p => p.Plays);
 
     /// <summary>The Master row under the groups: master FX, master pan (offset on every track) and the master volume (the main window's knob).</summary>
     private Border MasterPanel()
     {
         var grid = RowGrid();
-        Put(grid, NameBlock("Master", "whole mix", accent: true), 0);
+        var live = TabForge.LiveInput.LiveInputMixerRow.For(this, Rebuild);   // the live input row under Master (null: no main window with live input)
+        Put(grid, live is null ? NameBlock("Master", "whole mix", accent: true) : live.MasterHead(NameBlock("Master", "whole mix", accent: true)), 0);
         Put(grid, BusButton(null), 1);
         // Monitoring FX: a different look on purpose (amber outline, headphones, "MON"): live only, never part of a render.
         var mon = new MonitorFxButton
@@ -651,10 +650,13 @@ public sealed partial class MixerWindow : Window
             "Master pan: moves the whole mix left or right (−64 left … 0 centre … +63 right; double-click: centre)"), 4);
         Put(grid, Fader(() => _host.MasterVolume, 0, 100, 100, v => _host.MasterVolume = v,
             "Master volume for all tracks (0–100 %, the same as the main window's master knob; double-click: 100)"), 5);
+        var rows = new StackPanel();
+        rows.Children.Add(RowBorder(grid, accent: true));
+        if (live is not null) rows.Children.Add(live.Row);   // a child of Master, as a track is of its group
         var panel = new Border
         {
             BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(6), Padding = new Thickness(4),
-            Margin = new Thickness(0, 0, 0, 8), Child = RowBorder(grid, accent: true)
+            Margin = new Thickness(0, 0, 0, 8), Child = rows
         };
         panel.SetResourceReference(Border.BackgroundProperty, "PanelBrush");
         panel.SetResourceReference(Border.BorderBrushProperty, "BorderSoftBrush");
@@ -739,7 +741,7 @@ public sealed partial class MixerWindow : Window
         return row;
     }
 
-    private static Border RowBorder(Grid grid, bool accent)
+    internal static Border RowBorder(Grid grid, bool accent)
     {
         var border = new Border
         {
@@ -750,7 +752,7 @@ public sealed partial class MixerWindow : Window
         return border;
     }
 
-    private static StackPanel NameBlock(string title, string subtitle, bool accent)
+    internal static StackPanel NameBlock(string title, string subtitle, bool accent)
     {
         var panel = new StackPanel();
         var name = new TextBlock { Text = title, FontWeight = FontWeights.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis, ToolTip = title };

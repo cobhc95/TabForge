@@ -313,6 +313,25 @@ Default keys are the **TabForge** preset, currently identical to the **Classic**
 | Note effects | Arpeggio up | Play the chord as an upward arpeggio. | `Note.ArpeggioUp` | — |  |
 | File and tabs | Exit | Close TabForge; the usual unsaved-changes prompt still applies. | `File.Exit` | — |  |
 
+## FX chain window (only while the FX chain window has the focus)
+
+These commands have their own key scope: the same key may also be bound to a main-window command. They are set in Settings > Shortcuts, and the FX menu, Chains menu and the container menu show the live key.
+
+| Command | What it does | Command id | Default key |
+|---|---|---|---|
+| Add plug-in | Add a plug-in to the end of the chain. | `FxChain.AddPlugin` | — |
+| Remove plug-in | Remove the selected plug-ins. The Delete key in the plug-in list also removes them. | `FxChain.RemovePlugin` | — |
+| Save FX chain | Save the chain as a chain file. | `FxChain.Save` | Ctrl+S |
+| Load FX chain | Load a saved chain, replacing this one. | `FxChain.Load` | Ctrl+O |
+| Add FX chain to the end | Load a saved chain after the plug-ins already there. | `FxChain.AddToEnd` | — |
+| Clear FX chain | Remove every plug-in and container. | `FxChain.Clear` | — |
+| Save FX chain for other hosts | Write the chain as a .RfxChain file. | `FxChain.SaveForHosts` | — |
+| New container | Add an empty container behind the focused row. | `FxChain.NewContainer` | — |
+| Put selected in a new container | Move the selected rows into a new container. | `FxChain.GroupSelected` | Ctrl+G |
+| Dissolve container | Remove the focused container; its plug-ins stay. | `FxChain.Dissolve` | Ctrl+Shift+G |
+| Rename container | Type a new name for the focused container. | `FxChain.Rename` | F2 |
+| Delete container with its plug-ins | Remove the selected containers and their plug-ins. | `FxChain.DeleteContainer` | — |
+
 ## Dropping files on the timeline
 
 - Drag audio (.wav, .mp3, .flac, .ogg, .aif/.aiff, .m4a, .wma) or MIDI (.mid, .midi) files from Windows or from a plug-in editor onto a track. A translucent block shows where they will land: at the snapped position (hold Alt while dragging to place freely), as long as the files, on the lane under the pointer when it is free there, otherwise on the first free lane, or on a new lane (shown opening under the track). Below the last track a new track opens. One drop is one undo step.
@@ -375,6 +394,7 @@ These share keys with score commands on purpose: they act only while a clip is s
 | View | Chord finder | Show the notes of a chord for a root and type, and insert its name on the beat under the score cursor. | `Tools.ChordFinder` | — |  |
 | View | Song stats | Show the number of tracks, bars, notes and sections in the song. | `Tools.SongStats` | — |  |
 | View | Tuner | Open the chromatic tuner: the note and cents of the sound on the armed input, with the selected track's string tunings. | `Tools.Tuner` | — |  |
+| View | Preset manager | Open the preset manager: every saved plug-in preset, FX chain, container, MIDI chain, MIDI processor preset and drum map in one window, to rename, copy, reorder, delete and search (same as Tools > Preset manager). | `Tools.PresetManager` | — |  |
 | View | Tutorial | Open the Beginner's Guide: searchable chapters with pictures, and a PDF export (Help > Tutorial). | `Help.Tutorial` | — | Also Help > Tutorial…; F1 stays with Keyboard shortcuts. Inside the window: Ctrl+F search, Esc clears it, Alt+Left / Alt+Right back / forward; the switch at the top changes between the Basic and the Detailed guide. |
 | View | Detailed guide | Open the Tutorial window on the Detailed Guide, the full reference to every feature (Help > Detailed guide). | `Help.TutorialDetailed` | — | Also Help > Detailed guide…; unbound by default. |
 | View | Check for updates | Ask GitHub whether a newer TabForge release exists (one anonymous HTTPS request). | `Help.CheckForUpdates` | — |  |

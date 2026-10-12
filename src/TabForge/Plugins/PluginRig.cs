@@ -10,6 +10,9 @@ public sealed class RigPreset
     /// <summary>Automatic pitch matching of this chain's instruments: null = the global default (Settings), else on / off.</summary>
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public bool? AutoPitchMatch { get; set; }
+    /// <summary>Containers over <see cref="Plugins"/> (see <see cref="ChainContainer"/>); null without any, so chains without containers are written as before.</summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public List<ChainContainer>? Containers { get; set; }
 }
 
 public sealed class PluginSlot
@@ -49,10 +52,20 @@ public sealed class PluginSlot
     /// <summary>The plug-in's own saved state (base64), restored when the song opens.</summary>
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public string? State { get; set; }
+    /// <summary>The preset name this plug-in came with from an imported chain (display only; gone once another preset is picked). Absent in older files.</summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public string? PresetName { get; set; }
     public Dictionary<string, string> ArticulationBindings { get; set; } = new();
     /// <summary>Instruments: the measured automatic pitch-match transpose in semitones (null: not measured yet). Applied right before the plug-in.</summary>
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public int? AutoPitchOffset { get; set; }
+    /// <summary>Only in a bare plug-in list (a chain file, a default chain), on its first plug-in: the chain's containers, runs counted from this plug-in (see <see cref="ChainTree.Pack"/>).</summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public List<ChainContainer>? ChainContainers { get; set; }
+    /// <summary>Runtime only: a container this plug-in sits in is bypassed (set by <see cref="ChainTree.Write"/>), never saved.</summary>
+    [System.Text.Json.Serialization.JsonIgnore] public bool GroupBypassed { get; set; }
+    /// <summary>What the engine plays: the plug-in's own switch, unless a container around it is bypassed.</summary>
+    [System.Text.Json.Serialization.JsonIgnore] public bool Plays => Enabled && !GroupBypassed;
     /// <summary>Runtime only: the engine cannot play this plug-in (not loaded, quarantined, untrusted or missing); set by the audio client, never saved.</summary>
     [System.Text.Json.Serialization.JsonIgnore] public bool Unavailable { get; set; }
 }

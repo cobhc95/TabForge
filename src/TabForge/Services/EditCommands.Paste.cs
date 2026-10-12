@@ -434,7 +434,7 @@ public static partial class EditCommands
             cells.RemoveRange(first, stop - first);
             while (cells.Count < slots) cells.Add(new TabCell());
             // Only rests left (the fill's, which moved up): the bar is empty, as GP5's, so a later paste gets no leading rests (s004869).
-            if (cells.Any(c => c.IsRest)) BarFill.ResetEmptyVoice(cells, MusicTime.BarSlots(p, bar), wholeRest: voice == 0);
+            TidyAfterRemoval(cells, MusicTime.BarSlots(p, bar), wholeRest: voice == 0);
             changed = true;
         }
         return changed;

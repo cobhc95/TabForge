@@ -64,6 +64,8 @@ public sealed class PluginSettings
     public int BufferSize { get; set; } = 256;
     /// <summary>Folders the user added (browsed to) that hold plug-ins.</summary>
     public List<string> Folders { get; set; } = new();
+    /// <summary>Plug-ins installed under Program Files (where only an administrator can write) load without asking; off: every plug-in needs a scan or an approval first.</summary>
+    public bool AllowInstalledPlugins { get; set; } = true;
     /// <summary>Also scan the standard VST folders (off: only the folders above, as in Equalizer APO).</summary>
     public bool ScanStandardFolders { get; set; }
     /// <summary>The "common folders" the Add plug-in window's "Scan common folders" (and the standard-folders option) scan; may use %ENV% variables. Empty = the built-in list (<see cref="TabForge.Plugins.VstScannerService.DefaultCommonFolders"/>).</summary>
@@ -87,6 +89,8 @@ public sealed class PluginSettings
     public List<PluginFingerprint> TrustRecords { get; set; } = new();
     /// <summary>Show the plug-in's window inside the FX chain window (on) or floating on its own.</summary>
     public bool DockPluginWindows { get; set; } = true;
+    /// <summary>Width of the plug-in list in the FX chain window (the divider beside it is dragged).</summary>
+    public double FxListWidth { get; set; } = 290;
     /// <summary>Floating plug-in windows stay above other windows.</summary>
     public bool PluginWindowsOnTop { get; set; }
     /// <summary>Default FX chains per instrument type, applied to tracks of that type ("Auto-load for this instrument").</summary>

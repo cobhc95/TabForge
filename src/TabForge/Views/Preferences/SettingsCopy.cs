@@ -41,6 +41,7 @@ internal static class SettingsCopy
         to.HiddenInputs = InputsShownDialog.Copy(from.HiddenInputs);
         to.UseAllInputs = from.UseAllInputs;
         to.ProtectFromPops = from.ProtectFromPops;
+        to.AllowInstalledPlugins = from.AllowInstalledPlugins;
         to.AsioOutputChannel = from.AsioOutputChannel;
         to.AsioOutputLastChannel = from.AsioOutputLastChannel;
         to.Folders = new List<string>(from.Folders);
@@ -49,6 +50,7 @@ internal static class SettingsCopy
         to.RememberScan = from.RememberScan;
         to.DockPluginWindows = from.DockPluginWindows;
         to.PluginWindowsOnTop = from.PluginWindowsOnTop;
+        to.FxListWidth = from.FxListWidth;
         to.SeparateProcessPerPlugin = from.SeparateProcessPerPlugin;
         to.LiveInput = from.LiveInput;
     }

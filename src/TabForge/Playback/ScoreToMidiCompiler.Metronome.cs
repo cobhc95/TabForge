@@ -61,7 +61,7 @@ internal sealed partial class ScoreToMidiCompiler
         _timeline.ChannelSetup.Add(e);
     }
 
-    private double CountInMs(int firstBar)
+    private double CountInMs(int firstBar, double atMs)
     {
         var barMs = MusicTime.BarMs(_project, firstBar, _speedScale);
         var num = MusicTime.BarOf(_project, firstBar)?.TimeSigNum ?? _project.TimeSignatureNumerator;
@@ -69,7 +69,7 @@ internal sealed partial class ScoreToMidiCompiler
         for (var b = 0; b < num; b++)
             for (var tick = 0; tick < MetronomeTicksPerBeat; tick++)
                 if (ShouldCompileMetronomeTick(tick))
-                    Click(b * beatMs + beatMs * tick / MetronomeTicksPerBeat, b == 0 && tick == 0, tick, isCountIn: true);
+                    Click(atMs + b * beatMs + beatMs * tick / MetronomeTicksPerBeat, b == 0 && tick == 0, tick, isCountIn: true);
         return barMs;
     }
 

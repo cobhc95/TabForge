@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.IO;
 using System.Text.Json.Nodes;
 using System.Windows;
@@ -45,8 +44,10 @@ public sealed class MidiProcessingWindow : Window
     private bool _learning;
     private Action<int>? _learnSink;
     private Border? _noteEditor;
-    private readonly ComboBox _presets = new() { Width = 230, ToolTip = "Load a preset: replaces this plug-in's whole processor list (Undo works in the FX window)" };
+    private NoteMaps.NoteMapPane? _mapPane;
+    private readonly ComboBox _presets = UiIds.Id(new ComboBox { Width = 230, ToolTip = "Load a preset: replaces this plug-in's whole processor list (Undo works in the FX window). Rename, duplicate, delete or drag your own presets in the open list" }, "Midi.Presets");
     private readonly Button _savePreset = new() { Content = "Save preset…", Padding = new Thickness(10, 3, 10, 3), Margin = new Thickness(6, 0, 0, 0), ToolTip = "Save the whole processor list as a preset" };
+    private readonly Presets.MidiProcessorPresetBar _processorPresets;
     private readonly Button _deletePreset = new() { Content = "Delete", Padding = new Thickness(10, 3, 10, 3), Margin = new Thickness(6, 0, 0, 0), IsEnabled = false, ToolTip = "Delete the selected saved preset" };
     private readonly TextBox _log = new() { IsReadOnly = true, FontFamily = new System.Windows.Media.FontFamily("Consolas"), FontSize = 11, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, Height = 150 };
     private readonly StackPanel _logPanel = new() { Visibility = Visibility.Collapsed };
@@ -110,6 +111,7 @@ public sealed class MidiProcessingWindow : Window
         var detail = new StackPanel();
         detail.Children.Add(_title);
         detail.Children.Add(_description);
+        detail.Children.Add((_processorPresets = new(this, AskName, (proc, json) => { _edit(() => proc.Params = json); ShowSelected(); })).Root);
         detail.Children.Add(_params);
         right.Children.Add(new ScrollViewer { Content = detail, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Padding = new Thickness(0, 0, 8, 0) });
         grid.Children.Add(right);
@@ -121,10 +123,12 @@ public sealed class MidiProcessingWindow : Window
         var root = new DockPanel();
         root.Children.Add(top); root.Children.Add(grid);
         Content = root;
+        _presetRows = Presets.PresetRows.Attach(_presets, Presets.PresetKind.MidiChain, () => _presetStore, o => o is ComboBoxItem { Tag: string file } ? System.IO.Path.GetFileNameWithoutExtension(file) : null);
         RefreshPresets(null);
         _presets.SelectionChanged += (_, _) => OnPresetPicked();
         _savePreset.Click += (_, _) => SavePreset();
         _deletePreset.Click += (_, _) => DeletePreset();
+        _presetStore.Changed += () => RefreshPresets(null);
 
         _description.SetResourceReference(TextBlock.ForegroundProperty, "MutedBrush");
         _log.SetResourceReference(BackgroundProperty, "PanelBrush");
@@ -183,7 +187,7 @@ public sealed class MidiProcessingWindow : Window
     }
     internal void CaptureSelect(int index) { if (index >= 0 && index < _list.Items.Count) _list.SelectedIndex = index; }
     internal void CaptureSearch(string text) => _search.Text = text;
-    internal void CaptureParam(string key, double value)
+    internal void CaptureParam(string key, JsonNode value)
     {
         if (Selected is not { } proc || MidiProcessorCatalog.Find(proc.Type) is not { } info) throw new InvalidOperationException("no processor selected");
         var values = MidiProcessorCatalog.ParseParams(proc, info);
@@ -333,8 +337,8 @@ public sealed class MidiProcessingWindow : Window
         var index = _list.SelectedIndex;
         _up.IsEnabled = selected is not null && index > 0;
         _down.IsEnabled = selected is not null && index < Procs.Count - 1;
-        _remove.IsEnabled = selected is not null;
-        _params.Children.Clear(); _elems.Clear(); _advanced = null; _noteEditor = null;
+        _remove.IsEnabled = selected is not null; _processorPresets.Show(selected);
+        _params.Children.Clear(); _elems.Clear(); _advanced = null; _noteEditor = null; _mapPane = null;
         if (_learning) { _learning = false; _learnSink = null; }
         if (selected is null || MidiProcessorCatalog.Find(selected.Type) is not { } info)
         {
@@ -349,6 +353,7 @@ public sealed class MidiProcessingWindow : Window
         _title.Text = info.Name;
         _description.Text = info.Description;
         var values = MidiProcessorCatalog.ParseParams(selected, info);
+        if (info.Type == "noteMap") _mapPane = new(this, values, (key, name) => _edit(() => { values[key] = name; Store(selected, values); }));
         foreach (var group in new[] { "Applies to", "Main", "Advanced" })
         {
             var ps = info.Params.Where(p => p.Group == group).ToList();
@@ -374,7 +379,6 @@ public sealed class MidiProcessingWindow : Window
                 _params.Children.Add(wrap);
             }
         }
-        if (info.Type == "noteMap") _params.Children.Add(MapButtons());
         ApplyFilter();
         UpdateWatch();
         if (_jumpKey is { } key) { _jumpKey = null; Highlight(key); }
@@ -416,7 +420,7 @@ public sealed class MidiProcessingWindow : Window
     }
 
     // ---------- parameters ----------
-    private void Store(PluginMidiProcessor proc, JsonObject values) => proc.Params = values.ToJsonString();
+    private void Store(PluginMidiProcessor proc, JsonObject values) { proc.Params = values.ToJsonString(); _mapPane?.Refresh(); }
 
     private FrameworkElement BuildParam(PluginMidiProcessor proc, MidiProcessorInfo info, JsonObject values, MidiParamInfo p)
     {
@@ -428,6 +432,7 @@ public sealed class MidiProcessingWindow : Window
             item.Children.Add(box);
             return item;
         }
+        if (p.Kind == MidiParamKind.MapPreset && _mapPane is { } maps) return maps.Row(p);   // the two drum map rows: Views/NoteMaps
         var label = new TextBlock { Text = p.Label, Width = 140, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis, ToolTip = p.Tip.Length > 0 ? p.Tip : p.Label };
         label.SetResourceReference(TextBlock.ForegroundProperty, "MutedBrush");
         item.Children.Add(label);
@@ -442,6 +447,7 @@ public sealed class MidiProcessingWindow : Window
                     Format = v => p.Format(v / scale), ToolTip = p.Tip.Length > 0 ? p.Tip : p.Label,
                 };
                 var text = new TextBlock { Width = 90, Margin = new Thickness(8, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
+                knob.TypeOnDoubleClick(text);
                 knob.Value = Math.Round(values[p.Key]!.GetValue<double>() * scale);
                 text.Text = p.Format(knob.Value / scale);
                 knob.EditStarted += (_, _) => { _dragging = true; _host.BeginChainEdit(); };
@@ -478,21 +484,6 @@ public sealed class MidiProcessingWindow : Window
                     if (combo.SelectedItem is not ComboBoxItem { Tag: int value }) return;
                     if (p.Key == "NoteMode" && _noteEditor is not null) _noteEditor.Visibility = value == 0 ? Visibility.Collapsed : Visibility.Visible;
                     _edit(() => { values[p.Key] = value; Store(proc, values); });
-                };
-                item.Children.Add(combo);
-                break;
-            }
-            case MidiParamKind.MapPreset:
-            {
-                var combo = new ComboBox { Width = 200, ToolTip = p.Tip.Length > 0 ? p.Tip : null };
-                var current = values[p.Key]!.GetValue<string>();
-                combo.Items.Add(new ComboBoxItem { Content = "(none: notes unchanged)", Tag = DrumMapLibrary.None });
-                foreach (var map in DrumMapLibrary.All()) combo.Items.Add(new ComboBoxItem { Content = map.IsUser ? $"★ {map.Name}" : map.Name, Tag = map.Name });
-                combo.SelectedItem = combo.Items.Cast<ComboBoxItem>().FirstOrDefault(i => (string?)i.Tag == (DrumMapLibrary.Find(current)?.Name ?? current)) ?? combo.Items[0];
-                combo.SelectionChanged += (_, _) =>
-                {
-                    if (combo.SelectedItem is not ComboBoxItem { Tag: string name }) return;
-                    _edit(() => { values[p.Key] = name; Store(proc, values); });
                 };
                 item.Children.Add(combo);
                 break;
@@ -568,25 +559,6 @@ public sealed class MidiProcessingWindow : Window
         return item;
     }
 
-    private FrameworkElement MapButtons()
-    {
-        var panel = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 8, 0, 0), Width = 640 };
-        var open = new Button { Content = "Open my drum maps folder", Padding = new Thickness(10, 3, 10, 3), Margin = new Thickness(0, 0, 8, 0), ToolTip = "Save your own maps here as .json files (same format as the shipped ones), then press Reload maps" };
-        open.Click += (_, _) =>
-        {
-            try { Directory.CreateDirectory(DrumMapLibrary.UserFolder); Process.Start(new ProcessStartInfo(DrumMapLibrary.UserFolder) { UseShellExecute = true }); }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.ComponentModel.Win32Exception) { Services.Trace.Error(Services.Trace.Ui, "MIDI processing: open presets folder: " + ex.Message); }
-        };
-        var reload = new Button { Content = "Reload maps", Padding = new Thickness(10, 3, 10, 3), ToolTip = "Read the drum map files again" };
-        reload.Click += (_, _) => { DrumMapLibrary.Reload(); ShowSelected(); };
-        panel.Children.Add(open); panel.Children.Add(reload);
-        var note = new TextBlock { Text = "Maps marked (unverified) come from memory of vendor documentation; check them against the vendor's MIDI map.", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(12, 0, 0, 0), Width = 280, FontSize = 11 };
-        note.SetResourceReference(TextBlock.ForegroundProperty, "MutedBrush");
-        panel.Children.Add(note);
-        return panel;
-    }
-
-
     // ---------- note labels ----------
     private string NoteLabel(int n)
     {
@@ -604,19 +576,11 @@ public sealed class MidiProcessingWindow : Window
         return TabForge.Audio.Contracts.SafeFileNames.SafeFileName(name, "preset", 64);
     }
 
-    private static List<(string Name, string File)> UserPresets()
-    {
-        var list = new List<(string, string)>();
-        try
-        {
-            if (Directory.Exists(PresetFolder))
-                foreach (var file in Directory.EnumerateFiles(PresetFolder, "*.json").Take(200)) list.Add((System.IO.Path.GetFileNameWithoutExtension(file), file));
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { Services.Trace.Error(Services.Trace.Ui, "MIDI processing: list presets: " + ex.Message); }
-        return list.OrderBy(p => p.Item1, StringComparer.OrdinalIgnoreCase).ToList();
-    }
+    private readonly PresetFolderStore _presetStore = PresetFolderStore.MidiChains();
+    private List<(string Name, string File)> UserPresets() => _presetStore.Names().Select(n => (n, _presetStore.PathOf(n))).ToList();
 
     private bool _presetBusy;
+    private readonly Presets.PresetRows _presetRows;
 
     private void RefreshPresets(string? select)
     {
@@ -626,8 +590,9 @@ public sealed class MidiProcessingWindow : Window
             _presets.Items.Clear();
             _presets.Items.Add(new ComboBoxItem { Content = PresetHint, Tag = null });
             foreach (var (name, build) in MidiProcessorCatalog.BuiltInPresets) _presets.Items.Add(new ComboBoxItem { Content = name, Tag = build });
-            foreach (var (name, file) in UserPresets()) _presets.Items.Add(new ComboBoxItem { Content = $"★ {name}", Tag = file });
-            _presets.SelectedItem = _presets.Items.Cast<ComboBoxItem>().FirstOrDefault(i => select is not null && i.Tag as string == select) ?? _presets.Items[0];
+            foreach (var (name, file) in UserPresets()) _presets.Items.Add(_presetRows.Item($"★ {name}", file));
+            _presetRows.AddManage(_presets.Items);
+            _presets.SelectedItem = _presets.Items.OfType<ComboBoxItem>().FirstOrDefault(i => select is not null && i.Tag as string == select) ?? _presets.Items[0];
             _deletePreset.IsEnabled = _presets.SelectedItem is ComboBoxItem { Tag: string };
         }
         finally { _presetBusy = false; }

@@ -402,6 +402,7 @@ public static class ProjectValidator
         RequireText(rig.ArticulationMap, InputLimits.MaxTitleLength, "articulation map");
         var plugins = rig.Plugins ?? throw Invalid("A track has no valid plug-in list.");
         if (plugins.Count > InputLimits.MaxPluginsPerTrack) throw Invalid("A track contains too many plug-in entries.");
+        if (plugins.All(p => p is not null)) TabForge.Plugins.ChainTree.Refresh(rig);   // containers that do not fit the plug-in list are dropped: the flat chain is the chain
         foreach (var plugin in plugins)
         {
             if (plugin is null || !Enum.IsDefined(plugin.Type)) throw Invalid("The project contains an invalid plug-in entry.");

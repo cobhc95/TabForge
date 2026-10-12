@@ -86,6 +86,11 @@ public enum EngineCommand : byte
     /// the output clamp: everything heard, live input and plug-ins included) as <see cref="EngineEvent.MasterAudio"/> frames. Off by default; off costs nothing.
     /// </summary>
     SetMasterTap = 41,
+    /// <summary>
+    /// What each loaded plug-in of a chain reports about itself (slot, request id); answered by one <see cref="EngineEvent.PluginInfo"/>
+    /// frame per plug-in. An engine that does not know this command ignores it: no answer means "not available".
+    /// </summary>
+    GetPluginInfo = 42,
     Shutdown = 99,
 }
 
@@ -209,6 +214,11 @@ public enum EngineEvent : byte
     /// was switched on: the audio clock), frame count (int, 1..<see cref="MasterTapLimits.MaxChunkFrames"/>), then count x 2 interleaved float32 (left, right).
     /// </summary>
     MasterAudio = 24,
+    /// <summary>
+    /// One plug-in's own description for a <see cref="EngineCommand.GetPluginInfo"/> request, one frame per plug-in: slot, request id,
+    /// chain index (-1 when the slot has no live chain), chain count, then a <see cref="LoadedPluginInfo"/>.
+    /// </summary>
+    PluginInfo = 25,
 }
 
 /// <summary>Bounds of one <see cref="EngineEvent.MasterAudio"/> chunk.</summary>

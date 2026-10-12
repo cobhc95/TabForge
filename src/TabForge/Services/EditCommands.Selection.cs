@@ -57,4 +57,12 @@ public static partial class EditCommands
         }
         while (cells.Count < slots) cells.Add(new TabCell());
     }
+
+    /// <summary>The tidy pass after beats left a voice (Delete and Cut on a selection): empty cells past the bar's <paramref name="slots"/> go, and a
+    /// voice left with only automatic rests becomes one whole-bar rest (<paramref name="wholeRest"/>) or empty. A rest the user wrote stays.</summary>
+    public static void TidyAfterRemoval(List<TabCell> cells, int slots, bool wholeRest)
+    {
+        while (cells.Count > slots && cells[^1] is { Notes.Count: 0, IsRest: false, HasAnnotation: false }) cells.RemoveAt(cells.Count - 1);
+        if (cells.Any(c => c.IsRest) && !cells.Any(c => c.IsRest && c.WrittenRest)) BarFill.ResetEmptyVoice(cells, slots, wholeRest);
+    }
 }

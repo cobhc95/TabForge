@@ -87,7 +87,7 @@ internal sealed class PlaybackScheduleReuse
         track.Kind, track.MidiChannel, track.MidiProgram, track.MidiOutputDeviceId,
         track.Volume, track.Pan, track.Chorus, track.Reverb, track.Mute, track.Solo,
         track.MidiSound, track.SoundSource,
-        string.Join("/", track.Rig.Plugins.Select(plugin => $"{plugin.Type}:{plugin.Enabled}:{plugin.Unavailable}")));
+        string.Join("/", track.Rig.Plugins.Select(plugin => $"{plugin.Type}:{plugin.Plays}:{plugin.Unavailable}")));
 
     private static string OptionsStamp(PlaybackOptions options) => string.Join("|",
         options.Speed.ToString("R", CultureInfo.InvariantCulture), options.Loop, options.LoopStartBar,

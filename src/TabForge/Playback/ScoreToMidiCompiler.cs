@@ -71,7 +71,7 @@ internal sealed partial class ScoreToMidiCompiler
         _metronomeDevice = _players.FirstOrDefault(t => !t.IsAudio)?.MidiOutputDeviceId ?? -1;   // never an audio track's device
 
         var cursorMs = 0.0;
-        if (_opt.CountIn) cursorMs += CountInMs(order[0]) * Math.Clamp(_opt.CountInBars, 1, 4);
+        if (_opt.CountIn) for (var bar = Math.Clamp(_opt.CountInBars, 1, 4); bar > 0; bar--) cursorMs += CountInMs(order[0], cursorMs);   // every count-in bar clicks
         _timeline.CountInMs = cursorMs;
 
         var firstBarMs = MusicTime.BarMs(_project, order[0], _speedScale);

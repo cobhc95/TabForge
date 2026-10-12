@@ -2,6 +2,61 @@
 
 TabForge is actively developed; please report anything odd on the Issues page.
 
+## 0.7.6
+
+- **Presets**
+  - Preset drop-downs can be organised in place: rename, delete and reorder your own presets in the open list. Every list ends with "Manage presets…".
+  - Preset manager (Tools > Preset manager…) holds the plug-in presets, FX chains, containers, MIDI chains, MIDI processor presets and drum maps in one window, with search, rename, duplicate, reorder and delete.
+  - Select several presets with Ctrl, Shift or Ctrl+A to delete, move or duplicate them together. Deleting asks once for the whole selection; the question can be turned off in the same window and back on in Preferences > General > Confirmations.
+  - Containers have their own presets: save a container with its plug-ins and load it into another. Plug-ins that are not approved are left out and listed.
+  - Each MIDI processor has its own presets; loading one is a single undo step.
+- **FX chain containers**
+  - Group plug-ins in a named container that opens and closes, with its own bypass. Plug-ins in a container run in series.
+  - Drag plug-ins onto a container, between its plug-ins or back out. New container, Put selected in a new container (Ctrl+G), Dissolve container (Ctrl+Shift+G), rename (F2) and delete with its plug-ins.
+  - Containers are saved with the project and with FX chain files. A bypassed container still counts for the track's sound route, automatic GM sound and pitch matching.
+  - A container's mix is kept with the chain but is not applied to the sound yet.
+  - Deleting a container that holds the only instrument switches the GM sound back on.
+- **FX chain list**
+  - Select several plug-ins (Ctrl+click, Shift+click, Ctrl+A, or a box dragged from the empty area), then remove, bypass or drag them together.
+  - Dragged plug-ins follow the pointer, and the drop spot is marked: into a container, in front of it, behind it or between its plug-ins.
+  - A Chains menu lists your saved FX chains and loads one with a click, asking whether to replace the chain or add to its end.
+  - Drag the divider beside the list to resize it (double-click resets); the width is remembered.
+  - Save FX chain, Load FX chain and the other FX chain window commands can be bound in Settings > Shortcuts, in their own group.
+- **FX chain files**
+  - "Save as FX chain for other hosts (.RfxChain)…" in the Chains menu writes each plug-in's settings, bypass and mix, with containers. Anything the file cannot hold is listed after saving.
+  - Loading an .RfxChain file from another host brings in each plug-in's saved settings (VST2 and VST3) and mix, keeps containers with their name, bypass, mix and nesting, and finds plug-ins among those TabForge knows. It offers to scan when some are missing and shows one summary of what was left out.
+  - VST2 plug-ins that keep their settings as plain parameters have them saved with the project and with FX chains.
+- **Drum note map**
+  - A new "Tabs to SD3" map sends the electric snare note (40), which tabs often use for a normal snare hit, to the centre snare (38). It replaces the earlier kit map, which changed nothing; songs that used that map now use this one.
+  - The drum map boxes are drop-downs with a plain summary of the changes (for example "40 Electric Snare → 38"), with Edit map…, New map… and Manage beneath.
+  - Drum map editor: one row per drum with a "Send as" number, changed rows highlighted, "Show only changed" and an Advanced list. Built-in maps are read-only until duplicated; your own can be renamed, duplicated and deleted.
+  - A drum map can hold its own note-to-note table, so a remap no longer needs matching piece names.
+  - The preset "Drums: GM → kit map + humanize" loads the note map with Tabs to SD3, then the humanizer, then velocity at 1.3.
+- **Count-in, metronome and playback**
+  - Metronome and count-in clicks play on their own hidden destination: no track's sound source, FX, mute, solo or volume applies to them. They still pass through the master.
+  - A count-in of two or more bars clicks through every bar; before, only the first bar clicked, leaving a silent bar before the music.
+  - Play after a pause counts in again and continues from where it paused. With a loop on, a start inside the loop counts in and starts there. With count-in on, moving to another place while the song plays counts in there.
+  - A start in the middle of a bar begins exactly on the beat after the last click.
+  - The playback line, the note glow and the timeline playhead move on every screen frame at any playback speed; at slow speeds they used to update less often.
+- **Mixer, live input and sound**
+  - The options at the top of the mixer wrap onto another line in a narrow window instead of being cut off.
+  - A live input row sits under Master, with arm, the live FX chain, pan, volume and mute, the same in every tab and window.
+  - Turning live input on brings back its previous FX chain without asking (the setting can still be Ask or Never).
+  - A track could play much quieter, or with the wrong sound, after another song had used the same mixer slot; the slot now starts clean when its track is unloaded.
+- **Plug-ins**
+  - Plug-ins installed under Program Files load without an approval step ("Load installed plug-ins without asking" in Preferences > Audio & plug-ins, on by default). Plug-ins in other places still need a scan or your approval.
+- **Menus, windows and focus**
+  - Right-click menus, tooltips, drop-down lists, the menu bar menus and submenus open at once, without the slide or fade.
+  - Focus stays in TabForge when a tool window, dialog or pop-up closes, instead of passing to another program.
+- **Score**
+  - Pausing or stopping playback (Space) keeps a selection, so a looped selection stays selected; Esc or a click ends it.
+  - Cut and Delete on the same selected beats leave the same tidy bar: no extra cells after a cut in an overfull bar, and a bar left without notes becomes one whole-bar rest. A rest you typed yourself stays.
+  - The grey hover outline also shows while a song plays, in the score and in the Band view lanes.
+- **View, zoom and typing values**
+  - A new score starts at 100% zoom instead of fit width; fit width is still in the zoom presets.
+  - A double click on the zoom, speed, tempo or time / key button opens the same fine-tune popup as a right click, so a value can be typed; a single click still opens presets.
+  - A double click on the number beside a knob types a value, as a double click on the knob does.
+
 ## 0.7.5
 
 - **Live input**

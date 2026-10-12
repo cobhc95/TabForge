@@ -296,7 +296,7 @@
                                 </Grid>
                             </ToggleButton>
                             <Popup x:Name="PART_Popup" AllowsTransparency="True" Focusable="False" Placement="Bottom"
-                                   IsOpen="{TemplateBinding IsDropDownOpen}" PopupAnimation="Fade">
+                                   IsOpen="{TemplateBinding IsDropDownOpen}" PopupAnimation="None">
                                 <Border Background="{DynamicResource Panel2Brush}" BorderBrush="{DynamicResource BorderSoftBrush}" BorderThickness="1" CornerRadius="5"
                                         MinWidth="{TemplateBinding ActualWidth}" MaxHeight="330" Padding="3">
                                     <ScrollViewer CanContentScroll="True" SnapsToDevicePixels="True" VerticalScrollBarVisibility="Auto"

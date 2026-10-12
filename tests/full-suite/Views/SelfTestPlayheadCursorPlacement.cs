@@ -13,6 +13,7 @@ public static partial class SelfTest
         editor.SetPosition(3, 2, 2, seekPlayback: false);
         var beat = editor.SelectedCell;
         editor.SetPosition(0, 0, 2, seekPlayback: false);
+        editor.ClearSelection();
         editor.Playback.SetPlayhead(3, beat);
         PlayheadCursorPlacement.MoveCursorToPlayhead(editor);
         Check("playhead cursor: lands on the playhead bar", editor.SelectedMeasure == 3, $"bar {editor.SelectedMeasure}");
@@ -21,5 +22,7 @@ public static partial class SelfTest
         editor.Playback.Clear();
         PlayheadCursorPlacement.MoveCursorToPlayhead(editor);
         Check("playhead cursor: no playhead leaves the cursor", editor.SelectedMeasure == 3 && editor.SelectedCell == beat, $"bar {editor.SelectedMeasure}");
+        editor.SelectRange(1, 0, 2, 0); editor.Playback.SetPlayhead(1, 0); PlayheadCursorPlacement.MoveCursorToPlayhead(editor);   // pausing a looped selection
+        Check("playhead cursor: a selection stays when playback pauses", editor.HasSelection);
     }
 }

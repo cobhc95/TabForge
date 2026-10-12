@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Shapes;
@@ -31,8 +32,28 @@ public static class ThemedMessageBox
         return result;
     }
 
-    /// <summary>Builds the box without showing it. <paramref name="answered"/> gets the button's result (or the close-box result).</summary>
-    internal static Window Build(Window? owner, string text, string caption, MessageBoxButton buttons, MessageBoxImage icon, MessageBoxResult defaultResult, Action<MessageBoxResult> answered)
+    /// <summary>
+    /// Shows the box with an unticked check box at the lower left (<paramref name="checkText"/>, Alt+ its underlined letter). Returns the
+    /// button's result and whether the check box was ticked when a button was pressed.
+    /// </summary>
+    public static (MessageBoxResult Result, bool Checked) ShowWithCheckBox(Window? owner, string text, string caption, MessageBoxButton buttons, MessageBoxImage icon, string checkText)
+    {
+        var app = Application.Current;
+        if (app is null || !app.Dispatcher.CheckAccess()) return (Show(owner, text, caption, buttons, icon), false);
+
+        var result = MessageBoxResult.None;
+        var ticked = false;
+        var window = Build(owner, text, caption, buttons, icon, MessageBoxResult.None, answer => result = answer, checkText, check => ticked = check);
+        window.ShowDialog();
+        return (result, ticked);
+    }
+
+    /// <summary>
+    /// Builds the box without showing it. <paramref name="answered"/> gets the button's result (or the close-box result). With
+    /// <paramref name="checkText"/> the box has a check box, and <paramref name="checkAnswered"/> gets its state when a button is pressed.
+    /// </summary>
+    internal static Window Build(Window? owner, string text, string caption, MessageBoxButton buttons, MessageBoxImage icon, MessageBoxResult defaultResult, Action<MessageBoxResult> answered,
+        string? checkText = null, Action<bool>? checkAnswered = null)
     {
         var window = new Window
         {
@@ -62,8 +83,23 @@ public static class ThemedMessageBox
         var content = new StackPanel();
         var message = new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap, FontSize = 13, MaxWidth = 500, Margin = new Thickness(14, 0, 0, 0) };
         message.SetResourceReference(TextBlock.ForegroundProperty, "TextBrush");
+        CheckBox? check = null;
+        UIElement actions = buttonRow;
+        if (checkText is not null)
+        {
+            // The check box sits at the lower left, the buttons at the lower right, both on one row.
+            check = new CheckBox { Content = new AccessText { Text = checkText }, IsChecked = false, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 12, 0) };
+            check.SetResourceReference(Control.ForegroundProperty, "TextBrush");
+            AutomationProperties.SetName(check, checkText.Replace("_", ""));
+            buttonRow.Margin = new Thickness(0);
+            var row = new DockPanel { Margin = new Thickness(0, 18, 0, 0) };
+            DockPanel.SetDock(check, Dock.Left);
+            row.Children.Add(check);
+            row.Children.Add(buttonRow);
+            actions = row;
+        }
         content.Children.Add(message);
-        content.Children.Add(buttonRow);
+        content.Children.Add(actions);
         body.Children.Add(content);
 
         var scroller = new ScrollViewer { Content = body, MaxHeight = 480, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
@@ -75,6 +111,7 @@ public static class ThemedMessageBox
         void Finish(MessageBoxResult r)
         {
             finished = true;
+            checkAnswered?.Invoke(check?.IsChecked == true);
             answered(r);
             window.Close();
         }

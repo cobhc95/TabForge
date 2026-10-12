@@ -15,6 +15,8 @@ namespace TabForge;
 
 public partial class App : Application
 {
+    private Shell.WindowFocusKeeper? _windowFocus;   // kept alive for the app's lifetime (the class handler holds it too)
+
     protected override void OnStartup(StartupEventArgs e)
     {
         ClipboardService.Compose(new Views.WindowsScoreClipboard());   // the one score clipboard of this process; every window and diagnostic run shares it
@@ -87,6 +89,7 @@ public partial class App : Application
         TabForge.Views.SlowTrace.HookInput();
         Views.AccessibleNames.Install();
         Shell.WindowPolish.Register();
+        _windowFocus = Shell.WindowFocusKeeper.Register(new Shell.AppWindowFocusHost());   // focus stays in TabForge when one of its windows closes
         ThemeService.PrepareMutableBrushes();
         // --capture <script.json> <outDir> (documentation screenshots): the window is created off-screen and never activated.
         var captureAt = Array.FindIndex(args, a => a.Equals("--capture", StringComparison.OrdinalIgnoreCase));

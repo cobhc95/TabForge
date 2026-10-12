@@ -28,6 +28,7 @@ public static partial class SelfTest
         // last closed window is pinned by ref-counted UI Automation handles held by an out-of-process UIA client on the desktop.
         Section("Window lifetime (real main windows)");
         GuardGroup("window-lifetime", TestWindowLifetime);
+        GuardGroup("window-lifetime", TestWindowFocusKeeper);   // focus returns to TabForge when one of its windows closes
         GuardGroup("window-lifetime", TestStartupFileOpen);   // a command-line song and a second-launch hand-over open in a fresh window (.gp, .gp5, .tforge)   // repeated close, cancelled close, queued work, tab transfer, Preferences owners, engine chains
         GuardGroup("window-lifetime", TestSingleInstanceProcessHandover);   // Explorer-style hand-over between two real app processes and last-window shutdown
         Section("Document context (media, approvals, close)");
@@ -238,6 +239,10 @@ public static partial class SelfTest
         Guard(TestTrackListFollowsMixerInPlace);
         Guard(TestMixerHost);
         Guard(TestFxChainWindow);
+        Guard(TestFxChainListSelection);
+        Guard(TestFxChainContainerRows);
+        Guard(TestFxChainCommandScope);
+        Guard(TestFxContainerPresets);
         Guard(TestSliderMappingAndGroupValues);
         Guard(TestTrackOrderingModel);
         Guard(TestMixerDragAndDrop);
@@ -279,6 +284,7 @@ public static partial class SelfTest
         Guard(TestBarFill);
         Guard(TestGapRestCloseUp);
         Guard(TestSixteenthBarEntry);
+        Guard(TestCutTidiesLikeDelete);
         Guard(TestShortNoteEntry);
         Guard(TestWritingDuration);
         Guard(TestWorkflow);   // workflow area: a guitarist's editing stories through real keys and tools (--areas workflow)
@@ -417,6 +423,8 @@ public static partial class SelfTest
         Guard(TestRepositionPathsSoundFirstNoteOnce);
         Guard(TestSoundingSetIncludesNoteAtPlayhead);
         Guard(TestCountInIsHeard);
+        Guard(TestCountInClicksUseTheMetronomePath);
+        Guard(TestLoopCountInStartsAtCursor);
         Guard(TestPasteOptionsDialog);
         Guard(TestPasteSettingsRows);
         Guard(TestSettingsStoreSharedAcrossWindows);
@@ -435,6 +443,9 @@ public static partial class SelfTest
         Guard(TestToolsChordFinderAndSongStats);
         Guard(TestMixer);
         Guard(TestMidiProcessors);
+        Guard(TestDrumMapTabsToSd3);
+        Guard(TestDrumMapRemap);
+        Guard(TestDrumMapEditorStore);
         Guard(TestRecordingPipeline);
         Guard(TestAudioInputChannels);
         Guard(TestAudioInputSafety);
@@ -500,6 +511,8 @@ public static partial class SelfTest
         Guard(TestRetirementEpochBarrier);
         Guard(TestMonitorFx);
         Guard(TestLiveInput);
+        Guard(TestLiveInputMixerRow);
+        Guard(TestClickDestination);
         Guard(TestEngineSlotsFollowTrackIdentity);
         Guard(TestEnginePluginEditAndStatesByIdentity);
         Guard(TestEngineSyncDeferredRequests);
@@ -531,6 +544,7 @@ public static partial class SelfTest
         Guard(TestEffectChannel);
         Guard(TestDrumAndMelodicDispatchTogether);
         Guard(TestColdStartSetupSurvivesPanic);
+        Guard(TestSlotReuseDrumLevel);
         Guard(TestChildProcessJob);
         Guard(TestEngineLivenessAndSlowLoad);
         Guard(TestCaptureResampling);
@@ -539,6 +553,12 @@ public static partial class SelfTest
         Guard(TestAudioTrackRouting);
         Guard(TestAudioTrackLiveMidi);
         Guard(TestReaperChainImport);
+        Guard(TestChainContainers);
+        Guard(TestPresetManagePanel);
+        Guard(TestPresetStoresOnDisk);
+        Guard(TestPresetManagerWindow);
+        Guard(TestFxListWidthLimits);
+        Guard(TestRfxChainExport);
         Guard(TestSettingsWithInlinePluginStates);
         Guard(TestDataIntegrityLeftovers);
         Guard(TestAutosaveRecovery);
@@ -602,6 +622,7 @@ public static partial class SelfTest
         Guard(TestTabEditorRenderInvariance);
         Guard(TestScoreCursorBox);
         Guard(TestCursorBoxCentreOnFret);
+        Guard(TestHoverBoxDuringPlayback);
         Guard(TestPlayheadCursorPlacement);
         Guard(TestTabEditorPlaybackAllocation);
         Guard(TestTabEditorLayoutMatrix);
@@ -682,6 +703,10 @@ public static partial class SelfTest
         ["TestTrackListFollowsMixerInPlace"] = "core",
         ["TestMixerHost"] = "core",
         ["TestFxChainWindow"] = "core",
+        ["TestFxChainListSelection"] = "ui",
+        ["TestFxChainContainerRows"] = "ui",
+        ["TestFxChainCommandScope"] = "ui",
+        ["TestFxContainerPresets"] = "ui",
         ["TestTrackListGroupRows"] = "core",
         ["TestTrackOrderingModel"] = "core",
         ["TestTrackReorder"] = "core",
@@ -707,6 +732,7 @@ public static partial class SelfTest
         ["TestClipChurnWhileStreaming"] = "engine",
         ["TestAudioTrackAddDuringPlayback"] = "engine",
         ["TestColdStartSetupSurvivesPanic"] = "engine",
+        ["TestSlotReuseDrumLevel"] = "engine",
         ["TestCommandFrameRobustness"] = "engine",
         ["TestEngineMessagesGolden"] = "engine",
         ["TestEngineMessagesRoundTrip"] = "engine",
@@ -731,6 +757,8 @@ public static partial class SelfTest
         ["TestMixer"] = "engine",
         ["TestMonitorFx"] = "engine",
         ["TestLiveInput"] = "engine",
+        ["TestLiveInputMixerRow"] = "engine",
+        ["TestClickDestination"] = "engine",
         ["TestMuteDimmingIsInstant"] = "engine",
         ["TestMuteHoldsAcrossSeekAndRestart"] = "engine",
         ["TestMuteSoloDoesNotDisturbPlayback"] = "engine",
@@ -783,6 +811,9 @@ public static partial class SelfTest
         ["TestRepeatedOpenCloseReleasesWindows"] = "leaks",
         ["TestRepeatedTearOffAndMergeReleasesWindows"] = "leaks",
         ["TestMidiProcessors"] = "midi",
+        ["TestDrumMapTabsToSd3"] = "midi",
+        ["TestDrumMapRemap"] = "midi",
+        ["TestDrumMapEditorStore"] = "persistence",
         ["TestNoteNames"] = "notation",
         ["TestTransposeAllVoices"] = "notation",
         ["TestAsyncSaveSequencing"] = "persistence",
@@ -812,7 +843,13 @@ public static partial class SelfTest
         ["TestPersistenceSchema"] = "persistence",
         ["TestPluginStateCollection"] = "persistence",
         ["TestProfileLeavesUserFoldersUntouched"] = "persistence",
+        ["TestPresetManagePanel"] = "ui",
+        ["TestPresetStoresOnDisk"] = "persistence",
+        ["TestPresetManagerWindow"] = "ui",
+        ["TestFxListWidthLimits"] = "ui",
         ["TestReaperChainImport"] = "persistence",
+        ["TestChainContainers"] = "persistence",
+        ["TestRfxChainExport"] = "persistence",
         ["TestRecoveryCopyOverTforgeLimit"] = "persistence",
         ["TestSaveTransactions"] = "persistence",
         ["TestScoreClipCapture"] = "persistence",
@@ -824,6 +861,8 @@ public static partial class SelfTest
         ["TestTforgeCompression"] = "persistence",
         ["TestCapoRepitchesNotes"] = "playback",
         ["TestCountInIsHeard"] = "playback",
+        ["TestCountInClicksUseTheMetronomePath"] = "playback",
+        ["TestLoopCountInStartsAtCursor"] = "playback",
         ["TestDelayLineClearKeepsNewMessage"] = "playback",
         ["TestDelayLineDenseStreamIsCheapAndOnTime"] = "playback",
         ["TestFermataPlayback"] = "playback",
@@ -940,6 +979,7 @@ public static partial class SelfTest
         ["TestBarFill"] = "ui",
         ["TestGapRestCloseUp"] = "ui",
         ["TestSixteenthBarEntry"] = "ui",
+        ["TestCutTidiesLikeDelete"] = "workflow",
         ["TestShortNoteEntry"] = "ui",
         ["TestBrowserTabShell"] = "ui",
         ["TestCaptureMainWindowOffscreen"] = "ui",
@@ -1049,6 +1089,7 @@ public static partial class SelfTest
         ["TestTabEditorRenderInvariance"] = "ui",
         ["TestScoreCursorBox"] = "ui",
         ["TestCursorBoxCentreOnFret"] = "ui",
+        ["TestHoverBoxDuringPlayback"] = "ui",
         ["TestPlayheadCursorPlacement"] = "ui",
         ["TestTabUi"] = "ui",
         ["TestPlayingSpeakerTab"] = "ui",
@@ -1111,6 +1152,7 @@ public static partial class SelfTest
         ["TestGp5Batch6RegressionStories"] = "workflow",
         ["TestGp5EntryStories"] = "workflow",
         ["TestWindowLifetime"] = "window-lifetime",
+        ["TestWindowFocusKeeper"] = "window-lifetime",
         ["TestStartupFileOpen"] = "window-lifetime",
         ["TestSingleInstanceProcessHandover"] = "release",
     };

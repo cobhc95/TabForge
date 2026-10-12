@@ -40,6 +40,12 @@ public sealed partial class MixerWindow
     private Button Chevron(string group)
     {
         var collapsed = IsCollapsed(group);
+        return ChevronButton(collapsed, group, collapsed ? "Expand the group (Right arrow)" : "Collapse the group (Left arrow)", () => _host.SetGroupsCollapsed(new[] { group }, null));
+    }
+
+    /// <summary>The collapse arrow of a group-style row: a right triangle when collapsed, a down one when open. Used by groups and by the Master row.</summary>
+    internal static Button ChevronButton(bool collapsed, string name, string tip, Action toggle)
+    {
         var path = new System.Windows.Shapes.Path
         {
             Data = Geometry.Parse(collapsed ? "M0,0 L5,4 L0,8 Z" : "M0,0 L8,0 L4,5 Z"), Stretch = Stretch.Uniform,
@@ -50,10 +56,10 @@ public sealed partial class MixerWindow
         {
             Width = 18, Height = 18, Padding = new Thickness(0), Margin = new Thickness(0, 0, 4, 0), VerticalAlignment = VerticalAlignment.Top, Focusable = false,
             Background = Brushes.Transparent, BorderThickness = new Thickness(0), Content = path,
-            ToolTip = collapsed ? "Expand the group (Right arrow)" : "Collapse the group (Left arrow)"
+            ToolTip = tip
         };
-        System.Windows.Automation.AutomationProperties.SetName(button, (collapsed ? "Expand " : "Collapse ") + group);
-        button.Click += (_, _) => _host.SetGroupsCollapsed(new[] { group }, null);
+        System.Windows.Automation.AutomationProperties.SetName(button, (collapsed ? "Expand " : "Collapse ") + name);
+        button.Click += (_, _) => toggle();
         return button;
     }
 

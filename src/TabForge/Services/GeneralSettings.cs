@@ -32,6 +32,8 @@ public sealed class GeneralSettings
     public bool ConfirmOnClose { get; set; } = true;
     /// <summary>Warn before discarding staged changes in the Preferences window.</summary>
     public bool ConfirmDiscardSettingsChanges { get; set; } = true;
+    /// <summary>Ask before deleting a preset. Ticking "Don't ask again when deleting presets" in that question turns it off.</summary>
+    public bool ConfirmDeletePresets { get; set; } = true;
     /// <summary>Ask before removing all musical content in a section.</summary>
     public bool ConfirmDeleteSection { get; set; } = true;
     /// <summary>Keep the playhead in view while playing.</summary>

@@ -1,4 +1,4 @@
-# main menu: 189 items, 21 separators; regenerate with TABFORGE_RECORD_MENU_GOLDEN=1
+# main menu: 190 items, 21 separators; regenerate with TABFORGE_RECORD_MENU_GOLDEN=1
 _File | name= | id= | tag= | gesture= | checkable=no | icon=no | enabled=
   _New | name= | id=File.New | tag= | gesture=Ctrl+N | checkable=no | icon=no | enabled=
   New from t_emplate… | name= | id=File.NewFromTemplate | tag= | gesture= | checkable=no | icon=no | enabled=
@@ -140,6 +140,7 @@ _Tools | name= | id= | tag= | gesture= | checkable=no | icon=no | enabled=
   Chord finder… | name= | id=Tools.ChordFinder | tag= | gesture= | checkable=no | icon=no | enabled=
   Song stats… | name= | id=Tools.SongStats | tag= | gesture= | checkable=no | icon=no | enabled=
   Tuner… | name= | id=Tools.Tuner | tag= | gesture= | checkable=no | icon=no | enabled=
+  Preset manager… | name= | id=Tools.PresetManager | tag= | gesture= | checkable=no | icon=no | enabled=
   ---
   Metronome | name=MetronomeMenu | id=Transport.Metronome | tag= | gesture= | checkable=yes | icon=no | enabled=
   Count-in | name=CountInMenu | id=Transport.CountIn | tag= | gesture= | checkable=yes | icon=no | enabled=

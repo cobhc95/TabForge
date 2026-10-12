@@ -214,8 +214,8 @@ public static partial class SelfTest
             var openEngine = LiveInputFakeEngine();
             var openHost = new LiveInputTestHost(openEngine, opened, DocumentSession.Blank()) { Answer = (true, false) };
             using (var session = new LiveInputController(openHost)) session.OpenFx();
-            Check("live input: opening the chain while off asks the restore question first, so an edit cannot overwrite the previous chain unasked",
-                openHost.Asked == 1 && openEngine.LiveInput.Track.Rig.Plugins.Count == 1 && !openEngine.LiveInput.IsOn && openHost.FxShown == 1, $"asked {openHost.Asked}, plug-ins {openEngine.LiveInput.Track.Rig.Plugins.Count}");
+            Check("live input: opening the chain while off restores the previous chain first (the default: without asking), so an edit cannot overwrite it",
+                openHost.Asked == 0 && openEngine.LiveInput.Track.Rig.Plugins.Count == 1 && !openEngine.LiveInput.IsOn && openHost.FxShown == 1, $"asked {openHost.Asked}, plug-ins {openEngine.LiveInput.Track.Rig.Plugins.Count}");
             openEngine.Stop();
             var gone = LiveInputArmedThenClosed(client, settings);
             GC.Collect(); GC.WaitForPendingFinalizers(); GC.Collect();
@@ -253,9 +253,9 @@ public static partial class SelfTest
 
             TestLiveInputMidi();
 
-            Check("live input: the command is in the catalogue without a default key, and the Preferences row defaults to Ask",
+            Check("live input: the command is in the catalogue without a default key, and the Preferences row defaults to Always",
                 HotkeyCatalog.All.Any(c => c.Id == LiveInputFeatureModule.CommandId) && !HotkeyCatalog.BuildMap(new AppSettings().Hotkeys).Values.Contains(LiveInputFeatureModule.CommandId)
-                && SettingsCatalog.LiveInputRows(new AppSettings()).Count == 1 && new LiveInputSettings().Restore == LiveInputSettings.RestoreAsk);
+                && SettingsCatalog.LiveInputRows(new AppSettings()).Count == 1 && new LiveInputSettings().Restore == LiveInputSettings.RestoreAlways);
         }
         finally { client.SentForTest = null; client.Stop(); }
     }
@@ -354,5 +354,60 @@ public static partial class SelfTest
             Check("live input MIDI: the reset asks for the stand-in's slot when it is sent (nothing to a slot the stand-in has left)", gone && written.Count == 0, $"{gone} {written.Count}");
         }
         finally { engine.WrittenForTest = null; engine.LiveInput.Midi?.Stop(); engine.Stop(); }
+    }
+
+    /// <summary>The mixer's live input row: volume, pan and mute reach the stand-in and the engine mix, its arm is the toolbar's command, and the values are saved and reset.</summary>
+    private static void TestLiveInputMixerRow()
+    {
+        Section("Live input mixer row");
+        var client = LiveInputFakeEngine();
+        LiveInputController? controller = null, fresh = null;
+        try
+        {
+            var settings = new PluginSettings { PlayAllThroughEngine = false };
+            var host = new LiveInputTestHost(client, settings, DocumentSession.Blank());
+            client.LiveInput.Midi = new LiveInputMidi(client, client.LiveInput.Track, new MidiInputHub(new FakeMidiDeviceSet()));   // no real device
+            controller = new LiveInputController(host);
+            var button = new LiveInputButton();
+            button.Attach(controller);
+            var row = new LiveInputMixerRow(controller, () => { });
+            var track = client.LiveInput.Track;
+
+            controller.SetLevel(60, 80);
+            Check("live input row: volume and pan reach the stand-in track", track.Volume == 60 && track.Pan == 80);
+            client.LiveInput.SetMaster(100, 0);
+            Check("live input row: the engine mix is its volume and pan at master 100", client.LiveInput.Mix == (60, 80));
+            client.LiveInput.SetMaster(50, 0);
+            Check("live input row: master 50 halves its volume in the engine mix", client.LiveInput.Mix.Volume == 30);
+            client.LiveInput.SetMaster(100, 10);
+            Check("live input row: the master pan offsets its pan in the engine mix", client.LiveInput.Mix.Pan == 90);
+            client.LiveInput.SetMaster(100, 0);
+
+            controller.Toggle();   // the toolbar button's command
+            Check("live input row: on, and the row's arm and the toolbar button agree", controller.IsOn && button.IsLit);
+            row.Press();   // the row's microphone is the same command
+            Check("live input row: its arm turns live input off and the button follows", !controller.IsOn && !button.IsLit);
+            row.Press();
+            row.Refresh();
+            Check("live input row: on again, with its input line and arm state", controller.IsOn && row.ShowsOn && row.StatusText.Length > 0 && row.StatusText != "off");
+
+            controller.SetMuted(true);
+            Check("live input row: mute sends volume 0 and keeps the fader and on", client.LiveInput.Mix.Volume == 0 && track.Volume == 60 && controller.IsOn);
+            controller.SetMuted(false);
+            Check("live input row: unmute restores the volume", client.LiveInput.Mix.Volume == 60);
+
+            Check("live input row: the values are saved in the app settings", settings.LiveInput.Volume == 60 && settings.LiveInput.Pan == 80);
+            controller.Dispose();
+            controller = null;
+            track.Volume = 127; track.Pan = 0;   // a stale value left in the session
+            fresh = new LiveInputController(new LiveInputTestHost(client, settings, DocumentSession.Blank()));
+            Check("live input row: the saved volume and pan come back when a window opens", track.Volume == 60 && track.Pan == 80);
+            fresh.MixerCollapsed = true;
+            Check("live input row: collapsing Master is saved with the app settings", settings.LiveInput.MixerCollapsed);
+            fresh.Dispose();
+            fresh = new LiveInputController(new LiveInputTestHost(client, new PluginSettings { PlayAllThroughEngine = false }, DocumentSession.Blank()));
+            Check("live input row: Reset all (default settings) puts the default volume and centre pan back", track.Volume == 100 && track.Pan == 64);
+        }
+        finally { controller?.Dispose(); fresh?.Dispose(); client.Stop(); }
     }
 }

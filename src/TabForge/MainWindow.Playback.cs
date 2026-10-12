@@ -57,7 +57,7 @@ public partial class MainWindow
         else StopPlayback();
         move();
         ScrollToCursor();
-        if (wasPlaying) StartPlayback();
+        if (wasPlaying) StartPlayback();   // with count-in on, a jump to another place counts in there
     }
 
     private void PlayFromStart()
@@ -86,6 +86,7 @@ public partial class MainWindow
         }
         if (_midi.IsPlaying && _midi.IsPaused)
         {
+            if (_playheadBar >= 0 && _transport.CountsInFrom(_playheadBar)) { _midi.Stop(); Editor.Playback.Paused = false; _transport.ResumeFrom = (_playheadBar, _playheadCell); StartPlayback(); return; }   // count-in on: Play after a pause counts in, then goes on from where it paused
             _midi.Resume();
             _follow.Resume();
             Arrangement.SetPlayhead(Math.Max(0, _playheadBar), _playheadFraction, playbackActive: true);
@@ -162,7 +163,7 @@ public partial class MainWindow
         RefreshInstrument();
         RefreshToolsPalette();
         if (!_restoring && _midi.IsPlaying && Editor.SelectionShouldSeekPlayback)
-            _midi.Seek(_project, Editor.SelectedMeasure, Editor.SelectedCell);
+            if (!_midi.IsPaused && _transport.CountsInFrom(Editor.SelectedMeasure)) { _midi.Stop(); StartPlayback(); } else _midi.Seek(_project, Editor.SelectedMeasure, Editor.SelectedCell);   // count-in on: moving to another place while it plays counts in there
     }
 
     /// <summary>Applies the newest playback position (the controller's tick body).</summary>

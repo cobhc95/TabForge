@@ -71,7 +71,6 @@ public partial class MainWindow
         if (sourcePath is not null) doc.Media.SetSourceDirectory(System.IO.Path.GetDirectoryName(sourcePath));   // an imported song has no native path yet: its relative media resolves here
         doc.Notation = PreferredNotation;
         ApplyPreferredScoreView(doc);
-        if (replaceAll) doc.ZoomFactor = 0;
         doc.MarkClean();
         if (clearHistory) doc.Undo.Clear();
         // Where the song goes (replace the target, open beside, replace everything) is DocumentPlacement's decision; the window only reacts to it.

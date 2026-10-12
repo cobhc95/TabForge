@@ -15,6 +15,8 @@ public static class FeatureRegistry
         new KeyboardMode.KeyboardModePopoutFeatureModule(),
         new CompactMode.CompactModeFeatureModule(),
         new LiveInput.LiveInputFeatureModule(),
+        new PresetManagement.PresetsFeatureModule(),
+        new FxChainFeatureModule(),
     };
 
     /// <summary>Inserts every module hotkey after its anchor row.</summary>

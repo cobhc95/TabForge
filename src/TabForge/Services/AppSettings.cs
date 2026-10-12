@@ -32,7 +32,7 @@ public sealed class AppSettings
     public int FretboardFrets { get; set; } = 24;
     public string? Notation { get; set; } = "TabAndStaff";
     public bool NotationPreferenceSet { get; set; }
-    public double ZoomFactor { get; set; }
+    public double ZoomFactor { get; set; } = 1.0;   // 1 = 100%; 0 = fit width
     public bool Metronome { get; set; }
     public bool CountIn { get; set; }
     public double Speed { get; set; } = 1.0;

@@ -60,6 +60,8 @@ public sealed partial class PlaybackEngine : IDisposable
     private double _anchorMs;          // musical ms at the last clock restart
     private double _currentStreamMs;
     private double _startMs;
+    /// <summary>A count-in plays before a start inside a loop: the scheduler plays it on its own thread, then starts at <see cref="_startMs"/>.</summary>
+    private bool _countInBeforeStart;
     private Action<PlaybackPosition>? _onPosition;
     private Action? _onFinished;
     private int _generation;
@@ -233,8 +235,13 @@ public sealed partial class PlaybackEngine : IDisposable
         }
 
         _timer.Set(!startPaused);   // RT-10: held while playing only
-        _startMs =options.CountIn ? 0 : timeline.PlayFromMs;
-        if (loopCompileStart >= 0 && !options.CountIn &&
+        // A start inside a loop is compiled from the loop start: its count-in plays first, then playback begins at the requested bar and cell.
+        // A start inside a bar would leave the bar's skipped part as silence after the compiled count-in, so there too the count-in is played first
+        // and the clock then begins exactly at the start position.
+        var midBar = options.CountIn && timeline.PlayFromMs > timeline.CountInMs + 0.5;
+        _startMs = options.CountIn && loopCompileStart < 0 && !midBar ? 0 : timeline.PlayFromMs;
+        _countInBeforeStart = options.CountIn && (loopCompileStart >= 0 || midBar);
+        if (loopCompileStart >= 0 &&
             timeline.Bars.FirstOrDefault(b => b.Bar == options.StartBar) is { } playBar)
         {
             var slots = Math.Max(1, MusicTime.BarSlots(project, options.StartBar));

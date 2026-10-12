@@ -589,7 +589,7 @@
                             </Border>
                         </StackPanel>
                         <Popup x:Name="MetronomeSettingsPopup" PlacementTarget="{Binding ElementName=MetronomeButton}"
-                               Placement="Bottom" StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade">
+                               Placement="Bottom" StaysOpen="False" AllowsTransparency="True" PopupAnimation="None">
                             <Border LayoutTransform="{DynamicResource UiScaleTransform}" Width="276" Padding="12" Background="{DynamicResource Panel2Brush}"
                                     BorderBrush="{DynamicResource BorderSoftBrush}" BorderThickness="1" CornerRadius="8">
                                 <Border.Effect>
@@ -642,7 +642,7 @@
                             </Border>
                         </Popup>
                         <Popup x:Name="CountInSettingsPopup" PlacementTarget="{Binding ElementName=CountInButton}"
-                               Placement="Bottom" StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade">
+                               Placement="Bottom" StaysOpen="False" AllowsTransparency="True" PopupAnimation="None">
                             <Border LayoutTransform="{DynamicResource UiScaleTransform}" Width="250" Padding="12" Background="{DynamicResource Panel2Brush}"
                                     BorderBrush="{DynamicResource BorderSoftBrush}" BorderThickness="1" CornerRadius="8">
                                 <Border.Effect>
@@ -680,7 +680,7 @@
                             </Border>
                         </Popup>
                         <Popup x:Name="LoopSettingsPopup" PlacementTarget="{Binding ElementName=LoopButton}"
-                               Placement="Bottom" StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade">
+                               Placement="Bottom" StaysOpen="False" AllowsTransparency="True" PopupAnimation="None">
                             <Border LayoutTransform="{DynamicResource UiScaleTransform}" Width="276" Padding="12" Background="{DynamicResource Panel2Brush}"
                                     BorderBrush="{DynamicResource BorderSoftBrush}" BorderThickness="1" CornerRadius="8">
                                 <Border.Effect>

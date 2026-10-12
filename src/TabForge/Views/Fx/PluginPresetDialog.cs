@@ -51,7 +51,7 @@ internal static class PluginPresetDialog
         {
             var typed = box.Text.Trim();
             var hit = names.FirstOrDefault(n => string.Equals(n, typed, StringComparison.OrdinalIgnoreCase));
-            if (hit is null || TabForge.Views.ThemedMessageBox.Show(dialog, $"Delete preset \"{hit}\"?", "Save preset", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+            if (hit is null || !TabForge.Views.Presets.PresetDeleteQuestion.Confirm(new[] { hit }, text => TabForge.Views.Presets.PresetDeleteQuestion.Ask(dialog, text, "Save preset"))) return;
             PluginLibrary.DeletePreset(slot, hit);
             Reload();
         };

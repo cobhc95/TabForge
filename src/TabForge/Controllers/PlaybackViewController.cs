@@ -159,10 +159,13 @@ internal sealed class PlaybackViewController : IDisposable
             Finish(playback);
             return;
         }
-        if (!playback.TryTakePendingPosition(out var position) || position is null) return;
         var engine = playback.Engine;
-        // Draw what is heard now: the live clock minus the output latency, not the scheduler's last report.
-        if (engine.IsPlaying && !engine.IsPaused) position = engine.AudiblePlayhead();
+        // While it plays, every screen frame draws what is heard now (the live clock minus the output latency): the scheduler reports on a
+        // song-time grid, which is coarser than the display and slows down with the playback speed.
+        var live = engine.IsPlaying && !engine.IsPaused;
+        if (!playback.TryTakePendingPosition(out var position) && !live) return;
+        if (live) position = engine.AudiblePlayhead();
+        if (position is null) return;
 
         var remap = playback.PlaybackBarRemap;
         var bar = remap is not null && position.Bar >= 0 && position.Bar < remap.Length

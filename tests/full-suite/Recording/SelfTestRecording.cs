@@ -199,8 +199,66 @@ public static partial class SelfTest
 
     private static void TestReaperChainImport()
     {
-        var failure = TabForge.Plugins.ReaperChainImporter.SelfTestFailure();
-        Check("REAPER .RfxChain parser: VST2/VST3 entries, bypass, JS skipped, VST2 state header", failure is null, failure ?? "");
+        // A synthetic .RfxChain: header (id, magic, pins, state length, kind, 4 bytes), state, footer (two names, 4 bytes), each line its own base64.
+        static string Lines(uint id, uint magic, int ins, int outs, int kind, byte[] state, string preset, int? claimLength = null)
+        {
+            var d = new List<byte>();
+            d.AddRange(BitConverter.GetBytes(id)); d.AddRange(BitConverter.GetBytes(magic));
+            d.AddRange(BitConverter.GetBytes(ins)); for (var i = 0; i < ins; i++) d.AddRange(BitConverter.GetBytes(1L << i));
+            d.AddRange(BitConverter.GetBytes(outs)); for (var i = 0; i < outs; i++) d.AddRange(BitConverter.GetBytes(1L << i));
+            d.AddRange(BitConverter.GetBytes(claimLength ?? state.Length)); d.AddRange(BitConverter.GetBytes(kind)); d.AddRange(BitConverter.GetBytes(0x100000));
+            var header = d.Count;
+            d.AddRange(state); d.Add(0); d.AddRange(System.Text.Encoding.UTF8.GetBytes(preset)); d.Add(0); d.AddRange(BitConverter.GetBytes(0x10));
+            var all = d.ToArray(); var sb = new System.Text.StringBuilder();
+            // The header on its own lines of 96 bytes (a long one wraps), then the rest.
+            for (var o = 0; o < all.Length;) { var n = Math.Min(96, (o < header ? header : all.Length) - o); sb.Append("  ").Append(Convert.ToBase64String(all, o, n)).Append('\n'); o += n; }
+            return sb.ToString();
+        }
+        var chunk = Enumerable.Range(0, 200).Select(i => (byte)(i * 3 + 1)).ToArray();
+        var list = new byte[] { 0xEF, 0xBE, 0xAD, 0xDE, 0x0D, 0xF0, 0xAD, 0xDE }.Concat(BitConverter.GetBytes(0.25f)).Concat(BitConverter.GetBytes(1f)).ToArray();
+        byte[] comp = { 9, 8, 7, 6, 5 }, ctrl = { 1, 2, 3 };
+        var vst3 = BitConverter.GetBytes(comp.Length).Concat(BitConverter.GetBytes(1)).Concat(comp).Concat(BitConverter.GetBytes(ctrl.Length)).Concat(BitConverter.GetBytes(0)).Concat(ctrl).ToArray();
+        var text = "BYPASS 0 0\n<VST \"VST: Test EQ (Acme)\" TEST.DLL 0 \"\" 1<00> \"\"\n" + Lines(0x74736574, 0xFEED5EEE, 2, 2, 1, chunk, "Bright") + ">\nPRESETNAME Bright\nWAK 0 0\n"
+            + "BYPASS 1 0\n<VST \"VST: Comp (Acme)\" \"Test Comp.dll\" 0 \"\" 2<00> \"\"\n" + Lines(2, 0xFEED5EEF, 4, 2, 0, list, "") + ">\nWET 0.25 0\nWAK 0 0\n"
+            + "BYPASS 0 0\n<CONTAINER Container \"\"\n  BYPASS 0 0 0\n  <VST \"VST3i: Synth (Acme)\" Synth.vst3 0 \"\" 3{00} \"\"\n" + Lines(3, 0xFEED5EEE, 2, 14, 1, vst3, "Pad") + "  >\n  WAK 0 0\n>\nWET 0.5 0\n"
+            + "<JS midi/foo \"\"\n  0 1\n>\nWET 0.1 0\n"
+            + "<VST \"VST: Bad64 (Acme)\" bad.dll 0 \"\" 4<00> \"\"\n  !!!not base64!!!\n>\n"
+            + "<VST \"VST: Short (Acme)\" short.dll 0 \"\" 5<00> \"\"\n" + Lines(5, 0xFEED5EEE, 2, 2, 1, chunk, "", claimLength: 100000) + ">\n"
+            + "<VST \"VST: Pins (Acme)\" pins.dll 0 \"\" 6<00> \"\"\n  " + Convert.ToBase64String(BitConverter.GetBytes(6).Concat(BitConverter.GetBytes(0xFEED5EEE)).Concat(BitConverter.GetBytes(int.MaxValue)).Concat(new byte[32]).ToArray()) + "\n>\n"
+            + "<VST \"VST: Elsewhere (Acme)\" elsewhere.dll 0 \"\" 7<00> \"\"\n>\n";
+        var p = TabForge.Plugins.ReaperChainImporter.Parse(text);
+        var e = p.Entries;
+        Check("chain exchange file: every VST block is an entry, the script effect is counted", e.Count == 7 && p.Notes.Any(n => n.Contains("1 script effect")), $"{e.Count} / {string.Join(" | ", p.Notes)}");
+        if (e.Count != 7) return;
+        var block = TabForge.Plugins.ReaperChainImporter.DecodeBlock(Lines(0x74736574, 0xFEED5EEE, 2, 14, 1, chunk, "Bright").Split('\n', StringSplitOptions.RemoveEmptyEntries).Select(l => l.Trim()).ToList(), out var blockProblem);
+        Check("chain exchange file: header fields (a header longer than one line), state length and preset name",
+            block is { Id: 0x74736574, Inputs: 2, Outputs: 14, IsChunk: true, PresetName: "Bright" } && block.State.SequenceEqual(chunk), blockProblem ?? "");
+        Check("chain exchange file: VST2 chunk is the state, byte for byte", e[0] is { Name: "Test EQ", Vendor: "Acme", Format: "VST2", Enabled: true, Wet: 100 } && e[0].State!.SequenceEqual(chunk));
+        Check("chain exchange file: VST2 parameter list is kept whole; bypass and mix are read", e[1] is { Enabled: false, Wet: 25 } && e[1].State!.SequenceEqual(list), $"{e[1].Enabled} {e[1].Wet} {e[1].StateProblem}");
+        Check("chain exchange file: VST3 state becomes length + component + length + controller; a container's mix is not the plug-in's",
+            e[2] is { Format: "VST3", IsInstrument: true, Wet: 100 } && e[2].State!.SequenceEqual(BitConverter.GetBytes(comp.Length).Concat(comp).Concat(BitConverter.GetBytes(ctrl.Length)).Concat(ctrl)), e[2].StateProblem ?? "");
+        Check("chain exchange file: bad base64, a length past the data and an absurd pin count drop the state with a reason, never throw",
+            e.Skip(3).Take(3).All(x => x.State is null && x.StateProblem is { Length: > 0 }), string.Join(" | ", e.Skip(3).Take(3).Select(x => x.StateProblem ?? "none")));
+        var catalog = new[] { "test.dll", "TEST COMP.DLL", "synth.vst3", "Bad.dll", "short-standalone.dll", "pins.dll" }
+            .Select(f => new TabForge.Plugins.VstPluginInfo(Path.GetFileNameWithoutExtension(f), @"C:\Plugins\" + f, f.EndsWith("3") ? "VST3" : "VST2")).ToList();
+        var built = TabForge.Plugins.ReaperChainImporter.Build(p, catalog);
+        var report = built.Report.Split("\n\n");
+        Check("chain exchange file: plug-ins are found by file name in any case; the unknown one is counted",
+            built.Chain.Count == 6 && built.Missing == 1 && built.Chain[0].Path == @"C:\Plugins\test.dll" && built.Chain[0].State == Convert.ToBase64String(chunk) && built.Chain[1].Wet == 25);
+        Check("chain exchange file: a plug-in's preset name stays on its slot, and a slot without one writes none",
+            built.Chain[0].PresetName == "Bright" && built.Chain[1].PresetName is null && !System.Text.Json.JsonSerializer.Serialize(built.Chain[1]).Contains("PresetName", StringComparison.Ordinal), built.Chain[0].PresetName ?? "");
+        Check("chain exchange file: one grouped summary (count, one line for unknown plug-ins, one for dropped settings)",
+            report[0] == "Imported 6 of 7 plug-ins." && report.Count(l => l.StartsWith("Not in your plug-in list: Elsewhere.")) == 1 && report.Count(l => l.StartsWith("Loaded with default settings: Bad64 (")) == 1
+            && !built.Report.Contains(".dll"), built.Report);
+        // The file name matches but the maker does not: the plug-in is kept, another plug-in's settings are not applied.
+        var other = TabForge.Plugins.ReaperChainImporter.Build(new(e.Take(2).ToList(), new()), new[] { new TabForge.Plugins.VstPluginInfo("test", @"C:\Plugins\test.dll", "VST2", "Other Maker"), new TabForge.Plugins.VstPluginInfo("Test Comp", @"C:\Plugins\Test Comp.dll", "VST2", "ACME Audio Ltd.") });
+        Check("chain exchange file: a different maker's plug-in under the same file name loads with default settings, in one summary line",
+            other.Chain.Count == 2 && other.Chain[0].State is null && other.Chain[1].State is not null && other.Report.Split("\n\n").Count(l => l.Contains("belong to a different plug-in")) == 1, other.Report);
+        Check("chain exchange file: a text with no plug-in block is no chain file; one with only skipped effects is",
+            TabForge.Plugins.ReaperChainImporter.Recognised(TabForge.Plugins.ReaperChainImporter.Parse("hello\nBYPASS 0 0\nWET 0.5 0\n")) is null
+            && TabForge.Plugins.ReaperChainImporter.Recognised(TabForge.Plugins.ReaperChainImporter.Parse("<JS midi/foo \"\"\n>\n")) is not null);
+        Check("chain exchange file: a chain that comes in whole says nothing",
+            TabForge.Plugins.ReaperChainImporter.Build(new(e.Take(2).ToList(), new()), catalog) is { Report: "", Missing: 0, Chain.Count: 2 });
     }
 
     private static void TestSettingsWithInlinePluginStates()

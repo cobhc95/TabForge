@@ -10,6 +10,7 @@ The square microphone button at the left of the track list toolbar: hear the cho
 - `LiveInputMidi.cs`: the MIDI keyboard: one client of the engine client's shared `MidiInputHub` while on with a MIDI choice; each channel message goes to the stand-in's slot with `AudioEngineClient.Write` (no song channel); held notes are reset on off, a device change or a device gone; a two-second poll opens a device that appears.
 - `LiveInputFeatureModule.cs`: the command and hotkey row, the Preferences group, one controller per window and the adapter from the main window.
 - `LiveInputHint.cs`: the line in the live FX window while live input is off, with its Turn on button.
+- `LiveInputMixerRow.cs`: the live input row of the mixer, a child of the Master row: arm toggle, FX button, pan, volume and mute sliders bound to the stand-in's own level (saved in the app settings, applied again on Reset all), and the Master row's collapse arrow (saved in the app settings as the mixer-collapsed flag). It uses the mixer's track-row helpers; the row is hidden when Master is collapsed and is not part of any group or of Collapse all.
 - `LiveInputSettingsRows.cs`: the Preferences row for the restore choice (a `SettingsCatalog` partial).
 
 ## How the sound gets there
@@ -23,6 +24,7 @@ The engine already monitors a record-armed track's input through that track's ch
 - `AudioRouting.cs`: the arm gets the master volume and pan before the sync, and the live track joins the availability refresh. `EngineSyncController.cs`: one condition so a crashed plug-in in the live chain is dropped at once.
 - `PluginSettings.cs`: one property for the settings above.
 - `FeatureRegistry.cs`: one line, the module.
+- Mixer window (Views folder, the Master row's panel): the Master row's name column and child row come from the live input row's factory; its track-row helpers are internal for it. The group collapse arrow builder is shared with the Master row.
 - `ArrangementPanel.cs`: three lines: the button as the toolbar's first child.
 - `CompactColumnLayout.cs`: one line: the button's place in the compact column.
 - `FxChainWindow.cs` and `FxChainWindow.Sections.cs`: an app-wide chain title and note on the host; such a window has that title, the note and no track options.
@@ -30,4 +32,4 @@ The engine already monitors a record-armed track's input through that track's ch
 
 Removing the feature: delete this folder and the hooks above, the live input test file in the full suite and its registration, the command's row in `TOOLS_AND_HOTKEYS.md`; put the compact column counts in the compact mode test back and re-record the settings snapshot.
 
-Tests: `TestLiveInput` (MIDI keyboard, arm, one slot across songs, off everywhere, own level, clean song, menu, input choice, restore choices, command), `TestCompactMode` (the button's place in the compact column).
+Tests: `TestLiveInput` (MIDI keyboard, arm, one slot across songs, off everywhere, own level, clean song, menu, input choice, restore choices, command), `TestLiveInputMixerRow` (the row's volume, pan and mute reach the engine mix at two master levels, its arm and the button agree, saved values and Reset all), `TestCompactMode` (the button's place in the compact column).

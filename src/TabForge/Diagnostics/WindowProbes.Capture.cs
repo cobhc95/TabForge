@@ -210,7 +210,7 @@ internal sealed partial class WindowProbes : MainWindow.ProbeAccess
                 case "midi-add": foreach (var type in value.ValueKind == JsonValueKind.Array ? value.EnumerateArray().Select(e => e.GetString() ?? "") : new[] { value.GetString() ?? "" }) MidiWindow().CaptureAdd(type); await _w.Settle(300); break;
                 case "midi-select": MidiWindow().CaptureSelect(value.GetInt32()); await _w.Settle(300); break;
                 case "midi-search": MidiWindow().CaptureSearch(value.GetString() ?? ""); await _w.Settle(300); break;
-                case "midi-param": MidiWindow().CaptureParam(value[0].GetString() ?? "", value[1].GetDouble()); await _w.Settle(300); break;
+                case "midi-param": MidiWindow().CaptureParam(value[0].GetString() ?? "", value[1].ValueKind == JsonValueKind.String ? System.Text.Json.Nodes.JsonValue.Create(value[1].GetString()!) : System.Text.Json.Nodes.JsonValue.Create(value[1].GetDouble())); await _w.Settle(300); break;
                 case "popup": ShowPopup(value.GetString() ?? ""); break;
                 case "audio-track": await AddExampleAudioTrackAsync(); break;
                 case "timeline-drag": TimelineDrag(value.GetString() ?? "drop"); await _w.Settle(400); break;

@@ -214,7 +214,6 @@ internal sealed class EditorInputController
         if (_sel.ClearHover()) RepaintHover();
     }
 
-    /// <summary>The hover highlight is not drawn while a song plays, so a hover change then repaints nothing (the score is not redrawn under the playhead).</summary>
     /// <summary>A key moved the cursor: the hover outline goes to the cursor's beat until the mouse moves again.</summary>
     public void CursorMovedByKey()
     {
@@ -222,8 +221,6 @@ internal sealed class EditorInputController
         _sel.HoverMeasure = _host.SelectedMeasure; _sel.HoverCell = _host.SelectedCell; RepaintHover();
     }
 
-    private void RepaintHover()
-    {
-        if (!_host.PlaybackActive) _host.RepaintAll();
-    }
+    /// <summary>Repaints the hover outline only: the system holding the hovered beat is re-engraved, the others are replayed, also during playback.</summary>
+    private void RepaintHover() => _host.RepaintKeepingDrawings();
 }

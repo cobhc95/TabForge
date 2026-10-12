@@ -24,7 +24,7 @@ public static partial class SelfTest
         "TestMediaDropPlan", "TestClipEdgesAndLoops", "TestTrimEmptyBars", "TestMediaDropPreviewGeometry", "TestClipMoveGhost", "TestMidiClipMoves", "TestTimelineSongTimeRepeatGrowth",
         "TestSectionColourEditing", "TestEffectEditorFiles", "TestEffectEditors", "TestOrnamentEditorFiles", "TestOrnamentEditors",
         "TestSecurityInputBoundaries", "TestNightPluginApproval", "TestPairMarkerIsUntrusted", "TestQuarantineAllowAgain", "TestPluginStateCollection", "TestPluginRightsNotice",
-        "TestBandLayoutSaved", "TestBandLayoutSafety", "TestMixerCollapseIsViewState", "TestEngineMessagesGolden", "TestEngineMessagesRoundTrip", "TestMasterTapRestartWaitsForOldRun", "TestClipPlayerCatchesUpAfterSeek", "TestLiveAudioFidelity", "TestLiveRecordingLoudness", "TestFxChainWindow",
+        "TestChainContainers", "TestBandLayoutSaved", "TestBandLayoutSafety", "TestMixerCollapseIsViewState", "TestEngineMessagesGolden", "TestEngineMessagesRoundTrip", "TestMasterTapRestartWaitsForOldRun", "TestClipPlayerCatchesUpAfterSeek", "TestLiveAudioFidelity", "TestLiveRecordingLoudness", "TestFxChainWindow",
     };
 
     private static readonly HashSet<string> _releaseRan = new(StringComparer.Ordinal);

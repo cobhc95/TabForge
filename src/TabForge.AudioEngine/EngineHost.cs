@@ -351,6 +351,12 @@ public static partial class EngineHost
                         EngineThreads.Post(() => _session.SendPrograms(slot, index));
                         break;
                     }
+                    case EngineCommand.GetPluginInfo:
+                    {
+                        var (slot, requestId) = GetPluginInfoMessage.Read(r);
+                        EngineThreads.Post(() => _session.SendPluginInfo(slot, requestId));
+                        break;
+                    }
                     case EngineCommand.SetProgram:
                     {
                         var (slot, index, program) = SetProgramMessage.Read(r);

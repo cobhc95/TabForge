@@ -9,8 +9,8 @@ using System.Windows.Shapes;
 namespace TabForge.Views.ViewTempo;
 
 // Owns: the View and tempo pane's one row of four equal buttons (zoom, speed, tempo, time / key): their captions and tooltips,
-//       and what opens from them (a click or Enter / Space: the preset menu; a right click or the Menu key: the fine-tune popup;
-//       the wheel over zoom or speed: a step).
+//       and what opens from them (a click or Enter / Space: the preset menu; a right click, a double click or the Menu key: the
+//       fine-tune popup; the wheel over zoom or speed: a step).
 // Does not own: the values and how they are applied (IViewTempoHost; in the window, ViewTempoControlsHost over the pane's own
 //       value controls), the menu rows (ViewTempoMenus) or the popup contents (ViewTempoPopups).
 // Tests: TestToolbarZoomAndSpeed, TestToolbarZoomSpeedNarrow.
@@ -23,6 +23,8 @@ public sealed class ViewTempoBar : UniformGrid
     private readonly TextBlock[] _captions = new TextBlock[4];
     private IViewTempoHost? _host;
     private ViewTempoControlsHost? _found;
+    private ContextMenu? _menu;                 // the preset menu a click opened, while it is open
+    private long _ignoreClickUntil;             // the release of a double click's second press must not reopen the menu
 
     public ViewTempoBar()
     {
@@ -65,7 +67,7 @@ public sealed class ViewTempoBar : UniformGrid
         _captions[Speed].Text = $"{host.SpeedPercent:0}%";
         _captions[Tempo].Text = host.Tempo.ToString(System.Globalization.CultureInfo.InvariantCulture);
         _captions[TimeKey].Text = $"{host.TimeText} {host.KeyText}";
-        TooltipShortcuts.Bind(_buttons[TimeKey], $"Time signature and key: {host.TimeText}, {FullKey(host.KeyText)}", "Bar.TimeSignature");
+        TooltipShortcuts.Bind(_buttons[TimeKey], $"Time signature and key: {host.TimeText}, {FullKey(host.KeyText)}. Click for presets, right-click or double-click to type", "Bar.TimeSignature");
     }
 
     private Button MakeButton(int kind)
@@ -80,12 +82,12 @@ public sealed class ViewTempoBar : UniformGrid
         AutomationProperties.SetName(button, Names[kind]);
         button.ToolTip = kind switch
         {
-            Zoom => "Score zoom: click for presets, right-click to fine-tune",
-            Speed => "Playback speed: click for presets, right-click to fine-tune",
-            Tempo => "Tempo (BPM): click for presets, right-click to type",
-            _ => "Time signature and key",
+            Zoom => "Score zoom: click for presets, right-click or double-click to fine-tune",
+            Speed => "Playback speed: click for presets, right-click or double-click to fine-tune",
+            Tempo => "Tempo (BPM): click for presets, right-click or double-click to type",
+            _ => "Time signature and key: click for presets, right-click or double-click to type",
         };
-        button.Click += (_, _) => OpenMenu(kind);
+        button.Click += (_, _) => { if (Environment.TickCount64 >= _ignoreClickUntil) OpenMenu(kind); };
         button.MouseRightButtonUp += (_, e) => { e.Handled = true; OpenPopup(kind); };
         button.KeyDown += (_, e) =>
         {
@@ -110,12 +112,47 @@ public sealed class ViewTempoBar : UniformGrid
         if (BuildMenu(kind) is not { } menu) return;
         menu.PlacementTarget = _buttons[kind];
         menu.Placement = PlacementMode.Bottom;
+        menu.Closed += (_, _) =>
+        {
+            if (!ReferenceEquals(_menu, menu)) return;
+            _menu = null;
+            Mouse.RemovePreviewMouseDownOutsideCapturedElementHandler(menu, OnPressOutsideMenu);
+        };
+        _menu = menu;
+        Mouse.AddPreviewMouseDownOutsideCapturedElementHandler(menu, OnPressOutsideMenu);
         menu.IsOpen = true;
     }
 
-    private void OpenPopup(int kind)
+    // While the preset menu is open, its light dismiss takes the second press of a double click, so that press is seen here.
+    private void OnPressOutsideMenu(object sender, MouseButtonEventArgs e)
     {
-        if (_host is not null) ViewTempoPopups.Build(kind, _host, _buttons[kind]).IsOpen = true;
+        if (e.ClickCount != 2) return;
+        for (var kind = 0; kind < 4; kind++)
+        {
+            var at = Mouse.GetPosition(_buttons[kind]);
+            if (at.X < 0 || at.Y < 0 || at.X > _buttons[kind].ActualWidth || at.Y > _buttons[kind].ActualHeight) continue;
+            var hit = kind;   // after the menu has finished closing, so the popup keeps the mouse capture it takes
+            _ignoreClickUntil = Environment.TickCount64 + 500;
+            Dispatcher.BeginInvoke(new Action(() => DoubleClick(hit)), System.Windows.Threading.DispatcherPriority.Input);
+            return;
+        }
+    }
+
+    /// <summary>A double click on a button: closes its preset menu and opens the fine-tune popup, as a right click does.
+    /// The popup is returned so the tests can see it open.</summary>
+    internal Popup? DoubleClick(int kind)
+    {
+        _ignoreClickUntil = Environment.TickCount64 + 500;
+        if (_menu is { } menu) menu.IsOpen = false;
+        return OpenPopup(kind);
+    }
+
+    private Popup? OpenPopup(int kind)
+    {
+        if (_host is null) return null;
+        var popup = ViewTempoPopups.Build(kind, _host, _buttons[kind]);
+        popup.IsOpen = true;
+        return popup;
     }
 
     // The small mark before the value: a magnifier, a play triangle, a quarter note; time / key has none.

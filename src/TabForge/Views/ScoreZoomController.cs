@@ -34,8 +34,8 @@ internal sealed class ScoreZoomController
 
     public ScoreZoomController(IScoreZoomHost host) => _host = host;
 
-    /// <summary>The zoom (1 = 100%); 0 means fit width.</summary>
-    public double Factor { get; set; }
+    /// <summary>The zoom (1 = 100%, the default); 0 means fit width.</summary>
+    public double Factor { get; set; } = 1.0;
 
     private bool Interactive => _host.Window.IsLoaded && !_host.Restoring;
 

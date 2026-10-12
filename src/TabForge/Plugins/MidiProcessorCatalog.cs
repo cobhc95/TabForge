@@ -111,11 +111,16 @@ public static partial class MidiProcessorCatalog
     /// <summary>Built-in whole-list presets (name, processors).</summary>
     public static IReadOnlyList<(string Name, Func<List<PluginMidiProcessor>> Build)> BuiltInPresets { get; } = new (string, Func<List<PluginMidiProcessor>>)[]
     {
-        ("Drums: GM → kit map", () => new() { Make("noteMap", o => { o["From"] = "General MIDI"; o["To"] = "Acoustic kit map (unverified)"; }) }),
+        ("Drums: GM → kit map", () => new() { Make("noteMap", o => { o["From"] = "General MIDI"; o["To"] = "Tabs to SD3"; }) }),
         ("Humanize light", () => new() { Make("humanize", o => { o["TimingMs"] = 4; o["VelRandom"] = 5; o["BaseDelayMs"] = 10; }) }),
-        ("Drums: GM → kit map + humanize", () => new() { Make("noteMap", o => { o["From"] = "General MIDI"; o["To"] = "Acoustic kit map (unverified)"; }), Make("humanize", o => { o["TimingMs"] = 4; o["VelRandom"] = 6; o["BaseDelayMs"] = 10; }) }),
+        ("Drums: GM → kit map + humanize", () => new() { Make("noteMap", o => { o["From"] = "General MIDI"; o["To"] = "Tabs to SD3"; }), Make("humanize", o => { o["TimingMs"] = 4; o["VelRandom"] = 6; o["BaseDelayMs"] = 10; }), Make("velocity", o => o["Mul"] = 1.3) }),
         ("Kick and snare: softer", () => new() { Make("velocity", o => { o["Mul"] = 0.8; o["NoteMode"] = 1; o["NoteSet"] = "36,38"; }) }),
     };
+
+    /// <summary>Built-in presets of one processor type (name, parameter values): read-only, listed before the user's presets of that type.</summary>
+    public static IReadOnlyList<(string Name, string Params)> BuiltInProcessorPresets(string type) => type == "noteMap" ? NoteMapPresets : Array.Empty<(string, string)>();
+
+    private static readonly (string, string)[] NoteMapPresets = { ("Tabs to SD3", "{\"From\":\"General MIDI\",\"To\":\"Tabs to SD3\",\"Overrides\":\"\"}") };
 
     private static PluginMidiProcessor Make(string type, Action<JsonObject> set)
     {

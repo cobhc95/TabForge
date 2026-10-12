@@ -22,6 +22,9 @@ internal interface IScorePageHost
 
     /// <summary>Drops the retained system drawings and repaints.</summary>
     void RepaintAll();
+
+    /// <summary>Repaints without dropping the retained system drawings: the playback and hover marks are part of each drawing's key.</summary>
+    void RepaintKeepingDrawings();
 }
 
 /// <summary>What the score drawing reads from the editor that owns it.</summary>

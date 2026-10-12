@@ -4,12 +4,16 @@ using System.Text.RegularExpressions;
 
 namespace TabForge.Plugins;
 
-/// <summary>One drum map preset: which note plays which piece. Shipped maps live in Resources/DrumMaps, the user's own under the app data folder.</summary>
-public sealed record DrumMap(string Name, bool Verified, bool IsUser, IReadOnlyDictionary<int, string> Notes);
+/// <summary>
+/// One drum map preset: which note plays which piece. Shipped maps live in Resources/DrumMaps, the user's own under the app data folder.
+/// <paramref name="Remap"/> is the map's optional note-to-note table (incoming note, note sent; -1: not sent), used when the map is the target.
+/// </summary>
+public sealed record DrumMap(string Name, bool Verified, bool IsUser, IReadOnlyDictionary<int, string> Notes, IReadOnlyDictionary<int, int>? Remap = null);
 
 /// <summary>
-/// Drum map presets (JSON: <c>{ "Name": "...", "Verified": true, "Notes": { "36": "Bass Drum 1" } }</c>) and the conversion between two of them:
-/// the note of a piece in the source map becomes the note of the same-named piece in the target map.
+/// Drum map presets (JSON: <c>{ "Name": "...", "Verified": true, "Notes": { "36": "Bass Drum 1" }, "Remap": { "40": 38 } }</c>) and the
+/// conversion between two of them: the note of a piece in the source map becomes the note of the same-named piece in the target map,
+/// then the target map's optional "Remap" (incoming note to note sent, whatever the pieces are called) is applied.
 /// </summary>
 public static class DrumMapLibrary
 {
@@ -30,9 +34,10 @@ public static class DrumMapLibrary
 
     public static DrumMap? Find(string name) => string.IsNullOrEmpty(name) ? null : All().FirstOrDefault(m => string.Equals(m.Name, Current(name), StringComparison.OrdinalIgnoreCase));
 
-    /// <summary>The current name of a shipped map saved in older chains under its earlier name.</summary>
+    /// <summary>The current name of the shipped map, for chains saved under one of its earlier names.</summary>
     private static string Current(string name) =>
-        string.Equals(name, "Superior Drummer 3 (unverified)", StringComparison.OrdinalIgnoreCase) ? "Acoustic kit map (unverified)" : name;
+        string.Equals(name, "Superior Drummer 3 (unverified)", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(name, "Acoustic kit map (unverified)", StringComparison.OrdinalIgnoreCase) ? "Tabs to SD3" : name;
 
     private static List<DrumMap> Load()
     {
@@ -53,7 +58,8 @@ public static class DrumMapLibrary
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { Services.Trace.Error(Services.Trace.Engine, "drum maps: read folder: " + ex.Message); }
     }
 
-    private static DrumMap? Parse(string file, bool user)
+    /// <summary>Reads one map file; null when it is no readable map.</summary>
+    internal static DrumMap? Parse(string file, bool user)
     {
         try
         {
@@ -68,7 +74,12 @@ public static class DrumMapLibrary
             if (root.TryGetProperty("Notes", out var nodes) && nodes.ValueKind == JsonValueKind.Object)
                 foreach (var p in nodes.EnumerateObject())
                     if (int.TryParse(p.Name, out var note) && note is >= 0 and <= 127 && p.Value.ValueKind == JsonValueKind.String) notes[note] = p.Value.GetString() ?? "";
-            return new DrumMap(name, verified, user, notes);
+            Dictionary<int, int>? remap = null;
+            if (root.TryGetProperty("Remap", out var pairs) && pairs.ValueKind == JsonValueKind.Object)
+                foreach (var p in pairs.EnumerateObject())
+                    if (int.TryParse(p.Name, out var note) && note is >= 0 and <= 127 && p.Value.ValueKind == JsonValueKind.Number && p.Value.TryGetInt32(out var sent) && sent is >= -1 and <= 127)
+                        (remap ??= new())[note] = sent;
+            return new DrumMap(name, verified, user, notes, remap);
         }
         catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException or InvalidDataException) { Services.Trace.Error(Services.Trace.Engine, "drum map: read: " + ex.Message); return null; }
     }
@@ -78,17 +89,30 @@ public static class DrumMapLibrary
     {
         var table = new int[128];
         for (var i = 0; i < 128; i++) table[i] = i;
-        if (Find(from) is { } source && Find(to) is { } target && !ReferenceEquals(source, target))
+        var target = Find(to);
+        if (Find(from) is { } source && target is not null && !ReferenceEquals(source, target))
         {
             var byName = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
             foreach (var (note, piece) in target.Notes) byName.TryAdd(piece, note);
             foreach (var (note, piece) in source.Notes) if (byName.TryGetValue(piece, out var mapped)) table[note] = mapped;
         }
+        if (target?.Remap is { } remap) foreach (var (note, sent) in remap) table[note] = sent;   // the target map's own note table
         foreach (Match m in Regex.Matches(overrides ?? "", @"(\d{1,3})\s*>\s*(\d{1,3}|-|x)", RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(50)))
         {
             if (!int.TryParse(m.Groups[1].Value, out var a) || a > 127) continue;
             table[a] = int.TryParse(m.Groups[2].Value, out var b) ? Math.Min(b, 127) : -1;   // "-" or "x": drop that note
         }
         return table;
+    }
+
+    /// <summary>What a note map does, in words: the notes it changes (at most <paramref name="max"/>, then "+ N more"), one per line.</summary>
+    public static string Describe(string from, string to, string overrides, int max = 4)
+    {
+        var table = BuildTable(from, to, overrides);
+        var names = (Find(from) ?? Find("General MIDI"))?.Notes;
+        var changes = Enumerable.Range(0, 128).Where(n => table[n] != n)
+            .Select(n => $"{n}{(names is not null && names.TryGetValue(n, out var piece) ? " " + piece : "")} → {(table[n] < 0 ? "not sent" : table[n].ToString())}").ToList();
+        if (changes.Count == 0) return "Every note is sent unchanged.";
+        return "Notes are sent unchanged except:\n" + string.Join("\n", changes.Take(max)) + (changes.Count > max ? $"\n+ {changes.Count - max} more" : "");
     }
 }

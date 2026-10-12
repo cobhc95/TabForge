@@ -96,6 +96,13 @@ internal sealed class EditorSelectionState
         if (EndMeasure > last) { EndMeasure = last; EndCell = lastCell; }
     }
 
+    /// <summary>A key for the hover outline inside bars first..last: zero when the outline is not there, so a system without it keeps its drawing.</summary>
+    public long HoverKeyIn(int first, int last)
+    {
+        if (HoverMeasure < first || HoverMeasure > last || HoverCell < 0) return 0;
+        unchecked { return (HoverMeasure * 1000003L + HoverCell + 1) * 0x2545F491L; }
+    }
+
     /// <summary>Forgets the hovered beat; true when there was one.</summary>
     public bool ClearHover()
     {

@@ -145,21 +145,27 @@ public sealed partial class FxChainWindow
         // Left: the chain.
         var left = new DockPanel { Width = 290, Margin = new Thickness(0, 0, 10, 0) };
         DockPanel.SetDock(left, Dock.Left);
-        var buttons = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 6, 0, 0) };
+        var buttons = new DockPanel { Margin = new Thickness(0, 6, 0, 0) };   // the status text takes what the buttons leave and trims there
         DockPanel.SetDock(buttons, Dock.Bottom);
+        _status.TextTrimming = TextTrimming.CharacterEllipsis;
         buttons.Children.Add(UiIds.Id(MakeButton("Add…", AddPlugin, "Add a plug-in to the end of the chain"), "Fx.Add"));
-        buttons.Children.Add(UiIds.Id(MakeButton("Remove", RemoveSelected, "Remove the selected plug-in (Delete)"), "Fx.Remove"));
+        buttons.Children.Add(UiIds.Id(MakeButton("Remove", RemoveSelected, "Remove the selected plug-ins (Delete)"), "Fx.Remove"));
         buttons.Children.Add(_status);
         _status.SetResourceReference(TextBlock.ForegroundProperty, "MutedBrush");
         left.Children.Add(buttons);
-        var listFrame = new Border { BorderThickness = new Thickness(1), Child = _list };
+        _chainList = new Fx.FxChainList(_list);
+        _containers = new Fx.FxChainContainers(this, _chainList, () => _track.Rig, (change, switched) => EditTree(tree => { var had = HasInstrument; change(tree); GmBackWithoutInstrument(had); }, refresh: true, switched: switched), RefreshRows,
+            leaving => { if (_docked is { } docked && leaving.Contains(docked)) CloseDocked(); },
+            slot => PluginTrust.IsTrusted(slot.Path, _host.PluginSettings), () => _host.Engine.CollectStatesAsync(new[] { _track }, 2000));
+        buttons.Children.Insert(1, UiIds.Id(Fx.FxChainRows.NewContainerButton(_containers.New), "Fx.NewContainer", "New container"));
+        var listFrame = new Border { BorderThickness = new Thickness(1), Child = _chainList.Root };
         listFrame.SetResourceReference(Border.BorderBrushProperty, "BorderSoftBrush");
         _list.SetResourceReference(BackgroundProperty, "PanelBrush");
+        ScrollViewer.SetHorizontalScrollBarVisibility(_list, ScrollBarVisibility.Disabled);   // a narrow list trims long names
         left.Children.Add(listFrame);
-        _list.SelectionChanged += (_, _) => { if (!_building) ShowSelected(); };
+        _chainList.FocusChanged += () => { if (!_building) ShowSelected(); };   // selecting more rows changes nothing in the plug-in pane
         _list.KeyDown += (_, e) => { if (e.Key == Key.Delete) RemoveSelected(); };
         _list.MouseDoubleClick += (_, _) => { if (Selected is { } slot) Float(slot); };
-        AttachDragReorder();
         return left;
     }
 
@@ -172,6 +178,8 @@ public sealed partial class FxChainWindow
         var right = new DockPanel();
         DockPanel.SetDock(_bar, Dock.Top);
         right.Children.Add(_bar);
+        DockPanel.SetDock(_containers.Pane, Dock.Top);
+        right.Children.Add(_containers.Pane);
         var dockArea = new Grid();
         dockArea.Children.Add(_dockMessage);
         var message = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
@@ -228,7 +236,7 @@ public sealed partial class FxChainWindow
         StateChanged += (_, _) => PlaceOverlay();
         Activated += (_, _) => PlaceOverlay();
         // The tick only picks up bypass-state changes; placement never raises the overlay above the editor it covers.
-        _cpuTimer.Tick += (_, _) => { _status.Text = _host.Engine.IsRunning ? $"CPU {_host.Engine.CpuLoad / Environment.ProcessorCount:P1} · audio load {_host.Engine.CpuLoad:P0}" : ""; _status.ToolTip ??= "CPU: the audio engine's share of the whole processor, as the system's task list shows it. Audio load: how much of each audio buffer's time all chains use on one core; dropouts start near 100%."; PlaceOverlay(); };
+        _cpuTimer.Tick += (_, _) => { _status.Text = _host.Engine.IsRunning ? $"CPU {_host.Engine.CpuLoad / Environment.ProcessorCount:P1} · load {_host.Engine.CpuLoad:P0}" : ""; _status.ToolTip ??= "CPU: the audio engine's share of the whole processor, as the system's task list shows it. Load (audio load): how much of each audio buffer's time all chains use on one core; dropouts start near 100%."; PlaceOverlay(); };
         _cpuTimer.Start();
         OwnerActivation.Attach(this);
         Closed += (_, _) =>

@@ -19,6 +19,8 @@ public interface IMidiOutput : IDisposable
     void Send(int deviceId, int status, int data1, int data2);
     /// <summary>A note played live (MIDI input monitoring): as soon as possible, never held back for sync.</summary>
     void SendLive(int deviceId, int status, int data1, int data2) => Send(deviceId, status, data1, data2);
+    /// <summary>A metronome or count-in click: never routed to a song channel's engine slot (clicks share channel 9 with the drums).</summary>
+    void SendMetronome(int deviceId, int status, int data1, int data2) => Send(deviceId, status, data1, data2);
     /// <summary>Turns all notes off on every open device (panic). Must be safe to call repeatedly.</summary>
     void ResetAll();
     void Close();

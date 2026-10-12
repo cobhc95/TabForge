@@ -128,6 +128,7 @@ UI side: no per-frame or layout-driven work for playback visuals; the UI never c
 | Audio configuration, chain *requests* | UI process (project and settings) | Sent as commands; the full desired state is re-sent after an engine restart |
 | Live plug-in instances, chains, routing | Engine process | Keyed by slot and stable `PluginSpec.Id`; a chain change keeps the instance with the same id |
 | Plug-in internal state | The plug-in | Read back with `GetStates` on save; a failed getter is reported per plug-in, never replaced by an older stored state |
+| Plug-in identity (VST2 id, VST3 class id, pin counts, names) | The plug-in | Read with `GetPluginInfo` (one `PluginInfo` frame per plug-in, main thread) when a chain is exported; no answer means "not available", so an engine without the request is harmless |
 | Isolated plug-in instance | Plug-in host process | The engine holds a `RemotePlugin` proxy |
 | Recorded takes, clips | Files on disk; `AudioClip` / `ClipLane` metadata in the project | |
 | Settings | `AppSettingsStore.Shared` (created by `App`), `%APPDATA%\TabForge\settings.json` | One `AppSettings` for all windows. Changes raise `Changed`; saves are debounced (400 ms) and atomic, and flush on exit. An unreadable file is not overwritten until Preferences are applied. Normalised and clamped on load; never wiped by rebuilds |

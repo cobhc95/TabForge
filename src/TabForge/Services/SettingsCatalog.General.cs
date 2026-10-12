@@ -46,6 +46,9 @@ public static partial class SettingsCatalog
             Bool(General, "Safety", "general.confirmdiscardsettings", "Warn before discarding unapplied changes", v => g.ConfirmDiscardSettingsChanges = v, () => g.ConfirmDiscardSettingsChanges,
                 "Ask before closing Settings, Track properties or Project settings without applying edits. Turned off by \"Don't ask me again\".",
                 "preferences settings cancel discard track project dont ask again remember warning"),
+            Bool(General, "Safety", "general.confirmdeletepresets", "Ask before deleting presets", v => g.ConfirmDeletePresets = v, () => g.ConfirmDeletePresets,
+                "Ask before deleting a preset in the preset manager, a preset drop-down or the Save preset dialog. Turned off by ticking \"Don't ask again when deleting presets\" in that question.",
+                "preset presets delete remove confirm ask prompt dont ask again remember warning"),
 
         };
     }

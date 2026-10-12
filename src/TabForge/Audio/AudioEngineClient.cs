@@ -49,6 +49,8 @@ public sealed partial class AudioEngineClient : IDisposable
     public TabForge.Models.MixerOptions Mixer { get; } = new();
     /// <summary>The program's one live input (every window and tab shares this client). See LiveInput/README.md.</summary>
     public TabForge.LiveInput.LiveInputArm LiveInput { get; } = new();
+    /// <summary>The metronome and count-in clicks' own engine slot (no song track). See ClickDestination.cs.</summary>
+    public ClickDestination Click { get; } = new();
 
     /// <summary>The MIDI input devices, shared by recording and Keyboard mode (each takes a client; the devices open while one holds them).</summary>
     public MidiInputHub MidiInput { get; } = new(new MidiInputCapture());
@@ -458,6 +460,8 @@ public sealed partial class AudioEngineClient : IDisposable
         {
             foreach (var request in _stateRequests.Values) request.Done.TrySetResult(false);   // unanswered plug-ins report as timed out
             _stateRequests.Clear();
+            foreach (var request in _infoRequests.Values) request.Done.TrySetResult(false);   // unanswered: not available
+            _infoRequests.Clear();
         }
         Interlocked.Exchange(ref _liveness, null)?.Dispose();
         lock (_sendGate)
@@ -567,6 +571,7 @@ public sealed partial class AudioEngineClient : IDisposable
                         break;
                     }
                     case EngineEvent.PluginState: OnPluginState(r); break;
+                    case EngineEvent.PluginInfo: OnPluginInfo(r); break;
                     case EngineEvent.PitchMeasured:
                     {
                         var slot = r.ReadInt32(); var index = r.ReadInt32(); var id = r.ReadInt32(); var status = (PitchMatch.Status)r.ReadByte();

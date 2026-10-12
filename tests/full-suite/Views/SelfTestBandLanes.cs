@@ -163,9 +163,8 @@ public static partial class SelfTest
         Check("band hover: leaving the lane clears its outline", HoverOf(lanes[1]) == (-1, -1), HoverOf(lanes[1]).ToString());
         HoverSet(lanes[1]);
         band.View.Playing = true;
-        var cleared = HoverOf(lanes[1]);
         lanes[1].RaiseEvent(MouseOf(System.Windows.Input.Mouse.MouseMoveEvent));
-        Check("band hover: playing takes the outline away and a move sets none", cleared == (-1, -1) && HoverOf(lanes[1]) == (-1, -1) && moves.Sum() == 1, $"{cleared} {HoverOf(lanes[1])} moves {moves.Sum()}");
+        Check("band hover: playing still hands a move to that lane's score", moves[1] == 2 && moves.Sum() == 2, $"moves {string.Join("/", moves)}");
         band.View.Playing = false;
 
         // The now-sounding glow lands in the bar's own line.

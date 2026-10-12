@@ -51,6 +51,16 @@ public static partial class SelfTest
         Check($"choosing 125% on the zoom button sets the score zoom (factor {zoom.Factor}, caption {bar.Caption(0)})", Math.Abs(zoom.Factor - 1.25) < 1e-9 && bar.Caption(0) == "125%");
         Pick(Views.ViewTempo.ViewTempoBar.Zoom, "Fit width");
         Check($"choosing Fit width shows Fit (factor {zoom.Factor}, caption {bar.Caption(0)})", zoom.Factor <= 0 && bar.Caption(0) == "Fit");
+        Check("a fresh settings default (also Reset all settings) zooms to 100%, not fit width", new Services.AppSettings().ZoomFactor == 1.0);
+
+        // A double click: the first click opens the tempo preset menu; the second press closes it and opens the fine-tune popup.
+        var tempoButton = Views.ViewTempo.ViewTempoBar.Tempo;
+        bar.Buttons[tempoButton].RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+        var presets = LtField<ContextMenu>(bar, "_menu");
+        Check("a click on the tempo button opens its preset menu", presets is { IsOpen: true });
+        var popup = bar.DoubleClick(tempoButton);
+        Check("a double click on the tempo button closes the preset menu and opens the tempo popup", presets is { IsOpen: false } && popup is { IsOpen: true });
+        if (popup is not null) popup.IsOpen = false;
         Check("the zoom menu's Zoom in and Zoom out rows reach their commands, as do the signature rows",
             bar.Host is Views.ViewTempo.ViewTempoControlsHost found && new[] { "View.ZoomIn", "View.ZoomOut", "Bar.TimeSignature", "Bar.KeySignature" }.All(id => found.CommandSource(id) is not null));
 

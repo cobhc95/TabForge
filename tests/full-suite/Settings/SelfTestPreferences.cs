@@ -10,7 +10,7 @@ public static partial class SelfTest
     // Every row key of the Preferences window before the reorganisation (docs/PREFERENCES_MIGRATION.txt). None may disappear.
     private const string OldPreferenceKeys =
         "general.checkupdates general.checknow general.openfromexplorer general.autosave general.saveformat general.associate general.toolbar general.statusbar " +
-        "general.confirmclose general.confirmdiscardsettings appearance.thememode appearance.uiscale appearance.tracktint appearance.density " +
+        "general.confirmclose general.confirmdiscardsettings general.confirmdeletepresets appearance.thememode appearance.uiscale appearance.tracktint appearance.density " +
         "appearance.reduceanimations appearance.animationspeed appearance.accent appearance.selection appearance.hover appearance.background " +
         "appearance.panel appearance.titlebar appearance.tabactive appearance.tabhover appearance.text appearance.muted appearance.timelinescrollbar " +
         "appearance.font appearance.fontsize appearance.iconsize appearance.toolbaricons score.defaultnotation appearance.scorefont " +

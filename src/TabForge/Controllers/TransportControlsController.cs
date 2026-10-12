@@ -178,9 +178,16 @@ internal sealed class TransportControlsController : IDisposable
 
     // ---- what the transport sends to the engine ----
 
+    /// <summary>Set for one start: the bar and cell playback paused at, used instead of the cursor (a looped selection keeps its range).</summary>
+    public (int Bar, int Cell)? ResumeFrom { get; set; }
+
+    /// <summary>True when a start at this bar plays the count-in: the switch is on, and "Only from bar 1" allows it.</summary>
+    public bool CountsInFrom(int startBar) => CountIn && (!_host.Settings.Audio.CountInOnlyAtSongStart || startBar == 0);
+
     /// <summary>The playback options for a start at the given bar and cell, from the transport switches and the audio settings.</summary>
     public PlaybackOptions BuildOptions(int startBar, int startCell, bool loop, int loopStartBar, int loopEndBar, int loopStartCell, int loopEndCell)
     {
+        if (ResumeFrom is var (bar, cell)) { startBar = bar; startCell = cell; ResumeFrom = null; }   // Play after a pause: from where it paused, not from the cursor or the loop start
         var audio = _host.Settings.Audio;
         _host.Preferences.CountInEachSection = CountIn && audio.CountInEachSection;
         return new PlaybackOptions
@@ -195,7 +202,7 @@ internal sealed class TransportControlsController : IDisposable
             LoopEndCell = loopEndCell,
             Metronome = Metronome,
             // "Only from bar 1": the count-in plays only when starting at the top of the song.
-            CountIn = CountIn && (!audio.CountInOnlyAtSongStart || startBar == 0),
+            CountIn = CountsInFrom(startBar),
             CountInBars = audio.CountInBars,
             MetronomeAccentNote = audio.MetronomeAccent,
             MetronomeClickNote = audio.MetronomeClick,

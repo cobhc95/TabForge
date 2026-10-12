@@ -47,7 +47,7 @@ public sealed class AutoPitchMatcher
         Apply(track);
         if (!Enabled(track)) return;
         foreach (var slot in track.Rig.Plugins)
-            if (slot.Type == PluginSlotType.Instrument && slot.Enabled && slot.AutoPitchOffset is null && !IsMeasuring(slot)) Measure(track, slot);
+            if (slot.Type == PluginSlotType.Instrument && slot.Plays && slot.AutoPitchOffset is null && !IsMeasuring(slot)) Measure(track, slot);
     }
 
     /// <summary>Measures (again) one instrument now.</summary>
@@ -91,7 +91,7 @@ public sealed class AutoPitchMatcher
     public string Describe(TrackModel track)
     {
         if (!Enabled(track)) return IsDrums(track) ? "drums: not transposed" : "";
-        var inst = track.Rig.Plugins.Where(s => s.Type == PluginSlotType.Instrument && s.Enabled).ToList();
+        var inst = track.Rig.Plugins.Where(s => s.Type == PluginSlotType.Instrument && s.Plays).ToList();
         if (inst.Count == 0) return "";
         if (inst.Any(IsMeasuring)) return "measuring…";
         var parts = inst.Select(s => s.AutoPitchOffset is { } o ? (o == 0 ? "matched" : $"{o:+0;-0} st") : "not measured").Distinct();

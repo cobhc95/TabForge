@@ -96,15 +96,41 @@ public sealed class RoutedMidiOutput : IMidiOutput
         var channel = status & 0x0F;
         if (status < 0xF0 && routes[channel] is var slot && slot >= 0 && _engine.IsRunning)
         {
-            // The engine schedules by timestamp, so a later stamp holds the event back (net < 0: Windows MIDI is the slower path).
-            var engineHold = Compensation(_engine.LatencyTicks, WindowsMidiTicks, _engine.Mixer.PlayAllThroughEngine).EngineHoldTicks;
-            _engine.Write(new TimedMidi
-            {
-                Timestamp = Stopwatch.GetTimestamp() + engineHold, Slot = slot,
-                Status = (byte)status, Data1 = (byte)data1, Data2 = (byte)data2
-            });
+            WriteToEngine(slot, status, data1, data2);
             return;
         }
+        SendWindows(deviceId, status, data1, data2);
+    }
+
+    /// <summary>
+    /// A metronome or count-in click: the click's own engine slot (<see cref="AudioEngineClient.Click"/>), never a song track's route, so no
+    /// track's sound source, FX, mute, solo, volume or pan applies. Without that slot (engine not running, or no free slot) it takes the ordinary route.
+    /// </summary>
+    public void SendMetronome(int deviceId, int status, int data1, int data2)
+    {
+        if (status < 0xF0 && _engine.SlotOf(_engine.Click.Track) is var clickSlot and >= 0)
+        {
+            WriteToEngine(clickSlot, status, data1, data2);
+            return;
+        }
+        Send(deviceId, status, data1, data2);
+    }
+
+    /// <summary>One channel message to an engine slot, stamped with the engine's latency compensation.</summary>
+    private void WriteToEngine(int slot, int status, int data1, int data2)
+    {
+        // The engine schedules by timestamp, so a later stamp holds the event back (net < 0: Windows MIDI is the slower path).
+        var engineHold = Compensation(_engine.LatencyTicks, WindowsMidiTicks, _engine.Mixer.PlayAllThroughEngine).EngineHoldTicks;
+        _engine.Write(new TimedMidi
+        {
+            Timestamp = Stopwatch.GetTimestamp() + engineHold, Slot = slot,
+            Status = (byte)status, Data1 = (byte)data1, Data2 = (byte)data2
+        });
+    }
+
+    private void SendWindows(int deviceId, int status, int data1, int data2)
+    {
+        var routes = _routes;
         var delay = _engine.IsRunning && (_engineInUse || routes.Any(r => r >= 0)) ? _engine.LatencyTicks - WindowsMidiTicks : 0;
         if (delay <= 0) { _inner.Send(deviceId, status, data1, data2); return; }
         (_delay ??= new DelayLine(_inner)).Push(Stopwatch.GetTimestamp() + delay, deviceId, status, data1, data2);
@@ -134,6 +160,8 @@ public sealed class RoutedMidiOutput : IMidiOutput
         _delay?.Clear();
         _inner.ResetAll();
         PanicOwnSlots(_routes);
+        if (_engine.SlotOf(_engine.Click.Track) is var clickSlot and >= 0)
+            _engine.Write(new TimedMidi { Timestamp = Stopwatch.GetTimestamp() + Compensation(_engine.LatencyTicks, WindowsMidiTicks, _engine.Mixer.PlayAllThroughEngine).EngineHoldTicks, Slot = clickSlot, Status = 0xB0, Data1 = 123, Flags = TimedMidi.PanicFlag });
     }
 
     public void Close()

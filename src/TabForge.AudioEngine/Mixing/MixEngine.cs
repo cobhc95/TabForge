@@ -111,6 +111,10 @@ public sealed class MixEngine : ISampleProvider
     private readonly byte[] _programState = CreateUnset(MaxSlots * 16);
     private readonly short[] _bendState = new short[MaxSlots * 16];
     private readonly TrackChain?[] _primed = new TrackChain?[MaxSlots];
+    // Slots whose track was unloaded (main thread sets, audio thread clears): the remembered channel state belongs to that track,
+    // so it is dropped before the slot's next chain is primed. Otherwise the next song's track in the slot starts with the previous
+    // track's volume, expression and program on every channel its own setup does not send.
+    private readonly bool[] _forget = new bool[MaxSlots];
     /// <summary>Slots whose General MIDI synth is switched off (engine thread writes; applied to every chain that newly appears in the slot). Static: survives a device restart.</summary>
     public static readonly bool[] SynthOff = new bool[TotalSlots];
 
@@ -133,6 +137,13 @@ public sealed class MixEngine : ISampleProvider
         for (var slot = 0; slot < chains.Length && slot < MaxSlots; slot++)
         {
             var chain = chains[slot];
+            if (Volatile.Read(ref _forget[slot]))
+            {
+                Volatile.Write(ref _forget[slot], false);
+                Array.Fill(_ccState, (byte)255, slot * 16 * 128, 16 * 128);
+                Array.Fill(_programState, (byte)255, slot * 16, 16);
+                Array.Clear(_bendState, slot * 16, 16);
+            }
             if (ReferenceEquals(chain, _primed[slot]))
             {
                 // Same chain, but its General MIDI synth was just switched back on: it skipped the MIDI while off, so replay the state.
@@ -168,6 +179,7 @@ public sealed class MixEngine : ISampleProvider
         var copy = (TrackChain?[])Volatile.Read(ref _chains).Clone();
         var old = copy[slot];
         copy[slot] = chain;
+        if (chain is null && slot < MaxSlots) Volatile.Write(ref _forget[slot], true);   // unloaded (a replaced chain keeps the slot's state)
         Volatile.Write(ref _chains, copy);
         return old;
     }

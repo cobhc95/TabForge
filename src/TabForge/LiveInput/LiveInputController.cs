@@ -45,10 +45,14 @@ internal sealed class LiveInputController : IFxChainHost, IDisposable
         _arm.Changed += OnArmChanged;
         _midi = _arm.Midi ??= new LiveInputMidi(host.Engine, _arm.Track, host.Engine.MidiInput);
         _midi.Notice += _host.SetStatus;
+        _arm.LevelChanged += OnLevelChanged;
+        ApplySavedLevel();
     }
 
     /// <summary>Raised when live input turns on or off (from any window).</summary>
     public event Action? Changed;
+    /// <summary>Raised when the live input's volume, pan or mute changes (from any window).</summary>
+    public event Action? LevelChanged;
     /// <summary>Raised when a press could not turn live input on and the input menu should open instead.</summary>
     public event Action? MenuRequested;
 
@@ -133,6 +137,45 @@ internal sealed class LiveInputController : IFxChainHost, IDisposable
     }
 
     public void OpenAudioSettings() => _host.OpenAudioSettings();
+
+    /// <summary>The live input's own volume (0-127), pan (0-127, 64 centre) and mute, as the mixer's live input row shows them.</summary>
+    public int Volume => _arm.Track.Volume;
+    public int Pan => _arm.Track.Pan;
+    public bool Muted => _arm.Track.Mute;
+    /// <summary>The number of plug-ins in the live FX chain.</summary>
+    public int PluginCount => _arm.Track.Rig.Plugins.Count;
+
+    /// <summary>Sets the live input's volume and pan: saved program-wide, sent to the engine at once while on.</summary>
+    public void SetLevel(int volume, int pan)
+    {
+        Saved.Volume = Math.Clamp(volume, 0, 127);
+        Saved.Pan = Math.Clamp(pan, 0, 127);
+        _arm.SetLevel(Saved.Volume, Saved.Pan);
+        _host.SaveSettings();
+        if (IsOn) _host.SyncAudioEngine();
+    }
+
+    /// <summary>Mutes or unmutes the live input without turning it off (its volume is kept).</summary>
+    public void SetMuted(bool muted)
+    {
+        _arm.SetMute(muted);
+        if (IsOn) _host.SyncAudioEngine();
+    }
+
+    /// <summary>The saved volume and pan go to the stand-in: at the start, and after Reset all settings (the engine follows while on).</summary>
+    public void ApplySavedLevel()
+    {
+        if (_arm.Track.Volume == Saved.Volume && _arm.Track.Pan == Saved.Pan) return;
+        _arm.SetLevel(Saved.Volume, Saved.Pan);
+        if (IsOn) _host.SyncAudioEngine();
+    }
+
+    /// <summary>True hides the live input row under the mixer's Master row (saved with the app settings).</summary>
+    public bool MixerCollapsed
+    {
+        get => Saved.MixerCollapsed;
+        set { Saved.MixerCollapsed = value; _host.SaveSettings(); }
+    }
 
     public void Toggle()
     {
@@ -238,8 +281,10 @@ internal sealed class LiveInputController : IFxChainHost, IDisposable
 
     private void OnArmChanged() => Changed?.Invoke();
 
+    private void OnLevelChanged() => LevelChanged?.Invoke();
+
     /// <summary>The window closed. Live input belongs to the program, so it stays as it is.</summary>
-    public void Dispose() { _disposed = true; _arm.Changed -= OnArmChanged; _midi.Notice -= _host.SetStatus; }
+    public void Dispose() { _disposed = true; _arm.Changed -= OnArmChanged; _arm.LevelChanged -= OnLevelChanged; _midi.Notice -= _host.SetStatus; }
 
     // ---------- IFxChainHost: the live chain's window ----------
 

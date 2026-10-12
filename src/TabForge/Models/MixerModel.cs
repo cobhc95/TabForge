@@ -364,7 +364,7 @@ public static class MixerGroups
         // The user unticked both "Through chain" and "GM sound" on a track with plug-ins: silence is what they asked for.
         if (IsSilentRoute(track)) return TrackRoute.Silent;
         if (track.SoundSource != SoundSources.Plugins) return playAll ? TrackRoute.MidiThroughEffects : TrackRoute.WindowsMidi;
-        var plugins = track.Rig.Plugins.Where(p => p.Enabled).ToList();
+        var plugins = track.Rig.Plugins.Where(p => p.Plays).ToList();
         if (plugins.Any(p => p.Type == TabForge.Plugins.PluginSlotType.Instrument && !p.Unavailable)) return TrackRoute.Instrument;
         return plugins.Count > 0 || playAll ? TrackRoute.MidiThroughEffects : TrackRoute.WindowsMidi;
     }
@@ -377,7 +377,7 @@ public static class MixerGroups
     {
         if (track.IsAudio) return !InstrumentPlays(track);
         if (track.SoundSource != SoundSources.Plugins) return track.MidiSoundManualOff && !track.MidiSound && track.Rig.Plugins.Count > 0;
-        var instrumentPlays = track.Rig.Plugins.Any(p => p.Enabled && p.Type == TabForge.Plugins.PluginSlotType.Instrument && !p.Unavailable);
+        var instrumentPlays = track.Rig.Plugins.Any(p => p.Plays && p.Type == TabForge.Plugins.PluginSlotType.Instrument && !p.Unavailable);
         return !instrumentPlays && !track.MidiSound;
     }
 
@@ -407,7 +407,7 @@ public static class MixerGroups
     /// <summary>A VST instrument really plays this track: chain on, the instrument not bypassed, and the engine can run it (not crashed, quarantined, untrusted or missing).</summary>
     public static bool InstrumentPlays(TrackModel track) =>
         track.SoundSource == SoundSources.Plugins
-        && track.Rig.Plugins.Any(p => p.Enabled && !p.Unavailable && p.Type == TabForge.Plugins.PluginSlotType.Instrument);
+        && track.Rig.Plugins.Any(p => p.Plays && !p.Unavailable && p.Type == TabForge.Plugins.PluginSlotType.Instrument);
 
     /// <summary>
     /// Keeps "GM sound" in line with reality: when no VST instrument plays the track (chain off, instrument bypassed or removed) GM is

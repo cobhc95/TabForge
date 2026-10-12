@@ -14,7 +14,12 @@ namespace TabForge;
 public static partial class SelfTest
 {
     /// <summary>Catalogued commands that RunHotkey does not run, each with the place that runs it. Empty: the clip commands reach ClipEditController from the palette too.</summary>
-    private static readonly (string Id, string Reason)[] HotkeyIdsOutsideRunHotkey = Array.Empty<(string, string)>();
+    private static readonly (string Id, string Reason)[] HotkeyIdsOutsideRunHotkey = FxChainIdsOutsideRunHotkey().ToArray();
+
+    /// <summary>The FX chain window's commands: its own key map and menu route them (Views/FxChainWindow.Commands.cs), not RunHotkey.</summary>
+    private static IEnumerable<(string Id, string Reason)> FxChainIdsOutsideRunHotkey() =>
+        typeof(TabForge.Services.Features.FxChainIds).GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
+            .Select(f => ((string)f.GetValue(null)!, "the FX chain window's own key map (Views/FxChainWindow.Commands.cs)"));
 
     /// <summary>A line of the plain-command table: Click("Id", handler) or Run("Id", action).</summary>
     internal static readonly Regex CommandTableLine = new(@"\b(?:Click|Run)\(""([A-Za-z]+\.[A-Za-z]+)""", RegexOptions.Compiled);

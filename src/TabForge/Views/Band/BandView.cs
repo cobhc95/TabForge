@@ -152,17 +152,12 @@ internal sealed class BandView : Grid
         };
         row.StackedExtraChanged += FitRows;
         row.Lane.SizeChanged += (_, _) => SeeLanes();
-        BandLaneHover.Attach(row.Lane, () => _playing);
+        BandLaneHover.Attach(row.Lane);
         row.ResizeReset += () => { _state.ResetHeight(row.Track); FitRows(); };
     }
 
-    private bool _playing;
-    /// <summary>True while the song plays (the controller sets it): the lanes show no hover outline then, and one on show goes as playback starts.</summary>
-    internal bool Playing
-    {
-        get => _playing;
-        set { if (value == _playing) return; _playing = value; if (value) foreach (var row in _rows) BandLaneHover.Clear(row.Lane); }
-    }
+    /// <summary>True while the song plays (the controller sets it).</summary>
+    internal bool Playing { get; set; }
 
     /// <summary>Raised when the part of a lane that lies inside the rows' viewport changed (a row resized, the rows scrolled, the pane resized).</summary>
     public event Action? LanesSeenChanged;

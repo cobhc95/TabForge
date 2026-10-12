@@ -61,6 +61,38 @@ public static partial class SelfTest
             $"cursor {cursorBox.X}, eighth {eighthOutline.X}, sixteenth {sixteenthOutline.X}");
     }
 
+    /// <summary>The hover outline is drawn while the song plays, and a hover change repaints the system that holds the beat: the result equals a fresh drawing.</summary>
+    private static void TestHoverBoxDuringPlayback()
+    {
+        var rethrow = TabEditorControl.RethrowRenderFailures;
+        TabEditorControl.RethrowRenderFailures = true;
+        try
+        {
+            var project = DemoSongFactory.Create();
+            var editor = ScoreRenderIdentity.CreateEditor(project, 0, 1.0, true, "play");
+            var playing = Pixels(ScoreRenderIdentity.Render(editor));
+            SetHover(editor, 0, 0);
+            var hovered = Pixels(ScoreRenderIdentity.Render(editor));
+            var fresh = ScoreRenderIdentity.CreateEditor(project, 0, 1.0, true, "play");
+            SetHover(fresh, 0, 0);
+            var expected = Pixels(ScoreRenderIdentity.Render(fresh));
+            var changed = 0;
+            for (var i = 0; i < hovered.Length && i < playing.Length; i += 4)
+                if (hovered[i] != playing[i] || hovered[i + 1] != playing[i + 1] || hovered[i + 2] != playing[i + 2]) changed++;
+            Check("hover box while playing: the outline is drawn", changed > 20, $"{changed} pixels changed");
+            Check("hover box while playing: the retained systems take the outline too", hovered.AsSpan().SequenceEqual(expected), "differs from a fresh drawing");
+        }
+        finally { TabEditorControl.RethrowRenderFailures = rethrow; }
+    }
+
+    private static void SetHover(TabEditorControl editor, int measure, int cell)
+    {
+        var sel = typeof(TabEditorControl).GetField("_sel", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(editor)!;
+        sel.GetType().GetProperty("HoverMeasure")!.SetValue(sel, measure);
+        sel.GetType().GetProperty("HoverCell")!.SetValue(sel, cell);
+        ((Views.Score.IScorePageHost)editor).RepaintKeepingDrawings();
+    }
+
     // The pixels the cursor adds: the same state rendered with and without the cursor.
     private static int CursorPixels(Models.SongProject project, string state)
     {

@@ -92,7 +92,7 @@ public sealed partial class TabEditorControl
                 _systemCache.Remove(s);
                 continue;
             }
-            var signature = _playback.SystemSignature(system);
+            var signature = _playback.SystemSignature(system) ^ _sel.HoverKeyIn(system.FirstMeasure, system.LastMeasure);
             if (!_systemCache.TryGet(s, signature, out var drawing))
             {
                 var group = new DrawingGroup();

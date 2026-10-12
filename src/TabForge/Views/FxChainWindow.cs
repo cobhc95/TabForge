@@ -52,7 +52,13 @@ public sealed partial class FxChainWindow : Window
 {
     private readonly IFxChainHost _host;
     private readonly TrackModel _track;
-    private readonly ListBox _list = new() { BorderThickness = new Thickness(0), AllowDrop = true };
+    private readonly ListBox _list = new() { BorderThickness = new Thickness(0) };
+    private Fx.FxChainList _chainList = null!;
+    /// <summary>The chain list's selection and drag (tests and captures drive it).</summary>
+    internal Fx.FxChainList ChainList => _chainList;
+    private Fx.FxChainContainers _containers = null!;
+    private readonly Fx.FxChainKeys _keys;
+    internal Fx.FxChainContainers Containers => _containers;
     private readonly CheckBox _useChain = new() { Content = "Through chain", ToolTip = "Play this track through the chain. Off: the track plays through Windows MIDI." };
     private readonly CheckBox _midiSound = new() { Content = "GM sound", ToolTip = "On: the track's General MIDI instrument sound plays; with effects and no VST instrument the effects shape it. Off: only a VST instrument sounds." };
     private readonly CheckBox _autoGm = new() { Content = "Auto-switch to GM sound when no VST instrument plays", ToolTip = "On: GM sound is ticked when no VST instrument plays this track (chain off, instrument bypassed or removed) and unticked when one plays again. A GM sound you untick yourself stays off. Same as the option in Settings > Audio & Plug-ins." };
@@ -60,7 +66,7 @@ public sealed partial class FxChainWindow : Window
     private readonly CheckBox _startup = new() { Content = "Add as a track on startup", ToolTip = "Off by default. On: this chain (plug-ins, their settings, wiring and MIDI configuration, volume, audio input and monitor setting) is added as a track, not armed, to every song you open or create. That track is not saved with the song until you untick this. Manage them in Settings > Audio & Plug-ins." };
     private readonly Button _midiButton =new() { Content = "MIDI…", Padding = new Thickness(10, 3, 10, 3), Margin = new Thickness(0, 0, 8, 0), ToolTip = "MIDI processors in front of this plug-in: filter, transpose, drum map, velocity, humanize, delay, program / CC, log… (lit when any is on)" };
     private BypassOverlay? _overlay;
-    private readonly ComboBox _presets = new() { MinWidth = 220, ToolTip = "Presets: the plug-in's own programs and your saved presets" };
+    private readonly ComboBox _presets = new() { MinWidth = 220, ToolTip = "Presets: the plug-in's own programs and your saved presets (rename, duplicate, delete or drag your own in the open list)" };
     private readonly Button _wiring = new() { Content = "Wiring…", Padding = new Thickness(10, 3, 10, 3), Margin = new Thickness(0, 0, 8, 0), ToolTip = "Audio pins and MIDI routing (source track, channel) of this plug-in" };
     private WiringWindow? _wiringWindow;
     private readonly KnobControl _volume = new()
@@ -80,7 +86,6 @@ public sealed partial class FxChainWindow : Window
     private readonly HashSet<PluginSlot> _floating = new(ReferenceEqualityComparer.Instance);
     private List<string> _programs = new();
     private bool _building;
-    private Point _dragStart;
 
     public TrackModel Track => _track;
 
@@ -103,7 +108,7 @@ public sealed partial class FxChainWindow : Window
             matcher.Apply(_track);
             if (on) foreach (var s in _track.Rig.Plugins) if (s.Type == PluginSlotType.Instrument && s.AutoPitchOffset is null) matcher.Measure(_track, s);
         };
-        _remeasure.Click += (_, _) => { foreach (var s in _track.Rig.Plugins) if (s.Type == PluginSlotType.Instrument && s.Enabled) matcher.Measure(_track, s); };
+        _remeasure.Click += (_, _) => { foreach (var s in _track.Rig.Plugins) if (s.Type == PluginSlotType.Instrument && s.Plays) matcher.Measure(_track, s); };
         matcher.Changed += Refresh;
         Closed += (_, _) => matcher.Changed -= Refresh;
         Refresh(_track);
@@ -119,7 +124,8 @@ public sealed partial class FxChainWindow : Window
         UiIds.Id(_presets, "Fx.Presets");
         UiIds.Id(_wiring, "Fx.Wiring");
         UiIds.Id(_midiButton, "Fx.Midi");
-        PreviewKeyDown += (_, e) => { if (e.Key == Key.Escape && Keyboard.FocusedElement is not System.Windows.Controls.Primitives.TextBoxBase && Keyboard.FocusedElement is not ComboBox) { e.Handled = true; Close(); } else if (Keyboard.Modifiers == ModifierKeys.Control && e.Key is Key.S or Key.O) { e.Handled = true; if (e.Key == Key.S) SaveChain(); else LoadChain(replace: true); } };
+        _keys = new Fx.FxChainKeys(RunFxCommand);
+        PreviewKeyDown += (_, e) => { if (_keys.Handle(e)) e.Handled = true; else if (e.Key == Key.Escape && _chainList.HandleEscape()) e.Handled = true; else if (e.Key == Key.Escape && Keyboard.FocusedElement is not System.Windows.Controls.Primitives.TextBoxBase && Keyboard.FocusedElement is not ComboBox) { e.Handled = true; Close(); } };
         _host = host;
         _track = track;
         Owner = owner;
@@ -136,7 +142,7 @@ public sealed partial class FxChainWindow : Window
         root.Children.Add(body);
 
         body.Children.Add(BuildOptionsRow());
-        body.Children.Add(BuildChainPane());
+        Fx.FxListSplitter.Attach(this, body, BuildChainPane(), _host.PluginSettings, _host.SaveSettings);
         body.Children.Add(BuildPluginPane());
 
         Content = root;
@@ -158,7 +164,7 @@ public sealed partial class FxChainWindow : Window
     private void PlaceOverlay()
     {
         // Bypassed: its own switch, or the whole chain switched off (a global bypass; the plug-ins stay loaded).
-        var show = IsVisible && WindowState != WindowState.Minimized && Selected is { } s && (!s.Enabled || _track.SoundSource != SoundSources.Plugins)
+        var show = IsVisible && WindowState != WindowState.Minimized && Selected is { } s && (!s.Plays || _track.SoundSource != SoundSources.Plugins)
             && ReferenceEquals(s, _docked)
             && _dockFrame.Visibility == Visibility.Visible && _dockFrame.ActualWidth > 8 && _dockFrame.ActualHeight > 8 && PresentationSource.FromVisual(_dockFrame) is not null;
         if (!show) { _overlay?.Hide(); return; }
@@ -268,41 +274,8 @@ public sealed partial class FxChainWindow : Window
         SetWindowPos(h, after, left, top, right - left, bottom - top, flags);
     }
 
-    private PluginSlot? Selected => _list.SelectedItem is ListBoxItem { Tag: PluginSlot slot } ? slot : null;
-
-    private Menu BuildMenu()
-    {
-        var menu = new Menu();
-        DockPanel.SetDock(menu, Dock.Top);
-        var fx = new MenuItem { Header = "_FX" };
-        fx.Items.Add(Item("Add plug-in…", AddPlugin));
-        fx.Items.Add(Item("Remove plug-in", RemoveSelected));
-        fx.Items.Add(new Separator());
-        fx.Items.Add(Item("Save FX chain…", SaveChain)); ((MenuItem)fx.Items[^1]!).InputGestureText = new KeyGesture(Key.S, ModifierKeys.Control).GetDisplayStringForCulture(System.Globalization.CultureInfo.CurrentUICulture);   // the window's own fixed key (see PreviewKeyDown), shown from the gesture
-        fx.Items.Add(Item("Load FX chain…", () => LoadChain(replace: true))); ((MenuItem)fx.Items[^1]!).InputGestureText = new KeyGesture(Key.O, ModifierKeys.Control).GetDisplayStringForCulture(System.Globalization.CultureInfo.CurrentUICulture);   // the window's own fixed key (see PreviewKeyDown), shown from the gesture
-        fx.Items.Add(Item("Add FX chain to the end…", () => LoadChain(replace: false)));
-        fx.Items.Add(new Separator());
-        fx.Items.Add(Item("Clear chain", () => Edit(() => { CloseDocked(); _track.Rig.Plugins.Clear(); }, refresh: true)));
-        menu.Items.Add(fx);
-        var options = new MenuItem { Header = "_Options" };
-        var dock = new MenuItem { Header = "Show plug-in windows in this window", IsCheckable = true, IsChecked = _host.PluginSettings.DockPluginWindows };
-        dock.Click += (_, _) => { _host.PluginSettings.DockPluginWindows = dock.IsChecked; _host.SaveSettings(); _floating.Clear(); ShowSelected(); };
-        var onTop = new MenuItem { Header = "Keep floating plug-in windows on top", IsCheckable = true, IsChecked = _host.PluginSettings.PluginWindowsOnTop };
-        onTop.Click += (_, _) => { _host.PluginSettings.PluginWindowsOnTop = onTop.IsChecked; _host.SaveSettings(); };
-        options.Items.Add(dock);
-        options.Items.Add(onTop);
-        options.Items.Add(new Separator());
-        options.Items.Add(Item("Plug-in folders and audio settings…", _host.OpenAudioSettings));
-        menu.Items.Add(options);
-        return menu;
-
-        static MenuItem Item(string header, Action action)
-        {
-            var item = new MenuItem { Header = header };
-            item.Click += (_, _) => action();
-            return item;
-        }
-    }
+    /// <summary>The focused plug-in: the row clicked last, the one the pane shows (other rows may be selected with it).</summary>
+    private PluginSlot? Selected => _chainList.Focused as PluginSlot;
 
     private static Button MakeButton(string text, Action click, string? tip = null)
     {
@@ -313,23 +286,9 @@ public sealed partial class FxChainWindow : Window
 
     private void BuildBar()
     {
-        var addPreset = new Button { Content = "+", Width = 28, Margin = new Thickness(4, 0, 8, 0), ToolTip = "Save or delete presets" };
-        addPreset.Click += (_, _) =>
-        {
-            var menu = new ContextMenu();
-            var save = new MenuItem { Header = "Save preset…" };
-            save.Click += (_, _) => SavePreset();
-            menu.Items.Add(save);
-            if (_presets.SelectedItem is PresetItem { User: true } user)
-            {
-                var delete = new MenuItem { Header = $"Delete preset “{user.Name}”" };
-                delete.Click += (_, _) => { if (Selected is { } s) { PluginLibrary.DeletePreset(s, user.Name); LoadPresetList(); } };
-                menu.Items.Add(delete);
-            }
-            addPreset.ContextMenu = menu;
-            menu.PlacementTarget = addPreset;
-            menu.IsOpen = true;
-        };
+        var addPreset = new Button { Content = "+", Width = 28, Margin = new Thickness(4, 0, 8, 0), ToolTip = "Save the current settings as a preset" };
+        var rows = _presetRows = Presets.PresetRows.Attach(_presets, Presets.PresetKind.PluginPreset, () => Selected is { } s ? PresetFolderStore.Plugin(s) : null, o => o is PresetItem { User: true } p ? p.Name : null, LoadPresetList, () => Selected is { } s ? PresetFolderStore.PluginKey(s) : null);
+        addPreset.Click += (_, _) => Fx.FxPresetMenus.ShowPresetMenu(addPreset, rows, Selected, _presets.SelectedItem is PresetItem { User: true } user ? user.Name : null, SavePreset);
         _presets.SelectionChanged += (_, _) => { if (!_building) ApplyPreset(); };
         TooltipShortcuts.Bind(_wiring, "Audio pins and MIDI routing (source track, channel) of this plug-in", "Track.Wiring");
         TooltipShortcuts.Bind(_midiButton, "MIDI processors in front of this plug-in: filter, transpose, drum map, velocity, humanize, delay, program / CC, log… (lit when any is on)", "Track.MidiProcessing");
@@ -359,16 +318,20 @@ public sealed partial class FxChainWindow : Window
         _bar.Children.Add(_bypass);
     }
 
-    private void Edit(Action change, bool refresh = false, bool show = true, bool switched = false)
+    private void Edit(Action change, bool refresh = false, bool show = true, bool switched = false) => EditTree(_ => change(), refresh, show, switched);
+
+    /// <summary>One undo step on the chain: the change may edit the plug-in list, the tree of containers, or both (see <see cref="ChainTree.Edit"/>).</summary>
+    private void EditTree(Action<List<ChainItem>> change, bool refresh = false, bool show = true, bool switched = false)
     {
         _host.BeginChainEdit();
-        change();
+        ChainTree.Edit(_track.Rig, change);
+        if (switched && _track.Rig.Plugins.FirstOrDefault() is { } any) _host.Engine.SetPluginEnabled(_track, any);   // a container's switch: every plug-in's live bypass follows
         if (switched) _host.PluginSwitched(_track); else _host.ChainChanged(_track);
         // The app may have switched GM sound automatically (see MixerGroups.ApplyAutoGm): show what is really playing.
         _midiSound.IsChecked = _track.MidiSound;
         _useChain.IsChecked = _track.SoundSource == SoundSources.Plugins;
         UpdateMidiButton();
-        if (refresh) RefreshList(_list.SelectedIndex);
+        if (refresh) RefreshList(-1);
         else if (show) Dispatcher.BeginInvoke(ShowSelected, System.Windows.Threading.DispatcherPriority.Background);
     }
 
@@ -390,35 +353,18 @@ public sealed partial class FxChainWindow : Window
         Dispatcher.BeginInvoke(ShowSelected, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
     }
 
-    private void RefreshList(int select)
+    /// <summary>Builds the rows again and focuses the plug-in at <paramref name="select"/> (negative: the focus stays where it is).</summary>
+    private void RefreshList(int select) => RefreshRows(select < 0 ? _chainList.Focused : _track.Rig.Plugins.ElementAtOrDefault(Math.Clamp(select, 0, Math.Max(0, _track.Rig.Plugins.Count - 1))));
+
+    private void RefreshRows(object? focus)
     {
         _building = true;
         try
         {
-            _list.Items.Clear();
-            foreach (var slot in _track.Rig.Plugins)
-            {
-                var check = new CheckBox { IsChecked = slot.Enabled, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0), ToolTip = slot.Enabled ? "On (untick to bypass)" : "Bypassed (tick to enable)" };
-                System.Windows.Automation.AutomationProperties.SetHelpText(check, slot.Enabled ? "On" : "Bypassed");
-                var captured = slot;
-                check.Click += (_, _) => Edit(() => { captured.Enabled = check.IsChecked == true; _host.Engine.SetPluginEnabled(_track, captured); }, switched: true);
-                var row = new DockPanel { Margin = new Thickness(2) };
-                row.Children.Add(check);
-                var kind = new TextBlock { Text = slot.Type == PluginSlotType.Instrument ? "INST" : "FX", FontSize = Services.ThemeService.MinFontSize, Width = 32, VerticalAlignment = VerticalAlignment.Center };
-                kind.SetResourceReference(TextBlock.ForegroundProperty, slot.Type == PluginSlotType.Instrument ? "AccentBrush" : "MutedBrush");
-                row.Children.Add(kind);
-                var names = new StackPanel();
-                names.Children.Add(new TextBlock { Text = slot.Name, TextTrimming = TextTrimming.CharacterEllipsis });
-                if (slot.Vendor.Length > 0)
-                {
-                    var vendor = new TextBlock { Text = slot.Vendor, FontSize = Services.ThemeService.MinFontSize, TextTrimming = TextTrimming.CharacterEllipsis };
-                    vendor.SetResourceReference(TextBlock.ForegroundProperty, "SecondaryTextBrush");
-                    names.Children.Add(vendor);
-                }
-                row.Children.Add(names);
-                _list.Items.Add(new ListBoxItem { Content = row, Tag = slot, ToolTip = $"{slot.Name}\n{slot.Path}\nDouble-click: float its window · drag: reorder" });
-            }
-            if (_track.Rig.Plugins.Count > 0) _list.SelectedIndex = Math.Clamp(select, 0, _track.Rig.Plugins.Count - 1);
+            var keep = _chainList.SelectedTags;
+            _chainList.Clear();
+            Fx.FxChainRows.Fill(_chainList, _track.Rig, SetEnabled, _containers.SetEnabled, _containers.ToggleCollapsed);
+            _chainList.Restore(keep, Math.Max(0, _chainList.IndexOf(focus)));
         }
         finally { _building = false; }
         _useChain.IsChecked = _track.SoundSource == SoundSources.Plugins;
@@ -431,6 +377,8 @@ public sealed partial class FxChainWindow : Window
     private void ShowSelected()
     {
         var slot = Selected;
+        _bar.Visibility = _containers.Show(_chainList.Focused as ChainContainer) ? Visibility.Collapsed : Visibility.Visible;
+        if (_containers.Shown is not null) { CloseDocked(); _dockHere.Visibility = Visibility.Collapsed; ShowMessage(""); return; }
         _bar.IsEnabled = slot is not null;
         _building = true;
         try
@@ -467,7 +415,7 @@ public sealed partial class FxChainWindow : Window
         {
             ShowMessage(_track.SoundSource != SoundSources.Plugins
                 ? "The chain is off. Tick “Play this track through the chain” (or the FX power switch) to use the plug-in."
-                : slot.Enabled ? "Starting the plug-in…" : "This plug-in is bypassed.");
+                : slot.Plays ? "Starting the plug-in…" : slot.Enabled ? "The container this plug-in sits in is bypassed." : "This plug-in is bypassed.");
             _docked = null;   // the engine has no chain for this track: its editor is gone, so it must be opened again when the chain is back
             return;
         }
@@ -532,6 +480,7 @@ public sealed partial class FxChainWindow : Window
     }
 
     // ---------- presets ----------
+    private Presets.PresetRows? _presetRows;
     private sealed record PresetItem(string Name, int Program, bool User)
     {
         public override string ToString() => User ? $"★ {Name}" : Name;
@@ -542,14 +491,19 @@ public sealed partial class FxChainWindow : Window
         _building = true;
         try
         {
-            var items = new List<PresetItem>();
+            var items = new List<object>();
             if (Selected is { } slot)
             {
                 items.AddRange(_programs.Select((n, i) => new PresetItem(n, i, false)));
                 items.AddRange(PluginLibrary.PresetNames(slot).Select(n => new PresetItem(n, -1, true)));
             }
-            _presets.ItemsSource = items;
             _presets.IsEnabled = items.Count > 0;
+            // The preset name an imported chain gave the plug-in: its own row when no program or saved preset has that name.
+            var came = Selected?.PresetName is { Length: > 0 } name ? items.FirstOrDefault(i => ((PresetItem)i).Name == name) ?? new ComboBoxItem { Content = name, Tag = name, ToolTip = "The preset name this plug-in came with" } : null;
+            if (came is ComboBoxItem) items.Add(came);
+            if (Selected is not null) _presetRows?.AddManage(items);
+            _presets.ItemsSource = items;
+            if (came is not null) _presets.SelectedItem = came;
             if (items.Count == 0) _presets.Text = "No presets";
         }
         finally { _building = false; }
@@ -561,13 +515,14 @@ public sealed partial class FxChainWindow : Window
         _programs = names.ToList();
         LoadPresetList();
         _building = true;
-        try { if (current >= 0 && current < names.Count) _presets.SelectedIndex = current; }
+        try { if (slot.PresetName is null && current >= 0 && current < names.Count) _presets.SelectedIndex = current; }
         finally { _building = false; }
     }
 
     private void ApplyPreset()
     {
         if (Selected is not { } slot || _presets.SelectedItem is not PresetItem item) return;
+        slot.PresetName = null;
         if (!item.User) { _host.Engine.SetProgram(_track, slot, item.Program); return; }
         if (PluginLibrary.LoadPreset(slot, item.Name) is not { } preset) return;
         _host.BeginChainEdit();
@@ -635,17 +590,27 @@ public sealed partial class FxChainWindow : Window
     }
 
     // ---------- chain editing ----------
+    private bool HasInstrument => _track.Rig.Plugins.Any(p => p.Type == PluginSlotType.Instrument);
+    /// <summary>The chain's last instrument left it (removed alone or with its container): the GM sound plays again.</summary>
+    private void GmBackWithoutInstrument(bool had) { if (had && !HasInstrument) _track.MidiSound = true; }
+
+    /// <summary>Removes every selected plug-in as one step.</summary>
     private void RemoveSelected()
     {
-        if (Selected is not { } slot) return;
-        var index = _list.SelectedIndex;
-        if (ReferenceEquals(_docked, slot)) CloseDocked();
-        Edit(() =>
-        {
-            _track.Rig.Plugins.Remove(slot);
-            if (slot.Type == PluginSlotType.Instrument && !_track.Rig.Plugins.Any(p => p.Type == PluginSlotType.Instrument)) _track.MidiSound = true;
-        }, refresh: false, show: false);
+        if (_chainList.SelectedTags.Any(t => t is ChainContainer)) { _containers.DeleteSelected(); return; }
+        var slots = _chainList.SelectedTags.OfType<PluginSlot>().ToList();
+        if (slots.Count == 0) return;
+        var index = _track.Rig.Plugins.IndexOf(slots[0]);
+        if (_docked is { } docked && slots.Contains(docked)) CloseDocked();
+        Edit(() => { var had = HasInstrument; _track.Rig.Plugins.RemoveAll(slots.Contains); GmBackWithoutInstrument(had); }, refresh: false, show: false);
         RefreshList(index);
+    }
+
+    /// <summary>A row's tick: switches that plug-in, or every selected plug-in when its row is one of several selected, as one step.</summary>
+    private void SetEnabled(PluginSlot slot, bool on)
+    {
+        var slots = _chainList.TargetsOf(slot).OfType<PluginSlot>().ToList();
+        Edit(() => { foreach (var s in slots) { s.Enabled = on; _host.Engine.SetPluginEnabled(_track, s); } }, refresh: slots.Count > 1, switched: true);
     }
 
     private async void AddPlugin()
@@ -709,7 +674,7 @@ public sealed partial class FxChainWindow : Window
             InitialDirectory = PluginLibrary.ChainsFolder, FileName = _track.Name,
         };
         if (dialog.ShowDialog(this) != true) return;
-        try { PluginLibrary.SaveChain(dialog.FileName, _track.Rig.Plugins); }
+        try { PluginLibrary.SaveChain(dialog.FileName, _track.Rig.Plugins, _track.Rig.Containers); }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
         {
             Services.Trace.Error(Services.Trace.Ui, "FX chain: save: " + ex.Message);
@@ -719,8 +684,10 @@ public sealed partial class FxChainWindow : Window
         _status.Text = $"Saved {Path.GetFileName(dialog.FileName)}";
     }
 
-    private void LoadChain(bool replace)
+    private bool _loadingChain;   // an import is scanning: a second load waits
+    private async void LoadChain(bool replace, string? file = null)
     {
+        if (_loadingChain) return;
         Directory.CreateDirectory(PluginLibrary.ChainsFolder);
         var reaperFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "REAPER", "FXChains");
         var useReaper = Directory.Exists(reaperFolder) && !Directory.EnumerateFiles(PluginLibrary.ChainsFolder, "*.tfchain").Any();
@@ -729,52 +696,22 @@ public sealed partial class FxChainWindow : Window
             Title = "Load FX chain", Filter = "TabForge FX chain (*.tfchain)|*.tfchain|Imported FX chain (*.RfxChain)|*.RfxChain",
             InitialDirectory = useReaper ? reaperFolder : PluginLibrary.ChainsFolder, FilterIndex = useReaper ? 2 : 1,
         };
-        if (dialog.ShowDialog(this) != true) return;
+        if (file is null && dialog.ShowDialog(this) != true) return;
+        file ??= dialog.FileName;
         List<PluginSlot>? chain;
-        if (dialog.FileName.EndsWith(".rfxchain", StringComparison.OrdinalIgnoreCase))
-        {
-            var catalog = _host.PluginSettings.ScanCache.Select(k => new VstPluginInfo(k.Name, k.Path, k.Format, k.Vendor, k.Role)).Concat(_host.PluginSettings.LastScan).ToList();
-            if (catalog.Count == 0) catalog = VstScannerService.Scan(VstScannerService.RootsFor(_host.PluginSettings).ToList(), CancellationToken.None, null, _host.PluginSettings).ToList();
-            var imported = ReaperChainImporter.Import(dialog.FileName, catalog);
-            chain = imported?.Chain;
-            if (imported is not null && imported.Value.Report.Length > 0) TabForge.Views.ThemedMessageBox.Show(this, imported.Value.Report, "FX chain import", MessageBoxButton.OK, MessageBoxImage.Information);
-        }
-        else chain = PluginLibrary.LoadChain(dialog.FileName);
+        _loadingChain = true;
+        try { chain = file.EndsWith(".rfxchain", StringComparison.OrdinalIgnoreCase) ? await RfxChainImportFlow.LoadAsync(this, file, _host, t => _status.Text = t) : PluginLibrary.LoadChain(file); }
+        finally { _loadingChain = false; }
+        if (!IsLoaded) return;   // the window closed while the folders were scanned
         if (chain is null) { TabForge.Views.ThemedMessageBox.Show(this, "That file is not a valid FX chain.", "Load FX chain", MessageBoxButton.OK, MessageBoxImage.Warning); return; }
-        if (!replace && _track.Rig.Plugins.Count + chain.Count > InputLimits.MaxPluginsPerTrack) return;
+        if (chain.Count == 0 || (!replace && _track.Rig.Plugins.Count + chain.Count > InputLimits.MaxPluginsPerTrack)) return;   // nothing to add: the chain stays
         CloseDocked();
         Edit(() =>
         {
             if (replace) _track.Rig.Plugins.Clear();
             _track.Rig.Plugins.AddRange(chain);
-            if (chain.Count > 0) _track.SoundSource = SoundSources.Plugins;
+            _track.SoundSource = SoundSources.Plugins;
         }, refresh: true);
-    }
-
-    // ---------- drag and drop reordering ----------
-    private void AttachDragReorder()
-    {
-        _list.PreviewMouseLeftButtonDown += (_, e) => _dragStart = e.GetPosition(_list);
-        _list.PreviewMouseMove += (_, e) =>
-        {
-            if (e.LeftButton != MouseButtonState.Pressed || Selected is not { } slot) return;
-            var delta = e.GetPosition(_list) - _dragStart;
-            if (Math.Abs(delta.Y) < SystemParameters.MinimumVerticalDragDistance) return;
-            if (e.OriginalSource is DependencyObject source && FindParent<CheckBox>(source) is not null) return;
-            DragDrop.DoDragDrop(_list, new DataObject(typeof(PluginSlot), slot), DragDropEffects.Move);
-        };
-        _list.DragOver += (_, e) => { e.Effects = e.Data.GetDataPresent(typeof(PluginSlot)) ? DragDropEffects.Move : DragDropEffects.None; e.Handled = true; };
-        _list.Drop += (_, e) =>
-        {
-            if (e.Data.GetData(typeof(PluginSlot)) is not PluginSlot moving) return;
-            var target = FindParent<ListBoxItem>(e.OriginalSource as DependencyObject)?.Tag as PluginSlot;
-            var plugins = _track.Rig.Plugins;
-            var from = plugins.IndexOf(moving);
-            var to = target is null ? plugins.Count - 1 : plugins.IndexOf(target);
-            if (from < 0 || to < 0 || from == to) return;
-            Edit(() => { plugins.RemoveAt(from); plugins.Insert(to, moving); }, refresh: false);
-            RefreshList(to);
-        };
     }
 
     private sealed class BypassOverlay : Window
@@ -800,11 +737,5 @@ public sealed partial class FxChainWindow : Window
                 SetWindowLong(h, -20, GetWindowLong(h, -20) | 0x20 | 0x80 | 0x08000000);   // TRANSPARENT (click-through), TOOLWINDOW, NOACTIVATE
             };
         }
-    }
-
-    private static T? FindParent<T>(DependencyObject? node) where T : DependencyObject
-    {
-        while (node is not null and not T) node = node is Visual or System.Windows.Media.Media3D.Visual3D ? VisualTreeHelper.GetParent(node) : LogicalTreeHelper.GetParent(node);
-        return node as T;
     }
 }

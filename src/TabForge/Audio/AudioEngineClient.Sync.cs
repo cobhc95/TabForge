@@ -75,6 +75,7 @@ public sealed partial class AudioEngineClient : IDisposable
         var now = WarmClock();
         foreach (var parked in _parkedSince.Keys.Where(s => !_slots.ContainsValue(s)).ToList()) _parkedSince.Remove(parked);   // a crash cleared the slots
 
+        AddClick(wanted);
         AdoptReplacedTracks(wanted, liveElsewhere, owner);
         CurrentOwner = owner;
         foreach (var gone in _slots.Keys.Where(t => !wanted.Contains(t) && !liveElsewhere.Contains(t)).ToList())
@@ -103,11 +104,12 @@ public sealed partial class AudioEngineClient : IDisposable
             // A track's plug-ins stay loaded while the chain is off (all bypassed): their editors stay open
             // and switching back is instant. Bus chains that are off are not in the engine at all.
             var chainOn = track.SoundSource == SoundSources.Plugins;
+            ChainTree.Refresh(track.Rig);
             var specs = PluginTrust.BuildSpecs(chainOn || !track.IsBus ? track.Rig.Plugins : new List<PluginSlot>(), LiveInput.Owns(track) ? Quarantine?.Invoke() ?? Array.Empty<string>() : quarantined, settings);   // untrusted paths are Skip: never loaded
             if (!chainOn) specs = specs.Select(s => s with { Enabled = false }).ToList();
             // The General MIDI synth exists for every MIDI track in the engine and is switched on / off live (SetSynth): GM
             // taking over from a bypassed instrument or a switched-off chain needs no rebuild, so it stays in time.
-            var useSynth = !track.IsBus && MixerGroups.MidiInEngine(track, Mixer);
+            var useSynth = !track.IsBus && (Click.Owns(track) || MixerGroups.MidiInEngine(track, Mixer));
             var key = $"{useSynth}|{track.Name}|{(track.BusSlot == MixerBuses.MonitorSlot ? System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(track.Bus) : 0)}|" + string.Join("|", specs.Select(s => $"{s.Id}:{s.Path}:{s.Skip}:{s.Wet}:{s.IsInstrument}:{s.Pins}"));   // OutputDb and Enabled are not part of the key: SetPluginGain / SetPluginEnabled change them live
             if (!(_sentChains.TryGetValue(slot, out var sent) && sent == key))
             {
@@ -121,8 +123,8 @@ public sealed partial class AudioEngineClient : IDisposable
             }
             SyncBypass(track, slot);
             SyncGain(track, slot);
-            if (useSynth) SyncSynth(slot, MixerGroups.GmSounds(track, Mixer));
-            if (!track.IsBus) SyncAudio(track, slot, LiveInput.Owns(track) ? LiveInput.Mix : mix?.Invoke(track) ?? (track.Mute ? 0 : track.Volume, track.Pan), media);
+            if (useSynth) SyncSynth(slot, Click.Owns(track) || MixerGroups.GmSounds(track, Mixer));
+            if (!track.IsBus) SyncAudio(track, slot, LiveInput.Owns(track) ? LiveInput.Mix : Click.Owns(track) ? Click.Mix : mix?.Invoke(track) ?? (track.Mute ? 0 : track.Volume, track.Pan), media);
         }
         foreach (var track in wanted) { if (!track.IsBus) SyncMidiRoute(track, wanted, project); SyncMidiProcessors(track); SyncWiring(track); }
         SyncGraph(wanted, project, liveElsewhere);
@@ -151,6 +153,17 @@ public sealed partial class AudioEngineClient : IDisposable
             _slots.Remove(old);
             _slots[track] = slot;
         }
+    }
+
+    /// <summary>
+    /// The click's stand-in is wanted while the engine runs, so its slot exists before the first click of any count-in (the sync that starts
+    /// the engine adds it). It is added only while a track slot is free; with all of them in use the clicks fall back to Windows MIDI.
+    /// It is no song's track: a warm engine with no song tracks still stops after the warm period.
+    /// </summary>
+    private void AddClick(List<TrackModel> wanted)
+    {
+        if (!IsRunning) return;
+        if (_slots.ContainsKey(Click.Track) || _slots.Keys.Count(t => !t.IsBus) < MixerBuses.BusBase) wanted.Add(Click.Track);
     }
 
     private bool PlaysElsewhere(int slot, object owner)
@@ -232,14 +245,14 @@ public sealed partial class AudioEngineClient : IDisposable
     {
         if (ReferenceEquals(CurrentOwner, owner)) CurrentOwner = null;
         ReleaseOwnerId(owner);
-        foreach (var track in _slots.Where(kv => !kv.Key.IsBus && !LiveInput.Owns(kv.Key) && _slotOwners.TryGetValue(kv.Value, out var o) && ReferenceEquals(o, owner)).Select(kv => kv.Key).ToList())
+        foreach (var track in _slots.Where(kv => !kv.Key.IsBus && !LiveInput.Owns(kv.Key) && !Click.Owns(kv.Key) && _slotOwners.TryGetValue(kv.Value, out var o) && ReferenceEquals(o, owner)).Select(kv => kv.Key).ToList())
             RemoveSlot(track);
         foreach (var slot in _slotOwners.Where(kv => ReferenceEquals(kv.Value, owner)).Select(kv => kv.Key).ToList())
             _slotOwners.Remove(slot);
         // No track of any document left (the closed one was the last, e.g. its window closed and no other window syncs): its bus,
         // master and monitor chains go too and the warm period starts, as a Sync without engine tracks would do, instead of the
         // closed song's bus chains staying loaded and unowned until some later Sync.
-        if (IsRunning && !_slots.Keys.Any(t => !t.IsBus))
+        if (IsRunning && !_slots.Keys.Any(t => !t.IsBus && !Click.Owns(t)))
         {
             foreach (var bus in _slots.Keys.ToList()) RemoveSlot(bus);
             _idleSince ??= WarmClock();
@@ -271,7 +284,7 @@ public sealed partial class AudioEngineClient : IDisposable
         {
             if (t.IsBus || !_slots.TryGetValue(t, out var slot)) continue;
             var ownSong = liveElsewhere is null || !liveElsewhere.Contains(t);
-            if (ownSong && project is not null && !LiveInput.Owns(t) && MixerBuses.SlotOf(MixerGroups.GroupOf(project, t)) is var bus && buses.Contains(bus)) dests.Add((slot, bus));
+            if (ownSong && project is not null && !LiveInput.Owns(t) && !Click.Owns(t) && MixerBuses.SlotOf(MixerGroups.GroupOf(project, t)) is var bus && buses.Contains(bus)) dests.Add((slot, bus));
             if (t.SoundSource != SoundSources.Plugins) continue;
             for (var i = 0; i < t.Rig.Plugins.Count; i++)
             {
@@ -433,7 +446,8 @@ public sealed partial class AudioEngineClient : IDisposable
     private void SyncBypass(TrackModel track, int slot)
     {
         var chainOn = track.SoundSource == SoundSources.Plugins;
-        var now = track.Rig.Plugins.Select(p => chainOn && p.Enabled).ToList();
+        ChainTree.Refresh(track.Rig);   // a bypassed container bypasses the plug-ins inside it
+        var now = track.Rig.Plugins.Select(p => chainOn && p.Plays).ToList();
         var key = string.Join(",", now);
         if (_sentBypass.TryGetValue(slot, out var sent) && sent == key) return;
         var before = sent?.Split(',');
@@ -487,7 +501,7 @@ public sealed partial class AudioEngineClient : IDisposable
         }
         var armMode = AudioInputs.WireMode(track.AudioInput);   // an input the device lacks is still sent: the engine plays silence for it
         var armed = track.RecordArm && armMode >= 0;   // MIDI input is recorded by the editor, not the engine
-        var ownerId = !LiveInput.Owns(track) && _slotOwners.TryGetValue(slot, out var slotOwner) ? OwnerIdOf(slotOwner) : 0;   // the live input stand-in is no song's: the same key whichever song syncs
+        var ownerId = !LiveInput.Owns(track) && !Click.Owns(track) && _slotOwners.TryGetValue(slot, out var slotOwner) ? OwnerIdOf(slotOwner) : 0;   // the live input and click stand-ins are no song's: the same key whichever song syncs
         var key = $"{ownerId}|{mix.Volume}|{mix.Pan}|{armed}|{armMode}|{track.MonitorInput}|" + string.Join("|", clips.Select(c => $"{c.File}@{c.StartSec:0.###}+{c.OffsetSec:0.###}/{c.SourceLengthSec:0.###}/{c.GainDb:0.##}/{c.Pitch:0.##}/{c.Speed:0.###}/{c.FadeInSec:0.###}/{c.FadeOutSec:0.###}"));
         if (_sentAudio.TryGetValue(slot, out var sent) && sent == key) return;
         _sentAudio[slot] = key;

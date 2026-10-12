@@ -78,7 +78,7 @@ public static partial class SelfTest
         var output = new RecordingMidiOutput();
         using var engine = new PlaybackEngine(output);
         var timelineChanges = 0;
-        engine.TimelineChanged += _ => Interlocked.Increment(ref timelineChanges);
+        engine.TimelineChanged += _ => System.Threading.Interlocked.Increment(ref timelineChanges);
         engine.Start(project, new PlaybackOptions { LoopStartBar = 1, LoopEndBar = 1 }, _ => { }, () => { });
         var timeline = engine.Timeline;
         var candidateAccents = timeline?.Events.Where(e => e.IsMetronome && e.IsMetronomeAccent)
@@ -1126,7 +1126,7 @@ public static partial class SelfTest
         public TabForge.Views.Score.ScoreLayoutEngine Layout => null!;
         public double Zoom => 1;
         public void RepaintAll() { }
-        public void RepaintPlaybackOnly() { }
+        public void RepaintKeepingDrawings() { }
     }
 
     private sealed class SlowResetMidiOutput : IMidiOutput
@@ -1896,5 +1896,89 @@ public static partial class SelfTest
         engine.Stop();
         var clicks = engine.DispatchLog.Count(r => r.IsNoteOn && (r.Status & 0x0F) == 9);
         Check("count-in clicks are sent when Play starts with count-in on (metronome off)", clicks >= 3, $"{clicks} count-in clicks");
+        // Two count-in bars: both bars click (the second used to be silent, a bar-long pause before the music).
+        var two = MidiTimelineBuilder.Build(project, new PlaybackOptions { CountIn = true, CountInBars = 2, Metronome = false });
+        var twoClicks = two.Events.Where(e => e.IsCountInClick && e.IsNoteOn && e.MetronomeTick == 0).Select(e => e.TimeMs).OrderBy(ms => ms).ToList();
+        var beat = two.CountInMs / Math.Max(1, twoClicks.Count);
+        Check("count-in of two bars clicks on every beat of both bars, up to the beat before the music", twoClicks.Count >= 4 && twoClicks.Count % 2 == 0 && Math.Abs(twoClicks[^1] - (two.CountInMs - beat)) < 1, $"{twoClicks.Count} clicks, last at {(twoClicks.Count > 0 ? twoClicks[^1] : -1):0} of {two.CountInMs:0} ms");
+    }
+
+    /// <summary>A start inside a loop with count-in: the count-in bar is heard in full, playback then begins at the start bar (not the loop start) and the wrap returns to the loop start.</summary>
+    private static void TestLoopCountInStartsAtCursor()
+    {
+        var song = IxDemoSong();
+        song.Tempo = 240;
+        using var engine = new PlaybackEngine(new NullMidiOutput());
+        engine.StartDiagnostics();
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        // No repeat signs in the compiled order: the loop's end is then the one performance of its last bar.
+        engine.Start(song, new PlaybackOptions { CountIn = true, CountInBars = 1, Metronome = false, Loop = true, LoopStartBar = 0, LoopEndBar = 2, StartBar = 2, StartCell = 0, RepeatExpansion = false }, _ => { }, () => { });
+        var bars = engine.Timeline!.Bars;
+        var loopStartMs = bars.First(b => b.Bar == 0).StartMs;
+        var startBarMs = bars.First(b => b.Bar == 2).StartMs;
+        var nextBarMs = bars.First(b => b.Bar == 3).StartMs;
+        double firstSongMs = -1;
+        long firstSongWallMs = -1;
+        var wrapped = false;
+        while (clock.ElapsedMilliseconds < 8000 && !wrapped)
+        {
+            var notes = engine.DispatchLog.Where(r => r.IsNoteOn && r.TrackIndex >= 0).ToList();
+            if (firstSongMs < 0 && notes.Count > 0) { firstSongMs = notes[0].StreamMs; firstSongWallMs = clock.ElapsedMilliseconds; }
+            // The first pass starts at the start bar, so a note before it can only come from the wrap to the loop start.
+            wrapped = firstSongMs >= 0 && notes.Any(r => r.StreamMs < startBarMs - 1);
+            Thread.Sleep(5);
+        }
+        engine.Stop();
+        Check("loop with count-in: the count-in bar is heard in full before the first song note",
+            firstSongWallMs >= 900, $"first song note {firstSongWallMs} ms after Play");
+        Check("loop with count-in: playback begins at the start bar, not the loop start",
+            firstSongMs >= startBarMs - 1 && firstSongMs < nextBarMs - 1, $"first song note at {firstSongMs:0} ms; start bar {startBarMs:0}, loop start {loopStartMs:0}");
+        Check("loop with count-in: the first wrap returns to the loop start", wrapped, $"loop start {loopStartMs:0} ms, start bar {startBarMs:0} ms");
+
+        // A start in the middle of a bar: the song goes on right after the count-in bar (1000 ms at this tempo), not after the bar's skipped part as well.
+        using var mid = new PlaybackEngine(new NullMidiOutput());
+        mid.StartDiagnostics();
+        var half = Math.Max(1, MusicTime.BarSlots(song, 2) / 2);
+        var midClock = System.Diagnostics.Stopwatch.StartNew();
+        mid.Start(song, new PlaybackOptions { CountIn = true, CountInBars = 1, Metronome = false, StartBar = 2, StartCell = half }, _ => { }, () => { });
+        var fromMs = mid.Timeline!.PlayFromMs;
+        double midSongMs = -1; long midWallMs = -1;
+        while (midClock.ElapsedMilliseconds < 5000 && midSongMs < 0)
+        {
+            var first = mid.DispatchLog.Where(r => r.IsNoteOn && r.TrackIndex >= 0).Take(1).ToList();
+            if (first.Count > 0) { midSongMs = first[0].StreamMs; midWallMs = midClock.ElapsedMilliseconds; }
+            Thread.Sleep(2);
+        }
+        mid.Stop();
+        var expected = 1000 + (midSongMs - fromMs);
+        Check("count-in from the middle of a bar: the first song note follows the count-in on time (no silent gap)",
+            midSongMs >= fromMs - 1 && Math.Abs(midWallMs - expected) < 150, $"first song note {midWallMs} ms after Play, expected about {expected:0} ms (start {fromMs:0}, note {midSongMs:0})");
+    }
+
+    /// <summary>Counts the channel-9 note-ons that reach the metronome send and the ordinary send.</summary>
+    private sealed class ClickRouteRecorder : IMidiOutput
+    {
+        public int Clicks;
+        public int OrdinaryChannel9;
+        public IReadOnlyList<MidiOutputDeviceInfo> Devices { get; } = Array.Empty<MidiOutputDeviceInfo>();
+        public void Send(int deviceId, int status, int data1, int data2) { if ((status & 0xF0) == 0x90 && (status & 0x0F) == 9 && data2 > 0) System.Threading.Interlocked.Increment(ref OrdinaryChannel9); }
+        public void SendMetronome(int deviceId, int status, int data1, int data2) { if ((status & 0xF0) == 0x90 && data2 > 0) System.Threading.Interlocked.Increment(ref Clicks); }
+        public void ResetAll() { }
+        public void Close() { }
+        public void Dispose() { }
+    }
+
+    /// <summary>The count-in click never takes a song channel's route: it goes through the metronome send only.</summary>
+    private static void TestCountInClicksUseTheMetronomePath()
+    {
+        var project = TemplateFactory.Blank();
+        project.Tempo = 240;
+        var output = new ClickRouteRecorder();
+        using var engine = new PlaybackEngine(output);
+        engine.Start(project, new PlaybackOptions { CountIn = true, CountInBars = 1, Metronome = false }, _ => { }, () => { });
+        Poll.Until(() => output.Clicks >= 3, 1400);
+        engine.Stop();
+        Check("count-in clicks go through the metronome send, never the ordinary channel-9 send (a song track's route)",
+            output.Clicks >= 3 && output.OrdinaryChannel9 == 0, $"{output.Clicks} metronome note-ons, {output.OrdinaryChannel9} ordinary channel-9 note-ons");
     }
 }
