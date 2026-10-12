@@ -4,7 +4,7 @@
 
 [![TabForge with a drum plug-in](docs/screenshots/github-main.jpg)](docs/screenshots/github-main.jpg)
 
-*The main screenshot shows TabForge's own demo song and a third-party VST3 plug-in (Superior Drummer 3 by Toontrack, sold separately) as an example of plug-in hosting. TabForge does not include that plug-in and is not affiliated with Toontrack.*
+*The plug-in shown is a third-party example (Superior Drummer 3 by Toontrack): not included and not affiliated.*
 
 ### See it in action
 
