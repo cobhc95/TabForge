@@ -20,15 +20,13 @@
 
 ## What sets it apart
 
-- **Tab editing, recording and plug-in hosting in one window.** VST2 and VST3 instruments and effects sit on the tracks of a tab, next to audio and MIDI takes, a mixer with groups and a master chain.
-- **Band view.** One row per track with its own instrument view and tab lane, all following playback together.
-- **Keyboard mode.** Any track as falling notes on a piano keyboard, with play-along scoring and a *Wait for me* mode that holds the song until the right keys are pressed.
-- **Live input.** One button plays a guitar or a MIDI keyboard through an FX chain, with no track and no recording.
-- **Video from the score.** Export a song as an MP4 that plays itself, or record the score, Band view or whole window with the sound you hear.
-- **MIDI processing in front of every plug-in.** Arpeggiator, step sequencer, humaniser, note maps, an audio-to-MIDI drum trigger and more, with one search box over every parameter.
-- **Keyboard first, and yours to remap.** Every command takes two shortcuts, three presets are included, and the command palette finds any command by name.
-- **A workspace that moves.** Every pane can be docked, tabbed, floated or hidden; songs open as tabs that can be dragged between windows and can play at the same time.
-- **Plug-in approval and crash isolation.** A plug-in loads only after you scan or approve it and runs outside the editor; one that crashes is named and switched off.
+- **One window:** tab editing, audio and MIDI recording, a mixer and VST2 / VST3 plug-ins on the tracks of a tab.
+- **Band view and Keyboard mode:** every track on its own instrument following playback, or falling notes with play-along scoring and *Wait for me*.
+- **Live input:** one button plays a guitar or MIDI keyboard through an FX chain, with no track and no recording.
+- **Video from the score:** export a self-playing MP4, or record the score with the sound you hear.
+- **MIDI processing before every plug-in:** arpeggiator, step sequencer, humaniser, drum trigger and more.
+- **Yours to arrange:** remappable shortcuts with a command palette, dockable panes, and songs as tabs that move between windows.
+- **Plug-in safety:** plug-ins load only once approved and run outside the editor; one that crashes is switched off.
 
 ## New in 0.7.5
 
