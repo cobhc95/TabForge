@@ -20,12 +20,24 @@
 
 ### New in 0.7.5
 
-- **Live input:** a microphone button in the track list toolbar plays an audio input, a MIDI keyboard or both through an app-wide FX chain, without a track and without recording.
-- **All audio inputs:** every input of a multi-input audio device can be used for recording and live input.
-- **Pop protection:** changing the audio device or its settings fades the sound out and back in, so speakers do not pop.
-- **Compact mode:** hides the track rows and the menu row so the score gets the room; a strip of track capsules switches track.
-- **Band view defaults:** the fretboard sits above the tab, and each row shows its music in one or two lines; the fretboard beside the tab is one button away for wide screens.
-- **Master track lane:** an overview lane above the tracks, one thin line per track, filled where that track plays.
+A short tour of what changed. Click a picture for the full size.
+
+<table>
+<tr>
+<td width="33%" valign="top"><a href="docs/screenshots/band-above.png"><img src="docs/screenshots/band-above.png" alt="Band view with the fretboard above the tab" width="270"></a><br><b>Band view</b><br>One row per track, each framed in its colour. The fretboard now sits above the tab and only the first track shows one; the others show a line of music each. Fretboard beside the tab is in the BAND VIEW menu.</td>
+<td width="33%" valign="top"><a href="docs/screenshots/compact-mode.png"><img src="docs/screenshots/compact-mode.png" alt="Compact mode" width="270"></a><br><b>Compact mode</b><br>Hides the track rows and the menu row so the score gets the room. A strip of track capsules switches track, and its menu holds the menus and tools.</td>
+<td width="33%" valign="top"><a href="docs/screenshots/live-input.png"><img src="docs/screenshots/live-input.png" alt="The live input button lit in the track list toolbar" width="270"></a><br><b>Live input</b><br>The microphone button plays your guitar or a MIDI keyboard through a live FX chain at once: no track, no recording. One for the whole program.</td>
+</tr>
+<tr>
+<td width="33%" valign="top"><a href="docs/screenshots/master-lane.png"><img src="docs/screenshots/master-lane.png" alt="The master track lane above the tracks" width="270"></a><br><b>Master track lane</b><br>An overview above the tracks: one thin line per track, filled where that track plays, with the master FX, volume and pan beside it.</td>
+<td width="33%" valign="top"><a href="docs/screenshots/icon-row.png"><img src="docs/screenshots/icon-row.png" alt="The grouped icons at the right of the top bar" width="270"></a><br><b>Top bar icons</b><br>Grouped by kind: side panel, fretboard and Keyboard mode, Band view and compact mode, project settings. Drag an icon to reorder; the order is remembered.</td>
+<td width="33%" valign="top"><a href="docs/screenshots/zoom-speed.png"><img src="docs/screenshots/zoom-speed.png" alt="The View and tempo pane" width="270"></a><br><b>View and tempo</b><br>Zoom, speed, tempo and time / key are one row of four buttons in the side panel: click for presets, right-click to fine-tune.</td>
+</tr>
+</table>
+
+- **All audio inputs:** every input of a multi-input audio device can be used for recording and live input, with a setting for which ones are shown.
+- **Pop protection:** changing the audio device or its settings fades the sound out and back in, so speakers do not pop; a playing song carries on by itself afterwards.
+- **Track list:** the toolbar wraps onto a second row when the column is narrow, and arming a track brings its input options into view.
 
 See the [changelog](CHANGELOG.md) for everything in 0.7.5.
 
