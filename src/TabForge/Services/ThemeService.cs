@@ -275,9 +275,9 @@ public static class ThemeService
                     => Mix(dark, Colors.Black, 0.18),
                 _ when key.EndsWith("BorderBrush") || key is "CaptionCloseHoverBrush" or "CaptionClosePressedBrush" or "DangerBrush"
                     or "AddTrackSurfaceBrush" => dark,
-                // Transport buttons: clean pastel of each button's own accent (a tint of the dark fill looked muddy).
+                // Transport buttons: clean pastel of each button's own accent (a tint of the dark fill looked muddy), see-through so the panel tones it down.
                 "PlaybarRewindBrush" or "PlaybarPlayBrush" or "PlaybarStopBrush" or "PlaybarNextBrush"
-                    or "PlaybarMetroBrush" or "PlaybarBeatBrush" or "PlaybarLoopBrush" => Mix(PlaybarAccent(key), Colors.White, 0.74),
+                    or "PlaybarMetroBrush" or "PlaybarBeatBrush" or "PlaybarLoopBrush" => Mix(PlaybarAccent(key), Colors.White, 0.74) with { A = 0x8C },
                 _ => Mix(dark, Colors.White, 0.62), // coloured button surfaces become light tints of themselves
             };
             Put(key, light2);

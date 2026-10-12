@@ -47,6 +47,8 @@ public sealed partial class AudioEngineClient : IDisposable
 
     /// <summary>How tracks sound (route, auto GM) for this engine: the settings applier writes it, every routing decision reads it. One per client, never a static.</summary>
     public TabForge.Models.MixerOptions Mixer { get; } = new();
+    /// <summary>The program's one live input (every window and tab shares this client). See LiveInput/README.md.</summary>
+    public TabForge.LiveInput.LiveInputArm LiveInput { get; } = new();
 
     /// <summary>The MIDI input devices, shared by recording and Keyboard mode (each takes a client; the devices open while one holds them).</summary>
     public MidiInputHub MidiInput { get; } = new(new MidiInputCapture());
@@ -120,6 +122,10 @@ public sealed partial class AudioEngineClient : IDisposable
     public event Action<string, int>? PluginMisbehaved;
     /// <summary>The audio device could not be opened or stopped working.</summary>
     public event Action<string>? DeviceError;
+    /// <summary>A running device is about to be reopened with other settings (pop protection on); raised before the request is sent.</summary>
+    public event Action? DeviceChanging;
+    /// <summary>The device is open and playing.</summary>
+    public event Action? DeviceReady;
     /// <summary>A plug-in reported a parameter edit: the document (or song) that owns its slot, which has unsaved changes; null when no owner is known.</summary>
     public event Action<object?>? PluginEdited;
     /// <summary>The engine started or stopped.</summary>
@@ -526,9 +532,13 @@ public sealed partial class AudioEngineClient : IDisposable
                         var outNames = new string[Math.Clamp(r.ReadInt32(), 0, 128)];
                         for (var i = 0; i < outNames.Length; i++) outNames[i] = r.ReadBoundedString(128);
                         if (inNames.Length + outNames.Length > 0) AsioChannels = (inNames, outNames);
+                        var recordable = new string[r.BaseStream.Position < r.BaseStream.Length ? Math.Clamp(r.ReadInt32(), 0, AudioInputAddress.MaxChannels) : 0];   // the inputs tracks can record
+                        for (var i = 0; i < recordable.Length; i++) recordable[i] = r.ReadBoundedString(128);
+                        var inputDevice = _config is { } cfg ? (cfg.Driver == AudioDrivers.Asio ? cfg.Device : cfg.InputDevice) : "";
+                        RaiseOnUi(() => AudioInputs.SetDevice(inputDevice, recordable));   // before StatusChanged below: the pickers rebuilt for it see the device's inputs
                         DeviceDescription = $"{description} · {rate} Hz · {latency} ms";
                         if (_config is { } running) Output = (running.Driver, description, rate, buffer, latency);
-                        RaiseOnUi(() => StatusChanged?.Invoke());
+                        RaiseOnUi(() => { StatusChanged?.Invoke(); DeviceReady?.Invoke(); });
                         break;
                     }
                     case EngineEvent.ChainLoaded:
@@ -642,7 +652,12 @@ public sealed partial class AudioEngineClient : IDisposable
     }
 
     /// <summary>Reader thread: a plug-in in <paramref name="slot"/> reported a parameter edit; the UI thread tells the slot's owner.</summary>
-    internal void OnPluginEdited(int slot) => RaiseOnUi(() => PluginEdited?.Invoke(_slotOwners.GetValueOrDefault(slot)));
+    internal void OnPluginEdited(int slot) => RaiseOnUi(() => PluginEdited?.Invoke(IsAppWideSlot(slot) ? null : _slotOwners.GetValueOrDefault(slot)));
+
+    /// <summary>The live input chain and the app-wide monitor chain live in the app settings: an edit in them belongs to no song.</summary>
+    private bool IsAppWideSlot(int slot) =>
+        SlotOf(LiveInput.Track) == slot || (slot == TabForge.Models.MixerBuses.MonitorSlot && _slots.Keys.Any(t => t.BusSlot == slot && ReferenceEquals(t.Bus, _appWideMonitor)));
+    private TabForge.Models.BusChain? _appWideMonitor;
 
     private void RaiseOnUi(Action action)
     {

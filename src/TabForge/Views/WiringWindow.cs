@@ -149,7 +149,7 @@ public sealed class WiringWindow : Window
 
     private void Refuse(string target)
     {
-        MessageBox.Show(this, $"Connecting to \"{target}\" would make a loop (sidechain / MIDI links must not lead back to this track).", "Wiring", MessageBoxButton.OK, MessageBoxImage.Information);
+        ThemedMessageBox.Show(this, $"Connecting to \"{target}\" would make a loop (sidechain / MIDI links must not lead back to this track).", "Wiring", MessageBoxButton.OK, MessageBoxImage.Information);
         Load();
     }
 

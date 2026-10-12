@@ -14,6 +14,7 @@ Helpers of the arrangement timeline (`TrackTimeline`, `ArrangementPanel` in `Vie
 | `SectionTipController.cs` | The section lane's hover hint (ToolTip, open delay, hint text) |
 | `TrackColoursDialog.cs` | Colour tracks by hand: pick tracks or a range, then a colour |
 | `TrackColumnLayout.cs` | Track-control columns: order, widths, hidden columns, header strip, per-row cells |
+| `ToolbarWrapPanel.cs` | The track list toolbar's panel: one row, or two rows when the controls column is narrower than one row needs |
 | `TrackControlWidgets.cs` | Stateless track-control widgets shared by the track list and the Mixer (colour palette, volume and pan) |
 | `TrackGridDragController.cs` | Drag of a row of the practice panel's track grid to reorder tracks |
 | `TrackOutputWindow.cs` | The track output window's layout (Tools and Sound windows) |

@@ -355,12 +355,12 @@ public partial class MainWindow
         }
 
         public bool ConfirmWarning(string text, string caption) =>
-            MessageBox.Show(_window, text, caption, MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) == MessageBoxResult.Yes;
+            ThemedMessageBox.Show(_window, text, caption, MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) == MessageBoxResult.Yes;
 
         public bool Ask(string title, string text, string yesText, bool withUndoHint) => ConfirmPrompt.Ask(_window, title, text, yesText, withUndoHint);
 
 
-        public void ShowLastBarWarning() => MessageBox.Show(_window,
+        public void ShowLastBarWarning() => ThemedMessageBox.Show(_window,
             "The last remaining bar cannot be removed from a song.", "Section not removed",
             MessageBoxButton.OK, MessageBoxImage.Information);
     }

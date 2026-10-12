@@ -248,7 +248,7 @@ public partial class MainWindow
             case "View.CycleStringSpacing": InstrumentPane.SetInstrumentAppearance(stringSpacing: FretStringSpacings.Next(_settings.Editing.FretStringSpacing)); StatusText.Text = $"Fretboard string spacing: {_settings.Editing.FretStringSpacing}"; return true;
             // The switch owns the Band.* keys: Band.Run returns false while the Band view is disposed, so the key is not consumed here.
             // The Band feature module registers these ids for the catalogue only.
-            case "Band.ToggleTrackRow": case "Band.RowsMore": case "Band.RowsFewer": case "Band.CycleLaneContent": case "Band.CycleLaneLayout": case "Band.CycleInstrumentSize": case "Band.ToggleSmoothFollow": case "Band.ResetRowHeights": return Band.Run(id);   // false while the Band view is disposed, so the key is not consumed
+            case { } when id.StartsWith("Band.", StringComparison.Ordinal): return Band.Run(id);   // false while the Band view is disposed, so the key is not consumed
         }
         return false;
     }
@@ -426,7 +426,7 @@ public partial class MainWindow
     public void ReportStartupFileMissing(string path)
     {
         StatusText.Text = $"File not found: {path}";
-        MessageBox.Show(this, $"Could not find the file:\n\n{path}", "TabForge", MessageBoxButton.OK, MessageBoxImage.Warning);
+        ThemedMessageBox.Show(this, $"Could not find the file:\n\n{path}", "TabForge", MessageBoxButton.OK, MessageBoxImage.Warning);
     }
 
     private void RefreshMidiDevices_Click(object sender, RoutedEventArgs e) => RefreshMidiDevices();

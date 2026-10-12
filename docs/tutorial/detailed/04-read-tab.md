@@ -150,7 +150,7 @@ With the score selected, press `Tab` to move to the next view and `Shift+Tab` to
 
 > **Note:** In **Standard notation only** view, a digit you type chooses a string, not a fret. Switch to a view with TAB when you want to write frets (see **Chapter 5: Writing your first riff**).
 
-To change the size of the score, choose **Fit width** or a percentage in the zoom box in the top toolbar, or press `Ctrl+Plus` and `Ctrl+Minus`. **View > Dark score page** and **Light score page** change the paper. The score is one continuous page that scrolls down; right-click empty paper for **Page layout** to scroll sideways instead.
+To change the size of the score, choose **Fit width** or a percentage in the zoom box in the **View and tempo** pane, or press `Ctrl+Plus` and `Ctrl+Minus`. **View > Dark score page** and **Light score page** change the paper. The score is one continuous page that scrolls down; right-click empty paper for **Page layout** to scroll sideways instead.
 
 ### Try it: Three views
 

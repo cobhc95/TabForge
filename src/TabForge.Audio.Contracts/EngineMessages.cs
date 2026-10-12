@@ -141,7 +141,33 @@ public readonly record struct SetMidiLogWatchMessage(int Slot, bool Watch)
     public static SetMidiLogWatchMessage Read(BinaryReader r) => new(r.ReadInt32(), r.ReadBoolean());
 }
 
-/// <summary><see cref="EngineCommand.SetArm"/>: slot, armed, input mode, monitor.</summary>
+/// <summary>
+/// The input a track records and monitors, as the one integer <see cref="SetArmMessage.Mode"/> carries: 0 = input 1 (mono),
+/// 1 = input 2 (mono), 2 = inputs 1+2 (stereo); from 3 on, <c>mode - 3</c> holds the first channel (zero-based) in its upper
+/// bits and "stereo pair with the next channel" in bit 0. Channels 1, 2 and the pair 1+2 always encode as 0, 1, 2.
+/// </summary>
+public static class AudioInputAddress
+{
+    /// <summary>The most input channels a device is opened with.</summary>
+    public const int MaxChannels = 64;
+    public const int MaxMode = 3 + (MaxChannels - 1) * 2 + 1;
+
+    /// <param name="firstChannel">Zero-based channel (the left one of a pair).</param>
+    public static int Encode(int firstChannel, bool stereo) =>
+        firstChannel == 0 ? (stereo ? 2 : 0) : firstChannel == 1 && !stereo ? 1 : 3 + firstChannel * 2 + (stereo ? 1 : 0);
+
+    /// <summary>The zero-based channels a mode reads (left and right are the same channel for a mono input). Any integer decodes to a channel inside 0..<see cref="MaxChannels"/>.</summary>
+    public static (int Left, int Right) Decode(int mode)
+    {
+        if (mode <= 0) return (0, 0);
+        if (mode == 1) return (1, 1);
+        if (mode == 2) return (0, 1);
+        var first = Math.Min((mode - 3) >> 1, MaxChannels - 1);
+        return (first, ((mode - 3) & 1) == 1 ? first + 1 : first);
+    }
+}
+
+/// <summary><see cref="EngineCommand.SetArm"/>: slot, armed, input mode (<see cref="AudioInputAddress"/>), monitor.</summary>
 public readonly record struct SetArmMessage(int Slot, bool Armed, int Mode, bool Monitor)
 {
     public void Write(BinaryWriter w) { w.Write(Slot); w.Write(Armed); w.Write(Mode); w.Write(Monitor); }

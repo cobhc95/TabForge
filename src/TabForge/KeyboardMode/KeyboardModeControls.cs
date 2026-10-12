@@ -15,7 +15,7 @@ internal sealed class KeyboardModeControls
 
     private readonly KeyboardModeFrameController _learn;
     private readonly KeyboardModeTransport _transport;
-    private (bool, double, bool, bool, string, bool, int, string, int, (bool, bool)) _seen;
+    private (bool, double, bool, bool, string, bool, int, string, int, (bool, bool), (int, int)) _seen;
 
     public KeyboardModeControls(KeyboardModeFrameController learn, KeyboardModeTransport transport)
     {
@@ -66,6 +66,13 @@ internal sealed class KeyboardModeControls
     /// <summary>The devices Keyboard mode hears now (empty: nothing is connected or the input is off).</summary>
     public IReadOnlyList<string> HeardDevices => _learn.HeardDevices;
 
+    /// <summary>The Track selector: the song's tracks by name, and the track the window has selected.</summary>
+    public int TrackCount => _learn.TrackCount;
+    public string TrackName(int index) => _learn.TrackName(index);
+    public int SelectedTrackIndex => _learn.SelectedTrackIndex;
+    public int TracksSignature => _learn.TracksSignature;
+    public void SelectTrack(int index) { _learn.SelectTrack(index); Poll(); }
+
     private void Change(Action<KeyboardModeSettings> change, string status)
     {
         change(Settings);
@@ -77,7 +84,7 @@ internal sealed class KeyboardModeControls
     public void Poll()
     {
         var heard = _learn.HeardDevices;
-        var now = (IsPlaying, Speed, LoopOn, WaitOn, Settings.Hands ?? "", ShowNames, LookAheadSeconds, MidiInput, heard.Count == 0 ? -1 : heard[0].GetHashCode() ^ heard.Count, (ShowFingers, HasFingers));
+        var now = (IsPlaying, Speed, LoopOn, WaitOn, Settings.Hands ?? "", ShowNames, LookAheadSeconds, MidiInput, heard.Count == 0 ? -1 : heard[0].GetHashCode() ^ heard.Count, (ShowFingers, HasFingers), (_learn.SelectedTrackIndex, _learn.TracksSignature));
         if (now.Equals(_seen)) return;
         _seen = now;
         Changed?.Invoke();

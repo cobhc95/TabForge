@@ -8,7 +8,7 @@ public interface IBandCommandHost : IFeatureHost
     void RunBandCommand(string id);
 }
 
-// Owns: everything Band adds to the central tables: the eight "Band view" hotkey rows (each after the one before, from View.BandView),
+// Owns: everything Band adds to the central tables: the ten "Band view" hotkey rows (each after the one before, from View.BandView),
 //   their commands, the "Band view" Preferences rows and their group on the Timeline page.
 // Does not own: the Band view (Views/Band), its key handling (BandViewController.Run, reached through the window's RunBandCommand),
 //   the saved values (TimelineSettings.Band) or the settings bounds (SettingsValidator).
@@ -28,11 +28,13 @@ public sealed class BandFeatureModule : IFeatureModule
         new(new("Band.CycleInstrumentSize", HotkeyCatalog.CategoryView, "Band view: instrument size", "", "Switch the Band view instruments between the full neck (or keyboard), the first 12 frets, and a small keyboard."), "Band.CycleLaneLayout"),
         new(new("Band.ToggleSmoothFollow", HotkeyCatalog.CategoryView, "Band view: smooth / page follow", "", "Switch the Band view lanes between following like the score (its Follow settings) and the Band view own smooth or page-by-page follow."), "Band.CycleInstrumentSize"),
         new(new("Band.ResetRowHeights", HotkeyCatalog.CategoryView, "Band view: reset row heights", "", "Give every Band view row the shared height again (undoes rows resized one by one)."), "Band.ToggleSmoothFollow"),
+        new(new("Band.ToggleFretboardAbove", HotkeyCatalog.CategoryView, "Band view: switch fretboard beside / above tab", "", "Switch every Band view row between the instrument beside its tab and the instrument above its tab at the full row width."), "Band.ResetRowHeights"),
+        new(new("Band.ToggleColourFrame", HotkeyCatalog.CategoryView, "Band view: track colour frame", "", "Show or hide the rounded frame and dim glow in the track's colour around every Band view row."), "Band.ToggleFretboardAbove"),
     };
 
     public IReadOnlyList<FeatureLayout> Layout { get; } = new FeatureLayout[]
     {
-        new(SettingsCatalog.Timeline, "Band view", "band.instrumentsize band.lanecontent band.followscore* band.lanelayout* band.lanezoom* band.playheadline* band.smoothfollow* band.rowsperscreen* band.syncorder*", "Timeline display"),
+        new(SettingsCatalog.Timeline, "Band view", "band.instrumentsize band.lanecontent band.followscore* band.lanelayout* band.lanezoom* band.playheadline* band.smoothfollow* band.rowsperscreen* band.syncorder* band.fretboardabove* band.colourframe*", "Timeline display"),
     };
 
     public IEnumerable<SettingDescriptor> SettingRows(AppSettings settings) => SettingsCatalog.BandRows(settings);

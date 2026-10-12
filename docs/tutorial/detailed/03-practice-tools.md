@@ -40,9 +40,9 @@ The song has a written tempo, shown in the **BPM** box in the toolbar. Ashen Mer
 
 The **Speed** box is different. It is a listening percentage from 25% to 200%, and it only changes how fast the song plays back. The written tempo and the pitch of the notes do not change. At 50% the song plays like 75 BPM, and at 75% it plays like 112 BPM.
 
-The **Speed** box lives in the top toolbar, left of the tempo box, next to the score zoom box.
+The **Speed** box lives in the **View and tempo** pane at the bottom of the side panel, below the score zoom box.
 
-1. Find the **Speed** box in the top toolbar.
+1. Find the **Speed** box in the **View and tempo** pane.
 2. Click the arrow in the **Speed** box. A list opens with 50%, 75%, 100%, 125%, 150% and 200%.
 3. Choose `75%`. The song now plays at three quarters of its speed.
 
@@ -148,7 +148,7 @@ Right-click the **Loop** button and choose **Speed trainer** instead of **Simple
 
 1. Click the **Lead Gtr** track in the track list. The score and the fretboard now show the lead guitar.
 2. On the timeline, right-click the **Chorus 1** section (bars 40 to 47) and choose **Loop section**. The **Loop** button lights up.
-3. In the top toolbar, type `60` in the **Speed** box and press `Enter`.
+3. In the **View and tempo** pane, type `60` in the **Speed** box and press `Enter`.
 4. Click the **Metronome** button, then the **Count-in** button, so that both light up.
 5. Right-click the **Loop** button and choose **Speed trainer**. Set **Tempo** from `60` to `100` and **Increase tempo each loop by** `10`. Click outside the popup to close it.
 6. Press `Space` and play along. Each pass is a little faster: 60%, 70%, 80%, 90%, then 100%.

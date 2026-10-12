@@ -72,7 +72,7 @@ internal sealed class ValuesEffectDialog
     {
         var name = GpDialogs.Prompt("Save as preset", "Preset name:", "My preset");
         if (string.IsNullOrWhiteSpace(name)) return;
-        if (!_presets.Save(_kind, name, Array.Empty<BendPointModel>(), _read())) { MessageBox.Show(Dialog, "That name is taken by a built-in preset, too long, or the list is full.", "Save as preset"); return; }
+        if (!_presets.Save(_kind, name, Array.Empty<BendPointModel>(), _read())) { ThemedMessageBox.Show(Dialog, "That name is taken by a built-in preset, too long, or the list is full.", "Save as preset"); return; }
         _presetsChanged?.Invoke();
         FillList(name.Trim());
     }

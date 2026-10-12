@@ -123,6 +123,9 @@ internal sealed class TrackColumnLayout
         }
     }
 
+    /// <summary>Width the rows need with the name column at <paramref name="name"/> and every other shown column at its width.</summary>
+    public double RowsNeed(double name) => RowGridLeft + RowGridRight + name + _columnOrder.Where(id => id != "name" && !_hiddenColumns.Contains(id)).Sum(id => _columnWidths[id]);
+
     public void Reset(double areaWidth)
     {
         _columnOrder = DefaultOrder.ToList();

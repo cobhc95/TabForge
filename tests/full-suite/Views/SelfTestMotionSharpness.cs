@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -67,7 +67,7 @@ public static partial class SelfTest
             foreach (var vertical in new[] { false, true })
             {
                 var host = new FakeBandHost(BandUnevenSong(80));
-                host.Settings.Timeline.Band = new BandSettings { LaneLayout = vertical ? BandChoices.Vertical : BandChoices.Horizontal };
+                host.Settings.Timeline.Band = new BandSettings { FretboardAbove = false, Fretboards = BandChoices.FretboardsAll, SystemsPerRow = -1, LaneLayout = vertical ? BandChoices.Vertical : BandChoices.Horizontal };
                 host.Settings.Follow.Mode = FollowModes.Jump;
                 using var band = new BandViewController(host);
                 MotionSharpnessProbe.Stage(band.View, scale, 1000, 800);
@@ -76,7 +76,10 @@ public static partial class SelfTest
                 var lane = band.View.Rows[0].Lane;
                 var line = VisualDescendants<Rectangle>(lane).First(r => r.Width == 2);
                 var origin = lane.TransformToAncestor(band.View).Transform(new Point(0, 0));
-                var region = new Int32Rect((int)(origin.X * scale) + 4, (int)(origin.Y * scale) + 4, (int)(lane.ActualWidth * scale) - 8, (int)(lane.ActualHeight * scale) - 8);
+                // The still picture is read up to 13 DIPs to the side of the region (the furthest slide): the region keeps that far from the lane's
+                // sides, so both pictures are compared inside the lane and the row's frame beside it is never counted as the strip.
+                var side = vertical ? 4 : 4 + (int)Math.Ceiling(14 * scale);
+                var region = new Int32Rect((int)(origin.X * scale) + side, (int)(origin.Y * scale) + 4, (int)(lane.ActualWidth * scale) - 2 * side, (int)(lane.ActualHeight * scale) - 8);
                 double worstSharp = 1;
                 int partial = 0, lineSeen = 0;
                 BitmapSource? still = null;
@@ -93,8 +96,9 @@ public static partial class SelfTest
                     if (still is null) { still = shot; stillSlide = slide; }
                     else
                     {
+                        // The strip moved by the slide's change, so what stands at x (or y) now stood that many device pixels further on in the still picture.
                         var shift = -(int)(Math.Round(slide * scale) - Math.Round(stillSlide * scale));
-                        worstSharp = Math.Min(worstSharp, MotionSharpnessProbe.Best(shot, still, vertical ? 0 : -shift, vertical ? shift : 0, vertical, region).Sharp);
+                        worstSharp = Math.Min(worstSharp, MotionSharpnessProbe.Best(shot, still, vertical ? 0 : shift, vertical ? shift : 0, vertical, region).Sharp);
                     }
                     line.Visibility = Visibility.Visible;
                     if (!lane.PlayheadVisible) continue;
@@ -226,7 +230,7 @@ public static partial class SelfTest
             MotionSharpnessProbe.Stage(band.View, scale, 1000, 800);
             var row = band.View.Rows[0];
             var origin = row.TransformToAncestor(band.View).Transform(new Point(0, 0));
-            var region = new Int32Rect((int)(origin.X * scale) + 4, (int)(origin.Y * scale) + 24, (int)(row.ActualWidth * scale) - 8, (int)(row.ActualHeight * scale) - 40);
+            var region = new Int32Rect((int)(origin.X * scale) + 4, (int)(origin.Y * scale) + 24, (int)(row.ActualWidth * scale) - 8, (int)(row.ActualHeight * scale) - 40 - (int)Math.Ceiling(BandRowFrame.Inset * scale));   // the still picture is read up to 13 px below the region: that stays above the frame at the row's bottom edge
             var line = "";
             double dragSharp = 0;
             foreach (var (label, make) in new (string, Func<BitmapCache>)[] { ("plain cache", () => new BitmapCache(scale)), ("drag cache", () => BandReorder.DragCache(scale)) })

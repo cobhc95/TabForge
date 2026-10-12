@@ -28,6 +28,7 @@ public sealed partial class AudioEngineClient : IDisposable
         if (Rendering) return;
         _ui ??= SynchronizationContext.Current;
         RecordingOffsetMs = settings.RecordingOffsetMs;
+        _appWideMonitor = settings.MonitorFx;
         owner ??= (object?)project ?? TracksOnlyOwner;
         OwnerIdOf(owner);
         ICollection<string> quarantined = Quarantine?.Invoke() ?? Array.Empty<string>();
@@ -35,7 +36,8 @@ public sealed partial class AudioEngineClient : IDisposable
             quarantined = quarantined.Concat(skipped).ToHashSet(StringComparer.OrdinalIgnoreCase);   // a copy: the quarantine list itself is not changed
         // Tracks whose MIDI plays through plug-ins, or that have audio (clips, or an armed input).
         var wanted = tracks.Where(t => MixerGroups.MidiInEngine(t, Mixer) || MixerGroups.UsesEngineAudio(t)).ToList();
-        var config = new EngineConfig(settings.Driver, settings.Device, settings.SampleRate, settings.BufferSize, settings.SeparateProcessPerPlugin, settings.InputDevice, settings.AsioInputChannel, settings.AsioOutputChannel, settings.AsioInputLastChannel, settings.AsioInputsEnabled, settings.FollowWindowsVolume, settings.AsioOutputLastChannel);
+        AudioInputs.SetHidden(settings.HiddenInputs); LiveInput.AddWanted(wanted, settings);   // live input: its stand-in track while it is on, whichever song syncs
+        var config = new EngineConfig(settings.Driver, settings.Device, settings.SampleRate, settings.BufferSize, settings.SeparateProcessPerPlugin, settings.InputDevice, settings.AsioInputChannel, settings.AsioOutputChannel, settings.AsioInputLastChannel, settings.AsioInputsEnabled, settings.FollowWindowsVolume, settings.AsioOutputLastChannel, settings.UseAllInputs, settings.ProtectFromPops);
         // Multi-tab playback: tracks of other documents that are still playing stay live (never parked or removed here).
         var liveElsewhere = IsRunning ? _slots.Where(kv => !kv.Key.IsBus && !wanted.Contains(kv.Key) && PlaysElsewhere(kv.Value, owner)).Select(kv => kv.Key).ToList() : new List<TrackModel>();
 
@@ -62,7 +64,7 @@ public sealed partial class AudioEngineClient : IDisposable
         if (project is not null && !ownIdle) wanted.AddRange(SongRigs.Running(project, null, SongRigKind.Bus | SongRigKind.Master).Select(r => r.AsTrack()));
         // Monitor FX (speaker calibration): after the master, live output only; the app-wide chain or the song's own. Global slot: wanted while any document's tracks are live.
         if (project is not null && !idle) wanted.AddRange(SongRigs.Running(project, settings.MonitorFx, SongRigKind.Monitor).Select(r => r.AsTrack()));
-        if (!ownIdle && _config != config) { _config = config; Send(EngineCommand.Configure, w => w.Write(config)); }
+        if (!ownIdle && _config != config) { var changing = _config is not null && config.PopGuard; _config = config; if (changing) DeviceChanging?.Invoke(); Send(EngineCommand.Configure, w => w.Write(config)); }
         if (!ownIdle) SyncWindowsPathOffset(config);
         if (EngineProcessId is int enginePid && _limiterSent != (enginePid, settings.LiveLimiter))
         {
@@ -101,7 +103,7 @@ public sealed partial class AudioEngineClient : IDisposable
             // A track's plug-ins stay loaded while the chain is off (all bypassed): their editors stay open
             // and switching back is instant. Bus chains that are off are not in the engine at all.
             var chainOn = track.SoundSource == SoundSources.Plugins;
-            var specs = PluginTrust.BuildSpecs(chainOn || !track.IsBus ? track.Rig.Plugins : new List<PluginSlot>(), quarantined, settings);   // untrusted paths are Skip: never loaded
+            var specs = PluginTrust.BuildSpecs(chainOn || !track.IsBus ? track.Rig.Plugins : new List<PluginSlot>(), LiveInput.Owns(track) ? Quarantine?.Invoke() ?? Array.Empty<string>() : quarantined, settings);   // untrusted paths are Skip: never loaded
             if (!chainOn) specs = specs.Select(s => s with { Enabled = false }).ToList();
             // The General MIDI synth exists for every MIDI track in the engine and is switched on / off live (SetSynth): GM
             // taking over from a bypassed instrument or a switched-off chain needs no rebuild, so it stays in time.
@@ -120,7 +122,7 @@ public sealed partial class AudioEngineClient : IDisposable
             SyncBypass(track, slot);
             SyncGain(track, slot);
             if (useSynth) SyncSynth(slot, MixerGroups.GmSounds(track, Mixer));
-            if (!track.IsBus) SyncAudio(track, slot, mix?.Invoke(track) ?? (track.Mute ? 0 : track.Volume, track.Pan), media);
+            if (!track.IsBus) SyncAudio(track, slot, LiveInput.Owns(track) ? LiveInput.Mix : mix?.Invoke(track) ?? (track.Mute ? 0 : track.Volume, track.Pan), media);
         }
         foreach (var track in wanted) { if (!track.IsBus) SyncMidiRoute(track, wanted, project); SyncMidiProcessors(track); SyncWiring(track); }
         SyncGraph(wanted, project, liveElsewhere);
@@ -230,7 +232,7 @@ public sealed partial class AudioEngineClient : IDisposable
     {
         if (ReferenceEquals(CurrentOwner, owner)) CurrentOwner = null;
         ReleaseOwnerId(owner);
-        foreach (var track in _slots.Where(kv => !kv.Key.IsBus && _slotOwners.TryGetValue(kv.Value, out var o) && ReferenceEquals(o, owner)).Select(kv => kv.Key).ToList())
+        foreach (var track in _slots.Where(kv => !kv.Key.IsBus && !LiveInput.Owns(kv.Key) && _slotOwners.TryGetValue(kv.Value, out var o) && ReferenceEquals(o, owner)).Select(kv => kv.Key).ToList())
             RemoveSlot(track);
         foreach (var slot in _slotOwners.Where(kv => ReferenceEquals(kv.Value, owner)).Select(kv => kv.Key).ToList())
             _slotOwners.Remove(slot);
@@ -269,7 +271,7 @@ public sealed partial class AudioEngineClient : IDisposable
         {
             if (t.IsBus || !_slots.TryGetValue(t, out var slot)) continue;
             var ownSong = liveElsewhere is null || !liveElsewhere.Contains(t);
-            if (ownSong && project is not null && MixerBuses.SlotOf(MixerGroups.GroupOf(project, t)) is var bus && buses.Contains(bus)) dests.Add((slot, bus));
+            if (ownSong && project is not null && !LiveInput.Owns(t) && MixerBuses.SlotOf(MixerGroups.GroupOf(project, t)) is var bus && buses.Contains(bus)) dests.Add((slot, bus));
             if (t.SoundSource != SoundSources.Plugins) continue;
             for (var i = 0; i < t.Rig.Plugins.Count; i++)
             {
@@ -416,7 +418,7 @@ public sealed partial class AudioEngineClient : IDisposable
             ChainAck? ack = null;
             if (slotKnown) _lastAcks.TryGetValue(slot, out ack);
             var generation = slotKnown ? _chainRequests.GetValueOrDefault(slot) : -1;
-            var specs = PluginTrust.BuildSpecs(track.Rig.Plugins, quarantined, settings);
+            var specs = PluginTrust.BuildSpecs(track.Rig.Plugins, LiveInput.Owns(track) ? Quarantine?.Invoke() ?? Array.Empty<string>() : quarantined, settings);   // a song's skipped plug-ins are that song's only
             for (var i = 0; i < track.Rig.Plugins.Count; i++)
             {
                 var p = track.Rig.Plugins[i];
@@ -483,9 +485,9 @@ public sealed partial class AudioEngineClient : IDisposable
                 clips.Add(new ClipSpec(access.Verdict.FullPath, pieces[i].StartSec, pieces[i].OffsetSec, pieces[i].SourceLengthSec, c.GainDb, c.Pitch, c.Speed,
                     i == 0 ? c.FadeInSec : 0, i == pieces.Count - 1 ? c.FadeOutSec : 0));
         }
-        var armMode = Array.IndexOf(AudioInputs.Audio, track.AudioInput);
+        var armMode = AudioInputs.WireMode(track.AudioInput);   // an input the device lacks is still sent: the engine plays silence for it
         var armed = track.RecordArm && armMode >= 0;   // MIDI input is recorded by the editor, not the engine
-        var ownerId = _slotOwners.TryGetValue(slot, out var slotOwner) ? OwnerIdOf(slotOwner) : 0;
+        var ownerId = !LiveInput.Owns(track) && _slotOwners.TryGetValue(slot, out var slotOwner) ? OwnerIdOf(slotOwner) : 0;   // the live input stand-in is no song's: the same key whichever song syncs
         var key = $"{ownerId}|{mix.Volume}|{mix.Pan}|{armed}|{armMode}|{track.MonitorInput}|" + string.Join("|", clips.Select(c => $"{c.File}@{c.StartSec:0.###}+{c.OffsetSec:0.###}/{c.SourceLengthSec:0.###}/{c.GainDb:0.##}/{c.Pitch:0.##}/{c.Speed:0.###}/{c.FadeInSec:0.###}/{c.FadeOutSec:0.###}"));
         if (_sentAudio.TryGetValue(slot, out var sent) && sent == key) return;
         _sentAudio[slot] = key;

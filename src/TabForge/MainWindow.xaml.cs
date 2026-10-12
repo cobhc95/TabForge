@@ -243,7 +243,6 @@ public partial class MainWindow : Window
             SyncAudioEngine(); // cheap: only changed levels are sent
         };
         Arrangement.MixEditEnded += (_, _) => _gestures.MixEditEnded();
-        Arrangement.AddTrackRequested += (_, _) => AddTrackWithWindow();
         // Drag starts take the undo state before the drop edits the model (it only costs the bars changed since the last state).
         Arrangement.TrackDragStarted += (_, _) => _gestures.TrackDragStarted();
         Arrangement.TrackReordered += (_, move) => MoveTrackTo(move.from, move.to);
@@ -278,7 +277,6 @@ public partial class MainWindow : Window
         Arrangement.TimelineContextRequested += (_, context) => ShowArrangementContextMenu(context.bar, context.track);
         HookAudioLanes();
         HookAddTrackLane();
-        Arrangement.AddTrackMenuRequested += ShowAddTrackMenu;
         Arrangement.GroupCollapseToggled += group => MixerHost.SetGroupsCollapsed(new[] { group }, null);
         Arrangement.GroupMoved += (start, count, before) =>
         {

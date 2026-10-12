@@ -126,7 +126,10 @@ internal sealed class RecordingController
             return true;
         }, invalidatesTimeline: false);
         ArmChanged();
-        _host.SetStatus(track.RecordArm
+        _host.Arrangement.RequestTrackReveal(Project.Tracks.IndexOf(track));
+        _host.SetStatus(track.RecordArm && !AudioInputs.IsMidi(track.AudioInput) && !AudioInputs.IsAvailable(track.AudioInput)
+            ? $"{track.Name}: {track.AudioInput} is not available on {(AudioInputs.Device.Length > 0 ? AudioInputs.Device : "this audio device")}: the track is silent"
+            : track.RecordArm
             ? $"{track.Name}: armed — {(AudioInputs.IsMidi(track.AudioInput) ? "MIDI input plays through the track" : "the audio input is monitored through the track")} (press {TooltipShortcuts.Append("Record", "Transport.Record")} to record)"
             : $"{track.Name}: disarmed");
     }

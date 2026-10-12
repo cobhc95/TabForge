@@ -474,13 +474,13 @@ public sealed class TrackChain : IDisposable
             if (arm >= 0 && monitor is not null && monitor.Frames >= frames)
             {
                 // The block is shared by every armed chain (read once per mixer block): read-only here.
-                var inL = monitor.L; var inR = monitor.R;
+                var (left, right) = TabForge.Audio.Contracts.AudioInputAddress.Decode(arm); var has = right < monitor.Channels && right < monitor.Ch.Length && monitor.Ch[right].Length >= frames && monitor.Ch[left].Length >= frames;   // an input the device lacks (or a short block) is silence
+                var inL = monitor.Ch[has ? left : 0]; var inR = monitor.Ch[has ? right : 0];
                 var inputPeak = 0f;
-                var monitoring = Monitor;
-                for (var i = 0; i < frames; i++)
+                var monitoring = Monitor && has;
+                for (var i = 0; has && i < frames; i++)
                 {
-                    var li = inL[i]; var ri = inR[i];
-                    var (ml, mr) = arm switch { 1 => (ri, ri), 2 => (li, ri), _ => (li, li) };
+                    var ml = inL[i]; var mr = inR[i];
                     if (monitoring) { _inL[i] += ml; _inR[i] += mr; }
                     inputPeak = MathF.Max(inputPeak, MathF.Max(MathF.Abs(ml), MathF.Abs(mr)));
                 }

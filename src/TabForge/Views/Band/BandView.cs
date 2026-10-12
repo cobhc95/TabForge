@@ -20,6 +20,12 @@ internal sealed class BandView : Grid
     private readonly ScrollViewer _scroll = new() { VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
     private readonly StackPanel _stack = new();
     private readonly WrapPanel _pills = new() { Margin = new Thickness(4, 4, 4, 2) };
+    // The pane's own caption (the dock draws no tab for it) with the pills on the same line; pills that do not fit stay on that line, cut off at the edge.
+    private readonly TextBlock _caption = TrackPillStrip.Caption("BAND VIEW");
+    private readonly Button _layout = BandLayoutMenu.Button();
+    private readonly Button _close = TrackPillStrip.CloseButton("Close Band view", "View.BandView");
+    /// <summary>The menu id the close button hands to the host: leave Band view, as the Band view command does.</summary>
+    internal const string CloseId = "band.close";
     private readonly TextBlock _empty = new()
     {
         Text = EmptyNoTracks, HorizontalAlignment = HorizontalAlignment.Center,
@@ -43,12 +49,34 @@ internal sealed class BandView : Grid
         SetRow(_scroll, 1);
         SetRow(_empty, 1);
         _scroll.Content = _stack;
-        Children.Add(_pills);
+        var header = new DockPanel();
+        DockPanel.SetDock(_caption, Dock.Left);
+        header.Children.Add(_caption); BandLayoutMenu.AlsoOpens(_caption, _layout);   // the whole caption opens the layout menu, not only the chevron
+        DockPanel.SetDock(_layout, Dock.Left);
+        header.Children.Add(_layout);
+        // Docked before the pills, so their scroll area ends where the button begins.
+        _close.Click += (_, _) => CloseRequested?.Invoke();
+        DockPanel.SetDock(_close, Dock.Right);
+        header.Children.Add(_close);
+        header.Children.Add(TrackPillStrip.PillScroll(_pills));
+        Children.Add(header);
         Children.Add(_scroll);
         Children.Add(_empty);
         System.Windows.Automation.AutomationProperties.SetName(this, "Band view");
         _scroll.SizeChanged += (_, _) => FitRows();
+        _scroll.ScrollChanged += (_, _) => SeeLanes();
     }
+
+    /// <summary>Raised by the × at the right end of the header: leave Band view.</summary>
+    public event Action? CloseRequested;
+    internal Button CloseButton => _close;
+    /// <summary>The header row (caption, roll-down button, pills, close).</summary>
+    internal FrameworkElement Header => (FrameworkElement)Children[0];
+    /// <summary>Raised with the roll-down menu just before it opens: another feature may add its rows below the layout rows.</summary>
+    internal event Action<ContextMenu>? LayoutMenuOpening;
+    internal void RaiseLayoutMenuOpening(ContextMenu menu) => LayoutMenuOpening?.Invoke(menu);
+    /// <summary>The roll-down button after the caption (BandLayoutMenu opens its menu).</summary>
+    internal Button LayoutButton => _layout;
 
     /// <summary>Raised when a pill is clicked: the track whose row should show or hide.</summary>
     public event Action<TrackModel>? PillClicked;
@@ -77,6 +105,9 @@ internal sealed class BandView : Grid
 
     public IReadOnlyList<BandRow> Rows => _rows;
 
+    /// <summary>The "BAND VIEW" caption left of the pills.</summary>
+    internal TextBlock Caption => _caption;
+
     public IReadOnlyList<ToggleButton> Pills => _pills.Children.OfType<ToggleButton>().ToList();
 
     /// <summary>The height of the rows' viewport (the panel under the pills).</summary>
@@ -88,25 +119,8 @@ internal sealed class BandView : Grid
         _pills.Children.Clear();
         foreach (var track in tracks)
         {
-            var label = new TextBlock { Text = track.Name, TextTrimming = TextTrimming.CharacterEllipsis, MaxWidth = 160, VerticalAlignment = VerticalAlignment.Center };
-            // The app-wide TextBlock style paints TextBrush; the pill's state colour (TrackPill style) must win.
-            label.SetBinding(TextBlock.ForegroundProperty, new System.Windows.Data.Binding(nameof(Control.Foreground))
-                { RelativeSource = new System.Windows.Data.RelativeSource(System.Windows.Data.RelativeSourceMode.FindAncestor, typeof(ToggleButton), 1) });
-            var chip = new System.Windows.Shapes.Ellipse
-            {
-                Width = 8, Height = 8, Margin = new Thickness(0, 0, 6, 0), VerticalAlignment = VerticalAlignment.Center,
-                Fill = new SolidColorBrush(ColourHex.TryParse(track.ColorHex, out var c) ? Color.FromRgb(c.R, c.G, c.B) : Colors.Gray)
-            };
-            var content = new StackPanel { Orientation = Orientation.Horizontal };
-            content.Children.Add(chip);
-            content.Children.Add(label);
-            var pill = new ToggleButton
-            {
-                IsChecked = _state.IsShown(track), Margin = new Thickness(0, 0, 4, 4), Content = content,
-                ToolTip = track.Name + " (click to show or hide its row)"
-            };
-            pill.SetResourceReference(StyleProperty, "TrackPill");
-            System.Windows.Automation.AutomationProperties.SetName(pill, "Show " + track.Name + " in Band view");
+            var pill = TrackPillStrip.Pill(track, track.Name + " (click to show or hide its row)", "Show " + track.Name + " in Band view");
+            pill.IsChecked = _state.IsShown(track);
             var t = track;
             pill.Click += (_, _) => PillClicked?.Invoke(t);
             _pills.Children.Add(pill);
@@ -130,8 +144,44 @@ internal sealed class BandView : Grid
     public void Adopt(BandRow row)
     {
         Reorder.Attach(row);
-        row.ResizeRequested += h => { _state.SetHeight(row.Track, h, Viewport); FitRows(); };
+        row.ResizeRequested += h =>
+        {
+            var kept = _state.SetHeight(row.Track, h - row.StackedExtra, Viewport);
+            if (row.SystemHeight > 1) _state.RememberSystems(_rows.Count > 0 && ReferenceEquals(row, _rows[0]), (int)Math.Round((kept - row.Chrome) / row.SystemHeight));
+            FitRows();
+        };
+        row.StackedExtraChanged += FitRows;
+        row.Lane.SizeChanged += (_, _) => SeeLanes();
+        BandLaneHover.Attach(row.Lane, () => _playing);
         row.ResizeReset += () => { _state.ResetHeight(row.Track); FitRows(); };
+    }
+
+    private bool _playing;
+    /// <summary>True while the song plays (the controller sets it): the lanes show no hover outline then, and one on show goes as playback starts.</summary>
+    internal bool Playing
+    {
+        get => _playing;
+        set { if (value == _playing) return; _playing = value; if (value) foreach (var row in _rows) BandLaneHover.Clear(row.Lane); }
+    }
+
+    /// <summary>Raised when the part of a lane that lies inside the rows' viewport changed (a row resized, the rows scrolled, the pane resized).</summary>
+    public event Action? LanesSeenChanged;
+
+    /// <summary>Tells every lane how much of it, from its top, is inside the rows' viewport, so its follow keeps the playing system there.
+    /// Runs on size and scroll events only. A lane whose top is outside the viewport is not limited.</summary>
+    private void SeeLanes()
+    {
+        var changed = false;
+        for (var i = 0; i < _rows.Count; i++)
+        {
+            var lane = _rows[i].Lane;
+            var top = lane.IsDescendantOf(_scroll) ? lane.TransformToAncestor(_scroll).Transform(new Point()).Y : -1;
+            var seen = top < -0.5 || top >= Viewport ? double.PositiveInfinity : Math.Min(lane.ActualHeight, Viewport - top);
+            if (seen.Equals(lane.Seen)) continue;
+            lane.Seen = seen;
+            changed = true;
+        }
+        if (changed) LanesSeenChanged?.Invoke();
     }
 
     /// <summary>Shown rows that still share the screen when rows per screen is the default 3 or more: a 4th track fits without scrolling.</summary>
@@ -145,19 +195,25 @@ internal sealed class BandView : Grid
         {
             var fit = RowsPerScreen >= BandLayoutState.DefaultRowsPerScreen ? Math.Max(RowsPerScreen, FitShownUpTo) : RowsPerScreen;
             var n = Math.Clamp(_rows.Count, 1, fit);
-            return Math.Max(MinAutoRowHeight, (Viewport - 2 * n) / n);
+            // The name strips of hidden instruments come out of the shared height, so the rows still fill the viewport without scrolling.
+            double strips = 0;
+            for (var i = 0; i < _rows.Count && i < n; i++) if (_rows[i].InstrumentHidden) strips += BandRow.StripHeight;
+            return Math.Max(MinAutoRowHeight, (Viewport - 2 * n - strips) / n);
         }
     }
 
-    /// <summary>Sizes every row: its own height when it was dragged to one, else the shared height.</summary>
+    /// <summary>Sizes every row: its own height when it was dragged to one, else the shared height; a row with its instrument above the lane is taller by the instrument, one with a hidden instrument by its name strip.</summary>
     public void FitRows()
     {
         if (Viewport <= 0) return;
         var shared = RowHeight;
+        // The default: whole systems per row, as many as fit (BandRowFit); "rows per screen" shares the viewport instead.
+        Func<BandRow, double?> kept = r => _state.HeightOf(r.Track) is { } h ? BandLayoutState.ClampHeight(h, Viewport) : null;
+        var (systems, main) = _state.AutoSystems < 0 ? (0.0, 0.0) : BandRowFit.Fit(_rows, kept, Viewport, _state.AutoSystems, _state.MainSystems);
         for (var i = 0; i < _rows.Count; i++)
         {
             var row = _rows[i];
-            var height = _state.HeightOf(row.Track) is { } own ? BandLayoutState.ClampHeight(own, Viewport) : shared;
+            var height = _state.HeightOf(row.Track) is { } own ? BandLayoutState.ClampHeight(own, Viewport) + row.StackedExtra : systems > 0 ? BandRowFit.Height(row, i == 0 ? main : systems) : shared + row.StackedExtra;
             if (double.IsNaN(row.Height) || Math.Abs(row.Height - height) > 0.5) row.Height = height;
         }
     }

@@ -28,6 +28,8 @@ internal interface ITrackListRows
     double CollapsedHeight { get; }
     event SizeChangedEventHandler SizeChanged;
     event Action? ResetTrackListHeightRequested;
+    event Action<int>? TrackRevealRequested;
+    void ScrollTrackRowIntoView(int index);
     double PreferredHeight();
     double PreferredHeightAt(double rowHeight);
     double RowHeightForPaneHeight(double paneHeight);
@@ -73,6 +75,7 @@ internal sealed class TrackListFitController
         host.Dock.LayoutChanged += (_, _) => ScheduleShrink();
         host.Dock.SplitterInteraction += OnSplitter;
         host.Arrangement.ResetTrackListHeightRequested += ResetRowHeight;
+        host.Arrangement.TrackRevealRequested += OnTrackReveal;
         // While auto-fit is on the splitter stops where every row fits at the default height (above: no clipped rows) and at the
         // largest row height (below: no empty space).
         host.Dock.SetPanelHeightLimits(PanelId, () => Enabled
@@ -103,6 +106,14 @@ internal sealed class TrackListFitController
         if (_fitPending || _fitting || _dragging || !Enabled) return;
         _fitPending = true;
         _host.Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () => { _fitPending = false; Fit(allowGrow: !_userShort); });
+    }
+
+    /// <summary>A record arm changed: fit the pane to the rows (a user-set height stays), then show the armed row, strip included.</summary>
+    private void OnTrackReveal(int index)
+    {
+        if (!Enabled) return;
+        FitToTracks();
+        _host.Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () => _host.Arrangement.ScrollTrackRowIntoView(index));
     }
 
     /// <summary>Runs a pending shrink-fit now (tests).</summary>

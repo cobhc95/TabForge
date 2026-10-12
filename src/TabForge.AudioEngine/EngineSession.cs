@@ -387,6 +387,7 @@ internal sealed partial class EngineSession
         Shared.SampleRate = SampleRate;
         Player.PlaybackStopped += (_, e) => { if (e.Exception is { } ex) Send(EngineEvent.DeviceError, w => w.WriteString(ex.Message)); };
         Mix.ResetClock();
+        if (Config.PopGuard) (Mix.Fade ??= new OutputFade(SampleRate)).FadeIn(); else Mix.Fade = null;   // no callback runs here
         Player.Play();
         FollowWindowsVolume(Config.Driver == AudioOutputFactory.Asio && Config.FollowWindowsVolume);
         return (latencyMs, description);
@@ -424,15 +425,15 @@ internal sealed partial class EngineSession
                 try { chain.Dispose(); } catch (Exception ex) { EngineLog.Write($"dispose failed: {ex.Message}"); }
             }
             if (Input is not null) { Input.Dispose(); Input = null; }
-            ApplyArms();
             var (latencyMs, description) = OpenOutput();
+            ApplyArms();   // after the output: it tells an ASIO driver (which feeds the input itself) from a device that needs its own capture
             var bufferFrames = _asioBufferFrames > 0 ? _asioBufferFrames : Math.Clamp(config.BufferSize, 16, 8192);
-            var channels = config.Driver == AudioOutputFactory.Asio ? AudioOutputFactory.AsioChannels : (Array.Empty<string>(), Array.Empty<string>());
+            var channels = config.Driver == AudioOutputFactory.Asio ? AudioOutputFactory.AsioChannels : (Array.Empty<string>(), Array.Empty<string>()); var inputs = AudioOutputFactory.RecordableInputs(config);   // read before the event is written: Ready is never left half written
             Send(EngineEvent.Ready, w =>
             {
                 w.Write(SampleRate); w.Write(latencyMs); w.WriteString(description); w.Write(bufferFrames);
                 w.Write(channels.Item1.Length); foreach (var n in channels.Item1) w.WriteString(n);
-                w.Write(channels.Item2.Length); foreach (var n in channels.Item2) w.WriteString(n);
+                w.Write(channels.Item2.Length); foreach (var n in channels.Item2) w.WriteString(n); w.Write(inputs.Length); foreach (var n in inputs) w.WriteString(n);
             });
             EngineLog.Write($"output started: {description}, {SampleRate} Hz, {latencyMs} ms");
         }
@@ -514,7 +515,7 @@ internal sealed partial class EngineSession
         var needed = e.SamplesPerBuffer * Math.Max(1, e.InputBuffers.Length);
         // Sized when the driver opens (PrepareAsioScratch); a driver that changes its buffer mid-stream is skipped
         // for that block rather than allocating on its real-time thread.
-        if (_asioScratch.Length < needed) { Interlocked.Increment(ref _asioScratchMisses); return; }
+        if (_asioScratch.Length < needed || e.InputBuffers.Length != input.FeedChannels) { Interlocked.Increment(ref _asioScratchMisses); return; }   // also a capture built for another channel count: never fed
         var written = e.GetAsInterleavedSamples(_asioScratch);
         input.Feed(_asioScratch.AsSpan(0, written));
     }
@@ -626,6 +627,7 @@ internal sealed partial class EngineSession
     public void StopOutput()
     {
         AssertMain();
+        if (Player is not null && Config.PopGuard) Mix?.Fade?.FadeOutAndDrain((int)(Mix.OutputLatencyTicks * 1000 / Stopwatch.Frequency));   // bounded: silence reaches the device and what it buffered plays out before it stops
         FollowWindowsVolume(false);
         try { Player?.Stop(); Player?.Dispose(); }
         catch (Exception ex) { EngineLog.Write($"output stop failed: {ex.Message}"); }
@@ -850,9 +852,9 @@ internal sealed partial class EngineSession
                     // The driver-reported input latency (ASIOGetLatencies, it includes the buffer) when there is one.
                     ? new Audio.InputCapture(AsioInputLabel(), SampleRate, Math.Max(1, AudioOutputFactory.AsioInputChannelsUsed),
                         Math.Max(1, (int)Math.Round((AudioOutputFactory.AsioInputLatencyFrames > 0 ? AudioOutputFactory.AsioInputLatencyFrames : _asioBufferFrames) * 1000.0 / SampleRate)))
-                    : new Audio.InputCapture(Config.InputDevice, SampleRate);
+                    : Audio.InputCapture.Open(Config.InputDevice, SampleRate, Config.AllInputs);
                 Mix.Input = Input;
-                EngineLog.Write($"input opened: {Input.DeviceName}, {Input.SourceRate} Hz" + (Input.SourceRate != SampleRate ? $" (resampled to {SampleRate} Hz)" : "") +
+                EngineLog.Write($"input opened: {Input.DeviceName}, {Input.Channels} channel(s), {Input.SourceRate} Hz" + (Input.SourceRate != SampleRate ? $" (resampled to {SampleRate} Hz)" : "") +
                                 $", input latency {Input.LatencyMs} ms ({(AudioOutputFactory.AsioInputLatencyFrames > 0 && Player is NAudio.Wave.AsioOut ? "ASIO driver" : Input.LatencySource)})");
             }
             catch (Exception ex)
@@ -876,12 +878,12 @@ internal sealed partial class EngineSession
         if (Recorder is not null || Input is null || Mix is null) return;
         var armed = Arms.Where(a => names.ContainsKey(a.Key)).Select(a => (a.Key, names[a.Key], a.Value)).ToList();
         if (armed.Count == 0) return;
-        var heardSec = Audio.TakeAlignment.StartSec(Mix.SongSecFor(owner), Mix.DelayTicks / (double)Stopwatch.Frequency, Input.LatencyMs, offsetMs);
         EngineLog.Write($"recording aligned: input latency {Input.LatencyMs} ms, user offset {offsetMs:0.#} ms");
         try
         {
-            Recorder = new Audio.Recorder(folder, armed, Math.Max(0, heardSec), SampleRate);
-            var recorder = Recorder;
+            // The start is read after the recorder is built (its queue allocation takes longer the more inputs are recorded) and right before the capture is attached.
+            var recorder = Recorder = new Audio.Recorder(folder, armed, 0, SampleRate, inputChannels: Input.Channels);
+            recorder.StartSec = Math.Max(0, Audio.TakeAlignment.StartSec(Mix.SongSecFor(owner), Mix.DelayTicks / (double)Stopwatch.Frequency, Input.LatencyMs, offsetMs));
             recorder.Error += msg => Send(EngineEvent.InputError, w => w.WriteString($"Recording problem: {msg}"));
             Input.BlockCaptured = recorder.Enqueue;
             EngineLog.Write($"recording {armed.Count} track(s) into {folder}");

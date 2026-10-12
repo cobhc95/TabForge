@@ -4,7 +4,7 @@ using NAudio.Wave;
 namespace TabForge.AudioEngine.Audio;
 
 /// <summary>
-/// The audio input (WASAPI, the chosen recording device): delivers inputs 1 and 2 to the audio thread through a
+/// The audio input (WASAPI, the chosen recording device): delivers every input channel (up to <see cref="MaxChannels"/>) to the audio thread through a
 /// lock-free ring (for monitoring through the track's chain) and hands every captured block to the recorder.
 /// Opened only while some track is armed; closed again when none is.
 /// </summary>
@@ -12,16 +12,63 @@ public sealed class InputCapture : IDisposable
 {
     private const int RingFrames = 1 << 15; // ~0.68 s at 48 kHz
     private readonly WasapiCapture? _capture;
-    private readonly float[] _ring = new float[RingFrames * 2];
+    private const int ConvertFrames = 8192;
+    /// <summary>The most input channels kept (a device with more delivers its first ones).</summary>
+    public const int MaxChannels = TabForge.Audio.Contracts.AudioInputAddress.MaxChannels;
+    // Sized once in the constructor (Channels wide); the callbacks never allocate.
+    private float[] _ring = Array.Empty<float>();
     private long _write, _read;
     private readonly int _engineRate;
     private readonly int _channels;
-    private readonly float[] _converted = new float[8192 * 2];
+    private float[] _converted = Array.Empty<float>();
     /// <summary>
-    /// Band-limited windowed-sinc resampler to the engine rate when the device cannot capture at it; null when the rates
-    /// match. Preallocated, so the capture callback does not allocate.
+    /// Band-limited windowed-sinc resamplers (one per channel pair) to the engine rate when the device cannot capture at it;
+    /// null when the rates match. Preallocated, so the capture callback does not allocate.
     /// </summary>
-    private readonly SincResampler? _resampler;
+    private SincResampler[]? _resamplers;
+    private float[] _pairOut = Array.Empty<float>();
+    private readonly int _maxChannels = MaxChannels;
+    private string? _fault;
+    private int _faultTaken;
+
+    /// <summary>
+    /// Engine main thread: the reason the input stopped (a fault in a capture callback, or the device ending the stream),
+    /// once; null otherwise. A stopped input delivers nothing more: monitoring hears silence, the output is not touched.
+    /// </summary>
+    public string? TakeFault() => Volatile.Read(ref _fault) is { } fault && Interlocked.Exchange(ref _faultTaken, 1) == 0 ? fault : null;
+
+    /// <summary>
+    /// The WASAPI capture with every channel; when that cannot be opened and <paramref name="allInputs"/> was asked, once more
+    /// with two channels (logged). Throws only when the two-channel capture fails too.
+    /// </summary>
+    public static InputCapture Open(string deviceName, int engineRate, bool allInputs)
+    {
+        if (allInputs)
+        {
+            try { return new InputCapture(deviceName, engineRate, MaxChannels); }
+            catch (Exception ex) { EngineLog.Write($"input with all channels failed ({ex.Message}): opening two channels"); }
+        }
+        return new InputCapture(deviceName, engineRate, 2);
+    }
+
+    /// <summary>Channels in the ring, in <see cref="BlockCaptured"/> blocks and in <see cref="Read"/>: the device's, at least 2 (a mono device is doubled), at most <see cref="MaxChannels"/>.</summary>
+    public int Channels { get; private set; } = 2;
+
+    /// <summary>Constructor: every buffer, sized for the device's channel count and rate. Returns the largest input chunk.</summary>
+    private int Allocate(int deviceChannels, int sourceRate, int engineRate)
+    {
+        Channels = Math.Clamp(deviceChannels, 2, Math.Clamp(_maxChannels, 2, MaxChannels));
+        _ring = new float[RingFrames * Channels];
+        _converted = new float[ConvertFrames * Channels];
+        var first = CreateResampler(sourceRate, engineRate, ConvertFrames, out var maxChunkIn);
+        if (first is null) return maxChunkIn;
+        _resamplers = new SincResampler[(Channels + 1) / 2];
+        _resamplers[0] = first;
+        for (var p = 1; p < _resamplers.Length; p++) _resamplers[p] = new SincResampler(sourceRate, engineRate, maxChunkIn);
+        _staging = new float[maxChunkIn * 2];
+        _pairOut = new float[ConvertFrames * 2];
+        return maxChunkIn;
+    }
     private readonly int _maxChunkIn;
     private const int WasapiBufferMs = 10;
 
@@ -39,7 +86,7 @@ public sealed class InputCapture : IDisposable
         return new SincResampler(sourceRate, engineRate, maxChunkIn);   // windowed sinc: no audible aliasing (linear interpolation aliased)
     }
 
-    /// <summary>Capture thread: every block of input (interleaved stereo at the engine rate), for recording. Must not block
+    /// <summary>Capture thread: every block of input (interleaved, <see cref="Channels"/> wide, at the engine rate), for recording. Must not block
     /// (for ASIO this is the driver's real-time thread): the recorder only queues it.</summary>
     public Action<float[], int>? BlockCaptured;
     public string DeviceName { get; }
@@ -55,15 +102,18 @@ public sealed class InputCapture : IDisposable
         _channels = Math.Max(1, channels);
         _engineRate = engineRate;
         SourceRate = sourceRate > 0 ? sourceRate : engineRate;
-        _resampler = CreateResampler(SourceRate, engineRate, _converted.Length / 2, out _maxChunkIn);
-        if (_resampler is not null) _staging = new float[_maxChunkIn * 2];
+        _maxChunkIn = Allocate(_channels, SourceRate, engineRate);
     }
 
-    /// <summary>ASIO callback thread: interleaved input samples at the engine rate.</summary>
-    public void Feed(ReadOnlySpan<float> samples) => OnSamples(samples);
+    /// <summary>Feed mode: the channels each fed block must have (0 for a capture that reads its own device).</summary>
+    public int FeedChannels => _capture is null ? _channels : 0;
 
-    public InputCapture(string deviceName, int engineRate)
+    /// <summary>ASIO callback thread: interleaved input samples at the engine rate.</summary>
+    public void Feed(ReadOnlySpan<float> samples) => Guarded(samples);
+
+    public InputCapture(string deviceName, int engineRate, int maxChannels = MaxChannels)
     {
+        _maxChannels = maxChannels;
         using var enumerator = new MMDeviceEnumerator();
         MMDevice? device = null;
         if (!string.IsNullOrWhiteSpace(deviceName))
@@ -95,18 +145,37 @@ public sealed class InputCapture : IDisposable
             _channels = Math.Max(1, capture.WaveFormat.Channels);
             _engineRate = engineRate;
             SourceRate = capture.WaveFormat.SampleRate;
-            _resampler = CreateResampler(SourceRate, engineRate, _converted.Length / 2, out _maxChunkIn);
-            if (_resampler is not null) _staging = new float[_maxChunkIn * 2];
+            _maxChunkIn = Allocate(_channels, SourceRate, engineRate);
             capture.DataAvailable += OnData;
+            capture.RecordingStopped += OnStopped;
             capture.StartRecording();
             _capture = capture;
         }
         catch
         {
-            if (capture is not null) { capture.DataAvailable -= OnData; try { capture.Dispose(); } catch { } }
+            if (capture is not null) { capture.DataAvailable -= OnData; capture.RecordingStopped -= OnStopped; try { capture.Dispose(); } catch { } }
             throw;
         }
         finally { device.Dispose(); }
+    }
+
+    /// <summary>Engine main thread: how many input channels the WASAPI recording device offers (its shared-mode format), 0 when it cannot be read. Opens no stream.</summary>
+    public static int DeviceChannels(string deviceName)
+    {
+        try
+        {
+            using var enumerator = new MMDeviceEnumerator();
+            MMDevice? device = null;
+            if (!string.IsNullOrWhiteSpace(deviceName))
+                foreach (var d in enumerator.EnumerateAudioEndPoints(DataFlow.Capture, DeviceState.Active))
+                {
+                    if (device is null && string.Equals(d.FriendlyName, deviceName, StringComparison.OrdinalIgnoreCase)) device = d;
+                    else d.Dispose();
+                }
+            device ??= enumerator.GetDefaultAudioEndpoint(DataFlow.Capture, Role.Console);
+            using (device) return Math.Clamp(device.AudioClient.MixFormat.Channels, 0, MaxChannels);
+        }
+        catch (Exception) { return 0; }   // any failure of the device query: the caller falls back to two inputs
     }
 
     /// <summary>
@@ -126,24 +195,39 @@ public sealed class InputCapture : IDisposable
     }
 
     private void OnData(object? sender, WaveInEventArgs e) =>
-        OnSamples(System.Runtime.InteropServices.MemoryMarshal.Cast<byte, float>(e.Buffer.AsSpan(0, e.BytesRecorded)));
+        Guarded(System.Runtime.InteropServices.MemoryMarshal.Cast<byte, float>(e.Buffer.AsSpan(0, Math.Clamp(e.BytesRecorded, 0, e.Buffer.Length))));
+
+    /// <summary>Capture thread: the device ended the stream with an error (unplugged, format changed).</summary>
+    private void OnStopped(object? sender, StoppedEventArgs e) { if (e.Exception is { } ex) Volatile.Write(ref _fault, ex.Message); }
+
+    /// <summary>
+    /// Capture thread (the driver's own for ASIO): the outermost guard of the input path (conversion, ring, recorder queue).
+    /// Nothing thrown here reaches the driver or the output: the input stops and the reason waits for <see cref="TakeFault"/>.
+    /// </summary>
+    private void Guarded(ReadOnlySpan<float> samples)
+    {
+        if (_fault is not null) return;
+        try { OnSamples(samples); }
+        catch (Exception ex) { Volatile.Write(ref _fault, ex.Message); }
+    }
 
     private void OnSamples(ReadOnlySpan<float> samples)
     {
         var frames = samples.Length / _channels;
-        var capacity = _converted.Length / 2;
-        // Keep the first two channels (mono is doubled). Every source frame is consumed, in chunks that fit the conversion
-        // buffer; the resampler keeps its state across chunks and callbacks. Allocation-free (ASIO calls this on its driver thread).
-        if (_resampler is null)
+        var width = Channels;
+        var kept = Math.Min(_channels, width);
+        // Keep every channel up to the cap (mono is doubled). Every source frame is consumed, in chunks that fit the conversion
+        // buffer; the resamplers keep their state across chunks and callbacks. Allocation-free (ASIO calls this on its driver thread).
+        if (_resamplers is null)
         {
-            for (var start = 0; start < frames; start += capacity)
+            for (var start = 0; start < frames; start += ConvertFrames)
             {
-                var n = Math.Min(capacity, frames - start);
+                var n = Math.Min(ConvertFrames, frames - start);
                 for (var i = 0; i < n; i++)
                 {
-                    var l = samples[(start + i) * _channels];
-                    _converted[i * 2] = l;
-                    _converted[i * 2 + 1] = _channels > 1 ? samples[(start + i) * _channels + 1] : l;
+                    var from = (start + i) * _channels; var to = i * width;
+                    for (var c = 0; c < kept; c++) _converted[to + c] = samples[from + c];
+                    if (_channels == 1) _converted[to + 1] = samples[from];
                 }
                 Deliver(n);
             }
@@ -152,31 +236,44 @@ public sealed class InputCapture : IDisposable
         for (var start = 0; start < frames;)
         {
             var n = Math.Min(_maxChunkIn, frames - start);
-            // Stereo pairs into the staging buffer (the device may deliver 1..n channels), then resample into the conversion buffer.
-            for (var i = 0; i < n; i++)
+            var produced = 0;
+            // One channel pair at a time into the staging buffer, resampled, then interleaved into the conversion buffer.
+            // Every pair's resampler sees the same frame counts, so they all produce the same number of frames.
+            for (var p = 0; p < _resamplers.Length; p++)
             {
-                var l = samples[(start + i) * _channels];
-                _staging[i * 2] = l;
-                _staging[i * 2 + 1] = _channels > 1 ? samples[(start + i) * _channels + 1] : l;
+                var left = p * 2; var right = _channels == 1 ? 0 : Math.Min(left + 1, _channels - 1);
+                for (var i = 0; i < n; i++)
+                {
+                    var from = (start + i) * _channels;
+                    _staging[i * 2] = samples[from + left];
+                    _staging[i * 2 + 1] = samples[from + right];
+                }
+                var made = _resamplers[p].Process(_staging.AsSpan(0, n * 2), _pairOut, ConvertFrames);
+                produced = p == 0 ? made : Math.Min(produced, made);
+                for (var i = 0; i < made; i++)
+                {
+                    _converted[i * width + left] = _pairOut[i * 2];
+                    if (left + 1 < width) _converted[i * width + left + 1] = _pairOut[i * 2 + 1];
+                }
             }
-            var produced = _resampler.Process(_staging.AsSpan(0, n * 2), _converted, capacity);
             if (produced > 0) Deliver(produced);
             start += n;
         }
     }
 
     /// <summary>Stereo copy of one input chunk for the resampler (sized once for the largest chunk).</summary>
-    private readonly float[] _staging = Array.Empty<float>();
+    private float[] _staging = Array.Empty<float>();
 
     /// <summary>Capture thread: pushes converted frames to the monitoring ring and to the recorder's queue.</summary>
     private void Deliver(int produced)
     {
         var write = Volatile.Read(ref _write);
+        var width = Channels;
         for (var i = 0; i < produced; i++)
         {
-            var at = (int)((write + i) & (RingFrames - 1)) * 2;
-            _ring[at] = _converted[i * 2];
-            _ring[at + 1] = _converted[i * 2 + 1];
+            var at = (int)((write + i) & (RingFrames - 1)) * width;
+            var from = i * width;
+            for (var c = 0; c < width; c++) _ring[at + c] = _converted[from + c];
         }
         Volatile.Write(ref _write, write + produced);
         TotalFrames += produced;
@@ -191,18 +288,21 @@ public sealed class InputCapture : IDisposable
     /// Audio thread: the latest input for one block. Keeps only a small safety margin behind the capture so
     /// monitoring latency stays low; silence while not enough input has arrived yet. No allocation.
     /// </summary>
-    public void Read(float[] left, float[] right, int frames)
+    public void Read(InputBlock block, int frames)
     {
+        var width = Math.Min(Channels, block.Ch.Length);
+        frames = Math.Clamp(frames, 0, block.Ch[0].Length);   // never past the block's buffers
+        block.Channels = width;
+        block.Frames = frames;
         var write = Volatile.Read(ref _write);
         var read = _read;
         var margin = Math.Max(frames * 2, _engineRate / 200);
         if (write - read > frames + margin * 2) read = write - frames - margin; // too far behind: catch up
-        if (write - read < frames) { Array.Clear(left, 0, frames); Array.Clear(right, 0, frames); return; }
-        for (var i = 0; i < frames; i++)
+        if (write - read < frames) { for (var c = 0; c < width; c++) Array.Clear(block.Ch[c], 0, frames); return; }
+        for (var c = 0; c < width; c++)
         {
-            var at = (int)((read + i) & (RingFrames - 1)) * 2;
-            left[i] = _ring[at];
-            right[i] = _ring[at + 1];
+            var dest = block.Ch[c];
+            for (var i = 0; i < frames; i++) dest[i] = _ring[(int)((read + i) & (RingFrames - 1)) * Channels + c];
         }
         _read = read + frames;
     }
@@ -221,12 +321,12 @@ public sealed class InputCapture : IDisposable
         var first = write - n;
         for (var i = 0; i < n; i++)
         {
-            var at = (int)((first + i) & (RingFrames - 1)) * 2;
+            var at = (int)((first + i) & (RingFrames - 1)) * Channels;
             var a = _ring[at]; var b = _ring[at + 1];
             l += Math.Abs(a); r += Math.Abs(b);
         }
         var use = r > l ? 1 : 0;
-        for (var i = 0; i < n; i++) dest[i] = _ring[(int)((first + i) & (RingFrames - 1)) * 2 + use];
+        for (var i = 0; i < n; i++) dest[i] = _ring[(int)((first + i) & (RingFrames - 1)) * Channels + use];
         return true;
     }
 
@@ -234,6 +334,7 @@ public sealed class InputCapture : IDisposable
     {
         if (_capture is null) return;
         _capture.DataAvailable -= OnData;
+        _capture.RecordingStopped -= OnStopped;
         try { _capture.StopRecording(); } catch (Exception) { }
         finally { try { _capture.Dispose(); } catch (Exception) { } }
     }

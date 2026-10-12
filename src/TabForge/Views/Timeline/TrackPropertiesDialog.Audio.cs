@@ -30,7 +30,8 @@ internal sealed partial class TrackPropertiesDialog
     /// <summary>The recording input (Input 1, Input 2, stereo, MIDI).</summary>
     private Border BuildAudioInputCard()
     {
-        _audioInput = new ComboBox { ItemsSource = AudioInputs.All, SelectedItem = _track.AudioInput, MinWidth = 220, HorizontalAlignment = HorizontalAlignment.Left };
+        var picker = _audioInput = new ComboBox { MinWidth = 220, HorizontalAlignment = HorizontalAlignment.Left };
+        AudioInputPicker.Bind(picker, () => picker.SelectedValue as string ?? _track.AudioInput);
         System.Windows.Automation.AutomationProperties.SetName(_audioInput, "Recording input");
         var stack = new StackPanel();
         stack.Children.Add(_audioInput);
@@ -56,7 +57,7 @@ internal sealed partial class TrackPropertiesDialog
         track.TrackNotes = _notes.Text;
         track.ColorHex = TabForge.Visualization.ColourText.Hex(_colour);
         track.TintRow = _tint.IsChecked == true;
-        if (_audioInput.SelectedItem is string input) track.AudioInput = input;
+        if (_audioInput.SelectedValue is string input) track.AudioInput = input;
         track.Volume = (int)_volume.Value;
         track.Pan = (int)_pan.Value;
     }

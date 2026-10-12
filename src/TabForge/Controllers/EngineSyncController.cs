@@ -35,6 +35,11 @@ internal interface IEngineSyncHost
     void UpdateAudioDeviceStatus();
     void UpdatePluginTrustBar();
     void UpdateMediaApprovalBar();
+    /// <summary>The window's play / pause toggle of the displayed song (button, status, follow and playhead follow it).</summary>
+    void TogglePlayback();
+    /// <summary>The window's Stop: ends a recording in progress (its take is kept) and stops the displayed song.</summary>
+    void StopPlayback();
+    bool IsRecording { get; }
 }
 
 // Owns: one window's side of the shared audio engine client: syncing the displayed song, answering engine events, coalescing
@@ -52,6 +57,7 @@ internal sealed class EngineSyncController : IDisposable
     private readonly IEngineSyncHost _host;
     private readonly AudioEngineClient _engine;
     private readonly OwnedSubscriptions _attached = new();
+    private readonly DeviceChangePause _devicePause = new();
     private bool _hooked, _disposed;
     private bool _syncPending, _followUpPending, _dragRefreshHeld, _undoCaptured;
     private long _syncRequestId;
@@ -184,6 +190,34 @@ internal sealed class EngineSyncController : IDisposable
     /// <summary>True when this window's displayed song made the engine's latest sync (or nobody has yet): only that window answers engine events with a sync.</summary>
     private bool OwnsEngine() => _engine.CurrentOwner is null || ReferenceEquals(_engine.CurrentOwner, _host.ActiveDocument);
 
+    /// <summary>Pop protection: songs playing in this window pause while the device is reopened and continue by themselves once it is ready.</summary>
+    internal void OnDeviceChanging()
+    {
+        if (_disposed) return;
+        // A recording is ended through the window's own stop (the take is finalised and kept); its song stays stopped.
+        if (_host.IsRecording) { _host.StopPlayback(); _host.SetStatus("Recording stopped: the audio device changed"); }
+        _devicePause.Changing(_host.Documents.Select(d => (d.Playback.Engine.IsPlaying && !d.Playback.Engine.IsPaused, (Action)(() => PauseForDevice(d)), (Action)(() => ResumeAfterDevice(d)))));
+    }
+
+    internal void OnDeviceReady() => _devicePause.Ready();
+
+    /// <summary>The device did not open: songs paused for the change stay paused (shown as paused; Play resumes them).</summary>
+    internal void OnDeviceFailed(string message) { _devicePause.Failed(); if (!_disposed) _host.SetStatus($"Audio output: {message}"); }
+
+    /// <summary>The displayed song pauses through the window's own pause (button, status, follow, playhead); a song playing in another tab pauses its transport.</summary>
+    private void PauseForDevice(DocumentSession d)
+    {
+        if (ReferenceEquals(d, _host.ActiveDocument)) _host.TogglePlayback();
+        else { d.Playback.Engine.Pause(); d.Playback.Clock.Paused(); }
+    }
+
+    /// <summary>Resumes a song paused by <see cref="PauseForDevice"/> only while it is still paused (stopped or resumed by the user meanwhile: left alone).</summary>
+    private void ResumeAfterDevice(DocumentSession d)
+    {
+        if (_disposed || !d.Playback.Engine.IsPlaying || !d.Playback.Engine.IsPaused) return;
+        if (ReferenceEquals(d, _host.ActiveDocument)) _host.TogglePlayback(); else d.Playback.Engine.Resume();
+    }
+
     private void On<THandler>(Action<THandler> attach, Action<THandler> detach, THandler handler) => _attached.Attach(() => attach(handler), () => detach(handler));
 
     private void Hook()
@@ -219,7 +253,9 @@ internal sealed class EngineSyncController : IDisposable
                 ? $"{System.IO.Path.GetFileNameWithoutExtension(path)} produced invalid audio and was bypassed; switch it off and on in its FX chain to try again"
                 : $"A track's sound ({path}) produced invalid audio; it was muted for that moment");
         }));
-        On(h => engine.DeviceError += h, h => engine.DeviceError -= h, (Action<string>)(message => { if (!_disposed) _host.SetStatus($"Audio output: {message}"); }));
+        On(h => engine.DeviceError += h, h => engine.DeviceError -= h, (Action<string>)OnDeviceFailed);
+        On(h => engine.DeviceChanging += h, h => engine.DeviceChanging -= h, (Action)OnDeviceChanging);
+        On(h => engine.DeviceReady += h, h => engine.DeviceReady -= h, (Action)OnDeviceReady);
         // Slow is not a crash: a big instrument may take a while; it is switched off only if it passes its limit (load 90 s).
         On(h => engine.PluginSlow += h, h => engine.PluginSlow -= h, (Action<string, PluginCallKind, int>)((path, kind, seconds) =>
         {
@@ -262,7 +298,7 @@ internal sealed class EngineSyncController : IDisposable
         if (!_engine.TooManyCrashes)
         {
             // One plug-in crashed in its slot (the engine and every other chain are intact): only a window whose song uses that plug-in syncs.
-            if (_engine.CrashLeftEngineRunning && !UsesPlugin(path)) { _host.RefreshMixer(); _host.RefreshArrangementAll(); return; }
+            if (_engine.CrashLeftEngineRunning && !UsesPlugin(path) && !(OwnsEngine() && _engine.LiveInput.Uses(path))) { _host.RefreshMixer(); _host.RefreshArrangementAll(); return; }
             // Who owns the engine is read now, before any window syncs (a sync takes the ownership): the owner's sync is queued behind the others'.
             _host.Post(() => { Sync(); _engine.ResendPositions(); }, OwnsEngine() ? DispatcherPriority.Loaded : DispatcherPriority.Normal);
         }

@@ -36,6 +36,11 @@ public static partial class SelfTest
         band.Tick();
         BandStage(band, 900, 800);
         Eq("band pills: one pill per track", 5, band.View.Pills.Count);
+        var close = band.View.CloseButton;
+        var closeBox = close.TransformToAncestor(band.View).TransformBounds(new System.Windows.Rect(close.RenderSize));
+        close.RaiseEvent(new System.Windows.RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+        Check("band header: a close button at the right edge asks the host to leave Band view", close.Visibility == System.Windows.Visibility.Visible && closeBox.Right > 900 - 12 && closeBox.Width >= 22 && closeBox.Top >= 0 && closeBox.Bottom < 40
+            && System.Windows.Automation.AutomationProperties.GetName(close) == "Close Band view" && host.ScoreMenuRuns.Count(m => m.Id == BandView.CloseId) == 1, $"{closeBox}, runs {host.ScoreMenuRuns.Count}");
         Check("band pills: the first three tracks are on by default", band.View.Rows.Select(r => r.Track).SequenceEqual(project.Tracks.Take(3))
             && band.View.Pills.Select(p => p.IsChecked == true).SequenceEqual(new[] { true, true, true, false, false }));
         var kept = band.View.Rows[1];
@@ -57,6 +62,46 @@ public static partial class SelfTest
         project.Tracks.Add(new TrackModel { Name = "Late", Measures = TemplateFactory.Measures(8) });
         band.Tick();
         Check("band pills: a new track gets a pill, hidden", band.View.Pills.Count == 6 && band.View.Pills[5].IsChecked == false && band.View.Rows.Count == 4);
+
+        // The layout choice (fretboard beside or above the tab) and the track colour frame.
+        var settings = host.Settings.Timeline.Band!;
+        var first = band.View.Rows[0];
+        BandStage(band, 900, 800);
+        var besideWidth = first.InstrumentColumnWidth;
+        var besideHeight = first.ActualHeight;
+        Rect BoxOf(FrameworkElement e) => e.TransformToAncestor(first).TransformBounds(new Rect(e.RenderSize));
+        Check("band layout: the fretboard is beside the tab by default, with the divider and the frame", !settings.FretboardAbove && settings.ColourFrame && !first.Stacked && first.WidthGripShown
+            && BoxOf(first.InstrumentSide).Right <= BoxOf(first.Lane).Left + 0.5, $"{BoxOf(first.InstrumentSide)} / {BoxOf(first.Lane)}");
+        var caption = band.View.Caption.TransformToAncestor(band.View).TransformBounds(new Rect(band.View.Caption.RenderSize));
+        var chevron = band.View.LayoutButton.TransformToAncestor(band.View).TransformBounds(new Rect(band.View.LayoutButton.RenderSize));
+        Check("band layout: the caption sits inside the roll-down button, which reaches past it for the chevron", chevron.Left <= caption.Left && chevron.Right >= caption.Right + 10 && !band.View.Caption.IsHitTestVisible && band.View.LayoutButton.ToolTip is not null, $"{caption} / {chevron}");
+        var saves = host.Saves;
+        band.LayoutMenu.RunMenu(new MenuSpec { Id = BandLayoutMenu.PlaceId, Arg = BandLayoutMenu.Above });
+        BandStage(band, 900, 800); band.Tick(); BandStage(band, 900, 800);
+        var above = BoxOf(first.InstrumentSide);
+        var under = BoxOf(first.Lane);
+        Check("band layout: above puts each fretboard over its score at the full row width, hides the divider and saves", settings.FretboardAbove && host.Saves == saves + 1 && above.Bottom <= under.Top + 0.5
+            && Math.Abs(above.Width - under.Width) < 1 && above.Width > first.ActualWidth - 20 && band.View.Rows.All(r => r.Stacked && !r.WidthGripShown), $"{above} / {under}");
+        Check("band layout: above makes the rows taller by the instrument, and the rows scroll", first.ActualHeight > besideHeight + 60 && Math.Abs(under.Height - besideHeight) < 40 && band.View.ScrollableHeight > 0,
+            $"{besideHeight:0} -> {first.ActualHeight:0}, lane {under.Height:0}, scroll {band.View.ScrollableHeight:0}");
+        var menu = BandLayoutMenu.Build(settings, _ => "");
+        Check("band layout: the menu ticks the current choice", menu.Count == 6 && menu[4].IsSeparator && menu[5].Id == BandLayoutMenu.ResetId && !menu[0].Checked && menu[1].Checked && menu[1].Radio && menu[2].IsSeparator && menu[3].Checked && !menu[3].Radio);
+        band.Run(BandLayoutMenu.ToggleAboveId);
+        BandStage(band, 900, 800); band.Tick(); BandStage(band, 900, 800);
+        Check("band layout: back to beside restores the side-by-side widths and the row height", !settings.FretboardAbove && Math.Abs(first.InstrumentColumnWidth - besideWidth) < 1 && first.WidthGripShown
+            && Math.Abs(first.ActualHeight - besideHeight) < 1, $"{besideWidth:0} -> {first.InstrumentColumnWidth:0}, {besideHeight:0} -> {first.ActualHeight:0}");
+        var wanted = ColourHex.TryParse(first.Track.ColorHex, out var hex) ? Color.FromRgb(hex.R, hex.G, hex.B) : Colors.Gray;
+        var noEffect = true;
+        for (DependencyObject? at = first.Lane; at is not null && !ReferenceEquals(at, band.View); at = VisualTreeHelper.GetParent(at)) noEffect &= at is not UIElement { Effect: not null };
+        Check("band frame: the line has the track's colour, the halo shows, and no ancestor of the score has an Effect", first.Frame.HaloVisible && first.Frame.Line.BorderBrush is SolidColorBrush line
+            && Color.FromRgb(line.Color.R, line.Color.G, line.Color.B) == wanted && line.Color.A is > 100 and < 180 && first.Frame.Line.CornerRadius.TopLeft == 6 && noEffect, $"{first.Frame.Line.BorderBrush}");
+        band.Run(BandLayoutMenu.ToggleFrameId);
+        Check("band frame: off, the row has its plain outline again", !settings.ColourFrame && !first.Frame.HaloVisible && first.BorderThickness.Left == 1 && first.Frame.Line.BorderThickness.Left == 0);
+        settings.FretboardAbove = true;
+        var loaded = System.Text.Json.JsonSerializer.Deserialize<Services.AppSettings>(System.Text.Json.JsonSerializer.Serialize(host.Settings))!.Timeline.Band!;
+        Check("band layout: both choices come back from saved settings (a fresh profile is above with the frame)", loaded.FretboardAbove && !loaded.ColourFrame && new Services.BandSettings() is { FretboardAbove: true, ColourFrame: true });
+        Check("band layout: the compact strip has no roll-down button", !new TabForge.CompactMode.CompactModeStrip().Children.OfType<System.Windows.Controls.Button>()
+            .Any(b => System.Windows.Automation.AutomationProperties.GetName(b) == "Band view layout"));
     }
 
     private static void TestBandRowSizing()
@@ -90,6 +135,47 @@ public static partial class SelfTest
         Check("band rows: a change of rows per screen refits every row (custom heights are dropped)", Math.Abs(row.Height - band.View.RowHeight) < 1 && band.State.HeightOf(row.Track) is null);
         row.RequestReset();
         Check("band rows: a reset returns to the shared height", Math.Abs(row.Height - band.View.RowHeight) < 1);
+
+        // Fresh settings: the fretboard above the tab, the first row's instrument only, and as many whole systems per row as fit the pane.
+        var fresh = new FakeBandHost(BandSongOf(40, 4));
+        var prefs = fresh.Settings.Timeline.Band = new Services.BandSettings();
+        using var auto = new BandViewController(fresh);
+        void Lay(double h) { for (var i = 0; i < 3; i++) { BandStage(auto, 1000, h); auto.Tick(); } BandStage(auto, 1000, h); }
+        Lay(900);
+        var ar = auto.View.Rows;
+        Check("band defaults: fretboard above, and only the first row shows its instrument", prefs.FretboardAbove && ar.Count == 3 && ar.All(r => r.Stacked) && !ar[0].InstrumentHidden && ar[1].InstrumentHidden && ar[2].InstrumentHidden);
+        string Shape() => string.Join(" ", ar.Select(r => $"{r.Lane.VisibleSystems}x{r.SystemHeight:0} in {r.Lane.ActualHeight:0}")) + $" fretboard {ar[0].InstrumentHeightNow:0} ({ar[0].InstrumentMin:0}-{ar[0].InstrumentNatural:0}) scroll {auto.View.ScrollableHeight:0}";
+        bool Tight() => ar.All(r => Math.Abs(r.Lane.ActualHeight - r.Lane.VisibleSystems * r.SystemHeight) < 2);   // a row is as tall as its lines of music, no empty score under them
+        Lay(620);
+        var small = ar[0].InstrumentHeightNow;
+        Check("band defaults: a normal pane shows all three rows at once, one system each, the fretboard at its least height", ar.All(r => r.Lane.VisibleSystems == 1) && auto.View.ScrollableHeight < 1
+            && small >= ar[0].InstrumentMin - 1 && small < ar[0].InstrumentNatural - 1, Shape());
+        Lay(900);
+        Check("band defaults: a taller pane gives the fretboard more height before any second system", ar.All(r => r.Lane.VisibleSystems == 1) && Tight() && auto.View.ScrollableHeight < 1 && ar[0].InstrumentHeightNow > small + 10, Shape());
+        Lay(1700);
+        Check("band defaults: a tall pane has the fretboard at its natural height, the main row one line ahead of the others, and no empty score", ar[0].Lane.VisibleSystems == ar[1].Lane.VisibleSystems + 1 && ar[1].Lane.VisibleSystems == ar[2].Lane.VisibleSystems && ar[1].Lane.VisibleSystems >= 1 && Tight() && auto.View.ScrollableHeight < 1 && Math.Abs(ar[0].InstrumentHeightNow - ar[0].InstrumentNatural) < 1, Shape());
+        Lay(300);
+        Check("band defaults: far too small a pane keeps one system per lane and the rows scroll", ar.All(r => r.Lane.VisibleSystems == 1) && auto.View.ScrollableHeight > 1, Shape());
+        Lay(1700);
+        ar[1].RequestHeight(ar[1].StackedExtra + ar[1].Chrome + ar[1].SystemHeight * 3);
+        Check("band defaults: a row dragged to three systems is remembered for the other rows of the next tabs, not the main row", prefs.SystemsPerRow == 3 && prefs.MainSystemsPerRow == 0, prefs.SystemsPerRow.ToString());
+        ar[1].RequestInstrumentToggle(); ar[2].RequestInstrumentToggle();
+        var next = new FakeBandHost(BandSongOf(8, 3));
+        next.Settings.Timeline.Band = prefs;
+        using var second = new BandViewController(next);
+        BandStage(second, 1000, 900); second.Tick();
+        Check("band defaults: every fretboard turned on becomes the rule, and a second new song starts with all on", prefs.Fretboards == Services.BandChoices.FretboardsAll && second.View.Rows.Count == 3 && second.View.Rows.All(r => !r.InstrumentHidden), prefs.Fretboards);
+        var stored = BandSongOf(8, 3);
+        stored.BandLayout = new BandLayoutData { Shown = stored.Tracks.Take(2).Select(t => t.Id).ToList(), HiddenInstruments = new() { stored.Tracks[0].Id } };
+        var keeps = new FakeBandHost(stored);
+        keeps.Settings.Timeline.Band = prefs;
+        using var third = new BandViewController(keeps);
+        BandStage(third, 1000, 900); third.Tick();
+        Check("band defaults: an old song keeps only which tracks it shows; its stored instruments are not read and not rewritten", third.View.Rows.Count == 2 && third.View.Rows.All(r => !r.InstrumentHidden) && stored.BandLayout!.HiddenInstruments.Count == 1);
+        auto.ResetView();
+        Lay(900);
+        Check("band defaults: Reset view restores above, the first fretboard only and whole systems that fit", prefs.FretboardAbove && prefs.ColourFrame && prefs.Fretboards == Services.BandChoices.FretboardsFirst && prefs.SystemsPerRow == 0 && prefs.MainSystemsPerRow == 0
+            && !ar[0].InstrumentHidden && ar[1].InstrumentHidden && ar[2].InstrumentHidden && auto.State.HeightOf(ar[1].Track) is null && ar.All(r => r.Lane.VisibleSystems >= 1), Shape());
     }
 
     private static void TestBandReorder()

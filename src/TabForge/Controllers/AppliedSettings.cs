@@ -40,12 +40,12 @@ internal sealed class AppliedSettings
         return changed;
     }
 
-    private (bool AutoFit, bool AddLane)? _fitKey;
+    private (bool AutoFit, bool AddLane, bool MasterLane)? _fitKey;
 
     /// <summary>True when the track list auto-fit or the Add-track lane differs from the last applied values (the rows must be re-fitted).</summary>
     public bool TakeTrackListFit(TimelineSettings timeline)
     {
-        var key = (timeline.AutoFitTrackList, timeline.ShowAddTrackLane);
+        var key = (timeline.AutoFitTrackList, timeline.ShowAddTrackLane, timeline.ShowMasterTrack);
         var changed = _fitKey is not null && _fitKey != key;
         _fitKey = key;
         return changed;

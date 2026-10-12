@@ -658,7 +658,7 @@ internal sealed partial class TrackTimeline : ISectionTipHost, ISectionEdgeHost
         if (Project is null || Project.Tracks.Count == 0) return -1;
         var gridTop = ArrangementPanel.RulerHeight + ArrangementPanel.SectionHeight;
         var offset = y + VerticalScrollOffset - gridTop;
-        if (offset < 0) return 0;
+        if (offset < MasterLane.OffsetOf(Project)) return 0;
         var index = ArrangementPanel.RowIndexAt(Project, offset);
         return index < 0 ? Project.Tracks.Count - 1 : index;
     }

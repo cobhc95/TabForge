@@ -70,7 +70,7 @@ The demo song is loud, and the metronome is boosted by default. Lower the master
 
 ### The song is too fast or too slow
 
-Check the **Speed** box in the top toolbar. At `100%` the song plays at its written tempo. Choose a lower percentage to slow it down. The **BPM** box in the toolbar is the written tempo itself. See **Chapter 3: Practice tools**.
+Check the **Speed** box in the **View and tempo** pane. At `100%` the song plays at its written tempo. Choose a lower percentage to slow it down. The **BPM** box in the same pane is the written tempo itself. See **Chapter 3: Practice tools**.
 
 ### Test sound says it worked, but nothing plays
 

@@ -193,17 +193,3 @@ public static class ClipLanes
         while (track.Lanes.Count > Math.Max(used, track.RecordArm ? 1 : 0)) track.Lanes.RemoveAt(track.Lanes.Count - 1);
     }
 }
-
-/// <summary>Which input channels a track records / monitors.</summary>
-public static class AudioInputs
-{
-    public const string Input1 = "Input 1";
-    public const string Input2 = "Input 2";
-    public const string Stereo = "Inputs 1+2 (stereo)";
-    /// <summary>MIDI from every MIDI input device (recorded as a MIDI clip, played live through the track).</summary>
-    public const string Midi = "MIDI (all inputs)";
-    public static readonly string[] All = { Input1, Input2, Stereo, Midi };
-    /// <summary>Audio inputs only (the engine's input modes, in order).</summary>
-    public static readonly string[] Audio = { Input1, Input2, Stereo };
-    public static bool IsMidi(string input) => input == Midi;
-}

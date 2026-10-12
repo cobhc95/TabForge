@@ -54,6 +54,8 @@ public static partial class SelfTest
         public double CollapsedHeight => 150;
         public event SizeChangedEventHandler? SizeChanged { add { } remove { } }
         public event Action? ResetTrackListHeightRequested { add { } remove { } }
+        public event Action<int>? TrackRevealRequested { add { } remove { } }
+        public void ScrollTrackRowIntoView(int index) { }
         public double PreferredHeight() => 200;
         public double PreferredHeightAt(double rowHeight) => rowHeight * 6;
         public double RowHeightForPaneHeight(double paneHeight) => 34;

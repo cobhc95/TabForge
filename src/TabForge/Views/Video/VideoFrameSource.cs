@@ -80,6 +80,8 @@ public sealed class VideoFrameSource : IDisposable
         _light = ThemeService.Paint(_root.Resources, _settings.Appearance);
         _root.Resources[SystemParameters.VerticalScrollBarWidthKey] = ScrollBarWidth;
         _settings.Timeline.Band.LaneZoom = BandLaneZoom;
+        // The export's own Band layout, whatever the user's: instruments beside the tab, every row's instrument (the spec hides them all), rows sharing the frame.
+        _settings.Timeline.Band.FretboardAbove = false; _settings.Timeline.Band.Fretboards = BandChoices.FretboardsAll; _settings.Timeline.Band.SystemsPerRow = -1;
         try
         {
             _bitmap = new RenderTargetBitmap(spec.Width, spec.Height, 96, 96, PixelFormats.Pbgra32);
@@ -121,15 +123,21 @@ public sealed class VideoFrameSource : IDisposable
         if (topShare < 1) _root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1 - topShare, GridUnitType.Star) });
     }
 
+    /// <summary>Gives <paramref name="editor"/> the export's score look: the Band rows copy theirs from it.</summary>
+    private TabEditorControl Looked(TabEditorControl editor)
+    {
+        if (_look is not null) BandAppearance.Copy(_look, editor.Appearance);
+        editor.Appearance.DarkPaper = _spec.Dark;
+        // The page, the margins round it and the instrument share one paper colour: the theme's.
+        editor.Appearance.DarkPaperColor = TryColour(_settings.Appearance.DarkScorePaperColour) ?? editor.Appearance.DarkPaperColor;
+        editor.Appearance.LightPaperColor = TryColour(_settings.Appearance.LightScorePaperColour) ?? editor.Appearance.LightPaperColor;
+        return editor;
+    }
+
     private void BuildScore(double share)
     {
         Rows(share);
-        _editor = new TabEditorControl { Project = _project, SelectedTrackIndex = _track, Notation = _spec.Notation };
-        if (_look is not null) BandAppearance.Copy(_look, _editor.Appearance);
-        _editor.Appearance.DarkPaper = _spec.Dark;
-        // The page, the margins round it and the instrument share one paper colour: the theme's.
-        _editor.Appearance.DarkPaperColor = TryColour(_settings.Appearance.DarkScorePaperColour) ?? _editor.Appearance.DarkPaperColor;
-        _editor.Appearance.LightPaperColor = TryColour(_settings.Appearance.LightScorePaperColour) ?? _editor.Appearance.LightPaperColor;
+        _editor = Looked(new TabEditorControl { Project = _project, SelectedTrackIndex = _track, Notation = _spec.Notation });
         _playhead = new PlayheadOverlay();
         if (TryColour(_settings.Follow.PlayheadColour) is { } colour) _playhead.SetColor(colour);
         _playhead.SetThickness(_settings.Follow.PlayheadThickness);
@@ -168,7 +176,7 @@ public sealed class VideoFrameSource : IDisposable
         var onlyBand = _spec.Layout == VideoLayout.Band;
         if (onlyBand) Rows(1); else if (_root.RowDefinitions.Count == 0) Rows(share);
         _project.BandLayout = null;   // the song's own Band layout is put back by Dispose; the rows here are the export's
-        _band = new BandViewController(new BandHost(_project, _settings, _editor ?? new TabEditorControl { Project = _project })) { UseFrameClock = true };
+        _band = new BandViewController(new BandHost(_project, _settings, _editor ?? Looked(new TabEditorControl { Project = _project }))) { UseFrameClock = true };
         var state = _band.State;
         state.Sync(_project);
         var chosen = _spec.Tracks.Where(i => i >= 0 && i < _project.Tracks.Count).Select(i => _project.Tracks[i]).Distinct().ToList();

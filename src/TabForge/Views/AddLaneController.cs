@@ -29,7 +29,7 @@ internal sealed class AddLaneController
 {
     private readonly IAddLaneHost _host;
     private readonly TrackTimeline _timeline;
-    private bool _shown = true;
+    private bool _shown = true, _suppressed;
     private Border? _row;
     private Border? _glow;
     private TextBlock? _text;
@@ -52,18 +52,23 @@ internal sealed class AddLaneController
         {
             if (_shown == value) return;
             _shown = value;
-            _timeline.AddLaneShown = value;
+            _timeline.AddLaneShown = Active;
             if (_host.Project is null) return;
             _host.RebuildControls();
             _host.RefreshTimelineExtent();
         }
     }
 
+    private bool Active => _shown && !_suppressed;
+
+    /// <summary>Hides the lane whatever the setting says (compact mode); the caller rebuilds the rows.</summary>
+    public bool Suppressed { set { _suppressed = value; _timeline.AddLaneShown = Active; } }
+
     /// <summary>Extra height of the lane (0 when hidden or no song is bound).</summary>
-    public double Extra => _host.Project is null ? 0 : AddTrackLane.HeightOf(_shown);
+    public double Extra => _host.Project is null ? 0 : AddTrackLane.HeightOf(Active);
 
     /// <summary>Actual height of the lane: all the room left below the last row in the pane (at least one row); 0 when hidden.</summary>
-    public double FillHeight => _host.Project is not { } project || !_shown
+    public double FillHeight => _host.Project is not { } project || !Active
         ? 0 : Math.Max(AddTrackLane.Height, _host.ControlsViewportHeight - ArrangementPanel.RowsHeight(project));
 
     /// <summary>The track-list half of the lane (null when hidden).</summary>
@@ -72,7 +77,7 @@ internal sealed class AddLaneController
     public Border? Build()
     {
         _row = null;
-        if (!_shown || _host.Project is null) return null;
+        if (!Active || _host.Project is null) return null;
         var content = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Top, Height = AddTrackLane.Height };
         content.Children.Add(new System.Windows.Shapes.Path
         {

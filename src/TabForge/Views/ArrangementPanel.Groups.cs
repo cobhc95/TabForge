@@ -159,6 +159,23 @@ public sealed partial class ArrangementPanel : IGroupDragHost
     public event Action? ResetTrackListHeightRequested;
     public void RequestResetTrackListHeight() => ResetTrackListHeightRequested?.Invoke();
 
+    /// <summary>A track's record arm changed: the track list fits its rows and shows the track's row (index). Nothing in compact mode.</summary>
+    public event Action<int>? TrackRevealRequested;
+    public void RequestTrackReveal(int index) { if (!_compactMode) TrackRevealRequested?.Invoke(index); }
+
+    /// <summary>Scrolls the track list so the whole row of a track, its clip lane strips included, is in view.</summary>
+    public void ScrollTrackRowIntoView(int index)
+    {
+        if (_compactMode || index < 0 || index >= _trackRows.Count || _trackRows[index].ActualHeight <= 0) return;
+        var row = _trackRows[index];
+        var top = row.TransformToAncestor(_controlsScroll).Transform(new Point(0, 0)).Y + _controlsScroll.VerticalOffset;
+        var bottom = top + row.ActualHeight;
+        var offset = _controlsScroll.VerticalOffset;
+        if (bottom - offset > _controlsScroll.ViewportHeight) offset = bottom - _controlsScroll.ViewportHeight;
+        if (top < offset) offset = top;
+        _controlsScroll.ScrollToVerticalOffset(Math.Max(0, offset));
+    }
+
     internal ContextMenu BuildEmptyAreaMenu(IEnumerable<Control>? own = null)
     {
         var menu = new ContextMenu { Style = (Style)Application.Current.FindResource(typeof(ContextMenu)) };
@@ -183,7 +200,7 @@ public sealed partial class ArrangementPanel : IGroupDragHost
         colours.Items.Add(byGroup);
         colours.Items.Add(pick);
         menu.Items.Add(colours);
-        var ownItems = own?.ToList() ?? new List<Control>();
+        var ownItems = (own ?? Array.Empty<Control>()).Append(MasterLaneItem()).ToList();
         if (ownItems.Count > 0) { menu.Items.Add(new Separator()); foreach (var item in ownItems) menu.Items.Add(item); }
         menu.Items.Add(new Separator());
         var resetHeight = new MenuItem

@@ -53,7 +53,7 @@ public static partial class SelfTest
         foreach (var measure in project.Tracks[2].Measures.Skip(3).Take(3))
             foreach (var cell in measure.Cells) cell.Notes.Clear();
         var host = new FakeBandHost(project);
-        host.Settings.Timeline.Band = new BandSettings();
+        host.Settings.Timeline.Band = new BandSettings { FretboardAbove = false, Fretboards = BandChoices.FretboardsAll, SystemsPerRow = -1 };
         using var band = new BandViewController(host);
         BandStage(band, 1000, 900);
         band.Tick();
@@ -73,7 +73,7 @@ public static partial class SelfTest
     {
         var project = BandUnevenSong(150);
         var host = new FakeBandHost(project);
-        host.Settings.Timeline.Band = new BandSettings { LaneLayout = BandChoices.Horizontal };
+        host.Settings.Timeline.Band = new BandSettings { FretboardAbove = false, Fretboards = BandChoices.FretboardsAll, SystemsPerRow = -1, LaneLayout = BandChoices.Horizontal };
         using var band = new BandViewController(host);
         BandStage(band, 1000, 800);
         band.Tick();
@@ -113,7 +113,7 @@ public static partial class SelfTest
     {
         var project = BandUnevenSong(80);
         var host = new FakeBandHost(project);
-        host.Settings.Timeline.Band = new BandSettings();
+        host.Settings.Timeline.Band = new BandSettings { FretboardAbove = false, Fretboards = BandChoices.FretboardsAll, SystemsPerRow = -1 };
         using var band = new BandViewController(host);
         host.Settings.Follow.Mode = FollowModes.Jump;
         BandStage(band, 1000, 900);
@@ -145,9 +145,67 @@ public static partial class SelfTest
         Check("band vertical: a click at the playhead's spot is the playing bar", hit is { Bar: 70 }, hit?.ToString());
         Check("band vertical: a click reaches the host", lane.Click(spot.X + 1, spot.Y + 8) && host.Cursor is { Track: 1, Bar: 70 }, host.Cursor?.ToString());
 
+        // The note length outline under the mouse: a move over a lane reaches that lane's score and no other, leaving clears it, and playing shows none.
+        var moves = new int[lanes.Count];
+        for (var i = 0; i < lanes.Count; i++) { var n = i; lanes[i].Editor.MouseMove += (_, _) => moves[n]++; }
+        (int Bar, int Cell) HoverOf(BandLane l) => (((Views.Score.IScoreRenderHost)l.Editor).HoverMeasure, ((Views.Score.IScoreRenderHost)l.Editor).HoverCell);
+        void HoverSet(BandLane l)
+        {
+            var sel = typeof(Views.TabEditorControl).GetField("_sel", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(l.Editor)!;
+            sel.GetType().GetProperty("HoverMeasure")!.SetValue(sel, 2); sel.GetType().GetProperty("HoverCell")!.SetValue(sel, 0);
+        }
+        System.Windows.Input.MouseEventArgs MouseOf(System.Windows.RoutedEvent what) => new(System.Windows.Input.Mouse.PrimaryDevice, 0) { RoutedEvent = what };
+        band.View.Playing = false;
+        lanes[1].RaiseEvent(MouseOf(System.Windows.Input.Mouse.MouseMoveEvent));
+        Check("band hover: a mouse move over a lane reaches that lane's score once, and no other lane's", moves[1] == 1 && moves.Sum() == 1 && !lanes[1].Editor.IsHitTestVisible, string.Join("/", moves));
+        HoverSet(lanes[1]);
+        lanes[1].RaiseEvent(MouseOf(System.Windows.Input.Mouse.MouseLeaveEvent));
+        Check("band hover: leaving the lane clears its outline", HoverOf(lanes[1]) == (-1, -1), HoverOf(lanes[1]).ToString());
+        HoverSet(lanes[1]);
+        band.View.Playing = true;
+        var cleared = HoverOf(lanes[1]);
+        lanes[1].RaiseEvent(MouseOf(System.Windows.Input.Mouse.MouseMoveEvent));
+        Check("band hover: playing takes the outline away and a move sets none", cleared == (-1, -1) && HoverOf(lanes[1]) == (-1, -1) && moves.Sum() == 1, $"{cleared} {HoverOf(lanes[1])} moves {moves.Sum()}");
+        band.View.Playing = false;
+
         // The now-sounding glow lands in the bar's own line.
         lane.ShowSounding(new[] { (70, 0, 0, "3", true) });
         Check("band vertical: a sounding note is glowed inside the lane", lane.Glow.Chips.Count == 1 && lane.Glow.Chips[0].Y * lane.Editor.Zoom + lane.SlideY is > 0 and var gy && gy < lane.ActualHeight, lane.Glow.Chips.Count > 0 ? (lane.Glow.Chips[0].Y * lane.Editor.Zoom + lane.SlideY).ToString("0") : "none");
+
+        // Rows of their own heights (over two systems, about one, and as tall as the viewport so its bottom is cut off), beside and above:
+        // every lane on screen keeps the playing bar's line inside the part of it that shows.
+        string Hidden(int bar)
+        {
+            foreach (var l in lanes)
+            {
+                var top = l.IsDescendantOf(band.View) ? l.TransformToAncestor(band.View).Transform(new System.Windows.Point()).Y : double.NaN;
+                var seen = Math.Min(l.ActualHeight, band.View.ActualHeight - top);
+                if (double.IsNaN(top) || top > band.View.ActualHeight || seen < l.Editor.SystemHeightNow || !l.PlayheadVisible) continue;
+                if (l.PlayheadAtLane.Y < -1 || l.PlayheadAtLane.Y > seen - 4) return $"bar {bar}: line at y {l.PlayheadAtLane.Y:0} of {seen:0} seen ({l.ActualHeight:0} tall), {l.VisibleSystems} systems";
+            }
+            return "";
+        }
+        foreach (var stacked in new[] { false, true })
+        {
+            host.Settings.Timeline.Band!.FretboardAbove = stacked;
+            band.Tick(); BandStage(band, 1000, 900); band.Tick(); BandStage(band, 1000, 900);
+            band.View.Rows[0].RequestHeight(band.View.Rows[0].StackedExtra + lanes[0].Editor.SystemHeightNow * 2.4);
+            band.View.Rows[1].RequestHeight(band.View.Rows[1].StackedExtra + lanes[1].Editor.SystemHeightNow * 1.3);
+            band.View.Rows[^1].RequestHeight(99999);
+            BandStage(band, 1000, 900);
+            var hidden = "";
+            for (var bar = 0; bar < 80 && hidden == ""; bar += 3) { band.Apply(bar, 0.4, bar * 2000.0, true, false); hidden = Hidden(bar); }
+            Check("band vertical: rows of different heights keep the playing system in the seen part of every lane" + (stacked ? " (fretboard above)" : ""),
+                hidden == "" && lanes.Select(l => l.VisibleSystems).Distinct().Count() > 1, hidden + " systems " + string.Join("/", lanes.Select(l => l.VisibleSystems)));
+            band.Apply(41, 0.4, 82000, true, false);
+            band.View.Rows[0].RequestHeight(band.View.Rows[0].StackedExtra + lanes[0].Editor.SystemHeightNow * 1.3);
+            BandStage(band, 1000, 900);
+            band.Apply(41, 0.4, 82000, true, false);
+            Check("band vertical: a row resized while playing keeps the playing system in view at once" + (stacked ? " (fretboard above)" : ""), Hidden(41) == "", Hidden(41));
+            foreach (var r in band.View.Rows) r.RequestReset();
+        }
+        host.Settings.Timeline.Band!.FretboardAbove = false;
+        band.Tick(); BandStage(band, 1000, 900);
 
         // The command and the menu switch the layout; the lanes follow.
         band.Run("Band.CycleLaneLayout");
@@ -167,7 +225,7 @@ public static partial class SelfTest
     {
         var project = BandUnevenSong(120);
         var host = new FakeBandHost(project);
-        host.Settings.Timeline.Band = new BandSettings { WidthPerRow = true };
+        host.Settings.Timeline.Band = new BandSettings { FretboardAbove = false, Fretboards = BandChoices.FretboardsAll, SystemsPerRow = -1, WidthPerRow = true };
         using var band = new BandViewController(host);
         BandStage(band, 1000, 900);
         band.Tick();
@@ -193,7 +251,7 @@ public static partial class SelfTest
         var project = BandSong(120);
         foreach (var t in project.Tracks.Take(2)) t.StringTunings = new List<int> { 64, 59, 55, 50, 45, 40, 35 };
         var host = new FakeBandHost(project);
-        host.Settings.Timeline.Band = new BandSettings { WidthPerRow = true, LaneLayout = BandChoices.Horizontal };
+        host.Settings.Timeline.Band = new BandSettings { FretboardAbove = false, Fretboards = BandChoices.FretboardsAll, SystemsPerRow = -1, WidthPerRow = true, LaneLayout = BandChoices.Horizontal };
         host.Settings.Follow.Mode = FollowModes.Jump;
         using var band = new BandViewController(host);
         BandStage(band, 2000, 1100);
@@ -227,7 +285,7 @@ public static partial class SelfTest
     {
         var project = TabForge.Presets.FullDemoSongFactory.Create();
         var host = new FakeBandHost(project);
-        host.Settings.Timeline.Band = new BandSettings { WidthPerRow = true, LaneLayout = BandChoices.Horizontal };
+        host.Settings.Timeline.Band = new BandSettings { FretboardAbove = false, Fretboards = BandChoices.FretboardsAll, SystemsPerRow = -1, WidthPerRow = true, LaneLayout = BandChoices.Horizontal };
         host.Settings.Follow.Mode = FollowModes.Jump;
         using var band = new BandViewController(host);
         BandStage(band, 2000, 1100);

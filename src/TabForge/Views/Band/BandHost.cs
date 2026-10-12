@@ -8,7 +8,7 @@ using TabForge.Visualization;
 namespace TabForge.Views.Band;
 
 // Owns: the Band view's window (IBandViewHost): the pane basics forwarded to the window's own IPaneHost, the active song, the instrument options,
-//   the cursor a lane click sets, the track move of the order sync and the Band menu's score zoom and settings items.
+//   the cursor a lane click sets, the track move of the order sync, the Band menu's score zoom and settings items and the header's close button.
 // Does not own: the window, the zoom, the settings dialog or the song's track order (it only calls what the window hands it); the view itself (BandViewController).
 // Tests: TestBandHostForwards.
 internal sealed class BandHost : IBandViewHost
@@ -21,13 +21,14 @@ internal sealed class BandHost : IBandViewHost
     private readonly Action<int> _selectTrack;
     private readonly Func<ScoreZoomController> _zoom;
     private readonly Action<string, string?> _openSettings;
+    private readonly Action? _leaveBand;
 
     public BandHost(IPaneHost pane, DocumentManager documents, AppOptions options,
         Func<(bool LeftHanded, bool ShowNoteNames, string? Scale, int Horizon)> instrument,
-        Action<int, int> moveTrack, Action<int> selectTrack, Func<ScoreZoomController> zoom, Action<string, string?> openSettings)
+        Action<int, int> moveTrack, Action<int> selectTrack, Func<ScoreZoomController> zoom, Action<string, string?> openSettings, Action? leaveBand = null)
     {
         _pane = pane; _documents = documents; _options = options; _instrument = instrument;
-        _moveTrack = moveTrack; _selectTrack = selectTrack; _zoom = zoom; _openSettings = openSettings;
+        _moveTrack = moveTrack; _selectTrack = selectTrack; _zoom = zoom; _openSettings = openSettings; _leaveBand = leaveBand;
     }
 
     public Window Window => _pane.Window;
@@ -57,6 +58,7 @@ internal sealed class BandHost : IBandViewHost
             case ScoreMenus.ZoomOutId: _zoom().ZoomBy(-1); break;
             case ScoreMenus.FitWidthId: _zoom().ApplyZoomText("Fit width"); break;
             case BandMenus.SettingsId: _openSettings(SettingsCatalog.Timeline, BandMenus.SettingsRow); break;
+            case BandView.CloseId: _leaveBand?.Invoke(); break;
         }
     }
 }

@@ -90,7 +90,7 @@ Here is the list as a table, with the chapter that teaches each region.
 
 Click a beat in the score to put the edit cursor there. Clicking only moves the cursor; it never adds a note. Roll the mouse wheel to scroll the score. Hold `Ctrl` and roll the wheel to zoom it in or out.
 
-The zoom box lives in the top toolbar, left of the tempo box. Its presets run from 50% to 200%, and **Fit width** is the first entry and the default. You can also type a value from 50 to 200, or use `Ctrl+Plus` and `Ctrl+Minus`.
+The zoom box lives in the **View and tempo** pane at the bottom of the side panel. Its presets run from 50% to 200%, and **Fit width** is the first entry and the default. You can also type a value from 50 to 200, or use `Ctrl+Plus` and `Ctrl+Minus`.
 
 > **Note:** The mouse wheel over the timeline zooms the timeline. It does not scroll it. To move along the timeline, drag the scroll bar in the middle of the status bar.
 

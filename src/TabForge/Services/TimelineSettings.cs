@@ -53,6 +53,14 @@ public sealed class TimelineSettings
     public bool AutoRemoveEmptyLanes { get; set; } = true;
     /// <summary>The "Add track" strip under the last track (track list and timeline). The + Track button stays either way.</summary>
     public bool ShowAddTrackLane { get; set; } = true;
+    /// <summary>The master track: an overview lane above track 1 with one thin line per track, filled where that track plays.</summary>
+    public bool ShowMasterTrack { get; set; }
+    /// <summary>Each master track line takes its track's colour; off, every line uses <see cref="MasterTrackColour"/>.</summary>
+    public bool MasterTrackColours { get; set; } = true;
+    /// <summary>The one colour of the master track's lines, used when <see cref="MasterTrackColours"/> is off.</summary>
+    public string MasterTrackColour { get; set; } = "#8B939F";
+    /// <summary>Opacity of the master track's lines, in percent (5-40).</summary>
+    public int MasterTrackOpacityPercent { get; set; } = 25;
     /// <summary>The Band view's preferences.</summary>
     public BandSettings Band { get; set; } = new();
 }

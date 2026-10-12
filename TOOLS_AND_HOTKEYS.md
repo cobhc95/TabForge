@@ -248,6 +248,7 @@ Default keys are the **TabForge** preset, currently identical to the **Classic**
 | View | Keyboard mode: more seconds ahead (shorter notes) | Show one more second of notes above the keys in Keyboard mode: the notes get shorter and you see further ahead (the + of its control bar). | `Learn.LookAheadLonger` | Ctrl+Alt+OemPlus | Also plus over the view, or Ctrl + mouse wheel down. |
 | View | Keyboard mode: fewer seconds ahead (longer notes) | Show one second fewer of notes above the keys in Keyboard mode: the notes get longer and easier to read (the - of its control bar). | `Learn.LookAheadShorter` | Ctrl+Alt+OemMinus | Also minus over the view, or Ctrl + mouse wheel up. |
 | View | Keyboard mode: view in its own window | Open the falling-notes view in its own window, or bring it back (Keyboard mode on; F11 in the window toggles full screen, Esc leaves it). | `View.LearnPopout` | Ctrl+Alt+O |  |
+| View | Compact mode | Hide every track row and show the master track lane at twice its height, so the score and the other panes get the room; again brings the tracks back (same as View > Compact mode). | `View.CompactMode` | Ctrl+Alt+C |  |
 | View | Band view: show / hide the selected track's row | Add the selected track's row to the Band view, or take it out (the same as clicking its pill at the top of the Band view). | `Band.ToggleTrackRow` | — |  |
 | View | Band view: more rows per screen | Show one more Band view row on the screen at once (1 to 5, 3 by default); further rows scroll. | `Band.RowsMore` | — |  |
 | View | Band view: fewer rows per screen | Show one fewer Band view row on the screen at once (1 to 5, 3 by default), so each row is taller. | `Band.RowsFewer` | — |  |
@@ -256,15 +257,61 @@ Default keys are the **TabForge** preset, currently identical to the **Classic**
 | View | Band view: instrument size | Switch the Band view instruments between the full neck (or keyboard), the first 12 frets, and a small keyboard. | `Band.CycleInstrumentSize` | — |  |
 | View | Band view: smooth / page follow | Switch the Band view lanes between following like the score (its Follow settings) and the Band view own smooth or page-by-page follow. | `Band.ToggleSmoothFollow` | — |  |
 | View | Band view: reset row heights | Give every Band view row the shared height again (undoes rows resized one by one). | `Band.ResetRowHeights` | — |  |
+| View | Band view: switch fretboard beside / above tab | Switch every Band view row between the instrument beside its tab and the instrument above its tab at the full row width. | `Band.ToggleFretboardAbove` | — | Also the roll-down button after the Band view caption. |
+| View | Band view: track colour frame | Show or hide the rounded frame and dim glow in the track's colour around every Band view row. | `Band.ToggleColourFrame` | — | Also the roll-down button after the Band view caption. |
 | View | Fretboard position: toggle top / bottom | Move the fretboard / keyboard pane between above the score (default) and below it, above the timeline (same as the fretboard's right-click menu > Position). | `View.FretboardPosition` | — | Also in Settings > Fretboard & Keyboard. |
 | View | Lock fretboard size | Lock or unlock the fretboard / keyboard pane's height. Unlocked, dragging its edge resizes it and the drawing scales to fit; locked, it keeps its size. | `View.LockInstrumentSize` | — | Also in the fretboard's right-click menu; unlocked by default. |
 | View | Layout: Compose | Switch to the Compose workspace layout (score and tab editor large, fretboard and tools, small arrangement). | `View.LayoutCompose` | Ctrl+D1 |  |
 | View | Layout: Practice | Switch to the Practice workspace layout (score and fretboard large, sections panel). | `View.LayoutPractice` | Ctrl+D2 |  |
 | View | Layout: Mix | Switch to the Mix workspace layout (arrangement and mixer large, small score). | `View.LayoutMix` | Ctrl+D3 |  |
 | Transport | Record | Record every armed track while the song plays; press again to stop. | `Transport.Record` | Ctrl+R |  |
+| Transport | Live input | Hear your instrument (the chosen audio input) through the live FX chain and the master, without a track and without recording; again turns it off. One for the whole program: it stays on across tabs and windows. | `Transport.LiveInput` | — |  |
 | Transport | Record video | Play the song and record the screen and the sound to an MP4 (Settings > General > Video recording: resolution, frame rate, what to record, folder); press again, or Stop, to finish. | `Transport.RecordVideo` | Ctrl+Alt+V | Also Sound > Record video. |
 | View | Snap clips on / off | Turn snapping of audio and MIDI clips on or off (right-click the snap button for its settings). | `Timeline.Snap` | Alt+S | Common default. |
 | Transport | Arm track for recording | Monitor the input (audio or MIDI) through the selected track and record it with Record. | `Track.Arm` | — | No default key for this either. |
+| View | About | Show the About window with the version and the licence. | `Help.About` | — |  |
+| View | Stylesheet | Open the Preferences window to the stylesheet settings. | `Options.Stylesheet` | — |  |
+| Bars and sections | Empty bar | Remove every note from the bar at the cursor. | `Bar.EmptyBar` | — |  |
+| Transport | MIDI / Audio setup | Open the MIDI and audio setup page of the settings. | `Sound.AudioSetup` | — |  |
+| Transport | Test selected track output | Play a short test sound through the output of the selected track. | `Sound.TestOutput` | — |  |
+| Notes and tracks | Add Bass | Add a bass track. | `Track.AddBass` | — |  |
+| Notes and tracks | Add Drums | Add a drum track. | `Track.AddDrums` | — |  |
+| Notes and tracks | Add Keys | Add a keyboard track. | `Track.AddKeys` | — |  |
+| Bars and sections | Duplicate bar | Copy the bar at the cursor into the bar after it. | `Bar.Duplicate` | — |  |
+| Bars and sections | Triplet feel | Toggle the triplet feel of the bar. | `Bar.TripletFeel` | — |  |
+| Bars and sections | Double bar | Toggle a double bar line at the end of the bar. | `Bar.DoubleBar` | — |  |
+| Bars and sections | Repeat one bar | Mark the bar as a repeat of the bar before it (one-bar simile). | `Bar.RepeatOneBar` | — |  |
+| Bars and sections | Repeat two bars | Mark the bar as a repeat of the two bars before it (two-bar simile). | `Bar.RepeatTwoBars` | — |  |
+| View | Tablature + standard | Show both the tablature and the standard notation. | `View.NotationBoth` | — |  |
+| View | Tablature only | Show only the tablature. | `View.NotationTab` | — |  |
+| View | Standard notation only | Show only the standard notation. | `View.NotationStaff` | — |  |
+| View | Dark score page | Draw the score page in dark colours. | `View.ScoreThemeDark` | — |  |
+| View | Light score page | Draw the score page in light colours. | `View.ScoreThemeLight` | — |  |
+| View | Reset all panels to default positions | Put every dockable panel back at its default position. | `View.ResetPanels` | — |  |
+| View | Zoom 75% | Set the score zoom to 75 %. | `View.Zoom75` | — |  |
+| View | Zoom 100% | Set the score zoom to 100 %. | `View.Zoom100` | — |  |
+| View | Zoom 150% | Set the score zoom to 150 %. | `View.Zoom150` | — |  |
+| Durations | Whole | Set the note value to a whole note. | `Note.Whole` | — |  |
+| Durations | Half | Set the note value to a half note. | `Note.Half` | — |  |
+| Durations | Quarter | Set the note value to a quarter note. | `Note.Quarter` | — |  |
+| Durations | Eighth | Set the note value to an eighth note. | `Note.Eighth` | — |  |
+| Durations | Sixteenth | Set the note value to a sixteenth note. | `Note.Sixteenth` | — |  |
+| Durations | 32nd | Set the note value to a 32nd note. | `Note.ThirtySecond` | — |  |
+| Durations | 64th | Set the note value to a 64th note. | `Note.SixtyFourth` | — |  |
+| Note effects | Shift slide | Shift slide on the selected note. | `Note.ShiftSlide` | — |  |
+| Note effects | Wide vibrato | Wide vibrato on the selected note. | `Note.WideVibrato` | — |  |
+| Note effects | Artificial harmonic | Artificial harmonic on the selected note. | `Note.ArtificialHarmonic` | — |  |
+| Note effects | Tapping | Tapped note. | `Note.Tapping` | — |  |
+| Note effects | Slap | Slapped note. | `Note.Slap` | — |  |
+| Note effects | Pop | Popped note. | `Note.Pop` | — |  |
+| Note effects | Tremolo picking | Tremolo picking on the selected note. | `Note.TremoloPicking` | — |  |
+| Note effects | Wah open | Open wah on the selected note. | `Note.WahOpen` | — |  |
+| Note effects | Wah close | Closed wah on the selected note. | `Note.WahClose` | — |  |
+| Note effects | Brush down | Strum the chord with a downward brush stroke. | `Note.BrushDown` | — |  |
+| Note effects | Brush up | Strum the chord with an upward brush stroke. | `Note.BrushUp` | — |  |
+| Note effects | Arpeggio down | Play the chord as a downward arpeggio. | `Note.ArpeggioDown` | — |  |
+| Note effects | Arpeggio up | Play the chord as an upward arpeggio. | `Note.ArpeggioUp` | — |  |
+| File and tabs | Exit | Close TabForge; the usual unsaved-changes prompt still applies. | `File.Exit` | — |  |
 
 ## Dropping files on the timeline
 
@@ -382,7 +429,7 @@ Presets are stored as *differences* from the defaults (`HotkeyPresets` in `Servi
 
 
 ## Add track
-- The arrangement's **+ Track** button opens the Add track window: the same window as Track properties (instrument catalogue via *Change…*, MIDI program/channel, mixer, tuning, frets, capo, name, colour, notes) plus **Position**: last (default), first, after the selected track, or as track number N. *Add track* adds it; Cancel adds nothing. Track > Add Guitar/Bass/Drums/Keys still add a default track instantly.
+- **Track > Add track…** (and the Add track lane under the last track) opens the Add track window: the same window as Track properties (instrument catalogue via *Change…*, MIDI program/channel, mixer, tuning, frets, capo, name, colour, notes) plus **Position**: last (default), first, after the selected track, or as track number N. *Add track* adds it; Cancel adds nothing. Track > Add Guitar/Bass/Drums/Keys still add a default track instantly.
 - In Sections, **Add at cursor…** shows the starting bar before adding a marker. Click a section or select it and press Enter to navigate. Edit opens its displayed colour; with similar-section matching enabled, a colour change applies to that name group.
 
 ## Instrument panel and scale finder

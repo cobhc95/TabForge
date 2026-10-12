@@ -39,6 +39,11 @@ public static partial class SelfTest
             void Walk(ItemsControl parent) { foreach (var m in parent.Items.OfType<MenuItem>()) { built.Add(MenuHotkey.GetId(m)); Walk(m); } }
             Walk(window.MainMenu);
             Check("menu table: every row id is on a live menu item", rows.Where(r => r.Id is not null).All(r => built.Contains(r.Id)));
+            var idless = rows.Where(r => r.Id is null).Select(r => r.Header).ToList();
+            Check("menu table: every row with a handler has a command id (skip list: none)", idless.Count == 0, string.Join(", ", idless));
+            var commands = (TabForge.Services.CommandRegistry)typeof(MainWindow).GetProperty("Commands", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(window)!;
+            var unregistered = rows.Where(r => r.Id is not null && !commands.Ids.Contains(r.Id)).Select(r => r.Id).ToList();
+            Check("menu table: every row id runs from the command table", unregistered.Count == 0, string.Join(", ", unregistered));
         });
 
         var xamlPath = FindMainWindowXaml();

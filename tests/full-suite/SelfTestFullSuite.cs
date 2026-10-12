@@ -168,6 +168,10 @@ public static partial class SelfTest
         Guard(TestTooltips);
         Guard(TestTrackRowRightClick);
         Guard(TestAddTrackLane);
+        Guard(TestMasterLane);
+        Guard(TestCompactMode);
+        Guard(TestToolbarWrap);
+        Guard(TestIconRowOrder);
         Guard(TestTrackSilhouetteMap);
         Guard(TestAudioTrackEditorGuards);
         Guard(TestAudioTrackProperties);
@@ -184,6 +188,7 @@ public static partial class SelfTest
         Guard(TestSettingsFileSplitSnapshots);
         Guard(TestRenderGuardContainment);
         Guard(TestDialogEscape);
+        Guard(TestPluginEditorFit);
         Guard(TestTutorialMarkdown);
         Guard(TestTutorialSearch);
         Guard(TestTutorialWindow);
@@ -408,6 +413,7 @@ public static partial class SelfTest
         Guard(TestSeekWhilePlayingSoundsFirstNote);
         Guard(TestSeekWhilePlayingSoundsTargetNoteOnce);
         Guard(TestDelayLineClearKeepsNewMessage);
+        Guard(TestDelayLineDenseStreamIsCheapAndOnTime);
         Guard(TestRepositionPathsSoundFirstNoteOnce);
         Guard(TestSoundingSetIncludesNoteAtPlayhead);
         Guard(TestCountInIsHeard);
@@ -430,6 +436,10 @@ public static partial class SelfTest
         Guard(TestMixer);
         Guard(TestMidiProcessors);
         Guard(TestRecordingPipeline);
+        Guard(TestAudioInputChannels);
+        Guard(TestAudioInputSafety);
+        Guard(TestOutputFade);
+        Guard(TestDeviceChangePause);
         Guard(TestVideoEncoderMp4);
         Guard(TestVideoEncoder4k60);
         Guard(TestVideoEncoderBenchmark);
@@ -489,6 +499,7 @@ public static partial class SelfTest
         Guard(TestIsolatedControlChannel);
         Guard(TestRetirementEpochBarrier);
         Guard(TestMonitorFx);
+        Guard(TestLiveInput);
         Guard(TestEngineSlotsFollowTrackIdentity);
         Guard(TestEnginePluginEditAndStatesByIdentity);
         Guard(TestEngineSyncDeferredRequests);
@@ -719,6 +730,7 @@ public static partial class SelfTest
         ["TestIsolatedPluginGenerations"] = "engine",
         ["TestMixer"] = "engine",
         ["TestMonitorFx"] = "engine",
+        ["TestLiveInput"] = "engine",
         ["TestMuteDimmingIsInstant"] = "engine",
         ["TestMuteHoldsAcrossSeekAndRestart"] = "engine",
         ["TestMuteSoloDoesNotDisturbPlayback"] = "engine",
@@ -813,6 +825,7 @@ public static partial class SelfTest
         ["TestCapoRepitchesNotes"] = "playback",
         ["TestCountInIsHeard"] = "playback",
         ["TestDelayLineClearKeepsNewMessage"] = "playback",
+        ["TestDelayLineDenseStreamIsCheapAndOnTime"] = "playback",
         ["TestFermataPlayback"] = "playback",
         ["TestLiveEditBigSong"] = "playback",
         ["TestLiveEditLoop"] = "playback",
@@ -848,6 +861,10 @@ public static partial class SelfTest
         ["TestMediaDropPlan"] = "recording",
         ["TestMidiFileToClip"] = "recording",
         ["TestRecordingPipeline"] = "recording",
+        ["TestAudioInputChannels"] = "recording",
+        ["TestAudioInputSafety"] = "recording",
+        ["TestOutputFade"] = "recording",
+        ["TestDeviceChangePause"] = "recording",
         ["TestVideoEncoderMp4"] = "recording",
         ["TestVideoEncoder4k60"] = "recording",
         ["TestVideoEncoderBenchmark"] = "bench",
@@ -906,6 +923,10 @@ public static partial class SelfTest
         ["TestTutorialSearch"] = "tutorial",
         ["TestTutorialWindow"] = "tutorial",
         ["TestAddTrackLane"] = "ui",
+        ["TestMasterLane"] = "ui",
+        ["TestCompactMode"] = "ui",
+        ["TestToolbarWrap"] = "ui",
+        ["TestIconRowOrder"] = "ui",
         ["TestTrackSilhouetteMap"] = "ui",
         ["TestArrangementFollowGeometry"] = "ui",
         ["TestSectionColourEditing"] = "ui",
@@ -933,6 +954,7 @@ public static partial class SelfTest
         ["TestContextMenuLean"] = "ui",
         ["TestNoteMenuClipboardActions"] = "ui", ["TestNoteMenuEditActions"] = "ui", ["TestNoteMenuItemsRouted"] = "ui",
         ["TestDialogEscape"] = "ui",
+        ["TestPluginEditorFit"] = "ui",
         ["TestDockRatioNotRewrittenByAutoFit"] = "ui",
         ["TestDrumEntryAndQuickAddBars"] = "ui",
         ["TestDynamicsEngraving"] = "ui",

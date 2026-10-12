@@ -1,4 +1,4 @@
-# main menu: 186 items, 21 separators; regenerate with TABFORGE_RECORD_MENU_GOLDEN=1
+# main menu: 189 items, 21 separators; regenerate with TABFORGE_RECORD_MENU_GOLDEN=1
 _File | name= | id= | tag= | gesture= | checkable=no | icon=no | enabled=
   _New | name= | id=File.New | tag= | gesture=Ctrl+N | checkable=no | icon=no | enabled=
   New from t_emplate… | name= | id=File.NewFromTemplate | tag= | gesture= | checkable=no | icon=no | enabled=
@@ -23,7 +23,7 @@ _File | name= | id= | tag= | gesture= | checkable=no | icon=no | enabled=
   Print _preview… | name= | id=File.PrintPreview | tag= | gesture=Ctrl+Shift+P | checkable=no | icon=no | enabled=
   _Print… | name= | id=File.Print | tag= | gesture=Ctrl+P | checkable=no | icon=no | enabled=
   ---
-  E_xit | name= | id= | tag= | gesture= | checkable=no | icon=no | enabled=
+  E_xit | name= | id=File.Exit | tag= | gesture= | checkable=no | icon=no | enabled=
 _Edit | name= | id= | tag= | gesture= | checkable=no | icon=no | enabled=
   _Undo | name= | id=Edit.Undo | tag= | gesture=Ctrl+Z | checkable=no | icon=no | enabled=
   _Redo | name= | id=Edit.Redo | tag= | gesture=Ctrl+Y | checkable=no | icon=no | enabled=
@@ -39,27 +39,27 @@ _Edit | name= | id= | tag= | gesture= | checkable=no | icon=no | enabled=
 _Bar | name= | id= | tag= | gesture= | checkable=no | icon=no | enabled=
   Insert _bar | name= | id=Bar.Insert | tag= | gesture=Ctrl+Insert | checkable=no | icon=no | enabled=
   _Delete bar | name= | id=Bar.Delete | tag= | gesture=Ctrl+Delete | checkable=no | icon=no | enabled=
-  Duplicate bar | name= | id= | tag= | gesture= | checkable=no | icon=no | enabled=
+  Duplicate bar | name= | id=Bar.Duplicate | tag= | gesture= | checkable=no | icon=no | enabled=
   Repeat selection as bars | name= | id=Edit.RepeatSelection | tag= | gesture=Ctrl+Shift+R | checkable=no | icon=no | enabled=
   ---
   _Time signature… | name= | id=Bar.TimeSignature | tag= | gesture=Ctrl+Shift+T | checkable=no | icon=no | enabled=
   _Key signature… | name= | id=Bar.KeySignature | tag= | gesture=Ctrl+K | checkable=no | icon=no | enabled=
   _Clef | name= | id=Bar.Clef | tag= | gesture=K | checkable=no | icon=no | enabled=
-  Triplet _feel | name= | id= | tag= | gesture= | checkable=no | icon=no | enabled=
+  Triplet _feel | name= | id=Bar.TripletFeel | tag= | gesture= | checkable=no | icon=no | enabled=
   ---
   Repeat _open | name= | id=Bar.RepeatOpen | tag= | gesture=[ | checkable=no | icon=no | enabled=
   Repeat _close… | name= | id=Bar.RepeatClose | tag= | gesture=] | checkable=no | icon=no | enabled=
   _Directions / ending… | name= | id=Bar.Directions | tag= | gesture=D | checkable=no | icon=no | enabled=
-  _Double bar | name= | id= | tag= | gesture= | checkable=no | icon=no | enabled=
-  Repeat one _bar | name= | id= | tag= | gesture= | checkable=no | icon=no | enabled=
-  Repeat two b_ars | name= | id= | tag= | gesture= | checkable=no | icon=no | enabled=
+  _Double bar | name= | id=Bar.DoubleBar | tag= | gesture= | checkable=no | icon=no | enabled=
+  Repeat one _bar | name= | id=Bar.RepeatOneBar | tag= | gesture= | checkable=no | icon=no | enabled=
+  Repeat two b_ars | name= | id=Bar.RepeatTwoBars | tag= | gesture= | checkable=no | icon=no | enabled=
   ---
   _Section… | name= | id=Section.Edit | tag= | gesture=Shift+Insert | checkable=no | icon=no | enabled=
 _Track | name= | id= | tag= | gesture= | checkable=no | icon=no | enabled=
   Add _track… | name= | id=Track.Add | tag= | gesture=Ctrl+T, Ctrl+Shift+Insert | checkable=no | icon=no | enabled=
-  Add _Bass | name= | id= | tag= | gesture= | checkable=no | icon=no | enabled=
-  Add _Drums | name= | id= | tag= | gesture= | checkable=no | icon=no | enabled=
-  Add _Keys | name= | id= | tag= | gesture= | checkable=no | icon=no | enabled=
+  Add _Bass | name= | id=Track.AddBass | tag= | gesture= | checkable=no | icon=no | enabled=
+  Add _Drums | name= | id=Track.AddDrums | tag= | gesture= | checkable=no | icon=no | enabled=
+  Add _Keys | name= | id=Track.AddKeys | tag= | gesture= | checkable=no | icon=no | enabled=
   ---
   _Delete track | name= | id=Track.Delete | tag= | gesture=Ctrl+Shift+Delete | checkable=no | icon=no | enabled=
   Move _up | name= | id=Track.MoveUp | tag= | gesture=Alt+Shift+Up | checkable=no | icon=no | enabled=
@@ -67,13 +67,13 @@ _Track | name= | id= | tag= | gesture= | checkable=no | icon=no | enabled=
   ---
   _Properties… | name= | id=Track.Properties | tag= | gesture=F6 | checkable=no | icon=no | enabled=
 _Note | name= | id= | tag= | gesture= | checkable=no | icon=no | enabled=
-  Whole | name= | id= | tag= | gesture= | checkable=no | icon=no | enabled=
-  Half | name= | id= | tag= | gesture= | checkable=no | icon=no | enabled=
-  Quarter | name= | id= | tag= | gesture= | checkable=no | icon=no | enabled=
-  Eighth | name= | id= | tag= | gesture= | checkable=no | icon=no | enabled=
-  Sixteenth | name= | id= | tag= | gesture= | checkable=no | icon=no | enabled=
-  32nd | name= | id= | tag= | gesture= | checkable=no | icon=no | enabled=
-  64th | name= | id= | tag= | gesture= | checkable=no | icon=no | enabled=
+  Whole | name= | id=Note.Whole | tag= | gesture= | checkable=no | icon=no | enabled=
+  Half | name= | id=Note.Half | tag= | gesture= | checkable=no | icon=no | enabled=
+  Quarter | name= | id=Note.Quarter | tag= | gesture= | checkable=no | icon=no | enabled=
+  Eighth | name= | id=Note.Eighth | tag= | gesture= | checkable=no | icon=no | enabled=
+  Sixteenth | name= | id=Note.Sixteenth | tag= | gesture= | checkable=no | icon=no | enabled=
+  32nd | name= | id=Note.ThirtySecond | tag= | gesture= | checkable=no | icon=no | enabled=
+  64th | name= | id=Note.SixtyFourth | tag= | gesture= | checkable=no | icon=no | enabled=
   ---
   Longer note value | name= | id=Note.Longer | tag= | gesture=- | checkable=no | icon=no | enabled=
   Shorter note value | name= | id=Note.Shorter | tag= | gesture=+ | checkable=no | icon=no | enabled=
@@ -101,29 +101,29 @@ _Effects | name= | id= | tag= | gesture= | checkable=no | icon=no | enabled=
   Bend | name= | id=Note.Bend | tag= | gesture=B | checkable=no | icon=no | enabled=
   Bend editor… | name= | id=Note.BendEditor | tag=Bend | gesture= | checkable=no | icon=no | enabled=
   Legato slide | name= | id=Note.Slide | tag= | gesture=S | checkable=no | icon=no | enabled=
-  Shift slide | name= | id= | tag= | gesture= | checkable=no | icon=no | enabled=
+  Shift slide | name= | id=Note.ShiftSlide | tag= | gesture= | checkable=no | icon=no | enabled=
   Vibrato | name= | id=Note.Vibrato | tag= | gesture=V | checkable=no | icon=no | enabled=
-  Wide vibrato | name= | id= | tag= | gesture= | checkable=no | icon=no | enabled=
+  Wide vibrato | name= | id=Note.WideVibrato | tag= | gesture= | checkable=no | icon=no | enabled=
   Tremolo bar | name= | id=Note.TremoloBar | tag= | gesture=W | checkable=no | icon=no | enabled=
   Tremolo bar editor… | name= | id=Note.TremoloBarEditor | tag=TremoloBar | gesture= | checkable=no | icon=no | enabled=
   Natural harmonic | name= | id=Note.Harmonic | tag= | gesture=Y | checkable=no | icon=no | enabled=
   Harmonic editor… | name= | id=Note.HarmonicEditor | tag=Harmonic | gesture= | checkable=no | icon=no | enabled=
   Trill editor… | name= | id=Note.TrillEditor | tag=Trill | gesture= | checkable=no | icon=no | enabled=
   Grace note editor… | name= | id=Note.GraceEditor | tag=Grace | gesture= | checkable=no | icon=no | enabled=
-  Artificial harmonic | name= | id= | tag= | gesture= | checkable=no | icon=no | enabled=
-  Tapping | name= | id= | tag= | gesture= | checkable=no | icon=no | enabled=
-  Slap | name= | id= | tag= | gesture= | checkable=no | icon=no | enabled=
-  Pop | name= | id= | tag= | gesture= | checkable=no | icon=no | enabled=
+  Artificial harmonic | name= | id=Note.ArtificialHarmonic | tag= | gesture= | checkable=no | icon=no | enabled=
+  Tapping | name= | id=Note.Tapping | tag= | gesture= | checkable=no | icon=no | enabled=
+  Slap | name= | id=Note.Slap | tag= | gesture= | checkable=no | icon=no | enabled=
+  Pop | name= | id=Note.Pop | tag= | gesture= | checkable=no | icon=no | enabled=
   Trill | name= | id=Note.Trill | tag= | gesture=N | checkable=no | icon=no | enabled=
-  Tremolo picking | name= | id= | tag= | gesture= | checkable=no | icon=no | enabled=
+  Tremolo picking | name= | id=Note.TremoloPicking | tag= | gesture= | checkable=no | icon=no | enabled=
   Fade in | name= | id=Note.FadeIn | tag= | gesture=Shift+, | checkable=no | icon=no | enabled=
   Fade out | name= | id=Note.FadeOut | tag= | gesture=Shift+. | checkable=no | icon=no | enabled=
-  Wah open | name= | id= | tag= | gesture= | checkable=no | icon=no | enabled=
-  Wah close | name= | id= | tag= | gesture= | checkable=no | icon=no | enabled=
-  Brush down | name= | id= | tag= | gesture= | checkable=no | icon=no | enabled=
-  Brush up | name= | id= | tag= | gesture= | checkable=no | icon=no | enabled=
-  Arpeggio down | name= | id= | tag= | gesture= | checkable=no | icon=no | enabled=
-  Arpeggio up | name= | id= | tag= | gesture= | checkable=no | icon=no | enabled=
+  Wah open | name= | id=Note.WahOpen | tag= | gesture= | checkable=no | icon=no | enabled=
+  Wah close | name= | id=Note.WahClose | tag= | gesture= | checkable=no | icon=no | enabled=
+  Brush down | name= | id=Note.BrushDown | tag= | gesture= | checkable=no | icon=no | enabled=
+  Brush up | name= | id=Note.BrushUp | tag= | gesture= | checkable=no | icon=no | enabled=
+  Arpeggio down | name= | id=Note.ArpeggioDown | tag= | gesture= | checkable=no | icon=no | enabled=
+  Arpeggio up | name= | id=Note.ArpeggioUp | tag= | gesture= | checkable=no | icon=no | enabled=
   Grace before beat | name= | id=Note.Grace | tag= | gesture=G | checkable=no | icon=no | enabled=
   ---
   Chord… | name= | id=Note.Chord | tag= | gesture=A | checkable=no | icon=no | enabled=
@@ -151,16 +151,16 @@ _Sound | name= | id= | tag= | gesture= | checkable=no | icon=no | enabled=
   First bar | name= | id=Bar.First | tag= | gesture=Ctrl+Home | checkable=no | icon=no | enabled=
   Last bar | name= | id=Bar.Last | tag= | gesture=Ctrl+End | checkable=no | icon=no | enabled=
   ---
-  Empty bar | name= | id= | tag= | gesture= | checkable=no | icon=no | enabled=
-  MIDI / Audio setup | name= | id= | tag= | gesture= | checkable=no | icon=no | enabled=
-  Test selected track output | name= | id= | tag= | gesture= | checkable=no | icon=no | enabled=
+  Empty bar | name= | id=Bar.EmptyBar | tag= | gesture= | checkable=no | icon=no | enabled=
+  MIDI / Audio setup | name= | id=Sound.AudioSetup | tag= | gesture= | checkable=no | icon=no | enabled=
+  Test selected track output | name= | id=Sound.TestOutput | tag= | gesture= | checkable=no | icon=no | enabled=
 _View | name= | id= | tag= | gesture= | checkable=no | icon=no | enabled=
-  Tablature + standard | name= | id= | tag= | gesture= | checkable=no | icon=no | enabled=
-  Tablature only | name= | id= | tag= | gesture= | checkable=no | icon=no | enabled=
-  Standard notation only | name= | id= | tag= | gesture= | checkable=no | icon=no | enabled=
+  Tablature + standard | name= | id=View.NotationBoth | tag= | gesture= | checkable=no | icon=no | enabled=
+  Tablature only | name= | id=View.NotationTab | tag= | gesture= | checkable=no | icon=no | enabled=
+  Standard notation only | name= | id=View.NotationStaff | tag= | gesture= | checkable=no | icon=no | enabled=
   ---
-  Dark score page | name= | id= | tag= | gesture= | checkable=no | icon=no | enabled=
-  Light score page | name= | id= | tag= | gesture= | checkable=no | icon=no | enabled=
+  Dark score page | name= | id=View.ScoreThemeDark | tag= | gesture= | checkable=no | icon=no | enabled=
+  Light score page | name= | id=View.ScoreThemeLight | tag= | gesture= | checkable=no | icon=no | enabled=
   ---
   Instrument view | name=InstrumentViewMenu | id=View.InstrumentPanel | tag= | gesture= | checkable=yes | icon=no | enabled=
   Arrangement overview | name=ArrangementMenu | id=View.Global | tag= | gesture=F8 | checkable=yes | icon=no | enabled=
@@ -171,6 +171,7 @@ _View | name= | id= | tag= | gesture= | checkable=no | icon=no | enabled=
   Mixer / VST | name= | id=View.Mixer | tag= | gesture= | checkable=no | icon=no | enabled=
   Keyboard mode (experimental) | name= | id=View.LearnMode | tag= | gesture=Ctrl+Alt+L | checkable=no | icon=no | enabled=
   Keyboard mode: view in its own window | name= | id=View.LearnPopout | tag= | gesture=Ctrl+Alt+O | checkable=no | icon=no | enabled=
+  Compact mode | name= | id=View.CompactMode | tag= | gesture=Ctrl+Alt+C | checkable=no | icon=no | enabled=
   ---
   Layouts | name= | id= | tag= | gesture= | checkable=no | icon=no | enabled=
     Compose | name= | id= | tag= | gesture=Ctrl+1 | checkable=yes | icon=no | enabled=
@@ -187,22 +188,24 @@ _View | name= | id= | tag= | gesture= | checkable=no | icon=no | enabled=
     Rhythm | name= | id= | tag=rhythm | gesture= | checkable=yes | icon=no | enabled=
     Layout | name= | id= | tag=layout | gesture= | checkable=yes | icon=no | enabled=
     Sections | name= | id= | tag=sections | gesture= | checkable=yes | icon=no | enabled=
+    Lyrics | name= | id= | tag=lyrics | gesture= | checkable=yes | icon=no | enabled=
+    View and tempo | name= | id= | tag=viewtempo | gesture= | checkable=yes | icon=no | enabled=
     Fretboard | name= | id= | tag=instrument | gesture= | checkable=yes | icon=no | enabled=
     Arrangement | name= | id= | tag=timeline | gesture= | checkable=yes | icon=no | enabled=
     Band view | name= | id= | tag=band | gesture= | checkable=yes | icon=no | enabled=
     Keyboard mode (experimental) | name= | id= | tag=learn | gesture= | checkable=yes | icon=no | enabled=
-  Reset all panels to default positions | name= | id= | tag= | gesture= | checkable=no | icon=no | enabled=
+  Reset all panels to default positions | name= | id=View.ResetPanels | tag= | gesture= | checkable=no | icon=no | enabled=
   ---
-  Zoom 75% | name= | id= | tag= | gesture= | checkable=no | icon=no | enabled=
-  Zoom 100% | name= | id= | tag= | gesture= | checkable=no | icon=no | enabled=
-  Zoom 150% | name= | id= | tag= | gesture= | checkable=no | icon=no | enabled=
+  Zoom 75% | name= | id=View.Zoom75 | tag= | gesture= | checkable=no | icon=no | enabled=
+  Zoom 100% | name= | id=View.Zoom100 | tag= | gesture= | checkable=no | icon=no | enabled=
+  Zoom 150% | name= | id=View.Zoom150 | tag= | gesture= | checkable=no | icon=no | enabled=
   Full screen | name= | id=View.Fullscreen | tag= | gesture=F11 | checkable=no | icon=no | enabled=
 _Options | name= | id= | tag= | gesture= | checkable=no | icon=no | enabled=
-  Stylesheet… | name= | id= | tag= | gesture= | checkable=no | icon=no | enabled=
+  Stylesheet… | name= | id=Options.Stylesheet | tag= | gesture= | checkable=no | icon=no | enabled=
   Preferences… | name= | id=App.Preferences | tag= | gesture=F12 | checkable=no | icon=no | enabled=
 _Help | name= | id= | tag= | gesture= | checkable=no | icon=no | enabled=
   Tutorial… | name= | id=Help.Tutorial | tag= | gesture= | checkable=no | icon=no | enabled=
   Detailed guide… | name= | id=Help.TutorialDetailed | tag= | gesture= | checkable=no | icon=no | enabled=
   Keyboard shortcuts… | name= | id=App.Shortcuts | tag= | gesture=F1 | checkable=no | icon=no | enabled=
   Check for updates… | name= | id=Help.CheckForUpdates | tag= | gesture= | checkable=no | icon=no | enabled=
-  About | name= | id= | tag= | gesture= | checkable=no | icon=no | enabled=
+  About | name= | id=Help.About | tag= | gesture= | checkable=no | icon=no | enabled=

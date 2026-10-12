@@ -28,6 +28,17 @@ public static partial class SelfTest
         item.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
         BandDockSettle(w);
         Check("band dock: Panels > Band view switches to the Band layout, not under the timeline", InBandLayout(), BandDockLayout(dock));
+        var bandTabs = VisualDescendants<TabForge.Docking.DockTabSurface>(w).Where(t => t.PanelId == "band").ToList();
+        var view = w.Band.View;
+        double MidY(FrameworkElement e) => e.TranslatePoint(new Point(0, e.ActualHeight / 2), view).Y;
+        var floated = dock.CaptureLayout();
+        floated.Root = TabForge.Docking.DockLayoutTree.Split("Horizontal", 0.5, DockWorkspace.EditorNode(), floated.Root!);
+        TabForge.Docking.DockLayoutTree.DropPanels(floated, _ => true);
+        Check("band dock: the pane has no tab, no panel menu and no drag; its BAND caption and the first capsule share one row; a layout holding it beside the score has it closed",
+            bandTabs.All(t => !t.IsVisible && t.ContextMenu is null) && TabForge.Docking.DockHostView.IsFixedPanel("band") && view.Caption.IsVisible && view.Caption.Text == "BAND VIEW" &&
+            view.Pills.Count > 0 && Math.Abs(MidY(view.Caption) - MidY(view.Pills[0])) <= 3 && view.Caption.TranslatePoint(new Point(view.Caption.ActualWidth, 0), view).X <= view.Pills[0].TranslatePoint(new Point(0, 0), view).X &&
+            !DockWorkspace.PanelsOf(floated).Contains("band") && floated.ClosedPanels.Contains("band"),
+            $"tabs {bandTabs.Count(t => t.IsVisible)} visible, pills {view.Pills.Count}, menus {bandTabs.Count(t => t.ContextMenu is not null)}, closed {floated.ClosedPanels.Contains("band")}, held {DockWorkspace.PanelsOf(floated).Contains("band")}, caption right {view.Caption.TranslatePoint(new Point(view.Caption.ActualWidth, 0), view).X:0}, pill left {view.Pills[0].TranslatePoint(new Point(0, 0), view).X:0}, caption y {MidY(view.Caption):0.#}, pill y {(view.Pills.Count > 0 ? MidY(view.Pills[0]) : -1):0.#}");
         item.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
         BandDockSettle(w);
         Check("band dock: Panels > Band view again goes back to the score layout", InScoreLayout(), BandDockLayout(dock));

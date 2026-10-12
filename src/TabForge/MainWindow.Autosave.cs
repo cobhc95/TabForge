@@ -46,7 +46,7 @@ public partial class MainWindow
             Application.Current?.Windows.OfType<MainWindow>().SelectMany(w => w.OpenDocuments).ToList() ?? new List<DocumentSession>();
         public void Post(Action work, DispatcherPriority priority) => _window.PostIfOpen(work, priority);
         public bool ConfirmRecovery(int songs) =>
-            MessageBox.Show(_window,
+            ThemedMessageBox.Show(_window,
                 $"TabForge found {songs} unsaved song(s) from a session that ended unexpectedly.\n\nOpen them now? Choosing No discards them.",
                 "Recover unsaved songs", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes;
         public Task OpenDocumentAsync(string path) => _window.OpenDocumentFromPath(path);

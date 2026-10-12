@@ -108,7 +108,7 @@ internal sealed class BandLane : Border
     /// <summary>Raised when the zoom this lane wants or its width changed: the controller then settles the shared cap and page width.</summary>
     internal event Action? WantedZoomChanged;
 
-    private double _shareWidth, _lastWidth;
+    private double _shareWidth, _lastWidth, _topCut;
     /// <summary>Vertical layout: the page width (the narrowest lane's) every lane wraps its systems at, so each system starts on the same bar in all lanes.</summary>
     internal double SharedWidth
     {
@@ -208,8 +208,25 @@ internal sealed class BandLane : Border
     protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo)
     {
         base.OnRenderSizeChanged(sizeInfo);
-        Refit();
+        if (_holdFit) _fitDue = true; else Refit();
     }
+
+    private bool _holdFit, _fitDue;
+    /// <summary>While set, a new lane size keeps the strip as engraved (the lane clips it); the fit runs once when it is cleared.</summary>
+    internal bool HoldFit
+    {
+        get => _holdFit;
+        set { _holdFit = value; if (!value && _fitDue) { _fitDue = false; Refit(); } }
+    }
+
+    /// <summary>Height a strip above the lane takes: the lane fits as if it began that much higher, and slides its first system's blank
+    /// top inset under the strip as far as the inset allows (<see cref="TopCutUsed"/>), so the strip costs no score space.</summary>
+    internal double TopCut { get => _topCut; set { if (value == _topCut) return; _topCut = value; Refit(); } }
+    internal double TopCutUsed { get; private set; } internal double Seen { get; set; } = double.PositiveInfinity;   // Seen: the lane's height, from its top, that lies inside the rows' viewport (BandView sets it)
+    private double FitHeight => ActualHeight + _topCut;
+
+    /// <summary>How many times the strip was fitted (a self-test counter: a grip drag adds none until it ends).</summary>
+    internal int Fits { get; private set; }
 
     private double _textScale = 1;
     /// <summary>The score's text scale (the main score's "Fit width" zoom for this width): the lane draws its tab at this size,
@@ -228,12 +245,13 @@ internal sealed class BandLane : Border
     internal void Refit()
     {
         if (ActualHeight < 20) return;
+        Fits++;
         _editor.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));   // the system height follows marks found while laying out (tempo, text): read it settled
         var unit = _editor.Zoom > 0 ? _editor.SystemHeightNow / _editor.Zoom : 0;
         if (unit <= 0) return;
         // Only a tab-only strip may overflow (its empty top padding is cut); a strip with notation scales to fit whole.
         var overflow = _editor.Notation == NotationMode.TabOnly ? PaddingOverflow : 1.0;
-        var wanted = Math.Clamp(Math.Clamp(Math.Min(_textScale, ActualHeight * 0.98 / unit * overflow), 0.5, 2.0) * _userZoom, 0.25, 4.0);
+        var wanted = Math.Clamp(Math.Clamp(Math.Min(_textScale, FitHeight * 0.98 / unit * overflow), 0.5, 2.0) * _userZoom, 0.25, 4.0);
         var wantedChanged = Math.Abs(wanted - WantedZoom) > 0.001;
         WantedZoom = wanted;
         var zoom = Math.Min(wanted, _zoomCap);
@@ -241,10 +259,13 @@ internal sealed class BandLane : Border
         if (_vertical) _editor.PageWidthOverride = Math.Max(300, (_shareWidth > 1 ? _shareWidth : ActualWidth) / zoom);
         _editor.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
         // Centred when it fits; a taller system keeps its tab staff (at the bottom) and loses top padding.
-        var spare = ActualHeight - _editor.SystemHeightNow * VisibleSystems;
+        var spare = FitHeight - _editor.SystemHeightNow * VisibleSystems;
+        // The inset above the top staff line, less room for the bar number and a line of text over it, is free to go under the strip.
+        var box = _topCut > 0 && _editor.Track is { Measures.Count: > 0 } ? _editor.AuditSystemMetrics(0) : default;
+        TopCutUsed = Math.Clamp(((_editor.Notation == NotationMode.TabOnly ? box.TabTop : box.StaffTop) - box.SystemTop - 3 * box.StringGapPx) * zoom, 0, _topCut);
         // Vertical: whole systems from the top with the spare below, and nothing past them shows. Horizontal: centred.
-        _yBase = spare >= 0 ? (_vertical ? 0 : spare / 2) : spare;
-        _canvas.Clip = _vertical && spare >= 0 ? new RectangleGeometry(new Rect(0, 0, ActualWidth, _editor.SystemHeightNow * VisibleSystems)) : null;
+        _yBase = (spare >= 0 ? (_vertical ? 0 : spare / 2) : spare) - TopCutUsed;
+        _canvas.Clip = _vertical && spare >= 0 ? new RectangleGeometry(new Rect(0, 0, ActualWidth, Math.Max(0, _editor.SystemHeightNow * VisibleSystems - TopCutUsed))) : null;
         _shownBar = -2;   // the strip and the line go back to the last asked position now
         if (_wantBar >= -1) Place(_wantBar, _wantFraction, _pos);
         PlaceGlow();
@@ -253,8 +274,8 @@ internal sealed class BandLane : Border
         if (wantedChanged || widthChanged) WantedZoomChanged?.Invoke();
     }
 
-    /// <summary>How many whole systems the lane shows at once (always 1 for a horizontal strip).</summary>
-    internal int VisibleSystems => !_vertical || _editor.SystemHeightNow <= 1 ? 1 : Math.Max(1, (int)Math.Floor(ActualHeight / _editor.SystemHeightNow + 1e-6));
+    /// <summary>How many whole systems the lane shows at once in the part of it that is on screen (always 1 for a horizontal strip).</summary>
+    internal int VisibleSystems => !_vertical || _editor.SystemHeightNow <= 1 ? 1 : Math.Max(1, (int)Math.Floor(Math.Min(FitHeight, Seen + _topCut) / _editor.SystemHeightNow + 1e-6));
 
     /// <summary>The number of systems the strip is wrapped into (0 for an audio or empty track).</summary>
     internal int SystemCount => _editor.Track is { IsAudio: false, Measures.Count: > 0 } t ? _editor.Layout.GetLayout(t).SystemCount : 0;

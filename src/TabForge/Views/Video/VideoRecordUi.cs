@@ -78,7 +78,7 @@ internal sealed class VideoSavedNotice
 
     public void Show(string message, string? openFolder)
     {
-        if (openFolder is null) { MessageBox.Show(_window, message, "Record video", MessageBoxButton.OK, MessageBoxImage.Warning); return; }
+        if (openFolder is null) { ThemedMessageBox.Show(_window, message, "Record video", MessageBoxButton.OK, MessageBoxImage.Warning); return; }
         _folder = openFolder;
         _notice ??= _notices.Create("Video saved", "Open folder", OpenFolder);
         _notice.Show(message);

@@ -218,7 +218,7 @@ public static partial class SettingsCatalog
         (Fretboard, "Practice aids", "editing.horizon.enabled editing.scale follow.fretboard editing.horizon* audio.fretboardstyle*"),
         (Fretboard, "Appearance", "fretboard.scalestyle* fretboard.scalecolour* fretboard.scalestrength* fretboard.markercolour* fretboard.markerbrightness* fretboard.numbersize* fretboard.markersize* fretboard.stringspacing*"),
 
-        (Timeline, "Track list", "timeline.volumestyle timeline.panstyle timeline.autofit timeline.trackgroups* timeline.addtracklane*"),
+        (Timeline, "Track list", "timeline.volumestyle timeline.panstyle timeline.autofit timeline.trackgroups* timeline.addtracklane* timeline.mastertrack* timeline.mastertrackcolours* timeline.mastertrackcolour* timeline.mastertrackopacity*"),
         (Timeline, "Clip lanes", "timeline.removeemptylanes*"),
         (Timeline, "Timeline display", "appearance.arrangement timeline.numbers timeline.individualnotes timeline.continuousline* timeline.hideemptygrid* timeline.tracklines* timeline.barglow* timeline.playheadstyle* appearance.timelinescrollbar*"),
         (Timeline, "Sections", "timeline.similarcolours timeline.brackets timeline.names follow.sectionglow* appearance.sectionbracket*"),
@@ -236,11 +236,11 @@ public static partial class SettingsCatalog
         (Playback, "Note preview", "audio.preview audio.previewlen* audio.letring*"),
         (Playback, "Several tabs", "tabs.playbackonswitch"),
 
-        (AudioVst, "Output device", "vst.driver vst.device vst.buffer vst.renderlimiter vst.samplerate* vst.asio.out* vst.asio.outlast* vst.followvolume* vst.livelimiter*"),
+        (AudioVst, "Output device", "vst.driver vst.device vst.buffer vst.renderlimiter vst.samplerate* vst.asio.out* vst.asio.outlast* vst.followvolume* vst.livelimiter* vst.popguard*"),
         (AudioVst, "Playback engine", "vst.playall* vst.autogm* vst.winmidilatency*"),
         (AudioVst, "Plug-ins", "vst.folders vst.commonfolders* vst.rememberscan* vst.dock* vst.ontop* vst.scanstandard* vst.isolate* vst.autopitch* vst.startuptracks* vst.quarantine*"),
 
-        (Recording, "Input device", "vst.input vst.asio.inputs vst.asio.infirst* vst.asio.inlast*"),
+        (Recording, "Input device", "vst.input vst.asio.inputs vst.asio.infirst* vst.asio.oneinput* vst.allinputs* vst.inputsshown*"),
         (Recording, "Timing", "vst.recordoffset*"),
 
         (Tabs, "Opening and closing tabs", "tabs.closebutton tabs.lastclosed tabs.newposition tabs.openincurrent tabs.dropnewtab tabs.playing"),

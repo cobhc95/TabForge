@@ -60,7 +60,7 @@ internal sealed class KeyboardModeController : IDisposable
     public void Exit()
     {
         if (_snapshot is not { } before) return;
-        if (_dock() is { } dock) dock.ApplyLayout(before);
+        if (_dock() is { } dock) dock.ApplyLayout(Docking.DockLayoutTree.WithInstrumentSide(before, dock.InstrumentAtBottom));
         _snapshot = null;
         Changed?.Invoke();
         _host.SetStatus("");   // clears the "on" message

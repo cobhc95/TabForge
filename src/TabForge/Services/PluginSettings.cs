@@ -30,6 +30,8 @@ public sealed class PluginSettings
     public bool PlayAllSetAutomatically { get; set; }
     /// <summary>App-wide monitoring effects chain (speaker / room calibration), used by every song that keeps "Use for all projects" ticked. Live output only: never rendered or exported.</summary>
     public TabForge.Models.BusChain MonitorFx { get; set; } = new();
+    /// <summary>Live input (hear an input through the app-wide live FX chain): its chain, input and options. See LiveInput/README.md.</summary>
+    public TabForge.LiveInput.LiveInputSettings LiveInput { get; set; } = new();
     /// <summary>Tick a track's GM sound automatically when no VST instrument plays it (chain off, instrument bypassed / removed), untick when one does; manual unticks are respected.</summary>
     public bool AutoGmSound { get; set; } = true;
     /// <summary>Output latency of the Windows MIDI synth (ms); plug-in tracks are delayed by the difference so both stay in time.</summary>
@@ -46,7 +48,14 @@ public sealed class PluginSettings
     /// <summary>ASIO: first input channel (0-based).</summary>
     public int AsioInputChannel { get; set; }
     /// <summary>ASIO: last input channel (0-based; equal to the first = one mono input, as a guitar on input 2).</summary>
+    /// <summary>Equal to (or below) <see cref="AsioInputChannel"/>: the ASIO input is that one channel, heard on inputs 1 and 2. Above it: every channel from the first on is open.</summary>
     public int AsioInputLastChannel { get; set; } = 1;
+    /// <summary>On: every input of the audio device is opened. Off: two input channels, as a device with two inputs.</summary>
+    public bool UseAllInputs { get; set; } = true;
+    /// <summary>Fade the sound out before the audio device or its settings change, and back in afterwards.</summary>
+    public bool ProtectFromPops { get; set; } = true;
+    /// <summary>Per audio device name: the inputs its track pickers and the live input menu leave out. No entry: every input shows.</summary>
+    public Dictionary<string, TabForge.Models.HiddenAudioInputs> HiddenInputs { get; set; } = new();
     /// <summary>ASIO: first output channel (0-based).</summary>
     public int AsioOutputChannel { get; set; }
     /// <summary>ASIO: last output channel (0-based; equal to the first = one mono output, the mix summed to it).</summary>

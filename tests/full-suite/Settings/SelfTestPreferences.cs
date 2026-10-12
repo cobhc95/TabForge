@@ -21,7 +21,7 @@ public static partial class SelfTest
         "follow.vertical follow.anticipation follow.verticaltrigger follow.margin follow.stopmanual follow.stopatend follow.fps follow.highlight " +
         "follow.colour follow.bg follow.duration.enabled follow.durationglow follow.durationopacity follow.playhead follow.playhead.thickness " +
         "vst.driver vst.device vst.asio.out vst.asio.outlast vst.playall vst.autogm vst.autopitch vst.startuptracks vst.winmidilatency " +
-        "vst.followvolume vst.asio.inputs vst.asio.infirst vst.asio.inlast vst.recordoffset vst.input vst.samplerate vst.buffer audio.linkedmedia " +
+        "vst.followvolume vst.popguard vst.asio.inputs vst.asio.infirst vst.asio.oneinput vst.allinputs vst.inputsshown vst.recordoffset vst.input vst.samplerate vst.buffer audio.linkedmedia " +
         "vst.folders vst.commonfolders vst.rememberscan vst.dock vst.ontop vst.scanstandard vst.isolate audio.metronome audio.countin " +
         "audio.countinbars audio.speed audio.preview audio.previewlen audio.letring audio.metroclick audio.metroaccent audio.metrovolume " +
         "audio.metroaccentvolume audio.metroclickvolume audio.metrodivision timeline.volumestyle timeline.panstyle timeline.autofit editing.duration " +

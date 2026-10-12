@@ -13,6 +13,7 @@ The app's only way to reach the audio engine process, plus device and capture he
 - `AudioDevices`, `AudioRouting`: devices and routing.
 - `MidiInputCapture`, `MidiInputHub`, `RoutedMidiOutput`: MIDI in and out. Clients can pick one device by name (`IMidiInputClient.Device`); `Rescan()` picks up devices connected or removed while open. The hub (one per engine client, `AudioEngineClient.MidiInput`) owns the single set of input handles and hands each listener (recording, Keyboard mode) a client; the devices open while one client holds them and close with the last.
 - `SongClock`: playback position shared by the views.
+- `DeviceChangePause`: pauses playing songs while the audio device is reopened and resumes them when it is ready.
 - `SongOwnerIds`: each open document's engine transport id (the engine keeps one song transport per id).
 - Clips reach the engine in `AudioEngineClient.Sync.cs` (`EngineCommand.SetClips`, built from each track's audio clips); the engine side is `ClipPlayer`.
 - `WaveformCache`: bounded waveform data for clips.

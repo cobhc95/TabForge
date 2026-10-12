@@ -1,7 +1,7 @@
 namespace TabForge.Views;
 
 /// <summary>What the track row menu needs to know about the track it opens on.</summary>
-internal sealed record TrackRowMenuState(bool IsAudio, bool CanPaste, bool CanDelete, string ColourHex);
+internal sealed record TrackRowMenuState(bool IsAudio, bool CanPaste, bool CanDelete, string ColourHex, bool MasterLane = false);
 
 // Owns: the contents of the track row's right-click menu (plain data, one menu for every track kind).
 // Does not own: opening the menu and running the commands (MainWindow.TrackMenu.cs, TrackClipboardFlow).
@@ -15,7 +15,7 @@ internal static class TrackRowMenus
 {
     public const string Cut = "TrackRow.Cut", Copy = "TrackRow.Copy", Paste = "TrackRow.Paste", Duplicate = "TrackRow.Duplicate",
         Delete = "TrackRow.Delete", Rename = "TrackRow.Rename", Colour = "TrackRow.Colour", Properties = "TrackRow.Properties",
-        Convert = "TrackRow.Convert", ConvertToAudio = "Track.ConvertToAudio";
+        Convert = "TrackRow.Convert", ConvertToAudio = "Track.ConvertToAudio", AddTrack = "Track.Add";
 
     public static List<MenuSpec> Build(TrackRowMenuState s, Func<string, string> key)
     {
@@ -26,6 +26,8 @@ internal static class TrackRowMenus
         }).ToList();
         var list = new List<MenuSpec>
         {
+            Item(AddTrack, "Add track…", key(AddTrack), true, "Opens the Add track window"),
+            MenuSpec.Separator(),
             Item(Cut, "Cut", key(Cut), s.CanDelete, "Copies the track and removes it from the song"),
             Item(Copy, "Copy", key(Copy)),
             Item(Paste, "Paste (after this track)", key(Paste), s.CanPaste, "Inserts the copied track after this one"),
@@ -40,6 +42,8 @@ internal static class TrackRowMenus
         list.Add(s.IsAudio
             ? Item(Convert, "Convert to instrument track…", "", true, "Choose an instrument; the track keeps its audio and MIDI clips")
             : Item(ConvertToAudio, "Convert to audio track…", key("Track.ConvertToAudio"), true, "The notation becomes a MIDI clip on the track; existing clips stay"));
+        list.Add(MenuSpec.Separator());
+        list.Add(new MenuSpec { Id = MasterLane.CommandId, Header = MasterLane.MenuHeader, Checkable = true, Checked = s.MasterLane, SettingKey = MasterLane.SettingKey, ToolTip = "An overview lane above the first track: one thin line per track, filled where that track plays" });
         return list;
     }
 

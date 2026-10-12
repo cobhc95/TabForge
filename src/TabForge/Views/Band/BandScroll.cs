@@ -25,7 +25,10 @@ internal sealed class BandScroll
         {
             if (Vertical)
             {
+                // Every lane puts the playing system as many systems below its top as the lead does, so a page is as many systems as the
+                // lane that shows the fewest holds (rows have their own heights, and the rows' viewport can cut the lowest one).
                 var visible = lead.VisibleSystems;
+                for (var i = 0; i < rows.Count; i++) if (rows[i].Lane.HasGeometry(bar)) visible = Math.Min(visible, rows[i].Lane.VisibleSystems);
                 _top = follow.NextTop(_top, lead.SystemOf(bar), visible, lead.SystemCount);
                 var ease = glide && (follow.Glide || follow.Mode == BandFollowMode.Continuous) && Math.Abs(_top - _pos) <= visible + 1;
                 _pos = ease && Math.Abs(_top - _pos) > 0.02 ? _pos + (_top - _pos) * 0.25 : _top;

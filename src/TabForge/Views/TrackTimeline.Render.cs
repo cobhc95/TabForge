@@ -135,6 +135,7 @@ internal sealed partial class TrackTimeline
         // --- track rows ---
         // Draw the floating lane last so it stays above the rows it is sliding over.
         dc.PushClip(new RectangleGeometry(new Rect(0, gridTop, width, Math.Max(0, height - gridTop))));   // rows scroll under the pinned ruler and section strip
+        DrawMasterLane(dc, gridTop, width, firstBar, endBar);
         var barGlowOuter = ShowBarGlow ? Draw.Pen(Colors.White, 2, 0.07) : null;
         var barGlowInner = ShowBarGlow ? Draw.Pen(Colors.White, 0.8, 0.16) : null;
         for (var drawIndex = 0; drawIndex < trackCount; drawIndex++)

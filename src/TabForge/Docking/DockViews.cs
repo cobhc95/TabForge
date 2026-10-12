@@ -46,8 +46,11 @@ internal sealed class DockHostView
     // Groups that only ever host a single, fixed panel: their tab header strip is pure
     // chrome (one button, nothing to switch between), so it is collapsed and the panel's
     // right-click menu is mirrored onto the content area instead.
-    private static readonly HashSet<string> SoloPanelIds = new(StringComparer.Ordinal) { "instrument", "timeline", "learn" };
+    private static readonly HashSet<string> SoloPanelIds = new(StringComparer.Ordinal) { "instrument", "timeline", "learn", "band" };
     public static bool IsSoloPanel(string id) => SoloPanelIds.Contains(id);
+
+    /// <summary>True for a pane that stays where its layout puts it: no tab to drag, no panel menu, and nothing can be dropped onto it. It draws its own caption.</summary>
+    public static bool IsFixedPanel(string id) => id == "band";
     public const double TabHeaderMinHeight = 36;
 
     public DockHostView(string hostId, DockNodeState node, FrameworkElement? surface,
@@ -123,10 +126,13 @@ internal sealed class DockHostView
         {
             var registration = panels[id];
             var tab = new DockTabSurface(_workspace, HostId, id, registration.Title);
-            _workspace.RenderContextMenu(tab);
-            tab.MouseLeftButtonDown += (_, e) => _workspace.OnTabDragStarted(tab, e);
-            tab.MouseMove += (_, e) => _workspace.OnTabDragMoved(tab, e);
-            tab.MouseLeftButtonUp += (_, e) => _workspace.OnTabDragEnded(tab, e);
+            if (!IsFixedPanel(id))
+            {
+                _workspace.RenderContextMenu(tab);
+                tab.MouseLeftButtonDown += (_, e) => _workspace.OnTabDragStarted(tab, e);
+                tab.MouseMove += (_, e) => _workspace.OnTabDragMoved(tab, e);
+                tab.MouseLeftButtonUp += (_, e) => _workspace.OnTabDragEnded(tab, e);
+            }
             tab.Selected += (_, _) => Select(id, notify: true);
             Header.Children.Add(tab);
             _tabSurfaces.Add(tab);
@@ -135,7 +141,7 @@ internal sealed class DockHostView
 
         var collapseHeader = ids.Count == 1 && SoloPanelIds.Contains(ids[0]);
         if (_tabScroller is not null) _tabScroller.Visibility = collapseHeader ? Visibility.Collapsed : Visibility.Visible;
-        _body.ContextMenu = collapseHeader ? _workspace.BuildPanelContextMenu(ids[0]) : null;
+        _body.ContextMenu = collapseHeader && !IsFixedPanel(ids[0]) ? _workspace.BuildPanelContextMenu(ids[0]) : null;
         // A header-less fretboard may paint its top-string markers upward over the menu bar.
         // Clip geometry (not ClipToBounds) keeps the sides and bottom clipped; no per-frame cost.
         // Overhang removed: the fretboard now reserves room for its top markers inside the pane.

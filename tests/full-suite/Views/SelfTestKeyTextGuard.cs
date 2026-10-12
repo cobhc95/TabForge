@@ -91,5 +91,12 @@ public static partial class SelfTest
         SettingsMigration.DisableSecondSlotWhereFirstWasChanged(moved, HotkeyCatalog.All);
         Eq("a customised Add track key is kept", "Ctrl+Alt+K", HotkeyCatalog.GestureFor(moved, "Track.Add"));
         Eq("a customised Add track gets no default Hotkey 2", "", HotkeyCatalog.GestureFor(moved, "Track.Add", 2));
+
+        // A command that came from a menu row has no default key; a key the user assigns to it runs it.
+        Check("a menu command is in the catalogue", HotkeyCatalog.ById("Note.Whole") is not null);
+        Check("a menu command has no default key", HotkeyCatalog.BuildMap(new HotkeySettings()).Values.All(v => v != "Note.Whole"));
+        var menuKeys = new HotkeySettings();
+        menuKeys.Bindings["Note.Whole"] = "Ctrl+Alt+F9";
+        Check("a key bound to a menu command runs it", HotkeyCatalog.BuildMap(menuKeys).TryGetValue("Ctrl+Alt+F9", out var menuId) && menuId == "Note.Whole");
     }
 }

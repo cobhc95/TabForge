@@ -21,7 +21,7 @@ internal interface IBandViewHost : IPaneHost
     void ShowCursor(int trackIndex, int bar, int cell);
     /// <summary>Moves a track in the song's own order, as dragging it on the timeline does (the sync setting uses it).</summary>
     void MoveSongTrack(int from, int to);
-    /// <summary>Runs the Band menu's items the window owns: the score zoom and the Band settings door.</summary>
+    /// <summary>Runs the Band items the window owns: the score zoom, the Band settings door and leaving Band view.</summary>
     void RunScoreMenu(Views.MenuSpec spec);
 }
 
@@ -46,15 +46,13 @@ internal sealed class BandViewController : IDisposable
     private int _revision = -1;
     private int _pillKey;
     private BandAppearance.Key _look;
-    private int _lastBar = -2;
-    private int _lastCell = -2;
+    private int _lastBar = -2, _lastCell = -2;
     private double _lastFraction = -1;
     private bool _instrumentsDirty = true;
     private bool _glowShown;
     private double _lastInstrumentMs = double.NegativeInfinity;
     private double _changedAt = -1;
     private bool _disposed;
-    private bool _playing;
     private double _checkedAt = double.NegativeInfinity;
     private int _checkedVersion = -1;
     private string _size = "", _content = "";
@@ -62,6 +60,8 @@ internal sealed class BandViewController : IDisposable
     private readonly BandScroll _scroll = new();
     private string _layoutName = "";
     private readonly BandLaneAligner _aligner = new();
+    private readonly BandWidthDrag _widthDrag;
+    private readonly BandLayoutMenu _layoutMenu;
     private int _fittedRows;
 
     /// <summary>Export only: while playing, every tick checks the rows and refreshes the instruments, instead of waiting for the wall clock, so a frame's pixels do not depend on the machine's speed. The live view leaves it off.</summary>
@@ -72,8 +72,12 @@ internal sealed class BandViewController : IDisposable
         _host = host;
         _state = new BandLayoutState(() => Band);
         View = new BandView(_state);
+        _widthDrag = new BandWidthDrag(() => Band, _state, () => View.Rows, () => { _host.SaveSettings(); Sync(); });
+        _layoutMenu = new BandLayoutMenu(View.LayoutButton, () => Band, Remember, ResetView);
         View.PillClicked += track => { _state.Toggle(track); Sync(); };
         View.RowDropped += OnRowDropped;
+        View.LanesSeenChanged += () => _lastBar = -2;   // the lanes place the playing system again with the next tick
+        View.CloseRequested += () => _host.RunScoreMenu(new Views.MenuSpec { Id = BandView.CloseId });
         View.LaneZoomWheel += up => ChangeLaneZoom(up ? BandChoices.LaneZoomStep : 1 / BandChoices.LaneZoomStep);
         View.MouseRightButtonUp += (_, e) => { e.Handled = true; ShowMenu(); };
         _ticker.Tick += (_, _) => Tick();
@@ -128,7 +132,7 @@ internal sealed class BandViewController : IDisposable
             case "Band.ToggleSmoothFollow": Band.FollowLikeScore = !Band.FollowsScore; Remember("Band view follow: " + (Band.FollowsScore ? "like the score" : Band.SmoothFollow ? "smooth" : "page by page")); return true;
             case "Band.ResetRowHeights": _state.ResetHeights(); View.FitRows(); _host.SetStatus("Band view: row heights reset"); return true;
         }
-        return false;
+        return _layoutMenu.Run(id);
     }
 
     /// <summary>The right-click menu: what the lanes show, instrument size, rows per screen, row heights, follow, zoom and Band settings.</summary>
@@ -180,7 +184,7 @@ internal sealed class BandViewController : IDisposable
         if (_disposed) return;
         _state.ResetView();
         var band = Band;
-        band.InstrumentWidth = 0; band.LaneZoom = 1;
+        band.InstrumentWidth = 0; band.LaneZoom = 1; band.FretboardAbove = true; band.ColourFrame = true;
         band.LaneLayout = BandChoices.Vertical; band.PlayheadLine = BandChoices.TabOnly;
         View.FitRows();
         Remember("Band view reset to its defaults");
@@ -232,6 +236,7 @@ internal sealed class BandViewController : IDisposable
     public void Dispose()
     {
         _disposed = true;
+        _widthDrag.Stop();
         _ticker.Stop();
         View.IsVisibleChanged -= OnVisibleChanged;
         View.Reorder.Cancel();
@@ -246,14 +251,14 @@ internal sealed class BandViewController : IDisposable
         var playback = doc.Playback;
         if (ProbePlay is { } probe)
         {
-            _playing = true;
+            View.Playing = true;
             Sync();
             if (!_ticker.IsEnabled || _ticker.Interval != TimeSpan.Zero) _ticker.Interval = TimeSpan.Zero;
             Apply(probe.Bar, probe.Fraction, probe.Ms, true, false);
             return;
         }
         var playing = playback.IsPlayingVisual && playback.Engine.IsPlaying && playback.PlayheadBar >= 0;
-        _playing = playing;
+        View.Playing = playing;
         Sync();
         var interval = playing ? TimeSpan.Zero : IdleInterval;
         if (_ticker.Interval != interval) _ticker.Interval = interval;
@@ -270,10 +275,7 @@ internal sealed class BandViewController : IDisposable
     internal void Apply(int bar, double fraction, double ms, bool playing, bool paused, int cell = -1)
     {
         var moved = bar != _lastBar || Math.Abs(fraction - _lastFraction) > 1e-6;
-        if (moved)
-        {
-            _scroll.Show(View.Rows, bar, fraction, playing, _follow);
-        }
+        if (moved) _scroll.Show(View.Rows, bar, fraction, playing, _follow);
         if (playing || _glowShown)
         {
             var timeline = TimelineNow;
@@ -301,7 +303,7 @@ internal sealed class BandViewController : IDisposable
         var rows = View.Rows;
         // While playing, a frame with no edit and no change of rows skips the checks below; they run at least every QuietCheckMs.
         var nowMs = _clock.Elapsed.TotalMilliseconds;
-        if (!UseFrameClock && _playing && ReferenceEquals(project, _project) && project.ContentRevision == _revision && _state.Version == _checkedVersion
+        if (!UseFrameClock && View.Playing && ReferenceEquals(project, _project) && project.ContentRevision == _revision && _state.Version == _checkedVersion
             && _changedAt < 0 && nowMs - _checkedAt < QuietCheckMs) return;
         _checkedAt = nowMs;
         _state.Sync(project);
@@ -400,9 +402,9 @@ internal sealed class BandViewController : IDisposable
             row.Lane.WantedZoomChanged += AlignLanes;
             row.Lane.Clicked += (bar, cell) => _host.ShowCursor(_host.Project.Tracks.IndexOf(track), bar, cell);
             row.InstrumentToggleRequested += () => { _state.ToggleInstrument(track); _instrumentsDirty = true; Sync(); };
-            row.WidthRequested += w => SetInstrumentWidth(track, w);
+            row.WidthRequested += w => _widthDrag.Request(track, w);
             row.WidthReset += () => { if (Band.WidthPerRow) _state.ResetWidth(track); else Band.InstrumentWidth = 0; _host.SaveSettings(); Sync(); };
-            row.WidthCommitted += _host.SaveSettings;
+            row.WidthCommitted += _widthDrag.Commit;
             View.Adopt(row);
             rows.Add(row);
         }
@@ -422,23 +424,21 @@ internal sealed class BandViewController : IDisposable
         if (_aligner.Align(View.Rows)) _lastBar = -2;
     }
 
-    /// <summary>A grip drag: the shared width, or this row's own in "this row only" mode (widths change on drag only, never per frame).</summary>
-    private void SetInstrumentWidth(TrackModel track, double width)
-    {
-        if (Band.WidthPerRow) _state.SetWidth(track, width); else Band.InstrumentWidth = BandChoices.ClampWidth(width);
-        Sync();
-    }
+    /// <summary>The grip drag between instrument and lane (a self-test reads its counter).</summary>
+    internal BandWidthDrag WidthDrag => _widthDrag; internal BandLayoutMenu LayoutMenu => _layoutMenu;
 
     /// <summary>Hands each row its hidden instrument, instrument width and playhead line length.</summary>
     private void ApplyLayout(IReadOnlyList<BandRow> rows)
     {
         var band = Band;
         var full = BandChoices.NormalizePlayhead(band.PlayheadLine) == BandChoices.FullRow;
+        var dragging = _widthDrag.Active;   // the drag shows its own width until it ends
         for (var i = 0; i < rows.Count; i++)
         {
             var row = rows[i];
             var width = band.WidthPerRow ? _state.WidthOf(row.Track) ?? band.InstrumentWidth : band.InstrumentWidth;
-            row.ApplyInstrument(_state.IsInstrumentHidden(row.Track), width);
+            if (!dragging) row.ApplyInstrument(_state.IsInstrumentHidden(row.Track), width);
+            row.Arrange(band.FretboardAbove, band.ColourFrame);
             row.Lane.UserZoom = band.LaneZoom;
             row.Lane.PlayheadFullRow = full;
         }

@@ -53,7 +53,7 @@ public static partial class SelfTest
         Check("feature modules: the experimental video encoder rows are in the catalogue", new[] { "video.encoder", "video.fastexport", "video.lowlatency" }.All(k => moduleKeys.Contains(k)));
 
         var hotkeyOrder = HotkeyCatalog.All.Select(a => a.Id).ToList();
-        var bandRows = new[] { "Band.ToggleTrackRow", "Band.RowsMore", "Band.RowsFewer", "Band.CycleLaneContent", "Band.CycleLaneLayout", "Band.CycleInstrumentSize", "Band.ToggleSmoothFollow", "Band.ResetRowHeights" };
+        var bandRows = new[] { "Band.ToggleTrackRow", "Band.RowsMore", "Band.RowsFewer", "Band.CycleLaneContent", "Band.CycleLaneLayout", "Band.CycleInstrumentSize", "Band.ToggleSmoothFollow", "Band.ResetRowHeights", "Band.ToggleFretboardAbove", "Band.ToggleColourFrame" };
         var anchor = hotkeyOrder.IndexOf("View.BandView");
         Check("feature modules: the Band hotkey rows follow View.BandView in order", anchor >= 0 && bandRows.Select((id, i) => hotkeyOrder.IndexOf(id) == anchor + 1 + i).All(ok => ok));
         Check("feature modules: the Band commands are registered", bandRows.All(id => table.Ids.Contains(id)));

@@ -1,5 +1,7 @@
 # code-built menus (MenuSpec data), several states each; regenerate with TABFORGE_RECORD_MENU_GOLDEN=1
 == track row, instrument
+Add track… | key=Ctrl+T, Ctrl+Shift+Insert | id=Track.Add | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=Opens the Add track window
+---
 Cut | key=Ctrl+X | id=TrackRow.Cut | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=Copies the track and removes it from the song
 Copy | key=Ctrl+C | id=TrackRow.Copy | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
 Paste (after this track) | key=Ctrl+V | id=TrackRow.Paste | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=Inserts the copied track after this one
@@ -27,7 +29,11 @@ Colour | key= | id= | arg= | cmd=None | enabled=True | checkable=False | radio=F
 Properties… | key=F6 | id=TrackRow.Properties | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
 ---
 Convert to audio track… | key= | id=Track.ConvertToAudio | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=The notation becomes a MIDI clip on the track; existing clips stay
+---
+Show master track | key= | id=View.MasterTrack | arg= | cmd=None | enabled=True | checkable=True | radio=False | label=False | setting=timeline.mastertrack | tip=An overview lane above the first track: one thin line per track, filled where that track plays
 == track row, audio
+Add track… | key=Ctrl+T, Ctrl+Shift+Insert | id=Track.Add | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=Opens the Add track window
+---
 Cut | key=Ctrl+X | id=TrackRow.Cut | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=Copies the track and removes it from the song
 Copy | key=Ctrl+C | id=TrackRow.Copy | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
 Paste (after this track) | key=Ctrl+V | id=TrackRow.Paste | arg= | cmd=None | enabled=False | checkable=False | radio=False | label=False | setting= | tip=Inserts the copied track after this one
@@ -55,7 +61,11 @@ Colour | key= | id= | arg= | cmd=None | enabled=True | checkable=False | radio=F
 Properties… | key=F6 | id=TrackRow.Properties | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
 ---
 Convert to instrument track… | key= | id=TrackRow.Convert | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=Choose an instrument; the track keeps its audio and MIDI clips
+---
+Show master track | key= | id=View.MasterTrack | arg= | cmd=None | enabled=True | checkable=True | radio=False | label=False | setting=timeline.mastertrack | tip=An overview lane above the first track: one thin line per track, filled where that track plays
 == track row, last track
+Add track… | key=Ctrl+T, Ctrl+Shift+Insert | id=Track.Add | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=Opens the Add track window
+---
 Cut | key=Ctrl+X | id=TrackRow.Cut | arg= | cmd=None | enabled=False | checkable=False | radio=False | label=False | setting= | tip=Copies the track and removes it from the song
 Copy | key=Ctrl+C | id=TrackRow.Copy | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
 Paste (after this track) | key=Ctrl+V | id=TrackRow.Paste | arg= | cmd=None | enabled=False | checkable=False | radio=False | label=False | setting= | tip=Inserts the copied track after this one
@@ -83,6 +93,8 @@ Colour | key= | id= | arg= | cmd=None | enabled=True | checkable=False | radio=F
 Properties… | key=F6 | id=TrackRow.Properties | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=
 ---
 Convert to audio track… | key= | id=Track.ConvertToAudio | arg= | cmd=None | enabled=True | checkable=False | radio=False | label=False | setting= | tip=The notation becomes a MIDI clip on the track; existing clips stay
+---
+Show master track | key= | id=View.MasterTrack | arg= | cmd=None | enabled=True | checkable=True | radio=False | label=False | setting=timeline.mastertrack | tip=An overview lane above the first track: one thin line per track, filled where that track plays
 == bar, full
 Copy bar (this track) | key=Ctrl+C | id= | arg= | cmd=CopyBar | enabled=True | checkable=False | radio=False | label=False | setting= | tip=Copies this bar of the selected track
 Paste bar (this track) | key=Ctrl+V | id= | arg= | cmd=PasteBar | enabled=True | checkable=False | radio=False | label=False | setting= | tip=

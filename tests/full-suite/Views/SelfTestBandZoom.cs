@@ -12,7 +12,7 @@ public static partial class SelfTest
     {
         var project = BandUnevenSong(60);
         var host = new FakeBandHost(project);
-        host.Settings.Timeline.Band = new BandSettings();
+        host.Settings.Timeline.Band = new BandSettings { FretboardAbove = false, Fretboards = BandChoices.FretboardsAll, SystemsPerRow = -1 };
         using var band = new BandViewController(host);
         BandStage(band, 1000, 900);
         band.Tick();
@@ -44,7 +44,7 @@ public static partial class SelfTest
         var project = BandUnevenSong(30);
         for (var i = project.Tracks.Count; i < 6; i++) project.Tracks.Add(new TrackModel { Name = "T" + i, Measures = TemplateFactory.Measures(30) });
         var host = new FakeBandHost(project);
-        host.Settings.Timeline.Band = new BandSettings();
+        host.Settings.Timeline.Band = new BandSettings { FretboardAbove = false, Fretboards = BandChoices.FretboardsAll, SystemsPerRow = -1 };
         using var band = new BandViewController(host);
         BandStage(band, 1000, 900);
         band.Tick();
@@ -64,7 +64,7 @@ public static partial class SelfTest
         band.ToggleInstrumentOf(0);
         BandStage(band, 1000, 900);
         var row = band.View.Rows[0];
-        Check("band hidden: the lane takes the freed width", row.InstrumentHidden && row.Lane.ActualWidth > 1000 - BandRow.HiddenHeaderWidth - 30, row.Lane.ActualWidth.ToString("0"));
+        Check("band hidden: the lane takes the freed width", row.InstrumentHidden && row.Lane.ActualWidth > row.ActualWidth - BandRow.HiddenHeaderWidth - 2 * BandRowFrame.Inset - 1 && row.ActualWidth > 1000 - 30, row.Lane.ActualWidth.ToString("0"));
 
         // Reset view keeps the shown tracks and their order.
         var order = band.State.ShownTracks().ToList();

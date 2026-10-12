@@ -18,7 +18,7 @@ public static class DialogHost
     public static void ShowError(Window owner, string text, string caption)
     {
         if (MessageCapture is { } capture) { capture(caption, text); return; }
-        MessageBox.Show(owner, text, caption, MessageBoxButton.OK, MessageBoxImage.Error);
+        ThemedMessageBox.Show(owner, text, caption, MessageBoxButton.OK, MessageBoxImage.Error);
     }
 
     public static bool? ShowModal(Window dialog)

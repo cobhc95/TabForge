@@ -136,7 +136,7 @@ public partial class MainWindow
         Arrangement.ShowTrackLines = s.Timeline.ShowTrackLines;
         Arrangement.ShowBarGlow = s.Timeline.BarGlow;
         Arrangement.PlayheadStyle = s.Timeline.PlayheadStyle;
-        Arrangement.ShowAddTrackLane = s.Timeline.ShowAddTrackLane;
+        Arrangement.ShowAddTrackLane = s.Timeline.ShowAddTrackLane; Arrangement.ApplyMasterLane(s.Timeline, () => { SaveSettings(); ScheduleFitTimelineToTracks(); });
         ArrangementIndividualNotesMenu.IsChecked = Arrangement.ShowIndividualNotes;
         ArrangementContinuousBlocksMenu.IsChecked = Arrangement.ShowContinuousBlocks;
         if (Arrangement.PanKnobs != s.Audio.PanKnobs || Arrangement.VolumeKnobs != s.Audio.VolumeKnobs)

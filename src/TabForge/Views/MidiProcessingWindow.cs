@@ -648,7 +648,7 @@ public sealed class MidiProcessingWindow : Window
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Text.Json.JsonException) { Services.Trace.Error(Services.Trace.Ui, "MIDI processing: read preset: " + ex.Message); }
         }
-        if (list is null) { MessageBox.Show(this, "That preset could not be read.", Title, MessageBoxButton.OK, MessageBoxImage.Warning); return; }
+        if (list is null) { ThemedMessageBox.Show(this, "That preset could not be read.", Title, MessageBoxButton.OK, MessageBoxImage.Warning); return; }
         list = list.Where(p => p is not null && p.Params.Length <= PluginMidiProcessor.MaxParamsChars).Take(MaxProcessors).ToList();
         _edit(() => { Procs.Clear(); Procs.AddRange(list); });
         RefreshList(0);
@@ -662,18 +662,18 @@ public sealed class MidiProcessingWindow : Window
         {
             Directory.CreateDirectory(PresetFolder);
             var file = System.IO.Path.Combine(PresetFolder, SafeName(name) + ".json");
-            if (File.Exists(file) && MessageBox.Show(this, $"Replace the preset \"{name}\"?", Title, MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+            if (File.Exists(file) && ThemedMessageBox.Show(this, $"Replace the preset \"{name}\"?", Title, MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
             var bytes = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(Procs, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
             TabForge.Services.FilePathPolicy.WriteAtomically(file, s => s.Write(bytes));   // a failed write leaves the previous preset intact
             RefreshPresets(file);
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException) { MessageBox.Show(this, ex.Message, Title, MessageBoxButton.OK, MessageBoxImage.Warning); } // Not logged: the message is shown in a dialog
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException) { ThemedMessageBox.Show(this, ex.Message, Title, MessageBoxButton.OK, MessageBoxImage.Warning); } // Not logged: the message is shown in a dialog
     }
 
     private void DeletePreset()
     {
         if (_presets.SelectedItem is not ComboBoxItem { Tag: string file }) return;
-        if (MessageBox.Show(this, $"Delete the preset \"{System.IO.Path.GetFileNameWithoutExtension(file)}\"?", Title, MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+        if (ThemedMessageBox.Show(this, $"Delete the preset \"{System.IO.Path.GetFileNameWithoutExtension(file)}\"?", Title, MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
         try { File.Delete(file); } catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { Services.Trace.Error(Services.Trace.Ui, "MIDI processing: delete preset: " + ex.Message); }
         RefreshPresets(null);
     }

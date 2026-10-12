@@ -32,7 +32,13 @@ public static partial class SelfTest
         public void Post(Action work, DispatcherPriority priority) => Posted.Add(work);
         public void RebuildMidi() { }
         public void RearmChannelSetup() { }
-        public void SetStatus(string text) { }
+        public void SetStatus(string text) => Statuses.Add(text);
+        public List<string> Statuses { get; } = new();
+        public int Toggles, Stops;
+        public bool IsRecording { get; set; }
+        /// <summary>As the window does: pauses a playing song, resumes a paused one.</summary>
+        public void TogglePlayback() { Toggles++; var e = ActiveDocument.Playback.Engine; if (e.IsPaused) e.Resume(); else e.Pause(); }
+        public void StopPlayback() { Stops++; IsRecording = false; ActiveDocument.Playback.Engine.Stop(); }
         public void CheckpointUndo() { }
         public void SaveSettings() { }
         public void UpdateTitle() { }

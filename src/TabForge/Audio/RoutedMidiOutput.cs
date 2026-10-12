@@ -183,7 +183,11 @@ public sealed class RoutedMidiOutput : IMidiOutput
             var idleSince = Stopwatch.GetTimestamp();
             try
             {
-                var spinTicks = Stopwatch.Frequency * 3 / 1000;
+                // The final approach to a due time is a busy spin (sub-millisecond delivery). A high-resolution timer wakes the thread
+                // close enough that the spin is a fraction of a millisecond; without one, the 1 ms tick needs a 3 ms spin.
+                using var wake = HighResolutionTimer.TryCreate();
+                var waits = wake is null ? null : new WaitHandle[] { _signal, wake };
+                var spinTicks = wake is null ? Stopwatch.Frequency * 3 / 1000 : Stopwatch.Frequency * 3 / 10000;
                 while (!_stop)
                 {
                     (long Due, int Device, int Status, int D1, int D2) next;
@@ -205,8 +209,11 @@ public sealed class RoutedMidiOutput : IMidiOutput
                     var wait = next.Due - Stopwatch.GetTimestamp();
                     if (wait > spinTicks)
                     {
-                        // Sleep until ~3 ms before due (a newly pushed earlier message wakes us), then spin.
-                        _signal.WaitOne((int)Math.Max(1, (wait - spinTicks) * 1000 / Stopwatch.Frequency));
+                        // Sleep until just before due (a newly pushed earlier message wakes us), then spin.
+                        var sleepMs = (int)Math.Max(1, (wait - spinTicks) * 1000 / Stopwatch.Frequency);
+                        if (wake is not null && wake.Set((wait - spinTicks) * 10_000_000 / Stopwatch.Frequency)) WaitHandle.WaitAny(waits!, sleepMs + 2);
+                        else if (spinTicks < Stopwatch.Frequency * 3 / 1000) spinTicks = Stopwatch.Frequency * 3 / 1000;   // the timer would not arm: back to the tick wait with its longer spin, decided again on the next turn
+                        else _signal.WaitOne(sleepMs);
                         continue;
                     }
                     var spins = 0;
@@ -234,5 +241,34 @@ public sealed class RoutedMidiOutput : IMidiOutput
             _stop = true;
             _signal.Set();
         }
+    }
+
+    /// <summary>A one-shot wake-up that is not rounded to the system timer tick (null where the system has none).</summary>
+    private sealed class HighResolutionTimer : WaitHandle
+    {
+        private const uint HighResolution = 0x2, AllAccess = 0x1F0003;
+
+        [System.Runtime.InteropServices.DllImport("kernel32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
+        private static extern Microsoft.Win32.SafeHandles.SafeWaitHandle CreateWaitableTimerExW(IntPtr attributes, string? name, uint flags, uint access);
+
+        [System.Runtime.InteropServices.DllImport("kernel32.dll")]
+        private static extern bool SetWaitableTimer(Microsoft.Win32.SafeHandles.SafeWaitHandle timer, in long dueTime, int period, IntPtr routine, IntPtr argument, bool resume);
+
+        private HighResolutionTimer(Microsoft.Win32.SafeHandles.SafeWaitHandle handle) => SafeWaitHandle = handle;
+
+        public static HighResolutionTimer? TryCreate()
+        {
+            try
+            {
+                var handle = CreateWaitableTimerExW(IntPtr.Zero, null, HighResolution, AllAccess);
+                if (!handle.IsInvalid) return new HighResolutionTimer(handle);
+                handle.Dispose();
+            }
+            catch (Exception ex) when (ex is DllNotFoundException or EntryPointNotFoundException) { }
+            return null;
+        }
+
+        /// <summary>Signals once, this many 100 ns units from now; false when the timer could not be armed.</summary>
+        public bool Set(long hundredNs) => SetWaitableTimer(SafeWaitHandle, -Math.Max(1, hundredNs), 0, IntPtr.Zero, IntPtr.Zero, false);
     }
 }

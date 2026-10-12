@@ -8,10 +8,10 @@ namespace TabForge.Models;
 public sealed partial class SongProject
 {
     private int _formatVersion = 2;
-    /// <summary>File schema: 3 exactly while the song has an audio track, otherwise the loaded value (3 reads as 2), so songs without audio write what older releases read.</summary>
+    /// <summary>File schema: 4 exactly while a track uses an input beyond inputs 1 and 2, 3 exactly while the song has an audio track, otherwise the loaded value (3 and 4 read as 2), so a song writes the oldest schema whose readers understand it.</summary>
     public int FormatVersion
     {
-        get => Tracks is { } tracks && tracks.Any(t => t?.IsAudio == true) ? 3 : _formatVersion == 3 ? 2 : _formatVersion;
+        get => Tracks is { } tracks && tracks.Any(t => AudioInputs.WireMode(t?.AudioInput) > 2) ? 4 : Tracks is { } audio && audio.Any(t => t?.IsAudio == true) ? 3 : _formatVersion is 3 or 4 ? 2 : _formatVersion;
         set => _formatVersion = value;
     }
     private string _title = "Untitled";

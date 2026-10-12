@@ -22,7 +22,7 @@ public sealed partial class TabEditorControl
 {
     // ---------- playback (state and geometry live in PlaybackOverlay) ----------
 
-    bool IEditorInputHost.PlaybackActive => _playback.Active;
+    bool IEditorInputHost.PlaybackActive => _playback.Active && !_playback.Paused;
 
     // Kept for the Band lanes (Views/Band), which still call these two.
     public int PlaybackMeasure { get => _playback.Measure; set => _playback.Measure = value; }

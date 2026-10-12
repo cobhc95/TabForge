@@ -54,7 +54,7 @@ public partial class MainWindow : IImportQueueHost
 
     /// <summary>The protected import could not start; opening in this process needs the user's yes for this file (default No).</summary>
     bool IImportQueueHost.ConfirmImportInProcess(ScoreImportJob job, string reason) =>
-        IsLoaded && MessageBox.Show(this,
+        IsLoaded && TabForge.Views.ThemedMessageBox.Show(this,
             $"The protected import process could not start ({reason}).\n\nOpening {job.Name} inside TabForge is less protected against damaged files. Open it anyway?",
             "Open without protection?", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) == MessageBoxResult.Yes;
 

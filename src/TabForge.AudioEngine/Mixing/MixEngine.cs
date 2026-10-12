@@ -91,7 +91,7 @@ public sealed class MixEngine : ISampleProvider
         _song = _owners[0];
         _shared = shared;
         _maxBlock = maxBlock;
-        _inputBlock = new Audio.InputBlock(maxBlock);
+        _inputBlock = new Audio.InputBlock(maxBlock, Audio.InputCapture.MaxChannels);
         _left = new float[maxBlock];
         _right = new float[maxBlock];
         _masterInL = new float[maxBlock];
@@ -323,6 +323,9 @@ public sealed class MixEngine : ISampleProvider
     /// <summary>Audio callback timing (duration vs deadline, regularity, allocations); summarised in the engine log.</summary>
     public readonly CallbackMetrics Metrics = new();
 
+    /// <summary>The pop guard of the device output; null (no work) while it is switched off.</summary>
+    public OutputFade? Fade;
+
     public int Read(float[] buffer, int offset, int count)
     {
         Epoch.Enter();   // before the chains are read
@@ -397,8 +400,7 @@ public sealed class MixEngine : ISampleProvider
             Audio.InputBlock? inputBlock = null;
             if (Input is { } input)
             {
-                input.Read(_inputBlock.L, _inputBlock.R, n);
-                _inputBlock.Frames = n;
+                input.Read(_inputBlock, n);
                 inputBlock = _inputBlock;
             }
             RenderGraphBlock(chains, Volatile.Read(ref _graph), n, inputBlock);
@@ -424,6 +426,7 @@ public sealed class MixEngine : ISampleProvider
             Tap?.Write(buffer, offset + 2 * done, n);
             done += n;
         }
+        Fade?.Apply(buffer, offset, frames);   // last gain before the device (after the recording tap)
         Volatile.Write(ref _heartbeat, Stopwatch.GetTimestamp());
         var ended = Stopwatch.GetTimestamp();
         var elapsed = ended - started;

@@ -30,7 +30,7 @@ public partial class MainWindow
     internal System.Windows.Controls.ContextMenu TrackRowMenu(int index)
     {
         var track = _project.Tracks[index];
-        var state = new TrackRowMenuState(track.IsAudio, TrackFlow.CanPaste, _project.Tracks.Count > 1, track.ColorHex);
+        var state = new TrackRowMenuState(track.IsAudio, TrackFlow.CanPaste, _project.Tracks.Count > 1, track.ColorHex, Arrangement.ShowMasterLane);
         return SpecMenus.New("Track options", TrackRowMenus.Build(state, MenuKey), spec => RunTrackRowCommand(spec, index), Arrangement);
     }
 
@@ -48,7 +48,7 @@ public partial class MainWindow
             case TrackRowMenus.Colour when spec.Arg is { } hex: Arrangement.ApplyTrackColour(index, hex); break;
             case TrackRowMenus.Properties: TrackMixerGrid.SelectedIndex = index; TrackProps_Click(this, new RoutedEventArgs()); break;
             case TrackRowMenus.Convert: ConvertAudioTrack(index); break;
-            case { } id: TrackFlow.RunHotkey(id, index); break;
+            case { } id: if (id == TrackRowMenus.AddTrack) Commands.TryRun(id); else if (!Arrangement.RunViewCommand(spec)) TrackFlow.RunHotkey(id, index); break;
         }
     }
 

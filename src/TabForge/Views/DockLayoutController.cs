@@ -62,17 +62,17 @@ internal sealed class DockLayoutController
         {
             // Score + tab editor large; fretboard/keyboard and tools beside it; arrangement small.
             "Compose" => DockWorkspace.Split("Vertical", 0.86,
-                DockWorkspace.Split("Horizontal", 0.78, DockWorkspace.Split("Vertical", 0.68, score, instrument), Tools()),
+                DockWorkspace.Split("Horizontal", 0.78, DockWorkspace.Split("Vertical", 0.68, score, instrument), DockLayoutTree.WithViewTempo(Tools(), ratio: 0.84)),
                 timeline),
             // Score/tab + fretboard large; sections panel visible; arrangement and mixer window closed.
             "Practice" => DockWorkspace.Split("Horizontal", 0.78,
                 DockWorkspace.Split("Vertical", 0.60, score, instrument),
-                Side("sections", "sections")),
+                DockLayoutTree.WithViewTempo(Side("sections", "sections", "lyrics"), ratio: 0.8)),
             // Band view and arrangement only: no score, no fretboard pane, no side panel.
             "Band" => DockWorkspace.Split("Vertical", 0.80, DockWorkspace.Tabs("default-band", "band"), timeline),
             // Arrangement + mixer large; score small.
             _ => DockWorkspace.Split("Vertical", 0.30, score,
-                DockWorkspace.Split("Horizontal", 0.74, timeline, Side("sections", "sections")))
+                DockWorkspace.Split("Horizontal", 0.74, timeline, DockLayoutTree.WithViewTempo(Side("sections", "sections", "lyrics"), ratio: 0.8)))
         };
         var state = new DockWorkspaceState { Root = root };
         var present = DockWorkspace.PanelsOf(state).ToHashSet(StringComparer.Ordinal);
@@ -191,7 +191,7 @@ internal sealed class DockLayoutController
     {
         if (_layoutBeforeBand is not { } before) { SwitchLayout("Compose"); return; }
         Settings.LastLayout = before.Name;
-        dock.ApplyLayout(before.State);
+        dock.ApplyLayout(DockLayoutTree.WithInstrumentSide(before.State, Settings.Appearance.FretboardAtBottom));
         _host.SaveSettings();
         _host.SetStatus(before.Name is { } name ? $"Layout: {name}" : "Band view closed");
     }
@@ -210,7 +210,7 @@ internal sealed class DockLayoutController
             saved = null;
         }
         Settings.LastLayout = saved?.Name ?? BuiltInLayoutNames.FirstOrDefault(n => string.Equals(n, name, StringComparison.OrdinalIgnoreCase)) ?? name;
-        dock.ApplyLayout(state);
+        dock.ApplyLayout(DockLayoutTree.WithInstrumentSide(state, Settings.Appearance.FretboardAtBottom));   // the fretboard side is the setting's, whatever the layout holds
         if (saved is not null && saved.WindowWidth > 0)
         {
             var w = _host.Window;

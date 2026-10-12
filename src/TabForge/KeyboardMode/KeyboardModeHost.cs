@@ -16,9 +16,13 @@ internal sealed class KeyboardModeHost : IKeyboardModeHost, IKeyboardModeWaitHos
     private readonly Func<DocumentSession> _document;
 
     private readonly Action? _togglePlayback;
+    private readonly Action<int>? _selectTrack;
 
     /// <param name="togglePlayback">The window's Play / Pause handler: wait mode pauses and resumes through it, so the follow, clock and play icon stay as for a hand-made pause.</param>
-    public KeyboardModeHost(IPaneHost pane, Func<DocumentSession> document, AudioEngineClient engine, Action? togglePlayback = null) { _pane = pane; _document = document; Engine = engine; _togglePlayback = togglePlayback; }
+    /// <param name="selectTrack">The window's track selection by index (its track list's selected index).</param>
+    public KeyboardModeHost(IPaneHost pane, Func<DocumentSession> document, AudioEngineClient engine, Action? togglePlayback = null, Action<int>? selectTrack = null) { _pane = pane; _document = document; Engine = engine; _togglePlayback = togglePlayback; _selectTrack = selectTrack; }
+
+    public void SelectTrack(int index) => _selectTrack?.Invoke(index);
 
     public bool IsPlaying => ActiveDocument.Playback.Engine is { IsPlaying: true, IsPaused: false };
     public void Pause() { if (IsPlaying) _togglePlayback?.Invoke(); }

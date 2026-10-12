@@ -89,7 +89,7 @@ public partial class MainWindow : ITrackListFitHost, ITrackGridDragHost
             SaveSettings();
         };
 
-        var master = Arrangement.MasterVolumeKnob;
+        var master = Arrangement.MasterVolumeKnob; Arrangement.MasterMix = MixerHost;
         master.Value = _settings.Audio.MasterVolume;
         master.ValueChanged += (_, e) =>
         {
@@ -262,7 +262,7 @@ public partial class MainWindow : ITrackListFitHost, ITrackGridDragHost
         // The toolbar shows the signatures in force at the bar you are looking at (a change carries forward to the bars after it).
         var shownKey = bar?.KeySignature ?? _project.KeySignature;
         TimeSigLabel.Text = $"{num}/{den}";
-        KeyLabelText.Text = KeyLabel(shownKey);
+        KeyLabelText.Text = Services.KeyNames.Short(shownKey, bar?.KeySignatureMinor ?? _project.KeySignatureMinor);
         Views.MasterInfoLabel.Update(MasterInfoText, MusicTime.TempoAt(_project, shownBar), KeyLabel(shownKey), MusicTime.DurationName(Editor.CurrentDurationDenominator), Editor.CurrentDots, Editor.CurrentTriplet);
     }
 

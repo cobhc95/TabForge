@@ -11,7 +11,10 @@ internal static class DockPaneSetup
     /// <summary>Registers each table row in registration order; <paramref name="content"/> returns the element of a pane id.</summary>
     public static void RegisterAll(DockWorkspace dock, Func<string, FrameworkElement> content)
     {
+        // The lyrics editor is found by name beside the Sections content while that is still in the window's tree.
+        var lyrics = content("sections").FindName("LyricsBox") as FrameworkElement;
         foreach (var row in DockPaneTable.InRegistrationOrder)
-            dock.RegisterPanel(row.Id, row.PaneTitle, content(row.Id), row.MinWidth, row.MinHeight, row.DefaultHost, row.DefaultAnchor, row.StartsClosed);
+            dock.RegisterPanel(row.Id, row.PaneTitle, row.Id == "lyrics" && lyrics is not null ? lyrics : content(row.Id),
+                row.MinWidth, row.MinHeight, row.DefaultHost, row.DefaultAnchor, row.StartsClosed);
     }
 }

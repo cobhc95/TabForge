@@ -56,6 +56,8 @@ internal sealed class SettingEditors
                 return RowButton(descriptor, "Group rules…", _host.Actions?.EditGroupRules is not null, () => _host.Actions?.EditGroupRules?.Invoke(_window));
             case "vst.quarantine":
                 return BuildQuarantineButton(descriptor);
+            case "vst.inputsshown":
+                return RowButton(descriptor, "Inputs shown…", true, () => InputsShownDialog.Edit(_window, _host.Settings.Plugins, _host.Baseline.Plugins));
             default:
                 return BuildLinkedAudioButton(descriptor);
         }

@@ -64,6 +64,15 @@ internal static class DockLayoutTree
             state.Root = RemovePanel(state.Root, id);
             foreach (var f in state.Floating) f.Root = RemovePanel(f.Root, id);
         }
+        // A fixed pane (the Band view) lives only in its own layout: one that holds it beside the score, in a shared tab host or in a floating
+        // window has it closed, and the Band view command opens it in its standard place.
+        foreach (var id in EnumerateAllPanels(state).Where(DockHostView.IsFixedPanel).Distinct().ToList())
+        {
+            if (FindPanelHost(state.Root, id) is { Panels.Count: 1 } && FindNode(state.Root, "score-editor") is null) continue;
+            state.Root = RemovePanel(state.Root, id);
+            foreach (var f in state.Floating) f.Root = RemovePanel(f.Root, id);
+            if (!state.ClosedPanels.Contains(id)) state.ClosedPanels.Add(id);
+        }
         state.Floating.RemoveAll(f => f.Root is null);
     }
 
@@ -195,14 +204,39 @@ internal static class DockLayoutTree
     {
         var toolHost = Tabs("default-tool-palette", "tools", "structure", "rhythm", "layout");
         toolHost.SelectedPanel = "tools";
-        var sideHost = Tabs("default-sections-practice", "sections");
+        var sideHost = Tabs("default-sections-practice", "sections", "lyrics");
         sideHost.SelectedPanel = "sections";
-        var right = Split("Vertical", 0.44, toolHost, sideHost);
+        var right = Split("Vertical", 0.44, toolHost, WithViewTempo(sideHost));
         var instrumentAndScore = Split("Vertical", 0.26, Tabs("default-instrument", "instrument"), EditorNode());
         var upper = Split("Horizontal", 0.79, instrumentAndScore, right);
         var root = Split("Vertical", 0.74, upper, Tabs("default-timeline", "timeline"));
         root.Second!.SelectedPanel = "timeline";
         var state = new DockWorkspaceState { Root = root };
+        return state;
+    }
+
+    /// <summary>A column with <paramref name="above"/> over the View and tempo pane (or <paramref name="id"/>), which takes the part below <paramref name="ratio"/>.</summary>
+    internal static DockNodeState WithViewTempo(DockNodeState above, string id = DockPaneTable.ViewTempoId, double ratio = 0.84)
+        => Split("Vertical", ratio, above, Tabs("default-below-" + id, id));
+
+    /// <summary>A copy of <paramref name="layout"/> with the fretboard pane on the chosen side of the score when the layout stacks it on the
+    /// other one. A fretboard beside the score, in a floating window, closed, or in a layout without the score stays as it is.</summary>
+    internal static DockWorkspaceState WithInstrumentSide(DockWorkspaceState layout, bool bottom)
+    {
+        static bool Has(DockNodeState? n, Func<DockNodeState, bool> f) => n is not null && (f(n) || Has(n.First, f) || Has(n.Second, f));
+        static bool Instrument(DockNodeState n) => n.Kind == "tabs" && n.Panels.Contains("instrument");
+        static bool Editor(DockNodeState n) => n.Kind == "editor";
+        var state = Clone(layout);
+        // Walk down to the split that separates the two; only a vertical one says above or below.
+        for (var node = state.Root; node is { Kind: "split" } && Has(node, Instrument) && Has(node, Editor);)
+        {
+            var instrumentFirst = Has(node.First, Instrument);
+            if (instrumentFirst == Has(node.First, Editor)) { node = instrumentFirst ? node.First : node.Second; continue; }
+            if (node.Orientation != "Vertical" || instrumentFirst != bottom) break;
+            state.Root = RemovePanel(state.Root, "instrument");
+            PlaceAtDefault(state, "instrument", bottom ? "instrument-bottom" : "instrument", "score-editor");
+            break;
+        }
         return state;
     }
 
@@ -215,6 +249,20 @@ internal static class DockLayoutTree
         if (defaultHost == "tools" || defaultHost == "side")
         {
             if (host is not null) AddToTabs(host, id);
+            else InsertAtRightOfEditor(state, id);
+        }
+        else if (defaultHost == "tab")
+        {
+            // A tab after its anchor that leaves the selected tab alone; a layout without the anchor gets it beside the editor.
+            var selected = host?.SelectedPanel;
+            if (host is null) InsertAtRightOfEditor(state, id);
+            else { AddToTabs(host, id, host.Panels.IndexOf(defaultAnchor) + 1); host.SelectedPanel = selected; }
+        }
+        else if (defaultHost == "below")
+        {
+            // Below its anchor's pane in the main window; a layout without that pane gets it beside the editor.
+            var above = FindPanelHost(state.Root, defaultAnchor);
+            if (above is not null) ReplaceNode(state, above.HostId, WithViewTempo(CloneNode(above)!, id));
             else InsertAtRightOfEditor(state, id);
         }
         else if (defaultHost == "instrument") InsertAroundEditor(state, id, DockDropZone.Top);

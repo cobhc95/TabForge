@@ -67,13 +67,13 @@ public partial class MainWindow : IScoreZoomHost, IBandCommandHost
         DockPaneSetup.RegisterAll(_dockWorkspace, id => id switch
         {
             "instrument" => InstrumentHost, "timeline" => ArrangementHost, "band" => Band.View, "learn" => KeyboardModePane, "tools" => ToolsPanelContent,
-            "sections" => SectionsPanelContent, _ => ToolPalette.PanelContents[id]
+            "sections" => SectionsPanelContent, _ => ToolPalette.PanelContents.GetValueOrDefault(id, ViewTempoPanelContent)
         });
         WorkspaceLayouts.ApplyInstrumentMinHeight();
         Instrument.RequiredHeightChanged += _ => WorkspaceLayouts.ApplyInstrumentMinHeight();
         Instrument.MaximumHeightChanged += _ => WorkspaceLayouts.ApplyInstrumentMaxHeight();
-        // The score zoom and playback speed live in the top toolbar; a narrow window sheds them in steps there.
-        new ToolbarZoomSpeedFit(MainToolbar, MainMenu, PinnedToolStrip, ToolbarTempoGroup, ZoomSpeedGroup).Update(MainToolbar.ActualWidth);
+        // A narrow window tightens the menu bar, then sheds the Keyboard mode button.
+        new ToolbarZoomSpeedFit(MainToolbar, MainMenu, PinnedToolStrip, ToolbarTempoGroup).Update(MainToolbar.ActualWidth);
 
         DockLayout.Children.Clear();
         DockLayout.RowDefinitions.Clear();
@@ -113,7 +113,7 @@ public partial class MainWindow : IScoreZoomHost, IBandCommandHost
     private BandViewController? _band;
     internal BandViewController Band => _band ??= new BandViewController(new BandHost(this, _documents, _options,
         () => (InstrumentPane.LeftHanded, InstrumentPane.ShowNoteNames, InstrumentPane.ScaleHighlight, InstrumentPane.PreviewHorizon),
-        MoveTrackTo, i => TrackMixerGrid.SelectedIndex = i, () => ScoreZoom, OpenSettings));
+        MoveTrackTo, i => TrackMixerGrid.SelectedIndex = i, () => ScoreZoom, OpenSettings, () => WorkspaceLayouts.ToggleBandView()));
     private void ToggleBandView_Click(object sender, RoutedEventArgs e) => WorkspaceLayouts.ToggleBandView();
 
     /// <summary>Runs one Band.* command for the feature module (Services/Band); the same handler as the RunHotkey switch.</summary>
@@ -430,7 +430,7 @@ public partial class MainWindow : IScoreZoomHost, IBandCommandHost
 
     private void Shortcuts_Click(object sender, RoutedEventArgs e)
     {
-        MessageBox.Show(this,
+        ThemedMessageBox.Show(this,
             ShortcutHelp.Build(_settings.Hotkeys),
             "Keyboard shortcuts", MessageBoxButton.OK, MessageBoxImage.Information);
     }

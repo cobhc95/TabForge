@@ -39,13 +39,13 @@ public sealed partial class ArrangementPanel
 
     /// <summary>Does a group header sit above this track (the first track of a run of one group)?</summary>
     public static bool StartsGroup(SongProject project, int index) =>
-        ShowsGroups(project) && index >= 0 && index < project.Tracks.Count &&
+        ShowsGroups(project) && !MasterLane.IsCompact(project) && index >= 0 && index < project.Tracks.Count &&
         (index == 0 || MixerGroups.GroupOf(project, project.Tracks[index]) != MixerGroups.GroupOf(project, project.Tracks[index - 1]));
 
-    /// <summary>Tracks of a collapsed group take no space (their group header stays).</summary>
+    /// <summary>Tracks of a collapsed group take no space (their group header stays); in compact mode no track does.</summary>
     public static bool IsCollapsed(SongProject? project, int index) =>
-        project is not null && ShowsGroups(project) && index >= 0 && index < project.Tracks.Count &&
-        project.Mixer.CollapsedGroups.Contains(MixerGroups.GroupOf(project, project.Tracks[index]));
+        project is not null && index >= 0 && index < project.Tracks.Count && (MasterLane.IsCompact(project) ||
+        ShowsGroups(project) && project.Mixer.CollapsedGroups.Contains(MixerGroups.GroupOf(project, project.Tracks[index])));
 
     public static double RowHeight(SongProject? project, int index) =>
         project is null || index < 0 || index >= project.Tracks.Count || IsCollapsed(project, index) ? 0 : RowHeightOf(project, project.Tracks[index]);
@@ -67,7 +67,7 @@ public sealed partial class ArrangementPanel
     public static double RowTopOf(SongProject? project, int index)
     {
         if (project is null) return index * DefaultTrackRowHeight;
-        double y = 0;
+        double y = MasterLane.OffsetOf(project);
         var groups = ShowsGroups(project);
         for (var i = 0; i <= index && i < project.Tracks.Count; i++)
         {
@@ -80,8 +80,8 @@ public sealed partial class ArrangementPanel
     /// <summary>The track whose row contains <paramref name="y"/> (a group header counts as its first track), or -1.</summary>
     public static int RowIndexAt(SongProject? project, double y)
     {
-        if (project is null || project.Tracks.Count == 0 || y < 0) return -1;
-        double top = 0;
+        if (project is null || project.Tracks.Count == 0 || y < MasterLane.OffsetOf(project)) return -1;
+        double top = MasterLane.OffsetOf(project);
         var groups = ShowsGroups(project);
         for (var i = 0; i < project.Tracks.Count; i++)
         {

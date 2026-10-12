@@ -125,6 +125,6 @@ public partial class MainWindow
         Run("View.Fullscreen", () => WorkspaceLayouts.ToggleFullscreen());
         Run("View.ZoomIn", () => ScoreZoom.ZoomBy(1));
         Run("View.ZoomOut", () => ScoreZoom.ZoomBy(-1));
-        return table;
+        return MenuRowCommands.AddTo(table, this, MainMenuGroups(), FeatureRegistry.MenuRows.Select(f => f.Id));
     }
 }

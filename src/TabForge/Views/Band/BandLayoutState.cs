@@ -4,8 +4,9 @@ using TabForge.Services;
 namespace TabForge.Views.Band;
 
 // Owns: which tracks the Band view shows, in what order, how many rows fit the screen and each row's own height; the drop maths of a row drag.
-// Also: keeps the layout in the song (SongProject.BandLayout) on every change and reads it back when a song comes on show; with the sync
-//   setting on, the Band order follows the song's track order.
+// Also: the layout is the program's, not the song's: instruments, row heights and widths start from the Band settings and what the user
+//   changes goes back there as a rule for every tab. The song keeps only which of its tracks show and their order
+//   (SongProject.BandLayout.Shown / Order); with the sync setting on, the Band order follows the song's track order.
 // Does not own: the rows themselves (BandView, BandViewController) or the song's track order (the host moves tracks).
 // Tests: TestBandPillsAndRows, TestBandRowSizing, TestBandReorder, TestBandStoppedInstruments, TestBandLayoutSaved.
 internal sealed class BandLayoutState
@@ -27,6 +28,14 @@ internal sealed class BandLayoutState
     private SongProject? _project;
     private int _defaultRows;
     private bool _ownRows;
+    private int _systems, _main, _resets;
+
+    /// <summary>The systems the main (first) row's lane holds: 0 = automatic (one more than the others when that fits).</summary>
+    public int MainSystems => _main;
+
+    /// <summary>The systems each row's lane holds by default: 0 = as many as fit (at least one), a number = that many (cut to what fits),
+    /// -1 = the rows share the viewport by "rows per screen" (the song or the user chose that).</summary>
+    public int AutoSystems => _ownRows || _systems < 0 ? -1 : _systems;
 
     /// <summary>Bumped whenever the shown set or the order changes, so callers can skip re-checking them.</summary>
     public int Version { get; private set; }
@@ -56,6 +65,7 @@ internal sealed class BandLayoutState
             _defaultRows = rowsDefault;
             RowsPerScreen = rowsDefault;
             _ownRows = false;
+            _systems = settings.SystemsPerRow; _main = settings.MainSystemsPerRow; _resets = settings.Resets;
             Version++;
             if (project.BandLayout is { } saved) Load(project, saved, sync);
             else
@@ -63,8 +73,11 @@ internal sealed class BandLayoutState
                 _order.AddRange(project.Tracks);
                 foreach (var track in project.Tracks.Take(DefaultShown)) _shown.Add(track);
             }
+            ApplyFretboardRule(settings.Fretboards);
             return;
         }
+        // Reset view in any tab or window puts every Band view back to the defaults.
+        if (settings.Resets != _resets) ApplyDefaults(settings);
         // A song with no rows per screen of its own follows the setting when it changes.
         if (rowsDefault != _defaultRows)
         {
@@ -87,7 +100,8 @@ internal sealed class BandLayoutState
         if (sync) { _order.Clear(); _order.AddRange(project.Tracks); }
     }
 
-    /// <summary>Reads a saved layout: ids of tracks that are gone are ignored, tracks the layout does not know join hidden at the end.</summary>
+    /// <summary>Reads which tracks the song shows and in what order (all it keeps of the Band view): ids of tracks that are gone are ignored,
+    /// tracks it does not know join hidden at the end. Heights, widths and instruments an older file stored are not read.</summary>
     private void Load(SongProject project, BandLayoutData saved, bool sync)
     {
         var byId = new Dictionary<Guid, TrackModel>();
@@ -96,27 +110,15 @@ internal sealed class BandLayoutState
             foreach (var id in saved.Order ?? new()) if (byId.TryGetValue(id, out var t) && !_order.Contains(t)) _order.Add(t);
         foreach (var track in project.Tracks) if (!_order.Contains(track)) _order.Add(track);
         foreach (var id in saved.Shown ?? new()) if (byId.TryGetValue(id, out var t)) _shown.Add(t);
-        foreach (var (id, height) in saved.Heights ?? new())
-            if (byId.TryGetValue(id, out var t) && double.IsFinite(height)) _heights[t] = Math.Clamp(height, MinRowHeight, MaxSavedHeight);
-        foreach (var id in saved.HiddenInstruments ?? new()) if (byId.TryGetValue(id, out var t)) _hiddenInstruments.Add(t);
-        foreach (var (id, width) in saved.InstrumentWidths ?? new())
-            if (byId.TryGetValue(id, out var t) && double.IsFinite(width)) _widths[t] = BandChoices.ClampWidth(width);
-        if (saved.RowsPerScreen <= 0) return;
-        _ownRows = true;
-        RowsPerScreen = Math.Clamp(saved.RowsPerScreen, MinRowsPerScreen, MaxRowsPerScreen);
     }
 
-    /// <summary>Writes the layout into the song so a save keeps it.</summary>
+    /// <summary>Writes which tracks show and their order into the song; whatever else an older file stored there is left as it is.</summary>
     private void Save()
     {
         if (_project is null) return;
         var data = _project.BandLayout ??= new BandLayoutData();
         data.Order = _order.Select(t => t.Id).ToList();
         data.Shown = _order.Where(_shown.Contains).Select(t => t.Id).ToList();
-        data.Heights = _heights.ToDictionary(h => h.Key.Id, h => h.Value);
-        data.HiddenInstruments = _order.Where(_hiddenInstruments.Contains).Select(t => t.Id).ToList();
-        data.InstrumentWidths = _widths.ToDictionary(w => w.Key.Id, w => w.Value);
-        data.RowsPerScreen = _ownRows ? RowsPerScreen : 0;
     }
 
     /// <summary>Shows or hides a track's row; there is no limit on how many are shown.</summary>
@@ -132,6 +134,8 @@ internal sealed class BandLayoutState
     {
         RowsPerScreen = Math.Clamp(RowsPerScreen + delta, MinRowsPerScreen, MaxRowsPerScreen);
         _ownRows = true;
+        var settings = _settings();
+        settings.SystemsPerRow = -1; settings.RowsPerScreen = _defaultRows = RowsPerScreen;   // songs with no layout of their own start this way too
         _heights.Clear();   // custom heights would hide the new rows: every row refits to the viewport share
         Save();
     }
@@ -148,14 +152,25 @@ internal sealed class BandLayoutState
         return clamped;
     }
 
-    /// <summary>Back to the view's defaults: row heights, instrument widths, hidden instruments and rows per screen. Which tracks show, and their order, stay.</summary>
+    /// <summary>Back to the view's defaults: row heights (whole systems that fit), instrument widths, the first row's instrument only and rows per screen. Which tracks show, and their order, stay.</summary>
     public void ResetView()
     {
-        _heights.Clear(); _widths.Clear(); _hiddenInstruments.Clear();
+        var settings = _settings();
+        settings.Fretboards = BandChoices.FretboardsFirst; settings.SystemsPerRow = settings.MainSystemsPerRow = 0; settings.RowsPerScreen = DefaultRowsPerScreen;
+        settings.Resets++;
+        ApplyDefaults(settings);
+    }
+
+    /// <summary>Takes the row heights, widths, instruments and rows per screen from the settings again, dropping what this view changed.</summary>
+    private void ApplyDefaults(BandSettings settings)
+    {
+        _resets = settings.Resets;
+        _heights.Clear(); _widths.Clear();
+        _systems = settings.SystemsPerRow; _main = settings.MainSystemsPerRow;
+        _defaultRows = RowsPerScreen = Math.Clamp(settings.RowsPerScreen, MinRowsPerScreen, MaxRowsPerScreen);
         _ownRows = false;
-        RowsPerScreen = Math.Clamp(_defaultRows, MinRowsPerScreen, MaxRowsPerScreen);
+        ApplyFretboardRule(settings.Fretboards);
         Version++;
-        Save();
     }
 
     public void ResetHeights()
@@ -177,8 +192,38 @@ internal sealed class BandLayoutState
     {
         if (!_order.Contains(track)) return;
         if (!_hiddenInstruments.Remove(track)) _hiddenInstruments.Add(track);
+        RememberFretboardRule();
         Version++;
         Save();
+    }
+
+    /// <summary>A song comes on show with the instruments the rule names: the first shown row's only, all, or none.</summary>
+    private void ApplyFretboardRule(string? rule)
+    {
+        _hiddenInstruments.Clear();
+        if (rule == BandChoices.FretboardsAll) return;
+        var first = rule == BandChoices.FretboardsNone ? null : ShownTracks().FirstOrDefault();
+        foreach (var track in _order) if (!ReferenceEquals(track, first)) _hiddenInstruments.Add(track);
+    }
+
+    /// <summary>What the user last made of the shown rows becomes the rule for the next tabs: every instrument on, every one off,
+    /// or the first row's only; any other mix stays in this view only and keeps the rule.</summary>
+    private void RememberFretboardRule()
+    {
+        var shown = ShownTracks();
+        if (shown.Count == 0) return;
+        var hidden = shown.Count(_hiddenInstruments.Contains);
+        var settings = _settings();
+        if (hidden == shown.Count) settings.Fretboards = BandChoices.FretboardsNone;
+        else if (shown.Count == 1) { if (settings.Fretboards == BandChoices.FretboardsNone) settings.Fretboards = BandChoices.FretboardsFirst; }
+        else if (hidden == 0) settings.Fretboards = BandChoices.FretboardsAll;
+        else if (hidden == shown.Count - 1 && !_hiddenInstruments.Contains(shown[0])) settings.Fretboards = BandChoices.FretboardsFirst;
+    }
+
+    /// <summary>A row was dragged to hold <paramref name="systems"/> systems: the next tabs start with that many in the main row, or in every other row.</summary>
+    public void RememberSystems(bool main, int systems)
+    {
+        if (main) _settings().MainSystemsPerRow = Math.Max(1, systems); else _settings().SystemsPerRow = Math.Max(1, systems);
     }
 
     public double? WidthOf(TrackModel track) => _widths.TryGetValue(track, out var w) ? w : null;

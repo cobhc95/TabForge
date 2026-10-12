@@ -17,6 +17,8 @@ internal interface IKeyboardModeHost : IPaneHost
     DocumentSession ActiveDocument { get; }
     /// <summary>The shared audio engine client: its MIDI input hub and output latency (for keyboard play-along).</summary>
     AudioEngineClient Engine { get; }
+    /// <summary>Selects the track at the index in the window's track list (the same as a click on its row).</summary>
+    void SelectTrack(int index);
 }
 
 // Owns: the pane's per-frame step (only while it is on screen): the playing position and loop read from the document's playback state, the keyboard note source of the selected track
@@ -135,6 +137,23 @@ internal sealed class KeyboardModeFrameController : IDisposable, IKeyboardModeWa
 
     /// <summary>The practice track (silent in playback, sounding the player's keys); null until a run listens.</summary>
     internal KeyboardModePracticeTrack? Practice => _practice;
+
+    /// <summary>The song's track count, and the name of the track at an index (the Track selector's list).</summary>
+    internal int TrackCount => _host.Project.Tracks.Count;
+    internal string TrackName(int index) => _host.Project.Tracks[index].Name ?? "";
+    /// <summary>The index of the window's selected track (-1 when none); the Track selector shows it.</summary>
+    internal int SelectedTrackIndex => _host.SelectedTrack is { } track ? _host.Project.Tracks.IndexOf(track) : -1;
+    /// <summary>A cheap signature of the track names and count: the selector rebuilds its list only when it changes.</summary>
+    internal int TracksSignature
+    {
+        get
+        {
+            var hash = new HashCode();
+            foreach (var track in _host.Project.Tracks) hash.Add(track.Name);
+            return hash.ToHashCode();
+        }
+    }
+    internal void SelectTrack(int index) => _host.SelectTrack(index);
 
     private void OnVisibleChanged(object? sender, DependencyPropertyChangedEventArgs e)
     {

@@ -30,7 +30,7 @@ public static partial class SelfTest
             band.ChangeRowsPerScreen(1);
             band.View.Rows[1].RequestHeight(210);
             expected = BandLayoutText(band);
-            Check("band saved: the layout is held by the song", project.BandLayout is { RowsPerScreen: 4 } && project.BandLayout.Heights.Count == 1, expected);
+            Check("band saved: the song holds only which tracks show and their order; heights and rows per screen are the program's", project.BandLayout is { RowsPerScreen: 0, Shown.Count: 3 } && project.BandLayout.Heights.Count == 0, expected);
         }
         var folder = Path.Combine(Path.GetTempPath(), "tf-band-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(folder);
@@ -55,8 +55,8 @@ public static partial class SelfTest
                 BandStage(band, 900, 800);
                 band.Tick();
                 BandStage(band, 900, 800);
-                Eq($"band saved: pills, order, heights and rows per screen come back from {name}", expected, BandLayoutText(band));
-                Check($"band saved: the rows come back from {name}", band.View.Rows.Select(r => r.Track.Name).SequenceEqual(new[] { "Extra 4", "Bass", "Drums" }) && Math.Abs(band.View.Rows.First(r => r.Track.Name == "Drums").Height - 210) < 1);
+                Eq($"band saved: pills and order come back from {name}; heights and rows per screen do not", System.Text.RegularExpressions.Regex.Replace(expected.Split('|')[0], ":[0-9]+", "") + "|3", BandLayoutText(band));
+                Check($"band saved: the rows come back from {name}", band.View.Rows.Select(r => r.Track.Name).SequenceEqual(new[] { "Extra 4", "Bass", "Drums" }) && band.View.Rows.All(r => band.State.HeightOf(r.Track) is null));
             }
             // A song saved before the layout existed opens with the first three rows.
             var old = new SongProject { Tracks = project.Tracks };
@@ -73,8 +73,8 @@ public static partial class SelfTest
             };
             using var odd = new BandViewController(new FakeBandHost(wild));
             odd.Tick();
-            Check("band saved: unknown ids are ignored and values clamped", odd.State.Order.Count == 2 && odd.State.Order[0] == wild.Tracks[1] && odd.State.ShownTracks().Count == 1
-                && odd.State.HeightOf(wild.Tracks[0]) is null && odd.State.HeightOf(wild.Tracks[1]) <= 4000 && odd.State.RowsPerScreen == BandLayoutState.MaxRowsPerScreen);
+            Check("band saved: unknown ids are ignored, and stored heights and rows per screen are not read", odd.State.Order.Count == 2 && odd.State.Order[0] == wild.Tracks[1] && odd.State.ShownTracks().Count == 1
+                && odd.State.HeightOf(wild.Tracks[0]) is null && odd.State.HeightOf(wild.Tracks[1]) is null && odd.State.RowsPerScreen == BandLayoutState.DefaultRowsPerScreen);
         }
         finally { try { Directory.Delete(folder, true); } catch (IOException) { } }
     }
@@ -124,7 +124,9 @@ public static partial class SelfTest
         using var after = new BandViewController(new FakeBandHost(restored));
         BandStage(after, 900, 800);
         after.Tick();
-        Check("band safety: the restored song shows the layout from before the undo", BandLayoutText(after) == edited && edited != layout, edited);
+        // The song keeps which tracks are shown; heights and rows per screen are the program's preferences, so they are left out here.
+        static string ShownOnly(string text) => System.Text.RegularExpressions.Regex.Replace(text, @":\d+(\.\d+)?|\|\d+$", "");
+        Check("band safety: the restored song shows the tracks from before the undo", ShownOnly(BandLayoutText(after)) == ShownOnly(edited) && edited != layout, BandLayoutText(after) + " / " + edited);
 
         // Load: a corrupted block opens with the default layout; oversized lists are cut.
         var folder = Path.Combine(Path.GetTempPath(), "tf-bandsafe-" + Guid.NewGuid().ToString("N"));

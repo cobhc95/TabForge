@@ -1,4 +1,4 @@
-# TabForge 0.7.2
+# TabForge 0.7.5
 
 **A keyboard-driven tablature and notation editor for Windows. Opens GP files (.gp3, .gp4, .gp5, .gpx, .gp) and saves .gp and its own .tforge projects.** Write, import and play back guitar, bass, drum and keyboard parts, with a live fretboard / keyboard, an arrangement timeline, audio and MIDI recording, a mixer, VST plug-ins and offline audio and video rendering.
 
@@ -18,18 +18,16 @@
 | *Moving a section to a new position.* | *Adjusting levels in the mixer.* |
 
 
-### New in 0.7.2
+### New in 0.7.5
 
-[<img src="docs/screenshots/keyboard-mode.png" alt="Keyboard mode with falling notes" width="860">](docs/screenshots/keyboard-mode.png)
+- **Live input:** a microphone button in the track list toolbar plays an audio input, a MIDI keyboard or both through an app-wide FX chain, without a track and without recording.
+- **All audio inputs:** every input of a multi-input audio device can be used for recording and live input.
+- **Pop protection:** changing the audio device or its settings fades the sound out and back in, so speakers do not pop.
+- **Compact mode:** hides the track rows and the menu row so the score gets the room; a strip of track capsules switches track.
+- **Band view defaults:** the fretboard sits above the tab, and each row shows its music in one or two lines; the fretboard beside the tab is one button away for wide screens.
+- **Master track lane:** an overview lane above the tracks, one thin line per track, filled where that track plays.
 
-- **Tidy bars:** with "Add rests automatically to fill bars" on, changing a note's length moves the notes after it along, and the rests at the end of the bar take up the change.
-- **32nd and 64th notes** typed back to back beam together, and a bar holds 32 or 64 of them.
-- **Edit cursor:** a see-through yellow highlight on the tab and a grey box behind the selected note on the staff; pausing or stopping moves it to where playback stopped.
-- **Add track on Ctrl+T**; New tab moves to Ctrl+Alt+T, and your own key choices are kept.
-- **Drum staff:** the percussion clef sits inside the staff, every drum note has a stem, and notes in one voice share a stem and beam.
-- **Playback marks:** the green glow on playing notes and the green playback line show only while the song plays.
-
-See the [changelog](CHANGELOG.md) for everything in 0.7.2.
+See the [changelog](CHANGELOG.md) for everything in 0.7.5.
 
 ## Download
 
@@ -64,6 +62,10 @@ Type frets with the keyboard and the notation and tab update together.
 - **Free rhythm entry**: a note can run past the end of the bar; the bar turns red instead of refusing (a strict mode exists). **Check bars (F4)** lists every bar that does not add up.
 - **Techniques**: bends with curves, slides, hammer-ons/pull-offs, palm mute, let ring, vibrato and wide vibrato, natural/artificial/pinch/tapped harmonics, dead and ghost notes, tremolo picking, trills, fades, accents, staccato, tenuto, grace notes, arpeggio/brush strokes, tapping, slap and pop.
 - **Edits during playback** are heard from the next bar. Bars you edit stay complete (*Fill incomplete bars with rests*, on by default); typing on a rest writes your remembered duration; *Advance after entering a note* (off by default) moves the caret on.
+- **Tidy bars:** with "Add rests automatically to fill bars" on, changing a note's length moves the notes after it along, and the rests at the end of the bar take up the change.
+- **32nd and 64th notes** typed back to back beam together, and a bar holds 32 or 64 of them.
+- **Edit cursor:** a see-through yellow highlight on the tab and a grey box behind the selected note on the staff; pausing or stopping moves it to where playback stopped.
+- **Drum staff:** the percussion clef sits inside the staff, every drum note has a stem, and notes in one voice share a stem and beam.
 - Fermatas, text, **mix table points (F10)** for tempo, volume and pan changes, copy/cut/paste beats and bars, repeat selections, insert/delete beats that keep the bar length.
 - Engraving uses the real clef on every system, with harmonics at the fretted pitch, slide strokes and slurs, strum arrows, repeat-bar signs and volta brackets.
 - **Tool palette**: durations, dynamics, effects and bar structure in tabs; right-click a tool to pin it to the quick strip.
@@ -139,6 +141,12 @@ Capture song ideas quickly and turn them into notation and tab. It is a sketchpa
 - **Multiple lanes per track** keep overlapping and loop-recorded takes apart; click a take to choose it, Ctrl+click to layer.
 - **Split (S), glue (Ctrl+Shift+G) and fade** clips; **snap** to a beat grid, the playhead or clip edges.
 - An armed audio track plays live MIDI through its instrument plug-in.
+- **Audio inputs:** every input of a multi-input audio device can be used for recording and live input, as one channel or a stereo pair. "Inputs shown" in the audio settings chooses which inputs are listed.
+- **Live input:** the microphone button at the left of the track list toolbar plays an audio input, a MIDI keyboard or both through an app-wide live FX chain and the master, with no track and no recording. It stays on across tabs until you click it again.
+
+<table><tr>
+<td><a href="docs/screenshots/live-input.png"><img src="docs/screenshots/live-input.png" alt="Live input" width="420"></a></td>
+</tr></table>
 
 <details><summary>More details</summary>
 
@@ -171,7 +179,7 @@ Load VST2 and VST3 instruments and effects on any track, in chains, with MIDI pr
 <details><summary>More details</summary>
 
 - With effects but no VST instrument, the track's own General MIDI sound plays through the effects (rendered from Windows' own sound bank); a *MIDI sound* switch turns it off.
-- **Audio output** device, sample rate and buffer size are in **Settings > Audio & VST**. Plug-in folders are added by browsing (no automatic scan unless you turn it on).
+- **Audio output** device, sample rate and buffer size are in **Settings > Audio & VST**. Plug-in folders are added by browsing (no automatic scan unless you turn it on). Changing the audio device or its settings fades the sound out and back in, so speakers do not pop (Protect speakers from pops when audio settings change, on by default).
 - **Safety**: plug-ins run in a separate audio engine process that starts only when a track uses plug-ins; if one crashes or freezes, TabForge names it, switches it off and carries on. *Run each plug-in in its own process* isolates every plug-in separately (a little more CPU). This is crash isolation only, not a security sandbox: load only plug-ins you trust.
 - **Wiring** selects audio input channels, the MIDI source/channel filter, sidechain input (VST2 with four or more inputs) and MIDI output forwarding to another track.
 - **Serial MIDI chain:** MIDI flows through the plug-in list in order; instruments add their audio, effects process everything before them.
@@ -263,6 +271,11 @@ Every track is a row with level, pan, mute, solo and FX; the Master row sits at 
 - **Add track** with instrument picker, tuning editor and position choice.
 - **Convert** an instrument track to an audio track (its notation becomes a MIDI clip) or back (MIDI clips can be written as notation); the track keeps its place, mixer and plug-ins.
 - **Global tuning** shifts every track at once.
+- **Master track lane** (track list right-click > *Show master track*): an overview lane above the first track with one thin line per track, filled where that track plays. Its row holds the master effects, volume and pan.
+
+<table><tr>
+<td><a href="docs/screenshots/master-lane.png"><img src="docs/screenshots/master-lane.png" alt="Master track lane" width="420"></a></td>
+</tr></table>
 
 <details><summary>More details</summary>
 
@@ -310,7 +323,8 @@ Play along with a metronome and count-in, loop any section, and let the speed tr
 - MIDI playback with per-track mute, solo, volume and pan, including bends, slides, let ring, palm mute and swing.
 - **Metronome and count-in** with their own sounds, levels and subdivisions.
 - **Seamless looping** of the song, a section or a selection; a **speed trainer**; skip areas.
-- **Zoom and speed** boxes sit in the top toolbar, left of the tempo box.
+- **Zoom and speed** sit in the **View and tempo** pane at the bottom of the side panel.
+- **Playback marks:** the green glow on playing notes and the green playback line show only while the song plays.
 - **Status bar tempo** follows the tempo in force at the playhead or the selected bar, so it tracks tempo changes during playback and after a seek; the toolbar box still shows the song's base tempo.
 
 <details><summary>More details</summary>
@@ -337,6 +351,7 @@ Practise a part by playing it along with a MIDI keyboard. Turn it on from the to
 - **Wait for me** (Ctrl+Alt+W) holds the song at each chord until its notes are pressed, in any order; wrong keys are ignored and Skip (Ctrl+Alt+Q) moves on. A **timing tolerance** setting (Strict, Normal or Relaxed; Relaxed by default) sets how close a press must be.
 - **Control bar**: speed, loop, hands and zoom sit in the pane. Left and right hands are worked out automatically and shown in hand colours, with note names and finger numbers.
 - **Pop out** (Ctrl+Alt+O) shows the falling notes in their own window with a small control strip; F11 makes it full screen and Esc leaves it.
+- **Track selector:** a Track drop-down at the left of the bar chooses the track the keyboard follows.
 
 <table><tr>
 <td><a href="docs/screenshots/keyboard-mode-light.png"><img src="docs/screenshots/keyboard-mode-light.png" alt="Keyboard mode, light theme" width="420"></a></td>
@@ -352,7 +367,16 @@ Practise a part by playing it along with a MIDI keyboard. Turn it on from the to
 
 [<img src="docs/animations/band-view.gif" alt="Band view during playback" width="860">](docs/animations/band-view.gif)
 
-Band view gives every track its own row: an instrument view and a scrolling tab lane, three rows per screen by default. Open it from the toolbar or **View > Band view**.
+Band view gives every track its own row: an instrument view and a scrolling tab lane, each row as tall as the music it shows. Open it from the toolbar or **View > Band view**.
+
+Band view has two layouts for the fretboard. By default the **fretboard sits above the tab**, which gives the tab the full row width and suits portrait screens. **Fretboard beside the tab** suits wide screens: the instrument sits in a column to the left of the tab. Choose the layout from the drop-down after the BAND VIEW caption, which also turns the track colour frame on or off; the drop-down's Reset view returns to the defaults.
+
+Only the first track shows its fretboard by default; the others start with a thin name strip that holds the instrument toggle. The first track gets two lines of music and the other tracks one, when that fits, and every row is as tall as its content. The Band view layout and colour frame belong to the program, not to the song, so they are the same for every song you open; a song keeps only which of its tracks are shown and their order.
+
+<table><tr>
+<td><a href="docs/screenshots/band-beside.png"><img src="docs/screenshots/band-beside.png" alt="Band view, fretboard beside the tab" width="420"></a></td>
+<td><a href="docs/screenshots/band-above.png"><img src="docs/screenshots/band-above.png" alt="Band view, fretboard above the tab" width="420"></a></td>
+</tr></table>
 
 - The right-click menu is grouped like the score's menus, with a **Row sizes** submenu; the playhead line is set in Settings.
 - A lane whose bar holds no notes draws its playing line at the same place as the other lanes.
@@ -364,6 +388,14 @@ Band view gives every track its own row: an instrument view and a scrolling tab 
 </tr><tr>
 <td><a href="docs/screenshots/band-view-playing.png"><img src="docs/screenshots/band-view-playing.png" alt="Band view while playing" width="420"></a></td>
 <td></td>
+</tr></table>
+
+### Compact mode
+
+Compact mode gives the score the room. It hides the track rows and the menu row, and shows the master track lane at twice its height. A strip of track capsules under the title bar selects the track (the selected one is lit); right-click the strip, or click its caption, for the menus and tools, and the track controls become a slim column of three rows of buttons. Turn it on from the toolbar button beside Keyboard mode or **View > Compact mode** (Ctrl+Alt+C); pressing it again brings the tracks back as they were.
+
+<table><tr>
+<td><a href="docs/screenshots/compact-mode.png"><img src="docs/screenshots/compact-mode.png" alt="Compact mode" width="420"></a></td>
 </tr></table>
 
 ### Import, export and GP files
@@ -385,7 +417,7 @@ TabForge supports GP files: it opens .gp3, .gp4, .gp5, .gpx and .gp, and saves .
 | ASCII tab (`.txt`) | | export |
 
 - **Templates**: File > *New from template* and *Save as template*.
-- **Export**: Standard MIDI, ASCII tab, PDF, MusicXML and rendered audio (**Ctrl+Alt+R**).
+- **Export**: Standard MIDI, ASCII tab, PDF, MusicXML, rendered audio (**Ctrl+Alt+R**) and video (MP4).
 - **Autosave and recovery**: unsaved songs are copied to the Recovery folder every 1 to 30 minutes and offered back after a crash.
 
 <details><summary>More details</summary>
@@ -517,7 +549,7 @@ Everything TabForge does, by area. Every command can be found in the menus, the 
 - **Templates**: File > *New from template* (built-in and your own) and *Save as template* (your templates live in `%APPDATA%\TabForge\Templates`).
 
 
-- **Export**: Standard MIDI, ASCII tab, **PDF** (engraved notation and tab as A4 pages, no printer needed), **MusicXML** (`.musicxml`, one part per track with a tab staff), clean **`.gp`**, and **Render to audio** (WAV / MP3, master and stems).
+- **Export**: Standard MIDI, ASCII tab, **PDF** (engraved notation and tab as A4 pages, no printer needed), **MusicXML** (`.musicxml`, one part per track with a tab staff), clean **`.gp`**, **Render to audio** (WAV / MP3, master and stems), **video export** (MP4) and **record video** (Ctrl+Alt+V).
 - **Print** and **Print preview**; **Score information** (F5).
 - **Command palette** (Ctrl+Shift+A): fuzzy-search every command by name, see its key, press Enter to run it.
 
@@ -544,9 +576,11 @@ Everything TabForge does, by area. Every command can be found in the menus, the 
 - **Screen-reader support**: the tab editor announces track, bar, beat, string, fret and note name as the cursor moves, and every control has an accessible name and a stable id.
 
 #### Side panes and panels
+- **Compact mode** (View menu, Ctrl+Alt+C): hides the track rows and the menu row, with a header strip of track capsules.
+- **View and tempo** pane: zoom, speed, tempo, time and key in one row at the bottom of the side panel; **Lyrics** is its own pane beside Sections.
 - **Tools** (durations, dynamics, effects, bar structure), **Structure**, **Rhythm** and **Layout** palette pages, pinnable quick strip.
 - **Sections** panel; **Lyrics**; **Scale highlight**; **Song stats** and **Chord finder** in the **Tools** menu.
-- **Zoom and speed** in the top toolbar, left of the tempo box: zoom out/in, zoom box and the single playback-speed box (25 to 200 %, presets 50 to 200 %). A narrow window collapses this group; the View menu zoom items and the hotkeys still work.
+- **Zoom and speed** in the **View and tempo** pane at the bottom of the side panel: zoom out/in, zoom box and the single playback-speed box (25 to 200 %, presets 50 to 200 %). The View menu zoom items and the hotkeys also work.
 
 
 - **Speed hotkeys**: Ctrl+Alt+Up (faster), Ctrl+Alt+Down (slower), Ctrl+Alt+0 (back to 100 %).
@@ -572,6 +606,7 @@ Everything TabForge does, by area. Every command can be found in the menus, the 
 
 #### Recording and clips
 - **Record** (Ctrl+R) audio or MIDI clips, arm track, input meter, live monitoring, multiple take lanes, loop-recorded takes, recording offset.
+- **Live input** (microphone button in the track list toolbar) and **audio inputs**: every input of the device, as channels or stereo pairs.
 - **Clip commands** (bindable): delete, deselect, move (coarse and fine), move between lanes, copy, cut, paste, duplicate, mute, properties (F2), **Snap** on/off (Alt+S).
 
 #### Plug-ins and audio engine
@@ -631,7 +666,7 @@ Everything TabForge does, by area. Every command can be found in the menus, the 
 
 **Side panes**
 - *Tools*, *Structure*, *Rhythm* and *Layout* pages hold the tool palette (durations, dynamics, effects, bar structure, rhythm and layout tools); right-click a tool to pin it to the quick strip.
-- *Sections*: add, edit, delete, colour, loop and go to a section. *Lyrics*: per-track lyrics editor. Song stats and chord finder are in the **Tools** menu. Zoom and speed are in the top toolbar (see above).
+- *Sections*: add, edit, delete, colour, loop and go to a section. *Lyrics*: per-track lyrics editor. Song stats and chord finder are in the **Tools** menu. Zoom and speed are in the View and tempo pane (see above).
 
 **Tool palette pages, every tool**
 - *Tools* page: **Edit** (selection cursor, erase note, change accidental); **Duration** (whole to 64th note, dotted, double-dotted, tie, triplet, choose tuplet ratio); **Dynamic** (ppp, pp, p, mp, mf, f, ff, fff); **Beat** (chord, choose chord, text annotation, brush down / up, pick-stroke down / up); **Effects** (vibrato, bend, tremolo bar, slide, dead note, hammer-on / pull-off, ghost note, accent, heavy accent, let ring, natural harmonic, grace note, trill, tremolo picking, palm mute, staccato, tapping, slapping, popping, fade in).

@@ -10,7 +10,7 @@ namespace TabForge;
 public partial class MainWindow : IKeyboardModeCommandHost
 {
     private KeyboardModeFrameController? _learn;
-    internal KeyboardModeFrameController Learn => _learn ??= new KeyboardModeFrameController(new KeyboardModeHost(this, () => _documents.Active, _engine, TogglePlayback));
+    internal KeyboardModeFrameController Learn => _learn ??= new KeyboardModeFrameController(new KeyboardModeHost(this, () => _documents.Active, _engine, TogglePlayback, i => TrackMixerGrid.SelectedIndex = i));
 
     IKeyboardModeWaitCommands IKeyboardModeCommandHost.WaitCommands => Learn;
 

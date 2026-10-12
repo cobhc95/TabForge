@@ -5,7 +5,7 @@ using TabForge.Views;
 
 namespace TabForge.Diagnostics;
 
-// Owns: the capture steps "clip-edit" (fades and a split on the example audio clip), "delete-prompt" (the bar-range Delete prompt as a tool window), "marker-size" (fretboard note marker size), "band-playing" (the Band view shown as playing), "learn-playing" (the Keyboard mode pane shown as playing; a third value "keys" or "keys-wait" shows a keyboard track with made-up play-along state, see WindowProbes.CaptureKeyboardModeKeys.cs), "learn-midi-menu" (its MIDI input list), "effect" (a note-effect editor dialog, see WindowProbes.CaptureEffects.cs),
+// Owns: the capture steps "clip-edit" (fades and a split on the example audio clip), "delete-prompt" (the bar-range Delete prompt as a tool window), "marker-size" (fretboard note marker size), "band-layout" (the Band rows with the instrument above or beside the tab), "band-playing" (the Band view shown as playing), "learn-playing" (the Keyboard mode pane shown as playing; a third value "keys" or "keys-wait" shows a keyboard track with made-up play-along state, see WindowProbes.CaptureKeyboardModeKeys.cs), "learn-midi-menu" (its MIDI input list), "effect" (a note-effect editor dialog, see WindowProbes.CaptureEffects.cs),
 //   "timeline-height" (the timeline pane squeezed to a height, as when the user collapses it), "section-tip" (the section lane's hover hint),
 //   "restore-saved" (the layout the profile started with, as after a restart) "rec-state" (the title-bar Record video button's red dot and the status bar's REC time, shown without recording) and "tab-strip" (a title-bar tab strip with idle, playing, unsaved and long-titled tabs, as the tool window "TabStrip").
 // Does not own: step dispatch (WindowProbes.Capture.cs) or the shots themselves (WindowProbes.CaptureShots.cs).
@@ -23,6 +23,7 @@ internal sealed partial class WindowProbes
                 case "marker-size": _w._settings.Editing.FretMarkerSizePercent = value.GetInt32(); _w.RefreshInstrument(); break;
                 case "effect": EffectShot(value.GetString() ?? "bend"); break;
                 case "band-hide-instrument": _w.Window.Band.ToggleInstrumentOf(value.GetInt32()); break;
+                case "band-layout": (_w._settings.Timeline.Band ??= new Services.BandSettings()).FretboardAbove = value.GetString() == "above"; _w.Window.Band.Sync(); break;
                 case "band-playing": BandPlaying(value[0].GetInt32() - 1, value[1].GetDouble()); break;
                 case "learn-playing":   // a third value ("keys" or "keys-wait") turns the selected track into a two-hand riff with made-up play-along state
                     UseExampleMidi();
@@ -30,6 +31,13 @@ internal sealed partial class WindowProbes
                     else KeyboardModePlaying(value[0].GetInt32() - 1, value[1].GetDouble());
                     break;
                 case "learn-midi-menu": KeyboardModeMidiMenu(); break;   // the Keyboard mode MIDI input list (then target "menu")
+                case "master-track":   // true or false: the master track lane; a number also keeps only that many tracks of the open song (in memory)
+                    if (value.ValueKind == System.Text.Json.JsonValueKind.Number) { var keep = Math.Clamp(value.GetInt32(), 1, _w._project.Tracks.Count); _w._project.Tracks.RemoveRange(keep, _w._project.Tracks.Count - keep); _w.RefreshTracks(); }
+                    _w.Arrangement.SetMasterLaneFromMenu(value.ValueKind != System.Text.Json.JsonValueKind.False); break;
+                case "live-input": ((Views.IMixerSurface)_w.Window).Engine.LiveInput.ShowLit(value.GetBoolean()); break;   // true or false: the live input button lit, nothing in the engine
+                case "controls-width": { var columns = _w.Arrangement.ColumnState; _w.Arrangement.ColumnState = (columns.order, columns.widths, value.GetDouble()); break; }   // the track list's controls column width (raised to its minimum)
+                case "compact-mode":   // true or false: compact mode, through its View menu row
+                    if (Views.MenuHotkey.Find(_w.Window.MainMenu.Items, CompactMode.CompactModeFeatureModule.CommandId) is { } compact && compact.IsChecked != value.GetBoolean()) compact.RaiseEvent(new System.Windows.RoutedEventArgs(System.Windows.Controls.MenuItem.ClickEvent)); break;
                 case "timeline-height":
                     _w._settings.Timeline.TrackListHeight = value.GetDouble();   // a user-collapsed pane: the auto-fit keeps it short
                     // Diagnostics only: the window's fit controller is private and the probe bridge stays as it is.
@@ -38,6 +46,7 @@ internal sealed partial class WindowProbes
                 case "section-tip": SectionTip(value.GetInt32()); break;
                 case "restore-saved": _w._settings.LastLayout = _savedLayoutName; _w._dockWorkspace?.ApplyLayout(_savedWorkspace ?? new()); break;   // as after a restart
                 case "tab-strip": TabStrip(value.GetDouble()); break;
+                case "message-box": _toolName = "MessageBox"; Adopt(ThemedMessageBox.Build(_w.Window, "You closed the last tab with unsaved changes.\nRestore it?", "Restore tab", System.Windows.MessageBoxButton.YesNoCancel, value.GetString() == "warning" ? System.Windows.MessageBoxImage.Warning : System.Windows.MessageBoxImage.Question, System.Windows.MessageBoxResult.Yes, _ => { })); break;   // the themed message box as the tool window "MessageBox"
                 case "rec-state": _w.Window.RecIndicator.Text = "REC 01:15"; _w.Window.RecIndicator.Visibility = _w.Window.VideoRecDot.Visibility = value.GetBoolean() ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed; break;   // the Record video REC state, no recording runs
                 default: throw new InvalidOperationException($"unknown step '{verb}'");
             }

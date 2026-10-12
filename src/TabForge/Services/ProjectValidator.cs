@@ -225,7 +225,7 @@ public static class ProjectValidator
     public static void Validate(SongProject project)
     {
         if (project is null) throw Invalid("The project is empty or invalid.");
-        if (project.FormatVersion is < 1 or > 3) throw Invalid("This project uses an unsupported format version.");
+        if (project.FormatVersion is < 1 or > 4) throw Invalid("This project uses an unsupported format version.");
         CapBandLayout(project);
         RequireText(project.Title, InputLimits.MaxTitleLength, "project title");
         RequireText(project.Subtitle, InputLimits.MaxTitleLength, "project subtitle");
@@ -281,7 +281,7 @@ public static class ProjectValidator
             if (tunings.Any(tuning => tuning is < 0 or > 127)) throw Invalid("A track contains an invalid string tuning.");
             ValidateRig(track.Rig);
             if (!SoundSources.All.Contains(track.SoundSource)) throw Invalid("A track has an unknown sound source.");
-            if (!AudioInputs.All.Contains(track.AudioInput)) throw Invalid("A track has an unknown audio input.");
+            if (!AudioInputs.IsValid(track.AudioInput)) throw Invalid("A track has an unknown audio input.");
             var clips = track.AudioClips ?? throw Invalid("A track has no valid audio clip list.");
             if (clips.Count > 4096) throw Invalid("A track has too many audio clips.");
             foreach (var clip in clips)

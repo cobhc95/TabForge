@@ -13,6 +13,9 @@ internal sealed partial class TrackTimeline
 {
     private int _hoverBar = -1, _hoverTrack = -1;
 
+    /// <summary>The track value of a hover cell on the master strip. It is not a track: the cell spans the strip's whole height.</summary>
+    internal const int MasterHoverTrack = -2;
+
     /// <summary>The pointer moved onto another bar cell (bar, track), or off every cell (-1, -1). Also raised by <see cref="RefreshHover"/>.</summary>
     public event EventHandler<(int bar, int track)>? HoverCellChanged;
 
@@ -24,7 +27,7 @@ internal sealed partial class TrackTimeline
         if (p.Y < gridTop || p.X < 0) return (-1, -1);
         var inGrid = p.Y + VerticalScrollOffset - gridTop;
         var track = ArrangementPanel.RowIndexAt(Project, inGrid);
-        if (track < 0) return (-1, -1);
+        if (track < 0) return MasterHoverCellAt(p, inGrid);
         var inRow = inGrid - ArrangementPanel.RowTopOf(Project, track);
         if (inRow < 0 || inRow >= ArrangementPanel.RowHeightFor(Project)) return (-1, -1);   // group header or audio lane
         var bars = BarCount;
@@ -35,6 +38,7 @@ internal sealed partial class TrackTimeline
     /// <summary>The bar cell's rectangle in timeline coordinates (same inset as the drawn cell), or null when it does not exist.</summary>
     internal Rect? CellBounds(int bar, int track)
     {
+        if (track == MasterHoverTrack) return MasterCellBounds(bar);
         if (Project is null || bar < 0 || bar >= BarCount || track < 0 || track >= Project.Tracks.Count) return null;
         var top = ArrangementPanel.RulerHeight + ArrangementPanel.SectionHeight + ArrangementPanel.RowTopOf(Project, track) - VerticalScrollOffset;
         return new Rect(XOfBar(bar), top + 1, Math.Max(1, WidthOfBar(bar) - 1), ArrangementPanel.RowHeightFor(Project) - 2);

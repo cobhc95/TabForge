@@ -13,7 +13,7 @@ namespace TabForge.Views;
 // Owns: the track list's columns: their order, widths and hidden set, the header minimum widths (HeaderNeed), the tuning button
 //   and master volume knob, the pan style and the auto-fit state.
 // Does not own: the column layout maths (TrackColumnLayout.cs) and the row widgets (TrackRowWidgets.cs).
-// Tests: TestTrackColumnHeaderFit.
+// Tests: TestTrackColumnHeaderFit, TestToolbarWrap.
 
 public sealed partial class ArrangementPanel : ITrackColumnHost, ITuningButtonHost, ITrackRowWidgetHost
 {
@@ -48,9 +48,30 @@ public sealed partial class ArrangementPanel : ITrackColumnHost, ITuningButtonHo
     double ITrackColumnHost.ControlsAreaWidth
     {
         get => ColumnDefinitions[0].Width.Value;
-        set => ColumnDefinitions[0].Width = new GridLength(value);
+        set => SetControlsWidth(_compactMode ? value : Math.Max(value, MinControlsWidth));
     }
     void ITrackColumnHost.RebuildControls() => RebuildControls();
+
+    internal ToolbarWrapPanel Toolbar => (ToolbarWrapPanel)((DockPanel)_controlsHeader.Child).Children[^1];
+    /// <summary>The narrowest the controls column gets outside compact mode: two toolbar rows and every track-row control whole.</summary>
+    internal double MinControlsWidth => Math.Ceiling(Math.Max(Toolbar.TwoRowWidth, _columns.RowsNeed(ToolbarWrapPanel.MinNameColumn)));
+    internal bool ToolbarWrapped => Toolbar.Wrapped;
+
+    private void SetControlsWidth(double width)
+    {
+        ColumnDefinitions[0].Width = new GridLength(width);
+        SyncToolbarWrap();
+    }
+
+    /// <summary>One or two toolbar rows for the column's width; the second row's height moves the header's bottom edge and the timeline down together, so the ruler and the rows stay level with the list.</summary>
+    private void SyncToolbarWrap()
+    {
+        if (!Toolbar.SetColumnWidth(_compactMode ? double.PositiveInfinity : ColumnDefinitions[0].Width.Value)) return;   // compact mode covers the header: one row
+        var extra = Toolbar.ExtraHeight;
+        ((Grid)_controlsHeader.Parent).RowDefinitions[0].Height = new GridLength(RulerHeight + SectionHeight + extra);
+        _horizontal.Margin = new Thickness(0, extra, 0, 0);
+        ((Grid)_horizontal.Parent).SetResourceReference(Panel.BackgroundProperty, "Panel2Brush");   // the band beside the second row
+    }
     ContextMenu ITrackColumnHost.BuildColumnHeaderMenu() => BuildEmptyAreaMenu(new Control[] { ResetColumnsItem() });
     void ITrackColumnHost.RaiseColumnLayoutChanged() => ColumnLayoutChanged?.Invoke(this, EventArgs.Empty);
     void ITuningButtonHost.RaiseTuningIconClicked() => TuningIconClicked?.Invoke(this, EventArgs.Empty);

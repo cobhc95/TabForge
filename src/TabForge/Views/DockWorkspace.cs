@@ -394,7 +394,7 @@ public sealed class DockWorkspace : Grid, IDockHost, IDockDragHost, Controllers.
     {
         _state = CreateDefaultState();
         RebuildVisualTree();
-        NotifyLayoutChanged();
+        NotifyLayoutChanged(); RaiseEvent(new RoutedEventArgs(IconRow.IconRowDragController.ResetEvent));   // the top bar's icon row returns to its default order too
     }
 
     /// <summary>

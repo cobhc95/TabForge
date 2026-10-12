@@ -12,15 +12,24 @@ public sealed class Recorder : IDisposable
 {
     public sealed record Take(int Slot, string Path, double StartSec, int Mode);
 
-    private readonly List<(Take Take, WaveFileWriter Writer)> _writers = new();
+    /// <summary>A take's file and the queue columns it is written from (-1: the device has no such input, the file is silence).</summary>
+    private readonly List<(Take Take, WaveFileWriter Writer, int Left, int Right)> _writers = new();
+    /// <summary>Channels of the capture block (interleaved, as <see cref="InputCapture.Channels"/>).</summary>
+    private readonly int _inputChannels;
+    /// <summary>The input channels the takes use, ascending (at least two): the queue keeps only these, one column each.</summary>
+    private readonly int[] _source;
+    private readonly int _width;
     private readonly object _gate = new();
+    private double _startSec;
+    /// <summary>Song time the takes start at. Set before the capture is attached; the finished takes carry it.</summary>
+    public double StartSec { get => Volatile.Read(ref _startSec); set => Volatile.Write(ref _startSec, value); }
     private readonly int _rate;
     private long _frames;
     // Big write chunks (32768 frames = 256 KB per write): fewer, larger writes hold up better when the disk is busy.
     private const int ChunkFrames = 32768;
-    private readonly float[] _scratch = new float[ChunkFrames * 2];
+    private readonly float[] _scratch = new float[ChunkFrames * 2];   // one take's samples (mono or stereo) for one write
 
-    // Single-producer (capture thread) / single-consumer (disk thread) queue of interleaved stereo frames.
+    // Single-producer (capture thread) / single-consumer (disk thread) queue of interleaved frames, _width columns wide.
     private readonly float[] _queue;
     private readonly long _queueMask;          // in frames (capacity is a power of two)
     private long _qWrite, _qRead;              // frame counters
@@ -35,7 +44,7 @@ public sealed class Recorder : IDisposable
     private long _lastGapPos = -1;             // producer only: queue position of the newest marker
     private long _lateSilence;                 // fallback: drops that fit no marker (ring full, newest marker already claimed): written as soon as the disk thread is idle
     private long _gapOverflows;
-    private readonly float[] _drain = new float[ChunkFrames * 2];
+    private readonly float[] _drain;
     private long _gapsWritten, _lostWritten;   // disk thread: gaps written as silence and their frames (final after Finish)
     private readonly Thread? _diskThread;
     private volatile bool _stopping;
@@ -49,20 +58,34 @@ public sealed class Recorder : IDisposable
 
     /// <param name="queueSeconds">How many seconds of stereo input the queue should hold (allocated once, here, never on the audio thread).</param>
     /// <param name="maxQueueBytes">Memory cap for the queue: a smaller queue (never under 4 s) is used, with a log line, when the rate needs more.</param>
+    /// <param name="inputChannels">Channels in each block given to <see cref="Enqueue"/> (the capture's width).</param>
     public Recorder(string folder, IEnumerable<(int Slot, string TrackName, int Mode)> tracks, double startSec, int rate, bool startWriter = true, int gapCapacity = 256,
-        int queueSeconds = QueueSeconds, long maxQueueBytes = MaxQueueBytes)
+        int queueSeconds = QueueSeconds, long maxQueueBytes = MaxQueueBytes, int inputChannels = 2)
     {
         _rate = rate;
+        _startSec = startSec;
+        _inputChannels = Math.Max(2, inputChannels);
+        tracks = tracks.ToList();
+        // The queue holds only the channels some take records (inputs 1 and 2 always, so a two-input take keeps the plain stereo layout).
+        var used = new SortedSet<int> { 0, 1 };
+        foreach (var (_, _, mode) in tracks)
+        {
+            var (left, right) = TabForge.Audio.Contracts.AudioInputAddress.Decode(mode);
+            if (right < _inputChannels) { used.Add(left); used.Add(right); }
+        }
+        _source = used.ToArray();
+        _width = _source.Length;
+        _drain = new float[ChunkFrames * _width];
         var gaps = 1;
         while (gaps < Math.Max(1, gapCapacity)) gaps <<= 1;
         _gapPos = new long[gaps]; _gapLen = new long[gaps]; _gapMask = gaps - 1;
-        // One stereo queue shared by every armed track (each take picks its channel): the memory does not grow with the track count.
+        // One queue shared by every armed track (each take picks its columns): the memory grows with the distinct inputs recorded, not the track count.
         var capacity = 1L;
         while (capacity < rate * (long)Math.Max(4, queueSeconds)) capacity <<= 1;
         var reduced = false;
-        while (capacity * 8 > maxQueueBytes && capacity > rate * 4L) { capacity >>= 1; reduced = true; }
-        EngineLog.Write($"recorder queue: {capacity / (double)rate:0} s ({capacity * 8 / 1048576} MB, shared by all armed tracks){(reduced ? ", reduced to fit the memory cap" : "")}");
-        _queue = new float[capacity * 2];
+        while (capacity * 4 * _width > maxQueueBytes && capacity > rate * 4L) { capacity >>= 1; reduced = true; }
+        EngineLog.Write($"recorder queue: {capacity / (double)rate:0} s ({capacity * 4 * _width / 1048576} MB, {_width} input channel(s), shared by all armed tracks){(reduced ? ", reduced to fit the memory cap" : "")}");
+        _queue = new float[capacity * _width];
         _queueMask = capacity - 1;
         // Fault every page in here (engine main thread, a few ms), not one page per callback on the capture thread for the first two minutes:
         // a fresh large array is untouched demand-zero memory, and a page fault on a real-time thread under memory pressure can take milliseconds.
@@ -74,14 +97,17 @@ public sealed class Recorder : IDisposable
             foreach (var (slot, name, mode) in tracks)
             {
                 var safe = TabForge.Audio.Contracts.SafeFileNames.SafeFileName(name, "Track");
-                var channels = mode == 2 ? 2 : 1;
+                var (left, right) = TabForge.Audio.Contracts.AudioInputAddress.Decode(mode);
+                var has = right < _inputChannels;
+                if (!has) EngineLog.Write($"recording: slot {slot} is armed on input {left + 1}, which the device ({_inputChannels} input channels) does not have: its take is silence");
                 var (path, stream) = CreateUnique(folder, $"{safe} {stamp} s{slot}");
-                _writers.Add((new Take(slot, path, startSec, mode), new WaveFileWriter(stream, WaveFormat.CreateIeeeFloatWaveFormat(rate, channels))));
+                _writers.Add((new Take(slot, path, startSec, mode), new WaveFileWriter(stream, WaveFormat.CreateIeeeFloatWaveFormat(rate, left == right ? 1 : 2)),
+                    has ? Array.IndexOf(_source, left) : -1, has ? Array.IndexOf(_source, right) : -1));
             }
         }
         catch
         {
-            foreach (var (_, w) in _writers) { try { w.Dispose(); } catch { } }
+            foreach (var (_, w, _, _) in _writers) { try { w.Dispose(); } catch { } }
             _writers.Clear();
             throw;
         }
@@ -131,12 +157,12 @@ public sealed class Recorder : IDisposable
     public long DroppedFrames => Interlocked.Read(ref _droppedTotal);
 
     /// <summary>
-    /// Capture thread (real-time for ASIO): queues one block of interleaved stereo input. Never blocks, never allocates,
-    /// never touches the disk.
+    /// Capture thread (real-time for ASIO): queues the recorded channels of one block of interleaved input (as wide as the
+    /// capture). Never blocks, never allocates, never touches the disk.
     /// </summary>
     public void Enqueue(float[] block, int frames)
     {
-        if (frames <= 0 || _stopping) return;
+        if (frames <= 0 || _stopping || block.Length < (long)frames * _inputChannels) return;   // a block narrower than the capture this recorder was built for is not read
         var write = _qWrite;
         var free = (_queueMask + 1) - (write - Volatile.Read(ref _qRead));
         if (free < frames)
@@ -147,9 +173,9 @@ public sealed class Recorder : IDisposable
         }
         for (var i = 0; i < frames; i++)
         {
-            var at = ((write + i) & _queueMask) * 2;
-            _queue[at] = block[i * 2];
-            _queue[at + 1] = block[i * 2 + 1];
+            var at = ((write + i) & _queueMask) * _width;
+            var from = i * _inputChannels;
+            for (var c = 0; c < _source.Length; c++) _queue[at + c] = block[from + _source[c]];
         }
         Volatile.Write(ref _qWrite, write + frames);
     }
@@ -261,12 +287,11 @@ public sealed class Recorder : IDisposable
     private void DrainOnce(long limit)
     {
         var read = _qRead;
-        var frames = (int)Math.Min(limit, _drain.Length / 2);
+        var frames = (int)Math.Min(limit, _drain.Length / _width);
         for (var i = 0; i < frames; i++)
         {
-            var at = ((read + i) & _queueMask) * 2;
-            _drain[i * 2] = _queue[at];
-            _drain[i * 2 + 1] = _queue[at + 1];
+            var at = ((read + i) & _queueMask) * _width;
+            for (var c = 0; c < _width; c++) _drain[i * _width + c] = _queue[at + c];
         }
         Volatile.Write(ref _qRead, read + frames);
         Write(_drain, frames);
@@ -277,13 +302,13 @@ public sealed class Recorder : IDisposable
         Array.Clear(_drain);
         while (frames > 0)
         {
-            var n = (int)Math.Min(frames, _drain.Length / 2);
+            var n = (int)Math.Min(frames, _drain.Length / _width);
             Write(_drain, n);
             frames -= n;
         }
     }
 
-    /// <summary>Disk thread (or tests): appends one block (interleaved stereo input) to every take.</summary>
+    /// <summary>Disk thread (or tests): appends one block (interleaved, one column per recorded input: inputs 1 and 2 first when no take uses another) to every take.</summary>
     public void Write(float[] block, int frames)
     {
         string? error = null;
@@ -292,15 +317,16 @@ public sealed class Recorder : IDisposable
             if (_failed) return;
             try
             {
-                foreach (var (take, writer) in _writers)
+                foreach (var (_, writer, left, right) in _writers)
                 {
-                    if (take.Mode == 2) { writer.WriteSamples(block, 0, frames * 2); continue; }
-                    var channel = take.Mode == 1 ? 1 : 0;
-                    for (var start = 0; start < frames; start += _scratch.Length)
+                    var stereo = writer.WaveFormat.Channels == 2;
+                    for (var start = 0; start < frames; start += ChunkFrames)
                     {
-                        var n = Math.Min(_scratch.Length, frames - start);
-                        for (var i = 0; i < n; i++) _scratch[i] = block[(start + i) * 2 + channel];
-                        writer.WriteSamples(_scratch, 0, n);
+                        var n = Math.Min(ChunkFrames, frames - start);
+                        if (left < 0) Array.Clear(_scratch, 0, stereo ? n * 2 : n);
+                        else if (stereo) for (var i = 0; i < n; i++) { var at = (start + i) * _width; _scratch[i * 2] = block[at + left]; _scratch[i * 2 + 1] = block[at + right]; }
+                        else for (var i = 0; i < n; i++) _scratch[i] = block[(start + i) * _width + left];
+                        writer.WriteSamples(_scratch, 0, stereo ? n * 2 : n);
                     }
                 }
                 _frames += frames;
@@ -349,8 +375,8 @@ public sealed class Recorder : IDisposable
         {
             if (_result is not null) return _result;
             var length = (double)_frames / _rate;
-            var result = _writers.Select(w => (w.Take, length)).ToList();
-            foreach (var (_, writer) in _writers) { try { writer.Dispose(); } catch { } }
+            var result = _writers.Select(w => (w.Take with { StartSec = StartSec }, length)).ToList();
+            foreach (var (_, writer, _, _) in _writers) { try { writer.Dispose(); } catch { } }
             _writers.Clear();
             Volatile.Write(ref _result, result);
             return result;

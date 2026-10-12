@@ -50,7 +50,7 @@ public static class AudioOutputFactory
                 var name = names.FirstOrDefault(n => string.Equals(n, config.Device, StringComparison.OrdinalIgnoreCase)) ?? names.FirstOrDefault()
                     ?? throw new InvalidOperationException("No ASIO driver is installed.");
                 var asio = new AsioOut(name);
-                var ok = false;
+                bool ok = false, atInit = false;
                 try
                 {
                     // Channel pair: the first channel of each pair, kept inside what the driver offers.
@@ -62,14 +62,16 @@ public static class AudioOutputFactory
                     asio.ChannelOffset = firstOut;
                     var monoOut = config.AsioOutputLast <= firstOut || outputs - firstOut < 2;   // one output channel: the mix is summed to it
                     RequestBufferSize(asio, config.BufferSize);
-                    // Inputs: first..last channel (one or two) through the same driver: the only way input and
-                    // output work together on an exclusive ASIO driver.
+                    // Inputs: every channel from the chosen first one (it is "Input 1") through the same driver: the only way
+                    // input and output work together on an exclusive ASIO driver. Last <= first is the one-channel set-up:
+                    // only that channel is opened (the capture copies it to inputs 1 and 2).
                     var first = Math.Clamp(config.AsioInput, 0, Math.Max(0, inputs - 1));
-                    var count = Math.Clamp(config.AsioInputLast - first + 1, 1, Math.Min(2, Math.Max(1, inputs - first)));
+                    var count = AsioInputCount(config, inputs);
                     asio.InputChannelOffset = first;
                     IWaveProvider provider = monoOut
                         ? new NAudio.Wave.SampleProviders.StereoToMonoSampleProvider(source) { LeftVolume = 0.5f, RightVolume = 0.5f }.ToWaveProvider()
                         : source.ToWaveProvider();
+                    atInit = true;   // from here a failure may be the input channel count: only that is retried
                     if (config.AsioInputs && inputs >= 1) asio.InitRecordAndPlayback(provider, count, source.WaveFormat.SampleRate);
                     else asio.Init(provider);
                     AsioInputChannelsUsed = config.AsioInputs && inputs >= 1 ? count : 0;
@@ -77,6 +79,15 @@ public static class AudioOutputFactory
                     var latency = Math.Max(1, (int)Math.Round(asio.PlaybackLatency * 1000.0 / source.WaveFormat.SampleRate));
                     ok = true;
                     return (asio, latency, $"ASIO: {name}");
+                }
+                catch (Exception ex) when (config.AsioInputs && atInit)
+                {
+                    // An input-side problem never costs the output: once more with two input channels, then with none. A driver
+                    // that cannot be opened at all (busy, unplugged) fails before the init step and is not opened again.
+                    try { asio.Dispose(); } catch (Exception) { }
+                    ok = true;   // disposed here
+                    EngineLog.Write($"ASIO open failed with {(config.AllInputs ? "all inputs" : "inputs")} ({ex.Message}): retrying with {(config.AllInputs ? "two input channels" : "no inputs")}");
+                    return Open(config.AllInputs ? config with { AllInputs = false } : config with { AsioInputs = false }, source);
                 }
                 finally { if (!ok) { try { asio.Dispose(); } catch (Exception) { } } }
             }
@@ -186,6 +197,32 @@ public static class AudioOutputFactory
 
     /// <summary>How many ASIO input channels the opened driver delivers to the engine (0 = none).</summary>
     public static int AsioInputChannelsUsed { get; private set; }
+
+    /// <summary>How many ASIO input channels are opened from the chosen first one: one for the one-channel set-up (last &lt;= first), else all of them up to the cap.</summary>
+    public static int AsioInputCount(EngineConfig config, int driverInputs)
+    {
+        var first = Math.Clamp(config.AsioInput, 0, Math.Max(0, driverInputs - 1));
+        if (!config.AllInputs) return Math.Clamp(config.AsioInputLast - first + 1, 1, Math.Min(2, Math.Max(1, driverInputs - first)));   // two channels at most
+        return config.AsioInputLast <= first ? 1 : Math.Clamp(driverInputs - first, 1, Audio.InputCapture.MaxChannels);
+    }
+
+    /// <summary>
+    /// Engine main thread, after <see cref="Open"/> and before the Ready event is written: the inputs tracks can record on this
+    /// device, "Input 1" first. For ASIO the driver's channel names from the chosen first input on, for WASAPI one unnamed
+    /// entry per channel of the recording device (two when the device cannot be asked), none for the headless output. Never throws.
+    /// </summary>
+    /// <param name="probe">The WASAPI channel count of a recording device (tests replace it).</param>
+    public static string[] RecordableInputs(EngineConfig config, Func<string, int>? probe = null)
+    {
+        if (config.Driver == Null) return Array.Empty<string>();
+        if (config.Driver == Asio)
+            return AsioChannels.Inputs.Skip(Math.Clamp(config.AsioInput, 0, Math.Max(0, AsioChannels.Inputs.Length - 1))).Take(AsioInputChannelsUsed).ToArray();
+        if (!config.AllInputs) return new[] { "", "" };
+        int count;
+        try { count = (probe ?? Audio.InputCapture.DeviceChannels)(config.InputDevice); }
+        catch (Exception ex) { EngineLog.Write($"input channel count not read: {ex.Message}"); count = 0; }
+        return Enumerable.Repeat("", count is > 0 and <= Audio.InputCapture.MaxChannels ? count : 2).ToArray();
+    }
 
     private static string Safe(Func<string> name, string fallback)
     {

@@ -31,6 +31,10 @@ public interface IFxChainHost
     IntPtr OwnerWindow { get; }
     bool DarkTheme { get; }
     AudioEngineClient Engine { get; }
+    /// <summary>The window title of an app-wide chain that is no track and no bus (its window shows no track options); null for every other chain.</summary>
+    string? AppWideChainTitle => null;
+    /// <summary>What an app-wide chain's window shows in place of the track options; null: nothing.</summary>
+    UIElement? AppWideChainNote => null;
 }
 
 // Owns: a track's FX chain window: the chain list (reorder, enable, add, remove, save and load chains), the selected plug-in's bar
@@ -115,7 +119,7 @@ public sealed partial class FxChainWindow : Window
         UiIds.Id(_presets, "Fx.Presets");
         UiIds.Id(_wiring, "Fx.Wiring");
         UiIds.Id(_midiButton, "Fx.Midi");
-        PreviewKeyDown += (_, e) => { if (e.Key == Key.Escape && Keyboard.FocusedElement is not System.Windows.Controls.Primitives.TextBoxBase && Keyboard.FocusedElement is not ComboBox) { e.Handled = true; Close(); } };
+        PreviewKeyDown += (_, e) => { if (e.Key == Key.Escape && Keyboard.FocusedElement is not System.Windows.Controls.Primitives.TextBoxBase && Keyboard.FocusedElement is not ComboBox) { e.Handled = true; Close(); } else if (Keyboard.Modifiers == ModifierKeys.Control && e.Key is Key.S or Key.O) { e.Handled = true; if (e.Key == Key.S) SaveChain(); else LoadChain(replace: true); } };
         _host = host;
         _track = track;
         Owner = owner;
@@ -274,8 +278,8 @@ public sealed partial class FxChainWindow : Window
         fx.Items.Add(Item("Add plug-in…", AddPlugin));
         fx.Items.Add(Item("Remove plug-in", RemoveSelected));
         fx.Items.Add(new Separator());
-        fx.Items.Add(Item("Save FX chain…", SaveChain));
-        fx.Items.Add(Item("Load FX chain…", () => LoadChain(replace: true)));
+        fx.Items.Add(Item("Save FX chain…", SaveChain)); ((MenuItem)fx.Items[^1]!).InputGestureText = new KeyGesture(Key.S, ModifierKeys.Control).GetDisplayStringForCulture(System.Globalization.CultureInfo.CurrentUICulture);   // the window's own fixed key (see PreviewKeyDown), shown from the gesture
+        fx.Items.Add(Item("Load FX chain…", () => LoadChain(replace: true))); ((MenuItem)fx.Items[^1]!).InputGestureText = new KeyGesture(Key.O, ModifierKeys.Control).GetDisplayStringForCulture(System.Globalization.CultureInfo.CurrentUICulture);   // the window's own fixed key (see PreviewKeyDown), shown from the gesture
         fx.Items.Add(Item("Add FX chain to the end…", () => LoadChain(replace: false)));
         fx.Items.Add(new Separator());
         fx.Items.Add(Item("Clear chain", () => Edit(() => { CloseDocked(); _track.Rig.Plugins.Clear(); }, refresh: true)));
@@ -524,16 +528,7 @@ public sealed partial class FxChainWindow : Window
     private void OnEditorSized(int engineSlot, int index, int width, int height)
     {
         if (_docked is not { } d || engineSlot != _host.Engine.SlotOf(_track) || index != _track.Rig.Plugins.IndexOf(d)) return;
-        var dpi = VisualTreeHelper.GetDpi(this);
-        _dock.Width = width / dpi.DpiScaleX;
-        _dock.Height = height / dpi.DpiScaleY;
-        _lastEditorPx = (width, height);
-    }
-    private (int W, int H) _lastEditorPx;
-    protected override void OnDpiChanged(DpiScale oldDpi, DpiScale newDpi)
-    {
-        base.OnDpiChanged(oldDpi, newDpi);
-        if (_docked is not null && _lastEditorPx.W > 0) { _dock.Width = _lastEditorPx.W / newDpi.DpiScaleX; _dock.Height = _lastEditorPx.H / newDpi.DpiScaleY; }
+        _fit.SetEditor(width, height);
     }
 
     // ---------- presets ----------
@@ -591,20 +586,20 @@ public sealed partial class FxChainWindow : Window
     private async void SavePreset()
     {
         if (Selected is not { } slot) return;
-        var name = GpDialogs.Prompt("Save preset", $"Preset name for {slot.Name}:", "My preset");
-        if (string.IsNullOrWhiteSpace(name)) return;
+        var name = Fx.PluginPresetDialog.Ask(this, slot);
+        if (string.IsNullOrWhiteSpace(name)) { LoadPresetList(); return; }
         await _host.Engine.CollectStatesAsync(new[] { _track }, 2000);
         if (!IsLoaded) return;   // the window closed while the states were read
         if (slot.State is not { Length: > 0 } state)
         {
-            MessageBox.Show(this, "This plug-in did not give its settings (turn the chain on first).", "Save preset", MessageBoxButton.OK, MessageBoxImage.Information);
+            TabForge.Views.ThemedMessageBox.Show(this, "This plug-in did not give its settings (turn the chain on first).", "Save preset", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
         try { PluginLibrary.SavePreset(slot, name.Trim(), state); }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
         {
             Services.Trace.Error(Services.Trace.Ui, "FX preset: save: " + ex.Message);
-            MessageBox.Show(this, "The preset could not be saved: " + ex.Message, "Save preset", MessageBoxButton.OK, MessageBoxImage.Warning);
+            TabForge.Views.ThemedMessageBox.Show(this, "The preset could not be saved: " + ex.Message, "Save preset", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
         LoadPresetList();
@@ -659,7 +654,7 @@ public sealed partial class FxChainWindow : Window
         catch (Exception ex)
         {
             _status.Text = "";
-            try { MessageBox.Show(this, "The plug-in could not be added: " + ex.GetBaseException().Message, "Add plug-in", MessageBoxButton.OK, MessageBoxImage.Warning); }
+            try { TabForge.Views.ThemedMessageBox.Show(this, "The plug-in could not be added: " + ex.GetBaseException().Message, "Add plug-in", MessageBoxButton.OK, MessageBoxImage.Warning); }
             catch (Exception) { Services.Trace.Error(Services.Trace.Ui, "FX chain: show add error: failed"); }
         }
     }
@@ -669,7 +664,7 @@ public sealed partial class FxChainWindow : Window
         if (_track.Rig.Plugins.Count >= InputLimits.MaxPluginsPerTrack) return;
         var chosen = PluginBrowser.Choose(this, _host);
         if (chosen is null) return;
-        TabForge.Plugins.PluginTrust.Approve(_host.PluginSettings, chosen.Path);   // picked from the user's own scan / browse: trusted
+        TabForge.Plugins.PluginTrust.Approve(_host.PluginSettings, chosen.Path); _host.SaveSettings();   // picked from the user's own scan / browse: trusted, and written now so it holds after a restart
         var role = chosen.Role;
         var vendor = chosen.Vendor;
         if (role.Length == 0)
@@ -718,7 +713,7 @@ public sealed partial class FxChainWindow : Window
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
         {
             Services.Trace.Error(Services.Trace.Ui, "FX chain: save: " + ex.Message);
-            MessageBox.Show(this, "The FX chain could not be saved: " + ex.Message, "Save FX chain", MessageBoxButton.OK, MessageBoxImage.Warning);
+            TabForge.Views.ThemedMessageBox.Show(this, "The FX chain could not be saved: " + ex.Message, "Save FX chain", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
         _status.Text = $"Saved {Path.GetFileName(dialog.FileName)}";
@@ -742,10 +737,10 @@ public sealed partial class FxChainWindow : Window
             if (catalog.Count == 0) catalog = VstScannerService.Scan(VstScannerService.RootsFor(_host.PluginSettings).ToList(), CancellationToken.None, null, _host.PluginSettings).ToList();
             var imported = ReaperChainImporter.Import(dialog.FileName, catalog);
             chain = imported?.Chain;
-            if (imported is not null && imported.Value.Report.Length > 0) MessageBox.Show(this, imported.Value.Report, "FX chain import", MessageBoxButton.OK, MessageBoxImage.Information);
+            if (imported is not null && imported.Value.Report.Length > 0) TabForge.Views.ThemedMessageBox.Show(this, imported.Value.Report, "FX chain import", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         else chain = PluginLibrary.LoadChain(dialog.FileName);
-        if (chain is null) { MessageBox.Show(this, "That file is not a valid FX chain.", "Load FX chain", MessageBoxButton.OK, MessageBoxImage.Warning); return; }
+        if (chain is null) { TabForge.Views.ThemedMessageBox.Show(this, "That file is not a valid FX chain.", "Load FX chain", MessageBoxButton.OK, MessageBoxImage.Warning); return; }
         if (!replace && _track.Rig.Plugins.Count + chain.Count > InputLimits.MaxPluginsPerTrack) return;
         CloseDocked();
         Edit(() =>

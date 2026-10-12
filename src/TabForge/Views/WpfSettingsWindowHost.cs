@@ -52,7 +52,7 @@ public sealed class WpfSettingsWindowHost : ISettingsWindowHost
             // Best effort: put the pre-dialog appearance back; the error below is what the user needs to see.
             try { preview(SettingsMigration.Clone(baseline)); }
             catch (Exception restoreError) { Services.Trace.Error(Services.Trace.Ui, "settings preview restore: " + restoreError.Message); System.Diagnostics.Debug.WriteLine($"Settings preview restore failed: {restoreError}"); }
-            MessageBox.Show(_owner,
+            ThemedMessageBox.Show(_owner,
                 $"Settings could not be opened.\n\n{ex.GetBaseException().Message}",
                 "TabForge Settings", MessageBoxButton.OK, MessageBoxImage.Error);
             return SettingsShowResult.Failed;

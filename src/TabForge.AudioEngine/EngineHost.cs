@@ -89,6 +89,8 @@ public static partial class EngineHost
         bool IdleTick()
         {
             TunerTick();
+            // An input that stopped (a fault in its callback, the device gone): one notice; the output keeps playing.
+            if (s.Input?.TakeFault() is { } inputFault) { EngineLog.Write($"input stopped: {inputFault}"); Send(EngineEvent.InputError, w => w.WriteString($"Audio input stopped: {inputFault}")); }
             // Every 10 s while audio runs: callback timing in the engine log (p95 / p99 / max against the block
             // deadline, deadline misses = likely dropouts, late calls = the device starved us, audio-thread allocations).
             if (s.FollowingWindowsVolume && Stopwatch.GetElapsedTime(lastSessionCheck).TotalSeconds >= 1)
@@ -330,7 +332,7 @@ public static partial class EngineHost
                     case EngineCommand.SetClips: ReadSetClips(r); break;
                     case EngineCommand.SetArm:
                     {
-                        var (slot, armed, rawMode, monitor) = SetArmMessage.Read(r); var mode = Math.Clamp(rawMode, 0, 2);
+                        var (slot, armed, rawMode, monitor) = SetArmMessage.Read(r); var mode = Math.Clamp(rawMode, 0, AudioInputAddress.MaxMode);
                         if (slot < 0 || slot >= MixEngine.MaxSlots) throw new InvalidDataException($"SetArm: track slot {slot} out of range");
                         EngineThreads.Post(() => _session.SetArm(slot, armed, mode, monitor));
                         break;

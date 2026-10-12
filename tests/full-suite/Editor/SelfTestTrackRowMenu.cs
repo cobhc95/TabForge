@@ -34,13 +34,13 @@ public static partial class SelfTest
         // Menu contents: the same Cut / Copy / Paste / Duplicate / Delete / Rename / Colour / Properties for every kind, audio adds Convert.
         var instrument = TrackRowMenus.Build(new TrackRowMenuState(false, true, true, "#F61A16"), Key);
         var audio = TrackRowMenus.Build(new TrackRowMenuState(true, false, true, "#7CC4F2"), Key);
-        var common = new[] { "Cut", "Copy", "Paste (after this track)", "Duplicate", "Delete…", "Rename", "Colour", "Properties…" };
-        Check("track row menu: an instrument track offers cut, copy, paste, duplicate, delete, rename, colour, properties",
+        var common = new[] { "Add track…", "Cut", "Copy", "Paste (after this track)", "Duplicate", "Delete…", "Rename", "Colour", "Properties…" };
+        Check("track row menu: an instrument track offers add track, cut, copy, paste, duplicate, delete, rename, colour, properties",
             instrument.Where(i => !i.IsSeparator).Select(i => i.Header).Take(common.Length).SequenceEqual(common), string.Join(" | ", instrument.Where(i => !i.IsSeparator).Select(i => i.Header)));
         Check("track row menu: an audio track has the same items plus Convert to instrument track",
-            audio.Where(i => !i.IsSeparator).Select(i => i.Header).SequenceEqual(common.Append("Convert to instrument track…")));
+            audio.Where(i => !i.IsSeparator).Select(i => i.Header).SequenceEqual(common.Append("Convert to instrument track…").Append("Show master track")));
         Check("track row menu: an instrument track also offers Convert to audio track",
-            instrument.Where(i => !i.IsSeparator).Select(i => i.Header).SequenceEqual(common.Append("Convert to audio track…")));
+            instrument.Where(i => !i.IsSeparator).Select(i => i.Header).SequenceEqual(common.Append("Convert to audio track…").Append("Show master track")));
         Check("track row menu: Paste is disabled with nothing copied, enabled with a copied track",
             !audio.First(i => i.Id == TrackRowMenus.Paste).Enabled && instrument.First(i => i.Id == TrackRowMenus.Paste).Enabled);
         Check("track row menu: Cut and Delete are off for the last track",

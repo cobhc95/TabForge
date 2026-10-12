@@ -179,39 +179,26 @@
                 </Menu>
                 <!-- Pinned tools: right-click any palette icon → "Pin to toolbar". Empty until the user pins. -->
                 <StackPanel x:Name="PinnedToolStrip" DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center" Margin="14,0,0,0"/>
-                <!-- Tempo and song-wide readouts remain in the main toolbar; only metronome and
-                     score zoom are hosted by the movable controller. -->
-                <StackPanel x:Name="ToolbarTempoGroup" DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0">
-                    <TextBox x:Name="TempoBox" Width="52" Text="120" ToolTip="Tempo (BPM)" LostFocus="TempoBox_LostFocus" PreviewKeyDown="TempoBox_PreviewKeyDown"/>
-                    <TextBlock Text="BPM" VerticalAlignment="Center" Margin="4,0,8,0" Foreground="{DynamicResource MutedBrush}"/>
-                    <Separator Style="{StaticResource BarSeparator}"/>
-                    <TextBlock x:Name="TimeSigLabel" Text="4/4" VerticalAlignment="Center" Margin="2,0,6,0" Foreground="{DynamicResource TextBrush}" ToolTip="Time signature" local:TooltipShortcuts.Command="Bar.TimeSignature"/>
-                    <TextBlock x:Name="KeyLabelText" Text="C major" VerticalAlignment="Center" Margin="2,0,6,0" Foreground="{DynamicResource TextBrush}" ToolTip="Key signature" local:TooltipShortcuts.Command="Bar.KeySignature"/>
-                    <Button x:Name="SidePanelButton" Style="{StaticResource ToolButton}" ToolTip="Show / hide the side panel (tools, sections, practice)" local:TooltipShortcuts.Command="View.SidePanel" Click="ToggleSidePanel_Click"
+                <StackPanel x:Name="ToolbarTempoGroup" xmlns:iconrow="clr-namespace:TabForge.Views.IconRow" iconrow:IconRowDragController.Reorder="True" DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0">
+                    <!-- The icons are grouped by kind; the user drags an icon to another place (Views/IconRow). A separator is an item of the same sequence. -->
+                    <StackPanel.Resources>
+                        <Style x:Key="IconRowSeparator" TargetType="Rectangle">
+                            <Setter Property="Width" Value="1"/><Setter Property="Height" Value="15"/><Setter Property="Margin" Value="5.5,0"/>
+                            <Setter Property="VerticalAlignment" Value="Center"/><Setter Property="Fill" Value="{DynamicResource MutedBrush}"/><Setter Property="Opacity" Value="0.4"/>
+                            <Setter Property="SnapsToDevicePixels" Value="True"/><Setter Property="IsHitTestVisible" Value="False"/>
+                        </Style>
+                    </StackPanel.Resources>
+                    <Button x:Name="SidePanelButton" iconrow:IconRowDragController.Id="side" Style="{StaticResource ToolButton}" ToolTip="Show / hide the side panel (tools, sections, practice)" local:TooltipShortcuts.Command="View.SidePanel" Click="ToggleSidePanel_Click"
                             AutomationProperties.Name="Show or hide the side panel">
                         <Path Style="{StaticResource IconPath}" Data="M3,4 H21 V20 H3 Z M15,4 V20"/>
                     </Button>
-                    <Button x:Name="InstrumentPanelButton" Style="{StaticResource ToolButton}" ToolTip="Show/hide fretboard / keyboard" local:TooltipShortcuts.Command="View.InstrumentPanel" Click="ToggleInstrumentView_Click"
+                    <Rectangle Style="{StaticResource IconRowSeparator}" iconrow:IconRowDragController.Id="|"/>
+                    <Button x:Name="InstrumentPanelButton" iconrow:IconRowDragController.Id="fretboard" Style="{StaticResource ToolButton}" ToolTip="Show/hide fretboard / keyboard" local:TooltipShortcuts.Command="View.InstrumentPanel" Click="ToggleInstrumentView_Click"
                             AutomationProperties.Name="Show or hide the fretboard / keyboard">
                         <Path Style="{StaticResource IconPath}" Data="{StaticResource IconFretboard}"/>
                     </Button>
-                    <!-- Lit (accent fill and border) while the Band view is shown; follows View > Band view's check. -->
-                    <Button ToolTip="Band view: a row per track" local:TooltipShortcuts.Command="View.BandView" Click="ToggleBandView_Click"
-                            AutomationProperties.Name="Show or hide the Band view">
-                        <Button.Style>
-                            <Style TargetType="Button" BasedOn="{StaticResource ToolButton}">
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsChecked, ElementName=BandViewMenu}" Value="True">
-                                        <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}"/>
-                                        <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Button.Style>
-                        <Path Style="{StaticResource IconPath}" Data="M3,4 H21 V8.5 H3 Z M3,10 H21 V14.5 H3 Z M3,16 H21 V20.5 H3 Z"/>
-                    </Button>
-                    <!-- Lit while Keyboard mode (experimental) shows its layout; MainWindow.KeyboardMode.cs sets Tag to "on". Notes falling onto a hit line. -->
-                    <Button x:Name="KeyboardModeButton" ToolTip="Keyboard mode (experimental)" local:TooltipShortcuts.Command="View.LearnMode" Click="ToggleKeyboardMode_Click"
+                    <!-- Lit while Keyboard mode (experimental) shows its layout; MainWindow.KeyboardMode.cs sets Tag to "on". A piano keyboard. -->
+                    <Button x:Name="KeyboardModeButton" iconrow:IconRowDragController.Id="keyboard" ToolTip="Keyboard mode (experimental)" local:TooltipShortcuts.Command="View.LearnMode" Click="ToggleKeyboardMode_Click"
                             AutomationProperties.Name="Show or hide Keyboard mode (experimental)">
                         <Button.Style>
                             <Style TargetType="Button" BasedOn="{StaticResource ToolButton}">
@@ -223,48 +210,50 @@
                                 </Style.Triggers>
                             </Style>
                         </Button.Style>
-                        <Path Style="{StaticResource IconPath}" Data="M5,2.5 H9.5 V9 H5 Z M13.5,7 H18 V13.5 H13.5 Z M3,19.5 H21"/>
+                        <Path Style="{StaticResource IconPath}" Data="M3,5 H21 V19 H3 Z M9,12.5 V19 M15,12.5 V19 M7.5,5 V12.5 H10.5 V5 M13.5,5 V12.5 H16.5 V5"/>
                     </Button>
-                    <Button Style="{StaticResource ToolButton}" ToolTip="Project settings: song info, credits, tempo, key" Click="ProjectSettings_Click"
+                    <Rectangle Style="{StaticResource IconRowSeparator}" iconrow:IconRowDragController.Id="|"/>
+                    <!-- Lit (accent fill and border) while the Band view is shown; follows View > Band view's check. -->
+                    <Button iconrow:IconRowDragController.Id="band" ToolTip="Band view: a row per track" local:TooltipShortcuts.Command="View.BandView" Click="ToggleBandView_Click"
+                            AutomationProperties.Name="Show or hide the Band view">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource ToolButton}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsChecked, ElementName=BandViewMenu}" Value="True">
+                                        <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}"/>
+                                        <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                        <Path Style="{StaticResource IconPath}" Data="M9.3,7 a2.7,2.7 0 1 0 5.4,0 a2.7,2.7 0 1 0 -5.4,0 M7,19.5 c0,-3.4 2.1,-5.6 5,-5.6 s5,2.2 5,5.6 M2.8,8.8 a2,2 0 1 0 4,0 a2,2 0 1 0 -4,0 M1.8,18.5 c0,-2.4 1.1,-4 3,-4.4 M17.2,8.8 a2,2 0 1 0 4,0 a2,2 0 1 0 -4,0 M22.2,18.5 c0,-2.4 -1.1,-4 -3,-4.4"/>
+                    </Button>
+                    <!-- Lit while compact mode hides the track rows; CompactModeButton sets Tag to "on". Two arrows pressing onto one line. -->
+                    <compact:CompactModeButton xmlns:compact="clr-namespace:TabForge.CompactMode" iconrow:IconRowDragController.Id="compact" ToolTip="Compact mode" local:TooltipShortcuts.Command="View.CompactMode"
+                            AutomationProperties.Name="Compact mode: hide the track rows and show the master track lane">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource ToolButton}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="on">
+                                        <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}"/>
+                                        <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                        <Path Style="{StaticResource IconPath}" Data="M12,2.5 V8.5 M9,5.5 L12,8.5 L15,5.5 M12,21.5 V15.5 M9,18.5 L12,15.5 L15,18.5 M3.5,12 H20.5"/>
+                    </compact:CompactModeButton>
+                    <Rectangle Style="{StaticResource IconRowSeparator}" iconrow:IconRowDragController.Id="|"/>
+                    <Button iconrow:IconRowDragController.Id="project" Style="{StaticResource ToolButton}" ToolTip="Project settings: song info, credits, tempo, key" Click="ProjectSettings_Click"
                             AutomationProperties.Name="Project settings">
                         <Path Style="{StaticResource IconPath}" Data="{StaticResource IconPrefs}"/>
                     </Button>
                 </StackPanel>
-                <!-- Score zoom and playback speed sit left of the tempo box. Narrow windows shed it in steps (ToolbarZoomSpeedFit). -->
-                <StackPanel x:Name="ZoomSpeedGroup" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,6,0">
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0">
-                                <Button Style="{StaticResource TransportButton}" Width="26" Height="26" MinWidth="26" Padding="0" ToolTip="Zoom out" local:TooltipShortcuts.Command="View.ZoomOut" Click="ZoomOutButton_Click" AutomationProperties.Name="Zoom out">
-                                    <local:SvgIconView Icon="zoom_minus" Width="20" Height="20" IsHitTestVisible="False" ButtonHovered="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=Button}}"/>
-                                </Button>
-                                <ComboBox x:Name="ZoomCombo" Width="76" Height="26" ToolTip="Score zoom. Choose a preset or type 50–200%."
-                                          AutomationProperties.AutomationId="ZoomCombo" AutomationProperties.Name="Zoom"
-                                          Loaded="ZoomCombo_ReSync" IsVisibleChanged="ZoomCombo_VisibleReSync"
-                                          IsEditable="True" IsTextSearchEnabled="False"
-                                          SelectionChanged="ZoomCombo_Changed" LostFocus="ZoomCombo_LostFocus"
-                                          PreviewKeyDown="ZoomCombo_PreviewKeyDown">
-                                    <ComboBoxItem Content="Fit width"/><ComboBoxItem Content="50%"/><ComboBoxItem Content="60%"/>
-                                    <ComboBoxItem Content="75%"/><ComboBoxItem Content="80%"/><ComboBoxItem Content="90%"/>
-                                    <ComboBoxItem Content="100%"/><ComboBoxItem Content="110%"/><ComboBoxItem Content="125%"/>
-                                    <ComboBoxItem Content="150%"/><ComboBoxItem Content="175%"/><ComboBoxItem Content="200%"/>
-                                </ComboBox>
-                                <Button Style="{StaticResource TransportButton}" Width="26" Height="26" MinWidth="26" Padding="0" ToolTip="Zoom in" local:TooltipShortcuts.Command="View.ZoomIn" Click="ZoomInButton_Click" AutomationProperties.Name="Zoom in">
-                                    <local:SvgIconView Icon="zoom_plus" Width="20" Height="20" IsHitTestVisible="False" ButtonHovered="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=Button}}"/>
-                                </Button>
-                            </StackPanel>
-                            <Border Width="1" Height="18" Background="{DynamicResource BorderSoftBrush}" VerticalAlignment="Center" Margin="6,0"/>
-                            <TextBlock Text="Speed" FontSize="11" VerticalAlignment="Center" Margin="0,0,3,0" Foreground="{DynamicResource MutedBrush}" ToolTip="Playback speed"/>
-                            <ComboBox x:Name="SpeedCombo" Width="76" Height="26" ToolTip="Playback speed. Choose a preset or type 25–200%."
-                                      AutomationProperties.AutomationId="Transport.Speed" AutomationProperties.Name="Playback speed"
-                                      Loaded="SpeedCombo_ReSync" IsVisibleChanged="SpeedCombo_VisibleReSync"
-                                      IsEditable="True" IsTextSearchEnabled="False"
-                                      SelectionChanged="SpeedCombo_Changed" LostFocus="SpeedCombo_LostFocus"
-                                      PreviewKeyDown="SpeedCombo_PreviewKeyDown">
-                                <ComboBoxItem Content="50%"/><ComboBoxItem Content="75%"/><ComboBoxItem Content="100%"/>
-                                <ComboBoxItem Content="125%"/><ComboBoxItem Content="150%"/><ComboBoxItem Content="200%"/>
-                            </ComboBox>
-                </StackPanel>
             </DockPanel>
         </Border>
+
+        <!-- Compact mode's header strip: caption, track pills, close. Shown only while compact mode is on; it hooks itself up when loaded. -->
+        <compact:CompactModeStrip xmlns:compact="clr-namespace:TabForge.CompactMode" DockPanel.Dock="Top"/>
 
         <!-- ============ WORKSPACE ============ -->
         <Grid x:Name="DockLayout">
@@ -372,7 +361,7 @@
                 </Border>
                 <ScrollViewer x:Name="SectionsPanelContent" Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False" Padding="8">
                 <Grid x:Name="SectionsPanelGrid" MinHeight="130">
-                    <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                    <Grid.RowDefinitions><RowDefinition Height="*"/></Grid.RowDefinitions>
                     <GroupBox Header="Sections">
                         <DockPanel Margin="5">
                             <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal">
@@ -456,12 +445,45 @@
                             </ListBox>
                         </DockPanel>
                     </GroupBox>
-                    <Expander Grid.Row="1" Header="Lyrics" IsExpanded="False" Margin="0,6,0,0">
-                        <TextBox x:Name="LyricsBox" MinHeight="120" AcceptsReturn="True"
-                                 VerticalScrollBarVisibility="Auto" TextWrapping="Wrap"
-                                 LostFocus="LyricsBox_LostFocus"/>
-                    </Expander>
                 </Grid>
+                </ScrollViewer>
+                <!-- Lyrics pane: the lyrics editor, a tab beside Sections. -->
+                <TextBox x:Name="LyricsBox" Grid.Row="2" Margin="8" MinHeight="120" AcceptsReturn="True"
+                         VerticalScrollBarVisibility="Auto" TextWrapping="Wrap"
+                         AutomationProperties.Name="Lyrics" LostFocus="LyricsBox_LostFocus"/>
+                <!-- View and tempo pane: one row of four equal buttons (score zoom, playback speed, tempo, time signature and key). -->
+                <ScrollViewer x:Name="ViewTempoPanelContent" Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False" Padding="4,3">
+                    <Grid>
+                        <!-- The value controls the rest of the window reads and writes. They stay in the tree, unseen and out of reach; the bar drives them. -->
+                        <Canvas Width="0" Height="0" HorizontalAlignment="Left" VerticalAlignment="Top" Opacity="0" IsHitTestVisible="False" KeyboardNavigation.TabNavigation="None" Focusable="False">
+                            <Button Style="{StaticResource TransportButton}" Width="22" Height="26" MinWidth="22" Padding="0" IsTabStop="False" ToolTip="Zoom out" local:TooltipShortcuts.Command="View.ZoomOut" Click="ZoomOutButton_Click" AutomationProperties.Name="Zoom out"/>
+                            <Button Style="{StaticResource TransportButton}" Width="22" Height="26" MinWidth="22" Padding="0" IsTabStop="False" ToolTip="Zoom in" local:TooltipShortcuts.Command="View.ZoomIn" Click="ZoomInButton_Click" AutomationProperties.Name="Zoom in"/>
+                            <ComboBox x:Name="ZoomCombo" Width="76" Height="26" IsTabStop="False" ToolTip="Score zoom. Choose a preset or type 50–200%."
+                                AutomationProperties.AutomationId="ZoomCombo" AutomationProperties.Name="Zoom"
+                                Loaded="ZoomCombo_ReSync" IsVisibleChanged="ZoomCombo_VisibleReSync"
+                                IsEditable="True" IsTextSearchEnabled="False"
+                                SelectionChanged="ZoomCombo_Changed" LostFocus="ZoomCombo_LostFocus"
+                                PreviewKeyDown="ZoomCombo_PreviewKeyDown">
+                                <ComboBoxItem Content="Fit width"/><ComboBoxItem Content="50%"/><ComboBoxItem Content="60%"/>
+                                <ComboBoxItem Content="75%"/><ComboBoxItem Content="80%"/><ComboBoxItem Content="90%"/>
+                                <ComboBoxItem Content="100%"/><ComboBoxItem Content="110%"/><ComboBoxItem Content="125%"/>
+                                <ComboBoxItem Content="150%"/><ComboBoxItem Content="175%"/><ComboBoxItem Content="200%"/>
+                            </ComboBox>
+                            <ComboBox x:Name="SpeedCombo" Width="58" Height="26" IsTabStop="False" ToolTip="Playback speed. Choose a preset or type 25–200%."
+                                AutomationProperties.AutomationId="Transport.Speed" AutomationProperties.Name="Playback speed"
+                                Loaded="SpeedCombo_ReSync" IsVisibleChanged="SpeedCombo_VisibleReSync"
+                                IsEditable="True" IsTextSearchEnabled="False"
+                                SelectionChanged="SpeedCombo_Changed" LostFocus="SpeedCombo_LostFocus"
+                                PreviewKeyDown="SpeedCombo_PreviewKeyDown">
+                                <ComboBoxItem Content="50%"/><ComboBoxItem Content="75%"/><ComboBoxItem Content="100%"/>
+                                <ComboBoxItem Content="125%"/><ComboBoxItem Content="150%"/><ComboBoxItem Content="200%"/>
+                            </ComboBox>
+                            <TextBox x:Name="TempoBox" Width="30" Height="22" Text="120" IsTabStop="False" ToolTip="Tempo (BPM)" LostFocus="TempoBox_LostFocus" PreviewKeyDown="TempoBox_PreviewKeyDown"/>
+                            <TextBlock x:Name="TimeSigLabel" Text="4/4"/>
+                            <TextBlock x:Name="KeyLabelText" Text="C"/>
+                        </Canvas>
+                        <vt:ViewTempoBar xmlns:vt="clr-namespace:TabForge.Views.ViewTempo" VerticalAlignment="Top"/>
+                    </Grid>
                 </ScrollViewer>
                 <GridSplitter x:Name="ControllerDockSplitter" Grid.Row="3" Height="5"
                               HorizontalAlignment="Stretch" VerticalAlignment="Center"

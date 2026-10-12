@@ -66,6 +66,8 @@ public sealed class AppearanceSettings
     public string ScorePaper { get; set; } = "Dark";
     /// <summary>Palette tool ids pinned to the menu-row toolbar, in order.</summary>
     public List<string> PinnedTools { get; set; } = new();
+    /// <summary>The top bar's icon row, as button ids and "|" separators in order; empty = the default order (Views/IconRow).</summary>
+    public List<string> IconRowOrder { get; set; } = new();
     public bool ShowSectionHeadings { get; set; } = true;
     /// <summary>Engrave dynamics markings (ppp..fff) under the staff where the dynamic changes.</summary>
     public bool ShowDynamics { get; set; } = true;

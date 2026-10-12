@@ -82,7 +82,7 @@ internal sealed class CurveEffectDialog
     {
         var name = GpDialogs.Prompt("Save as preset", "Preset name:", "My preset");
         if (string.IsNullOrWhiteSpace(name)) return;
-        if (!_presets.Save(_kind, name, Curve.Snapshot())) { MessageBox.Show(Dialog, "That name is taken by a built-in preset, too long, or the list is full.", "Save as preset"); return; }
+        if (!_presets.Save(_kind, name, Curve.Snapshot())) { ThemedMessageBox.Show(Dialog, "That name is taken by a built-in preset, too long, or the list is full.", "Save as preset"); return; }
         _presetsChanged?.Invoke();
         FillList(name.Trim());
     }

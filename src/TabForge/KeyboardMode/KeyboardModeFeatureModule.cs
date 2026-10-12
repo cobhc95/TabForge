@@ -38,7 +38,7 @@ public sealed class KeyboardModeFeatureModule : IFeatureModule
     public IReadOnlyList<FeatureHotkey> Hotkeys { get; } = new FeatureHotkey[]
     {
         new(new(CommandId, HotkeyCatalog.CategoryView, "Show / hide Keyboard mode (experimental)", "Ctrl+Alt+L",
-            "Show or hide the Keyboard mode pane: the notes of the selected track fall onto a key strip in time with playback (same as View > Keyboard mode (experimental))."), "Band.ResetRowHeights"),
+            "Show or hide the Keyboard mode pane: the notes of the selected track fall onto a key strip in time with playback (same as View > Keyboard mode (experimental))."), "Band.ToggleColourFrame"),
         new(new(WaitCommandId, HotkeyCatalog.CategoryView, "Keyboard mode: wait for the right notes", "Ctrl+Alt+W",
             "Turn on or off the pause at each chord in Keyboard mode until its notes are pressed (the Preferences setting of the same name)."), CommandId),
         new(new(SkipCommandId, HotkeyCatalog.CategoryView, "Keyboard mode: skip the awaited chord", "Ctrl+Alt+Q",

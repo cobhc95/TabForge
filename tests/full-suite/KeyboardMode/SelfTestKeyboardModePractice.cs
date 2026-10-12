@@ -82,9 +82,18 @@ public static partial class SelfTest
             void Click(Button b) => b.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
 
             Click(B("Play"));
-            Check("control bar: play calls the window's play / pause and shows Pause", plays == 1 && AutomationProperties.GetName(items[0]) == "Pause" && ((string)((Button)items[0]).Content).Contains("Pause"));
+            Check("control bar: play calls the window's play / pause and shows Pause", plays == 1 && AutomationProperties.GetName(B("Pause")) == "Pause" && ((string)B("Pause").Content).Contains("Pause"));
             Click(B("Stop"));
             Check("control bar: stop calls the window's stop", stops == 1);
+            var trackBox = C("Track");
+            var tracks = ((IPaneHost)window).Project.Tracks;
+            Check("control bar: the Track selector lists the song's tracks and shows the selected one", trackBox.Items.Count == tracks.Count && trackBox.SelectedIndex == controls.SelectedTrackIndex,
+                $"items {trackBox.Items.Count}, tracks {tracks.Count}, selected {trackBox.SelectedIndex}");
+            if (tracks.Count >= 2)
+            {
+                trackBox.SelectedIndex = 1;
+                Check("control bar: choosing a track in the Track selector selects it in the window", ((IPaneHost)window).SelectedTrack == tracks[1]);
+            }
             var wait = learn.WaitForNotes;
             Click(B("Wait for me"));
             Check("control bar: Wait for me toggles the setting and shows a check when on", learn.WaitForNotes != wait && ((string)B("Wait for me").Content).StartsWith("✓") == learn.WaitForNotes);

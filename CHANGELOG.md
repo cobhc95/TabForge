@@ -2,6 +2,64 @@
 
 TabForge is actively developed; please report anything odd on the Issues page.
 
+## 0.7.5
+
+- **Live input**
+  - The microphone button at the left of the track list toolbar (where "+ Track" was) plays an audio input or a MIDI keyboard through an app-wide live FX chain and the master, with no track and no recording. It is one for the whole program: it stays on across tabs and windows until you click it again, and is never on at start. The chain is kept with the app, not the song.
+  - Right-click the button for the FX chain, the input (audio inputs and connected MIDI devices can be ticked together or alone), whether the FX window opens when it is turned on, and the audio device settings. A MIDI device plugged in or removed while live input is on is picked up.
+  - When a chain was saved, the first turn-on in a run asks whether to restore it ("Remember my answer"; Preferences > Audio & Plug-ins > Live input: Ask, Always, Never).
+  - The status line reads "Live input on: Input 1" or "Input 1 + MIDI". The button is lit with a red outline and glow. New bindable command `Transport.LiveInput`. Adding a track stays in the Track menu, the Add track lane and its hotkeys.
+- **Audio inputs**
+  - Every input of the audio device can be used for recording and live input, as one channel or as a stereo pair, up to 64. Lists show the driver's names, and the input picker's closed box shows the input's name.
+  - "Inputs shown" in the audio settings chooses which of a device's inputs the track input pickers and the live input menu list; the choice is kept for each device.
+  - "Use all inputs of the audio device" is on by default; off opens two input channels only, for a device that misbehaves with all its inputs open. "ASIO input: one channel on inputs 1 and 2" replaces "ASIO input: last channel"; an existing one-input set-up keeps working as before, with that input heard on both sides.
+  - Safety: a device that cannot be opened with all its inputs falls back to two channels. If the input stops (the device is removed or its driver fails), the status bar says so and playback carries on. An input the device does not have stays chosen, is marked "(not available)" and is silent; the status bar says so when a track is armed or live input is on.
+  - A song that uses input 3 or above is saved in a newer format, which older versions refuse to open.
+  - Changing the audio device or its settings fades the sound out and back in, so speakers do not pop. A song that is playing pauses for the change and carries on by itself from the same place; a recording in progress is stopped and kept (Preferences: Protect speakers from pops when audio settings change, on by default).
+- **Compact mode**
+  - New toolbar button beside Keyboard mode, View > Compact mode (Ctrl+Alt+C), with a new icon of two arrows pressing onto one line. It hides the track rows and shows the master track lane at twice its height; pressing it again brings the tracks back as they were.
+  - A header strip under the top bar has a capsule for each track: the selected track is lit, and a click on another capsule selects it. The strip has a close button, and the side panel hides while compact mode is on and returns afterwards if it was shown before.
+  - The menu row is hidden in every layout, Band view included. The COMPACT MODE caption has a drop-down arrow and opens the menus-and-tools menu, as a right-click on the strip does. With Band view on, the Band header's right-click and drop-down offer the same rows.
+  - The track list's controls become a slim column of three rows of buttons: transport, metronome, loop, mixer, snap, tuner, master volume and zoom. The Compact mode tick in its menu follows the setting.
+- **Band view**
+  - New defaults: the fretboard sits above the tab, only the first row shows its fretboard (the others start with the thin name strip), the first row shows two lines of its music and every other row one, and a row is exactly as tall as what it shows (no empty score under the last line). When two lines do not fit, the first row shows one line like the others; a taller window adds whole lines to every row. The fretboard gives up height before the lines do.
+  - The Band layout belongs to the program, not to the song: what you change (fretboards on every row, on none or on the first only; the lines a row was dragged to, for the first row and for the others; rows per screen) is the start for every tab, and a song only keeps which of its tracks are shown and their order. "Reset view" (right-click, and now also in the BAND VIEW drop-down) returns every open tab to the defaults.
+  - A roll-down button after the BAND VIEW caption (the whole caption opens it) chooses the layout: fretboard beside the tab (a column at the left, good for wide screens), or fretboard above the tab with both at the full row width (good for portrait screens). It also turns the track colour frame on or off: a rounded frame with a dim glow in each track's colour around its row. Both are kept for the whole program, are in Preferences, and have hotkey commands. Each row's fretboard toggle has a new icon.
+  - The header is one row: a plain "BAND VIEW" caption with the track capsules beside it, so the lanes start higher. It has a close button at its right end, a new three-players button icon, and opens and closes only with its button or command.
+  - A row whose instrument is hidden has no left column. Its score spans the whole row under a thin strip with the track name and the instrument toggle, which is lit while the instrument shows; its width does not depend on the other rows' instruments.
+  - While playing, every row keeps the playing line of music in view, also when rows have different heights, and at once after a row is resized. The grey note length outline under the mouse shows in the rows as it does in the score (not while playing).
+  - Dragging the divider between instrument and score follows the pointer at once; the scores are laid out to the new width when the drag ends.
+  - The fretboard stays on its chosen side after entering or leaving Band view or Keyboard mode, and after switching layouts.
+- **Master track lane**
+  - Show master track (the track list's right-click menu, or Settings > Timeline & Tracks) adds an overview lane above the first track: one thin line per track, filled in the bars where that track plays. It is off by default.
+  - Its row in the track list has the master effects button, master volume and master pan, the same as the Mixer's Master row.
+  - Each line takes its track's colour (can be switched off in Preferences). The master colour and opacity are settings; opacity defaults to 25% and goes up to 50%.
+- **Track list and top bar**
+  - Arming a track refits the track list and scrolls the armed row with its input strip into view; a pane height you set is kept.
+  - The controls column is narrower by default and cannot be dragged narrower than its buttons need. Dragged narrower than one row needs, the toolbar shows two rows (live input and transport on the first; mixer, snap, tuning, master volume and zoom on the second) and returns to one row when widened.
+  - The track list's right-click menu has "Add track…" at the top.
+  - The icons at the right of the top bar are grouped by kind with a thin line between the groups. An icon can be dragged to another place in the row; the order is remembered, and "Reset all panels to default positions" restores it.
+- **View and tempo, Lyrics and Keyboard mode**
+  - Zoom, playback speed, tempo and time / key move to a **View and tempo** pane at the bottom of the side panel, as one row of four equal buttons: a click opens presets, a right click opens a slider and a box for fine-tuning, and the wheel steps zoom and speed. It can be moved, tabbed, floated, closed and reopened from View > Panels.
+  - **Lyrics** is its own pane beside Sections, so the sections list uses the full height.
+  - Keyboard mode has a Track selector at the left of its bar that chooses the track the keyboard follows. Its button has a keyboard icon.
+- **FX window and plug-ins**
+  - When a plug-in's own screen is larger than the window, the window grows to show it, within the screen and never smaller than you made it. Scroll bars at the right and bottom reach the rest when it still does not fit.
+  - Ctrl+S saves the FX chain and Ctrl+O loads one while the FX window has the focus.
+  - Saving a plug-in preset lists the saved presets, so one can be replaced (an existing name asks first) or deleted.
+  - A plug-in added from the plug-in list stays allowed after the program restarts.
+  - The CPU figure is the audio engine's share of the whole processor, with the audio buffer load beside it.
+  - A knob change in the app-wide Monitor FX chain no longer marks the open song as changed; a song's own monitor chain still does.
+- **Performance, fixes and looks**
+  - Exported video: Band rows follow the light or dark look of the export.
+  - Playback through a MIDI output uses much less CPU.
+  - The note length outline follows the mouse again while a song is paused.
+  - Render window: the small drop-downs (tail, sample rate, format, threads) no longer draw their arrow over the text.
+  - Message boxes follow the light or dark theme. Light theme transport buttons have see-through pastel fills.
+- **Shortcuts**
+  - 43 more menu commands can be given keys in Preferences > Shortcuts (no default keys were added): About, Stylesheet, audio setup, bar commands, add bass, drums and keys, notation and zoom views, note lengths, note effects, Exit.
+  - New bindable commands for the Band view layout and colour frame, and `Transport.LiveInput`.
+
 ## 0.7.2
 
 - **Short notes:** 32nd and 64th notes typed one after another follow each other without a gap, beam together, and a bar holds 32 or 64 of them.

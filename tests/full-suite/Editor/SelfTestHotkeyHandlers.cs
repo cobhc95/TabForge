@@ -66,7 +66,9 @@ public static partial class SelfTest
 
         Check("RunHotkey routes the Clip.* palette commands to the clip controller", mainWindow.Contains("IsClipAction(clip): return _clips.RunHotkey(Doc, clip)", StringComparison.Ordinal));
 
-        bool RunHotkeyRuns(string id) => handled.Contains(id) || HotkeyCatalog.IsClipAction(id) || EffectEditorFlow.KindOf(id) is not null || id.StartsWith("Tool.", StringComparison.Ordinal);
+        // The menu-row commands run through MenuRowCommands (the menu row's own click), and Band.* goes to the Band view by prefix.
+        var menuRows = System.Text.RegularExpressions.Regex.Matches(File.ReadAllText(Path.Combine(src, "Services", "HotkeyCatalog.MenuCommands.cs")), "new\\(\"([^\"]+)\"").Select(m => m.Groups[1].Value).ToHashSet(StringComparer.Ordinal);
+        bool RunHotkeyRuns(string id) => handled.Contains(id) || menuRows.Contains(id) || HotkeyCatalog.IsClipAction(id) || EffectEditorFlow.KindOf(id) is not null || id.StartsWith("Tool.", StringComparison.Ordinal) || id.StartsWith("Band.", StringComparison.Ordinal);
 
         var catalog = HotkeyCatalog.All.Select(a => a.Id).Distinct(StringComparer.Ordinal).ToList();
         var outside = HotkeyIdsOutsideRunHotkey.ToDictionary(e => e.Id, e => e.Reason, StringComparer.Ordinal);

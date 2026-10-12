@@ -134,6 +134,7 @@ public sealed partial class ArrangementPanel
         if (project is null) return;
 
         var showGroups = ShowsGroups(project);
+        if (BuildMasterLaneRow() is { } masterRow) _controls.Children.Add(masterRow);
         for (var i = 0; i < project.Tracks.Count; i++)
         {
             var track = project.Tracks[i];

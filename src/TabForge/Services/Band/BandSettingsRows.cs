@@ -34,6 +34,10 @@ public static partial class SettingsCatalog
                 "band view playhead line tab only full row green length"),
             Bool(Timeline, "Band view", "band.syncorder", "Keep Band order in sync with the timeline track order", v => band.KeepOrderInSync = v, () => band.KeepOrderInSync,
                 "Moving a Band view row also moves the track on the timeline, and moving a track on the timeline moves its Band view row. Off: the Band view keeps its own order.", "band view order sync timeline track reorder"),
+            Bool(Timeline, "Band view", "band.fretboardabove", "Fretboard above the tab", v => band.FretboardAbove = v, () => band.FretboardAbove,
+                "Each Band view row shows its instrument above its tab, both at the full row width. Off: the instrument sits beside the tab. Also in the roll-down menu after the Band view caption.", "band view layout fretboard instrument above beside tab stacked"),
+            Bool(Timeline, "Band view", "band.colourframe", "Track colour frame", v => band.ColourFrame = v, () => band.ColourFrame,
+                "Each Band view row has a rounded frame with a dim glow in its track's colour. Also in the roll-down menu after the Band view caption.", "band view track colour color frame glow halo border row"),
         };
     }
 }

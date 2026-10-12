@@ -22,13 +22,15 @@ public static class SettingsValidator
         plugins.Device = plugins.Device is { Length: <= 256 } device ? device : "";
         plugins.InputDevice = plugins.InputDevice is { Length: <= 256 } input ? input : "";
         plugins.AsioInputChannel = Math.Clamp(plugins.AsioInputChannel, 0, 62);
-        plugins.AsioInputLastChannel = Math.Clamp(plugins.AsioInputLastChannel, 0, 63);   // last < first is read as one channel
+        plugins.AsioInputLastChannel = Math.Clamp(plugins.AsioInputLastChannel, 0, 63);   // last <= first is read as one channel
+        plugins.HiddenInputs ??= new();
         if (settings.Timeline is { } timeline)
         {
             timeline.Snap ??= new SnapSettings();
             if (!SnapSettings.Grids.Contains(timeline.Snap.Grid)) timeline.Snap.Grid = "1/4";
             timeline.Snap.DistancePx = Math.Clamp(timeline.Snap.DistancePx, 1, 40);
             timeline.PlayheadStyle = PlayheadStyles.Normalize(timeline.PlayheadStyle);
+            timeline.MasterTrackColour = Colour(timeline.MasterTrackColour, "#8B939F"); timeline.MasterTrackOpacityPercent = Math.Clamp(timeline.MasterTrackOpacityPercent, 5, 50);
             timeline.Band ??= new BandSettings();
             timeline.Band.InstrumentSize = BandChoices.NormalizeSize(timeline.Band.InstrumentSize);
             timeline.Band.LaneContent = BandChoices.NormalizeContent(timeline.Band.LaneContent);

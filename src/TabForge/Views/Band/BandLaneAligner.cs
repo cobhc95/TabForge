@@ -1,7 +1,8 @@
 namespace TabForge.Views.Band;
 
 // Owns: giving every Band lane the widest of each bar and the smallest wanted zoom, so one bar has the same place and size in all lanes
-//   (the shared floor of bar widths is kept between passes). Re-entrant calls are ignored.
+//   (the shared floor of bar widths is kept between passes), and the lanes beside a shown instrument one page width (the narrowest),
+//   so their systems break on the same bars; a lane whose instrument is hidden fills its own row. Re-entrant calls are ignored.
 // Does not own: the rows, when to align (BandViewController) or the lanes' own engraving (BandLane).
 // Tests: TestBandLanesInSync, TestBandVerticalLanes.
 internal sealed class BandLaneAligner
@@ -28,7 +29,8 @@ internal sealed class BandLaneAligner
                     var natural = lane.NaturalBarWidths();
                     if (natural is null) continue;
                     cap = Math.Min(cap, lane.WantedZoom);
-                    if (lane.ActualWidth > 1) narrow = Math.Min(narrow, lane.ActualWidth);
+                    // A row with its instrument hidden wraps at its own width, so it is left out of the shared page width.
+                    if (lane.ActualWidth > 1 && !rows[i].InstrumentHidden) narrow = Math.Min(narrow, lane.ActualWidth);
                     if (widest is null) widest = (double[])natural.Clone();
                     else
                     {
@@ -43,7 +45,7 @@ internal sealed class BandLaneAligner
                 {
                     var lane = rows[i].Lane;
                     var before = (lane.WantedZoom, lane.Editor.Zoom);
-                    lane.ShareBarWidths(_floor); lane.ZoomCap = cap; lane.SharedWidth = narrow < double.MaxValue ? narrow : 0;
+                    lane.ShareBarWidths(_floor); lane.ZoomCap = cap; lane.SharedWidth = narrow < double.MaxValue && !rows[i].InstrumentHidden ? narrow : 0;
                     if (before != (lane.WantedZoom, lane.Editor.Zoom)) changed = true;
                 }
                 if (!changed) break;

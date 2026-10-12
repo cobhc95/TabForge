@@ -25,11 +25,11 @@ Open the demo song with **File > Open…** (`Ctrl+O`). The practice buttons sit 
 
 ## Slow down
 
-The **Speed** box changes only how fast the song plays back. The notes keep their pitch, and the written tempo stays as it is. You find the **Speed** box in the top toolbar, left of the tempo box.
+The **Speed** box changes only how fast the song plays back. The notes keep their pitch, and the written tempo stays as it is. You find the **Speed** box in the **View and tempo** pane of the side panel, beside the tempo box.
 
 Open the list and choose a preset, or type a percentage between 25% and 200%. At 100% the song plays at its written tempo, and 50% plays it at half speed. Typing `75` means 75% speed. It never means 75 beats per minute.
 
-The **BPM** box in the toolbar is different. It holds the song's written tempo, and it is saved with the song. Use **Speed** when you want to practise slowly, and use **BPM** when you want to change the music itself.
+The **BPM** box in the same pane is different. It holds the song's written tempo, and it is saved with the song. Use **Speed** when you want to practise slowly, and use **BPM** when you want to change the music itself.
 
 > **Tip:** Slow down until you can play the stretch cleanly, then raise the speed a little at a time. Playing fast and sloppy teaches your fingers the mistakes.
 
@@ -66,7 +66,7 @@ Click the **Count-in** button to switch it on. Right-click it to open **Count-in
 *Goal: repeat two bars at 75% speed with a click and a count-in.*
 
 1. Open the demo song and click a bar in the score. Then drag across two bars so that both are selected.
-2. In the top toolbar, type `75` in the **Speed** box and press `Enter`.
+2. In the **View and tempo** pane, type `75` in the **Speed** box and press `Enter`.
 3. Click the **Metronome** button and the **Count-in** button so that both light up.
 4. Click the **Loop** button. The status bar names the bars it will repeat.
 5. Press `Space`. You hear the count-in, and then the two bars play over and over at three quarters of their speed.

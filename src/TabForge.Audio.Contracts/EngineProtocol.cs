@@ -253,7 +253,7 @@ public sealed record MidiProcSpec(string Type, bool Enabled, string ParamsJson);
 
 /// <summary>Audio device settings sent to the engine.</summary>
 /// <remarks>ASIO: inputs on/off with the first and last channel (0-based, 1 or 2 channels); the output pair starts at AsioOutput.</remarks>
-public sealed record EngineConfig(string Driver, string Device, int SampleRate, int BufferSize, bool SeparateProcessPerPlugin, string InputDevice = "", int AsioInput = 0, int AsioOutput = 0, int AsioInputLast = 1, bool AsioInputs = true, bool FollowWindowsVolume = true, int AsioOutputLast = 1);
+public sealed record EngineConfig(string Driver, string Device, int SampleRate, int BufferSize, bool SeparateProcessPerPlugin, string InputDevice = "", int AsioInput = 0, int AsioOutput = 0, int AsioInputLast = 1, bool AsioInputs = true, bool FollowWindowsVolume = true, int AsioOutputLast = 1, bool AllInputs = true, bool PopGuard = true);
 
 /// <summary>One audio clip to play on a track: file, song position and processing.</summary>
 public sealed record ClipSpec(string File, double StartSec, double OffsetSec, double SourceLengthSec, double GainDb, double Pitch, double Speed, double FadeInSec = 0, double FadeOutSec = 0);
@@ -321,10 +321,15 @@ public static class Frames
 
     public static void Write(this BinaryWriter w, EngineConfig c)
     {
-        w.WriteString(c.Driver); w.WriteString(c.Device); w.Write(c.SampleRate); w.Write(c.BufferSize); w.Write(c.SeparateProcessPerPlugin); w.WriteString(c.InputDevice); w.Write(c.AsioInput); w.Write(c.AsioOutput); w.Write(c.AsioInputLast); w.Write(c.AsioInputs); w.Write(c.FollowWindowsVolume); w.Write(c.AsioOutputLast);
+        w.WriteString(c.Driver); w.WriteString(c.Device); w.Write(c.SampleRate); w.Write(c.BufferSize); w.Write(c.SeparateProcessPerPlugin); w.WriteString(c.InputDevice); w.Write(c.AsioInput); w.Write(c.AsioOutput); w.Write(c.AsioInputLast); w.Write(c.AsioInputs); w.Write(c.FollowWindowsVolume); w.Write(c.AsioOutputLast); w.Write(c.AllInputs); w.Write(c.PopGuard);
     }
 
-    public static EngineConfig ReadConfig(this BinaryReader r) =>
+    /// <summary>The tail (<see cref="EngineConfig.AllInputs"/>, then <see cref="EngineConfig.PopGuard"/>) is absent from an older sender: each missing field is on.</summary>
+    public static EngineConfig ReadConfig(this BinaryReader r) => ReadConfigHead(r) with { AllInputs = TailBool(r), PopGuard = TailBool(r) };
+
+    private static bool TailBool(BinaryReader r) => r.BaseStream.Position >= r.BaseStream.Length || r.ReadBoolean();
+
+    private static EngineConfig ReadConfigHead(BinaryReader r) =>
         new(r.ReadBoundedString(64), r.ReadBoundedString(256), Math.Clamp(r.ReadInt32(), 8000, 384000), Math.Clamp(r.ReadInt32(), 16, 16384), r.ReadBoolean(), r.ReadBoundedString(256), Math.Clamp(r.ReadInt32(), 0, 62), Math.Clamp(r.ReadInt32(), 0, 62), Math.Clamp(r.ReadInt32(), 0, 63), r.ReadBoolean(), r.ReadBoolean(), Math.Clamp(r.ReadInt32(), 0, 63));
 
     /// <summary>The owner id at the tail of SetPosition, SetClips and SetTransport: absent (an older sender) or out of range is owner 0.</summary>

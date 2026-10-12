@@ -27,7 +27,7 @@ public static partial class SelfTest
             ActiveDocument = DocumentSession.FromProject(project, null);
         }
         public Window Window { get; } = new();
-        public AppSettings Settings { get; } = new() { Timeline = new TimelineSettings { Band = new BandSettings { LaneLayout = BandChoices.Horizontal } } };
+        public AppSettings Settings { get; } = new() { Timeline = new TimelineSettings { Band = new BandSettings { FretboardAbove = false, Fretboards = BandChoices.FretboardsAll, SystemsPerRow = -1, LaneLayout = BandChoices.Horizontal } } };
         public TabEditorControl Editor { get; }
         public SongProject Project { get; }
         public TrackModel? Selected;
@@ -36,7 +36,8 @@ public static partial class SelfTest
         public (bool LeftHanded, bool ShowNoteNames, string? Scale, int Horizon) InstrumentOptions => (false, false, null, 4);
         public VisualOptions? Visual => null;
         public (int Track, int Bar, int Cell)? Cursor;
-        public void SaveSettings() { }
+        public int Saves { get; private set; }
+        public void SaveSettings() => Saves++;
         public void SetStatus(string text) { }
         public void MoveSongTrack(int from, int to) => Project.MoveTrack(from, to);
         public List<MenuSpec> ScoreMenuRuns { get; } = new();
@@ -252,7 +253,7 @@ public static partial class SelfTest
         {
             ("instrument", "instrument", "score-editor"), ("timeline", "timeline", "score-editor"), ("band", "band", "score-editor"), ("learn", "band", "score-editor"),
             ("tools", "tools", "structure"), ("structure", "tools", "tools"), ("rhythm", "tools", "tools"), ("layout", "tools", "tools"),
-            ("sections", "side", "score-editor")
+            ("sections", "side", "score-editor"), ("viewtempo", "below", "sections"), ("lyrics", "tab", "sections")
         })
             workspace.RegisterPanel(id, id, new Border(), 180, 100, host, anchor, startsClosed: id is "band" or "learn");
         workspace.RestoreLayout(null);
@@ -274,9 +275,9 @@ public static partial class SelfTest
         var pane = new FakeBandHost(project);
         var documents = new DocumentManager();
         var options = new AppOptions();
-        int? selected = null; (int From, int To)? moved = null; (string Category, string? Row)? opened = null;
+        int? selected = null; (int From, int To)? moved = null; (string Category, string? Row)? opened = null; var left = 0;
         IBandViewHost host = new BandHost(pane, documents, options, () => (true, false, "Major", 6),
-            (from, to) => moved = (from, to), i => selected = i, () => throw new InvalidOperationException("zoom"), (c, r) => opened = (c, r));
+            (from, to) => moved = (from, to), i => selected = i, () => throw new InvalidOperationException("zoom"), (c, r) => opened = (c, r), () => left++);
         Check("band host: pane basics come from the window's own pane host", host.Project == project && host.Settings == pane.Settings && host.Editor == pane.Editor && host.Window == pane.Window && host.SelectedTrack == project.Tracks[0]);
         Check("band host: the active song and the visual options are read live", host.ActiveDocument == documents.Active && host.Visual == options.Visual);
         Check("band host: the instrument options come from the delegate", host.InstrumentOptions == (true, false, "Major", 6));
@@ -288,7 +289,9 @@ public static partial class SelfTest
         Check("band host: the Band settings item opens Timeline & Tracks at the Band row", opened == (SettingsCatalog.Timeline, BandMenus.SettingsRow));
         opened = null;
         host.RunScoreMenu(new MenuSpec { Id = "other" });
-        Check("band host: any other id does nothing", opened is null);
+        Check("band host: any other id does nothing", opened is null && left == 0);
+        host.RunScoreMenu(new MenuSpec { Id = BandView.CloseId });
+        Eq("band host: the close button's id leaves Band view", 1, left);
         using var band = new BandViewController(host);
         BandStage(band, 900, 720);
         band.Tick();

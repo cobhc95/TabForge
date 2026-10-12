@@ -73,13 +73,13 @@ internal sealed class ToolActionsFlow
         var issues = MusicTime.FindBarProblems(_host.Project);
         if (issues.Count == 0)
         {
-            MessageBox.Show(_host.Window, "Every bar adds up to its time signature.", "Check bars", MessageBoxButton.OK, MessageBoxImage.Information);
+            ThemedMessageBox.Show(_host.Window, "Every bar adds up to its time signature.", "Check bars", MessageBoxButton.OK, MessageBoxImage.Information);
             _host.SetStatus("Bars OK");
             return;
         }
         var lines = issues.Take(20).Select(issue => issue.Describe());
         var more = issues.Count > 20 ? $"\n…and {issues.Count - 20} more" : "";
-        MessageBox.Show(_host.Window, string.Join("\n", lines) + more, "Check bars", MessageBoxButton.OK, MessageBoxImage.Warning);
+        ThemedMessageBox.Show(_host.Window, string.Join("\n", lines) + more, "Check bars", MessageBoxButton.OK, MessageBoxImage.Warning);
         _host.SetStatus($"{issues.Count} bar{(issues.Count == 1 ? "" : "s")} to check");
     }
 

@@ -12,6 +12,7 @@ public static partial class HotkeyCatalog
         all.AddRange(SliceB());
         all.AddRange(SliceC());
         all.AddRange(SliceD());
+        all.AddRange(SliceMenu());
         Features.FeatureRegistry.AddHotkeys(all);
         return all;
     }

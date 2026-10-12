@@ -7,6 +7,7 @@ The audio callback and everything it runs: the mixer, the track chains, the mast
 | --- | --- |
 | `CallbackMetrics.cs` | Real-time health of the callback: duration against deadline, deadline misses, late calls, allocations |
 | `MasterTap.cs` | Master output tap: a ring the callback fills; a drain thread hands blocks to a sink after the limiter |
+| `OutputFade.cs` | The last gain before the device: fades to silence before the output stops and back in after it starts |
 | `MixEngine.cs` | The audio callback: places timed MIDI at its frame, renders every track chain and sums them |
 | `OfflineRenderer.cs` | Faster-than-realtime render of the loaded track chains, in worker threads |
 | `PitchProbe.cs` | One pitch measurement of an instrument (`EngineHost.MeasurePitch`) |

@@ -15,6 +15,9 @@ internal sealed record DockPaneRow(string Id, string MenuTitle, string PaneTitle
 // Tests: TestDockPaneTable.
 internal static class DockPaneTable
 {
+    /// <summary>The pane of the score zoom, playback speed, tempo and time / key readouts: below the Sections pane by default.</summary>
+    public const string ViewTempoId = "viewtempo";
+
     public static readonly IReadOnlyList<DockPaneRow> Rows = new DockPaneRow[]
     {
         new("tools", "Tools", "Tools", 210, 150, "tools", "structure", 3, Side: true),
@@ -22,6 +25,8 @@ internal static class DockPaneTable
         new("rhythm", "Rhythm", "Rhythm", 210, 140, "tools", "tools", 5, Side: true),
         new("layout", "Layout", "Layout", 210, 140, "tools", "tools", 6, Side: true),
         new("sections", "Sections", "Sections", 190, 180, "side", "score-editor", 7, Side: true),
+        new("lyrics", "Lyrics", "Lyrics", 190, 150, "tab", "sections", 10, Side: true),
+        new(ViewTempoId, "View and tempo", "View and tempo", 190, 72, "below", "sections", 9, Side: true),
         new("instrument", "Fretboard", "Fretboard", 360, 150, "instrument", "score-editor", 0),
         new("timeline", "Arrangement", "Arrangement", 440, 112, "timeline", "score-editor", 1),
         new("band", "Band view", "Band", 520, 240, "band", "score-editor", 2, StartsClosed: true),

@@ -59,7 +59,7 @@ public sealed partial class ArrangementPanel : Grid
     /// <summary>Height of an audio row's controls (they share lane 0 with its armed strip).</summary>
     public const double AudioControlsHeight = DefaultTrackRowHeight;
 
-    public const double ControlsWidth = 580;
+    public const double ControlsWidth = 550;
 
     private readonly TrackTimeline _timeline = new();
     private readonly TrackColumnLayout _columns;
@@ -230,8 +230,6 @@ public sealed partial class ArrangementPanel : Grid
         _snapButton.SetResourceReference(Control.BorderBrushProperty, on ? "AccentBrush" : "BorderBrush");
         TooltipShortcuts.Bind(_snapButton, $"Snapping {(on ? "on" : "off")}: clips snap to the grid, other clips and the playhead. Hold Alt while dragging to bypass. Right-click for the snap settings.", "Timeline.Snap");
     }
-    /// <summary>Right-click on + Track: the host shows its track options menu there.</summary>
-    public event Action<FrameworkElement>? AddTrackMenuRequested;
     /// <summary>A group's collapse arrow in the track list (group name).</summary>
     public event Action<string>? GroupCollapseToggled;
     /// <summary>A whole group was dragged: first track, track count, insert before this track index (in the old order).</summary>
@@ -538,7 +536,7 @@ public sealed partial class ArrangementPanel : Grid
         _controlsScroll.ContextMenuOpening += (_, e) =>
         {
             for (var d = e.OriginalSource as DependencyObject; d is not null; d = d is Visual or System.Windows.Media.Media3D.Visual3D ? VisualTreeHelper.GetParent(d) : LogicalTreeHelper.GetParent(d))
-                if (d is UIElement el && el != _controls && !ReferenceEquals(el, _addLane.Row) && _controls.Children.Contains(el)) { e.Handled = true; return; }   // the Add-track lane is empty space: it keeps the pane's menu
+                if (d is UIElement el && el != _controls && !ReferenceEquals(el, _addLane.Row) && !ReferenceEquals(el, _masterRow) && _controls.Children.Contains(el)) { e.Handled = true; return; }   // the Add-track lane is empty space: it keeps the pane's menu
             _controlsScroll.ContextMenu = BuildEmptyAreaMenu(new Control[] { AutoFitItem() });
         };
         // The header strip (gaps between the buttons, column header row): the same "Show tracks in groups" item above the pane's items.
@@ -580,7 +578,7 @@ public sealed partial class ArrangementPanel : Grid
             Template = new ControlTemplate(typeof(Thumb)) { VisualTree = areaGripFactory }
         };
         areaGrip.DragDelta += (_, e) =>
-            ColumnDefinitions[0].Width = new GridLength(Math.Clamp(ColumnDefinitions[0].Width.Value + e.HorizontalChange, 420, 900));
+            SetControlsWidth(Math.Clamp(ColumnDefinitions[0].Width.Value + e.HorizontalChange, _compactMode ? 5 * TabForge.CompactMode.CompactColumnLayout.Cell + 12 : MinControlsWidth, 900));   // never narrower than two toolbar rows and the track rows need
         areaGrip.DragCompleted += (_, _) => ColumnLayoutChanged?.Invoke(this, EventArgs.Empty);
         SetColumn(areaGrip, 0);
         SetZIndex(areaGrip, 50);
@@ -714,7 +712,7 @@ public sealed partial class ArrangementPanel : Grid
     // Include a small per-row allowance for device-pixel rounding/borders so the final track is not
     // clipped at fractional DPI scales.
     public double PreferredHeight(int trackCount) =>
-        RulerHeight + SectionHeight + (_project is { } p ? RowsHeight(p) : trackCount * TrackRowHeight) + _addLane.Extra + 2;
+        RulerHeight + SectionHeight + (_project is { } p ? RowsHeight(p) : trackCount * TrackRowHeight) + _addLane.Extra + 2 + _horizontal.Margin.Top;
 
     /// <summary>Test hooks: the track list's vertical offset, the lanes' offset and the lanes' scroll viewer (wheel target).</summary>
     internal double RowScrollOffset => _controlsScroll.VerticalOffset;
@@ -729,7 +727,7 @@ public sealed partial class ArrangementPanel : Grid
     public double PreferredHeight() => PreferredHeight(Math.Max(1, _project?.Tracks.Count ?? 1));
 
     private static int VisibleTrackCount(SongProject p, int fallback) =>
-        p.Tracks.Count == 0 ? fallback : Enumerable.Range(0, p.Tracks.Count).Count(i => !IsCollapsed(p, i));
+        p.Tracks.Count == 0 ? fallback : Enumerable.Range(0, p.Tracks.Count).Count(i => !IsCollapsed(p, i)) + MasterLane.Rows(p);
 
     /// <summary>The height that shows the header plus every row when each track row is <paramref name="rowHeight"/> tall.</summary>
     public double PreferredHeightAt(double rowHeight)
@@ -773,6 +771,7 @@ public sealed partial class ArrangementPanel : Grid
                 _trackRows[i].Height = RowHeightOf(p, p.Tracks[i]);
                 if (_trackRows[i].Child is StackPanel { Children.Count: > 0 } stack && stack.Children[0] is FrameworkElement top) top.Height = p.Tracks[i].IsAudio ? AudioControlsHeight : TrackRowHeight;
             }
+        SizeMasterLaneRow();
         RefreshTimelineGeometry();
         LayoutPlayhead();
     }
@@ -797,13 +796,13 @@ public sealed partial class ArrangementPanel : Grid
         var monitor = new MonitorButton { On = track.MonitorInput, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0) };
         monitor.Toggled += (_, _) => MonitorToggled?.Invoke(index, !track.MonitorInput);
         strip.Children.Add(monitor);
-        var input = new ComboBox
+        var input = AudioInputPicker.Bind(new ComboBox
         {
-            ItemsSource = AudioInputs.All, SelectedItem = track.AudioInput, Width = 136, Height = 22, FontSize = 11,
+            Width = 136, Height = 22, FontSize = 11,
             VerticalAlignment = VerticalAlignment.Center, ToolTip = "Input recorded and monitored when armed: an audio input, or MIDI (played live through the track and recorded as a MIDI clip)",
             HorizontalAlignment = HorizontalAlignment.Left
-        };
-        input.SelectionChanged += (_, _) => { if (input.SelectedItem is string chosen && chosen != track.AudioInput) AudioInputChosen?.Invoke(index, chosen); };
+        }, () => track.AudioInput);
+        input.SelectionChanged += (_, _) => { if (input.SelectedValue is string chosen && chosen != track.AudioInput) AudioInputChosen?.Invoke(index, chosen); };
         strip.Children.Add(input);
         var meter = new InputMeter { Margin = new Thickness(8, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center, Width = 110, ToolTip = midi ? "MIDI input (velocity)" : "Input level" };
         _inputMeters[track] = meter;
@@ -826,35 +825,15 @@ public sealed partial class ArrangementPanel : Grid
     {
         if (VisualTreeHelper.GetParent(playbar) is Panel parent) parent.Children.Remove(playbar);
         _playbarHost.Content = playbar;
+        SyncToolbarWrap();
     }
 
     private UIElement BuildControlsHeader()
     {
-        var panel = new DockPanel { Margin = new Thickness(5, 0, 10, 0), VerticalAlignment = VerticalAlignment.Center };
-        var add = HeaderIconButton("IconPlus", "Add track");
-        // Narrow enough to leave the transport's loop button room; same icon, font and size.
-        add.Width = 66;
-        add.MinWidth = 66;
-        add.Padding = new Thickness(4, 0, 4, 0);
-        add.Height = 34;
-        add.Margin = new Thickness(2, 0, 3, 0);
-        add.SetResourceReference(System.Windows.Controls.Control.BackgroundProperty, "AddTrackSurfaceBrush");
-        add.SetResourceReference(System.Windows.Controls.Control.BorderBrushProperty, "AddTrackBorderBrush");
-        var addContents = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
-        addContents.Children.Add(new System.Windows.Shapes.Path
-        {
-            Data = (Geometry)Application.Current.FindResource("IconPlus"),
-            Style = (Style)Application.Current.FindResource("IconPath"),
-            Width = 17, Height = 17, Stroke = Brushes.White
-        });
-        addContents.Children.Add(new TextBlock { Text = "Track", FontWeight = FontWeights.SemiBold, Margin = new Thickness(3, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center });
-        add.Content = addContents;
-        add.Click += (_, _) => AddTrackRequested?.Invoke(this, EventArgs.Empty);
-        // Opens the Add track window (instrument and position). The tooltip shows the live Add track keys.
-        TooltipShortcuts.Bind(add, "Add track", "Track.Add");
-        add.MouseRightButtonUp += (_, e) => { e.Handled = true; AddTrackMenuRequested?.Invoke(add); };
-        DockPanel.SetDock(add, Dock.Left);
-        panel.Children.Add(add);
+        var panel = new ToolbarWrapPanel { Margin = new Thickness(5, 0, 10, 0), VerticalAlignment = VerticalAlignment.Center };
+        var live = new TabForge.LiveInput.LiveInputButton();   // live input: the left-most button (adding a track: Track menu, the Add track lane, hotkeys)
+        DockPanel.SetDock(live, Dock.Left);
+        panel.Children.Add(live);
         var zoomButtons = new StackPanel { Orientation = Orientation.Vertical, VerticalAlignment = VerticalAlignment.Center };
         var zoomIn = HeaderZoomButton("zoom_plus", "Zoom in timeline");
         var zoomOut = HeaderZoomButton("zoom_minus", "Zoom out timeline");

@@ -124,6 +124,7 @@ internal sealed class DockDragController
                 return;
             if (host.Node.Kind == "tabs" && host.Node.Panels.Count == 1 && host.Node.Panels[0] == _dragPanelId)
                 return;
+            if (host.Node.Kind == "tabs" && host.Node.Panels.Any(DockHostView.IsFixedPanel)) return;   // nothing docks onto or beside a fixed pane
 
             var overTabHeader = host.IsOverTabHeader(screenPoint);
             var zone = overTabHeader

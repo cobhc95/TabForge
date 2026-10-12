@@ -49,7 +49,7 @@ public partial class MainWindow : IWindowCloseHost, IExportCommandHost
         try { template = UserTemplates.Create(name); }
         catch (Exception ex) when (ex is IOException or InvalidDataException or ArgumentException or UnauthorizedAccessException)
         {
-            MessageBox.Show(this, $"Could not open the template \"{name}\".\n\n{ex.Message}", "New from template", MessageBoxButton.OK, MessageBoxImage.Error);
+            ThemedMessageBox.Show(this, $"Could not open the template \"{name}\".\n\n{ex.Message}", "New from template", MessageBoxButton.OK, MessageBoxImage.Error);
             return;
         }
         var doc = DocumentSession.FromProject(template, null);
@@ -322,7 +322,7 @@ public partial class MainWindow : IWindowCloseHost, IExportCommandHost
         }
         public string? PromptTemplateName(string suggested) => GpDialogs.Prompt("Save as template", "Template name", suggested);
         public int WritePdf(string path) => Views.ScorePdfExporter.Export(Project, _window.Editor.SelectedTrackIndex, path);
-        public void ShowError(string title, string message) => MessageBox.Show(_window, message, title, MessageBoxButton.OK, MessageBoxImage.Error);
+        public void ShowError(string title, string message) => ThemedMessageBox.Show(_window, message, title, MessageBoxButton.OK, MessageBoxImage.Error);
         public void SetStatus(string text) => _window.StatusText.Text = text;
     }
 
@@ -358,9 +358,9 @@ public partial class MainWindow : IWindowCloseHost, IExportCommandHost
     }
 
     private void Print_Click(object sender, RoutedEventArgs e) =>
-        MessageBox.Show(this, "Printing uses the Windows print dialog on the score page in the full release. For now use Export ASCII or screenshot the page.", "Print", MessageBoxButton.OK, MessageBoxImage.Information);
+        ThemedMessageBox.Show(this, "Printing uses the Windows print dialog on the score page in the full release. For now use Export ASCII or screenshot the page.", "Print", MessageBoxButton.OK, MessageBoxImage.Information);
     private void PrintPreview_Click(object sender, RoutedEventArgs e) =>
-        MessageBox.Show(this, "Print preview is the white score page above (page mode, 4 bars per system). Zoom with the toolbar.", "Print preview", MessageBoxButton.OK, MessageBoxImage.Information);
+        ThemedMessageBox.Show(this, "Print preview is the white score page above (page mode, 4 bars per system). Zoom with the toolbar.", "Print preview", MessageBoxButton.OK, MessageBoxImage.Information);
 
     private void ScoreInfo_Click(object sender, RoutedEventArgs e)
     {

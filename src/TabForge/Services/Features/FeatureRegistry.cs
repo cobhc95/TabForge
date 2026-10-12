@@ -13,6 +13,8 @@ public static class FeatureRegistry
         new Export.ExportFeatureModule(),
         new KeyboardMode.KeyboardModeFeatureModule(),
         new KeyboardMode.KeyboardModePopoutFeatureModule(),
+        new CompactMode.CompactModeFeatureModule(),
+        new LiveInput.LiveInputFeatureModule(),
     };
 
     /// <summary>Inserts every module hotkey after its anchor row.</summary>

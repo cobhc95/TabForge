@@ -234,7 +234,7 @@ public partial class MainWindow : TabForge.Views.Score.IScoreEditHost
         public string? AskDirections(string current, int ending, out int selectedEnding) => GpDialogs.Directions(current, ending, out selectedEnding);
         public string? AskText(string title, string label, string initial) => GpDialogs.Prompt(title, label, initial);
 
-        public bool ConfirmDeleteBar(int barNumber) => MessageBox.Show(_window, $"Delete bar {barNumber} from every track?",
+        public bool ConfirmDeleteBar(int barNumber) => ThemedMessageBox.Show(_window, $"Delete bar {barNumber} from every track?",
             "Delete bar", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) == MessageBoxResult.Yes;
 
         public void RefreshAfterBarDelete()

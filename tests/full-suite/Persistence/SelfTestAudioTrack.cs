@@ -104,8 +104,11 @@ public static partial class SelfTest
             Check("a note on an audio track is cleared on load", fixedAudio.Measures.All(m => m.Cells.All(c => c.Notes.Count == 0)));
             Check("a short audio track is padded to the song's bar count", fixedAudio.Measures.Count == repaired.Tracks[1].Measures.Count);
             var future = AudioTrackSong(withAudio: false);
-            future.FormatVersion = 4;
+            future.FormatVersion = 5;   // one above the highest version ProjectValidator accepts (4: audio inputs 3 and above)
             Check("an unknown format version is refused", Throws(() => ProjectValidator.Validate(future)));
+            var highest = AudioTrackSong(withAudio: false);
+            highest.FormatVersion = 4;
+            Check("format version 4 is accepted", !Throws(() => ProjectValidator.Validate(highest)));
             var legacy = AudioTrackSong(withAudio: false);
             legacy.FormatVersion = 1;
             Check("format version 1 is accepted", !Throws(() => ProjectValidator.Validate(legacy)));

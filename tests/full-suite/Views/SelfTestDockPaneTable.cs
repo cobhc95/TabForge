@@ -13,11 +13,11 @@ namespace TabForge;
 /// </summary>
 public static partial class SelfTest
 {
-    private const string DockMenuGolden = "tools=Tools,structure=Structure,rhythm=Rhythm,layout=Layout,sections=Sections,instrument=Fretboard,timeline=Arrangement,band=Band view,learn=Keyboard mode (experimental)";
+    private const string DockMenuGolden = "tools=Tools,structure=Structure,rhythm=Rhythm,layout=Layout,sections=Sections,lyrics=Lyrics,viewtempo=View and tempo,instrument=Fretboard,timeline=Arrangement,band=Band view,learn=Keyboard mode (experimental)";
     private const string DockRegistrationGolden =
         "instrument|Fretboard|360|-|instrument|score-editor|False;timeline|Arrangement|440|112|timeline|score-editor|False;band|Band|520|240|band|score-editor|True;" +
         "tools|Tools|210|150|tools|structure|False;structure|Structure|210|150|tools|tools|False;rhythm|Rhythm|210|140|tools|tools|False;" +
-        "layout|Layout|210|140|tools|tools|False;sections|Sections|190|180|side|score-editor|False;learn|Keyboard mode (experimental)|440|200|band|score-editor|True";
+        "layout|Layout|210|140|tools|tools|False;sections|Sections|190|180|side|score-editor|False;learn|Keyboard mode (experimental)|440|200|band|score-editor|True;viewtempo|View and tempo|190|72|below|sections|False;lyrics|Lyrics|190|150|tab|sections|False";
 
     private static void TestDockPaneTable() => RunInWindowFixture((w, context) =>
     {
@@ -38,7 +38,7 @@ public static partial class SelfTest
         Check("dock table: the table matches the registered panes in order", string.Join(";", DockPaneTable.InRegistrationOrder.Select(r =>
             $"{r.Id}|{r.PaneTitle}|{r.MinWidth}|{(r.Id == "instrument" ? "-" : r.MinHeight.ToString())}|{r.DefaultHost}|{r.DefaultAnchor}|{r.StartsClosed}")) == DockRegistrationGolden);
         Check("dock table: every pane id is a valid id in a saved layout (the settings validator reads the table)", rows.All(r => DockPaneTable.IsSavedId(r.Id)) && !DockPaneTable.IsSavedId("nonsense"));
-        Check("dock table: the side panel holds the five side panes", string.Join(",", DockPaneTable.SideIds) == "tools,structure,rhythm,layout,sections");
+        Check("dock table: the side panel holds the seven side panes", string.Join(",", DockPaneTable.SideIds) == "tools,structure,rhythm,layout,sections,lyrics,viewtempo");
         Check("dock table: each row's pane is registered with the dock", rows.All(r => panels.Contains(r.Id)) && panels.Count == rows.Count);
 
         var allIds = DockMenuGolden.Split(',').Select(p => p.Split('=')[0]).ToList();

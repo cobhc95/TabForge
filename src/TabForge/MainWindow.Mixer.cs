@@ -44,13 +44,7 @@ public partial class MainWindow : IMixerSurface
     void IMixerSurface.CheckpointUndo() => CheckpointUndo();
     void IMixerSurface.OpenAudioSettings() => OpenSettingsCategory(SettingsCatalog.AudioVst);
 
-    /// <summary>
-    /// Right-click on + Track: "Add track…" and "Audio track", nothing else (the Mixer has its own button). The colour items sit in the
-    /// track list's empty-area menu (Colours), and the colour of each group to Settings > Appearance &amp; colours.
-    /// </summary>
-    private void ShowAddTrackMenu(FrameworkElement target) => BuildAddTrackMenu(target).IsOpen = true;
-
-    /// <summary>The + Track button's right-click menu: "Add track…" and "Audio track" (a test reads and clicks its items).</summary>
+    /// <summary>A menu with "Add track…" and "Audio track" (a test reads and clicks its items).</summary>
     internal System.Windows.Controls.ContextMenu BuildAddTrackMenu(FrameworkElement target)
     {
         var menu = new System.Windows.Controls.ContextMenu
@@ -123,6 +117,6 @@ public partial class MainWindow : IMixerSurface
         public void RefreshMixer() => _window.MixerHost.RefreshWindow();
         public void UpdateAudioDeviceStatus() => _window.UpdateAudioDeviceStatus();
         public void UpdatePluginTrustBar() => _window.UpdatePluginTrustBar();
-        public void UpdateMediaApprovalBar() => _window.UpdateMediaApprovalBar();
+        public void UpdateMediaApprovalBar() => _window.UpdateMediaApprovalBar(); public void TogglePlayback() => _window.TogglePlayback(); public void StopPlayback() => _window.StopPlayback(); public bool IsRecording => _window.IsRecording;
     }
 }

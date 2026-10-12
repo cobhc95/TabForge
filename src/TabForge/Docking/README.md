@@ -26,3 +26,5 @@ Song data, playback or the audio engine.
 
 ## Tests
 `TestDockRatioNotRewrittenByAutoFit`, `TestDockPaneTable`, `TestBrowserTabShell`, `TestTabUi`.
+
+A fixed pane (`DockHostView.IsFixedPanel`, the Band view) has no tab, no panel menu and no drag, takes no drops, and draws its own caption; `DockLayoutTree.DropPanels` closes it in a layout that holds it anywhere but alone in a layout without the score.

@@ -21,6 +21,8 @@ internal sealed class KeyboardModeControlBar : Border
     private readonly Button _play, _wait, _loop, _names, _fingers;
     private readonly ComboBox _speed = new() { MinWidth = 76 };
     private readonly ComboBox _hands = new() { MinWidth = 128 };
+    private readonly ComboBox _track = new() { MinWidth = 150, MaxWidth = 150 };
+    private int? _trackSig;
     private readonly ComboBox _midi = new() { MinWidth = 168, MaxWidth = 260 };
     private readonly TextBlock _look = new() { MinWidth = 30, TextAlignment = TextAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
     private readonly Ellipse _dot = new() { Width = 10, Height = 10, StrokeThickness = 1.5, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(4, 0, 4, 0) };
@@ -36,6 +38,10 @@ internal sealed class KeyboardModeControlBar : Border
         Child = _row;
         AutomationProperties.SetName(this, "Keyboard mode controls");
 
+        const string trackTip = "Track the keyboard follows and practises";
+        Group("Track", _track, trackTip);
+        Views.TooltipShortcuts.Bind(_track, trackTip, null);
+        _track.SelectionChanged += (_, _) => { if (!_syncing && _track.SelectedIndex >= 0) controls.SelectTrack(_track.SelectedIndex); };
         _play = Add(Make("Play", "Play or pause the song", controls.PlayPause, "Transport.PlayPause"));
         Add(Make("■ Stop", "Stop the song", controls.Stop), "Stop");
         Group("Speed", _speed, "Playback speed: slower to learn, faster to challenge yourself (the play bar's speed)");
@@ -99,6 +105,7 @@ internal sealed class KeyboardModeControlBar : Border
         _syncing = true;
         try
         {
+            SyncTracks();
             var playing = _controls.IsPlaying;
             _play.Content = playing ? "❚❚ Pause" : "▶ Play";
             AutomationProperties.SetName(_play, playing ? "Pause" : "Play");
@@ -126,6 +133,19 @@ internal sealed class KeyboardModeControlBar : Border
             _heard.ToolTip = heard.Count > 1 ? string.Join("\n", heard) : null;
         }
         finally { _syncing = false; }
+    }
+
+    /// <summary>The Track selector: the list is rebuilt only when the track names or count change; the selection follows the window's selected track.</summary>
+    private void SyncTracks()
+    {
+        var sig = _controls.TracksSignature;
+        if (sig != _trackSig)
+        {
+            _trackSig = sig;
+            _track.Items.Clear();
+            for (var i = 0; i < _controls.TrackCount; i++) _track.Items.Add(_controls.TrackName(i));
+        }
+        _track.SelectedIndex = _controls.SelectedTrackIndex;
     }
 
     private static string Percent(double speed) => Math.Round(speed * 100).ToString(CultureInfo.InvariantCulture) + " %";

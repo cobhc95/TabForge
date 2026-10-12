@@ -105,11 +105,10 @@ public sealed partial class ArrangementPanel
         _syncingHorizontalScroll = false;
     }
 
-    public event EventHandler? AddTrackRequested;
-
     public void Bind(SongProject project, IReadOnlyList<MidiOutputDeviceInfo> devices, TabForge.Services.MediaContext? media = null, bool keepRows = false)
     {
         _project = project;
+        MarkMasterLane();
         _devices = devices;
         _timeline.Media = media ?? TabForge.Services.MediaContext.Anonymous;   // the bound song's media context: base directory and approvals for its clips
         _timeline.Project = project;

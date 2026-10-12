@@ -29,6 +29,20 @@ public sealed class BandSettings
     public string PlayheadLine { get; set; } = BandChoices.TabOnly;
     /// <summary>The Band lanes' own zoom, a multiplier on the shared lane zoom (1 = the score's size).</summary>
     public double LaneZoom { get; set; } = 1;
+    /// <summary>True (the default): each row's instrument lies above its tab at the full row width; false: beside it.</summary>
+    public bool FretboardAbove { get; set; } = true;
+    /// <summary>Which rows show their instrument in a song with no Band layout of its own: the first shown row (First), All or None. Follows what the user last did.</summary>
+    public string Fretboards { get; set; } = BandChoices.FretboardsFirst;
+    /// <summary>Systems per row in a song with no Band layout of its own: 0 = as many as fit the screen (at least one), a number = the user's last
+    /// dragged row (cut to what fits), -1 = the rows share the screen by <see cref="RowsPerScreen"/> (the user last used that control).</summary>
+    public int SystemsPerRow { get; set; }
+    /// <summary>Systems in the main (first) row: 0 = automatic (one more than the other rows when that fits), a number = the user's last drag of that row.</summary>
+    public int MainSystemsPerRow { get; set; }
+    /// <summary>Bumped by the Band view's Reset view, so every open Band view goes back to the defaults (never saved).</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public int Resets { get; set; }
+    /// <summary>Each row has a rounded frame and a dim halo in its track's colour.</summary>
+    public bool ColourFrame { get; set; } = true;
     /// <summary>Reordering the Band rows or the timeline's tracks reorders both.</summary>
     public bool KeepOrderInSync { get; set; }
 }
@@ -47,6 +61,7 @@ public static class BandChoices
     public const double MinLaneZoom = 0.5, MaxLaneZoom = 3, LaneZoomStep = 1.1;
     public static double ClampZoom(double z) => double.IsFinite(z) ? Math.Round(Math.Clamp(z, MinLaneZoom, MaxLaneZoom), 3) : 1;
     public const string TabOnly = "Tab only";
+    public const string FretboardsFirst = "First", FretboardsAll = "All", FretboardsNone = "None";
     public const string FullRow = "Full row";
     public static readonly string[] PlayheadLines = { TabOnly, FullRow };
     public static string NormalizePlayhead(string? v) => PlayheadLines.FirstOrDefault(s => string.Equals(s, v, StringComparison.OrdinalIgnoreCase)) ?? TabOnly;

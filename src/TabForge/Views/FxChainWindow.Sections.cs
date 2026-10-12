@@ -135,6 +135,7 @@ public sealed partial class FxChainWindow
                 top.Children.Add(useGlobal);
             }
         }
+        if (_host.AppWideChainTitle is { } appWide) { Title = appWide; foreach (FrameworkElement child in top.Children) child.Visibility = Visibility.Collapsed; if (_host.AppWideChainNote is { } note) top.Children.Add(note); }
         return top;
     }
 
@@ -161,6 +162,8 @@ public sealed partial class FxChainWindow
         AttachDragReorder();
         return left;
     }
+
+    private Fx.PluginEditorFit _fit = null!;
 
     /// <summary>The selected plug-in on the right: its bar above the docked editor area.</summary>
     private DockPanel BuildPluginPane()
@@ -204,8 +207,9 @@ public sealed partial class FxChainWindow
             _floating.Remove(s);
             ShowSelected();
         };
-        var scroller = new ScrollViewer { Content = dockArea, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
-        right.Children.Add(scroller);
+        // The editor is another process's window: the fit sizes the host area to what is visible and scrolls the plug-in's view inside it.
+        _fit = new Fx.PluginEditorFit(this, dockArea, _dockFrame, _dock, () => FindEditorPopup(new System.Windows.Interop.WindowInteropHelper(this).Handle));
+        right.Children.Add(_fit.Root);
         BuildBar();
         return right;
     }
@@ -224,7 +228,7 @@ public sealed partial class FxChainWindow
         StateChanged += (_, _) => PlaceOverlay();
         Activated += (_, _) => PlaceOverlay();
         // The tick only picks up bypass-state changes; placement never raises the overlay above the editor it covers.
-        _cpuTimer.Tick += (_, _) => { _status.Text = _host.Engine.IsRunning ? $"CPU {_host.Engine.CpuLoad:P1}" : ""; PlaceOverlay(); };
+        _cpuTimer.Tick += (_, _) => { _status.Text = _host.Engine.IsRunning ? $"CPU {_host.Engine.CpuLoad / Environment.ProcessorCount:P1} · audio load {_host.Engine.CpuLoad:P0}" : ""; _status.ToolTip ??= "CPU: the audio engine's share of the whole processor, as the system's task list shows it. Audio load: how much of each audio buffer's time all chains use on one core; dropouts start near 100%."; PlaceOverlay(); };
         _cpuTimer.Start();
         OwnerActivation.Attach(this);
         Closed += (_, _) =>

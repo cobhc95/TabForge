@@ -11,13 +11,13 @@ internal static class BandAppearance
     /// <summary>What a lane reads from the look; two equal keys draw the same.</summary>
     internal readonly record struct Key(
         bool Dark, Color Paper, Color Ink, Color Lines, Color Accent, Color Play, double Spacing, double VerticalSpacing,
-        double HorizontalSpacing, bool Dynamics, bool BarNumbers, int BarNumberEvery, bool Headings, LedgerLineMode Ledger);
+        double HorizontalSpacing, bool Dynamics, bool BarNumbers, int BarNumberEvery, bool Headings, LedgerLineMode Ledger, bool Outline);
 
     public static Key KeyOf(ScoreAppearance a) => new(
         a.DarkPaper, a.DarkPaper ? a.DarkPaperColor : a.LightPaperColor, a.DarkPaper ? a.DarkInkColor : a.LightInkColor,
         a.DarkPaper ? a.DarkStaffLineColor : a.LightStaffLineColor, a.AccentColor, a.PlaybackColor, a.ScoreSpacing,
         a.SystemVerticalSpacing, a.MeasureHorizontalSpacing, a.ShowDynamics, a.ShowBarNumbers, a.BarNumberFrequency,
-        a.ShowSectionHeadings, a.LedgerLines);
+        a.ShowSectionHeadings, a.LedgerLines, a.ShowNoteOutline);
 
     /// <summary>The paper colour of an appearance (the lane's background).</summary>
     public static Color PaperOf(ScoreAppearance a) => a.DarkPaper ? a.DarkPaperColor : a.LightPaperColor;
@@ -42,6 +42,7 @@ internal static class BandAppearance
         to.ShowBarNumbers = from.ShowBarNumbers;
         to.BarNumberFrequency = from.BarNumberFrequency;
         to.ShowDynamics = from.ShowDynamics;
+        to.ShowNoteOutline = from.ShowNoteOutline;
         to.ScoreSpacing = from.ScoreSpacing;
         to.SystemVerticalSpacing = from.SystemVerticalSpacing;
         to.MeasureHorizontalSpacing = from.MeasureHorizontalSpacing;

@@ -164,7 +164,7 @@ public sealed partial class ArrangementPanel
         var count = _project?.Tracks.Count ?? 0;
         if (count == 0) return -1;
         var index = RowIndexAt(_project, Math.Max(0, y));
-        return index < 0 ? count - 1 : index;
+        return index < 0 ? (y < MasterLane.OffsetOf(_project) ? 0 : count - 1) : index;
     }
 
     private void UpdateDragVisual(Point? pointer = null)

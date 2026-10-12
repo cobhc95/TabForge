@@ -136,7 +136,7 @@ public sealed class RenderWindow : Window
         var options = new StackPanel();
         foreach (var r in Rates) _rate.Items.Add(new ComboBoxItem { Content = r == 0 ? "Engine rate" : $"{r / 1000.0:0.#} kHz" });
         foreach (var f in Formats) _format.Items.Add(new ComboBoxItem { Content = f, IsEnabled = _mp3Ok || !f.StartsWith("MP3"), ToolTip = !_mp3Ok && f.StartsWith("MP3") ? "MP3 needs the Windows Media Foundation encoder, which this Windows edition does not have." : null });
-        _threads.Items.Add("Threads: auto"); _threads.Items.Add("Threads: 1");
+        _threads.Items.Add("Threads: auto"); _threads.Items.Add("Threads: 1"); foreach (var combo in new[] { _tail, _rate, _format, _threads }) combo.Padding = new Thickness(8, 2, 26, 2);   // room for the arrow beside the text
         options.Children.Add(Row(Label("Sample rate:"), _rate, Label("Format:"), _format, _threads));
         options.Children.Add(_mono); options.Children.Add(_realtime);
         options.Children.Add(Small("MP3: 44.1 / 48 kHz only. The engine's General MIDI synth may sound slightly different from the Windows MIDI synth used for normal playback."));
