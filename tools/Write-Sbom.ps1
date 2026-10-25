@@ -7,8 +7,11 @@ Run after changing packages or rebuilding tfvst3; Source\tools\Package-Release.p
 [CmdletBinding()]
 param()
 $ErrorActionPreference = 'Stop'
-$root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
-$out = Join-Path $root 'Source\docs\SBOM.md'
+# Private workspace: <root>\Source\tools\. Public repository: <root>\tools\ (sources at the root).
+$top = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
+if (Test-Path -LiteralPath (Join-Path $top 'TabForge.sln')) { $root = $top; $srcRoot = $top }
+else { $root = [IO.Path]::GetFullPath((Join-Path $top '..')); $srcRoot = Join-Path $root 'Source' }
+$out = Join-Path $srcRoot 'docs\SBOM.md'
 $rows = New-Object System.Collections.Generic.List[string]
 
 $lines = New-Object System.Collections.Generic.List[string]
@@ -19,7 +22,7 @@ $lines.Add('Restore runs in locked mode (`--locked-mode`), so these are the exac
 $lines.Add('Not established by this file: vulnerability status of any component. The executables are not code-signed; release builds carry GitHub build attestations.')
 
 # ---- managed packages ------------------------------------------------------------------------------
-$locks = Get-ChildItem -Path (Join-Path $root 'Source\src') -Filter 'packages.lock.json' -Recurse |
+$locks = Get-ChildItem -Path (Join-Path $srcRoot 'src') -Filter 'packages.lock.json' -Recurse |
     Where-Object { $_.FullName -notmatch '[/\x5c](bin|obj)[/\x5c]' } | Sort-Object FullName
 foreach ($lock in $locks) {
     $projectName = Split-Path (Split-Path $lock.FullName -Parent) -Leaf
@@ -52,17 +55,17 @@ foreach ($lock in $locks) {
 }
 
 # ---- native components -----------------------------------------------------------------------------
-$fetch = [IO.File]::ReadAllText((Join-Path $root 'Source\native\fetch-vst3sdk.ps1'))
+$fetch = [IO.File]::ReadAllText((Join-Path $srcRoot 'native\fetch-vst3sdk.ps1'))
 $sdkTag = if ($fetch -match "\`$SdkTag\s*=\s*'([^']+)'") { $Matches[1] } else { 'unknown' }
 $sdkCommit = if ($fetch -match "\`$SdkCommit\s*=\s*'([0-9a-f]{40})'") { $Matches[1] } else { 'unknown' }
 $submodules = New-Object System.Collections.Generic.List[string]
 foreach ($m in [regex]::Matches($fetch, "'([\w\.]+)'\s*=\s*'([0-9a-f]{40})'")) { $submodules.Add("- $($m.Groups[1].Value): ``$($m.Groups[2].Value)``") }
 
-$dll = Join-Path $root 'Source\src\TabForge.AudioEngine\native\tfvst3.dll'
+$dll = Join-Path $srcRoot 'src\TabForge.AudioEngine\native\tfvst3.dll'
 $dllHash = if (Test-Path -LiteralPath $dll) { (Get-FileHash -Algorithm SHA256 -LiteralPath $dll).Hash.ToLowerInvariant() } else { 'not present' }
 $recorded = 'no Source/native/BUILD_PROVENANCE.md yet (run Source/native/build-tfvst3.ps1)'
 $compiler = 'unknown'
-$provenance = Join-Path $root 'Source\native\BUILD_PROVENANCE.md'
+$provenance = Join-Path $srcRoot 'native\BUILD_PROVENANCE.md'
 if (Test-Path -LiteralPath $provenance) {
     $recorded = 'none recorded'
     foreach ($line in [IO.File]::ReadAllLines($provenance)) {

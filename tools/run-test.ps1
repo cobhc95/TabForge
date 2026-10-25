@@ -16,8 +16,11 @@ param(
 $ErrorActionPreference = 'Stop'
 if ($Test -notmatch '^[A-Za-z0-9_,]+$') { Write-Host "Test names may contain only letters, digits, underscore and comma: $Test"; exit 1 }
 
-$repo = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
-$project = Join-Path $repo 'Source\src\TabForge.Avalonia\TabForge.Avalonia.csproj'
+# Private workspace: <root>\Source\tools\. Public repository: <root>\tools\ (sources at the root).
+$top = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
+if (Test-Path -LiteralPath (Join-Path $top 'TabForge.sln')) { $repo = $top; $srcRoot = $top }
+else { $repo = [IO.Path]::GetFullPath((Join-Path $top '..')); $srcRoot = Join-Path $repo 'Source' }
+$project = Join-Path $srcRoot 'src\TabForge.Avalonia\TabForge.Avalonia.csproj'
 $temp = $env:TEMP
 $buildDir = Join-Path $temp 'tf-fs'
 $profileDir = Join-Path $temp 'tf-fs-profile'

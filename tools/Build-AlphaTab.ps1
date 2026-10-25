@@ -22,8 +22,11 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$repo = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
-$vendor = Join-Path $repo 'Source\vendor\alphatab'
+# Private workspace: <root>\Source\tools\. Public repository: <root>\tools\ (sources at the root).
+$top = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
+if (Test-Path -LiteralPath (Join-Path $top 'TabForge.sln')) { $repo = $top; $srcRoot = $top }
+else { $repo = [IO.Path]::GetFullPath((Join-Path $top '..')); $srcRoot = Join-Path $repo 'Source' }
+$vendor = Join-Path $srcRoot 'vendor\alphatab'
 $upstream = 'https://github.com/CoderLine/alphaTab.git'
 $tag = 'v1.8.4'
 $commit = '022a45c8e42370f9e12e68949d11eada370da83d'
@@ -56,7 +59,7 @@ if ($patches.Count -eq 0) { throw "No patch found in $vendor" }
 if (Test-Path -LiteralPath $Work) { Remove-Item -LiteralPath $Work -Recurse -Force }
 New-Item -ItemType Directory -Path $Work | Out-Null
 # The same .NET SDK (compiler) as TabForge itself: global.json applies to everything below the work folder.
-Copy-Item -LiteralPath (Join-Path $repo 'Source\global.json') -Destination (Join-Path $Work 'global.json')
+Copy-Item -LiteralPath (Join-Path $srcRoot 'global.json') -Destination (Join-Path $Work 'global.json')
 $src = Join-Path $Work 'alphaTab'
 
 # 1. The pinned upstream source, with line endings untouched so every machine generates the same files.

@@ -16,8 +16,11 @@ param(
     [string[]]$ExtraArgs = @()
 )
 $ErrorActionPreference = 'Stop'
-$root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
-$project = Join-Path $root 'Source\src\TabForge.Avalonia\TabForge.Avalonia.csproj'
+# Private workspace: <root>\Source\tools\. Public repository: <root>\tools\ (sources at the root).
+$top = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
+if (Test-Path -LiteralPath (Join-Path $top 'TabForge.sln')) { $root = $top; $srcRoot = $top }
+else { $root = [IO.Path]::GetFullPath((Join-Path $top '..')); $srcRoot = Join-Path $root 'Source' }
+$project = Join-Path $srcRoot 'src\TabForge.Avalonia\TabForge.Avalonia.csproj'
 dotnet publish $project -c Release -r win-x64 --no-restore --self-contained true -p:PublishSingleFile=true `
     -p:PublishTrimmed=false -p:IncludeNativeLibrariesForSelfExtract=true `
     -p:ContinuousIntegrationBuild=true -p:Deterministic=true @ExtraArgs -o $Output

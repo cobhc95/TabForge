@@ -33,7 +33,10 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
+# Private workspace: <root>\Source\tools\. Public repository: <root>\tools\ (sources at the root).
+$top = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
+if (Test-Path -LiteralPath (Join-Path $top 'TabForge.sln')) { $root = $top; $srcRoot = $top }
+else { $root = [IO.Path]::GetFullPath((Join-Path $top '..')); $srcRoot = Join-Path $root 'Source' }
 
 # ---- build from a clean worktree of the committed HEAD ---------------------------------------------
 if (-not $InCleanCheckout -and $env:CI -ne 'true') {
@@ -57,7 +60,7 @@ if (-not $InCleanCheckout -and $env:CI -ne 'true') {
     if ($LASTEXITCODE) { throw "git worktree add failed for $wt" }
     Write-Output "Building commit $head from a clean worktree: $wt"
     try {
-        $innerArgs = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', (Join-Path $wt 'Source\tools\Package-Release.ps1'), '-InCleanCheckout')
+        $innerArgs = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', (Join-Path $wt $(if (Test-Path -LiteralPath (Join-Path $wt 'Source\TabForge.sln')) { 'Source\tools\Package-Release.ps1' } else { 'tools\Package-Release.ps1' })), '-InCleanCheckout')
         if ($InnoCompiler) { $innerArgs += @('-InnoCompiler', $InnoCompiler) }
         if ($AllowUnprovenancedNative) { $innerArgs += '-AllowUnprovenancedNative' }
         & (Get-Process -Id $PID).Path @innerArgs
@@ -79,8 +82,8 @@ $porcelain = @(& git -C $root status --porcelain)
 if ($porcelain.Count -gt 0) { throw ('The checkout is not clean, so the build would not match the committed commit:' + [Environment]::NewLine + ($porcelain -join [Environment]::NewLine)) }
 # Same as CI: the sample songs in Tabs\ are not part of a clean checkout, so the gate must not depend on them.
 $env:TABFORGE_NO_LOCAL_SONGS = '1'
-$project = Join-Path $root 'Source\src\TabForge.Avalonia\TabForge.Avalonia.csproj'
-$buildProps = Join-Path $root 'Source\Directory.Build.props'
+$project = Join-Path $srcRoot 'src\TabForge.Avalonia\TabForge.Avalonia.csproj'
+$buildProps = Join-Path $srcRoot 'Directory.Build.props'
 $version = ([xml][IO.File]::ReadAllText($buildProps)).Project.PropertyGroup.Version | Where-Object { $_ } | Select-Object -First 1
 if (-not $version) { throw 'No <Version> in Directory.Build.props.' }
 # Display version, same rule as AppInfo.DisplayVersion: a final release with patch 0 is shown as major.minor ("0.5").
@@ -116,8 +119,8 @@ function Write-LoudWarning([string]$Message) {
 Write-Output "TabForge $display (version $version)"
 
 # ---- native bridge provenance ---------------------------------------------------------------------
-$shippedDll = Join-Path $root 'Source\src\TabForge.AudioEngine\native\tfvst3.dll'
-$provenanceFile = Join-Path $root 'Source\native\BUILD_PROVENANCE.md'
+$shippedDll = Join-Path $srcRoot 'src\TabForge.AudioEngine\native\tfvst3.dll'
+$provenanceFile = Join-Path $srcRoot 'native\BUILD_PROVENANCE.md'
 if (-not (Test-Path -LiteralPath $shippedDll)) {
     throw "tfvst3.dll is missing at $shippedDll (run native\build-tfvst3.ps1)."
 }
@@ -164,10 +167,10 @@ $pdbs = @(Get-ChildItem -LiteralPath $publish -Filter '*.pdb' -File -Recurse)
 foreach ($pdb in $pdbs) { Move-Item -LiteralPath $pdb.FullName -Destination (Join-Path $symbols $pdb.Name) -Force }
 if ($pdbs.Count -eq 0) { Write-LoudWarning "No PDBs were produced; dist\symbols\$version is empty." }
 else { Write-Output ("Symbols: {0} PDB(s) archived in {1}" -f $pdbs.Count, $symbols) }
-Copy-Item (Join-Path $root 'Source\LICENSE') (Join-Path $publish 'LICENSE.txt')
-Copy-Item (Join-Path $root 'Source\docs\THIRD_PARTY.md') $publish
+Copy-Item (Join-Path $srcRoot 'LICENSE') (Join-Path $publish 'LICENSE.txt')
+Copy-Item (Join-Path $srcRoot 'docs\THIRD_PARTY.md') $publish
 # MPL-2.0 s3.2 (TabForge.AlphaTab is a modified alphaTab): the patch, i.e. the source of the modification, ships beside the licence text.
-$alphaTabPatches = @(Get-ChildItem -LiteralPath (Join-Path $root 'Source\vendor\alphatab') -Filter '*.patch' -File)
+$alphaTabPatches = @(Get-ChildItem -LiteralPath (Join-Path $srcRoot 'vendor\alphatab') -Filter '*.patch' -File)
 if ($alphaTabPatches.Count -eq 0) { throw 'Source\vendor\alphatab\*.patch is missing (MPL-2.0 source of TabForge.AlphaTab); refusing to package.' }
 foreach ($patch in $alphaTabPatches) { Copy-Item -LiteralPath $patch.FullName -Destination (Join-Path $publish "licenses\alphaTab-$($patch.Name)") }
 
@@ -191,7 +194,7 @@ if (-not (Get-ChildItem -LiteralPath (Join-Path $publish 'Samples') -Filter '*.g
 
 # Refresh the SBOM and ship it next to the licence texts.
 & (Join-Path $PSScriptRoot 'Write-Sbom.ps1')
-$sbom = Join-Path $root 'Source\docs\SBOM.md'
+$sbom = Join-Path $srcRoot 'docs\SBOM.md'
 if (Test-Path -LiteralPath $sbom) { Copy-Item $sbom (Join-Path $publish 'SBOM.md') }
 
 # ---- release gate: the curated release area, on its own copy that is never packaged -----------------
@@ -271,7 +274,7 @@ Write-Output ("Portable: {0} ({1:N1} MB)" -f $zip, ((Get-Item $zip).Length / 1MB
 
 # Installer (built from the same tested folder)
 if (-not (Test-Path -LiteralPath $InnoCompiler)) { throw "Inno Setup compiler not found: $InnoCompiler" }
-& $InnoCompiler "/DAppVersion=$display" "/DFileVersion=$numericVersion" "/DSourceDir=$publish" /Q (Join-Path $root 'Source\installer\TabForge.iss')
+& $InnoCompiler "/DAppVersion=$display" "/DFileVersion=$numericVersion" "/DSourceDir=$publish" /Q (Join-Path $srcRoot 'installer\TabForge.iss')
 if ($LASTEXITCODE) { throw 'Inno Setup failed' }
 $setup = Join-Path $dist "TabForge-$display-setup.exe"
 Write-Output ("Installer: {0} ({1:N1} MB)" -f $setup, ((Get-Item $setup).Length / 1MB))

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace TabForge;
 
@@ -137,7 +138,11 @@ public static partial class SelfTest
         }
     }
 
-    /// <summary>The source checkout that contains this executable or the working directory, if any.</summary>
+    /// <summary>
+    /// The source checkout that contains this executable or the working directory, if any. The private workspace keeps the sources
+    /// under "Source\"; the public repository has them at its root. For the public layout a private-layout mirror is built once per run
+    /// (files copied under a temp "Source\" folder) so the checks that name "Source/..." paths read the same files in both layouts.
+    /// </summary>
     private static string? FindRepositoryRoot()
     {
         foreach (var start in new[] { Environment.CurrentDirectory, AppContext.BaseDirectory })
@@ -147,8 +152,56 @@ public static partial class SelfTest
                 if (File.Exists(Path.Combine(dir.FullName, "Source", "TabForge.sln")) &&
                     File.Exists(Path.Combine(dir.FullName, "Source", "Directory.Build.props")))
                     return dir.FullName;
+                if (File.Exists(Path.Combine(dir.FullName, "TabForge.sln")) && File.Exists(Path.Combine(dir.FullName, "Directory.Build.props")) &&
+                    Directory.Exists(Path.Combine(dir.FullName, "src")))
+                    return PublicLayoutMirror(dir.FullName);
             }
         }
         return null;
+    }
+
+    private static string? _publicMirror;
+
+    private static readonly string[] PublicRootEntries = { "src", "tests", "tools", "native", "vendor", "installer", "samples", ".github", "LICENSE", "Directory.Build.props", "global.json", "TabForge.sln", "nuget.config" };
+
+    /// <summary>A root document of the public tree links relative to the repository root; in the mirror it sits in Source/docs, so its link targets are moved back.</summary>
+    private static string PrivateRelativeLinks(string markdown) =>
+        Regex.Replace(markdown, @"\]\(([^)\s#]+)((?:#[^)\s]*)?)\)", m =>
+        {
+            var target = m.Groups[1].Value;
+            if (target.Contains("://", StringComparison.Ordinal) || target.StartsWith("mailto:", StringComparison.Ordinal)) return m.Value;
+            if (target.StartsWith("docs/", StringComparison.Ordinal)) return "](" + target[5..] + m.Groups[2].Value + ")";
+            var first = target.Split('/')[0];
+            return PublicRootEntries.Contains(first, StringComparer.Ordinal) ? "](../" + target + m.Groups[2].Value + ")" : m.Value;
+        });
+
+    private static string PublicLayoutMirror(string repo)
+    {
+        if (_publicMirror is not null && Directory.Exists(_publicMirror)) return _publicMirror;
+        var mirror = Path.Combine(Path.GetTempPath(), "tabforge-selftest-layout-" + Environment.ProcessId);
+        if (Directory.Exists(mirror)) Directory.Delete(mirror, true);
+        var skipped = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "bin", "obj", "build", "dist", "backup", "work", "Tabs", "TestResults", "node_modules" };
+        void Copy(string from, string to)
+        {
+            Directory.CreateDirectory(to);
+            foreach (var file in Directory.EnumerateFiles(from)) File.Copy(file, Path.Combine(to, Path.GetFileName(file)), true);
+            foreach (var sub in Directory.EnumerateDirectories(from))
+                if (!skipped.Contains(Path.GetFileName(sub))) Copy(sub, Path.Combine(to, Path.GetFileName(sub)));
+        }
+        var source = Path.Combine(mirror, "Source");
+        foreach (var folder in new[] { "src", "tests", "tools", "installer", "native", "vendor", "docs" })
+            if (Directory.Exists(Path.Combine(repo, folder))) Copy(Path.Combine(repo, folder), Path.Combine(source, folder));
+        foreach (var folder in new[] { "samples", ".github" })
+            if (Directory.Exists(Path.Combine(repo, folder))) Copy(Path.Combine(repo, folder), Path.Combine(mirror, folder));
+        Directory.CreateDirectory(Path.Combine(source, "docs"));
+        foreach (var file in Directory.EnumerateFiles(repo))
+        {
+            var name = Path.GetFileName(file);
+            var isDoc = name.EndsWith(".md", StringComparison.OrdinalIgnoreCase);
+            if (name is ".gitattributes" or ".gitignore") File.Copy(file, Path.Combine(mirror, name), true);
+            else if (isDoc) File.WriteAllText(Path.Combine(source, "docs", name), PrivateRelativeLinks(File.ReadAllText(file)));
+            else File.Copy(file, Path.Combine(source, name), true);
+        }
+        return _publicMirror = mirror;
     }
 }
