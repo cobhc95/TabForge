@@ -29,6 +29,20 @@ public readonly record struct SetMasterTapMessage(bool On)
     public static SetMasterTapMessage Read(BinaryReader r) => new(r.ReadBoolean());
 }
 
+/// <summary><see cref="EngineCommand.SetInputGain"/>: slot, gain in dB.</summary>
+public readonly record struct SetInputGainMessage(int Slot, float Db)
+{
+    public void Write(BinaryWriter w) { w.Write(Slot); w.Write(Db); }
+    public static SetInputGainMessage Read(BinaryReader r) => new(r.ReadInt32(), r.ReadSingle());
+}
+
+/// <summary><see cref="EngineCommand.SetTunerWindow"/>: window in ms.</summary>
+public readonly record struct SetTunerWindowMessage(int Ms)
+{
+    public void Write(BinaryWriter w) => w.Write(Ms);
+    public static SetTunerWindowMessage Read(BinaryReader r) => new(r.ReadInt32());
+}
+
 /// <summary><see cref="EngineCommand.SetLiveLimiter"/>: on.</summary>
 public readonly record struct SetLiveLimiterMessage(bool On)
 {
@@ -172,4 +186,61 @@ public readonly record struct SetArmMessage(int Slot, bool Armed, int Mode, bool
 {
     public void Write(BinaryWriter w) { w.Write(Slot); w.Write(Armed); w.Write(Mode); w.Write(Monitor); }
     public static SetArmMessage Read(BinaryReader r) => new(r.ReadInt32(), r.ReadBoolean(), r.ReadInt32(), r.ReadBoolean());
+}
+
+/// <summary><see cref="EngineCommand.ProbeAsio"/>: request id, driver name (empty: the first installed).</summary>
+public readonly record struct ProbeAsioMessage(int RequestId, string Driver)
+{
+    public void Write(BinaryWriter w) { w.Write(RequestId); w.Write(Driver); }
+    public static ProbeAsioMessage Read(BinaryReader r) => new(r.ReadInt32(), r.ReadBoundedString(256));
+}
+
+/// <summary><see cref="EngineEvent.AsioPanelShown"/>: request id, why the control panel could not be shown (empty: it was shown).</summary>
+public readonly record struct AsioPanelShownMessage(int RequestId, string Error)
+{
+    public void Write(BinaryWriter w) { w.Write(RequestId); w.Write(Error); }
+    public static AsioPanelShownMessage Read(BinaryReader r) => new(r.ReadInt32(), r.ReadBoundedString(512));
+}
+
+/// <summary><see cref="EngineEvent.AsioProbed"/>: request id, preferred buffer size (0: unknown), the accepted rates of <see cref="AudioDriverNames.SampleRates"/>, then the driver's input and output channel names (none: unknown).</summary>
+public readonly record struct AsioProbedMessage(int RequestId, int PreferredBuffer, IReadOnlyList<int> Rates, IReadOnlyList<string> Inputs, IReadOnlyList<string> Outputs)
+{
+    public void Write(BinaryWriter w)
+    {
+        w.Write(RequestId); w.Write(PreferredBuffer); w.Write(Rates.Count); foreach (var rate in Rates) w.Write(rate);
+        AsioChannelNames.Write(w, Inputs); AsioChannelNames.Write(w, Outputs);
+    }
+
+    public static AsioProbedMessage Read(BinaryReader r)
+    {
+        var id = r.ReadInt32(); var buffer = r.ReadInt32();
+        var rates = new List<int>();
+        for (var i = Math.Clamp(r.ReadInt32(), 0, AudioDriverNames.SampleRates.Count); i > 0; i--) rates.Add(r.ReadInt32());
+        if (r.BaseStream.Position >= r.BaseStream.Length) return new(id, buffer, rates, Array.Empty<string>(), Array.Empty<string>());   // an engine from before the names: unknown
+        return new(id, buffer, rates, AsioChannelNames.Read(r), AsioChannelNames.Read(r));
+    }
+}
+
+/// <summary>An ASIO driver's channel names on the wire (the probe answer and the Ready event): a count, then that many names. The writer keeps to <see cref="Max"/> names of <see cref="MaxNameChars"/> characters and the reader accepts exactly that, so the two always agree on how many bytes belong to the list.</summary>
+public static class AsioChannelNames
+{
+    /// <summary>The most names per direction (the settings allow channels 0 to 62).</summary>
+    public const int Max = 128;
+
+    /// <summary>The longest name; longer ones are cut by the writer.</summary>
+    public const int MaxNameChars = 128;
+
+    public static void Write(BinaryWriter w, IReadOnlyList<string> names)
+    {
+        var count = Math.Min(names.Count, Max);
+        w.Write(count);
+        for (var i = 0; i < count; i++) { var name = names[i] ?? ""; w.Write(name.Length > MaxNameChars ? name[..MaxNameChars] : name); }
+    }
+
+    public static string[] Read(BinaryReader r)
+    {
+        var names = new string[Math.Clamp(r.ReadInt32(), 0, Max)];
+        for (var i = 0; i < names.Length; i++) names[i] = r.ReadBoundedString(MaxNameChars);
+        return names;
+    }
 }

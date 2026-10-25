@@ -49,7 +49,7 @@ That line is the result. The exit code alone is not enough. A failing check is w
 
 - **One test.** `--only TestName[,TestName]` runs just the named tests. The full command reference (one test, one area, the CI gate, the headless diagnostics) is `docs/DEBUGGING.md`.
 - **Areas.** `--areas ui` (or `--areas settings,persistence`) runs one area plus the tests that have no area. Use it while you work. Run the whole suite before you open a pull request. The area names are listed in `docs/TESTING.md`.
-- **Groups and `--require ci`.** Some tests belong to named groups. `--require ci` makes the CI groups and two hygiene checks mandatory: a group that did not run, threw, or ran fewer checks than its minimum fails the whole run. A deleted or emptied test cannot pass. The registry is `src/TabForge/SelfTests/SelfTestRequirements.cs`.
+- **Groups and `--require ci`.** Some tests belong to named groups. `--require ci` makes the CI groups and two hygiene checks mandatory: a group that did not run, threw, or ran fewer checks than its minimum fails the whole run. A deleted or emptied test cannot pass. The registry is `src/TabForge.Avalonia/SelfTests/SelfTestRequirements.cs`.
 - **Small-screen mode.** CI runs on a 1024 x 728 screen at 100% scale. `TABFORGE_SELFTEST_SMALLSCREEN=1` makes your PC judge test windows by the same screen, so a layout test that passes on a big monitor but fails on CI fails for you too.
 - **No local songs.** `TABFORGE_NO_LOCAL_SONGS=1` ignores any local song folder, as on a clean checkout.
 
@@ -57,18 +57,18 @@ That line is the result. The exit code alone is not enough. A failing check is w
 
 | You want to change | Look in |
 | --- | --- |
-| Score data | `src/TabForge/Models/` (plain data, no WPF) |
-| Musical logic, file formats, settings, limits | `src/TabForge/Services/` (no WPF; a test enforces it) |
-| Playback compiler and scheduler | `src/TabForge/Playback/` (score to timeline to MIDI) |
-| Open songs, undo, save and close flows | `src/TabForge/Documents/` (one `DocumentSession` per song) |
-| Controls and windows | `src/TabForge/Views/`, `src/TabForge/Visualization/`, `src/TabForge/Docking/` |
-| Responsibilities moved out of windows | `src/TabForge/Controllers/` |
-| Window shell helpers | `src/TabForge/Shell/` |
-| Audio client and rendering | `src/TabForge/Audio/`, `src/TabForge/Rendering/` (the engine is reached only through the client) |
+| Score data | `src/TabForge.Core/Models/` (plain data, no WPF) |
+| Musical logic, file formats, settings, limits | `src/TabForge.Core/Services/` (no WPF; a test enforces it) |
+| Playback compiler and scheduler | `src/TabForge.Core/Playback/` (score to timeline to MIDI) |
+| Open songs, undo, save and close flows | `src/TabForge.Core/Documents/` (one `DocumentSession` per song) |
+| Controls and windows | `src/TabForge.Core/Views/`, `src/TabForge.Avalonia/Visualization/`, `src/TabForge.Core/Docking/` |
+| Responsibilities moved out of windows | `src/TabForge.Core/Controllers/` |
+| Window shell helpers | `src/TabForge.Core/Shell/` |
+| Audio client and rendering | `src/TabForge.Core/Audio/`, `src/TabForge.Core/Rendering/` (the engine is reached only through the client) |
 | Audio engine, mixer, plug-in hosting, synth, recorder | `src/TabForge.AudioEngine/` (real-time rules: `ARCHITECTURE.md`, section 4) |
 | Wire contracts shared by both sides | `src/TabForge.Audio.Contracts/` (no dependencies) |
 | Native VST3 bridge | `native/tfvst3/` |
-| Headless commands and tests | `src/TabForge/Diagnostics/`, `src/TabForge/SelfTests/` (the basic set) and `tests/full-suite/` (the full suite) |
+| Headless commands and tests | `src/TabForge.Core/Diagnostics/`, `src/TabForge.Avalonia/SelfTests/` (the basic set) and `tests/TabForge.Avalonia.Tests/` (the full suite) |
 | Build, packaging, CI | `Directory.Build.props`, `tools/`, `installer/`, `.github/workflows/` |
 
 To find the code, the pathway and the self-tests for a feature, start with `docs/FEATURE_MAP.md` and the feature's page in `docs/feature-map/`. The test tables in `docs/feature-map/tests.md` are generated (`TabForge.exe --feature-map`) and a self-test keeps them current.
@@ -130,7 +130,7 @@ The suffix says what a type is for. These are the names already in use; follow t
 - `XService` is a stateless or app-wide service with no UI state. Example: `Services/AsciiExportService.cs`.
 - `XBuilder` produces a layout or model and `XRenderer` draws it. Example: `Views/Score/ScoreRenderer.cs`.
 
-A self-test (architecture guard G13) fails on a new interface named `*Host` without the `I`, a class named `I*Host`, or an interface named `*Controller`, `*Flow` or `*Service`. Old exceptions are listed under `namingExceptions` in `src/TabForge/ArchitectureBudget.json`, which may only shrink.
+A self-test (architecture guard G13) fails on a new interface named `*Host` without the `I`, a class named `I*Host`, or an interface named `*Controller`, `*Flow` or `*Service`. Old exceptions are listed under `namingExceptions` in `src/TabForge.Avalonia/ArchitectureBudget.json`, which may only shrink.
 
 ## Comment style
 
@@ -145,10 +145,10 @@ Not good: `// Fixed 2 March: this used to allocate.`
 
 ## Writing a test
 
-- Tests are static methods in the `SelfTest` partial class (narrow tests in `tests/full-suite/<Area>/SelfTest*.cs`; only the basic set is in `src/TabForge/SelfTests/`). They are registered in `RunFullSuite` (`tests/full-suite/SelfTestFullSuite.cs`) with `Guard(TestName)`, or `GuardGroup("<group>", TestName)` for a required group, and mapped to an area in the area table of that file (`SelfTest.cs` for the basic set).
+- Tests are static methods in the `SelfTest` partial class (narrow tests in `tests/TabForge.Avalonia.Tests/<Area>/SelfTest*.cs`; only the basic set is in `src/TabForge.Avalonia/SelfTests/`). They are registered in `RunFullSuite` (`tests/TabForge.Avalonia.Tests/SelfTestFullSuite.cs`) with `Guard(TestName)`, or `GuardGroup("<group>", TestName)` for a required group, and mapped to an area in the area table of that file (`SelfTest.cs` for the basic set).
 - Use `Check(name, condition, detail)`, `Eq(name, expected, actual)` and `Skip(name, reason, requirement)`. A skip is only for something truly unavailable on the machine. Every skip is listed in `docs/TESTING.md`, and CI has a skip budget.
-- Do not depend on the screen. A guard fails a test that opens a top-level window larger than 1024 x 728. Lay a control out at an explicit size with `Measure` and `Arrange` (see `FitStage` in `tests/full-suite/Editor/SelfTestTrackListFit.cs`).
-- Do not depend on local files. Generate songs in code (`tests/full-suite/GuitarPro/SelfTestSyntheticFixtures.cs`).
+- Do not depend on the screen. A guard fails a test that opens a top-level window larger than 1024 x 728. Lay a control out at an explicit size with `Measure` and `Arrange` (see `FitStage` in `tests/TabForge.Avalonia.Tests/Editor/SelfTestTrackListFit.cs`).
+- Do not depend on local files. Generate songs in code (`tests/TabForge.Avalonia.Tests/GuitarPro/SelfTestSyntheticFixtures.cs`).
 - Do not depend on the clock. A performance check compares two paths against each other; it never asserts an absolute time.
 - Sources contain no stray control characters (a test checks). Text files use CRLF (`.gitattributes`).
 

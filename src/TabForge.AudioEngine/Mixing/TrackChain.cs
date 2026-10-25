@@ -4,13 +4,15 @@ using TabForge.AudioEngine.Plugins;
 
 namespace TabForge.AudioEngine.Mixing;
 
+// Owns: one track's signal path from sound through effects to track level and pan (instrument, wet/dry, CC7/CC10 levels).
+
 /// <summary>
 /// One track's signal path: sound (a VST instrument and/or the built-in General MIDI synth) → effects in order
 /// (each with wet/dry) → track level and pan. Level and pan come from the track's MIDI volume / pan messages (CC7 /
 /// CC10, which already include the mixer groups), applied here so they work with any instrument.
 /// All buffers are allocated up front; <see cref="Render"/> does not allocate.
 /// </summary>
-public sealed class TrackChain : IDisposable
+public sealed partial class TrackChain : IDisposable
 {
     /// <summary>One plug-in of the serial chain (instrument or effect), in chain order.</summary>
     public sealed record Effect(IPluginInstance Plugin, float Wet, int Index, string Pins = "Stereo", float Gain = 1, bool IsInstrument = false)
@@ -86,86 +88,6 @@ public sealed class TrackChain : IDisposable
     public volatile PitchProbe? Probe;
     private readonly BlockMidi[] _xpose = new BlockMidi[2048];
 
-    /// <summary>Any thread: the automatic pitch-match transpose of the instrument at a chain index.</summary>
-    public void SetAutoPitch(int index, int semitones)
-    {
-        foreach (var e in _effects) if (e.Index == index && e.IsInstrument) e.AutoPitch.Shift = semitones;
-    }
-
-    /// <summary>Audio thread: the stream through an instrument's automatic transpose, into a scratch list (the stream passed on stays untransposed).</summary>
-    private ReadOnlySpan<BlockMidi> AutoPitched(Effect e, ReadOnlySpan<BlockMidi> input)
-    {
-        var n = 0;
-        foreach (var m in input)
-        {
-            if (n >= _xpose.Length) break;
-            var status = m.Status; var d1 = m.Data1;
-            if (e.AutoPitch.Map(ref status, ref d1, m.Data2)) _xpose[n++] = new BlockMidi { Frame = m.Frame, Status = status, Data1 = d1, Data2 = m.Data2 };
-        }
-        return new ReadOnlySpan<BlockMidi>(_xpose, 0, n);
-    }
-
-    /// <summary>Every plug-in stage in chain order (engine thread sets processors and links on them).</summary>
-    public IReadOnlyList<Effect> Effects => _effects;
-
-    /// <summary>Bus or master chain: audio comes from the summed input, fader at unity.</summary>
-    public bool IsBus => _slot >= MixEngine.BusBase;
-
-    /// <summary>Post-fader output of the last block (sidechain source, stems).</summary>
-    public float[] PostL { get; }
-    public float[] PostR { get; }
-    private readonly float[][] _side4 = new float[4][];
-    private bool _unsorted;
-
-    /// <summary>Live bypass (any thread): the plug-in stays loaded, only its processing stops.</summary>
-    public void SetPluginBypass(int index, bool bypassed)
-    {
-        foreach (var e in _effects)
-            if (e.Index == index)
-            {
-                e.Bypass = bypassed;
-                if (!bypassed) { e.Misbehaved = false; e.MisbehaveReported = false; }   // switched on again: it gets another chance
-                if (!bypassed && e.IsInstrument) _panic = true;
-            }
-    }
-
-    private volatile bool _synthOn = true, _synthSilence;
-    private readonly BlockMidi[] _synthStop = new BlockMidi[32];
-    /// <summary>Set when the General MIDI synth is switched back on: the mixer replays the slot's channel state (program, controllers) into it.</summary>
-    public volatile bool Reprime;
-
-    /// <summary>
-    /// Live (any thread): the General MIDI synth sounds or not. Off costs nothing (it is skipped); its notes are released first.
-    /// No rebuild, so GM taking over from a bypassed instrument (or the chain switched off) keeps the timing and every plug-in editor.
-    /// </summary>
-    public void SetSynthOn(bool on)
-    {
-        if (_synthOn == on) return;
-        _synthOn = on;
-        if (on) Reprime = true; else _synthSilence = true;
-    }
-
-    /// <summary>Changes a plug-in's output volume live; the audio thread ramps to it per block (no zipper noise).</summary>
-    public void SetPluginGain(int index, float gain)
-    {
-        foreach (var e in _effects) if (e.Index == index) e.Target = gain;
-    }
-
-    /// <summary>Engine thread: the chain id (PluginSpec.Id) of the plug-in at a chain index, or null.</summary>
-    public string? IdAt(int index)
-    {
-        foreach (var e in _effects)
-            if (e.Index == index) foreach (var (id, p) in ById) if (ReferenceEquals(p, e.Plugin)) return id;
-        return null;
-    }
-
-    /// <summary>Live serial-chain options of one plug-in (any thread): bit 0 pass incoming MIDI on, bit 1 send its MIDI output on, bit 2 instrument audio replaces.</summary>
-    public void SetPluginWiring(int index, int flags)
-    {
-        foreach (var e in _effects)
-            if (e.Index == index) { e.PassMidi = (flags & 1) != 0; e.MidiOutToNext = (flags & 2) != 0; e.Replace = (flags & 4) != 0; }
-    }
-
     /// <summary>Scales _b by a linear ramp from <paramref name="from"/> to <paramref name="to"/> across the block.</summary>
     private void ScaleRamp(int frames, float from, float to)
     {
@@ -186,7 +108,8 @@ public sealed class TrackChain : IDisposable
     private readonly IPluginInstance? _midiSynth;
     private readonly Effect[] _effects;
     private readonly float[][] _a, _b, _silence;
-    private readonly BlockMidi[] _events = new BlockMidi[1024];
+    /// <summary>Audio thread: queued MIDI for the next render (drops beyond capacity count in <see cref="MidiDropped"/>, surfaced in the engine log).</summary>
+    private readonly BlockMidi[] _events = new BlockMidi[2048];
     private int _eventCount;
     private float _volume = 100 / 127f, _pan = 0.5f;
     private volatile bool _panic;
@@ -198,12 +121,15 @@ public sealed class TrackChain : IDisposable
     public volatile int ArmMode = -1;
     /// <summary>Play the armed input through the chain (off: it is only metered and recorded).</summary>
     public volatile bool Monitor = true;
+    /// <summary>Linear gain of the monitored input going into the chain (1 = unity); ramped across each block. The input meter and the tuner see the raw input.</summary>
+    public volatile float InputGain = 1f;
+    private float _inputGainNow = 1f;
     // Audio (clips, input) is scaled so the default track volume (104, GP step 13) plays it at its own level.
     private const float AudioUnity = (127f / 104f) * (127f / 104f);
     private readonly float[] _inL, _inR;
 
     /// <summary>Track level and pan from the mixer (0..127 each).</summary>
-    public void SetMix(int volume, int pan) { _volume = Math.Clamp(volume, 0, 127) / 127f; _pan = Math.Clamp(pan, 0, 127) / 127f; Silent = volume <= 0; }
+    public void SetMix(int volume, int pan) { _volume = Math.Clamp(volume, 0, MidiLimits.Max) / 127f; _pan = Math.Clamp(pan, 0, MidiLimits.Max) / 127f; Silent = volume <= 0; }
 
     /// <summary>
     /// The mixer's mute gate: set by <see cref="SetMix"/> with level 0 (what the client sends for a muted / not-soloed track), cleared by any other level.
@@ -245,7 +171,8 @@ public sealed class TrackChain : IDisposable
         get
         {
             var tail = 0;
-            foreach (var p in Plugins) { try { tail = Math.Max(tail, p.TailSamples); } catch (Exception) { } }
+            foreach (var p in Plugins) { try { tail = Math.Max(tail, p.TailSamples); } catch (Exception) { } // swallow: a plug-in that does not report its tail keeps the current value
+ }
             return tail;
         }
     }
@@ -294,136 +221,6 @@ public sealed class TrackChain : IDisposable
     /// <summary>Any thread: where the instrument's MIDI comes from (see <see cref="_route"/>) and which channels pass (bit n = channel n+1).</summary>
     public void SetRoute(int source, int channelMask) => _route = ((Math.Max(source, -2) + 2) << 16) | (channelMask & 0xFFFF);
 
-    /// <summary>Audio thread: MIDI from another track that routes to this chain's instrument (already known to come from the chosen source).</summary>
-    public void AddRouted(int frame, byte status, byte data1, byte data2)
-    {
-        var route = _route;
-        if ((route >> 16) - 2 < 0) return;   // this chain does not take another track's MIDI
-        AddInstrument(route, frame, status, data1, data2);
-    }
-
-    private void AddInstrument(int route, int frame, byte status, byte data1, byte data2)
-    {
-        if (status < 0xF0 && (route & (1 << (status & 0x0F))) == 0) return;   // channel filter (system messages always pass)
-        if (_instCount < _instEvents.Length) _instEvents[_instCount++] = new BlockMidi { Frame = frame, Status = status, Data1 = data1, Data2 = data2 };
-        else Interlocked.Increment(ref MidiDropped);
-    }
-
-    /// <summary>Audio thread: queues a MIDI message for the next <see cref="Render"/>.</summary>
-    public void AddEvent(int frame, byte status, byte data1, byte data2)
-    {
-        var kind = status & 0xF0;
-        // The General MIDI synth handles volume / pan itself, exactly like the Windows synth; a VST instrument gets
-        // them as the chain's level and pan instead (many instruments ignore CC7 / CC10).
-        if (kind == 0xB0 && data1 == 7) { _volume = data2 / 127f; return; }
-        if (kind == 0xB0 && data1 == 10) { _pan = data2 / 127f; return; }
-        if (_eventCount < _events.Length) _events[_eventCount++] = new BlockMidi { Frame = frame, Status = status, Data1 = data1, Data2 = data2 };
-        else Interlocked.Increment(ref MidiDropped);
-        var route = _route;
-        if ((route >> 16) == 1) AddInstrument(route, frame, status, data1, data2);   // own MIDI
-    }
-
-    /// <summary>Audio thread: MIDI forwarded from another chain's plug-in output (delivered for this block; CC7 / CC10 are not taken as the track level).</summary>
-    public void AddForwarded(int frame, byte status, byte data1, byte data2)
-    {
-        if (_eventCount < _events.Length) _events[_eventCount++] = new BlockMidi { Frame = frame, Status = status, Data1 = data1, Data2 = data2 };
-        else Interlocked.Increment(ref MidiDropped);
-        var route = _route;
-        if ((route >> 16) == 1) AddInstrument(route, frame, status, data1, data2);
-        _unsorted = true;
-    }
-
-    /// <summary>Audio thread, after every chain rendered: hands captured plug-in MIDI output to the destination chains (heard next block).</summary>
-    public void DeliverForwards(TrackChain?[] chains)
-    {
-        foreach (var e in _effects)
-        {
-            var count = e.FwdCount;
-            if (count == 0) continue;
-            e.FwdCount = 0;
-            var dest = e.ForwardSlot;
-            if (dest < 0 || dest >= chains.Length || chains[dest] is not { } target || ReferenceEquals(target, this)) continue;
-            for (var i = 0; i < count; i++) target.AddForwarded(e.Fwd[i].Frame, e.Fwd[i].Status, e.Fwd[i].Data1, e.Fwd[i].Data2);
-        }
-    }
-
-    /// <summary>Stable insertion sort by frame (small lists, no allocation).</summary>
-    private static void SortByFrame(BlockMidi[] items, int count)
-    {
-        for (var i = 1; i < count; i++)
-        {
-            var x = items[i]; var j = i - 1;
-            while (j >= 0 && items[j].Frame > x.Frame) { items[j + 1] = items[j]; j--; }
-            items[j + 1] = x;
-        }
-    }
-
-    /// <summary>
-    /// Audio thread: runs one stage's MIDI processors on the current stream (_cur), in place. A bypassed stage runs none, and a
-    /// processor list that goes away (bypass, removed) first releases every note it let through, so nothing hangs.
-    /// Returns true when the stream went through processors (or released notes).
-    /// </summary>
-    private bool RunProcessors(Effect e, int frames, in TransportInfo transport)
-    {
-        var wanted = e.Bypass || e.Misbehaved ? null : e.Processors;
-        if (wanted is null && e.ProcActive is null) return false;
-        _procOut.Clear();
-        if (!ReferenceEquals(wanted, e.ProcActive))
-        {
-            if (wanted is null) e.ProcActive!.ReleaseAll(_procOut); else wanted.TakeOver(e.ProcActive, _procOut);
-            e.ProcActive = wanted;
-        }
-        var input = new ReadOnlySpan<BlockMidi>(_cur, 0, _curCount);
-        if (e.ProcActive is not null) e.ProcActive.Process(input, _procOut, frames, transport, MidiLog, _a[0], _a[1]);
-        else foreach (var m in input) _procOut.Add(m);
-        if (_procOut.Unsorted) _procOut.Sort();
-        _curCount = Math.Min(_procOut.Count, _cur.Length);
-        _procOut.Span[.._curCount].CopyTo(_cur);
-        return true;
-    }
-
-    /// <summary>
-    /// Audio thread, no allocation: the block's queue after a panic = all notes off + all sound off on every channel at frame 0, then the
-    /// program changes, controllers and pitch bends that were queued (notes and other messages are dropped).
-    /// </summary>
-    internal static void PanicKeepingState(BlockMidi[] buffer, ref int count)
-    {
-        var kept = 0;
-        for (var i = 0; i < count; i++)
-        {
-            var e = buffer[i];
-            var kind = e.Status & 0xF0;
-            if (kind == 0xC0 || kind == 0xE0 || (kind == 0xB0 && e.Data1 < 120)) buffer[kept++] = e;
-        }
-        const int PanicEvents = 32;
-        if (buffer.Length < PanicEvents) { count = 0; return; }
-        if (kept > buffer.Length - PanicEvents) kept = buffer.Length - PanicEvents;
-        Array.Copy(buffer, 0, buffer, PanicEvents, kept);   // overlapping copy is handled
-        for (var ch = 0; ch < 16; ch++)
-        {
-            buffer[2 * ch] = new BlockMidi { Frame = 0, Status = (byte)(0xB0 | ch), Data1 = 123 };
-            buffer[2 * ch + 1] = new BlockMidi { Frame = 0, Status = (byte)(0xB0 | ch), Data1 = 120 };
-        }
-        count = kept + PanicEvents;
-    }
-
-    /// <summary>Any thread: silence every note at the next block.</summary>
-    public void Panic() => _panic = true;
-
-    /// <summary>Audio thread: silence now, dropping the notes this block holds so far (events added after this call are kept).</summary>
-    public void PanicNow()
-    {
-        _panic = false;
-        _unsorted = false;
-        foreach (var e in _effects) e.AutoPitch.Reset();
-        foreach (var e in _effects) e.ProcActive?.Reset();   // held notes and delayed events are gone with the panic
-        // The panic silences notes but must not eat channel state: a song start is "reset, then program / volume / bend setup", and the
-        // setup travels by the shared ring, so the panic can land in the block that already holds the setup. Dropping it left the synth on
-        // piano (GM program 0) until the setup was sent again (the first cold play).
-        PanicKeepingState(_events, ref _eventCount);
-        PanicKeepingState(_instEvents, ref _instCount);
-    }
-
     /// <summary>Audio thread: renders one block and adds it into <paramref name="mixL"/> / <paramref name="mixR"/>.</summary>
     /// <param name="peers">Every chain by slot (sidechain sources); null: no sidechain.</param>
     /// <param name="busL">Bus / master chains: the summed input audio (added before the plug-ins, at unity).</param>
@@ -441,7 +238,25 @@ public sealed class TrackChain : IDisposable
         var firstProcessed = firstDone && RunProcessors(_effects[0], frames, transport);
         var midi = firstProcessed && (_route >> 16) == 1 ? new ReadOnlySpan<BlockMidi>(_cur, 0, _curCount) : new ReadOnlySpan<BlockMidi>(_events, 0, _eventCount);
         _a[0].AsSpan(0, frames).Clear(); _a[1].AsSpan(0, frames).Clear();
+        RunSynth(shared, midi, frames, transport);
+        _eventCount = 0; _instCount = 0;
+        if (busL is not null && busR is not null)
+            for (var i = 0; i < frames; i++) { _a[0][i] += busL[i]; _a[1][i] += busR[i]; }
 
+        // Audio: clips at the song position, and the monitored input; they go through the effects too.
+        var arm = ArmMode;
+        MixClipsAndInput(shared, arm, frames, transport, monitor);
+
+        // Serial chain: each plug-in gets the audio and MIDI coming out of the previous one.
+        for (var k = 0; k < _effects.Length; k++) RunEffect(_effects[k], k, firstDone, shared, frames, transport, peers);
+        Leave(shared);
+
+        MixToOutputs(mixL, mixR, offset, frames, arm, shared);
+    }
+
+    /// <summary>Audio thread: the General MIDI synth renders the block into the first buffer (or ends its notes once after it is switched off).</summary>
+    private void RunSynth(SharedBlock shared, ReadOnlySpan<BlockMidi> midi, int frames, in TransportInfo transport)
+    {
         if (_midiSynth is not null && _synthOn)
         {
             Enter(shared, -1, "General MIDI synth");
@@ -460,17 +275,16 @@ public sealed class TrackChain : IDisposable
             _midiSynth.Process(_silence, _a, frames, _synthStop, transport);
             _a[0].AsSpan(0, frames).Clear(); _a[1].AsSpan(0, frames).Clear();
         }
-        _eventCount = 0; _instCount = 0;
-        if (busL is not null && busR is not null)
-            for (var i = 0; i < frames; i++) { _a[0][i] += busL[i]; _a[1][i] += busR[i]; }
+    }
 
-        // Audio: clips at the song position, and the monitored input; they go through the effects too.
+    /// <summary>Audio thread: adds the audio clips at the song position and the monitored input to the first buffer.</summary>
+    private void MixClipsAndInput(SharedBlock shared, int arm, int frames, in TransportInfo transport, Audio.InputBlock? monitor)
+    {
         var clips = Clips;
-        var arm = ArmMode;
         if (clips.Length > 0 || arm >= 0)
         {
             Array.Clear(_inL, 0, frames); Array.Clear(_inR, 0, frames);
-            foreach (var clip in clips) clip.Mix(_inL, _inR, frames, transport.SongSec, transport.Playing);
+            foreach (var clip in clips) clip.Mix(_inL, _inR, frames, transport.SongSec, transport.Playing, transport.Speed);
             if (arm >= 0 && monitor is not null && monitor.Frames >= frames)
             {
                 // The block is shared by every armed chain (read once per mixer block): read-only here.
@@ -478,89 +292,99 @@ public sealed class TrackChain : IDisposable
                 var inL = monitor.Ch[has ? left : 0]; var inR = monitor.Ch[has ? right : 0];
                 var inputPeak = 0f;
                 var monitoring = Monitor && has;
+                var gainTarget = InputGain; var gain = _inputGainNow; var gainStep = (gainTarget - gain) / frames;
                 for (var i = 0; has && i < frames; i++)
                 {
                     var ml = inL[i]; var mr = inR[i];
-                    if (monitoring) { _inL[i] += ml; _inR[i] += mr; }
+                    if (monitoring) { _inL[i] += ml * gain; _inR[i] += mr * gain; gain += gainStep; }
                     inputPeak = MathF.Max(inputPeak, MathF.Max(MathF.Abs(ml), MathF.Abs(mr)));
                 }
+                _inputGainNow = gainTarget;
                 _inputPeak = MathF.Max(inputPeak, _inputPeak * 0.9f);
                 shared.SetInputPeak(_slot, _inputPeak);
             }
             for (var i = 0; i < frames; i++) { _a[0][i] += _inL[i] * AudioUnity; _a[1][i] += _inR[i] * AudioUnity; }
         }
+    }
 
-        // Serial chain: each plug-in gets the audio and MIDI coming out of the previous one.
-        for (var k = 0; k < _effects.Length; k++)
+    /// <summary>Audio thread: one stage of the serial chain; the plug-in gets the audio and MIDI coming out of the previous one.</summary>
+    private void RunEffect(Effect effect, int k, bool firstDone, SharedBlock shared, int frames, in TransportInfo transport, TrackChain?[]? peers)
+    {
+        if (k > 0 || !firstDone) RunProcessors(effect, frames, transport);
+        if (effect.Bypass || effect.Misbehaved) return;
+        Enter(shared, effect.Index, effect.Plugin.Path);
+        var midiIn = new ReadOnlySpan<BlockMidi>(_cur, 0, _curCount);
+        var input = effect.IsInstrument ? _silence : Wire(effect.Mode, frames);
+        // Sidechain: the source track's post-fader audio on inputs 3/4 (VST2 with at least four inputs).
+        var side = effect.SideSlot;
+        if (side >= 0 && !effect.IsInstrument && peers is not null && side < peers.Length && peers[side] is { } source
+            && !ReferenceEquals(source, this) && effect.Plugin.InputChannels >= 4)
         {
-            var effect = _effects[k];
-            if (k > 0 || !firstDone) RunProcessors(effect, frames, transport);
-            if (effect.Bypass || effect.Misbehaved) continue;
-            Enter(shared, effect.Index, effect.Plugin.Path);
-            var midiIn = new ReadOnlySpan<BlockMidi>(_cur, 0, _curCount);
-            var input = effect.IsInstrument ? _silence : Wire(effect.Mode, frames);
-            // Sidechain: the source track's post-fader audio on inputs 3/4 (VST2 with at least four inputs).
-            var side = effect.SideSlot;
-            if (side >= 0 && !effect.IsInstrument && peers is not null && side < peers.Length && peers[side] is { } source
-                && !ReferenceEquals(source, this) && effect.Plugin.InputChannels >= 4)
-            {
-                _side4[0] = input[0]; _side4[1] = input[1]; _side4[2] = source.PostL; _side4[3] = source.PostR;
-                input = _side4;
-            }
-            var probe = effect.IsInstrument ? Probe : null;
-            if (probe is not null && probe.Index != effect.Index) probe = null;
-            var plugMidi = probe is not null ? probe.Events(frames) : effect.IsInstrument && effect.AutoPitch.Active ? AutoPitched(effect, midiIn) : midiIn;
-            effect.Plugin.Process(input, _b, frames, plugMidi, transport);
-            if (!Finite(_b, frames))
-            {
-                // A NaN / infinity would poison the bus, the master, the meters and recorded stems. Discard the block,
-                // skip the plug-in from now on (its input passes on) and let the main loop report it once.
-                effect.Misbehaved = true;
-                Interlocked.Increment(ref MisbehaveSignal);
-                continue;
-            }
-            if (probe is not null)
-            {
-                // Measuring: the output goes to the probe's capture, never to the mix.
-                probe.Take(_b, frames);
-                _b[0].AsSpan(0, frames).Clear(); _b[1].AsSpan(0, frames).Clear();
-            }
-            var effectTarget = effect.Target;
-            ScaleRamp(frames, effect.Current, effectTarget);
-            effect.Current = effectTarget;
-
-            // Next stage's MIDI: this plug-in's own output merged with the incoming stream passed through.
-            var produced = effect.Plugin.MidiOut;
-            if (effect.ForwardSlot >= 0 && produced.Length > 0)
-            {
-                var n = Math.Min(produced.Length, effect.Fwd.Length);
-                produced[..n].CopyTo(effect.Fwd);
-                effect.FwdCount = n;
-            }
-            var outSpan = effect.MidiOutToNext ? produced : default;
-            var pass = effect.PassMidi ? midiIn : default;
-            if (outSpan.Length > 0 || pass.Length != _curCount)
-            {
-                _curCount = MergeMidi(_nxt, pass, outSpan);
-                (_cur, _nxt) = (_nxt, _cur);
-            }
-
-            if (effect.IsInstrument)
-            {
-                if (effect.Replace) { _b[0].AsSpan(0, frames).CopyTo(_a[0]); _b[1].AsSpan(0, frames).CopyTo(_a[1]); }
-                else for (var c = 0; c < 2; c++) { var a = _a[c]; var b = _b[c]; for (var i = 0; i < frames; i++) a[i] += b[i]; }
-                continue;
-            }
-            var wet = effect.Wet;
-            if (wet >= 0.999f) { _b[0].AsSpan(0, frames).CopyTo(_a[0]); _b[1].AsSpan(0, frames).CopyTo(_a[1]); }
-            else
-            {
-                var dry = 1 - wet;
-                for (var c = 0; c < 2; c++) for (var i = 0; i < frames; i++) _a[c][i] = _a[c][i] * dry + _b[c][i] * wet;
-            }
+            _side4[0] = input[0]; _side4[1] = input[1]; _side4[2] = source.PostL; _side4[3] = source.PostR;
+            input = _side4;
         }
-        Leave(shared);
+        var probe = effect.IsInstrument ? Probe : null;
+        if (probe is not null && probe.Index != effect.Index) probe = null;
+        var plugMidi = probe is not null ? probe.Events(frames) : effect.IsInstrument && effect.AutoPitch.Active ? AutoPitched(effect, midiIn) : midiIn;
+        effect.Plugin.Process(input, _b, frames, plugMidi, transport);
+        if (!Finite(_b, frames))
+        {
+            // A NaN / infinity would poison the bus, the master, the meters and recorded stems. Discard the block,
+            // skip the plug-in from now on (its input passes on) and let the main loop report it once.
+            effect.Misbehaved = true;
+            Interlocked.Increment(ref MisbehaveSignal);
+            return;
+        }
+        if (probe is not null)
+        {
+            // Measuring: the output goes to the probe's capture, never to the mix.
+            probe.Take(_b, frames);
+            _b[0].AsSpan(0, frames).Clear(); _b[1].AsSpan(0, frames).Clear();
+        }
+        var effectTarget = effect.Target;
+        ScaleRamp(frames, effect.Current, effectTarget);
+        effect.Current = effectTarget;
 
+        // Next stage's MIDI: this plug-in's own output merged with the incoming stream passed through.
+        var produced = effect.Plugin.MidiOut;
+        if (effect.ForwardSlot >= 0 && produced.Length > 0)
+        {
+            var n = Math.Min(produced.Length, effect.Fwd.Length);
+            produced[..n].CopyTo(effect.Fwd);
+            effect.FwdCount = n;
+        }
+        var outSpan = effect.MidiOutToNext ? produced : default;
+        var pass = effect.PassMidi ? midiIn : default;
+        if (outSpan.Length > 0 || pass.Length != _curCount)
+        {
+            _curCount = MergeMidi(_nxt, pass, outSpan);
+            (_cur, _nxt) = (_nxt, _cur);
+        }
+
+        MixStageOutput(effect, frames);
+    }
+
+    /// <summary>Audio thread: an instrument adds its output to the mix (or replaces it); an effect crossfades by its wet level.</summary>
+    private void MixStageOutput(Effect effect, int frames)
+    {
+        if (effect.IsInstrument)
+        {
+            if (effect.Replace) { _b[0].AsSpan(0, frames).CopyTo(_a[0]); _b[1].AsSpan(0, frames).CopyTo(_a[1]); }
+            else for (var c = 0; c < 2; c++) { var a = _a[c]; var b = _b[c]; for (var i = 0; i < frames; i++) a[i] += b[i]; }
+            return;
+        }
+        var wet = effect.Wet;
+        if (wet >= 0.999f) { _b[0].AsSpan(0, frames).CopyTo(_a[0]); _b[1].AsSpan(0, frames).CopyTo(_a[1]); }
+        else
+        {
+            var dry = 1 - wet;
+            for (var c = 0; c < 2; c++) for (var i = 0; i < frames; i++) _a[c][i] = _a[c][i] * dry + _b[c][i] * wet;
+        }
+    }
+
+    /// <summary>Audio thread: applies level and pan, meters the block, silences a non-finite one and adds the rest to the mix.</summary>
+    private void MixToOutputs(float[] mixL, float[] mixR, int offset, int frames, int arm, SharedBlock shared)
+    {
         // General MIDI volume curve (level²) and constant-power pan. The General MIDI synth keeps its own default
         // level (CC7 100), so its output is scaled relative to that: identical to the Windows synth at any volume.
         // Bus and master chains are pure inserts at unity: group / master level and pan are applied once, in each track's level.
@@ -595,15 +419,6 @@ public sealed class TrackChain : IDisposable
         if (arm < 0 && _inputPeak != 0) { _inputPeak = 0; shared.SetInputPeak(_slot, 0); }
         _peak = MathF.Max(peak, _peak * 0.9f); // short hold so meters are readable
         shared.SetPeak(_slot, _peak);
-    }
-
-    /// <summary>Merges two frame-ordered event lists into <paramref name="dst"/> (first list wins ties); returns the count. No allocation.</summary>
-    private static int MergeMidi(BlockMidi[] dst, ReadOnlySpan<BlockMidi> first, ReadOnlySpan<BlockMidi> second)
-    {
-        int i = 0, j = 0, n = 0;
-        while (n < dst.Length && (i < first.Length || j < second.Length))
-            dst[n++] = j >= second.Length || (i < first.Length && first[i].Frame <= second[j].Frame) ? first[i++] : second[j++];
-        return n;
     }
 
     private readonly float[][] _wired;

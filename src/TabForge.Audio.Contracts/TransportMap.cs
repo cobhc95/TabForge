@@ -2,6 +2,8 @@ using System.IO;
 
 namespace TabForge.Audio.Contracts;
 
+// Owns: the per-block time signature and bar position handed to every plug-in's transport (VST2/VST3 mapping).
+
 /// <summary>
 /// The time signature and bar position of the block being processed. The engine fills it per block from the song's bar map
 /// (<see cref="TransportMap"/>, sent with <see cref="EngineCommand.SetTransport"/>) and hands it to every plug-in in its transport

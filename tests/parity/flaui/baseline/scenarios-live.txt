@@ -1,0 +1,10 @@
+# live scenarios: real mouse and keyboard input to an on-screen TabForge started by the recorder with a scratch profile.
+# the states are read from the window's own flags (IsZoomed, IsIconic); a MANUAL line names what a human must judge.
+S01 double-click title bar (real input at a free title-bar point): Normal -> Maximized
+S02 double-click title bar to restore: Maximized -> Normal
+S03 Win+Up, Win+Down, Win+Down (real keys): Normal -> Maximized -> Normal -> Minimized
+S05 Tab-key focus order (real Tab key): MANUAL: focus did not move across 30 presses (at most one element of the app was focused), so no order was recorded
+S04 tab drag (real pointer, first tab onto second): before [Untitled, Untitled copy] after [Untitled copy, Untitled]
+S07 right-click at the right screen edge: menu items=7 menu fully on screen=y
+S09 Alt+Space (real keys): system menu items=Restore | Move | Size | Minimize | Maximize | Close
+S06 Ctrl+wheel zoom (real input, up then down): [100%] -> [100%] -> [100%]

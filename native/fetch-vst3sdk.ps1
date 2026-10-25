@@ -1,10 +1,10 @@
-# Fetches the Steinberg VST3 SDK (MIT licence) into third_party\vst3sdk with only the submodules tfvst3 needs
+# Fetches the Steinberg VST3 SDK (MIT licence) into Source\third_party\vst3sdk with only the submodules tfvst3 needs
 # (base, pluginterfaces, public.sdk). vstgui, doc, tutorials and vst3_doc are skipped.
 #
 # The SDK is PINNED: a release tag plus the exact commit it must resolve to, and the exact commits of the
 # three submodules that tag records. A moved/retagged upstream, or a different checkout, fails loudly.
-# To update the SDK: change the values below, rebuild tfvst3 (native\build-tfvst3.ps1), and commit the new
-# native\BUILD_PROVENANCE.md and docs\SBOM.md together with them.
+# To update the SDK: change the values below, rebuild tfvst3 (Source\native\build-tfvst3.ps1), and commit the new
+# Source\native\BUILD_PROVENANCE.md and Source\docs\SBOM.md together with them.
 [CmdletBinding()]
 param([switch]$Force)
 $ErrorActionPreference = 'Stop'
@@ -17,8 +17,8 @@ $SubmoduleCommits = [ordered]@{
     'public.sdk'    = '586dc5e6c8012c3e4b01c79389375cbe96bdb1da'
 }
 
-$repoRoot = Split-Path -Parent $PSScriptRoot
-$target = Join-Path $repoRoot 'third_party\vst3sdk'
+$repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+$target = Join-Path $repoRoot 'Source\third_party\vst3sdk'
 $git = 'C:\Program Files\Git\cmd\git.exe'
 if (-not (Test-Path $git)) { $git = 'git' }
 

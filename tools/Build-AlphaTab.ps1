@@ -4,12 +4,12 @@
 .DESCRIPTION
     alphaTab's .NET library is generated from its TypeScript by alphaTab's own transpiler. This script reproduces what
     upstream CI does (npm ci; generate-typescript; transpile; dotnet build) on a clean checkout of the pinned upstream
-    commit with vendor/alphatab/*.patch applied, and packs the result as the NuGet package TabForge.AlphaTab
+    commit with Source/vendor/alphatab/*.patch applied, and packs the result as the NuGet package TabForge.AlphaTab
     (assembly TabForge.AlphaTab.dll, version 1.8.4.4, package version 1.8.4-tabforge.4), so it can never be mistaken for the
     upstream AlphaTab package.
 
-      .\tools\Build-AlphaTab.ps1            build, then check the DLL equals the one inside the committed package
-      .\tools\Build-AlphaTab.ps1 -Update    build, then replace vendor/alphatab/*.nupkg and vendor/alphatab/SHA256SUMS
+      .\Source\tools\Build-AlphaTab.ps1            build, then check the DLL equals the one inside the committed package
+      .\Source\tools\Build-AlphaTab.ps1 -Update    build, then replace Source/vendor/alphatab/*.nupkg and Source/vendor/alphatab/SHA256SUMS
 
     Official sources only: github.com/CoderLine/alphaTab, npmjs.org, nuget.org. Needs git, node (LTS), npm and the .NET 8 SDK.
     Exit codes: 0 ok, 1 build or verification failed.
@@ -22,8 +22,8 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$repo = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
-$vendor = Join-Path $repo 'vendor\alphatab'
+$repo = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
+$vendor = Join-Path $repo 'Source\vendor\alphatab'
 $upstream = 'https://github.com/CoderLine/alphaTab.git'
 $tag = 'v1.8.4'
 $commit = '022a45c8e42370f9e12e68949d11eada370da83d'
@@ -56,7 +56,7 @@ if ($patches.Count -eq 0) { throw "No patch found in $vendor" }
 if (Test-Path -LiteralPath $Work) { Remove-Item -LiteralPath $Work -Recurse -Force }
 New-Item -ItemType Directory -Path $Work | Out-Null
 # The same .NET SDK (compiler) as TabForge itself: global.json applies to everything below the work folder.
-Copy-Item -LiteralPath (Join-Path $repo 'global.json') -Destination (Join-Path $Work 'global.json')
+Copy-Item -LiteralPath (Join-Path $repo 'Source\global.json') -Destination (Join-Path $Work 'global.json')
 $src = Join-Path $Work 'alphaTab'
 
 # 1. The pinned upstream source, with line endings untouched so every machine generates the same files.
@@ -96,7 +96,7 @@ if ($Update) {
         exit 0
     }
     Copy-Item -LiteralPath $built -Destination $committed -Force
-    Write-Output 'The package changed: regenerate the lock files (dotnet restore TabForge.sln --force-evaluate), docs/SBOM.md (tools/Write-Sbom.ps1) and the hashes in vendor/alphatab/README.md.'
+    Write-Output 'The package changed: regenerate the lock files (dotnet restore Source\TabForge.sln --force-evaluate), Source/docs/SBOM.md (Source/tools/Write-Sbom.ps1) and the hashes in Source/vendor/alphatab/README.md.'
     $nupkgHash = (Get-FileHash -LiteralPath $committed -Algorithm SHA256).Hash.ToLowerInvariant()
     $lines = @(
         "$nupkgHash  $packageFile",

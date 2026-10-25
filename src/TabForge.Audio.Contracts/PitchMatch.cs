@@ -1,5 +1,7 @@
 namespace TabForge.Audio.Contracts;
 
+// Owns: the automatic pitch matching of VST instruments (YIN f0, octave folding, implicit transpose, paired note-offs).
+
 /// <summary>
 /// Automatic pitch matching of VST instruments: f0 estimation (YIN with parabolic interpolation), octave folding of the
 /// per-note offsets, and the implicit transpose that runs right before an instrument (note-offs paired with their note-ons).
@@ -114,7 +116,7 @@ public static class PitchMatch
             {
                 var shift = Math.Clamp(Shift, -48, 48);
                 var target = data1 + shift;
-                if (target is < 0 or > 127) return false;
+                if (target is < 0 or > MidiLimits.Max) return false;
                 if (_held[key] == 0) _heldCount++;
                 _held[key] = (sbyte)(shift + 1 > 0 ? shift + 1 : shift - 1);   // never 0
                 data1 = (byte)target;
@@ -125,7 +127,7 @@ public static class PitchMatch
             var used = stored > 0 ? stored - 1 : stored + 1;
             var mapped = data1 + used;
             if (kind != 0xA0) { _held[key] = 0; _heldCount--; }
-            if (mapped is < 0 or > 127) return false;
+            if (mapped is < 0 or > MidiLimits.Max) return false;
             data1 = (byte)mapped;
             return true;
         }

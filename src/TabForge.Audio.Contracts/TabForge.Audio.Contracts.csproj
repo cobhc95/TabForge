@@ -1,10 +1,19 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!-- The only code shared by TabForge and its audio engine process: message layouts and shared memory. -->
   <PropertyGroup>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <!-- net8.0 is the portable build; net8.0-windows adds the Windows-only pieces excluded below. -->
+    <TargetFrameworks>net8.0;net8.0-windows</TargetFrameworks>
     <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
     <ImplicitUsings>enable</ImplicitUsings>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <!-- Nullable, warnings-as-errors, analysis, locked restore and Version: see Directory.Build.props. -->
   </PropertyGroup>
+  <!-- Windows-only code: the job object guard and the 1 ms timer (P/Invoke) are left out of net8.0. -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
+    <Compile Remove="ChildProcessJob.cs;NativeTimer.cs;NamedSharedMemory.Windows.cs" />
+  </ItemGroup>
+  <!-- Named shared memory has one implementation per target: the Windows mapping, or a net8.0 stub that throws. -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net8.0-windows'">
+    <Compile Remove="NamedSharedMemory.NonWindows.cs" />
+  </ItemGroup>
 </Project>

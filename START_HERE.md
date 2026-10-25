@@ -14,31 +14,31 @@ Three projects. A lower layer never references a higher one; self-tests enforce 
 | --- | --- | --- |
 | Wire contracts | `src/TabForge.Audio.Contracts/` | Protocol types shared by app and engine, no dependencies (`EngineCommand`, `EngineEvent`) |
 | Audio engine | `src/TabForge.AudioEngine/` | A separate process: mixer, synth, plug-in hosting, recorder, offline renderer. Real-time rules: `ARCHITECTURE.md`, section 4 |
-| Application | `src/TabForge/` | Everything the user sees, plus the data and logic behind it (below) |
+| Application | `src/TabForge.Avalonia/` | Everything the user sees, plus the data and logic behind it (below) |
 
 Inside the application project:
 
 | Folder | Role | Rule |
 | --- | --- | --- |
-| `src/TabForge/Models/` | Song data (`SongProject`, `TrackModel`, `MeasureModel`) | No WPF |
-| `src/TabForge/Services/` | Musical logic, file formats, settings, limits | No WPF |
-| `src/TabForge/Playback/` | Score to timeline to MIDI (`ScoreToMidiCompiler`, `PlaybackEngine`) | No WPF |
-| `src/TabForge/Documents/` | One `DocumentSession` per open song: undo, save, close, placement | |
-| `src/TabForge/Controllers/` | One responsibility moved out of a window, behind a host interface | Owns state, not layout |
-| `src/TabForge/Views/` | Controls and windows (`TabEditorControl`, `PreferencesWindow`) | |
-| `src/TabForge/Audio/`, `src/TabForge/Rendering/` | The only way to reach the engine (`AudioEngineClient`) and render jobs | |
-| `src/TabForge/Diagnostics/`, `src/TabForge/SelfTests/`, `tests/full-suite/` | Headless commands, the basic test set and the archived full suite | |
+| `src/TabForge.Core/Models/` | Song data (`SongProject`, `TrackModel`, `MeasureModel`) | No WPF |
+| `src/TabForge.Core/Services/` | Musical logic, file formats, settings, limits | No WPF |
+| `src/TabForge.Core/Playback/` | Score to timeline to MIDI (`ScoreToMidiCompiler`, `PlaybackEngine`) | No WPF |
+| `src/TabForge.Core/Documents/` | One `DocumentSession` per open song: undo, save, close, placement | |
+| `src/TabForge.Core/Controllers/` | One responsibility moved out of a window, behind a host interface | Owns state, not layout |
+| `src/TabForge.Core/Views/` | Controls and windows (`TabEditorControl`, `PreferencesWindow`) | |
+| `src/TabForge.Core/Audio/`, `src/TabForge.Core/Rendering/` | The only way to reach the engine (`AudioEngineClient`) and render jobs | |
+| `src/TabForge.Core/Diagnostics/`, `src/TabForge.Avalonia/SelfTests/`, `tests/TabForge.Avalonia.Tests/` | Headless commands, the basic test set and the archived full suite | |
 
 ### Folder READMEs
 
 Each folder README is one page: purpose, key types, pathway, what the folder must not depend on, and its tests.
 
-- Application: `src/TabForge/Models/README.md`, `src/TabForge/Services/README.md`, `src/TabForge/Playback/README.md`, `src/TabForge/Documents/README.md`, `src/TabForge/Controllers/README.md`, `src/TabForge/Views/README.md`, `src/TabForge/Audio/README.md`, `src/TabForge/Rendering/README.md`.
-- Also: `src/TabForge/Shell/README.md`, `src/TabForge/Docking/README.md`, `src/TabForge/Plugins/README.md`, `src/TabForge/Presets/README.md`, `src/TabForge/Visualization/README.md`, `src/TabForge/Diagnostics/README.md`, `src/TabForge/SelfTests/README.md`, `src/TabForge/Resources/README.md`.
+- Application: `src/TabForge.Core/Models/README.md`, `src/TabForge.Core/Services/README.md`, `src/TabForge.Core/Playback/README.md`, `src/TabForge.Core/Documents/README.md`, `src/TabForge.Core/Controllers/README.md`, `src/TabForge.Core/Views/README.md`, `src/TabForge.Core/Audio/README.md`, `src/TabForge.Core/Rendering/README.md`.
+- Also: `src/TabForge.Core/Shell/README.md`, `src/TabForge.Core/Docking/README.md`, `src/TabForge.Core/Plugins/README.md`, `src/TabForge.Core/Presets/README.md`, `src/TabForge.Avalonia/Visualization/README.md`, `src/TabForge.Core/Diagnostics/README.md`, `src/TabForge.Avalonia/SelfTests/README.md`, `src/TabForge.Avalonia/Resources/README.md`.
 - Engine and contracts: `src/TabForge.AudioEngine/README.md`, `src/TabForge.Audio.Contracts/README.md`.
-- Project root: `src/TabForge/README.md` (every root file). Views and services: `src/TabForge/Views/Score/README.md`, `src/TabForge/Views/Band/README.md`, `src/TabForge/Views/Preferences/README.md`, `src/TabForge/Services/Video/README.md`, `src/TabForge/KeyboardMode/README.md`, `src/TabForge/PresetManagement/README.md`, `src/TabForge/CompactMode/README.md`, `src/TabForge/LiveInput/README.md`, `src/TabForge/Views/Video/README.md`, `src/TabForge/Services/Features/README.md`, `src/TabForge/Services/Log/README.md`, `src/TabForge/Playback/Models/README.md`, `src/TabForge/Presets/FullDemoSong/README.md`.
+- Project root: `src/TabForge.Avalonia/README.md` (every root file). Views and services: `src/TabForge.Core/Views/Score/README.md`, `src/TabForge.Core/Views/Band/README.md`, `src/TabForge.Core/Views/Preferences/README.md`, `src/TabForge.Core/Services/Video/README.md`, `src/TabForge.Core/KeyboardMode/README.md`, `src/TabForge.Avalonia/PresetManagement/README.md`, `src/TabForge.Avalonia/CompactMode/README.md`, `src/TabForge.Core/LiveInput/README.md`, `src/TabForge.Core/Views/Video/README.md`, `src/TabForge.Core/Services/Features/README.md`, `src/TabForge.Core/Services/Log/README.md`, `src/TabForge.Core/Playback/Models/README.md`, `src/TabForge.Core/Presets/FullDemoSong/README.md`.
 - Engine sub-folders: `src/TabForge.AudioEngine/Audio/README.md`, `src/TabForge.AudioEngine/Editors/README.md`, `src/TabForge.AudioEngine/Isolation/README.md`, `src/TabForge.AudioEngine/Midi/README.md`, `src/TabForge.AudioEngine/Midi/Processors/README.md`, `src/TabForge.AudioEngine/Mixing/README.md`, `src/TabForge.AudioEngine/Output/README.md`, `src/TabForge.AudioEngine/Plugins/README.md`, `src/TabForge.AudioEngine/Synth/README.md`.
-- Self-test sub-folders: `src/TabForge/SelfTests/Architecture/README.md`, `src/TabForge/SelfTests/Engine/README.md`, `src/TabForge/SelfTests/Hygiene/README.md`, `src/TabForge/SelfTests/Settings/README.md`, `src/TabForge/SelfTests/Smoke/README.md`.
+- Self-test sub-folders: `src/TabForge.Avalonia/SelfTests/Architecture/README.md`, `src/TabForge.Avalonia/SelfTests/Engine/README.md`, `src/TabForge.Avalonia/SelfTests/Hygiene/README.md`, `src/TabForge.Avalonia/SelfTests/Settings/README.md`, `src/TabForge.Avalonia/SelfTests/Smoke/README.md`.
 
 `MainWindow` (many partial files) and `TabEditorControl` are composition roots. They wire things together; new behaviour goes into a small class with a host interface, never into another partial file.
 
@@ -55,7 +55,7 @@ Use these instead of writing a new route.
 - **Settings.** One shared `AppSettingsStore`. Bounds in `SettingsValidator`, old files in `SettingsMigration`, rows in `PreferencesWindow`.
 - **Files.** Write with `FilePathPolicy.WriteAtomically`; bound every read with `InputLimits`.
 - **Commands.** Bindable through `HotkeyCatalog`, listed in the presets and in `TOOLS_AND_HOTKEYS.md`. A plain command is one line in `BuildCommands()` (`MainWindow.Commands.cs`); one with conditions or several steps is a case in the `RunHotkey(...)` switch (`MainWindow.Settings.cs`). Steps: `docs/RECIPES.md`.
-- **New feature.** A module in the feature's own folder implementing `IFeatureModule`, added to `src/TabForge/Services/Features/FeatureRegistry.cs`. The window gets thin hooks only. Steps: `docs/RECIPES.md`, "Add a feature module".
+- **New feature.** A module in the feature's own folder implementing `IFeatureModule`, added to `src/TabForge.Core/Services/Features/FeatureRegistry.cs`. The window gets thin hooks only. Steps: `docs/RECIPES.md`, "Add a feature module".
 
 ## Find a feature
 
@@ -72,23 +72,23 @@ Use these instead of writing a new route.
 Build, then from the repository root (the source-scanning tests read the folder they start in):
 
 ```
-dotnet build src\TabForge\TabForge.csproj -c Release -v q -p:TabForgeFullSuite=true -o out-full
+dotnet build src\TabForge\TabForge.csproj -c Release -v q -o out-full
 Start-Process -Wait out-full\TabForge.exe -ArgumentList '--selftest','one.log','--only','TestEditCommands','--profile','scratch-profile'
 ```
 
 - `--only <TestName>[,<TestName>]` runs just those tests; `--areas <area>` runs one area. Names: `docs/feature-map/tests.md`.
 - The program prints nothing. Read the last line of the log (`N passed, M failed, K skipped`) and search it for FAIL. The exit code alone is not the result.
 - `--profile <folder>` keeps your own settings untouched. Always use it.
-- A normal build runs only the small basic set (`--selftest <log>`; architecture, hygiene, smoke tests). Narrow tests of the big suite (`tests/full-suite/`) need the `-p:TabForgeFullSuite=true` build above; the full gate (`--selftest <log> --require ci,document-context` on that build) is for major redesigns only. All headless commands: `docs/DEBUGGING.md`.
+- A normal build runs only the small basic set (`--selftest <log>`; architecture, hygiene, smoke tests). Narrow tests of the big suite (`tests/TabForge.Avalonia.Tests/`) need the `-p:TabForgeFullSuite=true` build above; the full gate (`--selftest <log> --require ci,document-context` on that build) is for major redesigns only. All headless commands: `docs/DEBUGGING.md`.
 
 ## Guard rules
 
 Self-tests fail the build of a change that breaks these.
 
 - **Layering.** Models, Services and Playback have no WPF; the app reaches the engine only through the client; the contracts project has no dependencies.
-- **Size and shape budgets.** `src/TabForge/ArchitectureBudget.json` caps file and class sizes and lists naming exceptions. Lower a budget when a change shrinks the code. Raise one only with a reason in the commit message, and never cut behaviour to fit a budget. New files stay at 500 lines or fewer, so move code into a new class instead of growing a large file.
+- **Size and shape budgets.** `src/TabForge.Avalonia/ArchitectureBudget.json` caps file and class sizes and lists naming exceptions. Lower a budget when a change shrinks the code. Raise one only with a reason in the commit message, and never cut behaviour to fit a budget. New files stay at 500 lines or fewer, so move code into a new class instead of growing a large file.
 - **Naming.** XController, XFlow, IXHost and XService as in `CONTRIBUTING.md`.
 - **Find a feature fast.** `TabForge.exe --find <keyword> out.txt` lists matching features, files and tests in at most 40 lines; read that instead of the whole feature map.
-- **Tests.** Every test has an area in the AreaOf table in `src/TabForge/SelfTests/SelfTest.cs`; after adding or renaming tests run `TabForge.exe --feature-map` and commit `docs/feature-map/tests.md`.
+- **Tests.** Every test has an area in the AreaOf table in `src/TabForge.Avalonia/SelfTests/SelfTest.cs`; after adding or renaming tests run `TabForge.exe --feature-map` and commit `docs/feature-map/tests.md`.
 - **Docs.** A document that names a file, type, test or command must name one that exists. This page and `docs/RECIPES.md` are checked the same way (`TestStartHereAndRecipesInSync`), and this page stays within 150 lines.
 - **Text.** Sources contain no stray control characters; comments describe the code as it is, without history.

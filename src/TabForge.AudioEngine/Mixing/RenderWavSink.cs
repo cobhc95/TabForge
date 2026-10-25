@@ -1,8 +1,11 @@
+using System.Buffers;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
 using TabForge.Audio.Contracts;
 
 namespace TabForge.AudioEngine.Mixing;
+
+// Owns: one WAV file of an offline render (downmix, resample, bit-depth convert, peak tracking, auto tail).
 
 /// <summary>
 /// One WAV file of an offline render (master or a stem): takes non-interleaved engine-rate blocks, downmixes to the
@@ -64,16 +67,29 @@ internal sealed class RenderWavSink : IDisposable
         Drain();
     }
 
-    /// <summary>Keeps a (silent) block back until <see cref="FlushHeld"/> or <see cref="DropHeld"/>.</summary>
-    public void Hold(float[] left, float[] right, int frames) => _held.Add((left.AsSpan(0, frames).ToArray(), right.AsSpan(0, frames).ToArray(), frames));
+    /// <summary>Keeps a (silent) block back until <see cref="FlushHeld"/> or <see cref="DropHeld"/> (pooled: rented from the shared array pool, returned on flush/drop).</summary>
+    public void Hold(float[] left, float[] right, int frames)
+    {
+        var l = ArrayPool<float>.Shared.Rent(frames);
+        var r = ArrayPool<float>.Shared.Rent(frames);
+        left.AsSpan(0, frames).CopyTo(l);
+        right.AsSpan(0, frames).CopyTo(r);
+        _held.Add((l, r, frames));
+    }
+
+    private void ReleaseHeld()
+    {
+        foreach (var (l, r, _) in _held) { ArrayPool<float>.Shared.Return(l); ArrayPool<float>.Shared.Return(r); }
+        _held.Clear();
+    }
 
     public void FlushHeld()
     {
         foreach (var (l, r, n) in _held) Write(l, r, n);
-        _held.Clear();
+        ReleaseHeld();
     }
 
-    public void DropHeld() => _held.Clear();
+    public void DropHeld() => ReleaseHeld();
 
     /// <summary>Writes only the first <paramref name="frames"/> held frames and drops the rest (a delayed master that must end where the stems end).</summary>
     public void FlushHeldFirst(long frames)
@@ -85,7 +101,7 @@ internal sealed class RenderWavSink : IDisposable
             Write(l, r, k);
             frames -= k;
         }
-        _held.Clear();
+        ReleaseHeld();
     }
 
     /// <summary>Engine-rate frames written so far (held frames not counted).</summary>
@@ -173,32 +189,53 @@ internal sealed class RenderWavSink : IDisposable
     /// <summary>Closes and deletes the unfinished file.</summary>
     public void Abort()
     {
-        try { _writer?.Dispose(); } catch (Exception) { }
+        try { _writer?.Dispose(); } catch (Exception) { } // swallow: best-effort dispose during teardown
         _writer = null;
-        try { File.Delete(Path); } catch (Exception) { }
+        try { File.Delete(Path); } catch (Exception) { } // swallow: best-effort delete of a failed render
     }
 
-    public void Dispose() { try { _writer?.Dispose(); } catch (Exception) { } _writer = null; }
+    public void Dispose() { try { _writer?.Dispose(); } catch (Exception) { } // swallow: best-effort dispose during teardown
+ _writer = null; }
 
-    /// <summary>A queue the resampler pulls from: the render pushes engine-rate blocks in.</summary>
+    /// <summary>A queue the resampler pulls from: the render pushes engine-rate blocks in (ring: no O(n) shift on read).</summary>
+    /// <remarks>
+    /// Chunk contract shared with <see cref="MasterTapLimits.MaxChunkFrames"/> (see AudioEngineClient.ReadMasterAudio):
+    /// one render block (≤ 512 frames) or resampler drain chunk at a time; the sink never holds an unbounded tail.
+    /// Follow-up outside Audio scope (do not edit here): Services/Video/VideoExportFlow.cs:135
+    /// (<c>r.FrameTap?.Invoke(i, pixels.ToArray())</c>) copies every video frame even when no tap is attached.
+    /// Gate it the same pooled opt-in way: capture the pixels span once, invoke the tap only when attached, and offer
+    /// a pooled/rented overload so the per-frame ToArray copy disappears.
+    /// </remarks>
     private sealed class PushSource(WaveFormat format) : ISampleProvider
     {
         private float[] _data = new float[16384];
-        private int _count;
+        private int _head, _count;
         public WaveFormat WaveFormat => format;
 
         public void Add(float[] samples, int count)
         {
-            if (_count + count > _data.Length) Array.Resize(ref _data, Math.Max(_data.Length * 2, _count + count));
-            Array.Copy(samples, 0, _data, _count, count);
+            if (_count + count > _data.Length)
+            {
+                var bigger = new float[Math.Max(_data.Length * 2, _count + count)];
+                var first = Math.Min(_count, _data.Length - _head);
+                Array.Copy(_data, _head, bigger, 0, first);
+                if (_count > first) Array.Copy(_data, 0, bigger, first, _count - first);
+                _data = bigger; _head = 0;
+            }
+            var tail = (_head + _count) % _data.Length;
+            var firstAdd = Math.Min(count, _data.Length - tail);
+            Array.Copy(samples, 0, _data, tail, firstAdd);
+            if (firstAdd < count) Array.Copy(samples, firstAdd, _data, 0, count - firstAdd);
             _count += count;
         }
 
         public int Read(float[] buffer, int offset, int count)
         {
             var n = Math.Min(count, _count);
-            Array.Copy(_data, 0, buffer, offset, n);
-            Array.Copy(_data, n, _data, 0, _count - n);
+            var first = Math.Min(n, _data.Length - _head);
+            Array.Copy(_data, _head, buffer, offset, first);
+            if (first < n) Array.Copy(_data, 0, buffer, offset + first, n - first);
+            _head = (_head + n) % _data.Length;
             _count -= n;
             return n;
         }

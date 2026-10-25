@@ -4,6 +4,8 @@ using TabForge.AudioEngine.Mixing;
 
 namespace TabForge.AudioEngine;
 
+// Owns: the automatic pitch matching command parsing (reader thread, on EngineHost).
+
 /// <summary>Automatic pitch matching: command parsing (reader thread, on <see cref="EngineHost"/>).</summary>
 public static partial class EngineHost
 {
@@ -11,8 +13,8 @@ public static partial class EngineHost
     {
         var m = MeasurePitchMessage.Read(r);
         var (slot, index, requestId) = (m.Slot, m.Index, m.RequestId); var channel = m.Channel & 0x0F;
-        var notes = m.Notes.Select(n => Math.Clamp(n, 0, 127)).ToArray();
-        EngineThreads.Post(() => _session.StartMeasurePitch(slot, index, requestId, channel, notes));
+        var notes = m.Notes.Select(n => Math.Clamp(n, 0, MidiLimits.Max)).ToArray();
+        Threads.Post(() => _session.StartMeasurePitch(slot, index, requestId, channel, notes));
     }
 
     private static void ReadSetAutoPitch(BinaryReader r)
@@ -20,7 +22,7 @@ public static partial class EngineHost
         var m = SetAutoPitchMessage.Read(r);
         var slot = m.Slot;
         var list = m.Transposes.Select(t => (t.Index, Semitones: Math.Clamp(t.Semitones, -48, 48))).ToArray();
-        EngineThreads.Post(() => _session.SetAutoPitch(slot, list));
+        Threads.Post(() => _session.SetAutoPitch(slot, list));
     }
 
     /// <summary>Per-note sounding offsets (NaN: unpitched / silent) folded to an octave transpose.</summary>

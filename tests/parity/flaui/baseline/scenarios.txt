@@ -1,0 +1,7 @@
+# off-screen capture scenarios: window messages and UIA patterns only (no real input).
+# the real-input scenarios of the on-screen run are in scenarios-live.txt.
+S05 Tab-key focus order (WM_KEYDOWN and WM_KEYUP with VK_TAB to the window): MANUAL: focus results differed between runs of the same build in the off-screen run, so no order is recorded; on the owner's hand-test list
+S06 Ctrl+wheel zoom over the score: MANUAL: no change in the element tree after a posted MK_CONTROL wheel message; zoom may read the keyboard state, which a posted message does not set
+S08 Windows 11 Snap Layouts flyout over the maximise button: MANUAL: needs a human to judge the hover flyout's feel
+S10 resize through TransformPattern (px): asked 900x600, got 1080x720; asked 10x10, got 1080x720; restored to 1600x1000 (first 1600x1000)
+S11 close a tool window (WM_SYSCOMMAND SC_CLOSE, Mixer): closed=y

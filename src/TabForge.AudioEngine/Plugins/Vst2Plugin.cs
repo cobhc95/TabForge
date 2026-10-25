@@ -5,12 +5,14 @@ using System.Text;
 
 namespace TabForge.AudioEngine.Plugins;
 
+// Owns: hosting a 64-bit VST2 plug-in through its plain C interface (AEffect, preallocated buffers, crash attribution).
+
 /// <summary>
 /// Hosts a 64-bit VST2 plug-in (.dll) through its plain C interface (AEffect + dispatcher opcodes). Buffers and the
 /// event list are allocated once; <see cref="Process"/> never allocates. A native crash inside the plug-in ends the
 /// engine process (not TabForge); the engine records which plug-in was running so TabForge can switch it off.
 /// </summary>
-public sealed unsafe partial class Vst2Plugin : IPluginInstance
+public sealed unsafe partial class Vst2Plugin : IPluginInstance, IEditorResizeSource
 {
     // ---- VST2 ABI ----
     private const int Magic = 0x56737450; // 'VstP'
@@ -58,8 +60,13 @@ public sealed unsafe partial class Vst2Plugin : IPluginInstance
     private struct ERect { public short top, left, bottom, right; }
 
     // Plug-ins call back into the host with their AEffect*; map it to the instance.
+    // Budget: one entry per live plug-in (≤ slots × chain length); added on successful start, removed on Dispose
+    // and on constructor failure. No WeakReference needed: the entry's lifetime is the plug-in's lifetime, and a dead
+    // engine process drops the whole table. A missing remove would leak one entry per leaked plug-in (not per block).
     private static readonly ConcurrentDictionary<IntPtr, Vst2Plugin> Instances = new();
-    [ThreadStatic] private static Vst2Plugin? _loading;
+    // The plug-in whose entry point is running; a callback from a thread the plug-in started during its own init (no AEffect* known yet) finds it here. One load at a time (LoadGate).
+    private static readonly object LoadGate = new();
+    private static volatile Vst2Plugin? _loading;
 
     private readonly IntPtr _library;
     private readonly AEffect* _effect;
@@ -120,41 +127,59 @@ public sealed unsafe partial class Vst2Plugin : IPluginInstance
         _samplePos = 0;
     }
 
-    /// <summary>Vendor as the plug-in reports it (effGetVendorString).</summary>
+    /// <summary>Vendor as the plug-in reports it (effGetVendorString). Main thread only: holds the EnterMain breadcrumb.</summary>
     public string Vendor => AskString(47);
-    /// <summary>Product name as the plug-in reports it (effGetProductString, else effGetEffectName).</summary>
+    /// <summary>Product name as the plug-in reports it (effGetProductString, else effGetEffectName). Main thread only: holds the EnterMain breadcrumb.</summary>
     public string ProductName => AskString(48) is { Length: > 0 } p ? p : AskString(45);
 
     private string AskString(int opcode)
     {
-        fixed (byte* buffer = _nameBuffer)
+        if (_disposed) return "";
+        var shared = EngineHost.Shared;
+        var entered = false;
+        try
         {
-            new Span<byte>(buffer, _nameBuffer.Length).Clear();
-            Dispatch(opcode, 0, IntPtr.Zero, (IntPtr)buffer, 0);
-            var length = new ReadOnlySpan<byte>(buffer, _nameBuffer.Length - 1).IndexOf((byte)0);
-            return Encoding.ASCII.GetString(buffer, length < 0 ? _nameBuffer.Length - 1 : length).Trim();
+            // A vendor/product string call runs plug-in code: attribute a hang to this plug-in like every main-thread call.
+            // Slot -1: the query path (PluginInfoProbe, SendPluginInfo) has no chain index; the path is what the watchdog blames.
+            if (shared is not null) { shared.EnterMain(-1, -1, Path, TabForge.Audio.Contracts.PluginCallKind.Other); entered = true; }
+            fixed (byte* buffer = _nameBuffer)
+            {
+                new Span<byte>(buffer, _nameBuffer.Length).Clear();
+                Dispatch(opcode, 0, IntPtr.Zero, (IntPtr)buffer, 0);
+                var length = new ReadOnlySpan<byte>(buffer, _nameBuffer.Length - 1).IndexOf((byte)0);
+                return Encoding.ASCII.GetString(buffer, length < 0 ? _nameBuffer.Length - 1 : length).Trim();
+            }
         }
+        finally { if (entered) shared?.LeaveMain(); }
     }
 
-    /// <summary>The plug-in's own programs (factory presets), by name.</summary>
+    /// <summary>The plug-in's own programs (factory presets), by name. Main thread only: holds the EnterMain breadcrumb.</summary>
     public IReadOnlyList<string> Programs
     {
         get
         {
-            var count = Math.Clamp(_effect->numPrograms, 0, 512);
-            var names = new List<string>(count);
-            for (var i = 0; i < count; i++)
+            if (_disposed) return Array.Empty<string>();
+            var shared = EngineHost.Shared;
+            var entered = false;
+            try
             {
-                fixed (byte* buffer = _nameBuffer)
+                if (shared is not null) { shared.EnterMain(-1, -1, Path, TabForge.Audio.Contracts.PluginCallKind.Other); entered = true; }
+                var count = Math.Clamp(_effect->numPrograms, 0, 512);
+                var names = new List<string>(count);
+                for (var i = 0; i < count; i++)
                 {
-                    new Span<byte>(buffer, _nameBuffer.Length).Clear();
-                    Dispatch(29, i, IntPtr.Zero, (IntPtr)buffer, 0); // effGetProgramNameIndexed
-                    var length = new ReadOnlySpan<byte>(buffer, _nameBuffer.Length - 1).IndexOf((byte)0);
-                    var name = Encoding.ASCII.GetString(buffer, length < 0 ? 0 : length).Trim();
-                    names.Add(name.Length > 0 ? name : $"Program {i + 1}");
+                    fixed (byte* buffer = _nameBuffer)
+                    {
+                        new Span<byte>(buffer, _nameBuffer.Length).Clear();
+                        Dispatch(29, i, IntPtr.Zero, (IntPtr)buffer, 0); // effGetProgramNameIndexed
+                        var length = new ReadOnlySpan<byte>(buffer, _nameBuffer.Length - 1).IndexOf((byte)0);
+                        var name = Encoding.ASCII.GetString(buffer, length < 0 ? 0 : length).Trim();
+                        names.Add(name.Length > 0 ? name : $"Program {i + 1}");
+                    }
                 }
+                return names;
             }
-            return names;
+            finally { if (entered) shared?.LeaveMain(); }
         }
     }
 
@@ -166,6 +191,7 @@ public sealed unsafe partial class Vst2Plugin : IPluginInstance
     // Host callbacks arrive on any thread, the audio thread included (audioMasterAutomate from processReplacing: modulated
     // parameters, macro knobs). They only set these flags and bump the process-wide signal: no closure, no queue node, no allocation.
     // The main loop (EngineThreads.RunPending) raises Edited / ResizeRequested once per flag.
+    private readonly EngineThreads _threads;
     private int _editedFlag, _resizeFlag;
     private long _pendingSize;
     private static int _hostSignal, _hostSeen;
@@ -190,23 +216,39 @@ public sealed unsafe partial class Vst2Plugin : IPluginInstance
         {
             if (Interlocked.Exchange(ref plugin._editedFlag, 0) != 0)
             {
-                try { plugin.Edited?.Invoke(); } catch (Exception ex) { EngineLog.Write($"plug-in edit notification failed: {ex.GetBaseException().Message}"); }
+                try { plugin.Edited?.Invoke(); } catch (Exception ex) { plugin._threads.Log.Write($"plug-in edit notification failed: {ex.GetBaseException().Message}"); }
             }
             if (Interlocked.Exchange(ref plugin._resizeFlag, 0) != 0)
             {
                 var size = Interlocked.Read(ref plugin._pendingSize);
-                try { plugin.ResizeRequested?.Invoke((int)(size >> 32), (int)(uint)size); } catch (Exception ex) { EngineLog.Write($"plug-in resize failed: {ex.GetBaseException().Message}"); }
+                try { plugin.ResizeRequested?.Invoke((int)(size >> 32), (int)(uint)size); } catch (Exception ex) { plugin._threads.Log.Write($"plug-in resize failed: {ex.GetBaseException().Message}"); }
             }
         }
     }
 
-    public Vst2Plugin(string path, double sampleRate, int maxBlock) : this(path, NativeLibrary.Load(path), IntPtr.Zero, sampleRate, maxBlock) { }
+    public Vst2Plugin(string path, double sampleRate, int maxBlock, EngineThreads threads) : this(path, LoadModule(path), IntPtr.Zero, sampleRate, maxBlock, threads) { }
+
+    // Load flags: the plug-in's own folder and the system folders only, never the working folder or the search path.
+    private const uint LoadLibrarySearchDefaultDirs = 0x00001000, LoadLibrarySearchDllLoadDir = 0x00000100;
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true, EntryPoint = "LoadLibraryExW")]
+    private static extern IntPtr LoadLibraryEx(string fileName, IntPtr reserved, uint flags);
+
+    /// <summary>Loads the VST2 module at its full path (the caller passes a normalised path only).</summary>
+    private static IntPtr LoadModule(string path)
+    {
+        var module = LoadLibraryEx(path, IntPtr.Zero, LoadLibrarySearchDefaultDirs | LoadLibrarySearchDllLoadDir);
+        if (module != IntPtr.Zero) return module;
+        var error = Marshal.GetLastPInvokeError();
+        throw new System.ComponentModel.Win32Exception(error, Vst2LoadError.Describe(error));
+    }
 
     /// <param name="library">The loaded module (freed only if the plug-in's entry point never ran); zero with an explicit <paramref name="entryPoint"/>.</param>
     /// <param name="entryPoint">VSTPluginMain; zero = look it up in <paramref name="library"/>.</param>
-    private Vst2Plugin(string path, IntPtr library, IntPtr entryPoint, double sampleRate, int maxBlock)
+    private Vst2Plugin(string path, IntPtr library, IntPtr entryPoint, double sampleRate, int maxBlock, EngineThreads threads)
     {
         Path = path;
+        _threads = threads;
         _sampleRate = sampleRate;
         _maxBlock = maxBlock;
         _library = library;
@@ -224,10 +266,13 @@ public sealed unsafe partial class Vst2Plugin : IPluginInstance
             if (main == IntPtr.Zero && !NativeLibrary.TryGetExport(_library, "VSTPluginMain", out main) && !NativeLibrary.TryGetExport(_library, "main", out main))
                 throw new InvalidOperationException("Not a VST2 plug-in (no VSTPluginMain).");
             var entry = (delegate* unmanaged[Cdecl]<IntPtr, AEffect*>)main;
-            _loading = this;
-            entered = true;
-            try { _effect = entry((IntPtr)(delegate* unmanaged[Cdecl]<AEffect*, int, int, IntPtr, IntPtr, float, IntPtr>)&HostCallback); }
-            finally { _loading = null; }
+            lock (LoadGate)
+            {
+                _loading = this;
+                entered = true;
+                try { _effect = entry((IntPtr)(delegate* unmanaged[Cdecl]<AEffect*, int, int, IntPtr, IntPtr, float, IntPtr>)&HostCallback); }
+                finally { _loading = null; }
+            }
             if (_effect is null || _effect->magic != Magic) throw new InvalidOperationException("The plug-in did not start (bad VST2 entry).");
             if ((_effect->flags & FlagCanReplacing) == 0) throw new InvalidOperationException("The plug-in does not support 32-bit float processing.");
             Instances[(IntPtr)_effect] = this;
@@ -402,60 +447,13 @@ public sealed unsafe partial class Vst2Plugin : IPluginInstance
     /// <summary>Resize request from the plug-in (audioMasterSizeWindow).</summary>
     public event Action<int, int>? ResizeRequested;
 
-    [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
-    private static IntPtr HostCallback(AEffect* effect, int opcode, int index, IntPtr value, IntPtr ptr, float opt)
-    {
-        try
-        {
-            var self = effect is not null && Instances.TryGetValue((IntPtr)effect, out var found) ? found : _loading;
-            switch (opcode)
-            {
-                case 1: return 2400;                                   // audioMasterVersion
-                case 0: case 43: case 44:                              // automate / beginEdit / endEdit: the user changed something
-                    self?.FlagEdited();                                // A flag, raised by the main loop (no allocation here)
-                    return 0;
-                case 6: return 1;                                      // wantMidi
-                case 8: self?.CollectOut(ptr); return 1;               // processEvents: MIDI out of the plug-in
-                case 7: return self is null ? 0 : (IntPtr)self._timeInfo; // getTime
-                case 13: return 1;                                     // ioChanged
-                case 15:                                               // sizeWindow
-                    if (self is not null)
-                    {
-                        Interlocked.Exchange(ref self._pendingSize, ((long)index << 32) | (uint)(int)value);
-                        Volatile.Write(ref self._resizeFlag, 1);
-                        Interlocked.Increment(ref _hostSignal);
-                    }
-                    return 1;
-                case 16: return self is null ? 0 : (IntPtr)(long)self._sampleRate; // getSampleRate
-                case 17: return self is null ? 0 : self._maxBlock;     // getBlockSize
-                case 23: return EngineThreads.IsOfflineWorker ? 4 : EngineThreads.IsAudioThread ? 2 : 1;   // currentProcessLevel: offline / realtime / user
-                case 32: return WriteString(ptr, "TabForge", 64);       // vendor
-                case 33: return WriteString(ptr, "TabForge Audio Engine", 64);
-                case 34: return 1;
-                case 37:                                               // canDo
-                    var what = ptr == IntPtr.Zero ? "" : Marshal.PtrToStringAnsi(ptr) ?? "";
-                    return what is "sendVstEvents" or "sendVstMidiEvent" or "sizeWindow" or "sendVstTimeInfo" or "receiveVstEvents" or "receiveVstMidiEvent" ? 1 : 0;
-                case 42: return 1;                                     // updateDisplay
-                default: return 0;
-            }
-        }
-        catch { return 0; } // never let an exception cross into native code
-    }
-
-    private static IntPtr WriteString(IntPtr ptr, string text, int max)
-    {
-        if (ptr == IntPtr.Zero) return 0;
-        var bytes = Encoding.ASCII.GetBytes(text);
-        var n = Math.Min(bytes.Length, max - 1);
-        Marshal.Copy(bytes, 0, ptr, n);
-        ((byte*)ptr)[n] = 0;
-        return 1;
-    }
-
     public void Dispose()
     {
         if (_disposed) return;
         _disposed = true;
+        // Audit: every native allocation in the constructor (time info, event list, channel pointer arrays + buffers)
+        // is freed here; the constructor's catch frees the same set on failure (NativeMemory.Free(null) is a no-op).
+        // Instances is removed in both paths. AskString/Programs above guard on _disposed so a late query cannot touch the closed effect.
         CloseEditor();
         Dispatch(EffStopProcess, 0, IntPtr.Zero, IntPtr.Zero, 0);
         Dispatch(EffMainsChanged, 0, 0, IntPtr.Zero, 0);

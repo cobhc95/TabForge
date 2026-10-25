@@ -1,0 +1,58 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <!-- One target per OS, not a multi-target: on Windows the exe is the audio engine host too (it starts itself with
+         the audio-engine argument), so every Windows build must carry the engine. macOS and Linux build without it. -->
+    <TargetFramework Condition="$([MSBuild]::IsOSPlatform('Windows'))">net8.0-windows</TargetFramework>
+    <TargetFramework Condition="!$([MSBuild]::IsOSPlatform('Windows'))">net8.0</TargetFramework>
+    <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
+    <AssemblyName>TabForge</AssemblyName>
+    <RootNamespace>TabForge.Avalonia</RootNamespace>
+    <!-- Precompiled code (no start-up JIT) and tiered PGO, and a GC that conserves memory (5), as in the WPF build. -->
+
+    <PublishReadyToRun>true</PublishReadyToRun>
+    <!-- Only English satellite resources are kept (the UI has no localised resources; dependency satellites are dead weight). -->
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <TieredPGO>true</TieredPGO>
+    <ApplicationIcon>Assets\TabForge.ico</ApplicationIcon>
+    <!-- Per-monitor DPI awareness for this exe and its engine and plug-in host processes (the same exe). Same as the WPF build. -->
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+  <ItemGroup>
+    <RuntimeHostConfigurationOption Include="System.GC.ConserveMemory" Value="5" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The audio engine is Windows-only (net8.0-windows); the same reference the WPF build makes. -->
+    <ProjectReference Include="..\TabForge.AudioEngine\TabForge.AudioEngine.csproj" Condition="'$(TargetFramework)' == 'net8.0-windows'" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' != 'net8.0-windows'">
+    <!-- The engine client and its Windows trust adapter exist only in the Windows build (see Playback/AvaloniaPlaybackComposition.cs). -->
+    <Compile Remove="Playback\**\*.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="11.3.20" />
+    <PackageReference Include="Avalonia.Desktop" Version="11.3.20" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.20" />
+    <ProjectReference Include="..\TabForge.Core\TabForge.Core.csproj" />
+    <Content Include="Assets\TabForge.ico" Link="Assets\TabForge.ico" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Assets\Icons\TrackRows\owner-icons.json" Link="Assets\TrackRowIcons\owner-icons.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Assets\Icons\Transport\*.svg" Link="Assets\TransportIcons\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Assets\Icons\Tools\**\*.svg" Link="Assets\ToolIcons\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Assets\Icons\Instruments\SVG\**\*.svg" Link="Assets\Instruments\SVG\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Assets\Icons\Instruments\manifest.json" Link="Assets\Instruments\manifest.json" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Licence texts of the bundled components (verbatim copies); shipped as <app folder>\licenses\. -->
+    <Content Include="licenses\*.txt" Link="licenses\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <!-- The headless tests drive the preview score's editor and probe through the view. -->
+    <InternalsVisibleTo Include="TabForge.Avalonia.Tests" />
+  </ItemGroup>
+  <!-- LGPL-2.1 (SoundTouch.Net): the library stays a loose, replaceable file beside TabForge.exe, not inside the single-file bundle.
+       The VST3 host shim (tfvst3.dll) stays loose too: Vst3Plugin loads it from the exe's folder, and a bundled copy is only
+       extracted to a temp folder, so every VST3 plug-in failed with "Dll was not found". -->
+  <Target Name="KeepSoundTouchLooseInSingleFile" AfterTargets="ComputeResolvedFilesToPublishList">
+    <ItemGroup>
+      <ResolvedFileToPublish Update="@(ResolvedFileToPublish)" Condition="'%(ResolvedFileToPublish.Filename)' == 'SoundTouch.Net' Or '%(ResolvedFileToPublish.Filename)' == 'tfvst3'">
+        <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      </ResolvedFileToPublish>
+    </ItemGroup>
+  </Target>
+</Project>

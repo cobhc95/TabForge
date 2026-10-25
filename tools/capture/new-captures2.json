@@ -1,0 +1,22 @@
+[
+ {"theme": "dark"},
+ {"live-fx": "open"},
+ {"live-fx": "readings", "in": 0.7, "out": 0.55, "hz": 82.0, "repeat": 6},
+ {"shot": "images/input-fx-strip", "target": "window:LiveInputFx"},
+ {"frames": "images/tuner-reacting", "fps": 8, "scale": 1, "target": "element:LiveInputStrip", "hold": 900, "sequence": [
+   [{"live-fx": "readings", "in": 0.3, "out": 0.25, "hz": 74.0, "repeat": 4}],
+   [{"live-fx": "readings", "in": 0.4, "out": 0.3, "hz": 76.5, "repeat": 4}],
+   [{"live-fx": "readings", "in": 0.5, "out": 0.4, "hz": 78.8, "repeat": 4}],
+   [{"live-fx": "readings", "in": 0.6, "out": 0.5, "hz": 80.6, "repeat": 4}],
+   [{"live-fx": "readings", "in": 0.6, "out": 0.5, "hz": 81.9, "repeat": 4}],
+   [{"live-fx": "readings", "in": 0.55, "out": 0.45, "hz": 82.4, "repeat": 4}],
+   [{"live-fx": "readings", "in": 0.5, "out": 0.4, "hz": 82.4, "repeat": 4}]]},
+ {"close": "all"},
+ {"fx-chain": "reaper"},
+ {"shot": "images/reaper-chain", "target": "window:FxChain"},
+ {"close": "all"},
+ {"audio-fixture": "repeat"},
+ {"timeline-scroll": 15},
+ {"wait": 3000},
+ {"shot": "images/clips-repeat-lanes", "target": "timeline"}
+]

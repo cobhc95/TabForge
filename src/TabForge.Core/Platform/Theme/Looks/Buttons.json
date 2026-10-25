@@ -1,0 +1,56 @@
+[
+  {
+    "name": "Button", "kind": "Button",
+    "rules": [
+      { "name": "Hover", "when": [ { "property": "IsMouseOver", "value": "True" } ],
+        "set": [ { "part": "b", "property": "Border.Background", "brush": "HoverBrush" }, { "part": "b", "property": "Border.BorderBrush", "brush": "AccentBrush" } ] },
+      { "name": "Pressed", "when": [ { "property": "IsPressed", "value": "True" } ],
+        "set": [ { "part": "b", "property": "Border.Background", "brush": "AccentSoftBrush" } ] },
+      { "name": "Disabled", "when": [ { "property": "IsEnabled", "value": "False" } ],
+        "set": [ { "property": "Opacity", "literal": "0.45" } ] },
+      { "name": "FocusVisible", "when": [ { "property": "IsKeyboardFocusVisible", "value": "True" } ],
+        "set": [ { "part": "b", "property": "Border.BorderBrush", "brush": "FocusRingBrush" } ] }
+    ]
+  },
+  {
+    "name": "AccentButton", "kind": "Button",
+    "rules": [
+      { "name": "Hover", "when": [ { "property": "IsMouseOver", "value": "True" } ],
+        "set": [ { "part": "b", "property": "Border.BorderBrush", "brush": "TextStrongBrush" } ] },
+      { "name": "Pressed", "when": [ { "property": "IsPressed", "value": "True" } ],
+        "set": [ { "part": "b", "property": "UIElement.Opacity", "literal": "0.92" } ] },
+      { "name": "Disabled", "when": [ { "property": "IsEnabled", "value": "False" } ],
+        "set": [ { "property": "Opacity", "literal": "0.45" } ] },
+      { "name": "FocusVisible", "when": [ { "property": "IsKeyboardFocusVisible", "value": "True" } ],
+        "set": [ { "part": "b", "property": "Border.BorderBrush", "brush": "FocusRingBrush" } ] }
+    ]
+  },
+  {
+    "name": "Tab", "kind": "TabItem",
+    "rules": [
+      { "name": "Selected", "when": [ { "property": "IsSelected", "value": "True" } ],
+        "set": [ { "part": "bd", "property": "Border.Background", "brush": "Panel2Brush" }, { "part": "bd", "property": "Border.BorderBrush", "brush": "AccentBrush" }, { "property": "Foreground", "brush": "TextStrongBrush" } ] },
+      { "name": "HoverNotSelected", "when": [ { "property": "IsMouseOver", "value": "True" }, { "property": "IsSelected", "value": "False" } ],
+        "set": [ { "part": "bd", "property": "Border.Background", "brush": "HoverBrush" } ] },
+      { "name": "Pressed", "when": [ { "property": "IsPressed", "value": "True" } ],
+        "set": [ { "part": "bd", "property": "Border.Background", "brush": "PressBrush" } ] },
+      { "name": "Disabled", "when": [ { "property": "IsEnabled", "value": "False" } ],
+        "set": [ { "property": "Opacity", "literal": "0.45" } ] },
+      { "name": "FocusVisible", "when": [ { "property": "IsKeyboardFocusVisible", "value": "True" } ],
+        "set": [ { "part": "bd", "property": "Border.BorderBrush", "brush": "FocusRingBrush" } ] }
+    ]
+  },
+  {
+    "name": "MixerToggle", "kind": "ToggleButton",
+    "rules": [
+      { "name": "Hover", "when": [ { "property": "IsMouseOver", "value": "True" } ],
+        "set": [ { "part": "b", "property": "Border.Background", "brush": "HoverBrush" }, { "part": "b", "property": "Border.BorderBrush", "brush": "AccentBrush" } ] },
+      { "name": "Pressed", "when": [ { "property": "IsPressed", "value": "True" } ],
+        "set": [ { "part": "b", "property": "Border.Background", "brush": "AccentSoftBrush" } ] },
+      { "name": "Disabled", "when": [ { "property": "IsEnabled", "value": "False" } ],
+        "set": [ { "property": "Opacity", "literal": "0.45" } ] },
+      { "name": "FocusVisible", "when": [ { "property": "IsKeyboardFocusVisible", "value": "True" } ],
+        "set": [ { "part": "b", "property": "Border.BorderBrush", "brush": "FocusRingBrush" } ] }
+    ]
+  }
+]

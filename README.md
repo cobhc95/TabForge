@@ -1,4 +1,4 @@
-# TabForge 0.7.6
+# TabForge 0.8.0
 
 **A keyboard-driven tablature and notation editor for Windows. Opens GP files (.gp3, .gp4, .gp5, .gpx, .gp) and saves .gp and its own .tforge projects.** Write, import and play back guitar, bass, drum and keyboard parts, with a live fretboard / keyboard, an arrangement timeline, audio and MIDI recording, a mixer, VST plug-ins and offline audio and video rendering.
 
@@ -9,9 +9,11 @@
 ## Download
 
 > [!TIP]
-> **[Setup installer](https://github.com/cobhc95/TabForge/releases/download/v0.7.6/TabForge-0.7.6-setup.exe)** · no administrator rights needed
+> **[Setup installer](https://github.com/cobhc95/TabForge/releases/download/v0.8.0/TabForge-0.8.0-setup.exe)** · no administrator rights needed
 >
-> **[Portable ZIP](https://github.com/cobhc95/TabForge/releases/download/v0.7.6/TabForge-0.7.6-win-x64-portable.zip)** · extract and run `TabForge.exe`
+> **[Portable ZIP](https://github.com/cobhc95/TabForge/releases/download/v0.8.0/TabForge-0.8.0-win-x64-portable.zip)** · extract and run `TabForge.exe`
+>
+> **[SHA-256 checksums](https://github.com/cobhc95/TabForge/releases/download/v0.8.0/TabForge-0.8.0-SHA256.txt)** · to verify both files
 
 Windows 10 or 11, 64-bit, nothing else to install. Not code-signed: see [Verify your download](#verify-your-download). Older versions: [Releases](https://github.com/cobhc95/TabForge/releases).
 
@@ -25,26 +27,23 @@ Windows 10 or 11, 64-bit, nothing else to install. Not code-signed: see [Verify 
 </tr>
 </table>
 
-**Contents:** [Download](#download) · [New since 0.7.5](#new-since-075) · [What sets it apart](#what-sets-it-apart) · [Writing tab and notation](#writing-tab-and-notation) · [Instruments on screen](#instruments-on-screen) · [Arrangement and tracks](#arrangement-and-tracks) · [Recording and live input](#recording-and-live-input) · [Playback and practice](#playback-and-practice) · [Band view, Keyboard mode and compact mode](#band-view-keyboard-mode-and-compact-mode) · [Sound](#sound) · [Export](#export) · [Customising](#customising) · [Files, safety and updates](#files-safety-and-updates) · [Full feature reference](#full-feature-reference) · [Verify your download](#verify-your-download) · [Building from source](#building-from-source) · [Licence](#licence)
+**Contents:** [Download](#download) · [What's new in 0.8](#whats-new-in-08) · [What sets it apart](#what-sets-it-apart) · [Writing tab and notation](#writing-tab-and-notation) · [Instruments on screen](#instruments-on-screen) · [Arrangement and tracks](#arrangement-and-tracks) · [Recording and live input](#recording-and-live-input) · [Playback and practice](#playback-and-practice) · [Band view, Keyboard mode and compact mode](#band-view-keyboard-mode-and-compact-mode) · [Sound](#sound) · [Export](#export) · [Customising](#customising) · [Files, safety and updates](#files-safety-and-updates) · [Full feature reference](#full-feature-reference) · [Verify your download](#verify-your-download) · [Building from source](#building-from-source) · [Licence](#licence)
 
-## New since 0.7.5
+## What's new in 0.8
 
-A short tour of what changed. Click a picture for the full size.
+TabForge now runs on Avalonia, the first step toward running on more platforms in the future. It is Windows only today.
 
-<table>
-<tr>
-<td width="33%" valign="top"><a href="docs/screenshots/band-above.png"><img src="docs/screenshots/band-above.png" alt="Band view with the fretboard above the tab" width="215"></a><br><b>Band view</b><br>One row per track, each framed in its colour. The fretboard now sits above the tab and only the first track shows one; the others show a line of music each. Fretboard beside the tab is in the BAND VIEW menu.</td>
-<td width="33%" valign="top"><a href="docs/screenshots/compact-mode.png"><img src="docs/screenshots/compact-mode.png" alt="Compact mode" width="215"></a><br><b>Compact mode</b><br>Hides the track rows and the menu row so the score gets the room. A strip of track capsules switches track, and its menu holds the menus and tools.</td>
-<td width="33%" valign="top"><a href="docs/screenshots/live-input.png"><img src="docs/screenshots/live-input.png" alt="The live input button lit in the track list toolbar" width="215"></a><br><b>Live input</b><br>The microphone button plays your guitar or a MIDI keyboard through a live FX chain at once: no track, no recording. One for the whole program.</td>
-</tr>
-<tr>
-<td width="33%" valign="top"><a href="docs/screenshots/master-lane.png"><img src="docs/screenshots/master-lane.png" alt="The master track lane above the tracks" width="215"></a><br><b>Master track lane</b><br>An overview above the tracks: one thin line per track, filled where that track plays, with the master FX, volume and pan beside it.</td>
-<td width="33%" valign="top"><a href="docs/screenshots/icon-row.png"><img src="docs/screenshots/icon-row.png" alt="The grouped icons at the right of the top bar" width="215"></a><br><b>Top bar icons</b><br>Grouped by kind: side panel, fretboard and Keyboard mode, Band view and compact mode, project settings. Drag an icon to reorder; the order is remembered.</td>
-<td width="33%" valign="top"><a href="docs/screenshots/zoom-speed.png"><img src="docs/screenshots/zoom-speed.png" alt="The View and tempo pane" width="215"></a><br><b>View and tempo</b><br>Zoom, speed, tempo and time / key are one row of four buttons in the side panel: click for presets, right-click to fine-tune.</td>
-</tr>
-</table>
+- **Selection and loops:** drag a box on the timeline, or drag across the score, to select and set the loop; the ruler loop has handles; *Clear loop* and Esc twice remove it.
+- **Light mode** redesigned.
+- **Monitor FX** button in the title bar.
+- **Loop recording** keeps each pass as a take.
+- **Playback highlight colour** of your choice.
+- **Spacing** setting for the score.
+- **Tuner strip** in the FX windows.
+- **Audio settings per device**, remembered for each output.
+- **Section previous / next** moves the playhead.
 
-See the [changelog](CHANGELOG.md) for everything since.
+See the [changelog](CHANGELOG.md) for everything.
 
 ## What sets it apart
 
@@ -87,7 +86,7 @@ Type frets with the keyboard; standard notation and tab update together. Click a
 <details><summary>More details</summary>
 
 - **Techniques**: bends with curves, slides, hammer-ons/pull-offs, palm mute, let ring, vibrato and wide vibrato, natural/artificial/pinch/tapped harmonics, dead and ghost notes, tremolo picking, trills, fades, accents, staccato, tenuto, grace notes, arpeggio/brush strokes, tapping, slap and pop.
-- **Edits during playback** are heard from the next bar. Bars you edit stay complete (*Fill incomplete bars with rests*, on by default); typing on a rest writes your remembered duration; *Advance after entering a note* (off by default) moves the caret on.
+- **Edits during playback** are heard from the next bar. Bars you edit stay complete (*Fill incomplete bars with rests*, on by default); typing on a rest writes your remembered duration; the cursor stays on the note just written (*Move to the next note after writing*, off by default, moves it on).
 - **Tidy bars:** with "Add rests automatically to fill bars" on, changing a note's length moves the notes after it along, and the rests at the end of the bar take up the change.
 - **Delete in the score:** a bar left without notes becomes one whole-bar rest.
 - **32nd and 64th notes** typed back to back beam together, and a bar holds 32 or 64 of them.
@@ -170,7 +169,7 @@ One block per bar and track, with coloured sections across the top. Sections, ba
 </table>
 
 - **Add a track** from the Track menu, Ctrl+T, the Add track lane under the last track, or *Add track…* in the track list's right-click menu.
-- **Master track lane** (track list right-click > *Show master track*): an overview above the first track, pictured under [New since 0.7.5](#new-since-075).
+- **Master track lane** (track list right-click > *Show master track*): an overview above the first track, pictured under [At a glance](#at-a-glance).
 - **Selection scope:** a timeline selection covers every track; bars selected in the score cover just that track, and copy, cut, paste and loop follow it.
 
 <details><summary>More details</summary>
@@ -240,6 +239,23 @@ Play along with a metronome and count-in, loop any section, and let the speed tr
 
 ## Band view, Keyboard mode and compact mode
 
+### At a glance
+
+A short tour of the band view, compact mode and the newer controls. Click a picture for the full size.
+
+<table>
+<tr>
+<td width="33%" valign="top"><a href="docs/screenshots/band-above.png"><img src="docs/screenshots/band-above.png" alt="Band view with the fretboard above the tab" width="215"></a><br><b>Band view</b><br>One row per track, each framed in its colour. The fretboard now sits above the tab and only the first track shows one; the others show a line of music each. Fretboard beside the tab is in the BAND VIEW menu.</td>
+<td width="33%" valign="top"><a href="docs/screenshots/compact-mode.png"><img src="docs/screenshots/compact-mode.png" alt="Compact mode" width="215"></a><br><b>Compact mode</b><br>Hides the track rows and the menu row so the score gets the room. A strip of track capsules switches track, and its menu holds the menus and tools.</td>
+<td width="33%" valign="top"><a href="docs/screenshots/live-input.png"><img src="docs/screenshots/live-input.png" alt="The live input button lit in the track list toolbar" width="215"></a><br><b>Live input</b><br>The microphone button plays your guitar or a MIDI keyboard through a live FX chain at once: no track, no recording. One for the whole program.</td>
+</tr>
+<tr>
+<td width="33%" valign="top"><a href="docs/screenshots/master-lane.png"><img src="docs/screenshots/master-lane.png" alt="The master track lane above the tracks" width="215"></a><br><b>Master track lane</b><br>An overview above the tracks: one thin line per track, filled where that track plays, with the master FX, volume and pan beside it.</td>
+<td width="33%" valign="top"><a href="docs/screenshots/icon-row.png"><img src="docs/screenshots/icon-row.png" alt="The grouped icons at the right of the top bar" width="215"></a><br><b>Top bar icons</b><br>Grouped by kind: side panel, fretboard and Keyboard mode, Band view and compact mode, project settings. Drag an icon to reorder; the order is remembered.</td>
+<td width="33%" valign="top"><a href="docs/screenshots/zoom-speed.png"><img src="docs/screenshots/zoom-speed.png" alt="The View and tempo pane" width="215"></a><br><b>View and tempo</b><br>Zoom, speed, tempo and time / key are one row of four buttons in the side panel: click for presets, right-click to fine-tune.</td>
+</tr>
+</table>
+
 ### Band view
 
 Every track gets its own row: an instrument view and a scrolling tab lane, each row as tall as the music it shows. Open it from the top bar or **View > Band view**.
@@ -276,7 +292,7 @@ Practise a part by playing it along with a MIDI keyboard. Turn it on from the to
 
 ### Compact mode
 
-Compact mode gives the score the room. It hides the track rows and the menu row, and shows the master track lane at twice its height. A strip of track capsules under the title bar selects the track (the selected one is lit); right-click the strip, or click its caption, for the menus and tools, and the track controls become a slim column of three rows of buttons. Turn it on from the toolbar button beside Keyboard mode or **View > Compact mode** (Ctrl+Alt+C); pressing it again brings the tracks back as they were. It is pictured under [New since 0.7.5](#new-since-075).
+Compact mode gives the score the room. It hides the track rows and the menu row, and shows the master track lane at twice its height. A strip of track capsules under the title bar selects the track (the selected one is lit); right-click the strip, or click its caption, for the menus and tools, and the track controls become a slim column of three rows of buttons. Turn it on from the toolbar button beside Keyboard mode or **View > Compact mode** (Ctrl+Alt+C); pressing it again brings the tracks back as they were. It is pictured under [At a glance](#at-a-glance).
 
 ## Sound
 
@@ -700,10 +716,10 @@ A `licenses/` folder beside `TabForge.exe` (portable zip and installer) holds th
 Requires the .NET 8 SDK on Windows.
 
 ```cmd
-dotnet build src\TabForge\TabForge.csproj -c Release
+dotnet build Source\src\TabForge.Avalonia\TabForge.Avalonia.csproj -c Release
 ```
 
-Or publish a self-contained build with `dotnet publish src\TabForge\TabForge.csproj -c Release`.
+Or publish a self-contained build with `dotnet publish Source\src\TabForge.Avalonia\TabForge.Avalonia.csproj -c Release`.
 
 ## Releases and issues
 

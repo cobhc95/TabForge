@@ -1,0 +1,13 @@
+# Shots copied to <TABFORGE_SHOTS>\release: <window>-<theme>-<size> (main windows at 1600x900, dialogs native).
+win-default-dark-1600x900
+win-default-light-1600x900
+play-band-dark-1600x900
+play-playhead-light-1600x900
+win-Mixer-dark-1600x900
+win-MixTable-dark-native
+win-MixTable-light-native
+win-Preferences-dark-1600x900
+win-FxChain-example-dark-native
+paste-special-bars-dark-native
+delete-bars-clear-light-native
+win-ScaleFinder-dark-native

@@ -1,0 +1,41 @@
+# TabForge element tree, role=tool
+# control view; rect = x,y,w,h relative to the window top-left in physical pixels at dpi=96
+# window size=480x560
+# stripped: paths, GUIDs, times, dates, handles, numbers of 6+ digits
+Window id="" name="Score information" enabled=y focusable=y rect=0,0,480,560
+  TitleBar id="TitleBar" name="" enabled=y focusable=y rect=24,3,448,28
+    MenuBar id="SystemMenuBar" name="System" enabled=y focusable=y rect=8,8,22,22
+      MenuItem id="" name="System" enabled=y focusable=y rect=8,8,22,22
+    Button id="Minimize-Restore" name="Minimize" enabled=y focusable=n rect=333,1,47,30
+    Button id="Maximize-Restore" name="Maximize" enabled=y focusable=n rect=380,1,46,30
+    Button id="Close" name="Close" enabled=y focusable=n rect=426,1,47,30
+  Pane id="" name="" enabled=y focusable=y rect=8,31,464,521
+    Text id="" name="Title" enabled=y focusable=n rect=18,41,427,16
+    Edit id="Window.TextBox0" name="Text box0" enabled=y focusable=y rect=19,58,425,24
+    Text id="" name="Subtitle" enabled=y focusable=n rect=18,83,427,16
+    Edit id="Window.TextBox1" name="Text box1" enabled=y focusable=y rect=19,100,425,24
+    Text id="" name="Artist" enabled=y focusable=n rect=18,125,427,16
+    Edit id="Window.TextBox2" name="Text box2" enabled=y focusable=y rect=19,142,425,24
+    Text id="" name="Album" enabled=y focusable=n rect=18,167,427,16
+    Edit id="Window.TextBox3" name="Text box3" enabled=y focusable=y rect=19,184,425,24
+    Text id="" name="Music author" enabled=y focusable=n rect=18,209,427,16
+    Edit id="Window.TextBox4" name="Text box4" enabled=y focusable=y rect=19,226,425,24
+    Text id="" name="Lyrics author" enabled=y focusable=n rect=18,251,427,16
+    Edit id="Window.TextBox5" name="Text box5" enabled=y focusable=y rect=19,268,425,24
+    Text id="" name="Copyright" enabled=y focusable=n rect=18,293,427,16
+    Edit id="Window.TextBox6" name="Text box6" enabled=y focusable=y rect=19,310,425,24
+    Text id="" name="Tab author" enabled=y focusable=n rect=18,335,427,16
+    Edit id="Window.TextBox7" name="Text box7" enabled=y focusable=y rect=19,352,425,24
+    Text id="" name="Instructions" enabled=y focusable=n rect=18,377,427,16
+    Edit id="Window.TextBox8" name="Text box8" enabled=y focusable=y rect=19,394,425,44
+    Text id="" name="Notice" enabled=y focusable=n rect=18,439,427,16
+    Edit id="Window.TextBox9" name="Text box9" enabled=y focusable=y rect=19,456,425,55
+    Button id="Window.OK" name="OK" enabled=y focusable=y rect=282,521,80,24
+      Text id="" name="OK" enabled=y focusable=n rect=314,525,16,16
+    Button id="Window.Cancel" name="Cancel" enabled=y focusable=y rect=364,521,80,24
+      Text id="" name="Cancel" enabled=y focusable=n rect=386,525,36,16
+    ScrollBar id="VerticalScrollBar" name="" enabled=y focusable=n rect=455,31,17,521
+      Button id="Window.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=-8,-8,0,0
+      Thumb id="" name="" enabled=y focusable=n rect=455,31,17,517
+      Button id="Window.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=455,548,17,4
+# nodes=36

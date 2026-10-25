@@ -10,7 +10,5 @@ The built-in General MIDI sound: the synth rendered in the engine (so effects ca
 | `GmSynthProbe.cs` | The `--probe-gm` diagnostic: measures what the built-in synth produces for each playing technique |
 
 ## Pathway
-`START_HERE.md`, Golden pathways: **Reach the engine**.
 
 ## Tests
-`docs/feature-map/mixer-and-audio-engine.md`.

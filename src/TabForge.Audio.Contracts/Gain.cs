@@ -1,5 +1,7 @@
 namespace TabForge.Audio.Contracts;
 
+// Owns: the decibel/linear-amplitude conversions (type-following overloads, allocation-free, audio-thread safe).
+
 /// <summary>
 /// Decibels and linear amplitude. The overload follows the argument type (a float stays in single precision, a double in double),
 /// so each call gives exactly the value the inline expression it names gives. Clamps and floors (for example a silence floor

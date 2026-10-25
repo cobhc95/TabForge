@@ -2,6 +2,8 @@ using System.IO;
 
 namespace TabForge.Audio.Contracts;
 
+// Owns: the GetPluginInfo wire shape (slot, request id) for per-plug-in reports.
+
 /// <summary><see cref="EngineCommand.GetPluginInfo"/>: slot, request id.</summary>
 public readonly record struct GetPluginInfoMessage(int Slot, int RequestId)
 {

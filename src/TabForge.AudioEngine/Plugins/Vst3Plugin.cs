@@ -3,14 +3,24 @@ using System.Text;
 
 namespace TabForge.AudioEngine.Plugins;
 
+// Owns: hosting a VST3 plug-in through tfvst3.dll (preallocated buffers and event array, allocation-free process).
+
 /// <summary>
 /// Hosts a VST3 plug-in through tfvst3.dll (native\tfvst3, a small C interface over the Steinberg VST3 SDK).
 /// Buffers and the event array are allocated once; <see cref="Process"/> never allocates.
 /// </summary>
-public sealed unsafe class Vst3Plugin : IPluginInstance
+public sealed unsafe class Vst3Plugin : IPluginInstance, IEditorResizeSource, IEditorSizeSink
 {
     private const string Lib = "tfvst3.dll";
+    /// <summary>The shim, loaded only from this program's own folder (a bare name would also be searched on PATH and in the working folder).</summary>
+    private static readonly string LibPath = System.IO.Path.Combine(AppContext.BaseDirectory, Lib);
     private const int MaxEvents = 512;
+
+    static Vst3Plugin()
+    {
+        // Every DllImport of the shim resolves to the copy beside TabForge.exe; when that copy is absent the load fails.
+        NativeLibrary.SetDllImportResolver(typeof(Vst3Plugin).Assembly, (name, _, _) => name == Lib ? NativeLibrary.Load(LibPath) : IntPtr.Zero);
+    }
 
     [StructLayout(LayoutKind.Sequential)]
     private struct Midi { public int SampleOffset; public byte Status, Data1, Data2, Pad; }
@@ -23,6 +33,12 @@ public sealed unsafe class Vst3Plugin : IPluginInstance
     [DllImport(Lib)] private static extern int tfv3_has_editor(IntPtr p);
     [DllImport(Lib)] private static extern int tfv3_open_editor(IntPtr p, IntPtr parent, int* width, int* height);
     [DllImport(Lib)] private static extern void tfv3_close_editor(IntPtr p);
+    // Editor size handshake; an older tfvst3.dll lacks these (see HasEditorApi): the editor then opens as before and never resizes.
+    [DllImport(Lib)] private static extern void tfv3_editor_set_scale(IntPtr p, float scale);
+    [DllImport(Lib)] private static extern int tfv3_editor_poll_resize(IntPtr p, int* width, int* height);
+    [DllImport(Lib)] private static extern void tfv3_editor_set_size(IntPtr p, int width, int height);
+    [DllImport("user32.dll")] private static extern uint GetDpiForWindow(IntPtr hwnd);
+    [DllImport("user32.dll")] private static extern IntPtr GetWindow(IntPtr hwnd, uint cmd);
     [DllImport(Lib)] private static extern int tfv3_latency(IntPtr p);
     [DllImport(Lib)] private static extern void tfv3_destroy(IntPtr p);
     [DllImport(Lib)] private static extern int tfv3_set_offline(IntPtr p, int offline);
@@ -40,11 +56,20 @@ public sealed unsafe class Vst3Plugin : IPluginInstance
     private static readonly Lazy<bool> HasNewApi = new(() =>
     {
         IntPtr lib;
-        if (!NativeLibrary.TryLoad(System.IO.Path.Combine(AppContext.BaseDirectory, Lib), out lib) && !NativeLibrary.TryLoad(Lib, out lib)) return false;
+        if (!NativeLibrary.TryLoad(LibPath, out lib)) return false;
         return NativeLibrary.TryGetExport(lib, "tfv3_process_ex", out _) && NativeLibrary.TryGetExport(lib, "tfv3_state_begin", out _)
             && NativeLibrary.TryGetExport(lib, "tfv3_state_copy", out _) && NativeLibrary.TryGetExport(lib, "tfv3_set_processing", out _);
     });
     private readonly bool _newApi;
+
+    private static readonly Lazy<bool> HasEditorApi = new(() =>
+    {
+        if (!NativeLibrary.TryLoad(LibPath, out var lib)) return false;
+        var found = NativeLibrary.TryGetExport(lib, "tfv3_editor_poll_resize", out _)
+            && NativeLibrary.TryGetExport(lib, "tfv3_editor_set_size", out _) && NativeLibrary.TryGetExport(lib, "tfv3_editor_set_scale", out _);
+        NativeLibrary.Free(lib);   // release the probe's own reference
+        return found;
+    });
 
     private IntPtr _handle;
     private int _maxBlock;
@@ -67,7 +92,7 @@ public sealed unsafe class Vst3Plugin : IPluginInstance
     public int LatencySamples => _handle == IntPtr.Zero ? 0 : tfv3_latency(_handle);
 
     // An older tfvst3.dll has neither export: offline mode and tails are then simply unavailable.
-    private static bool _noOfflineApi;
+    private static volatile bool _noOfflineApi;
 
     public int TailSamples
     {
@@ -87,11 +112,14 @@ public sealed unsafe class Vst3Plugin : IPluginInstance
     }
 
     /// <summary>True when tfvst3.dll is present (VST3 hosting available).</summary>
-    public static bool Available => NativeLibrary.TryLoad(System.IO.Path.Combine(AppContext.BaseDirectory, Lib), out _) || NativeLibrary.TryLoad(Lib, out _);
+    public static bool Available => NativeLibrary.TryLoad(LibPath, out _);
 
-    public Vst3Plugin(string path, bool wantInstrument, double sampleRate, int maxBlock)
+    private readonly EngineLogWriter _log;
+
+    public Vst3Plugin(string path, bool wantInstrument, double sampleRate, int maxBlock, EngineLogWriter log)
     {
         Path = path;
+        _log = log;
         _maxBlock = maxBlock;
         _newApi = HasNewApi.Value;
         // Pick the class matching the requested role (the first instrument or first effect in the bundle).
@@ -146,7 +174,7 @@ public sealed unsafe class Vst3Plugin : IPluginInstance
             for (var c = 0; c < 2; c++) { NativeMemory.Free(_in[c]); NativeMemory.Free(_out[c]); }
             AllocateBuffers(maxBlock);
             if (tfv3_set_processing(_handle, sampleRate, maxBlock) != 0) return;
-            EngineLog.Write($"VST3 reconfigure: live setupProcessing refused, recreating: {Path}");
+            _log.Write($"VST3 reconfigure: live setupProcessing refused, recreating: {Path}");
         }
         RecreateWithState(sampleRate, maxBlock);
     }
@@ -155,7 +183,7 @@ public sealed unsafe class Vst3Plugin : IPluginInstance
     {
         byte[]? state = null;
         try { state = GetState(); }
-        catch (Exception ex) when (ex is InvalidOperationException or InvalidDataException) { EngineLog.Write($"VST3 reconfigure: state not captured: {Path}: {ex.Message}"); }
+        catch (Exception ex) when (ex is InvalidOperationException or InvalidDataException) { _log.Write($"VST3 reconfigure: state not captured: {Path}: {ex.Message}"); }
         CloseEditor();
         if (_handle != IntPtr.Zero) tfv3_destroy(_handle);
         _handle = IntPtr.Zero;
@@ -269,10 +297,26 @@ public sealed unsafe class Vst3Plugin : IPluginInstance
         if (ok == 0) throw new InvalidDataException($"The VST3 plug-in rejected its saved state ({state.Length} bytes).");
     }
 
+    private const float BaseDpi = 96f;
+    private const uint GwOwner = 4;
+    private IntPtr _editorParent;
+    private uint _editorDpi;
+
+    /// <summary>Tells the editor the scale of the monitor its owner window (the FX or main window, already placed) is on, when that changed; the popup itself is not placed yet when it opens.</summary>
+    private void SyncScale()
+    {
+        var owner = GetWindow(_editorParent, GwOwner);
+        if (GetDpiForWindow(owner != IntPtr.Zero ? owner : _editorParent) is not (> 0 and var dpi) || dpi == _editorDpi) return;
+        _editorDpi = dpi;
+        tfv3_editor_set_scale(_handle, dpi / BaseDpi);
+    }
+
     public (int Width, int Height)? OpenEditor(IntPtr parent)
     {
         if (_editorOpen || _handle == IntPtr.Zero) return null;
         int w, h;
+        (_editorParent, _editorDpi) = (parent, 0);
+        if (HasEditorApi.Value) SyncScale();
         if (tfv3_open_editor(_handle, parent, &w, &h) == 0) return null;
         _editorOpen = true;
         return (Math.Max(100, w), Math.Max(60, h));
@@ -285,7 +329,21 @@ public sealed unsafe class Vst3Plugin : IPluginInstance
         if (_handle != IntPtr.Zero) tfv3_close_editor(_handle);
     }
 
-    public void EditorIdle() { }
+    /// <summary>The view asked to resize (resizeView); the editor registry sizes the window and tells the view back through <see cref="SetEditorSize"/>.</summary>
+    public event Action<int, int>? ResizeRequested;
+
+    public void EditorIdle()
+    {
+        if (!_editorOpen || !HasEditorApi.Value) return;
+        SyncScale();
+        int w, h;
+        if (tfv3_editor_poll_resize(_handle, &w, &h) != 0) ResizeRequested?.Invoke(Math.Max(100, w), Math.Max(60, h));
+    }
+
+    public void SetEditorSize(int width, int height)
+    {
+        if (_editorOpen && HasEditorApi.Value) tfv3_editor_set_size(_handle, width, height);
+    }
 
     public void Dispose()
     {

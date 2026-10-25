@@ -2,6 +2,8 @@ using NAudio.Wave;
 
 namespace TabForge.AudioEngine.Audio;
 
+// Owns: writing each armed track's input to its own WAV file (lock-free capture queue, dedicated disk thread, gap markers).
+
 /// <summary>
 /// Writes the input of each armed track to its own WAV file (32-bit float, the engine rate). The capture callback
 /// (which for ASIO is the driver's real-time thread) only copies into a preallocated lock-free queue
@@ -13,7 +15,7 @@ public sealed class Recorder : IDisposable
     public sealed record Take(int Slot, string Path, double StartSec, int Mode);
 
     /// <summary>A take's file and the queue columns it is written from (-1: the device has no such input, the file is silence).</summary>
-    private readonly List<(Take Take, WaveFileWriter Writer, int Left, int Right)> _writers = new();
+    private readonly List<(Take Take, WaveFileWriter Writer, int Left, int Right, string Staging, string BaseName)> _writers = new();
     /// <summary>Channels of the capture block (interleaved, as <see cref="InputCapture.Channels"/>).</summary>
     private readonly int _inputChannels;
     /// <summary>The input channels the takes use, ascending (at least two): the queue keeps only these, one column each.</summary>
@@ -24,6 +26,7 @@ public sealed class Recorder : IDisposable
     /// <summary>Song time the takes start at. Set before the capture is attached; the finished takes carry it.</summary>
     public double StartSec { get => Volatile.Read(ref _startSec); set => Volatile.Write(ref _startSec, value); }
     private readonly int _rate;
+    private readonly EngineLogWriter _log;
     private long _frames;
     // Big write chunks (32768 frames = 256 KB per write): fewer, larger writes hold up better when the disk is busy.
     private const int ChunkFrames = 32768;
@@ -59,9 +62,10 @@ public sealed class Recorder : IDisposable
     /// <param name="queueSeconds">How many seconds of stereo input the queue should hold (allocated once, here, never on the audio thread).</param>
     /// <param name="maxQueueBytes">Memory cap for the queue: a smaller queue (never under 4 s) is used, with a log line, when the rate needs more.</param>
     /// <param name="inputChannels">Channels in each block given to <see cref="Enqueue"/> (the capture's width).</param>
-    public Recorder(string folder, IEnumerable<(int Slot, string TrackName, int Mode)> tracks, double startSec, int rate, bool startWriter = true, int gapCapacity = 256,
+    public Recorder(string folder, IEnumerable<(int Slot, string TrackName, int Mode)> tracks, double startSec, int rate, EngineLogWriter log, bool startWriter = true, int gapCapacity = 256,
         int queueSeconds = QueueSeconds, long maxQueueBytes = MaxQueueBytes, int inputChannels = 2)
     {
+        _log = log;
         _rate = rate;
         _startSec = startSec;
         _inputChannels = Math.Max(2, inputChannels);
@@ -84,30 +88,39 @@ public sealed class Recorder : IDisposable
         while (capacity < rate * (long)Math.Max(4, queueSeconds)) capacity <<= 1;
         var reduced = false;
         while (capacity * 4 * _width > maxQueueBytes && capacity > rate * 4L) { capacity >>= 1; reduced = true; }
-        EngineLog.Write($"recorder queue: {capacity / (double)rate:0} s ({capacity * 4 * _width / 1048576} MB, {_width} input channel(s), shared by all armed tracks){(reduced ? ", reduced to fit the memory cap" : "")}");
+        _log.Write($"recorder queue: {capacity / (double)rate:0} s ({capacity * 4 * _width / 1048576} MB, {_width} input channel(s), shared by all armed tracks){(reduced ? ", reduced to fit the memory cap" : "")}");
         _queue = new float[capacity * _width];
         _queueMask = capacity - 1;
         // Fault every page in here (engine main thread, a few ms), not one page per callback on the capture thread for the first two minutes:
         // a fresh large array is untouched demand-zero memory, and a page fault on a real-time thread under memory pressure can take milliseconds.
         for (var i = 0; i < _queue.Length; i += 1024) _queue[i] = 0f;
-        Directory.CreateDirectory(folder);
         var stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss");
         try
         {
+            Directory.CreateDirectory(folder);
             foreach (var (slot, name, mode) in tracks)
             {
                 var safe = TabForge.Audio.Contracts.SafeFileNames.SafeFileName(name, "Track");
                 var (left, right) = TabForge.Audio.Contracts.AudioInputAddress.Decode(mode);
                 var has = right < _inputChannels;
-                if (!has) EngineLog.Write($"recording: slot {slot} is armed on input {left + 1}, which the device ({_inputChannels} input channels) does not have: its take is silence");
-                var (path, stream) = CreateUnique(folder, $"{safe} {stamp} s{slot}");
-                _writers.Add((new Take(slot, path, startSec, mode), new WaveFileWriter(stream, WaveFormat.CreateIeeeFloatWaveFormat(rate, left == right ? 1 : 2)),
-                    has ? Array.IndexOf(_source, left) : -1, has ? Array.IndexOf(_source, right) : -1));
+                if (!has) _log.Write($"recording: slot {slot} is armed on input {left + 1}, which the device ({_inputChannels} input channels) does not have: its take is silence");
+                // Staging: the take is written to a hidden temp file beside its final name and moved over only when the
+                // take is closed (see Complete): a failure or kill never leaves a half WAV at the take's name.
+                var baseName = $"{safe} {stamp} s{slot}";
+                var (staging, stream) = CreateStaging(folder, baseName);
+                try
+                {
+                    _writers.Add((new Take(slot, UniquePath(folder, baseName), startSec, mode), new WaveFileWriter(stream, WaveFormat.CreateIeeeFloatWaveFormat(rate, left == right ? 1 : 2)),
+                        has ? Array.IndexOf(_source, left) : -1, has ? Array.IndexOf(_source, right) : -1, staging, baseName));
+                }
+                catch { try { stream.Dispose(); } catch { } // swallow: best-effort dispose of a failed stream
+ TryDelete(staging); throw; }
             }
         }
         catch
         {
-            foreach (var (_, w, _, _) in _writers) { try { w.Dispose(); } catch { } }
+            foreach (var (_, w, _, _, staging, _) in _writers) { try { w.Dispose(); } catch { } // swallow: best-effort dispose of a writer during abort
+ TryDelete(staging); }
             _writers.Clear();
             throw;
         }
@@ -133,19 +146,33 @@ public sealed class Recorder : IDisposable
     public long GapOverflows => Interlocked.Read(ref _gapOverflows);
 
     /// <summary>
-    /// A new file that did not exist before (create-new semantics): "name.wav", else "name-2.wav", "name-3.wav"… so two
-    /// armed tracks with the same (or identically sanitised) name, or two takes in the same second, never share a file.
+    /// A reserved final name that does not exist yet ("name.wav", else "name-2.wav", "name-3.wav"…): two armed tracks
+    /// with the same (or identically sanitised) name, or two takes in the same second, never share a file. Nothing is
+    /// created (the take is written to staging and moved over on close); re-checked at commit time.
     /// </summary>
-    internal static (string Path, FileStream Stream) CreateUnique(string folder, string baseName)
+    internal static string UniquePath(string folder, string baseName)
     {
         for (var n = 1; n < 1000; n++)
         {
             var path = Path.Combine(folder, n == 1 ? $"{baseName}.wav" : $"{baseName}-{n}.wav");
-            try { return (path, new FileStream(path, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.Read)); }
-            catch (IOException) when (File.Exists(path)) { }
+            if (!File.Exists(path) && !Directory.Exists(path)) return path;
         }
-        var fallback = Path.Combine(folder, $"{baseName}-{Guid.NewGuid():N}.wav");
-        return (fallback, new FileStream(fallback, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.Read));
+        return Path.Combine(folder, $"{baseName}-{Guid.NewGuid():N}.wav");
+    }
+
+    /// <summary>
+    /// A new hidden staging file beside the take's final name (".&lt;base&gt;.tftake-&lt;id&gt;.tmp.wav", create-new, no sharing),
+    /// so the take's name only ever appears with a complete header (see <see cref="Complete"/>).
+    /// </summary>
+    internal static (string Path, FileStream Stream) CreateStaging(string folder, string baseName)
+    {
+        for (var n = 0; n < 3; n++)
+        {
+            var path = Path.Combine(folder, $".{baseName}.tftake-{Guid.NewGuid():N}.tmp.wav");
+            try { return (path, new FileStream(path, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.Read)); }
+            catch (IOException) when (File.Exists(path)) { }   // a GUID collision (effectively never): try again
+        }
+        throw new IOException("Could not create a recording staging file.");
     }
 
     private bool _failed;
@@ -224,7 +251,7 @@ public sealed class Recorder : IDisposable
                 if (Volatile.Read(ref _onFinished) is { } done)
                 {
                     try { done(result); }
-                    catch (Exception ex) { EngineLog.Write($"recorder: finish callback failed: {ex.Message}"); }   // never let it end the engine process
+                    catch (Exception ex) { _log.Write($"recorder: finish callback failed: {ex.Message}"); }   // never let it end the engine process
                 }
                 return;
             }
@@ -271,16 +298,16 @@ public sealed class Recorder : IDisposable
     {
         var gaps = Interlocked.Increment(ref _gapsWritten);
         var lost = Interlocked.Add(ref _lostWritten, frames);
-        EngineLog.Write($"recording: {frames / (double)_rate:0.00} s of input lost at {(_frames - frames) / (double)_rate:0.0} s into the take (disk too slow); {gaps} gap(s), {lost / (double)_rate:0.0} s so far");
+        _log.Write($"recording: {frames / (double)_rate:0.00} s of input lost at {(_frames - frames) / (double)_rate:0.0} s into the take (disk too slow); {gaps} gap(s), {lost / (double)_rate:0.0} s so far");
         if (!_reportedDrop)
         {
             _reportedDrop = true;
-            try { Error?.Invoke($"The disk could not keep up; {frames / (double)_rate:0.00} s of input was replaced by silence."); } catch { }
+            try { Error?.Invoke($"The disk could not keep up; {frames / (double)_rate:0.00} s of input was replaced by silence."); } catch { } // swallow: an error handler must not break recording
         }
         if (!_reportedOverflow && Interlocked.Read(ref _gapOverflows) > 0)
         {
             _reportedOverflow = true;
-            try { Error?.Invoke("The disk fell far behind; timing after the lost input may be slightly off."); } catch { }
+            try { Error?.Invoke("The disk fell far behind; timing after the lost input may be slightly off."); } catch { } // swallow: an error handler must not break recording
         }
     }
 
@@ -317,7 +344,7 @@ public sealed class Recorder : IDisposable
             if (_failed) return;
             try
             {
-                foreach (var (_, writer, left, right) in _writers)
+                foreach (var (_, writer, left, right, _, _) in _writers)
                 {
                     var stereo = writer.WaveFormat.Channels == 2;
                     for (var start = 0; start < frames; start += ChunkFrames)
@@ -337,7 +364,8 @@ public sealed class Recorder : IDisposable
                 error = "Recording stopped: " + ex.Message;
             }
         }
-        if (error is not null) { try { Error?.Invoke(error); } catch { } }
+        if (error is not null) { try { Error?.Invoke(error); } catch { } // swallow: an error handler must not break recording
+ }
     }
 
     /// <summary>Closes the files; returns each take with its length in seconds.</summary>
@@ -368,20 +396,51 @@ public sealed class Recorder : IDisposable
     private List<(Take Take, double LengthSec)>? _result;
     private Action<List<(Take Take, double LengthSec)>>? _onFinished;
 
-    /// <summary>Closes the files once (disk thread at its end, or <see cref="Finish"/>); later calls return the same takes.</summary>
+    /// <summary>Closes the files and moves each staging file to its take's name (re-checked for collisions); later calls return the same takes.</summary>
     private List<(Take Take, double LengthSec)> Complete()
     {
         lock (_gate)
         {
             if (_result is not null) return _result;
             var length = (double)_frames / _rate;
-            var result = _writers.Select(w => (w.Take with { StartSec = StartSec }, length)).ToList();
-            foreach (var (_, writer, _, _) in _writers) { try { writer.Dispose(); } catch { } }
+            var result = new List<(Take Take, double LengthSec)>(_writers.Count);
+            foreach (var (take, writer, _, _, staging, baseName) in _writers)
+            {
+                try { writer.Dispose(); } catch { } // swallow: best-effort dispose during finalization
+                var folder = Path.GetDirectoryName(take.Path) ?? "";
+                result.Add((take with { StartSec = StartSec, Path = CommitStaging(staging, take.Path, folder, baseName) }, length));
+            }
             _writers.Clear();
             Volatile.Write(ref _result, result);
             return result;
         }
     }
+
+    /// <summary>
+    /// Publishes a finished staging file at <paramref name="finalPath"/> (never overwriting; the next free name wins a race).
+    /// A commit that fails keeps the staging file and points the take at it, so the audio is never lost; reported once
+    /// (finalize path, distinct from the start and mid-record messages).
+    /// </summary>
+    private string CommitStaging(string staging, string finalPath, string folder, string baseName)
+    {
+        var target = finalPath;
+        for (var attempt = 0; attempt < 100; attempt++)
+        {
+            try { File.Move(staging, target, overwrite: false); return target; }
+            catch (IOException) when (File.Exists(target)) { target = UniquePath(folder, baseName); continue; }   // lost the race: the next free name
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                try { Error?.Invoke($"Recording could not be saved: {ex.Message}"); } catch { } // swallow: an error handler must not break recording teardown
+                return staging;
+            }
+        }
+        try { Error?.Invoke($"Recording could not be saved: no free file name in {folder}."); } catch { } // swallow: an error handler must not break recording teardown
+        return staging;
+    }
+
+    private static void TryDelete(string path) { try { if (File.Exists(path)) File.Delete(path); } catch (IOException) { } // swallow: best-effort delete of a staging file
+ catch (UnauthorizedAccessException) { } // swallow: best-effort delete of a staging file
+ }
 
     public void Dispose() => Finish();
 }

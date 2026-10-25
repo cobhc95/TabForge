@@ -17,6 +17,7 @@
 
 #include "pluginterfaces/base/funknownimpl.h"
 #include "pluginterfaces/gui/iplugview.h"
+#include "pluginterfaces/gui/iplugviewcontentscalesupport.h"
 #include "pluginterfaces/vst/ivstaudioprocessor.h"
 #include "pluginterfaces/vst/ivstcomponent.h"
 #include "pluginterfaces/vst/ivsteditcontroller.h"
@@ -285,8 +286,9 @@ struct tfv3_plugin
 
 	// Editor
 	IPtr<IPlugView> view;
-	HWND parentHwnd = nullptr;
-	bool inResize = false;
+	std::atomic<HWND> parentHwnd {nullptr};            // set on the main thread, read by resizeView on the plug-in's UI thread
+	float editorScale = 0.f;                           // content scale to give the view before it attaches (0: none)
+	std::atomic<int64_t> pendingResize {-1};           // the view's latest resizeView request, (width << 32 | height); -1: none
 	int32 hasEditorCache = -1;
 
 	class ComponentHandler final : public IComponentHandler
@@ -315,28 +317,10 @@ struct tfv3_plugin
 		tfv3_plugin* owner = nullptr;
 		tresult PLUGIN_API resizeView (IPlugView* v, ViewRect* newSize) override
 		{
-			if (!v || !newSize || !owner->parentHwnd)
+			if (!v || !newSize || !owner->parentHwnd.load ())
 				return kInvalidArgument;
-			if (owner->inResize)
-				return kResultFalse;
-			owner->inResize = true;
-			const int w = newSize->getWidth (), h = newSize->getHeight ();
-			HWND parent = owner->parentHwnd;
-			HWND root = GetAncestor (parent, GA_ROOT);
-			if (root)
-			{
-				RECT wr {}, cr {};
-				GetWindowRect (root, &wr);
-				GetClientRect (parent, &cr);
-				const int dw = (wr.right - wr.left) - (cr.right - cr.left);
-				const int dh = (wr.bottom - wr.top) - (cr.bottom - cr.top);
-				SetWindowPos (root, nullptr, 0, 0, w + dw, h + dh,
-				              SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
-			}
-			if (parent != root)
-				SetWindowPos (parent, nullptr, 0, 0, w, h, SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
-			v->onSize (newSize);
-			owner->inResize = false;
+			// The host window belongs to the engine's editor registry: it sizes the window and tells the view (tfv3_editor_set_size).
+			owner->pendingResize.store ((static_cast<int64_t> (newSize->getWidth ()) << 32) | static_cast<uint32_t> (newSize->getHeight ()));
 			return kResultTrue;
 		}
 		TFV3_FUNKNOWN_OWNED (IPlugFrame)
@@ -385,6 +369,7 @@ struct tfv3_plugin
 			view = nullptr;
 		}
 		parentHwnd = nullptr;
+		pendingResize = -1;
 	}
 
 	void shutdown ()
@@ -557,7 +542,9 @@ TFV3_API int32_t tfv3_list_classes (const wchar_t* path, char (*names)[128], int
 }
 
 
-// Diagnostics: with the environment variable TFVST3_TRACE set to a file path, each step of tfv3_create is appended there.
+// Diagnostics (Debug builds only): with the environment variable TFVST3_TRACE set to a file path, each step of tfv3_create is appended there.
+// Release builds compile the trace out, so a user's environment cannot make the shim write files.
+#ifdef _DEBUG
 static void traceStep (const char* text)
 {
 	static const char* path = std::getenv ("TFVST3_TRACE");
@@ -570,6 +557,9 @@ static void traceStep (const char* text)
 	}
 }
 #define TRACE(x) traceStep (x)
+#else
+#define TRACE(x) ((void)0)
+#endif
 
 TFV3_API tfv3_plugin* tfv3_create (const wchar_t* path, int32_t class_index, double sample_rate, int32_t max_block,
                                   char* error_out)
@@ -1109,11 +1099,18 @@ TFV3_API int32_t tfv3_open_editor (tfv3_plugin* p, void* parent_hwnd, int32_t* w
 		if (!p || !p->controller || !parent_hwnd)
 			return 0;
 		p->closeEditor ();
+		p->pendingResize = -1;
 		IPtr<IPlugView> v = owned (p->controller->createView (ViewType::kEditor));
 		if (!v || v->isPlatformTypeSupported (kPlatformTypeHWND) != kResultTrue)
 			return 0;
 		p->parentHwnd = static_cast<HWND> (parent_hwnd);
 		v->setFrame (&p->frame);
+		if (p->editorScale > 0.f)
+		{
+			FUnknownPtr<IPlugViewContentScaleSupport> scale (v);
+			if (scale)
+				scale->setContentScaleFactor (p->editorScale);
+		}
 		if (v->attached (parent_hwnd, kPlatformTypeHWND) != kResultOk)
 		{
 			v->setFrame (nullptr);
@@ -1137,6 +1134,39 @@ TFV3_API int32_t tfv3_open_editor (tfv3_plugin* p, void* parent_hwnd, int32_t* w
 	catch (...)
 	{
 		return 0;
+	}
+}
+
+TFV3_API void tfv3_editor_set_scale (tfv3_plugin* p, float scale)
+{
+	if (p)
+		p->editorScale = scale;
+}
+
+TFV3_API int32_t tfv3_editor_poll_resize (tfv3_plugin* p, int32_t* width, int32_t* height)
+{
+	if (!p || !width || !height)
+		return 0;
+	const int64_t packed = p->pendingResize.exchange (-1);
+	if (packed < 0)
+		return 0;
+	*width = static_cast<int32_t> (packed >> 32);
+	*height = static_cast<int32_t> (packed & 0xFFFFFFFF);
+	return 1;
+}
+
+TFV3_API void tfv3_editor_set_size (tfv3_plugin* p, int32_t width, int32_t height)
+{
+	try
+	{
+		if (!p || !p->view || p->view->canResize () != kResultTrue)
+			return;
+		ViewRect rect {0, 0, width, height};
+		p->view->checkSizeConstraint (&rect);
+		p->view->onSize (&rect);
+	}
+	catch (...)
+	{
 	}
 }
 

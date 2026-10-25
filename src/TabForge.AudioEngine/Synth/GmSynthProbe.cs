@@ -4,6 +4,8 @@ using TabForge.AudioEngine.Plugins;
 
 namespace TabForge.AudioEngine.Synth;
 
+// Owns: the --probe-gm measurement feeding the GM synth score-compiler messages and measuring pitch/level/tail.
+
 /// <summary>
 /// `TabForge.exe --probe-gm &lt;report&gt;`: feeds the engine's General MIDI synth the messages the score compiler produces for each
 /// technique and measures what comes out (pitch over time, level, tail), so a difference from what the score says is found
@@ -90,30 +92,51 @@ public static class GmSynthProbe
         return new Event(ms, 0xE0, value & 0x7F, (value >> 7) & 0x7F);
     }
 
+    private const int Flute = 73;   // close to a sine: a clean pitch to measure
+    private const double A3 = 220.0;
+
+    /// <summary>The report text and the number of failed checks.</summary>
+    private sealed class ProbeReport
+    {
+        private readonly StringBuilder _text = new();
+        public int Failures { get; private set; }
+        public void AppendLine(string line) => _text.AppendLine(line);
+        public void Check(string name, bool ok, string detail)
+        {
+            _text.AppendLine($"{(ok ? "PASS" : "FAIL")}  {name}  ({detail})");
+            if (!ok) Failures++;
+        }
+        public override string ToString() => _text.ToString();
+    }
+
     public static int Run(string[] args)
     {
         var path = args.Length > 1 ? args[1] : "gm-probe.txt";
-        var report = new StringBuilder();
-        var failures = 0;
-        void Check(string name, bool ok, string detail)
-        {
-            report.AppendLine($"{(ok ? "PASS" : "FAIL")}  {name}  ({detail})");
-            if (!ok) failures++;
-        }
-        const int Flute = 73;   // close to a sine: a clean pitch to measure
-        const double A3 = 220.0;
+        var report = new ProbeReport();
+        ProbeBasics(report);
+        ProbeControllers(report);
+        ProbePitchAccuracy(report);
+        ProbeDlsRegions(report);
+        report.AppendLine(report.Failures == 0 ? "GM synth probe: all checks passed" : $"GM synth probe: {report.Failures} failure(s)");
+        File.WriteAllText(path, report.ToString());
+        Console.Out.WriteLine(report.ToString());
+        return report.Failures == 0 ? 0 : 1;
+    }
 
+    /// <summary>A plain note, the bend range set by RPN, and a bend that follows a curve.</summary>
+    private static void ProbeBasics(ProbeReport report)
+    {
         // 1. plain note
         var (plain, _) = Render(Setup(Flute, 12).Append(new Event(50, 0x90, 57, 100)).Append(new Event(1000, 0x80, 57, 0)), 1200);
         var hz = Pitch(plain, 400);
-        Check("a plain note plays at its pitch", Math.Abs(Semitones(hz, A3)) < 0.15, $"{hz:0.0} Hz, expected 220 Hz");
+        report.Check("a plain note plays at its pitch", Math.Abs(Semitones(hz, A3)) < 0.15, $"{hz:0.0} Hz, expected 220 Hz");
 
         // 2. bend range set with RPN (the compiler's own setup): +2 semitones, +12 semitones
         foreach (var target in new[] { 1.0, 2.0, 5.0, 12.0, -2.0 })
         {
             var (bent, _) = Render(Setup(Flute, 12).Concat(new[] { new Event(50, 0x90, 57, 100), Wheel(300, target, 12), new Event(1000, 0x80, 57, 0) }), 1200);
             var h = Pitch(bent, 500);
-            Check($"pitch wheel {target:+0.0;-0.0} semitones (range 12 by RPN)", Math.Abs(Semitones(h, A3) - target) < 0.2, $"measured {Semitones(h, A3):+0.00;-0.00} semitones");
+            report.Check($"pitch wheel {target:+0.0;-0.0} semitones (range 12 by RPN)", Math.Abs(Semitones(h, A3) - target) < 0.2, $"measured {Semitones(h, A3):+0.00;-0.00} semitones");
         }
 
         // 3. a bend that follows a curve, as the compiler writes it (a wheel message every ~10 ms): pre-bend, release
@@ -122,13 +145,17 @@ public static class GmSynthProbe
         for (var t = 0; t <= 200; t += 10) curve.Add(Wheel(500 + t, 2.0 * (1 - t / 200.0), 12));   // back down
         curve.Add(new Event(1000, 0x80, 57, 0));
         var (curved, _) = Render(Setup(Flute, 12).Concat(curve), 1200);
-        Check("a bend up and release follows the curve", Math.Abs(Semitones(Pitch(curved, 420), A3) - 2) < 0.25 && Math.Abs(Semitones(Pitch(curved, 800), A3)) < 0.25,
+        report.Check("a bend up and release follows the curve", Math.Abs(Semitones(Pitch(curved, 420), A3) - 2) < 0.25 && Math.Abs(Semitones(Pitch(curved, 800), A3)) < 0.25,
             $"peak {Semitones(Pitch(curved, 420), A3):+0.00} st, after release {Semitones(Pitch(curved, 800), A3):+0.00} st");
+    }
 
+    /// <summary>Controllers: reset and panic, per-channel wheel, mod wheel, sustain, expression, velocity, short notes and the drum channel.</summary>
+    private static void ProbeControllers(ProbeReport report)
+    {
         // 4. the range survives a "reset all controllers" and an all-notes-off (panic) when the setup is sent again
         var (afterReset, _) = Render(Setup(Flute, 12).Concat(new[] { new Event(20, 0xB0, 121, 0), new Event(30, 0xB0, 123, 0) }).Concat(Setup(Flute, 12).Select(e => e with { Ms = 40 }))
             .Concat(new[] { new Event(60, 0x90, 57, 100), Wheel(200, 2, 12), new Event(1000, 0x80, 57, 0) }), 1200);
-        Check("setup sent again after a controller reset restores the bend range", Math.Abs(Semitones(Pitch(afterReset, 500), A3) - 2) < 0.25, $"{Semitones(Pitch(afterReset, 500), A3):+0.00} st");
+        report.Check("setup sent again after a controller reset restores the bend range", Math.Abs(Semitones(Pitch(afterReset, 500), A3) - 2) < 0.25, $"{Semitones(Pitch(afterReset, 500), A3):+0.00} st");
         var (noSetup, _) = Render(new[] { new Event(0, 0xC0, Flute, 0), new Event(20, 0xB0, 121, 0), new Event(60, 0x90, 57, 100), Wheel(200, 2, 12), new Event(1000, 0x80, 57, 0) }, 1200);
         report.AppendLine($"INFO  wheel value for +2 st (range 12) with NO range setup after a reset plays {Semitones(Pitch(noSetup, 500), A3):+0.00} st (default synth range decides)");
 
@@ -140,25 +167,29 @@ public static class GmSynthProbe
         var (vibrato, _) = Render(Setup(Flute, 12).Concat(new[] { new Event(50, 0x90, 57, 100), new Event(60, 0xB0, 1, 100), new Event(1000, 0x80, 57, 0) }), 1200);
         var vibPitches = Enumerable.Range(0, 8).Select(i => Pitch(vibrato, 300 + i * 60)).Where(p => p > 0).ToList();
         var spread = vibPitches.Count > 1 ? Semitones(vibPitches.Max(), vibPitches.Min()) : 0;
-        Check("modulation wheel (CC1) adds vibrato", spread > 0.05, $"pitch moves {spread:0.00} semitones");
+        report.Check("modulation wheel (CC1) adds vibrato", spread > 0.05, $"pitch moves {spread:0.00} semitones");
         var (sustained, _) = Render(Setup(Flute, 12).Concat(new[] { new Event(20, 0xB0, 64, 127), new Event(50, 0x90, 57, 100), new Event(300, 0x80, 57, 0) }), 1500);
-        Check("sustain pedal (CC64) holds a released note", Peak(sustained, 800, 100) > 0.001, $"level {Peak(sustained, 800, 100):0.0000} after release");
+        report.Check("sustain pedal (CC64) holds a released note", Peak(sustained, 800, 100) > 0.001, $"level {Peak(sustained, 800, 100):0.0000} after release");
         var (released, _) = Render(Setup(Flute, 12).Concat(new[] { new Event(50, 0x90, 57, 100), new Event(300, 0x80, 57, 0) }), 1500);
-        Check("without the pedal the note stops after release", Peak(released, 1100, 100) < 0.005, $"level {Peak(released, 1100, 100):0.0000}");
+        report.Check("without the pedal the note stops after release", Peak(released, 1100, 100) < 0.005, $"level {Peak(released, 1100, 100):0.0000}");
         var (expr, _) = Render(Setup(Flute, 12).Concat(new[] { new Event(20, 0xB0, 11, 30), new Event(50, 0x90, 57, 100), new Event(1000, 0x80, 57, 0) }), 1200);
         var (loud, _) = Render(Setup(Flute, 12).Concat(new[] { new Event(50, 0x90, 57, 100), new Event(1000, 0x80, 57, 0) }), 1200);
-        Check("expression (CC11) lowers the level", Peak(expr, 300, 400) < Peak(loud, 300, 400) * 0.7, $"{Peak(expr, 300, 400):0.000} vs {Peak(loud, 300, 400):0.000}");
+        report.Check("expression (CC11) lowers the level", Peak(expr, 300, 400) < Peak(loud, 300, 400) * 0.7, $"{Peak(expr, 300, 400):0.000} vs {Peak(loud, 300, 400):0.000}");
 
         // 7. velocity range and short notes
         var (soft, _) = Render(Setup(Flute, 12).Concat(new[] { new Event(50, 0x90, 57, 30), new Event(1000, 0x80, 57, 0) }), 1200);
-        Check("velocity changes the level", Peak(soft, 300, 400) < Peak(loud, 300, 400) * 0.85, $"{Peak(soft, 300, 400):0.000} vs {Peak(loud, 300, 400):0.000}");
+        report.Check("velocity changes the level", Peak(soft, 300, 400) < Peak(loud, 300, 400) * 0.85, $"{Peak(soft, 300, 400):0.000} vs {Peak(loud, 300, 400):0.000}");
         var (quick, _) = Render(Setup(30, 12).Concat(new[] { new Event(50, 0x90, 57, 100), new Event(58, 0x80, 57, 0) }), 600);
-        Check("a very short note still sounds", Peak(quick, 50, 80) > 0.001, $"level {Peak(quick, 50, 80):0.0000}");
+        report.Check("a very short note still sounds", Peak(quick, 50, 80) > 0.001, $"level {Peak(quick, 50, 80):0.0000}");
 
         // 8. the same note twice quickly (re-attack), a chord, the drum channel
         var (drums, _) = Render(new[] { new Event(0, 0xC9, 0, 0), new Event(50, 0x99, 38, 100), new Event(60, 0x99, 42, 100) }, 500);
-        Check("drum channel plays notes (channel 10)", Peak(drums, 50, 200) > 0.01, $"level {Peak(drums, 50, 200):0.000}");
+        report.Check("drum channel plays notes (channel 10)", Peak(drums, 50, 200) > 0.01, $"level {Peak(drums, 50, 200):0.000}");
+    }
 
+    /// <summary>Pitch error by note for the guitar and bass programs, the low bass range and every program.</summary>
+    private static void ProbePitchAccuracy(ProbeReport report)
+    {
         foreach (var prog in new[] { 25, 26, 27, 28, 29, 30, 24, 32, 33, 34, 35 })
         {
             var line = new StringBuilder($"INFO  program {prog} pitch error by note (semitones):");
@@ -196,6 +227,11 @@ public static class GmSynthProbe
                 }
             report.AppendLine($"INFO  all programs: mean |error| {sum / count:0.000} semitones over {count} notes, {bad} off by more than 0.35");
         }
+    }
+
+    /// <summary>The regions of the DLS programs 29 and 30 as the converter reads them.</summary>
+    private static void ProbeDlsRegions(ProbeReport report)
+    {
         var bank = DlsToSoundFont.LoadWindowsBank();
         foreach (var prog in new[] { 29, 30 })
         {
@@ -205,9 +241,5 @@ public static class GmSynthProbe
                 foreach (var ir in pr.Instrument.Regions)
                     report.AppendLine($"INFO  prog {prog} keys {ir.KeyRangeStart}-{ir.KeyRangeEnd} vel {ir.VelocityRangeStart}-{ir.VelocityRangeEnd} root {ir.RootKey}/{ir.Sample.OriginalPitch} coarse {ir.CoarseTune} fine {ir.FineTune} scale {ir.ScaleTuning} rate {ir.Sample.SampleRate} sampleCorr {ir.Sample.PitchCorrection}");
         }
-        report.AppendLine(failures == 0 ? "GM synth probe: all checks passed" : $"GM synth probe: {failures} failure(s)");
-        File.WriteAllText(path, report.ToString());
-        Console.Out.WriteLine(report.ToString());
-        return failures == 0 ? 0 : 1;
     }
 }

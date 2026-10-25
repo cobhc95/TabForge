@@ -8,7 +8,7 @@ namespace TabForge.AudioEngine.Plugins;
 //       VST3 class id, name and vendor from the module's class factory.
 // Does not own: loading or trust (the plug-in is already loaded: PluginLoading), pin counts of a VST3 plug-in (the VST3 host
 //       interface does not report them), anything on the audio thread.
-// Tests: TestRfxChainExport (the wire record); the factory read is checked against real plug-ins by a probe outside the suite.
+// Tests: none dedicated(the wire record); the factory read is checked against real plug-ins by a probe outside the suite.
 public static unsafe class Vst3ClassInfo
 {
     /// <summary>Main thread, while <paramref name="plugin"/> is alive. Anything but a VST2 instance or a live VST3 instance of this process: unavailable (the module is never loaded fresh here).</summary>

@@ -3,6 +3,8 @@ using NAudio.Wave;
 
 namespace TabForge.AudioEngine.Audio;
 
+// Owns: the audio input device capture (lock-free ring to the audio thread, blocks to the recorder, armed-only open).
+
 /// <summary>
 /// The audio input (WASAPI, the chosen recording device): delivers every input channel (up to <see cref="MaxChannels"/>) to the audio thread through a
 /// lock-free ring (for monitoring through the track's chain) and hands every captured block to the recorder.
@@ -41,12 +43,12 @@ public sealed class InputCapture : IDisposable
     /// The WASAPI capture with every channel; when that cannot be opened and <paramref name="allInputs"/> was asked, once more
     /// with two channels (logged). Throws only when the two-channel capture fails too.
     /// </summary>
-    public static InputCapture Open(string deviceName, int engineRate, bool allInputs)
+    public static InputCapture Open(string deviceName, int engineRate, bool allInputs, EngineLogWriter log)
     {
         if (allInputs)
         {
             try { return new InputCapture(deviceName, engineRate, MaxChannels); }
-            catch (Exception ex) { EngineLog.Write($"input with all channels failed ({ex.Message}): opening two channels"); }
+            catch (Exception ex) { log.Write($"input with all channels failed ({ex.Message}): opening two channels"); }
         }
         return new InputCapture(deviceName, engineRate, 2);
     }
@@ -153,7 +155,8 @@ public sealed class InputCapture : IDisposable
         }
         catch
         {
-            if (capture is not null) { capture.DataAvailable -= OnData; capture.RecordingStopped -= OnStopped; try { capture.Dispose(); } catch { } }
+            if (capture is not null) { capture.DataAvailable -= OnData; capture.RecordingStopped -= OnStopped; try { capture.Dispose(); } catch { } // swallow: best-effort dispose of a replaced capture
+ }
             throw;
         }
         finally { device.Dispose(); }
@@ -335,7 +338,8 @@ public sealed class InputCapture : IDisposable
         if (_capture is null) return;
         _capture.DataAvailable -= OnData;
         _capture.RecordingStopped -= OnStopped;
-        try { _capture.StopRecording(); } catch (Exception) { }
-        finally { try { _capture.Dispose(); } catch (Exception) { } }
+        try { _capture.StopRecording(); } catch (Exception) { } // swallow: best-effort stop of a capture that may already have stopped
+        finally { try { _capture.Dispose(); } catch (Exception) { } // swallow: best-effort dispose during teardown
+ }
     }
 }

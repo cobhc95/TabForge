@@ -1,0 +1,1354 @@
+# TabForge element tree, role=fn-keyboard-mode-off
+# control view; rect = x,y,w,h relative to the window top-left in physical pixels at dpi=96
+# window size=1600x1000
+# stripped: paths, GUIDs, times, dates, handles, numbers of 6+ digits
+Window id="RootWindow" name="TabForge - Ashen Meridian *" enabled=y focusable=y rect=0,0,1600,1000
+  Window id="" name="Keyboard shortcuts" enabled=y focusable=y rect=20000,20000,557,360
+    TitleBar id="TitleBar" name="" enabled=y focusable=y rect=20024,20003,525,28
+      MenuBar id="SystemMenuBar" name="System" enabled=y focusable=y rect=20008,20008,22,22
+        MenuItem id="" name="System" enabled=y focusable=y rect=20008,20008,22,22
+      Button id="Close" name="Close" enabled=y focusable=n rect=20516,20001,34,30
+    Pane id="" name="" enabled=y focusable=y rect=20008,20031,541,320
+      Text id="" name="i" enabled=y focusable=n rect=20041,20053,4,22
+      Text id="" name="File: New score Ctrl+N, Open score Ctrl+O, Save Ctrl+S, Save as Ctrl+Shift+S, Print Ctrl+P, New tab Ctrl+Alt+T Edit: Undo Ctrl+Z, Redo Ctrl+Y, Copy Ctrl+C, Paste Ctrl+V, Insert beat Insert Bar: Insert bar Ctrl+Insert, Delete bar Ctrl+Delete, Time signature Ctrl+Shift+T, Key signature Ctrl+K, Repeat start [, Repeat end ], Check bars F4 Note: Longer note value -, Shorter note value +, Dotted ., Num ., Triplet /, Rest R, Tie note L, Chord name A, Beat text T Tracks: Add track Ctrl+T, Ctrl+Shift+Insert, Track properties F6, Score information F5 Sound: Play / pause Space, Play from the start Shift+Space, Loop F9, Record Ctrl+R View: Zoom in Ctrl++, Zoom out Ctrl+-, Show track list F3, Fullscreen F11 Every command can have two keys (Hotkey 1 and Hotkey 2): see Settings > Shortcuts." enabled=y focusable=n rect=20072,20049,457,242
+      Button id="Window.Button0" name="Button0" enabled=y focusable=y rect=20445,20309,84,28
+        Text id="" name="OK" enabled=y focusable=n rect=20479,20315,16,16
+  Window id="" name="Chord finder" enabled=y focusable=y rect=20008,20008,380,330
+    TitleBar id="TitleBar" name="" enabled=y focusable=y rect=20032,20011,348,28
+      MenuBar id="SystemMenuBar" name="System" enabled=y focusable=y rect=20016,20016,22,22
+        MenuItem id="" name="System" enabled=y focusable=y rect=20016,20016,22,22
+      Button id="Minimize-Restore" name="Minimize" enabled=y focusable=n rect=20241,20009,47,30
+      Button id="Maximize-Restore" name="Maximize" enabled=y focusable=n rect=20288,20009,46,30
+      Button id="Close" name="Close" enabled=y focusable=n rect=20334,20009,47,30
+    Text id="" name="Root" enabled=y focusable=n rect=20030,20057,25,16
+    ComboBox id="Window.ComboBox0" name="Combo box0" enabled=y focusable=y rect=20059,20053,64,24
+    Text id="" name="Type" enabled=y focusable=n rect=20135,20057,25,16
+    ComboBox id="Window.ComboBox1" name="Combo box1" enabled=y focusable=y rect=20164,20053,120,24
+    Text id="" name="" enabled=y focusable=n rect=20030,20300,336,16
+    Button id="Window.Show" name="Show" enabled=y focusable=y rect=20150,20264,55,28
+      Text id="" name="Show" enabled=y focusable=n rect=20163,20270,29,16
+    Button id="Window.InsertName" name="Insert name" enabled=y focusable=y rect=20213,20264,88,28
+      Text id="" name="Insert name" enabled=y focusable=n rect=20226,20270,62,16
+    Button id="Window.Close" name="Close" enabled=y focusable=y rect=20310,20265,55,26
+      Text id="" name="Close" enabled=y focusable=n rect=20323,20270,29,16
+    List id="" name="" enabled=y focusable=y rect=20030,20087,336,167
+      ListItem id="Bd.C" name="C  (tone 0)" enabled=y focusable=y rect=20032,20089,332,22
+        Text id="" name="C  (tone 0)" enabled=y focusable=n rect=20037,20092,322,16
+      ListItem id="Bd.E" name="E  (tone 4)" enabled=y focusable=y rect=20032,20111,332,22
+        Text id="" name="E  (tone 4)" enabled=y focusable=n rect=20037,20114,322,16
+      ListItem id="Bd.G" name="G  (tone 7)" enabled=y focusable=y rect=20032,20133,332,22
+        Text id="" name="G  (tone 7)" enabled=y focusable=n rect=20037,20136,322,16
+  Window id="" name="Scale finder" enabled=y focusable=y rect=20008,20008,560,600
+    TitleBar id="TitleBar" name="" enabled=y focusable=y rect=20032,20011,528,28
+      MenuBar id="SystemMenuBar" name="System" enabled=y focusable=y rect=20016,20016,22,22
+        MenuItem id="" name="System" enabled=y focusable=y rect=20016,20016,22,22
+      Button id="Minimize-Restore" name="Minimize" enabled=y focusable=n rect=20421,20009,47,30
+      Button id="Maximize-Restore" name="Maximize" enabled=y focusable=n rect=20468,20009,46,30
+      Button id="Close" name="Close" enabled=y focusable=n rect=20514,20009,47,30
+    Text id="" name="Search the notes in" enabled=y focusable=n rect=20030,20053,516,16
+    RadioButton id="Window.Selection" name="Selection (nothing selected)" enabled=n focusable=n rect=20030,20073,516,15
+      Text id="" name="Selection (nothing selected)" enabled=n focusable=n rect=20049,20072,147,16
+    RadioButton id="Window.EntireSong" name="Entire song" enabled=y focusable=y rect=20030,20092,516,15
+      Text id="" name="Entire song" enabled=y focusable=n rect=20049,20091,60,16
+    CheckBox id="Window.AllTracks" name="All tracks (not only Rhythm Gtr L)" enabled=y focusable=y rect=20030,20113,516,16
+      Text id="" name="All tracks (not only Rhythm Gtr L)" enabled=y focusable=n rect=20051,20113,495,16
+    Button id="Window.ClearHighlight" name="Clear highlight" enabled=y focusable=y rect=20245,20558,103,28
+      Text id="" name="Clear highlight" enabled=y focusable=n rect=20258,20564,77,16
+    Button id="Window.ShowOnFretboard" name="Show on fretboard" enabled=y focusable=y rect=20356,20558,125,28
+      Text id="" name="Show on fretboard" enabled=y focusable=n rect=20369,20564,99,16
+    Button id="Window.Close" name="Close" enabled=y focusable=y rect=20490,20559,55,26
+      Text id="" name="Close" enabled=y focusable=n rect=20503,20564,29,16
+    Text id="" name="Highlight style" enabled=y focusable=n rect=20030,20527,76,16
+    ComboBox id="Window.ComboBox0" name="Combo box0" enabled=y focusable=y rect=20115,20523,150,24
+    Text id="" name="Colour" enabled=y focusable=n rect=20282,20527,36,16
+    ComboBox id="Window.ComboBox1" name="Combo box1" enabled=y focusable=y rect=20327,20523,110,24
+    Text id="" name="1344 notes analysed · notes used: C C# D D# E F F# G A A# B. Usually several scales fit; pick one." enabled=y focusable=n rect=20030,20496,516,16
+    Tab id="" name="" enabled=y focusable=y rect=20030,20139,516,349
+      TabItem id="HeaderPanel.TabItem0" name="Tab item0" enabled=y focusable=y rect=20032,20141,88,28
+        Text id="" name="Likely scales" enabled=y focusable=n rect=20044,20148,64,16
+        List id="" name="" enabled=y focusable=y rect=20030,20170,516,318
+          ListItem id="Bd.ListBoxItem0" name="List box item0" enabled=y focusable=y rect=20031,20171,497,50
+            Text id="" name="A Phrygian" enabled=y focusable=n rect=20040,20179,479,18
+            Text id="" name="87% of the notes fit · every scale note is played   (A A# C D E F G)" enabled=y focusable=n rect=20040,20197,479,16
+          ListItem id="Bd.ListBoxItem1" name="List box item1" enabled=y focusable=y rect=20031,20221,497,51
+            Text id="" name="A Natural Minor" enabled=y focusable=n rect=20040,20229,479,19
+            Text id="" name="86% of the notes fit · every scale note is played   (A B C D E F G)" enabled=y focusable=n rect=20040,20248,479,16
+          ListItem id="Bd.ListBoxItem2" name="List box item2" enabled=y focusable=y rect=20031,20272,497,51
+            Text id="" name="F Major" enabled=y focusable=n rect=20040,20280,479,19
+            Text id="" name="87% of the notes fit · every scale note is played   (F G A A# C D E)" enabled=y focusable=n rect=20040,20299,479,16
+          ListItem id="Bd.ListBoxItem3" name="List box item3" enabled=y focusable=y rect=20031,20323,497,50
+            Text id="" name="D Natural Minor" enabled=y focusable=n rect=20040,20331,479,18
+            Text id="" name="87% of the notes fit · every scale note is played   (D E F G A A# C)" enabled=y focusable=n rect=20040,20349,479,16
+          ListItem id="Bd.ListBoxItem4" name="List box item4" enabled=y focusable=y rect=20031,20373,497,51
+            Text id="" name="G Dorian" enabled=y focusable=n rect=20040,20381,479,19
+            Text id="" name="87% of the notes fit · every scale note is played   (G A A# C D E F)" enabled=y focusable=n rect=20040,20400,479,16
+          ListItem id="Bd.ListBoxItem5" name="List box item5" enabled=y focusable=y rect=20031,20424,497,50
+            Text id="" name="C Mixolydian" enabled=y focusable=n rect=20040,20432,479,18
+            Text id="" name="87% of the notes fit · every scale note is played   (C D E F G A A#)" enabled=y focusable=n rect=20040,20450,479,16
+          ListItem id="Bd.ListBoxItem6" name="List box item6" enabled=y focusable=y rect=20031,20474,497,51
+            Text id="" name="E Locrian" enabled=y focusable=n rect=20040,20482,479,19
+            Text id="" name="87% of the notes fit · every scale note is played   (E F G A A# C D)" enabled=y focusable=n rect=20040,20501,479,16
+          ListItem id="Bd.ListBoxItem7" name="List box item7" enabled=y focusable=y rect=20031,20525,497,50
+            Text id="" name="A# Lydian" enabled=y focusable=n rect=20040,20533,479,18
+            Text id="" name="87% of the notes fit · every scale note is played   (A# C D E F G A)" enabled=y focusable=n rect=20040,20551,479,16
+      TabItem id="HeaderPanel.TabItem1" name="Tab item1" enabled=y focusable=y rect=20120,20141,72,28
+        Text id="" name="All scales" enabled=y focusable=n rect=20132,20148,48,16
+  Window id="" name="Tuner" enabled=y focusable=y rect=20008,20008,420,330
+    TitleBar id="TitleBar" name="" enabled=y focusable=y rect=20032,20011,388,28
+      MenuBar id="SystemMenuBar" name="System" enabled=y focusable=y rect=20016,20016,22,22
+        MenuItem id="" name="System" enabled=y focusable=y rect=20016,20016,22,22
+      Button id="Minimize-Restore" name="Minimize" enabled=y focusable=n rect=20281,20009,47,30
+      Button id="Maximize-Restore" name="Maximize" enabled=y focusable=n rect=20328,20009,46,30
+      Button id="Close" name="Close" enabled=y focusable=n rect=20374,20009,47,30
+    Text id="" name="--" enabled=y focusable=n rect=20196,20055,44,72
+    Text id="" name="" enabled=y focusable=n rect=20000,20000,0,0
+    Text id="" name="A1" enabled=y focusable=n rect=20078,20224,33,26
+    Text id="" name="E2" enabled=y focusable=n rect=20119,20224,32,26
+    Text id="" name="A2" enabled=y focusable=n rect=20159,20224,34,26
+    Text id="" name="D3" enabled=y focusable=n rect=20201,20224,35,26
+    Text id="" name="G3" enabled=y focusable=n rect=20244,20224,34,26
+    Text id="" name="B3" enabled=y focusable=n rect=20286,20224,33,26
+    Text id="" name="E4" enabled=y focusable=n rect=20327,20224,31,26
+    Text id="" name="Play a note. The tuner listens to the armed input: arm a track (the red dot on its row) so the input is open." enabled=y focusable=n rect=20036,20259,364,32
+  Window id="" name="TabForge Settings - 0.7.6" enabled=y focusable=y rect=20008,20008,1294,857
+    TitleBar id="TitleBar" name="" enabled=y focusable=y rect=20032,20011,1262,28
+      MenuBar id="SystemMenuBar" name="System" enabled=y focusable=y rect=20016,20016,22,22
+        MenuItem id="" name="System" enabled=y focusable=y rect=20016,20016,22,22
+      Button id="Minimize-Restore" name="Minimize" enabled=y focusable=n rect=21155,20009,47,30
+      Button id="Maximize-Restore" name="Maximize" enabled=y focusable=n rect=21202,20009,46,30
+      Button id="Close" name="Close" enabled=y focusable=n rect=21248,20009,47,30
+    Text id="" name="TabForge Settings" enabled=y focusable=n rect=20034,20055,185,28
+    Text id="" name="Preferences" enabled=y focusable=n rect=20034,20085,185,15
+    Edit id="SearchAreaGrid.Search" name="Search settings" enabled=y focusable=y rect=20260,20065,756,30
+    Text id="" name="Search settings, e.g. theme, audio device, metronome" enabled=y focusable=n rect=20275,20071,741,19
+    ComboBox id="SearchAreaGrid.CategoryFilter" name="Limit settings search to a category" enabled=y focusable=y rect=21028,20065,128,30
+    Pane id="" name="" enabled=y focusable=y rect=20016,20117,221,668
+      Button id="NavigationPanel.CommonSettings" name="Common settings" enabled=y focusable=y rect=20016,20125,204,44
+        Text id="" name="Common settings" enabled=y focusable=n rect=20069,20137,135,20
+      Text id="" name="BASICS" enabled=y focusable=n rect=20034,20181,186,13
+      Button id="NavigationPanel.General" name="General" enabled=y focusable=y rect=20016,20198,204,44
+        Text id="" name="General" enabled=y focusable=n rect=20066,20210,138,20
+      Button id="NavigationPanel.Appearance" name="Appearance" enabled=y focusable=y rect=20016,20242,204,44
+        Text id="" name="Appearance" enabled=y focusable=n rect=20066,20254,138,20
+      Text id="" name="MUSIC" enabled=y focusable=n rect=20034,20298,186,13
+      Button id="NavigationPanel.ScoreNotation" name="Score & Notation" enabled=y focusable=y rect=20016,20315,204,44
+        Text id="" name="Score & Notation" enabled=y focusable=n rect=20066,20327,138,20
+      Button id="NavigationPanel.FretboardKeyboard" name="Fretboard & Keyboard" enabled=y focusable=y rect=20016,20359,204,44
+        Text id="" name="Fretboard & Keyboard" enabled=y focusable=n rect=20066,20361,138,40
+      Button id="NavigationPanel.TimelineTracks" name="Timeline & Tracks" enabled=y focusable=y rect=20016,20403,204,44
+        Text id="" name="Timeline & Tracks" enabled=y focusable=n rect=20066,20415,138,20
+      Button id="NavigationPanel.Editing" name="Editing" enabled=y focusable=y rect=20016,20447,204,44
+        Text id="" name="Editing" enabled=y focusable=n rect=20066,20459,138,20
+      Text id="" name="SOUND" enabled=y focusable=n rect=20034,20503,186,13
+      Button id="NavigationPanel.PlaybackPractice" name="Playback & Practice" enabled=y focusable=y rect=20016,20520,204,44
+        Text id="" name="Playback & Practice" enabled=y focusable=n rect=20066,20532,138,20
+      Button id="NavigationPanel.AudioPlugIns" name="Audio & Plug-ins" enabled=y focusable=y rect=20016,20564,204,44
+        Text id="" name="Audio & Plug-ins" enabled=y focusable=n rect=20066,20576,138,20
+      Button id="NavigationPanel.Recording" name="Recording" enabled=y focusable=y rect=20016,20608,204,44
+        Text id="" name="Recording" enabled=y focusable=n rect=20066,20620,138,20
+      Text id="" name="SYSTEM" enabled=y focusable=n rect=20034,20664,186,13
+      Button id="NavigationPanel.TabsWindows" name="Tabs & Windows" enabled=y focusable=y rect=20016,20681,204,44
+        Text id="" name="Tabs & Windows" enabled=y focusable=n rect=20066,20693,138,20
+      Button id="NavigationPanel.Shortcuts" name="Shortcuts" enabled=y focusable=y rect=20016,20725,204,44
+        Text id="" name="Shortcuts" enabled=y focusable=n rect=20066,20737,138,20
+      Button id="NavigationPanel.FilesBackups" name="Files & Backups" enabled=y focusable=y rect=20016,20769,204,44
+        Text id="" name="Files & Backups" enabled=y focusable=n rect=20066,20781,138,20
+      Button id="NavigationPanel.Advanced" name="Advanced" enabled=y focusable=y rect=20016,20813,204,44
+        Text id="" name="Advanced" enabled=y focusable=n rect=20066,20825,138,20
+      ScrollBar id="VerticalScrollBar" name="" enabled=y focusable=n rect=20220,20117,17,668
+        Thumb id="" name="" enabled=y focusable=n rect=20220,20117,17,597
+    Pane id="PageScroll" name="" enabled=y focusable=y rect=20238,20117,1056,668
+      Text id="PageTitle" name="Common settings" enabled=y focusable=n rect=20346,20135,820,35
+      Text id="PageSubtitle" name="The settings people change most, and where to find the rest" enabled=y focusable=n rect=20346,20172,820,17
+      Text id="" name="Look" enabled=y focusable=n rect=20363,20214,786,21
+      Text id="" name="Theme" enabled=y focusable=n rect=20367,20244,628,19
+      Text id="" name="Theme preset: Dark, Light or System sets the interface, accent and score page colours at once; any colour can still be changed afterwards. Custom keeps your colours as they are." enabled=y focusable=n rect=20367,20266,616,30
+      ComboBox id="ContentGrid.Theme" name="Theme" enabled=y focusable=y rect=20995,20255,150,30
+      Text id="" name="UI scale" enabled=y focusable=n rect=20367,20328,658,19
+      Text id="" name="Scale interface text and icon controls." enabled=y focusable=n rect=20367,20350,646,15
+      Edit id="ContentGrid.UIScale" name="UI scale" enabled=y focusable=y rect=21026,20330,98,32
+      Button id="ContentGrid.IncreaseUIScale" name="Increase UI scale" enabled=y focusable=n rect=21124,20330,20,16
+      Button id="ContentGrid.DecreaseUIScale" name="Decrease UI scale" enabled=y focusable=n rect=21124,20346,20,16
+      Text id="" name="Show the fretboard" enabled=y focusable=n rect=20367,20402,751,19
+      Text id="" name="Show the instrument/fretboard panel." enabled=y focusable=n rect=20367,20424,739,15
+      CheckBox id="ContentGrid.ShowTheFretboard" name="Show the fretboard" enabled=y focusable=y rect=21118,20411,27,18
+      Text id="" name="Show the toolbar" enabled=y focusable=n rect=20367,20476,751,19
+      Text id="" name="Show the transport and editing toolbar." enabled=y focusable=n rect=20367,20498,739,15
+      CheckBox id="ContentGrid.ShowTheToolbar" name="Show the toolbar" enabled=y focusable=y rect=21118,20485,27,18
+      Button id="ContentGrid.AllAppearanceSettings" name="All appearance settings" enabled=y focusable=y rect=20363,20537,171,38
+        Text id="" name="All appearance settings" enabled=y focusable=n rect=20378,20547,141,19
+      Text id="" name="Sound" enabled=y focusable=n rect=20363,20617,786,21
+      Text id="" name="Audio driver" enabled=y focusable=n rect=20367,20647,598,19
+      Text id="" name="How plug-in audio reaches your speakers. WASAPI (shared) works everywhere; exclusive and ASIO give the lowest latency. ASIO also carries the recording input. DirectSound is the legacy fallback (larger buffer, more latency); WASAPI or ASIO is recommended. Tracks on Windows MIDI are not affected." enabled=y focusable=n rect=20367,20669,586,45
+      ComboBox id="ContentGrid.AudioDriver" name="Audio driver" enabled=y focusable=y rect=20965,20665,180,30
+      Text id="" name="Output device" enabled=y focusable=n rect=20367,20740,606,19
+      Text id="" name="The device plug-in audio plays on (for ASIO: the ASIO driver; use Configure… for its buffer size and routing). Windows default follows the device chosen in Windows sound settings. The list follows the driver above." enabled=y focusable=n rect=20367,20762,594,30
+      ComboBox id="ContentGrid.OutputDevice" name="Output device" enabled=y focusable=y rect=20973,20751,172,30
+      Text id="" name="Metronome" enabled=y focusable=n rect=20367,20824,751,19
+      Text id="" name="Play clicks during playback." enabled=y focusable=n rect=20367,20846,739,15
+      CheckBox id="ContentGrid.Metronome" name="Metronome" enabled=y focusable=y rect=21118,20833,27,18
+      Text id="" name="Metronome volume" enabled=n focusable=n rect=20367,20892,778,19
+      Text id="" name="Master metronome level." enabled=n focusable=n rect=20367,20914,766,15
+      Slider id="ContentGrid.MetronomeVolume" name="Metronome volume" enabled=n focusable=n rect=20367,20941,165,22
+        Button id="ContentGrid.RepeatButton0" name="Repeat button0" enabled=n focusable=n rect=20367,20941,104,22
+        Thumb id="" name="" enabled=n focusable=n rect=20471,20944,16,16
+        Button id="ContentGrid.RepeatButton1" name="Repeat button1" enabled=n focusable=n rect=20487,20941,45,22
+      Edit id="ContentGrid.MetronomeVolume" name="Metronome volume" enabled=n focusable=n rect=20541,20936,62,32
+      Button id="ContentGrid.IncreaseMetronomeVolume" name="Increase Metronome volume" enabled=n focusable=n rect=20603,20936,20,16
+      Button id="ContentGrid.DecreaseMetronomeVolume" name="Decrease Metronome volume" enabled=n focusable=n rect=20603,20952,20,16
+      Text id="" name="Count-in before playback" enabled=y focusable=n rect=20367,21007,751,19
+      Text id="" name="Play a count-in before the score starts." enabled=y focusable=n rect=20367,21029,739,15
+      CheckBox id="ContentGrid.CountInBefore" name="Count-in before playback" enabled=y focusable=y rect=21118,21016,27,18
+      Text id="" name="Playback speed" enabled=y focusable=n rect=20367,21081,658,19
+      Text id="" name="Practice at a fraction of the written tempo." enabled=y focusable=n rect=20367,21103,646,15
+      Edit id="ContentGrid.PlaybackSpeed" name="Playback speed" enabled=y focusable=y rect=21026,21083,98,32
+      Button id="ContentGrid.IncreasePlaybackSpeed" name="Increase Playback speed" enabled=y focusable=n rect=21124,21083,20,16
+      Button id="ContentGrid.DecreasePlaybackSpeed" name="Decrease Playback speed" enabled=y focusable=n rect=21124,21099,20,16
+      Button id="ContentGrid.MoreAudioSettings" name="More audio settings" enabled=y focusable=y rect=20363,21142,153,38
+        Text id="" name="More audio settings" enabled=y focusable=n rect=20378,21152,123,19
+      Button id="ContentGrid.PlaybackAndPractice" name="Playback and practice settings" enabled=y focusable=y rect=20363,21192,213,38
+        Text id="" name="Playback and practice settings" enabled=y focusable=n rect=20378,21202,183,19
+      Text id="" name="Score" enabled=y focusable=n rect=20363,21272,786,21
+      Text id="" name="Default score display" enabled=y focusable=n rect=20367,21308,628,19
+      Text id="" name="Default display for new scores: notation + TAB, TAB only, or notation only." enabled=y focusable=n rect=20367,21330,616,15
+      ComboBox id="ContentGrid.DefaultScoreDisplay" name="Default score display" enabled=y focusable=y rect=20995,21311,150,30
+      Text id="" name="Scroll the score while playing" enabled=y focusable=n rect=20367,21382,628,19
+      Text id="" name="Off, jump a line at a time, or scroll smoothly." enabled=y focusable=n rect=20367,21404,616,15
+      ComboBox id="ContentGrid.ScrollTheScore" name="Scroll the score while playing" enabled=y focusable=y rect=20995,21385,150,30
+      Button id="ContentGrid.AllScoreSettings" name="All score settings" enabled=y focusable=y rect=20363,21443,133,38
+        Text id="" name="All score settings" enabled=y focusable=n rect=20378,21453,103,19
+      Text id="" name="Files" enabled=y focusable=n rect=20363,21523,786,21
+      Text id="" name="Autosave unsaved songs" enabled=y focusable=n rect=20367,21553,614,19
+      Text id="" name="Copies songs with unsaved changes into TabForge's Recovery folder at this interval (skipped while playing). Your own files are never overwritten; the copies are offered the next time TabForge starts after a crash, and removed when you save or close." enabled=y focusable=n rect=20367,21575,602,45
+      ComboBox id="ContentGrid.AutosaveUnsavedSongs" name="Autosave unsaved songs" enabled=y focusable=y rect=20981,21571,164,30
+      Text id="" name="Default save format" enabled=y focusable=n rect=20367,21646,778,19
+      Text id="" name=".gp keeps every TabForge feature (stored inside the file). .tforge is TabForge-only." enabled=y focusable=n rect=20367,21668,766,15
+      ComboBox id="ContentGrid.DefaultSaveFormat" name="Default save format" enabled=y focusable=y rect=20367,21689,252,30
+      Button id="ContentGrid.FilesAndBackups" name="Files and backups" enabled=y focusable=y rect=20363,21744,137,38
+        Text id="" name="Files and backups" enabled=y focusable=n rect=20378,21754,107,19
+      Text id="" name="Shortcuts" enabled=y focusable=n rect=20363,21824,786,21
+      Text id="" name="Pick a preset layout (TabForge or another program's) and change any key on the Shortcuts page." enabled=y focusable=n rect=20363,21849,786,15
+      Button id="ContentGrid.OpenAllShortcuts" name="Open all shortcuts" enabled=y focusable=y rect=20363,21876,142,38
+        Text id="" name="Open all shortcuts" enabled=y focusable=n rect=20378,21886,112,19
+      Text id="" name="Looking for _window song's settings?" enabled=y focusable=n rect=20363,21956,786,21
+      Text id="" name="Preferences are for the program. A song's own settings are in other windows: Project settings (the File menu) and Track properties (right-click a track)." enabled=y focusable=n rect=20363,21981,786,30
+      ScrollBar id="VerticalScrollBar" name="" enabled=y focusable=n rect=21277,20117,17,668
+        Thumb id="" name="" enabled=y focusable=n rect=21277,20117,17,229
+    Button id="Preferences.Manage" name="Manage settings menu" enabled=y focusable=y rect=20036,20802,148,38
+      Text id="" name="Manage settings" enabled=y focusable=n rect=20051,20812,102,19
+    Text id="VersionLabel" name="TabForge version" enabled=y focusable=n rect=20198,20814,76,15
+    Text id="StatusText" name="All changes saved" enabled=y focusable=n rect=20852,20812,104,17
+    Button id="Preferences.DiscardUnappliedChanges" name="Discard unapplied changes and close settings." enabled=y focusable=y rect=20980,20802,90,38
+      Text id="" name="Cancel" enabled=y focusable=n rect=21005,20812,40,19
+    Button id="Preferences.Apply" name="Commit changes and keep this window open." enabled=n focusable=n rect=21079,20802,90,38
+      Text id="" name="Apply" enabled=n focusable=n rect=21107,20812,35,19
+    Button id="Preferences.CommitChangesAnd" name="Commit changes and close settings." enabled=y focusable=y rect=21178,20802,90,38
+      Text id="" name="OK" enabled=y focusable=n rect=21213,20812,20,19
+  Window id="" name="Render to file" enabled=y focusable=y rect=20008,20008,760,860
+    TitleBar id="TitleBar" name="" enabled=y focusable=y rect=20032,20011,728,28
+      MenuBar id="SystemMenuBar" name="System" enabled=y focusable=y rect=20016,20016,22,22
+        MenuItem id="" name="System" enabled=y focusable=y rect=20016,20016,22,22
+      Button id="Minimize-Restore" name="Minimize" enabled=y focusable=n rect=20621,20009,47,30
+      Button id="Maximize-Restore" name="Maximize" enabled=y focusable=n rect=20668,20009,46,30
+      Button id="Close" name="Close" enabled=y focusable=n rect=20714,20009,47,30
+    ProgressBar id="" name="" enabled=y focusable=n rect=20030,20782,716,10
+    Text id="" name="" enabled=y focusable=n rect=20030,20796,716,16
+    Button id="Render.Video" name="Export the song as an MP4 video instead" enabled=y focusable=y rect=20484,20820,104,28
+      Text id="" name="Video (MP4)…" enabled=y focusable=n rect=20499,20826,74,16
+    Button id="Render.Start" name="Render" enabled=y focusable=y rect=20596,20820,75,28
+      Text id="" name="Render" enabled=y focusable=n rect=20615,20826,37,16
+    Button id="Render.Cancel" name="Cancel" enabled=y focusable=y rect=20680,20821,65,26
+      Text id="" name="Cancel" enabled=y focusable=n rect=20695,20826,35,16
+    Pane id="" name="" enabled=y focusable=y rect=20016,20039,744,734
+      Group id="" name="Source" enabled=y focusable=n rect=20028,20051,703,65
+        Text id="" name="Source" enabled=y focusable=n rect=20037,20056,685,16
+        ComboBox id="Render.Source" name="Source" enabled=y focusable=y rect=20036,20084,687,24
+      Group id="Render.Range" name="Bounds" enabled=y focusable=n rect=20028,20124,703,261
+        Text id="" name="Bounds" enabled=y focusable=n rect=20037,20129,685,16
+        RadioButton id="Render.Range.Entire" name="Entire song" enabled=y focusable=y rect=20035,20157,689,15
+          Text id="" name="Entire song" enabled=y focusable=n rect=20054,20156,60,16
+        RadioButton id="Render.Range.Selection" name="Select bars in the score first." enabled=n focusable=n rect=20035,20174,689,15
+          Text id="" name="Time selection" enabled=n focusable=n rect=20054,20173,76,16
+        RadioButton id="Render.Range.Bars" name="Select bars in the score first." enabled=n focusable=n rect=20035,20191,689,15
+          Text id="" name="Selected bars" enabled=n focusable=n rect=20054,20190,71,16
+        RadioButton id="Render.Range.Custom" name="Custom range (seconds)" enabled=y focusable=y rect=20035,20208,689,15
+          Text id="" name="Custom range (seconds)" enabled=y focusable=n rect=20054,20207,128,16
+        Text id="" name="from" enabled=y focusable=n rect=20035,20231,25,16
+        Edit id="Render.TextBox0" name="Text box0" enabled=n focusable=n rect=20072,20227,70,24
+        Text id="" name="to" enabled=y focusable=n rect=20148,20231,11,16
+        Edit id="Render.TextBox1" name="Text box1" enabled=n focusable=n rect=20171,20227,70,24
+        RadioButton id="Render.Range.CustomBars" name="Custom bars" enabled=y focusable=y rect=20035,20255,689,15
+          Text id="" name="Custom bars" enabled=y focusable=n rect=20054,20254,66,16
+        Text id="" name="from bar" enabled=y focusable=n rect=20035,20278,46,16
+        Edit id="Render.BarFrom" name="From bar" enabled=n focusable=n rect=20093,20274,60,24
+        Text id="" name="to bar" enabled=y focusable=n rect=20159,20278,32,16
+        Edit id="Render.BarTo" name="To bar" enabled=n focusable=n rect=20203,20274,60,24
+        Text id="" name="(1 to 144)" enabled=y focusable=n rect=20269,20278,50,16
+        RadioButton id="Render.Range.CustomSections" name="Custom sections" enabled=y focusable=y rect=20035,20302,689,15
+          Text id="" name="Custom sections" enabled=y focusable=n rect=20054,20301,87,16
+        Text id="" name="from" enabled=y focusable=n rect=20035,20325,25,16
+        ComboBox id="Render.SectionFrom" name="From section" enabled=n focusable=n rect=20072,20321,170,24
+        Text id="" name="to" enabled=y focusable=n rect=20248,20325,11,16
+        ComboBox id="Render.SectionTo" name="To section" enabled=n focusable=n rect=20271,20321,170,24
+        Text id="" name="Tail:" enabled=y focusable=n rect=20035,20355,19,16
+        ComboBox id="Render.ComboBox0" name="Combo box0" enabled=y focusable=y rect=20066,20351,62,24
+        Edit id="Render.TextBox0" name="Text box0" enabled=y focusable=y rect=20134,20351,70,24
+        Text id="" name="ms (reverb / delay ring-out)" enabled=y focusable=n rect=20210,20355,146,16
+      Group id="" name="Output" enabled=y focusable=n rect=20028,20393,703,207
+        Text id="" name="Output" enabled=y focusable=n rect=20037,20398,685,16
+        Button id="Render.Browse" name="Browse…" enabled=y focusable=y rect=20655,20425,69,26
+          Text id="" name="Browse…" enabled=y focusable=n rect=20666,20430,47,16
+        Edit id="Render.Folder" name="Output folder" enabled=y focusable=y rect=20036,20426,612,24
+        Text id="" name="File name:" enabled=y focusable=n rect=20035,20458,53,16
+        Edit id="Render.FileName" name="File name pattern" enabled=y focusable=y rect=20100,20454,300,24
+        Text id="" name="Wildcards: $project $track $tracknumber $date $time $bpm. Existing files are never overwritten: a number is added." enabled=y focusable=n rect=20035,20485,689,14
+        List id="" name="" enabled=y focusable=y rect=20035,20503,689,90
+          ListItem id="Bd.AshenMeridianWav" name="Ashen Meridian.wav" enabled=y focusable=y rect=20037,20505,685,22
+            Text id="" name="Ashen Meridian.wav" enabled=y focusable=n rect=20042,20508,675,16
+      Group id="" name="Options and format" enabled=y focusable=n rect=20028,20608,703,144
+        Text id="" name="Options and format" enabled=y focusable=n rect=20037,20613,685,16
+        Text id="" name="Sample rate:" enabled=y focusable=n rect=20035,20648,66,16
+        ComboBox id="Render.ComboBox0" name="Combo box0" enabled=y focusable=y rect=20114,20644,93,24
+        Text id="" name="Format:" enabled=y focusable=n rect=20214,20648,41,16
+        ComboBox id="Render.Format" name="Format" enabled=y focusable=y rect=20268,20644,94,24
+        ComboBox id="Render.ComboBox2" name="Combo box2" enabled=y focusable=y rect=20369,20643,105,26
+        CheckBox id="Render.Mono" name="Mono (L+R average)" enabled=y focusable=y rect=20036,20673,687,16
+          Text id="" name="Mono (L+R average)" enabled=y focusable=n rect=20057,20673,666,16
+        CheckBox id="Render.RealtimePace" name="Realtime pace (for streaming samplers)" enabled=y focusable=y rect=20036,20691,687,16
+          Text id="" name="Realtime pace (for streaming samplers)" enabled=y focusable=n rect=20057,20691,666,16
+        Text id="" name="MP3: 44.1 / 48 kHz only. The engine's General MIDI synth may sound slightly different from the Windows MIDI synth used for normal playback." enabled=y focusable=n rect=20035,20712,689,29
+      CheckBox id="Render.OpenTheFolder" name="Open the folder when done" enabled=y focusable=y rect=20029,20761,701,16
+        Text id="" name="Open the folder when done" enabled=y focusable=n rect=20050,20761,680,16
+      ScrollBar id="VerticalScrollBar" name="" enabled=y focusable=n rect=20743,20039,17,734
+        Button id="Render.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=20000,20000,0,0
+        Thumb id="" name="" enabled=y focusable=n rect=20743,20039,17,717
+        Button id="Render.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=20743,20756,17,17
+  Window id="" name="Mixer" enabled=y focusable=y rect=20008,20008,900,620
+    TitleBar id="TitleBar" name="" enabled=y focusable=y rect=20032,20011,868,28
+      MenuBar id="SystemMenuBar" name="System" enabled=y focusable=y rect=20016,20016,22,22
+        MenuItem id="" name="System" enabled=y focusable=y rect=20016,20016,22,22
+      Button id="Minimize-Restore" name="Minimize" enabled=y focusable=n rect=20761,20009,47,30
+      Button id="Maximize-Restore" name="Maximize" enabled=y focusable=n rect=20808,20009,46,30
+      Button id="Close" name="Close" enabled=y focusable=n rect=20854,20009,47,30
+    Button id="Mixer.AudioPlugIns" name="Audio & Plug-ins settings…" enabled=y focusable=y rect=20723,20050,166,24
+      Text id="" name="Audio & Plug-ins settings…" enabled=y focusable=n rect=20734,20054,144,16
+    Text id="" name="Group tracks" enabled=y focusable=n rect=20026,20054,68,16
+    ComboBox id="Mixer.ByInstrumentGuitars" name="By instrument: guitars, basses, keys (piano, organ, synth), drums, other." enabled=y focusable=y rect=20103,20050,150,24
+    Button id="Mixer.ChooseWhichInstruments" name="Choose which instruments go in which group: add, rename, reorder groups and set their rules" enabled=y focusable=y rect=20262,20050,88,24
+      Text id="" name="Group rules…" enabled=y focusable=n rect=20271,20054,70,16
+    Button id="Mixer.ShowOnlyThe" name="Show only the group rows" enabled=y focusable=y rect=20358,20050,78,24
+      Text id="" name="Collapse all" enabled=y focusable=n rect=20367,20054,60,16
+    CheckBox id="Mixer.ShowTheVolume" name="Show the volume column in the main track list" enabled=y focusable=y rect=20452,20054,122,16
+      Text id="" name="Volume in track list" enabled=y focusable=n rect=20473,20054,101,16
+    CheckBox id="Mixer.ShowThePan" name="Show the pan column in the main track list" enabled=y focusable=y rect=20586,20054,100,16
+      Text id="" name="Pan in track list" enabled=y focusable=n rect=20607,20054,79,16
+    CheckBox id="Mixer.ShowTheMixer" name="Show the mixer groups in the main track list: a box per group, which can be collapsed and dragged as a whole" enabled=y focusable=y rect=20026,20078,120,16
+      Text id="" name="Groups in track list" enabled=y focusable=n rect=20047,20078,99,16
+    Text id="" name="Group rows add to every track in the group (pan and pitch are offsets, volume is a percentage of each track's own). Drag a track or group row to reorder (the Move track up and down commands also move the selected row); right-click a track row to move it to another group. Double-click a slider to reset it." enabled=y focusable=n rect=20026,20581,864,29
+    Pane id="" name="" enabled=y focusable=y rect=20026,20105,864,468
+      Text id="" name="TRACK / GROUP" enabled=y focusable=n rect=20039,20105,182,15
+      Text id="" name="FX" enabled=y focusable=n rect=20229,20105,58,15
+      Text id="" name="MIDI" enabled=y focusable=n rect=20295,20105,50,15
+      Text id="" name="PITCH" enabled=y focusable=n rect=20353,20105,104,15
+      Text id="" name="PAN" enabled=y focusable=n rect=20465,20105,142,15
+      Text id="" name="VOLUME" enabled=y focusable=n rect=20615,20105,161,15
+      Text id="" name="" enabled=y focusable=n rect=20784,20105,76,15
+      Button id="Mixer.CollapseMaster" name="Collapse Master" enabled=y focusable=y rect=20041,20137,18,24
+      Text id="" name="Master" enabled=y focusable=n rect=20063,20137,160,16
+      Text id="" name="whole mix" enabled=y focusable=n rect=20063,20153,160,14
+      Button id="Mixer.TrackFXChain" name="Track FX chain" enabled=y focusable=y rect=20231,20141,54,22
+      Button id="" name="Monitor FX" enabled=y focusable=y rect=20295,20141,56,22
+      Slider id="Mixer.MasterPanMoves" name="Master pan: moves the whole mix left or right (−64 left … 0 centre … +63 right; double-click: centre)" enabled=y focusable=y rect=20467,20140,142,24
+        Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=20467,20145,62,14
+        Thumb id="SliderThumb" name="" enabled=y focusable=n rect=20529,20145,18,14
+        Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=20547,20145,62,14
+      Slider id="Mixer.MasterVolumeFor" name="Master volume for all tracks (0–100 %, the same as the main window's master knob; double-click: 100)" enabled=y focusable=y rect=20617,20140,157,24
+        Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=20617,20145,139,14
+        Thumb id="SliderThumb" name="" enabled=y focusable=n rect=20756,20145,18,14
+        Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=20000,20000,0,0
+      Button id="Mixer.LiveInputOff" name="Live input, off" enabled=y focusable=y rect=20063,20184,16,24
+      Text id="" name="Live input" enabled=y focusable=n rect=20085,20184,138,16
+      Text id="" name="off" enabled=y focusable=n rect=20085,20200,138,14
+      Button id="Mixer.FXChainFor" name="FX chain for live input" enabled=y focusable=y rect=20231,20188,54,22
+      Slider id="Mixer.LiveInputPan" name="Live input pan" enabled=y focusable=y rect=20467,20187,142,24
+        Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=20467,20192,62,14
+        Thumb id="SliderThumb" name="" enabled=y focusable=n rect=20529,20192,18,14
+        Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=20547,20192,62,14
+      Slider id="Mixer.LiveInputVolume" name="Live input volume" enabled=y focusable=y rect=20617,20187,157,24
+        Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=20617,20192,109,14
+        Thumb id="SliderThumb" name="" enabled=y focusable=n rect=20726,20192,18,14
+        Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=20744,20192,30,14
+      Button id="Mixer.LiveInputMute" name="Live input mute" enabled=y focusable=y rect=20803,20189,34,26
+        Text id="" name="M" enabled=y focusable=n rect=20815,20195,10,14
+      Button id="Mixer.CollapseGuitars" name="Collapse Guitars" enabled=y focusable=n rect=20041,20250,18,24
+      Button id="Mixer.ColourOfThe" name="Colour of the guitars: click to choose (colours every track in the group)" enabled=y focusable=y rect=20063,20250,16,24
+      Text id="" name="Guitars" enabled=y focusable=n rect=20085,20250,138,16
+      Text id="" name="5 tracks" enabled=y focusable=n rect=20085,20266,138,14
+      Button id="Mixer.TrackFXChain" name="Track FX chain" enabled=y focusable=y rect=20231,20254,54,22
+      Button id="Mixer.Button0" name="−" enabled=y focusable=y rect=20356,20253,22,24
+        Text id="" name="−" enabled=y focusable=n rect=20363,20257,8,16
+      Button id="Mixer.Button1" name="+" enabled=y focusable=y rect=20436,20253,22,24
+        Text id="" name="+" enabled=y focusable=n rect=20443,20257,8,16
+      Text id="" name="0 st" enabled=y focusable=n rect=20388,20257,38,16
+      Slider id="Mixer.MovesEveryTrack" name="Moves every track in the group left or right (−64 left … 0 centre … +63 right)" enabled=y focusable=y rect=20467,20253,142,24
+        Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=20467,20258,62,14
+        Thumb id="SliderThumb" name="" enabled=y focusable=n rect=20529,20258,18,14
+        Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=20547,20258,62,14
+      Slider id="Mixer.GroupLevelIn" name="Group level in percent of each track's own volume (100 = unchanged)" enabled=y focusable=y rect=20617,20253,157,24
+        Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=20617,20258,70,14
+        Thumb id="SliderThumb" name="" enabled=y focusable=n rect=20687,20258,18,14
+        Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=20705,20258,69,14
+      Button id="Mixer.Mute" name="Mute" enabled=y focusable=y rect=20784,20255,34,26
+        Text id="" name="M" enabled=y focusable=n rect=20796,20261,10,14
+      Button id="Mixer.Solo" name="Solo" enabled=y focusable=y rect=20822,20255,34,26
+        Text id="" name="S" enabled=y focusable=n rect=20836,20261,6,14
+      Button id="Mixer.ColourOfRhythm" name="Colour of Rhythm Gtr L" enabled=y focusable=y rect=20063,20298,16,24
+      Text id="" name="Rhythm Gtr L" enabled=y focusable=n rect=20085,20298,134,16
+      Text id="" name="Distortion Guitar (7 strings)" enabled=y focusable=n rect=20085,20314,134,14
+      Button id="Mixer.FXChainFor" name="FX chain for Rhythm Gtr L" enabled=y focusable=y rect=20231,20302,54,22
+      CheckBox id="Mixer.MIDISoundThe" name="MIDI sound: the track's General MIDI instrument plays while the FX chain is on (the effects shape it when there is no VST instrument). Off: only a VST instrument sounds." enabled=n focusable=n rect=20312,20306,21,15
+      Button id="Mixer.Button0" name="−" enabled=y focusable=y rect=20356,20301,22,24
+        Text id="" name="−" enabled=y focusable=n rect=20363,20305,8,16
+      Button id="Mixer.Button1" name="+" enabled=y focusable=y rect=20436,20301,22,24
+        Text id="" name="+" enabled=y focusable=n rect=20443,20305,8,16
+      Text id="" name="0 st" enabled=y focusable=n rect=20388,20305,38,16
+      Slider id="Mixer.TrackPan" name="Track pan (−64 left … 0 centre … +63 right; mouse wheel: 1 step, Ctrl+wheel: 8; double-click: centre)" enabled=y focusable=y rect=20467,20301,142,24
+        Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=20000,20000,0,0
+        Thumb id="SliderThumb" name="" enabled=y focusable=n rect=20467,20306,18,14
+        Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=20485,20306,124,14
+      Slider id="Mixer.TrackVolume" name="Track volume (0-127; mouse wheel: 1 step, Ctrl+wheel: 8; double-click: 100)" enabled=y focusable=y rect=20617,20301,157,24
+        Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=20617,20306,105,14
+        Thumb id="SliderThumb" name="" enabled=y focusable=n rect=20722,20306,18,14
+        Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=20740,20306,34,14
+      Button id="Mixer.Mute" name="Mute" enabled=y focusable=y rect=20784,20303,34,26
+        Text id="" name="M" enabled=y focusable=n rect=20796,20309,10,14
+      Button id="Mixer.Solo" name="Solo" enabled=y focusable=y rect=20822,20303,34,26
+        Text id="" name="S" enabled=y focusable=n rect=20836,20309,6,14
+      Button id="Mixer.ColourOfRhythm" name="Colour of Rhythm Gtr R" enabled=y focusable=y rect=20063,20346,16,24
+      Text id="" name="Rhythm Gtr R" enabled=y focusable=n rect=20085,20346,134,16
+      Text id="" name="Distortion Guitar (8 strings)" enabled=y focusable=n rect=20085,20362,134,14
+      Button id="Mixer.FXChainFor" name="FX chain for Rhythm Gtr R" enabled=y focusable=y rect=20231,20350,54,22
+      CheckBox id="Mixer.MIDISoundThe" name="MIDI sound: the track's General MIDI instrument plays while the FX chain is on (the effects shape it when there is no VST instrument). Off: only a VST instrument sounds." enabled=n focusable=n rect=20312,20354,21,15
+      Button id="Mixer.Button0" name="−" enabled=y focusable=y rect=20356,20349,22,24
+        Text id="" name="−" enabled=y focusable=n rect=20363,20353,8,16
+      Button id="Mixer.Button1" name="+" enabled=y focusable=y rect=20436,20349,22,24
+        Text id="" name="+" enabled=y focusable=n rect=20443,20353,8,16
+      Text id="" name="0 st" enabled=y focusable=n rect=20388,20353,38,16
+      Slider id="Mixer.TrackPan" name="Track pan (−64 left … 0 centre … +63 right; mouse wheel: 1 step, Ctrl+wheel: 8; double-click: centre)" enabled=y focusable=y rect=20467,20349,142,24
+        Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=20467,20354,124,14
+        Thumb id="SliderThumb" name="" enabled=y focusable=n rect=20591,20354,18,14
+        Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=20000,20000,0,0
+      Slider id="Mixer.TrackVolume" name="Track volume (0-127; mouse wheel: 1 step, Ctrl+wheel: 8; double-click: 100)" enabled=y focusable=y rect=20617,20349,157,24
+        Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=20617,20354,105,14
+        Thumb id="SliderThumb" name="" enabled=y focusable=n rect=20722,20354,18,14
+        Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=20740,20354,34,14
+      Button id="Mixer.Mute" name="Mute" enabled=y focusable=y rect=20784,20351,34,26
+        Text id="" name="M" enabled=y focusable=n rect=20796,20357,10,14
+      Button id="Mixer.Solo" name="Solo" enabled=y focusable=y rect=20822,20351,34,26
+        Text id="" name="S" enabled=y focusable=n rect=20836,20357,6,14
+      Button id="Mixer.ColourOfLead" name="Colour of Lead Gtr" enabled=y focusable=y rect=20063,20394,16,24
+      Text id="" name="Lead Gtr" enabled=y focusable=n rect=20085,20394,134,16
+      Text id="" name="Overdriven Guitar" enabled=y focusable=n rect=20085,20410,134,14
+      Button id="Mixer.FXChainFor" name="FX chain for Lead Gtr" enabled=y focusable=y rect=20231,20398,54,22
+      CheckBox id="Mixer.MIDISoundThe" name="MIDI sound: the track's General MIDI instrument plays while the FX chain is on (the effects shape it when there is no VST instrument). Off: only a VST instrument sounds." enabled=n focusable=n rect=20312,20402,21,15
+      Button id="Mixer.Button0" name="−" enabled=y focusable=y rect=20356,20397,22,24
+        Text id="" name="−" enabled=y focusable=n rect=20363,20401,8,16
+      Button id="Mixer.Button1" name="+" enabled=y focusable=y rect=20436,20397,22,24
+        Text id="" name="+" enabled=y focusable=n rect=20443,20401,8,16
+      Text id="" name="0 st" enabled=y focusable=n rect=20388,20401,38,16
+      Slider id="Mixer.TrackPan" name="Track pan (−64 left … 0 centre … +63 right; mouse wheel: 1 step, Ctrl+wheel: 8; double-click: centre)" enabled=y focusable=y rect=20467,20397,142,24
+        Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=20467,20402,62,14
+        Thumb id="SliderThumb" name="" enabled=y focusable=n rect=20529,20402,18,14
+        Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=20547,20402,62,14
+      Slider id="Mixer.TrackVolume" name="Track volume (0-127; mouse wheel: 1 step, Ctrl+wheel: 8; double-click: 100)" enabled=y focusable=y rect=20617,20397,157,24
+        Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=20617,20402,105,14
+        Thumb id="SliderThumb" name="" enabled=y focusable=n rect=20722,20402,18,14
+        Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=20740,20402,34,14
+      Button id="Mixer.Mute" name="Mute" enabled=y focusable=y rect=20784,20399,34,26
+        Text id="" name="M" enabled=y focusable=n rect=20796,20405,10,14
+      Button id="Mixer.Solo" name="Solo" enabled=y focusable=y rect=20822,20399,34,26
+        Text id="" name="S" enabled=y focusable=n rect=20836,20405,6,14
+      Button id="Mixer.ColourOfLead" name="Colour of Lead Harmony" enabled=y focusable=y rect=20063,20442,16,24
+      Text id="" name="Lead Harmony" enabled=y focusable=n rect=20085,20442,134,16
+      Text id="" name="Overdriven Guitar" enabled=y focusable=n rect=20085,20458,134,14
+      Button id="Mixer.FXChainFor" name="FX chain for Lead Harmony" enabled=y focusable=y rect=20231,20446,54,22
+      CheckBox id="Mixer.MIDISoundThe" name="MIDI sound: the track's General MIDI instrument plays while the FX chain is on (the effects shape it when there is no VST instrument). Off: only a VST instrument sounds." enabled=n focusable=n rect=20312,20450,21,15
+      Button id="Mixer.Button0" name="−" enabled=y focusable=y rect=20356,20445,22,24
+        Text id="" name="−" enabled=y focusable=n rect=20363,20449,8,16
+      Button id="Mixer.Button1" name="+" enabled=y focusable=y rect=20436,20445,22,24
+        Text id="" name="+" enabled=y focusable=n rect=20443,20449,8,16
+      Text id="" name="0 st" enabled=y focusable=n rect=20388,20449,38,16
+      Slider id="Mixer.TrackPan" name="Track pan (−64 left … 0 centre … +63 right; mouse wheel: 1 step, Ctrl+wheel: 8; double-click: centre)" enabled=y focusable=y rect=20467,20445,142,24
+        Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=20467,20450,47,14
+        Thumb id="SliderThumb" name="" enabled=y focusable=n rect=20514,20450,18,14
+        Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=20532,20450,77,14
+      Slider id="Mixer.TrackVolume" name="Track volume (0-127; mouse wheel: 1 step, Ctrl+wheel: 8; double-click: 100)" enabled=y focusable=y rect=20617,20445,157,24
+        Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=20617,20450,96,14
+        Thumb id="SliderThumb" name="" enabled=y focusable=n rect=20713,20450,18,14
+        Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=20731,20450,43,14
+      Button id="Mixer.Mute" name="Mute" enabled=y focusable=y rect=20784,20447,34,26
+        Text id="" name="M" enabled=y focusable=n rect=20796,20453,10,14
+      Button id="Mixer.Solo" name="Solo" enabled=y focusable=y rect=20822,20447,34,26
+        Text id="" name="S" enabled=y focusable=n rect=20836,20453,6,14
+      Button id="Mixer.ColourOfClean" name="Colour of Clean Gtr" enabled=y focusable=y rect=20063,20490,16,24
+      Text id="" name="Clean Gtr" enabled=y focusable=n rect=20085,20490,134,16
+      Text id="" name="Electric Guitar (clean)" enabled=y focusable=n rect=20085,20506,134,14
+      Button id="Mixer.FXChainFor" name="FX chain for Clean Gtr" enabled=y focusable=y rect=20231,20494,54,22
+      CheckBox id="Mixer.MIDISoundThe" name="MIDI sound: the track's General MIDI instrument plays while the FX chain is on (the effects shape it when there is no VST instrument). Off: only a VST instrument sounds." enabled=n focusable=n rect=20312,20498,21,15
+      Button id="Mixer.Button0" name="−" enabled=y focusable=y rect=20356,20493,22,24
+        Text id="" name="−" enabled=y focusable=n rect=20363,20497,8,16
+      Button id="Mixer.Button1" name="+" enabled=y focusable=y rect=20436,20493,22,24
+        Text id="" name="+" enabled=y focusable=n rect=20443,20497,8,16
+      Text id="" name="0 st" enabled=y focusable=n rect=20388,20497,38,16
+      Slider id="Mixer.TrackPan" name="Track pan (−64 left … 0 centre … +63 right; mouse wheel: 1 step, Ctrl+wheel: 8; double-click: centre)" enabled=y focusable=y rect=20467,20493,142,24
+        Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=20467,20498,78,14
+        Thumb id="SliderThumb" name="" enabled=y focusable=n rect=20545,20498,18,14
+        Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=20563,20498,46,14
+      Slider id="Mixer.TrackVolume" name="Track volume (0-127; mouse wheel: 1 step, Ctrl+wheel: 8; double-click: 100)" enabled=y focusable=y rect=20617,20493,157,24
+        Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=20617,20498,88,14
+        Thumb id="SliderThumb" name="" enabled=y focusable=n rect=20705,20498,18,14
+        Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=20723,20498,51,14
+      Button id="Mixer.Mute" name="Mute" enabled=y focusable=y rect=20784,20495,34,26
+        Text id="" name="M" enabled=y focusable=n rect=20796,20501,10,14
+      Button id="Mixer.Solo" name="Solo" enabled=y focusable=y rect=20822,20495,34,26
+        Text id="" name="S" enabled=y focusable=n rect=20836,20501,6,14
+      Button id="Mixer.CollapseBasses" name="Collapse Basses" enabled=y focusable=n rect=20041,20556,18,24
+      Button id="Mixer.ColourOfThe" name="Colour of the basses: click to choose (colours every track in the group)" enabled=y focusable=y rect=20063,20556,16,24
+      Text id="" name="Basses" enabled=y focusable=n rect=20085,20556,138,16
+      Text id="" name="2 tracks" enabled=y focusable=n rect=20085,20572,138,14
+      Button id="Mixer.TrackFXChain" name="Track FX chain" enabled=y focusable=y rect=20231,20560,54,22
+      Button id="Mixer.Button0" name="−" enabled=y focusable=y rect=20356,20559,22,24
+        Text id="" name="−" enabled=y focusable=n rect=20363,20563,8,16
+      Button id="Mixer.Button1" name="+" enabled=y focusable=y rect=20436,20559,22,24
+        Text id="" name="+" enabled=y focusable=n rect=20443,20563,8,16
+      Text id="" name="0 st" enabled=y focusable=n rect=20388,20563,38,16
+      Slider id="Mixer.MovesEveryTrack" name="Moves every track in the group left or right (−64 left … 0 centre … +63 right)" enabled=y focusable=y rect=20467,20559,142,24
+        Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=20467,20564,62,14
+        Thumb id="SliderThumb" name="" enabled=y focusable=n rect=20529,20564,18,14
+        Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=20547,20564,62,14
+      Slider id="Mixer.GroupLevelIn" name="Group level in percent of each track's own volume (100 = unchanged)" enabled=y focusable=y rect=20617,20559,157,24
+        Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=20617,20564,70,14
+        Thumb id="SliderThumb" name="" enabled=y focusable=n rect=20687,20564,18,14
+        Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=20705,20564,69,14
+      Button id="Mixer.Mute" name="Mute" enabled=y focusable=y rect=20784,20561,34,26
+        Text id="" name="M" enabled=y focusable=n rect=20796,20567,10,14
+      Button id="Mixer.Solo" name="Solo" enabled=y focusable=y rect=20822,20561,34,26
+        Text id="" name="S" enabled=y focusable=n rect=20836,20567,6,14
+      Button id="Mixer.ColourOfBass" name="Colour of Bass" enabled=y focusable=y rect=20063,20604,16,24
+      Text id="" name="Bass" enabled=y focusable=n rect=20085,20604,134,16
+      Text id="" name="Electric Bass (pick) (5 strings)" enabled=y focusable=n rect=20085,20620,134,14
+      Button id="Mixer.FXChainFor" name="FX chain for Bass" enabled=y focusable=y rect=20231,20608,54,22
+      CheckBox id="Mixer.MIDISoundThe" name="MIDI sound: the track's General MIDI instrument plays while the FX chain is on (the effects shape it when there is no VST instrument). Off: only a VST instrument sounds." enabled=n focusable=n rect=20312,20612,21,15
+      Button id="Mixer.Button0" name="−" enabled=y focusable=y rect=20356,20607,22,24
+        Text id="" name="−" enabled=y focusable=n rect=20363,20611,8,16
+      Button id="Mixer.Button1" name="+" enabled=y focusable=y rect=20436,20607,22,24
+        Text id="" name="+" enabled=y focusable=n rect=20443,20611,8,16
+      Text id="" name="0 st" enabled=y focusable=n rect=20388,20611,38,16
+      Slider id="Mixer.TrackPan" name="Track pan (−64 left … 0 centre … +63 right; mouse wheel: 1 step, Ctrl+wheel: 8; double-click: centre)" enabled=y focusable=y rect=20467,20607,142,24
+        Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=20467,20612,62,14
+        Thumb id="SliderThumb" name="" enabled=y focusable=n rect=20529,20612,18,14
+        Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=20547,20612,62,14
+      Slider id="Mixer.TrackVolume" name="Track volume (0-127; mouse wheel: 1 step, Ctrl+wheel: 8; double-click: 100)" enabled=y focusable=y rect=20617,20607,157,24
+        Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=20617,20612,114,14
+        Thumb id="SliderThumb" name="" enabled=y focusable=n rect=20731,20612,18,14
+        Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=20749,20612,25,14
+      Button id="Mixer.Mute" name="Mute" enabled=y focusable=y rect=20784,20609,34,26
+        Text id="" name="M" enabled=y focusable=n rect=20796,20615,10,14
+      Button id="Mixer.Solo" name="Solo" enabled=y focusable=y rect=20822,20609,34,26
+        Text id="" name="S" enabled=y focusable=n rect=20836,20615,6,14
+      Button id="Mixer.ColourOfSub" name="Colour of Sub Drop" enabled=y focusable=y rect=20063,20652,16,24
+      Text id="" name="Sub Drop" enabled=y focusable=n rect=20085,20652,134,16
+      Text id="" name="Synth Bass 1" enabled=y focusable=n rect=20085,20668,134,14
+      Button id="Mixer.FXChainFor" name="FX chain for Sub Drop" enabled=y focusable=y rect=20231,20656,54,22
+      CheckBox id="Mixer.MIDISoundThe" name="MIDI sound: the track's General MIDI instrument plays while the FX chain is on (the effects shape it when there is no VST instrument). Off: only a VST instrument sounds." enabled=n focusable=n rect=20312,20660,21,15
+      Button id="Mixer.Button0" name="−" enabled=y focusable=y rect=20356,20655,22,24
+        Text id="" name="−" enabled=y focusable=n rect=20363,20659,8,16
+      Button id="Mixer.Button1" name="+" enabled=y focusable=y rect=20436,20655,22,24
+        Text id="" name="+" enabled=y focusable=n rect=20443,20659,8,16
+      Text id="" name="0 st" enabled=y focusable=n rect=20388,20659,38,16
+      Slider id="Mixer.TrackPan" name="Track pan (−64 left … 0 centre … +63 right; mouse wheel: 1 step, Ctrl+wheel: 8; double-click: centre)" enabled=y focusable=y rect=20467,20655,142,24
+        Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=20467,20660,62,14
+        Thumb id="SliderThumb" name="" enabled=y focusable=n rect=20529,20660,18,14
+        Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=20547,20660,62,14
+      Slider id="Mixer.TrackVolume" name="Track volume (0-127; mouse wheel: 1 step, Ctrl+wheel: 8; double-click: 100)" enabled=y focusable=y rect=20617,20655,157,24
+        Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=20617,20660,105,14
+        Thumb id="SliderThumb" name="" enabled=y focusable=n rect=20722,20660,18,14
+        Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=20740,20660,34,14
+      Button id="Mixer.Mute" name="Mute" enabled=y focusable=y rect=20784,20657,34,26
+        Text id="" name="M" enabled=y focusable=n rect=20796,20663,10,14
+      Button id="Mixer.Solo" name="Solo" enabled=y focusable=y rect=20822,20657,34,26
+        Text id="" name="S" enabled=y focusable=n rect=20836,20663,6,14
+      Button id="Mixer.CollapseDrums" name="Collapse Drums" enabled=y focusable=n rect=20041,20718,18,24
+      Button id="Mixer.ColourOfThe" name="Colour of the drums: click to choose (colours every track in the group)" enabled=y focusable=y rect=20063,20718,16,24
+      Text id="" name="Drums" enabled=y focusable=n rect=20085,20718,138,16
+      Text id="" name="1 track" enabled=y focusable=n rect=20085,20734,138,14
+      Button id="Mixer.TrackFXChain" name="Track FX chain" enabled=y focusable=y rect=20231,20722,54,22
+      Button id="Mixer.Button0" name="−" enabled=y focusable=y rect=20356,20721,22,24
+        Text id="" name="−" enabled=y focusable=n rect=20363,20725,8,16
+      Button id="Mixer.Button1" name="+" enabled=y focusable=y rect=20436,20721,22,24
+        Text id="" name="+" enabled=y focusable=n rect=20443,20725,8,16
+      Text id="" name="0 st" enabled=y focusable=n rect=20388,20725,38,16
+      Slider id="Mixer.MovesEveryTrack" name="Moves every track in the group left or right (−64 left … 0 centre … +63 right)" enabled=y focusable=y rect=20467,20721,142,24
+        Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=20467,20726,62,14
+        Thumb id="SliderThumb" name="" enabled=y focusable=n rect=20529,20726,18,14
+        Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=20547,20726,62,14
+      Slider id="Mixer.GroupLevelIn" name="Group level in percent of each track's own volume (100 = unchanged)" enabled=y focusable=y rect=20617,20721,157,24
+        Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=20617,20726,70,14
+        Thumb id="SliderThumb" name="" enabled=y focusable=n rect=20687,20726,18,14
+        Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=20705,20726,69,14
+      Button id="Mixer.Mute" name="Mute" enabled=y focusable=y rect=20784,20723,34,26
+        Text id="" name="M" enabled=y focusable=n rect=20796,20729,10,14
+      Button id="Mixer.Solo" name="Solo" enabled=y focusable=y rect=20822,20723,34,26
+        Text id="" name="S" enabled=y focusable=n rect=20836,20729,6,14
+      Button id="Mixer.ColourOfDrums" name="Colour of Drums" enabled=y focusable=y rect=20063,20766,16,24
+      Text id="" name="Drums" enabled=y focusable=n rect=20085,20766,134,16
+      Text id="" name="Drum Kit (Standard)" enabled=y focusable=n rect=20085,20782,134,14
+      Button id="Mixer.FXChainFor" name="FX chain for Drums" enabled=y focusable=y rect=20231,20770,54,22
+      CheckBox id="Mixer.MIDISoundThe" name="MIDI sound: the track's General MIDI instrument plays while the FX chain is on (the effects shape it when there is no VST instrument). Off: only a VST instrument sounds." enabled=n focusable=n rect=20312,20774,21,15
+      Button id="Mixer.Button0" name="−" enabled=y focusable=y rect=20356,20769,22,24
+        Text id="" name="−" enabled=y focusable=n rect=20363,20773,8,16
+      Button id="Mixer.Button1" name="+" enabled=y focusable=y rect=20436,20769,22,24
+        Text id="" name="+" enabled=y focusable=n rect=20443,20773,8,16
+      Text id="" name="0 st" enabled=y focusable=n rect=20388,20773,38,16
+      Slider id="Mixer.TrackPan" name="Track pan (−64 left … 0 centre … +63 right; mouse wheel: 1 step, Ctrl+wheel: 8; double-click: centre)" enabled=y focusable=y rect=20467,20769,142,24
+        Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=20467,20774,62,14
+        Thumb id="SliderThumb" name="" enabled=y focusable=n rect=20529,20774,18,14
+        Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=20547,20774,62,14
+      Slider id="Mixer.TrackVolume" name="Track volume (0-127; mouse wheel: 1 step, Ctrl+wheel: 8; double-click: 100)" enabled=y focusable=y rect=20617,20769,157,24
+        Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=20617,20774,123,14
+        Thumb id="SliderThumb" name="" enabled=y focusable=n rect=20740,20774,18,14
+        Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=20758,20774,16,14
+      Button id="Mixer.Mute" name="Mute" enabled=y focusable=y rect=20784,20771,34,26
+        Text id="" name="M" enabled=y focusable=n rect=20796,20777,10,14
+      Button id="Mixer.Solo" name="Solo" enabled=y focusable=y rect=20822,20771,34,26
+        Text id="" name="S" enabled=y focusable=n rect=20836,20777,6,14
+      Button id="Mixer.CollapseOtherInstruments" name="Collapse Other instruments" enabled=y focusable=n rect=20041,20832,18,24
+      Button id="Mixer.ColourOfThe" name="Colour of the other instruments: click to choose (colours every track in the group)" enabled=y focusable=y rect=20063,20832,16,24
+      Text id="" name="Other instruments" enabled=y focusable=n rect=20085,20832,138,16
+      Text id="" name="2 tracks" enabled=y focusable=n rect=20085,20848,138,14
+      Button id="Mixer.TrackFXChain" name="Track FX chain" enabled=y focusable=y rect=20231,20836,54,22
+      Button id="Mixer.Button0" name="−" enabled=y focusable=y rect=20356,20835,22,24
+        Text id="" name="−" enabled=y focusable=n rect=20363,20839,8,16
+      Button id="Mixer.Button1" name="+" enabled=y focusable=y rect=20436,20835,22,24
+        Text id="" name="+" enabled=y focusable=n rect=20443,20839,8,16
+      Text id="" name="0 st" enabled=y focusable=n rect=20388,20839,38,16
+      Slider id="Mixer.MovesEveryTrack" name="Moves every track in the group left or right (−64 left … 0 centre … +63 right)" enabled=y focusable=y rect=20467,20835,142,24
+        Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=20467,20840,62,14
+        Thumb id="SliderThumb" name="" enabled=y focusable=n rect=20529,20840,18,14
+        Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=20547,20840,62,14
+      Slider id="Mixer.GroupLevelIn" name="Group level in percent of each track's own volume (100 = unchanged)" enabled=y focusable=y rect=20617,20835,157,24
+        Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=20617,20840,70,14
+        Thumb id="SliderThumb" name="" enabled=y focusable=n rect=20687,20840,18,14
+        Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=20705,20840,69,14
+      Button id="Mixer.Mute" name="Mute" enabled=y focusable=y rect=20784,20837,34,26
+        Text id="" name="M" enabled=y focusable=n rect=20796,20843,10,14
+      Button id="Mixer.Solo" name="Solo" enabled=y focusable=y rect=20822,20837,34,26
+        Text id="" name="S" enabled=y focusable=n rect=20836,20843,6,14
+      Button id="Mixer.ColourOfPad" name="Colour of Pad / Strings" enabled=y focusable=y rect=20063,20880,16,24
+      Text id="" name="Pad / Strings" enabled=y focusable=n rect=20085,20880,134,16
+      Text id="" name="Pad 2 (warm)" enabled=y focusable=n rect=20085,20896,134,14
+      Button id="Mixer.FXChainFor" name="FX chain for Pad / Strings" enabled=y focusable=y rect=20231,20884,54,22
+      CheckBox id="Mixer.MIDISoundThe" name="MIDI sound: the track's General MIDI instrument plays while the FX chain is on (the effects shape it when there is no VST instrument). Off: only a VST instrument sounds." enabled=n focusable=n rect=20312,20888,21,15
+      Button id="Mixer.Button0" name="−" enabled=y focusable=y rect=20356,20883,22,24
+        Text id="" name="−" enabled=y focusable=n rect=20363,20887,8,16
+      Button id="Mixer.Button1" name="+" enabled=y focusable=y rect=20436,20883,22,24
+        Text id="" name="+" enabled=y focusable=n rect=20443,20887,8,16
+      Text id="" name="0 st" enabled=y focusable=n rect=20388,20887,38,16
+      Slider id="Mixer.TrackPan" name="Track pan (−64 left … 0 centre … +63 right; mouse wheel: 1 step, Ctrl+wheel: 8; double-click: centre)" enabled=y focusable=y rect=20467,20883,142,24
+        Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=20467,20888,62,14
+        Thumb id="SliderThumb" name="" enabled=y focusable=n rect=20529,20888,18,14
+        Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=20547,20888,62,14
+      Slider id="Mixer.TrackVolume" name="Track volume (0-127; mouse wheel: 1 step, Ctrl+wheel: 8; double-click: 100)" enabled=y focusable=y rect=20617,20883,157,24
+        Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=20617,20888,70,14
+        Thumb id="SliderThumb" name="" enabled=y focusable=n rect=20687,20888,18,14
+        Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=20705,20888,69,14
+      Button id="Mixer.Mute" name="Mute" enabled=y focusable=y rect=20784,20885,34,26
+        Text id="" name="M" enabled=y focusable=n rect=20796,20891,10,14
+      Button id="Mixer.Solo" name="Solo" enabled=y focusable=y rect=20822,20885,34,26
+        Text id="" name="S" enabled=y focusable=n rect=20836,20891,6,14
+      Button id="Mixer.ColourOfPiano" name="Colour of Piano" enabled=y focusable=y rect=20063,20928,16,24
+      Text id="" name="Piano" enabled=y focusable=n rect=20085,20928,134,16
+      Text id="" name="Acoustic Grand Piano" enabled=y focusable=n rect=20085,20944,134,14
+      Button id="Mixer.FXChainFor" name="FX chain for Piano" enabled=y focusable=y rect=20231,20932,54,22
+      CheckBox id="Mixer.MIDISoundThe" name="MIDI sound: the track's General MIDI instrument plays while the FX chain is on (the effects shape it when there is no VST instrument). Off: only a VST instrument sounds." enabled=n focusable=n rect=20312,20936,21,15
+      Button id="Mixer.Button0" name="−" enabled=y focusable=y rect=20356,20931,22,24
+        Text id="" name="−" enabled=y focusable=n rect=20363,20935,8,16
+      Button id="Mixer.Button1" name="+" enabled=y focusable=y rect=20436,20931,22,24
+        Text id="" name="+" enabled=y focusable=n rect=20443,20935,8,16
+      Text id="" name="0 st" enabled=y focusable=n rect=20388,20935,38,16
+      Slider id="Mixer.TrackPan" name="Track pan (−64 left … 0 centre … +63 right; mouse wheel: 1 step, Ctrl+wheel: 8; double-click: centre)" enabled=y focusable=y rect=20467,20931,142,24
+        Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=20467,20936,47,14
+        Thumb id="SliderThumb" name="" enabled=y focusable=n rect=20514,20936,18,14
+        Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=20532,20936,77,14
+      Slider id="Mixer.TrackVolume" name="Track volume (0-127; mouse wheel: 1 step, Ctrl+wheel: 8; double-click: 100)" enabled=y focusable=y rect=20617,20931,157,24
+        Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=20617,20936,70,14
+        Thumb id="SliderThumb" name="" enabled=y focusable=n rect=20687,20936,18,14
+        Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=20705,20936,69,14
+      Button id="Mixer.Mute" name="Mute" enabled=y focusable=y rect=20784,20933,34,26
+        Text id="" name="M" enabled=y focusable=n rect=20796,20939,10,14
+      Button id="Mixer.Solo" name="Solo" enabled=y focusable=y rect=20822,20933,34,26
+        Text id="" name="S" enabled=y focusable=n rect=20836,20939,6,14
+      ScrollBar id="VerticalScrollBar" name="" enabled=y focusable=n rect=20873,20105,17,468
+        Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=20000,20000,0,0
+        Thumb id="" name="" enabled=y focusable=n rect=20873,20105,17,250
+        Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=20873,20355,17,218
+  Window id="" name="Delete track" enabled=y focusable=y rect=20000,20000,420,182
+    Text id="" name="Delete track" enabled=y focusable=n rect=20027,20022,344,16
+    Button id="ThemedConfirmDialog.Cancel" name="Cancel" enabled=y focusable=n rect=20371,20016,34,28
+      Text id="" name="×" enabled=y focusable=n rect=20384,20021,8,18
+    Text id="" name="?" enabled=y focusable=n rect=20046,20072,8,21
+    Text id="" name="Delete the track 'Rhythm Gtr L'? You can undo this with Ctrl+Z." enabled=y focusable=n rect=20077,20065,310,35
+    Button id="ThemedConfirmDialog.DeleteTheTrack" name="Delete the track" enabled=y focusable=y rect=20233,20129,76,28
+      Text id="" name="Delete" enabled=y focusable=n rect=20252,20134,38,17
+    Button id="ThemedConfirmDialog.KeepTheTrack" name="Keep the track  (N / Enter / Esc)" enabled=y focusable=y rect=20317,20129,76,28
+      Text id="" name="Cancel" enabled=y focusable=n rect=20336,20134,38,17
+  Window id="" name="Add track" enabled=y focusable=y rect=20000,20000,800,782
+    TitleBar id="TitleBar" name="" enabled=y focusable=y rect=20024,20003,768,28
+      MenuBar id="SystemMenuBar" name="System" enabled=y focusable=y rect=20008,20008,22,22
+        MenuItem id="" name="System" enabled=y focusable=y rect=20008,20008,22,22
+      Button id="Minimize-Restore" name="Minimize" enabled=y focusable=n rect=20653,20001,47,30
+      Button id="Maximize-Restore" name="Maximize" enabled=y focusable=n rect=20700,20001,46,30
+      Button id="Close" name="Close" enabled=y focusable=n rect=20746,20001,47,30
+    Button id="Track.Cancel" name="Cancel" enabled=y focusable=y rect=20683,20734,92,24
+      Text id="" name="Cancel" enabled=y focusable=n rect=20711,20738,36,16
+    Button id="Track.Ok" name="Add track" enabled=y focusable=y rect=20564,20733,110,26
+      Text id="" name="Add track" enabled=y focusable=n rect=20593,20738,52,16
+    Text id="" name="Position" enabled=y focusable=n rect=20024,20738,44,16
+    ComboBox id="Window.ComboBox0" name="Combo box0" enabled=y focusable=y rect=20077,20734,230,24
+    Edit id="Window.1To11" name="1 to 11" enabled=n focusable=n rect=20314,20733,46,26
+    Text id="" name="" enabled=y focusable=n rect=20372,20738,180,16
+    Pane id="" name="" enabled=y focusable=y rect=20008,20031,784,692
+      Image id="" name="" enabled=y focusable=n rect=20069,20062,160,160
+      Text id="" name="Electric Guitar" enabled=y focusable=n rect=20108,20241,82,17
+      Text id="" name="DETAILS" enabled=y focusable=n rect=20039,20279,220,15
+      Text id="" name="Track name" enabled=y focusable=n rect=20039,20306,220,16
+      Edit id="Window.TextBox0" name="Text box0" enabled=y focusable=y rect=20040,20327,218,24
+      Text id="" name="Played by" enabled=y focusable=n rect=20039,20362,220,16
+      Edit id="Window.TextBox1" name="Text box1" enabled=y focusable=y rect=20040,20383,218,24
+      Text id="" name="The musician who normally plays this part." enabled=y focusable=n rect=20039,20411,220,15
+      Text id="" name="Colour" enabled=y focusable=n rect=20039,20436,220,16
+      Button id="Window.E5484D" name="#E5484D" enabled=y focusable=y rect=20039,20460,20,24
+      Button id="Window.F76B15" name="#F76B15" enabled=y focusable=y rect=20064,20460,20,24
+      Button id="Window.FFC53D" name="#FFC53D" enabled=y focusable=y rect=20089,20460,20,24
+      Button id="Window.46A758" name="#46A758" enabled=y focusable=y rect=20114,20460,20,24
+      Button id="Window.12A594" name="#12A594" enabled=y focusable=y rect=20139,20460,20,24
+      Button id="Window.3E63DD" name="#3E63DD" enabled=y focusable=y rect=20164,20460,20,24
+      Button id="Window.8E4EC6" name="#8E4EC6" enabled=y focusable=y rect=20189,20460,20,24
+      Button id="Window.D6409F" name="#D6409F" enabled=y focusable=y rect=20214,20460,20,24
+      Button id="Window.8B8D98" name="#8B8D98" enabled=y focusable=y rect=20039,20488,20,24
+      Button id="Window.F0F0F0" name="#F0F0F0" enabled=y focusable=y rect=20064,20488,20,24
+      Edit id="Window.TextBox0" name="Text box0" enabled=y focusable=y rect=20095,20488,86,24
+      CheckBox id="Window.TheStrengthIs" name="The strength is set in Settings > Appearance > Track colour tint." enabled=y focusable=y rect=20039,20518,220,32
+        Text id="" name="Tint the track's row and lane with its colour" enabled=y focusable=n rect=20060,20518,199,32
+      Text id="" name="Notes" enabled=y focusable=n rect=20039,20560,220,16
+      Edit id="Window.TextBox2" name="Text box2" enabled=y focusable=y rect=20040,20581,218,64
+      Text id="" name="INSTRUMENT" enabled=y focusable=n rect=20303,20058,458,15
+      Button id="Window.OpenTheInstrument" name="Open the instrument catalogue (search, pictures)" enabled=y focusable=y rect=20304,20076,456,42
+        Image id="" name="" enabled=y focusable=n rect=20441,20082,30,30
+        Text id="" name="Change…" enabled=y focusable=n rect=20573,20089,50,16
+        Text id="" name="Electric Guitar" enabled=y focusable=n rect=20481,20088,82,17
+      Text id="" name="MIDI program" enabled=y focusable=n rect=20303,20132,75,16
+      Edit id="Window.TextBox0" name="Text box0" enabled=y focusable=y rect=20387,20128,60,24
+      Text id="" name="Channel" enabled=y focusable=n rect=20464,20132,43,16
+      Edit id="Window.TextBox1" name="Text box1" enabled=y focusable=y rect=20516,20128,60,24
+      Text id="" name="MIXER" enabled=y focusable=n rect=20303,20187,458,14
+      Slider id="Window.100" name=": 100" enabled=y focusable=y rect=20303,20207,44,44
+      Text id="" name="Volume" enabled=y focusable=n rect=20304,20255,42,16
+      Text id="" name="79%" enabled=y focusable=n rect=20314,20275,22,16
+      Slider id="Window.64" name=": 64" enabled=y focusable=y rect=20373,20207,44,44
+      Text id="" name="Pan" enabled=y focusable=n rect=20385,20255,20,16
+      Text id="" name="Centre" enabled=y focusable=n rect=20378,20275,34,16
+      Text id="" name="Drag or scroll a knob; double-click to type a value; Ctrl+click to reset." enabled=y focusable=n rect=20303,20294,458,15
+      Button id="Window.AvailableOnceThe" name="Available once the track has been added" enabled=n focusable=n rect=20303,20317,167,26
+        Text id="" name="Effects & instruments (FX)…" enabled=n focusable=n rect=20314,20322,145,16
+      Text id="" name="TUNING" enabled=y focusable=n rect=20303,20377,458,14
+      Text id="" name="6 strings" enabled=y focusable=n rect=20303,20398,45,16
+      ComboBox id="Window.ComboBox0" name="Combo box0" enabled=y focusable=y rect=20361,20394,220,24
+      Text id="" name="1" enabled=y focusable=n rect=20303,20434,26,16
+      Button id="Window.TuneThisString" name="Tune this string down a semitone" enabled=y focusable=y rect=20647,20430,26,24
+        Text id="" name="−" enabled=y focusable=n rect=20656,20434,8,16
+      Text id="" name="E4" enabled=y focusable=n rect=20696,20434,14,16
+      Button id="Window.TuneThisString" name="Tune this string up a semitone" enabled=y focusable=y rect=20733,20430,26,24
+        Text id="" name="+" enabled=y focusable=n rect=20742,20434,8,16
+      Text id="" name="2" enabled=y focusable=n rect=20303,20464,26,16
+      Button id="Window.TuneThisString" name="Tune this string down a semitone" enabled=y focusable=y rect=20647,20460,26,24
+        Text id="" name="−" enabled=y focusable=n rect=20656,20464,8,16
+      Text id="" name="B3" enabled=y focusable=n rect=20696,20464,14,16
+      Button id="Window.TuneThisString" name="Tune this string up a semitone" enabled=y focusable=y rect=20733,20460,26,24
+        Text id="" name="+" enabled=y focusable=n rect=20742,20464,8,16
+      Text id="" name="3" enabled=y focusable=n rect=20303,20494,26,16
+      Button id="Window.TuneThisString" name="Tune this string down a semitone" enabled=y focusable=y rect=20647,20490,26,24
+        Text id="" name="−" enabled=y focusable=n rect=20656,20494,8,16
+      Text id="" name="G3" enabled=y focusable=n rect=20695,20494,16,16
+      Button id="Window.TuneThisString" name="Tune this string up a semitone" enabled=y focusable=y rect=20733,20490,26,24
+        Text id="" name="+" enabled=y focusable=n rect=20742,20494,8,16
+      Text id="" name="4" enabled=y focusable=n rect=20303,20524,26,16
+      Button id="Window.TuneThisString" name="Tune this string down a semitone" enabled=y focusable=y rect=20647,20520,26,24
+        Text id="" name="−" enabled=y focusable=n rect=20656,20524,8,16
+      Text id="" name="D3" enabled=y focusable=n rect=20695,20524,16,16
+      Button id="Window.TuneThisString" name="Tune this string up a semitone" enabled=y focusable=y rect=20733,20520,26,24
+        Text id="" name="+" enabled=y focusable=n rect=20742,20524,8,16
+      Text id="" name="5" enabled=y focusable=n rect=20303,20554,26,16
+      Button id="Window.TuneThisString" name="Tune this string down a semitone" enabled=y focusable=y rect=20647,20550,26,24
+        Text id="" name="−" enabled=y focusable=n rect=20656,20554,8,16
+      Text id="" name="A2" enabled=y focusable=n rect=20696,20554,14,16
+      Button id="Window.TuneThisString" name="Tune this string up a semitone" enabled=y focusable=y rect=20733,20550,26,24
+        Text id="" name="+" enabled=y focusable=n rect=20742,20554,8,16
+      Text id="" name="6" enabled=y focusable=n rect=20303,20584,26,16
+      Button id="Window.TuneThisString" name="Tune this string down a semitone" enabled=y focusable=y rect=20647,20580,26,24
+        Text id="" name="−" enabled=y focusable=n rect=20656,20584,8,16
+      Text id="" name="E2" enabled=y focusable=n rect=20697,20584,12,16
+      Button id="Window.TuneThisString" name="Tune this string up a semitone" enabled=y focusable=y rect=20733,20580,26,24
+        Text id="" name="+" enabled=y focusable=n rect=20742,20584,8,16
+      Button id="Window.TuneEveryString" name="Tune every string down a semitone" enabled=y focusable=y rect=20303,20615,50,24
+        Text id="" name="All −1" enabled=y focusable=n rect=20312,20619,32,16
+      Button id="Window.TuneEveryString" name="Tune every string up a semitone" enabled=y focusable=y rect=20359,20615,49,24
+        Text id="" name="All +1" enabled=y focusable=n rect=20368,20619,31,16
+      Button id="Window.AddAString" name="Add a string a fourth below the lowest" enabled=y focusable=y rect=20414,20615,84,24
+        Text id="" name="+ Low string" enabled=y focusable=n rect=20423,20619,66,16
+      Button id="Window.RemoveTheLowest" name="Remove the lowest string" enabled=y focusable=y rect=20504,20615,85,24
+        Text id="" name="− Low string" enabled=y focusable=n rect=20513,20619,67,16
+      CheckBox id="Window.CheckBox0" name="Check box0" enabled=y focusable=y rect=20304,20648,21,15
+      Text id="" name="Keep fret numbers (notes change pitch, like retuning the instrument)" enabled=y focusable=n rect=20332,20648,429,16
+      Text id="" name="Frets" enabled=y focusable=n rect=20303,20679,25,16
+      Edit id="Window.TextBox0" name="Text box0" enabled=y focusable=y rect=20337,20675,50,24
+      Text id="" name="Capo" enabled=y focusable=n rect=20404,20679,28,16
+      Edit id="Window.TextBox1" name="Text box1" enabled=y focusable=y rect=20441,20675,50,24
+  Window id="" name="Time signature" enabled=y focusable=y rect=20008,20008,300,230
+    TitleBar id="TitleBar" name="" enabled=y focusable=y rect=20032,20011,268,28
+      MenuBar id="SystemMenuBar" name="System" enabled=y focusable=y rect=20016,20016,22,22
+        MenuItem id="" name="System" enabled=y focusable=y rect=20016,20016,22,22
+      Button id="Close" name="Close" enabled=y focusable=n rect=20267,20009,34,30
+    Text id="" name="Beats per bar / beat value" enabled=y focusable=n rect=20026,20049,264,16
+    Edit id="Window.TextBox0" name="Text box0" enabled=y focusable=y rect=20027,20074,50,24
+    Text id="" name=" / " enabled=y focusable=n rect=20078,20078,11,16
+    ComboBox id="Window.ComboBox0" name="Combo box0" enabled=y focusable=y rect=20090,20074,70,24
+    Text id="" name="Applies from this bar until the next time signature change." enabled=y focusable=n rect=20026,20107,264,32
+    CheckBox id="Window.OnlyThisBar" name="Only this bar" enabled=y focusable=y rect=20026,20145,264,16
+      Text id="" name="Only this bar" enabled=y focusable=n rect=20047,20145,243,16
+    Button id="Window.OK" name="OK" enabled=y focusable=y rect=20137,20170,75,24
+      Text id="" name="OK" enabled=y focusable=n rect=20166,20174,17,16
+    Button id="Window.Cancel" name="Cancel" enabled=y focusable=y rect=20214,20170,75,24
+      Text id="" name="Cancel" enabled=y focusable=n rect=20234,20174,35,16
+  Button id="Transport.RecordVideo" name="Record video" enabled=y focusable=n rect=1382,0,40,44
+  Button id="Window.TitleSettings" name="Settings" enabled=y focusable=n rect=1422,0,40,44
+  Button id="Window.Min" name="Minimise" enabled=y focusable=n rect=1462,0,46,44
+  Button id="Window.Max" name="Maximise" enabled=y focusable=n rect=1508,0,46,44
+  Button id="Window.Close" name="Close" enabled=y focusable=n rect=1554,0,46,44
+  Custom id="Tabs" name="" enabled=y focusable=n rect=0,0,1382,43
+    Pane id="Scroll" name="" enabled=y focusable=n rect=0,0,1382,36
+      List id="TabStrip" name="" enabled=y focusable=y rect=8,0,323,36
+        DataItem id="" name="TabForge.Documents.TabItemModel" enabled=y focusable=n rect=8,0,323,36
+          Text id="TabTitle" name="Ashen Meridian" enabled=y focusable=n rect=17,9,261,18
+          Button id="Tabs.TabClose" name="Close tab" enabled=y focusable=n rect=299,8,20,20
+      Button id="Tabs.NewTab" name="New tab" enabled=y focusable=n rect=334,0,36,36
+  Text id="StatusText" name="Status" enabled=y focusable=n rect=10,979,68,15
+  Text id="" name="MIDI" enabled=y focusable=n rect=110,978,28,17
+  Text id="PositionText" name="Measure 3  ·  Rhythm Gtr L" enabled=y focusable=n rect=155,979,190,15
+  Text id="BarStateText" name="4/4  <time>" enabled=y focusable=n rect=362,977,61,19
+  Text id="MasterInfoText" name="♩=150  ·  C major  ·  quarter" enabled=y focusable=n rect=440,977,165,19
+  ScrollBar id="" name="Arrangement timeline horizontal scrollbar" enabled=y focusable=n rect=628,978,769,17
+    Button id="TimelineScrollHost.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=20000,20000,0,0
+    Thumb id="" name="" enabled=y focusable=n rect=628,978,189,17
+    Button id="TimelineScrollHost.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=817,978,580,17
+  Text id="OutputStatusText" name="Microsoft MIDI Mapper (default)" enabled=y focusable=n rect=1419,979,171,15
+  Menu id="MainMenu" name="" enabled=y focusable=y rect=0,46,773,25
+    MenuItem id="MainMenu.File" name="File" enabled=y focusable=y rect=0,46,54,25
+      Text id="" name="_File" enabled=y focusable=n rect=16,51,18,15
+    MenuItem id="MainMenu.Edit" name="Edit" enabled=y focusable=y rect=54,46,56,25
+      Text id="" name="_Edit" enabled=y focusable=n rect=70,51,20,15
+    MenuItem id="MainMenu.Bar" name="Bar" enabled=y focusable=y rect=110,46,53,25
+      Text id="" name="_Bar" enabled=y focusable=n rect=126,51,17,15
+    MenuItem id="MainMenu.Track" name="Track" enabled=y focusable=y rect=163,46,63,25
+      Text id="" name="_Track" enabled=y focusable=n rect=179,51,27,15
+    MenuItem id="MainMenu.Note" name="Note" enabled=y focusable=y rect=226,46,63,25
+      Text id="" name="_Note" enabled=y focusable=n rect=242,51,27,15
+    MenuItem id="MainMenu.Effects" name="Effects" enabled=y focusable=y rect=289,46,70,25
+      Text id="" name="_Effects" enabled=y focusable=n rect=305,51,34,15
+    MenuItem id="MainMenu.Sections" name="Sections" enabled=y focusable=y rect=359,46,80,25
+      Text id="" name="_Sections" enabled=y focusable=n rect=375,51,44,15
+    MenuItem id="MainMenu.Tools" name="Tools" enabled=y focusable=y rect=439,46,63,25
+      Text id="" name="_Tools" enabled=y focusable=n rect=455,51,27,15
+    MenuItem id="MainMenu.Sound" name="Sound" enabled=y focusable=y rect=502,46,70,25
+      Text id="" name="_Sound" enabled=y focusable=n rect=518,51,34,15
+    MenuItem id="MainMenu.View" name="View" enabled=y focusable=y rect=572,46,62,25
+      Text id="" name="_View" enabled=y focusable=n rect=588,51,26,15
+    MenuItem id="MainMenu.Options" name="Options" enabled=y focusable=y rect=634,46,78,25
+      Text id="" name="_Options" enabled=y focusable=n rect=650,51,42,15
+    MenuItem id="MainMenu.Help" name="Help" enabled=y focusable=y rect=712,46,61,25
+      Text id="" name="_Help" enabled=y focusable=n rect=728,51,25,15
+  Button id="Toolbar.SidePanel" name="Show or hide the side panel" enabled=y focusable=y rect=1363,45,30,27
+  Button id="Instrument.InstrumentPanel" name="Show or hide the fretboard / keyboard" enabled=y focusable=y rect=1407,45,30,27
+  Button id="Toolbar.KeyboardMode" name="Show or hide Keyboard mode (experimental)" enabled=y focusable=y rect=1439,45,30,27
+  Button id="Toolbar.ShowOrHide" name="Show or hide the Band view" enabled=y focusable=y rect=1483,45,30,27
+  Button id="Toolbar.CompactModeHide" name="Compact mode: hide the track rows and show the master track lane" enabled=y focusable=y rect=1515,45,30,27
+  Button id="Toolbar.ProjectSettings" name="Project settings" enabled=y focusable=y rect=1559,45,30,27
+  Button id="DockLayout.BandViewLayout" name="Band view layout" enabled=y focusable=n rect=5,80,105,24
+    Text id="" name="BAND VIEW" enabled=y focusable=n rect=14,84,69,16
+  Button id="DockLayout.CloseBandView" name="Close Band view" enabled=y focusable=n rect=1561,80,30,24
+  Pane id="" name="" enabled=y focusable=n rect=118,75,1441,32
+    Button id="DockLayout.ShowRhythmGtr" name="Show Rhythm Gtr L in Band view" enabled=y focusable=y rect=122,79,104,22
+      Text id="" name="Rhythm Gtr L" enabled=y focusable=n rect=145,82,70,16
+    Button id="DockLayout.ShowRhythmGtr" name="Show Rhythm Gtr R in Band view" enabled=y focusable=y rect=230,79,105,22
+      Text id="" name="Rhythm Gtr R" enabled=y focusable=n rect=253,82,71,16
+    Button id="DockLayout.ShowLeadGtr" name="Show Lead Gtr in Band view" enabled=y focusable=y rect=339,79,79,22
+      Text id="" name="Lead Gtr" enabled=y focusable=n rect=362,82,45,16
+    Button id="DockLayout.ShowLeadHarmony" name="Show Lead Harmony in Band view" enabled=y focusable=y rect=422,79,111,22
+      Text id="" name="Lead Harmony" enabled=y focusable=n rect=445,82,77,16
+    Button id="DockLayout.ShowCleanGtr" name="Show Clean Gtr in Band view" enabled=y focusable=y rect=537,79,83,22
+      Text id="" name="Clean Gtr" enabled=y focusable=n rect=560,82,49,16
+    Button id="DockLayout.ShowBassIn" name="Show Bass in Band view" enabled=y focusable=y rect=624,79,57,22
+      Text id="" name="Bass" enabled=y focusable=n rect=647,82,23,16
+    Button id="DockLayout.ShowSubDrop" name="Show Sub Drop in Band view" enabled=y focusable=y rect=685,79,85,22
+      Text id="" name="Sub Drop" enabled=y focusable=n rect=708,82,51,16
+    Button id="DockLayout.ShowDrumsIn" name="Show Drums in Band view" enabled=y focusable=y rect=774,79,68,22
+      Text id="" name="Drums" enabled=y focusable=n rect=797,82,34,16
+    Button id="DockLayout.ShowPadStrings" name="Show Pad / Strings in Band view" enabled=y focusable=y rect=846,79,101,22
+      Text id="" name="Pad / Strings" enabled=y focusable=n rect=869,82,67,16
+    Button id="DockLayout.ShowPianoIn" name="Show Piano in Band view" enabled=y focusable=y rect=951,79,64,22
+      Text id="" name="Piano" enabled=y focusable=n rect=974,82,30,16
+  Pane id="" name="" enabled=y focusable=y rect=1,107,1598,455
+    Button id="DockLayout.ShowOrHide" name="Show or hide the instrument of Rhythm Gtr L" enabled=y focusable=y rect=1536,119,30,24
+    Text id="" name="Rhythm Gtr L" enabled=y focusable=n rect=29,122,1503,18
+    Custom id="" name="Instrument of Rhythm Gtr L" enabled=y focusable=y rect=9,147,1565,147
+    Custom id="" name="Tab editor" enabled=y focusable=y rect=9,215,1565,1737
+      Group id="" name="Bar 1, section Intro: Embers, current bar" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 1, beat 1, quarter rest" enabled=y focusable=n rect=9,215,1565,1737
+      Group id="" name="Bar 2" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 2, beat 1, whole rest" enabled=y focusable=n rect=9,215,1565,1737
+      Group id="" name="Bar 3" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 3, beat 1, half rest" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 3, beat 9, eighth rest" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 3, beat 11, quarter rest" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 3, beat 15, eighth rest" enabled=y focusable=n rect=9,215,1565,1737
+      Group id="" name="Bar 4" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 4, beat 1, whole rest" enabled=y focusable=n rect=9,215,1565,1737
+      Group id="" name="Bar 5" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 5, beat 1, whole rest" enabled=y focusable=n rect=9,215,1565,1737
+      Group id="" name="Bar 6" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 6, beat 1, whole rest" enabled=y focusable=n rect=9,215,1565,1737
+      Group id="" name="Bar 7" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 7, beat 1, whole rest" enabled=y focusable=n rect=9,215,1565,1737
+      Group id="" name="Bar 8" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 8, beat 1, whole rest" enabled=y focusable=n rect=9,215,1565,1737
+      Group id="" name="Bar 9" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 9, beat 1, whole rest" enabled=y focusable=n rect=9,215,1565,1737
+      Group id="" name="Bar 10, section Swell" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 10, beat 1, half rest" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 10, beat 9, eighth rest" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 10, beat 11, sixteenth note, string 7 fret 0, palm mute" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 10, beat 12, sixteenth note, string 7 fret 0, palm mute" enabled=y focusable=n rect=9,215,1565,1737
+      Group id="" name="Bar 11, section Intro: Meridian" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 11, beat 1, sixteenth note, string 7 fret 0, palm mute" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 11, beat 2, sixteenth note, string 7 fret 0, palm mute" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 11, beat 3, eighth note, string 4 fret 2" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 11, beat 5, sixteenth note, string 7 fret 0, palm mute" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 11, beat 6, sixteenth note, string 7 fret 0, palm mute" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 11, beat 7, eighth note, string 4 fret 0" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 11, beat 9, sixteenth note, string 7 fret 0, palm mute" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 11, beat 10, sixteenth note, string 7 fret 0, palm mute" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 11, beat 11, eighth note, string 5 fret 3" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 11, beat 13, eighth note, string 7 fret 0, palm mute" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 11, beat 15, eighth note, string 4 fret 2" enabled=y focusable=n rect=9,215,1565,1737
+      Group id="" name="Bar 12" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 12, beat 1, sixteenth note, string 7 fret 0, palm mute" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 12, beat 2, sixteenth note, string 7 fret 0, palm mute" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 12, beat 3, eighth note, string 4 fret 3" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 12, beat 5, sixteenth note, string 7 fret 0, palm mute" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 12, beat 6, sixteenth note, string 7 fret 0, palm mute" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 12, beat 7, eighth note, string 4 fret 2" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 12, beat 9, sixteenth note, string 7 fret 0, palm mute" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 12, beat 10, sixteenth note, string 7 fret 0, palm mute" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 12, beat 11, eighth note, string 5 fret 3" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 12, beat 13, eighth note, string 5 fret 1; string 6 fret 1; string 7 fret 1" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 12, beat 15, eighth note, string 7 dead note, dead" enabled=y focusable=n rect=9,215,1565,1737
+      Group id="" name="Bar 13" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 13, beat 1, sixteenth note, string 7 fret 0, palm mute" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 13, beat 2, sixteenth note, string 7 fret 0, palm mute" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 13, beat 3, eighth note, string 4 fret 2" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 13, beat 5, sixteenth note, string 7 fret 0, palm mute" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 13, beat 6, sixteenth note, string 7 fret 0, palm mute" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 13, beat 7, eighth note, string 4 fret 0" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 13, beat 9, sixteenth note, string 7 fret 0, palm mute" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 13, beat 10, sixteenth note, string 7 fret 0, palm mute" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 13, beat 11, eighth note, string 5 fret 3" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 13, beat 13, eighth note, string 7 fret 0, palm mute" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 13, beat 15, eighth note, string 4 fret 2" enabled=y focusable=n rect=9,215,1565,1737
+      Group id="" name="Bar 14" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 14, beat 1, sixteenth note, string 7 fret 0, palm mute" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 14, beat 2, sixteenth note, string 7 fret 0, palm mute" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 14, beat 3, eighth note, string 4 fret 3" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 14, beat 5, sixteenth note, string 7 fret 0, palm mute" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 14, beat 6, sixteenth note, string 7 fret 0, palm mute" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 14, beat 7, eighth note, string 4 fret 2" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 14, beat 9, sixteenth note, string 7 fret 0, palm mute" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 14, beat 10, sixteenth note, string 7 fret 0, palm mute" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 14, beat 11, eighth note, string 5 fret 3" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 14, beat 13, quarter note, string 5 fret 1, harmonic, pinch harmonic, vibrato" enabled=y focusable=n rect=9,215,1565,1737
+      Group id="" name="Bar 15" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 15, beat 1, dotted quarter note, string 5 fret 8; string 6 fret 8; string 7 fret 8" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 15, beat 7, sixteenth note, string 7 fret 8, palm mute" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 15, beat 8, sixteenth note, string 7 fret 8, palm mute" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 15, beat 9, eighth note, string 5 fret 8; string 6 fret 8; string 7 fret 8" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 15, beat 11, eighth note, string 7 fret 8, palm mute" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 15, beat 13, eighth note, string 7 fret 8, palm mute" enabled=y focusable=n rect=9,215,1565,1737
+        ListItem id="" name="Bar 15, beat 15, eighth note, string 5 fret 8; string 6 fret 8; string 7 fret 8" enabled=y focusable=n rect=9,215,1565,1737
+    Custom id="" name="Instrument of Rhythm Gtr R" enabled=y focusable=n rect=20000,20000,0,0
+    Custom id="" name="Tab editor" enabled=y focusable=y rect=9,339,1565,1872
+      Group id="" name="Bar 1, section Intro: Embers, current bar" enabled=y focusable=n rect=9,339,1565,1872
+        ListItem id="" name="Bar 1, beat 1, quarter rest" enabled=y focusable=n rect=9,339,1565,1872
+      Group id="" name="Bar 2" enabled=y focusable=n rect=9,339,1565,1872
+        ListItem id="" name="Bar 2, beat 1, whole rest" enabled=y focusable=n rect=9,339,1565,1872
+      Group id="" name="Bar 3" enabled=y focusable=n rect=9,339,1565,1872
+        ListItem id="" name="Bar 3, beat 1, whole rest" enabled=y focusable=n rect=9,339,1565,1872
+      Group id="" name="Bar 4" enabled=y focusable=n rect=9,339,1565,1872
+        ListItem id="" name="Bar 4, beat 1, whole rest" enabled=y focusable=n rect=9,339,1565,1872
+      Group id="" name="Bar 5" enabled=y focusable=n rect=9,339,1565,1872
+        ListItem id="" name="Bar 5, beat 1, whole rest" enabled=y focusable=n rect=9,339,1565,1872
+      Group id="" name="Bar 6" enabled=y focusable=n rect=9,339,1565,1872
+        ListItem id="" name="Bar 6, beat 1, whole rest" enabled=y focusable=n rect=9,339,1565,1872
+      Group id="" name="Bar 7" enabled=y focusable=n rect=9,339,1565,1872
+        ListItem id="" name="Bar 7, beat 1, whole rest" enabled=y focusable=n rect=9,339,1565,1872
+      Group id="" name="Bar 8" enabled=y focusable=n rect=9,339,1565,1872
+        ListItem id="" name="Bar 8, beat 1, whole rest" enabled=y focusable=n rect=9,339,1565,1872
+      Group id="" name="Bar 9" enabled=y focusable=n rect=9,339,1565,1872
+        ListItem id="" name="Bar 9, beat 1, whole rest" enabled=y focusable=n rect=9,339,1565,1872
+      Group id="" name="Bar 10, section Swell" enabled=y focusable=n rect=9,339,1565,1872
+        ListItem id="" name="Bar 10, beat 1, half rest" enabled=y focusable=n rect=9,339,1565,1872
+        ListItem id="" name="Bar 10, beat 9, eighth rest" enabled=y focusable=n rect=9,339,1565,1872
+        ListItem id="" name="Bar 10, beat 11, sixteenth note, string 7 fret 0, palm mute" enabled=y focusable=n rect=9,339,1565,1872
+        ListItem id="" name="Bar 10, beat 12, sixteenth note, string 7 fret 0, palm mute" enabled=y focusable=n rect=9,339,1565,1872
+      Group id="" name="Bar 11, section Intro: Meridian" enabled=y focusable=n rect=9,339,1565,1872
+        ListItem id="" name="Bar 11, beat 1, sixteenth note, string 7 fret 0, palm mute" enabled=y focusable=n rect=9,339,1565,1872
+        ListItem id="" name="Bar 11, beat 2, sixteenth note, string 7 fret 0, palm mute" enabled=y focusable=n rect=9,339,1565,1872
+        ListItem id="" name="Bar 11, beat 3, eighth note, string 4 fret 2" enabled=y focusable=n rect=9,339,1565,1872
+        ListItem id="" name="Bar 11, beat 5, sixteenth note, string 7 fret 0, palm mute" enabled=y focusable=n rect=9,339,1565,1872
+        ListItem id="" name="Bar 11, beat 6, sixteenth note, string 7 fret 0, palm mute" enabled=y focusable=n rect=9,339,1565,1872
+        ListItem id="" name="Bar 11, beat 7, eighth note, string 4 fret 0" enabled=y focusable=n rect=9,339,1565,1872
+        ListItem id="" name="Bar 11, beat 9, sixteenth note, string 7 fret 0, palm mute" enabled=y focusable=n rect=9,339,1565,1872
+        ListItem id="" name="Bar 11, beat 10, sixteenth note, string 7 fret 0, palm mute" enabled=y focusable=n rect=9,339,1565,1872
+        ListItem id="" name="Bar 11, beat 11, eighth note, string 5 fret 3" enabled=y focusable=n rect=9,339,1565,1872
+        ListItem id="" name="Bar 11, beat 13, eighth note, string 7 fret 0, palm mute" enabled=y focusable=n rect=9,339,1565,1872
+        ListItem id="" name="Bar 11, beat 15, eighth note, string 4 fret 2" enabled=y focusable=n rect=9,339,1565,1872
+      Group id="" name="Bar 12" enabled=y focusable=n rect=9,339,1565,1872
+        ListItem id="" name="Bar 12, beat 1, sixteenth note, string 7 fret 0, palm mute" enabled=y focusable=n rect=9,339,1565,1872
+        ListItem id="" name="Bar 12, beat 2, sixteenth note, string 7 fret 0, palm mute" enabled=y focusable=n rect=9,339,1565,1872
+        ListItem id="" name="Bar 12, beat 3, eighth note, string 4 fret 3" enabled=y focusable=n rect=9,339,1565,1872
+        ListItem id="" name="Bar 12, beat 5, sixteenth note, string 7 fret 0, palm mute" enabled=y focusable=n rect=9,339,1565,1872
+        ListItem id="" name="Bar 12, beat 6, sixteenth note, string 7 fret 0, palm mute" enabled=y focusable=n rect=9,339,1565,1872
+        ListItem id="" name="Bar 12, beat 7, eighth note, string 4 fret 2" enabled=y focusable=n rect=9,339,1565,1872
+        ListItem id="" name="Bar 12, beat 9, sixteenth note, string 7 fret 0, palm mute" enabled=y focusable=n rect=9,339,1565,1872
+        ListItem id="" name="Bar 12, beat 10, sixteenth note, string 7 fret 0, palm mute" enabled=y focusable=n rect=9,339,1565,1872
+        ListItem id="" name="Bar 12, beat 11, eighth note, string 5 fret 3" enabled=y focusable=n rect=9,339,1565,1872
+        ListItem id="" name="Bar 12, beat 13, eighth note, string 5 fret 1; string 6 fret 1; string 7 fret 1" enabled=y focusable=n rect=9,339,1565,1872
+        ListItem id="" name="Bar 12, beat 15, eighth note, string 7 dead note, dead" enabled=y focusable=n rect=9,339,1565,1872
+      Group id="" name="Bar 13" enabled=y focusable=n rect=9,339,1565,1872
+        ListItem id="" name="Bar 13, beat 1, sixteenth note, string 7 fret 0, palm mute" enabled=y focusable=n rect=9,339,1565,1872
+        ListItem id="" name="Bar 13, beat 2, sixteenth note, string 7 fret 0, palm mute" enabled=y focusable=n rect=9,339,1565,1872
+        ListItem id="" name="Bar 13, beat 3, eighth note, string 4 fret 2" enabled=y focusable=n rect=9,339,1565,1872
+        ListItem id="" name="Bar 13, beat 5, sixteenth note, string 7 fret 0, palm mute" enabled=y focusable=n rect=9,339,1565,1872
+        ListItem id="" name="Bar 13, beat 6, sixteenth note, string 7 fret 0, palm mute" enabled=y focusable=n rect=9,339,1565,1872
+        ListItem id="" name="Bar 13, beat 7, eighth note, string 4 fret 0" enabled=y focusable=n rect=9,339,1565,1872
+        ListItem id="" name="Bar 13, beat 9, sixteenth note, string 7 fret 0, palm mute" enabled=y focusable=n rect=9,339,1565,1872
+        ListItem id="" name="Bar 13, beat 10, sixteenth note, string 7 fret 0, palm mute" enabled=y focusable=n rect=9,339,1565,1872
+        ListItem id="" name="Bar 13, beat 11, eighth note, string 5 fret 3" enabled=y focusable=n rect=9,339,1565,1872
+        ListItem id="" name="Bar 13, beat 13, eighth note, string 7 fret 0, palm mute" enabled=y focusable=n rect=9,339,1565,1872
+        ListItem id="" name="Bar 13, beat 15, eighth note, string 4 fret 2" enabled=y focusable=n rect=9,339,1565,1872
+      Group id="" name="Bar 14" enabled=y focusable=n rect=9,339,1565,1872
+        ListItem id="" name="Bar 14, beat 1, sixteenth note, string 7 fret 0, palm mute" enabled=y focusable=n rect=9,339,1565,1872
+        ListItem id="" name="Bar 14, beat 2, sixteenth note, string 7 fret 0, palm mute" enabled=y focusable=n rect=9,339,1565,1872
+        ListItem id="" name="Bar 14, beat 3, eighth note, string 4 fret 3" enabled=y focusable=n rect=9,339,1565,1872
+        ListItem id="" name="Bar 14, beat 5, sixteenth note, string 7 fret 0, palm mute" enabled=y focusable=n rect=9,339,1565,1872
+        ListItem id="" name="Bar 14, beat 6, sixteenth note, string 7 fret 0, palm mute" enabled=y focusable=n rect=9,339,1565,1872
+        ListItem id="" name="Bar 14, beat 7, eighth note, string 4 fret 2" enabled=y focusable=n rect=9,339,1565,1872
+        ListItem id="" name="Bar 14, beat 9, sixteenth note, string 7 fret 0, palm mute" enabled=y focusable=n rect=9,339,1565,1872
+        ListItem id="" name="Bar 14, beat 10, sixteenth note, string 7 fret 0, palm mute" enabled=y focusable=n rect=9,339,1565,1872
+        ListItem id="" name="Bar 14, beat 11, eighth note, string 5 fret 3" enabled=y focusable=n rect=9,339,1565,1872
+        ListItem id="" name="Bar 14, beat 13, quarter note, string 5 fret 1, harmonic, pinch harmonic, vibrato" enabled=y focusable=n rect=9,339,1565,1872
+      Group id="" name="Bar 15" enabled=y focusable=n rect=9,339,1565,1872
+        ListItem id="" name="Bar 15, beat 1, dotted quarter note, string 5 fret 8; string 6 fret 8; string 7 fret 8" enabled=y focusable=n rect=9,339,1565,1872
+        ListItem id="" name="Bar 15, beat 7, sixteenth note, string 7 fret 8, palm mute" enabled=y focusable=n rect=9,339,1565,1872
+        ListItem id="" name="Bar 15, beat 8, sixteenth note, string 7 fret 8, palm mute" enabled=y focusable=n rect=9,339,1565,1872
+        ListItem id="" name="Bar 15, beat 9, eighth note, string 5 fret 8; string 6 fret 8; string 7 fret 8" enabled=y focusable=n rect=9,339,1565,1872
+        ListItem id="" name="Bar 15, beat 11, eighth note, string 7 fret 8, palm mute" enabled=y focusable=n rect=9,339,1565,1872
+        ListItem id="" name="Bar 15, beat 13, eighth note, string 7 fret 8, palm mute" enabled=y focusable=n rect=9,339,1565,1872
+        ListItem id="" name="Bar 15, beat 15, eighth note, string 5 fret 8; string 6 fret 8; string 7 fret 8" enabled=y focusable=n rect=9,339,1565,1872
+    Button id="DockLayout.ShowOrHide" name="Show or hide the instrument of Rhythm Gtr R" enabled=y focusable=y rect=1536,404,30,24
+    Text id="" name="Rhythm Gtr R" enabled=y focusable=n rect=29,407,1503,18
+    Custom id="" name="Instrument of Lead Gtr" enabled=y focusable=n rect=20000,20000,0,0
+    Custom id="" name="Tab editor" enabled=y focusable=y rect=9,473,1565,2174
+      Group id="" name="Bar 1, section Intro: Embers, current bar" enabled=y focusable=n rect=9,473,1565,2174
+        ListItem id="" name="Bar 1, beat 1, quarter rest" enabled=y focusable=n rect=9,473,1565,2174
+      Group id="" name="Bar 2" enabled=y focusable=n rect=9,473,1565,2174
+        ListItem id="" name="Bar 2, beat 1, whole rest" enabled=y focusable=n rect=9,473,1565,2174
+      Group id="" name="Bar 3" enabled=y focusable=n rect=9,473,1565,2174
+        ListItem id="" name="Bar 3, beat 1, whole rest" enabled=y focusable=n rect=9,473,1565,2174
+      Group id="" name="Bar 4" enabled=y focusable=n rect=9,473,1565,2174
+        ListItem id="" name="Bar 4, beat 1, whole rest" enabled=y focusable=n rect=9,473,1565,2174
+      Group id="" name="Bar 5" enabled=y focusable=n rect=9,473,1565,2174
+        ListItem id="" name="Bar 5, beat 1, whole rest" enabled=y focusable=n rect=9,473,1565,2174
+      Group id="" name="Bar 6" enabled=y focusable=n rect=9,473,1565,2174
+        ListItem id="" name="Bar 6, beat 1, whole rest" enabled=y focusable=n rect=9,473,1565,2174
+      Group id="" name="Bar 7" enabled=y focusable=n rect=9,473,1565,2174
+        ListItem id="" name="Bar 7, beat 1, whole rest" enabled=y focusable=n rect=9,473,1565,2174
+      Group id="" name="Bar 8" enabled=y focusable=n rect=9,473,1565,2174
+        ListItem id="" name="Bar 8, beat 1, whole rest" enabled=y focusable=n rect=9,473,1565,2174
+      Group id="" name="Bar 9" enabled=y focusable=n rect=9,473,1565,2174
+        ListItem id="" name="Bar 9, beat 1, whole rest" enabled=y focusable=n rect=9,473,1565,2174
+      Group id="" name="Bar 10, section Swell" enabled=y focusable=n rect=9,473,1565,2174
+        ListItem id="" name="Bar 10, beat 1, quarter rest" enabled=y focusable=n rect=9,473,1565,2174
+      Group id="" name="Bar 11, section Intro: Meridian" enabled=y focusable=n rect=9,473,1565,2174
+        ListItem id="" name="Bar 11, beat 1, whole rest" enabled=y focusable=n rect=9,473,1565,2174
+      Group id="" name="Bar 12" enabled=y focusable=n rect=9,473,1565,2174
+        ListItem id="" name="Bar 12, beat 1, whole rest" enabled=y focusable=n rect=9,473,1565,2174
+      Group id="" name="Bar 13" enabled=y focusable=n rect=9,473,1565,2174
+        ListItem id="" name="Bar 13, beat 1, whole rest" enabled=y focusable=n rect=9,473,1565,2174
+      Group id="" name="Bar 14" enabled=y focusable=n rect=9,473,1565,2174
+        ListItem id="" name="Bar 14, beat 1, whole rest" enabled=y focusable=n rect=9,473,1565,2174
+      Group id="" name="Bar 15" enabled=y focusable=n rect=9,473,1565,2174
+        ListItem id="" name="Bar 15, beat 1, dotted quarter note, string 1 fret 12" enabled=y focusable=n rect=9,473,1565,2174
+        ListItem id="" name="Bar 15, beat 7, eighth note, string 1 fret 10" enabled=y focusable=n rect=9,473,1565,2174
+        ListItem id="" name="Bar 15, beat 9, quarter note, string 1 fret 8" enabled=y focusable=n rect=9,473,1565,2174
+        ListItem id="" name="Bar 15, beat 13, quarter note, string 1 fret 12" enabled=y focusable=n rect=9,473,1565,2174
+    Button id="DockLayout.ShowOrHide" name="Show or hide the instrument of Lead Gtr" enabled=y focusable=y rect=1536,537,30,24
+    Text id="" name="Lead Gtr" enabled=y focusable=n rect=29,540,1503,18
+    ScrollBar id="VerticalScrollBar" name="" enabled=y focusable=n rect=1582,107,17,455
+      Button id="DockLayout.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=20000,20000,0,0
+      Thumb id="" name="" enabled=y focusable=n rect=1582,107,17,361
+      Button id="DockLayout.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=1582,468,17,94
+  List id="Arrangement" name="Arrangement" enabled=y focusable=n rect=1,569,1598,402
+    Text id="" name="♪" enabled=y focusable=n rect=46,614,8,18
+    Text id="" name="●" enabled=y focusable=n rect=73,614,8,18
+    Text id="" name="#" enabled=y focusable=n rect=98,614,8,18
+    Text id="" name="TRACK" enabled=y focusable=n rect=122,614,40,18
+    Text id="" name="FX" enabled=y focusable=n rect=289,614,14,18
+    Text id="" name="M" enabled=y focusable=n rect=331,614,12,18
+    Text id="" name="S" enabled=y focusable=n rect=359,614,8,18
+    Text id="" name="VOLUME" enabled=y focusable=n rect=391,614,52,18
+    Text id="" name="PAN" enabled=y focusable=n rect=486,614,26,18
+    Thumb id="" name="" enabled=y focusable=n rect=31,614,7,18
+    Thumb id="" name="" enabled=y focusable=n rect=63,614,7,18
+    Thumb id="" name="" enabled=y focusable=n rect=85,614,7,18
+    Thumb id="" name="" enabled=y focusable=n rect=113,614,7,18
+    Thumb id="" name="" enabled=y focusable=n rect=265,614,7,18
+    Thumb id="" name="" enabled=y focusable=n rect=321,614,7,18
+    Thumb id="" name="" enabled=y focusable=n rect=347,614,7,18
+    Thumb id="" name="" enabled=y focusable=n rect=373,614,7,18
+    Thumb id="" name="" enabled=y focusable=n rect=455,614,7,18
+    Button id="Arrangement.LiveInput" name="Live input" enabled=y focusable=y rect=8,574,34,34
+    Button id="Arrangement.ZoomInTimeline" name="Zoom in timeline" enabled=y focusable=y rect=513,567,26,24
+    Button id="Arrangement.ZoomOutTimeline" name="Zoom out timeline" enabled=y focusable=y rect=513,591,26,24
+    Slider id="Arrangement.100" name=": 100" enabled=y focusable=y rect=468,572,38,38
+    Button id="Arrangement.GlobalTuning" name="Global tuning" enabled=y focusable=y rect=428,577,34,28
+      Text id="" name="0" enabled=y focusable=n rect=448,583,7,16
+    Button id="Arrangement.Snap" name="Snap" enabled=y focusable=y rect=394,576,30,30
+    Button id="Arrangement.Mixer" name="Mixer" enabled=y focusable=y rect=356,574,34,34
+    Button id="Transport.RewindToBeginning" name="Rewind to beginning" enabled=y focusable=y rect=49,574,34,34
+    Button id="TransportStop" name="Stop playback" enabled=y focusable=y rect=85,574,34,34
+    Button id="Transport.Record" name="Record" enabled=y focusable=y rect=121,574,34,34
+    Button id="TransportPlay" name="Play or pause" enabled=y focusable=y rect=157,574,34,34
+    Button id="Transport.NextSection" name="Next section" enabled=y focusable=y rect=193,574,34,34
+    Button id="Transport.CountIn" name="Click and beat count-in" enabled=y focusable=y rect=236,574,34,34
+    Button id="TransportMetronome" name="Metronome off" enabled=y focusable=y rect=272,574,34,34
+    Button id="TransportLoop" name="Loop off" enabled=y focusable=y rect=308,574,34,34
+    Pane id="" name="" enabled=y focusable=y rect=1,633,550,338
+      ListItem id="" name="Track 1: Rhythm Gtr L" enabled=y focusable=y rect=1,633,533,34
+        Button id="Arrangement.Track1Properties" name="Track 1 properties" enabled=y focusable=y rect=9,638,24,24
+        Button id="Arrangement.InstrumentDistortionGuitar" name="Instrument: Distortion Guitar (7 strings)" enabled=y focusable=y rect=35,635,31,29
+        Button id="Arrangement.ArmTrackFor" name="Arm track for recording" enabled=y focusable=y rect=67,640,20,20
+        Text id="" name="1" enabled=y focusable=n rect=99,643,6,14
+        Edit id="Arrangement.RhythmGtrL" name="Rhythm Gtr L" enabled=y focusable=n rect=116,635,76,30
+        Button id="Arrangement.TrackFXChain" name="Track FX chain" enabled=y focusable=y rect=254,639,50,22
+        Button id="Arrangement.MuteTrack" name="Mute track" enabled=y focusable=y rect=309,638,23,24
+          Text id="" name="M" enabled=y focusable=n rect=315,643,10,14
+        Button id="Arrangement.SoloTrack" name="Solo track" enabled=y focusable=y rect=335,638,23,24
+          Text id="" name="S" enabled=y focusable=n rect=343,643,6,14
+        Slider id="Arrangement.Slider0" name="Slider0" enabled=y focusable=y rect=365,638,66,24
+          Button id="Arrangement.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=365,643,36,14
+          Thumb id="SliderThumb" name="" enabled=y focusable=n rect=401,643,18,14
+          Button id="Arrangement.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=419,643,12,14
+        Slider id="Arrangement.Slider0" name="Slider0" enabled=y focusable=y rect=447,638,66,24
+          Button id="Arrangement.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=20000,20000,0,0
+          Thumb id="SliderThumb" name="" enabled=y focusable=n rect=447,643,18,14
+          Button id="Arrangement.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=465,643,48,14
+      ListItem id="" name="Track 2: Rhythm Gtr R" enabled=y focusable=y rect=1,667,533,34
+        Button id="Arrangement.Track2Properties" name="Track 2 properties" enabled=y focusable=y rect=9,672,24,24
+        Button id="Arrangement.InstrumentDistortionGuitar" name="Instrument: Distortion Guitar (8 strings)" enabled=y focusable=y rect=35,669,31,29
+        Button id="Arrangement.ArmTrackFor" name="Arm track for recording" enabled=y focusable=y rect=67,674,20,20
+        Text id="" name="2" enabled=y focusable=n rect=99,677,6,14
+        Edit id="Arrangement.RhythmGtrR" name="Rhythm Gtr R" enabled=y focusable=n rect=116,669,77,30
+        Button id="Arrangement.TrackFXChain" name="Track FX chain" enabled=y focusable=y rect=254,673,50,22
+        Button id="Arrangement.MuteTrack" name="Mute track" enabled=y focusable=y rect=309,672,23,24
+          Text id="" name="M" enabled=y focusable=n rect=315,677,10,14
+        Button id="Arrangement.SoloTrack" name="Solo track" enabled=y focusable=y rect=335,672,23,24
+          Text id="" name="S" enabled=y focusable=n rect=343,677,6,14
+        Slider id="Arrangement.Slider0" name="Slider0" enabled=y focusable=y rect=365,672,66,24
+          Button id="Arrangement.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=365,677,36,14
+          Thumb id="SliderThumb" name="" enabled=y focusable=n rect=401,677,18,14
+          Button id="Arrangement.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=419,677,12,14
+        Slider id="Arrangement.Slider0" name="Slider0" enabled=y focusable=y rect=447,672,66,24
+          Button id="Arrangement.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=447,677,48,14
+          Thumb id="SliderThumb" name="" enabled=y focusable=n rect=495,677,18,14
+          Button id="Arrangement.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=20000,20000,0,0
+      ListItem id="" name="Track 3: Lead Gtr" enabled=y focusable=y rect=1,701,533,34
+        Button id="Arrangement.Track3Properties" name="Track 3 properties" enabled=y focusable=y rect=9,706,24,24
+        Button id="Arrangement.InstrumentOverdrivenGuitar" name="Instrument: Overdriven Guitar" enabled=y focusable=y rect=35,703,31,29
+        Button id="Arrangement.ArmTrackFor" name="Arm track for recording" enabled=y focusable=y rect=67,708,20,20
+        Text id="" name="3" enabled=y focusable=n rect=99,711,6,14
+        Edit id="Arrangement.LeadGtr" name="Lead Gtr" enabled=y focusable=n rect=116,703,53,30
+        Button id="Arrangement.TrackFXChain" name="Track FX chain" enabled=y focusable=y rect=254,707,50,22
+        Button id="Arrangement.MuteTrack" name="Mute track" enabled=y focusable=y rect=309,706,23,24
+          Text id="" name="M" enabled=y focusable=n rect=315,711,10,14
+        Button id="Arrangement.SoloTrack" name="Solo track" enabled=y focusable=y rect=335,706,23,24
+          Text id="" name="S" enabled=y focusable=n rect=343,711,6,14
+        Slider id="Arrangement.Slider0" name="Slider0" enabled=y focusable=y rect=365,706,66,24
+          Button id="Arrangement.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=365,711,36,14
+          Thumb id="SliderThumb" name="" enabled=y focusable=n rect=401,711,18,14
+          Button id="Arrangement.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=419,711,12,14
+        Slider id="Arrangement.Slider0" name="Slider0" enabled=y focusable=y rect=447,706,66,24
+          Button id="Arrangement.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=447,711,24,14
+          Thumb id="SliderThumb" name="" enabled=y focusable=n rect=471,711,18,14
+          Button id="Arrangement.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=489,711,24,14
+      ListItem id="" name="Track 4: Lead Harmony" enabled=y focusable=y rect=1,735,533,34
+        Button id="Arrangement.Track4Properties" name="Track 4 properties" enabled=y focusable=y rect=9,740,24,24
+        Button id="Arrangement.InstrumentOverdrivenGuitar" name="Instrument: Overdriven Guitar" enabled=y focusable=y rect=35,737,31,29
+        Button id="Arrangement.ArmTrackFor" name="Arm track for recording" enabled=y focusable=y rect=67,742,20,20
+        Text id="" name="4" enabled=y focusable=n rect=99,745,6,14
+        Edit id="Arrangement.LeadHarmony" name="Lead Harmony" enabled=y focusable=n rect=116,737,83,30
+        Button id="Arrangement.TrackFXChain" name="Track FX chain" enabled=y focusable=y rect=254,741,50,22
+        Button id="Arrangement.MuteTrack" name="Mute track" enabled=y focusable=y rect=309,740,23,24
+          Text id="" name="M" enabled=y focusable=n rect=315,745,10,14
+        Button id="Arrangement.SoloTrack" name="Solo track" enabled=y focusable=y rect=335,740,23,24
+          Text id="" name="S" enabled=y focusable=n rect=343,745,6,14
+        Slider id="Arrangement.Slider0" name="Slider0" enabled=y focusable=y rect=365,740,66,24
+          Button id="Arrangement.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=365,745,33,14
+          Thumb id="SliderThumb" name="" enabled=y focusable=n rect=398,745,18,14
+          Button id="Arrangement.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=416,745,15,14
+        Slider id="Arrangement.Slider0" name="Slider0" enabled=y focusable=y rect=447,740,66,24
+          Button id="Arrangement.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=447,745,18,14
+          Thumb id="SliderThumb" name="" enabled=y focusable=n rect=465,745,18,14
+          Button id="Arrangement.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=483,745,30,14
+      ListItem id="" name="Track 5: Clean Gtr" enabled=y focusable=y rect=1,769,533,34
+        Button id="Arrangement.Track5Properties" name="Track 5 properties" enabled=y focusable=y rect=9,774,24,24
+        Button id="Arrangement.InstrumentElectricGuitar" name="Instrument: Electric Guitar (clean)" enabled=y focusable=y rect=35,771,31,29
+        Button id="Arrangement.ArmTrackFor" name="Arm track for recording" enabled=y focusable=y rect=67,776,20,20
+        Text id="" name="5" enabled=y focusable=n rect=99,779,6,14
+        Edit id="Arrangement.CleanGtr" name="Clean Gtr" enabled=y focusable=n rect=116,771,57,30
+        Button id="Arrangement.TrackFXChain" name="Track FX chain" enabled=y focusable=y rect=254,775,50,22
+        Button id="Arrangement.MuteTrack" name="Mute track" enabled=y focusable=y rect=309,774,23,24
+          Text id="" name="M" enabled=y focusable=n rect=315,779,10,14
+        Button id="Arrangement.SoloTrack" name="Solo track" enabled=y focusable=y rect=335,774,23,24
+          Text id="" name="S" enabled=y focusable=n rect=343,779,6,14
+        Slider id="Arrangement.Slider0" name="Slider0" enabled=y focusable=y rect=365,774,66,24
+          Button id="Arrangement.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=365,779,30,14
+          Thumb id="SliderThumb" name="" enabled=y focusable=n rect=395,779,18,14
+          Button id="Arrangement.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=413,779,18,14
+        Slider id="Arrangement.Slider0" name="Slider0" enabled=y focusable=y rect=447,774,66,24
+          Button id="Arrangement.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=447,779,30,14
+          Thumb id="SliderThumb" name="" enabled=y focusable=n rect=477,779,18,14
+          Button id="Arrangement.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=495,779,18,14
+      ListItem id="" name="Track 6: Bass" enabled=y focusable=y rect=1,803,533,34
+        Button id="Arrangement.Track6Properties" name="Track 6 properties" enabled=y focusable=y rect=9,808,24,24
+        Button id="Arrangement.InstrumentElectricBass" name="Instrument: Electric Bass (pick) (5 strings)" enabled=y focusable=y rect=35,805,31,29
+        Button id="Arrangement.ArmTrackFor" name="Arm track for recording" enabled=y focusable=y rect=67,810,20,20
+        Text id="" name="6" enabled=y focusable=n rect=99,813,6,14
+        Edit id="Arrangement.Bass" name="Bass" enabled=y focusable=n rect=116,805,33,30
+        Button id="Arrangement.TrackFXChain" name="Track FX chain" enabled=y focusable=y rect=254,809,50,22
+        Button id="Arrangement.MuteTrack" name="Mute track" enabled=y focusable=y rect=309,808,23,24
+          Text id="" name="M" enabled=y focusable=n rect=315,813,10,14
+        Button id="Arrangement.SoloTrack" name="Solo track" enabled=y focusable=y rect=335,808,23,24
+          Text id="" name="S" enabled=y focusable=n rect=343,813,6,14
+        Slider id="Arrangement.Slider0" name="Slider0" enabled=y focusable=y rect=365,808,66,24
+          Button id="Arrangement.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=365,813,39,14
+          Thumb id="SliderThumb" name="" enabled=y focusable=n rect=404,813,18,14
+          Button id="Arrangement.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=422,813,9,14
+        Slider id="Arrangement.Slider0" name="Slider0" enabled=y focusable=y rect=447,808,66,24
+          Button id="Arrangement.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=447,813,24,14
+          Thumb id="SliderThumb" name="" enabled=y focusable=n rect=471,813,18,14
+          Button id="Arrangement.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=489,813,24,14
+      ListItem id="" name="Track 7: Sub Drop" enabled=y focusable=y rect=1,837,533,34
+        Button id="Arrangement.Track7Properties" name="Track 7 properties" enabled=y focusable=y rect=9,842,24,24
+        Button id="Arrangement.InstrumentSynthBass" name="Instrument: Synth Bass 1" enabled=y focusable=y rect=35,839,31,29
+        Button id="Arrangement.ArmTrackFor" name="Arm track for recording" enabled=y focusable=y rect=67,844,20,20
+        Text id="" name="7" enabled=y focusable=n rect=99,847,6,14
+        Edit id="Arrangement.SubDrop" name="Sub Drop" enabled=y focusable=n rect=116,839,58,30
+        Button id="Arrangement.TrackFXChain" name="Track FX chain" enabled=y focusable=y rect=254,843,50,22
+        Button id="Arrangement.MuteTrack" name="Mute track" enabled=y focusable=y rect=309,842,23,24
+          Text id="" name="M" enabled=y focusable=n rect=315,847,10,14
+        Button id="Arrangement.SoloTrack" name="Solo track" enabled=y focusable=y rect=335,842,23,24
+          Text id="" name="S" enabled=y focusable=n rect=343,847,6,14
+        Slider id="Arrangement.Slider0" name="Slider0" enabled=y focusable=y rect=365,842,66,24
+          Button id="Arrangement.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=365,847,36,14
+          Thumb id="SliderThumb" name="" enabled=y focusable=n rect=401,847,18,14
+          Button id="Arrangement.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=419,847,12,14
+        Slider id="Arrangement.Slider0" name="Slider0" enabled=y focusable=y rect=447,842,66,24
+          Button id="Arrangement.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=447,847,24,14
+          Thumb id="SliderThumb" name="" enabled=y focusable=n rect=471,847,18,14
+          Button id="Arrangement.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=489,847,24,14
+      ListItem id="" name="Track 8: Drums" enabled=y focusable=y rect=1,871,533,34
+        Button id="Arrangement.Track8Properties" name="Track 8 properties" enabled=y focusable=y rect=9,876,24,24
+        Button id="Arrangement.InstrumentDrumKit" name="Instrument: Drum Kit (Standard)" enabled=y focusable=y rect=35,873,31,29
+        Button id="Arrangement.ArmTrackFor" name="Arm track for recording" enabled=y focusable=y rect=67,878,20,20
+        Text id="" name="8" enabled=y focusable=n rect=99,881,6,14
+        Edit id="Arrangement.Drums" name="Drums" enabled=y focusable=n rect=116,873,44,30
+        Button id="Arrangement.TrackFXChain" name="Track FX chain" enabled=y focusable=y rect=254,877,50,22
+        Button id="Arrangement.MuteTrack" name="Mute track" enabled=y focusable=y rect=309,876,23,24
+          Text id="" name="M" enabled=y focusable=n rect=315,881,10,14
+        Button id="Arrangement.SoloTrack" name="Solo track" enabled=y focusable=y rect=335,876,23,24
+          Text id="" name="S" enabled=y focusable=n rect=343,881,6,14
+        Slider id="Arrangement.Slider0" name="Slider0" enabled=y focusable=y rect=365,876,66,24
+          Button id="Arrangement.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=365,881,42,14
+          Thumb id="SliderThumb" name="" enabled=y focusable=n rect=407,881,18,14
+          Button id="Arrangement.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=425,881,6,14
+        Slider id="Arrangement.Slider0" name="Slider0" enabled=y focusable=y rect=447,876,66,24
+          Button id="Arrangement.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=447,881,24,14
+          Thumb id="SliderThumb" name="" enabled=y focusable=n rect=471,881,18,14
+          Button id="Arrangement.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=489,881,24,14
+      ListItem id="" name="Track 9: Pad / Strings" enabled=y focusable=y rect=1,905,533,34
+        Button id="Arrangement.Track9Properties" name="Track 9 properties" enabled=y focusable=y rect=9,910,24,24
+        Button id="Arrangement.InstrumentPad2" name="Instrument: Pad 2 (warm)" enabled=y focusable=y rect=35,907,31,29
+        Button id="Arrangement.ArmTrackFor" name="Arm track for recording" enabled=y focusable=y rect=67,912,20,20
+        Text id="" name="9" enabled=y focusable=n rect=99,915,6,14
+        Edit id="Arrangement.PadStrings" name="Pad / Strings" enabled=y focusable=n rect=116,907,73,30
+        Button id="Arrangement.TrackFXChain" name="Track FX chain" enabled=y focusable=y rect=254,911,50,22
+        Button id="Arrangement.MuteTrack" name="Mute track" enabled=y focusable=y rect=309,910,23,24
+          Text id="" name="M" enabled=y focusable=n rect=315,915,10,14
+        Button id="Arrangement.SoloTrack" name="Solo track" enabled=y focusable=y rect=335,910,23,24
+          Text id="" name="S" enabled=y focusable=n rect=343,915,6,14
+        Slider id="Arrangement.Slider0" name="Slider0" enabled=y focusable=y rect=365,910,66,24
+          Button id="Arrangement.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=365,915,24,14
+          Thumb id="SliderThumb" name="" enabled=y focusable=n rect=389,915,18,14
+          Button id="Arrangement.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=407,915,24,14
+        Slider id="Arrangement.Slider0" name="Slider0" enabled=y focusable=y rect=447,910,66,24
+          Button id="Arrangement.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=447,915,24,14
+          Thumb id="SliderThumb" name="" enabled=y focusable=n rect=471,915,18,14
+          Button id="Arrangement.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=489,915,24,14
+      ListItem id="" name="Track 10: Piano" enabled=y focusable=y rect=1,939,533,34
+        Button id="Arrangement.Track10Properties" name="Track 10 properties" enabled=y focusable=y rect=9,944,24,24
+        Button id="Arrangement.InstrumentAcousticGrand" name="Instrument: Acoustic Grand Piano" enabled=y focusable=y rect=35,941,31,29
+        Button id="Arrangement.ArmTrackFor" name="Arm track for recording" enabled=y focusable=y rect=67,946,20,20
+        Text id="" name="10" enabled=y focusable=n rect=96,949,12,14
+        Edit id="Arrangement.Piano" name="Piano" enabled=y focusable=n rect=116,941,39,30
+        Button id="Arrangement.TrackFXChain" name="Track FX chain" enabled=y focusable=y rect=254,945,50,22
+        Button id="Arrangement.MuteTrack" name="Mute track" enabled=y focusable=y rect=309,944,23,24
+          Text id="" name="M" enabled=y focusable=n rect=315,949,10,14
+        Button id="Arrangement.SoloTrack" name="Solo track" enabled=y focusable=y rect=335,944,23,24
+          Text id="" name="S" enabled=y focusable=n rect=343,949,6,14
+        Slider id="Arrangement.Slider0" name="Slider0" enabled=y focusable=y rect=365,944,66,24
+          Button id="Arrangement.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=365,949,24,14
+          Thumb id="SliderThumb" name="" enabled=y focusable=n rect=389,949,18,14
+          Button id="Arrangement.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=407,949,24,14
+        Slider id="Arrangement.Slider0" name="Slider0" enabled=y focusable=y rect=447,944,66,24
+          Button id="Arrangement.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=447,949,18,14
+          Thumb id="SliderThumb" name="" enabled=y focusable=n rect=465,949,18,14
+          Button id="Arrangement.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=483,949,30,14
+      Text id="" name="Add track" enabled=y focusable=n rect=252,948,52,16
+      ScrollBar id="VerticalScrollBar" name="" enabled=y focusable=n rect=534,633,17,338
+        Button id="Arrangement.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=20000,20000,0,0
+        Thumb id="" name="" enabled=y focusable=n rect=534,633,17,309
+        Button id="Arrangement.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=534,942,17,29
+    Pane id="" name="" enabled=y focusable=y rect=551,569,1048,402
+      Custom id="" name="Arrangement timeline" enabled=y focusable=y rect=551,569,4260,436
+    Thumb id="" name="" enabled=y focusable=n rect=548,569,6,402
+  Thumb id="" name="" enabled=y focusable=y rect=0,561,1600,9
+# nodes=1349

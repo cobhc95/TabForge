@@ -2,6 +2,8 @@ using TabForge.Audio.Contracts;
 
 namespace TabForge.AudioEngine.Isolation;
 
+// Owns: the isolated plug-in's engine-side control channel (request ids, per-id waits, unknown-reply drops).
+
 /// <summary>
 /// The isolated plug-in's control channel (engine side): every command carries a request id that the plug-in's process
 /// echoes in its reply ([uint32 id][payload] after the frame type). Each <see cref="Ask"/> waits only for its own id, so a
@@ -16,7 +18,13 @@ public sealed class PluginControlChannel
     private uint _nextId;
     private int _dropped;
 
-    public PluginControlChannel(Stream pipe) => _pipe = pipe;
+    private readonly EngineLogWriter _log;
+
+    public PluginControlChannel(Stream pipe, EngineLogWriter log)
+    {
+        _pipe = pipe;
+        _log = log;
+    }
 
     /// <summary>Replies dropped because their request was no longer waiting (timed out) or was never sent.</summary>
     public int Dropped => Volatile.Read(ref _dropped);
@@ -43,7 +51,7 @@ public sealed class PluginControlChannel
             var (type, data) = waiter.Task.Result;
             if (type == RemotePlugin.MsgFailed)
             {
-                EngineLog.Write($"isolated plug-in command {command} failed: {FailureText(data)}");
+                _log.Write($"isolated plug-in command {command} failed: {FailureText(data)}");
                 return null;
             }
             return type == expect ? data : null;
@@ -71,14 +79,14 @@ public sealed class PluginControlChannel
     /// Plug-in process side: runs one command's handler and always answers the request id, with
     /// <see cref="RemotePlugin.MsgFailed"/> and the error text when the handler throws.
     /// </summary>
-    public static void Answer(Stream pipe, uint id, Func<(byte Type, Action<BinaryWriter>? Payload)> handler)
+    public static void Answer(Stream pipe, uint id, EngineLogWriter log, Func<(byte Type, Action<BinaryWriter>? Payload)> handler)
     {
         byte type;
         Action<BinaryWriter>? payload;
         try { (type, payload) = handler(); }
         catch (Exception ex)
         {
-            EngineLog.Write($"plug-in command {id} failed: {ex.GetBaseException().Message}");
+            log.Write($"plug-in command {id} failed: {ex.GetBaseException().Message}");
             type = RemotePlugin.MsgFailed;
             var message = ex.GetBaseException().Message;
             payload = w => w.WriteString(message);

@@ -2,7 +2,7 @@
 .SYNOPSIS
     PE-aware comparison of two builds of the native VST3 bridge (tfvst3.dll): is every difference one of the expected, harmless kinds?
 .DESCRIPTION
-    A rebuild of native/tfvst3 from the pinned SDK is not byte-identical to the committed DLL (native/tfvst3/BUILD.md,
+    A rebuild of Source/native/tfvst3 from the pinned SDK is not byte-identical to the committed DLL (Source/native/tfvst3/BUILD.md,
     "Reproducibility"), but the differences must all be of these kinds:
 
       1. Link timestamps: the COFF header TimeDateStamp, the export directory and resource directory timestamps, and the
@@ -17,7 +17,7 @@
     reported as unexplained and the script exits 1. Exit codes: 0 identical or only the expected categories, 1 unexplained
     differences, 2 usage or not a PE file.
 .EXAMPLE
-    .\tools\Compare-NativeBridge.ps1 -Built C:\tfb\Release\tfvst3.dll -Shipped src\TabForge.AudioEngine\native\tfvst3.dll
+    .\Source\tools\Compare-NativeBridge.ps1 -Built C:\tfb\Release\tfvst3.dll -Shipped Source\src\TabForge.AudioEngine\native\tfvst3.dll
 #>
 [CmdletBinding()]
 param(
@@ -119,7 +119,7 @@ Emit "- checked in: ``$hashB`` ($($b.Length) bytes)"
 
 if ($hashA -eq $hashB) { Emit '- result: identical'; Finish 0 }
 if ($a.Length -ne $b.Length) {
-    Emit "- result: DIFFERENT, sizes differ ($($a.Length) vs $($b.Length) bytes): not explained by timestamps, the PDB identity or path hashes (a different compiler or linker, SDK or source?). Run the build-bridge workflow and commit its output (docs/REPRODUCIBLE_BUILDS.md)."
+    Emit "- result: DIFFERENT, sizes differ ($($a.Length) vs $($b.Length) bytes): not explained by timestamps, the PDB identity or path hashes (a different compiler or linker, SDK or source?). Run the build-bridge workflow and commit its output (Source/docs/REPRODUCIBLE_BUILDS.md)."
     Finish 1
 }
 
@@ -154,5 +154,5 @@ if ($unexplained -eq 0) {
     Emit "- result: same size; all $total differing bytes are link timestamps, the PDB identity or source-path hashes. Code and data are identical."
     Finish 0
 }
-Emit ("- result: DIFFERENT, $unexplained byte(s) differ outside the expected categories (first at offset 0x{0:X}). The bridge source, SDK or compiler differs: run the build-bridge workflow and commit its output (docs/REPRODUCIBLE_BUILDS.md)." -f $first)
+Emit ("- result: DIFFERENT, $unexplained byte(s) differ outside the expected categories (first at offset 0x{0:X}). The bridge source, SDK or compiler differs: run the build-bridge workflow and commit its output (Source/docs/REPRODUCIBLE_BUILDS.md)." -f $first)
 Finish 1

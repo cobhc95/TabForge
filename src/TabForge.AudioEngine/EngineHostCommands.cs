@@ -6,8 +6,9 @@ namespace TabForge.AudioEngine;
 
 // Owns: reader-thread parsing of the engine commands with lists, tails or several range checks (the rest sit in EngineHost.HandleCommand).
 // Does not own: the handlers themselves (EngineSession); the wire layout (EngineMessages.cs, EngineMessageLists.cs).
-// Tests: TestCommandFrameRobustness, TestEngineMessagesRoundTrip.
+// Tests: TestEngineMessagesRoundTrip.
 
+/// <summary>Reader-thread parsing of the engine commands with lists, tails or several range checks.</summary>
 public static partial class EngineHost
 {
     private static void ReadSetMidiProcessors(BinaryReader r)
@@ -17,7 +18,7 @@ public static partial class EngineHost
         var slot = m.Slot;
         var lists = new Dictionary<int, List<MidiProcSpec>>();
         foreach (var (index, specs) in m.Lists) if (index is >= 0 and < 64 && specs.Count > 0) lists[index] = specs.ToList();
-        EngineThreads.Post(() => _session.SetMidiProcessors(slot, lists));
+        Threads.Post(() => _session.SetMidiProcessors(slot, lists));
     }
 
     private static void ReadSetGraph(BinaryReader r)
@@ -28,22 +29,22 @@ public static partial class EngineHost
         foreach (var (s, d) in m.Dests) if (Slot(s, MixEngine.MaxSlots) >= 0 && d >= MixEngine.BusBase && d < MixEngine.MasterSlot) dests[s] = d;
         foreach (var (s, x, src) in m.Sidechains) if (Slot(s, MixEngine.MaxSlots) >= 0 && Slot(src, MixEngine.MaxSlots) >= 0) sides[(s, x)] = src;
         foreach (var (s, x, dst) in m.Forwards) if (Slot(s, MixEngine.MaxSlots) >= 0 && Slot(dst, MixEngine.MaxSlots) >= 0) fwds[(s, x)] = dst;
-        EngineThreads.Post(() => _session.SetGraph(dests, sides, fwds));
+        Threads.Post(() => _session.SetGraph(dests, sides, fwds));
     }
 
     private static void ReadSetClips(BinaryReader r)
     {
         var (slot, clips, owner) = SetClipsMessage.Read(r);
         if (slot < 0 || slot >= MixEngine.MaxSlots) throw new InvalidDataException($"SetClips: track slot {slot} out of range");
-        EngineThreads.Post(() => _session.SetClips(slot, clips, owner));
+        Threads.Post(() => _session.SetClips(slot, clips, owner));
     }
 
     private static void ReadSetPosition(BinaryReader r)
     {
-        var (playing, songSec, stamp, owner) = SetPositionMessage.Read(r);
+        var (playing, songSec, stamp, owner, speed) = SetPositionMessage.Read(r);
         // Reader thread. The position lives in the owner's SongTransport (not in the MixEngine, which Configure
         // replaces on the main thread), published as one immutable record: never torn, never lost to a mixer swap.
-        if (double.IsFinite(songSec)) _session.Transports[owner].SetPosition(playing, Math.Max(0, songSec), stamp);
+        if (double.IsFinite(songSec)) _session.Transports[owner].SetPosition(playing, Math.Max(0, songSec), stamp, speed);
     }
 
     private static void ReadRecord(BinaryReader r)
@@ -57,7 +58,10 @@ public static partial class EngineHost
         }
         if (!double.IsFinite(rawOffsetMs)) throw new InvalidDataException("Record: offset is not a number");
         var offsetMs = Math.Clamp(rawOffsetMs, -Audio.TakeAlignment.MaxOffsetMs, Audio.TakeAlignment.MaxOffsetMs);
-        EngineThreads.Post(() => _session.Record(start, folder, names, offsetMs, owner));
+        // The take's start comes from the clock as it is now, in frame order with the SetPosition commands: read it on this thread, not
+        // when the posted work runs (a later session position report would otherwise move it, e.g. to the compile-relative 0).
+        var songSec = Volatile.Read(ref _session.Mix)?.SongSecFor(owner);
+        Threads.Post(() => _session.Record(start, folder, names, offsetMs, owner, songSec));
     }
 
     private static void ReadPanicSlots(BinaryReader r)

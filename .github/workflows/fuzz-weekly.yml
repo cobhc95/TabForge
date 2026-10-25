@@ -42,7 +42,7 @@ jobs:
         run: dotnet restore TabForge.sln --locked-mode
 
       - name: Build (Release)
-        run: dotnet build TabForge.sln -c Release --no-restore -p:TabForgeFullSuite=true
+        run: dotnet build src/TabForge.Avalonia/TabForge.Avalonia.csproj -c Release --no-restore -o build/ci-app
 
       - name: Fuzz (larger count, random logged seed)
         shell: pwsh
@@ -61,7 +61,7 @@ jobs:
           $line
           Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "### $line"
           $log = Join-Path $PWD 'fuzz.log'
-          $exe = Join-Path $PWD 'src/TabForge/bin/Release/net8.0-windows/TabForge.exe'
+          $exe = Join-Path $PWD 'build/ci-app/TabForge.exe'
           # --require fuzz: the group must run, never be skipped. TabForge.exe is a GUI-subsystem program: start it and wait.
           $p = Start-Process -FilePath $exe -ArgumentList @('--selftest', "`"$log`"", '--areas', 'fuzz', '--require', 'fuzz') -Wait -PassThru
           "self-test exit code: $($p.ExitCode)"

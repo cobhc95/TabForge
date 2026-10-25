@@ -1,5 +1,7 @@
 namespace TabForge.AudioEngine.Plugins;
 
+// Owns: the plug-in instance contract (block MIDI, transport, process and state shapes for VST2/VST3/test doubles).
+
 /// <summary>A MIDI message at a frame inside the current block.</summary>
 public struct BlockMidi
 {
@@ -15,6 +17,8 @@ public struct TransportInfo
     public bool Playing;
     /// <summary>Song time at the start of the block (seconds from the song's start), for audio clips.</summary>
     public double SongSec;
+    /// <summary>Speed of the song clock (1 = normal: the song advances Speed x real time), for audio clips. Offline renders run at 1.</summary>
+    public double Speed;
     /// <summary>
     /// Time signature and bar start (ppq) at the block start, from the song's bar map; <c>Meter.IsValid</c> false when unknown
     /// (then the plug-in gets no time-signature / bar flags).

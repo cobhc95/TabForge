@@ -10,12 +10,12 @@ therefore ship the files GitHub built and attested, and anyone can rebuild them 
 | --- | --- |
 | .NET SDK (compiler, ReadyToRun compiler, runtime pack) | `global.json`: exact version, `rollForward: disable`. CI installs exactly that version (`setup-dotnet` with `global-json-file`). |
 | NuGet packages | `packages.lock.json` per project, restore in locked mode. |
-| alphaTab | `TabForge.AlphaTab`: upstream alphaTab 1.8.4 plus four patches, built from source by `tools/Build-AlphaTab.ps1` and checked in as `vendor/alphatab/*.nupkg` (a local NuGet source, `nuget.config`). CI rebuilds it and fails when the DLL differs; see `vendor/alphatab/README.md`. |
-| Compiler output | `Deterministic`, `ContinuousIntegrationBuild` (always on in `tools/Publish.ps1`, not only when `CI=true`), `PathMap` to `/_/` so no folder name is embedded. |
+| alphaTab | `TabForge.AlphaTab`: upstream alphaTab 1.8.4 plus four patches, built from source by `Source/tools/Build-AlphaTab.ps1` and checked in as `vendor/alphatab/*.nupkg` (a local NuGet source, `nuget.config`). CI rebuilds it and fails when the DLL differs; see `Source/vendor/alphatab/README.md`. |
+| Compiler output | `Deterministic`, `ContinuousIntegrationBuild` (always on in `Source/tools/Publish.ps1`, not only when `CI=true`), `PathMap` to `/_/` so no folder name is embedded. |
 | Version | One `<Version>` in `Directory.Build.props`; the version string carries no git commit id (`IncludeSourceRevisionInInformationalVersion` is `false`, and source-control links are off in the PDB), so a build of the same source is identical whichever clone or commit id it was built from. |
 | Source text | `.gitattributes` forces CRLF for every text file (`* text=auto eol=crlf`), so a checkout is identical on every machine; embedded source checksums and loose text files match. |
-| Build folder | `tools/Package-Release.ps1` builds from a temporary `git worktree` of the committed HEAD, never from the working folder, so uncommitted edits, stray files and local line endings cannot reach the release. It refuses a checkout that is not clean. |
-| Native bridge | One binary: the committed `src/TabForge.AudioEngine/native/tfvst3.dll`, verified against `native/BUILD_PROVENANCE.md`. Both builds ship it. |
+| Build folder | `Source/tools/Package-Release.ps1` builds from a temporary `git worktree` of the committed HEAD, never from the working folder, so uncommitted edits, stray files and local line endings cannot reach the release. It refuses a checkout that is not clean. |
+| Native bridge | One binary: the committed `Source/src/TabForge.AudioEngine/native/tfvst3.dll`, verified against `Source/native/BUILD_PROVENANCE.md`. Both builds ship it. |
 | Zip | Entries are sorted, use forward slashes and one fixed timestamp. |
 
 Not reproducible by design: the Inno Setup installer embeds its own timestamps. Its contents come from the same
@@ -25,12 +25,12 @@ tested folder as the portable zip, so the portable zip is the file to compare.
 
 1. Let GitHub Actions build the tag (the `release` workflow) and download the `release-files` artifact.
 2. On a PC with the pinned SDK (`dotnet --version` prints the version in `global.json`), commit everything and run
-   `.\tools\Package-Release.ps1` from the repository root (it needs Inno Setup 6 or later installed; `-InnoCompiler <path to ISCC.exe>` names it).
+   `.\Source\tools\Package-Release.ps1` from the repository root (it needs Inno Setup 6 or later installed; `-InnoCompiler <path to ISCC.exe>` names it).
    It builds the committed HEAD in a temporary worktree, tests that exact build and leaves the files in `dist\`.
 3. Compare:
 
 ```powershell
-.\tools\Compare-Release.ps1 -ZipA dist\TabForge-<version>-win-x64-portable.zip `
+.\Source\tools\Compare-Release.ps1 -ZipA dist\TabForge-<version>-win-x64-portable.zip `
     -ZipB <download>\TabForge-<version>-win-x64-portable.zip `
     -SetupA dist\TabForge-<version>-setup.exe -SetupB <download>\TabForge-<version>-setup.exe
 ```
@@ -42,19 +42,19 @@ causes) and exits with 0 only when all entries are identical. The installers are
 ## The native bridge
 
 `tfvst3.dll` is the one binary that is not rebuilt for a release. The release ships the DLL committed in the repository
-(`src/TabForge.AudioEngine/native/tfvst3.dll`), so the GitHub build and a local build carry exactly the same bridge.
+(`Source/src/TabForge.AudioEngine/native/tfvst3.dll`), so the GitHub build and a local build carry exactly the same bridge.
 Two rebuilds of the bridge from the same source never match byte for byte, so the committed DLL is produced once, by
 the manual `build-bridge` workflow, and then only reused:
 
 1. The maintainer runs the `build-bridge` workflow (Actions, Run workflow) whenever the bridge source or the SDK pin
    changes. It builds the bridge from the pinned, unpatched SDK on the runner, records the compiler and SHA-256 in
-   `native/BUILD_PROVENANCE.md`, attests the DLL and uploads both files.
-2. The maintainer commits that DLL and that `BUILD_PROVENANCE.md` as they are. `tools/Package-Release.ps1` refuses to
+   `Source/native/BUILD_PROVENANCE.md`, attests the DLL and uploads both files.
+2. The maintainer commits that DLL and that `BUILD_PROVENANCE.md` as they are. `Source/tools/Package-Release.ps1` refuses to
    package when the DLL's SHA-256 differs from the record.
 
 ### What the CI comparison checks
 
-The `native-bridge` job of `windows-ci` rebuilds the bridge on every run and runs `tools/Compare-NativeBridge.ps1`,
+The `native-bridge` job of `windows-ci` rebuilds the bridge on every run and runs `Source/tools/Compare-NativeBridge.ps1`,
 which parses the PE headers of both files, masks the expected differences and requires everything else to be
 identical. The expected differences are:
 
@@ -74,8 +74,8 @@ mean the shipped bridge is wrong; it is the expected result of rebuilding.
 The bridge changes rarely. When its source or the SDK pin changes:
 
 1. Run the `build-bridge` workflow (Actions, Run workflow) on the commit.
-2. Download the `tfvst3-bridge` artifact and copy `tfvst3.dll` to `src/TabForge.AudioEngine/native/` and
-   `BUILD_PROVENANCE.md` to `native/`, unchanged.
+2. Download the `tfvst3-bridge` artifact and copy `tfvst3.dll` to `Source/src/TabForge.AudioEngine/native/` and
+   `BUILD_PROVENANCE.md` to `Source/native/`, unchanged.
 3. Commit both files together.
 
 ## Updating the SDK

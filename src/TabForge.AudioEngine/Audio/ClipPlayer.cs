@@ -5,6 +5,8 @@ using TabForge.Audio.Contracts;
 
 namespace TabForge.AudioEngine.Audio;
 
+// Owns: playing one audio clip (background disk decode into a lock-free ring, audio-thread copy, seek silence).
+
 /// <summary>
 /// Plays one audio clip. A background disk thread (<see cref="DiskStreamer"/>) decodes the file from the right
 /// place into a small lock-free ring (resampled to the engine rate, pitch / speed through SoundTouch); the audio
@@ -20,9 +22,9 @@ public sealed class ClipPlayer : IDisposable
     private readonly bool _fades;
 
     // Shared between the audio thread and the disk thread.
-    private volatile float[]? _ring;
-    private long _write, _read;
-    private double _ringStartSec = double.NaN; // song time of ring frame 0
+    private volatile RingBuffer? _ring;       // null = no ring; a seek publishes a whole new one, so the audio thread always sees one consistent ring
+    private double _requestedSpeed = 1;       // audio thread only: the speed a re-fill was last asked for
+    private double _speed = 1;                 // transport speed, published by the audio thread each block
     private double _request = double.NaN;     // song time the audio thread wants (NaN = none)
     private long _lastUsed;
 
@@ -31,17 +33,42 @@ public sealed class ClipPlayer : IDisposable
     private AudioFileReader? _reader;
     private SoundTouchProcessor? _stretch;
     private bool _sourceDone;   // the source returned nothing (clip end): no point in waking up for it until the next seek
-    private readonly float[] _decode = new float[4096 * 2];
-    private readonly float[] _stretched = new float[8192 * 2];
+    private const int DecodeFloats = 4096 * 2;
+    private const int StretchedFloats = 8192 * 2;
+    // Scratch for one read: taken when the clip first produces sound and dropped with the ring, so a clip far from the playhead holds none.
+    private float[]? _decode;
+    private float[]? _stretched;   // only for a clip with pitch or speed
 
     public bool Failed { get; private set; }
 
     private readonly bool _offline;
 
+    /// <summary>Ring frame 0 starts at song time <paramref name="Sec"/> and the ring was stretched for transport speed <paramref name="Speed"/>: one ring frame is Speed / rate song seconds.</summary>
+    private sealed record RingPlace(double Sec, double Speed);
+
+    /// <summary>
+    /// One ring with its place and counters. Never reused: a seek builds a new one and publishes it in a single write, so the audio thread
+    /// (which reads <see cref="_ring"/> once per block) never sees a half-reset ring or a place from another ring. Only the disk thread
+    /// moves <see cref="Write"/>, only the audio thread moves <see cref="Read"/> (both through Volatile).
+    /// </summary>
+    private sealed class RingBuffer(RingPlace place)
+    {
+        public readonly float[] Data = new float[RingFrames * 2];
+        public readonly RingPlace Place = place;
+        public long Read, Write;
+    }
+
+    /// <summary>The ring frame that plays at song time <paramref name="sec"/>.</summary>
+    private long RingIndex(RingPlace place, double sec) => (long)Math.Round((sec - place.Sec) * _rate / place.Speed);
+
+    /// <summary>The log of the session that owns this player (the shared disk thread writes through it).</summary>
+    public EngineLogWriter Log { get; }
+
     /// <param name="offline">Offline render: decoding, resampling and stretching happen synchronously inside <see cref="Mix"/> (no disk thread, fully deterministic).</param>
-    public ClipPlayer(ClipSpec spec, int rate, bool offline = false)
+    public ClipPlayer(ClipSpec spec, int rate, EngineLogWriter log, bool offline = false)
     {
         Spec = spec;
+        Log = log;
         _rate = rate;
         _offline = offline;
         _gain = (float)Gain.FromDb(spec.GainDb);
@@ -65,82 +92,91 @@ public sealed class ClipPlayer : IDisposable
     /// <summary>Offline: seeks (when the position jumped) and decodes exactly what this block needs, then copies it.</summary>
     private void MixOffline(float[] left, float[] right, int frames, double songSec, int from, double wantedSec, double end)
     {
-        var ringStart = _ring is null ? double.NaN : _ringStartSec;
-        var index = double.IsNaN(ringStart) ? long.MaxValue : (long)Math.Round((wantedSec - ringStart) * _rate);
-        if (_ring is null || Math.Abs(index - _read) > 256) { Seek(wantedSec); if (Failed) return; }
+        var current = _ring;
+        var index = current is null ? long.MaxValue : RingIndex(current.Place, wantedSec);
+        if (current is null || Math.Abs(index - current.Read) > 256) { Seek(wantedSec); if (Failed) return; }
         var ring = _ring;
         if (ring is null) return;
         var count = (int)Math.Min(frames - from, (long)((end - wantedSec) * _rate) + 1);
         var stalls = 0;
-        while (_write - _read < count && stalls < 64)
+        while (ring.Write - ring.Read < count && stalls < 64)
         {
-            var free = RingFrames - (_write - _read);
+            var free = RingFrames - (ring.Write - ring.Read);
             var produced = free >= 1024 ? Produce(ring, (int)Math.Min(free, 4096)) : 0;
             stalls = produced > 0 ? 0 : stalls + 1;
         }
-        count = (int)Math.Min(count, _write - _read);
+        count = (int)Math.Min(count, ring.Write - ring.Read);
         for (var i = 0; i < count; i++)
         {
-            var at = (int)((_read + i) & (RingFrames - 1)) * 2;
+            var at = (int)((ring.Read + i) & (RingFrames - 1)) * 2;
             var g = _fades ? _gain * FadeGain((wantedSec - Spec.StartSec) + (double)i / _rate, Length, Spec.FadeInSec, Spec.FadeOutSec) : _gain;
-            left[from + i] += ring[at] * g;
-            right[from + i] += ring[at + 1] * g;
+            left[from + i] += ring.Data[at] * g;
+            right[from + i] += ring.Data[at + 1] * g;
         }
-        _read += Math.Max(0, count);
+        ring.Read += Math.Max(0, count);
     }
 
     private double Length => Spec.SourceLengthSec / Spec.Speed;
 
     /// <summary>
-    /// Audio thread: adds the clip's audio for the block starting at song time <paramref name="songSec"/>.
-    /// Allocation-free.
+    /// Audio thread: adds the clip's audio for the block starting at song time <paramref name="songSec"/>. The song runs at
+    /// <paramref name="speed"/> times real time, so the block covers frames * speed / rate song seconds and the disk thread
+    /// stretches the clip by that much more (a speed change re-fills the ring in the background, with no silence). Allocation-free.
+    /// Right after a speed change the ring still holds audio stretched for the old speed: it plays on at the new advance (a brief tempo
+    /// error, no silence) until the re-fill is published, which re-anchors on its own place, so the error never accumulates.
     /// </summary>
-    public void Mix(float[] left, float[] right, int frames, double songSec, bool playing)
+    public void Mix(float[] left, float[] right, int frames, double songSec, bool playing, double speed)
     {
         if (!playing || Failed) return;
         var start = Spec.StartSec;
         var end = start + Length;
-        var blockEnd = songSec + (double)frames / _rate;
+        var blockEnd = songSec + frames * speed / _rate;
         if (_offline)
         {
+            // Offline always renders at transport speed 1: the ring is not re-anchored for another speed here.
+            if (speed != 1) throw new ArgumentException("offline clip mixing needs transport speed 1", nameof(speed));
             if (blockEnd <= start || songSec >= end) return;
             var offlineFrom = Math.Max(0, (int)Math.Round((start - songSec) * _rate));
             if (offlineFrom >= frames) return;
             MixOffline(left, right, frames, songSec, offlineFrom, songSec + (double)offlineFrom / _rate, end);
             return;
         }
+        Volatile.Write(ref _speed, speed);
         // Prepare a little ahead of the clip's start.
         if (blockEnd < start)
         {
-            if (start - songSec < 1.5 && !Primed(start)) Volatile.Write(ref _request, start);
+            if (start - songSec < 1.5 && !Primed(start, speed)) Volatile.Write(ref _request, start);
             return;
         }
         if (songSec >= end) return;
-        var from = Math.Max(0, (int)Math.Round((start - songSec) * _rate));
-        var wantedSec = songSec + (double)from / _rate;
+        var from = Math.Max(0, (int)Math.Round((start - songSec) * _rate / speed));
+        var wantedSec = songSec + from * speed / _rate;
         var ring = _ring;
-        var ringStart = Volatile.Read(ref _ringStartSec);
-        if (ring is null || double.IsNaN(ringStart)) { Volatile.Write(ref _request, wantedSec); return; }
-        var index = (long)Math.Round((wantedSec - ringStart) * _rate);
-        var read = Volatile.Read(ref _read);
+        if (ring is null) { Volatile.Write(ref _request, wantedSec); return; }
+        var place = ring.Place;
+        var index = RingIndex(place, wantedSec);
+        var read = Volatile.Read(ref ring.Read);
         // The disk thread answers a seek while the song keeps running, so a fresh ring is usually a little behind the playhead:
         // skip the stale frames when the ring already holds the wanted one (otherwise a busy machine re-seeks forever and the clip never starts).
-        if (index > read + 256 && index < Volatile.Read(ref _write)) { read = index; Volatile.Write(ref _read, read); }
-        else if (Math.Abs(index - read) > 256) { Volatile.Write(ref _request, wantedSec); return; } // jumped: re-seek
-        var available = Volatile.Read(ref _write) - read;
-        var count = (int)Math.Min(Math.Min(frames - from, available), (long)((end - wantedSec) * _rate) + 1);
+        // A ring stretched for another speed is asked for once from the place now wanted; it plays on meanwhile rather than go silent.
+        var inStep = place.Speed == speed;
+        if (!inStep && _requestedSpeed != speed) { _requestedSpeed = speed; Volatile.Write(ref _request, wantedSec); }
+        if (inStep && index > read + 256 && index < Volatile.Read(ref ring.Write)) { read = index; Volatile.Write(ref ring.Read, read); }
+        else if (inStep && Math.Abs(index - read) > 256) { Volatile.Write(ref _request, wantedSec); return; } // jumped: re-seek
+        var available = Volatile.Read(ref ring.Write) - read;
+        var count = (int)Math.Min(Math.Min(frames - from, available), (long)((end - wantedSec) * _rate / speed) + 1);
         for (var i = 0; i < count; i++)
         {
             var at = (int)((read + i) & (RingFrames - 1)) * 2;
-            var g = _fades ? _gain * FadeGain((wantedSec - start) + (double)i / _rate, Length, Spec.FadeInSec, Spec.FadeOutSec) : _gain;
-            left[from + i] += ring[at] * g;
-            right[from + i] += ring[at + 1] * g;
+            var g = _fades ? _gain * FadeGain((wantedSec - start) + i * speed / _rate, Length, Spec.FadeInSec, Spec.FadeOutSec) : _gain;
+            left[from + i] += ring.Data[at] * g;
+            right[from + i] += ring.Data[at + 1] * g;
         }
-        Volatile.Write(ref _read, read + Math.Max(0, count));
+        Volatile.Write(ref ring.Read, read + Math.Max(0, count));
         Volatile.Write(ref _lastUsed, Environment.TickCount64);
     }
 
-    private bool Primed(double atSec) => _ring is not null && Math.Abs(Volatile.Read(ref _ringStartSec) - atSec) < 0.002 && Volatile.Read(ref _read) == 0;
+    private bool Primed(double atSec, double speed) => _ring is { } ring && Math.Abs(ring.Place.Sec - atSec) < 0.002 && ring.Place.Speed == speed && Volatile.Read(ref ring.Read) == 0;
 
     /// <summary>Disk thread: serves a seek request and keeps the ring filled. Returns true when it did work.</summary>
     public bool Service()
@@ -158,14 +194,24 @@ public sealed class ClipPlayer : IDisposable
         if (Environment.TickCount64 - Volatile.Read(ref _lastUsed) > 8000 && double.IsNaN(Volatile.Read(ref _request)))
         {
             _ring = null;
-            Volatile.Write(ref _ringStartSec, double.NaN);
             CloseSource();
+            _decode = null;
+            _stretched = null;
             return false;
         }
-        var free = RingFrames - (Volatile.Read(ref _write) - Volatile.Read(ref _read));
+        var free = RingFrames - (Volatile.Read(ref ring.Write) - Volatile.Read(ref ring.Read));
         if (free < 2048 || _source is null) return false;
         var produced = Produce(ring, (int)Math.Min(free, 4096));
         return produced > 0;
+    }
+
+    /// <summary>Disk thread: the stretch tempo is the clip's speed times the transport speed (pitch unchanged); at tempo 1 with no pitch there is no stretch.</summary>
+    private void SetTempo(double speed)
+    {
+        var tempo = Spec.Speed * speed;
+        if (_stretch is not null) _stretch.Tempo = tempo;
+        else if (Math.Abs(tempo - 1) > 0.001 || Math.Abs(Spec.Pitch) > 0.001)
+            _stretch = new SoundTouchProcessor { SampleRate = _rate, Channels = 2, Tempo = tempo, PitchSemiTones = Spec.Pitch };
     }
 
     private void Seek(double songSec)
@@ -176,7 +222,7 @@ public sealed class ClipPlayer : IDisposable
             if (!ClipPathGuard.IsAllowed(Spec.File, out var refused))
             {
                 Failed = true;
-                EngineLog.Write($"audio clip refused ({refused}): {Spec.File}");
+                Log.Write($"audio clip refused ({refused}): {Spec.File}");
                 return;
             }
             CloseSource();
@@ -184,7 +230,7 @@ public sealed class ClipPlayer : IDisposable
             if (_reader.TotalTime.TotalHours > 2)   // same limit as the UI
             {
                 Failed = true;
-                EngineLog.Write($"audio clip too long: {Spec.File}");
+                Log.Write($"audio clip too long: {Spec.File}");
                 CloseSource();
                 return;
             }
@@ -196,57 +242,57 @@ public sealed class ClipPlayer : IDisposable
             if (provider.WaveFormat.SampleRate != _rate) provider = new WdlResamplingSampleProvider(provider, _rate);
             _source = new TakeProvider(provider, (long)((Spec.SourceLengthSec - intoClip) * _rate));
             _sourceDone = false;
-            if (Math.Abs(Spec.Speed - 1) > 0.001 || Math.Abs(Spec.Pitch) > 0.001)
-                _stretch = new SoundTouchProcessor { SampleRate = _rate, Channels = 2, Tempo = Spec.Speed, PitchSemiTones = Spec.Pitch };
-            var ring = _ring ?? new float[RingFrames * 2];
-            Volatile.Write(ref _read, 0);
-            Volatile.Write(ref _write, 0);
-            Volatile.Write(ref _ringStartSec, songSec);
+            var speed = Volatile.Read(ref _speed);
+            SetTempo(speed);
+            var ring = new RingBuffer(new RingPlace(songSec, speed));   // fresh: the audio thread may still be copying from the old one
             _ring = ring;
             Volatile.Write(ref _lastUsed, Environment.TickCount64);
-            Produce(ring, 4096); // a first block right away
+            // A first block right away; a stretch needs a few reads before its first output.
+            for (var tries = 0; tries < 4 && Volatile.Read(ref ring.Write) == 0 && !_sourceDone; tries++) Produce(ring, 4096);
         }
         catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException or System.Runtime.InteropServices.COMException or ArgumentException or FormatException)
         {
             Failed = true;
-            EngineLog.Write($"audio clip could not be read: {Spec.File}: {ex.Message}");
+            Log.Write($"audio clip could not be read: {Spec.File}: {ex.Message}");
         }
     }
 
-    private int Produce(float[] ring, int maxFrames)
+    private int Produce(RingBuffer ring, int maxFrames)
     {
         if (_source is null) return 0;
+        var decode = _decode ??= new float[DecodeFloats];
         int frames;
         if (_stretch is null)
         {
-            frames = _source.Read(_decode, 0, Math.Min(maxFrames, _decode.Length / 2) * 2) / 2;
+            frames = _source.Read(decode, 0, Math.Min(maxFrames, decode.Length / 2) * 2) / 2;
             if (frames == 0) _sourceDone = true;
-            Write(ring, _decode, frames);
+            Write(ring, decode, frames);
             return frames;
         }
+        var stretched = _stretched ??= new float[StretchedFloats];
         // Keep SoundTouch fed until it gives output (it needs a few thousand frames to start).
-        var received = _stretch.ReceiveSamples(_stretched.AsSpan(), Math.Min(maxFrames, _stretched.Length / 2));
+        var received = _stretch.ReceiveSamples(stretched.AsSpan(), Math.Min(maxFrames, stretched.Length / 2));
         if (received == 0)
         {
-            var read = _source.Read(_decode, 0, _decode.Length) / 2;
+            var read = _source.Read(decode, 0, decode.Length) / 2;
             if (read == 0) { _sourceDone = true; return 0; }
-            _stretch.PutSamples(_decode.AsSpan(0, read * 2), read);
-            received = _stretch.ReceiveSamples(_stretched.AsSpan(), Math.Min(maxFrames, _stretched.Length / 2));
+            _stretch.PutSamples(decode.AsSpan(0, read * 2), read);
+            received = _stretch.ReceiveSamples(stretched.AsSpan(), Math.Min(maxFrames, stretched.Length / 2));
         }
-        Write(ring, _stretched, received);
+        Write(ring, stretched, received);
         return received;
     }
 
-    private void Write(float[] ring, float[] data, int frames)
+    private void Write(RingBuffer ring, float[] data, int frames)
     {
-        var write = Volatile.Read(ref _write);
+        var write = Volatile.Read(ref ring.Write);
         for (var i = 0; i < frames; i++)
         {
             var at = (int)((write + i) & (RingFrames - 1)) * 2;
-            ring[at] = data[i * 2];
-            ring[at + 1] = data[i * 2 + 1];
+            ring.Data[at] = data[i * 2];
+            ring.Data[at + 1] = data[i * 2 + 1];
         }
-        Volatile.Write(ref _write, write + frames);
+        Volatile.Write(ref ring.Write, write + frames);
     }
 
     private void CloseSource()
@@ -267,7 +313,7 @@ public sealed class ClipPlayer : IDisposable
         {
             if (Failed) return false;
             if (!double.IsNaN(Volatile.Read(ref _request))) return true;
-            return _ring is not null && _source is not null && !_sourceDone && Volatile.Read(ref _write) - Volatile.Read(ref _read) < RingFrames / 2;
+            return _ring is { } ring && _source is not null && !_sourceDone && Volatile.Read(ref ring.Write) - Volatile.Read(ref ring.Read) < RingFrames / 2;
         }
     }
 
@@ -383,7 +429,7 @@ public static class DiskStreamer
                 foreach (var player in closing)
                 {
                     try { player.CloseOnDiskThread(); }
-                    catch (Exception ex) { Interlocked.Increment(ref _faults); EngineLog.Write($"audio clip could not be closed: {player.Spec.File}: {ex.Message}"); }
+                    catch (Exception ex) { Interlocked.Increment(ref _faults); player.Log.Write($"audio clip could not be closed: {player.Spec.File}: {ex.Message}"); }
                     Interlocked.Decrement(ref _closing);
                 }
                 closing.Clear();
@@ -394,13 +440,13 @@ public static class DiskStreamer
                     {
                         Interlocked.Increment(ref _faults);
                         player.MarkFailed();   // not serviced again, so this is logged once per player
-                        EngineLog.Write($"audio clip stopped (disk thread error): {player.Spec.File}: {ex.GetType().Name}: {ex.Message}");
+                        player.Log.Write($"audio clip stopped (disk thread error): {player.Spec.File}: {ex.GetType().Name}: {ex.Message}");
                     }
                 }
                 parked = work.Count == 0;
                 work.Clear();
             }
-            catch (Exception ex) { Interlocked.Increment(ref _faults); EngineLog.Write($"disk thread: {ex.Message}"); }
+            catch (Exception ex) { Interlocked.Increment(ref _faults); foreach (var log in work.Select(p => p.Log).Distinct()) log.Write($"disk thread: {ex.Message}"); }   // each session with players on this shared thread
             Interlocked.Increment(ref _passes);
             // Nothing registered: park until players arrive or leave (Register / Unregister set Wake). Else top up at the idle
             // interval, or at 1 ms while a ring is hungry.

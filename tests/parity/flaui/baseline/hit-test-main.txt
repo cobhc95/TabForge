@@ -1,0 +1,9 @@
+# hit-test map: WM_NCHITTEST result per sample (sent to the main window handle)
+# edges not recorded: the frame's resize test reads the live pointer, and the results near the edges varied between runs on this machine
+# window 1500x960 DIP at dpi=96; samples are DIP offsets from the window top-left; the pointer is placed on each sample
+# legend: . HTCLIENT(1), m HTMINBUTTON(8), M HTMAXBUTTON(9), x HTCLOSE(20)
+[title bar interior] cols=16..1480 (184 values) rows=16,24,32,40
+y=  16 |.........................................................................................................................................................................mmmmmMMMMMMxxxx|
+y=  24 |.........................................................................................................................................................................mmmmmMMMMMMxxxx|
+y=  32 |.........................................................................................................................................................................mmmmmMMMMMMxxxx|
+y=  40 |.........................................................................................................................................................................mmmmmMMMMMMxxxx|

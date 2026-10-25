@@ -1,5 +1,7 @@
 namespace TabForge.AudioEngine.Audio;
 
+// Owns: the streaming stereo windowed-sinc resampler for the capture path (48 taps, preallocated, allocation-free).
+
 /// <summary>
 /// Streaming stereo windowed-sinc resampler for the capture path: 48 taps, Blackman-Harris window, 256 kernel phases with
 /// linear interpolation between them, cutoff at 92 % of the lower Nyquist (anti-aliasing when downsampling). Input-driven: every

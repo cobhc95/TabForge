@@ -1,0 +1,15 @@
+[
+ {"theme": "dark"},
+ {"audio-fixture": "end"},
+ {"timeline-scroll": "end"},
+ {"wait": 600},
+ {"pointer": "press", "clip": [10, 0]},
+ {"pointer": "move", "by-bars": 2},
+ {"pointer": "move", "by-bars": 4.5},
+ {"timeline-scroll": "end"},
+ {"shot": "images/drag-past-end-ghost", "target": "timeline"},
+ {"pointer": "release"},
+ {"timeline-scroll": "end"},
+ {"wait": 600},
+ {"shot": "images/drag-past-end-dropped", "target": "timeline"}
+]

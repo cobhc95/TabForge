@@ -2,10 +2,17 @@
   <!-- Build settings shared by every TabForge project (app, audio engine, contracts), so they cannot drift. -->
   <PropertyGroup>
     <!-- Release version: the one place it is set. Shown in About/Settings, stamped into every assembly and the installer. -->
-    <Version>0.7.6</Version>
+    <Version>0.8.0</Version>
     <!-- true marks a pre-release build even without a version suffix (About/Settings text, update check). 0.5 is the official release. -->
     <PreRelease>false</PreRelease>
     <Nullable>enable</Nullable>
+    <!-- NAudio's meta-package depends on NAudio.WinForms, whose framework reference would ship the WPF/WinForms runtime (~49 MB); nothing here uses it. -->
+    <DisableTransitiveFrameworkReferences>true</DisableTransitiveFrameworkReferences>
+    <DisableTransitiveFrameworkReferenceDownloads>true</DisableTransitiveFrameworkReferenceDownloads>
+    <!-- All build output (bin + obj) centralises under the workspace build/ folder, so the
+         source tree stays clean and a fresh build is one folder delete away. -->
+    <UseArtifactsOutput>true</UseArtifactsOutput>
+    <ArtifactsPath>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../build/'))</ArtifactsPath>
     <!-- Hygiene: a warning is a build failure, so the tree stays at zero warnings. -->
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <AnalysisLevel>latest</AnalysisLevel>

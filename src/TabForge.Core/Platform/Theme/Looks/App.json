@@ -1,0 +1,216 @@
+[
+  {
+    "name": "StatusLinkButton", "kind": "Button",
+    "rules": [
+      { "name": "Hover", "when": [ { "property": "IsMouseOver", "value": "True" } ],
+        "set": [ { "part": "Bd", "property": "Border.Background", "brush": "HoverBrush" }, { "part": "Bd", "property": "Border.BorderBrush", "brush": "AccentSoftBrush" } ] },
+      { "name": "Pressed", "when": [ { "property": "IsPressed", "value": "True" } ],
+        "set": [ { "part": "Bd", "property": "Border.Background", "brush": "PressBrush" } ] },
+      { "name": "FocusVisible", "when": [ { "property": "IsKeyboardFocusVisible", "value": "True" } ],
+        "set": [ { "part": "Bd", "property": "Border.BorderBrush", "brush": "FocusRingBrush" } ] },
+      { "name": "Disabled", "when": [ { "property": "IsEnabled", "value": "False" } ],
+        "set": [ { "property": "Opacity", "literal": "0.45" } ] }
+    ]
+  },
+  {
+    "name": "TransportButton", "kind": "Button",
+    "rules": [
+      { "name": "Hover", "when": [ { "property": "IsMouseOver", "value": "True" } ],
+        "set": [ { "part": "Chrome", "property": "Border.Background", "brush": "HoverBrush" } ] },
+      { "name": "Pressed", "when": [ { "property": "IsPressed", "value": "True" } ],
+        "set": [ { "part": "Chrome", "property": "Border.Background", "brush": "AccentSoftBrush" }, { "part": "Chrome", "property": "Border.BorderBrush", "brush": "AccentBrush" } ] },
+      { "name": "Disabled", "when": [ { "property": "IsEnabled", "value": "False" } ],
+        "set": [ { "part": "Chrome", "property": "Border.Opacity", "literal": "0.45" } ] },
+      { "name": "FocusVisible", "when": [ { "property": "IsKeyboardFocusVisible", "value": "True" } ],
+        "set": [ { "part": "Chrome", "property": "Border.BorderBrush", "brush": "FocusRingBrush" } ] }
+    ]
+  },
+  {
+    "name": "ChromeCaptionButton", "kind": "Button",
+    "rules": [
+      { "name": "Hover", "when": [ { "property": "IsMouseOver", "value": "True" } ],
+        "set": [ { "part": "Bd", "property": "Border.Background", "brush": "CaptionHoverBrush" } ] },
+      { "name": "Pressed", "when": [ { "property": "IsPressed", "value": "True" } ],
+        "set": [ { "part": "Bd", "property": "Border.Background", "brush": "CaptionPressedBrush" } ] },
+      { "name": "Hot", "when": [ { "property": "CaptionButtonState.IsHot", "value": "True" } ],
+        "set": [ { "part": "Bd", "property": "Border.Background", "brush": "CaptionHoverBrush" } ] },
+      { "name": "Down", "when": [ { "property": "CaptionButtonState.IsDown", "value": "True" } ],
+        "set": [ { "part": "Bd", "property": "Border.Background", "brush": "CaptionPressedBrush" } ] }
+    ]
+  },
+  {
+    "name": "ChromeCloseButton", "kind": "Button",
+    "rules": [
+      { "name": "Hover", "when": [ { "property": "IsMouseOver", "value": "True" } ],
+        "set": [ { "part": "Bd", "property": "Border.Background", "brush": "CaptionCloseHoverBrush" } ] },
+      { "name": "Pressed", "when": [ { "property": "IsPressed", "value": "True" } ],
+        "set": [ { "part": "Bd", "property": "Border.Background", "brush": "CaptionClosePressedBrush" } ] },
+      { "name": "Hot", "when": [ { "property": "CaptionButtonState.IsHot", "value": "True" } ],
+        "set": [ { "part": "Bd", "property": "Border.Background", "brush": "CaptionCloseHoverBrush" } ] },
+      { "name": "Down", "when": [ { "property": "CaptionButtonState.IsDown", "value": "True" } ],
+        "set": [ { "part": "Bd", "property": "Border.Background", "brush": "CaptionClosePressedBrush" } ] }
+    ]
+  },
+  {
+    "name": "TrackPill", "kind": "ToggleButton",
+    "rules": [
+      { "name": "Checked", "when": [ { "property": "IsChecked", "value": "True" } ],
+        "set": [ { "property": "Background", "brush": "SelectedTintBrush" }, { "property": "BorderBrush", "brush": "SelectedOutlineBrush" }, { "property": "Foreground", "brush": "TextStrongBrush" } ] },
+      { "name": "HoverUnchecked", "when": [ { "property": "IsMouseOver", "value": "True" }, { "property": "IsChecked", "value": "False" } ],
+        "set": [ { "property": "Background", "brush": "HoverBrush" }, { "property": "BorderBrush", "brush": "AccentBrush" }, { "property": "Foreground", "brush": "TextBrush" } ] },
+      { "name": "HoverChecked", "when": [ { "property": "IsMouseOver", "value": "True" }, { "property": "IsChecked", "value": "True" } ],
+        "set": [ { "property": "Background", "brush": "HoverAccentBrush" } ] },
+      { "name": "Pressed", "when": [ { "property": "IsPressed", "value": "True" } ],
+        "set": [ { "property": "Background", "brush": "PressBrush" }, { "property": "Foreground", "brush": "TextBrush" } ] },
+      { "name": "Disabled", "when": [ { "property": "IsEnabled", "value": "False" } ],
+        "set": [ { "property": "Opacity", "literal": "0.45" } ] },
+      { "name": "FocusVisible", "when": [ { "property": "IsKeyboardFocusVisible", "value": "True" } ],
+        "set": [ { "property": "BorderBrush", "brush": "FocusRingBrush" } ] }
+    ]
+  },
+  {
+    "name": "ComboToggle", "kind": "ToggleButton",
+    "rules": [
+      { "name": "Hover", "when": [ { "property": "IsMouseOver", "value": "True" } ],
+        "set": [ { "part": "bd", "property": "Border.BorderBrush", "brush": "AccentBrush" }, { "part": "arrow", "property": "Path.Fill", "brush": "AccentBrush" } ] },
+      { "name": "Pressed", "when": [ { "property": "IsPressed", "value": "True" } ],
+        "set": [ { "part": "bd", "property": "Border.Background", "brush": "PressBrush" } ] },
+      { "name": "Disabled", "when": [ { "property": "IsEnabled", "value": "False" } ],
+        "set": [ { "property": "Opacity", "literal": "0.45" } ] },
+      { "name": "FocusVisible", "when": [ { "property": "IsKeyboardFocusVisible", "value": "True" } ],
+        "set": [ { "part": "bd", "property": "Border.BorderBrush", "brush": "FocusRingBrush" } ] }
+    ]
+  },
+  {
+    "name": "ComboBox", "kind": "ComboBox",
+    "rules": [
+      { "name": "Disabled", "when": [ { "property": "IsEnabled", "value": "False" } ],
+        "set": [ { "property": "Opacity", "literal": "0.45" } ] },
+      { "name": "Editable", "when": [ { "property": "IsEditable", "value": "True" } ],
+        "set": [ { "part": "PART_EditableTextBox", "property": "TextBox.Visibility", "literal": "Visible" }, { "part": "cp", "property": "ContentPresenter.Visibility", "literal": "Collapsed" } ] }
+    ]
+  },
+  {
+    "name": "ComboBoxItem", "kind": "ComboBoxItem",
+    "rules": [
+      { "name": "Highlighted", "when": [ { "property": "IsHighlighted", "value": "True" } ],
+        "set": [ { "part": "bd", "property": "Border.Background", "brush": "HoverBrush" } ] },
+      { "name": "Selected", "when": [ { "property": "IsSelected", "value": "True" } ],
+        "set": [ { "part": "bd", "property": "Border.Background", "brush": "SelectedTintBrush" } ] },
+      { "name": "SelectedHighlighted", "when": [ { "property": "IsSelected", "value": "True" }, { "property": "IsHighlighted", "value": "True" } ],
+        "set": [ { "part": "bd", "property": "Border.Background", "brush": "HoverAccentBrush" } ] },
+      { "name": "Pressed", "when": [ { "property": "IsPressed", "value": "True" } ],
+        "set": [ { "part": "bd", "property": "Border.Background", "brush": "PressBrush" } ] },
+      { "name": "FocusVisible", "when": [ { "property": "IsKeyboardFocusVisible", "value": "True" } ],
+        "set": [ { "part": "bd", "property": "Border.BorderBrush", "brush": "FocusRingBrush" } ] },
+      { "name": "Disabled", "when": [ { "property": "IsEnabled", "value": "False" } ],
+        "set": [ { "property": "Opacity", "literal": "0.45" } ] }
+    ]
+  },
+  {
+    "name": "CheckBox", "kind": "CheckBox",
+    "rules": [
+      { "name": "Checked", "when": [ { "property": "IsChecked", "value": "True" } ],
+        "set": [ { "part": "check", "property": "Path.Visibility", "literal": "Visible" } ] },
+      { "name": "Hover", "when": [ { "property": "IsMouseOver", "value": "True" } ],
+        "set": [ { "part": "box", "property": "Border.BorderBrush", "brush": "AccentBrush" } ] },
+      { "name": "Pressed", "when": [ { "property": "IsPressed", "value": "True" } ],
+        "set": [ { "part": "box", "property": "Border.Background", "brush": "PressBrush" } ] },
+      { "name": "Disabled", "when": [ { "property": "IsEnabled", "value": "False" } ],
+        "set": [ { "property": "Opacity", "literal": "0.45" } ] },
+      { "name": "FocusVisible", "when": [ { "property": "IsKeyboardFocusVisible", "value": "True" } ],
+        "set": [ { "part": "box", "property": "Border.BorderBrush", "brush": "FocusRingBrush" } ] }
+    ]
+  },
+  {
+    "name": "MenuItem", "kind": "MenuItem",
+    "rules": [
+      { "name": "Submenu", "when": [ { "property": "Role", "value": "SubmenuHeader" } ],
+        "set": [ { "part": "sub", "property": "Path.Visibility", "literal": "Visible" }, { "part": "bd", "property": "Border.Padding", "literal": "0" }, { "part": "PART_Popup", "property": "Popup.Placement", "literal": "Right" }, { "part": "PART_Popup", "property": "Popup.HorizontalOffset", "literal": "-3" } ] },
+      { "name": "TopLevel", "when": [ { "property": "Role", "value": "TopLevelHeader" } ],
+        "set": [ { "part": "sub", "property": "Path.Visibility", "literal": "Collapsed" }, { "part": "icon", "property": "ContentPresenter.MinWidth", "literal": "0" } ] },
+      { "name": "Highlighted", "when": [ { "property": "IsHighlighted", "value": "True" } ],
+        "set": [ { "part": "bd", "property": "Border.Background", "brush": "HoverBrush" } ] },
+      { "name": "Disabled", "when": [ { "property": "IsEnabled", "value": "False" } ],
+        "set": [ { "property": "Foreground", "brush": "MutedBrush" } ] },
+      { "name": "Checked", "when": [ { "property": "IsChecked", "value": "True" } ],
+        "set": [ { "part": "icon", "property": "ContentPresenter.Content", "literal": "✔" }, { "part": "icon", "property": "TextElement.Foreground", "brush": "AccentBrush" } ] },
+      { "name": "Radio", "when": [ { "property": "IsChecked", "value": "True" }, { "property": "MenuMarks.IsRadio", "value": "True" } ],
+        "set": [ { "part": "icon", "property": "ContentPresenter.Content", "literal": "●" } ] },
+      { "name": "Pressed", "when": [ { "property": "IsPressed", "value": "True" } ],
+        "set": [ { "part": "bd", "property": "Border.Background", "brush": "PressBrush" } ] }
+    ]
+  },
+  {
+    "name": "ListBoxItem", "kind": "ListBoxItem",
+    "rules": [
+      { "name": "Hover", "when": [ { "property": "IsMouseOver", "value": "True" } ],
+        "set": [ { "part": "bd", "property": "Border.Background", "brush": "HoverBrush" } ] },
+      { "name": "Selected", "when": [ { "property": "IsSelected", "value": "True" } ],
+        "set": [ { "part": "bd", "property": "Border.Background", "brush": "SelectedTintBrush" } ] },
+      { "name": "SelectedHover", "when": [ { "property": "IsSelected", "value": "True" }, { "property": "IsMouseOver", "value": "True" } ],
+        "set": [ { "part": "bd", "property": "Border.Background", "brush": "HoverAccentBrush" } ] },
+      { "name": "Pressed", "when": [ { "property": "IsPressed", "value": "True" } ],
+        "set": [ { "part": "bd", "property": "Border.Background", "brush": "PressBrush" } ] },
+      { "name": "Disabled", "when": [ { "property": "IsEnabled", "value": "False" } ],
+        "set": [ { "property": "Opacity", "literal": "0.45" } ] },
+      { "name": "FocusVisible", "when": [ { "property": "IsKeyboardFocusVisible", "value": "True" } ],
+        "set": [ { "part": "bd", "property": "Border.BorderBrush", "brush": "FocusRingBrush" } ] }
+    ]
+  },
+  {
+    "name": "DataGridCell", "kind": "DataGridCell",
+    "rules": [
+      { "name": "Selected", "when": [ { "property": "IsSelected", "value": "True" } ],
+        "set": [ { "part": "bd", "property": "Border.Background", "brush": "SelectedTintBrush" } ] }
+    ]
+  },
+  {
+    "name": "ArrangementSlider", "kind": "Slider",
+    "rules": [
+      { "name": "KeyboardFocus", "when": [ { "property": "IsKeyboardFocused", "value": "True" } ],
+        "set": [ { "part": "TrackBar", "property": "Border.BorderBrush", "brush": "AccentBrush" }, { "part": "TrackBar", "property": "Border.BorderThickness", "literal": "2" } ] }
+    ]
+  },
+  {
+    "name": "ArrangementSliderThumb", "kind": "Thumb",
+    "rules": [
+      { "name": "Hover", "when": [ { "property": "IsMouseOver", "value": "True" } ],
+        "set": [ { "part": "ThumbFace", "property": "Border.Background", "brush": "SliderThumbFaceBrush" }, { "part": "ThumbFace", "property": "Border.BorderBrush", "brush": "AccentHoverBrush" } ] }
+    ]
+  },
+  {
+    "name": "ScrollBar", "kind": "ScrollBar",
+    "rules": [
+      { "name": "Horizontal", "when": [ { "property": "Orientation", "value": "Horizontal" } ],
+        "set": [ { "property": "Height", "literal": "12" }, { "property": "Width", "literal": "NaN" }, { "part": "PART_Track", "property": "Track.IsDirectionReversed", "literal": "False" } ] }
+    ]
+  },
+  {
+    "name": "ScrollBarThumb", "kind": "Thumb",
+    "rules": [
+      { "name": "Hover", "when": [ { "property": "IsMouseOver", "value": "True" } ],
+        "set": [ { "part": "t", "property": "Border.Background", "brush": "ScrollThumbHoverBrush" } ] },
+      { "name": "Dragging", "when": [ { "property": "IsDragging", "value": "True" } ],
+        "set": [ { "part": "t", "property": "Border.Background", "brush": "AccentBrush" } ] },
+      { "name": "Disabled", "when": [ { "property": "IsEnabled", "value": "False" } ],
+        "set": [ { "property": "Opacity", "literal": "0.45" } ] }
+    ]
+  },
+  {
+    "name": "ScrollBarThumbLength", "kind": "Thumb",
+    "rules": [
+      { "name": "Horizontal", "when": [ { "binding": "Orientation|Ancestor:ScrollBar", "value": "Horizontal" } ],
+        "set": [ { "property": "MinHeight", "literal": "0" }, { "property": "MinWidth", "literal": "28" } ] }
+    ]
+  },
+  {
+    "name": "TimelineScrollBarThumb", "kind": "Thumb",
+    "rules": [
+      { "name": "Hover", "when": [ { "property": "IsMouseOver", "value": "True" } ],
+        "set": [ { "part": "TimelineThumb", "property": "Border.Background", "brush": "TimelineScrollThumbHoverBrush" }, { "part": "TimelineThumb", "property": "Border.BorderBrush", "brush": "TimelineScrollThumbDragBrush" } ] },
+      { "name": "Dragging", "when": [ { "property": "IsDragging", "value": "True" } ],
+        "set": [ { "part": "TimelineThumb", "property": "Border.Background", "brush": "TimelineScrollThumbDragBrush" } ] }
+    ]
+  }
+]

@@ -2,6 +2,8 @@ using TabForge.Audio.Contracts;
 
 namespace TabForge.AudioEngine.Midi.Processors;
 
+// Owns: the MIDI delay processor (ms+beats+samples summed, paired note-on/off, carry-over ring).
+
 /// <summary>
 /// MIDI delay (milliseconds + beats + samples, summed). Note-ons and note-offs are delayed by the same amount, so notes stay
 /// paired; "notes only" lets other messages pass straight through. Events past the block wait in the scheduler's carry-over ring.
@@ -66,7 +68,7 @@ public sealed class HumanizeProcessor : IMidiProcessor
         _biasMs = p.Double("BiasMs", 0, -10, 10);
         _baseMs = p.Double("BaseDelayMs", 20, 0, 100);
         _velRandom = p.Int("VelRandom", 8, 0, 64);
-        _baseline = p.Int("Baseline", 0, 0, 127);   // 0 = keep the original velocity
+        _baseline = p.Int("Baseline", 0, 0, MidiLimits.Max);   // 0 = keep the original velocity
         _ch = p.Int("InCh", 0, 0, 16);
     }
 
@@ -89,7 +91,7 @@ public sealed class HumanizeProcessor : IMidiProcessor
                     _shift[key] = shift;
                     var v = _baseline > 0 ? _baseline : d2;
                     if (_velRandom > 0) v += (int)Math.Round(_rng.Bipolar() * _velRandom);
-                    d2 = (byte)Math.Clamp(v, 1, 127);
+                    d2 = (byte)Math.Clamp(v, 1, MidiLimits.Max);
                 }
                 else shift = _shift[key];
             }

@@ -1,0 +1,5 @@
+[
+  { "name": "MidiParamAccentFallback", "dark": "#FFFFA500", "light": "#FFB36B00" },
+  { "name": "ScoreTextDefaultColour", "value": "#FF808080" },
+  { "name": "ScoreTextDefaultOutline", "value": "#FF000000" }
+]

@@ -3,6 +3,8 @@ using System.Runtime.InteropServices;
 
 namespace TabForge.AudioEngine.Plugins;
 
+// Owns: the headless pass-through VST2 test effect behind the real VST2 ABI (no DLL on disk).
+
 public sealed unsafe partial class Vst2Plugin
 {
     /// <summary>
@@ -45,7 +47,7 @@ public sealed unsafe partial class Vst2Plugin
         /// <summary>A new instance (a fresh AEffect) hosted by the real <see cref="Vst2Plugin"/> code path.</summary>
         /// <param name="openDelayMs">effOpen sleeps this long (a slow-loading instrument).</param>
         /// <param name="inputs">Declared audio inputs (the host allocates exactly this many, at least two; more than 128 is refused).</param>
-        public static Vst2Plugin Create(double sampleRate, int maxBlock, int openDelayMs = 0, int inputs = 2, int outputs = 2)
+        public static Vst2Plugin Create(double sampleRate, int maxBlock, EngineThreads threads, int openDelayMs = 0, int inputs = 2, int outputs = 2)
         {
             Volatile.Write(ref _openDelayMs, openDelayMs);
             var effect = (AEffect*)NativeMemory.AllocZeroed((nuint)sizeof(AEffect));   // lives as long as the process (tests only)
@@ -57,7 +59,7 @@ public sealed unsafe partial class Vst2Plugin
             lock (Gate)
             {
                 _next = effect;
-                return new Vst2Plugin(PathName, IntPtr.Zero, (IntPtr)(delegate* unmanaged[Cdecl]<IntPtr, AEffect*>)&Main, sampleRate, maxBlock);
+                return new Vst2Plugin(PathName, IntPtr.Zero, (IntPtr)(delegate* unmanaged[Cdecl]<IntPtr, AEffect*>)&Main, sampleRate, maxBlock, threads);
             }
         }
 
@@ -65,6 +67,30 @@ public sealed unsafe partial class Vst2Plugin
 
         [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
         private static AEffect* Main(IntPtr host) { _host = host; return _next; }
+
+        /// <summary>A plug-in making the Reaper probe (audioMaster 0xDEADBEEF) for <paramref name="name"/>; null when the host answers no function.</summary>
+        public static string? ProbeReaperString(string name)
+        {
+            var fn = ProbeReaperFunction(name);
+            if (fn == IntPtr.Zero) return null;
+            return Marshal.PtrToStringUTF8(((delegate* unmanaged[Cdecl]<IntPtr>)fn)());
+        }
+
+        /// <summary>The probe's resolve_fn function asked for <paramref name="name"/>: whether it knows it.</summary>
+        public static bool ProbeResolveFn(string name)
+        {
+            var resolve = ProbeReaperFunction("resolve_fn");
+            var text = Marshal.StringToHGlobalAnsi(name);
+            try { return ((delegate* unmanaged[Cdecl]<IntPtr, IntPtr>)resolve)(text) != IntPtr.Zero; }
+            finally { Marshal.FreeHGlobal(text); }
+        }
+
+        private static IntPtr ProbeReaperFunction(string name)
+        {
+            var text = Marshal.StringToHGlobalAnsi(name);
+            try { return ((delegate* unmanaged[Cdecl]<AEffect*, int, int, IntPtr, IntPtr, float, IntPtr>)_host)(null, Vst2ReaperHostApi.Opcode, Vst2ReaperHostApi.Index, IntPtr.Zero, text, 0); }
+            finally { Marshal.FreeHGlobal(text); }
+        }
 
         /// <summary>Each processed block calls audioMasterAutomate (opcode 0) back into the host, from the audio thread.</summary>
         public static volatile bool AutomateInProcess;

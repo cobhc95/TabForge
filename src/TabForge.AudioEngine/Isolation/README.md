@@ -1,6 +1,6 @@
 # TabForge.AudioEngine/Isolation
 
-Plug-ins that run in their own process: the engine side of the link, the shared memory block, and the child process that hosts one plug-in. Does not own the trust decision (`src/TabForge/Plugins/PluginTrust.cs`).
+Plug-ins that run in their own process: the engine side of the link, the shared memory block, and the child process that hosts one plug-in. Does not own the trust decision (`Source/src/TabForge.Core/Plugins/PluginTrust.cs`).
 
 ## Files
 | File | Purpose |
@@ -13,7 +13,6 @@ Plug-ins that run in their own process: the engine side of the link, the shared 
 | `RemotePlugin.cs` | A plug-in in its own process, seen by the engine as an ordinary instrument |
 
 ## Pathway
-`START_HERE.md`, Golden pathways: **Reach the engine**. Untrusted plug-ins reach the engine as skipped.
+Untrusted plug-ins reach the engine as skipped.
 
 ## Tests
-`docs/feature-map/plug-ins.md`.

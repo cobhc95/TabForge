@@ -11,7 +11,7 @@ The audio engine, a separate process: mixer, synth, plug-in hosting, recording a
 - `EngineWatchdog`: detects a stalled engine so the app can restart it.
 
 ## Pathway
-The app talks to it only through `EngineCommand` and `EngineEvent` (`src/TabForge.Audio.Contracts/README.md`) via `AudioEngineClient`. Audio-thread code is allocation-free and lock-free; changes retire old objects through `RetireQueue`. Real-time rules: `ARCHITECTURE.md`.
+The app talks to it only through `EngineCommand` and `EngineEvent` (`Source/src/TabForge.Audio.Contracts/README.md`) via `AudioEngineClient`. Audio-thread code is allocation-free and lock-free; changes retire old objects through `RetireQueue`. Real-time rules: `ARCHITECTURE.md`.
 
 ## Must not depend on
 The app project or WPF. It references only the contracts project.

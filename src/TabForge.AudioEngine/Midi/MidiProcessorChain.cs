@@ -5,6 +5,8 @@ using TabForge.AudioEngine.Plugins;
 
 namespace TabForge.AudioEngine.Midi;
 
+// Owns: the ordered MIDI processor list in front of one instrument (engine-thread build, audio-thread swap, stuck-note release).
+
 /// <summary>
 /// An ordered list of MIDI processors in front of one instrument. Built (JSON parsed, everything allocated) on the engine
 /// thread and swapped into the track chain with Volatile.Write; <see cref="Process"/> runs on the audio thread without

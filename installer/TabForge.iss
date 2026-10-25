@@ -1,10 +1,10 @@
-﻿; TabForge installer (Inno Setup 7). Built by tools\Package-Release.ps1, which passes the version and
-; the publish folder:  ISCC.exe /DAppVersion=0.6.0 /DFileVersion=0.6.0.0 /DSourceDir=..\build\TabForge installer\TabForge.iss
+; TabForge installer (Inno Setup 7). Built by Source\tools\Package-Release.ps1, which passes the version and
+; the publish folder:  ISCC.exe /DAppVersion=0.8.0 /DFileVersion=0.8.0.0 /DSourceDir=..\..\build\TabForge Source\installer\TabForge.iss
 #ifndef AppVersion
   #define AppVersion "0.0.0-dev"
 #endif
 #ifndef SourceDir
-  #define SourceDir "..\build\TabForge"
+  #define SourceDir "..\..\build\TabForge"
 #endif
 ; File version resource: passed in as FileVersion (0.5.0.0); otherwise the numeric part of AppVersion ("0.2.0-beta.4" -> "0.2.0").
 #ifdef FileVersion
@@ -35,10 +35,10 @@ PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
-SetupIconFile=..\src\TabForge\Assets\TabForge.ico
+SetupIconFile=..\src\TabForge.Avalonia\Assets\TabForge.ico
 UninstallDisplayIcon={app}\TabForge.exe
 LicenseFile=..\LICENSE
-OutputDir=..\dist
+OutputDir=..\..\dist
 OutputBaseFilename=TabForge-{#AppVersion}-setup
 Compression=lzma2/max
 SolidCompression=yes
@@ -60,7 +60,7 @@ Name: "associate"; Description: "Open .gp, .gp5, .gp4, .gp3, .gpx and TabForge (
 ; The whole publish folder: TabForge.exe, the loose SoundTouch.Net.dll (LGPL, replaceable), licenses\ (licence texts), Assets\, Resources\.
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "..\LICENSE"; DestDir: "{app}"; DestName: "LICENSE.txt"; Flags: ignoreversion
-Source: "..\THIRD_PARTY.md"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\docs\THIRD_PARTY.md"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\TabForge"; Filename: "{app}\TabForge.exe"

@@ -1,0 +1,1247 @@
+[
+ {
+  "theme": "dark"
+ },
+ {
+  "open": "demo"
+ },
+ {
+  "shot": "win-default-dark",
+  "target": "window"
+ },
+ {
+  "shot": "edit-score-dark",
+  "target": "score"
+ },
+ {
+  "shot": "edit-timeline-dark",
+  "target": "timeline"
+ },
+ {
+  "shot": "edit-fretboard-dark",
+  "target": "fretboard"
+ },
+ {
+  "tab-strip": 1100
+ },
+ {
+  "shot": "win-TabStrip-dark",
+  "target": "window:TabStrip"
+ },
+ {
+  "close": "all"
+ },
+ {
+  "menu": "File"
+ },
+ {
+  "shot": "menu-File-dark",
+  "target": "menu"
+ },
+ {
+  "menu": "Edit"
+ },
+ {
+  "shot": "menu-Edit-dark",
+  "target": "menu"
+ },
+ {
+  "menu": "Note"
+ },
+ {
+  "shot": "menu-Note-dark",
+  "target": "menu"
+ },
+ {
+  "menu": "Bar"
+ },
+ {
+  "shot": "menu-Bar-dark",
+  "target": "menu"
+ },
+ {
+  "menu": "Track"
+ },
+ {
+  "shot": "menu-Track-dark",
+  "target": "menu"
+ },
+ {
+  "menu": "Sections"
+ },
+ {
+  "shot": "menu-Sections-dark",
+  "target": "menu"
+ },
+ {
+  "menu": "View"
+ },
+ {
+  "shot": "menu-View-dark",
+  "target": "menu"
+ },
+ {
+  "menu": "View/Layouts"
+ },
+ {
+  "shot": "menu-View-Layouts-dark",
+  "target": "menu"
+ },
+ {
+  "menu": "View/Panels"
+ },
+ {
+  "shot": "menu-View-Panels-dark",
+  "target": "menu"
+ },
+ {
+  "menu": "Effects"
+ },
+ {
+  "shot": "menu-Effects-dark",
+  "target": "menu"
+ },
+ {
+  "menu": "Sound"
+ },
+ {
+  "shot": "menu-Sound-dark",
+  "target": "menu"
+ },
+ {
+  "menu": "Tools"
+ },
+ {
+  "shot": "menu-Tools-dark",
+  "target": "menu"
+ },
+ {
+  "menu": "Options"
+ },
+ {
+  "shot": "menu-Options-dark",
+  "target": "menu"
+ },
+ {
+  "menu": "Help"
+ },
+ {
+  "shot": "menu-Help-dark",
+  "target": "menu"
+ },
+ {
+  "context": "score"
+ },
+ {
+  "shot": "context-score-dark",
+  "target": "menu"
+ },
+ {
+  "context": "note"
+ },
+ {
+  "shot": "context-note-dark",
+  "target": "menu"
+ },
+ {
+  "context": "timeline"
+ },
+ {
+  "shot": "context-timeline-dark",
+  "target": "menu"
+ },
+ {
+  "context": "fretboard"
+ },
+ {
+  "shot": "context-fretboard-dark",
+  "target": "menu"
+ },
+ {
+  "context": "timeline-empty"
+ },
+ {
+  "shot": "context-timeline-empty-dark",
+  "target": "menu"
+ },
+ {
+  "context": "track-row"
+ },
+ {
+  "shot": "context-track-row-dark",
+  "target": "menu"
+ },
+ {
+  "context": "mixer-colour"
+ },
+ {
+  "shot": "context-mixer-colour-dark",
+  "target": "menu"
+ },
+ {
+  "panel": "instrument"
+ },
+ {
+  "shot": "panel-instrument-dark",
+  "target": "panel:instrument"
+ },
+ {
+  "panel": "timeline"
+ },
+ {
+  "shot": "panel-timeline-dark",
+  "target": "panel:timeline"
+ },
+ {
+  "panel": "tools"
+ },
+ {
+  "shot": "panel-tools-dark",
+  "target": "panel:tools"
+ },
+ {
+  "panel": "structure"
+ },
+ {
+  "shot": "panel-structure-dark",
+  "target": "panel:structure"
+ },
+ {
+  "panel": "rhythm"
+ },
+ {
+  "shot": "panel-rhythm-dark",
+  "target": "panel:rhythm"
+ },
+ {
+  "panel": "layout"
+ },
+ {
+  "shot": "panel-layout-dark",
+  "target": "panel:layout"
+ },
+ {
+  "panel": "sections"
+ },
+ {
+  "shot": "panel-sections-dark",
+  "target": "panel:sections"
+ },
+ {
+  "window": "Mixer"
+ },
+ {
+  "shot": "win-Mixer-dark",
+  "target": "window:Mixer"
+ },
+ {
+  "close": "Mixer"
+ },
+ {
+  "window": "GroupRules"
+ },
+ {
+  "shot": "win-GroupRules-dark",
+  "target": "window:GroupRules"
+ },
+ {
+  "close": "GroupRules"
+ },
+ {
+  "window": "FxChain"
+ },
+ {
+  "shot": "win-FxChain-dark",
+  "target": "window:FxChain"
+ },
+ {
+  "close": "FxChain"
+ },
+ {
+  "window": "FxChain-example"
+ },
+ {
+  "shot": "win-FxChain-example-dark",
+  "target": "window:FxChain-example"
+ },
+ {
+  "close": "FxChain-example"
+ },
+ {
+  "window": "Render"
+ },
+ {
+  "shot": "win-Render-dark",
+  "target": "window:Render"
+ },
+ {
+  "close": "Render"
+ },
+ {
+  "window": "AddTrack"
+ },
+ {
+  "shot": "win-AddTrack-dark",
+  "target": "window:AddTrack"
+ },
+ {
+  "close": "AddTrack"
+ },
+ {
+  "window": "TrackProperties"
+ },
+ {
+  "shot": "win-TrackProperties-dark",
+  "target": "window:TrackProperties"
+ },
+ {
+  "close": "TrackProperties"
+ },
+ {
+  "window": "Tuner"
+ },
+ {
+  "shot": "win-Tuner-dark",
+  "target": "window:Tuner"
+ },
+ {
+  "close": "Tuner"
+ },
+ {
+  "window": "SongInfo"
+ },
+ {
+  "shot": "win-SongInfo-dark",
+  "target": "window:SongInfo"
+ },
+ {
+  "close": "SongInfo"
+ },
+ {
+  "window": "ProjectSettings"
+ },
+ {
+  "shot": "win-ProjectSettings-dark",
+  "target": "window:ProjectSettings"
+ },
+ {
+  "close": "ProjectSettings"
+ },
+ {
+  "window": "GlobalTuning"
+ },
+ {
+  "shot": "win-GlobalTuning-dark",
+  "target": "window:GlobalTuning"
+ },
+ {
+  "close": "GlobalTuning"
+ },
+ {
+  "window": "ScaleFinder"
+ },
+ {
+  "shot": "win-ScaleFinder-dark",
+  "target": "window:ScaleFinder"
+ },
+ {
+  "close": "ScaleFinder"
+ },
+ {
+  "window": "InstrumentPicker"
+ },
+ {
+  "shot": "win-InstrumentPicker-dark",
+  "target": "window:InstrumentPicker"
+ },
+ {
+  "close": "InstrumentPicker"
+ },
+ {
+  "window": "ScoreTextStyle"
+ },
+ {
+  "shot": "win-ScoreTextStyle-dark",
+  "target": "window:ScoreTextStyle"
+ },
+ {
+  "close": "ScoreTextStyle"
+ },
+ {
+  "window": "MixTable"
+ },
+ {
+  "shot": "win-MixTable-dark",
+  "target": "window:MixTable"
+ },
+ {
+  "close": "MixTable"
+ },
+ {
+  "window": "ChordFinder"
+ },
+ {
+  "shot": "win-ChordFinder-dark",
+  "target": "window:ChordFinder"
+ },
+ {
+  "close": "ChordFinder"
+ },
+ {
+  "window": "SongStats"
+ },
+ {
+  "shot": "win-SongStats-dark",
+  "target": "window:SongStats"
+ },
+ {
+  "close": "SongStats"
+ },
+ {
+  "window": "NewFromTemplate"
+ },
+ {
+  "shot": "win-NewFromTemplate-dark",
+  "target": "window:NewFromTemplate"
+ },
+ {
+  "close": "NewFromTemplate"
+ },
+ {
+  "window": "AddPlugin"
+ },
+ {
+  "shot": "win-AddPlugin-dark",
+  "target": "window:AddPlugin"
+ },
+ {
+  "close": "AddPlugin"
+ },
+ {
+  "window": "PasteOptions"
+ },
+ {
+  "shot": "win-PasteOptions-dark",
+  "target": "window:PasteOptions"
+ },
+ {
+  "close": "PasteOptions"
+ },
+ {
+  "window": "Preferences",
+  "page": "Appearance"
+ },
+ {
+  "shot": "win-Preferences-dark",
+  "target": "window:Preferences"
+ },
+ {
+  "close": "all"
+ },
+ {
+  "window": "Shortcuts"
+ },
+ {
+  "shot": "win-Shortcuts-dark",
+  "target": "window:Preferences"
+ },
+ {
+  "close": "all"
+ },
+ {
+  "window": "CommandPalette",
+  "text": "tun"
+ },
+ {
+  "shot": "win-CommandPalette-dark",
+  "target": "window:CommandPalette"
+ },
+ {
+  "close": "all"
+ },
+ {
+  "playhead": [
+   13,
+   0.4
+  ]
+ },
+ {
+  "shot": "play-playhead-dark",
+  "target": "window"
+ },
+ {
+  "layout": "Compose"
+ },
+ {
+  "panel": "band"
+ },
+ {
+  "band-playing": [
+   13,
+   0.4
+  ]
+ },
+ {
+  "shot": "play-band-dark",
+  "target": "window"
+ },
+ {
+  "layout": "Compose"
+ },
+ {
+  "panel": "learn"
+ },
+ {
+  "learn-playing": [
+   13,
+   0.4
+  ]
+ },
+ {
+  "shot": "play-learn-dark",
+  "target": "window"
+ },
+ {
+  "layout": "Compose"
+ },
+ {
+  "theme": "light"
+ },
+ {
+  "open": "demo"
+ },
+ {
+  "shot": "win-default-light",
+  "target": "window"
+ },
+ {
+  "shot": "edit-score-light",
+  "target": "score"
+ },
+ {
+  "shot": "edit-timeline-light",
+  "target": "timeline"
+ },
+ {
+  "shot": "edit-fretboard-light",
+  "target": "fretboard"
+ },
+ {
+  "tab-strip": 1100
+ },
+ {
+  "shot": "win-TabStrip-light",
+  "target": "window:TabStrip"
+ },
+ {
+  "close": "all"
+ },
+ {
+  "menu": "File"
+ },
+ {
+  "shot": "menu-File-light",
+  "target": "menu"
+ },
+ {
+  "menu": "Edit"
+ },
+ {
+  "shot": "menu-Edit-light",
+  "target": "menu"
+ },
+ {
+  "menu": "Note"
+ },
+ {
+  "shot": "menu-Note-light",
+  "target": "menu"
+ },
+ {
+  "menu": "Bar"
+ },
+ {
+  "shot": "menu-Bar-light",
+  "target": "menu"
+ },
+ {
+  "menu": "Track"
+ },
+ {
+  "shot": "menu-Track-light",
+  "target": "menu"
+ },
+ {
+  "menu": "Sections"
+ },
+ {
+  "shot": "menu-Sections-light",
+  "target": "menu"
+ },
+ {
+  "menu": "View"
+ },
+ {
+  "shot": "menu-View-light",
+  "target": "menu"
+ },
+ {
+  "menu": "View/Layouts"
+ },
+ {
+  "shot": "menu-View-Layouts-light",
+  "target": "menu"
+ },
+ {
+  "menu": "View/Panels"
+ },
+ {
+  "shot": "menu-View-Panels-light",
+  "target": "menu"
+ },
+ {
+  "menu": "Effects"
+ },
+ {
+  "shot": "menu-Effects-light",
+  "target": "menu"
+ },
+ {
+  "menu": "Sound"
+ },
+ {
+  "shot": "menu-Sound-light",
+  "target": "menu"
+ },
+ {
+  "menu": "Tools"
+ },
+ {
+  "shot": "menu-Tools-light",
+  "target": "menu"
+ },
+ {
+  "menu": "Options"
+ },
+ {
+  "shot": "menu-Options-light",
+  "target": "menu"
+ },
+ {
+  "menu": "Help"
+ },
+ {
+  "shot": "menu-Help-light",
+  "target": "menu"
+ },
+ {
+  "context": "score"
+ },
+ {
+  "shot": "context-score-light",
+  "target": "menu"
+ },
+ {
+  "context": "note"
+ },
+ {
+  "shot": "context-note-light",
+  "target": "menu"
+ },
+ {
+  "context": "timeline"
+ },
+ {
+  "shot": "context-timeline-light",
+  "target": "menu"
+ },
+ {
+  "context": "fretboard"
+ },
+ {
+  "shot": "context-fretboard-light",
+  "target": "menu"
+ },
+ {
+  "context": "timeline-empty"
+ },
+ {
+  "shot": "context-timeline-empty-light",
+  "target": "menu"
+ },
+ {
+  "context": "track-row"
+ },
+ {
+  "shot": "context-track-row-light",
+  "target": "menu"
+ },
+ {
+  "context": "mixer-colour"
+ },
+ {
+  "shot": "context-mixer-colour-light",
+  "target": "menu"
+ },
+ {
+  "panel": "instrument"
+ },
+ {
+  "shot": "panel-instrument-light",
+  "target": "panel:instrument"
+ },
+ {
+  "panel": "timeline"
+ },
+ {
+  "shot": "panel-timeline-light",
+  "target": "panel:timeline"
+ },
+ {
+  "panel": "tools"
+ },
+ {
+  "shot": "panel-tools-light",
+  "target": "panel:tools"
+ },
+ {
+  "panel": "structure"
+ },
+ {
+  "shot": "panel-structure-light",
+  "target": "panel:structure"
+ },
+ {
+  "panel": "rhythm"
+ },
+ {
+  "shot": "panel-rhythm-light",
+  "target": "panel:rhythm"
+ },
+ {
+  "panel": "layout"
+ },
+ {
+  "shot": "panel-layout-light",
+  "target": "panel:layout"
+ },
+ {
+  "panel": "sections"
+ },
+ {
+  "shot": "panel-sections-light",
+  "target": "panel:sections"
+ },
+ {
+  "window": "Mixer"
+ },
+ {
+  "shot": "win-Mixer-light",
+  "target": "window:Mixer"
+ },
+ {
+  "close": "Mixer"
+ },
+ {
+  "window": "GroupRules"
+ },
+ {
+  "shot": "win-GroupRules-light",
+  "target": "window:GroupRules"
+ },
+ {
+  "close": "GroupRules"
+ },
+ {
+  "window": "FxChain"
+ },
+ {
+  "shot": "win-FxChain-light",
+  "target": "window:FxChain"
+ },
+ {
+  "close": "FxChain"
+ },
+ {
+  "window": "FxChain-example"
+ },
+ {
+  "shot": "win-FxChain-example-light",
+  "target": "window:FxChain-example"
+ },
+ {
+  "close": "FxChain-example"
+ },
+ {
+  "window": "Render"
+ },
+ {
+  "shot": "win-Render-light",
+  "target": "window:Render"
+ },
+ {
+  "close": "Render"
+ },
+ {
+  "window": "AddTrack"
+ },
+ {
+  "shot": "win-AddTrack-light",
+  "target": "window:AddTrack"
+ },
+ {
+  "close": "AddTrack"
+ },
+ {
+  "window": "TrackProperties"
+ },
+ {
+  "shot": "win-TrackProperties-light",
+  "target": "window:TrackProperties"
+ },
+ {
+  "close": "TrackProperties"
+ },
+ {
+  "window": "Tuner"
+ },
+ {
+  "shot": "win-Tuner-light",
+  "target": "window:Tuner"
+ },
+ {
+  "close": "Tuner"
+ },
+ {
+  "window": "SongInfo"
+ },
+ {
+  "shot": "win-SongInfo-light",
+  "target": "window:SongInfo"
+ },
+ {
+  "close": "SongInfo"
+ },
+ {
+  "window": "ProjectSettings"
+ },
+ {
+  "shot": "win-ProjectSettings-light",
+  "target": "window:ProjectSettings"
+ },
+ {
+  "close": "ProjectSettings"
+ },
+ {
+  "window": "GlobalTuning"
+ },
+ {
+  "shot": "win-GlobalTuning-light",
+  "target": "window:GlobalTuning"
+ },
+ {
+  "close": "GlobalTuning"
+ },
+ {
+  "window": "ScaleFinder"
+ },
+ {
+  "shot": "win-ScaleFinder-light",
+  "target": "window:ScaleFinder"
+ },
+ {
+  "close": "ScaleFinder"
+ },
+ {
+  "window": "InstrumentPicker"
+ },
+ {
+  "shot": "win-InstrumentPicker-light",
+  "target": "window:InstrumentPicker"
+ },
+ {
+  "close": "InstrumentPicker"
+ },
+ {
+  "window": "ScoreTextStyle"
+ },
+ {
+  "shot": "win-ScoreTextStyle-light",
+  "target": "window:ScoreTextStyle"
+ },
+ {
+  "close": "ScoreTextStyle"
+ },
+ {
+  "window": "MixTable"
+ },
+ {
+  "shot": "win-MixTable-light",
+  "target": "window:MixTable"
+ },
+ {
+  "close": "MixTable"
+ },
+ {
+  "window": "ChordFinder"
+ },
+ {
+  "shot": "win-ChordFinder-light",
+  "target": "window:ChordFinder"
+ },
+ {
+  "close": "ChordFinder"
+ },
+ {
+  "window": "SongStats"
+ },
+ {
+  "shot": "win-SongStats-light",
+  "target": "window:SongStats"
+ },
+ {
+  "close": "SongStats"
+ },
+ {
+  "window": "NewFromTemplate"
+ },
+ {
+  "shot": "win-NewFromTemplate-light",
+  "target": "window:NewFromTemplate"
+ },
+ {
+  "close": "NewFromTemplate"
+ },
+ {
+  "window": "AddPlugin"
+ },
+ {
+  "shot": "win-AddPlugin-light",
+  "target": "window:AddPlugin"
+ },
+ {
+  "close": "AddPlugin"
+ },
+ {
+  "window": "PasteOptions"
+ },
+ {
+  "shot": "win-PasteOptions-light",
+  "target": "window:PasteOptions"
+ },
+ {
+  "close": "PasteOptions"
+ },
+ {
+  "window": "Preferences",
+  "page": "Appearance"
+ },
+ {
+  "shot": "win-Preferences-light",
+  "target": "window:Preferences"
+ },
+ {
+  "close": "all"
+ },
+ {
+  "window": "Shortcuts"
+ },
+ {
+  "shot": "win-Shortcuts-light",
+  "target": "window:Preferences"
+ },
+ {
+  "close": "all"
+ },
+ {
+  "window": "CommandPalette",
+  "text": "tun"
+ },
+ {
+  "shot": "win-CommandPalette-light",
+  "target": "window:CommandPalette"
+ },
+ {
+  "close": "all"
+ },
+ {
+  "playhead": [
+   13,
+   0.4
+  ]
+ },
+ {
+  "shot": "play-playhead-light",
+  "target": "window"
+ },
+ {
+  "layout": "Compose"
+ },
+ {
+  "panel": "band"
+ },
+ {
+  "band-playing": [
+   13,
+   0.4
+  ]
+ },
+ {
+  "shot": "play-band-light",
+  "target": "window"
+ },
+ {
+  "layout": "Compose"
+ },
+ {
+  "panel": "learn"
+ },
+ {
+  "learn-playing": [
+   13,
+   0.4
+  ]
+ },
+ {
+  "shot": "play-learn-light",
+  "target": "window"
+ },
+ {
+  "layout": "Compose"
+ },
+ { "theme": "dark" },
+ { "close": "all" },
+ { "layout": "Compose" },
+ { "note-map-editor": "shipped" },
+ { "shot": "win-NoteMapEditor-dark", "target": "window:NoteMapEditor" },
+ { "close": "all" },
+ { "preset-panel": "seed" },
+ { "preset-manager": "plugin" },
+ { "shot": "win-PresetManager-dark", "target": "window:PresetManager" },
+ { "close": "all" },
+ { "message-box": "delete" },
+ { "shot": "win-MessageBox-dark", "target": "window:MessageBox" },
+ { "close": "all" },
+ { "select": [ 12, 14 ] },
+ { "delete-prompt": true },
+ { "shot": "win-DeletePrompt-dark", "target": "window:DeletePrompt" },
+ { "close": "all" },
+ { "clear-selection": true },
+ { "window": "VideoExport" },
+ { "shot": "win-VideoExport-dark", "target": "window:VideoExport" },
+ { "close": "all" },
+ { "learn-playing": [ 13, 0.4, "keys" ] },
+ { "panel": "learn" },
+ { "window": "KeyboardModePopout" },
+ { "shot": "win-KeyboardModePopout-dark", "target": "window:KeyboardModePopout" },
+ { "close": "all" },
+ { "theme": "light" },
+ { "close": "all" },
+ { "layout": "Compose" },
+ { "note-map-editor": "shipped" },
+ { "shot": "win-NoteMapEditor-light", "target": "window:NoteMapEditor" },
+ { "close": "all" },
+ { "preset-panel": "seed" },
+ { "preset-manager": "plugin" },
+ { "shot": "win-PresetManager-light", "target": "window:PresetManager" },
+ { "close": "all" },
+ { "message-box": "delete" },
+ { "shot": "win-MessageBox-light", "target": "window:MessageBox" },
+ { "close": "all" },
+ { "select": [ 12, 14 ] },
+ { "delete-prompt": true },
+ { "shot": "win-DeletePrompt-light", "target": "window:DeletePrompt" },
+ { "close": "all" },
+ { "clear-selection": true },
+ { "window": "VideoExport" },
+ { "shot": "win-VideoExport-light", "target": "window:VideoExport" },
+ { "close": "all" },
+ { "learn-playing": [ 13, 0.4, "keys" ] },
+ { "panel": "learn" },
+ { "window": "KeyboardModePopout" },
+ { "shot": "win-KeyboardModePopout-light", "target": "window:KeyboardModePopout" },
+ { "close": "all" },
+ { "theme": "dark" },
+ { "layout": "Compose" },
+ { "example-plugins": true },
+ { "window": "Wiring" },
+ { "shot": "win-Wiring-dark", "target": "window:Wiring" },
+ { "close": "all" },
+ { "window": "MidiProcessing" },
+ { "shot": "win-MidiProcessing-dark", "target": "window:MidiProcessing" },
+ { "close": "all" },
+ { "theme": "light" },
+ { "layout": "Compose" },
+ { "example-plugins": true },
+ { "window": "Wiring" },
+ { "shot": "win-Wiring-light", "target": "window:Wiring" },
+ { "close": "all" },
+ { "window": "MidiProcessing" },
+ { "shot": "win-MidiProcessing-light", "target": "window:MidiProcessing" },
+ { "close": "all" },
+ { "layout": "Compose" },
+ {
+  "open": "demo"
+ },
+ {
+  "theme": "dark"
+ },
+ {
+  "track": 0
+ },
+ {
+  "bar": 3
+ },
+ {
+  "note": [2, 5]
+ },
+ {
+  "effect": "bend"
+ },
+ {
+  "shot": "effect-bend-dark",
+  "target": "window:EffectBend"
+ },
+ {
+  "close": "EffectBend"
+ },
+ {
+  "effect": "tremolobar"
+ },
+ {
+  "shot": "effect-tremolobar-dark",
+  "target": "window:EffectTremoloBar"
+ },
+ {
+  "close": "EffectTremoloBar"
+ },
+ {
+  "effect": "trill"
+ },
+ {
+  "shot": "effect-trill-dark",
+  "target": "window:EffectTrill"
+ },
+ {
+  "close": "EffectTrill"
+ },
+ {
+  "effect": "grace"
+ },
+ {
+  "shot": "effect-grace-dark",
+  "target": "window:EffectGrace"
+ },
+ {
+  "close": "EffectGrace"
+ },
+ {
+  "effect": "harmonic"
+ },
+ {
+  "shot": "effect-harmonic-dark",
+  "target": "window:EffectHarmonic"
+ },
+ {
+  "close": "EffectHarmonic"
+ },
+ {
+  "theme": "light"
+ },
+ {
+  "effect": "bend"
+ },
+ {
+  "shot": "effect-bend-light",
+  "target": "window:EffectBend"
+ },
+ {
+  "close": "EffectBend"
+ },
+ {
+  "effect": "tremolobar"
+ },
+ {
+  "shot": "effect-tremolobar-light",
+  "target": "window:EffectTremoloBar"
+ },
+ {
+  "close": "EffectTremoloBar"
+ },
+ {
+  "effect": "trill"
+ },
+ {
+  "shot": "effect-trill-light",
+  "target": "window:EffectTrill"
+ },
+ {
+  "close": "EffectTrill"
+ },
+ {
+  "effect": "grace"
+ },
+ {
+  "shot": "effect-grace-light",
+  "target": "window:EffectGrace"
+ },
+ {
+  "close": "EffectGrace"
+ },
+ {
+  "effect": "harmonic"
+ },
+ {
+  "shot": "effect-harmonic-light",
+  "target": "window:EffectHarmonic"
+ },
+ {
+  "close": "EffectHarmonic"
+ },
+ {
+  "open": "demo"
+ },
+ {
+  "theme": "dark"
+ },
+ {
+  "track": 3
+ },
+ {
+  "panel": "instrument"
+ },
+ {
+  "instrument": "drums"
+ },
+ {
+  "shot": "instrument-drums-dark",
+  "target": "panel:instrument"
+ },
+ {
+  "track": 0
+ },
+ {
+  "instrument": "keyboard"
+ },
+ {
+  "shot": "instrument-keyboard-dark",
+  "target": "panel:instrument"
+ },
+ {
+  "theme": "light"
+ },
+ {
+  "shot": "instrument-keyboard-light",
+  "target": "panel:instrument"
+ },
+ {
+  "track": 3
+ },
+ {
+  "instrument": "drums"
+ },
+ {
+  "shot": "instrument-drums-light",
+  "target": "panel:instrument"
+ }
+]

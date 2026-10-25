@@ -1,0 +1,34 @@
+// Genuine names the DocTruth scanner cannot resolve to the tree.
+// One entry per line, exact match. Kept small: every entry below is either
+// an external/system name, or a legacy/example test named by the docs that
+// has no test in the tree (Batch-2 history, worked examples, specs).
+// Do NOT add current type/test/file names here to silence the guard;
+// fix the doc or the code instead.
+TestVideoFrameSourceGolden
+TestVideoEncoderBenchmark
+TestVideoEncoderOptions
+TestEditorCopyPaste
+TestFullDemoSong
+TestKeyboardHandsAccuracy
+TestSettingsEntryPointParity
+TestVideoExport
+TestTimelineSongTimeRepeatGrowth
+TestDialogEscape
+TestSingleInstanceProcessHandover
+TestSeekRebuildReturnsAtOnce
+TestDockLayoutCatalog
+TestWorkflowMonkey
+TestGp5EditingSemantics
+TestMusicXmlGuitarPro8Encoding
+TestTimelineLoopAndOrder
+TestBarSlots
+TestX
+TestA
+TestB
+Volatile
+Interlocked
+.github/workflows/windows-ci.yml
+.github/workflows/release.yml
+.github/workflows/build-bridge.yml
+.github/workflows/fuzz-weekly.yml
+windows-ci.yml

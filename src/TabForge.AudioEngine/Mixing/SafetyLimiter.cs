@@ -1,5 +1,7 @@
 namespace TabForge.AudioEngine.Mixing;
 
+// Owns: the transparent master safety limiter (stereo-linked peak, lookahead, bit-identical below ceiling).
+
 /// <summary>
 /// Transparent master safety limiter (A7-A01): a stereo-linked sample-peak limiter with a short lookahead. The required gain of each
 /// sample (ceiling / peak of the louder channel) is minimum-filtered over the lookahead window, then smoothed with a moving average of

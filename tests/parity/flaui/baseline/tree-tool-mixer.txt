@@ -1,0 +1,374 @@
+# TabForge element tree, role=tool
+# control view; rect = x,y,w,h relative to the window top-left in physical pixels at dpi=96
+# window size=1180x560
+# stripped: paths, GUIDs, times, dates, handles, numbers of 6+ digits
+Window id="" name="Mixer" enabled=y focusable=y rect=0,0,1180,560
+  TitleBar id="TitleBar" name="" enabled=y focusable=y rect=24,3,1148,28
+    MenuBar id="SystemMenuBar" name="System" enabled=y focusable=y rect=8,8,22,22
+      MenuItem id="" name="System" enabled=y focusable=y rect=8,8,22,22
+    Button id="Minimize-Restore" name="Minimize" enabled=y focusable=n rect=1033,1,47,30
+    Button id="Maximize-Restore" name="Maximize" enabled=y focusable=n rect=1080,1,46,30
+    Button id="Close" name="Close" enabled=y focusable=n rect=1126,1,47,30
+  Button id="Mixer.AudioPlugIns" name="Audio & Plug-ins settings…" enabled=y focusable=y rect=995,42,166,24
+    Text id="" name="Audio & Plug-ins settings…" enabled=y focusable=n rect=1006,46,144,16
+  Text id="" name="Group tracks" enabled=y focusable=n rect=18,46,68,16
+  ComboBox id="Mixer.ByInstrumentGuitars" name="By instrument: guitars, basses, keys (piano, organ, synth), drums, other." enabled=y focusable=y rect=95,42,150,24
+  Button id="Mixer.ChooseWhichInstruments" name="Choose which instruments go in which group: add, rename, reorder groups and set their rules" enabled=y focusable=y rect=254,42,88,24
+    Text id="" name="Group rules…" enabled=y focusable=n rect=263,46,70,16
+  Button id="Mixer.ShowOnlyThe" name="Show only the group rows" enabled=y focusable=y rect=350,42,78,24
+    Text id="" name="Collapse all" enabled=y focusable=n rect=359,46,60,16
+  CheckBox id="Mixer.ShowTheVolume" name="Show the volume column in the main track list" enabled=y focusable=y rect=444,46,122,16
+    Text id="" name="Volume in track list" enabled=y focusable=n rect=465,46,101,16
+  CheckBox id="Mixer.ShowThePan" name="Show the pan column in the main track list" enabled=y focusable=y rect=578,46,100,16
+    Text id="" name="Pan in track list" enabled=y focusable=n rect=599,46,79,16
+  CheckBox id="Mixer.ShowTheMixer" name="Show the mixer groups in the main track list: a box per group, which can be collapsed and dragged as a whole" enabled=y focusable=y rect=690,46,120,16
+    Text id="" name="Groups in track list" enabled=y focusable=n rect=711,46,99,16
+  Text id="" name="Group rows add to every track in the group (pan and pitch are offsets, volume is a percentage of each track's own). Drag a track or group row to reorder (the Move track up and down commands also move the selected row); right-click a track row to move it to another group. Double-click a slider to reset it." enabled=y focusable=n rect=18,513,1144,29
+  Pane id="" name="" enabled=y focusable=y rect=18,75,1144,430
+    Text id="" name="TRACK / GROUP" enabled=y focusable=n rect=31,75,182,15
+    Text id="" name="FX" enabled=y focusable=n rect=221,75,58,15
+    Text id="" name="MIDI" enabled=y focusable=n rect=287,75,50,15
+    Text id="" name="PITCH" enabled=y focusable=n rect=345,75,104,15
+    Text id="" name="PAN" enabled=y focusable=n rect=457,75,142,15
+    Text id="" name="VOLUME" enabled=y focusable=n rect=607,75,441,15
+    Text id="" name="" enabled=y focusable=n rect=1056,75,76,15
+    Button id="Mixer.CollapseMaster" name="Collapse Master" enabled=y focusable=y rect=33,107,18,24
+    Text id="" name="Master" enabled=y focusable=n rect=55,107,160,16
+    Text id="" name="whole mix" enabled=y focusable=n rect=55,123,160,14
+    Button id="Mixer.TrackFXChain" name="Track FX chain" enabled=y focusable=y rect=223,111,54,22
+    Button id="" name="Monitor FX" enabled=y focusable=y rect=287,111,56,22
+    Slider id="Mixer.MasterPanMoves" name="Master pan: moves the whole mix left or right (−64 left … 0 centre … +63 right; double-click: centre)" enabled=y focusable=y rect=459,110,142,24
+      Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=459,115,62,14
+      Thumb id="SliderThumb" name="" enabled=y focusable=n rect=521,115,18,14
+      Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=539,115,62,14
+    Slider id="Mixer.MasterVolumeFor" name="Master volume for all tracks (0–100 %, the same as the main window's master knob; double-click: 100)" enabled=y focusable=y rect=609,110,437,24
+      Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=609,115,419,14
+      Thumb id="SliderThumb" name="" enabled=y focusable=n rect=1028,115,18,14
+      Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=-8,-8,0,0
+    Button id="Mixer.LiveInputOff" name="Live input, off" enabled=y focusable=y rect=55,154,16,24
+    Text id="" name="Live input" enabled=y focusable=n rect=77,154,138,16
+    Text id="" name="off" enabled=y focusable=n rect=77,170,138,15
+    Button id="Mixer.FXChainFor" name="FX chain for live input" enabled=y focusable=y rect=223,158,54,22
+    Slider id="Mixer.LiveInputPan" name="Live input pan" enabled=y focusable=y rect=459,157,142,24
+      Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=459,162,62,14
+      Thumb id="SliderThumb" name="" enabled=y focusable=n rect=521,162,18,14
+      Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=539,162,62,14
+    Slider id="Mixer.LiveInputVolume" name="Live input volume" enabled=y focusable=y rect=609,157,437,24
+      Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=609,162,330,14
+      Thumb id="SliderThumb" name="" enabled=y focusable=n rect=939,162,18,14
+      Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=957,162,89,14
+    Button id="Mixer.LiveInputMute" name="Live input mute" enabled=y focusable=y rect=1075,159,34,26
+      Text id="" name="M" enabled=y focusable=n rect=1087,165,10,15
+    Button id="Mixer.CollapseGuitars" name="Collapse Guitars" enabled=y focusable=n rect=33,220,18,24
+    Button id="Mixer.ColourOfThe" name="Colour of the guitars: click to choose (colours every track in the group)" enabled=y focusable=y rect=55,220,16,24
+    Text id="" name="Guitars" enabled=y focusable=n rect=77,220,138,16
+    Text id="" name="5 tracks" enabled=y focusable=n rect=77,236,138,15
+    Button id="Mixer.TrackFXChain" name="Track FX chain" enabled=y focusable=y rect=223,224,54,22
+    Button id="Mixer.Button0" name="−" enabled=y focusable=y rect=348,223,22,24
+      Text id="" name="−" enabled=y focusable=n rect=355,227,8,16
+    Button id="Mixer.Button1" name="+" enabled=y focusable=y rect=428,223,22,24
+      Text id="" name="+" enabled=y focusable=n rect=435,227,8,16
+    Text id="" name="0 st" enabled=y focusable=n rect=380,227,38,16
+    Slider id="Mixer.MovesEveryTrack" name="Moves every track in the group left or right (−64 left … 0 centre … +63 right)" enabled=y focusable=y rect=459,223,142,24
+      Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=459,228,62,14
+      Thumb id="SliderThumb" name="" enabled=y focusable=n rect=521,228,18,14
+      Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=539,228,62,14
+    Slider id="Mixer.GroupLevelIn" name="Group level in percent of each track's own volume (100 = unchanged)" enabled=y focusable=y rect=609,223,437,24
+      Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=609,228,210,14
+      Thumb id="SliderThumb" name="" enabled=y focusable=n rect=819,228,18,14
+      Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=837,228,209,14
+    Button id="Mixer.Mute" name="Mute" enabled=y focusable=y rect=1056,225,34,26
+      Text id="" name="M" enabled=y focusable=n rect=1068,231,10,15
+    Button id="Mixer.Solo" name="Solo" enabled=y focusable=y rect=1094,225,34,26
+      Text id="" name="S" enabled=y focusable=n rect=1108,231,6,15
+    Button id="Mixer.ColourOfRhythm" name="Colour of Rhythm Gtr L" enabled=y focusable=y rect=55,268,16,24
+    Text id="" name="Rhythm Gtr L" enabled=y focusable=n rect=77,268,134,16
+    Text id="" name="Distortion Guitar (7 strings)" enabled=y focusable=n rect=77,284,134,15
+    Button id="Mixer.FXChainFor" name="FX chain for Rhythm Gtr L" enabled=y focusable=y rect=223,272,54,22
+    CheckBox id="Mixer.MIDISoundThe" name="MIDI sound: the track's General MIDI instrument plays while the FX chain is on (the effects shape it when there is no VST instrument). Off: only a VST instrument sounds." enabled=n focusable=n rect=304,276,21,15
+    Button id="Mixer.Button0" name="−" enabled=y focusable=y rect=348,271,22,24
+      Text id="" name="−" enabled=y focusable=n rect=355,275,8,16
+    Button id="Mixer.Button1" name="+" enabled=y focusable=y rect=428,271,22,24
+      Text id="" name="+" enabled=y focusable=n rect=435,275,8,16
+    Text id="" name="0 st" enabled=y focusable=n rect=380,275,38,16
+    Slider id="Mixer.TrackPan" name="Track pan (−64 left … 0 centre … +63 right; mouse wheel: 1 step, Ctrl+wheel: 8; double-click: centre)" enabled=y focusable=y rect=459,271,142,24
+      Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=-8,-8,0,0
+      Thumb id="SliderThumb" name="" enabled=y focusable=n rect=459,276,18,14
+      Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=477,276,124,14
+    Slider id="Mixer.TrackVolume" name="Track volume (0-127; mouse wheel: 1 step, Ctrl+wheel: 8; double-click: 100)" enabled=y focusable=y rect=609,271,437,24
+      Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=609,276,317,14
+      Thumb id="SliderThumb" name="" enabled=y focusable=n rect=926,276,18,14
+      Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=944,276,102,14
+    Button id="Mixer.Mute" name="Mute" enabled=y focusable=y rect=1056,273,34,26
+      Text id="" name="M" enabled=y focusable=n rect=1068,279,10,15
+    Button id="Mixer.Solo" name="Solo" enabled=y focusable=y rect=1094,273,34,26
+      Text id="" name="S" enabled=y focusable=n rect=1108,279,6,15
+    Button id="Mixer.ColourOfRhythm" name="Colour of Rhythm Gtr R" enabled=y focusable=y rect=55,316,16,24
+    Text id="" name="Rhythm Gtr R" enabled=y focusable=n rect=77,316,134,16
+    Text id="" name="Distortion Guitar (8 strings)" enabled=y focusable=n rect=77,332,134,15
+    Button id="Mixer.FXChainFor" name="FX chain for Rhythm Gtr R" enabled=y focusable=y rect=223,320,54,22
+    CheckBox id="Mixer.MIDISoundThe" name="MIDI sound: the track's General MIDI instrument plays while the FX chain is on (the effects shape it when there is no VST instrument). Off: only a VST instrument sounds." enabled=n focusable=n rect=304,324,21,15
+    Button id="Mixer.Button0" name="−" enabled=y focusable=y rect=348,319,22,24
+      Text id="" name="−" enabled=y focusable=n rect=355,323,8,16
+    Button id="Mixer.Button1" name="+" enabled=y focusable=y rect=428,319,22,24
+      Text id="" name="+" enabled=y focusable=n rect=435,323,8,16
+    Text id="" name="0 st" enabled=y focusable=n rect=380,323,38,16
+    Slider id="Mixer.TrackPan" name="Track pan (−64 left … 0 centre … +63 right; mouse wheel: 1 step, Ctrl+wheel: 8; double-click: centre)" enabled=y focusable=y rect=459,319,142,24
+      Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=459,324,124,14
+      Thumb id="SliderThumb" name="" enabled=y focusable=n rect=583,324,18,14
+      Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=-8,-8,0,0
+    Slider id="Mixer.TrackVolume" name="Track volume (0-127; mouse wheel: 1 step, Ctrl+wheel: 8; double-click: 100)" enabled=y focusable=y rect=609,319,437,24
+      Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=609,324,317,14
+      Thumb id="SliderThumb" name="" enabled=y focusable=n rect=926,324,18,14
+      Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=944,324,102,14
+    Button id="Mixer.Mute" name="Mute" enabled=y focusable=y rect=1056,321,34,26
+      Text id="" name="M" enabled=y focusable=n rect=1068,327,10,15
+    Button id="Mixer.Solo" name="Solo" enabled=y focusable=y rect=1094,321,34,26
+      Text id="" name="S" enabled=y focusable=n rect=1108,327,6,15
+    Button id="Mixer.ColourOfLead" name="Colour of Lead Gtr" enabled=y focusable=y rect=55,364,16,24
+    Text id="" name="Lead Gtr" enabled=y focusable=n rect=77,364,134,16
+    Text id="" name="Overdriven Guitar" enabled=y focusable=n rect=77,380,134,15
+    Button id="Mixer.FXChainFor" name="FX chain for Lead Gtr" enabled=y focusable=y rect=223,368,54,22
+    CheckBox id="Mixer.MIDISoundThe" name="MIDI sound: the track's General MIDI instrument plays while the FX chain is on (the effects shape it when there is no VST instrument). Off: only a VST instrument sounds." enabled=n focusable=n rect=304,372,21,15
+    Button id="Mixer.Button0" name="−" enabled=y focusable=y rect=348,367,22,24
+      Text id="" name="−" enabled=y focusable=n rect=355,371,8,16
+    Button id="Mixer.Button1" name="+" enabled=y focusable=y rect=428,367,22,24
+      Text id="" name="+" enabled=y focusable=n rect=435,371,8,16
+    Text id="" name="0 st" enabled=y focusable=n rect=380,371,38,16
+    Slider id="Mixer.TrackPan" name="Track pan (−64 left … 0 centre … +63 right; mouse wheel: 1 step, Ctrl+wheel: 8; double-click: centre)" enabled=y focusable=y rect=459,367,142,24
+      Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=459,372,62,14
+      Thumb id="SliderThumb" name="" enabled=y focusable=n rect=521,372,18,14
+      Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=539,372,62,14
+    Slider id="Mixer.TrackVolume" name="Track volume (0-127; mouse wheel: 1 step, Ctrl+wheel: 8; double-click: 100)" enabled=y focusable=y rect=609,367,437,24
+      Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=609,372,317,14
+      Thumb id="SliderThumb" name="" enabled=y focusable=n rect=926,372,18,14
+      Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=944,372,102,14
+    Button id="Mixer.Mute" name="Mute" enabled=y focusable=y rect=1056,369,34,26
+      Text id="" name="M" enabled=y focusable=n rect=1068,375,10,15
+    Button id="Mixer.Solo" name="Solo" enabled=y focusable=y rect=1094,369,34,26
+      Text id="" name="S" enabled=y focusable=n rect=1108,375,6,15
+    Button id="Mixer.ColourOfLead" name="Colour of Lead Harmony" enabled=y focusable=y rect=55,412,16,24
+    Text id="" name="Lead Harmony" enabled=y focusable=n rect=77,412,134,16
+    Text id="" name="Overdriven Guitar" enabled=y focusable=n rect=77,428,134,15
+    Button id="Mixer.FXChainFor" name="FX chain for Lead Harmony" enabled=y focusable=y rect=223,416,54,22
+    CheckBox id="Mixer.MIDISoundThe" name="MIDI sound: the track's General MIDI instrument plays while the FX chain is on (the effects shape it when there is no VST instrument). Off: only a VST instrument sounds." enabled=n focusable=n rect=304,420,21,15
+    Button id="Mixer.Button0" name="−" enabled=y focusable=y rect=348,415,22,24
+      Text id="" name="−" enabled=y focusable=n rect=355,419,8,16
+    Button id="Mixer.Button1" name="+" enabled=y focusable=y rect=428,415,22,24
+      Text id="" name="+" enabled=y focusable=n rect=435,419,8,16
+    Text id="" name="0 st" enabled=y focusable=n rect=380,419,38,16
+    Slider id="Mixer.TrackPan" name="Track pan (−64 left … 0 centre … +63 right; mouse wheel: 1 step, Ctrl+wheel: 8; double-click: centre)" enabled=y focusable=y rect=459,415,142,24
+      Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=459,420,47,14
+      Thumb id="SliderThumb" name="" enabled=y focusable=n rect=506,420,18,14
+      Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=524,420,77,14
+    Slider id="Mixer.TrackVolume" name="Track volume (0-127; mouse wheel: 1 step, Ctrl+wheel: 8; double-click: 100)" enabled=y focusable=y rect=609,415,437,24
+      Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=609,420,290,14
+      Thumb id="SliderThumb" name="" enabled=y focusable=n rect=899,420,18,14
+      Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=917,420,129,14
+    Button id="Mixer.Mute" name="Mute" enabled=y focusable=y rect=1056,417,34,26
+      Text id="" name="M" enabled=y focusable=n rect=1068,423,10,15
+    Button id="Mixer.Solo" name="Solo" enabled=y focusable=y rect=1094,417,34,26
+      Text id="" name="S" enabled=y focusable=n rect=1108,423,6,15
+    Button id="Mixer.ColourOfClean" name="Colour of Clean Gtr" enabled=y focusable=y rect=55,460,16,24
+    Text id="" name="Clean Gtr" enabled=y focusable=n rect=77,460,134,16
+    Text id="" name="Electric Guitar (clean)" enabled=y focusable=n rect=77,476,134,15
+    Button id="Mixer.FXChainFor" name="FX chain for Clean Gtr" enabled=y focusable=y rect=223,464,54,22
+    CheckBox id="Mixer.MIDISoundThe" name="MIDI sound: the track's General MIDI instrument plays while the FX chain is on (the effects shape it when there is no VST instrument). Off: only a VST instrument sounds." enabled=n focusable=n rect=304,468,21,15
+    Button id="Mixer.Button0" name="−" enabled=y focusable=y rect=348,463,22,24
+      Text id="" name="−" enabled=y focusable=n rect=355,467,8,16
+    Button id="Mixer.Button1" name="+" enabled=y focusable=y rect=428,463,22,24
+      Text id="" name="+" enabled=y focusable=n rect=435,467,8,16
+    Text id="" name="0 st" enabled=y focusable=n rect=380,467,38,16
+    Slider id="Mixer.TrackPan" name="Track pan (−64 left … 0 centre … +63 right; mouse wheel: 1 step, Ctrl+wheel: 8; double-click: centre)" enabled=y focusable=y rect=459,463,142,24
+      Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=459,468,78,14
+      Thumb id="SliderThumb" name="" enabled=y focusable=n rect=537,468,18,14
+      Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=555,468,46,14
+    Slider id="Mixer.TrackVolume" name="Track volume (0-127; mouse wheel: 1 step, Ctrl+wheel: 8; double-click: 100)" enabled=y focusable=y rect=609,463,437,24
+      Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=609,468,264,14
+      Thumb id="SliderThumb" name="" enabled=y focusable=n rect=873,468,18,14
+      Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=891,468,155,14
+    Button id="Mixer.Mute" name="Mute" enabled=y focusable=y rect=1056,465,34,26
+      Text id="" name="M" enabled=y focusable=n rect=1068,471,10,15
+    Button id="Mixer.Solo" name="Solo" enabled=y focusable=y rect=1094,465,34,26
+      Text id="" name="S" enabled=y focusable=n rect=1108,471,6,15
+    Button id="Mixer.CollapseBasses" name="Collapse Basses" enabled=y focusable=n rect=33,526,18,24
+    Button id="Mixer.ColourOfThe" name="Colour of the basses: click to choose (colours every track in the group)" enabled=y focusable=y rect=55,526,16,24
+    Text id="" name="Basses" enabled=y focusable=n rect=77,526,138,16
+    Text id="" name="2 tracks" enabled=y focusable=n rect=77,542,138,15
+    Button id="Mixer.TrackFXChain" name="Track FX chain" enabled=y focusable=y rect=223,530,54,22
+    Button id="Mixer.Button0" name="−" enabled=y focusable=y rect=348,529,22,24
+      Text id="" name="−" enabled=y focusable=n rect=355,533,8,16
+    Button id="Mixer.Button1" name="+" enabled=y focusable=y rect=428,529,22,24
+      Text id="" name="+" enabled=y focusable=n rect=435,533,8,16
+    Text id="" name="0 st" enabled=y focusable=n rect=380,533,38,16
+    Slider id="Mixer.MovesEveryTrack" name="Moves every track in the group left or right (−64 left … 0 centre … +63 right)" enabled=y focusable=y rect=459,529,142,24
+      Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=459,534,62,14
+      Thumb id="SliderThumb" name="" enabled=y focusable=n rect=521,534,18,14
+      Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=539,534,62,14
+    Slider id="Mixer.GroupLevelIn" name="Group level in percent of each track's own volume (100 = unchanged)" enabled=y focusable=y rect=609,529,437,24
+      Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=609,534,210,14
+      Thumb id="SliderThumb" name="" enabled=y focusable=n rect=819,534,18,14
+      Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=837,534,209,14
+    Button id="Mixer.Mute" name="Mute" enabled=y focusable=y rect=1056,531,34,26
+      Text id="" name="M" enabled=y focusable=n rect=1068,537,10,15
+    Button id="Mixer.Solo" name="Solo" enabled=y focusable=y rect=1094,531,34,26
+      Text id="" name="S" enabled=y focusable=n rect=1108,537,6,15
+    Button id="Mixer.ColourOfBass" name="Colour of Bass" enabled=y focusable=y rect=55,574,16,24
+    Text id="" name="Bass" enabled=y focusable=n rect=77,574,134,16
+    Text id="" name="Electric Bass (pick) (5 strings)" enabled=y focusable=n rect=77,590,134,15
+    Button id="Mixer.FXChainFor" name="FX chain for Bass" enabled=y focusable=y rect=223,578,54,22
+    CheckBox id="Mixer.MIDISoundThe" name="MIDI sound: the track's General MIDI instrument plays while the FX chain is on (the effects shape it when there is no VST instrument). Off: only a VST instrument sounds." enabled=n focusable=n rect=304,582,21,15
+    Button id="Mixer.Button0" name="−" enabled=y focusable=y rect=348,577,22,24
+      Text id="" name="−" enabled=y focusable=n rect=355,581,8,16
+    Button id="Mixer.Button1" name="+" enabled=y focusable=y rect=428,577,22,24
+      Text id="" name="+" enabled=y focusable=n rect=435,581,8,16
+    Text id="" name="0 st" enabled=y focusable=n rect=380,581,38,16
+    Slider id="Mixer.TrackPan" name="Track pan (−64 left … 0 centre … +63 right; mouse wheel: 1 step, Ctrl+wheel: 8; double-click: centre)" enabled=y focusable=y rect=459,577,142,24
+      Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=459,582,62,14
+      Thumb id="SliderThumb" name="" enabled=y focusable=n rect=521,582,18,14
+      Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=539,582,62,14
+    Slider id="Mixer.TrackVolume" name="Track volume (0-127; mouse wheel: 1 step, Ctrl+wheel: 8; double-click: 100)" enabled=y focusable=y rect=609,577,437,24
+      Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=609,582,343,14
+      Thumb id="SliderThumb" name="" enabled=y focusable=n rect=952,582,18,14
+      Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=970,582,76,14
+    Button id="Mixer.Mute" name="Mute" enabled=y focusable=y rect=1056,579,34,26
+      Text id="" name="M" enabled=y focusable=n rect=1068,585,10,15
+    Button id="Mixer.Solo" name="Solo" enabled=y focusable=y rect=1094,579,34,26
+      Text id="" name="S" enabled=y focusable=n rect=1108,585,6,15
+    Button id="Mixer.ColourOfSub" name="Colour of Sub Drop" enabled=y focusable=y rect=55,622,16,24
+    Text id="" name="Sub Drop" enabled=y focusable=n rect=77,622,134,16
+    Text id="" name="Synth Bass 1" enabled=y focusable=n rect=77,638,134,15
+    Button id="Mixer.FXChainFor" name="FX chain for Sub Drop" enabled=y focusable=y rect=223,626,54,22
+    CheckBox id="Mixer.MIDISoundThe" name="MIDI sound: the track's General MIDI instrument plays while the FX chain is on (the effects shape it when there is no VST instrument). Off: only a VST instrument sounds." enabled=n focusable=n rect=304,630,21,15
+    Button id="Mixer.Button0" name="−" enabled=y focusable=y rect=348,625,22,24
+      Text id="" name="−" enabled=y focusable=n rect=355,629,8,16
+    Button id="Mixer.Button1" name="+" enabled=y focusable=y rect=428,625,22,24
+      Text id="" name="+" enabled=y focusable=n rect=435,629,8,16
+    Text id="" name="0 st" enabled=y focusable=n rect=380,629,38,16
+    Slider id="Mixer.TrackPan" name="Track pan (−64 left … 0 centre … +63 right; mouse wheel: 1 step, Ctrl+wheel: 8; double-click: centre)" enabled=y focusable=y rect=459,625,142,24
+      Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=459,630,62,14
+      Thumb id="SliderThumb" name="" enabled=y focusable=n rect=521,630,18,14
+      Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=539,630,62,14
+    Slider id="Mixer.TrackVolume" name="Track volume (0-127; mouse wheel: 1 step, Ctrl+wheel: 8; double-click: 100)" enabled=y focusable=y rect=609,625,437,24
+      Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=609,630,317,14
+      Thumb id="SliderThumb" name="" enabled=y focusable=n rect=926,630,18,14
+      Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=944,630,102,14
+    Button id="Mixer.Mute" name="Mute" enabled=y focusable=y rect=1056,627,34,26
+      Text id="" name="M" enabled=y focusable=n rect=1068,633,10,15
+    Button id="Mixer.Solo" name="Solo" enabled=y focusable=y rect=1094,627,34,26
+      Text id="" name="S" enabled=y focusable=n rect=1108,633,6,15
+    Button id="Mixer.CollapseDrums" name="Collapse Drums" enabled=y focusable=n rect=33,688,18,24
+    Button id="Mixer.ColourOfThe" name="Colour of the drums: click to choose (colours every track in the group)" enabled=y focusable=y rect=55,688,16,24
+    Text id="" name="Drums" enabled=y focusable=n rect=77,688,138,16
+    Text id="" name="1 track" enabled=y focusable=n rect=77,704,138,15
+    Button id="Mixer.TrackFXChain" name="Track FX chain" enabled=y focusable=y rect=223,692,54,22
+    Button id="Mixer.Button0" name="−" enabled=y focusable=y rect=348,691,22,24
+      Text id="" name="−" enabled=y focusable=n rect=355,695,8,16
+    Button id="Mixer.Button1" name="+" enabled=y focusable=y rect=428,691,22,24
+      Text id="" name="+" enabled=y focusable=n rect=435,695,8,16
+    Text id="" name="0 st" enabled=y focusable=n rect=380,695,38,16
+    Slider id="Mixer.MovesEveryTrack" name="Moves every track in the group left or right (−64 left … 0 centre … +63 right)" enabled=y focusable=y rect=459,691,142,24
+      Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=459,696,62,14
+      Thumb id="SliderThumb" name="" enabled=y focusable=n rect=521,696,18,14
+      Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=539,696,62,14
+    Slider id="Mixer.GroupLevelIn" name="Group level in percent of each track's own volume (100 = unchanged)" enabled=y focusable=y rect=609,691,437,24
+      Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=609,696,210,14
+      Thumb id="SliderThumb" name="" enabled=y focusable=n rect=819,696,18,14
+      Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=837,696,209,14
+    Button id="Mixer.Mute" name="Mute" enabled=y focusable=y rect=1056,693,34,26
+      Text id="" name="M" enabled=y focusable=n rect=1068,699,10,15
+    Button id="Mixer.Solo" name="Solo" enabled=y focusable=y rect=1094,693,34,26
+      Text id="" name="S" enabled=y focusable=n rect=1108,699,6,15
+    Button id="Mixer.ColourOfDrums" name="Colour of Drums" enabled=y focusable=y rect=55,736,16,24
+    Text id="" name="Drums" enabled=y focusable=n rect=77,736,134,16
+    Text id="" name="Drum Kit (Standard)" enabled=y focusable=n rect=77,752,134,15
+    Button id="Mixer.FXChainFor" name="FX chain for Drums" enabled=y focusable=y rect=223,740,54,22
+    CheckBox id="Mixer.MIDISoundThe" name="MIDI sound: the track's General MIDI instrument plays while the FX chain is on (the effects shape it when there is no VST instrument). Off: only a VST instrument sounds." enabled=n focusable=n rect=304,744,21,15
+    Button id="Mixer.Button0" name="−" enabled=y focusable=y rect=348,739,22,24
+      Text id="" name="−" enabled=y focusable=n rect=355,743,8,16
+    Button id="Mixer.Button1" name="+" enabled=y focusable=y rect=428,739,22,24
+      Text id="" name="+" enabled=y focusable=n rect=435,743,8,16
+    Text id="" name="0 st" enabled=y focusable=n rect=380,743,38,16
+    Slider id="Mixer.TrackPan" name="Track pan (−64 left … 0 centre … +63 right; mouse wheel: 1 step, Ctrl+wheel: 8; double-click: centre)" enabled=y focusable=y rect=459,739,142,24
+      Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=459,744,62,14
+      Thumb id="SliderThumb" name="" enabled=y focusable=n rect=521,744,18,14
+      Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=539,744,62,14
+    Slider id="Mixer.TrackVolume" name="Track volume (0-127; mouse wheel: 1 step, Ctrl+wheel: 8; double-click: 100)" enabled=y focusable=y rect=609,739,437,24
+      Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=609,744,370,14
+      Thumb id="SliderThumb" name="" enabled=y focusable=n rect=979,744,18,14
+      Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=997,744,49,14
+    Button id="Mixer.Mute" name="Mute" enabled=y focusable=y rect=1056,741,34,26
+      Text id="" name="M" enabled=y focusable=n rect=1068,747,10,15
+    Button id="Mixer.Solo" name="Solo" enabled=y focusable=y rect=1094,741,34,26
+      Text id="" name="S" enabled=y focusable=n rect=1108,747,6,15
+    Button id="Mixer.CollapseOtherInstruments" name="Collapse Other instruments" enabled=y focusable=n rect=33,802,18,24
+    Button id="Mixer.ColourOfThe" name="Colour of the other instruments: click to choose (colours every track in the group)" enabled=y focusable=y rect=55,802,16,24
+    Text id="" name="Other instruments" enabled=y focusable=n rect=77,802,138,16
+    Text id="" name="2 tracks" enabled=y focusable=n rect=77,818,138,15
+    Button id="Mixer.TrackFXChain" name="Track FX chain" enabled=y focusable=y rect=223,806,54,22
+    Button id="Mixer.Button0" name="−" enabled=y focusable=y rect=348,805,22,24
+      Text id="" name="−" enabled=y focusable=n rect=355,809,8,16
+    Button id="Mixer.Button1" name="+" enabled=y focusable=y rect=428,805,22,24
+      Text id="" name="+" enabled=y focusable=n rect=435,809,8,16
+    Text id="" name="0 st" enabled=y focusable=n rect=380,809,38,16
+    Slider id="Mixer.MovesEveryTrack" name="Moves every track in the group left or right (−64 left … 0 centre … +63 right)" enabled=y focusable=y rect=459,805,142,24
+      Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=459,810,62,14
+      Thumb id="SliderThumb" name="" enabled=y focusable=n rect=521,810,18,14
+      Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=539,810,62,14
+    Slider id="Mixer.GroupLevelIn" name="Group level in percent of each track's own volume (100 = unchanged)" enabled=y focusable=y rect=609,805,437,24
+      Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=609,810,210,14
+      Thumb id="SliderThumb" name="" enabled=y focusable=n rect=819,810,18,14
+      Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=837,810,209,14
+    Button id="Mixer.Mute" name="Mute" enabled=y focusable=y rect=1056,807,34,26
+      Text id="" name="M" enabled=y focusable=n rect=1068,813,10,15
+    Button id="Mixer.Solo" name="Solo" enabled=y focusable=y rect=1094,807,34,26
+      Text id="" name="S" enabled=y focusable=n rect=1108,813,6,15
+    Button id="Mixer.ColourOfPad" name="Colour of Pad / Strings" enabled=y focusable=y rect=55,850,16,24
+    Text id="" name="Pad / Strings" enabled=y focusable=n rect=77,850,134,16
+    Text id="" name="Pad 2 (warm)" enabled=y focusable=n rect=77,866,134,15
+    Button id="Mixer.FXChainFor" name="FX chain for Pad / Strings" enabled=y focusable=y rect=223,854,54,22
+    CheckBox id="Mixer.MIDISoundThe" name="MIDI sound: the track's General MIDI instrument plays while the FX chain is on (the effects shape it when there is no VST instrument). Off: only a VST instrument sounds." enabled=n focusable=n rect=304,858,21,15
+    Button id="Mixer.Button0" name="−" enabled=y focusable=y rect=348,853,22,24
+      Text id="" name="−" enabled=y focusable=n rect=355,857,8,16
+    Button id="Mixer.Button1" name="+" enabled=y focusable=y rect=428,853,22,24
+      Text id="" name="+" enabled=y focusable=n rect=435,857,8,16
+    Text id="" name="0 st" enabled=y focusable=n rect=380,857,38,16
+    Slider id="Mixer.TrackPan" name="Track pan (−64 left … 0 centre … +63 right; mouse wheel: 1 step, Ctrl+wheel: 8; double-click: centre)" enabled=y focusable=y rect=459,853,142,24
+      Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=459,858,62,14
+      Thumb id="SliderThumb" name="" enabled=y focusable=n rect=521,858,18,14
+      Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=539,858,62,14
+    Slider id="Mixer.TrackVolume" name="Track volume (0-127; mouse wheel: 1 step, Ctrl+wheel: 8; double-click: 100)" enabled=y focusable=y rect=609,853,437,24
+      Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=609,858,211,14
+      Thumb id="SliderThumb" name="" enabled=y focusable=n rect=820,858,18,14
+      Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=838,858,208,14
+    Button id="Mixer.Mute" name="Mute" enabled=y focusable=y rect=1056,855,34,26
+      Text id="" name="M" enabled=y focusable=n rect=1068,861,10,15
+    Button id="Mixer.Solo" name="Solo" enabled=y focusable=y rect=1094,855,34,26
+      Text id="" name="S" enabled=y focusable=n rect=1108,861,6,15
+    Button id="Mixer.ColourOfPiano" name="Colour of Piano" enabled=y focusable=y rect=55,898,16,24
+    Text id="" name="Piano" enabled=y focusable=n rect=77,898,134,16
+    Text id="" name="Acoustic Grand Piano" enabled=y focusable=n rect=77,914,134,15
+    Button id="Mixer.FXChainFor" name="FX chain for Piano" enabled=y focusable=y rect=223,902,54,22
+    CheckBox id="Mixer.MIDISoundThe" name="MIDI sound: the track's General MIDI instrument plays while the FX chain is on (the effects shape it when there is no VST instrument). Off: only a VST instrument sounds." enabled=n focusable=n rect=304,906,21,15
+    Button id="Mixer.Button0" name="−" enabled=y focusable=y rect=348,901,22,24
+      Text id="" name="−" enabled=y focusable=n rect=355,905,8,16
+    Button id="Mixer.Button1" name="+" enabled=y focusable=y rect=428,901,22,24
+      Text id="" name="+" enabled=y focusable=n rect=435,905,8,16
+    Text id="" name="0 st" enabled=y focusable=n rect=380,905,38,16
+    Slider id="Mixer.TrackPan" name="Track pan (−64 left … 0 centre … +63 right; mouse wheel: 1 step, Ctrl+wheel: 8; double-click: centre)" enabled=y focusable=y rect=459,901,142,24
+      Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=459,906,47,14
+      Thumb id="SliderThumb" name="" enabled=y focusable=n rect=506,906,18,14
+      Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=524,906,77,14
+    Slider id="Mixer.TrackVolume" name="Track volume (0-127; mouse wheel: 1 step, Ctrl+wheel: 8; double-click: 100)" enabled=y focusable=y rect=609,901,437,24
+      Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=609,906,211,14
+      Thumb id="SliderThumb" name="" enabled=y focusable=n rect=820,906,18,14
+      Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=838,906,208,14
+    Button id="Mixer.Mute" name="Mute" enabled=y focusable=y rect=1056,903,34,26
+      Text id="" name="M" enabled=y focusable=n rect=1068,909,10,15
+    Button id="Mixer.Solo" name="Solo" enabled=y focusable=y rect=1094,903,34,26
+      Text id="" name="S" enabled=y focusable=n rect=1108,909,6,15
+    ScrollBar id="VerticalScrollBar" name="" enabled=y focusable=n rect=1145,75,17,430
+      Button id="Mixer.RepeatButton0" name="Repeat button0" enabled=y focusable=n rect=-8,-8,0,0
+      Thumb id="" name="" enabled=y focusable=n rect=1145,75,17,211
+      Button id="Mixer.RepeatButton1" name="Repeat button1" enabled=y focusable=n rect=1145,286,17,219
+# nodes=369

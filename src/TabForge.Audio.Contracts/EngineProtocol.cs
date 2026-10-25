@@ -1,7 +1,12 @@
+using System.Buffers.Binary;
+using System.Runtime.CompilerServices;
+using System.Buffers;
 using System.IO;
 using System.Text;
 
 namespace TabForge.Audio.Contracts;
+
+// Owns: the commands from TabForge to the audio engine (named pipe, length-prefixed frames).
 
 /// <summary>Commands from TabForge to the audio engine (named pipe, length-prefixed frames).</summary>
 public enum EngineCommand : byte
@@ -30,7 +35,7 @@ public enum EngineCommand : byte
     SetClips = 15,
     /// <summary>Record-arm / input monitoring (slot, armed, input mode 0 = in 1, 1 = in 2, 2 = stereo).</summary>
     SetArm = 16,
-    /// <summary>Song position: playing, song seconds at a Stopwatch timestamp; then (optional) the owner id of the song, absent: owner 0.</summary>
+    /// <summary>Song position: playing, song seconds at a Stopwatch timestamp; then (optional) the owner id of the song, absent: owner 0; then (optional) the playback speed (float, absent: 1, clamped 0.05..8) that the song clock and audio clips follow.</summary>
     SetPosition = 17,
     /// <summary>Start (true, folder) or stop (false) recording the armed tracks; after the offset (optional) the owner id of the recording song, absent: owner 0.</summary>
     Record = 18,
@@ -91,6 +96,20 @@ public enum EngineCommand : byte
     /// frame per plug-in. An engine that does not know this command ignores it: no answer means "not available".
     /// </summary>
     GetPluginInfo = 42,
+    /// <summary>The live input's gain into its chain (slot, dB, float): applied to the monitored input before the plug-ins, ramped in the engine. The input meter and the tuner stay on the raw input.</summary>
+    SetInputGain = 43,
+    /// <summary>The tuner's analysis window (ms, int; the choices are <c>TunerSettings.WindowChoicesMs</c>): longer windows detect lower notes.</summary>
+    SetTunerWindow = 44,
+    /// <summary>
+    /// What an ASIO driver offers (request id, driver name; empty = the first installed): answered by <see cref="EngineEvent.AsioProbed"/>. The engine answers from its
+    /// own open driver, or opens the driver briefly when it does not hold it. TabForge never opens ASIO itself (the driver takes one client at a time).
+    /// </summary>
+    ProbeAsio = 45,
+    /// <summary>
+    /// Shows the control panel of an ASIO driver (request id, driver name; empty = the first installed): answered by <see cref="EngineEvent.AsioPanelShown"/> once the panel call returns.
+    /// The engine opens the panel of the driver it holds, or opens the driver briefly when it does not: TabForge itself never opens ASIO.
+    /// </summary>
+    ShowAsioPanel = 46,
     Shutdown = 99,
 }
 
@@ -133,6 +152,11 @@ public static class EngineWatchdog
     public const double LongNoticeSec = 30;
     /// <summary>TabForge restarts an engine that answered no ping for this long while no plug-in call was in progress.</summary>
     public const double DeafLimitSec = 5;
+    /// <summary>An ASIO control panel is modal in the engine: the watchdog and TabForge's liveness check wait for it this long, then judge the engine as usual (the shared cap).</summary>
+    public const double PanelCapSec = 600;
+
+    /// <summary>True while a control panel opened at <paramref name="openedTicks"/> (a Stopwatch timestamp; 0 = none) still holds the engine at <paramref name="nowTicks"/>.</summary>
+    public static bool PanelHolds(long openedTicks, long nowTicks) => openedTicks != 0 && System.Diagnostics.Stopwatch.GetElapsedTime(openedTicks, nowTicks).TotalSeconds < PanelCapSec;
 
     public static double LimitSec(PluginCallKind kind) => kind switch
     {
@@ -219,6 +243,12 @@ public enum EngineEvent : byte
     /// chain index (-1 when the slot has no live chain), chain count, then a <see cref="LoadedPluginInfo"/>.
     /// </summary>
     PluginInfo = 25,
+    /// <summary>The engine did not know a command (a newer TabForge than this engine, or a stray frame) and ignored it: the command byte (byte), a short reason.</summary>
+    CommandRejected = 26,
+    /// <summary>Answer to <see cref="EngineCommand.ProbeAsio"/>: an <see cref="AsioProbedMessage"/> (request id, the driver's preferred buffer, the rates it accepts; nothing known: 0 and none).</summary>
+    AsioProbed = 27,
+    /// <summary>Answer to <see cref="EngineCommand.ShowAsioPanel"/>: an <see cref="AsioPanelShownMessage"/> (request id, why the panel could not be shown; empty = it was shown).</summary>
+    AsioPanelShown = 28,
 }
 
 /// <summary>Bounds of one <see cref="EngineEvent.MasterAudio"/> chunk.</summary>
@@ -256,171 +286,24 @@ public static class PluginStateLimits
 
 /// <summary>One plug-in of a track's chain as sent to the engine.</summary>
 /// <remarks><see cref="Id"/> is stable for one plug-in in a chain: the engine keeps that live instance when the chain changes.</remarks>
-public sealed record PluginSpec(string Path, string Format, bool IsInstrument, bool Enabled, int Wet, string? State, string Name = "", string Pins = "Stereo", double OutputDb = 0, string Id = "", bool Skip = false, bool Untrusted = false, string ExpectedSha256 = "");   // Skip: a quarantined plug-in that must not be loaded at all (Enabled is only the live bypass). ExpectedSha256: the approved binary's hash, checked by the engine right before each real load (see PluginIdentity); empty = no per-file approval (folder-trusted, engine-internal)
+/// <remarks>
+/// Skip: a quarantined plug-in that must not be loaded at all (Enabled is only the live bypass). LocationTrusted: the binary lies where only
+/// an administrator can write (or it is engine-internal), so no per-file hash is checked. Otherwise ExpectedSha256 is the approved binary's
+/// SHA-256, checked by the engine right before each real load (see PluginIdentity), and an empty one fails closed.
+/// </remarks>
+public sealed record PluginSpec(string Path, string Format, bool IsInstrument, bool Enabled, int Wet, string? State, string Name = "", string Pins = "Stereo", double OutputDb = 0, string Id = "", bool Skip = false, bool Untrusted = false, string ExpectedSha256 = "", bool LocationTrusted = false);
 
 /// <summary>One MIDI processor of a plug-in's list as sent to the engine: type name, enabled, and its parameters as a flat JSON object.</summary>
 public sealed record MidiProcSpec(string Type, bool Enabled, string ParamsJson);
 
 /// <summary>Audio device settings sent to the engine.</summary>
 /// <remarks>ASIO: inputs on/off with the first and last channel (0-based, 1 or 2 channels); the output pair starts at AsioOutput.</remarks>
+/// <remarks><c>SampleRate</c> 0 = the device default: the Windows mix rate in WASAPI shared mode, the device's own accepted rate in exclusive mode, else 48000 (<c>AudioOutputFactory.SampleRateFor</c>).</remarks>
 public sealed record EngineConfig(string Driver, string Device, int SampleRate, int BufferSize, bool SeparateProcessPerPlugin, string InputDevice = "", int AsioInput = 0, int AsioOutput = 0, int AsioInputLast = 1, bool AsioInputs = true, bool FollowWindowsVolume = true, int AsioOutputLast = 1, bool AllInputs = true, bool PopGuard = true);
 
 /// <summary>One audio clip to play on a track: file, song position and processing.</summary>
 public sealed record ClipSpec(string File, double StartSec, double OffsetSec, double SourceLengthSec, double GainDb, double Pitch, double Speed, double FadeInSec = 0, double FadeOutSec = 0);
 
-/// <summary>
-/// Framing: [int32 length][byte type][payload]. Payloads use BinaryWriter primitives. Every read is bounded so a
-/// broken or hostile peer cannot make the other side allocate without limit.
-/// </summary>
-public static class Frames
-{
-    public const int MaxFrameBytes = 32 * 1024 * 1024;
-
-    public static void Write(Stream stream, byte type, Action<BinaryWriter>? payload = null)
-    {
-        using var buffer = new MemoryStream();
-        using (var writer = new BinaryWriter(buffer, Encoding.UTF8, leaveOpen: true))
-        {
-            writer.Write(type);
-            payload?.Invoke(writer);
-        }
-        if (buffer.Length > MaxFrameBytes) throw new InvalidDataException("Message too large.");
-        var header = BitConverter.GetBytes((int)buffer.Length);
-        lock (stream)
-        {
-            stream.Write(header, 0, 4);
-            buffer.Position = 0;
-            buffer.CopyTo(stream);
-            stream.Flush();
-        }
-    }
-
-    /// <summary>Reads one frame; null when the peer closed the connection.</summary>
-    public static (byte Type, BinaryReader Reader)? Read(Stream stream)
-    {
-        var header = new byte[4];
-        if (!ReadExactly(stream, header)) return null;
-        var length = BitConverter.ToInt32(header, 0);
-        if (length < 1 || length > MaxFrameBytes) throw new InvalidDataException("Bad message length.");
-        var body = new byte[length];
-        if (!ReadExactly(stream, body)) return null;
-        var reader = new BinaryReader(new MemoryStream(body, writable: false), Encoding.UTF8);
-        return (reader.ReadByte(), reader);
-    }
-
-    private static bool ReadExactly(Stream stream, byte[] buffer)
-    {
-        var read = 0;
-        while (read < buffer.Length)
-        {
-            var n = stream.Read(buffer, read, buffer.Length - read);
-            if (n <= 0) return false;
-            read += n;
-        }
-        return true;
-    }
-
-    public static void WriteString(this BinaryWriter writer, string? value) => writer.Write(value ?? "");
-
-    public static string ReadBoundedString(this BinaryReader reader, int maxChars = 32_768)
-    {
-        var value = reader.ReadString();
-        if (value.Length > maxChars) throw new InvalidDataException("Text too long.");
-        return value;
-    }
-
-    public static void Write(this BinaryWriter w, EngineConfig c)
-    {
-        w.WriteString(c.Driver); w.WriteString(c.Device); w.Write(c.SampleRate); w.Write(c.BufferSize); w.Write(c.SeparateProcessPerPlugin); w.WriteString(c.InputDevice); w.Write(c.AsioInput); w.Write(c.AsioOutput); w.Write(c.AsioInputLast); w.Write(c.AsioInputs); w.Write(c.FollowWindowsVolume); w.Write(c.AsioOutputLast); w.Write(c.AllInputs); w.Write(c.PopGuard);
-    }
-
-    /// <summary>The tail (<see cref="EngineConfig.AllInputs"/>, then <see cref="EngineConfig.PopGuard"/>) is absent from an older sender: each missing field is on.</summary>
-    public static EngineConfig ReadConfig(this BinaryReader r) => ReadConfigHead(r) with { AllInputs = TailBool(r), PopGuard = TailBool(r) };
-
-    private static bool TailBool(BinaryReader r) => r.BaseStream.Position >= r.BaseStream.Length || r.ReadBoolean();
-
-    private static EngineConfig ReadConfigHead(BinaryReader r) =>
-        new(r.ReadBoundedString(64), r.ReadBoundedString(256), Math.Clamp(r.ReadInt32(), 8000, 384000), Math.Clamp(r.ReadInt32(), 16, 16384), r.ReadBoolean(), r.ReadBoundedString(256), Math.Clamp(r.ReadInt32(), 0, 62), Math.Clamp(r.ReadInt32(), 0, 62), Math.Clamp(r.ReadInt32(), 0, 63), r.ReadBoolean(), r.ReadBoolean(), Math.Clamp(r.ReadInt32(), 0, 63));
-
-    /// <summary>The owner id at the tail of SetPosition, SetClips and SetTransport: absent (an older sender) or out of range is owner 0.</summary>
-    public static int ReadOwnerTail(this BinaryReader r)
-    {
-        if (r.BaseStream.Position >= r.BaseStream.Length) return 0;
-        var owner = r.ReadInt32();
-        return owner is >= 0 and < SongOwners.Max ? owner : 0;
-    }
-
-    public static void Write(this BinaryWriter w, IReadOnlyList<ClipSpec> clips)
-    {
-        w.Write(clips.Count);
-        foreach (var c in clips)
-        {
-            w.WriteString(c.File); w.Write(c.StartSec); w.Write(c.OffsetSec); w.Write(c.SourceLengthSec); w.Write(c.GainDb); w.Write(c.Pitch); w.Write(c.Speed); w.Write(c.FadeInSec); w.Write(c.FadeOutSec);
-        }
-    }
-
-    public static List<ClipSpec> ReadClips(this BinaryReader r)
-    {
-        var count = r.ReadInt32();
-        if (count is < 0 or > 4096) throw new InvalidDataException("Bad clip count.");
-        var list = new List<ClipSpec>(count);
-        for (var i = 0; i < count; i++)
-        {
-            var file = r.ReadBoundedString(1024);
-            double Finite(double v, double min, double max) => double.IsFinite(v) ? Math.Clamp(v, min, max) : min;
-            list.Add(new ClipSpec(file, Finite(r.ReadDouble(), 0, 86_400), Finite(r.ReadDouble(), 0, 86_400), Finite(r.ReadDouble(), 0, 86_400),
-                Finite(r.ReadDouble(), -96, 24), Finite(r.ReadDouble(), -24, 24), Finite(r.ReadDouble(), 0.25, 4), Finite(r.ReadDouble(), 0, 3_600), Finite(r.ReadDouble(), 0, 3_600)));
-        }
-        return list;
-    }
-
-    public static void Write(this BinaryWriter w, IReadOnlyList<MidiProcSpec> list)
-    {
-        w.Write(list.Count);
-        foreach (var p in list) { w.WriteString(p.Type); w.Write(p.Enabled); w.WriteString(p.ParamsJson); }
-    }
-
-    public static List<MidiProcSpec> ReadMidiProcs(this BinaryReader r)
-    {
-        var count = r.ReadInt32();
-        if (count is < 0 or > 64) throw new InvalidDataException("Bad MIDI processor count.");
-        var list = new List<MidiProcSpec>(count);
-        for (var i = 0; i < count; i++) list.Add(new MidiProcSpec(r.ReadBoundedString(48), r.ReadBoolean(), r.ReadBoundedString(64 * 1024)));
-        return list;
-    }
-
-    public static void Write(this BinaryWriter w, IReadOnlyList<PluginSpec> chain)
-    {
-        w.Write(chain.Count);
-        foreach (var p in chain)
-        {
-            w.WriteString(p.Path); w.WriteString(p.Format); w.Write(p.IsInstrument); w.Write(p.Enabled); w.Write(p.Wet); w.WriteString(p.State); w.WriteString(p.Name); w.WriteString(p.Pins); w.Write(p.OutputDb); w.WriteString(p.Id); w.Write(p.Skip); w.Write(p.Untrusted); w.WriteString(p.ExpectedSha256);
-        }
-    }
-
-    public static List<PluginSpec> ReadChain(this BinaryReader r)
-    {
-        var count = r.ReadInt32();
-        if (count is < 0 or > 64) throw new InvalidDataException("Bad chain length.");
-        var list = new List<PluginSpec>(count);
-        for (var i = 0; i < count; i++)
-        {
-            var path = r.ReadBoundedString(1024); var format = r.ReadBoundedString(8); var inst = r.ReadBoolean();
-            var enabled = r.ReadBoolean(); var wet = Math.Clamp(r.ReadInt32(), 0, 100);
-            var state = r.ReadBoundedString(PluginStateLimits.MaxBase64Chars);
-            var name = r.ReadBoundedString(256);
-            var pins = r.ReadBoundedString(32);
-            var outputDb = r.ReadDouble();
-            var id = r.ReadBoundedString(64);
-            var skip = r.ReadBoolean();
-            var untrusted = r.ReadBoolean();
-            var expectedSha = r.ReadBoundedString(64);
-            list.Add(new PluginSpec(path, format, inst, enabled, wet, state.Length == 0 ? null : state, name, pins,
-                double.IsFinite(outputDb) ? Math.Clamp(outputDb, -60, 12) : 0, id, skip, untrusted, expectedSha));
-        }
-        return list;
-    }
-}
 
 /// <summary>Audio driver names, shared by the settings and the engine.</summary>
 public static class AudioDriverNames
@@ -430,11 +313,16 @@ public static class AudioDriverNames
     public const string Asio = "ASIO";
     public const string DirectSound = "DirectSound";
     public static readonly string[] All = { WasapiShared, WasapiExclusive, Asio, DirectSound };
+    /// <summary>The rates a driver is asked about; only the ones it supports are offered.</summary>
+    public static IReadOnlyList<int> SampleRates { get; } = Array.AsReadOnly(new[] { 44100, 48000, 88200, 96000, 176400, 192000 });
 }
 
 /// <summary>Names shared by both sides for one engine session.</summary>
 public static class EngineNames
 {
+    /// <summary>The wire protocol of this build: the engine reports it at the end of its Ready event (an engine without it is version 1, from before the ASIO channel names); a client ignores optional answers from another version.</summary>
+    public const int ProtocolVersion = 2;
+
     public static string Pipe(string session) => $"TabForge.AudioEngine.{session}";
     public static string SharedMemory(string session) => $"TabForge.AudioEngine.{session}.shm";
 }

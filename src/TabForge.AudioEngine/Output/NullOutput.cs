@@ -3,13 +3,15 @@ using NAudio.Wave;
 
 namespace TabForge.AudioEngine.Output;
 
+// Owns: the headless null audio device (discarded mix, clocked thread or manual pump, single allocation).
+
 /// <summary>
 /// The headless "device" (driver <see cref="AudioOutputFactory.Null"/>): no sound card, the mix is read and discarded.
 /// Clocked: its own thread calls the source at the block cadence (block frames / sample rate) while playing, like a
 /// real driver callback. Manual (device name <see cref="AudioOutputFactory.NullManual"/>): no thread; a test calls
 /// <see cref="Pump"/> to run exactly the blocks it wants, in process. Either way the callback buffer is allocated once.
 /// </summary>
-public sealed class NullOutput : IWavePlayer
+public sealed class NullOutput : IWavePlayer, IResetRequestingOutput
 {
     private readonly ISampleProvider _source;
     private readonly IWaveProvider _wave;
@@ -40,6 +42,13 @@ public sealed class NullOutput : IWavePlayer
     public float Volume { get; set; } = 1f;
     public WaveFormat OutputWaveFormat => _source.WaveFormat;
     public event EventHandler<StoppedEventArgs>? PlaybackStopped;
+    public event EventHandler? ResetRequested;
+
+    /// <summary>Test seam: the device is lost, as a WASAPI endpoint that was unplugged stops its stream with an error.</summary>
+    public void LoseDevice(Exception error) => PlaybackStopped?.Invoke(this, new StoppedEventArgs(error));
+
+    /// <summary>Test seam: the device asks to be reopened, as an ASIO driver does with its reset request.</summary>
+    public void RequestReset() => ResetRequested?.Invoke(this, EventArgs.Empty);
 
     public void Init(IWaveProvider waveProvider) { }
 
@@ -84,6 +93,9 @@ public sealed class NullOutput : IWavePlayer
 
     private void Run()
     {
+        // Paced clock: one block per period, no per-block events (PlaybackStopped fires once in Stop).
+        // The inner wait is bounded (Sleep for >1 ms, brief spin otherwise) so an idle headless run costs no busy loop;
+        // a long stall skips ahead instead of bursting to catch up.
         var period = BlockFrames * (double)Stopwatch.Frequency / OutputWaveFormat.SampleRate;
         var next = (double)Stopwatch.GetTimestamp();
         while (_state != PlaybackState.Stopped)
@@ -96,7 +108,7 @@ public sealed class NullOutput : IWavePlayer
             {
                 var remainingMs = (next - Stopwatch.GetTimestamp()) * 1000.0 / Stopwatch.Frequency;
                 if (remainingMs <= 0) break;
-                if (remainingMs > 2) Thread.Sleep(1); else Thread.Yield();
+                if (remainingMs > 1) Thread.Sleep(1); else Thread.SpinWait(20);
             }
         }
     }

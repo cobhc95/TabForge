@@ -1,0 +1,23 @@
+[
+  { "name": "Goldenrod", "value": "#FFDAA520" },
+  { "name": "DimGray", "value": "#FF696969" },
+  { "name": "TuningStringLight", "value": "#FFE8E0C8" },
+  { "name": "TuningStringDark", "value": "#FF9A8C6A" },
+  { "name": "TuningPillBackground", "dark": "#FF16181C", "light": "#FFD2D2D2" },
+  { "name": "SettingsNavIconSelected", "dark": "#FF38A9F5", "light": "#FF105EB0" },
+  { "name": "SettingsNavIcon", "dark": "#FF98A3AE", "light": "#FF3E444B" },
+  { "name": "SvgIconFallbackStop", "value": "#FF222222" },
+  { "name": "PlayheadLine", "dark": "#FF3FB950", "light": "#FF2E8B47" },
+  { "name": "PlayheadDurationGlow", "dark": "#FF3FB950", "light": "#FF1F7A38" },
+  { "name": "RecordArmDangerFallback", "dark": "#FFE04A4A", "light": "#FFB3261E" },
+  { "name": "MediaDropDangerFallback", "dark": "#FFE04F4F", "light": "#FFB3261E" },
+  { "name": "FxSplitSurfaceFallback", "dark": "#FF2A2F37", "light": "#FFC0C0C0" },
+  { "name": "FxSplitBorderFallback", "dark": "#FF48505C", "light": "#FF8E969F" },
+  { "name": "FxSplitAccentFallback", "dark": "#FF4C9AFF", "light": "#FF0F4489" },
+  { "name": "FxSplitHoverFallback", "dark": "#30FFFFFF", "light": "#30000000" },
+  { "name": "MonitorFxSurfaceFallback", "dark": "#FF2A2F37", "light": "#FFC0C0C0" },
+  { "name": "MonitorFxAmberFallback", "dark": "#FFE6B93A", "light": "#FFC99A1E" },
+  { "name": "MonitorFxHoverFallback", "dark": "#30FFFFFF", "light": "#30000000" },
+  { "name": "MonitorFxInkOnAmber", "value": "#FF1B1605" },
+  { "name": "TimelinePlayhead", "dark": "#FFFFFFFF", "light": "#FF000000" }
+]

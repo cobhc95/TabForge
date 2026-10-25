@@ -3,6 +3,8 @@ using TabForge.AudioEngine.Mixing;
 
 namespace TabForge.AudioEngine;
 
+// Owns: the offline render on the engine process (device stop, chains offline, restore and reopen afterwards).
+
 /// <summary>
 /// Offline render on the engine process (EngineCommand.RenderOffline / RenderCancel, see Audio.Contracts/RenderProtocol.cs).
 /// The engine main thread stops the audio device, puts the loaded chains into offline mode and hands them to an
@@ -37,7 +39,7 @@ internal sealed partial class EngineSession
         if (RenderActive) { FailRender("A render is already running."); return; }
         if (Mix is null || Shared is null) { FailRender("The audio engine is not ready."); return; }
         RenderCancel = false;
-        var renderer = new OfflineRenderer(spec, Mix, Shared, SampleRate, Math.Clamp(Config.BufferSize, 16, 8192), () => RenderCancel,
+        var renderer = new OfflineRenderer(spec, Mix, Shared, SampleRate, Math.Clamp(Config.BufferSize, 16, 8192), Threads, () => RenderCancel,
             p => Send(EngineEvent.RenderProgress, w => { w.Write(p.Fraction); w.Write(p.Seconds); w.Write(p.Speed); }));
         RenderActive = true;
         try
@@ -47,7 +49,7 @@ internal sealed partial class EngineSession
         }
         catch (Exception ex)
         {
-            EngineLog.Write($"render could not start: {ex}");
+            Log.Write($"render could not start: {ex}");
             FinishRender(renderer, null, ex);
             return;
         }
@@ -56,7 +58,7 @@ internal sealed partial class EngineSession
             RenderResult? result = null; Exception? error = null;
             try { result = renderer.Run(); }
             catch (Exception ex) { error = ex; }
-            EngineThreads.Post(() => FinishRender(renderer, result, error));
+            Threads.Post(() => FinishRender(renderer, result, error));
         }) { IsBackground = true, Name = "TabForge render" };
         RenderThread.Start();
     }
@@ -66,7 +68,7 @@ internal sealed partial class EngineSession
     {
         AssertMain();
         try { renderer.Restore(); }
-        catch (Exception ex) { EngineLog.Write($"render restore failed: {ex}"); }
+        catch (Exception ex) { Log.Write($"render restore failed: {ex}"); }
         RenderThread = null;
         RenderActive = false;
         try
@@ -75,14 +77,14 @@ internal sealed partial class EngineSession
         }
         catch (Exception ex)
         {
-            EngineLog.Write($"output could not be reopened after the render: {ex}");
+            Log.Write($"output could not be reopened after the render: {ex}");
             Send(EngineEvent.DeviceError, w => w.WriteString(ex.GetBaseException().Message));
         }
         var deferred = _deferred; _deferred = null;
         if (deferred is not null)
             foreach (var action in deferred)
             {
-                try { action(); } catch (Exception ex) { EngineLog.Write($"deferred change after the render failed: {ex.GetBaseException().Message}"); }
+                try { action(); } catch (Exception ex) { Log.Write($"deferred change after the render failed: {ex.GetBaseException().Message}"); }
             }
         if (result is not null) { Send(EngineEvent.RenderDone, w => result.Write(w)); return; }
         var cancelled = error is RenderException { Cancelled: true };

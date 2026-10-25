@@ -5,6 +5,8 @@ using TabForge.AudioEngine.Plugins;
 
 namespace TabForge.AudioEngine.Mixing;
 
+// Owns: the audio callback rendering every track chain and summing them (timed MIDI placement, allocation-free device thread).
+
 /// <summary>
 /// The audio callback: takes timed MIDI from the shared ring, places each message at its frame, renders every
 /// track chain and sums them. Runs on the device thread; allocation-free after construction.
@@ -82,14 +84,20 @@ public sealed class MixEngine : ISampleProvider
     /// <summary>The master output tap (null: none); gets every finished block, after the master level and the clamp.</summary>
     public volatile MasterTap? Tap;
     private readonly SafetyLimiter _limiter;
+    private readonly EngineThreads _threads;
     private bool _limiterWasOn;
 
     /// <param name="owners">The engine's song transports by owner id, element 0 first (null: a private one, e.g. for tests).</param>
-    public MixEngine(SharedBlock shared, int sampleRate, int maxBlock, SongTransport[]? owners = null)
+    /// <param name="synthOff">The session's per-slot "General MIDI synth off" flags (null: private ones, e.g. for tests).</param>
+    /// <param name="channelState">The session's remembered channel state, which outlives a mix (null: a private one, e.g. for tests).</param>
+    public MixEngine(SharedBlock shared, int sampleRate, int maxBlock, EngineThreads threads, SongTransport[]? owners = null, bool[]? synthOff = null, ChannelStateMemory? channelState = null)
     {
+        SynthOff = synthOff ?? new bool[TotalSlots];
+        _channelState = channelState ?? new ChannelStateMemory();
         _owners = owners is { Length: > 0 } ? owners : new[] { new SongTransport() };
         _song = _owners[0];
         _shared = shared;
+        _threads = threads;
         _maxBlock = maxBlock;
         _inputBlock = new Audio.InputBlock(maxBlock, Audio.InputCapture.MaxChannels);
         _left = new float[maxBlock];
@@ -104,32 +112,10 @@ public sealed class MixEngine : ISampleProvider
         WaveFormat = WaveFormat.CreateIeeeFloatWaveFormat(sampleRate, 2);
     }
 
-    // Last program / controller / pitch-bend value each slot's MIDI set on each channel (255 = never set). Kept
-    // even while the slot has no chain yet, and replayed into any chain that newly appears in a slot, so a synth
-    // created after the song's setup was sent (cold start, tab switch, chain rebuild) never falls back to piano.
-    private readonly byte[] _ccState = CreateUnset(MaxSlots * 16 * 128);
-    private readonly byte[] _programState = CreateUnset(MaxSlots * 16);
-    private readonly short[] _bendState = new short[MaxSlots * 16];
+    private readonly ChannelStateMemory _channelState;
     private readonly TrackChain?[] _primed = new TrackChain?[MaxSlots];
-    // Slots whose track was unloaded (main thread sets, audio thread clears): the remembered channel state belongs to that track,
-    // so it is dropped before the slot's next chain is primed. Otherwise the next song's track in the slot starts with the previous
-    // track's volume, expression and program on every channel its own setup does not send.
-    private readonly bool[] _forget = new bool[MaxSlots];
-    /// <summary>Slots whose General MIDI synth is switched off (engine thread writes; applied to every chain that newly appears in the slot). Static: survives a device restart.</summary>
-    public static readonly bool[] SynthOff = new bool[TotalSlots];
-
-    private static byte[] CreateUnset(int length) { var a = new byte[length]; Array.Fill(a, (byte)255); return a; }
-
-    private void RememberChannelState(int slot, byte status, byte d1, byte d2)
-    {
-        var ch = status & 0x0F;
-        switch (status & 0xF0)
-        {
-            case 0xB0 when d1 < 120: _ccState[(slot * 16 + ch) * 128 + d1] = d2; break;
-            case 0xC0: _programState[slot * 16 + ch] = d1; break;
-            case 0xE0: _bendState[slot * 16 + ch] = (short)(1 + (d1 | (d2 << 7))); break;
-        }
-    }
+    /// <summary>Slots whose General MIDI synth is switched off (engine thread writes; applied to every chain that newly appears in the slot). Owned by the engine session so it survives a device restart.</summary>
+    public readonly bool[] SynthOff;
 
     /// <summary>Audio thread: a chain that is new in its slot gets the slot's remembered channel state first.</summary>
     private void PrimeNewChains(TrackChain?[] chains)
@@ -137,13 +123,7 @@ public sealed class MixEngine : ISampleProvider
         for (var slot = 0; slot < chains.Length && slot < MaxSlots; slot++)
         {
             var chain = chains[slot];
-            if (Volatile.Read(ref _forget[slot]))
-            {
-                Volatile.Write(ref _forget[slot], false);
-                Array.Fill(_ccState, (byte)255, slot * 16 * 128, 16 * 128);
-                Array.Fill(_programState, (byte)255, slot * 16, 16);
-                Array.Clear(_bendState, slot * 16, 16);
-            }
+            _channelState.ApplyForget(slot);
             if (ReferenceEquals(chain, _primed[slot]))
             {
                 // Same chain, but its General MIDI synth was just switched back on: it skipped the MIDI while off, so replay the state.
@@ -154,32 +134,22 @@ public sealed class MixEngine : ISampleProvider
             {
                 _primed[slot] = chain;
                 if (chain is null) continue;
-                if (SynthOff[slot]) chain.SetSynthOn(false);
+                if (Volatile.Read(ref SynthOff[slot])) chain.SetSynthOn(false);
                 chain.Reprime = false;
             }
-            for (var ch = 0; ch < 16; ch++)
-            {
-                var baseIndex = (slot * 16 + ch) * 128;
-                // Bank select before the program change, then the other controllers.
-                if (_ccState[baseIndex] != 255) chain.AddEvent(0, (byte)(0xB0 | ch), 0, _ccState[baseIndex]);
-                if (_ccState[baseIndex + 32] != 255) chain.AddEvent(0, (byte)(0xB0 | ch), 32, _ccState[baseIndex + 32]);
-                if (_programState[slot * 16 + ch] != 255) chain.AddEvent(0, (byte)(0xC0 | ch), _programState[slot * 16 + ch], 0);
-                for (var cc = 1; cc < 120; cc++)
-                    if (cc != 32 && _ccState[baseIndex + cc] != 255) chain.AddEvent(0, (byte)(0xB0 | ch), (byte)cc, _ccState[baseIndex + cc]);
-                var bend = _bendState[slot * 16 + ch] - 1;
-                if (bend >= 0) chain.AddEvent(0, (byte)(0xE0 | ch), (byte)(bend & 0x7F), (byte)(bend >> 7));
-            }
+            _channelState.Replay(slot, chain);
         }
     }
 
     /// <summary>Main thread: replaces the chain in a slot (the old one is returned for deferred disposal).</summary>
     public TrackChain? SetChain(int slot, TrackChain? chain)
     {
+        System.Diagnostics.Debug.Assert(_threads.IsMainThread, "SetChain / ChannelStateMemory.Forget touched off the engine main thread");
         if (slot is < 0 or >= TotalSlots) return chain;
         var copy = (TrackChain?[])Volatile.Read(ref _chains).Clone();
         var old = copy[slot];
         copy[slot] = chain;
-        if (chain is null && slot < MaxSlots) Volatile.Write(ref _forget[slot], true);   // unloaded (a replaced chain keeps the slot's state)
+        if (chain is null && slot < MaxSlots) _channelState.Forget(slot);   // unloaded (a replaced chain keeps the slot's state)
         Volatile.Write(ref _chains, copy);
         return old;
     }
@@ -201,9 +171,6 @@ public sealed class MixEngine : ISampleProvider
     /// <summary>Any thread: the song tempo used when there is no bar map (playing comes with <see cref="SetPosition"/>).</summary>
     public void SetTransport(double tempo, bool playing) => _song.SetTempo(tempo);
 
-    /// <summary>Any thread: the song's bar map (time signature, bar start and tempo per performed bar).</summary>
-    public void SetTransportMap(TransportBar[] bars) => _song.SetMap(bars);
-
     /// <summary>The song transport is playing (pitch measurement waits for it to stop).</summary>
     public bool SongPlaying
     {
@@ -211,7 +178,7 @@ public sealed class MixEngine : ISampleProvider
     }
 
     /// <summary>Song position: <paramref name="songSec"/> at Stopwatch time <paramref name="stamp"/> (the MIDI time-stamp clock).</summary>
-    public void SetPosition(bool playing, double songSec, long stamp) => _song.SetPosition(playing, songSec, stamp);
+    public void SetPosition(bool playing, double songSec, long stamp, double speed = 1.0) => _song.SetPosition(playing, songSec, stamp, speed);
 
     /// <summary>The song time now, on the time-stamp clock (what TabForge's scheduler is sending).</summary>
     public double SongSecNow
@@ -247,6 +214,7 @@ public sealed class MixEngine : ISampleProvider
     {
         t.Playing = position.Playing;
         t.SongSec = position.SecAt(_blockStartTicks);
+        t.Speed = position.Speed;
         if (TransportMap.Locate(bars, t.SongSec, ref _barCursor[owner], out var ppq, out var barTempo, out var meter))
         {
             t.PpqPosition = ppq; t.Tempo = barTempo; t.Meter = meter;
@@ -261,7 +229,8 @@ public sealed class MixEngine : ISampleProvider
 
     public void Panic()
     {
-        foreach (var chain in Chains) chain.Panic();
+        var chains = Volatile.Read(ref _chains);   // indexed: no iterator or LINQ allocation
+        for (var i = 0; i < chains.Length; i++) chains[i]?.Panic();
     }
 
     // Delay-locked loop state (audio thread only, except the reset flag).
@@ -348,7 +317,7 @@ public sealed class MixEngine : ISampleProvider
     private int ReadBlock(float[] buffer, int offset, int count)
     {
         // Per thread (a thread-static read): a device reopened on the same mixer (after an offline render) calls from a new thread.
-        if (!EngineThreads.IsAudioThread) EngineThreads.MarkAudioThread();
+        if (!_threads.IsAudioThread) _threads.MarkAudioThread();
         var started = Stopwatch.GetTimestamp();
         var allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
         var chains = Volatile.Read(ref _chains);
@@ -374,35 +343,8 @@ public sealed class MixEngine : ISampleProvider
             var n = Math.Min(_maxBlock, frames - done);
             var blockStart = callTime + done * _tpfEst;
             var blockEnd = blockStart + n * _tpfEst;
-            // Hand every message due in this block to its chain, at its frame; keep later ones.
-            var keep = 0;
             if (done == 0) PrimeNewChains(chains);
-            for (var i = 0; i < _pendingCount; i++)
-            {
-                ref var e = ref _pending[i];
-                if (e.Timestamp < blockEnd)
-                {
-                    // Earlier than the block start (stalled producer) still plays, at frame 0.
-                    var frame = (int)Math.Clamp(Math.Round((e.Timestamp - blockStart) / _tpfEst), 0, n - 1);
-                    if (e.Slot is >= 0 and < MaxSlots && (e.Flags & TimedMidi.PanicFlag) != 0)
-                    {
-                        // Ordered panic: drops what this block already holds for the slot (all queued before it), keeps what follows.
-                        chains[e.Slot]?.PanicNow();
-                        if (fanout[e.Slot] is { } panicked)
-                            foreach (var d in panicked) chains[d]?.PanicNow();
-                    }
-                    else if (e.Slot is >= 0 and < MaxSlots)
-                    {
-                        RememberChannelState(e.Slot, e.Status, e.Data1, e.Data2);
-                        chains[e.Slot]?.AddEvent(frame, e.Status, e.Data1, e.Data2);   // a full chain buffer counts the drop
-                        // Instruments that take this track's MIDI as their input (filtered by channel in the chain).
-                        if (fanout[e.Slot] is { } destinations)
-                            foreach (var d in destinations) chains[d]?.AddRouted(frame, e.Status, e.Data1, e.Data2);
-                    }
-                }
-                else _pending[keep++] = e;
-            }
-            _pendingCount = keep;
+            DispatchDueMidi(chains, fanout, blockStart, blockEnd, n);
 
             Array.Clear(_left, 0, n);
             Array.Clear(_right, 0, n);
@@ -416,26 +358,7 @@ public sealed class MixEngine : ISampleProvider
                 inputBlock = _inputBlock;
             }
             RenderGraphBlock(chains, Volatile.Read(ref _graph), n, inputBlock);
-            var master = MasterGain; var ceiling = Ceiling;
-            // Last line of defence (each chain already mutes its own non-finite output): Math.Clamp keeps NaN, so a
-            // non-finite master block is silenced whole. x - x is 0 for finite x and NaN otherwise; the sum is branch-free.
-            var poison = 0f;
-            for (var i = 0; i < n; i++) poison += (_left[i] - _left[i]) + (_right[i] - _right[i]);
-            if (poison != 0f) { Array.Clear(_left, 0, n); Array.Clear(_right, 0, n); }
-            if (!float.IsFinite(master)) master = 0f;
-            // A7-A01: live safety limiter (off by default), after the master chain and the Monitor FX, before the output level.
-            if (LiveLimiter)
-            {
-                if (!_limiterWasOn) { _limiter.Reset(); _limiterWasOn = true; }
-                _limiter.Process(_left, _right, n);
-            }
-            else _limiterWasOn = false;
-            for (var i = 0; i < n; i++)
-            {
-                buffer[offset + 2 * (done + i)] = Math.Clamp(_left[i] * master, -ceiling, ceiling);
-                buffer[offset + 2 * (done + i) + 1] = Math.Clamp(_right[i] * master, -ceiling, ceiling);
-            }
-            Tap?.Write(buffer, offset + 2 * done, n);
+            WriteOutputBlock(buffer, offset, done, n);
             done += n;
         }
         Fade?.Apply(buffer, offset, frames);   // last gain before the device (after the recording tap)
@@ -445,5 +368,66 @@ public sealed class MixEngine : ISampleProvider
         _shared.CpuLoad = elapsed / Math.Max(1.0, frames * _ticksPerFrame);
         Metrics.Record(started, ended, frames, _sampleRate, GC.GetAllocatedBytesForCurrentThread() - allocatedBefore);
         return count;
+    }
+
+    /// <summary>Audio thread: hands every message due in the block to its chain, at its frame; the later ones stay in the pending list.</summary>
+    private void DispatchDueMidi(TrackChain?[] chains, int[]?[] fanout, double blockStart, double blockEnd, int n)
+    {
+        // Hand every message due in this block to its chain, at its frame; keep later ones.
+        var keep = 0;
+        for (var i = 0; i < _pendingCount; i++)
+        {
+            ref var e = ref _pending[i];
+            if (e.Timestamp < blockEnd)
+            {
+                // Earlier than the block start (stalled producer) still plays, at frame 0.
+                var frame = (int)Math.Clamp(Math.Round((e.Timestamp - blockStart) / _tpfEst), 0, n - 1);
+                if (e.Slot is >= 0 and < MaxSlots && (e.Flags & TimedMidi.PanicFlag) != 0)
+                {
+                    // Ordered panic: drops what this block already holds for the slot (all queued before it), keeps what follows.
+                    chains[e.Slot]?.PanicNow();
+                    if (fanout[e.Slot] is { } panicked)
+                        foreach (var d in panicked) chains[d]?.PanicNow();
+                }
+                else if (e.Slot is >= 0 and < MaxSlots)
+                {
+                    _channelState.Remember(e.Slot, e.Status, e.Data1, e.Data2);
+                    chains[e.Slot]?.AddEvent(frame, e.Status, e.Data1, e.Data2);   // a full chain buffer counts the drop
+                    // Instruments that take this track's MIDI as their input (filtered by channel in the chain).
+                    if (fanout[e.Slot] is { } destinations)
+                        foreach (var d in destinations) chains[d]?.AddRouted(frame, e.Status, e.Data1, e.Data2);
+                }
+            }
+            else _pending[keep++] = e;
+        }
+        _pendingCount = keep;
+    }
+
+    /// <summary>Audio thread: the master level, the live limiter and the ceiling written to the device buffer; a non-finite block is silenced whole, then the recording tap sees it.</summary>
+    private void WriteOutputBlock(float[] buffer, int offset, int done, int n)
+    {
+        var master = MasterGain; var ceiling = Ceiling;
+        if (!float.IsFinite(master)) master = 0f;
+        // A7-A01: live safety limiter (off by default), after the master chain and the Monitor FX, before the output level.
+        // It already zeroes non-finite inputs (never into its gain state), so the fused poison check below guards the final gain.
+        if (LiveLimiter)
+        {
+            if (!_limiterWasOn) { _limiter.Reset(); _limiterWasOn = true; }
+            _limiter.Process(_left, _right, n);
+        }
+        else _limiterWasOn = false;
+        // Last line of defence (each chain already mutes its own non-finite output): Math.Clamp keeps NaN, so a
+        // non-finite master block is silenced whole. x - x is 0 for finite x and NaN otherwise. Fused into the gain
+        // loop (one pass): the poison sum rides along, and only a poisoned block pays a second clear of what was written.
+        var poison = 0f;
+        for (var i = 0; i < n; i++)
+        {
+            var l = _left[i]; var r = _right[i];
+            poison += (l - l) + (r - r);
+            buffer[offset + 2 * (done + i)] = Math.Clamp(l * master, -ceiling, ceiling);
+            buffer[offset + 2 * (done + i) + 1] = Math.Clamp(r * master, -ceiling, ceiling);
+        }
+        if (poison != 0f) { Array.Clear(_left, 0, n); Array.Clear(_right, 0, n); Array.Clear(buffer, offset + 2 * done, 2 * n); }
+        Tap?.Write(buffer, offset + 2 * done, n);
     }
 }

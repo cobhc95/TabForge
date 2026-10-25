@@ -3,6 +3,8 @@ using System.Runtime.InteropServices;
 
 namespace TabForge.Audio.Contracts;
 
+// Owns: the shared-memory block layout for timed MIDI per track slot (16-byte messages, same clock both processes).
+
 /// <summary>One timed MIDI message for a track slot in the engine (16 bytes).</summary>
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
 public struct TimedMidi
@@ -65,26 +67,53 @@ public sealed unsafe class SharedBlock : IDisposable
         _crumbText = p + Size;
     }
 
-    public static SharedBlock Create(string name) =>
-        new(MemoryMappedFile.CreateNew(name, TotalSize, MemoryMappedFileAccess.ReadWrite));
+    // Identity of the block, written by Create and checked by Open: a mapping of another size or without the mark is not ours.
+    private const int OffTotalSize = 240, OffMagic = 248, Magic = 0x42534654;   // "TFSB"
 
-    public static SharedBlock Open(string name) =>
-        new(MemoryMappedFile.OpenExisting(name, MemoryMappedFileRights.ReadWrite));
+    public static SharedBlock Create(string name)
+    {
+        var block = new SharedBlock(NamedSharedMemory.Create(name, TotalSize));
+        *(long*)(block._base + OffTotalSize) = TotalSize;
+        Volatile.Write(ref *(int*)(block._base + OffMagic), Magic);
+        return block;
+    }
+
+    public static SharedBlock Open(string name)
+    {
+        var block = new SharedBlock(NamedSharedMemory.Open(name));
+        if (Volatile.Read(ref *(int*)(block._base + OffMagic)) != Magic || *(long*)(block._base + OffTotalSize) != TotalSize)
+        {
+            block.Dispose();
+            throw new InvalidDataException("The shared block is not the one this engine expects.");
+        }
+        return block;
+    }
 
     private long* WriteIndex => (long*)(_base + OffWrite);
     private long* ReadIndex => (long*)(_base + OffRead);
     private TimedMidi* Ring => (TimedMidi*)(_base + HeaderBytes);
 
-    /// <summary>Producer (TabForge): false when the ring is full (the event is dropped rather than blocking).</summary>
+    // Dropped-ring counter (header byte 72, long): producer increments when TryWrite finds the ring full.
+    // Visible to both processes (same mapped block): the engine log surfaces it with the MIDI drop/defer counts.
+    private const int OffDropped = 72;
+
+    /// <summary>Producer (TabForge): false when the ring is full (the event is dropped rather than blocking; counted in <see cref="DroppedWrites"/>).</summary>
     public bool TryWrite(in TimedMidi e)
     {
         var write = Volatile.Read(ref *WriteIndex);
         var read = Volatile.Read(ref *ReadIndex);
-        if (write - read >= RingCapacity) return false;
+        if (write - read >= RingCapacity)
+        {
+            Volatile.Write(ref *(long*)(_base + OffDropped), Volatile.Read(ref *(long*)(_base + OffDropped)) + 1);
+            return false;
+        }
         Ring[write & (RingCapacity - 1)] = e;
         Volatile.Write(ref *WriteIndex, write + 1);
         return true;
     }
+
+    /// <summary>Messages dropped because the ring was full (producer fills, audio thread drains).</summary>
+    public long DroppedWrites => Volatile.Read(ref *(long*)(_base + OffDropped));
 
     /// <summary>Consumer (engine audio thread): allocation-free.</summary>
     public bool TryRead(out TimedMidi e)

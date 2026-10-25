@@ -2,6 +2,8 @@ using System.Security.Cryptography;
 
 namespace TabForge.Audio.Contracts;
 
+// Owns: the content identity of the exact plug-in binary about to be loaded (SHA-256 hold, no replace-after-check).
+
 /// <summary>
 /// Content identity of the exact binary about to be loaded. The UI process records a SHA-256 when the user scans or approves a
 /// plug-in (see PluginTrust) and sends it as <see cref="PluginSpec.ExpectedSha256"/>; the engine calls <see cref="Hold"/> right
@@ -32,29 +34,28 @@ public static class PluginIdentity
     /// <summary>Hex SHA-256 of a whole stream (positioned at its start).</summary>
     public static string Sha256Hex(Stream stream) => Convert.ToHexString(SHA256.HashData(stream));
 
+    /// <summary>Hex SHA-256 of a byte block; the one hex-hash helper the app shares.</summary>
+    public static string Sha256Hex(ReadOnlySpan<byte> bytes) => Convert.ToHexString(SHA256.HashData(bytes));
+
     /// <summary>
     /// Verifies <paramref name="spec"/>'s binary against <see cref="PluginSpec.ExpectedSha256"/> and returns the handle to keep
-    /// open while loading (dispose it afterwards). Returns null when the spec carries no expectation (folder-trusted locations,
-    /// engine-internal plug-ins). Throws <see cref="PluginChangedException"/> when the file changed or cannot be read; the
-    /// message says what to do.
+    /// open while loading (dispose it afterwards). Returns null for a location-trusted spec. Throws <see cref="PluginChangedException"/>
+    /// when the file changed, cannot be read, or the spec has no approved hash; the message says what to do.
     /// </summary>
-    public static IDisposable? Hold(PluginSpec spec) => Hold(spec.Path, spec.ExpectedSha256);
+    public static IDisposable? Hold(PluginSpec spec) => Hold(spec.Path, spec.ExpectedSha256, spec.LocationTrusted);
 
     /// <summary>
     /// The one owner of the rule "no plug-in code runs before it is trusted", for every process that loads a plug-in (the engine,
-    /// the isolated plug-in host, the identify probe). With <paramref name="required"/> (the probe and the plug-in host) a
-    /// missing expectation fails closed: nothing is loaded without an approved SHA-256. Without it (the engine, for
-    /// folder-trusted and engine-internal plug-ins) an empty expectation means no per-file approval and returns null.
+    /// the isolated plug-in host, the identify probe). <paramref name="locationTrusted"/> skips the hash (the binary is in a folder only an
+    /// administrator can write); otherwise an empty <paramref name="expectedSha256"/> fails closed: nothing is loaded without an approved SHA-256.
     /// </summary>
-    public static IDisposable? Hold(string path, string? expectedSha256, bool required = false)
+    public static IDisposable? Hold(string path, string expectedSha256, bool locationTrusted)
     {
+        if (locationTrusted) return null;
         var expected = expectedSha256;
         var name = System.IO.Path.GetFileName(path.TrimEnd('\\', '/'));
-        if (string.IsNullOrEmpty(expected))
-        {
-            if (!required) return null;
+        if (expected.Length == 0)
             throw new PluginChangedException($"'{name}' has no approved SHA-256 to check, so it was not loaded. Approve it first (Review plug-ins).");
-        }
         var bin = BinaryOf(path);
         if (expected == ExpectMissing)
         {

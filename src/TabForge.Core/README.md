@@ -1,0 +1,10 @@
+# TabForge.Core
+
+The UI-framework-free part of the editor: song model, playback scheduling, audio routing, plug-in catalogue and rules, presets, rendering inputs and the services that do not touch a UI framework.
+
+- Targets: `net8.0` (portable hosts) and `net8.0-windows` (the app and the engine). The Windows-only files (video encoding and DXGI capture, `LiveVideoSession`, `LiveVideoRecordController`, `SingleInstanceService`, `WindowsMidiLatency`, `WindowsPathOffset`) are listed in the csproj and compile only into `net8.0-windows`. On `net8.0` the import worker's default job guard fails closed (`ImportWorkerUnavailableException`).
+- The Avalonia app (`Source/src/TabForge.Avalonia`) references this project. This project never references the app: nothing here may use a type that lives in `Source/src/TabForge.Avalonia`.
+- Folder READMEs: `Source/src/TabForge.Core/Models/`, `Source/src/TabForge.Core/Playback/`, `Source/src/TabForge.Core/Audio/`, `Source/src/TabForge.Core/Plugins/`, `Source/src/TabForge.Core/Presets/`, `Source/src/TabForge.Core/Rendering/`, `Source/src/TabForge.Core/Services/`, `Source/src/TabForge.Core/Platform/`, `Source/src/TabForge.Core/Documents/`, `Source/src/TabForge.Core/Docking/`, `Source/src/TabForge.Core/KeyboardMode/`, `Source/src/TabForge.Core/Presenters/`, `Source/src/TabForge.Core/Shell/` (each one page).
+- `Source/src/TabForge.Core/Platform/` holds the OS ports Core logic needs (`IPathResolver`); the Windows adapters sit in `Source/src/TabForge.Core/Platform/Windows/` and `Source/src/TabForge.Avalonia/Platform/`.
+- Gates: `TestPortReadinessBudget` (the CoreWpf category must stay at 0 here), `TestArchitectureLayering`, `TestFileIndexInSync`.
+- Internal helpers are visible to the app through InternalsVisibleTo in `TabForge.Core.csproj`.

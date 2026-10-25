@@ -3,6 +3,8 @@ using TabForge.AudioEngine.Plugins;
 
 namespace TabForge.AudioEngine.Midi;
 
+// Owns: the fixed-capacity block MIDI event list (preallocated, allocation-free add, silent drop past capacity).
+
 /// <summary>A fixed-capacity list of block MIDI events. Preallocated; adding never allocates and silently drops past capacity.</summary>
 public sealed class MidiBuffer
 {

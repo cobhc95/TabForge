@@ -15,7 +15,5 @@ The MIDI processors of a track's chain: channel and note mapping, transpose, vel
 | `TimingProcessors.cs` | MIDI delay in milliseconds, beats and samples; note-ons and note-offs are delayed alike |
 
 ## Pathway
-`START_HERE.md`, Golden pathways: **Reach the engine**.
 
 ## Tests
-`docs/feature-map/mixer-and-audio-engine.md`.

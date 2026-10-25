@@ -2,6 +2,8 @@ using TabForge.AudioEngine.Plugins;
 
 namespace TabForge.AudioEngine.Isolation;
 
+// Owns: the audio half of an isolated plug-in (per-block generation echo, deadline bypass, grace-period failure).
+
 /// <summary>
 /// The audio half of an isolated plug-in: each block goes to the plug-in's process through a
 /// <see cref="PluginHostBlock"/> and must come back within the callback's budget. Every request carries a new
@@ -17,6 +19,9 @@ public sealed class PluginHostLink
     /// <summary>Realtime wait: one deadline per mixer callback (<see cref="BeginCallback"/>: start + 75 % of its duration, at most 40 ms) shared by every isolated plug-in in it; outside a callback, 75 % of the block, 2..40 ms.</summary>
     public const double MinBudgetMs = 2, MaxBudgetMs = 40, BlockShare = 0.75;
     /// <summary>Offline (render) blocks are not realtime: a slow plug-in may take this long before it counts as hung.</summary>
+    /// <remarks>ModeSwitch (15 s) reviewed: mode switches run on the engine main thread with audio stopped, so the wait can be
+    /// generous without risking a dropout; 15 s covers slow preset restores on mode change while still failing a dead child
+    /// before the engine watchdog's unattributed limit (30 s). Follow-up outside this pass: measure p99 mode-switch time.</remarks>
     public const double OfflineBudgetMs = 30000, ModeSwitchBudgetMs = 15000;
 
     /// <summary>Realtime miss tolerance: a child still busy with a missed block after this long is failed; so is one missing over this share of blocks in a window.</summary>

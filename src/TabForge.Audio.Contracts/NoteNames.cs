@@ -1,5 +1,7 @@
 namespace TabForge.Audio.Contracts;
 
+// Owns: the MIDI note names shared by app and engine (C-1 = 0, sharp default, marker spelling for fretboard).
+
 /// <summary>
 /// The names of MIDI notes, shared by the application and the audio engine. Octaves are numbered so that MIDI note 0 is C-1 and
 /// note 60 is C4. The sharp spelling is the default; the marker spelling (D#, G# and A# written as Eb, Ab and Bb) is what a

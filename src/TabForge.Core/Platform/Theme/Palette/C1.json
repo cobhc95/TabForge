@@ -1,0 +1,20 @@
+[
+  { "name": "SteelBlue", "value": "#FF4682B4" },
+  { "name": "SettingErrorBorder", "value": "#C04D5B" },
+  { "name": "ColourSwatchBorder", "dark": "#55606B", "light": "#8E969F" },
+  { "name": "ColourPickerPreviewBorder", "dark": "#53606B", "light": "#8E969F" },
+  { "name": "HotkeyCustomTag", "dark": "#6DBBFF", "light": "#0F4489" },
+  { "name": "HotkeyFeedbackText", "dark": "#E08484", "light": "#A6273A" },
+  { "name": "HotkeyCustomBorder", "dark": "#3A5369", "light": "#8FA9C0" },
+  { "name": "InstrumentWoodLight", "value": "#8A5A2B" },
+  { "name": "InstrumentWoodDark", "value": "#4E3016" },
+  { "name": "InstrumentMetal", "value": "#D8DCE2" },
+  { "name": "InstrumentEdge", "value": "#C0000000" },
+  { "name": "InstrumentDrumSkinA", "value": "#EEEAE0" },
+  { "name": "InstrumentDrumSkinB", "value": "#F4F1EA" },
+  { "name": "InstrumentBrass", "value": "#D9B34A" },
+  { "name": "InstrumentKeysShadow", "value": "#60000000" },
+  { "name": "InstrumentPickupDot", "value": "#B0101010" },
+  { "name": "InstrumentStringLight", "value": "#E8E0C8" },
+  { "name": "InstrumentStringDark", "value": "#9A8C6A" }
+]

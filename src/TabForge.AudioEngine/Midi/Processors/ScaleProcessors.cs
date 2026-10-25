@@ -1,5 +1,7 @@
 namespace TabForge.AudioEngine.Midi.Processors;
 
+// Owns: the scale tables and small parsing helpers shared by the P3 processors.
+
 /// <summary>Scale tables and small parsing helpers shared by the P3 processors.</summary>
 public static class MidiScales
 {
@@ -34,7 +36,7 @@ public static class MidiScales
         for (var d = 0; d < 12; d++)
         {
             if (note - d >= 0 && mask[(note - d) % 12]) return note - d;
-            if (note + d <= 127 && mask[(note + d) % 12]) return note + d;
+            if (note + d <= MidiLimits.Max && mask[(note + d) % 12]) return note + d;
         }
         return note;
     }
@@ -79,8 +81,8 @@ public sealed class ScaleSnapProcessor : NoteTransform
         InCh = p.Int("InCh", 0, 0, 16);
         _mask = MidiScales.Mask(p.Int("Root", 0, 0, 11), p.Int("Scale", 1, 0, 11));
         _mode = p.Int("Mode", 0, 0, 1);   // 0 remap, 1 block
-        _low = p.Int("Low", 0, 0, 127);
-        _high = p.Int("High", 127, 0, 127);
+        _low = p.Int("Low", 0, 0, MidiLimits.Max);
+        _high = p.Int("High", 127, 0, MidiLimits.Max);
     }
 
     protected override bool MapNote(ref int ch, ref int note, ref int vel)
@@ -113,8 +115,8 @@ public sealed class ChordProcessor : IMidiProcessor
         _st2 = p.Int("Step2", 2, -24, 24);
         _st3 = p.Int("Step3", 4, -24, 24);
         _velScale = p.Double("VelScale", 1, 0, 1);
-        _low = p.Int("Low", 0, 0, 127);
-        _high = p.Int("High", 127, 0, 127);
+        _low = p.Int("Low", 0, 0, MidiLimits.Max);
+        _high = p.Int("High", 127, 0, MidiLimits.Max);
     }
 
     public void Process(MidiBuffer input, MidiBuffer output, in MidiContext ctx)
@@ -145,8 +147,8 @@ public sealed class ChordProcessor : IMidiProcessor
                 for (var v = 0; v < n; v++)
                 {
                     var note = voices[v];
-                    if (note < 0 || note > 127) continue;
-                    var vel = v == 0 ? e.Data2 : (int)Math.Clamp(Math.Round(e.Data2 * _velScale), 1, 127);
+                    if (note < 0 || note > MidiLimits.Max) continue;
+                    var vel = v == 0 ? e.Data2 : (int)Math.Clamp(Math.Round(e.Data2 * _velScale), 1, MidiLimits.Max);
                     _notes[key * 5 + stored++] = (byte)note;
                     output.Add(e.Frame, (byte)(0x90 | ch), (byte)note, (byte)vel);
                 }
@@ -181,9 +183,9 @@ public sealed class NoteRandomizerProcessor : NoteTransform
     public NoteRandomizerProcessor(MidiParams p)
     {
         InCh = p.Int("InCh", 0, 0, 16);
-        _trigger = p.Int("Trigger", 60, 0, 127);
-        _low = p.Int("Low", 48, 0, 127);
-        _high = Math.Max(_low, p.Int("High", 72, 0, 127));
+        _trigger = p.Int("Trigger", 60, 0, MidiLimits.Max);
+        _low = p.Int("Low", 48, 0, MidiLimits.Max);
+        _high = Math.Max(_low, p.Int("High", 72, 0, MidiLimits.Max));
         _mix = p.Int("Mix", 100, 0, 100);
     }
 
@@ -205,8 +207,8 @@ public sealed class ScaleVariationProcessor : NoteTransform
     public ScaleVariationProcessor(MidiParams p)
     {
         InCh = p.Int("InCh", 0, 0, 16);
-        _low = p.Int("Low", 0, 0, 127);
-        _high = p.Int("High", 127, 0, 127);
+        _low = p.Int("Low", 0, 0, MidiLimits.Max);
+        _high = p.Int("High", 127, 0, MidiLimits.Max);
         _root = p.Int("Root", 0, 0, 11);
         _scale = MidiScales.Get(p.Int("Scale", 1, 0, 11));
         _lowOct = p.Int("LowOct", 4, 0, 10);
@@ -222,7 +224,7 @@ public sealed class ScaleVariationProcessor : NoteTransform
         int d;
         if (_mode == 0) d = (int)(_rng.Next() % (uint)count);
         else { d = _mode == 1 ? _step % count : count - 1 - _step % count; _step++; }
-        note = Math.Min(127, MidiScales.NoteOfDegree(_root, _scale, _lowOct * len + d));
+        note = Math.Min(MidiLimits.Max, MidiScales.NoteOfDegree(_root, _scale, _lowOct * len + d));
         return true;
     }
 
@@ -240,13 +242,13 @@ public sealed class VelocityVariationProcessor : NoteTransform
     public VelocityVariationProcessor(MidiParams p)
     {
         InCh = p.Int("InCh", 0, 0, 16);
-        _base = p.Int("Base", 0, 0, 127);
+        _base = p.Int("Base", 0, 0, MidiLimits.Max);
         _var = p.Int("Variation", 20, 0, 100);
-        _accentAmount = p.Int("AccentAmount", 25, 0, 127);
+        _accentAmount = p.Int("AccentAmount", 25, 0, MidiLimits.Max);
         var a = MidiScales.ParseInts(p.String("Accent", "1 0 0 0"), 0, 1, 0);
         _accent = a.Length == 0 ? new[] { 0 } : a;
-        _low = p.Int("Low", 0, 0, 127);
-        _high = p.Int("High", 127, 0, 127);
+        _low = p.Int("Low", 0, 0, MidiLimits.Max);
+        _high = p.Int("High", 127, 0, MidiLimits.Max);
     }
 
     protected override bool MapNote(ref int ch, ref int note, ref int vel)
@@ -256,7 +258,7 @@ public sealed class VelocityVariationProcessor : NoteTransform
         if (_accent[_step % _accent.Length] == 1) v += _accentAmount;
         _step++;
         v += _rng.Bipolar() * _var / 100.0 * 63;
-        vel = (int)Math.Clamp(Math.Round(v), 1, 127);
+        vel = (int)Math.Clamp(Math.Round(v), 1, MidiLimits.Max);
         return true;
     }
 

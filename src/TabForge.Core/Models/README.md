@@ -1,0 +1,35 @@
+# Models
+
+Song data and the plain types around it. No WPF, no I/O.
+
+## How to change me
+1. Entry files: `SongProject.cs`, `NotationEnums.cs`.
+2. Owner class: `SongProject` / `TrackModel` / `MeasureModel`; no WPF, no I/O.
+3. Tests to run: `TestModelRoundTrip`, `TestAudioTrackModel`, `TestSelectionModel` (full-suite build), plus `--areas architecture,hygiene` (see the test box in `Source/docs/TESTING.md`).
+4. Docs to update: `ProjectService` format notes, `CHANGELOG.md`.
+
+## Key types
+- `SongProject`: the whole song (tracks, tempo map, sections, mixer, clips; the Band view rows are saved as `BandLayoutData`).
+- `MeasureModel`, `TrackModel` and the note types in `NotationEnums.cs`.
+- `TrackKind.Audio` (value 5): a clips-only track (no notes, tuning or instrument; empty bars equal in number to the other tracks). `TrackModel.IsAudio` / HasNotation; SongProject properties NotationTracks, FirstNotationTrack (null in an audio-only song) and MasterBarTrack (first notation track, else the first track: where tempo, time, key and section attributes are read). Use these instead of `Tracks[0]`. FormatVersion reads 3 exactly while an audio track exists (otherwise 2 or older), so songs without audio save as before; `ProjectValidator` accepts 1 to 3 and clears notes and pads or trims bars on audio tracks. TrackController.ConvertAudioToInstrument turns an audio track into an instrument track (the only direction), moving its clips down one lane.
+- `AudioClip`: an audio or MIDI clip placed on the timeline.
+- `AudioInputs` (`AudioInputs.cs`): the ids of the inputs a track records ("Input 3", "Inputs 3+4 (stereo)", MIDI), their engine address, the list the running device offers and the per-use filter the pickers show.
+- `SongExtentMeasureCache`: the per-project runtime cache for measured bar timing (the performed end and every performed bar, `SongTimingMeasure`); it is excluded from project files and checks timing metadata plus the timeline revision.
+- `SongProject.Runtime.cs`: runtime-only dirty state, timeline revision batching, and the cache slot; `SongProject.cs` retains the serialized model types.
+- `MixerSettings`, `MixerOptions`: per-track and master levels. `MixerRules` / `MixerGroupDef`: which group a track is in (families, programs, kinds, channels, names; first match wins).
+- `TechniqueNames` (persisted ids) and `TechniqueInfo` (one row per technique: engraved mark text, playback effect kinds, Guitar Pro value ids, MusicXML spelling, and the formats it is not supported in). `ScoreMarkText.ShortTechnique`, the `.gp` importer's enum mapping, the `.gp` exporter's harmonic, fade, wah and arpeggio values (`TechniqueInfo.GpValue`, the order of names stays in the exporter) and the MusicXML articulation element (scoop, plop, doit, falloff) read the table. Playback reads the per-technique numbers from the rows (velocity factor, length cap in slots, controller value) while the compiler keeps the order of the steps, the casts and the rounding; the other MusicXML spellings and the rest of the `.gp` export keep their own code. `TestTechniqueInfoTable`, `TestTechniqueGpExportGolden`, `TestTechniqueMusicXmlGolden` and `TestTechniquePlaybackGolden` (the compiled MIDI events of every technique and its combinations) hold the golden outputs and `TestTechniqueCoverage` fails for a technique without a row.
+- `SelectionModel`: the one selection and loop state per song. White = what edits act on (score notes, timeline clips, track rows); the loop region
+  (`SelectionModel.Loop.cs`) only comes from a drag on the bar-number ruler or a released score selection, and `LoopRepeat` is the Loop button.
+  There is no timeline (blue) range any more. Esc clears white first, then the loop with Loop off (`DocumentEdits.Escape`, one undo step); ruler
+  adjusts are one undo step each (`DocumentEdits.EditLoop`). Bar commands ask `Services/SelectionBars` (loop, else score bars, else the selected
+  clips' bars on their tracks). Tests: `LoopRegionTests`, `LoopModelTests`, `SelectionLoopLinkTests`.
+- `TrackOrdering`: display order of tracks.
+
+## Pathway
+Code that changes a song does it inside `DocumentEdits.Run` (see `Source/src/TabForge.Core/Documents/README.md`); models never mark themselves changed. Saving goes through `ProjectService`.
+
+## Must not depend on
+WPF assemblies (checked by `TestArchitectureLayering`). Nothing here may reference the audio engine.
+
+## Tests
+`TestModelRoundTrip`, `TestProjectRoundtrip`, `TestSelectionModel`, `TestTrackOrderingModel`, `TestSongRigs`, `TestPersistenceSchema`, `TestAudioTrackModel`, `TestAudioTrackPersistence`, `TestAudioTrackConversion`.

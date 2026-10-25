@@ -2,6 +2,8 @@ using System.Diagnostics;
 
 namespace TabForge.AudioEngine.Mixing;
 
+// Owns: the real-time health of the audio callback (deadlines, misses, allocation tracking, fixed histogram).
+
 /// <summary>
 /// Real-time health of the audio callback: how long each callback took against its deadline (block duration), how
 /// regularly it was called, deadline misses (a likely audible dropout), late calls, and bytes allocated on the audio

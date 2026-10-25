@@ -52,6 +52,13 @@ TFV3_API int32_t tfv3_set_state(tfv3_plugin* p, const uint8_t* data, int32_t siz
 TFV3_API int32_t tfv3_has_editor(tfv3_plugin* p);
 TFV3_API int32_t tfv3_open_editor(tfv3_plugin* p, void* parent_hwnd, int32_t* width, int32_t* height);
 TFV3_API void    tfv3_close_editor(tfv3_plugin* p);
+/* Editor size handshake. tfv3_editor_set_scale: the monitor scale (1.0 = 96 dpi) given to the view when the next editor
+   opens, if it supports content scale. tfv3_editor_poll_resize: 1 and the size when the view asked to resize since the
+   last call (the host sizes its window; nothing is resized here). tfv3_editor_set_size: tells a resizable view the size
+   its window now has (checkSizeConstraint, then onSize). */
+TFV3_API void    tfv3_editor_set_scale(tfv3_plugin* p, float scale);
+TFV3_API int32_t tfv3_editor_poll_resize(tfv3_plugin* p, int32_t* width, int32_t* height);
+TFV3_API void    tfv3_editor_set_size(tfv3_plugin* p, int32_t width, int32_t height);
 
 /* Latency the plug-in reports, in samples. */
 TFV3_API int32_t tfv3_latency(tfv3_plugin* p);

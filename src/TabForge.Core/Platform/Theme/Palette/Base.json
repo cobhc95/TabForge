@@ -1,0 +1,13 @@
+[
+  { "name": "Transparent", "value": "#00FFFFFF" },
+  { "name": "White", "value": "#FFFFFFFF" },
+  { "name": "Black", "value": "#FF000000" },
+  { "name": "Gray", "value": "#FF808080" },
+  { "name": "LimeGreen", "value": "#FF32CD32" },
+  { "name": "IndianRed", "value": "#FFCD5C5C" },
+  { "name": "SeaGreen", "value": "#FF2E8B57" },
+  { "name": "Red", "value": "#FFFF0000" },
+  { "name": "DodgerBlue", "value": "#FF1E90FF" },
+  { "name": "ClipOutline", "dark": "#59FFFFFF", "light": "#59000000" },
+  { "name": "FocusRing", "dark": "#65B5FF", "light": "#175BB0" }
+]

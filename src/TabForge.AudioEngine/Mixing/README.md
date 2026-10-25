@@ -5,6 +5,7 @@ The audio callback and everything it runs: the mixer, the track chains, the mast
 ## Files
 | File | Purpose |
 | --- | --- |
+| `ChannelStateMemory.cs` | The programs, controllers and bend each slot set per channel, replayed into a chain that is new in the slot; survives a new mix |
 | `CallbackMetrics.cs` | Real-time health of the callback: duration against deadline, deadline misses, late calls, allocations |
 | `MasterTap.cs` | Master output tap: a ring the callback fills; a drain thread hands blocks to a sink after the limiter |
 | `OutputFade.cs` | The last gain before the device: fades to silence before the output stops and back in after it starts |
@@ -18,7 +19,6 @@ The audio callback and everything it runs: the mixer, the track chains, the mast
 | `TrackChain.cs` | One track's path: sound (VST and/or the built-in GM synth), effects in order, then level and pan |
 
 ## Pathway
-`START_HERE.md`, Golden pathways: **Reach the engine**. Objects the callback may still read are replaced through `RetireQueue`, never freed in place. Real-time rules are in `ARCHITECTURE.md`.
+Objects the callback may still read are replaced through `RetireQueue`, never freed in place. Real-time rules are in `ARCHITECTURE.md`.
 
 ## Tests
-`docs/feature-map/mixer-and-audio-engine.md`.

@@ -3,18 +3,20 @@ using System.Runtime.InteropServices;
 
 namespace TabForge.Audio.Contracts;
 
+// Owns: the Windows child-process guard (Job Object kill-on-close, HasExited polling as second layer).
+
 /// <summary>
-/// A Windows Job Object with JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE. Child processes added to it (TabForge's audio engine; the
+/// The Windows adapter of the IChildProcessGuard port: a Windows Job Object with JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE. Child processes added to it (TabForge's audio engine; the
 /// engine's isolated plug-in hosts) end when the job's last handle closes, which Windows does when the owning process ends for any
 /// reason (Task Manager, debugger, crash). The owners' HasExited polling stays as a second layer. Children a member starts join
 /// the job too (nested jobs, Windows 8+).
 /// </summary>
-public sealed class ChildProcessJob : IDisposable
+public sealed class ChildProcessJob : IChildProcessGuard
 {
     private IntPtr _handle;
 
-    /// <summary>This process's job, kept for its whole lifetime (closed by Windows when the process ends).</summary>
-    public static ChildProcessJob ForThisProcess { get; } = new();
+    /// <summary>This process's job, kept for its whole lifetime (closed by Windows when the process ends). Composed once, here.</summary>
+    public static IChildProcessGuard ForThisProcess { get; } = new ChildProcessJob();
 
     public ChildProcessJob() : this(0, TimeSpan.Zero) { }
 

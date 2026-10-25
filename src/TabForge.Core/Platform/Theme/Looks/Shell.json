@@ -1,0 +1,115 @@
+[
+  {
+    "name": "MainTagOnButton", "kind": "Button",
+    "rules": [
+      { "name": "On", "when": [ { "binding": "Tag|Self", "value": "on" } ],
+        "set": [ { "property": "Background", "brush": "SelectedTintBrush" }, { "property": "BorderBrush", "brush": "SelectedOutlineBrush" } ] }
+    ]
+  },
+  {
+    "name": "MainBandViewButton", "kind": "Button",
+    "rules": [
+      { "name": "On", "when": [ { "binding": "IsChecked|Element:BandViewMenu", "value": "True" } ],
+        "set": [ { "property": "Background", "brush": "SelectedTintBrush" }, { "property": "BorderBrush", "brush": "SelectedOutlineBrush" } ] }
+    ]
+  },
+  {
+    "name": "MainLockIcon", "kind": "TextBlock",
+    "rules": [
+      { "name": "Locked", "when": [ { "binding": "LockPosition", "value": "True" } ],
+        "set": [ { "property": "Visibility", "literal": "Visible" } ] }
+    ]
+  },
+  {
+    "name": "TabBarOverflowButton", "kind": "Button",
+    "rules": [
+      { "name": "Hover", "when": [ { "property": "IsMouseOver", "value": "True" } ],
+        "set": [ { "part": "b", "property": "UIElement.Opacity", "literal": "0.88" } ] },
+      { "name": "Pressed", "when": [ { "property": "IsPressed", "value": "True" } ],
+        "set": [ { "part": "b", "property": "UIElement.Opacity", "literal": "0.72" } ] }
+    ]
+  },
+  {
+    "name": "TabBarPlusButton", "kind": "Button",
+    "rules": [
+      { "name": "Hover", "when": [ { "property": "IsMouseOver", "value": "True" } ],
+        "set": [ { "part": "b", "property": "Border.Background", "brush": "TabHoverBrush" } ] }
+    ]
+  },
+  {
+    "name": "TabBarCloseButton", "kind": "Button",
+    "rules": [
+      { "name": "Hover", "when": [ { "property": "IsMouseOver", "value": "True" } ],
+        "set": [ { "part": "b", "property": "Border.Background", "brush": "TabCloseHoverBrush" } ] }
+    ]
+  },
+  {
+    "name": "TabBarTab", "kind": "Border",
+    "rules": [
+      { "name": "Hover", "when": [ { "property": "IsMouseOver", "value": "True", "source": "TabRoot" } ],
+        "set": [ { "part": "TabRoot", "property": "Border.Background", "brush": "TabHoverBrush" } ] },
+      { "name": "Active", "when": [ { "binding": "IsActive", "value": "True" } ],
+        "set": [ { "part": "TabRoot", "property": "Border.Background", "brush": "TabActiveBrush" },
+                 { "part": "TabTitle", "property": "TextElement.Foreground", "brush": "TextStrongBrush" } ] },
+      { "name": "KeyboardFocus", "when": [ { "property": "IsKeyboardFocused", "value": "True", "source": "TabRoot" } ],
+        "set": [ { "part": "TabRoot", "property": "Border.BorderBrush", "brush": "AccentBrush" } ] }
+    ]
+  },
+  {
+    "name": "TabBarTabClose", "kind": "Button",
+    "rules": [
+      { "name": "Active", "when": [ { "binding": "IsActive", "value": "True" } ],
+        "set": [ { "property": "Visibility", "literal": "Visible" } ] },
+      { "name": "HoverShow", "when": [ { "binding": "ShowCloseOnHover", "value": "True" }, { "binding": "IsMouseOver|Ancestor:Border", "value": "True" } ],
+        "set": [ { "property": "Visibility", "literal": "Visible" } ] },
+      { "name": "Always", "when": [ { "binding": "CloseAlways", "value": "True" } ],
+        "set": [ { "property": "Visibility", "literal": "Visible" } ] },
+      { "name": "Never", "when": [ { "binding": "CloseNever", "value": "True" } ],
+        "set": [ { "property": "Visibility", "literal": "Collapsed" } ] }
+    ]
+  },
+  {
+    "name": "TrackRowIconButton", "kind": "Button",
+    "rules": [
+      { "name": "Hover", "when": [ { "property": "IsMouseOver", "value": "True" } ],
+        "set": [ { "part": "Chrome", "property": "Border.Background", "brush": "HoverBrush" }, { "part": "Chrome", "property": "Border.BorderBrush", "brush": "BorderBrush" } ] },
+      { "name": "Pressed", "when": [ { "property": "IsPressed", "value": "True" } ],
+        "set": [ { "part": "Chrome", "property": "Border.Background", "brush": "PressBrush" } ] },
+      { "name": "Focus", "when": [ { "property": "IsKeyboardFocusVisible", "value": "True" } ],
+        "set": [ { "part": "Chrome", "property": "Border.BorderBrush", "brush": "FocusRingBrush" } ] },
+      { "name": "Disabled", "when": [ { "property": "IsEnabled", "value": "False" } ],
+        "set": [ { "property": "Opacity", "literal": "0.45" } ] }
+    ]
+  },
+  {
+    "name": "ListRow", "kind": "ListViewItem",
+    "rules": [
+      { "name": "Hover", "when": [ { "property": "IsMouseOver", "value": "True" } ],
+        "set": [ { "part": "Bd", "property": "Border.Background", "brush": "HoverBrush" } ] },
+      { "name": "Selected", "when": [ { "property": "IsSelected", "value": "True" } ],
+        "set": [ { "part": "Bd", "property": "Border.Background", "brush": "AccentSoftBrush" }, { "property": "Foreground", "brush": "TextStrongBrush" } ] },
+      { "name": "Pressed", "when": [ { "property": "IsPressed", "value": "True" } ],
+        "set": [ { "part": "Bd", "property": "Border.Background", "brush": "PressBrush" } ] },
+      { "name": "Disabled", "when": [ { "property": "IsEnabled", "value": "False" } ],
+        "set": [ { "property": "Opacity", "literal": "0.45" } ] },
+      { "name": "FocusVisible", "when": [ { "property": "IsKeyboardFocusVisible", "value": "True" } ],
+        "set": [ { "part": "Bd", "property": "Border.BorderBrush", "brush": "FocusRingBrush" } ] }
+    ]
+  },
+  {
+    "name": "ListHeader", "kind": "GridViewColumnHeader",
+    "rules": [
+      { "name": "Hover", "when": [ { "property": "IsMouseOver", "value": "True" } ],
+        "set": [ { "part": "Bd", "property": "Border.Background", "brush": "HoverBrush" }, { "property": "Foreground", "brush": "TextBrush" } ] }
+    ]
+  },
+  {
+    "name": "FxSplitterBar", "kind": "Thumb",
+    "rules": [
+      { "name": "Hover", "when": [ { "property": "IsMouseOver", "value": "True" } ],
+        "set": [ { "part": "line", "property": "Border.Background", "brush": "AccentBrush" } ] },
+      { "name": "Dragging", "when": [ { "property": "IsDragging", "value": "True" } ],
+        "set": [ { "part": "line", "property": "Border.Background", "brush": "AccentBrush" } ] }
+    ]
+  }
+]

@@ -2,6 +2,8 @@ using TabForge.Audio.Contracts;
 
 namespace TabForge.AudioEngine.Midi.Processors;
 
+// Owns: the generative note processors (repeater, arpeggiator) re-sending held notes with the original velocity.
+
 /// <summary>Note repeater: while a note is held its note-off / note-on pair is re-sent every <c>Size</c> beats with the original velocity.</summary>
 public sealed class RepeaterProcessor : IMidiProcessor
 {
@@ -90,7 +92,7 @@ public sealed class ArpeggiatorProcessor : IMidiProcessor
         _mode = p.Int("Mode", 1, 0, 3);   // 0 down, 1 up, 2 down-alt, 3 up-alt
         _variants = p.Int("Variants", 0, 0, 3);
         _varOffset = p.Int("VarOffset", 12, -64, 64);
-        _velocity = p.Int("Velocity", 0, 0, 127);
+        _velocity = p.Int("Velocity", 0, 0, MidiLimits.Max);
     }
 
     private void RunSteps(double limit, long blockStart, MidiBuffer output, in MidiContext ctx, double period)
@@ -114,7 +116,7 @@ public sealed class ArpeggiatorProcessor : IMidiProcessor
             }
             var key = _list[idx];
             var ch2 = key >> 7;
-            var note2 = Math.Clamp((key & 0x7F) + (int)(pass % (_variants + 1)) * _varOffset, 0, 127);
+            var note2 = Math.Clamp((key & 0x7F) + (int)(pass % (_variants + 1)) * _varOffset, 0, MidiLimits.Max);
             var vel = _velocity > 0 ? _velocity : _vel[key];
             var t = (long)_next;
             output.Add((int)Math.Clamp(t - blockStart, 0, ctx.Frames - 1), (byte)(0x90 | ch2), (byte)note2, (byte)vel);
@@ -196,8 +198,8 @@ public sealed class ModalRandomizerProcessor : IMidiProcessor
                 if (pick < 0) continue;
                 var note = e.Data1 + Major[_interval[pick] - 1];
                 if (_octRand > 0 && _rng.Next() % 100 < _octRand) note += (_rng.Next() & 1) == 0 ? 12 : -12;
-                if (note < 0 || note > 127) continue;
-                var vel = (int)Math.Clamp(Math.Round(e.Data2 * (1 - (_rng.Next() / (double)uint.MaxValue) * _velRand / 200.0)), 1, 127);
+                if (note < 0 || note > MidiLimits.Max) continue;
+                var vel = (int)Math.Clamp(Math.Round(e.Data2 * (1 - (_rng.Next() / (double)uint.MaxValue) * _velRand / 200.0)), 1, MidiLimits.Max);
                 var at = ctx.BlockStart + e.Frame + (long)(_rng.Next() / (double)uint.MaxValue * _timing / 100.0 * beat);
                 _sched.Schedule(at, st, (byte)note, (byte)vel);
                 _sched.Schedule(at + (long)(_length * beat), (byte)(0x80 | (st & 0x0F)), (byte)note, 0);
@@ -228,9 +230,9 @@ public sealed class LfoProcessor : IMidiProcessor
     {
         _target = p.Int("Target", 0, 0, 1);   // 0 controller, 1 pitch wheel
         _ch = p.Int("Channel", 1, 1, 16) - 1;
-        _cc = p.Int("Cc", 1, 0, 127);
-        _center = p.Double("Center", 64, 0, 127);
-        _range = p.Double("Range", 63, 0, 127);
+        _cc = p.Int("Cc", 1, 0, MidiLimits.Max);
+        _center = p.Double("Center", 64, 0, MidiLimits.Max);
+        _range = p.Double("Range", 63, 0, MidiLimits.Max);
         _maxBend = p.Double("MaxBend", 50, 0, 100);
         _shape = p.Int("Shape", 0, 0, 4);
         _freq = p.Double("Freq", 1, 0, 32);
@@ -287,7 +289,7 @@ public sealed class LfoProcessor : IMidiProcessor
         {
             var frame = (int)Math.Clamp(_nextTick - ctx.BlockStart, 0, ctx.Frames - 1);
             var w = Wave(_shape, _phase + (_nextTick - ctx.BlockStart) * inc);
-            var v = _target == 0 ? (int)Math.Clamp(Math.Round(_center + w * _range), 0, 127) : (int)Math.Clamp(Math.Round(8192 + w * _maxBend / 100.0 * 8191), 0, 16383);
+            var v = _target == 0 ? (int)Math.Clamp(Math.Round(_center + w * _range), 0, MidiLimits.Max) : (int)Math.Clamp(Math.Round(8192 + w * _maxBend / 100.0 * 8191), 0, 16383);
             if (v != _last) { Send(output, frame, v); _last = v; }
             _nextTick += tick;
         }
@@ -321,12 +323,12 @@ public sealed class StepSequencerProcessor : IMidiProcessor
     public StepSequencerProcessor(MidiParams p)
     {
         _ch = p.Int("Channel", 1, 1, 16) - 1;
-        _root = p.Int("Root", 60, 0, 127);
+        _root = p.Int("Root", 60, 0, MidiLimits.Max);
         _steps = p.Int("Steps", 16, 4, 128);
         _spb = p.Double("StepsPerBeat", 4, 1, 16);
         _gateDefault = p.Int("Gate", 50, 1, 100);
         _swing = p.Double("Swing", 0, 0, 100);
-        _velDefault = p.Int("Velocity", 100, 1, 127);
+        _velDefault = p.Int("Velocity", 100, 1, MidiLimits.Max);
         _chain = p.Int("Chain", 1, 1, 4);
         _passInput = p.Bool("PassInput", true);
         _notes = new int[4][];
@@ -357,7 +359,7 @@ public sealed class StepSequencerProcessor : IMidiProcessor
                 var n = pattern[inPat % pattern.Length];
                 if (n != Rest)
                 {
-                    var note = Math.Clamp(_root + n, 0, 127);
+                    var note = Math.Clamp(_root + n, 0, MidiLimits.Max);
                     var at = (long)(_grid + ((_k & 1) == 1 ? _swing / 100.0 * sl * 0.5 : 0));
                     var vel = _vel.Length > 0 && _vel[inPat % _vel.Length] > 0 ? _vel[inPat % _vel.Length] : _velDefault;
                     var gate = _gate.Length > 0 && _gate[inPat % _gate.Length] > 0 ? _gate[inPat % _gate.Length] : _gateDefault;

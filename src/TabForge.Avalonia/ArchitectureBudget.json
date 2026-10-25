@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  // goal 500 lines per file, hard max 800: a file over 800 needs a reviewed entry below, which may only shrink
+  "maxFileLines": 800,
+  "fileLineExceptions": {}
+}

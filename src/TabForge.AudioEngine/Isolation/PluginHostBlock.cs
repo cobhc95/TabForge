@@ -4,6 +4,8 @@ using TabForge.AudioEngine.Plugins;
 
 namespace TabForge.AudioEngine.Isolation;
 
+// Owns: the shared memory for one isolated plug-in (audio in/out, MIDI and transport, generation echo, fixed layout).
+
 /// <summary>
 /// Shared memory for one plug-in running in its own process: the block's audio in/out, its MIDI and transport.
 /// The engine fills it, stamps a new request generation and signals "request"; the plug-in host processes, echoes

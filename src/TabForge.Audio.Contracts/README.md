@@ -5,7 +5,7 @@ Wire contracts shared by the app and the audio engine. No dependencies.
 ## Key types
 - `EngineCommand`, `EngineEvent` (in `EngineProtocol.cs`): what the app sends and what the engine answers.
 - `EngineMessages.cs`, `EngineMessageLists.cs`: one message record per command with a payload, each with one Write and one Read; see Command messages below.
-- `SharedBlock`: shared-memory block between processes.
+- `SharedBlock`: shared-memory block between processes (see Targets for where it works).
 - `TransportMap`, `TransportMeter`: playback position exchange.
 - `ClipPathGuard`, `SafeFileNames`: path and file-name checks for clips.
 - `EngineConfig`, `ClipSpec`, `PluginSpec`: engine setup records.
@@ -17,8 +17,11 @@ The pipe protocol is positional binary: the payload of a command is its fields i
 - Already a single pair: the device configuration (`EngineConfig`), the offline render (`RenderSpec`), the chain load and its state frames (`ChainLoadProtocol`).
 - No payload: panic, render cancel, shutdown.
 
+## Targets
+`net8.0` (portable) and `net8.0-windows`. The Windows-only files, `ChildProcessJob.cs` (job object), `NativeTimer.cs` (1 ms timer) and `NamedSharedMemory.Windows.cs` (named mapping), are compiled into `net8.0-windows` only. On `net8.0`, `NamedSharedMemory.NonWindows.cs` makes creating or opening a `SharedBlock` throw a PlatformNotSupportedException until a Linux and macOS mapping exists.
+
 ## Pathway
-A new engine command is added here first, then handled in `src/TabForge.AudioEngine/` and sent from `AudioEngineClient` (`docs/RECIPES.md`). Keep messages bounded; every size limit is stated in `ARCHITECTURE.md`.
+A new engine command is added here first, then handled in `Source/src/TabForge.AudioEngine/` and sent from `AudioEngineClient`. Keep messages bounded; every size limit is stated in `ARCHITECTURE.md`.
 
 ## Must not depend on
 Any other project, WPF, or the app. A lower layer never references a higher one.

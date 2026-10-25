@@ -1,0 +1,139 @@
+# TabForge element tree, role=tool
+# control view; rect = x,y,w,h relative to the window top-left in physical pixels at dpi=96
+# window size=1294x857
+# stripped: paths, GUIDs, times, dates, handles, numbers of 6+ digits
+Window id="" name="TabForge Settings - 0.7.6" enabled=y focusable=y rect=0,0,1294,857
+  TitleBar id="TitleBar" name="" enabled=y focusable=y rect=24,3,1262,28
+    MenuBar id="SystemMenuBar" name="System" enabled=y focusable=y rect=8,8,22,22
+      MenuItem id="" name="System" enabled=y focusable=y rect=8,8,22,22
+    Button id="Minimize-Restore" name="Minimize" enabled=y focusable=n rect=1147,1,47,30
+    Button id="Maximize-Restore" name="Maximize" enabled=y focusable=n rect=1194,1,46,30
+    Button id="Close" name="Close" enabled=y focusable=n rect=1240,1,47,30
+  Text id="" name="TabForge Settings" enabled=y focusable=n rect=26,47,185,28
+  Text id="" name="Preferences" enabled=y focusable=n rect=26,77,185,15
+  Edit id="SearchAreaGrid.Search" name="Search settings" enabled=y focusable=y rect=252,57,756,30
+  Text id="" name="Search settings, e.g. theme, audio device, metronome" enabled=y focusable=n rect=267,63,741,19
+  ComboBox id="SearchAreaGrid.CategoryFilter" name="Limit settings search to a category" enabled=y focusable=y rect=1020,57,128,30
+  Pane id="" name="" enabled=y focusable=y rect=8,109,221,668
+    Button id="NavigationPanel.CommonSettings" name="Common settings" enabled=y focusable=y rect=8,117,204,44
+      Text id="" name="Common settings" enabled=y focusable=n rect=61,129,135,20
+    Text id="" name="BASICS" enabled=y focusable=n rect=26,173,186,13
+    Button id="NavigationPanel.General" name="General" enabled=y focusable=y rect=8,190,204,44
+      Text id="" name="General" enabled=y focusable=n rect=58,202,138,20
+    Button id="NavigationPanel.Appearance" name="Appearance" enabled=y focusable=y rect=8,234,204,44
+      Text id="" name="Appearance" enabled=y focusable=n rect=58,246,138,20
+    Text id="" name="MUSIC" enabled=y focusable=n rect=26,290,186,13
+    Button id="NavigationPanel.ScoreNotation" name="Score & Notation" enabled=y focusable=y rect=8,307,204,44
+      Text id="" name="Score & Notation" enabled=y focusable=n rect=58,319,138,20
+    Button id="NavigationPanel.FretboardKeyboard" name="Fretboard & Keyboard" enabled=y focusable=y rect=8,351,204,44
+      Text id="" name="Fretboard & Keyboard" enabled=y focusable=n rect=58,353,138,40
+    Button id="NavigationPanel.TimelineTracks" name="Timeline & Tracks" enabled=y focusable=y rect=8,395,204,44
+      Text id="" name="Timeline & Tracks" enabled=y focusable=n rect=58,407,138,20
+    Button id="NavigationPanel.Editing" name="Editing" enabled=y focusable=y rect=8,439,204,44
+      Text id="" name="Editing" enabled=y focusable=n rect=58,451,138,20
+    Text id="" name="SOUND" enabled=y focusable=n rect=26,495,186,13
+    Button id="NavigationPanel.PlaybackPractice" name="Playback & Practice" enabled=y focusable=y rect=8,512,204,44
+      Text id="" name="Playback & Practice" enabled=y focusable=n rect=58,524,138,20
+    Button id="NavigationPanel.AudioPlugIns" name="Audio & Plug-ins" enabled=y focusable=y rect=8,556,204,44
+      Text id="" name="Audio & Plug-ins" enabled=y focusable=n rect=58,568,138,20
+    Button id="NavigationPanel.Recording" name="Recording" enabled=y focusable=y rect=8,600,204,44
+      Text id="" name="Recording" enabled=y focusable=n rect=58,612,138,20
+    Text id="" name="SYSTEM" enabled=y focusable=n rect=26,656,186,13
+    Button id="NavigationPanel.TabsWindows" name="Tabs & Windows" enabled=y focusable=y rect=8,673,204,44
+      Text id="" name="Tabs & Windows" enabled=y focusable=n rect=58,685,138,20
+    Button id="NavigationPanel.Shortcuts" name="Shortcuts" enabled=y focusable=y rect=8,717,204,44
+      Text id="" name="Shortcuts" enabled=y focusable=n rect=58,729,138,20
+    Button id="NavigationPanel.FilesBackups" name="Files & Backups" enabled=y focusable=y rect=8,761,204,44
+      Text id="" name="Files & Backups" enabled=y focusable=n rect=58,773,138,20
+    Button id="NavigationPanel.Advanced" name="Advanced" enabled=y focusable=y rect=8,805,204,44
+      Text id="" name="Advanced" enabled=y focusable=n rect=58,817,138,20
+    ScrollBar id="VerticalScrollBar" name="" enabled=y focusable=n rect=212,109,17,668
+      Thumb id="" name="" enabled=y focusable=n rect=212,109,17,597
+  Pane id="PageScroll" name="" enabled=y focusable=y rect=230,109,1056,668
+    Text id="PageTitle" name="Common settings" enabled=y focusable=n rect=338,127,820,35
+    Text id="PageSubtitle" name="The settings people change most, and where to find the rest" enabled=y focusable=n rect=338,164,820,17
+    Text id="" name="Look" enabled=y focusable=n rect=355,206,786,21
+    Text id="" name="Theme" enabled=y focusable=n rect=359,236,628,19
+    Text id="" name="Theme preset: Dark, Light or System sets the interface, accent and score page colours at once; any colour can still be changed afterwards. Custom keeps your colours as they are." enabled=y focusable=n rect=359,258,616,30
+    ComboBox id="ContentGrid.Theme" name="Theme" enabled=y focusable=y rect=987,247,150,30
+    Text id="" name="UI scale" enabled=y focusable=n rect=359,320,658,19
+    Text id="" name="Scale interface text and icon controls." enabled=y focusable=n rect=359,342,646,15
+    Edit id="ContentGrid.UIScale" name="UI scale" enabled=y focusable=y rect=1018,322,98,32
+    Button id="ContentGrid.IncreaseUIScale" name="Increase UI scale" enabled=y focusable=n rect=1116,322,20,16
+    Button id="ContentGrid.DecreaseUIScale" name="Decrease UI scale" enabled=y focusable=n rect=1116,338,20,16
+    Text id="" name="Show the fretboard" enabled=y focusable=n rect=359,394,751,19
+    Text id="" name="Show the instrument/fretboard panel." enabled=y focusable=n rect=359,416,739,15
+    CheckBox id="ContentGrid.ShowTheFretboard" name="Show the fretboard" enabled=y focusable=y rect=1110,403,27,18
+    Text id="" name="Show the toolbar" enabled=y focusable=n rect=359,468,751,19
+    Text id="" name="Show the transport and editing toolbar." enabled=y focusable=n rect=359,490,739,15
+    CheckBox id="ContentGrid.ShowTheToolbar" name="Show the toolbar" enabled=y focusable=y rect=1110,477,27,18
+    Button id="ContentGrid.AllAppearanceSettings" name="All appearance settings" enabled=y focusable=y rect=355,529,171,38
+      Text id="" name="All appearance settings" enabled=y focusable=n rect=370,539,141,19
+    Text id="" name="Sound" enabled=y focusable=n rect=355,609,786,21
+    Text id="" name="Audio driver" enabled=y focusable=n rect=359,639,598,19
+    Text id="" name="How plug-in audio reaches your speakers. WASAPI (shared) works everywhere; exclusive and ASIO give the lowest latency. ASIO also carries the recording input. DirectSound is the legacy fallback (larger buffer, more latency); WASAPI or ASIO is recommended. Tracks on Windows MIDI are not affected." enabled=y focusable=n rect=359,661,586,45
+    ComboBox id="ContentGrid.AudioDriver" name="Audio driver" enabled=y focusable=y rect=957,657,180,30
+    Text id="" name="Output device" enabled=y focusable=n rect=359,732,606,19
+    Text id="" name="The device plug-in audio plays on (for ASIO: the ASIO driver; use Configure… for its buffer size and routing). Windows default follows the device chosen in Windows sound settings. The list follows the driver above." enabled=y focusable=n rect=359,754,594,30
+    ComboBox id="ContentGrid.OutputDevice" name="Output device" enabled=y focusable=y rect=965,743,172,30
+    Text id="" name="Metronome" enabled=y focusable=n rect=359,816,751,19
+    Text id="" name="Play clicks during playback." enabled=y focusable=n rect=359,838,739,15
+    CheckBox id="ContentGrid.Metronome" name="Metronome" enabled=y focusable=y rect=1110,825,27,18
+    Text id="" name="Metronome volume" enabled=n focusable=n rect=359,884,778,19
+    Text id="" name="Master metronome level." enabled=n focusable=n rect=359,906,766,15
+    Slider id="ContentGrid.MetronomeVolume" name="Metronome volume" enabled=n focusable=n rect=359,933,165,22
+      Button id="ContentGrid.RepeatButton0" name="Repeat button0" enabled=n focusable=n rect=359,933,104,22
+      Thumb id="" name="" enabled=n focusable=n rect=463,936,16,16
+      Button id="ContentGrid.RepeatButton1" name="Repeat button1" enabled=n focusable=n rect=479,933,45,22
+    Edit id="ContentGrid.MetronomeVolume" name="Metronome volume" enabled=n focusable=n rect=533,928,62,32
+    Button id="ContentGrid.IncreaseMetronomeVolume" name="Increase Metronome volume" enabled=n focusable=n rect=595,928,20,16
+    Button id="ContentGrid.DecreaseMetronomeVolume" name="Decrease Metronome volume" enabled=n focusable=n rect=595,944,20,16
+    Text id="" name="Count-in before playback" enabled=y focusable=n rect=359,999,751,19
+    Text id="" name="Play a count-in before the score starts." enabled=y focusable=n rect=359,1021,739,15
+    CheckBox id="ContentGrid.CountInBefore" name="Count-in before playback" enabled=y focusable=y rect=1110,1008,27,18
+    Text id="" name="Playback speed" enabled=y focusable=n rect=359,1073,658,19
+    Text id="" name="Practice at a fraction of the written tempo." enabled=y focusable=n rect=359,1095,646,15
+    Edit id="ContentGrid.PlaybackSpeed" name="Playback speed" enabled=y focusable=y rect=1018,1075,98,32
+    Button id="ContentGrid.IncreasePlaybackSpeed" name="Increase Playback speed" enabled=y focusable=n rect=1116,1075,20,16
+    Button id="ContentGrid.DecreasePlaybackSpeed" name="Decrease Playback speed" enabled=y focusable=n rect=1116,1091,20,16
+    Button id="ContentGrid.MoreAudioSettings" name="More audio settings" enabled=y focusable=y rect=355,1134,153,38
+      Text id="" name="More audio settings" enabled=y focusable=n rect=370,1144,123,19
+    Button id="ContentGrid.PlaybackAndPractice" name="Playback and practice settings" enabled=y focusable=y rect=355,1184,213,38
+      Text id="" name="Playback and practice settings" enabled=y focusable=n rect=370,1194,183,19
+    Text id="" name="Score" enabled=y focusable=n rect=355,1264,786,21
+    Text id="" name="Default score display" enabled=y focusable=n rect=359,1300,628,19
+    Text id="" name="Default display for new scores: notation + TAB, TAB only, or notation only." enabled=y focusable=n rect=359,1322,616,15
+    ComboBox id="ContentGrid.DefaultScoreDisplay" name="Default score display" enabled=y focusable=y rect=987,1303,150,30
+    Text id="" name="Scroll the score while playing" enabled=y focusable=n rect=359,1374,628,19
+    Text id="" name="Off, jump a line at a time, or scroll smoothly." enabled=y focusable=n rect=359,1396,616,15
+    ComboBox id="ContentGrid.ScrollTheScore" name="Scroll the score while playing" enabled=y focusable=y rect=987,1377,150,30
+    Button id="ContentGrid.AllScoreSettings" name="All score settings" enabled=y focusable=y rect=355,1435,133,38
+      Text id="" name="All score settings" enabled=y focusable=n rect=370,1445,103,19
+    Text id="" name="Files" enabled=y focusable=n rect=355,1515,786,21
+    Text id="" name="Autosave unsaved songs" enabled=y focusable=n rect=359,1545,614,19
+    Text id="" name="Copies songs with unsaved changes into TabForge's Recovery folder at this interval (skipped while playing). Your own files are never overwritten; the copies are offered the next time TabForge starts after a crash, and removed when you save or close." enabled=y focusable=n rect=359,1567,602,45
+    ComboBox id="ContentGrid.AutosaveUnsavedSongs" name="Autosave unsaved songs" enabled=y focusable=y rect=973,1563,164,30
+    Text id="" name="Default save format" enabled=y focusable=n rect=359,1638,778,19
+    Text id="" name=".gp keeps every TabForge feature (stored inside the file). .tforge is TabForge-only." enabled=y focusable=n rect=359,1660,766,15
+    ComboBox id="ContentGrid.DefaultSaveFormat" name="Default save format" enabled=y focusable=y rect=359,1681,252,30
+    Button id="ContentGrid.FilesAndBackups" name="Files and backups" enabled=y focusable=y rect=355,1736,137,38
+      Text id="" name="Files and backups" enabled=y focusable=n rect=370,1746,107,19
+    Text id="" name="Shortcuts" enabled=y focusable=n rect=355,1816,786,21
+    Text id="" name="Pick a preset layout (TabForge or another program's) and change any key on the Shortcuts page." enabled=y focusable=n rect=355,1841,786,15
+    Button id="ContentGrid.OpenAllShortcuts" name="Open all shortcuts" enabled=y focusable=y rect=355,1868,142,38
+      Text id="" name="Open all shortcuts" enabled=y focusable=n rect=370,1878,112,19
+    Text id="" name="Looking for _window song's settings?" enabled=y focusable=n rect=355,1948,786,21
+    Text id="" name="Preferences are for the program. A song's own settings are in other windows: Project settings (the File menu) and Track properties (right-click a track)." enabled=y focusable=n rect=355,1973,786,30
+    ScrollBar id="VerticalScrollBar" name="" enabled=y focusable=n rect=1269,109,17,668
+      Thumb id="" name="" enabled=y focusable=n rect=1269,109,17,229
+  Button id="Preferences.Manage" name="Manage settings menu" enabled=y focusable=y rect=28,794,148,38
+    Text id="" name="Manage settings" enabled=y focusable=n rect=43,804,102,19
+  Text id="VersionLabel" name="TabForge version" enabled=y focusable=n rect=190,806,76,15
+  Text id="StatusText" name="All changes saved" enabled=y focusable=n rect=844,804,104,17
+  Button id="Preferences.DiscardUnappliedChanges" name="Discard unapplied changes and close settings." enabled=y focusable=y rect=972,794,90,38
+    Text id="" name="Cancel" enabled=y focusable=n rect=997,804,40,19
+  Button id="Preferences.Apply" name="Commit changes and keep this window open." enabled=n focusable=n rect=1071,794,90,38
+    Text id="" name="Apply" enabled=n focusable=n rect=1099,804,35,19
+  Button id="Preferences.CommitChangesAnd" name="Commit changes and close settings." enabled=y focusable=y rect=1170,794,90,38
+    Text id="" name="OK" enabled=y focusable=n rect=1205,804,20,19
+# nodes=134

@@ -2,6 +2,8 @@ using TabForge.Audio.Contracts;
 
 namespace TabForge.AudioEngine.Midi.Processors;
 
+// Owns: the choke note-flow processor (choke set ends sounding notes, held-choke blocking).
+
 /// <summary>Choke: a note-on in the choke set ends every sounding note of the affected set; while a choke note is held, affected note-ons are blocked (or allowed).</summary>
 public sealed class ChokeProcessor : IMidiProcessor
 {
@@ -14,8 +16,8 @@ public sealed class ChokeProcessor : IMidiProcessor
     public ChokeProcessor(MidiParams p)
     {
         _inCh = p.Int("InCh", 0, 0, 16);
-        _cStart = p.Int("ChokeStart", 42, 0, 127); _cCount = p.Int("ChokeCount", 1, 1, 16);
-        _aStart = p.Int("AffStart", 46, 0, 127); _aCount = p.Int("AffCount", 1, 1, 16);
+        _cStart = p.Int("ChokeStart", 42, 0, MidiLimits.Max); _cCount = p.Int("ChokeCount", 1, 1, 16);
+        _aStart = p.Int("AffStart", 46, 0, MidiLimits.Max); _aCount = p.Int("AffCount", 1, 1, 16);
         _action = p.Int("Action", 0, 0, 1);   // 0 block, 1 allow
         for (var i = 0; i < 4; i++) _extra[i] = p.Int($"Extra{i + 1}", -1, -1, 127);
     }
@@ -81,7 +83,7 @@ public sealed class ChokeGroupProcessor : IMidiProcessor
     public ChokeGroupProcessor(MidiParams p)
     {
         _inCh = p.Int("InCh", 0, 0, 16);
-        _start = p.Int("Start", 60, 0, 127);
+        _start = p.Int("Start", 60, 0, MidiLimits.Max);
         _count = p.Int("Count", 8, 1, 128);
     }
 

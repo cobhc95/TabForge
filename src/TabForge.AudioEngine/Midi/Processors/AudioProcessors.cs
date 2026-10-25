@@ -3,6 +3,8 @@ using TabForge.AudioEngine.Plugins;
 
 namespace TabForge.AudioEngine.Midi.Processors;
 
+// Owns: the MIDI processors that also see and may change the audio at their chain position (audio-thread, allocation-free).
+
 /// <summary>
 /// A MIDI processor that also sees (and may change) the audio at its position in the plug-in chain: the audio going into the
 /// plug-in that follows it. Runs on the audio thread and must not allocate. The chain calls this instead of
@@ -41,7 +43,7 @@ public sealed class AudioDrumTriggerProcessor : IMidiProcessor, IAudioAwareProce
         _atk = AudioProcUtil.MsCoef(p.Double("AttackMs", 0.1, 0, 50), sr);
         _rel = AudioProcUtil.MsCoef(p.Double("ReleaseMs", 20, 0.1, 500), sr);
         _retrig = (long)(p.Double("Retrigger", 30, 0, 500) * 0.001 * sr);
-        _note = p.Int("Note", 38, 0, 127); _ch = p.Int("Channel", 10, 1, 16) - 1;
+        _note = p.Int("Note", 38, 0, MidiLimits.Max); _ch = p.Int("Channel", 10, 1, 16) - 1;
         _mix = (float)(p.Double("Mix", 100, 0, 100) / 100);
         _peakWin = Math.Max(1, (int)(0.0005 * sr));
     }
@@ -177,7 +179,7 @@ public sealed class LoopSamplerProcessor : IMidiProcessor, IAudioAwareProcessor
 
     public LoopSamplerProcessor(MidiParams p, int sr)
     {
-        _recNote = p.Int("RecNote", 50, 0, 127); _inCh = p.Int("InCh", 0, 0, 16); _root = p.Int("Root", 60, 0, 127);
+        _recNote = p.Int("RecNote", 50, 0, MidiLimits.Max); _inCh = p.Int("InCh", 0, 0, 16); _root = p.Int("Root", 60, 0, MidiLimits.Max);
         _pitched = p.Bool("Pitched", false); _loop = p.Bool("Loop", false); _level = AudioProcUtil.DbToLin(p.Double("Level", 0, -60, 12));
         var size = Math.Max(1, (int)(p.Double("MaxSec", 4, 1, 30) * sr));
         _bl = new float[size]; _br = new float[size];   // engine thread: allocated once here

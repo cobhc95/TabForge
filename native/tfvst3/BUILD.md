@@ -43,7 +43,7 @@ skipped). The SDK's own CMake project is not used; only these sources are compil
 From the repository root, in a "Developer PowerShell for VS" (or any shell where `cmake` and `git` are on `PATH`):
 
 ```powershell
-cmake -S native/tfvst3 -B C:\tfb -A x64 -DTFVST3_BUILD_TEST=OFF
+cmake -S Source/native/tfvst3 -B C:\tfb -A x64 -DTFVST3_BUILD_TEST=OFF
 cmake --build C:\tfb --config Release --parallel
 ```
 
@@ -64,7 +64,7 @@ cmake --build C:\tfb --config Release --parallel
 The build writes `C:\tfb\Release\tfvst3.dll`. Copy it to
 
 ```
-src/TabForge.AudioEngine/native/tfvst3.dll
+Source/src/TabForge.AudioEngine/native/tfvst3.dll
 ```
 
 The audio engine project copies that file next to `TabForge.exe` (`TabForge.AudioEngine.csproj`). Without the DLL
@@ -72,7 +72,7 @@ the app still runs; VST3 plug-ins are then unavailable.
 
 ## Reproducibility
 
-The checked-in `src/TabForge.AudioEngine/native/tfvst3.dll` (636,416 bytes) has SHA-256
+The checked-in `Source/src/TabForge.AudioEngine/native/tfvst3.dll` (636,416 bytes) has SHA-256
 
 ```
 9e3e286335ead842fb062ce1f138ad1fa9ce3e4fea5488d9c10b94dc205a1589
@@ -103,18 +103,18 @@ Two builds from the same folder differ from each other only in the two timestamp
 Because of 1 and 2, the check that is meaningful is "same size, same code and data apart from timestamps and
 path-hashed names", not equal hashes. A future release could make the build reproducible by building from a fixed
 folder with `/Brepro` (`-DCMAKE_SHARED_LINKER_FLAGS=/Brepro -DCMAKE_CXX_FLAGS=/Brepro`); that changes the DLL,
-so it is not done for the current file. The workflow `windows-ci.yml` builds the bridge from the pinned SDK on
-every run and runs `tools/Compare-NativeBridge.ps1`: it parses the PE headers, masks the link timestamps (COFF header,
+so it is not done for the current file. The upstream CI workflow (historical: windows-ci; this checkout has no CI config) builds the bridge from the pinned SDK on
+every run and runs `Source/tools/Compare-NativeBridge.ps1`: it parses the PE headers, masks the link timestamps (COFF header,
 export, resource and debug directories), the PDB identity (GUID, path, checksum) and the `?A0x<hash>` source-path hash
 names, reports how many bytes differed in each category, and fails only when a byte outside those categories (or the
 size) differs.
 
 **Release builds.** Releases ship the checked-in DLL, in the local build and in the GitHub Actions build alike, so both
-carry the same bridge; the CI rebuild above is a check, not the source of the shipped file. The workflow
-`build-bridge.yml` (run by hand whenever the bridge source or the SDK pin changes; the maintainer then commits its DLL
-and `native/BUILD_PROVENANCE.md` as they are) builds the bridge from the pinned SDK on the runner with `native/build-tfvst3.ps1`, attests it, and uploads
-`tfvst3.dll` together with `native/BUILD_PROVENANCE.md` (compiler and SHA-256). Those two files are committed as they
-are. `tools/Package-Release.ps1` refuses to package if the DLL's SHA-256 differs from the record. The release is then
-reproducible: see `docs/REPRODUCIBLE_BUILDS.md`.
+carry the same bridge; the CI rebuild above is a check, not the source of the shipped file. The upstream
+manual build-bridge workflow (historical: no CI config in this checkout; run by hand whenever the bridge source or the SDK pin changes; the maintainer then commits its DLL
+and `Source/native/BUILD_PROVENANCE.md` as they are) builds the bridge from the pinned SDK on the runner with `Source/native/build-tfvst3.ps1`, attests it, and uploads
+`tfvst3.dll` together with `Source/native/BUILD_PROVENANCE.md` (compiler and SHA-256). Those two files are committed as they
+are. `Source/tools/Package-Release.ps1` refuses to package if the DLL's SHA-256 differs from the record. The release is then
+reproducible: see `Source/docs/REPRODUCIBLE_BUILDS.md`.
 
 The checked-in DLL has no Authenticode signature.

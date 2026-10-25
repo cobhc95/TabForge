@@ -3,6 +3,8 @@ using System.Runtime.InteropServices;
 
 namespace TabForge.Audio.Contracts;
 
+// Owns: the offline render protocol (RenderSpec, progress/done/failed frames, engine-rate frame numbers).
+
 // Offline render ("File > Render"): TabForge sends one RenderSpec (EngineCommand.RenderOffline) plus a sorted event file;
 // the engine stops its audio device, renders the loaded chains faster than realtime on parallel workers, writes the WAV
 // files itself, sends RenderProgress about 10 times a second and finally RenderDone or RenderFailed, then reopens the

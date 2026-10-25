@@ -32,7 +32,7 @@ TAB shows where to play, not how long to hold each note. The rhythm marks, furth
 
 A guitar TAB staff has six lines, one for each string. The top line is the thinnest, highest-pitched string, which is string 1. The bottom line is the thickest, lowest string, which is string 6. This matches how the strings look when you look down at your guitar.
 
-![A guitar neck with three notes marked, above the same three notes written on a six-line TAB staff.](images/reading-tab.png)
+![A guitar neck with three notes marked, above the same three notes written on a six-line TAB staff.](../images/reading-tab.png)
 *Figure: the lines of a TAB staff, and the strings they stand for.*
 
 A number on a line is the fret to press on that string. A `0` means the open string, played with no finger on it. A `5` means press fret 5. Numbers stacked above each other, at the same point in the bar, are played together as a chord.
@@ -75,7 +75,7 @@ Each note has a note value, which is how long it lasts compared with a whole bar
 - An eighth note (quaver) lasts half a beat, so there are two per beat.
 - A sixteenth note (semiquaver) lasts a quarter of a beat, so there are four per beat.
 
-![A ladder of note values from whole note to sixteenth note, each one half as long as the one above.](images/duration-ladder.png)
+![A ladder of note values from whole note to sixteenth note, each one half as long as the one above.](../images/duration-ladder.png)
 *Figure: each note value is half as long as the one above it.*
 
 Short notes are beamed together. Eighth notes in a row share a beam, and sixteenth notes share a double beam. A single eighth note has a flag instead. A hollow note head is a half or whole note, and a filled head is a quarter or shorter.

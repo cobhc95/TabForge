@@ -1,0 +1,15 @@
+[
+  { "name": "MainCloseGlyph", "value": "#FFFFFF" },
+  { "name": "MainMidiLedIdle", "value": "#6B7280" },
+  { "name": "MainMidiLedRing", "dark": "#23272E", "light": "#D2D2D2" },
+  { "name": "SectionSelectedRing", "dark": "#CCFFFFFF", "light": "#CC111111" },
+  { "name": "ControllerDockGlow", "dark": "#4C9AFF", "light": "#0F4489" },
+  { "name": "ZoomControllerShadow", "value": "#000000" },
+  { "name": "SettingsPopupShadow", "value": "#000000" },
+  { "name": "PlaybarBeatBorder", "value": "#7656B3" },
+  { "name": "PlaybarMetroBorder", "value": "#9E542F" },
+  { "name": "PlaybarLoopBorder", "value": "#18865E" },
+  { "name": "TabBarArrowGlyph", "dark": "#FFFFFF", "light": "#1E242B" },
+  { "name": "TrackRowColourDefault", "value": "#FF4682B4" },
+  { "name": "PlayheadShadow", "dark": "#FF000000", "light": "#FF404040" }
+]

@@ -14,7 +14,6 @@ Audio clips and live input: clip playback from disk, the input device, recording
 | `TakeAlignment.cs` | Where a recorded take starts on the song timeline, compensating the output delay |
 
 ## Pathway
-`START_HERE.md`, Golden pathways: **Reach the engine**. Real-time rules (no allocation or locks on the audio thread) are in `ARCHITECTURE.md`.
+Real-time rules (no allocation or locks on the audio thread) are in `ARCHITECTURE.md`.
 
 ## Tests
-`docs/feature-map/recording.md`, `docs/feature-map/mixer-and-audio-engine.md`.

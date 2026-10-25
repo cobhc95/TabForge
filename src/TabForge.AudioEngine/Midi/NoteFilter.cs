@@ -2,6 +2,8 @@ using System.Globalization;
 
 namespace TabForge.AudioEngine.Midi;
 
+// Owns: parsing and formatting note sets such as ranges and note names (C-1 = 0).
+
 /// <summary>Parses and formats note sets such as "36, 38, 40-45, C2, D#3" (note names use C-1 = 0, so C4 = 60).</summary>
 public static class NoteSetText
 {
@@ -28,7 +30,7 @@ public static class NoteSetText
         note = 0;
         token = token.Trim();
         if (token.Length == 0) return false;
-        if (int.TryParse(token, NumberStyles.None, CultureInfo.InvariantCulture, out note)) return note <= 127;
+        if (int.TryParse(token, NumberStyles.None, CultureInfo.InvariantCulture, out note)) return note <= MidiLimits.Max;
         var letter = "CDEFGAB".IndexOf(char.ToUpperInvariant(token[0]));
         if (letter < 0) return false;
         var semis = new[] { 0, 2, 4, 5, 7, 9, 11 }[letter];
@@ -37,13 +39,13 @@ public static class NoteSetText
         else if (i < token.Length && (token[i] == 'b' || token[i] == 'B') && i + 1 < token.Length && (char.IsDigit(token[i + 1]) || token[i + 1] == '-')) { semis--; i++; }
         if (!int.TryParse(token.AsSpan(i), NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var oct)) return false;
         note = (oct + 1) * 12 + semis;
-        return note is >= 0 and <= 127;
+        return note is >= 0 and <= MidiLimits.Max;
     }
 
     /// <summary>Compact numeric text ("36,38,40-45") that <see cref="Parse"/> reads back.</summary>
     public static string Format(IEnumerable<int> notes)
     {
-        var sorted = notes.Where(n => n is >= 0 and <= 127).Distinct().OrderBy(n => n).ToList();
+        var sorted = notes.Where(n => n is >= 0 and <= MidiLimits.Max).Distinct().OrderBy(n => n).ToList();
         var parts = new List<string>();
         for (var i = 0; i < sorted.Count;)
         {

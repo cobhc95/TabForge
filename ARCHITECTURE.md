@@ -1,7 +1,8 @@
 # Architecture
 
-TabForge is a notation-first composition workstation (C# / .NET 8 / WPF, Windows x64) with an audio path: built-in General
-MIDI synth, VST2/VST3 hosting, recording, clips, mixing and offline render. Three projects, up to three kinds of process.
+TabForge is a notation-first composition workstation (C# / .NET 8, Windows x64) with an audio path: built-in General
+MIDI synth, VST2/VST3 hosting, recording, clips, mixing and offline render. Five projects; one UI process, plus the audio
+engine process and optional per-plug-in hosts.
 
 "By design" means the code is written to that rule and reviewed against it. It is proven only where a self-test is named.
 
@@ -9,15 +10,16 @@ MIDI synth, VST2/VST3 hosting, recording, clips, mixing and offline render. Thre
 
 | Project | Contents | Depends on |
 | --- | --- | --- |
-| `src/TabForge` | WPF app: score model, editor, playback compiler, MIDI scheduler, documents, settings, render orchestration, engine client | TabForge.AlphaTab 1.8.4-tabforge.4 (alphaTab 1.8.4 with four patches: per-import .gp3/.gp4/.gp5 bar limit, exact gpif mixer volume/balance, gpif trill speed, .gp3-.gp5 link marks without a partner note; source in `vendor/alphatab`); the two projects below (NAudio, MeltySynth, SoundTouch.Net come in transitively) |
-| `src/TabForge.Audio.Contracts` | Wire contracts: `EngineProtocol` (commands, events, framing, records), `RenderProtocol`, `SharedBlock` (shared-memory layout) | none |
-| `src/TabForge.AudioEngine` | Audio output, mixer, track chains, VST2/VST3 hosting, MIDI processors, recorder, clip player, GM synth, offline renderer, isolated plug-in host, native bridge | NAudio 2.2.1, MeltySynth 2.4.1, SoundTouch.Net 2.3.2, native `tfvst3.dll` |
+| `Source/src/TabForge.Core` | UI-framework-free logic (626 .cs files): song model, playback scheduling, audio routing rules, plug-in catalogue and rules, presets, rendering inputs, services without UI-framework types, presenters (window state and commands that a view drives, `Presenters/`, 104 files) | TabForge.AlphaTab 1.8.4-tabforge.4 (alphaTab 1.8.4 with four patches: per-import .gp3/.gp4/.gp5 bar limit, exact gpif mixer volume/balance, gpif trill speed, .gp3-.gp5 link marks without a partner note; source in `Source/vendor/alphatab`); `Source/src/TabForge.Audio.Contracts` (targets `net8.0` and `net8.0-windows`; the Windows-only files listed in its csproj build only for `net8.0-windows`; no UI-framework or app types) |
+| `Source/src/TabForge.Avalonia` | Avalonia 11 preview: `App` (Fluent theme, the Core palette and look styles) and `MainWindow` (94 `MainWindow*.cs` partials, composed in `MainWindow.Compose.cs`); 524 .cs + 5 .axaml source files; test project `TabForge.Avalonia.Tests` | Avalonia packages, `TabForge.Core` |
+| `Source/src/TabForge.Audio.Contracts` | Wire contracts: `EngineProtocol` (commands, events, framing, records), `RenderProtocol`, `SharedBlock` (shared-memory layout) | none; targets `net8.0` and `net8.0-windows` (the Windows-only pieces are `net8.0-windows` only, see its folder README) |
+| `Source/src/TabForge.AudioEngine` | Audio output, mixer, track chains, VST2/VST3 hosting, MIDI processors, recorder, clip player, GM synth, offline renderer, isolated plug-in host, native bridge | NAudio 2.2.1, MeltySynth 2.4.1, SoundTouch.Net 2.3.2, native `tfvst3.dll` |
 
-`native/tfvst3` is a C++ VST3 host bridge built against the Steinberg VST3 SDK (pinned by `native/fetch-vst3sdk.ps1`).
-`native/build-tfvst3.ps1` writes `native/BUILD_PROVENANCE.md`; `tools/Package-Release.ps1` checks the shipped DLL against it.
-Versions and hashes of all components: `docs/SBOM.md`. Restore is locked (`packages.lock.json`, `--locked-mode`).
+`Source/native/tfvst3` is a C++ VST3 host bridge built against the Steinberg VST3 SDK (pinned by `Source/native/fetch-vst3sdk.ps1`).
+`Source/native/build-tfvst3.ps1` writes `Source/native/BUILD_PROVENANCE.md`; `Source/tools/Package-Release.ps1` checks the shipped DLL against it.
+Versions and hashes of all components: `Source/docs/SBOM.md`. Restore is locked (`packages.lock.json`, `--locked-mode`).
 
-Dependency direction inside `src/TabForge`:
+Dependency direction inside `Source/src/TabForge.Core` and the app:
 
 ```
 Models/            (pure data: SongProject, TrackModel, MeasureModel, TabCell, TabNote)
@@ -32,26 +34,30 @@ Visualization/ + Views/ + MainWindow  (read-only consumers of the timeline)
 ```
 
 Rules for this layering:
-- `Models` and `Playback` do not reference WPF.
+- `Models` and `Playback` reference no UI-framework types.
 - The playback timeline is authoritative. Visualisation reads it and adds no animation that lags the sound.
 - External formats are converted only at the import and export boundary.
 - The scheduler owns the compiled timeline; the UI observes it (`PlaybackEngine.TimelineChanged`).
 
 The architecture self-tests (`--areas architecture`) check the boundaries.
 
+Port layers, bottom to top: `TabForge.Core` (no UI-framework types, no app types) → ports in `Source/src/TabForge.Core/Platform/` (`IUiThread`, `IUiTimer`, `UiPriority`, `IAppServices`, `IDrawContext`, `IDrawPaints`, the theme table data `Theme/Palette` and `Theme/LookTable` with their JSON; namespace `TabForge.Platform`; OS ports such as `IPathResolver` sit there too) → the app (`Source/src/TabForge.Avalonia/`), which reaches Core through the ports and shows the state of a presenter in `Core/Presenters/` from its own views (the view keeps layout and wiring only); its composition root is `MainWindow.Compose.cs`. Core never references the app.
+
+`Source/src/TabForge.Avalonia/ArchitectureBudget.json` holds the reviewed line budgets (goal under 500 lines per file, hard max 800; files over 800 need a reviewed budget entry that only shrinks), enforced by the architecture tests.
+
 ## 2. Processes
 
 ```
 +----------------------------------------------+
-| TabForge.exe  (UI process, WPF, STA)          |
-|  documents, editor, score model, undo         |
+| UI process (`TabForge.exe`)                  |
+|  documents, editor, score model, undo        |
 |  PlaybackEngine  (MIDI scheduler thread)      |   winmm MIDI out (plain MIDI tracks / external ports)
 |  AudioEngineClient  (engine lifecycle)        |
 +---------+------------------------+-----------+
           | named pipe (frames)    | shared memory: MIDI ring, breadcrumb, meters
           |  CurrentUserOnly       | (SharedBlock, one per engine session)
 +---------v------------------------v-----------+
-| TabForge.exe --audio-engine <session> <pid>   |   same executable, no WPF started
+| TabForge.exe --audio-engine <session> <pid>   |   same executable, no UI started
 |  EngineHost: command reader, main thread,     |
 |  watchdog thread                              |
 |  MixEngine (audio callback, device thread)    |
@@ -67,13 +73,14 @@ The architecture self-tests (`--areas architecture`) check the boundaries.
 ```
 
 - **UI process.** Owns the song, documents, undo, settings and the desired audio configuration. Never runs plug-ins and never
-  sits on the audio callback path.
+  sits on the audio callback path. The UI process is `TabForge.exe` (the owner's run build is
+  `build\TabForge\TabForge.exe` in the repo root, gitignored).
 - **Audio engine process.** Started by `AudioEngineClient` as `--audio-engine <session> <parentPid>`; `Program.Main` dispatches
-  before any WPF object exists. Exits when the parent dies. The session id is 8-64 alphanumeric characters and names the pipe
+  before any window exists. Exits when the parent dies. The session id is 8-64 alphanumeric characters and names the pipe
   and the shared block. If the engine dies, the client restarts it, and a plug-in blamed by the breadcrumb is quarantined.
 - **Plug-in host process (optional).** `--plugin-host` runs one plug-in for `RemotePlugin`. Helpers: `--plugin-info` (metadata
   probe) and `--probe-gm`.
-- **Headless modes** (`--selftest`, `--playtest`, `--audit`, `--render`, ... in `Diagnostics/DiagnosticCommands.cs`) run without a
+- **Headless modes** (`--selftest`, `--audio-engine`, `--plugin-host`, `--plugin-info`, `--import-worker`, routed in `Source/src/TabForge.Avalonia/Program.cs`) run without a
   main window and return exit codes 0 / 1 / 2.
 
 ## 3. IPC and limits
@@ -123,7 +130,7 @@ UI side: no per-frame or layout-driven work for playback visuals; the UI never c
 
 | State | Owner | Notes |
 | --- | --- | --- |
-| Song, tracks, bars, notes | UI process, `DocumentSession.Project` | Edits end in `CommitEdit(EditRefresh...)`. Undo is a bounded chain of `ProjectState`s (`UndoController`, `UndoHistory`); unchanged bar chunks are shared |
+| Song, tracks, bars, notes | UI process, `SongDocument.Project` | Edits end in `DocumentEdits.Run`. Undo is a bounded chain of `ProjectState`s (`UndoController`, `UndoHistory`); unchanged bar chunks are shared |
 | Compiled timeline | `PlaybackEngine` | Rebuilt from the project; the UI observes `TimelineChanged` |
 | Audio configuration, chain *requests* | UI process (project and settings) | Sent as commands; the full desired state is re-sent after an engine restart |
 | Live plug-in instances, chains, routing | Engine process | Keyed by slot and stable `PluginSpec.Id`; a chain change keeps the instance with the same id |
@@ -131,14 +138,14 @@ UI side: no per-frame or layout-driven work for playback visuals; the UI never c
 | Plug-in identity (VST2 id, VST3 class id, pin counts, names) | The plug-in | Read with `GetPluginInfo` (one `PluginInfo` frame per plug-in, main thread) when a chain is exported; no answer means "not available", so an engine without the request is harmless |
 | Isolated plug-in instance | Plug-in host process | The engine holds a `RemotePlugin` proxy |
 | Recorded takes, clips | Files on disk; `AudioClip` / `ClipLane` metadata in the project | |
-| Settings | `AppSettingsStore.Shared` (created by `App`), `%APPDATA%\TabForge\settings.json` | One `AppSettings` for all windows. Changes raise `Changed`; saves are debounced (400 ms) and atomic, and flush on exit. An unreadable file is not overwritten until Preferences are applied. Normalised and clamped on load; never wiped by rebuilds |
-| The audio engine | `AudioEngineClient.Instance`, owned by the active document | Engine ownership below |
-| Crash recovery copies | `%LOCALAPPDATA%\TabForge\Recovery` | Written by the last-resort handler in `App.xaml.cs` |
+| Settings | the one `AppSettingsStore` `App` creates, `%APPDATA%\TabForge\settings.json` | One `AppSettings` for all windows. Changes raise `Changed`; saves are debounced (400 ms) and atomic, and flush on exit. An unreadable file is not overwritten until Preferences are applied. Normalised and clamped on load; never wiped by rebuilds |
+| The audio engine | the one `AudioEngineClient` `App` creates, owned by the active document | Engine ownership below |
+| Crash recovery copies | `%LOCALAPPDATA%\TabForge\Recovery` | Written by the last-resort handler in `App.cs` |
 
 Rule: one owner per piece of state. Other processes hold requests or copies, never a second source of truth.
 
-**Engine ownership.** The engine is app-wide with one owner: the document whose window last synced it (`AudioRouting.Apply(...,
-owner: DocumentSession)`). Other documents play through Windows MIDI or are silent; there is no multi-document mixing. On a switch,
+**Engine ownership.** The engine is app-wide with one owner: the document whose window last synced it (`AvaloniaEngineRouting.Apply(...,
+owner: SongDocument)`). Other documents play through Windows MIDI or are silent; there is no multi-document mixing. On a switch,
 the previous owner's chains are *parked* (loaded, level 0, no clips, not armed) on their own slots, so documents never share a slot.
 Switching back within the warm period (`AudioEngineClient.DefaultWarmIdleMinutes`, 5 minutes, `WarmIdle`) re-activates them without
 a LoadChain. Group buses and the master use fixed shared slots, never parked; they reload on an owner switch. Parked chains are removed
@@ -146,17 +153,17 @@ after the warm period. A `Sync` without engine tracks keeps the engine warm unti
 probes set `WarmIdle = 0`.
 
 **Window lifetime.** A main window attaches to objects that outlive it: static events (`MediaAccess.Changed`,
-`PlaybackEngine.LoopCompleted`), the shared `AudioEngineClient` and `AppSettingsStore`, the media-provider registration, and the
+`PlaybackEngine.LoopCompleted`), the one `AudioEngineClient` and `AppSettingsStore`, the media-provider registration, and the
 recorder's engine and MIDI-input hooks. Each attachment goes through `MainWindow.Subscribe` / `_lifetime.Add` (`OwnedSubscriptions`),
 which records the detach beside the attach; `ReleaseWindowResources` runs them once from `Closed`. `Closing` only decides. Work queued
 from another thread goes through `PostIfOpen`, which drops it after close. Settings dialogs call back into their opener through
-`SettingsWindowActions` (via `WpfSettingsWindowHost`), never through statics. A document owns its clock (`DocumentPlaybackState.Clock`),
+`SettingsWindowActions`, never through statics. A document owns its playback (`AvaloniaPlaybackSession`),
 so a tab moved to another window keeps playing. App-wide caches hold songs and windows weakly. The `window-lifetime` group builds,
 uses and closes real `MainWindow`s and asserts this.
 
-**Document media context.** Everything that reads a song's linked audio receives its `MediaContext` (`DocumentSession.Media`)
-explicitly: `MediaAccess.Evaluate/Approve/Revoke`, `WaveformCache.Get/StatusOf/LengthOf/Cancel`, `AudioEngineClient.Sync`,
-`AudioRouting.Apply` (with the document's skipped plug-ins), the drop session, the timeline and render requests. There are no ambient
+**Document media context.** Everything that reads a song's linked audio receives its `MediaContext` (`SongDocument.Media`)
+explicitly: `MediaAccess.Evaluate/Approve/Revoke`, `WaveformService.Get/StatusOf/LengthOf/Cancel` (the app's one instance is `WaveformCache.Default`), `AudioEngineClient.Sync`,
+`AvaloniaEngineRouting.Apply` (with the document's skipped plug-ins), the drop session, the timeline and render requests. There are no ambient
 providers and no "current document". The context holds:
 - the identity: a run-time session id, never stored in a file;
 - the **media base directory**: the saved file's folder, else the folder an imported song came from (separate from the save path);
@@ -164,7 +171,7 @@ providers and no "current document". The context holds:
   path matches nothing;
 - a **revision** that changes on Save As and on close.
 
-Save As copies no approvals; an unsaved song's session approvals transfer only to the path it is first saved to. The waveform cache
+Save As copies no approvals; an unsaved song's session approvals transfer only to the path it is first saved to. The waveform service
 keeps one slot per document and file and shares decoded peaks by canonical file only after the asking document's permission is
 checked. The worker re-checks permission before opening anything, after the read and on every draw (`MediaAccess.Decide`, memory only,
 so an unreachable share never stalls the UI thread or the cache lock). A read for a closed document or an older revision is dropped.
@@ -172,7 +179,7 @@ An approval change re-judges the clips of every live engine slot (`AudioEngineCl
 Window close asks about every dirty document first. Preferences merges approvals with the live list (`MediaApprovalMerge`). The
 `document-context` group covers the matrix.
 
-**Document operations.** The model half of an edit, save, close or open is a function of an explicit `DocumentSession`; `MainWindow`
+**Document operations.** The model half of an edit, save, close or open is a function of an explicit `SongDocument`; `MainWindow`
 keeps dialogs, input gating, status text and visual refresh.
 - `DocumentEdits.Run` is one logical edit: one undo transaction (nothing stored when nothing changed), one dirty change, one timeline
   invalidation (`SongProject.BeginTimelineBatch`). `ArrangementController` and `TrackController` expose the bar, section and track
@@ -226,7 +233,7 @@ start disposes per-writer files and releases the input device. Capture opens onl
 - **Separate process per plug-in** (`RemotePlugin` / `--plugin-host`): only that process dies on a crash or hang. Effects pass the sound
   through, instruments go silent, `Crashed` is raised once on the engine's main thread, and the plug-in is lost for the session.
   **This is crash isolation, not a security sandbox.** The process runs as the same user with the same rights as TabForge.
-- **Plug-in trust boundary** (`Plugins/PluginTrust.cs`): songs, rigs, presets and auto-load chains only *name* plug-in paths.
+- **Plug-in trust boundary** (`Source/src/TabForge.Core/Plugins/PluginTrust.cs`): songs, rigs, presets and auto-load chains only *name* plug-in paths.
   `AudioEngineClient.Sync` builds specs through `PluginTrust.BuildSpecs`. A path loads only if it is in the user's scan (this
   session's or the remembered list), inside a scanned folder on a local fixed drive, or in `PluginSettings.ApprovedPluginPaths`
   (full normalised path, case-insensitive). UNC and removable or optical locations always need explicit approval.
@@ -277,7 +284,7 @@ PlaybackEngine (scheduler)      monotonic clock -> dispatch due events -> routed
 
 Events are absolute milliseconds from per-bar tempo (`MusicTime.BarMs`). Onsets follow a duration cursor, not the raw 16-slot index,
 so tuplets and dotted values do not drift. The scheduler is deterministic for the same score, settings and start. `PlaybackEngine`
-raises about 60 Hz position callbacks; `MainWindow` coalesces them onto a `DispatcherTimer`.
+raises about 60 Hz position callbacks.
 
 ## 11. Subsystems and their files
 
@@ -286,23 +293,24 @@ raises about 60 Hz position callbacks; `MainWindow` coalesces them onto a `Dispa
 | Score model | `Models/SongProject.cs`, `TechniqueNames.cs` (persisted ids: use the constants), `TripletFeels.cs`, `NotationEnums.cs` |
 | Section bounds, bar ranges, musical time | `Services/SectionLayout.cs`, `Services/BarRangeEditor.cs` (all-track copy, remove, insert, move), `Services/MusicTime.cs` |
 | Playback | `Playback/*` (options, timeline, compiler, sustain, order, channels, playhead, note queries, scheduler, diagnostics) |
-| Import and export | `Services/GuitarProImporter.cs`, `GuitarProExporter.cs`, `MidiExportService.cs`, `ProjectService.cs`, `AudioDataFile.cs` |
+| Import and export | `Services/GuitarProImporter.cs` (Core), `GuitarProExporter.cs`, `MidiExportService.cs`, `MusicXmlInput.cs` (MusicXML / .mxl bytes to the score XML alphaTab reads), `MusicXmlExportService.cs`, `Midi/SmfReader.cs` + `Midi/MidiToSong.cs` (MIDI import), `ProjectService.cs`, `AudioDataFile.cs` |
 | Input limits | `Services/InputLimits.cs`, `FilePathPolicy.cs`, `ProjectValidator` |
 | Documents | `Documents/*` (session, controller, undo history, tab transfer, playback-on-switch policy) |
-| Notation view | `Views/TabEditorControl.cs` (state, properties) with partials `.Geometry`, `.Playback`, `.Navigation`, `.Editing`, `.Selection`, `.Keyboard`, `.Mouse`, `.Accessibility` (incl. `EditorPeer`), `.Layout`, `.Rendering`, `.Marks`; `Views/Score/StaffNotationRenderer.cs`; `Views/EditorEvents.cs`. One owner per partial file |
-| Arrangement panel | `Views/ArrangementPanel.cs` with partials `.RowGeometry`, `.Timeline`, `.Interaction`, `.TrackRows`, `.Groups`, `.TrackColumns`; `ArrangementFollowGeometry.cs`, `SectionDragOverlay.cs`, `SectionInsertionIndicator.cs` |
-| Arrangement timeline | `Views/TrackTimeline.cs` (state, geometry, activity cache) with partials `.Render`, `.Interaction`, `.Clips`, `.MediaDrop`, `.SongTime`; `Services/MediaDrop.cs`, `Services/MidiFileImport.cs`, `Views/MediaDropSession.cs`, `Views/VirtualFileDrop.cs`, `Views/MediaDropGhost.cs` |
+| Views (notation, arrangement, timeline, fretboard) | `Source/src/TabForge.Avalonia/AREA-MAP.md` lists the files that own each area |
 | MIDI compiler | `Playback/ScoreToMidiCompiler.cs` with partials `.Techniques` (note emission, dead, ghost and palm mute, grace, slides, trills, tremolo, bends, vibrato, whammy, fade-in), `.Clips`, `.Metronome` |
-| UI host | `MainWindow.xaml(.cs)` and `MainWindow.<Area>.cs` partials (composition root; model edits end in `CommitEdit`; no musical logic) |
-| Audio client | `Audio/AudioEngineClient.cs`, `AudioRouting.cs`, `AudioDevices.cs`, `RoutedMidiOutput.cs`, `SongClock.cs`, `WaveformCache.cs` |
+| UI host | `Source/src/TabForge.Avalonia/MainWindow.Compose.cs` with the `MainWindow*.cs` partials (composition root; model edits end in `DocumentEdits.Run`; no musical logic) |
+| Audio client | `Source/src/TabForge.Core/Audio/AudioEngineClient.cs`, `AvaloniaEngineRouting.cs`, `RoutedMidiOutput.cs`, `TimelineSongClock.cs`, `WaveformService.cs` (outline slots, queue and worker; `WaveformCache.cs` holds the decoder and `WaveformCache.Default`) |
+| Recording rules | `Source/src/TabForge.Core/Features/Recording/` (capture, takes, landing and the repeat-take writes), `Models/TakeGroups.cs` (the shared read-only take-group rules), `Source/src/TabForge.Avalonia/Features/Recording/Presenter/` (the toggle, live takes, landing and undo step), `Source/src/TabForge.Avalonia/Features/Recording/View/` (the armed sub-rows, input picker and live-take overlay) |
 | Plug-in catalog and rig | `Plugins/*` (scan via `VstScannerService` and isolated probe, rig per track, drum maps, MIDI processor catalog) |
 | Rendering | `Rendering/RenderJob.cs`, `RenderSpecBuilder.cs` |
 | Contracts | `TabForge.Audio.Contracts/*` |
-| Engine | `TabForge.AudioEngine/EngineHost.cs`, `EngineThreads.cs`, `EngineRender.cs`, `Mixing/*`, `Audio/*`, `Plugins/*`, `Isolation/*`, `Midi/*`, `Synth/*`, `Output/*`, `Editors/*` |
-| Window shell | `Views/BrowserTabBar.xaml(.cs)`, `Shell/` (title-bar tabs, drag policy, Win32 caption hit tests) |
-| Headless tools | `Diagnostics/DiagnosticCommands.cs` |
+| Engine | `TabForge.AudioEngine/EngineHost.cs`, `EngineThreads.cs`, `EngineLogWriter.cs`, `EngineRender.cs`, `Mixing/*`, `Audio/*`, `Plugins/*`, `Isolation/*`, `Midi/*`, `Synth/*`, `Output/*`, `Editors/*` |
+| Edit commands and gestures | `Services/EditRouting.cs` (the one Copy/Cut/Paste/Delete/Duplicate table), `RangePaste.cs` (paste a range snapshot), `ClipAutoBars.cs` (bars added so a clip fits), `TimelineZoomGesture.cs` (wheel and pinch zoom maths), `Documents/DocumentWatch.cs` (a view's subscription to one document's events) |
+| App-wide services | `Source/src/TabForge.Avalonia/Shell/AppServices.cs` (the services every window shares, made once at the first window), `Source/src/TabForge.Audio.Contracts/PipeAuth.cs` (the per-launch pipe token) |
+| Window shell | `Source/src/TabForge.Avalonia/Shell/` (title-bar tabs, drag policy, Win32 caption hit tests) |
+| Headless tools | `Source/src/TabForge.Avalonia/Program.cs` (the process modes) |
 | Debug switch | `Services/Log/Trace.cs`: `TABFORGE_TRACE=area,...` (playback, engine, layout, import, ui, all) writes `Diagnostics/trace-<area>.log`; `TABFORGE_MIDI_LOG`, `TABFORGE_LAYOUT_LOG`, `TABFORGE_CAPTION_LOG` still work |
-| Crash safety | `App.xaml.cs` (last-resort handler: crash log, unsaved songs to Recovery) |
+| Crash safety | `Source/src/TabForge.Avalonia/App.cs` (crash log install, start-up recovery offer) |
 | Tests | `SelfTest*.cs` (headless deterministic suite, partial class; groups are guarded; skips reported as SKIP) |
 | Shortcuts | `TOOLS_AND_HOTKEYS.md` |
 
@@ -316,7 +324,7 @@ sounding-note queries -> `NoteTimeline`; file beat placement -> `GuitarProImport
 `Isolation/RemotePlugin.cs`.
 
 Guarantees (by design, with the tests that cover them where they exist):
-- The headless suite (`--selftest`, gated in CI by `.github/workflows/windows-ci.yml`) covers score, timeline, playback, file-format and
+- The headless suite (`--selftest`; it was gated by the upstream windows-ci workflow, historical: this checkout has no CI config) covers score, timeline, playback, file-format and
   security logic, including a synthetic `.gp` export-import fixture. It does not exercise real devices, real plug-ins or the running UI.
 - Untrusted inputs are bounded (files, JSON depth, IPC frames, zip inflate). A malformed peer or file is rejected, not trusted.
 - Only the pipes are user-restricted; shared memory uses default ACLs.
@@ -330,37 +338,27 @@ Known limits:
 - Sidechain works only for VST2 plug-ins with four or more inputs. VST3 and isolated plug-ins have no MIDI output. Render has no delay
   compensation for sidechain or buses. Vendor drum maps are unverified.
 - Rendering, device, DPI and native-window behaviour are confirmed by the live desktop pass, not by the headless suite.
-- Executables are not code-signed yet; see `docs/SBOM.md` and `native/BUILD_PROVENANCE.md` for supply-chain records.
+- Executables are not code-signed yet; see `Source/docs/SBOM.md` and `Source/native/BUILD_PROVENANCE.md` for supply-chain records.
 
-## 13. Feature modules, hosts and central tables
+## 13. Central tables
 
-A feature keeps its code in its own folder and adds its rows to the central tables through a feature module. Each window
-controller reaches the window only through a narrow host interface. Each central table is one list.
+Each central table is one list.
 
-Feature modules (`src/TabForge/Services/Features/`):
-- `IFeatureModule.cs`: the module shape (hotkeys, menu rows, Preferences groups, settings rows, commands, settings bounds); every member has a no-op default.
-- `FeatureRegistry.cs`: the module list (`Modules`), and the merge of their rows into the hotkey, layout, settings and command tables.
-- `src/TabForge/Services/Band/BandFeatureModule.cs`: the Band view hotkeys, commands and Preferences group.
-- `src/TabForge/Services/Video/VideoFeatureModule.cs`: File > Export video and Sound > Record video, their hotkeys, commands and settings bounds.
+- Commands: `Source/src/TabForge.Avalonia/MainWindowCommands.cs` holds the main-menu command id-to-handler table.
+- Menus: `Source/src/TabForge.Core/Presenters/MainMenuTable.cs` holds the rows; `Source/src/TabForge.Avalonia/MainWindowMenu.cs` builds the menu items.
+- Dock panes: `Source/src/TabForge.Core/Docking/DockPaneTable.cs` (id, titles, default placement, side-panel membership, in Panels-menu order).
+- Note techniques: `Source/src/TabForge.Core/Models/TechniqueInfo.cs` (one row per technique: mark text, playback numbers, score-format and MusicXML names, unsupported formats).
 
-Host classes (each implements one interface that its controller declares):
-- `src/TabForge/Views/MixerHost.cs`: `IMixerHost` (declared in `Views/MixerWindow.cs`), `IFxChainHost` and `IMixerWindowsHost` for the Mixer and FX chain windows.
-- `src/TabForge/Views/DockHost.cs`: `IDockLayoutHost` (declared in `Views/DockLayoutController.cs`) for the dock layout controller.
-- `src/TabForge/Views/Band/BandHost.cs`: `IBandViewHost` (declared in `Views/Band/BandViewController.cs`) for the Band view.
-
-Central tables:
-- Commands: `src/TabForge/MainWindow.Commands.cs` holds the id-to-handler lines for plain commands, registered in `src/TabForge/Services/CommandRegistry.cs` (duplicate ids are rejected). Module commands are added by `FeatureRegistry.AddCommands`. Routers that run first and multi-step cases stay in `MainWindow.Settings.cs` (`RunHotkey`).
-- Menus: `src/TabForge/Views/MainMenu/MenuTable.cs` (row and group shape, and the one-time build into the XAML skeleton); the rows are in `src/TabForge/MainWindow.Menus.cs`. The golden files `tests/full-suite/Menus/main-menu-tree.golden.txt` and `code-menus.golden.txt` pin the menu tree.
-- Settings appliers: `src/TabForge/MainWindow.SettingsApply.cs`, one named applier per settings area, called in the order that `SyncFromSettings` (`MainWindow.Settings.cs`) states.
-- Dock panes: `src/TabForge/Docking/DockPaneTable.cs` (id, titles, default placement, side-panel membership, in Panels-menu order).
-- Note techniques: `src/TabForge/Models/TechniqueInfo.cs` (one row per technique: mark text, playback numbers, score-format and MusicXML names, unsupported formats).
-
-Engine messages (`src/TabForge.Audio.Contracts/`):
+Engine messages (`Source/src/TabForge.Audio.Contracts/`):
 - `EngineMessages.cs`: one record and one Write/Read pair per fixed-shape engine command. The pair is the only place the field order is written.
 - `EngineMessageLists.cs`: the same for commands with lists, optional tails or nested records.
-- The UI client (`src/TabForge/Audio/AudioEngineClient.Commands.cs`) and the engine (`src/TabForge.AudioEngine/EngineHostCommands.cs`) both use these pairs. Round-trip and golden tests: `tests/full-suite/Engine/SelfTestEngineMessages.cs`.
+- The UI client (`Source/src/TabForge.Core/Audio/AudioEngineClient.Commands.cs`) and the engine (`Source/src/TabForge.AudioEngine/EngineHostCommands.cs`) both use these pairs. Round-trip and golden tests: former engine-message suite, removed in Batch 2 ([canonical note](docs/TESTING.md#removed-in-batch-2-canonical-note)).
 
 ## Dependency rules
 
-The rules are in section 1: which folder may use which, and `Models` and `Playback` never reference WPF. The architecture
+The rules are in section 1: which folder may use which, and `Models` and `Playback` never reference UI-framework types. The architecture
 self-tests (`--areas architecture`) check the boundaries.
+
+## UI conventions
+
+- The mouse pointer never changes shape over a control (no hand, I-beam, cross or move cursor); only resize cursors on splitters, pane edges and window edges. Hover shades and pressed looks show what is clickable. `NoPointerShapeGuardTests` enforces it.

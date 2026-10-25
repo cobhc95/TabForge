@@ -1,5 +1,7 @@
 namespace TabForge.Audio.Contracts;
 
+// Owns: what became of one plug-in of a requested chain (per-plug-in status, engine acknowledgement shape).
+
 /// <summary>What became of one plug-in of a requested chain. BlockedChanged: approved, but the file changed before the engine loaded it.</summary>
 public enum PluginLoadStatus : byte { Loaded = 0, Failed = 1, SkippedQuarantined = 2, BlockedUntrusted = 3, BlockedChanged = 4 }
 

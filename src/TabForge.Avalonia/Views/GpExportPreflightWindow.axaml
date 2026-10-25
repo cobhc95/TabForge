@@ -1,0 +1,21 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="TabForge.Avalonia.Views.GpExportPreflightWindow"
+        Width="560" MaxHeight="640" SizeToContent="Height" CanResize="False"
+        ShowInTaskbar="False"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource WindowBackground}"
+        Foreground="{DynamicResource TextPrimary}">
+  <!-- Same controls and order as the WPF GpExportPreflightDialog. Texts and buttons come from the presenter. -->
+  <StackPanel Margin="16">
+    <TextBlock x:Name="HeadlineText" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,0,0,6" />
+    <TextBlock x:Name="IntroText" TextWrapping="Wrap" Margin="0,0,0,8" Foreground="{DynamicResource TextMuted}" />
+    <TextBox x:Name="LossList" IsReadOnly="True" TextWrapping="Wrap" MaxHeight="220" Margin="0,0,0,10" Padding="8,6"
+             BorderThickness="1" ScrollViewer.VerticalScrollBarVisibility="Auto"
+             Background="{DynamicResource PanelBackground}"
+             Foreground="{DynamicResource TextPrimary}"
+             BorderBrush="{DynamicResource GeneralBorder}" />
+    <TextBlock x:Name="AdviceText" TextWrapping="Wrap" Margin="0,0,0,12" Foreground="{DynamicResource TextMuted}" />
+    <WrapPanel x:Name="ButtonsPanel" HorizontalAlignment="Right" />
+  </StackPanel>
+</Window>

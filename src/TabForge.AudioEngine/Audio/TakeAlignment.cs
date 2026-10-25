@@ -1,5 +1,7 @@
 namespace TabForge.AudioEngine.Audio;
 
+// Owns: where a recorded take starts on the song timeline (output delay, input latency, manual offset).
+
 /// <summary>
 /// Where a recorded take starts on the song timeline. The player hears the song after the engine's output delay, and their
 /// playing reaches the input after the input latency (device-reported when available); the user's recording offset corrects what is

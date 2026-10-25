@@ -47,7 +47,7 @@ Four marks change how long a note lasts.
 
 ## Type fret numbers
 
-The edit cursor shows where the next note goes. It marks a beat and a string. Click the line of the string you want, then type a fret number with the digit keys `0` to `9`. The note appears, you hear it, and the cursor moves on by the length of the note, ready for the next one.
+The edit cursor shows where the next note goes. It marks a beat and a string. Click the line of the string you want, then type a fret number with the digit keys `0` to `9`. The note appears and you hear it; the cursor stays on that note until you move it with the arrow keys or a click.
 
 - For frets 10 and above, type both digits quickly, one after the other.
 - Use the arrow keys to move the cursor. `Up` and `Down` change the string.
@@ -73,7 +73,7 @@ Every edit can be taken back. Press `Ctrl+Z` to undo the last edit and `Ctrl+Y` 
 1. Choose **File > New**. A blank song opens in a new tab.
 2. Click the fifth line down in the TAB staff of the first bar. That is the A string, and the cursor lands there.
 3. Choose **Note > Eighth**. The status bar shows the new length.
-4. Type `0`, `3`, `5`, `3`, `0`, one key at a time. Five notes appear, and the cursor moves on after each.
+4. Type `0`, press `Right`, then type `3`, `5`, `3`, `0`, pressing `Right` after each note. Five notes appear; the cursor stays on each note until you move it.
 5. Click the **Rewind to beginning** button, then press `Space`. You hear the five notes.
 6. Press `Space` to pause. Press `Ctrl+Z` five times. The notes disappear one by one.
 
@@ -94,7 +94,7 @@ If you would rather be stopped than warned, open **Options > Preferences…**, s
 ## Quick recap
 
 - Each TAB line is a string, and each number is a fret. A `0` is an open string.
-- Click a string, then type digits to write notes. The cursor moves on by itself.
+- Click a string, then type digits to write notes. The cursor stays on each note; the arrow keys move it on.
 - The **Note** menu sets the length and offers dots, triplets, ties and rests.
 - `Ctrl+Z` undoes and `Ctrl+Y` redoes.
 - A red bar does not add up. **Tools > Check bar duration** lists it.

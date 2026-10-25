@@ -1,5 +1,7 @@
 namespace TabForge.Audio.Contracts;
 
+// Owns: the one file-name sanitiser shared by UI and engine (invalid chars, edges, reserved device names).
+
 /// <summary>The one file-name sanitiser (UI project and audio engine): invalid characters become '_', edges are trimmed, Windows reserved device names are prefixed.</summary>
 public static class SafeFileNames
 {

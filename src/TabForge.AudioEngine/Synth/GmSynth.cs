@@ -1,8 +1,12 @@
+using System.Collections.Frozen;
+using System.Collections.Immutable;
 using TabForge.Audio.Contracts;
 using MeltySynth;
 using TabForge.AudioEngine.Plugins;
 
 namespace TabForge.AudioEngine.Synth;
+
+// Owns: the per-track General MIDI sound rendered in the engine (MeltySynth over gm.dls, sample-accurate, effects-ready).
 
 /// <summary>
 /// The General MIDI sound of a track, rendered in the engine (MeltySynth playing Windows' own gm.dls, the bank
@@ -53,6 +57,11 @@ public sealed class GmSynth : IPluginInstance
     {
         var rate = (int)Math.Round(sampleRate);
         if (rate == SampleRate) return;
+        // MeltySynth's Synthesizer holds no unmanaged resources of its own (the SoundFont bank is shared via
+        // DlsToSoundFont's cache); dropping the reference is the dispose. Silence the old instance first so no
+        // voice survives the swap (Reconfigure runs with audio stopped, but a render may have left voices ringing).
+        var old = _synth;
+        try { old.NoteOffAll(true); } catch (Exception) { } // swallow: best-effort note-off on a replaced synth
         _synth = NewSynth(rate);
         SampleRate = rate;
         ReplayChannelState();
@@ -77,14 +86,16 @@ public sealed class GmSynth : IPluginInstance
     {
         for (var ch = 0; ch < 16; ch++)
         {
-            _synth.ProcessMidiMessage(ch, 0xC0, _program[ch], 0);
-            for (var c = 0; c < 128; c++) if (_cc[ch, c] >= 0) _synth.ProcessMidiMessage(ch, 0xB0, c, _cc[ch, c]);
+            // Bank select (CC0, CC32) first: a program change picks its sound from the bank that is selected when it arrives.
+            foreach (var c in new[] { 0, 32 }) if (_cc[ch, c] >= 0) _synth.ProcessMidiMessage(ch, 0xB0, c, _cc[ch, c]);
+            if (_program[ch] >= 0) _synth.ProcessMidiMessage(ch, 0xC0, _program[ch], 0);   // never set: the synth's own default (the drum kit on channel 10) stays
+            for (var c = 1; c < 128; c++) if (c != 32 && _cc[ch, c] >= 0) _synth.ProcessMidiMessage(ch, 0xB0, c, _cc[ch, c]);
             if (_bend[ch] >= 0) _synth.ProcessMidiMessage(ch, 0xE0, _bend[ch] & 0x7F, _bend[ch] >> 7);
         }
     }
 
     private int[]? _sProgram, _sBend; private int[,]? _sCc;
-    private readonly int[] _program = new int[16];
+    private readonly int[] _program = Enumerable.Repeat(-1, 16).ToArray();   // -1 = no program change heard
     private readonly int[,] _cc = NewCc();
     private readonly int[] _bend = Enumerable.Repeat(-1, 16).ToArray();
     private static int[,] NewCc() { var a = new int[16, 128]; for (var i = 0; i < 16; i++) for (var j = 0; j < 128; j++) a[i, j] = -1; return a; }
@@ -121,12 +132,12 @@ public static class GmSynthTuning
 {
     // Measured against the Microsoft GS Wavetable Synth through the same output path: MeltySynth with the
     // converted gm.dls was 6.3 dB quieter at 0.5 on every instrument tested (piano, guitars, bass, strings, drums).
-    public static float MasterVolume { get; set; } = 1.03f;
+    public static readonly float MasterVolume = 1.03f;
     // The Windows GS synth plays no reverb / chorus tail even when a track sends CC91 / CC93 (measured: drums are
     // silent 0.5 s after the hit), so the engine's copy runs dry too: reverb and chorus are fixed off (which also saves their CPU per track).
     public const bool ReverbAndChorus = false;
     /// <summary>Applies the measured per-program / per-drum-note level calibration.</summary>
-    public static bool Calibrate { get; set; } = true;
+    public static readonly bool Calibrate = true;
 
     /// <summary>Measured correction per GM program, dB (positive = make the engine louder); NaN = not measured (family average).</summary>
     // Measurement method: engine minus GS negated, mean of velocities 40/64/90/110/127
@@ -134,15 +145,15 @@ public static class GmSynthTuning
     // The engine plays the sound bank as it is, except for the two things heard as different from the Windows synth:
     // snares quieter (+2.5 dB) and crashes louder (-4 dB), set by ear. The program table is empty: a full measured
     // per-program / per-drum table (kick +14.6 dB etc.) made the engine sound wrong.
-    public static readonly double[] ProgramGainDb = BuildProgramTable(new Dictionary<int, double>());
+    public static readonly IReadOnlyList<double> ProgramGainDb = BuildProgramTable(new Dictionary<int, double>()).ToImmutableArray();
     /// <summary>Correction per drum note, dB (positive = louder in the engine); notes not listed get 0.</summary>
-    public static readonly Dictionary<int, double> DrumGainDb = new()
+    public static readonly IReadOnlyDictionary<int, double> DrumGainDb = new Dictionary<int, double>
     {
         [38] = 2.5, [40] = 2.5,                              // snares (user, by ear)
         [49] = -4.0, [52] = -4.0, [55] = -4.0, [57] = -4.0,  // crashes, China 52, splash 55 (user, by ear)
-    };
+    }.ToFrozenDictionary();
     /// <summary>Overall trim of the engine synth after calibration, dB (0: engine on and off must sound the same).</summary>
-    public static double OverallTrimDb { get; set; }
+    public static readonly double OverallTrimDb = 0;
     // A large correction (kick 35 +14.6 dB) is not clipping: the GS synth's own kick peaks about +8 dBFS on
     // the same scale, and Windows applies its volume (and a further ~-18 dB, measured) in float before the final clip. The engine
     // matches that: WASAPI shared passes floats above 1 to the Windows mixer (MixEngine.Ceiling), ASIO applies the same Windows

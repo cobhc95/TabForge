@@ -6,7 +6,7 @@ namespace TabForge.AudioEngine.Mixing;
 /// <remarks>
 /// Owns: the ramp gain of one mixer's output, the "silent block delivered" report, and the bounded wait of the control thread.
 /// Does not own: stopping or opening the device (EngineSession), mixer levels, mute / solo or plug-in state (never touched here).
-/// Tests: TestOutputFade.
+/// Tests: no dedicated test class.
 /// </remarks>
 public sealed class OutputFade
 {

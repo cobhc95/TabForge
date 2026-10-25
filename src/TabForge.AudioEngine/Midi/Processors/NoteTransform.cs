@@ -1,5 +1,7 @@
 namespace TabForge.AudioEngine.Midi.Processors;
 
+// Owns: the base of the stateless-looking note processors (held-note table, paired note-offs, dropped-note pairing).
+
 /// <summary>
 /// Base of the stateless-looking note processors (channel map / route, note range, transpose, note map, velocity).
 /// It owns the held-note table, so a note-off always leaves with the pitch and channel its note-on actually left with,
@@ -29,7 +31,7 @@ public abstract class NoteTransform : IMidiProcessor
             {
                 int och = ch, note = e.Data1, vel = e.Data2;
                 if (!MapNote(ref och, ref note, ref vel)) continue;
-                note = Math.Clamp(note, 0, 127); och = Math.Clamp(och, 0, 15); vel = Math.Clamp(vel, 1, 127);
+                note = Math.Clamp(note, 0, MidiLimits.Max); och = Math.Clamp(och, 0, 15); vel = Math.Clamp(vel, 1, MidiLimits.Max);
                 // The same key pressed again without a release: end the earlier output note first if it differs.
                 if (Held.TryGet(ch, e.Data1, out var pch, out var pnote) && (pch != och || pnote != note))
                     output.Add(e.Frame, (byte)(0x80 | pch), (byte)pnote, 0);
@@ -46,7 +48,7 @@ public abstract class NoteTransform : IMidiProcessor
                 else
                 {
                     int och = ch, note = e.Data1, vel = 64;
-                    if (MapNote(ref och, ref note, ref vel)) output.Add(e.Frame, (byte)(kind | Math.Clamp(och, 0, 15)), (byte)Math.Clamp(note, 0, 127), e.Data2);
+                    if (MapNote(ref och, ref note, ref vel)) output.Add(e.Frame, (byte)(kind | Math.Clamp(och, 0, 15)), (byte)Math.Clamp(note, 0, MidiLimits.Max), e.Data2);
                 }
             }
             else if (kind == 0xA0)
@@ -58,7 +60,7 @@ public abstract class NoteTransform : IMidiProcessor
             {
                 int och = ch, d1 = e.Data1, d2 = e.Data2;
                 if (MapOther(kind, ref och, ref d1, ref d2))
-                    output.Add(e.Frame, (byte)(kind | Math.Clamp(och, 0, 15)), (byte)Math.Clamp(d1, 0, 127), (byte)Math.Clamp(d2, 0, 127));
+                    output.Add(e.Frame, (byte)(kind | Math.Clamp(och, 0, 15)), (byte)Math.Clamp(d1, 0, MidiLimits.Max), (byte)Math.Clamp(d2, 0, MidiLimits.Max));
             }
         }
     }

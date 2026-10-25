@@ -1,5 +1,7 @@
 namespace TabForge.Audio.Contracts;
 
+// Owns: the last line of defence on clip paths in the engine process (absolute plain audio-file paths only).
+
 /// <summary>
 /// Last line of defence in the engine process: the UI only sends clip paths its media policy allowed, and the engine still refuses
 /// anything that is not an absolute, plain audio-file path (device forms, streams, reserved names, other extensions).

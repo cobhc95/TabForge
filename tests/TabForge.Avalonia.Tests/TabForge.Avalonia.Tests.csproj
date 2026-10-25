@@ -1,0 +1,27 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- Same target per OS as TabForge.Avalonia (it references that project; a net8.0 test project cannot reference the net8.0-windows build). -->
+    <TargetFramework Condition="$([MSBuild]::IsOSPlatform('Windows'))">net8.0-windows</TargetFramework>
+    <TargetFramework Condition="!$([MSBuild]::IsOSPlatform('Windows'))">net8.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(TargetFramework)' != 'net8.0-windows'">
+    <!-- The engine client's composition is Windows-only (see src/TabForge.Avalonia/Playback). -->
+    <Compile Remove="AvaloniaPlaybackCompositionTests.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Where this project was built from: the checkout root for tests whose binaries are built outside the checkout (ArtifactsPath elsewhere) with no TABFORGE_REPO. -->
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>TabForgeCheckout</_Parameter1>
+      <_Parameter2>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../../..'))</_Parameter2>
+    </AssemblyAttribute>
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Avalonia.Headless.XUnit" Version="11.3.20" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.20" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+    <ProjectReference Include="..\..\src\TabForge.Avalonia\TabForge.Avalonia.csproj" />
+  </ItemGroup>
+</Project>

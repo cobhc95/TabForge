@@ -1,0 +1,15 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="TabForge.Avalonia.Views.KeyboardModePopoutWindow"
+        Width="1100" Height="680" MinWidth="520" MinHeight="360"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource WindowBackground}"
+        Foreground="{DynamicResource TextPrimary}">
+  <!-- The control bar (KeyboardModeBar) fills the wrap panel; the full screen button ends it. The keyboard view goes in KeysHost. -->
+  <DockPanel>
+    <WrapPanel x:Name="BarPanel" DockPanel.Dock="Top" Margin="6,3">
+      <Button x:Name="FullScreenButton" Padding="8,1" MinHeight="26" Foreground="{DynamicResource TextPrimary}" />
+    </WrapPanel>
+    <Panel x:Name="KeysHost" Background="{DynamicResource PanelBackground}" />
+  </DockPanel>
+</Window>

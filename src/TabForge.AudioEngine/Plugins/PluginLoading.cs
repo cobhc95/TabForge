@@ -2,6 +2,8 @@ using System.Diagnostics;
 
 namespace TabForge.AudioEngine.Plugins;
 
+// Owns: the one place turning a plug-in file into an in-process instance (shared format detection and construction).
+
 /// <summary>
 /// The one place that turns a plug-in file into an in-process instance (the engine, the isolated plug-in host and the scan probe
 /// all use it), so format detection and construction cannot drift from <see cref="IPluginInstance.Reconfigure"/>.
@@ -13,19 +15,19 @@ public static class PluginFactory
         path.EndsWith(".vst3", StringComparison.OrdinalIgnoreCase) || string.Equals(format, "VST3", StringComparison.OrdinalIgnoreCase);
 
     /// <param name="isInstrument">VST3: which class of the bundle to pick (the first instrument or the first effect); VST2 reports its own role.</param>
-    public static IPluginInstance Create(string path, string format, bool isInstrument, double sampleRate, int maxBlock) =>
-        IsVst3(path, format) ? new Vst3Plugin(path, isInstrument, sampleRate, maxBlock) : new Vst2Plugin(path, sampleRate, maxBlock);
+    public static IPluginInstance Create(string path, string format, bool isInstrument, double sampleRate, int maxBlock, EngineThreads threads) =>
+        IsVst3(path, format) ? new Vst3Plugin(path, isInstrument, sampleRate, maxBlock, threads.Log) : new Vst2Plugin(path, sampleRate, maxBlock, threads);
 
     /// <summary>
     /// Create for a process that has no engine spec (the isolated plug-in host, the identify probe): the approved SHA-256 is
-    /// checked through <see cref="TabForge.Audio.Contracts.PluginIdentity.Hold(string, string?, bool)"/> and the file stays held until the instance exists.
+    /// checked through <see cref="TabForge.Audio.Contracts.PluginIdentity.Hold(string, string, bool)"/> and the file stays held until the instance exists.
     /// <paramref name="create"/> is a test seam (a counter, to prove an unapproved file is never executed).
     /// </summary>
     public static IPluginInstance CreateVerified(string path, string format, bool isInstrument, double sampleRate, int maxBlock,
-        string? expectedSha256, bool required, Func<string, IPluginInstance>? create = null)
+        string expectedSha256, bool locationTrusted, EngineThreads threads, Func<string, IPluginInstance>? create = null)
     {
-        using var hold = TabForge.Audio.Contracts.PluginIdentity.Hold(path, expectedSha256, required);
-        return create is not null ? create(path) : Create(path, format, isInstrument, sampleRate, maxBlock);
+        using var hold = TabForge.Audio.Contracts.PluginIdentity.Hold(path, expectedSha256, locationTrusted);
+        return create is not null ? create(path) : Create(path, format, isInstrument, sampleRate, maxBlock, threads);
     }
 }
 
@@ -36,7 +38,7 @@ public static class PluginLoading
     /// Creates an instance and applies <paramref name="state"/> (when given). If applying it throws, the new instance
     /// (its native module, editor, or its own process) is disposed before the exception propagates.
     /// </summary>
-    public static IPluginInstance CreateWithState(Func<IPluginInstance> create, byte[]? state, out long createMs)
+    public static IPluginInstance CreateWithState(Func<IPluginInstance> create, byte[]? state, EngineLogWriter log, out long createMs)
     {
         var timer = Stopwatch.StartNew();
         var plugin = create();
@@ -49,7 +51,7 @@ public static class PluginLoading
         catch
         {
             try { plugin.Dispose(); }
-            catch (Exception ex) { EngineLog.Write($"dispose failed: {ex.Message}"); }
+            catch (Exception ex) { log.Write($"dispose failed: {ex.Message}"); }
             throw;
         }
     }

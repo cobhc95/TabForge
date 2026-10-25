@@ -1,5 +1,7 @@
 namespace TabForge.AudioEngine.Midi.Processors;
 
+// Owns: the channel filter/remap note processors (16-row map, solo channel, per-row channel messages).
+
 /// <summary>Channel filter / remap: 16 rows, each off or an output channel (default: identity). Optional "solo channel". Every channel message follows its row.</summary>
 public sealed class ChannelMapProcessor : NoteTransform
 {
@@ -35,8 +37,8 @@ public sealed class ChannelRouteProcessor : NoteTransform
         InCh = p.Int("InCh", 0, 0, 16);
         _outCh = p.Int("OutCh", 1, 1, 16) - 1;
         _scope = p.Int("Scope", 1, 0, 3);   // 0 off, 1 notes, 2 other messages, 3 both
-        _low = p.Int("Low", 0, 0, 127);
-        _high = p.Int("High", 127, 0, 127);
+        _low = p.Int("Low", 0, 0, MidiLimits.Max);
+        _high = p.Int("High", 127, 0, MidiLimits.Max);
         _note = p.Int("Note", -1, -1, 127);
     }
 
@@ -62,8 +64,8 @@ public sealed class NoteRangeProcessor : NoteTransform
     public NoteRangeProcessor(MidiParams p)
     {
         InCh = p.Int("InCh", 0, 0, 16);
-        _low = p.Int("Low", 21, 0, 127);
-        _high = p.Int("High", 108, 0, 127);
+        _low = p.Int("Low", 21, 0, MidiLimits.Max);
+        _high = p.Int("High", 108, 0, MidiLimits.Max);
         _otherPass = p.Bool("OtherPass", true);
     }
 
@@ -82,14 +84,14 @@ public sealed class TransposeProcessor : NoteTransform
         InCh = p.Int("InCh", 0, 0, 16);
         _semis = p.Int("Semitones", 0, -64, 64);
         _mult = p.Double("Premultiply", 1, -16, 16);
-        _low = p.Int("Low", 0, 0, 127);
-        _high = p.Int("High", 127, 0, 127);
+        _low = p.Int("Low", 0, 0, MidiLimits.Max);
+        _high = p.Int("High", 127, 0, MidiLimits.Max);
     }
 
     protected override bool MapNote(ref int ch, ref int note, ref int vel)
     {
         if (note < _low || note > _high) return true;
-        note = (int)Math.Clamp(Math.Round(note * _mult + _semis), 0, 127);
+        note = (int)Math.Clamp(Math.Round(note * _mult + _semis), 0, MidiLimits.Max);
         return true;
     }
 }
@@ -129,18 +131,18 @@ public sealed class VelocityProcessor : NoteTransform
         _mode = p.Int("Mode", 0, 0, 2);   // 0 scale + offset, 1 fixed, 2 compressor
         _mul = p.Double("Mul", 1, -16, 16);
         _add = p.Int("Add", 0, -128, 128);
-        _min = p.Int("Min", 1, 0, 127);
-        _max = p.Int("Max", 127, 0, 127);
-        _fixed = p.Int("Fixed", 100, 1, 127);
-        _threshold = p.Double("Threshold", 80, 1, 127);
+        _min = p.Int("Min", 1, 0, MidiLimits.Max);
+        _max = p.Int("Max", 127, 0, MidiLimits.Max);
+        _fixed = p.Int("Fixed", 100, 1, MidiLimits.Max);
+        _threshold = p.Double("Threshold", 80, 1, MidiLimits.Max);
         _ratio = p.Double("Ratio", 2, 1, 20);
         _makeup = p.Double("Makeup", 0, -64, 64);
         _random = p.Int("Random", 0, 0, 100);
         _mix = p.Int("Mix", 100, 0, 100);
-        _inLow = p.Int("InLow", 1, 1, 127);
-        _inHigh = p.Int("InHigh", 127, 1, 127);
-        _low = p.Int("Low", 0, 0, 127);
-        _high = p.Int("High", 127, 0, 127);
+        _inLow = p.Int("InLow", 1, 1, MidiLimits.Max);
+        _inHigh = p.Int("InHigh", 127, 1, MidiLimits.Max);
+        _low = p.Int("Low", 0, 0, MidiLimits.Max);
+        _high = p.Int("High", 127, 0, MidiLimits.Max);
     }
 
     protected override bool MapNote(ref int ch, ref int note, ref int vel)

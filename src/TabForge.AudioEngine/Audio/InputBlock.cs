@@ -1,5 +1,7 @@
 namespace TabForge.AudioEngine.Audio;
 
+// Owns: one block of live input shared read-only by every armed chain (same samples for all monitors).
+
 /// <summary>
 /// One block of live input (every channel the input device delivers, at the engine rate), read from <see cref="InputCapture"/>
 /// once per mixer block and shared read-only by every armed chain, so several monitored tracks hear the same samples.

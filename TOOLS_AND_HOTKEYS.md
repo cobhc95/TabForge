@@ -1,6 +1,8 @@
 # TabForge icons, commands and hotkeys
 
-Generated from the source (the palette rows in `Views/ToolPaletteController.Tools.cs`, the palette command handling in `MainWindow.Palette.cs`, and `Services/HotkeyCatalog.cs`). Every item here can be bound to a key in **Settings → Shortcuts**; palette icons are registered automatically as `Tool.<id>` commands, so new icons become mappable without editing this list.
+Generated from the source (the palette rows in `Views/ToolPaletteController.Tools.cs`, the palette command handling in `MainWindow.Palette.cs`, and `Services/HotkeyCatalog.cs`). Almost every item here can be bound to a key in **Settings → Shortcuts** (one palette icon, Change accidental, is not yet bindable); palette icons are registered automatically as `Tool.<id>` commands, so new icons become mappable without editing this list.
+
+*Verified 2026-10-19: 508 lines (generated; see header).*
 
 ## Tools palette
 
@@ -120,29 +122,29 @@ Generated from the source (the palette rows in `Views/ToolPaletteController.Tool
 
 ## Commands (Settings → Shortcuts)
 
-Default keys are the **TabForge** preset, currently identical to the **Classic** preset. The **Alternative** column shows where that preset differs (blank = same as TabForge, "—" = unbound).
+Default keys are the **TabForge** preset, identical to the **Classic** preset except that the two Add track keys swap places (see that row). The **Alternative** column holds keys only: it shows where that preset differs (blank = same as TabForge, "—" = unbound). Menu paths and notes are in the *What it does* column.
 
 | Category | Command | What it does | Id | TabForge / Classic | Alternative |
 |---|---|---|---|---|---|
 | File and tabs | New score | Create a new score in a new tab. | `File.New` | Ctrl+N |  |
-| File and tabs | New from template | Create a new score from a built-in or saved template (File > New from template). | `File.NewFromTemplate` | — | Also File > New from template. |
-| File and tabs | Save as template | Save a copy of the active score as a template in the templates folder. | `File.SaveAsTemplate` | — | Templates are stored in %APPDATA%\TabForge\Templates. |
+| File and tabs | New from template | Create a new score from a built-in or saved template (File > New from template). (Also File > New from template.) | `File.NewFromTemplate` | — |  |
+| File and tabs | Save as template | Save a copy of the active score as a template in the templates folder. (Templates are stored in %APPDATA%\TabForge\Templates.) | `File.SaveAsTemplate` | — |  |
 | File and tabs | Open score | Open a .tforge or score file in the current tab. | `File.Open` | Ctrl+O |  |
 | File and tabs | Open score in new tab | Open a .tforge or score file in a new tab. | `File.OpenInNewTab` | Ctrl+Shift+O |  |
 | File and tabs | Save | Save the active score. | `File.Save` | Ctrl+S |  |
 | File and tabs | Save as | Save the active score under a new name. | `File.SaveAs` | Ctrl+Shift+S | F12 |
-| File and tabs | Cancel import | Cancel the score import(s) running in the background (same as the status-bar Cancel button). | `File.CancelImport` | — | Unbound by default; Esc is used by other commands. |
-| File and tabs | Export PDF | Export the engraved score (notation and tab) as a PDF file. | `File.ExportPdf` | — | Also File > Export PDF. |
-| File and tabs | Export MusicXML | Export the song as uncompressed MusicXML (.musicxml): a part per track with notation and a tab staff. | `File.ExportMusicXml` | — | Also File > Export MusicXML. |
-| File and tabs | Export video (MP4) | Export the song as an MP4 video of the score, its instrument and the Band view, with the full audio mix, in 1080p or 4K at 30, 60 or 120 frames per second. | `File.ExportVideo` | — | Also File > Export video. |
-| File and tabs | Export MIDI | Export the song as a standard MIDI file (File > Export MIDI). | `File.ExportMidi` | — | Also File > Export MIDI. |
-| File and tabs | Export ASCII tab | Export the tablature as a plain-text ASCII tab file (File > Export ASCII tab). | `File.ExportAscii` | — | Also File > Export ASCII tab. |
-| File and tabs | Export compatible .gp file | Write a compatible .gp copy for other programs. If the song uses something that file cannot hold, you choose first: keep a full TabForge copy, export the compatible file only, or cancel. | `File.ExportGuitarPro` | — | Also File > Export compatible .gp file. |
-| File and tabs | Project settings | Open the project settings: song info, credits, tempo and key (the toolbar's Project settings button). | `File.ProjectSettings` | — | Also the toolbar's Project settings button. |
-| File and tabs | Command palette | Search every command by name, see its key and run it. | `App.CommandPalette` | Ctrl+Shift+A | Also File > Command palette. |
+| File and tabs | Cancel import | Cancel the score import(s) running in the background (same as the status-bar Cancel button). (Unbound by default; Esc is used by other commands.) | `File.CancelImport` | — |  |
+| File and tabs | Export PDF | Export the engraved score (notation and tab) as a PDF file. (Also File > Export PDF.) | `File.ExportPdf` | — |  |
+| File and tabs | Export MusicXML | Export the song as uncompressed MusicXML (.musicxml): a part per track with notation and a tab staff. (Also File > Export MusicXML.) | `File.ExportMusicXml` | — |  |
+| File and tabs | Export video (MP4) | Export the song as an MP4 video of the score, its instrument and the Band view, with the full audio mix, in 1080p or 4K at 30, 60 or 120 frames per second. (Also File > Export video.) | `File.ExportVideo` | — |  |
+| File and tabs | Export MIDI | Export the song as a standard MIDI file (File > Export MIDI). (Also File > Export MIDI.) | `File.ExportMidi` | — |  |
+| File and tabs | Export ASCII tab | Export the tablature as a plain-text ASCII tab file (File > Export ASCII tab). (Also File > Export ASCII tab.) | `File.ExportAscii` | — |  |
+| File and tabs | Export compatible .gp file | Write a compatible .gp copy for other programs. If the song uses something that file cannot hold, you choose first: keep a full TabForge copy, export the compatible file only, or cancel. (Also File > Export compatible .gp file.) | `File.ExportGuitarPro` | — |  |
+| File and tabs | Project settings | Open the project settings: song info, credits, tempo and key (the toolbar's Project settings button). (Also the toolbar's Project settings button.) | `File.ProjectSettings` | — |  |
+| File and tabs | Command palette | Search every command by name, see its key and run it. (Also File > Command palette.) | `App.CommandPalette` | Ctrl+Shift+A |  |
 | File and tabs | Render to audio file | Render the song to WAV / MP3 (master mix and / or stems) faster than realtime. | `File.Render` | Ctrl+Alt+R |  |
-| File and tabs | Print | Print the active score. | `File.Print` | Ctrl+P |  |
-| File and tabs | Print preview | Preview the printed page. | `File.PrintPreview` | Ctrl+Shift+P |  |
+| File and tabs | Print | Print the active score (not available yet: the File menu row is disabled). | `File.Print` | Ctrl+P |  |
+| File and tabs | Print preview | Preview the printed page (not available yet: the File menu row is disabled). | `File.PrintPreview` | Ctrl+Shift+P |  |
 | File and tabs | New tab | Open another score in a new tab. | `Tab.New` | Ctrl+Alt+T |  |
 | File and tabs | Close tab | Close the active tab. | `Tab.Close` | Ctrl+W |  |
 | File and tabs | Duplicate tab | Duplicate the active tab as an unsaved copy. | `Tab.Duplicate` | Ctrl+Shift+D | — |
@@ -156,14 +158,14 @@ Default keys are the **TabForge** preset, currently identical to the **Classic**
 | Editing | Paste special | Paste with a repeat count, replace or insert, octave shift, keep string and fret, and bar settings. | `Edit.PasteSpecial` | Ctrl+Shift+V | — |
 | Editing | Select whole track | Select every bar of the track. | `Edit.SelectAll` | Ctrl+A |  |
 | Editing | Insert beat | Insert an empty beat at the cursor and push the rest of the bar right (the bar keeps its length). | `Edit.InsertBeat` | Insert |  |
-| Editing | Delete beats (shift left) | Remove the beat at the cursor and pull the rest of the bar left. Remove the beat at the cursor and pull the rest of the bar left. The Delete key clears the notes first, and removes an empty beat the same way. | `Edit.DeleteBeats` | — | Also Edit > Delete beats. |
-| Editing | Repeat selection | Repeat the selected bars. | `Edit.RepeatSelection` | Ctrl+Shift+R | Was Ctrl+R; Ctrl+R now records. |
+| Editing | Delete beats (shift left) | Remove the beat at the cursor and pull the rest of the bar left. Remove the beat at the cursor and pull the rest of the bar left. The Delete key clears the notes first, and removes an empty beat the same way. (Also Edit > Delete beats.) | `Edit.DeleteBeats` | — |  |
+| Editing | Repeat selection | Repeat the selected bars. (Was Ctrl+R; Ctrl+R now records.) | `Edit.RepeatSelection` | Ctrl+Shift+R |  |
 | Transport | Play / pause | Start or pause playback. | `Transport.PlayPause` | Space |  |
 | Transport | Play from the start | Restart playback from the beginning. | `Transport.PlayFromStart` | Shift+Space |  |
 | Transport | Stop | Stop playback and return to the edit cursor. | `Transport.Stop` | Ctrl+OemPeriod |  |
 | Transport | Loop | Play the loop range repeatedly. | `Transport.Loop` | F9 | F9 |
-| Transport | Metronome on / off | Turn the metronome click on or off (the same as the transport's Metronome button). | `Transport.Metronome` | — | Also Tools > Metronome. |
-| Transport | Count-in on / off | Turn the count-in before playback on or off (the same as the transport's Count-in button). | `Transport.CountIn` | — | Also Tools > Count-in. |
+| Transport | Metronome on / off | Turn the metronome click on or off (the same as the transport's Metronome button). (Also Tools > Metronome.) | `Transport.Metronome` | — |  |
+| Transport | Count-in on / off | Turn the count-in before playback on or off (the same as the transport's Count-in button). (Also Tools > Count-in.) | `Transport.CountIn` | — |  |
 | Bars and sections | Insert bar | Insert an empty bar before the cursor. | `Bar.Insert` | Ctrl+Insert |  |
 | Bars and sections | Delete bar | Delete the bar at the cursor. | `Bar.Delete` | Ctrl+Delete |  |
 | Bars and sections | Mix table | Change instrument, volume, pan, effects or tempo from the selected beat. | `Beat.MixTable` | F10 |  |
@@ -199,11 +201,11 @@ Default keys are the **TabForge** preset, currently identical to the **Classic**
 | View | Show track list | Scroll the track list (the mixer table with every track) into view; click a track's colour block there to jump to it. | `View.Multitrack` | F3 |  |
 | View | Show / hide arrangement overview | Show or hide the Arrangement (timeline) panel, the same as View > Arrangement overview. | `View.Global` | F8 |  |
 | View | Fullscreen | Toggle fullscreen. | `View.Fullscreen` | F11 |  |
-| View | Zoom in | Increase the score zoom. | `View.ZoomIn` | Ctrl+OemPlus |  |
-| View | Zoom out | Decrease the score zoom. | `View.ZoomOut` | Ctrl+OemMinus |  |
+| View | Zoom in | Increase the score zoom. | `View.ZoomIn` | Ctrl+OemPlus | Ctrl+Add (numpad +) |
+| View | Zoom out | Decrease the score zoom. | `View.ZoomOut` | Ctrl+OemMinus | Ctrl+Subtract (numpad -) |
 | Notes and tracks | Repeat previous beat | Copy the previous beat onto the cursor. | `Note.RepeatBeat` | C | — |
-| Durations | Longer note value | Make the note value one step longer (16th to 8th to quarter...). Numpad - does the same. Preferences > Editing > "Reverse + / - duration keys" swaps the two default keys. | `Note.Longer` | OemMinus (the - key) |  |
-| Durations | Shorter note value | Make the note value one step shorter (quarter to 8th to 16th...). Numpad + and Shift+= do the same. Preferences > Editing > "Reverse + / - duration keys" swaps the two default keys. | `Note.Shorter` | OemPlus (the + / = key) |  |
+| Durations | Longer note value | Make the note value one step longer (16th to 8th to quarter...). By default the - key and numpad - lengthen; Preferences > Editing > "Plus key lengthens notes" swaps the + and - keys. | `Note.Longer` | OemMinus (the - key) |  |
+| Durations | Shorter note value | Make the note value one step shorter (quarter to 8th to 16th...). By default the + key, Shift+= and numpad + shorten; Preferences > Editing > "Plus key lengthens notes" swaps the + and - keys. | `Note.Shorter` | OemPlus (the + / = key) |  |
 | Notes and tracks | Shift pitch up (semitone) | Raise the selected note by a semitone. | `Note.PitchUp` | Shift+Up |  |
 | Notes and tracks | Shift pitch down (semitone) | Lower the selected note by a semitone. | `Note.PitchDown` | Shift+Down |  |
 | Notes and tracks | Move note to higher string | Move the selected note(s) to the next higher string, keeping the pitch (the fret is recalculated). Nothing changes when the pitch cannot be played there or the string is taken in that beat. On an empty spot the cursor moves to the higher string. The plain Up arrow moves only the cursor. | `Note.MoveStringUp` | Alt+Up |  |
@@ -240,14 +242,14 @@ Default keys are the **TabForge** preset, currently identical to the **Classic**
 | Bars and sections | Repeat end | End a repeated passage. | `Bar.RepeatClose` | OemCloseBrackets |  |
 | View | Switch instrument view | Cycle the instrument panel between fretboard, keyboard and drum pads (this session; the default is in Settings > Fretboard & Keyboard). | `View.InstrumentView` | — |  |
 | View | Show / hide side panel | Hide the side panel (tools, sections, practice) for more score space, or bring it back. | `View.SidePanel` | — |  |
-| View | Show / hide fretboard / keyboard | Hide the instrument panel (fretboard, keyboard or drum map) for more score space, or bring it back (same as View > Instrument view). | `View.InstrumentPanel` | — | Also the fretboard button next to the side-panel button in the toolbar. |
+| View | Show / hide fretboard / keyboard | Hide the instrument panel (fretboard, keyboard or drum map) for more score space, or bring it back (same as View > Instrument view). (Also the fretboard button next to the side-panel button in the toolbar.) | `View.InstrumentPanel` | — |  |
 | View | Show / hide Band view | Switch to the Band layout (every track's instrument and tab in rows, with the arrangement below), or back to the layout you left (same as View > Band view). | `View.BandView` | — |  |
 | View | Show / hide Keyboard mode (experimental) | Show or hide the Keyboard mode pane: the notes of the selected track fall onto a key strip in time with playback (same as View > Keyboard mode (experimental)). | `View.LearnMode` | Ctrl+Alt+L | Plus and minus (or Ctrl + wheel) change the look-ahead while the pane has focus; the pane's control bar has play, speed, wait, loop, hands, look-ahead, note names, fingers and the MIDI input. |
 | View | Keyboard mode: wait for the right notes | Turn on or off the pause at each chord in Keyboard mode until its notes are pressed (the Preferences setting of the same name). | `Learn.ToggleWait` | Ctrl+Alt+W |  |
 | View | Keyboard mode: skip the awaited chord | Give up the chord the song is waiting for (a miss) and carry on. | `Learn.WaitSkip` | Ctrl+Alt+Q |  |
-| View | Keyboard mode: more seconds ahead (shorter notes) | Show one more second of notes above the keys in Keyboard mode: the notes get shorter and you see further ahead (the + of its control bar). | `Learn.LookAheadLonger` | Ctrl+Alt+OemPlus | Also plus over the view, or Ctrl + mouse wheel down. |
-| View | Keyboard mode: fewer seconds ahead (longer notes) | Show one second fewer of notes above the keys in Keyboard mode: the notes get longer and easier to read (the - of its control bar). | `Learn.LookAheadShorter` | Ctrl+Alt+OemMinus | Also minus over the view, or Ctrl + mouse wheel up. |
-| View | Keyboard mode: view in its own window | Open the falling-notes view in its own window, or bring it back (Keyboard mode on; F11 in the window toggles full screen, Esc leaves it). | `View.LearnPopout` | Ctrl+Alt+O |  |
+| View | Keyboard mode: more seconds ahead (shorter notes) | Show one more second of notes above the keys in Keyboard mode: the notes get shorter and you see further ahead (the + of its control bar). (Also plus over the view, or Ctrl + mouse wheel down.) | `Learn.LookAheadLonger` | Ctrl+Alt+OemPlus |  |
+| View | Keyboard mode: fewer seconds ahead (longer notes) | Show one second fewer of notes above the keys in Keyboard mode: the notes get longer and easier to read (the - of its control bar). (Also minus over the view, or Ctrl + mouse wheel up.) | `Learn.LookAheadShorter` | Ctrl+Alt+OemMinus |  |
+| View | Keyboard mode: view in its own window | Open the falling-notes view in its own window, or bring it back (Keyboard mode on; F11 in the window toggles full screen, Esc leaves it: control gestures, not in Shortcuts). | `View.LearnPopout` | Ctrl+Alt+O |  |
 | View | Compact mode | Hide every track row and show the master track lane at twice its height, so the score and the other panes get the room; again brings the tracks back (same as View > Compact mode). | `View.CompactMode` | Ctrl+Alt+C |  |
 | View | Band view: show / hide the selected track's row | Add the selected track's row to the Band view, or take it out (the same as clicking its pill at the top of the Band view). | `Band.ToggleTrackRow` | — |  |
 | View | Band view: more rows per screen | Show one more Band view row on the screen at once (1 to 5, 3 by default); further rows scroll. | `Band.RowsMore` | — |  |
@@ -257,16 +259,18 @@ Default keys are the **TabForge** preset, currently identical to the **Classic**
 | View | Band view: instrument size | Switch the Band view instruments between the full neck (or keyboard), the first 12 frets, and a small keyboard. | `Band.CycleInstrumentSize` | — |  |
 | View | Band view: smooth / page follow | Switch the Band view lanes between following like the score (its Follow settings) and the Band view own smooth or page-by-page follow. | `Band.ToggleSmoothFollow` | — |  |
 | View | Band view: reset row heights | Give every Band view row the shared height again (undoes rows resized one by one). | `Band.ResetRowHeights` | — |  |
-| View | Band view: switch fretboard beside / above tab | Switch every Band view row between the instrument beside its tab and the instrument above its tab at the full row width. | `Band.ToggleFretboardAbove` | — | Also the roll-down button after the Band view caption. |
-| View | Band view: track colour frame | Show or hide the rounded frame and dim glow in the track's colour around every Band view row. | `Band.ToggleColourFrame` | — | Also the roll-down button after the Band view caption. |
-| View | Fretboard position: toggle top / bottom | Move the fretboard / keyboard pane between above the score (default) and below it, above the timeline (same as the fretboard's right-click menu > Position). | `View.FretboardPosition` | — | Also in Settings > Fretboard & Keyboard. |
-| View | Lock fretboard size | Lock or unlock the fretboard / keyboard pane's height. Unlocked, dragging its edge resizes it and the drawing scales to fit; locked, it keeps its size. | `View.LockInstrumentSize` | — | Also in the fretboard's right-click menu; unlocked by default. |
+| View | Band view: switch fretboard beside / above tab | Switch every Band view row between the instrument beside its tab and the instrument above its tab at the full row width. (Also the roll-down button after the Band view caption.) | `Band.ToggleFretboardAbove` | — |  |
+| View | Band view: track colour frame | Show or hide the rounded frame and dim glow in the track's colour around every Band view row. (Also the roll-down button after the Band view caption.) | `Band.ToggleColourFrame` | — |  |
+| View | Fretboard position: toggle top / bottom | Move the fretboard / keyboard pane between above the score (default) and below it, above the timeline (same as the fretboard's right-click menu > Position). (Also in Settings > Fretboard & Keyboard.) | `View.FretboardPosition` | — |  |
+| View | Lock fretboard size | Lock or unlock the fretboard / keyboard pane's height. Unlocked, dragging its edge resizes it and the drawing scales to fit; locked, it keeps its size. (Also in the fretboard's right-click menu; unlocked by default.) | `View.LockInstrumentSize` | — |  |
 | View | Layout: Compose | Switch to the Compose workspace layout (score and tab editor large, fretboard and tools, small arrangement). | `View.LayoutCompose` | Ctrl+D1 |  |
 | View | Layout: Practice | Switch to the Practice workspace layout (score and fretboard large, sections panel). | `View.LayoutPractice` | Ctrl+D2 |  |
 | View | Layout: Mix | Switch to the Mix workspace layout (arrangement and mixer large, small score). | `View.LayoutMix` | Ctrl+D3 |  |
 | Transport | Record | Record every armed track while the song plays; press again to stop. | `Transport.Record` | Ctrl+R |  |
 | Transport | Live input | Hear your instrument (the chosen audio input) through the live FX chain and the master, without a track and without recording; again turns it off. One for the whole program: it stays on across tabs and windows. | `Transport.LiveInput` | — |  |
-| Transport | Record video | Play the song and record the screen and the sound to an MP4 (Settings > General > Video recording: resolution, frame rate, what to record, folder); press again, or Stop, to finish. | `Transport.RecordVideo` | Ctrl+Alt+V | Also Sound > Record video. |
+| Transport | Record video | Record the screen and the sound to an MP4 (Settings > General > Video recording: resolution, frame rate, what to record, folder); press again to finish. Starting, stopping or a capture error never starts or stops playback. (Also Sound > Record video.) | `Transport.RecordVideo` | Ctrl+Alt+V |  |
+| View | Zoom in timeline | Make the bars of the arrangement timeline wider (the score zoom is View > Zoom in). | `Timeline.ZoomIn` | Ctrl+Alt+Shift+OemPlus |  |
+| View | Zoom out timeline | Make the bars of the arrangement timeline narrower. | `Timeline.ZoomOut` | Ctrl+Alt+Shift+OemMinus |  |
 | View | Snap clips on / off | Turn snapping of audio and MIDI clips on or off (right-click the snap button for its settings). | `Timeline.Snap` | Alt+S | Common default. |
 | Transport | Arm track for recording | Monitor the input (audio or MIDI) through the selected track and record it with Record. | `Track.Arm` | — | No default key for this either. |
 | View | About | Show the About window with the version and the licence. | `Help.About` | — |  |
@@ -320,7 +324,7 @@ These commands have their own key scope: the same key may also be bound to a mai
 | Command | What it does | Command id | Default key |
 |---|---|---|---|
 | Add plug-in | Add a plug-in to the end of the chain. | `FxChain.AddPlugin` | — |
-| Remove plug-in | Remove the selected plug-ins. The Delete key in the plug-in list also removes them. | `FxChain.RemovePlugin` | — |
+| Remove plug-in | Remove the selected plug-ins. The Delete key in the plug-in list also removes them (a control gesture, not a bindable hotkey). | `FxChain.RemovePlugin` | — |
 | Save FX chain | Save the chain as a chain file. | `FxChain.Save` | Ctrl+S |
 | Load FX chain | Load a saved chain, replacing this one. | `FxChain.Load` | Ctrl+O |
 | Add FX chain to the end | Load a saved chain after the plug-ins already there. | `FxChain.AddToEnd` | — |
@@ -368,8 +372,11 @@ These share keys with score commands on purpose: they act only while a clip is s
 | Clip properties | Name, volume, pitch, speed. | `Clip.Properties` | F2 |
 | View | Mixer | Open the mixer: track and group levels, pan, pitch, sound source and FX chains. | `View.Mixer` | — |  |
 | View | Horizontal score scrolling | Switch the score between wrapped lines (scroll down) and one line (scroll right). | `View.HorizontalScroll` | — |  |
+| View | Follow playback on / off | Turn the score and timeline following the playhead on or off. The same setting as Preferences > Playback > Follow > Follow playback. | `View.FollowPlayback` | Ctrl+Shift+F |  |
 | View | Smooth page-turn follow | Switch playback follow between instant and smooth (glided) page turns. | `View.SmoothFollow` | — |  |
 | View | Highlight playing bar | Shade the whole bar that is playing (staff and tab) with a translucent band behind the notes; off by default. Colour, opacity and "Also show the cursor's bar when stopped" are in Preferences > Playback > Appearance (the "when stopped" option under More options). | `View.PlayingBar` | — |  |
+| View | Show notes in each track lane | Draw the notes of each track inside its lane in the arrangement overview (View > Show the notes in each track lane). | `View.ArrangementIndividualNotes` | — |  |
+| View | Show one line per track lane | Draw each track's lane as one continuous line in the arrangement overview (View > Show one continuous line per track lane). | `View.ArrangementContinuousBlocks` | — |  |
 | View | Show tracks in groups | Show or hide a header per mixer group in the track list (same setting as the Mixer's "Groups in track list" box and the track list's right-click menu; off by default). | `View.ShowTrackGroups` | — |  |
 | View | Track FX chain | Open the selected track's FX (plug-in) chain. | `Track.FxChain` | — |  |
 | View | Auto-resize track list to fit | Turn on / off growing and shrinking the track list to fit all tracks and group rows. | `View.AutoFitTrackList` | — |  |
@@ -394,9 +401,11 @@ These share keys with score commands on purpose: they act only while a clip is s
 | View | Chord finder | Show the notes of a chord for a root and type, and insert its name on the beat under the score cursor. | `Tools.ChordFinder` | — |  |
 | View | Song stats | Show the number of tracks, bars, notes and sections in the song. | `Tools.SongStats` | — |  |
 | View | Tuner | Open the chromatic tuner: the note and cents of the sound on the armed input, with the selected track's string tunings. | `Tools.Tuner` | — |  |
+| View | Global tuning | Retune every pitched track of the song by the same amount: open the tuning window, pick a tuning and apply it in one undo step. | `Tools.GlobalTuning` | — |  |
+| View | Preview note sound | Turn the note sound preview on or off, the same as Tools > Preview note sound. | `Tools.PreviewNotes` | — |  |
 | View | Preset manager | Open the preset manager: every saved plug-in preset, FX chain, container, MIDI chain, MIDI processor preset and drum map in one window, to rename, copy, reorder, delete and search (same as Tools > Preset manager). | `Tools.PresetManager` | — |  |
-| View | Tutorial | Open the Beginner's Guide: searchable chapters with pictures, and a PDF export (Help > Tutorial). | `Help.Tutorial` | — | Also Help > Tutorial…; F1 stays with Keyboard shortcuts. Inside the window: Ctrl+F search, Esc clears it, Alt+Left / Alt+Right back / forward; the switch at the top changes between the Basic and the Detailed guide. |
-| View | Detailed guide | Open the Tutorial window on the Detailed Guide, the full reference to every feature (Help > Detailed guide). | `Help.TutorialDetailed` | — | Also Help > Detailed guide…; unbound by default. |
+| View | Tutorial | Open the Beginner's Guide: searchable chapters with pictures, and a PDF export (Help > Tutorial; the PDF button is not available yet). (Also Help > Tutorial…; F1 stays with Keyboard shortcuts. Inside the window (control gestures, not in Shortcuts): Ctrl+F search, Esc clears it, Alt+Left / Alt+Right back / forward; the switch at the top changes between the Basic and the Detailed guide.) | `Help.Tutorial` | — |  |
+| View | Detailed guide | Open the Tutorial window on the Detailed Guide, the full reference to every feature (Help > Detailed guide). (Also Help > Detailed guide…; unbound by default.) | `Help.TutorialDetailed` | — |  |
 | View | Check for updates | Ask GitHub whether a newer TabForge release exists (one anonymous HTTPS request). | `Help.CheckForUpdates` | — |  |
 
 ## Hotkey 1 and Hotkey 2
@@ -469,14 +478,14 @@ Presets are stored as *differences* from the defaults (`HotkeyPresets` in `Servi
 - **FX chain window** : drag to reorder, tick to enable / bypass, Delete to remove, double-click to float a plug-in's window. The selected plug-in's controls are docked in the window (or floating, optionally on top), with a bar for presets (**+** saves / deletes your own), channel wiring, role (Auto / Instrument / Effect), wet and bypass. FX menu: save / load / append FX chains (`.tfchain`), clear. *Add…* lists plug-ins with vendor, format and role, filters as you type, shows scan progress, identifies unknown plug-ins in the background, adds folders or a single .vst3 / .dll file (64-bit VST2 and VST3); *Folder settings…* opens Settings > Audio & Plug-ins (remembered plug-in list is opt-in).
 - **MIDI sound** (tick in the chain window and the mixer's MIDI column): with the chain on, the track's General MIDI sound also plays. With effects and no VST instrument, that sound is rendered by the audio engine (Windows' own `gm.dls` bank) so the effects shape it; this built-in synth runs only in that case. Off: only a VST instrument sounds.
 - **Audio engine**: plug-ins run in a separate process (TabForge.exe, audio-engine mode). With *Play the whole song through the audio engine* on (the default) every song's tracks play on the engine; with it off the engine runs only for tracks with plug-ins, audio clips or armed audio input, and it is kept warm for a few minutes after the last such track stops. Windows MIDI tracks (when that option is off) are delayed by the engine's latency so everything stays in time. A plug-in that crashes or freezes is named in the status bar, switched off, and the engine restarts without it. It stays off until you allow it again: select it in its FX chain window and press *Allow again*, or use Settings > Audio & Plug-ins > More options > *Plug-ins switched off after a crash*, which lists every switched-off plug-in with an *Allow again* button. Allowing again only takes it off that list (it loads on the next playback); it does not approve an untrusted file, which stays blocked until you approve it.
-- **Settings > Audio & Plug-ins** (and **Recording** for the input): audio driver (WASAPI shared / exclusive, ASIO, DirectSound), output device, sample rate, buffer size; **plug-in folders** (Browse to add; only these are scanned unless *Also scan the standard VST folders* is on); *Run each plug-in in its own process* (off by default: plug-ins share one engine process, separate from TabForge). *Recording offset (ms)* (Audio input; a numeric setting, not a hotkey command): shifts new takes on top of the input latency the device reports; positive moves them earlier (use it when recordings sound late).
+- **Settings > Audio & Plug-ins** (and **Recording** for the input): audio driver (WASAPI shared / exclusive, ASIO, DirectSound), output device, sample rate, buffer size; **plug-in folders** (a list with *Add folder…* and *Remove*; the *Common plug-in folders* list has *Reset to defaults*; only the plug-in folders are scanned unless *Also scan the standard VST folders* is on); *Run each plug-in in its own process* (off by default: plug-ins share one engine process, separate from TabForge). *Recording offset (ms)* (Audio input; a numeric setting, not a hotkey command): shifts new takes on top of the input latency the device reports; positive moves them earlier (use it when recordings sound late).
 - **Saving as .gp** a song that uses plug-ins, FX or mixer groups asks once per song: *.gp with the audio settings inside* (recommended), *clean .gp + .tfaudio file* (most compatible with other programs; TabForge re-applies the .tfaudio when it opens the .gp), or *.tforge*. Songs without these settings save as .gp exactly as before. Exporting to .gp folds group levels and pan into each track.
 
 ## Mix Table
 - F10: Mix Table for the selected beat (instrument, volume, pan, chorus, reverb, phaser, tremolo, tempo; transition; all tracks). Red dot above the beat in the score and in the timeline lane. Imported from .gp5 automations.
 
 ## Context menus from the keyboard
-- **Shift+F10** or the **Menu** key opens the right-click menu of the part that has the focus, with the first item focused (arrow keys move, Enter chooses, Esc closes).
+- **Shift+F10** or the **Menu** key opens the right-click menu of the part that has the focus, with the first item focused (arrow keys move, Enter chooses, Esc closes). A control gesture, not in Shortcuts.
 - **Score**: the note menu on a note or selection, the score menu elsewhere, opened at the caret.
 - **Timeline**: the selection menu when bars are selected, otherwise the bar menu for the playing or current bar.
 - **Fretboard / keyboard panel**: its menu. The panel is a Tab stop and shows an outline while it has the focus (clicking it still leaves the focus on the score).
@@ -492,7 +501,7 @@ Presets are stored as *differences* from the defaults (`HotkeyPresets` in `Servi
 
 - **Resize a section**: drag the left/right edge of a section block in the timeline (cursor turns to a resize arrow). Shrinking leaves empty bars; growing into a neighbour pushes it along. Undoable.
 
-- **+ / - (duration)**: .gp5 style � + makes the note shorter (8th to 16th), - makes it longer. Settings > Editing > Note entry > 'Reverse + / - duration keys' swaps them.
+- **+ / - (duration)**: .gp5 style � + makes the note shorter (8th to 16th), - makes it longer. Settings > Editing > Note entry > 'Plus key lengthens notes' swaps them.
 - **Free rhythm entry** (default): durations, dots and tuplets can always be changed; bars that don't add up turn red. Settings > Editing > Note entry > 'Prevent rhythms that overfill a bar' blocks such changes instead.
 
 - **Add section (M)**: adds a section at the cursor bar (also the Sections panel's Add button, and right-click on the timeline's section lane: *Add section at bar N*). If a section already starts there, it opens that section's title.

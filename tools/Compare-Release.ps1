@@ -2,8 +2,8 @@
 .SYNOPSIS
     Compares two TabForge release builds byte by byte: two portable zips and, optionally, two installers.
 .DESCRIPTION
-    Use it to check that the build from GitHub Actions and a local tools\Package-Release.ps1 build of the same commit
-    are identical (docs/REPRODUCIBLE_BUILDS.md).
+    Use it to check that the build from GitHub Actions and a local Source\tools\Package-Release.ps1 build of the same commit
+    are identical (Source/docs/REPRODUCIBLE_BUILDS.md).
 
     Portable zips: entry names, sizes and the SHA-256 of every entry's content are compared (the zip container
     itself is also compared as a whole file). For a differing entry it prints the number of differing bytes and the
@@ -18,7 +18,7 @@
     Exit code: 0 when every compared zip entry is identical (installer differences alone do not fail the comparison
     unless the extracted payloads differ), 1 when a zip entry or an installer payload differs, 2 on a usage error.
 .EXAMPLE
-    .\tools\Compare-Release.ps1 -ZipA dist\TabForge-0.2.0-beta.6-win-x64-portable.zip -ZipB C:\ci\TabForge-0.2.0-beta.6-win-x64-portable.zip
+    .\Source\tools\Compare-Release.ps1 -ZipA dist\TabForge-0.2.0-beta.6-win-x64-portable.zip -ZipB C:\ci\TabForge-0.2.0-beta.6-win-x64-portable.zip
 #>
 [CmdletBinding()]
 param(
@@ -81,7 +81,7 @@ function Describe-Difference([string]$Name, [byte[]]$A, [byte[]]$B) {
 
 function Explain([string]$Name) {
     switch -Regex ($Name) {
-        '(^|/)tfvst3\.dll$' { return 'native bridge: differs when a different tfvst3.dll was shipped. Both builds must use the committed DLL (docs/REPRODUCIBLE_BUILDS.md).' }
+        '(^|/)tfvst3\.dll$' { return 'native bridge: differs when a different tfvst3.dll was shipped. Both builds must use the committed DLL (Source/docs/REPRODUCIBLE_BUILDS.md).' }
         '(^|/)TabForge\.exe$' { return 'managed single-file build: differs when the SDK version, the commit, the source text (line endings) or a build setting differs.' }
         '\.(pdb)$' { return 'symbols are not shipped; if present they embed source checksums, so line endings matter.' }
         '\.(md|txt|json|svg)$' { return 'text file: usually a line-ending difference (checkout is not eol=crlf) or a different commit.' }

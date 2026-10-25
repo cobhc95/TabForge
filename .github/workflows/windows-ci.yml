@@ -5,7 +5,7 @@ on:
     branches: ['**']
     tags: ['v*']
   pull_request:
-  # The full suite (tests/full-suite) runs weekly and on manual dispatch; pushes and pull requests run the basic set.
+  # Pushes and pull requests run the basic self-test set; the weekly schedule and manual dispatch run the full CI gate (--require ci).
   schedule:
     - cron: '0 3 * * 1'
   workflow_dispatch:
@@ -23,7 +23,7 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 20
     env:
-      # 'true' on the weekly schedule and manual dispatch: the full suite is compiled in and run.
+      # 'true' on the weekly schedule and manual dispatch: the full CI gate (--require ci) is run.
       FULL_SUITE: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
       # The weekly and dispatch full suite runs all 20 workflow monkey seeds; pushes and pull requests run the basic set only.
       TABFORGE_MONKEY_FULL: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && '1' || '0' }}
@@ -44,20 +44,24 @@ jobs:
         run: dotnet restore TabForge.sln --locked-mode
 
       - name: Build (Release)
-        # The full suite (tests/full-suite) is compiled in with TabForgeFullSuite only on schedule or dispatch.
         shell: pwsh
         run: |
-          $full = if ($env:FULL_SUITE -eq 'true') { '-p:TabForgeFullSuite=true' } else { '-p:TabForgeFullSuite=false' }
-          dotnet build TabForge.sln -c Release --no-restore $full
+          dotnet build TabForge.sln -c Release --no-restore
+          # The Avalonia app (assembly TabForge) into a known folder for the self-test.
+          dotnet build src/TabForge.Avalonia/TabForge.Avalonia.csproj -c Release --no-restore -o build/ci-app
+
+      - name: Avalonia unit tests (weekly and dispatch)
+        if: env.FULL_SUITE == 'true'
+        run: dotnet test tests/TabForge.Avalonia.Tests/TabForge.Avalonia.Tests.csproj -c Release --no-restore
 
       - name: Self-test (headless)
         shell: pwsh
         run: |
           $log = Join-Path $PWD 'selftest.log'
-          $exe = Join-Path $PWD 'src/TabForge/bin/Release/net8.0-windows/TabForge.exe'
+          $exe = Join-Path $PWD 'build/ci-app/TabForge.exe'
           # --require makes the source-hygiene and installer-parity checks fail instead of skipping when the source
           # tree or installer script cannot be found (the working directory is the repository root).
-          # TabForge.exe is a WPF (GUI-subsystem) executable: start it and wait for it to exit. --selftest opens no
+          # TabForge.exe is a GUI-subsystem executable: start it and wait for it to exit. --selftest opens no
           # main window, needs no audio device (the engine tests use the headless harness and a null output).
           # The basic set (a normal build) requires only the groups it contains; the full suite requires every CI group.
           $testArgs = if ($env:FULL_SUITE -eq 'true') { @('--selftest', "`"$log`"", '--require', 'ci') }

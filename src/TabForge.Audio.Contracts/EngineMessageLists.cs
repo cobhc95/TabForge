@@ -6,11 +6,12 @@ namespace TabForge.Audio.Contracts;
 // Does not own: validation beyond the bounds that keep a read from allocating without limit; the engine range-checks slots and values.
 // Tests: TestEngineMessagesRoundTrip, TestEngineMessagesGolden.
 
-/// <summary><see cref="EngineCommand.SetPosition"/>: playing, song seconds, Stopwatch stamp, then the owner id (absent or out of range reads as owner 0).</summary>
-public readonly record struct SetPositionMessage(bool Playing, double SongSec, long Stamp, int Owner)
+/// <summary><see cref="EngineCommand.SetPosition"/>: playing, song seconds, Stopwatch stamp, then the owner id (absent or out of range reads as owner 0), then the transport
+/// speed in song seconds per real second (absent or not finite reads as 1).</summary>
+public readonly record struct SetPositionMessage(bool Playing, double SongSec, long Stamp, int Owner, double Speed = 1.0)
 {
-    public void Write(BinaryWriter w) { w.Write(Playing); w.Write(SongSec); w.Write(Stamp); w.Write(Owner); }
-    public static SetPositionMessage Read(BinaryReader r) => new(r.ReadBoolean(), r.ReadDouble(), r.ReadInt64(), r.ReadOwnerTail());
+    public void Write(BinaryWriter w) { w.Write(Playing); w.Write(SongSec); w.Write(Stamp); w.Write(Owner); w.Write(Speed); }
+    public static SetPositionMessage Read(BinaryReader r) => new(r.ReadBoolean(), r.ReadDouble(), r.ReadInt64(), r.ReadOwnerTail(), r.ReadSpeedTail());
 }
 
 /// <summary>

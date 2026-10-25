@@ -2,6 +2,8 @@ using TabForge.AudioEngine.Plugins;
 
 namespace TabForge.AudioEngine.Mixing;
 
+// Owns: one pitch measurement of an instrument (preallocated buffers, test notes on its own MIDI input).
+
 /// <summary>
 /// One pitch measurement of an instrument (see EngineHost.MeasurePitch). Built on the engine thread with every buffer preallocated;
 /// the audio thread feeds the plug-in its test notes (on its own MIDI input only) and captures its output here instead of the mix.

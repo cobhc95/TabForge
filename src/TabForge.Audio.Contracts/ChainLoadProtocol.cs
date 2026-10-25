@@ -2,6 +2,8 @@ using System.IO;
 
 namespace TabForge.Audio.Contracts;
 
+// Owns: the multi-frame chain loading protocol (LoadChain spec, per-plug-in ChainState, ChainCommit).
+
 /// <summary>
 /// Chain loading in several frames: <see cref="EngineCommand.LoadChain"/> carries the chain spec without state blobs (plus a load id and the
 /// indices whose state follows), then one <see cref="EngineCommand.ChainState"/> frame per plug-in, then <see cref="EngineCommand.ChainCommit"/>.

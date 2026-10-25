@@ -6,6 +6,8 @@ using TabForge.AudioEngine.Plugins;
 
 namespace TabForge.AudioEngine;
 
+// Owns: the headless engine harness driving the real engine code in-process (no pipe, no sound card).
+
 public static partial class EngineHost
 {
     /// <summary>
@@ -17,6 +19,9 @@ public static partial class EngineHost
     /// </summary>
     public static class Headless
     {
+        /// <summary>The session main-thread queue and log the harness drives (for building plug-ins by hand, e.g. the managed test effect).</summary>
+        public static EngineThreads Threads => _session.Threads;
+
         public static bool Attached => _session.PluginFactory is not null || (_shared is not null && _pipe is null);
 
         /// <param name="factory">Creates each plug-in of a chain (spec, sample rate, max block); the real VST loaders are not used.</param>
@@ -24,7 +29,7 @@ public static partial class EngineHost
         {
             if (_pipe is not null) throw new InvalidOperationException("The headless harness cannot run inside an engine process.");
             if (_shared is not null) throw new InvalidOperationException("The headless harness is already attached.");
-            EngineThreads.MarkMainThread();
+            Threads.MarkMainThread();
             _shared = shared;
             _session.PluginFactory = factory;
             _session.SampleRate = 48000;
@@ -49,7 +54,7 @@ public static partial class EngineHost
         /// <summary>The engine main loop's housekeeping: posted work (and VST2 host notifications) and the retire queue.</summary>
         public static int Collect()
         {
-            EngineThreads.RunPending();
+            Threads.RunPending();
             return _session.Retired.Collect();
         }
 
@@ -91,9 +96,9 @@ public static partial class EngineHost
         public static void Detach()
         {
             var s = _session;
-            try { s.StopOutput(); } catch (Exception ex) { EngineLog.Write($"headless: stop: {ex.Message}"); }
-            foreach (var chain in s.Loaded.Values) { try { chain.Dispose(); } catch (Exception ex) { EngineLog.Write($"dispose failed: {ex.Message}"); } }
-            foreach (var parked in s.Parked.Values) foreach (var p in parked.Values) { try { p.Dispose(); } catch (Exception ex) { EngineLog.Write($"dispose failed: {ex.Message}"); } }
+            try { s.StopOutput(); } catch (Exception ex) { Log.Write($"headless: stop: {ex.Message}"); }
+            foreach (var chain in s.Loaded.Values) { try { chain.Dispose(); } catch (Exception ex) { Log.Write($"dispose failed: {ex.Message}"); } }
+            foreach (var parked in s.Parked.Values) foreach (var p in parked.Values) { try { p.Dispose(); } catch (Exception ex) { Log.Write($"dispose failed: {ex.Message}"); } }
             s.Retired.DisposeAll();
             s.Loaded.Clear(); s.Parked.Clear(); s.Requested.Clear(); s.ChainGeneration.Clear(); s.Mixes.Clear(); s.ClipSpecs.Clear(); s.ClipOwners.Clear(); s.Arms.Clear();
             s.Unmonitored.Clear(); s.Routes.Clear(); s.MidiProcs.Clear(); s.GraphDest.Clear(); s.Sidechains.Clear(); s.Forwards.Clear(); s.Wirings.Clear(); s.LogWatch.Clear();

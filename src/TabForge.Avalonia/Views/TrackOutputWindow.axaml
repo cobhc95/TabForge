@@ -1,0 +1,21 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="TabForge.Avalonia.Views.TrackOutputWindow"
+        Width="420" Height="210" MinWidth="340" MinHeight="190"
+        ShowInTaskbar="False"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource WindowBackground}"
+        Foreground="{DynamicResource TextPrimary}">
+  <!-- Same controls and order as the WPF TrackOutputWindow. Texts are set in the code-behind. -->
+  <DockPanel Margin="14">
+    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+      <Button x:Name="TestButton" Padding="12,4" Margin="0,0,8,0" Foreground="{DynamicResource TextPrimary}" />
+      <Button x:Name="CloseButton" Padding="12,4" IsCancel="True" Foreground="{DynamicResource TextPrimary}" />
+    </StackPanel>
+    <StackPanel>
+      <TextBlock x:Name="HeadingText" TextWrapping="Wrap" FontWeight="SemiBold" />
+      <ComboBox x:Name="DeviceBox" Margin="0,8,0,0" HorizontalAlignment="Stretch" />
+      <TextBlock x:Name="HintText" TextWrapping="Wrap" Margin="0,8,0,0" Foreground="{DynamicResource TextMuted}" />
+    </StackPanel>
+  </DockPanel>
+</Window>

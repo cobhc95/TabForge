@@ -83,7 +83,7 @@ Three pages control how the main work areas look.
 
 **Timeline & Tracks** has a **Timeline display** group. Behind its **More options**, **Playback position marker** sets how the timeline shows where the song is playing: **Line** (the default), **Bar marker** or **Both**. The command **Cycle playback position marker** steps through the three, and has no default key.
 
-The **Editing** page holds how notes are entered, such as the **Default note value** and whether the cursor moves on after a note. **Chapter 5: Writing your first riff** explains these.
+The **Editing** page holds how notes are entered, such as the **Default note value**, whether the cursor stays on the note just written, and which way the `+` and `-` keys change note lengths. **Chapter 5: Writing your first riff** explains these.
 
 ## Change keyboard shortcuts
 

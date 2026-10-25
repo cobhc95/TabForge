@@ -1,6 +1,6 @@
 # TabForge.AudioEngine/Plugins
 
-In-process plug-in hosting: the instance interface, the one loader that builds an instance from a file, and the VST2 and VST3 hosts. The option to run a plug-in in its own process is in `../Isolation/`. Does not own trust or approval (`src/TabForge/Plugins/PluginTrust.cs`).
+In-process plug-in hosting: the instance interface, the one loader that builds an instance from a file, and the VST2 and VST3 hosts. The option to run a plug-in in its own process is in `../Isolation/`. Does not own trust or approval (`Source/src/TabForge.Core/Plugins/PluginTrust.cs`).
 
 ## Files
 | File | Purpose |
@@ -14,7 +14,6 @@ In-process plug-in hosting: the instance interface, the one loader that builds a
 | `Vst3Plugin.cs` | Hosts a VST3 plug-in through `tfvst3.dll`, a small C interface over the VST3 SDK |
 
 ## Pathway
-`START_HERE.md`, Golden pathways: **Reach the engine**. Plug-in trust is decided at scan or approval in `src/TabForge/Plugins/`, not at load.
+Plug-in trust is decided at scan or approval in `Source/src/TabForge.Core/Plugins/`, not at load.
 
 ## Tests
-`docs/feature-map/plug-ins.md`.

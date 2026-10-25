@@ -60,14 +60,14 @@ The edit cursor is the highlight that shows where the next note will go. It mark
 
 The arrow keys move it. `Left` and `Right` move one beat, and `Up` and `Down` move one string. Hold `Ctrl` with `Left` or `Right` to move a whole bar. `Home` jumps to the start of the bar.
 
-To write a note, type its fret number. Digits `0` to `9` write frets 0 to 9. For frets 10 and above, type both digits within 0.7 seconds of each other. When you enter a new note, the cursor moves on by the length of that note, ready for the next one. That is how a whole bar goes in without touching the mouse.
+To write a note, type its fret number. Digits `0` to `9` write frets 0 to 9. For frets 10 and above, type both digits within 0.7 seconds of each other. When you enter a new note the cursor stays on it, so press `Right` to move to the next beat. If you prefer the old automatic move, turn on **Move to the next note after writing** in **Preferences > Editing**.
 
 Try the cursor before you write the riff.
 
 1. Click the empty bar 1 in the score, on the fifth line down from the top of the TAB lines. That line is the A string. The cursor appears there.
 2. Press `Home`. The cursor moves to the first beat of the bar.
-3. Type `0`. A quarter note on fret 0 appears, and the cursor moves to the next beat.
-4. Type `0` again. A second note appears next to the first.
+3. Type `0`. A quarter note on fret 0 appears, and the cursor stays on it.
+4. Press `Right`, then type `0` again. A second note appears next to the first.
 
 You hear each note as you enter it. These two notes are quarter notes because that is the note value a new song starts with. The next section changes that. Press `Ctrl+Z` twice to take both notes back.
 
@@ -95,7 +95,7 @@ A few more keys shape the rhythm.
 
 1. Click bar 1 on the fifth line of the TAB, then press `Home`. The cursor is on the A string at the start of bar 1.
 2. In the **Duration** group, click the eighth note button. The status bar now shows eighth.
-3. Type `0`, `0`, `3`, `0`, `0`, `5`, `3`, `0`, one key at a time. Eight notes fill bar 1, and the cursor moves on to bar 2.
+3. Type `0`, press `Right`, and repeat for `0`, `3`, `0`, `0`, `5`, `3`, `0`. Eight notes fill bar 1; the cursor stays on each note until you press `Right`.
 4. Type `0`, `0`, `3`, `0`, `0`, `5`, `7`, `5` for bar 2.
 5. Press `Ctrl+Home`. The cursor returns to the start of bar 1.
 6. Press `Space`. You hear the two bars, then silence, because the song has 32 bars and only two are written.
@@ -147,9 +147,9 @@ A click on an empty beat uses the current note value, the same as typing. So cho
 7. Press `Right`. The cursor moves to bar 4. In the **Duration** group, click the whole note button.
 8. Click string 5 at fret 2. Press `Down`, then type `0`. The cursor was on string 5; `Down` moves it to string 6, and the typed `0` completes the E5 chord.
 
-You wrote one chord by clicking and one by typing. Both give the same result: notes stacked in one beat. After step 8 the cursor moves on, because a typed note advances the cursor.
+You wrote one chord by clicking and one by typing. Both give the same result: notes stacked in one beat. After step 8 the cursor stays on the beat, because a typed note does not advance it by default; the arrow keys move it on.
 
-> **Note:** To enter a whole chord by typing, switch off **Advance after entering a note** in **Preferences > Editing**, under **Note entry**. Then `Up` and `Down` choose the string and a digit writes the fret, and the cursor stays on the beat.
+> **Note:** To enter a whole chord by typing, leave **Move to the next note after writing** off (the default) in **Preferences > Editing**, under **Note entry**. Then `Up` and `Down` choose the string and a digit writes the fret, and the cursor stays on the beat.
 
 Your four bars are done.
 
@@ -206,11 +206,11 @@ Your song now matches the plan at the start of this chapter. Chapter 6 starts fr
 
 ## More options
 
-**Preferences > Editing** holds the settings for note entry. **Default note value** and **Advance after entering a note** are always visible. The others sit behind the **More options** toggle of their group.
+**Preferences > Editing** holds the settings for note entry. **Default note value**, **Move to the next note after writing** and **Plus key lengthens notes** are always visible. The others sit behind the **More options** toggle of their group.
 
 - **Default note value** sets the value a new song starts with.
-- **Advance after entering a note** turns the automatic move to the next beat on or off.
-- **Reverse + / - duration keys** swaps what `+` and `-` do.
+- **Move to the next note after writing** turns the automatic move to the next beat on or off; it is off by default, so the cursor stays on the note you just wrote.
+- **Plus key lengthens notes** swaps what `+` and `-` do; off by default, so `+` shortens and `-` lengthens.
 - **Prevent rhythms that overfill a bar** refuses changes that would turn a bar red.
 - **Score wheel scroll distance**, in **Mouse and scrolling**, sets how far one wheel notch scrolls the score.
 - The **Copy and paste** group has one question for each kind of paste. Each can ask every time, or remember your choice.

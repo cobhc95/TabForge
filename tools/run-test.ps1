@@ -1,10 +1,10 @@
-# Runs one self-test, or a comma-separated list, from a full-suite build.
-# Usage: tools\run-test.ps1 -Test TestVideoExport [-Log <path>] [-TimeoutSec 600]
+# Runs one self-test, or a comma-separated list, from a build of the app.
+# Usage: Source\tools\run-test.ps1 -Test TestVideoExport [-Log <path>] [-TimeoutSec 600]
 #
-# Builds tests/full-suite into the fixed folder %TEMP%\tf-fs (incremental; the folder is never cleaned),
+# Builds Source/src/TabForge.Avalonia into the fixed folder %TEMP%\tf-fs (incremental; the folder is never cleaned),
 # then runs TabForge.exe --only with a scratch profile. The build and the run both hold the lock
 # directory %TEMP%\tf-build.lock, so two jobs never run dotnet or TabForge.exe at the same time.
-# Each step gets -TimeoutSec; a cold full-suite build may need 900.
+# Each step gets -TimeoutSec; a cold build may need 900.
 # Exit codes: 0 all passed, 1 a test failed or there is no result line, 2 build failed or the lock
 # was not free within 30 minutes, 124 a step timed out and was killed.
 param(
@@ -16,8 +16,8 @@ param(
 $ErrorActionPreference = 'Stop'
 if ($Test -notmatch '^[A-Za-z0-9_,]+$') { Write-Host "Test names may contain only letters, digits, underscore and comma: $Test"; exit 1 }
 
-$repo = Split-Path -Parent $PSScriptRoot
-$project = Join-Path $repo 'src\TabForge\TabForge.csproj'
+$repo = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+$project = Join-Path $repo 'Source\src\TabForge.Avalonia\TabForge.Avalonia.csproj'
 $temp = $env:TEMP
 $buildDir = Join-Path $temp 'tf-fs'
 $profileDir = Join-Path $temp 'tf-fs-profile'
@@ -61,7 +61,7 @@ try {
 
     $buildOut = Join-Path $temp 'tf-fs-build.out.log'
     $buildErr = Join-Path $temp 'tf-fs-build.err.log'
-    $buildArgs = 'build "' + $project + '" -c Release -v q -p:TabForgeFullSuite=true -o "' + $buildDir + '"'
+    $buildArgs = 'build "' + $project + '" -c Release -v q -o "' + $buildDir + '"'
     $code = Invoke-Timed -File 'dotnet' -Arguments $buildArgs -Seconds $TimeoutSec -StdOut $buildOut -StdErr $buildErr
     if ($code -ne 0) {
         Write-Host "Build failed (exit $code). Output: $buildOut ; errors: $buildErr"

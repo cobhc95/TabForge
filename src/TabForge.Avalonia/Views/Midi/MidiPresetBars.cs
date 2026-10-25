@@ -1,0 +1,280 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using System.Threading.Tasks;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Layout;
+using TabForge.Avalonia.Views.Fx;
+using TabForge.Avalonia.Views.Presets;
+using TabForge.Plugins;
+using TabForge.Presenters;
+using TabForge.Services;
+
+namespace TabForge.Avalonia.Views.Midi;
+
+// Owns: the two preset rows of the MIDI processing window: the whole list's presets (the ones that come with the app, then the user's, with Save preset…
+//   and Delete) and the preset row of the selected processor (its parameter values: the built-in ones of its type, then the user's, with Save preset…), and
+//   reading a preset file into checked values and writing one.
+// Does not own: applying a preset (the window does it as one edit, through the actions it passes), the files' folder rules (PresetFolderStore), the parameters.
+// Tests: no dedicated test class.
+public sealed class MidiPresetBars
+{
+    public const string Hint = "Load preset…", Caption = "MIDI processing";
+    private const long MaxListPresetBytes = 512 * 1024;
+    private const double ListBoxWidth = 230, ProcessorBoxWidth = 200;
+
+    /// <summary>One row of a preset drop-down: what it shows, and where its content comes from.</summary>
+    internal sealed record Entry(string Text, Func<List<PluginMidiProcessor>>? Build = null, string? Name = null, string? BuiltInParams = null, bool Manage = false)
+    {
+        public override string ToString() => Text;
+    }
+
+    private readonly Window _owner;
+    private readonly Func<FxChainDialogs> _dialogs;
+    private readonly Func<List<PluginMidiProcessor>> _current;
+    private readonly Action<List<PluginMidiProcessor>> _applyList;
+    private readonly Action<PluginMidiProcessor, string> _applyProcessor;
+    private readonly PresetFolderStore _listStore = PresetFolderStore.MidiChains();
+    private PresetFolderStore? _processorStore;
+    private PluginMidiProcessor? _processor;
+    private bool _filling;
+
+    /// <summary>The whole list's presets: a drop-down, Save preset… and Delete.</summary>
+    public ComboBox ListBox { get; } = new() { Width = ListBoxWidth, Name = "PresetBox" };
+    public Button SaveList { get; } = Small("Save preset…", "Save the whole processor list as a preset", "SavePresetButton");
+    public Button DeleteList { get; } = Small("Delete", "Delete the selected saved preset", "DeletePresetButton");
+    /// <summary>The selected processor's presets: a drop-down and Save preset….</summary>
+    public ComboBox ProcessorBox { get; } = new() { Width = ProcessorBoxWidth, Name = "ProcessorPresetBox" };
+    public Button SaveProcessor { get; } = Small("Save preset…", "Save this processor's parameter values as a preset", "SaveProcessorPresetButton");
+    public StackPanel ProcessorRow { get; } = new() { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 10), IsVisible = false, Name = "ProcessorPresetRow" };
+
+    /// <param name="current">The plug-in's processors as they are now (what Save preset… writes).</param>
+    /// <param name="applyList">Replaces the plug-in's whole list with a preset's processors (one undo step).</param>
+    /// <param name="applyProcessor">Sets one processor's parameter text (one undo step).</param>
+    public MidiPresetBars(Window owner, Func<FxChainDialogs> dialogs, Func<List<PluginMidiProcessor>> current, Action<List<PluginMidiProcessor>> applyList, Action<PluginMidiProcessor, string> applyProcessor)
+    {
+        (_owner, _dialogs, _current, _applyList, _applyProcessor) = (owner, dialogs, current, applyList, applyProcessor);
+        ToolTip.SetTip(ListBox, "Load a preset: replaces this plug-in's whole processor list (Undo works in the FX window). Delete or reorder your own with Manage presets…");
+        ToolTip.SetTip(ProcessorBox, "Presets of this processor: picking one sets its parameters (one undo step). Delete or reorder your own with Manage presets…");
+        ProcessorRow.Children.Add(ProcessorBox);
+        ProcessorRow.Children.Add(SaveProcessor);
+        _ = PresetRows.Attach(ListBox, () => _listStore, item => item is Entry { Name: not null, Manage: false } entry ? entry.Name : null,
+            () => PresetCatalogKind.MidiChain, () => null, () => FillList(null), item => item is Entry { Manage: true });
+        _ = PresetRows.Attach(ProcessorBox, () => _processorStore, item => item is Entry { Name: not null, Manage: false } entry ? entry.Name : null,
+            () => PresetCatalogKind.MidiProcessor, () => _processor?.Type, FillProcessor, item => item is Entry { Manage: true });
+        ListBox.SelectionChanged += async (_, _) => await ListPicked();
+        SaveList.Click += async (_, _) => await SaveListAsync();
+        DeleteList.Click += async (_, _) => await DeleteListAsync();
+        ProcessorBox.SelectionChanged += async (_, _) => await ProcessorPicked();
+        SaveProcessor.Click += async (_, _) => await SaveProcessorAsync();
+        _listStore.Changed += () => FillList(null);
+        FillList(null);
+    }
+
+    private static Button Small(string text, string tip, string name)
+    {
+        var button = new Button { Content = text, Padding = new Thickness(10, 3), Margin = new Thickness(6, 0, 0, 0), Name = name };
+        ToolTip.SetTip(button, tip);
+        return button;
+    }
+
+    private static string PresetName(string key) => Path.GetFileNameWithoutExtension(key);
+
+    // ---------- the whole list ----------
+
+    private void FillList(string? select)
+    {
+        _filling = true;
+        try
+        {
+            var items = new List<Entry> { new(Hint) };
+            items.AddRange(MidiProcessorCatalog.BuiltInPresets.Select(b => new Entry(b.Name, b.Build)));
+            items.AddRange(_listStore.Names().Select(n => new Entry($"★ {n}", Name: n)));
+            items.Add(new Entry(PresetRowText.Manage, Manage: true));
+            ListBox.ItemsSource = items;
+            ListBox.SelectedItem = items.FirstOrDefault(i => select is not null && i.Name == select) ?? items[0];
+            DeleteList.IsEnabled = ListBox.SelectedItem is Entry { Name: not null };
+        }
+        finally { _filling = false; }
+    }
+
+    private async Task ListPicked()
+    {
+        if (_filling || ListBox.SelectedItem is not Entry entry) { DeleteList.IsEnabled = false; return; }
+        DeleteList.IsEnabled = entry.Name is not null;
+        if (entry.Manage) return;   // PresetRows reverts the row and opens the manager
+        List<PluginMidiProcessor>? list = null;
+        if (entry.Build is { } build) list = build();
+        else if (entry.Name is { } name) list = ReadList(name);
+        else return;
+        if (list is null) { await _dialogs().Ask(_owner, "That preset could not be read.", Caption, MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
+        _applyList(list.Where(p => p is not null && p.Params.Length <= PluginMidiProcessor.MaxParamsChars).Take(MidiProcessingListPresenter.MaxProcessors).ToList());
+    }
+
+    private List<PluginMidiProcessor>? ReadList(string name)
+    {
+        try
+        {
+            var bytes = InputLimits.ReadBoundedBytes(_listStore.PathOf(name), MaxListPresetBytes, "MIDI preset");
+            return JsonSerializer.Deserialize<List<PluginMidiProcessor>>(bytes);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or InvalidDataException)
+        {
+            Trace.Error(Trace.Ui, "MIDI processing: read preset: " + ex.Message);
+            return null;
+        }
+    }
+
+    /// <summary>Saves the whole list under a name the user types; false when cancelled or refused.</summary>
+    public async Task<bool> SaveListAsync(string? name = null)
+    {
+        name ??= (await _dialogs().Prompt(_owner, "Save preset", "Preset name", ""))?.Trim();
+        if (string.IsNullOrEmpty(name)) return false;
+        if (PresetRules.Error(name) is { } error) { await _dialogs().Tell(_owner, error, Caption); return false; }
+        if (_listStore.Names().Contains(name, StringComparer.OrdinalIgnoreCase)
+            && await _dialogs().Ask(_owner, $"Replace the preset \"{name}\"?", Caption, MessageBoxButtons.YesNo, MessageBoxIcon.Question) != MessageBoxAnswer.Yes) return false;
+        try
+        {
+            var bytes = JsonSerializer.SerializeToUtf8Bytes(_current(), new JsonSerializerOptions { WriteIndented = true });
+            FilePathPolicy.WriteAtomically(_listStore.PathOf(name), s => s.Write(bytes), createDirectory: true);   // a failed write leaves the previous preset intact
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
+        {
+            Trace.Error(Trace.Ui, "MIDI processing: save preset: " + ex.Message);
+            await _dialogs().Ask(_owner, "The preset could not be saved: " + ex.Message, Caption, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return false;
+        }
+        FillList(name);
+        return true;
+    }
+
+    private async Task DeleteListAsync()
+    {
+        if (ListBox.SelectedItem is not Entry { Name: { } name }) return;
+        if (await _dialogs().Ask(_owner, $"Delete the preset \"{name}\"?", Caption, MessageBoxButtons.YesNo, MessageBoxIcon.Question) != MessageBoxAnswer.Yes) return;
+        try { _listStore.Delete(name); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { Trace.Error(Trace.Ui, "MIDI processing: delete preset: " + ex.Message); }
+        FillList(null);
+    }
+
+    // ---------- the selected processor ----------
+
+    /// <summary>Shows the presets of the selected processor's type; hidden when there is none or its type is unknown.</summary>
+    public void Show(PluginMidiProcessor? processor)
+    {
+        var known = processor is not null && MidiProcessorCatalog.Find(processor.Type) is not null;
+        ProcessorRow.IsVisible = known;
+        _processor = known ? processor : null;
+        if (_processorStore is not null) _processorStore.Changed -= FillProcessor;
+        _processorStore = known ? PresetFolderStore.MidiProcessor(processor!.Type) : null;
+        if (_processorStore is not null) _processorStore.Changed += FillProcessor;
+        FillProcessor();
+    }
+
+    private IReadOnlyList<(string Name, string Params)> BuiltIns() => _processor is { } p ? MidiProcessorCatalog.BuiltInProcessorPresets(p.Type) : Array.Empty<(string, string)>();
+
+    /// <summary>The rows of the processor drop-down as (text, is built-in); the closed box shows <see cref="ProcessorShown"/>.</summary>
+    internal IReadOnlyList<(string Text, bool BuiltIn)> Listed => ProcessorBox.Items.OfType<Entry>().Skip(1).Where(i => !i.Manage).Select(i => (i.Text, i.BuiltInParams is not null)).ToList();
+    internal string ProcessorShown => (ProcessorBox.SelectedItem as Entry)?.Text ?? "";
+    internal void PickProcessorRow(string text) => ProcessorBox.SelectedItem = ProcessorBox.Items.OfType<Entry>().First(i => i.Text == text);
+
+    private void FillProcessor()
+    {
+        _filling = true;
+        try
+        {
+            var current = _processor is { } p ? Normalize(p.Type, p.Params) : null;
+            Entry? match = null;
+            var items = new List<Entry> { new(Hint) };
+            foreach (var (name, values) in BuiltIns())
+            {
+                var item = new Entry(name, BuiltInParams: values);
+                items.Add(item);
+                if (current is not null && Normalize(_processor!.Type, values) == current) match ??= item;
+            }
+            foreach (var name in _processorStore?.Names() ?? Array.Empty<string>())
+            {
+                var item = new Entry(name, Name: name);
+                items.Add(item);
+                if (match is null && current is not null && Read(_processorStore!, _processor!.Type, name) == current) match = item;
+            }
+            items.Add(new Entry(PresetRowText.Manage, Manage: true));
+            ProcessorBox.ItemsSource = items;
+            ProcessorBox.SelectedItem = match ?? items[0];
+        }
+        finally { _filling = false; }
+    }
+
+    private async Task ProcessorPicked()
+    {
+        if (_filling || _processor is not { } processor || _processorStore is not { } store || ProcessorBox.SelectedItem is not Entry entry) return;
+        if (entry.Manage) return;   // PresetRows reverts the row and opens the manager
+        if (entry.Text == Hint) return;
+        var values = entry.BuiltInParams is { } builtIn ? Normalize(processor.Type, builtIn) : Read(store, processor.Type, entry.Name!);
+        if (values is not null) _applyProcessor(processor, values);
+        else await _dialogs().Ask(_owner, "That preset could not be read.", Caption, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+    }
+
+    /// <summary>Saves the selected processor's values under a name the user types (or <paramref name="name"/>); false when cancelled or refused.</summary>
+    public async Task<bool> SaveProcessorAsync(string? name = null)
+    {
+        if (_processor is not { } processor || _processorStore is not { } store) return false;
+        name ??= (await _dialogs().Prompt(_owner, "Save preset", "Preset name", ""))?.Trim();
+        if (string.IsNullOrEmpty(name)) return false;
+        var reserved = BuiltIns().Any(b => string.Equals(b.Name, name, StringComparison.OrdinalIgnoreCase)) ? "A preset that comes with the app has this name. Choose another name." : null;
+        if ((PresetRules.Error(name) ?? reserved) is { } error) { await _dialogs().Ask(_owner, error, Caption, MessageBoxButtons.OK, MessageBoxIcon.Warning); return false; }
+        if (store.Names().Contains(name, StringComparer.OrdinalIgnoreCase)
+            && await _dialogs().Ask(_owner, $"Replace the preset \"{name}\"?", Caption, MessageBoxButtons.YesNo, MessageBoxIcon.Question) != MessageBoxAnswer.Yes) return false;
+        try { Write(store, name, processor); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
+        {
+            Trace.Error(Trace.Ui, "MIDI processor preset: write: " + ex.Message);
+            await _dialogs().Ask(_owner, "The preset could not be saved: " + ex.Message, Caption, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return false;
+        }
+        FillProcessor();
+        return true;
+    }
+
+    /// <summary>Writes the processor's parameter values as a preset of its type (a failed write leaves an older preset intact).</summary>
+    internal static void Write(PresetFolderStore store, string name, PluginMidiProcessor processor)
+    {
+        var bytes = System.Text.Encoding.UTF8.GetBytes(processor.Params);
+        FilePathPolicy.WriteAtomically(store.PathOf(name), s => s.Write(bytes), createDirectory: true);
+    }
+
+    /// <summary>A preset's values for a processor of that type: only the parameters the type has, numbers inside their range, missing ones at their default. Null when unreadable.</summary>
+    internal static string? Read(PresetFolderStore store, string type, string name)
+    {
+        try { return Normalize(type, System.Text.Encoding.UTF8.GetString(InputLimits.ReadBoundedBytes(store.PathOf(name), PluginMidiProcessor.MaxParamsChars * 4L, "preset"))); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
+        {
+            Trace.Error(Trace.Ui, "MIDI processor preset: read: " + ex.Message);
+            return null;
+        }
+    }
+
+    /// <summary>Parameter text as the checked values of that type, written one way, so two texts with the same values compare equal. Null when unreadable.</summary>
+    internal static string? Normalize(string type, string text)
+    {
+        if (MidiProcessorCatalog.Find(type) is not { } info) return null;
+        try
+        {
+            if (text.Length > PluginMidiProcessor.MaxParamsChars || JsonNode.Parse(text) is not JsonObject) return null;
+            var parsed = MidiProcessorCatalog.ParseParams(new PluginMidiProcessor { Type = type, Params = text }, info);
+            var values = new JsonObject();
+            foreach (var p in info.Params)
+                values[p.Key] = p.Kind == MidiParamKind.Number && parsed[p.Key]!.GetValue<double>() is var v ? Math.Clamp(double.IsFinite(v) ? v : p.Default, p.Min, p.Max) : parsed[p.Key]!.DeepClone();
+            return values.ToJsonString();
+        }
+        catch (Exception ex) when (ex is InvalidDataException or JsonException or InvalidOperationException or FormatException)
+        {
+            Trace.Error(Trace.Ui, "MIDI processor preset: values: " + ex.Message);
+            return null;
+        }
+    }
+}

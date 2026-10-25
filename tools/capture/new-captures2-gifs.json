@@ -1,0 +1,21 @@
+[
+ {"theme": "dark"},
+ {"timeline-scroll": 1},
+ {"frames": "images/section-move", "fps": 6, "scale": 1, "target": "timeline", "hold": 900, "sequence": [
+   [{"pointer": "press", "bar": 10.5, "zone": "section"}],
+   [{"pointer": "move", "by-bars": 1}],
+   [{"pointer": "move", "by-bars": 3}],
+   [{"pointer": "move", "by-bars": 6}],
+   [{"pointer": "move", "by-bars": 8}],
+   [{"pointer": "release"}]]},
+ {"timeline-scroll": 15},
+ {"record-fake": "start", "bar": 19},
+ {"frames": "images/recording", "fps": 6, "scale": 1, "target": "timeline", "hold": 900, "sequence": [
+   [{"record-fake": "grow", "sec": 0.3}],
+   [{"record-fake": "grow", "sec": 0.9}],
+   [{"record-fake": "grow", "sec": 1.5}],
+   [{"record-fake": "grow", "sec": 2.1}],
+   [{"record-fake": "grow", "sec": 2.7}],
+   [{"record-fake": "grow", "sec": 3.3}],
+   [{"record-fake": "stop", "sec": 3.3}]]}
+]

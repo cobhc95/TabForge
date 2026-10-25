@@ -2,6 +2,8 @@ using TabForge.AudioEngine.Plugins;
 
 namespace TabForge.AudioEngine.Isolation;
 
+// Owns: the --plugin-info probe loading one approved plug-in in a throwaway process (fail-closed hash check).
+
 /// <summary>
 /// `TabForge.exe --plugin-info &lt;path&gt; &lt;approved sha256&gt;`: loads one plug-in in a throwaway process and prints
 /// "role|vendor|name" (role = Instrument or Effect). A plug-in that crashes here only ends this process.
@@ -19,7 +21,7 @@ public static class PluginInfoProbe
         try
         {
             // VST3: prefer the bundle's instrument class (a bundle with one reports it); VST2 reports its own role.
-            using var plugin = PluginFactory.CreateVerified(path, "", isInstrument: true, 48000, 256, args.Length > 2 ? args[2] : "", required: true, create);
+            using var plugin = PluginFactory.CreateVerified(path, "", isInstrument: true, 48000, 256, args.Length > 2 ? args[2] : "", locationTrusted: false, new EngineThreads(new EngineLogWriter()), create);
             var role = plugin.IsInstrument ? "Instrument" : "Effect";
             Console.Out.WriteLine(plugin is Vst2Plugin vst2 ? $"{role}|{Clean(vst2.Vendor)}|{Clean(vst2.ProductName)}" : $"{role}||");
             Console.Out.Flush();

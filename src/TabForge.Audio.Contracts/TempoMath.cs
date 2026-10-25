@@ -2,6 +2,8 @@ using System.Runtime.CompilerServices;
 
 namespace TabForge.Audio.Contracts;
 
+// Owns: the one tempo-to-time conversion shared by engine and app (allocation-free, audio-thread safe, exact operand order).
+
 /// <summary>
 /// The one place where a tempo (quarter notes per minute) is turned into time and back. The engine's MIDI processors and the
 /// application's playback and timeline code both call it, so a beat is the same length everywhere.

@@ -8,8 +8,10 @@ using TabForge.AudioEngine.Mixing;
 
 namespace TabForge.AudioEngine;
 
+// Owns: the audio engine process entry point and IPC side (pipe, shared block, command reader, watchdogs, main loop).
+
 /// <summary>
-/// Entry point of the audio engine process (TabForge.exe --audio-engine &lt;session&gt; &lt;parent pid&gt;).
+/// Entry point of the audio engine process (TabForge.exe --audio-engine &lt;session&gt; &lt;parent pid&gt; &lt;log file&gt;).
 /// Connects to TabForge's pipe, opens the shared block, and runs: commands and plug-in windows on the main thread,
 /// audio on the device thread. Exits when TabForge closes the pipe or its process ends.
 /// This class keeps the process and IPC side only (pipe, shared block, command reader, watchdogs, main loop). The engine
@@ -23,7 +25,9 @@ public static partial class EngineHost
     private static volatile bool _exit;
 
     /// <summary>The per-session state and handlers (see <see cref="EngineSession"/>); <see cref="Run"/> starts a fresh one.</summary>
-    private static EngineSession _session = new();
+    private static EngineSession _session = new(new EngineLogWriter());
+    private static EngineLogWriter Log => _session.Log;
+    private static EngineThreads Threads => _session.Threads;
 
     /// <summary>The shared block with TabForge (null in a process that is neither the engine nor the headless harness).</summary>
     internal static SharedBlock? Shared => _shared;
@@ -34,15 +38,20 @@ public static partial class EngineHost
     public static int Run(string[] args)
     {
         if (args.Length < 3 || !int.TryParse(args[2], out var parentId)) return 2;
-        _session = new EngineSession();   // before any thread starts: the session owns every per-run collection
-        EngineThreads.MarkMainThread();
+        // The run's log file is named by TabForge (args[3]) and created new here; without one this run keeps no log.
+        // The composition root of the engine process: one log writer, handed to the session (which owns the main-thread queue and passes both on).
+        var log = new EngineLogWriter();
+        if (args.Length > 3) log.CreateForRun(args[3]);
+        _session = new EngineSession(log);   // before any thread starts: the session owns every per-run collection
+        Threads.MarkMainThread();
         var s = _session;
         var session = args[1];
-        EngineThreads.PrepareProcess();
+        AudioThreadSetup.PrepareProcess();
         // 1 ms timer resolution for the engine's lifetime: isolated plug-in waits and the main loop's timed waits stay precise.
         NativeTimer.Acquire();
         _timerHeld = true;
         if (session.Length is < 8 or > 64 || !session.All(char.IsLetterOrDigit)) return 2;
+        if (args.Length < 5 || !PipeAuth.IsWellFormed(args[4])) return 2;   // no launch token: not started by TabForge
         Process? parent;
         try { parent = Process.GetProcessById(parentId); s.UiProcessId = parentId; }
         catch (ArgumentException) { return 3; }
@@ -53,84 +62,102 @@ public static partial class EngineHost
             // Asynchronous (overlapped) handle: a pending read must never block replies written from another thread.
             _pipe = new NamedPipeClientStream(".", EngineNames.Pipe(session), PipeDirection.InOut, PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
             _pipe.Connect(5000);
+            PipeAuth.WriteHello(_pipe, args[4]);   // first bytes: TabForge refuses a peer without the launch token
         }
-        catch (Exception ex) { EngineLog.Write($"engine could not connect: {ex.Message}"); return 4; }
+        catch (Exception ex) { Log.Write($"engine could not connect: {ex.Message}"); return 4; }
 
+        // Markers that tell a crash from an orderly end: the log says how this run began, why it ended, and any exception that nobody caught.
+        Log.Write($"engine started (pid {Environment.ProcessId}, TabForge pid {parentId})");
+        AppDomain.CurrentDomain.UnhandledException += OnUnhandled;
+        TaskScheduler.UnobservedTaskException += OnUnobserved;
         var reader = new Thread(ReadCommands) { IsBackground = true, Name = "TabForge engine commands" };
         reader.Start();
         var lastIdle = Stopwatch.GetTimestamp();
-        var lastMetrics = Stopwatch.GetTimestamp();
-        var lastSessionCheck = Stopwatch.GetTimestamp();
         var lastLog = lastIdle;
         new Thread(MainThreadWatchdog) { IsBackground = true, Name = "TabForge engine watchdog" }.Start();
-        // Tuner: while TabForge's tuner window is open and an input is open (a track armed), detect the pitch ~25 times a second.
-        Audio.PitchDetector? tunerDetector = null; float[]? tunerWindow = null; var tunerRate = 0; var lastTuner = 0L; var tunerShownSilence = false;
-        void TunerTick()
-        {
-            if (_shared is not { } sh) return;
-            if (!sh.TunerOn || s.Input is not { } input)
-            {
-                if (!tunerShownSilence) { sh.SetTuner(0, 0); tunerShownSilence = true; }
-                return;
-            }
-            if (Stopwatch.GetElapsedTime(lastTuner).TotalMilliseconds < 40) return;
-            lastTuner = Stopwatch.GetTimestamp();
-            if (tunerDetector is null || tunerRate != s.SampleRate)
-            {
-                tunerRate = s.SampleRate; tunerDetector = new Audio.PitchDetector(tunerRate); tunerWindow = new float[tunerDetector.RawWindow];
-            }
-            var clarity = 0f;
-            var hz = input.CopyLatestMono(tunerWindow!) ? tunerDetector.Detect(tunerWindow!, out clarity) : 0f;
-            if (hz == 0) clarity = 0;
-            sh.SetTuner(hz, clarity);
-            tunerShownSilence = hz == 0;
-        }
-        // ~30 Hz housekeeping (created once: the loop allocates nothing per turn); false ends the loop.
-        bool IdleTick()
-        {
-            TunerTick();
-            // An input that stopped (a fault in its callback, the device gone): one notice; the output keeps playing.
-            if (s.Input?.TakeFault() is { } inputFault) { EngineLog.Write($"input stopped: {inputFault}"); Send(EngineEvent.InputError, w => w.WriteString($"Audio input stopped: {inputFault}")); }
-            // Every 10 s while audio runs: callback timing in the engine log (p95 / p99 / max against the block
-            // deadline, deadline misses = likely dropouts, late calls = the device starved us, audio-thread allocations).
-            if (s.FollowingWindowsVolume && Stopwatch.GetElapsedTime(lastSessionCheck).TotalSeconds >= 1)
-            {
-                lastSessionCheck = Stopwatch.GetTimestamp();
-                s.RefreshSessionVolume();
-            }
-            if (s.Mix is { } metricsMix && Stopwatch.GetElapsedTime(lastMetrics).TotalSeconds >= 10)
-            {
-                lastMetrics = Stopwatch.GetTimestamp();
-                var m = metricsMix.Metrics.TakeAndReset();
-                if (m.Calls > 0)
-                    EngineLog.Write($"audio callback: {m.Calls} calls, p95 {m.P95Ms:0.0} ms, p99 {m.P99Ms:0.0} ms, max {m.MaxMs:0.0} ms, " +
-                                    $"deadline misses {m.DeadlineMisses}, late calls {m.LateCalls}, allocated {m.AllocatedBytes} B, " +
-                                    $"MIDI dropped {m.MidiDropped}, MIDI deferred {m.MidiDeferred}, device block {m.BlockFrames} frames");   // the granted size, which can differ from the requested one (WASAPI exclusive)
-            }
-            if (parent.HasExited) return false;
-            // Watchdog: a plug-in that freezes the audio thread would silence everything. End the engine; the
-            // breadcrumb names the plug-in, TabForge switches it off and restarts the engine without it.
-            if (s.Player?.PlaybackState == PlaybackState.Playing && s.Mix is { } mix
-                && Stopwatch.GetElapsedTime(mix.Heartbeat).TotalSeconds > 4)
-            {
-                EngineLog.Write("audio thread stopped responding; ending the engine so TabForge can recover");
-                HardExit(EngineWatchdog.ExitAudioHung);   // TabForge blames the audio thread's breadcrumb, not a main-thread load
-            }
-            return true;
-        }
-        Func<bool> idle = IdleTick;
+        Func<bool> idle = new IdleWork(s, parent).Tick;
         while (!_exit)
         {
             Volatile.Write(ref _busySince, Stopwatch.GetTimestamp());
-            EngineThreads.RunPending();
+            Threads.RunPending();
             Volatile.Write(ref _busySince, 0);
             if (s.Retired.Count > 0) s.Retired.Collect();
             s.ReportMisbehaving();
             if (s.LogWatch.Count > 0 && Stopwatch.GetElapsedTime(lastLog).TotalMilliseconds >= 50) { lastLog = Stopwatch.GetTimestamp(); s.PumpMidiLog(); }
-            if (!EditorWindows.PumpOnce(ref lastIdle, idle)) break;
+            if (!_session.Editors.PumpOnce(ref lastIdle, idle)) break;
         }
         Shutdown();
         return 0;
+    }
+
+    /// <summary>The ~30 Hz housekeeping of the main loop (created once: the loop allocates nothing per turn): tuner, input faults, volume follow, callback metrics and the watchdogs.</summary>
+    private sealed class IdleWork
+    {
+        private readonly EngineSession _s;
+        private readonly Process _parent;
+        private long _lastMetrics = Stopwatch.GetTimestamp();
+        private long _lastSessionCheck = Stopwatch.GetTimestamp();
+        // Tuner: while the tuner window of TabForge is open and an input is open (a track armed), detect the pitch ~25 times a second.
+        private Audio.PitchDetector? _tunerDetector; private float[]? _tunerWindow; private int _tunerRate; private long _lastTuner; private bool _tunerShownSilence;
+
+        public IdleWork(EngineSession s, Process parent) { _s = s; _parent = parent; }
+
+        private void TunerTick()
+        {
+            if (_shared is not { } sh) return;
+            if (!sh.TunerOn || _s.Input is not { } input)
+            {
+                if (!_tunerShownSilence) { sh.SetTuner(0, 0); _tunerShownSilence = true; }
+                return;
+            }
+            if (Stopwatch.GetElapsedTime(_lastTuner).TotalMilliseconds < 40) return;
+            _lastTuner = Stopwatch.GetTimestamp();
+            if (_tunerDetector is null || _tunerRate != _s.SampleRate)
+            {
+                _tunerRate = _s.SampleRate; _tunerDetector = new Audio.PitchDetector(_tunerRate); _tunerWindow = new float[_tunerDetector.RawWindowMax];
+            }
+            _tunerDetector.WindowMs = _s.TunerWindowMs;
+            var clarity = 0f;
+            var hz = input.CopyLatestMono(_tunerWindow!) ? _tunerDetector.Detect(_tunerWindow!, out clarity) : 0f;
+            if (hz == 0) clarity = 0;
+            sh.SetTuner(hz, clarity);
+            _tunerShownSilence = hz == 0;
+        }
+
+        public bool Tick()
+        {
+            TunerTick();
+            // An input that stopped (a fault in its callback, the device gone): one notice; the output keeps playing.
+            if (_s.Input?.TakeFault() is { } inputFault) { Log.Write($"input stopped: {inputFault}"); Send(EngineEvent.InputError, w => w.WriteString($"Audio input stopped: {inputFault}")); }
+            // Every 10 s while audio runs: callback timing in the engine log (p95 / p99 / max against the block
+            // deadline, deadline misses = likely dropouts, late calls = the device starved us, audio-thread allocations).
+            if (_s.FollowingWindowsVolume && Stopwatch.GetElapsedTime(_lastSessionCheck).TotalSeconds >= 1)
+            {
+                _lastSessionCheck = Stopwatch.GetTimestamp();
+                _s.RefreshSessionVolume();
+            }
+            if (_s.Mix is { } metricsMix && Stopwatch.GetElapsedTime(_lastMetrics).TotalSeconds >= 10)
+            {
+                _lastMetrics = Stopwatch.GetTimestamp();
+                var m = metricsMix.Metrics.TakeAndReset();
+                // MIDI dropped (chain buffers full) / deferred (pending list full, ring kept it) / ring dropped (producer found the
+                // shared ring full): late vs lost, each with its own fix (chain size, pending size, producer rate).
+                if (m.Calls > 0)
+                    Log.Write($"audio callback: {m.Calls} calls, p95 {m.P95Ms:0.0} ms, p99 {m.P99Ms:0.0} ms, max {m.MaxMs:0.0} ms, " +
+                                    $"deadline misses {m.DeadlineMisses}, late calls {m.LateCalls}, allocated {m.AllocatedBytes} B, " +
+                                    $"MIDI dropped {m.MidiDropped}, MIDI deferred {m.MidiDeferred}, ring dropped {(_shared is not null ? _shared.DroppedWrites : 0)}, device block {m.BlockFrames} frames");   // the granted size, which can differ from the requested one (WASAPI exclusive)
+            }
+            if (_parent.HasExited) { Log.Write("TabForge has exited; the engine ends"); return false; }
+            // Watchdog: a plug-in that freezes the audio thread would silence everything. End the engine; the
+            // breadcrumb names the plug-in, TabForge switches it off and restarts the engine without it.
+            if (_s.Player?.PlaybackState == PlaybackState.Playing && _s.Mix is { } mix
+                && Stopwatch.GetElapsedTime(mix.Heartbeat).TotalSeconds > 4)
+            {
+                Log.Write("audio thread stopped responding; ending the engine so TabForge can recover");
+                HardExit(EngineWatchdog.ExitAudioHung);   // TabForge blames the audio thread's breadcrumb, not a main-thread load
+            }
+            return true;
+        }
     }
 
     private static long _busySince;
@@ -150,7 +177,7 @@ public static partial class EngineHost
             try
             {
                 var since = Volatile.Read(ref _busySince);
-                if (since == 0 || _shared is not { } shared) continue;
+                if (since == 0 || _session is { } session && EngineWatchdog.PanelHolds(Volatile.Read(ref session.PanelOpenedTicks), Stopwatch.GetTimestamp()) || _shared is not { } shared) continue;   // an ASIO control panel is modal: the user, not a hang, holds the main thread (up to its cap)
                 var busySec = Stopwatch.GetElapsedTime(since).TotalSeconds;
                 var call = shared.MainCall();
                 if (call is { Blame: false }) continue;   // a bounded wait on an isolated plug-in: its own timeout applies
@@ -165,20 +192,20 @@ public static partial class EngineHost
                         notified = slow.StartTicks;
                         if (callSec >= EngineWatchdog.LongNoticeSec) notifiedLong = slow.StartTicks;
                         var seconds = (int)(callSec ?? 0);
-                        EngineLog.Write($"plug-in call slow ({slow.Kind}, {seconds} s so far, limit {EngineWatchdog.LimitSec(slow.Kind)} s): {slow.Path}");
+                        Log.Write($"plug-in call slow ({slow.Kind}, {seconds} s so far, limit {EngineWatchdog.LimitSec(slow.Kind)} s): {slow.Path}");
                         Send(EngineEvent.PluginSlow, w => { w.Write(slow.Slot); w.Write(slow.Index); w.WriteString(slow.Path); w.Write((int)slow.Kind); w.Write(seconds); });
                         break;
                     case EngineWatchdog.Verdict.PluginHung when call is { } hung:
-                        EngineLog.Write($"plug-in stuck for over {EngineWatchdog.LimitSec(hung.Kind)} s ({hung.Kind}): {hung.Path}; ending the engine so TabForge can recover");
+                        Log.Write($"plug-in stuck for over {EngineWatchdog.LimitSec(hung.Kind)} s ({hung.Kind}): {hung.Path}; ending the engine so TabForge can recover");
                         HardExit(EngineWatchdog.ExitPluginHung);
                         break;
                     case EngineWatchdog.Verdict.UnattributedHang:
-                        EngineLog.Write($"engine main thread busy for over {EngineWatchdog.UnattributedLimitSec} s outside any plug-in call; ending the engine (unattributed, nothing is blamed)");
+                        Log.Write($"engine main thread busy for over {EngineWatchdog.UnattributedLimitSec} s outside any plug-in call; ending the engine (unattributed, nothing is blamed)");
                         HardExit(EngineWatchdog.ExitUnattributedHang);
                         break;
                 }
             }
-            catch (Exception ex) when (ex is not OutOfMemoryException) { }
+            catch (Exception ex) when (ex is not OutOfMemoryException) { Log.Write("watchdog: check failed: " + ex); }
         }
     }
 
@@ -189,7 +216,7 @@ public static partial class EngineHost
     /// </summary>
     internal static void HardExit(int exitCode)
     {
-        EngineLog.Flush(1000);   // the reason for the exit must reach the log (TerminateProcess runs no handlers)
+        Log.Flush(1000);   // the reason for the exit must reach the log (TerminateProcess runs no handlers)
         try { TerminateProcess(GetCurrentProcess(), (uint)exitCode); }
         catch (Exception ex) when (ex is DllNotFoundException or EntryPointNotFoundException) { }
         Environment.Exit(exitCode);
@@ -210,16 +237,17 @@ public static partial class EngineHost
         {
             while (!_exit && _pipe is { IsConnected: true })
             {
-                var frame = Frames.Read(_pipe);   // a broken stream (not a bad payload) ends the loop below
-                if (frame is null) break;
-                var (type, r) = frame.Value;
+                var next = Frames.Read(_pipe, FrameLimits.ForCommand);   // a broken stream (not a bad payload) ends the loop below
+                if (next is null) break;
+                using var frame = next.Value;
+                var (type, r) = frame;
                 if (HandleFrame(type, r)) { bad = 0; continue; }
-                if (++bad >= MaxBadFrames) { EngineLog.Write($"{bad} malformed commands in a row; closing the command pipe"); break; }
+                if (++bad >= MaxBadFrames) { Log.Write($"{bad} malformed commands in a row; closing the command pipe"); break; }
             }
         }
         catch (Exception ex) when (ex is IOException or InvalidDataException or EndOfStreamException or ObjectDisposedException)
         {
-            EngineLog.Write($"command pipe closed: {ex.Message}");
+            Log.Write($"command pipe closed: {ex.Message}");
         }
         _exit = true;
     }
@@ -234,166 +262,15 @@ public static partial class EngineHost
         try { HandleCommand(type, r); return true; }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
-            EngineLog.Write($"command {(EngineCommand)type} dropped: {ex.GetType().Name}: {ex.Message}");
+            Log.Write($"command {(EngineCommand)type} dropped: {ex.GetType().Name}: {ex.Message}");
             return false;
         }
     }
 
+#if TABFORGE_TEST_HOOKS
+    /// <summary>Self-test hooks are on only when the engine process was started with TABFORGE_ENGINE_TEST_HOOKS=1 (and this build has them).</summary>
     internal static bool TestHooks => Environment.GetEnvironmentVariable("TABFORGE_ENGINE_TEST_HOOKS") == "1";
-
-    /// <summary>
-    /// Reader thread: parses one command (bounded reads) and posts its <see cref="EngineSession"/> handler to the main thread. Only the
-    /// transport (SetPosition / SetTransport), chain-load assembly, RenderCancel and Panic act here, on state built for this thread.
-    /// The posted lambdas read <see cref="_session"/> when they run, as before.
-    /// </summary>
-    private static void HandleCommand(byte type, BinaryReader r)
-    {
-                // Parse on this thread (bounded reads), act on the main thread.
-                switch ((EngineCommand)type)
-                {
-                    case EngineCommand.Ping: { var seq = PingMessage.Read(r).Seq; EngineThreads.Post(() => Send(EngineEvent.Pong, w => w.Write(seq))); break; }   // answered by the main thread: a deaf main thread misses it
-                    case EngineCommand.TestHang:
-                    {
-                        var seconds = Math.Clamp(TestHangMessage.Read(r).Seconds, 1, 120);
-                        if (!TestHooks) { EngineLog.Write("test hang ignored (test hooks are off)"); break; }
-                        EngineThreads.Post(() => { EngineLog.Write($"test hook: main thread sleeps {seconds} s"); Thread.Sleep(seconds * 1000); });
-                        break;
-                    }
-                    case EngineCommand.Configure: { var c = r.ReadConfig(); EngineThreads.Post(() => _session.Configure(c)); break; }
-                    case EngineCommand.LoadChain:
-                    {
-                        _session.ChainLoads.OnLoadChain(r);   // the states follow one frame per plug-in; built on ChainCommit
-                        break;
-                    }
-                    case EngineCommand.ChainState: _session.ChainLoads.OnChainState(r); break;
-                    case EngineCommand.ChainCommit:
-                    {
-                        if (_session.ChainLoads.OnCommit(r) is not { } ready) break;
-                        EngineThreads.Post(() => _session.CommitChain(ready));
-                        break;
-                    }
-                    case EngineCommand.RemoveTrack: { var slot = RemoveTrackMessage.Read(r).Slot; EngineThreads.Post(() => _session.RemoveChain(slot)); break; }
-                    case EngineCommand.OpenEditor:
-                    {
-                        var m = OpenEditorMessage.Read(r); var window = new IntPtr(m.Window);
-                        EngineThreads.Post(() => _session.OpenEditor(m.Slot, m.Index, window, m.Dark, m.Docked, m.OnTop));
-                        break;
-                    }
-                    case EngineCommand.SetTrackMix:
-                    {
-                        var (slot, volume, pan) = SetTrackMixMessage.Read(r);
-                        if (slot < 0 || slot >= MixEngine.TotalSlots) throw new InvalidDataException($"SetTrackMix: slot {slot} out of range");
-                        EngineThreads.Post(() => _session.SetTrackMix(slot, volume, pan));
-                        break;
-                    }
-                    case EngineCommand.SetPluginGain:
-                    {
-                        var (slot, index, db) = SetPluginGainMessage.Read(r);
-                        var gain = db <= -59.9 ? 0f : (float)Math.Pow(10, Math.Clamp(db, -60, 12) / 20);
-                        EngineThreads.Post(() => _session.SetPluginGain(slot, index, gain));
-                        break;
-                    }
-                    case EngineCommand.SetPluginBypass:
-                    {
-                        var (slot, index, enabled) = SetPluginBypassMessage.Read(r);
-                        EngineThreads.Post(() => _session.SetPluginBypass(slot, index, enabled));
-                        break;
-                    }
-                    case EngineCommand.SetSynth:
-                    {
-                        var (slot, on) = SetSynthMessage.Read(r);
-                        if (slot < 0 || slot >= MixEngine.TotalSlots) break;
-                        EngineThreads.Post(() => _session.SetSynth(slot, on));
-                        break;
-                    }
-                    case EngineCommand.SetMidiRoute:
-                    {
-                        var (slot, index, source, rawMask) = SetMidiRouteMessage.Read(r); var mask = rawMask & 0xFFFF;
-                        if (source < -2 || source >= MixEngine.MaxSlots || slot < 0 || slot >= MixEngine.MaxSlots) break;
-                        EngineThreads.Post(() => _session.SetMidiRoute(slot, index, source, mask));
-                        break;
-                    }
-                    case EngineCommand.SetPluginWiring:
-                    {
-                        var (slot, index, flags) = SetPluginWiringMessage.Read(r);
-                        if (slot < 0 || slot >= MixEngine.TotalSlots) break;
-                        EngineThreads.Post(() => _session.SetPluginWiring(slot, index, flags));
-                        break;
-                    }
-                    case EngineCommand.SetMidiProcessors: ReadSetMidiProcessors(r); break;
-                    case EngineCommand.SetGraph: ReadSetGraph(r); break;
-                    case EngineCommand.SetMidiLogWatch:
-                    {
-                        var (slot, watch) = SetMidiLogWatchMessage.Read(r);
-                        if (slot < 0 || slot >= MixEngine.MaxSlots) break;
-                        EngineThreads.Post(() => _session.SetMidiLogWatch(slot, watch));
-                        break;
-                    }
-                    case EngineCommand.SetClips: ReadSetClips(r); break;
-                    case EngineCommand.SetArm:
-                    {
-                        var (slot, armed, rawMode, monitor) = SetArmMessage.Read(r); var mode = Math.Clamp(rawMode, 0, AudioInputAddress.MaxMode);
-                        if (slot < 0 || slot >= MixEngine.MaxSlots) throw new InvalidDataException($"SetArm: track slot {slot} out of range");
-                        EngineThreads.Post(() => _session.SetArm(slot, armed, mode, monitor));
-                        break;
-                    }
-                    case EngineCommand.SetPosition: ReadSetPosition(r); break;
-                    case EngineCommand.Record: ReadRecord(r); break;
-                    case EngineCommand.CloseEditor:
-                    {
-                        var (slot, index) = CloseEditorMessage.Read(r);
-                        EngineThreads.Post(() => _session.CloseEditor(slot, index));
-                        break;
-                    }
-                    case EngineCommand.GetPrograms:
-                    {
-                        var (slot, index) = GetProgramsMessage.Read(r);
-                        EngineThreads.Post(() => _session.SendPrograms(slot, index));
-                        break;
-                    }
-                    case EngineCommand.GetPluginInfo:
-                    {
-                        var (slot, requestId) = GetPluginInfoMessage.Read(r);
-                        EngineThreads.Post(() => _session.SendPluginInfo(slot, requestId));
-                        break;
-                    }
-                    case EngineCommand.SetProgram:
-                    {
-                        var (slot, index, program) = SetProgramMessage.Read(r);
-                        EngineThreads.Post(() => _session.SetProgram(slot, index, program));
-                        break;
-                    }
-                    case EngineCommand.SetState:
-                    {
-                        var (slot, index, state) = SetStateMessage.Read(r);
-                        EngineThreads.Post(() => _session.SetState(slot, index, state));
-                        break;
-                    }
-                    case EngineCommand.GetStates: { var (slot, requestId) = GetStatesMessage.Read(r); EngineThreads.Post(() => _session.SendStates(slot, requestId)); break; }
-                    case EngineCommand.RenderOffline:
-                    {
-                        RenderSpec spec;
-                        try { spec = RenderSpec.Read(r); }
-                        catch (Exception ex) when (ex is InvalidDataException or EndOfStreamException)
-                        {
-                            Send(EngineEvent.RenderFailed, w => { w.WriteString("The render request was not valid: " + ex.Message); w.Write(false); w.WriteString(""); });
-                            break;
-                        }
-                        EngineThreads.Post(() => _session.BeginRender(spec));
-                        break;
-                    }
-                    case EngineCommand.RenderCancel: _session.RenderCancel = true; break;   // reader thread: works while the engine renders
-                    case EngineCommand.Panic: { var s = _session; if (!s.RenderActive) Volatile.Read(ref s.Mix)?.Panic(); break; }
-                    case EngineCommand.PanicSlots: ReadPanicSlots(r); break;
-                    case EngineCommand.SetTransport: ReadSetTransport(r); break;
-                    case EngineCommand.MeasurePitch: ReadMeasurePitch(r); break;
-                    case EngineCommand.SetAutoPitch: ReadSetAutoPitch(r); break;
-                    case EngineCommand.SetWindowsPathOffset: { var db = Math.Clamp(SetWindowsPathOffsetMessage.Read(r).Db, -60f, 12f); EngineThreads.Post(() => _session.SetWindowsPathOffset(db)); break; }
-                    case EngineCommand.SetLiveLimiter: { var on = SetLiveLimiterMessage.Read(r).On; EngineThreads.Post(() => _session.SetLiveLimiter(on)); break; }
-                    case EngineCommand.SetMasterTap: { var on = SetMasterTapMessage.Read(r).On; EngineThreads.Post(() => { _session.Tap.Sink ??= SendMasterAudio; _session.Tap.Enable(on, _session.SampleRate); }); break; }
-                    case EngineCommand.Shutdown: _exit = true; break;
-                }
-    }
+#endif
 
     /// <summary>Any thread: one event frame to TabForge (dropped when there is no pipe, as in the headless harness).</summary>
     internal static void Send(EngineEvent type, Action<BinaryWriter>? payload = null)
@@ -405,14 +282,25 @@ public static partial class EngineHost
     private static void SendMasterAudio(int rate, long firstFrame, float[] data, int frames) =>
         Send(EngineEvent.MasterAudio, w => { w.Write(rate); w.Write(firstFrame); w.Write(frames); w.Write(System.Runtime.InteropServices.MemoryMarshal.AsBytes(data.AsSpan(0, frames * 2))); });
 
+    private static void OnUnhandled(object? sender, UnhandledExceptionEventArgs e)
+    {
+        Log.Write("unhandled exception: " + e.ExceptionObject);
+        Log.Flush(1000);   // the process is ending: the line must reach the file
+    }
+
+    private static void OnUnobserved(object? sender, UnobservedTaskExceptionEventArgs e) => Log.Write("unobserved task exception: " + e.Exception);
+
     private static void Shutdown()
     {
+        AppDomain.CurrentDomain.UnhandledException -= OnUnhandled;
+        TaskScheduler.UnobservedTaskException -= OnUnobserved;
+        Log.Write("engine stopped");
         _exit = true;
         _session.Shutdown();
-        try { _pipe?.Dispose(); } catch (Exception ex) { EngineLog.Write($"shutdown: pipe: {ex.Message}"); }
-        try { _shared?.Dispose(); } catch (Exception ex) { EngineLog.Write($"shutdown: shared: {ex.Message}"); }
+        try { _pipe?.Dispose(); } catch (Exception ex) { Log.Write($"shutdown: pipe: {ex.Message}"); }
+        try { _shared?.Dispose(); } catch (Exception ex) { Log.Write($"shutdown: shared: {ex.Message}"); }
         if (_timerHeld) { _timerHeld = false; NativeTimer.Release(); }
-        EngineLog.Flush();
+        Log.Flush();
     }
 
     private static bool _timerHeld;

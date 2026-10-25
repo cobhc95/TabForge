@@ -4,6 +4,8 @@ using TabForge.Audio.Contracts;
 
 namespace TabForge.AudioEngine.Output;
 
+// Owns: opening the audio device chosen in Settings (WASAPI shared/exclusive, ASIO, DirectSound).
+
 /// <summary>Opens the audio device chosen in Settings > Audio & VST (WASAPI shared / exclusive, ASIO, DirectSound).</summary>
 public static class AudioOutputFactory
 {
@@ -21,17 +23,42 @@ public static class AudioOutputFactory
     /// <summary>Channel names of the ASIO driver opened last (empty for other drivers).</summary>
     public static (string[] Inputs, string[] Outputs) AsioChannels { get; private set; } = (Array.Empty<string>(), Array.Empty<string>());
 
+    /// <summary>The rate used when the setting is "Device default" (0) and the device gives none of its own.</summary>
+    public const int DefaultRate = 48000;
+
     /// <summary>The sample rate the engine should run at for this configuration.</summary>
     public static int SampleRateFor(EngineConfig config)
     {
-        if (config.Driver != WasapiShared) return config.SampleRate;
+        var chosen = config.SampleRate > 0 ? config.SampleRate : DefaultRate;
+        if (config.Driver == WasapiExclusive && config.SampleRate <= 0)
+        {
+            try
+            {
+                var device = FindRenderDevice(config.Device);
+                if (device is not null) return ExclusiveRate(device.AudioClient.MixFormat.SampleRate, rate => device.AudioClient.IsFormatSupported(AudioClientShareMode.Exclusive, WaveFormat.CreateIeeeFloatWaveFormat(rate, 2)), chosen);
+            }
+            catch (Exception ex) when (ex is System.Runtime.InteropServices.COMException or InvalidOperationException) { return chosen; } // swallow: an unreadable device keeps the default rate
+        }
+        if (config.Driver != WasapiShared) return chosen;
         // Shared mode runs at the device's own mix rate (no resampling in the chain).
-        try { return FindRenderDevice(config.Device)?.AudioClient.MixFormat.SampleRate ?? config.SampleRate; }
-        catch (Exception ex) when (ex is System.Runtime.InteropServices.COMException or InvalidOperationException) { return config.SampleRate; }
+        try { return FindRenderDevice(config.Device)?.AudioClient.MixFormat.SampleRate ?? chosen; }
+        catch (Exception ex) when (ex is System.Runtime.InteropServices.COMException or InvalidOperationException) { return chosen; }
+    }
+
+    /// <summary>The rate for exclusive WASAPI at "Device default": the device's mix rate when it accepts it exclusively, else the first usual rate it accepts, else <paramref name="fallback"/>.</summary>
+    public static int ExclusiveRate(int mixRate, Func<int, bool> accepts, int fallback) =>
+        mixRate > 0 && accepts(mixRate) ? mixRate : AudioDriverNames.SampleRates.FirstOrDefault(accepts, fallback);
+
+    /// <summary>The installed ASIO driver a device setting names; an empty or unknown name is the first installed one.</summary>
+    public static string ResolveAsioName(string device)
+    {
+        var names = AsioOut.GetDriverNames();
+        return names.FirstOrDefault(n => string.Equals(n, device, StringComparison.OrdinalIgnoreCase)) ?? names.FirstOrDefault()
+            ?? throw new InvalidOperationException("No ASIO driver is installed.");
     }
 
     /// <summary>Creates and initialises the output for <paramref name="source"/>; returns it with its latency in ms.</summary>
-    public static (IWavePlayer Player, int LatencyMs, string Description) Open(EngineConfig config, ISampleProvider source)
+    public static (IWavePlayer Player, int LatencyMs, string Description) Open(EngineConfig config, ISampleProvider source, EngineThreads threads)
     {
         if (config.Driver == Null)
         {
@@ -40,15 +67,13 @@ public static class AudioOutputFactory
             return (output, Math.Max(1, (int)Math.Round(output.BlockFrames * 1000.0 / source.WaveFormat.SampleRate)), "Null output (headless)");
         }
         // No blocking gen-2 GC pauses while the output runs (concurrent GC is on by default in the engine).
-        try { System.Runtime.GCSettings.LatencyMode = System.Runtime.GCLatencyMode.SustainedLowLatency; } catch (InvalidOperationException) { }
+        try { System.Runtime.GCSettings.LatencyMode = System.Runtime.GCLatencyMode.SustainedLowLatency; } catch (InvalidOperationException) { } // swallow: low-latency mode is unavailable on this runtime
         var blockMs = Math.Max(1, (int)Math.Ceiling(config.BufferSize * 1000.0 / source.WaveFormat.SampleRate));
         switch (config.Driver)
         {
             case Asio:
             {
-                var names = AsioOut.GetDriverNames();
-                var name = names.FirstOrDefault(n => string.Equals(n, config.Device, StringComparison.OrdinalIgnoreCase)) ?? names.FirstOrDefault()
-                    ?? throw new InvalidOperationException("No ASIO driver is installed.");
+                var name = ResolveAsioName(config.Device);
                 var asio = new AsioOut(name);
                 bool ok = false, atInit = false;
                 try
@@ -61,7 +86,7 @@ public static class AudioOutputFactory
                     var firstOut = Math.Clamp(config.AsioOutput, 0, Math.Max(0, outputs - 1));
                     asio.ChannelOffset = firstOut;
                     var monoOut = config.AsioOutputLast <= firstOut || outputs - firstOut < 2;   // one output channel: the mix is summed to it
-                    RequestBufferSize(asio, config.BufferSize);
+                    RequestBufferSize(asio, config.BufferSize, threads.Log);
                     // Inputs: every channel from the chosen first one (it is "Input 1") through the same driver: the only way
                     // input and output work together on an exclusive ASIO driver. Last <= first is the one-channel set-up:
                     // only that channel is opened (the capture copies it to inputs 1 and 2).
@@ -75,7 +100,7 @@ public static class AudioOutputFactory
                     if (config.AsioInputs && inputs >= 1) asio.InitRecordAndPlayback(provider, count, source.WaveFormat.SampleRate);
                     else asio.Init(provider);
                     AsioInputChannelsUsed = config.AsioInputs && inputs >= 1 ? count : 0;
-                    AsioInputLatencyFrames = ReadInputLatency(asio);
+                    AsioInputLatencyFrames = ReadInputLatency(asio, threads.Log);
                     var latency = Math.Max(1, (int)Math.Round(asio.PlaybackLatency * 1000.0 / source.WaveFormat.SampleRate));
                     ok = true;
                     return (asio, latency, $"ASIO: {name}");
@@ -84,12 +109,13 @@ public static class AudioOutputFactory
                 {
                     // An input-side problem never costs the output: once more with two input channels, then with none. A driver
                     // that cannot be opened at all (busy, unplugged) fails before the init step and is not opened again.
-                    try { asio.Dispose(); } catch (Exception) { }
+                    try { asio.Dispose(); } catch (Exception) { } // swallow: best-effort dispose of a failed device
                     ok = true;   // disposed here
-                    EngineLog.Write($"ASIO open failed with {(config.AllInputs ? "all inputs" : "inputs")} ({ex.Message}): retrying with {(config.AllInputs ? "two input channels" : "no inputs")}");
-                    return Open(config.AllInputs ? config with { AllInputs = false } : config with { AsioInputs = false }, source);
+                    threads.Log.Write($"ASIO open failed with {(config.AllInputs ? "all inputs" : "inputs")} ({ex.Message}): retrying with {(config.AllInputs ? "two input channels" : "no inputs")}");
+                    return Open(config.AllInputs ? config with { AllInputs = false } : config with { AsioInputs = false }, source, threads);
                 }
-                finally { if (!ok) { try { asio.Dispose(); } catch (Exception) { } } }
+                finally { if (!ok) { try { asio.Dispose(); } catch (Exception) { } // swallow: best-effort dispose of a failed device
+ } }
             }
             case DirectSound:
             {
@@ -98,7 +124,7 @@ public static class AudioOutputFactory
                 // starves whenever the polling thread is delayed. 80 ms, or 4 blocks if larger, keeps a safe margin.
                 var latency = Math.Max(80, blockMs * 4);
                 var ds = device is null ? new DirectSoundOut(latency) : new DirectSoundOut(device.Guid, latency);
-                ds.Init(new RenderWatch(source, latency).ToWaveProvider());
+                ds.Init(new RenderWatch(source, latency, threads).ToWaveProvider());
                 return (ds, latency, $"DirectSound: {device?.Description ?? "default device"}");
             }
             default:
@@ -118,12 +144,12 @@ public static class AudioOutputFactory
     /// its buffers with (kept inside the driver's minimum, maximum and granularity). A driver that insists on its own panel
     /// setting keeps that; the real size is read back and shown.
     /// </summary>
-    private static void RequestBufferSize(AsioOut asio, int wanted)
+    private static void RequestBufferSize(AsioOut asio, int wanted, EngineLogWriter log)
     {
         try
         {
             var field = typeof(AsioOut).GetField("driver", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-            if (field is null) { EngineLog.Write("buffer size request not possible: AsioOut driver field not found"); return; }
+            if (field is null) { log.Write("buffer size request not possible: AsioOut driver field not found"); return; }
             var capability = (field.GetValue(asio) as NAudio.Wave.Asio.AsioDriverExt)?.Capabilities;
             if (capability is null || wanted <= 0) return;
             var min = capability.BufferMinSize; var max = capability.BufferMaxSize; var step = capability.BufferGranularity;
@@ -134,7 +160,7 @@ public static class AudioOutputFactory
         }
         catch (Exception ex) when (ex is System.Reflection.TargetException or InvalidCastException or NullReferenceException or MethodAccessException)
         {
-            EngineLog.Write($"buffer size request not possible: {ex.Message}");
+            log.Write($"buffer size request not possible: {ex.Message}");
         }
     }
 
@@ -148,12 +174,13 @@ public static class AudioOutputFactory
         private readonly int _latencyMs;
         private long _last, _calls, _late, _slow, _lost;
         private bool _raised;
-        public RenderWatch(ISampleProvider source, int latencyMs) { _source = source; _latencyMs = latencyMs; }
+        private readonly EngineThreads _threads;
+        public RenderWatch(ISampleProvider source, int latencyMs, EngineThreads threads) { _source = source; _latencyMs = latencyMs; _threads = threads; }
         public WaveFormat WaveFormat => _source.WaveFormat;
 
         public int Read(float[] buffer, int offset, int count)
         {
-            if (!_raised) { _raised = true; EngineThreads.RaiseRenderPriority(); }
+            if (!_raised) { _raised = true; _threads.RaiseRenderPriority(); }
             var start = System.Diagnostics.Stopwatch.GetTimestamp();
             var read = _source.Read(buffer, offset, count);
             var end = System.Diagnostics.Stopwatch.GetTimestamp();
@@ -168,7 +195,7 @@ public static class AudioOutputFactory
                 else if (gapMs > periodMs * 1.6) { _late++; bad = true; }
                 if (costMs > periodMs * 0.5) { _slow++; bad = true; }
                 if (bad && (_late + _lost + _slow <= 20 || (_late + _lost + _slow) % 50 == 0))
-                    EngineLog.Write($"DirectSound refill: gap {gapMs:F1} ms (expected {periodMs:F1}), render {costMs:F1} ms; late {_late}, over-buffer {_lost}, slow {_slow}");
+                    _threads.Log.Write($"DirectSound refill: gap {gapMs:F1} ms (expected {periodMs:F1}), render {costMs:F1} ms; late {_late}, over-buffer {_lost}, slow {_slow}");
             }
             _last = start;
             return read;
@@ -179,7 +206,7 @@ public static class AudioOutputFactory
     public static int AsioInputLatencyFrames { get; private set; }
 
     /// <summary>ASIOGetLatencies' input value, through the same private driver field as <see cref="RequestBufferSize"/>.</summary>
-    private static int ReadInputLatency(AsioOut asio)
+    private static int ReadInputLatency(AsioOut asio, EngineLogWriter log)
     {
         try
         {
@@ -190,7 +217,7 @@ public static class AudioOutputFactory
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)   // a driver error (AsioException, COM) or a changed NAudio field
         {
-            EngineLog.Write($"ASIO input latency not available: {ex.Message}");
+            log.Write($"ASIO input latency not available: {ex.Message}");
             return 0;
         }
     }
@@ -212,7 +239,7 @@ public static class AudioOutputFactory
     /// entry per channel of the recording device (two when the device cannot be asked), none for the headless output. Never throws.
     /// </summary>
     /// <param name="probe">The WASAPI channel count of a recording device (tests replace it).</param>
-    public static string[] RecordableInputs(EngineConfig config, Func<string, int>? probe = null)
+    public static string[] RecordableInputs(EngineConfig config, EngineLogWriter log, Func<string, int>? probe = null)
     {
         if (config.Driver == Null) return Array.Empty<string>();
         if (config.Driver == Asio)
@@ -220,11 +247,11 @@ public static class AudioOutputFactory
         if (!config.AllInputs) return new[] { "", "" };
         int count;
         try { count = (probe ?? Audio.InputCapture.DeviceChannels)(config.InputDevice); }
-        catch (Exception ex) { EngineLog.Write($"input channel count not read: {ex.Message}"); count = 0; }
+        catch (Exception ex) { log.Write($"input channel count not read: {ex.Message}"); count = 0; }
         return Enumerable.Repeat("", count is > 0 and <= Audio.InputCapture.MaxChannels ? count : 2).ToArray();
     }
 
-    private static string Safe(Func<string> name, string fallback)
+    internal static string Safe(Func<string> name, string fallback)
     {
         try { var n = name(); return string.IsNullOrWhiteSpace(n) ? fallback : n; }
         catch (Exception ex) when (ex is System.Runtime.InteropServices.COMException or InvalidOperationException) { return fallback; }
@@ -232,7 +259,7 @@ public static class AudioOutputFactory
 
     private static MMDevice? FindRenderDevice(string name)
     {
-        var enumerator = new MMDeviceEnumerator();
+        using var enumerator = new MMDeviceEnumerator();
         if (!string.IsNullOrWhiteSpace(name))
             foreach (var device in enumerator.EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active))
                 if (string.Equals(device.FriendlyName, name, StringComparison.OrdinalIgnoreCase)) return device;

@@ -1,5 +1,7 @@
 namespace TabForge.AudioEngine.Mixing;
 
+// Owns: the audio callback's epoch (odd while a callback runs, safe-dispose past replaced values).
+
 /// <summary>
 /// The audio callback's epoch: incremented when a callback starts and again when it ends, so the value is odd
 /// exactly while a callback runs. Anything the callback could have picked up before it was replaced is safe to
@@ -43,6 +45,9 @@ public sealed class CallbackEpoch
 public sealed class RetireQueue
 {
     private readonly List<(IDisposable Item, CallbackEpoch? Epoch, long RetiredAt)> _items = new();
+    private readonly EngineLogWriter _log;
+
+    public RetireQueue(EngineLogWriter log) => _log = log;
 
     public int Count => _items.Count;
 
@@ -71,9 +76,9 @@ public sealed class RetireQueue
         _items.Clear();
     }
 
-    private static void DisposeQuietly(IDisposable item)
+    private void DisposeQuietly(IDisposable item)
     {
         try { item.Dispose(); }
-        catch (Exception ex) { EngineLog.Write($"dispose failed: {ex.Message}"); }
+        catch (Exception ex) { _log.Write($"dispose failed: {ex.Message}"); }
     }
 }

@@ -1,5 +1,7 @@
 namespace TabForge.AudioEngine.Midi.Processors;
 
+// Owns: the pass-through sender processors (own messages first at frame 0 on create/start/parameter change).
+
 /// <summary>Passes everything through; sends its own messages first (frame 0) when it is created, when playback starts, or when its parameters changed.</summary>
 public abstract class SenderProcessor : IMidiProcessor
 {
@@ -59,7 +61,7 @@ public sealed class CcSenderProcessor : SenderProcessor
         for (var i = 0; i < 4; i++)
         {
             _cc[i] = p.Int($"Cc{i + 1}", i == 0 ? 7 : -1, -1, 127);
-            _val[i] = p.Int($"Value{i + 1}", 100, 0, 127);
+            _val[i] = p.Int($"Value{i + 1}", 100, 0, MidiLimits.Max);
         }
     }
 
@@ -100,10 +102,10 @@ public sealed class CcMapperProcessor : IMidiProcessor
     public CcMapperProcessor(MidiParams p)
     {
         _ch = p.Int("InCh", 0, 0, 16);
-        _src = p.Int("Source", 1, 0, 127);
-        _dst = p.Int("Target", 1, 0, 127);
-        _lo = p.Int("ClampLow", 0, 0, 127);
-        _hi = p.Int("ClampHigh", 127, 0, 127);
+        _src = p.Int("Source", 1, 0, MidiLimits.Max);
+        _dst = p.Int("Target", 1, 0, MidiLimits.Max);
+        _lo = p.Int("ClampLow", 0, 0, MidiLimits.Max);
+        _hi = p.Int("ClampHigh", 127, 0, MidiLimits.Max);
         _pass = p.Bool("PassSource", false);
     }
 

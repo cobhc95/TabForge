@@ -1,0 +1,15 @@
+[
+  { "name": "Gold", "value": "#FFFFD700" },
+  { "name": "OrangeRed", "value": "#FFFF4500" },
+  { "name": "MixPointDot", "dark": "#E03B3B", "light": "#B3261E" },
+  { "name": "AreaMoveDropCaret", "dark": "#4CB8FF", "light": "#0F4489" },
+  { "name": "TutorialTipAccent", "value": "#2E9E4F" },
+  { "name": "TutorialNoteAccent", "value": "#2F7DE0" },
+  { "name": "TutorialWarningAccent", "value": "#D08A00" },
+  { "name": "WarningIcon", "dark": "#FFD08A00", "light": "#FF8A5A00" },
+  { "name": "TutorialShortcutAccent", "value": "#7C5CD6" },
+  { "name": "TutorialQuoteAccent", "value": "#8A94A3" },
+  { "name": "RenderErrorPlaceholder", "value": "#C04D5B" },
+  { "name": "FxBypassVeil", "value": "#6E000000" },
+  { "name": "FxBypassStamp", "value": "#96FF2828" }
+]

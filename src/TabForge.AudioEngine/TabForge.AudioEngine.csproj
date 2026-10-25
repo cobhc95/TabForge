@@ -10,8 +10,13 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
   </PropertyGroup>
+  <!-- Self-test hooks (the hang command, the managed test effect) are compiled only into Debug and full-suite builds, never into Release. -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug' Or '$(TabForgeFullSuite)' == 'true'">
+    <DefineConstants>$(DefineConstants);TABFORGE_TEST_HOOKS</DefineConstants>
+  </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\TabForge.Audio.Contracts\TabForge.Audio.Contracts.csproj" />
+    <InternalsVisibleTo Include="TabForge.Avalonia.Tests" />
   </ItemGroup>
   <ItemGroup>
     <!-- VST3 host shim (native\tfvst3, built from the Steinberg VST3 SDK); optional until it is built. -->
