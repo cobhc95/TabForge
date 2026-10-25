@@ -1,4 +1,4 @@
-﻿using TabForge.Avalonia.Transport;
+using TabForge.Avalonia.Transport;
 using TabForge.Avalonia.Views;
 using System;
 using Avalonia;
@@ -79,10 +79,26 @@ public sealed partial class ScorePreviewView : Control
     internal ScoreEmptyState ScoreState(bool overBeat = false) => MenuStateSource is { } source ? source() with { OverBeat = overBeat } : new(OverBeat: overBeat, CanPaste: false, ShowNotation: _probe.Notation != NotationMode.TabOnly,
         Continuous: _probe.Appearance.CenterSystems, Horizontal: _probe.HorizontalScroll, ShowOutline: _probe.Appearance.ShowNoteOutline);
 
+    private const string AudioPlaceholderText = "Audio track — no score. Select a tab or MIDI track to see its score.";
+    private bool _audioPlaceholder;   // an audio track is shown: no score is laid out or drawn, only a centred note
+
+    /// <summary>True while the view shows the audio-track note instead of a score.</summary>
+    internal bool ShowsAudioPlaceholder => _audioPlaceholder;
+
+    private void DrawAudioPlaceholder(DrawingContext context)
+    {
+        var d = _draw.Use(context);
+        var light = ActualThemeVariant == ThemeVariant.Light;
+        var text = d.Text(AudioPlaceholderText, InstrumentPanelView.Font, 13, AvaloniaPalette.Get("InstrumentMuted", light), d.PixelsPerDip);
+        d.DrawText(text, Bounds.Width / 2 - text.Width / 2, Bounds.Height / 2 - text.Height / 2);
+    }
+
     /// <summary>Draws track <paramref name="index"/> of the shown song (a Band panel's staff); the whole-song score keeps track 0.</summary>
     public void ShowTrack(int index)
     {
         _probe.ShowTrack(index);
+        var audio = _probe.Track is { IsAudio: true };
+        if (audio != _audioPlaceholder) { _audioPlaceholder = audio; InvalidateMeasure(); }
         InvalidateVisual();
         CursorChanged?.Invoke();
     }
@@ -422,6 +438,7 @@ public sealed partial class ScorePreviewView : Control
 
     public override void Render(DrawingContext context)
     {
+        if (_audioPlaceholder) { DrawAudioPlaceholder(context); return; }
         // The paper belongs to the shown song (LightPaper), not to the theme: the document panes set it on every tab switch.
         // A view with no song (a proof, a standalone preview) has no override and follows the theme it is rendered in.
         if (_paperOverride is null) _probe.Light = ActualThemeVariant == ThemeVariant.Light;

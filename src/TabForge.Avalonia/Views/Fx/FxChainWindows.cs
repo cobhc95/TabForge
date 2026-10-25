@@ -27,6 +27,7 @@ public sealed class FxChainWindows
     private readonly MainWindowSettings? _settings;
     private readonly PluginTrust _trust;
     private readonly Dictionary<(SongDocument Document, string Track), FxChainWindow> _open = new();
+    private readonly Dictionary<SongDocument, EventHandler> _pruning = new();   // per song: floating editors of removed plug-ins and tracks close even with no chain window open
 
     /// <param name="owner">The main window the chain windows open over.</param>
     /// <param name="active">The song that is shown now; a chain window edits the song it was opened on.</param>
@@ -76,6 +77,7 @@ public sealed class FxChainWindows
         var host = new SongFxChainHost(document, _playback, _settings, () => _owner, () => TrackListChanged?.Invoke(), _trust);
         var window = new FxChainWindow(host, track);
         _open[key] = window;
+        Watch(document);
         EventHandler changed = (_, _) => Follow(document, key.Item2, window);
         document.DisplayStateChanged += changed;
         window.Closed += (_, _) =>
@@ -153,6 +155,23 @@ public sealed class FxChainWindows
     public void CloseSong(SongDocument song)
     {
         foreach (var (key, window) in _open.ToList()) if (ReferenceEquals(key.Document, song)) window.Close();
+        FloatingEditors.CloseSong(song);
+        if (_pruning.Remove(song, out var prune)) song.DisplayStateChanged -= prune;
+    }
+
+    private void Watch(SongDocument document)
+    {
+        if (_pruning.ContainsKey(document)) return;
+        EventHandler prune = (_, _) => FloatingEditors.Prune(document);
+        _pruning[document] = prune;
+        document.DisplayStateChanged += prune;
+    }
+
+    /// <summary>The shown song changed: the other songs' floating plug-in windows hide, the shown song's open again. Call again once the engine took the song (a refused open retries).</summary>
+    public void SongShown(IEnumerable<SongDocument> held)
+    {
+        var handle = _owner.TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
+        FloatingEditors.SongShown(held, _active(), handle, _owner.ActualThemeVariant != global::Avalonia.Styling.ThemeVariant.Light);
     }
 
     /// <summary>The monitor switched between the app-wide chain and the song's own: its window closes and reopens on the other chain (as WPF does).</summary>

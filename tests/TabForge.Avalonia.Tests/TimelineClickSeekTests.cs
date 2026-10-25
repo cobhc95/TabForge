@@ -48,7 +48,7 @@ public class TimelineClickSeekTests
     private static Point RulerAt(TimelineView view, int bar) => new(view.BarX(bar) + 5, TimelineView.RulerHeight / 2);
 
     [AvaloniaFact]
-    public void ClickOnClipSelectsItAndMovesThePlayheadToItsStart()
+    public void ClickMidClipSeeksToClickedBarNotClipStart()
     {
         var (w, v, input, _, track, clip) = OpenWithClip();
         var seeks = new List<int>();
@@ -61,7 +61,9 @@ public class TimelineClickSeekTests
         w.Close();
         Assert.NotNull(v.SelectedClip);
         Assert.Equal(clip, v.SelectedClip!.Clip);
-        Assert.Equal(new[] { TabForge.Presenters.AudioClipTimelineRules.BarAtSeconds(v.Song, clip.StartSec).Bar }, seeks);
+        var expected = Enumerable.Range(0, v.BarCount).Last(b => v.BarX(b) <= press.X);
+        Assert.Equal(new[] { expected }, seeks);
+        Assert.NotEqual(TabForge.Presenters.AudioClipTimelineRules.BarAtSeconds(v.Song, clip.StartSec).Bar, expected);
     }
 
     [AvaloniaFact]

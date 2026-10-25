@@ -39,7 +39,12 @@ public sealed partial class ScorePreviewView : Control
 
     private (double Width, double Height) _measuredPage;
 
-    protected override Size MeasureOverride(Size availableSize) => PageExtent(this.FindAncestorOfType<ScrollViewer>());
+    protected override Size MeasureOverride(Size availableSize)
+    {
+        if (!_audioPlaceholder) return PageExtent(this.FindAncestorOfType<ScrollViewer>());
+        var viewport = this.FindAncestorOfType<ScrollViewer>()?.Viewport ?? default;   // no score to lay out: the note fills the viewer
+        return new Size(viewport.Width > 1 ? viewport.Width : 400, viewport.Height > 1 ? viewport.Height : 200);
+    }
 
     /// <summary>
     /// The page's size at the current zoom, worked out from the live layout and viewer (never a cached measure): the whole page, and in the

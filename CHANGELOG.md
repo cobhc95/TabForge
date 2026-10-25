@@ -95,6 +95,16 @@ TabForge is actively developed; please report anything odd on the Issues page.
   - Audit rounds for dead settings and code hygiene, with fixes; tests updated for the new selection and loop rules.
   - The audio engine ends with the app; engine logs are written per session.
 
+### Late fixes
+
+- Floating plug-in windows belong to their song: they hide when you switch songs and close with the song; closing the FX window keeps them open.
+- Clicking an audio or MIDI clip moves the playhead to the clicked bar, not the clip start.
+- Audio tracks show a short note in the score pane instead of an empty score.
+
+### Coming soon
+
+- MIDI piano roll editor for MIDI tracks (piano keys, note grid, velocity lane, editing tools).
+
 ## 0.7.7
 
 - **Playback**

@@ -30,8 +30,7 @@ public sealed class FxEditorController : IDisposable
     private readonly Action _editorClosed;
     private readonly Func<IntPtr>? _popup;
     private readonly IUiTimer? _openCheck;
-    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<TrackModel, HashSet<PluginSlot>> FloatingByTrack = new();   // floating plug-in windows outlive the FX window that opened them
-    private readonly HashSet<PluginSlot> _floating;
+    private readonly FloatingEditors.Set _floating;   // floating plug-in windows outlive the FX window that opened them: the registry holds them per track and song
     private readonly HashSet<PluginSlot> _opened = new(ReferenceEqualityComparer.Instance);   // docked editors that showed once: their next open is quick
     private PluginSlot? _docked;
     private PluginSlot? _loading;
@@ -45,7 +44,7 @@ public sealed class FxEditorController : IDisposable
         Func<PluginSlot?> focused, Action reshow, Action editorClosed, Func<IntPtr>? popup = null)
     {
         (_host, _track, _area, _ui, _ownerHandle, _dark, _focused, _reshow, _editorClosed, _popup) = (host, track, area, ui, ownerHandle, dark, focused, reshow, editorClosed, popup);
-        _floating = FloatingByTrack.GetValue(track, _ => new HashSet<PluginSlot>(ReferenceEqualityComparer.Instance));
+        _floating = FloatingEditors.Of(track);
         if (popup is not null)
         {
             _openCheck = ui.CreateTimer(TimeSpan.FromMilliseconds(OpenCheckMs));
@@ -155,7 +154,7 @@ public sealed class FxEditorController : IDisposable
     public void Float(PluginSlot slot)
     {
         if (ReferenceEquals(_docked, slot)) CloseDocked();
-        _floating.Add(slot);
+        _floating.Add(slot, (_host as SongFxChainHost)?.Document, _host.Engine, _host.PluginSettings.PluginWindowsOnTop);
         var opened = _host.Engine?.OpenEditor(_track, slot, _ownerHandle(), _dark(), docked: false, onTop: _host.PluginSettings.PluginWindowsOnTop) == true;
         if (!opened) _area.ShowNotice(FxEditorPlan.FloatNeedsChainNotice, null);
         else if (ReferenceEquals(_focused(), slot)) _area.ShowNotice(FxEditorPlan.FloatingNotice, FxEditorPlan.ButtonFor(FxEditorMode.Floating, _host.PluginSettings.DockPluginWindows));

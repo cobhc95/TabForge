@@ -44,6 +44,7 @@ TabForge now runs on Avalonia, the first step toward running on more platforms i
 - **Section previous / next** moves the playhead.
 
 See the [changelog](CHANGELOG.md) for everything.
+- **Coming soon:** a MIDI piano roll editor for MIDI tracks.
 
 ## What sets it apart
 

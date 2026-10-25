@@ -415,7 +415,11 @@ public sealed partial class TimelineInputController
             }
             // A plain click on a clip selects it and moves the playhead to its start (the score scrolls there); Ctrl or Shift on a clip only changes the white.
             // Any other press on the ruler, a section or a lane moves the playhead to its bar (pass 1 on the old bar path). The loop region always stays.
-            else if (clip is not null) { if (!ctrl && !_pressShift && clipBar >= 0 && clipBar < _view.BarCount) BarSeekRequested?.Invoke(clipBar); }
+            else if (clip is not null)
+            {
+                var seekBar = _pressBar >= 0 && _pressBar < _view.BarCount ? _pressBar : clipBar;   // the bar under the pointer, not the clip start
+                if (!ctrl && !_pressShift && seekBar >= 0 && seekBar < _view.BarCount) BarSeekRequested?.Invoke(seekBar);
+            }
             else if (ctrl && TabCellAt(_pressPoint) is not null) { }   // Ctrl+click on a tab cell only toggles it: the playhead and the score cursor stay
             else if (_pressBar >= 0 && _pressBar < _view.BarCount) BarSeekRequested?.Invoke(_pressBar);
             if (_dragSlot < 0 && !(_pressOnRuler && alt)) _selection.Batch(() => ClickSelect(clip, clipBar, ctrl));   // the click's changes reach the views as one

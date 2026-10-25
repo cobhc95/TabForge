@@ -71,6 +71,11 @@ public sealed partial class MainWindow
         MainWindowClipEditKeys.Register(commands, songs, panes, showStatus);
         var fxWindows = MainWindowTrackFxKeys.Register(commands, songs, this, playback, settings, compose.Registry.Services.Trust);
         songs.SongClosing += song => fxWindows.CloseSong(song);
+        songs.ActiveChanged += () =>
+        {
+            fxWindows.SongShown(songs.Songs);   // the other songs' floating plug-in windows hide now; the shown song's open again once the engine took it
+            global::Avalonia.Threading.Dispatcher.UIThread.Post(() => fxWindows.SongShown(songs.Songs), global::Avalonia.Threading.DispatcherPriority.Background);
+        };
         MainWindowTrackFxCells.Register(panes, songs, this, playback, () => settings?.Settings.Plugins ?? new TabForge.Services.PluginSettings(), fxWindows);
         MainWindowClipProperties.Register(commands, songs, panes, this, showStatus);
         MainWindowSectionEdit.Register(commands, songs, scorePreview, this);
