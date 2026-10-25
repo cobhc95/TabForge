@@ -76,7 +76,7 @@ Source: `Source/src/TabForge.Avalonia/packages.lock.json`
 | System.IO.Pipelines | 8.0.0 | Transitive | `FHNOatmUq0sqJOkTx+UF/9YK1f180cnW5FVqnQMvYUN0elp6wFzbtPSiqbo1/ru8ICp43JM1i7kKkk6GsNGHlA==` |
 | System.Security.AccessControl | 4.7.0 | Transitive | `JECvTt5aFF3WT3gHpfofL2MNNP6v84sxtXxpqhLBCcDRzqsPBmHhQ6shv4DwwN2tRlzsUxtb3G9M3763rbXKDg==` |
 | System.Security.Principal.Windows | 4.7.0 | Transitive | `ojD0PX0XhneCsUbAZVKdb7h/70vyYMDYs85lwEI+LngEONe/17A0cFaRFqZU+sOEidcVswYWikYOQ9PPfjlbtQ==` |
-| TabForge.AlphaTab | 1.8.4-tabforge.4 | Transitive | `QLiUUcMuXfaCPUWxE+E3EuNcGiq7iX5nujmrX113zv+G/GcjQUNUl0SJb6ZJmpDEFjr7R3Md8gv+0V4UYgaQxw==` |
+| TabForge.AlphaTab | 1.8.4-tabforge.4 | Transitive | `AInxu4W9CdfGl1WTJPSbYPXTsdW9hzri9fd7JA0lpNgpBQdlXDdDKTdDnhY2zSL89yKCBynm37bd+/UpfkeN4w==` |
 | Tmds.DBus.Protocol | 0.21.3 | Transitive | `hDwB8WsQoyALQKqIbwzS68UKdlnafDm4T/DkO/JrA/YIneP/rKv96SxYPVXeh3FP4i/SXfShrYftKLtciJAIlw==` |
 
 ## Managed packages: TabForge.Core
@@ -100,7 +100,7 @@ Source: `Source/src/TabForge.Core/packages.lock.json`
 | System.Drawing.Common | 9.0.8 | Transitive | `ineIJmF+yuBEHGft9R153J9kmBFaeEfFL5Put5nzENneRcGGPUb3MvM8zrZ5pERQ0jPPSE3Wqw/clXvOq2F/Kw==` |
 | System.Security.AccessControl | 4.7.0 | Transitive | `JECvTt5aFF3WT3gHpfofL2MNNP6v84sxtXxpqhLBCcDRzqsPBmHhQ6shv4DwwN2tRlzsUxtb3G9M3763rbXKDg==` |
 | System.Security.Principal.Windows | 4.7.0 | Transitive | `ojD0PX0XhneCsUbAZVKdb7h/70vyYMDYs85lwEI+LngEONe/17A0cFaRFqZU+sOEidcVswYWikYOQ9PPfjlbtQ==` |
-| TabForge.AlphaTab | 1.8.4-tabforge.4 | Direct | `QLiUUcMuXfaCPUWxE+E3EuNcGiq7iX5nujmrX113zv+G/GcjQUNUl0SJb6ZJmpDEFjr7R3Md8gv+0V4UYgaQxw==` |
+| TabForge.AlphaTab | 1.8.4-tabforge.4 | Direct | `AInxu4W9CdfGl1WTJPSbYPXTsdW9hzri9fd7JA0lpNgpBQdlXDdDKTdDnhY2zSL89yKCBynm37bd+/UpfkeN4w==` |
 
 ## Native components
 

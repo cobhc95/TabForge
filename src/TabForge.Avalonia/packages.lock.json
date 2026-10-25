@@ -295,7 +295,7 @@
       "TabForge.AlphaTab": {
         "type": "Transitive",
         "resolved": "1.8.4-tabforge.4",
-        "contentHash": "QLiUUcMuXfaCPUWxE+E3EuNcGiq7iX5nujmrX113zv+G/GcjQUNUl0SJb6ZJmpDEFjr7R3Md8gv+0V4UYgaQxw==",
+        "contentHash": "AInxu4W9CdfGl1WTJPSbYPXTsdW9hzri9fd7JA0lpNgpBQdlXDdDKTdDnhY2zSL89yKCBynm37bd+/UpfkeN4w==",
         "dependencies": {
           "AlphaSkia": "3.4.135",
           "Microsoft.CSharp": "4.7.0",

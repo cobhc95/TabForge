@@ -169,13 +169,5 @@ jobs:
         shell: pwsh
         run: |
           node --version
-          $env:RUNNER_TEMP; (Get-Item $env:RUNNER_TEMP).FullName; ./tools/Build-AlphaTab.ps1 -Work 'C:\w\ab'; ./tools/Build-AlphaTab.ps1 -Work (Join-Path $env:RUNNER_TEMP 'tabforge-alphatab-build')
+          ./tools/Build-AlphaTab.ps1 -Work (Join-Path $env:RUNNER_TEMP 'tabforge-alphatab-build')
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-      - name: Keep the rebuilt package for inspection
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: alphatab-rebuild
-          path: ${{ runner.temp }}/tabforge-alphatab-build/alphaTab/packages/csharp/src/AlphaTab/bin/Release/*.nupkg
-          if-no-files-found: ignore
