@@ -66,6 +66,7 @@ public sealed partial class TimelineView
         if (DragRow >= 0 && DragRow < _rows.Count) DrawRow(d, ink, edge, DragRow, width);
         d.Pop();
         DrawInteraction(d, ink, gridTop);
+        DrawSplitMarker(d, ink);
         d.Pop();
         if (LoopStart >= 0 && LoopEnd >= LoopStart && LoopStart < BarCount)   // the bracket sits on the ruler, so it draws outside the lanes' clip
             TimelineLoopMarks.Draw(d, ink, BarX(LoopStart), TimelineGeometryRules.RightOfBar(_boundaries, LoopEnd), RulerHeight, gridTop, Bounds.Height, LoopOn);
@@ -73,6 +74,17 @@ public sealed partial class TimelineView
         if (PlayheadBar >= 0 && PlayheadBar < BarCount && PlayheadStyles.ShowsBarMarker(_playheadStyle)) DrawBarMarker(d, ink);
         DrawSectionDrag(d, ink, gridTop);
         BodyRenderCount++;
+    }
+
+    /// <summary>The split marker: a thin dashed vertical line (the overlay ink, white in the dark theme) across the lane of the lane edit cursor.</summary>
+    private void DrawSplitMarker(IDrawContext d, Func<string, UiColor> ink)
+    {
+        if (LaneCursor is not { } cursor) return;
+        var row = _song.Tracks.IndexOf(cursor.Track);
+        if (row < 0 || row >= _rows.Count || !RowInBand(row)) return;
+        var x = Math.Round(XOfSeconds(cursor.Sec)) + 0.5;
+        var top = LaneBandTopOf(row, cursor.Lane);
+        d.Line(new UiStroke(ink("OverlayInk"), 1, Dash: 3, Gap: 3), x, top, x, top + ClipLanes.AudioLaneHeight);
     }
 
     /// <summary>How many times the body drew; a playhead frame never adds one.</summary>
@@ -240,8 +252,7 @@ public sealed partial class TimelineView
         var accent = AvaloniaPalette.Get("InstrumentAccent", light);
         for (var i = 0; i < _sections.Count; i++)
         {
-            var start = Math.Clamp(_sections[i].MeasureIndex, 0, BarCount);
-            var end = SectionLayout.End(_sections, i, BarCount);
+            var (start, end) = SectionBars(i);
             if (end <= start || i == DragSection) continue;
             var colour = _sectionColours[i].ToUi();
             var x = BarX(start);
@@ -256,6 +267,7 @@ public sealed partial class TimelineView
             var height = SectionHeight - 4 - 2 * inset;
             d.Rect(colour.WithOpacity(SectionFillOf(light)), new UiStroke(colour, 1), left, top, width, height, 3);
             if (ReferenceEquals(SectionButtons.Hovered, section)) d.Rect(HoverShade.Overlay(light), null, left, top, width, height, 3);
+            if (DragSection < 0) { SectionKnobs.Draw(d, colour, left, RulerHeight); SectionKnobs.Draw(d, colour, left + width, RulerHeight); }
             if (SectionActive(i)) DrawSectionGlow(d, colour, x + 1, y, w, _sectionGlowIntensity * SectionGlowActiveShare);
             var flash = SectionButtons.FlashAlpha(section);
             if (flash > 0) DrawSectionGlow(d, accent, x + 1, y, w, flash);

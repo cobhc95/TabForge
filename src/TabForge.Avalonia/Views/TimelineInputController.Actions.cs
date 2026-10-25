@@ -73,6 +73,7 @@ public sealed partial class TimelineInputController
         _view.DragSection = _view.DragRow = -1;
         _view.SectionPreviewX = null;
         _view.SectionRestingX = null;
+        _view.SectionResizePreview = null;
         _view.RowOffsets = null;
         Repaint();
     }
@@ -111,6 +112,7 @@ public sealed partial class TimelineInputController
             return;
         }
         _view.SelectedClip = null;
+        _view.LaneCursor = null;   // a plain click on empty lane space clears the split marker
         MarkBar(_pressBar);
         if (_pressRow >= 0 && _pressBar >= 0 && _pressBar < _view.BarCount) CellClicked?.Invoke(_pressRow, _pressBar);
         if (cell is { } plain) HighlightCell(plain.Row, plain.Bar, extend: false);

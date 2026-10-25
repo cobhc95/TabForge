@@ -69,6 +69,34 @@ public sealed partial class TimelineView
     /// <summary>Shows the hover row under <paramref name="y"/> (-1 clears it); the header column calls it for its pointer.</summary>
     public void HoverRowAtY(double y) => SetHoverRow(RowAtY(y));
 
+    /// <summary>Where a resize drag shows its section's edges before the release: the sorted section index and the bars it would span (no model change until the drop).</summary>
+    internal (int Index, int Start, int End)? SectionResizePreview { get; set; }
+
+    /// <summary>The first bar and the exclusive end bar of section <paramref name="i"/>, as drawn (a resize in progress shows its preview).</summary>
+    private (int Start, int End) SectionBars(int i) =>
+        SectionResizePreview is { } p && p.Index == i ? (p.Start, p.End) : (Math.Clamp(_sections[i].MeasureIndex, 0, BarCount), SectionLayout.End(_sections, i, BarCount));
+
+    internal int SectionEndBar(int i) => SectionLayout.End(_sections, i, BarCount);
+
+    /// <summary>The section edge knob under (<paramref name="x"/>, <paramref name="y"/>): the section's sorted index and which end, the nearest one when two knobs overlap; null elsewhere.</summary>
+    internal (int Index, bool Right)? SectionKnobAt(double x, double y)
+    {
+        if (DragSection >= 0 || SectionResizePreview is not null || y >= RulerHeight + SectionKnobs.HitInto) return null;
+        (int, bool)? best = null;
+        var bestReach = double.MaxValue;
+        for (var i = 0; i < _sections.Count; i++)
+        {
+            var start = Math.Clamp(_sections[i].MeasureIndex, 0, BarCount);
+            var end = SectionLayout.End(_sections, i, BarCount);
+            if (end <= start) continue;
+            var left = BarX(start) + 1;
+            var right = BarX(end) - 3;   // the chip's edges as DrawSections draws them
+            if (SectionKnobs.Reach(left, x, y, RulerHeight) is { } l && l < bestReach) { bestReach = l; best = (i, false); }
+            if (SectionKnobs.Reach(right, x, y, RulerHeight) is { } r && r < bestReach) { bestReach = r; best = (i, true); }
+        }
+        return best;
+    }
+
     public SectionSlot[] SectionSlots()
     {
         var slots = new List<SectionSlot>();

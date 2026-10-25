@@ -37,7 +37,7 @@ public sealed partial class TimelineInputController
 {
     private const double DragThreshold = TabDragRules.DragThreshold;
 
-    private enum Gesture { None, Press, SectionDrag, RowDrag, Slider, Clip, Box, Loop }
+    private enum Gesture { None, Press, SectionDrag, RowDrag, Slider, Clip, Box, Loop, SectionResize }
 
     private readonly TimelineView _view;
     private IEditableDocument _document;
@@ -276,6 +276,9 @@ public sealed partial class TimelineInputController
             case Gesture.Loop:
                 UpdateLoopDrag(p);
                 break;
+            case Gesture.SectionResize:
+                UpdateSectionResize(p);
+                break;
             default:
                 UpdateDrag(p);
                 break;
@@ -321,6 +324,7 @@ public sealed partial class TimelineInputController
             e.Pointer.Capture(source);
             return;
         }
+        if (ReferenceEquals(source, _view) && TryBeginSectionResize(_pressPoint, e.Pointer)) { e.Handled = true; return; }
         _pressRow = hit.Row;
         TakeFocus(source, hit.OnGrid && hit.SectionSlot < 0, e.KeyModifiers);
         _pressBar = hit.Bar;
@@ -332,7 +336,7 @@ public sealed partial class TimelineInputController
         _pressOnLanes = hit.OnLanes;
         _pressOnRuler = _pressOnGrid && _dragSlot < 0 && _pressPoint.Y < TimelineView.RulerHeight;
         if (_pressOnRuler) PressRuler();
-        _clips.Press(_pressOnGrid && _dragSlot < 0, _pressPoint);
+        _clips.Press(_pressOnGrid && _dragSlot < 0, _pressPoint, !e.KeyModifiers.HasFlag(KeyModifiers.Control));
         _gesture = Gesture.Press;
         e.Pointer.Capture(source);
     }
@@ -372,6 +376,14 @@ public sealed partial class TimelineInputController
         var gesture = _gesture;
         _gesture = Gesture.None;
         EndBoxSelect(commit: gesture == Gesture.Box);
+        if (gesture == Gesture.SectionResize)
+        {
+            CommitSectionResize();   // before the capture is released: that raises PointerCaptureLost
+            e.Pointer.Capture(null);
+            ClearDrag();
+            if (source == _view) ApplyHover(e.GetPosition(_view));
+            return;
+        }
         if (gesture == Gesture.Loop) EndLoopDrag();
         if (gesture == Gesture.Slider) CommitSlider();
         // The clip drop commits before the capture is released: releasing it raises PointerCaptureLost, which cancels the drag.

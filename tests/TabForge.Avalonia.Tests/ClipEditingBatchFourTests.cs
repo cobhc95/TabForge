@@ -120,7 +120,43 @@ public class ClipEditingBatchFourTests
         Assert.Equal(2, parts.Count);
         Assert.Equal(2.0, parts[0].EndSec, 3);
         Assert.Equal(2.0, parts[1].StartSec, 3);
-        Assert.Equal(2.0, view.LaneCursor!.Value.Sec, 3);   // the split point becomes the new lane cursor
+        Assert.Null(view.LaneCursor);   // the split clears the split marker
+    }
+
+    [AvaloniaFact]
+    public void ClickSetsTheSplitMarkerAtThePointerTimeAndCtrlClickAndDragLeaveIt()
+    {
+        var (song, track, clip, view, _, _) = SetUp();
+        view.Snap = null;
+        var gestures = new TimelineClipGestureController(view);
+        var y = view.LaneBandTopOf(view.Song.Tracks.IndexOf(track), clip.Lane) + 20;
+        var x = view.XOfSeconds(clip.StartSec + 1.3);
+
+        gestures.Press(true, new global::Avalonia.Point(x, y));
+        Assert.Equal(clip.StartSec + 1.3, view.LaneCursor!.Value.Sec, 3);
+
+        var marker = view.LaneCursor;
+        gestures.Press(true, new global::Avalonia.Point(view.XOfSeconds(clip.StartSec + 0.5), y), moveMarker: false);
+        Assert.Equal(marker, view.LaneCursor);
+        gestures.Press(true, new global::Avalonia.Point(x, y));
+        gestures.Begin();
+        Assert.Equal(marker, view.LaneCursor);   // a drag does not move it
+        gestures.Cancel();
+    }
+
+    [AvaloniaFact]
+    public void ClickMarkerSnapsToTheGridWhenSnappingIsOn()
+    {
+        var (_, track, clip, view, _, _) = SetUp();
+        view.Snap = new SnapSettings { Enabled = true, ToGrid = true, ToItems = false, ToPlayhead = false, GridAtAnyDistance = true, Grid = "Bar" };
+        var gestures = new TimelineClipGestureController(view);
+        var y = view.LaneBandTopOf(view.Song.Tracks.IndexOf(track), clip.Lane) + 20;
+
+        gestures.Press(true, new global::Avalonia.Point(view.XOfSeconds(clip.StartSec + 1.3), y));
+
+        var sec = view.LaneCursor!.Value.Sec;
+        var barStarts = Enumerable.Range(0, view.BarCount + 1).Select(b => view.SecondsOfX(view.BarX(b)));
+        Assert.Contains(barStarts, s => Math.Abs(s - sec) < 0.001);
     }
 
     [AvaloniaFact]

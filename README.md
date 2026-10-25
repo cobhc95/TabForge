@@ -34,6 +34,8 @@ Windows 10 or 11, 64-bit, nothing else to install. Not code-signed: see [Verify 
 TabForge now runs on Avalonia, the first step toward running on more platforms in the future. It is Windows only today.
 
 - **Selection and loops:** drag a box on the timeline, or drag across the score, to select and set the loop; the ruler loop has handles; *Clear loop* and Esc twice remove it.
+- **Section resize knobs:** drag a section's edge knob to make it shorter or longer; it stops at the neighbouring section. Dragging the middle still moves it.
+- **Split marker:** clicking an audio or MIDI clip leaves a dashed line (following the magnet / snap); S splits the clip there.
 - **Light mode** redesigned.
 - **Monitor FX** button in the title bar.
 - **Loop recording** keeps each pass as a take.

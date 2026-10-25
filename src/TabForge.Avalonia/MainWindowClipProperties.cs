@@ -62,7 +62,7 @@ public static class MainWindowClipProperties
         {
             if (ClipSplitGlue.Split(track, clip, sec) is not { } second) return false;
             target.Timeline.SelectedClip = new TimelineClipSelection(track, second);
-            target.Timeline.LaneCursor = new TimelineLaneCursor(track, second.Lane, sec, null);
+            target.Timeline.LaneCursor = null;   // the split consumes the split marker
             return true;
         });
     }

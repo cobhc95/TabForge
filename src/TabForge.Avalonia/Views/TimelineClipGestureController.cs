@@ -35,6 +35,7 @@ internal sealed class TimelineClipGestureController
     private int _originLane;
     private (TrackModel Track, int Lane) _target;
     private double _pressSec;
+    private TimelineLaneCursor? _markerBeforePress;
     private bool _changed;
     private readonly List<(AudioClip Clip, double Start)> _others = new();   // the other selected clips a move carries along, with their starts at the press
 
@@ -45,9 +46,10 @@ internal sealed class TimelineClipGestureController
     }
 
     /// <summary>Remembers the clip under a press on the grid, the lane edit cursor it leaves, and the gesture its position starts; nothing is changed yet.</summary>
-    public void Press(bool onGrid, Point point)
+    public void Press(bool onGrid, Point point, bool moveMarker = true)
     {
         _pressed = onGrid ? TimelineAudioClips.ClipAt(_view, point) : null;
+        _markerBeforePress = _view.LaneCursor;
         if (_pressed is not { } pressed) return;
         // A pass lives in its own sub-lane: its edges and fade band are its drawn box, not the main lane.
         var box = TimelineAudioClips.ClipBounds(_view, pressed.Track, pressed.Clip);
@@ -55,8 +57,14 @@ internal sealed class TimelineClipGestureController
         var right = box.Right;
         _pressSec = _view.SecondsOfX(point.X);
         // The pass under the press (a folded clip's slice), so Split uses the performed time the click showed, not the bar's first play.
-        var position = _resolvePosition?.Invoke(point.X, point.Y, pressed);
-        _view.LaneCursor = new TimelineLaneCursor(pressed.Track, pressed.Clip.Lane, _pressSec, position);
+        // The split marker sits where the magnet snaps the click (the exact pointer time with snapping off); Ctrl+click leaves it where it was.
+        if (moveMarker)
+        {
+            var markerX = TimelineClipSnap.SnapX(_view, point.X, pressed.Clip, false, out var snapDistance);
+            var markerSec = double.IsFinite(snapDistance) ? _view.SecondsOfX(markerX) : _pressSec;
+            var position = _resolvePosition?.Invoke(markerX, point.Y, pressed);
+            _view.LaneCursor = new TimelineLaneCursor(pressed.Track, pressed.Clip.Lane, markerSec, position);
+        }
         // The top band owns the fade handles: a press there near one starts that fade, and only elsewhere in the band (or on an edge below it)
         // is the press a trim or a move. A hovered clip shows its handles, so the first press can start a fade.
         _gesture = ClipGesturePresenter.BodyGesture(point.X, left, right, EdgeGripDip);
@@ -81,6 +89,7 @@ internal sealed class TimelineClipGestureController
     {
         if (_pressed is not { } pressed) return false;
         var clip = pressed.Clip;
+        _view.LaneCursor = _markerBeforePress;   // a drag does not set the split marker
         _origin = (clip.StartSec, clip.OffsetSec, clip.SourceLengthSec);
         _originEnd = clip.EndSec;
         _originFades = (clip.FadeInSec, clip.FadeOutSec);

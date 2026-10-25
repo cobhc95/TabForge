@@ -8,7 +8,7 @@ using TabForge.Services;
 namespace TabForge.Avalonia.Views;
 
 // Owns: the loop region gestures on the bar-number ruler: a drag on empty ruler makes a loop (Shift extends the existing one), a drag on an edge resizes
-//   it, a drag inside moves it; the pointer turns to the resize arrow only over the end handles (whole bars; a loop made from notes keeps its cells). The drag only draws a preview (TimelineView.LoopPreview); the release
+//   it, a drag inside moves it; the pointer turns to the resize arrow only over the end handles and the section edge knobs (whole bars; a loop made from notes keeps its cells). The drag only draws a preview (TimelineView.LoopPreview); the release
 //   writes the model once as one undo step (DocumentEdits.EditLoop), so the engine hears one change; a lost capture drops the preview. A click without a drag only moves the playhead (TimelineInputController.Released).
 // Does not own: the loop state and its rules (SelectionModel, LoopRulerRules), its drawing (TimelineLoopMarks) or the transport (SelectionLoopLink).
 // Tests: TabForge.Avalonia.Tests.LoopModelTests.
@@ -36,7 +36,7 @@ public sealed partial class TimelineInputController
     // The hover sets the resize arrow over a handle and clears it elsewhere; the bar middle and the rest keep the normal pointer.
     private void ApplyLoopCursor(Point p)
     {
-        var cursor = OverLoopHandle(p) ? _resizeCursor ??= new Cursor(StandardCursorType.SizeWestEast) : null;
+        var cursor = OverLoopHandle(p) || _view.SectionKnobAt(p.X, p.Y) is not null ? _resizeCursor ??= new Cursor(StandardCursorType.SizeWestEast) : null;
         if (!ReferenceEquals(_view.Cursor, cursor)) _view.Cursor = cursor;
     }
 

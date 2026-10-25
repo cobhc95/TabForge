@@ -27,6 +27,8 @@ TabForge is actively developed; please report anything odd on the Issues page.
   - Only one selection exists at a time: a timeline selection replaces a score selection and the other way round; one Ctrl+Z brings the old one back.
   - Bar commands (copy, cut, delete, paste bars and the rest) never use the loop, only the current selection.
   - A score selection is one track; a timeline selection covers all tab tracks. Copy never asks; Paste Special offers Overwrite / Merge / Insert with repeat, as one undo step.
+  - **Section resize knobs:** drag a section's edge knob to make it shorter or longer; it stops at the neighbouring section. Dragging the middle still moves it.
+  - **Split marker:** clicking an audio or MIDI clip leaves a dashed line (following the magnet / snap); S splits the clip there.
 
 - **Appearance and light mode**
   - Light mode redesigned: pale accent-tinted selections, a light maple fretboard and white section labels with a hairline.

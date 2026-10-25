@@ -91,8 +91,7 @@ public sealed class PassAwareEditTests
         var parts = track.AudioClips.OrderBy(part => part.StartSec).ToList();
         Assert.Equal(19.0, parts[0].EndSec, 6);
         Assert.Equal(19.0, parts[1].StartSec, 6);
-        Assert.Null(view.LaneCursor!.Value.Position);
-        Assert.Equal(19.0, view.LaneCursor!.Value.Sec, 6);
+        Assert.Null(view.LaneCursor);   // the split consumes the marker
     }
 
     [Fact]

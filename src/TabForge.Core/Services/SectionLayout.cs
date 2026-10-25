@@ -102,6 +102,37 @@ public static class SectionLayout
         }
     }
 
+    /// <summary>The boundaries a section's edge may be dragged to without touching a neighbour: the right edge (exclusive end bar) from one bar after the start up to the next section's start (or the end);
+    /// the left edge (start bar) from the previous section's end up to one bar before this end. Null when the section is unknown.</summary>
+    public static (int Min, int Max)? EdgeRange(SongProject project, MarkerModel marker, bool rightEdge)
+    {
+        var barCount = BarRangeEditor.MaxMeasures(project);
+        var sorted = Sorted(project);
+        var index = sorted.IndexOf(marker);
+        if (index < 0 || barCount <= 0) return null;
+        var start = Math.Clamp(marker.MeasureIndex, 0, barCount);
+        var end = End(sorted, index, barCount);
+        if (rightEdge) return (start + 1, Math.Max(start + 1, index + 1 < sorted.Count ? Math.Clamp(sorted[index + 1].MeasureIndex, start, barCount) : barCount));
+        return (index > 0 ? End(sorted, index - 1, barCount) : 0, Math.Max(0, end - 1));
+    }
+
+    /// <summary>Drags one edge to <paramref name="boundary"/> (clamped by <see cref="EdgeRange"/>): never over a neighbour, a gap may open when shrinking, at least one bar stays. Only the section's start or length changes; true when it did.</summary>
+    public static bool ResizeClamped(SongProject project, MarkerModel marker, bool rightEdge, int boundary)
+    {
+        if (EdgeRange(project, marker, rightEdge) is not var (min, max)) return false;
+        var barCount = BarRangeEditor.MaxMeasures(project);
+        var sorted = Sorted(project);
+        var index = sorted.IndexOf(marker);
+        var start = Math.Clamp(marker.MeasureIndex, 0, barCount);
+        var end = End(sorted, index, barCount);
+        var target = Math.Clamp(boundary, min, max);
+        if (target == (rightEdge ? end : start)) return false;
+        if (rightEdge) marker.LengthBars = target - start;
+        else { marker.LengthBars = end - target; marker.MeasureIndex = target; }
+        Normalize(project);
+        return true;
+    }
+
     /// <summary>
     /// Moves one edge of a section to a bar boundary. Right edge: growing fills gap bars, then pushes the
     /// following sections along (keeping their lengths); shrinking leaves gap bars. Left edge: growing trims
