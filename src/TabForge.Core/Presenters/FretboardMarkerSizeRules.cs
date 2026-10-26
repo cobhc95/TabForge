@@ -24,14 +24,14 @@ public static class FretboardMarkerSizeRules
         return Math.Min(scale, Math.Max(0, fit));
     }
 
-    /// <summary>The share of the string gap a scale-highlight mark's radius takes: the WPF renderer's 0.3 of the smaller of the string gap and the
+    /// <summary>The share of the string gap a scale-highlight mark's radius takes: the renderer's 0.3 of the smaller of the string gap and the
     /// fret width. The panel sizes the mark from the string gap alone and caps it at 11 DIPs (see InstrumentPanelView.Fretboard).</summary>
     public const double MaxRadiusShareOfGap = 0.3;
 
     /// <summary>The label font size of a marker of <paramref name="radius"/>: the radius itself. A Segoe UI digit is about 1.35 em tall and half an
     /// em wide, so a two-digit number at that size spans about two thirds of the dot's diameter and fits inside it (the two-digit check in
     /// TabForge.Avalonia.Tests.InstrumentFretNumberTests), while a marker shrunk by the note-marker-size setting shrinks its number with it. No role's
-    /// number reaches the cap at the default marker size (13 at the sounding marker's radius of 16, 10 to 12 for the other roles), so the WPF sizes
+    /// number reaches the cap at the default marker size (13 at the sounding marker's radius of 16, 10 to 12 for the other roles), so the sizes
     /// stand there and only a grown or a shrunken marker is limited by its dot.</summary>
     public static double LabelFontSize(double radius) => radius;
 }

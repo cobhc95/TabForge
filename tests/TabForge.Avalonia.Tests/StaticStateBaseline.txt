@@ -48,7 +48,7 @@ Source/src/TabForge.Avalonia/PreviewToolsMenu.cs|1
 Source/src/TabForge.Avalonia/Program.cs|1
 Source/src/TabForge.Avalonia/SelfTests/Architecture/SelfTestArchitectureBudget.cs|1
 Source/src/TabForge.Avalonia/SelfTests/Hygiene/SelfTestDocsConsistency.cs|6
-Source/src/TabForge.Avalonia/SelfTests/Hygiene/SelfTestSourceHygiene.cs|2
+Source/src/TabForge.Avalonia/SelfTests/Hygiene/SelfTestSourceHygiene.cs|1
 Source/src/TabForge.Avalonia/SelfTests/Release/Engine/SelfTestEngineMessages.cs|3
 Source/src/TabForge.Avalonia/SelfTests/Release/Fuzz/SelfTestFuzz.cs|2
 Source/src/TabForge.Avalonia/SelfTests/Release/GuitarPro/SelfTestGpFixture.cs|1

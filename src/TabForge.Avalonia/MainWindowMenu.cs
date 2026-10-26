@@ -21,25 +21,28 @@ namespace TabForge.Avalonia;
 /// <summary>Builds the Avalonia main menu from the Core menu table.</summary>
 public static class MainWindowMenu
 {
-    /// <summary>The menu bar height, as the WPF main toolbar row.</summary>
+    /// <summary>The menu bar height.</summary>
     public const double BarHeight = 30;
+
+    /// <summary>The narrowest menu row (DIP) that still shows the Piano / Tab pills beside the twelve menus and the quick buttons.</summary>
+    public const double PillsMinRow = 1180;
 
     /// <summary>The command of the View menu row that the Layouts and Panels items sit above.</summary>
     private const string ResetPanelsCommandId = "View.ResetPanels";
 
-    /// <summary>The top-level menus in the order the app shows them (the order of the WPF menu skeleton).</summary>
+    /// <summary>The top-level menus in the order the app shows them (the order of the menu skeleton).</summary>
     public static readonly IReadOnlyList<string> TopLevelOrder = new[] { "_File", "_Edit", "_Bar", "_Track", "_Note", "_Effects", "_Sections", "_Tools", "_Sound", "_View", "_Options", "_Help" };
 
     /// <param name="owner">The window the track prompts open over.</param>
     /// <param name="viewMenus">The Layouts and Panels items the View menu holds, before its Reset all panels row.</param>
     /// <param name="hotkeys">The hotkeys whose gesture text the rows show.</param>
     /// <returns>The menu row: the menu on the left, the layout toggles (MenuRowToggles) docked right.</returns>
-    public static Control Build(MainWindowCommands commands, Window owner, DockViewMenus viewMenus, HotkeySettings hotkeys)
+    public static Control Build(MainWindowCommands commands, Window owner, DockViewMenus viewMenus, HotkeySettings hotkeys, Control? modePills = null)
     {
         var groups = MainMenuTable.WithFeatureRows();
         var unknown = groups.Select(g => g.Menu).Distinct().Except(TopLevelOrder).ToList();
         if (unknown.Count > 0) throw new InvalidOperationException($"MainMenuTable names menus the window does not list: {string.Join(", ", unknown)}.");
-        // The WPF bar: 30 px on the panel colour with a soft 1 px bottom line; top-level headers 16 px in, and the same inset after the label (AvaloniaMenuTemplates centres it).
+        // The bar: 30 px on the panel colour with a soft 1 px bottom line; top-level headers 16 px in, and the same inset after the label (AvaloniaMenuTemplates centres it).
         var menu = MenuStability.CreateMenu();
         menu.Name = "MainMenu"; menu[!Layoutable.HeightProperty] = new DynamicResourceExtension(UiDensityResources.MenuInnerHeight); menu.Margin = new global::Avalonia.Thickness(8, 0, 0, 0);
         menu[!TemplatedControl.BackgroundProperty] = new DynamicResourceExtension("PanelBackground");
@@ -50,11 +53,17 @@ public static class MainWindowMenu
         DockPanel.SetDock(divider, Dock.Right);
         var quick = Views.QuickActionsGroup.Build(() => commands);
         DockPanel.SetDock(quick, Dock.Right);
+        if (modePills is not null) DockPanel.SetDock(modePills, Dock.Right);   // added after the quick buttons, so it sits just left of them
         var menuRow = new Border
         {
             Name = "MainMenuRow", BorderThickness = new global::Avalonia.Thickness(0, 0, 0, 1),
-            Child = new DockPanel { LastChildFill = true, Children = { toggles, divider, quick, menu } },
+            Child = new DockPanel { LastChildFill = true, Children = { toggles, divider, quick } },
         };
+        var dock = (DockPanel)menuRow.Child!;
+        if (modePills is not null) dock.Children.Add(modePills);
+        dock.Children.Add(menu);
+        // The menus keep priority: a row narrower than PillsMinRow hides the pills.
+        if (modePills is not null) menuRow.SizeChanged += (_, e) => modePills.IsVisible = e.NewSize.Width >= PillsMinRow;
         menuRow[!Layoutable.HeightProperty] = new DynamicResourceExtension(UiDensityResources.MenuBarHeight);
         menuRow[!Border.BackgroundProperty] = new DynamicResourceExtension("PanelBackground");
         menuRow[!Border.BorderBrushProperty] = new DynamicResourceExtension("SoftBorder");
@@ -130,7 +139,7 @@ public static class MainWindowMenu
         return item;
     }
 
-    /// <summary>The preview dialogs no row names, in one submenu: they are Avalonia's own entries, so they stay out of the WPF-sized Tools popup.</summary>
+    /// <summary>The preview dialogs no row names, in one submenu: they are Avalonia's own entries, so they stay out of the Tools popup.</summary>
     private static MenuItem PreviewsMenu(IEnumerable<PreviewDialogEntry> entries)
     {
         var menu = new MenuItem { Header = "Preview dialogs" };

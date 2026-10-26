@@ -22,7 +22,7 @@ namespace TabForge.Avalonia.Tests;
 
 /// <summary>
 /// Owns: the proof that empty bars are engraved with a whole-bar rest in the staff and the tab, that the page, continuous and one-line views size
-/// the score the way the WPF views do, and that playback follow scrolls vertically and horizontally (Jump and Smooth move, Off does not).
+/// the score the way the views do, and that playback follow scrolls vertically and horizontally (Jump and Smooth move, Off does not).
 /// Does not own: the follow maths (FollowSettingsTests) or the rest drawing itself (Core ScoreRenderer).
 /// Tests: ScoreRenderer.DrawnCells, ScoreGeometryProbe.ContentSize, ScorePreviewView.FollowPlayhead.
 /// </summary>

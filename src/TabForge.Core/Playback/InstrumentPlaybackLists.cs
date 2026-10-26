@@ -8,7 +8,7 @@ namespace TabForge.Playback;
 //     movement (the notes sharing the first onset past now) and the later movements up to the preview horizon plus HorizonExtraMovements,
 //     one onset group per movement, each upcoming note tagged with its movement depth.
 // Does not own: drawing (the panes), the sounding timeline (ScoreTimeline), the score-cursor lights (InstrumentLitNotes).
-//     The WPF InstrumentVisualizer.Build takes its sounding, recent, rest and upcoming notes from here.
+//     The instrument visualizer takes its sounding, recent, rest and upcoming notes from here.
 // Tests: TabForge.Avalonia.Tests.InstrumentPlaybackListsTests.
 // Threads: pure, called from the UI thread once per frame. Key: the song time and the note stream. Ceiling: each list holds at most
 //     the notes of one movement window, and the onset scratch at most previewHorizon + HorizonExtraMovements onsets. Fill allocates
@@ -61,9 +61,9 @@ public static class InstrumentPlaybackLists
     public const double OnsetToleranceMs = 0.5;
     /// <summary>Notes older than this many ms are not sounding any more (the scan stops there).</summary>
     public const double SoundingLookbackMs = 6000;
-    /// <summary>How long a released note stays in Recent, in ms (the WPF instrument's past hold).</summary>
+    /// <summary>How long a released note stays in Recent, in ms.</summary>
     public const double DefaultHoldMs = 2600;
-    /// <summary>Movements read past the preview horizon, so the lists reach as far as the WPF preview does.</summary>
+    /// <summary>Movements read past the preview horizon, so the lists reach as far.</summary>
     public const int HorizonExtraMovements = 2;
     /// <summary>How many upcoming movements the panes preview when the caller gives no horizon.</summary>
     public const int DefaultPreviewHorizon = 6;

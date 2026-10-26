@@ -11,7 +11,7 @@ namespace TabForge.Avalonia;
 
 // Owns: the handlers of the score's right-click rows on the shown score: Show standard notation, Show note length outline, Zoom in, Zoom out,
 //   Fit width, the page layout choices (page or continuous, vertical or horizontal) and Score settings... (the Settings window on the Score page).
-//   Each runs what the WPF row runs (MainWindow.ContextMenus), with the zoom arithmetic from Core (ScoreZoomRules).
+// Each runs what the row runs (MainWindow.ContextMenus), with the zoom arithmetic from Core (ScoreZoomRules).
 // Does not own: the rows (ScoreMenus), the score drawing and layout (Core ScoreGeometryProbe and ScoreLayoutEngine), the zoom and page width
 //   of the view (ScorePreviewView), the Settings window (MainWindowSettings).
 // Tests: TabForge.Avalonia.Tests.MainWindowRowCommandsTests.

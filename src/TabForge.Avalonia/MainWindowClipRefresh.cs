@@ -8,7 +8,7 @@ using TabForge.Services;
 
 namespace TabForge.Avalonia;
 
-// Owns: what every clip or lane edit needs after it landed, in the WPF ClipEditController.Changed order: the "Remove empty clip lanes
+// Owns: what every clip or lane edit needs after it landed, in the clip-edit order: the "Remove empty clip lanes
 //   automatically" setting compacts every track's empty lanes (ClipLanes.Compact skips armed tracks), and the engine is brought in line down
 //   its normal sync path, so a fade/move/trim/recording landing is heard without waiting for the next play.
 // Does not own: the edit itself (MainWindowClipKeys, TimelineClipGestureController), the lane rules (ClipLanes in Core), the engine sync
@@ -52,7 +52,7 @@ internal static class MainWindowClipRefresh
     }
 
     /// <summary>A section drop committed: the moved clips reach the engine down the normal path, and a playing song takes the new
-    /// order from the next bar (no restart), as the WPF section move does. The rows are already reloaded by the drop itself.</summary>
+    /// order from the next bar (no restart). The rows are already reloaded by the drop itself.</summary>
     internal static void AfterSectionMove(IEditableDocument document, int[] baseToCurrentBar, MainWindowSettings? settings, AvaloniaPlaybackSessions? playback)
     {
         if (document is not SongDocument song) return;

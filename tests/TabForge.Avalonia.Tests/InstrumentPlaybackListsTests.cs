@@ -7,7 +7,7 @@ namespace TabForge.Avalonia.Tests;
 
 /// <summary>
 /// Owns: the checks of the Core lit-note lists (now, recent, next, upcoming) on a small hand-made note stream.
-/// Does not own: the drawing of the lists (the instrument pane) or the WPF selection they will replace.
+/// Does not own: the drawing of the lists (the instrument pane) or the selection they will replace.
 /// Tests: this class.
 /// </summary>
 public class InstrumentPlaybackListsTests

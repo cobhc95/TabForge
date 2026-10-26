@@ -37,7 +37,7 @@ internal static class DockSizeRules
 
     /// <summary>The track list's wanted height capped at <paramref name="maxShare"/> of the <paramref name="shared"/> dock height and leaving the score
     /// <paramref name="minScoreHeight"/>; never below <paramref name="collapsedHeight"/>. Unmeasured inputs (shared or minScore not above 0) leave it uncapped.
-    /// The default share is the WPF rule; a share of 1 leaves only the score's minimum as the cap.</summary>
+    /// The default share is the rule; a share of 1 leaves only the score's minimum as the cap.</summary>
     internal static double TrackListHeight(double want, double shared, double minScoreHeight, double collapsedHeight, double maxShare = TrackListMaxShare)
     {
         if (shared <= 1 || minScoreHeight <= 0) return want;

@@ -190,7 +190,7 @@ public static class ContextMenuRows
             return TimelineMenus.Highlight(new HighlightMenuState($"{bars} · {tracks} highlighted", canPaste), key);
         }
 
-        // Inside the loop region on the lanes: the loop menu (Copy/Cut/Paste, Delete…, Loop, Arrange, Clear loop), as WPF's ShowBarMenu branch.
+        // Inside the loop region on the lanes: the loop menu (Copy/Cut/Paste, Delete…, Loop, Arrange, Clear loop).
         var selectedBar = timeline.BarAtX(at.X);
         if (timeline.FocusModel is { HasLoop: true } looped && looped.LoopContains(selectedBar))
         {

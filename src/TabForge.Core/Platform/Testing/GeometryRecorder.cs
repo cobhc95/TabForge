@@ -6,7 +6,7 @@ public sealed record DrawRecord(string Kind, double[] Values, string? Text = nul
 /// <summary>
 /// An <see cref="IDrawContext"/> that logs every draw call to <see cref="Records"/> and forwards it to an inner context.
 /// Owns: the call log (paths as their bounds, text as its string, position and laid-out size). Does not own: drawing or measuring (the inner context).
-/// Tests: ScoreGeometryProofTests (Avalonia), --score-geometry (WPF).
+/// Tests: ScoreGeometryProofTests (Avalonia), --score-geometry.
 /// Diagnostic tool, used by --score-geometry and the Avalonia proof.
 /// </summary>
 public sealed class GeometryRecorder(IDrawContext inner) : IDrawContext

@@ -2,7 +2,7 @@ using TabForge.Models;
 
 namespace TabForge.Services;
 
-// Owns: the string tuning presets offered by Track properties (WPF and Avalonia) and the six-string list of the global tuning window.
+// Owns: the string tuning presets offered by Track properties and the six-string list of the global tuning window.
 // Does not own: applying a tuning to a track (TrackSetup.ApplyTuning) or the windows that list the presets.
 // Tests: no dedicated test class.
 /// <summary>

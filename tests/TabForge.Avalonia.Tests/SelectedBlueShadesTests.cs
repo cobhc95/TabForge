@@ -14,7 +14,7 @@ using Xunit;
 
 namespace TabForge.Avalonia.Tests;
 
-/// <summary>Owns: the selected-row blue (palette key AccentSoft) pinned to the WPF pixels measured in the reference shots: dark #2D5181, light #7895BA,
+/// <summary>Owns: the selected-row blue (palette key AccentSoft) pinned to the pixels measured in the reference shots: dark #2D5181, light #7895BA,
 /// and the painted fill of the selected Settings rail row (its content presenter paints nothing over the row fill).
 /// Does not own: the row templates (LookStateRulesTests) or the dock tab pill (MainWindowDockParityTests).
 /// Tests: AvaloniaPalette.Get("AccentSoft") in the dark and the light theme; the selected rail row in the dark theme.</summary>

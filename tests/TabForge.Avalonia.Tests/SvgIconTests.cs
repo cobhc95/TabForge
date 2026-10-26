@@ -13,7 +13,7 @@ namespace TabForge.Avalonia.Tests;
 
 /// <summary>
 /// Owns: the check of the shared SVG icon model and its Avalonia drawing: a bold label reads as semibold, is anchored on its
-/// SVG x and baseline the way the WPF icon places it, and is drawn in the icon colour.
+/// SVG x and baseline the way the icon places it, and is drawn in the icon colour.
 /// Tests: SvgIcon (Core reader) and AvaloniaSvgIcon (Avalonia drawing).
 /// </summary>
 public class SvgIconTests

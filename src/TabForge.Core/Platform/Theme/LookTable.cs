@@ -43,7 +43,7 @@ public sealed record Look(
 
 /// <summary>
 /// The theme table's state rules for every control look, read from the JSON files in Platform/Theme/Looks (embedded in the app). The table is
-/// toolkit-neutral: the WPF adapter builds template triggers from it (<c>LookRule</c> markup), another toolkit builds its own state styles.
+/// toolkit-neutral: the adapter builds template triggers from it (<c>LookRule</c> markup), another toolkit builds its own state styles.
 /// Owns: reading and finding looks. Does not own: colour values (AvaloniaLooks paints the named brushes per theme) or template shapes (XAML).
 /// Tests: no dedicated test class.
 /// </summary>

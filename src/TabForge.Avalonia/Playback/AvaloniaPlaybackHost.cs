@@ -8,7 +8,7 @@ using TabForge.Playback;
 namespace TabForge.Avalonia.Playback;
 
 // Owns: the process's playback parts for the Avalonia app: the one engine client, the one winmm MIDI output and the per-document sessions
-//   whose engines route through them (the same routing the WPF build makes per document).
+// whose engines route through them (the same routing the app makes per document).
 // Does not own: the adapters' construction (AvaloniaPlaybackComposition), the engine's I/O (AudioEngineClient), the transport (AvaloniaPlaybackSession).
 // Tests: AvaloniaPlaybackHostTests.
 // Threads: UI thread only. Windows only.
@@ -18,7 +18,7 @@ public sealed class AvaloniaPlaybackHost : IDisposable
 
     private readonly AudioEngineClient _client;
     private readonly IMidiOutput _midi = AvaloniaPlaybackComposition.CreateMidiOutput();
-    // One preferences object for every engine of the app (metronome boost, count-in sound, section count-in and loop behaviour), as WPF shares its app options.
+    // One preferences object for every engine of the app (metronome boost, count-in sound, section count-in and loop behaviour).
     private readonly PlaybackPreferences _preferences = new();
 
     public AvaloniaPlaybackHost(IUiThread ui)

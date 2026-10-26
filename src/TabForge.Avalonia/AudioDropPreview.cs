@@ -16,12 +16,12 @@ public sealed record AudioFileDropPreview(TrackModel? Track, int Lane, double St
 /// <summary>Plans the landing an audio-file drag previews: the same target and lane rule as the landed plan, with an estimated span until the files are measured.</summary>
 internal static class AudioDropPreviewPlanner
 {
-    /// <summary>Short files still preview a visible block (the WPF ghost's floor).</summary>
+    /// <summary>Short files still preview a visible block.</summary>
     private const double MinPreviewSeconds = 0.05;
 
     /// <summary>
     /// The preview for <paramref name="files"/> at <paramref name="startSec"/>: measured files at their real lengths, unmeasured ones
-    /// (length 0 or less) at one bar there, as the WPF ghost estimates. Null when the target takes no drop.
+    /// (length 0 or less) at one bar there. Null when the target takes no drop.
     /// </summary>
     public static AudioFileDropPreview? Plan(SongProject song, AudioDropTarget target, double startSec, IReadOnlyList<(string File, double LengthSec)> files)
     {
@@ -44,11 +44,11 @@ internal static class AudioDropPreviewPlanner
             target.Kind == AudioDropTargetKind.NewTrack);
     }
 
-    /// <summary>The preview's length line: the real span, or "length on drop" while any file is still estimated (the WPF ghost's words).</summary>
+    /// <summary>The preview's length line: the real span, or "length on drop" while any file is still estimated.</summary>
     public static string Detail(AudioFileDropPreview preview) =>
         preview.Estimated ? "length on drop" : LengthText(preview.EndSec - preview.StartSec);
 
-    /// <summary>How long a span reads on the preview block (the WPF ghost's length text).</summary>
+    /// <summary>How long a span reads on the preview block.</summary>
     public static string LengthText(double seconds) =>
         seconds < 60 ? $"{seconds:0.0} s" : $"{(int)(seconds / 60)}:{seconds % 60:00.0}";
 

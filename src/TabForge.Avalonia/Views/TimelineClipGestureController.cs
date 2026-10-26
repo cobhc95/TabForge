@@ -17,12 +17,12 @@ namespace TabForge.Avalonia.Views;
 //       clip, snapped to the targets of TimelineClipSnap unless Alt is held; release puts the clip back where the press found it and applies
 //       the final state as one DocumentEdits edit (moving it to its track and lane too), so one undo step returns to the state before the press.
 // Does not own: the press and the selection click (TimelineInputController), the snap targets (TimelineClipSnap), the drawing of the drop lane (TimelineAudioClips),
-//       the song growing to hold a trimmed end (WPF ClipGestureController and ClipEditController), the move itself (ClipRelocation),
+// the song growing to hold a trimmed end, the move itself (ClipRelocation),
 //       and the clip drawing (TimelineAudioClips).
 // Tests: TabForge.Avalonia.Tests.TimelineAudioClipTests.
 internal sealed class TimelineClipGestureController
 {
-    /// <summary>How close to a clip's edge, in DIPs, a press trims rather than moves it (the WPF clip edge grip).</summary>
+    /// <summary>How close to a clip's edge, in DIPs, a press trims rather than moves it.</summary>
     private const double EdgeGripDip = 6;
 
     private readonly TimelineView _view;
@@ -138,6 +138,7 @@ internal sealed class TimelineClipGestureController
                 return;
         }
         _changed = true;
+        _view.LaneCursor = null;   // changing the clip (move, trim, fade) ends the split marker; the next click sets it again
         _view.GhostBars = GhostBarsFor(clip);
         _view.InvalidateVisual();
     }
@@ -197,7 +198,7 @@ internal sealed class TimelineClipGestureController
         if (fit.EndsInJump) _view.ClipNotice?.Invoke(ClipAutoBars.JumpNotice);
         if (changed && relocate) _view.SelectedClip = new TimelineClipSelection(targetTrack, clip);
         if (changed) _view.ClipEdited?.Invoke(document);
-        if (hadDrag) ClearStalePass();
+        if (hadDrag) _view.LaneCursor = null;
         _view.InvalidateVisual();
         return changed;
     }

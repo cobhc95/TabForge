@@ -1,10 +1,10 @@
 namespace TabForge.Platform.Theme;
 
-// Owns: the path data of every icon that both the WPF and the Avalonia app draw (16 x 16 design box unless the name says otherwise),
-//       in the path mini-language both toolkits parse. WPF reads them into its resources at start-up (Platform/Wpf/WpfIconGeometries.cs);
+// Owns: the path data of every icon that the Avalonia app draws (16 x 16 design box unless the name says otherwise),
+//       in the path mini-language both toolkits parse. The Avalonia app reads them at start-up;
 //       Avalonia passes them to Geometry.Parse.
 // Does not own: how an icon is drawn (stroke, fill, size: IconPath and IconFillPath in App.xaml, and the views), or icons only one app
-//       draws (WPF's transport icons in App.xaml, Avalonia's caption minimise bar and the 9 px close glyph of the instrument strip).
+//       draws (the transport icons in App.xaml, Avalonia's caption minimise bar and the 9 px close glyph of the instrument strip).
 // Tests: TabForge.Avalonia.Tests.IconGeometryTests pins each constant.
 public static class IconGeometry
 {
@@ -45,4 +45,55 @@ public static class IconGeometry
 
     /// <summary>The rising steps of the scale finder button.</summary>
     public const string ScaleSteps = "M0,11 L3,11 L3,8 L6,8 L6,5 L9,5 L9,2 L12,2";
+
+    /// <summary>The piano roll's Select tool: the arrow pointer.</summary>
+    public const string ToolSelect = "M4,2.5 L4,13.2 L6.7,10.6 L8.6,14.2 L10.4,13.4 L8.5,9.8 L12.2,9.6 Z";
+
+    /// <summary>The piano roll's Draw tool: a pencil.</summary>
+    public const string ToolDraw = "M3,13 L3.7,10.2 L10.8,3.1 L12.9,5.2 L5.8,12.3 Z M9.5,4.4 L11.6,6.5";
+
+    /// <summary>The piano roll's Erase tool: an eraser block.</summary>
+    public const string ToolErase = "M2.8,10.2 L8.4,4.6 L13.4,9.6 L9.6,13.4 L6,13.4 Z M5.6,7.4 L10.6,12.4 M9.6,13.4 L14,13.4";
+
+    /// <summary>The piano roll's Split tool: scissors.</summary>
+    public const string ToolSplit = "M2.8,11.6 A2,2 0 1 1 6.8,11.6 A2,2 0 1 1 2.8,11.6 M9.2,11.6 A2,2 0 1 1 13.2,11.6 A2,2 0 1 1 9.2,11.6 M6.2,10.2 L11.5,2.8 M9.8,10.2 L4.5,2.8";
+
+    /// <summary>The piano roll's Mute tool: a note with a cross.</summary>
+    public const string ToolMute = "M2.5,6 L10.5,6 L10.5,10.5 L2.5,10.5 Z M11.5,3.5 L14.5,7 M14.5,3.5 L11.5,7";
+
+    /// <summary>The piano roll's Quantize button: notes pulled onto grid lines.</summary>
+    public const string Quantize = "M3,2.5 L3,13.5 M8,2.5 L8,13.5 M13,2.5 L13,13.5 M3,4.5 L7,4.5 L7,6.9 L3,6.9 Z M8,9.2 L11.2,9.2 L11.2,11.6 L8,11.6 Z";
+
+    /// <summary>Zoom in: a magnifier with a plus.</summary>
+    public const string ZoomIn = "M2.7,7 A4.3,4.3 0 1 1 11.3,7 A4.3,4.3 0 1 1 2.7,7 M10.2,10.2 L13.8,13.8 M5,7 L9,7 M7,5 L7,9";
+
+    /// <summary>Zoom out: a magnifier with a minus.</summary>
+    public const string ZoomOut = "M2.7,7 A4.3,4.3 0 1 1 11.3,7 A4.3,4.3 0 1 1 2.7,7 M10.2,10.2 L13.8,13.8 M5,7 L9,7";
+
+    /// <summary>Zoom to fit: corner marks round a note.</summary>
+    public const string ZoomFit = "M2.5,5.5 L2.5,2.5 L5.5,2.5 M10.5,2.5 L13.5,2.5 L13.5,5.5 M13.5,10.5 L13.5,13.5 L10.5,13.5 M5.5,13.5 L2.5,13.5 L2.5,10.5 M5.5,6.5 L10.5,6.5 L10.5,9.5 L5.5,9.5 Z";
+
+    /// <summary>Follow the playhead: an arrow against a line.</summary>
+    public const string Follow = "M2.5,8 L11.5,8 M8.5,5 L11.5,8 L8.5,11 M13.5,3 L13.5,13";
+
+    /// <summary>The snap magnet (U shape with its poles).</summary>
+    public const string Magnet = "M3.5,2.5 L3.5,8.5 A4.5,4.5 0 0 0 12.5,8.5 L12.5,2.5 L9.8,2.5 L9.8,8.5 A1.8,1.8 0 0 1 6.2,8.5 L6.2,2.5 Z M3.5,5 L6.2,5 M9.8,5 L12.5,5";
+
+    /// <summary>A warning triangle (the tab prompt).</summary>
+    public const string Warning = "M8,2 L14.5,13.5 L1.5,13.5 Z M8,6.5 L8,9.5 M8,11.6 L8,11.7";
+
+    /// <summary>The piano roll's Glue tool (a later version): two notes joined.</summary>
+    public const string ToolGlue = "M2.5,8 L6.5,8 M9.5,8 L13.5,8 M6.5,5.5 L6.5,10.5 M9.5,5.5 L9.5,10.5 M7.2,8 L8.8,8";
+
+    /// <summary>The piano roll's Velocity tool (a later version): three lollipops.</summary>
+    public const string ToolVelocity = "M3.5,13.5 L3.5,8 M8,13.5 L8,4.5 M12.5,13.5 L12.5,7 M2.2,7 A1.3,1.3 0 1 1 4.8,7 A1.3,1.3 0 1 1 2.2,7 M6.7,3.5 A1.3,1.3 0 1 1 9.3,3.5 A1.3,1.3 0 1 1 6.7,3.5 M11.2,6 A1.3,1.3 0 1 1 13.8,6 A1.3,1.3 0 1 1 11.2,6";
+
+    /// <summary>The piano roll's Legato command (a later version): a note stretched to the next.</summary>
+    public const string ToolLegato = "M2.5,5 L7,5 L7,7.5 L2.5,7.5 Z M7.5,9 L13.5,9 L13.5,11.5 L7.5,11.5 Z M7,6.2 L9.5,6.2";
+
+    /// <summary>The piano roll's scale highlight: rows with one picked out.</summary>
+    public const string ScaleRows = "M2.5,4 L13.5,4 M2.5,8 L13.5,8 M2.5,12 L13.5,12 M2.5,5.6 L13.5,5.6 L13.5,6.6 L2.5,6.6 Z";
+
+    /// <summary>The piano roll's step input: a note and an arrow to the next step.</summary>
+    public const string StepInput = "M2.5,6 L7,6 L7,9.5 L2.5,9.5 Z M9,7.75 L13.5,7.75 M11.5,5.5 L13.5,7.75 L11.5,10";
 }

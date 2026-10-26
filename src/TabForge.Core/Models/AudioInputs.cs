@@ -50,6 +50,8 @@ public static class AudioInputs
     public static IReadOnlyList<string> Names => _now.Names;
 
     public static bool IsMidi(string input) => input == Midi;
+    /// <summary>True when the track takes MIDI: the legacy MIDI input, or at least one MIDI device ticked next to its audio input.</summary>
+    public static bool TakesMidi(TrackModel track) => IsMidi(track.AudioInput) || track.MidiInputs.Count > 0;
     public static string Mono(int channel) => $"Input {channel}";
     public static string Pair(int first) => $"Inputs {first}+{first + 1} (stereo)";
 

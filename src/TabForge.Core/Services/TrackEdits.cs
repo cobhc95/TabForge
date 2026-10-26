@@ -3,7 +3,7 @@ using TabForge.Ports;
 
 namespace TabForge.Services;
 
-// Owns: the whole-track edits the WPF and Avalonia track row menus share: the unique name a pasted or duplicated track takes, and the
+// Owns: the whole-track edits the track row menus share: the unique name a pasted or duplicated track takes, and the
 //   instrument-to-audio conversion (one undo step: the notation becomes a MIDI clip on the track).
 // Does not own: the menus and prompts (each window), the clipboard (ClipboardService), the refresh of the track list after an edit.
 // Tests: TabForge.Avalonia.Tests.MainWindowTrackRowMenuTests.

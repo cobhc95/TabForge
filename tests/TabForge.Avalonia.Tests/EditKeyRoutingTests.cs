@@ -129,12 +129,10 @@ public sealed class EditKeyRoutingTests
         a.Clipboard.CopyRange(RangeCapture.Capture(a.Song.Project, 2, 2));
         var b = Open(windows: a.Window.Windows);
         Assert.Same(a.Clipboard, b.Clipboard);   // one clipboard for the whole app
-        Assert.False(HasFret(b.Song, 0, 4, 17));
+        Assert.False(HasFret(b.Song, 0, 0, 17));
 
-        b.Model.SetLoop(4, 4);   // a paste lands at the loop start
-        b.Model.SetFocus(FocusTarget.Loop);
-        b.Commands.Run(EditRouting.RangePasteId);
-        WaitUntil(() => HasFret(b.Song, 0, 4, 17));
+        b.Commands.Run(EditRouting.RangePasteId);   // bar commands never use the loop: lands at the playhead bar (0)
+        WaitUntil(() => HasFret(b.Song, 0, 0, 17));
         a.Close();
         b.Close();
     }

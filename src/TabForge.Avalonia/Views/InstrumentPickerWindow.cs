@@ -44,7 +44,7 @@ public sealed class InstrumentPickerWindow : Window
     private Border? _chosenTile;
     // Every posted slice runs only while its generation is still current: a new slice chain or the close bumps it, cancelling the queued slice.
     private int _sliceGeneration;
-    // A tile is a 56 DIP badge above the name, as the WPF picker's.
+    // A tile is a 56 DIP badge above the name.
     private const double TileWidth = 112, BadgeSize = 56, TileNameMaxHeight = 30;
 
     /// <summary>Sample sounds for the preview: two families and a drum kit.</summary>

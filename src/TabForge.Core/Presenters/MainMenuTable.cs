@@ -2,7 +2,7 @@ using TabForge.Models;
 // Owns: the plain main-menu rows as data: the top-level menu each group goes in, the skeleton item it follows, each row's caption
 //   (with the access-key underscore the menu shows), its command id (the hotkey id of HotkeyCatalog) and its tag, and the separators.
 // Does not own: the click handlers (MainWindow.Menus.cs binds each command id to one), the menu skeleton (MainWindow.xaml: the
-//   menus and the Panels item the dock layouts fill), or the WPF build (Views/MainMenu/MenuTable.cs) and the Avalonia build (MainWindowMenu.cs).
+// menus and the Panels item the dock layouts fill), or the app (Views/MainMenu/MenuTable.cs) and the Avalonia build (MainWindowMenu.cs).
 // Tests: TabForge.Avalonia.Tests.MainWindowMenuTests.
 namespace TabForge.Presenters;
 
@@ -226,6 +226,8 @@ public static class MainMenuTable
         new("_File", "File.ExportMidi", "Export _video (MP4)…", "File.ExportVideo"),
         new("_Sound", "Transport.PlayFromStart", "Record _video", "Transport.RecordVideo"),
         new("_File", "File.SaveAs", "Save as temp_late…", "File.SaveAsTemplate"),
+        new("_File", "File.SaveAsTemplate", "Collect media…", "File.CollectMedia"),
+        new("_File", "File.CollectMedia", "Find missing media…", "File.FindMissingMedia"),
         new("_File", "File.Render", "Export _ASCII tab…", "File.ExportAscii"),
         new("_File", "File.ExportAscii", "Export compatible .gp file…", "File.ExportGuitarPro"),
         new("_File", "File.ExportGuitarPro", "Export P_DF…", "File.ExportPdf"),

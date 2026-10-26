@@ -24,7 +24,7 @@ namespace TabForge.Avalonia.Platform;
 internal static partial class TimelineAudioClips
 {
     private const double LanePadding = 2;
-    // A clip's fill, name and wave (the WPF TrackTimeline.Clips values): a 0.34 fill keeps the same-colour waveform readable, the 10pt name sits above it.
+    // A clip's fill, name and wave: a 0.34 fill keeps the same-colour waveform readable, the 10pt name sits above it.
     private const double ClipFillOpacity = 0.34;
     private const double MutedClipOpacity = 0.45;
     // The light theme's clips are solid track colour with a dark name; a muted one fades and takes a 1px track-colour border.
@@ -37,7 +37,7 @@ internal static partial class TimelineAudioClips
     private const double ClipCornerRadius = 2;
     private const double MinClipWidth = 3;
     private const int NameWeight = 400;
-    /// <summary>A clip narrower than this shows no name (the WPF clip label rule).</summary>
+    /// <summary>A clip narrower than this shows no name.</summary>
     private const double MinNameWidth = 30;
     // A MIDI clip's notes (the DAW mini piano roll): the clip's own pitch range spread over the clip height.
     private const double MinNoteHeight = 4;
@@ -46,24 +46,24 @@ internal static partial class TimelineAudioClips
     private const double SelectionStrokeWidth = 2;
     private const double DropLaneFillOpacity = 0.16;
     private const double DropLaneStrokeWidth = 1;
-    /// <summary>A file drag's lane shade, in the lane's own track colour (the WPF ghost's track-coloured shade: a red shade on a red track).</summary>
+    /// <summary>A file drag's lane shade, in the lane's own track colour (the ghost's track-coloured shade: a red shade on a red track).</summary>
     private const double FileDropLaneShadeOpacity = 0.10;
-    /// <summary>A file drag's landing block, in the lane's own track colour (the WPF ghost's translucent block with its file label).</summary>
+    /// <summary>A file drag's landing block, in the lane's own track colour.</summary>
     private const double FileDropBlockFillOpacity = 0.38;
     private const double FileDropBlockStrokeWidth = 1.2;
     private const double FileDropLabelFontSize = 11;
     private const double FileDropDetailFontSize = 10;
     private const double FileDropTextInset = 6;
     private const double FileDropDetailTop = 3;
-    /// <summary>A file drag's new-lane slot: an accent wash with a dashed border (the WPF ghost's slot opening under the block).</summary>
+    /// <summary>A file drag's new-lane slot: an accent wash with a dashed border.</summary>
     private const double FileDropSlotFillOpacity = 0.07;
     private const double FileDropSlotDash = 4;
     private const double FileDropSlotGap = 3;
-    // A lane band's board fill and its track-colour tint, as the WPF lane bands draw them: stronger on a lane that plays, faint on a silenced take lane.
+    // A lane band's board fill and its track-colour tint: stronger on a lane that plays, faint on a silenced take lane.
     private const double LaneBoardOpacity = 0.55;
     private const double LanePlayingTintOpacity = 0.08;
     private const double LaneSilentTintOpacity = 0.03;
-    // The WPF fade shading: the silenced wedge over the gain ramp, in the board colour, with the ramp as a faint text-coloured line.
+    // The fade shading: the silenced wedge over the gain ramp, in the board colour, with the ramp as a faint text-coloured line.
     private const double FadeShadeOpacity = 0.55;
     private const double FadeRampStrokeWidth = 1;
     private const double FadeRampStrokeOpacity = 0.8;
@@ -73,6 +73,7 @@ internal static partial class TimelineAudioClips
     /// <summary>Draws one track's lane bands (an empty lane stays visible) and its clips; <paramref name="top"/> is below the notation band, <paramref name="colour"/> the track's colour.</summary>
     public static void DrawRow(IDrawContext d, Func<string, UiColor> ink, TimelineView view, TrackModel track, int row, double top, UiColor colour)
     {
+        view.Waveforms.MissingInk = ink("Danger");   // a clip whose file is gone draws hatched in this colour
         var lanes = ClipLanes.LaidOutCount(track);
         if (lanes == 0) return;
         var laneHeight = ClipLanes.AudioLaneHeight;
@@ -177,7 +178,7 @@ internal static partial class TimelineAudioClips
     }
 
     /// <summary>Draws the file drag's planned landing: the target lane shaded in its own track colour and the landing block with its
-    /// label (a new track or lane gets the slot opening under it), as the WPF ghost previews in the drop target's colour. Nothing when
+    /// label (a new track or lane gets the slot opening under it), as the ghost previews in the drop target's colour. Nothing when
     /// no file drag is over. Called from the interaction pass, so the block previews over the lanes but under the playhead.</summary>
     public static void DrawFileDropPreview(IDrawContext d, Func<string, UiColor> ink, TimelineView view, double width)
     {
@@ -221,7 +222,7 @@ internal static partial class TimelineAudioClips
         var detail = AudioDropPreviewPlanner.Detail(preview);
         if (box.Width > 4 * FileDropTextInset && detail.Length > 0)
         {
-            // The length (and "new lane") only when it fits: a cut-off number would read as a different length (the WPF ghost's rule).
+            // The length (and "new lane") only when it fits: a cut-off number would read as a different length.
             var parts = detail.Split(" · ");
             for (var count = parts.Length; count >= 1; count = count > 1 ? 1 : 0)
             {
@@ -299,7 +300,7 @@ internal static partial class TimelineAudioClips
     private static double LaneTopOf(TimelineView view, int row) =>
         view.LaneBandTopOf(row) + (view.RowOffsets is { } offsets && row < offsets.Length ? offsets[row] : 0);
 
-    /// <summary>The side of the square fade handles at a clip's top corners, in DIPs (the WPF clip fade handle).</summary>
+    /// <summary>The side of the square fade handles at a clip's top corners, in DIPs.</summary>
     internal const double FadeHandleSize = 7;
     private const double FadeHandleStrokeWidth = 1;
 
@@ -311,7 +312,7 @@ internal static partial class TimelineAudioClips
     internal static (double In, double Out) FadeHandleXs(TimelineView view, AudioClip clip) =>
         (view.XOfSeconds(clip.StartSec + clip.FadeInSec), view.XOfSeconds(clip.EndSec - clip.FadeOutSec));
 
-    // The silenced part of each fade: a triangle above the gain ramp, with the ramp as a line (the WPF TrackTimeline.Clips DrawFadeShades).
+    // The silenced part of each fade: a triangle above the gain ramp, with the ramp as a line.
     private static void DrawFadeShades(IDrawContext d, TimelineView view, AudioClip clip, Rect box, Func<string, UiColor> ink)
     {
         if (clip.FadeInSec <= 0 && clip.FadeOutSec <= 0) return;

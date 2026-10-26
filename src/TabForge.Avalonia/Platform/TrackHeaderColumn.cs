@@ -16,15 +16,15 @@ using TabForge.Presenters;
 namespace TabForge.Avalonia.Platform;
 
 /// <summary>
-/// The track header column of the arrangement: one row per timeline row with the WPF track-row cells in the WPF default order and widths
+/// The track header column of the arrangement: one row per timeline row with the track-row cells in the default order and widths
 /// (<see cref="TrackRowCells"/>): cogwheel, the owner's instrument icon, record arm, number, name, split FX button, M, S, volume and pan sliders,
-/// under a header strip with the WPF column labels. Rows sit exactly where the <see cref="TimelineView"/> puts them (its Core row geometry), scroll
+/// under a header strip with the column labels. Rows sit exactly where the <see cref="TimelineView"/> puts them (its Core row geometry), scroll
 /// with it and follow its row-drag offsets, so the two stay aligned while a row drags. It only draws and answers hit tests; <see cref="TimelineInputController"/>
 /// handles the pointer and shows a slider drag through <see cref="SliderPreview"/> before the edit lands.
 /// Owns: the column's drawing, the cell hit test (track rows and the master row's cells, which report <see cref="MasterRow"/>), the cell tooltips,
 /// the hover and pressed states of the cells, the slider preview value and the input levels the armed sub-rows' meters show.
 /// Does not own: the row geometry (TimelineView), the cell geometry and art (TrackRowCells, MasterLaneRowPainter), the edits, the pointer gestures, the
-/// row-height grip, group headers and the "Add track" lane of the WPF column.
+/// row-height grip, group headers and the "Add track" lane of the column.
 /// Tests: TabForge.Avalonia.Tests.ArrangementViewTests, TabForge.Avalonia.Tests.TrackRowControlsTests, TrackRowSelectionTests, MasterLaneRowTests.
 /// </summary>
 public sealed class TrackHeaderColumn : Control
@@ -46,7 +46,7 @@ public sealed class TrackHeaderColumn : Control
     /// <summary>Every cell in hit-test order, taken from the enum once so a pointer move allocates no array.</summary>
     internal static readonly TrackRowCells.Cell[] HitTestCells = Enum.GetValues<TrackRowCells.Cell>();
 
-    /// <summary>The tooltip text of a cell of <paramref name="row"/>, in the WPF wording (the master row's own texts).</summary>
+    /// <summary>The tooltip text of a cell of <paramref name="row"/>, in the wording (the master row's own texts).</summary>
     public static string TooltipOf(int row, TrackRowCells.Cell cell) => row == MasterRow ? MasterLaneRowPainter.TooltipOf(cell) : cell switch
     {
         TrackRowCells.Cell.Settings => "Track properties (instrument, tuning, mixer, details)",
@@ -342,7 +342,7 @@ public sealed class TrackHeaderColumn : Control
         if (_timeline.ShowTrackLines) d.Line(edge, 0, top + height - 0.5, ColumnWidth, top + height - 0.5);
     }
 
-    /// <summary>The boxes use the WPF colours: idle as the row, red when muted, amber when soloed; the muted letter is the higher-contrast ink on the red.</summary>
+    /// <summary>The boxes use the colours: idle as the row, red when muted, amber when soloed; the muted letter is the higher-contrast ink on the red.</summary>
     internal static (UiColor Fill, UiColor Edge, UiColor Letter) ToggleColours(Func<string, UiColor> ink, TrackRowCells.Cell kind, bool on)
     {
         var mute = kind == TrackRowCells.Cell.Mute;

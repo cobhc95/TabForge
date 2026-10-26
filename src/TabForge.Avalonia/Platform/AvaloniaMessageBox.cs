@@ -11,7 +11,7 @@ using TabForge.Presenters;
 namespace TabForge.Avalonia.Platform;
 
 /// <summary>
-/// The themed message box of the Avalonia app, the counterpart of the WPF <c>Views/ThemedMessageBox</c>.
+/// The themed message box of the Avalonia app.
 /// Owns: building the window from MessageBoxPresenter (buttons, Enter default, Esc button, close-box answer, icon glyph and tone).
 /// Does not own: the labels, answers and tones (MessageBoxPresenter) or showing it (AvaloniaDialogHost).
 /// Tests: AvaloniaDialogTests.
@@ -44,7 +44,7 @@ public sealed class AvaloniaMessageBox : Window
         var body = new DockPanel { Margin = new Thickness(20, 18, 20, 14), LastChildFill = true };
         var content = new StackPanel();
         var row = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
-        // The check box sits at the lower left and the buttons at the lower right, on one row (as the WPF box).
+        // The check box sits at the lower left and the buttons at the lower right, on one row.
         var actions = new DockPanel { LastChildFill = true, Margin = new Thickness(0, 18, 0, 0) };
         if (checkText is not null)
         {
@@ -117,7 +117,7 @@ public sealed class AvaloniaMessageBox : Window
         return (shown ?? box.Result, box.Ticked);
     }
 
-    // The warning icon's amber, with a dark and a light value (the WPF AmberBrush uses the same key).
+    // The warning icon's amber, with a dark and a light value.
     private static string TonePaletteName(MessageBoxTone tone) => tone switch
     {
         MessageBoxTone.Amber => "WarningIcon",

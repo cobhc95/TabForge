@@ -16,15 +16,15 @@ using TabForge.Platform.Theme;
 
 namespace TabForge.Avalonia.Views.TransportPopups;
 
-// Owns: the look and the opening of one transport settings popup (the WPF metronome, count-in and loop popups): a rounded panel above its
+// Owns: the look and the opening of one transport settings popup (the metronome, count-in and loop popups): a rounded panel above its
 //     transport button with a shadow, a caps title, an × close button, and the row builders the three popups share (a labelled slider with its
-//     percent on the right, a labelled drop-down, a check box, muted helper text). It closes on a press outside it (WPF StaysOpen="False"), on Escape or on ×.
+//     percent on the right, a labelled drop-down, a check box, muted helper text). It closes on a press outside it (StaysOpen=false), on Escape or on ×.
 // Does not own: what the rows change (the content classes and their change callbacks), the settings file, the transport buttons.
 // Tests: TabForge.Avalonia.Tests.TransportSettingsPopupTests.
 // Threads: UI thread only.
 public sealed class TransportPopupFrame
 {
-    /// <summary>The popup widths of the WPF popups: the metronome's and the loop's, and the narrower count-in's.</summary>
+    /// <summary>The popup widths of the popups: the metronome's and the loop's, and the narrower count-in's.</summary>
     public const double WideWidth = 276;
     public const double NarrowWidth = 250;
 
@@ -41,7 +41,7 @@ public sealed class TransportPopupFrame
     public const double SmallFontSize = 11;
     private const int PercentMaximum = 100;
     private const double SliderTickFrequency = 10;
-    // The WPF drop shadow (SettingsPopupShadow, blur 16, depth 3, opacity 0.52); the panel keeps a margin so the shadow is not clipped.
+    // The drop shadow (SettingsPopupShadow, blur 16, depth 3, opacity 0.52); the panel keeps a margin so the shadow is not clipped.
     private const string ShadowKey = "SettingsPopupShadow";
     private const double ShadowBlur = 16;
     private const double ShadowDepth = 3;
@@ -54,7 +54,7 @@ public sealed class TransportPopupFrame
     private readonly Border _panel;
     private readonly DockPanel _titleRow;
 
-    /// <param name="title">The caps title, as WPF shows it ("METRONOME SETTINGS").</param>
+    /// <param name="title">The caps title ("METRONOME SETTINGS").</param>
     /// <param name="closeTip">The × button's tooltip.</param>
     /// <param name="width">The panel width (WideWidth or NarrowWidth).</param>
     public TransportPopupFrame(string title, string closeTip, double width)

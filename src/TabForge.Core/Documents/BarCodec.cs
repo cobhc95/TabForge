@@ -128,7 +128,7 @@ internal static class BarCodec
             foreach (var n in c.Notes)
             {
                 if (n is null) { w.VarU(0); continue; }
-                w.VarU((ulong)(1 | Bit(n.Ghost, 1) | Bit(n.Dead, 2) | Bit(n.IsGraceNote, 3) | Bit(n.GraceBeforeBeat, 4) | Bit(n.Tied, 5) | Bit(n.HarmonicFret.HasValue, 6)));
+                w.VarU((ulong)(1 | Bit(n.Ghost, 1) | Bit(n.Dead, 2) | Bit(n.IsGraceNote, 3) | Bit(n.GraceBeforeBeat, 4) | Bit(n.Tied, 5) | Bit(n.HarmonicFret.HasValue, 6) | Bit(n.Silent, 7)));
                 w.Int(n.StringIndex);
                 w.Int(n.Fret);
                 w.Int(n.MidiValue);
@@ -238,7 +238,7 @@ internal static class BarCodec
                     bool N(int shift) => (noteFlags & (1UL << shift)) != 0;
                     var n = new TabNote
                     {
-                        Ghost = N(1), Dead = N(2), IsGraceNote = N(3), GraceBeforeBeat = N(4), Tied = N(5),
+                        Ghost = N(1), Dead = N(2), IsGraceNote = N(3), GraceBeforeBeat = N(4), Tied = N(5), Silent = N(7),
                         StringIndex = r.Int(), Fret = r.Int(), MidiValue = r.Int(), Velocity = r.Int(),
                         SlideTargetMidi = r.Int(), TrillTargetMidi = r.Int(), TrillDurationDenominator = r.Int(),
                         LeftHandFinger = r.NInt(), RightHandFinger = r.NInt(),

@@ -1,6 +1,6 @@
-// Owns: the palette tool rows (group, id, icon file, label) that the WPF and Avalonia Tools panes both list, and the catalogue command
+// Owns: the palette tool rows (group, id, icon file, label) that the Avalonia Tools pane lists, and the catalogue command
 //   each tool runs in TabForge (CommandIdFor).
-// Does not own: the buttons (WPF ToolPaletteController, Avalonia ToolsPaneView), the tool actions, the icon artwork (Assets/Icons/Tools).
+// Does not own: the buttons (Avalonia ToolsPaneView), the tool actions, the icon artwork (Assets/Icons/Tools).
 // Tests: TabForge.Avalonia.Tests.ToolsPaneViewTests.
 
 namespace TabForge.Presenters;

@@ -25,7 +25,7 @@ namespace TabForge.Avalonia.Views;
 /// <summary>
 /// Export video (MP4) (Tools > Export video (MP4)… in the preview): range, layout, theme, instrument, tracks, resolution and frame rate.
 /// Export checks the range, asks for the file and runs the given export (AvaloniaVideoExporter) with progress; Close cancels it while it runs. The preview, with none, reports that it needs the full app.
-/// Owns: the controls (their order, texts and automation names as in the WPF window), loading and saving VideoSettings, and the enabling
+/// Owns: the controls (their order, texts and automation names as in the window), loading and saving VideoSettings, and the enabling
 ///     and tooltip rules applied from VideoExportPresenter. Does not own: the choice lists and range rules (VideoExportPresenter), the
 ///     bar check (RenderBarRange), the export (VideoExportFlow and the encoder), or the song (the caller passes it).
 /// Tests: TabForge.Avalonia.Tests.RenderVideoExportTutorialTests.
@@ -184,7 +184,7 @@ public sealed class VideoExportWindow : Window
         ToolTip.SetTip(_trackScroll, VideoExportPresenter.TrackToolTip(_layout.SelectedIndex));
     }
 
-    /// <summary>Checks the range, asks for the file and exports as the WPF dialog does: progress on the bar, Close cancels while it runs.</summary>
+    /// <summary>Checks the range, asks for the file and exports: progress on the bar, Close cancels while it runs.</summary>
     public async Task ExportPressed()
     {
         var choices = Choices();
@@ -223,7 +223,7 @@ public sealed class VideoExportWindow : Window
         finally { _cts?.Dispose(); _cts = null; _export.IsEnabled = true; _close.Content = VideoExportPresenter.CloseButton; }
     }
 
-    /// <summary>The range in song milliseconds for the choices (the WPF dialog's rule); the range was checked before.</summary>
+    /// <summary>The range in song milliseconds for the choices; the range was checked before.</summary>
     private (double Start, double End) RangeOf(ScoreTimeline timeline, VideoExportChoices choices)
     {
         switch (choices.Range)

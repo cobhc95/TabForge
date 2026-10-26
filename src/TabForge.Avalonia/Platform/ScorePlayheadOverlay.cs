@@ -10,7 +10,7 @@ using TabForge.Views.Score;
 
 namespace TabForge.Avalonia.Platform;
 
-/// <summary>The WPF overlay's job: draws the moving line above the retained page. Thread: UI.</summary>
+/// <summary>The overlay's job: draws the moving line above the retained page. Thread: UI.</summary>
 internal sealed class ScorePlayheadOverlay : Control
 {
     private readonly ScoreGeometryProbe _probe;

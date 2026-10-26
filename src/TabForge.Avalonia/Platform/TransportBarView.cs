@@ -21,9 +21,9 @@ using TabForge.Services;
 namespace TabForge.Avalonia.Platform;
 
 /// <summary>
-/// The transport bar of the WPF app: the live input button, the playback group (rewind to beginning, stop, record, play / pause, next section, a
+/// The transport bar of the app: the live input button, the playback group (rewind to beginning, stop, record, play / pause, next section, a
 /// divider, then count-in, metronome and loop), then the timeline zoom pair, the global tuning fork, the snap magnet, the mixer button and, at the
-/// far right, the master volume knob. Each button is drawn through IDrawContext in the WPF playbar colours, inside the bar's rounded panel. The preview has no playback
+/// far right, the master volume knob. Each button is drawn through IDrawContext in the playbar colours, inside the bar's rounded panel. The preview has no playback
 /// engine, so the playback and live input buttons are disabled (drawn with the transport look's Disabled opacity) and their tooltip says why; the
 /// toggles show unlit. The tuning fork and the snap magnet work without an engine.
 /// Owns: layout and drawing of the transport buttons, their tooltips, the recording state the Record button shows and the snap settings the magnet holds.
@@ -35,7 +35,7 @@ public sealed partial class TransportBarView : Border
 {
     public const string NotAvailable = "Playback is not available in the preview";
 
-    // The square transport buttons (34 DIP) and the stacked timeline zoom pair (26 x 17 DIP each), sized as the WPF playbar sizes them.
+    // The square transport buttons (34 DIP) and the stacked timeline zoom pair (26 x 17 DIP each), sized.
     public const double TransportButtonSize = UiMetrics.TransportButtonSize;
 
     /// <summary>The smallest button size the transport bar shrinks to so its groups fit one row; below it the bar wraps.</summary>
@@ -44,7 +44,7 @@ public sealed partial class TransportBarView : Border
     /// <summary>How much a button shrinks each step while the groups do not fit one row.</summary>
     private const double ButtonShrinkStep = 1;
 
-    /// <summary>The zoom pair's buttons: WPF's 26 x 17 DIP, stacked flush (no vertical margin) and 1 DIP apart sideways.</summary>
+    /// <summary>The zoom pair's buttons: 26 x 17 DIP, stacked flush (no vertical margin) and 1 DIP apart sideways.</summary>
     private const double ZoomButtonWidth = 26;
     private const double ZoomButtonHeight = 17;
     private static readonly Thickness ZoomButtonMargin = new(1, 0);
@@ -55,23 +55,23 @@ public sealed partial class TransportBarView : Border
     /// <summary>The bar's padding inside its border: 1 DIP, so one row of 34 DIP buttons (with their 1 DIP margins) and the border is the ruler's 40 DIP.</summary>
     private static readonly Thickness BarPadding = new(1);
 
-    // The master volume knob at the far right after the mixer button: the WPF knob's label, a 0-100 % range, sized to the 34 DIP buttons so the bar keeps its height.
+    // The master volume knob at the far right after the mixer button: the knob's label, a 0-100 % range, sized to the 34 DIP buttons so the bar keeps its height.
     public const string MasterVolumeLabel = "Master volume";
     private const double MasterVolumeKnobSize = 34;
     private const double MasterVolumeKnobLeftMargin = 4;
     private const double MasterVolumeKnobRightMargin = 6;
 
-    // The lit toggle's fill and accent border (the loop colours of the WPF playbar); the loop button takes the fill; the snap magnet keeps its plain fill and takes only the accent border.
+    // The lit toggle's fill and accent border (the loop colours of the playbar); the loop button takes the fill; the snap magnet keeps its plain fill and takes only the accent border.
     private const string PlayItemName = "Play or pause";
     // The soft grey hover shade of the theme (the same key the menus and lists hover with).
     private const string HoverFillKey = HoverShade.IconPaletteKey;
     private const string LoopItemName = "Loop enable";
     private const string RecordItemName = "Record";
 
-    /// <summary>One button: automation name, WPF tooltip, command id for the key text (or null), icon (null: the record dot), fill and border palette keys.</summary>
+    /// <summary>One button: automation name, tooltip, command id for the key text (or null), icon (null: the record dot), fill and border palette keys.</summary>
     public sealed record Item(string Name, string ToolTip, string? CommandId, string? Icon, string Fill, string Border, bool Toggle);
 
-    /// <summary>The playback buttons in WPF order; the divider sits before the first toggle.</summary>
+    /// <summary>The playback buttons in order; the divider sits before the first toggle.</summary>
     public static readonly IReadOnlyList<Item> Items = new Item[]
     {
         new("Rewind to beginning", "Rewind to beginning", null, "rewind_to_beginning", "PlaybarRewind", "PlaybarRewindBorder", false),
@@ -84,23 +84,23 @@ public sealed partial class TransportBarView : Border
         new("Loop enable", "Loop · click to toggle, right-click for loop settings", "Transport.Loop", "loop", "PlaybarSurface", "PlaybarBorder", true),
     };
 
-    /// <summary>The timeline zoom pair, top to bottom: zoom in, then zoom out (the WPF header zoom buttons).</summary>
+    /// <summary>The timeline zoom pair, top to bottom: zoom in, then zoom out.</summary>
     public static readonly IReadOnlyList<Item> ZoomItems = new Item[]
     {
         new("Zoom in timeline", "Zoom in timeline", MainWindowTimelineZoom.ZoomInId, "zoom_plus", "PlaybarSurface", "PlaybarBorder", false),
         new("Zoom out timeline", "Zoom out timeline", MainWindowTimelineZoom.ZoomOutId, "zoom_minus", "PlaybarSurface", "PlaybarBorder", false),
     };
 
-    /// <summary>The mixer button after the tuning fork and the snap magnet (the WPF header mixer button).</summary>
+    /// <summary>The mixer button after the tuning fork and the snap magnet.</summary>
     public static readonly Item MixerItem = new("Mixer", "Mixer: track and group levels, pan, pitch, sound source and FX chains", "View.Mixer", "mixer", "PlaybarSurface", "PlaybarBorder", false);
 
-    /// <summary>The live input button, left of the playback group (the WPF left-most header button): a press runs Transport.LiveInput, a right press opens the input menu; lit while live input is on.</summary>
+    /// <summary>The live input button, left of the playback group (the left-most header button): a press runs Transport.LiveInput, a right press opens the input menu; lit while live input is on.</summary>
     public static readonly Item LiveInputItem = new("Live input", "Live input: hear your instrument through the live FX chain", "Transport.LiveInput", "mic", "PlaybarSurface", "PlaybarBorder", false);
 
-    /// <summary>The global tuning fork after the zoom pair (the WPF tuning button); it opens the tuning window.</summary>
+    /// <summary>The global tuning fork after the zoom pair; it opens the tuning window.</summary>
     public static readonly Item TuningItem = new("Global tuning", "Global tuning: click to open the tuning window · double-click to type a semitone shift · right-click for quick options (tune up or down a semitone, back to original)", null, "tuning_fork", "PlaybarSurface", "PlaybarBorder", false);
 
-    /// <summary>The snap magnet after the tuning fork, lit while snapping is on (the WPF snap button); right-click opens the snap settings.</summary>
+    /// <summary>The snap magnet after the tuning fork, lit while snapping is on; right-click opens the snap settings.</summary>
     public static readonly Item SnapItem = new("Snap", "Snapping: clips snap to the grid, other clips and the playhead. Hold Alt while dragging to bypass. Right-click for the snap settings.", "Timeline.Snap", "snap_magnet", "PlaybarSurface", "PlaybarBorder", true);
 
     /// <summary>The playback commands a bound session answers, by button name; the other buttons stay disabled.</summary>
@@ -139,7 +139,7 @@ public sealed partial class TransportBarView : Border
     /// <summary>Repaints the lit toggles (live input turned on or off in any window).</summary>
     public void RefreshLiveInput() => RefreshLit();
 
-    /// <summary>True while this bar's window is capturing: the Record button takes the red active state (WPF's REC pulse).</summary>
+    /// <summary>True while this bar's window is capturing: the Record button takes the red active state (the REC pulse).</summary>
     public bool Recording { get; private set; }
 
     /// <summary>Shows or clears the Record button's recording state; called when a recording starts, is stopped or refused, and when a new bar is made.</summary>
@@ -348,9 +348,14 @@ public sealed partial class TransportBarView : Border
     {
         Snap.Enabled = !Snap.Enabled;
         RefreshLit();
+        SnapChanged?.Invoke();
     }
 
-    private void OpenSnapSettings() => new SnapSettingsWindow(Snap, RefreshLit).ShowDialog(OwnerWindow());
+    /// <summary>Raised after the magnet or the snap settings window changed <see cref="Snap"/> (the piano roll's mirror magnet follows).</summary>
+    public event Action? SnapChanged;
+
+    /// <summary>Opens the snap settings window over the window (the magnet's right-click, and the piano roll's mirror magnet).</summary>
+    public void OpenSnapSettings() => new SnapSettingsWindow(Snap, () => { RefreshLit(); SnapChanged?.Invoke(); }).ShowDialog(OwnerWindow());
 
     /// <summary>The Global tuning button was clicked: the window that owns the song's tuning opens the tuning window and applies its choice.</summary>
     public event Action? GlobalTuningRequested;

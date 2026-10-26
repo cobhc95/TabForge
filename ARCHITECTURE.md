@@ -352,7 +352,7 @@ Each central table is one list.
 Engine messages (`Source/src/TabForge.Audio.Contracts/`):
 - `EngineMessages.cs`: one record and one Write/Read pair per fixed-shape engine command. The pair is the only place the field order is written.
 - `EngineMessageLists.cs`: the same for commands with lists, optional tails or nested records.
-- The UI client (`Source/src/TabForge.Core/Audio/AudioEngineClient.Commands.cs`) and the engine (`Source/src/TabForge.AudioEngine/EngineHostCommands.cs`) both use these pairs. Round-trip and golden tests: former engine-message suite, removed in Batch 2 ([canonical note](docs/TESTING.md#removed-in-batch-2-canonical-note)).
+- The UI client (`Source/src/TabForge.Core/Audio/AudioEngineClient.Commands.cs`) and the engine (`Source/src/TabForge.AudioEngine/EngineHostCommands.cs`) both use these pairs. Round-trip and golden tests: former engine-message suite, removed in Batch 2 ([canonical note](TESTING.md#removed-in-batch-2-canonical-note)).
 
 ## Dependency rules
 

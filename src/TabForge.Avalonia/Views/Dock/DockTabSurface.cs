@@ -22,7 +22,7 @@ public sealed class DockTabSurface : Border
 {
     /// <summary>The pointer distance in DIPs from the press before a tab press becomes a drag.</summary>
     public const double DragThreshold = 6;
-    /// <summary>The tab header row height, as the WPF dock host's header (36).</summary>
+    /// <summary>The tab header row height, as the dock host's header (36).</summary>
     public const double StripHeight = 36;
 
     private readonly IUiThread _ui = TabForge.Avalonia.Platform.AvaloniaUiThread.ForApplication();   // posts the layout save after a tab click
@@ -46,7 +46,7 @@ public sealed class DockTabSurface : Border
         this[!BackgroundProperty] = new DynamicResourceExtension("PanelBackground");
         var stripBar = _stripBar = new Border { Child = _strip, Height = StripHeight };
         stripBar[!BackgroundProperty] = new DynamicResourceExtension("Panel2Brush");
-        // A solo pane (the fretboard) has no tab to show: its strip hides and its content carries the pane menu, as in WPF.
+        // A solo pane (the fretboard) has no tab to show: its strip hides and its content carries the pane menu.
         stripBar.IsVisible = !DockPanePresenter.HidesTabStrip(node.Panels);
         _body.ContextMenu = DockPanePresenter.ContentMenuPane(node.Panels) is { } menuPane ? menuOf?.Invoke(menuPane) : null;
         var dock = new DockPanel { LastChildFill = true };
@@ -90,7 +90,7 @@ public sealed class DockTabSurface : Border
     private Control Tab(string id)
     {
         var title = DockPaneTable.Rows.FirstOrDefault(r => r.Id == id)?.PaneTitle ?? id;
-        // The WPF dock tab: a pill rounded on top, accent-tinted with an accent edge when selected, on the strip colour otherwise.
+        // The dock tab: a pill rounded on top, accent-tinted with an accent edge when selected, on the strip colour otherwise.
         var text = new TextBlock
         {
             Text = title, FontSize = 12.65, FontWeight = FontWeight.SemiBold, MaxWidth = 180,

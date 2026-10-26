@@ -7,7 +7,7 @@ using Xunit;
 
 namespace TabForge.Avalonia.Tests;
 
-// Owns: the engine position anchors a session sends (the WPF SongClock's anchors): play, pause, resume, stop, seek and drift
+// Owns: the engine position anchors a session sends: play, pause, resume, stop, seek and drift
 // report the song transport, so the engine's audio clips start, follow jumps and stop with the song. Nothing anchors while the start
 // is still compiling.
 // Does not own: the transport (PlaybackTransport) or the engine client (the sessions host wires ReportEnginePosition to it).

@@ -13,10 +13,10 @@ using Avalonia.Styling;
 namespace TabForge.Avalonia.Platform;
 
 /// <summary>
-/// The templates of every CheckBox, RadioButton and Slider, replacing Fluent's accent-filled ones with the WPF app's: the CheckBox is App.xaml's 15 DIP rounded
+/// The templates of every CheckBox, RadioButton and Slider, replacing Fluent's accent-filled ones with the app's: the CheckBox is App.xaml's 15 DIP rounded
 /// box with an accent tick (its checked and hover colours come from the Core look "CheckBox", whose class the template adds), the RadioButton is a
-/// thin-outlined 13 DIP circle with a 5 DIP centred dot while checked, and the Slider is the WPF default one (a 4 DIP track and a 11x18 DIP thumb
-/// in the system control colours, which the WPF app does not theme).
+/// thin-outlined 13 DIP circle with a 5 DIP centred dot while checked, and the Slider is the default one (a 4 DIP track and a 11x18 DIP thumb
+/// in the system control colours, which the app does not theme).
 /// Owns: those three templates and the system slider colours. Does not own: the CheckBox state colours (Core look "CheckBox" via AvaloniaLooks).
 /// Tests: TabForge.Avalonia.Tests.ParityShotsTests (A/B renders of the Score text and Global tuning dialogs).
 /// </summary>
@@ -26,15 +26,15 @@ public static class AvaloniaCheckSliderStyles
     private const double BoxSize = 15, BoxCorner = 3, TickStroke = 2, LabelGap = 6;
     // The tick's bounds start at the origin, so centring it in the box centres the visible mark.
     private const string TickPath = "M 0 4 L 4 8 L 10 0";
-    // The WPF default radio button: a 13 DIP circle with a 1 DIP outline and a 5 DIP dot when checked.
+    // The default radio button: a 13 DIP circle with a 1 DIP outline and a 5 DIP dot when checked.
     private const double RadioSize = 13, RadioStrokeWidth = 1, RadioDotSize = 5;
     private const string RadioDotClass = "RadioDot";
-    // The WPF default slider (no app style) paints in fixed greys in both themes (palette keys SystemSliderTrack... and the derived thumb states).
+    // The default slider (no app style) paints in fixed greys in both themes (palette keys SystemSliderTrack... and the derived thumb states).
     private const double TrackHeight = 4, ThumbWidth = 11, ThumbHeight = 18, SliderHeight = ThumbHeight;
 
     public static Styles Build() => new()
     {
-        // The WPF check box has no minimum size or padding and a 1 DIP margin (App.xaml); Fluent's are a 32 DIP minimum height and an 8 DIP left padding.
+        // The check box has no minimum size or padding and a 1 DIP margin (App.xaml); Fluent's are a 32 DIP minimum height and an 8 DIP left padding.
         new Style(x => x.OfType<CheckBox>())
         {
             Setters =
@@ -52,7 +52,7 @@ public static class AvaloniaCheckSliderStyles
             Setters =
             {
                 new Setter(TemplatedControl.TemplateProperty, new FuncControlTemplate<RadioButton>(RadioContent)),
-                // Option text uses the dialog body size (13, as WPF inherits it) instead of the theme's 14.
+                // Option text uses the dialog body size (13) instead of the theme's 14.
                 new Setter(TemplatedControl.FontSizeProperty, 13.0),
                 new Setter(Layoutable.MinHeightProperty, 0.0),
                 new Setter(Layoutable.MinWidthProperty, 0.0),

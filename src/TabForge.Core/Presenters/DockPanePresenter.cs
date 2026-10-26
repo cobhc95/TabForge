@@ -9,7 +9,7 @@ internal enum DockPaneMenuAction { ResetPane, ClosePane, Separator, ResetAllPane
 internal sealed record DockPaneMenuEntry(string Label, DockPaneMenuAction Action);
 
 /// <summary>
-/// The dock panes' rules that need no WPF types.
+/// The dock panes' rules that need no toolkit types.
 /// Owns: which panes are solo (their tab strip is hidden when alone), which can move, float and close, the tab tool tip,
 ///     the floating-window title and the pane menu entries.
 /// Does not own: the pane rows, titles and tab order (DockPaneTable), the layout tree (DockLayoutTree), drag, drop, tear-off and

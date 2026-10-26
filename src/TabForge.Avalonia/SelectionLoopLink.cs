@@ -146,12 +146,12 @@ public sealed class SelectionLoopLink : IDisposable
     /// <summary>The loop settings' area line: the region's bars, or that none is picked.</summary>
     public string AreaText => LoopSettingsRules.AreaText(Model.HasLoop, LoopOn, LoopedRange.Start, LoopedRange.End);
 
-    /// <summary>The shortest loop a recording splits on (below it the take is one pass, as WPF's RecordingPasses).</summary>
+    /// <summary>The shortest loop a recording splits on (below it the take is one pass).</summary>
     private const double LoopMinimumSec = 0.05;
 
     /// <summary>
     /// The loop range in song seconds while the shown song loops, or null when the loop is off: a mid-bar start cell is honoured and the end is
-    /// the end of the last looped bar, so a recording can be cut into one take per pass as WPF's RecordingController.LoopSeconds does.
+    /// the end of the last looped bar, so a recording can be cut into one take per pass.
     /// </summary>
     public (double Start, double End)? LoopSeconds
     {
@@ -246,7 +246,7 @@ public sealed class SelectionLoopLink : IDisposable
         // 25 Oct: one selection at a time. A new timeline white selection deselects the score notes (the loop and its tint stay); no mirror.
         if (userChange && Active.Highlight.Has && ActiveScore.Editor.HasSelection)
         {
-            DocumentEdits.PendingSelection ??= _scoreBefore;
+            Active.Highlight.PendingSelection ??= _scoreBefore;
             ActiveScore.Editor.ClearSelection();
         }
     }
@@ -276,6 +276,30 @@ public sealed class SelectionLoopLink : IDisposable
     /// <summary>Loops bars <paramref name="start"/> to <paramref name="end"/> with the Loop button on, as one undo step.</summary>
     public void LoopBars(int start, int end, string label = "Loop bars") =>
         DocumentEdits.EditLoop(Active, model => model.SetLoop(start, end) | model.SetLoopRepeat(true), label);
+
+    /// <summary>
+    /// A piano-roll loop: a ruler drag (<paramref name="fromSelection"/> false) or a released box selection (true: the white selection goes too, as
+    /// after a score drag) sets the loop region to bars <paramref name="start"/> to <paramref name="end"/> as one undo step. The Loop button stays.
+    /// The cells are sixteenth slots (as playback reads them), so a loop can start and end inside a bar (<paramref name="endCell"/> -1: the bar's end).
+    /// </summary>
+    public void LoopPianoRollSpan(int start, int end, bool fromSelection, int startCell = 0, int endCell = -1)
+    {
+        if (_tabs.IsTearCopy) return;
+        var document = Active;
+        var (selection, highlight, loop) = (Model.Snapshot(), document.Highlight.Snapshot(), Model.LoopSnapshot());
+        Model.SetLoop(start, end, startCell, endCell);
+        if (fromSelection)
+        {
+            document.Highlight.Clear();
+            Model.Clear(SelectionOrigin.Editor);
+            Model.SetClips(Array.Empty<TimelineClipSelection>());
+            if (ActiveScore.Editor.HasSelection) ActiveScore.Editor.ClearSelection();
+            DocumentEdits.RecordSwap(document, "Select notes", highlight, loop, selection);
+        }
+        else DocumentEdits.RecordLoop(document, loop, "Loop");
+        _shown = null;
+        SyncAreaVisuals();
+    }
 
     /// <summary>The ruler menu's Loop selected bars: the white selection's bar span (score notes or selected clips); nothing without one.</summary>
     public void LoopSelectedBars()
@@ -336,8 +360,15 @@ public sealed class SelectionLoopLink : IDisposable
         // reverted 25 Oct: a plain score click clears the score selection only; the loop stays
     }
 
-    /// <summary>Edit.SelectAll: every bar of the shown track, in both views.</summary>
-    public void SelectAll() => ActiveScore.SelectAll();
+    /// <summary>Edit.SelectAll: every bar of the shown track, in both views (or every note of a focused piano roll, asked first).</summary>
+    public void SelectAll()
+    {
+        if (SelectAllFirst?.Invoke() == true) return;
+        ActiveScore.SelectAll();
+    }
+
+    /// <summary>Asked before Select all selects the score (the piano roll with focus selects its notes); true when it did.</summary>
+    public Func<bool>? SelectAllFirst { get; set; }
 
     /// <summary>Adds the loop and selection commands to <paramref name="commands"/> (the section row reads the section clicked in <paramref name="menus"/>) and the Escape key to <paramref name="window"/>.</summary>
     /// <param name="notice">Shows the status line after the loop button and Clear loop.</param>
@@ -359,7 +390,7 @@ public sealed class SelectionLoopLink : IDisposable
     /// <summary>Turns the Loop button on or off (the region stays); with no region and the setting to loop what is playing it loops the playing section or bar.</summary>
     public void SetLoopActive(bool loop)
     {
-        // Without a region the loop covers the whole song, or (opt-in) the section, bar or song being played, as the WPF loop button does.
+        // Without a region the loop covers the whole song, or (opt-in) the section, bar or song being played.
         var audio = AudioOrDefaults;
         var session = Session;
         _noAreaLoop = loop && !Model.HasLoop && audio.LoopButtonLoopsSection

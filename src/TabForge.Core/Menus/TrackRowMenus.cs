@@ -1,6 +1,6 @@
 // Owns: the contents of the track row's right-click menu (plain data, one menu for every track kind), and the master track row's menu item (its
 //   header, command id and setting key).
-// Does not own: opening the menu and running the commands (WPF MainWindow.TrackMenu.cs, the Avalonia track header).
+// Does not own: opening the menu and running the commands (the Avalonia track header).
 // Tests: SelfTestTrackRowMenu, SelfTestMasterLane, TabForge.Avalonia.Tests.ContextMenuTests.
 namespace TabForge.Menus;
 

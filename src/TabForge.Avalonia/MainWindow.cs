@@ -35,7 +35,7 @@ public sealed partial class MainWindow : Window
     private readonly NotificationBar _topBar;
 
     public const string PreviewTitle = "TabForge";
-    /// <summary>The smallest window size in DIPs, as the WPF main window (MainWindow.xaml MinWidth and MinHeight).</summary>
+    /// <summary>The smallest window size in DIPs, as the main window (MainWindow.xaml MinWidth and MinHeight).</summary>
     public const double MinimumWidth = 1080, MinimumHeight = 720;
 
     /// <summary>The smallest width actually enforced, clamped to the current screen's working-area width
@@ -70,7 +70,7 @@ public sealed partial class MainWindow : Window
     /// <summary>The main window's offers to its Settings rows (Check now, Group rules, approved folders, plug-ins switched off); set by the constructor.</summary>
     internal Views.PreferencesRowActions? PreferencesActions { get; private set; }
 
-    /// <summary>The notice when the settings file could not be read: defaults are active (as the WPF app's status text).</summary>
+    /// <summary>The notice when the settings file could not be read: defaults are active.</summary>
     public const string SettingsLoadFailedNotice = "Settings could not be loaded; defaults are active. Review Preferences before saving.";
 
     public MainWindow(MainWindowSettings? settings = null, TabWindowRegistry? windows = null, SongDocument? first = null, Transport.AvaloniaPlaybackSessions? playback = null)
@@ -102,12 +102,12 @@ public sealed partial class MainWindow : Window
         compose.Autosave = Autosave;
         ComposeFrame(compose);
         // A malformed settings file already falls back to defaults without overwriting it (AppSettingsStore.LoadFailed):
-        // say so on the top bar, as the WPF status text does, so the silence is not mistaken for a clean start.
+        // say so on the top bar, so the silence is not mistaken for a clean start.
         if (Settings?.LoadFailed == true) _topBar.Show(SettingsLoadFailedNotice, Views.NotificationKind.Warn);
     }
 
     /// <summary>
-    /// Opens the song named on the command line in place of the empty start-up song (the WPF app's start-up file); the outcome or the failure shows
+    /// Opens the song named on the command line in place of the empty start-up song (the app's start-up file); the outcome or the failure shows
     /// on the top bar. False when the file could not be read, leaving the empty song in place.
     /// </summary>
     public Task<bool> OpenStartupFile(string path) => _files.OpenPath(path, replaceActive: true);
@@ -117,7 +117,7 @@ public sealed partial class MainWindow : Window
 
     /// <summary>
     /// A song double-clicked in Explorer while this window runs (a later launch's hand-over): opened in a new tab, and the
-    /// window comes forward, as the WPF app's OpenFromAnotherLaunch. False for a path that is not an openable song.
+    /// window comes forward. False for a path that is not an openable song.
     /// </summary>
     public Task<bool> OpenFromAnotherLaunch(string path, bool activate = true)
     {

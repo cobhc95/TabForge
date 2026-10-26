@@ -228,7 +228,7 @@ public static class Program
     public readonly record struct StartupFile(string? SongPath, string? MissingPath);
 
     /// <summary>
-    /// The song file a start names, as the WPF app resolves it: the first argument that is not an option and exists, else the arguments joined (a path
+    /// The song file a start names: the first argument that is not an option and exists, else the arguments joined (a path
     /// the shell did not quote). Arguments beginning with "--" belong to the helper modes routed above and are ignored, as is the value of such an
     /// option ("--profile &lt;folder&gt;"); a named path that does not exist is returned as <see cref="StartupFile.MissingPath"/> so it can be reported
     /// instead of opened.

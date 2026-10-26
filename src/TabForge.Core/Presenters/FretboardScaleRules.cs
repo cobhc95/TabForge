@@ -4,7 +4,7 @@ namespace TabForge.Presenters;
 
 // Owns: the drawing scale of the fretboard pane: its natural height for a string count and spacing, and the scale a pane of a given
 //   size draws at (height over natural height, capped by the natural width, clamped to [MinScale, MaxScale]).
-// Does not own: the layout inside the scaled space (FretboardGeometryRules), the pane's required height in the WPF panel (InstrumentPanel),
+// Does not own: the layout inside the scaled space (FretboardGeometryRules), the pane's required height in the panel (InstrumentPanel),
 //   or the drawing.
 // Tests: no dedicated test class.
 public static class FretboardScaleRules

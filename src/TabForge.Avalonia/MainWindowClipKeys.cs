@@ -15,7 +15,7 @@ namespace TabForge.Avalonia;
 //   nudges left and right, and lane up and down. Each edit is one DocumentEdits step on the shown song. A key is used only while a clip is selected
 //   (MainWindowCommands.AddWhen), so the arrows and Escape keep their editor meaning otherwise; Paste also needs a copied clip.
 // Does not own: the key table (MainWindowKeyboard), the selection (the document's SelectionModel), the pure clip edits and lane rules (ClipEditService
-//   over ClipLanes in TabForge.Core), the clip clipboard (ClipClipboard in TabForge.Core), and the click position the WPF Paste uses (LaneCursor):
+//   over ClipLanes in TabForge.Core), the clip clipboard (ClipClipboard in TabForge.Core), and the click position Paste uses (LaneCursor):
 //   Paste lands after the selected clip.
 // Tests: TabForge.Avalonia.Tests.MainWindowClipKeysTests.
 /// <summary>The timeline clip commands, bound to the selected clip of the shown song.</summary>
@@ -47,7 +47,7 @@ public static class MainWindowClipKeys
         Add(commands, songs, panes, "Clip.Deselect", target =>
         {
             target.Timeline.SelectedClip = null;
-            target.Timeline.LaneCursor = null;   // the lane edit cursor belongs to the clip context (WPF Clip.Deselect)
+            target.Timeline.LaneCursor = null;   // the lane edit cursor belongs to the clip context
         });
         Add(commands, songs, panes, "Clip.Delete", target => Delete(target, trimEmptyBarsAtEnd));
         Add(commands, songs, panes, "Clip.Copy", Copy);

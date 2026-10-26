@@ -9,7 +9,7 @@ using Xunit;
 namespace TabForge.Avalonia.Tests;
 
 /// <summary>
-/// Owns: the main window opens at its saved position, size and maximised state (WPF ApplyWindowSize), falls back to the OS placement when the
+/// Owns: the main window opens at its saved position, size and maximised state, falls back to the OS placement when the
 /// saved position is off the screens, and saves the position it is moved to. Every run uses its own temp folder; no user settings are read or written.
 /// Tests: MainWindowPlacement.
 /// </summary>

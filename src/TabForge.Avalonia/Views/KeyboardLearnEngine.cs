@@ -16,9 +16,9 @@ using TabForge.Services;
 namespace TabForge.Avalonia.Views;
 
 // Owns: one window's Keyboard mode run (the Learn engine): the judge, score and feedback of the shown song's keyboard track, the wait gate that
-//   pauses the song at each chord until its notes are pressed (WPF KeyboardModeWaitMode parity), the MIDI listener queue (WPF KeyboardModeMidiListener
+// pauses the song at each chord until its notes are pressed, the MIDI listener queue (the MIDI listener
 //   parity: song-time stamping with latency compensation, unstamped pitch-only presses while paused), the practice silence of the practised track
-//   (WPF KeyboardModePracticeTrack parity: PlaybackEngine.SetPracticeSilence only, never Mute), the bar-to-session drive (play/stop/speed/loop/track,
+//   (practice track: PlaybackEngine.SetPracticeSilence only, never Mute), the bar-to-session drive (play/stop/speed/loop/track,
 //   persisted Learn settings for wait/midi/hands/look-ahead/names/fingers) and the per-frame strip feed (Source/Judge/Score/Feedback/Waiting/Awaited/Loop).
 //   One instance per window, owned by MainWindowDocumentPanes and shared by the docked pane and the pop-out, so both bars stay in sync.
 // Does not own: the bars or strips (each binding drives its own pair through this engine), the transport (the session), the devices (the MIDI hub),
@@ -27,7 +27,7 @@ namespace TabForge.Avalonia.Views;
 // Threads: UI thread only, except OnMidiMessage (the MIDI driver thread, lock-free enqueue only).
 public sealed partial class KeyboardLearnEngine : IDisposable
 {
-    /// <summary>A press this long before the pause still counts for the chord (WPF WaitMode.PreWindowMs parity).</summary>
+    /// <summary>A press this long before the pause still counts for the chord.</summary>
     public const long PreWindowMs = 300;
     private const double CatchUpSec = 0.1;
     private const double StartSlackSec = 0.05;
@@ -48,7 +48,7 @@ public sealed partial class KeyboardLearnEngine : IDisposable
     private long _rescanAt;
     private bool _disposed;
 
-    // Run state (WPF KeyboardModeKeyboardSession parity).
+    // Run state.
     private KeyboardNoteSource? _source;
     private object? _timelineOfSource;
     private SongProject? _projectOfSource;
@@ -62,7 +62,7 @@ public sealed partial class KeyboardLearnEngine : IDisposable
     private const int OffsetWindow = 8, MinOffsets = 3;
     private const double MaxSpreadMs = 160, MinBiasMs = 30, MaxBiasMs = 700;
 
-    // Wait state (WPF KeyboardModeWaitMode parity).
+    // Wait state.
     private KeyboardModeJudge? _waitJudge;
     private int _waitGroup;
     private int _waitYielded = -1;
@@ -135,7 +135,7 @@ public sealed partial class KeyboardLearnEngine : IDisposable
         RearmWait();
     }
 
-    /// <summary>The docked pane is attached (visible) or not; hidden with no pop-out stops listening like WPF's OnVisibleChanged.</summary>
+    /// <summary>The docked pane is attached (visible) or not; hidden with no pop-out stops listening when the pane is hidden.</summary>
     public void SetPaneAttached(bool attached)
     {
         _paneAttached = attached;
@@ -160,7 +160,7 @@ public sealed partial class KeyboardLearnEngine : IDisposable
     /// <summary>True while the song is actually playing (not paused, not stopped).</summary>
     private bool HostIsPlaying => _session is { IsPlaying: true, IsPaused: false };
 
-    // ---- bar drive (WPF KeyboardModeControls parity) ----
+    // ---- bar drive ----
 
     /// <summary>A bar choice changed: drives the session and persists the Learn-owned choices.</summary>
     public void ApplyBar(KeyboardModeBar bar)
@@ -229,7 +229,7 @@ public sealed partial class KeyboardLearnEngine : IDisposable
         if (Learn is { } learn) Change(learn, s => s.LookAheadSeconds = KeyboardModeSettings.NormalizeLookAhead(s.LookAheadSeconds + step));
     }
 
-    // ---- per-frame feed (WPF KeyboardModeFrameController.Tick parity, minus drawing) ----
+    // ---- per-frame feed (the frame tick, minus drawing) ----
 
     /// <summary>One frame for one strip+bar pair: keeps the note source current, runs the judge/wait/score/feedback and feeds the strip, then syncs the bar.</summary>
     public void Follow(KeyboardStripView strip, KeyboardModeBar bar)
@@ -254,7 +254,7 @@ public sealed partial class KeyboardLearnEngine : IDisposable
         var paused = session.IsPaused;
         var real = session.Transport.PlayheadMs;
         var listen = _source is not null && (Learn?.PlayAlongKeyboard ?? true);
-        // A hands or tolerance change starts a fresh run (WPF KeyboardSession parity).
+        // A hands or tolerance change starts a fresh run.
         if (Judge is not null && (_handsOfJudge != KeyboardHands.Parse(Learn?.Hands) || !Equals(_tolOfJudge, KeyboardModeTolerances.Of(Learn?.TimingTolerance))))
         {
             Judge = null;
@@ -339,7 +339,7 @@ public sealed partial class KeyboardLearnEngine : IDisposable
         return loop.IsUsable ? loop : null;
     }
 
-    // ---- bar poll (WPF KeyboardModeControls.Poll parity: a bar follows hotkeys, the play bar and devices) ----
+    // ---- bar poll (controls poll: a bar follows hotkeys, the play bar and devices) ----
 
     private int _syncSig;
     private string _syncMidi = "";
@@ -360,7 +360,7 @@ public sealed partial class KeyboardLearnEngine : IDisposable
         bar.ShowFingers = learn?.ShowFingers ?? true;
         bar.HasFingers = _source?.HasFingers == true;
 
-        // Track list follows the window's selection (WPF TracksSignature parity).
+        // Track list follows the window's selection.
         if (project is not null)
         {
             var hash = new HashCode();
@@ -408,7 +408,7 @@ public sealed partial class KeyboardLearnEngine : IDisposable
         return _midi.Device is { Length: > 0 } one ? (open.Contains(one) ? new[] { one } : Array.Empty<string>()) : open;
     }
 
-    // ---- practice silence (WPF KeyboardModePracticeTrack parity: silence only, never Mute) ----
+    // ---- practice silence (practice track: silence only, never Mute) ----
 
     private int _practiceTrack = -1;
 

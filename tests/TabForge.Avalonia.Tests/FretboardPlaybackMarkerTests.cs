@@ -9,7 +9,7 @@ using Xunit;
 namespace TabForge.Avalonia.Tests;
 
 /// <summary>
-/// Owns: the playback marker radii of each role, as the WPF panel sizes them, the fit of a marker into the drawn string gap at every spacing
+/// Owns: the playback marker radii of each role, the fit of a marker into the drawn string gap at every spacing
 /// setting (so neighbouring bubbles never overlap), and the movement line's rule: only the changed positions, from the held shape (or the
 /// released chord at a rest) to the next shape.
 /// Does not own: drawing the markers and the line (FretboardPlaybackMarkers draws through IDrawContext), the text metrics of a bubble's label

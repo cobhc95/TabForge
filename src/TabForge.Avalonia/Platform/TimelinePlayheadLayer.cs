@@ -18,7 +18,7 @@ namespace TabForge.Avalonia.Platform;
 internal sealed class TimelinePlayheadLayer : Control
 {
     public const double LineWidth = 3;
-    /// <summary>The shadow round the line and arrow: a blur of this radius with no offset, at this opacity (WPF's playhead drop shadow).</summary>
+    /// <summary>The shadow round the line and arrow: a blur of this radius with no offset, at this opacity (the playhead drop shadow).</summary>
     public const double ShadowBlurRadius = 4, ShadowOpacity = 0.72;
 
     private readonly TimelineView _view;

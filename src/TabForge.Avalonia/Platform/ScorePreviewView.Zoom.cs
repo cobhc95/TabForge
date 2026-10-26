@@ -99,7 +99,7 @@ public sealed partial class ScorePreviewView
     }
 
     /// <summary>
-    /// The one-line view sits in the middle of the viewer's height when its line is shorter than the viewer, as the WPF one-line view does
+    /// The one-line view sits in the middle of the viewer's height when its line is shorter than the viewer
     /// (its page takes a top margin); the page and the continuous view start at the top, with no margin.
     /// </summary>
     internal void CentreOneLineVertically()

@@ -19,6 +19,13 @@ public interface IMidiInputClient : IMidiInputSource
     string? Device { get; set; }
 }
 
+/// <summary>A hub client that also hears which device each message came from (empty for a source that has no device names).</summary>
+public interface IMidiDeviceInputClient : IMidiInputClient
+{
+    /// <summary>(device name, status, data1, data2, stopwatch timestamp) on the MIDI driver thread; the same messages as <see cref="IMidiInputSource.Message"/>.</summary>
+    event Action<string, int, int, int, long>? DeviceMessage;
+}
+
 // Owns: sharing one set of MIDI input handles between several listeners (recording, Keyboard mode): the devices open while at least one client holds them
 //   and close with the last one; every message is passed to the clients that hold them and listen to its device; rescanning for devices connected or removed.
 // Does not own: the devices (the <see cref="IMidiInputSource"/> it wraps), what a client does with a message, or the recording state.
@@ -78,11 +85,12 @@ public sealed class MidiInputHub
         if (next.Length == 0 && _device.IsOpen) _device.Close();
     }
 
-    private sealed class Client : IMidiInputClient
+    private sealed class Client : IMidiDeviceInputClient
     {
         private readonly MidiInputHub _hub;
         public Client(MidiInputHub hub) => _hub = hub;
         public event Action<int, int, int, long>? Message;
+        public event Action<string, int, int, int, long>? DeviceMessage;
         public bool IsOpen { get; private set; }
         private volatile string? _device;
         public string? Device { get => _device; set => _device = value; }
@@ -98,7 +106,9 @@ public sealed class MidiInputHub
         internal void Raise(string device, int s, int a, int b, long t)
         {
             var want = _device;
-            if (string.IsNullOrEmpty(want) || string.Equals(want, device, StringComparison.Ordinal)) Message?.Invoke(s, a, b, t);
+            if (!string.IsNullOrEmpty(want) && !string.Equals(want, device, StringComparison.Ordinal)) return;
+            Message?.Invoke(s, a, b, t);
+            DeviceMessage?.Invoke(device, s, a, b, t);
         }
     }
 }

@@ -12,7 +12,7 @@ using TabForge.Services;
 namespace TabForge.Avalonia;
 
 // Owns: the Structure, Rhythm and Layout tools that ask a question first (Check bars, time and key signature, directions, add section, N-tuplet,
-//   sound duration, tempo change) and the Marker list tool: each asks with the WPF wording, then hands the answer to the score editor.
+// sound duration, tempo change) and the Marker list tool: each asks with the wording, then hands the answer to the score editor.
 // Does not own: the questions' windows (BarDialogs, TextPromptWindow), the edits (Core ScorePreviewEditor) or the tools that need no question (MainWindowEdit).
 // Deviation: the Sections pane is a fixed sample, so the Marker list tool only brings it into view and an added marker shows there after a restart.
 // Tests: TabForge.Avalonia.Tests.NotificationBarTests.

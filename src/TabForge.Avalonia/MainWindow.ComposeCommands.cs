@@ -177,7 +177,8 @@ public sealed partial class MainWindow
         var layout = compose.Layout;
         var commands = compose.Commands;
         var showStatus = shared.ShowStatus;
-        var recordingHooks = MainWindowTransportRecord.Register(commands, panes, playback, songs, showStatus, () => settings?.Settings.Plugins ?? new TabForge.Services.PluginSettings());
+        var recordingHooks = MainWindowTransportRecord.Register(commands, panes, playback, songs, showStatus, () => settings?.Settings.Plugins ?? new TabForge.Services.PluginSettings(),
+            () => panes.Arrangement?.Transport.Snap, live => compose.EditorPane.PianoRoll.ShowLive(live));
         compose.RecordingHooks = recordingHooks;
         Closed += (_, _) => recordingHooks.Dispose();
         MainWindowReRecordPass.Register(commands, songs, panes, recordingHooks);
@@ -196,6 +197,15 @@ public sealed partial class MainWindow
         MainWindowTrackOutputMenu.Register(commands, playback, songs, this, showStatus);
         MainWindowSpeedHotkeys.Register(commands, songs, playback, showStatus);
         MainWindowScoreRows.Register(commands, scorePreview, settings, this, () => MainWindowBandView.ActiveScoreMenu(dock, panes));
+        compose.EditorPane.Register(commands);   // Show in piano roll / Show in score mode (this track)
+        // The instrument panel hides when the pane switches to the piano roll and comes back with the score; a manual toggle holds until the next switch.
+        compose.EditorPane.ModeChanged = roll =>
+        {
+            if (dock.SuppressInstrumentPanel) return;   // keyboard mode never shows the fretboard
+            dock.SetPanelVisible("instrument", !roll);
+            MainWindowViewMenu.SetRowChecks(this, "View.InstrumentPanel", !roll);
+        };
+        if (compose.EditorPane.ShowsPianoRoll) compose.EditorPane.ModeChanged(true);
         MainWindowNotationMenu.Register(commands, scorePreview, this, settings, () => songs.Active, showStatus);
         MainWindowScoreThemeMenu.Register(commands, scorePreview, this, () => songs.Active, showStatus);
         MainWindowZoomPresets.Register(commands, scorePreview);
@@ -221,6 +231,8 @@ public sealed partial class MainWindow
         var showStatus = shared.ShowStatus;
         var files = new MainWindowFile(dialogs, this, songs, showStatus);
         compose.File = files;
+        compose.Media.Bind(songs, panes);
+        compose.Media.Register(commands);
         commands.Add("Tab.New", songs.New);
         commands.Add("Tab.Duplicate", () => songs.Duplicate(songs.ActiveIndex));
         MainWindowTabMenu.Register(commands, this, showStatus);
@@ -306,7 +318,7 @@ public sealed partial class MainWindow
             bar => contextMenus.MovePlayhead?.Invoke(bar));   // the arrangement's seek: playback, playhead, and paging the view to the bar
         var editRouting = new EditRouting();
         var editTargets = new EditTargets(() => panes.Selection.Model, () => songs.Active.Highlight, () => EditTargetRule.FromChoice(settings?.Settings.Editing.EditTarget));
-        var clipFlow = MainWindowClipboard.Register(commands, () => panes.Selection.ActiveScore, this, () => settings?.Settings.Editing ?? new TabForge.Services.EditingSettings(), showStatus, editRouting, editTargets, Windows);
+        var clipFlow = MainWindowClipboard.Register(commands, () => panes.Selection.ActiveScore, this, () => settings?.Settings.Editing ?? new TabForge.Services.EditingSettings(), showStatus, editRouting, editTargets, Windows, compose.EditorPane.RunEdit);
         var clipboard = clipFlow.Clipboard;
         MainWindowRangePaste.Register(commands, songs, panes, clipFlow, showStatus,
             request => DialogLauncher.Ask<PasteSpecialWindow, PasteSpecialOptions?>(this, () => new PasteSpecialWindow(request)),

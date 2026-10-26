@@ -18,7 +18,7 @@ namespace TabForge.Avalonia.Views.Docking;
 //   ones fitted onto the work areas, follow their moves, and the user's X (FloatingSessionRules).
 // Does not own: the floating window itself (DockFloatingWindow), the pane content (DockPaneSetup), saving the layout, size and fit maths, the rendering.
 // Tests: TabForge.Avalonia.Tests.DockWorkspaceControllerTests.
-/// <summary>Edits the dock tree through DockLayoutTree and DockWorkspaceRules (the same calls as the WPF dock) and re-shows the view.</summary>
+/// <summary>Edits the dock tree through DockLayoutTree and DockWorkspaceRules (the same calls) and re-shows the view.</summary>
 public sealed class DockWorkspaceController : IDockPaneDragHost, IDisposable
 {
     private static readonly TimeSpan ChangeDelay = TimeSpan.FromMilliseconds(UiTiming.LayoutChangeDebounceMs);
@@ -134,7 +134,7 @@ public sealed class DockWorkspaceController : IDockPaneDragHost, IDisposable
 
     /// <summary>
     /// Sizes the lower pane of the vertical split that ends in <paramref name="panelId"/>'s tab host to <paramref name="height"/> (the Core fit rule), as the
-    /// WPF dock does: the live ratio changes, the user's ratio is kept in UserRatio, and nothing is saved. False when no such split is shown yet, or when
+    /// the dock does: the live ratio changes, the user's ratio is kept in UserRatio, and nothing is saved. False when no such split is shown yet, or when
     /// the user dragged the splitter since the last fit and <paramref name="replaceUserSplit"/> is false. A saved ratio at launch is not a user drag, so the
     /// first fit of a session always applies.
     /// </summary>
@@ -278,7 +278,7 @@ public sealed class DockWorkspaceController : IDockPaneDragHost, IDisposable
         Changed();
     }
 
-    /// <summary>The layout the window starts with and "Reset all panels" restores: the WPF default (the fretboard above the score, the palettes at the right, the timeline below).</summary>
+    /// <summary>The layout the window starts with and "Reset all panels" restores: the default (the fretboard above the score, the palettes at the right, the timeline below).</summary>
     public static DockWorkspaceState DefaultLayout() => DockLayoutTree.CreateDefaultState();
 
     /// <summary>The layout the window starts with: the saved one when it is usable (every required pane shown), otherwise the default.</summary>

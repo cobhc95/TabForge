@@ -107,7 +107,7 @@ internal sealed class AvaloniaVideoFrameSource : IVideoFrameSource
         _paper = new ImmutableSolidColorBrush(AvaloniaPalette.ColorOf(colour));
     }
 
-    /// <summary>Shows the page of whole systems that holds <paramref name="system"/> (the rule of the WPF frame source): as many systems as fit,
+    /// <summary>Shows the page of whole systems that holds <paramref name="system"/> (the rule of the frame source): as many systems as fit,
     /// the header above the first page when it fits too, centred and cut below the last whole system.</summary>
     private void TurnPage(int system)
     {

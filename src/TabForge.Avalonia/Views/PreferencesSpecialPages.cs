@@ -23,7 +23,7 @@ public sealed record SpecialActions(Action<string> Open, Action ResetTheme, Acti
 /// </summary>
 public static class PreferencesSpecialPages
 {
-    /// <summary>Row keys shown on Common settings, by card, as the WPF page lists them, and the ids of the link entries under them.</summary>
+    /// <summary>Row keys shown on Common settings, by card, and the ids of the link entries under them.</summary>
     public static readonly IReadOnlyList<(string Title, string[] Keys, string[] LinkIds)> HomeCards = new[]
     {
         ("Look", new[] { "appearance.thememode", "appearance.uiscale", "appearance.fretboard", "general.toolbar" }, new[] { SettingsCatalog.LinkAppearance }),

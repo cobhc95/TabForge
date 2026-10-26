@@ -8,7 +8,7 @@ using TabForge.Platform;
 namespace TabForge.Avalonia.Views;
 
 /// <summary>
-/// The Mixer card of the track properties: the volume and pan knobs with their labels and readouts, as in the WPF dialog.
+/// The Mixer card of the track properties: the volume and pan knobs with their labels and readouts, as in the dialog.
 /// Owns: the two knobs and their card. Does not own: the knob (KnobControl), the texts (KnobText), writing the values (OnOk calls WriteMix).
 /// The FX button opens the track's FX chain window (FxChainWindow); it is disabled while the track is being added.
 /// Tests: TabForge.Avalonia.Tests.TrackPropertiesWindowTests.

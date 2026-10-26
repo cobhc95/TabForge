@@ -9,7 +9,7 @@ using Xunit;
 namespace TabForge.Avalonia.Tests;
 
 /// <summary>
-/// Owns: the drum key map labels each sound with the selected drum track's own drum-map label (as the WPF key map does), and a pitched track gives none.
+/// Owns: the drum key map labels each sound with the selected drum track's own drum-map label, and a pitched track gives none.
 /// Does not own: the drum maps (DrumMaps) or the key map's layout (PercussionKeyMapRules).
 /// Tests: TabForge.Avalonia.Tests.FretboardDrumLabelTests.
 /// </summary>

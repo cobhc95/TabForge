@@ -5,7 +5,7 @@ using Xunit;
 namespace TabForge.Avalonia.Tests;
 
 /// <summary>
-/// Owns: the timeline hover and playhead shades as WPF draws them: the track-list row shade at half strength, the bar cell shade (white on dark,
+/// Owns: the timeline hover and playhead shades: the track-list row shade at half strength, the bar cell shade (white on dark,
 ///     black on light) and its radius.
 /// Does not own: the hover wiring (HoverShade.Attach, TimelineView.HoverBar) or the drawing itself.
 /// </summary>

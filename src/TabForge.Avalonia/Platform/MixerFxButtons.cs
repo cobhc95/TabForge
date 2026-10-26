@@ -10,7 +10,7 @@ using TabForge.Platform.Theme;
 namespace TabForge.Avalonia.Platform;
 
 /// <summary>
-/// The Mixer's two drawn buttons, twins of the WPF FxSplitButton and MonitorFxButton: the split FX button (the left part opens a chain, the
+/// The Mixer's two drawn buttons, FxSplitButton and MonitorFxButton: the split FX button (the left part opens a chain, the
 /// right part is its power) and the amber MON button. Both draw through one reused <see cref="AvaloniaDrawContext"/> in theme colours and redraw
 /// only on a state or hover change.
 /// Owns: the two controls' drawing and pointer parts. Does not own: what a click does (the Mixer window) or the chain state.
@@ -39,7 +39,7 @@ public abstract class MixerDrawnButton : Control
     public override void Render(DrawingContext context) => Draw(_draw.Use(context), Bounds.Width, Bounds.Height);
 }
 
-/// <summary>The split FX button: "FX" opens the chain, the power part switches it. Width 54 and height 22 as the WPF mixer rows.</summary>
+/// <summary>The split FX button: "FX" opens the chain, the power part switches it. Width 54 and height 22.</summary>
 public sealed class FxSplitButton : MixerDrawnButton
 {
     private const double SplitShare = 0.58;

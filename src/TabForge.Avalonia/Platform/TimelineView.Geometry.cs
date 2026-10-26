@@ -40,7 +40,8 @@ public sealed partial class TimelineView
         // A clip whose file could not be read says why on hover.
         var failed = clip is { } hit && hit.Row < _song.Tracks.Count && hit.Index < _song.Tracks[hit.Row].AudioClips.Count && _song.Tracks[hit.Row].AudioClips[hit.Index] is { IsMidi: false } audio
             && Waveforms.StatusOf(audio).State == WaveState.Failed;
-        global::Avalonia.Controls.ToolTip.SetTip(this, failed ? TimelineWaveforms.FailedTip : null);
+        var missing = failed && Waveforms.StatusOf(_song.Tracks[clip!.Value.Row].AudioClips[clip.Value.Index]).IsMissing;
+        global::Avalonia.Controls.ToolTip.SetTip(this, missing ? TimelineWaveforms.MissingTip : failed ? TimelineWaveforms.FailedTip : null);
         InvalidateVisual();
     }
 
@@ -78,23 +79,34 @@ public sealed partial class TimelineView
 
     internal int SectionEndBar(int i) => SectionLayout.End(_sections, i, BarCount);
 
-    /// <summary>The section edge knob under (<paramref name="x"/>, <paramref name="y"/>): the section's sorted index and which end, the nearest one when two knobs overlap; null elsewhere.</summary>
-    internal (int Index, bool Right)? SectionKnobAt(double x, double y)
+    /// <summary>Width (px) of the grab zone inside each side edge of a section chip.</summary>
+    internal const double SectionEdgeZone = 10;
+
+    /// <summary>The section chip edge under (<paramref name="x"/>, <paramref name="y"/>): the section's sorted index and which side, inside the 10 px zone at the chip's left/right edge; null elsewhere (the middle moves the section).</summary>
+    internal (int Index, bool Right)? SectionEdgeAt(double x, double y)
     {
-        if (DragSection >= 0 || SectionResizePreview is not null || y >= RulerHeight + SectionKnobs.HitInto) return null;
-        (int, bool)? best = null;
-        var bestReach = double.MaxValue;
+        if (DragSection >= 0 || SectionResizePreview is not null || y < RulerHeight + 1 || y >= RulerHeight + SectionHeight - 3) return null;
         for (var i = 0; i < _sections.Count; i++)
         {
             var start = Math.Clamp(_sections[i].MeasureIndex, 0, BarCount);
             var end = SectionLayout.End(_sections, i, BarCount);
             if (end <= start) continue;
             var left = BarX(start) + 1;
-            var right = BarX(end) - 3;   // the chip's edges as DrawSections draws them
-            if (SectionKnobs.Reach(left, x, y, RulerHeight) is { } l && l < bestReach) { bestReach = l; best = (i, false); }
-            if (SectionKnobs.Reach(right, x, y, RulerHeight) is { } r && r < bestReach) { bestReach = r; best = (i, true); }
+            var right = BarX(end) - 1;   // the chip's edges as DrawSections draws them
+            if (x < left || x > right) continue;
+            var zone = Math.Min(SectionEdgeZone, (right - left) / 2);
+            return x - left <= zone ? (i, false) : right - x <= zone ? (i, true) : null;
         }
-        return best;
+        return null;
+    }
+
+    private (int Index, bool Right)? _hoverSectionEdge;
+
+    /// <summary>The chip edge shown with a thin highlight (hover, or the edge being dragged); repaints only on change.</summary>
+    internal (int Index, bool Right)? HoverSectionEdge
+    {
+        get => _hoverSectionEdge;
+        set { if (_hoverSectionEdge == value) return; _hoverSectionEdge = value; InvalidateVisual(); }
     }
 
     public SectionSlot[] SectionSlots()
@@ -160,6 +172,7 @@ public sealed partial class TimelineView
         if (added) next.Add(clip);
         FocusModel.SetClips(next);
         if (added) FocusModel.SetFocus(FocusTarget.Clips);
+        DropStaleSplitMarker();
         InvalidateVisual();
     }
     /// <summary>Selects exactly these clips (a paste or duplicate leaves its copies selected); the edit keys go to the clips when there are any.</summary>
@@ -167,7 +180,13 @@ public sealed partial class TimelineView
     {
         FocusModel.SetClips(clips);
         if (FocusModel.Clips.Count > 0) FocusModel.SetFocus(FocusTarget.Clips);
+        DropStaleSplitMarker();
         InvalidateVisual();
+    }
+    /// <summary>The split marker only lives inside a selected clip: a selection of other clips (or none) ends it.</summary>
+    internal void DropStaleSplitMarker()
+    {
+        if (LaneCursor is { } cursor && !cursor.InsideClip(FocusModel.Clips.Select(c => c.Clip))) LaneCursor = null;
     }
     /// <summary>The first selected clip (the one the clip keys act on) or null; setting it selects that clip alone (null: none).</summary>
     public TimelineClipSelection? SelectedClip
@@ -178,6 +197,7 @@ public sealed partial class TimelineView
             var newlySelected = value is not null && SelectedClip?.Clip.Id != value.Clip.Id;
             FocusModel.SetClips(value is null ? Array.Empty<TimelineClipSelection>() : new[] { value });
             if (newlySelected) FocusModel.SetFocus(FocusTarget.Clips);   // selecting a clip puts the edit keys on clips (a restore re-selecting the same clip keeps the focus)
+            DropStaleSplitMarker();
             InvalidateVisual();
         }
     }

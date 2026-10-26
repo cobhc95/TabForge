@@ -16,8 +16,8 @@ public sealed record PaletteEntry(
 
 /// <summary>
 /// The theme table's named colours, read from the JSON files in Platform/Theme/Palette (embedded in the app). Views name a colour instead of
-/// writing its value; a colour that differs by theme has a dark and a light value. The table is toolkit-neutral (<see cref="UiColor"/>); the WPF
-/// adapter (<c>WpfPalette</c>) hands out one frozen brush per colour.
+/// writing its value; a colour that differs by theme has a dark and a light value. The table is toolkit-neutral (<see cref="UiColor"/>); the Avalonia
+/// adapter (AvaloniaPalette) hands out one brush per colour.
 /// Owns: reading and finding named colours. Does not own: the user-editable appearance colours (AvaloniaPalette paints those into resources).
 /// Tests: PaletteToolsTests.
 /// </summary>

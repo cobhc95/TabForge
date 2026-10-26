@@ -15,7 +15,7 @@ using Avalonia.Styling;
 
 namespace TabForge.Avalonia.Platform;
 
-// Owns: the Avalonia templates of the menu items and the context menus, measured to the WPF App.xaml menu templates: the tick column, the
+// Owns: the Avalonia templates of the menu items and the context menus, measured to the App.xaml menu templates: the tick column, the
 //   caption padding, the gesture column and its text, the submenu arrow, the popup offsets and the popup border. The item's root border is named
 //   PART_LayoutRoot so the AvaloniaLooks rules of the MenuItem look (hover, disabled) paint it.
 // Does not own: the menu rows (Core), the item colours (the look table), the separator rule (AvaloniaFormControlStyles), or the menu's handlers.
@@ -25,7 +25,7 @@ public static class AvaloniaMenuTemplates
     // Tick column of a menu item (App.xaml "icon" presenter): 6 DIP left, 2 DIP right, 14 DIP minimum width.
     private static readonly Thickness TickMargin = new(6, 0, 2, 0);
     private const double TickMinWidth = 14;
-    // The tick is a 12 x 10 DIP stroke path, bold enough to match the WPF menu's tick.
+    // The tick is a 12 x 10 DIP stroke path, bold enough to match the menu's tick.
     private const string CheckMarkData = "M 1,5 L 4.5,8.5 L 11,1.5";
     private const double CheckMarkWidth = 12;
     private const double CheckMarkHeight = 10;
@@ -118,7 +118,7 @@ public static class AvaloniaMenuTemplates
     private static Border BuildTick(MenuItem parent, bool isTopLevel)
     {
         // A top-level header has no tick column (its caption sits at the header padding), so its tick host has no margin or minimum width.
-        // A checked check box shows the vector tick (the WPF App.xaml tick); a checked radio item shows its dot as text.
+        // A checked check box shows the vector tick; a checked radio item shows its dot as text.
         var radioDot = new TextBlock { HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
         radioDot[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextPrimary");
         var checkMark = new Path

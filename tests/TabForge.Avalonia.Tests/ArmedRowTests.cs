@@ -51,7 +51,7 @@ public class ArmedRowTests
         window.UpdateLayout();
 
         Assert.Equal(rowBefore + ArmedRowPainter.SubRowHeight, view.Timeline.RowTop(ArmedRow + 1) - view.Timeline.RowTop(ArmedRow), 6);
-        Assert.Single(view.ArmedRows.Children.OfType<ComboBox>());
+        Assert.Single(view.ArmedRows.Children.OfType<TrackInputPicker>());
         var monitor = Assert.Single(view.ArmedRows.Children.OfType<ToggleButton>());
         Assert.Equal(project.Tracks[ArmedRow].MonitorInput, monitor.IsChecked == true);
         window.Close();
@@ -62,13 +62,13 @@ public class ArmedRowTests
     {
         var (window, view, _) = Open();
         SetArm(view, ArmedRow, true);
-        Assert.Single(view.ArmedRows.Children.OfType<ComboBox>());
+        Assert.Single(view.ArmedRows.Children.OfType<TrackInputPicker>());
 
         Assert.NotNull(DocumentEdits.Undo(view.Document));
-        Assert.Empty(view.ArmedRows.Children.OfType<ComboBox>());
+        Assert.Empty(view.ArmedRows.Children.OfType<TrackInputPicker>());
 
         Assert.NotNull(DocumentEdits.Redo(view.Document));
-        Assert.Single(view.ArmedRows.Children.OfType<ComboBox>());
+        Assert.Single(view.ArmedRows.Children.OfType<TrackInputPicker>());
         window.Close();
     }
 
@@ -79,19 +79,13 @@ public class ArmedRowTests
         SetArm(view, ArmedRow, true);
         window.UpdateLayout();
         var monitor = view.ArmedRows.Children.OfType<ToggleButton>().Single();
-        var picker = view.ArmedRows.Children.OfType<ComboBox>().Single();
+        var picker = view.ArmedRows.Children.OfType<TrackInputPicker>().Single();
 
         monitor.IsChecked = !(monitor.IsChecked == true);
 
         Assert.Equal(monitor.IsChecked == true, project.Tracks[ArmedRow].MonitorInput);
-        Assert.NotNull(picker.ItemsSource);
-        // The closed box renders the input's label (the display member), never a blank or the record's fields.
-        Assert.Equal(AudioInputs.Label(project.Tracks[ArmedRow].AudioInput), Assert.IsType<TextBlock>(picker.SelectionBoxItem).Text);
-        // The rows stay readable in the narrow header: the width is the item container's, not the text's.
-        picker.IsDropDownOpen = true;
-        window.UpdateLayout();
-        Assert.True(picker.ContainerFromIndex(0) is { MinWidth: >= 200 });
-        picker.IsDropDownOpen = false;
+        // The closed button shows the input's label.
+        Assert.Contains(AudioInputs.Label(project.Tracks[ArmedRow].AudioInput), Assert.IsType<TextBlock>(picker.Content).Text);
         window.Close();
     }
 
@@ -142,13 +136,11 @@ public class ArmedRowTests
         Assert.InRange(fx.Center.Y, mainTop + mainHeight / 2 - 2, mainTop + mainHeight / 2 + 2);
 
         // The sub-row's controls sit in the band below the main row, the input picker shows the track's input.
-        var picker = view.ArmedRows.Children.OfType<ComboBox>().Single();
+        var picker = view.ArmedRows.Children.OfType<TrackInputPicker>().Single();
         var monitor = view.ArmedRows.Children.OfType<ToggleButton>().Single();
         Assert.InRange(Canvas.GetTop(picker) + view.Timeline.TrackRowsTop, subTop, subTop + ArmedRowPainter.SubRowHeight - picker.Height);
         Assert.InRange(Canvas.GetTop(monitor) + view.Timeline.TrackRowsTop, subTop, subTop + ArmedRowPainter.SubRowHeight - monitor.Height);
-        Assert.NotNull(picker.SelectedItem);
-        Assert.NotNull(picker.SelectionBoxItem);
-        Assert.Equal(project.Tracks[ArmedRow].AudioInput, ((AudioInputChoice)picker.SelectedItem!).Id);
+        Assert.Contains(AudioInputs.Label(project.Tracks[ArmedRow].AudioInput), Assert.IsType<TextBlock>(picker.Content).Text);
         window.Close();
     }
 

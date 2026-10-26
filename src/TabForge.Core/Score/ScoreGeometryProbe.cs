@@ -7,9 +7,9 @@ using TabForge.Presenters;
 namespace TabForge.Views.Score;
 
 // Owns: a headless score host with the editor's page metrics at zoom 1, dark paper unless Light is set, an optional cursor, selection and hover (EditorSelectionState) and the editor's hit rule, no playback; it lays out a track
-//   and draws the header and the systems that hold its first bars through a GeometryRecorder, so the WPF and Avalonia adapters can be compared.
+// and draws the header and the systems that hold its first bars through a GeometryRecorder, so the adapters can be compared.
 // Does not own: the layout or drawing (ScoreLayoutEngine, ScoreRenderer) or the toolkit adapters.
-// Tests: --score-geometry (WPF), ScoreGeometryProofTests (Avalonia).
+// Tests: --score-geometry, ScoreGeometryProofTests (Avalonia).
 // Diagnostic tool, used by --score-geometry and the Avalonia proof.
 internal sealed class ScoreGeometryProbe : IScoreLayoutHost, IScoreRenderHost, IScoreAppearanceHost
 {
@@ -22,7 +22,7 @@ internal sealed class ScoreGeometryProbe : IScoreLayoutHost, IScoreRenderHost, I
     public int TrackIndex { get; private set; }
     private readonly ScoreRenderer _renderer;
 
-    /// <summary>True (the score's page): the header block of title, authors and tuning is drawn above the first system. A Band panel turns it off, as the WPF Band rows draw none.</summary>
+    /// <summary>True (the score's page): the header block of title, authors and tuning is drawn above the first system. A Band panel turns it off.</summary>
     public bool DrawsHeader { get; set; } = true;
 
     /// <param name="measure">The adapter's own context: the layout measures text with it.</param>
@@ -38,9 +38,9 @@ internal sealed class ScoreGeometryProbe : IScoreLayoutHost, IScoreRenderHost, I
         Selection.CellsOf = m => m >= 0 && m < _track.Measures.Count ? _track.Measures[m].CellsForVoice(0) : null;
     }
 
-    // The paper, ink and staff-line colours the WPF editor shows with default settings (MainWindow.ApplyScoreAppearanceSettings
+    // The paper, ink and staff-line colours the editor shows with default settings (MainWindow.ApplyScoreAppearanceSettings
     // reads them from AppearanceSettings at full staff-line opacity), so the light paper is the app's soft grey, not the bare
-    // ScoreAppearance default the WPF render identity keeps.
+    // ScoreAppearance default the render identity keeps.
     private static void UseDefaultSettingsPaper(ScoreAppearance appearance)
     {
         var settings = new TabForge.Services.AppearanceSettings();

@@ -15,13 +15,13 @@ namespace TabForge.Avalonia.Tests;
 /// <summary>
 /// Owns: the Keyboard mode pop-out window checks (presenter texts and tooltip, the full screen button and its text, the F11 and Esc keys,
 /// dark and light PNGs, contrast, the preview's menu item).
-/// Does not own: the window, the presenter or the palette. The WPF control bar and the keyboard view are the app's Keyboard mode and are not
+/// Does not own: the window, the presenter or the palette. The control bar and the keyboard view are the app's Keyboard mode and are not
 /// in this window (see its header), so the structure check covers only the full screen button and the empty host.
 /// Tests: this class.
 /// </summary>
 public class KeyboardModePopoutWindowTests
 {
-    // The WPF window (src/TabForge/KeyboardMode/KeyboardModePopoutWindow.cs), written as the controls it owns: the full screen button (its
+    // The window (src/TabForge/KeyboardMode/KeyboardModePopoutWindow.cs), written as the controls it owns: the full screen button (its
     // automation name, text and tooltip) after the app's control bar, then the keyboard view. The bar and the view are not ported.
     [AvaloniaFact]
     public void FullScreenButtonMatchesWpfWindowNamesTextAndTooltip()

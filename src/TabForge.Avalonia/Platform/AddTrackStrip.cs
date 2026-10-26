@@ -5,7 +5,7 @@ using TabForge.Services;
 namespace TabForge.Avalonia.Platform;
 
 // Owns: the drawing of the "Add track" strip under the track rows: one band across the full pane width, the card fill, the plus glyph and
-//   label centred in the track list's width, and the hover glow (the WPF AddLaneController's look).
+// label centred in the track list's width, and the hover glow.
 // Does not own: the strip's size and words (AddTrackLane in Core), the row geometry (TimelineView), the hover and click (AddTrackBar), or the
 //   Add track window, which the preview does not have yet.
 // Tests: TabForge.Avalonia.Tests.AddTrackStripTests, TabForge.Avalonia.Tests.TrackListOwnerLayoutTests.
@@ -14,7 +14,7 @@ public static class AddTrackStrip
     private const string Font = "Segoe UI";
     private const double LabelFontSize = 12;
     private const double GlowOpacity = 0.10;
-    /// <summary>A dragged audio file over the strip: an accent wash with a border and the drop words (WPF's add-track drag shade).</summary>
+    /// <summary>A dragged audio file over the strip: an accent wash with a border and the drop words (the add-track drag shade).</summary>
     private const double DropFillOpacity = 0.14;
     private const double DropBorder = 2;
     /// <summary>The plus glyph: arm half-length and stroke, and the gap between it and the label.</summary>

@@ -17,12 +17,12 @@ public enum UiFillRule { EvenOdd, Nonzero }
 /// <summary>
 /// Receives one geometry's figures, in DIPs. Every segment is stroked and joins sharply unless it asks for a smooth join.
 /// Owns: the path-building contract. Does not own: drawing (<see cref="IDrawContext.Path"/>) or the geometry object (the adapter's).
-/// Tests: TestDrawContextPort (WPF), AvaloniaPortsTests (Avalonia).
+/// Tests: TestDrawContextPort, AvaloniaPortsTests (Avalonia).
 /// </summary>
 public interface IPathSink
 {
     void BeginFigure(UiPoint start, bool filled, bool closed);
-    /// <param name="smoothJoin">The join into this segment is drawn smooth (WPF honours it; other toolkits draw it as the pen joins).</param>
+    /// <param name="smoothJoin">The join into this segment is drawn smooth (Avalonia honours it; other toolkits could draw it as the pen joins).</param>
     void LineTo(UiPoint point, bool smoothJoin = false);
     void BezierTo(UiPoint control1, UiPoint control2, UiPoint end, bool smoothJoin = false);
     /// <summary>A quadratic curve; kept quadratic because a toolkit rasterises it differently from its cubic equivalent.</summary>

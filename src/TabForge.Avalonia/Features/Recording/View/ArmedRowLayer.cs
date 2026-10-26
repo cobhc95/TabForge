@@ -48,13 +48,19 @@ public sealed class ArmedRowLayer : Canvas
     private readonly DocumentWatch _watch = new();
 
     // The two controls of each armed track. Key: the armed track's id (an undo replaces the TrackModel, never the id); ceiling: the armed tracks (removed when the track disarms); thread: UI only.
-    private readonly Dictionary<Guid, (ToggleButton Monitor, ComboBox Input)> _controls = new();
+    private readonly Dictionary<Guid, (ToggleButton Monitor, TrackInputPicker Input)> _controls = new();
+    private readonly IUiThread _ui;
+    private readonly Func<IReadOnlyList<string>> _midiDevices;
 
     /// <param name="document">The shown song's document: the edits the controls make go to it.</param>
-    /// <param name="ui">The UI thread (kept for the call shape; the level poll rides the shared meter tick).</param>
+    /// <param name="ui">The UI thread (the input pickers' device poll; the level poll rides the shared meter tick).</param>
     /// <param name="meter">The app's shared meter tick; null gives the layer its own (disposed when the layer detaches).</param>
-    public ArmedRowLayer(TimelineView timeline, TrackHeaderColumn header, IEditableDocument document, IUiThread ui, SharedMeterTick? meter = null)
+    /// <param name="midiDevices">Lists the MIDI input devices present now (the input pickers poll it on a worker); null: none.</param>
+    public ArmedRowLayer(TimelineView timeline, TrackHeaderColumn header, IEditableDocument document, IUiThread ui, SharedMeterTick? meter = null,
+        Func<IReadOnlyList<string>>? midiDevices = null)
     {
+        _ui = ui;
+        _midiDevices = midiDevices ?? (() => Array.Empty<string>());
         _ownsMeter = meter is null;
         _meter = meter ?? new SharedMeterTick();
         _timeline = timeline;
@@ -133,6 +139,8 @@ public sealed class ArmedRowLayer : Canvas
             Content = glyph,
         };
         ToolTip.SetTip(monitor, "Monitor the input: you hear it live while armed");
+        monitor.Classes.Add("Button");   // the app's button look gives the hover and pressed surfaces (the rest state below stays flat)
+        monitor.WithNoMargin();
         // Flat chrome like the other row buttons: transparent at rest, the hover and press surfaces under the pointer.
         monitor.Background = Brushes.Transparent;
         monitor.BorderThickness = new Thickness(0);
@@ -146,11 +154,10 @@ public sealed class ArmedRowLayer : Canvas
             PaintMonitor(monitor, glyph);
             SetMonitor(id, monitor.IsChecked == true);
         };
-        var input = AudioInputPicker.Bind(new ComboBox { Width = ArmedRowPainter.InputWidth, Height = ArmedRowPainter.InputHeight, FontSize = ArmedRowPainter.TextSize }, () => Current(id)?.AudioInput ?? "");
-        ToolTip.SetTip(input, "Input recorded and monitored when armed: an audio input, or MIDI (played live through the track and recorded as a MIDI clip)");
-        input.SelectionChanged += (_, _) =>
+        var input = new TrackInputPicker(() => Current(id)?.AudioInput ?? "", () => Current(id)?.MidiInputs ?? new(), pick => SetInput(id, pick), list => SetMidiInputs(id, list),
+            _ui, _midiDevices)
         {
-            if (input.SelectedItem is AudioInputChoice choice && choice.Id != Current(id)?.AudioInput) SetInput(id, choice.Id);
+            Width = ArmedRowPainter.InputWidth, Height = ArmedRowPainter.InputHeight, FontSize = ArmedRowPainter.TextSize,
         };
         Children.Add(monitor);
         Children.Add(input);
@@ -175,13 +182,13 @@ public sealed class ArmedRowLayer : Canvas
     private static void PaintMonitor(ToggleButton monitor, Path glyph) =>
         glyph[!Shape.FillProperty] = new DynamicResourceExtension(monitor.IsChecked == true ? "IconActive" : "IconDisabled");
 
-    private void Place(SongProject project, TrackModel track, (ToggleButton Monitor, ComboBox Input) controls)
+    private void Place(SongProject project, TrackModel track, (ToggleButton Monitor, TrackInputPicker Input) controls)
     {
         var row = project.Tracks.IndexOf(track);
         if (row < 0) return;
         // An undo may have changed the track's monitor or input: the controls show the current track's values (their change handlers find nothing to edit).
         if (controls.Monitor.IsChecked != track.MonitorInput) controls.Monitor.IsChecked = track.MonitorInput;
-        if ((controls.Input.SelectedItem as AudioInputChoice)?.Id != track.AudioInput) AudioInputPicker.Refresh(controls.Input, track.AudioInput);
+        controls.Input.Refresh();
         // The strip sits at the bottom of the track's base band: under it when it has no lanes, inside the last lane band otherwise.
         var subTop = ArmedRowPainter.StripTopOf(track, _timeline.RowTop(row) + _timeline.BaseBandHeightOf(row)) - _timeline.TrackRowsTop;
         SetPosition(controls.Monitor, ArmedRowPainter.MonitorLeft, subTop + (ArmedRowPainter.SubRowHeight - ArmedRowPainter.MonitorHeight) / 2);
@@ -208,6 +215,15 @@ public sealed class ArmedRowLayer : Canvas
         if (Current(id) is not { } track || track.AudioInput == input) return;
         // The chosen input is monitoring state: saved, but never an undo step.
         track.AudioInput = input;
+        _document.Project.IsDirty = true;
+        AnnounceSettingChanged();
+    }
+
+    private void SetMidiInputs(Guid id, IReadOnlyList<string> devices)
+    {
+        if (Current(id) is not { } track || track.MidiInputs.SequenceEqual(devices)) return;
+        // Like the audio input: monitoring state, saved with the track, never an undo step.
+        track.MidiInputs = devices.ToList();
         _document.Project.IsDirty = true;
         AnnounceSettingChanged();
     }

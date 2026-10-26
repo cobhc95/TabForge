@@ -50,9 +50,13 @@ public sealed class MainWindowLifetime
     /// <summary>The longest the close waits for <see cref="FinishBeforeClose"/>: a recording's save watchdog (15 s) plus a margin, so closing never kills a save in progress.</summary>
     public TimeSpan FinishBeforeCloseTimeout { get; init; } = TimeSpan.FromSeconds(20);
 
+    /// <summary>Runs first on every close attempt, before the save question: ends a recording in progress so its take is committed (undoable) and saved with the song.</summary>
+    public Action? CommitBeforeClose { get; init; }
+
     private void OnClosing(object? sender, WindowClosingEventArgs e)
     {
         if (_closeApproved) return;
+        if (!_closing) CommitBeforeClose?.Invoke();
         if (_closing) { e.Cancel = true; return; }   // a close question or a running save is already being answered: a second X must not ask again
         if (!_tabs.HasUnsaved && !_tabs.IsSaving)
         {

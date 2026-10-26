@@ -13,7 +13,7 @@ using TabForge.Views.EffectEditors;
 namespace TabForge.Avalonia.Platform;
 
 /// <summary>
-/// The bend and tremolo-bar curve editor: the twin of the WPF EffectCurveEditor. Time runs across, pitch up the side in quarter-tone steps
+/// The bend and tremolo-bar curve editor. Time runs across, pitch up the side in quarter-tone steps
 /// (a solid line per semitone, labelled per whole tone). Drag a point to move it, click empty grid to add one, right-click or double-click a
 /// point to remove it, Arrow keys move the selected point and Delete removes it. The point under the pointer is outlined.
 /// Owns: the drawing of the grid, curve and handles through <see cref="AvaloniaDrawContext"/> in theme colours, and the pointer and key input

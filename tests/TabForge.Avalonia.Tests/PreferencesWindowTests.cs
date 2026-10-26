@@ -21,8 +21,8 @@ using static TabForge.Avalonia.Tests.DialogTestKit;
 namespace TabForge.Avalonia.Tests;
 
 /// <summary>
-/// The Avalonia Settings window: rail and card structure as the WPF window, rows and captions from PreferencesPagePresenter, the enable
-/// rule of the Custom palette, values written as the WPF catalogue setters write them, reset and the discard question, PNGs and contrast.
+/// The Avalonia Settings window: rail and card structure, rows and captions from PreferencesPagePresenter, the enable
+/// rule of the Custom palette, values written, reset and the discard question, PNGs and contrast.
 /// Tests: this class.
 /// </summary>
 public class PreferencesWindowTests
@@ -176,7 +176,7 @@ public class PreferencesWindowTests
         window.Write("appearance.uiscale", 9.0);
         window.Write("appearance.thememode", "Light");
 
-        // The values the WPF setters store: the switch, the stored bar answer, the clamped scale and the light palette.
+        // The values the setters store: the switch, the stored bar answer, the clamped scale and the light palette.
         var expected = new TabForge.Services.AppearanceSettings();
         ThemeColours.ApplyPreset(expected, light: true);
         Assert.False(window.Working.General.CheckForUpdates);

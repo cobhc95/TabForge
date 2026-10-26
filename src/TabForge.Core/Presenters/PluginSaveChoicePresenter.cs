@@ -1,5 +1,5 @@
 // Owns: the "Save song with audio settings" question's texts and its three options (title, explanation, value, which is recommended).
-// Does not own: the window (WPF PluginSaveDialog, Avalonia PluginSaveWindow) or the save itself (SaveDialogs maps the value for DocumentSaveFlow).
+// Does not own: the window (Avalonia PluginSaveWindow) or the save itself (SaveDialogs maps the value for DocumentSaveFlow).
 // Tests: TabForge.Avalonia.Tests.ClipSnapPluginDialogTests.
 namespace TabForge.Presenters;
 

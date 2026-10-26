@@ -6,7 +6,7 @@ using TabForge.Views.Score;
 namespace TabForge.Avalonia.Platform;
 
 // Owns: the fretboard click that writes a note at the score cursor's cell, or removes the one already there (ScoreEditCommands.ToggleFretAtPosition),
-//     and the drum-pad click that writes a drum sound on its drum-map line. A click edits while the song plays, as the WPF panel does.
+// and the drum-pad click that writes a drum sound on its drum-map line. A click edits while the song plays.
 // Does not own: the note rules and undo (Core ScoreEditCommands, DocumentEdits), the hover ghost (InstrumentPanelView), which clicks reach it (the strip).
 // Tests: FretboardNoteEntryTests.
 // Threads: UI thread only; each click is one edit through the editor's own RunEdit.

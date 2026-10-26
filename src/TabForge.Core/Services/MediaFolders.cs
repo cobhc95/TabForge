@@ -1,9 +1,9 @@
 namespace TabForge.Services;
 
-// Owns: where a song keeps its recordings and kept copies of dropped files.
-// Does not own: copying files there (MediaDrop.KeepCopy), the recording itself (TransportRecording, RecordingController).
+// Owns: where a song keeps its recordings and the media collected into it (the folder name only).
+// Does not own: copying other files into it (MediaCollector, which collects external media here), the recording itself (TransportRecording, RecordingController).
 // Tests: TabForge.Avalonia.Tests.TransportRecordingTests.
-/// <summary>Where a song keeps its recordings and kept copies of dropped files.</summary>
+/// <summary>Where a song keeps its recordings and the media collected into it. A dropped file is linked, never copied here unless the user collects it.</summary>
 public static class MediaFolders
 {
     /// <summary>The folder under Music for recordings of a song that has not been saved.</summary>

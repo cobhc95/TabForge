@@ -86,7 +86,7 @@ public static class ScaleHighlightStyles
     public const string Circles = "Circles";
     public const string Rings = "Rings";
     public static readonly string[] All = { Shaded, Circles, Rings };
-    /// <summary>Colour names (the settings types stay WPF-free); "Accent" follows the applied accent colour.</summary>
+    /// <summary>Colour names (the settings types stay toolkit-free); "Accent" follows the applied accent colour.</summary>
     public static readonly string[] Colours = { "Accent", "Blue", "Green", "Amber", "Purple", "Red", "Teal", "Grey" };
     public const int MinStrength = 10, MaxStrength = 150, DefaultStrength = 100, StrengthStep = 10;
     /// <summary>The strength setting as a multiplier of the standard look (1.0 = today's alphas).</summary>

@@ -15,13 +15,13 @@ using TabForge.Avalonia.Views.Dialogs;
 namespace TabForge.Avalonia.Views;
 
 /// <summary>
-/// The Wiring window (the FX chain window's Wiring… button), the Avalonia twin of the WPF WiringWindow: the same
+/// The Wiring window (the FX chain window's Wiring… button), the Avalonia wiring window: the same
 /// sections, rows, texts, choices and enabled rules, all read from WiringPresenter. It runs on a sample routing graph
 /// (<see cref="SampleTracks"/>): the preview has no song, so the tracks and the plug-in are made up here, and Pad already forwards
 /// its MIDI to Lead so the loop refusal can be seen. A refused link shows its message on the status line and the choice goes back.
 /// Owns: the layout, the rows and the event wiring. Does not own: the choices, rules, texts and loop check (WiringPresenter), the
 /// change to the plug-in (the <paramref name="edit"/> callback) and engine routing.
-/// The rows carry the WPF tooltips (a disabled row says why). The instrument output row shows for instrument plug-ins only.
+/// The rows carry the tooltips (a disabled row says why). The instrument output row shows for instrument plug-ins only.
 /// Tests: TabForge.Avalonia.Tests.WiringWindowTests.
 /// </summary>
 public sealed class WiringWindow : Window

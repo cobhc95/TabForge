@@ -10,7 +10,7 @@ namespace TabForge.Services;
 // Owns: the model of a new track (the kind's template, instrument, MIDI channel, tuning, colour and empty bars matching the song).
 // Does not own: the document edit that adds the track, the Add track window or prompt, or the track list.
 // Tests: NewTrackFactoryTests in TabForge.Avalonia.Tests.
-/// <summary>Builds the model of a new track from its kind. No UI types, so the WPF and Avalonia apps share it.</summary>
+/// <summary>Builds the model of a new track from its kind. No UI types, so the app can share it.</summary>
 public static class NewTrackFactory
 {
     /// <summary>The colour a new track of this kind starts with (null: the kind cycles the palette).</summary>

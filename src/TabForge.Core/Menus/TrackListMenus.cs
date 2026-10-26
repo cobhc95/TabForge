@@ -1,8 +1,8 @@
 // Owns: the right-click menu of the empty track list (the space below the tracks) as plain data: show tracks in groups, the Colours submenu,
-//   the master track row, reset track list height and the Track list settings door. Captions and tooltips are the WPF menu's.
-// Does not own: opening the menu (WPF ArrangementPanel.Groups.cs, Avalonia ContextMenuRows), the colour dialogs or the Settings pages it opens,
-//   nor the WPF menu's column items (auto fit, reset columns) and dock panel items, which the WPF host adds to its own copy.
-// Tests: TabForge.Avalonia.Tests.TrackListMenuTests (pins the WPF captions and order).
+// the master track row, reset track list height and the Track list settings door. Captions and tooltips are the menu's.
+// Does not own: opening the menu (Avalonia ContextMenuRows), the colour dialogs or the Settings pages it opens,
+// nor the menu's column items (auto fit, reset columns) and dock panel items, which the host adds to its own copy.
+// Tests: TabForge.Avalonia.Tests.TrackListMenuTests (pins the captions and order).
 namespace TabForge.Menus;
 
 /// <summary>What the track list menu needs to know: whether tracks are shown in groups and whether the master track row is shown.</summary>

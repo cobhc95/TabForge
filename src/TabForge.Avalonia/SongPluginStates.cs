@@ -9,13 +9,13 @@ using TabForge.Models;
 namespace TabForge.Avalonia;
 
 // Owns: the plug-in states a save or a .gp export reads before it writes: every rig of the song (tracks, group buses, master and the monitor chain)
-//   asked of the audio engine, with the wait the WPF window uses. Without an engine nothing is asked and the song keeps the states it has.
+// asked of the audio engine, with the wait the window uses. Without an engine nothing is asked and the song keeps the states it has.
 // Does not own: the engine (AudioEngineClient, the playback host's engine), the save sequence (DocumentSaveFlow), what a state is (StateCollection).
 // Tests: TabForge.Avalonia.Tests.MainWindowSaveTests.
 /// <summary>Reads the plug-in states of a song's rigs for a save. UI thread only (the engine answers on the caller's context).</summary>
 public sealed class SongPluginStates
 {
-    /// <summary>How long a save waits for the engine's state replies; the WPF window waits the same.</summary>
+    /// <summary>How long a save waits for the engine's state replies; the window waits the same.</summary>
     public const int CollectTimeoutMs = 5000;
 
     private readonly Func<IEnumerable<TrackModel>, int, Task<StateCollection>>? _readStates;

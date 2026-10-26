@@ -12,7 +12,7 @@ namespace TabForge.Avalonia.Platform;
 
 /// <summary>
 /// The waveform outline drawn inside an audio clip of the arrangement timeline: the peak level of the clip's file, as one filled shape across the
-/// clip box, centred on the lane as WPF draws it. The outline is built once per clip and replayed on every frame until the file, offset, length,
+/// clip box, centred on the lane. The outline is built once per clip and replayed on every frame until the file, offset, length,
 /// width, height, gain or visible span changes. Until the file has been read the clip shows its status (loading stripe, lock, warning); the timeline redraws when it is ready.
 /// Files are read in the shown document media scope (the same as import and playback), so an approved folder shows its waveform.
 /// Owns: the per-clip outline cache (keyed by clip and held weakly, so a closed timeline frees it) and the redraw request when a file finishes reading.
@@ -34,7 +34,7 @@ public sealed partial class TimelineWaveforms
         public IUiPath? Path;
     }
 
-    /// <summary>The zoom-scale range a cached outline stretches over instead of rebuilding; a step beyond it rebuilds (WPF's 0.2-5x).</summary>
+    /// <summary>The zoom-scale range a cached outline stretches over instead of rebuilding; a step beyond it rebuilds (0.2-5x).</summary>
     private const double MinZoomReuseScale = 0.2, MaxZoomReuseScale = 5;
 
     // Keyed by clip, weakly held: an outline lives as long as its clip, and a closed timeline releases them. Read and written on the UI thread only.
@@ -87,7 +87,7 @@ public sealed partial class TimelineWaveforms
         var peaks = _service.Get(clip.File, media);
         if (peaks is null || peaks.Length == 0)
         {
-            if (clip.SourceLengthSec > 0) DrawStatus(d, _service.StatusOf(clip.File, media).State, box, ink ?? colour);
+            if (clip.SourceLengthSec > 0) DrawStatus(d, _service.StatusOf(clip.File, media), box, ink ?? colour);
             return;
         }
         if (clip.SourceLengthSec <= 0) return;

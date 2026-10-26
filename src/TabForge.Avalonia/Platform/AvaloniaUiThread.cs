@@ -6,7 +6,7 @@ using TabForge.Platform;
 namespace TabForge.Avalonia.Platform;
 
 /// <summary>
-/// <see cref="IUiThread"/> over an Avalonia <see cref="Dispatcher"/>: each call maps one to one onto the dispatcher call with the same priority, as the WPF adapter does.
+/// <see cref="IUiThread"/> over an Avalonia <see cref="Dispatcher"/>: each call maps one to one onto the dispatcher call with the same priority.
 /// Owns: the Avalonia dispatcher mapping and the shutdown flag. Does not own: which dispatcher (the caller passes it; the app passes <c>Dispatcher.UIThread</c>).
 /// Tests: TabForge.Avalonia.Tests.UiThreadTests.
 /// </summary>
@@ -39,7 +39,7 @@ public sealed class AvaloniaUiThread : IUiThread
         UiPriority.Input => DispatcherPriority.Input,
         UiPriority.Loaded => DispatcherPriority.Loaded,
         UiPriority.Render => DispatcherPriority.Render,
-#pragma warning disable CS0618 // Avalonia marks DataBind obsolete for WPF compatibility; the value still sorts between Render and Normal, as in WPF.
+#pragma warning disable CS0618 // Avalonia marks DataBind obsolete (a WPF-compatibility leftover); the value still sorts between Render and Normal.
         UiPriority.DataBind => DispatcherPriority.DataBind,
 #pragma warning restore CS0618
         UiPriority.Normal => DispatcherPriority.Normal,

@@ -9,8 +9,8 @@ using TabForge.Platform.Theme;
 namespace TabForge.Avalonia.Platform;
 
 /// <summary>
-/// The palette icons (Assets/ToolIcons/&lt;group&gt;/&lt;name&gt;.svg, the owner's files the WPF Tools pane reads) drawn on their 32 x 32 grid
-/// without a frame, as the WPF palette shows them. The file is read by the Core icon reader (SvgIcon) and drawn by AvaloniaSvgIcon;
+/// The palette icons (Assets/ToolIcons/&lt;group&gt;/&lt;name&gt;.svg, the owner's files the Tools pane reads) drawn on their 32 x 32 grid
+/// without a frame. The file is read by the Core icon reader (SvgIcon) and drawn by AvaloniaSvgIcon;
 /// <c>currentColor</c> takes the icon colour. The SVG glow of explicitly coloured shapes on hover is not drawn.
 /// Owns: loading the palette SVGs once and drawing one icon in its square. Does not own: the buttons (ToolsPaneView) or the tool rows (Core
 /// PaletteToolCatalog).

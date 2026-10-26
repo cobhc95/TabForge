@@ -25,7 +25,7 @@ public static class MidiClipToTab
         var beats = new SortedDictionary<(int Bar, int Slot), List<(int Pitch, int Velocity, double LengthSlots)>>();
         foreach (var n in notes)
         {
-            if (n.StartSec < clip.OffsetSec - 1e-6 || n.StartSec >= clip.OffsetSec + clip.SourceLengthSec) continue;
+            if (n.Muted || n.StartSec < clip.OffsetSec - 1e-6 || n.StartSec >= clip.OffsetSec + clip.SourceLengthSec) continue;
             var songSec = clip.StartSec + (n.StartSec - clip.OffsetSec) / speed;
             var (bar, fraction) = barAt(songSec);
             if (bar < 0 || bar >= bars) continue;

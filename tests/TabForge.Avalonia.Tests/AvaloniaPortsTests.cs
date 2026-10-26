@@ -9,7 +9,7 @@ using Xunit;
 
 namespace TabForge.Avalonia.Tests;
 
-/// <summary>Owns: the Avalonia path and text-measure adapter check. Tests: a known path's bounds match the WPF adapter's (10, 5, 130, 35, from TestDrawContextPort) within 0.5 px; a path and text render to a PNG.</summary>
+/// <summary>Owns: the Avalonia path and text-measure adapter check. Tests: a known path's bounds match the adapter's (10, 5, 130, 35, from TestDrawContextPort) within 0.5 px; a path and text render to a PNG.</summary>
 public class AvaloniaPortsTests
 {
     [AvaloniaFact]

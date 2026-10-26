@@ -7,7 +7,7 @@ using TabForge.Services;
 namespace TabForge.Avalonia.Views;
 
 // Owns: the snap targets of an audio clip drag on the arrangement, in pixels: the grid line of the bar under the pointer (the grid setting
-//       sets the step), the start and end of the other clips (not the dragged pass's own take group, whose passes share its times), and the
+//       sets the step, straight or triplet, through the shared SnapCore), the start and end of the other clips (not the dragged pass's own take group, whose passes share its times), and the
 //       playhead. The nearest target within the snap distance wins (the grid at any distance when that setting is on). With snapping off, or
 //       Alt held, nothing snaps.
 // Does not own: the drag (TimelineClipGestureController), the snap settings (TransportBarView holds them; the timeline reads them), the snap
@@ -27,7 +27,7 @@ internal static class TimelineClipSnap
         var best = x;
         var bestDistance = double.PositiveInfinity;
         void Consider(double candidate, double limitPx) =>
-            ClipGesturePresenter.ConsiderSnap(ref best, ref bestDistance, candidate, Math.Abs(candidate - x), limitPx);
+            SnapCore.Consider(ref best, ref bestDistance, candidate, Math.Abs(candidate - x), limitPx);
         if (snap.ToItems)
             foreach (var track in view.Song.Tracks)
                 foreach (var other in track.AudioClips)
@@ -69,20 +69,6 @@ internal static class TimelineClipSnap
             if (!view.ContinuesPastEnd) return end;
             left = end + Math.Floor((x - end) / width) * width;
         }
-        var step = GridStepSlots(grid, slots);
-        var snapped = Math.Round((x - left) / width * slots / step) * step;
-        return left + snapped / slots * width;
+        return SnapCore.NearestInBar(x, left, width, slots, grid);   // the step (straight or triplet) comes from the shared snap core
     }
-
-    /// <summary>The grid step in slots of a bar: "Bar" is the whole bar, the others are note values (a quarter note is 4 slots).</summary>
-    private static double GridStepSlots(string grid, int slots) => grid switch
-    {
-        "Bar" => slots,
-        "1/2" => 8.0,
-        "1/4" => 4.0,
-        "1/8" => 2.0,
-        "1/16" => 1.0,
-        "1/32" => 0.5,
-        _ => 4.0,
-    };
 }

@@ -116,7 +116,7 @@ public sealed partial class PreferencesWindow
         Rebuild();
     }
 
-    /// <summary>The Theme card's reset: after a confirmation, the built-in theme keys go back to their defaults (the same keys as WPF).</summary>
+    /// <summary>The Theme card's reset: after a confirmation, the built-in theme keys go back to their defaults (the same keys).</summary>
     public async Task ResetThemeAsync()
     {
         var prompt = new ResetPrompt("Reset theme", "Restore the built-in theme: palette, sizing, typography, motion and the score page look?");

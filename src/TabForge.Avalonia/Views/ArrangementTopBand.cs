@@ -16,7 +16,7 @@ namespace TabForge.Avalonia.Views;
 // Threads: UI thread only.
 public sealed class ArrangementTopBand
 {
-    /// <summary>The width the transport wraps in while the compact content shows: the live input and transport buttons in one row at their smallest size, so it wraps to three rows as WPF's compact panel.</summary>
+    /// <summary>The width the transport wraps in while the compact content shows: the live input and transport buttons in one row at their smallest size, so it wraps to three rows.</summary>
     public const double CompactTransportWidth = 6 * (TransportBarView.MinButtonSize + CompactButtonSlack) + 2 * CompactTransportChrome;
 
     /// <summary>The room a smallest transport button takes beyond its size (its outline and rounding), in DIP.</summary>
@@ -77,7 +77,7 @@ public sealed class ArrangementTopBand
         if (_transport.MinHeight != 0) _transport.MinHeight = 0;
         if (Compact)
         {
-            // Compact content: the transport wraps in its own narrow column at the left and the timeline starts right after it, as WPF's compact panel.
+            // Compact content: the transport wraps in its own narrow column at the left and the timeline starts right after it.
             SetMargin(_transport, _transport.Margin.WithTop(0));
             if (_transport.Width != CompactTransportWidth) _transport.Width = CompactTransportWidth;
             _transport.Measure(new Size(CompactTransportWidth, double.PositiveInfinity));

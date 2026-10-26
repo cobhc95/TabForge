@@ -14,7 +14,7 @@ namespace TabForge.Avalonia.Platform;
 /// <summary>The pure edits behind the clip commands; no document, undo or view state.</summary>
 public static class ClipEditService
 {
-    /// <summary>The lowest tempo (beats per minute) a beat is measured at; the WPF fallback when a bar has no length to read.</summary>
+    /// <summary>The lowest tempo (beats per minute) a beat is measured at; the fallback when a bar has no length to read.</summary>
     public const double MinimumTempo = 20;
 
     /// <summary>One beat in seconds at <paramref name="tempo"/>, never faster than <see cref="MinimumTempo"/>.</summary>

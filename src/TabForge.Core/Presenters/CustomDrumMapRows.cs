@@ -8,7 +8,7 @@ namespace TabForge.Presenters;
 
 // Owns: the rows of the track's custom drum map window (one per GM percussion sound 27-87), the choices each cell offers
 //   (TAB line 1-8, staff position -4..10, notehead) and the row label text.
-// Does not own: the window (WPF DrumMapWindow, Avalonia TrackDrumMapWindow) or applying the map (DrumMaps.Apply).
+// Does not own: the window (Avalonia TrackDrumMapWindow) or applying the map (DrumMaps.Apply).
 // Tests: TabForge.Avalonia.Tests.TrackDrumMapWindowTests.
 public static class CustomDrumMapRows
 {

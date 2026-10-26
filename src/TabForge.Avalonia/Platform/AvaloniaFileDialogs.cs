@@ -13,7 +13,7 @@ namespace TabForge.Avalonia.Platform;
 /// <summary>
 /// The IFileDialogs port on Avalonia's StorageProvider. The port is synchronous, so each call runs a nested dispatcher frame until the picker answers.
 /// Every chosen path passes through FilePathPolicy before it is returned.
-/// Owns: options to picker options, the WPF filter text to file types, picker results to checked paths.
+/// Owns: options to picker options, the filter text to file types, picker results to checked paths.
 /// Does not own: what callers do with the paths. Tests: AvaloniaDialogTests (filter parsing).
 /// </summary>
 public sealed class AvaloniaFileDialogs : IFileDialogs
@@ -57,7 +57,7 @@ public sealed class AvaloniaFileDialogs : IFileDialogs
         return paths?.Select(path => FilePathPolicy.OutputDirectory(path, "chosen folder")).ToArray();
     }
 
-    /// <summary>The WPF filter text ("Name|*.a;*.b|...") as picker file types; null for no filter.</summary>
+    /// <summary>The filter text ("Name|*.a;*.b|...") as picker file types; null for no filter.</summary>
     public static List<FilePickerFileType>? FileTypes(string? filter)
     {
         if (string.IsNullOrWhiteSpace(filter)) return null;

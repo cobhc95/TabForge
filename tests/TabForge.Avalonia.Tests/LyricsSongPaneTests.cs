@@ -9,7 +9,7 @@ using Xunit;
 
 namespace TabForge.Avalonia.Tests;
 
-// Owns: the Lyrics pane as the WPF app's text box of the song's lyrics (IN-14): it shows Project.Lyrics, and a commit is one undo step that marks the song dirty.
+// Owns: the Lyrics pane as the app's text box of the song's lyrics (IN-14): it shows Project.Lyrics, and a commit is one undo step that marks the song dirty.
 // Does not own: the per-bar syllable editor (LyricsPaneTests).
 public class LyricsSongPaneTests
 {

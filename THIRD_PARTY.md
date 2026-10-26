@@ -12,7 +12,7 @@ later (LGPL-2.1-or-later). You may replace `SoundTouch.Net.dll` in this folder w
 `SoundTouch.Net.dll` is a separate file beside `TabForge.exe`; it is not packed into the executable, so you can swap
 it without rebuilding TabForge. TabForge only calls it through its public API.
 
-- Licence text: [licenses/LGPL-2.1_SoundTouch.Net.txt](src/TabForge.Avalonia/licenses/LGPL-2.1_SoundTouch.Net.txt)
+- Licence text: [licenses/LGPL-2.1_SoundTouch.Net.txt](../src/TabForge.Avalonia/licenses/LGPL-2.1_SoundTouch.Net.txt)
 - Copyright: Olaf Woudenberg 2011-2019 (SoundTouch.Net); the SoundTouch algorithms are by Olli Parviainen (https://www.surina.net/soundtouch/).
 - Source of the exact version used (tag `2.3.2`, commit `98e5b8fd2f8efed0ddf7c8f66b435bfb231659dc`):
   https://github.com/owoudenberg/soundtouch.net/tree/98e5b8fd2f8efed0ddf7c8f66b435bfb231659dc
@@ -61,7 +61,7 @@ shipped as the assembly `TabForge.AlphaTab.dll` (NuGet package `TabForge.AlphaTa
 - Project: https://www.alphatab.net/
 - Source code form (tag `v1.8.4`, commit `022a45c8e42370f9e12e68949d11eada370da83d`):
   https://github.com/CoderLine/alphaTab/tree/022a45c8e42370f9e12e68949d11eada370da83d
-- Licence: Mozilla Public License 2.0 (MPL-2.0). Text: [licenses/MPL-2.0_alphaTab.txt](src/TabForge.Avalonia/licenses/MPL-2.0_alphaTab.txt)
+- Licence: Mozilla Public License 2.0 (MPL-2.0). Text: [licenses/MPL-2.0_alphaTab.txt](../src/TabForge.Avalonia/licenses/MPL-2.0_alphaTab.txt)
   (also at https://www.mozilla.org/MPL/2.0/). The Source Code Form of alphaTab is available at the link above.
 
 ## Bravura music font (SIL OFL 1.1)
@@ -70,7 +70,7 @@ The alphaTab library embeds the Bravura font (version 1.38) as the resource `Alp
 inside `TabForge.AlphaTab.dll` (unchanged by TabForge's patch).
 
 - Copyright (c) 2020, Steinberg Media Technologies GmbH (http://www.steinberg.net/), with Reserved Font Name "Bravura".
-- Licence: SIL Open Font License, Version 1.1. Text: [licenses/OFL-1.1_Bravura.txt](src/TabForge.Avalonia/licenses/OFL-1.1_Bravura.txt)
+- Licence: SIL Open Font License, Version 1.1. Text: [licenses/OFL-1.1_Bravura.txt](../src/TabForge.Avalonia/licenses/OFL-1.1_Bravura.txt)
   (the licence field of the font file itself).
 - Source: https://github.com/steinbergmedia/bravura
 
@@ -81,7 +81,7 @@ shipped; no native Skia library is included.
 
 - Copyright (c) 2025, Daniel Kuschny.
 - Source: https://github.com/CoderLine/alphaSkia
-- Licence: BSD 3-Clause. Text: [licenses/BSD-3-Clause_AlphaSkia.txt](src/TabForge.Avalonia/licenses/BSD-3-Clause_AlphaSkia.txt) (the project's
+- Licence: BSD 3-Clause. Text: [licenses/BSD-3-Clause_AlphaSkia.txt](../src/TabForge.Avalonia/licenses/BSD-3-Clause_AlphaSkia.txt) (the project's
   LICENSE file, which also carries the Skia and HarfBuzz notices).
 
 ## NAudio (MIT)
@@ -90,7 +90,7 @@ The audio engine uses the `NAudio` NuGet packages (2.2.1) for audio output (WASA
 
 - Copyright 2020 Mark Heath.
 - Source: https://github.com/naudio/NAudio
-- Licence: MIT. Text: [licenses/MIT_NAudio.txt](src/TabForge.Avalonia/licenses/MIT_NAudio.txt)
+- Licence: MIT. Text: [licenses/MIT_NAudio.txt](../src/TabForge.Avalonia/licenses/MIT_NAudio.txt)
 
 ASIO is a trademark and software of Steinberg Media Technologies GmbH.
 
@@ -102,7 +102,7 @@ process it (it plays Windows' own `gm.dls` sound bank, converted in memory; the 
 - Copyright (c) 2021 Nobuaki Tanaka. The licence file also carries the notices for C# Synth (Alex Veltsistas, 2014)
   and TinySoundFont (Bernhard Schelling, based on SFZero by Steve Folta).
 - Source: https://github.com/sinshu/meltysynth
-- Licence: MIT. Text: [licenses/MIT_MeltySynth_and_notices.txt](src/TabForge.Avalonia/licenses/MIT_MeltySynth_and_notices.txt)
+- Licence: MIT. Text: [licenses/MIT_MeltySynth_and_notices.txt](../src/TabForge.Avalonia/licenses/MIT_MeltySynth_and_notices.txt)
 
 ## Microsoft .NET runtime and packages (MIT)
 
@@ -110,11 +110,11 @@ TabForge is a self-contained .NET 8 application: the .NET runtime (8.0.31) is pa
 `System.Drawing.Common` and `Microsoft.Win32.SystemEvents` (9.0.8), which the alphaTab package brings in.
 
 - Copyright (c) .NET Foundation and Contributors / Microsoft Corporation.
-- Licences: [licenses/MIT_DotNet_runtime_LICENSE.txt](src/TabForge.Avalonia/licenses/MIT_DotNet_runtime_LICENSE.txt),
-  [licenses/MIT_Microsoft_System.Drawing.Common.txt](src/TabForge.Avalonia/licenses/MIT_Microsoft_System.Drawing.Common.txt)
+- Licences: [licenses/MIT_DotNet_runtime_LICENSE.txt](../src/TabForge.Avalonia/licenses/MIT_DotNet_runtime_LICENSE.txt),
+  [licenses/MIT_Microsoft_System.Drawing.Common.txt](../src/TabForge.Avalonia/licenses/MIT_Microsoft_System.Drawing.Common.txt)
 - Notices for the third-party code inside them:
-  [licenses/THIRD-PARTY-NOTICES_DotNet_runtime.txt](src/TabForge.Avalonia/licenses/THIRD-PARTY-NOTICES_DotNet_runtime.txt),
-  [licenses/THIRD-PARTY-NOTICES_System.Drawing.Common.txt](src/TabForge.Avalonia/licenses/THIRD-PARTY-NOTICES_System.Drawing.Common.txt)
+  [licenses/THIRD-PARTY-NOTICES_DotNet_runtime.txt](../src/TabForge.Avalonia/licenses/THIRD-PARTY-NOTICES_DotNet_runtime.txt),
+  [licenses/THIRD-PARTY-NOTICES_System.Drawing.Common.txt](../src/TabForge.Avalonia/licenses/THIRD-PARTY-NOTICES_System.Drawing.Common.txt)
 - Source: https://github.com/dotnet/runtime
 
 ## VST 2 plug-in hosting (TabForge's own code)
@@ -149,7 +149,7 @@ The checked-in `Source/src/TabForge.AudioEngine/native/tfvst3.dll` is a build of
   proprietary licences are no longer offered, and this project uses no earlier version. MIT is compatible with
   TabForge's own MIT licence. Its terms require the copyright notice and licence text to accompany copies of the
   Software, including a redistributed `tfvst3.dll`; the notice is reproduced here and in
-  [licenses/MIT_Steinberg_VST3_SDK.txt](src/TabForge.Avalonia/licenses/MIT_Steinberg_VST3_SDK.txt):
+  [licenses/MIT_Steinberg_VST3_SDK.txt](../src/TabForge.Avalonia/licenses/MIT_Steinberg_VST3_SDK.txt):
 - VST is a registered trademark of Steinberg Media Technologies GmbH. ASIO is a trademark of Steinberg Media
   Technologies GmbH. TabForge is not affiliated with or endorsed by Steinberg.
 

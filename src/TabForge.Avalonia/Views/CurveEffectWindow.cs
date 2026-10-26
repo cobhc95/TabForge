@@ -20,7 +20,7 @@ namespace TabForge.Avalonia.Views;
 public enum CurveEffectAnswer { Cancel, Ok, Clean }
 
 /// <summary>
-/// The bend and tremolo-bar editor dialog: the twin of the WPF CurveEffectDialog in its ThemedEditorDialog frame. The curve editor on the
+/// The bend and tremolo-bar editor dialog in its ThemedEditorDialog frame. The curve editor on the
 /// left; the preset list, Save as preset and Delete preset on the right; then OK (the default), Clean and Cancel.
 /// Owns: the dialog's controls, the preset list and its buttons, and the answer it closes with. Does not own: the point rules (EffectCurve),
 /// the preset storage (EffectPresetStore), or the note write (EffectCurveFlow).
@@ -30,7 +30,7 @@ public sealed class CurveEffectWindow : Window
 {
     private const double PresetListWidth = 190, PresetListMinHeight = 150, PresetListMaxHeight = 220;
     private const double SideGap = 16, SideTopGap = 10, ButtonGap = 6, ButtonMinWidth = DialogMetrics.PromptButtonMinWidth, FrameMargin = 16;
-    // The frame of the WPF ThemedEditorDialog: the title strip, the body and the footer, inside a bordered rounded panel shown with a margin.
+    // The frame of the ThemedEditorDialog: the title strip, the body and the footer, inside a bordered rounded panel shown with a margin.
     private const double TitleHeight = 34, TitleFontSize = 12, TitleLeftPadding = 14, FrameCorner = 8, FrameBorder = 1, FrameOuterMargin = 12;
     private const double FooterSide = 14, FooterTop = 10, FooterBottom = 12;
     private const string SavePromptTitle = "Save as preset", SavePromptLabel = "Preset name:", SavePromptDefault = "My preset";
@@ -95,7 +95,7 @@ public sealed class CurveEffectWindow : Window
         var footer = new Border { BorderThickness = new Thickness(0, 1, 0, 0), CornerRadius = new CornerRadius(0, 0, FrameCorner, FrameCorner), Child = actions };
         footer[!Border.BackgroundProperty] = new DynamicResourceExtension("Panel2Brush");
         footer[!Border.BorderBrushProperty] = new DynamicResourceExtension("BorderSoftBrush");
-        // The frame of the WPF ThemedEditorDialog: a title strip, the body and a footer, inside a rounded panel with a border.
+        // The frame of the ThemedEditorDialog: a title strip, the body and a footer, inside a rounded panel with a border.
         var frame = new StackPanel { Children = { titleBar, body, footer } };
         var panel = new Border
         {

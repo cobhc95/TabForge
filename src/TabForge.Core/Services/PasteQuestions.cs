@@ -64,7 +64,7 @@ public sealed record PasteOption(string Id, string Label);
 // Owns: the paste questions, their options and the recommended answers.
 // Does not own: asking them (dialogs) and the paste itself.
 // Tests: no dedicated test class.
-/// <summary>Wording, options and settings mapping of the paste questions. No WPF here, so it is testable headless.</summary>
+/// <summary>Wording, options and settings mapping of the paste questions. No UI toolkit here, so it is testable headless.</summary>
 public static class PasteQuestionInfo
 {
     public const string Ask = "Ask";

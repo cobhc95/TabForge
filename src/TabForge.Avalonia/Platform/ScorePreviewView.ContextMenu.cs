@@ -10,7 +10,7 @@ namespace TabForge.Avalonia.Platform;
 
 // Owns: the score's right-click rows: the note menu over a note or inside the selection, the beat menu (Paste and Paste special while the
 //   clipboard can paste) over a beat, and the empty-area menu elsewhere. A right-click on a beat outside the selection moves the cursor there
-//   first, as the WPF score does, so the menu acts on that beat.
+// first, so the menu acts on that beat. The main score's menus end with Show in piano roll (this track).
 // Does not own: the rows (Core ScoreMenus, ScoreNoteMenus), the hit rule (Core ScorePreviewEditor.ContextHitAt), the menu items (ContextMenuBuilder).
 // Tests: TabForge.Avalonia.Tests.ScoreContextMenuTests.
 public sealed partial class ScorePreviewView
@@ -21,6 +21,7 @@ public sealed partial class ScorePreviewView
         var page = PagePoint(at);
         var hit = _editor.ContextHitAt(page.X, page.Y);
         var rows = RowsFor(hit);
+        if (MenuStateSource is null) rows = ScoreMenus.WithPianoRollRow(rows);   // the main score (not a Band card) can show this track in the piano roll
         // Inside the tinted loop region: Clear loop on top (the ruler menu's command, undoable).
         if (_probe.LoopTint is { } t && hit.Measure >= 0 && ScoreEditorGeometry.IsInRange(hit.Measure, hit.Cell, t.m1, t.c1, t.m2, t.c2))
             return new[] { new MenuSpec { Id = "Transport.ClearLoopArea", Header = "Clear loop", Shortcut = "Esc twice" }, MenuSpec.Separator() }.Concat(rows);

@@ -9,12 +9,12 @@ using TabForge.Services;
 
 namespace TabForge.Avalonia.Transport;
 
-// Owns: the engine sync of the Avalonia playback, built on the Core engine APIs as the WPF AudioRouting.Apply does: the plug-in availability,
+// Owns: the engine sync of the Avalonia playback, built on the Core engine APIs: the plug-in availability,
 //     the GM sound, the master level, the track levels, each MIDI channel's route to its engine slot and the transport tempo; the live level push
 //     after a fader, pan, mute or solo change; and the audio and plug-in settings every sync reads (the master percent is the shared
 //     AudioSettings.MasterVolume, which the transport's master knob writes and the settings file saves).
 // Does not own: the sessions and their engines (AvaloniaPlaybackSessions), the settings file (MainWindowSettings), the bar map of the
-//     meter (the WPF SongClock is not in the Avalonia app, so the transport carries no bars yet).
+//     meter (the song clock is not in the app, so the transport carries no bars yet).
 // Tests: TabForge.Avalonia.Tests.AvaloniaEngineRoutingTests.
 // Threads: UI thread only.
 public sealed class AvaloniaEngineRouting
@@ -45,7 +45,7 @@ public sealed class AvaloniaEngineRouting
         _audio.MasterVolume = Math.Clamp(percent, 0, 100);
     }
 
-    /// <summary>Brings the engine in line with the document (as WPF AudioRouting.Apply does); the routes change only when a MIDI output is given.</summary>
+    /// <summary>Brings the engine in line with the document; the routes change only when a MIDI output is given.</summary>
     /// <param name="owner">The document that owns the engine now.</param>
     /// <param name="skippedPlugins">The owning document's plug-ins skipped for now ("Disable it" after a very slow load); null: none.</param>
     public static void Apply(SongProject project, RoutedMidiOutput? routing, AudioEngineClient engine, PluginSettings settings, int masterPercent, object owner,
@@ -63,8 +63,8 @@ public sealed class AvaloniaEngineRouting
         engine.SetTransport(project.Tempo, false, PerformedTransportBars.From(project), engine.OwnerIdOf(owner));
     }
 
-    /// <summary>Copies the sound options the WPF sync copies (auto GM sound, play-all-through-engine) into the engine mixer, as the settings say
-    /// for every song: with play-all on, tracks without plug-ins play on the engine's General MIDI synth, as in the WPF build, not on Windows MIDI.</summary>
+    /// <summary>Copies the sound options the sync copies (auto GM sound, play-all-through-engine) into the engine mixer, as the settings say
+    /// for every song: with play-all on, tracks without plug-ins play on the engine's General MIDI synth, as in the app, not on Windows MIDI.</summary>
     public static void ApplyMixerOptions(PluginSettings settings, MixerOptions mixer)
     {
         mixer.AutoGmSound = settings.AutoGmSound;

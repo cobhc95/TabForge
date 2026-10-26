@@ -7,7 +7,7 @@ namespace TabForge.Avalonia.Views;
 
 /// <summary>
 /// The Band view in its own window: the Band panels over a song.
-/// Owns: the window shell. Does not own: the header, panels and pills (BandView), the WPF dock panel.
+/// Owns: the window shell. Does not own: the header, panels and pills (BandView), the dock panel.
 /// Tests: TabForge.Avalonia.Tests.BandViewTests.
 /// </summary>
 public sealed class BandWindow : Window

@@ -9,14 +9,14 @@ namespace TabForge.Avalonia.Platform;
 
 /// <summary>
 /// <see cref="IScoreClipboard"/> over Avalonia's asynchronous clipboard. Writes put the clip JSON on the system clipboard as the private format
-/// <see cref="ScoreClip.ClipboardFormat"/> (UTF-8 bytes) plus the same JSON as text, the bytes the WPF build writes; reads answer from the copy
+/// <see cref="ScoreClip.ClipboardFormat"/> (UTF-8 bytes) plus the same JSON as text, the bytes the app writes; reads answer from the copy
 /// <see cref="RefreshAsync"/> last fetched, so call it before a paste.
 /// Owns: the fetched clipboard text and its change counter. Does not own: the clip rules or caching (ClipboardService).
 /// Tests: TabForge.Avalonia.Tests.MainWindowClipboardTests.
 /// </summary>
 internal sealed class AvaloniaScoreClipboard : IScoreClipboard
 {
-    // The WPF build's private format by its exact system name (a platform format: Avalonia adds no prefix).
+    // The app's private format by its exact system name (a platform format: Avalonia adds no prefix).
     private static readonly DataFormat<byte[]> ScoreClipFormat = DataFormat.CreateBytesPlatformFormat(ScoreClip.ClipboardFormat);
     private static readonly DataFormat<byte[]> RangeFormat = DataFormat.CreateBytesPlatformFormat(RangeSnapshot.ClipboardFormat);
     private readonly Func<IClipboard?> _clipboard;

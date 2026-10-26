@@ -8,7 +8,7 @@ using TabForge.Models;
 
 namespace TabForge.Avalonia;
 
-// Owns: Track.FxChain (the FX chain window of the selected track), Track.Wiring (that window, with the wiring window of its focused plug-in on top, as WPF
+// Owns: Track.FxChain (the FX chain window of the selected track), Track.Wiring (that window, with the wiring window of its focused plug-in on top, as
 //   MixerHost.OpenWiring) and Track.MidiProcessing (the same with the MIDI processing window), and the window registry of the main window (FxChainWindows).
 // Does not own: the windows themselves (FxChainWindow, WiringWindow, MidiProcessingWindow) or their edits (SongFxChainHost), the mixer's FX buttons (MixerWindow),
 //   the key table (MainWindowKeyboard).

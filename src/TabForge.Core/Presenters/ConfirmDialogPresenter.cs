@@ -4,7 +4,7 @@
 // Tests: no dedicated test class.
 namespace TabForge.Presenters;
 
-/// <summary>Texts and sizes shared by the WPF confirm dialog and its Avalonia twins (SavePromptWindow, BarRangePromptWindow).</summary>
+/// <summary>Texts and sizes shared by the confirm dialog and its Avalonia twins (SavePromptWindow, BarRangePromptWindow).</summary>
 public static class ConfirmDialogPresenter
 {
     public const string ScopeHeading = "Apply to";

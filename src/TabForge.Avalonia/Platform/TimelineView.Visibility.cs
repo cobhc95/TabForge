@@ -124,7 +124,7 @@ public sealed partial class TimelineView
     private void DrawContinuousRun(IDrawContext d, int fromBar, int toBar, double top, UiColor colour) =>
         TimelineNoteMarks.DrawContinuousRun(d, BarX(fromBar) + 1, BarX(toBar) - 1, top, RowHeight, colour.WithOpacity(TimelineNoteMarks.ContinuousLineOpacity));
 
-    /// <summary>The track colour as the timeline shows it: the Core <see cref="SectionColourPresenter.Tame"/> of the stored colour (the WPF rule), or <paramref name="fallback"/> when it does not parse.</summary>
+    /// <summary>The track colour as the timeline shows it: the Core <see cref="SectionColourPresenter.Tame"/> of the stored colour, or <paramref name="fallback"/> when it does not parse.</summary>
     internal static UiColor TamedTrackColour(string hex, UiColor fallback)
     {
         if (!Color.TryParse(hex, out var c)) return fallback;

@@ -58,13 +58,13 @@ public static class AvaloniaPalette
         ["CaptionClosePressedBrush"] = "CaptionClosePressed",
         ["ScrollThumbBrush"] = "ScrollThumb",
         ["ScrollThumbHoverBrush"] = "ScrollThumbHover",
-        // The Preferences accent (the WPF PrefsAccent key), used by the selected Settings rail row's accent bar.
+        // The Preferences accent, used by the selected Settings rail row's accent bar.
         ["PrefsAccentBrush"] = "PrefsAccent",
-        // The Preferences primary (the WPF PrefsPrimary key), the deeper muted blue of the OK button (PrimaryActionButton in PreferencesWindow.xaml).
+        // The Preferences primary, the deeper muted blue of the OK button (PrimaryActionButton in PreferencesWindow.xaml).
         ["PrefsPrimaryBrush"] = "PrefsPrimary",
         // The check box outline is the CheckBoxBorder palette value, as App.xaml paints it, not the derived panel shade.
         ["CheckBoxBorderBrush"] = "CheckBoxBorder",
-        // The plain button edge is the CheckBoxBorder palette value in both themes, as the WPF boxed buttons paint it (the light general border is faint).
+        // The plain button edge is the CheckBoxBorder palette value in both themes, as the boxed buttons paint it (the light general border is faint).
         ["ButtonBorderBrush"] = "CheckBoxBorder",
     };
 
@@ -85,11 +85,11 @@ public static class AvaloniaPalette
         ["TextStrong"] = "TextStrongBrush", ["TextMuted"] = "MutedBrush", ["TextLegible"] = "LegibleBrush",
         ["TextSecondary"] = "SecondaryTextBrush", ["Accent"] = "AccentBrush", ["AccentSoft"] = "AccentSoftBrush",
         ["SoftBorder"] = "BorderSoftBrush", ["ChromeStrip"] = "ChromeStripBrush",
-        // The general border is the BorderBrush the WPF menus, lists and dialogs paint; its dark palette value would frame light menus in near-black.
+        // The general border is the BorderBrush the menus, lists and dialogs paint; its dark palette value would frame light menus in near-black.
         ["GeneralBorder"] = "BorderBrush",
     };
 
-    /// <summary>Fluent menu resource names to the theme brush they take, so the menu popups and items paint the WPF menu colours (App.xaml's MenuItem and ContextMenu) in both themes.</summary>
+    /// <summary>Fluent menu resource names to the theme brush they take, so the menu popups and items paint the menu colours (App.xaml's MenuItem and ContextMenu) in both themes.</summary>
     public static IReadOnlyDictionary<string, string> FluentMenuBrushNames { get; } = new Dictionary<string, string>(StringComparer.Ordinal)
     {
         ["MenuFlyoutPresenterBackground"] = "Panel2Brush",
@@ -105,7 +105,7 @@ public static class AvaloniaPalette
         ["MenuFlyoutSubItemChevronPointerOver"] = "TextBrush",
     };
 
-    /// <summary>Fluent text box and combo box resource names to the theme brush they take, so every text box and combo box paints the WPF colours (App.xaml TextBox: window fill, general border, focus border) and Fluent's own state fills never show. The combo box is the exception: its hover and press take the strong HoverBrush and PressBrush so the pointer-over fill is visible, as the owner expects of a hot control.</summary>
+    /// <summary>Fluent text box and combo box resource names to the theme brush they take, so every text box and combo box paints the colours (App.xaml TextBox: window fill, general border, focus border) and Fluent's own state fills never show. The combo box is the exception: its hover and press take the strong HoverBrush and PressBrush so the pointer-over fill is visible, as the owner expects of a hot control.</summary>
     public static IReadOnlyDictionary<string, string> FluentFieldBrushNames { get; } = new Dictionary<string, string>(StringComparer.Ordinal)
     {
         ["ListBoxItemForegroundDisabled"] = "DisabledInkBrush",
@@ -125,7 +125,7 @@ public static class AvaloniaPalette
         ["ComboBoxBackground"] = "WindowBrush", ["ComboBoxBackgroundPointerOver"] = "HoverBrush", ["ComboBoxBackgroundPressed"] = "PressBrush", ["ComboBoxBackgroundFocused"] = "WindowBrush", ["ComboBoxBackgroundFocusedPressed"] = "PressBrush", ["ComboBoxBackgroundDisabled"] = "WindowBrush",
         ["ComboBoxBorderBrush"] = "BorderBrush", ["ComboBoxBorderBrushPointerOver"] = "AccentBrush", ["ComboBoxBorderBrushPressed"] = "AccentBrush", ["ComboBoxBorderBrushFocused"] = "ButtonBorderBrush", ["ComboBoxBorderBrushDisabled"] = "BorderSoftBrush",
         ["ComboBoxForeground"] = "TextBrush", ["ComboBoxForegroundDisabled"] = "DisabledInkBrush", ["ComboBoxDropDownGlyphForeground"] = "TextBrush",
-        // The WPF radio button is the system one: the field fill, a text-coloured ring and dot, an accent ring on hover.
+        // The radio button is the system one: the field fill, a text-coloured ring and dot, an accent ring on hover.
         ["RadioButtonOuterEllipseFill"] = "WindowBrush", ["RadioButtonOuterEllipseFillPointerOver"] = "WindowBrush", ["RadioButtonOuterEllipseFillPressed"] = "WindowBrush",
         ["RadioButtonOuterEllipseStroke"] = "TextBrush", ["RadioButtonOuterEllipseStrokePointerOver"] = "AccentBrush", ["RadioButtonOuterEllipseStrokePressed"] = "AccentBrush",
         ["RadioButtonOuterEllipseCheckedFill"] = "WindowBrush", ["RadioButtonOuterEllipseCheckedFillPointerOver"] = "WindowBrush", ["RadioButtonOuterEllipseCheckedFillPressed"] = "WindowBrush",
@@ -289,7 +289,7 @@ public static class AvaloniaPalette
     public static UiColor Get(string paletteName, bool light)
     {
         // The hover and press surfaces are the one palette pair Avalonia paints stronger than Core, so a hovered control stands off the window
-        // and the cards; the Core values (shared with the WPF app) stay as they are.
+        // and the cards; the Core values (shared with the app) stay as they are.
         if (HoverSurfaces.IsOverridden(paletteName)) return HoverSurfaces.Value(paletteName, light);
         if (ThemeColours.DerivesFromAccent(paletteName))
             return State.Derived.GetOrAdd((paletteName, light), key => ThemeColours.FromAccent(key.Name, Get("Accent", key.Light), Get("AccentSoft", key.Light), Get("WindowBackground", key.Light), key.Light));
@@ -298,8 +298,8 @@ public static class AvaloniaPalette
         return Palette.Get(paletteName, light);
     }
 
-    // Palette keys whose dark value is the dark preset's brush, as WPF paints them: the general border (its brighter palette value would frame
-    // the dark menus too light), and the selection tint, the blend of accent and window that WPF paints (its Core palette value is another blue).
+    // Palette keys whose dark value is the dark preset's brush: the general border (its brighter palette value would frame
+    // the dark menus too light), and the selection tint, the blend of accent and window the app paints (its Core palette value is another blue).
     // The keys whose dark preset brush equals the palette value are listed too, so a published Custom colour (accent, page, panel, text) paints
     // them live instead of leaving the palette's older dark value behind.
     private static readonly IReadOnlyDictionary<string, string> DarkThemeBrushOfPalette = new Dictionary<string, string>(StringComparer.Ordinal)
@@ -365,7 +365,7 @@ public static class AvaloniaPalette
         yield return Entry("SliderThumbDisabledBorder", ThemeColours.Blend(border, fill, ThumbDisabledBorderAmount));
     }
 
-    /// <summary>The tuning string fill: the palette's light-to-dark gradient down the string, as the WPF tuning editor draws it.</summary>
+    /// <summary>The tuning string fill: the palette's light-to-dark gradient down the string.</summary>
     public static IBrush TuningStringBrush(bool light) => new LinearGradientBrush
     {
         StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative),

@@ -13,11 +13,11 @@ namespace TabForge.Documents;
 /// </summary>
 public sealed class SaveCapture
 {
-    private readonly (string AudioInput, bool MonitorInput)[] _inputs;
+    private readonly (string AudioInput, bool MonitorInput, string MidiInputs)[] _inputs;   // MidiInputs: the device names joined by a line break (comparable)
     private readonly BandLayoutData? _band;
     private readonly List<string> _collapsedGroups;
 
-    private SaveCapture(ProjectState state, int editVersion, (string, bool)[] inputs, BandLayoutData? band, List<string> collapsedGroups)
+    private SaveCapture(ProjectState state, int editVersion, (string, bool, string)[] inputs, BandLayoutData? band, List<string> collapsedGroups)
     {
         State = state;
         EditVersion = editVersion;
@@ -36,7 +36,7 @@ public sealed class SaveCapture
         return new SaveCapture(DocumentEdits.CurrentState(document), project.EditVersion, InputsOf(project), project.BandLayout?.Copy(), new List<string>(project.Mixer.CollapsedGroups));
     }
 
-    private static (string, bool)[] InputsOf(SongProject project) => project.Tracks.Select(t => (t.AudioInput, t.MonitorInput)).ToArray();
+    private static (string, bool, string)[] InputsOf(SongProject project) => project.Tracks.Select(t => (t.AudioInput, t.MonitorInput, string.Join("\n", t.MidiInputs))).ToArray();
 
     /// <summary>Any thread: a private song with everything the capture held (the live song is never read).</summary>
     public SongProject Rebuild()
@@ -46,7 +46,10 @@ public sealed class SaveCapture
         project.BandLayout = _band?.Copy();
         project.Mixer.CollapsedGroups = new List<string>(_collapsedGroups);
         for (var index = 0; index < _inputs.Length; index++)
-            (project.Tracks[index].AudioInput, project.Tracks[index].MonitorInput) = _inputs[index];
+        {
+            (project.Tracks[index].AudioInput, project.Tracks[index].MonitorInput, var midi) = _inputs[index];
+            project.Tracks[index].MidiInputs = midi.Length == 0 ? new() : midi.Split('\n').ToList();
+        }
         return project;
     }
 

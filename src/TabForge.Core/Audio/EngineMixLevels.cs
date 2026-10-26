@@ -4,7 +4,7 @@ using TabForge.Models;
 namespace TabForge.Audio;
 
 // Owns: the per-track engine level and pan a song sends to the audio engine (mute/solo rule, group levels, master scaling).
-// Does not own: the engine sync itself (AudioEngineClient.Sync), the MIDI routing (AudioRouting in the WPF build).
+// Does not own: the engine sync itself (AudioEngineClient.Sync), the MIDI routing (AudioRouting in the app).
 // Tests: TabForge.Avalonia.Tests.TransportRecordingTests (engine sync of arm state).
 public static class EngineMixLevels
 {

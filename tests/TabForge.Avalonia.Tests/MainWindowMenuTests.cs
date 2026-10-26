@@ -24,7 +24,7 @@ public class MainWindowMenuTests
         return main;
     }
 
-    // The WPF menu row: 30 px directly under the 44 px title row, File's header text 16 px from the left edge.
+    // The menu row: 30 px directly under the 44 px title row, File's header text 16 px from the left edge.
     [AvaloniaFact]
     public void MenuBarMatchesWpfRowHeightAndHeaderInset()
     {
@@ -134,7 +134,7 @@ public class MainWindowMenuTests
         main.Close();
     }
 
-    // Options > Stylesheet is a plain Settings open (WPF Stylesheet_Click runs Prefs_Click): Home before any open, the last page again after.
+    // Options > Stylesheet is a plain Settings open: Home before any open, the last page again after.
     [Fact]
     public void OptionsStylesheetKeepsTheLastPageInsteadOfPinningHome()
     {
@@ -188,13 +188,13 @@ public class MainWindowMenuTests
         DialogTestKit.SavePng(main, nameof(MainWindowMenuTests), $"main-window-{themeName}.png");
         Dispatcher.UIThread.RunJobs();
         main.UpdateLayout();   // the default layout's first size change sets the fretboard pane's height; this pass lays that out
-        Assert.Equal((1500d, 960d, 1080d, 720d), (main.Width, main.Height, main.MinWidth, main.MinHeight));   // the WPF first-start size and minimum
+        Assert.Equal((1500d, 960d, 1080d, 720d), (main.Width, main.Height, main.MinWidth, main.MinHeight));   // the first-start size and minimum
         double Top(Control c) => c.TranslatePoint(default, main)!.Value.Y;
         var editor = main.GetLogicalDescendants().OfType<ScorePreviewView>().Single();
         var strip = main.GetLogicalDescendants().OfType<InstrumentPanelStrip>().Single();
         var timeline = main.GetLogicalDescendants().OfType<ArrangementView>().Single();
         var editorPane = editor.FindAncestorOfType<ScrollViewer>()!;   // the score view is scrolled inside its pane, so its own top is not the pane's
-        // Compose: the fretboard above the score (the WPF default, FretboardAtBottom off), the arrangement along the bottom.
+        // Compose: the fretboard above the score (the default, FretboardAtBottom off), the arrangement along the bottom.
         Assert.True(Top(strip) < Top(editorPane) && Top(editorPane) < Top(timeline), "pane order top to bottom: instrument, editor, timeline");
         Assert.True(timeline.Bounds.Height > 40, "the arrangement is visible");
         var surface = strip.FindAncestorOfType<DockTabSurface>()!;

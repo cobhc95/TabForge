@@ -1,5 +1,5 @@
 // Owns: the plug-in row data (name, path, format, vendor, role) that the Add plug-in window and its list presenter share.
-// Does not own: scanning (VstScannerService), approval (PluginTrust) or any WPF type.
+// Does not own: scanning (VstScannerService), approval (PluginTrust) or any toolkit type.
 // Tests: no dedicated test class.
 namespace TabForge.Plugins;
 

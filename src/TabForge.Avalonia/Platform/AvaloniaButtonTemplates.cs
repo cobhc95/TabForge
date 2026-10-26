@@ -15,7 +15,7 @@ namespace TabForge.Avalonia.Platform;
 
 /// <summary>
 /// The control templates of the border-template looks (Button, ToggleButton, ListBoxItem, ListViewItem, Thumb): nested borders named after the look's
-/// template parts (as the WPF templates name them, for example "b", "Bd", "Chrome"), around a content presenter when the control has content.
+/// template parts (as the templates name them, for example "b", "Bd", "Chrome"), around a content presenter when the control has content.
 /// The outer border shows the control's own background, border brush, thickness and padding.
 /// Owns: which part names a look uses and the template built from them. Does not own: the part setters (AvaloniaLooks) or colours (AvaloniaPalette).
 /// Tests: TabForge.Avalonia.Tests.ThemeTests.
@@ -86,7 +86,7 @@ public static class AvaloniaButtonTemplates
         return presenter;
     }
 
-    // Template priority, so a look's "/template/ Border#part" style setter wins over the control's own value, as a WPF template trigger does.
+    // Template priority, so a look's "/template/ Border#part" style setter wins over the control's own value, as a template trigger does.
     internal static void Bind<T>(AvaloniaObject target, AvaloniaProperty<T> property, TemplatedControl parent, AvaloniaProperty<T> source) =>
         target.Bind(property, parent.GetObservable(source), BindingPriority.Template);
 }

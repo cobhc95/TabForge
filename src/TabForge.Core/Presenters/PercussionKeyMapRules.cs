@@ -5,7 +5,7 @@ namespace TabForge.Presenters;
 
 // Owns: the drum key map's maths: the GM percussion names 27-87 (the labels the key map and the custom drum map window show), the column grid,
 //   each cell's rectangle, the point-to-note hit test, the label text, the label size, the hit-glow fade and the pane height the map needs.
-// Does not own: drawing (the WPF InstrumentPanel, the Avalonia InstrumentPanelView), colours, or writing the note.
+// Does not own: drawing (the Avalonia InstrumentPanelView), colours, or writing the note.
 //   The drum map presets' piece names (Resources/DrumMaps/*.json) are a separate vocabulary used to match notes between presets.
 // Tests: TabForge.Avalonia.Tests.InstrumentPanelViewTests.
 public static class PercussionKeyMapRules

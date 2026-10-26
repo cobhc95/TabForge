@@ -14,7 +14,7 @@ namespace TabForge.Avalonia;
 
 // Owns: the handlers of the Sound menu rows. Test selected track output (Sound.TestOutput) plays a short note at the selected track's
 //   channel and program on its MIDI output. MIDI / Audio setup (Sound.AudioSetup) opens the MIDI output window of the selected track with the
-//   system's outputs and applies the chosen one to the track. Both show the status texts the WPF build shows.
+// system's outputs and applies the chosen one to the track. Both show the status texts the app shows.
 // Does not own: the menu rows (MainMenuTable in Core), the commands table (MainWindowCommands), the MIDI output and engine (AvaloniaPlaybackSessions,
 //   AvaloniaPlaybackComposition), the MIDI output window (Views/TrackOutputWindow), the edit itself (DocumentEdits).
 // Tests: TabForge.Avalonia.Tests.MainWindowMenuTests.
@@ -29,11 +29,11 @@ public static class MainWindowTrackOutputMenu
     private const string TestFailedAction = "Testing the MIDI output";
     private const string AudioSetupText = "MIDI / audio setup: the selected track's MIDI output";
 
-    /// <summary>The output listed when the system reports no MIDI output device, as the WPF build lists it.</summary>
+    /// <summary>The output listed when the system reports no MIDI output device.</summary>
     private const int DefaultOutputDeviceId = -1;
     private const string DefaultOutputName = "MIDI Mapper / Windows default";
 
-    /// <summary>The test note's pitch: a bass track plays a lower note, as in the WPF build.</summary>
+    /// <summary>The test note's pitch: a bass track plays a lower note, as in the app.</summary>
     private const int BassTestNote = 40;
     private const int OtherTestNote = 64;
 

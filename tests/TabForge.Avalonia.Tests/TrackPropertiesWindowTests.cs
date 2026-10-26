@@ -65,7 +65,7 @@ public class TrackPropertiesWindowTests
         window.Close();
     }
 
-    // The cover is a 190 DIP picture with the instrument name below it (outside the picture); the drum and preset boxes take the WPF widths.
+    // The cover is a 190 DIP picture with the instrument name below it (outside the picture); the drum and preset boxes take the widths.
     [AvaloniaFact]
     public void CoverCaptionAndBoxSizesMatchWpf()
     {

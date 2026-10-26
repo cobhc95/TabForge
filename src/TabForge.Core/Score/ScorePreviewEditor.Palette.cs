@@ -7,7 +7,7 @@ using TabForge.Services;
 namespace TabForge.Views.Score;
 
 // Owns: the preview editor's palette tools: bar properties, bar append, stepping, marker jumps and adding, voice choice, tuplet, sound duration,
-//   tempo, signatures and directions, as edits of the shown document through the same Core commands the WPF palette calls.
+// tempo, signatures and directions, as edits of the shown document through the same Core commands the palette calls.
 // Does not own: the questions the dialog tools ask (the Avalonia window layer), the edit rules (ScoreEditCommands, PaletteBarCommands,
 //   MeasureProperties, BarSignatureCommands) or the tool state rules (PaletteToolStates).
 // Tests: no dedicated test class.

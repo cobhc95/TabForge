@@ -144,7 +144,7 @@ public sealed partial class ScorePreviewView : Control
     }
 
     /// <summary>
-    /// Sets the logical page width: the continuous view reflows to its viewer (Core rule, as the WPF page width does: at least
+    /// Sets the logical page width: the continuous view reflows to its viewer (Core rule: at least
     /// <see cref="ContinuousMinPageWidth"/>, the viewer width at the zoom less a border), and every system fills that width; the page view and
     /// the one-line view keep their own width.
     /// </summary>
@@ -164,7 +164,7 @@ public sealed partial class ScorePreviewView : Control
         }
     }
 
-    /// <summary>A plain press placed the cursor: the bar and cell it sits on, or the start of a dragged range once released. Playback follows it on press, as the WPF score does.</summary>
+    /// <summary>A plain press placed the cursor: the bar and cell it sits on, or the start of a dragged range once released. Playback follows it on press.</summary>
     public event Action<int, int>? CursorPlaced;
 
     /// <summary>The cursor moved or an edit changed the score under it.</summary>
@@ -201,7 +201,7 @@ public sealed partial class ScorePreviewView : Control
         // set by hand, and the incoming song opens at its own.
         if (_shownSong is not null) _shownSong.ZoomFactor = _fitWidthOn || !_zoomedByHand ? FitWidthFactor : Zoom;
         _shownSong = song;
-        // A song shown for the first time takes the preferred notation (the mode on screen, which the View menu saves), as WPF sets
+        // A song shown for the first time takes the preferred notation (the mode on screen, which the View menu saves), as the song's own setting
         // PreferredNotation on every opened song; a song shown again keeps its own mode.
         if (_songsShown.TryGetValue(song, out _)) _probe.Notation = song.Notation;
         else { _songsShown.Add(song, song); song.Notation = _probe.Notation; }
@@ -337,7 +337,7 @@ public sealed partial class ScorePreviewView : Control
     internal double FirstTabBottom => (_probe.TabTop(0) + _probe.StringGap * Math.Max(0, (_probe.Track?.StringTunings.Count ?? 1) - 1)) * Zoom;
 
     /// <summary>
-    /// Opens the score scrolled to its first system (staff and tab in view), as the WPF score does. The viewer clamps the offset to its
+    /// Opens the score scrolled to its first system (staff and tab in view). The viewer clamps the offset to its
     /// extent, and the extent is zero until the page is laid out, so the offset is set on the first extent change that has a height.
     /// </summary>
     private void RevealFirstSystemWhenLaidOut(ScrollViewer viewer)
@@ -447,58 +447,6 @@ public sealed partial class ScorePreviewView : Control
         using (context.PushTransform(Matrix.CreateScale(Zoom, Zoom)))
             _probe.DrawPage(_draw.Use(context), AllBars, withPlayhead: false, visibleRows: DrawnRows());
         if (Marquee is { } box) MarqueePainter.Draw(_draw.Use(context), key => AvaloniaPalette.Get(key, ActualThemeVariant == ThemeVariant.Light), box.X, box.Y, box.Width, box.Height);
-    }
-
-    protected override void OnPointerPressed(PointerPressedEventArgs e)
-    {
-        base.OnPointerPressed(e);
-        if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) return;
-        Focus();
-        Focused?.Invoke();
-        _input.Press(e);
-    }
-
-    protected override void OnPointerReleased(PointerReleasedEventArgs e)
-    {
-        base.OnPointerReleased(e);
-        _input.Release(e);
-    }
-
-    protected override void OnPointerMoved(PointerEventArgs e)
-    {
-        base.OnPointerMoved(e);
-        _input.Move(e);
-    }
-
-    protected override void OnPointerCaptureLost(PointerCaptureLostEventArgs e)
-    {
-        base.OnPointerCaptureLost(e);
-        _input.CaptureLost();
-    }
-
-    protected override void OnPointerExited(PointerEventArgs e)
-    {
-        base.OnPointerExited(e);
-        _input.Exited();
-    }
-
-    protected override void OnGotFocus(GotFocusEventArgs e)
-    {
-        base.OnGotFocus(e);
-        Focused?.Invoke();
-    }
-
-    protected override void OnKeyDown(KeyEventArgs e)
-    {
-        base.OnKeyDown(e);
-        _input.KeyDown(e);
-    }
-
-    // Shift coming up ends a Shift+arrows selection: it becomes the loop region as a mouse drag's release does.
-    protected override void OnKeyUp(KeyEventArgs e)
-    {
-        base.OnKeyUp(e);
-        if (e.Key is Key.LeftShift or Key.RightShift) RaiseSelectionReleased();
     }
 
     internal void RaiseCursorChanged() => CursorChanged?.Invoke();

@@ -16,7 +16,7 @@ using Xunit;
 namespace TabForge.Avalonia.Tests;
 
 /// <summary>
-/// Owns: the adjusted clip editing of the arrangement: the WPF fade shading, fade handles shown on hover, the fade-handle hit winning over the
+/// Owns: the adjusted clip editing of the arrangement: the fade shading, fade handles shown on hover, the fade-handle hit winning over the
 /// trim grip in the top band while the lower edges still trim, the fade drag as one undo step, and Split using the lane edit cursor when it lies
 /// inside the selected clip and the playhead otherwise.
 /// Does not own: the lane/clip rules (ClipLanes, ClipSplitGlue), the menu rows (ContextMenuTests) or the engine sync (RecordingLaneLifecycleTests).
@@ -142,6 +142,43 @@ public class ClipEditingBatchFourTests
         gestures.Begin();
         Assert.Equal(marker, view.LaneCursor);   // a drag does not move it
         gestures.Cancel();
+    }
+
+    [AvaloniaFact]
+    public void DraggingTheClipClearsTheSplitMarker()
+    {
+        var (_, track, clip, view, _, _) = SetUp();
+        view.Snap = null;
+        var gestures = new TimelineClipGestureController(view);
+        var y = view.LaneBandTopOf(view.Song.Tracks.IndexOf(track), clip.Lane) + 20;
+        var x = view.XOfSeconds(clip.StartSec + 1.3);
+
+        gestures.Press(true, new global::Avalonia.Point(x, y));
+        Assert.NotNull(view.LaneCursor);
+        gestures.Begin();
+        gestures.Update(new global::Avalonia.Point(x + 60, y), false);
+
+        Assert.Null(view.LaneCursor);
+        gestures.Cancel();
+    }
+
+    [AvaloniaFact]
+    public void TheSplitMarkerEndsWhenTheSelectionLeavesItsClipOrTheClipIsDeleted()
+    {
+        var (_, track, clip, view, _, _) = SetUp();
+        view.Snap = null;
+        view.LaneCursor = new TimelineLaneCursor(track, clip.Lane, clip.StartSec + 0.5, null);
+        view.SelectedClip = new TimelineClipSelection(track, clip);
+        Assert.NotNull(view.LaneCursor);   // the clip it sits in stays selected
+
+        view.SelectedClip = null;
+        Assert.Null(view.LaneCursor);
+
+        view.LaneCursor = new TimelineLaneCursor(track, clip.Lane, clip.StartSec + 0.5, null);
+        track.AudioClips.Remove(clip);
+        view.Reload(view.Song);
+        Assert.Null(view.LaneCursor);   // a marker outside every clip is dropped, and never drawn
+        Assert.False(new TimelineLaneCursor(track, clip.Lane, clip.StartSec + 0.5, null).InsideClip());
     }
 
     [AvaloniaFact]

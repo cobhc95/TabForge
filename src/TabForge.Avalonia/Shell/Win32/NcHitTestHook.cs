@@ -90,7 +90,7 @@ public sealed class NcHitTestHook
         var client = new UiPoint((screen.X - windowRect.X) / scale, (screen.Y - windowRect.Y) / scale);
         var hit = bar is null ? ChromeHit.Client
             : ChromeHitRules.Classify(client, bar.TabBounds, bar.TabActionBounds, bar.CaptionButtons, bar.CaptionBounds);
-        // Caption buttons win over the resize border, as in the WPF window (its caption-button hook runs before its resize hook):
+        // Caption buttons win over the resize border, as in the window (its caption-button hook runs before its resize hook):
         // the top row above Minimise, Maximise and Close and the right column beside Close press the button, so the top-right
         // corner pixel is Close in a normal and a maximised window alike.
         if (hit is ChromeHit.MinButton or ChromeHit.MaxButton or ChromeHit.CloseButton) return CodeOfHit(hit);

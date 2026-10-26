@@ -1,6 +1,6 @@
 // Owns: the status bar's MIDI output text: the name of the device the selected track sends to, or the fallback when the list does not hold it.
 // Does not own: the device list (WinMmMidiOutput.Devices, from the platform adapter), the selected track (the caller passes its device id),
-//       or the status bar controls (the WPF MainWindow.Tracks.cs, the Avalonia StatusBarView).
+// or the status bar controls (the Avalonia StatusBarView).
 // Tests: TabForge.Avalonia.Tests.MidiOutputStatusPresenterTests.
 using TabForge.Playback;
 

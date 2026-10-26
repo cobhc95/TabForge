@@ -21,14 +21,14 @@ namespace TabForge.Avalonia.Views;
 /// Apply closes with the tuning as its result; Cancel and Esc close with null.
 /// Owns: the window's controls and layout, and refreshing their texts from the presenter. Does not own: the tuning logic (GlobalTuningPresenter)
 /// or the preset catalogue, which the caller passes in (the Tools command passes the Core <c>TuningPresets.SixStringPresets</c>).
-/// Deviation: each string is a flat fill of the light string tone; the WPF string line is a gradient.
+/// Deviation: each string is a flat fill of the light string tone; the string line is a gradient.
 /// Tests: TabForge.Avalonia.Tests.CommandPaletteSavePromptTuningTests.
 /// </summary>
 public sealed class GlobalTuningWindow : Window
 {
     private const int StringCount = 6;
 
-    // Gap between the "Shift all by (semitones)" label and its value box, as the WPF row.
+    // Gap between the "Shift all by (semitones)" label and its value box.
     private const double ShiftLabelGap = 8;
 
     private readonly GlobalTuningPresenter _presenter;

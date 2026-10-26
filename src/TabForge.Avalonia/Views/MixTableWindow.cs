@@ -53,7 +53,7 @@ public sealed class MixTableWindow : Window
         Content = root;
     }
 
-    /// <summary>The sample beat the preview opens with: no mix point, the full demo song's first track and tempo, as the WPF capture shows. Built once, on first use (never at startup).</summary>
+    /// <summary>The sample beat the preview opens with: no mix point, the full demo song's first track and tempo. Built once, on first use (never at startup).</summary>
     public static MixTablePresenter SamplePresenter() => _sample ??= CreateSample();
 
     private static MixTablePresenter? _sample;

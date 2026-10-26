@@ -17,8 +17,8 @@ using TabForge.Avalonia.Views.Dialogs;
 namespace TabForge.Avalonia.Views;
 
 /// <summary>
-/// The Add plug-in window, the twin of the WPF PluginBrowserDialog: the search box, the sortable Name / Vendor / Format / Role
-/// list, the status line, the remember option and the action buttons, in the WPF order with the WPF texts, tooltips and automation ids.
+/// The Add plug-in window, the plug-in browser: the search box, the sortable Name / Vendor / Format / Role
+/// list, the status line, the remember option and the action buttons, in the order with the texts, tooltips and automation ids.
 /// Enter or a double-click on a row chooses it; in the search box Down moves to the list and Enter chooses the selected (or first) row; Esc cancels.
 /// Owns: the controls, the sort state, the key and double-click routing, and the chosen plug-in.
 /// Does not own: the rows, filter, sort order and status text (PluginBrowserListPresenter); scanning, identifying and the folder lists (PluginBrowserSession);
@@ -28,7 +28,7 @@ namespace TabForge.Avalonia.Views;
 /// </summary>
 public sealed class PluginBrowserWindow : Window
 {
-    // The list columns as the WPF GridView has them; a header's index is the presenter's sort column.
+    // The list columns; a header's index is the presenter's sort column.
     private const string ColumnWidths = "300,190,70,100";
     private static readonly IReadOnlyList<string> ColumnHeaders = ["Name", "Vendor", "Format", "Role"];
     private static readonly Thickness CellPadding = new(6, 3);
@@ -122,7 +122,7 @@ public sealed class PluginBrowserWindow : Window
         return _search;
     }
 
-    // The status line, the remember option and the button row, below the list as in the WPF window.
+    // The status line, the remember option and the button row, below the list as in the window.
     private Control BuildBottom()
     {
         _status[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted");
@@ -135,7 +135,7 @@ public sealed class PluginBrowserWindow : Window
         return bottom;
     }
 
-    // The WPF buttons in order; returns the empty-state button. The folder list in its tooltip is VstScannerService.StandardFolderLabels.
+    // The buttons in order; returns the empty-state button. The folder list in its tooltip is VstScannerService.StandardFolderLabels.
     private Button BuildButtons()
     {
         var scanStandard = AddButton("Scan the standard VST folders", "Plugins.ScanStandard",
@@ -211,7 +211,7 @@ public sealed class PluginBrowserWindow : Window
         // build controls no matter how many folders were scanned.
         _list.ItemsPanel = new FuncTemplate<Panel?>(() => new VirtualizingStackPanel());
         _list.ItemTemplate = new FuncDataTemplate<PluginBrowserRow>((row, _) => BuildRow(row), supportsRecycling: true);
-        // The themed row hover and selection look of the WPF rows (look "ListRow"), with the header's cell padding so the columns line up.
+        // The themed row hover and selection look of the rows (look "ListRow"), with the header's cell padding so the columns line up.
         _list.ContainerPrepared += (_, e) =>
         {
             e.Container.Classes.Add("ListRow");
@@ -220,7 +220,7 @@ public sealed class PluginBrowserWindow : Window
         return new DockPanel { Children = { headerRow, _list } };
     }
 
-    // A column header: a click sorts by its column ascending and a second click reverses, as the WPF ThemedList.MakeSortable headers do.
+    // A column header: a click sorts by its column ascending and a second click reverses.
     private Button SortHeader(int column)
     {
         var title = ColumnHeaders[column];
@@ -264,7 +264,7 @@ public sealed class PluginBrowserWindow : Window
         _list.DoubleTapped += (_, _) => Accept();
         _list.AddHandler(KeyDownEvent, (_, e) => { if (e.Key == Key.Enter) { Accept(); e.Handled = true; } }, RoutingStrategies.Tunnel);
         _search.AddHandler(KeyDownEvent, OnSearchKey, RoutingStrategies.Tunnel);
-        // The property change filters at once (TextChanged is posted to the dispatcher), so Enter sees the new rows, as in the WPF box.
+        // The property change filters at once (TextChanged is posted to the dispatcher), so Enter sees the new rows, as in the box.
         // A fast query pays the first pass at once and one more when typing rests (~100 ms), not one per keystroke.
         _filterDebounce.Tick += (_, _) =>
         {

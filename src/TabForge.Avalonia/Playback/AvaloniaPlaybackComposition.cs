@@ -6,8 +6,8 @@ using TabForge.Plugins;
 namespace TabForge.Avalonia.Playback;
 
 // Owns: the one place the Avalonia app builds its playback adapters: the audio engine client (with the Windows plug-in
-//   file-trust adapter inside the PluginTrustLoadGate the WPF build uses, so both apps ask the same trust), the winmm MIDI output
-//   and the NAudio device list. The WPF build composes the same adapters in WpfUiThread.
+// file-trust adapter inside the PluginTrustLoadGate the app uses, so both apps ask the same trust), the winmm MIDI output
+// and the NAudio device list. The app composes the same adapters in the UI-thread adapter.
 // Does not own: the engine's lifetime and I/O (AudioEngineClient), the trust rules (PluginTrust), the device calls (the Core
 //   Windows adapters), or any view (nothing is wired to UI yet).
 // Tests: AvaloniaPlaybackCompositionTests.

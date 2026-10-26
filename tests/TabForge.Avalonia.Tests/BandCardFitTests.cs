@@ -35,7 +35,7 @@ public sealed class BandCardFitTests
     private const double FitTolerance = 4;
     private const double MaxLeftover = 40;
 
-    /// <summary>The smallest staff zoom three cards with the first card's fretboard may have at 2000x1100 (the WPF band's size).</summary>
+    /// <summary>The smallest staff zoom three cards with the first card's fretboard may have at 2000x1100.</summary>
     private const double ReadableStaffZoom = 0.5;
 
     /// <summary>How far the fretboard's drawing scale may differ from its height's share of the natural height (the board is never squeezed).</summary>

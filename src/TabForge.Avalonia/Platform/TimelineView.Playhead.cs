@@ -61,7 +61,7 @@ public sealed partial class TimelineView
         return barLeft + (_boundaries[PlayheadBar + 1] - barLeft) * Math.Clamp(PlayheadFraction, 0, 1);
     }
 
-    /// <summary>Whether the [ ] brackets mark the section that holds the playhead (the WPF "section brackets" option, on by default).</summary>
+    /// <summary>Whether the [ ] brackets mark the section that holds the playhead (the "section brackets" option, on by default).</summary>
     public bool ShowSectionBrackets { get => _showSectionBrackets; set => Redraw(ref _showSectionBrackets, value); }
     private bool _showSectionBrackets = true;
 }

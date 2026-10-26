@@ -389,6 +389,6 @@ These `--selftest` checks must still pass unchanged:
 | `CheckLoopBounds` (SelfTestPlayback.cs) | "loop: bounds available", "loop: starts at bar 2 (2000 ms)", "loop: ends after bar 3 (6000 ms)", and the three selected-cell checks (E64, E65) |
 | `TestMusicXmlGuitarPro8Encoding` (SelfTestImportContract.cs) | "GP8 encoding: segno and D.S. marks are written" (uses the direction names in section 2.3) |
 
-The whole `--selftest` run and the headless `--playtest` on the reference song must also pass, since
+The whole `--selftest` run must also pass (the old headless `--playtest` step was retired 25 Oct; the Playback self-tests cover it), since
 the timeline, playhead and live-edit tests build on this order. Examples E2 to E6, E9 to E12, E19 to E28,
 E35 to E63 and E66 to E68 should be added as new self-test checks alongside the rewrite.

@@ -11,9 +11,9 @@ namespace TabForge.Avalonia;
 //   and Show one continuous line per track lane. Each flips its mode on the arrangement's timeline (the two modes are exclusive), then sets
 //   both menu checks from the timeline.
 // Does not own: the rows (MainMenuTable in Core), the lane drawing (TimelineView and TimelineNoteMarks), the commands table (MainWindowCommands),
-//   the settings file (MainWindowSettings; the modes are kept in its Timeline settings, as WPF does, and applied to each new arrangement pane).
+// the settings file (MainWindowSettings; the modes are kept in its Timeline settings, and applied to each new arrangement pane).
 // Tests: TabForge.Avalonia.Tests.MainWindowMenuTests (every menu row is handled or disabled), MainWindowArrangementModesTests.
-/// <summary>The View menu's arrangement lane modes, as WPF.</summary>
+/// <summary>The View menu's arrangement lane modes.</summary>
 public static class MainWindowArrangementModes
 {
     private const string IndividualNotesId = "View.ArrangementIndividualNotes";

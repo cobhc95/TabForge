@@ -25,7 +25,7 @@ namespace TabForge.Avalonia.Views;
 /// Owns: the view's behaviour — the subscriptions on the controls, attach/detach, playback following, the wheel, the splitter drag and the inline track name editor. The control tree
 /// and its layout are built by <see cref="ArrangementComposition"/>; the row stack (row source, armed rows, row scroll bar, natural max height, selected-row reload) is
 /// <see cref="ArrangementTrackRows"/>. Does not own: drawing, gestures or edits (TimelineView, TimelineInputController and the command hosts), the toolbar and group headers of the
-/// WPF `ArrangementPanel`, the track list's reload (ArrangementRowSource) and the top band's layout (ArrangementTopBand).
+/// the arrangement panel, the track list's reload (ArrangementRowSource) and the top band's layout (ArrangementTopBand).
 /// Tests: TabForge.Avalonia.Tests.ArrangementViewTests.
 /// </summary>
 public sealed partial class ArrangementView : UserControl
@@ -55,7 +55,7 @@ public sealed partial class ArrangementView : UserControl
         _trackRows.RowsCountChanged += () => TrackRowsCountChanged?.Invoke();
         Input.TrackRowClicked += SelectTrackRow;
         // Arming from the track row's record cell changes the rows (the armed sub-row), and the timeline is not marked for that edit, so the rows reload here.
-        Input.TrackArmToggled += _ => _trackRows.ReloadRows();
+        Input.TrackArmToggled += row => { _trackRows.ReloadRows(); TrackArmChanged?.Invoke(row); };
         _trackRows.WatchTimeline();
         AddTrackBar.Clicked += OnAddTrackClicked;
         Header.DoubleTapped += (_, e) =>
@@ -64,7 +64,7 @@ public sealed partial class ArrangementView : UserControl
             if (row >= 0) BeginTrackRename(row);
         };
         FooterScrollBar.ValueChanged += (_, _) => { if (_syncingFooterBar) return; NoteHandScroll(); _sideways.Offset = new Vector(FooterScrollBar.Value, _sideways.Offset.Y); };
-        _sideways.ScrollChanged += (_, _) => { FitTimelineToViewport(_sideways); SyncFooterScrollBar(); };
+        _sideways.ScrollChanged += (_, _) => { FitTimelineToViewport(_sideways); SyncFooterScrollBar(); SidewaysScrolled?.Invoke(); };
         // A bar click seeks the playback, then pages the view if the bar is at an edge (the click still selects the bar in the input controller).
         // While this window is capturing, a ruler or lane click never moves the transport: the take stays anchored where recording began.
         void SeekToBar(int bar)
@@ -104,7 +104,7 @@ public sealed partial class ArrangementView : UserControl
 
     private IEditableDocument _document;
 
-    /// <summary>The width of the divider between the track list and the timeline: one line, as WPF's.</summary>
+    /// <summary>The width of the divider between the track list and the timeline: one line.</summary>
     public const double DividerWidth = 1;
 
     // The track list width when the splitter drag began; the drag distance is added to it.
@@ -174,11 +174,11 @@ public sealed partial class ArrangementView : UserControl
 
     private readonly TabForge.Avalonia.Views.Docking.DockSplitter _listSplitter;
 
-    /// <summary>The footer bar's height and the gap either side of it (WPF's timeline scrollbar: 16 px, 6 px margin).</summary>
+    /// <summary>The footer bar's height and the gap either side of it (the timeline scrollbar: 16 px, 6 px margin).</summary>
     public const double SidewaysBarHeight = 16;
     public const double SidewaysBarSideMargin = 6;
 
-    /// <summary>The footer bar's large step as a share of the view's width, and its small step in DIPs (WPF's values).</summary>
+    /// <summary>The footer bar's large step as a share of the view's width, and its small step in DIPs (the usual values).</summary>
     private const double FooterLargeChangeShare = 0.8, FooterSmallChange = 24;
 
     /// <summary>The smallest large step the footer bar takes: one DIP, so a narrow pane still pages.</summary>
@@ -187,7 +187,7 @@ public sealed partial class ArrangementView : UserControl
     private bool _syncingFooterBar;
 
     /// <summary>
-    /// The timeline's horizontal scroll bar, WPF's footer bar: the status bar hosts it. It is two-way synced with the timeline's offset and shows only
+    /// The timeline's horizontal scroll bar, the footer bar: the status bar hosts it. It is two-way synced with the timeline's offset and shows only
     /// while this pane is attached (closing the pane hides it).
     /// </summary>
     public ScrollBar FooterScrollBar { get; } = new()
@@ -200,7 +200,7 @@ public sealed partial class ArrangementView : UserControl
         IsVisible = false,
     };
 
-    // The timeline is never narrower than the viewer, so short songs draw their empty grid out to the pane's edge (WPF fills the rest with grid).
+    // The timeline is never narrower than the viewer, so short songs draw their empty grid out to the pane's edge.
     private void FitTimelineToViewport(ScrollViewer sideways)
     {
         var width = Math.Max(0, sideways.Viewport.Width);
@@ -243,9 +243,12 @@ public sealed partial class ArrangementView : UserControl
 
     /// <summary>
     /// Raised when a track or a group row is added or removed, or a row's height changes (an armed track's sub-row), so the window re-fits the track
-    /// list to its rows (WPF fits on track changes, as it does for the master lane).
+    /// list to its rows (it fits on track changes, as it does for the master lane).
     /// </summary>
     public event Action? TrackRowsCountChanged;
+
+    /// <summary>Raised (with the track's row) after the track row's record cell armed or disarmed a track and the rows reloaded, so the window can grow the pane to show the armed sub-row.</summary>
+    public event Action<int>? TrackArmChanged;
 
     /// <summary>The confirm flash on a section block after a jump to it (see <see cref="SectionButtonFeedback"/>).</summary>
     public void FlashSection(MarkerModel section) => Timeline.SectionButtons.Flash(section);
@@ -394,7 +397,7 @@ public sealed partial class ArrangementView : UserControl
     }
 
     /// <summary>
-    /// The "Add track" strip asks the Add track question over the window, as WPF does. Audio adds an audio track at the end (one undo step);
+    /// The "Add track" strip asks the Add track question over the window. Audio adds an audio track at the end (one undo step);
     /// Instrument opens the Track properties window in add mode, which adds its track on OK.
     /// </summary>
     private async void OnAddTrackClicked()
@@ -438,4 +441,18 @@ public sealed partial class ArrangementView : UserControl
     /// <summary>The controls of the armed tracks' sub-rows (monitor, input) and their level poll.</summary>
     public ArmedRowLayer ArmedRows => _trackRows.Armed;
     public TimelineInputController Input { get; }
+
+    /// <summary>Raised when the lanes scroll sideways (by hand, by zoom or following playback); the piano roll follows it.</summary>
+    public event Action? SidewaysScrolled;
+
+    /// <summary>The song second at the left edge of the visible lanes.</summary>
+    public double LeftSeconds => Timeline.SecondsOfX(_sideways.Offset.X);
+
+    /// <summary>Scrolls the lanes so <paramref name="seconds"/> is at their left edge (the piano roll was scrolled by hand).</summary>
+    public void ScrollToSeconds(double seconds)
+    {
+        var x = Math.Max(0, Timeline.XOfSeconds(Math.Max(0, seconds)));
+        if (Math.Abs(x - _sideways.Offset.X) < 0.5) return;
+        _sideways.Offset = new Vector(x, _sideways.Offset.Y);
+    }
 }

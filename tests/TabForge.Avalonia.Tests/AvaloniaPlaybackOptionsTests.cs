@@ -11,8 +11,8 @@ using Xunit;
 namespace TabForge.Avalonia.Tests;
 
 // Owns: the playback options an Avalonia session starts with: the app's click, count-in and let-ring settings reach every start, so the events a
-//   start compiles match the WPF transport's options (source bar 121 of the demo is compared event for event).
-// Does not own: the engine (PlaybackEngine), the WPF transport (a read-only reference; its options are written out here).
+// start compiles match the transport's options (source bar 121 of the demo is compared event for event).
+// Does not own: the engine (PlaybackEngine), the transport (a read-only reference; its options are written out here).
 // Tests: this file.
 public class AvaloniaPlaybackOptionsTests
 {
@@ -28,7 +28,7 @@ public class AvaloniaPlaybackOptionsTests
         session.ApplyClickOptions(audio);
         session.PlayOrPause();
 
-        // The WPF transport's options for the same settings (TransportControlsController.BuildOptions).
+        // The transport's options for the same settings (TransportControlsController.BuildOptions).
         var wpf = new PlaybackOptions
         {
             LetRingCapMs = audio.LetRingCapMs,

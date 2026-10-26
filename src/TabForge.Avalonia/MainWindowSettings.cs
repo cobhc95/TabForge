@@ -10,7 +10,7 @@ using TabForge.Services;
 
 namespace TabForge.Avalonia;
 
-// Owns: the Avalonia window's settings: the store it reads (the same AppSettingsStore and settings.json format as the WPF app), the
+// Owns: the Avalonia window's settings: the store it reads (the same AppSettingsStore and settings.json format), the
 //   saved dock layout it starts from, saving the captured layout on the dock's debounced LayoutChanged and on window close, and
 //   saving the Settings window's OK and Apply.
 // Does not own: the file format, bounds and migration (SettingsFileService, SettingsValidator, WorkspaceNormalizer), the layout
@@ -39,7 +39,7 @@ public sealed class MainWindowSettings : IDisposable
     /// <summary>Raised with the live settings when the store marks them changed (a layout save or a replaced settings object).</summary>
     public event Action<AppSettings>? SettingsChanged;
 
-    /// <summary>The user's settings file (the one the WPF app uses).</summary>
+    /// <summary>The user's settings file (the one the app uses).</summary>
     public static MainWindowSettings OpenDefault() => Open(AppSettingsStore.DefaultPath);
 
     /// <summary>The settings file at <paramref name="path"/>; a missing file gives defaults, an unreadable one is never overwritten.</summary>
@@ -50,7 +50,7 @@ public sealed class MainWindowSettings : IDisposable
 
     public AppSettings Settings => _store.Settings;
 
-    /// <summary>The settings file exists but could not be read: defaults are active and nothing is saved until Preferences are applied (as the WPF app).</summary>
+    /// <summary>The settings file exists but could not be read: defaults are active and nothing is saved until Preferences are applied.</summary>
     public bool LoadFailed => _store.LoadFailed;
 
     /// <summary>The layout the window starts from: the saved one (already normalized on load), else the default layout.</summary>
@@ -59,7 +59,7 @@ public sealed class MainWindowSettings : IDisposable
     /// <summary>Saves the dock's layout a moment after each change and once more when <paramref name="window"/> closes.</summary>
     public void Attach(DockWorkspaceController dock, Window window)
     {
-        // Every window saves its own layout into the one store (the last save wins), as the WPF windows do.
+        // Every window saves its own layout into the one store (the last save wins).
         _openWindows++;
         dock.LayoutChanged += SaveLayout;
         window.Closing += (_, _) => { dock.FlushLayoutChanged(); FlushDeferred(); _store.Flush(); };   // a placement saved quietly reaches the disk with the window, not only with the last one
@@ -114,7 +114,7 @@ public sealed class MainWindowSettings : IDisposable
     {
         var stored = _heldWorkspace ?? layout;
         _store.Settings.Workspace = stored;
-        // The fretboard setting follows the saved layout, as the WPF window keeps it: a pane the user closed must not be shown again by the settings' apply.
+        // The fretboard setting follows the saved layout: a pane the user closed must not be shown again by the settings' apply.
         _store.Settings.Appearance.ShowFretboard = FretboardShownIn(stored);
         _store.MarkChanged(this);
     }
@@ -199,7 +199,7 @@ public sealed class MainWindowSettings : IDisposable
     /// <summary>The one Settings window: shown over <paramref name="owner"/> from <paramref name="create"/>, or the open one brought forward.</summary>
     internal PreferencesWindow OpenPreferences(Window owner, Func<PreferencesWindow> create) => _tools.OpenOrActivate("Settings", null, create, owner);
 
-    /// <summary>The Settings window over the shared settings: its OK and Apply save them to the settings file, as the WPF window does.</summary>
+    /// <summary>The Settings window over the shared settings: its OK and Apply save them to the settings file.</summary>
     public PreferencesWindow CreatePreferencesWindow(Views.PreferencesRowActions? actions = null)
     {
         var window = new PreferencesWindow(new AvaloniaDialogHost(), Settings, actions);

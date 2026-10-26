@@ -7,8 +7,8 @@ using TabForge.Platform.Theme;
 namespace TabForge.Avalonia.Platform;
 
 /// <summary>
-/// The "Master" row's cells in the track list, in the track rows' columns as WPF's master row places them: the label in the name column, the master
-/// FX split button (FX and power), the master volume slider (0-100 %, the transport's master knob) and the master pan slider. WPF's master row has
+/// The "Master" row's cells in the track list, in the track rows' columns: the label in the name column, the master
+/// FX split button (FX and power), the master volume slider (0-100 %, the transport's master knob) and the master pan slider. The master row has
 /// these and no M or S. Drawn with the <see cref="TrackRowCells"/> builders.
 /// Owns: the master row's label and the drawing of its three cells, from the song's master bus and pan and the state the caller passes (<see cref="Shown"/>),
 /// the master cells' tooltips and the master volume range.
@@ -18,7 +18,7 @@ namespace TabForge.Avalonia.Platform;
 /// </summary>
 public static class MasterLaneRowPainter
 {
-    /// <summary>The label the row shows in the name column, as WPF's.</summary>
+    /// <summary>The label the row shows in the name column.</summary>
     public const string Label = "Master";
 
     /// <summary>The master volume range: the transport knob's 0-100 %.</summary>

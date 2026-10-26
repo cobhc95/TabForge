@@ -6,7 +6,7 @@ namespace TabForge.KeyboardMode;
 // Owns: the numbers of the keyboard falling-notes strip as pure maths: the key window (the notes' range in whole octaves, at least three, widened by octaves inside the 88 until the keys keep
 //   real piano proportions within the height cap), the x and width of every key (white keys evenly spaced, black keys 58 % wide and 63 % long, off the seams as on a piano), the strip's height,
 //   how many pixels a millisecond is (the falling area over the look-ahead, capped in speed) and where a moment ahead of the song time sits.
-// Does not own: the key outlines and rectangles as toolkit shapes (the WPF KeyboardModeLayout), the notes, the colours or drawing.
+// Does not own: the key outlines and rectangles as toolkit shapes, the notes, the colours or drawing.
 // Tests: TestKeyboardModeKeyView.
 public sealed class KeyboardStripGeometry
 {

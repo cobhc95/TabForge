@@ -1,6 +1,6 @@
 // Owns: the audio clip properties dialog's logic without UI types: its texts, the three sliders (range, step, reset value, how a value
 //       reads) and writing the edited values back to the clip on OK.
-// Does not own: the window (WPF ClipPropertiesDialog, Avalonia ClipPropertiesWindow) or the clip's playback.
+// Does not own: the window (Avalonia ClipPropertiesWindow) or the clip's playback.
 // Tests: ClipPropertiesTests, TabForge.Avalonia.Tests.ClipSnapPluginDialogTests.
 using System.Globalization;
 using TabForge.Models;

@@ -74,7 +74,7 @@ public static class FretboardSizeRules
 
     /// <summary>The string gap that keeps a board of <paramref name="boardWidth"/> within the aspect range, then within the gap range.
     /// Where the aspect cannot be met (a board too narrow or too wide for the gap range) the gap range wins. An infinite aspect cap
-    /// (the WPF panel) means the board has no aspect range, so the gap is returned unchanged.</summary>
+    /// means the board has no aspect range, so the gap is returned unchanged.</summary>
     public static double ClampStringGap(double gap, int strings, double boardWidth, FretboardBoardLimits? limits = null)
     {
         var caps = limits ?? FretboardBoardLimits.Default;

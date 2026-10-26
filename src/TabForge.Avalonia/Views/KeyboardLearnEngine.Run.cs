@@ -20,7 +20,7 @@ namespace TabForge.Avalonia.Views;
 
 public sealed partial class KeyboardLearnEngine : IDisposable
 {
-    // ---- listener (WPF KeyboardModeMidiListener parity, minus the Thru play path) ----
+    // ---- listener (the MIDI listener, minus the Thru play path) ----
 
     private void EnsureListener(bool listen)
     {
@@ -94,7 +94,7 @@ public sealed partial class KeyboardLearnEngine : IDisposable
         _queue.Enqueue(new KeyboardModePlayed(midi, on, timeSec));
     }
 
-    // ---- run (WPF KeyboardModeKeyboardSession parity, with the bias calibration) ----
+    // ---- run (the keyboard session, with the bias calibration) ----
 
     private void StartRun(double songSec, KeyboardModeLoop? loop)
     {
@@ -134,7 +134,7 @@ public sealed partial class KeyboardLearnEngine : IDisposable
         return spread <= MaxSpreadMs && Math.Abs(median) >= MinBiasMs ? Math.Clamp(median, -MaxBiasMs, MaxBiasMs) / 1000 : 0;
     }
 
-    // ---- wait gate (WPF KeyboardModeWaitMode parity) ----
+    // ---- wait gate ----
 
     private void Press(KeyboardModePlayed e)
     {

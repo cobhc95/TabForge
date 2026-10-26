@@ -14,7 +14,7 @@ using Xunit;
 
 namespace TabForge.Avalonia.Tests;
 
-/// <summary>Owns: the main window's dock measured against the WPF default-layout captures (win-default-dark/light, 200 % halved to DIPs):
+/// <summary>Owns: the main window's dock measured against the default-layout captures (win-default-dark/light, 200 % halved to DIPs):
 /// side panel tab pills, splitter bands, the View and tempo pane and the menu row's layout toggles.</summary>
 public class MainWindowDockParityTests
 {

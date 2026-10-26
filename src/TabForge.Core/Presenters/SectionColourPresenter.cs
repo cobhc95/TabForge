@@ -1,7 +1,7 @@
 // Owns: the section colour rules shared by the timeline and the section lists, on plain RGBA: a section's display colour (tamed unless
 //       chosen exactly), one colour for a section family ("Verse 1", "Verse 2"), a distinct colour for a family that looks like one
 //       already used, the tame maths and the look-alike test, and the family name of a title.
-// Does not own: the marker storage, the resolved-colour cache (WPF SectionColours keeps it), palette lookup (callers pass the distinct
+// Does not own: the marker storage, the resolved-colour cache, palette lookup (callers pass the distinct
 //       colours, named by DistinctPaletteNames), drawing. Colour text is hex only (ColourHex), as the markers store it.
 // Tests: SectionColourPresenterTests.
 using System.Text.RegularExpressions;

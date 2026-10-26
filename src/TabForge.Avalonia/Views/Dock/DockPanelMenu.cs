@@ -20,7 +20,7 @@ public static class DockPanelMenu
         {
             if (entry.Action == DockPaneMenuAction.Separator)
             {
-                // The tear-off of the WPF dock is a drag; here it is this menu item, before the separator.
+                // The tear-off of the dock is a drag; here it is this menu item, before the separator.
                 var floatItem = new MenuItem { Header = FloatLabel };
                 floatItem.Click += (_, _) => floatPanel(panelId);
                 menu.Items.Add(floatItem);

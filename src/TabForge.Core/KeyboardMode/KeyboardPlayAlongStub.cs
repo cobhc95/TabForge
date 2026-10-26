@@ -5,8 +5,8 @@ namespace TabForge.KeyboardMode;
 
 // Owns: the fixed made-up play-along state of the Keyboard mode captures: a two-hand riff written over four bars of one track (in memory), the note source of that track, and a judge, score and
 //   feedback as if the song had been played a little off the beat up to a moment of a bar (one note missed, the last note's grade flashing, the notes sounding now held right, one extra key held).
-// Does not own: drawing (the WPF KeyboardModeView, the Avalonia KeyboardStripView), the real run (KeyboardModeKeyboardSession) or the capture steps that call this.
-// Tests: TestKeyboardModeKeyView (WPF capture "learn-playing" with "keys"), TabForge.Avalonia.Tests.KeyboardStripViewTests.
+// Does not own: drawing (the Avalonia KeyboardStripView), the real run (KeyboardModeKeyboardSession) or the capture steps that call this.
+// Tests: TestKeyboardModeKeyView (the capture "learn-playing" with "keys"), TabForge.Avalonia.Tests.KeyboardStripViewTests.
 public sealed class KeyboardPlayAlongStub
 {
     /// <summary>How long the last grade flash stays fully visible (an hour: it never fades during a capture).</summary>

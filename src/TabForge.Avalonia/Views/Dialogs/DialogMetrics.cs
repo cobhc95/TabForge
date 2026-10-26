@@ -89,6 +89,24 @@ internal static class DialogMetrics
     /// <summary>Preferences window: the rail's right border, the page cards' margin, a row group's gap above and the "More options" toggle's pull to the left.</summary>
     public static readonly Thickness PrefsRailBorder = new(0, 0, 1, 0), PrefsCardsMargin = new(16, 8, 16, 16), PrefsRowsGap = new(0, 4, 0, 0), PrefsMoreToggleMargin = new(-6, 0, 0, 0);
 
+    /// <summary>The media windows (copy question, copy progress, find missing media): widths, list heights, bar and button height, small text, corner.</summary>
+    public const double MediaPromptMinWidth = 420, MediaPromptMaxWidth = 620, MediaProgressWidth = 420, MediaRelinkWidth = 600, MediaRelinkMinWidth = 420,
+        MediaListMaxHeight = 150, MediaRelinkListMaxHeight = 220, MediaBarHeight = 8, MediaButtonHeight = 28, MediaSmallText = 12, MediaCorner = 4;
+
+    /// <summary>The media windows: the gaps above the Remember box, around the file list, above the bar, a list row's inset, the gap before a detail and a status, the button padding, the outline.</summary>
+    public static readonly Thickness MediaRememberGap = new(0, 8, 0, 0), MediaListGap = new(0, 8, 0, 4), MediaBarGap = new(0, 10, 0, 4), MediaRowInset = new(6, 3),
+        MediaDetailGap = new(10, 0, 0, 0), MediaStatusGap = new(8, 0), MediaButtonPadding = new(14, 0), MediaFrameGap = new(0, 0, 0, 6), MediaOutline = new(1);
+
+    /// <summary>Centres a dialog over its owner window.</summary>
+    public static void CenterOnOwner(global::Avalonia.Controls.Window window) => window.WindowStartupLocation = global::Avalonia.Controls.WindowStartupLocation.CenterOwner;
+
+    /// <summary>Sets the button's padding and returns it (builder code outside the metrics owner does not assign layout).</summary>
+    public static global::Avalonia.Controls.Button WithPadding(this global::Avalonia.Controls.Button button, Thickness padding)
+    {
+        button.Padding = padding;
+        return button;
+    }
+
     /// <summary>A light-dismiss popup shown at <paramref name="placement"/> (under by default) the anchor; the one place anchored pickers are built.</summary>
     public static Popup AnchoredPopup(Control anchor, Control child, PlacementMode placement = PlacementMode.Bottom) =>
         new() { PlacementTarget = anchor, Placement = placement, IsLightDismissEnabled = true, Child = child };

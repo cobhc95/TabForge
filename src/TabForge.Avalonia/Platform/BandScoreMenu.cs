@@ -9,7 +9,7 @@ namespace TabForge.Avalonia.Platform;
 
 // Owns: the score right-click menu of a Band card: its state (read from the band settings, not the card's view) and what each row does. Show
 //   standard notation sets the band lane content (Tab / Both), the outline and the page layout rows set the band's own outline and layout, Zoom in
-//   and out change the band lane zoom (the value Ctrl+wheel changes in the WPF Band view), and Score settings... opens Preferences at the
+//   and out change the band lane zoom (the value Ctrl+wheel changes in the Band view), and Score settings... opens Preferences at the
 //   Band view group. Every change is saved and applied to all cards; none touches the main score's settings.
 // Does not own: the rows (Core ScoreMenus), the stored values (BandSettings), the cards (BandView, BandTrackPanel), the Preferences window.
 // Tests: TabForge.Avalonia.Tests.BandScoreMenuTests.

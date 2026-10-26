@@ -10,7 +10,7 @@ namespace TabForge.Avalonia.Platform;
 
 /// <summary>
 /// Draws a bundled SVG icon read by the Core icon reader (SvgIcon) in Avalonia: each shape's path is built once by <see cref="Prepare"/>, then
-/// each draw applies the shape's rotation and paints and draws the texts in the icon colour, the way the WPF icon does.
+/// each draw applies the shape's rotation and paints and draws the texts in the icon colour, the way the icon does.
 /// Owns: the Avalonia geometry of an icon's shapes and the draw calls for them. Does not own: reading the file (ToolIconArt, TransportIconArt),
 /// the frame transform of each icon, or the caches that hold prepared icons.
 /// Tests: TabForge.Avalonia.Tests.SvgIconTests.

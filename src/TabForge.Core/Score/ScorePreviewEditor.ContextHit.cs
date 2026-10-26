@@ -16,7 +16,7 @@ internal readonly record struct ScoreContextHit(int Measure, int Cell, int Strin
 
 internal sealed partial class ScorePreviewEditor
 {
-    /// <summary>The right-click target at page point (<paramref name="x"/>, <paramref name="y"/>), as the WPF score's right-click reads it.</summary>
+    /// <summary>The right-click target at page point (<paramref name="x"/>, <paramref name="y"/>).</summary>
     internal ScoreContextHit ContextHitAt(double x, double y)
     {
         var (measure, cell, stringIndex) = _probe.HitTest(x, y);
@@ -28,7 +28,7 @@ internal sealed partial class ScorePreviewEditor
         return new ScoreContextHit(measure, cell, stringIndex, true, onNote, insideSelection);
     }
 
-    /// <summary>Puts the cursor on a beat and string and drops any range, so a menu opened on that beat acts on it (the WPF SelectForEdit).</summary>
+    /// <summary>Puts the cursor on a beat and string and drops any range, so a menu opened on that beat acts on it.</summary>
     internal void SelectForEdit(int measure, int cell, int stringIndex)
     {
         Sel.Clear();

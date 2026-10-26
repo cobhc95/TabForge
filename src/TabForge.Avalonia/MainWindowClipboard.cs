@@ -50,13 +50,13 @@ public sealed class MainWindowClipboard
 
     /// <summary>Adds Edit.Copy, Edit.Cut, Edit.Paste and Edit.PasteSpecial over <paramref name="owner"/>'s clipboard and dialogs; <see cref="MainWindowEditRouting"/> routes them by the focus target of the shown document's <paramref name="targets"/>.</summary>
     public static MainWindowClipboard Register(MainWindowCommands commands, Func<ScorePreviewView> score, Window owner, Func<EditingSettings> settings, Action<string> report,
-        EditRouting routing, EditTargets targets, Shell.TabWindowRegistry windows)
+        EditRouting routing, EditTargets targets, Shell.TabWindowRegistry windows, Func<EditVerb, bool>? first = null)
     {
         var flow = new MainWindowClipboard(score, windows.SystemClipboard, settings,
             bars => DialogLauncher.Ask<Views.PasteSpecialWindow, PasteSpecialOptions?>(owner, () => new Views.PasteSpecialWindow(bars)),
             questions => DialogLauncher.Ask<Views.PasteOptionsWindow, PasteAnswers?>(owner, () => new Views.PasteOptionsWindow(questions)),
             clipboard: windows.Clipboard);
-        MainWindowEditRouting.Register(commands, flow, routing, targets, report);
+        MainWindowEditRouting.Register(commands, flow, routing, targets, report, first);
         return flow;
     }
 

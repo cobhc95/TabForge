@@ -291,19 +291,21 @@ public sealed class TimelineBarHighlightInputTests
     }
 
     [AvaloniaFact]
-    public void AClickOnAClipSelectsItMovesThePlayheadToItsStartAndLeavesTheHighlight()
+    public void AClickOnAClipSelectsItMovesThePlayheadToTheClickedBarAndLeavesTheHighlight()
     {
         var rig = Open();
         rig.Click(rig.Cell(1, 0));
         var seeks = new List<int>();
         rig.Input.BarSeekRequested += seeks.Add;
 
-        rig.Click(rig.ClipCentre());
+        var centre = rig.ClipCentre();
+        var clickedBar = rig.View.BarAtX(rig.Window.TranslatePoint(centre, rig.View)!.Value.X);   // 0.8.0: the bar under the pointer, not the clip start
+        rig.Click(centre);
         rig.Window.Close();
 
         Assert.Equal(rig.Doc.Project.Tracks[2].AudioClips[0], rig.View.SelectedClip!.Clip);
         Assert.Equal(FocusTarget.Clips, rig.Doc.Selection.Focus);
-        Assert.Equal(new[] { TabForge.Presenters.AudioClipTimelineRules.BarAtSeconds(rig.Doc.Project, rig.View.SelectedClip!.Clip.StartSec).Bar }, seeks);
+        Assert.Equal(new[] { clickedBar }, seeks);
         Assert.Equal((0, 0, 1, 1), rig.Block);
     }
 

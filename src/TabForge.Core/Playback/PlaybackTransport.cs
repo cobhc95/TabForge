@@ -101,7 +101,7 @@ public sealed class PlaybackTransport : IDisposable
             CountIn = countIn,
             Speed = _speed,
         };
-        // The start replaces the engine's options, so the app's audio settings are applied to each start here, as the WPF transport builds them.
+        // The start replaces the engine's options, so the app's audio settings are applied to each start here.
         _startTuning?.Invoke(options);
         // A start from the middle of the song (a speed change while playing) never replays the count-in, whatever the settings say.
         if (!countIn) options.CountIn = false;

@@ -15,15 +15,15 @@ namespace TabForge.Avalonia;
 //   Clip.Properties (the clip properties dialog). Each is one DocumentEdits step on the shown song; a dialog closed with nothing changed
 //   takes no step. Keys are used only while a clip is selected (MainWindowClipKeys.Add).
 // Does not own: the split rule (ClipSplitGlue in TabForge.Core), the dialog's wording and apply rule (ClipPropertiesPresenter), the
-//   dialog controls (ClipPropertiesWindow), the other clip commands (MainWindowClipKeys, MainWindowClipEditKeys). The WPF lane edit cursor
-//   is not ported: Split uses the playhead, the WPF fallback.
+// dialog controls (ClipPropertiesWindow), the other clip commands (MainWindowClipKeys, MainWindowClipEditKeys). The lane edit cursor
+// is not ported: Split uses the playhead, the fallback.
 // Tests: TabForge.Avalonia.Tests.ClipPropertiesTests, TabForge.Avalonia.Tests.MainWindowMenuTests (every Commands id is handled).
 public static class MainWindowClipProperties
 {
     /// <summary>The command ids this class handles.</summary>
     public static readonly IReadOnlyList<string> Commands = new[] { "Clip.Split", "Clip.Properties" };
 
-    /// <summary>The notice when the playhead is not inside the selected clip (the WPF status text).</summary>
+    /// <summary>The notice when the playhead is not inside the selected clip.</summary>
     public const string SplitOutsideNotice = "Put the edit cursor (click the clip) or the playhead inside the clip to split it";
 
     /// <param name="commands">The window's command table.</param>
@@ -37,8 +37,8 @@ public static class MainWindowClipProperties
         MainWindowClipKeys.Add(commands, songs, panes, "Clip.Properties", target => _ = EditProperties(target, owner));
     }
 
-    /// <summary>Splits the selected clip at the lane edit cursor when it lies inside the clip, else at the playhead (the WPF rule); outside the
-    /// clip it shows the notice and takes no step. The split point becomes the new lane edit cursor, as WPF does.</summary>
+    /// <summary>Splits the selected clip at the lane edit cursor when it lies inside the clip, else at the playhead; outside the
+    /// clip it shows the notice and takes no step. The split point becomes the new lane edit cursor.</summary>
     internal static void Split(MainWindowClipKeys.Target target, Action<string> notice)
     {
         var (track, clip) = (target.Selection.Track, target.Selection.Clip);

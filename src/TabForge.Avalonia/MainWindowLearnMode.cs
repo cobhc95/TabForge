@@ -83,7 +83,7 @@ public sealed class MainWindowLearnMode
     /// <summary>The saved keyboard size text, as Keyboard mode settings store it.</summary>
     private string SavedSize => _settings?.Settings.Learn?.KeyboardSize ?? KeyboardModeSettings.SizeFull;
 
-    /// <summary>The Keyboard mode pane's X button: leaves the mode and puts the arrangement back, as the pane's exit request does in WPF.</summary>
+    /// <summary>The Keyboard mode pane's X button: leaves the mode and puts the arrangement back, as the pane's exit request does.</summary>
     public void LeaveFromPane()
     {
         if (IsOn) Toggle();

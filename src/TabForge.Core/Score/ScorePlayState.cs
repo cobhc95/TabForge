@@ -5,12 +5,12 @@ using TabForge.Playback;
 namespace TabForge.Views.Score;
 
 // Owns: the score's playing state as one value both apps build: whether it plays, the bar, beat and fraction of the playhead, the sounding and freshly struck notes of one track,
-//   and the geometry of the playhead line and playing-bar band over a layout (the formulas of the WPF PlaybackOverlay).
+//   and the geometry of the playhead line and playing-bar band over a layout (the formulas of the playback overlay).
 // Does not own: the clock (PlaybackTransport), the drawing (ScoreGeometryProbe), the timeline (ScoreTimeline).
 // Tests: TabForge.Avalonia.Tests.ScorePlayStateTests.
 internal sealed class ScorePlayState
 {
-    /// <summary>A struck note stays lit this long (the WPF overlay's window).</summary>
+    /// <summary>A struck note stays lit this long.</summary>
     public const double StruckWindowMs = 130;
 
     public bool Active { get; private set; }

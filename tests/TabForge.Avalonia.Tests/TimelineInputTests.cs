@@ -111,7 +111,7 @@ public class TimelineInputTests
         var slots = v.SectionSlots();
         Assert.True(slots.Length >= 2);
         var title = SectionLayout.Sorted(doc.Project)[0].Title;
-        var from = new Point(slots[0].Left + 4, slots[0].Top + 4);
+        var from = new Point(slots[0].Left + 24, slots[0].Top + 4);
         w.MouseDown(from, MouseButton.Left);
         w.MouseMove(from + new Vector(2, 0));
         Assert.Equal(-1, v.DragSection);

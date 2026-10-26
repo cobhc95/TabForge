@@ -18,7 +18,7 @@ namespace TabForge.Avalonia.Views;
 /// for a copied timeline range the repeat count, mode (overwrite / merge / insert), what to paste, what an overlapped clip does and "remember". Then Paste / Cancel.
 /// Closing returns the PasteSpecialOptions, or null when cancelled.
 /// Owns: the window controls and keeping them in step with the presenter. Does not own: the choices, limits or words (PasteSpecialPresenter) or the paste.
-/// Deviation: the window uses the platform title bar; the WPF window draws its own.
+/// Deviation: the window uses the platform title bar; the window draws its own.
 /// Tests: TabForge.Avalonia.Tests.PasteOptionsSpecialAndDeleteBarsTests, TimelinePasteTests.
 /// </summary>
 public sealed class PasteSpecialWindow : Window

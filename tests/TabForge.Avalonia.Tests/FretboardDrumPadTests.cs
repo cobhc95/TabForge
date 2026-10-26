@@ -18,7 +18,7 @@ namespace TabForge.Avalonia.Tests;
 
 /// <summary>
 /// Owns: a real pointer click on a drum sound in the key map of a selected drum track writes that sound at the cursor's cell, on the drum-map line
-/// the track's drum map gives it (as the WPF panel does).
+/// the track's drum map gives it.
 /// Does not own: the drum map's rules (DrumMaps), the key map's geometry (PercussionKeyMapRules) or the note rules (ScoreEditCommands).
 /// Tests: TabForge.Avalonia.Tests.FretboardDrumPadTests.
 /// </summary>

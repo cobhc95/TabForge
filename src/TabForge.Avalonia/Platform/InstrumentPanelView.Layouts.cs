@@ -59,7 +59,7 @@ public sealed partial class InstrumentPanelView
     private static string KeyName(int midi) =>
         midi % 12 == 0 ? MusicTheoryService.NoteName(midi) : MusicTheoryService.NoteNames[midi % 12];
 
-    /// <summary>The idle fill of a key: under the shaded scale style a scale key is tinted toward the highlight colour, its root more strongly (as WPF).</summary>
+    /// <summary>The idle fill of a key: under the shaded scale style a scale key is tinted toward the highlight colour, its root more strongly.</summary>
     private UiColor ScaleKeyFill(int midi, Func<string, UiColor> ink, UiColor plain)
     {
         var pitchClass = ((midi % 12) + 12) % 12;
@@ -73,7 +73,7 @@ public sealed partial class InstrumentPanelView
         return ThemeColours.Blend(plain, ink(_look.ScaleColourKey), amount);
     }
 
-    /// <summary>The circles and rings styles put a small mark near the bottom of each scale key, the root's larger (as WPF).</summary>
+    /// <summary>The circles and rings styles put a small mark near the bottom of each scale key, the root's larger.</summary>
     private void ScaleKeyMark(IDrawContext d, Func<string, UiColor> ink, int midi, UiRect key)
     {
         var pitchClass = ((midi % 12) + 12) % 12;
@@ -88,7 +88,7 @@ public sealed partial class InstrumentPanelView
         else d.Ellipse(colour, null, cx, cy, radius, radius);
     }
 
-    /// <summary>The drum key map, as the WPF panel draws it: every GM sound labelled "N - Name" in columns, the lit ones glowing in the current colour.</summary>
+    /// <summary>The drum key map: every GM sound labelled "N - Name" in columns, the lit ones glowing in the current colour.</summary>
     private void DrawDrums(IDrawContext d, Func<string, UiColor> ink)
     {
         var grid = PercussionKeyMapRules.GridFor(Bounds.Width, Bounds.Height);

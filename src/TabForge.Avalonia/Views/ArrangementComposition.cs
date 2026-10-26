@@ -43,7 +43,7 @@ internal static class ArrangementComposition
         // The viewer's own bar is hidden (not disabled, so the offset still moves); the footer bar in the status bar drives it instead.
         var sideways = new ScrollViewer { Content = timeline, HorizontalScrollBarVisibility = ScrollBarVisibility.Hidden, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled };
         // Columns: the track list, the 1 px divider (the splitter's line; its wider grab area overlaps the columns either side), the timeline,
-        // then the track rows' scroll bar at the timeline's right edge (collapsed when the rows fit), as WPF places it.
+        // then the track rows' scroll bar at the timeline's right edge (collapsed when the rows fit).
         var columns = new Grid { ColumnDefinitions = new ColumnDefinitions($"Auto,{ArrangementView.DividerWidth},*,Auto") };
         var topBand = new ArrangementTopBand(transport, header, timeline, addTrackBar, columns);
         var trackRows = new ArrangementTrackRows(timeline, header, document, () => topBand.NaturalHeight, value => { if (view.MaxHeight != value) view.MaxHeight = value; }, meterTick);
@@ -64,7 +64,7 @@ internal static class ArrangementComposition
         columns.Children.Add(trackRows.Bar);
         columns.Children.Add(sideways);
         columns.Children.Add(splitter);   // after the timeline, so its grab area over the timeline's first pixels takes the pointer
-        // The transport bar sits in the top slot of the track list column, beside the ruler and section strip (WPF's controls header). It is as
+        // The transport bar sits in the top slot of the track list column, beside the ruler and section strip (the controls header). It is as
         // wide as the list and wraps inside it; the columns start below the part of it that rises above the header's labels (ArrangementTopBand).
         transport.VerticalAlignment = VerticalAlignment.Top;
         transport.HorizontalAlignment = HorizontalAlignment.Left;

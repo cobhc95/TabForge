@@ -5,7 +5,7 @@ using TabForge.Services.Video;
 namespace TabForge.Services.Features;
 
 // Owns: the Preferences groups, rows and settings bounds of the four features that add settings rows (Band, Video, Keyboard mode, Live input), as plain data for the catalogues.
-//   The WPF feature modules and TabForge both derive from these classes, so both read the same groups, rows and bounds.
+// The feature modules and TabForge both derive from these classes, so both read the same groups, rows and bounds.
 // Does not own: the commands and window code (the feature modules), the saved values (the AppSettings sections) or the row builders (SettingsCatalog.*Rows).
 // Tests: PreferencesFeatureRowsTests (Avalonia).
 /// <summary>The Band view Preferences group on the Timeline page, with its rows.</summary>

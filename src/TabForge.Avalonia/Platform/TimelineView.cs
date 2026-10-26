@@ -24,11 +24,11 @@ namespace TabForge.Avalonia.Platform;
 /// <summary>
 /// The arrangement timeline at rest, read-only: the bar ruler, the section strip, one row per track with a block per occupied bar, and the
 /// playhead line. Geometry comes from the Core rules (<see cref="TimelineGeometryRules"/>, <see cref="ArrangementRowPresenter"/>,
-/// <see cref="SectionLayout"/>, <see cref="TimelineActivityRules"/>); colours are the Instrument palette keys the WPF timeline reads.
+/// <see cref="SectionLayout"/>, <see cref="TimelineActivityRules"/>); colours are the Instrument palette keys the timeline reads.
 /// Also draws the interaction state it is given (hover, selection band, section and row drag previews) and answers the hit tests the input
 /// controller asks (bar, row, section slot) from the same geometry.
 /// Owns: the Avalonia drawing of that layout. Does not own: the rules, the pointer handling (TimelineInputController), the waveform and audio lanes, the
-/// master lane's compact mode, group headers, the loop band and the glow, which the WPF `TrackTimeline` draws and this view leaves out.
+/// master lane's compact mode, group headers, the loop band and the glow, which the `TrackTimeline` draws and this view leaves out.
 /// Tests: TabForge.Avalonia.Tests.TimelineViewTests, TimelineInputTests.
 /// </summary>
 public sealed partial class TimelineView : Control
@@ -37,7 +37,7 @@ public sealed partial class TimelineView : Control
     public const double SectionHeight = 24;
     /// <summary>The track row height the settings start at; <see cref="RowHeight"/> is the row height now.</summary>
     public const double DefaultRowHeight = 34;
-    /// <summary>The tallest a track row stretches (the WPF rule: one and a half rows).</summary>
+    /// <summary>The tallest a track row stretches (the rule: one and a half rows).</summary>
     internal const double MaxRowHeight = DefaultRowHeight * 1.5 * 1.2;
 
     /// <summary>The shortest base row: the default scaled by the Compact density (0.85).</summary>
@@ -273,6 +273,7 @@ public sealed partial class TimelineView : Control
         // The cursor is kept by track id: a replaced song (undo) holds new TrackModel objects, so it is looked up again.
         if (LaneCursor is { } kept)
             LaneCursor = new TimelineLaneCursor(kept.Track, kept.Lane, kept.Sec, kept.Position is { } at && at.WrittenBar < song.Tracks.Select(t => t.Measures.Count).DefaultIfEmpty(0).Max() ? at : null).ResolveIn(song);
+        if (LaneCursor is { } resolved && !resolved.InsideClip()) LaneCursor = null;   // the clip it sat in was deleted or moved away
         PickerPopoverRegion = null;
         _activityCache = song.Tracks.Select(track => new TimelineActivityRules.CacheEntry[track.Measures.Count]).ToArray();
         _masterLaneActivity = MasterLaneStrip.Activity(song);
@@ -319,14 +320,14 @@ public sealed partial class TimelineView : Control
         LiveTakeLayer.InvalidateVisual();
     }
 
-    /// <summary>Compact mode: the track rows and the "Add track" strip are hidden and the master lane shows at double height (as WPF).</summary>
+    /// <summary>Compact mode: the track rows and the "Add track" strip are hidden and the master lane shows at double height.</summary>
     public bool Compact
     {
         get => _compact;
         set { if (_compact == value) return; _compact = value; Reload(_song); }
     }
 
-    /// <summary>The overview lane above track 1 (one thin line per track, filled where the track plays); off by default, as in the WPF timeline.</summary>
+    /// <summary>The overview lane above track 1 (one thin line per track, filled where the track plays); off by default, as in the timeline.</summary>
     public bool MasterLaneShown
     {
         get => _masterLaneShown;
@@ -337,7 +338,7 @@ public sealed partial class TimelineView : Control
     public double MasterLaneHeight => MasterLaneRules.Height(MasterLaneRules.Rows((_masterLaneShown || _compact) && _song.Tracks.Count > 0, _compact), _baseRowHeight);
 
     /// <summary>
-    /// The ink for a section label. The WPF window draws these labels white, so on the dark theme the light ink is kept unless it would be illegible
+    /// The ink for a section label. The window draws these labels white, so on the dark theme the light ink is kept unless it would be illegible
     /// on a genuinely light chip (a near-white colour, or one the person picked exactly, which skips the taming), where the dark ink is the only
     /// readable choice. The light theme keeps the WCAG pick, whose dark ink is the readable one on its chips: no fill there is dark enough for
     /// the light ink's bias to matter.

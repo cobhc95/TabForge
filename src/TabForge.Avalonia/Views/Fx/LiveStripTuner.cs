@@ -21,7 +21,7 @@ public sealed class LiveStripTuner : Grid
     public const string SwitchText = "Tuner", OffNote = "--";
     private readonly TextBlock _note = new() { Name = "TunerNote", FontSize = ChromeMetrics.LiveStripNoteFontSize, FontWeight = FontWeight.SemiBold, Text = OffNote, VerticalAlignment = VerticalAlignment.Center, TextAlignment = TextAlignment.Center, Width = ChromeMetrics.LiveStripNoteWidth };
     private readonly TextBlock _cents = new() { Name = "TunerCents", VerticalAlignment = VerticalAlignment.Center, TextAlignment = TextAlignment.Right, Width = ChromeMetrics.LiveStripCentsTextWidth, FontSize = ChromeMetrics.LiveStripFontSize };
-    private readonly LiveCentsBar _bar = new() { Name = "TunerNeedle", Width = ChromeMetrics.LiveStripCentsScaleWidth, Height = ChromeMetrics.LiveStripControlHeight, VerticalAlignment = VerticalAlignment.Center };
+    private readonly LiveCentsBar _bar = new() { Name = "TunerNeedle", Height = ChromeMetrics.LiveStripControlHeight, VerticalAlignment = VerticalAlignment.Center };
     private readonly LiveStripToggle _switch = new(LiveStripToggle.Look.Lit, SwitchText, ChromeMetrics.LiveStripTunerToggleWidth, ChromeMetrics.LiveStripControlHeight) { Name = "TunerSwitch", VerticalAlignment = VerticalAlignment.Center };
     private readonly ComboBox _window = new() { Name = "TunerWindow", Height = ChromeMetrics.LiveStripControlHeight, MinHeight = ChromeMetrics.LiveStripControlHeight, FontSize = ChromeMetrics.LiveStripFontSize, VerticalAlignment = VerticalAlignment.Center, VerticalContentAlignment = VerticalAlignment.Center };
     private string _pendingCents = "", _shownCents = "";
@@ -45,8 +45,8 @@ public sealed class LiveStripTuner : Grid
         _window.SelectionBoxItemTemplate = new FuncDataTemplate<string>((text, _) => new TextBlock { Text = NumberOf(text), VerticalAlignment = VerticalAlignment.Center });   // the closed box shows the number alone; the open list keeps "100 ms"
         _window.Width = LongestNumberWidth() + ChromeMetrics.LiveStripWindowChrome;
         ShowWindowTip(LiveStripRules.DefaultWindowMs);
-        SetColumn(_bar, 1); SetColumn(_cents, 2);
-        Children.Add(_note); Children.Add(_bar); Children.Add(_cents);
+        SetColumn(_cents, 1); SetColumn(_bar, 2);   // the fixed cents cell sits by the note, so the scale ends next to the Tuner switch with no dead gap
+        Children.Add(_note); Children.Add(_cents); Children.Add(_bar);
         Controls.Children.Add(_switch); Controls.Children.Add(_window);
         _switch.Toggled += on => { if (!_setting) TunerSwitched?.Invoke(on); };
         _window.SelectionChanged += (_, _) => { if (!_setting && _window.SelectedItem is string text) WindowChosen?.Invoke(LiveStripRules.ParseWindow(text)); };
@@ -59,6 +59,7 @@ public sealed class LiveStripTuner : Grid
     public event Action<int>? WindowChosen;
 
     public bool IsOn => _switch.IsChecked;
+    public LiveCentsBar Scale => _bar;
     public LiveStripToggle Switch => _switch;
     public ComboBox Window => _window;
     public string NoteText => _note.Text ?? "";
@@ -67,8 +68,11 @@ public sealed class LiveStripTuner : Grid
 
     private static string NumberOf(string? text) => text?.Replace(" ms", "") ?? "";
 
-    private void ShowWindowTip(int ms) =>
-        ToolTip.SetTip(_window, $"Tuner window: {LiveStripRules.WindowText(ms)} — longer = steadier reading, shorter = faster");
+    private void ShowWindowTip(int ms)
+    {
+        ToolTip.SetTip(_window, new TextBlock { Text = $"Tuner window: {LiveStripRules.WindowText(ms)}. Shorter reacts faster, longer is steadier.", TextWrapping = TextWrapping.Wrap, MaxWidth = ChromeMetrics.LiveStripTipMaxWidth });
+        ToolTip.SetPlacement(_window, PlacementMode.Bottom);   // a popup that flips to stay on screen
+    }
 
     /// <summary>The width of the widest number the closed box shows, at the dropdown's font; <see cref="ChromeMetrics.LiveStripWindowChrome"/> adds the padding, border and arrow.</summary>
     private double LongestNumberWidth()

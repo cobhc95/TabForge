@@ -11,7 +11,7 @@ using TabForge.Documents;
 
 namespace TabForge.Avalonia.Lyrics;
 
-// Owns: the Lyrics dock pane, as the WPF build's: one text box of the shown song's lyrics (Project.Lyrics). Leaving the box commits the text through
+// Owns: the Lyrics dock pane: one text box of the shown song's lyrics (Project.Lyrics). Leaving the box commits the text through
 //     DocumentEdits (one undo step, one dirty change). A button opens the per-bar syllable editor (LyricsByBarWindow) for the same song.
 // Does not own: the syllables of a bar (LyricsController, LyricsPaneView), the document tabs (LyricsPaneFlow wires them), the playhead.
 // Tests: TabForge.Avalonia.Tests.LyricsSongPaneTests.

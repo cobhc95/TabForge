@@ -25,7 +25,7 @@ namespace TabForge.Avalonia.Views;
 /// <summary>The Tools pane. The window creates it before the dock, then attaches its command table once the commands exist.</summary>
 public sealed class ToolsPaneView : Border
 {
-    /// <summary>A tool button's square, as the WPF palette sizes it (DIPs).</summary>
+    /// <summary>A tool button's square, as the palette sizes it (DIPs).</summary>
     public const double ToolButtonSize = UiMetrics.ToolButtonSize;
     /// <summary>The icon inside a tool button (DIPs).</summary>
     public const double IconSize = 27;

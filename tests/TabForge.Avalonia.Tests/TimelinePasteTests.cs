@@ -271,7 +271,7 @@ public sealed class TimelinePasteTests
             NoSettings, () => { }, notices.Add).WaitAsync(Timeout);
 
     [Fact]
-    public async Task TheRangePastesAtTheLoopStartOrThePlayhead()
+    public async Task TheRangePastesAtThePlayheadAndNeverUsesTheLoop()
     {
         var song = NewSong();
         var notices = new List<string>();
@@ -282,9 +282,9 @@ public sealed class TimelinePasteTests
         Assert.False(song.Selection.HasLoop);   // a paste never makes a loop
 
         song.Selection.SetLoop(1, 1);
-        Assert.True(await PasteWithModel(song, song.Selection, snapshot, playheadBar: 5, notices));   // a loop: its start
-        Assert.Contains("at bar 2", notices.Last());
-        Assert.Equal(new[] { 2, 3 }, Frets(song, 0, 1, 2));
+        Assert.True(await PasteWithModel(song, song.Selection, snapshot, playheadBar: 5, notices));   // a loop is ignored: bar commands never use it
+        Assert.Contains("at bar 6", notices.Last());
+        Assert.Equal(new[] { 2, 3 }, Frets(song, 0, 5, 6));
     }
 
     [Fact]

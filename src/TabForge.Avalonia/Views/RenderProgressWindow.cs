@@ -12,7 +12,7 @@ namespace TabForge.Avalonia.Views;
 
 /// <summary>
 /// The progress dialog shown while a render runs: a bar, a status line and a Cancel button. Cancel cancels the job's token, and the
-/// button turns into Close once the job has ended, as in the WPF render dialog.
+/// button turns into Close once the job has ended, as in the render dialog.
 /// Owns: the bar and status text for one job, the cancel token handed to the job, and the Cancel / Close button.
 /// Does not own: the job itself (AudioEngineClient.RenderAsync), the render settings, or what the caller does with the result or the error.
 /// Tests: TabForge.Avalonia.Tests.RenderProgressWindowTests.

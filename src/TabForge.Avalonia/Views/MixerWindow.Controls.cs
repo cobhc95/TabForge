@@ -106,7 +106,7 @@ public sealed partial class MixerWindow
         return row;
     }
 
-    /// <summary>The M and S toggle height in DIP (the WPF mixer's compact mute and solo buttons).</summary>
+    /// <summary>The M and S toggle height in DIP.</summary>
     private const double MuteSoloToggleHeight = 26;
 
     private static ToggleButton Toggle(string label, string tip, bool on, Action<bool> set, Action? changed)

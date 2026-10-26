@@ -12,7 +12,7 @@ using Xunit;
 namespace TabForge.Avalonia.Tests;
 
 // Owns: "Score settings..." from the score's right-click menu opens the Settings window on the Score page and asks for the Page layout row to be
-//   brought into view (SC-13), as the WPF row does.
+// brought into view (SC-13).
 // Does not own: the Settings window's pages and rows (PreferencesWindow), the menu row (ScoreMenus), the opener (MainWindowSettings).
 // Tests: ScoreSettingsRowTargetTests (this file).
 public class ScoreSettingsRowTargetTests

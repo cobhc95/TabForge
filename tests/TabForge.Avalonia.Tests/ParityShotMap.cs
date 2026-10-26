@@ -27,7 +27,7 @@ namespace TabForge.Avalonia.Tests;
 
 /// <summary>
 /// Owns: the decision for each parity.capture.json shot base (the shot name without its -dark or -light suffix): the Avalonia window or
-/// pane that renders it, the size in DIP the WPF shot was taken at, the state it reproduces, and for every shot without a twin the reason.
+/// pane that renders it, the size in DIP the shot was taken at, the state it reproduces, and for every shot without a twin the reason.
 /// Does not own: the manifest (tests/parity/parity.capture.json), the rendering and the missing list (ParityShotsTests), the pixel
 /// comparison (tools/ab/compare.py).
 /// Tests: ParityShotsTests (every manifest shot must have an entry here).
@@ -180,7 +180,7 @@ internal static class ParityShotMap
     private static ParityCapture MenuPopup(string header) =>
         new(new MainWindow { Width = 1600, Height = 1000 }, window => MenuPopupCapture.OpenTopLevel(window, header));
 
-    /// <summary>The WPF strip shot: the tab strip on the title-bar colour, 4 px above and below, 1100 DIP wide.</summary>
+    /// <summary>The strip shot: the tab strip on the title-bar colour, 4 px above and below, 1100 DIP wide.</summary>
     private static ParityCapture TabStripTwin()
     {
         var strip = new TabStripView(new TabForge.Services.TabSettings());
@@ -195,13 +195,13 @@ internal static class ParityShotMap
         }, 2, 1100);
         var chrome = new Border { Padding = new Thickness(0, 4), Child = strip };
         chrome[!Border.BackgroundProperty] = new DynamicResourceExtension("ChromeStrip");
-        // Not Sized: that adds the WPF window frame padding (39 DIP at the bottom), which would clip this 44 DIP strip to a few pixels.
+        // Not Sized: that adds the window frame padding (39 DIP at the bottom), which would clip this 44 DIP strip to a few pixels.
         return new ParityCapture(new Window { Width = 1100, Height = 44, Content = chrome });
     }
 
     private static string PresetDeleteText => PresetDeleteQuestionPresenter.TextFor(new[] { "Warm pad", "Bright lead", "Tight rhythm" });
 
-    /// <summary>The WPF playback captures: the Ashen Meridian song playing bar 13 at 0.4 in a 1600 x 1000 main window, with <paramref name="pane"/> ("band" or "learn") open, or none.</summary>
+    /// <summary>The playback captures: the Ashen Meridian song playing bar 13 at 0.4 in a 1600 x 1000 main window, with <paramref name="pane"/> ("band" or "learn") open, or none.</summary>
     private static ParityCapture PlayingMain(string? pane)
     {
         var sessions = new AvaloniaPlaybackSessions(new AvaloniaUiThread(global::Avalonia.Threading.Dispatcher.UIThread), () => new PlayingStateStub(12, 0.4));
@@ -223,7 +223,7 @@ internal static class ParityShotMap
         return Sized(window, 1100, 680);
     }
 
-    /// <summary>A palette tab as the WPF shot shows it: the strip of four tab names (the selected one boxed) above the pane's rows.</summary>
+    /// <summary>A palette tab: the strip of four tab names (the selected one boxed) above the pane's rows.</summary>
     private static ParityCapture PaletteTabTwin(string selected, PaletteTool[] tools)
     {
         var strip = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(4, 4, 4, 0), Spacing = 6 };
@@ -258,7 +258,7 @@ internal static class ParityShotMap
     private const double WpfWindowFrameHeight = 39;
 
     /// <summary>A note-effect editor opened on the cursor note of the demo song (track 0, bar index 2 (bar 3), string index 2, fret 5 typed in memory), not shown.
-    /// The window keeps the WPF dialog's outer size, so its layout is not resized to its content.</summary>
+    /// The window keeps the dialog's outer size, so its layout is not resized to its content.</summary>
     private static ParityCapture OrnamentTwin(Func<OrnamentEditorFlow, OrnamentEditorFlow.OrnamentDialog?> build, double width, double height)
     {
         var view = new ScorePreviewView();
@@ -271,7 +271,7 @@ internal static class ParityShotMap
     }
 
     /// <summary>
-    /// A WPF window shot at the outer Width and Height the WPF window was given. The WPF shot paints the frame area with the window
+    /// A WPF window shot at the outer Width and Height the window was given. The shot paints the frame area with the window
     /// background and lays the content out in the client area, so the window keeps the outer size and its content gets the frame as padding on the right and bottom.
     /// </summary>
     private static ParityCapture Sized(Window window, double width, double height)
@@ -331,7 +331,7 @@ internal static class ParityShotMap
         new PluginSlot { Name = "Example effect", Path = @"example\Example effect.dll", Format = "VST2", Wet = 80 },
     ];
 
-    /// <summary>The Credits tab of the project settings, selected, with the WPF song's credits.</summary>
+    /// <summary>The Credits tab of the project settings, selected, with the song's credits.</summary>
 }
 
 /// <summary>What one shot shows: the window to show and, for a pane, the control inside it to crop to (null for the whole window).</summary>

@@ -7,7 +7,7 @@ using TabForge.Documents;
 namespace TabForge.Avalonia;
 
 // Owns: the track row's properties entries in the Avalonia main window: the gear cell opens the Track properties window of its row, and a double-click
-//   on the row's body (anywhere but the name and the drawn controls) opens the same window, as the WPF row does. The instrument icon opens the
+// on the row's body (anywhere but the name and the drawn controls) opens the same window. The instrument icon opens the
 //   Choose instrument catalogue for its row with that instrument's family expanded: each tile sounds live on the track (InstrumentChoice),
 //   Select commits as one "Change instrument" undo step, Cancel restores the track exactly with no step. An audio track's icon
 //   keeps the row press (it is no cell there). The name's double-click stays the rename (ArrangementView), and a double-click on a drawn control

@@ -20,7 +20,7 @@ public static class MainWindowMixer
     /// <summary>The View menu row that shows the track list (the mixer with every track).</summary>
     private const string MultitrackCommandId = "View.Multitrack";
 
-    /// <summary>The status notice the track list row shows, as WPF does.</summary>
+    /// <summary>The status notice the track list row shows.</summary>
     private const string MultitrackText = "Multitrack: all tracks in the mixer; click a colour block to jump";
 
     /// <param name="songs">The tabs; the command reads the shown song.</param>

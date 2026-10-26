@@ -19,7 +19,7 @@ namespace TabForge.Avalonia.Tests;
 /// Owns: the hover and press surface contrast the owner needs to see a control hot in both themes: the minimum against the window and the Panel2
 /// cards, the primary text on the hover shade, the pressed shade as one further step, and the real FX chain bar controls painting it.
 /// Computed from the theme tables (AvaloniaPalette), never hexes.
-/// Does not own: the Core theme values, which are shared with the WPF app and stay as they are.
+/// Does not own: the Core theme values, which are shared with the app and stay as they are.
 /// Tests: this class.
 /// </summary>
 public class HoverSurfaceContrastTests

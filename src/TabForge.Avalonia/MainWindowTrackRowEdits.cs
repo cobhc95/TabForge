@@ -16,7 +16,7 @@ namespace TabForge.Avalonia;
 // Owns: the track row right-click rows that act on the track under the last track row right-click (ContextMenuHost.ClickedTrack): Copy, Cut (which asks the Delete track question first),
 //   Paste (after that track), Duplicate, Colour (one row per palette swatch; the row's argument is its hex), Rename (opens the inline name editor
 //   on the latest arrangement) and Convert to audio track (after its prompt). Each edit is one undo step through DocumentEdits; copy and paste go
-//   through ClipboardService, as WPF does.
+// through ClipboardService.
 // Does not own: the menu rows (TrackRowMenus), the Delete and Properties rows (MainWindowTrackMenu), the instrument-to-audio edit
 //   (TrackEdits), the unique copy name (TrackEdits.UniqueName), the track list refresh, the name edit itself (TrackNameEditor).
 // Tests: TabForge.Avalonia.Tests.MainWindowTrackRowMenuTests.

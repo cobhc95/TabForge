@@ -65,6 +65,10 @@ public sealed class AudioClip
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public List<ClipNote>? Notes { get; set; }
 
+    /// <summary>A MIDI clip's controller points (control changes and pitch bend, times in seconds from the source start); null when it has none.</summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public List<ClipController>? Controllers { get; set; }
+
     [System.Text.Json.Serialization.JsonIgnore]
     public bool IsMidi => Notes is not null;
 
@@ -78,14 +82,26 @@ public sealed class AudioClip
         FileLengthSec = FileLengthSec, GainDb = GainDb, Pitch = Pitch, Speed = Speed, Muted = Muted, Lane = Lane, FadeInSec = FadeInSec, FadeOutSec = FadeOutSec,
         LoopRecordingId = LoopRecordingId, TakeGroupId = TakeGroupId, TakeGroupKind = TakeGroupKind, TakeGroupPass = TakeGroupPass,
         Notes = Notes?.Select(n => n with { }).ToList(),
+        Controllers = Controllers?.ToList(),
     };
 
     /// <summary>True when the clip covers any of [from, to) on the timeline.</summary>
     public bool Overlaps(double from, double to) => StartSec < to && EndSec > from;
 }
 
-/// <summary>One note of a MIDI clip: start and length in seconds of the clip's source, pitch, velocity.</summary>
-public sealed record ClipNote(double StartSec, double LengthSec, int Pitch, int Velocity);
+/// <summary>One note of a MIDI clip: start and length in seconds of the clip's source, pitch, velocity. A muted note stays in the clip (the piano roll
+/// draws it hollow) but never plays; old files carry no Muted field and load unmuted, and an unmuted note writes none.
+/// <paramref name="Channel"/> is the note's own MIDI channel (0-15), null for the track's channel.</summary>
+public sealed record ClipNote(double StartSec, double LengthSec, int Pitch, int Velocity,
+    [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)] bool Muted = false,
+    [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] int? Channel = null);
+
+/// <summary>One controller point of a MIDI clip at a time in seconds of the clip's source: a control change (<paramref name="Controller"/> 0-127,
+/// value 0-127) or the pitch bend (<see cref="PitchBend"/>, value -8192 to 8191). It holds until the next point of its controller.</summary>
+public sealed record ClipController(double StartSec, int Controller, int Value)
+{
+    public const int PitchBend = 128;
+}
 
 /// <summary>A clip lane under a track row. Fixed lanes: only playing lanes are heard, and a new take
 /// lane becomes the only playing one (older takes grey out); Ctrl+click on a lane's play button adds lanes.
@@ -105,7 +121,7 @@ public static class ClipLanes
         return Math.Max(Math.Max(used, track.RecordArm ? 1 : 0), track.AudioClips.Count > 0 || track.RecordArm ? track.Lanes.Count : 0);
     }
 
-    /// <summary>Height in DIPs of one lane band: every lane of a track is this tall (the WPF ArrangementPanel.AudioLaneHeight).</summary>
+    /// <summary>Height in DIPs of one lane band: every lane of a track is this tall.</summary>
     public const double AudioLaneHeight = 54;
 
     /// <summary>

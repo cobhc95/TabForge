@@ -23,11 +23,11 @@ public readonly record struct InstrumentNotePick(int Midi, int? StringIndex, int
 /// <summary>
 /// The instrument panel (fretboard, keyboard or drum key map) with the score cursor's notes lit; a click raises <see cref="NotePicked"/>.
 /// Geometry and hit tests come from the Core rules (<see cref="FretboardGeometryRules"/>, <see cref="KeyboardGeometryRules"/>,
-/// <see cref="PercussionKeyMapRules"/>); colours are the Instrument palette keys the WPF panel reads.
+/// <see cref="PercussionKeyMapRules"/>); colours are the Instrument palette keys the panel reads.
 /// Owns: the Avalonia drawing of the three layouts (the fretboard with its string and fret numbers and the colour legend), the click mapping,
 /// the score-cursor lit notes and the playing notes (now, next, upcoming, recent) from <see cref="InstrumentPlaybackLists"/>. The playing
 /// notes replace the cursor's while playback shows them, and the panel repaints only when the lists change (note boundaries).
-/// Does not own: the rules, the artwork of the WPF panel (shaded markers, strum arrows, scale highlights), the
+/// Does not own: the rules, the artwork of the panel (shaded markers, strum arrows, scale highlights), the
 /// Scales button (<see cref="InstrumentPanelStrip"/>), the instrument icons, the playback clock or audio.
 /// Over 300 lines: the fretboard layout and its marker drawing are here. The playing notes (InstrumentPanelView.Playback.cs), the labels
 /// (InstrumentPanelView.Labels.cs), the keyboard and drum layouts (InstrumentPanelView.Layouts.cs) and the fretboard drawing with its markers
@@ -41,16 +41,16 @@ public sealed partial class InstrumentPanelView : Control
     public const double CloseButtonReserve = 30;
 
     /// <summary>The board's caps in this panel: the board keeps the real proportions of its frets and strings (scaled to the pane, centred, clear of
-    /// the legend), so there is no width or aspect cap; the string gap cap of 44 only sets how far the pane's height grows (the WPF panel stops at 34).
+    /// the legend), so there is no width or aspect cap; the string gap cap of 44 only sets how far the pane's height grows.
     /// Only this panel uses them.</summary>
     internal static readonly FretboardBoardLimits BoardLimits = new(double.PositiveInfinity, 44, double.PositiveInfinity, ClearsLegend: true, RealProportions: true);
     internal const string Font = "Segoe UI";
-    /// <summary>The placeholder texts and size (WPF InstrumentPanel): no track selected, and an audio track selected.</summary>
+    /// <summary>The placeholder texts and size: no track selected, and an audio track selected.</summary>
     private const string NoTrackPlaceholderText = "Select a track to see the instrument";
     private const string AudioTrackPlaceholderText = "Audio track — no instrument view";
     private const double NoTrackFontSize = 13;
     private const double NoTrackLift = 8;
-    // The legend column beside the board: four rows, the Scales button under them (sizes as the WPF panel's legend).
+    // The legend column beside the board: four rows, the Scales button under them (sizes).
     private const double LegendGap = 14;
     private const double LegendTopMinimum = 10;
     private const int LegendRows = 4;
@@ -61,7 +61,7 @@ public sealed partial class InstrumentPanelView : Control
     private static readonly int[] StandardTuning = { 64, 59, 55, 50, 45, 40 };
     private static readonly int[] InlayFrets = { 3, 5, 7, 9, 12, 15, 17, 19, 21, 24 };
 
-    /// <summary>Fade of a note the WPF instrument shows after it stops: quick release (ms), then the trace over the hold.</summary>
+    /// <summary>Fade of a note the instrument shows after it stops: quick release (ms), then the trace over the hold.</summary>
     private const double ReleaseFadeMs = 320;
     private const double QuickReleaseWeight = 0.55;
     private const double TraceWeight = 0.16;
@@ -179,7 +179,7 @@ public sealed partial class InstrumentPanelView : Control
         return ScoreInstrumentScale.DrawingScale(fit, _contentScale);
     }
 
-    /// <summary>The virtual area the fretboard may use: the panel at the drawing scale, narrowed when the board would run under the legend column (the WPF panel narrows its content the same way).</summary>
+    /// <summary>The virtual area the fretboard may use: the panel at the drawing scale, narrowed when the board would run under the legend column.</summary>
     private UiRect FretboardArea()
     {
         var s = FretboardScale();
@@ -233,7 +233,7 @@ public sealed partial class InstrumentPanelView : Control
         DrawFocusRing(d, ink);
     }
 
-    /// <summary>The placeholder that stands in for the instrument when no track or an audio track is selected, centred as the WPF panel centres it.</summary>
+    /// <summary>The placeholder that stands in for the instrument when no track or an audio track is selected, centred.</summary>
     private void DrawNoTrack(IDrawContext d, Func<string, UiColor> ink)
     {
         var text = d.Text(_audioTrack ? AudioTrackPlaceholderText : NoTrackPlaceholderText, Font, NoTrackFontSize, ink("InstrumentMuted"), d.PixelsPerDip);

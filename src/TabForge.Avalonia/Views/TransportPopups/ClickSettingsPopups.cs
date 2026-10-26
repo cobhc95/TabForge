@@ -4,7 +4,7 @@ using TabForge.Services;
 
 namespace TabForge.Avalonia.Views.TransportPopups;
 
-// Owns: the rows of the metronome and count-in settings popups (the WPF MetronomeSettingsPopup and CountInSettingsPopup): the volumes, the click
+// Owns: the rows of the metronome and count-in settings popups: the volumes, the click
 //     sound, the boost, the subdivision, the count-in length and the count-in checks with their helper texts. Every change writes the audio
 //     settings at once and calls the change callback.
 // Does not own: the popup's look and opening (TransportPopupFrame), the sound presets (ClickSoundPresets), saving and the engine (the callback).

@@ -16,7 +16,7 @@ using TabForge.Views.Score;
 namespace TabForge.Avalonia.Platform;
 
 /// <summary>
-/// The instrument pane as the WPF pane shows it: the panel (fretboard, keyboard or drum key map) of the track with the score cursor's notes lit,
+/// The instrument pane: the panel (fretboard, keyboard or drum key map) of the track with the score cursor's notes lit,
 /// the Scales button under the colour legend, and a small close (X) button at the top-right corner. No title tab and no kind buttons: the kind
 /// follows the track.
 /// Owns: the pane's layout (the panel and the two overlay buttons), the cursor-to-panel wiring and the kind a track shows. Does not own: the panel's
@@ -73,8 +73,8 @@ public sealed class InstrumentPanelStrip : Grid
         Refresh();
     }
 
-    /// <summary>The pane's text scale follows the score's zoom and spacing, as the WPF pane's does (the score sets it on every zoom).</summary>
-    private void ApplyScoreTextScale() => Panel.ContentScale = ScoreInstrumentScale.ContentScaleFor(_score.Zoom, _score.Probe.Appearance.ScoreSpacing);
+    /// <summary>The pane's text scale follows the score's spacing only (never its zoom: the fretboard size is independent of score zoom).</summary>
+    private void ApplyScoreTextScale() => Panel.ContentScale = ScoreInstrumentScale.ContentScaleFor(_score.Probe.Appearance.ScoreSpacing);
 
     /// <summary>A fretboard click writes or removes that note at the cursor's cell; a drum-pad click writes its sound on the drum track's line; a
     /// key click edits nothing. Through the score's own edit path, as a typed note is: the score repaints and reports the cursor change.</summary>
@@ -196,7 +196,7 @@ public sealed class InstrumentPanelStrip : Grid
     }
 
     /// <summary>Whether the dock locks the instrument row to its content height when the window starts: only the "Lock fretboard size"
-    /// setting does, as in the WPF dock. Unlocked (the default), the splitter resizes the row and the drawing scales with it.</summary>
+    /// setting does, as in the dock. Unlocked (the default), the splitter resizes the row and the drawing scales with it.</summary>
     public static bool LocksRowHeight(AppearanceSettings? appearance) => appearance?.LockInstrumentSize ?? false;
 
     /// <summary>The pane's height limits by kind. A fretboard stops growing where its board stops growing (the gap cap, or the width's own limit when

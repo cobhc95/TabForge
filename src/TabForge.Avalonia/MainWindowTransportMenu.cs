@@ -5,7 +5,7 @@ using TabForge.Avalonia.Transport;
 namespace TabForge.Avalonia;
 
 // Owns: the handlers of the Transport menu and the transport bar's transport commands: Play from beginning, Play/Pause, Stop and Escape stop,
-//   including the WPF rule that stopping playback while a recording runs ends the recording first (and the recording's own stop restores the
+// including the rule that stopping playback while a recording runs ends the recording first (and the recording's own stop restores the
 //   cursor and stops the playback).
 // Does not own: the menu rows (MainMenuTable in Core), the commands table (MainWindowCommands), the playback session and engine
 //   (AvaloniaPlaybackSessions), the recording (MainWindowTransportRecord), the Metronome and Count-in toggles (MainWindowTransportToggles).
@@ -20,7 +20,7 @@ public static class MainWindowTransportMenu
 
     /// <param name="playback">The playback sessions; null (no engine host, as in the preview) makes the commands do nothing.</param>
     /// <param name="songs">The tabs; the commands act on the shown song.</param>
-    /// <param name="recording">The window's recording state; a run-time Stop, Space or Esc ends a recording first, as WPF does.</param>
+    /// <param name="recording">The window's recording state; a run-time Stop, Space or Esc ends a recording first.</param>
     internal static void Register(MainWindowCommands commands, AvaloniaPlaybackSessions? playback, MainWindowTabs songs,
         RecordingPresenter.RecordingSession? recording = null)
     {
@@ -32,7 +32,7 @@ public static class MainWindowTransportMenu
                 || (playback?.For(songs.Active) is { } session && (session.IsPlaying || session.IsPaused)));
         commands.Add("Transport.PlayFromStart", () =>
         {
-            if (EndRecording(recording)) return;   // Shift+Space while recording ends it, as WPF's Space does
+            if (EndRecording(recording)) return;   // Shift+Space while recording ends it, as Space does
             if (playback?.For(songs.Active) is { } session) PlayFromStart(session);
         });
         commands.Add("Transport.PlayPause", () =>

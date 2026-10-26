@@ -29,6 +29,7 @@ public sealed class NotificationBar : IDisposable
     public const string VideoSource = "video";
     public const string CheckBarsSource = "checkbars";
     public const string LearnSource = "learn";
+    public const string MissingMediaSource = "missing-media";
 
     private sealed class Entry
     {

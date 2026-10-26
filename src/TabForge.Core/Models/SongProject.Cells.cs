@@ -141,9 +141,13 @@ public sealed class TabNote
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? RightHandFinger { get; set; }
     public HashSet<string> Techniques { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    /// <summary>Muted in the piano roll: the note stays written in the tab exactly as it is but never plays. Old files carry no field (false).</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool Silent { get; set; }
 
     public TabNote Clone() => new()
     {
+        Silent = Silent,
         StringIndex = StringIndex,
         Fret = Fret,
         MidiValue = MidiValue,

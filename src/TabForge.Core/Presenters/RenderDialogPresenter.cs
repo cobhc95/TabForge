@@ -56,19 +56,20 @@ public static class RenderDialogPresenter
         IsMp3(formatIndex) && !IsSampleRateAllowed(formatIndex, SampleRates[Math.Max(0, rateIndex)]) ? 0 : rateIndex;
 
     /// <summary>Whether a bounds choice can be picked: a selection needs a selection, custom bars need bars and custom sections need sections.</summary>
-    public static bool IsBoundsEnabled(int bounds, bool hasSelection, int sectionCount, int barCount) => bounds switch
+    public static bool IsBoundsEnabled(int bounds, bool hasSelection, int sectionCount, int barCount, bool hasLoop = false) => bounds switch
     {
-        1 or 2 => hasSelection,
+        1 => hasLoop,
+        2 => hasSelection,
         4 => barCount > 0,
         5 => sectionCount > 0,
         _ => true,
     };
 
     /// <summary>The saved bounds choice, moved to "Entire song" when the song cannot use it.</summary>
-    public static int BoundsOnLoad(int savedBounds, bool hasSelection, int sectionCount, int barCount)
+    public static int BoundsOnLoad(int savedBounds, bool hasSelection, int sectionCount, int barCount, bool hasLoop = false)
     {
         var bounds = Math.Clamp(savedBounds, 0, 5);
-        return IsBoundsEnabled(bounds, hasSelection, sectionCount, barCount) ? bounds : 0;
+        return IsBoundsEnabled(bounds, hasSelection, sectionCount, barCount, hasLoop) ? bounds : 0;
     }
 
     /// <summary>The custom bar range shown on load: a saved bar (1-based) is kept inside the song; an unset one (below 1) loads as
@@ -84,7 +85,22 @@ public static class RenderDialogPresenter
         problem ?? (sectionCount == 0 ? "Custom sections needs sections: add them in the Sections pane." : "");
 
     /// <summary>The tooltip of the selection choices when there is no selection, else none.</summary>
-    public static string? SelectionTooltip(bool hasSelection) => hasSelection ? null : "Select bars in the score first.";
+    /// <summary>The "Time selection" label: it follows the loop region, shown as 1-based bars when there is one.</summary>
+    public static string TimeSelectionLabel(bool hasLoop, int startBar, int endBar) =>
+        !hasLoop ? BoundsNames[1] : startBar == endBar ? $"{BoundsNames[1]} (loop: bar {startBar + 1})" : $"{BoundsNames[1]} (loop: bars {startBar + 1}-{endBar + 1})";
+
+    /// <summary>The "Selected bars" label: the tracks and bars (1-based, when a bar range is selected) or clips the snip plays.</summary>
+    public static string SelectedBarsLabel(int tracks, int firstBar, int lastBar, int clips)
+    {
+        var parts = new List<string> { tracks == 1 ? "1 track" : $"{tracks} tracks" };
+        if (firstBar >= 0) parts.Add(firstBar == lastBar ? $"bar {firstBar + 1}" : $"bars {firstBar + 1}-{lastBar + 1}");
+        if (clips > 0) parts.Add(clips == 1 ? "1 clip" : $"{clips} clips");
+        return $"{BoundsNames[2]} ({string.Join(", ", parts)})";
+    }
+
+    public static string? LoopTooltip(bool hasLoop) => hasLoop ? null : "Make a loop region first (drag on the timeline ruler or select in the score).";
+
+    public static string? SelectionTooltip(bool hasSelection) => hasSelection ? null : "Select bars or clips on the timeline first.";
 
     /// <summary>The tooltip of the custom sections choice when the song has no sections, else none.</summary>
     public static string? SectionsTooltip(int sectionCount) => sectionCount == 0 ? "The song has no sections yet." : null;

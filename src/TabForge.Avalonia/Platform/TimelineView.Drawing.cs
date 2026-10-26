@@ -30,7 +30,7 @@ namespace TabForge.Avalonia.Platform;
 /// </summary>
 public sealed partial class TimelineView
 {
-    /// <summary>The edge width in DIPs is the setting divided by this: 10 gives about 2.8 DIP. Eye-matched, not derived: WPF's code strokes the full setting.</summary>
+    /// <summary>The edge width in DIPs is the setting divided by this: 10 gives about 2.8 DIP. Eye-matched, not derived; the old code stroked the full setting.</summary>
     internal const double SectionBracketThicknessDivisor = 3.6;
 
     /// <summary>The section bracket's arms (18% of the section's width, kept between 8 and 18 DIPs) and the narrowest section it draws.</summary>
@@ -79,7 +79,7 @@ public sealed partial class TimelineView
     /// <summary>The split marker: a thin dashed vertical line (the overlay ink, white in the dark theme) across the lane of the lane edit cursor.</summary>
     private void DrawSplitMarker(IDrawContext d, Func<string, UiColor> ink)
     {
-        if (LaneCursor is not { } cursor) return;
+        if (LaneCursor is not { } cursor || !cursor.InsideClip()) return;   // never outside its clip
         var row = _song.Tracks.IndexOf(cursor.Track);
         if (row < 0 || row >= _rows.Count || !RowInBand(row)) return;
         var x = Math.Round(XOfSeconds(cursor.Sec)) + 0.5;
@@ -98,7 +98,7 @@ public sealed partial class TimelineView
 
     /// <summary>
     /// Raised after a clip or lane edit of this timeline landed (a drag/trim/fade, a clip command, a take click): the window compacts empty
-    /// lanes when the setting says so and syncs the engine down its normal path, as WPF's ClipEditController.Changed does.
+    /// lanes when the setting says so and syncs the engine down its normal path.
     /// </summary>
     internal Action<IEditableDocument>? ClipEdited { get; set; }
 
@@ -106,7 +106,7 @@ public sealed partial class TimelineView
     internal Action<string>? ClipNotice { get; set; }
 
     /// <summary>
-    /// The lane edit cursor: the track, lane and song second of the last press in a clip lane, as WPF's ClipEditController.LaneCursor. Clip.
+    /// The lane edit cursor: the track, lane and song second of the last press in a clip lane. Clip.
     /// Split prefers it when it lies inside the selected clip; otherwise the playhead is used. Null before any clip-lane press.
     /// </summary>
     internal TimelineLaneCursor? LaneCursor { get; set; }
@@ -123,6 +123,7 @@ public sealed partial class TimelineView
     // The colours every bar cell reads, looked up once per body draw instead of once per cell.
     private UiColor _frameClipOutline, _frameBoard;
     private const double EmptyCellOpacity = 0.6;
+    private const double SectionEdgeDarkOpacity = 0.30, SectionEdgeLightOpacity = 0.22;   // the grey hover highlight on a section chip's edge zone (brighter than the bar-cell hover)
 
     /// <summary>True while the last press was on a track row (not the ruler or the empty grid below the rows): the focus target is TrackRow. Reads and writes the model's Focus.</summary>
     internal bool TrackRowFocused
@@ -160,7 +161,7 @@ public sealed partial class TimelineView
         return finalSize;
     }
 
-    /// <summary>The marker of the bar style: a small square centred in the played bar's cell on the selected track's row (or the first row), as WPF draws it.</summary>
+    /// <summary>The marker of the bar style: a small square centred in the played bar's cell on the selected track's row (or the first row).</summary>
     private void DrawBarMarker(IDrawContext d, Func<string, UiColor> ink)
     {
         if (_rows.Count == 0) return;
@@ -182,7 +183,7 @@ public sealed partial class TimelineView
     /// <summary>The top of the selected row's lane, or -1 when no row is selected.</summary>
     internal double ArrowLaneTop() => _selectedRow >= 0 && _selectedRow < _rows.Count ? RowTop(_selectedRow) : -1;
 
-    /// <summary>The [ ] brackets around the section that holds the playhead bar, in the section's colour, from the section strip down (as the WPF timeline draws them).</summary>
+    /// <summary>The [ ] brackets around the section that holds the playhead bar, in the section's colour, from the section strip down.</summary>
     internal void DrawActiveSectionBrackets(IDrawContext d, Func<string, UiColor> ink, double gridTop)
     {
         if (!ShowSectionBrackets || PlayheadBar < 0) return;
@@ -267,7 +268,11 @@ public sealed partial class TimelineView
             var height = SectionHeight - 4 - 2 * inset;
             d.Rect(colour.WithOpacity(SectionFillOf(light)), new UiStroke(colour, 1), left, top, width, height, 3);
             if (ReferenceEquals(SectionButtons.Hovered, section)) d.Rect(HoverShade.Overlay(light), null, left, top, width, height, 3);
-            if (DragSection < 0) { SectionKnobs.Draw(d, colour, left, RulerHeight); SectionKnobs.Draw(d, colour, left + width, RulerHeight); }
+            if (DragSection < 0 && HoverSectionEdge is { } edge && edge.Index == i)
+            {
+                var zone = Math.Min(SectionEdgeZone, width / 2);   // as wide as the grab zone SectionEdgeAt uses
+                d.Rect(AvaloniaPalette.Get("OverlayInk", light).WithOpacity(light ? SectionEdgeLightOpacity : SectionEdgeDarkOpacity), null, edge.Right ? left + width - zone : left, top, zone, height, 3);
+            }
             if (SectionActive(i)) DrawSectionGlow(d, colour, x + 1, y, w, _sectionGlowIntensity * SectionGlowActiveShare);
             var flash = SectionButtons.FlashAlpha(section);
             if (flash > 0) DrawSectionGlow(d, accent, x + 1, y, w, flash);
@@ -397,9 +402,9 @@ public sealed partial class TimelineView
         }
         if (measure.RepeatStart) d.Line(new UiStroke(colour, 2), x + 1, top + 1, x + 1, top + RowHeight - 1);
         if (measure.RepeatEnd) d.Line(new UiStroke(colour, 2), x + cellWidth - 1, top + 1, x + cellWidth - 1, top + RowHeight - 1);
-        // In the light theme a note's outline is its own colour at the fill's opacity, so the pill has no dark rim (the WPF light look).
+        // In the light theme a note's outline is its own colour at the fill's opacity, so the pill has no dark rim.
         var rim = !empty && _frameLight ? new UiStroke(colour.WithOpacity(BlockOpacity(muted)), 1) : edge;
-        // The continuous line replaces the outline of the bars it covers, as in WPF.
+        // The continuous line replaces the outline of the bars it covers.
         if (empty ? !HideEmptyGrid : !ShowContinuousBlocks) d.Rect(null, rim, Math.Round(x) + 0.5, top + 1, Math.Max(1, Math.Round(cellWidth)), RowHeight - 2);
     }
 

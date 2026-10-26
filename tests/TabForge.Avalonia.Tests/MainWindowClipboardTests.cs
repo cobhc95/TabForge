@@ -9,7 +9,7 @@ namespace TabForge.Avalonia.Tests;
 
 /// <summary>
 /// Owns: the Avalonia Edit Copy / Cut / Paste: copied beats paste back as the same notes and undo as one step, the held clipboard text is the clip's own JSON
-/// (the bytes the WPF app writes), cut clears a beat as one undo step, a whole-bar cut removes the bars (WholeBarCut).
+/// (the bytes the app writes), cut clears a beat as one undo step, a whole-bar cut removes the bars (WholeBarCut).
 /// Tests: MainWindowClipboard, AvaloniaScoreClipboard, ScorePreviewEditor clip calls.
 /// </summary>
 public class MainWindowClipboardTests

@@ -320,7 +320,7 @@ public sealed partial class BandTrackPanel : Border
     public double WindowHeight => _staffScroll.Height;
 
     /// <summary>Slides the card's window of systems so it shows the system holding <paramref name="measure"/>: the window stays while the playing
-    /// system is inside it and jumps (the system at the top) once it leaves, clamped at the song's end (WPF BandFollow's page turn).</summary>
+    /// system is inside it and jumps (the system at the top) once it leaves, clamped at the song's end.</summary>
     public void ShowSystemsAround(int measure)
     {
         var system = SystemOf(measure);

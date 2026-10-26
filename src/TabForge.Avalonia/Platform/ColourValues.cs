@@ -5,7 +5,7 @@ using TabForge.Platform.Theme;
 namespace TabForge.Avalonia.Platform;
 
 /// <summary>
-/// Colour values shared by the Avalonia windows and drawn views.
+/// Colour values used by the Avalonia windows and drawn views.
 /// Owns: the one opacity composite and the one strict hex read. Does not own: palette lookup (AvaloniaPalette) or the Core colour rules.
 /// Tests: TabForge.Avalonia.Tests.ColourValuesTests.
 /// </summary>

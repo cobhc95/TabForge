@@ -4,7 +4,7 @@ namespace TabForge.Docking;
 
 // Owns: the built-in layouts (Compose, Practice, Mix, Band), finding a saved or built-in layout by name, the name a typed
 //   layout is saved under, the Layouts menu rows as data, and the score-back and side-panel comparison rules.
-// Does not own: menus, the window and the dock (DockLayoutController builds the WPF menus from these rows), saving settings.
+// Does not own: menus, the window and the dock (DockLayoutController builds the menus from these rows), saving settings.
 // Tests: no dedicated test class.
 /// <summary>Toolkit-free rules of the dock's built-in and saved layouts.</summary>
 internal static class DockLayoutCatalog

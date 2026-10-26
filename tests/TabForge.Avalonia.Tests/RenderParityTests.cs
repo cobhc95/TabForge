@@ -16,7 +16,7 @@ namespace TabForge.Avalonia.Tests;
 
 /// <summary>
 /// Owns: render parity between the apps: the demo song rendered through the Avalonia Render path (AvaloniaRenderRunner's request, the shared
-/// Core RenderJob, the real engine on the Null driver) writes the same WAV bytes as the WPF render path. The WPF side is the WPF build's
+/// Core RenderJob, the real engine on the Null driver) writes the same WAV bytes. The WPF side is the app's
 /// <c>--audio-audit</c> (File > Render's own job, same settings: 32-bit float, 4 s tail, master 100, a stem per track); point
 /// TABFORGE_WPF_RENDER_DIR at its output folder to compare bytes, else only the Avalonia render's own checks run.
 /// Tests: Views/AvaloniaRenderRunner, Core/Rendering/RenderJob.
@@ -73,7 +73,7 @@ public class RenderParityTests
 
     private static string Hash(string path) { using var stream = File.OpenRead(path); return Convert.ToHexString(SHA256.HashData(stream)); }
 
-    // AudioAudit's file-name rule, so the stems line up with the WPF output.
+    // AudioAudit's file-name rule, so the stems line up with the output.
     private static string Sanitize(string name)
     {
         var bad = Path.GetInvalidFileNameChars();

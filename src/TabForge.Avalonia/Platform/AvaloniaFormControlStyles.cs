@@ -15,7 +15,7 @@ using TabForge.Platform.Theme;
 namespace TabForge.Avalonia.Platform;
 
 /// <summary>
-/// The master base look of the form controls, from the WPF build's default templates (App.xaml): the sizes and brush names of buttons, the default (accent) button,
+/// The master base look of the form controls, from the app's default templates (App.xaml): the sizes and brush names of buttons, the default (accent) button,
 /// text boxes, combo boxes, list boxes and separators. Every window inherits these; Core looks only add the hover, pressed, selected and disabled states on top
 /// (AvaloniaDefaultLooks gives plain controls their look class), and the field colours of Fluent's own states are replaced through AvaloniaPalette.FluentFieldBrushNames.
 /// Owns: those base setters for the Avalonia app. Does not own: the state looks (AvaloniaLooks), the brushes (AvaloniaPalette).
@@ -27,10 +27,10 @@ public static partial class AvaloniaFormControlStyles
     /// <summary>The corner radius of every control surface (App.xaml: 3 DIP); Fluent's own is 4.</summary>
     public static readonly CornerRadius ControlCornerRadius = new(3);
 
-    /// <summary>The class of the Preferences page rows in the settings rail (the nav rows of the WPF Preferences window).</summary>
+    /// <summary>The class of the Preferences page rows in the settings rail (the nav rows of the Preferences window).</summary>
     public const string PrefsNavRowClass = "PrefsNavRow";
 
-    /// <summary>The class of the Preferences "More options" expanders: plain text with no fill or edge, as the WPF expander.</summary>
+    /// <summary>The class of the Preferences "More options" expanders: plain text with no fill or edge.</summary>
     public const string PrefsMoreOptionsClass = "PrefsMoreOptions";
 
     /// <summary>The class of the Mixer mute and solo toggles: the Core look "MixerToggle" plus the dark base style below.</summary>
@@ -55,20 +55,20 @@ public static partial class AvaloniaFormControlStyles
     private static readonly Thickness ListBoxItemPadding = new(5, 3, 5, 3);
     private static readonly Thickness TabHeaderPadding = new(12, 0, 12, 0);
     private const double TabHeaderFontSize = 13, TabHeaderHeight = 34, TabHeaderAccentWidth = 2;
-    // A list row sits 4 DIP inside the pane edge, so its selected tile is inset and rounded as the WPF row.
+    // A list row sits 4 DIP inside the pane edge, so its selected tile is inset and rounded.
     private static readonly Thickness ListBoxItemMargin = new(4, 0);
-    // The separator is a 1 DIP rule in the soft border colour, inset 8 DIP at the sides, as the WPF menu separator.
+    // The separator is a 1 DIP rule in the soft border colour, inset 8 DIP at the sides.
     private const double MenuSeparatorHeight = 1;
     private static readonly Thickness MenuSeparatorMargin = new(8, 4);
 
     // PreferencesWindow.xaml BaseActionButton, SecondaryActionButton and ResetActionButton: Panel3 fill, soft edge, the control corner.
-    // The Preferences rail row radius: the WPF navigation tile's 4 DIP.
+    // The Preferences rail row radius: the navigation tile's 4 DIP.
     private static readonly CornerRadius PrefsNavCornerRadius = new(4);
     private static readonly Thickness PrefsActionPadding = new(14, 7, 14, 7);
     private const double PrefsActionMinWidth = 90, PrefsActionFontSize = 13;
     private const double PrefsResetMinWidth = 52, PrefsResetHeight = 26, PrefsResetFontSize = 11;
 
-    // App.xaml ComboToggle: a filled 8x4 triangle, 7 DIP from the right edge (the WPF picture shows the filled triangle).
+    // App.xaml ComboToggle: a filled 8x4 triangle, 7 DIP from the right edge.
     private const string ComboArrowPath = "M 0 0 L 4 4 L 8 0 Z";
     private const double ComboArrowWidth = 8, ComboArrowHeight = 4, ComboArrowRightGap = 7;
 
@@ -163,7 +163,7 @@ public static partial class AvaloniaFormControlStyles
     /// <summary>The Preferences action buttons, their default (OK) look, the More options toggle and the shortcut key boxes.</summary>
     private static Style[] PrefsButtonStyles() => new Style[]
     {
-        // Preferences action buttons: the Core look "PrefsActionButton" (class) plus these WPF sizes; the Secondary and Reset classes refine it.
+        // Preferences action buttons: the Core look "PrefsActionButton" (class) plus these sizes; the Secondary and Reset classes refine it.
         new Style(x => x.OfType<Button>().Class("PrefsActionButton"))
         {
             Setters =
@@ -181,7 +181,7 @@ public static partial class AvaloniaFormControlStyles
                 new Setter(ContentControl.VerticalContentAlignmentProperty, VerticalAlignment.Center),
             },
         },
-        // The Preferences default (OK) button takes the WPF PrefsPrimary blue (PrimaryActionButton): a compound selector outranks the PrefsActionButton fill for it.
+        // The Preferences default (OK) button takes the PrefsPrimary blue (PrimaryActionButton): a compound selector outranks the PrefsActionButton fill for it.
         new Style(x => x.OfType<Button>().Class("PrefsActionButton").Class("AccentButton"))
         {
             Setters =
@@ -293,7 +293,7 @@ public static partial class AvaloniaFormControlStyles
         {
             Setters = { Bound(TemplatedControl.BackgroundProperty, "WindowBrush"), Bound(TemplatedControl.ForegroundProperty, "TextBrush") },
         },
-        // Tab controls are the WindowBrush frame shade, so a dialog body runs flat to the window edge with no lifted panel, as the WPF dialogs are.
+        // Tab controls are the WindowBrush frame shade, so a dialog body runs flat to the window edge with no lifted panel.
         new Style(x => x.OfType<TabControl>())
         {
             Setters = { Bound(TemplatedControl.BackgroundProperty, "WindowBrush") },
@@ -351,7 +351,7 @@ public static partial class AvaloniaFormControlStyles
     /// <summary>List boxes, their rows, and the Preferences navigation rail rows.</summary>
     private static Style[] ListStyles() => new Style[]
     {
-        // The WPF list box border is the general border, and its text is the primary text colour.
+        // The list box border is the general border, and its text is the primary text colour.
         new Style(x => x.OfType<ListBox>())
         {
             Setters =
@@ -372,12 +372,12 @@ public static partial class AvaloniaFormControlStyles
                 new Setter(TemplatedControl.CornerRadiusProperty, ControlCornerRadius),
             },
         },
-        // A selected row takes the AccentSoft fill on its outer edge too, so Fluent's own square selected fill never shows (as the WPF row).
+        // A selected row takes the AccentSoft fill on its outer edge too, so Fluent's own square selected fill never shows.
         new Style(x => x.OfType<ListBoxItem>().Class(":selected"))
         {
             Setters = { Bound(TemplatedControl.BackgroundProperty, "SelectedTintBrush") },
         },
-        // Preferences rail rows: stretched across the rail, drawn by PrefsNavRowTemplate (its own border, so the row's fill is the item's), rounded as the WPF navigation tile.
+        // Preferences rail rows: stretched across the rail, drawn by PrefsNavRowTemplate (its own border, so the row's fill is the item's), rounded.
         new Style(x => x.OfType<ListBoxItem>().Class(PrefsNavRowClass))
         {
             Setters =
@@ -391,7 +391,7 @@ public static partial class AvaloniaFormControlStyles
                 new Setter(Layoutable.MarginProperty, new Thickness(0)),
             },
         },
-        // The selected rail row carries the 3 DIP accent bar on its left edge, as the WPF SelectedNavigationButton.
+        // The selected rail row carries the 3 DIP accent bar on its left edge.
         new Style(x => x.OfType<ListBoxItem>().Class(PrefsNavRowClass).Class(":selected"))
         {
             Setters =
@@ -400,12 +400,12 @@ public static partial class AvaloniaFormControlStyles
                 new Setter(TemplatedControl.BorderThicknessProperty, new Thickness(ChromeMetrics.SettingsRailAccentBarWidth, 0, 0, 0)),
             },
         },
-        // The selected rail row's label is semi-bold, as the WPF selected navigation tile.
+        // The selected rail row's label is semi-bold.
         new Style(x => x.OfType<ListBoxItem>().Class(PrefsNavRowClass).Class(":selected").Descendant().OfType<TextBlock>())
         {
             Setters = { new Setter(TextBlock.FontWeightProperty, FontWeight.SemiBold) },
         },
-        // A hovered rail row takes the hover fill of the WPF PrefsNavItem look; it also covers a selected row, as the WPF trigger does.
+        // A hovered rail row takes the hover fill of the PrefsNavItem look; it also covers a selected row.
         new Style(x => x.OfType<ListBoxItem>().Class(PrefsNavRowClass).Class(":pointerover"))
         {
             Setters = { Bound(TemplatedControl.BackgroundProperty, "HoverBrush") },
@@ -415,7 +415,7 @@ public static partial class AvaloniaFormControlStyles
     /// <summary>Mixer toggles, step buttons, separators and combo boxes.</summary>
     private static Style[] ToggleAndComboStyles() => new Style[]
     {
-        // Mixer mute and solo toggles: the Button base look (dark panel fill, soft edge, control radius) with the muted ink of the WPF toggles.
+        // Mixer mute and solo toggles: the Button base look (dark panel fill, soft edge, control radius) with the muted ink of the toggles.
         new Style(x => x.OfType<ToggleButton>().Class(MixerToggleClass))
         {
             Setters =
@@ -430,7 +430,7 @@ public static partial class AvaloniaFormControlStyles
                 new Setter(ContentControl.VerticalContentAlignmentProperty, VerticalAlignment.Center),
             },
         },
-        // Global tuning step buttons: the form button with the plain button outline and regular glyphs, as the WPF step buttons.
+        // Global tuning step buttons: the form button with the plain button outline and regular glyphs.
         new Style(x => x.OfType<Button>().Class(StepButtonClass))
         {
             Setters =

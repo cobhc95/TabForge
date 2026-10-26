@@ -26,8 +26,8 @@ namespace TabForge.Avalonia.Tests;
 /// </summary>
 public class ChordFinderWindowTests
 {
-    // The WPF window's controls in tree order, written from the WPF app's ChordFinderWindow.cs:
-    // role, control name (the WPF variable name, PascalCased) and text. The "Root" and "Type" labels have no name.
+    // The window's controls in tree order, written from the app's ChordFinderWindow.cs:
+    // role, control name (the variable name, PascalCased) and text. The "Root" and "Type" labels have no name.
     private static readonly (string Role, string Name, string Text)[] WpfControls =
     {
         ("TextBlock", "", "Root"),

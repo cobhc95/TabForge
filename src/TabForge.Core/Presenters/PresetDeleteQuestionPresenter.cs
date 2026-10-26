@@ -1,6 +1,6 @@
 // Owns: the words of the question asked before presets are deleted: the text for one preset or for several (up to five names, then
 //       "and N more"), and the "Don't ask again" check box text.
-// Does not own: the box (WPF PresetDeleteQuestion with ThemedMessageBox; Avalonia PresetManagerWindow with AvaloniaMessageBox), the
+// Does not own: the box (Avalonia PresetManagerWindow with AvaloniaMessageBox), the
 //       "Ask before deleting presets" setting, or the delete itself.
 // Tests: PresetManagerWindowTests (full suite), TabForge.Avalonia.Tests PresetManagerWindowTests.
 namespace TabForge.Presenters;

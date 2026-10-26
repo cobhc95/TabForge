@@ -59,7 +59,7 @@ public sealed class FileAssociationSync
     }
 }
 
-/// <summary>The status texts of the file-association change (the words match the WPF build's).</summary>
+/// <summary>The status texts of the file-association change (the words match the app's).</summary>
 public static class FileAssociationText
 {
     public const string Registered = "TabForge now opens .gp and .tforge files";

@@ -9,7 +9,6 @@
     <AssemblyName>TabForge</AssemblyName>
     <RootNamespace>TabForge.Avalonia</RootNamespace>
     <!-- Precompiled code (no start-up JIT) and tiered PGO, and a GC that conserves memory (5), as in the WPF build. -->
-
     <PublishReadyToRun>true</PublishReadyToRun>
     <!-- Only English satellite resources are kept (the UI has no localised resources; dependency satellites are dead weight). -->
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
@@ -53,6 +52,8 @@
       <ResolvedFileToPublish Update="@(ResolvedFileToPublish)" Condition="'%(ResolvedFileToPublish.Filename)' == 'SoundTouch.Net' Or '%(ResolvedFileToPublish.Filename)' == 'tfvst3'">
         <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
       </ResolvedFileToPublish>
+      <!-- The native Windows-PDB reader (2.3 MB) serves only debuggers reading full PDBs; this build's portable PDBs never need it at run time. -->
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="'%(ResolvedFileToPublish.Filename)' == 'Microsoft.DiaSymReader.Native.amd64'" />
     </ItemGroup>
   </Target>
 </Project>

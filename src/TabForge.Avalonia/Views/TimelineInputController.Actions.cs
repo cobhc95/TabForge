@@ -21,7 +21,7 @@ namespace TabForge.Avalonia.Views;
 // Tests: no dedicated test class.
 public sealed partial class TimelineInputController
 {
-    /// <summary>Mute, solo or record arm of the row, or of every selected track when the row is one of them: all take the clicked track's new state. Disarming trims the takes as the WPF RecordingController does. Record arm is its own undo step
+    /// <summary>Mute, solo or record arm of the row, or of every selected track when the row is one of them: all take the clicked track's new state. Disarming trims the takes. Record arm is its own undo step
     /// ("Arm track"/"Disarm track"), separate from the recording landing; a track being recorded keeps its lane until the global stop.</summary>
     private void ToggleTrack(int row, TrackRowCells.Cell kind)
     {

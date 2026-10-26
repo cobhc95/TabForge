@@ -19,7 +19,7 @@ namespace TabForge.Avalonia.Tests;
 
 /// <summary>
 /// Owns: the headless checks of the project settings window (structure, presenter texts and clamping, renders, contrast).
-/// Does not own: the window or ProjectSettingsPresenter; expected values come from the presenter and the WPF window's texts.
+/// Does not own: the window or ProjectSettingsPresenter; expected values come from the presenter and the window's texts.
 /// Tests: this class.
 /// </summary>
 public class ProjectSettingsWindowTests

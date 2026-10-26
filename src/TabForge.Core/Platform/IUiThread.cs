@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 namespace TabForge.Platform;
 
 /// <summary>
-/// The UI thread as a port: queue work, run work, timers. The WPF adapter is <c>Platform/Wpf/WpfUiThread</c>; WPF code gets one with <c>Ui.Of(element)</c> or <c>Ui.Current</c>.
+/// The UI thread as a port: queue work, run work, timers. The adapter is the Avalonia UI thread (<c>AvaloniaUiThread</c>).
 /// Owns: the threading contract. Does not own: what runs on it.
 /// Tests: UiThreadTests.
 /// </summary>

@@ -8,7 +8,7 @@ using TabForge.Platform;
 namespace TabForge.Avalonia.Platform;
 
 /// <summary>
-/// The owner's track-row instrument line art (Assets/TrackRowIcons/owner-icons.json, the file the WPF track list reads) drawn on its 24 x 24 grid
+/// The owner's track-row instrument line art (Assets/TrackRowIcons/owner-icons.json, the file the track list reads) drawn on its 24 x 24 grid
 /// in three layers: faint shading and the line work in the text colour, and the accent detail in the fixed accent colour.
 /// Owns: loading the art once and drawing one icon. Does not own: the program-to-icon mapping (Core <c>TrackIconKeys</c>) or the row layout.
 /// Perf (H11-icon): loaded once on the UI thread after the first frame (Avalonia geometry must be built on the UI thread), so the first paint does no IO;

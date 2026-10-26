@@ -26,7 +26,7 @@ namespace TabForge.Avalonia.Views;
 /// Render runs the given job (AvaloniaRenderRunner) with progress and cancel; without one (the preview) it reports that it needs the full app. Browse asks for the output folder
 /// through the given folder picker (the preview passes none and reports that it needs the full app). Video (MP4)… closes this window and
 /// opens the video export window.
-/// Owns: the controls (their order, texts and automation names as in the WPF dialog), loading and saving RenderSettings, and the enabling,
+/// Owns: the controls (their order, texts and automation names as in the dialog), loading and saving RenderSettings, and the enabling,
 ///     hint and file-preview rules applied from RenderDialogPresenter and RenderBarRange. It is one class because the controls share their state.
 /// Does not own: the render (RenderJob and the engine), the bounds and file-name rules (RenderDialogPresenter), the custom range check
 ///     (RenderBarRange), or the video dialog (VideoExportWindow).
@@ -63,6 +63,8 @@ public sealed class RenderWindow : Window
     private readonly Func<RenderPlan, IProgress<RenderProgressInfo>, CancellationToken, Task<RenderResult>>? _run;
     private readonly bool _mp3Ok;
     private readonly (int StartBar, int StartCell, int EndBar, int EndCell)? _selection;   // the score's note selection when the dialog opened
+    private readonly SelectionSnapshot? _snip;   // the white selection when the dialog opened (cells/clips); "Selected bars" renders only it
+    private readonly LoopRegionSnapshot? _loop;   // the loop region when the dialog opened; "Time selection" follows it
     private CancellationTokenSource? _cts;   // set while a render runs
     private bool _loading = true;
     private bool _fillingSections;
@@ -77,8 +79,10 @@ public sealed class RenderWindow : Window
     /// <param name="mp3Available">Whether the MP3 encoder is there (RenderJob.Mp3Available); the MP3 formats are disabled without it.</param>
     public RenderWindow(SongProject project, RenderSettings settings, bool hasSelection, Action? openVideoExport, Func<string, string?>? pickFolder = null,
         Func<RenderPlan, IProgress<RenderProgressInfo>, CancellationToken, Task<RenderResult>>? run = null, bool mp3Available = true,
-        (int StartBar, int StartCell, int EndBar, int EndCell)? selection = null)
+        (int StartBar, int StartCell, int EndBar, int EndCell)? selection = null, LoopRegionSnapshot? loop = null, SelectionSnapshot? snip = null)
     {
+        _snip = RenderSnip.Any(snip) ? snip : null;
+        _loop = loop is { Has: true } ? loop : null;
         _project = project; _settings = settings; _hasSelection = hasSelection; _openVideoExport = openVideoExport; _pickFolder = pickFolder;
         _run = run; _mp3Ok = mp3Available; _selection = selection;
         Title = "Render to file";
@@ -98,7 +102,7 @@ public sealed class RenderWindow : Window
         stack.Children.Add(BuildOptionsGroup());
         stack.Children.Add(_open);
 
-        // Progress, status and the Video / Render / Cancel buttons sit in a footer outside the scroll area, as in the WPF dialog.
+        // Progress, status and the Video / Render / Cancel buttons sit in a footer outside the scroll area, as in the dialog.
         var footer = new StackPanel { Margin = new Thickness(14, 0, 14, 12) };
         footer.Children.Add(_bar); footer.Children.Add(_status); footer.Children.Add(BuildButtons());
         var footerHost = new Border { Child = footer, BorderThickness = new Thickness(0, 1, 0, 0), [!Border.BorderBrushProperty] = new DynamicResourceExtension("BorderSoftBrush") };
@@ -228,7 +232,7 @@ public sealed class RenderWindow : Window
     /// <summary>The output folder box's text.</summary>
     public string OutputFolder => _dir.Text ?? "";
 
-    /// <summary>Renders the plan as the WPF dialog does: progress on the bar and status line, the Cancel button cancels the job while it runs.</summary>
+    /// <summary>Renders the plan: progress on the bar and status line, the Cancel button cancels the job while it runs.</summary>
     public async Task RenderPressed()
     {
         SaveSettings();
@@ -262,34 +266,45 @@ public sealed class RenderWindow : Window
         finally { _cts?.Dispose(); _cts = null; _render.IsEnabled = true; _cancel.Content = CloseLabel; Changed(); }
     }
 
-    /// <summary>The compiled song, the range and the output paths for the current choices (as the WPF dialog computes them); null with the reason shown.</summary>
+    /// <summary>The compiled song, the range and the output paths for the current choices; null with the reason shown.</summary>
     private RenderPlan? RenderPlanNow()
     {
         var timeline = RenderSpecBuilder.Compile(_project);
         var mode = (RenderBounds)Math.Max(0, _settings.Bounds);
         int startBar = _selection?.StartBar ?? 0, startCell = _selection?.StartCell ?? 0, endBar = _selection?.EndBar ?? 0, endCell = _selection?.EndCell ?? -1;
+        if (mode == RenderBounds.TimeSelection && _loop is { } lp) (startBar, startCell, endBar, endCell) = (lp.StartBar, lp.StartCell, lp.EndBar, lp.EndCell);
         if (mode is RenderBounds.CustomBars or RenderBounds.CustomSections)
         {
             var range = CustomBarRange();
             if (range.Problem is not null) { _status.Text = range.Problem; return null; }
             startBar = range.First; startCell = 0; endBar = range.Last; endCell = -1;
         }
-        var (startMs, endMs) = RenderSpecBuilder.Bounds(timeline, mode, startBar, startCell, endBar, endCell, _settings.CustomStartSec, _settings.CustomEndSec);
+        SongProject? snipped = null;
+        Dictionary<TrackModel, TrackModel>? snipMap = null;
+        double startMs, endMs;
+        if (mode == RenderBounds.Bars && _snip is not null && RenderSnip.Range(timeline, _project, _snip) is { } snipRange)
+        {
+            var snip = RenderSnip.Build(_project, _snip);
+            snipped = snip.Project; snipMap = new(snip.Map);
+            timeline = RenderSpecBuilder.Compile(snipped);
+            (startMs, endMs) = snipRange;
+        }
+        else (startMs, endMs) = RenderSpecBuilder.Bounds(timeline, mode, startBar, startCell, endBar, endCell, _settings.CustomStartSec, _settings.CustomEndSec);
         var dir = ToolWindowParts.TextOf(_dir).Trim();
         string? master = null;
         var stems = new Dictionary<TrackModel, string>();
         foreach (var file in PlannedFiles())
         {
             var path = Path.Combine(dir, file.FileName);
-            if (file.Track is null) master = path; else stems[file.Track] = path;
+            if (file.Track is null) master = path; else stems[snipMap?.GetValueOrDefault(file.Track) ?? file.Track] = path;
         }
-        return new RenderPlan(timeline, startMs, endMs, master, stems);
+        return new RenderPlan(timeline, startMs, endMs, master, stems, snipped);
     }
 
     private void LoadSettings()
     {
         _source.SelectedIndex = Math.Clamp(_settings.Source, 0, 3);
-        _bounds[RenderDialogPresenter.BoundsOnLoad(_settings.Bounds, _hasSelection, _sections.Count, _barCount)].IsChecked = true;
+        _bounds[RenderDialogPresenter.BoundsOnLoad(_settings.Bounds, _snip is not null, _sections.Count, _barCount, _loop is not null)].IsChecked = true;
         var saved = _settings.StemTrackNames;
         foreach (var box in _stemBoxes) box.IsChecked = saved is null || saved.Contains(((TrackModel)box.Tag!).Name);
         var (fromBar, toBar) = RenderDialogPresenter.BarRangeOnLoad(_settings.CustomFromBar, _settings.CustomToBar, _barCount);
@@ -302,8 +317,14 @@ public sealed class RenderWindow : Window
         _fillingSections = false;
         FillSectionTo(_settings.CustomToSectionBar);
         ToolTip.SetTip(_bounds[5], RenderDialogPresenter.SectionsTooltip(_sections.Count));
-        ToolTip.SetTip(_bounds[1], RenderDialogPresenter.SelectionTooltip(_hasSelection));
-        ToolTip.SetTip(_bounds[2], RenderDialogPresenter.SelectionTooltip(_hasSelection));
+        ToolTip.SetTip(_bounds[1], RenderDialogPresenter.LoopTooltip(_loop is not null));
+        _bounds[1].Content = RenderDialogPresenter.TimeSelectionLabel(_loop is not null, _loop?.StartBar ?? 0, _loop?.EndBar ?? 0);
+        ToolTip.SetTip(_bounds[2], RenderDialogPresenter.SelectionTooltip(_snip is not null));
+        if (_snip is not null)
+        {
+            var (tracks, clips) = RenderSnip.Counts(_project, _snip);
+            _bounds[2].Content = RenderDialogPresenter.SelectedBarsLabel(tracks, _snip.HasRange ? _snip.StartBar : -1, _snip.EndBar, clips);
+        }
         _start.Text = _settings.CustomStartSec.ToString("0.###", CultureInfo.InvariantCulture);
         _end.Text = (_settings.CustomEndSec > 0 ? _settings.CustomEndSec : 60).ToString("0.###", CultureInfo.InvariantCulture);
         _tail.SelectedIndex = Math.Clamp(_settings.TailMode, 0, 2);
@@ -384,7 +405,7 @@ public sealed class RenderWindow : Window
             if (_rate.Items[i] is ComboBoxItem item) item.IsEnabled = RenderDialogPresenter.IsSampleRateAllowed(formatIndex, RenderDialogPresenter.SampleRates[i]);
         _rate.SelectedIndex = RenderDialogPresenter.RateIndexAfterFormat(formatIndex, _rate.SelectedIndex);
         for (var i = 0; i < _bounds.Length; i++)
-            _bounds[i].IsEnabled = RenderDialogPresenter.IsBoundsEnabled(i, _hasSelection, _sections.Count, _barCount);
+            _bounds[i].IsEnabled = RenderDialogPresenter.IsBoundsEnabled(i, _snip is not null, _sections.Count, _barCount, _loop is not null);
         var custom = _bounds[3].IsChecked == true;
         _start.IsEnabled = _end.IsEnabled = custom;
         var customBars = _bounds[4].IsChecked == true;

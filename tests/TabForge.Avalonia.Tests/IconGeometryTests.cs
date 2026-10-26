@@ -51,4 +51,55 @@ public class IconGeometryTests
 
     [Fact]
     public void ScaleStepsPath() => Assert.Equal("M0,11 L3,11 L3,8 L6,8 L6,5 L9,5 L9,2 L12,2", IconGeometry.ScaleSteps);
+
+    [Fact]
+    public void ToolSelectPath() => Assert.Equal("M4,2.5 L4,13.2 L6.7,10.6 L8.6,14.2 L10.4,13.4 L8.5,9.8 L12.2,9.6 Z", IconGeometry.ToolSelect);
+
+    [Fact]
+    public void ToolDrawPath() => Assert.Equal("M3,13 L3.7,10.2 L10.8,3.1 L12.9,5.2 L5.8,12.3 Z M9.5,4.4 L11.6,6.5", IconGeometry.ToolDraw);
+
+    [Fact]
+    public void ToolErasePath() => Assert.Equal("M2.8,10.2 L8.4,4.6 L13.4,9.6 L9.6,13.4 L6,13.4 Z M5.6,7.4 L10.6,12.4 M9.6,13.4 L14,13.4", IconGeometry.ToolErase);
+
+    [Fact]
+    public void ToolSplitPath() => Assert.Equal("M2.8,11.6 A2,2 0 1 1 6.8,11.6 A2,2 0 1 1 2.8,11.6 M9.2,11.6 A2,2 0 1 1 13.2,11.6 A2,2 0 1 1 9.2,11.6 M6.2,10.2 L11.5,2.8 M9.8,10.2 L4.5,2.8", IconGeometry.ToolSplit);
+
+    [Fact]
+    public void ToolMutePath() => Assert.Equal("M2.5,6 L10.5,6 L10.5,10.5 L2.5,10.5 Z M11.5,3.5 L14.5,7 M14.5,3.5 L11.5,7", IconGeometry.ToolMute);
+
+    [Fact]
+    public void QuantizePath() => Assert.Equal("M3,2.5 L3,13.5 M8,2.5 L8,13.5 M13,2.5 L13,13.5 M3,4.5 L7,4.5 L7,6.9 L3,6.9 Z M8,9.2 L11.2,9.2 L11.2,11.6 L8,11.6 Z", IconGeometry.Quantize);
+
+    [Fact]
+    public void ZoomInPath() => Assert.Equal("M2.7,7 A4.3,4.3 0 1 1 11.3,7 A4.3,4.3 0 1 1 2.7,7 M10.2,10.2 L13.8,13.8 M5,7 L9,7 M7,5 L7,9", IconGeometry.ZoomIn);
+
+    [Fact]
+    public void ZoomOutPath() => Assert.Equal("M2.7,7 A4.3,4.3 0 1 1 11.3,7 A4.3,4.3 0 1 1 2.7,7 M10.2,10.2 L13.8,13.8 M5,7 L9,7", IconGeometry.ZoomOut);
+
+    [Fact]
+    public void ZoomFitPath() => Assert.Equal("M2.5,5.5 L2.5,2.5 L5.5,2.5 M10.5,2.5 L13.5,2.5 L13.5,5.5 M13.5,10.5 L13.5,13.5 L10.5,13.5 M5.5,13.5 L2.5,13.5 L2.5,10.5 M5.5,6.5 L10.5,6.5 L10.5,9.5 L5.5,9.5 Z", IconGeometry.ZoomFit);
+
+    [Fact]
+    public void FollowPath() => Assert.Equal("M2.5,8 L11.5,8 M8.5,5 L11.5,8 L8.5,11 M13.5,3 L13.5,13", IconGeometry.Follow);
+
+    [Fact]
+    public void MagnetPath() => Assert.Equal("M3.5,2.5 L3.5,8.5 A4.5,4.5 0 0 0 12.5,8.5 L12.5,2.5 L9.8,2.5 L9.8,8.5 A1.8,1.8 0 0 1 6.2,8.5 L6.2,2.5 Z M3.5,5 L6.2,5 M9.8,5 L12.5,5", IconGeometry.Magnet);
+
+    [Fact]
+    public void WarningPath() => Assert.Equal("M8,2 L14.5,13.5 L1.5,13.5 Z M8,6.5 L8,9.5 M8,11.6 L8,11.7", IconGeometry.Warning);
+
+    [Fact]
+    public void ToolGluePath() => Assert.Equal("M2.5,8 L6.5,8 M9.5,8 L13.5,8 M6.5,5.5 L6.5,10.5 M9.5,5.5 L9.5,10.5 M7.2,8 L8.8,8", IconGeometry.ToolGlue);
+
+    [Fact]
+    public void ToolVelocityPath() => Assert.Equal("M3.5,13.5 L3.5,8 M8,13.5 L8,4.5 M12.5,13.5 L12.5,7 M2.2,7 A1.3,1.3 0 1 1 4.8,7 A1.3,1.3 0 1 1 2.2,7 M6.7,3.5 A1.3,1.3 0 1 1 9.3,3.5 A1.3,1.3 0 1 1 6.7,3.5 M11.2,6 A1.3,1.3 0 1 1 13.8,6 A1.3,1.3 0 1 1 11.2,6", IconGeometry.ToolVelocity);
+
+    [Fact]
+    public void ToolLegatoPath() => Assert.Equal("M2.5,5 L7,5 L7,7.5 L2.5,7.5 Z M7.5,9 L13.5,9 L13.5,11.5 L7.5,11.5 Z M7,6.2 L9.5,6.2", IconGeometry.ToolLegato);
+
+    [Fact]
+    public void ScaleRowsPath() => Assert.Equal("M2.5,4 L13.5,4 M2.5,8 L13.5,8 M2.5,12 L13.5,12 M2.5,5.6 L13.5,5.6 L13.5,6.6 L2.5,6.6 Z", IconGeometry.ScaleRows);
+
+    [Fact]
+    public void StepInputPath() => Assert.Equal("M2.5,6 L7,6 L7,9.5 L2.5,9.5 Z M9,7.75 L13.5,7.75 M11.5,5.5 L13.5,7.75 L11.5,10", IconGeometry.StepInput);
 }

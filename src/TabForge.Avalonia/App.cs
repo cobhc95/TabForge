@@ -30,12 +30,12 @@ public sealed class App : Application
         WindowUiScale.RegisterWindowHook();
         Styles.Add(new FluentTheme());
         AvaloniaPalette.Register(Resources);
-        // The WPF app's default text size (12) and compact list rows, in place of the Fluent 14 and touch-sized item padding.
+        // The app's default text size (12) and compact list rows, in place of the Fluent 14 and touch-sized item padding.
         Resources["ControlContentThemeFontSize"] = new TabForge.Services.AppearanceSettings().FontSize;
-        // Fluent's text boxes (the editable combo box text too) are 32 DIP high; the WPF ones are as high as their text and padding.
+        // Fluent's text boxes (the editable combo box text too) are 32 DIP high; here they are as high as their text and padding.
         Resources["TextControlThemeMinHeight"] = 24.0;
         Resources["TextControlThemePadding"] = new Thickness(5, 3, 5, 3);
-        // The WPF app rounds every control surface by 3 DIP; Fluent rounds by 4.
+        // The app rounds every control surface by 3 DIP; Fluent rounds by 4.
         UiDensityResources.Publish(Resources, new TabForge.Services.AppearanceSettings());
         Resources["ControlCornerRadius"] = AvaloniaFormControlStyles.ControlCornerRadius;
         AvaloniaDefaultLooks.Register();
@@ -53,8 +53,8 @@ public sealed class App : Application
         {
             if (e.NameScope.Find<TextBlock>("PART_Watermark") is { } watermark) watermark.Opacity = 1;
         });
-        // Sub-pixel (ClearType-style) text anti-aliasing for every control, as WPF draws text on Windows; greyscale looks heavier and blurred.
-        // The menu bar and its popups (a logical descendant of a MenuItem) are greyscale, as WPF draws menu text: sub-pixel fringes look sharper and coloured there.
+        // Sub-pixel (ClearType-style) text anti-aliasing for every control; greyscale looks heavier and blurred.
+        // The menu bar and its popups (a logical descendant of a MenuItem) are greyscale: sub-pixel fringes look sharper and coloured there.
         // Set on each control when it loads, then invalidated: text drawn before the mode was set is not redrawn by the setter itself.
         // The mode has no public styleable property, so a style setter cannot inherit it.
         Control.LoadedEvent.AddClassHandler<Control>((control, _) =>
@@ -90,7 +90,7 @@ public sealed class App : Application
             if (desktop.MainWindow is MainWindow first)
             {
                 // The song named on the command line (a double-clicked .gp file) is opened once the window is on screen, in
-                // place of the empty start-up song, as the WPF app's OpenStartupFile; a path that does not exist is reported.
+                // place of the empty start-up song; a path that does not exist is reported.
                 // Subscribed before the recovery offer: the requested song is the one the window starts with.
                 var startup = Program.StartupFileFrom(desktop.Args ?? Array.Empty<string>());
                 first.Opened += (_, _) => OpenStartupFile(first, startup);
@@ -117,7 +117,7 @@ public sealed class App : Application
             TabForge.Presenters.MessageBoxButtons.OK, TabForge.Presenters.MessageBoxIcon.Warning, TabForge.Presenters.MessageBoxAnswer.OK);
     }
 
-    /// <summary>Opens the song the command line named in place of the empty start-up song, or reports the path that does not exist (the WPF app's OpenStartupFile).</summary>
+    /// <summary>Opens the song the command line named in place of the empty start-up song, or reports the path that does not exist.</summary>
     private static void OpenStartupFile(MainWindow window, Program.StartupFile startup)
     {
         if (startup.SongPath is { } path)
@@ -149,7 +149,7 @@ public sealed class App : Application
 
     /// <summary>
     /// Receives a song from a later double-click launch on the single-instance pipe and opens it in a new tab of the chosen
-    /// window, bringing that window forward. Nothing listens when songs from Explorer open in a new window (the WPF app's
+    /// window, bringing that window forward. Nothing listens when songs from Explorer open in a new window (the app's
     /// rule): the later launch then shows the song in its own window instead.
     /// </summary>
     private static void StartHandOverServer(IClassicDesktopStyleApplicationLifetime desktop, MainWindow first)

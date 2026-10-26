@@ -6,7 +6,7 @@ using Xunit;
 namespace TabForge.Avalonia.Tests;
 
 /// <summary>
-/// Owns: the checks of the status bar's MIDI output name (the rule the WPF status bar used before it moved to Core): the name of the
+/// Owns: the checks of the status bar's MIDI output name (the rule the status bar used before it moved to Core): the name of the
 /// track's device, the mapper's name, and the fallback text for a device the list does not hold.
 /// Does not own: the device list (WinMmMidiOutput.Devices) or the status bar view.
 /// Tests: this class.

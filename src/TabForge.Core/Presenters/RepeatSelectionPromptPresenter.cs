@@ -3,7 +3,7 @@ namespace TabForge.Presenters;
 /// <summary>
 /// The Repeat selection text prompt as plain data: its title, label and default, and what a typed count means.
 /// Owns: the wording and the count rules (a whole number of 1 or more, clamped to 16).
-/// Does not own: building or showing the prompt (GpDialogs.Prompt in WPF, TextPromptWindow in Avalonia) or the repeat itself (BarStructureEdits).
+/// Does not own: building or showing the prompt (TextPromptWindow in Avalonia) or the repeat itself (BarStructureEdits).
 /// Tests: TabForge.Avalonia.Tests.TextPromptWindowTests.
 /// </summary>
 public static class RepeatSelectionPromptPresenter

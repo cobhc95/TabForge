@@ -41,7 +41,7 @@ public sealed class StatusBarView : UserControl
     private const double MasterMaxWidth = 240;
     private const double OutputMaxWidth = 185;
     private const double AudioDeviceMaxWidth = 300;
-    // The audio interface button: the WPF StatusLinkButton padding (6, 2), its 3 DIP corner and the gap from the MIDI readout on its left.
+    // The audio interface button: the status link button padding (6, 2), its 3 DIP corner and the gap from the MIDI readout on its left.
     private const double AudioDevicePaddingX = 6, AudioDevicePaddingY = 2, AudioDeviceCornerRadius = 3, AudioDeviceLeftGap = 4;
     private const string PositionTooltip = "Playing position (or edit cursor): measure · track · string · cell";
     private const string MasterTooltip = "Tempo · key signature · current note value";
@@ -138,7 +138,7 @@ public sealed class StatusBarView : UserControl
         _output.IsVisible = showOutput && !_audioDevice.IsVisible;
     }
 
-    /// <summary>Shows the audio interface button with the running or idle device text, hidden when no device applies. While it shows, the MIDI output name is hidden (as the WPF status bar).</summary>
+    /// <summary>Shows the audio interface button with the running or idle device text, hidden when no device applies. While it shows, the MIDI output name is hidden.</summary>
     public void ShowAudioDevice(AudioDeviceStatus status)
     {
         _audioDevice.IsVisible = status.DeviceButtonVisible;
@@ -186,7 +186,7 @@ public sealed class StatusBarView : UserControl
             Margin = new Thickness(AudioDeviceLeftGap, 0, 0, 0), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(AudioDeviceCornerRadius),
             VerticalAlignment = VerticalAlignment.Center, Content = _audioDeviceText,
         };
-        // A link with no border at rest and muted text; under the pointer it takes the WPF StatusLinkButton hover (fill, accent-soft border) and its text brightens.
+        // A link with no border at rest and muted text; under the pointer it takes the status link button hover (fill, accent-soft border) and its text brightens.
         SetAudioDeviceHover(button, hovered: false);
         button.PointerEntered += (_, _) => SetAudioDeviceHover(button, hovered: true);
         button.PointerExited += (_, _) => SetAudioDeviceHover(button, hovered: false);

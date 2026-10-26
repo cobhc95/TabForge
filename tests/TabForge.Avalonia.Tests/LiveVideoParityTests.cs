@@ -20,7 +20,7 @@ namespace TabForge.Avalonia.Tests;
 
 /// <summary>
 /// Owns: the principle parity of live video between the hosts: the same 2 s chord goes through the master tap and the Core session once with
-/// the Avalonia host's capture (the window render) and once with the WPF host's capture (the desktop grabber of VideoRecordUi.BeginCapture).
+/// the Avalonia host's capture (the window render) and once with the host's capture (the desktop grabber of VideoRecordUi.BeginCapture).
 /// Each MP4 must hold about 2 s of frames, its picture and sound must end within one frame of each other, and its decoded sound must match
 /// what the tap handed over (SNR fit as in SelfTestLiveAudioFidelity). Tests: Core/Services/Video/LiveVideoSession, AudioEngine/Mixing/MasterTap.
 /// </summary>
@@ -100,7 +100,7 @@ public class LiveVideoParityTests
         }
     }
 
-    /// <summary>The WPF host's capture (VideoRecordUi.Capture) around the Core desktop grabber.</summary>
+    /// <summary>The host's capture (VideoRecordUi.Capture) around the Core desktop grabber.</summary>
     private sealed class DesktopCapture : IVideoCapture
     {
         private readonly DesktopRegionGrabber _grabber;
@@ -109,7 +109,7 @@ public class LiveVideoParityTests
         public void Dispose() => _grabber.Dispose();
     }
 
-    /// <summary>The GDI fallback for a machine without desktop duplication: a black frame (the WPF adapter is not reachable from here).</summary>
+    /// <summary>The GDI fallback for a machine without desktop duplication: a black frame.</summary>
     private sealed class BlackScreen : IScreenCapture
     {
         public IScreenFrame? OpenFrame(int width, int height) => new Frame();

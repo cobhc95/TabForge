@@ -327,12 +327,12 @@ public class ScorePreviewEditorTests
         using var bitmap = new global::Avalonia.Media.Imaging.RenderTargetBitmap(new global::Avalonia.PixelSize(1280, 800), new global::Avalonia.Vector(96, 96));
         bitmap.Render(view);
         var paper = AvaloniaDrawContextTests.Pixel(bitmap, 2, 2);
-        // The WPF window's paper, measured on its default light and dark captures.
+        // The window's paper, measured on its default light and dark captures.
         Assert.Equal(light ? new UiColor(0xFF, 0xFA, 0xFA, 0xF7) : new UiColor(0xFF, 0x15, 0x18, 0x1D), paper);
         window.Close();
     }
 
-    /// <summary>The preview's paper, ink and staff lines are the WPF editor's with default settings (AppearanceSettings), in both papers.</summary>
+    /// <summary>The preview's paper, ink and staff lines are the editor's with default settings (AppearanceSettings), in both papers.</summary>
     [AvaloniaFact]
     public void ScorePaperColoursMatchTheWpfEditorSettings()
     {

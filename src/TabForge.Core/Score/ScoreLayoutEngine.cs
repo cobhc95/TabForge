@@ -50,7 +50,7 @@ internal sealed partial class ScoreLayoutEngine
     internal double[]? MinBarWidths { get => _minBarWidths; set { if (SameWidths(_minBarWidths, value)) return; _minBarWidths = value; Invalidate(); } }
 
     // P0: ShareBars builds a fresh array every pass; a reference check alone re-laid out (and re-fired LayoutUpdated) forever.
-    // Same values (WPF-visible behaviour identical) skip the layout so the retry converges.
+    // Same values (visible behaviour identical) skip the layout so the retry converges.
     private static bool SameWidths(double[]? a, double[]? b)
     {
         if (ReferenceEquals(a, b)) return true;

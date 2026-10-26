@@ -54,11 +54,13 @@ public sealed partial class MainWindow
         public MainWindowTempoBar TempoBar = null!;
         public AvaloniaFileDialogs Dialogs = null!;
         public MainWindowSaving Saving = null!;
+        public MainWindowMediaCollect Media = null!;
         public TabWindowRegistry Registry = null!;
         public ScorePreviewView ScorePreview = null!;
         public ContextMenuHost ContextMenus = null!;
         public MainWindowTrackListFit TrackListFit = null!;
         public ScrollViewer Score = null!;
+        public EditorPaneSwitch EditorPane = null!;
         public ToolsPaneView Tools = null!;
         public ToolsPaneView Structure = null!;
         public ToolsPaneView Rhythm = null!;
@@ -89,7 +91,7 @@ public sealed partial class MainWindow
             }, TabForge.Platform.UiPriority.ApplicationIdle);
         };
         Opened += setIcon;
-        var defaults = new AppSettings();   // the first-start window size is the WPF default (AppSettings.WindowWidth and WindowHeight)
+        var defaults = new AppSettings();   // the first-start window size is the default (AppSettings.WindowWidth and WindowHeight)
         Width = defaults.WindowWidth;
         Height = defaults.WindowHeight;
         MinWidth = EffectiveMinimumWidth(this);
@@ -127,13 +129,13 @@ public sealed partial class MainWindow
     private void ComposeFrame(MainWindowComposeState state)
     {
         _ = new MainWindowLifetime(this, state.Keyboard, state.Songs, state.TempoBar, state.Dock, state.StatusBar, state.Panes.Selection, state.Songs)
-        { FinishBeforeClose = state.LiveVideo.FinishBeforeClose };
+        { FinishBeforeClose = state.LiveVideo.FinishBeforeClose, CommitBeforeClose = () => state.RecordingHooks?.StopRecording() };
         var menu = MainWindowMenu.Build(state.Commands, this, new DockViewMenus(state.Dock, state.Settings, this,
             state.StatusBar.ShowTransient,
             realLayout: () => state.LearnMode?.RealLayout,
             bandToggle: () => state.Commands.Run("View.BandView"),
             learnToggle: () => state.Commands.Run("View.LearnMode")),
-            state.Settings?.Settings.Hotkeys ?? new HotkeySettings());
+            state.Settings?.Settings.Hotkeys ?? new HotkeySettings(), state.EditorPane.Pills);
         if (state.Settings is { } iconSettings)
         {
             // Icon size: the menu row's icons are built once, so each applied size resizes them in place.

@@ -22,7 +22,7 @@ public sealed partial class ScorePreviewView : Control
     private ScrollBarVisibility HorizontalBarFor(bool reflow, double viewport) =>
         reflow && ContinuousMinPageWidth * Zoom + ViewerBorder <= viewport ? ScrollBarVisibility.Disabled : ScrollBarVisibility.Auto;
 
-    /// <summary>Viewer width not available to the page (its border), as the WPF page width reserves.</summary>
+    /// <summary>Viewer width not available to the page (its border).</summary>
     private const double ViewerBorder = 2;
     /// <summary>
     /// Reflow deadband (DIPs): a viewport change smaller than this never re-lays the page. The viewport tracks the

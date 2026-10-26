@@ -4,7 +4,7 @@ using Xunit;
 namespace TabForge.Avalonia.Tests;
 
 // Owns: the pinned values of the shared Win32 message and hit-test codes (Core/Shell/NativeHitCodes): each equals its winuser.h value.
-// Does not own: the hook's replies (NcHitTestHookTests) or the hit rules (TestChromeHitRules in the WPF self-tests).
+// Does not own: the hook's replies (NcHitTestHookTests) or the hit rules (TestChromeHitRules in the self-tests).
 public class NativeHitCodesTests
 {
     [Theory]

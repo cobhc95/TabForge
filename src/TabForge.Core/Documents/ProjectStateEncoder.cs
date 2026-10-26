@@ -199,6 +199,7 @@ internal sealed class ProjectStateEncoder
             if (track is null || !byId.TryGetValue(track.Id, out var liveTrack)) continue;
             track.AudioInput = liveTrack.AudioInput;
             track.MonitorInput = liveTrack.MonitorInput;
+            track.MidiInputs = new List<string>(liveTrack.MidiInputs);
         }
     }
 

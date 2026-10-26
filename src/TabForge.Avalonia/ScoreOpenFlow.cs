@@ -8,8 +8,8 @@ using TabForge.Services;
 
 namespace TabForge.Avalonia;
 
-// Owns: opening a score file for the Avalonia shell with the WPF build's import protection: a Guitar Pro file is parsed in the import worker
-//   process (ImportWorker, as ScoreImportQueue does in the WPF build), and a file whose worker cannot start is refused rather than parsed here.
+// Owns: opening a score file for the Avalonia shell with the app's import protection: a Guitar Pro file is parsed in the import worker
+// process (ImportWorker, as ScoreImportQueue does in the app), and a file whose worker cannot start is refused rather than parsed here.
 // Does not own: the tabs, the dialogs and the messages (MainWindowFile), the parser (GuitarProImporter) or the worker (ImportWorker).
 // Tests: TabForge.Avalonia.Tests.ScoreOpenFlowTests.
 /// <summary>Opens score files for the Avalonia shell; Guitar Pro files go through the import worker, other files open in place.</summary>
@@ -43,7 +43,7 @@ public sealed class ScoreOpenFlow
         }
         catch (ImportWorkerUnavailableException unavailable)
         {
-            // The Avalonia shell has no per-file consent for an in-process parse yet (the WPF build asks), so the file is refused, never parsed here.
+            // The Avalonia shell has no per-file consent for an in-process parse yet, so the file is refused, never parsed here.
             throw new InvalidOperationException($"The protected import process could not start ({unavailable.Message}), so {Path.GetFileName(path)} was not opened.", unavailable);
         }
     }

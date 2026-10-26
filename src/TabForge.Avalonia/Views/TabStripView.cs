@@ -37,7 +37,7 @@ public sealed record TabStripDocument(string? LabelPath, string SongTitle, bool 
 
 /// <summary>
 /// The document tab strip: one tab per document in the caller's order (name, tooltip, a close cross as the setting says), the
-/// active tab on the active-tab colour, then the 36 px (+) button, sized as the WPF tab bar.
+/// active tab on the active-tab colour, then the 36 px (+) button, sized.
 /// </summary>
 public sealed partial class TabStripView : UserControl
 {

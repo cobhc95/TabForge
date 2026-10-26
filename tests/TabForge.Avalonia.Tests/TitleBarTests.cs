@@ -45,7 +45,7 @@ public class TitleBarTests
 
     private static Button Button(TitleBarView bar, string name) => bar.GetVisualDescendantsOf<Button>().Single(b => b.Name == name);
 
-    // The WPF tab bar measures: tabs 8 px in from the left, top-aligned, 36 px tall on the active-tab colour; a 36 px transparent (+) button
+    // The tab bar measures: tabs 8 px in from the left, top-aligned, 36 px tall on the active-tab colour; a 36 px transparent (+) button
     // with a 14 px glyph centred in it; a 20 px close button with a 10 px glyph.
     [AvaloniaFact]
     public void TabStripMatchesWpfGeometryAndPlusGlyphIsCentred()
@@ -77,7 +77,7 @@ public class TitleBarTests
     }
 
     // The Record video button: a 20 px glyph box centred in the 40 x 44 button, the camera outline in a 17 x 14 box at its left / centre
-    // (the WPF window's placement), and the recording dot at the box's top right. The outline is scaled through a Viewbox, so its bounds are
+    //, and the recording dot at the box's top right. The outline is scaled through a Viewbox, so its bounds are
     // fitted and centred: measured on the headless renderer, the drawn outline leaves equal gaps above and below (it sat 2 px high before).
     [AvaloniaFact]
     public void RecordGlyphIsCentredInItsBoxWithTheDotAtItsTopRight()
@@ -100,7 +100,7 @@ public class TitleBarTests
         Assert.Equal(recordRect.Center.Y, boxRect.Center.Y, 0.5);
         Assert.Equal(17, glyphRect.Width, 0.5);
         Assert.Equal(14, glyphRect.Height, 0.5);
-        Assert.Equal(boxRect.X, glyphRect.X, 0.5);                        // left, as the WPF window places the glyph...
+        Assert.Equal(boxRect.X, glyphRect.X, 0.5);                        // left...
         Assert.Equal(boxRect.Center.Y, glyphRect.Center.Y, 0.5);          // ...and vertically centred in the box
         Assert.Equal(global::Avalonia.Media.Stretch.Uniform, Assert.IsType<global::Avalonia.Controls.Shapes.Path>(glyph.Child).Stretch);
         Assert.Equal(9, dotRect.Width, 0.5);                              // the dot sits at the box's top right...

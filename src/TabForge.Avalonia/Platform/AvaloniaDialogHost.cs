@@ -5,7 +5,7 @@ using Avalonia.Controls;
 namespace TabForge.Avalonia.Platform;
 
 /// <summary>
-/// Every modal dialog of the Avalonia app opens through here, the counterpart of the WPF <c>Views/DialogHost</c>.
+/// Every modal dialog of the Avalonia app opens through here.
 /// Esc and Enter come from the dialog's own buttons (<c>IsCancel</c> and <c>IsDefault</c>, which Avalonia binds to the window's keys).
 /// Owns: showing a built dialog modally over its owner and the capture seam. Does not own: building dialogs or reading their answers.
 /// Tests: AvaloniaDialogTests.

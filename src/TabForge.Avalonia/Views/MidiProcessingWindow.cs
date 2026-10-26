@@ -22,7 +22,7 @@ using TabForge.Services;
 namespace TabForge.Avalonia.Views;
 
 /// <summary>
-/// One plug-in's MIDI processing list (the FX chain window's MIDI... button), the twin of the WPF MidiProcessingWindow:
+/// One plug-in's MIDI processing list (the FX chain window's MIDI... button), the MIDI processing window:
 /// a searchable catalog of every processor and every parameter on the left, the ordered list in the middle (tick to enable, move, remove) and the selected
 /// processor's presets, description and parameters on the right, with the log panel while a log processor is on.
 /// Owns: the layout, the list and catalog wiring, the parameter search highlight, the log view and the engine's log watch.

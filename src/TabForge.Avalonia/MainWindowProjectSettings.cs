@@ -13,7 +13,7 @@ using TabForge.Services;
 namespace TabForge.Avalonia;
 
 // Owns: the File.ProjectSettings command (the File menu's Project settings row and the menu-row button): opens the project settings dialog
-//   for the shown song and, on OK, applies the edited credits, tempo, time signature, key, notes and lyrics as one undo step, as WPF does.
+// for the shown song and, on OK, applies the edited credits, tempo, time signature, key, notes and lyrics as one undo step.
 // Does not own: the menu rows (MainMenuTable in Core), the commands table (MainWindowCommands), the dialog and its checks (ProjectSettingsWindow,
 //   ProjectSettingsPresenter), the bar signature rules (BarSignatures in Core).
 // Tests: TabForge.Avalonia.Tests.MainWindowProjectSettingsTests.

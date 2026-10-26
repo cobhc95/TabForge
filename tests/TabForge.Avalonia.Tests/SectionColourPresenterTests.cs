@@ -10,7 +10,7 @@ namespace TabForge.Avalonia.Tests;
 /// <summary>
 /// Owns: characterization of the section colour and section list rules in Core (SectionColourPresenter, SectionListPresenter): family sharing,
 /// collision separation, explicit family colours, tame, family names, the row fills and the bar order.
-/// Does not own: the WPF list or the Avalonia panel (SectionsPanelViewTests).
+/// Does not own: the list or the Avalonia panel (SectionsPanelViewTests).
 /// Tests: this class.
 /// </summary>
 public class SectionColourPresenterTests

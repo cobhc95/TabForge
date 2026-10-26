@@ -23,7 +23,7 @@ using TabForge.Presenters;
 //   again when the window is used after the manager was open. Built-in and hint rows stay plain text.
 // Does not own: the item types each window keeps (they carry per-window payloads: a program index, a Build function, a map tag), what
 //   picking a preset does, or where presets live (IPresetStore). That is why the three item types are not unified here: the row layer
-//   takes a text and a user-name selector instead, the same shape as the WPF PresetRows.
+// takes a text and a user-name selector instead, the same shape.
 // Tests: PresetRowsTests, PresetManagerOpenTests.
 namespace TabForge.Avalonia.Views.Presets;
 

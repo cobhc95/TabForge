@@ -17,6 +17,8 @@ public sealed class GeneralSettings
     public DateTime? LastUpdateCheckUtc { get; set; }
     /// <summary>"gp" (Guitar Pro 7/8 file with the full TabForge project embedded) or "tforge".</summary>
     public string DefaultSaveFormat { get; set; } = "gp";
+    /// <summary>What saving does about audio files outside the song's folder: "Ask" (default), "Always copy" or "Never copy" (see MediaSavePolicy).</summary>
+    public string ExternalMedia { get; set; } = MediaSavePolicy.AskText;
     /// <summary>
     /// Windows integration: open .gp/.gp5/.gpx/.tforge files with TabForge (per-user registration).
     /// Mirrors the registry: read from it at start-up, applied to it on Apply/OK.

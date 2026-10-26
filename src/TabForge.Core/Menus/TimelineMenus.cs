@@ -1,5 +1,5 @@
 ﻿// Owns: the arrangement-timeline right-click menus as data: the bar, loop region, ruler, section and clip menus, and the command each row runs (TimelineCommand).
-//   Does not own: opening the menus or running their commands (the WPF TimelineMenuController, the Avalonia timeline menu).
+// Does not own: opening the menus or running their commands (the Avalonia timeline menu).
 // Tests: SelfTestMenuGolden, SelfTestSelection, SelfTestBarDeleteGuards, SelfTestTimelineClips.
 
 namespace TabForge.Menus;

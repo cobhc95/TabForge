@@ -6,7 +6,7 @@ using Avalonia.Media;
 namespace TabForge.Avalonia.Platform;
 
 // Owns: the soft grey hover shade of interactive controls: the pointer enter and exit wiring, the HoverSurface colour as a brush, and the
-//     hovered bar cell's fill (white on the dark theme, black on the light one, as the WPF arrangement draws it).
+// hovered bar cell's fill (white on the dark theme, black on the light one).
 // Does not own: what a control paints with the shade (each control decides), the theme values (the palette keys).
 // Tests: TransportBarViewTests (the hover fill of a transport button), TimelineHoverTests (the bar cell and the track row).
 // Threads: UI thread only.

@@ -13,7 +13,7 @@ namespace TabForge.Avalonia.Views;
 /// A one-line text prompt: a label, a text box holding the default (selected, focused) and OK / Cancel. Closing returns the typed
 /// text, or null on Cancel / Esc. Enter presses OK.
 /// Owns: the window's controls and reading the text back. Does not own: the wording or what the text means (a presenter such as RepeatSelectionPromptPresenter).
-/// Deviation: the window uses the platform title bar; the WPF prompt (GpDialogs.Prompt) draws the system one.
+/// Deviation: the window uses the platform title bar; the prompt (GpDialogs.Prompt) draws the system one.
 /// Tests: TabForge.Avalonia.Tests.TextPromptWindowTests.
 /// </summary>
 public sealed class TextPromptWindow : Window

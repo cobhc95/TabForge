@@ -127,8 +127,9 @@ public static class SectionLayout
         var end = End(sorted, index, barCount);
         var target = Math.Clamp(boundary, min, max);
         if (target == (rightEdge ? end : start)) return false;
+        Freeze(project);   // explicit lengths first: a neighbour with an implied length would otherwise stretch into the bars this edge frees
         if (rightEdge) marker.LengthBars = target - start;
-        else { marker.LengthBars = end - target; marker.MeasureIndex = target; }
+        else { marker.LengthBars = Math.Max(1, end - target); marker.MeasureIndex = target; }
         Normalize(project);
         return true;
     }

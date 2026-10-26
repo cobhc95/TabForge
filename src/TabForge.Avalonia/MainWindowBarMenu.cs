@@ -12,7 +12,7 @@ namespace TabForge.Avalonia;
 
 // Owns: the Bar menu rows that move the cursor (First bar, Last bar, Go to a bar number or section title), the three bar edits (Empty bar,
 //   Triplet feel, Clef), Score information (the song's credits and texts dialog) and the screen reader rows (the cursor's bar and position
-//   announced on the status notice), bound to the shown score as the WPF Bar menu does.
+// announced on the status notice), bound to the shown score.
 // Does not own: the menu rows (MainMenuTable in Core), the commands table (MainWindowCommands), the edits (ScorePreviewEditor, the palette tool
 //   gp:triplet_feel), the dialog (ScoreInfoWindow).
 // Tests: TabForge.Avalonia.Tests.MainWindowMenuTests (every row of the Bar menu is handled or disabled).

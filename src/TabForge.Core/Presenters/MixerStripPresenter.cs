@@ -1,4 +1,4 @@
-// Owns: the Mixer strip rules that need no WPF types: the pan range text, the semitone text and range of the pitch and transpose steppers, the pan and volume fader mapping, the
+// Owns: the Mixer strip rules that need no toolkit types: the pan range text, the semitone text and range of the pitch and transpose steppers, the pan and volume fader mapping, the
 //       MIDI sound enabled rule, a strip's accessible name with its mute and solo state, the Master labels and the empty-song message.
 // Does not own: the rows, sliders and buttons (the views in Views/MixerWindow*.cs), the meters, the strip order (TrackOrdering.Layout)
 //       and the edits the sliders make.

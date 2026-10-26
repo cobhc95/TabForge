@@ -127,7 +127,7 @@ internal sealed class MainWindowAudioDrop
     }
 
     /// <summary>Shows the affordance: the Add track strip's shade/words for a strip drop, the target lane's track-colour shade and
-    /// the landing block for a track drop (a new track or lane gets its slot too), as the WPF ghost previews in the target's colour.</summary>
+    /// the landing block for a track drop (a new track or lane gets its slot too).</summary>
     private void Preview(ArrangementView arrangement, AudioDropHit hit, IReadOnlyList<string> usable)
     {
         arrangement.AddTrackBar.DropActive = usable.Count > 0 && hit.Kind == AudioDropHitKind.Strip;
@@ -162,7 +162,7 @@ internal sealed class MainWindowAudioDrop
     private string _lengthsKey = "";
     private (ArrangementView Arrangement, AudioDropHit Hit, IReadOnlyList<string> Usable)? _previewed;
 
-    // The first hover of a drag measures the files' lengths off the UI thread (a header read each, as the WPF session measures on entry):
+    // The first hover of a drag measures the files' lengths off the UI thread (a header read each):
     // the preview refines from the one-bar estimate to the real span when each arrives, and the drop re-measures with the song's context.
     private void EnsureMeasured(ArrangementView arrangement, IReadOnlyList<string> usable)
     {

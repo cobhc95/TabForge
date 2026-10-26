@@ -75,7 +75,7 @@ public sealed class TrackPillButton : ToggleButton
     /// <summary>True when the capsule still shows this track's name and colour, so the strip need not rebuild it.</summary>
     public bool Shows(string name, string colourHex) => TrackName == name && ColourHex == colourHex;
 
-    /// <summary>The idle colours of a capsule (panel fill, soft outline, the normal text colour as WPF's idle capsules), for the strip that holds capsules to add to its styles; it
+    /// <summary>The idle colours of a capsule (panel fill, soft outline, the normal text colour), for the strip that holds capsules to add to its styles; it
     /// matches only an idle capsule, so the look's hover, press and checked states (app styles, further from the capsule) still show.</summary>
     public static Style IdleLook()
     {

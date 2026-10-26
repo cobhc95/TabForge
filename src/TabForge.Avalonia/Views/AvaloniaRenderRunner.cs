@@ -19,10 +19,10 @@ using TabForge.Services;
 namespace TabForge.Avalonia.Views;
 
 /// <summary>What the Render dialog hands over: the compiled song, the range in song milliseconds and the files to write.</summary>
-public sealed record RenderPlan(ScoreTimeline Timeline, double StartMs, double EndMs, string? MasterFile, IReadOnlyDictionary<TrackModel, string> Stems);
+public sealed record RenderPlan(ScoreTimeline Timeline, double StartMs, double EndMs, string? MasterFile, IReadOnlyDictionary<TrackModel, string> Stems, SongProject? Project = null);
 
 // Owns: the Avalonia side of File > Render: the request the shared RenderJob (Core) runs, built from the song, the dialog's plan and the
-//   shared audio settings as the WPF RenderWindow builds it; stopping the song's playback first, re-syncing its engine after, and the
+// shared audio settings; stopping the song's playback first, re-syncing its engine after, and the
 //   question about plug-ins that did not load.
 // Does not own: the render (RenderJob, the engine), the dialog's controls and plan (RenderWindow), the engine routing (EngineSongSync, AvaloniaPlaybackSessions).
 // Tests: TabForge.Avalonia.Tests.RenderParityTests.
@@ -42,11 +42,11 @@ public sealed class AvaloniaRenderRunner
     /// <summary>The engine renders run through; null when the window has none (Render then says it needs the audio engine).</summary>
     public AudioEngineClient? Engine => _playback.Engine;
 
-    /// <summary>The request the WPF dialog builds for the same song, plan and settings (master level from the audio settings).</summary>
+    /// <summary>The request the dialog builds for the same song, plan and settings (master level from the audio settings).</summary>
     public static RenderRequest Request(SongProject project, RenderPlan plan, RenderSettings settings, PluginSettings plugins, int masterPercent,
         Action? restore, Func<IReadOnlyList<string>, Task<bool>>? confirmIncomplete) => new()
     {
-        Project = project, Plugins = plugins, MasterPercent = masterPercent, Settings = settings, Timeline = plan.Timeline,
+        Project = plan.Project ?? project, Plugins = plugins, MasterPercent = masterPercent, Settings = settings, Timeline = plan.Timeline,
         StartMs = plan.StartMs, EndMs = plan.EndMs, MasterFile = plan.MasterFile, Stems = plan.Stems, Restore = restore, ConfirmIncomplete = confirmIncomplete,
     };
 

@@ -64,7 +64,7 @@ public static class DialogLauncher
         return result(window);
     }
 
-    /// <summary>An owned dialog shows no taskbar button of its own (WPF parity: one taskbar entry, the owner's).</summary>
+    /// <summary>An owned dialog shows no taskbar button of its own (one taskbar entry, the owner's).</summary>
     private static void PrepareOwned(Window window) => window.ShowInTaskbar = false;
 
     /// <summary>

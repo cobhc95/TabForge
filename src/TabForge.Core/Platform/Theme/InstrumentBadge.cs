@@ -96,7 +96,7 @@ public sealed record InstrumentBadge(BadgeShape? Background, IReadOnlyList<Badge
 /// <summary>A badge shape: <see cref="Matrix"/> maps its own units into the badge's; paints are null when absent.</summary>
 public sealed record BadgeShape(SvgGeometry Geometry, BadgeMatrix Matrix, UiColor? Fill, UiColor? Stroke, double StrokeWidth, bool RoundCaps, bool RoundJoins, bool EvenOdd);
 
-/// <summary>A 2D affine matrix in the row-vector convention (x' = x*M11 + y*M21 + OffsetX), the one the WPF and Avalonia matrices use.</summary>
+/// <summary>A 2D affine matrix in the row-vector convention (x' = x*M11 + y*M21 + OffsetX), the one Avalonia's matrices use.</summary>
 public readonly record struct BadgeMatrix(double M11, double M12, double M21, double M22, double OffsetX, double OffsetY)
 {
     public static readonly BadgeMatrix Identity = new(1, 0, 0, 1, 0, 0);

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 namespace TabForge.Platform;
 
 /// <summary>
-/// The running application as a port: shared resources, open windows, shutdown. The WPF adapter is <c>Platform/Wpf/WpfAppServices</c> (<c>Ui.App</c>).
+/// The running application as a port: shared resources, open windows, shutdown. The adapter is the Avalonia app services (<c>Ui.App</c>).
 /// Owns: the application-access contract. Does not own: the windows themselves.
 /// Tests: UiThreadTests.
 /// </summary>

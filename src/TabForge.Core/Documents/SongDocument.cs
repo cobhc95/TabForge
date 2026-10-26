@@ -92,6 +92,8 @@ public class SongDocument : IEditableDocument
 
     /// <summary>This song's one selection: its tab keeps it while another tab is shown, and a tab moved to another window takes it along.</summary>
     public SelectionModel Selection { get; } = new();
+    /// <summary>View-layer objects that belong to this song and live and die with it (the floating plug-in sets); the core never reads them.</summary>
+    public List<object> ViewAttachments { get; } = new();
 
     /// <summary>This song's timeline bar highlight (grey cells): a view state kept with the song while another tab shows, restored by undo and redo, never saved in the file.</summary>
     public BarHighlight Highlight { get; } = new();

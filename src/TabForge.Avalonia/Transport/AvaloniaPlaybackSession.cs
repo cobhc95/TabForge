@@ -69,7 +69,7 @@ public sealed class AvaloniaPlaybackSession : IDisposable
     public event Action? PlayStarting;
 
     /// <summary>Reports the song position to the audio engine's song transport: the engine's audio clips only play while their song
-    /// is told playing with its position (the WPF SongClock's anchors). Null keeps positions local. Set by the sessions host.</summary>
+    /// is told playing with its position. Null keeps positions local. Set by the sessions host.</summary>
     public Action<bool, double, double>? ReportEnginePosition { get; set; }
 
     /// <summary>The routed MIDI output the engine plays through (the document's MIDI routes are set on it); null when the engine has none.</summary>
@@ -131,7 +131,7 @@ public sealed class AvaloniaPlaybackSession : IDisposable
         _clock.Update(_transport);
         SyncState();
         PlayheadBarChanged?.Invoke();
-        // The engine's song transport stops where the song was (the WPF clock's Stopped): the cleared playhead reads 0 afterwards.
+        // The engine's song transport stops where the song was: the cleared playhead reads 0 afterwards.
         if (wasActive) Anchor(false, sec);
     }
 
@@ -143,7 +143,7 @@ public sealed class AvaloniaPlaybackSession : IDisposable
         _transport.Seek(_project(), bar, cell);
         _clock.Update(_transport);
         PlayheadBarChanged?.Invoke();
-        // A playing song jumps there at once (the WPF clock's jump anchor): the transport's playhead fields have no seconds yet.
+        // A playing song jumps there at once: the transport's playhead fields have no seconds yet.
         if (_transport.IsPlaying && !_transport.StartPending)
         {
             var song = _project();
@@ -297,7 +297,7 @@ public sealed class AvaloniaPlaybackSession : IDisposable
             preferences.CountInAccentNote = notes.AccentNote;
             preferences.CountInClickNote = notes.ClickNote;
         });
-        // Every later start takes the same settings (the engine's options are replaced at each start), as the WPF transport's BuildOptions does.
+        // Every later start takes the same settings (the engine's options are replaced at each start).
         _transport.SetStartTuning(options =>
         {
             options.CountIn = options.CountIn && (!audio.CountInOnlyAtSongStart || options.StartBar == 0);
@@ -312,7 +312,7 @@ public sealed class AvaloniaPlaybackSession : IDisposable
         });
     }
 
-    // The section count-in plays only while the count-in is on, as the WPF transport sets it.
+    // The section count-in plays only while the count-in is on.
     private void ApplyLoopPreferences()
     {
         if (_audio is not { } audio) return;
@@ -321,7 +321,7 @@ public sealed class AvaloniaPlaybackSession : IDisposable
     }
 
     /// <summary>A section moved while this song plays: the playing song takes the new order from the next bar (no restart),
-    /// as the WPF section move does. Nothing when this song is not playing.</summary>
+    /// as the section move does. Nothing when this song is not playing.</summary>
     /// <summary>Tracks deleted while this song plays fall silent at once; nothing when it is not playing.</summary>
     internal void SilenceTracks(IReadOnlyCollection<Guid> removed)
     {
@@ -399,7 +399,7 @@ public sealed class AvaloniaPlaybackSession : IDisposable
         TryStartAfterCountIn();
     }
 
-    // The engine's song position follows the transport's playhead (the WPF SongClock's anchors): a new anchor on a play-state
+    // The engine's song position follows the transport's playhead: a new anchor on a play-state
     // change or a drift past the threshold, so the engine's audio clips start, follow jumps and stop with the song. Nothing while
     // the start is still compiling (the playhead is held at the old position): the first real frame anchors it. Never per frame.
     private bool? _reportedPlaying = false;
@@ -407,7 +407,7 @@ public sealed class AvaloniaPlaybackSession : IDisposable
     private long _reportedStamp;
     private double _reportedSpeed = PlaybackTransport.DefaultSpeed;
 
-    /// <summary>A play-state change or drift the engine has not been told yet, in song seconds (the WPF clock's 25 ms anchor rule).</summary>
+    /// <summary>A play-state change or drift the engine has not been told yet, in song seconds.</summary>
     private const double AnchorDriftSec = 0.025;
 
     private void ReportPosition()

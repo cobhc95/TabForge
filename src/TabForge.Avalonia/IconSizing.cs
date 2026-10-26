@@ -22,7 +22,7 @@ internal static class IconSizing
         try { ui.Post(() => app.Resources[Key] = size); }   // off the UI thread: the write happens there
         catch (Exception ex) when (ex is InvalidOperationException or NullReferenceException)
         {
-            System.Diagnostics.Debug.WriteLine("IconSizing: no UI dispatcher, icon size not applied");
+            Trace.Write("IconSizing", "no UI dispatcher, icon size not applied");
         }
     }
 

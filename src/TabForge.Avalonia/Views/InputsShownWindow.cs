@@ -17,7 +17,7 @@ namespace TabForge.Avalonia.Views;
 // Owns: the "Inputs shown" dialog of the Audio settings: one row per input of the running device, with a tick for the track input
 //       pickers (Recording) and one for the live input menu (Live input), kept per device name in PluginSettings.HiddenInputs.
 // Does not own: the list of inputs and the filtering (Core AudioInputs), or the Settings window's copy and baseline (PreferencesWindow.Buttons.cs
-//       writes what this returns). The copy and apply rules repeat the WPF InputsShownDialog, which stays as the WPF reference.
+// writes what this returns). The copy and apply rules repeat the rules of the inputs-shown dialog.
 // Tests: TabForge.Avalonia.Tests.PreferencesSettingsTransferTests.
 public sealed class InputsShownWindow : Window
 {

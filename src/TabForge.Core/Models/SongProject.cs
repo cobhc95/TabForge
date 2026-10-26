@@ -133,9 +133,19 @@ public enum TrackKind
     Audio = 5
 }
 
+/// <summary>How the score pane shows a track: <see cref="Auto"/> (MIDI tracks and takes in the piano roll, tab tracks in the score) or the user's choice.</summary>
+public enum TrackEditorView
+{
+    Auto = 0,
+    Score = 1,
+    PianoRoll = 2,
+}
+
 public sealed class TrackModel
 {
     public Guid Id { get; set; } = Guid.NewGuid();
+    /// <summary>A view-layer object that belongs to this track and dies with it (the floating plug-in set); never saved, the core never reads it.</summary>
+    [JsonIgnore] public object? ViewAttachment { get; set; }
     public string Name { get; set; } = "Guitar";
     public TrackKind Kind { get; set; } = TrackKind.Guitar;
     /// <summary>True for an audio track (clips only, see <see cref="TrackKind.Audio"/>).</summary>
@@ -195,6 +205,9 @@ public sealed class TrackModel
     public bool RecordArm { get; set; }
     /// <summary>Audio input used when armed: see <see cref="AudioInputs"/>.</summary>
     public string AudioInput { get; set; } = AudioInputs.Input1;
+    /// <summary>Names of the MIDI input devices ticked for this track; their messages are merged for monitoring and recording next to <see cref="AudioInput"/>. Empty: none (older songs).</summary>
+    public List<string> MidiInputs { get => _midiInputs; set => _midiInputs = value ?? new(); }
+    private List<string> _midiInputs = new();
     /// <summary>While armed: listen to the input live through the track (on by default). Off: it is still recorded and metered.</summary>
     public bool MonitorInput { get; set; } = true;
     /// <summary>Tint this track's row and lane with its colour (Settings sets the strength).</summary>
@@ -208,6 +221,12 @@ public sealed class TrackModel
     /// <summary>Set on a track added from a startup template (FX window "Add as a track on startup"): it is left out of the saved file.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? StartupTemplateId { get; set; }
+    /// <summary>How the score pane shows this track (score or piano roll), saved in the song; Auto (not written) picks by the track's content.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public TrackEditorView EditorView { get; set; }
+    /// <summary>The piano roll's key strip shows note names (a drum track's drum names) instead of piano keys; saved in the song.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool PianoRollNoteNames { get; set; }
     /// <summary>Mixer group chosen for this track; null = by instrument.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? MixerGroup { get; set; }
@@ -217,6 +236,9 @@ public sealed class TrackModel
     /// <summary>Runtime only: the bus chain this stand-in edits (null for real tracks).</summary>
     [JsonIgnore] public BusChain? Bus { get; set; }
     [JsonIgnore] public bool IsBus => BusSlot >= 0;
+
+    /// <summary>A shallow copy (lists shared until replaced); a render of a selection swaps the copy's measures and clips.</summary>
+    public TrackModel ShallowCopy() => (TrackModel)MemberwiseClone();
 }
 
 public sealed class MeasureModel

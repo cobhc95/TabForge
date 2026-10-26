@@ -130,7 +130,7 @@ public class TimelineAudioClipTests
         TimelineAudioClips.DrawRow(draw, key => AvaloniaPalette.Get(key, false), view, track, song.Tracks.Count - 1,
             view.LaneBandTopOf(song.Tracks.Count - 1), AvaloniaPalette.Get("InstrumentAccent", false));
 
-        // The WPF fill (0.34): the same-colour waveform stays readable over it.
+        // The fill (0.34): the same-colour waveform stays readable over it.
         var expectedAlpha = (byte)Math.Round(255 * 0.34);
         Assert.Contains(draw.Rects, r => r.Fill is { } fill && fill.A == expectedAlpha);
         Assert.Contains(draw.Texts, t => t.Text == "Take");

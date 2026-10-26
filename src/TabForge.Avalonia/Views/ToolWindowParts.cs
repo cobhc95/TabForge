@@ -59,7 +59,7 @@ public static class ToolWindowParts
         return row;
     }
 
-    /// <summary>A titled group as the WPF GroupBox (App.xaml): a raised header band with a semibold title over a panel body, both in the general border with 4 DIP corners. The header's name is the header text, so tests find each group.</summary>
+    /// <summary>A titled group as the GroupBox (App.xaml): a raised header band with a semibold title over a panel body, both in the general border with 4 DIP corners. The header's name is the header text, so tests find each group.</summary>
     public static Border Group(string header, Control content)
     {
         var title = new TextBlock

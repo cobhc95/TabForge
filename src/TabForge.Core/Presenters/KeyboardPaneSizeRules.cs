@@ -6,7 +6,7 @@ namespace TabForge.Presenters;
 //   tall, kept within 60-120 DIPs), the pane height limits that follow (the keys' inset above and below, and the height a pane's width alone allows),
 //   and the white key count of each keyboard size.
 // Does not own: the keys' drawing and hit tests (InstrumentPanelView, KeyboardGeometryRules), the pane's layout and its dock clamp (InstrumentPanelStrip,
-//   DockWorkspaceView). The WPF KeyboardPaneSizing keeps the same numbers for the WPF panel; this file is the Core copy the Avalonia panel reads.
+// DockWorkspaceView). This file is the Core copy of the numbers the Avalonia panel reads.
 // Tests: TabForge.Avalonia.Tests.InstrumentPanelViewTests.
 public static class KeyboardPaneSizeRules
 {

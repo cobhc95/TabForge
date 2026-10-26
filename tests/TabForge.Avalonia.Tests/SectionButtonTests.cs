@@ -63,7 +63,7 @@ public class SectionButtonTests
     }
 
     private static Point StripPoint(Rig rig, int section) =>
-        rig.Arrangement.Timeline.TranslatePoint(new Point(rig.Arrangement.Timeline.SectionSlots()[section].Left + 8, rig.Arrangement.Timeline.SectionSlots()[section].Top + 6), rig.Window)!.Value;
+        rig.Arrangement.Timeline.TranslatePoint(new Point(rig.Arrangement.Timeline.SectionSlots()[section].Left + 24, rig.Arrangement.Timeline.SectionSlots()[section].Top + 6), rig.Window)!.Value;
 
     private static Border[] Rows(SectionsPanelView panel) =>
         panel.GetVisualDescendants().OfType<Border>().Where(b => b.Child is Grid && b.CornerRadius == new CornerRadius(2)).ToArray();

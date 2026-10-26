@@ -26,7 +26,7 @@ public interface IScoreClipboard
 /// <summary>
 /// The one score clipboard (design 3.8): builds clips from a track range (<see cref="CaptureBars"/>, <see cref="CaptureBeats"/>,
 /// <see cref="CaptureSelection"/>), writes them to the system clipboard when it can, and reads them back as untrusted input.
-/// The last clip is always kept in memory, so copy/paste keeps working when the system clipboard is unavailable. No WPF here
+/// The last clip is always kept in memory, so copy/paste keeps working when the system clipboard is unavailable. No UI toolkit here
 /// (the Windows adapter is composed by the application at start-up, see <see cref="Compose"/>); UI thread only (the Windows clipboard needs STA).
 /// </summary>
 public sealed class ClipboardService

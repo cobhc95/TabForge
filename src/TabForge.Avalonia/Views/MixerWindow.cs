@@ -22,7 +22,7 @@ using TabForge.Services;
 namespace TabForge.Avalonia.Views;
 
 /// <summary>
-/// The Mixer (Tools > Mixer…), the twin of the WPF MixerWindow: the grouping choice, the
+/// The Mixer (Tools > Mixer…), the mixer window: the grouping choice, the
 /// track-list options, the column headers, the Master row, then one panel per group (a group row and its track strips) in the
 /// TrackOrdering.Layout order. Each track strip has its colour, name, FX power, MIDI sound, pitch, pan, volume with a meter, and
 /// mute / solo. Values change the song in place; the preview has no engine, so the meters show a static sample level and the FX,
@@ -35,7 +35,7 @@ namespace TabForge.Avalonia.Views;
 /// </summary>
 public sealed partial class MixerWindow : Window
 {
-    /// <summary>The column headers, as WPF: name | FX | MIDI | pitch | pan | volume | mute and solo.</summary>
+    /// <summary>The column headers: name | FX | MIDI | pitch | pan | volume | mute and solo.</summary>
     public static readonly string[] ColumnNames = { "TRACK / GROUP", "FX", "MIDI", "PITCH", "PAN", "VOLUME", "" };
 
     /// <summary>The top of the chorus and reverb send sliders (the MIDI controller range 0-127).</summary>

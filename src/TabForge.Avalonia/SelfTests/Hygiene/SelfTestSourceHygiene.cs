@@ -10,9 +10,9 @@ namespace TabForge;
 
 public static partial class SelfTest
 {
-    private static readonly string[] HygieneExtensions = { ".cs", ".xaml", ".ps1", ".cmd", ".md" };
-    private static readonly HashSet<string> HygieneSkippedFolders =
-        new(StringComparer.OrdinalIgnoreCase) { "bin", "obj", "build", "dist", "third_party", "Tabs", "backup", "work", "TabForge Avalonia" };   // plus every dot-folder (tool data, other checkouts), see EnumerateHygieneFiles
+    private static readonly IReadOnlyList<string> HygieneExtensions = new[] { ".cs", ".xaml", ".ps1", ".cmd", ".md" };
+    private static readonly IReadOnlySet<string> HygieneSkippedFolders =
+        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "bin", "obj", "build", "dist", "third_party", "Tabs", "backup", "work", "TabForge Avalonia" };   // plus every dot-folder (tool data, other checkouts), see EnumerateHygieneFiles
 
     /// <summary>Every control character (char.IsControl: 0x00-0x1F and 0x7F-0x9F) except tab, LF and CR.</summary>
     private static readonly System.Buffers.SearchValues<char> StrayControlCharacters = System.Buffers.SearchValues.Create(
@@ -162,7 +162,7 @@ public static partial class SelfTest
 
     private static string? _publicMirror;
 
-    private static readonly string[] PublicRootEntries = { "src", "tests", "tools", "native", "vendor", "installer", "samples", ".github", "LICENSE", "Directory.Build.props", "global.json", "TabForge.sln", "nuget.config" };
+    private static readonly IReadOnlyList<string> PublicRootEntries = new[] { "src", "tests", "tools", "native", "vendor", "installer", "samples", ".github", "LICENSE", "Directory.Build.props", "global.json", "TabForge.sln", "nuget.config" };
 
     /// <summary>A root document of the public tree links relative to the repository root; in the mirror it sits in Source/docs, so its link targets are moved back.</summary>
     private static string PrivateRelativeLinks(string markdown) =>

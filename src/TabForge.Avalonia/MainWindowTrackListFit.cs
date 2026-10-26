@@ -1,4 +1,4 @@
-// Owns: sizing the timeline pane of the main window to its track rows (the WPF "Auto-resize track list to fit" default): the rows' height, capped by the Core
+// Owns: sizing the timeline pane of the main window to its track rows (the "Auto-resize track list to fit" default): the rows' height, capped by the Core
 //   rule, applied when the dock is laid out or resized.
 // Does not own: the fit maths (DockSizeRules.TrackListHeight), the split drawing (DockSplitPanel) or the saved layout (UserRatio keeps the saved ratio).
 // Tests: TabForge.Avalonia.Tests.MainWindowDockParityTests, TabForge.Avalonia.Tests.TrackListLaunchFitTests.
@@ -40,7 +40,7 @@ internal sealed class MainWindowTrackListFit
     }
 
     /// <summary>
-    /// The height that shows the header and every row, capped like the WPF fit; with "Auto-resize track list to fit" off, the saved split comes back.
+    /// The height that shows the header and every row, capped like the fit; with "Auto-resize track list to fit" off, the saved split comes back.
     /// A splitter the user dragged keeps its place until the next song, tab or layout is shown (<see cref="FitReplacingUserSplit"/>).
     /// When the dock's split is not laid out yet, the fit re-posts on the UI thread's next turns until it applies (a rebuild settles over
     /// several passes) or the attempts run out, so one early turn never leaves the pane unfitted.
@@ -85,10 +85,37 @@ internal sealed class MainWindowTrackListFit
         timeline.LayoutUpdated += FitOnce;
     }
 
+    /// <summary>
+    /// After a track was armed or disarmed: grows the pane just enough to show the rows with the armed sub-row (never past the fit's cap, never
+    /// shrinking a taller pane, the user's dragged splitter included) and scrolls the track's row into view. Disarming gives the height back only
+    /// while the splitter is still where this growth put it.
+    /// </summary>
+    public void GrowForArm(int row)
+    {
+        if (_arrangement() is not { } arrangement) return;
+        var timeline = arrangement.Timeline;
+        var collapsed = arrangement.TopBandHeight + TimelineView.RulerHeight + TimelineView.SectionHeight + timeline.BaseRowHeight + 2;
+        var needed = DockSizeRules.TrackListHeight(arrangement.NaturalHeight, _view.Bounds.Height, ScoreKeepHeight, collapsed, TrackListMaxShare);
+        var current = arrangement.Bounds.Height;
+        if (current > 0 && current < needed - 1)
+        {
+            var before = _grownFrom ?? current;
+            if (_dock.FitPanelHeight(PanelId, needed, replaceUserSplit: true)) _grownFrom = before;
+        }
+        else if (_grownFrom is { } prior && needed <= prior + 1)
+        {
+            _dock.FitPanelHeight(PanelId, prior, replaceUserSplit: false);   // refused when the user moved the splitter since: it stays
+            _grownFrom = null;
+        }
+        _uiThread.Post(() => timeline.EnsureRowVisible(row), UiPriority.Background);
+    }
+
+    private double? _grownFrom;   // the pane height before the arm grew it; null when the pane was not grown (or the user took over)
+
     /// <summary>Fits once; false when the split could not be fitted yet (not laid out).</summary>
     private bool FitNow()
     {
-        if (!_enabled()) { _dock.RestorePanelHeight(PanelId); return true; }
+        if (!_enabled()) { if (_grownFrom is null) _dock.RestorePanelHeight(PanelId); return true; }
         if (_arrangement() is not { } arrangement) return true;
         var timeline = arrangement.Timeline;
         var collapsed = arrangement.TopBandHeight + TimelineView.RulerHeight + TimelineView.SectionHeight + timeline.BaseRowHeight + 2;

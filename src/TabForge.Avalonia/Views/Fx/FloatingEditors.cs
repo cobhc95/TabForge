@@ -33,8 +33,9 @@ public static class FloatingEditors
 
         public void Add(PluginSlot slot, SongDocument? document, IFxChainEngine? engine, bool onTop)
         {
+            if (!ReferenceEquals(Document, document)) Document?.ViewAttachments.Remove(this);
             (Document, Engine, OnTop) = (document, engine, onTop);
-            if (_slots.Add(slot) && !All.Contains(this)) All.Add(this);
+            if (_slots.Add(slot) && document is not null && !document.ViewAttachments.Contains(this)) document.ViewAttachments.Add(this);
         }
 
         public bool Remove(PluginSlot slot)
@@ -44,15 +45,12 @@ public static class FloatingEditors
             return removed;
         }
 
-        public void Clear() { _slots.Clear(); All.Remove(this); Hidden = false; }
+        public void Clear() { _slots.Clear(); Document?.ViewAttachments.Remove(this); Hidden = false; }
     }
 
-    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<TrackModel, Set> ByTrack = new();
-    private static readonly List<Set> All = new();
+    public static Set Of(TrackModel track) => track.ViewAttachment as Set ?? (Set)(track.ViewAttachment = new Set(track));
 
-    public static Set Of(TrackModel track) => ByTrack.GetValue(track, t => new Set(t));
-
-    private static List<Set> OfSong(SongDocument song) => All.Where(s => ReferenceEquals(s.Document, song)).ToList();
+    private static List<Set> OfSong(SongDocument song) => song.ViewAttachments.OfType<Set>().ToList();
 
     /// <summary>Closes the windows of the song's floating plug-ins and forgets them (the song's tab closes).</summary>
     public static void CloseSong(SongDocument song)

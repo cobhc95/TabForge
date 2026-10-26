@@ -8,7 +8,7 @@ using TabForge.Services;
 namespace TabForge.Avalonia.Platform.Controls;
 
 /// <summary>
-/// The outline glyphs of the settings rail, as the WPF rail draws them: one idea per category, on a 24 x 24 grid, one line weight that does not
+/// The outline glyphs of the settings rail: one idea per category, on a 24 x 24 grid, one line weight that does not
 /// scale with the icon. Categories without a glyph of their own get the Advanced glyph (three sliders).
 /// Owns: the glyph geometry and the category-to-glyph choice. Does not own: the colour (<see cref="SettingsNavigationIconView"/>) or the rail row.
 /// Tests: TabForge.Avalonia.Tests.PreferencesWindowTests.

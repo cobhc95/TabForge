@@ -11,7 +11,7 @@ using Xunit;
 namespace TabForge.Avalonia.Tests;
 
 // Owns: the section menu's rows map to handled command ids; Delete section removes the section's bars; Add section here, Rename / recolour and
-//   Paste section (title and colour back) change the song as WPF does.
+// Paste section (title and colour back) change the song.
 // Does not own: the menu's contents (TimelineMenus) or the bar moves (SectionReorderService).
 // Tests: this file.
 public sealed class TimelineSectionMenuTests

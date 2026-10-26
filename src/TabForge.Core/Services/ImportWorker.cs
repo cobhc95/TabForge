@@ -214,7 +214,7 @@ public static class ImportWorker
         return ProjectService.RestoreTransferBytes(result);
     }
 
-    /// <summary>Worker process entry (<c>--import-worker &lt;pipe&gt; &lt;parent id&gt; &lt;token&gt;</c>): one request, one reply, then exit. No WPF, no settings.</summary>
+    /// <summary>Worker process entry (<c>--import-worker &lt;pipe&gt; &lt;parent id&gt; &lt;token&gt;</c>): one request, one reply, then exit. No UI toolkit, no settings.</summary>
     public static int Run(string[] args)
     {
         if (args.Length < 2 || !args[1].StartsWith(PipePrefix, StringComparison.Ordinal) || args[1].Length > PipePrefix.Length + 32) return 2;

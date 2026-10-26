@@ -10,7 +10,7 @@ using TabForge.Services;
 namespace TabForge.Avalonia.Views;
 
 /// <summary>
-/// The "update available" window, the Avalonia twin of the WPF UpdateAvailableWindow: the same texts, buttons and
+/// The "update available" window, the Avalonia window for it: the same texts, buttons and
 /// defaults, all read from UpdateAvailablePresenter. The preview runs no update check, so it opens on <see cref="SampleRelease"/>.
 /// Opening the download page needs the full app: its button says so on the status line and changes nothing.
 /// Owns: the layout, the controls and their event wiring. Does not own: the texts and button rules (UpdateAvailablePresenter), the

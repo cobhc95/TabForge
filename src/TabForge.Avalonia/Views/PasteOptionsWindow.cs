@@ -16,7 +16,7 @@ using TabForge.Avalonia.Views.Dialogs;
 namespace TabForge.Avalonia.Views;
 
 /// <summary>
-/// The combined paste dialog, the twin of the WPF PasteOptionsDialog: its own title row ("Paste" and a close cross, the
+/// The combined paste dialog, the paste options dialog: its own title row ("Paste" and a close cross, the
 /// window has no platform title bar), one group of options per question (the recommended one picked) each with its own "Remember my
 /// choice" box, and a footer with Paste (default) and Cancel. Closing returns the answers, or null when the paste is cancelled.
 /// Owns: the window's controls, the title-row drag and reading the controls back. Does not own: the order, labels, words or answers
@@ -27,7 +27,7 @@ namespace TabForge.Avalonia.Views;
 /// </summary>
 public sealed class PasteOptionsWindow : Window
 {
-    // The card's inset from the window edge, the root margin of the WPF PasteOptionsDialog.
+    // The card's inset from the window edge, the root margin of the paste options dialog.
     private const double CardInset = 12;
     private readonly PasteOptionsPresenter _presenter;
     private readonly Dictionary<PasteQuestion, (RadioButton[] Options, CheckBox Remember)> _groups = new();

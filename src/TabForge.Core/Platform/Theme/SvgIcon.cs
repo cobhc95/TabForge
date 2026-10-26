@@ -12,11 +12,11 @@ namespace TabForge.Platform.Theme;
 // Owns: reading one bundled icon SVG into a toolkit-free model (the frame panel's colours and border; shapes as path data, ellipses or
 //       rectangles with their rotation, paints and stroke width; texts with font, size, weight, anchor and rotation), and the light-theme
 //       shading every icon is drawn with (ForTheme, FrameFill).
-// Does not own: drawing (WPF SvgIconView and WpfSvgGeometry; Avalonia AvaloniaSvgIcon), the lookup of an icon by name, or any cache.
-// Tests: SvgIconTests (full suite) pins the WPF output of this reader; TabForge.Avalonia.Tests.SvgIconTests pins the Avalonia side.
+// Does not own: drawing (Avalonia AvaloniaSvgIcon), the lookup of an icon by name, or any cache.
+// Tests: SvgIconTests (full suite) pins the output of this reader; TabForge.Avalonia.Tests.SvgIconTests pins the Avalonia side.
 public sealed record SvgIcon(UiColor PanelTop, UiColor PanelBottom, UiColor Border, IReadOnlyList<SvgShape> Shapes, IReadOnlyList<SvgText> Texts)
 {
-    // The SVG reader keeps the icon's own colours; the WPF and Avalonia painters decide what to draw with them.
+    // The SVG reader keeps the icon's own colours; the painters decide what to draw with them.
     private const string SvgNone = "none";
     private const string SvgCurrentColour = "currentColor";
 
@@ -232,7 +232,7 @@ public sealed record SvgShape(SvgGeometry Geometry, SvgRotation? Rotation, SvgPa
 public enum SvgTextAnchor { Start, Middle, End }
 
 /// <summary>
-/// A text element. <see cref="Colour"/> is the colour the SVG gives it; the icon colour is drawn instead, as the WPF icon does, so it only
+/// A text element. <see cref="Colour"/> is the colour the SVG gives it; the icon colour is drawn instead, so it only
 /// reaches the model for inspection. <see cref="Weight"/> is the CSS weight, 400 or 600.
 /// </summary>
 public sealed record SvgText(string Text, double X, double Y, string FontFamily, double FontSize, int Weight, SvgTextAnchor Anchor,

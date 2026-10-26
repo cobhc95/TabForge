@@ -9,7 +9,7 @@ using TabForge.Presenters;
 
 namespace TabForge.Avalonia.Platform;
 
-/// <summary>The WPF `ArrangementPanel.TintColour` rule on plain colours: same maths, so both apps tint a row alike. Pure; any thread.</summary>
+/// <summary>The `ArrangementPanel.TintColour` rule on plain colours: same maths, so both apps tint a row alike. Pure; any thread.</summary>
 public static class TrackRowTint
 {
     private const double DarkThemeDarken = 0.35;
@@ -28,7 +28,7 @@ public static class TrackRowTint
         return new Rgba(Dark(tamed.R), Dark(tamed.G), Dark(tamed.B), (byte)Math.Round(255 * strength));
     }
 
-    /// <summary>How much of the full ink the dimming removes at 100 percent (the WPF muted-row opacity: 1 - 0.9 * dim).</summary>
+    /// <summary>How much of the full ink the dimming removes at 100 percent (the muted-row opacity: 1 - 0.9 * dim).</summary>
     private const double MutedDimReach = 0.9;
 
     /// <summary>The alpha of a muted track's ink: 255 at 0 percent dimming, falling to 10 percent of it at 100.</summary>

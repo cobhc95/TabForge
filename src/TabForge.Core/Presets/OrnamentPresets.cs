@@ -5,10 +5,10 @@ namespace TabForge.Presets;
 /// <summary>A built-in preset of the trill, grace-note or harmonic editor: its name and its values by editor key.</summary>
 public sealed record OrnamentPreset(string Name, IReadOnlyDictionary<string, double> Values);
 
-// Owns: the built-in number presets of the trill, grace-note and harmonic editors, the one list both the WPF and the Avalonia editors show.
-// Does not own: the user's presets (AppSettings.EffectPresets, WPF EffectPresetStore), the dialogs, or what the keys mean (EffectValuesPresenter).
+// Owns: the built-in number presets of the trill, grace-note and harmonic editors, the one list the editors show.
+// Does not own: the user's presets (AppSettings.EffectPresets), the dialogs, or what the keys mean (EffectValuesPresenter).
 // Key: none (static data). Ceiling: fixed lists. Thread: read-only after the static initialiser.
-// Tests: none dedicated(WPF list), TabForge.Avalonia.Tests.OrnamentEditorFlowTests.
+// Tests: none dedicated, TabForge.Avalonia.Tests.OrnamentEditorFlowTests.
 public static class OrnamentPresets
 {
     // Trill: Step (frets above the note), Speed (16/32/64). Grace: Step, Dead, Before (1 before the beat), Speed, Dynamic (0..7, -1 keeps the

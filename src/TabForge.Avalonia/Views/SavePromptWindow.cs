@@ -17,7 +17,7 @@ namespace TabForge.Avalonia.Views;
 /// box, and Yes / No (/ Cancel). Y and N answer as their buttons do, and Esc answers Cancel.
 /// Owns: building the window from a SavePrompt (its title, question and button tooltips), the key routing, and the answer it records.
 /// Does not own: what each answer means (SavePromptPresenter.Answer, or the caller for the discard question), or showing it (AvaloniaDialogHost).
-/// Deviation: the window uses the platform title bar, so its close box answers Cancel; the WPF window draws its own title bar and × button.
+/// Deviation: the window uses the platform title bar, so its close box answers Cancel; the window draws its own title bar and × button.
 /// Tests: TabForge.Avalonia.Tests.CommandPaletteSavePromptTuningTests.
 /// </summary>
 public sealed class SavePromptWindow : Window

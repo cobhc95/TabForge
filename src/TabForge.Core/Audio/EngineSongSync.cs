@@ -4,7 +4,7 @@ namespace TabForge.Audio;
 
 // Owns: bringing the engine's chains, clips and levels in line with one song (availability, auto GM sound, live input master, the sync),
 //   the part of the routing every host and the render share.
-// Does not own: the MIDI routes and the transport bars a host's playback adds (AudioRouting in WPF, AvaloniaEngineRouting), the render (RenderJob).
+// Does not own: the MIDI routes and the transport bars a host's playback adds (AvaloniaEngineRouting), the render (RenderJob).
 // Tests: TabForge.Avalonia.Tests.RenderParityTests.
 /// <summary>The engine sync of a song, without MIDI routes: what File > Render applies before it renders, in either app.</summary>
 public static class EngineSongSync

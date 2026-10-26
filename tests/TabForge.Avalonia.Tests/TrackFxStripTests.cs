@@ -178,7 +178,7 @@ public class TrackFxStripTests
         number.Measure(Size.Infinity);
         Assert.True(number.Bounds.Width >= number.DesiredSize.Width - 0.5, "the number is squeezed");
         Assert.True(number.TranslatePoint(new Point(number.Bounds.Width, 0), combo)!.Value.X <= combo.Bounds.Width - 10, "the number runs under the arrow");
-        Assert.Contains("100 ms", (string)ToolTip.GetTip(combo)!);
+        Assert.Contains("100 ms", ((TextBlock)ToolTip.GetTip(combo)!).Text);
         window.Close();
     }
 

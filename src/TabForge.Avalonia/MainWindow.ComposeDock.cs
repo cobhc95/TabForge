@@ -58,6 +58,7 @@ public sealed partial class MainWindow
         public AvaloniaFileDialogs Dialogs = null!;
         public TabWindowRegistry Registry = null!;
         public MainWindowSaving Saving = null!;
+        public MainWindowMediaCollect Media = null!;
         public MainWindowTabs Songs = null!;
         public ViewTempoBarView ViewTempo = null!;
         public MainWindowTempoBar TempoBar = null!;
@@ -66,6 +67,7 @@ public sealed partial class MainWindow
         public MainWindowStatusBar StatusBarCreated = null!;
         public MainWindowDocumentPanes Panes = null!;
         public ScrollViewer Score = null!;
+        public EditorPaneSwitch EditorPane = null!;   // the score pane's slot: the score or the piano roll of the selected track
         public ToolsPaneView Tools = null!;
         public ToolsPaneView Structure = null!;
         public ToolsPaneView Rhythm = null!;
@@ -105,8 +107,9 @@ public sealed partial class MainWindow
         var dialogs = new AvaloniaFileDialogs();
         var registry = windows ?? new TabWindowRegistry(new AppServices(playback?.Trust ?? new TabForge.Plugins.PluginTrust()));   // the windows song tabs move between, and the state they share (autosave, degraded mode)
         Func<SavePrompt, Task<PromptButton>> askSave = async prompt => { var ask = new SavePromptWindow(prompt); await ask.ShowDialog(this); return ask.Result; };
+        var media = new MainWindowMediaCollect(this, dialogs, settings, topBar, showStatus);
         var saving = new MainWindowSaving(dialogs, this, showStatus, SongPluginStates.ForEngine(playback?.Engine, () => settings?.Settings.Plugins.MonitorFx),
-            () => (settings?.Settings ?? SettingsDefaults.Fallback()).General.DefaultSaveFormat, askSave, () => registry.Degraded);
+            () => (settings?.Settings ?? SettingsDefaults.Fallback()).General.DefaultSaveFormat, askSave, () => registry.Degraded, media.Step);
         var songs = new MainWindowTabs(initial, askSave, saving.Save, tabs, Width - CaptionButtons.ReservedWidth, settings?.Settings, showStatus, playback, TabForge.Audio.WaveformCache.Default, saving.WhenIdle);
         songs.EffectiveThemeIsLight = () => ActualThemeVariant == global::Avalonia.Styling.ThemeVariant.Light;
         ActualThemeVariantChanged += (_, _) => songs.RefreshDefaultPaper();
@@ -121,6 +124,7 @@ public sealed partial class MainWindow
         d.Dialogs = dialogs;
         d.Registry = registry;
         d.Saving = saving;
+        d.Media = media;
         d.Songs = songs;
         d.ViewTempo = viewTempo;
         d.TempoBar = tempoBar;
@@ -187,22 +191,26 @@ public sealed partial class MainWindow
         var rhythm = new ToolsPaneView(scorePreview, PaletteToolCatalog.RhythmTab);
         var layout = new ToolsPaneView(scorePreview, PaletteToolCatalog.LayoutTab);
         var setup = new DockPaneSetup();
+        // The score pane holds the score or the piano roll of the selected track (per track, saved in the song).
+        var editorPane = new EditorPaneSwitch(score, scorePreview, songs, panes, d.Playback, settings, () => this, showStatus);
         // The dock rebuilds its tree on every change: the one score view moves to the new editor host; arrangement/band/instrument are reused (Detached/Shared).
-        setup.RegisterEditor(() => DockPaneSetup.Detached(score));
+        setup.RegisterEditor(() => DockPaneSetup.Detached(editorPane.Host));
         var timelineSettings = new TimelineSettingsBinding(settings?.Settings ?? SettingsDefaults.Fallback(), shown => d.Dock?.SetPanelVisible("timeline", shown), () => d.TrackListFit?.Fit());
         // One wiring per arrangement (replace, not append): a rebuilt arrangement drops the previous
         // track-list fit before taking it, so a repeated creation never stacks duplicate fits.
         ArrangementView? fittedArrangement = null;
         void FitTrackList() => d.TrackListFit?.Fit();
+        void GrowForArm(int row) => d.TrackListFit?.GrowForArm(row);
         Action<ArrangementView> onArrangement = arrangement =>
         {
             timelineSettings.Attach(arrangement);
             statusBarCreated.View.SetTimelineScrollBar(arrangement.FooterScrollBar);
             if (!ReferenceEquals(fittedArrangement, arrangement))
             {
-                if (fittedArrangement is not null) fittedArrangement.TrackRowsCountChanged -= FitTrackList;
+                if (fittedArrangement is not null) { fittedArrangement.TrackRowsCountChanged -= FitTrackList; fittedArrangement.TrackArmChanged -= GrowForArm; }
                 fittedArrangement = arrangement;
                 arrangement.TrackRowsCountChanged += FitTrackList;
+                arrangement.TrackArmChanged += GrowForArm;
             }
             MainWindowGlobalTuning.BindTransport(arrangement.Transport, songs, this, showStatus);
         };
@@ -210,9 +218,10 @@ public sealed partial class MainWindow
         subscriptions.Add(() =>
         {
             panes.ArrangementCreated -= onArrangement;
-            if (fittedArrangement is not null) fittedArrangement.TrackRowsCountChanged -= FitTrackList;
+            if (fittedArrangement is not null) { fittedArrangement.TrackRowsCountChanged -= FitTrackList; fittedArrangement.TrackArmChanged -= GrowForArm; }
         });
         d.Score = score;
+        d.EditorPane = editorPane;
         d.Tools = tools;
         d.Structure = structure;
         d.Rhythm = rhythm;
@@ -359,12 +368,14 @@ public sealed partial class MainWindow
         compose.TempoBar = tempoBar;
         compose.Dialogs = dialogs;
         compose.Saving = saving;
+        compose.Media = d.Media;
         compose.Registry = registry;
         compose.Workspace = workspace;
         compose.ScorePreview = scorePreview;
         compose.ContextMenus = contextMenus;
         compose.TrackListFit = d.TrackListFit;
         compose.Score = score;
+        compose.EditorPane = d.EditorPane;
         compose.Tools = tools;
         compose.Structure = structure;
         compose.Rhythm = rhythm;

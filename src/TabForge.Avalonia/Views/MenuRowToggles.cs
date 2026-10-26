@@ -33,14 +33,14 @@ public static class MenuRowToggles
     /// <summary>The toggle's one border template part, the outline the lit state paints.</summary>
     private const string OutlinePartName = "Bd";
 
-    /// <summary>The lit state's palette keys and outline width: the WPF toolbar's checked colours (AccentSoftBrush over AccentBrush).</summary>
+    /// <summary>The lit state's palette keys and outline width: the toolbar's checked colours (AccentSoftBrush over AccentBrush).</summary>
     private const string LitFillKey = "SelectedTint", LitEdgeKey = "SelectedOutline", LitHoverKey = "AccentSoft";
     private const double LitOutlineWidth = 1;
 
     /// <summary>One toggle: its command id, tooltip and the icon path data (IconGeometry; 24 x 24 or 16 x 16 grid, drawn uniform at 14 px).</summary>
     public sealed record Toggle(string CommandId, string ToolTip, string IconData);
 
-    /// <summary>The toggles in order; null is a separator. Icon data is the WPF menu row's own path data.</summary>
+    /// <summary>The toggles in order; null is a separator. Icon data is the menu row's own path data.</summary>
     public static readonly IReadOnlyList<Toggle?> Items = new Toggle?[]
     {
         new("View.SidePanel", "Show / hide the side panel (tools, sections, practice)", IconGeometry.SidePanel),

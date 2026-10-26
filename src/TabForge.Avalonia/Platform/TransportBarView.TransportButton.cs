@@ -19,7 +19,7 @@ namespace TabForge.Avalonia.Platform;
 
 /// <summary>
 /// The transport bar's drawn controls: the 1 DIP divider between the playback group and the toggles, and one button (a 34 DIP playback/mixer button
-/// or a 26 x 17 zoom button) drawn through IDrawContext in the WPF playbar colours, with its hover, pressed, lit and playing glow states.
+/// or a 26 x 17 zoom button) drawn through IDrawContext in the playbar colours, with its hover, pressed, lit and playing glow states.
 /// Owns: the TransportButton and Divider controls.
 /// Does not own: the bar's layout, wiring, lit state, tooltips and background (TransportBarView.cs).
 /// Tests: TabForge.Avalonia.Tests.TransportBarViewTests.
@@ -79,13 +79,13 @@ public sealed partial class TransportBarView
         /// <summary>Runs when a left press lands on an enabled button; null when the button is not wired.</summary>
         public Action? Pressed { get; set; }
 
-        /// <summary>Runs when a right press lands on an enabled button (the WPF right-click settings); null when the button has none.</summary>
+        /// <summary>Runs when a right press lands on an enabled button (the right-click settings); null when the button has none.</summary>
         public Action? SecondaryPressed { get; set; }
 
         /// <summary>True for a button that works without a bound session (the tuning fork, the snap magnet); the session never disables it.</summary>
         public bool Local { get; set; }
 
-        /// <summary>True while a toggle is on: it takes the accent border, and the loop lit fill for the loop button (WPF TransportButtonStyle, active).</summary>
+        /// <summary>True while a toggle is on: it takes the accent border, and the loop lit fill for the loop button.</summary>
         public bool Lit { get; set; }
 
         /// <summary>True while the song plays: the Play button shows its pause bars and takes the active glow.</summary>
@@ -143,7 +143,7 @@ public sealed partial class TransportBarView
         {
             var light = ActualThemeVariant == ThemeVariant.Light;
             var d = _draw.Use(context);
-            // Unavailable buttons keep the WPF transport's full brightness (the Core Disabled dim of Looks/App.json is not applied here); unlit toggles take 0.78 on dark (WPF TransportButtonStyle).
+            // Unavailable buttons keep the transport's full brightness (the Core Disabled dim of Looks/App.json is not applied here); unlit toggles take 0.78 on dark.
             d.PushOpacity(!IsEnabled && Item.Toggle && !light ? 0.78 : 1);
             var accent = GlowAccent(light);
             var hovered = _hovered && IsEnabled && accent is null;

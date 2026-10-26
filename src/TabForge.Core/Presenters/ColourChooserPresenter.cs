@@ -1,6 +1,6 @@
 // Owns: the colour chooser's logic without UI types: the colour being chosen as RGBA, the preset rows (with the optional Default row first),
 //       which preset row the colour matches, the hex text for the colour, and the slider conversions (hue, saturation, brightness).
-// Does not own: the window, the preset dropdown, swatches, sliders and hex box, the live preview, the OK and Cancel result, or WPF colours.
+// Does not own: the window, the preset dropdown, swatches, sliders and hex box, the live preview, the OK and Cancel result, or toolkit colours.
 // Tests: no dedicated test class.
 using TabForge.Models;
 

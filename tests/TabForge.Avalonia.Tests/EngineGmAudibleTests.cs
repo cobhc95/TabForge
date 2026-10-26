@@ -96,7 +96,7 @@ public class EngineGmAudibleTests
         }
     }
 
-    /// <summary>Every chain the sync requested has acknowledged its generation (as the WPF render waits for them).</summary>
+    /// <summary>Every chain the sync requested has acknowledged its generation.</summary>
     private static bool ChainsReady(AudioEngineClient client)
     {
         var readiness = new ChainReadiness(client.RequestedChains);

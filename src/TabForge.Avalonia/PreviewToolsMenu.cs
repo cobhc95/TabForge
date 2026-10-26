@@ -138,7 +138,7 @@ public static class PreviewToolsMenu
         entries.Add(new("Snap / grid settings…", () => new SnapSettingsWindow(new SnapSettings(), () => { }).ShowDialog(owner)));
         entries.Add(new("Save song with audio settings…", () => DialogLauncher.Ask<PluginSaveWindow, string?>(owner, () => new PluginSaveWindow("song.gp"))));
         entries.Add(new("Save plug-in preset…", () => OpenPluginPreset(owner)));
-        entries.Add(new("Track input…", () => AudioInputPicker.SampleWindow().ShowDialog(owner)));
+        entries.Add(new("Track input…", () => AudioInputPicker.SampleWindow(AvaloniaUiThread.ForApplication(), TabForge.Audio.MidiInputCapture.DeviceNames).ShowDialog(owner)));
         // The preview has no View menu yet, so the Band view opens from here on the demo song.
         entries.Add(new("Dock preview…", () => new Views.Docking.DockPreviewWindow().Show(owner)));
         entries.Add(new("Band view…", () => new BandWindow(new TabForge.Documents.SongDocument(() => null) { Project = DemoSongFactory.Create() }).Show(owner)));

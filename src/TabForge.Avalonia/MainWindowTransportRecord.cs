@@ -31,8 +31,9 @@ public static class MainWindowTransportRecord
     /// <param name="panes">The document panes; each arrangement's track arm toggles, armed-row edits and input meter are hooked, the first one included.</param>
     /// <returns>The window's recording state; disposing it (the window closed) ends a recording in progress and detaches the hooks.</returns>
     internal static RecordingPresenter.RecordingSession Register(MainWindowCommands commands, MainWindowDocumentPanes panes, AvaloniaPlaybackSessions? playback, MainWindowTabs songs,
-        Action<string> showStatus, Func<PluginSettings> plugins) =>
-        new RecordingPresenter(commands, panes, playback, songs, showStatus, plugins, MeterFraction).Register();
+        Action<string> showStatus, Func<PluginSettings> plugins, Func<TabForge.Services.SnapSettings?>? snap = null,
+        Action<TabForge.Avalonia.Features.Recording.Presenter.LiveTakes>? rollLive = null) =>
+        new RecordingPresenter(commands, panes, playback, songs, showStatus, plugins, MeterFraction, snap, rollLive).Register();
 
     /// <summary>A linear input peak (0..1) as the armed row meter's fraction (0..1): the live strip's dB curve, one source of truth for both meters.</summary>
     private static double MeterFraction(double peak) => LiveStripRules.MeterFraction(LiveStripRules.PeakToDb(peak));

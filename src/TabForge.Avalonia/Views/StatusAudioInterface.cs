@@ -8,7 +8,7 @@ namespace TabForge.Avalonia.Views;
 // Owns: the state of the status bar's audio interface button in the Avalonia app, which is always shown: the running output's text (from
 //   AudioDeviceStatusPresenter) while the engine reports one, else the configured interface (driver, device and sample rate from the settings),
 //   with the latency and buffer of the engine's last report in this session. The idle text uses the same "Driver: Device (ms · kHz · smp)" form.
-// Does not own: the button and its look (StatusBarView), the running text's rules (AudioDeviceStatusPresenter, shared with WPF and not changed
+// Does not own: the button and its look (StatusBarView), the running text's rules (AudioDeviceStatusPresenter, shared and not changed
 //   here), the engine (AudioEngineClient), the settings (PluginSettings).
 // Tests: TabForge.Avalonia.Tests.StatusBarAudioInterfaceTests.
 // Thread: UI thread only. Cache: the last report's latency and buffer, one value, replaced at each running report and kept after the engine stops.

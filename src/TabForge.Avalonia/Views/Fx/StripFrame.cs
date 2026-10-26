@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Avalonia;
 using Avalonia.Controls;
@@ -27,9 +28,9 @@ public abstract class StripFrame : Border
     }
 
     /// <summary>Puts these groups in the strip's wrapping panel, in order.</summary>
-    protected void Fill(IEnumerable<Control> groups)
+    protected void Fill(IEnumerable<Control> groups, LiveCentsBar? flex = null)
     {
-        var panel = new WrapPanel { Name = "LiveStripGroups", Orientation = Orientation.Horizontal, ItemSpacing = ChromeMetrics.LiveStripGroupGap, LineSpacing = ChromeMetrics.LiveStripGap };
+        var panel = new FlexWrapPanel(flex) { Name = "LiveStripGroups", Orientation = Orientation.Horizontal, ItemSpacing = ChromeMetrics.LiveStripGroupGap, LineSpacing = ChromeMetrics.LiveStripGap };
         foreach (var group in groups) panel.Children.Add(group);
         Child = panel.WithMargin(ChromeMetrics.LiveStripInset, ChromeMetrics.LiveStripRowInset, ChromeMetrics.LiveStripInset, ChromeMetrics.LiveStripRowInset);
     }
@@ -40,7 +41,7 @@ public abstract class StripFrame : Border
         var groups = new List<Control> { Group(captionGroup, caption, meters) };
         if (options is not null) groups.Add(options);
         groups.AddRange(new Control[] { tuner, tuner.Controls, knobs, knobs.Buttons });
-        Fill(groups);
+        Fill(groups, tuner.Scale);
     }
 
     protected static StackPanel Group(string name, params Control[] parts)
@@ -52,4 +53,24 @@ public abstract class StripFrame : Border
 
     protected static TextBlock Caption(string text) =>
         new() { Text = text, FontSize = ChromeMetrics.LiveStripFontSize, VerticalAlignment = VerticalAlignment.Center, [!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted") };
+}
+
+/// <summary>The wrapping panel of a strip: before any group wraps to a second row, the cents scale shrinks (down to its minimum) to take the deficit.</summary>
+internal sealed class FlexWrapPanel : WrapPanel
+{
+    private readonly LiveCentsBar? _flex;
+    public FlexWrapPanel(LiveCentsBar? flex) => _flex = flex;
+
+    protected override Size MeasureOverride(Size availableSize)
+    {
+        if (_flex is not null && !double.IsInfinity(availableSize.Width))
+        {
+            _flex.Fit = ChromeMetrics.LiveStripCentsScaleWidth;
+            var total = 0.0;
+            foreach (var child in Children) { child.Measure(Size.Infinity); total += child.DesiredSize.Width; }
+            total += ItemSpacing * Math.Max(0, Children.Count - 1);
+            _flex.Fit = ChromeMetrics.LiveStripCentsScaleWidth - Math.Max(0, total - availableSize.Width);
+        }
+        return base.MeasureOverride(availableSize);
+    }
 }

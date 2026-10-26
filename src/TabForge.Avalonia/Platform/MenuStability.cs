@@ -11,7 +11,7 @@ using Avalonia.VisualTree;
 
 namespace TabForge.Avalonia.Platform;
 
-// Owns: the pointer timing of menus and submenus so they behave like the WPF ones: a submenu parent opens after OpenDelay, an open
+// Owns: the pointer timing of menus and submenus so they behave like the usual ones: a submenu parent opens after OpenDelay, an open
 //   submenu closes only CloseDelay after the pointer left it (cancelled when the pointer enters the submenu or comes back), and a row of
 //   the parent menu crossed on the way to the open submenu (the pointer is inside the triangle from its last position to the submenu's
 //   near edge) does not switch the submenu.

@@ -28,7 +28,7 @@ public class SongStatsWindowTests
         var window = new SongStatsWindow(project, null);
         window.Show();
 
-        // The WPF window's controls in tree order, written from the WPF app's SongStatsWindow.cs: a Close button, then the heading and the counts.
+        // The window's controls in tree order, written from the app's SongStatsWindow.cs: a Close button, then the heading and the counts.
         var expected = new[]
         {
             ("Button", "Close"),

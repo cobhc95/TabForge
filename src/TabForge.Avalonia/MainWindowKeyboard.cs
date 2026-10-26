@@ -40,7 +40,7 @@ public sealed class MainWindowKeyboard
     private readonly Func<FocusTarget> _focus;
     private readonly EditRouting _routing;
 
-    /// <param name="stopRecording">Ends a recording in progress when Space is pressed (WPF's window key: Space ends a recording before it
+    /// <param name="stopRecording">Ends a recording in progress when Space is pressed (the window key: Space ends a recording before it
     /// pauses); true when one ended. Null: no recording in this window.</param>
     /// <param name="focus">The focus target the last click set (the window's SelectionModel.Focus); null: nothing is focused, so the window table applies.</param>
     /// <param name="routing">The one edit routing table; null makes a private instance (it keeps no state).</param>
@@ -109,7 +109,7 @@ public sealed class MainWindowKeyboard
 
     /// <summary>
     /// Runs Space (Play/Pause, or Play from the start with Shift) before the focused control sees it, so a focused button never takes
-    /// the key as a click. Space also ends a recording first, as WPF's window does. true when the key was used.
+    /// the key as a click. Space also ends a recording first. true when the key was used.
     /// </summary>
     public bool RouteBeforeControls(Key key, KeyModifiers modifiers, object? focused)
     {
@@ -123,7 +123,7 @@ public sealed class MainWindowKeyboard
     private static string? EscapeStopFor(Key key, KeyModifiers modifiers) =>
         key == Key.Escape && modifiers == KeyModifiers.None ? MainWindowTransportMenu.EscapeStopCommand : null;
 
-    /// <summary>Space belongs only to a text box (WPF's text-input rule); Escape to any editing control. The other keys follow the text-box rule.</summary>
+    /// <summary>Space belongs only to a text box (the text-input rule); Escape to any editing control. The other keys follow the text-box rule.</summary>
     private static bool BlockedByFocus(Key key, object? focused, string id) => key switch
     {
         Key.Space => MainWindowEditingFocus.IsTextInput(focused),

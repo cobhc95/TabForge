@@ -4,7 +4,7 @@ namespace TabForge.Presenters;
 public enum RemoveTarget { Nothing, Containers, Plugins }
 
 /// <summary>
-/// The FX chain window's labels, notices and rules that need no WPF types: the window title, the chain switch's label for a bus
+/// The FX chain window's labels, notices and rules that need no toolkit types: the window title, the chain switch's label for a bus
 /// or the monitor, the bar's bypass switch, the notice for the selected plug-in, the CPU status text, the output dB rounding, the Remove rules and when the
 /// GM sound plays again. Every value comes in as a plain flag, count or number.
 /// Owns: those texts and rules.

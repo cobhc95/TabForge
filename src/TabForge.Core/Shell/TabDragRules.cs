@@ -16,7 +16,7 @@ public static class TabDragRules
 {
     public const double DragThreshold = 4;
     /// <summary>How far the pointer may leave the tab strip band (above or below it) before the tab tears off, in DIPs. Shared with the
-    /// WPF shell's tear-off rule, so it keeps the value its own checks use.</summary>
+    /// the old shell's tear-off rule, so it keeps the value its own checks use.</summary>
     public const double TearOffTolerance = 22;
 
     public static bool AcceptsDrop(bool allowCrossWindowMerge, bool isLocalTab) =>

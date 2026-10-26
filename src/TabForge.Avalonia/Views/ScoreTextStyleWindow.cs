@@ -44,7 +44,7 @@ public sealed class ScoreTextStyleWindow : Window
 
     /// <param name="styles">The per-area styles, edited in place.</param>
     /// <param name="fonts">The font names the font box lists after "(inherit)".</param>
-    /// <param name="preview">Called after each change, the way the WPF window redraws the score.</param>
+    /// <param name="preview">Called after each change, the way the window redraws the score.</param>
     /// <param name="recentColours">The persisted recent colour list the pickers share with Preferences; a window-only list when null.</param>
     public ScoreTextStyleWindow(IDictionary<string, ScoreTextAreaStyle> styles, IEnumerable<string> fonts, Action? preview = null, IList<string>? recentColours = null)
     {

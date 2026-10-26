@@ -72,7 +72,7 @@ public sealed class MainWindowFileExports
             Runner is { Engine: not null } runner ? (plan, progress, cancel) => runner.Run(song, plan, _renderSettings, window ?? owner, progress, cancel) : null;
         window = new RenderWindow(project, _renderSettings, hasSelection: _hasSelection(), openVideoExport: () => ShowVideo(song, owner),
             pickFolder: start => _dialogs.PickFolder(new FileDialogOptions { Title = "Choose the render folder", InitialDirectory = start }, owner),
-            run: run, mp3Available: run is null || RenderJob.Mp3Available(), selection: _hasSelection() ? Selection() : null);
+            run: run, mp3Available: run is null || RenderJob.Mp3Available(), selection: _hasSelection() ? Selection() : null, loop: song.Selection.LoopSnapshot(), snip: song.Selection.Snapshot());
         window.ShowDialog(owner);
     }
 

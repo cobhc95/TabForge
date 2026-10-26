@@ -120,7 +120,7 @@ public class BandViewTests
         var lane = MasterLaneRules.Height(MasterLaneRules.Rows(true, false), TimelineView.DefaultRowHeight);
         Assert.Equal(lane, view.Timeline.MasterLaneHeight);
         Assert.Equal(top + lane, view.Timeline.RowTop(0));
-        // The lane is one more row above track 1 (WPF adds it as a grid row); the track rows keep their base height, so the content grows by the lane.
+        // The lane is one more row above track 1; the track rows keep their base height, so the content grows by the lane.
         Assert.Equal(heightBefore + lane, view.Timeline.ContentHeight, 6);
         Assert.Equal(-1, view.Timeline.RowAtY(top + lane - 1));
         Assert.Equal(0, view.Timeline.RowAtY(top + lane + 1));
@@ -150,7 +150,7 @@ public class BandViewTests
         Assert.Equal(TimelineView.SectionLabelWhite, TimelineView.LabelInk(section, background));   // always white; the hairline outline carries the contrast
     }
 
-    // The WPF window draws section labels white, and the taming keeps the well-separated palette colours dark enough for that. A chip the person
+    // The window draws section labels white, and the taming keeps the well-separated palette colours dark enough for that. A chip the person
     // picked exactly skips the taming, and these mid-tone ones (teal, gold, purple, blue) read better with the near-black ink on the dark theme's
     // fill, which is what turned the label black in a dark window: the light theme's WCAG pick, whose dark ink is right on its lighter fills, must
     // not be reached here.

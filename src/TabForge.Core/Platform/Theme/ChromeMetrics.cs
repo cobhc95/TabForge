@@ -12,6 +12,8 @@ public static class ChromeMetrics
 
     /// <summary>The width of each caption icon button (minimise, maximise, and the like).</summary>
     public const double CaptionIconButtonWidth = 40;
+    /// <summary>The Monitor FX headphones glyph box and stroke.</summary>
+    public const double MonitorFxGlyphWidth = 16, MonitorFxGlyphHeight = 14, MonitorFxGlyphStroke = 1.4;
 
     /// <summary>The width of the minimise, maximise and close caption buttons.</summary>
     public const double CaptionSystemButtonWidth = 46;
@@ -31,10 +33,10 @@ public static class ChromeMetrics
     /// <summary>The opacity of the Global Tuning string numbers and offsets.</summary>
     public const double GlobalTuningStringLabelOpacity = 0.7;
 
-    /// <summary>The width of the Settings page rail: the first column of the WPF Settings window (222 DIP).</summary>
+    /// <summary>The width of the Settings page rail: the first column of the Settings window (222 DIP).</summary>
     public const double SettingsRailWidth = 222;
 
-    /// <summary>The height of one Settings rail row: the WPF SettingsNavigationButton height (44 DIP).</summary>
+    /// <summary>The height of one Settings rail row: the navigation button height (44 DIP).</summary>
     public const double SettingsRailRowHeight = 44;
 
     /// <summary>The edge length of the glyph in a Settings rail row (25 DIP).</summary>
@@ -58,23 +60,23 @@ public static class ChromeMetrics
     /// <summary>The gap between the glyph and the page name in a Settings rail row (9 DIP).</summary>
     public const double SettingsRailLabelGap = 9;
 
-    /// <summary>The left and right inset of a Settings rail row around its glyph (16 DIP, the WPF SettingsNavigationButton padding).</summary>
+    /// <summary>The left and right inset of a Settings rail row around its glyph (16 DIP, the navigation button padding).</summary>
     public const double SettingsRailRowInset = 16;
 
-    /// <summary>The width of the accent bar on the selected Settings rail row (3 DIP, the WPF SelectedNavigationButton left border).</summary>
+    /// <summary>The width of the accent bar on the selected Settings rail row (3 DIP, the selected navigation button left border).</summary>
     public const double SettingsRailAccentBarWidth = 3;
 
     /// <summary>The default and minimum size of the Settings window: compact enough for a 1920 x 1080 screen (1040 x 690, minimum 834 x 597 DIP).</summary>
     public const double SettingsWindowWidth = 1040, SettingsWindowHeight = 690, SettingsWindowMinWidth = 834, SettingsWindowMinHeight = 597;
 
-    /// <summary>The band caption above each rail group (BASICS, MUSIC, ...): 11 DIP, indented 18 DIP, 12 DIP above and 4 DIP below, as the WPF caption.</summary>
+    /// <summary>The band caption above each rail group (BASICS, MUSIC, ...): 11 DIP, indented 18 DIP, 12 DIP above and 4 DIP below.</summary>
     public const double SettingsRailCaptionFontSize = 11, SettingsRailCaptionIndent = 18, SettingsRailCaptionTop = 12, SettingsRailCaptionBottom = 4;
 
     /// <summary>The Song info (Project settings) window: 660 x 600 DIP, minimum 540 x 460.</summary>
     public const double SongInfoWindowWidth = 660, SongInfoWindowHeight = 600, SongInfoWindowMinWidth = 540, SongInfoWindowMinHeight = 460;
     /// <summary>The Song info window's label column: the field labels on the left, the editors in the column to their right.</summary>
     public const double SongInfoLabelColumn = 120;
-    /// <summary>The Settings "Reset page…" link: 12 DIP left and 6 DIP above, so it sits on the title row, at 12 DIP text, as the WPF ResetPageButton.</summary>
+    /// <summary>The Settings "Reset page…" link: 12 DIP left and 6 DIP above, so it sits on the title row, at 12 DIP text.</summary>
     public const double SettingsResetPageMarginLeft = 12, SettingsResetPageMarginTop = 6, SettingsResetPageFontSize = 12;
 
     /// <summary>The family of the drawn text of custom-painted controls (track rows, mixer buttons).</summary>
@@ -94,7 +96,7 @@ public static class ChromeMetrics
     public const double LiveStripHeight = 28, LiveStripCorner = 6, LiveStripGap = 4, LiveStripGroupGap = 10, LiveStripRowInset = 1, LiveStripInset = 6, LiveStripFontSize = 11;
 
     /// <summary>The live strip's parts: the caption, the two-bar meter, the note name, the cents scale (fixed width), the cents text, the Tuner toggle, the window dropdown (its width is its longest item plus the chrome), a slider label and a mini slider.</summary>
-    public const double LiveStripMeterWidth = 40, LiveStripMeterBar = 4, LiveStripNoteWidth = 36, LiveStripNoteFontSize = 15, LiveStripCentsScaleWidth = 200,
+    public const double LiveStripMeterWidth = 40, LiveStripMeterBar = 4, LiveStripNoteWidth = 36, LiveStripNoteFontSize = 15, LiveStripCentsScaleWidth = 200, LiveStripCentsScaleMinWidth = 120, LiveStripTipMaxWidth = 240,
         LiveStripCentsTextWidth = 44, LiveStripTunerToggleWidth = 40, LiveStripWindowPad = 4, LiveStripWindowChrome = 44, LiveStripSliderLabelWidth = 26, LiveStripSliderWidth = 54, LiveStripToggleWidth = 23, LiveStripControlHeight = 22;
 
     /// <summary>How often (ms) the strip's cents text may change.</summary>

@@ -13,7 +13,7 @@ using TabForge.Avalonia.Views.Dialogs;
 namespace TabForge.Avalonia.Views;
 
 /// <summary>
-/// The track's custom drum map (twin of the WPF DrumMapWindow): for every GM percussion sound the TAB line, the TAB text,
+/// The track's custom drum map (the drum map window): for every GM percussion sound the TAB line, the TAB text,
 /// the staff position and the notehead, starting from the track's current mapping; "Reset from" refills every row from a preset.
 /// Owns: building the rows and returning the edited entries on OK. Does not own: the rows' data and choices (Core CustomDrumMapRows),
 /// applying the map (DrumMaps.Apply in TrackPropertiesWindow), or the MIDI drum map files (NoteMaps/DrumMapEditorWindow).

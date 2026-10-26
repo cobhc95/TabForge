@@ -1,5 +1,5 @@
 ; TabForge installer (Inno Setup 7). Built by Source\tools\Package-Release.ps1, which passes the version and
-; the publish folder:  ISCC.exe /DAppVersion=0.8.0 /DFileVersion=0.8.0.0 /DSourceDir=..\..\build\TabForge Source\installer\TabForge.iss
+; the publish folder:  ISCC.exe /DAppVersion=0.8.1 /DFileVersion=0.8.1.0 /DSourceDir=..\..\build\TabForge Source\installer\TabForge.iss
 #ifndef AppVersion
   #define AppVersion "0.0.0-dev"
 #endif

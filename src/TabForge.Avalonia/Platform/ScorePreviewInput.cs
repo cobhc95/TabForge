@@ -129,7 +129,7 @@ internal sealed class ScorePreviewInput
             e.Handled = true;
             return;
         }
-        // Avalonia's key names are the hotkey catalogue's (R, OemPeriod, D1...), as WPF's are.
+        // Avalonia's key names are the hotkey catalogue's (R, OemPeriod, D1...).
         if (!_view.Editor.Key(AvaloniaEditorKeys.ToEditorKey(e.Key), e.Key.ToString(), mods.HasFlag(KeyModifiers.Control), mods.HasFlag(KeyModifiers.Shift), mods.HasFlag(KeyModifiers.Alt))) return;
         _view.ResumeFollow();
         _view.InvalidateVisual();

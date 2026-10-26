@@ -18,7 +18,7 @@ using TabForge.Services;
 namespace TabForge.Avalonia.Views.NoteMaps;
 
 /// <summary>
-/// The drum map editor, the twin of the WPF DrumMapEditorWindow: the map drop-down with New and Duplicate,
+/// The drum map editor, the drum map editor window: the map drop-down with New and Duplicate,
 /// the name, the remap list (one row per drum the song's map names, with the note it is sent as and the note it is heard as),
 /// Show only changed, the count of changed notes, and Save / Cancel.
 /// Owns: building the rows, refreshing the changed rows and the count, and saving the checked draft through the Core draft.

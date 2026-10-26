@@ -32,7 +32,7 @@ internal sealed class ArrangementTrackRows
         _setMaxHeight = setMaxHeight;
         Source = new ArrangementRowSource(timeline, header);
         Source.RowsCountChanged += () => RowsCountChanged?.Invoke();
-        Armed = new ArmedRowLayer(timeline, header, document, AvaloniaUiThread.ForApplication(), meterTick);
+        Armed = new ArmedRowLayer(timeline, header, document, AvaloniaUiThread.ForApplication(), meterTick, TabForge.Audio.MidiInputCapture.DeviceNames);
         Bar = new TrackRowScrollBar(timeline);
     }
 

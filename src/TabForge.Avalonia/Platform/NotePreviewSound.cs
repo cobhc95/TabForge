@@ -11,7 +11,7 @@ namespace TabForge.Avalonia.Platform;
 // Tests: TabForge.Avalonia.Tests.FretboardNoteAuditionTests.
 // Threads: UI thread only; the audition is fire-and-forget and reports its own failures through the editor's notice line.
 
-/// <summary>Auditions each note the score editor reports, the way the WPF editor does on a typed or clicked note.</summary>
+/// <summary>Auditions each note the score editor reports, the way the editor does on a typed or clicked note.</summary>
 internal sealed class NotePreviewSound
 {
     private readonly Func<AvaloniaPlaybackSessions?> _playback;

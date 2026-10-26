@@ -346,6 +346,7 @@ internal sealed partial class ScoreToMidiCompiler
         var index = 0;
         foreach (var note in ordered)
         {
+            if (note.Silent) { index++; continue; }   // muted in the piano roll: written in the tab, never played
             EmitNote(track, trackIndex, voiceIndex, playBar, cellIndex, cell, note, onset + index * spreadStep, noteMs, slotMs);
             index++;
         }

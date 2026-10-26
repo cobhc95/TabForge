@@ -42,6 +42,10 @@ public sealed class PluginSettings
     /// earlier (use it when recordings sound late), negative later. -1000..1000; 0 by default.
     /// </summary>
     public int RecordingOffsetMs { get; set; }
+    /// <summary>Recording over a MIDI clip: false = the take gets a new lane (default); true = its notes merge into the clip underneath.</summary>
+    public bool MergeMidiTakes { get; set; }
+    /// <summary>Snap recorded MIDI note starts to the current snap grid when the take lands (off keeps the raw timing).</summary>
+    public bool QuantizeMidiInput { get; set; }
     /// <summary>ASIO: use the driver's inputs (recording and monitoring).</summary>
     public bool AsioInputsEnabled { get; set; } = true;
     /// <summary>ASIO: first input channel (0-based).</summary>

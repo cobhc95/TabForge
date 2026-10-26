@@ -11,8 +11,8 @@ using TabForge.Services;
 namespace TabForge.Avalonia;
 
 // Owns: the FX cells of the arrangement's track rows. The FX part opens that row's track FX chain window (MainWindowTrackFxKeys.OpenChain,
-//   as WPF FxSplitButton.OpenChain does). The power part switches the row's track between its plug-in chain and Windows MIDI as one undoable
-//   step (as WPF MixerHost.ToggleTrackChain does), then syncs the engine and repaints the header cell, which is drawn from the track's sound source.
+//   as the FX split button's OpenChain does). The power part switches the row's track between its plug-in chain and Windows MIDI as one undoable
+// step, then syncs the engine and repaints the header cell, which is drawn from the track's sound source.
 // Does not own: the windows (FxChainWindow), the cell geometry and art (TrackRowCells, TrackHeaderColumn), the engine sync (AvaloniaPlaybackSessions),
 //   the mixer's FX buttons (MixerWindow), the bypass of single plug-ins (FxChainWindow).
 // Tests: TabForge.Avalonia.Tests.MainWindowTrackFxCellsTests.

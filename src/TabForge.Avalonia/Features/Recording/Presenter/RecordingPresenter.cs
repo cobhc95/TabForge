@@ -17,7 +17,7 @@ using TabForge.Services;
 namespace TabForge.Avalonia.Features.Recording.Presenter;
 
 // Owns: the Transport.Record command (the Record button and its hotkey): it starts the shown song's playback and records its armed tracks
-//   through the engine (TransportRecording in Core) into the song's Media folder (MediaFolders); pressed again it ends the recording and stops the playback, as the WPF app does,
+// through the engine (TransportRecording in Core) into the song's Media folder (MediaFolders); pressed again it ends the recording and stops the playback,
 //   and leaves the cursor and transport at the playhead where recording stopped. The same stop is offered to the transport (Stop, Space/PlayPause, Esc) through the returned
 //   RecordingSession, and every arrangement's Record button shows the recording state. Closing the window releases its engine hooks and ends a
 //   recording in progress. While recording, each write passes the live takes to every arrangement's overlay; each finished take lands on its
@@ -27,7 +27,8 @@ namespace TabForge.Avalonia.Features.Recording.Presenter;
 //   (LiveTakes), the playback sessions and engine (AvaloniaPlaybackSessions), the commands table (MainWindowCommands).
 // Tests: TabForge.Avalonia.Tests.TransportRecordingTests, MidiTakeCaptureTests, CountInRecordingTests, RecordingBatchOneTests, RecordingLiveTakeTests.
 internal sealed partial class RecordingPresenter(MainWindowCommands commands, MainWindowDocumentPanes panes, AvaloniaPlaybackSessions? playback,
-    MainWindowTabs songs, Action<string> showStatus, Func<PluginSettings> plugins, Func<double, double> meterFraction)
+    MainWindowTabs songs, Action<string> showStatus, Func<PluginSettings> plugins, Func<double, double> meterFraction,
+    Func<SnapSettings?>? snap = null, Action<LiveTakes>? rollLive = null)
 {
     /// <summary>The command id of Transport.Record (the Record button runs it too).</summary>
     public const string CommandId = "Transport.Record";
@@ -82,11 +83,13 @@ internal sealed partial class RecordingPresenter(MainWindowCommands commands, Ma
     /// <returns>The window's recording state; disposing it (the window closed) ends a recording in progress and detaches the hooks.</returns>
     internal RecordingSession Register()
     {
-        var hooks = new EngineHooks(playback?.Engine, songs, showStatus)
+        EngineHooks? created = null;   // the live-take overlay callback below reads its Live
+        var hooks = created = new EngineHooks(playback?.Engine, songs, showStatus)
         {
             InputPeakOf = track => playback?.Engine is { } engine ? engine.InputPeakOf(track) : 0,
-            LiveChanged = () => panes.Arrangement?.Timeline.RefreshLiveTakes(),
-            // A landed take is a clip edit too: compact its empty lanes and sync the engine down the normal path (WPF ClipsChanged).
+            LiveChanged = () => { panes.Arrangement?.Timeline.RefreshLiveTakes(); rollLive?.Invoke(created!.Live); },
+            MidiOptions = () => new MidiRecordOptions(plugins().MergeMidiTakes, plugins().QuantizeMidiInput && snap?.Invoke() is { } grid ? grid.Grid : null),
+            // A landed take is a clip edit too: compact its empty lanes and sync the engine down the normal path.
             ClipLanded = song => panes.Arrangement?.Timeline.ClipEdited?.Invoke(song),
             // The rows must always show a landed take's lanes and pass stacks, even if no clip-refresh hook is attached.
             RowsReload = song =>
@@ -168,8 +171,6 @@ internal sealed partial class RecordingPresenter(MainWindowCommands commands, Ma
         private AvaloniaPlaybackSession? _liveSession;
         private TrackModel[] _liveTracks = Array.Empty<TrackModel>();
         private Func<double, double>? _liveToSong;
-        private Func<double, double>? _recordToSong;
-        private Func<double, double>? _landingToSong;   // a stopped recording's mapping, kept until its takes land (they arrive asynchronously)
         private UndoSnapshot? _landingBase;              // the state the stop began from: every take of that stop joins this one undo step
         private (double Start, double End)? _landingLoop; // the stopped recording's loop, kept for its later take files
         private double _landingSpeed = 1;                // the stopped recording's playback speed (the file length times it is song time)
@@ -204,12 +205,12 @@ internal sealed partial class RecordingPresenter(MainWindowCommands commands, Ma
             {
                 if (_released) return;
                 RemoveLiveTake(track);   // the real clip replaces the live box as it lands
-                // A take recorded while the song played is stamped on the playing timeline: place it on the song clock.
-                // The mapping, loop and speed are those of the recording that produced the take (its files arrive after the stop).
-                var toSong = _landingPending ? _landingToSong : _recordToSong;
+                // The engine stamps the take on its song clock, which the session feeds in performed song seconds (EngineSongSec):
+                // it is never mapped again (a second timeline-to-song mapping shifted a take recorded mid-song by its start).
+                // The loop and speed are those of the recording that produced the take (its files arrive after the stop).
                 var loop = _landingPending ? _landingLoop : Recording?.RecordLoop;
                 var speed = _landingPending ? _landingSpeed : _recordSpeed;
-                var songStart = toSong?.Invoke(start) ?? start;
+                var songStart = start;
                 // The engine's length is wall time; song time advances by the session speed. A track disarmed mid-recording is cut there.
                 var songLength = Math.Max(0, length) * Math.Max(0.01, speed);
                 if (_audioCutSec.Remove(track, out var cut))
@@ -217,7 +218,8 @@ internal sealed partial class RecordingPresenter(MainWindowCommands commands, Ma
                 // A one-pass re-record lands against the target it started with, never by "the last recording": the file can arrive
                 // after another recording has stopped. Its target is keyed by track and consumed by its one take.
                 _landingPunches.Remove(track, out var punch);
-                showStatus(LandTake(songs.Songs, track, file, songStart, songLength, loop, _landingPending ? _landingBase : null, punch) ?? "");
+                // The landed clip shows itself on the timeline: no "Recorded N s" notice (real errors still report through InputError/RecordingLoss).
+                LandTake(songs.Songs, track, file, songStart, songLength, loop, _landingPending ? _landingBase : null, punch);
                 if (songs.Songs.FirstOrDefault(song => song.Project.Tracks.Contains(track)) is { } owner)
                 {
                     ClipLanded?.Invoke(owner);
@@ -254,6 +256,9 @@ internal sealed partial class RecordingPresenter(MainWindowCommands commands, Ma
         /// <summary>Lays the rows out again after a landing; called unconditionally, so a take is never invisible for a missing clip hook.</summary>
         public Action<SongDocument>? RowsReload { get; init; }
 
+        /// <summary>The MIDI landing options (merge over a clip, input quantize) from the settings and the song's snap grid; null: defaults.</summary>
+        public Func<MidiRecordOptions>? MidiOptions { get; init; }
+
         /// <summary>Called once when a growing take needs a lane the track does not have yet.</summary>
         public Action<TrackModel>? LiveLaneCreated { get; init; }
 
@@ -279,9 +284,7 @@ internal sealed partial class RecordingPresenter(MainWindowCommands commands, Ma
             Live.Loop = loop;        // a looped recording's takes stack one live lane per lap inside this range
             // Through score repeats (no transport loop) each play stacks inside the take's own lane instead; a transport loop wins.
             Live.RepeatPerformed = loop is null ? repeatPerformed : null;
-            // The audio take the engine reports is stamped on the playing timeline: it is converted to the song clock when it
-            // lands. A recording started from a stop is already on the song clock (the engine holds the anchored start).
-            _recordToSong = startedWhilePlaying ? toSong : null;
+            _ = startedWhilePlaying;   // the engine's take is already on the song clock, however the recording started
             Live.Clear();
             Live.LaneCreated = track => LiveLaneCreated?.Invoke(track);
             if (_liveTracks.Length == 0) return;
@@ -298,7 +301,6 @@ internal sealed partial class RecordingPresenter(MainWindowCommands commands, Ma
         public void BeginLanding(UndoSnapshot before, PassPunch? punch = null)
         {
             _landingBase = before;
-            _landingToSong = _recordToSong;
             _landingLoop = Recording?.RecordLoop;
             _landingSpeed = _recordSpeed;
             _landingPending = true;
@@ -369,12 +371,10 @@ internal sealed partial class RecordingPresenter(MainWindowCommands commands, Ma
             // started meanwhile (or the field being reassigned) cannot convert them.
             if (stopping)
             {
-                _landingToSong = _recordToSong;
                 _landingLoop = Recording?.RecordLoop;
                 _landingSpeed = _recordSpeed;
                 _landingPending = true;
             }
-            _recordToSong = null;
             _liveAnchored = false;
             _liveTracks = Array.Empty<TrackModel>();
             _explicitCapture.Clear();
@@ -452,7 +452,7 @@ internal sealed partial class RecordingPresenter(MainWindowCommands commands, Ma
             {
                 // The first frame's song second is the recording's start (the engine's take is stamped on it too): the same mapping as the MIDI capture.
                 var schedSec = _liveSession.SchedulerSec;
-                if (double.IsNaN(schedSec)) return;   // the scheduler has no position (stopped): WPF drops such frames too
+                if (double.IsNaN(schedSec)) return;   // the scheduler has no position (stopped): such frames are dropped
                 var startSec = _liveToSong?.Invoke(schedSec) ?? schedSec;
                 if (double.IsNaN(startSec)) return;
                 // While a start compiles, the clock has not reported the start second yet: a bar after the first means the 0 is not the take's start.

@@ -59,7 +59,7 @@ public static class FretboardGeometryRules
 
         // Keep dimensions readable on wide windows; the selected anchor only changes its horizontal placement.
         var fullWidth = placementWidth > 0 && double.IsFinite(placementWidth) ? placementWidth : content.Width;
-        // A board that clears the legend column gives way to it before it can run under it; the WPF caps leave the board the whole content width.
+        // A board that clears the legend column gives way to it before it can run under it; the caps leave the board the whole content width.
         var available = caps.ClearsLegend
             ? Math.Max(80, Math.Min(content.Width, fullWidth - LegendWidth) - BoardMargin)
             : Math.Max(80, content.Width - BoardMargin);

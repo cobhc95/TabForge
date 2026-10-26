@@ -102,15 +102,16 @@ public sealed class DocumentController
     private static async Task SaveCleanPairAsync(SongDocument document, string path, SaveCapture capture)
     {
         path = FilePathPolicy.OutputFile(path, "score file", ".gp");
-        var hash = await RunOnWorker(capture, project =>
+        var oldBase = document.Media.BaseDirectory;   // relative clip paths resolve against where the song was opened from; they are written relative to the new folder
+        var hash = await RunOnWorker(capture, project => MediaStoredPaths.Write(project, oldBase, path, () =>
         {
             var gp = GuitarProExporter.ToBytes(project, embedProject: false);
             var audio = AudioDataFile.Serialize(project, TabForge.Audio.Contracts.PluginIdentity.Sha256Hex(gp));
             FilePathPolicy.WritePairAtomically(path, stream => stream.Write(gp),
                 FilePathPolicy.OutputFile(AudioDataFile.PathFor(path), "TabForge audio data", AudioDataFile.Extension), stream => stream.Write(audio));
             return ProjectService.ContentHash(project);
-        });
-        MarkSaved(document, path, hash, capture);
+        }));
+        MarkSaved(document, path, hash!, capture);
     }
 
     /// <summary>
@@ -168,6 +169,7 @@ public sealed class DocumentController
             return new GuitarProExportResult(plan.CompatiblePath, null, plan.Note);
         }
         var compatiblePath = FilePathPolicy.OutputFile(plan.CompatiblePath, "score file", ".gp");
+        var oldBase = document.Media.BaseDirectory;
         var hash = await RunOnWorker(capture, project =>
         {
             if (plan.NativeCopyPath is not { } native)
@@ -179,8 +181,11 @@ public sealed class DocumentController
             var nativeTarget = FilePathPolicy.OutputFile(native, "TabForge project", ".tforge");
             var gp = GuitarProExporter.ToBytes(project, embedProject: false);
             _ = FilePathPolicy.RecoverInterruptedPair(compatiblePath);   // an earlier interrupted pair of this .gp (whatever its partner) is resolved first; the write below refuses if it cannot be
-            FilePathPolicy.WritePairAtomically(compatiblePath, stream => stream.Write(gp), nativeTarget, stream => ProjectService.WriteTo(stream, project));
-            return ProjectService.ContentHash(project);
+            return MediaStoredPaths.Write(project, oldBase, nativeTarget, () =>
+            {
+                FilePathPolicy.WritePairAtomically(compatiblePath, stream => stream.Write(gp), nativeTarget, stream => ProjectService.WriteTo(stream, project));
+                return ProjectService.ContentHash(project);
+            });
         });
         if (plan.MarkDocumentClean && plan.NativeCopyPath is { } nativePath && hash is not null)
             MarkSaved(document, plan.ChangeDocumentPath ? nativePath : null, hash, capture);
@@ -255,12 +260,13 @@ public sealed class DocumentController
     {
         var asGuitarPro = path.EndsWith(".gp", StringComparison.OrdinalIgnoreCase);
         path = asGuitarPro ? FilePathPolicy.OutputFile(path, "score file", ".gp") : FilePathPolicy.OutputFile(path, "TabForge project", ".tforge");
-        var (capture, contentHash) = await WriteCapturedAsync(document, project =>
+        var oldBase = document.Media.BaseDirectory;   // see SaveCleanPairAsync
+        var (capture, contentHash) = await WriteCapturedAsync(document, project => MediaStoredPaths.Write(project, oldBase, path, () =>
         {
             // .gp: Guitar Pro 7/8 file with the full TabForge project embedded (see GuitarProExporter).
             if (asGuitarPro) GuitarProExporter.Save(project, path);
             return asGuitarPro ? ProjectService.ContentHash(project) : ProjectService.Save(path, project);
-        });
-        MarkSaved(document, path, contentHash, capture);
+        }));
+        MarkSaved(document, path, contentHash!, capture);
     }
 }

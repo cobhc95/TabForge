@@ -10,7 +10,7 @@ namespace TabForge.Avalonia.Tests;
 
 /// <summary>
 /// Owns: a paste that asks questions in Avalonia: the question window's answers give the same song as the Core paste called directly with the same answers
-/// (the WPF path), and cancelling the questions changes nothing.
+///, and cancelling the questions changes nothing.
 /// Tests: PasteQuestionFlow, MainWindowClipboard.PasteAsync.
 /// </summary>
 public class PasteQuestionFlowTests

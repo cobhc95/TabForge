@@ -84,31 +84,14 @@ if defined TABFORGE_SELFTEST_AREAS (
     call :selftest
 )
 
-rem Song used by the playtest and the final launch: set TABFORGE_PLAYTEST_SONG to use another file.
-rem Default is the bundled demo song in Samples; when the song does not exist (clean checkout, CI) the playtest is
-rem skipped and the app is launched without a song.
+rem Song used by the final launch: set TABFORGE_PLAYTEST_SONG to use another file.
+rem Default is the bundled demo song in Samples; when the song does not exist (clean checkout, CI)
+rem the app is launched without a song.
 set "SONG=%TABFORGE_PLAYTEST_SONG%"
 if not defined SONG set "SONG=%CD%\Samples\TabForge Demo - Ashen Meridian.gp"
-echo [5/7] Running headless playback test (6 s of live MIDI dispatch on %SONG%)...
-if not exist "%SONG%" goto :noplaytest
-rem The Avalonia build has no --playtest mode yet (playback is covered by the in-app self-tests); skip unless TABFORGE_PLAYTEST=1.
-if not "%TABFORGE_PLAYTEST%"=="1" (echo Playback test skipped: not available in the Avalonia build yet; the self-tests cover playback.& goto :playtestdone)
-if "%QUICK%"=="1" (echo Quick build: playback test skipped.& goto :noplaytest)
-set "PLAYTEST_LOG=%TEMP%\tabforge-playtest.log"
-set "TF_ARGS=--playtest|%SONG%|6|%PLAYTEST_LOG%"
-rem The playtest has a 60-second hard limit (6 s of playback); only the PID this script started is closed.
-set "TF_TIMEOUT_MS=60000"
-call :runtimed
-set "PLAYTEST_RESULT=%errorlevel%"
-set "TF_TIMEOUT_MS=600000"
-findstr /B /C:"dispatches=" /C:"latency ms:" /C:"early(" "%PLAYTEST_LOG%"
-if "%PLAYTEST_RESULT%"=="124" (echo PLAYBACK TEST TIMED OUT after 60 s - the process was killed & set "SELFTEST_RESULT=1" & goto :playtestdone)
-if "%PLAYTEST_RESULT%"=="0" if not exist "%PLAYTEST_LOG%" set "PLAYTEST_RESULT=1"
-if "%PLAYTEST_RESULT%"=="0" (echo Playback test: PASS) else (echo PLAYBACK TEST FAILED - see %PLAYTEST_LOG% & set "SELFTEST_RESULT=1")
-goto :playtestdone
-:noplaytest
-echo Playback test SKIPPED: song not found. Set TABFORGE_PLAYTEST_SONG to a .gp/.gp5 file to enable it.
-:playtestdone
+rem [5/7] Retired 25 Oct: the WPF-era headless --playtest step. The Avalonia app has no --playtest mode;
+rem playback is covered by the Playback self-tests run in step [4/7]. Kept as a comment (no deletes) so the step numbers stay stable.
+echo [5/7] Playback: covered by the self-tests above.
 
 echo [6/7] Creating timestamped source-only backup...
 powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -File "Source\tools\New-SourceBackup.ps1" -Label source

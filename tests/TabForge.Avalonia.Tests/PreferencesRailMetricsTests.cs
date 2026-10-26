@@ -4,7 +4,7 @@ using Xunit;
 namespace TabForge.Avalonia.Tests;
 
 /// <summary>
-/// Pins the Settings window metrics to the WPF values they were taken from (PreferencesWindow.xaml and its rail style).
+/// Pins the Settings window metrics to the values they were taken from (PreferencesWindow.xaml and its rail style).
 /// Owns: the metric values the rail and the Reset page link use. Does not own: the layout (PreferencesWindow) or the rendering.
 /// Tests: this file.
 /// </summary>

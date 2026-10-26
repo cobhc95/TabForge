@@ -57,7 +57,7 @@ public sealed class AvaloniaPlaybackSessions : IDisposable
     /// <summary>Attaches the shared audio and plug-in settings: every engine sync reads the master percent and plug-ins from them.</summary>
     public void AttachSettings(TabForge.Services.AudioSettings audio, TabForge.Services.PluginSettings plugins) => _routing.Attach(audio, plugins);
 
-    /// <summary>Brings the document's engine in line with its tracks (arm state, chains, levels, MIDI routes, transport), as the WPF AudioRouting.Apply does; nothing without an engine.</summary>
+    /// <summary>Brings the document's engine in line with its tracks (arm state, chains, levels, MIDI routes, transport); nothing without an engine.</summary>
     public void SyncEngine(SongDocument document, TabForge.Services.PluginSettings plugins)
     {
         if (Engine is null) return;
@@ -82,7 +82,7 @@ public sealed class AvaloniaPlaybackSessions : IDisposable
     public AvaloniaPlaybackSession? For(SongDocument document)
     {
         if (_createEngine is null) return null;
-        // The engine keeps another owner's tracks live only while that owner reports playing (WPF EngineSyncController does the same):
+        // The engine keeps another owner's tracks live only while that owner reports playing:
         // without this, syncing a new tab parks the playing song's tracks and its sound stops.
         if (Engine is { } engine) engine.IsOwnerPlaying ??= owner => owner is SongDocument song && Existing(song) is { IsPlaying: true };
         if (!_sessions.TryGetValue(document, out var session))
@@ -94,7 +94,7 @@ public sealed class AvaloniaPlaybackSessions : IDisposable
             // The Preferences "Playback speed" is the speed a session starts at (the speed menu changes it per song afterwards).
             if (_clickAudio is { Speed: var startSpeed } && double.IsFinite(startSpeed) && Math.Abs(startSpeed - 1) > 0.001) session.SetSpeed(Math.Clamp(startSpeed, 0.25, 2));
             session.PlayStarting += () => SyncEngine(document, _routing.Plugins);
-            // The engine's song transport follows this document's playhead (the WPF SongClock's anchors): its audio clips start, follow
+            // The engine's song transport follows this document's playhead: its audio clips start, follow
             // jumps and stop with the song. Nothing without an engine; the document that owns the engine now is this session's song.
             session.ReportEnginePosition = (playing, sec, speed) =>
             {
@@ -112,14 +112,16 @@ public sealed class AvaloniaPlaybackSessions : IDisposable
         _sessions.TryGetValue(document, out var session) ? session : null;
 
     /// <summary>
-    /// Tells the engine's song transport where the recorded song is once, just before Transport Record starts: this app has no SongClock
-    /// sending positions, so the engine would otherwise anchor the audio take at 0. The clock is held at that second (not run on), because
-    /// nothing in this app sends the later positions that stop it again. Nothing without an engine.
+    /// Tells the engine's song transport where the recorded song is once, just before Transport Record starts, so the audio take
+    /// anchors at that second. A song that is rolling (playing, not paused, its start compiled) keeps the engine RUNNING from there at
+    /// its speed: the session's own reports only re-anchor on a play-state change or drift, so a held clock would leave the song's
+    /// audio clips stopped through the recording. A song not rolling yet is held there until its first frame anchors it. Nothing without an engine.
     /// </summary>
     public void SetPosition(SongDocument document, double songSec)
     {
         if (Engine is not { } engine) return;
-        engine.SetPosition(false, songSec, Stopwatch.GetTimestamp(), engine.OwnerIdOf(document));
+        var rolling = Existing(document) is { IsPlaying: true, IsPaused: false } session && !session.Transport.StartPending ? session : null;
+        engine.SetPosition(rolling is not null, songSec, Stopwatch.GetTimestamp(), engine.OwnerIdOf(document), rolling?.Speed ?? 1.0);
     }
 
     /// <summary>Sets the metronome and count-in choices: every open session follows them, and sessions made later start with them.

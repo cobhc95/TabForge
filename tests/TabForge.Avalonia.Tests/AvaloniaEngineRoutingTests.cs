@@ -16,7 +16,7 @@ namespace TabForge.Avalonia.Tests;
 
 /// <summary>
 /// Owns: the engine routing checks: the master percent is read from and saved to the attached audio settings (clamped to 0-100), the engine
-///     mixer options take the settings' auto GM sound and play-all-through-engine after a sync, and the demo song from bar 85 sends the WPF engine stream.
+/// mixer options take the settings' auto GM sound and play-all-through-engine after a sync, and the demo song from bar 85 sends the engine stream.
 /// Does not own: the engine sync itself (needs a running engine) or the knob and mixer wiring (the window tests).
 /// Tests: this class.
 /// </summary>

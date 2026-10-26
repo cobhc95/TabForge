@@ -239,13 +239,14 @@ public static partial class SettingsCatalog
 
         (Recording, "Input device", "vst.input vst.asio.inputs vst.asio.infirst* vst.asio.oneinput* vst.allinputs* vst.inputsshown*"),
         (Recording, "Timing", "vst.recordoffset*"),
+        (Recording, "MIDI recording", "vst.midiover* vst.midiquantize*"),
 
         (Tabs, "Opening and closing tabs", "tabs.closebutton tabs.lastclosed tabs.newposition tabs.openincurrent tabs.dropnewtab tabs.playing"),
         (Tabs, "Tab look", "tabs.style* tabs.width* tabs.maxwidth* tabs.minwidth* tabs.height* tabs.fontsize*"),
         (Tabs, "Mouse actions", "tabs.doubleclick* tabs.middleclick* tabs.middlebar*"),
         (Tabs, "Dragging between windows", "tabs.detach* tabs.merge*"),
 
-        (Files, "Opening and saving", "general.openfromexplorer general.saveformat"),
+        (Files, "Opening and saving", "general.openfromexplorer general.saveformat general.externalmedia"),
         (Files, "Backups and recovery", "general.autosave"),
         (Files, "Windows integration", "general.associate*"),
         (Files, "Linked audio", "audio.linkedmedia*"),

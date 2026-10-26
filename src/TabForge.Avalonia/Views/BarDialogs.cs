@@ -16,9 +16,9 @@ using TabForge.Avalonia.Views.Dialogs;
 namespace TabForge.Avalonia.Views;
 
 // Owns: the four small bar questions of the Structure tools: time signature, key signature, score directions and the section marker, with
-//   the WPF dialogs' texts, controls and answers (StandardDialogsPresenter parses what was typed).
+// the dialogs' texts, controls and answers (StandardDialogsPresenter parses what was typed).
 // Does not own: the parsing and wording (StandardDialogsPresenter, SignatureChoices) or applying the answer (ScorePreviewEditor).
-// Deviation: the windows use the platform title bar and the app theme; the WPF dialogs draw the system ones.
+// Deviation: the windows use the platform title bar and the app theme; the dialogs draw the system ones.
 // Tests: no dedicated test class.
 
 /// <summary>The time signature answer: beats per bar, beat value, and whether it reaches only the cursor bar.</summary>

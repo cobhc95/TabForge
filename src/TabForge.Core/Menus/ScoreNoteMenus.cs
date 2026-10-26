@@ -1,4 +1,4 @@
-// Owns: the score's note right-click menu as data, in the WPF note menu's order: Copy, Cut, Paste and Paste special (while the clipboard holds
+// Owns: the score's note right-click menu as data, in the note menu's order: Copy, Cut, Paste and Paste special (while the clipboard holds
 //   a clip), Delete, then the Duration, Dynamics, Effects and Beat groups of the palette and the Pitch and string submenu. Each group row is
 //   a palette tool: its command id is PaletteToolCatalog.CommandIdFor, its lit state and enabled rule come from the caller's editor.
 // Does not own: opening the menu or running its rows (Avalonia ScorePreviewView and ContextMenuBuilder), the lit and enabled rules

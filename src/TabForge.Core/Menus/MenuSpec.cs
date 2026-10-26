@@ -1,11 +1,11 @@
 // Owns: the row shape every right-click menu is built from (plain data: caption, shortcut text, tick, one-of-several choice, the Preferences row it mirrors, submenus, separators).
-//   Does not own: the menu contents (TimelineMenus, TrackRowMenus, ScoreMenus, and the WPF InstrumentMenus / BandMenus) or the toolkit builders (WPF SpecMenus, Avalonia ContextMenuBuilder).
+// Does not own: the menu contents (TimelineMenus, TrackRowMenus, ScoreMenus, and the instrument and band menus) or the toolkit builders (Avalonia ContextMenuBuilder).
 // Tests: SelfTestMenuGolden, SelfTestTrackRowMenu, TabForge.Avalonia.Tests.ContextMenuTests.
 
 namespace TabForge.Menus;
 
 /// <summary>One entry of a right-click menu as plain data (a separator has <see cref="IsSeparator"/>). Built by
-/// <see cref="TimelineMenus"/>, <see cref="TrackRowMenus"/>, <see cref="ScoreMenus"/> and the WPF instrument and band menus, turned into
+/// <see cref="TimelineMenus"/>, <see cref="TrackRowMenus"/>, <see cref="ScoreMenus"/> and the instrument and band menus, turned into
 /// toolkit items by each host, and enumerated by the self-test.</summary>
 public sealed class MenuSpec
 {

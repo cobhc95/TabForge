@@ -64,7 +64,7 @@ public class MidiProcessingWindowTests
     public void ControlsMatchWpfWindowOrderAndTexts()
     {
         var window = Open().Window;
-        // The WPF window's controls in tree order: the preset bar, the catalog, the list with its buttons, then the detail pane with the log panel.
+        // The window's controls in tree order: the preset bar, the catalog, the list with its buttons, then the detail pane with the log panel.
         var expected = new[]
         {
             ("TextBlock", "Presets"), ("ComboBox", ""), ("Button", "Save preset…"), ("Button", "Delete"),

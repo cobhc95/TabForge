@@ -29,7 +29,7 @@ public sealed class ContextMenuHost
     /// <summary>The window's clipboard; null until the window sets it, so the paste rows stay disabled.</summary>
     public ClipboardService? Clipboard { get; set; }
 
-    /// <summary>True when the clipboard holds TabForge notes or a copied track to paste (the same state the WPF menus read).</summary>
+    /// <summary>True when the clipboard holds TabForge notes or a copied track to paste (the same state the menus read).</summary>
     public bool CanPaste => (Clipboard?.CanPaste ?? false) || (Clipboard?.HasTrack ?? false);
 
     /// <summary>The bar under the last timeline right-click (set when its menu is built), or -1 when the pointer was on no bar.</summary>

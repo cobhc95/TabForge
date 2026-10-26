@@ -17,7 +17,7 @@ namespace TabForge.Avalonia.Features.Recording.View;
 /// </summary>
 public static class ArmedRowPainter
 {
-    /// <summary>The strip's height: WPF's armed clip-lane strip (about 40 DIPs), the sub-row under a track with no lanes, or the last lane band's lower part when it has lanes.</summary>
+    /// <summary>The strip's height: the armed clip-lane strip (about 40 DIPs), the sub-row under a track with no lanes, or the last lane band's lower part when it has lanes.</summary>
     public const double SubRowHeight = 40;
 
     /// <summary>
@@ -33,7 +33,7 @@ public static class ArmedRowPainter
     /// <summary>The monitor toggle's size.</summary>
     public const double MonitorWidth = 26, MonitorHeight = 20;
 
-    /// <summary>The input picker's size, as WPF's.</summary>
+    /// <summary>The input picker's size.</summary>
     public const double InputWidth = 136, InputHeight = 22;
 
     /// <summary>The input level meter's gap after the picker, and its size.</summary>
@@ -42,7 +42,7 @@ public static class ArmedRowPainter
     /// <summary>The label and the timeline hint's text size.</summary>
     public const double TextSize = 11;
 
-    /// <summary>The timeline hint's left edge in the lane, as WPF's.</summary>
+    /// <summary>The timeline hint's left edge in the lane.</summary>
     public const double HintLeft = 8;
 
     private const string Font = "Segoe UI";
@@ -59,7 +59,7 @@ public static class ArmedRowPainter
     /// <summary>The sub-row's label: "● MIDI (armed)" for a MIDI input, else "● Audio (armed)".</summary>
     public static string LabelOf(TrackModel track) => AudioInputs.IsMidi(track.AudioInput) ? "● MIDI (armed)" : "● Audio (armed)";
 
-    /// <summary>The hint the lane shows while an armed track has no clips, as WPF's.</summary>
+    /// <summary>The hint the lane shows while an armed track has no clips.</summary>
     public static string LaneHintOf(TrackModel track) =>
         AudioInputs.IsMidi(track.AudioInput) ? "Armed (MIDI): press Record to record here" : "Armed: press Record to record here, or drop audio files";
 

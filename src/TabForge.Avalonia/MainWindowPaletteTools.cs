@@ -7,13 +7,13 @@ using TabForge.Presenters;
 namespace TabForge.Avalonia;
 
 // Owns: the Tools pane buttons that edit the score at once with no question and have no menu row of their own: Selection cursor, Erase note,
-//   the eight dynamics, Heavy accent and the two pick strokes. Each runs the Core call the WPF palette makes (ToolPaletteController / MainWindow.Palette).
+// the eight dynamics, Heavy accent and the two pick strokes. Each runs the Core call the palette makes (ToolPaletteController / MainWindow.Palette).
 // Does not own: the menu rows (MainWindowEdit), the tools that ask first (MainWindowBarTools, MainWindowNoteDialogs), the pane (ToolsPaneView).
 // Tests: TabForge.Avalonia.Tests.ToolsPaneViewTests.
 /// <summary>Registers the Tools pane's no-question commands under their palette command ids (PaletteToolCatalog.CommandIdFor).</summary>
 public static class MainWindowPaletteTools
 {
-    /// <summary>The pick strokes' technique names (WPF writes the same names).</summary>
+    /// <summary>The pick strokes' technique names.</summary>
     private static readonly IReadOnlyList<(string ToolId, string Technique)> PickStrokes = new (string ToolId, string Technique)[]
     {
         ("effect:pickstroke_down", TechniqueNames.PickDown),

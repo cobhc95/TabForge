@@ -10,7 +10,8 @@ namespace TabForge.Avalonia;
 //   the toolbar and the context menus all run these ids, so none of them has a path of its own.
 // Does not own: the routing table (Core EditRouting), the key tables (MainWindowKeyboard), the clip and track row commands themselves
 //   (MainWindowClipKeys, MainWindowTrackRowEdits, which asks before a track goes), the clipboard flow (MainWindowClipboard).
-// Tests: TabForge.Avalonia.Tests.EditKeyRoutingTests.
+//   A piano roll with focus is asked first (its notes, its own clipboard).
+// Tests: TabForge.Avalonia.Tests.EditKeyRoutingTests, PianoRollViewTests.
 /// <summary>Registers the focus-routed Edit.* handlers over the window's clipboard flow. UI thread only.</summary>
 public sealed class MainWindowEditRouting
 {
@@ -18,19 +19,22 @@ public sealed class MainWindowEditRouting
     private readonly MainWindowClipboard _flow;
     private readonly EditRouting _routing;
     private readonly EditTargets _targets;
+    private readonly Func<EditVerb, bool>? _first;
 
-    private MainWindowEditRouting(MainWindowCommands commands, MainWindowClipboard flow, EditRouting routing, EditTargets targets)
+    private MainWindowEditRouting(MainWindowCommands commands, MainWindowClipboard flow, EditRouting routing, EditTargets targets, Func<EditVerb, bool>? first)
     {
+        _first = first;
         _commands = commands;
         _flow = flow;
         _routing = routing;
         _targets = targets;
     }
 
-    /// <summary>Adds Edit.Copy, Edit.Cut, Edit.Paste and Edit.PasteSpecial; <paramref name="report"/> shows a failed paste.</summary>
-    public static void Register(MainWindowCommands commands, MainWindowClipboard flow, EditRouting routing, EditTargets targets, Action<string> report)
+    /// <summary>Adds Edit.Copy, Edit.Cut, Edit.Paste and Edit.PasteSpecial; <paramref name="report"/> shows a failed paste. <paramref name="first"/> is asked
+    /// before the routing table (the piano roll takes the verb while it has focus); true when it ran the verb.</summary>
+    public static void Register(MainWindowCommands commands, MainWindowClipboard flow, EditRouting routing, EditTargets targets, Action<string> report, Func<EditVerb, bool>? first = null)
     {
-        var router = new MainWindowEditRouting(commands, flow, routing, targets);
+        var router = new MainWindowEditRouting(commands, flow, routing, targets, first);
         commands.Add("Edit.Copy", () => router.Run("Edit.Copy", EditVerb.Copy, () => flow.Copy()));
         commands.Add("Edit.Cut", () => router.Run("Edit.Cut", EditVerb.Cut, () => flow.Cut()));
         commands.Add("Edit.Paste", () => router.Run("Edit.Paste", EditVerb.Paste, () => Platform.UiTasks.Forget(flow.PasteAsync(), "Paste", report)));
@@ -40,6 +44,7 @@ public sealed class MainWindowEditRouting
     // The routed id is this command's own for the score and the range (the clipboard flow runs), else another command (a clip or track row one).
     private void Run(string ownId, EditVerb verb, Action clipboardFlow)
     {
+        if (_first?.Invoke(verb) == true) return;
         var selection = _targets.Selection;
         var focus = _targets.Focus;
         var routed = _routing.Resolve(focus, State(selection), verb);

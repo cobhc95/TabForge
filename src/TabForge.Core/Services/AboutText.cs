@@ -1,6 +1,6 @@
 namespace TabForge.Services;
 
-// Owns: the text of the About TabForge dialog (version line, product description, disclaimer), shared by the WPF and Avalonia apps.
+// Owns: the text of the About TabForge dialog (version line, product description, disclaimer), shared by the app.
 // Does not own: the dialog itself (ThemedConfirmDialog, the Avalonia message box), its buttons, or the version (AppInfo).
 // Tests: TabForge.Avalonia.Tests.HelpMenuTests.
 /// <summary>The About TabForge dialog text.</summary>

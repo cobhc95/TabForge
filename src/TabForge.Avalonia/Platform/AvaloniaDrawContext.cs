@@ -10,10 +10,10 @@ using TabForge.Platform;
 namespace TabForge.Avalonia.Platform;
 
 /// <summary>
-/// <see cref="IDrawContext"/> over an Avalonia <see cref="DrawingContext"/>, the counterpart of the WPF adapter. One instance per view, reused for
+/// <see cref="IDrawContext"/> over an Avalonia <see cref="DrawingContext"/>. One instance per view, reused for
 /// every frame through <see cref="Use"/>; it keeps one immutable brush per colour, one immutable pen per colour, width and caps and one typeface
 /// per family, so frames allocate nothing beyond new text layouts (shaped once per key in this instance's cache) and the pushed-state stack entries.
-/// Avalonia pushes return a state to dispose; this class keeps them on a stack so <see cref="Pop"/> ends the last push, as in WPF.
+/// Avalonia pushes return a state to dispose; this class keeps them on a stack so <see cref="Pop"/> ends the last push.
 /// Owns: the Avalonia drawing mapping and its brush, pen and typeface caches. Does not own: the drawing context's lifetime (the caller's render pass).
 /// Tests: AvaloniaDrawContextTests (TabForge.Avalonia.Tests).
 /// </summary>
@@ -87,7 +87,7 @@ public sealed class AvaloniaDrawContext : IDrawContext
     /// <summary>
     /// Lays out text, shaped once per <see cref="UiTextKey"/> in this instance's cache. <paramref name="pixelsPerDip"/> is unused because Avalonia scales
     /// text with the render target, and <paramref name="idealLayout"/> is ignored because Avalonia has one text formatting mode (ideal, with no
-    /// pixel-snapped display mode); both stay in the key so the cache matches the WPF one.
+    /// pixel-snapped display mode); both stay in the key so the cache keys stay consistent.
     /// </summary>
     public UiText Text(string text, string fontFamily, double size, UiColor colour, double pixelsPerDip, double maxWidth = 0, UiTextAlign align = UiTextAlign.Left,
         int weight = 400, bool italic = false, UiStroke? outline = null, bool idealLayout = false)

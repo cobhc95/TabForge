@@ -24,7 +24,7 @@ using Xunit;
 namespace TabForge.Avalonia.Tests;
 
 // Owns: the recording wiring of batch 1: the first (dock-built) arrangement's arm toggle, armed-row input and monitor edits and input meter
-//   reach the engine; Stop/Space/Esc end a recording; a refused start leaves the recording off and shows the WPF status; the Record button
+// reach the engine; Stop/Space/Esc end a recording; a refused start leaves the recording off and shows the status; the Record button
 //   shows the REC state.
 // Does not own: the recording itself and its takes (TransportRecordingTests, MidiTakeCaptureTests), the live overlay or lanes (later batches),
 //   the pointer geometry (TimelineInputController, ArrangementClicks).

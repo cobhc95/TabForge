@@ -7,7 +7,7 @@ using TabForge.Documents;
 namespace TabForge.Avalonia;
 
 // Owns: the View menu's score page colour commands (Dark score page, Light score page): each sets which paper the shown score and song
-//   are drawn on, redraws, shows the WPF status text and moves the menu check. The paper belongs to the song (SongDocument.DarkPaper), not
+// are drawn on, redraws, shows the status text and moves the menu check. The paper belongs to the song (SongDocument.DarkPaper), not
 //   to the saved preferences: a new song takes the Preferences default and the View menu never writes it.
 // Does not own: the menu rows (MainMenuTable in Core), the paper and ink colours (Core ScoreAppearance), the notation commands
 //   (MainWindowNotationMenu), the commands table (MainWindowCommands).
@@ -32,7 +32,7 @@ public static class MainWindowScoreThemeMenu
         if (owner is not null) owner.Opened += (_, _) => SyncChecks(owner, score.LightPaper);
     }
 
-    /// <summary>The WPF status text for the chosen paper.</summary>
+    /// <summary>The status text for the chosen paper.</summary>
     public static string StatusText(bool light) => light ? "Light score page" : "Dark score page";
 
     private static void SetLightPaper(ScorePreviewView score, bool light, Window? owner, Func<SongDocument?>? shownSong, Action<string>? notice)

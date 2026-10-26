@@ -34,14 +34,14 @@ public sealed partial class InstrumentPanelView
         ? _pitchNames[pitch] ??= MusicTheoryService.NoteName(pitch).TrimEnd('0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '-')
         : MusicTheoryService.NoteName(pitch).TrimEnd('0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '-');
 
-    /// <summary>The label beside the nut for a string: its open note with the octave under the note names setting (as WPF), else its number.</summary>
+    /// <summary>The label beside the nut for a string: its open note with the octave under the note names setting, else its number.</summary>
     internal string StringLabel(int stringIndex) =>
         _look.ShowNoteNames && stringIndex < Tuning.Count ? MusicTheoryService.NoteName(Tuning[stringIndex]) : (stringIndex + 1).ToString();
 
     /// <summary>The fill of a shaded scale cell: the root's cell is stronger than the other scale notes' (before the strength setting).</summary>
     private const double ShadedRootAlpha = 0.5, ShadedAlpha = 0.28;
 
-    /// <summary>The shaded scale style: each scale note's cell on the board is a tinted band behind the frets, the root's stronger (as the WPF board draws it).</summary>
+    /// <summary>The shaded scale style: each scale note's cell on the board is a tinted band behind the frets, the root's stronger.</summary>
     private void DrawShadedCells(IDrawContext d, Func<string, UiColor> ink, FretboardGeometryRules.Layout layout)
     {
         if (_look.ScalePitches.Length == 0) return;
@@ -68,7 +68,7 @@ public sealed partial class InstrumentPanelView
     /// <summary>The dead-note mark: the ring's stroke width, the X's stroke width, and the X's arm length as a share of the note radius.</summary>
     private const double DeadRingWidth = 1.8, DeadCrossWidth = 1.6, DeadCrossArm = 0.7;
 
-    /// <summary>The cell of a dead note: an outlined ring crossed by an X, in the cursor's colour (as the WPF fretboard draws it).</summary>
+    /// <summary>The cell of a dead note: an outlined ring crossed by an X, in the cursor's colour.</summary>
     private void MarkDead(IDrawContext d, Func<string, UiColor> ink, FretboardGeometryRules.Layout layout, int stringIndex, int fret, double radius)
     {
         if (stringIndex < 0 || stringIndex >= layout.Strings) return;

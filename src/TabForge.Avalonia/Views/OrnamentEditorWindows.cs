@@ -14,8 +14,8 @@ using TabForge.Presenters;
 namespace TabForge.Avalonia.Views;
 
 /// <summary>
-/// The trill, grace-note and harmonic editors, the twins of the WPF OrnamentEditors: the same fields,
-/// order and texts, each returned in an <see cref="EffectValuesWindow"/>. The caller passes plain starting values (the WPF side
+/// The trill, grace-note and harmonic editors, the ornament editors: the same fields,
+/// order and texts, each returned in an <see cref="EffectValuesWindow"/>. The caller passes plain starting values (the old side
 /// reads them from the note).
 /// Owns: the fields and the value-to-field mapping. Does not own: the frame and presets (EffectValuesWindow) or the model writes.
 /// Tests: TabForge.Avalonia.Tests.MixTableColourChooserEffectValuesTests.
@@ -86,7 +86,7 @@ public static class OrnamentEditorWindows
 
     private static TextBlock Label(string text) => new() { Text = text, Width = 96, VerticalAlignment = VerticalAlignment.Center };
 
-    /// <summary>A whole number between bounds: label, -, the box, +; Up and Down step it. The twin of the WPF NumberField.</summary>
+    /// <summary>A whole number between bounds: label, -, the box, +; Up and Down step it. A number field.</summary>
     public sealed class NumberField : StackPanel
     {
         private readonly int _min, _max;
@@ -122,7 +122,7 @@ public static class OrnamentEditorWindows
         }
     }
 
-    /// <summary>One choice from a few: label, then a radio button per option. The twin of the WPF ChoiceField (without its icons).</summary>
+    /// <summary>One choice from a few: label, then a radio button per option. A choice field (without icons).</summary>
     public sealed class ChoiceField : StackPanel
     {
         private readonly List<(RadioButton Button, int Value)> _items = new();

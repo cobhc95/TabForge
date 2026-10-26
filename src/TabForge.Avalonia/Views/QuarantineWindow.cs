@@ -13,7 +13,7 @@ using TabForge.Avalonia.Views.Dialogs;
 namespace TabForge.Avalonia.Views;
 
 /// <summary>
-/// The "Plug-ins switched off after a crash" window, the Avalonia twin of the WPF QuarantineWindow: the same caption,
+/// The "Plug-ins switched off after a crash" window, the Avalonia quarantine window: the same caption,
 /// rows, texts and buttons, all read from QuarantinePresenter. The preview has no plug-in settings, so it opens on <see cref="SamplePaths"/>.
 /// Allow again changes the saved plug-in settings and reloads the audio engine, so it needs the full app: its button says so on the
 /// status line and changes nothing.

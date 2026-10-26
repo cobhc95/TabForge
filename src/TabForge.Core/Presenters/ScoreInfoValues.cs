@@ -17,7 +17,7 @@ public sealed record ScoreInfoValues(
         project.MusicAuthor, project.LyricsAuthor, project.Copyright, project.TabAuthor,
         project.Instructions, project.Notice);
 
-    /// <summary>Writes the texts to the song and marks it changed, as the WPF dialog does on OK.</summary>
+    /// <summary>Writes the texts to the song and marks it changed.</summary>
     public void ApplyTo(SongProject project)
     {
         project.Title = Title;

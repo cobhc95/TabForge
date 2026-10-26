@@ -81,8 +81,8 @@ public class SectionResizeTests
         var first = SectionLayout.Sorted(song)[0];
         SectionLayout.TryGetBounds(song, first, out var start, out var end);
         Assert.True(end - start >= 2, "demo first section needs two bars");
-        var knob = new Point(view.BarX(end) - 3, TimelineView.RulerHeight - 3);
-        Assert.NotNull(view.SectionKnobAt(knob.X, knob.Y));
+        var knob = new Point(view.BarX(end) - 3, TimelineView.RulerHeight + 10);
+        Assert.NotNull(view.SectionEdgeAt(knob.X, knob.Y));
         w.MouseMove(knob);
         Assert.NotNull(view.Cursor);
         w.MouseDown(knob, MouseButton.Left);
@@ -109,6 +109,56 @@ public class SectionResizeTests
         var slot = view.SectionSlots()[0];
         w.MouseMove(new Point(slot.Left + slot.Width / 2, slot.Top + 6));
         Assert.Null(view.Cursor);
+        Assert.Null(view.SectionEdgeAt(slot.Left + slot.Width / 2, slot.Top + 6));
         w.Close();
+    }
+
+    // The old bug: a neighbour with an implied length stretched into the freed bars. No Freeze here on purpose.
+    private static (TabForge.Models.SongProject Song, TabForge.Models.MarkerModel Prev, TabForge.Models.MarkerModel V) Unfrozen()
+    {
+        var song = DemoSongFactory.Create();
+        var sorted = SectionLayout.Sorted(song);
+        var i = sorted.FindIndex(m => SectionLayout.TryGetBounds(song, m, out var s, out var e) && e - s >= 2 && sorted.IndexOf(m) > 0);
+        Assert.True(i > 0);
+        return (song, sorted[i - 1], sorted[i]);
+    }
+
+    [Fact]
+    public void LeftEdgeRightLeavesAGapAndNeverStretchesThePreviousSection()
+    {
+        var (song, prev, v) = Unfrozen();
+        SectionLayout.TryGetBounds(song, prev, out var ps, out var pe);
+        Assert.True(SectionLayout.ResizeClamped(song, v, false, v.MeasureIndex + 1));
+        SectionLayout.TryGetBounds(song, prev, out var ps2, out var pe2);
+        Assert.Equal((ps, pe), (ps2, pe2));
+        SectionLayout.TryGetBounds(song, v, out var vs, out _);
+        Assert.True(vs > pe2);   // gap left
+    }
+
+    [Fact]
+    public void RightEdgeLeftNeverMovesTheFollowingSection()
+    {
+        var song = DemoSongFactory.Create();
+        var sorted = SectionLayout.Sorted(song);
+        var a = sorted.First(m => SectionLayout.TryGetBounds(song, m, out var s, out var e) && e - s >= 2 && sorted.IndexOf(m) < sorted.Count - 1);
+        var next = sorted[sorted.IndexOf(a) + 1];
+        SectionLayout.TryGetBounds(song, next, out var ns, out var ne);
+        Assert.True(SectionLayout.ResizeClamped(song, a, true, a.MeasureIndex + 1));
+        SectionLayout.TryGetBounds(song, next, out var ns2, out var ne2);
+        Assert.Equal((ns, ne), (ns2, ne2));
+    }
+
+    [Fact]
+    public void ResizeNeverCrossesNeighbourOrBelowOneBar()
+    {
+        var (song, prev, v) = Unfrozen();
+        SectionLayout.TryGetBounds(song, prev, out _, out var pe);
+        SectionLayout.ResizeClamped(song, v, false, -50);
+        Assert.Equal(pe, v.MeasureIndex);
+        SectionLayout.TryGetBounds(song, v, out var vs, out var ve);
+        SectionLayout.ResizeClamped(song, v, false, 10_000);
+        SectionLayout.TryGetBounds(song, v, out var s2, out var e2);
+        Assert.Equal(ve, e2);
+        Assert.Equal(1, e2 - s2);
     }
 }

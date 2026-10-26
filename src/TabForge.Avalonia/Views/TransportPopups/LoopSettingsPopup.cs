@@ -10,7 +10,7 @@ using TabForge.Services;
 
 namespace TabForge.Avalonia.Views.TransportPopups;
 
-// Owns: the rows of the loop settings popup (the WPF LoopSettingsPopup): the loop area line, "Loop button loops what is playing" and its scope,
+// Owns: the rows of the loop settings popup: the loop area line, "Loop button loops what is playing" and its scope,
 //     "Forget the area when loop is turned off", the number of loops, the count-in before every loop, simple loop or speed trainer with its tempo
 //     boxes, and the Clear loop area button. A box is read when it loses focus or on Enter, and shown again normalised.
 // Does not own: the popup's look and opening (TransportPopupFrame), the box rules (LoopSettingsRules), the loop area and its clearing
@@ -143,7 +143,7 @@ public static class LoopSettingsPopup
         return row;
     }
 
-    // A box's text is read when focus leaves it or on Enter, as the WPF boxes do (LostFocus, KeyDown Enter).
+    // A box's text is read when focus leaves it or on Enter, as the boxes do (LostFocus, KeyDown Enter).
     private static void Commit(TextBox box, Action read)
     {
         box.LostFocus += (_, _) => read();

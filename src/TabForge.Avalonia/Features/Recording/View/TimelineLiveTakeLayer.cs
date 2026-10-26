@@ -27,7 +27,7 @@ internal sealed class TimelineLiveTakeLayer : Control
     private const double BoxMinWidth = 2;
     private const double BoxFillOpacity = 0.22;
     private const double BoxStrokeWidth = 1.2;
-    /// <summary>The narrowest box that still shows its label (the WPF live take's 40 px).</summary>
+    /// <summary>The narrowest box that still shows its label.</summary>
     private const double RecLabelMinWidth = 40;
     private const double RecLabelLeft = 5;
     private const double RecLabelTop = 1;
@@ -238,7 +238,7 @@ internal sealed class TimelineLiveTakeLayer : Control
         }
     }
 
-    // MIDI: one short bar per finished note plus the notes held now, growing to the take's current end, as the WPF live MIDI take draws them.
+    // MIDI: one short bar per finished note plus the notes held now, growing to the take's current end.
     private static void DrawNotes(IDrawContext d, LiveTake take, in Rect box, UiColor red) =>
         DrawNotes(d, take, box, red, take.StartSec, take.EndSec);
 

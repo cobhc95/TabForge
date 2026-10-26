@@ -25,7 +25,7 @@ namespace TabForge.Avalonia.Views;
 /// </summary>
 public sealed partial class TrackPropertiesWindow
 {
-    // The cover (WPF RedrawPicture): the track colour as a soft gradient behind the instrument badge (160 DIP, 12 above and below) and its name.
+    // The cover: the track colour as a soft gradient behind the instrument badge (160 DIP, 12 above and below) and its name.
     private const double CoverBadgeSize = 160, CoverBadgeGap = 12, CoverGradientAngle = 55, CoverHeight = 190;
     private const byte CoverAlphaStart = 0x55, CoverAlphaEnd = 0x10;
     private const double NotesMinHeight = 64;
@@ -63,7 +63,7 @@ public sealed partial class TrackPropertiesWindow
         return new StackPanel { Children = { Caption("Colour"), _colour, _tint } };
     }
 
-    // The performer with its hint (WPF "Played by"); an audio track has no performer, so the fields stay empty.
+    // The performer with its hint ("Played by"); an audio track has no performer, so the fields stay empty.
     private StackPanel PlayedBy()
     {
         var fields = new StackPanel();
@@ -74,7 +74,7 @@ public sealed partial class TrackPropertiesWindow
         return fields;
     }
 
-    // The track notes (WPF Notes): a box tall enough for several lines.
+    // The track notes: a box tall enough for several lines.
     private StackPanel NotesBox() => new() { Children = { Caption("Notes"), _notes } };
 
     private CheckBox KeepFretsBox() => _keepFrets = new CheckBox
@@ -103,7 +103,7 @@ public sealed partial class TrackPropertiesWindow
         return card;
     }
 
-    // What the custom map window starts from: the chosen preset with the working custom map (WPF probe track).
+    // What the custom map window starts from: the chosen preset with the working custom map.
     internal TrackModel DrumMapProbe() => new() { Kind = TrackKind.Drums, DrumMapPreset = CurrentDrumPreset(), CustomDrumMap = _customMap };
 
     internal void TakeCustomMap(List<DrumMapEntry> edited)
@@ -116,7 +116,7 @@ public sealed partial class TrackPropertiesWindow
 
     private string CurrentDrumPreset() => (_drumMap.SelectedItem as ComboBoxItem)?.Tag as string ?? DrumMaps.GuitarPro5;
 
-    // The tuning preset box, beside the string count, as in WPF: a preset sets every string box.
+    // The tuning preset box, beside the string count: a preset sets every string box.
     private StackPanel PresetRow()
     {
         _presetCombo = new ComboBox { Name = "TuningPresetBox", MinWidth = PresetBoxMinWidth, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(12, 0, 0, 0) };
@@ -175,7 +175,7 @@ public sealed partial class TrackPropertiesWindow
         _cover.Background = parsed ? CoverGradient(c) : null;
     }
 
-    // WPF LinearGradientBrush(from, to, 55 degrees): the line through the box centre at that angle.
+    // A linear gradient brush (from, to, 55 degrees): the line through the box centre at that angle.
     private static LinearGradientBrush CoverGradient(Rgba c)
     {
         var turn = CoverGradientAngle * System.Math.PI / 180;
@@ -193,7 +193,7 @@ public sealed partial class TrackPropertiesWindow
         var change = new TextBlock { Text = "Change…", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(10, 0, 0, 0), Opacity = 0.7 };
         var button = new Button
         {
-            // The WPF chooser is a full-width bordered box with its badge, name and "Change..." centred.
+            // The chooser is a full-width bordered box with its badge, name and "Change..." centred.
             Name = "InstrumentChooserButton", HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Center, Padding = new Thickness(8, 5, 8, 5),
             Content = new StackPanel { Orientation = Orientation.Horizontal, Children = { _chooserBadge, _chooserName, change } },
         };
@@ -206,7 +206,7 @@ public sealed partial class TrackPropertiesWindow
         return button;
     }
 
-    // Drum notation for a drum track, tuning for a pitched one that has strings (drum and keys tracks have none, as in WPF).
+    // Drum notation for a drum track, tuning for a pitched one that has strings (drum and keys tracks have none).
     private void ShowFamilyCards()
     {
         _drumCard.IsVisible = _track.IsDrumTrack;

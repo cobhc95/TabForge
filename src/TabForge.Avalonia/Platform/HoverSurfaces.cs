@@ -10,7 +10,7 @@ namespace TabForge.Avalonia.Platform;
 /// The Avalonia hover and press surfaces: a stronger shade than the Core theme's derived HoverBrush, which only guards 1.3:1 against the Panel2 cards,
 /// so a hovered button on the window chrome changed to a fill indistinguishable from the surface under it. Avalonia steps the shade away from the panel
 /// until it reaches <see cref="MinimumHoverContrast"/> against the window, the panel and the cards while the primary text stays above
-/// <see cref="MinimumHoverTextContrast"/>; the pressed shade is one further step. The Core theme maths and the WPF app's output are untouched.
+/// <see cref="MinimumHoverTextContrast"/>; the pressed shade is one further step. The Core theme maths and the app's output are untouched.
 /// Owns: the minimum ratios and the derived hover and press colours. Does not own: the published brushes (AvaloniaPalette) or which control paints the shade.
 /// Tests: TabForge.Avalonia.Tests.HoverSurfaceContrastTests.
 /// </summary>

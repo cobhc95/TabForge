@@ -1,8 +1,8 @@
 // Owns: the wording, buttons, Enter default, radio choices, remember box and answer mapping of the small track and confirm prompts (Add track,
 //       Delete track, Convert to audio track, Convert to instrument track, Change instrument and the generic Confirm), and the Undo sentence they share.
-// Does not own: showing a prompt (WPF Views/ConfirmPrompt, Avalonia Views/PromptWindow), the Undo key text (the caller passes it in), or whether
+// Does not own: showing a prompt (Avalonia Views/PromptWindow), the Undo key text (the caller passes it in), or whether
 //       a prompt is asked at all (the flows and TrackSetup).
-// Tests: none dedicated(WPF characterization), PromptWindowTests (Avalonia headless).
+// Tests: none dedicated, PromptWindowTests (Avalonia headless).
 namespace TabForge.Presenters;
 
 /// <summary>The answer a prompt gets. Esc, the close box and the title-bar cross all give <see cref="Cancel"/>.</summary>

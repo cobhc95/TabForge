@@ -1,6 +1,6 @@
 namespace TabForge.Documents;
 
-// Owns: the WPF-free rules the window applies when it opens a song among its tabs: where a new tab is inserted, whether a shown tab that
+// Owns: the toolkit-free rules the window applies when it opens a song among its tabs: where a new tab is inserted, whether a shown tab that
 //     plays is stopped before it is replaced, and how the placed song is shown (playback-on-switch policy, save-then-close of the target).
 // Does not own: the tab collection and its placement (DocumentManager, DocumentPlacement), loading and saving, or the unsaved-changes question.
 // Tests: no dedicated test class.

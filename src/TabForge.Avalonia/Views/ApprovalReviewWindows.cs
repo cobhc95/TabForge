@@ -14,7 +14,7 @@ using TabForge.Services;
 namespace TabForge.Avalonia.Views;
 
 /// <summary>
-/// The "Linked audio" window, the Avalonia twin of the WPF ApprovalReviewWindows: folders waiting for approval (Allow selected)
+/// The "Linked audio" window, the Avalonia window for it: folders waiting for approval (Allow selected)
 /// and the approvals already given (Revoke selected). The caller passes the lists and the two actions, so the window changes no settings itself.
 /// Owns: the layout, the rows and the button wiring. Does not own: the approval rules (MediaAccess, MediaPathPolicy), the song the approvals
 /// belong to, or the notice that opens this window. Tests: TabForge.Avalonia.Tests.ApprovalReviewWindowsTests.
@@ -134,7 +134,7 @@ public sealed class LinkedAudioReviewWindow : Window
 }
 
 /// <summary>
-/// The "Review plug-ins" window, the Avalonia twin of the WPF plug-in review: tick the plug-ins to trust, then Allow selected. Untrusted
+/// The "Review plug-ins" window, the Avalonia twin of the plug-in review: tick the plug-ins to trust, then Allow selected. Untrusted
 /// plug-ins that are not on disk show "(not found)". The caller passes the list and the approve action.
 /// Owns: the layout and the rows. Does not own: the trust rules (PluginTrust) or the settings change (the approve action does it).
 /// Tests: TabForge.Avalonia.Tests.ApprovalReviewWindowsTests.

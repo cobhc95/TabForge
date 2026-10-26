@@ -63,7 +63,7 @@ public sealed partial class MixerWindow
         return head;
     }
 
-    /// <summary>The live input row under Master, as the WPF row with the input switched off (the preview has no live input).</summary>
+    /// <summary>The live input row under Master, as the row with the input switched off (the preview has no live input).</summary>
     private Border LiveInputRow()
     {
         var grid = RowGrid();

@@ -43,7 +43,7 @@ public class TimelineSectionDragTests
     private static Point DragOverNeighbour(Window w, TimelineView v)
     {
         var slots = v.SectionSlots();
-        var from = new Point(slots[0].Left + 4, slots[0].Top + 4);
+        var from = new Point(slots[0].Left + slots[0].Width / 2, slots[0].Top + 4); // the middle: the 10 px edge zones resize
         w.MouseDown(from, MouseButton.Left);
         w.MouseMove(from + new Vector(2, 0));
         var to = new Point(slots[1].Left + slots[1].Width - 2, from.Y);

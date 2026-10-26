@@ -15,7 +15,7 @@ namespace TabForge.Avalonia;
 
 // Owns: the preview status bar's values: the shown tab's position, bar and master readouts (the first track, the score editor's cursor), the
 //   audio device state (the playback engine's running output, else the configured settings), the MIDI output name (shown only when the song has
-//   a MIDI track), the import idle state, and the transient status lines (metronome, file, edit and mixer messages, as the WPF status text).
+// a MIDI track), the import idle state, and the transient status lines (metronome, file, edit and mixer messages).
 //   The engine is the one the playback sessions use; null (no playback host) shows the idle state.
 //   Refreshed when the tab changes, the score or the cursor changes, the shown song's timeline changes, the settings change and the engine's status changes.
 // Does not own: the texts (the presenters), the row (StatusBarView), the score cursor (ScorePreviewView), the tabs (MainWindowTabs), the

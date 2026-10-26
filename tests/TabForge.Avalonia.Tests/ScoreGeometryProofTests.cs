@@ -18,7 +18,7 @@ namespace TabForge.Avalonia.Tests;
 
 /// <summary>
 /// Owns: the Avalonia half of the score geometry proof: the demo song's first 4 bars drawn through the recorder and the Skia adapter (geometry.json and
-/// score.png under %TEMP%\tf-avalonia-tests\avalonia), compared with the WPF file `TabForge.exe --score-geometry %TEMP%\tf-avalonia-tests\wpf` writes.
+/// score.png under %TEMP%\tf-avalonia-tests\avalonia), compared with the file `TabForge.exe --score-geometry %TEMP%\tf-avalonia-tests\wpf` writes.
 /// Tests: equal call counts per kind; lines, rects and paths within 1 DIP; text positions within 2 DIP; the differences go to compare.txt.
 /// </summary>
 public class ScoreGeometryProofTests
@@ -39,7 +39,7 @@ public class ScoreGeometryProofTests
         File.WriteAllText(Path.Combine(dir, "geometry.json"), JsonSerializer.Serialize(mine));
 
         var wpfFile = Path.Combine(Root, "wpf", "geometry.json");
-        if (!File.Exists(wpfFile)) return; // The WPF half runs only on Windows through the app; without it this test only renders.
+        if (!File.Exists(wpfFile)) return; // The half runs only on Windows through the app; without it this test only renders.
         var wpf = JsonSerializer.Deserialize<List<DrawRecord>>(File.ReadAllText(wpfFile))!;
         var (report, failures) = Compare(wpf, mine);
         File.WriteAllText(Path.Combine(Root, "compare.txt"), report);

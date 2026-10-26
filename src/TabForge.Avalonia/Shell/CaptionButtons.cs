@@ -18,7 +18,7 @@ namespace TabForge.Avalonia.Shell;
 
 /// <summary>
 /// The title row's buttons on the right: Record video, Monitor FX and Settings (40 px wide), then Minimise, Maximise or Restore, and Close (46 px wide),
-/// all 44 px tall, in the WPF order. A button takes the theme look of its class (ChromeCaptionButton, ChromeCloseButton), so hover and press
+/// all 44 px tall, in the order. A button takes the theme look of its class (ChromeCaptionButton, ChromeCloseButton), so hover and press
 /// colours come from the look table; glyph colours are palette keys.
 /// Owns: building the buttons and their glyphs. Does not own: what a button does (the caller's actions and IWindowChrome) or the looks (Core).
 /// Tests: TabForge.Avalonia.Tests.TitleBarTests.
@@ -31,10 +31,10 @@ public static class CaptionButtons
     // The shared icons (IconGeometry, 16 x 16 design box) are stretched uniformly to the glyph size. The minimise bar is Avalonia's own flat bar, drawn unstretched in the 10 px box.
     private const string MinimiseGeometry = "M 0,5 L 10,5";
 
-    // The Record video glyph: the camera outline, and the red recording dot (9 px with a 1.5 px ring) over the box's top right corner, as WPF draws it.
+    // The Record video glyph: the camera outline, and the red recording dot (9 px with a 1.5 px ring) over the box's top right corner.
     private const double CameraGlyphWidth = 17, CameraGlyphHeight = 14, RecordGlyphBox = 20, RecordDotSize = 9, RecordDotRingWidth = 1.5;
 
-    // The stroke of a caption glyph, as the WPF window draws the camera and the system glyphs.
+    // The stroke of a caption glyph, as the window draws the camera and the system glyphs.
     private const double GlyphStroke = 1.4;
     // The camera outline's stroke on screen, DIP: the toggles' stroke (MenuRowToggles.IconStroke), so the camera matches them.
     private const double CameraStroke = 1.6;
@@ -126,8 +126,8 @@ public static class CaptionButtons
     private static Grid Camera()
     {
         // The outline sits in a Viewbox, as the menu row's icons do (MenuRowToggles.Icon): the Path's Uniform stretch first normalises the
-        // geometry into its own bounds (the camera's units start at 2,6), then the Viewbox fits those bounds into the WPF 17 x 14 box and
-        // centres them in it. Left / centre is the WPF window's placement, so the dot overhangs the camera's top right corner as it does there.
+        // geometry into its own bounds (the camera's units start at 2,6), then the Viewbox fits those bounds into the 17 x 14 box and
+        // centres them in it. Centred in the 20 px box like the gear and headphones; the dot overhangs the camera's top right corner as it does there.
         var data = Geometry.Parse(IconGeometry.Camera);
         // The Viewbox's own scale for this outline (its width and height limits, as MenuRowToggles.Icon takes them): the stroke is set in the
         // outline's units so it is CameraStroke DIP on screen, the toggles' stroke. The window's UI-scale LayoutTransform scales it again, so
@@ -144,7 +144,7 @@ public static class CaptionButtons
         var glyph = new Viewbox
         {
             Width = CameraGlyphWidth, Height = CameraGlyphHeight, Stretch = Stretch.Uniform,
-            HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Center,
+            HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center,
             IsHitTestVisible = false, Child = outline,
         };
         var dot = new Ellipse

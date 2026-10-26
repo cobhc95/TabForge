@@ -27,7 +27,7 @@ namespace TabForge.Avalonia.Views;
 /// Owns: building the controls, one editor per row kind (switch, choice, number with range and unit, colour, text), the enabled state of
 /// dependent rows, reset, and the discard question with the list of unsaved changes.
 /// Does not own: the rows (PreferencesCatalog), the cards, enable rules and texts (PreferencesPagePresenter), or showing a question (AvaloniaMessageBox).
-/// Deviations: every edit copies the working settings into the live <see cref="Saved"/> object and raises <see cref="Previewed"/> (the WPF preview callback); Cancel or closing without OK copies the open-time snapshot back; OK and Apply keep the values, take a new snapshot and raise <see cref="Applied"/>; the owner saves them (MainWindowSettings). Common settings, Shortcuts and Advanced come
+/// Deviations: every edit copies the working settings into the live <see cref="Saved"/> object and raises <see cref="Previewed"/>; Cancel or closing without OK copies the open-time snapshot back; OK and Apply keep the values, take a new snapshot and raise <see cref="Applied"/>; the owner saves them (MainWindowSettings). Common settings, Shortcuts and Advanced come
 /// from PreferencesSpecialPages and the rest are catalogue cards; the button rows, Import and Export are in PreferencesWindow.Buttons.cs and PreferencesWindow.Transfer.cs. Search is SettingsCatalog.Matches over the registry (PreferencesWindow.Search.cs).
 /// Size: over 300 lines because the rail, the cards, the editors and the reset questions are one screen. The header and footer are in
 /// PreferencesWindow.Chrome.cs; the rules stay in PreferencesPagePresenter.
@@ -212,7 +212,7 @@ public sealed partial class PreferencesWindow : Window, IPreferencesChangesHost
         return header;
     }
 
-    /// <summary>A rail row: the page's glyph, then its name, as the WPF rail shows them.</summary>
+    /// <summary>A rail row: the page's glyph, then its name.</summary>
     private Grid NavigationRow(string page)
     {
         var glyph = new SettingsNavigationIconView(page) { Width = ChromeMetrics.SettingsRailIconSize, Height = ChromeMetrics.SettingsRailIconSize, VerticalAlignment = VerticalAlignment.Center };

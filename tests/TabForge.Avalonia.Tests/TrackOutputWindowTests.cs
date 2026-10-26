@@ -31,7 +31,7 @@ public class TrackOutputWindowTests
         var window = Make(new List<int>());
         window.Show();
 
-        // The WPF window's controls in tree order, written from the WPF app's Views/Timeline/TrackOutputWindow.cs: the buttons first
+        // The window's controls in tree order, written from the app's Views/Timeline/TrackOutputWindow.cs: the buttons first
         // (Test sound, Close), then the heading, the device list and the hint.
         var expected = new[]
         {

@@ -108,12 +108,9 @@ public static class DocumentEdits
     public static void RecordHighlight(IEditableDocument document, BarHighlightSnapshot before, string label = "Move highlight")
     {
         if (before == document.Highlight.Snapshot()) return;
-        var sel = PendingSelection; PendingSelection = null;   // a score selection this move cleared comes back in the same step
+        var sel = document.Highlight.PendingSelection; document.Highlight.PendingSelection = null;   // a score selection this move cleared comes back in the same step
         document.Undo.Capture(document.Undo.Snapshot(document.Project, label) with { Highlight = before, Selection = sel });
     }
-
-    /// <summary>The score/model selection a timeline selection is about to clear; folded into the next RecordHighlight step. UI thread only.</summary>
-    public static SelectionSnapshot? PendingSelection { get; set; }
 
     /// <summary>One undo step for a selection that replaced others: whichever of <paramref name="highlight"/>, <paramref name="loop"/>, <paramref name="selection"/> is given comes back with Ctrl+Z (the Loop button stays).</summary>
     public static void RecordSwap(IEditableDocument document, string label, BarHighlightSnapshot? highlight, LoopRegionSnapshot? loop, SelectionSnapshot? selection)

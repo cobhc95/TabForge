@@ -35,7 +35,7 @@ public static class ThemeColours
         var muted = a.Muted;
         Set("WindowBrush", parse(a.Background));
         Set("PanelBrush", parse(panel));
-        // Cards: the dark card is about 1.25x the panel, the CardBackground palette shade WPF paints, so cards stand off the page.
+        // Cards: the dark card is about 1.25x the panel, the CardBackground palette shade the app paints, so cards stand off the page.
         Set("Panel2Brush", Shade(panel, light ? 1.0 : 1.25));
         Set("Panel3Brush", Shade(panel, light ? 0.92 : 1.22));
         Set("ChromeStripBrush", parse(a.TitleBarColour));

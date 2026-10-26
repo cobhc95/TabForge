@@ -10,7 +10,7 @@ namespace TabForge.Avalonia.Platform.Controls;
 public sealed record BandLayoutChoices(bool FretboardAbove, bool ColourFrame);
 
 // Owns: the Band view's layout menu, the roll-down after the "BAND VIEW" caption, in the menu style of the compact menu: the fretboard placement
-//   (beside or above the tab, one choice), the track colour frame and Reset view, as WPF's band layout menu lists them; then the Band view and
+// (beside or above the tab, one choice), the track colour frame and Reset view; then the Band view and
 //   Compact mode tick rows (ToolbarMenuRows), so either mode can be turned off from it. It has no File to Help submenus.
 // Does not own: the band settings and what an option changes (the band host passes the current choices and runs the chosen option), the mode
 //   commands behind the tick rows (MainWindowCommands), the caption and when the menu opens.
@@ -20,7 +20,7 @@ public static class BandViewMenu
     /// <summary>The option ids the menu passes to the band host.</summary>
     public const string FretboardBesideOption = "beside", FretboardAboveOption = "above", ColourFrameOption = "frame", ResetOption = "reset";
 
-    /// <summary>The hotkey command ids of the fretboard placement and the colour frame, whose live keys the rows show (WPF's band layout menu).</summary>
+    /// <summary>The hotkey command ids of the fretboard placement and the colour frame, whose live keys the rows show (the band layout menu).</summary>
     public const string ToggleFretboardAboveCommandId = "Band.ToggleFretboardAbove", ToggleColourFrameCommandId = "Band.ToggleColourFrame";
 
     private const string ResetTooltip = "Back to the Band view's defaults in every tab: fretboard above the tab, the first row's fretboard only, the colour frame, and rows as tall as their lines of music.";

@@ -121,9 +121,9 @@ internal sealed partial class RecordingPresenter
         hooks?.BeginLanding(landingBase, activePunch);
         var stopStatus = recording.Toggle(tracks, MediaFolders.ForSong(song.Path));
         showStatus(stopStatus);
-        LandMidiTakes(recording, song, landingBase, activePunch);
+        LandMidiTakes(recording, song, landingBase, activePunch, hooks?.MidiOptions?.Invoke());
         if (activePunch is not null && AudioInputs.IsMidi(activePunch.Track.AudioInput)) hooks?.EndLandingPunch(activePunch);   // its file never arrives
-        hooks?.ClipLanded?.Invoke(song);   // the landed MIDI clips are a clip edit: compact and sync as WPF's ClipsChanged does
+        hooks?.ClipLanded?.Invoke(song);   // the landed MIDI clips are a clip edit: compact and sync as any clip edit does
         hooks?.RowsReload?.Invoke(song);   // always show the landed MIDI lanes/stacks
         // The drawn playhead at the stop is the take's end: keep it, so the cursor and the next Play continue from there.
         var drawn = session.Playhead;
@@ -252,7 +252,7 @@ internal sealed partial class RecordingPresenter
     /// newest playing, as one undo step in the song that owns the tracks. <paramref name="before"/> is the state the recording stop began from,
     /// so every audio take that lands later joins the same step.  A recording through score repeats lands as one ordinary clip (the repeat view only folds its drawing).
     /// </summary>
-    public static void LandMidiTakes(TransportRecording recording, SongDocument song, UndoSnapshot? before = null, PassPunch? punch = null)
+    public static void LandMidiTakes(TransportRecording recording, SongDocument song, UndoSnapshot? before = null, PassPunch? punch = null, MidiRecordOptions? options = null)
     {
         var finished = recording.TakeFinishedMidi();
         if (punch is not null)
@@ -267,9 +267,11 @@ internal sealed partial class RecordingPresenter
         var count = finished.Sum(item => item.Clips.Count);
         DocumentEdits.Run(song, _ =>
         {
+            var landing = options ?? new MidiRecordOptions();
             foreach (var (track, clips) in finished)
             {
-                RecordedTakes.Place(track, clips, midi: true);
+                if (landing.QuantizeGrid is { Length: > 0 } grid) MidiTakeQuantize.Quantize(song.Project, clips, grid);   // input quantize first, then land
+                MidiTakeLanding.Land(song.Project, track, clips, landing);
             }
             return true;
         }, before, label: count > 1 ? $"Record {count} takes" : "Record take");

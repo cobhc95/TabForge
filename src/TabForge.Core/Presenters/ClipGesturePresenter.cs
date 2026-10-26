@@ -1,6 +1,6 @@
 using TabForge.Models;
 
-// Owns: the clip gesture rules that need no WPF types: which gesture a press on a clip starts (body, trim edges, fade handles), the
+// Owns: the clip gesture rules that need no toolkit types: which gesture a press on a clip starts (body, trim edges, fade handles), the
 //       drag threshold, the nearest snap candidate, the lane and zone under a dragged clip, the notation-row drop rule, restoring a
 //       cancelled trim, and the waveform's visible span and peak range per pixel column. Every method takes plain numbers and
 //       allocates nothing.

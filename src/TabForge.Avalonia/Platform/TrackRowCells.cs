@@ -10,7 +10,7 @@ using TabForge.Presenters;
 namespace TabForge.Avalonia.Platform;
 
 /// <summary>
-/// The cells of one Avalonia track row, in the WPF default column order and widths (TrackColumnLayout.DefaultOrder): cogwheel, instrument kind,
+/// The cells of one Avalonia track row, in the default column order and widths (TrackColumnLayout.DefaultOrder): cogwheel, instrument kind,
 /// record arm, number, name (flexible), split FX button, M, S, volume slider and pan slider. It places each cell and draws it in theme colours.
 /// Owns: the column geometry, the cell boxes, the slider value mapping and the cell drawing.
 /// Does not own: the row geometry (TimelineView), the instrument art (TrackIconArt), the pointer gestures (TimelineInputController), the edits.
@@ -30,7 +30,7 @@ public static class TrackRowCells
     public const double SliderMarginLeft = 6, SliderMarginRight = 10;
     private const string Font = ChromeMetrics.UiFontFamily;
 
-    /// <summary>The WPF columns in their default order with their widths; "name" is the flexible one.</summary>
+    /// <summary>The columns in their default order with their widths; "name" is the flexible one.</summary>
     public static readonly IReadOnlyList<(string Id, string Label, double Width)> Columns = new (string Id, string Label, double Width)[]
     {
         ("settings", "", 24), ("kind", "", 32), ("colour", "", 22), ("number", "#", 28), ("name", "TRACK", NameWidth),
@@ -100,7 +100,7 @@ public static class TrackRowCells
         return span.Left + (span.Width - titleWidth) / 2;
     }
 
-    /// <summary>The box of a cell's control in a row whose top is <paramref name="top"/>, with the WPF control sizes.</summary>
+    /// <summary>The box of a cell's control in a row whose top is <paramref name="top"/>, with the control sizes.</summary>
     public static Rect Box(Cell cell, double top, double rowHeight, double nameWidth = NameWidth)
     {
         var layout = Layout(nameWidth);
@@ -120,7 +120,7 @@ public static class TrackRowCells
         }
     }
 
-    /// <summary>The slider value the WPF sliders show: volume 0..127, pan -64..63 (the model's 0..127 less the centre).</summary>
+    /// <summary>The slider value the sliders show: volume 0..127, pan -64..63 (the model's 0..127 less the centre).</summary>
     public static int SliderValue(TrackModel track, Cell cell) => cell == Cell.Volume ? Math.Clamp(track.Volume, 0, MidiLimits.Max) : Math.Clamp(track.Pan, 0, MidiLimits.Max) - 64;
 
     /// <summary>The slider value at <paramref name="x"/> across <paramref name="box"/>, over <paramref name="range"/> (the cell's own range when null).</summary>
@@ -185,7 +185,7 @@ public static class TrackRowCells
     public static void DrawKind(IDrawContext d, Func<string, UiColor> ink, Rect box, CellPaint paint = CellPaint.Idle) =>
         DrawCellState(d, ink, box, ink("InstrumentBackground"), ink("InstrumentBoardEdge"), paint);
 
-    /// <summary>The WPF record-arm dot: a red ring and glowing core when armed, a soft red core when idle.</summary>
+    /// <summary>The record-arm dot: a red ring and glowing core when armed, a soft red core when idle.</summary>
     public static void DrawArm(IDrawContext d, Func<string, UiColor> ink, Rect box, bool armed, CellPaint paint = CellPaint.Idle)
     {
         var red = ink("Danger");
@@ -205,7 +205,7 @@ public static class TrackRowCells
         }
     }
 
-    /// <summary>The WPF split FX button: "FX" (accent when the chain is on and holds plug-ins) and the power symbol (green when the chain is on); <paramref name="hoverPart"/> is 0 (FX), 1 (power) or -1.</summary>
+    /// <summary>The split FX button: "FX" (accent when the chain is on and holds plug-ins) and the power symbol (green when the chain is on); <paramref name="hoverPart"/> is 0 (FX), 1 (power) or -1.</summary>
     public static void DrawFx(IDrawContext d, Func<string, UiColor> ink, Rect label, Rect power, bool chainOn, int pluginCount, int hoverPart, bool pressed = false)
     {
         var border = ink("TrackToggleEdge");
@@ -235,7 +235,7 @@ public static class TrackRowCells
     public static int SliderDefault(Cell cell) => cell == Cell.Volume ? MixerStripPresenter.VolumeDefault : MixerStripPresenter.PanDefault;
 
     /// <summary>
-    /// The WPF arrangement slider (App.xaml ArrangementSlider): an 8 DIP rail in the track colours, a 6 DIP fill in the slider fill colour up to
+    /// The arrangement slider (App.xaml ArrangementSlider): an 8 DIP rail in the track colours, a 6 DIP fill in the slider fill colour up to
     /// the thumb, and an 18 x 14 DIP thumb that prints the value. The thumb travels the rail's width less its own width. The value runs from
     /// <paramref name="minimum"/> to <paramref name="maximum"/>, as the track's or the master row's range.
     /// </summary>
@@ -255,7 +255,7 @@ public static class TrackRowCells
 
     private const double SliderRailHeight = 8, SliderFillHeight = 6, SliderThumbWidth = 18, SliderThumbHeight = 14, SliderThumbCorner = 2, SliderValueFontSize = 9;
 
-    /// <summary>Draws a 16x16 path glyph of the WPF icon set scaled to <paramref name="size"/>.</summary>
+    /// <summary>Draws a 16x16 path glyph of the icon set scaled to <paramref name="size"/>.</summary>
     private static void Glyph(IDrawContext d, IUiPath path, UiColor fill, double x, double y, double size)
     {
         d.PushTranslate(x, y);
@@ -265,6 +265,6 @@ public static class TrackRowCells
         d.Pop();
     }
 
-    /// <summary>The WPF IconCog geometry (App.xaml), parsed once. Key: none (one value); ceiling: one geometry; read on the UI thread.</summary>
+    /// <summary>The IconCog geometry (App.xaml), parsed once. Key: none (one value); ceiling: one geometry; read on the UI thread.</summary>
     private static readonly Lazy<IUiPath> CogGeometry = new(() => new AvaloniaPath(Geometry.Parse(TabForge.Platform.Theme.IconGeometry.Cog)));
 }

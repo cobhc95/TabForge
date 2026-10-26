@@ -14,7 +14,7 @@ using Xunit;
 namespace TabForge.Avalonia.Tests;
 
 /// <summary>
-/// Owns: the track list fit runs when a track or a group row is added or removed (WPF fits on track changes), and not on edits that leave the row
+/// Owns: the track list fit runs when a track or a group row is added or removed, and not on edits that leave the row
 /// count alone.
 /// Does not own: the fit maths (DockSizeRules), the fit itself (MainWindowTrackListFit), the master lane fit (MasterLaneFitTests).
 /// Tests: TabForge.Avalonia.Tests.TrackListCountFitTests.

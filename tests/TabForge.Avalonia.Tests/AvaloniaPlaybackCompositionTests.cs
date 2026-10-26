@@ -10,7 +10,7 @@ namespace TabForge.Avalonia.Tests;
 
 /// <summary>
 /// Owns: the check that the Avalonia composition's engine client asks the fail-closed plug-in trust: a file nobody approved is sent as Skip.
-/// Does not own: the trust rules (PluginTrust, self-tests in the WPF app) or the engine itself.
+/// Does not own: the trust rules (PluginTrust, self-tests in the app) or the engine itself.
 /// Tests: this class.
 /// </summary>
 public class AvaloniaPlaybackCompositionTests

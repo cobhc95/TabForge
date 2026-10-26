@@ -116,7 +116,7 @@ public class SectionLinkTests
         window.Show();
         window.UpdateLayout();   // the strip's point is read from the arranged timeline, below the transport bar
         var slot = arrangement.Timeline.SectionSlots()[1];
-        var at = arrangement.Timeline.TranslatePoint(new Point(slot.Left + 8, slot.Top + 6), window)!.Value;
+        var at = arrangement.Timeline.TranslatePoint(new Point(slot.Left + 24, slot.Top + 6), window)!.Value;
         window.MouseDown(at, MouseButton.Left);
         window.MouseUp(at, MouseButton.Left);
         Assert.Equal(1, clicks);

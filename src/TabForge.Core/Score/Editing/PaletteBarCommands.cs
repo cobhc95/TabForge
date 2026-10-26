@@ -5,7 +5,7 @@ namespace TabForge.ScoreEditing;
 
 // Owns: the palette tools that flip one bar property (free time, double barline, swing feel, simile repeat, system breaks, gray inactive voice)
 //   as one undo step, and the status line each one reports.
-// Does not own: the flag edits (MeasureProperties), the buttons (the WPF and Avalonia palettes) or the redraw after the edit.
+// Does not own: the flag edits (MeasureProperties), the buttons or the redraw after the edit.
 // Tests: no dedicated test class.
 /// <summary>What a palette bar tool did: whether the song changed and the status line to show (empty when it changed nothing).</summary>
 public readonly record struct PaletteBarResult(bool Changed, string Status);

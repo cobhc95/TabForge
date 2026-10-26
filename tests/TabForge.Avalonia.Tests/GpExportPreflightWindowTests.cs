@@ -35,7 +35,7 @@ public class GpExportPreflightWindowTests
         var window = Make(new List<GpExportChoice>());
         window.Show();
 
-        // The WPF dialog's controls in tree order, written from the WPF app's GpExportPreflightDialog.cs: the headline, the intro,
+        // The dialog's controls in tree order, written from the app's GpExportPreflightDialog.cs: the headline, the intro,
         // the loss list (a read-only text box with an automation name), the advice, then the three buttons with their automation ids.
         var expected = new[]
         {

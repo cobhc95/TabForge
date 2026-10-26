@@ -6,7 +6,7 @@ using TabForge.Models;
 namespace TabForge.Avalonia;
 
 // Owns: the section lock toggle of the timeline's section menu and bar menu ("Lock section position"): it flips LockPosition of the section
-//   the right-click was on (ContextMenuHost.ClickedSection) on the shown song, as one undo step, as WPF does.
+// the right-click was on (ContextMenuHost.ClickedSection) on the shown song, as one undo step.
 // Does not own: the menu rows (TimelineMenus in Core), the row-to-id mapping (ContextMenuRows), the section lane drawing (TimelineView),
 //   the commands table (MainWindowCommands).
 // Tests: TabForge.Avalonia.Tests.MainWindowSectionLockTests.

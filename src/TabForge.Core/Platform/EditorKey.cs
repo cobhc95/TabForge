@@ -1,7 +1,7 @@
 namespace TabForge.Platform;
 
 // Owns: the toolkit-neutral keys the score editor reads (EditorKeyMap.cs), and the fret digit each digit key writes.
-// Does not own: the toolkit key mapping (Platform/Wpf/WpfEditorKeys.cs) or what a digit does (TabEditorControl.Keyboard.cs).
+// Does not own: the toolkit key mapping (the Avalonia key mapping) or what a digit does (TabEditorControl.Keyboard.cs).
 // Tests: no dedicated test class.
 
 /// <summary>A key the score editor reads; None for every other key.</summary>

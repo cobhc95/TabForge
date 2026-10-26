@@ -174,7 +174,7 @@ public sealed class FxChainWindows
         FloatingEditors.SongShown(held, _active(), handle, _owner.ActualThemeVariant != global::Avalonia.Styling.ThemeVariant.Light);
     }
 
-    /// <summary>The monitor switched between the app-wide chain and the song's own: its window closes and reopens on the other chain (as WPF does).</summary>
+    /// <summary>The monitor switched between the app-wide chain and the song's own: its window closes and reopens on the other chain.</summary>
     public void ReopenMonitor()
     {
         var wasOpen = _open.Values.Any(w => MixerBuses.IsMonitor(w.Track) && w.IsVisible);

@@ -9,7 +9,7 @@ namespace TabForge.Avalonia;
 
 // Owns: the View menu's score notation commands (Tablature + standard, Tablature only, Standard notation only) on the shown score:
 //   each sets the score's and the shown song's notation mode, saves it in the settings (Notation, NotationPreferenceSet), redraws,
-//   shows the WPF status text and moves the menu check, as the WPF View menu does; the saved mode is applied at startup.
+// shows the status text and moves the menu check; the saved mode is applied at startup.
 // Does not own: the menu rows (MainMenuTable in Core), the notation drawing (Core ScoreGeometryProbe and ScoreLayoutEngine), the
 //   notation toggle of the score's right-click row (MainWindowScoreRows), the commands table (MainWindowCommands).
 // Tests: TabForge.Avalonia.Tests.MainWindowNotationMenuTests.
@@ -37,7 +37,7 @@ public static class MainWindowNotationMenu
         if (owner is not null) owner.Opened += (_, _) => SyncChecks(owner, score.Probe.Notation);
     }
 
-    /// <summary>The WPF status text for <paramref name="mode"/>.</summary>
+    /// <summary>The status text for <paramref name="mode"/>.</summary>
     public static string StatusText(NotationMode mode) => "Notation: " + mode switch
     {
         NotationMode.TabOnly => "tablature only",

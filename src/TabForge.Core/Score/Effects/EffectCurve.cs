@@ -5,7 +5,7 @@ namespace TabForge.Views.EffectEditors;
 /// <summary>The effects that have an editor dialog. A follow-up editor adds its member here.</summary>
 public enum EffectEditorKind { Bend, TremoloBar, Trill, Grace, Harmonic }
 
-// Owns: the editable point list of a bend or tremolo-bar curve and its snapping, ordering and limits (pure; no WPF).
+// Owns: the editable point list of a bend or tremolo-bar curve and its snapping, ordering and limits (pure; no UI toolkit).
 // Does not own: drawing and mouse handling (EffectCurveEditor), presets (EffectPresetStore), writing into notes (EffectEdits).
 // Tests: no dedicated test class.
 /// <summary>

@@ -17,7 +17,7 @@ using Xunit;
 namespace TabForge.Avalonia.Tests;
 
 /// <summary>
-/// Owns: the WPF track-row cells of the Avalonia track header: the slider drag as one undo step, the record arm toggle, the cogwheel and FX hits,
+/// Owns: the track-row cells of the Avalonia track header: the slider drag as one undo step, the record arm toggle, the cogwheel and FX hits,
 /// the column width and the dark and light renders. Renders go to %TEMP%\tf-avalonia-tests\TrackRowControlsTests.
 /// Tests: TrackRowCells, TrackHeaderColumn, TimelineInputController.
 /// </summary>

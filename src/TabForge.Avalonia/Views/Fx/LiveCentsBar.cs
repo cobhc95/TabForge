@@ -23,6 +23,24 @@ public sealed class LiveCentsBar : Control
     private readonly AvaloniaDrawContext _draw = new();
     private double _cents = double.NaN;
 
+    private double _fit = ChromeMetrics.LiveStripCentsScaleWidth;
+
+    /// <summary>The width the strip gives the scale: its preferred width, down to the minimum when the strip is narrow. A change re-measures and repaints once.</summary>
+    public double Fit
+    {
+        get => _fit;
+        set
+        {
+            value = Math.Clamp(value, ChromeMetrics.LiveStripCentsScaleMinWidth, ChromeMetrics.LiveStripCentsScaleWidth);
+            if (value == _fit) return;
+            _fit = value;
+            InvalidateMeasure();
+            InvalidateVisual();
+        }
+    }
+
+    protected override Size MeasureOverride(Size availableSize) => new(_fit, Height);
+
     public LiveCentsBar() => ActualThemeVariantChanged += (_, _) => InvalidateVisual();
 
     public double Cents
@@ -50,6 +68,7 @@ public sealed class LiveCentsBar : Control
         d.Line(line, TunerPresenter.NeedleX(-50, width), RailY, TunerPresenter.NeedleX(50, width), RailY);
         for (var tick = -50.0; tick <= 50; tick += 25)
         {
+            if (tick % 50 != 0 && width < ChromeMetrics.LiveStripCentsScaleWidth) continue;   // narrowed: only the -50, 0 and +50 ticks
             var x = TunerPresenter.NeedleX(tick, width);
             d.Line(tick == 0 ? new UiStroke(ink("TextPrimary"), 1) : line, x, RailY, x, RailY + (tick == 0 ? TickLong : TickShort));
         }

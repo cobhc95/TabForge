@@ -9,7 +9,7 @@ namespace TabForge.Avalonia;
 
 // Owns: the handlers of the track list's right-click rows on the shown song: Show tracks in groups, Colour tracks by group, Colour tracks... (the
 //   Colour tracks window), Show master track, Reset track list height and Track list settings... (the Settings window on the Timeline & Tracks page).
-//   Each runs what the WPF row runs.
+// Each runs what the row runs.
 // Does not own: the rows (TrackListMenus, TrackRowMenus), the group headers and the master lane drawing (the timeline views), the Colour tracks window
 //   (TrackColoursWindow), the commands table (MainWindowCommands).
 // Tests: TabForge.Avalonia.Tests.MainWindowRowCommandsTests.

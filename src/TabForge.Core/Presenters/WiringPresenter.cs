@@ -149,7 +149,7 @@ public static class WiringPresenter
         return new TrackModel { Id = track.Id, Rig = rig };
     }
 
-    /// <summary>The window's fixed texts, shared by the WPF and Avalonia windows.</summary>
+    /// <summary>The window's fixed texts, used by the Avalonia windows.</summary>
     public static class Texts
     {
         /// <summary>Section label for the audio row.</summary>

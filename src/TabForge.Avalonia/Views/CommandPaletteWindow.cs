@@ -19,7 +19,7 @@ namespace TabForge.Avalonia.Views;
 /// Command palette: type to filter the commands, Up and Down move the selection, Enter runs the chosen command, Esc closes.
 /// Owns: the window's controls, key and double-click routing, and closing when focus is lost. Does not own: the filter, ranking, selection
 /// and chosen command (CommandPalettePresenter). TabForge has no command table here yet, so the window lists <see cref="SampleEntries"/> in place
-/// of the WPF HotkeyCatalog; the app passes its own entries through the constructor.
+/// of the hotkey catalogue; the app passes its own entries through the constructor.
 /// Tests: TabForge.Avalonia.Tests.CommandPaletteSavePromptTuningTests.
 /// </summary>
 public sealed class CommandPaletteWindow : Window
@@ -75,7 +75,7 @@ public sealed class CommandPaletteWindow : Window
         AutomationProperties.SetName(_list, "Matching commands");
         _query.Margin = new Thickness(8, 8, 8, 4);
         _query.Padding = new Thickness(4);
-        // TextChanged is posted to the dispatcher; the property change filters at once, as the WPF box does, so Enter sees the new rows.
+        // TextChanged is posted to the dispatcher; the property change filters at once, so Enter sees the new rows.
         _filterDebounce.Tick += (_, _) =>
         {
             _filterDebounce.Stop();
@@ -114,7 +114,7 @@ public sealed class CommandPaletteWindow : Window
         Refresh();
     }
 
-    // The key text sits at the right edge, as in the WPF row: the title is the left-hand, trimmed part.
+    // The key text sits at the right edge, as in the row: the title is the left-hand, trimmed part.
     // The list builds a container with a null item while it swaps ItemsSource; that container gets an empty row.
     private static Control BuildRow(CommandPaletteEntry? entry)
     {

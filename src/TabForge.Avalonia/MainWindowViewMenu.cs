@@ -13,7 +13,7 @@ namespace TabForge.Avalonia;
 // Owns: the handlers of the View menu rows that show or hide a part of the window: Arrangement overview (the timeline panel), Full screen
 //   (the window maximised, and back to its earlier state), Highlight playing bar (the score's band, saved in the Follow settings),
 //   Instrument view (the fretboard / keyboard panel, with its row's check) and Side panel (every side panel hidden or brought back,
-//   as the WPF side-panel button does).
+//   as the side-panel button does).
 // Does not own: the menu rows (MainMenuTable in Core), the commands table (MainWindowCommands), the dock layout (DockWorkspaceController),
 //   the score drawing (ScoreAppearance in Core), the settings file (MainWindowSettings).
 // Tests: TabForge.Avalonia.Tests.MainWindowViewMenuTests.
@@ -35,7 +35,7 @@ public static class MainWindowViewMenu
     /// <summary>The toolbar button that hides the side panel or brings it back.</summary>
     private const string SidePanelCommandId = "View.SidePanel";
 
-    /// <summary>The status notice hiding the side panels shows, and the one bringing them back shows, as WPF does.</summary>
+    /// <summary>The status notice hiding the side panels shows, and the one bringing them back shows.</summary>
     private const string SidePanelHiddenText = "Side panel hidden";
     private const string SidePanelShownText = "Side panel shown";
 
@@ -60,6 +60,8 @@ public static class MainWindowViewMenu
         commands.Add(SidePanelCommandId, () => ToggleSidePanel(dock, settings, status));
         // The menu rows are built after Register, so their checks take the panels' state when the window opens.
         window.Opened += (_, _) => SyncRowChecks(window, dock, score);
+        // Every path that shows or hides a panel (its own close button, a layout, the piano roll) rebuilds the dock: the checks follow the real visibility.
+        dock.LayoutRebuilt += () => { SetRowChecks(window, GlobalCommandId, dock.IsPanelVisible(ArrangementPanelId)); SetRowChecks(window, InstrumentPanelCommandId, dock.IsPanelVisible(InstrumentPanelId)); };
     }
 
     /// <summary>Sets the check of every show and hide row in the window from the panels and the score.</summary>
@@ -121,7 +123,7 @@ public static class MainWindowViewMenu
         SetRowChecks(window, PlayingBarCommandId, score.Probe.Appearance.PlayingBarEnabled);
     }
 
-    /// <summary>Toolbar side-panel button: hides every shown side panel, or brings back exactly the ones that were shown, as WPF does.</summary>
+    /// <summary>Toolbar side-panel button: hides every shown side panel, or brings back exactly the ones that were shown.</summary>
     private static void ToggleSidePanel(DockWorkspaceController dock, MainWindowSettings? settings, Action<string>? status)
     {
         var shown = DockPaneTable.SideIds.Where(dock.IsPanelVisible).ToList();
@@ -152,7 +154,7 @@ public static class MainWindowViewMenu
         }
     }
 
-    /// <summary>View > Full screen, as WPF: the window maximises, and the next run restores the state it had before.</summary>
+    /// <summary>View > Full screen: the window maximises, and the next run restores the state it had before.</summary>
     private static Action FullscreenToggle(Window window)
     {
         var fullscreen = false;

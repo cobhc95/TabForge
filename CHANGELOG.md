@@ -4,6 +4,44 @@ TabForge is actively developed; please report anything odd on the Issues page.
 
 ## Unreleased
 
+## 0.8.1
+
+### New
+- **MIDI piano roll**: MIDI tracks and takes open in a piano roll in place of the score; Piano / Tab pills and right-click switch any track (remembered per track). Tools: select, draw, erase (click or drag box), split, mute, glue; Ctrl/Shift selection; multi-note move/copy/resize/transpose; legato; quantize with strength and swing; triplet and dotted grids shared with the timeline snap; scale highlight and row folding; colour modes; info line; step input; velocity lane (drag bars, selected bars highlighted), CC and pitch-bend lanes; follows the timeline scroll and playback with a playhead line; live MIDI keyboard keys light up. The fretboard/keyboard panel hides in piano roll mode. Editing a tab track asks first and changes only the edited notes.
+- **Media collect and relink**: saving can copy outside audio files into a "<Song> Media" folder (Ask / Always / Never); paths inside the song folder are saved relative; missing audio shows a banner, hatched clips and a Relink window; File > Collect media / Find missing media.
+- **Track inputs:** the input popup has an Audio input (one) and MIDI inputs (tick any) section, updates when devices are plugged in, and recording uses only the ticked MIDI devices.
+- Tab notes can be muted (silent) without changing the written tab.
+- **MIDI recording**: recorded notes show live in the piano roll; Preferences > Recording: "When recording over a MIDI clip" New lane / Merge into the clip underneath, and optional "Quantize MIDI input" (snap grid, off by default); closing the window mid-recording keeps the take (undoable).
+
+### Improvements
+- **Piano roll, Reaper-style editing**: one Edit tool (left-drag on empty grid draws a note, sideways = length, up/down = pitch; drag note body/edges/top edge = move/resize/velocity with live values); right-drag box select, right-click menu, middle-drag pans, Escape cancels; double-click deletes / inserts; Ctrl+drag copies, Alt = no snap; velocity lane paint and Shift ramp; Length dropdown (Grid, fixed, triplet, dotted, Last used); key strip Piano keys / Note names (GM drum names); position and note/velocity readout; hovered-row band; "By lane" heat colours; velocity line inside tall notes; optional ghost notes from other takes (off by default); info line accepts +/- values. Wheel = time zoom, Ctrl+wheel = note height, Shift+wheel = vertical scroll, Alt+wheel = horizontal scroll.
+- **Section resize by edges:** drag a section's left or right edge (10 px grab zone, brighter hint); the neighbouring section never stretches. The old knobs are retired.
+- **Render:** "Time selection" renders the loop region; "Selected bars" renders only the selected bars, tracks and clips.
+- The fretboard keeps its size when the score is zoomed.
+
+### Fixes
+- Piano roll: a green playhead triangle in its ruler (also when stopped; drag to move, edge arrow when off screen); piano keys as wide as note names; selecting notes in the piano roll no longer creates a loop (score/tab unchanged).
+- The clip split marker no longer stays behind after a clip is moved, deleted or deselected, and never draws outside its clip.
+- Arming a track grows a short timeline panel just enough to show the armed row; the input and monitor buttons have proper borders and hover states.
+- FX window tuner strip: no dead gap; the cents scale shrinks before controls wrap; a small gap below the title bar; the tuner window tooltip is no longer cut off and reads more clearly.
+- The video-recording button in the title bar is centred.
+- **Piano roll edits vanished on mouse release** (drawn notes, box selection, note drags): the gesture is now finished and committed before the mouse is released. Selected notes keep their colour with a bright outline; muted notes are hollow.
+- Piano roll: sounding notes are highlighted during playback and the view follows the playhead. Mouse wheel zooms time, Ctrl+wheel zooms key height, Shift+wheel scrolls sideways, Alt+wheel scrolls up/down.
+- Piano / Tab pills moved into the menu bar (they overlapped the score and piano roll toolbar), with hover states; piano roll keys get a hover tint and the keyboard no longer shows blank space below C-1.
+- Resizing a section could stretch its neighbour (e.g. Verse 2 / Chorus 1).
+- The fretboard/keyboard toolbar button stayed highlighted after the panel was closed.
+- Track input list was clipped and covered by its tooltip.
+- Piano roll snap could use out-of-date note positions while dragging.
+- **Recorded audio takes landed in the wrong place** (often many bars later) when Record was pressed while the song was already playing; the take start was converted to song time twice. Covered by a two-track, mid-song, repeat-song record/save/reload test.
+- Recording while the song was already playing could stop other audio clips (the engine clock was held); it now keeps running.
+- The "Recorded N s on track" notification is gone (errors and lost-audio warnings still show).
+
+### Under the hood
+- Version 0.8.1. Audit (hygiene, maintainability, security, performance, size): long files split, missing file headers added, ~560 old WPF comments rewritten, debug-symbol DLL left out of the release.
+- Architecture rule fixes (shared state moved per song, size tokens, no debug prints).
+- GitHub CI passes on the public repo layout; AlphaTab package rebuilt reproducibly.
+- Retired the stale WPF-era playback step in REBUILD; out-of-date section, paste and clip-click tests updated to current rules.
+
 ## 0.8.0
 
 - **Platform**
@@ -27,8 +65,6 @@ TabForge is actively developed; please report anything odd on the Issues page.
   - Only one selection exists at a time: a timeline selection replaces a score selection and the other way round; one Ctrl+Z brings the old one back.
   - Bar commands (copy, cut, delete, paste bars and the rest) never use the loop, only the current selection.
   - A score selection is one track; a timeline selection covers all tab tracks. Copy never asks; Paste Special offers Overwrite / Merge / Insert with repeat, as one undo step.
-  - **Section resize knobs:** drag a section's edge knob to make it shorter or longer; it stops at the neighbouring section. Dragging the middle still moves it.
-  - **Split marker:** clicking an audio or MIDI clip leaves a dashed line (following the magnet / snap); S splits the clip there.
 
 - **Appearance and light mode**
   - Light mode redesigned: pale accent-tinted selections, a light maple fretboard and white section labels with a hairline.

@@ -142,7 +142,7 @@ public class TitleBarRectsTests
         window.Close();
     }
 
-    // The WPF window's edge answers: its caption-button hook runs before its resize hook, so the top row and the right column
+    // The window's edge answers: its caption-button hook runs before its resize hook, so the top row and the right column
     // over Minimise, Maximise and Close press the button; elsewhere a normal window's 6 px border resizes, and a maximised
     // window (no resize border) gives the top row to the tab, New tab, Record and Settings under it.
     [AvaloniaTheory]

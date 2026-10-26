@@ -81,7 +81,7 @@ public static class AvaloniaArrangementSlider
         };
         Bind(face, Border.BackgroundProperty, thumb, "SliderThumbFace");
         Bind(face, Border.BorderBrushProperty, thumb, "SliderThumbBorder");
-        // The WPF thumb glows in the palette glow colour: a 3 DIP blur at 40 percent opacity with no offset, in the colour of the theme the face sits in.
+        // The thumb glows in the palette glow colour: a 3 DIP blur at 40 percent opacity with no offset, in the colour of the theme the face sits in.
         void Glow()
         {
             var glow = AvaloniaPalette.Get(ThumbGlowPaletteKey, face.ActualThemeVariant == ThemeVariant.Light);

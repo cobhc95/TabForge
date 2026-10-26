@@ -14,7 +14,7 @@ namespace TabForge.Avalonia.Views;
 /// File > New from template: a drop-down of starting points (built-in first, then the saved templates) with Create and Cancel.
 /// Closing returns the chosen name, or null on Cancel / Esc.
 /// Owns: the window's controls and the chosen name. Does not own: the list of names (UserTemplates) or opening the song (MainWindowFile).
-/// Deviation: the window uses the platform title bar; the WPF picker (GpDialogs.PickTemplate) draws the system one.
+/// Deviation: the window uses the platform title bar; the picker (GpDialogs.PickTemplate) draws the system one.
 /// Tests: TabForge.Avalonia.Tests.MainWindowMenuTests.EveryMenuTableCommandIsHandledOrDisabled.
 /// </summary>
 public sealed class TemplatePickerWindow : Window

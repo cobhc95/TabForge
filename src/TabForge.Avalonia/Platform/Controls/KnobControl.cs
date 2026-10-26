@@ -12,7 +12,7 @@ using TabForge.Platform;
 namespace TabForge.Avalonia.Platform.Controls;
 
 /// <summary>
-/// A small rotary dial, the twin of the WPF KnobControl: drag around the dial (clockwise raises; Shift for fine), the mouse wheel
+/// A small rotary dial, the knob control: drag around the dial (clockwise raises; Shift for fine), the mouse wheel
 /// and arrow keys step, Ctrl+click or Home returns to <see cref="DefaultValue"/>, double-click, right-click, F2 or Enter type an exact value.
 /// The arc runs from <see cref="Origin"/> to the value, so a pan knob fills out from the centre.
 /// Owns: pointer and key handling, the drawing (IDrawContext, repainted only when the value, hover, drag or focus changes) and the type-in flyout.
@@ -21,7 +21,7 @@ namespace TabForge.Avalonia.Platform.Controls;
 /// </summary>
 public sealed class KnobControl : Control
 {
-    /// <summary>Default edge length in DIPs (the WPF knob's FX bar size).</summary>
+    /// <summary>Default edge length in DIPs.</summary>
     public const double DefaultSize = 30;
     private const double ArcWidth = 2.6;
     private const double RingInset = 2.5;

@@ -9,7 +9,7 @@ using Avalonia.Styling;
 namespace TabForge.Avalonia.Platform;
 
 /// <summary>
-/// The WPF scroll bar (App.xaml): a 12 DIP wide transparent track with a rounded thumb (radius 4, margin 2, at least 28 DIP long) in the ScrollThumbBrush,
+/// The scroll bar (App.xaml): a 12 DIP wide transparent track with a rounded thumb (radius 4, margin 2, at least 28 DIP long) in the ScrollThumbBrush,
 /// always visible instead of Fluent's overlay hairline. The Core looks "ScrollBar", "ScrollBarThumb" and "ScrollBarThumbLength" add the horizontal size and hover colour.
 /// Owns: the scroll bar template and the no-auto-hide rule. Does not own: the timeline scroll bar (its own control), the look rules (AvaloniaLooks).
 /// Tests: TabForge.Avalonia.Tests.ThemeTests (ScrollBar width and thumb brush).

@@ -20,7 +20,7 @@ namespace TabForge.Avalonia.Views;
 /// the second; the other is disabled), an "Apply to" scope row, "Remember my choice" and OK / Cancel. Closing returns the BarRangeAnswer, or null on Cancel / Esc.
 /// Owns: the window's controls and reading them back. Does not own: the words, labels or answer mapping (BarRangePromptPresenter,
 /// ConfirmDialogPresenter) or the edits.
-/// Deviation: the window uses the platform title bar; the WPF window draws its own and is reused per owner.
+/// Deviation: the window uses the platform title bar; the window draws its own and is reused per owner.
 /// Tests: TabForge.Avalonia.Tests.PasteOptionsSpecialAndDeleteBarsTests.
 /// </summary>
 public sealed class BarRangePromptWindow : Window
@@ -70,7 +70,7 @@ public sealed class BarRangePromptWindow : Window
         cancel.Click += (_, _) => Close(null);
         body.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Spacing = 8, Margin = DialogMetrics.FooterGap, Children = { ok, cancel } });
         Content = body;
-        // Y answers OK as in the WPF prompt; N and Esc cancel.
+        // Y answers OK as in the prompt; N and Esc cancel.
         AddHandler(KeyDownEvent, (_, e) =>
         {
             if (e.Key == Key.Y) Close(Current());

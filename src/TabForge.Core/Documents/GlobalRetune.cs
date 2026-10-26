@@ -6,7 +6,7 @@ namespace TabForge.Documents;
 //   per-string shift readout, and the status line that describes the tuning after a retune.
 // Does not own: the tuning window and its presets (GlobalTuningPresenter, TuningPresets), the menu row and command (the Avalonia Global tuning handler),
 //   the undo stacks and the dirty mark (DocumentEdits).
-// Tests: none dedicated(full suite; the same retune rule in the WPF build).
+// Tests: none dedicated(full suite; the same retune rule in the app).
 
 /// <summary>The global tuning retune of one open document.</summary>
 public static class GlobalRetune

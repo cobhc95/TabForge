@@ -149,7 +149,7 @@ public sealed class TimelineDeleteRoutingTests
         window.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Delete, Source = window });
         Assert.Empty(track.AudioClips);
 
-        // Ctrl+Z undoes through the window: the engine re-syncs and the arrangement reloads the restored song (WPF RefreshAfterRestore).
+        // Ctrl+Z undoes through the window: the engine re-syncs and the arrangement reloads the restored song.
         window.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Z, KeyModifiers = KeyModifiers.Control, Source = window });
 
         var restored = timeline.Song.Tracks.Single(candidate => candidate.Name == track.Name);

@@ -29,7 +29,7 @@ public static class MainWindowViewToggles
     private const string FollowOnText = "Follow playback on";
     private const string FollowOffText = "Follow playback off";
 
-    /// <summary>The status notices moving the fretboard pane shows, as WPF does.</summary>
+    /// <summary>The status notices moving the fretboard pane shows.</summary>
     private const string FretboardAboveText = "Fretboard above the score";
     private const string FretboardBelowText = "Fretboard below the score";
 
@@ -59,7 +59,7 @@ public static class MainWindowViewToggles
         commands.Add(FollowPlaybackCommandId, () => ToggleFollowPlayback(settings, status));
     }
 
-    /// <summary>Moves the fretboard pane above the score or below it, as WPF does (the binding moves the pane on the settings change).</summary>
+    /// <summary>Moves the fretboard pane above the score or below it (the binding moves the pane on the settings change).</summary>
     private static void MoveFretboard(MainWindowSettings? settings, Action<string>? status)
     {
         if (settings is null) return;

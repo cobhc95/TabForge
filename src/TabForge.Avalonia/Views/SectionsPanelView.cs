@@ -16,11 +16,11 @@ using TabForge.Presenters;
 
 namespace TabForge.Avalonia.Views;
 
-// Owns: the Sections dock pane, the twin of the WPF SectionsPanelContent: the sections in bar order, each row filled with its section colour
+// Owns: the Sections dock pane, the sections panel: the sections in bar order, each row filled with its section colour
 //       (SectionColourPresenter) in its rest, hover and selected look (SectionListPresenter), a lock glyph on locked sections, row selection,
 //       the press, release jump and confirm flash of each row (SectionButtonFeedback), and the Add at cursor, Edit and Remove buttons, which report that they need the full app.
 // Does not own: the sections (the markers are read only here), the section editor, the timeline and the dock placement (DockPaneSetup).
-//       Not ported yet: the hover glow, keyboard selection (the WPF list is a ListBox) and the Add and Edit dialogs.
+// Not ported yet: the hover glow, keyboard selection and the Add and Edit dialogs.
 // Tests: SectionColourPresenterTests (rules), ParityShotsTests (panel-sections shots).
 public sealed class SectionsPanelView : Border
 {

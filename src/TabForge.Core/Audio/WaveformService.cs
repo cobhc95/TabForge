@@ -17,6 +17,8 @@ namespace TabForge.Audio;
 /// </summary>
 public sealed partial class WaveformService : IDisposable
 {
+    /// <summary>The failure message of a file that is not there (the timeline draws such a clip hatched; see <see cref="WaveStatus.IsMissing"/>).</summary>
+    public const string MissingMessage = "file not found";
     public const double SecondsPerPeak = 0.01;
     public const long MaxFileBytes = 2L << 30;      // 2 GiB
     public const double MaxSeconds = 2 * 3600;      // 2 h
@@ -283,14 +285,14 @@ public sealed partial class WaveformService : IDisposable
         {
             if (StatOverride is { } stat)
             {
-                if (stat(path) is not { } probed) { Fail(s, "file not found"); return true; }
+                if (stat(path) is not { } probed) { Fail(s, MissingMessage); return true; }
                 (size, ticks) = probed;
                 if (size > MaxFileBytesOverride) { Fail(s, "file too large (limit 2 GiB)"); return true; }
             }
             else if (OpenOverride is null)
             {
                 var info = new FileInfo(path);
-                if (!info.Exists) { Fail(s, "file not found"); return true; }
+                if (!info.Exists) { Fail(s, MissingMessage); return true; }
                 size = info.Length; ticks = info.LastWriteTimeUtc.Ticks;
                 if (size > MaxFileBytesOverride) { Fail(s, "file too large (limit 2 GiB)"); return true; }
             }

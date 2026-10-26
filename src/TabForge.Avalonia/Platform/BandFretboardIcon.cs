@@ -5,8 +5,8 @@ using Avalonia.Media;
 
 namespace TabForge.Avalonia.Platform;
 
-// Owns: the drawing of a Band card's fretboard toggle, the same neck as WPF's band row icon (an outline, a thick nut at the left, three frets,
-//   hairline strings behind them and two inlay dots), with its geometry in the WPF icon's own 24 x 20 box.
+// Owns: the drawing of a Band card's fretboard toggle, the same neck as the band row icon (an outline, a thick nut at the left, three frets,
+// hairline strings behind them and two inlay dots), with its geometry in the icon's own 24 x 20 box.
 // Does not own: the toggle button, its lit state or what it shows (BandTrackPanel), the brush (passed to Paint from the theme).
 // Tests: TabForge.Avalonia.Tests.BandCardTests.
 internal static class BandFretboardIcon

@@ -25,7 +25,7 @@ public sealed class DockPaneSetup
     public IReadOnlySet<string> NaturalHeightIds => _naturalHeight;
 
     /// <summary>Registers the pane with a table row id; an id the table does not know is a mistake and throws.
-    /// <paramref name="keepsNaturalHeight"/> locks the pane's row to its content's height, as the WPF dock locks the fretboard.</summary>
+    /// <paramref name="keepsNaturalHeight"/> locks the pane's row to its content's height.</summary>
     public void Register(string id, Func<Control> factory, bool keepsNaturalHeight = false)
     {
         if (keepsNaturalHeight) _naturalHeight.Add(id);

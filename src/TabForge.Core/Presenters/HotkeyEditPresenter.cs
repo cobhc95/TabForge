@@ -3,9 +3,9 @@ using TabForge.Services;
 // Owns: the Shortcuts page rules that need no toolkit: which key presses are only modifiers or cancel, the gesture text of a
 //       captured key, conflicts across both slots of every command in the same context, reassign, clear, reset of one command,
 //       the "customized" mark, and writing the binding into HotkeySettings.
-// Does not own: key events, buttons or rebuilding the page (HotkeyPage in the WPF build, PreferencesSpecialPages in the Avalonia app),
+// Does not own: key events, buttons or rebuilding the page (HotkeyPage in the app, PreferencesSpecialPages in the Avalonia app),
 //       the preset box, the settings-changed notification (the host raises it after each call that returns true or Assigned).
-// Tests: none dedicated(the WPF page through this presenter), TabForge.Avalonia.Tests.PreferencesPagesTests.
+// Tests: none dedicated, TabForge.Avalonia.Tests.PreferencesPagesTests.
 namespace TabForge.Presenters;
 
 /// <summary>What a key press did to a shortcut capture.</summary>

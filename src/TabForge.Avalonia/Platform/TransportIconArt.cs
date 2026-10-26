@@ -8,8 +8,8 @@ using TabForge.Platform.Theme;
 namespace TabForge.Avalonia.Platform;
 
 /// <summary>
-/// The owner's transport icons (Assets/TransportIcons/*.svg, the files the WPF playbar reads) drawn on their 96 x 96 grid without the frame,
-/// as the WPF transport buttons show them (ShowFrame off). The files are read by the Core icon reader (SvgIcon) and drawn by AvaloniaSvgIcon;
+/// The owner's transport icons (Assets/TransportIcons/*.svg, the files the playbar reads) drawn on their 96 x 96 grid without the frame,
+/// as the transport buttons show them (ShowFrame off). The files are read by the Core icon reader (SvgIcon) and drawn by AvaloniaSvgIcon;
 /// on the light theme the colours take the deeper shade of the same hue. The SVG glow filter is not drawn.
 /// Owns: loading the SVGs once and drawing one icon. Does not own: the buttons or their layout (TransportBarView).
 /// Perf (H11-icon): loaded once on the UI thread after the first frame (Avalonia geometry must be built on the UI thread), so the first paint does no IO;

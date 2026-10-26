@@ -11,7 +11,7 @@ using TabForge.Services;
 namespace TabForge.Avalonia.Views.Docking;
 
 // Owns: the View menu's Layouts and Panels submenus for the Avalonia window. Their rows and their order come from DockLayoutCatalog
-//   (the layout list) and DockPaneTable (the panes), as the WPF View menu builds them; a layout row applies that layout, a panel row
+// (the layout list) and DockPaneTable (the panes); a layout row applies that layout, a panel row
 //   shows or closes its pane, and each check mark follows the dock.
 // Does not own: the dock tree (DockWorkspaceController), the saved-layout store (MainWindowSettings), the list rules
 //   (SavedLayoutRules, DockLayoutCatalog). The Band view and Keyboard mode Panels rows switch their whole-window layouts; without
@@ -31,7 +31,7 @@ public sealed class DockViewMenus
     private readonly List<(string PaneId, MenuItem Item)> _panelItems = new();
     private string? _currentLayout;
 
-    /// <summary>The status notices the layout rows show, as the WPF layout controller does.</summary>
+    /// <summary>The status notices the layout rows show.</summary>
     private const string LayoutSavedText = "saved";
     private const string TooManyLayoutsText = "Too many saved layouts; delete one first";
     private const string BuiltInsResetText = "Built-in layouts reset";
@@ -175,7 +175,7 @@ public sealed class DockViewMenus
             _status?.Invoke($"Layout \"{name}\" {LayoutNotFoundText}");
             return;
         }
-        // The fretboard side is the setting's, whatever the layout holds, as WPF does.
+        // The fretboard side is the setting's, whatever the layout holds.
         var bottom = _settings?.Settings.Appearance.FretboardAtBottom ?? false;
         _dock.ApplyLayout(DockLayoutTree.WithInstrumentSide(layout.State, bottom));
         _currentLayout = layout.Name;

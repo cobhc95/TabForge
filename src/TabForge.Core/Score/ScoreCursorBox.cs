@@ -33,7 +33,7 @@ internal static class ScoreCursorBox
 
     /// <summary>
     /// Grey box behind the notehead on the cursor's own string; the ink stays readable on it in both themes. A cursor on a string with no note in
-    /// its beat has no notehead box (the beat outline and the TAB box stay), as WPF's cursor does: nothing falls back to another note.
+    /// its beat has no notehead box (the beat outline and the TAB box stay): nothing falls back to another note.
     /// With a selection every note of every selected beat gets the yellow box, on every string.
     /// </summary>
     internal static void DrawStaff(IDrawContext d, IScoreRenderHost host, StaffNotationMeasureLayout layout, int measure, UiColor ink)

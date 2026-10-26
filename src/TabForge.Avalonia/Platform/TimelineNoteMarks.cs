@@ -8,7 +8,7 @@ using TabForge.Services;
 namespace TabForge.Avalonia.Platform;
 
 // Owns: the drawing of the two arrangement lane modes: the note marks of "Show the notes in each track lane" (one mark per pitched note or
-//   drum hit, sized as the WPF miniature) and the one continuous line of "Show one continuous line per track lane".
+// drum hit, sized) and the one continuous line of "Show one continuous line per track lane".
 // Does not own: the mode state and the lane cells (TimelineView), the menu rows (MainWindowArrangementModes), what a bar holds
 //   (TimelineActivityRules in Core).
 // Tests: TabForge.Avalonia.Tests.MainWindowMenuTests (the rows); the lane drawing is checked in the running app.

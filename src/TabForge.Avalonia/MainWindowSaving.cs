@@ -14,7 +14,7 @@ namespace TabForge.Avalonia;
 // Owns: File > Save, Save As and Export compatible .gp file of the Avalonia window: the path (the song's own .tforge / .gp, else the save dialog) and the write through
 //   DocumentSaveFlow; a failure is reported and leaves the song unsaved. The .gp export asks the lossy-export preflight question first (when
 //   GpExportPreflight finds losses) and hands the answer to DocumentSaveFlow.ExportGuitarProAsync; the song itself is never changed by an export.
-// Does not own: the file format and the save sequence (DocumentSaveFlow, DocumentController), the plug-in states (SongPluginStates), the dialog (IFileDialogs), the tabs (MainWindowTabs).
+// Does not own: the media copy offered before a write (MediaSaveStep), the file format and the save sequence (DocumentSaveFlow, DocumentController), the plug-in states (SongPluginStates), the dialog (IFileDialogs), the tabs (MainWindowTabs).
 // Tests: TabForge.Avalonia.Tests.MainWindowSaveTests.
 /// <summary>The window's save commands. UI thread only.</summary>
 public sealed class MainWindowSaving
@@ -33,6 +33,7 @@ public sealed class MainWindowSaving
     private readonly Func<string> _defaultSaveFormat;
     private readonly Func<SavePrompt, Task<PromptButton>> _ask;
     private readonly Func<DegradedSaveGate> _degraded;
+    private readonly MediaSaveStep? _media;
 
     /// <param name="dialogs">Asks where to save.</param>
     /// <param name="owner">The window the dialog belongs to.</param>
@@ -41,9 +42,11 @@ public sealed class MainWindowSaving
     /// <param name="defaultSaveFormat">The Default save format setting: "tforge", or anything else for .gp (the Save As dialog starts on it).</param>
     /// <param name="ask">Shows a question with buttons (the degraded-mode overwrite question) and returns the button the person pressed.</param>
     /// <param name="degraded">The degraded mode of the process (read at each save: it is set by an unexpected error at any time).</param>
+    /// <param name="media">The step run before each write that offers to copy audio from outside the song folder into it; null (tests) does nothing.</param>
     public MainWindowSaving(IFileDialogs dialogs, object? owner, Action<string> report, SongPluginStates pluginStates, Func<string> defaultSaveFormat,
-        Func<SavePrompt, Task<PromptButton>> ask, Func<DegradedSaveGate> degraded)
+        Func<SavePrompt, Task<PromptButton>> ask, Func<DegradedSaveGate> degraded, MediaSaveStep? media = null)
     {
+        _media = media;
         _dialogs = dialogs;
         _owner = owner;
         _report = report;
@@ -129,8 +132,11 @@ public sealed class MainWindowSaving
     {
         try
         {
+            // Audio outside the song folder: offered a copy first (a closed question cancels the save); the paths are written relative by the save itself.
+            if (_media is not null && !await _media.BeforeSave(document, path)) return false;
             var outcome = await _flow.SaveAsync(document, path, new TforgeOnlyAnswers(), _pluginStates.Collect, hold);
             if (outcome.Message.Length > 0) _report(outcome.Message);
+            if (outcome.Saved) _media?.AfterSave(document);
             // A file the person chose to write while degraded is not asked about again; a failed write confirms nothing.
             if (outcome.Saved) _degraded().ConfirmOverwrite(path);
             return outcome.Saved;

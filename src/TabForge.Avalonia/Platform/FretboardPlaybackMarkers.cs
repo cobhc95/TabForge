@@ -11,7 +11,7 @@ namespace TabForge.Avalonia.Platform;
 internal enum PlaybackMarkerRole { Now, ReleasedNow, Next, Upcoming, Recent }
 
 // Owns: how a playing note is drawn on the fretboard: each role's radius, halo, fill, outline and number, the technique tag pill and the movement
-//   line, as the WPF FretboardRenderer draws them. Sizes are named here; colours are theme-table keys.
+// line. Sizes are named here; colours are theme-table keys.
 // Does not own: which note has which role (InstrumentPlaybackSnapshot), the board geometry (FretboardGeometryRules), or when the panel redraws (InstrumentPanelView).
 // Tests: TabForge.Avalonia.Tests.FretboardPlaybackMarkerTests.
 internal static class FretboardPlaybackMarkers

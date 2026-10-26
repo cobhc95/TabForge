@@ -17,17 +17,17 @@ using TabForge.Avalonia.Views.Dialogs;
 namespace TabForge.Avalonia.Views;
 
 /// <summary>
-/// Track properties for a MIDI track, the twin of the WPF TrackPropertiesDialog: the details card (the owner's instrument
+/// Track properties for a MIDI track, the track properties dialog: the details card (the owner's instrument
 /// picture, track name, colour and tint), the instrument card (the Change button runs the track row icon's picker, InstrumentPickerFlow, whose OK commits at once as its own undo step; MIDI program and channel), the tuning card (strings, string tools, keep frets,
 /// frets and capo) or the drum notation card, and the OK / Cancel footer. OK is one undo step through DocumentEdits.Run when a document is given.
 /// The window edits working copies; OK writes the track only when every typed field is in range, else it shows the field's message and stays open.
-/// Closing with edits pending (Cancel, Esc, the close box) asks the WPF discard question; Yes closes, No returns to editing.
+/// Closing with edits pending (Cancel, Esc, the close box) asks the discard question; Yes closes, No returns to editing.
 /// Owns: the controls, layout and the working copies; the list of pending changes for the discard question.
 /// Does not own: the rules and texts (TrackPropertiesPresenter), the capo shift and retune (TrackSetup), the question window (SavePromptWindow);
 ///     the picture, colour, keep-frets and drum sections are in TrackPropertiesWindow.Sections.cs.
 /// Not a full twin: the FX button in the Mixer card,
 ///     the custom drum map editor, the typed note on a string chip, the Add track position row and the audio track variant.
-/// Deviation: the cover falls back to the owner's track-row icon, not the WPF vector instrument art, when an instrument has no badge; a string chip is the palette
+/// Deviation: the cover falls back to the owner's track-row icon, not the vector instrument art, when an instrument has no badge; a string chip is the palette
 ///     tuning pill, not the track colour; "Don't ask me again" is shown but not stored (no settings here).
 /// Over 300 lines: the field cards, string rows, footer and discard question of one window; the further sections live in the partial file; the Mixer card is in TrackPropertiesWindow.Mixer.cs.
 /// Tests: TabForge.Avalonia.Tests.TrackPropertiesWindowTests.
@@ -120,7 +120,7 @@ public sealed partial class TrackPropertiesWindow : Window
         return Card("Instrument", new StackPanel { Children = { InstrumentChooser(), soundRow, _channelHint } });
     }
 
-    // Drum and keys tracks have no tuning, as in WPF.
+    // Drum and keys tracks have no tuning.
     private Border TuningCard()
     {
         var tools = new WrapPanel { Margin = new Thickness(0, 8, 0, 0) };
@@ -155,7 +155,7 @@ public sealed partial class TrackPropertiesWindow : Window
         for (var i = 0; i < _tunings.Count; i++) _stringRows.Children.Add(StringRow(i));
     }
 
-    // Alpha of the note chip's fill: the track colour, dimmed, as in the WPF chip.
+    // Alpha of the note chip's fill: the track colour, dimmed, as in the chip.
     private const byte TrackChipTintAlpha = 0x40;
 
     // Per string: its number, the drawn string (thicker for lower pitches, like wound strings), − / note chip / +.
@@ -202,7 +202,7 @@ public sealed partial class TrackPropertiesWindow : Window
         return row;
     }
 
-    // Double-click on a note chip: type the note name. Enter accepts; Esc or leaving the box cancels (WPF BuildNoteChip).
+    // Double-click on a note chip: type the note name. Enter accepts; Esc or leaving the box cancels.
     internal void TypeNote(Border chip, int index)
     {
         if (chip.Child is TextBox) return;
@@ -326,7 +326,7 @@ public sealed partial class TrackPropertiesWindow : Window
         WriteSections();
     }
 
-    /// <summary>What the user changed so far, for the discard question (the WPF labels and arrow).</summary>
+    /// <summary>What the user changed so far, for the discard question.</summary>
     private List<string> PendingChanges()
     {
         var list = new List<string>();

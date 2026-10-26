@@ -17,7 +17,7 @@ namespace TabForge.Avalonia.Tests;
 /// <summary>
 /// Owns: the playback session checks against a fake engine and a fake UI thread: play, stop, pause, seek, loop, the frame pump, the finish
 ///     flag, dispose on tab close, and the transport bar wiring.
-/// Does not own: the real engine (the WPF PlaybackEngine is not reachable from Avalonia yet) or the MIDI output.
+/// Does not own: the real engine or the MIDI output.
 /// Tests: this class.
 /// </summary>
 public class AvaloniaPlaybackSessionTests

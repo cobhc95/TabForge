@@ -83,7 +83,7 @@ public sealed class EffectPresetStore
         P(EffectEditorKind.TremoloBar, "Release down", "0:4 60:0"),
     };
 
-    // Number presets come from the shared table (TabForge.Presets.OrnamentPresets), so the WPF and Avalonia editors list the same ones.
+    // Number presets come from the shared table (TabForge.Presets.OrnamentPresets), so the editors list the same ones.
     private static EffectPresetEntry[] Ornaments(EffectEditorKind kind, IEnumerable<OrnamentPreset> presets) => presets.Select(p => new EffectPresetEntry
     {
         Kind = kind.ToString(), Name = p.Name, Values = new Dictionary<string, double>(p.Values)

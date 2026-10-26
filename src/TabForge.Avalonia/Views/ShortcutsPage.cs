@@ -16,7 +16,7 @@ using TabForge.Services;
 namespace TabForge.Avalonia.Views;
 
 /// <summary>
-/// The Shortcuts page of the Settings window: the preset box and two editable slots per command, the twin of the WPF HotkeyPage.
+/// The Shortcuts page of the Settings window: the preset box and two editable slots per command.
 /// Owns: the rows (two slot buttons with Clear, Reassign, Reset, feedback, CUSTOM tag), turning key events into the catalogue key name and
 /// modifiers, and refreshing the texts after every change.
 /// Does not own: any shortcut rule (capture, conflicts, reassign, clear, reset, customized mark: HotkeyEditPresenter) or the settings dirty flag
@@ -150,7 +150,7 @@ internal sealed class ShortcutsPage
         label.Children.Add(title);
         if (action.Description.Length > 0) label.Children.Add(ToolWindowParts.Small(action.Description));
         label.Children.Add(ToolWindowParts.Small(action.Category));
-        // Each command row has 12 DIP of space above and below its key boxes, as the WPF row (pitch about 58 DIP).
+        // Each command row has 12 DIP of space above and below its key boxes, as the row (pitch about 58 DIP).
         const double commandRowVerticalMargin = 12;
         var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("*,16,Auto"), Name = "Shortcut", Margin = new Thickness(0, commandRowVerticalMargin) };
         grid.Children.Add(label);
@@ -223,7 +223,7 @@ internal sealed class ShortcutsPage
         }
     }
 
-    /// <summary>Restores the default bindings of the commands this page shows (all of them, or only the searched ones), as the WPF Reset category button.</summary>
+    /// <summary>Restores the default bindings of the commands this page shows (all of them, or only the searched ones).</summary>
     private void ResetCategories()
     {
         foreach (var action in HotkeyCatalog.All.Where(a => _scope is null || _scope.Contains(a.Id))) _settings.Reset(action.Id);

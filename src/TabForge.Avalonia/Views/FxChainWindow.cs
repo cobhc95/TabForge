@@ -19,7 +19,7 @@ using TabForge.Platform.Theme;
 namespace TabForge.Avalonia.Views;
 
 /// <summary>
-/// One track's FX chain window (the FX button), the twin of the WPF FxChainWindow: the menu bar (FX, Chains, Options), the options row, the
+/// One track's FX chain window (the FX button), the FX chain window: the menu bar (FX, Chains, Options), the options row, the
 /// chain list (rows, containers, drag to reorder, several selected) with Add, New container, Remove and the CPU text, the selected plug-in's bar (presets,
 /// Wiring, MIDI, volume, On) above its own editor docked in the window, and the status line.
 /// Owns: the window's layout, its controls and their wiring, the focused row, and every edit of the bound track's chain (each is one undo step, through the host).
@@ -54,7 +54,7 @@ public sealed partial class FxChainWindow : Window
     private bool _building;
     private bool _closed;
     private bool _replaced;
-    // Gap after each option of the options row, in DIP (the WPF window's option spacing).
+    // Gap after each option of the options row, in DIP.
     private const double OptionGap = 14;
     private const double BodyMargin = 10, ListGap = 10, SplitterWidth = 6;
     private const int CpuTickSeconds = 1;
@@ -182,7 +182,7 @@ public sealed partial class FxChainWindow : Window
         row.Children.Add(menu);
         row.Children.Add(divider);
         strip.VerticalAlignment = VerticalAlignment.Center;
-        row.Children.Add(strip.WithMargin(0, 0, BodyMargin, 0));
+        row.Children.Add(strip.WithMargin(0, ChromeMetrics.LiveStripGap, BodyMargin, ChromeMetrics.LiveStripGap));
         DockPanel.SetDock(row, Dock.Top);
         return row;
     }

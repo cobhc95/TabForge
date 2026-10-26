@@ -30,7 +30,7 @@ public sealed class VideoExportRequest
     public required double EndMs { get; init; }
     public required VideoViewSpec Spec { get; init; }
     public required string Path { get; init; }
-    /// <summary>Opens the host's frame source for <see cref="Spec"/> (WPF VideoFrameSource, Avalonia AvaloniaVideoFrameSource). Called on the UI thread.</summary>
+    /// <summary>Opens the host's frame source for <see cref="Spec"/> (Avalonia AvaloniaVideoFrameSource). Called on the UI thread.</summary>
     public required Func<IVideoFrameSource> OpenFrames { get; init; }
     /// <summary>The UI thread the frames are drawn on; the flow yields to it between batches so the window keeps answering.</summary>
     public required IUiThread Ui { get; init; }

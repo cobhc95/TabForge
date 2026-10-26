@@ -8,7 +8,7 @@ namespace TabForge.Avalonia.Platform;
 // Owns: the Avalonia app's crash log: one text file beside settings.json that each unhandled exception is appended to (local time, app
 //   version, full exception), kept under a size ceiling by dropping the oldest lines.
 // Does not own: what happens after the exception (the process ends or the failed call ends, as before), the dispatcher (the caller passes
-//   its UI thread adapter), the WPF build's per-crash files (App.xaml.cs).
+// its UI thread adapter), the app's per-crash files (App.xaml.cs).
 // Tests: TabForge.Avalonia.Tests.AvaloniaCrashLogTests. Any thread: one lock per log instance.
 /// <summary>Appends unhandled exceptions of the Avalonia app to its crash log.</summary>
 public sealed class AvaloniaCrashLog

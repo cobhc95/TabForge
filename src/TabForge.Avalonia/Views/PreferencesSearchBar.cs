@@ -11,7 +11,7 @@ using TabForge.Presenters;
 namespace TabForge.Avalonia.Views;
 
 /// <summary>
-/// The Preferences header bar: the search box and the category filter in their own strip, sized like the WPF window's.
+/// The Preferences header bar: the search box and the category filter in their own strip, sized like the window's.
 /// Owns: the two controls, their sizes and the Changed event. Does not own: what the search shows (PreferencesWindow.Rebuild).
 /// Tests: TabForge.Avalonia.Tests.PreferencesSearchBarTests.
 /// </summary>
@@ -47,7 +47,7 @@ public sealed class PreferencesSearchBar : Border
         _debounce.Tick += (_, _) => RaiseChanged();
         Box.TextChanged += (_, _) => OnTextTyped();
         Box.KeyDown += (_, e) => { if (e.Key == Key.Enter) RaiseChanged(); };
-        // The search field takes the Panel2Brush field fill of the WPF SettingsSearchBox (the TextBox style), not the window shade.
+        // The search field takes the Panel2Brush field fill of the settings search box (the TextBox style), not the window shade.
         Box[!TextBox.BackgroundProperty] = new DynamicResourceExtension("Panel2Brush");
         Category.SelectionChanged += (_, _) => RaiseChanged();
         ToolTip.SetTip(Box, "Search every category, setting description, keyword and keyboard shortcut.");

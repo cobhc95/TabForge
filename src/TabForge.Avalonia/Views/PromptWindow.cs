@@ -19,7 +19,7 @@ public readonly record struct PromptOutcome(PromptAnswer Answer, int SelectedCho
 
 /// <summary>
 /// One small track or confirm prompt (a <see cref="PromptSpec"/>) as an Avalonia window. Enter presses the default button, Esc
-/// cancels, Y and N answer Yes and No where the WPF prompt did. Closing it any other way answers Cancel.
+/// cancels, Y and N answer Yes and No where the prompt did. Closing it any other way answers Cancel.
 /// Owns: the window's layout and its key handling. Does not own: the wording or the answer mapping (PromptTextsPresenter).
 /// Tests: PromptWindowTests.
 /// </summary>

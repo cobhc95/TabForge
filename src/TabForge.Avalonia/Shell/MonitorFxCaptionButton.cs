@@ -29,7 +29,7 @@ public static class MonitorFxCaptionButton
     {
         var glyph = new Path
         {
-            Data = Geometry.Parse(Headphones), Width = 16, Height = 14, Stretch = Stretch.Uniform, StrokeThickness = 1.4,
+            Data = Geometry.Parse(Headphones), Width = ChromeMetrics.MonitorFxGlyphWidth, Height = ChromeMetrics.MonitorFxGlyphHeight, Stretch = Stretch.Uniform, StrokeThickness = ChromeMetrics.MonitorFxGlyphStroke,
             StrokeLineCap = PenLineCap.Round, StrokeJoin = PenLineJoin.Round, IsHitTestVisible = false,
         };
         var button = CaptionButtons.CaptionButton(ButtonName, "Monitor FX", "ChromeCaptionButton", ChromeMetrics.CaptionIconButtonWidth, glyph, () => monitor?.Open(), nativeOwnsClick);

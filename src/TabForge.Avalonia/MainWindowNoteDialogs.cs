@@ -8,7 +8,7 @@ using TabForge.Avalonia.Views.Dialogs;
 
 namespace TabForge.Avalonia;
 
-// Owns: the Note menu rows that ask for the cursor beat's chord name or text (the WPF Chord and Text prompts) and the grace note editor row, run on the shown song.
+// Owns: the Note menu rows that ask for the cursor beat's chord name or text and the grace note editor row, run on the shown song.
 // Does not own: the chord and text write rules (Core ScoreEditCommands.SetCursorChordName and SetCursorBeatText), the grace editor (OrnamentEditorFlow), the prompt window (Views.TextPromptWindow).
 // Tests: TabForge.Avalonia.Tests.MainWindowMenuTests (every row is handled).
 public static class MainWindowNoteDialogs

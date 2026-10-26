@@ -3,7 +3,7 @@ using TabForge.Platform;
 
 namespace TabForge.Avalonia.Platform;
 
-// Owns: the Avalonia Key to EditorKey mapping, the twin of the app's WpfEditorKeys.
+// Owns: the Avalonia Key to EditorKey mapping, the one place that maps keys.
 // Does not own: the digit rules or the key map (TabForge.Core Platform/EditorKey.cs, EditorKeyMap.cs).
 // Tests: ScorePreviewEditorTests.
 

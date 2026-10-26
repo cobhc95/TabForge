@@ -142,15 +142,13 @@ public class ClipSnapPluginDialogTests
     }
 
     [AvaloniaFact]
-    public void AudioInputPickerListsTheChoicesAndKeepsTheSelection()
+    public void AudioInputPickerShowsTheSelectedInput()
     {
-        var window = AudioInputPicker.SampleWindow();
+        var window = AudioInputPicker.SampleWindow(TabForge.Avalonia.Platform.AvaloniaUiThread.ForApplication(), () => System.Array.Empty<string>());
         window.Show();
-        var picker = window.GetLogicalDescendants().OfType<ComboBox>().Single();
-        Assert.Equal(AudioInputs.Choices(AudioInputs.Input1), picker.Items.Cast<AudioInputChoice>());
-        Assert.Equal(AudioInputs.Input1, ((AudioInputChoice)picker.SelectedItem!).Id);
-        AudioInputPicker.Refresh(picker, AudioInputs.Stereo);
-        Assert.Equal(AudioInputs.Stereo, ((AudioInputChoice)picker.SelectedItem!).Id);
+        var picker = window.GetLogicalDescendants().OfType<TrackInputPicker>().Single();
+        Assert.Contains(AudioInputs.Label(AudioInputs.Input1), Assert.IsType<TextBlock>(picker.Content).Text);
+
         window.Close();
     }
 
@@ -162,7 +160,7 @@ public class ClipSnapPluginDialogTests
         "snap-settings" => new SnapSettingsWindow(new SnapSettings(), () => { }),
         "plugin-save" => new PluginSaveWindow("song.gp"),
         "plugin-preset" => new PluginPresetWindow(new AvaloniaDialogHost(), "Sample Reverb", () => new[] { "Warm" }, _ => { }),
-        "audio-input" => AudioInputPicker.SampleWindow(),
+        "audio-input" => AudioInputPicker.SampleWindow(TabForge.Avalonia.Platform.AvaloniaUiThread.ForApplication(), () => System.Array.Empty<string>()),
         _ => throw new System.ArgumentException(name),
     };
 

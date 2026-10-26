@@ -10,7 +10,7 @@ using TabForge.Platform.Theme;
 namespace TabForge.Avalonia.Platform;
 
 /// <summary>
-/// Gives every plain control of a kind the Core look the WPF app's implicit style gives it (a Button the "Button" look, a list row the "ListBoxItem" look, ...), so hover, pressed, selected and disabled states come from the one look table in every window.
+/// Gives every plain control of a kind the Core look the app's implicit style gives it (a Button the "Button" look, a list row the "ListBoxItem" look, ...), so hover, pressed, selected and disabled states come from the one look table in every window.
 /// A control that already carries another look of its kind, or sets its own template, keeps it.
 /// Owns: the type-to-default-look table and its attach hook. Does not own: the look rules (Core look table) or their styles (AvaloniaLooks).
 /// Tests: TabForge.Avalonia.Tests.ThemeTests.

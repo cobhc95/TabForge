@@ -7,10 +7,10 @@ using TabForge.Services;
 
 namespace TabForge.Avalonia.Views;
 
-// Owns: dragging a section's edge knob on the ruler: the boundary follows the pointer bar by bar, clamped at the neighbour (a gap may open when shrinking, one bar at least), shown as a preview
+// Owns: dragging a section chip's edge (6 px zone inside its left/right side): the boundary follows the pointer bar by bar, clamped at the neighbour (a gap may open when shrinking, one bar at least), shown as a preview
 //   (TimelineView.SectionResizePreview, one repaint per bar change) and written once on release as one undo step. Only the section's start or length changes; no bars or notes move. The pointer turns to the
-//   resize arrow only over a knob.
-// Does not own: the rule (SectionLayout.EdgeRange/ResizeClamped), the knob drawing (SectionKnobs) or the section move drag (TimelineInputController.Drag).
+//   resize arrow only over an edge zone.
+// Does not own: the rule (SectionLayout.EdgeRange/ResizeClamped), the edge hit-test (TimelineView.SectionEdgeAt) or the section move drag (TimelineInputController.Drag).
 // Tests: TabForge.Avalonia.Tests.SectionResizeTests.
 public sealed partial class TimelineInputController
 {
@@ -18,10 +18,10 @@ public sealed partial class TimelineInputController
     private bool _resizeRight;
     private (int Min, int Max) _resizeRange;
 
-    // A press on a knob starts the resize at once (no drag threshold: the knobs are tiny and have no click meaning). False when the press is not on a knob.
+    // A press on an edge zone starts the resize at once (no drag threshold: an edge has no click meaning). False when the press is not on an edge.
     private bool TryBeginSectionResize(Point p, IPointer pointer)
     {
-        if (_view.SectionKnobAt(p.X, p.Y) is not var (index, right) || _view.SectionMarkerAt(index) is not { } marker) return false;
+        if (_view.SectionEdgeAt(p.X, p.Y) is not var (index, right) || _view.SectionMarkerAt(index) is not { } marker) return false;
         if (SectionLayout.EdgeRange(_document.Project, marker, right) is not var (min, max)) return false;
         _resizeSection = index;
         _resizeRight = right;
@@ -30,6 +30,7 @@ public sealed partial class TimelineInputController
         _pressOnGrid = _pressOnLanes = _pressOnRuler = false;
         _dragSlot = -1;
         _pressRow = -1;
+        _view.HoverSectionEdge = (index, right);
         pointer.Capture(_view);
         SetHover(-1, -1);
         return true;
@@ -60,6 +61,7 @@ public sealed partial class TimelineInputController
     {
         var preview = _view.SectionResizePreview;
         _view.SectionResizePreview = null;
+        _view.HoverSectionEdge = null;
         if (preview is not { } shown) { Repaint(); return; }
         var index = shown.Index;
         var boundary = _resizeRight ? shown.End : shown.Start;

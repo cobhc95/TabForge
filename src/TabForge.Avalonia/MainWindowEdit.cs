@@ -17,7 +17,7 @@ namespace TabForge.Avalonia;
 //   and the commands ScoreEditCommands.TryRunNoteCommand, the note values and the bar insert, delete and duplicate run (the same calls the score's own keys make),
 //   and Repeat selection after its count prompt (RepeatSelectionPromptPresenter, Views.TextPromptWindow).
 // Does not own: the edit rules and undo grouping (Core ScorePreviewEditor, ScoreEditCommands, DocumentEdits), the shown song
-//   (MainWindowDocumentPanes). Commands needing a clipboard stay unhandled. Bar.Delete asks first when the confirm setting is on (the WPF prompt).
+// (MainWindowDocumentPanes). Commands needing a clipboard stay unhandled. Bar.Delete asks first when the confirm setting is on.
 // Tests: TabForge.Avalonia.Tests.MainWindowDocumentsTests.
 /// <summary>Registers the editing commands. Built once per window.</summary>
 public static class MainWindowEdit
@@ -57,7 +57,7 @@ public static class MainWindowEdit
         score.Editor.AskDeleteBar = bar => _ = AskAndDeleteBar(score, owner, bar);
         var ornaments = new OrnamentEditorFlow(score, window => window.ShowDialog<EffectValuesAnswer?>(owner), notice, settings, saveSettings);
         var ornamentRows = new Dictionary<string, Action>(StringComparer.Ordinal)
-        {   // the trill, grace and harmonic palette buttons and hotkeys open the same editors as the Note menu rows (WPF EffectEditorFlow.KindOf)
+        {   // the trill, grace and harmonic palette buttons and hotkeys open the same editors as the Note menu rows
             ["Note.Trill"] = () => _ = ornaments.OpenTrill(),
             ["Note.Grace"] = () => _ = ornaments.OpenGrace(),
             ["Note.Harmonic"] = () => _ = ornaments.OpenOrRemoveHarmonic(),
@@ -87,7 +87,7 @@ public static class MainWindowEdit
         commands.Add(ContextMenuRows.InsertBarAfterId, () => score.InsertBarAt(contextMenus.ClickedBar + 1));
     }
 
-    // The WPF question (ConfirmDeleteBar): Yes deletes the bar from every track, No (the default) leaves the song as it is.
+    // The question (ConfirmDeleteBar): Yes deletes the bar from every track, No (the default) leaves the song as it is.
     private static async Task AskAndDeleteBar(ScorePreviewView score, Window owner, int bar)
     {
         var answer = await AvaloniaMessageBox.Show(new AvaloniaDialogHost(), owner, ScoreBarCommands.ConfirmDeleteText(bar), "Delete bar",

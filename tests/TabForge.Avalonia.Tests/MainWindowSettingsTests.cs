@@ -15,7 +15,7 @@ using Xunit;
 namespace TabForge.Avalonia.Tests;
 
 /// <summary>
-/// Owns: the settings file shared by the two apps: a settings.json written by the WPF writer loads in the Avalonia window with the same
+/// Owns: the settings file shared by the two apps: a settings.json written by the writer loads in the Avalonia window with the same
 /// dock layout and saves back byte for byte, and the reverse. Every run uses its own temp folder; no user settings are read or written.
 /// Tests: MainWindowSettings, AppSettingsStore, SettingsFileService.
 /// </summary>
@@ -47,7 +47,7 @@ public sealed class MainWindowSettingsTests : IDisposable
         return DockWorkspaceRules.Capture(new DockWorkspaceController(new DockWorkspaceView(setup.ContentOf), setup, saved).State);
     }
 
-    /// <summary>What the WPF app writes: its writer, after its own load (the settings it saves were always loaded and bounded).</summary>
+    /// <summary>What the app writes: its writer, after its own load (the settings it saves were always loaded and bounded).</summary>
     private static byte[] WrittenByWpf(string path, DockWorkspaceState layout)
     {
         SettingsFileService.SaveAtomic(path, new AppSettings { Workspace = layout });

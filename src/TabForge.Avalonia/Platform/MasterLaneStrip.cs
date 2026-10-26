@@ -11,7 +11,7 @@ namespace TabForge.Avalonia.Platform;
 /// The master lane between the section strip and track 1: one thin line per track, filled over the bars where the track plays, in the track's
 /// colour at <see cref="Opacity"/>, on the board background with faint bar lines. Geometry comes from <see cref="MasterLaneRules"/>.
 /// Owns: drawing the lane and the "does this track play in this bar" test. Does not own: whether the lane shows, its height (TimelineView),
-/// its header cell (TrackHeaderColumn), audio clips in a line and the compact mode of the WPF lane.
+/// its header cell (TrackHeaderColumn), audio clips in a line and the compact mode of the lane.
 /// Tests: TabForge.Avalonia.Tests.MasterLaneTests.
 /// </summary>
 public static class MasterLaneStrip

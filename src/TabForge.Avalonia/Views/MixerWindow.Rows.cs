@@ -76,7 +76,7 @@ public sealed partial class MixerWindow
         return border;
     }
 
-    /// <summary>The colour key of group and Master names: the accent, or plain text where the accent reads below 4.5:1 on the row (the WPF readable-text fallback).</summary>
+    /// <summary>The colour key of group and Master names: the accent, or plain text where the accent reads below 4.5:1 on the row (the readable-text fallback).</summary>
     public static string AccentNameKey(bool light) =>
         ThemeColours.Contrast(AvaloniaPalette.Get("Accent", light), AvaloniaPalette.Get("PanelBackground", light)) >= 4.5 ? "Accent" : "TextPrimary";
 

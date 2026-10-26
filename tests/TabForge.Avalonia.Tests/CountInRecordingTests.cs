@@ -68,7 +68,8 @@ public class CountInRecordingTests
         Assert.True(recording.IsRecording);
         Assert.Equal(StartBar, start.Bar);
         var at = AudioClipTimelineRules.SecondsAtBar(song.Project, start.Bar, 0);
-        Assert.Equal((false, at), client.PositionSentForTest(client.OwnerIdOf(song)));
+        // The song rolls once the count-in ends: the engine is anchored at the take's start and keeps running (its clips keep playing).
+        Assert.Equal((true, at), client.PositionSentForTest(client.OwnerIdOf(song)));
         var position = commands.IndexOf(EngineCommand.SetPosition);
         var record = commands.IndexOf(EngineCommand.Record);
         Assert.True(position >= 0 && record > position, $"position at {position}, record at {record}");
@@ -186,7 +187,8 @@ public class CountInRecordingTests
         Assert.True(recording.IsRecording);
         Assert.Equal(StartBar, start.Bar);
         Assert.Equal(loop, recording.RecordLoop!.Value);
-        Assert.Equal((false, at), client.PositionSentForTest(client.OwnerIdOf(song)));
+        // The song rolls once the count-in ends: the engine is anchored at the take's start and keeps running (its clips keep playing).
+        Assert.Equal((true, at), client.PositionSentForTest(client.OwnerIdOf(song)));
         var takes = RecordedTakes.FromRecording("take.wav", at, 3.0, recording.RecordLoop);
         Assert.Equal(at, takes[0].StartSec, 6);   // the first pass sits at P, not at the count-in start
         Assert.Equal(0.0, takes[0].OffsetSec, 6);

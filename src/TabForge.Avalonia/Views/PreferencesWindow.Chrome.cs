@@ -35,7 +35,7 @@ public sealed partial class PreferencesWindow
         var header = new StackPanel { Margin = new Thickness(16, 12, 16, 4), Spacing = 4 };
         header[!Panel.BackgroundProperty] = new DynamicResourceExtension("WindowBrush");
         DockPanel.SetDock(_resetPage, Dock.Right);
-        // The link sits at the top of the title row, not stretched down the header, as the WPF ResetPageButton.
+        // The link sits at the top of the title row, not stretched down the header.
         _resetPage.VerticalAlignment = VerticalAlignment.Top;
         _resetPage.Margin = new Thickness(ChromeMetrics.SettingsResetPageMarginLeft, ChromeMetrics.SettingsResetPageMarginTop, 0, 0);
         _resetPage.FontSize = ChromeMetrics.SettingsResetPageFontSize;
@@ -44,7 +44,7 @@ public sealed partial class PreferencesWindow
         return header;
     }
 
-    /// <summary>The title block above the settings rail: TabForge Settings with the Preferences subtitle, at the top left as in the WPF window.</summary>
+    /// <summary>The title block above the settings rail: TabForge Settings with the Preferences subtitle, at the top left as in the window.</summary>
     private Border BuildTitleBlock()
     {
         var caption = new StackPanel
@@ -123,7 +123,7 @@ public sealed partial class PreferencesWindow
         var footer = new DockPanel { Margin = new Thickness(FooterMarginLeft, FooterMarginVertical, FooterMarginRight, FooterMarginVertical), LastChildFill = false };
         var version = new TextBlock { Text = AppInfo.VersionLine, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 0, 0), [!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted") };
         var left = ToolWindowParts.Row(manage, version);
-        // The status text belongs to the right-hand group, before the buttons, as in the WPF footer.
+        // The status text belongs to the right-hand group, before the buttons, as in the footer.
         _status.Margin = new Thickness(0, 0, FooterStatusGap, 0);
         _status.MaxWidth = FooterStatusMaxWidth;
         _status.VerticalAlignment = VerticalAlignment.Center;

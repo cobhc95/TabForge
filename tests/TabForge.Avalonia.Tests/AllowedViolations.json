@@ -1,7 +1,7 @@
 {
   "drawing": {
     "Source/src/TabForge.Avalonia/Features/Recording/View/ArmedRowPainter.cs": 7,
-    "Source/src/TabForge.Avalonia/Features/Recording/View/AudioInputPicker.cs": 3,
+    "Source/src/TabForge.Avalonia/Features/Recording/View/AudioInputPicker.cs": 1,
     "Source/src/TabForge.Avalonia/Features/Recording/View/TimelineLiveTakeLayer.cs": 2,
     "Source/src/TabForge.Avalonia/Lyrics/LyricsByBarWindow.cs": 2,
     "Source/src/TabForge.Avalonia/Lyrics/LyricsSongPane.cs": 1,

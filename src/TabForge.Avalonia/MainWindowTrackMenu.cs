@@ -12,7 +12,7 @@ using TabForge.Services;
 
 namespace TabForge.Avalonia;
 
-// Owns: the handlers of the Track menu on the shown song: Add track (the Track properties window in add mode, as WPF), Add Bass, Add Drums and
+// Owns: the handlers of the Track menu on the shown song: Add track (the Track properties window in add mode), Add Bass, Add Drums and
 //   Add Keys (a new track of that kind at the end), Delete track (after the Delete prompt; the last track stays), Move track up / down, and
 //   Track.Next / Track.Previous (the selected track one row down / up).
 //   The track row menu's Delete and Properties rows act on the track under the last track row right-click (ContextMenuHost.ClickedTrack).
@@ -26,7 +26,7 @@ public static class MainWindowTrackMenu
     /// <summary>The undo key the Delete track prompt names; the default preset's Undo gesture.</summary>
     internal const string UndoCommandId = "Edit.Undo";
 
-    /// <summary>The status notice deleting the last track shows, as WPF does.</summary>
+    /// <summary>The status notice deleting the last track shows.</summary>
     private const string CannotDeleteLastTrackText = "Cannot delete the last track";
 
     /// <param name="songs">The tabs; the commands act on the shown song.</param>

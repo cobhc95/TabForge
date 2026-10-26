@@ -35,6 +35,7 @@ public static partial class ProjectService
         if (info.Type != typeof(TrackModel)) return;
         RemoveProperty(info, nameof(TrackModel.AudioInput));
         RemoveProperty(info, nameof(TrackModel.MonitorInput));
+        RemoveProperty(info, nameof(TrackModel.MidiInputs));
     }
 
     /// <summary>

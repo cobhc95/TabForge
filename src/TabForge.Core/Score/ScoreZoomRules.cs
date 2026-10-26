@@ -1,5 +1,5 @@
 // Owns: the score zoom arithmetic shared by both apps: the 10% zoom steps (50% to 200%), the factor clamp, and the "Fit width" factor for the continuous views.
-// Does not own: the zoom box, the scroll viewers or the page width (the WPF ScoreZoomController, the Avalonia ScorePreviewView).
+// Does not own: the zoom box, the scroll viewers or the page width (the Avalonia ScorePreviewView).
 // Tests: TabForge.Avalonia.Tests.MainWindowRowCommandsTests (ZoomStepsAre...), SelfTestScoreScale.
 namespace TabForge.Views.Score;
 

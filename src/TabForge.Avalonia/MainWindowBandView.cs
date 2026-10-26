@@ -159,7 +159,7 @@ public sealed class MainWindowBandView
     /// <summary>
     /// The Band panel was closed by hand (its tab's Close or the Panels menu): the panels the Band layout replaced come back, so the workspace is
     /// never left as the Band layout's remainder (the arrangement alone, with the score and the fretboard gone and empty space under the panes).
-    /// WPF's DockLayoutController.RefreshDockPanelsMenu restores the same layout once the workspace holds no score, no Band view and no Keyboard mode.
+    /// DockLayoutController.RefreshDockPanelsMenu restores the same layout once the workspace holds no score, no Band view and no Keyboard mode.
     /// </summary>
     private void OnDockChanged()
     {
@@ -291,7 +291,7 @@ public sealed class MainWindowBandView
         });
     }
 
-    /// <summary>The fewest and most Band rows on the screen at once, as WPF allows.</summary>
+    /// <summary>The fewest and most Band rows on the screen at once.</summary>
     private const int RowsPerScreenMin = 1, RowsPerScreenMax = 5;
 
     /// <summary>Applies a built-in or saved layout by name and records it as the last layout.</summary>

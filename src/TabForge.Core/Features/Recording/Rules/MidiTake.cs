@@ -6,7 +6,7 @@ namespace TabForge.Features.Recording.Rules;
 //   become when the recording stops.
 // Does not own: where the messages come from or what song time they were heard at (the recording controller of each app), placing the
 //   clips on lanes (RecordedTakes), the undo step.
-// Tests: TabForge.Avalonia.Tests.MidiTakeTests, CountInRecordingTests (WPF).
+// Tests: TabForge.Avalonia.Tests.MidiTakeTests, CountInRecordingTests.
 public sealed class MidiTake
 {
     /// <summary>Each pass: its song start and end in seconds and its notes (start relative to the pass start).</summary>

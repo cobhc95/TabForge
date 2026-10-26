@@ -157,7 +157,7 @@ public static class MainWindowPlacement
             if (!window.IsVisible || window.WindowState == WindowState.Minimized) return;
             var saved = settings.Settings;
             saved.Maximised = window.WindowState == WindowState.Maximized;
-            // A maximised window keeps the last normal bounds: its own bounds are the screen's, as WPF keeps the restore bounds instead.
+            // A maximised window keeps the last normal bounds: its own bounds are the screen's.
             if (!saved.Maximised) CaptureNormalBounds(window, saved);
             settings.SaveWindowPlacement();
         }

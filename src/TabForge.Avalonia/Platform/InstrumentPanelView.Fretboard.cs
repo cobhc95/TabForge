@@ -25,7 +25,7 @@ namespace TabForge.Avalonia.Platform;
 /// </summary>
 public sealed partial class InstrumentPanelView
 {
-    // Fretboard drawing sizes (virtual DIPs, as the WPF FretboardRenderer draws them).
+    // Fretboard drawing sizes (virtual DIPs).
     private const double BoardCorner = 3;
     private const double NutWidth = 5;
     private const double FretWireWidth = 1.6;
@@ -47,7 +47,7 @@ public sealed partial class InstrumentPanelView
     private const double StringLabelInset = 12;
     private const double StringLabelLift = 7;
 
-    /// <summary>The fretboard in its virtual space, scaled up to the pane (the WPF panel draws it the same way).</summary>
+    /// <summary>The fretboard in its virtual space, scaled up to the pane.</summary>
     private void DrawScaledFretboard(IDrawContext d, Func<string, UiColor> ink)
     {
         var s = FretboardScale();
@@ -84,7 +84,7 @@ public sealed partial class InstrumentPanelView
             }
             else d.Ellipse(inlay, null, x, middle, dot, dot);
         }
-        // Fret numbers under the board: fret 1 and every even fret (every fret when the range is short), as the WPF panel labels them.
+        // Fret numbers under the board: fret 1 and every even fret (every fret when the range is short).
         for (var fret = layout.FirstFret; fret <= layout.LastFret; fret++)
         {
             if (fret % 2 != 0 && fret != layout.FirstFret && layout.LastFret - layout.FirstFret > EveryFretLabelRange) continue;
@@ -94,7 +94,7 @@ public sealed partial class InstrumentPanelView
         for (var s = 0; s < layout.Strings; s++)
         {
             var y = FretboardGeometryRules.StringY(layout, s);
-            // Strings run from the nut to the board's right edge; the same thickness rule as the WPF renderer.
+            // Strings run from the nut to the board's right edge; the same thickness rule.
             d.Line(new UiStroke(ink("InstrumentString"), 0.8 + (layout.Strings - 1 - s) * 0.22), board.X, y, board.Right, y);
             // String labels in the gutter left of the nut, string 1 the highest.
             var label = d.Text(StringLabel(s), Font, StringLabelFontSize, ink("FretLabel"), d.PixelsPerDip);
@@ -221,10 +221,10 @@ public sealed partial class InstrumentPanelView
     }
 
     /// <summary>Top of the colour legend: bottom-aligned with the board, with the Scales button under it, never above the board's top strip.</summary>
-    /// <remarks>The Scales button is 24 real pixels, so it is that many virtual DIPs at the drawing scale (as the WPF legend places it).</remarks>
+    /// <remarks>The Scales button is 24 real pixels, so it is that many virtual DIPs at the drawing scale.</remarks>
     private double LegendTop(UiRect board) => Math.Max(LegendTopMinimum, board.Bottom - (LegendRows * LegendRowHeight + LegendScalesGap + ScalesButtonHeight / FretboardScale()));
 
-    /// <summary>The colour legend beside the board: now, next, upcoming and recent, in the palette colours the WPF legend uses.</summary>
+    /// <summary>The colour legend beside the board: now, next, upcoming and recent, in the palette colours the legend uses.</summary>
     private void DrawLegend(IDrawContext d, Func<string, UiColor> ink, UiRect board)
     {
         var rows = new (string Key, string Label)[] { ("InstrumentCurrent", "now"), ("InstrumentNext", "next"), ("InstrumentAccent", "upcoming"), ("InstrumentPast", "recent") };

@@ -2,7 +2,7 @@ namespace TabForge.Platform;
 
 /// <summary>
 /// The file and folder dialogs as a port. Each call is modal and synchronous, and returns null when the user cancels.
-/// The WPF adapter is <c>Platform/Wpf/WpfFileDialogs</c>, reached as <c>Ui.Dialogs</c>.
+/// The adapter is the Avalonia file dialogs, reached as <c>Ui.Dialogs</c>.
 /// Owns: the dialog contract. Does not own: what the caller does with the chosen paths.
 /// Tests: no dedicated test class.
 /// </summary>

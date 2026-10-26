@@ -56,7 +56,11 @@ internal sealed class NAudioMediaSource : IMediaSource
 public enum WaveState { Loading, Ready, NeedsApproval, Failed }
 
 /// <summary>What a clip shows while (or instead of) its outline: nothing yet, the outline, an approval request or an error.</summary>
-public readonly record struct WaveStatus(WaveState State, string? Message);
+public readonly record struct WaveStatus(WaveState State, string? Message)
+{
+    /// <summary>The file is not there (as opposed to unreadable): the clip is drawn hatched and the Find missing media command can relink it.</summary>
+    public bool IsMissing => State == WaveState.Failed && Message == WaveformService.MissingMessage;
+}
 
 
 /// <summary>The application's one <see cref="WaveformService"/>, created at the composition root and handed to the views that draw waveforms; code that can be given the service takes it as a parameter instead of reading this.</summary>

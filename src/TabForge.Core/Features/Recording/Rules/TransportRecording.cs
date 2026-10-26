@@ -5,7 +5,7 @@ using TabForge.Services;
 
 namespace TabForge.Features.Recording.Rules;
 
-// Owns: the UI-free part of Transport Record (the WPF RecordingController's ToggleRecording): which tracks are armed, starting and ending the
+// Owns: the UI-free part of Transport Record: which tracks are armed, starting and ending the
 //   engine's recording of the armed audio tracks, the MIDI takes of the armed MIDI tracks (MidiTakeCapture), and the status text each outcome shows.
 // Does not own: the playback that Record starts (the caller's session), landing the takes on lanes (the caller: audio takes arrive through the
 //   engine's Recorded event, MIDI takes through TakeFinishedMidi), the window and its status line (the caller shows the text).
@@ -114,7 +114,7 @@ public sealed class TransportRecording : IDisposable
             mediaFolder = win; fellBack = true; fellBackDenied = denied;
         }
         if (audioArmed && !_engine.StartRecording(requested, mediaFolder, requireArm: capture is null)) return CouldNotStartText;
-        var midiArmed = requested.Any(t => (capture is not null || t.RecordArm) && AudioInputs.IsMidi(t.AudioInput));
+        var midiArmed = requested.Any(t => (capture is not null || t.RecordArm) && AudioInputs.TakesMidi(t));
         RecordLoop = loop;
         var midiDevices = midiArmed
             ? _midi.Start(requested, startSec, Stopwatch.GetTimestamp(), speed, _engine.LatencyTicks, loop, songSecAt, requireArm: capture is null)
@@ -146,5 +146,10 @@ public sealed class TransportRecording : IDisposable
         return null;
     }
 
-    public void Dispose() => _midi.Dispose();
+    /// <summary>The window closed: a MIDI take still being captured is kept (finished into <see cref="TakeFinishedMidi"/>), not dropped.</summary>
+    public void Dispose()
+    {
+        if (IsRecording) { IsRecording = false; _finishedMidi.AddRange(_midi.Stop(Stopwatch.GetTimestamp())); }
+        _midi.Dispose();
+    }
 }

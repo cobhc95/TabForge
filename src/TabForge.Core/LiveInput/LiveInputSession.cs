@@ -25,8 +25,8 @@ public interface ILiveInputSessionHost
 // Owns: one window's live input logic without UI types: turning the program's live input on and off, the restore question's outcome,
 //   the audio and MIDI input choices the menu changes, the live level, and saving the live FX chain with its plug-in states.
 // Does not own: the program-wide arm and stand-in track (LiveInputArm), the engine sync (AudioEngineClient), the button, the menu and the
-//   chain window (WPF LiveInput folder, Avalonia MainWindowLiveInput), the saved values (LiveInputSettings).
-// Tests: LiveInputStripTests (WPF), TabForge.Avalonia.Tests.LiveInputSessionTests.
+//   chain window (Avalonia MainWindowLiveInput), the saved values (LiveInputSettings).
+// Tests: LiveInputStripTests, TabForge.Avalonia.Tests.LiveInputSessionTests.
 public sealed class LiveInputSession : IDisposable
 {
     private const int StateTimeoutMs = 3000;

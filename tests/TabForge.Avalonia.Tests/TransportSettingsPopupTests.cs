@@ -24,7 +24,7 @@ using Xunit;
 namespace TabForge.Avalonia.Tests;
 
 /// <summary>
-/// Owns: the metronome, count-in and loop settings popups of the transport bar: each opens above its button with the WPF title, rows and helper
+/// Owns: the metronome, count-in and loop settings popups of the transport bar: each opens above its button with the title, rows and helper
 ///     text, takes the window's theme, writes the audio settings and reports every change, and closes on ×; the loop popup's boxes read and
 ///     normalise their text; the loop settings rules. Renders each popup in dark and light to %TEMP%\tf-avalonia-tests\transport-popups.
 /// Does not own: the engine (the loop and count-in playback tests), the transport bar's drawing (TransportBarViewTests).

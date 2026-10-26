@@ -15,7 +15,7 @@ namespace TabForge.Avalonia.Views;
 /// <summary>
 /// The Group rules editor: one card per group (priority arrows, colour menu, name, rule rows with type and value), the fallback card,
 /// the scope radio buttons and the problem line. OK closes with the built <see cref="GroupRulesResult"/>, Reset to app rules and Reset to
-/// defaults with their results, Cancel and Esc with null. The window has no discard question: the WPF editor has none either.
+/// defaults with their results, Cancel and Esc with null. The window has no discard question: the editor has none either.
 /// Owns: the window's controls, their order and texts, and the wiring of each control to <see cref="GroupRulesPresenter"/>.
 /// Does not own: the rules, their checks and the result (GroupRulesPresenter), the rule matching (MixerRules), applying the result to a song.
 /// Sample state: the preview has no song, so the caller passes a song with no rules of its own (it follows the app-wide rules).

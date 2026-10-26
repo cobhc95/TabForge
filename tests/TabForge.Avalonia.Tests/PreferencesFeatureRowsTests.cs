@@ -8,7 +8,7 @@ using Xunit;
 namespace TabForge.Avalonia.Tests;
 
 /// <summary>
-/// The Avalonia Preferences catalogue carries the feature rows (Band, Video, Keyboard mode, Live input) by name and count, as the WPF catalogue does.
+/// The Avalonia Preferences catalogue carries the feature rows (Band, Video, Keyboard mode, Live input) by name and count.
 /// Owns: the check that the feature sources reach the preview's catalogue.
 /// Does not own: the rows themselves (FeatureSettingsRows.cs in Core) or the controls (PreferencesWindow).
 /// Tests: this class.

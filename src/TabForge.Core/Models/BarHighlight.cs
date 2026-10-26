@@ -29,6 +29,8 @@ public readonly struct HighlightCells : IEquatable<HighlightCells>
 /// </summary>
 public sealed class BarHighlight
 {
+    /// <summary>The score/model selection a timeline selection is about to clear; folded into the next highlight-move undo step. UI thread only.</summary>
+    public SelectionSnapshot? PendingSelection { get; set; }
     public bool Has { get; private set; }
     public int AnchorTrack { get; private set; } = -1;
     public int AnchorBar { get; private set; } = -1;

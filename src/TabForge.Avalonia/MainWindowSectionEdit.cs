@@ -10,7 +10,7 @@ using TabForge.ScoreEditing;
 namespace TabForge.Avalonia;
 
 // Owns: the Section.Edit command (Shift+Insert, the Section menu row): asks for the name of the section at the cursor's bar and sets it on
-//   that bar of every track as one undo step, as WPF does.
+// that bar of every track as one undo step.
 // Does not own: the menu row (MainMenuTable in Core), the commands table (MainWindowCommands), the measure update (MeasureProperties in Core),
 //   the section lane's own rename (TimelineMenuController).
 // Tests: TabForge.Avalonia.Tests.MainWindowSectionEditTests.

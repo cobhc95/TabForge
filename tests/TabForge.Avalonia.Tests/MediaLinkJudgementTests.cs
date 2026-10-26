@@ -10,6 +10,7 @@ namespace TabForge.Avalonia.Tests;
 /// Does not own: the link reading itself (WindowsPathResolver, full suite) or the approval dialog.
 /// Tests: this class.
 /// </summary>
+[Collection("MediaPolicyFileSystem")]
 public sealed class MediaLinkJudgementTests
 {
     /// <summary>A file system whose links cannot be read; nothing else is asked of it.</summary>

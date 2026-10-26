@@ -9,7 +9,7 @@ using TabForge.Platform.Theme;
 namespace TabForge.Avalonia.Platform;
 
 /// <summary>
-/// <see cref="IPathFactory"/> and <see cref="ITextMeasure"/> over Avalonia: StreamGeometry and FormattedText, the counterpart of the WPF adapter.
+/// <see cref="IPathFactory"/> and <see cref="ITextMeasure"/> over Avalonia: StreamGeometry and FormattedText.
 /// Owns: the Avalonia geometry and text-measure mapping, and the geometry cache of the paths it builds. Does not own: the callers' own caches.
 /// Tests: AvaloniaPortsTests, AvaloniaPathCacheTests (TabForge.Avalonia.Tests).
 /// </summary>

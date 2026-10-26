@@ -17,7 +17,7 @@ using Trace = TabForge.Services.Trace;
 namespace TabForge.Avalonia;
 
 // Owns: the Help and App menu rows that open a plain dialog: Help > About (the About text with Close and Third-party licences
-//   buttons, opening THIRD_PARTY.md / the licenses folder / the GitHub copy, as the WPF About_Click does), App > Shortcuts
+// buttons, opening THIRD_PARTY.md / the licenses folder / the GitHub copy), App > Shortcuts
 //   (the keyboard shortcut list) and Help > Tutorial (the Basic guide) and the Detailed guide, registered into the window's command table.
 // Does not own: the menu rows (MainMenuTable), the texts (AboutText, ShortcutHelp), the tutorial window (TutorialWindow) or the message box (AvaloniaMessageBox).
 // Tests: TabForge.Avalonia.Tests.HelpMenuTests.
@@ -26,12 +26,12 @@ public static class MainWindowHelpMenu
 {
     private const string AboutCaption = "About TabForge";
     private const string ShortcutsCaption = "Keyboard shortcuts";
-    // The About dialog's second button (WPF About_Click's noText) and the two buttons' tooltips (its yesToolTip/noToolTip).
+    // The About dialog's second button and the two buttons' tooltips (its yesToolTip/noToolTip).
     internal const string CloseButtonText = "Close";
     internal const string LicencesButtonText = "Third-party licences";
     internal const string CloseButtonToolTip = "Close this window";
     internal const string LicencesButtonToolTip = "Open the third-party licence notices";
-    // Where the licences live: the file next to the exe, else the folder next to the exe, else the copy on GitHub (WPF OpenThirdPartyLicences).
+    // Where the licences live: the file next to the exe, else the folder next to the exe, else the copy on GitHub.
     private const string LicencesFileName = "THIRD_PARTY.md";
     private const string LicencesFolderName = "licenses";
     internal const string LicencesUrl = "https://github.com/cobhc95/TabForge/blob/main/THIRD_PARTY.md";
@@ -76,7 +76,7 @@ public static class MainWindowHelpMenu
     }
 
     /// <summary>
-    /// How to open a licences target (WPF OpenThirdPartyLicences parity): a .md file has no shell handler, so it opens in Notepad (the path is its own
+    /// How to open a licences target: a .md file has no shell handler, so it opens in Notepad (the path is its own
     /// argument, no shell). Anything else goes to the shell only if it is the fixed web copy or lies inside <paramref name="baseDir"/>; otherwise null.
     /// </summary>
     internal static ProcessStartInfo? LicencesStartInfo(string target, string baseDir)
@@ -103,7 +103,7 @@ public static class MainWindowHelpMenu
         AvaloniaMessageBox.Show(new AvaloniaDialogHost(), owner, text, caption, MessageBoxButtons.OK, MessageBoxIcon.Information, MessageBoxAnswer.OK);
 }
 
-/// <summary>The About dialog: the About text with Close (default) and Third-party licences buttons (WPF About_Click parity).</summary>
+/// <summary>The About dialog: the About text with Close (default) and Third-party licences buttons.</summary>
 internal sealed class AboutWindow : Window
 {
     public AboutWindow(string caption, string text)
@@ -166,7 +166,7 @@ internal sealed class AboutWindow : Window
         return button;
     }
 
-    // The warning icon's amber, with a dark and a light value (the WPF AmberBrush uses the same key).
+    // The warning icon's amber, with a dark and a light value.
     private static string TonePaletteName(MessageBoxTone tone) => tone switch
     {
         MessageBoxTone.Amber => "WarningIcon",

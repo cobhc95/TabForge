@@ -29,7 +29,7 @@ namespace TabForge.Avalonia.Views;
 /// Owns: the gesture state and the translation from pointer positions to the view's overlay state and to the two edits, and the click that
 /// selects an audio clip (a click on the grid outside any clip clears the selection).
 /// Does not own: the hit-query composition (TimelineHitTester), drawing and hit geometry (TimelineView), the reorder rules (the Core presenters and services), the audio clip drag (TimelineClipGestureController), audio lanes and
-/// the loop band, the clips that travel with a moved section, and the animated settle of the WPF timeline (a drop lands at once). The score cursor
+/// the loop band, the clips that travel with a moved section, and the animated settle of the timeline (a drop lands at once). The score cursor
 /// has no hook in the preview, so a click raises <see cref="SelectedBarChanged"/> for the host to use.
 /// Tests: TabForge.Avalonia.Tests.TimelineInputTests, TabForge.Avalonia.Tests.TrackRowControlsTests.
 /// </summary>
@@ -95,7 +95,7 @@ public sealed partial class TimelineInputController
         view.PointerMoved += (_, e) => Moved(e, view);
         view.PointerPressed += (_, e) => Pressed(e, view);
         view.PointerReleased += (_, e) => Released(e, view);
-        view.PointerExited += (_, _) => { if (_gesture == Gesture.None) SetHover(-1, -1); _picker.OnPointerExited(); };
+        view.PointerExited += (_, _) => { if (_gesture == Gesture.None) { SetHover(-1, -1); view.HoverSectionEdge = null; } _picker.OnPointerExited(); };
         view.PointerCaptureLost += (_, _) => Cancel();
         view.KeyDown += (_, e) =>
         {

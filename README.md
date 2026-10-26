@@ -1,4 +1,4 @@
-# TabForge 0.8.0
+# TabForge 0.8.1
 
 **A keyboard-driven tablature and notation editor for Windows. Opens GP files (.gp3, .gp4, .gp5, .gpx, .gp) and saves .gp and its own .tforge projects.** Write, import and play back guitar, bass, drum and keyboard parts, with a live fretboard / keyboard, an arrangement timeline, audio and MIDI recording, a mixer, VST plug-ins and offline audio and video rendering.
 
@@ -9,11 +9,11 @@
 ## Download
 
 > [!TIP]
-> **[Setup installer](https://github.com/cobhc95/TabForge/releases/download/v0.8.0/TabForge-0.8.0-setup.exe)** · no administrator rights needed
+> **[Setup installer](https://github.com/cobhc95/TabForge/releases/download/v0.8.1/TabForge-0.8.1-setup.exe)** · no administrator rights needed
 >
-> **[Portable ZIP](https://github.com/cobhc95/TabForge/releases/download/v0.8.0/TabForge-0.8.0-win-x64-portable.zip)** · extract and run `TabForge.exe`
+> **[Portable ZIP](https://github.com/cobhc95/TabForge/releases/download/v0.8.1/TabForge-0.8.1-win-x64-portable.zip)** · extract and run `TabForge.exe`
 >
-> **[SHA-256 checksums](https://github.com/cobhc95/TabForge/releases/download/v0.8.0/TabForge-0.8.0-SHA256.txt)** · to verify both files
+> **[SHA-256 checksums](https://github.com/cobhc95/TabForge/releases/download/v0.8.1/TabForge-0.8.1-SHA256.txt)** · to verify both files
 
 Windows 10 or 11, 64-bit, nothing else to install. Not code-signed: see [Verify your download](#verify-your-download). Older versions: [Releases](https://github.com/cobhc95/TabForge/releases).
 
@@ -34,7 +34,7 @@ Windows 10 or 11, 64-bit, nothing else to install. Not code-signed: see [Verify 
 TabForge now runs on Avalonia, the first step toward running on more platforms in the future. It is Windows only today.
 
 - **Selection and loops:** drag a box on the timeline, or drag across the score, to select and set the loop; the ruler loop has handles; *Clear loop* and Esc twice remove it.
-- **Section resize knobs:** drag a section's edge knob to make it shorter or longer; it stops at the neighbouring section. Dragging the middle still moves it.
+- **Section resize by edges:** drag a section's left or right edge to make it shorter or longer; it never stretches the neighbouring section. Dragging the middle still moves it.
 - **Split marker:** clicking an audio or MIDI clip leaves a dashed line (following the magnet / snap); S splits the clip there.
 - **Light mode** redesigned.
 - **Monitor FX** button in the title bar.
@@ -46,7 +46,13 @@ TabForge now runs on Avalonia, the first step toward running on more platforms i
 - **Section previous / next** moves the playhead.
 
 See the [changelog](CHANGELOG.md) for everything.
-- **Coming soon:** a MIDI piano roll editor for MIDI tracks.
+
+### Piano roll (new in 0.8.1)
+
+MIDI tracks and takes open in a piano roll: draw, move, resize, split, glue and quantize notes, with velocity, CC and pitch-bend lanes, a scale highlight, and live recording straight into it. Switch any track between Piano and Tab with the pills in the menu bar.
+
+<a href="docs/screenshots/piano-roll.png"><img src="docs/screenshots/piano-roll.png" alt="The MIDI piano roll" width="640"></a>
+
 
 ## What sets it apart
 

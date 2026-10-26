@@ -6,20 +6,22 @@ using Xunit;
 namespace TabForge.Avalonia.Tests;
 
 // Owns: the instrument pane's text scale follows the score's zoom (SC-09): zooming the score sets the pane's ContentScale to the score's zoom times
-//   its spacing, as the WPF score does, and the pane's drawing never grows past its cap at that scale.
+// its spacing, and the pane's drawing never grows past its cap at that scale.
 // Does not own: the pane's drawing (InstrumentPanelView), the zoom (ScorePreviewView), the cap rule's constants (Core ScoreInstrumentScale).
 // Tests: ScoreInstrumentScaleTests (this file).
 public class ScoreInstrumentScaleTests
 {
     [AvaloniaFact]
-    public void ZoomingTheScoreSetsTheInstrumentPaneTextScale()
+    public void ZoomingTheScoreDoesNotChangeTheInstrumentPaneTextScale()
     {
         var score = new ScorePreviewView();
         var strip = new InstrumentPanelStrip(score);
 
+        var before = strip.Panel.ContentScale;
         score.SetZoom(1.5);
 
-        Assert.Equal(ScoreInstrumentScale.ContentScaleFor(1.5, score.Probe.Appearance.ScoreSpacing), strip.Panel.ContentScale, 6);
+        Assert.Equal(before, strip.Panel.ContentScale, 6);
+        Assert.Equal(ScoreInstrumentScale.ContentScaleFor(score.Probe.Appearance.ScoreSpacing), strip.Panel.ContentScale, 6);
     }
 
     [Fact]

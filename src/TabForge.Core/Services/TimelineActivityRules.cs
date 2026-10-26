@@ -5,7 +5,7 @@ namespace TabForge.Services;
 
 // Owns: the arrangement timeline's per-bar activity summary (note, beat and rest counts, miniature events), its cache lookup keyed by
 //       measure object, generation and project revision, and the muted-track fade and desaturate maths.
-// Does not own: where the cache lives, painting the miniature, which track is muted, or WPF colours.
+// Does not own: where the cache lives, painting the miniature, which track is muted, or toolkit colours.
 // Tests: no dedicated test class.
 /// <summary>What one drawn timeline cell shows of a bar. Pure functions, no UI types.</summary>
 public static class TimelineActivityRules

@@ -46,7 +46,7 @@ public class FxChainWindowTests
         var window = Make();
         window.Show();
 
-        // The WPF window's controls in tree order (FxChainWindow.Sections.cs and FxChainWindow.cs): the track strip (name, Options dropdown), then the chain's Add and Remove,
+        // The window's controls in tree order (FxChainWindow.Sections.cs and FxChainWindow.cs): the track strip (name, Options dropdown), then the chain's Add and Remove,
         // then the plug-in bar (presets, +, Wiring, MIDI, Volume, On). The status line is the last control.
         var expected = new[]
         {

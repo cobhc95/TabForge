@@ -13,7 +13,7 @@ using TabForge.Services;
 namespace TabForge.Avalonia;
 
 // Owns: the Beat.MixTable command (F10): opens the Mix Table for the cursor's beat of the selected track and, on OK, sets the beat's mix point
-//   and the bar's tempo as one undo step, as WPF does. Clear removes the mix point.
+// and the bar's tempo as one undo step. Clear removes the mix point.
 // Does not own: the window and its controls (MixTableWindow), the start values and result rules (MixTablePresenter), the instrument list (InstrumentCatalog),
 //   the track selection (MainWindowTrackMenu).
 // Tests: no dedicated test class.

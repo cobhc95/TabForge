@@ -17,11 +17,11 @@ namespace TabForge.Avalonia.Views;
 /// <summary>A preset of a value-based effect: its name, whether it is built in, and its values by key.</summary>
 public sealed record EffectValuesPreset(string Name, bool BuiltIn, IReadOnlyDictionary<string, double> Values);
 
-/// <summary>The dialog's answer, as the WPF editor frame (ThemedEditorDialog) gives it.</summary>
+/// <summary>The dialog's answer, as the editor frame (ThemedEditorDialog) gives it.</summary>
 public enum EffectValuesAnswer { Ok, Clean, Cancel }
 
 /// <summary>
-/// The dialog of a value-based effect (trill, grace note, harmonic), the twin of the WPF ValuesEffectDialog
+/// The dialog of a value-based effect (trill, grace note, harmonic), the value editor dialog
 /// in its ThemedEditorDialog frame: the editor's fields, the preset list, Save as preset, Delete preset, then OK, Clean and Cancel.
 /// Owns: the frame, the preset list and its buttons. Does not own: the fields (OrnamentEditorWindows), the preset row label and
 /// the Delete rule (EffectValuesPresenter), or storing presets (the caller's save callback and PresetDeleted).

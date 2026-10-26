@@ -12,7 +12,7 @@ using TabForge.Views.EffectEditors;
 namespace TabForge.Avalonia.Views;
 
 // Owns: opening the trill, grace-note and harmonic editors on the score's cursor notes, turning the answer into one undoable edit, and the
-//   status line the WPF editors show (no note to edit, a dead note, set, removed).
+// status line the editors show (no note to edit, a dead note, set, removed).
 // Does not own: the fields (OrnamentEditorWindows), the dialog frame (EffectValuesWindow), the model writes (Core OrnamentEdits), the undo step
 //   (ScoreEditCommands.EditEffect) the built-in presets (Core OrnamentPresets) or the preset storage rules (Core EffectPresetStore over AppSettings.EffectPresets).
 // Tests: TabForge.Avalonia.Tests.OrnamentEditorFlowTests.

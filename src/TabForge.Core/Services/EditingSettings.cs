@@ -82,6 +82,24 @@ public sealed class EditingSettings
     public bool RememberPasteSpecial { get; set; }
     public RangePasteOptions PasteSpecialRange { get; set; } = new();
     public string BarRangeLastChoice { get; set; } = nameof(BarRangeAction.Clear);
+    /// <summary>Piano roll: the velocity lane's height in DIP (dragging its divider sets it) and whether it is shown (its chevron collapses it).</summary>
+    public double PianoRollVelocityLane { get; set; } = 84;
+    public bool PianoRollVelocityLaneShown { get; set; } = true;
+    /// <summary>Piano roll quantize options: strength in percent, and whether note starts and note ends move to the grid.</summary>
+    public int PianoRollQuantizeStrength { get; set; } = 100;
+    public bool PianoRollQuantizeStarts { get; set; } = true;
+    public bool PianoRollQuantizeEnds { get; set; }
+    /// <summary>Piano roll quantize swing in percent: every second grid line moves later (100 = a triplet feel).</summary>
+    public int PianoRollQuantizeSwing { get; set; }
+    /// <summary>Piano roll note colours: Track (brighter = louder), Velocity, Pitch or Channel.</summary>
+    public string PianoRollColours { get; set; } = "Track";
+    /// <summary>Piano roll scale highlight on its rows (the Scale highlight setting gives the scale) and the row fold: None, Scale or Used.</summary>
+    public bool PianoRollScaleShown { get; set; }
+    public string PianoRollFold { get; set; } = "None";
+    /// <summary>Piano roll: the length of new notes (PianoRollSnap.Lengths: Grid follows the snap) and whether faint ghost notes of the other
+    /// takes and tracks show (off by default).</summary>
+    public string PianoRollNoteLength { get; set; } = "Grid";
+    public bool PianoRollGhosts { get; set; }
 }
 
 /// <summary>Text style override for one area of the score (null / 0 = inherit the global score text style).</summary>
@@ -100,9 +118,10 @@ public sealed class ScoreTextAreaStyle
 public sealed class SnapSettings
 {
     public bool Enabled { get; set; } = true;
-    /// <summary>Grid size: Bar, 1/2, 1/4, 1/8, 1/16 or 1/32 (note values; 1/4 = one beat in 4/4).</summary>
+    /// <summary>Grid size: Bar, 1/2, 1/4, 1/8, 1/16 or 1/32 (note values; 1/4 = one beat in 4/4), a triplet 1/4T, 1/8T or 1/16T (three in the time of
+    /// two), or a dotted 1/4D, 1/8D or 1/16D (one and a half times the value).</summary>
     public string Grid { get; set; } = "1/4";
-    public static readonly string[] Grids = { "Bar", "1/2", "1/4", "1/8", "1/16", "1/32" };
+    public static readonly string[] Grids = { "Bar", "1/2", "1/4", "1/8", "1/16", "1/32", "1/4T", "1/8T", "1/16T", "1/4D", "1/8D", "1/16D" };
     public bool ToGrid { get; set; } = true;
     public bool ToItems { get; set; } = true;
     public bool ToPlayhead { get; set; } = true;

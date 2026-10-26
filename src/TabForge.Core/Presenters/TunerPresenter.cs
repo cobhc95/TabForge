@@ -2,7 +2,7 @@
 //       the Hz and cents text, the cents needle position and its in-tune tone, the string of the track the reading is closest to, and the
 //       string boxes' names.
 // Does not own: the audio engine and its readings (AudioEngineClient), the update timer, the window, the gauge drawing and brushes.
-// Tests: none dedicated(WPF characterization), TunerWindowTests (Avalonia headless).
+// Tests: none dedicated, TunerWindowTests (Avalonia headless).
 using System.Globalization;
 using TabForge.Models;
 using TabForge.Services;

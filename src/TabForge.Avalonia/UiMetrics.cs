@@ -62,6 +62,13 @@ public static class UiMetrics
         return control;
     }
 
+    /// <summary>Removes the outer margin of <paramref name="control"/> (a control a canvas places, which the button look's margin would shift) and returns it.</summary>
+    public static T WithNoMargin<T>(this T control) where T : Layoutable
+    {
+        control.Margin = default;
+        return control;
+    }
+
     /// <summary>Sets the padding of <paramref name="control"/> (device-independent pixels, <paramref name="x"/> left and right, <paramref name="y"/> top and bottom) and returns it.</summary>
     public static T WithPadding<T>(this T control, double x, double y) where T : global::Avalonia.Controls.Primitives.TemplatedControl
     {

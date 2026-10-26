@@ -1,6 +1,6 @@
 // Owns: the plug-in "Save preset" dialog's logic without UI types: its texts, the case-insensitive name match (which saved name a typed
 //       name hits, so whether Delete is on and whether OK asks to replace) and the replace question.
-// Does not own: the window (WPF PluginPresetDialog, Avalonia PluginPresetWindow), reading the plug-in state or the preset files (PluginLibrary).
+// Does not own: the window (Avalonia PluginPresetWindow), reading the plug-in state or the preset files (PluginLibrary).
 // Tests: TabForge.Avalonia.Tests.ClipSnapPluginDialogTests.
 namespace TabForge.Presenters;
 

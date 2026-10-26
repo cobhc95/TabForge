@@ -214,18 +214,20 @@ public class TransportRecordingTests
         song.Project.Tracks.Add(track);
         sessions.SyncEngine(song, new PluginSettings());
         var session = sessions.For(song)!;
+        var commands = new List<EngineCommand>();
+        client.SentForTest = command => commands.Add(command);
         session.PlayOrPause();
+        playback.RaiseTimelineChanged(new ScoreTimeline { TotalMs = 60000 });   // the start compiled: the song rolls
         playback.Report(new PlaybackPosition { Bar = 4, Cell = 1, BarFraction = 0.5, ElapsedMs = 5000 });
         ui.FrameTimer.Fire();
 
-        var commands = new List<EngineCommand>();
-        client.SentForTest = command => commands.Add(command);
         using var recording = new TransportRecording(client, client.MidiInput.CreateClient());
         var start = new RecordingPresenter.RecordStart();
         MainWindowTransportRecord.Toggle(recording, session, song, _ => { }, start, playback: sessions);
 
         var owner = client.OwnerIdOf(song);
-        Assert.Equal((false, 5.0), client.PositionSentForTest(owner));   // the clock is held at the playhead second: this app sends no later positions
+        // The engine is anchored at the playhead second and keeps RUNNING: a song that plays on must not stop its audio clips for the recording.
+        Assert.Equal((true, 5.0), client.PositionSentForTest(owner));
         Assert.True(recording.IsRecording);
         var position = commands.IndexOf(EngineCommand.SetPosition);
         var record = commands.IndexOf(EngineCommand.Record);
