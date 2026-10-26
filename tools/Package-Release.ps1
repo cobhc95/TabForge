@@ -168,7 +168,9 @@ foreach ($pdb in $pdbs) { Move-Item -LiteralPath $pdb.FullName -Destination (Joi
 if ($pdbs.Count -eq 0) { Write-LoudWarning "No PDBs were produced; dist\symbols\$version is empty." }
 else { Write-Output ("Symbols: {0} PDB(s) archived in {1}" -f $pdbs.Count, $symbols) }
 Copy-Item (Join-Path $srcRoot 'LICENSE') (Join-Path $publish 'LICENSE.txt')
-Copy-Item (Join-Path $srcRoot 'docs\THIRD_PARTY.md') $publish
+$thirdParty = @('THIRD_PARTY.md','docsTHIRD_PARTY.md') | ForEach-Object { Join-Path $srcRoot $_ } | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
+if (-not $thirdParty) { throw 'THIRD_PARTY.md not found in the repo root or docs' }
+Copy-Item $thirdParty $publish
 # MPL-2.0 s3.2 (TabForge.AlphaTab is a modified alphaTab): the patch, i.e. the source of the modification, ships beside the licence text.
 $alphaTabPatches = @(Get-ChildItem -LiteralPath (Join-Path $srcRoot 'vendor\alphatab') -Filter '*.patch' -File)
 if ($alphaTabPatches.Count -eq 0) { throw 'Source\vendor\alphatab\*.patch is missing (MPL-2.0 source of TabForge.AlphaTab); refusing to package.' }
