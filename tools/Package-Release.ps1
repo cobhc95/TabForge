@@ -169,7 +169,7 @@ if ($pdbs.Count -eq 0) { Write-LoudWarning "No PDBs were produced; dist\symbols\
 else { Write-Output ("Symbols: {0} PDB(s) archived in {1}" -f $pdbs.Count, $symbols) }
 Copy-Item (Join-Path $srcRoot 'LICENSE') (Join-Path $publish 'LICENSE.txt')
 $thirdParty = @('THIRD_PARTY.md','docsTHIRD_PARTY.md') | ForEach-Object { Join-Path $srcRoot $_ } | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
-if (-not $thirdParty) { throw 'THIRD_PARTY.md not found in the repo root or docs' }
+if (-not $thirdParty) { throw 'THIRD_PARTY.md not found in the repo root or docs\x27 }
 Copy-Item $thirdParty $publish
 # MPL-2.0 s3.2 (TabForge.AlphaTab is a modified alphaTab): the patch, i.e. the source of the modification, ships beside the licence text.
 $alphaTabPatches = @(Get-ChildItem -LiteralPath (Join-Path $srcRoot 'vendor\alphatab') -Filter '*.patch' -File)
