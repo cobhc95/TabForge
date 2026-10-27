@@ -58,14 +58,14 @@ jobs:
         env:
           TABFORGE_TFPORTABLE: ${{ github.workspace }}/native/tfportable/bin
         run: >
-          dotnet test tests/TabForge.Avalonia.Tests/TabForge.Avalonia.Tests.csproj -c Release -p:EnableWindowsTargeting=true
+          dotnet test tests/TabForge.Avalonia.Tests/TabForge.Avalonia.Tests.csproj -c Release -p:EnableWindowsTargeting=true -p:RestoreLockedMode=false
           --filter "FullyQualifiedName~PortableBackendTests|FullyQualifiedName~PortableDeviceTests"
 
       # The Core tests live in the Avalonia test project (no Core-only project yet); the portability and architecture guards
       # only read source files, so they run here.
       - name: Guard tests (portability and architecture ratchets)
         run: >
-          dotnet test tests/TabForge.Avalonia.Tests/TabForge.Avalonia.Tests.csproj -c Release -p:EnableWindowsTargeting=true
+          dotnet test tests/TabForge.Avalonia.Tests/TabForge.Avalonia.Tests.csproj -c Release -p:EnableWindowsTargeting=true -p:RestoreLockedMode=false
           --filter "FullyQualifiedName~PortabilityGuardTests|FullyQualifiedName~ThemeArchitecture|FullyQualifiedName~LayoutArchitecture|FullyQualifiedName~StaticStateOnlyShrinks"
 
       # ffmpeg is the portable video encoder (an external program, never bundled): install it so the pipe smoke test runs for real.
@@ -81,7 +81,7 @@ jobs:
       - name: Stage 5 tests (video encoder port, Unix path rules, process guard)
         continue-on-error: true
         run: >
-          dotnet test tests/TabForge.Avalonia.Tests/TabForge.Avalonia.Tests.csproj -c Release -p:EnableWindowsTargeting=true
+          dotnet test tests/TabForge.Avalonia.Tests/TabForge.Avalonia.Tests.csproj -c Release -p:EnableWindowsTargeting=true -p:RestoreLockedMode=false
           --filter "FullyQualifiedName~VideoEncoderPortTests|FullyQualifiedName~UnixPathRulesTests|FullyQualifiedName~CrossPlatformStage5Tests"
 
       # libtfportable (miniaudio + RtMidi) built per OS with CMake; Linux needs the ALSA headers.
