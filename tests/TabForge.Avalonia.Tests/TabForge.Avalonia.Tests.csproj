@@ -12,6 +12,10 @@
   <ItemGroup Condition="'$(TargetFramework)' != 'net10.0-windows'">
     <!-- The engine client's composition is Windows-only (see src/TabForge.Avalonia/Playback). -->
     <Compile Remove="Playback/AvaloniaPlaybackCompositionTests.cs" />
+    <!-- These test Windows-only code (Win32 path resolver, Windows dialog shell, the Media Foundation live video parity). -->
+    <Compile Remove="Infrastructure/WindowsPathResolverTests.cs" />
+    <Compile Remove="Shell/DialogVirtualizationTests.cs" />
+    <Compile Remove="Video/LiveVideoParityTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <!-- Where this project was built from: the checkout root for tests whose binaries are built outside the checkout (ArtifactsPath elsewhere) with no TABFORGE_REPO. -->
