@@ -20,14 +20,14 @@ echo.
 set "DOTNET_EXE=dotnet"
 where dotnet >nul 2>nul
 if errorlevel 1 (
-    echo A trusted .NET 8 SDK is required. Install it from https://dotnet.microsoft.com/download/dotnet/8.0 and rerun this build.
+    echo A trusted .NET 10 SDK is required. Install it from https://dotnet.microsoft.com/download/dotnet/10.0 and rerun this build.
     goto :fail
 )
 
-"%DOTNET_EXE%" --list-sdks | findstr /R "^8\." >nul
+"%DOTNET_EXE%" --list-sdks | findstr /R "^10\." >nul
 if errorlevel 1 (
-    echo .NET 8 SDK was not found. TabForge does not download or execute SDK installers during normal builds.
-    echo Install a trusted .NET 8 SDK and rerun this build.
+    echo .NET 10 SDK was not found. TabForge does not download or execute SDK installers during normal builds.
+    echo Install a trusted .NET 10 SDK and rerun this build.
     goto :fail
 )
 
@@ -66,7 +66,7 @@ echo.
 echo ============================================================
 echo  BUILD SUCCEEDED
 echo  EXE: %CD%\%PUBLISH_OUTPUT%\TabForge.exe
-if /I "%BUILD_MODE%"=="framework-dependent compact" echo  Requires .NET 8 Windows Desktop Runtime
+if /I "%BUILD_MODE%"=="framework-dependent compact" echo  Requires .NET 10 Windows Desktop Runtime
 echo ============================================================
 exit /b 0
 

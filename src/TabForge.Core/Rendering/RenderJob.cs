@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.IO;
-using NAudio.MediaFoundation;
 using NAudio.Wave;
 using TabForge.Audio;
 using TabForge.Audio.Contracts;
@@ -40,29 +39,8 @@ public sealed class RenderRequest
 public static class RenderJob
 {
     private static readonly TimeSpan ChainReadyTimeout = TimeSpan.FromSeconds(60);
-    private static bool _mfStarted;
-    private static readonly object MfLock = new();
-
-    private static void EnsureMf()
-    {
-        lock (MfLock)
-        {
-            if (_mfStarted) return;
-            MediaFoundationApi.Startup();
-            _mfStarted = true;
-        }
-    }
-
     /// <summary>MP3 needs Media Foundation's encoder (missing on N editions and some LTSC installs).</summary>
-    public static bool Mp3Available()
-    {
-        try
-        {
-            EnsureMf();
-            return MediaFoundationEncoder.GetEncodeBitrates(AudioSubtypes.MFAudioFormat_MP3, 44100, 2).Length > 0;
-        }
-        catch (Exception) { return false; } // Not logged: job probe: false is reported by the caller
-    }
+    public static bool Mp3Available() => TabForge.Platform.SystemAudio.Mp3.IsAvailable();
 
     public static async Task<RenderResult> RunAsync(RenderRequest r, IProgress<RenderProgressInfo>? progress, CancellationToken cancel, AudioEngineClient engine)
     {
@@ -193,13 +171,12 @@ public static class RenderJob
         foreach (var kv in r.Stems) pairs.Add((files.Target(kv.Value), kv.Value));
         await Task.Run(() =>
         {
-            EnsureMf();
             foreach (var (wav, target) in pairs)
             {
                 cancel.ThrowIfCancellationRequested();
                 var stage = files.Stage(target);
                 using var reader = new WaveFileReader(wav);
-                MediaFoundationEncoder.EncodeToMp3(reader.ToSampleProvider().ToWaveProvider16(), stage, s.Mp3Kbps * 1000);
+                TabForge.Platform.SystemAudio.Mp3.Encode(reader.ToSampleProvider().ToWaveProvider16(), stage, s.Mp3Kbps * 1000);
             }
         });
     }

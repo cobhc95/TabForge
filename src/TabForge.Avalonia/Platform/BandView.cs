@@ -129,10 +129,44 @@ public sealed partial class BandView : ScrollViewer
         _current.FretboardsOn.Remove(trackIndex);
         if (!_current.Shown.Contains(_current.Selected)) _current.Selected = _current.Shown.Count > 0 ? _current.Shown[0] : -1;
         Refresh();
+        if (_current.Shown.Contains(trackIndex)) ScrollRowIntoView(trackIndex);   // a pill that adds a row shows it
     }
+
+    /// <summary>Scrolls the view so the shown track's card is on screen (no change when it already is); never runs during playback.</summary>
+    public void ScrollRowIntoView(int trackIndex)
+    {
+        if (!_current.Panels.TryGetValue(trackIndex, out var panel) || !_current.Shown.Contains(trackIndex) || panel.Bounds.Height <= 0) return;
+        var top = panel.Bounds.Top;
+        var bottom = panel.Bounds.Bottom;
+        var y = Offset.Y;
+        var target = top < y ? top : bottom > y + Viewport.Height ? Math.Max(0, bottom - Viewport.Height) : y;
+        if (bottom - top > Viewport.Height) target = top;   // a card taller than the view shows from its top
+        if (target != y) Offset = new Vector(Offset.X, target);
+    }
+
+    private string _appliedRowMin = BandChoices.RowMedium;
+
+    /// <summary>Fits the cards again after Preferences changed the "Band row minimum height" row (does nothing when it is the same).</summary>
+    public void ApplyRowMinHeight()
+    {
+        var choice = BandChoices.NormalizeRowMin(_scoreMenu?.RowMinHeightChoice);
+        if (choice == _appliedRowMin) return;
+        _appliedRowMin = choice;
+        ShareBars();
+    }
+
+    // The timeline (or any pane) selected another track: its row scrolls into view.
+    private void OnTrackIndexChanged() => ScrollRowIntoView(_document.TrackIndex);
 
     /// <summary>Selects a shown track's card (the outline marks it). The cards stay where they are: a press on a card must not rebuild the stack under the pointer.</summary>
     public void SelectTrack(int trackIndex)
+    {
+        SelectCard(trackIndex);
+        ScrollRowIntoView(trackIndex);
+    }
+
+    // A press on the card itself selects it without moving the view under the pointer.
+    private void SelectCard(int trackIndex)
     {
         if (!_current.Shown.Contains(trackIndex) || _current.Selected == trackIndex) return;
         _current.Selected = trackIndex;
@@ -169,7 +203,7 @@ public sealed partial class BandView : ScrollViewer
     // Ctrl+wheel over the cards changes the Band lane zoom (a step per notch) instead of scrolling the view.
     private void ZoomWithWheel(object? sender, global::Avalonia.Input.PointerWheelEventArgs e)
     {
-        if (!e.KeyModifiers.HasFlag(global::Avalonia.Input.KeyModifiers.Control) || e.Delta.Y == 0 || _scoreMenu is null) return;
+        if (!e.KeyModifiers.HasPrimary() || e.Delta.Y == 0 || _scoreMenu is null) return;
         _scoreMenu.WheelZoom(e.Delta.Y > 0);
         e.Handled = true;
     }
@@ -277,6 +311,7 @@ public sealed partial class BandView : ScrollViewer
         if (!_attached) return;
         song.DisplayStateChanged += OnSongChanged;
         song.ScorePaperChanged += ApplyPaper;
+        song.TrackIndexChanged += OnTrackIndexChanged;
         _watch.Bind(song);
     }
 
@@ -286,6 +321,7 @@ public sealed partial class BandView : ScrollViewer
         {
             _watchedSong.DisplayStateChanged -= OnSongChanged;
             _watchedSong.ScorePaperChanged -= ApplyPaper;
+            _watchedSong.TrackIndexChanged -= OnTrackIndexChanged;
         }
         _watch.Dispose();
         _watchedSong = null;
@@ -379,7 +415,7 @@ public sealed partial class BandView : ScrollViewer
     {
         if (_current.Panels.TryGetValue(trackIndex, out var existing)) return existing;
         var panel = new BandTrackPanel(_document, trackIndex);
-        panel.Selected += SelectTrack;
+        panel.Selected += SelectCard;
         _bindStaff?.Invoke(panel.Staff, _document);
         // A click on a card's staff seeks playback to the pressed cell, as a click on the main score does; never while recording.
         panel.Staff.CursorPlaced += (bar, cell) => { if (IsRecording?.Invoke() != true) _playback?.Seek(bar, cell); };
@@ -440,7 +476,7 @@ public sealed partial class BandView : ScrollViewer
         var cards = _current.Shown.Where(index => _current.Panels.TryGetValue(index, out _)).Select(index => _current.Panels[index]).ToList();
         if (cards.Count != _current.Shown.Count) { _sharePending = true; return; }
         if (cards.Max(card => card.StaffLineUnits()) <= 0) { _sharePending = true; return; }
-        BandCardFit.Apply(cards, Bounds.Height, CardGap, _scoreMenu?.LaneZoom ?? 1);
+        BandCardFit.Apply(cards, Bounds.Height, CardGap, _scoreMenu?.LaneZoom ?? 1, _scoreMenu?.RowMinScale ?? 1);
         ApplySavedRows();
     }
 

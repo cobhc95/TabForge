@@ -7,7 +7,7 @@
 namespace TabForge.Menus;
 
 /// <summary>What the piano roll's menu depends on: a note under the pointer or a selection, a clipboard, and whether the pointer is inside the loop.</summary>
-public sealed record PianoRollMenuState(bool OnNotes, bool CanPaste, bool InsideLoop, bool HasNotes = true, string ColourMode = "Track", bool OnSection = false);
+public sealed record PianoRollMenuState(bool OnNotes, bool CanPaste, bool InsideLoop, bool HasNotes = true, string ColourMode = "Track", bool OnSection = false, bool Needle = true);
 
 public static class PianoRollMenus
 {
@@ -17,9 +17,13 @@ public static class PianoRollMenus
         TransposeBy = "PianoRoll.TransposeBy", VelocitySet = "PianoRoll.VelocitySet", VelocityScale = "PianoRoll.VelocityScale", VelocityRamp = "PianoRoll.VelocityRamp",
         SelectAll = "PianoRoll.SelectAll", SelectPitch = "PianoRoll.SelectPitch", ShowInScoreId = "PianoRoll.ShowInScore", ClearLoop = "Transport.ClearLoopArea",
         Legato = "PianoRoll.Legato", Glue = "PianoRoll.Glue", Randomise = "PianoRoll.Randomise", Humanise = "PianoRoll.Humanise", Colours = "PianoRoll.Colours",
-        KeyStrip = "PianoRoll.KeyStrip", MovePlayhead = "PianoRoll.MovePlayhead", LoopBar = "PianoRoll.LoopBar", LoopSection = "PianoRoll.LoopSection";
+        KeyStrip = "PianoRoll.KeyStrip", MovePlayhead = "PianoRoll.MovePlayhead", LoopBar = "PianoRoll.LoopBar", LoopSection = "PianoRoll.LoopSection",
+        PlaybackNeedle = "PianoRoll.PlaybackNeedle";
 
-    public const string ShowInScore = "Show in score mode (this track)";
+    public const string ShowInScore = "Show in score mode (this track)", NeedleSettingKey = "editing.pianoroll.needle";
+
+    private static MenuSpec NeedleRow(bool on) =>
+        new() { Id = PlaybackNeedle, Header = "Show playback needle", Checkable = true, Checked = on, SettingKey = NeedleSettingKey };
 
     private static MenuSpec Row(string id, string header, string shortcut = "", bool enabled = true) =>
         new() { Id = id, Header = header, Shortcut = shortcut, Enabled = enabled };
@@ -66,6 +70,7 @@ public static class PianoRollMenus
         list.Add(Row(SelectAll, "Select all", "Ctrl+A"));
         list.Add(Row(SelectPitch, "Select all notes of this pitch"));
         list.Add(ColourRows(s.ColourMode));
+        list.Add(NeedleRow(s.Needle));
         list.Add(MenuSpec.Separator());
         list.Add(Row(ShowInScoreId, ShowInScore));
         return list;
@@ -103,6 +108,7 @@ public static class PianoRollMenus
         list.Add(Row(Quantize, "Quantize all", "Q", s.HasNotes));
         list.Add(Row(Legato, "Legato all", "Ctrl+L", s.HasNotes));
         list.Add(ColourRows(s.ColourMode));
+        list.Add(NeedleRow(s.Needle));
         list.Add(MenuSpec.Separator());
         list.Add(Row(ShowInScoreId, ShowInScore));
         return list;

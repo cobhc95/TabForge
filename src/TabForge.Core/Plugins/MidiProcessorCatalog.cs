@@ -24,7 +24,7 @@ public sealed record MidiProcessorInfo(string Type, string Name, string Category
 }
 
 /// <summary>
-/// The MIDI processors TabForge offers in front of a plug-in (functional spec: docs/MIDI_PROCESSORS_SPEC.md). Each entry describes its
+/// The MIDI processors TabForge offers in front of a plug-in (functional spec: docs/specs/MIDI_PROCESSORS_SPEC.md). Each entry describes its
 /// parameters; the engine (TabForge.AudioEngine/Midi) implements the same type names. Generative and audio-coupled processors follow later.
 /// </summary>
 public static partial class MidiProcessorCatalog

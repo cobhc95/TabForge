@@ -70,6 +70,9 @@ public static class ClipGesturePresenter
         clip.FadeOutSec = fadeOut;
     }
 
+    /// <summary>The pixel columns an outline of <paramref name="span"/> builds: at least one, so a clip box narrower than a pixel (its span a fraction wide) still has a first column to start its shape from.</summary>
+    public static int WaveColumns(WaveSpan span) => Math.Max(1, (int)(span.To - span.From));
+
     /// <summary>
     /// The pixel columns of a clip's waveform to build: the clip box clipped to the song width and, with a known viewport, to one
     /// viewport either side of the visible span. <see cref="WaveSpan.RebuildFrom"/> and <see cref="WaveSpan.RebuildTo"/> are the

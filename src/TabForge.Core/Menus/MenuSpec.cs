@@ -29,6 +29,8 @@ public sealed class MenuSpec
     /// <summary>Command id and argument of the menus that are not the timeline's (fretboard, score).</summary>
     public string? Id;
     public string? Arg;
+    /// <summary>Bars (first, last) the timeline outlines in red while the pointer is on this row.</summary>
+    public (int First, int Last)? HoverBars;
 
     public static MenuSpec Separator() => new() { IsSeparator = true };
 }

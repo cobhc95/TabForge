@@ -6,7 +6,7 @@ namespace TabForge.AudioEngine.Output;
 
 // Owns: telling "this output is gone or must be reopened" from one open output: a stop with an error (WASAPI device invalidated or unplugged),
 //     an ASIO driver reset request, and a change of the Windows default playback device the output follows.
-// Does not own: reopening it (EngineSession.Device.cs) or opening it (AudioOutputFactory).
+// Does not own: reopening it (EngineSession.Device.Windows.cs) or opening it (AudioOutputFactory).
 // Threads: raises on the driver's or the COM notification thread; the owner posts the reaction to the engine main thread.
 
 /// <summary>Watches one open output and raises <c>lost</c> once per signal with the reason; silent after <see cref="Dispose"/>.</summary>

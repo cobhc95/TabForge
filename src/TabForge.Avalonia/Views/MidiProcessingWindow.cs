@@ -64,7 +64,7 @@ public sealed class MidiProcessingWindow : Window
     private readonly Button _up = Btn("▲", "Move up (earlier in the chain)", "UpButton");
     private readonly Button _down = Btn("▼", "Move down (later in the chain)", "DownButton");
     private readonly Button _remove = Btn("Remove", "Remove the selected processor (Delete)", "RemoveButton");
-    private readonly TextBox _log = new() { IsReadOnly = true, AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, FontFamily = new FontFamily("Consolas"), FontSize = 11, Height = 150, Name = "LogBox" };
+    private readonly TextBox _log = new() { IsReadOnly = true, AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, FontFamily = TabForge.Avalonia.Platform.AvaloniaFonts.Family("Consolas"), FontSize = 11, Height = 150, Name = "LogBox" };
     private readonly StackPanel _logPanel = new() { IsVisible = false, Name = "LogPanel" };
     private readonly List<string> _logLines = new();
     private readonly TextBlock _status = ToolWindowParts.Status("StatusLine");

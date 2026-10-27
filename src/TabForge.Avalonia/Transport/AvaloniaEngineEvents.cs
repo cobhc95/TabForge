@@ -66,12 +66,14 @@ public sealed class AvaloniaEngineEvents : IDisposable
     {
         (_engine, _host, _ui) = (engine, host, ui);
         _routeKey = RouteKey(host.Plugins);
+        NoteMissingSoundFont();
         _engine.PluginCrashed += OnPluginCrashed;
         _engine.PluginFailed += OnPluginFailed;
         _engine.PluginSlow += OnPluginSlow;
         _engine.ChainLoaded += OnChainLoaded;
         _engine.DeviceChanging += OnDeviceChanging;
         _engine.DeviceReady += OnDeviceReady;
+        _engine.Resynced += OnEngineResynced;
         _engine.DeviceError += OnDeviceError;
         _engine.TrackLimitReached += OnTrackLimitReached;
     }
@@ -85,7 +87,16 @@ public sealed class AvaloniaEngineEvents : IDisposable
     /// <summary>The audio route settings (driver, device, channel pair, rate, buffer, latency, play-all) as one key: a change of any of them reaches the engine.</summary>
     public static string RouteKey(PluginSettings plugins) => string.Join('|', plugins.Driver, plugins.InputDevice, plugins.Device, plugins.SampleRate,
         plugins.BufferSize, plugins.AsioInputChannel, plugins.AsioInputLastChannel, plugins.AsioOutputChannel, plugins.AsioOutputLastChannel,
-        plugins.PlayAllThroughEngine, plugins.WindowsMidiLatencyMs);
+        plugins.PlayAllThroughEngine, plugins.WindowsMidiLatencyMs, SoundFontStore.ActivePath(plugins), SoundEngines.Resolve(plugins.SoundEngine));
+
+    /// <summary>The SoundFont is chosen but not downloaded: say so; Windows plays Windows GM until it is, other systems have no General MIDI sound until then.</summary>
+    private void NoteMissingSoundFont()
+    {
+        if (SoundFontStore.ChosenButMissing(_host.Plugins))
+            _host.ShowStatus(OperatingSystem.IsWindows()
+                ? "The TabForge SoundFont is not downloaded yet, so Windows GM plays. Settings > Audio & Plug-ins > Sound engine > Download SoundFont."
+                : "The TabForge SoundFont is not downloaded yet, so there is no General MIDI sound. Settings > Audio & Plug-ins > Sound engine > Download SoundFont.");
+    }
 
     /// <summary>The audio route settings changed: when one of them differs, the song shown is synced to the engine at once.</summary>
     public void ApplyRouteSettings()
@@ -94,6 +105,7 @@ public sealed class AvaloniaEngineEvents : IDisposable
         var key = RouteKey(_host.Plugins);
         if (key == _routeKey) return;
         _routeKey = key;
+        NoteMissingSoundFont();
         // A play-all choice that differs from the engine's own was made by hand: it is no longer set automatically.
         if (_engine.Mixer.PlayAllThroughEngine != _host.Plugins.PlayAllThroughEngine) _host.Plugins.PlayAllSetAutomatically = false;
         _host.SyncActive();
@@ -164,6 +176,12 @@ public sealed class AvaloniaEngineEvents : IDisposable
         _lastDeviceReadyMs = now;
         if (!flapping) _setupPending = true;   // a new mix: its synths hold nothing the song sent before (the engine replays its own copy of the state too)
         ResendSetupWhenLoaded();
+    }
+
+    /// <summary>The engine got the song's audio again (a dropped command, or a reopened device): the shown song syncs the rest (routing, chains) too.</summary>
+    private void OnEngineResynced()
+    {
+        if (!_disposed) _host.SyncActive();
     }
 
     private void OnTrackLimitReached(int limit)
@@ -253,6 +271,7 @@ public sealed class AvaloniaEngineEvents : IDisposable
         _engine.ChainLoaded -= OnChainLoaded;
         _engine.DeviceChanging -= OnDeviceChanging;
         _engine.DeviceReady -= OnDeviceReady;
+        _engine.Resynced -= OnEngineResynced;
         _engine.DeviceError -= OnDeviceError;
         _engine.TrackLimitReached -= OnTrackLimitReached;
     }

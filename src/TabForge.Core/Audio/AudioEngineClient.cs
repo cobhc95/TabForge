@@ -33,11 +33,26 @@ public sealed partial class AudioEngineClient : IDisposable
     /// <summary>The MIDI input devices, shared by recording and Keyboard mode (each takes a client; the devices open while one holds them).</summary>
     public MidiInputHub MidiInput { get; } = new(new MidiInputCapture());
 
+    /// <summary>The window's MIDI input monitor (a keyboard heard through the armed or selected track); live input's stand-in yields to its armed tracks. Null before a window makes one.</summary>
+    public TabForge.LiveInput.MidiInputMonitor? MidiMonitor { get; set; }
+
+    /// <summary>True while live input's stand-in listens to a MIDI keyboard (the selected track's monitoring then stays silent).</summary>
+    public bool LiveInputMidiOn => LiveInput.Midi?.IsOn == true;
+
+    /// <summary>UI thread: raised at the end of <see cref="Sync"/>, when slots may have been given, moved or freed (the MIDI monitor re-reads its tracks' slots).</summary>
+    public event Action? Synced;
+
+    /// <summary>Raised on the MIDI driver thread (nothing that waits) when an armed track hears a note-on; the armed rows wake their meters with it.</summary>
+    public event Action? MidiNoteHeard;
+
+    /// <summary>MIDI driver thread: the active window's monitor heard a note-on for an armed track.</summary>
+    public void RaiseMidiNoteHeard() => MidiNoteHeard?.Invoke();
+
     /// <summary>Which plug-in slots may load and which files changed at load (fails closed: untrusted slots are sent as Skip).</summary>
     public IPluginLoadGate Trust { get; }
 
     /// <summary>A client whose load gate asks <paramref name="trust"/> (the app's one trust state; a test passes its own).</summary>
-    public AudioEngineClient(TabForge.Plugins.PluginTrust trust) : this(new TabForge.Plugins.PluginTrustLoadGate(new TabForge.Platform.Windows.WindowsPluginFileTrust(), trust)) { }
+    public AudioEngineClient(TabForge.Plugins.PluginTrust trust) : this(new TabForge.Plugins.PluginTrustLoadGate(TabForge.Platform.PluginFileTrusts.Create(), trust)) { }
 
     public AudioEngineClient(IPluginLoadGate trust)
     {
@@ -54,6 +69,7 @@ public sealed partial class AudioEngineClient : IDisposable
     internal void RefreshClips()
     {
         if (Rendering) return;   // like Sync: nothing is sent to the engine mid-render (the end of the render re-judges the clips)
+        ResyncIfDropped();
         foreach (var (slot, state) in _audioContext.ToList())
         {
             if (state.Media.IsClosed || !_slots.ContainsValue(slot) || _parkedSince.ContainsKey(slot)) continue;   // a closed document asks for nothing; gone, or parked (no clips): its owner's next sync judges them
@@ -201,6 +217,7 @@ public sealed partial class AudioEngineClient : IDisposable
     private bool _measuringPathOffset;
     private int? _pathOffsetSentTo;
     private (int Pid, int Ms) _tunerWindowSent;   // tuner analysis window the running engine was last told
+    private (int Pid, string Path) _bankSent;   // sound bank the running engine was last told
     private (int Pid, bool On) _limiterSent;   // live safety limiter state the running engine was last told
 
     private readonly Dictionary<int, string> _sentWiring = new();
@@ -259,6 +276,8 @@ public sealed partial class AudioEngineClient : IDisposable
     public event Action? EditorClosed;
     /// <summary>A plug-in's programs: (engine slot, plug-in index, current, names) on the UI thread.</summary>
     public event Action<int, int, int, IReadOnlyList<string>>? ProgramsReceived;
+    /// <summary>A plug-in's parameter list arrived (asked with <see cref="RequestParameters"/>): engine slot, plug-in index, parameters.</summary>
+    public event Action<int, int, IReadOnlyList<PluginParameterInfo>>? ParametersReceived;
 
     /// <summary>One outstanding state request: the engine answers one frame per plug-in.</summary>
     internal sealed class StateRequest
@@ -281,7 +300,8 @@ public sealed partial class AudioEngineClient : IDisposable
     private TaskCompletionSource<RenderResult>? _renderTask;
     private IProgress<RenderProgressInfo>? _renderProgress;
 
-    private void Send(EngineCommand command, Action<BinaryWriter>? payload = null)
+    /// <summary>Sends one command. True when the engine (or its connect queue) took it; false when it was dropped because the pipe is down: the caller must not remember it as sent (see <see cref="NoteDropped"/>).</summary>
+    private bool Send(EngineCommand command, Action<BinaryWriter>? payload = null)
     {
         SentForTest?.Invoke(command);
         if (command == EngineCommand.Configure) _awaitingReady = true;   // opening a device can take seconds: liveness waits for Ready
@@ -292,14 +312,14 @@ public sealed partial class AudioEngineClient : IDisposable
                 using var frame = new MemoryStream();
                 Frames.Write(frame, (byte)command, payload);
                 queue.Add(frame.ToArray());
-                return;
+                return true;
             }
         }
         var pipe = _pipe;
-        if (pipe is not { IsConnected: true }) return;
-        try { Frames.Write(pipe, (byte)command, payload); }
-        catch (IOException ex) { Services.Trace.Error(Services.Trace.Engine, "engine: send command: " + ex.Message); /* the engine is gone; OnEngineEnded handles it */ }
-        catch (ObjectDisposedException ex) { Services.Trace.Error(Services.Trace.Engine, "engine: send command: " + ex.Message); }
+        if (pipe is not { IsConnected: true }) return (_fakeLinkUp && pipe is null) || NoteDropped(command, "the engine pipe is not connected");
+        try { Frames.Write(pipe, (byte)command, payload); return true; }
+        catch (IOException ex) { Services.Trace.Error(Services.Trace.Engine, "engine: send command: " + ex.Message); /* the engine is gone; OnEngineEnded handles it */ return NoteDropped(command, ex.Message); }
+        catch (ObjectDisposedException ex) { Services.Trace.Error(Services.Trace.Engine, "engine: send command: " + ex.Message); return NoteDropped(command, ex.Message); }
     }
 
     /// <summary>What a handler bug does besides the trace line: nothing (a Debug.Fail here would fail-fast the whole process from the reader thread); a test replaces it to count faults.</summary>

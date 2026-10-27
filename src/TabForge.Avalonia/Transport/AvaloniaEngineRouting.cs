@@ -68,7 +68,7 @@ public sealed class AvaloniaEngineRouting
     public static void ApplyMixerOptions(PluginSettings settings, MixerOptions mixer)
     {
         mixer.AutoGmSound = settings.AutoGmSound;
-        mixer.PlayAllThroughEngine = settings.PlayAllThroughEngine;
+        mixer.PlayAllThroughEngine = settings.PlayAllThroughEngine || SoundFontStore.ActivePath(settings).Length > 0 || !OperatingSystem.IsWindows();   // the SoundFont plays only in the engine; off Windows there is no Windows MIDI synth to fall back on
     }
 
     /// <summary>Sends only the loaded tracks' levels to the running engine (no chain, clip or route sync), for live fader, pan, mute and solo changes.</summary>

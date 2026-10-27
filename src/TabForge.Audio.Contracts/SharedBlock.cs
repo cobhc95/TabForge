@@ -78,9 +78,22 @@ public sealed unsafe class SharedBlock : IDisposable
         return block;
     }
 
-    public static SharedBlock Open(string name)
+    /// <summary>Creates the block on the portable file-backed backend (the default off Windows; on Windows only tests use it).</summary>
+    internal static SharedBlock CreatePortable(string name, string? folder = null)
     {
-        var block = new SharedBlock(NamedSharedMemory.Open(name));
+        var block = new SharedBlock(PortableSharedMemory.Create(name, TotalSize, folder));
+        *(long*)(block._base + OffTotalSize) = TotalSize;
+        Volatile.Write(ref *(int*)(block._base + OffMagic), Magic);
+        return block;
+    }
+
+    /// <summary>Opens a block made by <see cref="CreatePortable"/>.</summary>
+    internal static SharedBlock OpenPortable(string name, string? folder = null) => Checked(new SharedBlock(PortableSharedMemory.Open(name, folder)));
+
+    public static SharedBlock Open(string name) => Checked(new SharedBlock(NamedSharedMemory.Open(name)));
+
+    private static SharedBlock Checked(SharedBlock block)
+    {
         if (Volatile.Read(ref *(int*)(block._base + OffMagic)) != Magic || *(long*)(block._base + OffTotalSize) != TotalSize)
         {
             block.Dispose();

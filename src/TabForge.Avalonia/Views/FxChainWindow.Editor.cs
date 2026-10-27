@@ -24,9 +24,9 @@ public sealed partial class FxChainWindow
     private PluginSlot? _shownSlot;
 
     /// <summary>The window handle of the main window (the owner of floating plug-in windows); zero without a native window.</summary>
-    private IntPtr OwnerHandle => (Owner as Window)?.TryGetPlatformHandle()?.Handle ?? TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
+    private IntPtr OwnerHandle => Platform.PlatformAdapters.NativeWindows.Of(Owner as Window) is var owner && owner != IntPtr.Zero ? owner : SelfHandle;
 
-    private IntPtr SelfHandle => TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
+    private IntPtr SelfHandle => Platform.PlatformAdapters.NativeWindows.Of(this);
 
     /// <summary>The engine's docked editor window of this window, or zero.</summary>
     private IntPtr PluginEditorPopup => _popup = PluginEditorWin32.FindEditorPopup(SelfHandle, _popup);
@@ -42,13 +42,17 @@ public sealed partial class FxChainWindow
             _editors.CloseDocked();
             _containerPresets.Fill();
             _area.ShowNotice("", null);
+            ShowParameters(null, false);
             UpdateOverlay();
             return;
         }
         var slot = Selected;
         if (!ReferenceEquals(slot, _shownSlot)) { _editors.ResetPrograms(); _shownSlot = slot; }
         ShowBar();
-        _editors.Show(slot);
+        var viaButton = _parametersDown && IsClap(slot) && _editors.ModeOf(slot) == FxEditorMode.Docked;   // the Parameters button replaces the docked editor
+        if (viaButton) { _editors.CloseDocked(); _area.ShowNotice("", null); }
+        else _editors.Show(slot);
+        ShowParameters(slot, viaButton);
         UpdateOverlay();
     }
 
@@ -126,7 +130,7 @@ public sealed partial class FxChainWindow
     private void OnWindowKey(object? sender, KeyEventArgs e)
     {
         var focused = FocusManager?.GetFocusedElement();
-        if (_keys.Handle(e.Key, e.KeyModifiers, focused)) { e.Handled = true; return; }
+        if (_keys.Handle(e.Key, e.KeyModifiers, focused, ListFocused)) { e.Handled = true; return; }
         if (e.Key != Key.Escape || e.KeyModifiers != KeyModifiers.None) return;
         if (_optionsButton.Flyout is { IsOpen: true } open) { open.Hide(); e.Handled = true; return; }   // Escape closes the open Options popup, not the window
         if (_list.HandleEscape()) { e.Handled = true; return; }
@@ -146,6 +150,7 @@ public sealed partial class FxChainWindow
     {
         _closed = true;
         _cpuTimer.Stop();
+        _parameters.Dispose();
         if (_pitchMatcher is not null) _pitchMatcher.Changed -= OnPitchChanged;
         _host.SettingsChanged -= OnSettingsChanged;
         // The native plug-in editors go down after the window is gone, not on the click that closed it (at shutdown there is no later).

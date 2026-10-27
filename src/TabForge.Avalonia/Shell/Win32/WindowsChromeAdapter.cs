@@ -22,7 +22,7 @@ public sealed class WindowsChromeAdapter : AvaloniaWindowChrome
 
     private void SendNonClientPress(int hitCode)
     {
-        if (!OperatingSystem.IsWindows() || HostWindow.TryGetPlatformHandle() is not { HandleDescriptor: "HWND" } handle) return;
+        if (IsFullScreen || !OperatingSystem.IsWindows() || HostWindow.TryGetPlatformHandle() is not { HandleDescriptor: "HWND" } handle) return;
         ReleaseCapture(); // the pointer press that asked for the drag holds capture; Windows' drag loop needs it free
         SendMessage(handle.Handle, WmNcLButtonDown, new IntPtr(hitCode), IntPtr.Zero);
     }

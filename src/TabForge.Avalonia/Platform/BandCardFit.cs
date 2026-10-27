@@ -23,14 +23,16 @@ internal static class BandCardFit
     public const double MinStaffZoom = 0.25;
 
     /// <summary>Sets the zoom, the first card's lines and the cards' extra height for a view <paramref name="height"/> tall.</summary>
-    public static void Apply(IReadOnlyList<BandTrackPanel> cards, double height, double gap, double laneZoom)
+    public static void Apply(IReadOnlyList<BandTrackPanel> cards, double height, double gap, double laneZoom, double rowMinScale = 1)
     {
         if (cards.Count == 0 || height <= 1) return;
         if (cards.Max(card => card.StaffLineUnits()) <= 0) return;
         SizeAutoFretboards(cards, height, gap);
         var fixedHeight = cards.Sum(card => card.NaturalHeight(0)) + (cards.Count - 1) * gap;
         var fitZoom = Math.Min(1, (height - fixedHeight - FitSlack) / StaffUnits(cards));
-        var zoom = Math.Clamp(fitZoom * laneZoom, MinStaffZoom, ScoreZoomRules.MaxFactor);
+        // A row never shrinks below its minimum (one full tab line at the readable zoom); the rest overflows and the view scrolls.
+        var floorZoom = Math.Max(MinStaffZoom, TargetStaffZoom * rowMinScale * laneZoom);
+        var zoom = Math.Clamp(Math.Max(fitZoom * laneZoom, floorZoom), MinStaffZoom, ScoreZoomRules.MaxFactor);
         foreach (var card in cards)
         {
             card.Staff.MinZoom = MinStaffZoom;

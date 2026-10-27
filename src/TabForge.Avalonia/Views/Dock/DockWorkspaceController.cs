@@ -148,7 +148,8 @@ public sealed class DockWorkspaceController : IDockPaneDragHost, IDisposable
             if (available <= 0) return false;
             // A drag clears UserRatio; a ratio other than the last fit's then belongs to the user, until a new song replaces it.
             if (!replaceUserSplit && node.UserRatio is null && _fittedRatios.TryGetValue(panelId, out var fitted) && Math.Abs(node.Ratio - fitted) > 1e-9) return false;
-            var (_, ratio) = DockSizeRules.Fit(height, 0, available, inFirst: false);
+            // The split snaps its first half to whole pixels (DockSplitPanel.FirstShare), so a fractional height (density-scaled rows) would land up to half a pixel short and scroll the rows: round the first half down so the pane keeps at least the height asked.
+            var (_, ratio) = DockSizeRules.Fit(available - Math.Floor(available - height), 0, available, inFirst: false);
             node.UserRatio ??= node.Ratio;
             node.Ratio = ratio;
             _fittedRatios[panelId] = ratio;
@@ -304,6 +305,18 @@ public sealed class DockWorkspaceController : IDockPaneDragHost, IDisposable
         if (visible && IsInstrumentSuppressed(id)) return;
         if (visible) ResetPanel(id);
         else ClosePanel(id);
+    }
+
+    /// <summary>Brings a panel into view without moving one that is already shown: a closed panel is put at its default place, and a panel behind another tab of its group becomes that group's shown tab.</summary>
+    public void RevealPanel(string id)
+    {
+        if (!IsRegistered(id)) return;
+        if (!IsPanelVisible(id)) ResetPanel(id);
+        if (DockLayoutTree.FindPanelHost(State.Root, id) is { Kind: "tabs" } host && host.SelectedPanel != id)
+        {
+            host.SelectedPanel = id;
+            Changed();
+        }
     }
 
     /// <summary>View > Layouts: replaces the panels, their places and sizes with a saved or built-in layout, restored the way the window starts.</summary>

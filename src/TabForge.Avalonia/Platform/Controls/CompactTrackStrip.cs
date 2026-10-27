@@ -41,7 +41,7 @@ public sealed class CompactTrackStrip : DockPanel
 
     private const double CloseWidth = 26;
     private const double CloseHeight = 24;
-    private static readonly Thickness CloseMargin = new(2, 1, 8, 0);
+    private static readonly Thickness CloseMargin = new(4, 1, 2, 0);
     private const string CrossData = "M 0,0 L 10,10 M 10,0 L 0,10";
     private const double CrossSize = 10;
     private const double CrossStroke = 1.5;
@@ -58,6 +58,13 @@ public sealed class CompactTrackStrip : DockPanel
         _watch.ProjectChanged = (_, _) => RefreshPills();
         Bind(BackgroundProperty, this.GetResourceObservable("PanelBrush"), BindingPriority.Template);
         Styles.Add(TrackPillButton.IdleLook());
+        // The close button is the leftmost child, so the held toolbar icons sit flush right as in the normal menu row.
+        var close = CloseButton();
+        ToolTip.SetTip(close, CloseTooltip);
+        close.Click += (_, _) => CloseRequested?.Invoke();
+        CloseButtonControl = close;
+        SetDock(close, Dock.Left);
+        Children.Add(close);
         var menuButton = CaptionMenuButton();
         ToolTip.SetTip(menuButton, MenuTooltip);
         menuButton.Click += (_, _) => MenuRequested?.Invoke(menuButton, PlacementMode.Bottom);
@@ -65,11 +72,6 @@ public sealed class CompactTrackStrip : DockPanel
         SetDock(menuButton, Dock.Left);
         Children.Add(menuButton);
         ContextRequested += (_, e) => { MenuRequested?.Invoke(this, PlacementMode.Pointer); e.Handled = true; };
-        var close = CloseButton();
-        ToolTip.SetTip(close, CloseTooltip);
-        close.Click += (_, _) => CloseRequested?.Invoke();
-        SetDock(close, Dock.Right);
-        Children.Add(close);
         Children.Add(_pills);
     }
 
@@ -82,10 +84,13 @@ public sealed class CompactTrackStrip : DockPanel
     /// <summary>The caption with its chevron, which opens the stand-in menu.</summary>
     public Button MenuButton { get; }
 
-    /// <summary>The toolbar icons the strip holds before its close button while the menu row is hidden; null when it holds none.</summary>
+    /// <summary>The close button at the far left of the strip, before the caption.</summary>
+    public Button CloseButtonControl { get; }
+
+    /// <summary>The toolbar icons the strip holds flush right while the menu row is hidden; null when it holds none.</summary>
     public Control? Toolbar { get; private set; }
 
-    /// <summary>Docks <paramref name="toolbar"/> just left of the close button; the caller detaches it from its old parent first.</summary>
+    /// <summary>Docks <paramref name="toolbar"/> at the right edge of the strip; the caller detaches it from its old parent first.</summary>
     public void HoldToolbar(Control toolbar)
     {
         ReleaseToolbar();

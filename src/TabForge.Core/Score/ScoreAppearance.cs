@@ -30,12 +30,12 @@ internal sealed class ScoreAppearance : IScoreLayoutSettings
     private double _measureHorizontalSpacing = 1.0;
     private bool _centerSystems;
     private bool _showDynamics = true;
-    private bool _barEnabled;
+    private bool _barEnabled = true;
     private UiColor _barColor = Palette.Get("FollowPlayingBar");
     private UiColor _playbackColor = Palette.Get("FollowHighlightText");
     private UiColor _durationGlowColor = Palette.Get("FollowDurationGlow");
     private UiColor _highlightBackground = Palette.Get("FollowHighlightBackground");
-    private double _barOpacity = 0.20;
+    private double _barOpacity = 0.10;
     private bool _barWhenStopped;
 
     internal ScoreAppearance(IScoreAppearanceHost host) => _host = host;
@@ -144,7 +144,7 @@ internal sealed class ScoreAppearance : IScoreLayoutSettings
         }
     }
 
-    /// <summary>Show a translucent band over the bar that is playing. Off by default.</summary>
+    /// <summary>Show a translucent band over the bar that is playing. On by default.</summary>
     public bool PlayingBarEnabled { get => _barEnabled; set { if (_barEnabled == value) return; _barEnabled = value; _host.AppearanceChanged(ScoreAppearanceChange.Repaint); } }
 
     /// <summary>Colour of the playing-bar band (its opacity is applied on top).</summary>

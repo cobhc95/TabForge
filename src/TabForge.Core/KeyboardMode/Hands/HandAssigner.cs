@@ -3,7 +3,7 @@ namespace TabForge.KeyboardMode.Hands;
 // Owns: deciding which hand plays each note of a part (any instrument, as sounding pitches): a Viterbi pass over the chords in time order, where each chord's state is
 //   its split point (the lowest k notes left, the rest right, so a chord never crosses), each state carries both hands' context along its best path, and a cost model
 //   (HandAssignerOptions) scores span, held notes, reach over fast figures, jumps, register, crossing and line continuity. Pure and deterministic; no statics that change.
-// Does not own: the notes (KeyboardNoteSource builds them), drawing or colours (the Keyboard mode view), or the fitted constants' derivation (docs/KEYBOARD_HANDS.md).
+// Does not own: the notes (KeyboardNoteSource builds them), drawing or colours (the Keyboard mode view), or the fitted constants' derivation (docs/specs/KEYBOARD_HANDS.md).
 // Tests: no dedicated test class.
 public static class HandAssigner
 {

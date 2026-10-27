@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -100,6 +101,7 @@ public sealed partial class TimelineInputController
         view.KeyDown += (_, e) =>
         {
             if (e.Key == Key.Escape && e.KeyModifiers == KeyModifiers.None && _picker.OnEsc()) e.Handled = true;
+            else if (e.Key == Key.Escape && _gesture is Gesture.Clip or Gesture.SectionResize) { Cancel(); e.Handled = true; }   // Escape in a clip drag puts the clips back and drops nothing; in a section resize or stretch it leaves the section as it was
             else if (HighlightKey(e)) e.Handled = true;
         };
         view.KeyUp += (_, e) => { if (e.Key == _heldArrow) _heldArrow = null; };
@@ -114,6 +116,7 @@ public sealed partial class TimelineInputController
     /// <summary>Edits and shows <paramref name="document"/> from now on (a tab switch): a gesture in progress ends and the timeline shows that document's own selection.</summary>
     public void Show(IEditableDocument document)
     {
+        _stretchAsking = false;
         Cancel();
         _document = document;
         SelectedBar = -1;
@@ -162,8 +165,13 @@ public sealed partial class TimelineInputController
     /// <summary>Raised with the bar index when a click selects a bar.</summary>
     public event Action<int>? SelectedBarChanged;
 
+    /// <summary>Raised with the track row and the clip after a plain click on a MIDI clip (a MIDI take), so the host can open that take's lane in the piano roll.</summary>
+    public event Action<int, TabForge.Models.AudioClip>? MidiClipClicked;
+
     /// <summary>Raised with the row after a record arm toggle changes the song, so the host can sync the engine's armed inputs.</summary>
     public event Action<int>? TrackArmToggled;
+    /// <summary>A track was not armed because it has no input: the status line text.</summary>
+    public event Action<string>? TrackArmRefused;
 
     /// <summary>Raised after a track's mute or solo toggle changes the song, so the host can push the live mix to the engine.</summary>
     public event Action? TrackMuteSoloToggled;
@@ -183,6 +191,18 @@ public sealed partial class TimelineInputController
     /// <summary>Raised with the document and the old-to-new bar mapping when a section drop commits (for the engine's live order refresh).</summary>
     public event Action<IEditableDocument, int[]>? SectionMoved;
 
+    /// <summary>The "when a moved section cuts through audio" setting (EditingSettings.SectionMoveAudio), read at each drop; null asks.</summary>
+    public Func<string>? SectionAudioSetting { get; set; }
+
+    /// <summary>Stores the answer a ticked "Remember my choice" gives (Split or Leave) in the settings.</summary>
+    public Action<string>? SectionAudioRemember { get; set; }
+
+    /// <summary>Asks what to do with audio crossing a section being moved (null answer = cancel the move). Without it crossing audio is left where it is and nothing is asked.</summary>
+    public Func<SectionAudioCrossing, Task<SectionAudioAnswer?>>? SectionAudioPrompt { get; set; }
+
+    /// <summary>Asks how to close a gap that holds something when a section is dragged left into it (null answer = Cancel, the section snaps back). Without it a non-empty gap is not closed.</summary>
+    public Func<int, int, GapContents, Task<GapCloseMode?>>? GapClosePrompt { get; set; }
+
     /// <summary>Raised when a press on the ruler, a section or a lane lands on a bar and no clip or section drag takes it; the arrangement seeks playback to that bar.</summary>
     public event Action<int>? BarSeekRequested;
     /// <summary>Raised with the pass-aware position when a press on a folded clip lands inside a repeat with a pass above 1 (RV12); the arrangement seeks that pass, else the old <see cref="BarSeekRequested"/> bar path.</summary>
@@ -195,6 +215,12 @@ public sealed partial class TimelineInputController
 
     /// <summary>Raised after a plain click on a lane cell (no drag, no Shift, no clip) with its track row and bar: the score goes to that track's staff and bar.</summary>
     public event Action<int, int>? CellClicked;
+
+    /// <summary>Raised with the track row and lane after a plain click on empty space in a take lane (no clip under it): the host shows the piano roll on that lane or the score, by the track's type and the "Clicking an empty take lane shows" setting. Without a listener the click raises <see cref="ScoreRequested"/> as before.</summary>
+    public event Action<int, int>? EmptyLaneClicked;
+
+    /// <summary>Raised with the track row after a plain click on the track's header or on its lane away from any clip (its tab / notation): the host shows that track's score again if a MIDI take had opened its piano roll.</summary>
+    public event Action<int>? ScoreRequested;
 
     /// <summary>Maps a clip-click point (+ lane slice for RV12 repeat passes) to the pass-aware seek position: inside a repeat region with a folded clip, N&lt;=3 takes the slice under the pointer (folded clips only) and N&gt;=4 takes the shown pass; ruler, empty-space and notation clicks stay pass 1.</summary>
     internal RepeatPosition ResolveClickPosition(double x, double y, TimelineClipSelection? clip)
@@ -254,13 +280,13 @@ public sealed partial class TimelineInputController
             case Gesture.Press:
                 if (Math.Abs(p.X - _pressPoint.X) < DragThreshold && Math.Abs(p.Y - _pressPoint.Y) < DragThreshold) break;
                 if (_dragSlot >= 0) BeginSectionDrag();
-                else if (_clips.Begin()) { _gesture = Gesture.Clip; ClearRows(); _clips.Update(p, e.KeyModifiers.HasFlag(KeyModifiers.Alt)); break; }
+                else if (_clips.Begin()) { _gesture = Gesture.Clip; ClearRows(); _clips.Update(p, e.KeyModifiers.HasFlag(KeyModifiers.Alt), e.KeyModifiers); break; }
                 else if (_pressOnRuler) { BeginLoopDrag(p); break; }
                 else if (_pressOnLanes)
                 {
                     _gesture = Gesture.Box;
                     ClearRows();
-                    BeginBoxSelect(p, e.KeyModifiers.HasFlag(KeyModifiers.Control));
+                    BeginBoxSelect(p, e.KeyModifiers.HasPrimary());
                     break;
                 }
                 else if (source == _header && _pressRow >= 0 && Math.Abs(p.Y - _pressPoint.Y) > Math.Abs(p.X - _pressPoint.X)) BeginRowDrag();
@@ -268,7 +294,7 @@ public sealed partial class TimelineInputController
                 UpdateDrag(p);
                 break;
             case Gesture.Clip:
-                _clips.Update(p, e.KeyModifiers.HasFlag(KeyModifiers.Alt));
+                _clips.Update(p, e.KeyModifiers.HasFlag(KeyModifiers.Alt), e.KeyModifiers);
                 break;
             case Gesture.Box:
                 UpdateBoxSelect(p);
@@ -336,7 +362,7 @@ public sealed partial class TimelineInputController
         _pressOnLanes = hit.OnLanes;
         _pressOnRuler = _pressOnGrid && _dragSlot < 0 && _pressPoint.Y < TimelineView.RulerHeight;
         if (_pressOnRuler) PressRuler();
-        _clips.Press(_pressOnGrid && _dragSlot < 0, _pressPoint, !e.KeyModifiers.HasFlag(KeyModifiers.Control));
+        _clips.Press(_pressOnGrid && _dragSlot < 0, _pressPoint, !e.KeyModifiers.HasPrimary());
         _gesture = Gesture.Press;
         e.Pointer.Capture(source);
     }
@@ -366,7 +392,7 @@ public sealed partial class TimelineInputController
     private void SelectPressedRow(KeyModifiers modifiers)
     {
         var tracks = _document.Project.Tracks;
-        var pick = modifiers.HasFlag(KeyModifiers.Shift) ? TrackPick.Range : modifiers.HasFlag(KeyModifiers.Control) ? TrackPick.Toggle : TrackPick.Plain;
+        var pick = modifiers.HasFlag(KeyModifiers.Shift) ? TrackPick.Range : modifiers.HasPrimary() ? TrackPick.Toggle : TrackPick.Plain;
         _collapseRowsOnRelease = pick == TrackPick.Plain && _selection.TrackRowCount > 1 && _selection.Tracks.Contains(tracks, _pressRow);
         if (!_collapseRowsOnRelease) _selection.Tracks.Click(tracks, _pressRow, pick);
     }
@@ -378,7 +404,7 @@ public sealed partial class TimelineInputController
         EndBoxSelect(commit: gesture == Gesture.Box);
         if (gesture == Gesture.SectionResize)
         {
-            CommitSectionResize();   // before the capture is released: that raises PointerCaptureLost
+            _stretchAsking = CommitSectionResize();   // before the capture is released: that raises PointerCaptureLost; a stretch prompt keeps the preview on until it is answered
             e.Pointer.Capture(null);
             ClearDrag();
             if (source == _view) ApplyHover(e.GetPosition(_view));
@@ -407,15 +433,16 @@ public sealed partial class TimelineInputController
         {
             if (_collapseRowsOnRelease) _selection.Tracks.Click(_document.Project.Tracks, _pressRow, TrackPick.Plain);
             TrackRowClicked?.Invoke(_pressRow);
+            if (!_pressOnGrid) ScoreRequested?.Invoke(_pressRow);   // the track's header
         }
         if (gesture == Gesture.Press && _pressOnGrid)
         {
             var clip = _dragSlot < 0 ? _hitTests.ClipAt(_pressPoint) : null;
             var alt = e.KeyModifiers.HasFlag(KeyModifiers.Alt);
-            var ctrl = e.KeyModifiers.HasFlag(KeyModifiers.Control);
+            var ctrl = e.KeyModifiers.HasPrimary();
             var clipBar = clip is null ? -1 : AudioClipTimelineRules.BarAtSeconds(_document.Project, clip.Clip.StartSec).Bar;
             // Alt+click on the ruler inside a repeat cycles the playhead pass (k -> k+1, wrapping); outside a repeat it is a no-op (no seek).
-            if (_dragSlot >= 0) SectionClicked?.Invoke(_slots[_dragSlot].MarkerIndex, e.KeyModifiers.HasFlag(KeyModifiers.Control));
+            if (_dragSlot >= 0) SectionClicked?.Invoke(_slots[_dragSlot].MarkerIndex, e.KeyModifiers.HasPrimary());
             else if (_pressOnRuler && alt)
             {
                 if (RegionAtBar(_pressBar) is { } altRegion)

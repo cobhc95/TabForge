@@ -49,9 +49,39 @@ public static class AudioInputs
     /// <summary>The device's own name of each input (may be empty), "Input 1" first.</summary>
     public static IReadOnlyList<string> Names => _now.Names;
 
+    /// <summary>The track's MIDI input choice for every MIDI device (<see cref="TrackModel.MidiInputs"/> holds just this).</summary>
+    public const string AllMidi = "*";
+    /// <summary>The status line when a track with no audio and no MIDI input is armed.</summary>
+    public const string NoInputText = "This track has no input";
+
+    /// <summary>The legacy MIDI-only audio input (before the separate audio and MIDI choices); <see cref="MigrateMidi"/> turns it into "no audio input".</summary>
     public static bool IsMidi(string input) => input == Midi;
-    /// <summary>True when the track takes MIDI: the legacy MIDI input, or at least one MIDI device ticked next to its audio input.</summary>
+    /// <summary>True when the track takes MIDI: a MIDI device (or all) chosen, or the legacy MIDI input not migrated yet.</summary>
     public static bool TakesMidi(TrackModel track) => IsMidi(track.AudioInput) || track.MidiInputs.Count > 0;
+    /// <summary>True when the track's audio choice is an input (not None).</summary>
+    public static bool HasAudio(string? input) => TryParse(input, out _, out _);
+    /// <summary>True when the track takes MIDI and no audio input.</summary>
+    public static bool IsMidiOnly(TrackModel track) => !HasAudio(track.AudioInput) && TakesMidi(track);
+    /// <summary>True when the track records something: an audio input or a MIDI input.</summary>
+    public static bool HasInput(TrackModel track) => HasAudio(track.AudioInput) || TakesMidi(track);
+    /// <summary>The MIDI devices the track hears by name; empty: every device (All, or the legacy MIDI input with none named).</summary>
+    public static string[] MidiDevicesOf(TrackModel track) =>
+        track.MidiInputs.Contains(AllMidi) || (track.MidiInputs.Count == 0 && IsMidi(track.AudioInput)) ? Array.Empty<string>() : track.MidiInputs.ToArray();
+
+    /// <summary>
+    /// Older songs: the legacy MIDI input becomes "no audio input" and the MIDI choice is one device, or All for several (or for the
+    /// legacy MIDI input with none named); none stays none. Safe to repeat.
+    /// </summary>
+    public static void MigrateMidi(TrackModel track)
+    {
+        var legacy = IsMidi(track.AudioInput);
+        if (legacy) track.AudioInput = "";
+        var list = track.MidiInputs;
+        if (list.Count == 0 ? legacy : list.Count > 1 || list.Contains(AllMidi)) track.MidiInputs = new List<string> { AllMidi };
+    }
+    // Canonical-form checks without building the id string: TryParse runs every frame (HasAudio), so it must not allocate.
+    private static bool IsMono(int channel, string id) { Span<char> buf = stackalloc char[24]; return buf.TryWrite($"Input {channel}", out var n) && id.AsSpan().SequenceEqual(buf[..n]); }
+    private static bool IsPair(int first, string id) { Span<char> buf = stackalloc char[48]; return buf.TryWrite($"Inputs {first}+{first + 1} (stereo)", out var n) && id.AsSpan().SequenceEqual(buf[..n]); }
     public static string Mono(int channel) => $"Input {channel}";
     public static string Pair(int first) => $"Inputs {first}+{first + 1} (stereo)";
 
@@ -82,17 +112,17 @@ public static class AudioInputs
     {
         first = 0; stereo = false;
         if (id is null) return false;
-        if (id.StartsWith("Input ", StringComparison.Ordinal) && int.TryParse(id.AsSpan(6), System.Globalization.NumberStyles.None, null, out var mono) && Mono(mono) == id)
+        if (id.StartsWith("Input ", StringComparison.Ordinal) && int.TryParse(id.AsSpan(6), System.Globalization.NumberStyles.None, null, out var mono) && IsMono(mono, id))
             first = mono - 1;
         else if (id.StartsWith("Inputs ", StringComparison.Ordinal) && id.IndexOf('+') is > 7 and var plus
-                 && int.TryParse(id.AsSpan(7, plus - 7), System.Globalization.NumberStyles.None, null, out var left) && Pair(left) == id)
+                 && int.TryParse(id.AsSpan(7, plus - 7), System.Globalization.NumberStyles.None, null, out var left) && IsPair(left, id))
         { first = left - 1; stereo = true; }
         else return false;
         return first >= 0 && first + (stereo ? 1 : 0) < AudioInputAddress.MaxChannels;
     }
 
     /// <summary>A well-formed id (whether or not the running device has it): what a song or a setting may hold.</summary>
-    public static bool IsValid(string? id) => id == Midi || TryParse(id, out _, out _);
+    public static bool IsValid(string? id) => id == "" || id == Midi || TryParse(id, out _, out _);
 
     /// <summary>The engine's input mode for an audio input id (<see cref="AudioInputAddress"/>); -1 for MIDI or an unknown id.</summary>
     public static int WireMode(string? id) => TryParse(id, out var first, out var stereo) ? AudioInputAddress.Encode(first, stereo) : -1;

@@ -26,7 +26,7 @@ public static class PianoRollViewRules
     /// <summary>True for a MIDI track: one that holds MIDI takes, or records from a MIDI input, and has no written notes (an audio track with an
     /// instrument counts when it holds MIDI takes).</summary>
     public static bool IsMidiTrack(TrackModel track) =>
-        track.IsAudio ? HasMidiClips(track) : (HasMidiClips(track) || AudioInputs.IsMidi(track.AudioInput)) && !HasWrittenNotes(track);
+        track.IsAudio ? HasMidiClips(track) : (HasMidiClips(track) || AudioInputs.IsMidiOnly(track)) && !HasWrittenNotes(track);
 
     /// <summary>True when the piano roll edits the track's MIDI clips; false when it edits the written tab (the tab prompt applies).</summary>
     public static bool UsesClips(TrackModel track) => IsMidiTrack(track);

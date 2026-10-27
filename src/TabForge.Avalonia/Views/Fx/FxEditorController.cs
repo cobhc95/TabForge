@@ -66,6 +66,10 @@ public sealed class FxEditorController : IDisposable
     public int CurrentProgram { get; private set; } = -1;
     /// <summary>The program names changed (the preset box refills).</summary>
     public event Action? ProgramsChanged;
+    /// <summary>The engine refused a docked editor or its window did not appear (the plug-in may have none): the plug-in.</summary>
+    public event Action<PluginSlot>? EditorFailed;
+    /// <summary>Whether the docked editor of <paramref name="slot"/> failed to open and has not been retried.</summary>
+    public bool HasFailed(PluginSlot slot) => ReferenceEquals(_failed, slot);
     /// <summary>Forgets the program names (another plug-in is focused).</summary>
     public void ResetPrograms() { Programs = Array.Empty<string>(); CurrentProgram = -1; }
     public PluginSlot? Docked => _docked;
@@ -132,6 +136,7 @@ public sealed class FxEditorController : IDisposable
     private void Fail(PluginSlot slot)
     {
         _failed = slot;
+        EditorFailed?.Invoke(slot);
         if (ReferenceEquals(_focused(), slot)) ShowFailed();
     }
 

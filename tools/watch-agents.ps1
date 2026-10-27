@@ -11,7 +11,7 @@
 param(
     [int]$Minutes = 20,
     [int]$IntervalSec = 20,
-    [string]$Repo = "C:\Users\COBHC\Downloads\TabForge"
+    [string]$Repo = "$env:USERPROFILE\Downloads\TabForge"
 )
 
 $log = Join-Path $Repo "AGENT-CHAT.md"

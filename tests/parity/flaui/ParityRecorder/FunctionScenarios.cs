@@ -17,7 +17,7 @@ namespace ParityRecorder;
 internal sealed class FunctionScenarios
 {
     private static readonly string[] MainMenus =
-        { "File", "Edit", "Bar", "Track", "Note", "Effects", "Sections", "Tools", "Sound", "View", "Options", "Help" };
+        { "File", "Edit", "Insert", "Bar", "Track", "Note", "Effects", "View", "Tools", "Options", "Help" };
 
     private const string NeedsKeys = "MANUAL: needs keyboard input, which the off-screen run does not send; on the owner's hand-test list";
 
@@ -78,7 +78,7 @@ internal sealed class FunctionScenarios
         Step("F04", "cursor keys and fret entry on a string", () => throw new UiProbe.Manual(NeedsKeys));
         Step("F05", "copy, then paste (Edit menu)", CopyAndPaste);
         Step("F06", "undo, then redo (Edit menu)", UndoAndRedo);
-        Step("F07", "time signature dialog, cancelled", () => OpenWindow("time-signature", () => PickMenuItem("Bar", "Time signature"), null));
+        Step("F07", "time signature dialog, cancelled", () => OpenWindow("time-signature", () => PickMenuItem("Insert", "Time signature"), null));
         Step("F08", "add a track (Track menu), then delete it", AddAndDeleteTrack);
         Step("F09", "zoom in and out (View menu)", Zoom);
         Step("F10", "Ctrl+wheel zoom", () => throw new UiProbe.Manual(NeedsKeys));

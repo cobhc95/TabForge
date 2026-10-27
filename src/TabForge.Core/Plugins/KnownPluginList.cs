@@ -13,7 +13,7 @@ public static class KnownPluginList
 {
     public static List<VstPluginInfo> Of(PluginSettings settings, IEnumerable<PluginSlot> inUse)
     {
-        static string FormatOf(string path) => path.EndsWith(".vst3", StringComparison.OrdinalIgnoreCase) ? "VST3" : "VST2";
+        static string FormatOf(string path) => PluginFormats.Of(path);
         var list = settings.ScanCache.Concat(settings.Probed).Where(k => k is not null && k.Path.Length > 0)
             .Select(k => new VstPluginInfo(k.Name.Length > 0 ? k.Name : Path.GetFileNameWithoutExtension(k.Path), k.Path, k.Format.Length > 0 ? k.Format : FormatOf(k.Path), k.Vendor, k.Role, k.ClassId ?? ""))
             .Concat(settings.LastScan)

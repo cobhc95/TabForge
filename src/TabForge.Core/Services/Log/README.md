@@ -11,4 +11,4 @@ The opt-in debug trace (off unless turned on) and the always-on, bounded errors.
 ## Pathway
 
 ## Tests
-`Source/docs/DEBUGGING.md` (the debug options).
+`Source/docs/guides/DEBUGGING.md` (the debug options).

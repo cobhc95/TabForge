@@ -74,7 +74,7 @@ Check the **Speed** box in the **View and tempo** pane. At `100%` the song plays
 
 ### Test sound says it worked, but nothing plays
 
-**Test sound** in **Sound > MIDI / Audio setup** checks the Windows MIDI path. It does not test the audio driver you chose in Preferences. Use the steps in "There is no sound" instead.
+**Test sound** in **Options > MIDI / Audio setup** checks the Windows MIDI path. It does not test the audio driver you chose in Preferences. Use the steps in "There is no sound" instead.
 
 ## Writing and editing
 
@@ -82,7 +82,7 @@ Check the **Speed** box in the **View and tempo** pane. At `100%` the song plays
 
 A red bar does not add up: its notes and rests are longer or shorter than the time signature allows. It is a warning, and the song still plays.
 
-1. Choose **Tools > Check bar duration** (`F4`). A message lists every bar that does not add up.
+1. Choose **Bar > Check bar duration** (`F4`). A message lists every bar that does not add up.
 2. Click the red bar and compare its notes with the time signature.
 3. Change a note value, or add a rest, until the bar adds up. The red tint goes away.
 
@@ -240,7 +240,7 @@ Write the problem down so that it can be passed to the people who maintain TabFo
 
 - Ask first: does it happen in a new song?
 - No sound is usually mute, solo, volume or the output device. The status bar names the device.
-- A red bar does not add up. Check it with **Tools > Check bar duration** (`F4`).
+- A red bar does not add up. Check it with **Bar > Check bar duration** (`F4`).
 - Hover a button to read the key that works now.
 - After a crash, click **Yes** to recover songs, then save each one.
 - A report needs the steps, the version from **Help > About**, and no music.

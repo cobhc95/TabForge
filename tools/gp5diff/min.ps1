@@ -1,8 +1,8 @@
 param([string]$clusters, [string]$out, [int]$top = 25, [int]$n = 4, [int]$rounds = 6, [string]$deskPrefix = 'gp5m')
 # Repro minimisation: rounds of candidate sequences through both apps (minimize.py says which), each round with a timeout.
-$py = 'C:\Users\COBHC\Downloads\TabForge\Source\work\tools\venv\Scripts\python.exe'
+$py = "$env:USERPROFILE\Downloads\TabForge\Source\work\tools\venv\Scripts\python.exe"
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
-$exe = 'C:\Users\COBHC\Downloads\TabForge\Source\work\gp5diff\bin\Gp5Driver.exe'
+$exe = "$env:USERPROFILE\Downloads\TabForge\Source\work\gp5diff\bin\Gp5Driver.exe"
 if (-not (Test-Path "$out\state.json")) { & $py "$here\minimize.py" init $clusters $out $top }
 for ($k = 0; $k -lt $rounds; $k++) {
     if (Test-Path "$out\r$k\done.txt") { continue }

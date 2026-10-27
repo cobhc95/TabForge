@@ -44,7 +44,7 @@ public sealed class MainWindowLiveVideo : IDisposable
     {
         _playback = playback; _settings = settings; _topBar = topBar;
         _host = new AvaloniaLiveVideoHost(playback, () => songs.Active, StoredSettings, regions, AvaloniaUiThread.ForApplication(),
-            elapsed => RecordingChanged?.Invoke(elapsed is not null), Notify) { OutputRate = () => settings?.Settings.Plugins.SampleRate ?? 0, InfoNotice = m => topBar.Show(m, NotificationKind.Info, source: NotificationBar.VideoSource) };
+            elapsed => RecordingChanged?.Invoke(elapsed is not null), Notify) { OutputRate = () => settings?.Settings.Plugins.SampleRate ?? 0, InfoNotice = m => topBar.Show(m, NotificationKind.Info, NoticeCategory.Recording, source: NotificationBar.VideoSource) };
         _controller = new LiveVideoRecordController(_host);
     }
 
@@ -62,7 +62,7 @@ public sealed class MainWindowLiveVideo : IDisposable
         var video = new MainWindowLiveVideo(songs, playback, settings, regions, topBar);
         commands.Add(FeatureHotkeyIds.RecordVideo, () =>
         {
-            if (playback is null) showStatus(NoAudioEngineText);
+            if (playback is null) showStatus.Error(NoAudioEngineText);
             else video._controller.Toggle();
         });
         if (playback is not null) { playback.SessionClosing += video.OnSessionClosing; }
@@ -78,7 +78,7 @@ public sealed class MainWindowLiveVideo : IDisposable
     /// <summary>The window is closing: stops a running recording; the task ends when its MP4 is finished (at once when none runs).</summary>
     public Task FinishBeforeClose()
     {
-        if (_controller.IsRecording) _topBar.Show(SavingText, NotificationKind.Info, source: NotificationBar.VideoSource);
+        if (_controller.IsRecording) _topBar.Show(SavingText, NotificationKind.Info, NoticeCategory.Recording, source: NotificationBar.VideoSource);
         _controller.Stop();
         return _controller.Finalizing;
     }
@@ -96,24 +96,24 @@ public sealed class MainWindowLiveVideo : IDisposable
         // UI thread already (the host posts here): errors are sticky Error on the top bar, never modal; success keeps its Open folder button (8 s).
         if (openFolder is null)
         {
-            _topBar.Show(message, NotificationKind.Error, (OpenLogText, OpenLog), source: NotificationBar.VideoSource);
+            _topBar.Show(message, NotificationKind.Error, NoticeCategory.Recording, (OpenLogText, OpenLog), source: NotificationBar.VideoSource);
             return;
         }
         _savedFolder = openFolder;
-        _topBar.Show(message, NotificationKind.Info, (OpenFolderText, OpenSavedFolder), source: null);
+        _topBar.Show(message, NotificationKind.Info, NoticeCategory.Recording, (OpenFolderText, OpenSavedFolder), source: null);
     }
 
     private void OpenLog()
     {
         _topBar.DismissCurrent();
-        try { FolderLauncher.Open(System.IO.Path.GetDirectoryName(FilePathPolicy.DefaultDiagnosticsPath("errors.log"))!); }
-        catch (System.IO.IOException) { _topBar.Show("The log folder is not available.", NotificationKind.Error, source: NotificationBar.VideoSource); }
+        try { FolderLauncher.Open(_topBar.View, System.IO.Path.GetDirectoryName(FilePathPolicy.DefaultDiagnosticsPath("errors.log"))!); }
+        catch (System.IO.IOException) { _topBar.Show("The log folder is not available.", NotificationKind.Error, NoticeCategory.Recording, source: NotificationBar.VideoSource); }
     }
 
     private void OpenSavedFolder()
     {
         _topBar.DismissCurrent();
         if (_savedFolder is null) return;
-        FolderLauncher.Open(_savedFolder);
+        FolderLauncher.Open(_topBar.View, _savedFolder);
     }
 }

@@ -40,11 +40,11 @@ public static class ScoreBarCommands
         switch (id)
         {
             case "Bar.Insert":
-                if (selectedBars is not null || !BarStructureEdits.InsertBar(document, bar, bar, moveMarkers: false, fillRests).Changed) return false;
+                if (selectedBars is not null || !BarStructureEdits.InsertBar(document, bar, fillRests).Changed) return false;
                 cursorBar = bar;
                 return true;
             case "Bar.Delete":
-                if (!BarStructureEdits.DeleteBar(document, bar, -1, allTracks: true, moveMarkers: false).Changed) return false;
+                if (!BarStructureEdits.DeleteBar(document, bar, -1, allTracks: true).Changed) return false;
                 cursorBar = Math.Max(0, bar - 1);
                 return true;
             case "Bar.Duplicate":

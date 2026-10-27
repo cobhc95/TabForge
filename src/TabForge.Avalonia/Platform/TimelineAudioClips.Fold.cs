@@ -29,22 +29,9 @@ internal static partial class TimelineAudioClips
 
     /// <summary>The slices of <paramref name="clip"/> when it plays through a repeat, or null when it is drawn as one ordinary box.
     /// A repeat the clip covers in only one pass is a non-part slice (one full-height box, tagged "pass k" from pass 2; see <see cref="RepeatFold.FoldedSlices"/>):
-    /// the one fold decision of drawing, hit test and drag preview. Such a slice keeps the slice geometry (its end is measured just inside the pass).</summary>
-    internal static IReadOnlyList<RepeatSlice>? FoldOf(TimelineView view, AudioClip clip)
-    {
-        if (view.DragFold is { } frozen && frozen.Clip == clip)
-        {
-            // A clip being moved keeps the fold it was picked up with, shifted by the move: no re-fold while the edge crosses a repeat.
-            if (frozen.Slices is null) return null;
-            var by = clip.StartSec - frozen.Start;
-            var cache = view.DragFoldShifted;
-            if (cache.Shifted is not null && ReferenceEquals(cache.Source, frozen.Slices) && cache.By == by) return cache.Shifted;   // one shifted array per move step
-            var shifted = frozen.Slices.Select(s => s with { StartSec = s.StartSec + by, EndSec = s.EndSec + by, WrittenStartSec = s.WrittenStartSec + by, WrittenEndSec = s.WrittenEndSec + by }).ToArray();
-            view.DragFoldShifted = (frozen.Slices, by, shifted);
-            return shifted;
-        }
-        return view.Folds.FoldOf(SongExtent.Timing(view.Song).Performed, clip);
-    }
+    /// the one fold decision of drawing, hit test and drag preview (the preview folds at the candidate start, so it looks as the drop will). Such a slice keeps the slice geometry (its end is measured just inside the pass).</summary>
+    internal static IReadOnlyList<RepeatSlice>? FoldOf(TimelineView view, AudioClip clip) =>
+        view.Folds.FoldOf(SongExtent.Timing(view.Song).Performed, clip);   // a clip being dragged is folded at its candidate start, as it will be once dropped (cached per move step)
 
     /// <summary>Draws the "pass k" tag at the left of an unfolded one-pass box (pass 2 and later); nothing for pass 1.</summary>
     private static void DrawPassTag(IDrawContext d, RepeatSlice slice, Rect rect, UiColor nameInk)
@@ -189,7 +176,7 @@ internal static partial class TimelineAudioClips
     /// <summary>The fade wedges that fall inside <paramref name="slice"/>: the fade-in on the slice holding the clip start, the fade-out on the one holding its end.</summary>
     private static void DrawSliceFades(IDrawContext d, AudioClip clip, RepeatSlice slice, Rect box, Func<string, UiColor> ink)
     {
-        if (clip.FadeInSec <= 0 && clip.FadeOutSec <= 0) return;
+        if (clip.IsMidi || (clip.FadeInSec <= 0 && clip.FadeOutSec <= 0)) return;   // MIDI takes have no fades
         var fill = ink("TimelineRow").WithOpacity(FadeShadeOpacity);
         var stroke = new UiStroke(ink("TextPrimary").WithOpacity(FadeRampStrokeOpacity), FadeRampStrokeWidth);
         var span = Math.Max(1e-9, slice.EndSec - slice.StartSec);

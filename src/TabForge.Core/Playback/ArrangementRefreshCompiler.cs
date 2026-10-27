@@ -106,7 +106,12 @@ internal static class ArrangementRefreshCompiler
         for (var i = 0; i < timeline.Bars.Count; i++)
             if (inverseBars.TryGetValue(timeline.Bars[i].Bar, out var baseBar)) timeline.Bars[i] = timeline.Bars[i] with { Bar = baseBar };
         foreach (var note in timeline.Notes)
+        {
             if (inverseBars.TryGetValue(note.Bar, out var baseBar)) note.Bar = baseBar;
+            if (note.Continuations is { } continuations)
+                foreach (var continuation in continuations)
+                    if (inverseBars.TryGetValue(continuation.Bar, out var continuationBar)) continuation.Bar = continuationBar;
+        }
     }
 
     private static ScoreTimeline SpliceFuture(ScoreTimeline current, ScoreTimeline future,
@@ -226,6 +231,13 @@ internal static class ArrangementRefreshCompiler
         {
             note.OnsetMs += boundaryMs;
             if (inverseBars.TryGetValue(note.Bar, out var baseBar)) note.Bar = baseBar;
+            if (note.Continuations is { } continuations)
+                foreach (var continuation in continuations)
+                {
+                    continuation.OnsetMs += boundaryMs;
+                    continuation.EndMs += boundaryMs;
+                    if (inverseBars.TryGetValue(continuation.Bar, out var continuationBar)) continuation.Bar = continuationBar;
+                }
             revised.Notes.Add(note);
         }
     }

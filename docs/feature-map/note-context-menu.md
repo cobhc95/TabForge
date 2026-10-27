@@ -21,7 +21,7 @@ Three menus open from the score and the panel: the note menu (right-click on a n
 
 ## Where to add or change things
 
-- **A note menu item:** add its id to `ContextMenuLayouts.NoteMenu` (the top-level count in `TestContextMenuLayouts` then changes with it), add an Item to the parts table in ShowNoteContextMenu, and read its shortcut with MenuKey if it is a bindable command (hotkey presets and `TOOLS_AND_HOTKEYS.md`, as the project agent rules say).
+- **A note menu item:** add its id to `ContextMenuLayouts.NoteMenu` (the top-level count in `TestContextMenuLayouts` then changes with it), add an Item to the parts table in ShowNoteContextMenu, and read its shortcut with MenuKey if it is a bindable command (hotkey presets and `docs/guides/TOOLS_AND_HOTKEYS.md`, as the project agent rules say).
 - **A score empty-area item:** a `MenuSpec` in `ScoreMenus.Empty`, and a case in the switch in ShowScoreContextMenu.
 - **A fretboard menu item:** a `MenuSpec` in `InstrumentMenus.Build` (`src/TabForge/Views/ContextMenuSpecs.cs`), its state in ShowInstrumentContextMenu (`src/TabForge/MainWindow.View.cs`), and a case in RunInstrumentCommand.
 - **A setting-like option in a menu:** it needs a settings row. `TestContextMenuLean` checks that every tick maps to a settings row, or to a stated reason.

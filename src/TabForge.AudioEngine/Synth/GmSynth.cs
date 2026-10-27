@@ -17,10 +17,14 @@ namespace TabForge.AudioEngine.Synth;
 public sealed class GmSynth : IPluginInstance
 {
     private Synthesizer _synth;
+    private int _bankVersion;
+    private readonly GmBank _bank;
 
-    public GmSynth(int sampleRate, int maxBlock)
+    /// <param name="bank">The sound bank choice of the engine session; null = a bank of its own (Windows GM).</param>
+    public GmSynth(int sampleRate, int maxBlock, GmBank? bank = null)
     {
-        _synth = NewSynth(sampleRate);
+        _bank = bank ?? new GmBank();
+        _synth = NewSynth(sampleRate, _bank.Current, out _bankVersion);
         SampleRate = sampleRate;
         _ = maxBlock;
     }
@@ -34,15 +38,16 @@ public sealed class GmSynth : IPluginInstance
     /// <summary>The live synthesizer's voice limit (self-test).</summary>
     public int Polyphony => _synth.MaximumPolyphony;
 
-    private static Synthesizer NewSynth(int sampleRate)
+    private static Synthesizer NewSynth(int sampleRate, GmBank.Choice bank, out int version)
     {
+        version = bank.Version;
         var settings = new SynthesizerSettings(sampleRate)
         {
             BlockSize = 64,
             MaximumPolyphony = MaxVoices,
             EnableReverbAndChorus = GmSynthTuning.ReverbAndChorus,
         };
-        return new Synthesizer(DlsToSoundFont.LoadWindowsBank(), settings) { MasterVolume = GmSynthTuning.EffectiveMasterVolume };
+        return new Synthesizer(bank.Bank, settings) { MasterVolume = bank.MasterVolume };
     }
 
     /// <summary>The rate the synthesizer renders at.</summary>
@@ -62,7 +67,7 @@ public sealed class GmSynth : IPluginInstance
         // voice survives the swap (Reconfigure runs with audio stopped, but a render may have left voices ringing).
         var old = _synth;
         try { old.NoteOffAll(true); } catch (Exception) { } // swallow: best-effort note-off on a replaced synth
-        _synth = NewSynth(rate);
+        _synth = NewSynth(rate, _bank.Current, out _bankVersion);
         SampleRate = rate;
         ReplayChannelState();
     }
@@ -102,6 +107,13 @@ public sealed class GmSynth : IPluginInstance
 
     public void Process(float[][] input, float[][] output, int frames, ReadOnlySpan<BlockMidi> midi, in TransportInfo transport)
     {
+        // The sound bank was switched (Settings > Sound engine): a new synthesizer on the new bank, with the channel state the song already sent replayed.
+        if (_bank.Current is var bank && bank.Version != _bankVersion)
+        {
+            try { _synth.NoteOffAll(true); } catch (Exception) { }   // swallow: best-effort note-off on the replaced synth
+            _synth = NewSynth(SampleRate, bank, out _bankVersion);
+            ReplayChannelState();
+        }
         var left = output[0].AsSpan(0, frames);
         var right = output[1].AsSpan(0, frames);
         var at = 0;

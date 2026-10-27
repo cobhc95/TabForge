@@ -22,8 +22,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 APP = ROOT / "Source" / "src" / "TabForge.Avalonia"
-OUTPUT = ROOT / "Source" / "docs" / "COMMANDS.md"
-SOURCES = sorted(APP.glob("MainWindow*.cs"))
+OUTPUT = ROOT / "Source" / "docs" / "guides" / "COMMANDS.md"
+SOURCES = sorted((APP / "MainWindow").rglob("MainWindow*.cs"), key=lambda path: path.name)
 
 COMMANDS_FIELD = re.compile(
     r"public static readonly (?:string\[\]|IReadOnlyList<string>|IReadOnlyCollection<string>)"
@@ -164,7 +164,7 @@ def main():
         "```",
         "",
         f"**{len(rows)} command ids** in {files} files (all distinct). Generated from the `Commands` arrays of"
-        " `Source/src/TabForge.Avalonia/MainWindow*.cs` and from the inline `commands.Add` / `commands.AddWhen` registrations whose id"
+        " `Source/src/TabForge.Avalonia/MainWindow/**/MainWindow*.cs` and from the inline `commands.Add` / `commands.AddWhen` registrations whose id"
         " is a literal or a constant. Not listed: the command table's own handler map (`File.Exit`, `View.ResetPanels`), ids built"
         " at run time from a prefix (`ContextMenuRows.ScoreLayoutIdPrefix` rows), and ids passed through a loop variable already"
         " covered by a `Commands` array.",

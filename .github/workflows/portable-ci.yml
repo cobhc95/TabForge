@@ -1,0 +1,106 @@
+# Non-shipping portability check (cross-platform Stages 1 and 5): the portable (net10.0) Contracts, Core and AudioEngine build, the
+# source-scanning guard tests, the Stage 5 tests (video encoder port with a real ffmpeg, Unix path rules, process guard) and an attempt at the
+# self-contained app publish, on Linux and macOS. Informational only (continue-on-error): Windows stays the only shipped platform.
+name: portable-ci
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  portable:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
+        with:
+          global-json-file: global.json
+
+      # EnableWindowsTargeting: Audio.Contracts also lists net10.0-windows, which a non-Windows restore otherwise refuses.
+      - name: Build Contracts and Core for net10.0
+        run: |
+          dotnet build src/TabForge.Audio.Contracts/TabForge.Audio.Contracts.csproj -c Release -p:EnableWindowsTargeting=true
+          dotnet build src/TabForge.Core/TabForge.Core.csproj -c Release -p:EnableWindowsTargeting=true
+
+      # Stage 3 made the audio engine buildable without Windows (miniaudio and RtMidi backends); the shipped Windows engine is untouched.
+      - name: Build the portable audio engine
+        continue-on-error: true
+        run: dotnet build src/TabForge.AudioEngine/TabForge.AudioEngine.csproj -c Release -p:EnableWindowsTargeting=true
+
+      # Stage 3: the native audio and MIDI library (miniaudio + RtMidi, native/tfportable); its output sits next to the tests so the null-device and RtMidi tests run for real.
+      - name: Install ALSA headers (Linux)
+        if: runner.os == 'Linux'
+        continue-on-error: true
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libmp3lame0
+      - name: Install LAME (macOS)
+        if: runner.os == 'macOS'
+        continue-on-error: true
+        run: brew install lame
+      - name: Build tfportable (miniaudio + RtMidi)
+        continue-on-error: true
+        run: |
+          cmake -S native/tfportable -B build/tfportable -DCMAKE_BUILD_TYPE=Release
+          cmake --build build/tfportable --config Release
+          mkdir -p native/tfportable/bin
+          cp build/tfportable/libtfportable.* native/tfportable/bin/ || true
+      - name: Stage 3 tests (backend choice, miniaudio null device, RtMidi, LAME round trip, sound bank)
+        continue-on-error: true
+        env:
+          TABFORGE_TFPORTABLE: ${{ github.workspace }}/native/tfportable/bin
+        run: >
+          dotnet test tests/TabForge.Avalonia.Tests/TabForge.Avalonia.Tests.csproj -c Release -p:EnableWindowsTargeting=true
+          --filter "FullyQualifiedName~PortableBackendTests|FullyQualifiedName~PortableDeviceTests"
+
+      # The Core tests live in the Avalonia test project (no Core-only project yet); the portability and architecture guards
+      # only read source files, so they run here.
+      - name: Guard tests (portability and architecture ratchets)
+        run: >
+          dotnet test tests/TabForge.Avalonia.Tests/TabForge.Avalonia.Tests.csproj -c Release -p:EnableWindowsTargeting=true
+          --filter "FullyQualifiedName~PortabilityGuardTests|FullyQualifiedName~ThemeArchitecture|FullyQualifiedName~LayoutArchitecture|FullyQualifiedName~StaticStateOnlyShrinks"
+
+      # ffmpeg is the portable video encoder (an external program, never bundled): install it so the pipe smoke test runs for real.
+      - name: Install ffmpeg (Linux)
+        if: runner.os == 'Linux'
+        continue-on-error: true
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: Install ffmpeg (macOS)
+        if: runner.os == 'macOS'
+        continue-on-error: true
+        run: brew install ffmpeg
+
+      - name: Stage 5 tests (video encoder port, Unix path rules, process guard)
+        continue-on-error: true
+        run: >
+          dotnet test tests/TabForge.Avalonia.Tests/TabForge.Avalonia.Tests.csproj -c Release -p:EnableWindowsTargeting=true
+          --filter "FullyQualifiedName~VideoEncoderPortTests|FullyQualifiedName~UnixPathRulesTests|FullyQualifiedName~CrossPlatformStage5Tests"
+
+      # libtfportable (miniaudio + RtMidi) built per OS with CMake; Linux needs the ALSA headers.
+      - name: Build libtfportable (Linux)
+        if: runner.os == 'Linux'
+        continue-on-error: true
+        run: sudo apt-get install -y libasound2-dev libmp3lame0 && cmake -S native/tfportable -B build-tfportable -DCMAKE_BUILD_TYPE=Release && cmake --build build-tfportable
+      - name: Build libtfportable (macOS)
+        if: runner.os == 'macOS'
+        continue-on-error: true
+        run: brew install lame && cmake -S native/tfportable -B build-tfportable -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=arm64 && cmake --build build-tfportable
+
+      # The self-contained app publish for this OS. Not expected to pass until the Stage 7 trial; the log shows what still blocks it.
+      # RestoreLockedMode=false: the lock files belong to the Windows build.
+      - name: Publish the app (linux-x64)
+        if: runner.os == 'Linux'
+        continue-on-error: true
+        run: dotnet publish src/TabForge.Avalonia/TabForge.Avalonia.csproj -c Release -r linux-x64 --self-contained true -p:EnableWindowsTargeting=true -p:RestoreLockedMode=false -p:PublishReadyToRun=false -o publish/linux-x64
+      - name: Publish the app (osx-arm64)
+        if: runner.os == 'macOS'
+        continue-on-error: true
+        run: dotnet publish src/TabForge.Avalonia/TabForge.Avalonia.csproj -c Release -r osx-arm64 --self-contained true -p:EnableWindowsTargeting=true -p:RestoreLockedMode=false -p:PublishReadyToRun=false -o publish/osx-arm64

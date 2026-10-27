@@ -1,7 +1,5 @@
 [
   { "name": "MainCloseGlyph", "value": "#FFFFFF" },
-  { "name": "MainMidiLedIdle", "value": "#6B7280" },
-  { "name": "MainMidiLedRing", "dark": "#23272E", "light": "#D2D2D2" },
   { "name": "SectionSelectedRing", "dark": "#CCFFFFFF", "light": "#CC111111" },
   { "name": "ControllerDockGlow", "dark": "#4C9AFF", "light": "#0F4489" },
   { "name": "ZoomControllerShadow", "value": "#000000" },

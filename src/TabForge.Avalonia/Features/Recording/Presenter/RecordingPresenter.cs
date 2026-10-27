@@ -28,7 +28,7 @@ namespace TabForge.Avalonia.Features.Recording.Presenter;
 // Tests: TabForge.Avalonia.Tests.TransportRecordingTests, MidiTakeCaptureTests, CountInRecordingTests, RecordingBatchOneTests, RecordingLiveTakeTests.
 internal sealed partial class RecordingPresenter(MainWindowCommands commands, MainWindowDocumentPanes panes, AvaloniaPlaybackSessions? playback,
     MainWindowTabs songs, Action<string> showStatus, Func<PluginSettings> plugins, Func<double, double> meterFraction,
-    Func<SnapSettings?>? snap = null, Action<LiveTakes>? rollLive = null)
+    Func<SnapSettings?>? snap = null, Action<LiveTakes>? rollLive = null, Action? recordingChanged = null)
 {
     /// <summary>The command id of Transport.Record (the Record button runs it too).</summary>
     public const string CommandId = "Transport.Record";
@@ -115,12 +115,14 @@ internal sealed partial class RecordingPresenter(MainWindowCommands commands, Ma
             playback.SyncEngine(song, plugins());
             StartPunch(hooks.Recording, session, song, track, clip, showStatus, hooks, playback);
             ShowRecording(panes, hooks.IsRecording);
+            recordingChanged?.Invoke();   // the status bar's state word follows
         }
         if (playback is not null)
         {
             // The dock builds the first arrangement before the window registers this, so that one is attached here too; later ones as they are made.
             void Attach(ArrangementView arrangement)
             {
+                arrangement.Input.TrackArmRefused += text => showStatus.Warning(text);
                 arrangement.Input.TrackArmToggled += _ =>
                 {
                     playback.SyncEngine(songs.Active, plugins());
@@ -129,6 +131,9 @@ internal sealed partial class RecordingPresenter(MainWindowCommands commands, Ma
                 // The armed sub-rows' monitor and input edits reach the engine, and their meters read the engine's input peaks.
                 arrangement.ArmedRows.SettingChanged += () => playback.SyncEngine(songs.Active, plugins());
                 arrangement.ArmedRows.InputLevelOf = track => playback.Engine is { } engine ? meterFraction(engine.InputPeakOf(track)) : 0;
+                arrangement.ArmedRows.MidiNoteOf = track => playback.Engine?.MidiMonitor?.LastNoteOf(track) ?? 0;   // a MIDI-armed track's meter shows its note velocity
+                if (playback.Engine is { } noteEngine)
+                    arrangement.ArmedRows.NoteSource = wake => { noteEngine.MidiNoteHeard += wake; return () => noteEngine.MidiNoteHeard -= wake; };   // and wakes its frames on a note
                 arrangement.Transport.ShowRecording(hooks.IsRecording);
                 arrangement.Timeline.UseLiveTakes(hooks.Live);
             }
@@ -141,6 +146,7 @@ internal sealed partial class RecordingPresenter(MainWindowCommands commands, Ma
             if (hooks.Recording is not { IsRecording: true } recording || playback?.For(songs.Active) is not { } session) return;
             Toggle(recording, session, songs.Active, showStatus, hooks.Start, hooks);
             ShowRecording(panes, hooks.IsRecording);
+            recordingChanged?.Invoke();   // the status bar's state word follows
         }
         commands.Add(CommandId, () =>
         {
@@ -153,12 +159,16 @@ internal sealed partial class RecordingPresenter(MainWindowCommands commands, Ma
             Toggle(hooks.Recording, session, songs.Active, showStatus, hooks.Start, hooks,
                 session.Loop ? panes.Selection.LoopSeconds : null, playback, position: position);
             ShowRecording(panes, hooks.IsRecording);
+            recordingChanged?.Invoke();   // the status bar's state word follows
         });
         return new RecordingSession(hooks, StopFromTransport, ReRecord);
     }
 
     /// <summary>The Record button of the shown arrangement shows whether the window is capturing.</summary>
     internal static void ShowRecording(MainWindowDocumentPanes panes, bool on) => panes.Arrangement?.Transport.ShowRecording(on);
+
+    /// <summary>Tells the user nothing is armed to record (the warning category of the notice sink; kept here so the Landing part names no Views namespace).</summary>
+    internal static void WarnNothingArmed(Action<string> showStatus) => showStatus.Warning(TransportRecording.NothingArmedText);
 
     /// <summary>Where the song's cursor was when recording began; Stop puts it back there, so Play plays the take from its start.</summary>
     // One window's handlers on the shared engine client and its recording; Dispose (the window closed) ends a recording and removes exactly them.
@@ -226,8 +236,8 @@ internal sealed partial class RecordingPresenter(MainWindowCommands commands, Ma
                     RowsReload?.Invoke(owner);   // the new lanes/stacks are visible even when no clip-refresh hook is attached
                 }
             });
-            _onInputError = message => showStatus($"Audio input: {message}");
-            _onLoss = message => showStatus($"Recording: {message}");
+            _onInputError = message => showStatus.Error($"Audio input: {message}");
+            _onLoss = message => showStatus.Error($"Recording: {message}");
             engine.Recorded += _onRecorded;
             engine.InputError += _onInputError;
             engine.RecordingLoss += _onLoss;
@@ -290,7 +300,7 @@ internal sealed partial class RecordingPresenter(MainWindowCommands commands, Ma
             if (_liveTracks.Length == 0) return;
             if (punch is not null)
                 foreach (var track in _liveTracks)   // the target shows a live box from its loop start even before the first frame maps
-                    Live.Frame(track, punch.LoopStart, 0f, AudioInputs.IsMidi(track.AudioInput));
+                    Live.Frame(track, punch.LoopStart, 0f, !AudioInputs.HasAudio(track.AudioInput));
             _liveSession = session;
             session.PlayheadFrame += OnLiveFrame;
             if (Recording is not null) Recording.LiveMidiNote += _onLiveNote;
@@ -416,7 +426,7 @@ internal sealed partial class RecordingPresenter(MainWindowCommands commands, Ma
             foreach (var track in _liveTracks)
             {
                 if (track.RecordArm || _disarmed.Contains(track) || _explicitCapture.Contains(track)) continue;
-                var midi = AudioInputs.IsMidi(track.AudioInput);
+                var midi = !AudioInputs.HasAudio(track.AudioInput);
                 var cut = CaptureNowSec();
                 if (Live.Of(track) is null && cut is { } at) changed |= Live.Frame(track, at, 0f, midi);   // open the lane the take keeps
                 if (Live.Of(track) is { } take)
@@ -466,7 +476,7 @@ internal sealed partial class RecordingPresenter(MainWindowCommands commands, Ma
             foreach (var track in _liveTracks)
             {
                 if (_disarmed.Contains(track)) continue;   // a mid-take disarm froze (or never opened) its box
-                var midi = AudioInputs.IsMidi(track.AudioInput);
+                var midi = !AudioInputs.HasAudio(track.AudioInput);
                 var peak = midi ? 0f : (float)Math.Clamp(InputPeakOf?.Invoke(track) ?? 0, 0, 1);
                 changed |= Live.Frame(track, nowSec, peak, midi);
             }

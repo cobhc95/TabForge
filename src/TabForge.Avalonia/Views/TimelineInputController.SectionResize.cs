@@ -9,7 +9,7 @@ namespace TabForge.Avalonia.Views;
 
 // Owns: dragging a section chip's edge (6 px zone inside its left/right side): the boundary follows the pointer bar by bar, clamped at the neighbour (a gap may open when shrinking, one bar at least), shown as a preview
 //   (TimelineView.SectionResizePreview, one repaint per bar change) and written once on release as one undo step. Only the section's start or length changes; no bars or notes move. The pointer turns to the
-//   resize arrow only over an edge zone.
+//   resize arrow only over an edge zone. A right edge held past the next section stretches it (TimelineInputController.SectionStretch).
 // Does not own: the rule (SectionLayout.EdgeRange/ResizeClamped), the edge hit-test (TimelineView.SectionEdgeAt) or the section move drag (TimelineInputController.Drag).
 // Tests: TabForge.Avalonia.Tests.SectionResizeTests.
 public sealed partial class TimelineInputController
@@ -26,6 +26,9 @@ public sealed partial class TimelineInputController
         _resizeSection = index;
         _resizeRight = right;
         _resizeRange = (min, max);
+        _stretchPlan = right ? SectionStretch.PlanFor(_document.Project, marker) : null;   // a right edge dragged past the next section stretches it
+        _stretchBackPlan = right ? null : SectionStretchBack.PlanFor(_document.Project, marker);   // a left edge dragged past the previous section stretches it back
+        _stretchBars = 0;
         _gesture = Gesture.SectionResize;
         _pressOnGrid = _pressOnLanes = _pressOnRuler = false;
         _dragSlot = -1;
@@ -51,18 +54,25 @@ public sealed partial class TimelineInputController
         var start = Math.Clamp(marker.MeasureIndex, 0, _view.BarCount);
         var end = _view.SectionEndBar(_resizeSection);
         var preview = _resizeRight ? (_resizeSection, start, boundary) : (_resizeSection, boundary, end);
-        if (_view.SectionResizePreview == preview) return;
+        var bars = StretchBarsAt(p.X);
+        if (_view.SectionResizePreview == preview && _stretchBars == bars) return;
         _view.SectionResizePreview = preview;
+        _view.SectionStretchBars = _stretchBars = bars;
+        _view.SectionStretchBack = !_resizeRight;
         _view.InvalidateVisual();
     }
 
-    // The release writes the previewed edge as one undo step; a release on the starting bar changes nothing and records nothing.
-    private void CommitSectionResize()
+    // The release writes the previewed edge as one undo step; a release on the starting bar changes nothing and records nothing. An edge held past the next section stretches it instead (SectionStretch.cs).
+    // True when the stretch prompt is open: the preview stays until it is answered.
+    private bool CommitSectionResize()
     {
         var preview = _view.SectionResizePreview;
-        _view.SectionResizePreview = null;
+        var bars = _stretchBars;
         _view.HoverSectionEdge = null;
-        if (preview is not { } shown) { Repaint(); return; }
+        if (preview is { } held && bars > 0 && _view.SectionMarkerAt(held.Index) is { } stretched) return _resizeRight ? CommitStretch(stretched, bars) : CommitStretchBack(stretched, bars);
+        _view.SectionResizePreview = null;
+        _view.SectionStretchBars = _stretchBars = 0;
+        if (preview is not { } shown) { Repaint(); return false; }
         var index = shown.Index;
         var boundary = _resizeRight ? shown.End : shown.Start;
         var changed = DocumentEdits.Run(_document, song =>
@@ -77,5 +87,6 @@ public sealed partial class TimelineInputController
             SongEdited?.Invoke();
         }
         Repaint();
+        return false;
     }
 }

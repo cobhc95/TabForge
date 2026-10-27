@@ -63,7 +63,11 @@ public sealed partial class FxChainWindow
         pane.Children.Add(_bar);
         DockPanel.SetDock(_containers.Pane, Dock.Top);
         pane.Children.Add(_containers.Pane);
-        pane.Children.Add(_area);
+        var editorHost = new Grid();   // the editor area, and the parameter panel in its place when it shows
+        editorHost.Children.Add(_area);
+        _parameters.Panel.IsVisible = false;
+        editorHost.Children.Add(_parameters.Panel);
+        pane.Children.Add(editorHost);
         return pane;
     }
 
@@ -75,7 +79,7 @@ public sealed partial class FxChainWindow
         _addPreset.Width = SaveButtonWidth;
         _addPreset.Padding = new Thickness(0, 2, 0, 4);
         _addPreset.Margin = new Thickness(4, 0, BarGap, 0);
-        foreach (var control in new Control[] { _presetBox, _addPreset, _wiring, _midi })
+        foreach (var control in new Control[] { _presetBox, _addPreset, _wiring, _midi, _parametersButton })
         {
             control.VerticalAlignment = VerticalAlignment.Center;
             _bar.Children.Add(control);

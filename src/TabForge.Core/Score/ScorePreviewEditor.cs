@@ -208,7 +208,12 @@ internal sealed partial class ScorePreviewEditor : IScoreEditContext, ISelection
     /// <summary>Inserts an empty bar in front of <paramref name="bar"/> (the timeline bar menu's insert rows; the bar count is the position after the last bar). False when nothing changed.</summary>
     internal bool InsertBarAt(int bar) =>
         bar >= 0 && bar <= BarRangeEditor.MaxMeasures(_document.Project)
-        && AfterBarEdit(BarStructureEdits.InsertBar(_document, bar, bar, moveMarkers: false, Tools.FillBarsWithRests).Changed, bar);
+        && AfterBarEdit(BarStructureEdits.InsertBar(_document, bar, Tools.FillBarsWithRests).Changed, bar);
+
+    /// <summary>Inserts <paramref name="count"/> empty bars in front of <paramref name="at"/> (the bar count is the song end) as one undo step; the cursor goes to the first new bar. False when nothing changed.</summary>
+    internal bool InsertBarsAt(int at, int count) =>
+        at >= 0 && at <= BarRangeEditor.MaxMeasures(_document.Project) && count >= 1
+        && AfterBarEdit(BarStructureEdits.InsertBars(_document, at, count, Tools.FillBarsWithRests).Changed, at);
 
     /// <summary>The "Confirm before deleting a bar" setting; when it is on, Bar.Delete asks through <see cref="AskDeleteBar"/> first.</summary>
     internal Func<bool> ConfirmDeleteBarSetting { get; set; } = () => false;

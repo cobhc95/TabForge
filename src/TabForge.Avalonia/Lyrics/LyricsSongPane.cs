@@ -57,6 +57,13 @@ public sealed class LyricsSongPane : Border
         ShowText();
     }
 
+    /// <summary>Puts the keyboard focus in the lyrics box, the caret at the end of the text (Insert > Lyrics).</summary>
+    public void FocusEditor()
+    {
+        _box.Focus();
+        _box.CaretIndex = _box.Text?.Length ?? 0;
+    }
+
     /// <summary>Commits the box's text to the shown song, as one edit; nothing happens when the text is unchanged.</summary>
     public void CommitText()
     {

@@ -8,7 +8,7 @@ namespace TabForge.Presenters;
 /// <summary>What the video export window's controls hold, read back when a choice is remembered or the video is exported.</summary>
 public sealed record VideoExportChoices(
     bool Remember, int Range, string FromText, string ToText, int Section, int Layout, bool Dark, bool ShowInstrument, int ResolutionIndex,
-    string? FpsChoice, IReadOnlyList<string> TrackNames, IReadOnlyList<bool> TrackChecks);
+    string? FpsChoice, IReadOnlyList<string> TrackNames, IReadOnlyList<bool> TrackChecks, string Encoder = VideoEncoderChoices.Auto);
 
 /// <summary>
 /// The video export window's option lists, defaults and rules, its texts, and what its Export button reports.
@@ -35,6 +35,10 @@ public static class VideoExportPresenter
     public static readonly IReadOnlyList<string> ResolutionChoices = new[] { "1080p (1920 x 1080)", "4K (3840 x 2160)" };
     /// <summary>The frame rate choices: 30, 60, 120.</summary>
     public static readonly IReadOnlyList<string> FpsChoices = new[] { "30", "60", "120" };
+    /// <summary>The encoder choices: Auto (hardware once it passed the self-test, as live recording), Hardware, Software.</summary>
+    public static readonly IReadOnlyList<string> EncoderChoices = new[] { VideoEncoderChoices.Auto, VideoEncoderChoices.Hardware, VideoEncoderChoices.Software };
+    /// <summary>Tip of the encoder choice.</summary>
+    public const string EncoderToolTip = "Auto uses the hardware encoder once it passed a quick self-test; a hardware encoder that stalls is replaced by the software encoder";
 
     /// <summary>Range indexes: whole song, selection, bars, section.</summary>
     public const int RangeWholeSong = 0, RangeSelection = 1, RangeBars = 2, RangeSection = 3;
@@ -107,6 +111,9 @@ public static class VideoExportPresenter
 
     /// <summary>The frame rate choice for a remembered frame rate; anything but 60 or 120 opens as 30.</summary>
     public static string FpsChoice(int fps) => fps is 60 or 120 ? fps.ToString() : DefaultFps.ToString();
+
+    /// <summary>The encoder choice for a remembered encoder; anything unknown opens as Auto.</summary>
+    public static string EncoderChoice(string? encoder) => EncoderChoices.FirstOrDefault(c => c == encoder) ?? VideoEncoderChoices.Auto;
 
     /// <summary>The frame rate a choice means; a missing or non-number choice means 30.</summary>
     public static int FpsFrom(string? choice) => int.TryParse(choice, out var fps) ? fps : DefaultFps;
@@ -189,6 +196,7 @@ public static class VideoExportPresenter
         settings.Range = choices.Range; settings.Layout = choices.Layout; settings.Dark = choices.Dark; settings.ShowInstrument = choices.ShowInstrument;
         settings.Height = ResolutionHeight(choices.ResolutionIndex);
         settings.Fps = FpsFrom(choices.FpsChoice);
+        settings.Encoder = EncoderChoice(choices.Encoder);
         if (int.TryParse(choices.FromText, out var from)) settings.FromBar = from;
         if (int.TryParse(choices.ToText, out var to)) settings.ToBar = to;
         settings.Section = Math.Max(0, choices.Section);

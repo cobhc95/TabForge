@@ -14,13 +14,14 @@ public readonly record struct GetPluginInfoMessage(int Slot, int RequestId)
 /// <summary>
 /// What a loaded plug-in reports about itself (the part of an <see cref="EngineEvent.PluginInfo"/> frame after slot, request id,
 /// chain index and chain count). <paramref name="Format"/>: <see cref="None"/> when the plug-in is not loaded in the engine process
-/// (failed, skipped, or running in its own process), else <see cref="Vst2"/> or <see cref="Vst3"/>.
+/// (failed, skipped), else <see cref="Vst2"/>, <see cref="Vst3"/> or <see cref="Clap"/>.
 /// VST2: <paramref name="UniqueId"/> and the declared pin counts. VST3: <paramref name="ClassId"/> (32 hex digits, the class id as
 /// the plug-in's maker writes it) and -1 for both pin counts (the VST3 host interface does not report them).
+/// CLAP: <paramref name="ClassId"/> is the plug-in id of its descriptor ("org.vendor.name"), -1 for both pin counts, 0 for <paramref name="UniqueId"/>.
 /// </summary>
 public sealed record LoadedPluginInfo(byte Format, uint UniqueId, string ClassId, int Inputs, int Outputs, bool UsesChunks, string Vendor, string Name)
 {
-    public const byte None = 0, Vst2 = 1, Vst3 = 2;
+    public const byte None = 0, Vst2 = 1, Vst3 = 2, Clap = 3;
     public static readonly LoadedPluginInfo Unavailable = new(None, 0, "", -1, -1, false, "", "");
 
     /// <summary>The VST2 unique id as its four characters (most significant byte first); bytes outside printable ASCII become '?'.</summary>
@@ -36,5 +37,5 @@ public sealed record LoadedPluginInfo(byte Format, uint UniqueId, string ClassId
     }
 
     public static LoadedPluginInfo Read(BinaryReader r) =>
-        new(r.ReadByte(), r.ReadUInt32(), r.ReadBoundedString(64), r.ReadInt32(), r.ReadInt32(), r.ReadBoolean(), r.ReadBoundedString(256), r.ReadBoundedString(256));
+        new(r.ReadByte(), r.ReadUInt32(), r.ReadBoundedString(256), r.ReadInt32(), r.ReadInt32(), r.ReadBoolean(), r.ReadBoundedString(256), r.ReadBoundedString(256));
 }

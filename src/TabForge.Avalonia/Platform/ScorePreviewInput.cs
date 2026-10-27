@@ -15,7 +15,7 @@ namespace TabForge.Avalonia.Platform;
 // Threads: UI thread only.
 
 /// <summary>The score view's pointer and key input, forwarded to the Core editor; the view's overrides call these.</summary>
-internal sealed class ScorePreviewInput
+internal sealed partial class ScorePreviewInput
 {
     private readonly ScorePreviewView _view;
 
@@ -39,10 +39,11 @@ internal sealed class ScorePreviewInput
     /// <summary>A left press: a section heading, or the cursor at the press point (playback follows it on press).</summary>
     internal void Press(PointerPressedEventArgs e)
     {
+        CancelRightHold();
         var p = _view.PagePoint(e.GetPosition(_view));
         if (ScoreSectionLinks.HeadingAt(_view.Probe, p.X, p.Y) is { } section)
         {
-            _view.RaiseSectionHeadingClicked(section, e.KeyModifiers.HasFlag(KeyModifiers.Control));
+            _view.RaiseSectionHeadingClicked(section, e.KeyModifiers.HasPrimary());
             e.Handled = true;
             return;
         }
@@ -67,6 +68,7 @@ internal sealed class ScorePreviewInput
     /// <summary>The release ends a drag; a drag that moved the range start places the cursor there, a plain click leaves it where the press put it.</summary>
     internal void Release(PointerReleasedEventArgs e)
     {
+        if (e.InitialPressMouseButton == MouseButton.Right && EndRightHold(e)) return;
         _view.Editor.Release();
         _pressAt = null;
         if (_view.Marquee is not null) { _view.Marquee = null; _view.InvalidateVisual(); }
@@ -84,7 +86,9 @@ internal sealed class ScorePreviewInput
     internal void Move(PointerEventArgs e)
     {
         var p = _view.PagePoint(e.GetPosition(_view));
-        if (!e.GetCurrentPoint(_view).Properties.IsLeftButtonPressed)
+        var props = e.GetCurrentPoint(_view).Properties;
+        if (props.IsRightButtonPressed && !props.IsLeftButtonPressed && MoveRight(e, p)) return;
+        if (!props.IsLeftButtonPressed)
         {
             if (_view.Editor.HoverAt(p.X, p.Y)) _view.InvalidateVisual();
             return;
@@ -104,6 +108,7 @@ internal sealed class ScorePreviewInput
     internal void CaptureLost()
     {
         _pressAt = null;
+        LoseRightCapture();
         if (_view.Marquee is null) return;
         _view.Marquee = null;
         _view.InvalidateVisual();
@@ -121,6 +126,7 @@ internal sealed class ScorePreviewInput
         var mods = e.KeyModifiers;
         // Space is Transport.PlayPause and Escape clears the score selection first; Space is left to bubble to the window's key table.
         if (e.Key == Key.Space) return;
+        if (e.Key == Key.Escape && CancelRightDrag()) { e.Handled = true; return; }
         if (e.Key == Key.Escape && _view.Editor.HasSelection)
         {
             _view.Editor.ClearSelection();
@@ -130,7 +136,7 @@ internal sealed class ScorePreviewInput
             return;
         }
         // Avalonia's key names are the hotkey catalogue's (R, OemPeriod, D1...).
-        if (!_view.Editor.Key(AvaloniaEditorKeys.ToEditorKey(e.Key), e.Key.ToString(), mods.HasFlag(KeyModifiers.Control), mods.HasFlag(KeyModifiers.Shift), mods.HasFlag(KeyModifiers.Alt))) return;
+        if (!_view.Editor.Key(AvaloniaEditorKeys.ToEditorKey(e.Key), e.Key.ToString(), mods.HasPrimary(), mods.HasFlag(KeyModifiers.Shift), mods.HasFlag(KeyModifiers.Alt))) return;
         _view.ResumeFollow();
         _view.InvalidateVisual();
         _view.RaiseCursorChanged();

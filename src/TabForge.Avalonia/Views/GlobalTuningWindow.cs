@@ -52,7 +52,7 @@ public sealed class GlobalTuningWindow : Window
         var root = new StackPanel { Margin = new Thickness(14) };
         root.Children.Add(new TextBlock
         {
-            Text = "Retunes every instrument track. Fret numbers stay; the sounding pitch of each string moves.",
+            Text = "Retunes every tab track. Fret numbers stay; the sounding pitch of each string moves.",
             TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 10), Opacity = ChromeMetrics.GlobalTuningDescriptionOpacity,
         });
         root.Children.Add(PresetRow());

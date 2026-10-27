@@ -46,7 +46,7 @@ If you opened a song and your other song disappeared, **File > Open…** replace
 
 A red bar does not add up. Its notes and rests are longer or shorter than its time signature allows. It is a warning, and the song still plays.
 
-1. Choose **Tools > Check bar duration**. A message lists every bar that does not add up.
+1. Choose **Bar > Check bar duration**. A message lists every bar that does not add up.
 2. Click the bar and compare its notes with the time signature.
 3. Change a note length, or add or remove a rest, until the red goes away.
 
@@ -67,7 +67,7 @@ You do not need to remember keys. TabForge shows them where you need them.
 - Hover any button or control. The tooltip names it and shows its current shortcut at the end.
 - Open **Options > Preferences…** and choose the **Shortcuts** page. It lists every command with its key, and it is where you change a key or restore the defaults.
 - Choose **Help > Keyboard shortcuts…** for a quick list.
-- Choose **File > Command palette…**, then type part of a command's name. The list narrows as you type, and each row shows the command's key.
+- Choose **Help > Command palette…**, then type part of a command's name. The list narrows as you type, and each row shows the command's key.
 - To find a setting, type a word in the search box at the top of **Preferences**.
 
 If a shortcut does nothing, click an empty part of the score first, so that the key does not go into a text box. Then hover the command to check which key it uses now. You may have changed it, or a different preset may be active.
@@ -78,7 +78,7 @@ If a shortcut does nothing, click an empty part of the score first, so that the 
 
 *Goal: use the command palette and a tooltip to find the shortcut for Loop.*
 
-1. Choose **File > Command palette…**. A small window opens.
+1. Choose **Help > Command palette…**. A small window opens.
 2. Type `loop`. The list narrows to matching commands.
 3. Read the key at the right of the **Loop** row, then press `Esc` to close the palette.
 4. Hover the **Loop** button on the transport. Its tooltip shows the same key.
@@ -90,7 +90,7 @@ You know it worked when all three places showed the same key.
 
 - No sound is usually a mute, a solo, a volume at zero or the wrong output device.
 - TabForge opens song files, but not MIDI, MusicXML or PDF files.
-- A red bar does not add up. **Tools > Check bar duration** lists it.
+- A red bar does not add up. **Bar > Check bar duration** lists it.
 - After a crash, choose **Yes** to recover your songs.
 - Hover a control, or look in **Preferences > Shortcuts**, to find any shortcut.
 

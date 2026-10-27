@@ -54,6 +54,8 @@ public sealed partial class ArrangementView : UserControl
         // The behaviour wiring stays in the view: every subscription below runs a handler this class owns on the controls the composition built.
         _trackRows.RowsCountChanged += () => TrackRowsCountChanged?.Invoke();
         Input.TrackRowClicked += SelectTrackRow;
+        Timeline.ClipDragPreviewChanged += ShowClipDragOnStrip;
+        Timeline.NewTrackDropAvailable = AddTrackBar.IsVisible;
         // Arming from the track row's record cell changes the rows (the armed sub-row), and the timeline is not marked for that edit, so the rows reload here.
         Input.TrackArmToggled += row => { _trackRows.ReloadRows(); TrackArmChanged?.Invoke(row); };
         _trackRows.WatchTimeline();
@@ -128,6 +130,7 @@ public sealed partial class ArrangementView : UserControl
     private void ApplyAddTrackBarVisibility()
     {
         AddTrackBar.IsVisible = _addTrackLaneShown && !_topBand.Compact;
+        Timeline.NewTrackDropAvailable = AddTrackBar.IsVisible;
         InvalidateMeasure();
     }
 
@@ -430,6 +433,18 @@ public sealed partial class ArrangementView : UserControl
     {
         var last = _document.Project.Tracks.Count - 1;
         if (_document is SongDocument song) song.TrackIndex = last;
+        _trackRows.SyncSelectedRow();
+    }
+
+    /// <summary>Re-reads <paramref name="project"/>'s tracks into the timeline and header through the row source, so a changed row count or height re-fits the track list at once (a clip edit that added a track).</summary>
+    internal void ReloadRows(SongProject project) => _trackRows.Source.Reload(project);
+
+    /// <summary>Selects <paramref name="track"/> and scrolls its row into view (a dropped file that made a new track).</summary>
+    internal void ShowTrack(TrackModel track)
+    {
+        var row = _document.Project.Tracks.IndexOf(track);
+        if (row < 0) return;
+        if (_document is SongDocument song) song.TrackIndex = row;
         _trackRows.SyncSelectedRow();
     }
 

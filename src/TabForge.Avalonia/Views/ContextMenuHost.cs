@@ -32,6 +32,9 @@ public sealed class ContextMenuHost
     /// <summary>True when the clipboard holds TabForge notes or a copied track to paste (the same state the menus read).</summary>
     public bool CanPaste => (Clipboard?.CanPaste ?? false) || (Clipboard?.HasTrack ?? false);
 
+    /// <summary>The stored "clicking an empty take lane shows" choice (EditingSettings.EmptyLaneClick), read when the take-lane menu is built.</summary>
+    public Func<string> EmptyLaneClick { get; set; } = () => TabForge.Services.EmptyLaneChoice.Tab;
+
     /// <summary>The bar under the last timeline right-click (set when its menu is built), or -1 when the pointer was on no bar.</summary>
     public int ClickedBar { get; set; } = -1;
 
@@ -41,11 +44,28 @@ public sealed class ContextMenuHost
     /// <summary>The track row under the last track row right-click (set when its menu is built), or -1 when no track row was under the pointer.</summary>
     public int ClickedTrack { get; set; } = -1;
 
+    /// <summary>The clip lane under the last take-lane right-click (on the track <see cref="ClickedTrack"/>), or -1.</summary>
+    public int ClickedLane { get; set; } = -1;
+
+    /// <summary>The song time of the last take-lane right-click, snapped like a clip drag (the lane menu's paste, new clip, import and record-here place at it).</summary>
+    public double ClickedSec { get; set; }
+
     /// <summary>The audio clip under the last timeline right-click when its file could not be read (the Retry row reads it), else null.</summary>
     public TabForge.Models.AudioClip? ClickedUnreadableClip { get; set; }
 
     /// <summary>The index in the song's markers of the section under the last timeline right-click (its bracket, or the section holding the bar), or -1 when none.</summary>
     public int ClickedSection { get; set; } = -1;
+
+    /// <summary>The bars a hovered menu row outlines on the timeline (null when none); set by the menu, shown by the timeline.</summary>
+    public (int First, int Last)? HoverBars
+    {
+        get => _hoverBars;
+        set { if (_hoverBars == value) return; _hoverBars = value; HoverBarsChanged?.Invoke(); }
+    }
+    private (int First, int Last)? _hoverBars;
+
+    /// <summary>Raised when <see cref="HoverBars"/> changes.</summary>
+    public event Action? HoverBarsChanged;
 
     /// <summary>The live hotkey settings; the undo hint of a confirm prompt reads the key of Edit.Undo from them.</summary>
     public Func<TabForge.Services.HotkeySettings> Hotkeys { get; set; } = () => new TabForge.Services.HotkeySettings();

@@ -54,6 +54,15 @@ public static class NamedColourSwatches
     /// <summary>The colour of a section marker that has none of its own: the first section colour.</summary>
     public static readonly string SectionDefaultColour = Sections[0].Hex;
 
+    /// <summary>A friendly label for a colour: its swatch name from <see cref="All"/> or <see cref="Presets"/>, else "Custom (#hex)".</summary>
+    public static string LabelOf(string hex)
+    {
+        var text = (hex ?? "").Trim();
+        foreach (var (name, value) in All.Concat(Presets))
+            if (string.Equals(value, text, StringComparison.OrdinalIgnoreCase)) return name;
+        return $"Custom ({text.ToUpperInvariant()})";
+    }
+
     /// <summary>The hex text of the entry named <paramref name="name"/> in <see cref="All"/>; throws when there is no such entry.</summary>
     public static string HexOf(string name) => All.Single(swatch => swatch.Name == name).Hex;
 }

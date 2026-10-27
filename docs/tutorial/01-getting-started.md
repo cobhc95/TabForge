@@ -38,7 +38,7 @@ TabForge opens `.tforge`, `.gp`, `.gpx`, `.gp5`, `.gp4` and `.gp3` files. Openin
 
 The transport buttons control playback. They sit in the timeline area at the bottom of the window. Hover a button to read its name, such as **Play / pause**, **Stop** or **Rewind to beginning**.
 
-Press `Space` to start playing from the edit cursor. Press `Space` again to pause. Click **Stop** to stop and return to where you started. **Rewind to beginning** jumps back to the first bar. The same commands are in the **Sound** menu.
+Press `Space` to start playing from the edit cursor. Press `Space` again to pause. Click **Stop** to stop and return to where you started. **Rewind to beginning** jumps back to the first bar. The Play / pause and Play from beginning commands also have the keys `Space` and `Shift+Space`; the transport bar has the buttons.
 
 While the song plays, the score scrolls to follow it, and the fretboard above the score shows which notes are sounding. The fretboard is a picture of the instrument's neck. For a drum track it turns into a drum map, and for keys it turns into a keyboard.
 
@@ -55,7 +55,7 @@ The score is the large area in the middle. It shows the selected track as TAB an
 
 A bar is one stretch of music between two vertical lines, and bar numbers are written above the score. Playback starts from the edit cursor, so click where you want to begin and then press `Space`.
 
-The status bar along the bottom shows where you are: the bar number, the track name and the current note length.
+The status bar along the bottom shows where you are: the bar number and time, the track name and the cell, and whether the song is playing.
 
 ## Zoom the score
 

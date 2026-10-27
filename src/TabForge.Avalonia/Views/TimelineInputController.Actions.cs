@@ -30,6 +30,14 @@ public sealed partial class TimelineInputController
         var on = !TrackGroupEdits.Get(_document.Project.Tracks[row], flag);
         if (flag == TrackFlag.Arm)
         {
+            if (on)
+            {
+                // A track with no audio and no MIDI input has nothing to record: it is not armed, and the status line says so.
+                var withInput = rows.Where(r => AudioInputs.HasInput(_document.Project.Tracks[r])).ToList();
+                if (withInput.Count < rows.Count()) TrackArmRefused?.Invoke(AudioInputs.NoInputText);
+                if (withInput.Count == 0) return;
+                rows = withInput;
+            }
             var flipped = rows.Where(r => TrackGroupEdits.Get(_document.Project.Tracks[r], flag) != on).ToList();
             DocumentEdits.Run(_document, song =>
             {
@@ -73,7 +81,11 @@ public sealed partial class TimelineInputController
         _view.DragSection = _view.DragRow = -1;
         _view.SectionPreviewX = null;
         _view.SectionRestingX = null;
-        _view.SectionResizePreview = null;
+        if (!_stretchAsking)   // the stretch prompt keeps its preview on until it is answered
+        {
+            _view.SectionResizePreview = null;
+            _view.SectionStretchBars = _stretchBars = 0;
+        }
         _view.RowOffsets = null;
         Repaint();
     }
@@ -101,6 +113,7 @@ public sealed partial class TimelineInputController
                 _view.SelectedClip = clip;
                 MarkBar(clipBar);
                 if (_pressRow >= 0 && clipBar >= 0 && clipBar < _view.BarCount) CellClicked?.Invoke(_pressRow, clipBar);
+                if (_pressRow >= 0 && clip.Clip.IsMidi) MidiClipClicked?.Invoke(_pressRow, clip.Clip);   // the host opens that take's lane in the piano roll; no score notes are selected
             }
             return;
         }
@@ -115,8 +128,17 @@ public sealed partial class TimelineInputController
         _view.LaneCursor = null;   // a plain click on empty lane space clears the split marker
         MarkBar(_pressBar);
         if (_pressRow >= 0 && _pressBar >= 0 && _pressBar < _view.BarCount) CellClicked?.Invoke(_pressRow, _pressBar);
+        if (_pressRow >= 0) RequestEditorFor(_pressRow);
         if (cell is { } plain) HighlightCell(plain.Row, plain.Bar, extend: false);
         else ClearHighlight();
+    }
+
+    // A plain click on a track row away from any clip: on a take lane's empty space the host picks the piano roll or the score, else the score comes back.
+    private void RequestEditorFor(int row)
+    {
+        if (EmptyLaneClicked is not null && row < _document.Project.Tracks.Count && _view.LaneBandsOf(_document.Project.Tracks[row]) > 0
+            && TimelineAudioClips.LaneAt(_view, _pressPoint) is { } hit && hit.Row == row) EmptyLaneClicked(row, hit.Lane);
+        else ScoreRequested?.Invoke(row);
     }
 
     // A plain ruler click (no drag): the white selection and the loop go (the loop clear with Loop off is one undo step); the caller moves the playhead.

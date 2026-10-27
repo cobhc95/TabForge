@@ -3,7 +3,7 @@ namespace TabForge.KeyboardMode;
 /// <summary>Which hand's notes the player practises: both, one with the other faded, or one with the other hidden.</summary>
 public enum KeyboardHandsFilter { Both, Left, Right, LeftOnly, RightOnly }
 
-// Owns: which hand plays each note of a source (the one call site of the hand-assignment engine, HandAssigner, run once per note source build; docs/KEYBOARD_HANDS.md) and the hands filter: which notes are judged,
+// Owns: which hand plays each note of a source (the one call site of the hand-assignment engine, HandAssigner, run once per note source build; docs/specs/KEYBOARD_HANDS.md) and the hands filter: which notes are judged,
 //   which are faded and which are hidden.
 // Does not own: the notes (KeyboardNoteSource), the colours (KeyboardColours) or the saved choice (KeyboardModeSettings.Hands).
 // Tests: no dedicated test class.

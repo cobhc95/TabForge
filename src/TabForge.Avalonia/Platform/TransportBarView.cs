@@ -174,7 +174,7 @@ public sealed partial class TransportBarView : Border
             Margin = new Thickness(MasterVolumeKnobLeftMargin, 0, MasterVolumeKnobRightMargin, 0), VerticalAlignment = VerticalAlignment.Center
         };
         global::Avalonia.Automation.AutomationProperties.SetName(MasterVolumeKnob, MasterVolumeLabel);
-        row.Children.Add(Group(BuildLocalButton(TuningItem, keys, OpenTuningWindow, null), BuildLocalButton(SnapItem, keys, ToggleSnap, OpenSnapSettings),
+        row.Children.Add(Group(BuildLocalButton(TuningItem, keys, OpenTuningWindow, null), BuildLocalButton(SnapItem, keys, ToggleSnap, () => OpenSnapSettings()),
             BuildButton(MixerItem, keys, TransportButtonSize, TransportButtonSize), MasterVolumeKnob));
         row.Children.Add(Group(BuildZoomPair(keys)));   // the zoom pair closes the row, after the master volume knob
         RefreshLit();
@@ -354,8 +354,13 @@ public sealed partial class TransportBarView : Border
     /// <summary>Raised after the magnet or the snap settings window changed <see cref="Snap"/> (the piano roll's mirror magnet follows).</summary>
     public event Action? SnapChanged;
 
-    /// <summary>Opens the snap settings window over the window (the magnet's right-click, and the piano roll's mirror magnet).</summary>
-    public void OpenSnapSettings() => new SnapSettingsWindow(Snap, () => { RefreshLit(); SnapChanged?.Invoke(); }).ShowDialog(OwnerWindow());
+    /// <summary>Opens the snap settings popup above the magnet button (the magnet's right-click, and the piano roll's mirror magnet).</summary>
+    public Views.TransportPopups.TransportPopupFrame OpenSnapSettings()
+    {
+        var popup = Views.TransportPopups.SnapSettingsPopup.Create(Snap, () => { RefreshLit(); SnapChanged?.Invoke(); });
+        popup.OpenAbove(_buttons.FirstOrDefault(b => b.Item.Name == SnapItem.Name && b.IsEffectivelyVisible) ?? (Control)this);
+        return popup;
+    }
 
     /// <summary>The Global tuning button was clicked: the window that owns the song's tuning opens the tuning window and applies its choice.</summary>
     public event Action? GlobalTuningRequested;

@@ -62,18 +62,13 @@ public abstract class BarDialogWindow<TAnswer> : Window where TAnswer : class
     /// <summary>Puts <paramref name="body"/> above the button row.</summary>
     protected void SetBody(params Control[] body)
     {
-        var ok = new Button { Name = "OkButton", Content = OkText, MinWidth = DialogMetrics.PromptButtonMinWidth, IsDefault = true };
-        ok.Classes.Add(AvaloniaDefaultLooks.AccentLook);
+        var ok = PromptChrome.Action("OkButton", OkText, primary: true);
         ok.Click += (_, _) => { if (CanAccept()) Close(Answer()); };
-        var cancel = new Button { Name = "CancelButton", Content = "Cancel", MinWidth = DialogMetrics.PromptButtonMinWidth, IsCancel = true };
+        var cancel = PromptChrome.Action("CancelButton", "Cancel", primary: false, isCancel: true);
         cancel.Click += (_, _) => Close(null);
-        var panel = new StackPanel { Margin = new Thickness(16, 14), Spacing = 8 };
+        var panel = new StackPanel { Margin = DialogMetrics.PromptInset, Spacing = 8 };
         foreach (var control in body) panel.Children.Add(control);
-        panel.Children.Add(new StackPanel
-        {
-            Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Spacing = 8, Margin = new Thickness(0, 6, 0, 0),
-            Children = { ok, cancel },
-        });
+        panel.Children.Add(PromptChrome.Footer(null, null, cancel, ok));
         Content = panel;
     }
 

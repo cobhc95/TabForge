@@ -7,7 +7,7 @@ namespace TabForge;
 
 // Owns: score-clipboard validation check (untrusted text).
 
-/// <summary>Score clipboard (docs/COPY_PASTE_DESIGN.md chunk C1): text from outside is untrusted input and is validated before it becomes a clip.</summary>
+/// <summary>Score clipboard (docs/specs/COPY_PASTE_DESIGN.md chunk C1): text from outside is untrusted input and is validated before it becomes a clip.</summary>
 public static partial class SelfTest
 {
     /// <summary>Four 4/4 bars on a 6-string guitar: quarters in bar 1 (one with voice 2 and a lyric), a half note in bar 2 (repeat, section).</summary>

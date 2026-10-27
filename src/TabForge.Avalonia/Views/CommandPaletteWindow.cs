@@ -54,7 +54,7 @@ public sealed class CommandPaletteWindow : Window
             new("Edit.Undo", "Edit: Undo", HotkeyCatalog.DisplayAll(defaults, "Edit.Undo"), "Undo the last edit"),
             new("Edit.Redo", "Edit: Redo", HotkeyCatalog.DisplayAll(defaults, "Edit.Redo"), "Redo the last undone edit"),
             new("Tools.ChordFinder", "Tools: Chord finder", HotkeyCatalog.DisplayAll(defaults, "Tools.ChordFinder"), "Show the notes of a chord"),
-            new("Tools.GlobalTuning", "Tools: Global tuning", HotkeyCatalog.DisplayAll(defaults, "Tools.GlobalTuning"), "Retune every instrument track"),
+            new("Tools.GlobalTuning", "Tools: Global tuning", HotkeyCatalog.DisplayAll(defaults, "Tools.GlobalTuning"), "Retune every tab track"),
         ];
     }
 

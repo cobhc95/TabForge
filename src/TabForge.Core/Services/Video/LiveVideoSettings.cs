@@ -59,5 +59,5 @@ public static class LiveVideoChoices
     /// <summary>The folder for new MP4 files: the setting when it is an absolute path, otherwise Videos\TabForge.</summary>
     public static string FolderOf(LiveVideoSettings s) =>
         !string.IsNullOrWhiteSpace(s.Folder) && Path.IsPathFullyQualified(s.Folder) ? s.Folder
-        : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyVideos), "TabForge");
+        : Path.Combine(TabForge.Platform.AppFolders.Current.Videos, "TabForge");
 }

@@ -67,14 +67,10 @@ public sealed class PluginTrust
     public const string ReasonNoBaseline = "approved before file checks existed: approve it again to record it";
     private const int MaxRecords = 1024;
 
-    private readonly ConcurrentDictionary<string, bool> RemoteRoots = new(StringComparer.OrdinalIgnoreCase);
-    private static readonly string[] ProtectedBases = new[]
-        {
-            Environment.SpecialFolder.ProgramFiles, Environment.SpecialFolder.ProgramFilesX86,
-            Environment.SpecialFolder.CommonProgramFiles, Environment.SpecialFolder.CommonProgramFilesX86,
-        }
-        .Select(Environment.GetFolderPath).Where(p => !string.IsNullOrWhiteSpace(p)).Select(p => PluginPath.Normalize(p).TrimEnd('\\') + "\\")
-        .Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+    private readonly ConcurrentDictionary<string, bool> RemoteRoots = new(PathComparer.Default);
+    private static readonly string[] ProtectedBases = ProgramFolders.Current.ProtectedInstallFolders
+        .Where(p => !string.IsNullOrWhiteSpace(p)).Select(p => PluginPath.Normalize(p).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar)
+        .Distinct(PathComparer.Default).ToArray();
 
     private readonly object Gate = new();
     private Index? _index;
@@ -298,7 +294,7 @@ public sealed class PluginTrust
         MergeScanRecords(settings);
         var revision = RevisionOf(settings);
         if (_index is { } cached && cached.Revision == revision) return cached;
-        var cmp = StringComparer.OrdinalIgnoreCase;
+        var cmp = PathComparer.Default;
         var records = new Dictionary<string, PluginFingerprint>(cmp);
         foreach (var r in settings.TrustRecords ?? new())
             if (r is { Path.Length: > 0 and <= InputLimits.MaxPathLength })
@@ -310,7 +306,7 @@ public sealed class PluginTrust
             .Concat(settings.LastScan.Select(p => PluginPath.Normalize(p.Path)))
             .Concat(records.Where(r => r.Value.Scanned).Select(r => r.Key)).Where(p => p.Length > 0), cmp);
         var roots = VstScannerService.RootsFor(settings).Select(PluginPath.Normalize).Where(r => r.Length > 0 && IsProtectedLocation(r))
-            .Select(r => r.TrimEnd('\\') + "\\").Distinct(cmp).ToArray();
+            .Select(r => r.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar).Distinct(cmp).ToArray();
         return _index = new Index
         {
             Revision = revision, Records = records, Scanned = scanned, ProtectedRoots = roots,
@@ -476,7 +472,9 @@ public sealed class PluginTrust
         catch (Exception ex) { Services.Trace.Error(Services.Trace.Engine, "plug-in signature check: " + ex.Message); return ""; } // Any adapter failure reads as unsigned: fail closed
         try
         {
+#pragma warning disable SYSLIB0057 // .NET 10 marks it obsolete, but X509CertificateLoader cannot read an Authenticode signer from a binary; same call as before.
             using var cert = new X509Certificate2(X509Certificate.CreateFromSignedFile(bin));
+#pragma warning restore SYSLIB0057
             var key = Convert.ToHexString(SHA256.HashData(cert.PublicKey.EncodedKeyValue.RawData));
             var subject = (cert.Subject ?? "").Replace(';', ',');
             var text = KeyPrefix + key + "; " + subject;

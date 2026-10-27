@@ -10,7 +10,7 @@ namespace TabForge;
 public static partial class SelfTest
 {
     /// <summary>
-    /// Every file in docs/screenshots and docs/animations is named by a Markdown file (README.md, docs/*.md, docs/tutorial/**), so unused
+    /// Every file in docs/media/screenshots and docs/media/animations is named by a Markdown file (README.md, docs/*.md, docs/tutorial/**), so unused
     /// pictures never reach the public tree.
     /// </summary>
     private static void TestDocImagesAreReferenced()
@@ -26,7 +26,7 @@ public static partial class SelfTest
         var unused = new List<string>();
         foreach (var folder in new[] { "screenshots", "animations" })
         {
-            var dir = Path.Combine(docsDir, folder);
+            var dir = Path.Combine(docsDir, "media", folder);
             if (!Directory.Exists(dir)) continue;
             foreach (var file in Directory.EnumerateFiles(dir, "*", SearchOption.AllDirectories))
                 if (!text.Contains(Path.GetFileName(file), StringComparison.OrdinalIgnoreCase)) unused.Add(Path.GetRelativePath(root, file));

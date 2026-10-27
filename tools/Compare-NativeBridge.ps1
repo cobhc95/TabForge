@@ -119,7 +119,7 @@ Emit "- checked in: ``$hashB`` ($($b.Length) bytes)"
 
 if ($hashA -eq $hashB) { Emit '- result: identical'; Finish 0 }
 if ($a.Length -ne $b.Length) {
-    Emit "- result: DIFFERENT, sizes differ ($($a.Length) vs $($b.Length) bytes): not explained by timestamps, the PDB identity or path hashes (a different compiler or linker, SDK or source?). Run the build-bridge workflow and commit its output (Source/docs/REPRODUCIBLE_BUILDS.md)."
+    Emit "- result: DIFFERENT, sizes differ ($($a.Length) vs $($b.Length) bytes): not explained by timestamps, the PDB identity or path hashes (a different compiler or linker, SDK or source?). Run the build-bridge workflow and commit its output (Source/docs/guides/REPRODUCIBLE_BUILDS.md)."
     Finish 1
 }
 
@@ -154,5 +154,5 @@ if ($unexplained -eq 0) {
     Emit "- result: same size; all $total differing bytes are link timestamps, the PDB identity or source-path hashes. Code and data are identical."
     Finish 0
 }
-Emit ("- result: DIFFERENT, $unexplained byte(s) differ outside the expected categories (first at offset 0x{0:X}). The bridge source, SDK or compiler differs: run the build-bridge workflow and commit its output (Source/docs/REPRODUCIBLE_BUILDS.md)." -f $first)
+Emit ("- result: DIFFERENT, $unexplained byte(s) differ outside the expected categories (first at offset 0x{0:X}). The bridge source, SDK or compiler differs: run the build-bridge workflow and commit its output (Source/docs/guides/REPRODUCIBLE_BUILDS.md)." -f $first)
 Finish 1

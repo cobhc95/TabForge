@@ -54,6 +54,7 @@ public sealed partial class PreferencesWindow
     {
         try { await pending.Settled; }
         catch (Exception ex) when (ex is not OutOfMemoryException) { TabForge.Services.Trace.Error(TabForge.Services.Trace.Ui, $"settings list not answered: {ex.Message}"); }
+        await Task.Yield();   // never rebuild from inside the page being built: an answer that is already in would otherwise continue synchronously and draw every row twice
         Rebuild();
     }
 }

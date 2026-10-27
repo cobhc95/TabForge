@@ -57,7 +57,7 @@ To print a song, export a PDF and print it from a PDF viewer.
 
 ## Render to audio
 
-Rendering turns the whole mix into a sound file. Choose **File > Render to audio file…**. The **Render to file** window opens. The defaults render the whole song as one file of the master mix. You can also choose a different format, such as WAV or MP3, a range of bars, or separate files for each track. Click **Render**, and a progress bar shows how far it has got.
+Rendering turns the whole mix into a sound file. Choose **File > Export > Audio file…**. The **Render to file** window opens. The defaults render the whole song as one file of the master mix. You can also choose a different format, such as WAV or MP3, a range of bars, or separate files for each track. Click **Render**, and a progress bar shows how far it has got.
 
 TabForge never overwrites an existing file. It adds a number to the new file's name instead. The render leaves out the metronome and the count-in.
 
@@ -85,7 +85,7 @@ You know it worked when both files are in the folder you chose. Close the tab wi
 - `.tforge` and `.gp` are the two types TabForge saves.
 - Autosave copies unsaved songs, and the next start offers them back after a crash.
 - **File > Export…** commands make copies for sharing: MIDI, PDF, MusicXML and text tab.
-- **File > Render to audio file…** makes an audio file of the mix.
+- **File > Export > Audio file…** makes an audio file of the mix.
 
 ## What next
 

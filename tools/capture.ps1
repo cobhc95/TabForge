@@ -3,7 +3,7 @@
   Builds TabForge, runs every capture script in tools/capture and writes the PNG/GIF shots plus an index.html contact sheet.
 .PARAMETER Out
   Output folder (default: Docs\Release-draft\images-test beside the Source folder). Files are written under it with the names the scripts give
-  (images/..., docs/screenshots/..., docs/animations/...).
+  (images/..., docs/media/screenshots/..., docs/media/animations/...).
 .PARAMETER ArtifactsPath
   Optional build output root (passed to dotnet build as -p:ArtifactsPath, quote it when it has spaces); default is the repository build folder.
 .PARAMETER Scripts

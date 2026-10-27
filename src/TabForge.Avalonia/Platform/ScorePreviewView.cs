@@ -79,7 +79,7 @@ public sealed partial class ScorePreviewView : Control
     internal ScoreEmptyState ScoreState(bool overBeat = false) => MenuStateSource is { } source ? source() with { OverBeat = overBeat } : new(OverBeat: overBeat, CanPaste: false, ShowNotation: _probe.Notation != NotationMode.TabOnly,
         Continuous: _probe.Appearance.CenterSystems, Horizontal: _probe.HorizontalScroll, ShowOutline: _probe.Appearance.ShowNoteOutline);
 
-    private const string AudioPlaceholderText = "Audio track — no score. Select a tab or MIDI track to see its score.";
+    private const string AudioPlaceholderText = "Audio/MIDI track — no score. Select a tab or MIDI track to see its score.";
     private bool _audioPlaceholder;   // an audio track is shown: no score is laid out or drawn, only a centred note
 
     /// <summary>True while the view shows the audio-track note instead of a score.</summary>
@@ -180,6 +180,8 @@ public sealed partial class ScorePreviewView : Control
     public event Action? PlainClicked;
 
     internal void RaisePlainClicked() => PlainClicked?.Invoke();
+
+    internal void RaiseFocused() => Focused?.Invoke();
 
     internal void RaiseSelectionReleased() { if (Editor.HasSelection) SelectionReleased?.Invoke(); }
 
@@ -297,6 +299,15 @@ public sealed partial class ScorePreviewView : Control
     public bool InsertBarAt(int bar)
     {
         if (!_editor.InsertBarAt(bar)) return false;
+        InvalidateVisual();
+        CursorChanged?.Invoke();
+        return true;
+    }
+
+    /// <summary>Inserts <paramref name="count"/> empty bars in front of <paramref name="at"/> as one undo step; false when nothing changed.</summary>
+    public bool InsertBarsAt(int at, int count)
+    {
+        if (!_editor.InsertBarsAt(at, count)) return false;
         InvalidateVisual();
         CursorChanged?.Invoke();
         return true;

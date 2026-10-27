@@ -1,6 +1,6 @@
 # Feature map
 
-Index. Find a feature here, then open its page for the main code, the pathway to use and the self-tests. Read `CONTRIBUTING.md` for the rules and `ARCHITECTURE.md` for the design.
+Index. Find a feature here, then open its page for the main code, the pathway to use and the self-tests. Read `CONTRIBUTING.md` for the rules and `docs/architecture/ARCHITECTURE.md` for the design.
 
 - Feature pages (hand-kept): `docs/feature-map/<feature>.md`.
 - Every test, area and group (generated, do not edit): [docs/feature-map/tests.md](feature-map/tests.md). Refresh with `TabForge.exe --feature-map`.

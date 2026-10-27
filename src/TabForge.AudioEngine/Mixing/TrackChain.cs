@@ -24,6 +24,10 @@ public sealed partial class TrackChain : IDisposable
         public volatile bool Bypass;
         /// <summary>The MIDI arriving here also continues to the next plug-in.</summary>
         public volatile bool PassMidi = true;
+        /// <summary>MIDI input Source = None: the plug-in receives no MIDI events at all (the stream still passes on when <see cref="PassMidi"/> is on).</summary>
+        public volatile bool MidiNone;
+        /// <summary>Channels this plug-in does not take (bit n = channel n+1); 0: all. Channel messages only, system messages pass.</summary>
+        public volatile int MidiBlock;
         /// <summary>The plug-in's own MIDI output events go on to the next plug-in.</summary>
         public volatile bool MidiOutToNext = true;
         /// <summary>Instruments only: the output replaces the chain audio instead of being added to it.</summary>
@@ -50,6 +54,8 @@ public sealed partial class TrackChain : IDisposable
         public volatile bool Misbehaved;
         /// <summary>Engine main thread: <see cref="Misbehaved"/> was reported to TabForge (once).</summary>
         public bool MisbehaveReported;
+        /// <summary>Audio thread (Interlocked): how many blocks the plug-in has processed; read by the editor diagnostics.</summary>
+        public long ProcessCalls;
     }
 
     /// <summary>
@@ -325,7 +331,10 @@ public sealed partial class TrackChain : IDisposable
         }
         var probe = effect.IsInstrument ? Probe : null;
         if (probe is not null && probe.Index != effect.Index) probe = null;
-        var plugMidi = probe is not null ? probe.Events(frames) : effect.IsInstrument && effect.AutoPitch.Active ? AutoPitched(effect, midiIn) : midiIn;
+        // What this plug-in hears (its MIDI input Source / Channel); midiIn, the stream arriving here, is what passes on.
+        var heard = HeardBy(effect, midiIn);
+        var plugMidi = probe is not null ? probe.Events(frames) : effect.IsInstrument && effect.AutoPitch.Active ? AutoPitched(effect, heard) : heard;
+        Interlocked.Increment(ref effect.ProcessCalls);
         effect.Plugin.Process(input, _b, frames, plugMidi, transport);
         if (!Finite(_b, frames))
         {

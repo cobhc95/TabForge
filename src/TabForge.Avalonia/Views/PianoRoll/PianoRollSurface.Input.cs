@@ -186,10 +186,10 @@ public sealed partial class PianoRollSurface
             return true;
         }
         if (modifiers.HasFlag(KeyModifiers.Shift)) Presenter.Select(new[] { index }, add: true);   // Shift-click adds
-        else if (!modifiers.HasFlag(KeyModifiers.Control) && !Presenter.Selected.Contains(index)) Presenter.Select(new[] { index });   // Ctrl: toggled on release
+        else if (!modifiers.HasPrimary() && !Presenter.Selected.Contains(index)) Presenter.Select(new[] { index });   // Ctrl: toggled on release
         SelectionChanged?.Invoke();
         _pressNote = index;
-        _copy = modifiers.HasFlag(KeyModifiers.Control) && part == NotePart.Body;
+        _copy = modifiers.HasPrimary() && part == NotePart.Body;
         _gesture = part switch { NotePart.End => Gesture.ResizeEnd, NotePart.Start => Gesture.ResizeStart, _ => Gesture.Move };
         Sound(Presenter.Notes[index].Pitch);
         _lastAuditioned = Presenter.Notes[index].Pitch;
@@ -312,7 +312,7 @@ public sealed partial class PianoRollSurface
     /// <summary>Explorer-style: the box alone, the selection plus the box (Shift), or the selection with the box's notes toggled (Ctrl).</summary>
     private IEnumerable<int> Combine(List<int> inBox, KeyModifiers modifiers)
     {
-        if (modifiers.HasFlag(KeyModifiers.Control)) return Presenter.Selected.Except(inBox).Concat(inBox.Except(Presenter.Selected)).ToList();
+        if (modifiers.HasPrimary()) return Presenter.Selected.Except(inBox).Concat(inBox.Except(Presenter.Selected)).ToList();
         if (modifiers.HasFlag(KeyModifiers.Shift)) return Presenter.Selected.Union(inBox).ToList();
         return inBox;
     }
@@ -395,7 +395,7 @@ public sealed partial class PianoRollSurface
                 Run(Presenter.CommitAsync(PianoRollEdits.Delete(Presenter.Notes, new[] { _pressNote }), PianoRollEditKind.Notes, "Erase note"));
                 return;
             case Gesture.Move or Gesture.ResizeEnd or Gesture.ResizeStart when !_moved:   // a click: Ctrl toggles the note, a plain click keeps only it
-                if (_pressModifiers.HasFlag(KeyModifiers.Control)) Presenter.Toggle(_pressNote);
+                if (_pressModifiers.HasPrimary()) Presenter.Toggle(_pressNote);
                 else if (!_pressModifiers.HasFlag(KeyModifiers.Shift)) Presenter.Select(new[] { _pressNote });
                 SelectionChanged?.Invoke();
                 break;
@@ -430,7 +430,7 @@ public sealed partial class PianoRollSurface
     {
         base.OnPointerWheelChanged(e);
         var p = e.GetPosition(this);
-        var ctrl = e.KeyModifiers.HasFlag(KeyModifiers.Control);
+        var ctrl = e.KeyModifiers.HasPrimary();
         var shift = e.KeyModifiers.HasFlag(KeyModifiers.Shift);
         var alt = e.KeyModifiers.HasFlag(KeyModifiers.Alt);
         var delta = e.Delta.Y != 0 ? e.Delta.Y : e.Delta.X;
@@ -438,11 +438,12 @@ public sealed partial class PianoRollSurface
         e.Handled = true;
     }
 
-    /// <summary>The wheel over the piano roll: plain zooms time around the pointer, Ctrl zooms the key height around the pointer, Shift scrolls the
+    /// <summary>The wheel over the piano roll: plain zooms time around the pointer, Ctrl zooms the key height around the pointer, Shift (or the plain wheel over the key strip) scrolls the
     /// keys up and down, Alt (or a sideways tilt) scrolls sideways (the timeline follows). Each step only sets the view and invalidates (one paint per frame).</summary>
     internal void Wheel(double delta, Point p, bool ctrl, bool shift, bool alt)
     {
         if (delta == 0) return;
+        if (p.X < GridLeft && !ctrl && !alt) shift = true;   // over the key strip (and its corner readout) the plain wheel scrolls up and down
         if (shift) ScrollTo(ScrollX, ScrollY - delta * WheelRows * RowPx);
         else if (alt) ScrollTo(ScrollX - delta * WheelBeats * PixelsPerBeat, ScrollY);
         else if (ctrl) ZoomPitch(delta > 0 ? ZoomStep : 1 / ZoomStep, p.Y);

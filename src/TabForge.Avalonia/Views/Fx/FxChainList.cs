@@ -217,7 +217,7 @@ public sealed class FxChainList : Grid
     {
         if (e.Source is TextBox) return;
         var shift = e.KeyModifiers.HasFlag(KeyModifiers.Shift);
-        var ctrl = e.KeyModifiers.HasFlag(KeyModifiers.Control);
+        var ctrl = e.KeyModifiers.HasPrimary();
         switch (e.Key)
         {
             case Key.A when ctrl: SelectAll(); e.Handled = true; break;
@@ -281,8 +281,14 @@ public sealed class FxChainList : Grid
 
     private void OnDown(object? sender, PointerPressedEventArgs e)
     {
+        // A right click on a row outside the selection selects that row alone (the menu then means it); inside the selection it keeps the selection.
+        if (e.GetCurrentPoint(this).Properties.IsRightButtonPressed)
+        {
+            if (RowOf(e.Source) is >= 0 and var hit && !_selected.Contains(hit)) { Focus(); Click(hit); }
+            return;
+        }
         if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed || KeepsOwnClick(e.Source)) return;
-        var ctrl = e.KeyModifiers.HasFlag(KeyModifiers.Control);
+        var ctrl = e.KeyModifiers.HasPrimary();
         var shift = e.KeyModifiers.HasFlag(KeyModifiers.Shift);
         _press = e.GetPosition(_rows);
         var index = RowOf(e.Source);

@@ -5,15 +5,6 @@ using System.Runtime.InteropServices;
 
 namespace TabForge.Services.Video;
 
-/// <summary>Audio layout of the encoded track: interleaved float samples.</summary>
-public readonly record struct VideoAudioFormat(int SampleRate, int Channels);
-
-/// <summary>An encoder failure with a message the UI can show as it is.</summary>
-public sealed class VideoEncoderException : Exception
-{
-    public VideoEncoderException(string message, Exception? inner = null) : base(message, inner) { }
-}
-
 // Owns: writing an MP4 (H.264 video, AAC audio) through Media Foundation's sink writer; the bounded frame queue and its
 // fixed pool of native frame buffers (one per queue slot); the dropped-frame count; the bitrate rule. A worker thread owns
 // every COM object, so callers may be on any thread; a caller only copies pixels into a buffer the worker has locked for it.
@@ -22,12 +13,9 @@ public sealed class VideoEncoderException : Exception
 /// <summary>
 /// Live mode (<c>live: true</c>) never blocks the caller: a full queue drops the frame and counts it. Offline mode waits for room.
 /// </summary>
-public sealed partial class VideoEncoder : IDisposable
+public sealed partial class VideoEncoder : IVideoEncoder
 {
     public const int QueueFrames = 6;
-
-    private static readonly IReadOnlyList<(int W, int H)> Sizes = new (int W, int H)[] { (1920, 1080), (3840, 2160), (1080, 1920), (2160, 3840) };   // landscape and portrait
-    private static readonly int[] Rates = { 30, 60, 120 };
 
     private readonly BlockingCollection<Item> _queue = new();
     private readonly SemaphoreSlim _room = new(QueueFrames);
@@ -41,8 +29,9 @@ public sealed partial class VideoEncoder : IDisposable
     private readonly ManualResetEventSlim _ready = new();
     private readonly ManualResetEventSlim _abandoned = new();   // set when Finish gave up waiting: the worker deletes the partial file if it ever returns
     private volatile Exception? _error;
-    private long _dropped, _audioFrames;
+    private long _dropped, _audioFrames, _beat;
     private bool _finished;
+    private int _firstWrite;                        // 1 once the first frame's caller thread was logged
     private readonly object _gate = new();          // guards _free and _closed; COM calls are never made under it
     private readonly Stack<VideoSlot> _free = new(); // every buffer is in exactly one place: here, the queue, or the worker
     private bool _closed;
@@ -67,6 +56,11 @@ public sealed partial class VideoEncoder : IDisposable
     /// <summary>Frames dropped because the queue was full (live mode).</summary>
     public long DroppedFrames => Interlocked.Read(ref _dropped);
 
+    /// <summary>Changes whenever the worker writes a sample or the output file grows (the sink writer drains its backlog into it while finalising).</summary>
+    public long Heartbeat => Interlocked.Read(ref _beat) * 1_000_003L + FileLength(_path);
+
+    internal static long FileLength(string path) => VideoEncoderRules.FileLength(path);
+
     /// <summary>True when the video encoder in use is a hardware encoder.</summary>
     public bool UsesHardware { get; private set; }
 
@@ -74,17 +68,15 @@ public sealed partial class VideoEncoder : IDisposable
     private const int AacBytesPerSecond = 24000;
 
     /// <summary>Video bits per second for a size and frame rate (about 0.1 bit per pixel, capped at 100 Mbit/s).</summary>
-    public static int VideoBitrate(int width, int height, int fps) => (int)Math.Min(100_000_000.0, width * (double)height * fps * 0.1);
+    public static int VideoBitrate(int width, int height, int fps) => VideoEncoderRules.VideoBitrate(width, height, fps);
 
     /// <summary>True for the sample rates the MP4 audio stream takes (44.1 and 48 kHz).</summary>
-    public static bool SupportsSampleRate(int rate) => rate is 44100 or 48000;
+    public static bool SupportsSampleRate(int rate) => VideoEncoderRules.SupportsSampleRate(rate);
 
     /// <summary>Opens the file and starts the encoder thread. Throws <see cref="VideoEncoderException"/> when the size, frame rate or encoder is not usable.</summary>
     public static VideoEncoder Open(string path, int width, int height, int fps, VideoAudioFormat? audioFormat = null, bool live = false, VideoEncoderOptions? options = null)
     {
-        if (!Sizes.Contains((width, height))) throw new VideoEncoderException($"Video size {width}x{height} is not supported (use 1080p or 4K, landscape or portrait).");
-        if (!Rates.Contains(fps)) throw new VideoEncoderException($"{fps} frames per second is not supported (use 30, 60 or 120).");
-        if (audioFormat is { } a && (a.Channels is < 1 or > 2 || !SupportsSampleRate(a.SampleRate))) throw new VideoEncoderException("The audio must be 44.1 or 48 kHz, mono or stereo.");
+        VideoEncoderRules.Validate(width, height, fps, audioFormat);
         var encoder = new VideoEncoder(path, width, height, fps, audioFormat, live, options ?? new VideoEncoderOptions());
         encoder._worker.Start();
         encoder._ready.Wait();
@@ -96,6 +88,7 @@ public sealed partial class VideoEncoder : IDisposable
     public bool WriteFrame(ReadOnlySpan<byte> bgra, TimeSpan timestamp)
     {
         ThrowIfFaulted();
+        if (Interlocked.Exchange(ref _firstWrite, 1) == 0) Note($"write: first frame from {ThreadText()}");
         var size = _width * _height * 4;
         if (bgra.Length < size) throw new ArgumentException("The frame is smaller than width x height x 4 bytes.", nameof(bgra));
         if (_live) { if (!_room.Wait(0)) { Interlocked.Increment(ref _dropped); return false; } }
@@ -103,6 +96,16 @@ public sealed partial class VideoEncoder : IDisposable
         var slot = TakeSlot();
         CopyInto(slot, bgra[..size]);
         if (!TryQueue(new Item(slot, timestamp.Ticks, null, size))) { ReturnSlot(slot); _room.Release(); throw ClosedError(); }
+        return true;
+    }
+
+    /// <summary>Offline mode: true once a frame slot is free (the caller is not blocked while waiting); false after the timeout.</summary>
+    public async ValueTask<bool> WaitForRoomAsync(TimeSpan timeout, CancellationToken cancel)
+    {
+        ThrowIfFaulted();
+        if (_live) return true;
+        if (!await _room.WaitAsync(timeout, cancel).ConfigureAwait(false)) { ThrowIfFaulted(); return false; }
+        _room.Release();   // only looked: the one producer takes it in WriteFrame
         return true;
     }
 
@@ -131,12 +134,24 @@ public sealed partial class VideoEncoder : IDisposable
     {
         if (_finished) return;
         _finished = true;
-        _queue.CompleteAdding();
+        Note($"finish: called on {ThreadText()}; {Counts()}");
+        CompleteAdding();
         var started = Environment.TickCount64;
-        if (!_worker.Join(_options.FinalizeTimeout))
+        // FinalizeTimeout is how long the encoder may show NO progress (frames written, the file growing), not how long finishing may take:
+        // at 4K the sink writer holds a long backlog that is encoded only now.
+        var last = Heartbeat;
+        var moved = started;
+        while (!_worker.Join(_abandoned.IsSet ? 0 : 200))
         {
-            Abandon($"the encoder did not finish within {_options.FinalizeTimeout.TotalSeconds:0.#} s", hardwareHang: true);
-            throw ClosedError();   // the queue stays open: the stuck worker may still read it
+            if (_abandoned.IsSet) throw ClosedError();   // given up from outside (a cancel, a watchdog): says nothing about the hardware encoder
+            var now = Environment.TickCount64;
+            var beat = Heartbeat;
+            if (beat != last) { last = beat; moved = now; }
+            if (now - moved > _options.FinalizeTimeout.TotalMilliseconds)
+            {
+                Abandon($"the encoder made no progress for {_options.FinalizeTimeout.TotalSeconds:0.#} s while finishing the file", hardwareHang: true);
+                throw ClosedError();   // the queue stays open: the stuck worker may still read it
+            }
         }
         Note($"finish: encoder thread ended after {Environment.TickCount64 - started} ms");
         _queue.Dispose();
@@ -147,12 +162,21 @@ public sealed partial class VideoEncoder : IDisposable
     public void Abort(string why) => Abandon(why, hardwareHang: false);
 
     // Only the encoder's own finalize timeout says the hardware encoder hung; an abort from outside (a slow disk, a watchdog) proves nothing about it.
+    // Input ends here too: a worker that is not stuck stops pumping and skips finalising (a cancelled export), so nothing waits for it.
     private void Abandon(string why, bool hardwareHang)
     {
-        _error ??= new VideoEncoderException("The video encoder stopped responding while saving, so the recording was lost (" + why + ").");
-        Note($"abandoned: {why}; the unfinished file {_path} is kept (the encoder thread is a background thread and cannot keep the app open)");
+        _error ??= new VideoEncoderException("The video encoder stopped responding while saving, so the recording was lost (" + why + ").") { KeptFile = _path, HardwareStalled = hardwareHang && UsesHardware };
+        Note($"abandoned: {why}; the unfinished file {_path} is kept (the encoder thread is a background thread and cannot keep the app open); on {ThreadText()}; {Counts()}");
         if (hardwareHang && UsesHardware) _options.HardwareResult?.Invoke(false);
         _abandoned.Set();
+        CompleteAdding();
+    }
+
+    // CompleteAdding throws once the queue is disposed (a finished encoder): then there is nothing left to end.
+    private void CompleteAdding()
+    {
+        try { _queue.CompleteAdding(); }
+        catch (ObjectDisposedException) { } // swallow: the encoder already finished
     }
 
     /// <summary>
@@ -280,6 +304,7 @@ public sealed partial class VideoEncoder : IDisposable
         {
             if (Mf.MFStartup(Mf.Version, 0) < 0) throw new VideoEncoderException("Windows Media Foundation is not available.");
             started = true;
+            Note($"create: {_width}x{_height} {_fps} fps {(_live ? "live" : "offline")} choice={_options.Encoder} probe='{_options.HardwareProbe}' audio={(_audio is { } af ? $"{af.SampleRate} Hz x{af.Channels}" : "none")} on {ThreadText()} -> {_path}");
             var hardware = _options.Encoder switch
             {
                 VideoEncoderChoices.Software => false,
@@ -305,10 +330,7 @@ public sealed partial class VideoEncoder : IDisposable
             _ready.Set();
             Pump(writer, video, audio);
             if (_poolError is { } pe) throw pe;
-            var finalizing = Environment.TickCount64;
-            if (_options.SimulateFinalizeHang) _abandoned.Wait();
-            else writer.FinalizeWriter();
-            Note($"finalize writer took {Environment.TickCount64 - finalizing} ms");
+            FinishSequence(writer, video, audio);
         }
         catch (Exception e) when (e is not OutOfMemoryException)
         {

@@ -6,6 +6,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
+using Avalonia.Layout;
 
 namespace TabForge.Avalonia.Views.Dialogs;
 
@@ -17,6 +18,16 @@ internal static class DialogMetrics
 
     /// <summary>The width of a small, fixed-width dialog that sizes its height to the content.</summary>
     public const double SmallDialogWidth = 420;
+
+    /// <summary>The size of a window that shows a long read-only text (the third-party licences).</summary>
+    public const double TextWindowWidth = 760;
+    public const double TextWindowHeight = 560;
+
+    /// <summary>Gives <paramref name="control"/> the uniform dialog inset as its margin.</summary>
+    public static T Inset<T>(T control) where T : Layoutable { control.Margin = ContentInset; return control; }
+
+    /// <summary>Opens <paramref name="window"/> centred on its owner.</summary>
+    public static void CentreOnOwner(Window window) => window.WindowStartupLocation = WindowStartupLocation.CenterOwner;
 
     /// <summary>The minimum width of a dialog's footer action button (OK, Cancel and the like).</summary>
     public const double DialogButtonMinWidth = 80;
@@ -90,12 +101,16 @@ internal static class DialogMetrics
     public static readonly Thickness PrefsRailBorder = new(0, 0, 1, 0), PrefsCardsMargin = new(16, 8, 16, 16), PrefsRowsGap = new(0, 4, 0, 0), PrefsMoreToggleMargin = new(-6, 0, 0, 0);
 
     /// <summary>The media windows (copy question, copy progress, find missing media): widths, list heights, bar and button height, small text, corner.</summary>
-    public const double MediaPromptMinWidth = 420, MediaPromptMaxWidth = 620, MediaProgressWidth = 420, MediaRelinkWidth = 600, MediaRelinkMinWidth = 420,
+    public const double MediaPromptWidth = 580, MediaTreeIndent = 12, MediaProgressWidth = 420, MediaRelinkWidth = 600, MediaRelinkMinWidth = 420,
         MediaListMaxHeight = 150, MediaRelinkListMaxHeight = 220, MediaBarHeight = 8, MediaButtonHeight = 28, MediaSmallText = 12, MediaCorner = 4;
 
     /// <summary>The media windows: the gaps above the Remember box, around the file list, above the bar, a list row's inset, the gap before a detail and a status, the button padding, the outline.</summary>
     public static readonly Thickness MediaRememberGap = new(0, 8, 0, 0), MediaListGap = new(0, 8, 0, 4), MediaBarGap = new(0, 10, 0, 4), MediaRowInset = new(6, 3),
-        MediaDetailGap = new(10, 0, 0, 0), MediaStatusGap = new(8, 0), MediaButtonPadding = new(14, 0), MediaFrameGap = new(0, 0, 0, 6), MediaOutline = new(1);
+        MediaDetailGap = new(10, 0, 0, 0), MediaStatusGap = new(8, 0), MediaButtonPadding = new(14, 0), MediaFrameGap = new(0, 0, 0, 6), MediaOutline = new(1),
+        MediaLayoutHeadingGap = new(0, 10, 0, 4), MediaCardLeftGap = new(0, 0, 4, 8), MediaCardRightGap = new(4, 0, 0, 8);
+
+    /// <summary>The left indent of a line of a folder-tree sketch, <paramref name="depth"/> levels in.</summary>
+    public static Thickness MediaTreeIndentOf(int depth) => new(depth * MediaTreeIndent, 0, 0, 0);
 
     /// <summary>Centres a dialog over its owner window.</summary>
     public static void CenterOnOwner(global::Avalonia.Controls.Window window) => window.WindowStartupLocation = global::Avalonia.Controls.WindowStartupLocation.CenterOwner;
@@ -129,5 +144,29 @@ internal static class DialogMetrics
     {
         control.Margin = margin;
         return control;
+    }
+
+    /// <summary>The "Insert several bars" dialog: its width and the bar-count box width.</summary>
+    public const double InsertBarsWidth = 340, InsertBarsCountWidth = 72;
+
+    /// <summary>The "Audio crosses this section" prompt: its width, the card corner, the gaps below the question and between cards, the card inset and outline, the hint indent, the gap above the Remember row.</summary>
+    public const double SectionAudioWidth = 480, SectionAudioCardCorner = 6;
+    public static readonly Thickness SectionAudioQuestionGap = new(0, 0, 0, 10), SectionAudioCardGap = new(0, 0, 0, 6), SectionAudioCardInset = new(10, 6),
+        SectionAudioCardOutline = new(1), SectionAudioHintIndent = new(22, 1, 0, 0), SectionAudioRememberGap = new(0, 6, 0, 0);
+
+    /// <summary>The shared prompt chrome (PromptChrome): heading size, muted line size, action button height and minimum width, the gap between buttons.</summary>
+    public const double PromptHeadingSize = 16, PromptMutedSize = 12, PromptButtonHeight = 26, PromptActionMinWidth = 68, PromptButtonSpacing = 8;
+
+    /// <summary>The shared prompt chrome: the content inset, the gaps under the heading and the muted line, above the footer, before the Remember hint, and the action button padding.</summary>
+    public static readonly Thickness PromptInset = new(16, 14), PromptHeadingGap = new(0, 0, 0, 4), PromptMutedGap = new(0, 0, 0, 10), PromptFooterGap = new(0, 8, 0, 0),
+        PromptHintGap = new(6, 0, 0, 0), PromptActionPadding = new(12, 0);
+
+    /// <summary>Gives a radio card its inset, outline and corner radius.</summary>
+    public static void StyleChoiceCard(global::Avalonia.Controls.Border card)
+    {
+        card.Padding = SectionAudioCardInset;
+        card.BorderThickness = SectionAudioCardOutline;
+        card.CornerRadius = new CornerRadius(SectionAudioCardCorner);
+        card.Margin = SectionAudioCardGap;
     }
 }

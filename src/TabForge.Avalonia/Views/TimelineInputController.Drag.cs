@@ -1,9 +1,12 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Input;
 using TabForge.Avalonia.Platform;
 using TabForge.Documents;
+using TabForge.Models;
 using TabForge.Presenters;
 using TabForge.Services;
 
@@ -118,21 +121,100 @@ public sealed partial class TimelineInputController
     /// <summary>Applies the reorder; true when the dropped column is now settling into its slot (the drag visuals clear when it lands).</summary>
     private bool DropSection()
     {
+        if (TryDropCloseGap()) return true;
         var from = _slots[_dragSlot].MarkerIndex;
+        var split = false;
+        // Audio or MIDI clips crossing the section's edges: the setting decides, or the prompt asks (the lifted column stays until it is answered).
+        if (SectionAudioCrossings.WouldMove(_document.Project, from, _dropBefore) && SectionAudioCrossings.Find(_document.Project, from) is { } crossing)
+        {
+            var remembered = SectionAudioPromptPresenter.Remembered(SectionAudioSetting?.Invoke());
+            if (remembered is null && SectionAudioPrompt is { } ask)
+            {
+                UiTasks.Forget(AskThenDropSection(from, _dropBefore, crossing, ask), "Moving the section", _ => ClearDrag());
+                return true;
+            }
+            split = remembered?.Split == true;
+        }
+        return CommitSectionDrop(from, _dropBefore, split);
+    }
+
+    /// <summary>The nearest bar line to x, kept on the song's bars.</summary>
+    private int NearestBarLine(double x)
+    {
+        var bar = Math.Clamp(_view.BarAtX(x), 0, Math.Max(0, _view.BarCount - 1));
+        return x - _view.BarX(bar) > (_view.BarX(bar + 1) - _view.BarX(bar)) / 2 ? bar + 1 : bar;
+    }
+
+    /// <summary>The first bar a section dragged left into the empty bars before it would start at (snapping to the previous section's end when it reaches it), with the gap's first bar; null when it did not move left into a gap.</summary>
+    internal (int Target, int Section, int GapFirst)? GapDropTarget()
+    {
+        if (_dropBefore != _dragSlot && _dropBefore != _dragSlot + 1) return null;   // a reorder, not a slide into a gap
+        if (_view.SectionMarkerAt(_slots[_dragSlot].MarkerIndex) is not { } marker || SectionGapEdits.Find(_document.Project, marker.MeasureIndex - 1) is not var (first, _)) return null;
+        var target = Math.Clamp(NearestBarLine(_view.DragSectionX), first, marker.MeasureIndex);
+        return target < marker.MeasureIndex ? (target, marker.MeasureIndex, first) : null;
+    }
+
+    // A section slid left into the empty bars before it closes the dragged-over bars with the Close gap operation (the full gap when it reaches the previous section).
+    private bool TryDropCloseGap()
+    {
+        if (GapDropTarget() is not var (target, section, _)) return false;
+        UiTasks.Forget(CloseGapOnDrop(_view.SectionMarkerAt(_slots[_dragSlot].MarkerIndex)!, target, section - 1), "Closing the gap", _ => ClearDrag());
+        return true;
+    }
+
+    private async Task CloseGapOnDrop(MarkerModel marker, int first, int last)
+    {
+        var document = _document;
+        var changed = await MainWindowTimelineSections.CloseGapAsync(document, first, last, GapClosePrompt, _ => { });
+        if (!ReferenceEquals(document, _document)) return;
+        if (changed) AfterEdit();
+        _view.SectionPreviewX = null;
+        _view.SectionRestingX = null;
+        var slots = _view.SectionSlots();
+        var landing = slots.FirstOrDefault(slot => ReferenceEquals(_view.SectionMarkerAt(slot.MarkerIndex), marker));
+        if (landing.Width <= 0) { ClearDrag(); return; }
+        _view.DragSection = landing.MarkerIndex;
+        if (!SectionAnimator.BeginSettle(_view.DragSectionX, landing.Left, ClearDrag)) ClearDrag();
+    }
+
+    private async Task AskThenDropSection(int from, int dropBefore, SectionAudioCrossing crossing, Func<SectionAudioCrossing, Task<SectionAudioAnswer?>> ask)
+    {
+        var document = _document;
+        var answer = await ask(crossing);
+        if (!ReferenceEquals(document, _document)) return;   // the tab changed under the prompt: the drag was cancelled with it
+        if (answer is not { } picked)
+        {
+            _view.SectionPreviewX = null;   // Cancel move: the column slides back to where it was
+            _view.SectionRestingX = null;
+            _view.DragSection = _slots[_dragSlot].MarkerIndex;
+            if (!SectionAnimator.BeginSettle(_view.DragSectionX, _slots[_dragSlot].Left, ClearDrag)) ClearDrag();
+            return;
+        }
+        if (picked.Remember) SectionAudioRemember?.Invoke(SectionAudioPromptPresenter.Store(picked));
+        if (!CommitSectionDrop(from, dropBefore, picked.Split)) ClearDrag();
+    }
+
+    private bool CommitSectionDrop(int from, int dropBefore, bool splitCrossingAudio)
+    {
         var landing = _slots[_dragSlot];
+        var starts = new List<(AudioClip Clip, double Start)>();   // every clip before the move: the ones that moved or were cut off afterwards are the edited ones
         var edit = DocumentEdits.Run<int[]>(_document, song =>
             {
                 TabForge.Avalonia.Platform.SectionDisplayColours.FreezeDisplayedColours(song);
-                return SectionReorderService.MoveWithClips(song, from, _dropBefore);
+                starts.AddRange(song.Tracks.SelectMany(track => track.AudioClips).Select(clip => (clip, clip.StartSec)));
+                return SectionAudioCrossings.Move(song, from, dropBefore, splitCrossingAudio);   // splits + bar move: one undo step
             }, label: "Move section");
         if (edit.Changed)
         {
             AfterEdit();
+            var moved = _document.Project.Tracks.SelectMany(track => track.AudioClips)
+                .Where(clip => starts.FindIndex(s => ReferenceEquals(s.Clip, clip)) is var i && (i < 0 || Math.Abs(starts[i].Start - clip.StartSec) > 1e-9)).ToList();
             var now = _view.SectionSlots();
-            var target = Math.Clamp(_dropBefore > _dragSlot ? _dropBefore - 1 : _dropBefore, 0, now.Length - 1);
+            var target = Math.Clamp(dropBefore > _dragSlot ? dropBefore - 1 : dropBefore, 0, now.Length - 1);
             landing = now[target];
             // The playing song takes the new order from the next bar (no restart): the host re-syncs the moved clips and refreshes the engine live.
             if (edit.Value is { } mapping) SectionMoved?.Invoke(_document, mapping);
+            _view.ClipOverlapsAfter(_document, moved);   // a carried clip may now cover another on its lane
         }
         _view.DragSection = landing.MarkerIndex;
         _view.SectionPreviewX = null;

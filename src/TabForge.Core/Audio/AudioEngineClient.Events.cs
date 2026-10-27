@@ -64,6 +64,7 @@ public sealed partial class AudioEngineClient
                 break;
             }
             case EngineEvent.Programs: OnPrograms(r); break;
+            case EngineEvent.Params: OnParams(r); break;
             case EngineEvent.MidiLog: OnMidiLog(r); break;
             case EngineEvent.RenderProgress:
             {
@@ -97,6 +98,7 @@ public sealed partial class AudioEngineClient
     {
         _awaitingReady = false;
         ForgetSingleRateAsio();
+        NoteReady();   // a Ready after the first one: the device was reopened, so the audio state is sent again
         Volatile.Write(ref _lastAlive, Stopwatch.GetTimestamp());
         var rate = r.ReadInt32(); var latency = r.ReadInt32(); var description = r.ReadBoundedString(512);
         var buffer = r.ReadInt32();
@@ -145,6 +147,14 @@ public sealed partial class AudioEngineClient
         var names = new List<string>(count);
         for (var i = 0; i < count; i++) names.Add(r.ReadBoundedString(256));
         RaiseOnUi(() => ProgramsReceived?.Invoke(slot, index, current, names));
+    }
+
+    /// <summary>The parameter list of a plug-in.</summary>
+    private void OnParams(BinaryReader r)
+    {
+        var slot = r.ReadInt32(); var index = r.ReadInt32();
+        var list = PluginParameterWire.Read(r);
+        RaiseOnUi(() => ParametersReceived?.Invoke(slot, index, list));
     }
 
     /// <summary>A batch of logged MIDI lines.</summary>

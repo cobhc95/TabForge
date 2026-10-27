@@ -46,9 +46,11 @@ public sealed class AvaloniaPathsAndText : IPathFactory, ITextMeasure
     }
 
     /// <summary><paramref name="pixelsPerDip"/> is unused: Avalonia scales text with the render target.</summary>
+    private readonly FontProvider _fonts = AvaloniaFonts.Provider;
+
     public UiTextMetrics Measure(string text, string fontFamily, double size, int weight, bool italic, double pixelsPerDip)
     {
-        var face = new Typeface(new FontFamily(fontFamily), italic ? FontStyle.Italic : FontStyle.Normal, (FontWeight)weight);
+        var face = new Typeface(AvaloniaFonts.Family(fontFamily, _fonts), italic ? FontStyle.Italic : FontStyle.Normal, (FontWeight)weight);
         var t = new FormattedText(text, CultureInfo.InvariantCulture, FlowDirection.LeftToRight, face, size, new SolidColorBrush(AvaloniaPalette.ColorOf(UiTokens.MeasureInk)));
         return new UiTextMetrics(t.Width, t.Height, t.Baseline, t.Extent);
     }

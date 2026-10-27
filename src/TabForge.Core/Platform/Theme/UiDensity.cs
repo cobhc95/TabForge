@@ -33,6 +33,8 @@ public static class UiDensity
     public static DensityFactors Of(AppearanceSettings appearance)
     {
         if (appearance is null) throw new ArgumentNullException(nameof(appearance));
+        if (string.Equals(appearance.Density, "ExtraCompact", StringComparison.OrdinalIgnoreCase))
+            return new DensityFactors(0.70, 0.70, 0.70, 0.9);
         if (string.Equals(appearance.Density, "Compact", StringComparison.OrdinalIgnoreCase))
             return new DensityFactors(0.85, 0.85, 0.85, 0.9);
         if (string.Equals(appearance.Density, "Spacious", StringComparison.OrdinalIgnoreCase))

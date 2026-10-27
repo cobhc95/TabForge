@@ -48,7 +48,7 @@ The window has nine regions. They are numbered, and the rest of this section fol
 
 **1. Title bar and document tabs.** Each open song lives in its own *document tab* in the title bar. Click a tab to switch songs. The **+** button at the right of the tabs starts a new blank song in a new tab, and the gear at the far right opens **Preferences**. A song with unsaved changes shows a dot on its tab.
 
-**2. Menu bar.** Twelve menus run along the left: **File**, **Edit**, **Bar**, **Track**, **Note**, **Effects**, **Sections**, **Tools**, **Sound**, **View**, **Options** and **Help**. Open any of them to see what the program can do.
+**2. Menu bar.** Eleven menus run along the left: **File**, **Edit**, **Insert**, **Bar**, **Track**, **Note**, **Effects**, **View**, **Tools**, **Options** and **Help**. Open any of them to see what the program can do.
 
 **3. Toolbar.** The toolbar items sit at the right end of the menu bar. The **BPM** box holds the song's written tempo. Next to it are two read-outs, the time signature and the key. Then come three buttons: one shows or hides the side panel, one shows or hides the fretboard, and **Project settings** opens the song's information, credits, tempo and key.
 
@@ -66,11 +66,10 @@ The window has nine regions. They are numbered, and the rest of this section fol
 
 **9. Status bar.** The bar along the bottom reports what is happening, from left to right.
 
-- The last action, such as "Layout: Practice".
-- The **MIDI** light, grey when idle and green while a song plays.
-- The position: the bar number, the track name and the cell.
+- The transport state: **Ready**, **Playing**, **Paused**, **Stopped**, **Recording** (in red), **Count-in…**, **Rendering…** or **Exporting video…**.
+- The position. While a song plays it is the playhead: the bar and beat, the time from the start of the song (such as "Bar 17.3 · 0:32.4"), then the track. When stopped or paused it is the edit cursor: the bar, the time at the cursor, the track and the cell.
 - The bar state, such as "4/4 · 16:16": the time signature, then the length written in the bar and the length the time signature expects. It turns red when a bar does not add up.
-- The tempo, key and current note value.
+- The tempo, at the playhead while a song plays and at the cursor otherwise, and the **scale** of the section, such as "A minor ▾ auto". The word auto means TabForge worked it out from the notes; click it to see the other likely scales, pick your own, or choose what it listens to.
 - A scroll bar for the timeline.
 - At the right, the audio device or the MIDI output name.
 
@@ -141,7 +140,7 @@ TabForge has far more commands than buttons, and there are four ways to find one
 
 - **Menus.** Every command lives in a menu. Menus print a key at the right of many items, read from your current key bindings, so a rebind shows at once.
 - **Tooltips.** Hover a button and read its name. A long tooltip wraps onto several lines. Any button that runs a command shows its current shortcut in brackets at the end, for example "Play / pause (Space)". If you change a shortcut later, the tooltip shows the new key at once.
-- **The command palette.** Choose **File > Command palette…** (`Ctrl+Shift+A`). Type a few letters of a command's name, and the list narrows. Each row shows the command, with its key at the right. Press `Enter` to run the highlighted row, or `Esc` to close the palette. Every command appears here, including some that have no menu item.
+- **The command palette.** Choose **Help > Command palette…** (`Ctrl+Shift+A`). Type a few letters of a command's name, and the list narrows. Each row shows the command, with its key at the right. Press `Enter` to run the highlighted row, or `Esc` to close the palette. Every command appears here, including some that have no menu item.
 - **Preferences.** **Options > Preferences…** (`F12`) lists every keyboard shortcut on its **Shortcuts** page.
 
 To open a right-click menu from the keyboard, press `Shift+F10` or the `Menu` key.

@@ -32,7 +32,7 @@ public static class PluginHostMain
         var maxBlock = Math.Clamp(requestedBlock, MinBlockFrames, MaxBlockFrames);
         var wantInstrument = args[5] == "1";
         var format = args[6];
-        if (format is not ("" or "VST2" or "VST3")) return 2;
+        if (format is not ("" or "VST2" or "VST3" or "CLAP")) return 2;
         var path = args[7];
         var expectedSha256 = args.Length > 8 && args[8] != "none" ? args[8] : "";   // the approved hash the engine was sent; re-checked here because this process does the actual load (also after a device change)
         // The engine's log file, shared with the engine so this process's lines land in the same place (none: this process keeps no log).
@@ -42,7 +42,7 @@ public static class PluginHostMain
         Process engine;
         try { engine = Process.GetProcessById(enginePid); } catch (ArgumentException) { return 3; }
 
-        using var pipe = new NamedPipeClientStream(".", $"TabForge.PluginHost.{id}", PipeDirection.InOut, PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
+        using var pipe = new NamedPipeClientStream(".", PipeNames.PluginHost(id), PipeDirection.InOut, PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
         pipe.Connect(5000);
         using var block = PluginHostBlock.Open(id, maxBlock);
         IPluginInstance plugin;
@@ -58,7 +58,7 @@ public static class PluginHostMain
         if (plugin is Vst2Plugin vst2) vst2.Edited += () => Frames.Write(pipe, RemotePlugin.MsgEdited);
         Frames.Write(pipe, RemotePlugin.MsgLoaded, w => { w.Write(plugin.IsInstrument); w.Write(plugin.HasEditor); w.Write(plugin.LatencySamples); w.Write(plugin.TailSamples); });
 
-        var editors = new EditorWindows(log);
+        var editors = PluginEditorHosts.Create(log);
         var host = new HostSession(log, threads, pipe, block, plugin, path, maxBlock, editors);
         host.StartAudioThread();
         host.StartCommandThread();
@@ -86,15 +86,17 @@ public static class PluginHostMain
         private readonly IPluginInstance _plugin;
         private readonly string _path;
         private readonly int _maxBlock;
-        private readonly EditorWindows _editors;
+        private readonly IPluginEditorHost _editors;
         private readonly float[][] _input;
         private readonly float[][] _output;
         private readonly BlockMidi[] _events = new BlockMidi[PluginHostBlock.MaxEvents];
         private volatile bool _quit;
+        private long _processCalls;   // audio thread increments (Interlocked); the editor diagnostics read it on the main thread
 
-        public HostSession(EngineLogWriter log, EngineThreads threads, NamedPipeClientStream pipe, PluginHostBlock block, IPluginInstance plugin, string path, int maxBlock, EditorWindows editors)
+        public HostSession(EngineLogWriter log, EngineThreads threads, NamedPipeClientStream pipe, PluginHostBlock block, IPluginInstance plugin, string path, int maxBlock, IPluginEditorHost editors)
         {
             _log = log; _threads = threads; _pipe = pipe; _block = block; _plugin = plugin; _path = path; _maxBlock = maxBlock; _editors = editors;
+            editors.ProcessCalls = _ => Interlocked.Read(ref _processCalls);
             _input = new[] { new float[maxBlock], new float[maxBlock] };
             _output = new[] { new float[maxBlock], new float[maxBlock] };
         }
@@ -130,6 +132,7 @@ public static class PluginHostMain
                     Tempo = _block.Tempo, PpqPosition = _block.Ppq, Playing = _block.Playing != 0,
                     Meter = new TransportMeter { Numerator = _block.TimeSigNumerator, Denominator = _block.TimeSigDenominator, BarStartPpq = _block.BarStartPpq },
                 };
+                Interlocked.Increment(ref _processCalls);
                 _plugin.Process(_input, _output, frames, _events.AsSpan(0, count), transport);
                 _output[0].AsSpan(0, frames).CopyTo(_block.Channel(2));
                 _output[1].AsSpan(0, frames).CopyTo(_block.Channel(3));
@@ -200,6 +203,23 @@ public static class PluginHostMain
                 case RemotePlugin.CmdDescribe:
                     threads.Post(() => PluginControlChannel.Answer(pipe, id, log, () => (RemotePlugin.MsgInfo, w => Vst3ClassInfo.Describe(plugin).Write(w))));
                     break;
+                case RemotePlugin.CmdListParams:
+                    threads.Post(() => PluginControlChannel.Answer(pipe, id, log, () =>
+                    {
+                        var list = plugin is IPluginParameters p ? p.GetParameters() : Array.Empty<PluginParameterInfo>();
+                        return (RemotePlugin.MsgParams, w => RemotePlugin.WriteParameters(w, list));
+                    }));
+                    break;
+                case RemotePlugin.CmdSetParam:
+                {
+                    var (paramId, value) = (r.ReadUInt32(), r.ReadDouble());
+                    threads.Post(() => PluginControlChannel.Answer(pipe, id, log, () =>
+                    {
+                        var ok = plugin is IPluginParameters p && p.SetParameter(paramId, value);
+                        return (RemotePlugin.MsgParams, w => w.Write(ok ? 1 : 0));
+                    }));
+                    break;
+                }
                 default:
                     PluginControlChannel.Answer(pipe, id, log, () => throw new InvalidOperationException($"Unknown command {type}."));
                     break;

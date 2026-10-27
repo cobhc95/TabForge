@@ -1,4 +1,4 @@
-# Runs the full self-test suite as parallel process lanes and merges the result (Source/docs/TESTING.md, "Sharded full suite").
+# Runs the full self-test suite as parallel process lanes and merges the result (Source/docs/guides/TESTING.md, "Sharded full suite").
 # Usage: Source\tools\run-suite.ps1 [-Lanes L0,P3] [-DryRun] [-Quick] [-MaxParallel 4] [-Timeout 5]
 #
 # Builds the app once into %TEMP%\tf-suite-build, then starts child TabForge.exe processes, each with its own

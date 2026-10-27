@@ -1,5 +1,7 @@
 using System.IO.MemoryMappedFiles;
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
+using TabForge.Audio.Contracts;
 using TabForge.AudioEngine.Plugins;
 
 namespace TabForge.AudioEngine.Isolation;
@@ -20,11 +22,11 @@ public sealed unsafe class PluginHostBlock : IDisposable
     private readonly MemoryMappedViewAccessor _view;
     private readonly byte* _p;
     public readonly int MaxBlock;
-    public readonly EventWaitHandle Request, Done;
+    private readonly BlockSignal _request, _done;
 
     public static string Name(string id) => $"Local\\TabForge.PluginHost.{id}";
 
-    private PluginHostBlock(MemoryMappedFile file, int maxBlock, EventWaitHandle request, EventWaitHandle done)
+    private PluginHostBlock(MemoryMappedFile file, int maxBlock, Func<PluginHostBlock, (BlockSignal Request, BlockSignal Done)> signals)
     {
         _file = file;
         MaxBlock = maxBlock;
@@ -32,19 +34,37 @@ public sealed unsafe class PluginHostBlock : IDisposable
         byte* p = null;
         _view.SafeMemoryMappedViewHandle.AcquirePointer(ref p);
         _p = p;
-        Request = request;
-        Done = done;
+        (_request, _done) = signals(this);
     }
 
     private static long SizeFor(int maxBlock) => Header + MaxEvents * sizeof(BlockMidi) + 4L * maxBlock * sizeof(float);
 
-    public static PluginHostBlock Create(string id, int maxBlock) =>
-        new(MemoryMappedFile.CreateNew(Name(id), SizeFor(maxBlock)), maxBlock,
-            new EventWaitHandle(false, EventResetMode.AutoReset, Name(id) + ".req"), new EventWaitHandle(false, EventResetMode.AutoReset, Name(id) + ".done"));
+    // Windows: named page-file map and named events, as always. Elsewhere (or when portable is forced, as the tests do): a file-backed map and polled flags in the header's spare ints.
+    public static PluginHostBlock Create(string id, int maxBlock) => Create(id, maxBlock, portable: !OperatingSystem.IsWindows());
 
-    public static PluginHostBlock Open(string id, int maxBlock) =>
+    internal static PluginHostBlock Create(string id, int maxBlock, bool portable) => !portable && OperatingSystem.IsWindows()
+        ? CreateWindows(id, maxBlock)
+        : new(PortableMemory.Create(Name(id), SizeFor(maxBlock)), maxBlock, b => (b.Flag(RequestFlag), b.Flag(DoneFlag)));
+
+    [SupportedOSPlatform("windows")]
+    private static PluginHostBlock CreateWindows(string id, int maxBlock) =>
+        new(MemoryMappedFile.CreateNew(Name(id), SizeFor(maxBlock)), maxBlock,
+            _ => (EventBlockSignal.Create(Name(id) + ".req"), EventBlockSignal.Create(Name(id) + ".done")));
+
+    public static PluginHostBlock Open(string id, int maxBlock) => Open(id, maxBlock, portable: !OperatingSystem.IsWindows());
+
+    internal static PluginHostBlock Open(string id, int maxBlock, bool portable) => !portable && OperatingSystem.IsWindows()
+        ? OpenWindows(id, maxBlock)
+        : new(PortableMemory.Open(Name(id)), maxBlock, b => (b.Flag(RequestFlag), b.Flag(DoneFlag)));
+
+    [SupportedOSPlatform("windows")]
+    private static PluginHostBlock OpenWindows(string id, int maxBlock) =>
         new(MemoryMappedFile.OpenExisting(Name(id)), maxBlock,
-            EventWaitHandle.OpenExisting(Name(id) + ".req"), EventWaitHandle.OpenExisting(Name(id) + ".done"));
+            _ => (EventBlockSignal.Open(Name(id) + ".req"), EventBlockSignal.Open(Name(id) + ".done")));
+
+    private const int RequestFlag = 56, DoneFlag = 60;   // the header's two unused ints
+
+    private BlockSignal Flag(int offset) => new FlagBlockSignal((int*)(_p + offset));
 
     public ref int Frames => ref *(int*)_p;
     public ref int EventCount => ref *(int*)(_p + 4);
@@ -66,7 +86,7 @@ public sealed unsafe class PluginHostBlock : IDisposable
     public void Send(int generation)
     {
         Volatile.Write(ref RequestGeneration, generation);
-        Request.Set();
+        _request.Set();
     }
 
     /// <summary>
@@ -81,7 +101,7 @@ public sealed unsafe class PluginHostBlock : IDisposable
         {
             var remaining = (deadline - System.Diagnostics.Stopwatch.GetTimestamp()) * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
             if (remaining <= 0) return Volatile.Read(ref DoneGeneration) == generation;
-            if (Done.WaitOne((int)remaining) && Volatile.Read(ref DoneGeneration) == generation) return true;
+            if (_done.WaitOne((int)remaining) && Volatile.Read(ref DoneGeneration) == generation) return true;
         }
     }
 
@@ -89,7 +109,7 @@ public sealed unsafe class PluginHostBlock : IDisposable
     public bool TakeRequest(int timeoutMs, out int generation)
     {
         generation = 0;
-        if (!Request.WaitOne(timeoutMs)) return false;
+        if (!_request.WaitOne(timeoutMs)) return false;
         generation = Volatile.Read(ref RequestGeneration);
         return true;
     }
@@ -98,7 +118,7 @@ public sealed unsafe class PluginHostBlock : IDisposable
     public void Complete(int generation)
     {
         Volatile.Write(ref DoneGeneration, generation);
-        Done.Set();
+        _done.Set();
     }
     public Span<BlockMidi> Events => new(_p + Header, MaxEvents);
     public Span<float> Channel(int index) => new(_p + Header + MaxEvents * sizeof(BlockMidi) + (long)index * MaxBlock * sizeof(float), MaxBlock);
@@ -109,7 +129,7 @@ public sealed unsafe class PluginHostBlock : IDisposable
         _view.SafeMemoryMappedViewHandle.ReleasePointer();
         _view.Dispose();
         _file.Dispose();
-        Request.Dispose();
-        Done.Dispose();
+        _request.Dispose();
+        _done.Dispose();
     }
 }

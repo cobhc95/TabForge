@@ -52,6 +52,9 @@ public sealed class PianoRollPresenter
     /// <summary>True while a commit runs: the song's change notices it raises are the piano roll's own.</summary>
     public bool IsCommitting => _committing;
 
+    /// <summary>The window's answer to "clips now overlap on a lane" (null: overlaps are left as they are). Asked after a note edit grew a MIDI take over another clip.</summary>
+    public Func<ClipOverlapPolicy?>? Overlaps { get; set; }
+
     /// <summary>Raised after a commit changed the song (true for a tab track), so the host can refresh the score, the timeline and the engine.</summary>
     public event Action<bool>? Committed;
 
@@ -79,8 +82,59 @@ public sealed class PianoRollPresenter
             TrackIndex = index;
             _selected.Clear();
             _tabConfirmed = false;
+            Choice = default;   // another track: the track decides again (a clicked take sets the lane after)
         }
         Reload();
+    }
+
+    /// <summary>What the roll edits on the shown track: Auto, the written tab, or one MIDI clip lane (every take on it). Another track resets it to Auto.</summary>
+    public PianoRollSourceChoice Choice { get; private set; }
+
+    /// <summary>Edits <paramref name="choice"/>'s notes from now on (the selection goes; the tab prompt applies to the tab only).</summary>
+    public void UseSource(PianoRollSourceChoice choice)
+    {
+        if (Choice == choice) return;
+        Choice = choice;
+        _selected.Clear();
+        Reload();
+    }
+
+    private int? ClipLane => !IsTab && Choice.Kind == PianoRollSourceKind.Lane ? Choice.Lane : null;
+
+    private bool HasTakeOn(int lane) => Track is { } track && track.AudioClips.Any(clip => clip.IsMidi && clip.Lane == lane);
+
+    // An empty take lane (clicked with no take on it): it has no controller points yet, and none are written until a note makes the take.
+    private bool OnEmptyLane => Choice is { Kind: PianoRollSourceKind.Lane, Fresh: true } && !HasTakeOn(Choice.Lane);
+
+    /// <summary>The sources the shown track offers: its written tab (when it has notes) and each lane holding MIDI takes, with a label such as "MIDI lane 1 (3 takes)".</summary>
+    public List<(PianoRollSourceChoice Choice, string Label)> SourceOptions()
+    {
+        var list = new List<(PianoRollSourceChoice, string)>();
+        if (Track is not { } track) return list;
+        if (PianoRollViewRules.HasWrittenNotes(track)) list.Add((PianoRollSourceChoice.OnTab, "Tab"));
+        foreach (var lane in track.AudioClips.Where(clip => clip.IsMidi).Select(clip => clip.Lane).Distinct().Order())
+            list.Add((PianoRollSourceChoice.OnLane(lane), LaneLabel(track, lane)));
+        return list;
+    }
+
+    private static string LaneLabel(TrackModel track, int lane)
+    {
+        var takes = track.AudioClips.Count(clip => clip.IsMidi && clip.Lane == lane);
+        return $"MIDI lane {lane + 1} ({takes} {(takes == 1 ? "take" : "takes")})";
+    }
+
+    /// <summary>"Editing: Tab" or "Editing: MIDI lane 1 (3 takes)" (a MIDI track on its playing lanes: "Editing: MIDI (3 takes)").</summary>
+    public string SourceLabel
+    {
+        get
+        {
+            if (Track is not { } track || _source is null) return "";
+            if (_source.IsTab) return "Editing: Tab";
+            if (OnEmptyLane) return $"Editing: MIDI lane {Choice.Lane + 1} (no takes)";
+            if (Choice.Kind == PianoRollSourceKind.Lane && track.AudioClips.Any(clip => clip.IsMidi && clip.Lane == Choice.Lane)) return "Editing: " + LaneLabel(track, Choice.Lane);
+            var takes = PianoRollClipSource.Shown(track).Count;
+            return $"Editing: MIDI ({takes} {(takes == 1 ? "take" : "takes")})";
+        }
     }
 
     /// <summary>Reads the shown track's notes and clock again (after an undo or an edit made elsewhere); the selection keeps the notes still there.</summary>
@@ -94,7 +148,8 @@ public sealed class PianoRollPresenter
             _selected.Clear();
             return;
         }
-        _source = PianoRollSources.For(track);
+        if (Choice.Fresh && HasTakeOn(Choice.Lane)) Choice = PianoRollSourceChoice.OnLane(Choice.Lane);   // the first note made the take: an ordinary lane from now on
+        _source = PianoRollSources.For(track, Choice);
         _map = _source.Map(document.Project);
         _notes = _source.Read(document.Project, track, _map);
         Reselect(kept);
@@ -161,12 +216,18 @@ public sealed class PianoRollPresenter
         var wanted = edit.Selected.Where(i => i >= 0 && i < edit.Notes.Count).Select(i => edit.Notes[i]).ToList();
         var map = _map;
         bool changed;
+        var extents = track.AudioClips.Select(clip => (Clip: clip, clip.StartSec, clip.EndSec)).ToList();   // before: a clip that grew or is new is the edited one
         _committing = true;
         try
         {
             changed = DocumentEdits.Run(document, project => project.Tracks.Count > TrackIndex && source.Write(project, project.Tracks[TrackIndex], map, edit.Notes), label: label).Changed;
         }
         finally { _committing = false; }
+        if (changed && Overlaps?.Invoke() is { } policy && Track is { } written)
+        {
+            var grown = written.AudioClips.Where(clip => extents.FindIndex(e => ReferenceEquals(e.Clip, clip)) is var i && (i < 0 || extents[i].StartSec != clip.StartSec || extents[i].EndSec != clip.EndSec)).ToList();
+            if (grown.Count > 0 && await policy.ResolveAsync(document, grown) == ClipOverlapOutcome.Cancelled) { Reload(); return false; }   // the edit was undone
+        }
         Reload();
         Reselect(wanted);
         if (changed) Committed?.Invoke(source.IsTab);
@@ -245,16 +306,17 @@ public sealed class PianoRollPresenter
 
     /// <summary>The points of a controller lane on the shown track (none for a tab track).</summary>
     public List<PianoRollPoint> Points(int controller) =>
-        IsTab || Track is not { } track || controller == PianoRollControllers.Velocity ? new List<PianoRollPoint>() : PianoRollControllers.Read(track, _map, controller);
+        IsTab || OnEmptyLane || Track is not { } track || controller == PianoRollControllers.Velocity ? new List<PianoRollPoint>() : PianoRollControllers.Read(track, _map, controller, ClipLane);
 
     /// <summary>Stores a controller lane's points as one undo step (no prompt: only MIDI tracks have controller lanes).</summary>
     public Task<bool> CommitPointsAsync(int controller, IReadOnlyList<PianoRollPoint> points, string label)
     {
-        if (IsTab || _document() is not { } document || Track is null || controller == PianoRollControllers.Velocity) return Task.FromResult(false);
+        if (IsTab || OnEmptyLane || _document() is not { } document || Track is null || controller == PianoRollControllers.Velocity) return Task.FromResult(false);
         var map = _map;
+        var lane = ClipLane;
         bool changed;
         _committing = true;
-        try { changed = DocumentEdits.Run(document, project => PianoRollControllers.Write(project.Tracks[TrackIndex], map, controller, points), label: label).Changed; }
+        try { changed = DocumentEdits.Run(document, project => PianoRollControllers.Write(project.Tracks[TrackIndex], map, controller, points, lane), label: label).Changed; }
         finally { _committing = false; }
         Reload();
         if (changed) Committed?.Invoke(false);

@@ -44,7 +44,7 @@ To work on a track, click an empty part of its row. The row lights up, and the s
 
 TabForge gives you two ways to add a track. The quick way makes a ready-made track at once. The careful way opens a window where you choose everything first.
 
-For the quick way, open the **Track** menu and choose one of **Track > Add Guitar**, **Track > Add Bass**, **Track > Add Drums** or **Track > Add Keys**. The new track goes to the end of the list and is selected, and it has as many bars as the song. A drum track starts with six TAB lines, the same as one made in the **Add track** window. **Add Bass** gives you a four-string bass with the strings tuned E A D G, which is the one to use in this chapter.
+For the quick way, open the **Insert** menu and choose one of **Insert > Track > Tab track…**, **Bass**, **Drums** or **Keys**. The new track goes to the end of the list and is selected, and it has as many bars as the song. A drum track starts with six TAB lines, the same as one made in the **Add track** window. **Add Bass** gives you a four-string bass with the strings tuned E A D G, which is the one to use in this chapter.
 
 For the careful way, click **+ Track** at the top left of the track list. Hover over it and its tooltip says what it does. Right-click it to see a small menu with **Add track…** and **Mixer…**.
 
@@ -52,7 +52,7 @@ The **Add track** window is the same window as **Track properties**, with a few 
 
 The **Position** list decides where the new track lands in the list. You can choose **Last**, **First**, **After the selected track**, or **As track number…**, which lets you type a number.
 
-> **Note:** For a bass, **Track > Add Bass** is the quickest route because it sets up four bass strings for you.
+> **Note:** For a bass, **Insert > Track > Bass** is the quickest route because it sets up four bass strings for you.
 
 ### Try it: Add a bass
 
@@ -61,7 +61,7 @@ The **Position** list decides where the new track lands in the list. You can cho
 Starter file: `first-riff-06.gp`, the riff as it was at the end of Chapter 6. It comes with the guide as an optional download. You can also carry on with your own riff.
 
 1. Choose **File > Open…** (`Ctrl+O`), then open `first-riff-06.gp`. The riff opens with one guitar track.
-2. Choose **Track > Add Bass**. A track called **Bass** appears below the guitar and is selected.
+2. Choose **Insert > Track > Bass**. A track called **Bass** appears below the guitar and is selected.
 3. Choose **Note > Eighth**. The next notes you type will be eighth notes (quavers).
 4. Click the third line from the top of the TAB staff, at the start of bar 1. This is the A string, and the edit cursor lands there.
 5. Type `0` `0` `3` `0` `0` `5` `3` `0`. Each digit writes a fret and moves the cursor on. Bar 1 fills with eight eighth notes.
@@ -174,7 +174,7 @@ Three different things shift pitch, and beginners often mix them up.
 
 - **Tools > Transpose…** rewrites the notes of the selected track, or of the selected bars, by a number of semitones. It asks for a number from -12 to 12. The notes in the score change, so the TAB shows new frets. Drum tracks are refused, because their numbers name instruments, not pitches. The change covers both voices of each bar and moves slide and trill targets with the notes. A note that would fall below fret 0 or past the last fret moves to a free string of its beat where it fits, and the status bar counts any note that fits nowhere. The command has no default key, and one undo step takes it back.
 - The **Pitch** column in the mixer changes only the sound. The written notes stay as they are. Ashen Meridian uses it on **Sub Drop**, which is written an octave up and sounds an octave down. See **Chapter 9: Shaping the sound**.
-- **Global tuning** retunes every instrument track at once and keeps the fret numbers. Drum tracks are not affected.
+- **Global tuning** retunes every tab track at once and keeps the fret numbers. Drum tracks are not affected.
 
 **Global tuning** is the tuning-fork button in the header of the timeline. Hover over it to read its tooltip. Click it to open the **Global tuning (all instruments)** window, where you can pick a preset or shift every string, then click **Apply**.
 
@@ -210,11 +210,11 @@ Play one string. The window shows the note name, how many cents sharp or flat yo
 ## Quick recap
 
 - Each track is one player, with its own notes, sound, volume and pan. The score shows the selected track.
-- **Track > Add Bass**, **Add Guitar**, **Add Drums** and **Add Keys** add ready-made tracks. **+ Track** opens the **Add track** window with a **Position** list.
+- **Insert > Track > Bass**, **Add Guitar**, **Add Drums** and **Add Keys** add ready-made tracks. **+ Track** opens the **Add track** window with a **Position** list.
 - The instrument sets the sound. **Track properties** (`F6`) holds the name, colour, mixer knobs and tuning, and changes apply when you click **OK**.
 - Choose a tuning from the **Preset** list or edit each string. **Keep fret numbers** decides whether existing notes change pitch.
 - Fret numbers are counted from the capo. Changing the capo keeps the numbers and moves the sound.
-- **Transpose** rewrites notes, **Pitch** changes the sound only, and **Global tuning** retunes every instrument track.
+- **Transpose** rewrites notes, **Pitch** changes the sound only, and **Global tuning** retunes every tab track.
 
 ## What next
 

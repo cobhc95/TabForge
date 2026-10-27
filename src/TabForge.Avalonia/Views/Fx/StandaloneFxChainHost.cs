@@ -17,7 +17,7 @@ public sealed class StandaloneFxChainHost : IFxChainHost
     private readonly Action<TrackModel>? _changed;
     private readonly Action<Window>? _openSettings;
     private readonly TabForge.Plugins.PluginTrust _trust;
-    private readonly IPluginFileTrust _files = new TabForge.Platform.Windows.WindowsPluginFileTrust();
+    private readonly IPluginFileTrust _files = TabForge.Platform.PluginFileTrusts.Create();
 
     /// <summary>Opens the host on a chain that belongs to no song.</summary>
     /// <param name="plugins">The plug-in settings the window reads and changes.</param>

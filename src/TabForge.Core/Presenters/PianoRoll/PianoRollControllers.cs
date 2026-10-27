@@ -35,10 +35,10 @@ public static class PianoRollControllers
     public static int Clamp(int lane, int value) => Math.Clamp(value, Min(lane), Max(lane));
 
     /// <summary>The points of <paramref name="controller"/> in the shown clips, by beat.</summary>
-    public static List<PianoRollPoint> Read(TrackModel track, PianoRollTimeMap map, int controller)
+    public static List<PianoRollPoint> Read(TrackModel track, PianoRollTimeMap map, int controller, int? lane = null)
     {
         var list = new List<PianoRollPoint>();
-        foreach (var clip in PianoRollClipSource.Shown(track))
+        foreach (var clip in PianoRollClipSource.Shown(track, lane))
             foreach (var point in clip.Controllers ?? new List<ClipController>())
             {
                 if (point.Controller != controller || point.StartSec < clip.OffsetSec - 1e-6 || point.StartSec >= clip.OffsetSec + clip.SourceLengthSec) continue;
@@ -48,12 +48,12 @@ public static class PianoRollControllers
     }
 
     /// <summary>Stores <paramref name="points"/> as <paramref name="controller"/>'s points in the shown clips (the other controllers kept); false when nothing changed.</summary>
-    public static bool Write(TrackModel track, PianoRollTimeMap map, int controller, IReadOnlyList<PianoRollPoint> points)
+    public static bool Write(TrackModel track, PianoRollTimeMap map, int controller, IReadOnlyList<PianoRollPoint> points, int? lane = null)
     {
-        var before = Read(track, map, controller);
+        var before = Read(track, map, controller, lane);
         if (before.Count == points.Count && before.Zip(points).All(p => Math.Abs(p.First.Beat - p.Second.Beat) < 1e-6 && p.First.Value == p.Second.Value)) return false;
         var timed = points.Select(p => (Point: p, Sec: map.SecondsAt(p.Beat))).ToList();
-        var clips = PianoRollClipSource.Shown(track);
+        var clips = PianoRollClipSource.Shown(track, lane);
         if (clips.Count == 0)
         {
             if (timed.Count == 0) return false;

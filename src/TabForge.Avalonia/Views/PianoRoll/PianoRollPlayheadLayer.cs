@@ -9,27 +9,38 @@ using TabForge.Presenters;
 namespace TabForge.Avalonia.Views;
 
 // Owns: the piano roll's live layer over the surface, repainted alone (each playback frame, each coalesced MIDI key change) so the notes under it
-//       are not redrawn: the playhead needle while the song plays (none when stopped) in the playhead colour, and the piano keys lit live: the keys
+//       are not redrawn: the ruler's playhead triangle and the playback needle under it (setting; stopped too, at the stop position; both in the Playback highlight colour), and the piano keys lit live: the keys
 //       a MIDI keyboard holds (PianoRollKeyLive) and, while playing, the keys of the track's notes sounding at the playhead (PianoRollKeyPlaying).
 // Does not own: where the playhead is (the surface's PlayheadBeat hook), the held keys (PianoRollKeyState), following (PianoRollView).
 // Tests: TabForge.Avalonia.Tests.PianoRollGestureTests, PianoRollKeyStateTests.
 internal sealed class PianoRollPlayheadLayer : Control
 {
-    private const double LineWidth = 1.5, BlackShare = 0.62, NameLit = 0.55;
+    private const double LineWidth = 1.5, BlackShare = 0.62, NameLit = 0.55, NeedleOpacity = 0.7;
     private readonly PianoRollSurface _surface;
     private readonly AvaloniaDrawContext _draw = new();
     private readonly bool[] _live = new bool[128];       // reused each paint: no allocation per frame
     private readonly bool[] _sounding = new bool[128];
     private ThemeColourCache? _theme;
+    private UiColor? _playColour;   // the playback highlight colour, read once and kept: no parsing or allocation per frame
 
     public PianoRollPlayheadLayer(PianoRollSurface surface)
     {
         _surface = surface;
         IsHitTestVisible = false;
+        ActualThemeVariantChanged += (_, _) => _playColour = null;
     }
 
-    /// <summary>The x the line was last drawn at (NaN when hidden), so a test can read it.</summary>
+    /// <summary>Drops the kept playback highlight colour (the Playback highlight setting or the accent changed); the next paint reads it again.</summary>
+    internal void ResetColour() => _playColour = null;
+
+    /// <summary>The colour of the needle and the ruler marker: the Playback highlight (accent, or the custom pick).</summary>
+    internal UiColor PlaybackColour => _playColour ??= _surface.PlayheadColour(ActualThemeVariant == ThemeVariant.Light);
+
+    /// <summary>The x the needle was last drawn at (NaN when hidden or off), so a test can read it.</summary>
     internal double DrawnX { get; private set; } = double.NaN;
+
+    /// <summary>The colour the needle was last drawn in, before its translucency (null until drawn), so a test can read it.</summary>
+    internal UiColor? DrawnColour { get; private set; }
 
     /// <summary>How many keys the last paint lit (live or sounding), so a test can read it.</summary>
     internal int LitKeys { get; private set; }
@@ -45,13 +56,24 @@ internal sealed class PianoRollPlayheadLayer : Control
         DrawKeys(d);
         DrawLiveNotes(d);
         DrawMarker(d);
-        if (beat is not { } playhead) return;   // the needle shows only while the song plays
-        DrawSounding(d, playhead);
-        var x = _surface.XOf(playhead);
-        if (x < _surface.GridLeft || x > Bounds.Width) return;
-        var colour = (_theme ??= new ThemeColourCache(this)).Get("PlayBrush");
-        d.Line(new UiStroke(colour, LineWidth), x, 0, x, Bounds.Height);
-        DrawnX = x;
+        if (beat is { } playhead) DrawSounding(d, playhead);
+        DrawNeedle(d);
+    }
+
+    // The playback needle: a thin translucent line in the marker's colour from the ruler's triangle down through the grid and the lane, at the
+    // marker's own x (also stopped: it stays at the stop position, and nothing repaints it until the playhead moves). The red step-input cursor is
+    // drawn again over it so it stays visible where they meet.
+    private void DrawNeedle(IDrawContext d)
+    {
+        if (double.IsNaN(MarkerX) || !_surface.NeedleOn()) return;
+        var colour = PlaybackColour.WithOpacity(NeedleOpacity);
+        d.Line(new UiStroke(colour, LineWidth), MarkerX, _surface.GridTop, MarkerX, Bounds.Height);
+        DrawnX = MarkerX;
+        DrawnColour = PlaybackColour;
+        if (!_surface.StepInput) return;
+        var red = (_theme ??= new ThemeColourCache(this)).Get("CursorBrush");
+        var step = _surface.XOf(_surface.StepBeat);
+        d.Line(new UiStroke(red, LineWidth), step, _surface.GridTop, step, _surface.GridBottom);
     }
 
     /// <summary>The x of the ruler's playhead triangle as last drawn (NaN when none), and which edge arrow shows (-1 left, 1 right, 0 none).</summary>
@@ -65,7 +87,7 @@ internal sealed class PianoRollPlayheadLayer : Control
         MarkerX = double.NaN;
         EdgeArrow = 0;
         if ((_surface.PlayheadPreview ?? _surface.PlayheadBeat()) is not { } beat) return;
-        var colour = AvaloniaPalette.Get("PianoRollPlayheadMarker", ActualThemeVariant == ThemeVariant.Light);
+        var colour = PlaybackColour;
         var x = _surface.XOf(beat);
         var bottom = _surface.GridTop;
         var half = PianoRollSurface.MarkerHalf;
@@ -143,7 +165,7 @@ internal sealed class PianoRollPlayheadLayer : Control
             if (!_live[pitch] && !_sounding[pitch]) continue;
             var y = _surface.YOf(pitch);
             if (y + _surface.RowPx < _surface.GridTop || y > _surface.GridBottom) continue;
-            var colour = AvaloniaPalette.Get(_live[pitch] ? "PianoRollKeyLive" : "PianoRollKeyPlaying", light);
+            var colour = _live[pitch] ? AvaloniaPalette.Get("PianoRollKeyLive", light) : PlaybackColour;   // keys of the sounding notes use the Playback highlight
             if (_surface.NoteNames) d.Rect(colour.WithOpacity(NameLit), null, 0, y, _surface.GridLeft, _surface.RowPx);   // the name shows through
             else d.Rect(colour, null, 0, y, PianoRollSurface.IsBlack(pitch) ? _surface.GridLeft * BlackShare : _surface.GridLeft, _surface.RowPx);
             lit++;

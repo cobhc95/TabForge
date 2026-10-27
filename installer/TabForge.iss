@@ -1,5 +1,5 @@
 ; TabForge installer (Inno Setup 7). Built by Source\tools\Package-Release.ps1, which passes the version and
-; the publish folder:  ISCC.exe /DAppVersion=0.8.1 /DFileVersion=0.8.1.0 /DSourceDir=..\..\build\TabForge Source\installer\TabForge.iss
+; the publish folder:  ISCC.exe /DAppVersion=0.8.3 /DFileVersion=0.8.3.0 /DSourceDir=..\..\build\TabForge Source\installer\TabForge.iss
 #ifndef AppVersion
   #define AppVersion "0.0.0-dev"
 #endif
@@ -60,7 +60,7 @@ Name: "associate"; Description: "Open .gp, .gp5, .gp4, .gp3, .gpx and TabForge (
 ; The whole publish folder: TabForge.exe, the loose SoundTouch.Net.dll (LGPL, replaceable), licenses\ (licence texts), Assets\, Resources\.
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "..\LICENSE"; DestDir: "{app}"; DestName: "LICENSE.txt"; Flags: ignoreversion
-Source: "..\docs\THIRD_PARTY.md"; DestDir: "{app}"; Flags: ignoreversion
+; THIRD_PARTY.md is already in the publish folder (Package-Release copies it from the repo root or docs\), so the line above installs it.
 
 [Icons]
 Name: "{group}\TabForge"; Filename: "{app}\TabForge.exe"

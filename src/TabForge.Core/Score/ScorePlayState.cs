@@ -31,6 +31,18 @@ internal sealed class ScorePlayState
         _lastMs = ms;
         foreach (var n in NoteTimeline.SoundingAt(_lastNotes, ms)) Sounding.Add((n.Bar, n.Cell, n.StringIndex));
         foreach (var n in NoteTimeline.StruckWithin(_lastNotes, ms, StruckWindowMs)) Struck.Add((n.Bar, n.Cell, n.StringIndex));
+        // Tie destinations and legato slide targets have no attack of their own: they light at their own beat all the same.
+        NoteTimeline.ForEachContinuationAt(_lastNotes, ms, StruckWindowMs, _lightContinuation);
+    }
+
+    public ScorePlayState() => _lightContinuation = LightContinuation;
+
+    private readonly Action<NoteContinuation, bool> _lightContinuation;
+
+    private void LightContinuation(NoteContinuation c, bool struck)
+    {
+        Sounding.Add((c.Bar, c.Cell, c.StringIndex));
+        if (struck) Struck.Add((c.Bar, c.Cell, c.StringIndex));
     }
 
     /// <summary>Moves the playhead within its beat without touching the lit-note sets.</summary>

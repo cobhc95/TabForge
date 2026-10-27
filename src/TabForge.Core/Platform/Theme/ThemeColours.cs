@@ -117,7 +117,7 @@ public static class ThemeColours
     public static bool DerivesFromAccent(string name) => name is
         "SelectedTint" or "SelectedOutline" or "AccentHover" or "AccentPress" or "FocusRing" or "IconActive" or "SliderTrackFill" or "SliderThumbGlow" or "TransportButtonGlow" or "AddTrackBorder" or "AddTrackSurface"
         or "PrefsAccent" or "PrefsPrimary" or "PrefsPrimaryHover" or "PrefsPrimaryPress" or "PrefsPrimaryInk" or "PrefsSelection" or "SettingsNavIconSelected"
-        or "DockGhostAccentFallback" or "DockGhostGlow" or "DockDragGhostFallback" or "DockDragGlow" or "FxSplitAccentFallback" or "ToolPaletteAccentFallback" or "ControllerDockGlow";
+        or "ModePillOn" or "ModePillOnText" or "PianoRollKeyLive" or "DockGhostAccentFallback" or "DockGhostGlow" or "DockDragGhostFallback" or "DockDragGlow" or "FxSplitAccentFallback" or "ToolPaletteAccentFallback" or "ControllerDockGlow";
 
     /// <summary>The accent-derived token <paramref name="name"/> for the applied accent (<paramref name="accent"/>, already lifted to read on <paramref name="surface"/>) and its soft fill.
     /// The hover and press steps are fixed lightness steps of the accent, the ink on a primary fill is the light or dark ink that reads better,
@@ -129,7 +129,7 @@ public static class ThemeColours
         "SelectedOutline" => accent,
         "AccentHover" or "FocusRing" or "PrefsPrimaryHover" => Step(accent, 0.15, 0.2),
         "AccentPress" or "PrefsPrimaryPress" => Step(accent, 0.3, 0.1),
-        "PrefsPrimaryInk" => InkOn(accent),
+        "PrefsPrimaryInk" or "ModePillOnText" => InkOn(accent),
         "PrefsSelection" => accentSoft,
         "AddTrackSurface" => Shade(accent, 0.6),
         "DockDragGhostFallback" => WithOpacity(accent, 0.22),

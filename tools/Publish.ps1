@@ -3,7 +3,7 @@
     The one dotnet publish command line for TabForge. CI and Source/tools/Package-Release.ps1 call it, so a
     flag change cannot make CI test a different binary from the one released.
     ContinuousIntegrationBuild/Deterministic are always on here (not only when CI=true), so a local publish and a
-    CI publish of the same commit produce the same bytes (see Source/docs/REPRODUCIBLE_BUILDS.md).
+    CI publish of the same commit produce the same bytes (see Source/docs/guides/REPRODUCIBLE_BUILDS.md).
 .PARAMETER Output
     Folder to publish into (created by dotnet publish; not cleared here).
 .PARAMETER ExtraArgs

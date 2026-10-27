@@ -34,6 +34,12 @@ public interface IFxChainEngine
     void RequestPrograms(TrackModel track, PluginSlot slot);
     void SetProgram(TrackModel track, PluginSlot slot, int program);
     void SetState(TrackModel track, PluginSlot slot, string state);
+    /// <summary>Asks for the plug-in's parameter list (the generic parameter panel); the answer arrives as <see cref="ParametersReceived"/>.</summary>
+    void RequestParameters(TrackModel track, PluginSlot slot) { }
+    /// <summary>Sets one plug-in parameter to a plain value in the running plug-in.</summary>
+    void SetParameter(TrackModel track, PluginSlot slot, uint id, double value) { }
+    /// <summary>The plug-in's parameter list arrived: engine slot, plug-in index, parameters.</summary>
+    event Action<int, int, IReadOnlyList<PluginParameterInfo>>? ParametersReceived { add { } remove { } }
     /// <summary>Copies the plug-ins' current states into the tracks' slots; waits at most <paramref name="timeoutMs"/>.</summary>
     Task CollectStatesAsync(IEnumerable<TrackModel> tracks, int timeoutMs);
     AutoPitchMatcher? AutoPitch { get; }

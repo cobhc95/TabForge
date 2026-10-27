@@ -14,4 +14,4 @@ Does not own the notes (`KeyboardNoteSource`), the hand colours or any drawing (
 `Hand[] hands = HandAssigner.Assign(notes);` the result is index-aligned with the input, which may be in any order. Notes starting within 30 ms are one chord.
 
 ## Tests
-`TestKeyboardHands` (one-hand passages, melody over bass, wide chord, arpeggio, contrary motion, repeated notes, strum, unsorted input, determinism, 5000 notes under 50 ms) and `TestKeyboardHandsAccuracy` (the evaluation set `HandEvalSet`, at least 97 %; its former test file was removed in Batch 2; [canonical note](../../../../docs/TESTING.md#removed-in-batch-2-canonical-note)).
+`TestKeyboardHands` (one-hand passages, melody over bass, wide chord, arpeggio, contrary motion, repeated notes, strum, unsorted input, determinism, 5000 notes under 50 ms) and `TestKeyboardHandsAccuracy` (the evaluation set `HandEvalSet`, at least 97 %; its former test file was removed in Batch 2; [canonical note](../../../../docs/guides/TESTING.md#removed-in-batch-2-canonical-note)).

@@ -10,7 +10,8 @@ namespace TabForge.Presenters;
 public static class PianoRollScale
 {
     public const string FoldNone = "None", FoldScale = "Scale", FoldUsed = "Used";
-    public static IReadOnlyList<string> Folds { get; } = new[] { FoldNone, FoldScale, FoldUsed };
+    public const int MinUsedFold = 3;
+    public static IReadOnlyList<string> Folds{ get; } = new[] { FoldNone, FoldScale, FoldUsed };
     public static IReadOnlyList<string> ColourModes { get; } = new[] { "Track", "Velocity", "Lane", "Pitch", "Channel" };
 
     /// <summary>The pitch classes (0 = C) of a highlight such as "A Minor Pentatonic"; null when it names no scale.</summary>
@@ -32,7 +33,9 @@ public static class PianoRollScale
         else if (fold == FoldUsed)
         {
             var used = notes.Select(n => n.Pitch).ToHashSet();
-            if (used.Count > 0) pitches = pitches.Where(used.Contains);
+            // One or two used pitches would leave a blank strip nothing can be drawn on: show an octave either side of them instead.
+            if (used.Count >= MinUsedFold) pitches = pitches.Where(used.Contains);
+            else if (used.Count > 0) pitches = pitches.Where(p => p >= used.Min() - 12 && p <= used.Max() + 12);
         }
         return pitches.OrderByDescending(p => p).ToList();
     }

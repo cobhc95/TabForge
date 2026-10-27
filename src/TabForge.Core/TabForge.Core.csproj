@@ -1,13 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!-- The UI-framework-free part of the editor: models, playback, audio routing, plug-in catalogue and rules, presets and
        services that do not touch a UI framework. The app (src/TabForge.Avalonia) references it; it never references the app.
-       Builds for net8.0 (portable hosts) and net8.0-windows (the app and the engine). The Windows-only files below
-       (COM, Media Foundation, DXGI, Windows identity, Win32 timing) compile only into net8.0-windows. -->
+       Builds for net10.0 (portable hosts) and net10.0-windows (the app and the engine). The Windows-only files below
+       (COM, Media Foundation, DXGI, Windows identity, Win32 timing) compile only into net10.0-windows. -->
   <PropertyGroup>
-    <!-- Windows builds only net8.0-windows: the engine client, playback engine and MIDI adapters exist only there, so the
-         net8.0 target would not compile. Other hosts build net8.0 alone. -->
-    <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('Windows'))">net8.0-windows</TargetFrameworks>
-    <TargetFrameworks Condition="!$([MSBuild]::IsOSPlatform('Windows'))">net8.0</TargetFrameworks>
+    <!-- Windows builds only net10.0-windows: the engine client, playback engine and MIDI adapters exist only there. Other hosts
+         build net10.0 alone; -p:TabForgePortableBuild=true builds net10.0 on Windows too (the CI portability check). The
+         net10.0 build has its own lock file, so the Windows lock file and the shipped build stay as they are. -->
+    <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('Windows')) And '$(TabForgePortableBuild)' != 'true'">net10.0-windows</TargetFrameworks>
+    <TargetFrameworks Condition="!$([MSBuild]::IsOSPlatform('Windows')) Or '$(TabForgePortableBuild)' == 'true'">net10.0</TargetFrameworks>
+    <NuGetLockFilePath Condition="'$(TargetFrameworks)' == 'net10.0'">packages.portable.lock.json</NuGetLockFilePath>
     <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
     <ImplicitUsings>enable</ImplicitUsings>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -15,15 +17,10 @@
     <RootNamespace>TabForge</RootNamespace>
     <!-- Nullable, warnings-as-errors, analysis, locked restore and Version: see Directory.Build.props. -->
   </PropertyGroup>
-  <ItemGroup Condition="'$(TargetFramework)'=='net8.0'">
-    <Compile Remove="Services\Video\VideoEncoder.cs;Services\Video\MediaFoundationInterop.cs;Services\Video\DxgiCom.cs" />
+  <ItemGroup Condition="'$(TargetFramework)'=='net10.0'">
+    <Compile Remove="Services\Video\VideoEncoder.cs;Services\Video\VideoEncoder.Writer.cs;Services\Video\VideoEncoder.Finalize.cs;Platform\Windows\*.cs" />
     <Compile Remove="Services\Video\DxgiRegionGrabber.cs;Services\Video\DesktopRegionGrabber.cs" />
-    <Compile Remove="Services\Video\LiveVideoSession.cs;Services\Video\LiveVideoRecordController.cs;Services\Video\VideoExportFlow.cs" />
-    <Compile Remove="Services\SingleInstanceService.cs;Audio\WindowsMidiLatency.cs;Audio\WindowsPathOffset.cs" />
-    <Compile Remove="Audio\AudioEngineClient*.cs;Audio\EngineSongSync.cs;Rendering\RenderJob.cs;Rendering\RenderSpecBuilder.cs;Audio\AutoPitchMatcher.cs;LiveInput\LiveInputArm.cs;LiveInput\LiveInputMidi.cs" />
-    <Compile Remove="Platform\Windows\WindowsPluginFileTrust.cs;Platform\Windows\WindowsPathResolver.cs" />
-    <Compile Remove="Platform\Windows\WindowsMidiDevices.cs;Platform\Windows\WindowsAudioDevices.cs" />
-    <Compile Remove="Playback\PlaybackEngine*.cs;Playback\AudioGrowthRefreshFlow.cs;Playback\ArrangementRefreshCompiler.cs;Playback\PlaybackPreferences.cs;Audio\RoutedMidiOutput.cs" />
+    <Compile Remove="Audio\WindowsMidiLatency.cs;Audio\WindowsPathOffset.cs" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Platform\Theme\Looks\*.json" />

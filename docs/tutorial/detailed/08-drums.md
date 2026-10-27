@@ -29,11 +29,11 @@ Select a drum track and the instrument panel above the score becomes the drum ma
 
 ## Add a drum track
 
-Choose **Track > Add Drums**. A track called **Drums** appears at the end of the track list and is selected. It has as many bars as the song, and its TAB starts with six lines.
+Choose **Insert > Track > Drums**. A track called **Drums** appears at the end of the track list and is selected. It has as many bars as the song, and its TAB starts with six lines.
 
 The new track uses the standard kit. To pick a different one, open **Track properties** (`F6`), click **Change…** on the **Instrument** card, and look in the **Drum Kits** family of the **Choose instrument** window. There are nine kits, including Standard, Room, Power, Electronic, Jazz and Brush. Typing `drum` in the search box shows them all.
 
-> **Tip:** The **+ Track** button opens the **Add track** window, where a drum kit gives you a drum track too. **Track > Add Drums** is the faster route.
+> **Tip:** The **+ Track** button opens the **Add track** window, where a drum kit gives you a drum track too. **Insert > Track > Drums** is the faster route.
 
 ## Read drum notation
 
@@ -100,7 +100,7 @@ The bar has eight steps. Use this table as your guide, and read the count aloud:
 | 8 | and | **Closed Hi-Hat** |
 
 1. Choose **File > Open…** (`Ctrl+O`), then open `first-riff-07.gp`. The riff opens with a guitar and a bass.
-2. Choose **Track > Add Drums**. A **Drums** track is added and selected, and the drum map appears above the score.
+2. Choose **Insert > Track > Drums**. A **Drums** track is added and selected, and the drum map appears above the score.
 3. Choose **Note > Eighth**. Each hit you write will be an eighth note.
 4. Click the first beat of bar 1 in the drum score. The edit cursor lands there.
 5. Click the pads listed for step 1. A kick and a hi-hat appear on the first beat.
@@ -128,7 +128,7 @@ You have one bar. Copy it across the song so the beat plays under every bar of t
 
 You now have the same song as `first-riff-08.gp`.
 
-Two other tools repeat bars. **Bar > Repeat selection as bars** adds copies of the selected bars as new bars after them, and it does this on every track. Use it to build a longer song, not to fill a drum part. **Bar > Repeat one bar** marks a bar as a repeat of the one before, and the score shows the one-bar repeat sign.
+Two other tools repeat bars. **Edit > Repeat selection as bars** adds copies of the selected bars as new bars after them, and it does this on every track. Use it to build a longer song, not to fill a drum part. **Insert > Repeat / ending > Repeat one bar** marks a bar as a repeat of the one before, and the score shows the one-bar repeat sign.
 
 ## Choose a drum notation preset
 
@@ -171,7 +171,7 @@ You can close the demo tab without saving.
 ## Quick recap
 
 - A drum track has no frets or tuning. Its sounds are a kit, and every sound has a General MIDI note number.
-- **Track > Add Drums** adds a drum track. The **Drum Kits** family in the instrument catalogue offers nine kits.
+- **Insert > Track > Drums** adds a drum track. The **Drum Kits** family in the instrument catalogue offers nine kits.
 - Cymbals are written with an **x** and drums with round notes. The kick sits in the bottom space and the snare in the second space from the top.
 - Click a pad in the drum map to write that sound at the edit cursor. Press `Right` to move to the next beat.
 - Copy a bar with `Ctrl+C` and paste it with `Ctrl+V` to repeat a beat.

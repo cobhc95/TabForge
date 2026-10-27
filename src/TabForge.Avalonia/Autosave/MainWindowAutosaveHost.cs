@@ -17,7 +17,7 @@ namespace TabForge.Avalonia;
 // Does not own: the copy rules and the clock (MainWindowAutosave and TabForge.Autosave), the settings file (MainWindowSettings).
 // Tests: TabForge.Avalonia.Tests.MainWindowAutosaveTests.
 /// <summary>The window's answers and actions for <see cref="MainWindowAutosave"/>. UI thread only.</summary>
-internal sealed class MainWindowAutosaveHost : MainWindowAutosave.IHost
+internal sealed class MainWindowAutosaveHost : MainWindowAutosave.IHost, TabForge.Avalonia.Views.INoticeReceiver
 {
     private const string RecoveryCaption = "Recover unsaved songs";
 
@@ -56,4 +56,5 @@ internal sealed class MainWindowAutosaveHost : MainWindowAutosave.IHost
     public void OpenRecoveredSong(SongDocument song) => _tabs.Open(song);
 
     public void Report(string text) => _report(text);
+    public void Receive(string text, TabForge.Avalonia.Views.NoticeCategory category) => TabForge.Avalonia.Views.NoticeChannel.Send(_report, text, category);
 }

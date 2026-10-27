@@ -37,7 +37,7 @@ public static class VstScannerService
         {
             try { return Path.GetFullPath(r.Trim()); }
             catch (Exception ex) when (ex is ArgumentException or NotSupportedException or IOException or System.Security.SecurityException) { return r.Trim(); }
-        }).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(r => r, StringComparer.OrdinalIgnoreCase).Take(1024).ToList();
+        }).Distinct(PathComparer.Default).OrderBy(r => r, PathComparer.Default).Take(1024).ToList();
         return string.Join('\n', list);
     }
 
@@ -66,7 +66,7 @@ public static class VstScannerService
         }
         if (!forceRefresh)
         {
-            var key = SessionKey(roots);
+            var key = SessionKey(roots) + (remember is { ScanClap: true } ? "|clap" : "");
             lock (SessionGate)
             {
                 if (_sessionResults is not null && string.Equals(_sessionRootsKey, key, StringComparison.Ordinal) &&
@@ -78,7 +78,7 @@ public static class VstScannerService
             }
         }
         var fresh = ScanUncached(roots, cancellationToken, progress, trust, files, remember);
-        lock (SessionGate) { _sessionRootsKey = SessionKey(roots); _sessionResults = fresh; _sessionAtUtc = DateTime.UtcNow; }
+        lock (SessionGate) { _sessionRootsKey = SessionKey(roots) + (remember is { ScanClap: true } ? "|clap" : ""); _sessionResults = fresh; _sessionAtUtc = DateTime.UtcNow; }
         return fresh;
     }
 
@@ -100,7 +100,7 @@ public static class VstScannerService
         PluginSettings? remember)
     {
         ArgumentNullException.ThrowIfNull(roots);
-        var scan = new ScanState();
+        var scan = new ScanState { IncludeClap = remember is { ScanClap: true } };
         QueueRoots(roots, scan);
         while (scan.Pending.Count > 0 && scan.EntriesVisited < InputLimits.MaxVstScanEntries && scan.Results.Count < InputLimits.MaxVstPlugins)
         {
@@ -123,9 +123,10 @@ public static class VstScannerService
     private sealed class ScanState
     {
         public readonly Stack<(string Path, int Depth)> Pending = new();
-        public readonly HashSet<string> Queued = new(StringComparer.OrdinalIgnoreCase);
-        public readonly HashSet<string> Visited = new(StringComparer.OrdinalIgnoreCase);
-        public readonly Dictionary<string, VstPluginInfo> Results = new(StringComparer.OrdinalIgnoreCase);
+        public readonly HashSet<string> Queued = new(PathComparer.Default);
+        public readonly HashSet<string> Visited = new(PathComparer.Default);
+        public readonly Dictionary<string, VstPluginInfo> Results = new(PathComparer.Default);
+        public bool IncludeClap;   // CLAP is opt-in: the .clap files are listed only when the user turned it on
         public int EntriesVisited;
         public int UnreadableCount;   // unreadable folders and entries are counted, and one summary line is logged after the scan
         public string? FirstUnreadable;
@@ -151,6 +152,7 @@ public static class VstScannerService
     {
         FileAttributes directoryAttributes;
         try { directoryAttributes = File.GetAttributes(directory); }
+        catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException) { Services.Trace.Write(Services.Trace.Engine, "plug-in scan: folder not present, skipped: " + directory); return; }   // an optional default folder that does not exist is not an error
         catch (Exception ex) when (IsFilesystemFailure(ex)) { scan.Unreadable("folder attributes", directory, ex); return; }
         if ((directoryAttributes & FileAttributes.Directory) == 0 ||
             (directoryAttributes & FileAttributes.ReparsePoint) != 0 ||
@@ -188,7 +190,14 @@ public static class VstScannerService
             scan.Results.TryAdd(fullPath, new VstPluginInfo(Path.GetFileNameWithoutExtension(entry), fullPath, "VST3", vendor, role, classId));
             return scan.Results.Count >= InputLimits.MaxVstPlugins;
         }
-        if (!isDirectory && string.Equals(Path.GetExtension(entry), ".dll", StringComparison.OrdinalIgnoreCase)
+        if (scan.IncludeClap && string.Equals(Path.GetExtension(entry), ".clap", StringComparison.OrdinalIgnoreCase))
+        {
+            var fullPath = Path.GetFullPath(entry);
+            scan.Results.TryAdd(fullPath, new VstPluginInfo(Path.GetFileNameWithoutExtension(entry), fullPath, PluginFormats.Clap, ""));
+            return scan.Results.Count >= InputLimits.MaxVstPlugins;
+        }
+        var vst2Here = PluginScanFolders.Vst2Supported(HostSystem.Current);   // VST2 hosting is Windows-only: a .dll elsewhere is never a plug-in
+        if (vst2Here && !isDirectory && string.Equals(Path.GetExtension(entry), ".dll", StringComparison.OrdinalIgnoreCase)
             && PeExports.IsVst2Plugin(entry))
         {
             var fullPath = Path.GetFullPath(entry);
@@ -196,7 +205,7 @@ public static class VstScannerService
             return scan.Results.Count >= InputLimits.MaxVstPlugins;
         }
 
-        if (!isDirectory && string.Equals(Path.GetExtension(entry), ".dll", StringComparison.OrdinalIgnoreCase) && PeExports.IsVst2Plugin32(entry))
+        if (vst2Here && !isDirectory && string.Equals(Path.GetExtension(entry), ".dll", StringComparison.OrdinalIgnoreCase) && PeExports.IsVst2Plugin32(entry))
         {
             var fullPath = Path.GetFullPath(entry);
             scan.Results.TryAdd(fullPath, new VstPluginInfo(Path.GetFileNameWithoutExtension(entry), fullPath, VstPluginInfo.Format32, Vst2Vendor(fullPath)));
@@ -229,8 +238,9 @@ public static class VstScannerService
     /// <summary>The folders to scan: the user's own folders, plus the standard ones when that option is on.</summary>
     public static IEnumerable<string> RootsFor(PluginSettings settings) =>
         (settings.ScanStandardFolders ? GetDefaultRoots().Concat(CommonRoots(settings)) : Array.Empty<string>())
+        .Concat(settings.ScanClap ? ClapRoots() : Array.Empty<string>())
         .Concat(FolderListText.Clean(settings.Folders).Where(IsLocalScanFolder))
-        .Distinct(StringComparer.OrdinalIgnoreCase);
+        .Distinct(PathComparer.Default);
 
     /// <summary>
     /// False for a UNC (\\server\share) or device form: a scan does not read network shares or device paths. Such a folder is dropped
@@ -245,11 +255,13 @@ public static class VstScannerService
     public static IEnumerable<string> StandardFolders => GetDefaultRoots();
 
     /// <summary>The standard folders as shown to the user: with environment names, never an expanded user path (same list as <see cref="StandardFolders"/>).</summary>
-    public static readonly string[] StandardFolderLabels =
-    {
-        @"%CommonProgramFiles%\VST3", @"%ProgramFiles%\Common Files\VST3", @"%ProgramFiles%\VstPlugins", @"%ProgramFiles%\Steinberg\VSTPlugins",
-        @"%CommonProgramFiles%\VST2", @"%LocalAppData%\Programs\Common\VST3",
-    };
+    public static readonly string[] StandardFolderLabels = PluginScanFolders.Labels(HostSystem.Current).ToArray();
+
+    /// <summary>The standard CLAP folders that exist on this machine (scanned only when the user turned CLAP on).</summary>
+    public static IEnumerable<string> ClapRoots() => ExpandFolders(PluginScanFolders.Clap(PluginScanInputs.Current()));
+
+    /// <summary>The standard CLAP folders as shown to the user.</summary>
+    public static IReadOnlyList<string> ClapFolderLabels => PluginScanFolders.ClapLabels(HostSystem.Current);
 
     /// <summary>The Add plug-in window's "Scan the standard VST folders" button: turns the option on (the user's choice, off by default).</summary>
     public static void EnableStandardFolders(PluginSettings settings) => settings.ScanStandardFolders = true;
@@ -265,7 +277,7 @@ public static class VstScannerService
     /// <summary>Expands %VARS%, drops blanks, missing folders and duplicates.</summary>
     public static List<string> ExpandFolders(IEnumerable<string> patterns)
     {
-        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase); var list = new List<string>();
+        var seen = new HashSet<string>(PathComparer.Default); var list = new List<string>();
         foreach (var p in patterns)
         {
             if (string.IsNullOrWhiteSpace(p)) continue;
@@ -286,23 +298,7 @@ public static class VstScannerService
         return ExpandFolders(FolderListText.Clean(folders).Where(IsLocalScanFolder));
     }
 
-    private static IEnumerable<string> GetDefaultRoots()
-    {
-        var roots = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        Add(roots, Environment.GetFolderPath(Environment.SpecialFolder.CommonProgramFiles), "VST3");
-        Add(roots, Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Common Files", "VST3");
-        Add(roots, Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "VstPlugins");
-        Add(roots, Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Steinberg", "VSTPlugins");
-        Add(roots, Environment.GetFolderPath(Environment.SpecialFolder.CommonProgramFiles), "VST2");
-        Add(roots, Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "Common", "VST3");
-        return roots;
-    }
-
-    private static void Add(HashSet<string> roots, string root, params string[] parts)
-    {
-        if (string.IsNullOrWhiteSpace(root)) return;
-        roots.Add(parts.Aggregate(root, Path.Combine));
-    }
+    private static IEnumerable<string> GetDefaultRoots() => PluginScanFolders.Vst3(PluginScanInputs.Current());
 
     /// <summary>Vendor, role and class id (32 hex digits, upper case) of a VST3 bundle from its moduleinfo.json (read as text; the plug-in is not loaded).</summary>
     public static (string Vendor, string Role, string ClassId) Vst3ModuleInfo(string bundle)

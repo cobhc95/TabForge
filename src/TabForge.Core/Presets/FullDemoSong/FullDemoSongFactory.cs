@@ -8,7 +8,7 @@ namespace TabForge.Presets;
 // Tests: no dedicated test class.
 
 /// <summary>
-/// The built-in full demo song "Ashen Meridian" (CC0), written in code from docs/DEMO_SONG_PLAN.md: 10 tracks, 144 bars
+/// The built-in full demo song "Ashen Meridian" (CC0), written in code from docs/plans/DEMO_SONG_PLAN.md: 10 tracks, 144 bars
 /// (154 performed), every representable technique and structure feature. `TabForge.exe --write-demo-song &lt;out.gp&gt;` saves it.
 /// Split into partial files by owner (plan 6.1): Skeleton (structure, tracks, mix), Drums, Rhythm (guitars L/R, bass, sub),
 /// LeadKeys (lead, harmony, clean, pad, piano) and the shared Helpers.

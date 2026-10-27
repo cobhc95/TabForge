@@ -11,7 +11,7 @@ public readonly record struct HandNote(int Pitch, long StartMs, long DurationMs)
 
 /// <summary>
 /// The cost model's constants (pitches in semitones, times in milliseconds). The defaults were fitted by coordinate descent
-/// against the evaluation set (HandEvalSet in the self-tests, described in docs/KEYBOARD_HANDS.md); change them, that page and the accuracy test together.
+/// against the evaluation set (HandEvalSet in the self-tests, described in docs/specs/KEYBOARD_HANDS.md); change them, that page and the accuracy test together.
 /// </summary>
 public sealed record HandAssignerOptions
 {

@@ -206,6 +206,8 @@ internal sealed partial class ScoreToMidiCompiler
         (int track, int voice, int str) key, HashSet<string> t, int channel, int device, int trackIndex, double slotMs)
     {
         if (!(_open.TryGetValue(key, out var open) && (open.Note.Midi == midi || open.SlideTarget == midi) && CanContinue(open, midi, WheelPeakSemitones(cell, note, t), onset, slotMs))) return false;
+        // The merged beat has no note of its own, so the origin remembers it: the score lights it when the playhead reaches it.
+        (open.Note.Continuations ??= new List<NoteContinuation>()).Add(new NoteContinuation { OnsetMs = onset, EndMs = Math.Max(onset + length, writtenEndMs), Bar = playBar, Cell = cellIndex, StringIndex = note.StringIndex });
         // A tie from a dead note inherits it: the muted click stays as short as written and the tie adds no pitched sound (nor its own slide or vibrato: Guitar Pro plays the chain silent after a muted hit).
         if (open.Note.Dead)
         {

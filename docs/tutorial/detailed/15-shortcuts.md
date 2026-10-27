@@ -30,8 +30,8 @@ A document tab holds one open song.
 | Close the document tab | `Ctrl+W` | **File > Close tab** |
 | Duplicate the document tab | `Ctrl+Shift+D` | Right-click the document tab |
 | Score information | `F5` | **File > Score information…** |
-| Render to an audio file | `Ctrl+Alt+R` | **File > Render to audio file…** |
-| Command palette | `Ctrl+Shift+A` | **File > Command palette…** |
+| Render to an audio file | `Ctrl+Alt+R` | **File > Export > Audio file…** |
+| Command palette | `Ctrl+Shift+A` | **Help > Command palette…** |
 | Export MIDI, Export ASCII tab, Project settings | No default key | **File** menu, and the **Project settings** toolbar button |
 | Transpose | No default key | **Tools > Transpose…** |
 
@@ -46,7 +46,7 @@ A document tab holds one open song.
 | Paste | `Ctrl+V` | **Edit > Paste** |
 | Paste special | `Ctrl+Shift+V` | **Edit > Paste special…** |
 | Repeat the previous beat | `C` | **Edit > Copy last beat** |
-| Insert an empty beat (NumLock on) | `Insert` | **Edit > Insert beat** |
+| Insert an empty beat (NumLock on) | `Insert` | **Insert > Bar > Beat** |
 | Delete beats and shift the rest left | No default key | **Edit > Delete beats** |
 | Delete the note on the cursor's string | `Backspace` | Right-click a note, **Delete** |
 | Clear the beat at the cursor | `Delete` | None |
@@ -63,10 +63,10 @@ The edit cursor is the highlight that shows where the next note goes.
 | Move one bar left or right | `Ctrl+Left` or `Ctrl+Right` | None |
 | Step to the previous or next note you entered | `Alt+Left` or `Alt+Right` | None |
 | Go to the start or end of the bar | `Home` or `End` | None |
-| Go to the first or last bar | `Ctrl+Home` or `Ctrl+End` | **Sound > First bar** or **Sound > Last bar** |
+| Go to the first or last bar | `Ctrl+Home` or `Ctrl+End` | **Bar > First bar** or **Bar > Last bar** |
 | Move one line of the score up or down | `Ctrl+Up` or `Ctrl+Down`, or `Page Up` or `Page Down` | None |
-| Go to a bar number or section name | `Ctrl+G` | **Sections > Go to…** |
-| Jump to the previous or next section | `Alt+Shift+Left` or `Alt+Shift+Right` | **Sections > Previous section** or **Sections > Next section** |
+| Go to a bar number or section name | `Ctrl+G` | **Bar > Go to…** |
+| Jump to the previous or next section | `Alt+Shift+Left` or `Alt+Shift+Right` | **Bar > Previous section** or **Bar > Next section** |
 | Select beats one at a time | `Shift+Left` or `Shift+Right` | None |
 | Select the whole track | `Ctrl+A` | Command palette |
 | Clear the selection | `Esc` | None |
@@ -90,8 +90,8 @@ Type a fret number with the digit keys. For a fret above 9, type both digits qui
 | Tenuto | `Shift+Minus` | **Note > Tenuto** |
 | Shift the note up or down a semitone | `Shift+Up` or `Shift+Down` | **Note > Shift pitch up (semitone)** or **Note > Shift pitch down (semitone)** |
 | Move the note to the next higher or lower string, keeping its pitch (on an empty spot, the cursor moves) | `Alt+Up` or `Alt+Down` | **Note > Move to higher string** or **Note > Move to lower string** |
-| Chord name | `A` | **Effects > Chord…** |
-| Text above a beat | `T` | **Effects > Text…** |
+| Chord name | `A` | **Insert > Chord…** |
+| Text above a beat | `T` | **Insert > Text…** |
 
 ## Techniques
 
@@ -118,19 +118,19 @@ Each technique key switches the technique on, and pressing it again switches it 
 
 | Action | Keys | Menu path |
 |---|---|---|
-| Time signature | `Ctrl+Shift+T` | **Bar > Time signature…** |
-| Key signature | `Ctrl+K` | **Bar > Key signature…** |
+| Time signature | `Ctrl+Shift+T` | **Insert > Time signature change…** |
+| Key signature | `Ctrl+K` | **Insert > Key signature change…** |
 | Clef | `K` | **Bar > Clef** |
-| Repeat start | `Left bracket` | **Bar > Repeat open** |
-| Repeat end | `Right bracket` | **Bar > Repeat close…** |
-| Directions and endings | `D` | **Bar > Directions / ending…** |
-| Repeat the selected bars | `Ctrl+Shift+R` | **Bar > Repeat selection as bars** |
-| Insert a bar | `Ctrl+Insert` | **Bar > Insert bar** |
+| Repeat start | `Left bracket` | **Insert > Repeat / ending > Repeat open** |
+| Repeat end | `Right bracket` | **Insert > Repeat / ending > Repeat close…** |
+| Directions and endings | `D` | **Insert > Repeat / ending > Directions / ending…** |
+| Repeat the selected bars | `Ctrl+Shift+R` | **Edit > Repeat selection as bars** |
+| Insert a bar | `Ctrl+Insert` | **Insert > Bar > Before selected** |
 | Delete the bar | `Ctrl+Delete` | **Bar > Delete bar** |
-| Add a section at the cursor bar | `M` | **Sections > Add section…** |
+| Add a section at the cursor bar | `M` | **Insert > Section…** |
 | Open the section editor | `Shift+Insert` | **Bar > Section…** |
 | Mix table | `F10` | Command palette |
-| Check that every bar adds up | `F4` | **Tools > Check bar duration** |
+| Check that every bar adds up | `F4` | **Bar > Check bar duration** |
 | Track properties | `F6` | **Track > Properties…** |
 | Add a track | `Ctrl+Shift+Insert` | Command palette |
 | Delete the track | `Ctrl+Shift+Delete` | **Track > Delete track** |
@@ -141,14 +141,14 @@ Each technique key switches the technique on, and pressing it again switches it 
 
 | Action | Keys | Menu path |
 |---|---|---|
-| Play or pause | `Space` | **Sound > Play / pause** |
-| Play from the start | `Shift+Space` | **Sound > Play from beginning** |
+| Play or pause | `Space` | The Play button on the transport bar |
+| Play from the start | `Shift+Space` | The Rewind button on the transport bar |
 | Stop | `Ctrl+Full stop` | The **Stop** button |
 | Loop | `F9` | The **Loop** button |
 | Speed up or slow down | `Ctrl+Alt+Up` or `Ctrl+Alt+Down` | Command palette |
 | Back to 100% speed | `Ctrl+Alt+0` | Command palette |
-| Metronome on or off | No default key | **Tools > Metronome** |
-| Count-in on or off | No default key | **Tools > Count-in** |
+| Metronome on or off | No default key | the Metronome button on the transport bar |
+| Count-in on or off | No default key | the Count-in button on the transport bar |
 | Record | `Ctrl+R` | The **Record** button |
 | Snap clips on or off | `Alt+S` | The snap button in the timeline header |
 

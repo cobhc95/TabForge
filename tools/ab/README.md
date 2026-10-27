@@ -12,9 +12,9 @@ so earlier runs are never clobbered. It then runs `dotnet test ... --filter Pari
 
 ## Files
 
-- `Source/tests/TabForge.Avalonia.Tests/ParityShotMap.cs`: one entry per shot base: the Avalonia window or pane, its DIP size (from the WPF
+- `Source/tests/TabForge.Avalonia.Tests/Capture/ParityShotMap.cs`: one entry per shot base: the Avalonia window or pane, its DIP size (from the WPF
   report), the state it reproduces, or the reason it has no twin.
-- `Source/tests/TabForge.Avalonia.Tests/ParityShotsTests.cs`: renders each mapped shot to `%TEMP%\tf-ab\avalonia\<shot>.png` in the shot's theme,
+- `Source/tests/TabForge.Avalonia.Tests/Capture/ParityShotsTests.cs`: renders each mapped shot to `%TEMP%\tf-ab\avalonia\<shot>.png` in the shot's theme,
   and writes `%TEMP%\tf-ab\missing.txt` (`shot<TAB>reason`). `EveryManifestShotHasAMappingAndMissingShotsAreListed` fails if a manifest shot has no entry.
 - `Source/tools/ab/compare.py`: outputs below.
 

@@ -1,3 +1,4 @@
+using TabForge.Platform.Contracts;
 namespace TabForge.Playback;
 
 public sealed class MidiOutputDeviceInfo
@@ -76,7 +77,7 @@ public sealed class SharedMidiOutput : IMidiOutput
 public sealed class WinMmMidiOutput : IMidiOutput
 {
     /// <summary>The name of the Microsoft MIDI Mapper entry (device id -1), the first entry of every device list.</summary>
-    public const string MapperName = "Microsoft MIDI Mapper (default)";
+    public const string MapperName = IMidiDevices.MapperName;
 
     private readonly IMidiDevices _devices;
     private readonly Dictionary<int, IntPtr> _handles = new();
@@ -88,8 +89,8 @@ public sealed class WinMmMidiOutput : IMidiOutput
     {
         get
         {
-            var list = new List<MidiOutputDeviceInfo> { new() { DeviceId = -1, Name = MapperName } };
-            if (!OperatingSystem.IsWindows()) return list;
+            var list = new List<MidiOutputDeviceInfo> { new() { DeviceId = -1, Name = _devices.DefaultDeviceName } };
+            if (!_devices.IsSupported) return list;
             var count = _devices.OutputDeviceCount();
             for (uint i = 0; i < count; i++)
             {
@@ -119,7 +120,7 @@ public sealed class WinMmMidiOutput : IMidiOutput
         {
             if (_handles.TryGetValue(deviceId, out var existing)) return existing;
         }
-        if (!OperatingSystem.IsWindows()) return IntPtr.Zero;
+        if (!_devices.IsSupported) return IntPtr.Zero;
         var raw = deviceId < 0 ? 0xFFFFFFFFu : (uint)deviceId;
         var handle = _devices.OpenOutput(raw);
         if (handle == IntPtr.Zero) return IntPtr.Zero;

@@ -5,7 +5,7 @@ Export of a song to audio files.
 ## How to change me
 1. Entry files (this folder, shared by both apps): `RenderJob.cs`, `RenderSpecBuilder.cs`, and the settings they read, `RenderSettings.cs`. The engine sync they apply is `Audio/EngineSongSync.cs`; each app passes its own `Restore` and `ConfirmIncomplete` (WPF `Views/RenderWindow.cs`, Avalonia `Views/AvaloniaRenderRunner.cs`).
 2. Owner class: `RenderJob` (run), `RenderSpecBuilder` (request).
-3. Tests to run: `TestRenderBarRanges`, `TestGainRenderHash`, `TestRenderGuardContainment` (full-suite build), plus `--areas architecture,hygiene` (see the test box in `Source/docs/TESTING.md`).
+3. Tests to run: `TestRenderBarRanges`, `TestGainRenderHash`, `TestRenderGuardContainment` (full-suite build), plus `--areas architecture,hygiene` (see the test box in `Source/docs/guides/TESTING.md`).
 4. Docs to update: `CHANGELOG.md`, `TOOLS_AND_HOTKEYS.md` if a command changes.
 
 ## Key types

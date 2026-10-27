@@ -72,7 +72,7 @@ try {
     }
 
     if (Test-Path -LiteralPath $Log) { Remove-Item -LiteralPath $Log -Force }
-    $runArgs = '--profile "' + $profileDir + '" --selftest "' + $Log + '" --only ' + $Test
+    $runArgs = '--selftest "' + $Log + '" --profile "' + $profileDir + '" --only ' + $Test
     $code = Invoke-Timed -File $exe -Arguments $runArgs -Seconds $TimeoutSec
     if ($code -eq 124) { Write-Host "Timed out after $TimeoutSec s and killed: $Test"; exit 124 }
 

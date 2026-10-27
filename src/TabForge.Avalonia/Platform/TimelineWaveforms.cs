@@ -130,7 +130,7 @@ public sealed partial class TimelineWaveforms
         var half = box.Height / 2 - HalfHeightMargin;
         var loops = ClipLoop.Loops(clip);
         var period = ClipLoop.PeriodSec(clip);
-        var columns = (int)(span.To - span.From);
+        var columns = ClipGesturePresenter.WaveColumns(span);
         var heights = new double[columns];
         for (var i = 0; i < columns; i++)
         {

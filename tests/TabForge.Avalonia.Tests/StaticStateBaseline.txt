@@ -1,27 +1,11 @@
-# Reviewed static-state baseline (shrink-only). Counts per file; reseeding strips these comments, so keep them.
-# Reviewed 2026-10: the extended rule (readonly mutable-typed fields: List/Dictionary/HashSet/Queue/Stack/Concurrent*/
-#   ConditionalWeakTable/StringBuilder/arrays; get-only props of those types; private-set props; static events; non-readonly Lazy)
-#   added ~290 hits. They are write-once lookup tables, lock/queue plumbing and process-wide caches filled at type init and
-#   never reassigned; passing each in as a dependency is not small/safe. Specific reviewed cases:
-#   HoverSurfaces' four Lazy tables (re-created by Invalidate on palette publish; process-wide theme cache),
-#   WaveformCache MediaFoundationStarted (process-wide OS init),
-#   EditorWindows WithOpenWindows (keeps an editor manager alive while Win32 calls its native windows' WndProc; emptied when the last window closes).
-# DJ4: UserPaths keeps only ProfileRoot (the self-test temp profile is a SelfTestProfile instance, disposed by Program.RunSelfTest); MixEngine.SynthOff is owned by EngineSession;
-#   AudioEngineClient path-offset state is per client; the unused ShowNothingArmed modal is gone. Remaining D entries (process-wide facades/events, theme and playback files) are deliberate, see the reviewed cases above.
-# GMS: GmSynth keeps no static mutable state: its tuning values are readonly (IReadOnlyList / IReadOnlyDictionary tables), each GmSynth owns its synthesizer and channel state;
-#   the converted sound bank in DlsToSoundFont stays process-wide by design (immutable after load, thread-safe Lazy).
-# DJ1: the static EngineLog facade and the static EngineThreads queue / flags are gone: EngineLogWriter and EngineThreads are instances owned by the engine session
-#   (EngineHost.Run / the headless harness, PluginHostMain and PluginInfoProbe each create their own). No static log call site remains; the shared ClipPlayer disk thread
-#   (DiskStreamer, process-wide by design) writes through each player's own log. AudioThreadSetup keeps only a [ThreadStatic] MMCSS handle (per OS thread, not session state).
-# Tuple-typed statics fix: the classifier used to read a tuple type's paren as a method, so tuple arrays/dictionaries were uncounted; ~35 existing write-once tuple tables (e.g. LandingHalos, catalogue rows) were seeded here as reality, none new.
 Source/src/TabForge.Audio.Contracts/ClipPathGuard.cs|2
-Source/src/TabForge.Audio.Contracts/EngineProtocol.cs|1
 Source/src/TabForge.Audio.Contracts/EngineFrames.cs|1
+Source/src/TabForge.Audio.Contracts/EngineProtocol.cs|1
 Source/src/TabForge.Audio.Contracts/NativeTimer.cs|2
 Source/src/TabForge.Audio.Contracts/NoteNames.cs|2
 Source/src/TabForge.AudioEngine/Audio/ClipPlayer.cs|6
 Source/src/TabForge.AudioEngine/Editors/EditorWindows.cs|1
-Source/src/TabForge.AudioEngine/EngineHost.cs|6
+Source/src/TabForge.AudioEngine/Host/EngineHost.cs|6
 Source/src/TabForge.AudioEngine/Isolation/PluginHostLink.cs|1
 Source/src/TabForge.AudioEngine/Midi/Processors/GeneratorProcessors.cs|1
 Source/src/TabForge.AudioEngine/Midi/Processors/ScaleProcessors.cs|1
@@ -31,7 +15,7 @@ Source/src/TabForge.AudioEngine/Plugins/Vst2Plugin.cs|3
 Source/src/TabForge.AudioEngine/Plugins/Vst2TestEffect.cs|13
 Source/src/TabForge.AudioEngine/Plugins/Vst3ClassInfo.cs|1
 Source/src/TabForge.AudioEngine/Plugins/Vst3Plugin.cs|1
-Source/src/TabForge.Avalonia/MainWindowOptionsMenu.cs|1
+Source/src/TabForge.Avalonia/MainWindow/Menus/MainWindowOptionsMenu.cs|1
 Source/src/TabForge.Avalonia/Platform/AvaloniaFormControlStyles.cs|2
 Source/src/TabForge.Avalonia/Platform/AvaloniaScoreClipboard.cs|2
 Source/src/TabForge.Avalonia/Platform/AvaloniaSingleInstance.cs|1
@@ -44,8 +28,8 @@ Source/src/TabForge.Avalonia/Platform/ToolIconArt.cs|3
 Source/src/TabForge.Avalonia/Platform/TrackHeaderColumn.cs|2
 Source/src/TabForge.Avalonia/Platform/TrackIconArt.cs|2
 Source/src/TabForge.Avalonia/Platform/TransportIconArt.cs|2
-Source/src/TabForge.Avalonia/PreviewToolsMenu.cs|1
-Source/src/TabForge.Avalonia/Program.cs|1
+Source/src/TabForge.Avalonia/MainWindow/Menus/PreviewToolsMenu.cs|1
+Source/src/TabForge.Avalonia/App/Program.cs|1
 Source/src/TabForge.Avalonia/SelfTests/Architecture/SelfTestArchitectureBudget.cs|1
 Source/src/TabForge.Avalonia/SelfTests/Hygiene/SelfTestDocsConsistency.cs|6
 Source/src/TabForge.Avalonia/SelfTests/Hygiene/SelfTestSourceHygiene.cs|1
@@ -61,7 +45,7 @@ Source/src/TabForge.Avalonia/SelfTests/SelfTestRelease.cs|3
 Source/src/TabForge.Avalonia/SelfTests/SelfTestRequirements.cs|4
 Source/src/TabForge.Avalonia/SelfTests/SelfTestTiming.cs|2
 Source/src/TabForge.Avalonia/Shell/WindowChromeFactory.cs|1
-Source/src/TabForge.Avalonia/ThemeSettingsBinding.cs|1
+Source/src/TabForge.Avalonia/Settings/ThemeSettingsBinding.cs|1
 Source/src/TabForge.Avalonia/Transport/AvaloniaEngineEvents.cs|1
 Source/src/TabForge.Avalonia/Views/KeyboardModeBar.cs|1
 Source/src/TabForge.Avalonia/Views/MixTableWindow.cs|1
@@ -73,7 +57,7 @@ Source/src/TabForge.Avalonia/Views/Presets/PresetManager.cs|2
 Source/src/TabForge.Avalonia/Views/TransportPopups/ClickSettingsPopups.cs|2
 Source/src/TabForge.Avalonia/Views/TransportPopups/LoopSettingsPopup.cs|2
 Source/src/TabForge.Avalonia/Views/ViewTempoMenus.cs|4
-Source/src/TabForge.Avalonia/WindowUiScale.cs|5
+Source/src/TabForge.Avalonia/Metrics/WindowUiScale.cs|5
 Source/src/TabForge.Core/Audio/RoutedMidiOutput.cs|2
 Source/src/TabForge.Core/Audio/WaveformCache.cs|1
 Source/src/TabForge.Core/Audio/WindowsPathOffset.cs|1
@@ -98,6 +82,7 @@ Source/src/TabForge.Core/Models/SongProject.cs|1
 Source/src/TabForge.Core/Platform/Controls/KnobValueParser.cs|1
 Source/src/TabForge.Core/Platform/Theme/InstrumentBadge.cs|1
 Source/src/TabForge.Core/Platform/Theme/UiStrokes.cs|1
+Source/src/TabForge.Core/Platform/Windows/DxgiCom.cs|1
 Source/src/TabForge.Core/Playback/PlaybackEngine.cs|2
 Source/src/TabForge.Core/Playback/PlaybackOrder.Structure.cs|1
 Source/src/TabForge.Core/Plugins/ChainStateStore.cs|1
@@ -122,54 +107,51 @@ Source/src/TabForge.Core/Presets/FullDemoSong/FullDemoSongFactory.Notes.cs|5
 Source/src/TabForge.Core/Presets/FullDemoSong/FullDemoSongFactory.Rhythm.cs|4
 Source/src/TabForge.Core/Presets/FullDemoSong/FullDemoSongFactory.Skeleton.cs|3
 Source/src/TabForge.Core/Presets/FullDemoSong/FullDemoSongFactory.cs|1
-Source/src/TabForge.Core/Rendering/RenderJob.cs|1
 Source/src/TabForge.Core/Score/Effects/EffectPresetStore.cs|5
 Source/src/TabForge.Core/Score/PlaybackGlowIntensity.cs|1
 Source/src/TabForge.Core/Score/ScoreMarkText.cs|1
 Source/src/TabForge.Core/Score/ScoreText.cs|2
 Source/src/TabForge.Core/Score/StaffNotationGeometry.cs|3
-Source/src/TabForge.Core/Services/AlphaTabBoundary.cs|1
-Source/src/TabForge.Core/Services/AppSettingsStore.cs|1
-Source/src/TabForge.Core/Services/BandSettings.cs|4
-Source/src/TabForge.Core/Services/BarGrid.cs|1
-Source/src/TabForge.Core/Services/BarTiming.cs|2
-Source/src/TabForge.Core/Services/DrumMaps.cs|1
-Source/src/TabForge.Core/Services/EditCommands.Notes.cs|2
-Source/src/TabForge.Core/Services/EditingSettings.cs|1
+Source/src/TabForge.Core/Services/Import/AlphaTabBoundary.cs|1
+Source/src/TabForge.Core/Services/Settings/AppSettingsStore.cs|1
+Source/src/TabForge.Core/Services/Settings/BandSettings.cs|4
+Source/src/TabForge.Core/Services/Bars/BarGrid.cs|1
+Source/src/TabForge.Core/Services/Bars/BarTiming.cs|2
+Source/src/TabForge.Core/Services/Midi/DrumMaps.cs|1
+Source/src/TabForge.Core/Services/Editing/EditCommands.Notes.cs|2
+Source/src/TabForge.Core/Services/Settings/EditingSettings.cs|1
 Source/src/TabForge.Core/Services/Features/FeatureSettingsSources.cs|1
-Source/src/TabForge.Core/Services/FileAssociations.cs|1
-Source/src/TabForge.Core/Services/FileTypes.cs|6
-Source/src/TabForge.Core/Services/GeneralMidi.cs|1
-Source/src/TabForge.Core/Services/GuitarProBendCurve.cs|2
-Source/src/TabForge.Core/Services/GuitarProImportGuard.cs|1
-Source/src/TabForge.Core/Services/GuitarProImporter.cs|2
-Source/src/TabForge.Core/Services/GuitarProReflection.cs|1
-Source/src/TabForge.Core/Services/GuitarProTrackConverter.cs|1
-Source/src/TabForge.Core/Services/HotkeyCatalog.cs|4
-Source/src/TabForge.Core/Services/ImportPlausibility.cs|1
-Source/src/TabForge.Core/Services/InstrumentCatalog.cs|2
-Source/src/TabForge.Core/Services/KeyNames.cs|2
+Source/src/TabForge.Core/Services/Files/FileAssociations.cs|1
+Source/src/TabForge.Core/Services/Files/FileTypes.cs|6
+Source/src/TabForge.Core/Services/Midi/GeneralMidi.cs|1
+Source/src/TabForge.Core/Services/Import/GuitarProBendCurve.cs|2
+Source/src/TabForge.Core/Services/Import/GuitarProImportGuard.cs|1
+Source/src/TabForge.Core/Services/Import/GuitarProImporter.cs|2
+Source/src/TabForge.Core/Services/Import/GuitarProReflection.cs|1
+Source/src/TabForge.Core/Services/Import/GuitarProTrackConverter.cs|1
+Source/src/TabForge.Core/Services/Hotkeys/HotkeyCatalog.cs|4
+Source/src/TabForge.Core/Services/Import/ImportPlausibility.cs|1
+Source/src/TabForge.Core/Services/Instruments/InstrumentCatalog.cs|2
+Source/src/TabForge.Core/Services/Hotkeys/KeyNames.cs|2
 Source/src/TabForge.Core/Services/Log/Trace.cs|2
-Source/src/TabForge.Core/Services/MediaAccess.cs|6
-Source/src/TabForge.Core/Services/MediaPathPolicy.cs|3
-Source/src/TabForge.Core/Services/MusicTheoryService.cs|3
-Source/src/TabForge.Core/Services/MusicTime.cs|1
-Source/src/TabForge.Core/Services/MusicXmlExportService.cs|5
-Source/src/TabForge.Core/Services/NoteMapper.cs|2
-Source/src/TabForge.Core/Services/PluginSettings.cs|3
-Source/src/TabForge.Core/Services/SettingsCatalog.cs|5
-Source/src/TabForge.Core/Services/SettingsColor.cs|1
-Source/src/TabForge.Core/Services/SingleInstanceService.cs|1
-Source/src/TabForge.Core/Services/TimelineActivityRules.cs|1
-Source/src/TabForge.Core/Services/TimelineClips.cs|1
-Source/src/TabForge.Core/Services/TimelineSettings.cs|10
-Source/src/TabForge.Core/Services/TrackSetup.Convert.cs|1
-Source/src/TabForge.Core/Services/TuningPresets.cs|8
-Source/src/TabForge.Core/Services/UiMotion.cs|2
-Source/src/TabForge.Core/Services/UserPaths.cs|1
-Source/src/TabForge.Core/Services/UserTemplates.cs|1
-Source/src/TabForge.Core/Services/Video/DxgiCom.cs|1
+Source/src/TabForge.Core/Services/Media/MediaAccess.cs|6
+Source/src/TabForge.Core/Services/Media/MediaPathPolicy.cs|3
+Source/src/TabForge.Core/Services/Music/MusicTheoryService.cs|3
+Source/src/TabForge.Core/Services/Music/MusicTime.cs|1
+Source/src/TabForge.Core/Services/Export/MusicXmlExportService.cs|5
+Source/src/TabForge.Core/Services/Editing/NoteMapper.cs|2
+Source/src/TabForge.Core/Services/Settings/PluginSettings.cs|3
+Source/src/TabForge.Core/Services/Settings/SettingsCatalog.cs|5
+Source/src/TabForge.Core/Services/Settings/SettingsColor.cs|1
+Source/src/TabForge.Core/Services/Files/SingleInstanceService.cs|1
+Source/src/TabForge.Core/Services/Timeline/TimelineActivityRules.cs|1
+Source/src/TabForge.Core/Services/Clips/TimelineClips.cs|1
+Source/src/TabForge.Core/Services/Settings/TimelineSettings.cs|10
+Source/src/TabForge.Core/Services/Tracks/TrackSetup.Convert.cs|1
+Source/src/TabForge.Core/Services/Instruments/TuningPresets.cs|8
+Source/src/TabForge.Core/Services/App/UiMotion.cs|2
+Source/src/TabForge.Core/Services/Files/UserPaths.cs|1
+Source/src/TabForge.Core/Services/Project/UserTemplates.cs|1
 Source/src/TabForge.Core/Services/Video/LiveVideoSettings.cs|3
-Source/src/TabForge.Core/Services/Video/VideoEncoder.cs|1
 Source/src/TabForge.Core/Services/Video/VideoEncoderOptions.cs|1
 Source/src/TabForge.Core/Views/EffectEditors/OrnamentEdits.cs|3

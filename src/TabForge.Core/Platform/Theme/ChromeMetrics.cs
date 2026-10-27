@@ -101,4 +101,7 @@ public static class ChromeMetrics
 
     /// <summary>How often (ms) the strip's cents text may change.</summary>
     public const double LiveStripTextIntervalMs = 250, LiveStripNameMaxWidth = 160;
+
+    /// <summary>The generic plug-in parameter panel: the name and value columns of a row, the gap beside parts, the search box width, the slider's least width and how often (ms) the values are read while the panel is open.</summary>
+    public const double ParamNameWidth = 190, ParamValueWidth = 110, ParamGap = 6, ParamSearchWidth = 240, ParamSliderMinWidth = 120, ParamPollMs = 500;
 }

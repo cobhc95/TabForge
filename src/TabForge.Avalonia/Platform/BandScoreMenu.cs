@@ -58,6 +58,12 @@ public sealed class BandScoreMenu : IMenuCommandRunner
     /// <summary>The band lane zoom (1 = the zoom at which three cards fit).</summary>
     public double LaneZoom => BandChoices.ClampZoom(_band().LaneZoom);
 
+    /// <summary>The scale on a row's minimum height (the "Band row minimum height" row).</summary>
+    public double RowMinScale => BandChoices.RowMinScale(_band().RowMinHeight);
+
+    /// <summary>The stored "Band row minimum height" choice (Small, Medium or Large).</summary>
+    public string RowMinHeightChoice => BandChoices.NormalizeRowMin(_band().RowMinHeight);
+
     /// <summary>The menu state the band settings hold.</summary>
     public ScoreEmptyState State()
     {

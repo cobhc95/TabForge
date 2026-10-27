@@ -16,6 +16,7 @@ public static unsafe class Vst3ClassInfo
     {
         Vst2Plugin v => new(LoadedPluginInfo.Vst2, unchecked((uint)v.UniqueId), "", v.DeclaredInputs, v.DeclaredOutputs, v.UsesChunks, v.Vendor, v.ProductName),
         Vst3Plugin v when v.IsLive && Read(v.Path, v.ClassIndex) is { } c => new(LoadedPluginInfo.Vst3, 0, c.ClassId, -1, -1, true, c.Vendor, c.Name),
+        Clap.ClapPlugin c => new(LoadedPluginInfo.Clap, 0, c.Descriptor.Id, -1, -1, true, c.Vendor, c.ProductName),
         _ => LoadedPluginInfo.Unavailable,
     };
 

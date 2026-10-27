@@ -159,7 +159,7 @@ public sealed class TrackHeaderColumn : Control
         _pressedCell = null;   // a press whose release never arrived (a dialog opened over it) must not keep the cell dark
         HoverCell = null;      // rows may have changed under the pointer: the next move finds the cell again
         _song = song;
-        foreach (var gone in _inputLevels.Keys.Where(track => !song.Tracks.Contains(track)).ToList()) _inputLevels.Remove(gone);
+        foreach (var gone in _inputLevels.Keys.Where(track => !song.Tracks.Contains(track)).ToList()) { _inputLevels.Remove(gone); _inputHolds.Remove(gone); }
         InvalidateMeasure();
         InvalidateVisual();
     }
@@ -167,15 +167,21 @@ public sealed class TrackHeaderColumn : Control
     // The input peak (0..1) of each armed track, as the armed sub-row's meter shows it. Key: the song's track; ceiling: the song's tracks (pruned on
     // Reload); thread: UI only.
     private readonly Dictionary<TrackModel, double> _inputLevels = new();
+    // The peak-hold tick of a MIDI-armed track's meter; same key, ceiling and thread as the levels (absent: no tick).
+    private readonly Dictionary<TrackModel, double> _inputHolds = new();
 
     /// <summary>The input peak of a track (0..1) the sub-row's meter shows; 0 when none was shown.</summary>
     public double InputLevelOf(TrackModel track) => _inputLevels.TryGetValue(track, out var level) ? level : 0;
 
-    /// <summary>Shows the input peak of an armed track in its sub-row's meter; repaints the column only when the level changed.</summary>
-    public void ShowInputLevel(TrackModel track, double level)
+    /// <summary>The peak-hold tick (0..1) the sub-row's meter shows; 0 when none.</summary>
+    public double InputHoldOf(TrackModel track) => _inputHolds.TryGetValue(track, out var hold) ? hold : 0;
+
+    /// <summary>Shows the input peak of an armed track in its sub-row's meter, with the peak-hold tick of a MIDI input; repaints the column only when either changed.</summary>
+    public void ShowInputLevel(TrackModel track, double level, double hold = 0)
     {
-        if (InputLevelOf(track) == level) return;
+        if (InputLevelOf(track) == level && InputHoldOf(track) == hold) return;
         _inputLevels[track] = level;
+        _inputHolds[track] = hold;
         InvalidateVisual();
     }
 
@@ -221,7 +227,7 @@ public sealed class TrackHeaderColumn : Control
     /// <summary>The cell's box in column coordinates (not offset by a row drag); the master row's cells sit in the master lane's height.</summary>
     public Rect CellRect(int row, TrackRowCells.Cell cell) => row == MasterRow
         ? TrackRowCells.Box(cell, GridTop, _timeline.MasterLaneHeight, NameColumnWidth)
-        : TrackRowCells.Box(cell, _timeline.RowTop(row), _timeline.BaseBandHeightOf(row), NameColumnWidth);
+        : TrackRowCells.Box(cell, _timeline.RowTop(row), _timeline.HeaderLineHeightOf(row), NameColumnWidth);
 
     /// <summary>The row whose name cell holds <paramref name="p"/> (header coordinates), or -1.</summary>
     public int NameRowAt(Point p)
@@ -306,7 +312,7 @@ public sealed class TrackHeaderColumn : Control
         TrackRowTint.Fill(d, track, light, _timeline.TrackTintPercent, 0, top, ColumnWidth, height);
         TrackRowTint.Stripe(d, track, light, 0, top, height);
         if (light && selected) TimelinePlayheadMarks.DrawSelectedBar(d, ink, top, height);
-        if (_timeline.IsArmed(row)) ArmedRowPainter.Draw(d, ink, track, top + _timeline.BaseBandHeightOf(row), InputLevelOf(track));
+        if (_timeline.IsArmed(row)) ArmedRowPainter.Draw(d, ink, track, top + _timeline.HeaderLineHeightOf(row), InputLevelOf(track), InputHoldOf(track));
         var text = ink("TextPrimary");
         if (dimmed) text = text with { A = TrackRowTint.MutedAlpha(_timeline.MutedTrackDimPercent) };
         Rect Box(TrackRowCells.Cell cell) => CellRect(row, cell).Translate(new Vector(0, dy));
@@ -315,20 +321,20 @@ public sealed class TrackHeaderColumn : Control
         TrackRowCells.DrawKind(d, ink, kindBox, PaintOf(row, TrackRowCells.Cell.Kind));
         var (kindX, kindWidth) = TrackRowCells.Column("kind", NameColumnWidth);
         var key = track.IsAudio ? TrackIconKeys.AudioKey : TrackIconKeys.KeyFor(track.MidiProgram, track.MidiChannel == 9);
-        var iconSize = Math.Min(IconSize * IconSizing.Scale, Math.Min(kindWidth, _timeline.BaseBandHeightOf(row)));   // Icon size (Appearance) scales the track icon
-        TrackIconArt.Draw(d, key, kindX + (kindWidth - iconSize) / 2, top + (_timeline.BaseBandHeightOf(row) - iconSize) / 2, iconSize, text,
+        var iconSize = Math.Min(IconSize * IconSizing.Scale, Math.Min(kindWidth, _timeline.HeaderLineHeightOf(row)));   // Icon size (Appearance) scales the track icon
+        TrackIconArt.Draw(d, key, kindX + (kindWidth - iconSize) / 2, top + (_timeline.HeaderLineHeightOf(row) - iconSize) / 2, iconSize, text,
             dimmed ? ink("TrackSilhouetteAccent") with { A = TrackRowTint.MutedAlpha(_timeline.MutedTrackDimPercent) } : ink("TrackSilhouetteAccent"));
         TrackRowCells.DrawArm(d, ink, Box(TrackRowCells.Cell.Arm), track.RecordArm, PaintOf(row, TrackRowCells.Cell.Arm));
         var (numberX, numberWidth) = TrackRowCells.Column("number", NameColumnWidth);
         var number = d.Text((row + 1).ToString(System.Globalization.CultureInfo.InvariantCulture), Font, 11, ink("TextMuted"), d.PixelsPerDip);
-        d.DrawText(number, numberX + (numberWidth - number.Width) / 2, top + (_timeline.BaseBandHeightOf(row) - number.Height) / 2);
+        d.DrawText(number, numberX + (numberWidth - number.Width) / 2, top + (_timeline.HeaderLineHeightOf(row) - number.Height) / 2);
         var (nameX, nameWidth) = TrackRowCells.Column("name", NameColumnWidth);
         var nameRight = nameX + nameWidth - 4;
         var name = d.Text(track.Name, Font, 13, text, d.PixelsPerDip, weight: selected ? SelectedNameWeight : NameWeight);
         // Only a name wider than its cell is clipped: a clip pushed around every name left the later cells drawn at the wrong scale in a render at a scale other than 1 (a capture, a video frame).
         var clipName = name.Width + 1 > nameRight - (nameX + 4);
-        if (clipName) d.PushClip(nameX + 4, top, Math.Max(0, nameRight - (nameX + 4)), _timeline.BaseBandHeightOf(row));
-        d.DrawText(name, nameX + 4, top + (_timeline.BaseBandHeightOf(row) - name.Height) / 2);
+        if (clipName) d.PushClip(nameX + 4, top, Math.Max(0, nameRight - (nameX + 4)), _timeline.HeaderLineHeightOf(row));
+        d.DrawText(name, nameX + 4, top + (_timeline.HeaderLineHeightOf(row) - name.Height) / 2);
         if (clipName) d.Pop();
         TrackRowCells.DrawFx(d, ink, Box(TrackRowCells.Cell.Fx), Box(TrackRowCells.Cell.FxPower), track.SoundSource == SoundSources.Plugins, track.Rig.Plugins.Count, FxPartOf(row));
         DrawToggle(d, ink, Box(TrackRowCells.Cell.Mute), TrackRowCells.Cell.Mute, track.Mute, PaintOf(row, TrackRowCells.Cell.Mute));

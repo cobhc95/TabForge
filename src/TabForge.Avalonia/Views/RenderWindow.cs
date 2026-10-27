@@ -251,7 +251,7 @@ public sealed class RenderWindow : Window
             _bar.Value = 1;
             var clipped = result.Files.Sum(f => f.ClippedSamples);
             _status.Text = $"Done: {files.Count} file(s), {result.Seconds:0.0} s of audio in {result.ElapsedSeconds:0.0} s ({result.Seconds / Math.Max(0.001, result.ElapsedSeconds):0.#}x realtime)" + (clipped > 0 ? $"; {clipped} samples clipped." : ".");
-            if (_open.IsChecked == true) FolderLauncher.Open(ToolWindowParts.TextOf(_dir));
+            if (_open.IsChecked == true) FolderLauncher.Open(this, ToolWindowParts.TextOf(_dir));
         }
         catch (RenderException ex)
         {
@@ -329,7 +329,7 @@ public sealed class RenderWindow : Window
         _end.Text = (_settings.CustomEndSec > 0 ? _settings.CustomEndSec : 60).ToString("0.###", CultureInfo.InvariantCulture);
         _tail.SelectedIndex = Math.Clamp(_settings.TailMode, 0, 2);
         _tailMs.Text = _settings.TailMs.ToString(CultureInfo.InvariantCulture);
-        _dir.Text = string.IsNullOrWhiteSpace(_settings.Directory) ? Environment.GetFolderPath(Environment.SpecialFolder.MyMusic) : _settings.Directory;
+        _dir.Text = string.IsNullOrWhiteSpace(_settings.Directory) ? TabForge.Platform.AppFolders.Current.Music : _settings.Directory;
         _pattern.Text = string.IsNullOrWhiteSpace(_settings.Pattern) ? "$project" : _settings.Pattern;
         var rateIndex = RenderDialogPresenter.SampleRates.ToList().IndexOf(_settings.SampleRate);
         _rate.SelectedIndex = rateIndex < 0 ? 0 : rateIndex;

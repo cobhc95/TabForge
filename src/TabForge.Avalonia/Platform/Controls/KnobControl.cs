@@ -129,7 +129,7 @@ public sealed class KnobControl : Control
         if (!point.Properties.IsLeftButtonPressed) return;
         e.Handled = true;
         if (e.ClickCount == 2) { BeginTypeValue(); return; }
-        if (e.KeyModifiers.HasFlag(KeyModifiers.Control)) { SetAsEdit(DefaultValue); return; }
+        if (e.KeyModifiers.HasPrimary()) { SetAsEdit(DefaultValue); return; }
         _dragValue = _value;
         _lastPoint = point.Position;
         _lastAngle = double.NaN;

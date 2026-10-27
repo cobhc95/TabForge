@@ -52,12 +52,12 @@ public static class ClipEditService
         return true;
     }
 
-    /// <summary>Sets the copy's start (never before zero) and lane, taking the first free lane when the wanted one overlaps another clip;
-    /// adds the copy to the track and ensures the lane exists.</summary>
-    public static void PlaceCopy(TrackModel track, AudioClip copy, double startSec, int lane)
+    /// <summary>Sets the copy's start (never before zero) and lane, taking the first free lane when the wanted one overlaps another clip (unless
+    /// <paramref name="dodge"/> is off: the copy then stays and the overlap check moves the clip it covers); adds the copy to the track and ensures the lane exists.</summary>
+    public static void PlaceCopy(TrackModel track, AudioClip copy, double startSec, int lane, bool dodge = true)
     {
         copy.StartSec = Math.Max(0, startSec);
-        copy.Lane = track.AudioClips.Any(c => c.Lane == lane && c.Overlaps(copy.StartSec, copy.EndSec) && !ClipLanes.SameTakeGroup(copy, c))
+        copy.Lane = dodge && track.AudioClips.Any(c => c.Lane == lane && c.Overlaps(copy.StartSec, copy.EndSec) && !ClipLanes.SameTakeGroup(copy, c))
             ? ClipLanes.FreeLane(track, copy.StartSec, copy.EndSec, copy, copy.TakeGroupId) : lane;
         ClipLanes.Ensure(track, copy.Lane + 1);
         track.AudioClips.Add(copy);

@@ -52,7 +52,7 @@ internal sealed partial class RecordingPresenter
         IReadOnlyList<TrackModel> captureTracks = capture ?? tracks;
         if (capture is null && !TransportRecording.AnyArmed(tracks))
         {
-            showStatus(TransportRecording.NothingArmedText);
+            WarnNothingArmed(showStatus);
             return;
         }
         // A recording still waiting for its count-in to end has captured nothing: a second Record press cancels it.
@@ -122,7 +122,7 @@ internal sealed partial class RecordingPresenter
         var stopStatus = recording.Toggle(tracks, MediaFolders.ForSong(song.Path));
         showStatus(stopStatus);
         LandMidiTakes(recording, song, landingBase, activePunch, hooks?.MidiOptions?.Invoke());
-        if (activePunch is not null && AudioInputs.IsMidi(activePunch.Track.AudioInput)) hooks?.EndLandingPunch(activePunch);   // its file never arrives
+        if (activePunch is not null && !AudioInputs.HasAudio(activePunch.Track.AudioInput)) hooks?.EndLandingPunch(activePunch);   // its file never arrives
         hooks?.ClipLanded?.Invoke(song);   // the landed MIDI clips are a clip edit: compact and sync as any clip edit does
         hooks?.RowsReload?.Invoke(song);   // always show the landed MIDI lanes/stacks
         // The drawn playhead at the stop is the take's end: keep it, so the cursor and the next Play continue from there.
@@ -258,7 +258,7 @@ internal sealed partial class RecordingPresenter
         if (punch is not null)
         {
             // A MIDI pass replaces its notes even when none were played (the pass becomes empty); an audio pass lands through Recorded.
-            if (!AudioInputs.IsMidi(punch.Track.AudioInput)) return;
+            if (AudioInputs.HasAudio(punch.Track.AudioInput)) return;
             var takes = finished.Where(item => ReferenceEquals(item.Track, punch.Track)).SelectMany(item => item.Clips).ToList();
             DocumentEdits.Run(song, _ => RecordedTakes.ReplaceMidiPass(punch.Track, punch.GroupId, punch.Pass, takes), before, label: punch.UndoLabel);
             return;

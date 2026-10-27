@@ -13,7 +13,7 @@ Three projects. A lower layer never references a higher one; self-tests enforce 
 | Layer | Folder | Holds |
 | --- | --- | --- |
 | Wire contracts | `src/TabForge.Audio.Contracts/` | Protocol types shared by app and engine, no dependencies (`EngineCommand`, `EngineEvent`) |
-| Audio engine | `src/TabForge.AudioEngine/` | A separate process: mixer, synth, plug-in hosting, recorder, offline renderer. Real-time rules: `ARCHITECTURE.md`, section 4 |
+| Audio engine | `src/TabForge.AudioEngine/` | A separate process: mixer, synth, plug-in hosting, recorder, offline renderer. Real-time rules: `docs/architecture/ARCHITECTURE.md`, section 4 |
 | Application | `src/TabForge.Avalonia/` | Everything the user sees, plus the data and logic behind it (below) |
 
 Inside the application project:
@@ -54,7 +54,7 @@ Use these instead of writing a new route.
 - **Subscribe to events.** Through `OwnedSubscriptions`, so a closed window can be collected.
 - **Settings.** One shared `AppSettingsStore`. Bounds in `SettingsValidator`, old files in `SettingsMigration`, rows in `PreferencesWindow`.
 - **Files.** Write with `FilePathPolicy.WriteAtomically`; bound every read with `InputLimits`.
-- **Commands.** Bindable through `HotkeyCatalog`, listed in the presets and in `TOOLS_AND_HOTKEYS.md`. A plain command is one line in `BuildCommands()` (`MainWindow.Commands.cs`); one with conditions or several steps is a case in the `RunHotkey(...)` switch (`MainWindow.Settings.cs`). Steps: `docs/RECIPES.md`.
+- **Commands.** Bindable through `HotkeyCatalog`, listed in the presets and in `docs/guides/TOOLS_AND_HOTKEYS.md`. A plain command is one line in `BuildCommands()` (`MainWindow.Commands.cs`); one with conditions or several steps is a case in the `RunHotkey(...)` switch (`MainWindow.Settings.cs`). Steps: `docs/RECIPES.md`.
 - **New feature.** A module in the feature's own folder implementing `IFeatureModule`, added to `src/TabForge.Core/Services/Features/FeatureRegistry.cs`. The window gets thin hooks only. Steps: `docs/RECIPES.md`, "Add a feature module".
 
 ## Find a feature
@@ -62,10 +62,10 @@ Use these instead of writing a new route.
 1. `docs/FEATURE_MAP.md`: index of features. Each feature's page in `docs/feature-map/` gives main code, pathway and self-tests. `docs/feature-map/files.md` lists every source file by folder with its purpose (generated).
 2. `docs/RECIPES.md`: exact file lists for the usual changes (technique, setting, command, export, engine command, song field, dialog).
 3. `CONTRIBUTING.md`: naming, comment style, test rules, pull request checklist.
-4. `ARCHITECTURE.md`: processes, threads, IPC limits, state ownership, persistence.
+4. `docs/architecture/ARCHITECTURE.md`: processes, threads, IPC limits, state ownership, persistence.
 5. The folder README (purpose, key types, pathway, tests) of the folder you are about to change; the list is under "Folder READMEs".
-5a. Compatibility and format notes: `docs/COMPATIBILITY.md`.
-5b. Symptom to first file, first test and first log: `docs/DEBUG_SYMPTOMS.md`.
+5a. Compatibility and format notes: `docs/reference/COMPATIBILITY.md`.
+5b. Symptom to first file, first test and first log: `docs/guides/DEBUG_SYMPTOMS.md`.
 
 ## Run one test
 
@@ -79,7 +79,7 @@ Start-Process -Wait out-full\TabForge.exe -ArgumentList '--selftest','one.log','
 - `--only <TestName>[,<TestName>]` runs just those tests; `--areas <area>` runs one area. Names: `docs/feature-map/tests.md`.
 - The program prints nothing. Read the last line of the log (`N passed, M failed, K skipped`) and search it for FAIL. The exit code alone is not the result.
 - `--profile <folder>` keeps your own settings untouched. Always use it.
-- A normal build runs only the small basic set (`--selftest <log>`; architecture, hygiene, smoke tests). Narrow tests of the big suite (`tests/TabForge.Avalonia.Tests/`) need the `-p:TabForgeFullSuite=true` build above; the full gate (`--selftest <log> --require ci,document-context` on that build) is for major redesigns only. All headless commands: `docs/DEBUGGING.md`.
+- A normal build runs only the small basic set (`--selftest <log>`; architecture, hygiene, smoke tests). Narrow tests of the big suite (`tests/TabForge.Avalonia.Tests/`) need the `-p:TabForgeFullSuite=true` build above; the full gate (`--selftest <log> --require ci,document-context` on that build) is for major redesigns only. All headless commands: `docs/guides/DEBUGGING.md`.
 
 ## Guard rules
 

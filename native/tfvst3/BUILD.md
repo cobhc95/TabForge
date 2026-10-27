@@ -115,6 +115,15 @@ manual build-bridge workflow (historical: no CI config in this checkout; run by 
 and `Source/native/BUILD_PROVENANCE.md` as they are) builds the bridge from the pinned SDK on the runner with `Source/native/build-tfvst3.ps1`, attests it, and uploads
 `tfvst3.dll` together with `Source/native/BUILD_PROVENANCE.md` (compiler and SHA-256). Those two files are committed as they
 are. `Source/tools/Package-Release.ps1` refuses to package if the DLL's SHA-256 differs from the record. The release is then
-reproducible: see `Source/docs/REPRODUCIBLE_BUILDS.md`.
+reproducible: see `Source/docs/guides/REPRODUCIBLE_BUILDS.md`.
 
 The checked-in DLL has no Authenticode signature.
+
+## macOS and Linux (`posix/`)
+
+`posix/CMakeLists.txt` builds `libtfvst3.so` (Linux) or `libtfvst3.dylib` (macOS) from the same `tfvst3.cpp` and `tfvst3.h`, unchanged, and the same
+pinned SDK commit. `posix/compat/windows.h` stands in for `<windows.h>`; `posix/module_linux.cpp` (dlopen, `ModuleEntry` / `ModuleExit`) and
+`posix/module_mac.mm` (CFBundle, `bundleEntry` / `bundleExit`) load the `.vst3` bundle; `posix/tfvst3_posix.cpp` exports `tfv3_list_classes` and
+`tfv3_create` with the plug-in path as UTF-16, as the C# side passes it. Editors are not hosted on these systems yet. Build with
+`cmake -S Source/native/tfvst3/posix -B build/tfvst3 && cmake --build build/tfvst3` (the `native-ci` workflow does this on Ubuntu and macOS).
+These files have not been compiled on the machine they were written on (Windows); the workflow is their first build.

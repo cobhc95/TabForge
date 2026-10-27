@@ -3,17 +3,18 @@ using System.Text;
 
 namespace TabForge.AudioEngine.Plugins;
 
-// Owns: hosting a VST3 plug-in through tfvst3.dll (preallocated buffers and event array, allocation-free process).
+// Owns: hosting a VST3 plug-in through the tfvst3 shim (tfvst3.dll; libtfvst3.dylib / libtfvst3.so on macOS / Linux; preallocated buffers and event array, allocation-free process).
 
 /// <summary>
 /// Hosts a VST3 plug-in through tfvst3.dll (native\tfvst3, a small C interface over the Steinberg VST3 SDK).
 /// Buffers and the event array are allocated once; <see cref="Process"/> never allocates.
 /// </summary>
-public sealed unsafe class Vst3Plugin : IPluginInstance, IEditorResizeSource, IEditorSizeSink
+public sealed unsafe partial class Vst3Plugin : IPluginInstance, IEditorResizeSource, IEditorSizeSink
 {
-    private const string Lib = "tfvst3.dll";
+    private const string Lib = "tfvst3.dll";   // the name the entry points are declared under; ShimFile is the file of this system
+    private static string ShimFile => OperatingSystem.IsWindows() ? Lib : OperatingSystem.IsMacOS() ? "libtfvst3.dylib" : "libtfvst3.so";
     /// <summary>The shim, loaded only from this program's own folder (a bare name would also be searched on PATH and in the working folder).</summary>
-    private static readonly string LibPath = System.IO.Path.Combine(AppContext.BaseDirectory, Lib);
+    private static readonly string LibPath = System.IO.Path.Combine(AppContext.BaseDirectory, ShimFile);
     private const int MaxEvents = 512;
 
     static Vst3Plugin()
@@ -25,29 +26,6 @@ public sealed unsafe class Vst3Plugin : IPluginInstance, IEditorResizeSource, IE
     [StructLayout(LayoutKind.Sequential)]
     private struct Midi { public int SampleOffset; public byte Status, Data1, Data2, Pad; }
 
-    [DllImport(Lib, CharSet = CharSet.Unicode)] private static extern int tfv3_list_classes(string path, byte* names, int* isInstrument, int max);
-    [DllImport(Lib, CharSet = CharSet.Unicode)] private static extern IntPtr tfv3_create(string path, int classIndex, double sampleRate, int maxBlock, byte* error);
-    [DllImport(Lib)] private static extern int tfv3_process(IntPtr p, float** input, int inChannels, float** output, int outChannels, int frames, Midi* events, int count, double tempo, double ppq, int playing);
-    [DllImport(Lib)] private static extern int tfv3_get_state(IntPtr p, byte* buffer, int capacity);
-    [DllImport(Lib)] private static extern int tfv3_set_state(IntPtr p, byte* data, int size);
-    [DllImport(Lib)] private static extern int tfv3_has_editor(IntPtr p);
-    [DllImport(Lib)] private static extern int tfv3_open_editor(IntPtr p, IntPtr parent, int* width, int* height);
-    [DllImport(Lib)] private static extern void tfv3_close_editor(IntPtr p);
-    // Editor size handshake; an older tfvst3.dll lacks these (see HasEditorApi): the editor then opens as before and never resizes.
-    [DllImport(Lib)] private static extern void tfv3_editor_set_scale(IntPtr p, float scale);
-    [DllImport(Lib)] private static extern int tfv3_editor_poll_resize(IntPtr p, int* width, int* height);
-    [DllImport(Lib)] private static extern void tfv3_editor_set_size(IntPtr p, int width, int height);
-    [DllImport("user32.dll")] private static extern uint GetDpiForWindow(IntPtr hwnd);
-    [DllImport("user32.dll")] private static extern IntPtr GetWindow(IntPtr hwnd, uint cmd);
-    [DllImport(Lib)] private static extern int tfv3_latency(IntPtr p);
-    [DllImport(Lib)] private static extern void tfv3_destroy(IntPtr p);
-    [DllImport(Lib)] private static extern int tfv3_set_offline(IntPtr p, int offline);
-    [DllImport(Lib)] private static extern int tfv3_tail(IntPtr p);
-    // Newer exports (single-serialise state, live reconfigure, musical position); an older tfvst3.dll lacks them (see HasNewApi).
-    [DllImport(Lib)] private static extern int tfv3_process_ex(IntPtr p, float** input, int inChannels, float** output, int outChannels, int frames, Midi* events, int count, double tempo, double ppq, int playing, int timeSigNum, int timeSigDen, double barPositionPpq);
-    [DllImport(Lib)] private static extern int tfv3_state_begin(IntPtr p);
-    [DllImport(Lib)] private static extern int tfv3_state_copy(IntPtr p, byte* buffer, int capacity);
-    [DllImport(Lib)] private static extern int tfv3_set_processing(IntPtr p, double sampleRate, int maxBlock);
 
     /// <summary>
     /// True when the loaded tfvst3.dll has tfv3_process_ex, tfv3_state_begin/copy and tfv3_set_processing. Probed once on the
@@ -71,7 +49,28 @@ public sealed unsafe class Vst3Plugin : IPluginInstance, IEditorResizeSource, IE
         return found;
     });
 
+    /// <summary>True when the loaded tfvst3.dll has tfv3_editor_idle (the feed that keeps plug-in meters and displays moving); probed once on the main thread.</summary>
+    private static readonly Lazy<bool> HasIdleApi = new(() =>
+    {
+        if (!NativeLibrary.TryLoad(LibPath, out var lib)) return false;
+        var found = NativeLibrary.TryGetExport(lib, "tfv3_editor_idle", out _);
+        NativeLibrary.Free(lib);   // release the probe's own reference
+        return found;
+    });
+
+    /// <summary>Runs the shim's internal checks (output-parameter ring, message copy and queueing); 0 = all passed, -1 when this tfvst3.dll lacks them.</summary>
+    internal static int NativeSelfTest() => HasSelfTest.Value ? tfv3_selftest() : -1;
+    private static readonly Lazy<bool> HasSelfTest = new(() =>
+    {
+        if (!NativeLibrary.TryLoad(LibPath, out var lib)) return false;
+        var found = NativeLibrary.TryGetExport(lib, "tfv3_selftest", out _);
+        NativeLibrary.Free(lib);
+        return found;
+    });
+
     private IntPtr _handle;
+    /// <summary>Diagnostics: the native instance pointer (for the editor log lines).</summary>
+    internal IntPtr NativeHandle => _handle;
     private int _maxBlock;
     private readonly int _classIndex;
     /// <summary>Which of the file's audio classes this instance is (see <see cref="Vst3ClassInfo"/>).</summary>
@@ -116,8 +115,9 @@ public sealed unsafe class Vst3Plugin : IPluginInstance, IEditorResizeSource, IE
 
     private readonly EngineLogWriter _log;
 
-    public Vst3Plugin(string path, bool wantInstrument, double sampleRate, int maxBlock, EngineLogWriter log)
+    public Vst3Plugin(string path, bool wantInstrument, double sampleRate, int maxBlock, EngineLogWriter log, IPluginModuleLoader? loader = null)
     {
+        RequireModule(path, loader, OperatingSystem.IsWindows());
         Path = path;
         _log = log;
         _maxBlock = maxBlock;
@@ -137,6 +137,16 @@ public sealed unsafe class Vst3Plugin : IPluginInstance, IEditorResizeSource, IE
         _outPtrs = (float**)NativeMemory.AllocZeroed((nuint)(2 * sizeof(float*)));
         AllocateBuffers(maxBlock);
         _events = (Midi*)NativeMemory.AllocZeroed((nuint)(MaxEvents * sizeof(Midi)));
+    }
+
+    /// <summary>
+    /// On macOS and Linux the shim loads the bundle itself (Contents/MacOS, Contents/&lt;arch&gt;-linux); this asks the module loader first whether the
+    /// bundle has a binary for this system, so a missing or foreign bundle gives a plain message instead of the shim's. Windows: nothing to check (the shim reports).
+    /// </summary>
+    public static void RequireModule(string path, IPluginModuleLoader? loader, bool windows)
+    {
+        if (windows) return;
+        if ((loader ?? new NativePluginModuleLoader()).ResolveBinary(path) is null) throw new FileNotFoundException($"The VST3 plug-in has no module for this system: {path}");
     }
 
     private static IntPtr CreateNative(string path, int classIndex, double sampleRate, int maxBlock)
@@ -332,9 +342,15 @@ public sealed unsafe class Vst3Plugin : IPluginInstance, IEditorResizeSource, IE
     /// <summary>The view asked to resize (resizeView); the editor registry sizes the window and tells the view back through <see cref="SetEditorSize"/>.</summary>
     public event Action<int, int>? ResizeRequested;
 
+    /// <summary>The plug-in asked for a restart (bit mask: 1 latency changed, 2 bus layout changed, 4 reload requested, 8 parameter values changed); raised on the main thread from <see cref="EditorIdle"/>.</summary>
+    public event Action<int>? RestartRequested;
+
     public void EditorIdle()
     {
-        if (!_editorOpen || !HasEditorApi.Value) return;
+        if (!_editorOpen) return;
+        // Processor output parameters (meters, gain reduction) and queued processor -> controller messages reach the editor here.
+        if (HasIdleApi.Value && tfv3_editor_idle(_handle) is var restart and not 0) RestartRequested?.Invoke(restart);
+        if (!HasEditorApi.Value) return;
         SyncScale();
         int w, h;
         if (tfv3_editor_poll_resize(_handle, &w, &h) != 0) ResizeRequested?.Invoke(Math.Max(100, w), Math.Max(60, h));

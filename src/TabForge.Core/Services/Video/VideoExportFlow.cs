@@ -43,18 +43,28 @@ public sealed class VideoExportRequest
     public Action<int, ReadOnlyMemory<byte>>? FrameTap { get; init; }
     /// <summary>Called once with the time spent per phase of the frames (a diagnostics hook).</summary>
     public Action<VideoFrameTimings>? TimingsTap { get; init; }
+    /// <summary>The encoder chosen in the dialog: Auto (the Preferences choice; Media Foundation uses hardware only once it passed the self-test), Hardware or Software.</summary>
+    public string Encoder { get; init; } = VideoEncoderChoices.Auto;
+    /// <summary>A test hook: opens this encoder instead of the factory's (given the staging path and the options the flow chose).</summary>
+    internal Func<string, VideoEncoderOptions, IVideoEncoder>? OpenEncoder { get; init; }
+    /// <summary>A test hook: how often the finish watchdog looks at the encoder's heartbeat.</summary>
+    internal TimeSpan? FinishPoll { get; init; }
+    /// <summary>A test hook: how long a hardware encoder may make no progress before the video is redone in software.</summary>
+    internal TimeSpan? HardwareStall { get; init; }
 }
 
 public sealed record VideoExportResult(int Frames, double Seconds, double ElapsedSeconds);
 
 // File > Export > Video, shared by both apps: renders the song range to audio offline (every track and plug-in, as File > Render does, with the
-// Render dialog's tail so reverb rings out), then draws frame i at time i / fps through the host's frame source and encodes both into an MP4.
-// The video lasts as long as the rendered sound (frames past the range hold its last moment), so no tail or last samples are cut. The MP4 is
-// written to a staging file beside the target and moved over it only on success: a failure or cancel never touches a file that was there.
-// Owns: the order of the steps, the frame clock, the audio hand-off, the staging file and cleanup of the temporary files.
+// no tail: the video ends with the range, not with a ring-out of silence under frozen frames), then draws frame i at time i / fps through the host's frame source and encodes both into an MP4.
+// The video lasts as long as the rendered sound (the range), so no last samples are cut and no frozen frames follow. The MP4 is
+// written to a staging file in the app's temp folder and moved over the target only on success: a failure or cancel never touches a file that
+// was there. The encoder follows live recording's rule (Auto: hardware only after the self-test passed); a hardware encoder that makes no
+// progress for 15 s is given up on and the video is redone with the software encoder. The UI thread never waits for the encoder.
+// Owns: the order of the steps, the frame clock, the audio hand-off, the staging files, the hardware-stall fallback and the "video export" log lines.
 // Does not own: the range choice (the window), drawing (IVideoFrameSource) or encoding (VideoEncoder).
-// Tests: VideoExportParityTests, TabForge.Avalonia.Tests.VideoExportParityTests.
-public static class VideoExportFlow
+// Tests: VideoExportFinishTests, VideoExportCancelTests, TabForge.Avalonia.Tests.VideoExportParityTests.
+public static partial class VideoExportFlow
 {
     private const int AudioRate = 48000;
     private const int YieldEveryMs = 40;   // the longest the UI thread is held between yields
@@ -68,15 +78,19 @@ public static class VideoExportFlow
         var duration = Math.Max(0, r.EndMs - r.StartMs);
         if ((int)Math.Round(duration / 1000.0 * r.Fps) < 1) throw new InvalidOperationException("The chosen range is empty.");
         var jobId = Guid.NewGuid().ToString("N")[..8];
-        var wav = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "TabForge-video-" + jobId + ".wav");
-        var staging = RenderStaging.TempPath(r.Path, jobId);
+        var staging = StagingPath(r.Path, jobId);
+        var wav = System.IO.Path.Combine(StagingFolder, "TabForge-video-" + jobId + ".wav");
+        var written = staging;
+        Log($"begin {r.Spec.Width}x{r.Spec.Height} {r.Fps} fps, range {r.StartMs:0}-{r.EndMs:0} ms, encoder choice {r.Encoder}, target {r.Path}, staging {staging}, UI {VideoEncoderFinisher.ThreadText()}");
         int frames;
         try
         {
+            Directory.CreateDirectory(StagingFolder);
+            CleanStale(StagingFolder);
             var render = r.Settings.Render;
             var settings = new RenderSettings
             {
-                Format = 2, TailMode = render.TailMode, TailMs = render.TailMs, SampleRate = AudioRate, Mono = false,
+                Format = 2, TailMode = (int)RenderTailMode.None, TailMs = 0, SampleRate = AudioRate, Mono = false,
                 SingleThread = render.SingleThread, RealtimePace = render.RealtimePace, SafetyLimiter = render.SafetyLimiter,
             };
             var request = new RenderRequest
@@ -87,13 +101,15 @@ public static class VideoExportFlow
             var audioProgress = new Progress<RenderProgressInfo>(p => progress?.Report(VideoExportProgress.Audio(p.Fraction)));
             await RenderJob.RunAsync(request, audioProgress, cancel, r.Engine);
             frames = FramesFor(WavFloatReader.FramesIn(wav), r.Fps);
-            await EncodeAsync(r, wav, staging, frames, progress, cancel);
+            written = await EncodeAsync(r, wav, staging, frames, progress, cancel);
             cancel.ThrowIfCancellationRequested();
-            File.Move(staging, r.Path, overwrite: true);   // the save dialog asked before an existing file is replaced
+            await Task.Run(() => File.Move(written, r.Path, overwrite: true));   // the save dialog asked before an existing file is replaced; off the UI thread (it may copy across drives)
+            Log($"done: {frames} frames, moved to {r.Path} after {clock.ElapsedMilliseconds} ms");
         }
-        catch
+        catch (Exception e)
         {
-            TryDelete(staging);
+            Log($"{(e is OperationCanceledException ? "cancelled" : "failed")} after {clock.ElapsedMilliseconds} ms: {e.Message}");
+            if (e is not VideoEncoderException { KeptFile: not null }) { DeleteSoon(staging); DeleteSoon(written); }   // a video the encoder could not finish stays on disk, and the message says where
             throw;
         }
         finally { TryDelete(wav); }
@@ -104,32 +120,50 @@ public static class VideoExportFlow
     /// <summary>The frames that cover <paramref name="audioFrames"/> of sound at 48 kHz: the last frame ends at or after the last sample.</summary>
     public static int FramesFor(long audioFrames, int fps) => (int)Math.Max(1, (audioFrames * fps + AudioRate - 1) / AudioRate);
 
-    private static async Task EncodeAsync(VideoExportRequest r, string wav, string path, int frames, IProgress<VideoExportProgress>? progress, CancellationToken cancel)
+    // One try with one encoder: the frames are drawn on the UI thread, which never waits for the encoder (room is awaited, finishing runs on a
+    // pool thread); a cancel or failure gives the encoder up at once and disposes it off the UI thread.
+    private static async Task EncodeOnceAsync(VideoExportRequest r, string wav, string path, int frames, VideoEncoderOptions options, IProgress<VideoExportProgress>? progress, CancellationToken cancel)
     {
         var spec = r.Spec;
         using var audio = WavFloatReader.Open(wav);
-        using var encoder = VideoEncoder.Open(path, spec.Width, spec.Height, r.Fps, new VideoAudioFormat(AudioRate, 2), options: VideoEncoderOptions.From(r.Settings.LiveVideo ?? new LiveVideoSettings()));
-        using var source = r.OpenFrames();
-        var slice = Stopwatch.StartNew();
-        var phase = Stopwatch.StartNew();
-        long audioFrames = 0;
-        var buffer = new float[(AudioRate / r.Fps + 2) * 2];
-        for (var i = 0; i < frames; i++)
+        // Finishing may take long at 4K (the encoder holds a backlog): it only fails after this long with no progress at all.
+        var allowance = VideoEncoderFinisher.StallAllowance(spec.Width, spec.Height, r.Fps);
+        var encoder = await OpenAsync(r, path, options with { FinalizeTimeout = allowance }, cancel);
+        var stall = encoder.UsesHardware ? r.HardwareStall ?? VideoEncoderFinisher.HardwareStall : allowance;
+        Log($"encoder opened: {encoder.EncoderName}, hardware {encoder.UsesHardware}, no-progress allowance {stall.TotalSeconds:0.#} s, {frames} frames -> {path}");
+        var finished = false;
+        try
         {
-            cancel.ThrowIfCancellationRequested();
-            WriteFrame(source, encoder, audio, r, i, buffer, ref audioFrames);
-            if (i % ProgressEveryFrames == 0) progress?.Report(VideoExportProgress.Frame(i, frames, phase.Elapsed.TotalSeconds));
-            if (slice.ElapsedMilliseconds > YieldEveryMs)
+            using var source = r.OpenFrames();
+            var slice = Stopwatch.StartNew();
+            var phase = Stopwatch.StartNew();
+            long audioFrames = 0;
+            var buffer = new float[(AudioRate / r.Fps + 2) * 2];
+            for (var i = 0; i < frames; i++)
             {
-                await r.Ui.YieldAsync(UiPriority.Background);
-                slice.Restart();
+                cancel.ThrowIfCancellationRequested();
+                await WaitForRoomAsync(encoder, stall, cancel);   // the UI thread is never held by a full queue, and an encoder that stops taking frames is noticed
+                WriteFrame(source, encoder, audio, r, i, buffer, ref audioFrames);
+                if (i % ProgressEveryFrames == 0) progress?.Report(VideoExportProgress.Frame(i, frames, phase.Elapsed.TotalSeconds));
+                if (slice.ElapsedMilliseconds > YieldEveryMs)
+                {
+                    await r.Ui.YieldAsync(UiPriority.Background);
+                    slice.Restart();
+                }
             }
+            r.TimingsTap?.Invoke(source.Timings);
+            Log($"all {frames} frames handed over in {phase.ElapsedMilliseconds} ms (last frame at {(frames - 1) * 1000.0 / r.Fps:0.#} ms, sound {audioFrames} frames to {audioFrames * 1000.0 / AudioRate:0.#} ms)");
+            await VideoEncoderFinisher.FinishAsync(encoder, stall, path, progress, r.FinishPoll, cancel);   // off the UI thread, with a "Finishing video" status
+            finished = true;
         }
-        encoder.Finish();
-        r.TimingsTap?.Invoke(source.Timings);
+        finally
+        {
+            if (!finished) encoder.Abort("the export stopped before the video was finished");
+            _ = Task.Run(encoder.Dispose);   // never on the UI thread: a finished or given-up encoder returns at once, a stuck one is not waited for
+        }
     }
 
-    private static void WriteFrame(IVideoFrameSource source, VideoEncoder encoder, WavFloatReader audio, VideoExportRequest r, int i, float[] buffer, ref long audioFrames)
+    private static void WriteFrame(IVideoFrameSource source, IVideoEncoder encoder, WavFloatReader audio, VideoExportRequest r, int i, float[] buffer, ref long audioFrames)
     {
         var pixels = source.Render(Math.Min(r.EndMs, r.StartMs + i * 1000.0 / r.Fps));   // the tail holds the range's last moment
         r.FrameTap?.Invoke(i, pixels.ToArray());
@@ -144,9 +178,6 @@ public static class VideoExportFlow
         source.Timings.Frames++;
     }
 
-    private static void TryDelete(string path) { try { File.Delete(path); } catch (IOException) { } // swallow: best-effort delete of a leftover
- catch (UnauthorizedAccessException) { } // swallow: best-effort delete of a leftover
- }
 
     /// <summary>Reads interleaved float samples from a 32-bit float stereo WAV; past the end it returns silence.</summary>
     private sealed class WavFloatReader : IDisposable

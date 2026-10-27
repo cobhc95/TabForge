@@ -47,6 +47,7 @@ public sealed partial class TimelineView
     internal void DrawBody(IDrawContext d, bool light)
     {
         _frameLight = light;
+        _audibility.Refresh(_song);
         var ink = AvaloniaPalette.InkOf(light);
         _frameClipOutline = ink("ClipOutline");
         _frameBoard = ink("TimelineLane").WithOpacity(EmptyCellOpacity);
@@ -73,6 +74,9 @@ public sealed partial class TimelineView
         DrawActiveSectionBrackets(d, ink, gridTop);
         if (PlayheadBar >= 0 && PlayheadBar < BarCount && PlayheadStyles.ShowsBarMarker(_playheadStyle)) DrawBarMarker(d, ink);
         DrawSectionDrag(d, ink, gridTop);
+        DrawStretchLanes(d, gridTop);
+        if (ContextMenus.HoverBars is { } hover && hover.First >= 0 && hover.Last < BarCount && hover.Last >= hover.First)   // the bars a hovered "Close gap" row would remove
+            d.Rect(null, new UiStroke(ink("Danger"), 2), BarX(hover.First) + 1, RulerHeight + 1, BarX(hover.Last + 1) - BarX(hover.First) - 2, Math.Max(0, Bounds.Height - RulerHeight - 2));
         BodyRenderCount++;
     }
 
@@ -119,6 +123,12 @@ public sealed partial class TimelineView
 
     /// <summary>Whether the frame being drawn is the light theme (the clip painters key off it).</summary>
     internal bool FrameLight => _frameLight;
+
+    // The rows the mixer silences (muted, or not soloed beside a soloed track), refreshed at the start of each body draw.
+    private readonly TimelineTrackAudibility _audibility = new();
+
+    /// <summary>Whether the row's track is drawn dimmed: the mixer's rule (<see cref="MixerGroups.IsAudible"/>) would not play it. Valid after a body draw.</summary>
+    internal bool IsRowDimmed(int row) => _audibility.Dimmed(row);
 
     // The colours every bar cell reads, looked up once per body draw instead of once per cell.
     private UiColor _frameClipOutline, _frameBoard;
@@ -228,6 +238,7 @@ public sealed partial class TimelineView
         if (HoverBar >= 0 && HoverBar < BarCount && HoverRow >= 0 && HoverRow < _rows.Count)
             d.Rect(HoverShade.CellFill(_frameLight), null, BarX(HoverBar), RowTop(HoverRow) + 1, _boundaries[HoverBar + 1] - BarX(HoverBar), RowHeight - 2, HoverShade.CellRadius);
         TimelineAudioClips.DrawFileDropPreview(d, ink, this, Math.Max(Bounds.Width, _boundaries[^1]));
+        TimelineAudioClips.DrawClipDragPreview(d, ink, this, Math.Max(Bounds.Width, _boundaries[^1]));
         TimelineRepeatPicker.DrawPopovers(d, this, ink);
     }
 
@@ -260,6 +271,9 @@ public sealed partial class TimelineView
             var w = Math.Max(2, BarX(end) - x - 2);
             var y = RulerHeight + 1;
             if (SectionPreviewX is { } preview && SectionSlotIndex(i) is var slot and >= 0) x = preview[slot];
+            var stretched = SectionStretchBars > 0 && SectionResizePreview is { } stretch ? i.CompareTo(stretch.Index) : -2;   // a stretch in progress: -1 / 0 / 1 = before / the stretched section / after it
+            if (stretched == 0) w += StretchShiftPx;
+            else if (stretched > 0) x += StretchShiftPx;
             var section = _sections[i];
             var inset = SectionButtons.PressDepth(section) * SectionButtonFeedback.PressedInsetDips;
             var left = x + 1 + inset;
@@ -267,6 +281,7 @@ public sealed partial class TimelineView
             var width = Math.Max(0, w - 2 * inset);
             var height = SectionHeight - 4 - 2 * inset;
             d.Rect(colour.WithOpacity(SectionFillOf(light)), new UiStroke(colour, 1), left, top, width, height, 3);
+            if (stretched == 0) DrawStretchAdded(d, colour, AvaloniaPalette.InkOf(light)("White"), left, top, width, height);
             if (ReferenceEquals(SectionButtons.Hovered, section)) d.Rect(HoverShade.Overlay(light), null, left, top, width, height, 3);
             if (DragSection < 0 && HoverSectionEdge is { } edge && edge.Index == i)
             {
@@ -342,12 +357,12 @@ public sealed partial class TimelineView
         var height = RowHeightOf(row);
         d.Rect(ink(row % 2 == 0 ? "TimelineRow" : "TimelineRowAlt"), null, 0, top, width, height);
         TrackRowTint.Fill(d, track, _frameLight, TrackTintPercent, 0, top, width, height);
-        if (row == _selectedRow && _shadeSelectedTrack || IsRowPicked(row)) TimelinePlayheadMarks.DrawLaneTint(d, ink, _frameLight, top, width, height);
+        // Selecting a track no longer tints its lane (only the header shows it); the old DrawLaneTint call lived here.
         TrackRowTint.Stripe(d, track, _frameLight, double.IsNaN(VisibleSpan.From) ? 0 : Math.Max(0, VisibleSpan.From), top, height);
         if (_showTrackLines) d.Line(edge, 0, top + height - 0.5, width, top + height - 0.5);
-        if (IsArmed(row) && track.AudioClips.Count == 0) ArmedRowPainter.DrawLaneHint(d, ink, track, top + BaseBandHeightOf(row));
+        if (IsArmed(row) && track.AudioClips.Count == 0) ArmedRowPainter.DrawLaneHint(d, ink, track, top + HeaderLineHeightOf(row));
         var colour = TrackColourOf(track, ink("InstrumentAccent"));
-        var muted = track.Mute && !track.Solo;
+        var muted = IsRowDimmed(row);
         if (track.IsAudio) { TimelineAudioClips.DrawRow(d, ink, this, track, row, top + NotationHeightOf(row), colour); return; }
         DrawnRowCount++;
         var (firstBar, endBar) = VisibleBarRange(Math.Min(BarCount, track.Measures.Count));

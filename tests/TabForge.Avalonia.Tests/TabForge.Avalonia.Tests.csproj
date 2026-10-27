@@ -1,13 +1,17 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <!-- Same target per OS as TabForge.Avalonia (it references that project; a net8.0 test project cannot reference the net8.0-windows build). -->
-    <TargetFramework Condition="$([MSBuild]::IsOSPlatform('Windows'))">net8.0-windows</TargetFramework>
-    <TargetFramework Condition="!$([MSBuild]::IsOSPlatform('Windows'))">net8.0</TargetFramework>
+    <!-- Same target per OS as TabForge.Avalonia (it references that project; a net10.0 test project cannot reference the net10.0-windows build). -->
+    <TargetFramework Condition="$([MSBuild]::IsOSPlatform('Windows'))">net10.0-windows</TargetFramework>
+    <TargetFramework Condition="!$([MSBuild]::IsOSPlatform('Windows'))">net10.0</TargetFramework>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
-  <ItemGroup Condition="'$(TargetFramework)' != 'net8.0-windows'">
+  <!-- Same rule as TabForge.AudioEngine: its test hooks (the fake CLAP plug-in) exist only in Debug and full-suite builds, so the tests that use them do too. -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug' Or '$(TabForgeFullSuite)' == 'true'">
+    <DefineConstants>$(DefineConstants);TABFORGE_TEST_HOOKS</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(TargetFramework)' != 'net10.0-windows'">
     <!-- The engine client's composition is Windows-only (see src/TabForge.Avalonia/Playback). -->
-    <Compile Remove="AvaloniaPlaybackCompositionTests.cs" />
+    <Compile Remove="Playback/AvaloniaPlaybackCompositionTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <!-- Where this project was built from: the checkout root for tests whose binaries are built outside the checkout (ArtifactsPath elsewhere) with no TABFORGE_REPO. -->
@@ -23,5 +27,11 @@
     <PackageReference Include="xunit" Version="2.9.2" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
     <ProjectReference Include="..\..\src\TabForge.Avalonia\TabForge.Avalonia.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Test-only: libmp3lame (LAME, LGPL) for the LameMp3Encoder round trip; only its build assets are used (the managed wrapper is not referenced and nothing ships). -->
+    <PackageReference Include="NAudio.Lame" Version="2.1.0" ExcludeAssets="compile;runtime" />
+    <!-- Test-only: the dev build of native/tfportable (miniaudio + RtMidi), when it was built (native/tfportable/bin/tfportable.dll); the portable backend tests skip without it. -->
+    <None Include="..\..\native\tfportable\bin\tfportable.dll" Condition="Exists('..\..\native\tfportable\bin\tfportable.dll')" Link="tfportable.dll" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

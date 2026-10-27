@@ -174,7 +174,7 @@ How long a let-ring note may keep ringing is a setting. Open **Preferences > Pla
 
 1. Choose **File > Open…** (`Ctrl+O`). Open `TabForge Demo - Ashen Meridian.gp` from the `Samples` folder.
 2. Click **Rhythm Gtr L** in the track list.
-3. Choose **Sections > Go to…** (`Ctrl+G`), type `Intro: Meridian` and press `Enter`. The score jumps to the first heavy riff.
+3. Choose **Bar > Go to…** (`Ctrl+G`), type `Intro: Meridian` and press `Enter`. The score jumps to the first heavy riff.
 4. Look for **P.M.** labels above the notes. These are palm mutes.
 5. Click **Clean Gtr** in the track list. Press `Ctrl+G`, type `Embers` and press `Enter`. Look for let ring lines and, in the fifth bar of the song, a **Harm.** caption.
 6. Click **Lead Gtr**. Press `Ctrl+G`, type `Solo` and press `Enter`. Look through the first bars of the solo for bends, slides and hammer-on curves.

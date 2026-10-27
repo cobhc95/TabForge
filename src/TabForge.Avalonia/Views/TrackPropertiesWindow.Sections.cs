@@ -155,7 +155,9 @@ public sealed partial class TrackPropertiesWindow
     // Runs inside the OK edit, after the fields: colour, tint, then the retune or the drum lines (drum tracks have no tuning).
     private void WriteSections()
     {
-        _track.ColorHex = _colour.Value.Trim().ToUpperInvariant();
+        var picked = _colour.Value.Trim().ToUpperInvariant();
+        if (!string.Equals(picked, _track.ColorHex, System.StringComparison.OrdinalIgnoreCase)) _track.ColorFollowsInstrument = false;
+        _track.ColorHex = picked;
         _track.TintRow = _tint.IsChecked == true;
         if (_track.Kind == TrackKind.Drums)
         {

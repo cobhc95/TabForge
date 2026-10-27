@@ -41,6 +41,9 @@ public sealed class FxChainWindows
         owner.SetValue(RegistryProperty, this);
     }
 
+    /// <summary>The plug-ins copied in any chain window of this main window (a paste works in another track's window too).</summary>
+    public FxPluginClipboard Clipboard { get; } = new();
+
     /// <summary>The tool windows beside the chain windows (the live input's chain window), brought forward the same way.</summary>
     public ToolWindows Tools { get; } = new();
 
@@ -170,7 +173,7 @@ public sealed class FxChainWindows
     /// <summary>The shown song changed: the other songs' floating plug-in windows hide, the shown song's open again. Call again once the engine took the song (a refused open retries).</summary>
     public void SongShown(IEnumerable<SongDocument> held)
     {
-        var handle = _owner.TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
+        var handle = TabForge.Avalonia.Platform.PlatformAdapters.NativeWindows.Of(_owner);
         FloatingEditors.SongShown(held, _active(), handle, _owner.ActualThemeVariant != global::Avalonia.Styling.ThemeVariant.Light);
     }
 

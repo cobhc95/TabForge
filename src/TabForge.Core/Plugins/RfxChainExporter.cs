@@ -5,11 +5,11 @@ using TabForge.Audio.Contracts;
 
 namespace TabForge.Plugins;
 
-// Owns: writing a chain as the text of an FX chain file for other hosts (.RfxChain): the inverse of ReaperChainImporter
+// Owns: writing a chain as the text of an FX chain file for other hosts (.RfxChain; VST2, VST3 and CLAP blocks): the inverse of ReaperChainImporter
 //       (the block layout is in that class's header comment). Pure: items in, text and notes out.
 // Does not own: reading plug-in states or plug-in info (AudioEngineClient), the file dialog and the write (RfxChainExportFlow),
 //       the container model (ChainTree gives the tree; an item with Children is written as a container block).
-// Tests: none dedicated(export, then import: names, files, bypass, mix and states come back byte for byte).
+// Tests: RfxClapExportTests (the CLAP block text); export, then import: names, files, bypass, mix and states of VST blocks come back byte for byte.
 public static class RfxChainExporter
 {
     private const int MaxStateBytes = PluginStateLimits.MaxRawBytes;
@@ -44,7 +44,8 @@ public static class RfxChainExporter
                 catch (FormatException) { state = Array.Empty<byte>(); } // Not logged: reported in the export notes as "default settings"
             }
             var vst3 = s.Format == "VST3" || s.Path.EndsWith(".vst3", StringComparison.OrdinalIgnoreCase);
-            items.Add(new Item(s.Name, s.Vendor, Path.GetFileName(s.Path.TrimEnd('\\', '/')), vst3 ? "VST3" : "VST2", s.Type == PluginSlotType.Instrument, s.Enabled, s.Wet,
+            var clap = s.Format == PluginFormats.Clap || s.Path.EndsWith(".clap", StringComparison.OrdinalIgnoreCase);
+            items.Add(new Item(s.Name, s.Vendor, Path.GetFileName(s.Path.TrimEnd('\\', '/')), clap ? PluginFormats.Clap : vst3 ? "VST3" : "VST2", s.Type == PluginSlotType.Instrument, s.Enabled, s.Wet,
                 state, i < info.Count ? info[i] : null, extra, PresetName: s.PresetName ?? "", Unloaded: whyNotLoaded?.Invoke(s) ?? RfxExportGap.Unsupported));
         }
         return items;
@@ -116,7 +117,7 @@ public static class RfxChainExporter
                     continue;
                 }
                 total++;
-                if (item.FileName.Length == 0 || item.Info is not { Format: LoadedPluginInfo.Vst2 or LoadedPluginInfo.Vst3 } info || (info.Format == LoadedPluginInfo.Vst3) != (item.Format == "VST3") || (info.Format == LoadedPluginInfo.Vst3 && !IsClassId(info.ClassId)))
+                if (item.FileName.Length == 0 || item.Info is not { Format: LoadedPluginInfo.Vst2 or LoadedPluginInfo.Vst3 or LoadedPluginInfo.Clap } info || info.Format != ExpectedFormat(item) || (info.Format == LoadedPluginInfo.Vst3 && !IsClassId(info.ClassId)) || (info.Format == LoadedPluginInfo.Clap && info.ClassId.Length == 0))
                 {
                     var gap = item.Info is null ? RfxExportGap.NoAnswer : item.Info.Format == LoadedPluginInfo.None ? item.Unloaded : RfxExportGap.Unsupported;
                     AddGap(item, gap);
@@ -143,6 +144,7 @@ public static class RfxChainExporter
     private static string Bypass(bool enabled, int depth) => $"BYPASS {(enabled ? '0' : '1')} 0{(depth > 0 ? " 0" : "")}\r\n";
 
     private static string Label(Item item) => item.Name.Length > 0 ? item.Name : item.FileName.Length > 0 ? Path.GetFileNameWithoutExtension(item.FileName) : "Built-in sound";
+    private static byte ExpectedFormat(Item item) => item.Format == PluginFormats.Clap ? LoadedPluginInfo.Clap : item.Format == "VST3" ? LoadedPluginInfo.Vst3 : LoadedPluginInfo.Vst2;
     private static bool IsClassId(string id) => id.Length == 32 && id.All(Uri.IsHexDigit);
     // Double quotes always: Clean leaves none in the text, and they keep a ' or ` in it from opening a quoted token.
     private static string Quote(string s) => s.Length == 0 || s.Any(c => char.IsWhiteSpace(c) || c is '\'' or '`') ? "\"" + s + "\"" : s;
@@ -151,6 +153,7 @@ public static class RfxChainExporter
     /// <summary>Appends one plug-in with its lines; returns why its settings were left out, or null.</summary>
     private static string? WriteItem(StringBuilder text, Item item, LoadedPluginInfo info, int ordinal, int depth)
     {
+        if (info.Format == LoadedPluginInfo.Clap) return WriteClap(text, item, info, ordinal, depth);
         var vst3 = info.Format == LoadedPluginInfo.Vst3;
         string? problem = null;
         byte[]? state = null; var isChunk = true;
@@ -199,6 +202,41 @@ public static class RfxChainExporter
         if (item.Wet != 100) text.Append(pad).Append("WET ").Append((Math.Clamp(item.Wet, 0, 100) / 100.0).ToString("0.######", CultureInfo.InvariantCulture)).Append(" 0\r\n");
         if (Clean(item.PresetName) is { Length: > 0 } preset) text.Append(pad).Append("PRESETNAME ").Append(Quote(preset)).Append("\r\n");
         // A stable id per place in the chain, so the same chain exports to the same text.
+        var fxId = new Guid(System.Security.Cryptography.MD5.HashData(Encoding.UTF8.GetBytes($"{ordinal}|{item.FileName}|{name}")));
+        text.Append(pad).Append("FLOATPOS 0 0 0 0\r\n").Append(pad).Append("FXID ").Append(fxId.ToString("B").ToUpperInvariant()).Append("\r\n").Append(pad).Append("WAK 0 0\r\n");
+        return problem;
+    }
+
+    /// <summary>
+    /// Appends one CLAP plug-in as a CLAP block: <c>&lt;CLAP "CLAP: Name (Vendor)" plugin.id ""</c> (CLAPi for an instrument), then the plug-in's own state as base64 lines in a
+    /// STATE block, then the lines that follow every plug-in. Returns why its settings were left out, or null.
+    /// </summary>
+    private static string? WriteClap(StringBuilder text, Item item, LoadedPluginInfo info, int ordinal, int depth)
+    {
+        string? problem = null;
+        byte[]? state = null;
+        if (item.State is { } own)
+        {
+            if (own.Length == 0) problem = "its saved settings could not be read";
+            else if (own.Length > MaxStateBytes) problem = "its saved settings are too large";
+            else state = own;
+        }
+        var name = Clean(info.Name.Length > 0 ? info.Name : item.Name).Trim();
+        var vendor = Clean(info.Vendor.Length > 0 ? info.Vendor : item.Vendor).Trim();
+        var pad = new string(' ', 2 * depth);
+        text.Append(pad).Append(Bypass(item.Enabled, depth));
+        text.Append(pad).Append("<CLAP \"").Append(item.IsInstrument ? "CLAPi" : "CLAP").Append(": ").Append(name).Append(vendor.Length > 0 ? $" ({vendor})" : "").Append("\" ")
+            .Append(Quote(Clean(info.ClassId))).Append(" \"\"\r\n");
+        if (state is not null)
+        {
+            text.Append(pad).Append("  <STATE\r\n");
+            for (var o = 0; o < state.Length; o += LineBytes)
+                text.Append(pad).Append("    ").Append(Convert.ToBase64String(state, o, Math.Min(LineBytes, state.Length - o))).Append("\r\n");
+            text.Append(pad).Append("  >\r\n");
+        }
+        text.Append(pad).Append(">\r\n");
+        if (item.Wet != 100) text.Append(pad).Append("WET ").Append((Math.Clamp(item.Wet, 0, 100) / 100.0).ToString("0.######", CultureInfo.InvariantCulture)).Append(" 0\r\n");
+        if (Clean(item.PresetName) is { Length: > 0 } preset) text.Append(pad).Append("PRESETNAME ").Append(Quote(preset)).Append("\r\n");
         var fxId = new Guid(System.Security.Cryptography.MD5.HashData(Encoding.UTF8.GetBytes($"{ordinal}|{item.FileName}|{name}")));
         text.Append(pad).Append("FLOATPOS 0 0 0 0\r\n").Append(pad).Append("FXID ").Append(fxId.ToString("B").ToUpperInvariant()).Append("\r\n").Append(pad).Append("WAK 0 0\r\n");
         return problem;

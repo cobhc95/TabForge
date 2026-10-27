@@ -23,27 +23,28 @@ public static class ContextMenuBuilder
             if (!e.TryGetPosition(target, out var at)) return;
             var rows = rowsAt(at).ToList();
             if (rows.Count == 0) return;
-            Show(target, rows, host.Commands);
+            Show(target, rows, host.Commands, bars => host.HoverBars = bars);
             e.Handled = true;
         };
 
     /// <summary>Builds the menu for <paramref name="rows"/> and opens it over <paramref name="target"/> at the pointer; returns it.</summary>
-    public static ContextMenu Show(Control target, IEnumerable<MenuSpec> rows, IMenuCommandRunner commands)
+    public static ContextMenu Show(Control target, IEnumerable<MenuSpec> rows, IMenuCommandRunner commands, Action<(int First, int Last)?>? hover = null)
     {
-        var menu = Build(rows, commands);
+        var menu = Build(rows, commands, hover);
         menu.Open(target);
         return menu;
     }
 
     /// <summary>The menu for <paramref name="rows"/>, not opened.</summary>
-    public static ContextMenu Build(IEnumerable<MenuSpec> rows, IMenuCommandRunner commands)
+    public static ContextMenu Build(IEnumerable<MenuSpec> rows, IMenuCommandRunner commands, Action<(int First, int Last)?>? hover = null)
     {
         var menu = MenuStability.CreateContextMenu();
-        foreach (var row in rows) menu.Items.Add(ToElement(row, commands));
+        foreach (var row in rows) menu.Items.Add(ToElement(row, commands, hover));
+        if (hover is not null) menu.Closed += (_, _) => hover(null);   // the outline of a hovered row goes with the menu
         return menu;
     }
 
-    private static Control ToElement(MenuSpec row, IMenuCommandRunner commands)
+    private static Control ToElement(MenuSpec row, IMenuCommandRunner commands, Action<(int First, int Last)?>? hover = null)
     {
         if (row.IsSeparator) return new Separator();
         var item = new MenuItem { Header = row.Header, InputGesture = MainWindowMenu.GestureOfText(row.Shortcut) };
@@ -51,13 +52,18 @@ public static class ContextMenuBuilder
         if (row.ToolTip is not null) ToolTip.SetTip(item, row.ToolTip);
         if (row.Children is not null)
         {
-            foreach (var child in row.Children) item.Items.Add(ToElement(child, commands));
+            foreach (var child in row.Children) item.Items.Add(ToElement(child, commands, hover));
             return item;
         }
         if (row.Checkable)
         {
             item.ToggleType = row.Radio ? MenuItemToggleType.Radio : MenuItemToggleType.CheckBox;
             item.IsChecked = row.Checked;
+        }
+        if (hover is not null && row.HoverBars is { } bars)
+        {
+            item.PointerEntered += (_, _) => hover(bars);
+            item.PointerExited += (_, _) => hover(null);
         }
         var commandId = row.IsLabel ? null : ContextMenuRows.CommandIdOf(row);
         var runnable = commandId is not null && commands.Handles(commandId);

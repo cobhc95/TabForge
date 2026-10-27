@@ -18,7 +18,7 @@ namespace TabForge;
 // comparing musical MEANING (per-note pitch/string/fret/onset/duration/techniques/dynamics, per-bar signature/tempo/repeats) and not
 // parse success or bytes. Only redistributable fixtures: in-code synthetic songs and TabForge's own technique song, never Tabs/.
 // Every conversion loss is EXPLICIT: an allow-list per format with the reason; any other difference fails.
-// Results and scope: docs/COMPATIBILITY_RESULTS.md.
+// Results and scope: docs/reference/COMPATIBILITY_RESULTS.md.
 public static partial class SelfTest
 {
     // ------------------------------------------------------------------ facts: a song flattened to comparable key/value pairs

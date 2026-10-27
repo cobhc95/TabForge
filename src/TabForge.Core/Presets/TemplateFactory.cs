@@ -86,6 +86,7 @@ public static class TemplateFactory
             Kind = TrackKind.Guitar,
             MidiChannel = channel,
             MidiProgram = program,
+            MidiInputs = new List<string> { AudioInputs.AllMidi },   // an instrument track hears every MIDI input by default
             StringTunings = (tuning ?? new[] { 64, 59, 55, 50, 45, 40 }).ToList(),
             Measures = Measures(32),
             Rig = new RigPreset { Name = rig, ArticulationMap = "Generic Guitar" }
@@ -98,6 +99,7 @@ public static class TemplateFactory
         Kind = TrackKind.Bass,
         MidiChannel = channel,
         MidiProgram = 34,
+        MidiInputs = new List<string> { AudioInputs.AllMidi },
         StringTunings = new List<int> { 43, 38, 33, 28 },
         Measures = Measures(32),
         Rig = new RigPreset { Name = "Bass DI + Amp", ArticulationMap = "Generic Bass" }

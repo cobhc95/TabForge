@@ -1,6 +1,6 @@
-// Owns: the status bar's texts from plain state: the position line (the playing position while the transport runs, else the editing cursor,
-//       and the audio-track hint), the bar's written:expected duration with its marked state and tooltip, the time signature and key labels,
-//       and the master readout's text and key label.
+// Owns: the status bar's texts from plain state: the position line (the playhead's bar.beat and time while the transport runs, else the editing cursor
+//       with the time at it, and the audio-track hint), the bar's written:expected duration with its marked state and tooltip, the time signature and key labels,
+//       and the tempo readout's text.
 // Does not own: the text controls, the marked-bar brush, the master readout's change check, the playhead and selection (the caller reads them),
 //       or the tempo map and bar analysis (MusicTime decides those).
 // Tests: no dedicated test class.
@@ -17,9 +17,7 @@ namespace TabForge.Presenters;
 /// <param name="PlayheadCell">The playhead's cell (zero based).</param>
 /// <param name="SelectedBar">The editing cursor's bar (zero based).</param>
 /// <param name="SelectedCell">The editing cursor's cell (zero based).</param>
-/// <param name="DurationDenominator">The current note value's denominator (4 is a quarter).</param>
-/// <param name="Dots">The current note's dots.</param>
-/// <param name="Triplet">True when the current note is a triplet.</param>
+/// <param name="TimeSec">The performed time in seconds at the shown position (the playhead, else the cursor); NaN shows no time.</param>
 public readonly record struct StatusTextInput(
     SongProject Project,
     TrackModel? SelectedTrack,
@@ -28,12 +26,9 @@ public readonly record struct StatusTextInput(
     int PlayheadCell,
     int SelectedBar,
     int SelectedCell,
-    int DurationDenominator,
-    int Dots,
-    bool Triplet);
+    double TimeSec = double.NaN);
 
 /// <summary>The texts the status bar shows for one <see cref="StatusTextInput"/>.</summary>
-/// <param name="MasterKeyLabel">The key as the master readout words it ("C major", "2♯"); the master readout text is made by <see cref="StatusTextPresenter.MasterInfoText"/>.</param>
 public readonly record struct StatusTextReadout(
     string PositionText,
     string BarStateText,
@@ -41,11 +36,7 @@ public readonly record struct StatusTextReadout(
     string BarStateTooltip,
     string TimeSignatureText,
     string KeyText,
-    int Tempo,
-    string MasterKeyLabel,
-    string DurationName,
-    int Dots,
-    bool Triplet);
+    int Tempo);
 
 /// <summary>
 /// The status bar's texts. <see cref="Compose"/> decides what each text says; <see cref="MasterInfoText"/> formats the master readout line.
@@ -65,14 +56,18 @@ public static class StatusTextPresenter
         var playing = input.TransportRunning && input.PlayheadBar >= 0;
         var shownBar = playing ? Math.Clamp(input.PlayheadBar, 0, Math.Max(0, BarRangeEditor.MaxMeasures(project) - 1)) : input.SelectedBar;
         var shownCell = playing ? Math.Max(0, input.PlayheadCell) : input.SelectedCell;
-        var positionText = track is null ? "No track"
-            : track.IsAudio ? $"{track.Name}  ·  {EditorGuard.Message}"   // nothing to edit on an audio track: the hint replaces the cursor
-            : $"Measure {shownBar + 1}  ·  {track.Name}  ·  cell {shownCell + 1}";
-
         // The bar's actual:theoretical duration; the time signature and key come from the bar, or the song where the bar sets none.
         var bar = MusicTime.BarOf(project, shownBar);
         var numerator = bar?.TimeSigNum ?? project.TimeSignatureNumerator;
         var denominator = bar?.TimeSigDenom ?? project.TimeSignatureDenominator;
+        var time = double.IsNaN(input.TimeSec) ? "" : $"  ·  {TimeText(input.TimeSec)}";
+        var barText = playing
+            ? $"Bar {shownBar + 1}.{BeatOf(shownCell, Math.Max(1, MusicTime.BarSlots(project, shownBar)), numerator)}"   // bar.beat of the playhead
+            : $"Bar {shownBar + 1}";
+        var positionText = track is null ? "No track"
+            : playing ? $"{barText}{time}  ·  {track.Name}"
+            : track.IsAudio ? $"{track.Name}  ·  {EditorGuard.Message}"   // nothing to edit on an audio track: the hint replaces the cursor
+            : $"{barText}{time}  ·  {track.Name}  ·  cell {shownCell + 1}";
         var state = MusicTime.AnalyzeBar(project, shownBar, track);
         var shownKey = bar?.KeySignature ?? project.KeySignature;
         var shownKeyMinor = bar?.KeySignatureMinor ?? project.KeySignatureMinor;
@@ -84,16 +79,19 @@ public static class StatusTextPresenter
             BarStateTooltip: state.Marked ? MarkedBarTooltip : PlainBarTooltip,
             TimeSignatureText: $"{numerator}/{denominator}",
             KeyText: KeyNames.Short(shownKey, shownKeyMinor),
-            Tempo: MusicTime.TempoAt(project, shownBar),
-            MasterKeyLabel: MasterKeyLabel(shownKey),
-            DurationName: MusicTime.DurationName(input.DurationDenominator),
-            Dots: input.Dots,
-            Triplet: input.Triplet);
+            Tempo: MusicTime.TempoAt(project, shownBar));
     }
 
-    /// <summary>The master readout line: tempo, key, note value, then the dots and the triplet when the note has them.</summary>
-    public static string MasterInfoText(int tempo, string key, string duration, int dots, bool triplet)
-        => $"♩={tempo}  ·  {key}  ·  {duration}{(dots == 1 ? " dotted" : dots >= 2 ? " double-dotted" : "")}{(triplet ? " triplet" : "")}";
+    /// <summary>The tempo readout: the quarter note and its tempo, followed by the divider before the scale readout.</summary>
+    public static string TempoText(int tempo) => $"♩={tempo}  ·";
 
-    private static string MasterKeyLabel(int signature) => signature == 0 ? "C major" : signature > 0 ? $"{signature}♯" : $"{-signature}♭";
+    /// <summary>Minutes, seconds and tenths ("0:32.4"); a negative time reads as zero.</summary>
+    public static string TimeText(double seconds)
+    {
+        var tenths = (long)(Math.Max(0, seconds) * 10 + 1e-6);
+        return string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{tenths / 600}:{tenths / 10 % 60:00}.{tenths % 10}");
+    }
+
+    /// <summary>The 1-based beat of a cell: the bar's slots split evenly into the time signature's beats.</summary>
+    private static int BeatOf(int cell, int slots, int beats) => Math.Clamp(cell * Math.Max(1, beats) / slots, 0, Math.Max(1, beats) - 1) + 1;
 }

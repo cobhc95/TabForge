@@ -25,7 +25,7 @@ build of alphaTab 1.8.4 with **four small changes**: (1) that limit became a set
 4. `Directory.Build.props`, `AlphaTab.csproj`: package id, assembly name and version, so it cannot be taken for the upstream package.
 
 The limit lives on the `Settings` object of one read; nothing is global, so imports running at the same time cannot affect each other.
-TabForge sets it to `InputLimits.MaxMeasuresPerTrack` (20,000) in `Source/src/TabForge.Core/Services/AlphaTabBoundary.cs`, which is also where the build is
+TabForge sets it to `InputLimits.MaxMeasuresPerTrack` (20,000) in `Source/src/TabForge.Core/Services/Import/AlphaTabBoundary.cs`, which is also where the build is
 checked at run time: a different or older component makes the import fail with an explanation.
 
 ## Patch 0002 (`0002-gpif-exact-mixer-volume-and-balance.patch`)
@@ -71,11 +71,11 @@ TabForge reads the three fields as a fallback (`GuitarProBeatReader`, `GuitarPro
 
 ## Rebuild and verify
 
-Needs git, Node.js (LTS) and npm, and the .NET 8 SDK; everything comes from github.com/CoderLine/alphaTab, npmjs.org and nuget.org.
+Needs git, Node.js (LTS) and npm, and the .NET SDK pinned in `Source/vendor/alphatab/global.json` (8.0.425, the compiler that built the committed package; TabForge itself builds with .NET 10 since 0.8.2, and the package targets netstandard2.0 so it is unaffected); everything comes from github.com/CoderLine/alphaTab, npmjs.org and nuget.org. A future patch can move this pin to the current SDK together with the rebuilt package (`-Update`).
 
 ```powershell
 .\Source\tools\Build-AlphaTab.ps1            # rebuilds in a scratch folder and checks the DLL equals the one in the committed package
-.\Source\tools\Build-AlphaTab.ps1 -Update    # only after changing the patch: replaces the package (then regenerate the lock files and Source/docs/SBOM.md)
+.\Source\tools\Build-AlphaTab.ps1 -Update    # only after changing the patch: replaces the package (then regenerate the lock files and Source/docs/reference/SBOM.md)
 ```
 
 The DLL does not depend on the machine or folder it was built in (verified with two builds in different folders). It is not
@@ -89,7 +89,7 @@ packages by version and would otherwise keep serving the old one.
 
 ## Hashes
 
-See `SHA256SUMS`: the SHA-256 of the package and of the DLL inside it, and the upstream commit. The package's SHA-512 is in `packages.lock.json` and `Source/docs/SBOM.md`.
+See `SHA256SUMS`: the SHA-256 of the package and of the DLL inside it, and the upstream commit. The package's SHA-512 is in `packages.lock.json` and `Source/docs/reference/SBOM.md`.
 
 ## Written offer
 

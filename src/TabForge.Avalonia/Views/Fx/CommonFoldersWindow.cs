@@ -18,7 +18,7 @@ public sealed class CommonFoldersWindow : Window
     private const double WindowWidth = 560, WindowHeight = 380, Gap = 6;
     private readonly TextBox _box = new()
     {
-        AcceptsReturn = true, Name = "FolderLines", Margin = new Thickness(0, 4, 0, 8), FontFamily = new global::Avalonia.Media.FontFamily("Consolas"),
+        AcceptsReturn = true, Name = "FolderLines", Margin = new Thickness(0, 4, 0, 8), FontFamily = TabForge.Avalonia.Platform.AvaloniaFonts.Family("Consolas"),
         HorizontalAlignment = HorizontalAlignment.Stretch,
     };
 

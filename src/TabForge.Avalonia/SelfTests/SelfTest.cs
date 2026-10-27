@@ -90,6 +90,7 @@ public static partial class SelfTest
         Guard(TestDiskStreamerIdle);
         Guard(TestEngineOwnerTransports);
         Guard(TestEngineOwnerIdLifecycle);
+        Guard(TestClapRealPlugin);
         Guard(TestEngineMessagesRoundTrip);
         Guard(TestEngineMessagesGolden);
     }
@@ -159,7 +160,7 @@ public static partial class SelfTest
         ["TestChildProcessGuardPort"] = "architecture", ["TestEveryTestHasAnArea"] = "architecture", ["TestArchitectureFileLineBudget"] = "architecture",
         ["TestHeadlessDeviceReconfigure"] = "engine", ["TestSharedRingProducers"] = "engine", ["TestEngineExitCleanupOnUi"] = "engine", ["TestClipChurnWhileStreaming"] = "engine",
         ["TestAudioTrackAddDuringPlayback"] = "engine", ["TestDiskStreamerIdle"] = "engine", ["TestEngineOwnerTransports"] = "engine", ["TestEngineOwnerIdLifecycle"] = "engine",
-        ["TestEngineMessagesRoundTrip"] = "engine", ["TestEngineMessagesGolden"] = "engine",
+        ["TestEngineMessagesRoundTrip"] = "engine", ["TestEngineMessagesGolden"] = "engine", ["TestClapRealPlugin"] = "engine",
         ["TestPresetFolderStoreNoOverwrite"] = "persistence", ["TestNumberedSiblingCeiling"] = "persistence", ["TestSaveClaimAtomic"] = "persistence", ["TestAutosaveCopies"] = "persistence",
         ["TestPairSaveEveryStage"] = "persistence", ["TestPairMarkerIsUntrusted"] = "persistence", ["TestDirectTforgeOpenRecovers"] = "persistence", ["TestTforgeCompression"] = "persistence",
         ["TestScoreClipRejectsUntrustedInput"] = "persistence", ["TestClipboardCopyPasteBytes"] = "persistence",

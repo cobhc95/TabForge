@@ -281,7 +281,7 @@ public sealed class TutorialWindow : Window
         TutorialImage image => Text("[Picture: " + image.Alt + (image.Caption is null ? "]" : "] " + image.Caption)),
         TutorialCallout callout => RenderCallout(callout),
         TutorialTable table => RenderTable(table),
-        TutorialCode code => new TextBlock { Text = code.Text, FontFamily = new FontFamily("Consolas, monospace"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 4, 0, 4) },
+        TutorialCode code => new TextBlock { Text = code.Text, FontFamily = TabForge.Avalonia.Platform.AvaloniaFonts.Family("Consolas, monospace"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 4, 0, 4) },
         TutorialRule => new Separator { Margin = new Thickness(0, 8, 0, 8) },
         _ => throw new NotSupportedException("The reader has no control for " + block.GetType().Name + "."),
     };

@@ -1,5 +1,5 @@
 <#
-Regenerates Source\docs\SBOM.md: every managed package from each project's packages.lock.json (name, version,
+Regenerates Source\docs\reference\SBOM.md: every managed package from each project's packages.lock.json (name, version,
 type, content hash) plus the native components (tfvst3.dll and the pinned Steinberg VST3 SDK it is built from).
 Output is deterministic (no timestamps) so an unchanged dependency set produces an unchanged file.
 Run after changing packages or rebuilding tfvst3; Source\tools\Package-Release.ps1 runs it automatically.
@@ -11,7 +11,7 @@ $ErrorActionPreference = 'Stop'
 $top = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 if (Test-Path -LiteralPath (Join-Path $top 'TabForge.sln')) { $root = $top; $srcRoot = $top }
 else { $root = [IO.Path]::GetFullPath((Join-Path $top '..')); $srcRoot = Join-Path $root 'Source' }
-$out = Join-Path $srcRoot 'docs\SBOM.md'
+$out = Join-Path $srcRoot 'docs\reference\SBOM.md'
 $rows = New-Object System.Collections.Generic.List[string]
 
 $lines = New-Object System.Collections.Generic.List[string]

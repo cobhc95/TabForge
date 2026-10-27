@@ -81,7 +81,7 @@ A song file only names its plug-ins. It never carries them, and TabForge loads a
 
 *Goal: add a bass track to the demo song, solo it and change its volume.*
 
-1. Open the demo song and choose **Track > Add Bass**. A track called **Bass** appears at the end of the track list and is selected.
+1. Open the demo song and choose **Insert > Track > Bass**. A track called **Bass** appears at the end of the track list and is selected.
 2. Click **M** on the **Lead Gtr** track and press `Space`. The lead guitar goes quiet.
 3. Press `Space` to pause, and click **M** again to unmute.
 4. Click **S** on the **Bass** track and press `Space`. You hear silence, because the new bass has no notes yet. Click **S** again to switch the solo off.
@@ -92,7 +92,7 @@ You know it worked when the bass volume knob shows the new value. Close the tab 
 ## Quick recap
 
 - Each track is one player with its own notes, sound, volume and tuning.
-- **Track > Add Bass**, **Add Guitar**, **Add Drums** and **Add Keys** add ready-made tracks.
+- **Insert > Track > Bass**, **Add Guitar**, **Add Drums** and **Add Keys** add ready-made tracks.
 - **M** mutes a track and **S** plays it alone. Neither changes the song.
 - Double-click a knob to type an exact value, and hold `Ctrl` and click to reset it.
 - **FX** opens a track's effects. **Allow again** lets a plug-in that crashed load once more.

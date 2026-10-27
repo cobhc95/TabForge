@@ -2,18 +2,20 @@ using TabForge.Services;
 
 namespace TabForge.Docking;
 
-// Owns: the built-in layouts (Compose, Practice, Mix, Band), finding a saved or built-in layout by name, the name a typed
+// Owns: the built-in layouts (Default, and the Band view's own arrangement), finding a saved or built-in layout by name, the name a typed
 //   layout is saved under, the Layouts menu rows as data, and the score-back and side-panel comparison rules.
 // Does not own: menus, the window and the dock (DockLayoutController builds the menus from these rows), saving settings.
 // Tests: no dedicated test class.
 /// <summary>Toolkit-free rules of the dock's built-in and saved layouts.</summary>
 internal static class DockLayoutCatalog
 {
-    public static readonly string[] BuiltInLayoutNames = { "Compose", "Practice", "Mix", "Band" };
+    public static readonly string[] BuiltInLayoutNames = { DefaultName, BandName };
+    public const string DefaultName = "Default";
+    public const string BandName = "Band";
     public const int MaxSavedLayouts = 24;
     public const int MaxLayoutNameLength = 40;
 
-    /// <summary>One Layouts menu entry: a built-in layout has its hotkey id, a saved layout has none.</summary>
+    /// <summary>One Layouts menu entry: no layout has a hotkey now.</summary>
     public readonly record struct LayoutMenuRow(string Name, string? HotkeyId);
 
     /// <summary>A layout found by name: the name it is shown under, its panels, and the saved entry when it is one.</summary>
@@ -21,38 +23,16 @@ internal static class DockLayoutCatalog
 
     private static readonly LayoutMenuRow[] BuiltInMenuRows =
     {
-        new("Compose", "View.LayoutCompose"), new("Practice", "View.LayoutPractice"), new("Mix", "View.LayoutMix"), new("Band", "View.BandView")
+        new(DefaultName, null)
     };
 
     public static DockWorkspaceState BuiltInLayout(string name)
     {
-        static DockNodeState Tools() => DockLayoutTree.Tabs("default-tool-palette", "tools", "structure", "rhythm", "layout");
-        static DockNodeState Side(string selected, params string[] ids)
-        {
-            var host = DockLayoutTree.Tabs("default-sections-practice", ids);
-            host.SelectedPanel = selected;
-            return host;
-        }
-        var score = DockLayoutTree.EditorNode();
-        var instrument = DockLayoutTree.Tabs("default-instrument", "instrument");
+        // Default is the standard panel arrangement; Band is the Band view's own arrangement (entered from View > Band view, not listed in the Layouts menu).
+        if (!string.Equals(name, BandName, StringComparison.OrdinalIgnoreCase)) return InstrumentTopLayout();
         var timeline = DockLayoutTree.Tabs("default-timeline", "timeline");
-        var root = name switch
-        {
-            // Score + tab editor large; fretboard/keyboard and tools beside it; arrangement small.
-            "Compose" => DockLayoutTree.Split("Vertical", 0.86,
-                DockLayoutTree.Split("Horizontal", 0.78, DockLayoutTree.Split("Vertical", 0.68, score, instrument), DockLayoutTree.WithViewTempo(Tools(), ratio: 0.84)),
-                timeline),
-            // Score/tab + fretboard large; sections panel visible; arrangement and mixer window closed.
-            "Practice" => DockLayoutTree.Split("Horizontal", 0.78,
-                DockLayoutTree.Split("Vertical", 0.60, score, instrument),
-                DockLayoutTree.WithViewTempo(Side("sections", "sections", "lyrics"), ratio: 0.8)),
-            // Band view and arrangement only: no score, no fretboard pane, no side panel.
-            "Band" => DockLayoutTree.Split("Vertical", 0.80, DockLayoutTree.Tabs("default-band", "band"), timeline),
-            // Arrangement + mixer large; score small.
-            _ => DockLayoutTree.Split("Vertical", 0.30, score,
-                DockLayoutTree.Split("Horizontal", 0.74, timeline, DockLayoutTree.WithViewTempo(Side("sections", "sections", "lyrics"), ratio: 0.8)))
-        };
-        var state = new DockWorkspaceState { Root = root };
+        // Band view and arrangement only: no score, no fretboard pane, no side panel.
+        var state = new DockWorkspaceState { Root = DockLayoutTree.Split("Vertical", 0.80, DockLayoutTree.Tabs("default-band", "band"), timeline) };
         var present = DockLayoutTree.EnumerateAllPanels(state).ToHashSet(StringComparer.Ordinal);
         state.ClosedPanels = DockPaneTable.Ids.Where(id => !present.Contains(id)).ToList();
         return state;

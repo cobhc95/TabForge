@@ -2,7 +2,7 @@
   <!-- Differential-harness tool: drives Guitar Pro 5 instances on hidden desktops (see tools/gp5diff/README.md). Not part of the product. -->
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFramework>net10.0-windows</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>

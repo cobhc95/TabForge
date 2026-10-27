@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.IO;
-using NAudio.MediaFoundation;
 using NAudio.Wave;
 using TabForge.Services;
 
@@ -22,34 +21,34 @@ internal interface IMediaSource : IDisposable
 internal sealed class NAudioMediaSource : IMediaSource
 {
     private readonly IDisposable _reader;
-    private readonly ISampleProvider _samples;
+    private readonly ISampleProvider? _samples;
+    private readonly IAudioDecoder? _decoder;
     private readonly TimeSpan _total;
-    // Media Foundation starts once per process (on first use) and is left running until the process exits: a Startup per open had no matching Shutdown.
-    private static readonly Lazy<bool> MediaFoundationStarted = new(() => { MediaFoundationApi.Startup(); return true; });
 
-    /// <summary>Opens <paramref name="file"/> with NAudio's file reader; when that cannot decode it (some MP3/M4A files), the Windows Media Foundation reader is tried.</summary>
+    /// <summary>Opens <paramref name="file"/> with NAudio's file reader; when that cannot decode it (some MP3/M4A files), the system reader (Windows: Media Foundation) is tried.</summary>
     public NAudioMediaSource(string file)
     {
+        _decoder = AudioDecoders.TryOpenManaged(file); // MP3/OGG decode the same way on every OS; anything it rejects takes the readers below
+        if (_decoder is not null) { _reader = _decoder; _total = _decoder.TotalTime; return; }
         try
         {
             var reader = new AudioFileReader(file);
             _reader = reader; _samples = reader; _total = reader.TotalTime;
         }
-        catch (Exception first) when (first is not OutOfMemoryException && OperatingSystem.IsWindows())
+        catch (Exception first) when (first is not OutOfMemoryException && TabForge.Platform.SystemAudio.Reader.IsAvailable)
         {
             try
             {
-                _ = MediaFoundationStarted.Value;
-                var reader = new MediaFoundationReader(file);
-                _reader = reader; _samples = reader.ToSampleProvider(); _total = reader.TotalTime;
+                var reading = TabForge.Platform.SystemAudio.Reader.Open(file);
+                _reader = reading.Reader; _samples = reading.Samples; _total = reading.Total;
             }
             catch (Exception) { throw first is IOException or InvalidDataException or UnauthorizedAccessException ? first : new InvalidDataException("could not be decoded", first); } // the Media Foundation attempt failed too: the first error stands
         }
     }
-    public int SampleRate => _samples.WaveFormat.SampleRate;
-    public int Channels => _samples.WaveFormat.Channels;
+    public int SampleRate => _decoder?.SampleRate ?? _samples!.WaveFormat.SampleRate;
+    public int Channels => _decoder?.Channels ?? _samples!.WaveFormat.Channels;
     public double TotalSeconds => _total.TotalSeconds;
-    public int Read(float[] buffer, int offset, int count) => _samples.Read(buffer, offset, count);
+    public int Read(float[] buffer, int offset, int count) => _decoder is not null ? _decoder.Read(buffer, offset, count) : _samples!.Read(buffer, offset, count);
     public void Dispose() => _reader.Dispose();
 }
 

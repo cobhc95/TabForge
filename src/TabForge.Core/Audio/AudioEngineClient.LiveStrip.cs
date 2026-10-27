@@ -12,7 +12,7 @@ public sealed partial class AudioEngineClient
     {
         if (EngineProcessId is not int pid || _tunerWindowSent == (pid, ms)) return;
         _tunerWindowSent = (pid, ms);
-        Send(EngineCommand.SetTunerWindow, new SetTunerWindowMessage(ms).Write);
+        if (!Send(EngineCommand.SetTunerWindow, new SetTunerWindowMessage(ms).Write)) _tunerWindowSent = default;
     }
 
     /// <summary>The live input's raw input level before its chain (0..1+; the strip's Input meter).</summary>

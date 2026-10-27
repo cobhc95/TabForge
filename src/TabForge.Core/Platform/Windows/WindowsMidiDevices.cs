@@ -1,3 +1,4 @@
+using TabForge.Platform.Contracts;
 using System.Runtime.InteropServices;
 using TabForge.Playback;
 

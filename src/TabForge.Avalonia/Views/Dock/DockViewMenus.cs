@@ -10,12 +10,12 @@ using TabForge.Services;
 
 namespace TabForge.Avalonia.Views.Docking;
 
-// Owns: the View menu's Layouts and Panels submenus for the Avalonia window. Their rows and their order come from DockLayoutCatalog
-// (the layout list) and DockPaneTable (the panes); a layout row applies that layout, a panel row
+// Owns: the View menu's Panels and Layouts submenus for the Avalonia window. Their rows and their order come from DockLayoutCatalog
+// (the layout list) and DockPaneTable (the side panes); a layout row applies that layout, a panel row
 //   shows or closes its pane, and each check mark follows the dock.
 // Does not own: the dock tree (DockWorkspaceController), the saved-layout store (MainWindowSettings), the list rules
-//   (SavedLayoutRules, DockLayoutCatalog). The Band view and Keyboard mode Panels rows switch their whole-window layouts; without
-//   the Compose wiring they fall back to a plain show or close.
+//   (SavedLayoutRules, DockLayoutCatalog). The Band view and Keyboard mode panes are not Panels rows: View > Band view and
+//   View > Keyboard mode switch their whole-window layouts.
 // Tests: TabForge.Avalonia.Tests.MainWindowMenuTests.
 public sealed class DockViewMenus
 {
@@ -24,8 +24,6 @@ public sealed class DockViewMenus
     private readonly Window _owner;
     private readonly Action<string>? _status;
     private readonly Func<DockWorkspaceState?>? _realLayout;
-    private readonly Action? _bandToggle;
-    private readonly Action? _learnToggle;
     private readonly MenuItem _layouts = new() { Header = "Layouts" };
     private readonly MenuItem _panels = new() { Header = "Panels" };
     private readonly List<(string PaneId, MenuItem Item)> _panelItems = new();
@@ -34,43 +32,33 @@ public sealed class DockViewMenus
     /// <summary>The status notices the layout rows show.</summary>
     private const string LayoutSavedText = "saved";
     private const string TooManyLayoutsText = "Too many saved layouts; delete one first";
-    private const string BuiltInsResetText = "Built-in layouts reset";
     private const string LayoutDeletedText = "deleted";
     private const string LayoutNotFoundText = "not found";
     private const string LayoutAppliedText = "Layout: ";
-
-    /// <summary>The band pane id, which the Panels row switches through the Band layout instead of docking.</summary>
-    private const string BandPaneId = "band";
-
-    /// <summary>The Keyboard mode pane id, which the Panels row switches through the Keyboard mode layout instead of docking.</summary>
-    private const string LearnPaneId = "learn";
 
     /// <param name="dock">The dock the rows act on.</param>
     /// <param name="settings">The saved layouts (none when the window runs without settings).</param>
     /// <param name="owner">The window the save prompt opens over and whose size a saved layout records.</param>
     /// <param name="status">The status notice the layout rows show; null shows nothing (the Compose call leaves it unset).</param>
     /// <param name="realLayout">The layout a save stores while Keyboard mode shows its temporary arrangement; null stores the dock as shown.</param>
-    /// <param name="bandToggle">The Band view toggle the Panels band row runs; null shows or closes the pane in place.</param>
-    /// <param name="learnToggle">The Keyboard mode toggle the Panels learn row runs; null shows or closes the pane in place.</param>
-    public DockViewMenus(DockWorkspaceController dock, MainWindowSettings? settings, Window owner, Action<string>? status = null, Func<DockWorkspaceState?>? realLayout = null, Action? bandToggle = null, Action? learnToggle = null)
+    public DockViewMenus(DockWorkspaceController dock, MainWindowSettings? settings, Window owner, Action<string>? status = null, Func<DockWorkspaceState?>? realLayout = null)
     {
         _dock = dock;
         _settings = settings;
         _owner = owner;
         _status = status;
         _realLayout = realLayout;
-        _bandToggle = bandToggle;
-        _learnToggle = learnToggle;
         // The window starts in Compose when no settings say otherwise (the preview window has none).
-        _currentLayout = settings is null ? DockLayoutCatalog.BuiltInLayoutNames[0] : settings.Settings.LastLayout;
+        // A removed preset (Compose, Practice, Mix) or a deleted layout falls back to Default; the dock itself is left as it is.
+        _currentLayout = DockLayoutCatalog.Resolve(SavedLayouts, settings?.Settings.LastLayout ?? DockLayoutCatalog.DefaultName)?.Name ?? DockLayoutCatalog.DefaultName;
         _layouts.AddHandler(MenuItem.SubmenuOpenedEvent, (sender, args) => { if (ReferenceEquals(args.Source, _layouts)) RefreshLayouts(); });
         _panels.AddHandler(MenuItem.SubmenuOpenedEvent, (sender, args) => { if (ReferenceEquals(args.Source, _panels)) RefreshPanelChecks(); });
         BuildPanels();
         RefreshLayouts();
     }
 
-    /// <summary>The Layouts and Panels items, in the order the View menu shows them.</summary>
-    public IReadOnlyList<MenuItem> Items => new[] { _layouts, _panels };
+    /// <summary>The Panels and Layouts items, in the order the View menu shows them.</summary>
+    public IReadOnlyList<MenuItem> Items => new[] { _panels, _layouts };
 
     // Without settings (the preview window) the saved layouts live in memory for this window only; nothing is written.
     private readonly List<SavedLayout> _unsavedLayouts = new();
@@ -84,17 +72,14 @@ public sealed class DockViewMenus
         var customStarted = false;
         foreach (var row in DockLayoutCatalog.LayoutMenuRows(SavedLayouts))
         {
-            if (row.HotkeyId is null && !customStarted) { _layouts.Items.Add(new Separator()); customStarted = true; }
             _layouts.Items.Add(LayoutItem(row));
+            if (!customStarted && SavedLayouts.Count > 0) { _layouts.Items.Add(new Separator()); customStarted = true; }
         }
         _layouts.Items.Add(new Separator());
         var save = new MenuItem { Header = "Save current layout as…" };
         save.Click += async (_, _) => await SaveCurrentLayoutAsync();
         _layouts.Items.Add(save);
         _layouts.Items.Add(DeleteMenu());
-        var reset = new MenuItem { Header = "Reset built-in layouts" };
-        reset.Click += (_, _) => ResetBuiltIns();
-        _layouts.Items.Add(reset);
     }
 
     private MenuItem DeleteMenu()
@@ -103,7 +88,7 @@ public sealed class DockViewMenus
         foreach (var layout in SavedLayouts.ToList())
         {
             var name = layout.Name;
-            var item = new MenuItem { Header = DockLayoutCatalog.IsBuiltIn(name) ? name + " (back to built-in)" : name };
+            var item = new MenuItem { Header = DockLayoutCatalog.IsBuiltIn(name) ? name + " (back to Default)" : name };
             item.Click += (_, _) => DeleteLayout(name);
             delete.Items.Add(item);
         }
@@ -143,13 +128,6 @@ public sealed class DockViewMenus
         }
         PersistSettings();
         _status?.Invoke($"Layout \"{name}\" {LayoutDeletedText}");
-    }
-
-    private void ResetBuiltIns()
-    {
-        SavedLayoutRules.ResetBuiltIns(SavedLayouts);
-        PersistSettings();
-        _status?.Invoke(BuiltInsResetText);
     }
 
     private MenuItem LayoutItem(DockLayoutCatalog.LayoutMenuRow row)
@@ -197,17 +175,13 @@ public sealed class DockViewMenus
 
     private void BuildPanels()
     {
-        foreach (var row in DockPaneTable.Rows)
+        foreach (var row in DockPaneTable.Rows.Where(r => r.Side))   // the side panes only: the fretboard, arrangement, Band view and Keyboard mode panes have their own View rows
         {
             var item = new MenuItem { Header = row.MenuTitle, ToggleType = MenuItemToggleType.CheckBox };
             var paneId = row.Id;
             item.Click += (_, _) =>
             {
-                // Band view has its own layout and Keyboard mode swaps the layout: their Panels rows switch layouts, never dock the pane in place.
-                // Without the Compose wiring the toggle falls back to a plain show or close (DEFERRED: pass bandToggle/learnToggle).
-                if (paneId == BandPaneId && _bandToggle is not null) _bandToggle();
-                else if (paneId == LearnPaneId && _learnToggle is not null) _learnToggle();
-                else _dock.SetPanelVisible(paneId, !_dock.IsPanelVisible(paneId));
+                _dock.SetPanelVisible(paneId, !_dock.IsPanelVisible(paneId));
                 RefreshPanelChecks();
             };
             _panelItems.Add((paneId, item));

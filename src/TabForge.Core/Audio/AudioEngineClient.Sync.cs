@@ -26,6 +26,7 @@ public sealed partial class AudioEngineClient : IDisposable
         MediaContext? media = null, ICollection<string>? skippedPlugins = null)
     {
         if (Rendering) return;
+        ResyncIfDropped();   // commands lost while the engine was unreachable: every "sent" key is forgotten, this sync sends it all again
         _ui ??= SynchronizationContext.Current;
         RecordingOffsetMs = settings.RecordingOffsetMs;
         _appWideMonitor = settings.MonitorFx;
@@ -46,6 +47,7 @@ public sealed partial class AudioEngineClient : IDisposable
             if (IsRunning) Stop();
             ForgetAllSlots();
             ResetWarmState();
+            Synced?.Invoke();
             return;
         }
         var ownIdle = wanted.Count == 0;
@@ -55,13 +57,18 @@ public sealed partial class AudioEngineClient : IDisposable
         if (project is not null && !ownIdle) wanted.AddRange(SongRigs.Running(project, null, SongRigKind.Bus | SongRigKind.Master).Select(r => r.AsTrack()));
         // Monitor FX (speaker calibration): after the master, live output only; the app-wide chain or the song's own. Global slot: wanted while any document's tracks are live.
         if (project is not null && !idle) wanted.AddRange(SongRigs.Running(project, settings.MonitorFx, SongRigKind.Monitor).Select(r => r.AsTrack()));
-        if (!ownIdle && _config != config) { var changing = _config is not null && config.PopGuard; if (_config is null || _config.Driver != config.Driver || _config.Device != config.Device) ForgetSingleRateAsio(); _config = config; if (changing) DeviceChanging?.Invoke(); Send(EngineCommand.Configure, w => w.Write(config)); }
+        if (!ownIdle && _config != config) { var changing = _config is not null && config.PopGuard; if (_config is null || _config.Driver != config.Driver || _config.Device != config.Device) ForgetSingleRateAsio(); _config = config; if (changing) DeviceChanging?.Invoke(); if (!Send(EngineCommand.Configure, w => w.Write(config))) _config = null; }   // not delivered: the next sync configures the device again
         if (!ownIdle) SyncWindowsPathOffset(config);
         if (EngineProcessId is int enginePid && _limiterSent != (enginePid, settings.LiveLimiter))
         {
             _limiterSent = (enginePid, settings.LiveLimiter);
             var liveLimiter = settings.LiveLimiter;
-            Send(EngineCommand.SetLiveLimiter, new SetLiveLimiterMessage(liveLimiter).Write);
+            if (!Send(EngineCommand.SetLiveLimiter, new SetLiveLimiterMessage(liveLimiter).Write)) _limiterSent = default;
+        }
+        if (EngineProcessId is int bankPid && SoundFontStore.ActivePath(settings) is var bankPath && _bankSent != (bankPid, bankPath))
+        {
+            _bankSent = (bankPid, bankPath);
+            if (!Send(EngineCommand.SetSoundBank, new SetSoundBankMessage(bankPath).Write)) _bankSent = default;
         }
         SyncTunerWindow(settings.LiveInput.TunerWindowMs);
         var now = WarmClock();
@@ -73,10 +80,11 @@ public sealed partial class AudioEngineClient : IDisposable
         RemoveGoneSlots(wanted, liveElsewhere, owner, now);
         var noSlot = SyncTrackChains(wanted, owner, quarantined, settings, mix, media);
         if (noSlot.Count > 0) { wanted.RemoveAll(noSlot.Contains); RaiseOnUi(() => TrackLimitReached?.Invoke(MixerBuses.BusBase)); }   // the tracks without a slot stay silent; the user is told
-        foreach (var track in wanted) { if (!track.IsBus) SyncMidiRoute(track, wanted, project); SyncMidiProcessors(track); SyncWiring(track); }
+        foreach (var track in wanted) { if (!track.IsBus) SyncMidiRoute(track, wanted, project); SyncMidiProcessors(track); SyncWiring(track, project); }
         SyncGraph(wanted, project, liveElsewhere);
         _idleSince = idle ? _idleSince ?? now : null;
         ScheduleWarmCheck();
+        Synced?.Invoke();
     }
 
     /// <summary>The engine has no tracks to keep: every slot and everything remembered as sent is forgotten.</summary>
@@ -258,15 +266,16 @@ public sealed partial class AudioEngineClient : IDisposable
         var key = string.Join(",", dests) + "|" + string.Join(",", sides) + "|" + string.Join(",", fwds);
         if (key == _sentGraph) return;
         _sentGraph = key;
-        Send(EngineCommand.SetGraph, new SetGraphMessage(dests, sides, fwds).Write);
+        if (!Send(EngineCommand.SetGraph, new SetGraphMessage(dests, sides, fwds).Write)) _sentGraph = "";
     }
 
     /// <summary>Serial-chain options of every plug-in (pass MIDI on, MIDI output on, instrument audio add / replace): light live message, never part of the rebuild key.</summary>
-    private void SyncWiring(TrackModel track)
+    private void SyncWiring(TrackModel track, SongProject? project = null)
     {
         if (!_slots.TryGetValue(track, out var slot)) return;
         var plugins = track.SoundSource == SoundSources.Plugins ? track.Rig.Plugins : new List<PluginSlot>();
-        var flags = plugins.Select(p => (p.PassMidiThrough ? 1 : 0) | (p.MidiOutToNext ? 2 : 0) | (p.InstrumentAudio == "Replace" ? 4 : 0)).ToList();
+        // Bit 3: MIDI input Source None (the plug-in hears no MIDI); bits 16..31: the channels its Channel filter blocks.
+        var flags = plugins.Select(p => WiringFlags(track, p, project)).ToList();
         var key = string.Join(",", flags);
         var defaults = flags.All(f => f == 3);
         if (_sentWiring.TryGetValue(slot, out var sent) ? sent == key : defaults) { _sentWiring[slot] = key; return; }
@@ -324,18 +333,31 @@ public sealed partial class AudioEngineClient : IDisposable
             var src = wanted.FirstOrDefault(t => !ReferenceEquals(t, track) && t.Id.ToString("N") == midiIn.TrackId);
             source = src is not null && _slots.TryGetValue(src, out var s) ? s : -2;
         }
+        var mask = MidiChannelMask(track, midiIn, project);
+        var key = $"{index}|{source}|{mask}";
+        if (_sentRoutes.TryGetValue(slot, out var sent) ? sent == key : index < 0 || (source == -1 && mask == 0xFFFF)) { _sentRoutes[slot] = key; return; }
+        _sentRoutes[slot] = key;
+        if (index >= 0) Send(EngineCommand.SetMidiRoute, new SetMidiRouteMessage(slot, index, source, mask).Write);
+    }
+
+    private static int WiringFlags(TrackModel track, PluginSlot p, SongProject? project)
+    {
+        var midiIn = p.MidiIn ?? new PluginMidiIn();
+        return (p.PassMidiThrough ? 1 : 0) | (p.MidiOutToNext ? 2 : 0) | (p.InstrumentAudio == "Replace" ? 4 : 0)
+            | (midiIn.Source == PluginMidiIn.None ? 8 : 0) | ((~MidiChannelMask(track, midiIn, project) & 0xFFFF) << 16);
+    }
+
+    /// <summary>The channels (bit n = channel n+1) a plug-in's MIDI input takes; a filter on the track's own channel also lets its effect channel (bent notes) through.</summary>
+    private static int MidiChannelMask(TrackModel track, PluginMidiIn midiIn, SongProject? project)
+    {
         var mask = midiIn.Channel is >= 1 and <= 16 ? 1 << (midiIn.Channel - 1) : 0xFFFF;
-        // A filter on the track's own channel also lets its effect channel (bent notes) through.
         if (project is not null && mask != 0xFFFF && project.Tracks.IndexOf(track) is >= 0 and var own)
         {
             var main = Playback.ChannelAllocator.Assign(project);
             var effect = Playback.ChannelAllocator.AssignEffect(project, main);
             if (own < main.Length && mask == 1 << main[own] && effect[own] is >= 0 and < 16) mask |= 1 << effect[own];
         }
-        var key = $"{index}|{source}|{mask}";
-        if (_sentRoutes.TryGetValue(slot, out var sent) ? sent == key : index < 0 || (source == -1 && mask == 0xFFFF)) { _sentRoutes[slot] = key; return; }
-        _sentRoutes[slot] = key;
-        if (index >= 0) Send(EngineCommand.SetMidiRoute, new SetMidiRouteMessage(slot, index, source, mask).Write);
+        return mask;
     }
 
     /// <summary>A plug-in's output volume while its knob is dragged: one small message, no chain rebuild.</summary>
@@ -435,13 +457,15 @@ public sealed partial class AudioEngineClient : IDisposable
     public void SetTrackLevelsNow(IEnumerable<TrackModel> tracks, Func<TrackModel, (int Volume, int Pan)> mix)
     {
         if (!IsRunning) return;
+        ResyncIfDropped();
         foreach (var track in tracks)
         {
             if (track.IsBus || !_slots.TryGetValue(track, out var slot)) continue;
             var level = mix(track);
+            if (_audioContext.TryGetValue(slot, out var context)) _audioContext[slot] = (context.Track, context.Media, level);   // a later resync of this slot's clips keeps the level (mute, solo, fader) the user set
             if (_sentTrackMix.TryGetValue(slot, out var held) && held == level) continue;
-            _sentTrackMix[slot] = level;
-            Send(EngineCommand.SetTrackMix, new SetTrackMixMessage(slot, level.Volume, level.Pan).Write);
+            if (Send(EngineCommand.SetTrackMix, new SetTrackMixMessage(slot, level.Volume, level.Pan).Write)) _sentTrackMix[slot] = level;
+            else _sentTrackMix.Remove(slot);
         }
     }
 
@@ -473,11 +497,12 @@ public sealed partial class AudioEngineClient : IDisposable
         if (_sentAudio.TryGetValue(slot, out var sent) && sent == key) return;
         _sentAudio[slot] = key;
         _sentTrackMix[slot] = (mix.Volume, mix.Pan);
-        Send(EngineCommand.SetTrackMix, new SetTrackMixMessage(slot, mix.Volume, mix.Pan).Write);
+        var delivered = Send(EngineCommand.SetTrackMix, new SetTrackMixMessage(slot, mix.Volume, mix.Pan).Write);
         ClipsSentForTest?.Invoke(slot, clips);
-        Send(EngineCommand.SetClips, new SetClipsMessage(slot, clips, ownerId).Write);
-        Send(EngineCommand.SetArm, new SetArmMessage(slot, armed, Math.Max(0, armMode), track.MonitorInput).Write);
-        if (LiveInput.Owns(track)) Send(EngineCommand.SetInputGain, new SetInputGainMessage(slot, gainDb).Write);
+        delivered &= Send(EngineCommand.SetClips, new SetClipsMessage(slot, clips, ownerId).Write);
+        delivered &= Send(EngineCommand.SetArm, new SetArmMessage(slot, armed, Math.Max(0, armMode), track.MonitorInput).Write);
+        if (LiveInput.Owns(track)) delivered &= Send(EngineCommand.SetInputGain, new SetInputGainMessage(slot, gainDb).Write);
         ArmSentForTest?.Invoke(slot, armed, Math.Max(0, armMode), track.MonitorInput);
+        if (!delivered) { _sentAudio.Remove(slot); _sentTrackMix.Remove(slot); }   // the engine never got it: the next sync sends the clips, level and arm again
     }
 }

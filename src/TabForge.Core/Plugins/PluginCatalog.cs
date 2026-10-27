@@ -47,7 +47,7 @@ public static class PluginCatalog
         lock (ProbedLock)
         {
         settings.Probed.RemoveAll(p => string.Equals(p.Path, path, StringComparison.OrdinalIgnoreCase));
-        settings.Probed.Add(new KnownPlugin { Path = path, Role = role, Vendor = vendor, Name = name, Format = path.EndsWith(".vst3", StringComparison.OrdinalIgnoreCase) ? "VST3" : "VST2" });
+        settings.Probed.Add(new KnownPlugin { Path = path, Role = role, Vendor = vendor, Name = name, Format = PluginFormats.Of(path) });
         }
         return (role, vendor, name);
     }

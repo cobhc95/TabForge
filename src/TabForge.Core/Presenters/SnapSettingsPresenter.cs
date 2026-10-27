@@ -1,6 +1,6 @@
 // Owns: the snap / grid settings dialog's logic without UI types: its texts and tips, the switches (label, tip, indent, read and write
 //       of the setting) and committing a typed snap distance (whole pixels, clamped to 1-40; anything else restores the value).
-// Does not own: the window (Avalonia SnapSettingsWindow), the hotkey text of the first switch (the caller
+// Does not own: the window (Avalonia SnapSettingsPopup), the hotkey text of the first switch (the caller
 //       passes the label) or saving the settings (the caller's change callback).
 // Tests: TabForge.Avalonia.Tests.ClipSnapPluginDialogTests.
 using TabForge.Services;

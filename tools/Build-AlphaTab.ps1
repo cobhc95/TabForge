@@ -11,7 +11,7 @@
       .\Source\tools\Build-AlphaTab.ps1            build, then check the DLL equals the one inside the committed package
       .\Source\tools\Build-AlphaTab.ps1 -Update    build, then replace Source/vendor/alphatab/*.nupkg and Source/vendor/alphatab/SHA256SUMS
 
-    Official sources only: github.com/CoderLine/alphaTab, npmjs.org, nuget.org. Needs git, node (LTS), npm and the .NET 8 SDK.
+    Official sources only: github.com/CoderLine/alphaTab, npmjs.org, nuget.org. Needs git, node (LTS), npm and the .NET SDK pinned in Source/vendor/alphatab/global.json (8.0.425).
     Exit codes: 0 ok, 1 build or verification failed.
 #>
 [CmdletBinding()]
@@ -58,8 +58,9 @@ if ($patches.Count -eq 0) { throw "No patch found in $vendor" }
 
 if (Test-Path -LiteralPath $Work) { Remove-Item -LiteralPath $Work -Recurse -Force }
 New-Item -ItemType Directory -Path $Work | Out-Null
-# The same .NET SDK (compiler) as TabForge itself: global.json applies to everything below the work folder.
-Copy-Item -LiteralPath (Join-Path $srcRoot 'global.json') -Destination (Join-Path $Work 'global.json')
+# The .NET SDK (compiler) that built the committed package, pinned in vendor/alphatab/global.json (TabForge itself moved to .NET 10
+# in 0.8.2; the package targets netstandard2.0 and keeps its compiler until the patch changes). It applies to everything below the work folder.
+Copy-Item -LiteralPath (Join-Path $vendor 'global.json') -Destination (Join-Path $Work 'global.json')
 $src = Join-Path $Work 'alphaTab'
 
 # 1. The pinned upstream source, with line endings untouched so every machine generates the same files.
@@ -99,7 +100,7 @@ if ($Update) {
         exit 0
     }
     Copy-Item -LiteralPath $built -Destination $committed -Force
-    Write-Output 'The package changed: regenerate the lock files (dotnet restore Source\TabForge.sln --force-evaluate), Source/docs/SBOM.md (Source/tools/Write-Sbom.ps1) and the hashes in Source/vendor/alphatab/README.md.'
+    Write-Output 'The package changed: regenerate the lock files (dotnet restore Source\TabForge.sln --force-evaluate), Source/docs/reference/SBOM.md (Source/tools/Write-Sbom.ps1) and the hashes in Source/vendor/alphatab/README.md.'
     $nupkgHash = (Get-FileHash -LiteralPath $committed -Algorithm SHA256).Hash.ToLowerInvariant()
     $lines = @(
         "$nupkgHash  $packageFile",

@@ -76,6 +76,7 @@ public sealed partial class FxChainWindow : Window
         this[!BackgroundProperty] = new DynamicResourceExtension("WindowBackground");
         this[!ForegroundProperty] = new DynamicResourceExtension("TextPrimary");
         _area = new FxEditorArea(() => PluginEditorPopup);
+        _parameters = new FxParameterPane(host, track, _ui);
         _editors = new FxEditorController(host, track, _area, _ui, () => OwnerHandle, () => ActualThemeVariant != ThemeVariant.Light,
             () => Selected, () => ShowSelected(), () => { ShowSelected(); if (IsVisible && WindowState != WindowState.Minimized) Activate(); }, () => PluginEditorPopup);
         _containers = new FxChainContainers(this, _list, () => _track.Rig,
@@ -85,10 +86,13 @@ public sealed partial class FxChainWindow : Window
             leaving => _editors.Leaving(leaving), slot => _host.Trust.IsTrusted(slot.Path, _host.PluginSettings, _host.PluginFiles),
             () => _host.Engine?.CollectStatesAsync(new[] { _track }, StateCollectMs) ?? System.Threading.Tasks.Task.CompletedTask, () => Dialogs);
         _files = new FxChainFiles(this, () => Dialogs, _host, _track, first => RefreshList(first), text => _status.Text = text, change => EditTree(change, refresh: true));
+        TabForge.Avalonia.Platform.Controls.HotkeyTip.SetSource(this, () => _host.Hotkeys);   // tooltips with a key show the live binding
+        _containers.LeadingItems = ListMenuItems;
         BuildOptions();
         Content = BuildRoot();
         BuildBar();
         WireEvents();
+        WireParameters();
         _cpuTimer = _ui.CreateTimer(TimeSpan.FromSeconds(CpuTickSeconds));
         _cpuTimer.Tick += (_, _) => UpdateCpu();
         AttachWindowEvents();

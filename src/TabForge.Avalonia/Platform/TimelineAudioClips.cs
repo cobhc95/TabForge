@@ -26,7 +26,8 @@ internal static partial class TimelineAudioClips
     private const double LanePadding = 2;
     // A clip's fill, name and wave: a 0.34 fill keeps the same-colour waveform readable, the 10pt name sits above it.
     private const double ClipFillOpacity = 0.34;
-    private const double MutedClipOpacity = 0.45;
+    // A muted clip fades to about half its playing fill, the same ratio as a muted tab block (0.16 of 0.30), so it reads greyed on the dark theme too.
+    private const double MutedClipOpacity = 0.18;
     // The light theme's clips are solid track colour with a dark name; a muted one fades and takes a 1px track-colour border.
     private const double LightClipFillOpacity = 0.9;
     private const double LightMutedClipOpacity = 0.35;
@@ -74,7 +75,7 @@ internal static partial class TimelineAudioClips
     public static void DrawRow(IDrawContext d, Func<string, UiColor> ink, TimelineView view, TrackModel track, int row, double top, UiColor colour)
     {
         view.Waveforms.MissingInk = ink("Danger");   // a clip whose file is gone draws hatched in this colour
-        var lanes = ClipLanes.LaidOutCount(track);
+        var lanes = view.LaneBandsOf(track);
         if (lanes == 0) return;
         var laneHeight = ClipLanes.AudioLaneHeight;
         var width = Math.Max(view.BarsWidth, view.Bounds.Width);
@@ -83,6 +84,7 @@ internal static partial class TimelineAudioClips
         var laneFrom = double.IsNaN(spanFrom) ? 0 : Math.Max(0, spanFrom);
         var laneTo = double.IsNaN(spanFrom) ? width : Math.Min(width, spanFrom + spanWidth);
         var light = view.FrameLight;
+        var trackDimmed = view.IsRowDimmed(row);
         var board = ink("TimelineLane");
         for (var lane = 0; lane < lanes; lane++)
         {
@@ -91,8 +93,11 @@ internal static partial class TimelineAudioClips
             if (light) continue;
             d.Rect(colour.WithOpacity(ClipLanes.Plays(track, lane) ? LanePlayingTintOpacity : LaneSilentTintOpacity), null, laneFrom, laneTop, Math.Max(0, laneTo - laneFrom), laneHeight);
         }
+        // A lane the user named (Rename lane) shows its name small at the lane's left edge, under the clips.
+        for (var lane = 0; lane < lanes && lane < track.Lanes.Count; lane++)
+            if (track.Lanes[lane].Name is { Length: > 0 } laneName)
+                d.DrawText(d.Text(laneName, TimelineView.Font, NameFontSize, ink("TextMuted"), d.PixelsPerDip), laneFrom + NameInset, top + lane * ClipLanes.AudioLaneHeight + LanePadding);
         var background = ink("TimelineRow");
-        var playingOpacity = light ? LightClipFillOpacity : ClipFillOpacity;
         var surface = light ? board : background;
         if (view.ClipDropLane is { } drop && drop.Track == track)
         {
@@ -104,8 +109,9 @@ internal static partial class TimelineAudioClips
         for (var index = 0; index < track.AudioClips.Count; index++)
         {
             var clip = track.AudioClips[index];
+            if (IsLiftedByDrag(view, clip)) continue;   // a move drag shows this clip on its landing lane (DrawClipDragPreview): its own spot stays empty
             var laneTop = top + Math.Max(0, clip.Lane) * ClipLanes.AudioLaneHeight;
-            var fillOpacity = ClipLanes.Audible(track, clip) ? playingOpacity : light ? LightMutedClipOpacity : MutedClipOpacity;
+            var fillOpacity = FillOpacityOf(light, ClipLanes.Audible(track, clip), trackDimmed, view.MutedTrackDimPercent);
             var nameInk = ClipInk(surface, colour, fillOpacity);
             if (FoldOf(view, clip) is { } slices)
             {
@@ -116,6 +122,18 @@ internal static partial class TimelineAudioClips
             if (!double.IsNaN(spanFrom) && (rect.Right < spanFrom || rect.X > spanFrom + spanWidth)) continue;
             DrawClipBox(d, view, track, row, index, clip, rect, width, colour, nameInk, background, ink, fillOpacity);
         }
+    }
+
+    /// <summary>
+    /// The one style decision for a clip's fill: a clip muted itself (or on a silent lane) takes the muted opacity; a clip of a track the mixer silences (muted, or not soloed
+    /// beside a soloed track) fades the same way, by the muted-track dimming setting (0 = not dimmed), as the track's tab blocks do; any other clip is at the playing opacity.
+    /// </summary>
+    internal static double FillOpacityOf(bool light, bool clipAudible, bool trackDimmed, int mutedTrackDimPercent)
+    {
+        var playing = light ? LightClipFillOpacity : ClipFillOpacity;
+        var muted = light ? LightMutedClipOpacity : MutedClipOpacity;
+        if (!clipAudible) return muted;
+        return trackDimmed ? playing + (muted - playing) * Math.Clamp(mutedTrackDimPercent, 0, 100) / 100.0 : playing;
     }
 
     /// <summary>The name and wave ink for a clip: the better of light/dark on the clip's fill as composited (<paramref name="fillOpacity"/> of the track colour over the lane).</summary>
@@ -209,30 +227,7 @@ internal static partial class TimelineAudioClips
             d.Rect(colour.WithOpacity(FileDropLaneShadeOpacity), null, 0, laneTop, width, laneHeight);
             if (newLane) DrawFileDropSlot(d, accent, width, laneTop, laneHeight);
         }
-        var x1 = view.XOfSeconds(preview.StartSec);
-        // The preview box is the landed clip's box (BoundsOf): the same lane padding, height and minimum width, so the drop shows what lands.
-        var x2 = Math.Max(x1 + MinClipWidth, view.XOfSeconds(preview.EndSec));
-        var boxHeight = laneHeight - 2 * LanePadding;
-        var box = new Rect(x1, laneTop + LanePadding, x2 - x1, boxHeight);
-        d.Rect(colour.WithOpacity(FileDropBlockFillOpacity), new UiStroke(colour, FileDropBlockStrokeWidth), box.X, box.Y, box.Width, box.Height, ClipCornerRadius);
-        var textInk = ink("TextPrimary");
-        if (box.Width <= 2 * FileDropTextInset || string.IsNullOrEmpty(preview.Label)) return;
-        d.PushClip(box.X, box.Y, box.Width, box.Height);
-        d.DrawText(d.Text(preview.Label, TimelineView.Font, FileDropLabelFontSize, textInk, d.PixelsPerDip, weight: 600), box.X + FileDropTextInset, box.Y + LanePadding);
-        var detail = AudioDropPreviewPlanner.Detail(preview);
-        if (box.Width > 4 * FileDropTextInset && detail.Length > 0)
-        {
-            // The length (and "new lane") only when it fits: a cut-off number would read as a different length.
-            var parts = detail.Split(" · ");
-            for (var count = parts.Length; count >= 1; count = count > 1 ? 1 : 0)
-            {
-                var line = string.Join(" · ", parts.Take(count));
-                if (d.Text(line, TimelineView.Font, FileDropDetailFontSize, textInk, d.PixelsPerDip).Width + 2 * FileDropTextInset > box.Width) continue;
-                d.DrawText(d.Text(line, TimelineView.Font, FileDropDetailFontSize, textInk, d.PixelsPerDip), box.X + FileDropTextInset, box.Y + FileDropLabelFontSize + FileDropDetailTop);
-                break;
-            }
-        }
-        d.Pop();
+        DrawFileDropParts(d, ink, view, preview, colour, laneTop, accent);
     }
 
     private static void DrawFileDropSlot(IDrawContext d, UiColor accent, double width, double top, double height) =>
@@ -272,6 +267,23 @@ internal static partial class TimelineAudioClips
         return null;
     }
 
+    /// <summary>The (track row, lane) whose lane band holds <paramref name="point"/> (clip or not), or for an armed track with no lanes yet its armed strip (lane 0); null over the notation band, the ruler and empty space.</summary>
+    public static (int Row, int Lane)? LaneAt(TimelineView view, Point point)
+    {
+        var row = view.RowAtY(point.Y);
+        if (row < 0 || row >= view.RowCount) return null;
+        var track = view.Song.Tracks[row];
+        var lanes = view.LaneBandsOf(track);
+        if (lanes > 0)
+        {
+            var lane = (int)Math.Floor((point.Y - LaneTopOf(view, row)) / ClipLanes.AudioLaneHeight);
+            return lane >= 0 && lane < lanes ? (row, lane) : null;
+        }
+        if (!track.RecordArm) return null;
+        var stripTop = view.ArmedStripTopOf(row);
+        return point.Y >= stripTop && point.Y < stripTop + TabForge.Avalonia.Features.Recording.View.ArmedRowPainter.SubRowHeight ? (row, 0) : null;
+    }
+
     /// <summary>Adds the (track row, index in the track's clips) of every audio clip <paramref name="box"/> touches (a folded clip on any slice) to <paramref name="into"/>; allocates nothing.</summary>
     public static void ClipsIn(TimelineView view, Rect box, List<(int Row, int Index)> into)
     {
@@ -306,7 +318,7 @@ internal static partial class TimelineAudioClips
 
     /// <summary>A clip shows its fade handles when it is selected, already has a fade, or is hovered (a first press can start a fade).</summary>
     internal static bool ShowsFadeHandles(TimelineView view, AudioClip clip, int row, int index) =>
-        view.IsClipSelected(clip) || clip.FadeInSec > 0 || clip.FadeOutSec > 0 || view.HoverClip == (row, index);
+        !clip.IsMidi && (view.IsClipSelected(clip) || clip.FadeInSec > 0 || clip.FadeOutSec > 0 || view.HoverClip == (row, index));
 
     /// <summary>The x of the fade-in handle (the end of the fade-in) and of the fade-out handle (the start of the fade-out).</summary>
     internal static (double In, double Out) FadeHandleXs(TimelineView view, AudioClip clip) =>
@@ -315,7 +327,7 @@ internal static partial class TimelineAudioClips
     // The silenced part of each fade: a triangle above the gain ramp, with the ramp as a line.
     private static void DrawFadeShades(IDrawContext d, TimelineView view, AudioClip clip, Rect box, Func<string, UiColor> ink)
     {
-        if (clip.FadeInSec <= 0 && clip.FadeOutSec <= 0) return;
+        if (clip.IsMidi || (clip.FadeInSec <= 0 && clip.FadeOutSec <= 0)) return;   // MIDI takes have no fades
         var fill = ink("TimelineRow").WithOpacity(FadeShadeOpacity);
         var stroke = new UiStroke(ink("TextPrimary").WithOpacity(FadeRampStrokeOpacity), FadeRampStrokeWidth);
         if (clip.FadeInSec > 0)

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using TabForge.Avalonia.Platform;
 using TabForge.Menus;
+using TabForge.Models;
 using TabForge.Platform;
 using TabForge.Platform.Theme;
 using TabForge.Presenters;
@@ -69,7 +70,7 @@ public sealed partial class PianoRollView
         Surface.DrawVoice = Presenter.IsTab ? Surface.DrawVoice : 0;
         Surface.NoteNames = Presenter.Track?.PianoRollNoteNames == true;
         Surface.NoteLengthChoice = editing.PianoRollNoteLength;
-        Surface.Ghosts = editing.PianoRollGhosts && _document is { } song && Presenter.TrackIndex >= 0 ? PianoRollGhosts.Read(song.Project, Presenter.TrackIndex, Presenter.Map) : Array.Empty<PianoRollNote>();
+        Surface.Ghosts = editing.PianoRollGhosts && _document is { } song && Presenter.TrackIndex >= 0 ? PianoRollGhosts.Read(song.Project, Presenter.TrackIndex, Presenter.Map, Presenter.Choice) : Array.Empty<PianoRollNote>();
         Surface.DrumNames = Presenter.Track?.IsDrumTrack == true || Presenter.Track?.MidiChannel == 9;
         _names.IsChecked = Surface.NoteNames;
         _sections = Sections();
@@ -88,6 +89,24 @@ public sealed partial class PianoRollView
                     break;
                 }
         return list;
+    }
+
+    /// <summary>Edits another source of the shown track (its tab, or a lane of MIDI takes): the notes, lanes, ghosts and the "Editing:" label follow.</summary>
+    internal void UseSource(PianoRollSourceChoice choice)
+    {
+        Presenter.UseSource(choice);
+        RefreshTools();
+        RefreshInfo();
+        SyncScrollBars();
+        Surface.InvalidateVisual();
+        Surface.Playhead.InvalidateVisual();
+    }
+
+    /// <summary>A click on a MIDI take: the roll edits that take's whole lane (every take on it) and scrolls to it, never the track's tab.</summary>
+    public void ShowTakeLane(AudioClip clip)
+    {
+        UseSource(PianoRollSourceChoice.OnLane(clip.Lane));
+        Surface.Reveal(Presenter.Map.BeatsAt(clip.StartSec));   // only when the take's start is off screen
     }
 
     /// <summary>The recording's live take of this track, drawn translucent over the notes (none: cleared). Cheap and coalesced: it refills a reused list and

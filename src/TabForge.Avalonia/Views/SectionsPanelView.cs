@@ -122,7 +122,7 @@ public sealed class SectionsPanelView : Border
             Highlight(next.Marker);
             next.View.BringIntoView();
         }
-        else if (e.Key == Key.Enter && _selected is not null) JumpRequested?.Invoke(_selected.Marker, e.KeyModifiers.HasFlag(KeyModifiers.Control));
+        else if (e.Key == Key.Enter && _selected is not null) JumpRequested?.Invoke(_selected.Marker, e.KeyModifiers.HasPrimary());
         else return;
         e.Handled = true;
     }
@@ -170,7 +170,7 @@ public sealed class SectionsPanelView : Border
         view.PointerReleased += (_, e) =>
         {
             if (_feedback.Release() is { } held && ReferenceEquals(held, row.Marker))
-                JumpRequested?.Invoke(row.Marker, e.KeyModifiers.HasFlag(KeyModifiers.Control));
+                JumpRequested?.Invoke(row.Marker, e.KeyModifiers.HasPrimary());
         };
         return row;
     }

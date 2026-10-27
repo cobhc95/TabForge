@@ -9,8 +9,8 @@ namespace TabForge.Features.Recording.Rules;
 //   else from the start second and speed given to Start; the engine latency removed), gives the takes back as MIDI clips (one per lap)
 //   when the recording stops, and raises the note messages once for the live overlay.
 // Does not own: the audio takes (AudioEngineClient, RecordedTakes), placing the clips on lanes and the undo step (the caller), the playback,
-//   the MIDI input client (the caller creates it), the live overlay (the Avalonia TimelineLiveTakeLayer). An armed MIDI track with devices ticked hears only those
-//   devices (none ticked: every device, as before).
+//   the MIDI input client (the caller creates it), the live overlay (the Avalonia TimelineLiveTakeLayer). An armed MIDI track with one device chosen hears only that
+//   device (All MIDI inputs: every device; None: no MIDI take).
 // Threads: Start and Stop run on the UI thread; messages arrive on the MIDI driver thread. Both sides share one lock.
 // Tests: TabForge.Avalonia.Tests.MidiTakeCaptureTests.
 public sealed class MidiTakeCapture : IDisposable
@@ -59,7 +59,7 @@ public sealed class MidiTakeCapture : IDisposable
         {
             _takes.Clear();
             _endedAt.Clear();
-            foreach (var track in armed) _takes.Add((track, new MidiTake(), track.MidiInputs.ToArray()));
+            foreach (var track in armed) _takes.Add((track, new MidiTake(), AudioInputs.MidiDevicesOf(track)));
             (_startSec, _startStamp, _speed, _latencyTicks, _loop) = (startSec, startStamp, speed, latencyTicks, loop);
             _songSecAt = songSecAt;
             _laps = 0;

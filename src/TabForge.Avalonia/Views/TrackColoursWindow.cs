@@ -142,6 +142,7 @@ public sealed class TrackColoursWindow : Window
         if (change.IsFirstChange) _beforeFirstChange?.Invoke();
         foreach (var index in change.TrackIndexes)
         {
+            _tracks[index].ColorFollowsInstrument = false;
             _tracks[index].ColorHex = hex;
             _swatches[index].Background = SwatchBrush(hex);
         }

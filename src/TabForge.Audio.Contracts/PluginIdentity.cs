@@ -23,10 +23,7 @@ public static class PluginIdentity
         {
             if (File.Exists(path)) return path;
             if (!Directory.Exists(path)) return null;
-            var arch = System.IO.Path.Combine(path, "Contents", "x86_64-win");
-            var named = System.IO.Path.Combine(arch, System.IO.Path.GetFileName(path));
-            if (File.Exists(named)) return named;
-            return Directory.Exists(arch) ? Directory.EnumerateFiles(arch, "*.vst3").OrderBy(f => f, StringComparer.OrdinalIgnoreCase).FirstOrDefault() : null;
+            return PluginModulePaths.BinaryOf(path, PluginModulePaths.Current, DiskModuleFileView.Instance);   // Windows: Contents/x86_64-win/<bundle name>; macOS / Linux layouts in PluginModulePaths
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException) { return null; }
     }

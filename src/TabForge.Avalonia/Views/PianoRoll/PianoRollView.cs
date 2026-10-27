@@ -27,6 +27,8 @@ public sealed class PianoRollHost
     /// <summary>Sounds a pitch on the track's sound (the score's note audition path).</summary>
     public Action<TrackModel, int> Audition { get; init; } = (_, _) => { };
     public Func<EditingSettings> Editing { get; init; } = () => new EditingSettings();
+    /// <summary>The appearance settings: the Playback highlight colours the playback needle and the ruler marker.</summary>
+    public Func<AppearanceSettings> Appearance { get; init; } = () => new AppearanceSettings();
     /// <summary>Saves the settings quietly (never the full broadcast); called once a gesture ends.</summary>
     public Action SaveSettings { get; init; } = () => { };
     /// <summary>Sets the loop region (start bar, start slot, end bar, end slot or -1 for the bar's end) as one undo step; true when a box selection made
@@ -45,6 +47,10 @@ public sealed class PianoRollHost
     public Action ClearLoop { get; init; } = () => { };
     /// <summary>The shared MIDI input (step input listens to it while it is on); null without an engine.</summary>
     public Func<TabForge.Audio.MidiInputHub?> MidiInput { get; init; } = () => null;
+    /// <summary>True when MIDI input monitoring already sounds the keyboard for the track (step input then does not audition the key itself).</summary>
+    public Func<TabForge.Models.TrackModel, bool> MonitorSounds { get; init; } = _ => false;
+    /// <summary>The window's answer to "clips now overlap on a lane" (setting, prompt, Remember); null leaves a take that grew over a clip as it is.</summary>
+    public Func<ClipOverlapPolicy?> ClipOverlap { get; init; } = () => null;
     /// <summary>Scrolls the main timeline so the given song second is at its left edge (the piano roll was scrolled by hand).</summary>
     public Action<double> ScrollTimeline { get; init; } = _ => { };
 }
@@ -70,6 +76,7 @@ public sealed partial class PianoRollView : DockPanel
         _host = host;
         Presenter = new PianoRollPresenter(() => _document, name => _host.ConfirmTab(name));
         Presenter.Committed += tab => _host.AfterEdit(tab);
+        Presenter.Overlaps = () => _host.ClipOverlap();
         Surface = new PianoRollSurface(Presenter)
         {
             Snap = host.Snap,
@@ -88,6 +95,8 @@ public sealed partial class PianoRollView : DockPanel
             Sections = () => _sections,
             LaneMenuRequested = OpenLaneMenu,
             Playing = () => _session?.IsPlaying == true,
+            NeedleOn = () => host.Editing().PianoRollPlaybackNeedle,
+            PlayheadColour = light => PlaybackHighlightColour.Of(host.Appearance(), AvaloniaPalette.Get("PianoRollPlayheadMarker", light)),
             ClearLoop = () => _host.ClearLoop(),   // the release repaints the surface
             ValuePreview = value => { _velocity.Text = value.ToString(System.Globalization.CultureInfo.InvariantCulture); _velocity.FontStyle = global::Avalonia.Media.FontStyle.Normal; },
             UserScrolled = TellTimeline,
@@ -193,6 +202,9 @@ public sealed partial class PianoRollView : DockPanel
         RefreshTools();
         Surface.InvalidateVisual();
     }
+
+    /// <summary>The "Playback needle" setting changed (Preferences): the live layer repaints alone, so a stopped needle appears or goes at once.</summary>
+    public void RefreshNeedle() { Surface.Playhead.ResetColour(); Surface.Playhead.InvalidateVisual(); }   // also when the Playback highlight or the accent changed
 
     /// <summary>Reads the track again when the song changed while the pane was hidden or busy (the switch calls it when it shows the pane).</summary>
     public void RefreshIfStale() => Dispatch();

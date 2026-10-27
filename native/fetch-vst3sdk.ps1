@@ -4,7 +4,7 @@
 # The SDK is PINNED: a release tag plus the exact commit it must resolve to, and the exact commits of the
 # three submodules that tag records. A moved/retagged upstream, or a different checkout, fails loudly.
 # To update the SDK: change the values below, rebuild tfvst3 (Source\native\build-tfvst3.ps1), and commit the new
-# Source\native\BUILD_PROVENANCE.md and Source\docs\SBOM.md together with them.
+# Source\native\BUILD_PROVENANCE.md and Source\docs\reference\SBOM.md together with them.
 [CmdletBinding()]
 param([switch]$Force)
 $ErrorActionPreference = 'Stop'
@@ -23,6 +23,12 @@ $git = 'C:\Program Files\Git\cmd\git.exe'
 if (-not (Test-Path $git)) { $git = 'git' }
 
 function Assert-Pinned {
+    # A trimmed copy (git history and unused SDK parts moved out to keep Source small) carries its pin in TRIMMED.md.
+    $trimmed = Join-Path $target 'TRIMMED.md'
+    if (-not (Test-Path (Join-Path $target '.git')) -and (Test-Path $trimmed)) {
+        if ((Get-Content $trimmed -Raw) -notmatch [regex]::Escape($SdkCommit)) { throw "Trimmed VST3 SDK at $target does not record pinned commit $SdkCommit ($SdkTag). Re-run with -Force to re-fetch." }
+        return
+    }
     $head = (& $git -C $target rev-parse HEAD).Trim()
     if ($head -ne $SdkCommit) { throw "VST3 SDK at $target is at $head, expected pinned $SdkCommit ($SdkTag). Re-run with -Force to re-fetch." }
     foreach ($name in $SubmoduleCommits.Keys) {

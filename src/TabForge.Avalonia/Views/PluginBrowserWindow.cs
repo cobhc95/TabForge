@@ -41,6 +41,7 @@ public sealed class PluginBrowserWindow : Window
     private readonly ListBox _list = new() { Name = "PluginList" };
     private readonly TextBlock _status = new() { Name = "StatusText", Margin = new Thickness(0, 4, 0, 0), TextWrapping = TextWrapping.Wrap, TextTrimming = TextTrimming.CharacterEllipsis };
     private readonly CheckBox _remember = new() { Name = "RememberBox", Margin = new Thickness(0, 8, 0, 0) };
+    private readonly CheckBox _clap = new() { Name = "ClapBox" };   // CLAP is opt-in
     private readonly WrapPanel _buttons = new() { Name = "ButtonBar", Margin = new Thickness(0, 8, 0, 0) };
     private readonly List<TextBlock> _sortArrows = new();
     private readonly Button _scanStandard;   // the empty-state button; shown only while the list is empty (the preview has the standard folders off)
@@ -130,7 +131,11 @@ public sealed class PluginBrowserWindow : Window
         _remember.IsChecked = _session.Settings.RememberScan;
         ToolTip.SetTip(_remember, "On: the plug-ins found are saved and this window opens instantly from that list; use Rescan after installing new plug-ins. Off: the folders are scanned each time this window opens.");
         _remember.IsCheckedChanged += (_, _) => { if ((_remember.IsChecked == true) != _session.Settings.RememberScan) _session.SetRemember(_remember.IsChecked == true); };
-        var bottom = new StackPanel { Children = { _progress, _status, _remember, _buttons } };
+        _clap.Content = TabForge.Services.PluginSettings.ScanClapLabel;
+        _clap.IsChecked = _session.Settings.ScanClap;
+        ToolTip.SetTip(_clap, "Off (default): only VST plug-ins are listed. On: .clap plug-ins in " + string.Join(", ", VstScannerService.ClapFolderLabels) + " and in your folders are listed too and can be added like any plug-in.");
+        _clap.IsCheckedChanged += (_, _) => { if ((_clap.IsChecked == true) != _session.Settings.ScanClap) { _session.SetScanClap(_clap.IsChecked == true); _ = Scan(null); } };
+        var bottom = new StackPanel { Children = { _progress, _status, _remember, _clap, _buttons } };
         DockPanel.SetDock(bottom, Dock.Bottom);
         return bottom;
     }
@@ -164,7 +169,7 @@ public sealed class PluginBrowserWindow : Window
 
     private void BrowseForFile()
     {
-        var path = _files.OpenFile(new TabForge.Platform.FileDialogOptions { Title = "Choose a VST plug-in", Filter = "VST plug-ins (*.vst3;*.dll)|*.vst3;*.dll" }, this);
+        var path = _files.OpenFile(new TabForge.Platform.FileDialogOptions { Title = "Choose a plug-in", Filter = "Plug-ins (*.vst3;*.dll;*.clap)|*.vst3;*.dll;*.clap" }, this);
         if (path is null) return;
         if (PluginBrowserSession.FromFile(path, out var problem) is not { } info) { _status.Text = problem ?? ""; return; }
         Chosen = info;

@@ -1,7 +1,7 @@
 using System;
 using TabForge.Services;
 
-var denied = @"C:\Users\COBHC\Videos\TabForgeProofParent\Sub";
+var denied = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), @"Videos\TabForgeProofParent\Sub");
 Console.WriteLine("--- Validate ---");
 try { Console.WriteLine("VALIDATE-OK: " + FilePathPolicy.ValidateWritableFolder(denied, "video folder")); }
 catch (Exception ex) { Console.WriteLine($"VALIDATE-THREW: {ex.GetType().Name}: {ex.Message}"); }

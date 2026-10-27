@@ -2,7 +2,6 @@ using System;
 using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
-using Avalonia.Controls.Shapes;
 using Avalonia.Layout;
 using Avalonia.Markup.Xaml.MarkupExtensions;
 using Avalonia.Media;
@@ -13,7 +12,7 @@ using TabForge.Presenters;
 namespace TabForge.Avalonia.Views;
 
 /// <summary>
-/// The status bar under the workspace: the status text, the MIDI activity dot, the position, bar duration and master readouts, the import
+/// The status bar under the workspace: the transport state text, the position, bar duration and master readouts, the import
 /// Cancel button, the timeline slot, and the audio device button or the MIDI output name, laid out as the app's footer.
 /// Owns: the row, its columns and dividers, its sizes and readout colours, and showing the values it is given. Does not own: what the texts
 /// say (StatusTextPresenter, AudioDeviceStatusPresenter, MidiOutputStatusPresenter, ImportStatusPresenter), the values (MainWindowStatusBar
@@ -32,10 +31,8 @@ public sealed class StatusBarView : UserControl
 
     private const double BarHeight = 28;
     private const double StatusFontSize = 12;
-    private const double MidiFontSize = 13;
     private const double ReadoutFontSize = 13.8;
     private const double AudioDeviceFontSize = 11;
-    private const double MidiDotSize = 9;
     private const double PositionMaxWidth = 365;
     private const double BarStateMaxWidth = 110;
     private const double MasterMaxWidth = 240;
@@ -43,21 +40,24 @@ public sealed class StatusBarView : UserControl
     private const double AudioDeviceMaxWidth = 300;
     // The audio interface button: the status link button padding (6, 2), its 3 DIP corner and the gap from the MIDI readout on its left.
     private const double AudioDevicePaddingX = 6, AudioDevicePaddingY = 2, AudioDeviceCornerRadius = 3, AudioDeviceLeftGap = 4;
-    private const string PositionTooltip = "Playing position (or edit cursor): measure · track · string · cell";
-    private const string MasterTooltip = "Tempo · key signature · current note value";
-    private const string MidiDotTooltip = "MIDI output activity: grey = idle, green = playing";
+    private const string PositionTooltip = "Playhead position while playing (otherwise the edit cursor): bar.beat · time · track · cell";
+    private const string MasterTooltip = "Tempo at the playhead (otherwise at the edit cursor)";
+    private const string ScaleTooltip = "Scale of this section. Click to see the alternatives, choose your own, or change what it listens to.";
     private const string OutputTooltip = "MIDI output device for the selected track";
     private const string AudioInterfaceTooltip = "Audio interface settings";
 
     private readonly TextBlock _status = Text(StatusFontSize, "TextPrimary");
     private readonly TextBlock _position = Text(StatusFontSize, "TextPrimary", PositionMaxWidth);
     private readonly TextBlock _barState = Text(ReadoutFontSize, "LegibleBrush", BarStateMaxWidth);
-    private readonly TextBlock _master = Text(ReadoutFontSize, "LegibleBrush", MasterMaxWidth);
+    private readonly TextBlock _master = Text(ReadoutFontSize, "LegibleBrush");
+    private readonly TextBlock _scaleText = Text(ReadoutFontSize, "LegibleBrush", MasterMaxWidth);
     private readonly TextBlock _output = Text(StatusFontSize, "TextPrimary", OutputMaxWidth);
     private readonly TextBlock _audioDeviceText = Text(AudioDeviceFontSize, "TextPrimary", AudioDeviceMaxWidth);
     private readonly Button _cancelImport;
     private readonly Button _audioDevice;
+    private readonly Button _scale;
     private AudioDeviceTip? _audioTip;   // the facts the audio button's tooltip shows now
+    private string _stateText = ReadyText;   // the transport state text; the status shows it except while an import runs
     private bool _outputWanted;  // the song sends MIDI; the output name then shows unless the audio interface button takes its place
 
     public StatusBarView()
@@ -79,10 +79,11 @@ public sealed class StatusBarView : UserControl
         };
         AutomationProperties.SetName(_cancelImport, "Cancel import");
         _cancelImport.Click += (_, _) => CancelImportRequested?.Invoke();
-        _audioDevice = AudioDeviceButton();
+        _audioDevice = LinkButton("AudioDevice", _audioDeviceText, "TextMuted", AudioInterfaceTooltip, "Audio device settings", () => AudioDeviceRequested?.Invoke());
+        _audioDevice.IsVisible = false;
+        _scale = LinkButton("StatusScale", _scaleText, "LegibleBrush", ScaleTooltip, "Scale of this section", () => ScaleRequested?.Invoke());
+        _scaleText.Name = "StatusScaleText";
         var status = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center, Children = { _status, _cancelImport } };
-        var midi = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center, Children = { MidiDot(), Text(MidiFontSize, "TextPrimary", margin: new Thickness(5, 0, 0, 0), text: "MIDI") } };
-        ToolTip.SetTip(midi, MidiDotTooltip);
         ToolTip.SetTip(_position, PositionTooltip);
         ToolTip.SetTip(_master, MasterTooltip);
         ToolTip.SetTip(_output, OutputTooltip);
@@ -90,14 +91,13 @@ public sealed class StatusBarView : UserControl
         _output.Text = MidiOutputStatusPresenter.UnknownOutputText;
         var output = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center, Children = { _audioDevice, _output } };
 
-        var grid = new Grid { VerticalAlignment = VerticalAlignment.Center, ColumnDefinitions = ColumnDefinitions.Parse("Auto,Auto,Auto,Auto,Auto,*,Auto") };
+        var grid = new Grid { VerticalAlignment = VerticalAlignment.Center, ColumnDefinitions = ColumnDefinitions.Parse("Auto,Auto,Auto,Auto,*,Auto") };
         grid.Children.Add(Cell(status, new Thickness(5, 0, 9, 0), divider: true, column: 0));
-        grid.Children.Add(Cell(midi, new Thickness(8, 0), divider: true, column: 1));
-        grid.Children.Add(Cell(_position, new Thickness(8, 0), divider: true, column: 2));
-        grid.Children.Add(Cell(_barState, new Thickness(8, 0), divider: true, column: 3));
-        grid.Children.Add(Cell(_master, new Thickness(8, 0), divider: true, column: 4));
-        grid.Children.Add(Cell(_timelineSlot, default, divider: false, column: 5, margin: new Thickness(8, 0)));
-        grid.Children.Add(Cell(output, new Thickness(0), divider: false, column: 6));
+        grid.Children.Add(Cell(_position, new Thickness(8, 0), divider: true, column: 1));
+        grid.Children.Add(Cell(_barState, new Thickness(8, 0), divider: true, column: 2));
+        grid.Children.Add(Cell(new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center, Children = { _master, _scale } }, new Thickness(8, 0), divider: true, column: 3));
+        grid.Children.Add(Cell(_timelineSlot, default, divider: false, column: 4, margin: new Thickness(8, 0)));
+        grid.Children.Add(Cell(output, new Thickness(0), divider: false, column: 5));
 
         var bar = new Border { BorderThickness = new Thickness(0, 1, 0, 0), Padding = new Thickness(5, 0), Child = grid };
         bar[!Border.BackgroundProperty] = new DynamicResourceExtension("PanelBackground");
@@ -112,6 +112,19 @@ public sealed class StatusBarView : UserControl
     /// <summary>The device button was clicked: the caller opens the audio settings.</summary>
     public event Action? AudioDeviceRequested;
 
+    /// <summary>The scale readout was clicked: the caller opens the scale popup over <see cref="ScaleAnchor"/>.</summary>
+    public event Action? ScaleRequested;
+
+    /// <summary>The scale readout button, the control the scale popup opens above.</summary>
+    public Control ScaleAnchor => _scale;
+
+    /// <summary>Shows the scale readout text ("A minor ▾ auto") and its tooltip.</summary>
+    public void ShowScale(string text, string tooltip)
+    {
+        _scaleText.Text = text;
+        ToolTip.SetTip(_scale, tooltip);
+    }
+
     /// <summary>The Cancel button of a running import was clicked.</summary>
     public event Action? CancelImportRequested;
 
@@ -120,6 +133,14 @@ public sealed class StatusBarView : UserControl
     {
         _status.Text = text;
         ToolTip.SetTip(_status, tooltip);
+    }
+
+    /// <summary>Shows the transport state ("Playing", "Recording"…); the recording state takes the danger colour. An import's status text keeps the place while it runs.</summary>
+    public void ShowState(string text, bool danger)
+    {
+        _stateText = text;
+        _status[!TextBlock.ForegroundProperty] = new DynamicResourceExtension(danger ? "Danger" : "TextPrimary");
+        if (!_cancelImport.IsVisible && _status.Text != text) ShowStatus(text, ImportStatusPresenter.IdleTooltip);
     }
 
     /// <summary>Shows the position, bar duration and master readouts, and the MIDI output name when <paramref name="showOutput"/> (the song sends MIDI).</summary>
@@ -132,7 +153,7 @@ public sealed class StatusBarView : UserControl
         _barState.Text = readout.BarStateText;
         _barState[!TextBlock.ForegroundProperty] = new DynamicResourceExtension(readout.BarStateMarked ? "BarStateMarked" : "LegibleBrush");
         ToolTip.SetTip(_barState, readout.BarStateTooltip);
-        _master.Text = StatusTextPresenter.MasterInfoText(readout.Tempo, readout.MasterKeyLabel, readout.DurationName, readout.Dots, readout.Triplet);
+        _master.Text = StatusTextPresenter.TempoText(readout.Tempo);
         _output.Text = outputText;
         _outputWanted = showOutput;
         _output.IsVisible = showOutput && !_audioDevice.IsVisible;
@@ -175,48 +196,41 @@ public sealed class StatusBarView : UserControl
     {
         _cancelImport.IsVisible = status.CancelVisible;
         if (status.StatusText is not null) ShowStatus(status.StatusText, status.StatusTooltip);
+        else if (!status.CancelVisible && _status.Text != _stateText) ShowStatus(_stateText, status.StatusTooltip);   // the import ended: the transport state returns
         if (status.CancelText is not null) ToolTip.SetTip(_cancelImport, status.CancelText);
     }
 
-    private Button AudioDeviceButton()
+    // A link button: no border at rest and text in the rest brush; under the pointer it takes the status link button hover (fill, accent-soft border) and its text brightens.
+    private static Button LinkButton(string name, TextBlock label, string restBrush, string tooltip, string automationName, Action click)
     {
         var button = new Button
         {
-            Name = "AudioDevice", IsVisible = false, Focusable = false, Padding = new Thickness(AudioDevicePaddingX, AudioDevicePaddingY),
+            Name = name, Focusable = false, Padding = new Thickness(AudioDevicePaddingX, AudioDevicePaddingY),
             Margin = new Thickness(AudioDeviceLeftGap, 0, 0, 0), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(AudioDeviceCornerRadius),
-            VerticalAlignment = VerticalAlignment.Center, Content = _audioDeviceText,
+            VerticalAlignment = VerticalAlignment.Center, Content = label,
         };
-        // A link with no border at rest and muted text; under the pointer it takes the status link button hover (fill, accent-soft border) and its text brightens.
-        SetAudioDeviceHover(button, hovered: false);
-        button.PointerEntered += (_, _) => SetAudioDeviceHover(button, hovered: true);
-        button.PointerExited += (_, _) => SetAudioDeviceHover(button, hovered: false);
-        ToolTip.SetTip(button, AudioInterfaceTooltip);
-        AutomationProperties.SetName(button, "Audio device settings");
-        button.Click += (_, _) => AudioDeviceRequested?.Invoke();
+        SetLinkHover(button, label, restBrush, hovered: false);
+        button.PointerEntered += (_, _) => SetLinkHover(button, label, restBrush, hovered: true);
+        button.PointerExited += (_, _) => SetLinkHover(button, label, restBrush, hovered: false);
+        ToolTip.SetTip(button, tooltip);
+        AutomationProperties.SetName(button, automationName);
+        button.Click += (_, _) => click();
         return button;
     }
 
-    // The button's fill and border come from the theme's hover keys while hovered, and are transparent at rest; the text is muted at rest.
-    private void SetAudioDeviceHover(Button button, bool hovered)
+    // The fill and border come from the theme hover keys while hovered, and are transparent at rest.
+    private static void SetLinkHover(Button button, TextBlock label, string restBrush, bool hovered)
     {
         if (hovered)
         {
             button[!Button.BackgroundProperty] = new DynamicResourceExtension("HoverBrush");
             button[!Button.BorderBrushProperty] = new DynamicResourceExtension("AccentSoftBrush");
-            _audioDeviceText[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextPrimary");
+            label[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextPrimary");
             return;
         }
         button.Background = AvaloniaPalette.TransparentBrush;
         button.BorderBrush = AvaloniaPalette.TransparentBrush;
-        _audioDeviceText[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted");
-    }
-
-    private static Ellipse MidiDot()
-    {
-        var dot = new Ellipse { Width = MidiDotSize, Height = MidiDotSize, StrokeThickness = 1, VerticalAlignment = VerticalAlignment.Center };
-        dot[!Shape.FillProperty] = new DynamicResourceExtension("MainMidiLedIdle");
-        dot[!Shape.StrokeProperty] = new DynamicResourceExtension("MainMidiLedRing");
-        return dot;
+        label[!TextBlock.ForegroundProperty] = new DynamicResourceExtension(restBrush);
     }
 
     /// <summary>A text readout in a palette colour; <paramref name="maxWidth"/> trims it with an ellipsis.</summary>

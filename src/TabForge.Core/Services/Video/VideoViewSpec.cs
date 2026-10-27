@@ -38,5 +38,6 @@ public sealed class VideoSettings
     public bool ShowInstrument { get; set; } = true;
     public int Height { get; set; } = 1080;        // 1080 or 2160
     public int Fps { get; set; } = 30;
+    public string Encoder { get; set; } = VideoEncoderChoices.Auto;   // Auto, Hardware or Software
     public string Directory { get; set; } = "";
 }

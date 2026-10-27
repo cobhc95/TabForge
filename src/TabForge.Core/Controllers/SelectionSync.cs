@@ -31,13 +31,10 @@ public sealed class SelectionSync : IDisposable
 {
     private readonly ISelectionEditor _editor;
     private readonly Action<SelectionOrigin> _applyToTimeline;
-    private readonly Func<SongProject?>? _project;
     private bool _applyingToEditor;
 
-    /// <param name="project">The song the score shows, to light the notes under selected clips; null: clips light nothing.</param>
-    public SelectionSync(SelectionModel model, ISelectionEditor editor, Action<SelectionOrigin> applyToTimeline, Func<SongProject?>? project = null)
+    public SelectionSync(SelectionModel model, ISelectionEditor editor, Action<SelectionOrigin> applyToTimeline)
     {
-        _project = project;
         Model = model;
         _editor = editor;
         _applyToTimeline = applyToTimeline;
@@ -77,7 +74,7 @@ public sealed class SelectionSync : IDisposable
     private void ApplyLoopTint() =>
         _editor.ShowLoopTint(Model.HasLoop ? (Model.LoopStartBar, Model.LoopStartCell, Model.LoopEndBar, Model.LoopEndCell) : null);
 
-    /// <summary>Makes the score show the model's selection as highlighted notes (its score range, else the bars of the selected clips) and the loop region as a light tint only; a no-op when it already does.</summary>
+    /// <summary>Makes the score show the model's selection as highlighted notes (its score range; selected clips light nothing) and the loop region as a light tint only; a no-op when it already does.</summary>
     public void ApplyToEditor()
     {
         ApplyLoopTint();
@@ -92,12 +89,12 @@ public sealed class SelectionSync : IDisposable
         finally { _applyingToEditor = false; }
     }
 
-    // What the score lights: a score selection on its own track (or all tracks), else the selected clips' bars; null: nothing (the loop only tints, see ApplyToEditor).
+    // What the score lights: a score selection on its own track (or all tracks); null: nothing (the loop only tints, see ApplyToEditor).
+    // Selected clips (takes, MIDI clips) never light the score: a clip click selects the clip only, never notes or bars.
     private (int StartBar, int StartCell, int EndBar, int EndCell)? Shown()
     {
         var s = Model;
         if (s.HasRange && (s.Scope == SelectionScope.AllTracks || s.TrackIndex == _editor.SelectedTrackIndex)) return (s.StartBar, s.StartCell, s.EndBar, s.EndCell);
-        if (_project?.Invoke() is { } project && SelectionBars.ClipSpan(s, project) is { } clips) return (clips.Start, 0, clips.End, -1);
         return null;
     }
 

@@ -17,8 +17,8 @@ public static partial class SelfTest
     /// </summary>
     private static readonly string[] PublicDocFiles =
     {
-        "Source/docs/SECURITY.md", "Source/docs/ARCHITECTURE.md", "Source/docs/THIRD_PARTY.md", "Source/docs/TOOLS_AND_HOTKEYS.md",
-        "Source/docs/REPRODUCIBLE_BUILDS.md", "Source/docs/SBOM.md", "Source/docs/TESTING.md", "Source/docs/DEBUGGING.md", "Source/docs/DEBUG_SYMPTOMS.md", "Source/docs/COMPATIBILITY.md",
+        "Source/docs/SECURITY.md", "Source/docs/architecture/ARCHITECTURE.md", "Source/docs/THIRD_PARTY.md", "Source/docs/guides/TOOLS_AND_HOTKEYS.md",
+        "Source/docs/guides/REPRODUCIBLE_BUILDS.md", "Source/docs/reference/SBOM.md", "Source/docs/guides/TESTING.md", "Source/docs/guides/DEBUGGING.md", "Source/docs/guides/DEBUG_SYMPTOMS.md", "Source/docs/reference/COMPATIBILITY.md",
         "Source/native/tfvst3/BUILD.md", "Source/vendor/alphatab/README.md",
     };
 
@@ -31,14 +31,15 @@ public static partial class SelfTest
         "Source/TabForge.sln", "Source/global.json", "Source/Directory.Build.props", "Source/.editorconfig", ".gitattributes", ".gitignore", "Source/LICENSE", "Source/docs/THIRD_PARTY.md",
         "Source/nuget.config", "Source/docs/README.md", "Source/docs/CHANGELOG.md",
         // documents the export must ship (add them to Export-Public.ps1 when they are added here)
-        "Source/docs/SECURITY.md", "Source/docs/ARCHITECTURE.md", "Source/docs/TOOLS_AND_HOTKEYS.md", "Source/docs/SBOM.md", "Source/docs/TESTING.md", "Source/docs/DEBUGGING.md", "Source/docs/DEBUG_SYMPTOMS.md", "Source/docs/COMPATIBILITY.md",
-        "Source/docs/REPRODUCIBLE_BUILDS.md", "Source/docs/screenshots/", "Source/docs/animations/", "Source/docs/tutorial/",
+        "Source/docs/SECURITY.md", "Source/docs/architecture/ARCHITECTURE.md", "Source/docs/guides/TOOLS_AND_HOTKEYS.md", "Source/docs/reference/SBOM.md", "Source/docs/guides/TESTING.md", "Source/docs/guides/DEBUGGING.md", "Source/docs/guides/DEBUG_SYMPTOMS.md", "Source/docs/reference/COMPATIBILITY.md",
+        "Source/docs/guides/REPRODUCIBLE_BUILDS.md", "Source/docs/media/screenshots/", "Source/docs/media/animations/", "Source/docs/tutorial/",
         "Source/src/", "Source/tests/", "samples/", "Source/vendor/alphatab/",
         ".github/workflows/windows-ci.yml", ".github/workflows/release.yml", ".github/workflows/build-bridge.yml", ".github/workflows/fuzz-weekly.yml",
         "Source/tools/Compare-Release.ps1", "Source/tools/Build-AlphaTab.ps1", "Source/tools/Compare-NativeBridge.ps1", "Source/tools/Package-Release.ps1", "Source/tools/Publish.ps1", "Source/tools/Write-Sbom.ps1", "Source/tools/run-test.ps1",
         "Source/installer/TabForge.iss",
         "Source/native/BUILD_PROVENANCE.md", "Source/native/build-tfvst3.ps1", "Source/native/fetch-vst3sdk.ps1",
-        "Source/native/tfvst3/BUILD.md", "Source/native/tfvst3/CMakeLists.txt", "Source/native/tfvst3/tfvst3.cpp", "Source/native/tfvst3/tfvst3.h", "Source/native/tfvst3/test/tfv3test.cpp",
+        "Source/native/tfvst3/BUILD.md", "Source/native/tfvst3/CMakeLists.txt", "Source/native/tfvst3/tfvst3.cpp", "Source/native/tfvst3/tfvst3.h", "Source/native/tfvst3/tfv3_connection.h", "Source/native/tfvst3/test/tfv3test.cpp",
+        "Source/native/tfvst3/posix/", "Source/native/tfportable/",   // the macOS/Linux native libraries (0.8.3 cross-platform stages)
     };
 
     /// <summary>Names a public document may mention although they are not repository files (build output, upstream files, files created on the user's PC).</summary>

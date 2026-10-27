@@ -30,7 +30,7 @@ public sealed class ClipPlayer : IDisposable
 
     // Disk thread only.
     private ISampleProvider? _source;
-    private AudioFileReader? _reader;
+    private ClipReader? _reader;
     private SoundTouchProcessor? _stretch;
     private bool _sourceDone;   // the source returned nothing (clip end): no point in waking up for it until the next seek
     private const int DecodeFloats = 4096 * 2;
@@ -226,7 +226,7 @@ public sealed class ClipPlayer : IDisposable
                 return;
             }
             CloseSource();
-            _reader = new AudioFileReader(Spec.File);
+            _reader = new ClipReader(Spec.File);
             if (_reader.TotalTime.TotalHours > 2)   // same limit as the UI
             {
                 Failed = true;

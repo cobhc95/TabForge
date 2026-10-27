@@ -5,7 +5,7 @@ Song data and the plain types around it. No WPF, no I/O.
 ## How to change me
 1. Entry files: `SongProject.cs`, `NotationEnums.cs`.
 2. Owner class: `SongProject` / `TrackModel` / `MeasureModel`; no WPF, no I/O.
-3. Tests to run: `TestModelRoundTrip`, `TestAudioTrackModel`, `TestSelectionModel` (full-suite build), plus `--areas architecture,hygiene` (see the test box in `Source/docs/TESTING.md`).
+3. Tests to run: `TestModelRoundTrip`, `TestAudioTrackModel`, `TestSelectionModel` (full-suite build), plus `--areas architecture,hygiene` (see the test box in `Source/docs/guides/TESTING.md`).
 4. Docs to update: `ProjectService` format notes, `CHANGELOG.md`.
 
 ## Key types

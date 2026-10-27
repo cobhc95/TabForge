@@ -6,6 +6,6 @@ $bmp = New-Object System.Drawing.Bitmap($b.Width, $b.Height)
 $g = [System.Drawing.Graphics]::FromImage($bmp)
 $g.CopyFromScreen($b.Location, [System.Drawing.Point]::Empty, $b.Size)
 $g.Dispose()
-$bmp.Save('C:\Users\COBHC\Downloads\TabForge\tools\audit\shot-desktop.png', [System.Drawing.Imaging.ImageFormat]::Png)
+$bmp.Save("$env:USERPROFILE\Downloads\TabForge\tools\audit\shot-desktop.png", [System.Drawing.Imaging.ImageFormat]::Png)
 $bmp.Dispose()
 Write-Host "SHOT-SAVED"

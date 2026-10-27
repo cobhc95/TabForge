@@ -1,0 +1,62 @@
+name: native-ci
+
+# Builds the VST3 shim for macOS and Linux (native/tfvst3/posix). The Windows shim has its own workflow (build-bridge.yml).
+# Only paths of the native sources trigger it; nothing here is released or published.
+on:
+  push:
+    paths:
+      - 'native/tfvst3/**'
+      - '.github/workflows/native-ci.yml'
+  pull_request:
+    paths:
+      - 'native/tfvst3/**'
+      - '.github/workflows/native-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tfvst3-posix:
+    name: tfvst3 (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    # Informational until the macOS/Linux trial: these shims are built here for the first time and nothing from them ships.
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-14]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Configure (fetches the pinned VST3 SDK)
+        run: cmake -S native/tfvst3/posix -B build/tfvst3 -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build/tfvst3 --parallel
+
+      # The C# side loads libtfvst3.so / libtfvst3.dylib and calls these by name: every one must be exported.
+      - name: Check the exports (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          nm -D --defined-only build/tfvst3/libtfvst3.so > exports.txt
+          for name in tfv3_list_classes tfv3_create tfv3_process tfv3_process_ex tfv3_state_begin tfv3_state_copy tfv3_set_state tfv3_set_processing tfv3_has_editor tfv3_latency tfv3_destroy; do
+            grep -qw "$name" exports.txt || { echo "missing export: $name"; exit 1; }
+          done
+
+      - name: Check the exports (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          nm -gU build/tfvst3/libtfvst3.dylib > exports.txt
+          for name in tfv3_list_classes tfv3_create tfv3_process tfv3_process_ex tfv3_state_begin tfv3_state_copy tfv3_set_state tfv3_set_processing tfv3_has_editor tfv3_latency tfv3_destroy; do
+            grep -qw "_$name" exports.txt || { echo "missing export: $name"; exit 1; }
+          done
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: tfvst3-${{ runner.os }}
+          path: |
+            build/tfvst3/libtfvst3.so
+            build/tfvst3/libtfvst3.dylib
+          if-no-files-found: ignore

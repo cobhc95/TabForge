@@ -64,7 +64,7 @@ public sealed class FxChainFiles
     {
         if (_loading) return;
         Directory.CreateDirectory(PluginLibrary.ChainsFolder);
-        var reaper = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "REAPER", "FXChains");
+        var reaper = Path.Combine(TabForge.Platform.AppFolders.Current.ReaperResources, "FXChains");
         var useReaper = Directory.Exists(reaper) && !Directory.EnumerateFiles(PluginLibrary.ChainsFolder, "*" + ChainFileApply.FileExtension).Any();
         var file = _dialogs().Files.OpenFile(new FileDialogOptions
         {
@@ -96,12 +96,12 @@ public sealed class FxChainFiles
         catch (FileNotFoundException)
         {
             // The file went missing after the picker or the menu listed it: the status says so, and the chain stays as it was.
-            _status($"{Path.GetFileName(path)} could not be found.");
+            _status.Error($"{Path.GetFileName(path)} could not be found.");
             return;
         }
         catch (ArgumentException)
         {
-            _status($"{Path.GetFileName(path)} is not an FX chain file.");
+            _status.Error($"{Path.GetFileName(path)} is not an FX chain file.");
             return;
         }
         finally { _loading = false; }
@@ -133,7 +133,7 @@ public sealed class FxChainFiles
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
         {
             Trace.Error(Trace.Ui, "FX chain: save: " + ex.Message);
-            _status("The FX chain could not be saved: " + ex.Message);
+            _status.Error("The FX chain could not be saved: " + ex.Message);
             await _dialogs().Ask(_owner, "The FX chain could not be saved: " + ex.Message, SaveCaption, MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return;
         }

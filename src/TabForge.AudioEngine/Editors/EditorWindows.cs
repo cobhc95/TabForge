@@ -12,7 +12,7 @@ namespace TabForge.AudioEngine.Editors;
 /// Plug-in editor windows: plain Win32 top-level windows owned by TabForge's main window (so they stay above it and
 /// minimise with it), one per plug-in, created and pumped on the engine's main thread.
 /// </summary>
-public sealed unsafe class EditorWindows
+public sealed unsafe class EditorWindows : IPluginEditorHost
 {
     private const int WS_CHILD = 0x40000000, WS_OVERLAPPED = 0, WS_CAPTION = 0xC00000, WS_SYSMENU = 0x80000, WS_MINIMIZEBOX = 0x20000, WS_CLIPCHILDREN = 0x2000000;
     private const int WM_CLOSE = 0x10, WM_DESTROY = 2, SW_SHOW = 5, CW_USEDEFAULT = unchecked((int)0x80000000);
@@ -75,7 +75,7 @@ public sealed unsafe class EditorWindows
     ~EditorWindows() { if (_self.IsAllocated) _self.Free(); }
 
     /// <summary>Raised when the user closes a plug-in window (not when the app closes one).</summary>
-    public Action? UserClosed;
+    public Action? UserClosed { get; set; }
     private readonly Dictionary<IntPtr, IPluginInstance> Open = new();
     private readonly Dictionary<IPluginInstance, IntPtr> ByPlugin = new(ReferenceEqualityComparer.Instance);
     /// <summary>Named resize handlers per window so <see cref="Close(IntPtr)"/> can unsubscribe (anonymous lambdas leaked the plug-in).</summary>
@@ -86,6 +86,11 @@ public sealed unsafe class EditorWindows
 
     /// <summary>How many plug-in windows are open now.</summary>
     public int OpenCount => Open.Count;
+    public bool IsSupported => true;
+    public Func<IPluginInstance, long>? ProcessCalls { get; set; }
+    /// <summary>Diagnostics: per open window, its idle ticks and the plug-in's process calls, logged every ~2 s (frozen-meter hunting).</summary>
+    private readonly Dictionary<IntPtr, EditorRate> Rates = new();
+    public string UnsupportedReason => "";
 
     [UnmanagedCallersOnly]
     private static IntPtr WndProc(IntPtr hwnd, uint msg, IntPtr w, IntPtr l)
@@ -176,6 +181,8 @@ public sealed unsafe class EditorWindows
         SetWindowPos(hwnd, IntPtr.Zero, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOZORDER | 1 /*NOSIZE*/ | 0x40 /*SHOWWINDOW*/);
         if (docked) PlaceDocked(hwnd, force: true); else SetForegroundWindow(hwnd);
         _log.Write($"editor window 0x{hwnd:X} '{title}' {size.Value.Width}x{size.Value.Height} visible={IsWindowVisible(hwnd)}");
+        _log.Write($"editor open: '{title}' {EditorDiagnostics.Describe(plugin)} host={(docked ? "docked" : "floating")} runtime='{RuntimeInformation.FrameworkDescription}'");
+        Rates[hwnd] = new EditorRate(title, plugin);
         return true;
     }
 
@@ -268,6 +275,7 @@ public sealed unsafe class EditorWindows
         DockedAt.Remove(hwnd);
         Settle.Remove(hwnd);
         EditorSizes.Remove(hwnd);
+        Rates.Remove(hwnd);
         DestroyWindow(hwnd);
         if (Open.Count == 0) lock (WithOpenWindows) WithOpenWindows.Remove(this);
     }
@@ -309,6 +317,8 @@ public sealed unsafe class EditorWindows
             }
         foreach (var plugin in Open.Values.ToList())
             try { plugin.EditorIdle(); } catch (Exception ex) { _log.Write($"editor idle failed: {ex.Message}"); }
+        foreach (var (hwnd, rate) in Rates)
+            if (Open.TryGetValue(hwnd, out var shown) && rate.Tick(() => ProcessCalls?.Invoke(shown) ?? -1) is { } line) _log.Write(line);
     }
 
     public void CloseAll()

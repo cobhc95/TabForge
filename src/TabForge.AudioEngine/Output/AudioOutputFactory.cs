@@ -121,10 +121,10 @@ public static class AudioOutputFactory
             {
                 var device = DirectSoundOut.Devices.FirstOrDefault(d => string.Equals(d.Description, config.Device, StringComparison.OrdinalIgnoreCase));
                 // NAudio's DirectSoundOut splits this into two halves and refills one per notification: 40 ms (20 ms halves)
-                // starves whenever the polling thread is delayed. 80 ms, or 4 blocks if larger, keeps a safe margin.
-                var latency = Math.Max(80, blockMs * 4);
+                // starves whenever the polling thread is delayed. At least 100 ms per half (200 ms buffer), or 4 of the user's blocks if larger.
+                var latency = DirectSoundWatch.LatencyMs(config.BufferSize, source.WaveFormat.SampleRate);
                 var ds = device is null ? new DirectSoundOut(latency) : new DirectSoundOut(device.Guid, latency);
-                ds.Init(new RenderWatch(source, latency, threads).ToWaveProvider());
+                ds.Init(new DirectSoundWatch(source, latency, threads).ToWaveProvider());
                 return (ds, latency, $"DirectSound: {device?.Description ?? "default device"}");
             }
             default:
@@ -161,44 +161,6 @@ public static class AudioOutputFactory
         catch (Exception ex) when (ex is System.Reflection.TargetException or InvalidCastException or NullReferenceException or MethodAccessException)
         {
             log.Write($"buffer size request not possible: {ex.Message}");
-        }
-    }
-
-    /// <summary>
-    /// Wraps the mix for DirectSound: raises the priority of NAudio's polling thread on its first refill and counts refills that
-    /// came late (gap well above the expected cadence) or slow, logging them to the engine log.
-    /// </summary>
-    private sealed class RenderWatch : ISampleProvider
-    {
-        private readonly ISampleProvider _source;
-        private readonly int _latencyMs;
-        private long _last, _calls, _late, _slow, _lost;
-        private bool _raised;
-        private readonly EngineThreads _threads;
-        public RenderWatch(ISampleProvider source, int latencyMs, EngineThreads threads) { _source = source; _latencyMs = latencyMs; _threads = threads; }
-        public WaveFormat WaveFormat => _source.WaveFormat;
-
-        public int Read(float[] buffer, int offset, int count)
-        {
-            if (!_raised) { _raised = true; _threads.RaiseRenderPriority(); }
-            var start = System.Diagnostics.Stopwatch.GetTimestamp();
-            var read = _source.Read(buffer, offset, count);
-            var end = System.Diagnostics.Stopwatch.GetTimestamp();
-            var periodMs = count / 2 * 1000.0 / WaveFormat.SampleRate;
-            var freq = (double)System.Diagnostics.Stopwatch.Frequency;
-            if (++_calls > 4 && _last != 0)   // the first calls prefill the buffer back to back
-            {
-                var gapMs = (start - _last) * 1000.0 / freq;
-                var costMs = (end - start) * 1000.0 / freq;
-                var bad = false;
-                if (gapMs > _latencyMs) { _lost++; bad = true; }
-                else if (gapMs > periodMs * 1.6) { _late++; bad = true; }
-                if (costMs > periodMs * 0.5) { _slow++; bad = true; }
-                if (bad && (_late + _lost + _slow <= 20 || (_late + _lost + _slow) % 50 == 0))
-                    _threads.Log.Write($"DirectSound refill: gap {gapMs:F1} ms (expected {periodMs:F1}), render {costMs:F1} ms; late {_late}, over-buffer {_lost}, slow {_slow}");
-            }
-            _last = start;
-            return read;
         }
     }
 

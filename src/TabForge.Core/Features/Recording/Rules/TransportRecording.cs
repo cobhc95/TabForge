@@ -85,7 +85,8 @@ public sealed class TransportRecording : IDisposable
         }
         var requested = capture ?? tracks;
         if (capture is null && !AnyArmed(tracks)) return NothingArmedText;
-        var audioArmed = requested.Any(t => (capture is not null || t.RecordArm) && !AudioInputs.IsMidi(t.AudioInput));
+        if (!requested.Any(t => (capture is not null || t.RecordArm) && AudioInputs.HasInput(t))) return AudioInputs.NoInputText;   // armed tracks with no audio and no MIDI input have nothing to record
+        var audioArmed = requested.Any(t => (capture is not null || t.RecordArm) && AudioInputs.HasAudio(t.AudioInput));
         // The engine being down is reported without touching the disk; otherwise the folder is validated (device/link)
         // and write-probed before the Record command is sent, so a denied folder reports its own message, not the engine's.
         if (audioArmed && !_engine.IsRunning) return CouldNotStartText;

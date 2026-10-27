@@ -42,6 +42,7 @@ public sealed partial class VideoEncoder
                     if (category != Mf.VideoEncoderCategory || transform is null) continue;
                     // Hardware encoders are asynchronous MFTs, which are event generators; the software encoder is a plain synchronous transform.
                     UsesHardware = transform is IMFMediaEventGenerator;
+                    Note("encoder transform: " + DescribeTransform(transform) + $", {(UsesHardware ? "asynchronous (hardware)" : "synchronous (software)")}");
                 }
                 finally { if (transform is not null && Marshal.IsComObject(transform)) Marshal.ReleaseComObject(transform); }
                 var names = UsesHardware ? Mf.H264EncoderNames(4).Distinct().ToList() : new List<string> { "H264 Encoder MFT" };
@@ -127,7 +128,13 @@ public sealed partial class VideoEncoder
         {
             if (item.Slot is { } slot)
             {
-                try { WriteVideo(writer, video, slot, item.Count, item.Time, frameTicks); }
+                try
+                {
+                    WriteVideo(writer, video, slot, item.Count, item.Time, frameTicks);
+                    _videoSamples++;
+                    Volatile.Write(ref _lastVideoTicks, item.Time);
+                    if (!_live && UsesHardware) Pace(writer, video);
+                }
                 finally
                 {
                     try { Recycle(slot); }
@@ -144,9 +151,12 @@ public sealed partial class VideoEncoder
                     var rate = _audio.Value.SampleRate;
                     Write(writer, audio, pcm, pcm.Length, _audioFrames * 10_000_000L / rate, frames * 10_000_000L / rate);
                     _audioFrames += frames;
+                    _audioSamples++;
+                    Volatile.Write(ref _audioEndTicks, _audioFrames * 10_000_000L / rate);
                 }
                 finally { ArrayPool<float>.Shared.Return(au); }
             }
+            Interlocked.Increment(ref _beat);
         }
     }
 

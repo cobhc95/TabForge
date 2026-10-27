@@ -39,9 +39,12 @@ public class AvaloniaWindowChrome : IWindowChrome
     /// <summary>Remembers the pointer press the next <see cref="BeginMove"/> or <see cref="BeginResize"/> drags from.</summary>
     public void NotePress(PointerPressedEventArgs press) => _press = press;
 
-    public virtual void BeginMove() { if (TakePress() is { } press) _window.BeginMoveDrag(press); }
+    /// <summary>True in full screen: the window is fixed there, so no move, resize or maximise toggle runs.</summary>
+    protected bool IsFullScreen => _window.WindowState == WindowState.FullScreen;
 
-    public virtual void BeginResize(ResizeEdge edge) { if (TakePress() is { } press) _window.BeginResizeDrag(EdgeOf(edge), press); }
+    public virtual void BeginMove() { if (TakePress() is { } press && !IsFullScreen) _window.BeginMoveDrag(press); }
+
+    public virtual void BeginResize(ResizeEdge edge) { if (TakePress() is { } press && !IsFullScreen) _window.BeginResizeDrag(EdgeOf(edge), press); }
 
     private PointerPressedEventArgs? TakePress()
     {
@@ -52,7 +55,7 @@ public class AvaloniaWindowChrome : IWindowChrome
 
     public void Minimize() => _window.WindowState = WindowState.Minimized;
 
-    public void ToggleMaximise() => _window.WindowState = _window.WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+    public void ToggleMaximise() { if (!IsFullScreen) _window.WindowState = _window.WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized; }
 
     public void Close() => _window.Close();
 

@@ -14,9 +14,14 @@ public static class PluginFactory
     public static bool IsVst3(string path, string format) =>
         path.EndsWith(".vst3", StringComparison.OrdinalIgnoreCase) || string.Equals(format, "VST3", StringComparison.OrdinalIgnoreCase);
 
-    /// <param name="isInstrument">VST3: which class of the bundle to pick (the first instrument or the first effect); VST2 reports its own role.</param>
+    /// <summary>CLAP by file extension (a .clap file or macOS bundle) or by the catalog's format. CLAP is opt-in in the plug-in browser; a file with another extension never becomes CLAP.</summary>
+    public static bool IsClap(string path, string format) =>
+        path.TrimEnd('\\', '/').EndsWith(".clap", StringComparison.OrdinalIgnoreCase) || string.Equals(format, "CLAP", StringComparison.OrdinalIgnoreCase);
+
+    /// <param name="isInstrument">VST3 and CLAP: which plug-in of the file to pick (the first instrument or the first effect); VST2 reports its own role.</param>
     public static IPluginInstance Create(string path, string format, bool isInstrument, double sampleRate, int maxBlock, EngineThreads threads) =>
-        IsVst3(path, format) ? new Vst3Plugin(path, isInstrument, sampleRate, maxBlock, threads.Log) : new Vst2Plugin(path, sampleRate, maxBlock, threads);
+        IsClap(path, format) ? new Clap.ClapPlugin(path, isInstrument, sampleRate, maxBlock, threads.Log)
+        : IsVst3(path, format) ? new Vst3Plugin(path, isInstrument, sampleRate, maxBlock, threads.Log) : new Vst2Plugin(path, sampleRate, maxBlock, threads);
 
     /// <summary>
     /// Create for a process that has no engine spec (the isolated plug-in host, the identify probe): the approved SHA-256 is

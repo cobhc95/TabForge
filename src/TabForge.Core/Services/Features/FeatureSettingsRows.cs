@@ -15,7 +15,7 @@ public class BandFeatureSettings : IFeatureSettingsSource
 
     public IReadOnlyList<FeatureLayout> Layout { get; } = new FeatureLayout[]
     {
-        new(SettingsCatalog.Timeline, "Band view", "band.instrumentsize band.lanecontent band.followscore* band.lanelayout* band.lanezoom* band.noteoutline* band.continuous* band.playheadline* band.smoothfollow* band.rowsperscreen* band.fretboardabove* band.colourframe*", "Timeline display"),
+        new(SettingsCatalog.Timeline, "Band view", "band.instrumentsize band.lanecontent band.followscore* band.lanelayout* band.lanezoom* band.noteoutline* band.continuous* band.playheadline* band.rowminheight* band.smoothfollow* band.rowsperscreen* band.fretboardabove* band.colourframe*", "Timeline display"),
     };
 
     public IEnumerable<SettingDescriptor> SettingRows(AppSettings settings) => SettingsCatalog.BandRows(settings);

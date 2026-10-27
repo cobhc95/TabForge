@@ -40,9 +40,9 @@ public static class PromptTextsPresenter
 
     public static PromptSpec AddTrack() => new(
         "Add track", "What kind of track do you want to add?",
-        YesText: "Audio track", NoText: "Instrument…",
-        YesToolTip: "An audio track: it holds audio and MIDI clips and has no notation",
-        NoToolTip: "An instrument track: you pick the instrument next",
+        YesText: "Audio/MIDI track", NoText: "Tab…",
+        YesToolTip: "An audio/MIDI track: it holds audio and MIDI clips and has no notation",
+        NoToolTip: "A tab track: you pick the instrument next",
         ShowCancel: true, DefaultIsNo: false);
 
     public static AddTrackChoice AddTrackAnswer(PromptAnswer answer) => answer switch
@@ -79,25 +79,25 @@ public static class PromptTextsPresenter
         ShowCancel: false, DefaultIsNo: false, RememberText: "Don't ask again");
 
     public static PromptSpec ConvertTrackToAudio(string trackName, string undoKey) => new(
-        "Convert to audio track",
-        $"Convert '{trackName}' to an audio track? Its notation becomes a MIDI clip on the track, so nothing is lost, and the bars are emptied. " +
+        "Convert to audio/MIDI track",
+        $"Convert '{trackName}' to an audio/MIDI track? Its notation becomes a MIDI clip on the track, so nothing is lost, and the bars are emptied. " +
         $"The track is silent unless an instrument plug-in is on it. Clips already on the track stay on their lanes. {UndoHint(undoKey)}",
         YesText: "Convert", NoText: "Cancel",
-        YesToolTip: "Convert the track", NoToolTip: "Keep the instrument track",
+        YesToolTip: "Convert the track", NoToolTip: "Keep the tab track",
         ShowCancel: false, DefaultIsNo: true);
 
     /// <summary>The question after the instrument pick of Convert to instrument track: what happens to the clips.</summary>
     public static PromptSpec ConvertTrackToInstrumentClips(string trackName, bool hasMidi) => hasMidi
-        ? new PromptSpec("Convert to instrument track", $"'{trackName}' has MIDI clips. What should happen to them?",
+        ? new PromptSpec("Convert to tab track", $"'{trackName}' has MIDI clips. What should happen to them?",
             YesText: "Convert", NoText: "Cancel",
-            YesToolTip: "Convert the track", NoToolTip: "Keep the audio track",
+            YesToolTip: "Convert the track", NoToolTip: "Keep the audio/MIDI track",
             ShowCancel: false, DefaultIsNo: false,
             Choices: new[] { "Write them as notation", "Keep them as MIDI on a second lane" },
             RememberText: "Remember my choice")
-        : new PromptSpec("Convert to instrument track",
+        : new PromptSpec("Convert to tab track",
             $"'{trackName}' has audio clips. They stay on the track on a second lane under the new notation lane.",
             YesText: "OK", NoText: "Cancel",
-            YesToolTip: "Convert the track", NoToolTip: "Keep the audio track",
+            YesToolTip: "Convert the track", NoToolTip: "Keep the audio/MIDI track",
             ShowCancel: false, DefaultIsNo: false);
 
     /// <summary>

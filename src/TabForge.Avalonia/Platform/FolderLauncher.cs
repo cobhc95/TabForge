@@ -1,35 +1,34 @@
 using System;
-using System.ComponentModel;
-using System.Diagnostics;
 using System.IO;
+using System.Threading.Tasks;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Platform.Storage;
 using TabForge.Services;
 using Trace = TabForge.Services.Trace;
 
 namespace TabForge.Avalonia.Platform;
 
-// Owns: opening a folder in File Explorer from the Avalonia windows: the absolute Windows-folder Explorer path and the one argument both call sites share.
+// Owns: opening a folder in the system file manager from the Avalonia windows: Windows through the window's own launcher, other systems through IShellLauncher (open / xdg-open).
 // Does not own: choosing or creating the folder (the live-video and render windows), tracing (TabForge.Services.Trace).
 // Tests: TabForge.Avalonia.Tests.FolderLauncherTests.
 public static class FolderLauncher
 {
-    /// <summary>File Explorer's file name in the Windows folder (C:\Windows\explorer.exe): the copy under System32 does not
-    /// exist on every machine, and the name is never resolved through the shell's search order.</summary>
-    private const string ExplorerExe = "explorer.exe";
-
-    /// <summary>The start info that opens <paramref name="folder"/>: the absolute Windows-folder Explorer and the folder as one argument, not a command line.</summary>
-    public static ProcessStartInfo StartInfo(string folder)
+    /// <summary>Opens <paramref name="folder"/> in the file manager; a missing folder or a launch failure is logged, never shown as a crash.</summary>
+    public static void Open(Visual owner, string folder)
     {
-        var start = new ProcessStartInfo(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), ExplorerExe)) { UseShellExecute = false };
-        start.ArgumentList.Add(folder);
-        return start;
+        if (!Directory.Exists(folder)) return;
+        if (!OperatingSystem.IsWindows()) { if (!TabForge.Platform.ShellLauncher.Current.OpenFolder(folder)) Trace.Error(Trace.Ui, "open folder: no handler"); return; }   // macOS open, Linux xdg-open
+        if (TopLevel.GetTopLevel(owner) is { } top) _ = LaunchAsync(top.Launcher, folder);
     }
 
-    /// <summary>Opens <paramref name="folder"/> in File Explorer; a missing folder or a launch failure is logged, never shown as a crash.</summary>
-    public static void Open(string folder)
+    private static async Task LaunchAsync(ILauncher launcher, string folder)
     {
-        if (!OperatingSystem.IsWindows() || !Directory.Exists(folder)) return;
-        try { Process.Start(StartInfo(folder)); }
-        catch (Exception ex) when (ex is Win32Exception or InvalidOperationException)
+        try
+        {
+            if (!await launcher.LaunchDirectoryInfoAsync(new DirectoryInfo(folder))) Trace.Error(Trace.Ui, "open folder: no handler");
+        }
+        catch (Exception ex) when (ex is IOException or InvalidOperationException or NotSupportedException or System.ComponentModel.Win32Exception)
         {
             Trace.Error(Trace.Ui, "open folder: " + ex.Message);
         }

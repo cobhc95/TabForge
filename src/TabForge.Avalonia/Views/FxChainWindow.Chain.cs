@@ -50,12 +50,12 @@ public sealed partial class FxChainWindow
     private void RefreshList(int select) =>
         RefreshRows(select < 0 ? _list.Focused : _track.Rig.Plugins.ElementAtOrDefault(Math.Clamp(select, 0, Math.Max(0, _track.Rig.Plugins.Count - 1))));
 
-    private void RefreshRows(object? focus)
+    private void RefreshRows(object? focus, IReadOnlyCollection<object>? select = null)
     {
         _building = true;
         try
         {
-            var keep = _list.SelectedTags;
+            var keep = select ?? _list.SelectedTags;
             _list.Clear();
             FxChainRows.Fill(_list, _track.Rig, SetEnabled, _containers.SetEnabled, _containers.ToggleCollapsed);
             _list.Restore(keep, Math.Max(0, _list.IndexOf(focus)));
@@ -154,6 +154,11 @@ public sealed partial class FxChainWindow
         {
             case FxChainIds.AddPlugin: _ = AddPlugin(); return true;
             case FxChainIds.RemovePlugin: _ = RemoveSelected(); return true;
+            case FxChainIds.CutPlugins: _ = CutSelected(); return true;
+            case FxChainIds.CopyPlugins: _ = CopySelected(); return true;
+            case FxChainIds.PastePlugins: PasteClipboard(); return true;
+            case FxChainIds.DuplicatePlugins: _ = DuplicateSelected(); return true;
+            case FxChainIds.SelectAllPlugins: SelectAllRows(); return true;
             case FxChainIds.Save: _ = _files.Save(); return true;
             case FxChainIds.Load: _ = _files.Load(replace: true); return true;
             case FxChainIds.AddToEnd: _ = _files.Load(replace: false); return true;

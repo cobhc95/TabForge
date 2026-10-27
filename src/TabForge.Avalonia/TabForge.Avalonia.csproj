@@ -3,8 +3,10 @@
     <OutputType>WinExe</OutputType>
     <!-- One target per OS, not a multi-target: on Windows the exe is the audio engine host too (it starts itself with
          the audio-engine argument), so every Windows build must carry the engine. macOS and Linux build without it. -->
-    <TargetFramework Condition="$([MSBuild]::IsOSPlatform('Windows'))">net8.0-windows</TargetFramework>
-    <TargetFramework Condition="!$([MSBuild]::IsOSPlatform('Windows'))">net8.0</TargetFramework>
+    <TargetFramework Condition="$([MSBuild]::IsOSPlatform('Windows')) And '$(TabForgePortableBuild)' != 'true'">net10.0-windows</TargetFramework>
+    <TargetFramework Condition="!$([MSBuild]::IsOSPlatform('Windows')) Or '$(TabForgePortableBuild)' == 'true'">net10.0</TargetFramework>
+    <!-- The portable (non-Windows) build has its own lock file, so the shipped one is untouched; -p:TabForgePortableBuild=true builds it on Windows too. -->
+    <NuGetLockFilePath Condition="'$(TargetFramework)' == 'net10.0'">packages.portable.lock.json</NuGetLockFilePath>
     <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
     <AssemblyName>TabForge</AssemblyName>
     <RootNamespace>TabForge.Avalonia</RootNamespace>
@@ -21,18 +23,16 @@
     <RuntimeHostConfigurationOption Include="System.GC.ConserveMemory" Value="5" />
   </ItemGroup>
   <ItemGroup>
-    <!-- The audio engine is Windows-only (net8.0-windows); the same reference the WPF build makes. -->
-    <ProjectReference Include="..\TabForge.AudioEngine\TabForge.AudioEngine.csproj" Condition="'$(TargetFramework)' == 'net8.0-windows'" />
-  </ItemGroup>
-  <ItemGroup Condition="'$(TargetFramework)' != 'net8.0-windows'">
-    <!-- The engine client and its Windows trust adapter exist only in the Windows build (see Playback/AvaloniaPlaybackComposition.cs). -->
-    <Compile Remove="Playback\**\*.cs" />
+    <!-- The audio engine host: net10.0-windows on Windows, net10.0 (miniaudio) elsewhere; the exe starts it with the audio-engine argument. -->
+    <ProjectReference Include="..\TabForge.AudioEngine\TabForge.AudioEngine.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="11.3.20" />
     <PackageReference Include="Avalonia.Desktop" Version="11.3.20" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.20" />
     <ProjectReference Include="..\TabForge.Core\TabForge.Core.csproj" />
+    <!-- Inter and JetBrains Mono (SIL OFL): the optional bundled interface fonts, loaded from the app resources. -->
+    <AvaloniaResource Include="Assets\Fonts\*.ttf" />
     <Content Include="Assets\TabForge.ico" Link="Assets\TabForge.ico" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Assets\Icons\TrackRows\owner-icons.json" Link="Assets\TrackRowIcons\owner-icons.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Assets\Icons\Transport\*.svg" Link="Assets\TransportIcons\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />

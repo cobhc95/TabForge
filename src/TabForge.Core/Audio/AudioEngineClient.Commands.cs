@@ -100,7 +100,7 @@ public sealed partial class AudioEngineClient : IDisposable
     /// captures the given tracks even when a record arm is off (a one-pass re-record's explicit capture set); normal calls keep it true.</summary>
     public bool StartRecording(IEnumerable<TrackModel> tracks, string folder, bool requireArm = true)
     {
-        var armed = tracks.Where(t => (requireArm ? t.RecordArm : true) && !AudioInputs.IsMidi(t.AudioInput) && _slots.ContainsKey(t)).ToList();
+        var armed = tracks.Where(t => (requireArm ? t.RecordArm : true) && AudioInputs.HasAudio(t.AudioInput) && _slots.ContainsKey(t)).ToList();
         if (!IsRunning || armed.Count == 0) return false;
         var recording = armed.ToDictionary(t => _slots[t]);
         lock (_recordingGate) _recordingTracks = recording;
@@ -165,6 +165,18 @@ public sealed partial class AudioEngineClient : IDisposable
     public void RequestPrograms(TrackModel track, PluginSlot slot)
     {
         if (TryAddress(track, slot, out var engineSlot, out var index)) Send(EngineCommand.GetPrograms, new GetProgramsMessage(engineSlot, index).Write);
+    }
+
+    /// <summary>Asks for the plug-in's parameter list (generic parameter panel); the answer arrives as <see cref="ParametersReceived"/>.</summary>
+    public void RequestParameters(TrackModel track, PluginSlot slot)
+    {
+        if (TryAddress(track, slot, out var engineSlot, out var index)) Send(EngineCommand.GetParams, new GetParamsMessage(engineSlot, index).Write);
+    }
+
+    /// <summary>Sets one parameter of the running plug-in to a plain value (no chain rebuild).</summary>
+    public void SetParameter(TrackModel track, PluginSlot slot, uint id, double value)
+    {
+        if (double.IsFinite(value) && TryAddress(track, slot, out var engineSlot, out var index)) Send(EngineCommand.SetParam, new SetParamMessage(engineSlot, index, id, value).Write);
     }
 
     public void SetProgram(TrackModel track, PluginSlot slot, int program)

@@ -1,3 +1,4 @@
+using TabForge.Avalonia.Views;
 using System;
 using System.Threading.Tasks;
 
@@ -20,7 +21,7 @@ public static class UiTasks
         catch (Exception ex)
         {
             // Reported, not swallowed: the command's caller cannot await, so this is the only place the failure surfaces.
-            report($"{what} failed: {ex.Message}");
+            report.Error($"{what} failed: {ex.Message}");
         }
     }
 }

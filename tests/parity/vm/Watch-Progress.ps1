@@ -8,7 +8,7 @@
 #  - slot locks (%TEMP%\tf-slot*.lock) older than 30 minutes (a dead build left them).
 # Usage: .\Watch-Progress.ps1 (runs until stopped)
 . "$PSScriptRoot\VmCommon.ps1"
-$repo = 'C:\Users\COBHC\Downloads\TabForge'
+$repo = "$env:USERPROFILE\Downloads\TabForge"
 $out = "$env:TEMP\tf-progress.txt"
 $cred = Import-Clixml "$env:TEMP\tabforge-vm-cred.xml"
 while ($true) {

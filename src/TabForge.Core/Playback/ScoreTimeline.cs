@@ -89,7 +89,20 @@ public sealed class NoteEvent
     /// </summary>
     public List<int> SustainOffEventIndices { get; } = new();
 
+    /// <summary>The beats that merged into this note without an attack of their own (a tie destination, a legato slide target); null for most notes. The score lights them at their own beat.</summary>
+    public List<NoteContinuation>? Continuations;
+
     public double EndMs => OnsetMs + DurationMs;
+}
+
+/// <summary>A beat sustained by an earlier note instead of attacking again: where it sits in the score and the time it spans.</summary>
+public sealed class NoteContinuation
+{
+    public double OnsetMs;
+    public double EndMs;
+    public int Bar;
+    public int Cell;
+    public int StringIndex;
 }
 
 /// <summary>A performed bar in the playback order. <see cref="Bar"/> is the source bar index.</summary>

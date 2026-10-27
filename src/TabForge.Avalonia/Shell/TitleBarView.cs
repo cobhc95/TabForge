@@ -204,7 +204,17 @@ public sealed class TitleBarView : Border, ICaptionButtonRects
         Action? nativeMiddleClick = window is MainWindow main
             ? () => TabBehaviourSettings.OnTitleBarMiddleClicked(main.Settings, main.Songs)
             : null;
-        return new TitleBarView(tabs, WindowChromeFactory.Create(window), () => commands.Run(RecordCommandId), () => commands.Run(SettingsCommandId), WindowChromeFactory.CurrentOs, nativeMiddleClick,
+        var bar = new TitleBarView(tabs, WindowChromeFactory.Create(window), () => commands.Run(RecordCommandId), () => commands.Run(SettingsCommandId), WindowChromeFactory.CurrentOs, nativeMiddleClick,
             window is MainWindow m ? () => TabBehaviourSettings.TitleBarMiddleClickOpensTab(m.Settings) : null, window is MainWindow mw ? MonitorBinding(mw) : null);
+        // Full screen shows the content only: the caption row (tabs and caption buttons) hides, and comes back with the window state.
+        // The system caption area goes with it (height hint 0) so no drag or caption-button zone stays over the menu bar; exit restores the hint.
+        window.PropertyChanged += (_, e) =>
+        {
+            if (e.Property != Window.WindowStateProperty) return;
+            var fullScreen = window.WindowState == WindowState.FullScreen;
+            bar.IsVisible = !fullScreen;
+            window.ExtendClientAreaTitleBarHeightHint = fullScreen ? 0 : ChromeMetrics.CaptionRowHeight;
+        };
+        return bar;
     }
 }

@@ -28,11 +28,13 @@ public sealed class FxChainKeys
     public static string? IdFor(HotkeySettings settings, string gesture) =>
         HotkeyCatalog.BuildMap(settings, fxChainContext: true).TryGetValue(HotkeyCatalog.Canonical(gesture), out var id) ? id : null;
 
-    /// <summary>Runs the FX chain command bound to the key press. True when a command used the key; a command not safe in text is left to a focused text box.</summary>
-    public bool Handle(Key key, KeyModifiers modifiers, object? focused)
+    /// <summary>Runs the FX chain command bound to the key press. True when a command used the key; a command not safe in text is left to a focused text box,
+    /// and a command on the plug-in list (Delete, Ctrl+C ...) is left alone unless <paramref name="listFocused"/>.</summary>
+    public bool Handle(Key key, KeyModifiers modifiers, object? focused, bool listFocused = true)
     {
         if (MainWindowKeyboard.GestureOf(key, modifiers) is not { } gesture || IdFor(_bindings(), gesture) is not { } id) return false;
         if (focused is TextBox && !HotkeyCatalog.AllowsInTextBox(id)) return false;
+        if (!listFocused && FxChainIds.NeedsListFocus(id)) return false;
         return _run(id);
     }
 
@@ -41,7 +43,15 @@ public sealed class FxChainKeys
     {
         var item = new MenuItem { Header = header, Tag = id };
         item.Click += (_, _) => _run(id);
+        ShowGesture(item, id);
         return item;
+    }
+
+    private void ShowGesture(MenuItem menu, string id)
+    {
+        var text = HotkeyCatalog.DisplayAll(_bindings(), id);
+        menu.InputGesture = MainWindowMenu.GestureOfText(text);
+        AvaloniaMenuTemplates.SetGestureText(menu, text);
     }
 
     /// <summary>Sets the gesture text of every command item under <paramref name="root"/> from the live bindings.</summary>
@@ -50,12 +60,7 @@ public sealed class FxChainKeys
         foreach (var item in root.Items)
         {
             if (item is not MenuItem menu) continue;
-            if (menu.Tag is string id)
-            {
-                var text = HotkeyCatalog.DisplayAll(_bindings(), id);
-                menu.InputGesture = MainWindowMenu.GestureOfText(text);
-                AvaloniaMenuTemplates.SetGestureText(menu, text);
-            }
+            if (menu.Tag is string id) ShowGesture(menu, id);
             Apply(menu);
         }
     }

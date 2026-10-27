@@ -3,7 +3,7 @@ name: build-bridge
 # Builds native/tfvst3 (the VST3 host bridge) from the pinned, unpatched Steinberg VST3 SDK on the GitHub runner,
 # attests it and uploads tfvst3.dll plus native/BUILD_PROVENANCE.md. Run it by hand (Actions > build-bridge > Run
 # workflow) whenever the bridge source or the SDK pin changes, then commit both files as they are. Releases ship the
-# committed DLL, so local and CI release builds carry the same bridge (docs/REPRODUCIBLE_BUILDS.md).
+# committed DLL, so local and CI release builds carry the same bridge (docs/guides/REPRODUCIBLE_BUILDS.md).
 on:
   workflow_dispatch:
 

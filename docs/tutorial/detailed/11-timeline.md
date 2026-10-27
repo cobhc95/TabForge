@@ -48,7 +48,7 @@ Sections that share a base name share a colour. **Verse 1** and **Verse 2** both
 
 The **Sections** panel lists every section in its colour. Click a name to jump the cursor to that section. The **Go** button does the same, **Edit** reopens the name and colour window, and a padlock marks a locked section.
 
-> **Note:** **Bar > Section…** is a different, text-only command. It stores a plain text name on one bar, with no colour, and the timeline does not use it. To build the arrangement, use the methods above.
+> **Note:** **Bar > Section…** (Shift+Insert) is a different, text-only command. It stores a plain text name on one bar, with no colour, and the timeline does not use it. To build the arrangement, use the methods above.
 
 ## Move and resize sections
 
@@ -134,7 +134,7 @@ In the **Sections** panel, the **Remove** button takes only the marker. In the r
 
 Repeats let a few bars play twice without writing them twice. You met them in **Chapter 4: Reading tab and notation**. Here is the short version, because arranging often needs them.
 
-Place the cursor on the first bar to repeat and choose **Bar > Repeat open**. Place it on the last bar and choose **Bar > Repeat close…**. A small window asks how many times to play the passage, from 2 to 99. To give the repeat a first and second ending, choose **Bar > Directions / ending…** on those bars and type the ending number, 1 or 2.
+Place the cursor on the first bar to repeat and choose **Insert > Repeat / ending > Repeat open**. Place it on the last bar and choose **Insert > Repeat / ending > Repeat close…**. A small window asks how many times to play the passage, from 2 to 99. To give the repeat a first and second ending, choose **Insert > Repeat / ending > Directions / ending…** on those bars and type the ending number, 1 or 2.
 
 On the first pass the song plays the first ending. At the repeat sign it jumps back to the start. On the second pass it skips the first ending and plays the second. The timeline plays in this order too.
 

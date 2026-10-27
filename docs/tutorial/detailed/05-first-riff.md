@@ -47,7 +47,7 @@ A new song is blank and ready to use. There is no set-up wizard. You change the 
 4. Click **OK**. The title now appears in the document tab.
 5. Click the **BPM** box in the toolbar at the top right and type `100`.
 6. Press `Enter`. The tempo is now 100 BPM, within the allowed range of 20 to 400.
-7. Choose **Bar > Key signature…** (`Ctrl+K`). The **Key signature** window opens.
+7. Choose **Insert > Key signature change…** (`Ctrl+K`). The **Key signature** window opens.
 8. Leave the **Key** list on **C**, tick **Minor mode** and click **OK**.
 
 A minor shares its key signature with C major, so the score shows no sharps or flats. The time signature is already 4/4, so you do not need to change it. The key and the time signature apply from the bar where you set them, on every track, until the next change; you set both on bar 1, so they cover the whole riff.
@@ -75,7 +75,7 @@ You hear each note as you enter it. These two notes are quarter notes because th
 
 ## Choose a note value
 
-A note value is how long a note lasts: a whole note, a half note, a quarter note, an eighth note and so on. Here the note value works as a mode. The value you choose is used for the next note you write, until you choose another. The status bar shows the current value, such as quarter or eighth.
+A note value is how long a note lasts: a whole note, a half note, a quarter note, an eighth note and so on. Here the note value works as a mode. The value you choose is used for the next note you write, until you choose another. The chosen value is lit in the **Duration** tools.
 
 Choose a value from the **Duration** group on the **Tools** page of the side panel, or from the **Note** menu (**Whole**, **Half**, **Quarter**, **Eighth**, **Sixteenth**, **32nd**, **64th**). The seven sizes have no default keys. Hover a **Duration** button to read its name and, if it has one, its current key.
 
@@ -87,7 +87,7 @@ A few more keys shape the rhythm.
 - `Slash` (the `/` key) toggles a triplet: three notes in the time of two.
 - `R` turns the beat into a rest, a silence. Press `R` again to turn it back. Typing a fret on a rest writes a note of the rest's length.
 - `L` ties a note to the one before it, so the sound continues across both.
-- `-` (**Longer note value**) and `+` (**Shorter note value**) step the note value one size at a time. Press one and watch the status bar, or click a **Duration** button for a certain result.
+- `-` (**Longer note value**) and `+` (**Shorter note value**) step the note value one size at a time. Press one and watch the **Duration** tools, or click a **Duration** button for a certain result.
 
 ### Try it: Write the first two bars
 
@@ -118,7 +118,7 @@ The status bar shows how full the bar is, as two numbers: the music written, the
 1. Click the first note of bar 1. The cursor sits on it.
 2. In the **Duration** group, click the quarter note button. The first note becomes a quarter note, and the bar now holds more than four beats.
 3. Look at bar 1 and at the status bar. The bar turns red, and the readout changes to 18:16.
-4. Press `F4`, or choose **Tools > Check bar duration**. A message lists bar 1 as a bar that does not add up.
+4. Press `F4`, or choose **Bar > Check bar duration**. A message lists bar 1 as a bar that does not add up.
 5. Click **OK**. Then press `Ctrl+Z`. The first note is an eighth note again, and the red goes away.
 
 ![A message box listing bar 1 as a bar that does not add up, after pressing F4.](images/c05-s10.png)
@@ -173,7 +173,7 @@ Press `Ctrl+A` to select the whole track. Press `Esc` to clear the selection. Wh
 
 - `Insert` adds an empty beat at the cursor and pushes the rest of the bar to the right. This needs NumLock on, because with NumLock off the same key types fret 0.
 - **Edit > Delete beats** removes the beat on the cursor and pulls the rest of the bar left. It has no default key.
-- **Bar > Insert bar** (`Ctrl+Insert`) adds an empty bar before the cursor bar, on every track.
+- **Insert > Bar > Before selected** (`Ctrl+Insert`) adds an empty bar before the cursor bar, on every track.
 - **Bar > Delete bar** (`Ctrl+Delete`) removes the cursor bar from every track. The last bar cannot be deleted.
 - **Bar > Duplicate bar** copies the cursor bar and puts the copy after it, on every track. With bars selected, it copies the whole selection after its last bar and selects the copy. A section label is not repeated on the copy.
 

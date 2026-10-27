@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using TabForge.Documents;
@@ -251,9 +250,7 @@ public static partial class SelfTest
         var linkTarget = Path.Combine(outside, "old-copy.gp");
         File.Copy(realBackup, linkTarget);
         File.Move(realBackup, realBackup + ".held");
-        var symlinkMade = false;
-        try { File.CreateSymbolicLink(realBackup, linkTarget); symlinkMade = true; }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+        var symlinkMade = global::TabForge.Avalonia.Platform.FolderLinks.TryCreateFileLink(realBackup, linkTarget);
         if (symlinkMade)
         {
             var viaLink = FilePathPolicy.RecoverInterruptedPair(gp, tf);
@@ -261,26 +258,23 @@ public static partial class SelfTest
                 viaLink?.Contains("link", StringComparison.Ordinal) == true && SameBytes(gp, newGp) && SameBytes(linkTarget, oldGp) && File.Exists(marker), viaLink);
             File.Delete(realBackup);
         }
-        else Skip("a backup that is a symbolic link is refused", "creating symbolic links needs Developer Mode or elevation here");
+        else Skip("a backup that is a symbolic link is refused", "no kind of file link could be created here");
         File.Move(realBackup + ".held", realBackup);
 
         var junction = Path.Combine(root, "junction");
-        var mklink = Process.Start(new ProcessStartInfo("cmd.exe") { ArgumentList = { "/c", "mklink", "/J", junction, folder }, UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true });
-        var junctionMade = mklink is not null && mklink.WaitForExit(15000) && mklink.ExitCode == 0 && Directory.Exists(junction);
-        if (!junctionMade) { try { mklink?.Kill(); } catch (InvalidOperationException) { } // swallow: the helper process may already have exited
- }
+        var junctionMade = global::TabForge.Avalonia.Platform.FolderLinks.TryCreate(junction, folder);
         if (junctionMade)
         {
             var gpViaJunction = Path.Combine(junction, "song.gp");
             var junctionMarker = FilePathPolicy.PairMarkerPathFor(gpViaJunction);
             File.Copy(marker, junctionMarker);
             var viaJunction = FilePathPolicy.RecoverInterruptedPair(gpViaJunction, Path.Combine(junction, "song.tfaudio"));
-            Check("a song folder reached through a junction is refused: nothing is changed and it is reported",
+            Check("a song folder reached through a folder link is refused: nothing is changed and it is reported",
                 viaJunction?.Contains("link", StringComparison.Ordinal) == true && SameBytes(gp, newGp) && File.Exists(realBackup) && File.Exists(junctionMarker), viaJunction);
             File.Delete(junctionMarker);
             Directory.Delete(junction);
         }
-        else Skip("a song folder reached through a junction is refused", "mklink /J could not create a junction here");
+        else Skip("a song folder reached through a folder link is refused", "a folder link could not be created here");
         var direct = FilePathPolicy.RecoverInterruptedPair(gp, tf);
         Check("the same interrupted save opened directly (no link) is restored",
             direct?.Contains("restored", StringComparison.Ordinal) == true && PairState(gp, tf, oldGp, oldTf, newGp, newTf) == "old" && Directory.GetFiles(folder).Length == 2,

@@ -73,7 +73,7 @@ public sealed class TrackFxStrip : StripFrame
     public LiveStripTuner Tuner { get; }
 
     /// <summary>The tuner listens to the armed audio input of the track.</summary>
-    public bool HasInput => _track.RecordArm && !AudioInputs.IsMidi(_track.AudioInput);
+    public bool HasInput => _track.RecordArm && AudioInputs.HasAudio(_track.AudioInput);
 
     /// <summary>Moves the sliders and buttons to the track's values (it changed elsewhere: the track list, an undo); a slider being dragged is left alone.</summary>
     public void Show()

@@ -86,6 +86,9 @@ public sealed partial class SongProject
     /// <summary>How many rows (systems) each track's Band pane shows, by track id; null until a count is chosen (a file written before reads the same); a track without an entry has the default. Song state: one undo step, saved with the song, absent in older files.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public Dictionary<Guid, int>? BandPaneRows { get; set; }
+    /// <summary>The scales the user kept for the whole song (no section), by track id ("N" format) or "*" for all pitched tracks, as "Root Scale" highlights; null until one is kept. Saved with the song, one undo step, absent in older files.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public Dictionary<string, string>? KeptScales { get; set; }
 
     /// <summary>
     /// Moves the track at <paramref name="from"/> to <paramref name="to"/>, shifting the rest to keep
@@ -120,6 +123,9 @@ public sealed class MarkerModel
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? LengthBars { get; set; }
+    /// <summary>The scales the user kept for this section, by track id ("N" format) or "*" for all pitched tracks, as "Root Scale" highlights; null until one is kept. Moves with the section.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public Dictionary<string, string>? KeptScales { get; set; }
 }
 
 public enum TrackKind
@@ -155,6 +161,8 @@ public sealed class TrackModel
     /// <summary>True for a drum track (the drum kind). The one rule for it; MIDI channel 9 is reserved for it, see <see cref="ProjectValidator"/>.</summary>
     [JsonIgnore] public bool IsDrumTrack => Kind == TrackKind.Drums;
     public string ColorHex { get; set; } = NamedColourSwatches.TrackDefaultColour;
+    /// <summary>True while the colour is the instrument group's default (it follows an instrument change); false once the user picked a colour. Absent in older files, so they keep their colours.</summary>
+    public bool ColorFollowsInstrument { get; set; }
     public string InstrumentName { get; set; } = "Electric Guitar";
     /// <summary>Drum tracks: notation preset (see DrumMaps); default Guitar Pro 5.</summary>
     public string DrumMapPreset { get; set; } = "Guitar Pro 5";

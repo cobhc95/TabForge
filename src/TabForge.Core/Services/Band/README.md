@@ -9,6 +9,6 @@ The Band view's feature module: what Band adds to the central tables, merged by 
 | `BandSettingsRows.cs` | The "Band view" Preferences rows (a `SettingsCatalog` partial) |
 
 ## Not module-driven
-The View menu's "Band view" item (a checkable XAML item), the Band menu in `Views/ContextMenuSpecs.cs`, the Band settings bounds in `Services/SettingsValidator.cs`, and the `Band.*` case labels of `RunHotkey` in `MainWindow.Settings.cs`, which run before the module's commands and reach the same handler.
+The View menu's "Band view" item (a checkable XAML item), the Band menu in `Views/ContextMenuSpecs.cs`, the Band settings bounds in `Services/Settings/SettingsValidator.cs`, and the `Band.*` case labels of `RunHotkey` in `MainWindow.Settings.cs`, which run before the module's commands and reach the same handler.
 
 ## Tests

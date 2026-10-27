@@ -1,5 +1,5 @@
 using TabForge.Audio;
-using TabForge.Platform.Windows;
+using TabForge.Platform;
 using TabForge.Playback;
 using TabForge.Plugins;
 
@@ -11,12 +11,12 @@ namespace TabForge.Avalonia.Playback;
 // Does not own: the engine's lifetime and I/O (AudioEngineClient), the trust rules (PluginTrust), the device calls (the Core
 //   Windows adapters), or any view (nothing is wired to UI yet).
 // Tests: AvaloniaPlaybackCompositionTests.
-// Windows only: the audio engine, the MIDI and audio device calls and the plug-in file checks are Windows-only (the project builds net8.0-windows on Windows).
+// Windows only: the audio engine, the MIDI and audio device calls and the plug-in file checks are Windows-only (the project builds net10.0-windows on Windows).
 public static class AvaloniaPlaybackComposition
 {
     /// <summary>A new engine client over the desktop plug-in trust. The caller keeps the one client for the process.</summary>
-    public static AudioEngineClient CreateEngineClient(PluginTrust trust) => new(new PluginTrustLoadGate(new WindowsPluginFileTrust(), trust));
+    public static AudioEngineClient CreateEngineClient(PluginTrust trust) => new(new PluginTrustLoadGate(PluginFileTrusts.Create(), trust));
 
-    /// <summary>A new MIDI output over winmm. WinMM allows one handle per device, so the caller keeps the one output for the process.</summary>
-    public static IMidiOutput CreateMidiOutput() => new WinMmMidiOutput(new WindowsMidiDevices());
+    /// <summary>A new MIDI output over the OS's MIDI stack (winmm on Windows: <see cref="MidiBackends.Output"/>). WinMM allows one handle per device, so the caller keeps the one output for the process.</summary>
+    public static IMidiOutput CreateMidiOutput() => new WinMmMidiOutput(MidiBackends.Output);
 }

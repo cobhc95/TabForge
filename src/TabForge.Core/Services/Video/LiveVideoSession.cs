@@ -32,7 +32,7 @@ public sealed class LiveVideoSession : IDisposable
     private readonly object _gate = new();
     private readonly List<float[]> _early = new();   // audio that arrived while the encoder was opening
     private readonly VideoEncoderOptions? _options;
-    private VideoEncoder? _encoder;                  // set under _gate once open (Volatile.Write); the capture thread reads it with Volatile.Read
+    private IVideoEncoder? _encoder;                 // set under _gate once open (Volatile.Write); the capture thread reads it with Volatile.Read
     private int _rate;                               // the first chunk's rate
     private Task? _opening;
     private long _audioEnd;                          // frames received (gaps included)
@@ -138,9 +138,9 @@ public sealed class LiveVideoSession : IDisposable
         try
         {
             var options = _options;
-            if (options is { Encoder: VideoEncoderChoices.Auto, HardwareProbe: "" })   // first live recording on this PC: one self-test, remembered
-                options = options with { HardwareProbe = VideoEncoder.ProbeHardware(StagingPath(_path, "probe" + Guid.NewGuid().ToString("N")[..8]), _width, _height, _fps, options) ? VideoEncoderOptions.ProbePass : VideoEncoderOptions.ProbeFail };
-            var encoder = VideoEncoder.Open(_staging, _width, _height, _fps, new VideoAudioFormat(_rate, 2), live: true, options: options);
+            if (options is not null)   // first recording on this PC: one self-test, remembered (the rule export shares)
+                options = VideoEncoderFactory.WithHardwareProbe(options, StagingPath(_path, "probe" + Guid.NewGuid().ToString("N")[..8]), _width, _height, _fps);
+            var encoder = VideoEncoderFactory.Open(_staging, _width, _height, _fps, new VideoAudioFormat(_rate, 2), live: true, options: options);
             var orphan = false;
             lock (_gate)
             {

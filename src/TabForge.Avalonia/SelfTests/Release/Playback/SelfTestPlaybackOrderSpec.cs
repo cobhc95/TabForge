@@ -10,7 +10,7 @@ namespace TabForge;
 // Owns: playback-order spec worked-examples check.
 
 /// <summary>
-/// The worked examples of the playback-order specification (docs/PLAYBACK_ORDER_SPEC.md, section 7), one check
+/// The worked examples of the playback-order specification (docs/specs/PLAYBACK_ORDER_SPEC.md, section 7), one check
 /// per example, named by its id. Structures are written the way the specification writes them:
 /// <c>"0 |:; 1 [1.] :|; 2 [2.]; 3 :|x3; 4 DaCapo"</c> (bar index, then its marks).
 /// </summary>

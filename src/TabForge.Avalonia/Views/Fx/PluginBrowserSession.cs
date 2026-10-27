@@ -72,6 +72,14 @@ public sealed class PluginBrowserSession
     private List<KnownPlugin> CacheOfAll() =>
         _all.Select(p => new KnownPlugin { Name = p.Name, Path = p.Path, Format = p.Format, Vendor = p.Vendor, Role = p.Role, ClassId = p.ClassId }).ToList();
 
+    /// <summary>The user's choice: lists CLAP plug-ins (.clap) in the scan, or stops listing them. The saved scan is dropped so the next scan decides.</summary>
+    public void SetScanClap(bool on)
+    {
+        _settings.ScanClap = on;
+        VstScannerService.ClearSessionCache();
+        _save();
+    }
+
     /// <summary>The user's choice: turns on "Also scan the standard VST folders".</summary>
     public void EnableStandardFolders()
     {
@@ -101,6 +109,7 @@ public sealed class PluginBrowserSession
     public static VstPluginInfo? FromFile(string path, out string? problem)
     {
         problem = null;
+        if (PluginFormats.IsClap(path)) return new VstPluginInfo(Path.GetFileNameWithoutExtension(path.TrimEnd('\\', '/')), path, PluginFormats.Clap);   // chosen by hand: the user's explicit choice
         var vst3 = path.EndsWith(".vst3", StringComparison.OrdinalIgnoreCase);
         if (!vst3 && !PeExports.IsVst2Plugin(path)) { problem = NotAPluginText; return null; }
         var (vendor, role, classId) = vst3 ? VstScannerService.Vst3ModuleInfo(path) : (VstScannerService.Vst2Vendor(path), "", "");

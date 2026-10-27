@@ -47,7 +47,7 @@ public sealed partial class InstrumentPanelView : Control
     internal const string Font = "Segoe UI";
     /// <summary>The placeholder texts and size: no track selected, and an audio track selected.</summary>
     private const string NoTrackPlaceholderText = "Select a track to see the instrument";
-    private const string AudioTrackPlaceholderText = "Audio track — no instrument view";
+    private const string AudioTrackPlaceholderText = "Audio/MIDI track — no instrument view";
     private const double NoTrackFontSize = 13;
     private const double NoTrackLift = 8;
     // The legend column beside the board: four rows, the Scales button under them (sizes).

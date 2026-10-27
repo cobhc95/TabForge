@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using TabForge.Audio;
 using TabForge.Avalonia.Views.Docking;
 using TabForge.Platform.Theme;
-using TabForge.Platform.Windows;
 using TabForge.Services;
 using TabForge.Services.Features;
 
@@ -36,7 +35,7 @@ public static class PreferencesCatalog
         () => DeviceNames(AudioDeviceNames.Capture),
         DeviceNames,   // names only: ASIO lists the installed drivers (registry), none is opened here
         Array.Empty<string>(),
-        (driver, device) => driver == AudioDrivers.Asio ? AsioRates(device) : Capability(() => new WindowsAudioDevices().SupportedSampleRates(driver, device), Array.Empty<int>()),
+        (driver, device) => driver == AudioDrivers.Asio ? AsioRates(device) : Capability(() => TabForge.Avalonia.Platform.PlatformAdapters.AudioDevices().SupportedSampleRates(driver, device), Array.Empty<int>()),
         (driver, device) => driver == AudioDrivers.Asio ? AsioOffer(device) : Task.CompletedTask,
         (driver, device) => driver == AudioDrivers.Asio ? Engine?.KnownAsio(device)?.PreferredBuffer ?? 0 : 0,
         key => App?.DeviceNames.Settled(key) ?? Task.CompletedTask));

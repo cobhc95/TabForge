@@ -26,9 +26,6 @@ public static partial class DlsToSoundFont
     private static readonly Lazy<MeltySynth.SoundFont> WindowsBank =
         new(() => LoadWindowsBankCore(), LazyThreadSafetyMode.ExecutionAndPublication);
 
-    /// <summary>Path of the Windows GM/GS DLS bank.</summary>
-    public static string WindowsBankPath =>
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "System32", "drivers", "gm.dls");
 
     /// <summary>Loads, converts and caches the Windows GM bank (gm.dls) as a MeltySynth SoundFont.</summary>
     /// <exception cref="FileNotFoundException">gm.dls is not present.</exception>

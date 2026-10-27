@@ -201,7 +201,7 @@ internal sealed class ShortcutsPage
         e.Handled = true;
         var slot = _edit.RecordingSlot;
         var modifiers = HotkeyModifiers.None;
-        if (e.KeyModifiers.HasFlag(KeyModifiers.Control)) modifiers |= HotkeyModifiers.Control;
+        if (e.KeyModifiers.HasPrimary()) modifiers |= HotkeyModifiers.Control;
         if (e.KeyModifiers.HasFlag(KeyModifiers.Shift)) modifiers |= HotkeyModifiers.Shift;
         if (e.KeyModifiers.HasFlag(KeyModifiers.Alt)) modifiers |= HotkeyModifiers.Alt;
         if (e.KeyModifiers.HasFlag(KeyModifiers.Meta)) modifiers |= HotkeyModifiers.Windows;

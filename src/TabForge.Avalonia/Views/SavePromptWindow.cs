@@ -50,7 +50,7 @@ public sealed class SavePromptWindow : Window
         if (details is { Count: > 0 }) footer.Children.Add(BuildDetails(details));
         if (rememberText is not null)
         {
-            _remember = new CheckBox { Name = "RememberBox", Content = rememberText, FontSize = 12, Margin = new Thickness(0, 0, 0, 8) };
+            _remember = new CheckBox { Name = "RememberBox", Content = rememberText, FontSize = 12, Margin = new Thickness(0, details is { Count: > 0 } ? 10 : 0, 0, 8) };
             footer.Children.Add(_remember);
         }
         var actions = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Spacing = 8 };

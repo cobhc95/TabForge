@@ -18,7 +18,7 @@ The pipe protocol is positional binary: the payload of a command is its fields i
 - No payload: panic, render cancel, shutdown.
 
 ## Targets
-`net8.0` (portable) and `net8.0-windows`. The Windows-only files, `ChildProcessJob.cs` (job object), `NativeTimer.cs` (1 ms timer) and `NamedSharedMemory.Windows.cs` (named mapping), are compiled into `net8.0-windows` only. On `net8.0`, `NamedSharedMemory.NonWindows.cs` makes creating or opening a `SharedBlock` throw a PlatformNotSupportedException until a Linux and macOS mapping exists.
+`net10.0` (portable) and `net10.0-windows`. The Windows-only files, `ChildProcessJob.cs` (job object), `NativeTimer.cs` (1 ms timer) and `NamedSharedMemory.Windows.cs` (named mapping), are compiled into `net10.0-windows` only. On `net10.0`, `NamedSharedMemory.NonWindows.cs` makes creating or opening a `SharedBlock` throw a PlatformNotSupportedException until a Linux and macOS mapping exists.
 
 ## Pathway
 A new engine command is added here first, then handled in `Source/src/TabForge.AudioEngine/` and sent from `AudioEngineClient`. Keep messages bounded; every size limit is stated in `ARCHITECTURE.md`.

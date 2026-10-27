@@ -5,7 +5,7 @@ Turns a score into a timeline and MIDI events, and runs playback. No WPF.
 ## How to change me
 1. Entry files: `PlaybackEngine*.cs`, `ScoreToMidiCompiler*.cs`.
 2. Owner class: `PlaybackEngine` (transport), `ScoreToMidiCompiler` (events).
-3. Tests to run: `TestPlaybackOrderSpec`, `TestFermataPlayback` (full-suite build); `--areas playback`, plus `--areas architecture,hygiene` (see the test box in `Source/docs/TESTING.md`).
+3. Tests to run: `TestPlaybackOrderSpec`, `TestFermataPlayback` (full-suite build); `--areas playback`, plus `--areas architecture,hygiene` (see the test box in `Source/docs/guides/TESTING.md`).
 4. Docs to update: `CHANGELOG.md` (list audible changes).
 
 ## Key types

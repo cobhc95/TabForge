@@ -52,6 +52,12 @@ public sealed class AudioEngineFxAdapter : IFxChainEngine
     public void RequestPrograms(TrackModel track, PluginSlot slot) => _client.RequestPrograms(track, slot);
     /// <summary>Sets the plug-in's program.</summary>
     public void SetProgram(TrackModel track, PluginSlot slot, int program) => _client.SetProgram(track, slot, program);
+    /// <summary>Asks for the plug-in's parameter list.</summary>
+    public void RequestParameters(TrackModel track, PluginSlot slot) => _client.RequestParameters(track, slot);
+    /// <summary>Sets one plug-in parameter.</summary>
+    public void SetParameter(TrackModel track, PluginSlot slot, uint id, double value) => _client.SetParameter(track, slot, id, value);
+    /// <summary>The plug-in's parameter list arrived.</summary>
+    public event Action<int, int, IReadOnlyList<PluginParameterInfo>>? ParametersReceived { add => _client.ParametersReceived += value; remove => _client.ParametersReceived -= value; }
     /// <summary>Sets the plug-in's state.</summary>
     public void SetState(TrackModel track, PluginSlot slot, string state) => _client.SetState(track, slot, state);
     /// <summary>Collects the plug-in states of the tracks.</summary>

@@ -54,7 +54,7 @@ You can also type a value in the box. Type `75`, `75%` or `0.75`, then press `En
 
 The metronome plays a click on every beat while the song plays. The first beat of each bar is louder, so you can hear where each bar starts.
 
-Turn it on with the **Metronome** button, or with **Tools > Metronome**. The command has no default key, but you can give it one in **Preferences > Shortcuts**. A left-click on the button switches the click on and off. The change takes effect at once, even while the song is playing.
+Turn it on with the **Metronome** button, or with the command palette. The command has no default key, but you can give it one in **Preferences > Shortcuts**. A left-click on the button switches the click on and off. The change takes effect at once, even while the song is playing.
 
 A right-click on the button opens **Metronome settings**. Here you can set:
 
@@ -82,7 +82,7 @@ A finer subdivision helps with fast or tricky rhythms, because you hear the note
 
 A count-in plays clicks before the song starts, so you can get your hands ready. It is very useful when you loop a fast stretch, because you hear the tempo before the first note.
 
-Click the **Count-in** button to switch it on, or choose **Tools > Count-in**. Like the metronome, it has no default key and can be bound in **Preferences > Shortcuts**. A right-click opens **Count-in settings**:
+Click the **Count-in** button to switch it on, or use the command palette. Like the metronome, it has no default key and can be bound in **Preferences > Shortcuts**. A right-click opens **Count-in settings**:
 
 - **Volume** sets the level of the count-in clicks.
 - **Length** sets 1, 2, 3 or 4 bars.

@@ -5,11 +5,11 @@ The app's only way to reach the audio engine process, plus device and capture he
 ## How to change me
 1. Entry files: `Audio/AudioEngineClient*.cs` (Commands, Sync); engine side in `Source/src/TabForge.AudioEngine`.
 2. Owner class: `AudioEngineClient` (reach the engine only through it).
-3. Tests to run: `TestClipWaveformSpan`, `TestWaveformCacheBounds`, `TestEngineMultiTabPlayback` (full-suite build); `--areas engine`, plus `--areas architecture,hygiene` (see the test box in `Source/docs/TESTING.md`).
+3. Tests to run: `TestClipWaveformSpan`, `TestWaveformCacheBounds`, `TestEngineMultiTabPlayback` (full-suite build); `--areas engine`, plus `--areas architecture,hygiene` (see the test box in `Source/docs/guides/TESTING.md`).
 4. Docs to update: `ARCHITECTURE.md` if IPC changes.
 
 ## Key types
-- `AudioEngineClient` (partial files: core, Sync, Commands, Probes): sends commands, receives events. Windows only: the client and `AutoPitchMatcher` compile only into `net8.0-windows` (`TabForge.Core.csproj`); the Avalonia app composes one in `Source/src/TabForge.Avalonia/Playback`.
+- `AudioEngineClient` (partial files: core, Sync, Commands, Probes): sends commands, receives events. Windows only: the client and `AutoPitchMatcher` compile only into `net10.0-windows` (`TabForge.Core.csproj`); the Avalonia app composes one in `Source/src/TabForge.Avalonia/Playback`.
 - `AudioEngineClient.PluginInfo.cs`: asks the engine what each loaded plug-in of a chain reports about itself (ids, pin counts, names); no answer (an engine without the request, a plug-in that is not loaded) is "not available", never an error.
 - `IAudioDevices`, `AvaloniaEngineRouting`: devices and routing.
 - `ClickDestination`: the metronome and count-in click's own hidden engine slot (a General MIDI synth, no chain, in no song); `RoutedMidiOutput.SendMetronome` writes the clicks there while the engine runs; the sync in `AudioEngineClient.Sync.cs` keeps it.

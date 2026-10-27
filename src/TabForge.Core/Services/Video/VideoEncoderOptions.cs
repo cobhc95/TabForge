@@ -13,6 +13,10 @@ public sealed record VideoEncoderOptions(string Encoder = VideoEncoderChoices.Au
 
     public static VideoEncoderOptions From(LiveVideoSettings s) => new(VideoEncoderChoices.Normalize(s.Encoder), s.FastExport, s.LowLatency) { HardwareProbe = ProbeToUse(s, DateTime.UtcNow) };
 
+    /// <summary><see cref="From"/>, with a hardware verdict (self-test, hang) written back to <paramref name="s"/>: live recording and export share it.</summary>
+    public static VideoEncoderOptions Remembering(LiveVideoSettings s) =>
+        From(s) with { HardwareResult = ok => { s.HardwareProbe = ok ? ProbePass : ProbeFail; s.HardwareProbeAt = DateTime.UtcNow; } };
+
     /// <summary>The stored self-test result, or "" (test again) when a failure is older than <see cref="RetestAfter"/>.</summary>
     internal static string ProbeToUse(LiveVideoSettings s, DateTime utcNow) => s.HardwareProbe == ProbeFail && utcNow - s.HardwareProbeAt > RetestAfter ? "" : s.HardwareProbe;
 
@@ -57,7 +61,13 @@ public sealed record VideoEncoderOptions(string Encoder = VideoEncoderChoices.Au
 // Tests: no dedicated test class.
 public static class VideoEncoderChoices
 {
-    public const string Auto = "Auto", Software = "Software", Hardware = "Hardware";
+    public const string Auto = "Auto", Software = "Software", Hardware = "Hardware", FFmpeg = "FFmpeg";
     public static readonly string[] All = { Auto, Software, Hardware };
-    public static string Normalize(string? v) => All.FirstOrDefault(c => c == v) ?? Auto;
+    public static string Normalize(string? v) => All.FirstOrDefault(c => c == v) ?? (v is not null && v.StartsWith(FFmpeg, StringComparison.Ordinal) ? FFmpeg : Auto);
+
+    /// <summary>The choices the Preferences row offers: the built-in ones, plus FFmpeg on Windows when an ffmpeg is installed (elsewhere ffmpeg is what Auto uses).</summary>
+    public static string[] Available() => OperatingSystem.IsWindows() && FfmpegLocator.Find() is { } ? All.Append(LabelOf(FFmpeg)).ToArray() : All;
+
+    /// <summary>The text of a stored choice in the row: FFmpeg names where it was found.</summary>
+    public static string LabelOf(string? stored) => Normalize(stored) is FFmpeg ? (FfmpegLocator.Find() is { } path ? $"FFmpeg (found at {path})" : FFmpeg) : Normalize(stored);
 }

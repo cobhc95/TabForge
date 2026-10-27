@@ -80,7 +80,7 @@ public static class StartupTracks
             {
                 Name = t.Name, Kind = t.Kind, InstrumentName = t.InstrumentName, MidiProgram = t.MidiProgram, MidiChannel = t.Kind == TrackKind.Drums ? 9 : channel,
                 Volume = t.Volume, Pan = t.Pan, SoundSource = t.SoundSource, MidiSound = t.MidiSound, AudioInput = t.AudioInput,
-                MonitorInput = t.MonitorInput, ColorHex = t.ColorHex, RecordArm = false, StartupTemplateId = t.Id,
+                MonitorInput = t.MonitorInput, MidiInputs = t.Kind == TrackKind.Audio ? new() : new() { AudioInputs.AllMidi }, ColorHex = t.ColorHex, RecordArm = false, StartupTemplateId = t.Id,
                 Measures = TemplateFactory.Measures(measures), Rig = new RigPreset { Name = t.Name, Plugins = Clone(t.Plugins, keepIds: false) }
             });
             ChainStateStore.Resolve(project.Tracks[^1].Rig.Plugins);

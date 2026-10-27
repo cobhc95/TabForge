@@ -1,6 +1,6 @@
 # Recipes
 
-Exact file lists for the usual changes. Paths are from the repository root. Each recipe ends with the self-tests to run; how to run them is in `docs/DEBUGGING.md` (`--only`, `--areas`). `tools/run-test.ps1` builds the full-suite copy and runs one test by name. `START_HERE.md` explains the pathways named here, and `docs/feature-map/` lists the tests by area. Names of methods are written with parentheses; search for the name to find the line.
+Exact file lists for the usual changes. Paths are from the repository root. Each recipe ends with the self-tests to run; how to run them is in `docs/guides/DEBUGGING.md` (`--only`, `--areas`). `tools/run-test.ps1` builds the full-suite copy and runs one test by name. `START_HERE.md` explains the pathways named here, and `docs/feature-map/` lists the tests by area. Names of methods are written with parentheses; search for the name to find the line.
 
 ## Add a note technique
 
@@ -40,7 +40,7 @@ Example: a preference "zoom for new tabs".
 2. Presets: `HotkeyPresets` in `src/TabForge/Services/HotkeyCatalog.cs`. A preset with no override inherits the default.
 3. Action: a plain command that only calls one handler is one line in `BuildCommands()` in `src/TabForge/MainWindow.Commands.cs` (`Click("Id", Handler_Click);` or `Run("Id", Method);`); one with conditions or several steps is a `case` in the `RunHotkey(...)` switch in `src/TabForge/MainWindow.Settings.cs` (or in its `RunPaneHotkey(...)` router for the scale-highlight, string-spacing and Band view commands). Never both (`TestCommandRegistryRouting`).
 4. Menu item, if any: one `Item("_Header", Handler_Click, "Id")` line in `src/TabForge/MainWindow.Menus.cs` (see "Add a menu command"); the gesture text then follows the binding.
-5. Docs: `TOOLS_AND_HOTKEYS.md`, and a line under "Unreleased" in `CHANGELOG.md`.
+5. Docs: `docs/guides/TOOLS_AND_HOTKEYS.md`, and a line under "Unreleased" in `CHANGELOG.md`.
 6. Tests: `TestMenuGestureTextFollowsBindings`, `TestEditCommands`; run `--areas ui`.
 
 ## Add a menu command
@@ -52,7 +52,7 @@ Example: File > Export video (MP4). The catalog row and the preset are in "Add a
 3. One route for key and menu: one line in `BuildCommands()` in `src/TabForge/MainWindow.Commands.cs`, e.g. `Click("File.Render", Render_Click);` (a feature module registers its own commands) (the catalog row is step 1 of "Add a command and its hotkey"). Files to edit for a plain command: `HotkeyCatalog.Actions.cs` (the row), `MainWindow.Commands.cs` (the line), the handler, and one line in `MainWindow.Menus.cs`.
    A checkable, named or dynamic item still goes in `MainWindow.xaml` (with `local:MenuHotkey.Id`); `TestMainMenuTable` fails on a plain item left in the XAML.
 4. Toolbar button, if wanted: a Button in `src/TabForge/MainWindow.xaml` with `local:TooltipShortcuts.Command` set to the id (the Record video button sits in the title bar, left of Settings).
-5. Docs: a row in `TOOLS_AND_HOTKEYS.md`, and a line in `CHANGELOG.md`.
+5. Docs: a row in `docs/guides/TOOLS_AND_HOTKEYS.md`, and a line in `CHANGELOG.md`.
 6. Tests: `TestMainMenuTable` (every row id is catalogued, no plain item in the XAML), `TestMainMenuTreeGolden` (re-record as in "Change a menu"), `TestMenuGestureTextFollowsBindings`; run `--areas ui` on a full-suite build.
 
 ## Change a menu (the menu snapshot)
@@ -143,9 +143,9 @@ A dialog for one effect (bend, tremolo bar, trill, grace note and harmonic exist
 1. Kind and presets: add the member to `EffectEditorKind` (`src/TabForge/Views/EffectEditors/EffectCurve.cs`) and its built-in list to `EffectPresetStore.BuiltIn` (`src/TabForge/Views/EffectEditors/EffectPresetStore.cs`); user presets are stored by kind in `AppSettings.EffectPresets` (numbers go in `EffectPresetEntry.Values`).
 2. Dialog: a class like `CurveEffectDialog` that builds the controls and hands them to `ThemedEditorDialog` (OK / Clean / Cancel, Enter, Esc, tab order). A curve effect reuses `EffectCurveEditor`.
 3. Model write: `EffectEdits` (an apply and a clean method per effect; pure; they return whether anything changed) and one case in `EffectEditorFlow.Open` that finds the notes (`ScoreEditCommands.EffectNotes`) and runs the write through `ScoreEditCommands.EditEffect` (one undo step).
-4. Entry points: the `effect:` case in `src/TabForge/MainWindow.Palette.cs`, a menu row in `src/TabForge/MainWindow.Menus.cs` under `_Effects` (handler `EffectEditor_Click` in `src/TabForge/MainWindow.EffectEditors.cs`), a command id in `src/TabForge/Services/HotkeyCatalog.cs` with no default key, its case in the hotkey switch of `src/TabForge/MainWindow.Settings.cs`, and the rows in `TOOLS_AND_HOTKEYS.md`.
+4. Entry points: the `effect:` case in `src/TabForge/MainWindow.Palette.cs`, a menu row in `src/TabForge/MainWindow.Menus.cs` under `_Effects` (handler `EffectEditor_Click` in `src/TabForge/MainWindow.EffectEditors.cs`), a command id in `src/TabForge/Services/HotkeyCatalog.cs` with no default key, its case in the hotkey switch of `src/TabForge/MainWindow.Settings.cs`, and the rows in `docs/guides/TOOLS_AND_HOTKEYS.md`.
 5. Files and sound: the model fields must already round-trip (`.tforge` serialises the model; `.gp` import and export are in `src/TabForge/Services/GuitarProBeatReader.cs` and `GuitarProExporter.cs`); playback is `src/TabForge/Playback/ScoreToMidiCompiler.Techniques.cs`.
-6. Tests: `TestEffectCurveMath`, `TestEffectEditors`, `TestEffectEditorFiles` (register new ones per `docs/DEBUGGING.md`; a saving or import test also goes into the release list in `src/TabForge/SelfTests/SelfTestRelease.cs`).
+6. Tests: `TestEffectCurveMath`, `TestEffectEditors`, `TestEffectEditorFiles` (register new ones per `docs/guides/DEBUGGING.md`; a saving or import test also goes into the release list in `src/TabForge/SelfTests/SelfTestRelease.cs`).
 
 ## Video as the worked example: the hook points it edits
 
@@ -160,7 +160,7 @@ The 0.7 video feature is the model for a self-contained feature: its code lives 
 | Second entry | `src/TabForge/Views/RenderWindow.cs` (the video button of the Render window) | Optional |
 | Probes | `src/TabForge/Diagnostics/WindowProbes.PerfRecording.cs` (the --perf-follow option); the `videoexport` case in `src/TabForge/Diagnostics/WindowProbes.CaptureShots.cs` | A probe for the frame rate, a capture case for the window (not yet module-driven) |
 | Feature code | `src/TabForge/Services/Video/` and `src/TabForge/Views/Video/` | Own folders with a README each |
-| Docs | `TOOLS_AND_HOTKEYS.md` (a row per command), `CHANGELOG.md`, `docs/feature-map/video.md`, `docs/FEATURE_MAP.md` (an index row) | One line each |
+| Docs | `docs/guides/TOOLS_AND_HOTKEYS.md` (a row per command), `CHANGELOG.md`, `docs/feature-map/video.md`, `docs/FEATURE_MAP.md` (an index row) | One line each |
 | Tests | `tests/full-suite/Recording/SelfTestVideoExport.cs` and `tests/full-suite/Recording/SelfTestLiveVideo.cs`, registered in `tests/full-suite/SelfTestFullSuite.cs` | Full-suite tests, so they run with `--areas recording` on that build |
 
 ## Add a feature module
@@ -174,7 +174,7 @@ A module is one class in the feature's own folder that implements `IFeatureModul
 
 A second example with a dock pane: `src/TabForge/KeyboardMode/KeyboardModeFeatureModule.cs` (menu row, hotkey, settings group) plus a `DockPaneTable` row (starts closed), the id switch in `InitializeDockWorkspace()` and a thin `src/TabForge/MainWindow.KeyboardMode.cs`; the pane's code stays in `src/TabForge/KeyboardMode/`. Keyboard mode is a layout swap (`KeyboardModeController`, `KeyboardModeLayoutSwap`): like Band it takes a copy of the dock arrangement on entering and puts it back on leaving, and `MainWindow.SaveSettings` writes the copy while it is on, so a mode with a temporary arrangement follows that pattern.
 
-Not module-driven yet: the `AppSettings` property, probes, `TOOLS_AND_HOTKEYS.md` and `CHANGELOG.md`.
+Not module-driven yet: the `AppSettings` property, probes, `docs/guides/TOOLS_AND_HOTKEYS.md` and `CHANGELOG.md`.
 
 ## Keep something that moves crisp
 

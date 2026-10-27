@@ -71,8 +71,12 @@ public sealed partial class PianoRollSurface : Control
     // ---- Host hooks (set by PianoRollView) ----
     internal Func<SnapSettings?> Snap { get; set; } = () => null;
     internal Func<double?> PlayheadBeat { get; set; } = () => null;
-    /// <summary>True while the song plays (the needle shows only then).</summary>
+    /// <summary>True while the song plays (the sounding notes light only then).</summary>
     internal Func<bool> Playing { get; set; } = () => false;
+    /// <summary>True when the playback needle shows (the "Playback needle" setting, read live at each paint).</summary>
+    internal Func<bool> NeedleOn { get; set; } = () => true;
+    /// <summary>The colour of the playback needle and the ruler marker for a light (true) or dark theme: the Playback highlight setting.</summary>
+    internal Func<bool, UiColor> PlayheadColour { get; set; } = light => AvaloniaPalette.Get("PianoRollPlayheadMarker", light);
     /// <summary>The user scrolled the piano roll sideways (wheel, scroll bar): the main timeline scrolls with it.</summary>
     internal Action? UserScrolled { get; set; }
     internal Func<(double From, double To)?> LoopSpan { get; set; } = () => null;

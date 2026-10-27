@@ -154,6 +154,32 @@ public sealed partial class TimelineView
         var width = _boundaries[bar + 1] - left;
         return AudioClipTimelineRules.SecondsAtBar(_song, bar, width > 0 ? (x - left) / width : 0);
     }
+    /// <summary>
+    /// <see cref="SecondsOfX"/> at the pass nearest to <paramref name="referenceSec"/> (performed seconds) instead of the first one: a repeated bar is drawn once,
+    /// so a clip drag that holds a time of a later pass reads the pointer in that pass (see <see cref="AudioClipTimelineRules.SecondsAtBarNear"/>).
+    /// </summary>
+    public double SecondsOfXNear(double x, double referenceSec)
+    {
+        if (BarCount == 0) return 0;
+        if (x > _boundaries[^1] && ContinuesPastEnd) return ExtraSecondsOfX(x);
+        var bar = Math.Clamp(BarAtX(x), 0, BarCount - 1);
+        var left = BarX(bar);
+        var width = _boundaries[bar + 1] - left;
+        return AudioClipTimelineRules.SecondsAtBarNear(_song, bar, width > 0 ? (x - left) / width : 0, referenceSec);
+    }
+    /// <summary>
+    /// <see cref="SecondsOfX"/> read along the pass that holds <paramref name="referenceSec"/>, continuous across repeat signs and volta bars (see
+    /// <see cref="AudioClipTimelineRules.SecondsAtBarAlong"/>): a clip drag moves by the pointer's distance and never jumps to another pass or to 0.
+    /// </summary>
+    public double SecondsOfXAlong(double x, double referenceSec)
+    {
+        if (BarCount == 0) return 0;
+        if (x > _boundaries[^1] && ContinuesPastEnd) return ExtraSecondsOfX(x);
+        var bar = Math.Clamp(BarAtX(x), 0, BarCount - 1);
+        var left = BarX(bar);
+        var width = _boundaries[bar + 1] - left;
+        return AudioClipTimelineRules.SecondsAtBarAlong(_song, bar, width > 0 ? (x - left) / width : 0, referenceSec);
+    }
     /// <summary>The audio clips the timeline has selected (the white outlines), in the order they were added; the selection model holds them.</summary>
     public IReadOnlyList<TimelineClipSelection> SelectedClips => FocusModel.Clips;
     /// <summary>True when <paramref name="clip"/> is one of the selected clips.</summary>
@@ -214,9 +240,9 @@ public sealed partial class TimelineView
     public double RowTop(int row) => RulerHeight + SectionHeight + ArrangementRowPresenter.RowTop(_rows, row) - _rowScrollOffset;
 
     /// <summary>
-    /// Every track as one row: no collapsed groups, no master lane, no audio lanes. An armed track that has no lane bands yet takes the armed sub-row
-    /// under its base band (<see cref="ArmedRowPainter.SubRowHeight"/>); once it has lanes the strip draws inside the last lane band and the row does
-    /// not grow. Read from the song at each layout, so the rows below it move with it.
+    /// Every track as one row: no collapsed groups, no master lane, no audio lanes. An armed track takes the armed strip (<see cref="ArmedRowPainter.SubRowHeight"/>)
+    /// directly under its main line; the row grows only by what its base band lacks for that (see <see cref="ArmedExtraOf"/>). Read from the song at each
+    /// layout, so the rows below it move with it.
     /// </summary>
     private readonly struct Rows : IArrangementRowSource
     {
@@ -238,10 +264,9 @@ public sealed partial class TimelineView
         {
             if (index < 0 || index >= _tracks.Count) return _rowHeight;
             var track = _tracks[index];
-            var lanes = _view.LaidOutLaneCountOf(track);
-            var notation = track.IsAudio && lanes > 0 ? 0 : _rowHeight;
-            var armed = track.RecordArm && lanes == 0 ? ArmedRowPainter.SubRowHeight : 0;
-            return notation + lanes * ClipLanes.AudioLaneHeight + armed + _view.LiveStackHeightOf(index);
+            var lanes = _view.LaneBandsOf(track);
+            var band = (track.IsAudio ? 0 : _rowHeight) + lanes * ClipLanes.AudioLaneHeight;
+            return band + ArmedExtraOf(track.RecordArm, _rowHeight, band) + _view.LiveStackHeightOf(index);
         }
         public bool StartsGroup(int index) => false;
     }
@@ -257,33 +282,51 @@ public sealed partial class TimelineView
         return Math.Max(laidOut, LiveTakes.LaneCountOf(track));
     }
 
+    /// <summary>
+    /// The lane bands a track's row draws: its laid-out lanes, and at least one for an audio/MIDI track (its main row is a take lane, so an empty one is a lane too,
+    /// with no tab cells; a click on it opens the piano roll on lane 0). A tab track's row is its tab, with lane bands only under it when it has takes.
+    /// </summary>
+    internal int LaneBandsOf(TrackModel track) => Math.Max(LaidOutLaneCountOf(track), track.IsAudio ? 1 : 0);
+
     /// <summary>Live laps are full lane bands counted in <see cref="LaidOutLaneCountOf"/>; nothing stacks below the lanes (always 0).</summary>
     internal double LiveStackHeightOf(int row) =>
         0;
 
     /// <summary>
-    /// The height an armed track adds under its base row band (the armed sub-row); 0 for an unarmed track, a track that already has lane bands
-    /// (its strip draws inside the last lane band), or an index outside the tracks.
+    /// The height an armed track adds under its base band so its strip (<see cref="ArmedRowPainter.SubRowHeight"/>) sits directly under the main line
+    /// (one row height or the band, whichever is smaller) without overlapping it: the whole strip for a track with no lanes, the shortfall for a track whose
+    /// lane bands are too short, 0 for an unarmed track or a band that already holds main line and strip.
     /// </summary>
+    internal static double ArmedExtraOf(bool armed, double rowHeight, double baseBand) =>
+        armed ? Math.Max(0, Math.Min(rowHeight, baseBand) + ArmedRowPainter.SubRowHeight - baseBand) : 0;
+
+    /// <summary>The height an armed track adds under its base row band (see <see cref="ArmedExtraOf"/>); 0 for an index outside the tracks.</summary>
     private double ExtraHeightOf(int index)
     {
         if (index < 0 || index >= _song.Tracks.Count) return 0;
-        var track = _song.Tracks[index];
-        var armed = track.RecordArm && LaidOutLaneCountOf(track) == 0 ? ArmedRowPainter.SubRowHeight : 0;
-        return armed + LiveStackHeightOf(index);
+        return ArmedExtraOf(_song.Tracks[index].RecordArm, RowHeight, BaseBandHeightOf(index)) + LiveStackHeightOf(index);
     }
 
-    /// <summary>Whether the track at <paramref name="row"/> is armed, so its row draws the armed strip (inside its last lane band, or in the sub-row when it has no lanes).</summary>
+    /// <summary>Whether the track at <paramref name="row"/> is armed, so its row draws the armed strip (directly under its main line, see <see cref="ArmedStripTopOf"/>).</summary>
     public bool IsArmed(int row) => row >= 0 && row < _song.Tracks.Count && _song.Tracks[row].RecordArm;
 
-    /// <summary>The base band of a track's row: its notation band (see <see cref="ClipLanes.NotationBandHeight"/>) plus its lane bands; an armed track's strip sits inside the last lane band, or below this band when it has no lanes.</summary>
+    /// <summary>The base band of a track's row: its notation band (see <see cref="ClipLanes.NotationBandHeight"/>) plus its lane bands; an armed track's strip sits directly under the main line (see <see cref="ArmedStripTopOf"/>).</summary>
     public double BaseBandHeightOf(int row)
     {
         if (row < 0 || row >= _song.Tracks.Count) return RowHeight;
         var track = _song.Tracks[row];
-        var lanes = LaidOutLaneCountOf(track);
-        return (track.IsAudio && lanes > 0 ? 0 : RowHeight) + lanes * ClipLanes.AudioLaneHeight;
+        var lanes = LaneBandsOf(track);
+        return (track.IsAudio ? 0 : RowHeight) + lanes * ClipLanes.AudioLaneHeight;
     }
+
+    /// <summary>
+    /// The height the track list's main line (icons, name, FX, M, S, sliders) is centred in: one normal row height at the row's top, however tall the
+    /// lane bands below it are, so a track with a take keeps the layout of an empty one (never centred in the whole taller row).
+    /// </summary>
+    public double HeaderLineHeightOf(int row) => Math.Min(RowHeight, BaseBandHeightOf(row));
+
+    /// <summary>The top of the armed strip in layout coordinates: directly under the main line, the same offset from the row's top in every track state.</summary>
+    public double ArmedStripTopOf(int row) => RowTop(row) + HeaderLineHeightOf(row);
 
     /// <summary>Whether the track at <paramref name="row"/> is one of the header-selected rows (the selection model's Rows).</summary>
     internal bool IsRowPicked(int row) => row >= 0 && row < _song.Tracks.Count && FocusModel.Rows.Contains(_song.Tracks[row].Id);
@@ -295,7 +338,7 @@ public sealed partial class TimelineView
     public double LaneBandTopOf(int row, int lane) =>
         LaneBandTopOf(row) + (row >= 0 && row < _song.Tracks.Count ? Math.Max(0, lane) * ClipLanes.AudioLaneHeight : lane * ClipLanes.AudioLaneHeight);
 
-    /// <summary>The whole height of a track's row: the base band, plus the armed sub-row when the track is armed and has no lane bands.</summary>
+    /// <summary>The whole height of a track's row: the base band, plus what the armed strip needs below it (see <see cref="ArmedExtraOf"/>).</summary>
     public double RowHeightOf(int row) => BaseBandHeightOf(row) + ExtraHeightOf(row);
 
     /// <summary>The notation band of the track at <paramref name="row"/>; <see cref="RowHeight"/> outside the tracks.</summary>
@@ -303,6 +346,6 @@ public sealed partial class TimelineView
     {
         if (row < 0 || row >= _song.Tracks.Count) return RowHeight;
         var track = _song.Tracks[row];
-        return track.IsAudio && LaidOutLaneCountOf(track) > 0 ? 0 : RowHeight;
+        return track.IsAudio ? 0 : RowHeight;
     }
 }

@@ -9,7 +9,7 @@ namespace TabForge.Presenters;
 public static class PianoRollGhosts
 {
     /// <summary>Every ghost note for track <paramref name="trackIndex"/> on <paramref name="map"/>'s clock.</summary>
-    public static List<PianoRollNote> Read(SongProject song, int trackIndex, PianoRollTimeMap map)
+    public static List<PianoRollNote> Read(SongProject song, int trackIndex, PianoRollTimeMap map, PianoRollSourceChoice choice = default)
     {
         var list = new List<PianoRollNote>();
         for (var t = 0; t < song.Tracks.Count; t++)
@@ -18,21 +18,26 @@ public static class PianoRollGhosts
             if (track.IsBus) continue;
             if (t == trackIndex)
             {
-                if (!PianoRollViewRules.UsesClips(track)) continue;
-                var shown = PianoRollClipSource.Shown(track);
+                if (PianoRollSources.For(track, choice) is not PianoRollClipSource editing) continue;
+                var shown = editing.ShownClips(track);
                 foreach (var clip in track.AudioClips.Where(c => c.IsMidi && !shown.Contains(c))) list.AddRange(PianoRollClipSource.ReadClip(clip, map));
+                if (PianoRollViewRules.HasWrittenNotes(track)) AddOnClock(list, song, track, PianoRollSources.For(track, PianoRollSourceChoice.OnTab), map);   // a take lane is edited: the tab shows faint, never edited
                 continue;
             }
             if (!track.HasNotation && !PianoRollViewRules.HasMidiClips(track)) continue;
-            var source = PianoRollSources.For(track);
-            var own = source.Map(song);
-            foreach (var note in source.Read(song, track, own))
-            {
-                var start = map.BeatsAt(own.SecondsAt(note.Start));
-                var end = map.BeatsAt(own.SecondsAt(note.End));
-                list.Add(note with { Start = start, Length = Math.Max(PianoRollEdits.MinLength, end - start) });
-            }
+            AddOnClock(list, song, track, PianoRollSources.For(track), map);
         }
         return list;
+    }
+
+    private static void AddOnClock(List<PianoRollNote> list, SongProject song, TrackModel track, IPianoRollSource source, PianoRollTimeMap map)
+    {
+        var own = source.Map(song);
+        foreach (var note in source.Read(song, track, own))
+        {
+            var start = map.BeatsAt(own.SecondsAt(note.Start));
+            var end = map.BeatsAt(own.SecondsAt(note.End));
+            list.Add(note with { Start = start, Length = Math.Max(PianoRollEdits.MinLength, end - start) });
+        }
     }
 }

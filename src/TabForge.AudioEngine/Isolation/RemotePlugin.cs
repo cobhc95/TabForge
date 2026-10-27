@@ -16,11 +16,11 @@ namespace TabForge.AudioEngine.Isolation;
 /// grace period or misses too many blocks (see <see cref="PluginHostLink"/>). This is crash isolation, not a sandbox: the plug-in's process runs as the same user with the same
 /// rights as TabForge, so it can do anything TabForge can; only its crashes and hangs are kept away from the engine.
 /// </summary>
-public sealed class RemotePlugin : IPluginInstance
+public sealed partial class RemotePlugin : IPluginInstance
 {
     // Host commands over the pipe.
-    public const byte CmdGetState = 1, CmdSetState = 2, CmdOpenEditor = 3, CmdCloseEditor = 4, CmdDescribe = 5, CmdQuit = 9;
-    public const byte MsgLoaded = 100, MsgFailed = 101, MsgState = 102, MsgEditor = 103, MsgEdited = 104, MsgInfo = 105, MsgEditorSized = 106;
+    public const byte CmdGetState = 1, CmdSetState = 2, CmdOpenEditor = 3, CmdCloseEditor = 4, CmdDescribe = 5, CmdListParams = 6, CmdSetParam = 7, CmdQuit = 9;
+    public const byte MsgLoaded = 100, MsgFailed = 101, MsgState = 102, MsgEditor = 103, MsgEdited = 104, MsgInfo = 105, MsgEditorSized = 106, MsgParams = 107;
 
     // One plug-in process session; replaced as a whole by Reconfigure (main thread, audio stopped). Events from an older
     // session (its exit, its reply reader ending, its hang report) are ignored.
@@ -62,7 +62,7 @@ public sealed class RemotePlugin : IPluginInstance
     {
         var id = Guid.NewGuid().ToString("N");
         var block = _block = PluginHostBlock.Create(id, maxBlock);
-        var pipe = _pipe = new NamedPipeServerStream($"TabForge.PluginHost.{id}", PipeDirection.InOut, 1, PipeTransmissionMode.Byte,
+        var pipe = _pipe = new NamedPipeServerStream(PipeNames.PluginHost(id), PipeDirection.InOut, 1, PipeTransmissionMode.Byte,
             PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
         var exe = Environment.ProcessPath ?? throw new InvalidOperationException("Engine path unknown.");
         // Each argument is its own list entry, so a path with quotes or spaces cannot split into more arguments.
@@ -75,7 +75,7 @@ public sealed class RemotePlugin : IPluginInstance
             _spec.LocationTrusted ? "location" : "checked",
         }) start.ArgumentList.Add(argument);
         var process = _process = System.Diagnostics.Process.Start(start) ?? throw new InvalidOperationException("The plug-in process did not start.");
-        ChildProcessJob.ForThisProcess.Add(process);   // ends with the engine, however the engine ends
+        ChildProcessGuards.ForThisProcess.Add(process);   // ends with the engine, however the engine ends (Windows: the Job Object; elsewhere the engine kills it on exit and its parent-pid watchdog covers a hard crash)
         // A late block fails the plug-in (audio thread): the kill and the report run on the engine's main thread.
         void Hung() { if (!ReferenceEquals(process, _process)) return; try { process.Kill(); } catch (InvalidOperationException) { /* swallow: the plug-in process already exited. */ } Die("it stopped responding"); }
         _link = new PluginHostLink(block, sampleRate, () => _threads.Post(Hung));

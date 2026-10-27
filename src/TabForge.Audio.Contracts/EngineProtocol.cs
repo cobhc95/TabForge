@@ -110,6 +110,12 @@ public enum EngineCommand : byte
     /// The engine opens the panel of the driver it holds, or opens the driver briefly when it does not: TabForge itself never opens ASIO.
     /// </summary>
     ShowAsioPanel = 46,
+    /// <summary>The sound bank of the engine's General MIDI synths (path of a SoundFont 2 file; empty = the Windows gm.dls bank). Live: running synths switch at their next block; an unreadable file leaves the bank as it was.</summary>
+    SetSoundBank = 47,
+    /// <summary>Asks for a plug-in's parameter list (slot, chain index); answered by one <see cref="EngineEvent.Params"/> frame (empty when the plug-in has none).</summary>
+    GetParams = 48,
+    /// <summary>Sets one plug-in parameter to a plain value (slot, chain index, parameter id, value): live, no chain rebuild, no answer.</summary>
+    SetParam = 49,
     Shutdown = 99,
 }
 
@@ -249,6 +255,8 @@ public enum EngineEvent : byte
     AsioProbed = 27,
     /// <summary>Answer to <see cref="EngineCommand.ShowAsioPanel"/>: an <see cref="AsioPanelShownMessage"/> (request id, why the panel could not be shown; empty = it was shown).</summary>
     AsioPanelShown = 28,
+    /// <summary>Answer to <see cref="EngineCommand.GetParams"/>: slot, chain index, then a parameter list (<see cref="PluginParameterWire"/>).</summary>
+    Params = 29,
 }
 
 /// <summary>Bounds of one <see cref="EngineEvent.MasterAudio"/> chunk.</summary>
@@ -312,7 +320,19 @@ public static class AudioDriverNames
     public const string WasapiExclusive = "WASAPI (exclusive)";
     public const string Asio = "ASIO";
     public const string DirectSound = "DirectSound";
-    public static readonly string[] All = { WasapiShared, WasapiExclusive, Asio, DirectSound };
+    /// <summary>The miniaudio driver (CoreAudio, ALSA/PulseAudio/PipeWire/JACK): the only driver off Windows; on Windows only with the dev switch TABFORGE_AUDIO_BACKEND=portable.</summary>
+    public const string Miniaudio = "System audio (miniaudio)";
+    /// <summary>The drivers this OS offers: the four Windows drivers on Windows (plus miniaudio with the dev switch), miniaudio elsewhere.</summary>
+    public static readonly string[] All = DriversOfThisOs();
+
+    private static string[] DriversOfThisOs()
+    {
+        if (!OperatingSystem.IsWindows()) return new[] { Miniaudio };
+        var windows = new[] { WasapiShared, WasapiExclusive, Asio, DirectSound };
+        return string.Equals(Environment.GetEnvironmentVariable("TABFORGE_AUDIO_BACKEND"), "portable", StringComparison.OrdinalIgnoreCase) ? windows.Append(Miniaudio).ToArray() : windows;
+    }
+    /// <summary>The driver a new setup starts with.</summary>
+    public static string Default => OperatingSystem.IsWindows() ? WasapiShared : Miniaudio;
     /// <summary>The rates a driver is asked about; only the ones it supports are offered.</summary>
     public static IReadOnlyList<int> SampleRates { get; } = Array.AsReadOnly(new[] { 44100, 48000, 88200, 96000, 176400, 192000 });
 }
@@ -323,6 +343,6 @@ public static class EngineNames
     /// <summary>The wire protocol of this build: the engine reports it at the end of its Ready event (an engine without it is version 1, from before the ASIO channel names); a client ignores optional answers from another version.</summary>
     public const int ProtocolVersion = 2;
 
-    public static string Pipe(string session) => $"TabForge.AudioEngine.{session}";
+    public static string Pipe(string session) => PipeNames.ForPlatform($"TabForge.AudioEngine.{session}");
     public static string SharedMemory(string session) => $"TabForge.AudioEngine.{session}.shm";
 }

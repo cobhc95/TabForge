@@ -239,7 +239,7 @@ internal static class Gp5Runner
         private void StartJudge()
         {
             var script = Path.Combine(AppContext.BaseDirectory, "py", "judge.py");
-            const string python = @"C:\Users\COBHC\Downloads\TabForge\work\tools\venv\Scripts\python.exe";
+            var python = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), @"Downloads\TabForge\work\tools\venv\Scripts\python.exe");
             if (!File.Exists(script) || !File.Exists(python) || !Directory.Exists(Path.Combine(dir, "tf"))) return;
             _judge = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(python, $"\"{script}\" \"{dir}\"")
             { RedirectStandardInput = true, RedirectStandardOutput = true, UseShellExecute = false, CreateNoWindow = true });

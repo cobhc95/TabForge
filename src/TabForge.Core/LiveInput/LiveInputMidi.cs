@@ -36,7 +36,8 @@ internal sealed class LiveInputMidi
     {
         _engine = engine; _track = track; _hub = hub; _dispatcher = dispatcher;
         _client = hub.CreateClient();
-        _client.Message += OnMessage;
+        if (_client is IMidiDeviceInputClient named) named.DeviceMessage += OnMessage;
+        else _client.Message += (s, a, b, t) => OnMessage("", s, a, b, t);
     }
 
     /// <summary>A line for the status bar: a device appeared or disappeared while live input listens.</summary>
@@ -107,9 +108,10 @@ internal sealed class LiveInputMidi
     }
 
     /// <summary>MIDI driver thread: nothing that waits; the message is played on the UI thread, which knows the stand-in's slot.</summary>
-    private void OnMessage(int status, int data1, int data2, long stamp)
+    private void OnMessage(string device, int status, int data1, int data2, long stamp)
     {
         if (!_on || status < 0x80 || status >= 0xF0) return;
+        if (_engine.MidiMonitor?.ArmedClaims(device) == true) return;   // an armed track plays this input through its own instrument: one place sounds a note
         var epoch = Volatile.Read(ref _epoch);
         _dispatcher.Post(() => Play(status, data1, data2, epoch), UiPriority.Send);
     }

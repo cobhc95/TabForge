@@ -76,7 +76,7 @@ internal sealed partial class ScorePreviewEditor
             Notice?.Invoke($"The song is at its limit of {InputLimits.MaxMeasuresPerTrack} bars");
             return;
         }
-        if (!BarStructureEdits.InsertBar(_document, at, Math.Max(0, at - 1), moveMarkers: false, Tools.FillBarsWithRests).Changed) return;
+        if (!BarStructureEdits.InsertBar(_document, at, Tools.FillBarsWithRests).Changed) return;
         _probe.ReplaceSong(_document.Project);
         if (moveCursorToNewBar) _probe.Cursor = (at, 0, SelectedString);
         Notice?.Invoke($"Added bar {at + 1} at the end");

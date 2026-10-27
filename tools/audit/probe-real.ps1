@@ -1,7 +1,7 @@
-$dll = 'C:\Users\COBHC\Downloads\TabForge\src\TabForge.Avalonia\bin\Release\net8.0-windows\TabForge.Core.dll'
+$dll = "$env:USERPROFILE\Downloads\TabForge\src\TabForge.Avalonia\bin\Release\net8.0-windows\TabForge.Core.dll"
 Add-Type -Path $dll
 $fp = [TabForge.Services.FilePathPolicy]
-$denied = 'C:\Users\COBHC\Videos\TabForgeProofParent\Sub'
+$denied = "$env:USERPROFILE\Videos\TabForgeProofParent\Sub"
 Write-Host "--- Validate ---"
 try { $v = $fp::ValidateWritableFolder($denied, "video folder"); Write-Host ("VALIDATE-OK: " + $v) }
 catch { Write-Host ("VALIDATE-THREW: " + $_.Exception.GetType().Name + " : " + $_.Exception.Message) }

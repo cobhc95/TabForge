@@ -18,6 +18,7 @@ public sealed partial class ScorePreviewView
     /// <summary>The right-click rows at <paramref name="at"/> (the view's coordinates); the selection the menu acts on is set first.</summary>
     internal IEnumerable<MenuSpec> ContextRowsAt(Point at)
     {
+        if (_input.RightHoldSwallowsMenu) return [];   // the release of a right drag selects; it opens no menu
         var page = PagePoint(at);
         var hit = _editor.ContextHitAt(page.X, page.Y);
         var rows = RowsFor(hit);

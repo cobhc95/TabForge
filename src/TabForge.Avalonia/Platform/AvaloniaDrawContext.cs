@@ -24,6 +24,7 @@ public sealed class AvaloniaDrawContext : IDrawContext
     // Pen cache. Key: the whole UiStroke; ceiling: CacheLimit entries, least recently drawn dropped first; thread: the view's UI thread only.
     private readonly BoundedLruCache<UiStroke, ImmutablePen> _pens = new(CacheLimit);
     // Typeface cache. Key: (family, weight, italic); ceiling: CacheLimit entries, least recently drawn dropped first; thread: the view's UI thread only.
+    private readonly TabForge.Platform.Theme.FontProvider _fonts = AvaloniaFonts.Provider;   // this context's font set (the app's provider)
     private readonly BoundedLruCache<(string, int, bool), Typeface> _faces = new(CacheLimit);
     private const int CacheLimit = 256;
     private readonly Stack<DrawingContext.PushedState> _pushed = new();
@@ -64,7 +65,7 @@ public sealed class AvaloniaDrawContext : IDrawContext
     {
         var key = (family, weight, italic);
         if (_faces.TryGet(key, out var f)) return f;
-        f = new Typeface(new FontFamily(family), italic ? FontStyle.Italic : FontStyle.Normal, (FontWeight)weight);
+        f = new Typeface(AvaloniaFonts.Family(family, _fonts), italic ? FontStyle.Italic : FontStyle.Normal, (FontWeight)weight);
         _faces.Add(key, f);
         return f;
     }
@@ -92,6 +93,7 @@ public sealed class AvaloniaDrawContext : IDrawContext
     public UiText Text(string text, string fontFamily, double size, UiColor colour, double pixelsPerDip, double maxWidth = 0, UiTextAlign align = UiTextAlign.Left,
         int weight = 400, bool italic = false, UiStroke? outline = null, bool idealLayout = false)
     {
+        fontFamily = _fonts.Map(fontFamily);   // the bundled-font switch: the cache key holds the real family
         var key = UiTextKey.Of(text, fontFamily, size, colour, weight, italic, outline, pixelsPerDip, maxWidth, align, idealLayout);
         if (!_texts.TryGet(key, out var shaped))
         {

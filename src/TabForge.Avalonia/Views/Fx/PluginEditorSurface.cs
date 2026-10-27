@@ -34,7 +34,7 @@ public sealed class PluginEditorSurface : NativeControlHost
     {
         Area = PluginEditorWin32.CreateArea(parent.Handle);
         AreaChanged?.Invoke();
-        return Area == IntPtr.Zero ? base.CreateNativeControlCore(parent) : new PlatformHandle(Area, "HWND");
+        return Area == IntPtr.Zero ? base.CreateNativeControlCore(parent) : TabForge.Avalonia.Platform.PlatformAdapters.NativeWindows.Wrap(Area);
     }
 
     protected override void DestroyNativeControlCore(IPlatformHandle control)

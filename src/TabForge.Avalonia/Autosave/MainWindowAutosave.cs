@@ -159,7 +159,7 @@ public sealed class MainWindowAutosave : IDisposable
             // UI thread only (the clock ticks there; CopyDirtySongsAsync resumes there via the runner): marshal the engine/autosave callbacks.
             if (!_ui.CheckAccess()) { _ui.Post(UpdateNotice); return; }
             if (text is null) _topBar.HideSticky(NotificationBar.AutosaveSource);
-            else _topBar.Show(text, NotificationKind.Warn, (RetryButtonText, Retry), source: NotificationBar.AutosaveSource);
+            else _topBar.Show(text, NotificationKind.Warn, NoticeCategory.Warning, (RetryButtonText, Retry), source: NotificationBar.AutosaveSource);
             // The bottom row stays hidden in the app (one top bar); tests without a top bar use Notice below.
             Notice.Hide();
             return;
@@ -201,7 +201,7 @@ public sealed class MainWindowAutosave : IDisposable
         catch (Exception ex)
         {
             // Reported to the person and the trace: the copy stays on disk, so the next start offers it again.
-            _host.Report($"Could not reopen {Path.GetFileName(file)}: {ex.Message}");
+            NoticeChannel.Send(_host.Report, $"Could not reopen {Path.GetFileName(file)}: {ex.Message}", NoticeCategory.Error);
             Services.Trace.Error(Services.Trace.Ui, "autosave: recovered song: " + ex.Message);
         }
     }

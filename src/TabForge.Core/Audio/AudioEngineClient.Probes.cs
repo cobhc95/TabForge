@@ -20,7 +20,7 @@ public sealed partial class AudioEngineClient : IDisposable
     internal int ChainLoadsSentForTest => Volatile.Read(ref _nextChainLoad);
     internal bool IdleForTest => _idleSince is not null;
     /// <summary>Self-test hook: a "running" engine with no process or pipe (every Send is dropped), for UI-side bookkeeping tests.</summary>
-    internal void AttachFakeForTest() { _stopping = false; IsRunning = true; }
+    internal void AttachFakeForTest() { _stopping = false; IsRunning = true; _fakeLinkUp = true; }
 
     /// <summary>Test hook: raises the engine's Recorded take exactly as its reader thread does, for the command-level landing tests.</summary>
     internal void RaiseRecordedForTest(TrackModel track, string path, double startSec, double lengthSec) =>
@@ -39,7 +39,7 @@ public sealed partial class AudioEngineClient : IDisposable
         {
             if (_pathOffsetSentTo == pid) return;
             _pathOffsetSentTo = pid;
-            Send(EngineCommand.SetWindowsPathOffset, new SetWindowsPathOffsetMessage(offset).Write);
+            if (!Send(EngineCommand.SetWindowsPathOffset, new SetWindowsPathOffsetMessage(offset).Write)) _pathOffsetSentTo = null;
             return;
         }
         if (_measuringPathOffset) return;
@@ -47,7 +47,11 @@ public sealed partial class AudioEngineClient : IDisposable
         var ui = _ui;
         Task.Run(() =>
         {
+#if WINDOWS
             var (measured, detail) = WindowsPathOffset.Measure();
+#else
+            (float? measured, string detail) = (null, "not measured: the Windows audio path exists only on Windows");
+#endif
             WindowsPathDetail = detail;
             void Done() { _windowsPathOffset = measured ?? 0f; _measuringPathOffset = false; if (_config is { } c) SyncWindowsPathOffset(c); }
             if (ui is null) Done(); else ui.Post(_ => Done(), null);
@@ -206,7 +210,7 @@ public sealed partial class AudioEngineClient : IDisposable
         lock (_writeGate) { _retiredShared?.Dispose(); _retiredShared = null; }
         PublishShared(shared);
         for (var i = 0; i < slots; i++) _sentChains[i] = "selftest";
-        IsRunning = true;
+        IsRunning = true; _fakeLinkUp = true;
     }
 
     /// <summary>Self-test hook: starts a real engine process (as Sync does) with <paramref name="config"/>; returns at once (R-08).</summary>

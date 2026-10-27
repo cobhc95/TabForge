@@ -5,7 +5,7 @@ namespace TabForge.Presets;
 
 // Owns: the diagnostic songs, one purpose-built song per timing or musical behaviour (written by --gendiag).
 // Does not own: the demo songs (DemoSongFactory) and playback.
-// Tests: none in the self-tests; used by --gendiag and the audio verification tooling (docs/DEMO_SONG_COVERAGE.md).
+// Tests: none in the self-tests; used by --gendiag and the audio verification tooling (docs/plans/DEMO_SONG_COVERAGE.md).
 // Long on purpose: the catalogue stays in one file so each song sits next to the others.
 
 /// <summary>

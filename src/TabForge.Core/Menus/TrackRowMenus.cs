@@ -44,8 +44,8 @@ public static class TrackRowMenus
         };
         list.Add(MenuSpec.Separator());
         list.Add(s.IsAudio
-            ? Item(Convert, "Convert to instrument track…", "", true, "Choose an instrument; the track keeps its audio and MIDI clips")
-            : Item(ConvertToAudio, "Convert to audio track…", key("Track.ConvertToAudio"), true, "The notation becomes a MIDI clip on the track; existing clips stay"));
+            ? Item(Convert, "Convert to tab track…", "", true, "Choose an instrument; the track keeps its audio and MIDI clips")
+            : Item(ConvertToAudio, "Convert to audio/MIDI track…", key("Track.ConvertToAudio"), true, "The notation becomes a MIDI clip on the track; existing clips stay"));
         list.Add(MenuSpec.Separator());
         list.Add(new MenuSpec { Id = MasterLaneCommandId, Header = MasterLaneHeader, Checkable = true, Checked = s.MasterLane, SettingKey = MasterLaneSettingKey, ToolTip = "An overview lane above the first track: one thin line per track, filled where that track plays" });
         return list;

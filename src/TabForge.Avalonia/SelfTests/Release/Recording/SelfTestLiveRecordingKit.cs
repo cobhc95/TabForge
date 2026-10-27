@@ -30,6 +30,7 @@ public static partial class SelfTest
     /// <summary>Decodes the audio stream to 16-bit PCM; returns the rate the reader reports, the channels, the interleaved samples and the native rate.</summary>
     private static (int Rate, int Channels, short[] Pcm, int NativeRate) DecodeMp4Audio(string path)
     {
+#if WINDOWS
         Mf.MFStartup(Mf.Version, 0);
         try
         {
@@ -61,5 +62,8 @@ public static partial class SelfTest
             return (rate, channels, pcm, nativeRate);
         }
         finally { Mf.MFShutdown(); }
+#else
+        throw new PlatformNotSupportedException("Decoding MP4 audio needs Media Foundation, which exists on Windows only.");
+#endif
     }
 }

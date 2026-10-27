@@ -11,7 +11,9 @@ public sealed partial class ScorePreviewView
     protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
         base.OnPointerPressed(e);
-        if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) return;
+        var props = e.GetCurrentPoint(this).Properties;
+        if (props.IsRightButtonPressed && !props.IsLeftButtonPressed) _input.PressRight(e);   // a right drag selects without a loop; a plain right click still opens the menu
+        if (!props.IsLeftButtonPressed) return;
         Focus();
         Focused?.Invoke();
         _input.Press(e);
@@ -19,8 +21,11 @@ public sealed partial class ScorePreviewView
 
     protected override void OnPointerReleased(PointerReleasedEventArgs e)
     {
-        base.OnPointerReleased(e);
+        // The release of a right drag opens no context menu: the base would raise ContextRequested for it.
+        var swallowsMenu = e.InitialPressMouseButton == MouseButton.Right && _input.RightHoldSwallowsMenu;
+        if (!swallowsMenu) base.OnPointerReleased(e);
         _input.Release(e);
+        if (swallowsMenu) e.Handled = true;
     }
 
     protected override void OnPointerMoved(PointerEventArgs e)

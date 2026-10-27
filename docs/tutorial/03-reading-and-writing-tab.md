@@ -58,7 +58,7 @@ If a digit seems to choose a string instead of a fret, you are in the **Standard
 
 ## Choose a note length
 
-The **Note** menu lists **Whole**, **Half**, **Quarter**, **Eighth**, **Sixteenth**, **32nd** and **64th**. The length you choose is used for the next notes you write, until you choose another. The status bar shows the current length.
+The **Note** menu lists **Whole**, **Half**, **Quarter**, **Eighth**, **Sixteenth**, **32nd** and **64th**. The length you choose is used for the next notes you write, until you choose another. The chosen length is lit in the **Duration** tools.
 
 The same menu holds **Dotting**, **Triplet**, **Tie note** and **Rest**. With the cursor on an empty beat, these set up the next note. With the cursor on a written note, they change that note. Hover any of them to see its shortcut.
 
@@ -72,7 +72,7 @@ Every edit can be taken back. Press `Ctrl+Z` to undo the last edit and `Ctrl+Y` 
 
 1. Choose **File > New**. A blank song opens in a new tab.
 2. Click the fifth line down in the TAB staff of the first bar. That is the A string, and the cursor lands there.
-3. Choose **Note > Eighth**. The status bar shows the new length.
+3. Choose **Note > Eighth**. The **Eighth** button in the **Duration** tools lights up.
 4. Type `0`, press `Right`, then type `3`, `5`, `3`, `0`, pressing `Right` after each note. Five notes appear; the cursor stays on each note until you move it.
 5. Click the **Rewind to beginning** button, then press `Space`. You hear the five notes.
 6. Press `Space` to pause. Press `Ctrl+Z` five times. The notes disappear one by one.
@@ -87,7 +87,7 @@ Every bar holds a fixed amount of music. A bar in 4/4 holds four quarter notes, 
 
 A red bar is a warning, not an error. The song still plays, but the bar does not match its time signature. The status bar shows how full the bar is, such as 16:16 for a full bar of 4/4.
 
-Choose **Tools > Check bar duration** to list every bar that does not add up. Change a note length, add a rest or delete a note until the red goes away.
+Choose **Bar > Check bar duration** to list every bar that does not add up. Change a note length, add a rest or delete a note until the red goes away.
 
 If you would rather be stopped than warned, open **Options > Preferences…**, search for `overfill` and tick **Prevent rhythms that overfill a bar**.
 
@@ -97,7 +97,7 @@ If you would rather be stopped than warned, open **Options > Preferences…**, s
 - Click a string, then type digits to write notes. The cursor stays on each note; the arrow keys move it on.
 - The **Note** menu sets the length and offers dots, triplets, ties and rests.
 - `Ctrl+Z` undoes and `Ctrl+Y` redoes.
-- A red bar does not add up. **Tools > Check bar duration** lists it.
+- A red bar does not add up. **Bar > Check bar duration** lists it.
 
 ## What next
 

@@ -81,8 +81,13 @@ internal sealed class LiveVideoRecordController
 
     private void Start()
     {
+        if (!VideoEncoderFactory.LiveRecordingSupported(TabForge.Platform.HostSystem.Current))
+        {
+            _host.Notify(VideoEncoderFactory.LiveRecordingUnavailableText, null);
+            return;
+        }
         var settings = _host.Settings;
-        if (_host.OutputSampleRate is var rate and > 0 && !VideoEncoder.SupportsSampleRate(rate))
+        if (_host.OutputSampleRate is var rate and > 0 && !VideoEncoderRules.SupportsSampleRate(rate))
         {
             _host.Notify(string.Format(System.Globalization.CultureInfo.InvariantCulture, UnsupportedRateText, rate / 1000.0), null);
             return;
@@ -182,7 +187,7 @@ internal sealed class LiveVideoRecordController
         {
             _capture = _host.BeginCapture(width, height, () => _region);
             // The capture, its render, the capture thread and the encoder all run at the capped rate (see LiveVideoChoices.CaptureFps).
-            var options = VideoEncoderOptions.From(settings) with { HardwareResult = ok => { settings.HardwareProbe = ok ? VideoEncoderOptions.ProbePass : VideoEncoderOptions.ProbeFail; settings.HardwareProbeAt = DateTime.UtcNow; } };
+            var options = VideoEncoderOptions.Remembering(settings);
             Trace.Error(Trace.Ui, $"video: start {width}x{height} {settings.Fps} fps encoder={options.Encoder} hardware-probe='{options.HardwareProbe}' -> {_path}");
             _session = LiveVideoSession.Start(_path, width, height, LiveVideoChoices.CaptureFps(settings.Fps), _capture.Grab, TuneOptions(options));
         }

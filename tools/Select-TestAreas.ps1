@@ -35,13 +35,13 @@ $Rules = @(
     @{ Name = 'video'; Match = '^Source/src/TabForge\.Core/Services/Video/|^Source/src/TabForge\.Avalonia/(Video/|Views/VideoExportWindow\.cs$)'; Areas = @('recording'); Tests = @('TestVideoExport', 'TestVideoEncoderGolden', 'TestVideoFrameGolden', 'TestVideoFrameSourceGolden', 'TestVideoEncoderMp4', 'TestLiveVideoRecord', 'TestVideoAudioPitch') },
     @{ Name = 'engine'; Match = '^Source/src/TabForge\.(AudioEngine|Audio\.Contracts)/'; Areas = @('engine', 'recording', 'playback'); Tests = @() },
     @{ Name = 'technique'; Match = '^Source/src/TabForge\.Core/Models/Technique|^Source/src/TabForge\.Core/Playback/[^/]*Compiler[^/]*\.cs$'; Areas = @('notation', 'guitarpro', 'playback'); Tests = @('TestTechniqueEngraving', 'TestTimelineTechniques', 'TestTechniqueCoverage', 'TestTechniqueInfoTable', 'TestTechniqueGpExportGolden', 'TestTechniqueMusicXmlGolden', 'TestTechniquePlaybackGolden') },
-    @{ Name = 'settings'; Match = '^Source/src/TabForge\.Core/Services/(Settings|AppSettings)[^/]*\.cs$'; Areas = @('settings'); Tests = @('TestPreferencesCatalog', 'TestSettingsStoreSharedAcrossWindows', 'TestHotkeySettingsMigration') },
+    @{ Name = 'settings'; Match = '^Source/src/TabForge\.Core/Services/Settings/'; Areas = @('settings'); Tests = @('TestPreferencesCatalog', 'TestSettingsStoreSharedAcrossWindows', 'TestHotkeySettingsMigration') },
     @{ Name = 'menus'; Match = '/MainMenu/|[^/]*Menus?[^/]*\.cs$|^Source/tests/full-suite/Menus/'; Areas = @('ui'); Tests = @('TestMainMenuTreeGolden', 'TestMainMenuTable') },
     @{ Name = 'features'; Match = '^Source/src/TabForge\.Core/Services/Features/'; Areas = @('ui'); Tests = @('TestFeatureModuleContributions') },
     @{ Name = 'docking'; Match = '^Source/src/TabForge\.Core/Docking/'; Areas = @('ui'); Tests = @('TestDockPaneTable') },
     @{ Name = 'diagnostics'; Match = '^Source/src/TabForge\.Core/Diagnostics/'; Areas = @('ui'); Tests = @() },
     @{ Name = 'playback'; Match = '^Source/src/TabForge\.Core/Playback/'; Areas = @('playback'); Tests = @() },
-    @{ Name = 'window-and-views'; Match = '^Source/src/TabForge\.Avalonia/MainWindow[^/]*\.cs$|^Source/src/TabForge\.Avalonia/Views/'; Areas = @('ui', 'interactions'); Tests = @() }
+    @{ Name = 'window-and-views'; Match = '^Source/src/TabForge\.Avalonia/MainWindow/|^Source/src/TabForge\.Avalonia/Views/'; Areas = @('ui', 'interactions'); Tests = @() }
 )
 # Documents and build files: no tests of their own (hygiene and architecture, in the basic areas, check them).
 # Golden text files under tests/ are test inputs, so they take the rules above.

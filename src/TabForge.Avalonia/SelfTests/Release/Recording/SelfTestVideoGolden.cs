@@ -11,13 +11,18 @@ namespace TabForge;
 // Does not own: queue, drop and setting behaviour (SelfTestVideoEncoder).
 public static partial class SelfTest
 {
+#if WINDOWS
     private const int GoldenWidth = 1920, GoldenHeight = 1080, GoldenFps = 60, GoldenFrames = 60;
 
-    // Recorded from the encoder before the frame-copy change (docs/VIDEO_RENDER_SPEED.md, option 2). A different value means the MP4 changed.
+    // Recorded from the encoder before the frame-copy change (docs/reference/VIDEO_RENDER_SPEED.md, option 2). A different value means the MP4 changed.
     /// <summary>The video digest was recorded with a hardware encoder; another kind of encoder (a software one on a build machine) writes other bytes, so it is compared only when the same kind ran.</summary>
     private const bool GoldenVideoWasHardware = true;
     private const string GoldenVideoDigest = "5FCA28DBB720739A45247E51639C406D648072B7A73248DC933552C47E310F8D";
+    // The audio digest follows the kind of video encoder that ran as well, so one is recorded per kind. The software value was recorded on
+    // 2026-10-27 when the sink writer built the software encoder on the build machine; 0.8.2's encoder writes the same bytes there, so it is no
+    // change of the MP4 writer (the golden clip goes straight to VideoEncoder: the export's render-tail setting in VideoExportFlow never reaches it).
     private const string GoldenAudioDigest = "D0AD638BF4FBE24993E8DF3F0851D2A969F18832C9D46527CC35031155741036";
+    private const string GoldenAudioDigestSoftware = "0724D3CA3F9734027A482BFF9D81C1FA641FB338CD22578B23597E99AEF8CB61";
 
     private static void FillGoldenFrame(byte[] px, int frame)
     {
@@ -118,11 +123,14 @@ public static partial class SelfTest
             var (audio, audioCount) = DecodeGoldenStream(path, Mf.FirstAudioStream);
             Check("video golden: 60 video frames and audio chunks decode back", videoCount == GoldenFrames && audioCount > 0, $"video {videoCount}, audio {audioCount}, hardware {hardware}");
             Check("video golden: decoded frames and timestamps match the recorded digest", video == GoldenVideoDigest || hardware != GoldenVideoWasHardware, $"video {video}, hardware {hardware}");
-            Check("video golden: decoded audio matches the recorded digest", audio == GoldenAudioDigest, $"audio {audio}, hardware {hardware}");
+            Check("video golden: decoded audio matches the recorded digest", audio == (hardware == GoldenVideoWasHardware ? GoldenAudioDigest : GoldenAudioDigestSoftware), $"audio {audio}, hardware {hardware}");
             var (alone, held, released) = BufferRefCounts();
             Check("video golden: the buffer reference count sees a sample holding a buffer", alone >= 1 && held == alone + 1 && released == alone, $"alone {alone}, held {held}, released {released}");
         }
         finally { TryDelete(path);
  }
     }
+#else
+    private static void TestVideoEncoderGolden() => Check("video golden: Media Foundation exists on Windows only (skipped)", true);
+#endif
 }

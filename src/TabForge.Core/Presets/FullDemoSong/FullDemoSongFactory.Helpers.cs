@@ -12,7 +12,7 @@ namespace TabForge.Presets;
 //   the structure helpers and the finalise helpers. Note helpers and Hv: FullDemoSongFactory.Notes.cs; drum helpers: FullDemoSongFactory.DrumHelpers.cs.
 // Does not own: the song's content, which the owner files FullDemoSongFactory.*.cs write, and the song model (Models).
 // Tests: no dedicated test class.
-// Shared helpers of the full demo song ("Ashen Meridian", docs/DEMO_SONG_PLAN.md section 6.2).
+// Shared helpers of the full demo song ("Ashen Meridian", docs/plans/DEMO_SONG_PLAN.md section 6.2).
 // The signatures below are the contract between the four owners: do not change them, add new helpers instead.
 //
 // Conventions every helper follows (plan section 0):

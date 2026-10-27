@@ -324,6 +324,7 @@ public sealed partial class TrackPropertiesWindow : Window
         }
         WriteMix();
         WriteSections();
+        TrackColouring.FollowInstrument(_track);   // still on the default colour: it follows a changed program
     }
 
     /// <summary>What the user changed so far, for the discard question.</summary>
@@ -342,7 +343,7 @@ public sealed partial class TrackPropertiesWindow : Window
         Diff("Capo", _track.Capo.ToString(), Typed(_capo));
         Diff("Volume", _track.Volume.ToString(), ((int)_volumeKnob!.Value).ToString());
         Diff("Pan", _track.Pan.ToString(), ((int)_panKnob!.Value).ToString());
-        Diff("Colour", _track.ColorHex, _colour.Value.Trim());
+        Diff("Colour", TabForge.Platform.Theme.NamedColourSwatches.LabelOf(_track.ColorHex), TabForge.Platform.Theme.NamedColourSwatches.LabelOf(_colour.Value));
         Diff("Played by", _track.Performer, (_performer.Text ?? "").Trim());
         if (!string.Equals(_track.TrackNotes, _notes.Text ?? "", System.StringComparison.Ordinal)) list.Add("Notes edited");
         return list;

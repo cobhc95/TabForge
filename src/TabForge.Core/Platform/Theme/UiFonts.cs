@@ -23,8 +23,8 @@ public static class UiFonts
     public static UiFont Score() =>
         new UiFont(ScoreText.FontFamily, ScoreText.TextSize, ScoreText.TextBold ? 700 : 400, ScoreText.TextItalic);
 
-    /// <summary>The one fixed-width family for tab digits and log text. It is not a setting today.</summary>
-    public static string MonoFamily => "Consolas";
+    /// <summary>The fixed-width family for tab digits and log text: Consolas, or JetBrains Mono with the bundled fonts (see FontProvider).</summary>
+    public static string MonoFamily(FontProvider fonts) => fonts.Mono;
 
     /// <summary>The icon glyph size from the appearance, in device-independent pixels.</summary>
     public static double IconSize(AppearanceSettings appearance) => appearance.IconSize;

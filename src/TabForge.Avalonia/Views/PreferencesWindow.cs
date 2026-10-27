@@ -9,6 +9,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Controls.Templates;
 using Avalonia.Layout;
+using Avalonia.LogicalTree;
 using Avalonia.Markup.Xaml.MarkupExtensions;
 using Avalonia.Media;
 using TabForge.Avalonia.Platform;
@@ -373,6 +374,12 @@ public sealed partial class PreferencesWindow : Window, IPreferencesChangesHost
         var text = new StackPanel { Spacing = 2, VerticalAlignment = VerticalAlignment.Center };
         text.Children.Add(new TextBlock { Text = row.Title, TextWrapping = TextWrapping.Wrap });
         if (row.Description.Length > 0) text.Children.Add(ToolWindowParts.Small(row.Description));
+        if (row.DependsOnValue is not null)
+        {
+            var hint = ToolWindowParts.Small($"Choose {row.DependsOnValue.Split('|')[0]} above to {(row.Kind == SettingKind.Colour ? "pick a colour" : "use this")}.");
+            hint.Name = "DisabledHint";
+            text.Children.Add(hint);
+        }
         var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("*,16,Auto"), Tag = editor };
         Grid.SetColumn(editor, 2);
         editor.VerticalAlignment = VerticalAlignment.Center;
@@ -480,7 +487,10 @@ public sealed partial class PreferencesWindow : Window, IPreferencesChangesHost
     private void RefreshEnabled()
     {
         foreach (var (row, panel) in _shown)
+        {
             panel.IsEnabled = PreferencesPagePresenter.IsEnabled(row, key => Rows.FirstOrDefault(r => r.Key.Equals(key, StringComparison.OrdinalIgnoreCase)));
+            if (panel.GetLogicalDescendants().OfType<TextBlock>().FirstOrDefault(t => t.Name == "DisabledHint") is { } hint) hint.IsVisible = !panel.IsEnabled;
+        }
     }
 
 }

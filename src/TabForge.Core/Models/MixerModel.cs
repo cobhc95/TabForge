@@ -394,7 +394,7 @@ public static class MixerGroups
 
     /// <summary>The track needs the audio engine for audio (clips to play, or its input monitored).</summary>
     public static bool UsesEngineAudio(TrackModel track) =>
-        (track.RecordArm && !AudioInputs.IsMidi(track.AudioInput)) || track.AudioClips.Any(c => !c.IsMidi && TakeGroups.Audible(track, c));   // one owner: TakeGroups.Audible
+        (track.RecordArm && AudioInputs.HasAudio(track.AudioInput)) || track.AudioClips.Any(c => !c.IsMidi && TakeGroups.Audible(track, c));   // one owner: TakeGroups.Audible
 
     /// <summary>The track's MIDI plays through the engine (VST instrument or effects on the General MIDI sound).</summary>
     /// A track with plug-ins stays in the engine whatever its route (chain off, everything bypassed, silent): the plug-ins stay

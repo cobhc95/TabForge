@@ -1,19 +1,27 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!-- The only code shared by TabForge and its audio engine process: message layouts and shared memory. -->
   <PropertyGroup>
-    <!-- net8.0 is the portable build; net8.0-windows adds the Windows-only pieces excluded below. -->
-    <TargetFrameworks>net8.0;net8.0-windows</TargetFrameworks>
+    <!-- net10.0 is the portable build; net10.0-windows adds the Windows-only pieces excluded below. -->
+    <TargetFrameworks>net10.0;net10.0-windows</TargetFrameworks>
     <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
     <ImplicitUsings>enable</ImplicitUsings>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <!-- Nullable, warnings-as-errors, analysis, locked restore and Version: see Directory.Build.props. -->
   </PropertyGroup>
-  <!-- Windows-only code: the job object guard and the 1 ms timer (P/Invoke) are left out of net8.0. -->
-  <ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
-    <Compile Remove="ChildProcessJob.cs;NativeTimer.cs;NamedSharedMemory.Windows.cs" />
+  <!-- Managed MP3 and OGG decoders (both MIT): the portable audio decode seam in AudioDecoders.cs. -->
+  <ItemGroup>
+    <PackageReference Include="NLayer" Version="3.0.0" />
+    <PackageReference Include="NVorbis" Version="0.10.5" />
   </ItemGroup>
-  <!-- Named shared memory has one implementation per target: the Windows mapping, or a net8.0 stub that throws. -->
-  <ItemGroup Condition="'$(TargetFramework)' == 'net8.0-windows'">
+  <ItemGroup>
+    <InternalsVisibleTo Include="TabForge.Avalonia.Tests" />
+  </ItemGroup>
+  <!-- Windows-only code: the job object guard and the 1 ms timer adapter (P/Invoke, Platform/Windows) are left out of net10.0. -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
+    <Compile Remove="Platform\Windows\*.cs;NamedSharedMemory.Windows.cs" />
+  </ItemGroup>
+  <!-- Named shared memory has one implementation per target: the Windows mapping, or a net10.0 stub that throws. -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-windows'">
     <Compile Remove="NamedSharedMemory.NonWindows.cs" />
   </ItemGroup>
 </Project>

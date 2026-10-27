@@ -18,6 +18,7 @@ public static class ClipPathGuard
 
     public static bool IsAllowed(string? path, out string reason)
     {
+        if (!OperatingSystem.IsWindows()) return UnixClipPathRules.IsAllowed(path, out reason);   // drive letters, UNC, device forms and 8.3 names are Windows rules
         reason = "";
         if (string.IsNullOrWhiteSpace(path)) { reason = "empty path"; return false; }
         if (path.Any(c => c < 32)) { reason = "control characters"; return false; }

@@ -134,9 +134,11 @@ public static class CaptionButtons
         // it is divided by that scale too, and follows it when the scale changes (as the toggles do).
         var viewScale = Math.Min(CameraGlyphWidth / data.Bounds.Width, CameraGlyphHeight / data.Bounds.Height);
         var stroke = viewScale > 0 ? CameraStroke / viewScale : CameraStroke;
+        // A Shape's Uniform stretch pins the fitted geometry to its box's top left, not its centre: sized to the fitted outline exactly, so the
+        // Viewbox centres the drawing itself (a 17 x 14 box left the 20 x 12 camera ~2 px high).
         var outline = new Path
         {
-            Data = data, Width = CameraGlyphWidth, Height = CameraGlyphHeight, Stretch = Stretch.Uniform, StrokeThickness = stroke,
+            Data = data, Width = data.Bounds.Width * viewScale, Height = data.Bounds.Height * viewScale, Stretch = Stretch.Uniform, StrokeThickness = stroke,
             StrokeLineCap = PenLineCap.Round, StrokeJoin = PenLineJoin.Round, IsHitTestVisible = false,
         };
         outline[!Shape.StrokeProperty] = new DynamicResourceExtension("ChromeGlyph");

@@ -70,6 +70,8 @@ public sealed unsafe partial class Vst2Plugin : IPluginInstance, IEditorResizeSo
 
     private readonly IntPtr _library;
     private readonly AEffect* _effect;
+    /// <summary>Diagnostics: the native AEffect pointer (for the editor log lines).</summary>
+    internal IntPtr NativeHandle => (IntPtr)_effect;
     private readonly delegate* unmanaged[Cdecl]<AEffect*, int, int, IntPtr, IntPtr, float, IntPtr> _dispatch;
     private readonly delegate* unmanaged[Cdecl]<AEffect*, float**, float**, int, void> _processReplacing;
     private double _sampleRate;
@@ -231,8 +233,6 @@ public sealed unsafe partial class Vst2Plugin : IPluginInstance, IEditorResizeSo
     // Load flags: the plug-in's own folder and the system folders only, never the working folder or the search path.
     private const uint LoadLibrarySearchDefaultDirs = 0x00001000, LoadLibrarySearchDllLoadDir = 0x00000100;
 
-    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true, EntryPoint = "LoadLibraryExW")]
-    private static extern IntPtr LoadLibraryEx(string fileName, IntPtr reserved, uint flags);
 
     /// <summary>Loads the VST2 module at its full path (the caller passes a normalised path only).</summary>
     private static IntPtr LoadModule(string path)

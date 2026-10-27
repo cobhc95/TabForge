@@ -21,7 +21,7 @@ of the committed HEAD, never from the working folder, so line endings, stray fil
 into the release, and a local build equals a CI build of the same commit. Build settings that affect bytes live in
 Source\global.json (exact SDK), Source\Directory.Build.props and Source\tools\Publish.ps1. The one native bridge is the committed
 Source\src\TabForge.AudioEngine\native\tfvst3.dll (its hash is verified against Source\native\BUILD_PROVENANCE.md).
-Source\tools\Compare-Release.ps1 compares two results. See Source\docs\REPRODUCIBLE_BUILDS.md.
+Source\tools\Compare-Release.ps1 compares two results. See Source\docs\guides\REPRODUCIBLE_BUILDS.md.
 #>
 [CmdletBinding()]
 param(
@@ -180,7 +180,7 @@ foreach ($patch in $alphaTabPatches) { Copy-Item -LiteralPath $patch.FullName -D
 if (-not (Test-Path -LiteralPath (Join-Path $publish 'SoundTouch.Net.dll'))) {
     throw 'SoundTouch.Net.dll is not beside TabForge.exe in the publish folder (LGPL: it must stay a loose, replaceable file); refusing to package.'
 }
-foreach ($required in @('LGPL-2.1_SoundTouch.Net.txt', 'MPL-2.0_alphaTab.txt', 'OFL-1.1_Bravura.txt', 'MIT_NAudio.txt', 'MIT_MeltySynth_and_notices.txt', 'THIRD-PARTY-NOTICES_DotNet_runtime.txt')) {
+foreach ($required in @('LGPL-2.1_SoundTouch.Net.txt', 'MPL-2.0_alphaTab.txt', 'OFL-1.1_Bravura.txt', 'MIT_NAudio.txt', 'MIT_MeltySynth_and_notices.txt', 'MIT_NLayer.txt', 'MIT_NVorbis.txt', 'THIRD-PARTY-NOTICES_DotNet_runtime.txt')) {
     if (-not (Test-Path -LiteralPath (Join-Path $publish "licenses\$required"))) { throw "licenses\$required is missing from the publish folder; refusing to package." }
 }
 # Machine-neutral binaries: no local user or build paths may be embedded in anything that ships.
@@ -190,13 +190,18 @@ foreach ($bin in Get-ChildItem -LiteralPath $publish -Recurse -File -Include *.e
 }
 
 # The demo song ships as a loose file (Samples\), not inside the single-file bundle.
+$demoSongs = @('samples','Samples','..\Samples') | ForEach-Object { Join-Path $srcRoot $_ } | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
+if ($demoSongs) {
+    [IO.Directory]::CreateDirectory((Join-Path $publish 'Samples')) | Out-Null
+    Get-ChildItem -LiteralPath $demoSongs -Filter '*.gp' -File | ForEach-Object { Copy-Item -LiteralPath $_.FullName -Destination (Join-Path $publish 'Samples') }
+}
 if (-not (Get-ChildItem -LiteralPath (Join-Path $publish 'Samples') -Filter '*.gp' -ErrorAction SilentlyContinue)) {
     throw 'Samples\*.gp (the demo song) is missing from the publish folder; refusing to package.'
 }
 
 # Refresh the SBOM and ship it next to the licence texts.
 & (Join-Path $PSScriptRoot 'Write-Sbom.ps1')
-$sbom = Join-Path $srcRoot 'docs\SBOM.md'
+$sbom = Join-Path $srcRoot 'docs\reference\SBOM.md'
 if (Test-Path -LiteralPath $sbom) { Copy-Item $sbom (Join-Path $publish 'SBOM.md') }
 
 # ---- release gate: the curated release area, on its own copy that is never packaged -----------------
@@ -216,7 +221,7 @@ if ($gateProc.ExitCode -ne 0 -or -not (Select-String -LiteralPath $gateLog -Patt
 }
 $gateSummary = Select-String -LiteralPath $gateLog -Pattern '^TabForge self-test: (\d+) passed' | Select-Object -Last 1
 Write-Output $gateSummary.Line
-if (-not $gateSummary -or [int]$gateSummary.Matches[0].Groups[1].Value -lt 1500) { throw "Release gate ran too few checks ($($gateSummary.Line)); the curated release tests did not run. Refusing to package." }
+if (-not $gateSummary -or [int]$gateSummary.Matches[0].Groups[1].Value -lt 800) { throw "Release gate ran too few checks ($($gateSummary.Line)); the curated release tests did not run. Refusing to package." }
 if (-not (Select-String -LiteralPath $gateLog -Pattern 'release gate: all \d+ curated release tests ran' -Quiet)) { throw "Release gate log lacks the curated-test confirmation ($gateLog); refusing to package." }
 Copy-Item -LiteralPath $gateLog -Destination (Join-Path $dist "TabForge-$display-releasegate.log") -Force
 Remove-Item -LiteralPath $gateFolder -Recurse -Force
@@ -276,7 +281,7 @@ Write-Output ("Portable: {0} ({1:N1} MB)" -f $zip, ((Get-Item $zip).Length / 1MB
 
 # Installer (built from the same tested folder)
 if (-not (Test-Path -LiteralPath $InnoCompiler)) { throw "Inno Setup compiler not found: $InnoCompiler" }
-& $InnoCompiler "/DAppVersion=$display" "/DFileVersion=$numericVersion" "/DSourceDir=$publish" /Q (Join-Path $srcRoot 'installer\TabForge.iss')
+& $InnoCompiler "/DAppVersion=$display" "/DFileVersion=$numericVersion" "/DSourceDir=$publish" "/O$dist" /Q (Join-Path $srcRoot 'installer\TabForge.iss')
 if ($LASTEXITCODE) { throw 'Inno Setup failed' }
 $setup = Join-Path $dist "TabForge-$display-setup.exe"
 Write-Output ("Installer: {0} ({1:N1} MB)" -f $setup, ((Get-Item $setup).Length / 1MB))

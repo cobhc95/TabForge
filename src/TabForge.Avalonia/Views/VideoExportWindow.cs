@@ -40,7 +40,7 @@ public sealed class VideoExportWindow : Window
     private readonly List<CheckBox> _trackBoxes = new();
     private readonly StackPanel _trackList = new();
     private readonly ComboBox _range = new() { MinWidth = 170 }, _section = new() { MinWidth = 260 }, _layout = new() { MinWidth = 360 },
-        _theme = new() { MinWidth = 100 }, _size = new() { MinWidth = 210 }, _fps = new() { MinWidth = 70 };
+        _theme = new() { MinWidth = 100 }, _size = new() { MinWidth = 210 }, _fps = new() { MinWidth = 70 }, _encoder = new();
     private readonly TextBox _from = new() { Width = 60 }, _to = new() { Width = 60 };
     private readonly CheckBox _instrument = new() { Content = "Show the instrument (fretboard, keyboard or drums)" }, _remember = new() { Content = "Remember these settings" };
     private readonly ScrollViewer _trackScroll = new() { MaxHeight = 130, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
@@ -147,8 +147,11 @@ public sealed class VideoExportWindow : Window
     {
         foreach (var choice in VideoExportPresenter.ResolutionChoices) _size.Items.Add(choice);
         foreach (var choice in VideoExportPresenter.FpsChoices) _fps.Items.Add(choice);
+        foreach (var choice in VideoExportPresenter.EncoderChoices) _encoder.Items.Add(choice);
+        ToolTip.SetTip(_encoder, VideoExportPresenter.EncoderToolTip);
         var content = new StackPanel();
         content.Children.Add(ToolWindowParts.Row(ToolWindowParts.Label("Resolution:"), _size, ToolWindowParts.Label("Frames per second:"), _fps));
+        content.Children.Add(ToolWindowParts.Row(ToolWindowParts.Label("Encoder:"), _encoder));
         content.Children.Add(_remember);
         return ToolWindowParts.Group("Video", content);
     }
@@ -165,6 +168,7 @@ public sealed class VideoExportWindow : Window
         _instrument.IsChecked = _settings.ShowInstrument;
         _size.SelectedIndex = VideoExportPresenter.ResolutionIndex(_settings.Height);
         _fps.SelectedItem = VideoExportPresenter.FpsChoice(_settings.Fps);
+        _encoder.SelectedItem = VideoExportPresenter.EncoderChoice(_settings.Encoder);
         _remember.IsChecked = _settings.Remember;
         var checks = VideoExportPresenter.InitialTrackChecks(names, _settings.TrackNames, Array.Empty<string>());
         for (var i = 0; i < _trackBoxes.Count; i++) _trackBoxes[i].IsChecked = checks[i];
@@ -199,7 +203,7 @@ public sealed class VideoExportWindow : Window
         {
             Title = VideoExportPresenter.SaveDialogTitle, Filter = VideoExportPresenter.SaveDialogFilter, DefaultExt = VideoExportPresenter.DefaultExtension,
             AddExtension = true, OverwritePrompt = true, FileName = VideoExportPresenter.SuggestedFileName(_project.Title),
-            InitialDirectory = VideoExportPresenter.InitialDirectory(_settings.Directory, Directory.Exists(_settings.Directory), Environment.GetFolderPath(Environment.SpecialFolder.MyVideos)),
+            InitialDirectory = VideoExportPresenter.InitialDirectory(_settings.Directory, Directory.Exists(_settings.Directory), TabForge.Platform.AppFolders.Current.Videos),
         });
         if (chosen is null) return;
         if (_settings.Remember) _settings.Directory = VideoExportPresenter.DirectoryOf(chosen);
@@ -209,7 +213,7 @@ public sealed class VideoExportWindow : Window
         {
             _cts = new CancellationTokenSource();
             var progress = new Progress<VideoExportProgress>(p => { _bar.Value = p.Fraction; _status.Text = VideoExportPresenter.ProgressText(p.Text, p.Fraction); });
-            var plan = new VideoExportPlan(timeline, start, end, VideoExportPresenter.ViewSpec(choices, _notation), chosen, VideoExportPresenter.FpsFrom(choices.FpsChoice));
+            var plan = new VideoExportPlan(timeline, start, end, VideoExportPresenter.ViewSpec(choices, _notation), chosen, VideoExportPresenter.FpsFrom(choices.FpsChoice), VideoExportPresenter.EncoderChoice(choices.Encoder));
             var result = await _run(plan, progress, _cts.Token);
             _bar.Value = 1;
             _status.Text = VideoExportPresenter.DoneText(result.Frames, result.Seconds, result.ElapsedSeconds);
@@ -251,5 +255,6 @@ public sealed class VideoExportWindow : Window
         ResolutionIndex: _size.SelectedIndex,
         FpsChoice: _fps.SelectedItem as string,
         TrackNames: _project.Tracks.Select(t => t.Name).ToList(),
-        TrackChecks: _trackBoxes.Select(b => b.IsChecked == true).ToList());
+        TrackChecks: _trackBoxes.Select(b => b.IsChecked == true).ToList(),
+        Encoder: VideoExportPresenter.EncoderChoice(_encoder.SelectedItem as string));
 }

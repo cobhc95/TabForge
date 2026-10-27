@@ -18,7 +18,7 @@ public sealed partial class PresetManagerWindow
             if (key == Key.Escape) { e.Handled = true; EndEdit(); UpdateTools(); }   // the first Escape cancels the rename
             return;
         }
-        var ctrl = e.KeyModifiers.HasFlag(KeyModifiers.Control);
+        var ctrl = e.KeyModifiers.HasPrimary();
         var alt = e.KeyModifiers.HasFlag(KeyModifiers.Alt);
         var inList = _list.IsKeyboardFocusWithin;
         var inTree = _tree.IsKeyboardFocusWithin;

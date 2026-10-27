@@ -1,17 +1,21 @@
-using System.Runtime.InteropServices;
-
 namespace TabForge.Audio.Contracts;
 
-// Owns: the process's 1 ms Windows timer resolution (reference-counted acquire/release, never the audio thread).
+// Owns: the process's 1 ms timer resolution (reference-counted acquire/release, never the audio thread).
+// Does not own: the system call (IHighResTimer; Windows adapter in Platform/Windows/WindowsHighResTimer.cs, a no-op stub elsewhere).
 
 /// <summary>
-/// The one owner of the process's 1 ms Windows timer resolution (<c>timeBeginPeriod(1)</c>). Reference-counted: the first
+/// The one owner of the process's 1 ms timer resolution (<c>timeBeginPeriod(1)</c> on Windows). Reference-counted: the first
 /// <see cref="Acquire"/> raises it, the last <see cref="Release"/> gives it back, so callers (the engine for its lifetime, the playback
 /// scheduler while playing, the MIDI delay line while it has messages due) never undo each other. Not for the audio thread (takes a lock).
 /// </summary>
 public static class NativeTimer
 {
     private static readonly object Gate = new();
+#if WINDOWS
+    private static readonly IHighResTimer Native = new WindowsHighResTimer();
+#else
+    private static readonly IHighResTimer Native = new NullHighResTimer();
+#endif
     private static int _holds;
     private static bool _raised;
 
@@ -26,8 +30,7 @@ public static class NativeTimer
         lock (Gate)
         {
             if (_holds++ > 0) return;
-            try { _raised = timeBeginPeriod(1) == 0; }
-            catch (Exception ex) when (ex is DllNotFoundException or EntryPointNotFoundException) { _raised = false; }
+            _raised = Native.Begin();
         }
     }
 
@@ -39,8 +42,7 @@ public static class NativeTimer
             if (_holds == 0 || --_holds > 0) return;
             if (!_raised) return;
             _raised = false;
-            try { timeEndPeriod(1); }
-            catch (Exception ex) when (ex is DllNotFoundException or EntryPointNotFoundException) { }
+            Native.End();
         }
     }
 
@@ -56,7 +58,4 @@ public static class NativeTimer
             else if (Interlocked.Exchange(ref _held, 0) != 0) Release();
         }
     }
-
-    [DllImport("winmm.dll")] private static extern uint timeBeginPeriod(uint period);
-    [DllImport("winmm.dll")] private static extern uint timeEndPeriod(uint period);
 }

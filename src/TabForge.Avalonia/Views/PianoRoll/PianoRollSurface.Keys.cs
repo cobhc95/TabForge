@@ -73,7 +73,7 @@ public sealed partial class PianoRollSurface
     /// <summary>Runs the piano roll's meaning of a key; false when it has none (the key goes on to the window).</summary>
     internal bool HandleKey(Key key, KeyModifiers modifiers)
     {
-        var ctrl = modifiers.HasFlag(KeyModifiers.Control);
+        var ctrl = modifiers.HasPrimary();
         var shift = modifiers.HasFlag(KeyModifiers.Shift);
         var alt = modifiers.HasFlag(KeyModifiers.Alt);
         if (!ctrl && !alt && ToolOf(key) is { } tool) { Presenter.Tool = tool; ToolChanged?.Invoke(); InvalidateVisual(); return true; }

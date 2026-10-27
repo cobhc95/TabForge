@@ -1,4 +1,4 @@
-$parent = 'C:\Users\COBHC\Videos\TabForgeProofParent'
+$parent = "$env:USERPROFILE\Videos\TabForgeProofParent"
 if (Test-Path $parent) { Remove-Item $parent -Recurse -Force }
 New-Item -ItemType Directory -Path $parent | Out-Null
 $acl = Get-Acl $parent

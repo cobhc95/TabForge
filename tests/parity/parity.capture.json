@@ -67,10 +67,10 @@
   "target": "menu"
  },
  {
-  "menu": "Sections"
+  "menu": "Insert"
  },
  {
-  "shot": "menu-Sections-dark",
+  "shot": "menu-Insert-dark",
   "target": "menu"
  },
  {
@@ -102,10 +102,10 @@
   "target": "menu"
  },
  {
-  "menu": "Sound"
+  "menu": "Insert/Track"
  },
  {
-  "shot": "menu-Sound-dark",
+  "shot": "menu-Insert-Track-dark",
   "target": "menu"
  },
  {
@@ -572,10 +572,10 @@
   "target": "menu"
  },
  {
-  "menu": "Sections"
+  "menu": "Insert"
  },
  {
-  "shot": "menu-Sections-light",
+  "shot": "menu-Insert-light",
   "target": "menu"
  },
  {
@@ -607,10 +607,10 @@
   "target": "menu"
  },
  {
-  "menu": "Sound"
+  "menu": "Insert/Track"
  },
  {
-  "shot": "menu-Sound-light",
+  "shot": "menu-Insert-Track-light",
   "target": "menu"
  },
  {

@@ -8,9 +8,9 @@ namespace TabForge.Audio.Contracts;
 /// <summary>
 /// Named shared memory of the Windows build: the page-file mapping that TabForge and the audio engine open by the same name.
 /// Owns: creating (current-user access, SYSTEM/Administrators read, set at creation) and opening the named mapping. Does not own: the layout inside it (<see cref="SharedBlock"/>).
-/// Tests: the engine tests that create or open a SharedBlock (net8.0-windows build);
+/// Tests: the engine tests that create or open a SharedBlock (net10.0-windows build);
 /// SharedMemoryTrustTests (the mapping's DACL).
-/// Compiled into net8.0-windows only; the net8.0 build uses NamedSharedMemory.NonWindows.cs.
+/// Compiled into net10.0-windows only; the net10.0 build uses NamedSharedMemory.NonWindows.cs.
 /// </summary>
 internal static class NamedSharedMemory
 {

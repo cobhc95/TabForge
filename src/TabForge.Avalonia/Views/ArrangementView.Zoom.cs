@@ -133,7 +133,7 @@ public sealed partial class ArrangementView
     private void OnTimelineWheel(PointerWheelEventArgs e)
     {
         if (e.Delta.Y == 0) return;
-        if (e.KeyModifiers.HasFlag(KeyModifiers.Alt) && !e.KeyModifiers.HasFlag(KeyModifiers.Control) && !e.KeyModifiers.HasFlag(KeyModifiers.Shift))
+        if (e.KeyModifiers.HasFlag(KeyModifiers.Alt) && !e.KeyModifiers.HasPrimary() && !e.KeyModifiers.HasFlag(KeyModifiers.Shift))
         {
             var region = TimelineRepeatPicker.RegionAtX(Timeline, e.GetPosition(Timeline).X);
             if (region is not null)

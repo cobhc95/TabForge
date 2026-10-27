@@ -109,6 +109,9 @@ public sealed record ClipController(double StartSec, int Controller, int Value)
 public sealed class ClipLane
 {
     public bool Plays { get; set; } = true;
+    /// <summary>The name the user gave the lane (Rename lane); null: the lane has none and shows no label.</summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public string? Name { get; set; }
 }
 
 /// <summary>Lane helpers shared by the timeline, recording and the engine sync.</summary>

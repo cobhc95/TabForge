@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Controls.Shapes;
@@ -34,6 +35,8 @@ public sealed partial class PianoRollView
     private readonly Ellipse _chipDot = new();
     private readonly TextBlock _chipName = new() { VerticalAlignment = VerticalAlignment.Center };
     private readonly TextBlock _chipKind = new() { VerticalAlignment = VerticalAlignment.Center };
+    private readonly ComboBox _source = new() { IsVisible = false, VerticalAlignment = VerticalAlignment.Center };
+    private List<(PianoRollSourceChoice Choice, string Label)> _sourceChoices = new();
     private bool _follow = true;
     private bool _refreshing;
 
@@ -119,7 +122,12 @@ public sealed partial class PianoRollView
         _chipDot.Height = ChipDot;
         _chipDot.VerticalAlignment = VerticalAlignment.Center;
         _chipKind[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted");
-        var chip = new StackPanel { Orientation = Orientation.Horizontal, Spacing = GroupPad, VerticalAlignment = VerticalAlignment.Center, Children = { _chipDot, _chipName } };
+        var chip = new StackPanel { Orientation = Orientation.Horizontal, Spacing = GroupPad, VerticalAlignment = VerticalAlignment.Center, Children = { _chipDot, _chipName, _chipKind, _source } };
+        ToolTip.SetTip(_source, "What the piano roll edits on this track: its written tab, or a lane of MIDI takes (every take on the lane). Takes never touch the tab.");
+        _source.SelectionChanged += (_, _) =>
+        {
+            if (!_refreshing && _source.SelectedIndex >= 0 && _source.SelectedIndex < _sourceChoices.Count) UseSource(_sourceChoices[_source.SelectedIndex].Choice);
+        };
         var bar = new DockPanel { LastChildFill = false };
         var left = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
         left.Children.Add(Group(tools.ToArray()));
@@ -245,7 +253,12 @@ public sealed partial class PianoRollView
             _grid.IsEnabled = snap is not null;
             var track = Presenter.Track;
             _chipName.Text = track?.Name ?? "";
-            _chipKind.Text = track is null ? "" : Presenter.IsTab ? "Tab" : "MIDI";
+            _chipKind.Text = Presenter.SourceLabel;
+            _sourceChoices = Presenter.SourceOptions();
+            _source.ItemsSource = _sourceChoices.Select(option => option.Label).ToList();
+            var now = Presenter.IsTab ? PianoRollSourceChoice.OnTab : Presenter.Choice;
+            _source.SelectedIndex = _sourceChoices.FindIndex(option => option.Choice == now);
+            _source.IsVisible = _sourceChoices.Count > 1;
             _voice.IsVisible = Presenter.IsTab;
             _fold.SelectedItem = _host.Editing().PianoRollFold;
             _chipDot.Fill = TrackColour() is { } colour ? new SolidColorBrush(AvaloniaPalette.ColorOf(colour)) : null;

@@ -955,16 +955,16 @@ Window id="" name="TabForge Settings - 0.7.6" enabled=y focusable=y rect=0,0,129
       Text id="" name="Unbound" enabled=y focusable=n rect=986,7641,58,19
     Button id="ContentGrid.ClearTrackProperties" name="Clear Track properties hotkey 2" enabled=y focusable=y rect=1080,7637,52,26
       Text id="" name="Clear" enabled=y focusable=n rect=1093,7643,26,13
-    Text id="" name="Convert track to audio track" enabled=y focusable=n rect=359,7706,414,19
-    Text id="" name="Turn the selected instrument track into an audio track; its notation becomes a MIDI clip." enabled=y focusable=n rect=359,7728,406,30
+    Text id="" name="Convert track to audio/MIDI track" enabled=y focusable=n rect=359,7706,414,19
+    Text id="" name="Turn the selected tab track into an audio/MIDI track; its notation becomes a MIDI clip." enabled=y focusable=n rect=359,7728,406,30
     Text id="" name="Notes and tracks" enabled=y focusable=n rect=359,7761,86,13
-    Button id="ContentGrid.ConvertTrackTo" name="Convert track to audio track hotkey 1" enabled=y focusable=y rect=773,7723,120,34
+    Button id="ContentGrid.ConvertTrackTo" name="Convert track to audio/MIDI track hotkey 1" enabled=y focusable=y rect=773,7723,120,34
       Text id="" name="Unbound" enabled=y focusable=n rect=804,7731,58,19
-    Button id="ContentGrid.ClearConvertTrack" name="Clear Convert track to audio track hotkey 1" enabled=y focusable=y rect=898,7727,52,26
+    Button id="ContentGrid.ClearConvertTrack" name="Clear Convert track to audio/MIDI track hotkey 1" enabled=y focusable=y rect=898,7727,52,26
       Text id="" name="Clear" enabled=y focusable=n rect=911,7733,26,13
-    Button id="ContentGrid.ConvertTrackTo" name="Convert track to audio track hotkey 2" enabled=y focusable=y rect=955,7723,120,34
+    Button id="ContentGrid.ConvertTrackTo" name="Convert track to audio/MIDI track hotkey 2" enabled=y focusable=y rect=955,7723,120,34
       Text id="" name="Unbound" enabled=y focusable=n rect=986,7731,58,19
-    Button id="ContentGrid.ClearConvertTrack" name="Clear Convert track to audio track hotkey 2" enabled=y focusable=y rect=1080,7727,52,26
+    Button id="ContentGrid.ClearConvertTrack" name="Clear Convert track to audio/MIDI track hotkey 2" enabled=y focusable=y rect=1080,7727,52,26
       Text id="" name="Clear" enabled=y focusable=n rect=1093,7733,26,13
     Text id="" name="Next track" enabled=y focusable=n rect=359,7804,399,19
     Text id="" name="Select the next track." enabled=y focusable=n rect=359,7826,391,15

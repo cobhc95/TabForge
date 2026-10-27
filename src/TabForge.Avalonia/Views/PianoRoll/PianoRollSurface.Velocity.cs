@@ -16,7 +16,8 @@ public sealed partial class PianoRollSurface
 {
     private const double BarReach = 4;
 
-    private bool _relative;   // the press was on a selected bar and the pointer stays on it: every selected bar moves by the same amount
+    private bool _relative;   // the press was on a selected bar: for the whole drag every selected bar moves by the same amount from its press-time velocity
+    private readonly Dictionary<int, int> _pressVelocities = new();   // the selected bars' velocities at the press (the base of a relative drag)
     private int _pressVelocity;
     private Point _lastPaint;   // where the paint sweep's last step ended
 
@@ -38,12 +39,23 @@ public sealed partial class PianoRollSurface
         return best;
     }
 
+    /// <summary>True when a selected note's bar is within reach of <paramref name="x"/> (chord notes share a bar position: any selected one counts).</summary>
+    private bool SelectedBarAt(double x)
+    {
+        var notes = Presenter.Notes;
+        foreach (var i in Presenter.Selected)
+            if (i >= 0 && i < notes.Count && Math.Abs(x - (XOf(notes[i].Start) + StemWidth / 2)) <= BarReach + StemWidth) return true;
+        return false;
+    }
+
     private bool PressLane(Point p)
     {
         _gesture = Gesture.Velocity;
         _pressNote = BarAt(p.X);
         _pressVelocity = VelocityAt(p.Y);
-        _relative = _pressNote >= 0 && Presenter.Selected.Contains(_pressNote);
+        _relative = SelectedBarAt(p.X);
+        _pressVelocities.Clear();
+        if (_relative) foreach (var i in Presenter.Selected) if (i >= 0 && i < Presenter.Notes.Count) _pressVelocities[i] = Presenter.Notes[i].Velocity;
         _lastPaint = p;
         _moved = true;   // a press alone sets the bar
         _velocityPreview.Clear();
@@ -58,16 +70,14 @@ public sealed partial class PianoRollSurface
     // otherwise the sweep paints: every bar the pointer passes takes the pointer's height (interpolated between two moves, so a fast sweep skips none).
     private void DragLane(Point p)
     {
-        var notes = Presenter.Notes;
         var now = VelocityAt(p.Y);
-        if (_relative && Math.Abs(p.X - _press.X) <= BarReach + StemWidth && !_dragModifiers.HasFlag(KeyModifiers.Shift))
+        if (_relative && !_dragModifiers.HasFlag(KeyModifiers.Shift))   // sideways drift never turns it into a paint: the base is the press-time snapshot
         {
             _velocityPreview.Clear();
             var delta = now - VelocityAt(_press.Y);
-            foreach (var i in Presenter.Selected) _velocityPreview[i] = PianoRollEdits.ClampVelocity(notes[i].Velocity + delta);
+            foreach (var (i, velocity) in _pressVelocities) _velocityPreview[i] = PianoRollEdits.ClampVelocity(velocity + delta);
             return;
         }
-        if (_relative) { _relative = false; _velocityPreview.Clear(); }   // the sweep left the bar: from here it paints
         if (_dragModifiers.HasFlag(KeyModifiers.Shift))
         {
             _velocityPreview.Clear();

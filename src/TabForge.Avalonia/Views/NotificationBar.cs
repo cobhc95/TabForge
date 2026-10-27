@@ -87,13 +87,14 @@ public sealed class NotificationBar : IDisposable
 
     /// <summary>Shows a notice: newest replaces the shown one. A <paramref name="source"/> makes it sticky (updated in place when repeated);
     /// null is a transient (auto-hides, then the newest sticky returns). <paramref name="timeout"/> overrides the default
-    /// (Info 5 s, Info with action 8 s, Warn/Error sticky). UI thread only (posted otherwise).</summary>
-    public void Show(string text, NotificationKind kind, (string Label, Action Callback)? action = null, TimeSpan? timeout = null, string? source = null, string? tooltip = null)
+    /// (Info 5 s, Info with action 8 s, Warn/Error sticky). Only Error/Warning/Recording/Render categories show; Info is dropped. UI thread only (posted otherwise).</summary>
+    public void Show(string text, NotificationKind kind, NoticeCategory category, (string Label, Action Callback)? action = null, TimeSpan? timeout = null, string? source = null, string? tooltip = null)
     {
         if (_disposed) return;
+        if (!NoticeChannel.Shows(category)) return;   // Info notices never show the bar
         if (!_ui.CheckAccess())
         {
-            _ui.Post(() => Show(text, kind, action, timeout, source, tooltip));
+            _ui.Post(() => Show(text, kind, category, action, timeout, source, tooltip));
             return;
         }
         if (source is not null)

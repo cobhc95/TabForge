@@ -59,7 +59,7 @@ public sealed partial class MixerWindow
         {
             if (e.Delta.Y == 0) return;
             if (songEdit) BeginEdit(stepLabel);
-            slider.Value = MixerStripPresenter.WheelValue(slider.Value, min, max, e.Delta.Y > 0, e.KeyModifiers.HasFlag(KeyModifiers.Control));
+            slider.Value = MixerStripPresenter.WheelValue(slider.Value, min, max, e.Delta.Y > 0, e.KeyModifiers.HasPrimary());
             e.Handled = true;
         };
         return slider;

@@ -1,4 +1,5 @@
 using System.IO;
+using TabForge.Platform;
 using TabForge.Services;
 
 namespace TabForge.Plugins;
@@ -13,7 +14,7 @@ public static class ReaperPluginFolders
     /// <summary>The existing local folders of <c>vstpath64</c> (else <c>vstpath</c>) in <paramref name="iniPath"/> (default: %APPDATA%\REAPER\reaper.ini); none when Reaper is not set up here or the file is unreadable.</summary>
     public static List<string> Roots(string? iniPath = null)
     {
-        iniPath ??= Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "REAPER", "reaper.ini");
+        iniPath ??= Path.Combine(AppFolders.Current.ReaperResources, "reaper.ini");
         try
         {
             if (!File.Exists(iniPath)) return new();

@@ -24,7 +24,7 @@ public sealed class SongFxChainHost : IFxChainHost
     private readonly Action? _changed;
     private AudioEngineFxAdapter? _engine;
     private readonly TabForge.Plugins.PluginTrust _trust;
-    private readonly IPluginFileTrust _files = new TabForge.Platform.Windows.WindowsPluginFileTrust();
+    private readonly IPluginFileTrust _files = TabForge.Platform.PluginFileTrusts.Create();
 
     /// <summary>Opens the host on the song the chain windows edit.</summary>
     /// <param name="document">The song whose tracks the windows edit.</param>

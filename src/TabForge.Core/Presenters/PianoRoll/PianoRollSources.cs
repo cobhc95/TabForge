@@ -21,6 +21,18 @@ public interface IPianoRollSource
     bool Write(SongProject song, TrackModel track, PianoRollTimeMap map, IReadOnlyList<PianoRollNote> after);
 }
 
+/// <summary>Which notes the piano roll edits on a track: Auto (the track decides), the written Tab, or one MIDI clip Lane (every take on it; a Fresh lane is shown even with no take, and its first note creates one).</summary>
+public enum PianoRollSourceKind { Auto, Tab, Lane }
+
+public readonly record struct PianoRollSourceChoice(PianoRollSourceKind Kind = PianoRollSourceKind.Auto, int Lane = 0, bool Fresh = false)
+{
+    public static PianoRollSourceChoice OnTab => new(PianoRollSourceKind.Tab);
+    public static PianoRollSourceChoice OnLane(int lane) => new(PianoRollSourceKind.Lane, lane);
+
+    /// <summary>A lane that may hold no take yet (an empty take lane was clicked): it shows only that lane, and the first note written there creates a take on it.</summary>
+    public static PianoRollSourceChoice OnFreshLane(int lane) => new(PianoRollSourceKind.Lane, lane, true);
+}
+
 public static class PianoRollSources
 {
     private static readonly IPianoRollSource Clips = new PianoRollClipSource();
@@ -28,6 +40,15 @@ public static class PianoRollSources
 
     /// <summary>The source of <paramref name="track"/>'s notes: its MIDI clips for a MIDI track, else its written tab.</summary>
     public static IPianoRollSource For(TrackModel track) => PianoRollViewRules.UsesClips(track) ? Clips : Tab;
+
+    /// <summary>The source for <paramref name="choice"/>: the chosen tab or clip lane (a lane the track no longer has falls back to Auto).</summary>
+    public static IPianoRollSource For(TrackModel track, PianoRollSourceChoice choice) => choice.Kind switch
+    {
+        PianoRollSourceKind.Tab => Tab,
+        PianoRollSourceKind.Lane when choice.Fresh => new PianoRollClipSource(choice.Lane, strict: true),
+        PianoRollSourceKind.Lane when track.AudioClips.Any(clip => clip.IsMidi && clip.Lane == choice.Lane) => new PianoRollClipSource(choice.Lane),
+        _ => For(track),
+    };
 
     /// <summary>The notes in a stable order: by start, then pitch, then length.</summary>
     public static List<PianoRollNote> Sorted(IEnumerable<PianoRollNote> notes) =>

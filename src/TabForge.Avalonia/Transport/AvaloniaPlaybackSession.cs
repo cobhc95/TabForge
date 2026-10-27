@@ -58,6 +58,16 @@ public sealed class AvaloniaPlaybackSession : IDisposable
 
     public bool IsPlaying => _transport.IsPlaying;
     public bool IsPaused => _transport.IsPaused;
+
+    /// <summary>True once this song has played since it was opened (the status bar reads Ready before, Stopped after).</summary>
+    public bool HasPlayed { get; private set; }
+
+    /// <summary>The performed song second at the drawn playhead (repeats and jumps applied, the count-in held at the start); allocates only when the timeline changes. UI thread only.</summary>
+    public double PlayheadSongSec => SongMap().SongSecAt(_clock.Position.ElapsedMs);
+
+    /// <summary>True while the playing timeline's count-in sounds, before the music starts.</summary>
+    public bool InCountIn => _transport.IsPlaying && !_transport.StartPending && _transport.Timeline is { } timeline && _clock.Position.ElapsedMs < timeline.CountInMs;
+
     public bool Loop => _transport.Loop;
     public bool Metronome => _transport.Metronome;
     public bool CountIn => _transport.CountIn;
@@ -468,6 +478,7 @@ public sealed class AvaloniaPlaybackSession : IDisposable
         var running = _transport.IsPlaying && !_transport.IsPaused;
         if (running && !_frames.IsRunning) _frames.Start();
         else if (!running && _frames.IsRunning) _frames.Stop();
+        HasPlayed |= _transport.IsPlaying;
         if (_transport.IsPlaying == _lastPlaying && _transport.IsPaused == _lastPaused) return;
         _lastPlaying = _transport.IsPlaying;
         _lastPaused = _transport.IsPaused;

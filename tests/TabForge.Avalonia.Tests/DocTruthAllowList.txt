@@ -32,3 +32,7 @@ Interlocked
 .github/workflows/build-bridge.yml
 .github/workflows/fuzz-weekly.yml
 windows-ci.yml
+
+TABFORGE_FFMPEG
+libmp3lame.0.dylib
+libmp3lame.so.0

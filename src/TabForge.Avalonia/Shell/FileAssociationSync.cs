@@ -1,3 +1,4 @@
+using TabForge.Avalonia.Views;
 using System;
 using Avalonia.Controls;
 using System.IO;
@@ -10,7 +11,7 @@ namespace TabForge.Avalonia.Shell;
 
 // Owns: making the Windows "Open with TabForge" registration match the Windows-integration setting (general.associate): at start-up and each time the
 //     setting changes, only when the two differ; a refusal by Windows is reported to the person.
-// Does not own: the registry writes (Platform/AvaloniaFileAssociations behind IFileAssociations), the extension names (Services/FileAssociations),
+// Does not own: the registry writes (Platform/WindowsFileAssociations behind IFileAssociations), the extension names (Services/FileAssociations),
 //     the setting itself (MainWindowSettings).
 // Tests: TabForge.Avalonia.Tests.FileAssociationSyncTests.
 /// <summary>Applies the Windows-integration setting to the file associations. UI thread only.</summary>
@@ -43,7 +44,7 @@ public sealed class FileAssociationSync
         catch (Exception ex) when (ex is UnauthorizedAccessException or SecurityException or IOException)
         {
             // Reported, not swallowed: Windows refused the write, so the registry is as it was before this change.
-            _report(FileAssociationText.Refused);
+            _report.Error(FileAssociationText.Refused);
         }
     }
 

@@ -82,11 +82,13 @@ public sealed class NcHitTestHook
     /// <paramref name="scale"/> the monitor scale and <paramref name="maximisedInset"/> the physical overhang of a maximised
     /// window past its monitor (Avalonia's OffScreenMargin; ignored: points and button rects share the window-relative space,
     /// so the overhang cancels on both sides). Without a title bar only the
-    /// resize edges are answered (0 elsewhere: Avalonia decides).
+    /// resize edges are answered (0 elsewhere: Avalonia decides). In full screen the whole window is client: the caption row is
+    /// hidden (its stale rectangles must not claim the menu bar), nothing drags, resizes or shows Snap Layouts.
     /// </summary>
     public static int HitCode(PixelPoint screen, PixelRect windowRect, double scale, bool maximised, PixelPoint maximisedInset,
-        ICaptionButtonRects? bar)
+        ICaptionButtonRects? bar, bool fullScreen = false)
     {
+        if (fullScreen) return HtClient;
         var client = new UiPoint((screen.X - windowRect.X) / scale, (screen.Y - windowRect.Y) / scale);
         var hit = bar is null ? ChromeHit.Client
             : ChromeHitRules.Classify(client, bar.TabBounds, bar.TabActionBounds, bar.CaptionButtons, bar.CaptionBounds);
@@ -181,7 +183,7 @@ public sealed class NcHitTestHook
             }
             // The press never reached us (the first click that activates the window can be eaten): a lone release on empty caption still opens the tab.
             // A release long after activation is the end of a drag that began in another app, so it does nothing.
-            case WmNcMButtonUp when AcceptsLoneRelease(Environment.TickCount64, _activatedAt) && WindowRectOf(hwnd) is { } rect && MiddleClickAlone(ScreenPointOf(lParam), rect):
+            case WmNcMButtonUp when _window.WindowState != WindowState.FullScreen && AcceptsLoneRelease(Environment.TickCount64, _activatedAt) && WindowRectOf(hwnd) is { } rect && MiddleClickAlone(ScreenPointOf(lParam), rect):
                 _bar?.NativeMiddleClick();
                 handled = true;
                 return IntPtr.Zero;
@@ -229,9 +231,9 @@ public sealed class NcHitTestHook
     private static UiPoint DipsOf(PixelPoint screen, PixelRect windowRect, double scale) =>
         new((screen.X - windowRect.X) / scale, (screen.Y - windowRect.Y) / scale);
 
-    private bool MiddleDown(IntPtr hwnd, PixelPoint screen) => WindowRectOf(hwnd) is { } r && MiddleDown(screen, r, _window.RenderScaling, _bar);
+    private bool MiddleDown(IntPtr hwnd, PixelPoint screen) => _window.WindowState != WindowState.FullScreen && WindowRectOf(hwnd) is { } r && MiddleDown(screen, r, _window.RenderScaling, _bar);
 
-    private bool MiddleUp(IntPtr hwnd, PixelPoint screen) => WindowRectOf(hwnd) is { } r && MiddleUp(screen, r, _window.RenderScaling, _bar);
+    private bool MiddleUp(IntPtr hwnd, PixelPoint screen) => _window.WindowState != WindowState.FullScreen && WindowRectOf(hwnd) is { } r && MiddleUp(screen, r, _window.RenderScaling, _bar);
 
     private PixelRect? WindowRectOf(IntPtr hwnd)
     {
@@ -248,7 +250,7 @@ public sealed class NcHitTestHook
         var inset = new PixelPoint((int)Math.Round(margin.Left * scale), (int)Math.Round(margin.Top * scale));
         _bar ??= _window.GetVisualDescendants().OfType<ICaptionButtonRects>().FirstOrDefault();
         return HitCode(screen, new PixelRect(r.Left, r.Top, r.Right - r.Left, r.Bottom - r.Top), scale,
-            _window.WindowState == WindowState.Maximized, inset, _bar);
+            _window.WindowState == WindowState.Maximized, inset, _bar, _window.WindowState == WindowState.FullScreen);
     }
 
     private void Invoke(ChromeHit button)

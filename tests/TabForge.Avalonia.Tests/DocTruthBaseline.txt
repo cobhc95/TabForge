@@ -20,8 +20,8 @@ ARCHITECTURE.md: `Task`
 ARCHITECTURE.md: `TimelineChanged`
 ARCHITECTURE.md: `TrackController`
 ARCHITECTURE.md: `WarmIdle`
-ARCHITECTURE.md: `net8.0-windows`
-ARCHITECTURE.md: `net8.0`
+ARCHITECTURE.md: `net10.0-windows`
+ARCHITECTURE.md: `net10.0`
 ARCHITECTURE_TIDY.md: `Core/Score/…`
 ARCHITECTURE_TIDY.md: `Source/`
 AREA-MAP.md: `Autosave/`

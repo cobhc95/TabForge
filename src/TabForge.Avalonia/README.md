@@ -5,7 +5,11 @@ The Avalonia app for TabForge: an application with the Core theme and a main win
 - Owns: the Avalonia start-up (`Program`, `App`) and the audio engine start (the same internal flag the WPF app uses), which hands off to `EngineHost` before Avalonia starts (Windows only), the preview window (`MainWindow`: menu bar, tab strip, View and tempo bar, the dock workspace and the status notice), the main menu (`MainWindowMenu`, built from `MainMenuTable`; `MainWindowCommands` maps command ids to handlers and a row with no handler is disabled), the window lifetime (`MainWindowLifetime`: key routing and the close question), the window key table (`MainWindowKeyboard`, from `HotkeyCatalog`), the document tabs (`MainWindowTabs`: new, switch, close with the save question, whose Save saves first), File > Save and Save As (`MainWindowSaving`, through `DocumentSaveFlow`), File > Open and Export MIDI (`MainWindowFile`, through `DocumentController`), the Edit, Note and Bar commands the score editor runs (`MainWindowEdit`) and the palette tools that ask a question first (`MainWindowBarTools`, windows built on `BarDialogWindow`), Edit Copy, Cut, Paste and Paste Special (`MainWindowClipboard`) and the panes following the shown tab (`MainWindowDocumentPanes`) and the preview dialog list (`PreviewToolsMenu`), and the Avalonia adapters of the Core ports (the files below).
 - Does not own: any feature logic. The Chord finder view (`Source/src/TabForge.Avalonia/Views/ChordFinderWindow.axaml`) is layout and wiring only; its choices, notes and status texts come from `ChordFinderPresenter` in Core. It reaches the shared ports (in `Source/src/TabForge.Core/Platform`) through the Core project only.
 - Tests: the headless test project in the tests folder (`dotnet test`).
-- References: `Source/src/TabForge.Core` (its `net8.0` build).
+- References: `Source/src/TabForge.Core` (its `net10.0` build).
+
+## Layout
+
+Only the project files, `app.manifest`, `AREA-MAP.md` and this README sit at the root. `App/` holds `Program` and `App`; `MainWindow/` holds the `MainWindow` partials (its subfolders group them: `Menus/`, `Timeline/`, `Clips/`, `Editing/`, `Tracks/`, `Transport/`, `File/`, `Band/`, `Tools`); `Settings/` the settings bindings; `Metrics/` window and density sizing.
 
 ## Shell
 
@@ -23,7 +27,7 @@ Not added: an `IAppServices` adapter. Its property bag has no Avalonia equivalen
 
 ## Score opening
 
-`ScoreOpenFlow` (`Source/src/TabForge.Avalonia/ScoreOpenFlow.cs`) opens a score file for the shell: a Guitar Pro file is parsed in the import worker, and a file whose worker cannot start is refused. The tabs and dialogs stay in `MainWindowFile`.
+`ScoreOpenFlow` (`Source/src/TabForge.Avalonia/MainWindow/File/ScoreOpenFlow.cs`) opens a score file for the shell: a Guitar Pro file is parsed in the import worker, and a file whose worker cannot start is refused. The tabs and dialogs stay in `MainWindowFile`.
 
 ## Theme gaps
 

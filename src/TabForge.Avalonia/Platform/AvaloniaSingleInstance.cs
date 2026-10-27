@@ -1,24 +1,23 @@
 using System;
-using System.Diagnostics;
 using System.IO;
-using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
-using System.Threading;
+using TabForge.Platform;
+using TabForge.Services;
 
 namespace TabForge.Avalonia.Platform;
 
-// Owns: the single-instance named mutex for UI launches: the second UI launch of the same exe activates the
-// existing window and exits 0 before Avalonia starts. Helpers bypass; an abandoned mutex counts as owned;
-// any mutex failure proceeds to a normal start.
-// Does not own: song handover (none: just activation), the helpers themselves (Program) or the app start (App).
-// Tests: none dedicated(name/helper rules; no second process started).
+// Owns: the single-instance lock for UI launches: an exclusive lock file per exe path under UserPaths (FileShare.None, held for the process
+// lifetime, released by the OS when the process dies, so a crash leaves a stale file but never a stale lock). The second UI launch of the same
+// exe asks the running window to come forward and exits 0 before Avalonia starts. Helpers bypass; any lock failure proceeds to a normal start.
+// Does not own: the song hand-off (SingleInstanceService, named pipe), the Windows focus call (Shell/Win32/WindowsInstanceFocus), the helpers (Program) or the app start (App).
+// Tests: SingleInstanceTests, UnifiedCrashRoundOneTests.
 /// <summary>Guards UI launches so only one window per exe path runs.</summary>
 internal static class AvaloniaSingleInstance
 {
-    private static Mutex? _held;
+    private static FileStream? _held;
 
-    /// <summary>True for helper starts that must bypass the mutex (no window).</summary>
+    /// <summary>True for helper starts that must bypass the lock (no window).</summary>
     internal static bool IsHelperArgs(string[] args)
     {
         if (args.Length == 0) return false;
@@ -29,13 +28,28 @@ internal static class AvaloniaSingleInstance
             || string.Equals(first, global::TabForge.Services.ImportWorker.Argument, StringComparison.Ordinal);
     }
 
-    /// <summary>The mutex name for an exe path: same exe shares one name, different paths do not.</summary>
-    internal static string MutexNameFor(string exePath)
+    /// <summary>The lock file name for an exe path: same exe shares one name, different paths do not.</summary>
+    internal static string LockNameFor(string exePath)
     {
-        var normalized = exePath.ToLowerInvariant();
-        using var sha = SHA256.Create();
-        var hash = Convert.ToHexString(sha.ComputeHash(Encoding.UTF8.GetBytes(normalized)))[..16];
-        return "TabForge.Avalonia." + hash;
+        var normalized = PathComparer.Comparison == StringComparison.Ordinal ? exePath : exePath.ToLowerInvariant();   // a case-sensitive file system keeps case
+        var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(normalized)))[..16];
+        return "TabForge.Avalonia." + hash + ".lock";
+    }
+
+    /// <summary>
+    /// Takes the exclusive lock at <paramref name="lockPath"/>. True with the open stream when this process now owns it (a leftover file from a crashed
+    /// run is simply opened again); false when another live process holds it. Any other failure (unwritable folder) throws so the caller proceeds.
+    /// </summary>
+    internal static bool TryAcquire(string lockPath, out FileStream? held)
+    {
+        held = null;
+        Directory.CreateDirectory(Path.GetDirectoryName(lockPath)!);
+        try
+        {
+            held = new FileStream(lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None, 1);
+            return true;
+        }
+        catch (IOException) when (File.Exists(lockPath)) { return false; } // the file is there and cannot be opened exclusively: a live instance holds it
     }
 
     /// <summary>
@@ -45,95 +59,21 @@ internal static class AvaloniaSingleInstance
     internal static bool IsSecondInstance(string[] args)
     {
         if (IsHelperArgs(args)) return false;
-        string exePath;
-        try { exePath = Environment.ProcessPath ?? AppContext.BaseDirectory; }
-        catch (Exception) { return false; }
-        string name;
-        try { name = MutexNameFor(exePath); }
-        catch (Exception) { return false; }
-        Mutex? candidate = null;
         try
         {
-            candidate = new Mutex(false, name);
-            bool owned;
-            try { owned = candidate.WaitOne(0, false); }
-            catch (AbandonedMutexException) { owned = true; } // abandoned = owned
-            if (!owned)
+            var exePath = Environment.ProcessPath ?? AppContext.BaseDirectory;
+            if (TryAcquire(Path.Combine(UserPaths.Local, LockNameFor(exePath)), out var stream))
             {
-                try { ActivateExistingSameExeWindow(exePath); }
-                catch (Exception) { } // swallow: best-effort activation of the running window
-                try { candidate.Dispose(); }
-                catch (Exception) { } // swallow: best-effort dispose; a second launch still exits
-                return true;
+                _held = stream;
+                return false;
             }
-            _held = candidate;
-            candidate = null;
-            return false;
+            try { if (OperatingSystem.IsWindows()) Shell.Win32.WindowsInstanceFocus.ActivateExistingSameExeWindow(exePath); }
+            catch (Exception) { } // swallow: best-effort activation of the running window
+            return true;
         }
         catch (Exception)
         {
-            // Failures proceed: a mutex that cannot be created/waited must never stop the app.
-            try { candidate?.Dispose(); }
-            catch (Exception) { } // swallow: best-effort dispose; failures proceed with a new window
-            return false;
+            return false; // a lock that cannot be created must never stop the app
         }
     }
-
-    private static void ActivateExistingSameExeWindow(string exePath)
-    {
-        if (!OperatingSystem.IsWindows()) return;
-        string full;
-        try { full = Path.GetFullPath(exePath); }
-        catch (Exception) { full = exePath; }
-        Process current;
-        try { current = Process.GetCurrentProcess(); }
-        catch (Exception) { return; }
-        Process[] peers;
-        try { peers = Process.GetProcessesByName(current.ProcessName); }
-        catch (Exception) { return; }
-        foreach (var peer in peers)
-        {
-            try
-            {
-                if (peer.Id == current.Id) continue;
-                string? other;
-                try { other = peer.MainModule?.FileName; }
-                catch (Exception) { continue; }
-                if (other is null) continue;
-                string otherFull;
-                try { otherFull = Path.GetFullPath(other); }
-                catch (Exception) { continue; }
-                if (!string.Equals(otherFull, full, StringComparison.OrdinalIgnoreCase)) continue;
-                var hwnd = peer.MainWindowHandle;
-                if (hwnd == IntPtr.Zero) continue;
-                try
-                {
-                    if (IsIconic(hwnd)) ShowWindow(hwnd, SwRestore);
-                    else ShowWindow(hwnd, SwShow);
-                    SetForegroundWindow(hwnd);
-                }
-                catch (Exception) { } // swallow: best-effort activation of the running window
-                break;
-            }
-            finally
-            {
-                try { peer.Dispose(); }
-                catch (Exception) { } // swallow: best-effort dispose while enumerating peers
-            }
-        }
-        try { current.Dispose(); }
-        catch (Exception) { } // swallow: best-effort dispose after peer activation
-    }
-
-    private const int SwShow = 5;
-    private const int SwRestore = 9;
-
-    [DllImport("user32.dll", SetLastError = false)]
-    private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
-
-    [DllImport("user32.dll", SetLastError = false)]
-    private static extern bool SetForegroundWindow(IntPtr hWnd);
-
-    [DllImport("user32.dll", SetLastError = false)]
-    private static extern bool IsIconic(IntPtr hWnd);
 }

@@ -1,4 +1,5 @@
 using TabForge.AudioEngine.Plugins;
+using TabForge.AudioEngine.Plugins.Clap;
 
 namespace TabForge.AudioEngine.Isolation;
 
@@ -23,7 +24,12 @@ public static class PluginInfoProbe
             // VST3: prefer the bundle's instrument class (a bundle with one reports it); VST2 reports its own role.
             using var plugin = PluginFactory.CreateVerified(path, "", isInstrument: true, 48000, 256, args.Length > 2 ? args[2] : "", locationTrusted: false, new EngineThreads(new EngineLogWriter()), create);
             var role = plugin.IsInstrument ? "Instrument" : "Effect";
-            Console.Out.WriteLine(plugin is Vst2Plugin vst2 ? $"{role}|{Clean(vst2.Vendor)}|{Clean(vst2.ProductName)}" : $"{role}||");
+            Console.Out.WriteLine(plugin switch
+            {
+                Vst2Plugin vst2 => $"{role}|{Clean(vst2.Vendor)}|{Clean(vst2.ProductName)}",
+                ClapPlugin clap => $"{role}|{Clean(clap.Vendor)}|{Clean(clap.ProductName)}",   // CLAP names itself in its descriptor
+                _ => $"{role}||",
+            });
             Console.Out.Flush();
             return 0;
         }

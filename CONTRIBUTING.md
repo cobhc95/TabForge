@@ -6,7 +6,7 @@ The maintainer reviews every change. Small, focused pull requests are merged fas
 
 Contributions are made under the repository licence (`LICENSE`; third-party components are listed in `THIRD_PARTY.md`). Do not add copyrighted songs, samples or artwork. The repository ships one original demo song under `samples/`, and the tests generate their songs in code.
 
-Start with `START_HERE.md` (layers, pathways, where things live) and `docs/RECIPES.md` (file lists for common changes). Read `ARCHITECTURE.md` before you change anything that crosses a process, thread or file-format boundary.
+Start with `START_HERE.md` (layers, pathways, where things live) and `docs/RECIPES.md` (file lists for common changes). Read `docs/architecture/ARCHITECTURE.md` before you change anything that crosses a process, thread or file-format boundary.
 
 ## What you need
 
@@ -31,7 +31,7 @@ dotnet build TabForge.sln -c Release --no-restore
 
 ## Run the self-tests
 
-TabForge has one headless test suite built into the executable. No audio device, plug-in or song file is needed. Details are in `docs/TESTING.md`.
+TabForge has one headless test suite built into the executable. No audio device, plug-in or song file is needed. Details are in `docs/guides/TESTING.md`.
 
 From the repository root (the tests find the source tree from the working directory):
 
@@ -47,8 +47,8 @@ TabForge self-test: 4887 passed, 0 failed, 3 skipped
 
 That line is the result. The exit code alone is not enough. A failing check is written as `FAIL  <check>  -> <detail>`; search the log for `FAIL` and `SKIP`.
 
-- **One test.** `--only TestName[,TestName]` runs just the named tests. The full command reference (one test, one area, the CI gate, the headless diagnostics) is `docs/DEBUGGING.md`.
-- **Areas.** `--areas ui` (or `--areas settings,persistence`) runs one area plus the tests that have no area. Use it while you work. Run the whole suite before you open a pull request. The area names are listed in `docs/TESTING.md`.
+- **One test.** `--only TestName[,TestName]` runs just the named tests. The full command reference (one test, one area, the CI gate, the headless diagnostics) is `docs/guides/DEBUGGING.md`.
+- **Areas.** `--areas ui` (or `--areas settings,persistence`) runs one area plus the tests that have no area. Use it while you work. Run the whole suite before you open a pull request. The area names are listed in `docs/guides/TESTING.md`.
 - **Groups and `--require ci`.** Some tests belong to named groups. `--require ci` makes the CI groups and two hygiene checks mandatory: a group that did not run, threw, or ran fewer checks than its minimum fails the whole run. A deleted or emptied test cannot pass. The registry is `src/TabForge.Avalonia/SelfTests/SelfTestRequirements.cs`.
 - **Small-screen mode.** CI runs on a 1024 x 728 screen at 100% scale. `TABFORGE_SELFTEST_SMALLSCREEN=1` makes your PC judge test windows by the same screen, so a layout test that passes on a big monitor but fails on CI fails for you too.
 - **No local songs.** `TABFORGE_NO_LOCAL_SONGS=1` ignores any local song folder, as on a clean checkout.
@@ -65,7 +65,7 @@ That line is the result. The exit code alone is not enough. A failing check is w
 | Responsibilities moved out of windows | `src/TabForge.Core/Controllers/` |
 | Window shell helpers | `src/TabForge.Core/Shell/` |
 | Audio client and rendering | `src/TabForge.Core/Audio/`, `src/TabForge.Core/Rendering/` (the engine is reached only through the client) |
-| Audio engine, mixer, plug-in hosting, synth, recorder | `src/TabForge.AudioEngine/` (real-time rules: `ARCHITECTURE.md`, section 4) |
+| Audio engine, mixer, plug-in hosting, synth, recorder | `src/TabForge.AudioEngine/` (real-time rules: `docs/architecture/ARCHITECTURE.md`, section 4) |
 | Wire contracts shared by both sides | `src/TabForge.Audio.Contracts/` (no dependencies) |
 | Native VST3 bridge | `native/tfvst3/` |
 | Headless commands and tests | `src/TabForge.Core/Diagnostics/`, `src/TabForge.Avalonia/SelfTests/` (the basic set) and `tests/TabForge.Avalonia.Tests/` (the full suite) |
@@ -73,7 +73,7 @@ That line is the result. The exit code alone is not enough. A failing check is w
 
 To find the code, the pathway and the self-tests for a feature, start with `docs/FEATURE_MAP.md` and the feature's page in `docs/feature-map/`. The test tables in `docs/feature-map/tests.md` are generated (`TabForge.exe --feature-map`) and a self-test keeps them current.
 
-A command is made bindable in `HotkeyCatalog`, in the hotkey presets and in `TOOLS_AND_HOTKEYS.md`. A setting lives in the settings classes, `SettingsValidator` and `SettingsMigration`, and has a Preferences row.
+A command is made bindable in `HotkeyCatalog`, in the hotkey presets and in `docs/guides/TOOLS_AND_HOTKEYS.md`. A setting lives in the settings classes, `SettingsValidator` and `SettingsMigration`, and has a Preferences row.
 
 ## Adding a feature without growing the big windows
 
@@ -95,7 +95,7 @@ Use the shared pathways instead of writing a new one:
 - **Subscriptions.** Subscribe through `OwnedSubscriptions` so a closed window can be collected (the `window-lifetime` and `leaks` tests check this).
 - **Files.** Write through `FilePathPolicy.WriteAtomically`. Bound every read with `InputLimits`.
 
-Layering rules (which project may use which) are described in `ARCHITECTURE.md`, section 1, and enforced by self-tests. The full list will be under [Dependency rules](ARCHITECTURE.md#dependency-rules).
+Layering rules (which project may use which) are described in `docs/architecture/ARCHITECTURE.md`, section 1, and enforced by self-tests. The full list will be under [Dependency rules](docs/architecture/ARCHITECTURE.md#dependency-rules).
 
 ### Feature checklist
 
@@ -106,7 +106,7 @@ Answer these in the pull request description.
 3. **New shared state or dependency.** Did you add static state, a new reference between projects or folders, a new package or a new global? If yes, say why nothing existing fits.
 4. **Tests.** Which self-test pins the behaviour? Settings: a test must change the setting, check it is stored, survives a reload and changes nothing else.
 5. **Text.** Is every new user-visible string checked against a test, so a rename cannot drift unnoticed?
-6. **Commands and settings.** Is a new command bindable and in the presets and `TOOLS_AND_HOTKEYS.md`? Is a new setting in the validator, the migration and Preferences?
+6. **Commands and settings.** Is a new command bindable and in the presets and `docs/guides/TOOLS_AND_HOTKEYS.md`? Is a new setting in the validator, the migration and Preferences?
 7. **Docs.** Is there a user-facing line under "Unreleased" in `CHANGELOG.md` (final behaviour only), and are the documents that name what you changed up to date?
 8. **Comments.** Do the comments follow the rule below, with no history in them?
 
@@ -115,7 +115,7 @@ Answer these in the pull request description.
 A new option that highlights something in the score:
 
 - The setting: a field and default, a bound in `SettingsValidator`, a migration entry, a Preferences row.
-- The command, if there is one: a `HotkeyCatalog` entry, preset entries and a line in `TOOLS_AND_HOTKEYS.md`.
+- The command, if there is one: a `HotkeyCatalog` entry, preset entries and a line in `docs/guides/TOOLS_AND_HOTKEYS.md`.
 - The behaviour: a controller with a host interface, created by the window.
 - The test: a self-test that runs the controller against a fake host, plus the settings test.
 - The changelog line.
@@ -146,7 +146,7 @@ Not good: `// Fixed 2 March: this used to allocate.`
 ## Writing a test
 
 - Tests are static methods in the `SelfTest` partial class (narrow tests in `tests/TabForge.Avalonia.Tests/<Area>/SelfTest*.cs`; only the basic set is in `src/TabForge.Avalonia/SelfTests/`). They are registered in `RunFullSuite` (`tests/TabForge.Avalonia.Tests/SelfTestFullSuite.cs`) with `Guard(TestName)`, or `GuardGroup("<group>", TestName)` for a required group, and mapped to an area in the area table of that file (`SelfTest.cs` for the basic set).
-- Use `Check(name, condition, detail)`, `Eq(name, expected, actual)` and `Skip(name, reason, requirement)`. A skip is only for something truly unavailable on the machine. Every skip is listed in `docs/TESTING.md`, and CI has a skip budget.
+- Use `Check(name, condition, detail)`, `Eq(name, expected, actual)` and `Skip(name, reason, requirement)`. A skip is only for something truly unavailable on the machine. Every skip is listed in `docs/guides/TESTING.md`, and CI has a skip budget.
 - Do not depend on the screen. A guard fails a test that opens a top-level window larger than 1024 x 728. Lay a control out at an explicit size with `Measure` and `Arrange` (see `FitStage` in `tests/TabForge.Avalonia.Tests/Editor/SelfTestTrackListFit.cs`).
 - Do not depend on local files. Generate songs in code (`tests/TabForge.Avalonia.Tests/GuitarPro/SelfTestSyntheticFixtures.cs`).
 - Do not depend on the clock. A performance check compares two paths against each other; it never asserts an absolute time.

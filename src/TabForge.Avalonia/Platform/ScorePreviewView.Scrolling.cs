@@ -45,7 +45,7 @@ public sealed partial class ScorePreviewView
     {
         base.OnPointerWheelChanged(e);
         if (this.FindAncestorOfType<ScrollViewer>() is not { } viewer) return;
-        if (e.KeyModifiers.HasFlag(KeyModifiers.Control))
+        if (e.KeyModifiers.HasPrimary())
         {
             // Ctrl + wheel zooms one step per notch, about the pointer; the viewer does not also scroll.
             if (e.Delta.Y != 0) ZoomStep(Math.Sign(e.Delta.Y), e.GetPosition(viewer));

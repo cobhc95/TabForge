@@ -59,6 +59,15 @@ TabForge saves safely. It writes to a temporary file beside your song and swaps 
 
 A recorded clip is linked to its audio file by path, and it is not stored in the song. When you move a song to another computer, move its Media folder with it.
 
+When a song uses audio files from outside its own folder, saving can copy them with the song so it works on another PC. The first save, **Save As…** and a save after you add a new outside file open the window **Copy audio with this song?**. It lists the files and their sizes, and offers two layouts, shown as cards with a small folder sketch. Click anywhere on a card to pick it, or use the arrow keys and Space.
+
+- **One song folder** (the default): TabForge makes a folder named after the song, moves the song file into it (nothing is deleted) and copies the audio into an `Audio` folder beside it. Send the whole folder.
+- **Media folder beside**: the song stays where it is and the audio goes into a `<song> Media` folder next to it.
+
+**Copy audio** copies the files and points the clips at the copies; **Keep links** leaves the files where they are. Your original files are never changed or deleted, and files with the same name get a number. Tick **Remember my choice** to keep both answers; you can change them later in **Preferences > Files & Backups**, in the rows **External media when saving** and **Collected audio layout**. If the song cannot be moved (for example another program has it open), TabForge says so in an error notice and uses the Media folder beside the song instead. A path inside the song's folder is saved relative, so the folder can be moved as a whole.
+
+If audio files can no longer be found, the clips are drawn hatched. Right-click one and choose **Locate file…** to pick its file (other missing files in the same folder are relinked with it), or **Find all missing audio…** to pick a folder: TabForge searches it and every subfolder by file name, lists what it found, and **Relink** fixes them all in one undo step. **File > Find missing media** opens the same window.
+
 > **Warning:** Saving under the name of an existing file replaces that file, and Windows asks you to confirm. To keep the original, save under a new name with **Save As…**.
 
 ### Try it: Save and reopen
@@ -137,7 +146,7 @@ Exports write a copy of the song in another form. They never change the open son
 
 ## Render to an audio file
 
-Rendering turns the whole mix into a sound file, faster than real time. Choose **File > Render to audio file…** (`Ctrl+Alt+R`). The **Render to file** window opens, and playback stops.
+Rendering turns the whole mix into a sound file, faster than real time. Choose **File > Export > Audio file…** (`Ctrl+Alt+R`). The **Render to file** window opens, and playback stops.
 
 The top half holds the choices about what to render.
 
@@ -194,7 +203,7 @@ TabForge opens files up to 128 MB. A song can have up to 256 tracks and 20,000 b
 - **Save** is `Ctrl+S`, and **Save As…** is `Ctrl+Shift+S`. An asterisk in the window title means unsaved changes.
 - Autosave copies unsaved songs every 2 minutes by default, and the next start offers them after a crash.
 - To print, export a PDF and print it from a PDF viewer. The PDF holds the selected track only.
-- **File > Render to audio file…** (`Ctrl+Alt+R`) makes a WAV file by default, and an MP3 when Windows has an encoder.
+- **File > Export > Audio file…** (`Ctrl+Alt+R`) makes a WAV file by default, and an MP3 when Windows has an encoder.
 
 ## What next
 

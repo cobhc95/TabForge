@@ -1,6 +1,6 @@
 # Core/Documents
 
-The answer to the save-changes question, the open song, the edit transaction and the save sequence: no WPF, no app types. The tab strip's settings DTO lives with the other settings in `Services/TabSettings.cs`.
+The answer to the save-changes question, the open song, the edit transaction and the save sequence: no WPF, no app types. The tab strip's settings DTO lives with the other settings in `Services/Settings/TabSettings.cs`.
 
 | File | Owns |
 |---|---|
@@ -17,5 +17,5 @@ The answer to the save-changes question, the open song, the edit transaction and
 | `NewSongDefaults.cs` | The notation a new song starts with (the Preferences choice, else tab and staff) and its track-list grouping, from the settings (`NewSongDefaults.Apply`); used by the WPF new tab and the Avalonia tabs. |
 | `ClipClipboard.cs` | The audio or MIDI clip copied on a clip lane: one per process, shared by every window, holding a private copy of the clip (`ClipClipboard.Copy`, `Clone`). |
 | `ClipRelocation.cs` | Moves one audio or MIDI clip to another track or lane of the same kind (`ClipRelocation.Move`), used by the timeline clip drag. |
-Does not own: the tab strip itself (`Source/src/TabForge.Avalonia/Views/`) or the settings file (`Source/src/TabForge.Core/Services/AppSettingsStore.cs`).
+Does not own: the tab strip itself (`Source/src/TabForge.Avalonia/Views/`) or the settings file (`Source/src/TabForge.Core/Services/Settings/AppSettingsStore.cs`).
 Tests: `TestSettingsFileSplitSnapshots`, `TestPreferencesCatalog`, `TestSaveFlowCharacterization`, `TestUndoDeltaStates`, `TestDocumentOperations`, `TabForge.Avalonia.Tests.MainWindowSaveTests`.

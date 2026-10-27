@@ -17,13 +17,15 @@ public enum TimelineCommand
     // highlight menu (the grey cells)
     HighlightCopy, HighlightCut, HighlightClear, HighlightPaste, HighlightSelectBars,
     // section menu
-    AddSectionHere, CopySectionMenu, CutSection, PasteSectionAfter, DuplicateSection, DeleteSection, LoopSection,
+    AddSectionHere, CloseSectionGap, PasteSectionAtBar, CopySectionMenu, CutSection, PasteSectionAfter, DuplicateSection, RemoveSectionLabel, DeleteSection, LoopSection,
     RenameSection, GoToSection, ToggleSectionLock,
     // ruler menu (the bar-number strip: the loop region)
     RulerLoop, RulerClearLoop, RulerLoopSection, RulerLoopSelectedBars, RulerMovePlayhead,
     // clip menu
     ClipCopy, ClipCut, ClipPaste, ClipDuplicate, ClipSplit, ClipGlue, ClipFadeReset, ClipDelete, ClipMute, ClipProperties, ClipWriteNotation, ClipAddAudioFile,
     ClipReRecordPass,
+    // take-lane menu (an empty part of a clip lane)
+    LanePasteClip, LaneNewMidiClip, LaneImport, LaneRecordHere, LaneOpenPianoRoll, LaneRename, LaneMoveUp, LaneMoveDown, LaneDelete,
     // the one "... settings..." door of the bar / selection menus and of the section menu (Preferences > Timeline & sections)
     TimelineSettings, SectionSettings,
 }
@@ -38,6 +40,10 @@ public sealed record RulerMenuState(bool Looping, bool HasLoop, bool InSection, 
 
 /// <summary>The highlight menu's state: the label of the highlighted cells and whether a copied range can be pasted.</summary>
 public sealed record HighlightMenuState(string Label, bool CanPaste);
+
+/// <summary>The take-lane menu's state: a clip is copied, the lane takes MIDI (new clip row) or shows in the piano roll, and the lane can move up, down or be deleted.
+/// <paramref name="EmptyLaneClick"/> is the stored "clicking an empty take lane shows" choice (null on an audio/MIDI track, whose lane always opens the piano roll: the row is hidden).</summary>
+public sealed record TakeLaneMenuState(bool CanPaste, bool CanNewMidiClip, bool CanOpenInPianoRoll, bool CanMoveUp, bool CanMoveDown, bool CanDelete, string? EmptyLaneClick = null);
 
 public sealed record SectionMenuState(int? AddAtBar, bool CanPaste, bool Looped, bool Locked);
 
@@ -161,6 +167,24 @@ public static class TimelineMenus
         Item(TimelineCommand.HighlightSelectBars, "Loop these bars", toolTip: "Makes the highlighted bars the loop region"),
     };
 
+    /// <summary>Right-click on an empty part of the section strip (no section under the pointer): Add section and Paste section at the clicked bar, Close gap when
+    /// <paramref name="gap"/> (the empty run of bars before the next section) exists, and the settings.</summary>
+    public static List<MenuSpec> SectionGap(int bar, bool canPaste, (int First, int Last)? gap, Func<string, string> key)
+    {
+        var list = new List<MenuSpec> { Item(TimelineCommand.AddSectionHere, $"Add section at bar {bar + 1}", key("Section.Add")) };
+        if (gap is var (first, last))
+        {
+            var close = Item(TimelineCommand.CloseSectionGap, $"Close gap (bars {first + 1}–{last + 1})",
+                toolTip: "Removes these bars and moves every later section, bar and clip back. Asks first when the bars are not empty.");
+            close.HoverBars = (first, last);
+            list.Add(close);
+        }
+        list.Add(Item(TimelineCommand.PasteSectionAtBar, "Paste section", key("Edit.Paste"), canPaste));
+        list.Add(MenuSpec.Separator());
+        list.Add(SettingsEntry(TimelineCommand.TimelineSettings));
+        return list;
+    }
+
     /// <summary>Right-click on a section bracket or body.</summary>
     public static List<MenuSpec> Section(SectionMenuState s, Func<string, string> key)
     {
@@ -174,6 +198,7 @@ public static class TimelineMenus
         list.Add(Item(TimelineCommand.CutSection, "Cut section", key("Edit.Cut")));
         list.Add(Item(TimelineCommand.PasteSectionAfter, "Paste section", key("Edit.Paste"), s.CanPaste));
         list.Add(Item(TimelineCommand.DuplicateSection, "Duplicate section"));
+        list.Add(Item(TimelineCommand.RemoveSectionLabel, "Remove label (keep bars)", toolTip: "Removes only the section name and marker; all bars, notes and clips stay and the previous section extends over them. Undo restores it."));
         list.Add(Item(TimelineCommand.DeleteSection, "Delete section and its bars…", toolTip: "Removes the section marker and its bars and notes from every track. Asks first (Preferences > Timeline and Tracks > Confirm section deletion); Undo restores it. To remove only the marker use Remove in the Sections panel."));
         list.Add(MenuSpec.Separator());
         list.Add(Check(TimelineCommand.LoopSection, "Loop section", s.Looped, "transport state (not saved as a preference)", key("Transport.Loop")));
@@ -187,6 +212,9 @@ public static class TimelineMenus
 
     /// <summary>The command id of the Takes submenu rows; the row's Arg is the take number (1-based).</summary>
     public const string TakeId = "Clip.Take";
+
+    /// <summary>The command id of the take-lane menu's "Clicking an empty lane shows" rows; the row's Arg is the stored value (EmptyLaneChoice), the Preferences row editing.emptylane.</summary>
+    public const string EmptyLaneClickId = "TimelineLane.EmptyClick";
 
     /// <summary>Right-click on an audio / MIDI clip, or on an empty lane.</summary>
     public static List<MenuSpec> Clip(ClipMenuState s, Func<string, string> key)
@@ -216,12 +244,12 @@ public static class TimelineMenus
             list.Add(Item(TimelineCommand.ClipDuplicate, "Duplicate", key("Clip.Duplicate")));
             list.Add(Item(TimelineCommand.ClipSplit, "Split at cursor", key("Clip.Split")));
             list.Add(Item(TimelineCommand.ClipGlue, "Glue", key("Clip.Glue")));
-            list.Add(Item(TimelineCommand.ClipFadeReset, "Reset fade in / out", key("Clip.FadeReset")));
+            if (!s.IsMidi) list.Add(Item(TimelineCommand.ClipFadeReset, "Reset fade in / out", key("Clip.FadeReset")));
             list.Add(Item(TimelineCommand.ClipDelete, "Delete", key("Clip.Delete")));
             list.Add(MenuSpec.Separator());
             list.Add(Check(TimelineCommand.ClipMute, "Mute", s.Muted, "state of one clip (saved in the song)", key("Clip.Mute")));
             list.Add(Item(TimelineCommand.ClipProperties, "Properties…", key("Clip.Properties")));
-            // "Advanced notation conversion…" is hidden until it exists (docs/MIDI_TO_TAB_PLAN.md).
+            // "Advanced notation conversion…" is hidden until it exists (docs/plans/MIDI_TO_TAB_PLAN.md).
             if (s.IsMidi) list.Add(Item(TimelineCommand.ClipWriteNotation, "Write into the track's notation"));
         }
         else
@@ -229,6 +257,36 @@ public static class TimelineMenus
             list.Add(MenuSpec.Separator());
             list.Add(Item(TimelineCommand.ClipAddAudioFile, "Add audio file…"));
         }
+        return list;
+    }
+
+    /// <summary>Right-click on an empty part of a take lane (no clip under the pointer): the lane's own actions. Rows that do not apply to the lane are hidden.</summary>
+    public static List<MenuSpec> TakeLane(TakeLaneMenuState s, Func<string, string> key)
+    {
+        var list = new List<MenuSpec>
+        {
+            Item(TimelineCommand.LanePasteClip, "Paste clip here", key("Clip.Paste"), s.CanPaste, "Pastes the copied clip at the clicked position (snapped like a clip drag)"),
+        };
+        if (s.CanNewMidiClip)
+            list.Add(Item(TimelineCommand.LaneNewMidiClip, "New empty MIDI clip here", toolTip: "Adds an empty clip one bar long at the clicked position"));
+        list.Add(Item(TimelineCommand.LaneImport, "Import audio or MIDI file here…", toolTip: "Picks a file and puts it on the timeline at the clicked position"));
+        list.Add(Item(TimelineCommand.LaneRecordHere, "Record here", toolTip: "Arms this track and moves the playhead to the clicked bar; press Record to start"));
+        if (s.CanOpenInPianoRoll)
+            list.Add(Item(TimelineCommand.LaneOpenPianoRoll, "Open lane in piano roll", toolTip: "Edits this lane's MIDI notes in the piano roll"));
+        if (s.EmptyLaneClick is { } shows)
+            list.Add(Sub("Clicking an empty lane shows", TabForge.Services.EmptyLaneChoice.Values.Select((value, i) => new MenuSpec
+            {
+                Id = EmptyLaneClickId, Arg = value, Header = TabForge.Services.EmptyLaneChoice.Labels[i], Checkable = true, Radio = true, Checked = TabForge.Services.EmptyLaneChoice.Normalize(shows) == value,
+                SettingKey = "editing.emptylane", ToolTip = "Chooses what a click on empty space in a take lane of a tab track shows",
+            }).ToArray()));
+        list.Add(MenuSpec.Separator());
+        list.Add(Sub("Lane",
+            Item(TimelineCommand.LaneRename, "Rename lane…"),
+            Item(TimelineCommand.LaneMoveUp, "Move lane up", enabled: s.CanMoveUp),
+            Item(TimelineCommand.LaneMoveDown, "Move lane down", enabled: s.CanMoveDown),
+            Item(TimelineCommand.LaneDelete, "Delete lane…", enabled: s.CanDelete, toolTip: "Removes the lane and its clips (asks first when it has clips)")));
+        list.Add(MenuSpec.Separator());
+        list.Add(SettingsEntry(TimelineCommand.TimelineSettings));
         return list;
     }
 

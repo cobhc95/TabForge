@@ -61,8 +61,8 @@ public sealed partial class TimelineView : Control
         }
     }
 
-    /// <summary>The height the timeline shows: its content, or the pane when the content is taller.</summary>
-    public double VisibleHeight => PaneHeight > 0 ? Math.Min(ContentHeight, PaneHeight) : ContentHeight;
+    /// <summary>The height the timeline shows: its content rounded up to whole pixels (the dock snaps the pane to whole pixels, so a fractional row height would leave a sliver), or the pane when the content is taller.</summary>
+    public double VisibleHeight => PaneHeight > 0 ? Math.Min(Math.Ceiling(ContentHeight - 1e-6), PaneHeight) : ContentHeight;
 
     /// <summary>Scrolls the rows so the track at <paramref name="row"/> is inside the pane (a selected or dragged track stays in view).</summary>
     public void EnsureRowVisible(int row)
@@ -75,7 +75,7 @@ public sealed partial class TimelineView : Control
     /// <summary>Scrolls the rows by a mouse wheel's vertical movement; Ctrl + wheel is the zoom and is left alone. Returns whether the wheel was used.</summary>
     public bool ScrollRowsByWheel(PointerWheelEventArgs e)
     {
-        if (e.Delta.Y == 0 || e.KeyModifiers.HasFlag(KeyModifiers.Control)) return false;
+        if (e.Delta.Y == 0 || e.KeyModifiers.HasPrimary()) return false;
         RowScrollOffset -= e.Delta.Y * RowScrollRules.WheelNotch;
         e.Handled = true;
         return true;

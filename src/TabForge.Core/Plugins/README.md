@@ -5,7 +5,7 @@ Plug-in discovery, trust, chain state and rigs. Plug-ins run only in isolated pr
 ## How to change me
 1. Entry files: `PluginTrust.cs`, `ChainStateStore.cs`.
 2. Owner class: `PluginTrust` (trust), `ChainStateStore` (states); plug-ins stay in isolated processes. `PluginTrustLoadGate` takes its file-trust port (`IPluginFileTrust`) explicitly: the WPF build and the Avalonia app pass the same Windows adapter.
-3. Tests to run: `--areas persistence,settings`; plug-in trust tests via `--areas release` (full-suite build), plus `--areas architecture,hygiene` (see the test box in `Source/docs/TESTING.md`).
+3. Tests to run: `--areas persistence,settings`; plug-in trust tests via `--areas release` (full-suite build), plus `--areas architecture,hygiene` (see the test box in `Source/docs/guides/TESTING.md`).
 4. Docs to update: `ARCHITECTURE.md` guarantees, `CHANGELOG.md`.
 
 ## Key types

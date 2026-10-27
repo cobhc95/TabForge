@@ -2,7 +2,7 @@ using TabForge.Models;
 
 namespace TabForge.Presenters;
 
-// Owns: a MIDI track's notes in the piano roll: the notes of its MIDI clips on the playing lanes (every MIDI clip when none plays), placed on
+// Owns: a MIDI track's notes in the piano roll: the notes of its MIDI clips on one chosen lane (every clip on it) or on the playing lanes (every MIDI clip when none plays), placed on
 //       the performed clock as the clips play them (start, trim and speed applied, the clip's pitch shift added), and the write back: each note
 //       goes to the shown clip that holds its start (else the nearest one, which grows to hold it; a track with no MIDI clip gets a new one on a
 //       free lane), with the notes outside a clip's trimmed part kept as they were.
@@ -12,14 +12,30 @@ public sealed class PianoRollClipSource : IPianoRollSource
 {
     private const double Epsilon = 1e-9;
 
+    private readonly int? _lane;
+    private readonly bool _strict;
+
+    /// <param name="lane">The clip lane to show and edit (every MIDI clip on it, however many); null: the playing lanes, as before.</param>
+    /// <param name="strict">The lane alone, even with no take on it (an empty take lane): nothing from other lanes shows, and the first note written creates a one-bar take on it.</param>
+    public PianoRollClipSource(int? lane = null, bool strict = false)
+    {
+        _lane = lane;
+        _strict = strict;
+    }
+
     public bool IsTab => false;
 
     public PianoRollTimeMap Map(SongProject song) => PianoRollTimeMap.Performed(song);
 
-    /// <summary>The MIDI clips the piano roll shows: those on playing lanes, or every MIDI clip when none plays.</summary>
-    public static List<AudioClip> Shown(TrackModel track)
+    /// <summary>The MIDI clips this source shows: every MIDI clip on its lane, else (no lane, or none left on it) those on playing lanes, or every MIDI clip when none plays.</summary>
+    public List<AudioClip> ShownClips(TrackModel track) => Shown(track, _lane, _strict);
+
+    /// <summary>The MIDI clips the piano roll shows: those on <paramref name="lane"/> when given and it holds some, else those on playing lanes, or every MIDI clip when none plays.</summary>
+    public static List<AudioClip> Shown(TrackModel track, int? lane = null, bool strict = false)
     {
         var midi = track.AudioClips.Where(clip => clip.IsMidi).ToList();
+        if (strict && lane is { } only) return midi.Where(clip => clip.Lane == only).ToList();
+        if (lane is { } wanted && midi.Any(clip => clip.Lane == wanted)) return midi.Where(clip => clip.Lane == wanted).ToList();
         var playing = midi.Where(clip => ClipLanes.Plays(track, clip.Lane)).ToList();
         return playing.Count > 0 ? playing : midi;
     }
@@ -34,7 +50,7 @@ public sealed class PianoRollClipSource : IPianoRollSource
     public List<PianoRollNote> Read(SongProject song, TrackModel track, PianoRollTimeMap map)
     {
         var list = new List<PianoRollNote>();
-        foreach (var clip in Shown(track)) list.AddRange(ReadClip(clip, map));
+        foreach (var clip in ShownClips(track)) list.AddRange(ReadClip(clip, map));
         return PianoRollSources.Sorted(list);
     }
 
@@ -55,11 +71,16 @@ public sealed class PianoRollClipSource : IPianoRollSource
     public bool Write(SongProject song, TrackModel track, PianoRollTimeMap map, IReadOnlyList<PianoRollNote> after)
     {
         var timed = after.Select(n => (Note: n, From: map.SecondsAt(n.Start), To: map.SecondsAt(n.End))).ToList();
-        var clips = Shown(track);
+        var clips = ShownClips(track);
         if (clips.Count == 0)
         {
             if (timed.Count == 0) return false;
-            clips.Add(NewClip(track, timed.Min(t => t.From), timed.Max(t => t.To)));
+            if (_strict && _lane is { } lane)
+            {
+                var bar = map.BarAtBeat(after.Min(n => n.Start));   // an empty take lane: the take is the bar of the first note, grown below to hold the rest
+                clips.Add(NewClip(track, map.SecondsAt(bar.StartBeat), map.SecondsAt(bar.EndBeat), lane));
+            }
+            else clips.Add(NewClip(track, timed.Min(t => t.From), timed.Max(t => t.To)));
         }
         var assigned = clips.ToDictionary(clip => clip, _ => new List<(PianoRollNote Note, double From, double To)>());
         foreach (var t in timed) assigned[Owner(clips, t.From)].Add(t);
@@ -111,10 +132,10 @@ public sealed class PianoRollClipSource : IPianoRollSource
         return front;
     }
 
-    /// <summary>A new, empty MIDI clip on the track's first free lane over <paramref name="from"/> to <paramref name="to"/>.</summary>
-    internal static AudioClip NewClip(TrackModel track, double from, double to)
+    /// <summary>A new, empty MIDI clip on <paramref name="onLane"/>, else the track's first free lane, over <paramref name="from"/> to <paramref name="to"/>.</summary>
+    internal static AudioClip NewClip(TrackModel track, double from, double to, int? onLane = null)
     {
-        var lane = ClipLanes.FreeLane(track, from, to);
+        var lane = onLane ?? ClipLanes.FreeLane(track, from, to);
         ClipLanes.Ensure(track, lane + 1);
         var clip = new AudioClip { Name = track.Name + " MIDI", Notes = new List<ClipNote>(), StartSec = from, SourceLengthSec = Math.Max(0.001, to - from),
             FileLengthSec = Math.Max(0.001, to - from), Lane = lane };

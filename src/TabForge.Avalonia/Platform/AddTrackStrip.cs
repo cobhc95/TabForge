@@ -27,9 +27,9 @@ public static class AddTrackStrip
 
     /// <summary>
     /// Draws the strip at <paramref name="top"/> across <paramref name="width"/>, with the label centred in the first <paramref name="labelAreaWidth"/>
-    /// (the track list's width); <paramref name="hot"/> lights the hover glow and <paramref name="drop"/> shows the drop shade and drop words.
+    /// (the track list's width); <paramref name="hot"/> lights the hover glow and <paramref name="drop"/> shows the drop shade and drop words.  <paramref name="dropLabel"/> replaces the default drop words (a clip drag says move or copy).
     /// </summary>
-    public static void Draw(IDrawContext d, Func<string, UiColor> ink, double top, double width, double labelAreaWidth, bool hot, bool drop = false)
+    public static void Draw(IDrawContext d, Func<string, UiColor> ink, double top, double width, double labelAreaWidth, bool hot, bool drop = false, string? dropLabel = null)
     {
         var height = AddTrackLane.Height;
         var accent = ink("Accent");
@@ -43,7 +43,7 @@ public static class AddTrackStrip
             d.Line(border, 0, top + height - DropBorder / 2, width, top + height - DropBorder / 2); // bottom
             d.Line(border, width - DropBorder / 2, top, width - DropBorder / 2, top + height);     // right (the left edge meets the track list)
         }
-        var label = d.Text(drop ? AddTrackLane.DropLabel : AddTrackLane.Label, Font, LabelFontSize, ink("TextLegible"), d.PixelsPerDip, weight: 600);
+        var label = d.Text(drop ? dropLabel ?? AddTrackLane.DropLabel : AddTrackLane.Label, Font, LabelFontSize, ink("TextLegible"), d.PixelsPerDip, weight: 600);
         var groupWidth = PlusWidth + PlusGap + label.Width;
         var left = (labelAreaWidth - groupWidth) / 2;
         var centreY = top + height / 2;

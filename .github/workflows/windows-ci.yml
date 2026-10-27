@@ -31,7 +31,7 @@ jobs:
       # check that needs them must skip (reported in the log), never fail.
       TABFORGE_NO_LOCAL_SONGS: '1'
       # Judge test windows against the runner's small screen (1024x728 at 100%) so the same check fails on a developer PC
-      # with a big or high-DPI screen (docs/TESTING.md).
+      # with a big or high-DPI screen (docs/guides/TESTING.md).
       TABFORGE_SELFTEST_SMALLSCREEN: '1'
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -83,12 +83,30 @@ jobs:
           path: selftest.log
           if-no-files-found: warn
 
+  # Cross-platform guardrail (non-shipping): TabForge.Core must keep building for plain net10.0 (no Windows APIs), so the
+  # portable build cannot drift again. Its own job: the portable restore rewrites Core's restore state, which the Windows
+  # build above must not see. The net10.0 build has its own lock file (src/TabForge.Core/packages.portable.lock.json).
+  core-portable:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
+        with:
+          global-json-file: global.json
+
+      - name: Build TabForge.Core for net10.0 (locked)
+        run: |
+          dotnet restore src/TabForge.Core/TabForge.Core.csproj -p:TabForgePortableBuild=true --locked-mode
+          dotnet build src/TabForge.Core/TabForge.Core.csproj -c Release --no-restore -p:TabForgePortableBuild=true
+
   # Builds native/tfvst3 from the pinned Steinberg VST3 SDK and compares it with the checked-in DLL.
   # The rebuild is never byte-identical (link timestamps, PDB identity, source-path hash names; native/tfvst3/BUILD.md,
   # "Reproducibility"): tools/Compare-NativeBridge.ps1 explains those categories from the PE headers and fails only when
   # a difference falls outside them (different code, size, SDK or compiler). Releases do not depend on the match: they
   # ship the committed DLL, which the maintainer replaces with the build-bridge workflow's output whenever the bridge
-  # changes (docs/REPRODUCIBLE_BUILDS.md).
+  # changes (docs/guides/REPRODUCIBLE_BUILDS.md).
   native-bridge:
     runs-on: windows-latest
     timeout-minutes: 20
@@ -161,9 +179,10 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
+      # The package is rebuilt with the SDK that built it (vendor/alphatab/global.json), not the app's .NET 10 SDK.
       - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
         with:
-          global-json-file: global.json
+          global-json-file: vendor/alphatab/global.json
 
       - name: Rebuild TabForge.AlphaTab and compare
         shell: pwsh

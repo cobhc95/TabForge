@@ -51,6 +51,8 @@ public sealed class FxChainContainers
     public StackPanel PresetBar => _presetBar;
     public ChainContainer? Shown => _shown;
     public ContextMenu Menu { get; } = MenuStability.CreateContextMenu();
+    /// <summary>Entries the window puts in front of the container entries of the right-click menu (the plug-in commands), made at each opening; null: none.</summary>
+    public Func<IEnumerable<Control>>? LeadingItems { get; set; }
 
     /// <param name="edit">Runs a change as one undo step and refreshes the list; true: only bypass switches changed.</param>
     /// <param name="refresh">Builds the list again and focuses the given row item (null: keeps the focus).</param>
@@ -213,6 +215,11 @@ public sealed class FxChainContainers
     private void FillMenu()
     {
         Menu.Items.Clear();
+        if (LeadingItems?.Invoke() is { } leading)
+        {
+            foreach (var item in leading) Menu.Items.Add(item);
+            Menu.Items.Add(new Separator());
+        }
         foreach (var item in MenuItems()) Menu.Items.Add(item);
     }
 

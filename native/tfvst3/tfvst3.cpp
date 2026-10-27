@@ -9,11 +9,11 @@
 #include "tfvst3.h"
 
 #include "public.sdk/source/common/memorystream.h"
-#include "public.sdk/source/vst/hosting/connectionproxy.h"
 #include "public.sdk/source/vst/hosting/eventlist.h"
 #include "public.sdk/source/vst/hosting/hostclasses.h"
 #include "public.sdk/source/vst/hosting/module.h"
 #include "public.sdk/source/vst/utility/stringconvert.h"
+#include "tfv3_connection.h"
 
 #include "pluginterfaces/base/funknownimpl.h"
 #include "pluginterfaces/gui/iplugview.h"
@@ -198,6 +198,21 @@ public:
 	{
 		return StringConvert::convert ("TabForge", name) ? kResultTrue : kInternalError;
 	}
+	// IMessage / IAttributeList for the plug-in's processor <-> controller messages (copyable, see tfv3_connection.h).
+	tresult PLUGIN_API createInstance (TUID cid, TUID _iid, void** obj) override
+	{
+		if (FUnknownPrivate::iidEqual (cid, IMessage::iid) && FUnknownPrivate::iidEqual (_iid, IMessage::iid))
+		{
+			*obj = static_cast<IMessage*> (new tfv3::TfMessage ());
+			return kResultTrue;
+		}
+		if (FUnknownPrivate::iidEqual (cid, IAttributeList::iid) && FUnknownPrivate::iidEqual (_iid, IAttributeList::iid))
+		{
+			*obj = static_cast<IAttributeList*> (tfv3::TfAttributeList::make ());
+			return kResultTrue;
+		}
+		return HostApplication::createInstance (cid, _iid, obj);
+	}
 };
 
 //------------------------------------------------------------------------------------------------
@@ -256,7 +271,9 @@ struct tfv3_plugin
 	IPtr<IComponent> component;
 	IPtr<IAudioProcessor> processor;
 	IPtr<IEditController> controller;
-	IPtr<ConnectionProxy> componentCP, controllerCP;
+	// Processor <-> controller messages: queued proxies (the SDK ConnectionProxy drops messages from any thread but its creator's).
+	tfv3::MessageHub hub;
+	IPtr<tfv3::QueuedConnection> componentCP, controllerCP;
 	bool singleComponent = false;
 	bool active = false, processing = false;
 	int32 processMode = kRealtime;
@@ -284,6 +301,11 @@ struct tfv3_plugin
 	Edit editRing[kEditRingSize];
 	std::atomic<uint32> editWrite {0}, editRead {0};
 
+	// Processor -> controller parameter values (outputParameterChanges), applied by tfv3_editor_idle on the editor thread
+	tfv3::OutParamRing outRing;
+	std::atomic<int32> restartFlags {0};           // IComponentHandler::restartComponent requests since the last tfv3_editor_idle
+	std::map<ParamID, ParamValue> paramCache;      // last controller value seen per parameter (editor thread only)
+
 	// Editor
 	IPtr<IPlugView> view;
 	std::atomic<HWND> parentHwnd {nullptr};            // set on the main thread, read by resizeView on the plug-in's UI thread
@@ -291,7 +313,7 @@ struct tfv3_plugin
 	std::atomic<int64_t> pendingResize {-1};           // the view's latest resizeView request, (width << 32 | height); -1: none
 	int32 hasEditorCache = -1;
 
-	class ComponentHandler final : public IComponentHandler
+	class ComponentHandler final : public IComponentHandler, public IComponentHandler2
 	{
 	public:
 		tfv3_plugin* owner = nullptr;
@@ -306,9 +328,31 @@ struct tfv3_plugin
 		{
 			if (flags & kMidiCCAssignmentChanged)
 				owner->buildMidiMap ();
+			// Latency, I/O, reload and parameter-value changes are picked up on the editor thread by tfv3_editor_idle.
+			if (flags & (kLatencyChanged | kIoChanged | kReloadComponent | kParamValuesChanged))
+				owner->restartFlags.fetch_or (flags & (kLatencyChanged | kIoChanged | kReloadComponent | kParamValuesChanged));
 			return kResultOk;
 		}
-		TFV3_FUNKNOWN_OWNED (IComponentHandler)
+		// IComponentHandler2: nothing to do, but plug-ins that query it expect it
+		tresult PLUGIN_API setDirty (TBool) override { return kResultOk; }
+		tresult PLUGIN_API requestOpenEditor (FIDString) override { return kResultOk; }
+		tresult PLUGIN_API startGroupEdit () override { return kResultOk; }
+		tresult PLUGIN_API finishGroupEdit () override { return kResultOk; }
+		tresult PLUGIN_API queryInterface (const TUID _iid, void** obj) override
+		{
+			if (FUnknownPrivate::iidEqual (_iid, IComponentHandler::iid) || FUnknownPrivate::iidEqual (_iid, FUnknown::iid))
+				*obj = static_cast<IComponentHandler*> (this);
+			else if (FUnknownPrivate::iidEqual (_iid, IComponentHandler2::iid))
+				*obj = static_cast<IComponentHandler2*> (this);
+			else
+			{
+				*obj = nullptr;
+				return kNoInterface;
+			}
+			return kResultOk;
+		}
+		uint32 PLUGIN_API addRef () override { return 1; }
+		uint32 PLUGIN_API release () override { return 1; }
 	} handler;
 
 	class PlugFrame final : public IPlugFrame
@@ -343,6 +387,51 @@ struct tfv3_plugin
 			return; // full: drop
 		editRing[w & (kEditRingSize - 1)] = {id, value};
 		editWrite.store (w + 1, std::memory_order_release);
+	}
+
+	// Editor thread: lets the controller see the parameter values the controller itself changed (kParamValuesChanged), so the processor gets them too.
+	void resyncParams ()
+	{
+		if (!controller)
+			return;
+		const int32 count = controller->getParameterCount ();
+		for (int32 i = 0; i < count; ++i)
+		{
+			ParameterInfo info {};
+			if (controller->getParameterInfo (i, info) != kResultOk ||
+			    (info.flags & (ParameterInfo::kIsReadOnly | ParameterInfo::kIsProgramChange)))
+				continue;
+			const ParamValue v = controller->getParamNormalized (info.id);
+			auto it = paramCache.find (info.id);
+			if (it == paramCache.end ())
+				paramCache[info.id] = v;
+			else if (it->second != v)
+			{
+				it->second = v;
+				pushEdit (info.id, v);
+			}
+		}
+	}
+
+	// Editor thread: applies the processor's output parameters to the controller, delivers queued messages, returns the restart flags (TFV3_RESTART_*).
+	int32 editorIdle ()
+	{
+		hub.drain ();
+		ParamID id = 0;
+		ParamValue value = 0;
+		for (int n = 0; n < 4096 && outRing.pop (id, value); ++n)
+		{
+			if (controller)
+				controller->setParamNormalized (id, value);
+			auto it = paramCache.find (id);
+			if (it != paramCache.end ())
+				it->second = value;
+		}
+		const int32 flags = restartFlags.exchange (0);
+		if (flags & kParamValuesChanged)
+			resyncParams ();
+		return ((flags & kLatencyChanged) ? 1 : 0) | ((flags & kIoChanged) ? 2 : 0) | ((flags & kReloadComponent) ? 4 : 0) |
+		       ((flags & kParamValuesChanged) ? 8 : 0);
 	}
 
 	void buildMidiMap ()
@@ -388,6 +477,7 @@ struct tfv3_plugin
 			controllerCP->disconnect ();
 		componentCP = nullptr;
 		controllerCP = nullptr;
+		hub.clear ();
 
 		if (controller)
 			controller->setComponentHandler (nullptr);
@@ -648,8 +738,8 @@ TFV3_API tfv3_plugin* tfv3_create (const wchar_t* path, int32_t class_index, dou
 			FUnknownPtr<IConnectionPoint> ctrlCP (p->controller);
 			if (compCP && ctrlCP)
 			{
-				p->componentCP = owned (new ConnectionProxy (compCP));
-				p->controllerCP = owned (new ConnectionProxy (ctrlCP));
+				p->componentCP = owned (new tfv3::QueuedConnection (compCP, &p->hub, &p->hub.toController));
+				p->controllerCP = owned (new tfv3::QueuedConnection (ctrlCP, &p->hub, &p->hub.toComponent));
 				p->componentCP->connect (ctrlCP);
 				p->controllerCP->connect (compCP);
 			}
@@ -732,6 +822,7 @@ TFV3_API tfv3_plugin* tfv3_create (const wchar_t* path, int32_t class_index, dou
 		TRACE ("buildMidiMap");
 		if (p->controller)
 			p->buildMidiMap ();
+		p->resyncParams (); // fills the parameter cache (nothing differs yet, so nothing is sent)
 		TRACE ("create done");
 		return p;
 	}
@@ -768,6 +859,7 @@ TFV3_API int32_t tfv3_process_ex (tfv3_plugin* p, float** in, int32_t in_channel
 	};
 	try
 	{
+		tfv3::ProcessScope inProcess; // messages the plug-in sends during this call are queued, not copied or delivered here
 		if (!p || !p->processor || frames < 0 || frames > p->maxBlock)
 		{
 			zeroOut ();
@@ -959,6 +1051,16 @@ TFV3_API int32_t tfv3_process_ex (tfv3_plugin* p, float** in, int32_t in_channel
 			zeroOut ();
 			return 0;
 		}
+		// processor -> controller: the last value of every output parameter queue (meters, gain reduction, read-only displays)
+		{
+			const FixedChanges& changes = *p->outParams;
+			for (int32 i = 0; i < changes.used; ++i)
+			{
+				const FixedQueue& q = changes.queues[i];
+				if (q.count > 0)
+					p->outRing.push (q.id, q.points[q.count - 1].value);
+			}
+		}
 		// mono plug-in output: duplicate to the right channel
 		if (p->mainOutChannels == 1 && out && out_channels >= 2 && out[0] && out[1])
 			std::memcpy (out[1], out[0], bytes);
@@ -974,6 +1076,30 @@ TFV3_API int32_t tfv3_process_ex (tfv3_plugin* p, float** in, int32_t in_channel
 	{
 		zeroOut ();
 		return 0;
+	}
+}
+
+TFV3_API int32_t tfv3_editor_idle (tfv3_plugin* p)
+{
+	try
+	{
+		return p ? p->editorIdle () : 0;
+	}
+	catch (...)
+	{
+		return 0;
+	}
+}
+
+TFV3_API int32_t tfv3_selftest (void)
+{
+	try
+	{
+		return tfv3::selfTest ();
+	}
+	catch (...)
+	{
+		return -1;
 	}
 }
 

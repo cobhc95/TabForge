@@ -60,6 +60,15 @@ TFV3_API void    tfv3_editor_set_scale(tfv3_plugin* p, float scale);
 TFV3_API int32_t tfv3_editor_poll_resize(tfv3_plugin* p, int32_t* width, int32_t* height);
 TFV3_API void    tfv3_editor_set_size(tfv3_plugin* p, int32_t width, int32_t height);
 
+/* Editor thread, about 30 times a second while the editor is open: applies the parameter values the processor reported
+   (outputParameterChanges: meters, gain reduction, read-only displays) to the controller, delivers the processor <-> controller
+   messages queued from other threads, and returns the plug-in's restart requests since the last call as a bit mask:
+   1 latency changed (read tfv3_latency again), 2 bus layout changed, 4 reload requested, 8 parameter values changed (already
+   re-read and sent to the processor). 0 for a null handle. */
+TFV3_API int32_t tfv3_editor_idle(tfv3_plugin* p);
+/* Runs the shim's internal checks (output-parameter ring, message copy, queued message delivery); 0 = all passed. */
+TFV3_API int32_t tfv3_selftest(void);
+
 /* Latency the plug-in reports, in samples. */
 TFV3_API int32_t tfv3_latency(tfv3_plugin* p);
 

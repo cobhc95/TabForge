@@ -60,6 +60,22 @@ public static class NoteTimeline
     }
 
     /// <summary>
+    /// Calls <paramref name="visit"/> with every beat that a note sustains without attacking (a tie destination, a legato slide target) and that is sounding at <paramref name="ms"/>
+    /// (onset &lt;= ms &lt; end); <c>struck</c> is true when its onset is within <paramref name="struckWindowMs"/>. The score lights these beats like attacked ones.
+    /// </summary>
+    public static void ForEachContinuationAt(NoteEvent[] notes, double ms, double struckWindowMs, Action<NoteContinuation, bool> visit, double lookbackMs = 6000)
+    {
+        for (var i = FirstIndexAfter(notes, ms) - 1; i >= 0; i--)
+        {
+            var n = notes[i];
+            if (n.OnsetMs < ms - lookbackMs) break;
+            if (n.Continuations is not { } list) continue;
+            foreach (var c in list)
+                if (c.OnsetMs <= ms + OnsetToleranceMs && c.EndMs > ms) visit(c, c.OnsetMs >= ms - struckWindowMs);
+        }
+    }
+
+    /// <summary>
     /// Notes that have finished within <paramref name="holdMs"/> of <paramref name="ms"/>, newest first
     /// (a bounded "recent" trace for the fretboard), capped at <paramref name="maxCount"/>.
     /// </summary>
@@ -91,6 +107,9 @@ public static class NoteTimeline
             var n = notes[i];
             if (n.OnsetMs > fromMs + OnsetToleranceMs && n.OnsetMs <= toMs + OnsetToleranceMs) return true;
             if (n.EndMs > fromMs && n.EndMs <= toMs) return true;
+            if (n.Continuations is { } continuations)
+                foreach (var c in continuations)
+                    if ((c.OnsetMs > fromMs + OnsetToleranceMs && c.OnsetMs <= toMs + OnsetToleranceMs) || (c.EndMs > fromMs && c.EndMs <= toMs)) return true;
         }
         return false;
     }

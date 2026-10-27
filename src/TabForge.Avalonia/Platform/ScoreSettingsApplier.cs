@@ -55,7 +55,7 @@ internal sealed class ScoreSettingsApplier
         var light = global::Avalonia.Application.Current?.ActualThemeVariant == global::Avalonia.Styling.ThemeVariant.Light;
         var text = Palette.Get("FollowHighlightText", light);
         var values = new ScoreHighlightValues(follow.HighlightPlayedBeat,
-            PlaybackHighlightColour.Of(follow, appearance, text),
+            PlaybackHighlightColour.Of(appearance, text),
             ScoreSettingsBinding.ParseOr(follow.HighlightBackground, Palette.Get("FollowHighlightBackground")),
             ScoreSettingsBinding.ParseOr(follow.DurationGlowColour, Palette.Get("FollowDurationGlow")), follow.DurationTintEnabled ? follow.DurationGlowOpacity : 0,   // Duration tint off: no glow drawn
             follow.PlayingBarEnabled, ScoreSettingsBinding.ParseOr(follow.PlayingBarColour, Palette.Get("FollowPlayingBar")),
@@ -76,14 +76,13 @@ internal sealed class ScoreSettingsApplier
     }
 }
 
-/// <summary>The colour of the lit notes and the playing line: the accent, the custom pick, or (Auto) the Follow-page colour, which stays the theme-tuned green while it is its default.</summary>
+/// <summary>The colour of the lit notes and the playing line: the custom pick, else the accent.</summary>
 internal static class PlaybackHighlightColour
 {
-    public static UiColor Of(FollowSettings follow, AppearanceSettings appearance, UiColor fallback) => appearance.PlaybackHighlight switch
+    public static UiColor Of(AppearanceSettings appearance, UiColor fallback) => appearance.PlaybackHighlight switch
     {
-        PlaybackHighlightModes.FollowAccent => ScoreSettingsBinding.ParseOr(appearance.Accent, fallback),
         PlaybackHighlightModes.Custom => ScoreSettingsBinding.ParseOr(appearance.PlaybackHighlightColour, fallback),
-        _ => string.Equals(follow.HighlightColour, new FollowSettings().HighlightColour, System.StringComparison.OrdinalIgnoreCase) ? fallback : ScoreSettingsBinding.ParseOr(follow.HighlightColour, fallback),   // the default green follows the theme
+        _ => ScoreSettingsBinding.ParseOr(appearance.Accent, fallback),
     };
 }
 

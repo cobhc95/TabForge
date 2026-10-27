@@ -181,7 +181,7 @@ As a beginner, keep **Audio driver** on **WASAPI (shared)** and **Output device*
 
 > **Note:** The other drivers can take the sound device for themselves, so other programs may fall silent while TabForge plays. Stay on **WASAPI (shared)** unless you know you need more.
 
-The **Sound** menu has **Test selected track output**. It plays one test note on the Windows MIDI output of the selected track. That proves the Windows MIDI path works. It does not test TabForge's own audio engine, so a good result does not prove that normal playback works.
+The **Track** menu has **Test selected track output**. It plays one test note on the Windows MIDI output of the selected track. That proves the Windows MIDI path works. It does not test TabForge's own audio engine, so a good result does not prove that normal playback works.
 
 ## When there is no sound
 

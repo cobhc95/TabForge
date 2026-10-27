@@ -39,6 +39,18 @@ internal sealed partial class ScorePreviewEditor
     public bool SelectionMatches(int startMeasure, int startCell, int endMeasure, int endCell) =>
         Sel.HasSelection && ScoreSelectionRules.Matches(SelectionRange(), ClampedRange(startMeasure, startCell, endMeasure, endCell));
 
+    /// <summary>The cursor and the range as they are now (for a cancelled right-drag to put back).</summary>
+    internal ((int Measure, int Cell, int String)? Cursor, (int, int, int, int)? Range, bool WholeBars) SnapshotSelection() =>
+        (_probe.Cursor, Sel.HasSelection ? Sel.Range() : null, Sel.IsWholeBars);
+
+    /// <summary>Puts back what <see cref="SnapshotSelection"/> took: the range (or none) and the cursor.</summary>
+    internal void RestoreSelection(((int Measure, int Cell, int String)? Cursor, (int, int, int, int)? Range, bool WholeBars) snapshot)
+    {
+        Sel.Clear();
+        if (snapshot.Range is var (m1, c1, m2, c2)) Sel.Set(m1, c1, m2, c2, snapshot.WholeBars);
+        _probe.Cursor = snapshot.Cursor;
+    }
+
     /// <summary>Raised after the loop tint changed, so the view repaints.</summary>
     internal event EventHandler? LoopTintChanged;
 

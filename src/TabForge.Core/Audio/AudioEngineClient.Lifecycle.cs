@@ -26,12 +26,12 @@ public sealed partial class AudioEngineClient
                 PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly | PipeOptions.FirstPipeInstance);   // fail closed: a taken name fails the start
             var exe = EngineExeForTest ?? Environment.ProcessPath ?? throw new InvalidOperationException("TabForge's own path is unknown.");
             _process = Process.Start(EngineStartInfo.For(exe, session, Environment.ProcessId, UserPaths.Diagnostics, token)) ?? throw new InvalidOperationException("The audio engine did not start.");
-            ChildProcessJob.ForThisProcess.Add(_process);   // R-08: ends with TabForge, however TabForge ends
+            ChildProcessGuards.ForThisProcess.Add(_process);   // R-08: ends with TabForge, however TabForge ends
             _process.EnableRaisingEvents = true;
             // R-08: no blocking wait here. Commands sent until the engine connects are queued in order and flushed on connect
             // (Configure first), so Sync returns at once; the engine answers Ready once its device is open.
             lock (_sendGate) _queued = new List<byte[]>();
-            _deafKill = false;
+            _deafKill = false; _resyncNeeded = false; _readySeen = false;   // a fresh engine starts empty: nothing dropped for it, no earlier Ready
             IsRunning = true;
             _config = null; Output = null;
             var process = _process;
@@ -239,7 +239,7 @@ public sealed partial class AudioEngineClient
             try { _pipe?.Dispose(); } catch (IOException) { } // swallow: pipe dispose during teardown: the pipe may already be closed.
             _pipe = null;
         }
-        _awaitingReady = false;
+        _awaitingReady = false; _resyncNeeded = false; _readySeen = false; _fakeLinkUp = false;
         AsioChannels = null;
         _engineProtocol = 0;
         // Unpublished, not disposed: a producer (scheduler thread) may have read it just before; see Write / Start.

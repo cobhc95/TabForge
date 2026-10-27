@@ -35,7 +35,7 @@ public sealed partial class PianoRollView : IMenuCommandRunner
     {
         var inside = LoopSpan() is var (from, to) && Surface.MenuBeat >= from && Surface.MenuBeat < to;
         var state = new PianoRollMenuState(Surface.MenuNote >= 0, Presenter.Clipboard.Count > 0, inside, Presenter.Notes.Count > 0, _host.Editing().PianoRollColours,
-            SectionAt(Surface.MenuBeat) is not null);
+            SectionAt(Surface.MenuBeat) is not null, _host.Editing().PianoRollPlaybackNeedle);
         if (Surface.MenuInKeys) return PianoRollMenus.KeyStripRows(Surface.NoteNames);
         return Surface.MenuInRuler ? PianoRollMenus.RulerRows(state) : PianoRollMenus.Rows(state);
     }
@@ -87,6 +87,7 @@ public sealed partial class PianoRollView : IMenuCommandRunner
             case PianoRollMenus.Randomise: Ask("Randomise velocity", "Move each velocity by up to (±):", "10", v => Presenter.RandomiseVelocityAsync((int)v)); break;
             case PianoRollMenus.Humanise: Ask("Humanise timing", "Move each start by up to (± ticks, 480 to a beat):", "15", v => Presenter.HumaniseAsync(v / 480)); break;
             case PianoRollMenus.Colours when argument is not null: _host.Editing().PianoRollColours = argument; _host.SaveSettings(); RefreshDerived(); Surface.InvalidateVisual(); break;
+            case PianoRollMenus.PlaybackNeedle: _host.Editing().PianoRollPlaybackNeedle = !_host.Editing().PianoRollPlaybackNeedle; _host.SaveSettings(); RefreshNeedle(); break;
             case PianoRollMenus.MovePlayhead: Seek(Surface.MenuBeat); break;
             case PianoRollMenus.LoopBar: { var bar = Presenter.Map.BarAtBeat(Surface.MenuBeat); MakeLoop(bar.StartBeat, bar.EndBeat, false); break; }
             case PianoRollMenus.LoopSection when SectionAt(Surface.MenuBeat) is var (start, end): _host.MakeLoop(start, 0, end, -1, false); Surface.InvalidateVisual(); break;

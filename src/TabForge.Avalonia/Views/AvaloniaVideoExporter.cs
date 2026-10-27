@@ -18,7 +18,7 @@ using TabForge.Services.Video;
 namespace TabForge.Avalonia.Views;
 
 /// <summary>What the Export video dialog hands over: the compiled song, the range, the view, the chosen file and the frame rate.</summary>
-public sealed record VideoExportPlan(ScoreTimeline Timeline, double StartMs, double EndMs, VideoViewSpec Spec, string Path, int Fps);
+public sealed record VideoExportPlan(ScoreTimeline Timeline, double StartMs, double EndMs, VideoViewSpec Spec, string Path, int Fps, string Encoder = VideoEncoderChoices.Auto);
 
 // Owns: the Avalonia side of File > Export video: the request the shared VideoExportFlow (Core) runs, with this app's frame source
 //   (AvaloniaVideoFrameSource) and UI thread; stopping the song first, re-syncing its engine after, and the missing plug-ins question.
@@ -45,7 +45,7 @@ public sealed class AvaloniaVideoExporter
         Action? restore, Func<IReadOnlyList<string>, Task<bool>>? confirmIncomplete, PluginSettings? plugins = null) => new()
     {
         Project = project, Settings = settings, Engine = engine, Timeline = plan.Timeline, StartMs = plan.StartMs, EndMs = plan.EndMs, Spec = plan.Spec,
-        Path = plan.Path, Fps = plan.Fps, Ui = ui, Plugins = plugins, Restore = restore, ConfirmIncomplete = confirmIncomplete,
+        Path = plan.Path, Fps = plan.Fps, Encoder = plan.Encoder, Ui = ui, Plugins = plugins, Restore = restore, ConfirmIncomplete = confirmIncomplete,
         OpenFrames = () => new AvaloniaVideoFrameSource(project, plan.Timeline, plan.Spec, settings.Appearance),
     };
 

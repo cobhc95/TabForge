@@ -1,4 +1,4 @@
-param([string]$run, [string]$mode = 'replay', [int]$shards = 1, [string]$exe = 'C:\Users\COBHC\Downloads\TabForge\Source\work\gp5diff\tfbuild\TabForge.exe', [string]$tfdir = 'tf')
+param([string]$run, [string]$mode = 'replay', [int]$shards = 1, [string]$exe = "$env:USERPROFILE\Downloads\TabForge\Source\work\gp5diff\tfbuild\TabForge.exe", [string]$tfdir = 'tf')
 # Runs the TabForge side of the harness over a run folder: replay (sequences -> tf/*.json) or import (out/*.gp5 -> gp5/*.json),
 # in $shards parallel TabForge processes, each with a 3-hour timeout. Logs go to <run>\tflog-<mode>-<k>.log.
 $procs = @()

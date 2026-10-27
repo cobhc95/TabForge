@@ -109,10 +109,6 @@ public sealed partial class TimelineView : Control
     public SnapSettings? Snap { get; set; }
     /// <summary>The track and lane an audio clip drag is moving into, when that track is not the clip's own; null otherwise. The timeline draws that lane highlighted (see <see cref="TimelineAudioClips"/>).</summary>
     public (TrackModel Track, int Lane)? ClipDropLane { get; set; }
-    /// <summary>The fold of the clip being moved, computed once at the drag start: the slices and the clip start they were folded at. While set, the clip's fold is these slices shifted by the move, so the preview never re-folds at a repeat edge; null Slices = the clip started unfolded and stays one plain box. Null when no move drag.</summary>
-    internal (AudioClip Clip, double Start, IReadOnlyList<RepeatSlice>? Slices)? DragFold { get; set; }
-    /// <summary>The frozen fold shifted by the current move: the slices it came from, the shift and the result, so draw and hit test of one frame share one array (see <see cref="TimelineAudioClips.FoldOf"/>).</summary>
-    internal (IReadOnlyList<RepeatSlice>? Source, double By, IReadOnlyList<RepeatSlice>? Shifted) DragFoldShifted;
     /// <summary>An audio-file drag over the timeline or the Add track strip: the planned landing (the track or a new one, the lane and the span),
     /// drawn as a track-coloured block (see <see cref="TimelineAudioClips"/>); null when no file drag is over. Set by the audio drop handler.</summary>
     public AudioFileDropPreview? FileDropPreview { get; set; }
@@ -181,6 +177,7 @@ public sealed partial class TimelineView : Control
             VisualChildren.Add(layer);
         }
         Reload(song);
+        ContextMenus.HoverBarsChanged += InvalidateVisual;   // the red outline of a hovered Close gap row
         ContextMenuBuilder.Attach(this, ContextMenus, at => ContextMenuRows.TimelineAt(this, at));
         PointerMoved += (_, e) =>
         {

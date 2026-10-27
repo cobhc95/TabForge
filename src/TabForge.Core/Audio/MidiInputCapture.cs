@@ -1,5 +1,6 @@
+using TabForge.Platform.Contracts;
 using System.Diagnostics;
-using NAudio.Midi;
+using TabForge.Platform;
 
 namespace TabForge.Audio;
 
@@ -16,7 +17,7 @@ public interface IMidiDeviceSet : IMidiInputSource
     bool Rescan();
 }
 
-// Owns: the NAudio MIDI input handles: opening, closing and rescanning them, and stamping each message with its device name.
+// Owns: the MIDI input handles (through the IMidiInputBackend port: winmm on Windows, RtMidi elsewhere): opening, closing and rescanning them, and stamping each message with its device name.
 // Does not own: sharing the handles between listeners (<see cref="MidiInputHub"/>) or what a message means.
 // Tests: none dedicated(through a fake device set), TestKeyboardModeMidiListener.
 /// <summary>
@@ -28,12 +29,13 @@ public sealed class MidiInputCapture : IMidiDeviceSet
 {
     private sealed class OpenInput
     {
-        public MidiIn Input = null!;
+        public IMidiInputPort Input = null!;
         public string Name = "";
         public int Index;   // the device id it was opened with
-        public EventHandler<MidiInMessageEventArgs> Handler = null!;
+        public Action<int> Handler = null!;
     }
 
+    private readonly IMidiInputBackend _backend;
     private readonly List<OpenInput> _inputs = new();
     private string[] _lastNames = Array.Empty<string>();   // the devices present at the last open or rescan: a rescan with the same list does nothing
 
@@ -41,18 +43,15 @@ public sealed class MidiInputCapture : IMidiDeviceSet
     public event Action<int, int, int, long>? Message;
     public event Action<string, int, int, int, long>? DeviceMessage;
 
+    /// <summary>The device set on the OS's MIDI stack (<see cref="MidiBackends.Input"/>) unless a backend is given (tests).</summary>
+    public MidiInputCapture(IMidiInputBackend? backend = null) => _backend = backend ?? MidiBackends.Input;
+
     public bool IsOpen => _inputs.Count > 0;
 
     /// <summary>Names of the MIDI input devices (for the status line).</summary>
-    public static IReadOnlyList<string> DeviceNames()
-    {
-        var names = new List<string>();
-        try { for (var i = 0; i < MidiIn.NumberOfDevices; i++) names.Add(MidiIn.DeviceInfo(i).ProductName); }
-        catch (NAudio.MmException ex) { Services.Trace.Error(Services.Trace.Playback, "MIDI: list input devices: " + ex.Message); }
-        return names;
-    }
+    public static IReadOnlyList<string> DeviceNames() => MidiBackends.Input.InputNames();
 
-    public IReadOnlyList<string> ListNames() => DeviceNames();
+    public IReadOnlyList<string> ListNames() => _backend.InputNames();
 
     public IReadOnlyList<string> OpenNames => _inputs.Select(o => o.Name).ToArray();
 
@@ -60,16 +59,18 @@ public sealed class MidiInputCapture : IMidiDeviceSet
     public int Open()
     {
         if (IsOpen) return _inputs.Count;
-        var names = DeviceNames();
+        var names = ListNames();
         _lastNames = names.ToArray();
+        Services.Trace.Write(Services.Trace.Playback, $"MIDI: found {names.Count} inputs: " + string.Join(", ", names.Select(n => "\"" + n + "\"")));
         for (var i = 0; i < names.Count; i++) TryOpen(i, names[i]);
+        Services.Trace.Write(Services.Trace.Playback, $"MIDI: {_inputs.Count} of {names.Count} inputs open");
         return _inputs.Count;
     }
 
     public bool Rescan()
     {
         if (!IsOpen) return false;
-        var names = DeviceNames();
+        var names = ListNames();
         if (names.SequenceEqual(_lastNames)) return false;   // nothing connected or removed
         _lastNames = names.ToArray();
         var changed = false;
@@ -95,34 +96,35 @@ public sealed class MidiInputCapture : IMidiDeviceSet
     {
         try
         {
-            var input = new MidiIn(index);
+            var input = _backend.Open(index);
             var entry = new OpenInput { Input = input, Name = name, Index = index };
-            entry.Handler = (_, e) => OnMessage(name, e);
-            input.MessageReceived += entry.Handler;
-            input.Start();
+            entry.Handler = raw => OnMessage(name, raw);
+            input.RawMessage += entry.Handler;
+            try { input.Start(); }
+            catch (MidiPortException) { input.RawMessage -= entry.Handler; input.Dispose(); throw; }
             _inputs.Add(entry);
+            Services.Trace.Write(Services.Trace.Playback, $"MIDI: opened \"{name}\" (device {index})");
             return true;
         }
-        catch (NAudio.MmException ex) { Services.Trace.Error(Services.Trace.Playback, "MIDI: open input: " + ex.Message); return false; }   // the device is open in another program
+        catch (MidiPortException ex) { Services.Trace.Error(Services.Trace.Playback, "MIDI: open input: " + ex.Message); return false; }   // the device is open in another program
     }
 
     private static void CloseOne(OpenInput o)
     {
-        o.Input.MessageReceived -= o.Handler;
-        try { o.Input.Stop(); } catch (Exception ex) when (ex is NAudio.MmException or InvalidOperationException) { Services.Trace.Error(Services.Trace.Playback, "MIDI: stop input: " + ex.Message); }
-        try { o.Input.Dispose(); } catch (Exception ex) when (ex is NAudio.MmException or InvalidOperationException) { Services.Trace.Error(Services.Trace.Playback, "MIDI: close input: " + ex.Message); }
+        o.Input.RawMessage -= o.Handler;
+        o.Input.Stop();   // the adapters report their own stop and close failures
+        o.Input.Dispose();
     }
 
     public void Close()
     {
-        foreach (var o in _inputs) CloseOne(o);
+        foreach (var o in _inputs) { CloseOne(o); Services.Trace.Write(Services.Trace.Playback, $"MIDI: closed \"{o.Name}\""); }
         _inputs.Clear();
     }
 
-    private void OnMessage(string name, MidiInMessageEventArgs e)
+    private void OnMessage(string name, int raw)
     {
         var stamp = Stopwatch.GetTimestamp();
-        var raw = e.RawMessage;
         var status = raw & 0xFF;
         if (status < 0x80 || status >= 0xF0) return;   // running status / system messages are not used
         var d1 = (raw >> 8) & 0x7F; var d2 = (raw >> 16) & 0x7F;
