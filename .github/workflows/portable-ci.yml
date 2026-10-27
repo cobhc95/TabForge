@@ -63,6 +63,13 @@ jobs:
 
       # The Core tests live in the Avalonia test project (no Core-only project yet); the portability and architecture guards
       # only read source files, so they run here.
+      # The guards read the private workspace layout (<root>/Source/TabForge.sln, baselines keyed "Source/src/..."); the public
+      # repository has the sources at its root, so a link named Source gives them that layout without copying anything.
+      - name: Workspace layout for the guard tests
+        run: |
+          mkdir -p "${{ runner.temp }}/tf-layout"
+          ln -s "${{ github.workspace }}" "${{ runner.temp }}/tf-layout/Source"
+          echo "TABFORGE_REPO=${{ runner.temp }}/tf-layout" >> "$GITHUB_ENV"
       - name: Guard tests (portability and architecture ratchets)
         run: >
           dotnet test tests/TabForge.Avalonia.Tests/TabForge.Avalonia.Tests.csproj -c Release -p:EnableWindowsTargeting=true -p:RestoreLockedMode=false
