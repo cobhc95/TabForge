@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <!-- Same target per OS as TabForge.Avalonia (it references that project; a net10.0 test project cannot reference the net10.0-windows build). -->
     <TargetFramework Condition="$([MSBuild]::IsOSPlatform('Windows'))">net10.0-windows</TargetFramework>
@@ -12,10 +12,24 @@
   <ItemGroup Condition="'$(TargetFramework)' != 'net10.0-windows'">
     <!-- The engine client's composition is Windows-only (see src/TabForge.Avalonia/Playback). -->
     <Compile Remove="Playback/AvaloniaPlaybackCompositionTests.cs" />
-    <!-- These test Windows-only code (Win32 path resolver, Windows dialog shell, the Media Foundation live video parity). -->
+    <!-- These test Windows-only code (Win32 path resolver and temp folders, Windows dialog shell, Media Foundation video encode and
+         read-back, DXGI live recording, VST2/VST3 plug-in windows, parity screenshots); the macOS/Linux build leaves them out. -->
     <Compile Remove="Infrastructure/WindowsPathResolverTests.cs" />
     <Compile Remove="Shell/DialogVirtualizationTests.cs" />
     <Compile Remove="Video/LiveVideoParityTests.cs" />
+    <Compile Remove="Infrastructure/TempRootTests.cs" />
+    <Compile Remove="Capture/ParityShotsTests.cs" />
+    <Compile Remove="Video/VideoExportFinishTests.cs" />
+    <Compile Remove="Video/VideoExportParityTests.cs" />
+    <Compile Remove="Capture/ShotSweepTests.cs" />
+    <Compile Remove="Capture/ParityShotMap.cs" />
+    <Compile Remove="Plugins/FxAddPluginTests.cs" />
+    <Compile Remove="Plugins/PluginBrowserWindowTests.cs" />
+    <Compile Remove="Plugins/RfxReviewFixTests.cs" />
+    <Compile Remove="Video/LiveVideoRecordTests.cs" />
+    <Compile Remove="Video/Mp4ReadBack.cs" />
+    <Compile Remove="Video/VideoEncoderPortTests.cs" />
+    <Compile Remove="Video/VideoExportCancelTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <!-- Where this project was built from: the checkout root for tests whose binaries are built outside the checkout (ArtifactsPath elsewhere) with no TABFORGE_REPO. -->
