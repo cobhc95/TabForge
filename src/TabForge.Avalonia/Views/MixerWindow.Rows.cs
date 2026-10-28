@@ -110,7 +110,15 @@ public sealed partial class MixerWindow
             $"Master pan: moves the whole mix left or right ({MixerStripPresenter.PanRange}; double-click: centre)"), MixerColumnLayout.Pan);
         Put(grid, Fader(MasterVolume, 0, 100, MixerStripPresenter.MasterVolumeDefault, SetMasterVolume,
             "Master volume for all tracks (0–100 %, the same as the main window's master knob; double-click: 100)", songEdit: false), MixerColumnLayout.Volume);
-        return RowBorder(grid, accent: true, $"Mixer row: {MixerStripPresenter.MasterName}");
+        var row = RowBorder(grid, accent: true, $"Mixer row: {MixerStripPresenter.MasterName}");
+        // Right-click Master › Monitoring FX…: the live-only chain after the master (speaker correction), as the MON button.
+        var menu = MenuStability.CreateContextMenu();
+        var monitoring = new MenuItem { Header = "Monitoring FX…", Name = "MasterMonitoringFx" };
+        ToolTip.SetTip(monitoring, "Effects heard live on these speakers only (e.g. an IR Loader for speaker correction); never in renders, exports or videos.");
+        monitoring.Click += (_, _) => OpenMonitorFx();
+        menu.Items.Add(monitoring);
+        row.ContextMenu = menu;
+        return row;
     }
 
     /// <summary>The window's own master volume, used only when the window has no playback to read (the preview).</summary>

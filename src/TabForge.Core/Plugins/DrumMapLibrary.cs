@@ -41,10 +41,14 @@ public static class DrumMapLibrary
 
     public static DrumMap? Find(string name) => string.IsNullOrEmpty(name) ? null : All().FirstOrDefault(m => string.Equals(m.Name, Current(name), StringComparison.OrdinalIgnoreCase));
 
+    /// <summary>The named map, or General MIDI when it is missing: the editor and the processor rows always have a song map to show.</summary>
+    public static DrumMap? FindOrGeneralMidi(string name) => Find(name) ?? Find("General MIDI");
+
     /// <summary>The current name of the shipped map, for chains saved under one of its earlier names.</summary>
     private static string Current(string name) =>
         string.Equals(name, "Superior Drummer 3 (unverified)", StringComparison.OrdinalIgnoreCase)
-        || string.Equals(name, "Acoustic kit map (unverified)", StringComparison.OrdinalIgnoreCase) ? "Tabs to SD3" : name;
+        || string.Equals(name, "Acoustic kit map (unverified)", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(name, "Tabs to SD3", StringComparison.OrdinalIgnoreCase) ? "Superior Drummer 3" : name;
 
     private static List<DrumMap> Load()
     {

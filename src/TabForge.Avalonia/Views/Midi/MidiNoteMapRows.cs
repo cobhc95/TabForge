@@ -52,7 +52,8 @@ public sealed class MidiNoteMapRows
                 string text when DrumMapLibrary.Find(text.TrimStart('★', ' ')) is { IsUser: true } map => map.Name,
                 _ => null,
             },
-            () => PresetCatalogKind.DrumMap, () => null, Fill, null, item => item is ComboBoxItem combo ? combo.Content?.ToString() ?? "" : item?.ToString() ?? "");
+            () => PresetCatalogKind.DrumMap, () => null, Fill, null, item => item is ComboBoxItem combo ? combo.Content?.ToString() ?? "" : item?.ToString() ?? "",
+            item => item is ComboBoxItem { Tag: string tag } && DrumMapLibrary.Find(tag) is { IsUser: false });
         combo.SelectionChanged += (_, _) =>
         {
             if (_filling) return;
@@ -76,7 +77,7 @@ public sealed class MidiNoteMapRows
             stack.Children.Add(_summary);
             var overrides = new TextBlock
             {
-                Text = "For a single note, Overrides (under Advanced) also works, e.g. 40>38, or 42>x to drop a note.", TextWrapping = global::Avalonia.Media.TextWrapping.Wrap,
+                Text = "For a single note, the Overrides setting also works, e.g. 40>38, or 42>x to drop a note.", TextWrapping = global::Avalonia.Media.TextWrapping.Wrap,
                 FontSize = 11, Margin = new Thickness(ButtonIndent, 6, 0, 0), [!TextBlock.ForegroundProperty] = new DynamicResourceExtension("MutedBrush"),
             };
             stack.Children.Add(overrides);
@@ -96,7 +97,7 @@ public sealed class MidiNoteMapRows
     {
         try
         {
-            var source = DrumMapLibrary.Find(Value("From")) ?? DrumMapLibrary.Find("General MIDI");
+            var source = DrumMapLibrary.FindOrGeneralMidi(Value("From"));
             var editor = new DrumMapEditorWindow(map, source);
             await editor.ShowDialog(_owner);
             if (editor.Saved is not { } saved) { Fill(); return; }   // maps may have been renamed or deleted from the editor

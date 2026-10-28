@@ -25,8 +25,8 @@ namespace TabForge.Avalonia.Tests;
 public sealed class MainWindowSaveTests : IDisposable
 {
     /// <summary>The SHA-256 of the decompressed bytes the app's save path writes for <see cref="CharacterizationSong"/>. The file is gzip, whose compressed bytes differ between .NET versions
-    /// (the runtime's zlib changed in .NET 10) for identical content, so the content is compared, not the file. Re-pinned when Track.ColorFollowsInstrument (always written, like the other flags; false = older files keep their colours) joined the format.</summary>
-    private const string AppTforgeSha256 = "884A04D4C56B9A469CE96616EFBD5DB308F74CE929863E28B32513D1D4C34921";
+    /// (the runtime's zlib changed in .NET 10) for identical content, so the content is compared, not the file. Re-pinned when Track.MidiOutputDeviceName (always written, like the other flags; absent in older files, which keep working by index) joined the format.</summary>
+    private const string AppTforgeSha256 = "4EC23FC3A07B9B13CE7C6C737A5F7DE2E2083AD07C224144373970D5DAB4A045";
 
     private static string DecompressedSha256(string path)
     {

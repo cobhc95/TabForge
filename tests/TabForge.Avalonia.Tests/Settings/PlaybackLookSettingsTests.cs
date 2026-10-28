@@ -31,11 +31,11 @@ public class PlaybackLookSettingsTests
     };
 
     [Fact]
-    public void ThePlaybackHighlightOffersFollowAccentAndCustomAndDefaultsToTheAccent()
+    public void ThePlaybackHighlightOffersFollowAccentAndCustomAndDefaultsToCustom()
     {
         var row = SettingsCatalog.Build(new AppSettings()).Single(r => r.Key == "appearance.playbackhighlight");
         Assert.Equal(new[] { "Follow accent", "Custom" }, row.Choices);
-        Assert.Equal("Follow accent", row.Get());
+        Assert.Equal("Custom", row.Get());
         Assert.DoesNotContain("Auto", row.Description);
     }
 

@@ -34,6 +34,7 @@ public sealed class FxContainerPresets
     private readonly ComboBox _presets = new() { Width = 220, Name = "ContainerPresetBox" };
     private readonly Button _save = new() { Content = "Save preset…", Padding = new Thickness(10, 3), Margin = new Thickness(6, 0, 0, 0), Name = "ContainerSavePreset" };
     private bool _filling;
+    private HashSet<string> _names = new(StringComparer.OrdinalIgnoreCase);   // the saved presets as last listed: the row layer asks per row, so no disk read per call
 
     /// <summary>True when a plug-in of a preset may be loaded here (PluginTrust). Tests replace it.</summary>
     internal Func<PluginSlot, bool> Trusted { get; set; }
@@ -46,7 +47,7 @@ public sealed class FxContainerPresets
         ToolTip.SetTip(_presets, "Your saved container presets: picking one replaces what is in this container (one undo step). Rename, duplicate, delete or drag them with Manage presets…");
         ToolTip.SetTip(_save, "Save this container with its plug-ins and their settings as a preset");
         _ = PresetRows.Attach(_presets, () => _store,
-            item => item is string name && _store.Names().Contains(name, StringComparer.OrdinalIgnoreCase) ? name : null,
+            item => item is string name && _names.Contains(name) ? name : null,
             () => PresetCatalogKind.Container, () => null, Fill);
         _presets.SelectionChanged += async (_, _) =>
         {
@@ -73,6 +74,7 @@ public sealed class FxContainerPresets
             var current = _shown()?.Preset;
             var items = new List<object> { Hint };
             var names = _store.Names();
+            _names = new HashSet<string>(names, StringComparer.OrdinalIgnoreCase);
             items.AddRange(names);
             string? match = names.FirstOrDefault(n => string.Equals(n, current, StringComparison.OrdinalIgnoreCase));
             if (match is null && current is { Length: > 0 }) { items.Insert(1, current); match = current; }
@@ -113,6 +115,9 @@ public sealed class FxContainerPresets
             await _dialogs().Tell(_owner, "The preset could not be saved: " + ex.Message, Caption);
             return false;
         }
+        // The saved preset becomes the container's current one, so the box shows it (like a pick would; no reload happens).
+        if (!string.Equals(container.Preset, name, StringComparison.Ordinal))
+            _edit(live => { if (ChainTree.Find(live, container) is { } at) at.List[at.Index].Container!.Preset = name; });
         Fill();
         return true;
     }

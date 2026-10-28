@@ -4,7 +4,7 @@ using TabForge.Avalonia.Platform;
 using TabForge.Presenters;
 
 // Owns: the one place every "Manage presets…" row opens the manager from: the single app-wide window, the kind and key it jumps to, and
-//   the delete setting it was configured with. One replaceable opener is the seam a test records instead of opening a window.
+//   the stores it was configured with (the settings that hold the bend and tremolo presets). One replaceable opener is the seam a test records instead of opening a window.
 // Does not own: the window and its data (PresetManagerWindow, IPresetCatalogue), the stores, or any row's own contents.
 // Tests: PresetManagerOpenTests, PresetManagerWindowTests.
 namespace TabForge.Avalonia.Views.Presets;
@@ -13,8 +13,7 @@ namespace TabForge.Avalonia.Views.Presets;
 public static class PresetManager
 {
     private static PresetManagerWindow? _open;
-    private static Func<bool> _confirmDeletePresets = () => true;
-    private static Action<bool> _rememberDeletePresets = _ => { };
+    private static Func<IPresetStoreFactory?> _stores = () => null;
 
     /// <summary>Opens the manager; tests replace this to record the owner, kind and key instead of opening a window.</summary>
     internal static Action<Window, PresetCatalogKind, string?> Opener { get; set; } = OpenWindow;
@@ -22,19 +21,19 @@ public static class PresetManager
     /// <summary>True while the manager window is open (the drop-down rows re-read their folder when the window comes back).</summary>
     internal static bool IsOpen => _open is { IsVisible: true };
 
-    /// <summary>The configured "Ask before deleting presets" read and write, for the drop-down rows.</summary>
-    internal static Func<bool> ConfirmDeletePresets => _confirmDeletePresets;
-    internal static Action<bool> RememberDeletePresets => _rememberDeletePresets;
-
-    /// <summary>Takes the delete setting's read and write from the main window, once, when the command is registered.</summary>
-    public static void Configure(Func<bool>? confirmDeletePresets, Action<bool>? rememberDeletePresets)
-    {
-        _confirmDeletePresets = confirmDeletePresets ?? (() => true);
-        _rememberDeletePresets = rememberDeletePresets ?? (_ => { });
-    }
+    /// <summary>Takes the stores of every preset kind from the main window, once, when the command is registered (null: the folders only).</summary>
+    public static void Configure(Func<IPresetStoreFactory?>? stores) => _stores = stores ?? (() => null);
 
     /// <summary>Opens the manager on a kind (and plug-in folder or processor type), or brings the open one forward and jumps it there.</summary>
     public static void Open(Window owner, PresetCatalogKind kind, string? key) => Opener(owner, kind, key);
+
+    // The remembered dialog folders of the main window that owns this one (through the owner chain); null without one.
+    private static TabForge.Services.DialogFolderMemory? FoldersOf(Window owner)
+    {
+        for (WindowBase? window = owner; window is not null; window = window.Owner)
+            if (window is MainWindow main) return main.Settings?.DialogFolders;
+        return null;
+    }
 
     private static void OpenWindow(Window owner, PresetCatalogKind kind, string? key)
     {
@@ -45,8 +44,8 @@ public static class PresetManager
             shown.Activate();
             return;
         }
-        var window = new PresetManagerWindow(new AvaloniaDialogHost(), kind, key,
-            confirmDeletePresets: _confirmDeletePresets, rememberDeletePresets: _rememberDeletePresets);
+        var stores = _stores();
+        var window = new PresetManagerWindow(new AvaloniaDialogHost(), kind, key, stores is null ? null : new PresetCataloguePresenter(stores), stores) { Folders = FoldersOf(owner) };
         _open = window;
         window.Closed += (_, _) => { if (ReferenceEquals(_open, window)) _open = null; };
         window.Show(owner);

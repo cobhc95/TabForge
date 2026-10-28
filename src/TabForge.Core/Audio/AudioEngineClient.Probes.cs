@@ -184,6 +184,7 @@ public sealed partial class AudioEngineClient : IDisposable
                 _ => PluginStateOutcome.Failed,
             };
             if (outcome == PluginStateOutcome.Captured) plugin.State = replies[i].State;
+            if (outcome != PluginStateOutcome.Captured && TabForge.Audio.Contracts.Builtin.BuiltinEffects.IsBuiltin(plugin.Path)) Services.Trace.Error(Services.Trace.Engine, $"built-in state not captured: {plugin.Path} outcome {outcome}, reply index {i} of {expected}, ids {(request.PluginIds is null ? "none" : request.PluginIds.Length.ToString())}");   // diagnosis: why a built-in gave no state
             results.Add(new PluginStateResult(track, plugin, outcome));
         }
         return results;

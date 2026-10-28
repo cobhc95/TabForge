@@ -9,6 +9,7 @@ using Avalonia.Layout;
 using Avalonia.Markup.Xaml.MarkupExtensions;
 using Avalonia.Media;
 using TabForge.Avalonia.Platform;
+using TabForge.Avalonia.Views.Dialogs;
 using TabForge.Presenters;
 
 // Owns: the preset manager's two lists: the tree rows (chevron, title, count, indentation) and the list rows (name, built-in label,
@@ -26,6 +27,8 @@ public sealed partial class PresetManagerWindow
     private IReadOnlyList<PresetEntry> _entries = Array.Empty<PresetEntry>();
     // True while the list shows the flat search/group layout (name + where + date); false for the plain node layout.
     private bool _flat;
+    // How faint the name of a built-in preset is drawn (the theme's muted ink is near the normal ink in the light theme).
+    private const double BuiltInOpacity = 0.6;
 
     /// <summary>Switches the preset list to virtualization; called once from the window's constructor before the first fill.</summary>
     private void ConfigureListVirtualization()
@@ -89,9 +92,10 @@ public sealed partial class PresetManagerWindow
         var chevron = new Button
         {
             Content = node.IsGroup ? (open ? ChevronOpen : ChevronClosed) : "", Width = ChevronWidth, Padding = new Thickness(0),
-            IsVisible = node.IsGroup, Background = AvaloniaPalette.TransparentBrush, BorderThickness = new Thickness(0),
+            IsHitTestVisible = node.IsGroup, Focusable = node.IsGroup, Background = AvaloniaPalette.TransparentBrush, BorderThickness = new Thickness(0),
             HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Center, FontSize = ChevronFontSize,
         };
+        // A row without a chevron keeps its (empty) column, so every title starts at the same x.
         if (node.IsGroup) chevron.Click += (_, e) => { e.Handled = true; Toggle(node.Kind, !open); };
         var title = new TextBlock { Text = node.Title, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(TreeTitleGapX, 0, TreeTitleGapRight, 0) };
         var number = new TextBlock { Text = count.ToString(), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(TreeCountGap, 0, 0, 0) };
@@ -120,12 +124,22 @@ public sealed partial class PresetManagerWindow
     private Control BuildRowContent(PresetEntry? entry, bool flat)
     {
         if (entry is null) return new Grid();
-        var grid = new Grid { MinHeight = RowMinHeight, ColumnDefinitions = ColumnDefinitions.Parse(flat ? "*,*,Auto" : "*,Auto") };
+        var grid = new Grid { MinHeight = RowMinHeight, ColumnDefinitions = ColumnDefinitions.Parse(flat ? "*,*,Auto" : "Auto,*,Auto") };
         var name = new StackPanel { Orientation = Orientation.Horizontal };
         var text = new TextBlock { Text = entry.Name, Tag = NameTag, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis };
         ToolTip.SetTip(text, entry.BuiltIn ? BuiltInTip : "Double-click to rename");
+        if (entry.BuiltIn) { text[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted"); text.Opacity = BuiltInOpacity; }   // greyed: it comes with the app
         name.Children.Add(text);
         if (entry.BuiltIn) name.Children.Add(Muted(BuiltInLabel, new Thickness(NameGap, 0, 0, 0)));
+        if (!flat)
+        {
+            // The grip of a user preset (a built-in one gets the same room, so the names line up); dragging it reorders the list.
+            Control grip = entry.BuiltIn ? new Border { Width = DialogMetrics.PresetGripWidth } : PresetRowIcons.Grip(entry.Name);
+            if (grip is Border handle && !entry.BuiltIn) BeginDrag(handle, entry);
+            grid.Children.Add(grip);
+            Grid.SetColumn(name, 1);
+            name.Spaced(DialogMetrics.PresetLabelGap);
+        }
         grid.Children.Add(name);
         if (flat)
         {
@@ -137,7 +151,7 @@ public sealed partial class PresetManagerWindow
         var date = Muted(PresetCataloguePresenter.DateText(entry.Modified, DateTime.Now), new Thickness(WhereGap, 0, 0, 0));
         date.HorizontalAlignment = HorizontalAlignment.Right;
         date.MinWidth = DateWidth;
-        Grid.SetColumn(date, flat ? 2 : 1);
+        Grid.SetColumn(date, 2);
         grid.Children.Add(date);
         return grid;
     }

@@ -20,6 +20,7 @@ namespace TabForge.Avalonia.Tests;
 /// Does not own: the editor window or the Edit map... button (MidiProcessingWindow).
 /// Tests: this class.
 /// </summary>
+[Collection("PluginLibraryRoot")]   // PluginLibrary.RootOverride is process-wide: run alone so no parallel test resets it or reads the scratch folder
 public class NoteMapEditEntryTests
 {
     [Fact]
@@ -38,7 +39,7 @@ public class NoteMapEditEntryTests
         using var scratch = FxTestKit.ScratchLibrary();
         DrumMapLibrary.Reload();
         var owner = new Window();
-        var values = JsonNode.Parse("{\"From\":\"General MIDI\",\"To\":\"Tabs to SD3\",\"Overrides\":\"\"}")!.AsObject();
+        var values = JsonNode.Parse("{\"From\":\"General MIDI\",\"To\":\"Superior Drummer 3\",\"Overrides\":\"\"}")!.AsObject();
         var stored = new List<(string Key, string Value)>();
         var rows = new MidiNoteMapRows(owner, values, (key, value) => stored.Add((key, value)));
         var info = MidiProcessorCatalog.Find("noteMap")!;
@@ -69,7 +70,7 @@ public class NoteMapEditEntryTests
 
         Assert.Equal((PresetCatalogKind.DrumMap, (string?)null), Assert.Single(calls));
         Assert.Empty(stored);   // the manage row is never stored as a map
-        Assert.Equal("Tabs to SD3", values["To"]!.GetValue<string>());
+        Assert.Equal("Superior Drummer 3", values["To"]!.GetValue<string>());
         owner.Close();
     }
 }

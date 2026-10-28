@@ -28,7 +28,7 @@ public sealed partial class AudioEngineClient
             }
             case EngineEvent.Ready: OnReady(r); break;
             case EngineEvent.ChainLoaded: OnChainLoaded(r); break;
-            case EngineEvent.DeviceError: { _awaitingReady = false; var message = r.ReadBoundedString(); RaiseOnUi(() => DeviceError?.Invoke(message)); break; }
+            case EngineEvent.DeviceError: { _awaitingReady = false; var message = r.ReadBoundedString(); if (_config is { } failed && _fallback.Failed(failed) is { } notice) { message = notice; var open = _fallback.Apply(failed); _config = open; Send(EngineCommand.Configure, w => w.Write(open)); } RaiseOnUi(() => DeviceError?.Invoke(message)); break; }   // a saved output that will not open: this session plays on WASAPI (the next sync configures it), the saved choice stays
             case EngineEvent.PluginFailed:
             {
                 r.ReadInt32(); r.ReadInt32(); var path = r.ReadBoundedString(1024); var why = r.ReadBoundedString();

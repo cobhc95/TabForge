@@ -19,11 +19,15 @@ internal sealed class SongSnapshot : IScoreQuery
 
     private SongSnapshot(ProjectState state, RuntimeState runtime, int revision, int contentRevision)
     {
+        State = state;
         Revision = revision;
         ContentRevision = contentRevision;
         // Decoded by whichever thread asks first; a decoder of its own keeps the owner's encoder (and its baseline) untouched.
         _copy = new Lazy<SongProject>(() => runtime.ApplyTo(new ProjectStateEncoder().Restore(state, null, validate: false)), LazyThreadSafetyMode.ExecutionAndPublication);
     }
+
+    /// <summary>The undo state the copy decodes from (its bar chunks are what <see cref="PlaybackEditDiff"/> compares).</summary>
+    internal ProjectState State { get; }
 
     /// <summary>The song's <see cref="SongProject.TimelineRevision"/> when the copy was taken.</summary>
     public int Revision { get; }

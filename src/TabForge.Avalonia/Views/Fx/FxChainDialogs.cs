@@ -23,7 +23,7 @@ public sealed class FxChainDialogs
 
     /// <summary>Shows the Add plug-in window on the host's real scan and returns the chosen plug-in, or null: owner, host.</summary>
     public Func<Window, IFxChainHost, Task<VstPluginInfo?>> ChoosePlugin { get; set; } = (owner, host) =>
-        PluginBrowserWindow.ChooseAsync(owner, new PluginBrowserSession(host.PluginSettings, host.Trust, host.PluginFiles, host.SaveSettings), new AvaloniaFileDialogs(), host.OpenAudioSettings);
+        PluginBrowserWindow.ChooseAsync(owner, new PluginBrowserSession(host.PluginSettings, host.Trust, host.PluginFiles, host.SaveSettings), new AvaloniaFileDialogs(host.DialogFolders), host.OpenAudioSettings);
 
     /// <summary>Asks for the name of a preset of a plug-in (the Save preset window); null when cancelled: owner, plug-in.</summary>
     public Func<Window, PluginSlot, Task<string?>> PresetName { get; set; } = (owner, slot) =>

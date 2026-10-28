@@ -38,7 +38,7 @@ public sealed class PortabilityGuardTests
     // Windows-only code belongs here (later behind ports); everything else may only lose hits.
     private static readonly string[] AllowedFolders =
     {
-        "/Platform/Windows/", "/Shell/Win32/", "/TabForge.AudioEngine/Output/", "/TabForge.AudioEngine/Editors/",
+        "/Platform/Windows/", "/Platform/Linux/", "/Shell/Win32/", "/TabForge.AudioEngine/Output/", "/TabForge.AudioEngine/Editors/",
     };
 
     [Fact]

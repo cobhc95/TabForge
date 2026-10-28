@@ -194,7 +194,7 @@ public static partial class SettingsCatalog
     {
         (General, "Updates", "general.checkupdates general.checknow"),
         (General, "Window", "general.restorewindow"),
-        (General, "Confirmations", "general.confirmclose general.confirmdiscardsettings general.confirmdeletepresets editing.confirmdelete editing.bardelete timeline.confirmdelete"),
+        (General, "Confirmations", "general.confirmclose general.confirmdiscardsettings editing.confirmdelete editing.bardelete timeline.confirmdelete"),
 
         (Appearance, "Theme", "appearance.thememode"),
         (Appearance, "Size and text", "appearance.uiscale appearance.density appearance.fontsource appearance.font* appearance.fontsize* appearance.iconsize* appearance.toolbaricons*"),

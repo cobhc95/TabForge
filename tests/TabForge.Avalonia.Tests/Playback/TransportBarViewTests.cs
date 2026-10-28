@@ -34,8 +34,8 @@ public class TransportBarViewTests
         window.Show();
         var buttons = Buttons(bar);
         Assert.Equal(new[] { "mic", "rewind_to_beginning", "stop", null, "play", "next_section", "click_beat", "metronome", "loop", "tuning_fork", "snap_magnet", "mixer" }, buttons.Select(b => b.Item.Icon));
-        // At 480 px the groups fit two rows only with smaller buttons: all shrink together, never below the minimum.
-        Assert.All(buttons, b => Assert.InRange(b.Bounds.Width, TransportBarView.MinButtonSize, TransportBarView.TransportButtonSize));
+        // At 480 px the groups wrap to more rows; the buttons keep their normal size.
+        Assert.All(buttons, b => Assert.Equal(TransportBarView.TransportButtonSize, b.Bounds.Width));
         Assert.All(buttons, b => Assert.Equal(buttons[0].Bounds.Width, b.Bounds.Width));
         Assert.All(buttons.Where(b => !b.Local), b =>
         {

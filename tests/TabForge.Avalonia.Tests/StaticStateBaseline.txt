@@ -7,8 +7,6 @@ Source/src/TabForge.AudioEngine/Audio/ClipPlayer.cs|6
 Source/src/TabForge.AudioEngine/Editors/EditorWindows.cs|1
 Source/src/TabForge.AudioEngine/Host/EngineHost.cs|6
 Source/src/TabForge.AudioEngine/Isolation/PluginHostLink.cs|1
-Source/src/TabForge.AudioEngine/Midi/Processors/GeneratorProcessors.cs|1
-Source/src/TabForge.AudioEngine/Midi/Processors/ScaleProcessors.cs|1
 Source/src/TabForge.AudioEngine/Mixing/TrackChain.cs|2
 Source/src/TabForge.AudioEngine/Output/AudioOutputFactory.cs|3
 Source/src/TabForge.AudioEngine/Plugins/Vst2Plugin.cs|3
@@ -73,6 +71,8 @@ Source/src/TabForge.Core/KeyboardMode/KeyboardModeSettings.cs|2
 Source/src/TabForge.Core/KeyboardMode/KeyboardNoteSource.cs|1
 Source/src/TabForge.Core/KeyboardMode/KeyboardStripGeometry.cs|1
 Source/src/TabForge.Core/LiveInput/LiveInputSettings.cs|1
+Source/src/TabForge.Core/Midi/Processors/GeneratorProcessors.cs|1
+Source/src/TabForge.Core/Midi/Processors/ScaleProcessors.cs|1
 Source/src/TabForge.Core/Models/AudioInputs.cs|2
 Source/src/TabForge.Core/Models/Dynamics.cs|2
 Source/src/TabForge.Core/Models/MixerModel.cs|4

@@ -14,13 +14,16 @@ namespace TabForge.Avalonia.Views;
 // Tests: TabForge.Avalonia.Tests.PreferencesSettingsTransferTests.
 public sealed partial class PreferencesWindow
 {
-    private readonly AvaloniaFileDialogs _dialogs = new();
+    /// <summary>The app's remembered dialog folders (null: none, as in tests).</summary>
+    public TabForge.Services.DialogFolderMemory? DialogFolders { get; set; }
+
+    private AvaloniaFileDialogs _dialogs => new(DialogFolders);
     private const string SettingsFileFilter = "TabForge settings (*.json)|*.json";
 
     /// <summary>Import settings…: picks a settings file and stages it.</summary>
     private void ImportSettingsFromDialog()
     {
-        var chosen = _dialogs.OpenFile(new FileDialogOptions { Title = "Import TabForge settings", Filter = SettingsFileFilter, CheckFileExists = true }, this);
+        var chosen = _dialogs.OpenFile(new FileDialogOptions { Key = TabForge.Services.DialogKeys.SettingsImport, Title = "Import TabForge settings", Filter = SettingsFileFilter, CheckFileExists = true }, this);
         if (chosen is not null) ImportSettingsFrom(chosen);
     }
 
@@ -50,7 +53,7 @@ public sealed partial class PreferencesWindow
     {
         var chosen = _dialogs.SaveFile(new FileDialogOptions
         {
-            Title = "Export TabForge settings", Filter = SettingsFileFilter, DefaultExt = ".json", AddExtension = true, FileName = "TabForge-settings.json",
+            Key = TabForge.Services.DialogKeys.SettingsExport, Title = "Export TabForge settings", Filter = SettingsFileFilter, DefaultExt = ".json", AddExtension = true, FileName = "TabForge-settings.json",
         }, this);
         if (chosen is not null) ExportSettingsTo(chosen);
     }

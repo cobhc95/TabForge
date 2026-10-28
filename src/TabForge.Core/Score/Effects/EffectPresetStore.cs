@@ -1,4 +1,3 @@
-using System.Globalization;
 using TabForge.Models;
 using TabForge.Presets;
 using TabForge.Services;
@@ -6,7 +5,7 @@ using TabForge.Services;
 namespace TabForge.Views.EffectEditors;
 
 // Owns: the built-in preset lists and the user presets of every effect editor (kept in AppSettings.EffectPresets, keyed by editor kind).
-// Does not own: choosing a preset in the dialog (CurveEffectDialog) or saving the settings file (the host).
+// Does not own: choosing a preset in the dialog (CurveEffectWindow) or saving the settings file (the host).
 // Tests: no dedicated test class.
 public sealed class EffectPresetStore
 {
@@ -14,6 +13,9 @@ public sealed class EffectPresetStore
     private readonly AppSettings _settings;
 
     public EffectPresetStore(AppSettings settings) => _settings = settings;
+
+    /// <summary>The user's presets of one editor kind as a store the preset manager and the editors' lists share; <paramref name="save"/> writes the settings after each change.</summary>
+    public EffectPresetListStore Store(EffectEditorKind kind, Action? save = null) => new(_settings, kind, save);
 
     /// <summary>Built-in presets first, then the user's, in the order saved.</summary>
     public IReadOnlyList<(EffectPresetEntry Preset, bool BuiltIn)> List(EffectEditorKind kind)
@@ -43,17 +45,6 @@ public sealed class EffectPresetStore
     public bool Delete(EffectEditorKind kind, string name) =>
         _settings.EffectPresets.RemoveAll(p => p.Kind == kind.ToString() && string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase)) > 0;
 
-    // Offsets 0..60 across the note; values in quarter-tones (4 = a whole tone).
-    private static EffectPresetEntry P(EffectEditorKind kind, string name, string curve) => new()
-    {
-        Kind = kind.ToString(), Name = name,
-        Points = curve.Split(' ').Select(x => x.Split(':')).Select(a => new BendPointModel
-        {
-            Offset = double.Parse(a[0], CultureInfo.InvariantCulture),
-            Value = double.Parse(a[1], CultureInfo.InvariantCulture)
-        }).ToList()
-    };
-
     public static IReadOnlyList<EffectPresetEntry> BuiltIn(EffectEditorKind kind) => kind switch
     {
         EffectEditorKind.Bend => BendPresets,
@@ -64,24 +55,9 @@ public sealed class EffectPresetStore
         _ => Array.Empty<EffectPresetEntry>()
     };
 
-    private static readonly EffectPresetEntry[] BendPresets =
-    {
-        P(EffectEditorKind.Bend, "Bend", "0:0 30:4 60:4"),
-        P(EffectEditorKind.Bend, "Bend/Release", "0:0 20:4 40:4 60:0"),
-        P(EffectEditorKind.Bend, "Bend/Release/Bend", "0:0 15:4 30:0 45:4 60:4"),
-        P(EffectEditorKind.Bend, "Pre-Bend", "0:4 60:4"),
-        P(EffectEditorKind.Bend, "Pre-Bend/Release", "0:4 30:4 60:0"),
-    };
-
-    private static readonly EffectPresetEntry[] TremoloPresets =
-    {
-        P(EffectEditorKind.TremoloBar, "Dip", "0:0 30:-4 60:0"),
-        P(EffectEditorKind.TremoloBar, "Dive", "0:0 60:-8"),
-        P(EffectEditorKind.TremoloBar, "Release up", "0:-8 60:0"),
-        P(EffectEditorKind.TremoloBar, "Inverted Dip", "0:0 30:4 60:0"),
-        P(EffectEditorKind.TremoloBar, "Return", "0:0 15:-4 45:-4 60:0"),
-        P(EffectEditorKind.TremoloBar, "Release down", "0:4 60:0"),
-    };
+    // The bend and tremolo-bar lists are the editors' curve types (EffectCurveTypes), so the names stay reserved against the user's presets.
+    private static readonly EffectPresetEntry[] BendPresets = EffectCurveTypes.Presets(EffectEditorKind.Bend);
+    private static readonly EffectPresetEntry[] TremoloPresets = EffectCurveTypes.Presets(EffectEditorKind.TremoloBar);
 
     // Number presets come from the shared table (TabForge.Presets.OrnamentPresets), so the editors list the same ones.
     private static EffectPresetEntry[] Ornaments(EffectEditorKind kind, IEnumerable<OrnamentPreset> presets) => presets.Select(p => new EffectPresetEntry

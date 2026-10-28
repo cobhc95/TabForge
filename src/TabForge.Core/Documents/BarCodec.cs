@@ -40,7 +40,7 @@ internal static class BarCodec
             nameof(TabNote.IsGraceNote), nameof(TabNote.GraceBeforeBeat), nameof(TabNote.GraceOnsetOffsetSlots), nameof(TabNote.GraceDurationSlots),
             nameof(TabNote.Tied), nameof(TabNote.BendPoints), nameof(TabNote.BendTypeName), nameof(TabNote.BendStyleName), nameof(TabNote.SlideTargetMidi),
             nameof(TabNote.TrillTargetMidi), nameof(TabNote.TrillDurationDenominator), nameof(TabNote.HarmonicFret), nameof(TabNote.LeftHandFinger),
-            nameof(TabNote.RightHandFinger), nameof(TabNote.Techniques)
+            nameof(TabNote.RightHandFinger), nameof(TabNote.Techniques), nameof(TabNote.VibratoDepth), nameof(TabNote.VibratoSpeed)
         },
         [typeof(BendPointModel)] = new[] { nameof(BendPointModel.Offset), nameof(BendPointModel.Value) },
         [typeof(MixChange)] = new[]
@@ -128,7 +128,7 @@ internal static class BarCodec
             foreach (var n in c.Notes)
             {
                 if (n is null) { w.VarU(0); continue; }
-                w.VarU((ulong)(1 | Bit(n.Ghost, 1) | Bit(n.Dead, 2) | Bit(n.IsGraceNote, 3) | Bit(n.GraceBeforeBeat, 4) | Bit(n.Tied, 5) | Bit(n.HarmonicFret.HasValue, 6) | Bit(n.Silent, 7)));
+                w.VarU((ulong)(1 | Bit(n.Ghost, 1) | Bit(n.Dead, 2) | Bit(n.IsGraceNote, 3) | Bit(n.GraceBeforeBeat, 4) | Bit(n.Tied, 5) | Bit(n.HarmonicFret.HasValue, 6) | Bit(n.Silent, 7) | Bit(n.VibratoDepth.HasValue, 8) | Bit(n.VibratoSpeed.HasValue, 9)));
                 w.Int(n.StringIndex);
                 w.Int(n.Fret);
                 w.Int(n.MidiValue);
@@ -141,6 +141,8 @@ internal static class BarCodec
                 w.Dbl(n.GraceOnsetOffsetSlots);
                 w.Dbl(n.GraceDurationSlots);
                 if (n.HarmonicFret is { } harmonicFret) w.Dbl(harmonicFret);
+                if (n.VibratoDepth is { } vibratoDepth) w.Dbl(vibratoDepth);
+                if (n.VibratoSpeed is { } vibratoSpeed) w.Dbl(vibratoSpeed);
                 w.Str(n.BendTypeName);
                 w.Str(n.BendStyleName);
                 WritePoints(w, n.BendPoints);
@@ -245,6 +247,8 @@ internal static class BarCodec
                         GraceOnsetOffsetSlots = r.Dbl(), GraceDurationSlots = r.Dbl(),
                     };
                     if (N(6)) n.HarmonicFret = r.Dbl();
+                    if (N(8)) n.VibratoDepth = r.Dbl();
+                    if (N(9)) n.VibratoSpeed = r.Dbl();
                     n.BendTypeName = r.Str()!; n.BendStyleName = r.Str()!;
                     n.BendPoints = ReadPoints(ref r)!;
                     var techniqueCount = r.Count();

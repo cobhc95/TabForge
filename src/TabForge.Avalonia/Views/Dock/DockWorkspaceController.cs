@@ -283,7 +283,7 @@ public sealed class DockWorkspaceController : IDockPaneDragHost, IDisposable
     public static DockWorkspaceState DefaultLayout() => DockLayoutTree.CreateDefaultState();
 
     /// <summary>The layout the window starts with: the saved one when it is usable (every required pane shown), otherwise the default.</summary>
-    public static DockWorkspaceState StartupLayout(DockWorkspaceState? saved) => DockLayoutTree.IsUsableAtStart(saved) ? saved! : DefaultLayout();
+    public static DockWorkspaceState StartupLayout(DockWorkspaceState? saved, string? fretboardMode = null) => FretboardStartupLayout.Resolve(saved, fretboardMode, DefaultLayout);
 
     /// <summary>A copy of the current layout, with every panel's place and size; <see cref="ApplyLayout"/> restores it as it was taken.</summary>
     public DockWorkspaceState SnapshotLayout() => DockLayoutTree.Clone(State);

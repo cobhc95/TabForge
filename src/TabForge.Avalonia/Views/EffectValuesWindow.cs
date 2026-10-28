@@ -39,7 +39,7 @@ public sealed class EffectValuesWindow : Window
 
     /// <param name="save">Keeps the current values as a preset of the person's own; returns it, or null when it cannot be saved.</param>
     public EffectValuesWindow(string title, Control fields, Func<Dictionary<string, double>> read, Action<IReadOnlyDictionary<string, double>> write,
-        IEnumerable<EffectValuesPreset> presets, bool canClean, Func<IReadOnlyDictionary<string, double>, EffectValuesPreset?> save)
+        IEnumerable<EffectValuesPreset> presets, bool canClean, Func<IReadOnlyDictionary<string, double>, EffectValuesPreset?> save, bool showPresets = true, string cleanLabel = "Clean")
     {
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         _read = read; _write = write; _save = save; _presets = presets.ToList();
@@ -60,11 +60,12 @@ public sealed class EffectValuesWindow : Window
         _delete.Click += (_, _) => DeleteSelected();
         _list.SelectionChanged += (_, _) => { if (Selected is { } p) _write(p.Values); UpdateDelete(); };
         var side = new StackPanel { Margin = new Thickness(18, 0, 0, 0), Children = { heading, _list, saveButton, _delete, _status } };
-        var body = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(16), Children = { fields, side } };
+        var body = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(16), Children = { fields } };
+        if (showPresets) body.Children.Add(side);
 
         var actions = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(14, 10, 14, 12) };
         actions.Children.Add(AnswerButton("OK", EffectValuesAnswer.Ok, "Apply the effect  (Enter)"));
-        var clean = AnswerButton("Clean", EffectValuesAnswer.Clean, "Remove the effect from the note");
+        var clean = AnswerButton(cleanLabel, EffectValuesAnswer.Clean, "Remove the effect from the note");
         clean.IsEnabled = canClean;
         actions.Children.Add(clean);
         actions.Children.Add(AnswerButton("Cancel", EffectValuesAnswer.Cancel, "Close without changing anything  (Esc)"));

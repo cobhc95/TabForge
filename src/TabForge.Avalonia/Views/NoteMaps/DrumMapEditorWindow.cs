@@ -41,27 +41,33 @@ public sealed class DrumMapEditorWindow : Window
     private const int SendMaxLength = 3;
     private const string SendRowColumns = "190,90,30,80,*";
     private const string NewMapName = "My drum map";
-    private const string ReadOnlyHint = "This map comes with the app and cannot be changed. Press Duplicate to make your own copy, then change the Send as numbers.";
+    private const string BuiltInHint = "Built-in: your first change makes your own copy; this one stays untouched.";
     private const string UserNameTakenText = "A map of that name already exists. Choose another name.";
 
     private readonly DrumMap? _source;
     private readonly ComboBox _maps = new() { Width = MapBoxWidth, Name = "MapBox" };
     private readonly TextBox _name = new() { Width = NameBoxWidth, MaxLength = PresetRules.MaxNameLength, Name = "NameBox" };
     private readonly TextBlock _count = new() { VerticalAlignment = VerticalAlignment.Center, FontWeight = FontWeight.SemiBold };
-    private readonly TextBlock _hint = new() { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 8) };
+    private readonly TextBlock _hint = new() { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 8), Name = "HintText" };
     private readonly TextBlock _error = new() { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 8, 0, 0), IsVisible = false, FontWeight = FontWeight.SemiBold, Name = "ErrorText" };
     private readonly CheckBox _onlyChanged = new() { Content = "Show only changed", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 14, 0) };
     private readonly StackPanel _rows = new();
     private readonly Button _save = Push("Save", "Save this map to your drum maps and use it");
     private readonly List<SendRow> _sends = new();
+    private readonly DrumMapStore _store = new();
     private DrumMap? _map;
-    private bool _readOnly, _filling, _dirty;
+    private DrumMap? _effectiveSource;
+    private IReadOnlyDictionary<int, string> _pieces = new Dictionary<int, string>();
+    private bool _filling, _dirty;
 
     /// <summary>One remap row: the source note, its send-as box, the heard-as text and the row's frame.</summary>
     private sealed record SendRow(int Note, TextBox Box, TextBlock Heard, Border Row);
 
     /// <summary>The name of the map that was saved; null while nothing was.</summary>
     public string? Saved { get; private set; }
+
+    /// <summary>The number of remap rows shown (a new map shows the song map's drums).</summary>
+    internal int SendRowCount => _sends.Count;
 
     /// <summary>Opens the editor on a map (null: a new one), with the remap rows of the song's map.</summary>
     public DrumMapEditorWindow(DrumMap? map, DrumMap? source)
@@ -77,7 +83,7 @@ public sealed class DrumMapEditorWindow : Window
 
         var create = Push("New", "Start a new, empty map");
         var duplicate = Push("Duplicate", "Make a copy of this map that you can change");
-        ToolTip.SetTip(_maps, "The map to look at or change. Maps that come with the app are read-only: duplicate one to change it.");
+        ToolTip.SetTip(_maps, "The map to look at or change. Changing a map that comes with the app makes your own copy; the built-in stays untouched.");
         ToolTip.SetTip(_name, "The name this map is saved under");
         ToolTip.SetTip(_onlyChanged, "List only the drums whose note changes");
         _save.Name = "SaveButton";
@@ -105,6 +111,11 @@ public sealed class DrumMapEditorWindow : Window
         root.Children.Add(scroll);
         Content = root;
 
+        // The rows get their groups, pencil, bin and grip from the shared row layer; the Manage row stays this window's own (it reverts a dirty edit first).
+        _ = PresetRows.Attach(_maps, () => _store, item => item is ComboBoxItem { Tag: DrumMap { IsUser: true } map } ? map.Name : null,
+            () => PresetCatalogKind.DrumMap, () => null, FillMaps, isManage: _ => false,
+            textOf: item => item is ComboBoxItem combo ? combo.Content?.ToString() ?? "" : item?.ToString() ?? "",
+            isBuiltIn: item => item is ComboBoxItem { Tag: DrumMap { IsUser: false } });
         _maps.SelectionChanged += (_, e) =>
         {
             if (_filling) return;
@@ -116,13 +127,18 @@ public sealed class DrumMapEditorWindow : Window
                 Dispatcher.UIThread.Post(() => PresetManager.Open(this, PresetCatalogKind.DrumMap, null), DispatcherPriority.Background);
                 return;
             }
-            if (_maps.SelectedItem is ComboBoxItem { Tag: DrumMap picked }) PickMap(picked, (e as SelectionChangedEventArgs)?.RemovedItems is { Count: > 0 } removed ? removed[0] : null);
+            // Load refills the drop-down, which cannot happen while the selection change is still being committed: do it right after.
+            if (_maps.SelectedItem is ComboBoxItem { Tag: DrumMap picked })
+            {
+                var previous = (e as SelectionChangedEventArgs)?.RemovedItems is { Count: > 0 } removed ? removed[0] : null;
+                Dispatcher.UIThread.Post(() => PickMap(picked, previous), DispatcherPriority.Send);
+            }
         };
         create.Click += (_, _) => { if (!_dirty) Load(null, Unused(NewMapName), false); };
         duplicate.Click += (_, _) => { Load(_map, PresetRules.CopyName(_map?.Name ?? (_name.Text ?? "").Trim(), AllNames()), false); _dirty = true; };
         cancel.Click += (_, _) => Close();
         _save.Click += (_, _) => Save();
-        _name.PropertyChanged += (_, e) => { if (e.Property == TextBox.TextProperty && !_filling) _dirty = true; };
+        _name.PropertyChanged += (_, e) => { if (e.Property == TextBox.TextProperty && !_filling) { EnsureUserCopy(); _dirty = true; } };
         _onlyChanged.PropertyChanged += (_, e) => { if (e.Property == ToggleButton.IsCheckedProperty) Recount(); };
 
         Load(map, map?.Name ?? Unused(NewMapName), map is { IsUser: false });
@@ -162,28 +178,33 @@ public sealed class DrumMapEditorWindow : Window
             foreach (var map in DrumMapLibrary.All())
                 _maps.Items.Add(new ComboBoxItem { Content = map.IsUser ? $"★ {map.Name}" : map.Name, Tag = map });
             var current = _maps.Items.Cast<ComboBoxItem>().FirstOrDefault(i => _map is { } shown && ((DrumMap)i.Tag!).Name == shown.Name && _name.Text?.Trim() == shown.Name);
-            if (current is null) _maps.Items.Add(current = new ComboBoxItem { Content = "(new map, not saved yet)" });
+            if (current is null)
+                _maps.Items.Add(current = _map is { } pending
+                    ? new ComboBoxItem { Content = pending.IsUser ? $"★ {UnsavedName(pending)}" : UnsavedName(pending), Tag = pending }
+                    : new ComboBoxItem { Content = "(new map, not saved yet)" });
             PresetRowText.AppendManage(_maps.Items);
             _maps.SelectedItem = current;
         }
         finally { _filling = false; }
     }
 
-    /// <summary>Shows a map's rows (null: an empty map) under a name; a read-only map cannot be typed into or saved.</summary>
+    /// <summary>Shows a map's rows (null: a new map seeded from the song map) under a name; a map that comes with the app stays editable and its first change makes a user copy.</summary>
     private void Load(DrumMap? map, string name, bool readOnly)
     {
-        _map = map; _readOnly = readOnly; _filling = true;
+        _map = map; _filling = true;
         try
         {
-            _name.Text = name; _name.IsEnabled = !readOnly;
-            _save.IsEnabled = !readOnly;
-            _hint.Text = readOnly ? ReadOnlyHint : $"Each row is a drum the song plays ({_source?.Name ?? "no song map"}). Type the note your instrument needs under Send as; x means the note is not sent.";
+            _name.Text = name; _name.IsEnabled = true;
+            _save.IsEnabled = true;
+            var source = EffectiveSource();
+            _effectiveSource = source;
+            _pieces = map?.Notes ?? source.Notes;
+            _hint.Text = readOnly ? BuiltInHint : UserHint(source.Name);
             ShowError("");
             _rows.Children.Clear(); _sends.Clear();
-            var pieces = map?.Notes ?? new Dictionary<int, string>();
-            foreach (var (note, piece) in (_source?.Notes ?? new Dictionary<int, string>()).OrderBy(p => p.Key))
+            foreach (var (note, piece) in source.Notes.OrderBy(p => p.Key))
             {
-                var sent = map?.Remap is { } remap && remap.TryGetValue(note, out var mapped) ? mapped : DrumMapDraft.Paired(_source, pieces, note);
+                var sent = map?.Remap is { } remap && remap.TryGetValue(note, out var mapped) ? mapped : DrumMapDraft.Paired(source, _pieces, note);
                 AddSend(note, piece, sent < 0 ? "x" : sent.ToString(CultureInfo.InvariantCulture));
             }
         }
@@ -194,12 +215,64 @@ public sealed class DrumMapEditorWindow : Window
         Recount();
     }
 
+    /// <summary>On the first edit of a built-in map, switch to an in-memory user copy ("&lt;name&gt; (edited)") carrying the edit; the shipped map is never written. Later edits reuse the copy, and the copy file is written only on Save, so closing without saving leaves no orphan.</summary>
+    private void EnsureUserCopy()
+    {
+        if (_map is not { IsUser: false }) return;
+        var original = _map.Name;
+        var typed = (_name.Text ?? "").Trim();
+        var copyName = string.Equals(typed, original, StringComparison.OrdinalIgnoreCase) || typed.Length == 0
+            ? EditedCopyName(original, AllNames())
+            : typed;
+        _map = new DrumMap(copyName, false, true, _map.Notes, _map.Remap);
+        _filling = true;
+        try
+        {
+            if (!string.Equals(typed, copyName, StringComparison.Ordinal)) _name.Text = copyName;
+            _hint.Text = UserHint(EffectiveSource().Name);
+        }
+        finally { _filling = false; }
+        FillMaps();
+    }
+
+    /// <summary>"&lt;name&gt; (edited)", then "&lt;name&gt; (edited 2)"…: the first one no map has yet.</summary>
+    private static string EditedCopyName(string name, IReadOnlyList<string> existing)
+    {
+        for (var n = 1; ; n++)
+        {
+            var suffix = n == 1 ? " (edited)" : $" (edited {n})";
+            var candidate = name[..Math.Min(name.Length, Math.Max(0, PresetRules.MaxNameLength - suffix.Length))].TrimEnd() + suffix;
+            if (!existing.Contains(candidate, StringComparer.OrdinalIgnoreCase)) return candidate;
+        }
+    }
+
+    /// <summary>The unsaved name the drop-down shows for a pending copy (the typed name, else the copy's).</summary>
+    private string UnsavedName(DrumMap pending)
+    {
+        var typed = (_name.Text ?? "").Trim();
+        return typed.Length > 0 ? typed : pending.Name;
+    }
+
+    private static string UserHint(string sourceName) =>
+        $"Each row is a drum the song plays ({sourceName}). Type the note your instrument needs under Send as; x means the note is not sent.";
+
+    /// <summary>The song map, or General MIDI when it is missing (the embedded names when even that is missing).</summary>
+    private DrumMap EffectiveSource() =>
+        _source ?? DrumMapLibrary.Find("General MIDI") ?? new DrumMap("General MIDI", true, false, EmbeddedGeneralMidi());
+
+    private static IReadOnlyDictionary<int, string> EmbeddedGeneralMidi()
+    {
+        var notes = new Dictionary<int, string>();
+        for (var i = 0; i < PercussionKeyMapRules.Names.Count; i++) notes[PercussionKeyMapRules.FirstNote + i] = PercussionKeyMapRules.Names[i];
+        return notes;
+    }
+
     private static Grid Header() =>
         Cells(new Thickness(12, 0, 12, 2), Muted("Drum in the tab"), Muted("Note"), null, Muted("Send as"), Muted("Heard as"));
 
     private void AddSend(int note, string piece, string text)
     {
-        var box = new TextBox { Text = text, MaxLength = SendMaxLength, Width = SendBoxWidth, HorizontalAlignment = HorizontalAlignment.Left, IsEnabled = !_readOnly };
+        var box = new TextBox { Text = text, MaxLength = SendMaxLength, Width = SendBoxWidth, HorizontalAlignment = HorizontalAlignment.Left, Name = $"Send_{note}" };
         ToolTip.SetTip(box, $"The note your instrument receives when the song plays {note} {piece} (0 to 127; x: not sent)");
         var heard = new TextBlock { VerticalAlignment = VerticalAlignment.Center };
         var arrow = new TextBlock { Text = "→", VerticalAlignment = VerticalAlignment.Center };
@@ -208,7 +281,7 @@ public sealed class DrumMapEditorWindow : Window
         var row = new SendRow(note, box, heard, border);
         _sends.Add(row);
         _rows.Children.Add(border);
-        box.PropertyChanged += (_, e) => { if (e.Property == TextBox.TextProperty && !_filling) { _dirty = true; Refresh(row); Recount(); } };
+        box.PropertyChanged += (_, e) => { if (e.Property == TextBox.TextProperty && !_filling) { EnsureUserCopy(); _dirty = true; Refresh(row); Recount(); } };
     }
 
     /// <summary>The note a row sends: null when its text is no note, -1 for not sent, the row's own note for unchanged.</summary>
@@ -237,7 +310,7 @@ public sealed class DrumMapEditorWindow : Window
         };
     }
 
-    private string PieceOf(int note) => _map?.Notes.GetValueOrDefault(note) ?? "";
+    private string PieceOf(int note) => _pieces.GetValueOrDefault(note) ?? "";
 
     private void Recount()
     {
@@ -248,9 +321,8 @@ public sealed class DrumMapEditorWindow : Window
     }
 
     private (DrumMapDraft? Draft, string? Error) Draft() =>
-        DrumMapDraft.Build(_name.Text ?? "", (_map?.Notes ?? new Dictionary<int, string>())
-            .Select(p => (Note: p.Key.ToString(CultureInfo.InvariantCulture), Piece: p.Value)),
-            _sends.Select(r => (r.Note, r.Box.Text ?? "")), _source, _map?.Remap);
+        DrumMapDraft.Build(_name.Text ?? "", _pieces.Select(p => (Note: p.Key.ToString(CultureInfo.InvariantCulture), Piece: p.Value)),
+            _sends.Select(r => (r.Note, r.Box.Text ?? "")), _effectiveSource, _map?.Remap);
 
     /// <summary>A user's map of another name already holds the chosen name (the edited map itself may keep it).</summary>
     private string? UserNameTakenError()
@@ -262,7 +334,7 @@ public sealed class DrumMapEditorWindow : Window
 
     private void Save()
     {
-        if (_readOnly || !Check() || Draft().Draft is not { } draft) return;
+        if (!Check() || Draft().Draft is not { } draft) return;
         try { draft.Save(); }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
         {

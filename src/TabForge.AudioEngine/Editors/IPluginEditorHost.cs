@@ -1,7 +1,7 @@
 namespace TabForge.AudioEngine.Editors;
 
-// Owns: the seam between the engine and the window system that shows plug-in editors (Windows: Win32 windows; macOS / Linux: not supported yet).
-// Does not own: any one window system (EditorWindows is the Windows host), what a plug-in draws.
+// Owns: the seam between the engine and the window system that shows plug-in editors (Windows: Win32 windows; Linux: X11 windows; macOS: not supported yet).
+// Does not own: any one window system (EditorWindows is the Windows host, X11EditorHost the Linux one), what a plug-in draws.
 // Tests: PluginEditorHostTests.
 
 /// <summary>Shows plug-in editors in windows of the host system. One per message-loop owner (the engine session, the isolated plug-in host); main thread only.</summary>
@@ -29,7 +29,7 @@ public interface IPluginEditorHost
 }
 
 /// <summary>
-/// The editor host of macOS and Linux until their window parenting exists (NSView / X11 embed): it reports "editor not supported yet" cleanly,
+/// The editor host of macOS (until NSView parenting exists) and of Linux without an X11 display: it reports "editor not supported yet" cleanly,
 /// never throws, and keeps the main loop ticking. Plug-ins still load, process and save their state; parameters are the way to edit them.
 /// </summary>
 public sealed class UnsupportedEditorHost : IPluginEditorHost
@@ -67,9 +67,9 @@ public sealed class UnsupportedEditorHost : IPluginEditorHost
     }
 }
 
-/// <summary>Picks the editor host of a system: the Win32 windows on Windows (exactly as before), the "not supported yet" host elsewhere.</summary>
+/// <summary>Picks the editor host of a system: the Win32 windows on Windows (exactly as before), X11 windows on Linux when an X server is named, else the "not supported yet" host.</summary>
 public static class PluginEditorHosts
 {
     public static IPluginEditorHost Create(EngineLogWriter log) =>
-        OperatingSystem.IsWindows() ? new EditorWindows(log) : new UnsupportedEditorHost(log);
+        OperatingSystem.IsWindows() ? new EditorWindows(log) : X11Native.Available() ? new X11EditorHost(log) : new UnsupportedEditorHost(log);
 }

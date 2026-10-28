@@ -58,7 +58,7 @@ public class MainWindowMenuTests
             .Select(t => t.GetField("Commands", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static))
             .Where(f => f != null && typeof(System.Collections.Generic.IEnumerable<string>).IsAssignableFrom(f.FieldType))
             .SelectMany(f => (System.Collections.Generic.IEnumerable<string>)f!.GetValue(null)!);
-        var inline = new[] { "File.New", "File.Open", "File.OpenInNewTab", "File.ExportMidi", "Edit.RepeatSelection", "Note.TrillEditor", "Note.HarmonicEditor", "Note.BendEditor", "Note.TremoloBarEditor", "Note.Grace", "Note.Harmonic", "Note.Trill", "Transport.PlayPause", "File.ExportPdf", "Transport.RecordVideo", "Edit.SelectAll", "View.ZoomIn", "View.ZoomOut" };
+        var inline = new[] { "File.New", "File.Open", "File.OpenInNewTab", "File.ExportMidi", "Edit.RepeatSelection", "Note.TrillEditor", "Note.VibratoSettings", "Note.HarmonicEditor", "Note.BendEditor", "Note.TremoloBarEditor", "Note.Grace", "Note.Harmonic", "Note.Trill", "Transport.PlayPause", "File.ExportPdf", "Transport.RecordVideo", "Edit.SelectAll", "View.ZoomIn", "View.ZoomOut" };
         foreach (var id in inline.Concat(declared).Distinct()) commands.Add(id, () => { });
         Assert.All(ids, id => Assert.Equal(commands.Handles(id), items[id].IsEnabled));
         Assert.True(items["File.Exit"].IsEnabled);

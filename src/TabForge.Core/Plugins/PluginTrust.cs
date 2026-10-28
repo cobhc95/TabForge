@@ -108,7 +108,7 @@ public sealed class PluginTrust
 
     public TrustVerdict Check(string path, PluginSettings settings, IPluginFileTrust files)
     {
-        if (string.IsNullOrWhiteSpace(path)) return TrustVerdict.Location;   // nothing to load
+        if (string.IsNullOrWhiteSpace(path) || TabForge.Audio.Contracts.Builtin.BuiltinEffects.IsBuiltin(path)) return TrustVerdict.Location;   // nothing to load, or TabForge's own effect
         var full = PluginPath.Normalize(path);
         lock (Gate)
         {

@@ -140,6 +140,9 @@ Default keys are the **TabForge** preset, identical to the **Classic** preset ex
 | File and tabs | Export MIDI | Export the song as a standard MIDI file (File > Export MIDI). (Also File > Export MIDI.) | `File.ExportMidi` | — |  |
 | File and tabs | Export ASCII tab | Export the tablature as a plain-text ASCII tab file (File > Export ASCII tab). (Also File > Export ASCII tab.) | `File.ExportAscii` | — |  |
 | File and tabs | Export compatible .gp file | Write a compatible .gp copy for other programs. If the song uses something that file cannot hold, you choose first: keep a full TabForge copy, export the compatible file only, or cancel. (Also File > Export compatible .gp file.) | `File.ExportGuitarPro` | — |  |
+| File and tabs | Export .gp5 file (older programs) | Write a .gp5 copy for older programs. If the format cannot hold something in the song, you see what is changed or left out first, then choose Save copy or Cancel. The song stays on its own file. (Also File > Export > .gp5 file, and the .gp5 type in Save As.) | `File.ExportGp5` | — |  |
+| File and tabs | Export .gp4 file (older programs) | Write a .gp4 copy for older programs. If the format cannot hold something in the song, you see what is changed or left out first, then choose Save copy or Cancel. The song stays on its own file. (Also File > Export > .gp4 file, and the .gp4 type in Save As.) | `File.ExportGp4` | — |  |
+| File and tabs | Export .gp3 file (older programs) | Write a .gp3 copy for older programs. If the format cannot hold something in the song, you see what is changed or left out first, then choose Save copy or Cancel. The song stays on its own file. (Also File > Export > .gp3 file, and the .gp3 type in Save As.) | `File.ExportGp3` | — |  |
 | File and tabs | Project settings | Open the project settings: song info, credits, tempo and key (the toolbar's Project settings button). (Also the toolbar's Project settings button.) | `File.ProjectSettings` | — |  |
 | File and tabs | Command palette | Search every command by name, see its key and run it. (Also Help > Command palette.) | `App.CommandPalette` | Ctrl+Shift+A |  |
 | File and tabs | Render to audio file | Render the song to WAV / MP3 (master mix and / or stems) faster than realtime. (Also File > Export > Audio file.) | `File.Render` | Ctrl+Alt+R |  |
@@ -165,6 +168,7 @@ Default keys are the **TabForge** preset, identical to the **Classic** preset ex
 | Transport | Stop | Stop playback and return to the edit cursor. | `Transport.Stop` | Ctrl+OemPeriod |  |
 | Transport | Loop | Play the loop range repeatedly. | `Transport.Loop` | F9 | F9 |
 | Transport | Metronome on / off | Turn the metronome click on or off (the same as the transport's Metronome button). (No menu row: use the transport Metronome button or the command palette.) | `Transport.Metronome` | — |  |
+| Transport | Panic (all notes off) | Silence every stuck note and the sustain pedal on all outputs, also while stopped (the same as Tools > Panic). | `Transport.Panic` | — |  |
 | Transport | Count-in on / off | Turn the count-in before playback on or off (the same as the transport's Count-in button). (No menu row: use the transport Count-in button or the command palette.) | `Transport.CountIn` | — |  |
 | Bars and sections | Insert bar | Insert an empty bar before the cursor. | `Bar.Insert` | Ctrl+Insert |  |
 | Bars and sections | Delete bar | Delete the bar at the cursor. | `Bar.Delete` | Ctrl+Delete |  |
@@ -338,6 +342,7 @@ These commands have their own key scope: the same key may also be bound to a mai
 | Paste plug-ins | Paste the copied plug-ins after the selected row, in this chain or the FX window of another track. | `FxChain.Paste` | Ctrl+V |
 | Duplicate plug-ins | Add a copy of the selected plug-ins right after them. | `FxChain.Duplicate` | Ctrl+D |
 | Select all plug-ins | Select every row of the chain. | `FxChain.SelectAll` | Ctrl+A |
+| Show generic controls | Show the focused plug-in's parameters as searchable sliders in place of its own window (VST3, CLAP, VST2); also shown by itself when the plug-in's own window cannot open, and in the right-click menu of a plug-in row. Acts by key only while the plug-in list has the focus. | `FxChain.ShowGenericControls` | — |
 | Save FX chain | Save the chain as a chain file. | `FxChain.Save` | Ctrl+S |
 | Load FX chain | Load a saved chain, replacing this one. | `FxChain.Load` | Ctrl+O |
 | Add FX chain to the end | Load a saved chain after the plug-ins already there. | `FxChain.AddToEnd` | — |

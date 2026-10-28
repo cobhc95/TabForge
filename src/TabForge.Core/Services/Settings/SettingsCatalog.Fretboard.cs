@@ -26,6 +26,8 @@ public static partial class SettingsCatalog
             // Fretboard (legacy values remain in Editing for file compatibility)
             Bool(Fretboard, "Appearance","appearance.fretboard", "Show the fretboard", v => a.ShowFretboard = v, () => a.ShowFretboard,
                 "Show the instrument/fretboard panel.", "instrument panel hide"),
+            Choice(Fretboard, "Appearance","fretboard.atstartup", "Show fretboard at startup", v => a.FretboardAtStartup = v, () => a.FretboardAtStartup,
+                FretboardStartupModes.All, "Remember last: start with the fretboard as you left it. Always: show it at every start. Never: start with it hidden. The toolbar toggle works as usual.", "fretboard startup launch show hide remember always never"),
             Choice(Fretboard, "Appearance","fretboard.position", "Fretboard position", v => a.FretboardPosition = v, () => a.FretboardPosition,
                 new[] { "Left", "Centre", "Right" }, "Snap the fretboard horizontally.", "fretboard alignment position"),
             Choice(Fretboard, "Appearance","editing.frets", "Fretboard frets", v => ed.FretboardFrets = int.Parse(v), () => ed.FretboardFrets.ToString(),

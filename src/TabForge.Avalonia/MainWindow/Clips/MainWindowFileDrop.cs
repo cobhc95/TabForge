@@ -66,8 +66,13 @@ public sealed class MainWindowFileDrop
     }
 
     private string _hintKey = "";
+    private WindowDropKind? _lastTracedKind;
 
-    private void OnDragEnter(object? sender, DragEventArgs e) => _hintKey = "";
+    private void OnDragEnter(object? sender, DragEventArgs e)
+    {
+        _hintKey = "";
+        if (Trace.IsOn(Trace.Ui)) DroppedFileUris.TraceDrag("enter", e, LocalFiles(e.Data).ToList(), "n/a");
+    }
 
     private void OnDragLeave(object? sender, DragEventArgs e) => _hintKey = "";
 
@@ -77,26 +82,42 @@ public sealed class MainWindowFileDrop
     /// <summary>The local file paths carried by a drag, in their order.</summary>
     internal static IEnumerable<string> LocalFiles(IDataObject data)
     {
-        var items = data.GetFiles();
-        if (items is null) yield break;
-        foreach (var item in items)
-            if (item.Path.IsFile) yield return item.Path.LocalPath;
+        var found = false;
+        foreach (var item in data.GetFiles() ?? Array.Empty<IStorageItem>())
+            if (item.Path.IsFile)
+            {
+                found = true;
+                yield return item.Path.LocalPath;
+            }
+        if (found) yield break;
+        // X11 file managers may offer only text/uri-list: parse it when the storage list is empty.
+        foreach (var path in DroppedFileUris.FromData(data)) yield return path;
     }
 
     /// <summary>The local folders carried by a drag, in their order (a dropped folder is a storage item whose path is a directory).</summary>
     internal static IEnumerable<string> LocalFolders(IDataObject data) =>
-        FoldersAmong((data.GetFiles() ?? Array.Empty<IStorageItem>()).Select(item => item.TryGetLocalPath()));
+        FoldersAmong(LocalFiles(data));
 
     /// <summary>The paths among <paramref name="paths"/> that are existing folders, in their order (null entries are not local paths).</summary>
     internal static IEnumerable<string> FoldersAmong(IEnumerable<string?> paths) => paths.OfType<string>().Where(Directory.Exists);
 
-    private static string[] DroppedSongs(DragEventArgs e) => SongPaths(LocalFiles(e.Data));
-
     private void OnDragOver(object? sender, DragEventArgs e)
     {
         var files = LocalFiles(e.Data).ToList();
-        var kind = Decide(SongPaths(files), _audio?.Accepts(files) == true);
-        e.DragEffects = kind == WindowDropKind.None ? DragDropEffects.None : DragDropEffects.Copy;
+        e.DragEffects = HoverFiles(files, out var kind);
+        if (kind != _lastTracedKind) { _lastTracedKind = kind; DroppedFileUris.TraceDrag("over", e, files, kind.ToString()); }
+        e.Handled = true;
+    }
+
+    /// <summary>A hover that did not come through Avalonia drag events (the Linux X11 drop target): true when the window would take these files (the same test and new-track hint as a window drag).</summary>
+    internal bool HoverPaths(IReadOnlyList<string> files) => HoverFiles(files, out _) != DragDropEffects.None;
+
+    /// <summary>Ends a hover: the next drag shows its hint again.</summary>
+    internal void EndHover() => _hintKey = "";
+
+    private DragDropEffects HoverFiles(IReadOnlyList<string> files, out WindowDropKind kind)
+    {
+        kind = Decide(SongPaths(files), _audio?.Accepts(files) == true);
         // The new-track hint shows once per drag (every DragOver would repeat it onto the notice row).
         if (kind == WindowDropKind.Audio && _audio is { } audio)
         {
@@ -108,38 +129,54 @@ public sealed class MainWindowFileDrop
             }
         }
         else _hintKey = "";
-        e.Handled = true;
+        return kind == WindowDropKind.None ? DragDropEffects.None : DragDropEffects.Copy;
     }
 
     private void OnDrop(object? sender, DragEventArgs e)
     {
-        var songs = DroppedSongs(e);
+        _lastTracedKind = null;
+        var files = LocalFiles(e.Data).ToList();
+        if (Trace.IsOn(Trace.Ui)) DroppedFileUris.TraceDrag("drop", e, files, SongPaths(files).Length > 0 ? "songs accepted" : "no song; audio/refusal path");
+        if (DropFiles(files, e)) e.Handled = true;
+    }
+
+    /// <summary>A drop that did not come through Avalonia's drag events (the Linux X11 drop target): the same song / audio / refusal path as a window drop.</summary>
+    internal void DropPaths(IReadOnlyList<string> files) => DropFiles(files, null);
+
+    // True when the drop was taken (songs opened, or audio dropped); a refused one reports and leaves the event unhandled, as before.
+    private bool DropFiles(IReadOnlyList<string> files, DragEventArgs? e)
+    {
+        var songs = SongPaths(files);
+        DroppedFileUris.Note($"dispatch: MainWindowFileDrop.DropFiles ({DroppedFileUris.Describe(files)}) songs={songs.Length} audioHandler={_audio is not null}");
         if (songs.Length > 0)
         {
-            e.DragEffects = DragDropEffects.Copy;
-            e.Handled = true;
+            if (e is not null) e.DragEffects = DragDropEffects.Copy;
             _ = OpenAll(songs);
-            return;
+            return true;
         }
-        var files = LocalFiles(e.Data).ToList();
         if (files.Count > 0 && _audio?.Accepts(files) == true)
         {
-            e.DragEffects = DragDropEffects.Copy;
-            e.Handled = true;
+            if (e is not null) e.DragEffects = DragDropEffects.Copy;
             _hintKey = "";
             _audio.Drop(files);
-            return;
+            return true;
         }
         // A file dropped outside the arrangement (the score, the panes) is refused with the same notice as an empty timeline drop,
         // so an unsupported drop is never a silent no-op.
+        DroppedFileUris.Note(files.Count == 0 ? "dispatch: nothing done: no files" : "dispatch: nothing done: neither a song nor audio the importer accepts; notice shown: " + AudioDropPlanner.NoTargetText);
         if (files.Count > 0) _report?.Invoke(AudioDropPlanner.NoTargetText);
+        return false;
     }
 
     private async Task OpenAll(string[] songs)
     {
         var newTab = _dropOpensInNewTab();
         for (var index = 0; index < songs.Length; index++)
-            if (!await _files.OpenPath(songs[index], ReplacesSelectedTab(index, newTab)) && index == 0 && !newTab) return;
+        {
+            var opened = await _files.OpenPath(songs[index], ReplacesSelectedTab(index, newTab));
+            DroppedFileUris.Note($"dispatch: open {Path.GetFileName(songs[index])} replace={ReplacesSelectedTab(index, newTab)} -> opened={opened}");
+            if (!opened && index == 0 && !newTab) return;
+        }
     }
 }
 #pragma warning restore CS0618

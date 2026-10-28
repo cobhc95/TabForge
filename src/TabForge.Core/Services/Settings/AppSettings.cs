@@ -71,6 +71,8 @@ public sealed class AppSettings
     public TimelineSettings Timeline { get; set; } = new();
     /// <summary>Live video recording (the Record video button).</summary>
     public Video.LiveVideoSettings LiveVideo { get; set; } = new();
+    /// <summary>The transport bar's master level meter: its reading, number and peak hold.</summary>
+    public TabForge.Audio.Metering.MasterMeterSettings MasterMeter { get; set; } = new();
     /// <summary>Keyboard mode (experimental): look-ahead and note size.</summary>
     public KeyboardMode.KeyboardModeSettings Learn { get; set; } = new();
     /// <summary>Dock tree, selected tabs, closed panels, and floating-window bounds.</summary>
@@ -84,6 +86,8 @@ public sealed class AppSettings
     /// <summary>User presets of the note-effect editors (bend, tremolo bar...), keyed by editor kind; built-in presets are not stored.</summary>
     public List<EffectPresetEntry> EffectPresets { get; set; } = new();
     /// <summary>Preferred score layout for newly opened tabs; existing tabs retain their own view state.</summary>
+    /// <summary>The folder each open, save and browse dialog last used, by its key (see DialogKeys): the dialog starts there.</summary>
+    public Dictionary<string, string> RememberedFolders { get; set; } = new();
     public bool PreferredContinuousScoreView { get; set; } = true;
     public bool PreferredHorizontalScoreView { get; set; }
 }

@@ -18,7 +18,7 @@ namespace TabForge.Avalonia.Views;
 
 /// <summary>
 /// Track properties for a MIDI track, the track properties dialog: the details card (the owner's instrument
-/// picture, track name, colour and tint), the instrument card (the Change button runs the track row icon's picker, InstrumentPickerFlow, whose OK commits at once as its own undo step; MIDI program and channel), the tuning card (strings, string tools, keep frets,
+/// picture, track name, colour and tint), the instrument card (the Change button runs the track row icon's picker, InstrumentPickerFlow, whose OK commits at once as its own undo step; MIDI program, bank select and channel), the tuning card (strings, string tools, keep frets,
 /// frets and capo) or the drum notation card, and the OK / Cancel footer. OK is one undo step through DocumentEdits.Run when a document is given.
 /// The window edits working copies; OK writes the track only when every typed field is in range, else it shows the field's message and stays open.
 /// Closing with edits pending (Cancel, Esc, the close box) asks the discard question; Yes closes, No returns to editing.
@@ -40,7 +40,7 @@ public sealed partial class TrackPropertiesWindow : Window
     private readonly TrackModel _track;
     private readonly IEditableDocument? _document;
     private readonly List<int> _tunings;
-    private readonly TextBox _name, _performer, _notes, _program, _channel, _frets, _capo;
+    private readonly TextBox _name, _performer, _notes, _program, _bankMsb, _bankLsb, _channel, _frets, _capo;
     private readonly TextBlock _channelHint, _stringsLabel = new() { Name = "StringsLabel", VerticalAlignment = VerticalAlignment.Center };
     private readonly TextBlock _error = new() { Name = "ErrorText", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 12, 0), TextWrapping = TextWrapping.Wrap };
     private readonly StackPanel _stringRows = new() { Name = "StringRows", Margin = new Thickness(0, 8, 0, 0) };
@@ -80,6 +80,8 @@ public sealed partial class TrackPropertiesWindow : Window
         _notes.MinHeight = NotesMinHeight;
         _notes.VerticalContentAlignment = VerticalAlignment.Top;
         _program = Box("ProgramBox", "MIDI program", track.MidiProgram.ToString(), 60);
+        _bankMsb = Box("BankMsbBox", "Bank MSB (-1 is off)", track.MidiBankMsb.ToString(), 60);
+        _bankLsb = Box("BankLsbBox", "Bank LSB (-1 is off)", track.MidiBankLsb.ToString(), 60);
         _channel = Box("ChannelBox", "Channel", track.MidiChannel.ToString(), 60);
         _frets = Box("FretsBox", "Frets", track.NumberOfFrets.ToString(), 50);
         _capo = Box("CapoBox", "Capo", track.Capo.ToString(), 50);
@@ -116,8 +118,11 @@ public sealed partial class TrackPropertiesWindow : Window
 
     private Border InstrumentCard()
     {
-        var soundRow = Pair("MIDI program", _program, "Channel", _channel, top: 8);
-        return Card("Instrument", new StackPanel { Children = { InstrumentChooser(), soundRow, _channelHint } });
+        var programRow = Pair("MIDI program", _program, "Bank MSB", _bankMsb, top: 8);
+        ToolTip.SetTip(_bankMsb, "Bank select MSB (CC0): –1 is off, else sent before the program change");
+        var bankRow = Pair("Bank LSB", _bankLsb, "Channel", _channel, top: 8);
+        ToolTip.SetTip(_bankLsb, "Bank select LSB (CC32): –1 is off, else sent before the program change");
+        return Card("Instrument", new StackPanel { Children = { InstrumentChooser(), programRow, bankRow, _channelHint } });
     }
 
     // Drum and keys tracks have no tuning.
@@ -274,7 +279,7 @@ public sealed partial class TrackPropertiesWindow : Window
 
     private void OnOk()
     {
-        if ((TrackPropertiesPresenter.FieldError(_program.Text ?? "", _channel.Text ?? "", _frets.Text ?? "", _capo.Text ?? "", _track.IsDrumTrack, _track.IsAudio) ?? ColourError()) is { } fieldError)
+        if ((TrackPropertiesPresenter.FieldError(_program.Text ?? "", _bankMsb.Text ?? "", _bankLsb.Text ?? "", _channel.Text ?? "", _frets.Text ?? "", _capo.Text ?? "", _track.IsDrumTrack, _track.IsAudio) ?? ColourError()) is { } fieldError)
         {
             _error.Text = fieldError;
             return;
@@ -314,9 +319,11 @@ public sealed partial class TrackPropertiesWindow : Window
         _track.Name = TrackPropertiesPresenter.ResolvedName(_name.Text ?? "", _track.Name);
         _track.Performer = (_performer.Text ?? "").Trim();
         _track.TrackNotes = _notes.Text ?? "";
-        if (!_track.IsAudio)   // an audio track has no MIDI channel, program, frets or capo: whatever the boxes hold is not written
+        if (!_track.IsAudio)   // an audio track has no MIDI channel, program, bank, frets or capo: whatever the boxes hold is not written
         {
             _track.MidiProgram = int.Parse(_program.Text!);
+            _track.MidiBankMsb = int.Parse(_bankMsb.Text!);
+            _track.MidiBankLsb = int.Parse(_bankLsb.Text!);
             _track.MidiChannel = int.Parse(_channel.Text!);
             _track.NumberOfFrets = int.Parse(_frets.Text!);
             // The capo moves the sounding pitch of the notes (frets are relative to it); the written frets stay.
@@ -337,6 +344,8 @@ public sealed partial class TrackPropertiesWindow : Window
         }
         Diff("Track name", _track.Name, Typed(_name));
         Diff("MIDI program", _track.MidiProgram.ToString(), Typed(_program));
+        Diff("Bank MSB", _track.MidiBankMsb.ToString(), Typed(_bankMsb));
+        Diff("Bank LSB", _track.MidiBankLsb.ToString(), Typed(_bankLsb));
         Diff("MIDI channel", _track.MidiChannel.ToString(), Typed(_channel));
         Diff("Tuning", string.Join(" ", _track.StringTunings.Select(MusicTheoryService.NoteName)), string.Join(" ", _tunings.Select(MusicTheoryService.NoteName)));
         Diff("Frets", _track.NumberOfFrets.ToString(), Typed(_frets));

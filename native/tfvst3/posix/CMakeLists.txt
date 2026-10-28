@@ -6,7 +6,9 @@ project(tfvst3 LANGUAGES C CXX)
 #   * compat/windows.h stands in for <windows.h> (the HWND type, the UTF-8 conversion of the path, the export attribute);
 #   * module_mac.mm / module_linux.cpp are the platform half of the SDK's hosting Module (bundle loading), instead of the SDK's own;
 #   * tfvst3_posix.cpp exports tfv3_list_classes / tfv3_create with the plug-in path as UTF-16 (what the C# side passes), see that file.
-# The editor (HWND views) is not hosted on these systems yet: tfv3_has_editor answers 0 for every plug-in.
+#   * Linux: views attach to an X11 window id (kPlatformTypeX11EmbedWindowID) that the engine creates with libX11 (managed, no build dependency here);
+#     tfv3_runloop_linux.cpp is the host run loop (IRunLoop) the view gets from its frame, run by the export tfv3_run_loop_wait. No X11 headers needed.
+# macOS: the editor (NSView) is not hosted yet: tfv3_has_editor answers 0 for every plug-in there.
 if(WIN32)
     message(FATAL_ERROR "Use Source/native/tfvst3/CMakeLists.txt on Windows.")
 endif()
@@ -50,7 +52,7 @@ set(BRIDGE "${CMAKE_CURRENT_SOURCE_DIR}/..")
 if(APPLE)
     set(TFVST3_PLATFORM_SOURCES ${SDK}/public.sdk/source/common/threadchecker_mac.mm module_mac.mm)
 else()
-    set(TFVST3_PLATFORM_SOURCES ${SDK}/public.sdk/source/common/threadchecker_linux.cpp module_linux.cpp)
+    set(TFVST3_PLATFORM_SOURCES ${SDK}/public.sdk/source/common/threadchecker_linux.cpp module_linux.cpp tfv3_runloop_linux.cpp)
 endif()
 
 add_library(tfvst3 SHARED
@@ -71,8 +73,8 @@ add_library(tfvst3 SHARED
     ${SDK}/public.sdk/source/vst/hosting/module.cpp
     ${SDK}/public.sdk/source/vst/hosting/pluginterfacesupport.cpp)
 
-# compat/ first, so <windows.h> in tfvst3.cpp finds the stand-in.
-target_include_directories(tfvst3 PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/compat" "${SDK}" "${BRIDGE}")
+# compat/ first, so <windows.h> in tfvst3.cpp finds the stand-in; this folder for tfv3_runloop_linux.h.
+target_include_directories(tfvst3 PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/compat" "${CMAKE_CURRENT_SOURCE_DIR}" "${SDK}" "${BRIDGE}")
 target_compile_definitions(tfvst3 PRIVATE $<$<CONFIG:Debug>:DEVELOPMENT=1> $<$<NOT:$<CONFIG:Debug>>:RELEASE=1>)
 
 # tfvst3.cpp's two path functions are built under *_native names (wchar_t is 32 bits here); tfvst3_posix.cpp exports the UTF-16 forms.
@@ -84,5 +86,7 @@ if(APPLE)
     target_link_libraries(tfvst3 PRIVATE "-framework CoreFoundation" "-framework Foundation")
 else()
     target_link_libraries(tfvst3 PRIVATE ${CMAKE_DL_LIBS} pthread)
+    # No dependence on the system libstdc++/libgcc version (exports stay the hidden-visibility C interface).
+    target_link_options(tfvst3 PRIVATE -static-libstdc++ -static-libgcc)
 endif()
 set_target_properties(tfvst3 PROPERTIES OUTPUT_NAME tfvst3)

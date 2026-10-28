@@ -16,6 +16,11 @@ internal static class DialogMetrics
     /// <summary>The default text size of a dialog window (the app's other windows take the settings font size).</summary>
     public const double FontSize = 13;
 
+    /// <summary>The vibrato settings window: field column width, slider, value label and name widths, and the row and hint gaps.</summary>
+    public const double VibratoFieldsWidth = 330, VibratoSliderWidth = 170, VibratoValueWidth = 64, VibratoNameWidth = 56, VibratoRowGap = 4, VibratoHintGap = 8;
+    public static void SpaceVibratoRow(global::Avalonia.Controls.Control control) => control.Margin = new(0, VibratoRowGap);
+    public static void SpaceVibratoHint(global::Avalonia.Controls.Control control) => control.Margin = new(0, VibratoHintGap, 0, 0);
+
     /// <summary>The width of a small, fixed-width dialog that sizes its height to the content.</summary>
     public const double SmallDialogWidth = 420;
 
@@ -146,6 +151,15 @@ internal static class DialogMetrics
         return control;
     }
 
+    /// <summary>The bend and tremolo-bar editor's side panel: its width, the height range of the list of the person's presets and the space between its buttons.</summary>
+    public const double CurveSideWidth = 240, CurvePresetListMinHeight = 90, CurvePresetListMaxHeight = 150, CurveSideSpacing = 6;
+
+    /// <summary>The shape icon before a curve type in the bend and tremolo-bar editors' type list: its side and the gap to the name.</summary>
+    public const double CurveIconSize = 16, CurveIconSpacing = 8;
+
+    /// <summary>The bend and tremolo-bar editor's side panel: the gap left of it, under the first heading, above and under the second heading, and above the buttons.</summary>
+    public static readonly Thickness CurveSideGap = new(16, 0, 0, 0), CurveHeadingGap = new(0, 0, 0, 4), CurveSecondHeadingGap = new(0, 12, 0, 4), CurveButtonsGap = new(0, 8, 0, 0);
+
     /// <summary>The "Insert several bars" dialog: its width and the bar-count box width.</summary>
     public const double InsertBarsWidth = 340, InsertBarsCountWidth = 72;
 
@@ -161,6 +175,47 @@ internal static class DialogMetrics
     public static readonly Thickness PromptInset = new(16, 14), PromptHeadingGap = new(0, 0, 0, 4), PromptMutedGap = new(0, 0, 0, 10), PromptFooterGap = new(0, 8, 0, 0),
         PromptHintGap = new(6, 0, 0, 0), PromptActionPadding = new(12, 0);
 
+    /// <summary>The Articulations tab of the MIDI processing window: column widths, the row height and the gaps between its parts.</summary>
+    public const double ArticulationActionWidth = 140, ArticulationValueWidth = 90, ArticulationValue2Width = 64, ArticulationModeWidth = 100,
+        ArticulationPresetWidth = 240, ArticulationLeadWidth = 56, ArticulationRowMinHeight = 34;
+    public static readonly Thickness ArticulationCellGap = new(4, 0), ArticulationLabelGap = new(0, 0, 8, 0), ArticulationButtonPadding = new(10, 3),
+        ArticulationButtonGap = new(6, 0, 0, 0), ArticulationPaneGap = new(0, 6, 0, 0), ArticulationTextGap = new(0, 6, 0, 6), ArticulationTableGap = new(0, 0, 8, 0),
+        ArticulationLabelEnd = new(0, 0, 6, 0), ArticulationHeadFirst = new(0, 0, 0, 4), ArticulationHead = new(4, 0, 0, 4);
+
+    /// <summary>Preset rows (the drop-downs and the preset lists): the icon and grip sizes, the stroke of a drawn icon, the least row height, the header text size,
+    /// the share of the strongest ink a pressed icon keeps, and the corner and width of the Undo message.</summary>
+    public const double PresetIconSize = 14, PresetIconStroke = 1.4, PresetGripWidth = 14, PresetGripDot = 1.3, PresetRowMinHeight = 22, PresetHeaderSize = 11,
+        PresetPressedInk = 0.7, PresetEditorHeight = 22, UndoToastCorner = 6, UndoToastMaxWidth = 460, UndoToastBottomGap = 24;
+
+    /// <summary>Preset rows: the row's inset, the gap before the icons, the room above a group header, the text box padding, the gap above an error line,
+    /// the gap before a row's label, and the Undo message's inset and the gap before its button.</summary>
+    public static readonly Thickness PresetRowInset = new(2, 1), PresetToolsGap = new(6, 0, 0, 0), PresetHeaderGap = new(0, 4, 0, 1), PresetEditorPadding = new(2, 0),
+        PresetErrorGap = new(0, 2), PresetNoOutline = new(0),
+        UndoToastOutline = new(1), UndoToastInset = new(14, 8), UndoToastButtonGap = new(14, 0, 0, 0), PresetLabelGap = new(4, 0, 0, 0);
+
+    /// <summary>Gives a preset row its inset and returns it.</summary>
+    public static Border WithPresetInset(this Border row) { row.Padding = PresetRowInset; return row; }
+
+    /// <summary>Gives an in-place rename box its height and padding and returns it.</summary>
+    public static TextBox AsPresetEditor(this TextBox box) { box.Height = PresetEditorHeight; box.Padding = PresetEditorPadding; return box; }
+
+    /// <summary>Gives the "Deleted ... Undo" message its inset, outline, corner, width limit and gap above the window edge.</summary>
+    public static Border AsUndoToast(this Border toast)
+    {
+        toast.Padding = UndoToastInset;
+        toast.MaxWidth = UndoToastMaxWidth;
+        toast.BorderThickness = UndoToastOutline;
+        toast.CornerRadius = new CornerRadius(UndoToastCorner);
+        return toast;
+    }
+
+    /// <summary>Sets the outer margin of the control and returns it (builder code outside the metrics owner does not assign layout).</summary>
+    public static T Spaced<T>(this T control, Thickness margin) where T : Layoutable
+    {
+        control.Margin = margin;
+        return control;
+    }
+
     /// <summary>Gives a radio card its inset, outline and corner radius.</summary>
     public static void StyleChoiceCard(global::Avalonia.Controls.Border card)
     {
@@ -168,5 +223,35 @@ internal static class DialogMetrics
         card.BorderThickness = SectionAudioCardOutline;
         card.CornerRadius = new CornerRadius(SectionAudioCardCorner);
         card.Margin = SectionAudioCardGap;
+    }
+
+    /// <summary>The IR Loader window (a built-in effect's editor): its size, the file label column, the slider and value widths, the picture height and its strokes.</summary>
+    public const double IrLoaderWidth = 660, IrLoaderHeight = 600, IrLoaderMinWidth = 520, IrLoaderMinHeight = 460, IrLabelWidth = 120, IrSliderWidth = 320,
+        IrValueWidth = 70, IrGraphMinHeight = 120, IrCurveStroke = 1.5, IrGridStroke = 1;
+
+    /// <summary>The IR Loader window: the gap under a row, left of a button, around the picture, and a button's padding.</summary>
+    public static readonly Thickness IrRowGap = new(0, 0, 0, 6), IrButtonGap = new(8, 0, 0, 0), IrSectionGap = new(0, 8, 0, 8), IrButtonPadding = new(10, 2);
+
+    /// <summary>The built-in effect windows (EQ, Compressor, Limiter, Delay, Noise Gate): window sizes, the label and value columns of a slider row, the graph and meter sizes and strokes.</summary>
+    public const double EqWidth = 960, EqHeight = 700, EqMinWidth = 780, EqMinHeight = 600, CompressorWidth = 780, CompressorHeight = 440, CompressorMinWidth = 660, CompressorMinHeight = 400,
+        LimiterWidth = 560, LimiterHeight = 340, LimiterMinWidth = 460, LimiterMinHeight = 300, DelayWidth = 580, DelayHeight = 330, DelayMinWidth = 480, DelayMinHeight = 290,
+        GateWidth = 560, GateHeight = 340, GateMinWidth = 460, GateMinHeight = 300,
+        FxLabelWidth = 112, FxValueWidth = 90, FxBandLabelWidth = 40, FxBandValueWidth = 66, FxGraphMinHeight = 120, FxTransferMinSize = 200, FxBandColumnMinWidth = 220, FxCutColumnMinWidth = 300, FxCompressorColumnMinWidth = 380, FxMeterHeight = 14, FxMeterLabelWidth = 128,
+        FxLightSize = 16, FxDotRadius = 6, FxDotSelectedRadius = 8.5, FxDotHit = 12, FxCurveStroke = 2, FxGridStroke = 1, FxMarkerStroke = 1.5, FxMeterRadius = 3,
+        FxPlotLeft = 38, FxPlotTop = 10, FxPlotRight = 12, FxPlotBottom = 22, FxLabelInset = 4, FxQStep = 1.12;
+
+    /// <summary>The built-in effect windows: the gap under a row, between columns and sections, and the padding of a small button or box.</summary>
+    /// <summary>The built-in editors' on/off button: its padding, outline thickness and smallest height.</summary>
+    public static readonly Thickness FxTogglePadding = new(10, 2, 10, 2), FxToggleOutline = new(1);
+    public const double FxToggleMinHeight = 22;
+
+    public static readonly Thickness FxRowGap = new(0, 0, 0, 6), FxColumnGap = new(0, 0, 14, 0), FxSectionGap = new(0, 10, 0, 6), FxBandHeadGap = new(0, 0, 0, 4), FxButtonGap = new(10, 0, 0, 0);
+
+    /// <summary>The small action button beside a status line (Add plug-in: Pause, Resume, Stop): the notice button gap and padding.</summary>
+    public static Button StatusAction(Button button)
+    {
+        button.Margin = NoticeButtonGap;
+        button.Padding = NoticeActionPadding;
+        return button;
     }
 }

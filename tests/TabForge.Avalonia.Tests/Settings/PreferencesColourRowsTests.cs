@@ -45,6 +45,8 @@ public class PreferencesColourRowsTests
         using var settings = Open();
         var window = settings.CreatePreferencesWindow();
         bool Enabled() { var r = PreferencesCatalog.Build(settings.Settings); return PreferencesPagePresenter.IsEnabled(r.Single(x => x.Key == "appearance.playbackhighlightcolour"), k => r.FirstOrDefault(x => x.Key == k)); }
+        Assert.True(Enabled());   // Custom is the default
+        window.Write("appearance.playbackhighlight", PlaybackHighlightModes.FollowAccent);
         Assert.False(Enabled());
         window.Write("appearance.playbackhighlight", PlaybackHighlightModes.Custom);
         Assert.True(Enabled());

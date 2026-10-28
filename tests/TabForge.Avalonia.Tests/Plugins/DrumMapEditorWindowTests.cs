@@ -17,8 +17,10 @@ namespace TabForge.Avalonia.Tests;
 /// Does not own: the window (DrumMapEditorWindow), the checks (DrumMapDraftPresenter) or the map files (DrumMapLibrary).
 /// Tests: this class.
 /// </summary>
+[Collection("PluginLibraryRoot")]   // PluginLibrary.RootOverride is process-wide: run alone so no parallel test resets it or reads the scratch folder
 public class DrumMapEditorWindowTests
 {
+
     [AvaloniaFact]
     public void NewMapOpensWithDefaultNameAndPassesItsChecks()
     {
@@ -70,6 +72,29 @@ public class DrumMapEditorWindowTests
         DialogTestKit.RunQueuedUiWork();
 
         Assert.NotNull(DrumMapLibrary.Find("Manage line kit"));
+    }
+
+    [AvaloniaFact]
+    public void PickingAMapFromTheDropDownLoadsItWithoutThrowing()
+    {
+        using var scratch = Scratch();
+        var first = new DrumMapEditorWindow(null, null);
+        first.Show();
+        DialogTestKit.Named<TextBox>(first, "NameBox").Text = "Pick me";
+        FxTestKit.PressButton(first, "SaveButton");
+        DialogTestKit.RunQueuedUiWork();
+        var window = new DrumMapEditorWindow(null, null);
+        window.Show();
+        var box = DialogTestKit.Named<ComboBox>(window, "MapBox");
+        var other = box.Items.OfType<ComboBoxItem>().First(i => i.Tag is DrumMap);
+
+        box.SelectedItem = other;
+        DialogTestKit.RunQueuedUiWork();
+
+        Assert.Equal(((DrumMap)other.Tag!).Name, DialogTestKit.Named<TextBox>(window, "NameBox").Text);
+        Assert.True(DialogTestKit.Named<TextBox>(window, "NameBox").IsEnabled);
+        Assert.True(DialogTestKit.Named<Button>(window, "SaveButton").IsEnabled);
+        window.Close();
     }
 
     private static IDisposable Scratch()

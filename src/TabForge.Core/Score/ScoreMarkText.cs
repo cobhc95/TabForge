@@ -130,14 +130,17 @@ internal static class ScoreMarkText
         return false;
     }
 
+    /// <summary>The sounding fret of an artificial harmonic in angle brackets, printed beside its fret number ("<27>" for a 15 with a node 12 higher); "" for any other note.</summary>
+    internal static string ArtificialFretText(TabNote note) =>
+        note.Techniques.Contains("ArtificialHarmonic") && !note.Dead && !note.IsGraceNote
+            ? "<" + Math.Round(note.Fret + (note.HarmonicFret ?? 12)).ToString(CultureInfo.InvariantCulture) + ">" : "";
+
     /// <summary>
-    /// What the reference prints under the TAB for a harmonic (per its own render): the sounding pitch name for an artificial harmonic
-    /// ("E"), the tapped fret for a tap harmonic ("17", one decimal for 5.8 and the like); nothing for natural, pinch and semi.
+    /// What the reference prints under the TAB for a harmonic (per its own render): the tapped fret for a tap harmonic
+    /// ("17", one decimal for 5.8 and the like); nothing for natural, pinch, semi and artificial (its fret is beside the number, ArtificialFretText).
     /// </summary>
     internal static string HarmonicFretText(TabNote note)
     {
-        if (note.Techniques.Contains("ArtificialHarmonic") && note.MidiValue > 0)
-            return TabForge.Services.MusicTheoryService.NoteNames[((note.MidiValue % 12) + 12) % 12];
         if (!note.Techniques.Contains("TapHarmonic") || note.HarmonicFret is not { } fret || fret <= 0) return "";
         return Math.Abs(fret - Math.Round(fret)) < 0.05
             ? Math.Round(fret).ToString(CultureInfo.InvariantCulture)

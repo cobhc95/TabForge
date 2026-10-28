@@ -104,6 +104,7 @@ public sealed class FxEditorController : IDisposable
             return mode;
         }
         if (ReferenceEquals(_failed, slot)) { ShowFailed(); return mode; }
+        if (FxGenericControls.NativeEditorMissing(_area.Surface.Area, FxGenericControls.NativeEditorAreaSupported)) { Fail(slot!); return mode; }   // no native editor host on this system: the window falls back to the generic controls
         _area.ShowEditor();
         var engine = _host.Engine!;
         engine.RequestPrograms(_track, slot!);

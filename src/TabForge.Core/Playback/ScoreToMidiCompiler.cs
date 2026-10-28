@@ -20,10 +20,7 @@ internal sealed partial class ScoreToMidiCompiler
     // +/-12: wide enough for 1.5-2 step bends, dive bombs and multi-fret slides (a +/-2 range capped
     // every slide or bend beyond one whole step, e.g. 1 1/2 bends and 3->7 slides sounded short).
     private const int PitchBendRangeSemitones = 12;
-    // the reference's own vibrato depths: note vibrato +/-0.38 semitone, wide vibrato +/-0.94.
-    private const double NormalVibratoSemitones = 0.38;
-    private const double WideVibratoSemitones = 0.94;
-    private const double VibratoRateHz = 5.5;
+    // the vibrato depths and speed are PlaybackOptions defaults (PlaybackOptions.DefaultNormalVibrato...), overridden per note.
     private const double VibratoSampleMs = 20;
     private const double VibratoFadeMs = 70;
     private const double FadeInSampleMs = 40;
@@ -149,7 +146,7 @@ internal sealed partial class ScoreToMidiCompiler
             : _project.Tracks.ToList();
         _channels = ChannelAllocator.Assign(_project);
         _effectChannels = ChannelAllocator.AssignEffect(_project, _channels);
-        _metronomeDevice = _players.FirstOrDefault(t => !t.IsAudio)?.MidiOutputDeviceId ?? -1;   // never an audio track's device
+        _metronomeDevice = _players.FirstOrDefault(t => !t.IsAudio) is { } first ? OutputDeviceOf(first) : -1;   // never an audio track's device
     }
 
     /// <summary>
@@ -372,7 +369,7 @@ internal sealed partial class ScoreToMidiCompiler
         {
             if (index < 0 || index >= _project.Tracks.Count) continue;
             var target = _project.Tracks[index];
-            var device = target.MidiOutputDeviceId;
+            var device = OutputDeviceOf(target);
             var channel = _channels.Length > index ? _channels[index] : target.MidiChannel;
             if (channel < 0) continue;   // an audio track without a channel has nothing to adjust
             var effect = EffectChannelOf(index);
@@ -420,4 +417,9 @@ internal sealed partial class ScoreToMidiCompiler
             Status = statusBase | (channel & 0x0F), Data1 = data1, Data2 = data2, TrackIndex = trackIndex
         });
     }
+
+    /// <summary>The output device a track's events are compiled for: the saved name resolved against the playback
+    /// devices first, the saved index otherwise (null device list: the index, exactly as before).</summary>
+    private int OutputDeviceOf(TrackModel track) =>
+        _opt.OutputDevices is null ? track.MidiOutputDeviceId : MidiOutputRouting.Resolve(_opt.OutputDevices, track);
 }

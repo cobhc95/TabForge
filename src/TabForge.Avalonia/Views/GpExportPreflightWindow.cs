@@ -38,6 +38,20 @@ public partial class GpExportPreflightWindow : Window
             ButtonsPanel.Children.Add(MakeButton(entry, chosen));
     }
 
+    /// <summary>The question before a copy for older programs (.gp3 / .gp4 / .gp5) is written: what the format loses, then Save copy or Cancel (the choice is ExportCompatible or Cancel).</summary>
+    public GpExportPreflightWindow(GpPreflightReport report, LegacyGpFormat format, string fileName, Action<GpExportChoice> chosen)
+    {
+        InitializeComponent();
+        Title = LegacyGpPreflightPresenter.Title(format);
+        HeadlineText.Text = LegacyGpPreflightPresenter.Headline(fileName);
+        IntroText.Text = LegacyGpPreflightPresenter.Intro(format);
+        LossList.Text = LegacyGpPreflightPresenter.ListText(report);
+        AutomationProperties.SetName(LossList, LegacyGpPreflightPresenter.ListName(format));
+        AdviceText.Text = LegacyGpPreflightPresenter.Advice;
+        foreach (var entry in LegacyGpPreflightPresenter.Buttons())
+            ButtonsPanel.Children.Add(MakeButton(entry, chosen));
+    }
+
     /// <summary>A report with two sample losses for the preview, which has no song to analyse.</summary>
     public static GpPreflightReport SampleReport()
     {

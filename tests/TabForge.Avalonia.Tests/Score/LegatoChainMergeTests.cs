@@ -211,9 +211,9 @@ public class LegatoChainMergeTests
     [Fact]
     public void Channel_ten_is_rejected_for_a_pitched_track_and_accepted_for_drums()
     {
-        Assert.Equal("Channel 10 is for drums only.", TrackPropertiesPresenter.FieldError("29", "9", "24", "0", isDrumTrack: false));
-        Assert.Null(TrackPropertiesPresenter.FieldError("0", "9", "24", "0", isDrumTrack: true));
-        Assert.Null(TrackPropertiesPresenter.FieldError("29", "8", "24", "0", isDrumTrack: false));
+        Assert.Equal("Channel 10 is for drums only.", TrackPropertiesPresenter.FieldError("29", "-1", "-1", "9", "24", "0", isDrumTrack: false));
+        Assert.Null(TrackPropertiesPresenter.FieldError("0", "-1", "-1", "9", "24", "0", isDrumTrack: true));
+        Assert.Null(TrackPropertiesPresenter.FieldError("29", "-1", "-1", "8", "24", "0", isDrumTrack: false));
     }
 
     [Fact]

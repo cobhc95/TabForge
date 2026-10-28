@@ -17,8 +17,8 @@ public sealed record AudioDeviceTip(string Driver, string Device, string Format,
 
 public sealed class StatusAudioInterface
 {
-    /// <summary>The device name shown when the settings name none: the chosen driver's default device.</summary>
-    public const string DefaultDeviceName = "Windows default device";
+    /// <summary>The device name shown when the settings name none: the chosen driver's default device (the OS's own name only on Windows).</summary>
+    public static string DefaultDeviceName { get; } = OperatingSystem.IsWindows() ? "Windows default device" : "System default device";
 
     private (int LatencyMs, int Buffer)? _lastReport;
 

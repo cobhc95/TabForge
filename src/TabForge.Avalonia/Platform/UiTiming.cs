@@ -9,6 +9,9 @@ namespace TabForge.Avalonia.Platform;
 /// <summary>The one named source of the app's UI durations, in milliseconds.</summary>
 internal static class UiTiming
 {
+    /// <summary>How long the "Deleted ... Undo" message of a preset stays up before it goes away.</summary>
+    public const double PresetUndoMs = 7_000;
+
     /// <summary>The settings store's save debounce: a changed setting is written once the pointer has rested.</summary>
     public const double SettingsSaveDebounceMs = 400;
 
@@ -56,6 +59,9 @@ internal static class UiTiming
 
     /// <summary>How long typing rests before a palette, preset or browser filter re-applies (the leading edge applies at once, so the first keystroke and tests see it).</summary>
     public const double FilterDebounceMs = 100;
+
+    /// <summary>How long score edits rest before a playing song is re-scheduled from the edited score (one re-schedule for a burst of edits).</summary>
+    public const double PlaybackEditDebounceMs = 50;
 
     /// <summary>The dock layout's save debounce after a layout change.</summary>
     public const double LayoutChangeDebounceMs = 400;

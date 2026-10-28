@@ -319,6 +319,9 @@ public sealed class AvaloniaPlaybackSession : IDisposable
             options.MetronomeClickVolume = audio.MetronomeClickVolume;
             options.MetronomeSubdivision = audio.MetronomeSubdivision;
             options.LetRingCapMs = audio.LetRingCapMs;
+            options.NormalVibratoDepth = audio.NormalVibratoDepth;
+            options.WideVibratoDepth = audio.WideVibratoDepth;
+            options.VibratoSpeedHz = audio.VibratoSpeedHz;
         });
     }
 

@@ -21,6 +21,8 @@ public sealed class ScoreEvent
     public int Data2;
     /// <summary>Track that produced the event, or -1 for metronome/global events.</summary>
     public int TrackIndex = -1;
+    /// <summary>A copy of the event that belongs to track number <paramref name="track"/> (a refresh numbering the tracks in another order).</summary>
+    internal ScoreEvent WithTrack(int track) { var copy = (ScoreEvent)MemberwiseClone(); copy.TrackIndex = track; return copy; }
     /// <summary>
     /// Channel setup (program / volume / pan / reverb / chorus). Setup events are re-sent after a
     /// panic or a loop wrap, because <c>midiOutReset</c> clears device state.
@@ -33,6 +35,8 @@ public sealed class ScoreEvent
     /// <summary>Count-in clicks remain enabled even when the playback metronome is toggled off.</summary>
     public bool IsCountInClick;
     public bool IsMetronomeAccent;
+    /// <summary>An articulation keyswitch or controller the compiler sent before a note (see ScoreToMidiCompiler.Articulations): it belongs to its track's instrument, so a muted track still sends it (the latched state stays right) and a MIDI file export leaves it out.</summary>
+    public bool IsArticulation;
     /// <summary>Tick within the beat on a 12-tick grid, allowing 1, 2, 3 or 4 subdivisions per beat.</summary>
     public int MetronomeTick;
     /// <summary>Matching note-on/off identifier, unique within this timeline.</summary>
@@ -139,6 +143,8 @@ public sealed class ScoreTimeline
 
     /// <summary>Per-channel program/controller messages; re-sent after a device reset.</summary>
     public readonly List<ScoreEvent> ChannelSetup = new();
+    /// <summary>The ids of the tracks, in the order this timeline numbers them (<see cref="ScoreEvent.TrackIndex"/>); set when it is published, or when a refresh splices it from a differently ordered one. Null until then.</summary>
+    public Guid[]? TrackIds;
 
     public double TotalMs;
     /// <summary>Length of the count-in (0 when disabled); music begins at this time when there is one.</summary>

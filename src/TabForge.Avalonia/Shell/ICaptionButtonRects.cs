@@ -27,7 +27,7 @@ public interface ICaptionButtonRects
     void SetPressed(ChromeHit? button);
 
     /// <summary>
-    /// A native middle-click released on the empty caption. Windows sends the press as WM_NCMBUTTONDOWN because the hit test answers
+    /// A native middle press on the empty caption. Windows sends the press as WM_NCMBUTTONDOWN because the hit test answers
     /// HTCAPTION there, so Avalonia sees no pointer event; the hook calls this only on Windows. The title bar opens a new tab when the
     /// Tabs middle-click setting says so; tabs, tab actions and caption buttons never route here.
     /// </summary>

@@ -125,56 +125,121 @@ internal sealed class MainWindowAudioDrop
     {
         var files = MainWindowFileDrop.LocalFiles(e.Data).ToList();
         if (files.Count == 0) return;
-        if (HasSongs(files)) return;   // a song drag is the window file drop's
+        if (Hover(arrangement, files, visual => e.GetPosition(visual), e.KeyModifiers.HasFlag(KeyModifiers.Alt)) is not { } effects)
+        {
+            if (!HasSongs(files)) e.Handled = false;   // a song drag is the window file drop's; MIDI off the rows yields to it
+            return;
+        }
+        e.DragEffects = effects;
+        e.Handled = true;
+    }
 
-        var hit = HitTest(arrangement, e);
+    /// <summary>The one hover path (the Avalonia drag-over and the external X11 hover): draws the drop preview and returns the effect; null when the window file drop owns this drag.</summary>
+    private DragDropEffects? Hover(ArrangementView arrangement, IReadOnlyList<string> files, Func<Visual, Point> position, bool alt)
+    {
+        if (HasSongs(files)) return null;   // a song drag is the window file drop's
+        var hit = HitTest(arrangement, position, alt);
         var usable = files.Where(Lands).ToArray();
         if (YieldsToWindow(usable, hit))   // MIDI files off the rows and the strip open as a song in the window's drop
         {
-            ClearPreview(arrangement, e);
-            e.Handled = false;
-            return;
+            ClearPreview(arrangement, null);
+            return null;
         }
         EnsureMeasured(arrangement, usable);
         Preview(arrangement, hit, usable);
-        e.DragEffects = usable.Length > 0 && hit.Kind != AudioDropHitKind.None ? DragDropEffects.Copy : DragDropEffects.None;
-        e.Handled = true;
+        return usable.Length > 0 && hit.Kind != AudioDropHitKind.None ? DragDropEffects.Copy : DragDropEffects.None;
+    }
+
+    /// <summary>A hover that did not come through Avalonia drag events (the Linux X11 drop target): the same preview as a drag over the arrangement.
+    /// True/false: the arrangement took it and accepts / refuses it; null: the point is off the arrangement or the files are the window drop (any preview is cleared).</summary>
+    internal bool? HoverExternal(IReadOnlyList<string> files, Window window, Point windowPoint)
+    {
+        if (_panes.Arrangement is not { IsVisible: true } arrangement || files.Count == 0) return null;
+        if (window.TranslatePoint(windowPoint, arrangement) is not { } local
+            || local.X < 0 || local.Y < 0 || local.X > arrangement.Bounds.Width || local.Y > arrangement.Bounds.Height)
+        {
+            ClearPreview(arrangement, null);
+            return null;
+        }
+        return Hover(arrangement, files, visual => window.TranslatePoint(windowPoint, visual) ?? default, false) is { } effects ? effects != DragDropEffects.None : null;
+    }
+
+    /// <summary>Ends an external hover: the same clearing as a drag leaving the arrangement.</summary>
+    internal void ClearExternal()
+    {
+        if (_panes.Arrangement is { } arrangement) ClearPreview(arrangement, null);
     }
 
     private void OnDrop(ArrangementView arrangement, DragEventArgs e)
     {
         var files = MainWindowFileDrop.LocalFiles(e.Data).ToList();
         if (files.Count == 0) return;
-        if (HasSongs(files)) return;
-        var hit = HitTest(arrangement, e);
+        HandleDrop(arrangement, files, visual => e.GetPosition(visual), e.KeyModifiers.HasFlag(KeyModifiers.Alt), e);
+    }
+
+    /// <summary>A drop that did not come through Avalonia's drag events (the Linux X11 drop target): <paramref name="files"/> dropped at <paramref name="windowPoint"/> (window coordinates).
+    /// True when the arrangement took it; false: the window's file drop takes it (songs, MIDI off the rows, the score).</summary>
+    internal bool DropExternal(IReadOnlyList<string> files, Window window, Point windowPoint)
+    {
+        var kinds = DroppedFileUris.Describe(files);
+        if (_panes.Arrangement is not { IsVisible: true } arrangement || files.Count == 0)
+        {
+            DroppedFileUris.Note($"dispatch: MainWindowAudioDrop.DropExternal skipped ({kinds}): no visible arrangement -> window file drop");
+            return false;
+        }
+        if (window.TranslatePoint(windowPoint, arrangement) is not { } local
+            || local.X < 0 || local.Y < 0 || local.X > arrangement.Bounds.Width || local.Y > arrangement.Bounds.Height)
+        {
+            DroppedFileUris.Note($"dispatch: point ({windowPoint.X:0},{windowPoint.Y:0}) is outside the arrangement ({arrangement.Bounds.Width:0}x{arrangement.Bounds.Height:0}) ({kinds}) -> window file drop");
+            return false;
+        }
+        var handled = HandleDrop(arrangement, files, visual => window.TranslatePoint(windowPoint, visual) ?? default, false, null);
+        DroppedFileUris.Note($"dispatch: MainWindowAudioDrop took={handled} ({kinds}) at arrangement point ({local.X:0},{local.Y:0})");
+        return handled;
+    }
+
+    /// <summary>The one drop path (the Avalonia event, <paramref name="e"/> set, and the external X11 drop, null). True when this took the drop.</summary>
+    private bool HandleDrop(ArrangementView arrangement, IReadOnlyList<string> files, Func<Visual, Point> position, bool alt, DragEventArgs? e)
+    {
+        void Effect(DragDropEffects effects) { if (e is not null) e.DragEffects = effects; }
+        if (HasSongs(files))
+        {
+            DroppedFileUris.Note("dispatch: arrangement leaves the drop: it carries a song file (the window opens it)");
+            return false;
+        }
+        var hit = HitTest(arrangement, position, alt);
+        DroppedFileUris.Note($"dispatch: arrangement hit={hit.Kind} track={hit.Track?.Name ?? "-"} at {hit.Seconds:0.00}s");
         if (YieldsToWindow(files.Where(Lands).ToList(), hit))
         {
+            DroppedFileUris.Note("dispatch: only MIDI files off the rows and the strip -> the window opens them as a song");
             ClearPreview(arrangement, e);
-            e.Handled = false;
-            return;
+            if (e is not null) e.Handled = false;
+            return false;
         }
         ClearPreview(arrangement, e);
-        e.Handled = true;
 
         if (hit.Kind == AudioDropHitKind.None || hit.Kind == AudioDropHitKind.Empty)
         {
-            e.DragEffects = DragDropEffects.None;
+            Effect(DragDropEffects.None);
+            DroppedFileUris.Note("dispatch: nothing done: no track under the point (empty timeline space); warning shown: " + AudioDropPlanner.NoTargetText);
             _status.Warning(AudioDropPlanner.NoTargetText);
-            return;
+            return true;
         }
 
         var usable = files.Where(Lands).ToList();
         if (usable.Count == 0)
         {
-            e.DragEffects = DragDropEffects.None;
+            Effect(DragDropEffects.None);
             var first = files[0];
+            DroppedFileUris.Note($"dispatch: nothing done: unsupported type or refused path ({DroppedFileUris.Describe(files)})");
             _status.Error($"Cannot add {Path.GetFileName(first)}: {AudioDropPlanner.RefusalOf(first, FilePathBoundary.RefusalReason)}.");
-            return;
+            return true;
         }
 
-        e.DragEffects = DragDropEffects.Copy;
+        Effect(DragDropEffects.Copy);
         var target = hit.Kind == AudioDropHitKind.Strip ? AudioDropTarget.NewTrack : AudioDropTarget.On(hit.Track!);
         _ = ImportAsync(arrangement, usable, target, hit.Seconds);
+        return true;
     }
 
     /// <summary>True when the drag carries a song file other than a MIDI file: that is the window's open-as-song drop (a MIDI file is a song only off the timeline).</summary>
@@ -230,7 +295,7 @@ internal sealed class MainWindowAudioDrop
         return (left.X, left.X + Math.Max(3, x2 - x1), first?.Name ?? preview.Label, preview.Readout);
     }
 
-    private void ClearPreview(ArrangementView arrangement, DragEventArgs e)
+    private void ClearPreview(ArrangementView arrangement, DragEventArgs? e)
     {
         arrangement.AddTrackBar.DropActive = false;
         arrangement.Timeline.ClipDropLane = null;
@@ -238,7 +303,7 @@ internal sealed class MainWindowAudioDrop
         arrangement.AddTrackBar.DropGhost = null;
         arrangement.Timeline.InvalidateVisual();
         _previewed = null;
-        e.Handled = true;
+        if (e is not null) e.Handled = true;
     }
 
     private readonly Dictionary<string, double> _lengths = new(StringComparer.OrdinalIgnoreCase);
@@ -275,7 +340,12 @@ internal sealed class MainWindowAudioDrop
     private async Task ImportAsync(ArrangementView arrangement, IReadOnlyList<string> files, AudioDropTarget target, double startSec)
     {
         var song = _songs.Active;
-        if (!ReferenceEquals(arrangement.Timeline.Song, song.Project)) return;
+        if (!ReferenceEquals(arrangement.Timeline.Song, song.Project))
+        {
+            DroppedFileUris.Note("import: nothing done: the arrangement shows another song than the active tab");
+            return;
+        }
+        DroppedFileUris.Note($"import: start {files.Count} file(s) target={target}");
         var names = files.Select(Path.GetFileName).ToArray();
         // The progress lives on the top bar (sticky with Cancel); the transient status is only for the outcome, so the sticky stays behind it.
         _showImports?.Invoke(ImportStatusPresenter.ForPending(names!));
@@ -288,11 +358,16 @@ internal sealed class MainWindowAudioDrop
             var midis = await Task.Run(() => files.Where(isMidi).ToDictionary(file => file, file => { try { return ReadMidi(file); } catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException) { return null; } }));
             var lengths = measured.ToDictionary(pair => pair.Key, pair => pair.Value.Length);
             var verdicts = measured.ToDictionary(pair => pair.Key, pair => pair.Value.Verdict);
-            if (!ReferenceEquals(_songs.Active, song) || !ReferenceEquals(arrangement.Timeline.Song, song.Project)) return;
+            if (!ReferenceEquals(_songs.Active, song) || !ReferenceEquals(arrangement.Timeline.Song, song.Project))
+            {
+                DroppedFileUris.Note("import: nothing done: the active tab changed during the measurement");
+                return;
+            }
             var plan = AudioDropPlanner.Plan(files, target, startSec, file => lengths.GetValueOrDefault(file), FilePathBoundary.RefusalReason, file => midis.GetValueOrDefault(file));
             var result = plan.Accepted ? AudioDropApplier.Apply(song, plan) : null;
             if (result is null)
             {
+                DroppedFileUris.Note($"import: nothing added: {AudioDropPlanner.SkippedNotice(plan) ?? plan.Refusal ?? "no reason given"}");
                 _status.Warning(AudioDropPlanner.SkippedNotice(plan) ?? plan.Refusal ?? "Nothing was added");
                 return;
             }
@@ -301,7 +376,13 @@ internal sealed class MainWindowAudioDrop
             arrangement.Timeline.ClipEditCommitted(song, result.Track.AudioClips.TakeLast(result.Added).ToList());   // the one post-edit path (lane compaction, engine sync, rows reload), after the overlap check
             if (plan.NewTrack) arrangement.ShowTrack(result.Track);   // the new track is the selected one and its row is scrolled into view
             arrangement.Timeline.InvalidateVisual();
+            DroppedFileUris.Note($"import: done: {result.Status}");
             _status(result.Status);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            DroppedFileUris.Note($"import: failed: {ex.GetType().Name}: {ex.Message}");
+            _status.Error($"Could not add the dropped file: {ex.Message}");
         }
         finally
         {
@@ -322,29 +403,29 @@ internal sealed class MainWindowAudioDrop
     private static int PreviewLane(TrackModel track) =>track.AudioClips.Count == 0 ? 0 : ClipLanes.Count(track);
 
     /// <summary>The drop position mapped to the strip, a track (with its row and song second), empty timeline space, or nothing of ours.</summary>
-    private static AudioDropHit HitTest(ArrangementView arrangement, DragEventArgs e)
+    private static AudioDropHit HitTest(ArrangementView arrangement, Func<Visual, Point> position, bool alt)
     {
         var bar = arrangement.AddTrackBar;
         if (bar.IsVisible)
         {
-            var inBar = e.GetPosition(bar);
+            var inBar = position(bar);
             if (inBar.X >= 0 && inBar.Y >= 0 && inBar.X <= bar.Bounds.Width && inBar.Y <= bar.Bounds.Height)
-                return new AudioDropHit(AudioDropHitKind.Strip, null, SecondsAt(arrangement, e));
+                return new AudioDropHit(AudioDropHitKind.Strip, null, SecondsAt(arrangement, position, alt));
         }
         var timeline = arrangement.Timeline;
-        var point = e.GetPosition(timeline);
+        var point = position(timeline);
         if (point.X < 0 || point.Y < 0 || point.X > timeline.Bounds.Width || point.Y > timeline.Bounds.Height)
             return new AudioDropHit(AudioDropHitKind.None, null, 0);
         var row = timeline.RowAtY(point.Y);
         if (row >= 0 && row < timeline.Song.Tracks.Count)
-            return new AudioDropHit(AudioDropHitKind.Track, timeline.Song.Tracks[row], SecondsAt(arrangement, e));
-        return new AudioDropHit(AudioDropHitKind.Empty, null, SecondsAt(arrangement, e));
+            return new AudioDropHit(AudioDropHitKind.Track, timeline.Song.Tracks[row], SecondsAt(arrangement, position, alt));
+        return new AudioDropHit(AudioDropHitKind.Empty, null, SecondsAt(arrangement, position, alt));
     }
 
-    private static double SecondsAt(ArrangementView arrangement, DragEventArgs e)
+    private static double SecondsAt(ArrangementView arrangement, Func<Visual, Point> position, bool alt)
     {
         // The one landing second: the drag preview and the drop both read it here (snapped like a clip edge, along the repeat pass nearest the playhead; Alt: no snap).
-        return AudioDropLanding.StartSec(arrangement.Timeline, e.GetPosition(arrangement.Timeline).X, e.KeyModifiers.HasFlag(KeyModifiers.Alt));
+        return AudioDropLanding.StartSec(arrangement.Timeline, position(arrangement.Timeline).X, alt);
     }
 
     private enum AudioDropHitKind { None, Empty, Strip, Track }

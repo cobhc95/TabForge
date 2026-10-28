@@ -101,6 +101,9 @@ public sealed class PluginSettings
     public List<string> CommonFolders { get; set; } = new();
     /// <summary>Run each plug-in in its own process (safest, uses more CPU and memory). Off: one shared engine.</summary>
     public bool SeparateProcessPerPlugin { get; set; }
+    /// <summary>The impulse-response files the IR Loader opened last (newest first, at most <see cref="MaxRecentImpulseFiles"/>).</summary>
+    public List<string> RecentImpulseFiles { get; set; } = new();
+    public const int MaxRecentImpulseFiles = 10;
     /// <summary>Plug-ins switched off after they crashed (full paths).</summary>
     public List<string> Quarantined { get; set; } = new();
     /// <summary>Plug-in paths the user explicitly approved (full normalised paths; uncapped). Each needs its record in <see cref="TrustRecords"/> to be trusted.</summary>

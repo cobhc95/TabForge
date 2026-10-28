@@ -105,7 +105,12 @@ public sealed class FxParameterPanel : DockPanel
         {
             foreach (var (id, row) in _byId.ToList())
             {
-                if (!byId.TryGetValue(id, out var info) || id == _gesture?.Id) continue;
+                if (byId.TryGetValue(id, out var held) && id == _gesture?.Id)   // being dragged: the slider stays, the text follows what the plug-in reads for it
+                {
+                    if (held.Text.Length > 0 && Math.Abs(held.Value - _model.ValueOf(held)) <= FxParameterModel.StepOf(held)) row.Value.Text = held.Text;
+                    continue;
+                }
+                if (!byId.TryGetValue(id, out var info)) continue;
                 _byId[id] = row with { Info = info };
                 Show(_byId[id], info);
             }

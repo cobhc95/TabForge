@@ -113,7 +113,7 @@ internal sealed class TimelineSettingsBinding
         if (heightChanged) pane.Header.Reload(pane.Document.Project);
 
         SetZoom(pane, timeline.ZoomFactor);
-        if (force || timeline.TrackListWidth != _trackListWidth) pane.SetTrackListWidth(timeline.TrackListWidth);
+        if (force || timeline.TrackListWidth != _trackListWidth) pane.SetTrackListWidth(TrackListWidthRules.ResolveSaved(timeline.TrackListWidth, settings.Appearance));
         return heightChanged;
     }
 }

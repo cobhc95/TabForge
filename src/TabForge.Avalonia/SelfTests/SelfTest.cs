@@ -117,13 +117,18 @@ public static partial class SelfTest
         GuardGroup("gp-fixtures", TestSyntheticGuitarProFixture);
         GuardGroup("synthetic-fixtures", TestSyntheticFixtures);
         Guard(TestGp5OwnFilesImport);
+        Guard(TestGpifPitchCurves);
         Guard(TestGpRoundTripCounts);
+        Guard(TestLegacyGpExport);
         Guard(TestGuitarProImportWorker);
         Guard(TestImportPlausibility);
         Section("Release set: playback and recording");
         Guard(TestPlaybackOrderSpec);
         Guard(TestNoHangingNotes);
         Guard(TestMixPointsSurviveSeek);
+        Guard(TestPlaybackEditRefresh);
+        Guard(TestSeekDuringPlayback);
+        Guard(TestArticulationKeyswitches);
         Guard(TestSongExtent);
         Guard(TestLiveAudioFidelity);
         Guard(TestLiveRecordingLoudness);
@@ -167,10 +172,12 @@ public static partial class SelfTest
         ["TestSettingsChangeDuringSaveStaysPending"] = "settings", ["TestSettingsBadWorkspaceKeepsOtherSettings"] = "settings",
         ["TestRenderOutputFolderRefused"] = "core", ["TestPluginRightsNotice"] = "core",
         ["TestMalformedInputFuzz"] = "fuzz", ["TestSyntheticGuitarProFixture"] = "guitarpro", ["TestSyntheticFixtures"] = "synthetic", ["TestGp5OwnFilesImport"] = "guitarpro",
-        ["TestGpRoundTripCounts"] = "guitarpro", ["TestGuitarProImportWorker"] = "guitarpro", ["TestImportPlausibility"] = "guitarpro",
-        ["TestPlaybackOrderSpec"] = "playback", ["TestNoHangingNotes"] = "playback", ["TestMixPointsSurviveSeek"] = "playback",
+        ["TestGpifPitchCurves"] = "guitarpro",
+        ["TestGpRoundTripCounts"] = "guitarpro", ["TestLegacyGpExport"] = "guitarpro", ["TestGuitarProImportWorker"] = "guitarpro", ["TestImportPlausibility"] = "guitarpro",
+        ["TestPlaybackOrderSpec"] = "playback", ["TestNoHangingNotes"] = "playback", ["TestMixPointsSurviveSeek"] = "playback", ["TestArticulationKeyswitches"] = "playback",
         ["TestSongExtent"] = "recording", ["TestLiveAudioFidelity"] = "recording", ["TestLiveRecordingLoudness"] = "recording",
         ["TestVideoEncoderGolden"] = "recording",
+        ["TestPlaybackEditRefresh"] = "playback", ["TestSeekDuringPlayback"] = "playback",
     };
 
     private static HashSet<string>? _areas;   // null: every area

@@ -89,7 +89,7 @@ public sealed class MediaRelinkWindow : Window
 
     /// <summary>The file picker options for locating <paramref name="item"/> by hand (the window and the clip menu share them).</summary>
     public static FileDialogOptions LocateOptions(MissingMedia item) =>
-        new() { Title = "Locate " + item.Name, FileName = item.Name, CheckFileExists = true, Filter = "Audio files|*.wav;*.mp3;*.flac;*.aif;*.aiff;*.ogg;*.m4a;*.wma|All files|*.*" };
+        new() { Key = TabForge.Services.DialogKeys.MediaLocate, Title = "Locate " + item.Name, FileName = item.Name, CheckFileExists = true, Filter = "Audio files|*.wav;*.mp3;*.flac;*.aif;*.aiff;*.ogg;*.m4a;*.wma|All files|*.*" };
 
     private Control Row(MissingMedia item)
     {
@@ -115,7 +115,7 @@ public sealed class MediaRelinkWindow : Window
 
     private void Browse()
     {
-        var picked = _dialogs.PickFolder(new FileDialogOptions { Title = "Search this folder (and below) for the missing audio" }, this);
+        var picked = _dialogs.PickFolder(new FileDialogOptions { Key = TabForge.Services.DialogKeys.MediaSearchFolder, Title = "Search this folder (and below) for the missing audio" }, this);
         if (picked is null) return;
         _folder.Text = picked;
         _ = SearchAsync(picked);

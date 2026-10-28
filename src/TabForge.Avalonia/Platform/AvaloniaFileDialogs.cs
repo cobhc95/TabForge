@@ -12,35 +12,46 @@ namespace TabForge.Avalonia.Platform;
 
 /// <summary>
 /// The IFileDialogs port on Avalonia's StorageProvider. The port is synchronous, so each call runs a nested dispatcher frame until the picker answers.
-/// Every chosen path passes through FilePathPolicy before it is returned.
+/// Every chosen path passes through FilePathPolicy before it is returned. A dialog with a Key starts in its remembered folder and stores its pick (DialogFolderMemory).
 /// Owns: options to picker options, the filter text to file types, picker results to checked paths.
 /// Does not own: what callers do with the paths. Tests: AvaloniaDialogTests (filter parsing).
 /// </summary>
 public sealed class AvaloniaFileDialogs : IFileDialogs
 {
+    private readonly DialogFolderMemory? _folders;
+
+    /// <param name="folders">The remembered folders of the app's settings; null: every dialog starts where its options say.</param>
+    public AvaloniaFileDialogs(DialogFolderMemory? folders = null) => _folders = folders;
+
     public string? OpenFile(FileDialogOptions options, object? owner) => OpenFiles(options with { Multiselect = false }, owner)?.FirstOrDefault();
 
     public string[]? OpenFiles(FileDialogOptions options, object? owner)
     {
         var storage = StorageOf(owner);
+        var start = _folders?.StartFolder(options.Key, options.InitialDirectory) ?? options.InitialDirectory;
         var files = Wait(async () => await storage.OpenFilePickerAsync(new FilePickerOpenOptions
         {
             Title = options.Title, AllowMultiple = options.Multiselect == true, FileTypeFilter = FileTypes(options.Filter),
-            SuggestedStartLocation = await StartFolder(storage, options.InitialDirectory),
+            SuggestedStartLocation = await StartFolder(storage, start),
         }));
-        return CheckedFiles(files.Select(file => file.TryGetLocalPath()));
+        var paths = CheckedFiles(files.Select(file => file.TryGetLocalPath()));
+        if (paths is { Length: > 0 }) _folders?.Remember(options.Key, paths[0], isFolder: false);
+        return paths;
     }
 
     public string? SaveFile(FileDialogOptions options, object? owner)
     {
         var storage = StorageOf(owner);
+        var start = _folders?.StartFolder(options.Key, options.InitialDirectory) ?? options.InitialDirectory;
         var file = Wait(async () => await storage.SaveFilePickerAsync(new FilePickerSaveOptions
         {
             Title = options.Title, SuggestedFileName = options.FileName, DefaultExtension = options.DefaultExt,
             FileTypeChoices = FileTypes(options.Filter), ShowOverwritePrompt = options.OverwritePrompt ?? true,
-            SuggestedStartLocation = await StartFolder(storage, options.InitialDirectory),
+            SuggestedStartLocation = await StartFolder(storage, start),
         }));
-        return file is null ? null : CheckedFiles(new[] { file.TryGetLocalPath() })?[0];
+        var saved = file is null ? null : CheckedFiles(new[] { file.TryGetLocalPath() })?[0];
+        if (saved is not null) _folders?.Remember(options.Key, saved, isFolder: false);
+        return saved;
     }
 
     public string? PickFolder(FileDialogOptions options, object? owner) => PickFolders(options with { Multiselect = false }, owner)?.FirstOrDefault();
@@ -48,13 +59,15 @@ public sealed class AvaloniaFileDialogs : IFileDialogs
     public string[]? PickFolders(FileDialogOptions options, object? owner)
     {
         var storage = StorageOf(owner);
+        var start = _folders?.StartFolder(options.Key, options.InitialDirectory) ?? options.InitialDirectory;
         var folders = Wait(async () => await storage.OpenFolderPickerAsync(new FolderPickerOpenOptions
         {
             Title = options.Title, AllowMultiple = options.Multiselect == true,
-            SuggestedStartLocation = await StartFolder(storage, options.InitialDirectory),
+            SuggestedStartLocation = await StartFolder(storage, start),
         }));
-        var paths = LocalPaths(folders.Select(folder => folder.TryGetLocalPath()));
-        return paths?.Select(path => FilePathPolicy.OutputDirectory(path, "chosen folder")).ToArray();
+        var paths = LocalPaths(folders.Select(folder => folder.TryGetLocalPath()))?.Select(path => FilePathPolicy.OutputDirectory(path, "chosen folder")).ToArray();
+        if (paths is { Length: > 0 }) _folders?.Remember(options.Key, paths[0], isFolder: true);
+        return paths;
     }
 
     /// <summary>The filter text ("Name|*.a;*.b|...") as picker file types; null for no filter.</summary>

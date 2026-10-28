@@ -56,6 +56,20 @@ public sealed class PlaybackOptions
     public bool LiveMetronomeEvents { get; set; }
     /// <summary>Longest a let-ring note may ring on, in milliseconds.</summary>
     public double LetRingCapMs { get; set; } = 2000;
+    /// <summary>
+    /// The MIDI output devices to resolve track devices against (see <see cref="MidiOutputRouting"/>): the saved
+    /// device name wins, the saved index is the fallback. Null (previews, exports, tools): the saved index is used,
+    /// exactly as before. Read at compile time; left out of <see cref="CompilesSameAs"/> (a fresh start always recompiles).
+    /// </summary>
+    public IReadOnlyList<MidiOutputDeviceInfo>? OutputDevices { get; set; }
+
+    public const double DefaultNormalVibrato = 0.38, DefaultWideVibrato = 0.94, DefaultVibratoHz = 5.5;
+    /// <summary>Vibrato depth (semitones each way) of a note with no own depth: normal vibrato.</summary>
+    public double NormalVibratoDepth { get; set; } = DefaultNormalVibrato;
+    /// <summary>Vibrato depth of a wide-vibrato note with no own depth.</summary>
+    public double WideVibratoDepth { get; set; } = DefaultWideVibrato;
+    /// <summary>Vibrato speed in Hz of a note with no own speed.</summary>
+    public double VibratoSpeedHz { get; set; } = DefaultVibratoHz;
 
     public PlaybackOptions Clone() => (PlaybackOptions)MemberwiseClone();
 
@@ -74,7 +88,8 @@ public sealed class PlaybackOptions
         LoopEndBar == other.LoopEndBar && LoopStartCell == other.LoopStartCell && LoopEndCell == other.LoopEndCell &&
         CountIn == other.CountIn && CountInBars == other.CountInBars &&
         RepeatExpansion == other.RepeatExpansion && SkipClips == other.SkipClips &&
-        LiveMetronomeEvents == other.LiveMetronomeEvents && LetRingCapMs.Equals(other.LetRingCapMs);
+        LiveMetronomeEvents == other.LiveMetronomeEvents && LetRingCapMs.Equals(other.LetRingCapMs) &&
+        NormalVibratoDepth.Equals(other.NormalVibratoDepth) && WideVibratoDepth.Equals(other.WideVibratoDepth) && VibratoSpeedHz.Equals(other.VibratoSpeedHz);
 }
 
 /// <summary>A musical playback position reported to the UI (bar/cell come from the timeline bar map).</summary>

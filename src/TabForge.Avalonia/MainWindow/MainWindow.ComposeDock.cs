@@ -104,12 +104,18 @@ public sealed partial class MainWindow
         var topView = new StatusNoticeBarView("Video saved", "Open folder", () => { });
         var topBar = new NotificationBar(topView, AvaloniaUiThread.ForApplication());
         Action<string> showStatus = new TopBarNoticeSink(topBar).Show;   // plain report(text) is Info and dropped; report.Error(text) etc. show
-        var dialogs = new AvaloniaFileDialogs();
+        var dialogs = new AvaloniaFileDialogs(settings?.DialogFolders);
         var registry = windows ?? new TabWindowRegistry(new AppServices(playback?.Trust ?? new TabForge.Plugins.PluginTrust()));   // the windows song tabs move between, and the state they share (autosave, degraded mode)
         Func<SavePrompt, Task<PromptButton>> askSave = async prompt => { var ask = new SavePromptWindow(prompt); await ask.ShowDialog(this); return ask.Result; };
         var media = new MainWindowMediaCollect(this, dialogs, settings, topBar, showStatus);
+        Func<GpPreflightReport, string, LegacyGpFormat, Task<bool>> askLegacy = async (report, name, format) =>
+        {
+            var choice = GpExportChoice.Cancel;
+            await new GpExportPreflightWindow(report, format, name, c => choice = c).ShowDialog(this);
+            return choice == GpExportChoice.ExportCompatible;
+        };
         var saving = new MainWindowSaving(dialogs, this, showStatus, SongPluginStates.ForEngine(playback?.Engine, () => settings?.Settings.Plugins.MonitorFx),
-            () => (settings?.Settings ?? SettingsDefaults.Fallback()).General.DefaultSaveFormat, askSave, () => registry.Degraded, media.Step);
+            () => (settings?.Settings ?? SettingsDefaults.Fallback()).General.DefaultSaveFormat, askSave, () => registry.Degraded, media.Step, askLegacy);
         var songs = new MainWindowTabs(initial, askSave, saving.Save, tabs, Width - CaptionButtons.ReservedWidth, settings?.Settings, showStatus, playback, TabForge.Audio.WaveformCache.Default, saving.WhenIdle);
         songs.EffectiveThemeIsLight = () => ActualThemeVariant == global::Avalonia.Styling.ThemeVariant.Light;
         ActualThemeVariantChanged += (_, _) => songs.RefreshDefaultPaper();
@@ -171,7 +177,7 @@ public sealed partial class MainWindow
         statusBarCreated.BindNotice(notice!);
         statusBarCreated.AttachNotificationBar(topBar);
         var panes = new MainWindowDocumentPanes(songs, scorePreview, playback, registry.Services.MeterTick);
-        MainWindowEngineSync.Register(this, panes, songs, playback, settings, text => topBar.Show(text, NotificationKind.Error, NoticeCategory.Error, source: NotificationBar.EngineSource));
+        MainWindowEngineSync.Register(this, panes, songs, playback, settings, text => topBar.Show(text, NotificationKind.Error, NoticeCategory.Error, source: NotificationBar.EngineSource), registry.Services.MeterTick);
         d.ContextMenus = contextMenus;
         d.ScorePreview = scorePreview;
         d.StatusBarCreated = statusBarCreated;
@@ -275,7 +281,8 @@ public sealed partial class MainWindow
         setup.Register("learn", () => panes.NewKeyboardMode(() => compose.LeaveLearn?.Invoke()));
         setup.Register("band", panes.NewBand);
         setup.Register("timeline", panes.NewArrangement);
-        _ = new NotePreviewSound(scorePreview.Editor, () => playback, () => settings?.Settings.Audio ?? new TabForge.Services.AudioSettings(), showStatus);
+        _ = new NotePreviewSound(scorePreview.Editor, () => playback, () => settings?.Settings.Audio ?? new TabForge.Services.AudioSettings(), showStatus,
+            () => songs.Songs.Count == 0 ? null : playback?.For(songs.Active)?.Routing);
         var sectionLinks = new SectionLinks(songs, scorePreview, playback, () => panes.Arrangement);
         panes.ArrangementCreated += sectionLinks.Follow;
         subscriptions.Add(() => { panes.ArrangementCreated -= sectionLinks.Follow; sectionLinks.Dispose(); });

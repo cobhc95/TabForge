@@ -36,4 +36,6 @@ public sealed record FileDialogOptions
     public bool? CheckFileExists { get; init; }
     public bool? OverwritePrompt { get; init; }
     public bool? Multiselect { get; init; }
+    /// <summary>The dialog's stable key (<see cref="TabForge.Services.DialogKeys"/>): it starts in the folder that key last used and saves the folder of its pick. Null: no memory.</summary>
+    public string? Key { get; init; }
 }

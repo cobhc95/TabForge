@@ -14,11 +14,13 @@ public static class TrackPropertiesPresenter
 
     public static string Title(string trackName, bool adding) => adding ? "Add track" : $"Track properties — {trackName}";
 
-    /// <summary>The first failing field message, or null when program, channel, frets and capo are all in range (channel 9, shown as 10, is for drum tracks only, and a drum track stays on it). An audio track has no MIDI channel, program, frets or capo, so none of them can refuse the save.</summary>
-    public static string? FieldError(string program, string channel, string frets, string capo, bool isDrumTrack, bool isAudioTrack = false)
+    /// <summary>The first failing field message, or null when program, bank, channel, frets and capo are all in range (channel 9, shown as 10, is for drum tracks only, and a drum track stays on it). A bank of -1 means off. An audio track has no MIDI channel, program, bank, frets or capo, so none of them can refuse the save.</summary>
+    public static string? FieldError(string program, string bankMsb, string bankLsb, string channel, string frets, string capo, bool isDrumTrack, bool isAudioTrack = false)
     {
         if (isAudioTrack) return null;
         if (!InRange(program, 0, MidiLimits.Max)) return "MIDI program must be 0–127.";
+        if (!InRange(bankMsb, -1, MidiLimits.Max)) return "Bank MSB must be –1 (off) to 127.";
+        if (!InRange(bankLsb, -1, MidiLimits.Max)) return "Bank LSB must be –1 (off) to 127.";
         if (!InRange(channel, 0, 15)) return "MIDI channel must be 0–15.";
         var onDrumChannel = channel.Trim() == "9";
         if (!isDrumTrack && onDrumChannel) return "Channel 10 is for drums only.";

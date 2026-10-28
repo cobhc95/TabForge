@@ -57,11 +57,13 @@ public static class MainWindowEdit
         score.Editor.Notice = notice;
         score.Editor.AskDeleteBar = bar => _ = AskAndDeleteBar(score, owner, bar);
         var ornaments = new OrnamentEditorFlow(score, window => window.ShowDialog<EffectValuesAnswer?>(owner), notice, settings, saveSettings);
+        var vibrato = new VibratoEditorFlow(score, window => window.ShowDialog<EffectValuesAnswer?>(owner), notice, settings);
         var ornamentRows = new Dictionary<string, Action>(StringComparer.Ordinal)
         {   // the trill, grace and harmonic palette buttons and hotkeys open the same editors as the Note menu rows
             ["Note.Trill"] = () => _ = ornaments.OpenTrill(),
             ["Note.Grace"] = () => _ = ornaments.OpenGrace(),
             ["Note.Harmonic"] = () => _ = ornaments.OpenOrRemoveHarmonic(),
+            ["Note.Vibrato"] = () => _ = vibrato.OpenOrToggle(),
         };
         foreach (var id in Commands.Concat(ToolCommands).Concat(ornamentRows.Keys).Distinct())
         {
@@ -75,6 +77,7 @@ public static class MainWindowEdit
             commands.Add(commandId, ornamentRows.TryGetValue(commandId, out var open) ? open : () => score.Run(commandId));
         }
         commands.Add("Note.TrillEditor", () => _ = ornaments.OpenTrill());
+        commands.Add("Note.VibratoSettings", () => _ = vibrato.Open());
         commands.Add("Note.HarmonicEditor", () => _ = ornaments.OpenHarmonic());
         MainWindowNoteDialogs.Register(commands, score, owner, () => _ = ornaments.OpenGrace());
         MainWindowBarTools.Register(commands, score, owner, showMarkerList, afterInsert);

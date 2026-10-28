@@ -17,7 +17,7 @@ public static partial class SelfTest
     /// </summary>
     private static readonly string[] ReleaseTestNames =
     {
-        "TestEngineMessagesGolden", "TestEngineMessagesRoundTrip", "TestMalformedInputFuzz", "TestGp5OwnFilesImport", "TestSyntheticGuitarProFixture", "TestGpRoundTripCounts",
+        "TestEngineMessagesGolden", "TestEngineMessagesRoundTrip", "TestMalformedInputFuzz", "TestGp5OwnFilesImport", "TestGpifPitchCurves", "TestSyntheticGuitarProFixture", "TestGpRoundTripCounts",
         "TestTforgeCompression", "TestImportPlausibility", "TestGuitarProImportWorker", "TestSyntheticFixtures", "TestPresetFolderStoreNoOverwrite", "TestNumberedSiblingCeiling",
         "TestSaveClaimAtomic", "TestAutosaveCopies", "TestScoreClipRejectsUntrustedInput", "TestClipboardCopyPasteBytes", "TestDirectTforgeOpenRecovers", "TestPairMarkerIsUntrusted",
         "TestPairSaveEveryStage", "TestMixPointsSurviveSeek", "TestNoHangingNotes", "TestPlaybackOrderSpec", "TestLiveAudioFidelity",

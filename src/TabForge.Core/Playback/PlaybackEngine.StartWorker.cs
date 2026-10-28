@@ -58,6 +58,7 @@ public sealed partial class PlaybackEngine
         Stop();
         var generation = ++_generation;
         var opts = options.Clone();
+        opts.OutputDevices = GetDevices();   // the tracks' saved device names resolve against these (index fallback)
         PlaybackSeekRebuild.KeepStartInsideLoop(project, opts);
         if (opts.Loop) opts.StartOccurrence = null;   // T1 enters a loop by bar/cell, not by a pass
         CurrentBar = opts.StartBar;

@@ -27,6 +27,7 @@ public sealed class FxChainWindows
     private readonly MainWindowSettings? _settings;
     private readonly PluginTrust _trust;
     private readonly Dictionary<(SongDocument Document, string Track), FxChainWindow> _open = new();
+    private readonly DocumentWindowVisibility _visibility = new();
     private readonly Dictionary<SongDocument, EventHandler> _pruning = new();   // per song: floating editors of removed plug-ins and tracks close even with no chain window open
 
     /// <param name="owner">The main window the chain windows open over.</param>
@@ -86,6 +87,7 @@ public sealed class FxChainWindows
         window.Closed += (_, _) =>
         {
             document.DisplayStateChanged -= changed;
+            _visibility.Forget(window);
             if (_open.TryGetValue(key, out var current) && ReferenceEquals(current, window)) _open.Remove(key);
         };
         window.ShowOver(over ?? _owner);
@@ -173,6 +175,7 @@ public sealed class FxChainWindows
     /// <summary>The shown song changed: the other songs' floating plug-in windows hide, the shown song's open again. Call again once the engine took the song (a refused open retries).</summary>
     public void SongShown(IEnumerable<SongDocument> held)
     {
+        _visibility.Apply(_open.Select(pair => (pair.Key.Document, (Window)pair.Value)).ToList(), _active());
         var handle = TabForge.Avalonia.Platform.PlatformAdapters.NativeWindows.Of(_owner);
         FloatingEditors.SongShown(held, _active(), handle, _owner.ActualThemeVariant != global::Avalonia.Styling.ThemeVariant.Light);
     }

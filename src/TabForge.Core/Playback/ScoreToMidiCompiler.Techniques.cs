@@ -10,7 +10,7 @@ internal sealed partial class ScoreToMidiCompiler
 {
     private void EmitNote(TrackModel track, int trackIndex, int voiceIndex, int playBar, int cellIndex, TabCell cell, TabNote note, double onset, double noteMs, double slotMs)
     {
-        var device = track.MidiOutputDeviceId;
+        var device = OutputDeviceOf(track);
         var channel = _channels.Length > trackIndex ? _channels[trackIndex] : track.MidiChannel;
         // The reference: bent / whammied notes play on the track's effect channel, so their pitch wheel never detunes the other notes of the track.
         if (ChannelAllocator.UsesEffectChannel(note, cell) && EffectChannelOf(trackIndex) is >= 0 and var effectChannel) channel = effectChannel;
@@ -48,6 +48,7 @@ internal sealed partial class ScoreToMidiCompiler
         if (tied && mergeable) _timeline.TieOrphans++;   // a tremolo, trill or grace destination is picked on purpose
 
         ApplySlideInLead(trackIndex, voiceIndex, note, t, channel, ref onset, ref length);
+        var soundMidi = ApplyArticulation(track, trackIndex, cell, note, t, channel, device, onset, ref velocity, midi);   // the instrument's articulation map, if any
 
         var noteEvent = new NoteEvent
         {
@@ -67,11 +68,11 @@ internal sealed partial class ScoreToMidiCompiler
         var repeats = RepetitionCount(length, slotMs, tremoloDenominator);
         if ((t.Contains("TremoloPick") || t.Contains("Trill")) && repeats > 1 && length / repeats >= 30)
         {
-            EmitRepeatedAttacks(noteEvent, track, playBar, cellIndex, cell, note, midi, velocity, onset, length, repeats, tremoloDenominator, slotMs, key, t, channel, device, trackIndex);
+            EmitRepeatedAttacks(noteEvent, track, playBar, cellIndex, cell, note, soundMidi, velocity, onset, length, repeats, tremoloDenominator, slotMs, key, t, channel, device, trackIndex);
             return;
         }
 
-        EmitAttackAndExpression(noteEvent, track, playBar, cellIndex, cell, note, midi, velocity, onset, length, writtenEndMs, key, t, channel, device, trackIndex);
+        EmitAttackAndExpression(noteEvent, track, playBar, cellIndex, cell, note, soundMidi, velocity, onset, length, writtenEndMs, key, t, channel, device, trackIndex);
     }
 
     /// <summary>
@@ -466,13 +467,13 @@ internal sealed partial class ScoreToMidiCompiler
             var start = envelope.Note.OnsetMs;
             var end = Math.Max(start + 1, envelope.Note.EndMs);
             var duration = end - start;
-            Add(envelope.Track.MidiOutputDeviceId, envelope.Channel, 0xB0, 11, 0, start, envelope.Note.TrackIndex);
+            Add(OutputDeviceOf(envelope.Track), envelope.Channel, 0xB0, 11, 0, start, envelope.Note.TrackIndex);
             for (var at = start + FadeInSampleMs; at < end; at += FadeInSampleMs)
             {
                 var level = (int)Math.Round(MidiLimits.Max * Math.Clamp((at - start) / duration, 0, 1));
-                Add(envelope.Track.MidiOutputDeviceId, envelope.Channel, 0xB0, 11, level, at, envelope.Note.TrackIndex);
+                Add(OutputDeviceOf(envelope.Track), envelope.Channel, 0xB0, 11, level, at, envelope.Note.TrackIndex);
             }
-            Add(envelope.Track.MidiOutputDeviceId, envelope.Channel, 0xB0, 11, MidiLimits.Max, end, envelope.Note.TrackIndex);
+            Add(OutputDeviceOf(envelope.Track), envelope.Channel, 0xB0, 11, MidiLimits.Max, end, envelope.Note.TrackIndex);
         }
     }
 }

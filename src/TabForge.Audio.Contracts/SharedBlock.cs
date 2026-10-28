@@ -26,7 +26,7 @@ public struct TimedMidi
 /// - status written by the engine (latency, CPU load).
 /// Layout is fixed; both sides map the same named block.
 /// </summary>
-public sealed unsafe class SharedBlock : IDisposable
+public sealed unsafe partial class SharedBlock : IDisposable
 {
     public const int RingCapacity = 8192; // power of two
     private const int HeaderBytes = 256;

@@ -54,7 +54,8 @@ public static class VideoEncoderFactory
     public static VideoEncoderOptions ForExport(VideoEncoderOptions options, HostOs os) =>
         os == HostOs.Windows && options.Encoder == VideoEncoderChoices.Auto && options.HardwareProbe != VideoEncoderOptions.ProbePass ? options with { Encoder = VideoEncoderChoices.Software } : options;
 
-    public const string NoEncoderText = "Video export needs ffmpeg on this system. Install ffmpeg (for example 'brew install ffmpeg' or your package manager) or put the ffmpeg program next to TabForge, then try again.";
+    /// <summary>The "install ffmpeg" message with an install command for this OS (apt on Linux, brew elsewhere).</summary>
+    public static string NoEncoderText => $"Video export needs ffmpeg on this system. Install ffmpeg (for example '{(HostSystem.Current == HostOs.Linux ? "sudo apt install ffmpeg" : "brew install ffmpeg")}' or your package manager) or put the ffmpeg program next to TabForge, then try again.";
 
     public const string LiveRecordingUnavailableText = "Recording the screen to video is available on Windows only. Use Export video to make a video from the score instead.";
 

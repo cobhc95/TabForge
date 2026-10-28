@@ -80,6 +80,15 @@ TFV3_API int32_t tfv3_set_processing(tfv3_plugin* p, double sample_rate, int32_t
 /* Tail the plug-in reports, in samples (0 = none, unknown or infinite). */
 TFV3_API int32_t tfv3_tail(tfv3_plugin* p);
 
+/* Parameters (generic plug-in controls panel; main thread only; values are VST3 normalized 0..1). tfv3_param_info: name 256 bytes and
+   units 64 bytes UTF-8; step_count 0 = continuous; flags 1 read-only, 2 hidden, 4 program change, 8 bypass; any out pointer may be null.
+   tfv3_param_text: the plug-in's own text for a value. tfv3_param_set: sets it on the controller and queues it for the processor. 1 = success. */
+TFV3_API int32_t tfv3_param_count(tfv3_plugin* p);
+TFV3_API int32_t tfv3_param_info(tfv3_plugin* p, int32_t index, uint32_t* id, char* name, char* units, int32_t* step_count,
+                                 int32_t* flags, double* default_normalized, double* value_normalized);
+TFV3_API int32_t tfv3_param_text(tfv3_plugin* p, uint32_t id, double normalized, char* out, int32_t capacity);
+TFV3_API int32_t tfv3_param_set(tfv3_plugin* p, uint32_t id, double normalized);
+
 /* Stops processing, deactivates, terminates and frees everything (safe with null). */
 TFV3_API void tfv3_destroy(tfv3_plugin* p);
 

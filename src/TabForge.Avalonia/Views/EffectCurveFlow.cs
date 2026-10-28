@@ -31,8 +31,9 @@ public static class EffectCurveFlow
             ? notes.Any(n => n.BendPoints.Count > 0 || n.Techniques.Contains(TechniqueNames.Bend))
             : cells.Any(c => c.WhammyPoints.Count > 0 || c.Notes.Any(n => n.Techniques.Contains(TechniqueNames.TremoloBar)));
         var start = existing ?? EffectPresetStore.BuiltIn(kind)[0].Points;
-        var dialog = new CurveEffectWindow(kind, bend ? "Bend editor" : "Tremolo bar editor", bend ? 0 : -EffectCurve.TremoloRangeValue,
-            bend ? EffectCurve.BendMaxValue : EffectCurve.TremoloRangeValue, start, new EffectPresetStore(settings()), hasEffect, saveSettings);
+        var dialog = new CurveEffectWindow(kind, bend ? "Bend editor" : "Tremolo bar editor", bend ? 0 : EffectCurve.TremoloMinValue,
+            bend ? EffectCurve.BendMaxValue : EffectCurve.TremoloMaxValue, start, new EffectPresetStore(settings()), hasEffect, saveSettings,
+            bend ? edits.PreviousBendEnd() : edits.PreviousWhammyEnd());
         CurveEffectAnswer? answer = await host.ShowModal<CurveEffectAnswer?>(dialog, owner);
         if (answer is null or CurveEffectAnswer.Cancel) return false;
         var points = dialog.Curve.Snapshot();

@@ -36,6 +36,9 @@ public interface IAppFolders
     /// <summary>The user's Videos folder (Movies on macOS).</summary>
     string Videos { get; }
 
+    /// <summary>The user's Documents folder (default for projects and exports).</summary>
+    string Documents { get; }
+
     /// <summary>REAPER's resource folder (its reaper.ini and FXChains).</summary>
     string ReaperResources { get; }
 
@@ -56,7 +59,8 @@ public sealed class AppFolderLayout : IAppFolders
     /// <param name="env">Environment lookup (XDG variables).</param>
     /// <param name="music">The Music folder on Windows.</param>
     /// <param name="videos">The Videos folder on Windows.</param>
-    public AppFolderLayout(HostOs os, string home, string roaming, string local, string temp, Func<string, string?> env, string music = "", string videos = "")
+    /// <param name="documents">The Documents folder on Windows.</param>
+    public AppFolderLayout(HostOs os, string home, string roaming, string local, string temp, Func<string, string?> env, string music = "", string videos = "", string documents = "")
     {
         Temp = temp;
         Runtime = temp;
@@ -69,6 +73,7 @@ public sealed class AppFolderLayout : IAppFolders
             Videos = videos;
             ReaperResources = Path.Combine(roaming, "REAPER");
             UserPluginRoot = Path.Combine(local, "Programs", "Common");
+            Documents = documents;
         }
         else if (os == HostOs.MacOS)
         {
@@ -76,6 +81,7 @@ public sealed class AppFolderLayout : IAppFolders
             Cache = Path.Combine(home, "Library", "Caches", AppName);
             Music = Path.Combine(home, "Music");
             Videos = Path.Combine(home, "Movies");
+            Documents = Path.Combine(home, "Documents");
             ReaperResources = Path.Combine(Path.GetDirectoryName(Settings)!, "REAPER");
         }
         else
@@ -85,6 +91,7 @@ public sealed class AppFolderLayout : IAppFolders
             Cache = Path.Combine(XdgBase(env, "XDG_CACHE_HOME", home, ".cache"), AppName);
             Music = Path.Combine(home, "Music");
             Videos = Path.Combine(home, "Videos");
+            Documents = Path.Combine(home, "Documents");
             ReaperResources = Path.Combine(XdgBase(env, "XDG_CONFIG_HOME", home, ".config"), "REAPER");
             if (env("XDG_RUNTIME_DIR") is { Length: > 0 } run && Path.IsPathRooted(run)) Runtime = run;
         }
@@ -103,6 +110,7 @@ public sealed class AppFolderLayout : IAppFolders
     public string SoundFonts { get; }
     public string Music { get; } = "";
     public string Videos { get; } = "";
+    public string Documents { get; } = "";
     public string ReaperResources { get; } = "";
     public string UserPluginRoot { get; } = "";
 

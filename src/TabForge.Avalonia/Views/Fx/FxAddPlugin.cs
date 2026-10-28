@@ -35,8 +35,11 @@ public sealed class FxAddPlugin
     public async Task<PluginSlot> SlotFor(VstPluginInfo chosen)
     {
         var settings = _host.PluginSettings;
-        _host.Trust.Approve(settings, chosen.Path, _host.PluginFiles);   // picked from the user's own scan / browse: trusted
-        _host.SaveSettings();
+        if (!TabForge.Audio.Contracts.Builtin.BuiltinEffects.IsBuiltin(chosen.Path))   // TabForge's own effect: no file to approve
+        {
+            _host.Trust.Approve(settings, chosen.Path, _host.PluginFiles);   // picked from the user's own scan / browse: trusted
+            _host.SaveSettings();
+        }
         var role = chosen.Role;
         var vendor = chosen.Vendor;
         if (role.Length == 0)

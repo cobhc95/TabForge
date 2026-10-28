@@ -267,6 +267,7 @@ public sealed class PluginPortabilityTests
     {
         var host = PluginEditorHosts.Create(new TabForge.AudioEngine.EngineLogWriter());
         if (OperatingSystem.IsWindows()) { Assert.IsType<EditorWindows>(host); Assert.True(host.IsSupported); }
+        else if (host is X11EditorHost) Assert.True(OperatingSystem.IsLinux() && host.IsSupported);   // Linux with an X server named (DISPLAY)
         else { Assert.IsType<UnsupportedEditorHost>(host); Assert.False(host.IsSupported); }
         host.CloseAll();
     }

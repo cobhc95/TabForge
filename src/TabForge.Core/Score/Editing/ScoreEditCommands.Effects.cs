@@ -24,6 +24,20 @@ public sealed partial class ScoreEditCommands
         return cells.Where(cell => cell.Notes.Count > 0).ToList();
     }
 
+    /// <summary>The level (quarter tones) the bend of the note before the first effect note, on its string, ends on; 0 when there is no such bend.</summary>
+    public double PreviousBendEnd()
+    {
+        if (EffectCells().FirstOrDefault() is not { } cell || PreviousCellOf(cell) is not { } previous) return 0;
+        var note = previous.Notes.FirstOrDefault(n => n.StringIndex == (EffectNotes().FirstOrDefault()?.StringIndex ?? SelectedString));
+        return LevelAtEnd(note?.BendPoints);
+    }
+
+    /// <summary>The level (quarter tones) the tremolo bar of the beat before the first effect beat ends on; 0 when there is none.</summary>
+    public double PreviousWhammyEnd() =>
+        EffectCells().FirstOrDefault() is { } cell && PreviousCellOf(cell) is { } previous ? LevelAtEnd(previous.WhammyPoints) : 0;
+
+    private static double LevelAtEnd(IReadOnlyList<BendPointModel>? points) => points is { Count: > 0 } ? points.OrderBy(p => p.Offset).Last().Value : 0;
+
     /// <summary>The displayed track (string tunings for the fret <-> pitch conversion of the trill and grace editors).</summary>
     public TrackModel? EffectTrack => Track;
 

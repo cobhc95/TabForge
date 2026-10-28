@@ -12,5 +12,6 @@ public static class AppFolders
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         Path.GetTempPath(), Environment.GetEnvironmentVariable,
         Environment.GetFolderPath(Environment.SpecialFolder.MyMusic),
-        Environment.GetFolderPath(Environment.SpecialFolder.MyVideos));
+        Environment.GetFolderPath(Environment.SpecialFolder.MyVideos),
+        Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments));
 }

@@ -25,8 +25,8 @@ public static class UiMetrics
 {
     /// <summary>The square of a transport bar button at full width (DIPs; it shrinks to the transport minimum when the bar is narrow).</summary>
     public const double TransportButtonSize = 34;
-    /// <summary>The square of a preset row action button (DIPs).</summary>
-    public const double PresetRowButtonSize = 30;
+    /// <summary>The square of a preset row action button (DIPs): the pencil and the bin, a little wider than the 14 DIP icon so they are easy to hit.</summary>
+    public const double PresetRowButtonSize = 20;
     /// <summary>The square of a Tools pane tool button (DIPs).</summary>
     public const double ToolButtonSize = 36;
 

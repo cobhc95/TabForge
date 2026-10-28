@@ -213,6 +213,17 @@ public sealed class DocumentSaveFlow
         return new SaveOutcome(false, false, warning is { } w ? $"{text}, but {w}" : text, result.CompatiblePath is not null);
     }
 
+    /// <summary>
+    /// Save as .gp5 / .gp4 / .gp3 or File > Export: a copy for older programs. Never changes the song's own file or unsaved state. <paramref name="confirm"/> is asked
+    /// (with what the format loses) only when something is lost; false cancels and nothing is written. Throws when writing fails; the caller reports it.
+    /// </summary>
+    public async Task<SaveOutcome> ExportLegacyAsync(SongDocument document, string path, LegacyGpFormat format, Func<GpPreflightReport, Task<bool>> confirm, DocumentController.SaveHold hold)
+    {
+        var report = await _controller.ExportLegacyCopyAsync(document, path, format, confirm, hold);
+        if (report is null) return new SaveOutcome(false, true, "Export cancelled: nothing was written");
+        return new SaveOutcome(false, false, $"Exported {Path.GetFileName(path)} (a copy for older programs; the song stays as it was)", Wrote: true);
+    }
+
     /// <summary>Status text for a clean .gp write: the files that were written, including a "(compatible)" sibling used instead of the requested name.</summary>
     public static string DescribeGpExport(DocumentController.GuitarProExportResult result, string requestedPath)
     {

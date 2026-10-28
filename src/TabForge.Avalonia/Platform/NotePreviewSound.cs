@@ -17,13 +17,18 @@ internal sealed class NotePreviewSound
     private readonly Func<AvaloniaPlaybackSessions?> _playback;
     private readonly Func<AudioSettings> _audio;
     private readonly Action<string> _report;
+    private readonly Func<TabForge.Audio.RoutedMidiOutput?>? _instrumentRouting;
+    private readonly TrackInstrumentPreview _instrument = new();
 
     /// <param name="editor">The score editor whose entered notes are auditioned.</param>
     /// <param name="playback">The playback sessions that own the engine; null when no engine exists, so nothing sounds.</param>
     /// <param name="audio">The audio settings: the Preview note sound flag and the length used when a note has none.</param>
     /// <param name="report">Shows a failed audition as a notice.</param>
-    public NotePreviewSound(ScorePreviewEditor editor, Func<AvaloniaPlaybackSessions?> playback, Func<AudioSettings> audio, Action<string> report)
+    /// <param name="instrumentRouting">The shown song's engine routes, so a track with an instrument plug-in sounds through it; null: always the built-in synth.</param>
+    public NotePreviewSound(ScorePreviewEditor editor, Func<AvaloniaPlaybackSessions?> playback, Func<AudioSettings> audio, Action<string> report,
+        Func<TabForge.Audio.RoutedMidiOutput?>? instrumentRouting = null)
     {
+        _instrumentRouting = instrumentRouting;
         _playback = playback;
         _audio = audio;
         _report = report;
@@ -35,6 +40,8 @@ internal sealed class NotePreviewSound
         var settings = _audio();
         if (!settings.PreviewNotes || _playback() is not { } sessions) return;
         var lengthMs = preview.LengthMs > 0 ? preview.LengthMs : settings.PreviewLengthMs;
+        if (PreviewSources.Get(settings) == PreviewSources.Track && _instrumentRouting?.Invoke() is { } routing
+            && _instrument.TryPlay(routing, preview.Channel, preview.Midi, lengthMs)) return;   // the track's plug-in instrument sounds it; no program change
         UiTasks.Forget(sessions.PlayTestNoteAsync(preview.DeviceId, preview.Channel, preview.Program, preview.Midi, lengthMs), "Note preview", _report);
     }
 }

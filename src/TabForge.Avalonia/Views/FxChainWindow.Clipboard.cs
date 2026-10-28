@@ -91,5 +91,6 @@ public sealed partial class FxChainWindow
         yield return Item("Duplicate", FxChainIds.DuplicatePlugins, any);
         yield return Item("Delete", FxChainIds.RemovePlugin, any);
         yield return Item("Select all", FxChainIds.SelectAllPlugins, _list.Count > 0);
+        yield return Item(FxGenericControls.MenuText, FxChainIds.ShowGenericControls, FxGenericControls.Supports(Selected));
     }
 }

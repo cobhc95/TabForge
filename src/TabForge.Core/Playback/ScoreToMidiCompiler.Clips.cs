@@ -32,7 +32,7 @@ internal sealed partial class ScoreToMidiCompiler
             var value = bend ? Math.Clamp(point.Value + 8192, 0, 16383) : Math.Clamp(point.Value, 0, MidiLimits.Max);
             _timeline.Events.Add(new ScoreEvent
             {
-                TimeMs = atMs, DeviceId = track.MidiOutputDeviceId, Channel = channel, TrackIndex = trackIndex,
+                TimeMs = atMs, DeviceId = OutputDeviceOf(track), Channel = channel, TrackIndex = trackIndex,
                 Status = (bend ? 0xE0 : 0xB0) | (channel & 0x0F), Data1 = bend ? value & 0x7F : Math.Clamp(point.Controller, 0, MidiLimits.Max), Data2 = bend ? value >> 7 : value,
             });
         }
@@ -74,8 +74,8 @@ internal sealed partial class ScoreToMidiCompiler
                     var pitch = Math.Clamp(note.Pitch + (int)Math.Round(clip.Pitch) + track.Transpose, 0, MidiLimits.Max);
                     var velocity = Math.Clamp((int)Math.Round(note.Velocity * Gain.FromDb(clip.GainDb)), 1, MidiLimits.Max);
                     var noteChannel = note.Channel is int own and >= 0 and <= 15 ? own : channel;   // a note's own channel (set in the piano roll)
-                    _timeline.Events.Add(new ScoreEvent { TimeMs = onMs, DeviceId = track.MidiOutputDeviceId, Channel = noteChannel, Status = 0x90 | (noteChannel & 0x0F), Data1 = pitch, Data2 = velocity, TrackIndex = trackIndex });
-                    _timeline.Events.Add(new ScoreEvent { TimeMs = Math.Min(offMs, _timeline.TotalMs), DeviceId = track.MidiOutputDeviceId, Channel = noteChannel, Status = 0x80 | (noteChannel & 0x0F), Data1 = pitch, Data2 = 0, TrackIndex = trackIndex });
+                    _timeline.Events.Add(new ScoreEvent { TimeMs = onMs, DeviceId = OutputDeviceOf(track), Channel = noteChannel, Status = 0x90 | (noteChannel & 0x0F), Data1 = pitch, Data2 = velocity, TrackIndex = trackIndex });
+                    _timeline.Events.Add(new ScoreEvent { TimeMs = Math.Min(offMs, _timeline.TotalMs), DeviceId = OutputDeviceOf(track), Channel = noteChannel, Status = 0x80 | (noteChannel & 0x0F), Data1 = pitch, Data2 = 0, TrackIndex = trackIndex });
                 }
                 foreach (var piece in TabForge.Services.ClipLoop.Pieces(clip))
                     EmitClipControllers(track, trackIndex, channel, clip, piece.StartSec, piece.OffsetSec, piece.SourceLengthSec, speed, offsetMs, fromMs);

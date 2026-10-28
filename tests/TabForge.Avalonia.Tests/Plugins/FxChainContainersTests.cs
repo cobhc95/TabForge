@@ -198,6 +198,10 @@ public class FxChainContainersTests
         FxTestKit.PressButton(window, "ContainerSavePreset");
         DialogTestKit.RunQueuedUiWork();
         Assert.Contains("Duo", PresetFolderStore.Containers().Names());
+        var saved = DialogTestKit.Named<ComboBox>(window, "ContainerPresetBox");
+        Assert.Equal("Duo", saved.SelectedItem);   // the new preset is shown as chosen at once
+        Assert.Single(saved.Items.OfType<string>(), i => i == "Duo");
+        Assert.Equal(3, track.Rig.Plugins.Count);   // saving loaded nothing
 
         window.Run(FxChainIds.NewContainer);
         var empty = (ChainContainer)list.Focused!;

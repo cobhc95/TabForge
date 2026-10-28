@@ -11,9 +11,11 @@ using Avalonia.Headless.XUnit;
 using Avalonia.Layout;
 using Avalonia.LogicalTree;
 using Avalonia.Media;
+using Avalonia.Styling;
 using Avalonia.Threading;
 using TabForge.Avalonia.Platform;
 using TabForge.Avalonia.Views;
+using TabForge.Avalonia.Views.Dialogs;
 using TabForge.Avalonia.Views.Fx;
 using TabForge.Avalonia.Views.Midi;
 using TabForge.Avalonia.Views.Presets;
@@ -32,7 +34,7 @@ namespace TabForge.Avalonia.Tests;
 /// </summary>
 public class PresetRowsTests
 {
-    private sealed record Row(string Text, string? Name, bool Manage = false);
+    private sealed record Row(string Text, string? Name, bool Manage = false, bool Group = false);
 
     [AvaloniaFact]
     public void BuiltInRowsArePlainAndUserRowsCarryTheirTools()
@@ -52,8 +54,7 @@ public class PresetRowsTests
         Assert.Equal(2, buttons.Count);
         Assert.Equal(new[] { "Rename Metal", "Delete Metal" }, buttons.Select(button => AutomationProperties.GetName(button) ?? ""));
         Assert.Equal(new[] { "Rename (F2)", "Delete (Delete)" }, buttons.Select(button => ToolTip.GetTip(button) as string ?? ""));
-        Assert.All(buttons, button => Assert.IsType<Border>(button.Content));
-        Assert.All(buttons, button => Assert.Single(button.GetLogicalDescendants().OfType<Path>()));
+        Assert.All(buttons, button => Assert.IsType<Path>(button.Content));   // the icon alone: no box behind it
         Assert.All(buttons, button => Assert.Null(button.Cursor));   // the pointer shape never changes on hover
         Assert.DoesNotContain(user.GetLogicalDescendants().OfType<TextBlock>(), text => text.Text is "Rename" or "Delete");
         window.Close();
@@ -70,7 +71,7 @@ public class PresetRowsTests
     }
 
     [AvaloniaFact]
-    public void UserRowIconButtonsAreCompactRightAlignedAndShowTheHoverSurface()
+    public void UserRowIconsAreSmallAppearOnHoverAndTurnDangerOrAccentUnderThePointer()
     {
         var (window, _, rows, _) = Open();
         var user = rows.View(new Row("A preset name long enough for the old text buttons to leave it no room", "Long"));
@@ -78,25 +79,37 @@ public class PresetRowsTests
         host.Show();
         var buttons = user.GetLogicalDescendants().OfType<Button>().ToList();
         Assert.Equal(2, buttons.Count);
-        Assert.All(buttons, button => Assert.True(button.IsVisible && button.Bounds.Width > 0, "the icon buttons are always visible"));
+        var tools = Assert.IsType<StackPanel>(buttons[0].Parent);
+        // The pencil and bin keep their room but are invisible and ignore the pointer until the pointer is over the row.
+        Assert.Equal(0, tools.Opacity);
+        Assert.False(tools.IsHitTestVisible);
+        Assert.All(buttons, button => Assert.True(button.IsVisible && button.Bounds.Width > 0, "the icon buttons keep their room"));
         Assert.All(buttons, button => Assert.Equal(PresetRowIcons.PresetButtonSize, button.Bounds.Width, 1));
+        Assert.All(buttons, button => Assert.Equal(DialogMetrics.PresetIconSize, Assert.IsType<Path>(button.Content).Width));
         var first = buttons[0];
         var second = buttons[1];
         var gap = second.TranslatePoint(default, user)!.Value.X - (first.TranslatePoint(default, user)!.Value.X + first.Bounds.Width);
         Assert.Equal(PresetRowIcons.ButtonGap, gap, 1);
         var right = second.TranslatePoint(new Point(second.Bounds.Width, 0), user)!.Value.X;
         Assert.Equal(user.Bounds.Width - 2, right, 1);   // the row's own 2 DIP right padding
-        var name = user.GetLogicalDescendants().OfType<TextBlock>().First();
-        Assert.True(name.Bounds.Width > 130, $"the name gets {name.Bounds.Width:0} DIP; the old 58 DIP text buttons left it about 106");
-        // The pointer over the first icon takes the shared hover surface, and leaving takes it away again.
-        var surface = Assert.IsType<Border>(first.Content);
-        Assert.Same(AvaloniaPalette.TransparentBrush, surface.Background);
+        var name = user.GetLogicalDescendants().OfType<TextBlock>().First(text => text.Text?.Contains("A preset") == true);
+        Assert.True(name.Bounds.Width > 110, $"the name gets {name.Bounds.Width:0} DIP");
+        // The pointer over the row shows the icons; over the pencil its ink takes the accent, over the bin the danger colour; no box is drawn.
+        var pencil = Assert.IsType<Path>(first.Content);
+        var bin = Assert.IsType<Path>(second.Content);
+        var rest = Assert.IsAssignableFrom<SolidColorBrush>(bin.Stroke).Color;
         host.MouseMove(first.TranslatePoint(new Point(first.Bounds.Width / 2, first.Bounds.Height / 2), host)!.Value);
         Dispatcher.UIThread.RunJobs();
-        Assert.IsAssignableFrom<SolidColorBrush>(surface.Background);
-        host.MouseMove(new Point(1, 1));
+        Assert.Equal(1, tools.Opacity);
+        Assert.True(tools.IsHitTestVisible);
+        Assert.Equal(AvaloniaPalette.ColorOf(AvaloniaPalette.Get("Accent", pencil.ActualThemeVariant == ThemeVariant.Light)), Assert.IsAssignableFrom<SolidColorBrush>(pencil.Fill).Color);
+        host.MouseMove(second.TranslatePoint(new Point(second.Bounds.Width / 2, second.Bounds.Height / 2), host)!.Value);
         Dispatcher.UIThread.RunJobs();
-        Assert.Same(AvaloniaPalette.TransparentBrush, surface.Background);
+        Assert.Equal(AvaloniaPalette.ColorOf(AvaloniaPalette.Get("Danger", bin.ActualThemeVariant == ThemeVariant.Light)), Assert.IsAssignableFrom<SolidColorBrush>(bin.Stroke).Color);
+        Assert.NotEqual(rest, Assert.IsAssignableFrom<SolidColorBrush>(bin.Stroke).Color);
+        host.MouseMove(new Point(500, 500));
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(0, tools.Opacity);
         host.Close();
         window.Close();
     }
@@ -120,14 +133,50 @@ public class PresetRowsTests
     }
 
     [AvaloniaFact]
-    public async Task DeleteAsksOnceAndRemovesThePreset()
+    public void DeleteIsAtOnceAndUndoPutsThePresetBackWhereItWas()
     {
         var (window, _, rows, store) = Open();
-        var asked = new List<string>();
-        rows.AskDelete = text => { asked.Add(text); return Task.FromResult((true, false)); };
-        await rows.DeleteAsync("A");
-        Assert.Equal(PresetDeleteQuestionPresenter.TextFor(new[] { "A" }), Assert.Single(asked));
-        Assert.Equal(new[] { "B" }, store.Items);
+        store.Items.Add("C");
+        Assert.NotNull(rows.Delete("B"));
+        Assert.Equal(new[] { "A", "C" }, store.Items);   // no question was asked
+        Assert.True(rows.Toast.IsShowing);
+        Assert.Equal("Deleted \"B\"", rows.Toast.Text);
+        rows.Toast.Undo();
+        Assert.Equal(new[] { "A", "B", "C" }, store.Items);
+        Assert.False(rows.Toast.IsShowing);
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public void DroppingAGripOnAnotherRowMovesThePresetThere()
+    {
+        var (window, _, rows, store) = Open();
+        store.Items.Add("C");
+        rows.DropOn("C", "A");
+        Assert.Equal(new[] { "C", "A", "B" }, store.Items);
+        rows.DropOn("C", "B");
+        Assert.Equal(new[] { "A", "B", "C" }, store.Items);
+        rows.DropOn("A", "A");
+        Assert.Equal(new[] { "A", "B", "C" }, store.Items);
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public void RowsAreGroupedBuiltInThenYoursWithAHeaderOnTheFirstOfEach()
+    {
+        var (window, combo, rows, _) = Open();
+        var items = new List<object> { new Row("Hint", null), new Row("Factory 1", null, Group: true), new Row("Factory 2", null, Group: true), new Row("A", "A"), new Row("B", "B") };
+        PresetRowText.AppendManage(items);
+        combo.ItemsSource = items;
+        Assert.Equal(PresetGroup.BuiltIn, rows.GroupOf(items[1]));
+        Assert.Equal(PresetGroup.Yours, rows.GroupOf(items[3]));
+        Assert.Equal(PresetGroup.None, rows.GroupOf(items[0]));
+        Assert.Equal(PresetGroup.None, rows.GroupOf(items[^1]));
+        string[] Headers(object item) => rows.View(item).GetLogicalDescendants().OfType<TextBlock>().Select(t => t.Text ?? "").Where(t => t is "Built-in" or "Yours").ToArray();
+        Assert.Equal(new[] { "Built-in" }, Headers(items[1]));
+        Assert.Empty(Headers(items[2]));
+        Assert.Equal(new[] { "Yours" }, Headers(items[3]));
+        Assert.Empty(Headers(items[4]));
         window.Close();
     }
 
@@ -206,7 +255,7 @@ public class PresetRowsTests
         var combo = new ComboBox();
         var rows = PresetRows.Attach(combo, () => store,
             item => item is Row { Name: not null } row ? row.Name : null,
-            () => PresetCatalogKind.FxChain, () => null);
+            () => PresetCatalogKind.FxChain, () => null, isBuiltIn: item => item is Row { Group: true });
         window.Content = combo;
         var items = new List<object> { new Row("Hint", null), new Row("A", "A"), new Row("B", "B") };
         PresetRowText.AppendManage(items);
@@ -215,10 +264,14 @@ public class PresetRowsTests
         return (window, combo, rows, store);
     }
 
-    private sealed class FakeStore : IPresetStore
+    private sealed class FakeStore : IPresetRestorable
     {
         public List<string> Items { get; } = new() { "A", "B" };
         public event Action? Changed;
+        public string FileExtension => ".json";
+        public bool Accepts(byte[] bytes) => true;
+        public byte[]? Snapshot(string name) => System.Text.Encoding.UTF8.GetBytes(name);
+        public void Restore(string name, byte[] bytes, int index) { Items.RemoveAll(existing => existing == name); Items.Insert(Math.Clamp(index, 0, Items.Count), name); Changed?.Invoke(); }
         public IReadOnlyList<string> Names() => Items.ToList();
         public void Rename(string from, string to, bool replace = false)
         {

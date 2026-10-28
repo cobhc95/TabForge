@@ -14,7 +14,9 @@ namespace TabForge.Audio;
 /// faster of "engine plug-ins" and "Windows MIDI" back by the difference so mixed songs stay in time; a guessed constant (60 ms) left plug-in
 /// drums early on some machines, so this measures it. The probe plays one very quiet percussion hit (velocity 6 on the drum channel, about 60 dB
 /// below a normal hit and further reduced by the Windows path) and reads it back with WASAPI loopback of the default output in this process,
-/// the same idea as <see cref="WindowsPathOffset"/>. Run on demand only (Settings, the Measure button, or --probe-midi-latency); nothing is measured while other audio is playing, and a reading is used only when at least 3 of 5 trials are clean and the median is 20-600 ms.
+/// the same idea as <see cref="WindowsPathOffset"/>. There is no Measure button or --probe-midi-latency flag yet: the latency is a typed value in
+/// Settings (Audio &amp; VST, Windows MIDI delay); the probe is kept for wiring a future measurement. Nothing is measured while other audio is playing, and a reading
+/// is used only when at least 3 of 5 trials are clean and the median is 20-600 ms.
 /// </summary>
 internal static class WindowsMidiLatency
 {

@@ -176,6 +176,10 @@ public sealed class TrackModel
     public int NumberOfFrets { get; set; } = 24;
     public int MidiChannel { get; set; } = 0;
     public int MidiProgram { get; set; } = 29;
+    /// <summary>Bank select MSB (CC0), -1 = off: sent before the program change. Absent in older files, which read as off.</summary>
+    public int MidiBankMsb { get; set; } = -1;
+    /// <summary>Bank select LSB (CC32), -1 = off: sent before the program change. Absent in older files, which read as off.</summary>
+    public int MidiBankLsb { get; set; } = -1;
     /// <summary>Capo fret. Fret numbers are relative to the capo: sounding pitch = tuning + capo + fret (<see cref="PitchOf"/>).</summary>
     public int Capo { get; set; }
 
@@ -193,6 +197,12 @@ public sealed class TrackModel
         => pitch - (StringTunings[Math.Clamp(stringIndex, 0, StringTunings.Count - 1)] + Math.Max(0, Capo));
 
     public int MidiOutputDeviceId { get; set; } = -1;
+    /// <summary>
+    /// The name of the MIDI output device saved with <see cref="MidiOutputDeviceId"/>: the device is found by this
+    /// name first (so a replugged interface keeps its track whatever index it lands on) and by the index when the
+    /// name is empty or no longer listed. Empty in older files, which keep working by index alone.
+    /// </summary>
+    public string MidiOutputDeviceName { get; set; } = "";
     public int Volume { get; set; } = 100;
     public int Pan { get; set; } = 64;
     public int Chorus { get; set; } = 0;

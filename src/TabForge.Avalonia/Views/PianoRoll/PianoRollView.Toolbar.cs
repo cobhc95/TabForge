@@ -82,6 +82,7 @@ public sealed partial class PianoRollView
         foreach (var (tool, icon, tip) in Tools)
         {
             var button = Sized(new ToggleButton { Content = Icon(icon), Focusable = false });
+            PianoRollToolLook.Apply(button);
             ToolTip.SetTip(button, tip);
             button.Click += (_, _) => { Presenter.Tool = tool; RefreshTools(); Surface.Focus(); };
             _toolButtons[tool] = button;

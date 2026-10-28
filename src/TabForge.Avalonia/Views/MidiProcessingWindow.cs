@@ -52,7 +52,6 @@ public sealed class MidiProcessingWindow : Window
     private readonly TextBlock _parameterNote = new() { TextWrapping = TextWrapping.Wrap, Name = "ParameterNote", IsVisible = false };
     private readonly StackPanel _params = new() { Name = "ParamPanel" };
     private readonly Dictionary<string, (Border Box, MidiParamInfo Param)> _elems = new();
-    private Expander? _advanced;
     private MidiNoteMapRows? _mapRows;
     private string[] _queryWords = Array.Empty<string>();
     private string? _jumpKey;
@@ -80,6 +79,7 @@ public sealed class MidiProcessingWindow : Window
     public MidiProcessingWindow(IFxChainHost host, TrackModel track, PluginSlot slot, Action<Action> edit)
     {
         (_host, _track, _slot, _edit) = (host, track, slot, edit);
+        Dialogs.Files = new AvaloniaFileDialogs(host.DialogFolders);
         _slot.MidiProcessors ??= new List<PluginMidiProcessor>();
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         Title = $"MIDI processing: {slot.Name}";
@@ -100,7 +100,7 @@ public sealed class MidiProcessingWindow : Window
         RefreshList(0);
     }
 
-    /// <summary>A sample plug-in with three processors: a known transpose, an unknown type (the row says so) and an enabled log.</summary>
+    /// <summary>A sample plug-in with a known processor and an enabled log. Unknown types are not shown here: tests that cover them build their own slot.</summary>
     public static PluginSlot SampleSlot() => new()
     {
         Name = "Sample synth",
@@ -108,7 +108,6 @@ public sealed class MidiProcessingWindow : Window
         MidiProcessors =
         [
             new PluginMidiProcessor { Type = "transpose" },
-            new PluginMidiProcessor { Type = "legacyFilter" },
             new PluginMidiProcessor { Type = "log" },
         ],
     };
@@ -134,6 +133,7 @@ public sealed class MidiProcessingWindow : Window
         var root = new Grid { RowDefinitions = RowDefinitions.Parse("Auto,*,Auto"), Margin = new Thickness(10) };
         Grid.SetRow(top, 0); Grid.SetRow(body, 1); Grid.SetRow(_status, 2);
         root.Children.Add(top); root.Children.Add(body); root.Children.Add(_status);
+        if (_slot.Type == PluginSlotType.Instrument) Articulations.ArticulationsTab.Install(root, top, body, () => new Articulations.ArticulationsPane(_host, _track, _slot, _edit, this, () => Dialogs));   // the Articulations tab
         return root;
     }
 
@@ -333,7 +333,7 @@ public sealed class MidiProcessingWindow : Window
         _down.IsEnabled = listButtons.Down;
         _remove.IsEnabled = listButtons.Remove;
         _presets.Show(selected);
-        _params.Children.Clear(); _elems.Clear(); _advanced = null; _mapRows = null;
+        _params.Children.Clear(); _elems.Clear(); _mapRows = null;
         _editors.Reset();
         _learn.Stop();
         _parameterNote.IsVisible = false;
@@ -347,7 +347,7 @@ public sealed class MidiProcessingWindow : Window
         _description.Text = info.Description;
         var values = MidiProcessorCatalog.ParseParams(selected, info);
         if (info.Type == "noteMap") _mapRows = new MidiNoteMapRows(this, values, (key, name) => { _edit(() => { values[key] = name; selected.Params = values.ToJsonString(); }); _mapRows?.Refresh(); });
-        foreach (var group in new[] { "Applies to", "Main", "Advanced" })
+        foreach (var group in new[] { "Applies to", "Main" })
         {
             var ps = info.Params.Where(p => p.Group == group).ToList();
             if (ps.Count == 0) continue;
@@ -359,18 +359,10 @@ public sealed class MidiProcessingWindow : Window
                 _elems[p.Key] = (box, p);
                 wrap.Children.Add(box);
             }
-            if (group == "Advanced")
-            {
-                _advanced = new Expander { Header = $"Advanced ({ps.Count})", IsExpanded = false, Content = wrap, Margin = new Thickness(0, 8, 0, 0), Name = "AdvancedExpander", [!ForegroundProperty] = new DynamicResourceExtension("AccentBrush") };
-                _params.Children.Add(_advanced);
-            }
-            else
-            {
-                var header = Heading(group);
-                header.Margin = new Thickness(0, group == "Main" && info.Params.Any(p => p.Group == "Applies to") ? 10 : 0, 0, 2);
-                _params.Children.Add(header);
-                _params.Children.Add(wrap);
-            }
+            var header = Heading(group);
+            header.Margin = new Thickness(0, group == "Main" && info.Params.Any(p => p.Group == "Applies to") ? 10 : 0, 0, 2);
+            _params.Children.Add(header);
+            _params.Children.Add(wrap);
         }
         ApplyFilter();
         UpdateWatch();
@@ -389,7 +381,6 @@ public sealed class MidiProcessingWindow : Window
             box.Opacity = _queryWords.Length == 0 || match ? 1 : DimmedOpacity;
             if (match) box[!Border.BorderBrushProperty] = new DynamicResourceExtension("AccentBrush");
             else box.BorderBrush = AvaloniaPalette.TransparentBrush;
-            if (match && p.Group == "Advanced" && _advanced is not null) _advanced.IsExpanded = true;
         }
     }
 
@@ -397,7 +388,6 @@ public sealed class MidiProcessingWindow : Window
     private void Highlight(string key)
     {
         if (!_elems.TryGetValue(key, out var entry)) return;
-        if (entry.Param.Group == "Advanced" && _advanced is not null) _advanced.IsExpanded = true;
         entry.Box.Opacity = 1;
         entry.Box[!Border.BorderBrushProperty] = new DynamicResourceExtension("AccentBrush");
         entry.Box.BorderThickness = new Thickness(2);

@@ -46,7 +46,7 @@ public static class MainWindowArrangementModes
     private static void RestoreTrackListWidth(TabForge.Avalonia.Views.ArrangementView arrangement, MainWindowSettings? settings)
     {
         if (settings is null) return;
-        arrangement.SetTrackListWidth(settings.Settings.Timeline.TrackListWidth);
+        arrangement.SetTrackListWidth(TrackListWidthRules.ResolveSaved(settings.Settings.Timeline.TrackListWidth, settings.Settings.Appearance));
         arrangement.TrackListWidthCommitted += width =>
         {
             settings.Settings.Timeline.TrackListWidth = width;

@@ -15,4 +15,14 @@ public static class MidiOutputStatusPresenter
     /// <summary>The name of the output device with the given id, or <see cref="UnknownOutputText"/> when the list does not hold it.</summary>
     public static string OutputText(IReadOnlyList<MidiOutputDeviceInfo> devices, int deviceId)
         => devices.FirstOrDefault(device => device.DeviceId == deviceId)?.Name ?? UnknownOutputText;
+
+    /// <summary>
+    /// The name of the track's output device: the saved name resolved first (index fallback), the saved name with a
+    /// missing mark when it is not connected, or <see cref="UnknownOutputText"/> when neither resolves.
+    /// </summary>
+    public static string OutputText(IReadOnlyList<MidiOutputDeviceInfo> devices, int deviceId, string? deviceName)
+    {
+        if (MidiOutputRouting.IsMissing(devices, deviceName)) return TrackOutputPresenter.MissingDeviceText(deviceName!);
+        return devices.FirstOrDefault(device => device.DeviceId == MidiOutputRouting.Resolve(devices, deviceId, deviceName))?.Name ?? UnknownOutputText;
+    }
 }

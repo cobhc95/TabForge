@@ -54,7 +54,7 @@ public static class PreviewToolsMenu
     {
         var settings = SettingsOf(owner);
         var session = new Views.Fx.PluginBrowserSession(settings?.Settings.Plugins ?? new PluginSettings(), TrustOf(owner), TabForge.Platform.PluginFileTrusts.Create(), () => settings?.SaveSettings());
-        _ = PluginBrowserWindow.ChooseAsync(owner, session, new AvaloniaFileDialogs(), window => MainWindowSettings.ShowPreferencesPage(settings, owner, SettingsCatalog.AudioVst));
+        _ = PluginBrowserWindow.ChooseAsync(owner, session, new AvaloniaFileDialogs(settings?.DialogFolders), window => MainWindowSettings.ShowPreferencesPage(settings, owner, SettingsCatalog.AudioVst));
     }
 
     // The MIDI processing window on a sample plug-in of a track that belongs to no song; its edits apply at once.

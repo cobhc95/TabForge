@@ -54,9 +54,9 @@ public sealed partial class TransportBarView
         private const double PauseBarWidthShare = 0.14;
         private const double PauseBarHeightShare = 0.5;
         private const double PauseBarGapShare = 0.12;
-        private const double ButtonCornerRadius = 6;
+        internal const double ButtonCornerRadius = 6;
         // The button's outline width in DIPs: 1 DIP drew under 1 px at the 0.8 UI scale and read too faint, so the outline is 1.5 DIPs.
-        private const double BorderWidth = 1.5;
+        internal const double BorderWidth = 1.5;
         private readonly AvaloniaDrawContext _draw = new();
 
         public TransportButton(Item item, string baseTip, double width, double height)

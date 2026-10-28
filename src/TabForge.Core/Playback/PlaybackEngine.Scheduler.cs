@@ -191,6 +191,7 @@ public sealed partial class PlaybackEngine : IDisposable, IPlaybackEngine
         {
             // Tracks deleted from the old timeline are dropped with it: the old Timeline is not kept alive by _dropped.
             if (!ReferenceEquals(Volatile.Read(ref _song)?.Timeline, timeline)) Volatile.Write(ref _dropped, null);
+            if (timeline is not null) timeline.TrackIds ??= snapshot.TrackIds;
             Volatile.Write(ref _song, new SongState(timeline, project, snapshot, snapshot.TrackIds));
         }
     }

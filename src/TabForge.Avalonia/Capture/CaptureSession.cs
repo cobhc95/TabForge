@@ -42,9 +42,9 @@ internal sealed class CaptureSession
         OutputFolder = outputFolder;
         Engine = new CaptureMomentEngine();
         Sessions = new AvaloniaPlaybackSessions(new AvaloniaUiThread(Dispatcher.UIThread), () => Engine);
-        Document = new SongDocument(() => null) { Project = FullDemoSongFactory.Create() };
-        Document.MarkClean();
-        Window = new MainWindow(null, null, Document, Sessions)
+        var first = new SongDocument(() => null) { Project = FullDemoSongFactory.Create() };
+        first.MarkClean();
+        Window = new MainWindow(null, null, first, Sessions)
         {
             Width = CaptureScript.WindowDipsAcross,
             Height = CaptureScript.WindowDipsDown,
@@ -61,7 +61,8 @@ internal sealed class CaptureSession
 
     public string OutputFolder { get; }
     public MainWindow Window { get; }
-    public SongDocument Document { get; }
+    /// <summary>The song of the shown tab (the demo song until an <c>open</c> step replaces it).</summary>
+    public SongDocument Document => Window.Songs.Active;
     public CaptureMomentEngine Engine { get; }
     public AvaloniaPlaybackSessions Sessions { get; }
 

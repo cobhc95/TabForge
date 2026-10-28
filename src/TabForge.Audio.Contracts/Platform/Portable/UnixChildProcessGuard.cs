@@ -4,7 +4,7 @@ namespace TabForge.Audio.Contracts;
 
 // Owns: ending the engine, plug-in host and import-worker processes when their owner ends, on macOS and Linux: the owner kills the children it holds when it
 // shuts down normally (dispose or process exit), and a child-side ParentWatchdog ends a child whose owner died hard (crash, kill -9).
-// Does not own: the Windows Job Object (ChildProcessJob, kill-on-close by the kernel; stays the Windows guard) or memory/CPU limits (a Unix guard has none, so the import worker still asks before parsing in-process).
+// Does not own: the Windows Job Object (ChildProcessJob, kill-on-close by the kernel; stays the Windows guard) or memory/CPU limits (PolledLimitChildGuard, which wraps this guard for the import worker).
 // Why no prctl(PR_SET_PDEATHSIG): the signal fires when the THREAD that started the child exits, and .NET starts processes from pool threads that come and go; it would kill a healthy engine.
 // Tests: CrossPlatformStage5Tests.
 /// <summary>The non-Windows <see cref="IChildProcessGuard"/>: kills every process added to it when disposed, and when the owner process exits.</summary>

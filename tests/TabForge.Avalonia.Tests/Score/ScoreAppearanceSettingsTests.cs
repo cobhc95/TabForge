@@ -44,15 +44,16 @@ public class ScoreAppearanceSettingsTests
     }
 
     [AvaloniaFact]
-    public void PlaybackHighlightFollowsTheAccentByDefault()
+    public void PlaybackHighlightFollowsTheAccentWhenChosen()
     {
         var settings = new AppSettings();
+        Assert.Equal(PlaybackHighlightModes.Custom, settings.Appearance.PlaybackHighlight);
+        settings.Appearance.PlaybackHighlight = PlaybackHighlightModes.FollowAccent;
         settings.Appearance.Accent = "#0A0B0C";
         var score = new ScorePreviewView();
 
         new ScoreSettingsApplier(score).Apply(settings);
 
-        Assert.Equal(PlaybackHighlightModes.FollowAccent, settings.Appearance.PlaybackHighlight);
         Assert.Equal(new UiColor(0xFF, 0x0A, 0x0B, 0x0C), score.Probe.Appearance.PlaybackColor);   // the lit notes and the playing line
     }
 

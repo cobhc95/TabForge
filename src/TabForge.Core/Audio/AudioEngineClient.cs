@@ -89,6 +89,7 @@ public sealed partial class AudioEngineClient : IDisposable
     private readonly Dictionary<int, string[]> _sentChainIds = new();
     private readonly Dictionary<int, StateRequest> _stateRequests = new();   // by request id
     private EngineConfig? _config;
+    private readonly OutputFallback _fallback = new();
     private SynchronizationContext? _ui;
 
     public bool IsRunning { get; private set; }

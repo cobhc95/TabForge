@@ -1,4 +1,6 @@
 using System;
+using System.Globalization;
+using System.Text;
 using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
@@ -6,29 +8,27 @@ using Avalonia.Controls.Shapes;
 using Avalonia.Layout;
 using Avalonia.Media;
 using TabForge.Avalonia.Platform;
+using TabForge.Avalonia.Views.Dialogs;
 
-// Owns: the two icon buttons of a user preset's drop-down row: their 30 DIP square in an 8 DIP gap, the pencil and trash vector paths, and their
-//   rest (muted ink, no surface), hover (the app's strong hover surface, primary ink) and pressed (the press surface) looks, the tooltip and the
-//   automation name that names the action and the preset.
-// Does not own: when the buttons appear or what they do (PresetRows), the row's text and padding, or the shortcut keys (PresetRows.OnKey).
+// Owns: the small icons of a user preset row: the pencil (Rename) and bin (Delete) buttons and the grip of the drag handle. They are 14 DIP ink
+//   shapes with no box behind them: full-contrast theme ink at rest, the accent (pencil) or the danger colour (bin) under the pointer, a softer ink
+//   while pressed; the tooltip and the automation name name the action and the preset.
+// Does not own: when the buttons show or what they do (PresetRows), the row's text and padding, or the shortcut keys (PresetRows.OnKey).
 // Tests: PresetRowsTests.
 
-/// <summary>The Rename and Delete icon buttons of one user preset row.</summary>
+/// <summary>The Rename and Delete icon buttons and the drag grip of one user preset row.</summary>
 internal static class PresetRowIcons
 {
-    /// <summary>The side of one icon button (DIPs), as the owner's mockup draws it.</summary>
+    /// <summary>The side of one icon button (DIPs): the icon with a little room to hit.</summary>
     public const double PresetButtonSize = TabForge.Avalonia.UiMetrics.PresetRowButtonSize;
 
     /// <summary>The gap between the two buttons (DIPs).</summary>
-    public const double ButtonGap = 8;
+    public const double ButtonGap = 2;
 
-    // The icon box inside the button, the outline width of the drawn icons, and the button's rounded corner (DIPs).
-    private const double IconSize = 18, IconStroke = 1.5, ButtonCornerRadius = 6;
+    // The palette keys the states take their ink from, so both themes repaint from the one palette (never a colour literal).
+    private const string RestInk = "TextPrimary", MutedInk = "TextMuted", AccentInk = "Accent", DangerInk = "Danger";
 
-    // The palette keys the states take their ink and surface from, so both themes repaint from the one palette (never a colour literal).
-    private const string MutedInk = "TextMuted", PrimaryInk = "TextPrimary", HoverSurface = "HoverSurface", PressSurface = "PressSurface";
-
-    // The pencil as a filled path: the body and a separate sharpened tip, so the tip reads with a notch at 18 DIP.
+    // The pencil as a filled path: the body and a separate sharpened tip, so the tip reads with a notch.
     private const string PencilGeometry =
         "M3.23,10.89 L13.86,0.26 L17.74,4.14 L7.11,14.77 Z M2.94,11.74 L6.26,15.06 L2.2,15.8 Z";
 
@@ -40,35 +40,57 @@ internal static class PresetRowIcons
         "M7.2,8.0 L7.2,13.6 M10.8,8.0 L10.8,13.6";
 
     /// <summary>The Rename button of <paramref name="preset"/>'s row, named "Rename (F2)" to the pointer and "Rename &lt;preset&gt;" to automation.</summary>
-    public static Button Rename(string preset, Action run) => Create(PencilGeometry, filled: true, "Rename (F2)", $"Rename {preset}", run);
+    public static Button Rename(string preset, Action run) => Create(PencilGeometry, filled: true, AccentInk, "Rename (F2)", $"Rename {preset}", run);
 
     /// <summary>The Delete button of <paramref name="preset"/>'s row, named "Delete (Delete)" to the pointer and "Delete &lt;preset&gt;" to automation.</summary>
-    public static Button Delete(string preset, Action run) => Create(TrashGeometry, filled: false, "Delete (Delete)", $"Delete {preset}", run);
+    public static Button Delete(string preset, Action run) => Create(TrashGeometry, filled: false, DangerInk, "Delete (Delete)", $"Delete {preset}", run);
 
-    // One icon button. The surface is the button's content border, so its hover and press paints never depend on a theme template: the Fluent
-    // Button template shows no background of its own here. The button is a Button subclass because the default look hook maps exact control
-    // types: it leaves this icon without the Core Button look's accent hover border and accent-soft press fill, which the owner's mockup does not have.
-    private static Button Create(string geometry, bool filled, string tip, string name, Action run)
+    /// <summary>The drag handle of <paramref name="preset"/>'s row: two columns of three dots. It is not a button; the row's drag code listens to its pointer.</summary>
+    public static Border Grip(string preset)
+    {
+        var ink = new Path { Data = Geometry.Parse(DotsGeometry()), Stretch = Stretch.None, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, IsHitTestVisible = false };
+        var grip = new Border { Width = DialogMetrics.PresetGripWidth, Background = AvaloniaPalette.TransparentBrush, Child = ink, VerticalAlignment = VerticalAlignment.Stretch };
+        ToolTip.SetTip(grip, "Drag to reorder");
+        AutomationProperties.SetName(grip, $"Reorder {preset}");
+        var over = false;
+        void Paint() => ink.Fill = BandBrush.Of(ink, over ? RestInk : MutedInk);
+        grip.PointerEntered += (_, _) => { over = true; Paint(); };
+        grip.PointerExited += (_, _) => { over = false; Paint(); };
+        grip.FollowTheme(Paint);
+        grip.AttachedToVisualTree += (_, _) => Paint();
+        Paint();
+        return grip;
+    }
+
+    // Six dots (two columns, three rows) as circle subpaths, drawn from the grip's dot radius.
+    private static string DotsGeometry()
+    {
+        var r = DialogMetrics.PresetGripDot;
+        var text = new StringBuilder();
+        foreach (var x in new[] { r + 1, r * 5 })
+            foreach (var y in new[] { r + 1, r * 4.5 + 1, r * 8 + 1 })
+                text.Append(CultureInfo.InvariantCulture, $"M{x - r},{y} a{r},{r} 0 1,0 {2 * r},0 a{r},{r} 0 1,0 {-2 * r},0 ");
+        return text.ToString();
+    }
+
+    // One icon button: the icon alone is its content, so no surface, border or theme template shows a box. The button is a Button subclass because the
+    // default look hook maps exact control types: it leaves this icon without the Core Button look's accent hover border and fill.
+    private static Button Create(string geometry, bool filled, string hoverInk, string tip, string name, Action run)
     {
         var ink = new Path
         {
-            Data = Geometry.Parse(geometry), Width = IconSize, Height = IconSize, Stretch = Stretch.Uniform,
+            Data = Geometry.Parse(geometry), Width = DialogMetrics.PresetIconSize, Height = DialogMetrics.PresetIconSize, Stretch = Stretch.Uniform,
             HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, IsHitTestVisible = false,
         };
         if (!filled)
         {
-            ink.StrokeThickness = IconStroke;
+            ink.StrokeThickness = DialogMetrics.PresetIconStroke;
             ink.StrokeLineCap = PenLineCap.Round;
             ink.StrokeJoin = PenLineJoin.Round;
         }
-        var surface = new Border
-        {
-            Width = PresetButtonSize, Height = PresetButtonSize, CornerRadius = new CornerRadius(ButtonCornerRadius),
-            Background = AvaloniaPalette.TransparentBrush, Child = ink,
-        };
         var button = new IconButton
         {
-            Content = surface, Width = PresetButtonSize, Height = PresetButtonSize, Padding = new Thickness(0), BorderThickness = new Thickness(0),
+            Content = ink, Width = PresetButtonSize, Height = PresetButtonSize, Padding = DialogMetrics.PresetNoOutline, BorderThickness = DialogMetrics.PresetNoOutline,
             Background = AvaloniaPalette.TransparentBrush, Focusable = false,
             HorizontalContentAlignment = HorizontalAlignment.Center, VerticalContentAlignment = VerticalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
@@ -80,10 +102,10 @@ internal static class PresetRowIcons
 
         void Paint()
         {
-            surface.Background = down ? BandBrush.Of(surface, PressSurface) : over ? HoverShade.Brush(surface) : AvaloniaPalette.TransparentBrush;
-            var colour = BandBrush.Of(surface, over || down ? PrimaryInk : MutedInk);
+            var colour = BandBrush.Of(ink, over || down ? hoverInk : RestInk);
             if (filled) ink.Fill = colour;
             else ink.Stroke = colour;
+            ink.Opacity = down ? DialogMetrics.PresetPressedInk : 1;
         }
 
         button.PointerEntered += (_, _) => { over = true; Paint(); };

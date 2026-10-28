@@ -11,6 +11,7 @@ using TabForge.Avalonia.Views;
 using TabForge.Avalonia.Views.Fx;
 using TabForge.Models;
 using TabForge.Plugins;
+using TabForge.Presenters;
 using TabForge.Services;
 using Xunit;
 
@@ -207,16 +208,50 @@ public class FxParameterTests
     }
 
     [AvaloniaFact]
-    public void ThePanelAndItsButtonAreForClapPluginsOnly()
+    public void TheButtonIsForEveryPluginWithParametersAndTheEditorThatOpensKeepsItsArea()
     {
         var track = FxTestKit.Track(FxChainWindow.SampleChain());
-        var window = FxTestKit.Window(track, FxTestKit.Host(track, new FxTestKit.FakeEngine { Opens = false }));
+        var window = FxTestKit.Window(track, FxTestKit.Host(track, new FxTestKit.FakeEngine { Opens = true }));
         window.Show();
         DialogTestKit.RunQueuedUiWork();
         FxTestKit.List(window).Click(1);
         DialogTestKit.RunQueuedUiWork();
-        Assert.False(DialogTestKit.Named<global::Avalonia.Controls.Button>(window, "ParametersButton").IsVisible);
+        Assert.True(DialogTestKit.Named<global::Avalonia.Controls.Button>(window, "ParametersButton").IsVisible);   // a VST3 plug-in lists parameters too
+        Assert.False(window.ParameterPanel.IsVisible);                                                              // its own editor works: no generic panel
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public void AVst3PluginWhoseEditorFailedShowsThePanelAndTheButtonBringsTheNoticeBack()
+    {
+        var track = FxTestKit.Track(FxChainWindow.SampleChain());
+        track.SoundSource = SoundSources.Plugins;
+        var engine = new FxTestKit.FakeEngine { Opens = false };
+        var window = FxTestKit.Window(track, FxTestKit.Host(track, engine));
+        window.Show();
+        var area = DialogTestKit.Named<FxEditorArea>(window, "EditorArea");
+        area.Surface.SetAreaForTest((IntPtr)1234);
+        DialogTestKit.RunQueuedUiWork();
+        FxTestKit.List(window).Click(1);
+        DialogTestKit.RunQueuedUiWork();
+        Assert.True(window.ParameterPanel.IsVisible);
+        Assert.Contains("params:Sample reverb", engine.Calls);
+        FxTestKit.PressButton(window, "ParametersButton");
         Assert.False(window.ParameterPanel.IsVisible);
+        Assert.Equal(FxEditorPlan.RetryButton, area.ActionLabel);
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public void ShowGenericControlsOpensThePanelEvenWhenTheEditorWorks()
+    {
+        var (window, engine, _) = Open(opens: true);
+        Assert.False(window.ParameterPanel.IsVisible);
+        engine.Calls.Clear();
+        Assert.True(window.Run(TabForge.Services.Features.FxChainIds.ShowGenericControls));
+        Assert.True(window.ParameterPanel.IsVisible);
+        Assert.Contains("close:Sample clap", engine.Calls);   // the docked editor made room
+        Assert.Contains("params:Sample clap", engine.Calls);
         window.Close();
     }
 

@@ -68,7 +68,7 @@ public sealed class FxChainFiles
         var useReaper = Directory.Exists(reaper) && !Directory.EnumerateFiles(PluginLibrary.ChainsFolder, "*" + ChainFileApply.FileExtension).Any();
         var file = _dialogs().Files.OpenFile(new FileDialogOptions
         {
-            Title = LoadCaption, Filter = LoadFilter, InitialDirectory = useReaper ? reaper : PluginLibrary.ChainsFolder,
+            Key = TabForge.Services.DialogKeys.FxChainLoad, Title = LoadCaption, Filter = LoadFilter, InitialDirectory = useReaper ? reaper : PluginLibrary.ChainsFolder,
         }, _owner);
         if (file is not null) await LoadFile(file, replace);
     }
@@ -125,7 +125,7 @@ public sealed class FxChainFiles
         Directory.CreateDirectory(PluginLibrary.ChainsFolder);
         var chosen = _dialogs().Files.SaveFile(new FileDialogOptions
         {
-            Title = SaveCaption, Filter = ChainFilter, DefaultExt = ChainFileApply.FileExtension,
+            Key = TabForge.Services.DialogKeys.FxChainSave, Title = SaveCaption, Filter = ChainFilter, DefaultExt = ChainFileApply.FileExtension,
             InitialDirectory = PluginLibrary.ChainsFolder, FileName = _track.Name,
         }, _owner);
         if (chosen is null) return;

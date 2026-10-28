@@ -40,6 +40,7 @@ public sealed partial class PlaybackEngine : IDisposable
         try
         {
             var opts = (_options ?? new PlaybackOptions()).Clone();
+            opts.OutputDevices = GetDevices();   // the tracks' saved device names resolve against these (index fallback)
             opts.Metronome = false;
             opts.CountIn = false;
             opts.Loop = false;
@@ -55,6 +56,7 @@ public sealed partial class PlaybackEngine : IDisposable
         var timeline = _timeline;
         EnqueueOutputOperation(() =>
         {
+            ReleaseHeldNotes(timeline);
             _output.ResetAll();
             ClearSoundingNotes();
             SendNeutralExpressionState(timeline);

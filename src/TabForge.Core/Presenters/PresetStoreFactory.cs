@@ -1,5 +1,6 @@
 using System.IO;
 using TabForge.Audio.Contracts;
+using TabForge.Playback;
 using TabForge.Plugins;
 
 // Owns: the store of a preset kind (and key) for the preset manager, and the file date it shows for a stored preset.
@@ -15,7 +16,13 @@ public sealed class PresetStoreFactory : IPresetStoreFactory
     private const int PluginKeyMaxLength = 80;
     private const string PluginKeyFallback = "plugin";
 
-    /// <summary>The factory the app uses; a test supplies its own <see cref="IPresetStoreFactory"/> instead.</summary>
+    /// <param name="effects">The note-effect presets (they live in the app settings); without them that kind has no store.</param>
+    public PresetStoreFactory(IEffectPresetSource? effects = null) => Effects = effects;
+
+    /// <summary>The note-effect presets; null when the factory was built without them.</summary>
+    public IEffectPresetSource? Effects { get; }
+
+    /// <summary>The factory without note-effect presets; the app builds its own with the settings, a test supplies its own <see cref="IPresetStoreFactory"/>.</summary>
     public static PresetStoreFactory Default { get; } = new();
 
     /// <summary>The store of a kind; null when the kind needs a key and none is given.</summary>
@@ -27,6 +34,8 @@ public sealed class PresetStoreFactory : IPresetStoreFactory
         PresetCatalogKind.MidiChain => PresetFolderStore.MidiChains(),
         PresetCatalogKind.MidiProcessor => key is { Length: > 0 } ? PresetFolderStore.MidiProcessor(key) : null,
         PresetCatalogKind.DrumMap => new DrumMapStore(),
+        PresetCatalogKind.Articulation => ArticulationPresets.UserStore(),
+        PresetCatalogKind.EffectPreset => key is { Length: > 0 } ? Effects?.StoreOf(key) : null,
         _ => null,
     };
 

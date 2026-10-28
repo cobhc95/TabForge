@@ -55,7 +55,7 @@ internal sealed partial class ScoreToMidiCompiler
                 && (s.Status & 0xF0) == status && (status == 0xC0 || s.Data1 == data1));
             if (e is null)
             {
-                var device = track >= 0 && track < _project.Tracks.Count ? _project.Tracks[track].MidiOutputDeviceId : -1;
+                var device = track >= 0 && track < _project.Tracks.Count ? OutputDeviceOf(_project.Tracks[track]) : -1;
                 e = new ScoreEvent
                 {
                     TimeMs = _timeline.PlayFromMs, DeviceId = device, Channel = channel, Status = status | (channel & 0x0F),

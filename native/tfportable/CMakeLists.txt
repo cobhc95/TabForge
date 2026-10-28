@@ -58,6 +58,7 @@ else()
         target_compile_definitions(tfportable PRIVATE __RTMIDI_DUMMY__)
     endif()
     target_link_libraries(tfportable PRIVATE pthread dl m)
+    target_link_options(tfportable PRIVATE -static-libstdc++ -static-libgcc)   # no dependence on the system libstdc++/libgcc version
 endif()
 
 # miniaudio loads PulseAudio, ALSA and JACK at run time (dlopen), so no sound library is a hard dependency on Linux.

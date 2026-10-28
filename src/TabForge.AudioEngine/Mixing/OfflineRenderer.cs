@@ -94,6 +94,8 @@ public sealed partial class OfflineRenderer
         foreach (var rs in _spec.Slots.OrderBy(s => s.Slot))
         {
             if (!seen.Add(rs.Slot)) continue;
+            // The monitor chain (Monitor FX: speaker / room correction) is heard live only: a render never runs it, even when asked for its slot.
+            if (rs.Slot == MixEngine.MonitorSlot) { _threads.Log.Write("render: the monitor chain is live only, skipped"); continue; }
             var chain = _mix.ChainAt(rs.Slot);
             if (chain is null) { _threads.Log.Write($"render: slot {rs.Slot} has no chain, skipped"); continue; }
             if (!rs.InMaster && string.IsNullOrEmpty(rs.StemPath)) continue;   // neither in the master nor a stem: nothing to render

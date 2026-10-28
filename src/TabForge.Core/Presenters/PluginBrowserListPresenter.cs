@@ -32,19 +32,35 @@ public static class PluginBrowserListPresenter
         IReadOnlySet<string> notIdentified, string query, int sortColumn, bool ascending)
     {
         var text = query.Trim();
-        var rows = all.Select(p => WithKnown(p, probed))
+        var rows = BuiltinRows.Concat(all.Select(p => WithKnown(p, probed)))
             .Where(p => text.Length == 0 || p.Name.Contains(text, StringComparison.OrdinalIgnoreCase) || p.Vendor.Contains(text, StringComparison.OrdinalIgnoreCase))
             .Select(p => new PluginBrowserRow(p.Name, p.Vendor, p.Format, RoleText(p, notIdentified), p));
         Func<PluginBrowserRow, string> key = sortColumn switch { 1 => r => r.Vendor, 2 => r => r.Format, 3 => r => r.Role, _ => r => r.Name };
-        var ordered = ascending ? rows.OrderBy(key, StringComparer.CurrentCultureIgnoreCase) : rows.OrderByDescending(key, StringComparer.CurrentCultureIgnoreCase);
+        // TabForge's own effects come first whatever the sort (the user's plug-ins follow in the chosen order).
+        var builtinFirst = rows.OrderBy(r => r.Info.Format == PluginFormats.Builtin ? 0 : 1);
+        var ordered = ascending ? builtinFirst.ThenBy(key, StringComparer.CurrentCultureIgnoreCase) : builtinFirst.ThenByDescending(key, StringComparer.CurrentCultureIgnoreCase);
         return ordered.ThenBy(r => r.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
     }
+
+    /// <summary>The built-in effects as browser rows: vendor TabForge, format Built-in, role Effect; never scanned or identified.</summary>
+    public static IEnumerable<VstPluginInfo> BuiltinRows => TabForge.Audio.Contracts.Builtin.BuiltinEffects.All
+        .Select(e => new VstPluginInfo(e.Name, e.Id, PluginFormats.Builtin, TabForge.Audio.Contracts.Builtin.BuiltinEffects.Vendor, TabForge.Audio.Contracts.Builtin.BuiltinEffects.Role));
 
     /// <summary>The status line: the notice to add folders or the count of plug-ins (and whether it is the remembered list).</summary>
     public static string StatusText(int count, bool foldersChosen, bool remembered) =>
         count == 0
             ? (foldersChosen ? "No plug-ins found in your folders." : "No plug-in folders yet: click Scan the standard VST folders, or Add folder…, or browse to a plug-in file.")
             : $"{count} plug-ins{(remembered ? " (remembered list)" : "")}. Double-click one, or select it and press Enter, to add it.";
+
+    /// <summary>The status line while identifying: done of total (the instrument or effect role and the vendor are read).</summary>
+    public static string IdentifyRunningText(int done, int total) => $"Identifying plug-ins… {done} of {total} (instrument or effect, vendor)";
+
+    /// <summary>The status line when the identify pass is paused: done of total.</summary>
+    public static string IdentifyPausedText(int done, int total) => $"Paused at {done} of {total} · plug-ins found so far are listed";
+
+    /// <summary>The status line when the identify pass is stopped: done of total and the rest not checked.</summary>
+    public static string IdentifyStoppedText(int done, int total) =>
+        $"Stopped at {done} of {total} · {total - done} not checked yet (role/vendor shown as \"{Identifying}\"). Rescan to finish.";
 
     /// <summary>The list after a common-folder scan: the found plug-ins merged in, one per path, sorted by name.</summary>
     public static List<VstPluginInfo> MergeCommonScan(IEnumerable<VstPluginInfo> existing, IEnumerable<VstPluginInfo> found) =>

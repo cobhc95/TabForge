@@ -78,10 +78,17 @@ public class MidiProcessingWindowTests
         window.Close();
     }
 
+    private static PluginSlot UnknownSampleSlot() => new()
+    {
+        Name = "Sample synth",
+        Type = PluginSlotType.Instrument,
+        MidiProcessors = { new PluginMidiProcessor { Type = "transpose" }, new PluginMidiProcessor { Type = "legacyFilter" }, new PluginMidiProcessor { Type = "log" } },
+    };
+
     [AvaloniaFact]
     public void ShowsTheSelectedProcessorAndTheUnknownTypeFromThePresenter()
     {
-        var window = Open().Window;
+        var window = Open(UnknownSampleSlot()).Window;
         Assert.Equal(3, Rows(window).ItemCount);
         var transpose = MidiProcessorCatalog.Find("transpose")!;
         Assert.Equal(transpose.Name, DialogTestKit.Named<TextBlock>(window, "TitleText").Text);
@@ -97,7 +104,7 @@ public class MidiProcessingWindowTests
     [AvaloniaFact]
     public void ListButtonsFollowThePresenterRules()
     {
-        var window = Open().Window;
+        var window = Open(UnknownSampleSlot()).Window;
         var up = DialogTestKit.Named<Button>(window, "UpButton");
         var down = DialogTestKit.Named<Button>(window, "DownButton");
         var remove = DialogTestKit.Named<Button>(window, "RemoveButton");
@@ -113,7 +120,7 @@ public class MidiProcessingWindowTests
     [AvaloniaFact]
     public void MoveAndRemoveChangeTheSlotInOrderThroughTheEditCallback()
     {
-        var made = Open();
+        var made = Open(UnknownSampleSlot());
         Rows(made.Window).SelectedIndex = 1;
         FxTestKit.PressButton(made.Window, "UpButton");
         Assert.Equal(new[] { "legacyFilter", "transpose", "log" }, made.Slot.MidiProcessors.Select(p => p.Type));
@@ -127,7 +134,7 @@ public class MidiProcessingWindowTests
     [AvaloniaFact]
     public void AddPutsTheCatalogEntryAfterTheSelectedProcessor()
     {
-        var made = Open();
+        var made = Open(UnknownSampleSlot());
         Rows(made.Window).SelectedIndex = 0;
         DialogTestKit.Named<TextBox>(made.Window, "SearchBox").Text = "velocity";
         Assert.Equal("Velocity", ((MidiProcessorCatalog.SearchHit)Catalog(made.Window).SelectedItem!).Display);
@@ -169,11 +176,11 @@ public class MidiProcessingWindowTests
         DialogTestKit.Named<TextBox>(made.Window, "SearchBox").Text = "transpose semitones";
         var hit = Catalog(made.Window).Items.Cast<MidiProcessorCatalog.SearchHit>().FirstOrDefault(h => h.Param is not null && h.Info.Type == "transpose");
         if (hit is null) return;
-        Rows(made.Window).SelectedIndex = 2;
+        Rows(made.Window).SelectedIndex = 1;
         Catalog(made.Window).SelectedItem = hit;
         FxTestKit.PressButton(made.Window, "AddButton");
         Assert.Equal(0, Rows(made.Window).SelectedIndex);   // the transpose already in the list is reused, not added again
-        Assert.Equal(3, made.Slot.MidiProcessors.Count);
+        Assert.Equal(2, made.Slot.MidiProcessors.Count);
         made.Window.Close();
     }
 

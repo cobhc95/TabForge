@@ -12,13 +12,16 @@ using Avalonia.LogicalTree;
 using Avalonia.Media;
 using Avalonia.VisualTree;
 using TabForge.Avalonia.Platform;
+using TabForge.Plugins;
 using TabForge.Presenters;
 
-// Owns: the preset manager window: the tree of preset kinds and their children with counts at the left, the toolbar (Rename, Duplicate,
-//   Move up, Move down, Delete, Show in tree) and the list of the chosen node's presets at the right, the search across every kind, the
-//   extended selection, the inline rename box, the keys and the message line.
+// Owns: the preset manager window: the category list (the tree of preset kinds and their children with counts) at the left, the toolbar (Rename,
+//   Duplicate, Move up, Move down, Delete, Import, Export, Show in tree) and the list of the chosen category's presets at the right (built-in ones
+//   greyed and tagged), the search across every kind, the extended selection, the inline rename box, the keys, the message line and the Undo message
+//   after a delete.
 // Does not own: what is listed (IPresetCatalogue), the changes and their questions (PresetManagerActions, PresetManagerDialogs), the name
-//   rules (PresetRules, PresetManagePresenter), the stores (IPresetStoreFactory) or loading a preset.
+//   rules (PresetRules, PresetManagePresenter), the stores (IPresetStoreFactory), the file pickers (PresetManagerWindow.Portable.cs), the drag
+//   (PresetManagerWindow.Drag.cs) or loading a preset.
 // Tests: PresetManagerWindowTests.
 namespace TabForge.Avalonia.Views.Presets;
 
@@ -39,6 +42,7 @@ public sealed partial class PresetManagerWindow : Window
     private const string AtTopTip = "The selected presets are already at the top";
     private const string AtBottomTip = "The selected presets are already at the bottom";
     private const string DuplicateBuiltInTip = "This preset comes with the app; it is always in its drop-down and needs no copy";
+    private const string DeletedOneFormat = "Deleted \"{0}\"", DeletedManyFormat = "Deleted {0} presets";
     private const string ChevronOpen = "▾";
     private const string ChevronClosed = "▸";
     private const string NameTag = "name";
@@ -64,7 +68,10 @@ public sealed partial class PresetManagerWindow : Window
     private readonly Button _up = ToolButton("Move up");
     private readonly Button _down = ToolButton("Move down");
     private readonly Button _delete = ToolButton("Delete");
+    private readonly Button _import = ToolButton("Import…");
+    private readonly Button _export = ToolButton("Export…");
     private readonly Button _show = ToolButton("Show in tree");
+    private readonly PresetUndoToast _toast;
     private readonly HashSet<PresetCatalogKind> _expanded = new();
     private PresetNode _node;
     private PresetEntry? _editing;
@@ -85,16 +92,15 @@ public sealed partial class PresetManagerWindow : Window
     /// <param name="startKey">The plug-in folder or processor type the window opens on; null for the kind's group.</param>
     /// <param name="catalogue">What the window lists; the real preset folders by default.</param>
     /// <param name="stores">The stores the actions change; the real preset folders by default.</param>
-    /// <param name="confirmDeletePresets">Reads General.ConfirmDeletePresets at each delete; true by default.</param>
-    /// <param name="rememberDeletePresets">Turns that setting off and saves it; a no-op by default (tests/the preview).</param>
     public PresetManagerWindow(AvaloniaDialogHost host,
         PresetCatalogKind startKind = PresetCatalogKind.PluginPreset, string? startKey = null,
-        IPresetCatalogue? catalogue = null, IPresetStoreFactory? stores = null,
-        Func<bool>? confirmDeletePresets = null, Action<bool>? rememberDeletePresets = null)
+        IPresetCatalogue? catalogue = null, IPresetStoreFactory? stores = null)
     {
-        _catalogue = catalogue ?? new PresetCataloguePresenter();
-        Dialogs = PresetManagerDialogs.For(host, this, confirmDeletePresets, rememberDeletePresets);
-        _actions = new PresetManagerActions(stores ?? PresetStoreFactory.Default, Dialogs);
+        stores ??= PresetStoreFactory.Default;
+        _catalogue = catalogue ?? new PresetCataloguePresenter(stores);
+        Dialogs = PresetManagerDialogs.For(host, this);
+        _actions = new PresetManagerActions(stores, Dialogs);
+        _toast = new PresetUndoToast(() => this);
         _node = _catalogue.Node(startKind, startKey);
 
         Title = Caption;
@@ -121,7 +127,9 @@ public sealed partial class PresetManagerWindow : Window
         WireTool(_duplicate, "Make a copy of the selected preset", DuplicateSelected);
         WireTool(_up, "Move the selected preset up", () => MoveSelected(-1));
         WireTool(_down, "Move the selected preset down", () => MoveSelected(1));
-        WireTool(_delete, "Delete the selected preset", () => Platform.UiTasks.Forget(DeleteSelectedAsync(), "Delete preset", Say));
+        WireTool(_delete, "Delete the selected preset (Undo is offered for a few seconds)", DeleteSelected);
+        WireTool(_import, "Add a preset from a file to the category that is shown", () => Platform.UiTasks.Forget(ImportAsync(), "Import preset", Say));
+        WireTool(_export, "Write the selected preset to a file", () => Platform.UiTasks.Forget(ExportAsync(), "Export preset", Say));
         WireTool(_show, "Go to the place of the selected preset (Enter)", ShowInTree);
 
         _search.TextChanged += (_, _) =>
@@ -138,7 +146,7 @@ public sealed partial class PresetManagerWindow : Window
             _searchDirty = false;
             FillList(null);
         };
-        Closed += (_, _) => _searchDebounce.Stop();
+        Closed += (_, _) => { _searchDebounce.Stop(); _toast.Dismiss(); };
         _tree.SelectionChanged += (_, _) =>
         {
             if (_filling || _tree.SelectedItem is not ListBoxItem { Tag: PresetNode node }) return;
@@ -258,7 +266,7 @@ public sealed partial class PresetManagerWindow : Window
     {
         if (!_duplicate.IsEnabled) return;
         var made = new List<PresetEntry>();
-        foreach (var entry in SelectedEntries.Where(e => !e.BuiltIn || e.Node.Kind == PresetCatalogKind.DrumMap))
+        foreach (var entry in SelectedEntries.Where(CanCopy))
         {
             var result = _actions.Duplicate(entry, _catalogue.Entries(entry.Node).Select(e => e.Name).ToList());
             Say(result.Error);
@@ -267,17 +275,27 @@ public sealed partial class PresetManagerWindow : Window
         if (made.Count > 0) FillList(made);
     }
 
-    /// <summary>Deletes the selected user presets after one question; the row after the first deleted one is selected.</summary>
-    public async Task DeleteSelectedAsync()
+    /// <summary>Deletes the selected user presets at once and offers Undo for a few seconds; the row after the first deleted one is selected.</summary>
+    public void DeleteSelected()
     {
         var at = _list.SelectedIndex;
-        var result = await _actions.DeleteAsync(SelectedEntries);
+        var gone = SelectedEntries.Where(entry => !entry.BuiltIn).Select(entry => entry.Name).ToList();
+        var result = _actions.Delete(SelectedEntries);
         if (result.Error is { } error) Say(error);
         if (!result.Ok) return;
         FillList(null);
         if (_entries.Count > 0) _list.SelectedIndex = Math.Clamp(at, 0, _entries.Count - 1);
         UpdateTools();
+        if (result.Undo is { } undo)
+            _toast.Show(gone.Count == 1 ? string.Format(DeletedOneFormat, gone[0]) : string.Format(DeletedManyFormat, gone.Count), () => { undo(); FillList(null); });
     }
+
+    /// <summary>The Undo message of the last delete.</summary>
+    public PresetUndoToast Toast => _toast;
+
+    // A user preset can always be copied; a built-in one when its kind can write the copy (drum maps from the shipped file, the rest from bytes).
+    private static bool CanCopy(PresetEntry entry) =>
+        !entry.BuiltIn || entry.Node.Kind == PresetCatalogKind.DrumMap || PresetBuiltInCopy.CanCopy(entry.Node.Kind);
 
     /// <summary>Moves the selected user presets one row up (-1) or down (+1) as a block; not while searching.</summary>
     public void MoveSelected(int delta)
@@ -310,7 +328,8 @@ public sealed partial class PresetManagerWindow : Window
         SetTool(_up, canUp, "Move the selected presets up", searching ? SearchOrderTip : user.Count == 0 ? builtInTip : AtTopTip);
         SetTool(_down, canDown, "Move the selected presets down", searching ? SearchOrderTip : user.Count == 0 ? builtInTip : AtBottomTip);
         SetTool(_delete, user.Count > 0, user.Count == 1 ? "Delete the selected preset" : $"Delete the {user.Count} selected presets", builtInTip);
-        var copyable = chosen.Any(entry => !entry.BuiltIn || entry.Node.Kind == PresetCatalogKind.DrumMap);
+        var copyable = chosen.Any(CanCopy);
+        UpdateFileTools(chosen);
         SetTool(_duplicate, copyable, "Make a copy of the selected presets", chosen.Count == 0 ? NoneSelectedTip : DuplicateBuiltInTip);
         _show.IsEnabled = chosen.Count == 1;
     }
@@ -378,8 +397,8 @@ public sealed partial class PresetManagerWindow : Window
         top.Children.Add(_search);
         top.Children.Add(_heading);
 
-        var bar = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(BarMargin) };
-        foreach (var button in new[] { _rename, _duplicate, _up, _down, _delete, _show }) bar.Children.Add(button);
+        var bar = new WrapPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(BarMargin) };
+        foreach (var button in new[] { _rename, _duplicate, _up, _down, _delete, _import, _export, _show }) bar.Children.Add(button);
         DockPanel.SetDock(bar, Dock.Top);
         DockPanel.SetDock(_message, Dock.Bottom);
         DockPanel.SetDock(_empty, Dock.Top);

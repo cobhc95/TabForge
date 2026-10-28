@@ -159,6 +159,7 @@ public sealed partial class FxChainWindow
             case FxChainIds.PastePlugins: PasteClipboard(); return true;
             case FxChainIds.DuplicatePlugins: _ = DuplicateSelected(); return true;
             case FxChainIds.SelectAllPlugins: SelectAllRows(); return true;
+            case FxChainIds.ShowGenericControls: return ShowGenericControls();
             case FxChainIds.Save: _ = _files.Save(); return true;
             case FxChainIds.Load: _ = _files.Load(replace: true); return true;
             case FxChainIds.AddToEnd: _ = _files.Load(replace: false); return true;

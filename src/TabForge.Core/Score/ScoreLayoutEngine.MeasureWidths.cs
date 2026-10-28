@@ -158,6 +158,8 @@ internal sealed partial class ScoreLayoutEngine
             if (note.Source.Techniques.Contains("Bend") ||
                 note.Source.Techniques.Contains("Harmonic") || note.Source.Techniques.Contains("ArtificialHarmonic"))
                 right = Math.Max(right, 14);
+            var soundingFret = ScoreMarkText.ArtificialFretText(note.Source);   // "<27>" beside the fret number
+            if (soundingFret.Length > 0) right = Math.Max(right, fretWidth / 2 + 2.5 + _text.Width(ScoreTextArea.General, soundingFret, 8, 600));
         }
     }
 

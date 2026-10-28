@@ -8,7 +8,7 @@ using Xunit;
 
 namespace TabForge.Avalonia.Tests;
 
-// Owns: cross-platform Stage 5 leftovers: the plug-in host and import-worker pipe names per OS, the plug-in host block with polled flags (run on Windows too), and the Unix child-process guard and parent watchdog.
+// Owns: cross-platform Stage 5 leftovers: the plug-in host and import-worker pipe names per OS, the plug-in host block with polled flags (run on Windows too), and the Unix child-process guard, the polled memory/CPU limits of the portable import-worker guard, and the parent watchdog.
 // Does not own: the Windows named-event block (EngineSessionIsolationTests) or the Job Object (SelfTestChildProcessGuardPort).
 // Tests: itself.
 public sealed class CrossPlatformStage5Tests
@@ -129,6 +129,45 @@ public sealed class CrossPlatformStage5Tests
         child.WaitForExit(10000);
         Assert.False(ParentWatchdog.IsRunning(child.Id, started));
     }
+
+    [Fact]
+    public void ThePolledGuardKillsAChildOverItsMemoryLimit()
+    {
+        var resident = 10L;
+        using var guard = new PolledLimitChildGuard(100, TimeSpan.Zero, TimeSpan.FromMilliseconds(20), _ => (Volatile.Read(ref resident), TimeSpan.Zero));
+        using var child = StartSleeper();
+        Assert.True(guard.IsActive);
+        Assert.True(guard.Add(child));
+        Assert.False(child.WaitForExit(300), "a child under its limit was ended");
+        Volatile.Write(ref resident, 101);
+        Assert.True(child.WaitForExit(10000), "a child over its memory limit was still running");
+    }
+
+    [Fact]
+    public void ThePolledGuardKillsAChildOverItsCpuTimeAndEndsItsChildrenWhenDisposed()
+    {
+        using (var guard = new PolledLimitChildGuard(0, TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(20), _ => (long.MaxValue, TimeSpan.FromSeconds(2))))
+        {
+            using var child = StartSleeper();
+            Assert.True(guard.Add(child));
+            Assert.True(child.WaitForExit(10000), "a child over its CPU time was still running");
+        }
+        var closing = new PolledLimitChildGuard(0, TimeSpan.Zero, TimeSpan.FromMilliseconds(20), _ => (0, TimeSpan.Zero));
+        using var held = StartSleeper();
+        Assert.True(closing.Add(held));
+        closing.Dispose();
+        Assert.True(held.WaitForExit(10000), "the child was still running after the guard closed");
+        Assert.False(closing.IsActive);
+    }
+
+    [Theory]
+    [InlineData(101L, 0, 100L, 0, true)]
+    [InlineData(100L, 0, 100L, 0, false)]
+    [InlineData(long.MaxValue, 0, 0L, 0, false)]
+    [InlineData(0L, 3, 0L, 2, true)]
+    [InlineData(0L, 2, 0L, 0, false)]
+    public void ThePolledLimitsCompareUsageWithZeroMeaningOff(long resident, int cpuSeconds, long memoryLimit, int cpuLimitSeconds, bool over) =>
+        Assert.Equal(over, PolledLimitChildGuard.IsOverLimit(resident, TimeSpan.FromSeconds(cpuSeconds), memoryLimit, TimeSpan.FromSeconds(cpuLimitSeconds)));
 
     [Fact]
     public void ThePlatformGuardIsTheJobObjectOnWindows()

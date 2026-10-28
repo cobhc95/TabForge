@@ -74,11 +74,12 @@ public sealed class PianoRollNeedleTests
     public void TheNeedleAndTheMarkerFollowThePlaybackHighlight()
     {
         var rig = Open();
+        rig.Appearance.PlaybackHighlight = PlaybackHighlightModes.FollowAccent;
         rig.Appearance.Accent = "#0A0B0C";
         var layer = rig.View.Surface.Playhead;
         rig.View.RefreshNeedle();
         using (rig.Window.CaptureRenderedFrame()) { }
-        Assert.Equal(new UiColor(0xFF, 0x0A, 0x0B, 0x0C), layer.DrawnColour);   // Follow accent (the default)
+        Assert.Equal(new UiColor(0xFF, 0x0A, 0x0B, 0x0C), layer.DrawnColour);   // Follow accent (chosen)
 
         rig.Appearance.Accent = "#102030";   // the accent changed: the next refresh shows it at once
         rig.View.RefreshNeedle();

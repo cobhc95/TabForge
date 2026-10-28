@@ -192,6 +192,22 @@ public sealed class DocumentController
         return new GuitarProExportResult(plan.CompatiblePath, plan.NativeCopyPath, plan.Note);
     }
 
+    /// <summary>
+    /// Writes a copy in an older binary format (.gp3 / .gp4 / .gp5) under the save claim: the song is captured here, the copy and its loss list are built on a worker,
+    /// <paramref name="confirm"/> is asked only when the list is not empty, and the file is written atomically on a worker. The document is never changed.
+    /// Returns the loss list, or null when the person cancelled the question (nothing is written).
+    /// </summary>
+    public async Task<GpPreflightReport?> ExportLegacyCopyAsync(SongDocument document, string path, LegacyGpFormat format, Func<GpPreflightReport, Task<bool>> confirm, SaveHold hold)
+    {
+        if (!ReferenceEquals(hold, _hold)) throw new InvalidOperationException("The save claim is no longer held; nothing was written.");
+        path = FilePathPolicy.OutputFile(path, "score file", LegacyGpFormats.Extension(format));
+        var capture = SaveCapture.Take(document);
+        var result = await RunOnWorker(capture, project => LegacyGpExport.Build(project, format));
+        if (result.Report.Losses.Count > 0 && !await confirm(result.Report)) return null;   // the question may open a dialog: it continues on the UI context
+        await Task.Run(() => FilePathPolicy.WriteAtomically(path, stream => stream.Write(result.Bytes)));
+        return result.Report;
+    }
+
     /// <summary>The claim a running save or export holds from its first question (the file dialog included) until it is finished; dispose it to release.</summary>
     public sealed class SaveHold : IDisposable
     {

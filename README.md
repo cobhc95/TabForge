@@ -1,6 +1,6 @@
-# TabForge 0.8.3
+# TabForge 0.8.5
 
-**A keyboard-driven tablature and notation editor for Windows. Opens GP files (.gp3, .gp4, .gp5, .gpx, .gp) and saves .gp and its own .tforge projects.** Write, import and play back guitar, bass, drum and keyboard parts, with a live fretboard / keyboard, an arrangement timeline, audio and MIDI recording, a mixer, VST plug-ins and offline audio and video rendering.
+**A keyboard-driven tablature and notation editor for Windows, with an experimental Linux build. Opens .gp, .gpx, .gp5, .gp4 and .gp3 files and saves .gp and its own .tforge projects, and can save .gp5, .gp4 and .gp3 copies.** Write, import and play back guitar, bass, drum and keyboard parts, with a live fretboard / keyboard, an arrangement timeline, audio and MIDI recording, a mixer, VST plug-ins and offline audio and video rendering.
 
 [![TabForge with a drum plug-in](docs/media/screenshots/github-main.jpg)](docs/media/screenshots/github-main.jpg)
 
@@ -9,13 +9,30 @@
 ## Download
 
 > [!TIP]
-> **[Setup installer](https://github.com/cobhc95/TabForge/releases/download/v0.8.3/TabForge-0.8.3-setup.exe)** · no administrator rights needed
+> **Windows**
 >
-> **[Portable ZIP](https://github.com/cobhc95/TabForge/releases/download/v0.8.3/TabForge-0.8.3-win-x64-portable.zip)** · extract and run `TabForge.exe`
+> **[Setup installer](https://github.com/cobhc95/TabForge/releases/download/v0.8.5/TabForge-0.8.5-setup.exe)** · no administrator rights needed
 >
-> **[SHA-256 checksums](https://github.com/cobhc95/TabForge/releases/download/v0.8.3/TabForge-0.8.3-SHA256.txt)** · to verify both files
+> **[Portable ZIP](https://github.com/cobhc95/TabForge/releases/download/v0.8.5/TabForge-0.8.5-win-x64-portable.zip)** · extract and run `TabForge.exe`
+>
+> **[SHA-256 checksums](https://github.com/cobhc95/TabForge/releases/download/v0.8.5/TabForge-0.8.5-SHA256.txt)** · to verify both Windows files
 
-Windows 10 or 11, 64-bit, nothing else to install. Not code-signed: see [Verify your download](#verify-your-download). Older versions: [Releases](https://github.com/cobhc95/TabForge/releases).
+> [!WARNING]
+> **Linux (experimental)**
+>
+> **[Linux package (tar.gz)](https://github.com/cobhc95/TabForge/releases/download/v0.8.5/TabForge-0.8.5-linux-x64.tar.gz)** · [SHA-256](https://github.com/cobhc95/TabForge/releases/download/v0.8.5/TabForge-0.8.5-linux-x64.tar.gz.sha256) · Ubuntu 22.04 or newer (glibc 2.35+), 64-bit, X11 (Wayland sessions run through XWayland). The SoundFont and ffmpeg are bundled, so sound and Video export work on first run. This build is experimental. It appears fully functional in a Hyper-V Ubuntu VM, which is the only place it has been tried; it has not been tested on real hardware, and Render, microphone input and CLAP plug-ins are not yet confirmed on Linux. Expect rough edges, and please report them.
+
+Windows: 10 or 11, 64-bit, nothing else to install. Not code-signed: see [Verify your download](#verify-your-download). Older versions: [Releases](https://github.com/cobhc95/TabForge/releases).
+
+**Run it on Linux:**
+
+```bash
+tar -xzf TabForge-0.8.5-linux-x64.tar.gz
+cd TabForge
+./TabForge
+```
+
+If it does not start, install the usual desktop libraries: `sudo apt install libx11-6 libxext6 libxcursor1 libxrandr2 libxi6 libfontconfig1 libfreetype6 libgl1 libasound2` (on Ubuntu 24.04 the sound package is `libasound2t64`).
 
 ### See it in action
 
@@ -27,58 +44,42 @@ Windows 10 or 11, 64-bit, nothing else to install. Not code-signed: see [Verify 
 </tr>
 </table>
 
-**Contents:** [Download](#download) · [What's new in 0.8.3](#whats-new-in-083) · [What sets it apart](#what-sets-it-apart) · [Writing tab and notation](#writing-tab-and-notation) · [Instruments on screen](#instruments-on-screen) · [Arrangement and tracks](#arrangement-and-tracks) · [Recording and live input](#recording-and-live-input) · [Playback and practice](#playback-and-practice) · [Band view, Keyboard mode and compact mode](#band-view-keyboard-mode-and-compact-mode) · [Sound](#sound) · [Export](#export) · [Customising](#customising) · [Files, safety and updates](#files-safety-and-updates) · [Full feature reference](#full-feature-reference) · [Verify your download](#verify-your-download) · [Building from source](#building-from-source) · [Licence](#licence)
+**Contents:** [Download](#download) · [New since 0.8.3](#new-since-083) · [What sets it apart](#what-sets-it-apart) · [Writing tab and notation](#writing-tab-and-notation) · [Instruments on screen](#instruments-on-screen) · [Arrangement and tracks](#arrangement-and-tracks) · [Recording and live input](#recording-and-live-input) · [Playback and practice](#playback-and-practice) · [Band view, Keyboard mode and compact mode](#band-view-keyboard-mode-and-compact-mode) · [Sound](#sound) · [Export](#export) · [Customising](#customising) · [Files, safety and updates](#files-safety-and-updates) · [Full feature reference](#full-feature-reference) · [Verify your download](#verify-your-download) · [Building from source](#building-from-source) · [Licence](#licence)
 
-## What's new in 0.8.3
+## New since 0.8.3
 
-One Insert menu for everything you add, sections that stretch and close gaps, takes you can drag between lanes and tracks, a live scale readout and tidier media handling. Windows behaves as before: the groundwork for macOS and Linux is in, but only the Windows build ships.
-
-<table>
-<tr>
-<td width="50%" valign="top"><a href="docs/media/screenshots/0.8.3/insert-menu.png"><img src="docs/media/screenshots/0.8.3/insert-menu.png" alt="The Insert menu" width="340"></a><br><b>Insert menu</b><br>Tracks, bars, sections, tempo, time and key changes, repeats, chords, text, lyrics, audio and MIDI files in one place.</td>
-<td width="50%" valign="top"><a href="docs/media/screenshots/0.8.3/stretch-section.png"><img src="docs/media/screenshots/0.8.3/stretch-section.png" alt="Stretching a section past the next one" width="340"></a><br><b>Stretch a section</b><br>Drag its end past the next section: add empty bars, repeat its last bars or add a repeat sign.</td>
-</tr>
-<tr>
-<td valign="top"><a href="docs/media/screenshots/0.8.3/scale-popup.jpg"><img src="docs/media/screenshots/0.8.3/scale-popup.jpg" alt="The scale readout popup" width="220"></a><br><b>Scale readout</b><br>The status bar names the likely scale of the current section and track; click it for alternatives.</td>
-<td valign="top"><a href="docs/media/screenshots/0.8.3/input-menu-armed-pill.jpg"><img src="docs/media/screenshots/0.8.3/input-menu-armed-pill.jpg" alt="The track input menu above an armed track" width="340"></a><br><b>Track inputs</b><br>Pick an audio input, a MIDI input or both. A MIDI keyboard now sounds through the armed track's own instrument.</td>
-</tr>
-</table>
-
-- **Section tools:** stretch a section in either direction, close a gap from the section strip (it asks first when the bars aren't empty), and choose what happens to audio that crosses a section you move.
-- **Takes:** drag audio and MIDI takes to other lanes or tracks (Ctrl copies; below the last track makes a new track). When clips overlap, TabForge offers to move one to a free lane.
-- **Media:** *Copy audio with this song* can keep a song and its audio in one folder; *Find missing audio* searches a folder and its subfolders and relinks every missing clip at once.
-- **MIDI:** keyboard monitoring through the track's instrument and FX, a velocity meter on MIDI-armed tracks, and the piano roll opens the take you click.
-- **Plug-ins:** CLAP plug-ins (opt-in), FX list multi-select with cut, copy and paste, and VST3 meters that update live.
-- **Also:** tidier menus, Full screen (F11), MusicXML files that open again as the same song, video export that ends with the music, an optional SoundFont sound engine and bundled fonts, and .NET 10.
-
-<details><summary>More 0.8.3 pictures</summary>
+Built-in effects, a master level meter, techniques that switch an instrument's articulation, redesigned bend and tremolo bar editors, saving copies for older programs, a redesigned preset menu and manager, and a first, experimental Linux build.
 
 <table>
 <tr>
-<td width="50%" valign="top"><a href="docs/media/screenshots/0.8.3/close-gap.png"><img src="docs/media/screenshots/0.8.3/close-gap.png" alt="Close gap on the section strip" width="300"></a><br><b>Close gap</b><br>Right-click an empty area of the section strip.</td>
-<td width="50%" valign="top"><a href="docs/media/screenshots/0.8.3/close-gap-prompt.png"><img src="docs/media/screenshots/0.8.3/close-gap-prompt.png" alt="The Close gap prompt" width="300"></a><br><b>When the bars aren't empty</b><br>Remove them, make them a section, or remove only the empty bars. One undo puts it all back.</td>
+<td width="33%" valign="top"><a href="docs/media/screenshots/0.8.5/articulations-map.png"><img src="docs/media/screenshots/0.8.5/articulations-map.png" alt="The Articulations tab of the MIDI window" width="215"></a><br><b>Articulations</b><br>Palm mute, slides, harmonics and more become keyswitches or controllers for your instrument plug-in. Pick a preset or edit the table, and press Test to hear a row.</td>
+<td width="33%" valign="top"><a href="docs/media/screenshots/0.8.5/bend-editor.jpg"><img src="docs/media/screenshots/0.8.5/bend-editor.jpg" alt="The redesigned bend editor" width="215"></a><br><b>Bend and tremolo bar editors</b><br>A type list with your own presets, a tone scale and eased curves that play like a real bend.</td>
+<td width="33%" valign="top"><a href="docs/media/screenshots/0.8.5/older-formats.jpg"><img src="docs/media/screenshots/0.8.5/older-formats.jpg" alt="The window that lists what an older format leaves out" width="215"></a><br><b>Save .gp5, .gp4 or .gp3</b><br>File &gt; Export writes a copy for older programs, after listing what the format leaves out.</td>
 </tr>
 <tr>
-<td valign="top"><a href="docs/media/screenshots/0.8.3/audio-crosses-section.png"><img src="docs/media/screenshots/0.8.3/audio-crosses-section.png" alt="The Audio crosses this section prompt" width="300"></a><br><b>Audio crosses this section</b><br>Split the audio and move it with the section, or leave it where it is.</td>
-<td valign="top"><a href="docs/media/screenshots/0.8.3/copy-audio-with-song.png"><img src="docs/media/screenshots/0.8.3/copy-audio-with-song.png" alt="The Copy audio with this song prompt" width="300"></a><br><b>Copy audio with this song</b><br>One song folder, or a Media folder beside the song.</td>
+<td width="33%" valign="top"><a href="docs/media/screenshots/0.8.5/preset-manager.jpg"><img src="docs/media/screenshots/0.8.5/preset-manager.jpg" alt="The preset manager" width="215"></a><br><b>Preset manager</b><br>Reorder presets by dragging, undo a delete, import and export presets as files.</td>
+<td width="33%" valign="top"><a href="docs/media/screenshots/0.8.5/fx-window-eq.png"><img src="docs/media/screenshots/0.8.5/fx-window-eq.png" alt="The EQ inside the FX chain window" width="215"></a><br><b>Effects in the FX window</b><br>Built-in editors open right in the FX chain window. Any plug-in's parameters also show as searchable sliders (right-click › Show generic controls).</td>
+<td width="33%" valign="top"><b>Linux (experimental)</b><br>Songs, sound, VST3 plug-ins, Video export and file drag and drop, in one tar.gz.</td>
 </tr>
 <tr>
-<td valign="top"><a href="docs/media/screenshots/0.8.3/find-missing-audio.png"><img src="docs/media/screenshots/0.8.3/find-missing-audio.png" alt="The Find missing audio window" width="300"></a><br><b>Find missing audio</b><br>Search a folder and its subfolders, then relink everything found.</td>
-<td valign="top"><a href="docs/media/screenshots/0.8.3/input-pill.png"><img src="docs/media/screenshots/0.8.3/input-pill.png" alt="The track input pill with a MIDI velocity meter" width="300"></a><br><b>Input pill and MIDI meter</b><br>Monitoring and input in one pill; the meter shows MIDI note velocity.</td>
+<td width="33%" valign="top"><a href="docs/media/screenshots/0.8.5/builtin-eq.jpg"><img src="docs/media/screenshots/0.8.5/builtin-eq.jpg" alt="The built-in EQ" width="215"></a><br><b>Built-in effects</b><br>EQ, compressor, limiter, delay and noise gate, listed in Add plug-in as TabForge / Built-in.</td>
+<td width="33%" valign="top"><a href="docs/media/screenshots/0.8.5/builtin-ir-loader.jpg"><img src="docs/media/screenshots/0.8.5/builtin-ir-loader.jpg" alt="The IR loader" width="215"></a><br><b>IR loader</b><br>Load cabinet or speaker-correction IRs on any track, or on a monitoring-only master slot that is never exported.</td>
+<td width="33%" valign="top"><a href="docs/media/screenshots/0.8.5/master-meter.jpg"><img src="docs/media/screenshots/0.8.5/master-meter.jpg" alt="The master level meter in the transport bar" width="215"></a><br><b>Master meter</b><br>Peak, RMS and LUFS in the transport bar; right-click for the settings.</td>
 </tr>
 <tr>
-<td valign="top"><a href="docs/media/screenshots/0.8.3/compact-band-bar.png"><img src="docs/media/screenshots/0.8.3/compact-band-bar.png" alt="The Compact mode bar" width="300"></a><br><b>Compact and Band bars</b><br>The close button sits on the far left, so the right-hand icons stay put.</td>
-<td></td>
+<td width="33%" valign="top"><a href="docs/media/screenshots/0.8.5/builtin-delay.jpg"><img src="docs/media/screenshots/0.8.5/builtin-delay.jpg" alt="The built-in delay" width="215"></a><br><b>Delay</b><br>Echoes synced to the song tempo, with ping-pong and filtered repeats.</td>
+<td width="33%" valign="top"><a href="docs/media/screenshots/0.8.5/builtin-limiter.jpg"><img src="docs/media/screenshots/0.8.5/builtin-limiter.jpg" alt="The built-in limiter" width="215"></a><br><b>Limiter and noise gate</b><br>A true-peak limiter for the master and a <a href="docs/media/screenshots/0.8.5/builtin-gate.jpg">noise gate</a> for high-gain guitars.</td>
+<td width="33%" valign="top"><a href="docs/media/screenshots/0.8.5/vibrato-settings.jpg"><img src="docs/media/screenshots/0.8.5/vibrato-settings.jpg" alt="Vibrato settings" width="215"></a><br><b>Vibrato settings</b><br>Depth and speed per note, or a default in Settings.</td>
 </tr>
 </table>
 
-</details>
+- **Also:** a Panic command (Tools &gt; Panic) that silences every stuck note, Pause / Stop in the Add plug-in window, a *Show fretboard at startup* setting, edits heard at once while a song plays, a green playback highlight by default, a clearer selected tool in the piano roll, and track moves during playback that no longer change the sound.
 
 See the [changelog](CHANGELOG.md) for everything.
 
 <details><summary>Earlier in 0.8: Avalonia, selection and loops, piano roll</summary>
 
-TabForge now runs on Avalonia, the first step toward running on more platforms in the future. It is Windows only today.
+TabForge now runs on Avalonia, which made the experimental Linux build possible. Windows is the main platform.
 
 - **Selection and loops:** drag a box on the timeline, or drag across the score, to select and set the loop; the ruler loop has handles; *Clear loop* and Esc twice remove it.
 - **Section resize by edges:** drag a section's left or right edge to make it shorter or longer; it never stretches the neighbouring section. Dragging the middle still moves it.
@@ -86,7 +87,7 @@ TabForge now runs on Avalonia, the first step toward running on more platforms i
 - **Light mode** redesigned.
 - **Monitor FX** button in the title bar.
 - **Loop recording** keeps each pass as a take.
-- **Playback highlight** follows the accent colour, or a custom colour of your choice (Preferences > Appearance).
+- **Playback highlight** is a custom colour (green by default), or follows the accent colour (Preferences > Appearance).
 - **Spacing** setting for the score.
 - **Tuner strip** in the FX windows.
 - **Audio settings per device**, remembered for each output.
@@ -132,14 +133,14 @@ Type frets with the keyboard; standard notation and tab update together. Click a
 
 - **30+ techniques**: bends, slides, hammer-ons, harmonics, palm mute, vibrato, tapping, slap and more.
 - **Free rhythm entry**: a note can run past the end of the bar and the bar turns red instead of refusing (a strict mode exists). **Check bars (F4)** lists every bar that does not add up.
-- **Edits during playback** are heard from the next bar.
+- **Edits during playback** are heard at once.
 - **Tools menu**: Transpose, Chord finder, Song stats, Scale finder and the Tuner.
 - **Screen-reader support**: the tab editor announces track, bar, beat, string, fret and note name as the cursor moves.
 
 <details><summary>More details</summary>
 
 - **Techniques**: bends with curves, slides, hammer-ons/pull-offs, palm mute, let ring, vibrato and wide vibrato, natural/artificial/pinch/tapped harmonics, dead and ghost notes, tremolo picking, trills, fades, accents, staccato, tenuto, grace notes, arpeggio/brush strokes, tapping, slap and pop.
-- **Edits during playback** are heard from the next bar. Bars you edit stay complete (*Fill incomplete bars with rests*, on by default); typing on a rest writes your remembered duration; the cursor stays on the note just written (*Move to the next note after writing*, off by default, moves it on).
+- **Edits during playback** are heard at once. Bars you edit stay complete (*Fill incomplete bars with rests*, on by default); typing on a rest writes your remembered duration; the cursor stays on the note just written (*Move to the next note after writing*, off by default, moves it on).
 - **Tidy bars:** with "Add rests automatically to fill bars" on, changing a note's length moves the notes after it along, and the rests at the end of the bar take up the change.
 - **Delete in the score:** a bar left without notes becomes one whole-bar rest.
 - **32nd and 64th notes** typed back to back beam together, and a bar holds 32 or 64 of them.
@@ -169,6 +170,9 @@ A fretboard, keyboard or drum map matches each track, lights up as the song play
 <td width="33%" valign="top"><a href="docs/media/screenshots/instrument-picker.png"><img src="docs/media/screenshots/instrument-picker.png" alt="Instrument picker" height="150"></a><br><b>Instrument picker</b><br>The full General MIDI set with pictures, categories and search.</td>
 <td width="33%" valign="top"><a href="docs/media/screenshots/track-properties-guitar.png"><img src="docs/media/screenshots/track-properties-guitar.png" alt="Track properties, guitar" height="150"></a><br><b>Tuning editor</b><br>Per-string tuning with presets for 4- to 7-string bass and 6- to 9-string guitar. Retuning keeps either the fret numbers or the pitches.</td>
 <td width="33%" valign="top"><a href="docs/media/screenshots/track-properties-drums.png"><img src="docs/media/screenshots/track-properties-drums.png" alt="Track properties, drums" height="150"></a><br><b>Drum notation</b><br>Presets plus a custom map: tab line, tab text, staff position and notehead for every drum sound.</td>
+</tr>
+<tr>
+<td width="33%" valign="top"><a href="docs/media/screenshots/0.8.3/scale-popup.jpg"><img src="docs/media/screenshots/0.8.3/scale-popup.jpg" alt="The scale readout popup" width="215"></a><br><b>Scale readout</b><br>The status bar names the likely scale of the current section and track; click it for alternatives.</td>
 </tr>
 </table>
 
@@ -219,6 +223,16 @@ One block per bar and track, with coloured sections across the top. Sections, ba
 <td width="33%" valign="top"><a href="docs/media/screenshots/track-properties-bass.png"><img src="docs/media/screenshots/track-properties-bass.png" alt="Track properties, bass" height="150"></a><br><b>Track properties</b><br>Name, instrument, strings and tuning for a track (F6).</td>
 <td width="33%" valign="top"><a href="docs/media/screenshots/global-tuning.png"><img src="docs/media/screenshots/global-tuning.png" alt="Global tuning" width="215"></a><br><b>Global tuning</b><br>Shifts every track at once.</td>
 </tr>
+<tr>
+<td width="33%" valign="top"><a href="docs/media/screenshots/0.8.3/stretch-section.png"><img src="docs/media/screenshots/0.8.3/stretch-section.png" alt="Stretching a section past the next one" width="215"></a><br><b>Stretch a section</b><br>Drag its end past the next section: add empty bars, repeat its last bars or add a repeat sign.</td>
+<td width="33%" valign="top"><a href="docs/media/screenshots/0.8.3/close-gap.png"><img src="docs/media/screenshots/0.8.3/close-gap.png" alt="Close gap on the section strip" width="215"></a><br><b>Close gap</b><br>Right-click an empty area of the section strip.</td>
+<td width="33%" valign="top"><a href="docs/media/screenshots/0.8.3/close-gap-prompt.png"><img src="docs/media/screenshots/0.8.3/close-gap-prompt.png" alt="The Close gap prompt" width="215"></a><br><b>When the bars aren't empty</b><br>Remove them, make them a section, or remove only the empty bars. One undo puts it all back.</td>
+</tr>
+<tr>
+<td width="33%" valign="top"><a href="docs/media/screenshots/0.8.3/audio-crosses-section.png"><img src="docs/media/screenshots/0.8.3/audio-crosses-section.png" alt="The Audio crosses this section prompt" width="215"></a><br><b>Audio crosses this section</b><br>Split the audio and move it with the section, or leave it where it is.</td>
+<td width="33%" valign="top"><a href="docs/media/screenshots/0.8.3/copy-audio-with-song.png"><img src="docs/media/screenshots/0.8.3/copy-audio-with-song.png" alt="The Copy audio with this song prompt" width="215"></a><br><b>Copy audio with this song</b><br>One song folder, or a Media folder beside the song.</td>
+<td width="33%" valign="top"><a href="docs/media/screenshots/0.8.3/find-missing-audio.png"><img src="docs/media/screenshots/0.8.3/find-missing-audio.png" alt="The Find missing audio window" width="215"></a><br><b>Find missing audio</b><br>Search a folder and its subfolders, then relink everything found.</td>
+</tr>
 </table>
 
 - **Add a track** from the Track menu, Ctrl+T, the Add track lane under the last track, or *Add track…* in the track list's right-click menu.
@@ -260,6 +274,10 @@ Capture song ideas quickly and turn them into notation and tab. It is a sketchpa
 <td width="33%" valign="top"><a href="docs/media/screenshots/recording-lanes.png"><img src="docs/media/screenshots/recording-lanes.png" alt="MIDI take lanes" width="215"></a><br><b>Takes in lanes</b><br>Ctrl+R records armed tracks into audio or MIDI clips. Overlapping and loop-recorded takes get their own lanes; click a take to choose it, Ctrl+click to layer.</td>
 <td width="33%" valign="top"><a href="docs/media/screenshots/live-input.png"><img src="docs/media/screenshots/live-input.png" alt="The live input button lit in the track list toolbar" width="215"></a><br><b>Live input</b><br>The microphone button plays an audio input, a MIDI keyboard or both through a live FX chain and the master, with no track and no recording.</td>
 <td width="33%" valign="top"><a href="docs/media/screenshots/tuner.png"><img src="docs/media/screenshots/tuner.png" alt="Tuner" height="150"></a><br><b>Tuner</b><br>Detects the pitch of the armed input and shows the note, a cents needle and the track's string tunings.</td>
+</tr>
+<tr>
+<td width="33%" valign="top"><a href="docs/media/screenshots/0.8.3/input-menu-armed-pill.jpg"><img src="docs/media/screenshots/0.8.3/input-menu-armed-pill.jpg" alt="The track input menu above an armed track" width="215"></a><br><b>Track inputs</b><br>Pick an audio input, a MIDI input or both. A MIDI keyboard sounds through the armed track's own instrument.</td>
+<td width="33%" valign="top"><a href="docs/media/screenshots/0.8.3/input-pill.png"><img src="docs/media/screenshots/0.8.3/input-pill.png" alt="The track input pill with a MIDI velocity meter" width="215"></a><br><b>Input pill and MIDI meter</b><br>Monitoring and input in one pill; the meter shows MIDI note velocity.</td>
 </tr>
 </table>
 
@@ -384,8 +402,10 @@ Every track has level, pan, mute, solo and an FX chain. VST2 and VST3 instrument
 
 - **Master FX and monitoring FX:** the Master row has an FX chain, pan and volume over the whole mix. A **MON** chain is heard live only and is never rendered or exported.
 - **Fallback sound:** with effects but no VST instrument, the track's General MIDI sound plays through the effects; if a VST instrument stops, the track falls back to it.
+- **Built-in effects:** TabForge's own IR loader (convolution; on any track, or in a monitoring-only master slot for speaker correction that is never exported; A/B, frequency curve, drag a .wav on it, optional separate left and right files), EQ (low and high cut plus four bands, with a curve), compressor, limiter (master, true-peak), delay (tempo sync, ping-pong) and noise gate. They appear in Add plug-in with vendor TabForge and format Built-in, on Windows and Linux.
+- **Articulations:** the Articulations tab in an instrument plug-in's MIDI window turns note techniques (palm mute, slides, harmonics, hammer-ons and more) into keyswitches, controllers, fixed velocities or replaced pitches for that instrument, with presets you can edit, save, import and export.
 - **CLAP plug-ins (opt-in):** turn on *Also list CLAP plug-ins (new)* in Settings > Audio & Plug-ins to list, load and save .clap plug-ins, with their own editor window or a parameter panel.
-- **Sound engine:** Windows GM (the default) or the TabForge SoundFont (GeneralUser GS, downloaded once when you ask for it).
+- **Sound engine:** Windows GM (the default) or the TabForge SoundFont (GeneralUser GS, downloaded once when you ask for it). On Linux the SoundFont is bundled.
 - **Separate process:** plug-ins run in an audio engine process of their own; *Run each plug-in in its own process* isolates every plug-in separately. This is crash isolation, not a security sandbox: load only plug-ins you trust.
 - **Saving:** `.gp` with the settings inside, a clean `.gp` plus `.tfaudio`, or `.tforge`.
 
@@ -429,7 +449,8 @@ Every track has level, pan, mute, solo and an FX chain. VST2 and VST3 instrument
 
 | Format | Open | Save |
 |---|---|---|
-| `.gp3`, `.gp4`, `.gp5`, `.gpx` | ✔ | |
+| `.gpx` | ✔ | |
+| `.gp3`, `.gp4`, `.gp5` | ✔ | save a copy (File > Export) |
 | `.gp` | ✔ | ✔ (default) |
 | TabForge project (`.tforge`) | ✔ | ✔ |
 | Standard MIDI (`.mid`), ASCII tab (`.txt`), PDF, MusicXML (`.musicxml`) | | export |
@@ -439,6 +460,7 @@ Every track has level, pan, mute, solo and an FX chain. VST2 and VST3 instrument
 - **Recording** covers the score, Band view, the whole window, or score with instrument. A red REC time shows in the status bar; stopping saves the file in Videos\TabForge.
 - Score-only export is about twice as fast, and the progress bar shows the phase and time left.
 - **PDF** gives engraved notation and tab as A4 pages; **Print** and **Print preview** are in the File menu.
+- **Older formats:** File > Export > .gp5, .gp4 or .gp3 saves a copy for older programs; a window first lists what the format leaves out.
 
 <details><summary>More details</summary>
 
@@ -511,9 +533,13 @@ A `.gp` saved by TabForge follows the `.gp` file format **and** carries the comp
 <td align="center" valign="top"><a href="docs/media/screenshots/menu-options.png"><img src="docs/media/screenshots/menu-options.png" alt="Options" width="92"></a><br>Options</td>
 <td align="center" valign="top"><a href="docs/media/screenshots/menu-help.png"><img src="docs/media/screenshots/menu-help.png" alt="Help" width="92"></a><br>Help</td>
 </tr>
+<tr>
+<td width="33%" valign="top"><a href="docs/media/screenshots/0.8.3/insert-menu.png"><img src="docs/media/screenshots/0.8.3/insert-menu.png" alt="The Insert menu" width="215"></a><br><b>Insert menu</b><br>Tracks, bars, sections, tempo, time and key changes, repeats, chords, text, lyrics, audio and MIDI files in one place.</td>
+<td width="33%" valign="top"><a href="docs/media/screenshots/0.8.3/compact-band-bar.png"><img src="docs/media/screenshots/0.8.3/compact-band-bar.png" alt="The Compact mode bar" width="215"></a><br><b>Compact and Band bars</b><br>The close button sits on the far left, so the right-hand icons stay put.</td>
+</tr>
 </table>
 
-New in 0.8.3: an **Insert** menu gathers everything you can add. The Sound and Sections menus are gone (playback is on the transport bar, section commands are in Bar), Effects are grouped into submenus and Export is a File submenu.
+An **Insert** menu gathers everything you can add. The Sound and Sections menus are gone (playback is on the transport bar, section commands are in Bar), Effects are grouped into submenus and Export is a File submenu.
 
 <details><summary>More details</summary>
 
@@ -772,10 +798,12 @@ download matches that build.
 
 Each release attaches the installer (`TabForge-<version>-setup.exe`), the portable ZIP (`TabForge-<version>-win-x64-portable.zip`) and SHA-256 checksums. The installer offers a Start menu entry, an optional desktop icon and an optional *"Open .gp and .tforge files with TabForge"* association, for your Windows account only. Songs double-clicked in Explorer open as a new tab in the running TabForge (or a new window; see Settings > General).
 
+The experimental Linux package (`TabForge-<version>-linux-x64.tar.gz`) comes with its own checksum file (`.sha256`); check it with `sha256sum -c`.
+
 A `licenses/` folder beside `TabForge.exe` (portable zip and installer) holds the full licence texts of every bundled component. SoundTouch.Net (LGPL-2.1) ships as a separate, replaceable `SoundTouch.Net.dll`; each release attaches its source.
 ## Building from source
 
-Requires the .NET 10 SDK (the version in `global.json`) on Windows.
+Requires the .NET 10 SDK (the version in `global.json`) on Windows. The experimental Linux package is built by `tools/package-linux.sh` on Ubuntu 22.04 or newer.
 
 ```cmd
 dotnet build src\TabForge.Avalonia\TabForge.Avalonia.csproj -c Release

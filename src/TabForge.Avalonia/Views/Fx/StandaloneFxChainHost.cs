@@ -33,6 +33,7 @@ public sealed class StandaloneFxChainHost : IFxChainHost
     {
         _trust = trust ?? throw new ArgumentNullException(nameof(trust));
         PluginSettings = plugins;
+        DialogFolders = TabForge.Services.DialogFolderMemory.ForApp(() => _folderSettings, () => { });
         Hotkeys = hotkeys;
         Engine = engine;
         Tracks = tracks;
@@ -46,6 +47,10 @@ public sealed class StandaloneFxChainHost : IFxChainHost
     public IReadOnlyList<TrackModel> Tracks { get; }
     /// <summary>The plug-in settings the window reads and changes.</summary>
     public PluginSettings PluginSettings { get; }
+
+    // A standalone window has no settings file: its dialog folders are kept for its own session.
+    private readonly TabForge.Services.AppSettings _folderSettings = new();
+    public TabForge.Services.DialogFolderMemory? DialogFolders { get; }
     /// <summary>The key bindings.</summary>
     public HotkeySettings Hotkeys { get; }
     /// <summary>The engine client; null: no engine.</summary>

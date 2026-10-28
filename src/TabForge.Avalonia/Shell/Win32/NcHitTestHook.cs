@@ -28,14 +28,14 @@ public sealed class NcHitTestHook
     // The title bar found in the window's visual tree: key none, ceiling one, UI thread; looked up until one is found.
     private ICaptionButtonRects? _bar;
     private ChromeHit? _hot, _pressed;
-    // A middle-click that went down on the empty caption: a new tab follows if it is released on the empty caption too.
+    // A middle-click that went down on the empty caption: the tab already opened on the press; the matching release is swallowed.
     private bool _middleCaptionPressed;
     // This window's own click tracker; the Avalonia path has another, and no static is shared between windows.
     private readonly MiddleClickTracker _middle = new();
-    // When the window was last activated by a mouse click (Environment.TickCount64), or -1: only a release this soon after can be the eaten half of a click.
+    // When the window was last activated by a mouse click (Environment.TickCount64), or -1: only a release this soon after can be the release of an activating click whose press was eaten.
     private long _activatedAt = -1;
     /// <summary>How long after a mouse activation a lone middle release still counts as the release of the activating click.</summary>
-    public const long LoneReleaseWindowMs = 500;
+    public const long LoneReleaseWindowMs = 2000;
 
     public bool IsAttached { get; private set; }
 
@@ -165,25 +165,30 @@ public sealed class NcHitTestHook
                 handled = true;
                 return IntPtr.Zero;
             }
-            // A middle-click on the empty caption opens a tab on release. The press counts whatever code Windows gave it (the top resize
+            // A middle press on the empty caption opens the tab at once. The press counts whatever code Windows gave it (the top resize
             // band answers HTTOP, a corner HTTOPLEFT) as long as the point is empty caption, so no part of the title row is a dead spot.
-            case WmNcMButtonDown when MiddleDown(hwnd, ScreenPointOf(lParam)):
-                _middleCaptionPressed = true;
+            // A client press (WM_MBUTTONDOWN) is taken too, so a pixel the hit test leaves as client still opens exactly one tab.
+            // The pending flag stops a second message for the same physical press from firing again.
+            case WmNcMButtonDown when TryFireOnPress(hwnd, ScreenPointOf(lParam)):
                 SetCapture(hwnd); // the release arrives as WM_MBUTTONUP even if the pointer left the caption
+                _bar?.NativeMiddleClick();
                 handled = true;
                 return IntPtr.Zero;
-            // Released within 8 DIPs of the press and on empty caption too (any HT code): a tab, button or client release does nothing.
-            case WmNcMButtonUp or WmMButtonUp when _middleCaptionPressed:
+            case WmMButtonDown when GetCursorPos(out var pressAt) && TryFireOnPress(hwnd, new PixelPoint(pressAt.X, pressAt.Y)):
+                SetCapture(hwnd);
+                _bar?.NativeMiddleClick();
+                handled = true;
+                return IntPtr.Zero;
+            // The release of a press that already opened a tab: swallowed (no spot or slop check), so a lost release cannot lose the tab and a second fire is impossible.
+            case WmNcMButtonUp or WmMButtonUp when NoteMiddleRelease():
             {
-                _middleCaptionPressed = false;
                 ReleaseCapture();
-                if (GetCursorPos(out var middleAt) && MiddleUp(hwnd, new PixelPoint(middleAt.X, middleAt.Y))) _bar?.NativeMiddleClick();
                 handled = true;
                 return IntPtr.Zero;
             }
             // The press never reached us (the first click that activates the window can be eaten): a lone release on empty caption still opens the tab.
             // A release long after activation is the end of a drag that began in another app, so it does nothing.
-            case WmNcMButtonUp when _window.WindowState != WindowState.FullScreen && AcceptsLoneRelease(Environment.TickCount64, _activatedAt) && WindowRectOf(hwnd) is { } rect && MiddleClickAlone(ScreenPointOf(lParam), rect):
+            case WmNcMButtonUp or WmMButtonUp when _window.WindowState != WindowState.FullScreen && !_middleCaptionPressed && AcceptsLoneRelease(Environment.TickCount64, _activatedAt) && WindowRectOf(hwnd) is { } rect && GetCursorPos(out var loneAt) && MiddleClickAlone(new PixelPoint(loneAt.X, loneAt.Y), rect):
                 _bar?.NativeMiddleClick();
                 handled = true;
                 return IntPtr.Zero;
@@ -207,13 +212,42 @@ public sealed class NcHitTestHook
 
     /// <summary>True when a screen point is empty title-row space for a middle-click: the caption, including the resize band (not a tab, tab action or caption button).</summary>
     public static bool IsMiddleClickSpot(PixelPoint screen, PixelRect windowRect, double scale, ICaptionButtonRects? bar) =>
-        bar is not null && ChromeHitRules.Classify(new UiPoint((screen.X - windowRect.X) / scale, (screen.Y - windowRect.Y) / scale),
-            bar.TabBounds, bar.TabActionBounds, bar.CaptionButtons, bar.CaptionBounds) == ChromeHit.Caption;
+        bar is not null && ChromeHitRules.IsEmptyCaption(new UiPoint((screen.X - windowRect.X) / scale, (screen.Y - windowRect.Y) / scale),
+            bar.TabBounds, bar.TabActionBounds, bar.CaptionButtons, bar.CaptionBounds);
 
     /// <summary>
-    /// A native middle press: starts a click (tracked in DIPs) when the setting is on and the point is empty caption. Per instance, so each
-    /// window has its own state. True when the press was taken.
+    /// A middle press on the given screen point: true (open exactly one tab now) when the point is empty caption, the
+    /// setting is on and no press is already pending; a second press for the same click reports false, so one press fires once.
+    /// The matching release is swallowed by <see cref="NoteMiddleRelease"/> and never fires.
     /// </summary>
+    public bool NoteMiddlePress(PixelPoint screen, PixelRect windowRect, double scale, ICaptionButtonRects? bar)
+    {
+        if (_window.WindowState == WindowState.FullScreen || _middleCaptionPressed) return false;
+        if (!MiddleDown(screen, windowRect, scale, bar)) return false;
+        _middleCaptionPressed = true;
+        return true;
+    }
+
+    private bool TryFireOnPress(IntPtr hwnd, PixelPoint screen)
+    {
+        if (WindowRectOf(hwnd) is not { } rect) return false;
+        return NoteMiddlePress(screen, rect, _window.RenderScaling, _bar);
+    }
+
+    /// <summary>
+    /// The matching release of a press that already opened its tab: clears the pending press and reports true (swallow it).
+    /// A press opens the tab, so a release never opens one; without a pending press this reports false.
+    /// </summary>
+    public bool NoteMiddleRelease()
+    {
+        if (!_middleCaptionPressed) return false;
+        _middleCaptionPressed = false;
+        _middle.Cancel();
+        return true;
+    }
+
+    /// <summary>A native middle press: starts a click (tracked in DIPs) when the setting is on and the point is empty caption. Per instance, so each
+    /// window has its own state. True when the press was taken.</summary>
     public bool MiddleDown(PixelPoint screen, PixelRect windowRect, double scale, ICaptionButtonRects? bar)
     {
         if (bar is not { MiddleClickEnabled: true } || !IsMiddleClickSpot(screen, windowRect, scale, bar)) return false;
@@ -230,10 +264,6 @@ public sealed class NcHitTestHook
 
     private static UiPoint DipsOf(PixelPoint screen, PixelRect windowRect, double scale) =>
         new((screen.X - windowRect.X) / scale, (screen.Y - windowRect.Y) / scale);
-
-    private bool MiddleDown(IntPtr hwnd, PixelPoint screen) => _window.WindowState != WindowState.FullScreen && WindowRectOf(hwnd) is { } r && MiddleDown(screen, r, _window.RenderScaling, _bar);
-
-    private bool MiddleUp(IntPtr hwnd, PixelPoint screen) => _window.WindowState != WindowState.FullScreen && WindowRectOf(hwnd) is { } r && MiddleUp(screen, r, _window.RenderScaling, _bar);
 
     private PixelRect? WindowRectOf(IntPtr hwnd)
     {

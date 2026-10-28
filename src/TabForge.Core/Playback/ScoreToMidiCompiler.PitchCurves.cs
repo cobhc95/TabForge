@@ -8,7 +8,7 @@ namespace TabForge.Playback;
 internal sealed partial class ScoreToMidiCompiler
 {
     /// <summary>How far the note's own curve (bend, vibrato, slide in or out, trem bar, whammy) moves the pitch wheel from its pitch, at most, in semitones.</summary>
-    private static double WheelPeakSemitones(TabCell cell, TabNote note, HashSet<string> t)
+    private double WheelPeakSemitones(TabCell cell, TabNote note, HashSet<string> t)
     {
         var peak = 0.0;
         if (note.BendPoints.Count > 0) foreach (var point in BendCurve(note)) peak = Math.Max(peak, Math.Abs(point.Semitones));
@@ -17,7 +17,7 @@ internal sealed partial class ScoreToMidiCompiler
         if (t.Contains("TremBar") || t.Contains("TremBarWide")) peak = Math.Max(peak, 2);
         if (t.Contains("SlideOutUp") || t.Contains("SlideOutDown")) peak = Math.Max(peak, SlideOutSemitones);
         if (t.Contains("SlideInBelow") || t.Contains("SlideInAbove")) peak = Math.Max(peak, SlideInSemitones);
-        if (t.Contains("Vibrato") || t.Contains("WideVibrato")) peak = Math.Max(peak, t.Contains("WideVibrato") ? WideVibratoSemitones : NormalVibratoSemitones);
+        if (t.Contains("Vibrato") || t.Contains("WideVibrato")) peak = Math.Max(peak, note.VibratoDepth ?? (t.Contains("WideVibrato") ? _opt.WideVibratoDepth : _opt.NormalVibratoDepth));
         return peak;
     }
 
@@ -36,8 +36,9 @@ internal sealed partial class ScoreToMidiCompiler
         var vibrato = techniques.Contains("Vibrato") || techniques.Contains("WideVibrato");
         var genericBend = techniques.Contains("Bend") && note.BendPoints.Count == 0;
         var tremBar = techniques.Contains("TremBar") || techniques.Contains("TremBarWide");
+        var whammySpan = BendPointModel.SpanOf(cell.WhammyPoints);
         var whammyPoints = cell.WhammyPoints
-            .Select(point => (Fraction: Math.Clamp(point.Offset <= 1.0 ? point.Offset : point.Offset / 60.0, 0, 1),
+            .Select(point => (Fraction: Math.Clamp(point.Offset / whammySpan, 0, 1),
                 Semitones: Math.Clamp(point.Value / 2.0, -12.0, 12.0)))
             .OrderBy(point => point.Fraction).ToArray();
         var slideIn = techniques.Contains("SlideInBelow") || techniques.Contains("SlideInAbove");
@@ -52,7 +53,8 @@ internal sealed partial class ScoreToMidiCompiler
 
         var resetIndex = -1;
         var vibratoStart = onset + Math.Min(55, duration * 0.12);
-        var vibratoDepth = techniques.Contains("WideVibrato") ? WideVibratoSemitones : NormalVibratoSemitones;
+        var vibratoDepth = note.VibratoDepth ?? (techniques.Contains("WideVibrato") ? _opt.WideVibratoDepth : _opt.NormalVibratoDepth);
+        var vibratoRate = note.VibratoSpeed ?? _opt.VibratoSpeedHz;
         var slideInDuration = _slideInLeadMs > 0 ? _slideInLeadMs : Math.Max(1, Math.Min(120, duration * 0.25));
         // The reference slides in from ~3 frets, falls/rises ~5, progressively from 25% of the note
 
@@ -62,7 +64,7 @@ internal sealed partial class ScoreToMidiCompiler
             var semitones = bendPoints.Length > 0
                 ? BendAt(bendPoints, fraction)
                 : genericBend ? GenericBendAt(fraction) : 0;
-            if (whammyPoints.Length > 0) semitones += BendAt(whammyPoints, fraction);
+            if (whammyPoints.Length > 0) semitones += BendAt(whammyPoints, fraction, eased: false);   // the tremolo bar runs in straight lines
 
             // A target slide, a fretted bend and a separate slide ornament can coexist; each is
             // expressed as a delta around the note's imported sounding pitch.
@@ -74,7 +76,7 @@ internal sealed partial class ScoreToMidiCompiler
                     semitones += TremBarAt(techniques, fraction);
             }
             semitones += SlideOrnamentSemitones(techniques, at - onset, fraction, slideInDuration);
-            if (vibrato && at < end) semitones += VibratoSemitones(at, end, vibratoStart, vibratoDepth);
+            if (vibrato && at < end) semitones += VibratoSemitones(at, end, vibratoStart, vibratoDepth, vibratoRate);
 
             semitones += baseSemitones;
             // All generated curves return to the unbent sounding pitch, even when the imported
@@ -121,11 +123,11 @@ internal sealed partial class ScoreToMidiCompiler
         return semitones;
     }
 
-    private static double VibratoSemitones(double at, double end, double vibratoStart, double vibratoDepth)
+    private static double VibratoSemitones(double at, double end, double vibratoStart, double vibratoDepth, double vibratoRate)
     {
         var attack = Math.Clamp((at - vibratoStart) / VibratoFadeMs, 0, 1);
         var release = Math.Clamp((end - at) / VibratoFadeMs, 0, 1);
-        return Math.Sin(2 * Math.PI * VibratoRateHz * (at - vibratoStart) / 1000.0) *
+        return Math.Sin(2 * Math.PI * vibratoRate * (at - vibratoStart) / 1000.0) *
                vibratoDepth * Math.Min(attack, release);
     }
 
@@ -152,8 +154,9 @@ internal sealed partial class ScoreToMidiCompiler
     /// </summary>
     internal static (double Fraction, double Semitones)[] BendCurve(TabNote note)
     {
+        var span = BendPointModel.SpanOf(note.BendPoints);
         var points = note.BendPoints
-            .Select(point => (Fraction: Math.Clamp(point.Offset <= 1.0 ? point.Offset : point.Offset / 60.0, 0, 1),
+            .Select(point => (Fraction: Math.Clamp(point.Offset / span, 0, 1),
                 Semitones: Math.Clamp(point.Value / 2.0, -12.0, 12.0)))
             .OrderBy(point => point.Fraction).ToArray();
         if (note.BendTypeName == "Bend" && points.Length == 2 && points[0].Fraction <= 0 && points[0].Semitones == 0 &&
@@ -166,7 +169,8 @@ internal sealed partial class ScoreToMidiCompiler
     private const double BendReachedAt = 0.5;
     private const double SlideOutStart = 0.25;
 
-    private static double BendAt((double Fraction, double Semitones)[] points, double fraction)
+    /// <summary>The curve's semitones at <paramref name="fraction"/> of the note: each stretch between two bend points eases in and out like a string bend (the tremolo bar's stay straight). The wheel covers +/-12 semitones (PitchBendRangeSemitones), so the editor's -6..+4 tone tremolo axis and 3 tone bend axis fit.</summary>
+    private static double BendAt((double Fraction, double Semitones)[] points, double fraction, bool eased = true)
     {
         if (fraction < points[0].Fraction) return points[0].Fraction <= 0 ? points[0].Semitones : 0;
         for (var index = 1; index < points.Length; index++)
@@ -176,7 +180,8 @@ internal sealed partial class ScoreToMidiCompiler
             var current = points[index];
             var span = current.Fraction - previous.Fraction;
             var position = span <= 0 ? 1 : (fraction - previous.Fraction) / span;
-            return previous.Semitones + (current.Semitones - previous.Semitones) * position;
+            return eased ? EffectCurveShape.Between(previous.Semitones, current.Semitones, position)   // eased, as the editor draws it
+                : previous.Semitones + (current.Semitones - previous.Semitones) * position;
         }
         return points[^1].Semitones;
     }

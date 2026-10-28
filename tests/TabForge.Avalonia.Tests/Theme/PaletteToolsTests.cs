@@ -184,6 +184,24 @@ public class PaletteToolsTests
     }
 
     [AvaloniaFact]
+    public void EffectButtonsLightForEveryVariantOfTheirTechnique()
+    {
+        var (probe, editor) = Make();
+        OnFirstNote(probe);
+        var note = FirstBeat(probe).Notes.First();
+        foreach (var (tool, tag) in new[]
+        {
+            ("effect:vibrato", "WideVibrato"), ("effect:natural_harmonic", "PinchHarmonic"),
+            ("effect:tremolo_bar", "TremBarDive"), ("effect:palm_mute", "PM")
+        })
+        {
+            note.Techniques.Clear();
+            note.Techniques.Add(tag);
+            Assert.True(editor.ToolState(tool), tool);
+        }
+    }
+
+    [AvaloniaFact]
     public void SoundingDurationTempoAndSignatureEditsReachTheBars()
     {
         var (probe, editor) = Make();

@@ -27,6 +27,16 @@
         "resolved": "2.3.2",
         "contentHash": "5A29Pll/n4kEEPvCD5DFot3MJG+VgiaRG6LbNQVkF94VerC1b5iZtJKfdLQXZPFrl3LiVbKm3txKBe5/pbv5rw=="
       },
+      "AlphaSkia": {
+        "type": "Transitive",
+        "resolved": "3.4.135",
+        "contentHash": "fc2/epiLLLlPsxXQD4f564oEBrwf0ZZgLJOupH1pd2PtyPcgCp5RwHS7j5iGTN28vteFXblQWTz4WmglT6Wf0w=="
+      },
+      "Microsoft.Win32.SystemEvents": {
+        "type": "Transitive",
+        "resolved": "9.0.8",
+        "contentHash": "64oQBN8I8EOcyHGNt6+rlcqm4tlcKfqOpswtBCJZnpzBQ15L6IFKqjnbjbOWBpG9wKq9A/aC2LFSmSqplbwTYA=="
+      },
       "NAudio.Asio": {
         "type": "Transitive",
         "resolved": "2.2.1",
@@ -74,14 +84,45 @@
         "resolved": "0.10.5",
         "contentHash": "o+IptCG4Avze39HrGeztC+xIp6fOOwGVAwkoa1J++4Ji1WmZ+KIKlFl5wsgxsXqBkmdpfs/vFSUproiLKYa2bw=="
       },
+      "System.Drawing.Common": {
+        "type": "Transitive",
+        "resolved": "9.0.8",
+        "contentHash": "ineIJmF+yuBEHGft9R153J9kmBFaeEfFL5Put5nzENneRcGGPUb3MvM8zrZ5pERQ0jPPSE3Wqw/clXvOq2F/Kw==",
+        "dependencies": {
+          "Microsoft.Win32.SystemEvents": "9.0.8"
+        }
+      },
+      "TabForge.AlphaTab": {
+        "type": "Transitive",
+        "resolved": "1.8.4-tabforge.4",
+        "contentHash": "AInxu4W9CdfGl1WTJPSbYPXTsdW9hzri9fd7JA0lpNgpBQdlXDdDKTdDnhY2zSL89yKCBynm37bd+/UpfkeN4w==",
+        "dependencies": {
+          "AlphaSkia": "3.4.135",
+          "System.Drawing.Common": "9.0.8"
+        }
+      },
       "tabforge.audio.contracts": {
         "type": "Project",
         "dependencies": {
           "NLayer": "[3.0.0, )",
           "NVorbis": "[0.10.5, )"
         }
+      },
+      "tabforge.core": {
+        "type": "Project",
+        "dependencies": {
+          "NAudio": "[2.2.1, )",
+          "TabForge.AlphaTab": "[1.8.4-tabforge.4, )",
+          "TabForge.Audio.Contracts": "[0.8.5, )"
+        }
       }
     },
-    "net10.0/win-x64": {}
+    "net10.0/win-x64": {
+      "Microsoft.Win32.SystemEvents": {
+        "type": "Transitive",
+        "resolved": "9.0.8",
+        "contentHash": "64oQBN8I8EOcyHGNt6+rlcqm4tlcKfqOpswtBCJZnpzBQ15L6IFKqjnbjbOWBpG9wKq9A/aC2LFSmSqplbwTYA=="
+      }
+    }
   }
 }

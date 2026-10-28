@@ -222,7 +222,7 @@ public sealed partial class TimelineView : Control
     public int HoverRow { get; set; } = -1;
 
     /// <summary>The name column width of the track list beside this timeline; the header lays its columns out with it and the splitter sets it.</summary>
-    public double TrackListNameWidth { get; set; } = TrackRowCells.NameWidth;
+    public double TrackListNameWidth { get; set; } = TrackListWidthRules.DefaultNameWidth;
 
     /// <summary>The audio clip under the pointer as (track row, index in the track's clips); null when none. It is drawn lighter. UI thread only.</summary>
     public (int Row, int Index)? HoverClip { get; internal set; }

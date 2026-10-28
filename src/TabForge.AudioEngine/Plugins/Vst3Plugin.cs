@@ -326,7 +326,7 @@ public sealed unsafe partial class Vst3Plugin : IPluginInstance, IEditorResizeSo
         if (_editorOpen || _handle == IntPtr.Zero) return null;
         int w, h;
         (_editorParent, _editorDpi) = (parent, 0);
-        if (HasEditorApi.Value) SyncScale();
+        if (HasEditorApi.Value && OperatingSystem.IsWindows()) SyncScale();   // the monitor scale comes from user32; elsewhere the view keeps its own
         if (tfv3_open_editor(_handle, parent, &w, &h) == 0) return null;
         _editorOpen = true;
         return (Math.Max(100, w), Math.Max(60, h));
@@ -351,7 +351,7 @@ public sealed unsafe partial class Vst3Plugin : IPluginInstance, IEditorResizeSo
         // Processor output parameters (meters, gain reduction) and queued processor -> controller messages reach the editor here.
         if (HasIdleApi.Value && tfv3_editor_idle(_handle) is var restart and not 0) RestartRequested?.Invoke(restart);
         if (!HasEditorApi.Value) return;
-        SyncScale();
+        if (OperatingSystem.IsWindows()) SyncScale();
         int w, h;
         if (tfv3_editor_poll_resize(_handle, &w, &h) != 0) ResizeRequested?.Invoke(Math.Max(100, w), Math.Max(60, h));
     }

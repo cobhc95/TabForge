@@ -74,6 +74,44 @@ public class TrackOutputWindowTests
     }
 
     [AvaloniaFact]
+    public void MissingDeviceShowsAMarkAndReportsTheSavedName()
+    {
+        var devices = new List<MidiOutputDeviceInfo>
+        {
+            new() { DeviceId = 0, Name = "Speakers" },
+        };
+        var chosen = new List<(int Id, string? Name)>();
+        var window = new TrackOutputWindow(Track, devices, 7, "Unplugged", (id, name) => chosen.Add((id, name)), () => { });
+        window.Show();
+        var box = window.FindControl<ComboBox>("DeviceBox")!;
+        Assert.Equal(2, box.Items.Count);
+        Assert.Equal(1, box.SelectedIndex);
+        Assert.Equal(TrackOutputPresenter.MissingDeviceText("Unplugged"), (box.SelectedItem as MidiOutputDeviceInfo)?.Name);
+        Assert.Empty(chosen);
+
+        box.SelectedIndex = 0;
+        Assert.Equal(new (int, string?)[] { (0, "Speakers") }, chosen);
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public void KnownDeviceByNameSelectsItAfterAReorder()
+    {
+        var devices = new List<MidiOutputDeviceInfo>
+        {
+            new() { DeviceId = 0, Name = "US-2x2" },
+            new() { DeviceId = 1, Name = "Speakers" },
+        };
+        var chosen = new List<(int Id, string? Name)>();
+        var window = new TrackOutputWindow(Track, devices, 1, "US-2x2", (id, name) => chosen.Add((id, name)), () => { });
+        window.Show();
+        var box = window.FindControl<ComboBox>("DeviceBox")!;
+        Assert.Equal(2, box.Items.Count);   // no missing mark: the saved name is listed
+        Assert.Equal(0, box.SelectedIndex);
+        window.Close();
+    }
+
+    [AvaloniaFact]
     public void TestAndCloseButtonsRunTheirActions()
     {
         var testCount = 0;

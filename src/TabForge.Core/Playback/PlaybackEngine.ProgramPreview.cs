@@ -32,7 +32,7 @@ public sealed partial class PlaybackEngine
     }
 
     private void PushChannelProgram(SongProject project, int deviceId, int channel) =>
-        PushChannelState(project, e => e.DeviceId == deviceId && (e.Status & 0x0F) == channel && (e.Status & 0xF0) == 0xC0, send: true);
+        PushChannelState(project, (e, _) => e.DeviceId == deviceId && (e.Status & 0x0F) == channel && (e.Status & 0xF0) == 0xC0, send: true);
 
     /// <summary>Drops every preview: a timeline compiled from the whole song already carries its programs.</summary>
     private void ClearProgramPreviews()

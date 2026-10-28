@@ -29,6 +29,15 @@ public static class ChromeHitRules
     public const double MacOsLeadingInset = 78;
 
     /// <summary>
+    /// True when a point in the window's coordinates is empty caption (the caption, not a tab, tab action or caption
+    /// button). The single source of truth for "middle-click opens a tab here": the native hook's hit test and its
+    /// middle-click spot both read this, so no pixel answers differently in the two paths.
+    /// </summary>
+    public static bool IsEmptyCaption(UiPoint point, IReadOnlyList<UiRect> tabBounds, IReadOnlyList<UiRect> actionBounds,
+        IReadOnlyList<(UiRect Bounds, ChromeHit Kind)> captionButtons, UiRect captionBounds) =>
+        Classify(point, tabBounds, actionBounds, captionButtons, captionBounds) == ChromeHit.Caption;
+
+    /// <summary>
     /// Classifies a point in the window's coordinates. Caption buttons win over tab actions, tab actions over tabs, tabs over the
     /// caption, and anything else is client. Right and bottom edges count as inside, like a rectangle-contains test.
     /// </summary>

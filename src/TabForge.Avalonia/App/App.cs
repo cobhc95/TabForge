@@ -92,14 +92,11 @@ public sealed class App : Application
         {
             var crashLog = AvaloniaCrashLog.ForUserFolder();
             crashLog.Install(TabForge.Avalonia.Platform.AvaloniaUiThread.ForApplication());
-#if WINDOWS
+            // Every OS has the playback host: the engine process is the same exe (--audio-engine); off Windows it plays through miniaudio and the SoundFont.
             var playback = new TabForge.Avalonia.Playback.AvaloniaPlaybackHost(TabForge.Avalonia.Platform.AvaloniaUiThread.ForApplication());
             Engine = playback.Engine;
             desktop.Exit += (_, _) => playback.Dispose();
             desktop.MainWindow = new MainWindow(MainWindowSettings.OpenDefault(), new Shell.TabWindowRegistry(new Shell.AppServices(playback.Trust)), playback: playback.Sessions);   // the app's one trust state, made with the engine host
-#else
-            desktop.MainWindow = new MainWindow(MainWindowSettings.OpenDefault());
-#endif
             // The first window the app starts with; a test's own window is never offered recovery or a start-up file.
             if (desktop.MainWindow is MainWindow first)
             {

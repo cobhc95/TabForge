@@ -219,6 +219,8 @@ public sealed partial class TrackPropertiesWindow
     private void ReloadInstrument()
     {
         _program.Text = _track.MidiProgram.ToString();
+        _bankMsb.Text = _track.MidiBankMsb.ToString();
+        _bankLsb.Text = _track.MidiBankLsb.ToString();
         _channel.Text = _track.MidiChannel.ToString();
         _tunings.Clear();
         _tunings.AddRange(_track.StringTunings);

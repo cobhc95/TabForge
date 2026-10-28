@@ -2,6 +2,7 @@ using TabForge.Avalonia.Views;
 using System.Collections.Generic;
 using System;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using TabForge.Audio;
 using TabForge.Audio.Contracts;
@@ -12,7 +13,7 @@ using TabForge.Services;
 
 namespace TabForge.Avalonia;
 
-// Owns: File > Save, Save As and Export compatible .gp file of the Avalonia window: the path (the song's own .tforge / .gp, else the save dialog) and the write through
+// Owns: File > Save, Save As (its list also offers .gp5 / .gp4 / .gp3 copies for older programs), Export compatible .gp file and Export .gp5 / .gp4 / .gp3 file of the Avalonia window: the path (the song's own .tforge / .gp, else the save dialog) and the write through
 //   DocumentSaveFlow; a failure is reported and leaves the song unsaved. The .gp export asks the lossy-export preflight question first (when
 //   GpExportPreflight finds losses) and hands the answer to DocumentSaveFlow.ExportGuitarProAsync; the song itself is never changed by an export.
 // Does not own: the media copy offered before a write (MediaSaveStep), the file format and the save sequence (DocumentSaveFlow, DocumentController), the plug-in states (SongPluginStates), the dialog (IFileDialogs), the tabs (MainWindowTabs).
@@ -21,7 +22,7 @@ namespace TabForge.Avalonia;
 public sealed class MainWindowSaving
 {
     /// <summary>The menu command ids this class handles (registered in MainWindow).</summary>
-    public static readonly IReadOnlyList<string> Commands = new[] { "File.ExportGuitarPro" };
+    public static readonly IReadOnlyList<string> Commands = new[] { "File.ExportGuitarPro", "File.ExportGp5", "File.ExportGp4", "File.ExportGp3" };
 
     /// <summary>Completes when no save or export is running: closing a window or tab waits on it.</summary>
     public Task WhenIdle() => _flow.WhenIdle();
@@ -35,6 +36,7 @@ public sealed class MainWindowSaving
     private readonly Func<SavePrompt, Task<PromptButton>> _ask;
     private readonly Func<DegradedSaveGate> _degraded;
     private readonly MediaSaveStep? _media;
+    private readonly Func<GpPreflightReport, string, LegacyGpFormat, Task<bool>>? _askLegacy;
 
     /// <param name="dialogs">Asks where to save.</param>
     /// <param name="owner">The window the dialog belongs to.</param>
@@ -44,10 +46,13 @@ public sealed class MainWindowSaving
     /// <param name="ask">Shows a question with buttons (the degraded-mode overwrite question) and returns the button the person pressed.</param>
     /// <param name="degraded">The degraded mode of the process (read at each save: it is set by an unexpected error at any time).</param>
     /// <param name="media">The step run before each write that offers to copy audio from outside the song folder into it; null (tests) does nothing.</param>
+    /// <param name="askLegacy">Shows what a .gp3 / .gp4 / .gp5 copy leaves out (report, file name, format) and answers whether to save it; null (tests) saves without asking.</param>
     public MainWindowSaving(IFileDialogs dialogs, object? owner, Action<string> report, SongPluginStates pluginStates, Func<string> defaultSaveFormat,
-        Func<SavePrompt, Task<PromptButton>> ask, Func<DegradedSaveGate> degraded, MediaSaveStep? media = null)
+        Func<SavePrompt, Task<PromptButton>> ask, Func<DegradedSaveGate> degraded, MediaSaveStep? media = null,
+        Func<GpPreflightReport, string, LegacyGpFormat, Task<bool>>? askLegacy = null)
     {
         _media = media;
+        _askLegacy = askLegacy;
         _dialogs = dialogs;
         _owner = owner;
         _report = report;
@@ -91,13 +96,56 @@ public sealed class MainWindowSaving
         const string gpFilter = ".gp file (*.gp) - keeps every TabForge feature|*.gp";
         const string tforgeFilter = "TabForge project (*.tforge)|*.tforge";
         var gpDefault = !string.Equals(_defaultSaveFormat(), "tforge", StringComparison.OrdinalIgnoreCase);
+        var legacyFilters = string.Join("|", LegacyGpFormats.All.Select(LegacyGpFormats.DialogFilter));   // copies for older programs, last in the list
         var path = _dialogs.SaveFile(new FileDialogOptions
         {
-            Title = "Save song", Filter = gpDefault ? $"{gpFilter}|{tforgeFilter}" : $"{tforgeFilter}|{gpFilter}",
+            Key = TabForge.Services.DialogKeys.ProjectSave, Title = "Save song", Filter = (gpDefault ? $"{gpFilter}|{tforgeFilter}" : $"{tforgeFilter}|{gpFilter}") + "|" + legacyFilters,
             DefaultExt = gpDefault ? ".gp" : ".tforge", AddExtension = true,
             FileName = SafeFileNames.SafeFileName(Path.GetFileNameWithoutExtension(document.LabelPath) is { Length: > 0 } name ? name : document.Project.Title, "Untitled"),
         }, _owner);
-        return path is null ? Task.FromResult(false) : SaveTo(document, path, hold);
+        if (path is null) return Task.FromResult(false);
+        // An older-format file is a copy: the song stays on its own file and unsaved, so this save is not a save of the song (false).
+        return LegacyGpFormats.TryFromPath(path, out var legacy) ? ExportLegacyCopyOnly(document, path, legacy, hold) : SaveTo(document, path, hold);
+    }
+
+    private async Task<bool> ExportLegacyCopyOnly(SongDocument document, string path, LegacyGpFormat format, DocumentController.SaveHold hold)
+    {
+        await ExportLegacyHeld(document, path, format, hold);
+        return false;
+    }
+
+    /// <summary>
+    /// File > Export > .gp5 / .gp4 / .gp3: asks for a path, shows what the format leaves out (only when something is), and writes a copy for older programs.
+    /// True when a file was written; the song itself is never changed.
+    /// </summary>
+    public Task<bool> ExportLegacyCopy(SongDocument document, LegacyGpFormat format) =>
+        _flow.RunClaimedAsync(hold => ExportLegacyCommand(document, format, hold), _report);
+
+    private Task<bool> ExportLegacyCommand(SongDocument document, LegacyGpFormat format, DocumentController.SaveHold hold)
+    {
+        var path = _dialogs.SaveFile(new FileDialogOptions
+        {
+            Key = TabForge.Services.DialogKeys.ExportGpLegacy, Title = $"Export {LegacyGpFormats.Label(format)}", Filter = LegacyGpFormats.DialogFilter(format), DefaultExt = LegacyGpFormats.Extension(format), AddExtension = true,
+            FileName = SafeFileNames.SafeFileName(Path.GetFileNameWithoutExtension(document.LabelPath) is { Length: > 0 } name ? name : document.Project.Title, "Untitled"),
+        }, _owner);
+        return path is null ? Task.FromResult(false) : ExportLegacyHeld(document, path, format, hold);
+    }
+
+    private async Task<bool> ExportLegacyHeld(SongDocument document, string path, LegacyGpFormat format, DocumentController.SaveHold hold)
+    {
+        try
+        {
+            var name = Path.GetFileName(path);
+            var outcome = await _flow.ExportLegacyAsync(document, path, format, report => _askLegacy is null ? Task.FromResult(true) : _askLegacy(report, name, format), hold);
+            if (outcome.Message.Length > 0) _report.Render(outcome.Message);
+            return outcome.Wrote;
+        }
+        catch (Exception ex)
+        {
+            // Reported, not swallowed: the file is staged beside the target and swapped in only when complete, so a failure leaves an earlier file as it was.
+            _report.Render($"{LegacyGpFormats.Extension(format)} export failed: " + ex.Message);
+            return false;
+        }
     }
 
     /// <summary>
@@ -111,7 +159,7 @@ public sealed class MainWindowSaving
     {
         var path = _dialogs.SaveFile(new FileDialogOptions
         {
-            Title = "Export compatible .gp file", Filter = ".gp file (*.gp)|*.gp", DefaultExt = ".gp", AddExtension = true,
+            Key = TabForge.Services.DialogKeys.ExportGp, Title = "Export compatible .gp file", Filter = ".gp file (*.gp)|*.gp", DefaultExt = ".gp", AddExtension = true,
             FileName = SafeFileNames.SafeFileName(Path.GetFileNameWithoutExtension(document.LabelPath) is { Length: > 0 } name ? name : document.Project.Title, "Untitled"),
         }, _owner);
         if (path is null) return false;

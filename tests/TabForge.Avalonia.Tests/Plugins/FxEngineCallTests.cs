@@ -142,9 +142,31 @@ public class FxEngineCallTests
         Assert.Contains("collect", engine.Calls);
         Assert.Contains("Mine", PluginLibrary.PresetNames(track.Rig.Plugins[1]));
         var box = DialogTestKit.Named<ComboBox>(window, "PresetBox");
+        Assert.Equal("★ Mine", box.SelectedItem?.ToString());   // the new preset is shown as chosen at once
+        Assert.Single(box.Items.OfType<object>(), i => i.ToString() == "★ Mine");
+        Assert.DoesNotContain(engine.Calls, c => c.StartsWith("state:"));   // saving applied nothing
         var item = box.Items.OfType<object>().First(i => i.ToString() == "★ Mine");
+        box.SelectedItem = null;
         box.SelectedItem = item;
         Assert.Contains(engine.Calls, c => c.StartsWith("state:Sample reverb:"));
+        Assert.Equal("★ Mine", box.SelectedItem?.ToString());
+        FxTestKit.List(window).Click(0);
+        FxTestKit.List(window).Click(1);
+        Assert.Equal("★ Mine", DialogTestKit.Named<ComboBox>(window, "PresetBox").SelectedItem?.ToString());
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public void APickedProgramStaysInTheBoxWhenThePluginIsShownAgain()
+    {
+        var (window, track, engine, _) = Open(area: true);
+        FxTestKit.List(window).Click(0);
+        engine.RaisePrograms(0, 0, 1, "Init", "Warm", "Bright");
+        DialogTestKit.Named<ComboBox>(window, "PresetBox").SelectedIndex = 2;
+        Assert.Equal("Bright", track.Rig.Plugins[0].PresetName);
+        FxTestKit.List(window).Click(1);
+        FxTestKit.List(window).Click(0);
+        Assert.Equal("Bright", DialogTestKit.Named<ComboBox>(window, "PresetBox").SelectedItem?.ToString());
         window.Close();
     }
 

@@ -41,6 +41,7 @@
     <Content Include="Assets\Icons\Instruments\manifest.json" Link="Assets\Instruments\manifest.json" CopyToOutputDirectory="PreserveNewest" />
     <!-- Licence texts of the bundled components (verbatim copies); shipped as <app folder>\licenses\. -->
     <Content Include="licenses\*.txt" Link="licenses\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Resources\DrumMaps\*.json" CopyToOutputDirectory="PreserveNewest" />
     <!-- The headless tests drive the preview score's editor and probe through the view. -->
     <InternalsVisibleTo Include="TabForge.Avalonia.Tests" />
   </ItemGroup>

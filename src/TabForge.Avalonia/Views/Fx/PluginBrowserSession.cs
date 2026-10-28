@@ -155,28 +155,81 @@ public sealed class PluginBrowserSession
     {
         if (Identifying) return;
         Identifying = true;
+        _stopRequested = false;
+        _resume = null;
+        SetRun(IdentifyRun.Running);
         try
         {
             var known = KnownRoles();
             var unknown = _all.Where(p => PluginBrowserListPresenter.WithKnown(p, known).Role.Length == 0).ToList();
-            var done = 0;
+            var before = _all.Count - unknown.Count;   // identified in an earlier pass (kept in the saved list), so a reopened window continues from there
+            var done = before;
+            var total = _all.Count;
+            (_doneNow, _totalNow) = (done, total);
             using var gate = new SemaphoreSlim(Math.Clamp(Environment.ProcessorCount / CoresPerProbe, MinParallel, MaxParallel));
             await Task.WhenAll(unknown.Select(async plugin =>
             {
                 await gate.WaitAsync();
                 try
                 {
-                    if (!windowOpen()) return;
+                    if (_resume is { } paused) await paused.Task;   // Pause waits here, between plug-ins; a probe already running finishes
+                    if (_stopRequested || !windowOpen()) return;
                     var described = await Task.Run(() => PluginCatalog.Describe(plugin.Path, _settings, _trust, _files, IdentifyTimeoutMs));
                     if (described.Role.Length == 0) NotIdentified.Add(plugin.Path);   // unapproved or changed: never executed to find out
                 }
                 finally { gate.Release(); }
                 done++;   // back on the UI thread here
                 if (!windowOpen()) return;
-                if (!Scanning) Status?.Invoke($"Identifying plug-ins… {done} of {unknown.Count} (instrument or effect, vendor)");
-                if (done % SaveEvery == 0 || done == unknown.Count) { _save(); Changed?.Invoke(); }
+                _doneNow = done;
+                if (!Scanning && Run == IdentifyRun.Running) Status?.Invoke(PluginBrowserListPresenter.IdentifyRunningText(done, total));
+                if ((done - before) % SaveEvery == 0 || done == total) { _save(); Changed?.Invoke(); }
             }));
+            _totalNow = total;
+            if (_stopRequested) { _save(); SetRun(IdentifyRun.Stopped); Status?.Invoke(PluginBrowserListPresenter.IdentifyStoppedText(_doneNow, total)); Changed?.Invoke(); }
         }
-        finally { Identifying = false; }
+        finally { Identifying = false; if (Run != IdentifyRun.Stopped) SetRun(IdentifyRun.Idle); }
+    }
+
+    private bool _stopRequested;
+    private TaskCompletionSource? _resume;
+    private int _doneNow, _totalNow;
+    /// <summary>Plug-ins identified so far (earlier passes included) and the plug-ins in the list: the progress bar and the status text.</summary>
+    public (int Done, int Total) IdentifyProgress => (_doneNow, _totalNow);
+
+    /// <summary>Where the identify pass is: Running (Pause, Stop), Paused (Resume, Stop), Stopped (until Rescan or reopening), else Idle.</summary>
+    public IdentifyRun Run { get; private set; }
+    /// <summary>Raised when <see cref="Run"/> changes (the window shows or hides its buttons).</summary>
+    public event Action? RunChanged;
+
+    private void SetRun(IdentifyRun run) { Run = run; RunChanged?.Invoke(); }
+
+    /// <summary>Pauses between plug-ins: the probes already running finish, no new one starts. Does nothing unless running.</summary>
+    public void Pause()
+    {
+        if (Run != IdentifyRun.Running) return;
+        _resume = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        SetRun(IdentifyRun.Paused);
+        Status?.Invoke(PluginBrowserListPresenter.IdentifyPausedText(_doneNow, _totalNow));
+        Changed?.Invoke();
+    }
+
+    /// <summary>Continues a paused pass.</summary>
+    public void Resume()
+    {
+        if (Run != IdentifyRun.Paused) return;
+        var resume = _resume;
+        _resume = null;
+        SetRun(IdentifyRun.Running);
+        resume?.TrySetResult();
+    }
+
+    /// <summary>Stops after the probes already running; the rest stay listed with "…" and are checked by Rescan or when the window reopens.</summary>
+    public void Stop()
+    {
+        if (Run is not (IdentifyRun.Running or IdentifyRun.Paused)) return;
+        _stopRequested = true;
+        var resume = _resume;
+        _resume = null;
+        resume?.TrySetResult();   // a paused pass wakes up to finish
     }
 }

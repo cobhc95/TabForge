@@ -11,7 +11,7 @@ namespace TabForge.Avalonia.Playback;
 // whose engines route through them (the same routing the app makes per document).
 // Does not own: the adapters' construction (AvaloniaPlaybackComposition), the engine's I/O (AudioEngineClient), the transport (AvaloniaPlaybackSession).
 // Tests: AvaloniaPlaybackHostTests.
-// Threads: UI thread only. Windows only.
+// Threads: UI thread only. Every OS (off Windows the MIDI output is RtMidi, silent when libtfportable is missing).
 public sealed class AvaloniaPlaybackHost : IDisposable
 {
     private readonly PluginTrust _trust = new();   // the app's ONE trust state: the engine gate, the sessions and every window share it

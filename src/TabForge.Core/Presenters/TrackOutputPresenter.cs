@@ -1,3 +1,5 @@
+using TabForge.Playback;
+
 namespace TabForge.Presenters;
 
 /// <summary>
@@ -17,4 +19,11 @@ public static class TrackOutputPresenter
 
     /// <summary>The device id a selection reports; clearing the selection (no value) reports nothing.</summary>
     public static int? ChosenDeviceId(object? selectedValue) => selectedValue is int id ? id : null;
+
+    /// <summary>The mark shown for the track's saved device when it is not connected.</summary>
+    public static string MissingDeviceText(string savedName) => $"{savedName} (missing)";
+
+    /// <summary>The (id, name) a device-list selection reports; clearing the selection reports nothing.</summary>
+    public static (int Id, string? Name)? ChosenDevice(object? selectedItem) =>
+        selectedItem is MidiOutputDeviceInfo device ? (device.DeviceId, device.Name) : null;
 }

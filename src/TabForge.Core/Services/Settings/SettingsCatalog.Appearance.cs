@@ -36,7 +36,7 @@ public static partial class SettingsCatalog
             Colour(Appearance, "Interface colours", "appearance.accent", "Accent colour", v => a.Accent = a.Own("Accent", v), () => a.Accent,
                 "Focus, active controls and the primary selection colour.", "theme accent selection focus"),
             Choice(Appearance, "Interface colours", "appearance.playbackhighlight", "Playback highlight", v => a.PlaybackHighlight = v, () => a.PlaybackHighlight,
-                PlaybackHighlightModes.All, "Colour of the notes and the line that show what is playing in the score. Follow accent uses the accent colour.", "playback highlight playing note colour notes cursor line follow accent"),
+                PlaybackHighlightModes.All, "Colour of the notes and the line that show what is playing in the score. Custom (the default) uses the colour below; Follow accent uses the accent colour.", "playback highlight playing note colour notes cursor line follow accent"),
             Colour(Appearance, "Interface colours", "appearance.playbackhighlightcolour", "Playback highlight colour", v => a.PlaybackHighlightColour = v, () => a.PlaybackHighlightColour,
                 "The colour of the playing notes and line when Playback highlight is Custom.", "playback highlight custom colour playing note colour", "appearance.playbackhighlight", PlaybackHighlightModes.Custom),
             // Playback look: the playing beat, the playing bar, the duration glow and the playback line (moved here from Playback & Practice).

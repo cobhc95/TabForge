@@ -78,18 +78,19 @@ public static class MainWindowTrackOutputMenu
             return;
         }
         var track = tracks[index];
-        tools.OpenOrActivate("Track output", track.Id.ToString("N"), () => new TrackOutputWindow(track.Name, SystemOutputDevices(), track.MidiOutputDeviceId,
-            deviceId => SetTrackOutput(song, track, deviceId),
+        tools.OpenOrActivate("Track output", track.Id.ToString("N"), () => new TrackOutputWindow(track.Name, SystemOutputDevices(), track.MidiOutputDeviceId, track.MidiOutputDeviceName,
+            (deviceId, deviceName) => SetTrackOutput(song, track, deviceId, deviceName),
             () => StartTest(playback, song, notice)), owner);
         notice(AudioSetupText);
     }
 
     /// <summary>Sets the track's MIDI output device as one undoable edit that does not change the timeline.</summary>
-    private static void SetTrackOutput(SongDocument song, TrackModel track, int deviceId) =>
+    private static void SetTrackOutput(SongDocument song, TrackModel track, int deviceId, string? deviceName) =>
         DocumentEdits.Run(song, _ =>
         {
-            if (track.MidiOutputDeviceId == deviceId) return false;
+            if (track.MidiOutputDeviceId == deviceId && string.Equals(track.MidiOutputDeviceName ?? "", deviceName ?? "", StringComparison.Ordinal)) return false;
             track.MidiOutputDeviceId = deviceId;
+            track.MidiOutputDeviceName = deviceName ?? "";
             return true;
         }, invalidatesTimeline: false, label: "Track output");
 

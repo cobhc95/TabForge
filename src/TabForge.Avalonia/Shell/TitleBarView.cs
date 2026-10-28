@@ -123,7 +123,7 @@ public sealed class TitleBarView : Border, ICaptionButtonRects
     }
 
     /// <summary>
-    /// A native middle-click released on the empty caption (Windows sends WM_NCMBUTTONDOWN because the hit test answers HTCAPTION, so
+    /// A native middle press on the empty caption (Windows sends WM_NCMBUTTONDOWN because the hit test answers HTCAPTION, so
     /// Avalonia sees no pointer event): opens a new tab through the Tabs middle-click setting. Tabs, tab actions and caption buttons
     /// never reach here, and on the other platforms (no native hook) the Avalonia press handler is the only path.
     /// </summary>
@@ -193,6 +193,8 @@ public sealed class TitleBarView : Border, ICaptionButtonRects
     public static TitleBarView For(Window window, TabStripView tabs, MainWindowCommands commands)
     {
         window.ExtendClientAreaToDecorationsHint = true;
+        // Linux draws its own single title row: no window-manager frame at all (X11 Motif hint), so mutter adds no second bar.
+        if (WindowChromeFactory.CurrentOs == ChromeOs.Linux) window.SystemDecorations = SystemDecorations.None;
         if (WindowChromeFactory.CurrentOs != ChromeOs.MacOs) window.ExtendClientAreaChromeHints = global::Avalonia.Platform.ExtendClientAreaChromeHints.NoChrome;
         window.ExtendClientAreaTitleBarHeightHint = ChromeMetrics.CaptionRowHeight;
         // Maximised, the system draws the window a few pixels past the screen; the content moves in by that margin so nothing is clipped

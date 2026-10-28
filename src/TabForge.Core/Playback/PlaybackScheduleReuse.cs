@@ -1,5 +1,6 @@
 using System.Globalization;
 using TabForge.Models;
+using TabForge.Plugins;
 
 namespace TabForge.Playback;
 
@@ -105,10 +106,14 @@ internal sealed class PlaybackScheduleReuse
     }
 
     private static string TrackRouteStamp(TrackModel track) => string.Join(",",
-        track.Kind, track.MidiChannel, track.MidiProgram, track.MidiOutputDeviceId,
+        track.Kind, track.MidiChannel, track.MidiProgram, track.MidiOutputDeviceId, track.MidiOutputDeviceName ?? "",
         track.Volume, track.Pan, track.Chorus, track.Reverb, track.Mute, track.Solo,
         track.MidiSound, track.MidiSoundManualOff, track.SoundSource,
-        string.Join("/", track.Rig.Plugins.Select(plugin => $"{plugin.Type}:{plugin.Plays}:{plugin.Unavailable}")));
+        string.Join("/", track.Rig.Plugins.Select(plugin => $"{plugin.Type}:{plugin.Plays}:{plugin.Unavailable}{ArticulationStamp(plugin)}")));
+
+    /// <summary>The articulation map of the plug-in (empty without one): editing it makes the next seek compile afresh, like any other route change.</summary>
+    private static string ArticulationStamp(PluginSlot plugin) =>
+        plugin.ArticulationBindings is { Count: > 0 } map ? ":" + string.Join(",", map.Select(pair => pair.Key + "=" + pair.Value)) : "";
 
     private static string OptionsStamp(PlaybackOptions options) => string.Join("|",
         options.Speed.ToString("R", CultureInfo.InvariantCulture),
@@ -118,6 +123,8 @@ internal sealed class PlaybackScheduleReuse
         options.SkipClips, options.MetronomeAccentNote, options.MetronomeClickNote,
         options.MetronomeVolume, options.MetronomeAccentVolume, options.MetronomeClickVolume,
         options.MetronomeSubdivision, options.LiveMetronomeEvents,
-        options.LetRingCapMs.ToString("R", CultureInfo.InvariantCulture));
+        options.LetRingCapMs.ToString("R", CultureInfo.InvariantCulture),
+        options.NormalVibratoDepth.ToString("R", CultureInfo.InvariantCulture), options.WideVibratoDepth.ToString("R", CultureInfo.InvariantCulture),
+        options.VibratoSpeedHz.ToString("R", CultureInfo.InvariantCulture));
 
 }

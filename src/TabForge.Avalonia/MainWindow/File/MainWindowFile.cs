@@ -54,7 +54,7 @@ public sealed class MainWindowFile
     {
         var chosen = _dialogs.OpenFiles(new FileDialogOptions
         {
-            Title = "Open TabForge or .gp file",
+            Key = TabForge.Services.DialogKeys.ProjectOpen, Title = "Open TabForge or .gp file",
             Filter = "Supported scores|*.tforge;*.gp3;*.gp4;*.gp5;*.gpx;*.gp;*.musicxml;*.mxl;*.xml;*.mid;*.midi|TabForge project (*.tforge)|*.tforge|GP files (*.gp3;*.gp4;*.gp5;*.gpx;*.gp)|*.gp3;*.gp4;*.gp5;*.gpx;*.gp|MusicXML (*.musicxml;*.mxl;*.xml)|*.musicxml;*.mxl;*.xml|MIDI (*.mid;*.midi)|*.mid;*.midi",
             Multiselect = true,
         }, _owner);
@@ -97,25 +97,25 @@ public sealed class MainWindowFile
     public Task ExportMidi()
     {
         var project = _tabs.Active.Project;
-        return ExportTo(project, ExportDialog("Export MIDI", "MIDI file (*.mid)|*.mid", ".mid", project.Title), "MIDI export failed", MidiExportService.Export);
+        return ExportTo(project, ExportDialog(TabForge.Services.DialogKeys.ExportMidi, "Export MIDI", "MIDI file (*.mid)|*.mid", ".mid", project.Title), "MIDI export failed", MidiExportService.Export);
     }
 
     /// <summary>File > Export ASCII tab: asks for a .txt file and writes the shown song's tablature there.</summary>
     public Task ExportAscii()
     {
         var project = _tabs.Active.Project;
-        return ExportTo(project, ExportDialog("Export ASCII tab", "Text (*.txt)|*.txt", ".txt", project.Title), "ASCII export failed", AsciiExportService.Export);
+        return ExportTo(project, ExportDialog(TabForge.Services.DialogKeys.ExportAscii, "Export ASCII tab", "Text (*.txt)|*.txt", ".txt", project.Title), "ASCII export failed", AsciiExportService.Export);
     }
 
     /// <summary>File > Export MusicXML: asks for a .musicxml file and writes the shown song there.</summary>
     public Task ExportMusicXml()
     {
         var project = _tabs.Active.Project;
-        return ExportTo(project, ExportDialog("Export MusicXML", "MusicXML (*.musicxml;*.xml)|*.musicxml;*.xml", ".musicxml", project.Title), "MusicXML export failed", MusicXmlExportService.Export);
+        return ExportTo(project, ExportDialog(TabForge.Services.DialogKeys.ExportMusicXml, "Export MusicXML", "MusicXML (*.musicxml;*.xml)|*.musicxml;*.xml", ".musicxml", project.Title), "MusicXML export failed", MusicXmlExportService.Export);
     }
 
-    private static FileDialogOptions ExportDialog(string title, string filter, string extension, string songTitle) =>
-        new() { Title = title, Filter = filter, DefaultExt = extension, AddExtension = true, FileName = SafeFileNames.SafeFileName(songTitle, "Untitled") };
+    private static FileDialogOptions ExportDialog(string key, string title, string filter, string extension, string songTitle) =>
+        new() { Key = key, Title = title, Filter = filter, DefaultExt = extension, AddExtension = true, FileName = SafeFileNames.SafeFileName(songTitle, "Untitled") };
 
     /// <summary>
     /// Shows the save dialog; when a path is chosen, copies the song here (the copy is cheap; edits made meanwhile cannot reach it), runs the

@@ -176,7 +176,7 @@ public sealed partial class PlaybackEngine
         ResetAndSetup(s.Timeline, generation);
         if (!_running || generation != Volatile.Read(ref _generation)) return LoopStep.Continue;
         if (!CanScheduleWork(generation)) return LoopStep.Continue;
-        if (Preferences.CountInOnSeek) RequestRecordCountIn();   // a click on the timeline counts in at the clicked spot
+        if (Preferences.CountInOnSeek && seekRequest.RequestId != Volatile.Read(ref _editSeekId)) RequestRecordCountIn();   // a click on the timeline counts in at the clicked spot; an edit's resume does not
         RestoreChannelStateAt(s.Timeline, s.Timeline.PlayFromMs, s.StartMs);
         var seekPosition = CommitPendingSeekPosition(generation, s.Timeline, seekRequest, s.StartMs);
         if (seekPosition is not { } acceptedPosition) return LoopStep.Continue;
@@ -224,6 +224,7 @@ public sealed partial class PlaybackEngine
                 else
                 {
                     s.Timeline = refresh.Timeline;
+                    RemapTrackState(PublishedTrackIds, refresh.Snapshot.TrackIds);
                     Publish(s.Timeline, refresh.Project, refresh.Snapshot);
                     _scheduleReuse = null;
                     s.Events = s.Timeline.Events;
@@ -291,7 +292,11 @@ public sealed partial class PlaybackEngine
             // An edit was made while looping: the whole song, recompiled, replaces the timeline at the wrap, so edited loop bars behind the playhead are heard.
             ReleaseForLoopWrap(s.Timeline);
             s.Timeline = loopSwap.Timeline;
-            Publish(s.Timeline, loopSwap.Project, loopSwap.Snapshot);
+            lock (_gate)   // the remap and the publish are one step for a mix push (SwapAudibleMask)
+            {
+                RemapTrackState(PublishedTrackIds, loopSwap.Snapshot.TrackIds);
+                Publish(s.Timeline, loopSwap.Project, loopSwap.Snapshot);
+            }
             ClearProgramPreviews();   // the whole song, recompiled, carries the programs as they are now
             _scheduleReuse = null;
             s.Events = s.Timeline.Events;

@@ -17,10 +17,18 @@ namespace TabForge.Avalonia.Views;
 /// </summary>
 public partial class TrackOutputWindow : Window
 {
+    private readonly string? _savedName;
+    private readonly MidiOutputDeviceInfo? _missingEntry;
+
     /// <summary>For the XAML loader and designer only: the app passes the real track, devices and callbacks.</summary>
     public TrackOutputWindow() : this("Demo track", SampleDevices, 0, _ => { }, () => { }) { }
 
     public TrackOutputWindow(string trackName, IReadOnlyList<MidiOutputDeviceInfo> devices, int current, Action<int> chose, Action test)
+        : this(trackName, devices, current, null, (id, _) => chose(id), test) { }
+
+    /// <param name="currentName">The track's saved device name: the list selects by name first (index fallback) and shows a missing mark when it is not listed.</param>
+    /// <param name="chose">Applied with the chosen device id and its listed name (the saved name while the missing entry is selected).</param>
+    public TrackOutputWindow(string trackName, IReadOnlyList<MidiOutputDeviceInfo> devices, int current, string? currentName, Action<int, string?> chose, Action test)
     {
         InitializeComponent();
         Title = TrackOutputPresenter.Title;
@@ -28,12 +36,17 @@ public partial class TrackOutputWindow : Window
         HintText.Text = TrackOutputPresenter.Hint;
         TestButton.Content = TrackOutputPresenter.TestButton;
         CloseButton.Content = TrackOutputPresenter.CloseButton;
-        DeviceBox.ItemsSource = devices;
-        DeviceBox.SelectedIndex = devices.ToList().FindIndex(d => d.DeviceId == current);
+        _savedName = currentName;
+        var missing = MidiOutputRouting.IsMissing(devices, currentName);
+        var items = devices.ToList();
+        _missingEntry = missing ? new MidiOutputDeviceInfo { DeviceId = current, Name = TrackOutputPresenter.MissingDeviceText(currentName!) } : null;
+        if (_missingEntry is not null) items.Add(_missingEntry);
+        DeviceBox.ItemsSource = items;
+        DeviceBox.SelectedIndex = missing ? items.Count - 1 : items.FindIndex(d => currentName?.Length > 0 ? d.Name == currentName : d.DeviceId == current);
         DeviceBox.SelectionChanged += (_, _) =>
         {
-            object? selected = DeviceBox.SelectedItem is MidiOutputDeviceInfo device ? device.DeviceId : null;
-            if (TrackOutputPresenter.ChosenDeviceId(selected) is { } id) chose(id);
+            if (TrackOutputPresenter.ChosenDevice(DeviceBox.SelectedItem) is { } chosen)
+                chose(chosen.Id, ReferenceEquals(DeviceBox.SelectedItem, _missingEntry) ? _savedName : chosen.Name);
         };
         TestButton.Click += (_, _) => test();
         CloseButton.Click += (_, _) => Close();

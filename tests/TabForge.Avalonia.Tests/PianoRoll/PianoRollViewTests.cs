@@ -2,9 +2,14 @@ using System.Linq;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
+using Avalonia.Media;
+using Avalonia.Styling;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
+using TabForge.Avalonia.Platform;
 using TabForge.Avalonia.Views;
 using TabForge.Documents;
 using TabForge.Presenters;
@@ -182,6 +187,30 @@ public sealed class PianoRollViewTests
         var second = view.Surface.Items(new[] { 1 }).ToArray();   // same count, other note
         Assert.Equal(notes[0].Start, second[0]);
         Assert.Equal(notes[1].Start, first[0]);
+        window.Close();
+    }
+
+    private static ToggleButton ToolButton(Window window, string tipStart) =>
+        window.GetVisualDescendants().OfType<ToggleButton>().Single(b => ToolTip.GetTip(b) is string tip && tip.StartsWith(tipStart, System.StringComparison.Ordinal));
+
+    [AvaloniaFact]
+    public void TheActiveToolTakesTheToolsPaneSelectedLookAndTheOthersStayPlain()
+    {
+        var document = PianoRollSongs.Midi();
+        var (view, window) = Show(document);
+        var edit = ToolButton(window, "Edit (1)");
+        var erase = ToolButton(window, "Erase (2)");
+        var light = edit.ActualThemeVariant == ThemeVariant.Light;
+        var selected = AvaloniaPalette.ColorOf(AvaloniaPalette.Get(AvaloniaPalette.BrushPaletteNames["SelectedTintBrush"], light));
+        Assert.True(edit.IsChecked == true);
+        Assert.Equal(selected, ((ISolidColorBrush)edit.Background!).Color);
+        Assert.Equal(0, ((ISolidColorBrush)erase.Background!).Color.A);
+        Assert.Equal(0, ((ISolidColorBrush)erase.BorderBrush!).Color.A);
+        Assert.True(view.Surface.HandleKey(Key.D2, KeyModifiers.None));   // the keys run the same path as the buttons: RefreshTools
+        Assert.True(erase.IsChecked == true);
+        Assert.Equal(selected, ((ISolidColorBrush)erase.Background!).Color);
+        Assert.Equal(0, ((ISolidColorBrush)edit.Background!).Color.A);
+        Assert.Equal(0, ((ISolidColorBrush)edit.BorderBrush!).Color.A);
         window.Close();
     }
 }

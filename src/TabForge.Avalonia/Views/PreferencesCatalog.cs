@@ -29,7 +29,7 @@ public static class PreferencesCatalog
 #pragma warning disable CA2255 // A module initializer is the single install point every path through this assembly passes.
     [ModuleInitializer]
 #pragma warning restore CA2255
-    internal static void InstallCatalog() => CatalogComposition.Install(new IFeatureSettingsSource[] { new BandFeatureSettings(), new VideoFeatureSettings(), new KeyboardModeFeatureSettings(), new LiveInputFeatureSettings() }, new CatalogPlatform(
+    internal static void InstallCatalog() => CatalogComposition.Install(new IFeatureSettingsSource[] { new BandFeatureSettings(), new VideoFeatureSettings(), new KeyboardModeFeatureSettings(), new LiveInputFeatureSettings(), new MasterMeterFeatureSettings() }, new CatalogPlatform(
         ApplyTheme,
         AsioChannels,
         () => DeviceNames(AudioDeviceNames.Capture),

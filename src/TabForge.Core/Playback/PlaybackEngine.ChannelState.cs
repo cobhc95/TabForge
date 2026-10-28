@@ -13,23 +13,25 @@ public sealed partial class PlaybackEngine
 {
     /// <summary>Sends the song's current program, volume, pan and sends for <paramref name="track"/> (every track when null) now and keeps them in the channel setup a pause, seek or loop re-sends. Nothing while stopped: a start compiles the song as it is.</summary>
     public void PushLiveChannelState(SongProject project, int? track = null) =>
-        PushChannelState(project, e => track is null || e.TrackIndex == track, send: true);
+        PushChannelState(project, (_, t) => track is null || (track >= 0 && track < project.Tracks.Count && t == project.Tracks[track.Value]), send: true);
 
     /// <summary>Brings the channel setup of a paused song in line with the live song without sending, so the resume plays the values as they are now.</summary>
     private void RefreshChannelSetupFromLive()
     {
-        if (LiveProject is { } project) PushChannelState(project, _ => true, send: false);
+        if (LiveProject is { } project) PushChannelState(project, (_, _) => true, send: false);
     }
 
-    private void PushChannelState(SongProject project, Func<ScoreEvent, bool> affects, bool send)
+    private void PushChannelState(SongProject project, Func<ScoreEvent, TrackModel, bool> affects, bool send)
     {
-        var timeline = _timeline;
+        var song = Volatile.Read(ref _song);   // one read: the timeline and the track ids it is numbered by belong together
+        var timeline = song?.Timeline;
         if (timeline is null || !_running) return;
+        var ids = song!.TrackIds;
         var latest = LatestChannelState(timeline, timeline.PlayFromMs, Volatile.Read(ref _currentStreamMs), -1);
         foreach (var e in timeline.ChannelSetup)
         {
-            if (e.TrackIndex < 0 || e.TrackIndex >= project.Tracks.Count || !affects(e)) continue;
-            if (!TryLiveValue(project, project.Tracks[e.TrackIndex], e, out var value)) continue;
+            if (e.TrackIndex < 0 || LiveTrackOf(project, ids, e.TrackIndex) is not { } liveTrack || !affects(e, liveTrack)) continue;   // the event's own track, found by id: a list move must not hand its channel another track's sound
+            if (!TryLiveValue(project, liveTrack, e, out var value)) continue;
             lock (_outputGate)
             {
                 // The chased start value is the automation in force from a start after mix points: a base edit never replaces it. A flag on any other timeline is stale and cleared.
@@ -52,6 +54,8 @@ public sealed partial class PlaybackEngine
         switch (e.Status & 0xF0)
         {
             case 0xC0: value = track.MidiProgram; return true;
+            case 0xB0 when e.Data1 == 0: value = Math.Max(0, track.MidiBankMsb); return track.MidiBankMsb >= 0;
+            case 0xB0 when e.Data1 == 32: value = Math.Max(0, track.MidiBankLsb); return track.MidiBankLsb >= 0;
             case 0xB0 when e.Data1 == 7: value = MixerGroups.Volume(project, track); return true;
             case 0xB0 when e.Data1 == 10: value = MixerGroups.Pan(project, track); return true;
             case 0xB0 when e.Data1 == 91: value = Math.Clamp(track.Reverb, 0, MidiLimits.Max); return true;

@@ -27,10 +27,11 @@ namespace TabForge.Avalonia.Tests;
 /// Does not own: the window, the catalogue or the stores; expected texts come from the Core presenters.
 /// Tests: this class.
 /// </summary>
+[Collection("PluginLibraryRoot")]   // PluginLibrary.RootOverride is process-wide: run alone so no parallel test resets it or reads the scratch folder
 public class PresetManagerWindowTests
 {
     private static readonly string[] ToolLabels = { "Rename", "Duplicate", "Move up", "Move down", "Delete", "Show in tree" };
-    private static readonly string[] KindTitles = { "Plug-in presets", "FX chains", "Containers", "MIDI chains", "MIDI processors", "Drum maps" };
+    private static readonly string[] KindTitles = { "Plug-in presets", "FX chains", "Containers", "MIDI chains", "MIDI processors", "Drum maps", "Articulations", "Bend / tremolo" };
     private static readonly string[] FxOrder = { "A chain", "B chain", "C chain" };
 
     [AvaloniaFact]
@@ -60,7 +61,7 @@ public class PresetManagerWindowTests
 
         Assert.Equal(KindTitles, window.TreeRows.Where(row => row.Node.Key is null).Select(row => row.Node.Title));
         // Plug-in presets is expanded at start: its children follow it, sorted, and only folders with presets are listed.
-        Assert.Equal(new[] { "Plug-in presets", "Bass", "Lead", "FX chains", "Containers", "MIDI chains", "MIDI processors", "Drum maps" },
+        Assert.Equal(new[] { "Plug-in presets", "Bass", "Lead", "FX chains", "Containers", "MIDI chains", "MIDI processors", "Drum maps", "Articulations", "Bend / tremolo" },
             window.TreeRows.Select(row => row.Node.Title));
         Assert.Equal(3, window.TreeRows[0].Count);   // two Bass presets, one Lead
         Assert.Equal(2, window.TreeRows.Single(row => row.Node.Key == "Bass").Count);
@@ -81,7 +82,7 @@ public class PresetManagerWindowTests
 
         window.Show(PresetCatalogKind.MidiProcessor, "noteMap");
         Assert.Equal("noteMap", window.SelectedNode.Key);
-        Assert.Contains("Tabs to SD3", Names(window));
+        Assert.Contains("Superior Drummer 3", Names(window));
         Assert.True(window.Listed[0].BuiltIn);
         window.Close();
     }
@@ -132,42 +133,40 @@ public class PresetManagerWindowTests
     }
 
     [AvaloniaFact]
-    public async Task DeleteAsksOneCoreQuestionAndWritesTheSettingWhenTicked()
+    public void DeleteIsAtOnceAndOffersOneUndoForTheWholeSelection()
     {
         using var scratch = Scratch();
         SeedStandard();
         var window = Open();
-        var asked = new List<string>();
-        var remembered = true;
-        window.Dialogs.ConfirmDeletePresets = () => true;
-        window.Dialogs.AskDelete = text => { asked.Add(text); return Task.FromResult((true, true)); };
-        window.Dialogs.RememberDeletePresets = value => remembered = value;
 
         window.Show(PresetCatalogKind.FxChain, null);
         window.SelectNames("A chain", "B chain");
         DialogTestKit.RunQueuedUiWork();
-        await window.DeleteSelectedAsync();
+        window.DeleteSelected();
 
-        Assert.Equal(PresetDeleteQuestionPresenter.TextFor(new[] { "A chain", "B chain" }), Assert.Single(asked));
-        Assert.False(remembered);
         Assert.Equal(new[] { "C chain" }, PresetFolderStore.FxChains().Names());
+        Assert.True(window.Toast.IsShowing);
+        Assert.Equal("Deleted 2 presets", window.Toast.Text);
+        window.Toast.Undo();
+        Assert.Equal(new[] { "A chain", "B chain", "C chain" }, PresetFolderStore.FxChains().Names());
+        Assert.Equal(new[] { "A chain", "B chain", "C chain" }, Names(window));
         window.Close();
     }
 
     [AvaloniaFact]
-    public async Task DeleteDoesNotAskWhenTheSettingIsOff()
+    public void DeleteGoneForGoodOnceTheMessageTimesOut()
     {
         using var scratch = Scratch();
         SeedStandard();
         var window = Open();
-        var asked = false;
-        window.Dialogs.ConfirmDeletePresets = () => false;
-        window.Dialogs.AskDelete = _ => { asked = true; return Task.FromResult((true, true)); };
         window.Show(PresetCatalogKind.FxChain, null);
         window.Select("A chain");
         DialogTestKit.RunQueuedUiWork();
-        await window.DeleteSelectedAsync();
-        Assert.False(asked);
+        window.DeleteSelected();
+        Assert.Equal(new[] { "B chain", "C chain" }, PresetFolderStore.FxChains().Names());
+        window.Toast.Dismiss();
+        Assert.False(window.Toast.IsShowing);
+        window.Toast.Undo();
         Assert.Equal(new[] { "B chain", "C chain" }, PresetFolderStore.FxChains().Names());
         window.Close();
     }
@@ -214,7 +213,7 @@ public class PresetManagerWindowTests
         window.Select("Humanize light");
         DialogTestKit.RunQueuedUiWork();
         Assert.False(window.CanRename);
-        Assert.False(window.CanDuplicate);
+        Assert.True(window.CanDuplicate);   // a built-in chain can be copied into an editable one
         Assert.False(window.CanDelete);
         Assert.Contains("comes with the app", window.RenameTip);
 
@@ -235,25 +234,9 @@ public class PresetManagerWindowTests
         Assert.Equal(new[] { "Fake one" }, Names(window));
         window.Select("Fake one");
         DialogTestKit.RunQueuedUiWork();
-        window.Dialogs.ConfirmDeletePresets = () => false;
         window.DuplicateSelected();
         Assert.Equal(new[] { "Fake one", "Fake one copy" }, factory.Store.Items);
         window.Close();
-    }
-
-    [Fact]
-    public async Task DeleteQuestionWritesTheSettingOnlyForYesWithTheTick()
-    {
-        var remembered = true;
-        Assert.False(await PresetDeleteQuestion.ConfirmAsync(new[] { "A" }, _ => Task.FromResult((false, true)), () => true, value => remembered = value));
-        Assert.True(remembered);
-        Assert.True(await PresetDeleteQuestion.ConfirmAsync(new[] { "A" }, _ => Task.FromResult((true, false)), () => true, value => remembered = value));
-        Assert.True(remembered);
-        Assert.True(await PresetDeleteQuestion.ConfirmAsync(new[] { "A" }, _ => Task.FromResult((true, true)), () => true, value => remembered = value));
-        Assert.False(remembered);
-        var asked = false;
-        Assert.True(await PresetDeleteQuestion.ConfirmAsync(new[] { "A" }, _ => { asked = true; return Task.FromResult((true, true)); }, () => false, _ => { }));
-        Assert.False(asked);
     }
 
     [AvaloniaFact]
@@ -294,23 +277,20 @@ public class PresetManagerWindowTests
     }
 
     [AvaloniaFact]
-    public async Task MixedSelectionDeletesOnlyUserRowsAfterOneQuestion()
+    public void MixedSelectionDeletesOnlyUserRows()
     {
         using var scratch = Scratch();
         SeedStandard();
         var window = Open();
-        var asked = new List<string>();
-        window.Dialogs.AskDelete = text => { asked.Add(text); return Task.FromResult((true, false)); };
-        window.Dialogs.ConfirmDeletePresets = () => true;
         window.Show(PresetCatalogKind.MidiChain, null);
         window.SelectNames("Humanize light", "Mine");
         DialogTestKit.RunQueuedUiWork();
 
         Assert.False(window.CanRename);
         Assert.True(window.CanDelete);
-        await window.DeleteSelectedAsync();
+        window.DeleteSelected();
 
-        Assert.Equal(PresetDeleteQuestionPresenter.TextFor(new[] { "Mine" }), Assert.Single(asked));
+        Assert.Equal("Deleted \"Mine\"", window.Toast.Text);
         Assert.DoesNotContain("Mine", Names(window));
         Assert.Contains("Humanize light", Names(window));
         window.Close();
@@ -369,8 +349,6 @@ public class PresetManagerWindowTests
     {
         var window = new PresetManagerWindow(new AvaloniaDialogHost());
         window.Dialogs.Confirm = _ => Task.FromResult(true);
-        window.Dialogs.AskDelete = _ => Task.FromResult((true, false));
-        window.Dialogs.ConfirmDeletePresets = () => false;
         if (show) window.Show();
         return window;
     }

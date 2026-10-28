@@ -57,6 +57,8 @@ public class PluginBrowserWindowTests
     [
         ("TextBox", "Plugins.Search"),
         ("TextBlock", "StatusText"),
+        ("Button", "Plugins.Pause"),
+        ("Button", "Plugins.Stop"),
         ("CheckBox", "RememberBox"),
         ("CheckBox", "ClapBox"),
         ("Button", "Plugins.ScanStandard"), ("Button", "Plugins.AddFolder"), ("Button", "Plugins.BrowseFile"), ("Button", "Plugins.Rescan"),

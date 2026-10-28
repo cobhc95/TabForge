@@ -23,6 +23,9 @@ internal sealed partial class ScoreToMidiCompiler
             {
             var channel = pass == 0 ? mainChannel : EffectChannelOf(trackIndex);
             if (channel < 0) break;
+            // Bank select before the program change (a GM bank / VST bank beyond program 0-127); -1 leaves that part out.
+            if (track.MidiBankMsb >= 0) Setup(track, trackIndex, channel, 0xB0, 0, atMs, track.MidiBankMsb);
+            if (track.MidiBankLsb >= 0) Setup(track, trackIndex, channel, 0xB0, 32, atMs, track.MidiBankLsb);
             Setup(track, trackIndex, channel, 0xC0, track.MidiProgram, atMs);
             Setup(track, trackIndex, channel, 0xB0, 7, atMs, MixerGroups.Volume(_project, track));
             Setup(track, trackIndex, channel, 0xB0, 10, atMs, MixerGroups.Pan(_project, track));
@@ -53,7 +56,7 @@ internal sealed partial class ScoreToMidiCompiler
     {
         var e = new ScoreEvent
         {
-            TimeMs = atMs, DeviceId = track.MidiOutputDeviceId, Channel = channel,
+            TimeMs = atMs, DeviceId = OutputDeviceOf(track), Channel = channel,
             Status = statusBase | (channel & 0x0F), Data1 = data1, Data2 = data2,
             TrackIndex = trackIndex, IsSetup = true
         };

@@ -1,4 +1,5 @@
 using System.Globalization;
+using TabForge.Playback;
 using TabForge.Plugins;
 
 // Owns: what the preset manager lists: the tree's nodes (every kind, with one child per plug-in or processor type that has presets), the
@@ -12,7 +13,7 @@ namespace TabForge.Presenters;
 public sealed record PresetNode(PresetCatalogKind Kind, string? Key, string Title, string Where)
 {
     /// <summary>A kind whose presets live under its children (plug-ins, processor types).</summary>
-    public bool IsGroup => Key is null && Kind is PresetCatalogKind.PluginPreset or PresetCatalogKind.MidiProcessor;
+    public bool IsGroup => Key is null && Kind is PresetCatalogKind.PluginPreset or PresetCatalogKind.MidiProcessor or PresetCatalogKind.EffectPreset;
     public bool Same(PresetNode other) => Kind == other.Kind && string.Equals(Key, other.Key, StringComparison.OrdinalIgnoreCase);
 }
 
@@ -37,7 +38,10 @@ public sealed class PresetCataloguePresenter : IPresetCatalogue
         new(PresetCatalogKind.MidiChain, "MIDI chains"),
         new(PresetCatalogKind.MidiProcessor, "MIDI processors"),
         new(PresetCatalogKind.DrumMap, "Drum maps"),
+        new(PresetCatalogKind.Articulation, "Articulations"),
+        new(PresetCatalogKind.EffectPreset, "Bend / tremolo"),
     };
+
 
     private readonly IPresetStoreFactory _stores;
 
@@ -52,6 +56,8 @@ public sealed class PresetCataloguePresenter : IPresetCatalogue
     public IReadOnlyList<PresetNode> Children(PresetNode group)
     {
         if (!group.IsGroup) return Array.Empty<PresetNode>();
+        if (group.Kind == PresetCatalogKind.EffectPreset)
+            return (_stores.Effects?.Kinds ?? Array.Empty<(string Key, string Title)>()).Select(e => new PresetNode(group.Kind, e.Key, e.Title, $"{group.Title}{WhereSeparator}{e.Title}")).ToList();
         var plugin = group.Kind == PresetCatalogKind.PluginPreset;
         var keys = plugin
             ? PresetFolderStore.PluginKeys()
@@ -83,6 +89,8 @@ public sealed class PresetCataloguePresenter : IPresetCatalogue
         PresetCatalogKind.MidiChain => MidiProcessorCatalog.BuiltInPresets.Select(preset => preset.Name).ToList(),
         PresetCatalogKind.MidiProcessor when node.Key is { } type => MidiProcessorCatalog.BuiltInProcessorPresets(type).Select(preset => preset.Name).ToList(),
         PresetCatalogKind.DrumMap => DrumMapLibrary.BuiltInNames(),
+        PresetCatalogKind.Articulation => ArticulationPresets.BuiltIn.Select(preset => preset.Name).ToList(),
+        PresetCatalogKind.EffectPreset when node.Key is { } key && _stores.Effects is { } effects => effects.BuiltInNames(key),
         _ => Array.Empty<string>(),
     };
 

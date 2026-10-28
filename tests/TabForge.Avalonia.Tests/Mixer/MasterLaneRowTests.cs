@@ -25,7 +25,7 @@ public class MasterLaneRowTests
     private static (SongProject Project, TimelineView Timeline, TrackHeaderColumn Column) Open()
     {
         var song = new SongDocument(() => null) { Project = DemoSongFactory.Create() };
-        var timeline = new TimelineView(song.Project);
+        var timeline = new TimelineView(song.Project) { TrackListNameWidth = TrackRowCells.NameWidth };   // the geometry the Box numbers below are written for
         timeline.MasterLaneShown = true;
         return (song.Project, timeline, new TrackHeaderColumn(timeline, song.Project));
     }
@@ -53,6 +53,7 @@ public class MasterLaneRowTests
     {
         var song = new SongDocument(() => null) { Project = DemoSongFactory.Create() };
         var view = new ArrangementView(song.Project, song);
+        view.SetTrackListWidth(TrackRowCells.TotalWidth);   // the geometry the Thumb numbers are written for
         view.ShowMasterLane(true);
         var height = view.Timeline.MasterLaneHeight;
 

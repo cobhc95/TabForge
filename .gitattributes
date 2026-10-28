@@ -11,3 +11,5 @@
 *.zip binary
 *.patch -text
 *.nupkg binary
+*.sh text eol=lf
+*.yml text eol=lf

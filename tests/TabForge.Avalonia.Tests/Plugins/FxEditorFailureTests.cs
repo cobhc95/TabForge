@@ -29,6 +29,7 @@ public class FxEditorFailureTests
         area.Surface.SetAreaForTest((IntPtr)1234);
         DialogTestKit.RunQueuedUiWork();
         FxTestKit.List(window).Click(1);
+        FxTestKit.PressButton(window, "ParametersButton");   // the failed editor opens the generic panel; the button brings the failure notice back
         return (window, engine, area);
     }
 

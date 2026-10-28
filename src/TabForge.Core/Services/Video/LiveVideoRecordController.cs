@@ -31,6 +31,10 @@ internal interface ILiveVideoRecordHost
     void NotifyInfo(string message) => Notify(message, null);
     /// <summary>Runs <paramref name="action"/> on the UI thread.</summary>
     void Post(Action action);
+    /// <summary>UI thread: restores and activates the main window the recording captures (on start, and again when a picture is found black).</summary>
+    void BringToFront() { }
+    /// <summary>UI thread: why the window cannot show a picture (<see cref="LiveVideoFocus.BlackReason"/>), read before <see cref="BringToFront"/>.</summary>
+    string BlackReason() => LiveVideoFocus.BlackReason(false, true, true);
     /// <summary>Calls <paramref name="tick"/> on the UI thread every <paramref name="period"/> until disposed.</summary>
     IDisposable Every(TimeSpan period, Action tick);
 }
@@ -61,7 +65,7 @@ internal sealed class LiveVideoRecordController
     private string _path = "";
     private string _folder = "";
     private bool _fellBackShown, _blackShown;
-    private const string BlackText = "Recording captured a black picture - check the window is visible.";
+    private const string BlackText = "Recording captured a black picture: {0}. TabForge was brought to the front; keep it visible and record again.";
 
     public LiveVideoRecordController(ILiveVideoRecordHost host) => _host = host;
 
@@ -93,6 +97,7 @@ internal sealed class LiveVideoRecordController
             return;
         }
         _fellBackShown = false; _blackShown = false;
+        _host.BringToFront();   // the capture reads the main window: it must be restored, in front and painted before the first frame
         _region = _host.RegionRect(settings.Region);
         var (width, height) = LiveVideoChoices.SizeOf(settings.Resolution, _region);
         if (ValidatedFolder(settings) is not { } folder) return;
@@ -213,7 +218,9 @@ internal sealed class LiveVideoRecordController
         if (session.AllBlack && !_blackShown)
         {
             _blackShown = true;
-            _host.NotifyInfo(BlackText);
+            var reason = _host.BlackReason();   // read before the window is brought forward again
+            _host.BringToFront();
+            _host.NotifyInfo(string.Format(System.Globalization.CultureInfo.InvariantCulture, BlackText, reason));
         }
         _host.ShowRecording(session.Elapsed);
     }

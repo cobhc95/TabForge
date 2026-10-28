@@ -136,7 +136,7 @@ public static class GpExportPreflight
         return report;
     }
 
-    private static string Describe(List<(string Track, int Bar)> at)
+    internal static string Describe(List<(string Track, int Bar)> at)
     {
         var parts = new List<string>();
         foreach (var group in at.GroupBy(x => x.Track).Take(3))

@@ -16,10 +16,10 @@ namespace TabForge.Avalonia.Views;
 // Threads: UI thread only.
 public sealed class ArrangementTopBand
 {
-    /// <summary>The width the transport wraps in while the compact content shows: the live input and transport buttons in one row at their smallest size, so it wraps to three rows.</summary>
-    public const double CompactTransportWidth = 6 * (TransportBarView.MinButtonSize + CompactButtonSlack) + 2 * CompactTransportChrome;
+    /// <summary>The width the transport wraps in while the compact content shows: the live input and transport buttons in one row at their normal size, so it wraps to more rows.</summary>
+    public const double CompactTransportWidth = 6 * (TransportBarView.TransportButtonSize + CompactButtonSlack) + 2 * CompactTransportChrome;
 
-    /// <summary>The room a smallest transport button takes beyond its size (its outline and rounding), in DIP.</summary>
+    /// <summary>The room a transport button takes beyond its size (its outline and rounding), in DIP.</summary>
     private const double CompactButtonSlack = 2;
 
     /// <summary>The transport bar's border and padding on one side, in DIP.</summary>

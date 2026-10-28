@@ -46,7 +46,7 @@ To change how often autosave runs, open **Options > Preferences…**, type `auto
 
 An export writes a copy of the song in another form, for sharing. It never changes the open song, and it never changes whether the song counts as saved. Open the **File** menu to see the choices.
 
-- **Export MIDI…** writes a `.mid` file with the notes and tempo of the whole song. It holds no sound, so the program that opens it chooses the instruments.
+- **Export MIDI…** writes a `.mid` file with the notes and tempo of the whole song, played through each track's MIDI processors. It holds no sound, so the program that opens it chooses the instruments. Articulation keyswitches are not written (their pitch and velocity effects are).
 - **Export PDF…** writes the score of the selected track as pages you can print or send. Select the track you want first.
 - **Export MusicXML…** writes a file that other notation programs can open.
 - **Export ASCII tab…** writes a plain text tab that you can paste into a message.

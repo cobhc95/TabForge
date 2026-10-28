@@ -34,8 +34,12 @@ internal static class GuitarProBendCurve
     private static readonly ConditionalWeakTable<Note, StrongBox<Fields>> Planned = new();
 
     /// <summary>The curve as (offset 0..60, value) points in time order; a model offset up to 1 is a fraction of the note.</summary>
-    internal static List<(double Offset, double Value)> Normalise(IEnumerable<(double Offset, double Value)> points) =>
-        points.Select(p => (p.Offset <= 1.0 ? p.Offset * 60 : p.Offset, p.Value)).OrderBy(p => p.Item1).ToList();
+    internal static List<(double Offset, double Value)> Normalise(IEnumerable<(double Offset, double Value)> points)
+    {
+        var list = points.ToList();
+        var scale = list.Count > 0 && list.All(p => p.Offset <= 1.0) ? 60 : 1;   // decided per curve (BendPointModel.SpanOf)
+        return list.Select(p => (p.Offset * scale, p.Value)).OrderBy(p => p.Item1).ToList();
+    }
 
     /// <summary>Interpolated value of a point list (zero-width steps allowed) at an offset.</summary>
     private static double At(IReadOnlyList<(double Offset, double Value)> p, double x)

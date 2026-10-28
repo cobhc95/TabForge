@@ -6,13 +6,15 @@ using TabForge.Playback;
 
 namespace TabForge.Services;
 
-// Owns: Standard MIDI File export from the canonical playback timeline.
+// Owns: Standard MIDI File export from the canonical playback timeline with each track's MIDI processors applied.
 // Does not own: playback and the MIDI import.
 // Tests: no dedicated test class.
 // Long on purpose: one exporter class with its Standard MIDI File encoding helpers.
 /// <summary>
-/// Standard MIDI File export. The file is written from the canonical playback timeline, so an
-/// exported file plays exactly what TabForge plays (repeats, ties, techniques, tempo map included).
+/// Standard MIDI File export. The file is written from the canonical playback timeline with each track's
+/// MIDI processors applied (the same chain the live engine runs), so an exported file plays what TabForge
+/// plays (repeats, ties, techniques, transpose, arpeggiation, humanize, velocity and controller changes,
+/// tempo map included). Articulation keyswitches stay out of the file (their pitch/velocity effects are baked in).
 /// Format 1 with a conductor track (tempo + time signature) and one chunk per score track.
 /// </summary>
 public static class MidiExportService
@@ -22,11 +24,11 @@ public static class MidiExportService
     public static void Export(SongProject project, string path)
     {
         path = FilePathPolicy.OutputFile(path, "MIDI export", ".mid", ".midi");
-        var timeline = MidiTimelineBuilder.Build(project, new PlaybackOptions
+        var timeline = MidiExportProcessors.WithProcessors(project, MidiTimelineBuilder.Build(project, new PlaybackOptions
         {
             // An exported file represents the score, not the current practice state: ignore mute/solo.
             RespectMuteSolo = false
-        });
+        }));
         var map = new TickMap(timeline, project);
 
         var chunks = new List<byte[]> { BuildConductorTrack(project, timeline, map) };
@@ -99,7 +101,7 @@ public static class MidiExportService
         WriteMeta(events, 0, 0x03, Encoding.ASCII.GetBytes(string.IsNullOrWhiteSpace(track.Name) ? "Track" : track.Name));
 
         var cursorTick = 0;
-        foreach (var e in timeline.Events.Where(x => x.TrackIndex == trackIndex))
+        foreach (var e in timeline.Events.Where(x => x.TrackIndex == trackIndex && !x.IsArticulation))   // instrument keyswitches stay out of the file
         {
             var tick = map.TickOf(e.TimeMs);
             var delta = Math.Max(0, tick - cursorTick);

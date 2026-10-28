@@ -14,6 +14,7 @@ namespace TabForge.Avalonia.Tests;
 /// Does not own: the window, the files' rules (PresetFolderStore, DrumMapStore) or the built-in names (MidiProcessorCatalog, DrumMapLibrary).
 /// Tests: this class.
 /// </summary>
+[Collection("PluginLibraryRoot")]   // PluginLibrary.RootOverride is process-wide: run alone so no parallel test resets it or reads the scratch folder
 public class PresetCatalogueTests
 {
     private static readonly PresetCataloguePresenter Catalogue = new();
@@ -24,12 +25,12 @@ public class PresetCatalogueTests
     {
         var groups = Catalogue.Groups();
 
-        Assert.Equal(new[] { "Plug-in presets", "FX chains", "Containers", "MIDI chains", "MIDI processors", "Drum maps" }, groups.Select(g => g.Title));
+        Assert.Equal(new[] { "Plug-in presets", "FX chains", "Containers", "MIDI chains", "MIDI processors", "Drum maps", "Articulations", "Bend / tremolo" }, groups.Select(g => g.Title));
         Assert.Equal(new[]
         {
-            PresetCatalogKind.PluginPreset, PresetCatalogKind.FxChain, PresetCatalogKind.Container, PresetCatalogKind.MidiChain, PresetCatalogKind.MidiProcessor, PresetCatalogKind.DrumMap,
+            PresetCatalogKind.PluginPreset, PresetCatalogKind.FxChain, PresetCatalogKind.Container, PresetCatalogKind.MidiChain, PresetCatalogKind.MidiProcessor, PresetCatalogKind.DrumMap, PresetCatalogKind.Articulation, PresetCatalogKind.EffectPreset,
         }, groups.Select(g => g.Kind));
-        Assert.Equal(new[] { true, false, false, false, true, false }, groups.Select(g => g.IsGroup));
+        Assert.Equal(new[] { true, false, false, false, true, false, false, true }, groups.Select(g => g.IsGroup));
         Assert.All(groups, group => Assert.Equal(group.Title, group.Where));
     }
 
@@ -75,7 +76,7 @@ public class PresetCatalogueTests
         Assert.Equal(("Mine", false), (chains[^1].Name, chains[^1].BuiltIn));
 
         var noteMap = Catalogue.Entries(Catalogue.Node(PresetCatalogKind.MidiProcessor, "noteMap"));
-        Assert.Equal("Tabs to SD3", noteMap[0].Name);
+        Assert.Equal("Superior Drummer 3", noteMap[0].Name);
         Assert.True(noteMap[0].BuiltIn);
         Assert.Equal(("Mine", false), (noteMap[^1].Name, noteMap[^1].BuiltIn));
     }

@@ -3,13 +3,15 @@ using System;
 using Avalonia.Controls;
 using TabForge.Avalonia.Views.Presets;
 using TabForge.Presenters;
+using TabForge.Services;
+using TabForge.Views.EffectEditors;
 
 namespace TabForge.Avalonia;
 
-// Owns: the Tools.PresetManager command (the Tools menu's Preset manager row): configures the one manager helper with the delete
-//   setting and opens it on the plug-in presets group.
+// Owns: the Tools.PresetManager command (the Tools menu's Preset manager row): configures the one manager helper with the stores (the settings that
+//   hold the bend and tremolo presets) and opens it on the plug-in presets group.
 // Does not own: the menu row (MainMenuTable in Core), the commands table (MainWindowCommands), the manager and its presets
-//   (PresetManager, PresetManagerWindow) or the delete setting itself (MainWindowSettings).
+//   (PresetManager, PresetManagerWindow).
 // Tests: TabForge.Avalonia.Tests.PresetManagerWindowTests, PresetManagerOpenTests.
 /// <summary>The Tools menu's Preset manager command.</summary>
 public static class MainWindowPresetManager
@@ -18,11 +20,12 @@ public static class MainWindowPresetManager
     public static readonly IReadOnlyList<string> Commands = new[] { "Tools.PresetManager" };
 
     /// <param name="owner">The window the manager opens over.</param>
-    /// <param name="confirmDeletePresets">Read at each delete: true asks the question before a user preset is deleted.</param>
-    /// <param name="rememberDeletePresets">Turns the setting off and saves it when the delete question is ticked and answered Yes.</param>
-    public static void Register(MainWindowCommands commands, Window owner, Func<bool> confirmDeletePresets, Action<bool> rememberDeletePresets)
+    /// <param name="settings">The app settings (null before they load): the bend, tremolo and ornament presets live in them.</param>
+    /// <param name="saveSettings">Writes the settings after a preset of those kinds changes.</param>
+    public static void Register(MainWindowCommands commands, Window owner, Func<AppSettings?> settings, Action saveSettings)
     {
-        PresetManager.Configure(confirmDeletePresets, rememberDeletePresets);
+        var stores = new PresetStoreFactory(new EffectPresetSource(settings, saveSettings));
+        PresetManager.Configure(() => stores);
         commands.Add("Tools.PresetManager", () => PresetManager.Open(owner, PresetCatalogKind.PluginPreset, null));
     }
 }

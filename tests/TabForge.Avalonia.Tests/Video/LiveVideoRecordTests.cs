@@ -433,6 +433,26 @@ public class LiveVideoRecordTests
         Assert.Equal(fires ? 1 : 0, fired);
     }
 
+    [Theory]
+    [InlineData(true, true, true, true)]     // minimised: restore and bring forward
+    [InlineData(false, false, true, true)]   // another window has the focus
+    [InlineData(false, true, false, true)]   // hidden
+    [InlineData(false, true, true, false)]   // in front and shown: nothing to do
+    public void MainWindowIsBroughtForwardBeforeARecordingUnlessItIsAlreadyInFront(bool minimised, bool inFront, bool shown, bool expected)
+    {
+        Assert.Equal(expected, LiveVideoFocus.NeedsBringingForward(minimised, inFront, shown));
+    }
+
+    [Theory]
+    [InlineData(true, true, true, "minimised")]
+    [InlineData(false, true, false, "hidden")]
+    [InlineData(false, false, true, "another window")]
+    [InlineData(false, true, true, "not painted")]
+    public void ABlackRecordingNamesTheReasonTheWindowCouldNotShow(bool minimised, bool inFront, bool shown, string reasonPart)
+    {
+        Assert.Contains(reasonPart, LiveVideoFocus.BlackReason(minimised, inFront, shown));
+    }
+
     [AvaloniaFact]
     public void WindowFrameCaptureIsCappedAndSkipsARenderNobodyTook()
     {

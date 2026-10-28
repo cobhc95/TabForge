@@ -65,20 +65,20 @@ public static partial class MidiProcessorCatalog
             new[]
             {
                 InCh(), Choice("Mode", "Mode", 0, "How the velocity is computed", (0, "Scale + offset"), (1, "Fixed"), (2, "Compressor")),
-                Num("Mul", "Multiply", -16, 16, 1, "out = velocity x this + offset", 10), Num("Add", "Offset", -128, 128, 0),
-                Num("Fixed", "Fixed velocity", 1, 127, 100), Num("Threshold", "Compressor threshold", 1, 127, 80), Num("Ratio", "Compressor ratio", 1, 20, 2, "", 10, ":1"),
-                Num("Makeup", "Makeup", -64, 64, 0), Num("Min", "Minimum out", 0, 127, 1), Num("Max", "Maximum out", 0, 127, 127),
+                Num("Mul", "Multiply", -16, 16, 1, "Scale + offset mode: out = velocity x this + offset; ignored in Fixed and Compressor modes", 10), Num("Add", "Offset", -128, 128, 0, "Scale + offset mode: added after Multiply; ignored in Fixed and Compressor modes"),
+                Num("Fixed", "Fixed velocity", 1, 127, 100, "Fixed mode: every note in range gets this velocity"), Num("Threshold", "Compressor threshold", 1, 127, 80, "Compressor mode: velocities above this are squeezed"), Num("Ratio", "Compressor ratio", 1, 20, 2, "Compressor mode: how much above the threshold is squeezed", 10, ":1"),
+                Num("Makeup", "Makeup", -64, 64, 0, "Compressor mode: added after compression"), Num("Min", "Minimum out", 0, 127, 1), Num("Max", "Maximum out", 0, 127, 127),
                 Num("Random", "Random", 0, 100, 0, "Random velocity change, percent of the range", 1, " %"), Num("Mix", "Mix", 0, 100, 100, "Dry / wet", 1, " %"),
                 Num("InLow", "Lowest velocity affected", 1, 127, 1), Num("InHigh", "Highest velocity affected", 1, 127, 127),
                 Num("Low", "Lowest note", 0, 127, 0), Num("High", "Highest note", 0, 127, 127),
             }),
         new("humanize", "Humanizer", "Timing",
-            "Random timing and velocity. Everything is held back by a base delay so notes can also land early; a note-off keeps its note-on's shift.",
+            "Random timing and velocity around a fixed base delay (0 = no added delay); a note-off keeps its note-on's shift.",
             "humanize humanise random timing jitter swing feel velocity variation",
             new[]
             {
                 InCh(), Num("TimingMs", "Timing randomness", 0, 30, 8, "Up to this many milliseconds early or late", 1, " ms"), Num("BiasMs", "Timing bias", -10, 10, 0, "Plays a little early (-) or late (+)", 1, " ms"),
-                Num("BaseDelayMs", "Base delay", 0, 100, 20, "Delay that makes early jitter possible; keep it above the randomness", 1, " ms"),
+                Num("BaseDelayMs", "Fixed delay (base)", 0, 100, 0, "Fixed delay on every note: early jitter plays around it, so it must stay above the randomness. 0 = no added delay", 1, " ms"),
                 Num("VelRandom", "Velocity randomness", 0, 64, 8), Num("Baseline", "Baseline velocity (0 = keep)", 0, 127, 0),
             }),
         new("delay", "MIDI delay", "Timing",
@@ -90,7 +90,7 @@ public static partial class MidiProcessorCatalog
                 Num("Samples", "Samples", 0, 10000, 0), Check("NotesOnly", "Delay notes only", false, "Controllers and program changes pass straight through; note-ons and note-offs are delayed together"),
             }),
         new("programBank", "Program / bank select", "Controllers",
-            "Sends bank select (CC0 / CC32) and a program change when the track loads and/or playback starts.",
+            "Sends bank select (CC0 / CC32) and a program change when the track loads and/or playback starts. Notes pass through unchanged.",
             "program change bank msb lsb patch preset load start sound",
             new[]
             {
@@ -99,7 +99,7 @@ public static partial class MidiProcessorCatalog
                 Check("OnLoad", "Send when the track loads", true), Check("OnStart", "Send when playback starts", true),
             }),
         new("ccSender", "CC sender", "Controllers",
-            "Sends up to four controller values on a channel when the track loads and/or playback starts, and whenever you change them.",
+            "Sends up to four controller values on a channel when the track loads and/or playback starts, and whenever you change them. Notes pass through unchanged.",
             "cc controller volume pan expression modulation send start",
             new[]
             {
@@ -111,11 +111,11 @@ public static partial class MidiProcessorCatalog
                 Check("OnLoad", "Send when the track loads", true), Check("OnStart", "Send when playback starts", true),
             }),
         new("ccMapper", "CC mapper", "Controllers",
-            "Turns one controller into another, with the value limited to a range. The source can pass on as well.",
+            "Turns one controller into another, with the value limited to a range. The source can pass on as well. The default maps the mod wheel (CC1) to expression (CC11).",
             "cc controller map convert remap clamp limit modwheel expression",
             new[]
             {
-                InCh(), Num("Source", "Source controller", 0, 127, 1), Num("Target", "Target controller", 0, 127, 1), Num("ClampLow", "Lowest value", 0, 127, 0), Num("ClampHigh", "Highest value", 0, 127, 127),
+                InCh(), Num("Source", "Source controller", 0, 127, 1), Num("Target", "Target controller", 0, 127, 11, "Different from Source, or every message maps onto itself"), Num("ClampLow", "Lowest value", 0, 127, 0), Num("ClampHigh", "Highest value", 0, 127, 127),
                 Check("PassSource", "Source also passes", false),
             }),
     };
@@ -127,13 +127,13 @@ public static partial class MidiProcessorCatalog
             "snap scale key map to key remap block quantize pitch major minor mode",
             new[] { InCh(), RootParam(), ScaleParam(), Choice("Mode", "Out-of-scale notes", 0, "Remap moves them to the nearest scale note (ties down)", (0, "Snap to nearest"), (1, "Block")), Num("Low", "Lowest note", 0, 127, 0), Num("High", "Highest note", 0, 127, 127) }),
         new("chord", "Chord (in key / chorderizer)", "Pitch",
-            "Adds voices to each played note: fixed intervals (chorderizer) or scale steps in a key (chord in key). A note-off releases every voice.",
+            "Adds voices to each played note: fixed semitone intervals (chorderizer: Voices 1-4) or scale steps in a key (diatonic: Key, Scale and the diatonic steps). A note-off releases every voice.",
             "chord chorderizer chord in key triad harmony voices interval stack",
             new[]
             {
-                InCh(), Choice("Mode", "Mode", 0, "Fixed semitone intervals, or diatonic steps in the key", (0, "Fixed intervals"), (1, "Diatonic (in key)")),
-                Num("V1", "Voice 1 (semitones, 0 = off)", -24, 24, 5), Num("V2", "Voice 2 (semitones, 0 = off)", -24, 24, 0), Num("V3", "Voice 3 (semitones, 0 = off)", -24, 24, 0), Num("V4", "Voice 4 (semitones, 0 = off)", -24, 24, 0),
-                RootParam(), ScaleParam(), Num("Step2", "Diatonic step of note 2", -24, 24, 2, "Scale steps above the played note (2 = a third)"), Num("Step3", "Diatonic step of note 3", -24, 24, 4),
+                InCh(), Choice("Mode", "Mode", 0, "Fixed semitone intervals (Voices 1-4), or diatonic steps in the key (Key, Scale, steps)", (0, "Fixed intervals"), (1, "Diatonic (in key)")),
+                Num("V1", "Voice 1 (semitones, fixed, 0 = off)", -24, 24, 5), Num("V2", "Voice 2 (semitones, fixed, 0 = off)", -24, 24, 0), Num("V3", "Voice 3 (semitones, fixed, 0 = off)", -24, 24, 0), Num("V4", "Voice 4 (semitones, fixed, 0 = off)", -24, 24, 0),
+                RootParam(), ScaleParam(), Num("Step2", "Diatonic step of note 2", -24, 24, 2, "Diatonic mode: scale steps above the played note (2 = a third)"), Num("Step3", "Diatonic step of note 3", -24, 24, 4, "Diatonic mode: scale steps above the played note"),
                 Num("VelScale", "Added voices velocity", 0, 1, 1, "", 100), Num("Low", "Lowest note", 0, 127, 0), Num("High", "Highest note", 0, 127, 127),
             }),
         new("choke", "Choke", "Filter / routing",
@@ -158,17 +158,17 @@ public static partial class MidiProcessorCatalog
             "hold sustain legato latch mono drone",
             new[] { InCh() }),
         new("repeater", "Note repeater", "Generators",
-            "While a note is held it is retriggered every N beats with its original velocity.",
+            "While a note is held it is retriggered every N beats with its original velocity. The held note itself also sounds.",
             "repeat repeater retrigger roll ratchet stutter beats tempo sync",
             new[] { InCh(), Num("Size", "Repeat every (beats)", 0.1, 4, 0.5, "Tempo-synced", 10) }),
         new("arp", "Arpeggiator", "Generators",
-            "Turns held notes into a tempo-synced run. Steps sit on the beat grid; each note-off is scheduled.",
+            "Turns held notes into a tempo-synced run: the held notes themselves are silent, only the run sounds. Steps sit on the beat grid; each note-off is scheduled.",
             "arpeggiator arp arpeggio run sequence up down alternate tempo sync",
             new[]
             {
                 InCh(), Num("Rate", "Steps per beat", 0.25, 16, 2, "Tempo-synced", 100), Num("Length", "Note length", 0.01, 0.95, 0.5, "Fraction of a step", 100),
                 Choice("Mode", "Direction", 1, "Order of the held notes", (0, "Down"), (1, "Up"), (2, "Down / up"), (3, "Up / down")),
-                Num("Variants", "Extra passes (0-3)", 0, 3, 0, "Each pass adds another offset"), Num("VarOffset", "Offset per pass (semitones)", -64, 64, 12), Num("Velocity", "Velocity (0 = as played)", 0, 127, 0),
+                Num("Variants", "Extra passes (0-3)", 0, 3, 0, "Each pass adds another offset"), Num("VarOffset", "Offset per pass (semitones)", -64, 64, 12, "Needs Extra passes above 0"), Num("Velocity", "Velocity (0 = as played)", 0, 127, 0),
             }),
     };
 
@@ -179,7 +179,7 @@ public static partial class MidiProcessorCatalog
             "random note randomize randomise trigger pitch chance",
             new[] { InCh(), Num("Trigger", "Trigger note", 0, 127, 60), Num("Low", "Lowest output", 0, 127, 48), Num("High", "Highest output", 0, 127, 72), Num("Mix", "Chance", 0, 100, 100, "", 1, " %") }),
         new("modalRandom", "Modal randomizer", "Generators",
-            "Every played note also seeds random modal notes (scale-step intervals with probabilities, octave, timing and velocity randomness).",
+            "Every played note also seeds random modal notes (scale-step intervals with probabilities, octave, timing and velocity randomness). The played note itself still sounds: filter it with a note range before this processor for generated-notes-only sound.",
             "modal random cloud scatter generative intervals ambient",
             new[]
             {
@@ -202,18 +202,18 @@ public static partial class MidiProcessorCatalog
             "velocity variation accent pattern random humanize dynamics",
             new[] { InCh(), Num("Base", "Base velocity (0 = keep)", 0, 127, 0), Num("Variation", "Variation", 0, 100, 20, "", 1, " %"), new MidiParamInfo("Accent", "Accent pattern (1 = accent)", MidiParamKind.Text, DefaultText: "1 0 0 0"), Num("AccentAmount", "Accent amount", 0, 127, 25), Num("Low", "Lowest note", 0, 127, 0), Num("High", "Highest note", 0, 127, 127) }),
         new("lfo", "LFO (CC / pitch wheel)", "Controllers",
-            "A low-frequency oscillator into a controller or the pitch wheel, in Hz or cycles per beat. Only changes are sent.",
+            "A low-frequency oscillator into a controller or the pitch wheel, in Hz or cycles per beat. Only changes are sent; incoming notes pass through unchanged.",
             "lfo cc pitch wheel bend modulation oscillator sine triangle saw square random sample hold tempo sync",
             new[]
             {
                 Choice("Target", "Target", 0, "", (0, "Controller (CC)"), (1, "Pitch wheel")), new MidiParamInfo("Channel", "Channel", MidiParamKind.Choice, 1, 16, 1, "", Choices: Channel16),
-                Num("Cc", "Controller", 0, 127, 1), Num("Center", "Centre", 0, 127, 64), Num("Range", "Range (+/-)", 0, 127, 63), Num("MaxBend", "Max bend (pitch wheel)", 0, 100, 50, "", 1, " %"),
+                Num("Cc", "Controller", 0, 127, 1, "Controller target: which controller the LFO writes"), Num("Center", "Centre", 0, 127, 64, "Controller target: the middle value (the pitch wheel uses Max bend instead)"), Num("Range", "Range (+/-)", 0, 127, 63, "Controller target: how far each way (the pitch wheel uses Max bend instead)"), Num("MaxBend", "Max bend (pitch wheel)", 0, 100, 50, "Pitch-wheel target: how far each way, percent of full bend", 1, " %"),
                 Choice("Shape", "Shape", 0, "", (0, "Sine"), (1, "Triangle"), (2, "Saw"), (3, "Square"), (4, "Sample and hold")),
                 Num("Freq", "Frequency", 0, 32, 1, "", 100), Choice("Sync", "Frequency in", 1, "", (0, "Hz"), (1, "Cycles per beat")),
-                Num("Updates", "Updates per beat", 1, 512, 64), Num("OffValue", "Value when stopped (-1 = none)", -1, 127, -1), Check("OnlyPlaying", "Only while playing", true), Check("Enabled", "On", true),
+                Num("Updates", "Updates per beat", 1, 512, 64), Num("OffValue", "Value when stopped (-1 = none)", -1, 127, -1, "Sent when stopping for the Controller target only; the pitch wheel recentres instead"), Check("OnlyPlaying", "Only while playing", true), Check("Enabled", "On", true),
             }),
         new("stepSeq", "Step sequencer", "Generators",
-            "Plays a step pattern (semitones from the root; . = rest) in time with the transport. Up to four patterns, chained; per-step velocity and gate; swing.",
+            "Plays a step pattern (semitones from the root; . = rest) in time with the transport. With 'Input notes also pass' on (default) the input notes also reach the instrument; untick it for sequencer-only sound.",
             "step sequencer baby megababy pattern steps drum sequence gate swing chain tempo sync",
             new[]
             {
@@ -223,14 +223,14 @@ public static partial class MidiProcessorCatalog
                 new MidiParamInfo("Pattern1", "Pattern 1", MidiParamKind.Text, DefaultText: "0 . 7 . 12 . 7 .", Tip: "Semitones from the root, . for a rest"),
                 new MidiParamInfo("Pattern2", "Pattern 2", MidiParamKind.Text, DefaultText: ""), new MidiParamInfo("Pattern3", "Pattern 3", MidiParamKind.Text, DefaultText: ""), new MidiParamInfo("Pattern4", "Pattern 4", MidiParamKind.Text, DefaultText: ""),
                 new MidiParamInfo("Velocities", "Step velocities", MidiParamKind.Text, DefaultText: "", Tip: "Optional, cycled: 110 80 90 80"), new MidiParamInfo("Gates", "Step gates (%)", MidiParamKind.Text, DefaultText: "", Tip: "Optional, cycled"),
-                Check("PassInput", "Input notes also pass", true),
+                Check("PassInput", "Input notes also pass", true, "On: input notes also reach the instrument; off: only the pattern sounds"),
             }),
     };
 
     private static MidiProcessorInfo[] SliceE() => new MidiProcessorInfo[]
     {
         new("audioDrum", "Audio to MIDI drum trigger", "Audio",
-            "Turns hits in the audio arriving at this point into MIDI notes (velocity from the peak). Opens above one level, closes below another; the retrigger time blocks double triggers.",
+            "Turns hits in the audio arriving at this point into MIDI notes (velocity from the peak). Opens above one level, closes below another; the retrigger time blocks double triggers. Incoming MIDI passes through unchanged.",
             "audio to midi drum trigger transient kick snare replace sample threshold retrigger peak envelope",
             new[]
             {
@@ -241,7 +241,7 @@ public static partial class MidiProcessorCatalog
                 Num("Mix", "Audio pass-through", 0, 100, 100, "How much of the original audio stays", 1, " %"),
             }),
         new("audioDucker", "MIDI EQ ducker", "Audio",
-            "Notes duck the audio at this point: a gain change, or a band around a frequency, that fades in on note-on and out after the note-off.",
+            "Notes duck the audio at this point: a gain change, or a band around a frequency, that fades in on note-on and out after the note-off. Trigger notes also reach the instrument: put a note range filter before this processor to silence them.",
             "ducker duck eq sidechain pump gate gain band notch dip kick bass note triggered audio",
             new[]
             {
@@ -251,7 +251,7 @@ public static partial class MidiProcessorCatalog
                 Check("VelReact", "React to velocity", false),
             }),
         new("loopSampler", "Loop sampler", "Audio",
-            "Records the audio at this point while the record note is held (up to the maximum length), then plays the recording back from every other note.",
+            "Records the audio at this point while the record note is held (up to the maximum length), then plays the recording back from every other note. Record and trigger notes also reach the instrument: put a note range filter before this processor to silence them.",
             "loop sampler record playback audio trigger sample looper one shot pitch",
             new[]
             {
@@ -260,7 +260,7 @@ public static partial class MidiProcessorCatalog
                 Num("Level", "Level", -60, 12, 0, "", 1, " dB"),
             }),
         new("looper", "Synchronized looper (Super8 style)", "Audio",
-            "Several loop tracks that share one loop length (the first recording, rounded to beats). Control with notes: record/overdub from the base note, play/stop 8 notes higher, clear 16 higher; track number adds one.",
+            "Several loop tracks that share one loop length (the first recording, rounded to beats). Control with notes: record/overdub from the base note, play/stop 8 notes higher, clear 16 higher; track number adds one. Control notes also reach the instrument: put a note range filter before this processor to silence them.",
             "looper super8 loop record overdub play clear tracks tempo sync synchronized audio",
             new[]
             {
@@ -269,7 +269,7 @@ public static partial class MidiProcessorCatalog
                 Num("Level", "Loop level", -60, 12, 0, "", 1, " dB"),
             }),
         new("panic", "All notes off (Panic)", "Utility",
-            "Sends all-notes-off and all-sound-off on every channel when playback stops (and/or starts). The engine also releases every note this list let through.",
+            "Sends all-notes-off and all-sound-off on every channel when playback stops (and/or starts). Notes pass through unchanged. The engine also releases every note this list let through.",
             "panic all notes off stuck notes reset sound off stop",
             new[] { Check("OnStop", "When playback stops", true), Check("OnStart", "When playback starts", false) }),
         new("log", "MIDI log", "Utility",

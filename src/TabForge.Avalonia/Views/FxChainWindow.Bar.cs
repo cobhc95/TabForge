@@ -67,6 +67,7 @@ public sealed partial class FxChainWindow
         editorHost.Children.Add(_area);
         _parameters.Panel.IsVisible = false;
         editorHost.Children.Add(_parameters.Panel);
+        editorHost.Children.Add(_builtinEditor);   // a built-in effect's editor shows here, like a plug-in's
         pane.Children.Add(editorHost);
         return pane;
     }
@@ -87,13 +88,13 @@ public sealed partial class FxChainWindow
         _bar.Children.Add(new TextBlock { Text = "Volume", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, KnobLabelGap, 0), [!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted") });
         _bar.Children.Add(_volume);
         _bar.Children.Add(_volumeText);
-                _bar.Children.Add(_bypass);
+        _bar.Children.Add(_bypass);
         _ = PresetRows.Attach(_presetBox,
             () => Selected is { } slot ? PresetFolderStore.Plugin(slot) : null,
             item => item is PresetItem { Kind: PresetKind.User } preset ? preset.Name : null,
             () => PresetCatalogKind.PluginPreset,
             () => Selected is { } slot ? PresetFolderStore.PluginKey(slot) : null,
-            LoadPresetList, item => item is PresetItem { Kind: PresetKind.Manage });
+            LoadPresetList, item => item is PresetItem { Kind: PresetKind.Manage }, isBuiltIn: item => item is PresetItem { Kind: PresetKind.Program });
         _presetBox.SelectionChanged += (_, _) => { if (!_building) _ = ApplyPresetAsync(); };
         _addPreset.Click += (_, _) => _ = SavePresetAsync();
         _wiring.Click += (_, _) => OpenWiring();
@@ -134,7 +135,9 @@ public sealed partial class FxChainWindow
             if (Selected is { } slot)
             {
                 items.AddRange(_editors.Programs.Select((name, index) => new PresetItem(name, index, PresetKind.Program)));
-                items.AddRange(PluginLibrary.PresetNames(slot).Select(name => new PresetItem(name, -1, PresetKind.User)));
+                var saved = PluginLibrary.PresetNames(slot);
+                items.AddRange(TabForge.Audio.Contracts.Builtin.BuiltinPresets.Names(slot.Path).Where(name => !saved.Contains(name, StringComparer.OrdinalIgnoreCase)).Select(name => new PresetItem(name, -1, PresetKind.User)));   // a built-in's factory presets
+                items.AddRange(saved.Select(name => new PresetItem(name, -1, PresetKind.User)));
             }
             _presetBox.IsEnabled = items.Count > 0 || Selected is not null;
             // The preset name an imported chain gave the plug-in: its own row when no program or saved preset has that name.
@@ -157,7 +160,7 @@ public sealed partial class FxChainWindow
         if (item.Kind == PresetKind.CameWith) return;
         if (item.Kind == PresetKind.Program)
         {
-            if (slot.PresetName is not null) Edit(() => slot.PresetName = null, show: false);   // a pick that changes nothing makes no undo step
+            if (slot.PresetName != item.Name) Edit(() => slot.PresetName = item.Name, show: false);   // the chosen name stays with the plug-in; a pick that changes nothing makes no undo step
             _host.Engine?.SetProgram(_track, slot, item.Program);
             return;
         }
@@ -168,7 +171,7 @@ public sealed partial class FxChainWindow
         }
         Edit(() =>
         {
-            slot.PresetName = null;
+            slot.PresetName = item.Name;   // the name the box shows, kept with the plug-in (per slot, saved with the song)
             slot.State = preset.State;
             _host.Engine?.SetState(_track, slot, preset.State);
             if (preset.OutputDb is { } db) { slot.OutputDb = db; _host.Engine?.SetPluginGain(_track, slot); }
@@ -186,6 +189,9 @@ public sealed partial class FxChainWindow
         if (string.IsNullOrWhiteSpace(name)) { LoadPresetList(); return; }
         if (_host.Engine is { } engine) await engine.CollectStatesAsync(new[] { _track }, StateCollectMs);
         if (_closed) return;   // the window closed while the states were read
+        // A built-in is also read through the parameter list the editors poll (its current values), so the preset matches what is heard even when the state reply is missing.
+        if (_host.Engine is { } live && BuiltinEditors.IsBuiltin(slot)) await TabForge.Avalonia.Views.Builtin.BuiltinSlotState.CaptureAsync(live, _track, slot, StateCollectMs);
+        if (_closed) return;
         if (slot.State is not { Length: > 0 } state)
         {
             await Dialogs.Tell(this, "This plug-in did not give its settings (turn the chain on first).", SavePresetCaption);
@@ -198,6 +204,9 @@ public sealed partial class FxChainWindow
             await Dialogs.Ask(this, "The preset could not be saved: " + ex.Message, SavePresetCaption, MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return;
         }
+        // The saved preset becomes the plug-in's current one (as a pick would): the box lists and shows it, nothing is reloaded.
+        var saved = name.Trim();
+        if (slot.PresetName != saved) Edit(() => slot.PresetName = saved, show: false);
         LoadPresetList();
     }
 

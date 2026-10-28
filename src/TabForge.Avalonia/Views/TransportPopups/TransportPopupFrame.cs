@@ -48,6 +48,7 @@ public sealed class TransportPopupFrame
     private const double ShadowOpacity = 0.52;
     private static readonly Thickness ShadowRoom = new(ShadowBlur, 0, ShadowBlur, ShadowBlur);
     private const string CloseGlyph = "×";
+    private const double CrossSize = 8, CrossStroke = 1.5;
     private const string PowerOnText = "On", PowerOffText = "Off";
 
     private readonly Popup _popup;
@@ -63,6 +64,7 @@ public sealed class TransportPopupFrame
         var close = new Button { Content = CloseGlyph, Width = CloseButtonSize, Height = CloseButtonSize, Padding = new Thickness(0),
             HorizontalContentAlignment = HorizontalAlignment.Center, VerticalContentAlignment = VerticalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center };
+        close.ContentTemplate = new global::Avalonia.Controls.Templates.FuncDataTemplate<string>((_, _) => CrossShape());   // a drawn cross: the glyph sits off-centre in its line box
         ToolTip.SetTip(close, closeTip);
         AutomationProperties.SetName(close, closeTip);
         close.Click += (_, _) => Close();
@@ -130,6 +132,19 @@ public sealed class TransportPopupFrame
     }
 
     public void Close() => _popup.IsOpen = false;
+
+    // Two diagonal strokes in a square box, centred by the button's content alignment.
+    private static global::Avalonia.Controls.Shapes.Path CrossShape()
+    {
+        var cross = new global::Avalonia.Controls.Shapes.Path
+        {
+            Data = Geometry.Parse($"M0,0 L{CrossSize},{CrossSize} M{CrossSize},0 L0,{CrossSize}"), StrokeThickness = CrossStroke,
+            Width = CrossSize, Height = CrossSize, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center,
+            StrokeLineCap = PenLineCap.Round,
+        };
+        cross[!global::Avalonia.Controls.Shapes.Shape.StrokeProperty] = new DynamicResourceExtension("TextPrimary");
+        return cross;
+    }
 
     private void PaintShadow()
     {

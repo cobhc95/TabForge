@@ -27,7 +27,10 @@ public sealed class MainWindowFileExports
     private readonly RenderSettings _renderSettings;
     private readonly VideoSettings _videoSettings;
     private readonly Func<bool> _hasSelection;
-    private readonly IFileDialogs _dialogs = new AvaloniaFileDialogs();
+    /// <summary>The main window's remembered dialog folders (null: the dialogs start where their options say).</summary>
+    public TabForge.Services.DialogFolderMemory? Folders { get; init; }
+
+    private IFileDialogs _dialogs => new AvaloniaFileDialogs(Folders);
 
     /// <param name="hasSelection">Whether the score has a note selection when a dialog opens.</param>
     /// <param name="settings">The shared settings whose Render and Video sections the dialogs edit; null keeps private defaults.</param>
@@ -50,6 +53,7 @@ public sealed class MainWindowFileExports
     {
         var exports = new MainWindowFileExports(() => score.Editor.HasSelection, settings?.Settings)
         {
+            Folders = settings?.DialogFolders,
             Runner = playback is not null && settings is not null ? new AvaloniaRenderRunner(playback, settings.Settings) : null,
             Exporter = playback is not null && settings is not null ? new AvaloniaVideoExporter(playback, settings.Settings) : null,
             Selection = () => score.Editor.SelectionCellRange,
@@ -110,7 +114,7 @@ public sealed class MainWindowFileExports
         Func<RenderPlan, IProgress<TabForge.Audio.Contracts.RenderProgressInfo>, System.Threading.CancellationToken, System.Threading.Tasks.Task<TabForge.Audio.Contracts.RenderResult>>? run =
             Runner is { Engine: not null } runner ? (plan, progress, cancel) => Announce("Render", plan.MasterFile ?? plan.Stems.Values.FirstOrDefault(), () => runner.Run(song, plan, _renderSettings, window ?? owner, progress, cancel), r => r.Files.Count > 0 ? r.Files[0].Path : null) : null;
         window = new RenderWindow(project, _renderSettings, hasSelection: _hasSelection(), openVideoExport: () => ShowVideo(song, owner),
-            pickFolder: start => _dialogs.PickFolder(new FileDialogOptions { Title = "Choose the render folder", InitialDirectory = start }, owner),
+            pickFolder: start => _dialogs.PickFolder(new FileDialogOptions { Key = TabForge.Services.DialogKeys.RenderFolder, Title = "Choose the render folder", InitialDirectory = start }, owner),
             run: run, mp3Available: run is null || RenderJob.Mp3Available(), selection: _hasSelection() ? Selection() : null, loop: song.Selection.LoopSnapshot(), snip: song.Selection.Snapshot());
         window.ShowDialog(owner);
     }

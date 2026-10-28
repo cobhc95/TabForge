@@ -31,7 +31,7 @@ public class TrackListWidthTests
     public void DraggingChangesTheListWidthWithinBoundsAndKeepsRowsAligned()
     {
         var view = new ArrangementView(DemoSongFactory.Create(), new ScorePreviewEditor.PreviewDocument(DemoSongFactory.Create()));
-        var window = new Window { Width = 1000, Height = 600, Content = view };
+        var window = new Window { Width = 1300, Height = 600, Content = view };
         window.Show();
         window.UpdateLayout();
         var start = view.Header.ColumnWidth;
@@ -42,7 +42,7 @@ public class TrackListWidthTests
         view.MoveTrackListDrag(-100000);
         Assert.Equal(TrackListWidthRules.MinListWidth, view.Header.ColumnWidth, 6);
         view.MoveTrackListDrag(100000);
-        Assert.True(view.Header.ColumnWidth <= 1000 * TrackListWidthRules.MaxShareOfPane + 0.5);
+        Assert.True(view.Header.ColumnWidth <= 1300 * TrackListWidthRules.MaxShareOfPane + 0.5);
 
         // The M box of row 2 sits inside row 2's band, the same band the timeline lane uses.
         var mute = view.Header.CellRect(2, TrackRowCells.Cell.Mute).Center.Y;
@@ -96,5 +96,29 @@ public class TrackListWidthTests
         // The Add track strip spans the whole pane below the divider, so it covers the list and the timeline alike.
         Assert.Equal(view.Bounds.Width, view.AddTrackBar.Bounds.Width, 0.5);
         Assert.True(listRight <= view.AddTrackBar.Bounds.Width && timelineLeft < view.AddTrackBar.Bounds.Width);
+    }
+
+    [Fact]
+    public void ASavedOldDefaultReadsAsTheNewSnugDefaultAndADraggedWidthIsKept()
+    {
+        Assert.Equal(TrackListWidthRules.DefaultListWidth, TrackListWidthRules.ResolveSaved(532));
+        Assert.Equal(TrackListWidthRules.DefaultListWidth, TrackListWidthRules.ResolveSaved(600));
+        Assert.Equal(TrackListWidthRules.DefaultListWidthFor(0.85), TrackListWidthRules.ResolveSaved(532, 0.85));
+        Assert.Equal(TrackListWidthRules.DefaultListWidthFor(0.85), TrackListWidthRules.ResolveSaved(600, 0.85));
+        Assert.Equal(400, TrackListWidthRules.ResolveSaved(400));
+        Assert.Equal(401.5, TrackListWidthRules.ResolveSaved(401.5));
+        Assert.Equal(TrackListWidthRules.DefaultListWidth, TrackListWidthRules.FixedWidth + TrackListWidthRules.DefaultNameWidth);
+    }
+
+    [Theory]
+    [InlineData(1.0, 557)]
+    [InlineData(0.85, 555)]
+    public void TheSnugDefaultHoldsTheTransportRowAndNeverClipsTheTrackColumns(double factor, double expected)
+    {
+        Assert.Equal(expected, TrackListWidthRules.DefaultListWidthFor(factor), 3);
+        Assert.True(TrackListWidthRules.DefaultListWidthFor(factor) >= TrackListWidthRules.MinListWidth,
+            "TRACK/FX/M/S/VOLUME/PAN stay readable at the snug default");
+        Assert.Equal(TrackListWidthRules.DefaultListWidthFor(factor),
+            TrackListWidthRules.FixedWidth + TrackListWidthRules.NameWidthFor(TrackListWidthRules.DefaultListWidthFor(factor)), 6);
     }
 }

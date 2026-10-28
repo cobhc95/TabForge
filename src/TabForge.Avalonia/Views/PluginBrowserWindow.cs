@@ -43,6 +43,8 @@ public sealed class PluginBrowserWindow : Window
     private readonly CheckBox _remember = new() { Name = "RememberBox", Margin = new Thickness(0, 8, 0, 0) };
     private readonly CheckBox _clap = new() { Name = "ClapBox" };   // CLAP is opt-in
     private readonly WrapPanel _buttons = new() { Name = "ButtonBar", Margin = new Thickness(0, 8, 0, 0) };
+    private readonly StackPanel _runButtons = new() { Name = "RunButtons", Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+    private Button _pause = null!;   // set in BuildBottom: Pause, or Resume while paused
     private readonly List<TextBlock> _sortArrows = new();
     private readonly Button _scanStandard;   // the empty-state button; shown only while the list is empty (the preview has the standard folders off)
     private int _sortColumn;
@@ -84,7 +86,8 @@ public sealed class PluginBrowserWindow : Window
         WireInput();
         session.Changed += OnSessionChanged;
         session.Status += OnSessionStatus;
-        Closed += (_, _) => { session.Changed -= OnSessionChanged; session.Status -= OnSessionStatus; _filterDebounce.Stop(); };
+        session.RunChanged += RefreshRun;
+        Closed += (_, _) => { session.Changed -= OnSessionChanged; session.Status -= OnSessionStatus; session.RunChanged -= RefreshRun; session.Stop(); _filterDebounce.Stop(); };
         Filter();
         Opened += (_, _) =>
         {
@@ -100,15 +103,39 @@ public sealed class PluginBrowserWindow : Window
         return await new TabForge.Avalonia.Platform.AvaloniaDialogHost().ShowModal<bool>(window, owner) ? window.Chosen : null;
     }
 
-    private void OnSessionChanged() { _progress.IsVisible = _session.Scanning; Filter(); }
+    private void OnSessionChanged() { RefreshRun(); Filter(); }
 
-    private void OnSessionStatus(string text) => _status.Text = text;
+    private void OnSessionStatus(string text) { _status.Text = text; RefreshRun(); }
+
+    // Pause / Resume and Stop show only while an identify pass runs or is paused; the thin bar under the status line follows its progress (a scan: moving).
+    private void RefreshRun()
+    {
+        var active = _session.Run is IdentifyRun.Running or IdentifyRun.Paused;
+        _runButtons.IsVisible = active && !_session.Scanning;
+        _pause.Content = _session.Run == IdentifyRun.Paused ? "Resume" : "Pause";
+        var (done, total) = _session.IdentifyProgress;
+        _progress.IsIndeterminate = _session.Scanning;
+        _progress.Maximum = Math.Max(1, total);
+        _progress.Value = done;
+        _progress.IsVisible = _session.Scanning || active;
+    }
+
+    private Button RunButton(string text, string automationId, string tip, Action click)
+    {
+        var button = DialogMetrics.StatusAction(new Button { Content = text });
+        ToolTip.SetTip(button, tip);
+        AutomationProperties.SetAutomationId(button, automationId);
+        button.Name = automationId.Replace("Plugins.", "") + "Button";
+        button.Click += (_, _) => click();
+        return button;
+    }
 
     private async System.Threading.Tasks.Task Scan(System.Collections.Generic.List<string>? roots)
     {
+        _progress.IsIndeterminate = true;
         _progress.IsVisible = true;
         await _session.ScanAsync(roots);
-        _progress.IsVisible = false;
+        RefreshRun();
         _ = Identify();
     }
 
@@ -135,7 +162,14 @@ public sealed class PluginBrowserWindow : Window
         _clap.IsChecked = _session.Settings.ScanClap;
         ToolTip.SetTip(_clap, "Off (default): only VST plug-ins are listed. On: .clap plug-ins in " + string.Join(", ", VstScannerService.ClapFolderLabels) + " and in your folders are listed too and can be added like any plug-in.");
         _clap.IsCheckedChanged += (_, _) => { if ((_clap.IsChecked == true) != _session.Settings.ScanClap) { _session.SetScanClap(_clap.IsChecked == true); _ = Scan(null); } };
-        var bottom = new StackPanel { Children = { _progress, _status, _remember, _clap, _buttons } };
+        var statusRow = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") };
+        Grid.SetColumn(_runButtons, 1);
+        statusRow.Children.Add(_status);
+        statusRow.Children.Add(_runButtons);
+        _runButtons.Children.Add(_pause = RunButton("Pause", "Plugins.Pause", "Pause identifying after the plug-ins being checked now; Resume continues.", () => { if (_session.Run == IdentifyRun.Paused) _session.Resume(); else _session.Pause(); }));
+        _runButtons.Children.Add(RunButton("Stop", "Plugins.Stop", "Stop identifying; the rest stay listed with … and are checked by Rescan or when this window opens again.", _session.Stop));
+        _runButtons.IsVisible = false;
+        var bottom = new StackPanel { Children = { statusRow, _progress, _remember, _clap, _buttons } };
         DockPanel.SetDock(bottom, Dock.Bottom);
         return bottom;
     }
@@ -148,7 +182,7 @@ public sealed class PluginBrowserWindow : Window
             () => { _session.EnableStandardFolders(); _scanStandard.IsVisible = false; _ = Scan(null); });
         AddButton("Add folder…", "Plugins.AddFolder", "Add one or more folders that hold plug-ins; they are kept in Settings > Audio & Plug-ins.", () =>
         {
-            var chosen = _files.PickFolders(new TabForge.Platform.FileDialogOptions { Title = "Add plug-in folders", Multiselect = true }, this);
+            var chosen = _files.PickFolders(new TabForge.Platform.FileDialogOptions { Key = TabForge.Services.DialogKeys.PluginFolder, Title = "Add plug-in folders", Multiselect = true }, this);
             if (chosen is null) return;
             _session.AddFolders(chosen);
             _ = Scan(null);
@@ -169,7 +203,7 @@ public sealed class PluginBrowserWindow : Window
 
     private void BrowseForFile()
     {
-        var path = _files.OpenFile(new TabForge.Platform.FileDialogOptions { Title = "Choose a plug-in", Filter = "Plug-ins (*.vst3;*.dll;*.clap)|*.vst3;*.dll;*.clap" }, this);
+        var path = _files.OpenFile(new TabForge.Platform.FileDialogOptions { Key = TabForge.Services.DialogKeys.PluginFile, Title = "Choose a plug-in", Filter = "Plug-ins (*.vst3;*.dll;*.clap)|*.vst3;*.dll;*.clap" }, this);
         if (path is null) return;
         if (PluginBrowserSession.FromFile(path, out var problem) is not { } info) { _status.Text = problem ?? ""; return; }
         Chosen = info;
@@ -330,6 +364,7 @@ public sealed class PluginBrowserWindow : Window
             _sortArrows[column].Text = column != _sortColumn ? "" : _sortAscending ? "▲" : "▼";
         if (_session.Scanning) return;
         _scanStandard.IsVisible = _session.All.Count == 0 && !_session.Settings.ScanStandardFolders;
+        if (_session.Run is IdentifyRun.Paused or IdentifyRun.Stopped) return;   // keep the Paused / Stopped sentence
         _status.Text = PluginBrowserListPresenter.StatusText(_session.All.Count, _session.FoldersChosen, _session.Settings.RememberScan);
     }
 }

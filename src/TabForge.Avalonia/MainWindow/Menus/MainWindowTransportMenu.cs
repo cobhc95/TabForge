@@ -13,7 +13,10 @@ namespace TabForge.Avalonia;
 public static class MainWindowTransportMenu
 {
     /// <summary>The Transport menu command ids this class handles.</summary>
-    public static readonly IReadOnlyList<string> Commands = new[] { "Transport.PlayFromStart", "Transport.PlayPause", "Transport.Stop" };
+    public static readonly IReadOnlyList<string> Commands = new[] { "Transport.PlayFromStart", "Transport.PlayPause", "Transport.Stop", PanicCommand };
+
+    /// <summary>Panic: all notes and the sustain pedal off on every output; works while stopped.</summary>
+    public const string PanicCommand = "Transport.Panic";
 
     /// <summary>The fixed Escape command: stops a playing or paused song. Not in the hotkey catalogue; it does nothing while the song is stopped.</summary>
     public const string EscapeStopCommand = "Transport.EscapeStop";
@@ -40,6 +43,7 @@ public static class MainWindowTransportMenu
             if (EndRecording(recording)) return;   // Space ends a recording instead of pausing it
             if (playback?.For(songs.Active) is { } session) session.PlayOrPause();
         });
+        commands.Add(PanicCommand, () => playback?.Panic());
         commands.Add("Transport.Stop", () =>
         {
             if (EndRecording(recording)) return;   // the recording's stop stops the playback and restores the cursor

@@ -49,6 +49,8 @@ public sealed class SongFxChainHost : IFxChainHost
     public IReadOnlyList<TrackModel> Tracks => _document.Project.Tracks;
     /// <summary>The plug-in settings (or unsaved defaults).</summary>
     public PluginSettings PluginSettings => _settings?.Settings.Plugins ?? _fallbackPlugins;
+
+    public TabForge.Services.DialogFolderMemory? DialogFolders => _settings?.DialogFolders;
     /// <summary>The key bindings (or defaults).</summary>
     public HotkeySettings Hotkeys => _settings?.Settings.Hotkeys ?? _fallbackHotkeys;
     /// <summary>The engine adapter, or null without playback.</summary>
@@ -103,6 +105,15 @@ public sealed class SongFxChainHost : IFxChainHost
 
     /// <summary>Opens the settings on the Audio/VST page.</summary>
     public void OpenAudioSettings(Window owner) => MainWindowSettings.ShowPreferencesPage(_settings, _owner() ?? owner, SettingsCatalog.AudioVst);
+
+    /// <summary>One live message to the track's instrument, on the channel the song gives the track; false when the track is not routed to the engine.</summary>
+    public bool SendInstrumentMidi(TrackModel track, int status, int data1, int data2)
+    {
+        var index = _document.Project.Tracks.IndexOf(track);
+        var channels = index < 0 ? Array.Empty<int>() : TabForge.Playback.ChannelAllocator.Assign(_document.Project);
+        return index >= 0 && index < channels.Length && _playback?.For(_document)?.Routing is { } routing
+            && routing.SendLiveEngineOnly((status & 0xF0) | (channels[index] & 0x0F), data1, data2);
+    }
 
     /// <summary>Syncs the track to the engine and repaints.</summary>
     public void SyncEngine(TrackModel track)

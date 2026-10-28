@@ -65,7 +65,7 @@ public class DialogVirtualizationTests
             window.Show();
             var list = window.GetLogicalDescendants().OfType<ListBox>().Single(l => l.Name == "PluginList");
             Assert.IsType<VirtualizingStackPanel>(list.ItemsPanel?.Build());
-            Assert.Equal(2, list.ItemCount);
+            Assert.Equal(2 + TabForge.Audio.Contracts.Builtin.BuiltinEffects.All.Count, list.ItemCount);   // the scanned two and TabForge's own effects
         }
         finally { window.Close(); }
     }

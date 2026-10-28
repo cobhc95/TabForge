@@ -35,14 +35,9 @@ public sealed partial class TransportBarView : Border
 {
     public const string NotAvailable = "Playback is not available in the preview";
 
-    // The square transport buttons (34 DIP) and the stacked timeline zoom pair (26 x 17 DIP each), sized.
+    // The square transport buttons (34 DIP) and the stacked timeline zoom pair (26 x 17 DIP each), sized. The snug track list default
+    // (TransportWrapRules.SnugListWidth) mirrors these spans and each margin and padding below in ChromeMetrics.
     public const double TransportButtonSize = UiMetrics.TransportButtonSize;
-
-    /// <summary>The smallest button size the transport bar shrinks to so its groups fit one row; below it the bar wraps.</summary>
-    public const double MinButtonSize = 26;
-
-    /// <summary>How much a button shrinks each step while the groups do not fit one row.</summary>
-    private const double ButtonShrinkStep = 1;
 
     /// <summary>The zoom pair's buttons: 26 x 17 DIP, stacked flush (no vertical margin) and 1 DIP apart sideways.</summary>
     private const double ZoomButtonWidth = 26;
@@ -158,6 +153,9 @@ public sealed partial class TransportBarView : Border
     /// <summary>The master volume knob (0-100 %) at the far right after the mixer button; no engine is bound to it in the preview yet.</summary>
     public KnobControl MasterVolumeKnob { get; }
 
+    /// <summary>The master level meter in the last slot, after the zoom pair; MasterMeterWiring makes it live.</summary>
+    public Views.Meters.MasterMeterView MasterMeter { get; } = new() { Width = TransportButtonSize, Height = TransportButtonSize };   // always shown, at button size; the bar wraps when narrow
+
     public TransportBarView()
     {
         var row = new WrapPanel { Orientation = Orientation.Horizontal };
@@ -176,10 +174,9 @@ public sealed partial class TransportBarView : Border
         global::Avalonia.Automation.AutomationProperties.SetName(MasterVolumeKnob, MasterVolumeLabel);
         row.Children.Add(Group(BuildLocalButton(TuningItem, keys, OpenTuningWindow, null), BuildLocalButton(SnapItem, keys, ToggleSnap, () => OpenSnapSettings()),
             BuildButton(MixerItem, keys, TransportButtonSize, TransportButtonSize), MasterVolumeKnob));
-        row.Children.Add(Group(BuildZoomPair(keys)));   // the zoom pair closes the row, after the master volume knob
+        row.Children.Add(Group(BuildZoomPair(keys), MasterMeter));   // the zoom pair, then the master meter, close the row after the master volume knob
         RefreshLit();
         Child = row;
-        SizeChanged += (_, e) => FitButtonsToOneRow(row, e.NewSize.Width - BorderThickness.Left - BorderThickness.Right);
         // The spacing density scales only the sideways gaps (the bar keeps the ruler's height); the resource changes once per Apply.
         this.GetResourceObservable(UiDensityResources.Factor).Subscribe(new global::Avalonia.Reactive.AnonymousObserver<object?>(factor => ApplyGaps(row, factor is double f ? f : 1.0)));
         Name = "TransportControls";
@@ -227,6 +224,7 @@ public sealed partial class TransportBarView : Border
     /// </summary>
     public void BindCommands(ContextMenuHost? contextMenus)
     {
+        MasterMeter.OpenMixer = contextMenus is null ? null : () => RunIfHandled(contextMenus, MixerItem.CommandId!);   // a double click on the meter
         foreach (var button in _buttons)
         {
             if (!WindowCommandIds.TryGetValue(button.Item.Name, out var commandId)) continue;
@@ -292,25 +290,12 @@ public sealed partial class TransportBarView : Border
         return panel;
     }
 
-    // Shrinks the buttons step by step, down to MinButtonSize, until the groups sit in one row of this width; the bar wraps only below that size.
-    private void FitButtonsToOneRow(WrapPanel wrap, double width)
-    {
-        var size = TransportButtonSize;
-        while (true)
-        {
-            ApplyButtonSize(size);
-            wrap.Measure(new Size(width, double.PositiveInfinity));
-            var tallestGroup = wrap.Children.Max(group => group.DesiredSize.Height);
-            if (size <= MinButtonSize || TransportWrapRules.FitsOneRow(wrap.DesiredSize.Height, tallestGroup)) return;
-            size = TransportWrapRules.NextSmallerSize(size, MinButtonSize, ButtonShrinkStep);
-        }
-    }
-
     // Sideways gaps at the density factor: the button, divider and knob margins and the bar's side padding. Comfortable (1.0) is today's exact layout.
     private void ApplyGaps(WrapPanel row, double factor)
     {
         foreach (var button in _buttons)
             if (!ZoomItems.Contains(button.Item)) button.WithMargin(factor, 1, factor, 1);
+        MasterMeter.WithMargin(factor, 1, factor, 1);
         foreach (var group in row.Children.OfType<Panel>())
             foreach (var child in group.Children)
             {
@@ -318,17 +303,6 @@ public sealed partial class TransportBarView : Border
                 else if (ReferenceEquals(child, MasterVolumeKnob)) child.WithMargin(MasterVolumeKnobLeftMargin * factor, 0, MasterVolumeKnobRightMargin * factor, 0);
             }
         this.WithPadding(factor, BarPadding.Top);
-    }
-
-    // The zoom pair keeps its own size; every other button takes the given square size.
-    private void ApplyButtonSize(double size)
-    {
-        foreach (var button in _buttons)
-        {
-            if (ZoomItems.Contains(button.Item)) continue;
-            button.Width = size;
-            button.Height = size;
-        }
     }
 
     // A button that works in the preview without a session: enabled, its left press runs pressed and its right press secondary.

@@ -40,8 +40,8 @@ public sealed class AppearanceSettings
     public string SelectionColourInUse() =>
         IsOverridden(nameof(SelectionColour)) || !(string.Equals(SelectionColour, Palette.Hex("Selection", false), StringComparison.OrdinalIgnoreCase) || string.Equals(SelectionColour, Palette.Hex("Selection", true), StringComparison.OrdinalIgnoreCase))
             ? SelectionColour : Accent;
-    /// <summary>Colour of the lit notes and the playing line in the score: "Follow accent" (default) or "Custom" (<see cref="PlaybackHighlightColour"/>). A stored "Auto" from older files is moved on at load (SettingsMigration).</summary>
-    public string PlaybackHighlight { get; set; } = PlaybackHighlightModes.FollowAccent;
+    /// <summary>Colour of the lit notes and the playing line in the score: "Custom" (default, <see cref="PlaybackHighlightColour"/>, the default green) or "Follow accent". A stored "Auto" from older files is moved on at load (SettingsMigration).</summary>
+    public string PlaybackHighlight { get; set; } = PlaybackHighlightModes.Custom;
     /// <summary>The colour used when <see cref="PlaybackHighlight"/> is "Custom".</summary>
     public string PlaybackHighlightColour { get; set; } = Palette.Hex("FollowHighlightText", false);
     public string HoverColour { get; set; } = Palette.Hex("HoverOutline", false);
@@ -110,6 +110,8 @@ public sealed class AppearanceSettings
     public string TimelineScrollBarThumbColour { get; set; } = "#758396";
     /// <summary>Show the fretboard / instrument panel.</summary>
     public bool ShowFretboard { get; set; } = true;
+    /// <summary>Whether the fretboard shows at launch: Remember last (the saved state), Always or Never (see <see cref="FretboardStartupModes"/>).</summary>
+    public string FretboardAtStartup { get; set; } = FretboardStartupModes.Remember;
     /// <summary>Fretboard / keyboard pane height is locked (splitter drags do not change it).</summary>
     public bool LockInstrumentSize { get; set; }
     /// <summary>The fretboard / keyboard pane sits below the score (above the timeline) instead of above it.</summary>

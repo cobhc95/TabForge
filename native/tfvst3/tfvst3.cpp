@@ -39,6 +39,14 @@
 #include <string>
 #include <vector>
 
+#if defined(__linux__)
+// Linux: views attach to an X11 window id and get the host run loop from their frame (posix/tfv3_runloop_linux.h).
+#include "tfv3_runloop_linux.h"
+#define TFV3_VIEW_PLATFORM kPlatformTypeX11EmbedWindowID
+#else
+#define TFV3_VIEW_PLATFORM kPlatformTypeHWND
+#endif
+
 using namespace Steinberg;
 using namespace Steinberg::Vst;
 
@@ -312,6 +320,9 @@ struct tfv3_plugin
 	float editorScale = 0.f;                           // content scale to give the view before it attaches (0: none)
 	std::atomic<int64_t> pendingResize {-1};           // the view's latest resizeView request, (width << 32 | height); -1: none
 	int32 hasEditorCache = -1;
+#if defined(__linux__)
+	tfv3::RunLoop runLoop;                             // the IRunLoop the view finds on its frame; cleared when the editor closes
+#endif
 
 	class ComponentHandler final : public IComponentHandler, public IComponentHandler2
 	{
@@ -367,7 +378,28 @@ struct tfv3_plugin
 			owner->pendingResize.store ((static_cast<int64_t> (newSize->getWidth ()) << 32) | static_cast<uint32_t> (newSize->getHeight ()));
 			return kResultTrue;
 		}
+#if defined(__linux__)
+		// Linux: the view asks its frame for the host run loop (its timers and file descriptors).
+		tresult PLUGIN_API queryInterface (const TUID _iid, void** obj) override
+		{
+			if (FUnknownPrivate::iidEqual (_iid, Linux::IRunLoop::iid))
+			{
+				*obj = static_cast<Linux::IRunLoop*> (&owner->runLoop);
+				return kResultOk;
+			}
+			if (FUnknownPrivate::iidEqual (_iid, IPlugFrame::iid) || FUnknownPrivate::iidEqual (_iid, FUnknown::iid))
+			{
+				*obj = static_cast<IPlugFrame*> (this);
+				return kResultOk;
+			}
+			*obj = nullptr;
+			return kNoInterface;
+		}
+		uint32 PLUGIN_API addRef () override { return 1; }
+		uint32 PLUGIN_API release () override { return 1; }
+#else
 		TFV3_FUNKNOWN_OWNED (IPlugFrame)
+#endif
 	} frame;
 
 	tfv3_plugin ()
@@ -457,6 +489,9 @@ struct tfv3_plugin
 			view->setFrame (nullptr);
 			view = nullptr;
 		}
+#if defined(__linux__)
+		runLoop.clear (); // handlers the closed view left registered are never called again
+#endif
 		parentHwnd = nullptr;
 		pendingResize = -1;
 	}
@@ -1208,7 +1243,7 @@ TFV3_API int32_t tfv3_has_editor (tfv3_plugin* p)
 		if (p->hasEditorCache < 0)
 		{
 			IPtr<IPlugView> v = owned (p->controller->createView (ViewType::kEditor));
-			p->hasEditorCache = (v && v->isPlatformTypeSupported (kPlatformTypeHWND) == kResultTrue) ? 1 : 0;
+			p->hasEditorCache = (v && v->isPlatformTypeSupported (TFV3_VIEW_PLATFORM) == kResultTrue) ? 1 : 0;
 		}
 		return p->hasEditorCache;
 	}
@@ -1227,7 +1262,7 @@ TFV3_API int32_t tfv3_open_editor (tfv3_plugin* p, void* parent_hwnd, int32_t* w
 		p->closeEditor ();
 		p->pendingResize = -1;
 		IPtr<IPlugView> v = owned (p->controller->createView (ViewType::kEditor));
-		if (!v || v->isPlatformTypeSupported (kPlatformTypeHWND) != kResultTrue)
+		if (!v || v->isPlatformTypeSupported (TFV3_VIEW_PLATFORM) != kResultTrue)
 			return 0;
 		p->parentHwnd = static_cast<HWND> (parent_hwnd);
 		v->setFrame (&p->frame);
@@ -1237,10 +1272,13 @@ TFV3_API int32_t tfv3_open_editor (tfv3_plugin* p, void* parent_hwnd, int32_t* w
 			if (scale)
 				scale->setContentScaleFactor (p->editorScale);
 		}
-		if (v->attached (parent_hwnd, kPlatformTypeHWND) != kResultOk)
+		if (v->attached (parent_hwnd, TFV3_VIEW_PLATFORM) != kResultOk)
 		{
 			v->setFrame (nullptr);
 			p->parentHwnd = nullptr;
+#if defined(__linux__)
+			p->runLoop.clear ();
+#endif
 			return 0;
 		}
 		p->view = v;
@@ -1394,5 +1432,8 @@ TFV3_API void tfv3_destroy (tfv3_plugin* p)
 	{
 	}
 }
+
+// Parameter list / get / set for the generic plug-in controls panel (tfv3_param_*).
+#include "tfv3_params.inc"
 
 } // extern "C"

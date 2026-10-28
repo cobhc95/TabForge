@@ -275,6 +275,12 @@ internal sealed partial class ScoreRenderer
                     if (ScoreCursorBox.Selected(_host, measureIndex, i, note.StringIndex)) d.Rect(ScoreCursorBox.Highlight(_host), null, chip.X, chip.Y, chip.Width, chip.Height);
                 }
                 ScoreText.DrawFormatted(d, ft, gx - ft.Width / 2, sy - ft.Height / 2);
+                var soundingFret = ScoreMarkText.ArtificialFretText(note);   // an artificial harmonic's sounding fret "<27>" beside its number
+                if (soundingFret.Length > 0 && showTab)
+                {
+                    var sf = ScoreText.MakeText(d, soundingFret, 8, ink, 600);
+                    ScoreText.DrawFormatted(d, sf, gx + ft.Width / 2 + 2.5, sy - sf.Height / 2);
+                }
                 if (isGraceNote && ScoreMarkText.GraceTransitionShown(track, cell, note)) DrawTabGraceTransition(d, cell, note, gx, ft.Width, cx, sy, tabTop, ink);
             }
         }

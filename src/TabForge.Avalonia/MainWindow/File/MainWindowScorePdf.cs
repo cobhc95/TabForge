@@ -33,7 +33,7 @@ public static class MainWindowScorePdf
         var document = tabs.Active;
         var path = dialogs.SaveFile(new FileDialogOptions
         {
-            Title = "Export PDF", Filter = "PDF (*.pdf)|*.pdf", DefaultExt = ".pdf", AddExtension = true,
+            Key = TabForge.Services.DialogKeys.ExportPdf, Title = "Export PDF", Filter = "PDF (*.pdf)|*.pdf", DefaultExt = ".pdf", AddExtension = true,
             FileName = SafeFileNames.SafeFileName(document.Project.Title, "Untitled"),
         }, owner);
         if (path is null) return;

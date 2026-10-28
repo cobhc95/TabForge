@@ -31,7 +31,7 @@ public sealed partial class PresetManagerWindow
             case Key.Enter when SearchText.Length > 0: ShowInTree(); break;
             case Key.Down when _search.IsKeyboardFocusWithin: _list.Focus(); break;
             case Key.F2 when inList: BeginRename(); break;
-            case Key.Delete when inList: UiTasks.Forget(DeleteSelectedAsync(), "Delete preset", Say); break;
+            case Key.Delete when inList: DeleteSelected(); break;
             case Key.Up when inList && alt: MoveSelected(-1); break;
             case Key.Down when inList && alt: MoveSelected(1); break;
             case Key.Left when inTree && _node.IsGroup && _expanded.Contains(_node.Kind): Toggle(_node.Kind, false); break;

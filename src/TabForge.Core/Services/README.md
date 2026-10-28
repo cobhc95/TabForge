@@ -29,7 +29,7 @@ Files sit in topic folders (namespaces are unchanged): `Settings/`, `Hotkeys/`, 
 - `PasteSpecialOptions`: the Paste Special choices (repeat, placement, octave shift, keep string and fret, bar settings), normalised to their ranges; the paste itself is `PasteCommands.PasteSpecial` in the app.
 - `HotkeyCatalog`: every bindable command (`HotkeySettings` holds the user's Hotkey 1 and Hotkey 2).
 - `AlphaTabBoundary`: the one route to the bundled alphaTab. It checks the patched build and sets the per-import limit.
-- `MusicXmlExportService`, `MidiExportService`, `AsciiExportService`: exports.
+- `MusicXmlExportService`, `MidiExportService`, `AsciiExportService`: exports. `Export/LegacyGp/` (`LegacyGpExport`, `LegacyGpWriter*`, `LegacyGpPreflight`, `LegacyGpFormat`): a copy of the song as .gp5 / .gp4 / .gp3, built from the same score model as the .gp export, with the list of what the chosen format changes or leaves out.
 - `VideoEncoder`: writes an MP4 (H.264 + AAC) through Media Foundation (hand-written COM interop). Live mode drops frames when its queue is full; offline mode waits. Tests: `TestVideoEncoderMp4`, `TestVideoEncoder4k60`.
 - Live recording (Services/Video folder): `LiveVideoSession` (audio-clock stamping, capture thread), `ScreenRegionGrabber` (GDI), `DxgiRegionGrabber` (Desktop Duplication, hand-written COM in `DxgiCom`), `DesktopRegionGrabber` (picks DXGI, falls back to GDI), `LiveVideoRecordController` (start/stop state machine), `LiveVideoSettings`. The audio comes from the engine master tap (SetMasterTap, MasterAudio). Tests: `TestMasterTapProtocol`, `TestLiveVideoRecord`, `TestDxgiGrabber`.
 

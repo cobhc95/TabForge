@@ -25,6 +25,8 @@ public interface IFxChainHost
     IPluginFileTrust PluginFiles { get; }
     /// <summary>The plug-in trust state (one per app); the file checks above are what it asks.</summary>
     TabForge.Plugins.PluginTrust Trust { get; }
+    /// <summary>The remembered folders of the file dialogs this window opens; null when the host keeps no settings.</summary>
+    TabForge.Services.DialogFolderMemory? DialogFolders => null;
 
     /// <summary>The undo state to hand back to <see cref="Edit"/> when a drag that changes the model live ends; null when this host has no undo.</summary>
     UndoSnapshot? Checkpoint();
@@ -40,6 +42,8 @@ public interface IFxChainHost
     void SaveSettingsQuietly();
     /// <summary>Keeps the settings store open until the returned handle is disposed (a close that still collects plug-in states must save them after the last main window closed); null when the host has no store.</summary>
     IDisposable? HoldSettingsOpen() => null;
+    /// <summary>Sends one live MIDI message to the instrument of <paramref name="track"/> (the Articulations Test buttons); false when it is not routed to the engine. A host with no engine sends nothing.</summary>
+    bool SendInstrumentMidi(TrackModel track, int status, int data1, int data2) => false;
     /// <summary>Raised when the settings changed (Preferences Apply or OK); the window reads its options again. A host without settings never raises it.</summary>
     event Action<AppSettings>? SettingsChanged { add { } remove { } }
     /// <summary>Opens the audio and plug-in settings page over <paramref name="owner"/>.</summary>

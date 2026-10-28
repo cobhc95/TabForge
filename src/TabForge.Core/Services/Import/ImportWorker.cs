@@ -15,15 +15,15 @@ public sealed class ImportWorkerOptions
     public static ImportWorkerOptions Default { get; } = new();
     /// <summary>The program started as the worker; null = this TabForge.exe.</summary>
     public string? ExecutablePath { get; init; }
-    /// <summary>Committed memory of the worker process (Job Object limit); Windows ends it above this.</summary>
+    /// <summary>Memory of the worker process: committed memory on Windows (Job Object limit), resident memory elsewhere (polled); the worker is ended above this.</summary>
     public long JobMemoryLimitBytes { get; init; } = 2L * 1024 * 1024 * 1024;
-    /// <summary>Makes the guard that holds the worker (memory limit, CPU time limit, kill on close). The default is the Windows Job Object.</summary>
+    /// <summary>Makes the guard that holds the worker (memory limit, CPU time limit, kill on close). The default is the Windows Job Object, a <see cref="PolledLimitChildGuard"/> elsewhere.</summary>
     public Func<long, TimeSpan, IChildProcessGuard> CreateJobGuard { get; init; } =
 #if WINDOWS
         (jobMemoryLimitBytes, cpuTimeLimit) => new ChildProcessJob(jobMemoryLimitBytes, cpuTimeLimit);
 #else
-        // Fails closed: no worker without its limits; the caller asks before parsing in-process.
-        (_, _) => throw new ImportWorkerUnavailableException("its memory and time limits are not available on this system");
+        // macOS / Linux: the parent polls the worker's resident memory and CPU time and kills it over either limit.
+        (jobMemoryLimitBytes, cpuTimeLimit) => new PolledLimitChildGuard(jobMemoryLimitBytes, cpuTimeLimit);
 #endif
     /// <summary>Largest converted project (compressed, in the compact transfer form of <see cref="ProjectService.TransferBytes"/>) accepted back from the worker.</summary>
     public long MaxResultBytes { get; init; } = InputLimits.MaxTforgeFileBytes;

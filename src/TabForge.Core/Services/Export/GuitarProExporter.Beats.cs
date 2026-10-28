@@ -167,7 +167,8 @@ public static partial class GuitarProExporter
             note.TrillValue = Math.Clamp((n.TrillTargetMidi > 0 ? n.TrillTargetMidi : n.MidiValue + 2) + shift.Sounding, 0, MidiLimits.Max);   // an absolute pitch: follows the track transpose
             note.TrillSpeed = DurationOf(n.TrillDurationDenominator > 0 ? n.TrillDurationDenominator : 16);
         }
-        foreach (var (offset, value) in SimplifyBend(n.BendPoints.Select(p => (p.Offset <= 1.0 ? p.Offset * 60 : p.Offset, p.Value)).ToList(), customByCurve))
+        var bendScale = 60 / BendPointModel.SpanOf(n.BendPoints);
+        foreach (var (offset, value) in SimplifyBend(n.BendPoints.Select(p => (p.Offset * bendScale, p.Value)).ToList(), customByCurve))
             note.AddBendPoint(new BendPoint(offset, value));
         // alphaTab writes only a midpoint or peak middle stretch; the curve's own fit is written into the file afterwards (GuitarProBendCurve.Patch).
         if (!drums && GuitarProBendCurve.Fit(GuitarProBendCurve.Normalise(n.BendPoints.Select(p => (p.Offset, p.Value)))) is { } bendFit) GuitarProBendCurve.Plan(note, bendFit);

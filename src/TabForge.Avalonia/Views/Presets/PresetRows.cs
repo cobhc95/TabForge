@@ -6,43 +6,46 @@ using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Controls.Templates;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
-using Avalonia.Markup.Xaml.MarkupExtensions;
-using Avalonia.Media;
 using Avalonia.Threading;
-using Avalonia.VisualTree;
 using TabForge.Avalonia.Platform;
+using TabForge.Avalonia.Views.Dialogs;
 using TabForge.Plugins;
 using TabForge.Presenters;
 
-// Owns: the organisable rows of a preset ComboBox: the two icon buttons (PresetRowIcons) of a user's row, the inline rename box with the name
-//   rules, the replace and delete questions, Alt+Up / Alt+Down reorder, F2 / Delete, the trailing Manage row's selection guard, and listing
-//   again when the window is used after the manager was open. Built-in and hint rows stay plain text.
+// Owns: the organisable rows of a preset ComboBox (or list): a "Built-in" and a "Yours" group, the pencil and bin of a user's row (shown on hover and on
+//   the selected row only, PresetRowIcons), the drag grip that reorders (PresetRows.Drag), the inline rename box with the name rules, the replace
+//   question, the delete that is done at once and offered back with Undo (PresetUndoToast), Alt+Up / Alt+Down reorder, F2 / Delete, the trailing
+//   Manage row's selection guard, and listing again when the window is used after the manager was open.
 // Does not own: the item types each window keeps (they carry per-window payloads: a program index, a Build function, a map tag), what
-//   picking a preset does, or where presets live (IPresetStore). That is why the three item types are not unified here: the row layer
-// takes a text and a user-name selector instead, the same shape.
-// Tests: PresetRowsTests, PresetManagerOpenTests.
+//   picking a preset does, or where presets live (IPresetStore). That is why the item types are not unified here: the row layer
+//   takes a text, a user-name selector and a built-in test instead, the same shape.
+// Tests: PresetRowsTests, PresetManagerOpenTests, PresetUndoTests.
 namespace TabForge.Avalonia.Views.Presets;
 
 /// <summary>One rendered preset row: the text the box shows, and the preset name it edits when it is the user's own.</summary>
 public sealed record PresetRow(string Text, string? Name, bool BuiltIn = false);
 
+/// <summary>The group a row belongs to in the open list: none for a hint, a Manage row or a preset name that came with an imported chain.</summary>
+public enum PresetGroup { None, BuiltIn, Yours }
+
 /// <summary>The organisable rows of one preset ComboBox.</summary>
-public sealed class PresetRows
+public sealed partial class PresetRows
 {
-    private const string DeleteQuestionCaption = "Presets";
     private const string ReservedText = "A preset that comes with the app has this name. Choose another name.";
     private const string ReplaceQuestionFormat = "A preset named \"{0}\" already exists. Replace it?";
     private const string ChangeFailed = "The preset could not be changed: ";
-    private const double RowMinHeight = 22, LabelGap = 6;
+    private const string DeletedFormat = "Deleted \"{0}\"";
 
-    private readonly ComboBox _host;
+    private readonly SelectingItemsControl _host;
     private readonly Func<IPresetStore?> _store;
     private readonly Func<object, string?> _userName;
     private readonly Func<object?, bool> _isManage;
+    private readonly Func<object?, bool> _isBuiltIn;
     private readonly Func<object?, string> _text;
     private readonly Func<PresetCatalogKind> _kind;
     private readonly Func<string?> _key;
@@ -54,36 +57,47 @@ public sealed class PresetRows
 
     /// <summary>Asks a yes / no question (a replace); tests answer it directly.</summary>
     public Func<string, Task<bool>> Confirm { get; set; }
-    /// <summary>Asks the delete question (text in; answer and tick out); tests answer it directly.</summary>
-    public Func<string, Task<(bool Yes, bool Remember)>> AskDelete { get; set; }
+    /// <summary>The "Deleted ... Undo" message of this box's window.</summary>
+    public PresetUndoToast Toast { get; }
     /// <summary>Why the last change was refused; empty when it was not.</summary>
     public string Message { get; private set; } = "";
     public bool IsEditing => _editor is not null;
     /// <summary>Names a user preset may not take (the ones that come with the app); empty by default.</summary>
     public Func<IEnumerable<string>> Reserved { get; set; } = () => Array.Empty<string>();
 
-    private PresetRows(ComboBox host, Func<IPresetStore?> store, Func<object, string?> userName, Func<PresetCatalogKind> kind, Func<string?> key, Action? changed, Func<object?, bool> isManage, Func<object?, string> text)
+    private PresetRows(SelectingItemsControl host, Func<IPresetStore?> store, Func<object, string?> userName, Func<PresetCatalogKind> kind, Func<string?> key,
+        Action? changed, Func<object?, bool> isManage, Func<object?, string> text, Func<object?, bool> isBuiltIn)
     {
         _host = host;
         _store = store;
         _userName = userName;
         _isManage = isManage;
+        _isBuiltIn = isBuiltIn;
         _text = text;
         _kind = kind;
         _key = key;
         _changed = changed;
-        Confirm = async text => await AvaloniaMessageBox.Show(new AvaloniaDialogHost(), Owner()!, text, DeleteQuestionCaption, MessageBoxButtons.YesNo, MessageBoxIcon.Question) == MessageBoxAnswer.Yes;
-        AskDelete = text => PresetDeleteQuestion.AskAsync(new AvaloniaDialogHost(), Owner()!, text);
-        host.ItemTemplate = new FuncDataTemplate<object>((item, _) => new PresetRowView(this), supportsRecycling: true);
+        Toast = new PresetUndoToast(() => Owner());
+        Confirm = async text => await AvaloniaMessageBox.Show(new AvaloniaDialogHost(), Owner()!, text, PresetManagerWindow.Caption, MessageBoxButtons.YesNo, MessageBoxIcon.Question) == MessageBoxAnswer.Yes;
+        var template = new FuncDataTemplate<object>((item, _) => new PresetRowView(this), supportsRecycling: true);
+        host.ItemTemplate = template;
+        // A window that lists ready-made ComboBoxItems (note maps, drum maps) gets no item template from the box: give each its content template.
+        host.ContainerPrepared += (_, e) =>
+        {
+            if (e.Container is ContentControl { ContentTemplate: null } own && e.Index < host.ItemCount && ReferenceEquals(host.Items[e.Index], own)) own.ContentTemplate = template;
+        };
         host.AddHandler(InputElement.KeyDownEvent, OnKey, RoutingStrategies.Tunnel);
         host.SelectionChanged += OnSelectionChanged;
-        host.DetachedFromVisualTree += (_, _) => EndEdit();
+        host.DetachedFromVisualTree += (_, _) => { EndEdit(); Toast.Dismiss(); };
         host.AttachedToVisualTree += (_, _) => WatchWindow();
     }
 
-    /// <summary>Makes a ComboBox's rows organisable; <paramref name="userName"/> gives the preset name of an item, null for a built-in or hint row.</summary>
-    public static PresetRows Attach(ComboBox host, Func<IPresetStore?> store, Func<object, string?> userName,
-        Func<PresetCatalogKind> kind, Func<string?> key, Action? changed = null, Func<object?, bool>? isManage = null, Func<object?, string>? textOf = null) => new(host, store, userName, kind, key, changed, isManage ?? PresetRowText.IsManage, textOf ?? (item => item?.ToString() ?? ""));
+    /// <summary>Makes a ComboBox's (or list's) rows organisable; <paramref name="userName"/> gives the preset name of an item, null for a built-in or hint row.
+    /// <paramref name="isBuiltIn"/> marks the rows that come with the app (they sit under the "Built-in" header); every other non-user row stays plain.</summary>
+    public static PresetRows Attach(SelectingItemsControl host, Func<IPresetStore?> store, Func<object, string?> userName,
+        Func<PresetCatalogKind> kind, Func<string?> key, Action? changed = null, Func<object?, bool>? isManage = null, Func<object?, string>? textOf = null,
+        Func<object?, bool>? isBuiltIn = null) =>
+        new(host, store, userName, kind, key, changed, isManage ?? PresetRowText.IsManage, textOf ?? (item => item?.ToString() ?? ""), isBuiltIn ?? (_ => false));
 
     /// <summary>True when the row is one of the user's presets (never a built-in, hint or Manage row).</summary>
     public bool IsPreset(object? item) => _userName(item!) is not null;
@@ -100,10 +114,11 @@ public sealed class PresetRows
         var editor = _editor = new TextBox
         {
             Text = match.Key, MaxLength = PresetRules.MaxNameLength, VerticalAlignment = VerticalAlignment.Center,
-            Height = 22, Padding = new Thickness(2, 0, 2, 0),
-        };
+        }.AsPresetEditor();
         AutomationProperties.SetName(editor, $"New name for {match.Key}");
-        Grid.SetColumn(editor, 0);
+        Grid.SetColumn(editor, LabelColumn);
+        Grid.SetRow(editor, ContentRow);
+        Grid.SetColumnSpan(editor, ToolsColumn - LabelColumn + 1);
         grid.Children.Add(editor);
         var from = match.Key;
         editor.KeyDown += (_, e) =>
@@ -133,13 +148,15 @@ public sealed class PresetRows
         return true;
     }
 
-    /// <summary>Deletes one user preset after the one delete question.</summary>
-    public async Task DeleteAsync(string name)
+    /// <summary>Deletes one user preset at once and offers Undo for a few seconds; null when nothing was deleted.</summary>
+    public PresetDeleteUndo? Delete(string name)
     {
-        if (_store() is not { } store) return;
-        if (!await PresetDeleteQuestion.ConfirmAsync(new[] { name }, AskDelete, PresetManager.ConfirmDeletePresets, value => PresetManager.RememberDeletePresets(value)))
-            return;
-        Try(() => store.Delete(name));
+        if (_store() is not { } store) return null;
+        PresetDeleteUndo? undo = null;
+        if (!Try(() => undo = PresetDeleteUndo.Delete(store, new[] { name }))) return null;
+        if (_host is ComboBox box) box.IsDropDownOpen = false;   // the message would sit under the open list otherwise
+        if (undo is { CanUndo: true } done) Toast.Show(string.Format(DeletedFormat, name), () => Try(done.Undo));
+        return undo;
     }
 
     /// <summary>Moves a user preset one row up (-1) or down (+1); a move past either end does nothing.</summary>
@@ -153,39 +170,13 @@ public sealed class PresetRows
         Try(() => store.Move(name, to));
     }
 
-    /// <summary>What a row renders: the organisable row for a user's preset, plain text otherwise.</summary>
-    public Control View(object? item)
+    /// <summary>Drops a user preset on another user preset: it takes the place of that one (what releasing the grip over a row does).</summary>
+    public void DropOn(string name, string target)
     {
-        var text = _text(item);
-        return _userName(item!) is { } name ? Row(name, text) : Plain(text);
+        if (_store() is not { } store || Same(name, target)) return;
+        var to = store.Names().ToList().FindIndex(existing => Same(existing, target));
+        if (to >= 0) Try(() => store.Move(name, to));
     }
-
-    private Control Row(string name, string text)
-    {
-        var grid = new Grid { MinHeight = RowMinHeight, ColumnDefinitions = ColumnDefinitions.Parse("*,Auto") };
-        var label = Plain(text);
-        Grid.SetColumn(label, 0);
-        grid.Children.Add(label);
-        var tools = new StackPanel
-        {
-            Orientation = Orientation.Horizontal, Spacing = PresetRowIcons.ButtonGap,
-            VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(LabelGap, 0, 0, 0),
-        };
-        tools.Children.Add(PresetRowIcons.Rename(name, () => BeginRename(name)));
-        tools.Children.Add(PresetRowIcons.Delete(name, () => Platform.UiTasks.Forget(DeleteAsync(name), "Delete preset", ShowMessage)));
-        Grid.SetColumn(tools, 1);
-        grid.Children.Add(tools);
-        var error = new TextBlock { TextWrapping = TextWrapping.Wrap, IsVisible = false, Margin = new Thickness(0, 2, 0, 2) };
-        error[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("Danger");
-        Grid.SetRow(error, 1);
-        Grid.SetColumnSpan(error, 2);
-        grid.Children.Add(error);
-        grid.RowDefinitions = RowDefinitions.Parse("Auto,Auto");
-        _rows[name] = (grid, label, error);
-        return new Border { Child = grid, Padding = new Thickness(2, 1), Tag = name };
-    }
-
-    private static TextBlock Plain(string text) => new() { Text = text, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis };
 
     private void OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
@@ -209,7 +200,7 @@ public sealed class PresetRows
         switch (e.Key)
         {
             case Key.F2: BeginRename(name); break;
-            case Key.Delete: Platform.UiTasks.Forget(DeleteAsync(name), "Delete preset", ShowMessage); break;
+            case Key.Delete: Delete(name); break;
             case Key.Up when alt: Move(name, -1); break;
             case Key.Down when alt: Move(name, 1); break;
             default: return;
@@ -225,8 +216,12 @@ public sealed class PresetRows
         {
             if (!_stale) return;
             _stale = false;
-            if (_store() is PresetFolderStore files) files.RaiseChanged();
-            else if (_store() is DrumMapStore maps) maps.RaiseChanged();
+            switch (_store())
+            {
+                case PresetFolderStore files: files.RaiseChanged(); break;
+                case DrumMapStore maps: maps.RaiseChanged(); break;
+                case TabForge.Views.EffectEditors.EffectPresetListStore effects: effects.RaiseChanged(); break;
+            }
             _changed?.Invoke();
         };
     }
@@ -277,23 +272,4 @@ public sealed class PresetRows
     }
 
     private static bool Same(string a, string b) => string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
-
-    /// <summary>The row content: the organisable row inside the open list, plain text in the closed box.</summary>
-    private sealed class PresetRowView : Decorator
-    {
-        private readonly PresetRows _rows;
-        public PresetRowView(PresetRows rows)
-        {
-            _rows = rows;
-            Loaded += (_, _) => Build();
-            DataContextChanged += (_, _) => { if (IsLoaded) Build(); };
-        }
-
-        private void Build()
-        {
-            var text = DataContext?.ToString() ?? "";
-            var inList = this.GetVisualAncestors().OfType<ComboBoxItem>().Any();
-            Child = inList ? _rows.View(DataContext) : Plain(text);
-        }
-    }
 }

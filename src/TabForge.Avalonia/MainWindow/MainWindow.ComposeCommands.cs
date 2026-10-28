@@ -126,8 +126,7 @@ public sealed partial class MainWindow
         scaleFinder.Register(commands);
         MainWindowChordFinder.Register(commands, this, scorePreview);
         MainWindowTuner.Register(commands, this, playback?.Engine, () => System.Linq.Enumerable.ElementAtOrDefault(songs.Active.Project.Tracks, MainWindowTrackMenu.SelectedIndex(songs.Active)), compose.Registry.Services.MeterTick);
-        MainWindowPresetManager.Register(commands, this, () => settings?.Settings.General.ConfirmDeletePresets ?? true,
-            value => { if (settings is { } current) { current.Settings.General.ConfirmDeletePresets = value; current.SaveSettings(); } });
+        MainWindowPresetManager.Register(commands, this, () => settings?.Settings, () => settings?.SaveSettings());
         MainWindowToolsMenu.Register(commands, scorePreview, this, settings);
         MainWindowViewMenu.Register(commands, this, dock, scorePreview, settings);
         MainWindowViewHotkeys.Register(commands, songs, dock, settings);
@@ -252,23 +251,31 @@ public sealed partial class MainWindow
                 }), source: NotificationBar.ImportSource, tooltip: status.StatusTooltip);
             else topBar.HideSticky(NotificationBar.ImportSource);
         });
-        new MainWindowFileDrop(this, files, () => settings?.Settings.Tabs.DropOpensInNewTab ?? false, showStatus, audioDrop.ForWindow(() => PlaybackDropSeconds(songs, playback))).Attach();
+        var fileDrop = new MainWindowFileDrop(this, files, () => settings?.Settings.Tabs.DropOpensInNewTab ?? false, showStatus, audioDrop.ForWindow(() => PlaybackDropSeconds(songs, playback)));
+        fileDrop.Attach();
+        // Linux/X11: Avalonia has no XDND, so the file manager drops arrive through our own drop target and take the same paths as a window drop.
+        X11FileDrop.Attach(this, (dropped, point) => { if (!audioDrop.DropExternal(dropped, this, point)) fileDrop.DropPaths(dropped); },
+            (hovered, point) => audioDrop.HoverExternal(hovered, this, point) ?? fileDrop.HoverPaths(hovered),
+            () => { audioDrop.ClearExternal(); fileDrop.EndHover(); });
         // The take-lane menu (right-click on an empty part of a clip lane): its commands and the dialogs they use.
         MainWindowTakeLane.Register(commands, songs, panes, compose.ContextMenus, showStatus, new MainWindowTakeLane.Prompts(
             async (text, caption) => await AvaloniaMessageBox.Show(new AvaloniaDialogHost(), this, text, caption, MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxAnswer.No) == MessageBoxAnswer.Yes,
             (title, label, initial) => new TextPromptWindow(title, label, initial).ShowDialog<string?>(this),
-            () => new AvaloniaFileDialogs().OpenFile(new TabForge.Platform.FileDialogOptions { Title = "Import audio or MIDI file",
+            () => new AvaloniaFileDialogs(settings?.DialogFolders).OpenFile(new TabForge.Platform.FileDialogOptions { Key = TabForge.Services.DialogKeys.AudioImport, Title = "Import audio or MIDI file",
                 Filter = "Audio and MIDI files|*.wav;*.mp3;*.aif;*.aiff;*.flac;*.ogg;*.m4a;*.wma;*.mid;*.midi|Audio files|*.wav;*.mp3;*.aif;*.aiff;*.flac;*.ogg;*.m4a;*.wma|MIDI files|*.mid;*.midi" }, this)),
             compose.EditorPane, audioDrop.ImportOnTrack);
         // Insert menu: the commands that are new (bars after / several / at the end, Lyrics, audio and MIDI files and an empty MIDI clip at the cursor).
         MainWindowInsertMenu.Register(commands, songs, panes, scorePreview,
             new MainWindowInsertMenu.Prompts(
                 bars => DialogLauncher.Ask<InsertBarsWindow, InsertBarsAnswer?>(this, () => new InsertBarsWindow(bars)),
-                midi => new AvaloniaFileDialogs().OpenFile(new TabForge.Platform.FileDialogOptions { Title = midi ? "Insert MIDI file" : "Insert audio file",
+                midi => new AvaloniaFileDialogs(settings?.DialogFolders).OpenFile(new TabForge.Platform.FileDialogOptions { Key = midi ? TabForge.Services.DialogKeys.MidiInsert : TabForge.Services.DialogKeys.AudioInsert, Title = midi ? "Insert MIDI file" : "Insert audio file",
                     Filter = midi ? "MIDI files|*.mid;*.midi" : "Audio files|*.wav;*.mp3;*.aif;*.aiff;*.flac;*.ogg;*.m4a;*.wma" }, this)),
             showStatus, () => MainWindowInsertMenu.ShowLyrics(this, compose.Dock), audioDrop.InsertAtAsync);
         commands.Add("File.ExportMidi", () => _ = files.ExportMidi());
         commands.Add("File.ExportGuitarPro", () => _ = saving.ExportGuitarPro(songs.Active, async (report, name) => { var choice = GpExportChoice.Cancel; await new GpExportPreflightWindow(report, GpExportKind.Export, name, c => choice = c).ShowDialog(this); return choice; }));
+        commands.Add("File.ExportGp5", () => _ = saving.ExportLegacyCopy(songs.Active, LegacyGpFormat.Gp5));
+        commands.Add("File.ExportGp4", () => _ = saving.ExportLegacyCopy(songs.Active, LegacyGpFormat.Gp4));
+        commands.Add("File.ExportGp3", () => _ = saving.ExportLegacyCopy(songs.Active, LegacyGpFormat.Gp3));
         commands.Add("File.ExportAscii", () => _ = files.ExportAscii());
         commands.Add("File.ExportMusicXml", () => _ = files.ExportMusicXml());
         MainWindowScorePdf.Register(commands, scorePreview, songs, dialogs, this, settings, showStatus);

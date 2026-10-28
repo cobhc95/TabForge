@@ -40,11 +40,11 @@ public sealed class MainWindowLiveVideo : IDisposable
     private readonly NotificationBar _topBar;
     private string? _savedFolder;
 
-    private MainWindowLiveVideo(MainWindowTabs songs, AvaloniaPlaybackSessions? playback, MainWindowSettings? settings, LiveVideoRegions regions, NotificationBar topBar)
+    private MainWindowLiveVideo(Window owner, MainWindowTabs songs, AvaloniaPlaybackSessions? playback, MainWindowSettings? settings, LiveVideoRegions regions, NotificationBar topBar)
     {
         _playback = playback; _settings = settings; _topBar = topBar;
         _host = new AvaloniaLiveVideoHost(playback, () => songs.Active, StoredSettings, regions, AvaloniaUiThread.ForApplication(),
-            elapsed => RecordingChanged?.Invoke(elapsed is not null), Notify) { OutputRate = () => settings?.Settings.Plugins.SampleRate ?? 0, InfoNotice = m => topBar.Show(m, NotificationKind.Info, NoticeCategory.Recording, source: NotificationBar.VideoSource) };
+            elapsed => RecordingChanged?.Invoke(elapsed is not null), Notify) { Owner = owner, OutputRate = () => settings?.Settings.Plugins.SampleRate ?? 0, InfoNotice = m => topBar.Show(m, NotificationKind.Info, NoticeCategory.Recording, source: NotificationBar.VideoSource) };
         _controller = new LiveVideoRecordController(_host);
     }
 
@@ -59,7 +59,7 @@ public sealed class MainWindowLiveVideo : IDisposable
         MainWindowSettings? settings, Control score, Func<Control?> band, Func<Control?> instrument, Action<string> showStatus, NotificationBar topBar)
     {
         var regions = new LiveVideoRegions(() => owner.Content as Visual, score, band, instrument);
-        var video = new MainWindowLiveVideo(songs, playback, settings, regions, topBar);
+        var video = new MainWindowLiveVideo(owner, songs, playback, settings, regions, topBar);
         commands.Add(FeatureHotkeyIds.RecordVideo, () =>
         {
             if (playback is null) showStatus.Error(NoAudioEngineText);

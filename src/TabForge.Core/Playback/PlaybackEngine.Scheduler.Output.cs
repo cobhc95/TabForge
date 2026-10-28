@@ -94,8 +94,8 @@ public sealed partial class PlaybackEngine : IDisposable
         var (data1, data2) = DataOf(e);
         if (e.TrackIndex >= 0 && Volatile.Read(ref _dropped) is { } gone && e.TrackIndex < gone.Dropped.Length && gone.Dropped[e.TrackIndex] &&
             ReferenceEquals(gone.Timeline, _timeline)) return;   // a track deleted while this schedule plays: silent at once
-        // Live mute/solo: every track is compiled, silenced tracks simply do not start notes.
-        if (e.IsNoteOn && e.TrackIndex >= 0 && Volatile.Read(ref _audible) is { } audible &&
+        // Live mute/solo: every track is compiled, silenced tracks simply do not start notes (an articulation keyswitch is no note: it is still sent, so the instrument is in the right articulation on unmute).
+        if (e.IsNoteOn && !e.IsArticulation && e.TrackIndex >= 0 && Volatile.Read(ref _audible) is { } audible &&
             e.TrackIndex < audible.Length && !audible[e.TrackIndex]) return;
         // Practice silence: the track's notes neither start nor end, so a song note-off never cuts a key the player holds on its channel (notes sounding when it was set got All Notes Off).
         // Its bend, sustain, volume/expression and program messages are dropped too: they would land on the channel the player's live notes use (restored when the silence ends).
@@ -184,6 +184,7 @@ public sealed partial class PlaybackEngine : IDisposable
             ordered.Sort(static (a, b) => a.TimeMs.CompareTo(b.TimeMs));
             foreach (var e in ordered)
                 _output.Send(e.DeviceId, e.Status, ProgramFor(e.Status, e.Data1), MasterScaled(e.Status, e.Data1, e.Data2));
+            SendKeyswitchesAt(timeline, startMs, timeMs, onlyTrack);   // the articulation keyswitch in force there (see PlaybackEngine.Articulations.cs)
         }
         if (Trace.IsOn(Trace.Playback)) Trace.Write(Trace.Playback, RestoreTrace.Describe(timeMs, latest.Values));
     }

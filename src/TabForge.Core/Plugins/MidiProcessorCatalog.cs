@@ -54,6 +54,7 @@ public static partial class MidiProcessorCatalog
     public static readonly IReadOnlySet<string> NoteScoped = new HashSet<string> { "channelRoute", "noteRange", "transpose", "noteMap", "velocity", "humanize", "delay",
         "scaleSnap", "chord", "sanitizer", "noteHold", "repeater", "arp", "noteRandom", "modalRandom", "scaleVariation", "velVariation" };
 
+    /// <summary>Settings listed after the others in Main (the window has no separate Advanced section).</summary>
     private static readonly Dictionary<string, string[]> AdvancedKeys = new()
     {
         ["velocity"] = new[] { "Makeup", "Min", "Max", "Random", "Mix", "InLow", "InHigh", "Low", "High" },
@@ -70,7 +71,7 @@ public static partial class MidiProcessorCatalog
     private static MidiProcessorInfo Scope(MidiProcessorInfo info)
     {
         var adv = AdvancedKeys.GetValueOrDefault(info.Type) ?? Array.Empty<string>();
-        var list = info.Params.Select(p => adv.Contains(p.Key) ? p with { Group = "Advanced" } : p).ToList();
+        var list = info.Params.Where(p => !adv.Contains(p.Key)).Concat(info.Params.Where(p => adv.Contains(p.Key))).ToList(); // rarely used settings go last in the one Main list
         if (NoteScoped.Contains(info.Type))
         {
             list.Add(new MidiParamInfo("NoteMode", "Applies to", MidiParamKind.Choice, 0, 2, 0, "Which notes this processor touches; the rest pass through unchanged (a note-off always follows its note-on)",
@@ -115,16 +116,16 @@ public static partial class MidiProcessorCatalog
     /// <summary>Built-in whole-list presets (name, processors).</summary>
     public static IReadOnlyList<(string Name, Func<List<PluginMidiProcessor>> Build)> BuiltInPresets { get; } = new (string, Func<List<PluginMidiProcessor>>)[]
     {
-        ("Drums: GM → kit map", () => new() { Make("noteMap", o => { o["From"] = "General MIDI"; o["To"] = "Tabs to SD3"; }) }),
+        ("Drums: GM → kit map", () => new() { Make("noteMap", o => { o["From"] = "General MIDI"; o["To"] = "Superior Drummer 3"; }) }),
         ("Humanize light", () => new() { Make("humanize", o => { o["TimingMs"] = 4; o["VelRandom"] = 5; o["BaseDelayMs"] = 10; }) }),
-        ("Drums: GM → kit map + humanize", () => new() { Make("noteMap", o => { o["From"] = "General MIDI"; o["To"] = "Tabs to SD3"; }), Make("humanize", o => { o["TimingMs"] = 4; o["VelRandom"] = 6; o["BaseDelayMs"] = 10; }), Make("velocity", o => o["Mul"] = 1.3) }),
+        ("Drums: GM → kit map + humanize", () => new() { Make("noteMap", o => { o["From"] = "General MIDI"; o["To"] = "Superior Drummer 3"; }), Make("humanize", o => { o["TimingMs"] = 4; o["VelRandom"] = 6; o["BaseDelayMs"] = 10; }), Make("velocity", o => o["Mul"] = 1.3) }),
         ("Kick and snare: softer", () => new() { Make("velocity", o => { o["Mul"] = 0.8; o["NoteMode"] = 1; o["NoteSet"] = "36,38"; }) }),
     };
 
     /// <summary>Built-in presets of one processor type (name, parameter values): read-only, listed before the user's presets of that type.</summary>
     public static IReadOnlyList<(string Name, string Params)> BuiltInProcessorPresets(string type) => type == "noteMap" ? NoteMapPresets : Array.Empty<(string, string)>();
 
-    private static readonly IReadOnlyList<(string, string)> NoteMapPresets = new (string, string)[] { ("Tabs to SD3", "{\"From\":\"General MIDI\",\"To\":\"Tabs to SD3\",\"Overrides\":\"\"}") };
+    private static readonly IReadOnlyList<(string, string)> NoteMapPresets = new (string, string)[] { ("Superior Drummer 3", "{\"From\":\"General MIDI\",\"To\":\"Superior Drummer 3\",\"Overrides\":\"\"}") };
 
     private static PluginMidiProcessor Make(string type, Action<JsonObject> set)
     {

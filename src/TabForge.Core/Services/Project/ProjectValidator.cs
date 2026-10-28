@@ -88,6 +88,7 @@ public static partial class ProjectValidator
         if (!Enum.IsDefined(track.Kind)) throw Invalid("The project contains an unsupported track type.");
         if (track.NumberOfFrets < (track.IsAudio ? 0 : 1) || track.NumberOfFrets > InputLimits.MaxFrets || track.Capo is < 0 or > 48 ||
             track.MidiChannel is < 0 or > 15 || track.MidiProgram is < 0 or > MidiLimits.Max ||
+            track.MidiBankMsb is < -1 or > MidiLimits.Max || track.MidiBankLsb is < -1 or > MidiLimits.Max ||
             track.MidiOutputDeviceId is < -1 or > 100_000 || track.Volume is < 0 or > MidiLimits.Max ||
             track.Pan is < 0 or > MidiLimits.Max || track.Chorus is < 0 or > MidiLimits.Max || track.Reverb is < 0 or > MidiLimits.Max ||
             track.Transpose is < -127 or > MidiLimits.Max)
@@ -237,7 +238,7 @@ public static partial class ProjectValidator
             RequireText(plugin.Path, InputLimits.MaxPathLength, "plug-in path");
             if (plugin.Path.Any(c => c < 32)) throw Invalid("A plug-in path holds control characters.");
             // A relative plug-in path would be resolved against the process folder by the loader: only full paths are accepted (empty = none).
-            if (plugin.Path.Length > 0 && !Path.IsPathFullyQualified(plugin.Path)) throw Invalid("A plug-in path is not a full path.");
+            if (plugin.Path.Length > 0 && !Path.IsPathFullyQualified(plugin.Path) && !TabForge.Audio.Contracts.Builtin.BuiltinEffects.IsBuiltin(plugin.Path)) throw Invalid("A plug-in path is not a full path.");
             if ((plugin.Format != "" && !TabForge.Plugins.PluginFormats.IsKnown(plugin.Format)) || plugin.Wet is < 0 or > 100 || !double.IsFinite(plugin.OutputDb) || plugin.OutputDb is < -60 or > 12
                 || !PluginRoles.All.Contains(plugin.RoleMode) || !PluginPins.All.Contains(plugin.Pins) || (plugin.Vendor ?? "").Length > 256)
                 throw Invalid("The project contains an invalid plug-in entry.");

@@ -38,7 +38,7 @@ public sealed partial class AudioEngineClient : IDisposable
         // Tracks whose MIDI plays through plug-ins, or that have audio (clips, or an armed input).
         var wanted = tracks.Where(t => MixerGroups.MidiInEngine(t, Mixer) || MixerGroups.UsesEngineAudio(t)).ToList();
         AudioInputs.SetHidden(settings.HiddenInputs); LiveInput.AddWanted(wanted, settings);   // live input: its stand-in track while it is on, whichever song syncs
-        var config = new EngineConfig(settings.Driver, settings.Device, settings.SampleRate, settings.BufferSize, settings.SeparateProcessPerPlugin, settings.InputDevice, settings.AsioInputChannel, settings.AsioOutputChannel, settings.AsioInputLastChannel, settings.AsioInputsEnabled, settings.FollowWindowsVolume, settings.AsioOutputLastChannel, settings.UseAllInputs, settings.ProtectFromPops);
+        var config = _fallback.Apply(new EngineConfig(settings.Driver, settings.Device, settings.SampleRate, settings.BufferSize, settings.SeparateProcessPerPlugin, settings.InputDevice, settings.AsioInputChannel, settings.AsioOutputChannel, settings.AsioInputLastChannel, settings.AsioInputsEnabled, settings.FollowWindowsVolume, settings.AsioOutputLastChannel, settings.UseAllInputs, settings.ProtectFromPops));
         // Multi-tab playback: tracks of other documents that are still playing stay live (never parked or removed here).
         var liveElsewhere = IsRunning ? _slots.Where(kv => !kv.Key.IsBus && !wanted.Contains(kv.Key) && PlaysElsewhere(kv.Value, owner)).Select(kv => kv.Key).ToList() : new List<TrackModel>();
 

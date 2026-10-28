@@ -49,10 +49,20 @@ internal sealed class MainWindowTrackStructure : IDisposable
         if (ids.SequenceEqual(_trackIds)) return false;
         var appended = ids.Count > _trackIds.Count && ids.Take(_trackIds.Count).SequenceEqual(_trackIds);
         var removed = _trackIds.Except(ids).ToList();
+        var active = ActiveAfter(_trackIds, ids, song.TrackIndex);
         _trackIds = ids;
+        if (active != song.TrackIndex) song.TrackIndex = active;   // the active track stays the same TRACK through every move, Undo and Redo, never the same position
         _playback.TracksChanged(song, _plugins(), syncEngine: !appended, removed);
         RaiseStructureChanged();
         return true;
+    }
+
+    /// <summary>The index of the active track in <paramref name="now"/>: found by its id from the list before the change, so any number of moves in a row never drifts; <paramref name="active"/> when the track is gone or unknown.</summary>
+    internal static int ActiveAfter(IReadOnlyList<Guid> before, IReadOnlyList<Guid> now, int active)
+    {
+        if (active < 0 || active >= before.Count) return active;
+        for (var i = 0; i < now.Count; i++) if (now[i] == before[active]) return i;
+        return active;
     }
 
     // The subscribers touch controls, so the event is always raised on the UI thread (marshalled when Check ran elsewhere).

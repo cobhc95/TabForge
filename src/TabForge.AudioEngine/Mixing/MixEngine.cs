@@ -38,6 +38,9 @@ public sealed class MixEngine : ISampleProvider
     public RenderGraph Graph => Volatile.Read(ref _graph);
     private readonly float[][] _busL = new float[MaxBuses][], _busR = new float[MaxBuses][];
     private readonly float[] _masterInL, _masterInR;
+    // The recording tap's block before the Monitor FX (interleaved), used while a monitor chain runs: speaker correction is never recorded.
+    private readonly float[] _tapPre;
+    private bool _tapPreMonitor;
     private readonly SharedBlock _shared;
     private readonly int _maxBlock;
     private readonly float[] _left, _right;
@@ -104,14 +107,17 @@ public sealed class MixEngine : ISampleProvider
         _right = new float[maxBlock];
         _masterInL = new float[maxBlock];
         _masterInR = new float[maxBlock];
+        _tapPre = new float[2 * maxBlock];
         for (var b = 0; b < MaxBuses; b++) { _busL[b] = new float[maxBlock]; _busR[b] = new float[maxBlock]; }
         _ticksPerFrame = (double)Stopwatch.Frequency / sampleRate;
         _tpfEst = _ticksPerFrame;
         _sampleRate = sampleRate;
         _limiter = new SafetyLimiter(sampleRate);
+        _meter = new MasterMeter(sampleRate, shared);
         WaveFormat = WaveFormat.CreateIeeeFloatWaveFormat(sampleRate, 2);
     }
 
+    private readonly MasterMeter _meter;
     private readonly ChannelStateMemory _channelState;
     private readonly TrackChain?[] _primed = new TrackChain?[MaxSlots];
     /// <summary>Slots whose General MIDI synth is switched off (engine thread writes; applied to every chain that newly appears in the slot). Owned by the engine session so it survives a device restart.</summary>
@@ -290,6 +296,8 @@ public sealed class MixEngine : ISampleProvider
             master.Render(_left, _right, 0, n, _transport, _shared, null, null, _masterInL, _masterInR);
         }
         // Monitor chain (speaker / room calibration): after the master chain, live output only. OfflineRenderer never runs this method, so renders exclude it.
+        _tapPreMonitor = chains[MonitorSlot] is not null && Tap is { On: true };
+        if (_tapPreMonitor) for (var i = 0; i < n; i++) { _tapPre[2 * i] = _left[i]; _tapPre[2 * i + 1] = _right[i]; }
         if (chains[MonitorSlot] is { } monitor)
         {
             Array.Copy(_left, _masterInL, n); Array.Copy(_right, _masterInR, n);
@@ -417,17 +425,28 @@ public sealed class MixEngine : ISampleProvider
         }
         else _limiterWasOn = false;
         // Last line of defence (each chain already mutes its own non-finite output): Math.Clamp keeps NaN, so a
-        // non-finite master block is silenced whole. x - x is 0 for finite x and NaN otherwise. Fused into the gain
-        // loop (one pass): the poison sum rides along, and only a poisoned block pays a second clear of what was written.
+        // non-finite master block is silenced whole before anything reads it. x - x is 0 for finite x and NaN otherwise.
         var poison = 0f;
+        for (var i = 0; i < n; i++) poison += (_left[i] - _left[i]) + (_right[i] - _right[i]);
+        if (poison != 0f) { Array.Clear(_left, 0, n); Array.Clear(_right, 0, n); }
+        _meter.Process(_left, _right, n);   // the transport bar's master meter: the master before the output level and the clamp, as the plug-in meters see it
         for (var i = 0; i < n; i++)
         {
-            var l = _left[i]; var r = _right[i];
-            poison += (l - l) + (r - r);
-            buffer[offset + 2 * (done + i)] = Math.Clamp(l * master, -ceiling, ceiling);
-            buffer[offset + 2 * (done + i) + 1] = Math.Clamp(r * master, -ceiling, ceiling);
+            buffer[offset + 2 * (done + i)] = Math.Clamp(_left[i] * master, -ceiling, ceiling);
+            buffer[offset + 2 * (done + i) + 1] = Math.Clamp(_right[i] * master, -ceiling, ceiling);
         }
-        if (poison != 0f) { Array.Clear(_left, 0, n); Array.Clear(_right, 0, n); Array.Clear(buffer, offset + 2 * done, 2 * n); }
-        Tap?.Write(buffer, offset + 2 * done, n);
+        if (_tapPreMonitor) WriteTapBeforeMonitor(n, master, ceiling);
+        else Tap?.Write(buffer, offset + 2 * done, n);
+    }
+
+    /// <summary>Audio thread: the live recording (video) gets the mix before the Monitor FX, at the output level and ceiling; a non-finite sample is silenced.</summary>
+    private void WriteTapBeforeMonitor(int n, float master, float ceiling)
+    {
+        for (var i = 0; i < 2 * n; i++)
+        {
+            var v = _tapPre[i] * master;
+            _tapPre[i] = float.IsFinite(v) ? Math.Clamp(v, -ceiling, ceiling) : 0f;
+        }
+        Tap?.Write(_tapPre, 0, n);
     }
 }

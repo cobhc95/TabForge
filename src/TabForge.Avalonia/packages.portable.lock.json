@@ -280,7 +280,8 @@
           "MeltySynth": "[2.4.1, )",
           "NAudio": "[2.2.1, )",
           "SoundTouch.Net": "[2.3.2, )",
-          "TabForge.Audio.Contracts": "[0.8.3, )"
+          "TabForge.Audio.Contracts": "[0.8.5, )",
+          "TabForge.Core": "[0.8.5, )"
         }
       },
       "tabforge.core": {
@@ -288,7 +289,7 @@
         "dependencies": {
           "NAudio": "[2.2.1, )",
           "TabForge.AlphaTab": "[1.8.4-tabforge.4, )",
-          "TabForge.Audio.Contracts": "[0.8.3, )"
+          "TabForge.Audio.Contracts": "[0.8.5, )"
         }
       }
     },

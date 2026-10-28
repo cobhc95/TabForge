@@ -69,6 +69,6 @@ public sealed partial class PreferencesWindow
     /// <summary>The folders the user picks in the system folder dialog (the seam <see cref="PreferencesRowActions.PickFolders"/> replaces it); null when cancelled.</summary>
     private string[]? PickFolders(string title) =>
         _actions?.PickFolders is { } pick ? pick(this)
-            : new AvaloniaFileDialogs().PickFolders(new TabForge.Platform.FileDialogOptions { Title = "Add folders: " + title, Multiselect = true }, this);
+            : _dialogs.PickFolders(new TabForge.Platform.FileDialogOptions { Key = TabForge.Services.DialogKeys.SettingsFolder, Title = "Add folders: " + title, Multiselect = true }, this);
 }
 #pragma warning restore CS0618

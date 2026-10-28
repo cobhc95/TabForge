@@ -54,7 +54,7 @@ public sealed class FxRfxChainFlows
         }
         var chosen = _dialogs.Files.SaveFile(new FileDialogOptions
         {
-            Title = ExportCaption, Filter = FxChainFiles.ExportFilter, DefaultExt = ".RfxChain", AddExtension = true,
+            Key = TabForge.Services.DialogKeys.FxChainExportRfx, Title = ExportCaption, Filter = FxChainFiles.ExportFilter, DefaultExt = ".RfxChain", AddExtension = true,
             FileName = SafeFileNames.SafeFileName(track.Name, "FX chain"),
         }, _owner);
         if (chosen is null) return false;

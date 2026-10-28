@@ -16,6 +16,7 @@ public static class SettingsValidator
         settings.Appearance.TrackTintPercent = Math.Clamp(settings.Appearance.TrackTintPercent, 0, 60);
         settings.Appearance.MutedTrackDimPercent = Math.Clamp(settings.Appearance.MutedTrackDimPercent, 0, 100);
         NormalizePlugins(settings);
+        NormalizeRememberedFolders(settings);
         NormalizeTimeline(settings);
         NormalizeWindow(settings, defaults);
 
@@ -38,6 +39,12 @@ public static class SettingsValidator
 
         return settings;
     }
+
+    // A remembered dialog folder is a full local path under a stable key; a bad entry is dropped and the count is bounded.
+    private static void NormalizeRememberedFolders(AppSettings settings) =>
+        settings.RememberedFolders = (settings.RememberedFolders ?? new())
+            .Where(p => p.Key is { Length: > 0 and <= 64 } && p.Value is { Length: > 0 and <= InputLimits.MaxPathLength } && Path.IsPathFullyQualified(p.Value))
+            .Take(DialogFolders.MaxKeys).ToDictionary(p => p.Key, p => p.Value);
 
     private static void NormalizePlugins(AppSettings settings)
     {
@@ -65,6 +72,8 @@ public static class SettingsValidator
             .Distinct(StringComparer.OrdinalIgnoreCase).Take(64).ToList();
         plugins.CommonFolders = (plugins.CommonFolders ?? new()).Where(f => f is { Length: > 0 and <= InputLimits.MaxPathLength } && TabForge.Plugins.VstScannerService.IsLocalScanFolder(f))
             .Distinct(StringComparer.OrdinalIgnoreCase).Take(64).ToList();
+        plugins.RecentImpulseFiles = (plugins.RecentImpulseFiles ?? new()).Where(f => f is { Length: > 0 and <= InputLimits.MaxPathLength } && Path.IsPathFullyQualified(f))
+            .Distinct(StringComparer.OrdinalIgnoreCase).Take(PluginSettings.MaxRecentImpulseFiles).ToList();
         static List<KnownPlugin> CleanList(List<KnownPlugin>? list) => (list ?? new())
             .Where(k => k is not null && k.Path is { Length: > 0 and <= InputLimits.MaxPathLength } && (k.Name ?? "").Length <= 256 && (k.Vendor ?? "").Length <= 256)
             .Select(k => { k.Name ??= ""; k.Vendor ??= ""; k.Format = TabForge.Plugins.PluginFormats.IsKnown(k.Format) ? k.Format : ""; k.Role = k.Role is "Instrument" or "Effect" ? k.Role : ""; k.ClassId = TabForge.Plugins.Vst3ClassId.Normalize(k.ClassId); return k; })
@@ -212,6 +221,9 @@ public static class SettingsValidator
         value.CountInBars = Math.Clamp(value.CountInBars, 1, 4);
         value.PreviewLengthMs = Math.Clamp(value.PreviewLengthMs, 60, 1_200);
         value.LetRingCapMs = Math.Clamp(value.LetRingCapMs, 400, 6_000);
+        value.NormalVibratoDepth = InputLimits.ClampFinite(value.NormalVibratoDepth, 0.05, 3, 0.38);
+        value.WideVibratoDepth = InputLimits.ClampFinite(value.WideVibratoDepth, 0.05, 3, 0.94);
+        value.VibratoSpeedHz = InputLimits.ClampFinite(value.VibratoSpeedHz, 1, 12, 5.5);
         value.MetronomeClick = Math.Clamp(value.MetronomeClick, 0, MidiLimits.Max);
         value.MetronomeAccent = Math.Clamp(value.MetronomeAccent, 0, MidiLimits.Max);
         value.MetronomeVolume = Math.Clamp(value.MetronomeVolume, 0, 100);

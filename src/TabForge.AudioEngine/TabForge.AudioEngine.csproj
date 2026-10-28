@@ -20,6 +20,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\TabForge.Audio.Contracts\TabForge.Audio.Contracts.csproj" />
+    <ProjectReference Include="..\TabForge.Core\TabForge.Core.csproj" />
     <InternalsVisibleTo Include="TabForge.Avalonia.Tests" />
   </ItemGroup>
   <ItemGroup>

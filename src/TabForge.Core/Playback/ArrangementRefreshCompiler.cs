@@ -54,7 +54,7 @@ internal static class ArrangementRefreshCompiler
         var future = futureOrder.Length == 0
             ? new ScoreTimeline()
             : MidiTimelineBuilder.Build(source, compileOptions, futureOrder);
-        var revised = SpliceFuture(current, future, activeBar.EndMs, baseToCurrentBar);
+        var revised = SpliceFuture(current, future, activeBar.EndMs, baseToCurrentBar, source.Tracks.Select(t => t.Id).ToArray());
         return new Plan(revised, order.ToArray(), compileOptions);
     }
 
@@ -115,8 +115,12 @@ internal static class ArrangementRefreshCompiler
     }
 
     private static ScoreTimeline SpliceFuture(ScoreTimeline current, ScoreTimeline future,
-        double boundaryMs, int[] baseToCurrentBar)
+        double boundaryMs, int[] baseToCurrentBar, Guid[] trackIds)
     {
+        // The future is numbered by the song as it is now; the part kept from the playing timeline by the order it was compiled in. A track moved in between
+        // must keep its own setup (program, level, pan) and its pending releases: those are renumbered by track id.
+        var renumber = current.TrackIds is { } playing && !playing.AsSpan().SequenceEqual(trackIds) ? OldToNew(playing, trackIds) : null;
+        ScoreEvent Renumbered(ScoreEvent e) => renumber is null || e.TrackIndex < 0 ? e : e.TrackIndex < renumber.Length ? e.WithTrack(renumber[e.TrackIndex]) : e.WithTrack(-1);
         var revised = new ScoreTimeline
         {
             CountInMs = current.CountInMs,
@@ -125,9 +129,10 @@ internal static class ArrangementRefreshCompiler
             TieMerges = current.TieMerges + future.TieMerges,
             TieOrphans = current.TieOrphans + future.TieOrphans,
             LetRingExtensions = current.LetRingExtensions + future.LetRingExtensions,
-            MaxLetRingExtensionMs = Math.Max(current.MaxLetRingExtensionMs, future.MaxLetRingExtensionMs)
+            MaxLetRingExtensionMs = Math.Max(current.MaxLetRingExtensionMs, future.MaxLetRingExtensionMs),
+            TrackIds = trackIds
         };
-        revised.ChannelSetup.AddRange(current.ChannelSetup);
+        revised.ChannelSetup.AddRange(current.ChannelSetup.Select(Renumbered));
         revised.Bars.AddRange(current.Bars.Where(bar => bar.EndMs <= boundaryMs + 0.001));
         revised.Notes.AddRange(current.Notes.Where(note => note.OnsetMs < boundaryMs));
 
@@ -136,7 +141,7 @@ internal static class ArrangementRefreshCompiler
         CountSoundingBefore(current, boundaryMs, activeNotes, activeMetronomePairs);
 
         revised.Events.AddRange(current.Events.Where(e => e.TimeMs < boundaryMs));
-        var preservedFutureReleases = KeepReleasesPastBoundary(current, boundaryMs, revised, activeNotes, activeMetronomePairs);
+        var preservedFutureReleases = KeepReleasesPastBoundary(current, boundaryMs, revised, activeNotes, activeMetronomePairs, Renumbered);
 
         AppendFuture(revised, current, future, boundaryMs, baseToCurrentBar);
         revised.TotalMs = Math.Max(revised.TotalMs,
@@ -148,6 +153,14 @@ internal static class ArrangementRefreshCompiler
         SustainResolver.SortEvents(revised);
         revised.Notes.Sort((left, right) => left.OnsetMs.CompareTo(right.OnsetMs));
         return revised;
+    }
+
+    /// <summary>For each track number of the playing timeline, the number of the same track (by id) in the new order; -1 when it is gone.</summary>
+    private static int[] OldToNew(Guid[] playing, Guid[] now)
+    {
+        var map = new int[playing.Length];
+        for (var i = 0; i < map.Length; i++) map[i] = Array.IndexOf(now, playing[i]);
+        return map;
     }
 
     /// <summary>Counts the notes and metronome clicks that sound at the boundary (switched on before it, not yet off).</summary>
@@ -177,7 +190,7 @@ internal static class ArrangementRefreshCompiler
     }
 
     /// <summary>The releases and resets after the boundary that end a note or click still sounding at it are kept in the revised timeline; they are returned.</summary>
-    private static List<ScoreEvent> KeepReleasesPastBoundary(ScoreTimeline current, double boundaryMs, ScoreTimeline revised, Dictionary<(int Device, int Channel, int Pitch), int> activeNotes, HashSet<int> activeMetronomePairs)
+    private static List<ScoreEvent> KeepReleasesPastBoundary(ScoreTimeline current, double boundaryMs, ScoreTimeline revised, Dictionary<(int Device, int Channel, int Pitch), int> activeNotes, HashSet<int> activeMetronomePairs, Func<ScoreEvent, ScoreEvent> renumbered)
     {
         var preservedFutureReleases = new List<ScoreEvent>();
         foreach (var e in current.Events.Where(e => e.TimeMs >= boundaryMs))
@@ -198,8 +211,9 @@ internal static class ArrangementRefreshCompiler
             else if (!e.IsMetronome && PlaybackEngine.IsEssentialReleaseOrReset(e)) keep = true;
             if (keep)
             {
-                revised.Events.Add(e);
-                preservedFutureReleases.Add(e);
+                var kept = renumbered(e);
+                revised.Events.Add(kept);
+                preservedFutureReleases.Add(kept);
             }
         }
         return preservedFutureReleases;

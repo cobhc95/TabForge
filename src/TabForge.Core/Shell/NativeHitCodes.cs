@@ -8,7 +8,7 @@ namespace TabForge.Shell;
 /// <summary>Win32 window-message and hit-test numbers, shared by the Windows shells. Plain values, no P/Invoke.</summary>
 public static class NativeHitCodes
 {
-    public const int WmMouseMove = 0x0200, WmLButtonUp = 0x0202, WmMButtonUp = 0x0209, WmNcHitTest = 0x0084,
+    public const int WmMouseMove = 0x0200, WmLButtonUp = 0x0202, WmMButtonDown = 0x0207, WmMButtonUp = 0x0209, WmNcHitTest = 0x0084,
         WmNcMouseMove = 0x00A0, WmNcLButtonDown = 0x00A1, WmNcLButtonUp = 0x00A2, WmNcMButtonDown = 0x00A7,
         WmNcMButtonUp = 0x00A8, WmNcMouseLeave = 0x02A2, WmMouseActivate = 0x0021, WmCaptureChanged = 0x0215;
 

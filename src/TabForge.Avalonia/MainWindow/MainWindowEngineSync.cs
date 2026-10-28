@@ -23,9 +23,10 @@ public static class MainWindowEngineSync
     /// <param name="songs">The tabs; a mute or solo toggle pushes the shown song's mix.</param>
     /// <param name="playback">The playback sessions; null (no engine host) makes this do nothing.</param>
     /// <param name="settings">The shared settings the master percent and plug-ins are read from and saved to; null does nothing.</param>
+    /// <param name="meterTick">The app shared meter tick that moves each transport bar master level meter; null: the meters do not move.</param>
     /// <param name="showStatus">Shows an engine notice (a crash, a failed or slow plug-in) on the top bar (sticky Error, same source updates in place); null shows nothing.</param>
     public static void Register(Window window, MainWindowDocumentPanes panes, MainWindowTabs songs, AvaloniaPlaybackSessions? playback, MainWindowSettings? settings,
-        Action<string>? showStatus = null)
+        Action<string>? showStatus = null, SharedMeterTick? meterTick = null)
     {
         if (playback is null || settings is null) return;
         playback.AttachSettings(settings.Settings.Audio, settings.Settings.Plugins);
@@ -52,6 +53,7 @@ public static class MainWindowEngineSync
         playback.FrameWindow = () => window;
         panes.ArrangementCreated += arrangement =>
         {
+            Views.Meters.MasterMeterWiring.Attach(arrangement.Transport, playback.Engine, () => settings.Settings, settings.SaveSettings, meterTick);
             var knob = arrangement.Transport.MasterVolumeKnob;
             knob.Value = playback.MasterPercent;
             // A turn pushes the master at most every settings-preview interval (with a trailing run), and once more when the turn ends.

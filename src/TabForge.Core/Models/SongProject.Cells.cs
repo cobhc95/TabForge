@@ -141,6 +141,12 @@ public sealed class TabNote
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? RightHandFinger { get; set; }
     public HashSet<string> Techniques { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    /// <summary>Vibrato depth in semitones (each way); null plays the type's default (0.38 normal, 0.94 wide). Old files carry no field.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? VibratoDepth { get; set; }
+    /// <summary>Vibrato speed in Hz; null plays the default (5.5). Old files carry no field.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? VibratoSpeed { get; set; }
     /// <summary>Muted in the piano roll: the note stays written in the tab exactly as it is but never plays. Old files carry no field (false).</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool Silent { get; set; }
@@ -168,6 +174,8 @@ public sealed class TabNote
         HarmonicFret = HarmonicFret,
         LeftHandFinger = LeftHandFinger,
         RightHandFinger = RightHandFinger,
+        VibratoDepth = VibratoDepth,
+        VibratoSpeed = VibratoSpeed,
         Techniques = new HashSet<string>(Techniques, StringComparer.OrdinalIgnoreCase)
     };
 }
@@ -178,4 +186,17 @@ public sealed class BendPointModel
     public double Value { get; set; }
 
     public BendPointModel Clone() => new() { Offset = Offset, Value = Value };
+
+    /// <summary>The offset of the note's end for a curve: 60 (the model's units), or 1 for an old curve written as fractions (no offset above 1).
+    /// Decided per curve, so a 0..60 point near the start (an imported origin at 0.6) is not mistaken for a fraction.</summary>
+    public static double SpanOf(IEnumerable<BendPointModel> points)
+    {
+        var any = false;
+        foreach (var point in points)
+        {
+            if (point.Offset > 1.0) return 60;
+            any = true;
+        }
+        return any ? 1 : 60;
+    }
 }

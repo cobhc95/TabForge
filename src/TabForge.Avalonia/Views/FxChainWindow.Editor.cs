@@ -47,10 +47,14 @@ public sealed partial class FxChainWindow
             return;
         }
         var slot = Selected;
-        if (!ReferenceEquals(slot, _shownSlot)) { _editors.ResetPrograms(); _shownSlot = slot; }
+        if (!ReferenceEquals(slot, _shownSlot)) { _editors.ResetPrograms(); _shownSlot = slot; _fallbackOff = false; if (BuiltinEditors.IsBuiltin(slot)) _parametersDown = false; }
         ShowBar();
-        var viaButton = _parametersDown && IsClap(slot) && _editors.ModeOf(slot) == FxEditorMode.Docked;   // the Parameters button replaces the docked editor
+        // A built-in effect's editor is embedded in the editor area (ShowParameters); the generic controls replace it via "Show generic controls" or when it has no editor.
+        var builtin = BuiltinEditors.IsBuiltin(slot);
+        var ownWindow = BuiltinEditors.HasWindow(slot);
+        var viaButton = builtin ? (_parametersDown || !ownWindow) && FxGenericControls.Supports(slot) : _parametersDown && FxGenericControls.CanForce(FxGenericControls.Supports(slot), _editors.ModeOf(slot));   // the Parameters button / "Show generic controls" replaces the editor
         if (viaButton) { _editors.CloseDocked(); _area.ShowNotice("", null); }
+        else if (ownWindow) { _editors.CloseDocked(); _area.ShowNotice("", null); }
         else _editors.Show(slot);
         ShowParameters(slot, viaButton);
         UpdateOverlay();
@@ -88,6 +92,7 @@ public sealed partial class FxChainWindow
                 }
                 break;
             case FxEditorPlan.RetryButton:
+                _fallbackOff = false;
                 _editors.Retry(slot);
                 break;
             default:
@@ -99,7 +104,7 @@ public sealed partial class FxChainWindow
 
     private void OnAreaSecondAction()
     {
-        if (Selected is { } slot) _editors.Float(slot);
+        if (Selected is { } slot && !BuiltinEditors.TryOpen(this, _host, _track, slot)) _editors.Float(slot);
         ShowSelected();
     }
 

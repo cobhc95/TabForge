@@ -63,15 +63,15 @@ public sealed class MidiPresetBars
         ProcessorRow.Children.Add(ProcessorBox);
         ProcessorRow.Children.Add(SaveProcessor);
         _ = PresetRows.Attach(ListBox, () => _listStore, item => item is Entry { Name: not null, Manage: false } entry ? entry.Name : null,
-            () => PresetCatalogKind.MidiChain, () => null, () => FillList(null), item => item is Entry { Manage: true });
+            () => PresetCatalogKind.MidiChain, () => null, () => FillList(ListSelectedKey()), item => item is Entry { Manage: true }, isBuiltIn: item => item is Entry { Build: not null });
         _ = PresetRows.Attach(ProcessorBox, () => _processorStore, item => item is Entry { Name: not null, Manage: false } entry ? entry.Name : null,
-            () => PresetCatalogKind.MidiProcessor, () => _processor?.Type, FillProcessor, item => item is Entry { Manage: true });
+            () => PresetCatalogKind.MidiProcessor, () => _processor?.Type, FillProcessor, item => item is Entry { Manage: true }, isBuiltIn: item => item is Entry { BuiltInParams: not null });
         ListBox.SelectionChanged += async (_, _) => await ListPicked();
         SaveList.Click += async (_, _) => await SaveListAsync();
         DeleteList.Click += async (_, _) => await DeleteListAsync();
         ProcessorBox.SelectionChanged += async (_, _) => await ProcessorPicked();
         SaveProcessor.Click += async (_, _) => await SaveProcessorAsync();
-        _listStore.Changed += () => FillList(null);
+        _listStore.Changed += () => FillList(ListSelectedKey());
         FillList(null);
     }
 
@@ -96,11 +96,14 @@ public sealed class MidiPresetBars
             items.AddRange(_listStore.Names().Select(n => new Entry($"★ {n}", Name: n)));
             items.Add(new Entry(PresetRowText.Manage, Manage: true));
             ListBox.ItemsSource = items;
-            ListBox.SelectedItem = items.FirstOrDefault(i => select is not null && i.Name == select) ?? items[0];
+            ListBox.SelectedItem = items.FirstOrDefault(i => select is not null && (i.Name ?? i.Text) == select) ?? items[0];
             DeleteList.IsEnabled = ListBox.SelectedItem is Entry { Name: not null };
         }
         finally { _filling = false; }
     }
+
+    // The chosen list row by its preset name (its text for a built-in row), so a refresh keeps the choice in the box.
+    private string? ListSelectedKey() => ListBox.SelectedItem is Entry entry ? entry.Name ?? entry.Text : null;
 
     private async Task ListPicked()
     {

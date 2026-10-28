@@ -25,6 +25,7 @@ public sealed class AvaloniaPlaybackSessions : IDisposable
     private readonly Func<IPlaybackEngine>? _createEngine;
     private readonly AvaloniaEngineRouting _routing = new();
     private readonly Dictionary<SongDocument, AvaloniaPlaybackSession> _sessions = new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<SongDocument, PlaybackEditWatch> _editWatches = new(ReferenceEqualityComparer.Instance);   // score edits re-schedule the playing song
     private IPlaybackEngine? _testNoteEngine;   // made on the first test note, disposed with the sessions
     private bool _metronomeOn;                  // the choice a session starts with; read on the UI thread only
     private bool _countInOn;                    // the count-in choice a session starts with; read on the UI thread only
@@ -102,6 +103,7 @@ public sealed class AvaloniaPlaybackSessions : IDisposable
             };
             session.StateChanged += OnSessionStateChanged;
             _sessions[document] = session;
+            _editWatches[document] = new PlaybackEditWatch(_ui, document, session);
             SyncEngine(document, _routing.Plugins);
         }
         return session;
@@ -184,6 +186,14 @@ public sealed class AvaloniaPlaybackSessions : IDisposable
         return _testNoteEngine.PreviewNoteAsync(deviceId, channel, program, note, lengthMs);
     }
 
+    /// <summary>Panic: note-offs, sustain off and all-notes-off on every session's output (also while stopped); each runs on its engine's output thread.</summary>
+    public void Panic()
+    {
+        foreach (var session in _sessions.Values)
+            if (session.Engine is PlaybackEngine engine) engine.PanicAsync();
+        (_testNoteEngine as PlaybackEngine)?.PanicAsync();
+    }
+
     /// <summary>Raised with a session just before its tab's close stops and disposes it (a recording of that song ends first).</summary>
     public event Action<AvaloniaPlaybackSession>? SessionClosing;
 
@@ -191,6 +201,7 @@ public sealed class AvaloniaPlaybackSessions : IDisposable
     public void Close(SongDocument document)
     {
         if (!_sessions.Remove(document, out var session)) return;
+        if (_editWatches.Remove(document, out var watch)) watch.Dispose();
         SessionClosing?.Invoke(session);
         session.StateChanged -= OnSessionStateChanged;
         session.Dispose();
@@ -198,6 +209,8 @@ public sealed class AvaloniaPlaybackSessions : IDisposable
 
     public void Dispose()
     {
+        foreach (var watch in _editWatches.Values) watch.Dispose();
+        _editWatches.Clear();
         foreach (var session in _sessions.Values)
         {
             session.StateChanged -= OnSessionStateChanged;

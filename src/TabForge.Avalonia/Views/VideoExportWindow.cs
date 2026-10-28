@@ -201,7 +201,7 @@ public sealed class VideoExportWindow : Window
         if (VideoExportPresenter.EmptyRangeProblemFor(start, end) is { } empty) { _status.Text = empty; return; }
         var chosen = _saveFile(new FileDialogOptions
         {
-            Title = VideoExportPresenter.SaveDialogTitle, Filter = VideoExportPresenter.SaveDialogFilter, DefaultExt = VideoExportPresenter.DefaultExtension,
+            Key = TabForge.Services.DialogKeys.ExportVideo, Title = VideoExportPresenter.SaveDialogTitle, Filter = VideoExportPresenter.SaveDialogFilter, DefaultExt = VideoExportPresenter.DefaultExtension,
             AddExtension = true, OverwritePrompt = true, FileName = VideoExportPresenter.SuggestedFileName(_project.Title),
             InitialDirectory = VideoExportPresenter.InitialDirectory(_settings.Directory, Directory.Exists(_settings.Directory), TabForge.Platform.AppFolders.Current.Videos),
         });

@@ -24,7 +24,7 @@ public interface IPresetStore
 //   the order file beside the presets (one name per line; a folder without it lists alphabetically, as before).
 // Does not own: what a preset file holds or how it is loaded (PluginLibrary, the MIDI processing window), or any window.
 // Tests: TestPresetManagePanel.
-public sealed class PresetFolderStore : IPresetStore
+public sealed class PresetFolderStore : IPresetRestorable
 {
     /// <summary>The folder under <see cref="PluginLibrary.Root"/> that holds the plug-ins' presets.</summary>
     public const string PluginFolderName = "Presets";
@@ -34,8 +34,35 @@ public sealed class PresetFolderStore : IPresetStore
     private const int MaxPresets = 1000;
     private const long MaxFileBytes = 32L * 1024 * 1024;
     private readonly string _folder, _extension;
+    private readonly Func<byte[], bool>? _accepts;
 
-    public PresetFolderStore(string folder, string extension) { _folder = folder; _extension = extension; }
+    /// <param name="accepts">Checks the bytes of an imported preset beyond the file form (a .json store checks JSON by default); null for none.</param>
+    public PresetFolderStore(string folder, string extension, Func<byte[], bool>? accepts = null) { _folder = folder; _extension = extension; _accepts = accepts; }
+
+    public string FileExtension => _extension;
+
+    public bool Accepts(byte[] bytes) =>
+        bytes.Length <= MaxFileBytes && (_accepts?.Invoke(bytes) ?? (!string.Equals(_extension, ".json", StringComparison.OrdinalIgnoreCase) || PresetBytes.IsJson(bytes)));
+
+    public byte[]? Snapshot(string name)
+    {
+        try { return InputLimits.ReadBoundedBytes(PathOf(name), MaxFileBytes, "preset"); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
+        {
+            Services.Trace.Error(Services.Trace.Ui, "presets: read for undo: " + ex.Message);
+            return null;
+        }
+    }
+
+    public void Restore(string name, byte[] bytes, int index)
+    {
+        name = name.Trim();
+        FilePathPolicy.WriteAtomically(PathOf(name), s => s.Write(bytes), createDirectory: true);
+        var order = Names().ToList();
+        order.RemoveAll(n => Same(n, name));
+        order.Insert(Math.Clamp(index, 0, order.Count), name);
+        Finish(order, force: File.Exists(Path.Combine(_folder, OrderFile)));
+    }
 
     public static PresetFolderStore Plugin(PluginSlot slot) => new(PluginLibrary.PresetFolder(slot), PluginFileExtension);
     /// <summary>The presets of the plug-in whose preset folder has that name (<see cref="PluginKey"/>).</summary>

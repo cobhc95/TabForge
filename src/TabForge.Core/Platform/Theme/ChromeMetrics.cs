@@ -102,6 +102,18 @@ public static class ChromeMetrics
     /// <summary>How often (ms) the strip's cents text may change.</summary>
     public const double LiveStripTextIntervalMs = 250, LiveStripNameMaxWidth = 160;
 
+    /// <summary>The track list's default width (every transport item on one row at normal button size) and the earlier default saved layouts may still hold.</summary>
+    public const double TrackListDefaultWidth = 600, TrackListOldDefaultWidth = 532;
+
+    /// <summary>The transport bar's snug width parts (DIPs): the side margin of a full-size button and of the master meter (scaled by density),
+    /// the divider's own span and side margin (scaled), the master knob's left and right margins (scaled), the zoom column's own span and side
+    /// margin (unscaled, stacked flush), the bar's own side padding (scaled) and border, and the bar's outer left and right margins.
+    /// The values mirror TransportBarView's layout, so TransportWrapRules.SnugListWidth meets the master meter at the bar's right padding.</summary>
+    public const double TransportSideMargin = 1, TransportDividerSpan = 1, TransportDividerSideMargin = 3,
+        TransportKnobLeftMargin = 4, TransportKnobRightMargin = 6,
+        TransportZoomSpan = 26, TransportZoomSideMargin = 1,
+        TransportBarPadding = 1, TransportBarBorder = 1, TransportBarOuterLeft = 1, TransportBarOuterRight = 5;
+
     /// <summary>The generic plug-in parameter panel: the name and value columns of a row, the gap beside parts, the search box width, the slider's least width and how often (ms) the values are read while the panel is open.</summary>
-    public const double ParamNameWidth = 190, ParamValueWidth = 110, ParamGap = 6, ParamSearchWidth = 240, ParamSliderMinWidth = 120, ParamPollMs = 500;
+    public const double ParamNameWidth = 190, ParamValueWidth = 110, ParamGap = 6, ParamSearchWidth = 240, ParamSliderMinWidth = 120, ParamPollMs = 500, BuiltinPollMs = 33;
 }

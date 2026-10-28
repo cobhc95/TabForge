@@ -52,7 +52,7 @@ public sealed class DrumMapDraft
 }
 
 /// <summary>The user's drum maps folder as the preset manage panel sees it: one row per map file.</summary>
-public sealed class DrumMapStore : IPresetStore
+public sealed class DrumMapStore : IPresetRestorable
 {
     private readonly PresetFolderStore _files = new(DrumMapLibrary.UserFolder, ".json");
 
@@ -63,6 +63,18 @@ public sealed class DrumMapStore : IPresetStore
 
     public string PathOf(string name) => _files.PathOf(name);
     public IReadOnlyList<string> Names() => _files.Names();
+
+    public string FileExtension => _files.FileExtension;
+    public bool Accepts(byte[] bytes) => _files.Accepts(bytes);
+    public byte[]? Snapshot(string name) => _files.Snapshot(name);
+
+    /// <summary>Writes the map file back (an undone delete or an import); a name a shipped map has is refused.</summary>
+    public void Restore(string name, byte[] bytes, int index)
+    {
+        RefuseShipped(name);
+        _files.Restore(name, bytes, index);
+        Finish(name);
+    }
 
     /// <summary>The user's map files that cannot be read as a map (file names without the extension).</summary>
     public IReadOnlyList<string> Unreadable() => Names().Where(n => DrumMapLibrary.Parse(PathOf(n), user: true) is null).ToList();
@@ -85,16 +97,31 @@ public sealed class DrumMapStore : IPresetStore
         Finish(to);
     }
 
-    /// <summary>A user's copy of a map that comes with the app, under a new name.</summary>
+    /// <summary>A user's copy of a map that comes with the app, under a new name (from the map in memory when its file is missing).</summary>
     public void DuplicateShipped(string map, string to)
     {
         RefuseShipped(to);
         var file = Directory.Exists(DrumMapLibrary.ShippedFolder) ? Directory.EnumerateFiles(DrumMapLibrary.ShippedFolder, "*.json").Take(200)
             .FirstOrDefault(f => DrumMapLibrary.Parse(f, user: false) is { } m && string.Equals(m.Name, map, StringComparison.OrdinalIgnoreCase)) : null;
-        if (file is null) throw new InvalidDataException("the map's file is missing");
-        var bytes = InputLimits.ReadBoundedBytes(file, 256 * 1024, "drum map");
+        var bytes = file is null ? ShippedBytes(map) : InputLimits.ReadBoundedBytes(file, 256 * 1024, "drum map");
         FilePathPolicy.WriteAtomically(PathOf(to), s => s.Write(bytes), createDirectory: true);
         Finish(to);
+    }
+
+    /// <summary>The shipped map as file bytes, from the map in memory; throws when no map of that name is installed.</summary>
+    private static byte[] ShippedBytes(string map)
+    {
+        if (DrumMapLibrary.Find(map) is not { } memory) throw new InvalidDataException("the map's file is missing");
+        var notes = new JsonObject();
+        foreach (var (note, piece) in memory.Notes) notes[note.ToString(CultureInfo.InvariantCulture)] = piece;
+        var root = new JsonObject { ["Name"] = memory.Name, ["Verified"] = memory.Verified, ["Notes"] = notes };
+        if (memory.Remap is { } remap && remap.Count > 0)
+        {
+            var pairs = new JsonObject();
+            foreach (var (note, sent) in remap) pairs[note.ToString(CultureInfo.InvariantCulture)] = sent;
+            root["Remap"] = pairs;
+        }
+        return System.Text.Encoding.UTF8.GetBytes(root.ToJsonString(new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
     }
 
     public void Delete(string name) { _files.Delete(name); Finish(null); }

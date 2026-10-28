@@ -1,4 +1,6 @@
 using System;
+using Avalonia.Controls;
+using TabForge.Avalonia.Shell.Win32;
 using TabForge.Avalonia.Transport;
 using TabForge.Documents;
 using TabForge.Platform;
@@ -74,6 +76,23 @@ internal sealed class AvaloniaLiveVideoHost : ILiveVideoRecordHost
     public void NotifyInfo(string message) { if (InfoNotice is { } info) info(message); else _notify(message, null); }
 
     public void Post(Action action) => _ui.Post(action);
+
+    /// <summary>The main window the recording captures (set by the window); null in tests without one.</summary>
+    public Window? Owner { get; init; }
+
+    /// <summary>Restores a minimised main window and activates it; a Win32 foreground request when Avalonia could not take the focus.</summary>
+    public void BringToFront()
+    {
+        if (Owner is not { } window) return;
+        if (!LiveVideoFocus.NeedsBringingForward(window.WindowState == WindowState.Minimized, window.IsActive, window.IsVisible)) return;
+        if (window.WindowState == WindowState.Minimized) window.WindowState = WindowState.Normal;
+        window.Activate();
+        if (!window.IsActive) WindowsWindowForeground.Request(window);
+    }
+
+    public string BlackReason() => Owner is { } window
+        ? LiveVideoFocus.BlackReason(window.WindowState == WindowState.Minimized, window.IsActive, window.IsVisible)
+        : LiveVideoFocus.BlackReason(false, true, true);
 
     public IDisposable Every(TimeSpan period, Action tick)
     {

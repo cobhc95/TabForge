@@ -194,6 +194,7 @@ public sealed partial class PlaybackEngine : IDisposable
         Stop();
         var generation = ++_generation;
         options = options.Clone();
+        options.OutputDevices = GetDevices();   // the tracks' saved device names resolve against these (index fallback)
         PlaybackSeekRebuild.KeepStartInsideLoop(project, options);
         if (options.Loop) options.StartOccurrence = null;   // T1 enters a loop by bar/cell, not by a pass
         // A loop compiles from its start and begins at the requested bar inside it (see PlaybackSeekRebuild.CompilerOptionsFor).
@@ -250,9 +251,7 @@ public sealed partial class PlaybackEngine : IDisposable
     {
         Volatile.Write(ref _liveSolo, liveSolo);
         PushLiveChannelState(project);
-        var mask = AudibleMask(project, liveSolo);
-        var previous = Volatile.Read(ref _audible);
-        Volatile.Write(ref _audible, mask);
+        var mask = SwapAudibleMask(project, liveSolo, out var previous);   // keyed like the playing timeline's events, not the (possibly just reordered) live list
         if (previous is null) return;
         var practice = Volatile.Read(ref _practiceSilence);
         CutSilenced(WithoutTrack(mask, practice), WithoutTrack(previous, practice));
@@ -270,6 +269,7 @@ public sealed partial class PlaybackEngine : IDisposable
     public void SetPracticeSilence(int trackIndex)
     {
         trackIndex = Math.Max(-1, trackIndex);
+        trackIndex = TimelineIndexOf(trackIndex);   // the caller counts in the live list, the events in the playing timeline's order
         var previousIndex = Interlocked.Exchange(ref _practiceSilence, trackIndex);
         var s = Volatile.Read(ref _song);
         if (trackIndex != previousIndex && previousIndex >= 0 && s?.Timeline is { } live && _running)
@@ -352,13 +352,13 @@ public sealed partial class PlaybackEngine : IDisposable
 
     private void ClearSoundingNotes() => Array.Clear(_soundingTrack);
 
-    /// <summary>Note-off for every sounding note of the <paramref name="tracks"/> (flags by track index). Runs under _outputGate.</summary>
-    internal void ReleaseSoundingNotes(bool[] tracks)
+    /// <summary>Note-off for every sounding note of the <paramref name="tracks"/> (flags by track index; null = all tracks). Runs under _outputGate.</summary>
+    internal void ReleaseSoundingNotes(bool[]? tracks)
     {
         for (var slot = 0; slot < _soundingTrack.Length; slot++)
         {
             var track = _soundingTrack[slot] - 1;
-            if (track < 0 || track >= tracks.Length || !tracks[track]) continue;
+            if (track < 0 || (tracks is not null && (track >= tracks.Length || !tracks[track]))) continue;
             _output.Send(_soundingDevice[slot], 0x80 | (slot >> 7), slot & 0x7F, 0);
             _soundingTrack[slot] = 0;
         }

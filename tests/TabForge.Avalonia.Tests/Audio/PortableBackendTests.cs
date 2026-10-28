@@ -135,6 +135,22 @@ public sealed class PortableBackendTests
     }
 
     [Fact]
+    public void BundledSoundFontIsUsedOffWindowsOnlyWhenNoDownloadedOne()
+    {
+        if (SoundFontStore.IsInstalled || File.Exists(SoundFontStore.BundledPath)) return;   // a real file is there: do not touch it
+        Directory.CreateDirectory(Path.GetDirectoryName(SoundFontStore.BundledPath)!);
+        File.WriteAllBytes(SoundFontStore.BundledPath, new byte[] { 1 });
+        try
+        {
+            var settings = new PluginSettings { SoundEngine = SoundEngines.SoundFont };
+            Assert.Equal(SoundFontStore.BundledPath, SoundFontStore.ResolvedPath(windowsHost: false));
+            Assert.False(SoundFontStore.ChosenButMissing(settings, windowsHost: false));
+            Assert.Equal("", SoundFontStore.ResolvedPath(windowsHost: true));
+        }
+        finally { File.Delete(SoundFontStore.BundledPath); }
+    }
+
+    [Fact]
     public void PortableListsNeverThrow()
     {
         Assert.NotNull(new RtMidiInputBackend().InputNames());

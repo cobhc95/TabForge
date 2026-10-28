@@ -148,10 +148,10 @@ internal static class ParityShotMap
         foreach (var context in new[] { "note", "fretboard", "mixer-colour" })
             map["context-" + context] = new(null, ContextReason);
         // panel-structure, panel-rhythm and panel-layout have twins (AddPaletteTabTwins).
-        map["effect-bend"] = new(() => Pane(CurveEffectTwin(EffectEditorKind.Bend), 824, 385),
-            "The bend editor for track 0, bar 3 with no bend yet: the default Bend curve, the built-in presets, Clean disabled, OK and Cancel.");
-        map["effect-tremolobar"] = new(() => Pane(CurveEffectTwin(EffectEditorKind.TremoloBar), 824, 503),
-            "The tremolo bar editor for track 0, bar 3 with no tremolo bar yet: the default Dip curve, the built-in presets, Clean disabled, OK and Cancel.");
+        map["effect-bend"] = new(() => Pane(CurveEffectTwin(EffectEditorKind.Bend), 900, 500),
+            "The bend editor for track 0, bar 3 with no bend yet: the default Bend curve, the curve types, Remove disabled, OK, Reset and Cancel.");
+        map["effect-tremolobar"] = new(() => Pane(CurveEffectTwin(EffectEditorKind.TremoloBar), 900, 516),
+            "The tremolo bar editor for track 0, bar 3 with no tremolo bar yet: the default Dive curve, the curve types, Remove disabled, OK, Reset and Cancel.");
         map["effect-trill"] = new(() => OrnamentTwin(flow => flow.BuildTrill(), 606, 379), OrnamentNote + " The trill editor with its starting values.");
         map["effect-grace"] = new(() => OrnamentTwin(flow => flow.BuildGrace(), 714, 426), OrnamentNote + " The grace note editor with its starting values.");
         map["effect-harmonic"] = new(() => OrnamentTwin(flow => flow.BuildHarmonic(), 707, 402), OrnamentNote + " The harmonic editor with its starting values.");
@@ -164,8 +164,8 @@ internal static class ParityShotMap
     private static CurveEffectWindow CurveEffectTwin(EffectEditorKind kind)
     {
         var bend = kind == EffectEditorKind.Bend;
-        var window = new CurveEffectWindow(kind, bend ? "Bend editor" : "Tremolo bar editor", bend ? 0 : -EffectCurve.TremoloRangeValue,
-            bend ? EffectCurve.BendMaxValue : EffectCurve.TremoloRangeValue, EffectPresetStore.BuiltIn(kind)[0].Points, new EffectPresetStore(new AppSettings()),
+        var window = new CurveEffectWindow(kind, bend ? "Bend editor" : "Tremolo bar editor", bend ? 0 : EffectCurve.TremoloMinValue,
+            bend ? EffectCurve.BendMaxValue : EffectCurve.TremoloMaxValue, EffectPresetStore.BuiltIn(kind)[0].Points, new EffectPresetStore(new AppSettings()),
             false, () => { });
         window.SizeToContent = SizeToContent.Manual;
         return window;

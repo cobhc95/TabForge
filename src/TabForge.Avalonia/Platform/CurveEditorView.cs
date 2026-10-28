@@ -1,20 +1,21 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Styling;
+using TabForge.Models;
 using TabForge.Platform;
 using TabForge.Views.EffectEditors;
 
 namespace TabForge.Avalonia.Platform;
 
 /// <summary>
-/// The bend and tremolo-bar curve editor. Time runs across, pitch up the side in quarter-tone steps
-/// (a solid line per semitone, labelled per whole tone). Drag a point to move it, click empty grid to add one, right-click or double-click a
+/// The bend and tremolo-bar curve editor. Time runs across, pitch up the side on a tone scale (a solid line per whole tone, a dotted one per quarter tone;
+/// the labels read 0, a quarter, a half, Full ... for a bend and -3, +1 ... for a tremolo bar). A bend is drawn eased between its points and a tremolo bar in straight lines, as playback follows them.
+/// Drag a point to move it, click empty grid to add one (times snap to a twelfth of the note; hold Shift to place freely), right-click or double-click a
 /// point to remove it, Arrow keys move the selected point and Delete removes it. The point under the pointer is outlined.
 /// Owns: the drawing of the grid, curve and handles through <see cref="AvaloniaDrawContext"/> in theme colours, and the pointer and key input
 /// as curve edits. Does not own: the point rules (<see cref="EffectCurve"/>), presets, or applying the curve to notes (the dialog and EffectCurveFlow).
@@ -27,14 +28,16 @@ public sealed class CurveEditorView : Control
     /// <summary>Half the side of a drawn point handle in DIP.</summary>
     internal const double HandleHalf = 5;
     internal const double LeftMargin = 40, OtherMargin = 12;
-    internal const double EditorWidth = 560, ShortEditorHeight = 240, TallEditorHeight = 360;
-    /// <summary>A value range wider than this many quarter-tones gets the taller grid.</summary>
-    internal const double TallRangeAbove = 8;
+    internal const double EditorWidth = 560, EditorHeight = 360;
+    /// <summary>The least height in DIP between two labels, and between two dotted lines, before the grid thins out.</summary>
+    private const double LabelSpacing = 18, SoftLineSpacing = 6;
+    private const int CurveSamples = 12;
     private const double LabelSize = 11, LabelWidth = 28, LabelGap = 6, LabelHalfHeight = 7;
     private const double StrongLine = 1, SoftLine = 1, CurveLine = 2.5, SelectedRing = 2, FocusRing = 1;
     private const double DotDash = 2, DotGap = 2, FocusDash = 4, FocusGap = 4;
     private const string LabelFamily = "Segoe UI";
     private const int MinorColumnsPerMajor = 3;
+    private const double HalfStep = 2;
 
     private readonly AvaloniaDrawContext _draw = new();
     private ThemeColourCache? _theme;
@@ -43,14 +46,18 @@ public sealed class CurveEditorView : Control
     private int _hover = -1;
     private bool _dragging;
 
-    public CurveEditorView(EffectCurve curve)
+    private readonly bool _bend;
+
+    /// <param name="bend">True for the bend scale (0, a quarter, a half, Full ...), false for the signed tremolo-bar scale.</param>
+    public CurveEditorView(EffectCurve curve, bool bend = true)
     {
         Curve = curve;
+        _bend = bend;
         Focusable = true;
         Width = EditorWidth;
-        Height = curve.MaxValue - curve.MinValue > TallRangeAbove ? TallEditorHeight : ShortEditorHeight;
+        Height = EditorHeight;
         AutomationProperties.SetName(this, "Effect curve editor");
-        ToolTip.SetTip(this, "Drag a point to move it. Click to add a point. Right-click or double-click a point to remove it.");
+        ToolTip.SetTip(this, "Drag a point to move it. Click to add a point. Right-click or double-click a point to remove it. Hold Shift to place a point freely.");
         ActualThemeVariantChanged += (_, _) => InvalidateVisual();
     }
 
@@ -99,11 +106,15 @@ public sealed class CurveEditorView : Control
         return text;
     }
 
-    /// <summary>Axis text in semitones (a quarter-tone unit is half a semitone): +1, 0, -2...</summary>
-    internal static string Label(double value)
+    /// <summary>Axis text on the tone scale: 0, a quarter, a half, Full ... for a bend; -3, +1 ... for a tremolo bar.</summary>
+    internal string Label(double value) => EffectCurveShape.ToneLabel(value, _bend);
+
+    /// <summary>The spacing, in quarter tones, between two labels: the smallest of 1, 2, 4, 8 ... that leaves them <see cref="LabelSpacing"/> apart.</summary>
+    internal static double LabelStep(double pixelsPerValue)
     {
-        var semitones = value / 2;
-        return semitones > 0 ? "+" + semitones.ToString("0.#", CultureInfo.InvariantCulture) : semitones.ToString("0.#", CultureInfo.InvariantCulture);
+        var step = 1.0;
+        while (step * pixelsPerValue < LabelSpacing && step < EffectCurve.Span) step *= 2;
+        return step;
     }
 
     public override void Render(DrawingContext context)
@@ -117,12 +128,15 @@ public sealed class CurveEditorView : Control
         var strong = new UiStroke(Colours.Get("BorderBrush"), StrongLine);
         var soft = new UiStroke(Colours.Get("BorderSoftBrush"), SoftLine, Dash: DotDash, Gap: DotGap);
         d.Rect(Colours.Get("Panel2Brush"), null, 0, 0, size.Width, size.Height);
-        for (var v = Curve.MinValue; v <= Curve.MaxValue; v++)
+        var perValue = plot.Height / (Curve.MaxValue - Curve.MinValue);
+        var lineStep = perValue >= SoftLineSpacing ? 1 : HalfStep;
+        var labelStep = LabelStep(perValue);
+        for (var v = Curve.MinValue; v <= Curve.MaxValue; v += lineStep)
         {
             var y = ToPixel(plot, 0, v).Y;
-            var semitone = v % 2 == 0;
-            d.Line(semitone ? strong : soft, plot.Left, y, plot.Right, y);
-            if (semitone)
+            var tone = v % EffectCurveShape.ValuesPerTone == 0;
+            d.Line(tone ? strong : soft, plot.Left, y, plot.Right, y);
+            if (v % labelStep == 0)
             {
                 var label = d.Text(LabelOf(v), LabelFamily, LabelSize, v == 0 ? text : muted, d.PixelsPerDip);
                 d.DrawText(label, plot.Left - LabelGap - LabelWidth, y - LabelHalfHeight);
@@ -135,12 +149,7 @@ public sealed class CurveEditorView : Control
         }
         var pts = Curve.Points;
         var line = new UiStroke(accent, CurveLine, RoundJoins: true);
-        for (var i = 1; i < pts.Count; i++)
-        {
-            var from = ToPixel(plot, pts[i - 1].Offset, pts[i - 1].Value);
-            var to = ToPixel(plot, pts[i].Offset, pts[i].Value);
-            d.Line(line, from.X, from.Y, to.X, to.Y);
-        }
+        for (var i = 1; i < pts.Count; i++) DrawSegment(d, line, plot, pts[i - 1], pts[i]);
         for (var i = 0; i < pts.Count; i++)
         {
             var centre = ToPixel(plot, pts[i].Offset, pts[i].Value);
@@ -148,6 +157,20 @@ public sealed class CurveEditorView : Control
             d.Rect(i == _selected ? accent : text, edge, centre.X - HandleHalf, centre.Y - HandleHalf, 2 * HandleHalf, 2 * HandleHalf);
         }
         if (IsFocused) d.Rect(null, new UiStroke(accent, FocusRing, Dash: FocusDash, Gap: FocusGap), FocusRing, FocusRing, size.Width - 2 * FocusRing, size.Height - 2 * FocusRing);
+    }
+
+    /// <summary>One stretch of the curve, the way playback follows it: eased for a bend, straight for a tremolo bar (a flat stretch is a single line).</summary>
+    private void DrawSegment(AvaloniaDrawContext d, UiStroke line, Rect plot, BendPointModel from, BendPointModel to)
+    {
+        var samples = from.Value == to.Value || !_bend ? 1 : CurveSamples;
+        var last = ToPixel(plot, from.Offset, from.Value);
+        for (var k = 1; k <= samples; k++)
+        {
+            var t = (double)k / samples;
+            var next = ToPixel(plot, from.Offset + (to.Offset - from.Offset) * t, EffectCurveShape.Between(from.Value, to.Value, t));
+            d.Line(line, last.X, last.Y, next.X, next.Y);
+            last = next;
+        }
     }
 
     private Rect Plot() => PlotRect(new Size(Bounds.Width, Bounds.Height));
@@ -158,13 +181,13 @@ public sealed class CurveEditorView : Control
         var point = e.GetCurrentPoint(this);
         if (point.Properties.IsRightButtonPressed) { PressRight(point.Position); e.Handled = true; return; }
         if (!point.Properties.IsLeftButtonPressed) return;
-        if (PressLeft(point.Position, e.ClickCount)) { e.Pointer.Capture(this); e.Handled = true; }
+        if (PressLeft(point.Position, e.ClickCount, !e.KeyModifiers.HasFlag(KeyModifiers.Shift))) { e.Pointer.Capture(this); e.Handled = true; }
     }
 
     protected override void OnPointerMoved(PointerEventArgs e)
     {
         var position = e.GetPosition(this);
-        if (_dragging) { DragTo(position); return; }
+        if (_dragging) { DragTo(position, !e.KeyModifiers.HasFlag(KeyModifiers.Shift)); return; }
         HoverAt(position);
     }
 
@@ -191,8 +214,9 @@ public sealed class CurveEditorView : Control
         InvalidateVisual();
     }
 
-    /// <summary>A left press at <paramref name="position"/>: a double click removes the point, a press on empty grid adds one, and a press on a point starts a drag. False when the press is outside the grid.</summary>
-    internal bool PressLeft(Point position, int clickCount)
+    /// <summary>A left press at <paramref name="position"/>: a double click removes the point, a press on empty grid adds one, and a press on a point starts a drag. False when the press is outside the grid.
+    /// <paramref name="snap"/>: round the time to a twelfth of the note (Shift places freely).</summary>
+    internal bool PressLeft(Point position, int clickCount, bool snap = true)
     {
         var plot = Plot();
         var hit = HitPoint(plot, position);
@@ -201,7 +225,7 @@ public sealed class CurveEditorView : Control
         {
             if (!plot.Contains(position)) return false;
             var (offset, value) = FromPixel(plot, position);
-            hit = Curve.Add(offset, value);
+            hit = Curve.Add(offset, value, snap);
             Changed();
         }
         _selected = hit;
@@ -218,11 +242,11 @@ public sealed class CurveEditorView : Control
     }
 
     /// <summary>Moves the dragged point to <paramref name="position"/>; a press that is not a drag does nothing.</summary>
-    internal void DragTo(Point position)
+    internal void DragTo(Point position, bool snap = true)
     {
         if (!_dragging || _selected < 0) return;
         var (offset, value) = FromPixel(Plot(), position);
-        Curve.Move(_selected, offset, value);
+        Curve.Move(_selected, offset, value, snap);
         Changed();
     }
 
@@ -236,12 +260,14 @@ public sealed class CurveEditorView : Control
             else return;
         }
         var p = Curve.Points[_selected];
+        var free = e.KeyModifiers.HasFlag(KeyModifiers.Shift);
+        var step = free ? EffectCurve.MinGap : EffectCurve.TimeStep;
         switch (e.Key)
         {
-            case Key.Up: Curve.Move(_selected, p.Offset, p.Value + 1); break;
-            case Key.Down: Curve.Move(_selected, p.Offset, p.Value - 1); break;
-            case Key.Left: Curve.Move(_selected, p.Offset - EffectCurve.TimeStep, p.Value); break;
-            case Key.Right: Curve.Move(_selected, p.Offset + EffectCurve.TimeStep, p.Value); break;
+            case Key.Up: Curve.Move(_selected, p.Offset, p.Value + 1, snap: false); break;
+            case Key.Down: Curve.Move(_selected, p.Offset, p.Value - 1, snap: false); break;
+            case Key.Left: Curve.Move(_selected, p.Offset - step, p.Value, !free); break;
+            case Key.Right: Curve.Move(_selected, p.Offset + step, p.Value, !free); break;
             case Key.Delete: Remove(_selected); e.Handled = true; return;
             default: return;
         }

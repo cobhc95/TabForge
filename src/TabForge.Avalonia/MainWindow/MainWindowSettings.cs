@@ -34,7 +34,11 @@ public sealed class MainWindowSettings : IDisposable
     {
         _store = store;
         _store.Changed += _ => SettingsChanged?.Invoke(_store.Settings);
+        DialogFolders = TabForge.Services.DialogFolderMemory.ForApp(() => _store.Settings, SaveSettingsQuietly);
     }
+
+    /// <summary>The remembered folders of the file dialogs: each dialog key starts in its own last folder (saved quietly, with the settings).</summary>
+    public TabForge.Services.DialogFolderMemory DialogFolders { get; }
 
     /// <summary>Raised with the live settings when the store marks them changed (a layout save or a replaced settings object).</summary>
     public event Action<AppSettings>? SettingsChanged;
@@ -54,7 +58,7 @@ public sealed class MainWindowSettings : IDisposable
     public bool LoadFailed => _store.LoadFailed;
 
     /// <summary>The layout the window starts from: the saved one (already normalized on load), else the default layout.</summary>
-    public DockWorkspaceState StartLayout => DockWorkspaceController.StartupLayout(_store.Settings.Workspace);
+    public DockWorkspaceState StartLayout => DockWorkspaceController.StartupLayout(_store.Settings.Workspace, _store.Settings.Appearance.FretboardAtStartup);
 
     /// <summary>Saves the dock's layout a moment after each change and once more when <paramref name="window"/> closes.</summary>
     public void Attach(DockWorkspaceController dock, Window window)
@@ -126,6 +130,9 @@ public sealed class MainWindowSettings : IDisposable
 
     /// <summary>Schedules a save of the settings after a change made outside the layout (a row toggle).</summary>
     public void SaveSettings() => _store.MarkChanged(this);
+
+    /// <summary>Writes a waiting save to the file now.</summary>
+    internal void Flush() => _store.Flush();
 
     private bool _deferredSaveQueued, _deferredQuiet = true;
 
@@ -202,11 +209,13 @@ public sealed class MainWindowSettings : IDisposable
     /// <summary>The Settings window over the shared settings: its OK and Apply save them to the settings file.</summary>
     public PreferencesWindow CreatePreferencesWindow(Views.PreferencesRowActions? actions = null)
     {
-        var window = new PreferencesWindow(new AvaloniaDialogHost(), Settings, actions);
+        var window = new PreferencesWindow(new AvaloniaDialogHost(), Settings, actions) { DialogFolders = DialogFolders };
         // Unapplied previews live in memory only; a save during the session (a resize, a deactivate) may have written them, so a session that ends with some left saves again after the restore.
         var unappliedPreview = false;
         window.Applied += () => { unappliedPreview = false; _previewTimer?.Stop(); SaveSettingsDeferred(); };   // one deferred save and broadcast covers the pending preview
-        window.Previewed += () => { unappliedPreview = true; RaisePreviewed(); };
+        // The live output (driver, device, rate, buffer) switches the engine at once, so it is saved at once too; Cancel restores both (the Closed handler below saves the restore).
+        var output = OutputKey(Settings.Plugins);
+        window.Previewed += () => { unappliedPreview = true; if (OutputKey(Settings.Plugins) is var now && now != output) { output = now; SaveSettingsQuietly(); } RaisePreviewed(); };
         // A resize writes into the live settings directly (PreferencesWindow.CaptureSize); the debounced store saves it without telling the settings observers (a resize step must not re-apply every setting).
         window.WindowSizeChanged += SaveWindowPlacement;
         // The window's own Closed handler restored the snapshot first (silently); the one revert notice goes out after the window is gone.
@@ -223,6 +232,8 @@ public sealed class MainWindowSettings : IDisposable
         };
         return window;
     }
+
+    internal static string OutputKey(PluginSettings p) => $"{p.Driver}|{p.Device}|{p.SampleRate}|{p.BufferSize}";
 
     /// <summary>
     /// Tells every settings consumer the live settings changed without saving: at once when the last notice is older than the preview interval,

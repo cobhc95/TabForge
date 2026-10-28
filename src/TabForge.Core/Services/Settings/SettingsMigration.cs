@@ -21,6 +21,7 @@ public static class SettingsMigration
         settings.Follow ??= new FollowSettings();
         settings.Timeline ??= new TimelineSettings();
         settings.LiveVideo ??= new Video.LiveVideoSettings();
+        settings.MasterMeter ??= new TabForge.Audio.Metering.MasterMeterSettings();
         settings.Learn ??= new KeyboardMode.KeyboardModeSettings();
         settings.Hotkeys ??= new HotkeySettings();
         settings.Hotkeys.Bindings ??= new Dictionary<string, string>();

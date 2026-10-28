@@ -68,6 +68,7 @@ public sealed partial class FxChainWindow : Window
     {
         _host = host;
         _track = track;
+        Dialogs.Files = new AvaloniaFileDialogs(host.DialogFolders);
         _keys = new FxChainKeys(RunFxCommand, () => _host.Hotkeys);
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         ShowInTaskbar = false;
@@ -213,7 +214,7 @@ public sealed partial class FxChainWindow : Window
     {
         _list.FocusChanged += () => { if (!_building) ShowSelected(); };
         _list.KeyDown += (_, e) => { if (e.Key == Key.Delete && e.Source is not TextBox) { _ = RemoveSelected(); e.Handled = true; } };   // Delete removes the selected plug-ins, as Remove says
-        _list.RowActivated += tag => { if (tag is PluginSlot slot) _editors.Float(slot); };
+        _list.RowActivated += tag => { if (tag is PluginSlot slot && !BuiltinEditors.TryOpen(this, _host, _track, slot)) _editors.Float(slot); };
         _add.Click += (_, _) => _ = AddPlugin();
         _newContainer.Click += (_, _) => _containers.New();
         _remove.Click += (_, _) => _ = RemoveSelected();

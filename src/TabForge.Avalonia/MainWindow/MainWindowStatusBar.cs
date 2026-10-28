@@ -171,7 +171,7 @@ public sealed class MainWindowStatusBar : IDisposable, INoticeReceiver
         var selected = !_highlight.Has && editor.Track is { } shown && song.Tracks.Contains(shown) ? shown : track;
         _scale.Show(song, _live is { Following: true } playing ? playing.Bar : bar, selected);
         var midiTrack = song.Tracks.FirstOrDefault(t => !t.IsAudio);
-        View.ShowReadout(readout, MidiOutputStatusPresenter.OutputText(PreviewOutputDevices, midiTrack?.MidiOutputDeviceId ?? -1), midiTrack is not null);
+        View.ShowReadout(readout, MidiOutputStatusPresenter.OutputText(PreviewOutputDevices, midiTrack?.MidiOutputDeviceId ?? -1, midiTrack?.MidiOutputDeviceName), midiTrack is not null);
         ShowState();
     }
 

@@ -36,6 +36,8 @@ public static class ChainFileApply
         if (loaded.Count == 0) return new(new ChainLoadOutcome(false, -1, noneFound ?? $"{name} has no plug-ins."), null);
         if (!replace && currentCount + loaded.Count > InputLimits.MaxPluginsPerTrack)
             return new(new ChainLoadOutcome(false, -1, $"{name} would make this chain longer than {InputLimits.MaxPluginsPerTrack} plug-ins."), null);
+        // New ids: the engine keeps a running plug-in whose id is unchanged, so a chain loaded back into the chain it was saved from would ignore the saved states.
+        foreach (var plugin in loaded) plugin.Id = System.Guid.NewGuid().ToString("N");
         return new(new ChainLoadOutcome(true, replace ? 0 : currentCount, replace ? $"Loaded {name}." : $"Added {name} to the end."), loaded);
     }
 

@@ -47,7 +47,7 @@ public static class PluginLibrary
     public static (string State, double? OutputDb)? LoadPreset(PluginSlot slot, string name)
     {
         var path = Path.Combine(PresetFolder(slot), SafeFileNames.SafeFileName(name, "Plug-in", 80) + ".tfpreset");
-        if (!File.Exists(path)) return null;
+        if (!File.Exists(path)) return TabForge.Audio.Contracts.Builtin.BuiltinPresets.State(slot.Path, name) is { } factory ? (Convert.ToBase64String(factory), null) : null;   // a built-in effect's factory preset
         try
         {
             var preset = JsonSerializer.Deserialize<Preset>(InputLimits.ReadBoundedBytes(path, MaxFileBytes, "preset"), Json);

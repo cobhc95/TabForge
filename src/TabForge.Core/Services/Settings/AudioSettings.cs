@@ -13,11 +13,20 @@ public sealed class AudioSettings
     public bool CountIn { get; set; }
     public int CountInBars { get; set; } = 1;
     public double Speed { get; set; } = 1.0;
+    /// <summary>Notes sound when entered; off is the "Off" choice of Preview notes with (see <see cref="PreviewSources"/>).</summary>
     public bool PreviewNotes { get; set; } = true;
+    /// <summary>The sound a previewed note uses while <see cref="PreviewNotes"/> is on: "Track instrument" or "Built-in synth".</summary>
+    public string PreviewWith { get; set; } = PreviewSources.Track;
     /// <summary>How long a previewed note sounds, in milliseconds.</summary>
     public int PreviewLengthMs { get; set; } = 260;
     /// <summary>Let-ring tail ceiling in milliseconds.</summary>
     public int LetRingCapMs { get; set; } = 2000;
+    /// <summary>Vibrato depth in semitones (each way) of a note with no depth of its own: normal vibrato.</summary>
+    public double NormalVibratoDepth { get; set; } = 0.38;
+    /// <summary>Vibrato depth in semitones of a wide-vibrato note with no depth of its own.</summary>
+    public double WideVibratoDepth { get; set; } = 0.94;
+    /// <summary>Vibrato speed in Hz of a note with no speed of its own.</summary>
+    public double VibratoSpeedHz { get; set; } = 5.5;
     /// <summary>GM note used for the metronome click.</summary>
     public int MetronomeClick { get; set; } = 34;
     /// <summary>GM note used for the accented (first beat) click.</summary>

@@ -110,7 +110,7 @@ internal sealed partial class EngineSession
         IPluginInstance plugin;
         // Identity check for a real load only (a reused instance is already mapped): hash the file through a handle that
         // denies writers and keep it open until the plug-in is created. Before EnterMain: hashing is not a plug-in call.
-        using var identityHold = PluginIdentity.Hold(spec);
+        using var identityHold = TabForge.Audio.Contracts.Builtin.BuiltinEffects.IsBuiltin(spec.Path) ? null : PluginIdentity.Hold(spec);   // a built-in is engine code, no file
         byte[]? savedState = null;
         string? stateProblem = null;
         try { savedState = spec.State is { Length: > 0 } state ? Convert.FromBase64String(state) : null; }
@@ -135,6 +135,11 @@ internal sealed partial class EngineSession
         }
         Log.Write($"plug-in loaded: {System.IO.Path.GetFileName(spec.Path)} in {loadTimer.ElapsedMilliseconds} ms (create {createdMs} ms, state {loadTimer.ElapsedMilliseconds - createdMs} ms)");
         if (plugin is Vst2Plugin vst2) vst2.Edited += () => Send(EngineEvent.StateChanged, w => { w.Write(slot); w.Write(index); });
+        if (plugin is Builtin.BuiltinEffect builtin)
+        {
+            builtin.Edited += () => Send(EngineEvent.StateChanged, w => { w.Write(slot); w.Write(index); });
+            builtin.Problem += (file, why) => Threads.Post(() => Send(EngineEvent.PluginFailed, w => { w.Write(slot); w.Write(index); w.WriteString(file); w.WriteString(why); }));
+        }
         return plugin;
     }
 
@@ -188,6 +193,8 @@ internal sealed partial class EngineSession
             return Vst2Plugin.TestEffect.Create(SampleRate, maxBlock, Threads,
                 int.TryParse(Environment.GetEnvironmentVariable("TABFORGE_TEST_OPEN_DELAY_MS"), out var delay) ? Math.Clamp(delay, 0, 60_000) : 0);
 #endif
+        // TabForge's own effects (C#, no file) always run here, never in a plug-in process.
+        if (TabForge.Audio.Contracts.Builtin.BuiltinEffects.IsBuiltin(spec.Path)) return Builtin.BuiltinEffectFactory.Create(spec.Path, SampleRate, maxBlock);
         if (Config.SeparateProcessPerPlugin)
         {
             // Safest mode: the plug-in runs in its own process; a crash there loses only this plug-in.

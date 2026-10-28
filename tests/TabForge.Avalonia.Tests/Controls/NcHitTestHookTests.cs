@@ -277,11 +277,52 @@ public class NcHitTestHookTests
     [Theory]
     [InlineData(1000, 1200, true)]
     [InlineData(1000, 1500, true)]
-    [InlineData(1000, 1501, false)]
+    [InlineData(1000, 3000, true)]
+    [InlineData(1000, 3001, false)]
     [InlineData(1000, 999, false)]
     [InlineData(-1, 5000, false)]
     public void LoneMiddleRelease_IsAcceptedOnlyShortlyAfterActivation(long activatedAt, long now, bool accepted) =>
         Assert.Equal(accepted, NcHitTestHook.AcceptsLoneRelease(now, activatedAt));
+
+    // A press on empty caption opens the tab at once (first try, even right after activation): the matching release only swallows, never fires again.
+    [AvaloniaFact]
+    public void MiddlePressOpensTabOnceAndReleaseSwallows()
+    {
+        var hook = NcHitTestHook.AttachIfWindows(new Window())!;
+        var bar = new Bar();
+        Assert.True(hook.NoteMiddlePress(At(500, 20), Win, 1, bar)); // E1: gap right of the tabs opens on press
+        Assert.False(hook.NoteMiddlePress(At(500, 20), Win, 1, bar)); // E2: one press fires once, even if two messages arrive
+        Assert.True(hook.NoteMiddleRelease()); // the release is swallowed, not fired
+        Assert.False(hook.NoteMiddleRelease()); // nothing pending: nothing to swallow
+        Assert.True(hook.NoteMiddlePress(At(500, 2), Win, 1, bar)); // E2: top resize band is empty caption too
+        Assert.True(hook.NoteMiddleRelease());
+    }
+
+    [AvaloniaFact]
+    public void MiddlePressOnTabButtonOrClientOpensNothing()
+    {
+        var hook = NcHitTestHook.AttachIfWindows(new Window())!;
+        var bar = new Bar();
+        foreach (var (x, y) in new[] { (100.0, 20.0), (880.0, 20.0), (500.0, 300.0) })
+        {
+            Assert.False(hook.NoteMiddlePress(At(x, y), Win, 1, bar)); // E3: tab, button, client stay untouched
+            Assert.False(hook.NoteMiddleRelease());
+        }
+    }
+
+    // Both hit paths read one rule: an empty-caption pixel answers HtCaption (or a resize edge on the border) and is a middle-click spot.
+    [Theory]
+    [InlineData(500, 20, true)]
+    [InlineData(500, 2, true)]
+    [InlineData(100, 20, false)]
+    [InlineData(880, 20, false)]
+    public void EmptyCaptionRuleAgreesWithMiddleClickSpot(double x, double y, bool expected)
+    {
+        var bar = new Bar();
+        var point = new UiPoint(x, y);
+        Assert.Equal(expected, ChromeHitRules.IsEmptyCaption(point, bar.TabBounds, bar.TabActionBounds, bar.CaptionButtons, bar.CaptionBounds));
+        Assert.Equal(expected, NcHitTestHook.IsMiddleClickSpot(At(x, y), Win, 1, bar));
+    }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     private static (bool Hooked, bool AttachedAfterClose, WeakReference Hook) OpenAndClose()

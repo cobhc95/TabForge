@@ -56,6 +56,7 @@ public static partial class HotkeyCatalog
         new("Transport.Stop", CategoryTransport, "Stop", "Ctrl+OemPeriod", "Stop playback and return to the edit cursor."),
         new("Transport.Loop", CategoryTransport, "Loop", "F9", "Play the loop range repeatedly."),
         new("Transport.Metronome", CategoryTransport, "Metronome on / off", "", "Turn the metronome click on or off (the same as the transport's Metronome button)."),
+        new("Transport.Panic", CategoryTransport, "Panic (all notes off)", "", "Silence every stuck note and the sustain pedal on all outputs, also while stopped (the same as Tools > Panic)."),
         new("Transport.CountIn", CategoryTransport, "Count-in on / off", "", "Turn the count-in before playback on or off (the same as the transport's Count-in button)."),
 
         new("Bar.Insert", CategoryBar, "Insert bar", "Ctrl+Insert", "Insert an empty bar before the cursor."),
@@ -209,6 +210,7 @@ public static partial class HotkeyCatalog
         new("Note.HarmonicEditor", CategoryEffects, "Harmonic editor", "", "Open the harmonic editor: pick the harmonic type and its fret."),
         new("Note.HammerPull", CategoryEffects, "Hammer-on / pull-off", "H", "Legato to the next note."),
         new("Note.Vibrato", CategoryEffects, "Vibrato", "V", "Left-hand vibrato."),
+        new("Note.VibratoSettings", CategoryEffects, "Vibrato settings", "", "Open the vibrato settings: normal or wide, depth and speed of the vibrato on the selected notes."),
         new("Note.Slide", CategoryEffects, "Legato slide", "S", "Slide into the next note."),
         new("Note.LetRing", CategoryEffects, "Let ring", "I", "Let the note ring over."),
         new("Note.Dead", CategoryEffects, "Dead note", "X", "Muted, percussive note."),

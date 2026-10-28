@@ -20,7 +20,6 @@ public static class NoteMapEditEntry
 
     private const string FromKey = "From";
     private const string ToKey = "To";
-    private const string FallbackSourceName = "General MIDI";
 
     /// <summary>The drum map editor for a processor's parameter text: its To map, against its From map (General MIDI when that is missing).</summary>
     public static DrumMapEditorWindow OpenEditor(string paramsJson)
@@ -28,7 +27,7 @@ public static class NoteMapEditEntry
         var values = ParseValues(paramsJson);
         return new DrumMapEditorWindow(
             DrumMapLibrary.Find(TextOf(values, ToKey)),
-            DrumMapLibrary.Find(TextOf(values, FromKey)) ?? DrumMapLibrary.Find(FallbackSourceName));
+            DrumMapLibrary.FindOrGeneralMidi(TextOf(values, FromKey)));
     }
 
     /// <summary>The parameter text with its To map set to the saved map's name; the other values stay as they were.</summary>

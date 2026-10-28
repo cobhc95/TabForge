@@ -18,11 +18,15 @@ public static class ChannelAllocator
     public const int PercussionChannel = 9;
     public const int ChannelCount = 16;
 
+    private static int[] StableOrder(SongProject project) =>
+        Enumerable.Range(0, project.Tracks.Count).OrderBy(i => project.Tracks[i].Id).ToArray();
+
     public static int[] Assign(SongProject project)
     {
         var result = new int[project.Tracks.Count];
         var used = new bool[ChannelCount];
         used[PercussionChannel] = true;   // reserved even with no drum track: no melodic or audio track is ever handed it
+        var order = StableOrder(project);   // conflicts are settled in track-id order, never list order: moving a track while the song plays must not hand its channel to another track
 
         // Pass 1: percussion always wins channel 9.
         for (var i = 0; i < project.Tracks.Count; i++)
@@ -32,7 +36,7 @@ public static class ChannelAllocator
         }
 
         // Pass 2: honour stored channels where they are free and not percussion.
-        for (var i = 0; i < project.Tracks.Count; i++)
+        foreach (var i in order)
         {
             var track = project.Tracks[i];
             if (result[i] >= 0 || project.Tracks[i].IsAudio) continue;   // an audio track plays no notes: it gets no channel (-1)
@@ -46,7 +50,7 @@ public static class ChannelAllocator
 
         // Pass 3: anything still unassigned (or conflicted) gets the next free melodic channel.
         var next = 0;
-        for (var i = 0; i < project.Tracks.Count; i++)
+        foreach (var i in order)
         {
             if (result[i] >= 0 || project.Tracks[i].IsAudio) continue;   // audio tracks: pass 4
             while (next < ChannelCount && used[next]) next++;
@@ -58,7 +62,7 @@ public static class ChannelAllocator
 
         // Pass 4: an audio track plays no notes and gets no channel (-1), except one whose instrument plug-in plays its MIDI clips: it takes
         // a channel nobody else uses, after every other track, so no notated track's channel ever moves because of it.
-        for (var i = 0; i < project.Tracks.Count; i++)
+        foreach (var i in order)
         {
             if (!project.Tracks[i].IsAudio || !MixerGroups.InstrumentPlays(project.Tracks[i])) continue;
             var free = Array.FindIndex(used, c => !c);
@@ -105,8 +109,9 @@ public static class ChannelAllocator
         used[PercussionChannel] = true;
         foreach (var c in main) if (c is >= 0 and < ChannelCount) used[c] = true;
         var next = 0;
-        for (var i = 0; i < project.Tracks.Count && i < main.Length; i++)
+        foreach (var i in StableOrder(project))
         {
+            if (i >= main.Length) continue;
             var track = project.Tracks[i];
             if (track.Kind == TrackKind.Drums || main[i] == PercussionChannel || !HasEffectNotes(track)) continue;
             while (next < ChannelCount && used[next]) next++;

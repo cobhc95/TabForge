@@ -44,12 +44,12 @@ public class TrackPropertiesWindowTests
 
         Assert.Equal(TrackPropertiesPresenter.Title(track.Name, adding: false), window.Title);
         Assert.Equal((800d, 640d, 420d, SizeToContent.Height), (window.Width, window.MinWidth, window.MinHeight, window.SizeToContent));
-        // Order: details (name, played by, colour, notes), instrument (program, channel), tuning (frets, capo).
+        // Order: details (name, played by, colour, notes), instrument (program, bank MSB/LSB, channel), tuning (frets, capo).
         var fields = window.GetLogicalDescendants().OfType<TextBox>().Select(b => (b.Name, AutomationProperties.GetName(b))).ToList();
         Assert.Equal(new (string?, string?)[]
         {
             ("NameBox", "Track name"), ("PerformerBox", "Played by"), ("NotesBox", "Notes"),
-            ("ProgramBox", "MIDI program"), ("ChannelBox", "Channel"), ("FretsBox", "Frets"), ("CapoBox", "Capo"),
+            ("ProgramBox", "MIDI program"), ("BankMsbBox", "Bank MSB (-1 is off)"), ("BankLsbBox", "Bank LSB (-1 is off)"), ("ChannelBox", "Channel"), ("FretsBox", "Frets"), ("CapoBox", "Capo"),
         }, fields);
         var tools = Buttons(window).Where(b => b is not CheckBox && b is not ColourButton && b.Name is not null && !b.Name.StartsWith("String") && b.Name != "InstrumentChooserButton").Select(b => (b.Name, (string)b.Content!)).ToList();
         Assert.Equal(new (string?, string)[]
@@ -88,6 +88,10 @@ public class TrackPropertiesWindowTests
 
     [AvaloniaTheory]
     [InlineData("ProgramBox", "128")]
+    [InlineData("BankMsbBox", "128")]
+    [InlineData("BankMsbBox", "-2")]
+    [InlineData("BankLsbBox", "128")]
+    [InlineData("BankLsbBox", "-2")]
     [InlineData("ChannelBox", "16")]
     [InlineData("FretsBox", "11")]
     [InlineData("CapoBox", "13")]
@@ -95,18 +99,18 @@ public class TrackPropertiesWindowTests
     public void OutOfRangeOkShowsThePresenterMessageAndStaysOpen(string field, string typed)
     {
         var track = DemoTrack();
-        var before = (track.Name, track.MidiProgram, track.MidiChannel, track.NumberOfFrets, track.Capo);
+        var before = (track.Name, track.MidiProgram, track.MidiBankMsb, track.MidiBankLsb, track.MidiChannel, track.NumberOfFrets, track.Capo);
         var window = Open(track);
         Named<TextBox>(window, field).Text = typed;
         DialogTestKit.Click(Named<Button>(window, "OkButton"));
         Dispatcher.UIThread.RunJobs();
 
-        var expected = TrackPropertiesPresenter.FieldError(Text(window, "ProgramBox"), Text(window, "ChannelBox"), Text(window, "FretsBox"), Text(window, "CapoBox"), track.IsDrumTrack);
+        var expected = TrackPropertiesPresenter.FieldError(Text(window, "ProgramBox"), Text(window, "BankMsbBox"), Text(window, "BankLsbBox"), Text(window, "ChannelBox"), Text(window, "FretsBox"), Text(window, "CapoBox"), track.IsDrumTrack);
         Assert.NotNull(expected);
         Assert.Equal(expected, Named<TextBlock>(window, "ErrorText").Text);
         Assert.True(window.IsVisible);
         Assert.False(window.Applied);
-        Assert.Equal(before, (track.Name, track.MidiProgram, track.MidiChannel, track.NumberOfFrets, track.Capo));
+        Assert.Equal(before, (track.Name, track.MidiProgram, track.MidiBankMsb, track.MidiBankLsb, track.MidiChannel, track.NumberOfFrets, track.Capo));
         Discard(window);
     }
 
@@ -158,6 +162,8 @@ public class TrackPropertiesWindowTests
         expectedTunings[0] = TrackPropertiesPresenter.Step(expectedTunings[0], 1);
         var window = Open(track);
         Named<TextBox>(window, "ProgramBox").Text = "31";
+        Named<TextBox>(window, "BankMsbBox").Text = "2";
+        Named<TextBox>(window, "BankLsbBox").Text = "5";
         Named<TextBox>(window, "ChannelBox").Text = "2";
         Named<TextBox>(window, "FretsBox").Text = "22";
         Named<TextBox>(window, "CapoBox").Text = "2";
@@ -167,7 +173,7 @@ public class TrackPropertiesWindowTests
 
         Assert.True(window.Applied);
         Assert.False(window.IsVisible);
-        Assert.Equal((31, 2, 22, 2), (track.MidiProgram, track.MidiChannel, track.NumberOfFrets, track.Capo));
+        Assert.Equal((31, 2, 5, 2, 22, 2), (track.MidiProgram, track.MidiBankMsb, track.MidiBankLsb, track.MidiChannel, track.NumberOfFrets, track.Capo));
         Assert.Equal(expectedTunings, track.StringTunings);
     }
 

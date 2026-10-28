@@ -13,4 +13,7 @@ public interface IPresetStoreFactory
 
     /// <summary>The file date the manager shows for a stored preset; null when it has no file or the date cannot be read.</summary>
     DateTime? Modified(IPresetStore store, string name);
+
+    /// <summary>The note-effect presets (bend, tremolo bar...); null when the factory has none.</summary>
+    IEffectPresetSource? Effects => null;
 }
