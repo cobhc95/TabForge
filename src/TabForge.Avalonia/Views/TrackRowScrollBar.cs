@@ -17,6 +17,9 @@ namespace TabForge.Avalonia.Views;
 /// </summary>
 public sealed class TrackRowScrollBar : ScrollBar
 {
+    /// <summary>A subclass has its own style key and would get no ScrollBar theme (invisible thumb): use the stock ScrollBar theme.</summary>
+    protected override Type StyleKeyOverride => typeof(ScrollBar);
+
     private readonly TimelineView _timeline;
     private bool _syncing;
 

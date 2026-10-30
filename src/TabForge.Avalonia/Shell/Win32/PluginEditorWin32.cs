@@ -16,6 +16,7 @@ public static class PluginEditorWin32
     private const uint GwOwner = 4, GwChild = 5;
     private const uint SwpNoSize = 0x1, SwpNoZOrder = 0x4, SwpNoActivate = 0x10, SwpAsyncWindowPos = 0x4000;
     private const int ClassNameChars = 64, SwHide = 0, SwShowNoActivate = 8;
+    private const uint RdwInvalidate = 0x1, RdwAllChildren = 0x80, RdwUpdateNow = 0x400;
 
     [StructLayout(LayoutKind.Sequential)] public struct NativeRect { public int Left, Top, Right, Bottom; }
     [StructLayout(LayoutKind.Sequential)] private struct NativePoint { public int X, Y; }
@@ -31,6 +32,7 @@ public static class PluginEditorWin32
     [DllImport("user32.dll")] private static extern bool IsWindowVisible(IntPtr h);
     [DllImport("user32.dll")] private static extern IntPtr GetWindow(IntPtr h, uint cmd);
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern int GetClassName(IntPtr h, StringBuilder name, int max);
+    [DllImport("user32.dll")] private static extern bool RedrawWindow(IntPtr h, IntPtr rect, IntPtr region, uint flags);
     private delegate bool EnumProc(IntPtr h, IntPtr l);
     [DllImport("user32.dll")] private static extern bool EnumWindows(EnumProc proc, IntPtr l);
 
@@ -39,6 +41,13 @@ public static class PluginEditorWin32
         OperatingSystem.IsWindows() ? CreateWindowEx(0, "STATIC", null, WsChild | WsVisible | WsClipChildren, 0, 0, 100, 100, parent, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero) : IntPtr.Zero;
 
     public static void DestroyArea(IntPtr area) { if (OperatingSystem.IsWindows() && area != IntPtr.Zero) DestroyWindow(area); }
+
+    /// <summary>Forces a full repaint of the window and its children now: a stale plug-in image over a foreign window clears. A no-op off Windows.</summary>
+    public static void Redraw(IntPtr window)
+    {
+        if (OperatingSystem.IsWindows() && window != IntPtr.Zero)
+            RedrawWindow(window, IntPtr.Zero, IntPtr.Zero, RdwInvalidate | RdwAllChildren | RdwUpdateNow);
+    }
 
     /// <summary>The engine editor popup owned by <paramref name="owner"/> (the cached <paramref name="known"/> when it is still valid); zero when there is none.</summary>
     public static IntPtr FindEditorPopup(IntPtr owner, IntPtr known)

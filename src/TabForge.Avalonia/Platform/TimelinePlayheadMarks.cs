@@ -5,22 +5,17 @@ using TabForge.Platform;
 
 namespace TabForge.Avalonia.Platform;
 
-// Owns: playhead selection cues (lane tint, arrow, bar-number flag) on the arrangement timeline.
+// Owns: playhead cues (arrow, bar-number flag) on the arrangement timeline.
 // Does not own: the playhead line or its position (TimelineView).
 
 /// <summary>
-/// Owns the playhead's selection cues on the arrangement timeline: the selected-lane tint, the white arrow on the line at the lane's middle,
+/// Owns the playhead's cues on the arrangement timeline: the white arrow on the line at the lane's middle,
 /// and the amber bar number and flag in the ruler. Does not own the playhead line or its position (TimelineView). Tests: TimelineSelectedRowTests.
 /// </summary>
 internal static class TimelinePlayheadMarks
 {
-    public const string TintKey = "Accent";
     public const string AmberKey = "WarningIcon";
     public const string ArrowKey = "TimelinePlayhead";
-    public const double TintOpacity = 0.25;
-    /// <summary>The selected lane's accent tint on the light theme's soft rows, and the width of the accent bar at its left.</summary>
-    public const double LightTintOpacity = 0.18;
-    public const double LightBarWidth = 3;
     public const double ArrowWidth = 14;
     public const double ArrowHeight = 16;
     public const double FlagWidth = 9;
@@ -36,13 +31,6 @@ internal static class TimelinePlayheadMarks
 
     /// <summary>The arrow's vertical centre for a lane that starts at <paramref name="laneTop"/>.</summary>
     public static double ArrowCentreY(double laneTop, double laneHeight) => laneTop + laneHeight / 2;
-
-    public static void DrawLaneTint(IDrawContext d, Func<string, UiColor> ink, bool light, double top, double width, double height) =>
-        d.Rect(light ? ink("SelectedTint") : ink(TintKey).WithOpacity(TintOpacity), null, 0, top, width, height);   // light: the pale accent tint (derived), dark: the accent at its opacity
-
-    /// <summary>The light theme's accent bar at the left of the selected row (the track-colour stripe sits at x = 0, the bar beside it).</summary>
-    public static void DrawSelectedBar(IDrawContext d, Func<string, UiColor> ink, double top, double height) =>
-        d.Rect(ink(TintKey), null, TrackRowTint.StripeWidth, top, LightBarWidth, height);
 
     /// <summary>A right-pointing triangle in front of the playhead: its base sits on the line's left edge at <paramref name="x"/> and its tip points past the line to the right.</summary>
     public static void DrawArrow(IDrawContext d, Func<string, UiColor> ink, double x, double centreY)

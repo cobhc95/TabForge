@@ -10,6 +10,7 @@ using TabForge.Avalonia.Views;
 using TabForge.Avalonia.Views.Dialogs;
 using TabForge.Documents;
 using TabForge.Platform;
+using TabForge.Presenters;
 using TabForge.Services;
 
 namespace TabForge.Avalonia;
@@ -36,12 +37,22 @@ public sealed class MainWindowFile
     private readonly object? _owner;
     private readonly MainWindowTabs _tabs;
     private readonly Action<string> _report;
+    private readonly Func<TabSettings?>? _tabSettings;
+    private readonly Action? _saveSettings;
+    private readonly Func<string, MidiImportPreview, Task<MidiImportAnswer?>>? _askMidi;
 
     /// <param name="dialogs">Asks which files to open and where to export.</param>
     /// <param name="owner">The window the dialogs belong to.</param>
     /// <param name="report">Shows the outcome or the failure to the person.</param>
-    public MainWindowFile(IFileDialogs dialogs, object? owner, MainWindowTabs tabs, Action<string> report)
+    /// <param name="tabSettings">The Tabs settings (the remembered MIDI import mode); null: always ask.</param>
+    /// <param name="saveSettings">Stores the settings after "Remember my choice".</param>
+    /// <param name="askMidi">Shows the Import MIDI question; null = the app's window over the owner.</param>
+    public MainWindowFile(IFileDialogs dialogs, object? owner, MainWindowTabs tabs, Action<string> report,
+        Func<TabSettings?>? tabSettings = null, Action? saveSettings = null, Func<string, MidiImportPreview, Task<MidiImportAnswer?>>? askMidi = null)
     {
+        _tabSettings = tabSettings;
+        _saveSettings = saveSettings;
+        _askMidi = askMidi;
         _dialogs = dialogs;
         _owner = owner;
         _tabs = tabs;
@@ -74,7 +85,13 @@ public sealed class MainWindowFile
                 _report.Error($"Could not open {Path.GetFileName(path)}: {refusal}.");
                 return false;
             }
-            var opened = await _scores.OpenAsync(path);
+            var midiMode = MidiImportMode.Tab;
+            if (FileTypes.IsMidi(Path.GetExtension(path)))
+            {
+                if (await ChooseMidiMode(path) is not { } chosen) return false;   // cancelled: nothing is imported or changed
+                midiMode = chosen;
+            }
+            var opened = await _scores.OpenAsync(path, midiMode);
             var song = new SongDocument(() => null) { Project = opened.Project, Path = opened.SessionPath, ImportSourcePath = opened.SessionPath is null ? opened.SourcePath : null };
             song.IsNew = opened.SessionPath is null;
             if (opened.SourcePath is not null) song.Media.SetSourceDirectory(Path.GetDirectoryName(opened.SourcePath));   // an imported song's relative media resolves beside the imported file
@@ -91,6 +108,18 @@ public sealed class MainWindowFile
             _report.Error($"Could not open {Path.GetFileName(path)}: {ex.Message}");
             return false;
         }
+    }
+
+    /// <summary>The mode a MIDI file is imported with: the remembered one, else the answer to the question (stored when "Remember my choice" is ticked); null when cancelled.</summary>
+    private async Task<MidiImportMode?> ChooseMidiMode(string path)
+    {
+        var tabs = _tabSettings?.Invoke();
+        if (MidiImportModes.Remembered(tabs?.MidiImportMode) is { } remembered) return remembered;
+        var preview = await Task.Run(() => MidiImportPreview.Inspect(path));   // a damaged file throws here and is reported like any failed open
+        var answer = await (_askMidi?.Invoke(path, preview) ?? MidiImportPromptWindow.AskAsync(_owner as Window, path, preview));
+        if (answer is not { } picked) return null;
+        if (picked.Remember && tabs is not null) { tabs.MidiImportMode = MidiImportModes.Store(picked.Mode); _saveSettings?.Invoke(); }
+        return picked.Mode;
     }
 
     /// <summary>Asks for a .mid file and writes the shown song there.</summary>

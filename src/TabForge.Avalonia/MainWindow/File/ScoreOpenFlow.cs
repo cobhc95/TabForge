@@ -27,16 +27,17 @@ public sealed class ScoreOpenFlow
     }
 
     /// <summary>Opens <paramref name="path"/> off the calling thread. Throws when the file cannot be opened or its protected import cannot start.</summary>
-    public Task<OpenedScore> OpenAsync(string path)
+    /// <param name="midiMode">How a MIDI file's tracks are made (tab and notation tracks, or MIDI tracks); other files ignore it.</param>
+    public Task<OpenedScore> OpenAsync(string path, MidiImportMode midiMode = MidiImportMode.Tab)
     {
         if (!GuitarProImporter.SupportedExtensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase))
             return Task.Run(() => _documents.Open(path));
-        return Task.Run(() => OpenInWorker(path));
+        return Task.Run(() => OpenInWorker(path, midiMode));
     }
 
-    private OpenedScore OpenInWorker(string path)
+    private OpenedScore OpenInWorker(string path, MidiImportMode midiMode)
     {
-        var context = new ImportContext(new ImportGuard(CancellationToken.None));
+        var context = new ImportContext(new ImportGuard(CancellationToken.None)) { MidiMode = midiMode };
         try
         {
             return _documents.Open(path, (file, notices) => ImportWorker.Import(file, _options, notices, context), context);

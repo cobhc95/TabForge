@@ -1,7 +1,8 @@
 using System.Collections.Generic;
 using Avalonia.Controls;
 using TabForge.Audio.Contracts;
-using TabForge.AudioEngine.Builtin.Delay;
+using DelayEffect = TabForge.Audio.Contracts.Builtin.DelayParameters;
+using TabForge.Audio.Contracts.Builtin;
 using TabForge.Avalonia.Views.Dialogs;
 using TabForge.Models;
 using TabForge.Plugins;

@@ -7,13 +7,13 @@ namespace TabForge.Avalonia.Tests;
 /// Owns: a draw context that draws nothing and allocates nothing per call, so a test can measure the drawing code itself.
 /// Tests: FretboardPlaybackFrameTests (allocations per playback frame), TimelineBodyCullingTests (bars drawn per viewport).
 /// </summary>
-internal sealed class NullDrawContext : IDrawContext
+internal class NullDrawContext : IDrawContext
 {
     public double PixelsPerDip => 1;
     // Paths are empty: the measurement covers the view's own work, not the geometry a real path factory builds.
     public IPathFactory Paths { get; } = new EmptyPathFactory();
 
-    public void Rect(UiColor? fill, UiStroke? stroke, double x, double y, double width, double height, double radius = 0) { }
+    public virtual void Rect(UiColor? fill, UiStroke? stroke, double x, double y, double width, double height, double radius = 0) { }
     public void Line(UiStroke stroke, double x1, double y1, double x2, double y2) { }
     public void Ellipse(UiColor? fill, UiStroke? stroke, double cx, double cy, double rx, double ry) { }
     public void Path(UiColor? fill, UiStroke? stroke, IUiPath path) { }

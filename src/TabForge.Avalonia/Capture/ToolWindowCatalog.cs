@@ -29,7 +29,6 @@ internal sealed class ToolWindowCatalog(CaptureSession session)
         ["TrackProperties"] = (s => new TrackPropertiesWindow(session.Document.Project.Tracks[s.Option("track", 0)])),
         ["Tuner"] = (s => new TunerWindow(session.Document.Project.Tracks[s.Option("track", 0)], TunerWindow.SampleHz)),
         ["GlobalTuning"] = (_ => new GlobalTuningWindow(GlobalTuningPresenter.StandardE, TuningPresets.SixStringPresets)),
-        ["ScaleFinder"] = (_ => new ScaleFinderWindow(session.Document.Project, session.Document.Project.Tracks[0], null, null)),
         ["InstrumentPicker"] = (s => new InstrumentPickerWindow(InstrumentPickerWindow.CatalogueEntries(), s.Option("current", "Distortion Guitar")!)),
         ["ScoreTextStyle"] = (_ => new ScoreTextStyleWindow(new Dictionary<string, ScoreTextAreaStyle>(), new[] { "Arial", "Consolas" })),
         ["MixTable"] = (_ => new MixTableWindow(MixTableWindow.SamplePresenter())),

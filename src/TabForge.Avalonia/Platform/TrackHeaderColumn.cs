@@ -18,7 +18,7 @@ namespace TabForge.Avalonia.Platform;
 /// <summary>
 /// The track header column of the arrangement: one row per timeline row with the track-row cells in the default order and widths
 /// (<see cref="TrackRowCells"/>): cogwheel, the owner's instrument icon, record arm, number, name, split FX button, M, S, volume and pan sliders,
-/// under a header strip with the column labels. Rows sit exactly where the <see cref="TimelineView"/> puts them (its Core row geometry), scroll
+/// and the meter column (drawn by Views/Meters/TrackMeterColumn), under a header strip with the column labels. Rows sit exactly where the <see cref="TimelineView"/> puts them (its Core row geometry), scroll
 /// with it and follow its row-drag offsets, so the two stay aligned while a row drags. It only draws and answers hit tests; <see cref="TimelineInputController"/>
 /// handles the pointer and shows a slider drag through <see cref="SliderPreview"/> before the edit lands.
 /// Owns: the column's drawing, the cell hit test (track rows and the master row's cells, which report <see cref="MasterRow"/>), the cell tooltips,
@@ -46,6 +46,9 @@ public sealed class TrackHeaderColumn : Control
     /// <summary>Every cell in hit-test order, taken from the enum once so a pointer move allocates no array.</summary>
     internal static readonly TrackRowCells.Cell[] HitTestCells = Enum.GetValues<TrackRowCells.Cell>();
 
+    /// <summary>Whether the track name of <paramref name="row"/> is drawn bold: every selected track's name is, the active track and each multi-selected row (the same set that tints the rows).</summary>
+    internal bool IsNameBold(int row) => row == _timeline.SelectedRow || _timeline.IsRowPicked(row);
+
     /// <summary>The tooltip text of a cell of <paramref name="row"/>, in the wording (the master row's own texts).</summary>
     public static string TooltipOf(int row, TrackRowCells.Cell cell) => row == MasterRow ? MasterLaneRowPainter.TooltipOf(cell) : cell switch
     {
@@ -56,6 +59,7 @@ public sealed class TrackHeaderColumn : Control
         TrackRowCells.Cell.Mute => "Mute track",
         TrackRowCells.Cell.Solo => "Solo track",
         TrackRowCells.Cell.Volume => "Volume",
+        TrackRowCells.Cell.Meter => Views.Meters.TrackMeterColumn.Tip(),
         TrackRowCells.Cell.Kind => "Change instrument",
         _ => "Pan",
     };
@@ -87,6 +91,7 @@ public sealed class TrackHeaderColumn : Control
         ContextMenuBuilder.Attach(this, timeline.ContextMenus, at => ContextMenuRows.TrackRowAt(_timeline, at));
         timeline.HoverRowChanged += InvalidateVisual;
         timeline.RowScrollChanged += InvalidateVisual;
+        timeline.PickedRowsChanged += InvalidateVisual;
         // The header measures to the timeline's Height (see MeasureOverride), so it measures again whenever that Height changes: a pane resize,
         // a row reload or a new row height. Without this the column keeps the height of an older, smaller or larger pane.
         timeline.PropertyChanged += (_, e) => { if (e.Property == HeightProperty) InvalidateMeasure(); };
@@ -106,18 +111,47 @@ public sealed class TrackHeaderColumn : Control
         };
         PointerPressed += (_, e) =>
         {
-            if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) return;
-            UpdateCellHover(e.GetPosition(this));   // the cell under this press, even when the rows reloaded since the last move
+            var point = e.GetPosition(this);
+            var properties = e.GetCurrentPoint(this).Properties;
+            if (CellAt(point) is { Cell: TrackRowCells.Cell.Meter } meter)
+            {
+                if (properties.IsRightButtonPressed)
+                {
+                    e.Handled = true;
+                    MeterMenuRequested?.Invoke();
+                    return;
+                }
+                if (properties.IsLeftButtonPressed && meter.Row >= 0) MeterResetRequested?.Invoke(meter.Row);
+            }
+            if (!properties.IsLeftButtonPressed) return;
+            UpdateCellHover(point);   // the cell under this press, even when the rows reloaded since the last move
             SetPressedCell(HoverCell);
         };
         PointerReleased += (_, _) => SetPressedCell(null);
         PointerCaptureLost += (_, _) => SetPressedCell(null);   // a dialog the press opened takes the release
+        DoubleTapped += (_, e) =>
+        {
+            if (CellAt(e.GetPosition(this)) is { Cell: TrackRowCells.Cell.Meter } meter && meter.Row >= 0) MeterMixerRequested?.Invoke(meter.Row);
+        };
     }
 
     /// <summary>The track row and cell under the pointer, or null when the pointer is on no drawn cell.</summary>
     public (int Row, TrackRowCells.Cell Cell)? HoverCell { get; private set; }
 
+    /// <summary>Runs on a right-click on a track's meter cell; the arrangement opens the meter menu.</summary>
+    public Action? MeterMenuRequested { get; set; }
+
+    /// <summary>Runs with the row on a left-click on its meter cell; the arrangement resets that row's clip light.</summary>
+    public Action<int>? MeterResetRequested { get; set; }
+
+    /// <summary>Runs with the row on a double-click on its meter cell; the arrangement opens the mixer.</summary>
+    public Action<int>? MeterMixerRequested { get; set; }
+
+    /// <summary>Raised when the hovered or pressed cell changes, so the meter column can repaint just its own cell.</summary>
+    public event Action? CellPaintChanged;
+
     /// <summary>The cell a left press is holding, drawn darker until the release; null when none.</summary>
+    public (int Row, TrackRowCells.Cell Cell)? PressedCell => _pressedCell;
     private (int Row, TrackRowCells.Cell Cell)? _pressedCell;
 
     /// <summary>Tracks the drawn cell under <paramref name="p"/>; invalidates the column only when the cell changes.</summary>
@@ -126,16 +160,23 @@ public sealed class TrackHeaderColumn : Control
     private void SetHoverCell((int Row, TrackRowCells.Cell Cell)? cell)
     {
         if (cell == HoverCell) return;
+        var repaint = PaintsCellState(HoverCell) || PaintsCellState(cell);
         HoverCell = cell;
-        InvalidateVisual();
+        if (repaint) InvalidateVisual();
+        CellPaintChanged?.Invoke();
     }
 
     private void SetPressedCell((int Row, TrackRowCells.Cell Cell)? cell)
     {
         if (cell == _pressedCell) return;
+        var repaint = PaintsCellState(_pressedCell) || PaintsCellState(cell);
         _pressedCell = cell;
-        InvalidateVisual();
+        if (repaint) InvalidateVisual();
+        CellPaintChanged?.Invoke();
     }
+
+    // The meter cell is drawn by TrackMeterColumn over this column, so a meter-only state change repaints that control instead.
+    private static bool PaintsCellState((int Row, TrackRowCells.Cell Cell)? cell) => cell is { } hit && hit.Cell != TrackRowCells.Cell.Meter;
 
     /// <summary>The state a cell is drawn in: pressed while its press is held, hovered under the pointer, else idle.</summary>
     internal TrackRowCells.CellPaint PaintOf(int row, TrackRowCells.Cell cell) =>
@@ -156,8 +197,8 @@ public sealed class TrackHeaderColumn : Control
     /// <summary>Shows the tracks of <paramref name="song"/> after an edit changed them.</summary>
     public void Reload(SongProject song)
     {
-        _pressedCell = null;   // a press whose release never arrived (a dialog opened over it) must not keep the cell dark
-        HoverCell = null;      // rows may have changed under the pointer: the next move finds the cell again
+        SetPressedCell(null);   // a press whose release never arrived (a dialog opened over it) must not keep the cell dark
+        SetHoverCell(null);     // rows may have changed under the pointer: the next move finds the cell again
         _song = song;
         foreach (var gone in _inputLevels.Keys.Where(track => !song.Tracks.Contains(track)).ToList()) { _inputLevels.Remove(gone); _inputHolds.Remove(gone); }
         InvalidateMeasure();
@@ -307,11 +348,10 @@ public sealed class TrackHeaderColumn : Control
         var selected = row == _timeline.SelectedRow;
         var height = _timeline.RowHeightOf(row);
         d.Rect(ink(row % 2 == 0 ? "TimelineRow" : "TimelineRowAlt"), null, 0, top, ColumnWidth, height);
-        if (selected && _timeline.ShadeSelectedTrack || _timeline.IsRowPicked(row)) TimelinePlayheadMarks.DrawLaneTint(d, ink, light, top, ColumnWidth, height);
-        if (row == _timeline.HoverRow) d.Rect(HoverShade.Overlay(light), null, 0, top, ColumnWidth, height);
         TrackRowTint.Fill(d, track, light, _timeline.TrackTintPercent, 0, top, ColumnWidth, height);
         TrackRowTint.Stripe(d, track, light, 0, top, height);
-        if (light && selected) TimelinePlayheadMarks.DrawSelectedBar(d, ink, top, height);
+        if (row == _timeline.HoverRow || (selected && _timeline.ShadeSelectedTrack) || _timeline.IsRowPicked(row)) d.Rect(HoverShade.RowOverlay(light), null, 0, top, ColumnWidth, height);
+        if (row == _timeline.SelectedRow || _timeline.IsRowPicked(row)) TrackRowTint.DrawSelectedStrip(d, track, light, 0, top, height);
         if (_timeline.IsArmed(row)) ArmedRowPainter.Draw(d, ink, track, top + _timeline.HeaderLineHeightOf(row), InputLevelOf(track), InputHoldOf(track));
         var text = ink("TextPrimary");
         if (dimmed) text = text with { A = TrackRowTint.MutedAlpha(_timeline.MutedTrackDimPercent) };
@@ -330,7 +370,7 @@ public sealed class TrackHeaderColumn : Control
         d.DrawText(number, numberX + (numberWidth - number.Width) / 2, top + (_timeline.HeaderLineHeightOf(row) - number.Height) / 2);
         var (nameX, nameWidth) = TrackRowCells.Column("name", NameColumnWidth);
         var nameRight = nameX + nameWidth - 4;
-        var name = d.Text(track.Name, Font, 13, text, d.PixelsPerDip, weight: selected ? SelectedNameWeight : NameWeight);
+        var name = d.Text(track.Name, Font, 13, text, d.PixelsPerDip, weight: IsNameBold(row) ? SelectedNameWeight : NameWeight);
         // Only a name wider than its cell is clipped: a clip pushed around every name left the later cells drawn at the wrong scale in a render at a scale other than 1 (a capture, a video frame).
         var clipName = name.Width + 1 > nameRight - (nameX + 4);
         if (clipName) d.PushClip(nameX + 4, top, Math.Max(0, nameRight - (nameX + 4)), _timeline.HeaderLineHeightOf(row));
@@ -339,7 +379,8 @@ public sealed class TrackHeaderColumn : Control
         TrackRowCells.DrawFx(d, ink, Box(TrackRowCells.Cell.Fx), Box(TrackRowCells.Cell.FxPower), track.SoundSource == SoundSources.Plugins, track.Rig.Plugins.Count, FxPartOf(row));
         DrawToggle(d, ink, Box(TrackRowCells.Cell.Mute), TrackRowCells.Cell.Mute, track.Mute, PaintOf(row, TrackRowCells.Cell.Mute));
         DrawToggle(d, ink, Box(TrackRowCells.Cell.Solo), TrackRowCells.Cell.Solo, track.Solo, PaintOf(row, TrackRowCells.Cell.Solo));
-        foreach (var slider in new[] { TrackRowCells.Cell.Volume, TrackRowCells.Cell.Pan })
+        // The two sliders are drawn one by one (no array per row, so a paint allocates nothing).
+        foreach (var slider in (ReadOnlySpan<TrackRowCells.Cell>)[TrackRowCells.Cell.Volume, TrackRowCells.Cell.Pan])
         {
             var value = ShownSlider(row, slider, TrackRowCells.SliderValue(track, slider));
             var (minimum, maximum) = TrackRowCells.SliderRange(slider);

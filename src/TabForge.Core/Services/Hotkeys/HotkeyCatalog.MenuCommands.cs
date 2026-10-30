@@ -63,5 +63,10 @@ public static partial class HotkeyCatalog
         new("Insert.AudioFile", CategoryEdit, "Insert audio file", "", "Pick an audio file and place it at the cursor time on the selected audio / MIDI track (or on a new track when the selected track is a tab track)."),
         new("Insert.MidiFile", CategoryEdit, "Insert MIDI file", "", "Pick a MIDI file and place it as a MIDI clip at the cursor time on the selected audio / MIDI track (or on a new track when the selected track is a tab track)."),
         new("Insert.EmptyMidiClip", CategoryEdit, "Insert empty MIDI clip", "", "Add an empty MIDI clip one bar long at the cursor time on the selected audio / MIDI track."),
+        new("PianoRoll.TransposeDialog", CategoryNote, "Piano roll: transpose selection (T)", "", "Transpose the piano roll selection with the Transpose dialog (T with the piano roll focused and notes selected; follows the scale lock and the transpose mode)."),
+        new("PianoRoll.SelectTool", CategoryNote, "Select tool", "V", "Pick the piano roll Select tool (the arrow): click and drag to select, move and resize notes; nothing is written."),
+        new("PianoRoll.Split", CategoryNote, "Split notes at the pointer", "S", "Split (S): cuts the selected notes at the dashed line (the pointer's snapped position; the playhead when the pointer is off the grid), as one undo step."),
+        new("PianoRoll.Glue", CategoryNote, "Glue selected notes", "Ctrl+Shift+G", "Join the selected notes of one pitch that touch, overlap or lie within one snap step into one note, as one undo step."),
+        new("PianoRoll.Snap", CategoryNote, "Snap on / off", "Alt+S", "Turn piano roll snapping on or off (same as the magnet button)."),
     };
 }

@@ -89,6 +89,9 @@ public sealed partial class SongProject
     /// <summary>The scales the user kept for the whole song (no section), by track id ("N" format) or "*" for all pitched tracks, as "Root Scale" highlights; null until one is kept. Saved with the song, one undo step, absent in older files.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public Dictionary<string, string>? KeptScales { get; set; }
+    /// <summary>The piano roll's SHOW ROWS choice for this song: "Scale" or "Used"; null (not written) is All pitches, the default for a song that never chose one. Saved with the song, one undo step, absent in older files.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? PianoRollRows { get; set; }
 
     /// <summary>
     /// Moves the track at <paramref name="from"/> to <paramref name="to"/>, shifting the rest to keep
@@ -213,6 +216,12 @@ public sealed class TrackModel
     public List<int> StringTunings { get; set; } = new() { 64, 59, 55, 50, 45, 40 }; // high -> low
     public List<MeasureModel> Measures { get; set; } = new();
     public RigPreset Rig { get; set; } = new();
+    /// <summary>
+    /// The articulation map kept on the track itself when no instrument plug-in slot holds one (a built-in-sound track used for an export
+    /// to another program); null means none, so old songs load unchanged.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public Dictionary<string, string>? ArticulationBindings { get; set; }
     /// <summary>Where the track sounds: <see cref="SoundSources.Midi"/> (default) or its plug-in chain.</summary>
     public string SoundSource { get; set; } = SoundSources.Midi;
     /// <summary>Audio clips on the track's audio lane (recordings and dropped files).</summary>

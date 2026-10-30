@@ -18,6 +18,7 @@ namespace TabForge.Avalonia.Tests;
 /// Does not own: the engine (a recording fake stands in), the window or its controller.
 /// Tests: this class.
 /// </summary>
+[Collection("PluginLibraryRoot")]   // PluginLibrary.RootOverride is process-wide: run alone so no parallel test resets it or reads the scratch folder
 public class FxEngineCallTests
 {
     private static (FxChainWindow Window, TrackModel Track, FxTestKit.FakeEngine Engine, PluginSettings Settings) Open(bool area = false, bool chainOn = true)

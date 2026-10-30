@@ -7,6 +7,7 @@ using Avalonia.LogicalTree;
 using TabForge.Avalonia.Platform;
 using TabForge.Avalonia.Views.Docking;
 using TabForge.Docking;
+using TabForge.Services;
 
 namespace TabForge.Avalonia;
 
@@ -54,13 +55,15 @@ public static class MainWindowViewMenu
     /// <param name="score">The score view whose playing bar shows and hides.</param>
     /// <param name="settings">The shared settings the playing bar choice is read from and saved to; null keeps the choice for this session.</param>
     /// <param name="status">The status notice the side-panel toggle shows; null shows nothing (the Compose call leaves it unset).</param>
-    public static void Register(MainWindowCommands commands, Window window, DockWorkspaceController dock, ScorePreviewView score, MainWindowSettings? settings, Action<string>? status = null)
+    /// <param name="mode">The editor mode on screen; the instrument toggle remembers its choice in that mode (Tab when null).</param>
+    public static void Register(MainWindowCommands commands, Window window, DockWorkspaceController dock, ScorePreviewView score, MainWindowSettings? settings, Action<string>? status = null,
+        Func<FretboardMode>? mode = null)
     {
         score.Probe.Appearance.PlayingBarEnabled = settings?.Settings.Follow.PlayingBarEnabled ?? true;
         commands.Add(GlobalCommandId, () => ToggleGlobal(window, dock));
         RegisterFullscreen(commands, window);
         commands.Add(PlayingBarCommandId, () => TogglePlayingBar(window, score, settings));
-        commands.Add(InstrumentPanelCommandId, () => ToggleInstrumentPanel(window, dock));
+        commands.Add(InstrumentPanelCommandId, () => ToggleInstrumentPanel(window, dock, settings, mode));
         commands.Add(SidePanelCommandId, () => ToggleSidePanel(dock, settings, status));
         // The menu rows are built after Register, so their checks take the panels' state when the window opens.
         window.Opened += (_, _) => SyncRowChecks(window, dock, score);
@@ -84,8 +87,9 @@ public static class MainWindowViewMenu
         SetRowChecks(window, GlobalCommandId, show);
     }
 
-    /// <summary>View > Instrument view: shows or hides the fretboard / keyboard panel and sets the check of its menu row.</summary>
-    private static void ToggleInstrumentPanel(Window window, DockWorkspaceController dock)
+    /// <summary>View > Instrument view: shows or hides the fretboard / keyboard panel and sets the check of its menu row. The choice is
+    /// remembered in the mode on screen (Tab or the piano roll); in the Band view the per-track settings stay untouched.</summary>
+    private static void ToggleInstrumentPanel(Window window, DockWorkspaceController dock, MainWindowSettings? settings, Func<FretboardMode>? mode)
     {
         // Standing rule: never a fretboard in keyboard mode; the row stays unchecked and the dock refuses anyway.
         if (dock.SuppressInstrumentPanel)
@@ -95,6 +99,7 @@ public static class MainWindowViewMenu
         }
         var show = !dock.IsPanelVisible(InstrumentPanelId);
         dock.SetPanelVisible(InstrumentPanelId, show);
+        settings?.RememberFretboard(mode?.Invoke() ?? FretboardMode.Tab, show);
         SetRowChecks(window, InstrumentPanelCommandId, show);
     }
 

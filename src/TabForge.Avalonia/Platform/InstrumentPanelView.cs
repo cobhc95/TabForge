@@ -50,7 +50,7 @@ public sealed partial class InstrumentPanelView : Control
     private const string AudioTrackPlaceholderText = "Audio/MIDI track — no instrument view";
     private const double NoTrackFontSize = 13;
     private const double NoTrackLift = 8;
-    // The legend column beside the board: four rows, the Scales button under them (sizes).
+    // The legend column beside the board: now and recent always, plus next and upcoming while previewing (sizes).
     private const double LegendGap = 14;
     private const double LegendTopMinimum = 10;
     private const int LegendRows = 4;
@@ -100,11 +100,32 @@ public sealed partial class InstrumentPanelView : Control
         set { if (_kind == value) return; _kind = value; InvalidateMeasure(); InvalidateVisual(); }
     }
 
+    /// <summary>True while the look previews the next notes; false shows sounding (now) and recent notes only, like the drum map.</summary>
+    internal bool PreviewEnabled => _look.PreviewHorizon >= 0;
+
+    /// <summary>The colour legend's rows: now and recent always, plus next and upcoming while previewing.</summary>
+    internal int LegendRowCount => 1 + (PreviewEnabled ? 2 : 0) + (_look.PreviewPrevious ? 1 : 0);
+
     /// <summary>The settings-driven look (frets, keys, preview, sizes). Redraws and re-lays out only when the value changes.</summary>
     public FretboardSettingsBinding.Look Look
     {
         get => _look;
-        set { if (_look == value) return; _look = value; InvalidateMeasure(); InvalidateVisual(); }
+        set
+        {
+            if (_look == value) return;
+            _look = value;
+            if (!value.PreviewPrevious) _playing.Recent.Clear();
+            if (value.PreviewHorizon < 0 && (_playing.Next.Count > 0 || _playing.Upcoming.Count > 0))
+            {
+                // Toggled off live (menu or Settings) while notes show: drop the look-ahead lists at once,
+                // so every view repaints without them before the next frame fills (no restart, invalidate only).
+                _playing.Next.Clear();
+                _playing.Upcoming.Clear();
+                _playing.UpcomingDepth.Clear();
+                _movement = MovementOf(_playing);
+            }
+            InvalidateMeasure(); InvalidateVisual();
+        }
     }
 
     /// <summary>True while an audio track is the selected one: the panel shows its no-instrument note instead of an instrument.</summary>
@@ -259,11 +280,17 @@ public sealed partial class InstrumentPanelView : Control
     {
         if (!_playbackShown) return IsLit(midi) ? ink("InstrumentCurrent") : null;
         if (AnyMidi(_playing.Now, midi) || AnyMidi(_playing.Released, midi)) return ink("InstrumentCurrent");
-        if (AnyMidi(_playing.Next, midi)) return ink("InstrumentNext");
-        for (var i = 0; i < _playing.Upcoming.Count; i++)
-            if (_playing.Upcoming[i].Midi == midi) return ink("InstrumentAccent").WithOpacity(UpcomingBrightness(_playing.UpcomingDepth[i]));
-        foreach (var n in _playing.Recent)
-            if (n.Midi == midi) return ink("InstrumentPast").WithOpacity(RecentBrightness(n));
+        // Sounding notes only without the look-ahead (the drum map always, melodic views while preview notes are off):
+        // never the next/upcoming colours, whatever the lists still hold.
+        if (PreviewEnabled && _kind != InstrumentPanelKind.Drums)
+        {
+            if (AnyMidi(_playing.Next, midi)) return ink("InstrumentNext");
+            for (var i = 0; i < _playing.Upcoming.Count; i++)
+                if (_playing.Upcoming[i].Midi == midi) return ink("InstrumentAccent").WithOpacity(UpcomingBrightness(_playing.UpcomingDepth[i]));
+        }
+        if (_look.PreviewPrevious)
+            foreach (var n in _playing.Recent)
+                if (n.Midi == midi) return ink("InstrumentPast").WithOpacity(RecentBrightness(n));
         return null;
     }
 

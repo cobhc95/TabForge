@@ -24,6 +24,7 @@ public sealed class DockViewMenus
     private readonly Window _owner;
     private readonly Action<string>? _status;
     private readonly Func<DockWorkspaceState?>? _realLayout;
+    private readonly Func<FretboardMode>? _mode;
     private readonly MenuItem _layouts = new() { Header = "Layouts" };
     private readonly MenuItem _panels = new() { Header = "Panels" };
     private readonly List<(string PaneId, MenuItem Item)> _panelItems = new();
@@ -41,13 +42,16 @@ public sealed class DockViewMenus
     /// <param name="owner">The window the save prompt opens over and whose size a saved layout records.</param>
     /// <param name="status">The status notice the layout rows show; null shows nothing (the Compose call leaves it unset).</param>
     /// <param name="realLayout">The layout a save stores while Keyboard mode shows its temporary arrangement; null stores the dock as shown.</param>
-    public DockViewMenus(DockWorkspaceController dock, MainWindowSettings? settings, Window owner, Action<string>? status = null, Func<DockWorkspaceState?>? realLayout = null)
+    /// <param name="mode">The editor mode on screen; a layout the user picks remembers the fretboard shown in that mode (Tab when null).</param>
+    public DockViewMenus(DockWorkspaceController dock, MainWindowSettings? settings, Window owner, Action<string>? status = null, Func<DockWorkspaceState?>? realLayout = null,
+        Func<FretboardMode>? mode = null)
     {
         _dock = dock;
         _settings = settings;
         _owner = owner;
         _status = status;
         _realLayout = realLayout;
+        _mode = mode;
         // The window starts in Compose when no settings say otherwise (the preview window has none).
         // A removed preset (Compose, Practice, Mix) or a deleted layout falls back to Default; the dock itself is left as it is.
         _currentLayout = DockLayoutCatalog.Resolve(SavedLayouts, settings?.Settings.LastLayout ?? DockLayoutCatalog.DefaultName)?.Name ?? DockLayoutCatalog.DefaultName;
@@ -156,6 +160,8 @@ public sealed class DockViewMenus
         // The fretboard side is the setting's, whatever the layout holds.
         var bottom = _settings?.Settings.Appearance.FretboardAtBottom ?? false;
         _dock.ApplyLayout(DockLayoutTree.WithInstrumentSide(layout.State, bottom));
+        if (_settings is not null)
+            _settings.RememberFretboard(_mode?.Invoke() ?? FretboardMode.Tab, _dock.IsPanelVisible("instrument"));
         _currentLayout = layout.Name;
         var saved = layout.Saved;
         if (saved is not null && saved.WindowWidth > 0)

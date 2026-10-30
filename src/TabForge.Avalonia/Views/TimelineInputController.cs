@@ -392,10 +392,12 @@ public sealed partial class TimelineInputController
     private void SelectPressedRow(KeyModifiers modifiers)
     {
         var tracks = _document.Project.Tracks;
-        var pick = modifiers.HasFlag(KeyModifiers.Shift) ? TrackPick.Range : modifiers.HasPrimary() ? TrackPick.Toggle : TrackPick.Plain;
+        var pick = PickOf(modifiers);
         _collapseRowsOnRelease = pick == TrackPick.Plain && _selection.TrackRowCount > 1 && _selection.Tracks.Contains(tracks, _pressRow);
         if (!_collapseRowsOnRelease) _selection.Tracks.Click(tracks, _pressRow, pick);
     }
+
+    private static TrackPick PickOf(KeyModifiers modifiers) => modifiers.HasFlag(KeyModifiers.Shift) ? TrackPick.Range : modifiers.HasPrimary() ? TrackPick.Toggle : TrackPick.Plain;
 
     private void Released(PointerReleasedEventArgs e, Control source)
     {
@@ -429,13 +431,23 @@ public sealed partial class TimelineInputController
         e.Pointer.Capture(null);
         _view.SectionButtons.Release();
         if (gesture == Gesture.Slider) return;
-        if (gesture == Gesture.Press && _pressRow >= 0)
+        if (gesture == Gesture.Press) _selection.Batch(() => ReleasePress(e));   // the track pick and the click's own changes reach the views as one
+        else if (gesture == Gesture.SectionDrag && DropSection()) return;
+        else if (gesture == Gesture.RowDrag) DropRow();
+        ClearDrag();
+        if (source == _view) ApplyHover(e.GetPosition(_view));
+    }
+
+    private void ReleasePress(PointerReleasedEventArgs e)
+    {
+        if (_pressRow >= 0)
         {
             if (_collapseRowsOnRelease) _selection.Tracks.Click(_document.Project.Tracks, _pressRow, TrackPick.Plain);
+            else if (_pressOnGrid && !_pressOnRuler) _selection.Tracks.Click(_document.Project.Tracks, _pressRow, PickOf(e.KeyModifiers));   // a lane or clip click replaces the track selection like a name click (Ctrl toggles, Shift ranges)
             TrackRowClicked?.Invoke(_pressRow);
             if (!_pressOnGrid) ScoreRequested?.Invoke(_pressRow);   // the track's header
         }
-        if (gesture == Gesture.Press && _pressOnGrid)
+        if (_pressOnGrid)
         {
             var clip = _dragSlot < 0 ? _hitTests.ClipAt(_pressPoint) : null;
             var alt = e.KeyModifiers.HasFlag(KeyModifiers.Alt);
@@ -461,12 +473,8 @@ public sealed partial class TimelineInputController
             }
             else if (ctrl && TabCellAt(_pressPoint) is not null) { }   // Ctrl+click on a tab cell only toggles it: the playhead and the score cursor stay
             else if (_pressBar >= 0 && _pressBar < _view.BarCount) BarSeekRequested?.Invoke(_pressBar);
-            if (_dragSlot < 0 && !(_pressOnRuler && alt)) _selection.Batch(() => ClickSelect(clip, clipBar, ctrl));   // the click's changes reach the views as one
+            if (_dragSlot < 0 && !(_pressOnRuler && alt)) ClickSelect(clip, clipBar, ctrl);
         }
-        else if (gesture == Gesture.SectionDrag && DropSection()) return;
-        else if (gesture == Gesture.RowDrag) DropRow();
-        ClearDrag();
-        if (source == _view) ApplyHover(e.GetPosition(_view));
     }
 
 }

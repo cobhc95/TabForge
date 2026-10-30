@@ -1,7 +1,7 @@
 namespace TabForge.Playback;
 
-// Owns: the articulation map of one instrument: its rules by technique id and the keyswitch lead, and how it is kept in a plug-in slot
-//   (ArticulationBindings: technique id -> encoded rule; the lead under the key "@LeadMs"), so songs saved without it load unchanged.
+// Owns: the articulation map of one instrument: its rules by technique id and the keyswitch lead, and how it is kept in a plug-in slot or
+//   on a track without one (ArticulationMapStore: technique id -> encoded rule; the lead under the key "@LeadMs"), so songs saved without it load unchanged.
 // Does not own: what a rule is (ArticulationRule), the presets (ArticulationPresets) or the compile hook (ScoreToMidiCompiler.Articulations).
 // Tests: TestArticulationKeyswitches.
 

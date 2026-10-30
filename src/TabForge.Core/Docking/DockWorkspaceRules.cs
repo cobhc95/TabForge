@@ -59,9 +59,10 @@ internal static class DockWorkspaceRules
         return emptied;
     }
 
-    /// <summary>Takes the panel out of the layout and remembers it as closed.</summary>
+    /// <summary>Takes the panel out of the layout and remembers it as closed. The instrument pane's share is remembered first so showing it again keeps its size.</summary>
     internal static List<string> Close(DockWorkspaceState state, string id)
     {
+        if (id == InstrumentDockSizeMemory.InstrumentId) DockLayoutTree.RememberInstrumentShare(state);
         var emptied = RemoveEverywhere(state, id);
         if (!state.ClosedPanels.Contains(id, StringComparer.Ordinal)) state.ClosedPanels.Add(id);
         return emptied;
@@ -100,6 +101,15 @@ internal static class DockWorkspaceRules
             tabIndex--;
 
         fraction = double.IsFinite(fraction) ? Math.Clamp(fraction, 0.02, 0.98) : DockLayoutTree.EdgeFraction;
+        if (panelId == InstrumentDockSizeMemory.InstrumentId && zone != DockDropZone.Center)
+        {
+            var targetVertical = InstrumentDockSizeMemory.IsVerticalZone(zone);
+            var before = DockLayoutTree.FindInstrumentShare(state);
+            double? currentWhenSame = before is { } b && b.Vertical == targetVertical ? b.Share : null;
+            if (before is { } found) DockLayoutTree.RememberInstrumentShare(state);
+            var rememberedTarget = targetVertical ? state.InstrumentVerticalShare : state.InstrumentHorizontalShare;
+            fraction = InstrumentDockSizeMemory.ShareToApply(currentWhenSame, rememberedTarget);
+        }
         emptiedFloating.AddRange(RemoveEverywhere(state, panelId));
         state.ClosedPanels.Remove(panelId);
         var target = FindTarget();
@@ -120,12 +130,19 @@ internal static class DockWorkspaceRules
             var floatState = state.Floating.First(f => f.Id == floatingId);
             floatState.Root = DockLayoutTree.ReplaceNode(floatState.Root, target.HostId, split);
         }
+        if (panelId == InstrumentDockSizeMemory.InstrumentId)
+        {
+            var vertical = InstrumentDockSizeMemory.IsVertical(orientation);
+            if (vertical) state.InstrumentVerticalShare = InstrumentDockSizeMemory.RememberShare(fraction, state.InstrumentVerticalShare);
+            else state.InstrumentHorizontalShare = InstrumentDockSizeMemory.RememberShare(fraction, state.InstrumentHorizontalShare);
+        }
         return true;
     }
 
-    /// <summary>Moves the panel back to its default host (out of the closed list).</summary>
+    /// <summary>Moves the panel back to its default host (out of the closed list). The instrument pane's share is remembered first so it keeps its size.</summary>
     internal static List<string> PlaceAtDefault(DockWorkspaceState state, string id, string defaultHost, string defaultAnchor)
     {
+        if (id == InstrumentDockSizeMemory.InstrumentId) DockLayoutTree.RememberInstrumentShare(state);
         var emptied = RemoveEverywhere(state, id);
         state.ClosedPanels.Remove(id);
         DockLayoutTree.PlaceAtDefault(state, id, defaultHost, defaultAnchor);

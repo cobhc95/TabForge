@@ -38,7 +38,7 @@ public class TimelineSelectedRowTests
     }
 
     [AvaloniaFact]
-    public void TheSelectedLaneDrawsTheSameBackgroundAsAnUnselectedOneEvenWithTheShadeSetting()
+    public void TheSelectedTrackShadeIsDrawnInTheTrackListOnlyAndTheLanesStayUntouched()
     {
         Assert.False(new TabForge.Services.TimelineSettings().ShadeSelectedTrack);
         var view = new TimelineView(DemoSongFactory.Create()) { Width = 600, Height = 300 };
@@ -49,7 +49,7 @@ public class TimelineSelectedRowTests
         var unshaded = Render(view);
         view.ShadeSelectedTrack = true;
         var shaded = Render(view);
-        Assert.Equal(unshaded, shaded);
+        Assert.Equal(unshaded, shaded);   // the shade lives in TrackHeaderColumn (HoverShade.RowOverlay); the lanes are not shaded
         view.ShadeSelectedTrack = false;
         Assert.Equal(unshaded, Render(view));
         window.Close();

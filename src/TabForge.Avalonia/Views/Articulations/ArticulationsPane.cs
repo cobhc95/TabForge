@@ -9,10 +9,12 @@ using Avalonia.Markup.Xaml.MarkupExtensions;
 using Avalonia.Media;
 using TabForge.Avalonia.Views.Dialogs;
 using TabForge.Avalonia.Views.Fx;
+using TabForge.Avalonia.Views.Midi;
 using TabForge.Avalonia.Views.Presets;
 using TabForge.Models;
 using TabForge.Playback;
 using TabForge.Plugins;
+using TabForge.Presets;
 using TabForge.Presenters;
 
 namespace TabForge.Avalonia.Views.Articulations;
@@ -28,61 +30,75 @@ public sealed partial class ArticulationsPane : DockPanel
     private const string CustomText = "Custom";
     private readonly IFxChainHost _host;
     private readonly TrackModel _track;
-    private readonly PluginSlot _slot;
+    private readonly PluginSlot? _slot;
     private readonly Action<Action> _edit;
     private readonly Window _owner;
     private readonly Func<FxChainDialogs> _dialogs;
     private readonly List<ArticulationRow> _rows = ArticulationTechniques.All.Select(t => new ArticulationRow(t)).ToList();
-    private readonly ComboBox _presets = new() { Width = DialogMetrics.ArticulationPresetWidth, Name = "ArticulationPresetBox" };
-    private readonly Button _saveAs = Small("Save as…", "Save the table as a preset of your own", "ArticulationSaveAsButton");
+    private readonly ArticulationPresetSelector _presets = new() { CustomText = CustomText };
+    private readonly Button _saveAs = Small("Save preset…", "Save the table as a preset of your own", "ArticulationSaveAsButton");
     private readonly Button _import = Small("Import…", "Read a preset from a .json file", "ArticulationImportButton");
     private readonly Button _export = Small("Export…", "Write the table to a .json file", "ArticulationExportButton");
     private readonly Button _delete = Small("Delete", "Delete the selected preset of your own", "ArticulationDeleteButton");
+    private readonly Button _manage = Small("Manage…", "Rename, delete or reorder your articulation presets", "ArticulationManageButton");
     private readonly TextBox _lead = new() { Width = DialogMetrics.ArticulationLeadWidth, Name = "ArticulationLeadBox", VerticalAlignment = VerticalAlignment.Center };
     private readonly TextBlock _description = new TextBlock { TextWrapping = TextWrapping.Wrap, Name = "ArticulationDescription" }.Spaced(DialogMetrics.ArticulationTextGap);
     private readonly TextBlock _status = new TextBlock { TextWrapping = TextWrapping.Wrap, Name = "ArticulationStatus" }.Spaced(DialogMetrics.ArticulationPaneGap);
     private readonly PresetFolderStore _store = ArticulationPresets.UserStore();
-    private readonly PresetRows _presetRows;
     private bool _filling, _testing, _custom;
-
-    /// <summary>One row of the preset drop-down: its text, and the preset name it loads (null: the Custom row).</summary>
-    private sealed record Entry(string Text, string? Name, bool User, bool Manage = false)
-    {
-        public override string ToString() => Text;
-    }
 
     /// <param name="host">The song and engine (Test sends through it).</param>
     /// <param name="track">The track that holds the instrument.</param>
-    /// <param name="slot">The instrument whose articulation map the tab edits.</param>
-    /// <param name="edit">Runs a change of the slot as one undo step.</param>
+    /// <param name="slot">The instrument whose articulation map the tab edits; null edits the map kept on the track itself.</param>
+    /// <param name="edit">Runs a change of the slot (or track) as one undo step.</param>
     /// <param name="owner">The window, for dialogs and file pickers.</param>
     /// <param name="dialogs">The window questions (a test replaces them).</param>
-    public ArticulationsPane(IFxChainHost host, TrackModel track, PluginSlot slot, Action<Action> edit, Window owner, Func<FxChainDialogs> dialogs)
+    public ArticulationsPane(IFxChainHost host, TrackModel track, PluginSlot? slot, Action<Action> edit, Window owner, Func<FxChainDialogs> dialogs)
     {
         (_host, _track, _slot, _edit, _owner, _dialogs) = (host, track, slot, edit, owner, dialogs);
         this.Spaced(DialogMetrics.ArticulationPaneGap);
         Name = "ArticulationsPane";
-        var top = new StackPanel { Orientation = Orientation.Horizontal, Children = { Bold("Preset"), _presets, _saveAs, _import, _export, _delete, Bold("  Lead (ms)"), _lead } };
-        ToolTip.SetTip(_lead, "How long before the note the keyswitch or controller is sent (0 to 200, default 10)");
-        ToolTip.SetTip(_presets, "Pick a preset: the table below is filled from it. Rename, delete or reorder your own with the icons or Manage presets…");
-        var header = new StackPanel { Children = { top, _description } };
+        ClipToBounds = true;
+        var top = new WrapPanel { Orientation = Orientation.Horizontal, Name = "ArticulationTopRow", ClipToBounds = true };
+        top.Children.Add(Bold("Presets")); top.Children.Add(_presets); top.Children.Add(_saveAs); top.Children.Add(_delete); top.Children.Add(_manage); top.Children.Add(_import); top.Children.Add(_export); top.Children.Add(Bold("  Lead (ms)")); top.Children.Add(_lead);
+        MidiSharedRows.Tip(_lead, "How long before the note the keyswitch or controller is sent (0 to 200, default 10)");
+        MidiSharedRows.Tip(_presets, "Pick a preset: the table below is filled from it. Rename, delete or reorder your own with the icons or Manage presets…");
+        var header = new StackPanel { Children = { top } };
+        if (slot is null)
+        {
+            var hint = new TextBlock
+            {
+                Text = "Playback keeps the built-in sound; this map is used by MIDI exports that pick it and by an instrument added later.",
+                TextWrapping = TextWrapping.Wrap, Name = "ArticulationTrackHint",
+            }.Spaced(DialogMetrics.ArticulationTextGap);
+            hint[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("MutedBrush");
+            header.Children.Add(hint);
+        }
+        header.Children.Add(_description);
         DockPanel.SetDock(header, Dock.Top);
         DockPanel.SetDock(_status, Dock.Bottom);
         Children.Add(header);
         Children.Add(_status);
-        Children.Add(new ScrollViewer { Content = BuildTable(), HorizontalScrollBarVisibility = ScrollBarVisibility.Auto });
+        Children.Add(new ScrollViewer { Content = BuildTable(), Name = "ArticulationViewer", ClipToBounds = true, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto });
         _description[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("MutedBrush");
         _status[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("MutedBrush");
-        _presetRows = PresetRows.Attach(_presets, () => _store, item => item is Entry { User: true, Manage: false, Name: { } name } ? name : null,
-            () => PresetCatalogKind.Articulation, () => null, PresetsChanged, item => item is Entry { Manage: true },
-            isBuiltIn: item => item is Entry { User: false, Manage: false, Name: not null });
-        _presets.SelectionChanged += (_, _) => PresetPicked();
+        _presets.PresetSelected += preset =>
+        {
+            _custom = false;
+            Apply(preset.ToMap(), preset.Name, PresetCombo.Remember(preset.Name, "Articulation", Snapshot(preset.ToMap())));
+            FillPresets(preset.Name);
+            _status.Text = "";
+        };
+        _presets.CustomPicked += () => _delete.IsEnabled = false;
+        _presets.EntryChanged += UpdatePresetDetails;
+        _presets.Changed += PresetsChanged;
         _lead.LostFocus += (_, _) => { if (!_filling) Commit(); };
         _lead.KeyDown += (_, e) => { if (e.Key == global::Avalonia.Input.Key.Enter && !_filling) Commit(); };
         _saveAs.Click += async (_, _) => await SaveAsAsync();
         _import.Click += async (_, _) => await ImportAsync();
         _export.Click += async (_, _) => await ExportAsync();
         _delete.Click += (_, _) => Delete();
+        _manage.Click += (_, _) => PresetManager.Open(_owner, PresetCatalogKind.Articulation, null);
         foreach (var row in _rows)
         {
             row.Edited += Commit;
@@ -94,7 +110,7 @@ public sealed partial class ArticulationsPane : DockPanel
     private static Button Small(string text, string tip, string name)
     {
         var button = new Button { Content = text, Name = name }.WithPadding(DialogMetrics.ArticulationButtonPadding).Spaced(DialogMetrics.ArticulationButtonGap);
-        ToolTip.SetTip(button, tip);
+        MidiSharedRows.Tip(button, tip);
         return button;
     }
 
@@ -102,7 +118,7 @@ public sealed partial class ArticulationsPane : DockPanel
 
     private Grid BuildTable()
     {
-        var grid = new Grid { ColumnDefinitions = ColumnDefinitions.Parse("Auto,Auto,Auto,Auto,Auto,Auto") }.Spaced(DialogMetrics.ArticulationTableGap);
+        var grid = new Grid { ColumnDefinitions = ColumnDefinitions.Parse("Auto,Auto,Auto,Auto,Auto,Auto"), Name = "ArticulationTable", ClipToBounds = true }.Spaced(DialogMetrics.ArticulationTableGap);
         var heads = new[] { "Technique", "Action", "Value", "Value 2 (CC)", "Mode", "" };
         grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
         for (var column = 0; column < heads.Length; column++)
@@ -121,20 +137,25 @@ public sealed partial class ArticulationsPane : DockPanel
         return grid;
     }
 
-    /// <summary>The map the plug-in slot holds now.</summary>
-    private ArticulationMap CurrentMap() => ArticulationMap.FromBindings(_slot.ArticulationBindings);
+    /// <summary>The map the plug-in slot (or the track, when it has no instrument) holds now.</summary>
+    private ArticulationMap CurrentMap() => ArticulationMapStore.MapOf(_track, _slot);
 
     /// <summary>Shows the slot map: the rows, the lead and the preset drop-down.</summary>
     public void Reload()
     {
         var map = CurrentMap();
         _custom = false;
-        var name = _track.Rig.ArticulationMap ?? "";
+        var applied = _track.Rig.AppliedArticulationPreset;
+        var name = applied?.Name ?? _track.Rig.ArticulationMap ?? "";
         var known = map.IsEmpty ? ArticulationPresets.GenericName : ArticulationPresets.Find(name) is { } p && SameMap(p.ToMap(), map) ? p.Name : null;
         _custom = known is null;
         Show(map);
-        FillPresets(known);
+        FillPresets(known ?? (applied is not null ? applied.Name : null), applied, Snapshot(map));
     }
+
+    /// <summary>The map in one stable text form, for telling an edit from the map a preset applied.</summary>
+    private static string Snapshot(ArticulationMap map) =>
+        System.Text.Json.JsonSerializer.Serialize(ArticulationPreset.From("", "", map));
 
     private static bool SameMap(ArticulationMap a, ArticulationMap b) =>
         a.LeadMs == b.LeadMs && a.Rules.Count == b.Rules.Count && a.Rules.All(pair => b.Rules.TryGetValue(pair.Key, out var other) && other == pair.Value);
@@ -150,46 +171,31 @@ public sealed partial class ArticulationsPane : DockPanel
         finally { _filling = false; }
     }
 
-    private void FillPresets(string? select)
+    private void FillPresets(string? select, AppliedPreset? applied = null, string? current = null)
     {
-        _filling = true;
-        try
-        {
-            var items = new List<Entry>();
-            if (_custom) items.Add(new Entry(CustomText, null, false));
-            items.AddRange(ArticulationPresets.BuiltIn.Select(p => new Entry(p.Name, p.Name, false)));
-            try { items.AddRange(_store.Names().Select(n => new Entry("★ " + n, n, true))); }
-            catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException) { _status.Text = "Your presets could not be listed: " + ex.Message; }
-            var chosen = items.FirstOrDefault(i => select is not null && string.Equals(i.Name, select, StringComparison.OrdinalIgnoreCase)) ?? items[0];
-            items.Add(new Entry(PresetRowText.Manage, null, false, Manage: true));
-            _presets.ItemsSource = items;
-            _presets.SelectedItem = chosen;
-            _delete.IsEnabled = chosen.User;
-            _description.Text = select is null ? "Edited by hand: Save as keeps it as a preset." : ArticulationPresets.Find(select)?.Description ?? "";
-        }
-        finally { _filling = false; }
+        _presets.CustomVisible = _custom;
+        _presets.Reload(select, applied, current);
+        UpdatePresetDetails();
     }
 
-    private void PresetPicked()
+    /// <summary>The pane's parts that follow the selected row: its description and whether Delete applies.</summary>
+    private void UpdatePresetDetails()
     {
-        if (_filling || _presets.SelectedItem is not Entry { Manage: false } entry) return;   // the Manage row is reverted by PresetRows
-        _delete.IsEnabled = entry.User;
-        if (entry.Name is null) return;   // the Custom row: nothing to load
-        if (ArticulationPresets.Find(entry.Name) is not { } preset) { _status.Text = "That preset could not be read."; return; }
-        _custom = false;
-        Apply(preset.ToMap(), preset.Name);
-        FillPresets(preset.Name);
-        _status.Text = "";
+        _delete.IsEnabled = _presets.SelectedEntry?.User == true;
+        _description.Text = _presets.SelectedEntry is { Name: { } name }
+            ? ArticulationPresets.Find(name)?.Description ?? ""
+            : _custom ? "Edited by hand: Save preset keeps it as a preset." : "";
     }
 
     /// <summary>Puts a map into the slot (one undo step) and into the table.</summary>
-    private void Apply(ArticulationMap map, string presetName)
+    private void Apply(ArticulationMap map, string presetName, AppliedPreset? applied = null)
     {
         Show(map);
         _edit(() =>
         {
-            _slot.ArticulationBindings = map.ToBindings();   // a new dictionary: the compile reading the old one is never disturbed
+            ArticulationMapStore.Store(_track, _slot, map);
             _track.Rig.ArticulationMap = map.IsEmpty ? ArticulationPresets.GenericName : presetName;
+            if (applied is not null) _track.Rig.AppliedArticulationPreset = applied;
         });
     }
 
@@ -214,8 +220,9 @@ public sealed partial class ArticulationsPane : DockPanel
         if (SameMap(map, CurrentMap())) { _status.Text = ""; return; }
         _status.Text = "";
         _custom = !map.IsEmpty;
-        Apply(map, CustomText);
-        FillPresets(map.IsEmpty ? ArticulationPresets.GenericName : null);
+        var applied = _track.Rig.AppliedArticulationPreset;
+        Apply(map, applied?.Name ?? CustomText, applied);   // a hand edit keeps the preset's name and gets the " *" mark
+        FillPresets(applied?.Name ?? (map.IsEmpty ? ArticulationPresets.GenericName : null), applied, Snapshot(map));
     }
 
     private async System.Threading.Tasks.Task TestAsync(ArticulationRow row)

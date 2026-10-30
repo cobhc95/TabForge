@@ -18,7 +18,6 @@
   { "name": "ModePillHover", "dark": "#FF2F353D", "light": "#FFDADFE6" },
   { "name": "ModePillPressed", "dark": "#FF3A424D", "light": "#FFC9D0D9" },
   { "name": "ModePillBorder", "dark": "#FF3A404A", "light": "#FFC3C9D2" },
-  { "name": "PianoRollKeyLive", "dark": "#FF4C9AFF", "light": "#FF1F6FD6" },
   { "name": "PianoRollKeyHover", "dark": "#552F6FD6", "light": "#401F6FD6" },
   { "name": "PianoRollKeyPlaying", "dark": "#FF3FB950", "light": "#FF1A7F37" },
   { "name": "PianoRollSelectedOutline", "dark": "#FFFFFFFF", "light": "#FF0B2E66" },
@@ -34,6 +33,7 @@
   { "name": "PianoRollHeat4", "dark": "#FFE5533D", "light": "#FFC8402B" },
   { "name": "PianoRollHoverRow", "dark": "#2626C6C6", "light": "#26138A8A" },
   { "name": "PianoRollNoteValue", "dark": "#B3FFFFFF", "light": "#B30B2E66" },
+  { "name": "PianoRollNoteEdge", "dark": "#B30E1116", "light": "#B30B2E66" },
   { "name": "PianoRollGhost", "dark": "#33B0B7C2", "light": "#333E4552" },
   { "name": "PianoRollPlayheadMarker", "dark": "#FF3FB950", "light": "#FF1A7F37" }
 ]

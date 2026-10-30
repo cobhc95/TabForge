@@ -92,6 +92,27 @@ def inline_rows(types):
     return rows
 
 
+def method_ids(text, member):
+    """The command ids a `public static string[] Member() => new[] { ... };` helper returns, or None when it is not one."""
+    block = re.search(r"\b" + member + r"\(\)\s*=>(.*?);", text, re.S)
+    if not block:
+        return None
+    body = block.group(1)
+    own = const_pairs(text)
+    found = []
+    found.extend(LITERAL.findall(body))
+    for match in IDENT.finditer(LITERAL.sub("", body)):
+        type_name, sub = match.group(1), match.group(2)
+        if sub is not None:
+            return None   # a nested Type.Member: not expanded here
+        if type_name in ("new", "string"):
+            continue
+        if type_name not in own:
+            return None
+        found.append(own[type_name])
+    return found
+
+
 def ids_of(text, block, types, where):
     """The command ids a Commands initializer names, resolving literals, consts and `Type.Member`."""
     if "Presets.Select" in block:
@@ -111,8 +132,13 @@ def ids_of(text, block, types, where):
         if type_name in types:
             value = const_pairs(types[type_name]).get(member)
             if value is None:
-                raise SystemExit(f"{where}: cannot resolve {type_name}.{member}")
-            ids.append(value)
+                # A string[] helper (FeatureHotkeyIds.BandViewRowIds()): its body names the consts.
+                expanded = method_ids(types[type_name], member)
+                if expanded is None:
+                    raise SystemExit(f"{where}: cannot resolve {type_name}.{member}")
+                ids.extend(expanded)
+            else:
+                ids.append(value)
         elif member in own:
             ids.append(own[member])
         else:

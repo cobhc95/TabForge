@@ -38,6 +38,7 @@ public class FretboardContextMenuTests
     {
         (FretboardContextMenu.NoteNamesId, null, s => s.Editing.ShowNoteNames),
         (FretboardContextMenu.PreviewId, null, s => s.Editing.PreviewNotesEnabled),
+        (FretboardContextMenu.PreviewPreviousId, null, s => s.Editing.PreviewPreviousNotesEnabled),
         (FretboardContextMenu.LeftHandedId, null, s => s.Editing.LeftHanded),
         (FretboardContextMenu.LockId, null, s => s.Appearance.LockInstrumentSize),
         (FretboardContextMenu.PositionId, "Right", s => s.Appearance.FretboardPosition),

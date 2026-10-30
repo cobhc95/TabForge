@@ -61,7 +61,7 @@ public sealed partial class TimelineView
     /// <summary>A line under every track row.</summary>
     public bool ShowTrackLines { get => _showTrackLines; set => Redraw(ref _showTrackLines, value); }
 
-    /// <summary>The accent shade over the selected track's lane (and, read by the track list, over its row).</summary>
+    /// <summary>The grey overlay over the selected track's lane (and, read by the track list, over its row).</summary>
     public bool ShadeSelectedTrack { get => _shadeSelectedTrack; set => Redraw(ref _shadeSelectedTrack, value); }
 
     /// <summary>The playback position marker: the line, a marker in the played bar's cell, or both (<see cref="PlayheadStyles"/>).</summary>

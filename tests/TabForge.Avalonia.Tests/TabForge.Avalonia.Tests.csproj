@@ -30,6 +30,7 @@
     <Compile Remove="Video/Mp4ReadBack.cs" />
     <Compile Remove="Video/VideoEncoderPortTests.cs" />
     <Compile Remove="Video/VideoExportCancelTests.cs" />
+    <Compile Remove="Video/VideoEncoderFrameSizeTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <!-- Where this project was built from: the checkout root for tests whose binaries are built outside the checkout (ArtifactsPath elsewhere) with no TABFORGE_REPO. -->

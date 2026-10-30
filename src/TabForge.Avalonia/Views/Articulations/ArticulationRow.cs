@@ -2,7 +2,9 @@ using System;
 using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Layout;
+using Avalonia.Media;
 using TabForge.Avalonia.Views.Dialogs;
+using TabForge.Avalonia.Views.Midi;
 using TabForge.Playback;
 
 namespace TabForge.Avalonia.Views.Articulations;
@@ -28,7 +30,7 @@ internal sealed class ArticulationRow
     public TextBlock Label { get; }
     public ComboBox ActionBox { get; }
     public TextBox ValueBox { get; } = new TextBox { MinWidth = DialogMetrics.ArticulationValueWidth, VerticalAlignment = VerticalAlignment.Center }.Spaced(DialogMetrics.ArticulationCellGap);
-    public TextBox Value2Box { get; } = new TextBox { Width = DialogMetrics.ArticulationValue2Width, VerticalAlignment = VerticalAlignment.Center }.Spaced(DialogMetrics.ArticulationCellGap);
+    public TextBox Value2Box { get; } = new TextBox { MinWidth = DialogMetrics.ArticulationValue2Width, VerticalAlignment = VerticalAlignment.Center }.Spaced(DialogMetrics.ArticulationCellGap);
     public ComboBox ModeBox { get; } = new ComboBox { ItemsSource = new[] { "Latched", "Per note" }, SelectedIndex = 0, MinWidth = DialogMetrics.ArticulationModeWidth, VerticalAlignment = VerticalAlignment.Center }.Spaced(DialogMetrics.ArticulationCellGap);
     public Button TestButton { get; } = new Button { Content = "Test", VerticalAlignment = VerticalAlignment.Center }.WithPadding(DialogMetrics.ArticulationButtonPadding).Spaced(DialogMetrics.ArticulationCellGap);
 
@@ -41,13 +43,14 @@ internal sealed class ArticulationRow
         var normal = technique.Id == ArticulationTechniques.Normal;
         _actions = AllActions();
         if (normal) _actions = _actions.Where(a => a.Action is ArticulationAction.None or ArticulationAction.Keyswitch or ArticulationAction.Cc).ToArray();
-        Label = new TextBlock { Text = technique.Display, VerticalAlignment = VerticalAlignment.Center }.Spaced(DialogMetrics.ArticulationLabelGap);
+        Label = new TextBlock { Text = technique.Display, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis, ClipToBounds = true }.Spaced(DialogMetrics.ArticulationLabelGap);
+        MidiSharedRows.Tip(Label, technique.Display);
         ActionBox = new ComboBox { ItemsSource = _actions.Select(a => a.Text).ToArray(), SelectedIndex = 0, MinWidth = DialogMetrics.ArticulationActionWidth, VerticalAlignment = VerticalAlignment.Center }.Spaced(DialogMetrics.ArticulationCellGap);
         var tag = technique.Id;
         (Label.Name, ActionBox.Name, ValueBox.Name, Value2Box.Name, ModeBox.Name, TestButton.Name) =
             ("Tech" + tag, "Action" + tag, "Value" + tag, "Value2" + tag, "Mode" + tag, "Test" + tag);
-        ToolTip.SetTip(ModeBox, "Latched: sent only when the articulation changes, and the Normal rule is sent when the technique ends. Per note: sent before every note with the technique");
-        ToolTip.SetTip(TestButton, "Sends this rule to the instrument, then a short test note");
+        MidiSharedRows.Tip(ModeBox, "Latched: sent only when the articulation changes, and the Normal rule is sent when the technique ends. Per note: sent before every note with the technique");
+        MidiSharedRows.Tip(TestButton, "Sends this rule to the instrument, then a short test note");
         ActionBox.SelectionChanged += (_, _) => { if (!_filling) { SetDefaults(); Edited?.Invoke(); } };
         ModeBox.SelectionChanged += (_, _) => { if (!_filling) Edited?.Invoke(); };
         foreach (var box in new[] { ValueBox, Value2Box })
@@ -101,14 +104,14 @@ internal sealed class ArticulationRow
         Value2Box.IsEnabled = action == ArticulationAction.Cc;
         ModeBox.IsEnabled = action is ArticulationAction.Keyswitch or ArticulationAction.Cc;
         TestButton.IsEnabled = action != ArticulationAction.None;
-        ToolTip.SetTip(ActionBox, _actions[Math.Clamp(ActionBox.SelectedIndex, 0, _actions.Length - 1)].Tip);
-        ToolTip.SetTip(ValueBox, action switch
+        MidiSharedRows.Tip(ActionBox, _actions[Math.Clamp(ActionBox.SelectedIndex, 0, _actions.Length - 1)].Tip);
+        MidiSharedRows.Tip(ValueBox, action switch
         {
             ArticulationAction.Keyswitch or ArticulationAction.Replace => "A note name (C0 = MIDI 24, so middle C is C3) or a MIDI number 0 to 127",
             ArticulationAction.Cc => "Controller number (0 to 127)",
             _ => "Velocity 1 to 127",
         });
-        ToolTip.SetTip(Value2Box, "Controller value (0 to 127)");
+        MidiSharedRows.Tip(Value2Box, "Controller value (0 to 127)");
     }
 
     /// <summary>The rule the controls hold: null for None; false (with the reason) when a box holds something unusable.</summary>

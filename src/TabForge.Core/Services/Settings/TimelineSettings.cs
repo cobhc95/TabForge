@@ -46,7 +46,7 @@ public sealed class TimelineSettings
     public bool HideEmptyGrid { get; set; } = true;
     /// <summary>Horizontal lines between track rows in the timeline and the track list. Off by default: rows are told apart by their tints and a faint gap.</summary>
     public bool ShowTrackLines { get; set; }
-    /// <summary>A soft accent shade over the selected track's lane in the timeline and its row in the track list. Off by default: the list's bold name marks the selected track.</summary>
+    /// <summary>A soft grey overlay over the selected track's lane in the timeline and its row in the track list. Off by default: the list's bold name marks the selected track.</summary>
     public bool ShadeSelectedTrack { get; set; }
     /// <summary>Timeline appearance: a faint glow on bars that have notes.</summary>
     public bool BarGlow { get; set; } = true;
@@ -82,13 +82,39 @@ public static class InstrumentViews
 
 public static class ScaleHighlightStyles
 {
+    /// <summary>Filled soft dots (the default).</summary>
+    public const string Dots = "Dots";
+    public const string Rings = "Rings";
+    /// <summary>The fret cell is shaded (older files stored this as "Shaded").</summary>
+    public const string CellTint = "Cell tint";
+    public const string NoteNames = "Note names";
+    public const string Degrees = "Degrees";
+    /// <summary>Older files' names: "Shaded" is the cell tint, "Circles" are the dots.</summary>
     public const string Shaded = "Shaded";
     public const string Circles = "Circles";
-    public const string Rings = "Rings";
-    public static readonly string[] All = { Shaded, Circles, Rings };
-    /// <summary>Colour names (the settings types stay toolkit-free); "Accent" follows the applied accent colour.</summary>
-    public static readonly string[] Colours = { "Accent", "Blue", "Green", "Amber", "Purple", "Red", "Teal", "Grey" };
+    public static readonly string[] All = { Dots, Rings, CellTint, NoteNames, Degrees };
+    /// <summary>The style a stored name means; anything unknown or missing is <see cref="Dots"/>.</summary>
+    public static string Normalize(string? style) => style switch
+    {
+        Shaded or CellTint => CellTint,
+        Rings => Rings,
+        NoteNames => NoteNames,
+        Degrees => Degrees,
+        _ => Dots,
+    };
+    /// <summary>Colour names (the settings types stay toolkit-free); "Accent" follows the applied accent colour; "Custom" uses the saved custom colour.</summary>
+    public static readonly string[] Colours = { "Accent", "Green", "Amber", "Red", "Grey", "Blue", "Purple", "Teal", "Custom" };
+    /// <summary>The colours the popup shows as swatches.</summary>
+    public static string[] Swatches => new[] { "Accent", "Green", "Amber", "Red", "Grey", "Custom" };
     public const int MinStrength = 10, MaxStrength = 150, DefaultStrength = 100, StrengthStep = 10;
+    public const int MinOpacity = 10, MaxOpacity = 100, DefaultOpacity = 60;
+    /// <summary>The opacity setting as 0.1 to 1.</summary>
+    public static double OpacityFactor(int percent) => Math.Clamp(percent, MinOpacity, MaxOpacity) / 100.0;
+    /// <summary>The root is drawn this much stronger than the other scale notes when it is emphasised.</summary>
+    public const double RootBoost = 1.35;
+    /// <summary>A mark's alpha under the opacity setting (times the strength setting); the root a little stronger when emphasised.</summary>
+    public static double MarkAlpha(double opacity, double strength, bool root, bool emphasiseRoot) =>
+        Math.Clamp(opacity * strength * (root && emphasiseRoot ? RootBoost : 1), 0, 1);
     /// <summary>The strength setting as a multiplier of the standard look (1.0 = today's alphas).</summary>
     public static double StrengthFactor(int percent) => Math.Clamp(percent, MinStrength, MaxStrength) / 100.0;
     /// <summary>A scale mark's alpha: the standard alpha times the strength; other scale notes top out at 0.9 so the root (up to 1.0) always stays stronger.</summary>

@@ -25,6 +25,8 @@ public interface IAvaloniaEngineEventHost
     Window? Owner { get; }
     /// <summary>Writes the settings file.</summary>
     void SaveSettings();
+    /// <summary>Silences every session at once (all notes off on the engine and the Windows MIDI synth).</summary>
+    void PanicAll();
     /// <summary>Shows a line in the window's status notice row.</summary>
     void ShowStatus(string text);
     /// <summary>Brings the engine in line with the song shown.</summary>
@@ -54,6 +56,7 @@ public sealed class AvaloniaEngineEvents : IDisposable
     private readonly IUiThread _ui;
     private readonly DeviceChangePause _devicePause = new();
     private string _routeKey;
+    private string _soundEngine;
     private bool _disposed;
     private const long DeviceReadyCooldownMs = 1000;   // a flapping device raises DeviceReady in bursts: one resend per burst
     private long _lastDeviceReadyMs = long.MinValue / 2;
@@ -66,6 +69,7 @@ public sealed class AvaloniaEngineEvents : IDisposable
     {
         (_engine, _host, _ui) = (engine, host, ui);
         _routeKey = RouteKey(host.Plugins);
+        _soundEngine = SoundEngines.Resolve(host.Plugins.SoundEngine);
         NoteMissingSoundFont();
         _engine.PluginCrashed += OnPluginCrashed;
         _engine.PluginFailed += OnPluginFailed;
@@ -94,11 +98,12 @@ public sealed class AvaloniaEngineEvents : IDisposable
     {
         if (SoundFontStore.ChosenButMissing(_host.Plugins))
             _host.ShowStatus(OperatingSystem.IsWindows()
-                ? "The TabForge SoundFont is not downloaded yet, so Windows GM plays. Settings > Audio & Plug-ins > Sound engine > Download SoundFont."
-                : "The TabForge SoundFont is not downloaded yet, so there is no General MIDI sound. Settings > Audio & Plug-ins > Sound engine > Download SoundFont.");
+                ? "The chosen Sound bank is not downloaded yet, so Windows GM plays. Settings > Audio & Plug-ins > Sound banks."
+                : "The chosen Sound bank is not downloaded yet, so there is no General MIDI sound. Settings > Audio & Plug-ins > Sound banks.");
     }
 
-    /// <summary>The audio route settings changed: when one of them differs, the song shown is synced to the engine at once.</summary>
+    /// <summary>The audio route settings changed: when one of them differs, the song shown is synced to the engine at once.
+    /// A changed Sound engine also silences everything first (all notes off on the engine and the Windows MIDI synth), so no note hangs on the old engine.</summary>
     public void ApplyRouteSettings()
     {
         if (_disposed) return;
@@ -106,6 +111,12 @@ public sealed class AvaloniaEngineEvents : IDisposable
         if (key == _routeKey) return;
         _routeKey = key;
         NoteMissingSoundFont();
+        var soundEngine = SoundEngines.Resolve(_host.Plugins.SoundEngine);
+        if (soundEngine != _soundEngine)
+        {
+            _soundEngine = soundEngine;
+            _host.PanicAll();
+        }
         // A play-all choice that differs from the engine's own was made by hand: it is no longer set automatically.
         if (_engine.Mixer.PlayAllThroughEngine != _host.Plugins.PlayAllThroughEngine) _host.Plugins.PlayAllSetAutomatically = false;
         _host.SyncActive();

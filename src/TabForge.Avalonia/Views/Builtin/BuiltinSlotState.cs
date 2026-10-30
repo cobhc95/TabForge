@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using TabForge.Audio.Contracts;
 using TabForge.Audio.Contracts.Builtin;
-using TabForge.AudioEngine.Builtin;
 using TabForge.Avalonia.Views.Fx;
 using TabForge.Models;
 using TabForge.Plugins;
@@ -16,9 +15,6 @@ namespace TabForge.Avalonia.Views.Builtin;
 // Tests: BuiltinPresetRoundTripTests.
 public static class BuiltinSlotState
 {
-    private const double Rate = 48000;
-    private const int Block = 256;
-
     /// <summary>Asks the engine for the effect's current parameters and puts them in the slot's state. False when the slot is no built-in, the engine does not answer in time, or the answer does not fit.</summary>
     public static async Task<bool> CaptureAsync(IFxChainEngine engine, TrackModel track, PluginSlot slot, int timeoutMs)
     {
@@ -40,15 +36,15 @@ public static class BuiltinSlotState
     /// <summary>Sets the slot's state from the engine's parameter list: every editable parameter's current value, the text values (files) the slot's state already holds. False when the list is empty or names no known parameter.</summary>
     public static bool FromParameters(PluginSlot slot, IReadOnlyList<PluginParameterInfo> list)
     {
-        if (BuiltinEffects.Find(slot.Path) is null || list.Count == 0) return false;
-        using var effect = BuiltinEffectFactory.Create(slot.Path, Rate, Block);
+        var descriptors = BuiltinParameters.Of(slot.Path);
+        if (descriptors.Count == 0 || list.Count == 0) return false;
         var state = new BuiltinState();
         try { if (slot.State is { Length: > 0 } old) state = BuiltinState.Parse(Convert.FromBase64String(old)); }
         catch (Exception ex) when (ex is FormatException or System.IO.InvalidDataException) { state = new BuiltinState(); } // Not logged: an unreadable old state contributes no files
         var byId = new Dictionary<uint, PluginParameterInfo>();
         foreach (var p in list) byId[p.Id] = p;
         var found = 0;
-        foreach (var p in effect.Parameters)
+        foreach (var p in descriptors)
         {
             if (p.ReadOnly || !byId.TryGetValue(p.Id, out var live) || !double.IsFinite(live.Value)) continue;
             state.Values[p.Key] = live.Value;

@@ -36,6 +36,11 @@ public sealed partial class MainWindow
     {
         var d = new DockBuild { Settings = settings, Windows = windows, First = first, Playback = playback, Compose = new MainWindowComposeState() };
         var compose = d.Compose;
+        // Which editor mode the fretboard choice on screen belongs to: the Band view's layout, the piano roll, or the tab score.
+        compose.FretboardMode = () =>
+            compose.Dock is { } dock && dock.IsPanelVisible("band") ? FretboardMode.Band
+            : compose.EditorPane?.ShowsPianoRoll == true ? FretboardMode.PianoRoll
+            : FretboardMode.Tab;
         var subscriptions = new SubscriptionBag();   // every subscription below that outlives a statement is undone here when the window closes
         d.Subscriptions = subscriptions;
         Closed += (_, _) => subscriptions.Dispose();
@@ -261,8 +266,8 @@ public sealed partial class MainWindow
             () => MainWindowSettings.ShowPreferencesPage(settings, this, TabForge.Services.SettingsCatalog.Fretboard),
             () => scorePreview.Editor.Project is { Tracks.Count: > 0 } ? scorePreview.Editor.Track : null);
         compose.FretboardMenu = fretboardMenu;
-        var fretboard = new FretboardSettingsBinding(settings?.Settings ?? fretboardDefaults);
-        var scaleFinder = new MainWindowScaleFinder(songs, scorePreview, () => panes.Selection.Model, () => settings?.Settings.Editing ?? new TabForge.Services.EditingSettings(), () => settings?.SaveSettings(), this);
+        var fretboard = new FretboardSettingsBinding(settings?.Settings ?? fretboardDefaults, d.Compose.FretboardMode);
+        var scaleFinder = new MainWindowScaleFinder(this);
         // Perf E2b (H4/H5): the instrument pane is reused across Shows (was a fresh InstrumentPanelStrip per Show).
         // The strip itself is untouched; only its registration caches the control and detaches it on rebuild.
         InstrumentPanelStrip? cachedInstrument = null;
@@ -313,9 +318,14 @@ public sealed partial class MainWindow
         var playback = d.Playback;
         var workspace = new DockWorkspaceView(setup.ContentOf);
         d.Dock = new DockWorkspaceController(workspace, setup, settings?.StartLayout ?? DockWorkspaceController.DefaultLayout());
+        // A pane's own close / reset / float menu and a floating pane's X are the user's choice: remember it in the mode on screen.
+        d.Dock.PanelVisibilityChosenByUser += (id, shown) =>
+        {
+            if (id == FretboardSettingsBinding.InstrumentPaneId) settings?.RememberFretboard(d.Compose.FretboardMode(), shown);
+        };
         // The dock builds the first arrangement here, so the clip-edit refresh attaches to it and to every later pane.
         MainWindowClipRefresh.Register(panes, settings, playback, showStatus, this);
-        d.CloseInstrument = () => d.Dock.ClosePanel("instrument");
+        d.CloseInstrument = () => d.Dock.ClosePanelByUser("instrument");
         d.TrackListFit = new MainWindowTrackListFit(d.Dock, workspace, () => panes.Arrangement, () => (settings?.Settings ?? SettingsDefaults.Fallback()).Timeline.AutoFitTrackList, AvaloniaUiThread.ForApplication());
         // The fretboard's height is per tab: the tab being left keeps its height before the timeline refits (the refit moves the split beside the pane),
         // and the tab shown starts its fretboard after it. Hiding and showing the fretboard keeps the height too (the rebuild is read before and after).

@@ -21,7 +21,6 @@ internal static class CaptureMetrics
             "TrackProperties" => (800, 811),
             "Tuner" => (420, 330),
             "GlobalTuning" => (640, 437),
-            "ScaleFinder" => (560, 600),
             "InstrumentPicker" => (760, 620),
             "ScoreTextStyle" => (520, 281),
             "MixTable" => (470, 415),

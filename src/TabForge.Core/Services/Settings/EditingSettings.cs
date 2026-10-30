@@ -25,8 +25,18 @@ public sealed class EditingSettings
     public int KeyboardKeys { get; set; } = 88;
     /// <summary>Keyboard key colours: "Match the theme" (grey keys in dark, white in light), "Grey keys" or "White keys".</summary>
     public string KeyboardKeyColours { get; set; } = KeyboardKeyStyles.MatchTheme;
-    /// <summary>How scale notes are marked: "Shaded" (default), "Circles" or "Rings".</summary>
-    public string ScaleHighlightStyle { get; set; } = ScaleHighlightStyles.Shaded;
+    /// <summary>How scale notes are marked: "Dots" (default), "Rings", "Cell tint", "Note names" or "Degrees".</summary>
+    public string ScaleHighlightStyle { get; set; } = ScaleHighlightStyles.Dots;
+    /// <summary>Opacity of the scale marks in percent (10 to 100, default 60).</summary>
+    public int ScaleHighlightOpacity { get; set; } = ScaleHighlightStyles.DefaultOpacity;
+    /// <summary>Draw the scale root a little stronger than the other scale notes.</summary>
+    public bool ScaleEmphasiseRoot { get; set; } = true;
+    /// <summary>Dim the notes outside the scale.</summary>
+    public bool ScaleDimOutside { get; set; }
+    /// <summary>Mark only the frets in view.</summary>
+    public bool ScaleOnlyInView { get; set; }
+    /// <summary>The custom scale colour as "#RRGGBB" (used when the colour is "Custom"); empty for none.</summary>
+    public string ScaleHighlightCustomColour { get; set; } = "";
     /// <summary>The status bar scale readout: where it reads from, which tracks it listens to, the scale families, the common-scale preference and the fretboard link.</summary>
     public ScaleReadoutSettings ScaleReadout { get; set; } = new();
     /// <summary>Colour of the scale highlight (see <see cref="ScaleHighlightStyles.Colours"/>).</summary>
@@ -46,6 +56,8 @@ public sealed class EditingSettings
     public int FretboardFrets { get; set; } = 24;
     public int PreviewHorizon { get; set; } = 6;
     public bool PreviewNotesEnabled { get; set; } = true;
+    /// <summary>Show the grey trail of notes just played (the legend's "recent"); off by default, and a settings file without the key loads as off.</summary>
+    public bool PreviewPreviousNotesEnabled { get; set; } = false;
     public string? ScaleHighlight { get; set; }
     /// <summary>Ask before deleting a bar.</summary>
     public bool ConfirmDeleteBar { get; set; }
@@ -98,6 +110,8 @@ public sealed class EditingSettings
     /// <summary>Piano roll: the velocity lane's height in DIP (dragging its divider sets it) and whether it is shown (its chevron collapses it).</summary>
     public double PianoRollVelocityLane { get; set; } = 84;
     public bool PianoRollVelocityLaneShown { get; set; } = true;
+    /// <summary>Piano roll: the lane under the grid the user chose last (a lane id, see PianoRollControllers; -1 is velocity), kept across songs and restarts.</summary>
+    public int PianoRollLane { get; set; } = -1;
     /// <summary>Piano roll quantize options: strength in percent, and whether note starts and note ends move to the grid.</summary>
     public int PianoRollQuantizeStrength { get; set; } = 100;
     public bool PianoRollQuantizeStarts { get; set; } = true;
@@ -106,9 +120,19 @@ public sealed class EditingSettings
     public int PianoRollQuantizeSwing { get; set; }
     /// <summary>Piano roll note colours: Track (brighter = louder), Velocity, Pitch or Channel.</summary>
     public string PianoRollColours { get; set; } = "Track";
-    /// <summary>Piano roll scale highlight on its rows (the Scale highlight setting gives the scale) and the row fold: None, Scale or Used.</summary>
+    /// <summary>Piano roll scale highlight on its rows (the Scale highlight setting gives the scale). The SHOW ROWS choice is saved per song (SongProject.PianoRollRows).</summary>
     public bool PianoRollScaleShown { get; set; }
-    public string PianoRollFold { get; set; } = "None";
+    /// <summary>Retired (read once, never written): the piano roll's own scale choice; the piano roll now shares the status bar's pick. Was: null follows Settings &gt; Scale highlight, "Auto" detects it
+    /// from the shown notes, else a "Root Scale" highlight (a manual pick sticks until Auto is picked).</summary>
+    public string? PianoRollScalePick { get; set; }
+    /// <summary>True once an old piano roll pick (above, no longer written) was applied to the shared scale pick; it is applied at most once.</summary>
+    public bool PianoRollScalePickMigrated { get; set; }
+    /// <summary>Piano roll scale lock (off by default): drawn, moved, transposed and step-input notes snap to the scale highlight's pitches.</summary>
+    public bool PianoRollScaleLock { get; set; }
+    /// <summary>Piano roll transpose steps: "Semitones", or "Scale steps" (Up / Down move by diatonic steps of the scale highlight, in key).</summary>
+    public string PianoRollTransposeMode { get; set; } = "Semitones";
+    /// <summary>Piano roll step input and the scale: "Off" writes exactly the key pressed, "Snap" moves a key outside the scale to the nearest scale note, "Only scale notes" ignores keys outside the scale. Independent of the Lock to scale setting.</summary>
+    public string PianoRollStepScaleFilter { get; set; } = "Snap";
     /// <summary>Piano roll: the length of new notes (PianoRollSnap.Lengths: Grid follows the snap) and whether faint ghost notes of the other
     /// takes and tracks show (off by default).</summary>
     public string PianoRollNoteLength { get; set; } = "Grid";

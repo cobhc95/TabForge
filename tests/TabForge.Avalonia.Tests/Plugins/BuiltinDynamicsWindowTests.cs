@@ -68,7 +68,7 @@ public sealed class BuiltinDynamicsWindowTests
         presets.SelectedItem = "Vocal";
         Assert.Contains(engine.Calls, c => c.StartsWith("state:Compressor:", StringComparison.Ordinal));
         Assert.Equal(-20, BuiltinState.Parse(Convert.FromBase64String(slot.State!)).Values["threshold"]);
-        Assert.Null(presets.SelectedItem);
+        Assert.Equal("Vocal", presets.SelectedItem);   // the factory preset stays shown, as the preset memory asks
         window.Close();
     }
 

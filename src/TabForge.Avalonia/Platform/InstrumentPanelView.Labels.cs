@@ -38,30 +38,6 @@ public sealed partial class InstrumentPanelView
     internal string StringLabel(int stringIndex) =>
         _look.ShowNoteNames && stringIndex < Tuning.Count ? MusicTheoryService.NoteName(Tuning[stringIndex]) : (stringIndex + 1).ToString();
 
-    /// <summary>The fill of a shaded scale cell: the root's cell is stronger than the other scale notes' (before the strength setting).</summary>
-    private const double ShadedRootAlpha = 0.5, ShadedAlpha = 0.28;
-
-    /// <summary>The shaded scale style: each scale note's cell on the board is a tinted band behind the frets, the root's stronger.</summary>
-    private void DrawShadedCells(IDrawContext d, Func<string, UiColor> ink, FretboardGeometryRules.Layout layout)
-    {
-        if (_look.ScalePitches.Length == 0) return;
-        var colour = ink(_look.ScaleColourKey);
-        for (var s = 0; s < layout.Strings && s < Tuning.Count; s++)
-        {
-            var top = FretboardGeometryRules.StringY(layout, s) - layout.StringGap / 2;
-            for (var fret = layout.FirstFret; fret <= layout.LastFret; fret++)
-            {
-                var pitchClass = (Tuning[s] + fret) % 12;
-                if (_look.ScalePitches[pitchClass] != '1') continue;
-                var root = pitchClass == _look.ScaleRoot;
-                var fill = colour.WithOpacity(ScaleHighlightStyles.ScaleAlpha(root ? ShadedRootAlpha : ShadedAlpha, _look.ScaleStrength, root));
-                var left = FretboardGeometryRules.FretX(layout, fret - 0.5);
-                var right = FretboardGeometryRules.FretX(layout, fret + 0.5);
-                d.Rect(fill, null, left, top, right - left, layout.StringGap);
-            }
-        }
-    }
-
     /// <summary>The label the track's drum map gives a sound, shown on the key map; null for a track that is not drums (the GM name then shows).</summary>
     internal string? DrumLabelOf(int midi) => _track is { Kind: TrackKind.Drums } drums ? DrumMaps.For(drums, midi).Label : null;
 

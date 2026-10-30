@@ -316,17 +316,26 @@ public sealed partial class MixerWindow : Window
     private List<object> LayoutSignature() =>
         TrackOrdering.Layout(_project).SelectMany(g => g.Tracks.Cast<object>().Prepend(g.Group)).ToList();
 
+    private static List<object> LayoutSignature(IReadOnlyList<(string Group, List<TrackModel> Tracks)> layout) =>
+        layout.SelectMany(g => g.Tracks.Cast<object>().Prepend(g.Group)).ToList();
+
     /// <summary>The values the strips show (names, colours, mute, solo, levels) as last built; <see cref="SyncValues"/> compares against it.</summary>
     private List<object> _builtValues = new();
 
     private List<object> ValuesSignature() =>
+        ValuesSignature(TrackOrdering.Layout(_project));
+
+    private List<object> ValuesSignature(IReadOnlyList<(string Group, List<TrackModel> Tracks)> layout) =>
         _project.Tracks.Select(t => (object)(t.Id, t.Name, t.ColorHex, t.Mute, t.Solo, t.Volume, t.Pan, t.Reverb, t.Chorus, t.Transpose, t.MidiSound, t.SoundSource))
             .Prepend(_project.Mixer.MasterPan)
-            .Concat(GroupLevelsSignature()).ToList();
+            .Concat(GroupLevelsSignature(layout)).ToList();
 
     // The group rows' own values (volume, pan, pitch, mute, solo), after the tracks in the signature: an edit made to a group elsewhere shows on its row.
     private IEnumerable<object> GroupLevelsSignature() =>
         TrackOrdering.Layout(_project).Select(g => { var l = _project.Mixer.Levels(g.Group); return (object)(g.Group, l.Volume, l.Pan, l.Pitch, l.Mute, l.Solo); });
+
+    private IEnumerable<object> GroupLevelsSignature(IReadOnlyList<(string Group, List<TrackModel> Tracks)> layout) =>
+        layout.Select(g => { var l = _project.Mixer.Levels(g.Group); return (object)(g.Group, l.Volume, l.Pan, l.Pitch, l.Mute, l.Solo); });
 
     private bool _stripsBuilt;
 
@@ -354,14 +363,17 @@ public sealed partial class MixerWindow : Window
     internal void SyncValues()
     {
         if (!_stripsBuilt) { EnsureStripsBuilt(); return; }
-        if (!LayoutSignature().SequenceEqual(_builtLayout)) { Rebuild(); return; }
-        var now = ValuesSignature();
+        var layout = TrackOrdering.Layout(_project);
+        if (!LayoutSignature(layout).SequenceEqual(_builtLayout)) { Rebuild(); return; }
+        var now = ValuesSignature(layout);
         if (now.SequenceEqual(_builtValues)) return;
-        if (!RebuildChangedGroups(now)) Rebuild();
+        if (!RebuildChangedGroups(now, layout)) Rebuild();
     }
 
     /// <summary>Rebuilds only the group panels holding a track whose shown values changed (the layout is the same); false when something else changed (the master pan), so the caller rebuilds everything.</summary>
-    private bool RebuildChangedGroups(List<object> now)
+    private bool RebuildChangedGroups(List<object> now) => RebuildChangedGroups(now, TrackOrdering.Layout(_project));
+
+    private bool RebuildChangedGroups(List<object> now, IReadOnlyList<(string Group, List<TrackModel> Tracks)> layout)
     {
         if (now.Count != _builtValues.Count || !Equals(now[0], _builtValues[0])) return false;
         var changed = new HashSet<TrackModel>(ReferenceEqualityComparer.Instance);
@@ -376,7 +388,7 @@ public sealed partial class MixerWindow : Window
         _building = true;
         try
         {
-            foreach (var (group, members) in TrackOrdering.Layout(_project))
+            foreach (var (group, members) in layout)
             {
                 if (!(members.Any(changed.Contains) || changedGroups.Contains(group)) || !_groupPanels.TryGetValue(group, out var old)) continue;
                 var index = _groups.Children.IndexOf(old);

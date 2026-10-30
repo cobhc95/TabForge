@@ -53,6 +53,8 @@ internal sealed partial class ScoreToMidiCompiler
         public int HoldResetIndex = -1;
         /// <summary>Index of the pitch-wheel reset that ends this note's own bend / vibrato curve (-1 = none): a tie that carries the curve on reuses it.</summary>
         public int CurveEndIndex = -1;
+        /// <summary>Wheel offset the note holds at its written end (a bend, pre-bend or held slide): a tie continuation starts from it.</summary>
+        public double HeldSemitones;
         /// <summary>Where the note ends as written, before dead / palm-mute / staccato cuts: a tie that follows from there is still contiguous.</summary>
         public double WrittenEndMs;
     }
@@ -132,6 +134,7 @@ internal sealed partial class ScoreToMidiCompiler
 
         _timeline.TotalMs = cursorMs;
         EmitClipNotes();
+        if (_clipChased) { _timeline.StartedAfterMixPoints = true; ApplyChase(); }   // the setup carries the lane values in force at the start
         EmitFadeInEnvelopes();
         SustainResolver.Resolve(_timeline, _channels, _opt.LetRingCapMs);
         return _timeline;

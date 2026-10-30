@@ -85,4 +85,46 @@ public class AddTrackStripTests
         Assert.Equal(tracksBefore + 1, view.Timeline.RowCount);
         Assert.Equal(view.Timeline.Height, view.Header.Bounds.Height, 1);
     }
+
+    [AvaloniaTheory]
+    [InlineData(420)]
+    [InlineData(300)]
+    [InlineData(900)]
+    public void TheStripStaysReachableInAShortWindow(double height)
+    {
+        var document = new SongDocument(() => null) { Project = DemoSongFactory.Create() };
+        document.MarkClean();
+        var view = new ArrangementView(document.Project, document);
+        var window = new Window { Width = 1400, Height = height, Content = view };
+        window.Show();
+        window.UpdateLayout();
+        var bar = view.AddTrackBar;
+        Assert.True(bar.IsVisible);
+        Assert.True(bar.Bounds.Height > 0);
+        var bottom = bar.TranslatePoint(new Point(0, bar.Bounds.Height), window)!.Value.Y;
+        Assert.True(bottom <= window.Bounds.Height + 0.5, $"strip bottom {bottom} past window {window.Bounds.Height}");
+        var rowsBottom = view.Timeline.TranslatePoint(new Point(0, view.Timeline.Bounds.Height), window)!.Value.Y;
+        Assert.True(rowsBottom <= bar.TranslatePoint(new Point(0, 0), window)!.Value.Y + 0.5, "rows overlap the strip");
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public void TheStripRepaintsWhenItIsShownAgainOrResized()
+    {
+        var document = new SongDocument(() => null) { Project = DemoSongFactory.Create() };
+        document.MarkClean();
+        var view = new ArrangementView(document.Project, document);
+        var window = new Window { Width = 1300, Height = 700, Content = view };
+        window.Show();
+        window.UpdateLayout();
+        
+        window.Width = 1100;
+        window.UpdateLayout();
+        view.AddTrackLaneShown = false;
+        window.UpdateLayout();
+        view.AddTrackLaneShown = true;
+        window.UpdateLayout();
+        Assert.True(view.AddTrackBar.IsVisible && view.AddTrackBar.Bounds.Height > 0);
+        window.Close();
+    }
 }

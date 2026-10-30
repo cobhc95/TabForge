@@ -21,6 +21,7 @@ internal static class ArrangementComposition
     internal sealed record Parts(
         TimelineView Timeline,
         TrackHeaderColumn Header,
+        Views.Meters.TrackMeterColumn TrackMeters,
         ArrangementTrackRows TrackRows,
         TimelineInputController Input,
         TrackNameEditor Names,
@@ -38,6 +39,7 @@ internal static class ArrangementComposition
         var timeline = new TimelineView(song, contextMenus, document.Selection) { Snap = transport.Snap };
         if (document is SongDocument shown) timeline.Media = shown.Media;   // the clips read their files in the document media scope
         var header = new TrackHeaderColumn(timeline, song);
+        var trackMeters = new Views.Meters.TrackMeterColumn(timeline, song, meterTick);
         var input = new TimelineInputController(timeline, document, header);
         var names = new TrackNameEditor(timeline, header);
         // The viewer's own bar is hidden (not disabled, so the offset still moves); the footer bar in the status bar drives it instead.
@@ -60,6 +62,7 @@ internal static class ArrangementComposition
         timeline.HorizontalAlignment = HorizontalAlignment.Left;
         sideways.VerticalAlignment = VerticalAlignment.Top;
         columns.Children.Add(header);
+        columns.Children.Add(trackMeters);   // over the meter column: only this control repaints on a meter tick
         columns.Children.Add(trackRows.Armed);   // over the header, so the armed sub-rows' controls take their own presses
         columns.Children.Add(trackRows.Bar);
         columns.Children.Add(sideways);
@@ -79,6 +82,6 @@ internal static class ArrangementComposition
         body.Children.Add(addTrackBar);
         // The track rows scroll inside the arrangement (see TimelineView.RowScrollOffset), so the outer viewer never scrolls vertically.
         var content = new ScrollViewer { Content = body, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled };
-        return new Parts(timeline, header, trackRows, input, names, sideways, topBand, splitter, content);
+        return new Parts(timeline, header, trackMeters, trackRows, input, names, sideways, topBand, splitter, content);
     }
 }

@@ -11,14 +11,14 @@ namespace TabForge.Avalonia.Platform;
 
 /// <summary>
 /// The cells of one Avalonia track row, in the default column order and widths (TrackColumnLayout.DefaultOrder): cogwheel, instrument kind,
-/// record arm, number, name (flexible), split FX button, M, S, volume slider and pan slider. It places each cell and draws it in theme colours.
+/// record arm, number, name (flexible), split FX button, M, S, volume slider, pan slider and the per-track meter. It places each cell and draws it in theme colours.
 /// Owns: the column geometry, the cell boxes, the slider value mapping and the cell drawing.
 /// Does not own: the row geometry (TimelineView), the instrument art (TrackIconArt), the pointer gestures (TimelineInputController), the edits.
 /// Tests: TabForge.Avalonia.Tests.TrackRowControlsTests.
 /// </summary>
 public static class TrackRowCells
 {
-    public enum Cell { Settings, Arm, Fx, FxPower, Mute, Solo, Volume, Pan, Kind }
+    public enum Cell { Settings, Arm, Fx, FxPower, Mute, Solo, Volume, Pan, Meter, Kind }
 
     /// <summary>The state a cell is drawn in: idle, under the pointer (lighter), or held down by a press (darker).</summary>
     public enum CellPaint { Idle, Hover, Pressed }
@@ -26,7 +26,7 @@ public static class TrackRowCells
     /// <summary>How far the hover blends a cell's body toward white, the pressed state toward the press colour, and the hover edge toward white.</summary>
     public const double HoverBlend = 0.18, PressedBlend = 0.35, HoverEdgeBlend = 0.45;
 
-    public const double GridLeft = 6, GridRight = 10, NameWidth = 138;
+    public const double GridLeft = 6, GridRight = ChromeMetrics.TrackMeterInset, NameWidth = 138;
     public const double SliderMarginLeft = 6, SliderMarginRight = 10;
     private const string Font = ChromeMetrics.UiFontFamily;
 
@@ -34,7 +34,8 @@ public static class TrackRowCells
     public static readonly IReadOnlyList<(string Id, string Label, double Width)> Columns = new (string Id, string Label, double Width)[]
     {
         ("settings", "", 24), ("kind", "", 32), ("colour", "", 22), ("number", "#", 28), ("name", "TRACK", NameWidth),
-        ("fx", "FX", 56), ("mute", "M", 26), ("solo", "S", 26), ("volume", "VOLUME", 82), ("pan", "PAN", 82),
+        ("fx", "FX", 56), ("mute", "M", 26), ("solo", "S", 26), ("volume", "VOLUME", ChromeMetrics.TrackVolumeColumnWidth), ("pan", "PAN", ChromeMetrics.TrackPanColumnWidth),
+        ("meter", "", ChromeMetrics.TrackMeterColumnWidth),
     };
 
     /// <summary>One column's left edge and width in a track row.</summary>
@@ -48,18 +49,18 @@ public static class TrackRowCells
     /// the column titles and the name editor all read. The name column takes the extra width; every column after it shifts as a block.
     /// </summary>
     public readonly record struct TrackRowLayout(ColumnSpan Settings, ColumnSpan Kind, ColumnSpan Colour, ColumnSpan Number, ColumnSpan Name,
-        ColumnSpan Fx, ColumnSpan Mute, ColumnSpan Solo, ColumnSpan Volume, ColumnSpan Pan)
+        ColumnSpan Fx, ColumnSpan Mute, ColumnSpan Solo, ColumnSpan Volume, ColumnSpan Pan, ColumnSpan Meter)
     {
-        /// <summary>The span of a column by its id ("settings", "kind", "colour", "number", "name", "fx", "mute", "solo", "volume", "pan").</summary>
+        /// <summary>The span of a column by its id ("settings", "kind", "colour", "number", "name", "fx", "mute", "solo", "volume", "pan", "meter").</summary>
         public ColumnSpan Of(string id) => id switch
         {
             "settings" => Settings, "kind" => Kind, "colour" => Colour, "number" => Number, "name" => Name,
-            "fx" => Fx, "mute" => Mute, "solo" => Solo, "volume" => Volume, "pan" => Pan,
+            "fx" => Fx, "mute" => Mute, "solo" => Solo, "volume" => Volume, "pan" => Pan, "meter" => Meter,
             _ => throw new ArgumentException("Unknown track column " + id, nameof(id)),
         };
 
         /// <summary>The whole list width: the last column's right edge and the right margin.</summary>
-        public double Width => Pan.Right + GridRight;
+        public double Width => Meter.Right + GridRight;
     }
 
     private static double FixedWidthOf(string id)
@@ -81,7 +82,7 @@ public static class TrackRowCells
             return span;
         }
         return new TrackRowLayout(Next("settings"), Next("kind"), Next("colour"), Next("number"), Next("name"), Next("fx"), Next("mute"), Next("solo"),
-            Next("volume"), Next("pan"));
+            Next("volume"), Next("pan"), Next("meter"));
     }
 
     /// <summary>The list width with the default name column.</summary>
@@ -114,6 +115,8 @@ public static class TrackRowCells
             case Cell.Mute: return Centred(layout.Mute, 23, 22);
             case Cell.Solo: return Centred(layout.Solo, 23, 22);
             case Cell.Kind: return Centred(layout.Kind, 24, 24);
+            case Cell.Meter:
+                return new(layout.Meter.Left, top + (rowHeight - ChromeMetrics.TrackMeterHeight) / 2, ChromeMetrics.TrackMeterWidth, ChromeMetrics.TrackMeterHeight);
             default:
                 var slider = cell == Cell.Volume ? layout.Volume : layout.Pan;
                 return new(slider.Left + SliderMarginLeft, top + (rowHeight - 18) / 2, slider.Width - SliderMarginLeft - SliderMarginRight, 18);
@@ -154,6 +157,7 @@ public static class TrackRowCells
             if (id == "settings") Glyph(d, CogGeometry.Value, muted, x + (w - 12) / 2, top + (height - 12) / 2, 12);
             else if (id == "kind") { var t = d.Text("♪", Font, 12, muted, d.PixelsPerDip, weight: 600); d.DrawText(t, x + (w - t.Width) / 2, top + (height - t.Height) / 2); }
             else if (id == "colour") d.Ellipse(ink("Danger"), null, x + w / 2, top + height / 2, 3, 3);
+            else if (label.Length == 0) continue;
             else
             {
                 var t = d.Text(label, Font, 12, muted, d.PixelsPerDip, weight: 600);

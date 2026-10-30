@@ -30,6 +30,9 @@ namespace TabForge.Avalonia;
 /// </summary>
 public sealed class SelectionLoopLink : IDisposable
 {
+    /// <summary>The command ids this class handles (the menu test discovers this field by reflection).</summary>
+    public static readonly IReadOnlyList<string> Commands = new[] { "Edit.InvertSelection" };
+
     private readonly MainWindowTabs _tabs;
     private readonly ScorePreviewView _score;
     private readonly AvaloniaPlaybackSessions? _playback;
@@ -371,6 +374,15 @@ public sealed class SelectionLoopLink : IDisposable
     /// <summary>Asked before Select all selects the score (the piano roll with focus selects its notes); true when it did.</summary>
     public Func<bool>? SelectAllFirst { get; set; }
 
+    /// <summary>Edit.InvertSelection: the focused piano roll inverts its note selection (nothing elsewhere).</summary>
+    public void InvertSelection()
+    {
+        if (InvertFirst?.Invoke() == true) return;
+    }
+
+    /// <summary>Asked before Invert selection runs (the piano roll with focus inverts its notes); true when it did.</summary>
+    public Func<bool>? InvertFirst { get; set; }
+
     /// <summary>Adds the loop and selection commands to <paramref name="commands"/> (the section row reads the section clicked in <paramref name="menus"/>) and the Escape key to <paramref name="window"/>.</summary>
     /// <param name="notice">Shows the status line after the loop button and Clear loop.</param>
     public void Register(MainWindowCommands commands, Window window, ContextMenuHost menus, Action<string> notice)
@@ -382,6 +394,7 @@ public sealed class SelectionLoopLink : IDisposable
         commands.Add("Selection.Clear", () => ClearSelection());   // the selection menu's Clear selection row
         commands.Add(ContextMenuRows.LoopSectionId, () => LoopSection(menus.ClickedSection));
         commands.Add("Edit.SelectAll", SelectAll);
+        commands.Add("Edit.InvertSelection", InvertSelection);
         window.KeyDown += (_, e) =>
         {
             if (e.Key == Key.Escape && !e.Handled && e.KeyModifiers == KeyModifiers.None && ClearSelection()) e.Handled = true;

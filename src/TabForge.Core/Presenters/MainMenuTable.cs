@@ -88,6 +88,7 @@ public static class MainMenuTable
             Item("Paste _special…", "Edit.PasteSpecial"),
             Separator,
             Item("Select _all", "Edit.SelectAll"),
+            Item("Invert selection", "Edit.InvertSelection"),
             Separator,
             Item("Repeat selection as _bars", "Edit.RepeatSelection"),
             Item("_Delete beats", "Edit.DeleteBeats"),

@@ -11,22 +11,15 @@ namespace TabForge.AudioEngine.Builtin.Limiter;
 /// <summary>Look-ahead true-peak limiter: input gain, ceiling in dBTP, release (or automatic release); about 1.5 ms of look-ahead, reported as latency.</summary>
 public sealed partial class LimiterEffect : BuiltinEffect
 {
-    public const uint BypassId = 1, InputGainId = 2, CeilingId = 3, ReleaseId = 4, AutoReleaseId = 5;
-    public const uint GainReductionId = 100, OutputLevelId = 101, LatencyId = 102;
+    public const uint BypassId = LimiterParameters.BypassId, InputGainId = LimiterParameters.InputGainId, CeilingId = LimiterParameters.CeilingId,
+        ReleaseId = LimiterParameters.ReleaseId, AutoReleaseId = LimiterParameters.AutoReleaseId;
+    public const uint GainReductionId = LimiterParameters.GainReductionId, OutputLevelId = LimiterParameters.OutputLevelId, LatencyId = LimiterParameters.LatencyId;
     public const int BypassIndex = 0, InputGainIndex = 1, CeilingIndex = 2, ReleaseIndex = 3, AutoReleaseIndex = 4, GainReductionIndex = 5, OutputLevelIndex = 6, LatencyIndex = 7;
-    public const double LookAheadMs = 1.5, MinCeiling = -12, MaxInputGain = 24, MinReleaseMs = 1, MaxReleaseMs = 1000, MaxReduction = 30, MeterFloorDb = -100, MeterCeilingDb = 6;
+    public const double LookAheadMs = LimiterParameters.LookAheadMs, MinCeiling = LimiterParameters.MinCeiling, MaxInputGain = LimiterParameters.MaxInputGain,
+        MinReleaseMs = LimiterParameters.MinReleaseMs, MaxReleaseMs = LimiterParameters.MaxReleaseMs, MaxReduction = LimiterParameters.MaxReduction,
+        MeterFloorDb = LimiterParameters.MeterFloorDb, MeterCeilingDb = LimiterParameters.MeterCeilingDb;
 
-    public static IReadOnlyList<BuiltinParameter> Descriptors { get; } =
-    [
-        BuiltinParameter.Switch(BypassId, "bypass", "Bypass", false),
-        new(InputGainId, "inputGain", "Input gain", -12, MaxInputGain, 0, Unit: "dB"),
-        new(CeilingId, "ceiling", "Ceiling", MinCeiling, 0, -1.0, Unit: "dBTP"),
-        new(ReleaseId, "release", "Release", MinReleaseMs, MaxReleaseMs, 100, Unit: "ms"),
-        BuiltinParameter.Switch(AutoReleaseId, "autoRelease", "Auto release", false),
-        new(GainReductionId, "gainReduction", "Gain reduction", 0, MaxReduction, 0, ReadOnly: true, Unit: "dB"),
-        new(OutputLevelId, "outputLevel", "Output level", MeterFloorDb, MeterCeilingDb, MeterFloorDb, ReadOnly: true, Unit: "dBFS"),
-        BuiltinParameter.Readout(LatencyId, "latency", "Latency", 100000, "samples"),
-    ];
+    public static IReadOnlyList<BuiltinParameter> Descriptors => LimiterParameters.Descriptors;
 
     private int _lookAhead;
 

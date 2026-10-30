@@ -29,7 +29,7 @@ public static class QuickActionsGroup
     /// <param name="commands">The window's commands; resolved when a button is used or shown.</param>
     public static Border Build(Func<MainWindowCommands?> commands)
     {
-        var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 1 };
+        var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = UiMetrics.QuickGroupGap };
         row.Children.Add(Button(commands, "File.Open", "Open", OpenIcon));
         row.Children.Add(Button(commands, "File.Save", "Save", SaveIcon));
         var group = new Border
@@ -52,13 +52,12 @@ public static class QuickActionsGroup
         {
             Tag = commandId, Content = MenuRowToggles.Icon(iconData, IconSizing.Current),
             HorizontalContentAlignment = HorizontalAlignment.Center, VerticalContentAlignment = VerticalAlignment.Center,
-            CornerRadius = Platform.AvaloniaFormControlStyles.ControlCornerRadius,
-            Template = Platform.AvaloniaButtonTemplates.SingleBorder("Bd"), Background = Platform.AvaloniaPalette.TransparentBrush,
             Focusable = true,
         };
         UiMetrics.StyleQuickCell(button);
         button.Classes.Add(ButtonClass);
-        Platform.HoverShade.Attach(button, hover => button.Background = hover && button.IsEnabled ? Platform.HoverShade.IconBrush(button) : Platform.AvaloniaPalette.TransparentBrush);
+        // The menu row's flat icon button look (transparent at rest, the hover and pressed fills inside its own corner, the theme's tokens).
+        PianoRollToolLook.Apply(button);
         // Disabled as the menu item is: dimmed while no handler exists for the command (resolved once the window has its commands).
         button.AttachedToVisualTree += (_, _) =>
         {

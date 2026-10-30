@@ -89,10 +89,10 @@ public class TrackRowControlsTests
         var (w, v, _) = Open(light ? ThemeVariant.Light : ThemeVariant.Dark);
         v.Width = 1300;   // the pane share the clamp reads
         w.UpdateLayout();
-        v.SetTrackListWidth(TrackRowCells.TotalWidth);   // the 532 DIP list these WPF columns are written for (the product default is wider)
+        v.SetTrackListWidth(TrackRowCells.TotalWidth);   // the row list these WPF columns are written for (the product default is wider)
         w.UpdateLayout();
         Assert.Equal(TrackRowCells.TotalWidth, v.Header.ColumnWidth);
-        Assert.Equal(532, TrackRowCells.TotalWidth);
+        Assert.Equal(598, TrackRowCells.TotalWidth);   // 532 before the per-track meter
         var dir = DialogTestKit.RenderDirectory(nameof(TrackRowControlsTests));
         using var frame = w.CaptureRenderedFrame();
         frame!.Save(Path.Combine(dir, light ? "track-rows-light.png" : "track-rows-dark.png"));

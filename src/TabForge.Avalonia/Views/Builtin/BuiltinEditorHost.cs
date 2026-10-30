@@ -1,3 +1,4 @@
+using System;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Layout;
@@ -12,6 +13,9 @@ namespace TabForge.Avalonia.Views.Fx;
 // Tests: BuiltinEditorWindowTests, FxChainBuiltinEmbedTests.
 public sealed class BuiltinEditorHost : ScrollViewer
 {
+    /// <summary>A subclass takes the ScrollViewer's template, so the host scrolls (its own type has no theme of its own).</summary>
+    protected override Type StyleKeyOverride => typeof(ScrollViewer);
+
     /// <summary>The slot whose editor shows, or null.</summary>
     public PluginSlot? Slot { get; private set; }
 

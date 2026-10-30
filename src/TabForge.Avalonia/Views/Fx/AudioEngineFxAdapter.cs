@@ -22,6 +22,10 @@ public sealed class AudioEngineFxAdapter : IFxChainEngine
     public AudioEngineClient Client => _client;
     /// <summary>Whether the engine is running.</summary>
     public bool IsRunning => _client.IsRunning;
+    /// <summary>The output the "Active on" rules match now.</summary>
+    public ActiveOnOutput ActiveOutput => _client.ActiveOutput;
+    /// <summary>The output opened or reopened (the client re-matches the rules itself; this refreshes the window's rows).</summary>
+    public event Action? OutputChanged { add => _client.DeviceReady += value; remove => _client.DeviceReady -= value; }
     /// <summary>The engine's CPU load.</summary>
     public double CpuLoad => _client.CpuLoad;
     /// <summary>The engine's auto-pitch matcher.</summary>

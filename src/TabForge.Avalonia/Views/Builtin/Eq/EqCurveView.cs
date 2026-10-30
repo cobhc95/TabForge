@@ -5,6 +5,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
+using EqEffect = TabForge.Audio.Contracts.Builtin.EqParameters;
 using TabForge.AudioEngine.Builtin.Eq;
 using TabForge.Avalonia.Views.Dialogs;
 
@@ -25,13 +26,18 @@ public sealed class EqCurveView : Control
     private StreamGeometry? _curve;
     private Size _built;
     private int _selected, _dragging = -1;
+    private Pen? _gridPen, _curvePen, _mutedPen, _ringPen;
+    private IBrush? _mutedBrush, _paperBrush, _accentBrush, _textBrush;
+    private readonly Dictionary<double, FormattedText> _dbLabels = new();
+    private readonly Dictionary<double, FormattedText> _hzLabels = new();
+    internal int RebuildCount { get; private set; }
 
     public EqCurveView()
     {
         Name = "EqCurve";
         MinHeight = DialogMetrics.FxGraphMinHeight;
         Focusable = true;
-        ActualThemeVariantChanged += (_, _) => InvalidateVisual();
+        ActualThemeVariantChanged += (_, _) => { _gridPen = _curvePen = _mutedPen = _ringPen = null; _mutedBrush = _paperBrush = _accentBrush = _textBrush = null; _dbLabels.Clear(); _hzLabels.Clear(); InvalidateVisual(); };
         DoubleTapped += ResetBandAt;
     }
 
@@ -61,6 +67,7 @@ public sealed class EqCurveView : Control
     private void Rebuild()
     {
         _built = default;
+        RebuildCount++;
         InvalidateVisual();
     }
 
@@ -102,6 +109,21 @@ public sealed class EqCurveView : Control
         Rebuild();
     }
 
+    /// <summary>One pointer move: frequency, gain (and enable on first touch) applied with a single repaint (see audit-performance).</summary>
+    internal void DragBand(int band, double hz, double db)
+    {
+        var onIndex = EqEffect.Index(band, EqEffect.OnField);
+        var freqIndex = EqEffect.Index(band, EqEffect.FreqField);
+        var gainIndex = EqEffect.Index(band, EqEffect.GainField);
+        hz = EqEffect.Descriptors[freqIndex].Clamp(Math.Round(hz, 1));
+        db = EqEffect.Descriptors[gainIndex].Clamp(Math.Round(db, 1));
+        var dirty = false;
+        if (_values[onIndex] != 1) { _values[onIndex] = 1; Changed?.Invoke(EqEffect.Descriptors[onIndex].Id, 1); dirty = true; }
+        if (_values[freqIndex] != hz) { _values[freqIndex] = hz; Changed?.Invoke(EqEffect.Descriptors[freqIndex].Id, hz); dirty = true; }
+        if (_values[gainIndex] != db) { _values[gainIndex] = db; Changed?.Invoke(EqEffect.Descriptors[gainIndex].Id, db); dirty = true; }
+        if (dirty) Rebuild();
+    }
+
     protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
         base.OnPointerPressed(e);
@@ -119,9 +141,7 @@ public sealed class EqCurveView : Control
         base.OnPointerMoved(e);
         if (_dragging < 0) return;
         var at = e.GetPosition(this);
-        Set(_dragging, EqEffect.OnField, 1);
-        Set(_dragging, EqEffect.FreqField, Math.Round(HzOf(at.X), 1));
-        Set(_dragging, EqEffect.GainField, Math.Round(DbOf(at.Y), 1));
+        DragBand(_dragging, HzOf(at.X), DbOf(at.Y));
     }
 
     protected override void OnPointerReleased(PointerReleasedEventArgs e)
@@ -167,24 +187,35 @@ public sealed class EqCurveView : Control
     {
         var size = Bounds.Size;
         if (size.Width < 40 || size.Height < 40) return;
-        var grid = new Pen(BuiltinPaint.Theme(this, "BorderSoftBrush"), DialogMetrics.FxGridStroke);
-        var muted = BuiltinPaint.Theme(this, "TextMuted");
+        _gridPen ??= new Pen(BuiltinPaint.Theme(this, "BorderSoftBrush"), DialogMetrics.FxGridStroke);
+        _mutedBrush ??= BuiltinPaint.Theme(this, "TextMuted");
+        _paperBrush ??= BuiltinPaint.Theme(this, "WindowBackground");
+        _mutedPen ??= new Pen(_mutedBrush, DialogMetrics.FxGridStroke);
+        _curvePen ??= new Pen(BuiltinPaint.Theme(this, "AccentBrush"), DialogMetrics.FxCurveStroke);
+        _accentBrush ??= BuiltinPaint.Theme(this, "AccentBrush");
+        _textBrush ??= BuiltinPaint.Theme(this, "TextPrimary");
+        var grid = _gridPen;
+        var muted = _mutedBrush;
         var plot = Plot;
-        context.FillRectangle(BuiltinPaint.Theme(this, "WindowBackground"), plot);
+        context.FillRectangle(_paperBrush, plot);
         for (var db = -CurveSpanDb; db <= CurveSpanDb; db += GridStepDb)
         {
             context.DrawLine(grid, new Point(plot.Left, YOf(db)), new Point(plot.Right, YOf(db)));
-            context.DrawText(BuiltinPaint.Label(db > 0 ? $"+{db:0}" : $"{db:0}", muted), new Point(DialogMetrics.FxLabelInset, YOf(db) - DialogMetrics.FontSize / 2));
+            if (!_dbLabels.TryGetValue(db, out var label))
+                _dbLabels[db] = label = BuiltinPaint.Label(db > 0 ? $"+{db:0}" : $"{db:0}", muted);
+            context.DrawText(label, new Point(DialogMetrics.FxLabelInset, YOf(db) - DialogMetrics.FontSize / 2));
         }
         foreach (var hz in GridHz)
         {
             context.DrawLine(grid, new Point(XOf(hz), plot.Top), new Point(XOf(hz), plot.Bottom));
-            context.DrawText(BuiltinPaint.Label(hz >= 1000 ? $"{hz / 1000:0}k" : $"{hz:0}", muted), new Point(XOf(hz) + DialogMetrics.FxLabelInset, plot.Bottom + DialogMetrics.FxLabelInset / 2));
+            if (!_hzLabels.TryGetValue(hz, out var label))
+                _hzLabels[hz] = label = BuiltinPaint.Label(hz >= 1000 ? $"{hz / 1000:0}k" : $"{hz:0}", muted);
+            context.DrawText(label, new Point(XOf(hz) + DialogMetrics.FxLabelInset, plot.Bottom + DialogMetrics.FxLabelInset / 2));
         }
         context.DrawRectangle(grid, plot);
-        context.DrawLine(new Pen(muted, DialogMetrics.FxGridStroke), new Point(plot.Left, YOf(0)), new Point(plot.Right, YOf(0)));
+        context.DrawLine(_mutedPen, new Point(plot.Left, YOf(0)), new Point(plot.Right, YOf(0)));
         if (_built != size) BuildCurve(size);
-        if (_curve is not null) context.DrawGeometry(null, new Pen(BuiltinPaint.Theme(this, "AccentBrush"), DialogMetrics.FxCurveStroke), _curve);
+        if (_curve is not null) context.DrawGeometry(null, _curvePen, _curve);
         for (var b = 0; b < EqEffect.Bands; b++) DrawDot(context, b);
     }
 
@@ -213,12 +244,15 @@ public sealed class EqCurveView : Control
         var colour = BuiltinPaint.Palette(this, BandColours[band]);
         var on = _values[EqEffect.Index(band, EqEffect.OnField)] >= 0.5;
         var radius = band == _selected ? DialogMetrics.FxDotSelectedRadius : DialogMetrics.FxDotRadius;
-        context.DrawEllipse(on ? colour : BuiltinPaint.Theme(this, "WindowBackground"), new Pen(colour, DialogMetrics.FxCurveStroke), centre, radius, radius);
+        _paperBrush ??= BuiltinPaint.Theme(this, "WindowBackground");
+        _ringPen ??= new Pen(BuiltinPaint.Theme(this, "TextPrimary"), DialogMetrics.FxGridStroke);
+        context.DrawEllipse(on ? colour : _paperBrush, new Pen(colour, DialogMetrics.FxCurveStroke), centre, radius, radius);
         if (band == _selected)
         {
             var ring = radius + DialogMetrics.FxGridStroke * 2;
-            context.DrawEllipse(null, new Pen(BuiltinPaint.Theme(this, "TextPrimary"), DialogMetrics.FxGridStroke), centre, ring, ring);
+            context.DrawEllipse(null, _ringPen, centre, ring, ring);
         }
-        context.DrawText(BuiltinPaint.Label((band + 1).ToString(), BuiltinPaint.Theme(this, on ? "WindowBackground" : "TextPrimary")), new Point(centre.X - DialogMetrics.FxLabelInset, centre.Y - DialogMetrics.FontSize / 2));
+        _textBrush ??= BuiltinPaint.Theme(this, "TextPrimary");
+        context.DrawText(BuiltinPaint.Label((band + 1).ToString(), on ? _paperBrush : _textBrush), new Point(centre.X - DialogMetrics.FxLabelInset, centre.Y - DialogMetrics.FontSize / 2));
     }
 }

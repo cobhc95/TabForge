@@ -1,3 +1,8 @@
+using System.Collections.Generic;
+using System.Linq;
+using TabForge.Models;
+using TabForge.Plugins;
+
 namespace TabForge.Presenters;
 
 /// <summary>What the Remove button takes: the selected containers (with what is inside), the selected plug-ins, or nothing.</summary>
@@ -63,4 +68,27 @@ public static class FxChainPresenter
 
     /// <summary>The chain's last instrument left it: the GM sound plays again.</summary>
     public static bool RestoresGmSound(bool hadInstrument, bool hasInstrumentNow) => hadInstrument && !hasInstrumentNow;
+
+    /// <summary>True when the chain holds a VST instrument: the same check a VSTi added directly uses.</summary>
+    public static bool HasInstrument(IEnumerable<PluginSlot> plugins) =>
+        plugins.Any(p => p.Type == PluginSlotType.Instrument);
+
+    /// <summary>
+    /// The GM sound follows the chain after a change, as adding or removing a VSTi directly does: a newly arrived instrument switches it off, and
+    /// the last instrument leaving switches it back on when <paramref name="autoSwitch"/> is on (PluginSettings.AutoGmSound). Used by every preset
+    /// load too. True when the track changed.
+    /// </summary>
+    public static bool FollowsGmSound(TrackModel track, bool hadInstrument, bool autoSwitch)
+    {
+        var hasInstrument = HasInstrument(track.Rig.Plugins);
+        if (hasInstrument == hadInstrument) return false;
+        if (RestoresGmSound(hadInstrument, hasInstrument))
+        {
+            if (!autoSwitch) return false;
+            track.MidiSound = true;
+            return true;
+        }
+        track.MidiSound = false;
+        return true;
+    }
 }

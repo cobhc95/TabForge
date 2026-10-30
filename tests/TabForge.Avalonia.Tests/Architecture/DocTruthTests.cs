@@ -415,6 +415,34 @@ public sealed class DocTruthTests
             string.Join("\n", added.Take(20)) + (added.Count > 20 ? $"\n... +{added.Count - 20} more" : ""));
     }
 
+    [Fact]
+    public void IndexAndCommandsCountsMatchTheCommandTable()
+    {
+        // Guards the stale-count drift: INDEX.md said 271 while COMMANDS.md said 282,
+        // the table itself holding 279 rows; the SelfTests row pointed at a future
+        // task instead of the checked-in README; and an unshipped stop-button asset
+        // folder sat under the transport icons although the csproj glob and the
+        // top-level-only preload never read it.
+        var repo = TestRepo.CheckoutRoot();
+        var commandsPath = Path.Combine(repo, "Source", "docs", "guides", "COMMANDS.md");
+        var commands = File.ReadAllText(commandsPath);
+        var rows = commands.Split('\n').Count(l => l.StartsWith("| `", StringComparison.Ordinal));
+        Assert.True(rows > 100, $"COMMANDS.md table has only {rows} rows from {repo}");
+        var header = Regex.Match(commands, @"\*\*(\d+) command ids\*\*");
+        Assert.True(header.Success, "COMMANDS.md header names a command-id count");
+        Assert.Equal(rows, int.Parse(header.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture));
+
+        var index = File.ReadAllText(Path.Combine(repo, "Source", "docs", "INDEX.md"));
+        Assert.Contains($"{rows} main-window command ids", index, StringComparison.Ordinal);
+        Assert.DoesNotContain("task-48", index, StringComparison.Ordinal);
+        Assert.Contains("SelfTests/README.md", index, StringComparison.Ordinal);
+        Assert.True(File.Exists(Path.Combine(repo, "Source", "src", "TabForge.Avalonia", "SelfTests", "README.md")),
+            "INDEX.md names src/TabForge.Avalonia/SelfTests/README.md, which must exist");
+
+        Assert.False(Directory.Exists(Path.Combine(repo, "Source", "src", "TabForge.Avalonia", "Assets", "Icons", "Transport", "TabForge_Stop_Button_Assets")),
+            "unshipped TabForge_Stop_Button_Assets must stay deleted (flat csproj glob and top-level-only preload never read it)");
+    }
+
     private static HashSet<string> LoadAllowList(string repo)
     {
         var path = Path.Combine(repo, "Source", "tests", "TabForge.Avalonia.Tests", "DocTruthAllowList.txt");

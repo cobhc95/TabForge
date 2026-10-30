@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Markup.Xaml.MarkupExtensions;
@@ -11,8 +12,8 @@ using TabForge.Services;
 
 namespace TabForge.Avalonia.Views;
 
-/// <summary>What the special pages' buttons do: open a page, reset the theme, reset everything (the window asks first).</summary>
-public sealed record SpecialActions(Action<string> Open, Action ResetTheme, Action ResetAll, Action<string> Footer);
+/// <summary>What the special pages' buttons do: open a page, reset the theme, reset the settings, or reset the entire app (the window asks first).</summary>
+public sealed record SpecialActions(Action<string> Open, Action ResetTheme, Action ResetAll, Action ResetApp, Action<string> Footer);
 
 /// <summary>
 /// The three Settings pages that are not plain catalogue cards: Common settings (the most used rows plus links), Shortcuts (preset and the
@@ -54,7 +55,8 @@ public static class PreferencesSpecialPages
     {
         foreach (var id in new[] { SettingsCatalog.InfoVersion, SettingsCatalog.InfoSettingsFile, SettingsCatalog.InfoCompatibility, SettingsCatalog.InfoArrangement }) yield return InfoCard(SettingsCatalog.Special(id), actions);
         var reset = SettingsCatalog.Special(SettingsCatalog.ActionResetAll);
-        yield return Card(reset.Section, Part(reset, actions)!);
+        var resetApp = SettingsCatalog.Special(SettingsCatalog.ActionResetApp);
+        yield return Card(reset.Section, Stack(Part(reset, actions)!, Part(resetApp, actions)!));
     }
 
     /// <summary>
@@ -75,10 +77,14 @@ public static class PreferencesSpecialPages
                 return Stack(theme, ToolWindowParts.Small(entry.Description));
             case SettingsEntryKind.Action when entry.Id == SettingsCatalog.ActionResetAll:
                 return Stack(ToolWindowParts.Small(entry.Description), LinkButton(entry, actions.ResetAll));
+            case SettingsEntryKind.Action when entry.Id == SettingsCatalog.ActionResetApp:
+                return Stack(ToolWindowParts.Small(entry.Description), DangerButton(entry, actions.ResetApp));
             case SettingsEntryKind.Action when entry.Id == SettingsCatalog.ActionManage:
                 return new Button { Content = entry.Label, HorizontalAlignment = HorizontalAlignment.Left, Flyout = ManageMenu(actions.Footer) };
             case SettingsEntryKind.Action when SettingsCatalog.FooterActions.Contains(entry.Id):
                 return LinkButton(entry, () => actions.Footer(entry.Id));
+            case SettingsEntryKind.Action when SettingsCatalog.BankActions.Contains(entry.Id):
+                return LinkButton(entry, () => actions.Open(SettingsCatalog.AudioVst));
             default:
                 return null;
         }
@@ -114,6 +120,17 @@ public static class PreferencesSpecialPages
     private static Button LinkButton(SettingsEntry entry, Action click)
     {
         var button = new Button { Content = entry.Label, HorizontalAlignment = HorizontalAlignment.Left };
+        button.Click += (_, _) => click();
+        if (entry.Tip is { } tip) ToolTip.SetTip(button, tip);
+        return button;
+    }
+
+    /// <summary>The destructive row: the DangerButton look (danger ink/edge, accent hover and press) and a tip.</summary>
+    private static Button DangerButton(SettingsEntry entry, Action click)
+    {
+        var button = new Button { Content = entry.Label, HorizontalAlignment = HorizontalAlignment.Left };
+        button.Classes.Add(AvaloniaFormControlStyles.DangerButtonClass);
+        AutomationProperties.SetName(button, entry.Label);
         button.Click += (_, _) => click();
         if (entry.Tip is { } tip) ToolTip.SetTip(button, tip);
         return button;

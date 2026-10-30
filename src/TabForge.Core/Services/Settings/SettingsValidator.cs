@@ -31,6 +31,7 @@ public static class SettingsValidator
         NormalizeHotkeys(settings.Hotkeys);
         settings.Timeline ??= new TimelineSettings();
         Features.CatalogComposition.NormalizeSettings(settings);
+        settings.TrackMeter.Normalize();
 
         if (settings.Workspace is not null && !WorkspaceNormalizer.Normalize(settings.Workspace))
             settings.Workspace = null;
@@ -57,6 +58,7 @@ public static class SettingsValidator
         plugins.AsioInputLastChannel = Math.Clamp(plugins.AsioInputLastChannel, 0, 63);   // last <= first is read as one channel
         plugins.HiddenInputs ??= new();
         plugins.FxListWidth = InputLimits.ClampFinite(plugins.FxListWidth, 180, 2_000, 290);
+        plugins.FxPresetLoad = TabForge.Presenters.FxPresetLoadChoice.Normalize(plugins.FxPresetLoad);
         plugins.AsioOutputChannel = Math.Clamp(plugins.AsioOutputChannel, 0, 62);
         plugins.AsioOutputLastChannel = Math.Clamp(plugins.AsioOutputLastChannel, 0, 63);
         plugins.SampleRate = plugins.SampleRate == 0 || AudioDrivers.SampleRates.Contains(plugins.SampleRate) ? plugins.SampleRate : 48000;
@@ -239,7 +241,9 @@ public static class SettingsValidator
         value.FretboardFrets = value.FretboardFrets is 12 or 24 ? value.FretboardFrets : 24;
         value.InstrumentView = InstrumentViews.All.FirstOrDefault(v => string.Equals(v, value.InstrumentView, StringComparison.OrdinalIgnoreCase)) ?? InstrumentViews.MatchInstrument;
         if (!InstrumentViews.KeyboardSizes.Contains(value.KeyboardKeys)) value.KeyboardKeys = 88;
-        value.ScaleHighlightStyle = ScaleHighlightStyles.All.FirstOrDefault(v => string.Equals(v, value.ScaleHighlightStyle, StringComparison.OrdinalIgnoreCase)) ?? ScaleHighlightStyles.Shaded;
+        value.ScaleHighlightStyle = ScaleHighlightStyles.Normalize(value.ScaleHighlightStyle);
+        value.ScaleHighlightOpacity = Math.Clamp(value.ScaleHighlightOpacity, ScaleHighlightStyles.MinOpacity, ScaleHighlightStyles.MaxOpacity);
+        value.ScaleHighlightCustomColour = value.ScaleHighlightCustomColour is { Length: 7 } hex && hex[0] == '#' && hex[1..].All(Uri.IsHexDigit) ? hex : "";
         value.ScaleHighlightColour = ScaleHighlightStyles.Colours.FirstOrDefault(v => string.Equals(v, value.ScaleHighlightColour, StringComparison.OrdinalIgnoreCase)) ?? "Accent";
         value.FretMarkerSizePercent = Math.Clamp(value.FretMarkerSizePercent, 60, 160);
         value.ScaleHighlightStrength =Math.Clamp(value.ScaleHighlightStrength, ScaleHighlightStyles.MinStrength, ScaleHighlightStyles.MaxStrength);
@@ -250,6 +254,10 @@ public static class SettingsValidator
         value.KeyboardKeyColours = KeyboardKeyStyles.All.FirstOrDefault(v => string.Equals(v, value.KeyboardKeyColours, StringComparison.OrdinalIgnoreCase)) ?? KeyboardKeyStyles.MatchTheme;
         value.PreviewHorizon = Math.Clamp(value.PreviewHorizon, 1, 10);
         value.ScaleHighlight = SafeText(value.ScaleHighlight, 64, null);
+        value.PianoRollColours = Choice(value.PianoRollColours, "Track", "Track", "Velocity", "Lane", "Pitch", "Channel");
+        value.PianoRollTransposeMode = Choice(value.PianoRollTransposeMode, "Semitones", "Semitones", "Scale steps");
+        value.PianoRollStepScaleFilter = Choice(value.PianoRollStepScaleFilter, "Snap", "Off", "Snap", "Only scale notes");
+        value.PianoRollScalePick = NormalizeScalePick(value.PianoRollScalePick);
         foreach (var q in PasteQuestionInfo.All) PasteQuestionInfo.Set(value, q, PasteQuestionInfo.Get(value, q));
         value.PasteSpecialRange = (value.PasteSpecialRange ?? new RangePasteOptions()).Normalized();
     }
@@ -324,6 +332,20 @@ public static class SettingsValidator
         choices.FirstOrDefault(choice => string.Equals(choice, value, StringComparison.OrdinalIgnoreCase)) ?? fallback;
 
     private static string Colour(string? value, string fallback) => SettingsColor.IsValid(value) ? value! : fallback;
+
+    private static string? NormalizeScalePick(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return null;
+        var trimmed = value.Trim();
+        if (trimmed.Equals("Auto", StringComparison.OrdinalIgnoreCase)) return "Auto";
+        if (!InputLimits.IsSafeText(trimmed, 64, allowLineBreaks: false)) return null;
+        var space = trimmed.IndexOf(' ');
+        if (space <= 0) return null;
+        var root = Array.FindIndex(MusicTheoryService.NoteNames, n => n.Equals(trimmed[..space], StringComparison.OrdinalIgnoreCase));
+        if (root < 0) return null;
+        var scale = MusicTheoryService.Scales.Keys.FirstOrDefault(k => k.Equals(trimmed[(space + 1)..], StringComparison.OrdinalIgnoreCase));
+        return scale is null ? null : $"{MusicTheoryService.NoteNames[root]} {scale}";
+    }
 
     private static string? SafeText(string? value, int maximumLength, string? fallback) =>
         InputLimits.IsSafeText(value, maximumLength, allowLineBreaks: false) && !string.IsNullOrWhiteSpace(value)

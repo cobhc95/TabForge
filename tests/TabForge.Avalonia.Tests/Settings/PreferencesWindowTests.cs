@@ -9,7 +9,6 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Headless.XUnit;
 using Avalonia.LogicalTree;
 using TabForge.Avalonia.Platform;
-using TabForge.Avalonia.Views.Docking;
 using TabForge.Services;
 using TabForge.Avalonia.Platform.Controls;
 using TabForge.Avalonia.Views;
@@ -27,18 +26,6 @@ namespace TabForge.Avalonia.Tests;
 /// </summary>
 public class PreferencesWindowTests
 {
-    /// <summary>Reset all settings: the values to apply carry the default dock layout as the saved Workspace, and applying them stores it.</summary>
-    [AvaloniaFact]
-    public void ResetAllSettingsStoresTheDefaultWorkspaceOnApply()
-    {
-        var saved = new AppSettings();
-        var defaults = PreferencesCatalog.ResetAllDefaults();
-        PreferencesCatalog.CopyInto(defaults, saved, includeWorkspace: true);
-        // Each default layout gets fresh host ids, so the ids are left out of the comparison; the pane shape must match.
-        static string Shape(object? layout) => System.Text.RegularExpressions.Regex.Replace(System.Text.Json.JsonSerializer.Serialize(layout), @"""HostId"":""[0-9a-f]*""", "");
-        Assert.Equal(Shape(DockWorkspaceController.DefaultLayout()), Shape(saved.Workspace));
-    }
-
     /// <summary>OK or Apply writes a changed value to the settings file: a fresh store opened on that file reads it back.</summary>
     [AvaloniaFact]
     public void ApplySavesTheChangedValueToTheSettingsFile()

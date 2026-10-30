@@ -9,6 +9,7 @@ using Avalonia.Layout;
 using Avalonia.Markup.Xaml.MarkupExtensions;
 using TabForge.Avalonia.Views.Presets;
 using TabForge.Plugins;
+using TabForge.Presets;
 using TabForge.Presenters;
 using TabForge.Services;
 
@@ -30,30 +31,37 @@ public sealed class FxContainerPresets
     private readonly Action<IReadOnlyList<PluginSlot>> _leaving;
     private readonly Func<Task> _collectStates;
     private readonly Func<FxChainDialogs> _dialogs;
+    private readonly PluginSettings _settings;
+    private readonly Action _saveSettings;
     private readonly PresetFolderStore _store = PresetFolderStore.Containers();
     private readonly ComboBox _presets = new() { Width = 220, Name = "ContainerPresetBox" };
     private readonly Button _save = new() { Content = "Save preset…", Padding = new Thickness(10, 3), Margin = new Thickness(6, 0, 0, 0), Name = "ContainerSavePreset" };
     private bool _filling;
     private HashSet<string> _names = new(StringComparer.OrdinalIgnoreCase);   // the saved presets as last listed: the row layer asks per row, so no disk read per call
+    private readonly Dictionary<string, string> _displayToName = new(StringComparer.OrdinalIgnoreCase);   // a decorated row's text back to the preset's name
 
     /// <summary>True when a plug-in of a preset may be loaded here (PluginTrust). Tests replace it.</summary>
     internal Func<PluginSlot, bool> Trusted { get; set; }
 
     public FxContainerPresets(Window owner, StackPanel bar, Func<ChainContainer?> shown, Func<RigPreset> rig, Action<Action<List<ChainItem>>> edit,
-        Action<IReadOnlyList<PluginSlot>> leaving, Func<PluginSlot, bool> trusted, Func<Task> collectStates, Func<FxChainDialogs> dialogs)
+        Action<IReadOnlyList<PluginSlot>> leaving, Func<PluginSlot, bool> trusted, Func<Task> collectStates, Func<FxChainDialogs> dialogs,
+        PluginSettings? settings = null, Action? saveSettings = null)
     {
         (_owner, _shown, _rig, _edit, _leaving, Trusted, _collectStates, _dialogs) = (owner, shown, rig, edit, leaving, trusted, collectStates, dialogs);
+        _settings = settings ?? new PluginSettings();
+        _saveSettings = saveSettings ?? (() => { });
         var label = new TextBlock { Text = "Preset", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0), [!TextBlock.ForegroundProperty] = new DynamicResourceExtension("MutedBrush") };
         ToolTip.SetTip(_presets, "Your saved container presets: picking one replaces what is in this container (one undo step). Rename, duplicate, delete or drag them with Manage presets…");
         ToolTip.SetTip(_save, "Save this container with its plug-ins and their settings as a preset");
         _ = PresetRows.Attach(_presets, () => _store,
-            item => item is string name && _names.Contains(name) ? name : null,
+            item => item is string text && _displayToName.TryGetValue(text, out var raw) && _names.Contains(raw) ? raw : null,
             () => PresetCatalogKind.Container, () => null, Fill);
         _presets.SelectionChanged += async (_, _) =>
         {
-            if (_filling || _presets.SelectedItem is not string name) return;
+            if (_filling || _presets.SelectedItem is not string shown) return;
             if (PresetRowText.IsManage(_presets.SelectedItem)) return;   // PresetRows reverts the row and opens the manager
-            if (name != Hint) await Load(name);
+            if (shown == Hint || !_displayToName.TryGetValue(shown, out var name)) return;
+            await Load(name);
         };
         _save.Click += async (_, _) => await SaveAsked();
         _store.Changed += Fill;
@@ -71,24 +79,49 @@ public sealed class FxContainerPresets
         _filling = true;
         try
         {
-            var current = _shown()?.Preset;
+            var shown = _shown();
+            var applied = shown?.AppliedPreset;
+            var current = shown is null ? null : Snapshot(shown);
+            var name = applied?.Name ?? shown?.Preset;
             var items = new List<object> { Hint };
+            _displayToName.Clear();
             var names = _store.Names();
             _names = new HashSet<string>(names, StringComparer.OrdinalIgnoreCase);
-            items.AddRange(names);
-            string? match = names.FirstOrDefault(n => string.Equals(n, current, StringComparison.OrdinalIgnoreCase));
-            if (match is null && current is { Length: > 0 }) { items.Insert(1, current); match = current; }
+            foreach (var saved in names) Add(items, PresetCombo.Decorate(saved, saved, applied, current, true), saved);
+            string? match = names.FirstOrDefault(n => string.Equals(n, name, StringComparison.OrdinalIgnoreCase));
+            if (match is null && name is { Length: > 0 }) { Add(items, PresetCombo.Decorate(name, name, applied, current, false), name); match = name; }
             PresetRowText.AppendManage(items);
             _presets.ItemsSource = items;
-            _presets.SelectedItem = match ?? Hint;
+            _presets.SelectedItem = match is null ? Hint : items.FirstOrDefault(i => i is string text && _displayToName.TryGetValue(text, out var raw) && raw == match) ?? Hint;
         }
         finally { _filling = false; }
+    }
+
+    private void Add(List<object> items, string text, string name)
+    {
+        _displayToName[text] = name;
+        items.Add(text);
+    }
+
+    /// <summary>The container's plug-ins in one stable text form, for telling an edit from the contents a preset gave it.</summary>
+    private string? Snapshot(ChainContainer container)
+    {
+        var packed = ChainTree.PackCopy(_rig(), container);
+        // The container's own preset name is remembered elsewhere; only its contents decide whether the preset was edited.
+        foreach (var plugin in packed)
+            foreach (var nested in plugin.ChainContainers ?? new List<ChainContainer>())
+            {
+                nested.Preset = null;
+                nested.AppliedPreset = null;
+            }
+        return packed.Count == 0 ? "" : System.Text.Json.JsonSerializer.Serialize(packed);
     }
 
     private async Task SaveAsked()
     {
         if (_shown() is not { } container) return;
-        var name = (await _dialogs().Prompt(_owner, "Save container preset", "Preset name", container.Name))?.Trim();
+        var name = (await _dialogs().SavePresetName(_owner, new PresetNameRequest("Save container preset", "Preset name:",
+            container.Name, _store.Names(), null, PresetRules.Error)))?.Trim();
         if (string.IsNullOrEmpty(name)) return;
         if (PresetRules.Error(name) is { } error) { await _dialogs().Tell(_owner, error, Caption); return; }
         if (_store.Names().Contains(name, StringComparer.OrdinalIgnoreCase)
@@ -116,8 +149,12 @@ public sealed class FxContainerPresets
             return false;
         }
         // The saved preset becomes the container's current one, so the box shows it (like a pick would; no reload happens).
-        if (!string.Equals(container.Preset, name, StringComparison.Ordinal))
-            _edit(live => { if (ChainTree.Find(live, container) is { } at) at.List[at.Index].Container!.Preset = name; });
+        _edit(live =>
+        {
+            if (ChainTree.Find(live, container) is not { } at || at.List[at.Index].Container is not { } box) return;
+            box.Preset = name;
+            box.AppliedPreset = PresetCombo.Remember(name, "Container", Snapshot(box));
+        });
         Fill();
         return true;
     }
@@ -148,22 +185,35 @@ public sealed class FxContainerPresets
         var contents = saved is null ? tree : tree[0].Children;
         var rig = _rig();
         var inside = ChainTree.Find(ChainTree.Tree(rig), target) is { } now ? ChainTree.Plugins(now.List[now.Index].Children).ToList() : new List<PluginSlot>();
-        if (rig.Plugins.Count - inside.Count + ChainTree.Plugins(contents).Count() > InputLimits.MaxPluginsPerTrack)
+        var addedCount = ChainTree.Plugins(contents).Count();
+
+        // The same question as every other preset load; here Replace (today's behaviour) changes this container, Add puts the preset after its slots.
+        var answer = await FxPresetLoadQuiz.AskAsync(_owner, _dialogs(), _settings, _saveSettings, name, rig.Plugins.Count,
+            FxPresetLoadPresenter.ShowsTwoInstruments(rig, chain));
+        if (answer is not { } choice) { Fill(); return false; }
+        var mode = choice.Mode;
+        var roomNeeded = mode == FxPresetLoadMode.Replace ? rig.Plugins.Count - inside.Count + addedCount : rig.Plugins.Count + addedCount;
+        if (roomNeeded > InputLimits.MaxPluginsPerTrack)
         {
             await _dialogs().Tell(_owner, $"The preset does not fit: a track holds at most {InputLimits.MaxPluginsPerTrack} plug-ins.", Caption);
             Fill();
             return false;
         }
-        _leaving(inside);
+        if (mode == FxPresetLoadMode.Replace) _leaving(inside);
         _edit(live =>
         {
             if (ChainTree.Find(live, target) is not { } at) return;
             var item = at.List[at.Index];
-            item.Children.Clear();
+            if (mode == FxPresetLoadMode.Replace) item.Children.Clear();
             item.Children.AddRange(contents);
-            if (saved is not null) { target.Enabled = saved.Enabled; target.Mix = saved.Mix; target.Routing = saved.Routing; }
-            target.Preset = name;
+            if (mode == FxPresetLoadMode.Replace)
+            {
+                if (saved is not null) { target.Enabled = saved.Enabled; target.Mix = saved.Mix; target.Routing = saved.Routing; }
+                target.Preset = name;
+            }
             ChainTree.Write(rig, live);   // the plug-ins that left the container leave the chain, the new ones join it
+            if (mode == FxPresetLoadMode.Replace && ChainTree.Find(live, target) is { } written && written.List[written.Index].Container is { } box)
+                box.AppliedPreset = PresetCombo.Remember(name, "Container", Snapshot(box));
         });
         if (skipped.Count > 0)
             await _dialogs().Tell(_owner, "These plug-ins of the preset are not installed or not approved here and were left out:\n\n" + string.Join("\n", skipped.Take(20)) + (skipped.Count > 20 ? $"\n… and {skipped.Count - 20} more" : ""), Caption);

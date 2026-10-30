@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using TabForge.AudioEngine.Plugins;
 using TabForge.AudioEngine.Synth;
+using TabForge.Services;
 using Xunit;
 
 namespace TabForge.Avalonia.Tests;
@@ -55,5 +56,21 @@ public class GmSynthInstanceTests
         var untouched = Render(b, note);
         Assert.NotEqual(expected[0], changed[0]);
         Assert.Equal(expected[0], untouched[0]);
+    }
+
+    [Fact]
+    public void The_silent_bank_renders_nothing_and_needs_no_bank_file()
+    {
+        var bank = new GmBank(windowsHost: true, bundledPath: Path.Combine(Path.GetTempPath(), "tabforge-no-such-bank", "GeneralUser-GS.sf2"));
+        Assert.True(bank.Select(SoundEngines.None, out var error), error);
+        using var synth = new GmSynth(Rate, Block, bank);
+        Assert.Equal(0, synth.Polyphony);
+        var silent = Render(synth, Msg(0x90, 60, 100));
+        Assert.Equal(0, Energy(silent));   // no voices, no render: silence, without gm.dls or a SoundFont anywhere
+        Assert.True(bank.Select("", out _));   // switching back leaves the silent bank
+        Assert.False(bank.Current.Silent);
+        if (!Available) return;   // a live synth needs gm.dls
+        using var live = new GmSynth(Rate, Block, bank);
+        Assert.True(live.Polyphony > 0);
     }
 }

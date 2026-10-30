@@ -17,6 +17,9 @@ public sealed class RigPreset
     /// <summary>Containers over <see cref="Plugins"/> (see <see cref="ChainContainer"/>); null without any, so chains without containers are written as before.</summary>
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public List<ChainContainer>? Containers { get; set; }
+    /// <summary>The articulation preset the track was last given; absent in older files.</summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public TabForge.Presets.AppliedPreset? AppliedArticulationPreset { get; set; }
 }
 
 public sealed class PluginSlot
@@ -59,6 +62,12 @@ public sealed class PluginSlot
     /// <summary>The preset name this plug-in came with from an imported chain (display only; gone once another preset is picked). Absent in older files.</summary>
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public string? PresetName { get; set; }
+    /// <summary>The FX preset last applied to this plug-in (name, kind, values as applied); absent in older files.</summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public TabForge.Presets.AppliedPreset? AppliedPreset { get; set; }
+    /// <summary>The whole MIDI processor list's preset last applied to this plug-in; absent in older files.</summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public TabForge.Presets.AppliedPreset? AppliedMidiPreset { get; set; }
     public Dictionary<string, string> ArticulationBindings { get; set; } = new();
     /// <summary>Instruments: the measured automatic pitch-match transpose in semitones (null: not measured yet). Applied right before the plug-in.</summary>
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
@@ -66,12 +75,32 @@ public sealed class PluginSlot
     /// <summary>Only in a bare plug-in list (a chain file, a default chain), on its first plug-in: the chain's containers, runs counted from this plug-in (see <see cref="ChainTree.Pack"/>).</summary>
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public List<ChainContainer>? ChainContainers { get; set; }
+    /// <summary>Only play this plug-in on the named output (driver kind and/or device); null: every output, as before (see <see cref="ActiveOnRule"/>).</summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public ActiveOnRule? ActiveOn { get; set; }
     /// <summary>Runtime only: a container this plug-in sits in is bypassed (set by <see cref="ChainTree.Write"/>), never saved.</summary>
     [System.Text.Json.Serialization.JsonIgnore] public bool GroupBypassed { get; set; }
     /// <summary>What the engine plays: the plug-in's own switch, unless a container around it is bypassed.</summary>
     [System.Text.Json.Serialization.JsonIgnore] public bool Plays => Enabled && !GroupBypassed;
     /// <summary>Runtime only: the engine cannot play this plug-in (not loaded, quarantined, untrusted or missing); set by the audio client, never saved.</summary>
     [System.Text.Json.Serialization.JsonIgnore] public bool Unavailable { get; set; }
+
+    /// <summary>Deep copy without a JSON roundtrip (see audit-performance).</summary>
+    public PluginSlot Clone(bool keepId = true) => new()
+    {
+        Id = keepId ? Id : Guid.NewGuid().ToString("N"),
+        Name = Name, Path = Path, Type = Type, Enabled = Enabled, Format = Format, RoleMode = RoleMode,
+        Vendor = Vendor, Pins = Pins,
+        MidiIn = new PluginMidiIn { Source = MidiIn.Source, TrackId = MidiIn.TrackId, Channel = MidiIn.Channel },
+        MidiProcessors = MidiProcessors.Select(m => new PluginMidiProcessor { Type = m.Type, Enabled = m.Enabled, Params = m.Params, AppliedPreset = m.AppliedPreset }).ToList(),
+        PassMidiThrough = PassMidiThrough, MidiOutToNext = MidiOutToNext, InstrumentAudio = InstrumentAudio,
+        SidechainTrackId = SidechainTrackId, MidiOutTrackId = MidiOutTrackId, OutputDb = OutputDb, Wet = Wet,
+        State = State, PresetName = PresetName, AppliedPreset = AppliedPreset, AppliedMidiPreset = AppliedMidiPreset,
+        ArticulationBindings = new Dictionary<string, string>(ArticulationBindings),
+        AutoPitchOffset = AutoPitchOffset,
+        ChainContainers = ChainContainers?.Select(c => c.Clone()).ToList(),
+        ActiveOn = ActiveOn?.Clone(),
+    };
 }
 
 /// <summary>A plug-in's MIDI input routing (property names are the file format).</summary>
@@ -97,6 +126,9 @@ public sealed class PluginMidiProcessor
     public bool Enabled { get; set; } = true;
     /// <summary>Parameters as a flat JSON object of numbers and strings.</summary>
     public string Params { get; set; } = "{}";
+    /// <summary>The processor preset last applied to this instance (name, kind, values as applied); absent in older files.</summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public TabForge.Presets.AppliedPreset? AppliedPreset { get; set; }
 }
 
 public static class PluginRoles

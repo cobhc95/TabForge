@@ -38,7 +38,17 @@ public sealed class PianoRollPresenter
 
     public PianoRollTimeMap Map => _map;
 
-    public PianoRollTool Tool { get; set; } = PianoRollTool.Select;
+    /// <summary>The tool in use; a new install starts on the Select tool (the arrow), and a tool picked since stays.</summary>
+    public PianoRollTool Tool { get; set; } = PianoRollTool.Pointer;
+
+    /// <summary>The scale highlight's pitch classes (null: no scale picked); the view sets it from the settings after each reload.</summary>
+    public IReadOnlySet<int>? Scale { get; set; }
+
+    /// <summary>True while new and moved notes snap to <see cref="Scale"/> (the toolbar's Lock toggle; needs a scale).</summary>
+    public bool ScaleLock { get; set; }
+
+    /// <summary>True while Up / Down transpose by diatonic steps of <see cref="Scale"/> (the toolbar's transpose mode; semitones with no scale).</summary>
+    public bool ScaleSteps { get; set; }
 
     /// <summary>The copied notes (starts relative to the first); empty until a copy or cut.</summary>
     public List<PianoRollNote> Clipboard { get; private set; } = new();
@@ -192,6 +202,13 @@ public sealed class PianoRollPresenter
 
     public void SelectAll() => Select(Enumerable.Range(0, _notes.Count));
 
+    /// <summary>Selects every note not selected now (nothing selected: selects all).</summary>
+    public void InvertSelection() => Select(Enumerable.Range(0, _notes.Count).Where(i => !_selected.Contains(i)).ToList());
+
+    /// <summary>Selects every note of <paramref name="pitch"/>; with <paramref name="add"/> the row joins the selection.</summary>
+    public void SelectPitchRow(int pitch, bool add = false) =>
+        Select(Enumerable.Range(0, _notes.Count).Where(i => _notes[i].Pitch == pitch), add);
+
     /// <summary>Selects every note of the pitch of note <paramref name="index"/>.</summary>
     public void SelectPitch(int index)
     {
@@ -201,10 +218,10 @@ public sealed class PianoRollPresenter
     }
 
     /// <summary>
-    /// Stores an edit's notes as one undo step labelled <paramref name="label"/>. A <see cref="PianoRollEditKind.Notes"/> edit of a tab track asks
+    /// Stores an edit's notes as one undo step labelled <paramref name="label"/> (<paramref name="lockSnap"/> false: the Lock to scale setting does not touch it, as step input follows its own filter). A <see cref="PianoRollEditKind.Notes"/> edit of a tab track asks
     /// first (once per visit); a "Cancel" answer applies nothing and leaves no step. True when the song changed.
     /// </summary>
-    public async Task<bool> CommitAsync(PianoRollEditResult edit, PianoRollEditKind kind, string label)
+    public async Task<bool> CommitAsync(PianoRollEditResult edit, PianoRollEditKind kind, string label, bool lockSnap = true)
     {
         if (_document() is not { } document || Track is not { } track || _source is not { } source) return false;
         if (kind == PianoRollEditKind.Notes && source.IsTab && !_tabConfirmed)
@@ -213,6 +230,7 @@ public sealed class PianoRollPresenter
             _tabConfirmed = true;
             if (Track is null) return false;   // the song changed under the prompt
         }
+        if (kind == PianoRollEditKind.Notes && lockSnap) edit = SnapLocked(edit);   // drawn, pasted and step-input notes join the scale too (quantize keeps time only, so a locked pitch is already in key)
         var wanted = edit.Selected.Where(i => i >= 0 && i < edit.Notes.Count).Select(i => edit.Notes[i]).ToList();
         var map = _map;
         bool changed;
@@ -238,10 +256,27 @@ public sealed class PianoRollPresenter
 
     private List<int> Sel => _selected.ToList();
 
-    public Task<bool> MoveAsync(double beats, int semitones, string label = "Move notes") =>
-        _selected.Count == 0 ? Task.FromResult(false) : CommitAsync(PianoRollEdits.Move(_notes, Sel, beats, semitones), PianoRollEditKind.Notes, label);
+    /// <summary>Snaps the edited notes to the scale when the lock is on (drawn, moved, transposed, pasted and step-input notes stay in key).</summary>
+    private PianoRollEditResult SnapLocked(PianoRollEditResult edit) =>
+        ScaleLock && Scale is not null ? PianoRollEdits.SnapToScale(edit.Notes, edit.Selected, Scale) : edit;
 
-    public Task<bool> TransposeAsync(int semitones) => MoveAsync(0, semitones, "Transpose notes");
+    public Task<bool> MoveAsync(double beats, int semitones, string label = "Move notes") =>
+        _selected.Count == 0 ? Task.FromResult(false) : CommitAsync(SnapLocked(PianoRollEdits.Move(_notes, Sel, beats, semitones)), PianoRollEditKind.Notes, label);
+
+    /// <summary>Transposes the selection: by scale steps in scale-steps mode with a scale (an octave follows as seven steps), else by
+    /// semitones; a locked scale then pulls the result into key. The Move notes popup passes its own choices (<paramref name="scaleSteps"/>:
+    /// the number is literal scale steps; <paramref name="snap"/>: pull into key for this move only, whatever the Lock setting says).</summary>
+    public Task<bool> TransposeAsync(int semitones, bool? snap = null, bool? scaleSteps = null)
+    {
+        if (_selected.Count == 0) return Task.FromResult(false);
+        var steps = (scaleSteps ?? ScaleSteps) && Scale is not null;
+        var edit = steps
+            ? PianoRollEdits.TransposeSteps(_notes, Sel, Scale!, scaleSteps is null ? semitones switch { >= 12 => 7, <= -12 => -7, _ => semitones } : semitones)
+            : PianoRollEdits.Move(_notes, Sel, 0, semitones);
+        if (snap is null) return CommitAsync(SnapLocked(edit), PianoRollEditKind.Notes, "Transpose notes");
+        if (snap == true && Scale is not null) edit = PianoRollEdits.SnapToScale(edit.Notes, edit.Selected, Scale);
+        return CommitAsync(edit, PianoRollEditKind.Notes, "Move notes", lockSnap: false);
+    }
 
     public Task<bool> ResizeAsync(double beats) =>
         _selected.Count == 0 ? Task.FromResult(false) : CommitAsync(PianoRollEdits.Resize(_notes, Sel, beats), PianoRollEditKind.Notes, "Resize notes");
@@ -306,13 +341,17 @@ public sealed class PianoRollPresenter
 
     /// <summary>The points of a controller lane on the shown track (none for a tab track).</summary>
     public List<PianoRollPoint> Points(int controller) =>
-        IsTab || OnEmptyLane || Track is not { } track || controller == PianoRollControllers.Velocity ? new List<PianoRollPoint>() : PianoRollControllers.Read(track, _map, controller, ClipLane);
+        OnEmptyLane || Track is not { } track || controller == PianoRollControllers.Velocity || _document() is not { } document ? new List<PianoRollPoint>()
+            : PianoRollControllers.Read(track, ControllerMap(document), controller, ClipLane);
 
-    /// <summary>Stores a controller lane's points as one undo step (no prompt: only MIDI tracks have controller lanes).</summary>
+    // A tab track keeps its controller points in a controller-only MIDI take on the track (performed clock, as the MIDI roll's own lanes).
+    private PianoRollTimeMap ControllerMap(IEditableDocument document) => IsTab ? PianoRollTimeMap.Performed(document.Project) : _map;
+
+    /// <summary>Stores a controller lane's points as one undo step (no prompt; on a tab track the first point creates a controller-only MIDI take).</summary>
     public Task<bool> CommitPointsAsync(int controller, IReadOnlyList<PianoRollPoint> points, string label)
     {
-        if (IsTab || OnEmptyLane || _document() is not { } document || Track is null || controller == PianoRollControllers.Velocity) return Task.FromResult(false);
-        var map = _map;
+        if (OnEmptyLane || _document() is not { } document || Track is null || controller == PianoRollControllers.Velocity) return Task.FromResult(false);
+        var map = ControllerMap(document);
         var lane = ClipLane;
         bool changed;
         _committing = true;

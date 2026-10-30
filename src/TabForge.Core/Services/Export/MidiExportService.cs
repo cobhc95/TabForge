@@ -14,28 +14,98 @@ namespace TabForge.Services;
 /// Standard MIDI File export. The file is written from the canonical playback timeline with each track's
 /// MIDI processors applied (the same chain the live engine runs), so an exported file plays what TabForge
 /// plays (repeats, ties, techniques, transpose, arpeggiation, humanize, velocity and controller changes,
-/// tempo map included). Articulation keyswitches stay out of the file (their pitch/velocity effects are baked in).
+/// tempo map included). Articulation keyswitches stay out of the file by default (their pitch/velocity
+/// effects are baked in); the dialog's articulation-map option writes them before their notes.
 /// Format 1 with a conductor track (tempo + time signature) and one chunk per score track.
 /// </summary>
 public static class MidiExportService
 {
     private const int Division = 480;   // ticks per quarter note
 
-    public static void Export(SongProject project, string path)
+    public static void Export(SongProject project, string path) => Export(project, path, (ArticulationExportOptions?)null);
+
+    /// <summary>Writes the whole song; <paramref name="articulations"/> null is exactly the old export (no keyswitch messages).</summary>
+    public static void Export(SongProject project, string path, ArticulationExportOptions? articulations)
+        => Export(project, path, articulations, writeSections: true);
+
+    /// <summary>Writes the whole song, honouring <paramref name="writeSections"/> (the dialog's section tick).</summary>
+    public static void Export(SongProject project, string path, ArticulationExportOptions? articulations, bool writeSections)
     {
         path = FilePathPolicy.OutputFile(path, "MIDI export", ".mid", ".midi");
-        var timeline = MidiExportProcessors.WithProcessors(project, MidiTimelineBuilder.Build(project, new PlaybackOptions
-        {
-            // An exported file represents the score, not the current practice state: ignore mute/solo.
-            RespectMuteSolo = false
-        }));
+        var timeline = Compile(project, articulations);
         var map = new TickMap(timeline, project);
+        var keepTechniques = articulations is { KeepTechniques: true };
 
-        var chunks = new List<byte[]> { BuildConductorTrack(project, timeline, map) };
+        var chunks = new List<byte[]> { BuildConductorTrack(project, timeline, map, writeSections) };
         var withEvents = timeline.Events.Select(e => e.TrackIndex).ToHashSet();   // an audio track's MIDI clips are in the timeline exactly as playback plays them
         for (var trackIndex = 0; trackIndex < project.Tracks.Count; trackIndex++)
-            if (!project.Tracks[trackIndex].IsAudio || withEvents.Contains(trackIndex)) chunks.Add(BuildTrackChunk(project, timeline, map, trackIndex));
+            if (!project.Tracks[trackIndex].IsAudio || withEvents.Contains(trackIndex)) chunks.Add(BuildTrackChunk(project, timeline, map, trackIndex, articulations is not null, keepTechniques));
 
+        WriteFile(path, chunks);
+    }
+
+    /// <summary>The timeline the export writes: the same compile playback uses, with an export's articulation choices when given.</summary>
+    private static ScoreTimeline Compile(SongProject project, ArticulationExportOptions? articulations)
+    {
+        var timeline = MidiTimelineBuilder.Build(project, new PlaybackOptions
+        {
+            // An exported file represents the score, not the current practice state: ignore mute/solo.
+            RespectMuteSolo = false,
+            ArticulationExport = articulations,
+        });
+        return MidiExportProcessors.WithProcessors(project, timeline, keepArticulations: articulations is not null);
+    }
+
+    /// <summary>
+    /// Exports only <paramref name="slice"/>: the ticked tracks inside the song range, with the range starting at
+    /// tick 0 (the offset removed). A slice covering the whole song with every non-audio track writes exactly what
+    /// <see cref="Export(SongProject, string)"/> writes. The tempo map and time signatures in force at the range start
+    /// are written first, later changes keep their relative ticks; a note starting before the range starts at 0 with its
+    /// remaining length, a note ending after the range is cut there; the last program/CC/aftertouch/bend values at the
+    /// range start are written at tick 0. Repeats play in performed order: the slice's milliseconds already map source
+    /// bars to performed passes the way Render maps them.
+    /// </summary>
+    public static void Export(SongProject project, string path, MidiExportSlice slice) => Export(project, path, slice, null);
+
+    /// <summary>Exports only the slice, with the export's articulation choices when given. A whole-song slice is the whole-song export (same bytes).</summary>
+    public static void Export(SongProject project, string path, MidiExportSlice slice, ArticulationExportOptions? articulations)
+        => Export(project, path, slice, articulations, writeSections: true);
+
+    /// <summary>Exports only the slice, honouring <paramref name="writeSections"/> (the dialog's section tick).</summary>
+    public static void Export(SongProject project, string path, MidiExportSlice slice, ArticulationExportOptions? articulations, bool writeSections)
+    {
+        var timeline = Compile(project, articulations);
+        var map = new TickMap(timeline, project);
+        var totalEnd = timeline.Bars.Count > 0 ? timeline.Bars[^1].EndMs : timeline.TotalMs;
+        var allTracks = MidiExportRange.TrackIndexes(project, null);
+        if (slice.Tracks.SetEquals(allTracks) && slice.StartMs <= 0 && slice.EndMs >= totalEnd - 1e-6)
+        {
+            // The whole song: the same bytes as the whole-song export (default None is identical except section markers).
+            // Reuses the timeline compiled above (calling Export again would compile twice and double-count Mapped/Kept).
+            path = FilePathPolicy.OutputFile(path, "MIDI export", ".mid", ".midi");
+            var keepTechniques = articulations is { KeepTechniques: true };
+            var whole = new List<byte[]> { BuildConductorTrack(project, timeline, map, writeSections) };
+            var withEvents = timeline.Events.Select(e => e.TrackIndex).ToHashSet();
+            for (var trackIndex = 0; trackIndex < project.Tracks.Count; trackIndex++)
+                if (!project.Tracks[trackIndex].IsAudio || withEvents.Contains(trackIndex)) whole.Add(BuildTrackChunk(project, timeline, map, trackIndex, articulations is not null, keepTechniques));
+            WriteFile(path, whole);
+            return;
+        }
+        path = FilePathPolicy.OutputFile(path, "MIDI export", ".mid", ".midi");
+        var startTick = map.TickOf(Math.Max(0, slice.StartMs));
+        var endTick = Math.Max(startTick, map.TickOf(Math.Max(slice.StartMs, slice.EndMs)));
+        var chunks = new List<byte[]> { MidiExportSlices.BuildConductorSlice(project, timeline, map, startTick, endTick, writeSections) };
+        foreach (var trackIndex in slice.Tracks.OrderBy(i => i))
+        {
+            if (trackIndex < 0 || trackIndex >= project.Tracks.Count || project.Tracks[trackIndex].IsAudio) continue;
+            chunks.Add(MidiExportSlices.BuildTrackSlice(project, timeline, map, trackIndex, slice.StartMs, slice.EndMs, startTick, endTick,
+                articulations is not null, articulations is { KeepTechniques: true }));
+        }
+        WriteFile(path, chunks);
+    }
+
+    private static void WriteFile(string path, List<byte[]> chunks)
+    {
         FilePathPolicy.WriteAtomically(path, fs =>
         {
             fs.Write(Encoding.ASCII.GetBytes("MThd"));
@@ -47,7 +117,9 @@ public static class MidiExportService
         });
     }
 
-    private static byte[] BuildConductorTrack(SongProject project, ScoreTimeline timeline, TickMap map)
+
+
+    private static byte[] BuildConductorTrack(SongProject project, ScoreTimeline timeline, TickMap map, bool writeSections = true)
     {
         var events = new List<(int Tick, byte[] Bytes)>();
         var nameBytes = new List<byte>();
@@ -56,6 +128,13 @@ public static class MidiExportService
         var first = new List<byte>();
         WriteTimeSig(first, 0, project.TimeSignatureNumerator, project.TimeSignatureDenominator);
         events.Add((0, first.ToArray()));
+        if (writeSections)
+            foreach (var (tick, name) in SectionEvents(project, timeline, map, 0, int.MaxValue))
+            {
+                var bytes = new List<byte>();
+                WriteMeta(bytes, 0, 0x06, Encoding.UTF8.GetBytes(name));
+                events.Add((tick, bytes.ToArray()));
+            }
 
         // Seed from the meta written above so bar 1 does not duplicate the same time signature.
         var lastNum = project.TimeSignatureNumerator;
@@ -94,16 +173,22 @@ public static class MidiExportService
         return BuildChunk(body, Math.Max(0, map.EndTick - cursor));
     }
 
-    private static byte[] BuildTrackChunk(SongProject project, ScoreTimeline timeline, TickMap map, int trackIndex)
+    private static byte[] BuildTrackChunk(SongProject project, ScoreTimeline timeline, TickMap map, int trackIndex, bool includeArticulations, bool keepTechniques = false)
     {
         var events = new List<byte>();
         var track = project.Tracks[trackIndex];
         WriteMeta(events, 0, 0x03, Encoding.ASCII.GetBytes(string.IsNullOrWhiteSpace(track.Name) ? "Track" : track.Name));
+        var markers = keepTechniques ? TechniqueMarkers(timeline) : null;
 
         var cursorTick = 0;
-        foreach (var e in timeline.Events.Where(x => x.TrackIndex == trackIndex && !x.IsArticulation))   // instrument keyswitches stay out of the file
+        foreach (var e in timeline.Events.Where(x => x.TrackIndex == trackIndex && (includeArticulations || !x.IsArticulation)))   // keyswitches only on the mapped option
         {
             var tick = map.TickOf(e.TimeMs);
+            if (markers is not null && e.IsNoteOn && markers.TryGetValue((e.TrackIndex, e.TimeMs, e.Channel, e.Data1), out var payload))
+            {
+                WriteMeta(events, Math.Max(0, tick - cursorTick), 0x7F, TechniqueData(e, payload));
+                cursorTick = Math.Max(cursorTick, tick);
+            }
             var delta = Math.Max(0, tick - cursorTick);
             cursorTick = Math.Max(cursorTick, tick);
             WriteVarLen(events, delta);
@@ -257,7 +342,61 @@ public static class MidiExportService
 
     // ---------- chunk helpers ----------
 
-    private static byte[] BuildChunk(List<byte> events, int endDelta = 0)
+    /// <summary>The TF1 markers of a timeline by the exact note-on they belong to (track, onset ms, channel, sounding pitch).</summary>
+    internal static Dictionary<(int Track, double Ms, int Channel, int Pitch), string> TechniqueMarkers(ScoreTimeline timeline)
+    {
+        var markers = new Dictionary<(int, double, int, int), string>();
+        foreach (var note in timeline.Notes)
+            if (note.TechniqueMarker is { Length: > 0 } payload && note.Channel >= 0)
+                markers[(note.TrackIndex, note.OnsetMs, note.Channel, note.Midi)] = payload;
+        return markers;
+    }
+
+    /// <summary>The marker text of one note: version, channel and sounding pitch, then the technique payload (other programs ignore it).</summary>
+    internal static string MarkerText(ScoreEvent on, string payload) =>
+        $"{TechniqueMarker.Prefix}{on.Channel & 0x0F}:{on.Data1 & 0x7F}:{payload}";
+
+    internal static byte[] MarkerBytes(ScoreEvent on, string payload) =>
+        Encoding.Latin1.GetBytes(MarkerText(on, payload));
+
+    /// <summary>Sequencer-specific technique data: 0x7D then the same TF1 text (never a marker/cue, so hosts show no sections).</summary>
+    internal static byte[] TechniqueData(ScoreEvent on, string payload)
+    {
+        var text = MarkerBytes(on, payload);
+        var data = new byte[text.Length + 1];
+        data[0] = 0x7D;
+        Buffer.BlockCopy(text, 0, data, 1, text.Length);
+        return data;
+    }
+
+    /// <summary>A delta-0 technique sequencer-specific event (type 7F) for the slice writer, which replaces the first (delta) byte.</summary>
+    internal static byte[] MarkerChunk(ScoreEvent on, string payload)
+    {
+        var bytes = new List<byte>();
+        WriteMeta(bytes, 0, 0x7F, TechniqueData(on, payload));
+        return bytes.ToArray();
+    }
+
+    /// <summary>Section markers in tick order: each song section at its first performed start tick (trimmed UTF-8 name).</summary>
+    internal static List<(int Tick, string Name)> SectionEvents(SongProject project, ScoreTimeline timeline, TickMap map, int fromTick, int toTick)
+    {
+        var result = new List<(int, string)>();
+        if (project.Markers.Count == 0 || timeline.Bars.Count == 0) return result;
+        var firstOf = new Dictionary<int, int>();
+        for (var i = 0; i < timeline.Bars.Count; i++)
+            firstOf.TryAdd(timeline.Bars[i].Bar, map.TickOfBar(i));
+        foreach (var marker in project.Markers.OrderBy(m => m.MeasureIndex))
+        {
+            var name = (marker.Title ?? "").Trim();
+            if (name.Length == 0 || !firstOf.TryGetValue(marker.MeasureIndex, out var tick)) continue;
+            if (tick < fromTick || tick > toTick) continue;
+            if (name.Length > 256) name = name[..256];
+            result.Add((tick, name));
+        }
+        return result;
+    }
+
+    internal static byte[] BuildChunk(List<byte> events, int endDelta = 0)
     {
         WriteVarLen(events, endDelta); events.Add(0xFF); events.Add(0x2F); events.Add(0x00);
         var output = new List<byte>();
@@ -269,7 +408,7 @@ public static class MidiExportService
         return output.ToArray();
     }
 
-    private static void WriteVarLen(List<byte> b, int v)
+    internal static void WriteVarLen(List<byte> b, int v)
     {
         v = Math.Max(0, v);
         var tmp = new List<byte> { (byte)(v & 0x7F) };
@@ -279,7 +418,7 @@ public static class MidiExportService
         b.AddRange(tmp);
     }
 
-    private static void WriteMeta(List<byte> b, int delta, byte type, byte[] data)
+    internal static void WriteMeta(List<byte> b, int delta, byte type, byte[] data)
     {
         WriteVarLen(b, delta); b.Add(0xFF); b.Add(type); WriteVarLen(b, data.Length); b.AddRange(data);
     }
@@ -287,14 +426,14 @@ public static class MidiExportService
     private static void WriteTempo(List<byte> b, int delta, int bpm)
         => WriteTempoMpq(b, delta, (int)Math.Round(60_000_000.0 / Math.Clamp(bpm, 20, 400)));
 
-    private static void WriteTempoMpq(List<byte> b, int delta, int mpq)
+    internal static void WriteTempoMpq(List<byte> b, int delta, int mpq)
     {
         mpq = Math.Clamp(mpq, 1, 0xFFFFFF);
         WriteVarLen(b, delta); b.Add(0xFF); b.Add(0x51); b.Add(0x03);
         b.Add((byte)((mpq >> 16) & 0xFF)); b.Add((byte)((mpq >> 8) & 0xFF)); b.Add((byte)(mpq & 0xFF));
     }
 
-    private static void WriteTimeSig(List<byte> b, int delta, int num, int denom)
+    internal static void WriteTimeSig(List<byte> b, int delta, int num, int denom)
     {
         var e = 0; var d = Math.Clamp(denom, 1, 64);
         while (d > 1) { d /= 2; e++; }

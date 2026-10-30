@@ -44,12 +44,17 @@ public sealed class FxChainContainers
     private readonly TextBlock _note = new() { TextWrapping = global::Avalonia.Media.TextWrapping.Wrap, Margin = new Thickness(0, BarTop, 0, 0), IsVisible = false, Name = "ContainerRoutingNote" };
     private readonly StackPanel _presetBar = new() { Orientation = Orientation.Horizontal, Margin = new Thickness(0, BarTop, 0, 0), Name = "ContainerPresetBar" };
     private ChainContainer? _shown;
+    private readonly FxActiveOnButton _activeOn = new("ContainerActiveOnButton");
 
     /// <summary>The container pane; hidden unless a container row is focused.</summary>
     public StackPanel Pane { get; } = new() { IsVisible = false, Margin = new Thickness(0, 0, 0, PaneBottom), Name = "ContainerPane" };
     /// <summary>The preset bar's place in the pane (filled by the container presets).</summary>
     public StackPanel PresetBar => _presetBar;
     public ChainContainer? Shown => _shown;
+    /// <summary>The container header's Active on button (tests read it).</summary>
+    internal Button ActiveOnButton => _activeOn.Button;
+    /// <summary>Opens the Active on popup for a container under the given button (set by the window).</summary>
+    public Action<ChainContainer, Control>? OpenActiveOn { get; set; }
     public ContextMenu Menu { get; } = MenuStability.CreateContextMenu();
     /// <summary>Entries the window puts in front of the container entries of the right-click menu (the plug-in commands), made at each opening; null: none.</summary>
     public Func<IEnumerable<Control>>? LeadingItems { get; set; }
@@ -72,7 +77,8 @@ public sealed class FxChainContainers
         ToolTip.SetTip(mixLabel, MixTip);
         ToolTip.SetTip(_on, "Untick to bypass every plug-in in this container; their own switches stay as they are");
         ToolTip.SetTip(_name, "The container's name (Enter applies)");
-        foreach (var child in new Control[] { label, _name, _on, mixLabel, _mix, _count }) line.Children.Add(child);
+        foreach (var child in new Control[] { label, _name, _on, mixLabel, _mix, _count, _activeOn.Button }) line.Children.Add(child);
+        _activeOn.Button.Click += (_, _) => { if (_shown is { } shown) OpenActiveOn?.Invoke(shown, _activeOn.Button); };
         Pane.Children.Add(line);
         Pane.Children.Add(_presetBar);
         Pane.Children.Add(_note);
@@ -98,6 +104,7 @@ public sealed class FxChainContainers
         _on.IsChecked = container.Enabled;
         _mix.Value = container.Mix;
         _count.Text = FxChainRows.Count(count);
+        _activeOn.Update(container.ActiveOn, true);
         _note.Text = RoutingNote;
         _note.IsVisible = container.OwnRouting;
         return true;

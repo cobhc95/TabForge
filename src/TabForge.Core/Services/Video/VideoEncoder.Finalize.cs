@@ -44,7 +44,7 @@ public sealed partial class VideoEncoder
                 Note($"pacing off: the encoder output nothing for {PaceGiveUpMs} ms with {st.Received - st.Encoded} frames in (received {st.Received}, encoded {st.Encoded})");
                 break;
             }
-            Thread.Sleep(1);
+            Thread.Sleep(1);   // the encoder worker only (Pace runs on it from Pump): never the UI thread
         }
         Interlocked.Add(ref _pacedMs, Environment.TickCount64 - start);
     }
@@ -67,6 +67,7 @@ public sealed partial class VideoEncoder
         Step(clock, FinishSteps[0], $"{Counts()}; sink writer video [{Statistics(writer, video)}], audio [{Statistics(writer, audio)}]");
         if (_abandoned.IsSet) { Note("finalize step skipped: the encoder was given up on (cancelled or stalled), the file is not finalised"); return; }
         Step(clock, FinishSteps[1], "calling IMFSinkWriter.Finalize on " + ThreadText());
+        // Test hook only (SimulateFinalizeHang): the worker waits here until an outside Abort abandons it. Production never waits here.
         if (_options.SimulateFinalizeHang) _abandoned.Wait();
         else writer.FinalizeWriter();
         Step(clock, FinishSteps[2], $"finalize writer took {clock.ElapsedMilliseconds} ms, file {FileLength(_path)} B");

@@ -20,11 +20,11 @@ namespace TabForge.Avalonia.Platform;
 public sealed class FretboardContextMenu : IMenuCommandRunner
 {
     public const string ViewId = "Fretboard.View", ScaleId = "Fretboard.Scale", FindScaleId = "Fretboard.FindScale", ClearScaleId = "Fretboard.ClearScale",
-        NoteNamesId = "Fretboard.NoteNames", PreviewId = "Fretboard.Preview", LeftHandedId = "Fretboard.LeftHanded", LockId = "Fretboard.LockSize",
+        NoteNamesId = "Fretboard.NoteNames", PreviewId = "Fretboard.Preview", PreviewPreviousId = "Fretboard.PreviewPrevious", LeftHandedId = "Fretboard.LeftHanded", LockId = "Fretboard.LockSize",
         PositionId = "Fretboard.Position", DockId = "Fretboard.Dock", SettingsId = "Fretboard.Settings";
 
     private const string ShowThisTrackAs = "Show this track as", Scale = "Scale", FindScale = "Find scale…", ClearScale = "Clear scale";
-    private const string NoteNames = "Note names", PreviewNext = "Preview next notes", LeftHanded = "Left-handed";
+    private const string NoteNames = "Note names", PreviewNext = "Preview next notes", PreviewPrevious = "Preview previous notes", LeftHanded = "Left-handed";
     private const string LockSize = "Lock fretboard size", Position = "Position", Dock = "Dock", Settings = "Fretboard settings…";
     private const string TopArg = "top", BottomArg = "bottom";
     /// <summary>The Position setting's values, in the order the submenu lists them.</summary>
@@ -101,13 +101,15 @@ public sealed class FretboardContextMenu : IMenuCommandRunner
         var rows = new List<MenuSpec>
         {
             new() { Header = ShowThisTrackAs, Children = InstrumentViews.All.Select(v => Choice(ViewId, v, v, v == ViewFor(track, editing.InstrumentView))).ToList() },
-            new() { Header = Scale, Children = ScaleRows(editing.ScaleHighlight) },
         };
+        // Drum tracks have no scale: the drum map's menu keeps the view rows only.
+        if (kind != InstrumentPanelKind.Drums) rows.Add(new() { Header = Scale, Children = ScaleRows(editing.ScaleHighlight) });
         if (kind != InstrumentPanelKind.Drums)
         {
             rows.Add(MenuSpec.Separator());
             rows.Add(Toggle(NoteNamesId, NoteNames, editing.ShowNoteNames));
             rows.Add(Toggle(PreviewId, PreviewNext, editing.PreviewNotesEnabled));
+            rows.Add(Toggle(PreviewPreviousId, PreviewPrevious, editing.PreviewPreviousNotesEnabled));
             if (kind != InstrumentPanelKind.Keyboard) rows.Add(Toggle(LeftHandedId, LeftHanded, editing.LeftHanded));
         }
         rows.Add(MenuSpec.Separator());
@@ -176,6 +178,7 @@ public sealed class FretboardContextMenu : IMenuCommandRunner
             case FindScaleId: _findScale(); return;
             case NoteNamesId: editing.ShowNoteNames = !editing.ShowNoteNames; break;
             case PreviewId: editing.PreviewNotesEnabled = !editing.PreviewNotesEnabled; break;
+            case PreviewPreviousId: editing.PreviewPreviousNotesEnabled = !editing.PreviewPreviousNotesEnabled; break;
             case LeftHandedId: editing.LeftHanded = !editing.LeftHanded; break;
             case LockId: appearance.LockInstrumentSize = !appearance.LockInstrumentSize; break;
             case PositionId: appearance.FretboardPosition = argument ?? appearance.FretboardPosition; break;

@@ -173,6 +173,32 @@ public static partial class PianoRollEdits
         return n with { Start = Math.Max(0, start), Length = Math.Max(MinLength, end - start) };
     }
 
+    /// <summary>Flips each listed note's mute on its own (a paint gesture: mixed notes each toggle once).</summary>
+    public static PianoRollEditResult FlipMute(IReadOnlyList<PianoRollNote> notes, IReadOnlyCollection<int> selected)
+    {
+        var list = notes.ToList();
+        foreach (var i in Valid(notes, selected)) list[i] = list[i] with { Muted = !list[i].Muted };
+        return new PianoRollEditResult(list, Valid(notes, selected));
+    }
+
+    /// <summary>Cuts each listed note at its beat (nothing for cuts outside their note); one step for a split-line drag.</summary>
+    public static PianoRollEditResult SplitMany(IReadOnlyList<PianoRollNote> notes, IEnumerable<(int Index, double At)> cuts)
+    {
+        var list = notes.ToList();
+        var chosen = new List<int>();
+        foreach (var (index, at) in cuts.OrderBy(c => c.Index))
+        {
+            if (index < 0 || index >= list.Count) continue;
+            var n = list[index];
+            if (at <= n.Start + MinLength / 2 || at >= n.End - MinLength / 2) continue;
+            list[index] = n with { Length = at - n.Start };
+            chosen.Add(index);
+            chosen.Add(list.Count);
+            list.Add(n with { Start = at, Length = n.End - at });
+        }
+        return new PianoRollEditResult(list, chosen);
+    }
+
     /// <summary>The indexes of the notes whose rectangle meets the box from beat <paramref name="from"/> to <paramref name="to"/> and pitch
     /// <paramref name="low"/> to <paramref name="high"/> (both inclusive).</summary>
     public static List<int> InBox(IReadOnlyList<PianoRollNote> notes, double from, double to, int low, int high)
@@ -182,4 +208,13 @@ public static partial class PianoRollEdits
             if (notes[i].Pitch >= low && notes[i].Pitch <= high && notes[i].Start < to && notes[i].End > from) list.Add(i);
         return list;
     }
+
+    /// <summary>Snaps every selected note to the nearest pitch of <paramref name="scale"/> (ties up with <paramref name="direction"/> >= 0);
+    /// a null scale keeps every pitch.</summary>
+    public static PianoRollEditResult SnapToScale(IReadOnlyList<PianoRollNote> notes, IReadOnlyCollection<int> selected, IReadOnlySet<int>? scale, int direction = 0) =>
+        Map(notes, selected, n => n with { Pitch = PianoRollScaleLock.Snap(n.Pitch, scale, direction) });
+
+    /// <summary>Moves every selected note by <paramref name="steps"/> scale degrees of <paramref name="scale"/> (semitones with no scale).</summary>
+    public static PianoRollEditResult TransposeSteps(IReadOnlyList<PianoRollNote> notes, IReadOnlyCollection<int> selected, IReadOnlySet<int>? scale, int steps) =>
+        Map(notes, selected, n => n with { Pitch = PianoRollScaleLock.Step(n.Pitch, scale, steps) });
 }

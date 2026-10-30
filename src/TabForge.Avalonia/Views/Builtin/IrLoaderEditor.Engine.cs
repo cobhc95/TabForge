@@ -6,6 +6,7 @@ using Avalonia.Controls;
 using Avalonia.Markup.Xaml.MarkupExtensions;
 using Avalonia.Media;
 using TabForge.Audio.Contracts;
+using TabForge.Audio.Contracts.Builtin;
 using TabForge.AudioEngine.Builtin;
 using TabForge.AudioEngine.Builtin.IrLoader;
 using TabForge.Services;

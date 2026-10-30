@@ -70,15 +70,17 @@ public static class InstrumentPlaybackLists
 
     /// <summary>
     /// Fills <paramref name="target"/> for the song time <paramref name="nowMs"/>. <paramref name="notes"/> is one track's canonical
-    /// note stream, sorted by onset (<see cref="NoteTimeline"/>); <paramref name="previewHorizon"/> is how many movements to preview.
+    /// note stream, sorted by onset (<see cref="NoteTimeline"/>); <paramref name="previewHorizon"/> is how many movements to preview,
+    /// negative to skip the look-ahead lists entirely (the drum map shows sounding notes only); <paramref name="includeRecent"/> false skips the recent trail.
     /// </summary>
-    public static void Fill(InstrumentPlaybackSnapshot target, NoteEvent[] notes, double nowMs, int previewHorizon, double holdMs = DefaultHoldMs)
+    public static void Fill(InstrumentPlaybackSnapshot target, NoteEvent[] notes, double nowMs, int previewHorizon, double holdMs = DefaultHoldMs, bool includeRecent = true)
     {
         target.Clear();
         var lo = NoteTimeline.FirstIndexAfter(notes, nowMs);
         FillNow(target, notes, lo, nowMs);
-        FillRecent(target, notes, lo, nowMs, holdMs);
+        if (includeRecent) FillRecent(target, notes, lo, nowMs, holdMs);
         if (target.Now.Count == 0 && lo > 0) target.Released.Add(notes[lo - 1]);
+        if (previewHorizon < 0) return;
         FillMovements(target, notes, lo, Math.Clamp(previewHorizon, 0, 10));
     }
 

@@ -65,6 +65,14 @@ public static class Program
         try { capture = CaptureArguments.TryParse(args) is not null; }
         catch (Exception ex) when (ex is FormatException or ArgumentException or NotSupportedException or IOException) { Console.Error.WriteLine(ex.Message + " " + Capture.CaptureLaunch.Usage); return Capture.CaptureLaunch.NotRunExitCode; }
         if (capture) return Capture.CaptureLaunch.Run(args);
+        // A confirmed "Reset entire app" leaves this marker after the window closed; run it before the settings store or any
+        // other app file is opened, and before the single-instance lock file is taken (so the wipe may remove stale locks).
+        try { TabForge.Services.Reset.PendingAppWipe.TryRun(AppFolders.Current); }
+        catch (Exception ex)
+        {
+            try { Services.Trace.Error(Services.Trace.Ui, "reset app at startup: " + ex.Message); }
+            catch (Exception) { } // swallow: the startup trace must never stop the launch
+        }
         // Shootout-M shared diagnostic (all contenders): log every first-chance managed exception so a death that
         // bypasses Main's catch still leaves a trace. Best-effort only; never throws.
         InstallFirstChanceLog();

@@ -35,7 +35,7 @@ public sealed class ScoreEvent
     /// <summary>Count-in clicks remain enabled even when the playback metronome is toggled off.</summary>
     public bool IsCountInClick;
     public bool IsMetronomeAccent;
-    /// <summary>An articulation keyswitch or controller the compiler sent before a note (see ScoreToMidiCompiler.Articulations): it belongs to its track's instrument, so a muted track still sends it (the latched state stays right) and a MIDI file export leaves it out.</summary>
+    /// <summary>An articulation keyswitch or controller the compiler sent before a note (see ScoreToMidiCompiler.Articulations): it belongs to its track's instrument, so a muted track still sends it (the latched state stays right); a MIDI file export leaves it out unless the dialog's articulation-map option is on.</summary>
     public bool IsArticulation;
     /// <summary>Tick within the beat on a 12-tick grid, allowing 1, 2, 3 or 4 subdivisions per beat.</summary>
     public int MetronomeTick;
@@ -82,6 +82,8 @@ public sealed class NoteEvent
     public string? Technique;
     /// <summary>Strummed chord: 1 = down-stroke (toward the high strings), -1 = up-stroke, 0 = not strummed.</summary>
     public sbyte Strum;
+    /// <summary>The compact TF1 technique payload a "Keep techniques for TabForge" export writes at this note's tick; null when it has none.</summary>
+    public string? TechniqueMarker;
 
     /// <summary>Indices into <see cref="ScoreTimeline.Events"/> of every note-off for this note.</summary>
     public List<int> OffEventIndices { get; } = new();
@@ -151,7 +153,7 @@ public sealed class ScoreTimeline
     public double CountInMs;
     /// <summary>Absolute time of the first *sounding* event (start cell offset included).</summary>
     public double PlayFromMs;
-    /// <summary>The start skipped performed bars, so the setup carries the mix values chased from them (<see cref="ScoreEvent.IsChased"/>).</summary>
+    /// <summary>The start skipped performed bars or lane (clip controller) points, so the setup carries the mix and lane values chased from them (<see cref="ScoreEvent.IsChased"/>).</summary>
     public bool StartedAfterMixPoints;
 
     /// <summary>

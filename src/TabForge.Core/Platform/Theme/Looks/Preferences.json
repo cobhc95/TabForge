@@ -13,6 +13,19 @@
     ]
   },
   {
+    "name": "DangerButton", "kind": "Button",
+    "rules": [
+      { "name": "Hover", "when": [ { "property": "IsMouseOver", "value": "True" } ],
+        "set": [ { "part": "ButtonBorder", "property": "Border.Background", "brush": "HoverBrush" } ] },
+      { "name": "Pressed", "when": [ { "property": "IsPressed", "value": "True" } ],
+        "set": [ { "part": "ButtonBorder", "property": "Border.Background", "brush": "AccentSoftBrush" } ] },
+      { "name": "Focus", "when": [ { "property": "IsKeyboardFocused", "value": "True" } ],
+        "set": [ { "part": "ButtonBorder", "property": "Border.BorderBrush", "brush": "AccentBrush" } ] },
+      { "name": "Disabled", "when": [ { "property": "IsEnabled", "value": "False" } ],
+        "set": [ { "property": "Opacity", "literal": "0.42" } ] }
+    ]
+  },
+  {
     "name": "PrefsPrimaryButton", "kind": "Button",
     "rules": [
       { "name": "Hover", "when": [ { "property": "IsMouseOver", "value": "True" } ],

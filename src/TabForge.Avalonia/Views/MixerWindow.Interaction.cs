@@ -42,6 +42,7 @@ public sealed partial class MixerWindow
     private Control? _dragMoving;
     private Point _dragOrigin;
     private bool _dragArmed;
+    internal int DragVisualMoves { get; private set; }
 
     // ---------- Master and the live input row ----------
 
@@ -300,7 +301,9 @@ public sealed partial class MixerWindow
             var dy = e.GetPosition(_groups).Y - _dragOrigin.Y;
             if (!_dragArmed && Math.Abs(dy) < DragStartDistance) return;
             _dragArmed = true;
-            moving.RenderTransform = new TranslateTransform(0, dy);
+            if (moving.RenderTransform is not TranslateTransform shift) moving.RenderTransform = shift = new TranslateTransform();
+            shift.Y = dy; shift.X = 0;
+            DragVisualMoves++;
             moving.ZIndex = DragZIndex;
             moving.Opacity = DragHighlightOpacity;
         };
@@ -324,6 +327,14 @@ public sealed partial class MixerWindow
     {
         if (_dragMoving is not null) { _dragMoving.RenderTransform = null; _dragMoving.ZIndex = 0; _dragMoving.Opacity = 1; }
         _dragHandle = null; _dragMoving = null; _dragArmed = false;
+    }
+
+    /// <summary>Test seam: moves the dragged panel like PointerMoved without a pointer (counts visual moves, never rebuilds).</summary>
+    internal void SimulateDragVisual(Control moving, double dy)
+    {
+        if (moving.RenderTransform is not TranslateTransform shift) moving.RenderTransform = shift = new TranslateTransform();
+        shift.Y = dy; shift.X = 0;
+        DragVisualMoves++;
     }
 
     private double TopOf(Control element) => element.TranslatePoint(default, _groups)?.Y ?? 0;

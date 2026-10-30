@@ -18,6 +18,21 @@ public static class TrackRowTint
     /// <summary>The width of the opaque track-colour stripe at the left of a light-theme header and lane.</summary>
     public const double StripeWidth = 3;
 
+    /// <summary>How much more saturated the selected strip is than the track colour, in both themes.</summary>
+    public const double SelectedStripSaturationBoost = 0.25;
+
+    /// <summary>How much lighter the dark theme's selected strip is than the track colour.</summary>
+    public const double SelectedStripDarkLift = 0.22;
+
+    /// <summary>The least lightness the dark theme's selected strip keeps, so a very dark track still shows.</summary>
+    public const double SelectedStripDarkMinLightness = 0.45;
+
+    /// <summary>How much darker the light theme's selected strip is than the track colour.</summary>
+    public const double SelectedStripLightDarken = 0.12;
+
+    /// <summary>The least lightness the light theme's selected strip keeps.</summary>
+    public const double SelectedStripLightMinLightness = 0.18;
+
     /// <summary>The tint as an RGBA colour with its alpha, or null when the theme is light, the track does not tint its row or <paramref name="tintPercent"/> is 0.</summary>
     public static Rgba? Of(TrackModel track, bool light, int tintPercent)
     {
@@ -47,5 +62,39 @@ public static class TrackRowTint
         if (!light || !ColourHex.TryParse(track.ColorHex, out var parsed)) return;
         var tamed = SectionColourPresenter.Tame(parsed);
         d.Rect(tamed.ToUi(), null, x, y, StripeWidth, height);
+    }
+
+    /// <summary>The selected row's left-edge strip colour: the track's own colour, brighter and more saturated in the dark theme, darker and more saturated in the light theme, with a minimum lightness so a very dark track still shows. Tracks without a colour use the default track colour.</summary>
+    public static UiColor SelectedStrip(TrackModel track, bool light)
+    {
+        if (!ColourHex.TryParse(track.ColorHex, out var parsed))
+            ColourHex.TryParse(NamedColourSwatches.TrackDefaultColour, out parsed);
+        var tamed = SectionColourPresenter.Tame(parsed);
+        var baseColour = tamed.ToUi();
+        var (hue, saturation, lightness) = ThemeColours.ToHsl(baseColour);
+        var saturated = Math.Min(1, saturation + SelectedStripSaturationBoost);
+        var level = light
+            ? Math.Max(lightness - SelectedStripLightDarken, SelectedStripLightMinLightness)
+            : Math.Max(lightness + SelectedStripDarkLift, SelectedStripDarkMinLightness);
+        return HslToUi(baseColour, hue, saturated, Math.Clamp(level, 0, 1));
+    }
+
+    /// <summary>Paints the selected row's left-edge strip at <paramref name="x"/> over the full row height, slightly rounded, in the background below the cells.</summary>
+    public static void DrawSelectedStrip(IDrawContext d, TrackModel track, bool light, double x, double y, double height)
+    {
+        d.Rect(SelectedStrip(track, light), null, x, y, ChromeMetrics.SelectedStripWidth, height, ChromeMetrics.SelectedStripCorner);
+    }
+
+    private static UiColor HslToUi(UiColor keepAlpha, double hue, double saturation, double lightness)
+    {
+        var q = lightness < 0.5 ? lightness * (1 + saturation) : lightness + saturation - lightness * saturation;
+        var p = 2 * lightness - q;
+        byte Channel(double t)
+        {
+            t = (t % 1 + 1) % 1;
+            var v = t < 1.0 / 6 ? p + (q - p) * 6 * t : t < 0.5 ? q : t < 2.0 / 3 ? p + (q - p) * (2.0 / 3 - t) * 6 : p;
+            return (byte)Math.Clamp(Math.Round(v * 255), 0, 255);
+        }
+        return keepAlpha with { R = Channel(hue / 360 + 1.0 / 3), G = Channel(hue / 360), B = Channel(hue / 360 - 1.0 / 3) };
     }
 }

@@ -79,6 +79,8 @@ public sealed partial class VideoEncoder : IVideoEncoder
         VideoEncoderRules.Validate(width, height, fps, audioFormat);
         var encoder = new VideoEncoder(path, width, height, fps, audioFormat, live, options ?? new VideoEncoderOptions());
         encoder._worker.Start();
+        // The worker always signals _ready in its finally (Start throws before this when the thread cannot start), so this
+        // cannot wait forever; export and recording flows call Open on a worker, never on the UI thread.
         encoder._ready.Wait();
         if (encoder._error is { } e) { encoder._worker.Join(); encoder._queue.Dispose(); throw e as VideoEncoderException ?? new VideoEncoderException(e.Message, e); }
         return encoder;
@@ -90,7 +92,7 @@ public sealed partial class VideoEncoder : IVideoEncoder
         ThrowIfFaulted();
         if (Interlocked.Exchange(ref _firstWrite, 1) == 0) Note($"write: first frame from {ThreadText()}");
         var size = _width * _height * 4;
-        if (bgra.Length < size) throw new ArgumentException("The frame is smaller than width x height x 4 bytes.", nameof(bgra));
+        if (bgra.Length != size) throw new ArgumentException("The frame is not exactly width x height x 4 bytes.", nameof(bgra));
         if (_live) { if (!_room.Wait(0)) { Interlocked.Increment(ref _dropped); return false; } }
         else while (!_room.Wait(50)) ThrowIfFaulted();
         var slot = TakeSlot();
@@ -212,8 +214,7 @@ public sealed partial class VideoEncoder : IVideoEncoder
         catch (Exception e) when (e is IOException or UnauthorizedAccessException) { Trace.Error(Trace.Engine, $"VideoEncoder: could not delete {what} {path}: {e.Message}"); }
     }
 
-    public void Dispose() { try { Finish(); } catch (VideoEncoderException) { } // swallow: finishing an already-finished encoder is a no-op
- }
+    public void Dispose() => VideoDisposeHelper.TryFinish(Finish);
 
     private void ThrowIfFaulted() { if (_error is { } e) throw e as VideoEncoderException ?? new VideoEncoderException(e.Message, e); }
 
@@ -238,7 +239,12 @@ public sealed partial class VideoEncoder : IVideoEncoder
         }
     }
 
-    private static unsafe void CopyInto(VideoSlot slot, ReadOnlySpan<byte> bgra) => bgra.CopyTo(new Span<byte>((void*)slot.Pointer, bgra.Length));
+    private unsafe void CopyInto(VideoSlot slot, ReadOnlySpan<byte> bgra)
+    {
+        var size = _width * _height * 4;
+        if (bgra.Length != size) throw new InvalidDataException("The video frame is not width x height x 4 bytes.");
+        bgra.CopyTo(new Span<byte>((void*)slot.Pointer, size));
+    }
 
     private VideoSlot NewSlot()
     {

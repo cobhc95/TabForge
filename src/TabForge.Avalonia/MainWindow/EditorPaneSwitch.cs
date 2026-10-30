@@ -33,6 +33,7 @@ public sealed class EditorPaneSwitch
     private readonly MainWindowDocumentPanes _panes;
     private readonly LateCommands _commands = new();
     private readonly EditingSettings _fallbackEditing = new();
+    private readonly FollowSettings _fallbackFollow = new();
     private SongDocument? _watched;
     private (SongDocument? Song, int Track, bool Roll) _shown;
     private (SongDocument Song, int Track)? _auto;   // the track a MIDI take click opened in the piano roll without saving a view choice
@@ -54,6 +55,7 @@ public sealed class EditorPaneSwitch
             Session = () => songs.Songs.Count == 0 ? null : playback?.For(songs.Active),
             Snap = () => panes.Arrangement?.Transport.Snap,
             ToggleSnap = () => panes.Arrangement?.Transport.ToggleSnap(),
+            Hotkeys = () => settings?.Settings.Hotkeys ?? new HotkeySettings(),
             OpenSnapSettings = () => panes.Arrangement?.Transport.OpenSnapSettings(),
             Audition = (track, pitch) =>
             {
@@ -62,6 +64,7 @@ public sealed class EditorPaneSwitch
                     settings?.Settings.Audio.PreviewLengthMs ?? new AudioSettings().PreviewLengthMs), "Note preview", report);
             },
             Editing = () => settings?.Settings.Editing ?? _fallbackEditing,
+            Follow = () => settings?.Settings.Follow ?? _fallbackFollow,
             Appearance = () => settings?.Settings.Appearance ?? new AppearanceSettings(),
             SaveSettings = () => settings?.SaveSettingsQuietly(),
             MakeLoop = (start, startCell, end, endCell, fromSelection) => panes.Selection.LoopPianoRollSpan(start, end, fromSelection, startCell, endCell),
@@ -182,6 +185,7 @@ public sealed class EditorPaneSwitch
     {
         _commands.Inner = commands;
         _panes.Selection.SelectAllFirst = () => _shown.Roll && PianoRoll.IsKeyboardFocusWithin && PianoRoll.RunEdit(null);
+        _panes.Selection.InvertFirst = () => _shown.Roll && PianoRoll.IsKeyboardFocusWithin && PianoRoll.RunInvert();
         commands.Add(ScoreMenus.ShowInPianoRollId, () => SetView(TrackEditorView.PianoRoll));
         commands.Add(PianoRollMenus.ShowInScoreId, () => SetView(TrackEditorView.Score));
         commands.AddWithArgument(TimelineMenus.EmptyLaneClickId, value =>   // the take-lane menu's "Clicking an empty lane shows" rows: the Preferences value, read live by the next click

@@ -22,6 +22,9 @@ namespace TabForge.Avalonia.Features.Recording.View;
 /// </summary>
 public sealed class TrackInputPicker : Button
 {
+    /// <summary>A subclass has its own style key and would get no Button theme (invisible): use the stock Button theme.</summary>
+    protected override Type StyleKeyOverride => typeof(Button);
+
     /// <summary>The narrowest drop-down: a long input name reads whole, whatever the width of the button.</summary>
     private const double ListMinimum = 260;
     private const double ListMaximum = 360;

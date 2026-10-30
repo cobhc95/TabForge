@@ -33,6 +33,9 @@ public sealed class InstrumentPanelStrip : Grid
 
     private readonly ScorePreviewView _score;
     private readonly Button _scales = ScalesButton();
+
+    /// <summary>The Scales button, the anchor of the scale popup; invisible when the pane has no scale (a drum track).</summary>
+    internal Control ScalesAnchor => _scales;
     private readonly Canvas _scalesLayer = new();
     private readonly Func<AvaloniaPlaybackSession?> _activePlayback;
     private readonly FretboardContextMenu? _contextMenu;
@@ -250,7 +253,8 @@ public sealed class InstrumentPanelStrip : Grid
         ApplyPaneHeightLimits(_track);
         ClearPlaybackNotesKey();
         ShowPlaybackNotes();
-        _scales.IsVisible = _track is not null;
+        // Drum tracks have no scale: the Scales button stays hidden on the drum map.
+        _scales.IsVisible = _track is not null && Panel.Kind != InstrumentPanelKind.Drums;
         PlaceScalesButton();
     }
 

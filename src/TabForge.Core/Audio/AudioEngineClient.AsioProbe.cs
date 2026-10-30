@@ -127,7 +127,7 @@ public sealed partial class AudioEngineClient
         lock (_gate) _asioAsked.Remove(id);
         StopIfStartedFor(startedHere);
         if (!answered) return (null, false);
-        var answer = asked.Task.Result;
+        var answer = await asked.Task;
         return answer.Rates.Count == 0 && answer.PreferredBuffer <= 0 ? (null, true) : (answer, false);   // an explicit empty answer: unreadable, given up
     }
 
@@ -143,7 +143,7 @@ public sealed partial class AudioEngineClient
         var asked = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
         lock (_gate) _panelAsked[id] = (asked, Stopwatch.GetTimestamp());
         Send(EngineCommand.ShowAsioPanel, new ProbeAsioMessage(id, driver).Write);
-        var error = await Task.WhenAny(asked.Task, Task.Delay(timeoutMs)) == asked.Task ? asked.Task.Result : "The driver's control panel did not report back in time.";
+        var error = await Task.WhenAny(asked.Task, Task.Delay(timeoutMs)) == asked.Task ? await asked.Task : "The driver's control panel did not report back in time.";
         lock (_gate) _panelAsked.Remove(id);
         StopIfStartedFor(startedHere);
         return error;

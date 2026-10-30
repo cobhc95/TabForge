@@ -25,6 +25,8 @@ public sealed class SettingDescriptor : Presenters.IPreferenceRow
     public string Unit { get; init; } = "";
     public string? DependsOn { get; init; }
     public string? DependsOnValue { get; init; }
+    /// <summary>Shown under a disabled dependent row instead of the "Choose … above to use this." hint; null = the automatic hint.</summary>
+    public string? DisabledNote { get; init; }
     public string? HotkeyAction { get; init; }
     public IReadOnlyList<string> Keywords { get; init; } = Array.Empty<string>();
     public required Func<object?> Get { get; init; }
@@ -237,14 +239,14 @@ public static partial class SettingsCatalog
         (Playback, "Several tabs", "tabs.playbackonswitch"),
 
         (AudioVst, "Output device", "vst.driver vst.device vst.asio.configure vst.buffer vst.samplerate vst.renderlimiter vst.asio.out* vst.asio.outlast* vst.followvolume* vst.livelimiter* vst.popguard*"),
-        (AudioVst, "Playback engine", "vst.soundengine vst.soundfont.download vst.playall* vst.autogm* vst.winmidilatency*"),
+        (AudioVst, "Playback engine", "vst.soundengine vst.playall* vst.autogm* vst.winmidilatency*"),
         (AudioVst, "Plug-ins", "vst.folders vst.commonfolders* vst.rememberscan* vst.dock* vst.ontop* vst.scanstandard* vst.allowinstalled* vst.isolate* vst.autopitch* vst.startuptracks* vst.quarantine*"),
 
         (Recording, "Input device", "vst.input vst.asio.inputs vst.asio.infirst* vst.asio.oneinput* vst.allinputs* vst.inputsshown*"),
         (Recording, "Timing", "vst.recordoffset*"),
         (Recording, "MIDI recording", "vst.midiover* vst.midiquantize*"),
 
-        (Tabs, "Opening and closing tabs", "tabs.closebutton tabs.lastclosed tabs.newposition tabs.openincurrent tabs.dropnewtab tabs.playing"),
+        (Tabs, "Opening and closing tabs", "tabs.closebutton tabs.lastclosed tabs.newposition tabs.openincurrent tabs.dropnewtab tabs.midiimport tabs.playing"),
         (Tabs, "Tab look", "tabs.style* tabs.width* tabs.maxwidth* tabs.minwidth* tabs.height* tabs.fontsize*"),
         (Tabs, "Mouse actions", "tabs.doubleclick* tabs.middleclick* tabs.middlebar*"),
         (Tabs, "Dragging between windows", "tabs.detach* tabs.merge*"),
@@ -351,7 +353,7 @@ public static partial class SettingsCatalog
             {
                 Key = d.Key, Category = page, Group = group, Title = d.Title, Description = d.Description,
                 Kind = d.Kind, Choices = d.Choices, Min = d.Min, Max = d.Max, Step = d.Step, Decimals = d.Decimals,
-                Unit = d.Unit, DependsOn = d.DependsOn, DependsOnValue = d.DependsOnValue,
+                Unit = d.Unit, DependsOn = d.DependsOn, DependsOnValue = d.DependsOnValue, DisabledNote = d.DisabledNote,
                 HotkeyAction = d.HotkeyAction, Keywords = d.Keywords,
                 Get = d.Get, Set = d.Set, More = place?.More ?? false, Order = place?.Order ?? int.MaxValue,
                 SearchText = SearchTextOf(page, d.Title, d.Description, group, d.Key, oldName, KindWords(d.Kind), string.Join(' ', d.Keywords))
@@ -362,9 +364,9 @@ public static partial class SettingsCatalog
 
     private static SettingDescriptor Bool(string category, string group, string key, string title, Action<bool> set,
         Func<bool> get, string description, string keywords = "", string? hotkey = null, string? dependsOn = null,
-        string? dependsOnValue = null) =>
+        string? dependsOnValue = null, string? disabledNote = null) =>
         Make(category, group, key, title, description, SettingKind.Bool, () => get(), v => set(v is bool b && b),
-            keywords, dependsOn, hotkey: hotkey, dependsOnValue: dependsOnValue);
+            keywords, dependsOn, hotkey: hotkey, dependsOnValue: dependsOnValue, disabledNote: disabledNote);
 
     /// <summary>A "Copy and paste" row: "Ask every time" plus each answer of the question.</summary>
     private static SettingDescriptor PasteRow(EditingSettings ed, PasteQuestion q, string description, string keywords)
@@ -422,11 +424,11 @@ public static partial class SettingsCatalog
     private static SettingDescriptor Make(string category, string group, string key, string title, string description,
         SettingKind kind, Func<object?> get, Action<object?> set, string keywords, string? dependsOn = null,
         double min = 0, double max = 100, double step = 1, int decimals = 0, string unit = "",
-        string? hotkey = null, IReadOnlyList<string>? choices = null, string? dependsOnValue = null) => new()
+        string? hotkey = null, IReadOnlyList<string>? choices = null, string? dependsOnValue = null, string? disabledNote = null) => new()
     {
         Key = key, Category = category, Group = group, Title = title, Description = description, Kind = kind,
         Get = get, Set = set, Keywords = keywords.Split(' ', StringSplitOptions.RemoveEmptyEntries),
-        DependsOn = dependsOn, DependsOnValue = dependsOnValue, Min = min, Max = max, Step = step, Decimals = decimals, Unit = unit,
+        DependsOn = dependsOn, DependsOnValue = dependsOnValue, DisabledNote = disabledNote, Min = min, Max = max, Step = step, Decimals = decimals, Unit = unit,
         HotkeyAction = hotkey, Choices = choices ?? Array.Empty<string>()
     };
 }

@@ -20,6 +20,9 @@ public sealed record MediaMatch(string MissingPath, string? FoundPath, int Match
 /// <summary>Missing-media detection and the by-name folder search. Both read the file system: call them on a worker.</summary>
 public static class MediaRelink
 {
+    /// <summary>Folder search enumeration: below the folder, links never followed, system entries skipped.</summary>
+    private static EnumerationOptions RelinkOptions() => new() { RecurseSubdirectories = true, IgnoreInaccessible = true, AttributesToSkip = FileAttributes.ReparsePoint | FileAttributes.System };
+
     /// <summary>The most files one search looks at before it stops (a whole drive is not walked forever).</summary>
     public const int MaxFilesSearched = 500_000;
 
@@ -49,7 +52,7 @@ public static class MediaRelink
     {
         var wanted = missing.GroupBy(m => m.Name, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.Select(m => m.FullPath).ToList(), StringComparer.OrdinalIgnoreCase);
         var best = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);   // wanted name -> nearest file found
-        var options = new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true, AttributesToSkip = FileAttributes.ReparsePoint | FileAttributes.System };
+        var options = RelinkOptions();
         var looked = 0;
         try
         {
@@ -81,7 +84,7 @@ public static class MediaRelink
         var wanted = missing.GroupBy(m => m.Name, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.Select(m => m.FullPath).Distinct(StringComparer.OrdinalIgnoreCase).ToList(), StringComparer.OrdinalIgnoreCase);
         var hits = new Dictionary<string, List<FileInfo>>(StringComparer.OrdinalIgnoreCase);
         var root = Path.GetFullPath(folder);
-        var options = new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true, AttributesToSkip = FileAttributes.ReparsePoint | FileAttributes.System };
+        var options = RelinkOptions();
         var looked = 0;
         try
         {

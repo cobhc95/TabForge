@@ -7,9 +7,10 @@ namespace TabForge.Docking;
 // Tests: no dedicated test class.
 internal static class FloatingSessionRules
 {
-    /// <summary>Takes the panel out of the layout and opens it in a new floating root (a new id, its tab host named <paramref name="hostId"/>); returns the floating roots left empty.</summary>
+    /// <summary>Takes the panel out of the layout and opens it in a new floating root (a new id, its tab host named <paramref name="hostId"/>); returns the floating roots left empty. The instrument pane's share is remembered first so docking it back keeps its size.</summary>
     internal static List<string> OpenFloating(DockWorkspaceState state, string panelId, string hostId, UiRect bounds, out DockFloatingState floating)
     {
+        if (panelId == InstrumentDockSizeMemory.InstrumentId) DockLayoutTree.RememberInstrumentShare(state);
         var emptied = DockWorkspaceRules.RemoveEverywhere(state, panelId);
         state.ClosedPanels.Remove(panelId);
         floating = new DockFloatingState

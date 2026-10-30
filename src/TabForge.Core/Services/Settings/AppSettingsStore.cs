@@ -19,7 +19,9 @@ public sealed class AppSettingsStore : IDisposable
 
     // Key: none (one store per process). Ceiling: one instance. Thread: created at start-up on the UI thread; tests swap it on the
     // test thread. Reads and the first creation are guarded by _sharedGate so two threads never create two stores.
-    private static AppSettingsStore? _shared;
+    // The mutable part lives in an instance: the static facade only holds a readonly slot.
+    private sealed class SharedSlot { public AppSettingsStore? Current; }
+    private static readonly SharedSlot SharedState = new();
     private static readonly object _sharedGate = new();
 
     /// <summary>The app-wide store. The app creates it at startup; code that runs without it gets it on first use.</summary>
@@ -28,7 +30,7 @@ public sealed class AppSettingsStore : IDisposable
     /// <summary>App start: loads the settings file once for the whole app.</summary>
     internal static AppSettingsStore InitializeShared()
     {
-        lock (_sharedGate) return _shared ??= CreateDefault();
+        lock (_sharedGate) return SharedState.Current ??= CreateDefault();
     }
 
     /// <summary>Test seam: real main windows read the shared store; a test points it at its own scratch store so no user file is read or written. Dispose puts the previous one back.</summary>
@@ -36,19 +38,19 @@ public sealed class AppSettingsStore : IDisposable
     {
         lock (_sharedGate)
         {
-            var previous = _shared;
-            _shared = store;
+            var previous = SharedState.Current;
+            SharedState.Current = store;
             return new SharedRestore(previous);
         }
     }
 
     private sealed class SharedRestore(AppSettingsStore? previous) : IDisposable
     {
-        public void Dispose() { lock (_sharedGate) _shared = previous; }
+        public void Dispose() { lock (_sharedGate) SharedState.Current = previous; }
     }
 
     /// <summary>App exit: writes a pending debounced save now. Does nothing when the store was never created (headless runs).</summary>
-    internal static void FlushShared() => _shared?.Flush();
+    internal static void FlushShared() => SharedState.Current?.Flush();
 
     private static AppSettingsStore CreateDefault()
     {

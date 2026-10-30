@@ -4,8 +4,10 @@ using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using TabForge.Avalonia.Transport;
+using TabForge.Avalonia.Views;
 using TabForge.Documents;
 using TabForge.Models;
+using TabForge.Playback;
 using TabForge.Plugins;
 using TabForge.Services;
 
@@ -27,6 +29,7 @@ public sealed class FxChainWindows
     private readonly MainWindowSettings? _settings;
     private readonly PluginTrust _trust;
     private readonly Dictionary<(SongDocument Document, string Track), FxChainWindow> _open = new();
+    private readonly Dictionary<(SongDocument Document, string Track), MidiProcessingWindow> _midiOnly = new();   // MIDI windows opened without a chain window (Export MIDI links)
     private readonly DocumentWindowVisibility _visibility = new();
     private readonly Dictionary<SongDocument, EventHandler> _pruning = new();   // per song: floating editors of removed plug-ins and tracks close even with no chain window open
 
@@ -130,6 +133,27 @@ public sealed class FxChainWindows
     /// <summary>Track.MidiProcessing: the chain window of the track with the MIDI processing window of its focused (else first) plug-in on top.</summary>
     public void OpenMidiProcessing(TrackModel track) => Open(track).OpenMidiProcessing();
 
+    /// <summary>The Export MIDI "Create" / "View / edit" link: the MIDI processing window of the track's instrument on its Articulations tab, owned by the Export MIDI dialog
+    /// (so it stays above it). It never makes the FX chain window: the window is built from the track and the song. A chain window already open for the track is left alone
+    /// and its own MIDI window is used. <paramref name="over"/> is for a test or caller that already has the covering window; null finds the visible Export MIDI dialog.</summary>
+    public MidiProcessingWindow OpenArticulations(TrackModel track, Window? over = null)
+    {
+        var slot = ArticulationExportOptions.InstrumentSlotOf(track) ?? track.Rig.Plugins.FirstOrDefault(p => p.Type == PluginSlotType.Instrument);
+        over ??= _owner.OwnedWindows.LastOrDefault(window => window is MidiExportWindow && window.IsVisible);
+        if (WindowOf(track) is { IsVisible: true } chain) return chain.OpenMidiProcessing(slot, articulations: true)!;
+        var document = _active();
+        var key = (document, KeyOf(track));
+        if (_midiOnly.TryGetValue(key, out var existing) && existing.IsVisible && ReferenceEquals(existing.Tag, slot)) { existing.OpenArticulationsTab(); existing.Activate(); return existing; }
+        if (_midiOnly.Remove(key, out var stale)) stale.Close();
+        var host = new SongFxChainHost(document, _playback, _settings, () => _owner, () => TrackListChanged?.Invoke(), _trust);
+        var window = new MidiProcessingWindow(host, track, slot, change => host.Edit(track, () => ChainTree.Edit(track.Rig, _ => change()))) { Tag = slot };
+        window.OpenArticulationsTab();
+        _midiOnly[key] = window;
+        window.Closed += (_, _) => { if (_midiOnly.TryGetValue(key, out var current) && ReferenceEquals(current, window)) _midiOnly.Remove(key); };
+        window.Show(over ?? _owner);
+        return window;
+    }
+
     /// <summary>Mixer.MasterFx.</summary>
     public FxChainWindow OpenMaster() => Open(MixerBuses.MasterTrack(_active().Project));
 
@@ -154,12 +178,14 @@ public sealed class FxChainWindows
     public void CloseWhere(Func<TrackModel, bool> close)
     {
         foreach (var window in _open.Values.ToList()) if (close(window.Track)) window.Close();
+        foreach (var (key, window) in _midiOnly.ToList()) if (_active().Project.Tracks.FirstOrDefault(t => KeyOf(t) == key.Track) is { } t && close(t)) window.Close();
     }
 
     /// <summary>A song's tab closes: the chain windows of its tracks and buses close with it (the monitor chain stays, it is app-wide).</summary>
     public void CloseSong(SongDocument song)
     {
         foreach (var (key, window) in _open.ToList()) if (ReferenceEquals(key.Document, song)) window.Close();
+        foreach (var (key, window) in _midiOnly.ToList()) if (ReferenceEquals(key.Document, song)) window.Close();
         FloatingEditors.CloseSong(song);
         if (_pruning.Remove(song, out var prune)) song.DisplayStateChanged -= prune;
     }

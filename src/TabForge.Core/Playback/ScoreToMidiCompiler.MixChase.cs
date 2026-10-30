@@ -3,9 +3,9 @@ using TabForge.Models;
 
 namespace TabForge.Playback;
 
-// Owns: replaying the mix points of the skipped bars into the channel setup.
-// Does not own: emitting mix points in the performed range (EmitMix).
-// Tests: TestMixPointsSurviveSeek.
+// Owns: replaying the mix points of the skipped bars and the lane (clip controller) points before the start into the channel setup.
+// Does not own: emitting mix points in the performed range (EmitMix) or lane points in range (ScoreToMidiCompiler.Clips).
+// Tests: TestMixPointsSurviveSeek, TabForge.Avalonia.Tests.PianoRollControllerTests.
 internal sealed partial class ScoreToMidiCompiler
 {
     private bool _chasing;
@@ -44,7 +44,12 @@ internal sealed partial class ScoreToMidiCompiler
     }
 
     private void RecordChase(int channel, int statusBase, int data1, int data2, int trackIndex) =>
-        _chased[(trackIndex, channel, statusBase, statusBase == 0xC0 ? 0 : data1)] = statusBase == 0xC0 ? data1 : data2;
+        _chased[(trackIndex, channel, statusBase, statusBase is 0xC0 or 0xD0 or 0xE0 ? 0 : data1)] = statusBase switch
+        {
+            0xC0 or 0xD0 => data1,   // one-data-byte messages: the program or pressure is the chase value
+            0xE0 => (data2 << 7) | (data1 & 0x7F),   // pitch bend chases as one 14-bit value
+            _ => data2,
+        };
 
     /// <summary>Writes the chased state over the base channel setup (appended to the setup when it has no such message, before any note is emitted).</summary>
     private void ApplyChase()
@@ -52,19 +57,22 @@ internal sealed partial class ScoreToMidiCompiler
         foreach (var ((track, channel, status, data1), value) in _chased)
         {
             var e = _timeline.ChannelSetup.FirstOrDefault(s => s.TrackIndex == track && s.Channel == channel
-                && (s.Status & 0xF0) == status && (status == 0xC0 || s.Data1 == data1));
+                && (s.Status & 0xF0) == status && (status is 0xC0 or 0xD0 or 0xE0 || s.Data1 == data1));
             if (e is null)
             {
                 var device = track >= 0 && track < _project.Tracks.Count ? OutputDeviceOf(_project.Tracks[track]) : -1;
                 e = new ScoreEvent
                 {
                     TimeMs = _timeline.PlayFromMs, DeviceId = device, Channel = channel, Status = status | (channel & 0x0F),
-                    Data1 = status == 0xC0 ? value : data1, Data2 = status == 0xC0 ? 0 : value, TrackIndex = track, IsSetup = true
+                    Data1 = status is 0xC0 or 0xD0 ? value : status == 0xE0 ? value & 0x7F : data1,
+                    Data2 = status is 0xC0 or 0xD0 ? 0 : status == 0xE0 ? (value >> 7) & 0x7F : value,
+                    TrackIndex = track, IsSetup = true
                 };
                 _timeline.Events.Add(e);
                 _timeline.ChannelSetup.Add(e);
             }
-            else if (status == 0xC0) e.Data1 = value;
+            else if (status == 0xC0 || status == 0xD0) e.Data1 = value;
+            else if (status == 0xE0) { e.Data1 = value & 0x7F; e.Data2 = (value >> 7) & 0x7F; }
             else e.Data2 = value;
             e.IsChased = true;
         }

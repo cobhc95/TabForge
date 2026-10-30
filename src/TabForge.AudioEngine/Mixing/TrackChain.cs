@@ -1,5 +1,5 @@
 using TabForge.Audio.Contracts;
-using TabForge.AudioEngine.Midi;
+using TabForge.Core.Midi;
 using TabForge.AudioEngine.Plugins;
 
 namespace TabForge.AudioEngine.Mixing;
@@ -182,7 +182,8 @@ public sealed partial class TrackChain : IDisposable
             return tail;
         }
     }
-    private float _peak, _inputPeak;
+    private float _peak, _inputPeak, _prePeakL, _prePeakR, _postPeakL, _postPeakR, _rmsL, _rmsR;
+    private int _preClips, _postClips;
 
     public int Slot => _slot;
     public IReadOnlyList<IPluginInstance> Plugins { get; }
@@ -408,13 +409,27 @@ public sealed partial class TrackChain : IDisposable
         var l = _a[0]; var r = _a[1];
         var postL = PostL; var postR = PostR;
         var peak = 0f;
+        float prePeakL = 0, prePeakR = 0, postPeakL = 0, postPeakR = 0, squareL = 0, squareR = 0;
+        var preClips = 0; var postClips = 0;
         var poison = 0f;   // x - x is 0 for finite x, NaN otherwise (branch-free)
         for (var i = 0; i < frames; i++)
         {
-            var ol = l[i] * gl; var or = r[i] * gr;
+            var il = l[i]; var ir = r[i];
+            var al = MathF.Abs(il); var ar = MathF.Abs(ir);
+            if (al > prePeakL) prePeakL = al;
+            if (ar > prePeakR) prePeakR = ar;
+            if (al >= 1f) preClips++;
+            if (ar >= 1f) preClips++;
+            squareL += il * il; squareR += ir * ir;
+            var ol = il * gl; var or = ir * gr;
             postL[i] = ol; postR[i] = or;
             poison += (ol - ol) + (or - or);
-            peak = MathF.Max(peak, MathF.Max(MathF.Abs(ol), MathF.Abs(or)));
+            var aol = MathF.Abs(ol); var aor = MathF.Abs(or);
+            peak = MathF.Max(peak, MathF.Max(aol, aor));
+            if (aol > postPeakL) postPeakL = aol;
+            if (aor > postPeakR) postPeakR = aor;
+            if (aol >= 1f) postClips++;
+            if (aor >= 1f) postClips++;
         }
         if (poison != 0f)
         {
@@ -428,6 +443,15 @@ public sealed partial class TrackChain : IDisposable
         if (arm < 0 && _inputPeak != 0) { _inputPeak = 0; shared.SetInputPeak(_slot, 0); }
         _peak = MathF.Max(peak, _peak * 0.9f); // short hold so meters are readable
         shared.SetPeak(_slot, _peak);
+        // The track-row meters: the same short hold on both taps, a smoothed RMS for the RMS reading, and the running clip counts.
+        _prePeakL = MathF.Max(prePeakL, _prePeakL * 0.9f); _prePeakR = MathF.Max(prePeakR, _prePeakR * 0.9f);
+        _postPeakL = MathF.Max(postPeakL, _postPeakL * 0.9f); _postPeakR = MathF.Max(postPeakR, _postPeakR * 0.9f);
+        var n = MathF.Max(1, frames);
+        var blockRmsL = MathF.Sqrt(squareL / n); var blockRmsR = MathF.Sqrt(squareR / n);
+        _rmsL = MathF.Sqrt(_rmsL * _rmsL * 0.9f + blockRmsL * blockRmsL * 0.1f);
+        _rmsR = MathF.Sqrt(_rmsR * _rmsR * 0.9f + blockRmsR * blockRmsR * 0.1f);
+        _preClips += preClips; _postClips += postClips;
+        shared.SetTrackLevels(_slot, _prePeakL, _prePeakR, _postPeakL, _postPeakR, _rmsL, _rmsR, _preClips, _postClips);
     }
 
     private readonly float[][] _wired;

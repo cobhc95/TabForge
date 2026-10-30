@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using Avalonia.Controls;
 using Avalonia.Layout;
-using TabForge.AudioEngine.Builtin;
+using TabForge.Audio.Contracts.Builtin;
 using TabForge.Avalonia.Views.Dialogs;
 
 namespace TabForge.Avalonia.Views.Fx;

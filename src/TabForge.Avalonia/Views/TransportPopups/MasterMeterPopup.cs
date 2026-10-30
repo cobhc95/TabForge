@@ -14,7 +14,8 @@ namespace TabForge.Avalonia.Views.TransportPopups;
 // Tests: TabForge.Avalonia.Tests.MasterMeterBarTests.
 public static class MasterMeterPopup
 {
-    public const string Title = "METER", MeasureLabel = "Measure", ShowNumberLabel = "Show number", PeakHoldLabel = "Peak hold", ResetClipLabel = "Reset clip";
+    public const string Title = "METER", MeasureLabel = "Measure", ShowNumberLabel = "Show number", PeakHoldLabel = "Peak hold", ResetClipLabel = "Reset clip",
+        ApplyToAllLabel = "Apply to all tracks", TapLabel = "Tap";
     private const string CloseTip = "Close meter settings";
     private const double ResetTopMargin = 10;
 
@@ -31,6 +32,13 @@ public static class MasterMeterPopup
         var holds = MasterMeterSettings.HoldChoices;
         frame.AddChoice(PeakHoldLabel, holds.Select(MasterMeterSettings.HoldLabel), holds.ToList().IndexOf(settings.HoldSeconds),
             index => { settings.HoldSeconds = holds[index]; changed(); });
+        if (settings is TrackMeterSettings track)
+        {
+            frame.AddCheck(ApplyToAllLabel, track.ApplyToAll, value => track.ApplyToAll = value, changed);
+            var taps = TrackMeterSettings.Taps;
+            frame.AddChoice(TapLabel, taps.Select(TrackMeterSettings.TapLabel), taps.ToList().IndexOf(TrackMeterSettings.ParseTap(track.Tap)),
+                index => { track.Tap = taps[index]; changed(); });
+        }
         var reset = new Button { Content = ResetClipLabel, HorizontalAlignment = HorizontalAlignment.Left, };
         reset.WithMargin(0, ResetTopMargin, 0, 0);
         AutomationProperties.SetName(reset, ResetClipLabel);
@@ -38,4 +46,7 @@ public static class MasterMeterPopup
         frame.Rows.Children.Add(reset);
         return frame;
     }
+
+    /// <summary>The track meters' menu: the master's rows plus Apply to all tracks and the pre/post-fader tap.</summary>
+    public static TransportPopupFrame CreateTrack(TrackMeterSettings settings, Action changed, Action resetClip) => Create(settings, changed, resetClip);
 }

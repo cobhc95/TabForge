@@ -132,7 +132,7 @@ public class TimelineSettingsBindingTests
 
         Assert.Equal(255, TrackRowTint.MutedAlpha(0));
         Assert.Equal((byte)Math.Round(255 * (1 - 0.9)), TrackRowTint.MutedAlpha(100));
-        Assert.Equal(0.25, TimelinePlayheadMarks.TintOpacity);
+        Assert.Equal(0.16, HoverShade.RowOverlayOpacity);
     }
 
     [AvaloniaFact]

@@ -39,6 +39,9 @@ public sealed class TabSettings
     /// <summary>A song file dropped on the window opens in a new tab instead of replacing the selected tab.</summary>
     public bool DropOpensInNewTab { get; set; }
 
+    /// <summary>What opening a MIDI file does: ask each time, or always make tab and notation tracks / MIDI tracks (<see cref="MidiImportModes"/>).</summary>
+    public string MidiImportMode { get; set; } = MidiImportModes.Ask;
+
     /// <summary>What happens to playback in other tabs when a different tab is opened or selected.</summary>
     public string PlaybackOnTabSwitch { get; set; } = TabPlaybackActions.ContinuePlayingPrevious;
 

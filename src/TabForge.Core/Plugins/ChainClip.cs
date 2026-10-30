@@ -15,7 +15,12 @@ public static class ChainClip
     public static string? Snapshot(RigPreset rig, IReadOnlyCollection<object> tags)
     {
         // Everything below works on a copy: writing the tree sets bypass flags and container runs on the objects it walks.
-        var copy = JsonSerializer.Deserialize<RigPreset>(JsonSerializer.SerializeToUtf8Bytes(rig))!;
+        var copy = new RigPreset
+        {
+            Name = rig.Name, ArticulationMap = rig.ArticulationMap, AutoPitchMatch = rig.AutoPitchMatch,
+            Plugins = rig.Plugins.Select(p => p.Clone()).ToList(),
+            Containers = rig.Containers?.Select(c => c.Clone()).ToList(),
+        };
         var want = new HashSet<object>(ReferenceEqualityComparer.Instance);
         foreach (var tag in tags)
         {

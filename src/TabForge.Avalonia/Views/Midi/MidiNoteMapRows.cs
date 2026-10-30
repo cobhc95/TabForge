@@ -7,6 +7,7 @@ using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Markup.Xaml.MarkupExtensions;
 using Avalonia.Media;
+using TabForge.Avalonia.Views.Dialogs;
 using TabForge.Avalonia.Views.NoteMaps;
 using TabForge.Avalonia.Views.Presets;
 using TabForge.Plugins;
@@ -21,13 +22,15 @@ namespace TabForge.Avalonia.Views.Midi;
 public sealed class MidiNoteMapRows
 {
     public const string UnverifiedTip = "Written from the instrument's documentation and not checked against the instrument: compare it with the instrument's own MIDI map before relying on it.";
-    private const double ComboWidth = 200, RowWidth = 460, ButtonIndent = 140;
     private readonly Window _owner;
     private readonly JsonObject _values;
     private readonly Action<string, string> _set;
     private readonly Dictionary<string, ComboBox> _combos = new();
     private readonly DrumMapStore _mapStore = new();
-    private readonly TextBlock _summary = new() { TextWrapping = global::Avalonia.Media.TextWrapping.Wrap, Margin = new Thickness(ButtonIndent, 8, 0, 0), Name = "NoteMapSummary" };
+    private readonly TextBlock _summary = new() { TextWrapping = global::Avalonia.Media.TextWrapping.Wrap, Name = "NoteMapSummary" };
+
+    /// <summary>The editor column's scroller: while set, labels stay inside its viewport instead of pushing editors out.</summary>
+    public ScrollViewer? Viewer { get; set; }
     private bool _filling;
 
     /// <param name="values">The selected processor's parameter values (From, To, Overrides).</param>
@@ -42,8 +45,8 @@ public sealed class MidiNoteMapRows
     /// <summary>One map parameter's row; the "Instrument expects" row also carries the map buttons and the summary.</summary>
     public Control Row(MidiParamInfo p)
     {
-        var combo = new ComboBox { Width = ComboWidth, Name = "NoteMap_" + p.Key };
-        ToolTip.SetTip(combo, p.Tip.Length > 0 ? p.Tip : p.Label);
+        var combo = new ComboBox { Name = "NoteMap_" + p.Key, HorizontalAlignment = HorizontalAlignment.Stretch };
+        MidiSharedRows.StretchDrop(combo, p.Tip.Length > 0 ? p.Tip : p.Label);
         _combos[p.Key] = combo;
         _ = PresetRows.Attach(combo, () => _mapStore,
             item => item switch
@@ -60,26 +63,28 @@ public sealed class MidiNoteMapRows
             if (PresetRowText.IsManage(combo.SelectedItem)) return;   // PresetRows reverts the row and opens the manager
             if (combo.SelectedItem is ComboBoxItem { Tag: string name } && name != Value(p.Key)) _set(p.Key, name);
         };
-        var label = new TextBlock
-        {
-            Text = p.Label, Width = ButtonIndent, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis,
-            [!TextBlock.ForegroundProperty] = new DynamicResourceExtension("MutedBrush"),
-        };
-        var stack = new StackPanel { Width = RowWidth, Margin = new Thickness(0, 3, 12, 3) };
-        stack.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Children = { label, combo } });
+        var fields = Viewer is null ? MidiSharedRows.ParamRow(p.Label, p.Tip.Length > 0 ? p.Tip : p.Label, combo) : MidiSharedRows.ParamRow(p.Label, p.Tip.Length > 0 ? p.Tip : p.Label, combo, Viewer);
+        var stack = new StackPanel { HorizontalAlignment = HorizontalAlignment.Stretch };
+        stack.Spaced(DialogMetrics.MidiRowGap);
+        stack.Children.Add(fields);
         if (p.Key == "To")
         {
             var edit = Push("Edit map…", NoteMapEditEntry.EditButtonTip, "NoteMapEdit");
             var create = Push("New map…", "Make your own map: type the note your instrument needs for each drum", "NoteMapNew");
             edit.Click += (_, _) => Edit(DrumMapLibrary.Find(Value("To")));
             create.Click += (_, _) => Edit(null);
-            stack.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(ButtonIndent, 6, 0, 0), Children = { edit, create } });
+            var buttons = new WrapPanel { Orientation = Orientation.Horizontal };
+            buttons.Spaced(DialogMetrics.MidiBarGap);
+            buttons.Children.Add(edit); buttons.Children.Add(create);
+            stack.Children.Add(buttons);
+            _summary.Spaced(DialogMetrics.MidiBarGap);
             stack.Children.Add(_summary);
             var overrides = new TextBlock
             {
                 Text = "For a single note, the Overrides setting also works, e.g. 40>38, or 42>x to drop a note.", TextWrapping = global::Avalonia.Media.TextWrapping.Wrap,
-                FontSize = 11, Margin = new Thickness(ButtonIndent, 6, 0, 0), [!TextBlock.ForegroundProperty] = new DynamicResourceExtension("MutedBrush"),
+                FontSize = 11, [!TextBlock.ForegroundProperty] = new DynamicResourceExtension("MutedBrush"),
             };
+            overrides.Spaced(DialogMetrics.MidiBarGap);
             stack.Children.Add(overrides);
         }
         Fill();
@@ -88,8 +93,10 @@ public sealed class MidiNoteMapRows
 
     private static Button Push(string text, string tip, string name)
     {
-        var button = new Button { Content = text, Padding = new Thickness(10, 3), Margin = new Thickness(0, 0, 6, 0), Name = name };
-        ToolTip.SetTip(button, tip);
+        var button = new Button { Content = text, Name = name, HorizontalAlignment = HorizontalAlignment.Left };
+        DialogMetrics.WithPadding(button, DialogMetrics.MidiItemPad);
+        button.Spaced(DialogMetrics.MidiInputGap);
+        MidiSharedRows.Tip(button, tip);
         return button;
     }
 
@@ -125,8 +132,8 @@ public sealed class MidiNoteMapRows
                 foreach (var map in DrumMapLibrary.All())
                 {
                     var item = new ComboBoxItem { Content = map.IsUser ? $"★ {map.Name}" : map.Name, Tag = map.Name };
-                    if (map.IsUser) ToolTip.SetTip(item, "Your own map");
-                    else if (!map.Verified) ToolTip.SetTip(item, UnverifiedTip);
+                    if (map.IsUser) MidiSharedRows.Tip(item, "Your own map");
+                    else if (!map.Verified) MidiSharedRows.Tip(item, UnverifiedTip);
                     items.Add(item);
                 }
                 var name = DrumMapLibrary.Find(current)?.Name ?? current;
@@ -134,7 +141,7 @@ public sealed class MidiNoteMapRows
                 if (selected is null)
                 {
                     selected = new ComboBoxItem { Content = $"{current} (missing: notes unchanged)", Tag = current };
-                    ToolTip.SetTip(selected, "No map of this name is installed");
+                    MidiSharedRows.Tip(selected, "No map of this name is installed");
                     items.Add(selected);
                 }
                 PresetRowText.AppendManage(items);

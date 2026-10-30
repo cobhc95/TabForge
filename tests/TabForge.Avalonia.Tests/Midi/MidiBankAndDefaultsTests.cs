@@ -1,8 +1,8 @@
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using TabForge.AudioEngine.Midi;
-using TabForge.AudioEngine.Midi.Processors;
+using TabForge.Core.Midi;
+using TabForge.Core.Midi.Processors;
 using TabForge.Models;
 using TabForge.Playback;
 using TabForge.Plugins;

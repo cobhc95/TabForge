@@ -157,4 +157,7 @@ public sealed partial class MainWindow : Window
 
     /// <summary>The window's autosave: its copies of dirty songs, the failing-autosave notice and the start-up recovery offer.</summary>
     public MainWindowAutosave Autosave { get; }
+
+    /// <summary>The close sequence; set while the frame is composed, so a caller can run work only after an approved close.</summary>
+    public MainWindowLifetime Lifetime { get; private set; } = null!;
 }

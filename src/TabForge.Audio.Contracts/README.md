@@ -10,6 +10,7 @@ Wire contracts shared by the app and the audio engine. No dependencies.
 - `ClipPathGuard`, `SafeFileNames`: path and file-name checks for clips.
 - `EngineConfig`, `ClipSpec`, `PluginSpec`: engine setup records.
 - `PluginInfoProtocol.cs`: `GetPluginInfoMessage` and `LoadedPluginInfo` (what a loaded plug-in reports about itself: format, VST2 id, VST3 class id, pin counts, vendor, name).
+- `Builtin/`: the built-in effect ids, names, parameter descriptors and state format shared by the engine and the app's editors.
 
 ## Command messages
 The pipe protocol is positional binary: the payload of a command is its fields in order, no names. Each command's order is written once, in its message record (a Write over a BinaryWriter and a Read over a BinaryReader); `AudioEngineClient` sends the record's Write and `EngineHost` calls its Read, so the two sides cannot drift apart. The Read returns the raw values and bounds only what could allocate without limit; the engine range-checks. Optional tails (owner id, bar map, recording offset) are read when present and absent from older senders.

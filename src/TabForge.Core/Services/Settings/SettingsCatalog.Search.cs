@@ -23,6 +23,9 @@ public static partial class SettingsCatalog
         "microphone" or "mic" => new[] { "recording", "input" },
         "plugin" or "plugins" or "plug-in" or "vst" => new[] { "plug-ins" },
         "backup" or "recovery" => new[] { "autosave" },
+        "wipe" or "erase" or "clear" or "factory" or "uninstall" => new[] { "reset" },
+        "defaults" => new[] { "default" },
+        "remove" => new[] { "delete" },
         "text" or "typeface" or "size" => new[] { "font" },
         _ => Array.Empty<string>(),
     };
@@ -30,11 +33,11 @@ public static partial class SettingsCatalog
     /// <summary>Words only a colour row's controls carry (the swatch's "Choose ..." name, the preset box and the hex box).</summary>
     private static string KindWords(SettingKind kind) => kind == SettingKind.Colour ? "choose colour picker swatch preset hex" : "";
 
-    /// <summary>The lower-case text an entry is found by: its page and the page's other names, then every part given.</summary>
+    /// <summary>The lower-case text an entry is found by: its page (with the page's subtitle words, so page-level help is searchable too) and the page's other names, then every part given.</summary>
     private static string SearchTextOf(string page, params string?[] parts)
     {
         PageWords.TryGetValue(page, out var pageWords);
-        return string.Join(' ', parts.Prepend(page).Append(pageWords).Where(part => !string.IsNullOrEmpty(part))).ToLowerInvariant();
+        return string.Join(' ', parts.Prepend(page).Append(pageWords).Append(Subtitle(page)).Where(part => !string.IsNullOrEmpty(part))).ToLowerInvariant();
     }
 
     /// <summary>

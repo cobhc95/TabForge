@@ -108,6 +108,22 @@ public class FxChainOptionsTests
     }
 
     [AvaloniaFact]
+    public void GmSoundIsShownUncheckedAndDisabledWhileSoundEngineIsNone()
+    {
+        var track = FxTestKit.Track(FxChainWindow.SampleChain());
+        track.MidiSound = true;
+        var settings = new PluginSettings { SoundEngine = SoundEngines.None };
+        var window = FxTestKit.Window(track, FxTestKit.Host(track, new FxTestKit.FakeEngine(), settings));
+        window.Show();
+        var box = Box(window, "GmSoundCheck");
+        Assert.False(box.IsEnabled);
+        Assert.False(box.IsChecked);   // display only: the stored value is kept
+        Assert.Equal(FxChainWindow.SoundNoneToolTip, ToolTip.GetTip(box));
+        Assert.True(track.MidiSound);
+        window.Close();
+    }
+
+    [AvaloniaFact]
     public void ADefaultChainIsGivenToASongAndANewTrackWithoutPlugins()
     {
         var settings = new PluginSettings();

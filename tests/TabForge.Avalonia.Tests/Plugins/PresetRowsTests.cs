@@ -32,6 +32,7 @@ namespace TabForge.Avalonia.Tests;
 /// Does not own: the manager window or the stores' file rules.
 /// Tests: this class.
 /// </summary>
+[Collection("PluginLibraryRoot")]   // PluginLibrary.RootOverride is process-wide: run alone so no parallel test resets it or reads the scratch folder
 public class PresetRowsTests
 {
     private sealed record Row(string Text, string? Name, bool Manage = false, bool Group = false);
@@ -239,7 +240,7 @@ public class PresetRowsTests
     {
         using var scratch = FxTestKit.ScratchLibrary();
         var owner = new Window();
-        var bars = new MidiPresetBars(owner, () => new FxChainDialogs(), () => new List<PluginMidiProcessor>(), _ => { }, (_, _) => { });
+        var bars = new MidiPresetBars(owner, () => new FxChainDialogs(), () => new List<PluginMidiProcessor>(), new PluginSlot(), (_, _) => { }, (_, _, _) => { });
         bars.Show(new PluginMidiProcessor { Type = "transpose" });
         owner.Content = new StackPanel { Children = { bars.ListBox, bars.ProcessorRow } };
         owner.Show();

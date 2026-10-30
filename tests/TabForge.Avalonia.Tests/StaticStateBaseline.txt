@@ -65,7 +65,6 @@ Source/src/TabForge.Core/Docking/DockLayoutCatalog.cs|2
 Source/src/TabForge.Core/Docking/DockLayoutTree.cs|1
 Source/src/TabForge.Core/Docking/DockPaneTable.cs|1
 Source/src/TabForge.Core/Documents/BarCodec.cs|1
-Source/src/TabForge.Core/Documents/ClipClipboard.cs|1
 Source/src/TabForge.Core/KeyboardMode/KeyboardHands.cs|1
 Source/src/TabForge.Core/KeyboardMode/KeyboardModeSettings.cs|2
 Source/src/TabForge.Core/KeyboardMode/KeyboardNoteSource.cs|1
@@ -113,8 +112,6 @@ Source/src/TabForge.Core/Score/ScoreMarkText.cs|1
 Source/src/TabForge.Core/Score/ScoreText.cs|2
 Source/src/TabForge.Core/Score/StaffNotationGeometry.cs|3
 Source/src/TabForge.Core/Services/Import/AlphaTabBoundary.cs|1
-Source/src/TabForge.Core/Services/Settings/AppSettingsStore.cs|1
-Source/src/TabForge.Core/Services/Settings/BandSettings.cs|4
 Source/src/TabForge.Core/Services/Bars/BarGrid.cs|1
 Source/src/TabForge.Core/Services/Bars/BarTiming.cs|2
 Source/src/TabForge.Core/Services/Midi/DrumMaps.cs|1
@@ -135,7 +132,7 @@ Source/src/TabForge.Core/Services/Instruments/InstrumentCatalog.cs|2
 Source/src/TabForge.Core/Services/Hotkeys/KeyNames.cs|2
 Source/src/TabForge.Core/Services/Log/Trace.cs|2
 Source/src/TabForge.Core/Services/Media/MediaAccess.cs|6
-Source/src/TabForge.Core/Services/Media/MediaPathPolicy.cs|3
+Source/src/TabForge.Core/Services/Media/MediaPathPolicy.cs|1
 Source/src/TabForge.Core/Services/Music/MusicTheoryService.cs|3
 Source/src/TabForge.Core/Services/Music/MusicTime.cs|1
 Source/src/TabForge.Core/Services/Export/MusicXmlExportService.cs|5
@@ -151,7 +148,6 @@ Source/src/TabForge.Core/Services/Tracks/TrackSetup.Convert.cs|1
 Source/src/TabForge.Core/Services/Instruments/TuningPresets.cs|8
 Source/src/TabForge.Core/Services/App/UiMotion.cs|2
 Source/src/TabForge.Core/Services/Files/UserPaths.cs|1
-Source/src/TabForge.Core/Services/Project/UserTemplates.cs|1
 Source/src/TabForge.Core/Services/Video/LiveVideoSettings.cs|3
 Source/src/TabForge.Core/Services/Video/VideoEncoderOptions.cs|1
 Source/src/TabForge.Core/Views/EffectEditors/OrnamentEdits.cs|3

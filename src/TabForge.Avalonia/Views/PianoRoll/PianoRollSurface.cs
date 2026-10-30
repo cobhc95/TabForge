@@ -19,7 +19,9 @@ namespace TabForge.Avalonia.Views;
 // Tests: TabForge.Avalonia.Tests.PianoRollViewTests.
 public sealed partial class PianoRollSurface : Control
 {
-    internal const double RulerSize = 30, KeysSize = KeyStripSize, LaneHeaderSize = 16, EdgeGrip = 5, DividerGrip = 4;
+    internal const double RulerSize = 30, KeysSize = KeyStripSize, EdgeGrip = 5, DividerGrip = 4;
+    /// <summary>The lane strip under the grid: one toolbar control height, so the lane button in it is a real toolbar-size button.</summary>
+    internal static double LaneHeaderSize => PianoRollToolbarLayout.ControlHeight;
     internal const double DefaultPixelsPerBeat = 48, MinPixelsPerBeat = 6, MaxPixelsPerBeat = 480;
     internal const double DefaultRowPx = 12, MinRowPx = 5, MaxRowPx = 32;
     internal const double MinLane = 30, DefaultLane = 84, MaxLaneShare = 0.6;
@@ -90,7 +92,7 @@ public sealed partial class PianoRollSurface : Control
     internal Action<string>? Report { get; set; }
     /// <summary>The lane header's name was clicked: the view offers the lanes (velocity, CC, pitch bend).</summary>
     internal Action? LaneMenuRequested { get; set; }
-    /// <summary>True when the track has more lanes than velocity (a MIDI track): the lane name opens the lane picker.</summary>
+    /// <summary>True when the track has more lanes than velocity (a MIDI track): the lane picker's controller rows are enabled (on a tab track they stay disabled).</summary>
     internal bool LanePicker { get; set; }
 
     // ---- Geometry ----

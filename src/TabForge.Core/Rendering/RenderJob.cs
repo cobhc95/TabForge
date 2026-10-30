@@ -42,16 +42,28 @@ public static class RenderJob
     /// <summary>MP3 needs Media Foundation's encoder (missing on N editions and some LTSC installs).</summary>
     public static bool Mp3Available() => TabForge.Platform.SystemAudio.Mp3.IsAvailable();
 
+    /// <summary>
+    /// This job's private temp locations: one full-entropy id (a whole GUID, never truncated) names the MP3 scratch
+    /// folder, the engine event file and the staging files, so another local user cannot predict and squat them.
+    /// </summary>
+    internal static (string Temp, string EventFile, string JobId) TempPaths(bool mp3)
+    {
+        var jobId = Guid.NewGuid().ToString("N");
+        var temp = mp3 ? Path.Combine(Path.GetTempPath(), "TabForge-render-" + jobId) : "";
+        var eventFile = Path.Combine(Path.GetTempPath(), "TabForge-" + jobId + ".tfrender");
+        return (temp, eventFile, jobId);
+    }
+
     public static async Task<RenderResult> RunAsync(RenderRequest r, IProgress<RenderProgressInfo>? progress, CancellationToken cancel, AudioEngineClient engine)
     {
         var s = r.Settings;
         var mp3 = s.Format == 3;
         var mixer = engine.Mixer;
         var previousPlayAll = mixer.PlayAllThroughEngine;
-        var temp = mp3 ? Path.Combine(Path.GetTempPath(), "TabForge-render-" + Guid.NewGuid().ToString("N")[..8]) : "";
-        var eventFile = Path.Combine(Path.GetTempPath(), "TabForge-" + Guid.NewGuid().ToString("N")[..8] + ".tfrender");
+        var previousSoundNone = mixer.SoundNone;
+        var (temp, eventFile, jobId) = TempPaths(mp3);
         var succeeded = false;
-        var files = new StagedOutputs(Guid.NewGuid().ToString("N")[..8], mp3, temp);
+        var files = new StagedOutputs(jobId, mp3, temp);
         var published = new List<string>();   // files this job already renamed into place
         try
         {
@@ -81,6 +93,7 @@ public static class RenderJob
         {
             engine.Rendering = false;
             mixer.PlayAllThroughEngine = previousPlayAll;
+            mixer.SoundNone = previousSoundNone;
             try { r.Restore?.Invoke(); } catch (Exception) { Services.Trace.Error(Services.Trace.Engine, "render: restore engine state: failed"); }
             try { ResendPrograms(r, engine); } catch (Exception) { Services.Trace.Error(Services.Trace.Engine, "render: resend programs: failed"); }
             if (!succeeded)
@@ -118,7 +131,9 @@ public static class RenderJob
     {
         var mixer = engine.Mixer;
         // Every track through the engine (its General MIDI synth or plug-ins), whatever the playback routing is.
+        // Sound engine None renders silent GM tracks too: only VST instruments, audio and external MIDI sound.
         mixer.PlayAllThroughEngine = true;
+        mixer.SoundNone = TabForge.Services.SoundEngines.Resolve(r.Plugins.SoundEngine) == TabForge.Services.SoundEngines.None;
         // The engine's clip sync never waits for the file system (a path still being resolved is left out until it resolves, and a render in
         // progress ignores that late refresh): classify every linked clip now so the render cannot miss one.
         MediaAccess.ResolveNow(r.Project.Tracks.SelectMany(t => t.AudioClips), r.Media);

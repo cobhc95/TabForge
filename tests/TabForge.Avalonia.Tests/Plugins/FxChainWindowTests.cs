@@ -22,6 +22,7 @@ namespace TabForge.Avalonia.Tests;
 /// Does not own: the window, the presenter or the palette; the edits' undo (FxChainEditsTests), the keys (FxChainKeysTests).
 /// Tests: this class.
 /// </summary>
+[Collection("PluginLibraryRoot")]   // PluginLibrary.RootOverride is process-wide: run alone so no parallel test resets it or reads the scratch folder
 public class FxChainWindowTests
 {
     private static FxChainWindow Make() => FxTestKit.Window();
@@ -182,6 +183,26 @@ public class FxChainWindowTests
         Assert.Equal("MIDI processing: Sample piano", opened[0].Title);
         foreach (var midi in opened) midi.Close();
         window.Close();
+    }
+
+    [AvaloniaFact]
+    public void MidiButtonStaysEnabledOnATrackWithoutAnInstrumentAndOpensItsTrackMap()
+    {
+        var track = FxTestKit.Track(System.Array.Empty<PluginSlot>(), "Guitar I");
+        var window = FxTestKit.Window(track);
+        window.Show();
+        var midiButton = DialogTestKit.Named<Button>(window, "MidiButton");
+        Assert.True(midiButton.IsEnabled);
+        FxTestKit.Press(window, midiButton);
+        var opened = window.OwnedWindows.OfType<MidiProcessingWindow>().Single();
+        try
+        {
+            Assert.Equal("MIDI processing: Guitar I", opened.Title);
+            Assert.Contains(opened.GetLogicalDescendants().OfType<TextBlock>(),
+                t => t.Name == "NoInstrumentNote" && t.Text == MidiProcessingListPresenter.NoInstrumentDescription);
+            Assert.Contains(opened.GetLogicalDescendants().OfType<TabItem>(), t => t.Name == "ArticulationsTab");
+        }
+        finally { opened.Close(); window.Close(); }
     }
 
     [AvaloniaFact]

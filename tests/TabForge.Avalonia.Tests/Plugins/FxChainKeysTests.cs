@@ -18,6 +18,7 @@ namespace TabForge.Avalonia.Tests;
 /// Does not own: the key map (HotkeyCatalog) or the window.
 /// Tests: this class.
 /// </summary>
+[Collection("PluginLibraryRoot")]   // PluginLibrary.RootOverride is process-wide: run alone so no parallel test resets it or reads the scratch folder
 public class FxChainKeysTests
 {
     private static void Key(Window window, Key key, RawInputModifiers modifiers = RawInputModifiers.None) =>

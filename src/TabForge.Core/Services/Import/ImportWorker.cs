@@ -71,7 +71,7 @@ public static class ImportWorker
     private const byte FrameRequest = 1, FrameData = 2, FrameResult = 3, FrameError = 4, FrameNotice = 5;
     private const int MaxRequestBytes = 64 * 1024;
     private const int MaxErrorBytes = 8 * 1024;
-    private const int FlagTestHang = 1;
+    private const int FlagTestHang = 1, FlagMidiTracks = 2;
 
     /// <summary>
     /// The in-process parse, used by the background import only after the user agreed for this file (the worker or its
@@ -87,7 +87,8 @@ public static class ImportWorker
     }
 
     /// <summary>
-    /// Imports <paramref name="path"/> in a worker process. Cancellation and the time budget come from the <paramref name="context"/>, through its
+    /// Imports <paramref name="path"/> in a worker process. Runs its waits on the calling thread: call it on a worker
+    /// (the app's <c>ScoreOpenFlow.OpenAsync</c> runs it under <c>Task.Run</c>), never on the UI thread. Cancellation and the time budget come from the <paramref name="context"/>, through its
     /// <see cref="ImportGuard"/> (none: not cancellable, default budget). Throws <see cref="ImportWorkerUnavailableException"/> when
     /// the worker cannot start, <see cref="OperationCanceledException"/>, <see cref="TimeoutException"/> or <see cref="InvalidDataException"/>.
     /// </summary>
@@ -139,13 +140,13 @@ public static class ImportWorker
                 try { Task.WaitAny(new Task[] { accept, exited }, token); }
                 catch (ObjectDisposedException ex) { Services.Trace.Error(Services.Trace.Import, "import worker: wait for connection: " + ex.Message); }
                 token.ThrowIfCancellationRequested();
-                if (!accept.IsCompletedSuccessfully || !accept.Result)
+                if (!accept.IsCompletedSuccessfully || !accept.Result)   // both waits are over (WaitAny returned): a completed task's Result never blocks
                     throw new ImportWorkerUnavailableException(process.HasExited ? "it ended at start" : "it did not answer with the launch token");
 
                 using var deadline = new Timer(_ => { timedOut = true; Kill(); }, null, budget + options.KillGrace, Timeout.InfiniteTimeSpan);
                 try
                 {
-                    return ExchangeWithWorker(pipe, path, raw, options, budget, notices, Kill);
+                    return ExchangeWithWorker(pipe, path, raw, options, budget, notices, Kill, context?.MidiMode ?? MidiImportMode.Tab);
                 }
                 catch (Exception ex) when (ex is IOException or ObjectDisposedException)
                 {
@@ -184,10 +185,10 @@ public static class ImportWorker
     }
 
     /// <summary>Sends the request and the file, reads the notices and the reply, and restores the project the worker returned.</summary>
-    private static SongProject ExchangeWithWorker(NamedPipeServerStream pipe, string path, byte[] raw, ImportWorkerOptions options, TimeSpan budget, List<string>? notices, Action kill)
+    private static SongProject ExchangeWithWorker(NamedPipeServerStream pipe, string path, byte[] raw, ImportWorkerOptions options, TimeSpan budget, List<string>? notices, Action kill, MidiImportMode midiMode)
     {
         var request = new byte[8 + Encoding.UTF8.GetByteCount(path)];
-        BinaryPrimitives.WriteInt32LittleEndian(request, options.TestHang ? FlagTestHang : 0);
+        BinaryPrimitives.WriteInt32LittleEndian(request, (options.TestHang ? FlagTestHang : 0) | (midiMode == MidiImportMode.Midi ? FlagMidiTracks : 0));
         BinaryPrimitives.WriteInt32LittleEndian(request.AsSpan(4), (int)Math.Min(int.MaxValue, budget.TotalMilliseconds));
         Encoding.UTF8.GetBytes(path, request.AsSpan(8));
         if (request.Length > MaxRequestBytes) throw new InvalidDataException("The score file's path is too long.");
@@ -245,7 +246,7 @@ public static class ImportWorker
             {
                 if (!GuitarProImporter.SupportedExtensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase))
                     throw new InvalidDataException("This is not a score file.");
-                var context = new ImportContext(new ImportGuard(CancellationToken.None, TimeSpan.FromMilliseconds(budgetMs)));
+                var context = new ImportContext(new ImportGuard(CancellationToken.None, TimeSpan.FromMilliseconds(budgetMs))) { MidiMode = (flags & FlagMidiTracks) != 0 ? MidiImportMode.Midi : MidiImportMode.Tab };
                 SongProject project;
                 project = GuitarProImporter.ImportBytes(data, path, context);
                 data = Array.Empty<byte>();
@@ -258,6 +259,8 @@ public static class ImportWorker
                 }
                 if (context.DamageNotice is { } damaged)
                     WriteFrame(pipe, FrameNotice, Encoding.UTF8.GetBytes(damaged.Length > 2_000 ? damaged[..2_000] : damaged));
+                foreach (var report in new[] { context.KeyswitchNotice, context.MidiNotice })
+                    if (report is not null) WriteFrame(pipe, FrameNotice, Encoding.UTF8.GetBytes(report.Length > 2_000 ? report[..2_000] : report));
             }
             catch (Exception ex) when (ex is not OutOfMemoryException)
             {

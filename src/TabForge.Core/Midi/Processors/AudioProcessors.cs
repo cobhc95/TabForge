@@ -1,7 +1,7 @@
 using TabForge.Audio.Contracts;
 using TabForge.AudioEngine.Plugins;
 
-namespace TabForge.AudioEngine.Midi.Processors;
+namespace TabForge.Core.Midi.Processors;
 
 // Owns: the MIDI processors that also see and may change the audio at their chain position (audio-thread, allocation-free).
 

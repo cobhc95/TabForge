@@ -1,6 +1,6 @@
 using TabForge.Audio.Contracts;
 
-namespace TabForge.AudioEngine.Midi.Processors;
+namespace TabForge.Core.Midi.Processors;
 
 // Owns: the generative note processors (repeater, arpeggiator) re-sending held notes with the original velocity.
 

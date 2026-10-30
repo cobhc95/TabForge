@@ -42,6 +42,9 @@ public static partial class AvaloniaFormControlStyles
     /// <summary>The class of every Settings input: text, combo and number boxes, the search box and the card buttons. They share one height and one edge rule.</summary>
     public const string PrefsFieldClass = "PrefsField";
 
+    /// <summary>The class of a destructive action button: danger ink and edge, with the normal accent hover/press states.</summary>
+    public const string DangerButtonClass = "DangerButton";
+
     /// <summary>The height of every Settings input and button (the footer buttons, the shortcut key boxes and the fields alike).</summary>
     public const double PrefsFieldHeight = 32;
 
@@ -215,6 +218,24 @@ public static partial class AvaloniaFormControlStyles
                 new Setter(TemplatedControl.FontSizeProperty, PrefsResetFontSize),
                 new Setter(Layoutable.MinWidthProperty, PrefsResetMinWidth),
                 new Setter(Layoutable.HeightProperty, PrefsResetHeight),
+            },
+        },
+        // A destructive action: danger ink and edge on the normal button fill; the DangerButton look supplies the accent hover/press states.
+        new Style(x => x.OfType<Button>().Class(DangerButtonClass))
+        {
+            Setters =
+            {
+                Bound(TemplatedControl.BackgroundProperty, "Panel3Brush"),
+                Bound(TemplatedControl.BorderBrushProperty, "Danger"),
+                Bound(TemplatedControl.ForegroundProperty, "Danger"),
+                new Setter(TemplatedControl.BorderThicknessProperty, new Thickness(BorderThickness)),
+                new Setter(TemplatedControl.CornerRadiusProperty, ControlCornerRadius),
+                new Setter(TemplatedControl.PaddingProperty, PrefsActionPadding),
+                new Setter(TemplatedControl.FontSizeProperty, PrefsActionFontSize),
+                new Setter(Layoutable.MinWidthProperty, PrefsActionMinWidth),
+                new Setter(Layoutable.MinHeightProperty, PrefsFieldHeight),
+                new Setter(ContentControl.HorizontalContentAlignmentProperty, HorizontalAlignment.Center),
+                new Setter(ContentControl.VerticalContentAlignmentProperty, VerticalAlignment.Center),
             },
         },
     };

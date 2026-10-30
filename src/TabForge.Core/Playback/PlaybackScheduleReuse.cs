@@ -109,11 +109,15 @@ internal sealed class PlaybackScheduleReuse
         track.Kind, track.MidiChannel, track.MidiProgram, track.MidiOutputDeviceId, track.MidiOutputDeviceName ?? "",
         track.Volume, track.Pan, track.Chorus, track.Reverb, track.Mute, track.Solo,
         track.MidiSound, track.MidiSoundManualOff, track.SoundSource,
-        string.Join("/", track.Rig.Plugins.Select(plugin => $"{plugin.Type}:{plugin.Plays}:{plugin.Unavailable}{ArticulationStamp(plugin)}")));
+        string.Join("/", track.Rig.Plugins.Select(plugin => $"{plugin.Type}:{plugin.Plays}:{plugin.Unavailable}{ArticulationStamp(plugin)}")),
+        ArticulationStamp(track.ArticulationBindings));
 
     /// <summary>The articulation map of the plug-in (empty without one): editing it makes the next seek compile afresh, like any other route change.</summary>
-    private static string ArticulationStamp(PluginSlot plugin) =>
-        plugin.ArticulationBindings is { Count: > 0 } map ? ":" + string.Join(",", map.Select(pair => pair.Key + "=" + pair.Value)) : "";
+    private static string ArticulationStamp(PluginSlot plugin) => ArticulationStamp(plugin.ArticulationBindings);
+
+    /// <summary>The track-level fallback map (empty without one), which a plug-in added later uses.</summary>
+    private static string ArticulationStamp(IReadOnlyDictionary<string, string>? bindings) =>
+        bindings is { Count: > 0 } map ? ":" + string.Join(",", map.Select(pair => pair.Key + "=" + pair.Value)) : "";
 
     private static string OptionsStamp(PlaybackOptions options) => string.Join("|",
         options.Speed.ToString("R", CultureInfo.InvariantCulture),

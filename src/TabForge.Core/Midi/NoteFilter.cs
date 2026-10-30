@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace TabForge.AudioEngine.Midi;
+namespace TabForge.Core.Midi;
 
 // Owns: parsing and formatting note sets such as ranges and note names (C-1 = 0).
 

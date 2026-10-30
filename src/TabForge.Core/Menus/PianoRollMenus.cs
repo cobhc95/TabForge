@@ -15,9 +15,9 @@ public static class PianoRollMenus
         Quantize = "PianoRoll.Quantize", QuantizeSettings = "PianoRoll.QuantizeSettings", Mute = "PianoRoll.Mute",
         TransposeUp = "PianoRoll.TransposeUp", TransposeDown = "PianoRoll.TransposeDown", OctaveUp = "PianoRoll.OctaveUp", OctaveDown = "PianoRoll.OctaveDown",
         TransposeBy = "PianoRoll.TransposeBy", VelocitySet = "PianoRoll.VelocitySet", VelocityScale = "PianoRoll.VelocityScale", VelocityRamp = "PianoRoll.VelocityRamp",
-        SelectAll = "PianoRoll.SelectAll", SelectPitch = "PianoRoll.SelectPitch", ShowInScoreId = "PianoRoll.ShowInScore", ClearLoop = "Transport.ClearLoopArea",
+        SelectAll = "PianoRoll.SelectAll", SelectPitch = "PianoRoll.SelectPitch", InvertSelection = "PianoRoll.InvertSelection", ShowInScoreId = "PianoRoll.ShowInScore", ClearLoop = "Transport.ClearLoopArea",
         Legato = "PianoRoll.Legato", Glue = "PianoRoll.Glue", Randomise = "PianoRoll.Randomise", Humanise = "PianoRoll.Humanise", Colours = "PianoRoll.Colours",
-        KeyStrip = "PianoRoll.KeyStrip", MovePlayhead = "PianoRoll.MovePlayhead", LoopBar = "PianoRoll.LoopBar", LoopSection = "PianoRoll.LoopSection",
+        MovePlayhead = "PianoRoll.MovePlayhead", LoopBar = "PianoRoll.LoopBar", LoopSection = "PianoRoll.LoopSection",
         PlaybackNeedle = "PianoRoll.PlaybackNeedle";
 
     public const string ShowInScore = "Show in score mode (this track)", NeedleSettingKey = "editing.pianoroll.needle";
@@ -68,6 +68,7 @@ public static class PianoRollMenus
         list.Add(Row(Glue, "Glue same-pitch notes"));
         list.Add(MenuSpec.Separator());
         list.Add(Row(SelectAll, "Select all", "Ctrl+A"));
+        list.Add(Row(InvertSelection, "Invert selection", "Ctrl+I"));
         list.Add(Row(SelectPitch, "Select all notes of this pitch"));
         list.Add(ColourRows(s.ColourMode));
         list.Add(NeedleRow(s.Needle));
@@ -84,13 +85,6 @@ public static class PianoRollMenus
             .Select(c => new MenuSpec { Id = Colours, Arg = c.Item1, Header = c.Item2, Checkable = true, Radio = true, Checked = c.Item1 == mode, NoSetting = "a view choice of the piano roll" }).ToList(),
     };
 
-    /// <summary>The key strip's right-click rows: piano keys or note names (radio, saved per track).</summary>
-    public static List<MenuSpec> KeyStripRows(bool names) => new()
-    {
-        new MenuSpec { Id = KeyStrip, Arg = "Piano", Header = "Piano keys", Checkable = true, Radio = true, Checked = !names, NoSetting = "a choice of this track, saved in the song" },
-        new MenuSpec { Id = KeyStrip, Arg = "Names", Header = "Note names", Checkable = true, Radio = true, Checked = names, NoSetting = "a choice of this track, saved in the song" },
-    };
-
     /// <summary>The ruler's right-click rows: move the playhead, loop the bar or the section under the pointer, and Clear loop inside the loop.</summary>
     public static List<MenuSpec> RulerRows(PianoRollMenuState s)
     {
@@ -105,6 +99,7 @@ public static class PianoRollMenus
         if (s.InsideLoop) list.AddRange(new[] { Row(ClearLoop, "Clear loop", "Esc twice"), MenuSpec.Separator() });
         list.Add(Row(Paste, "Paste", "Ctrl+V", s.CanPaste));
         list.Add(Row(SelectAll, "Select all", "Ctrl+A", s.HasNotes));
+        list.Add(Row(InvertSelection, "Invert selection", "Ctrl+I", s.HasNotes));
         list.Add(Row(Quantize, "Quantize all", "Q", s.HasNotes));
         list.Add(Row(Legato, "Legato all", "Ctrl+L", s.HasNotes));
         list.Add(ColourRows(s.ColourMode));

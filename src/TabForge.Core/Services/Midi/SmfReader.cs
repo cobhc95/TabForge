@@ -1,19 +1,29 @@
 using System.IO;
 using System.Text;
+using TabForge.Playback;
 
 namespace TabForge.Services;
 
 // Owns: reading a Standard MIDI File (format 0 or 1) into notes, tempo, time and key signatures, and refusing anything malformed.
 // Does not own: turning those into a song (MidiToSong).
 // Tests: MidiImportTests.
-/// <summary>One note of a MIDI file; ticks count from the start of the file.</summary>
-internal readonly record struct SmfNote(long Start, long End, int Channel, int Pitch, int Velocity, int Program);
+/// <summary>One note of a MIDI file; ticks count from the start of the file. <paramref name="Marker"/> is the TF1 technique payload found at its tick.</summary>
+internal readonly record struct SmfNote(long Start, long End, int Channel, int Pitch, int Velocity, int Program, string? Marker = null);
 
-/// <summary>One track chunk: its name and its notes in start order.</summary>
+/// <summary>One controller point of a MIDI file: a control change (<see cref="Kind"/> 0xB0) or the pitch bend (0xE0, value -8192..8191).</summary>
+internal readonly record struct SmfController(long Tick, int Channel, int Kind, int Controller, int Value);
+
+/// <summary>One track chunk: its name, its notes in start order, its controller points and its TF1 technique markers.</summary>
 internal sealed class SmfTrack
 {
     public string Name { get; set; } = "";
     public List<SmfNote> Notes { get; } = new();
+    public List<SmfController> Controllers { get; } = new();
+    public List<(long Tick, int Channel, int Pitch, string Payload)> Markers { get; } = new();
+    /// <summary>Program changes in file order (tick, channel, program): the track's first change anywhere, not only before the first note.</summary>
+    public List<(long Tick, int Channel, int Program)> ProgramChanges { get; } = new();
+    /// <summary>Marker (0x06) and cue-point (0x07) texts that are not TF1 technique markers: song-section candidates.</summary>
+    public List<(long Tick, string Text)> SectionEvents { get; } = new();
 }
 
 /// <summary>A parsed Standard MIDI File.</summary>
@@ -109,8 +119,32 @@ internal static class SmfReader
         foreach (var ((channel, pitch), queue) in open)
             foreach (var (noteStart, velocity, noteProgram) in queue)
                 track.Notes.Add(new SmfNote(noteStart, Math.Max(tick, noteStart), channel, pitch, velocity, noteProgram));
+        AttachMarkers(track);
         track.Notes.Sort((x, y) => x.Start != y.Start ? x.Start.CompareTo(y.Start) : x.Pitch.CompareTo(y.Pitch));
+        track.Controllers.Sort((x, y) => x.Tick != y.Tick ? x.Tick.CompareTo(y.Tick) : x.Channel.CompareTo(y.Channel));
         return track;
+    }
+
+    /// <summary>Puts each TF1 marker on the note it describes (same start tick, channel and pitch; a pitch mismatch still matches by tick when unique).</summary>
+    private static void AttachMarkers(SmfTrack track)
+    {
+        if (track.Markers.Count == 0) return;
+        var byKey = new Dictionary<(long Tick, int Channel, int Pitch), string>();
+        var byTick = new Dictionary<long, string>();
+        foreach (var marker in track.Markers)
+        {
+            byKey.TryAdd((marker.Tick, marker.Channel, marker.Pitch), marker.Payload);
+            byTick.TryAdd(marker.Tick, marker.Payload);
+        }
+        var tickCounts = new Dictionary<long, int>();
+        foreach (var note in track.Notes) tickCounts[note.Start] = tickCounts.GetValueOrDefault(note.Start) + 1;
+        for (var i = 0; i < track.Notes.Count; i++)
+        {
+            var note = track.Notes[i];
+            if (byKey.TryGetValue((note.Start, note.Channel, note.Pitch), out var payload) ||
+                (tickCounts[note.Start] == 1 && byTick.TryGetValue(note.Start, out payload)))
+                track.Notes[i] = note with { Marker = payload };
+        }
     }
 
     /// <summary>A meta event (the status byte is already read): track name, tempo, time signature or key; true for the end of the track.</summary>
@@ -142,6 +176,42 @@ internal static class SmfReader
                 RequireRoom(file.Keys.Count);
                 file.Keys.Add((tick, (sbyte)body[0], body[1] != 0));
                 break;
+            case 0x01 or 0x06 or 0x07 when body.Length is > 0 and <= TechniqueMarker.MaxPayload + 24:
+                // A "Keep techniques for TabForge" marker: version, channel, pitch, payload. Other 0x06/0x07 texts are song sections.
+                var text = Encoding.Latin1.GetString(body);
+                if (TechniqueMarker.PayloadOf(text) is { } payload)
+                {
+                    var parts = text.Split(':', 4);
+                    if (int.TryParse(parts[1], out var channel) && int.TryParse(parts[2], out var pitch)
+                        && channel is >= 0 and <= 15 && pitch is >= 0 and <= 127
+                        && track.Markers.Count < InputLimits.MaxMidiMarkers)
+                        track.Markers.Add((tick, channel, pitch, payload));
+                    break;
+                }
+                if (type == 0x01 || TechniqueMarker.IsMarker(text)) break;   // legacy TF1 markers never become sections
+                var sectionText = Encoding.UTF8.GetString(body).Trim();
+                if (sectionText.Length == 0) break;
+                if (track.SectionEvents.Count >= InputLimits.MaxMidiMetaEvents) break;
+                track.SectionEvents.Add((tick, sectionText.Length > InputLimits.MaxTitleLength ? sectionText[..InputLimits.MaxTitleLength] : sectionText));
+                break;
+            case 0x06 or 0x07 when body.Length is > TechniqueMarker.MaxPayload + 24 and <= InputLimits.MaxTitleLength * 4 + 8:
+                // An overlong (multi-byte) section text the marker case above did not take.
+                var longSection = Encoding.UTF8.GetString(body).Trim();
+                if (longSection.Length == 0 || TechniqueMarker.IsMarker(longSection)) break;
+                if (track.SectionEvents.Count >= InputLimits.MaxMidiMetaEvents) break;
+                track.SectionEvents.Add((tick, longSection.Length > InputLimits.MaxTitleLength ? longSection[..InputLimits.MaxTitleLength] : longSection));
+                break;
+            case 0x7F when body.Length is >= 5 and <= TechniqueMarker.MaxPayload + 28:
+                // A "Keep techniques for TabForge" sequencer-specific event: 0x7D then the same TF1 text (other programs ignore it).
+                if (body[0] != 0x7D || body[1] != (byte)'T' || body[2] != (byte)'F' || body[3] != (byte)'1') break;
+                var seqText = Encoding.Latin1.GetString(body.Slice(1));
+                if (TechniqueMarker.PayloadOf(seqText) is not { } seqPayload) break;
+                var seqParts = seqText.Split(':', 4);
+                if (!int.TryParse(seqParts[1], out var seqChannel) || !int.TryParse(seqParts[2], out var seqPitch)) break;
+                if (seqChannel is < 0 or > 15 || seqPitch is < 0 or > 127) break;
+                if (track.Markers.Count >= InputLimits.MaxMidiMarkers) break;
+                track.Markers.Add((tick, seqChannel, seqPitch, seqPayload));
+                break;
         }
         return false;
     }
@@ -156,7 +226,15 @@ internal static class SmfReader
         int a = d[pos], b = need == 2 ? d[pos + 1] : 0;
         pos += need;
         if ((a | b) >= 0x80) throw new InvalidDataException(Invalid);
-        if (kind == 0xC0) program[channel] = a;
+        if (kind == 0xB0 && track.Controllers.Count < InputLimits.MaxMidiControllerPoints)
+            track.Controllers.Add(new SmfController(tick, channel, 0xB0, a, b));
+        else if (kind == 0xE0 && track.Controllers.Count < InputLimits.MaxMidiControllerPoints)
+            track.Controllers.Add(new SmfController(tick, channel, 0xE0, 0, ((b << 7) | a) - 8192));
+        if (kind == 0xC0)
+        {
+            program[channel] = a;
+            if (track.ProgramChanges.Count < InputLimits.MaxMidiMetaEvents) track.ProgramChanges.Add((tick, channel, a));
+        }
         else if (kind == 0x90 && b > 0)
         {
             if (++noteCount > InputLimits.MaxTotalNotes) throw new InvalidDataException("The score file contains too many notes.");

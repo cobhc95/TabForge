@@ -64,6 +64,8 @@ public sealed class AppSettings
     public EditingSettings Editing { get; set; } = new();
     /// <summary>Last-used File > Render options.</summary>
     public Rendering.RenderSettings Render { get; set; } = new();
+    /// <summary>Last-used File > Export MIDI options.</summary>
+    public Rendering.MidiExportSettings MidiExport { get; set; } = new();
     /// <summary>Last-used File > Export > Video options.</summary>
     public Video.VideoSettings Video { get; set; } = new();
     public HotkeySettings Hotkeys { get; set; } = new();
@@ -73,6 +75,8 @@ public sealed class AppSettings
     public Video.LiveVideoSettings LiveVideo { get; set; } = new();
     /// <summary>The transport bar's master level meter: its reading, number and peak hold.</summary>
     public TabForge.Audio.Metering.MasterMeterSettings MasterMeter { get; set; } = new();
+    /// <summary>The track rows' level meters: the same choices, the apply-to-all flag and the pre- or post-fader tap.</summary>
+    public TabForge.Audio.Metering.TrackMeterSettings TrackMeter { get; set; } = new();
     /// <summary>Keyboard mode (experimental): look-ahead and note size.</summary>
     public KeyboardMode.KeyboardModeSettings Learn { get; set; } = new();
     /// <summary>Dock tree, selected tabs, closed panels, and floating-window bounds.</summary>

@@ -236,8 +236,6 @@ public class SongSubscriberUndoTableTests
         ["TimelineView.cs:_song"] = "the arrangement view's song; the owner rebinds it on ProjectChanged",
         ["TrackHeaderColumn.cs:_song"] = "the header column's song; the owner rebinds it on ProjectChanged",
         ["RenderWindow.cs:_project"] = "opened with ShowDialog on the main window, whose input (undo included) is blocked while it is open",
-        ["ScaleFinderWindow.cs:_project"] = "opened with ShowDialog on the main window, whose input (undo included) is blocked while it is open",
-        ["ScaleFinderWindow.cs:_track"] = "opened with ShowDialog on the main window, whose input (undo included) is blocked while it is open",
         ["TrackPropertiesWindow.cs:_track"] = "opened with ShowDialog on the main window, whose input (undo included) is blocked while it is open",
         ["VideoExportWindow.cs:_project"] = "opened with ShowDialog on the main window, whose input (undo included) is blocked while it is open",
         ["FxParameterPane.cs:_track"] = "a part of the chain window of that track (it is made by the window and disposed with it): FxChainWindows re-resolves or closes that window, and with it this pane, on a song replace",

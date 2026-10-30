@@ -134,8 +134,11 @@ public sealed class DocumentController
     }
 
     /// <summary>The lossy-export preflight of the song as it is now: captured here, analysed on a worker (it reads every note and takes alphaTab's model lock, which a running export may hold).</summary>
-    public async Task<GpPreflightReport> AnalyzeGuitarProExportAsync(SongDocument document) =>
-        (await WriteCapturedAsync(document, GpExportPreflight.Analyze)).Result;
+    public async Task<GpPreflightReport> AnalyzeGuitarProExportAsync(SongDocument document)
+    {
+        var (_, report) = await WriteCapturedAsync(document, GpExportPreflight.Analyze);
+        return report;
+    }
 
     /// <summary>What an export wrote and what the person should be told; <paramref name="Cancelled"/>: the person cancelled the question, nothing was written.</summary>
     public sealed record GuitarProExportResult(string? CompatiblePath, string? NativeCopyPath, string Notice, bool Cancelled = false);

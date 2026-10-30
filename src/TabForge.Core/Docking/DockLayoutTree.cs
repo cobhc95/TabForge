@@ -104,8 +104,13 @@ internal static class DockLayoutTree
             Width = f.Width,
             Height = f.Height
         }).ToList(),
-        ClosedPanels = (state.ClosedPanels ?? new()).ToList()
+        ClosedPanels = (state.ClosedPanels ?? new()).ToList(),
+        InstrumentVerticalShare = ClampShareOrNull(state.InstrumentVerticalShare),
+        InstrumentHorizontalShare = ClampShareOrNull(state.InstrumentHorizontalShare)
     };
+
+    private static double? ClampShareOrNull(double? share) =>
+        share is { } s && double.IsFinite(s) ? Math.Clamp(s, 0.02, 0.98) : null;
 
     internal static DockNodeState? CloneNode(DockNodeState? node) => node is null ? null : new DockNodeState
     {
@@ -238,13 +243,15 @@ internal static class DockLayoutTree
         => Split("Vertical", ratio, above, Tabs("default-below-" + id, id));
 
     /// <summary>A copy of <paramref name="layout"/> with the fretboard pane on the chosen side of the score when the layout stacks it on the
-    /// other one. A fretboard beside the score, in a floating window, closed, or in a layout without the score stays as it is.</summary>
+    /// other one. A fretboard beside the score, in a floating window, closed, or in a layout without the score stays as it is. The pane keeps its
+    /// pixel height: the split ratio is set from the remembered vertical share, which the move itself remembers first.</summary>
     internal static DockWorkspaceState WithInstrumentSide(DockWorkspaceState layout, bool bottom)
     {
         static bool Has(DockNodeState? n, Func<DockNodeState, bool> f) => n is not null && (f(n) || Has(n.First, f) || Has(n.Second, f));
         static bool Instrument(DockNodeState n) => n.Kind == "tabs" && n.Panels.Contains("instrument");
         static bool Editor(DockNodeState n) => n.Kind == "editor";
         var state = Clone(layout);
+        RememberInstrumentShare(state);
         // Walk down to the split that separates the two; only a vertical one says above or below.
         for (var node = state.Root; node is { Kind: "split" } && Has(node, Instrument) && Has(node, Editor);)
         {
@@ -253,9 +260,48 @@ internal static class DockLayoutTree
             if (node.Orientation != "Vertical" || instrumentFirst != bottom) break;
             state.Root = RemovePanel(state.Root, "instrument");
             PlaceAtDefault(state, "instrument", bottom ? "instrument-bottom" : "instrument", "score-editor");
+            ApplyInstrumentShare(state, vertical: true);
             break;
         }
         return state;
+    }
+
+    /// <summary>The split that separates the instrument pane from the score editor and the instrument's share of it, searching the main root then the floating roots.</summary>
+    internal static (DockNodeState Node, bool InstrumentFirst, double Share, bool Vertical)? FindInstrumentShare(DockWorkspaceState state)
+    {
+        static bool Has(DockNodeState? n, Func<DockNodeState, bool> f) => n is not null && (f(n) || Has(n.First, f) || Has(n.Second, f));
+        static bool Instrument(DockNodeState n) => n.Kind == "tabs" && n.Panels.Contains(InstrumentDockSizeMemory.InstrumentId);
+        static bool Editor(DockNodeState n) => n.Kind == "editor";
+        foreach (var root in new[] { state.Root }.Concat(state.Floating.Select(f => f.Root)))
+        {
+            for (var node = root; node is { Kind: "split" } && Has(node, Instrument) && Has(node, Editor);)
+            {
+                var firstHasInstrument = Has(node.First, Instrument);
+                if (firstHasInstrument == Has(node.First, Editor)) { node = firstHasInstrument ? node.First : node.Second; continue; }
+                var share = InstrumentDockSizeMemory.ShareOf(node.Ratio, firstHasInstrument);
+                return (node, firstHasInstrument, share, InstrumentDockSizeMemory.IsVertical(node.Orientation));
+            }
+        }
+        return null;
+    }
+
+    /// <summary>Remembers the instrument pane's current share into its orientation slot (a dragged size is kept for the next move).</summary>
+    internal static void RememberInstrumentShare(DockWorkspaceState state)
+    {
+        if (FindInstrumentShare(state) is not { } found) return;
+        if (found.Vertical) state.InstrumentVerticalShare = InstrumentDockSizeMemory.RememberShare(found.Share, state.InstrumentVerticalShare);
+        else state.InstrumentHorizontalShare = InstrumentDockSizeMemory.RememberShare(found.Share, state.InstrumentHorizontalShare);
+    }
+
+    /// <summary>Sets the split that separates the instrument from the editor to the remembered share for <paramref name="vertical"/>.</summary>
+    internal static void ApplyInstrumentShare(DockWorkspaceState state, bool vertical)
+    {
+        if (FindInstrumentShare(state) is not { } found) return;
+        var remembered = vertical ? state.InstrumentVerticalShare : state.InstrumentHorizontalShare;
+        var share = InstrumentDockSizeMemory.ShareToApply(null, remembered);
+        found.Node.Ratio = InstrumentDockSizeMemory.RatioForShare(share, found.InstrumentFirst);
+        if (vertical) state.InstrumentVerticalShare = InstrumentDockSizeMemory.RememberShare(share, state.InstrumentVerticalShare);
+        else state.InstrumentHorizontalShare = InstrumentDockSizeMemory.RememberShare(share, state.InstrumentHorizontalShare);
     }
 
     /// <summary>Puts a panel back where it lives by default: into its shared tab host, or beside the editor, above it, or along the bottom.</summary>
@@ -304,9 +350,22 @@ internal static class DockLayoutTree
         var panelNode = Tabs("restore-" + Guid.NewGuid().ToString("N"), id);
         var split = zone is DockDropZone.Top or DockDropZone.Bottom ? "Vertical" : "Horizontal";
         var before = zone is DockDropZone.Left or DockDropZone.Top;
+        var share = ShareForNewPanel(state, id, split);
         ReplaceNode(state, target.HostId, before
-            ? Split(split, EdgeFraction, panelNode, CloneNode(target)!)
-            : Split(split, 1 - EdgeFraction, CloneNode(target)!, panelNode));
+            ? Split(split, share, panelNode, CloneNode(target)!)
+            : Split(split, 1 - share, CloneNode(target)!, panelNode));
+    }
+
+    /// <summary>The share a newly placed panel takes: the instrument pane reuses its remembered share for that orientation (the default only the first time), every other pane the default.</summary>
+    private static double ShareForNewPanel(DockWorkspaceState state, string id, string orientation)
+    {
+        if (id != InstrumentDockSizeMemory.InstrumentId) return EdgeFraction;
+        var vertical = InstrumentDockSizeMemory.IsVertical(orientation);
+        var remembered = vertical ? state.InstrumentVerticalShare : state.InstrumentHorizontalShare;
+        var share = InstrumentDockSizeMemory.ShareToApply(null, remembered);
+        if (vertical) state.InstrumentVerticalShare = InstrumentDockSizeMemory.RememberShare(share, state.InstrumentVerticalShare);
+        else state.InstrumentHorizontalShare = InstrumentDockSizeMemory.RememberShare(share, state.InstrumentHorizontalShare);
+        return share;
     }
 
     private static void InsertAtRootEdge(DockWorkspaceState state, string id, DockDropZone zone)
@@ -315,9 +374,11 @@ internal static class DockLayoutTree
         if (root is null) return;
         var first = zone is DockDropZone.Left or DockDropZone.Top;
         var vertical = zone is DockDropZone.Top or DockDropZone.Bottom;
+        var orientation = vertical ? "Vertical" : "Horizontal";
+        var share = id == InstrumentDockSizeMemory.InstrumentId ? ShareForNewPanel(state, id, orientation) : EdgeFraction;
         var panel = Tabs("restore-" + Guid.NewGuid().ToString("N"), id);
         state.Root = first
-            ? Split(vertical ? "Vertical" : "Horizontal", EdgeFraction, panel, CloneNode(root)!)
-            : Split(vertical ? "Vertical" : "Horizontal", 1 - EdgeFraction, CloneNode(root)!, panel);
+            ? Split(orientation, share, panel, CloneNode(root)!)
+            : Split(orientation, 1 - share, CloneNode(root)!, panel);
     }
 }

@@ -15,6 +15,10 @@ namespace TabForge.Avalonia.Views.Fx;
 public interface IFxChainEngine
 {
     bool IsRunning { get; }
+    /// <summary>The output the "Active on" rules should match now (driver and device name); an empty value means the window falls back to the settings.</summary>
+    ActiveOnOutput ActiveOutput => default;
+    /// <summary>The output opened or reopened, or a failed output fell back to another driver: match the "Active on" rules and refresh the rows.</summary>
+    event Action? OutputChanged { add { } remove { } }
     /// <summary>The engine's audio load as a fraction of one core (1.0: a full core).</summary>
     double CpuLoad { get; }
     /// <summary>The engine slot a track plays through; negative when the engine has no chain for it.</summary>

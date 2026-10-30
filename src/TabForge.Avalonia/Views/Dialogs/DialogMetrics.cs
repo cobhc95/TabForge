@@ -175,6 +175,29 @@ internal static class DialogMetrics
     public static readonly Thickness PromptInset = new(16, 14), PromptHeadingGap = new(0, 0, 0, 4), PromptMutedGap = new(0, 0, 0, 10), PromptFooterGap = new(0, 8, 0, 0),
         PromptHintGap = new(6, 0, 0, 0), PromptActionPadding = new(12, 0);
 
+    /// <summary>The Transpose popup (T with notes selected): its width, the round - and + buttons, the big number's width and text size, the octave pills' height and
+    /// width, and the gap between rows.</summary>
+    public const double TransposePopupWidth = 340, TransposeStepSize = 40, TransposeNumberWidth = 150, TransposeNumberSize = 26, TransposePillHeight = 26,
+        TransposePillWidth = 132, TransposeRowSpacing = 8;
+
+    /// <summary>The Transpose popup's round button corner (half its size) and its pill corner (half the pill height).</summary>
+    public static readonly CornerRadius TransposeStepCorner = new(TransposeStepSize / 2), TransposePillCorner = new(TransposePillHeight / 2);
+
+    /// <summary>The Move notes popup: the two segments' height, the note-name chips' height and least width, the Before / After label width and the caption text size.</summary>
+    public const double MoveSegmentHeight = 48, MoveChipHeight = 22, MoveChipMinWidth = 40, MoveRowLabelWidth = 52, MoveSmallSize = 11, MoveSegmentTitleSize = 13, MoveChipInsetX = 8;
+
+    /// <summary>The Move notes popup's chip corner (half its height), the gap above each section label, the chip inset, the gap under a small caption and the segment inset.</summary>
+    public static readonly CornerRadius MoveChipCorner = new(MoveChipHeight / 2);
+    public static readonly Thickness MoveSectionGap = new(0, 12, 0, 6), MoveCaptionGap = new(0, 2, 0, 0), MoveSegmentInset = new(8, 4), MoveChipRowGap = new(0, 4, 0, 0);
+
+    /// <summary>The Transpose popup's frame (the prompt inset and a 1 DIP edge) around <paramref name="child"/>.</summary>
+    public static Border TransposeFrame(Control child) =>
+        new() { Child = child, BorderThickness = new Thickness(1), Padding = PromptInset };
+
+    /// <summary>A light-dismiss popup centred over <paramref name="target"/>.</summary>
+    public static Popup CenteredPopup(Control target, Control child) =>
+        new() { PlacementTarget = target, Placement = PlacementMode.Center, IsLightDismissEnabled = true, Child = child };
+
     /// <summary>The Articulations tab of the MIDI processing window: column widths, the row height and the gaps between its parts.</summary>
     public const double ArticulationActionWidth = 140, ArticulationValueWidth = 90, ArticulationValue2Width = 64, ArticulationModeWidth = 100,
         ArticulationPresetWidth = 240, ArticulationLeadWidth = 56, ArticulationRowMinHeight = 34;
@@ -216,6 +239,13 @@ internal static class DialogMetrics
         return control;
     }
 
+    /// <summary>Sets the inner padding of a bordered box and returns it (builder code outside the metrics owner does not assign layout).</summary>
+    public static Border Padded(this Border box, Thickness pad)
+    {
+        box.Padding = pad;
+        return box;
+    }
+
     /// <summary>Gives a radio card its inset, outline and corner radius.</summary>
     public static void StyleChoiceCard(global::Avalonia.Controls.Border card)
     {
@@ -254,4 +284,104 @@ internal static class DialogMetrics
         button.Padding = NoticeActionPadding;
         return button;
     }
+
+    /// <summary>The FX chain rows: kind column, small text, row height, chevron, tick gap, folder glyph, new-button glyph and the Active on badge.</summary>
+    public const double FxRowKindWidth = 32, FxRowSmallFont = 11, FxRowMinHeight = 24, FxRowChevronSize = 20, FxRowChevronGlyph = 10,
+        FxRowFolderWidth = 16, FxRowFolderHeight = 14, FxRowFolderStroke = 1.3, FxRowChevronStroke = 1.6,
+        FxRowNewStroke = 1.3, FxRowNewIconWidth = 17, FxRowNewIconHeight = 16, FxRowNewSize = 24,
+        FxRowBadgeWidth = 11, FxRowBadgeHeight = 9, FxRowBadgeStroke = 1.2, FxRowBadgeGap = 6, FxRowHintMaxWidth = 130, FxRowIndentStep = 16;
+
+    /// <summary>The FX chain rows: badge, hint, tick, folder, count and chevron gaps, and the no-pad / no-outline used by the icon buttons.</summary>
+    public static readonly Thickness FxRowBadgeMargin = new(6, 0, 0, 0), FxRowHintMargin = new(0, 2, 0, 0), FxRowNoPad = new(0),
+        FxRowChevronGap = new(0, 0, 4, 0), FxRowTickMargin = new(0, 0, 6, 0), FxRowFolderGap = new(0, 0, 8, 0), FxRowCountMargin = new(8, 0, 2, 0);
+
+    /// <summary>The indent of an FX chain row <paramref name="depth"/> levels in (mirrors FxChainDropMath.Indent).</summary>
+    public static Thickness FxRowIndent(int depth) => new(depth * FxRowIndentStep, 0, 0, 0);
+
+    /// <summary>The Active on popup: width, inset, corner, outline, gaps, and the icon button (glyph, dot, padding, corner of the dot).</summary>
+    public const double ActiveOnPopupWidth = 300, ActiveOnPopupPadding = 14, ActiveOnPopupCorner = 8, ActiveOnPopupBorder = 1, ActiveOnGroupGap = 8,
+        ActiveOnTitleSize = 14, ActiveOnSubtitleSize = 12, ActiveOnButtonGap = 8, ActiveOnIconSize = 14, ActiveOnIconStroke = 1.2, ActiveOnDotSize = 7, ActiveOnDotStroke = 1;
+
+    /// <summary>The Active on popup and button: gap above a label, the subtitle gap, the button padding and gap, the dot's offset.</summary>
+    public static readonly Thickness ActiveOnSectionMargin = new(0, 6, 0, 2), ActiveOnSubtitleMargin = new(0, 0, 0, 4), ActiveOnStatusMargin = new(0, 6, 0, 0),
+        ActiveOnButtonRowMargin = new(0, 10, 0, 0), ActiveOnButtonPadding = new(10, 3, 10, 3), ActiveOnButtonMargin = new(0, 0, 4, 0), ActiveOnDotMargin = new(0, -4, -5, 0);
+
+    /// <summary>The MIDI export window: field widths, size and minimum size.</summary>
+    public const double MidiExportBarWidth = 60, MidiExportSecWidth = 70, MidiExportWidth = 560, MidiExportHeight = 560,
+        MidiExportMinWidth = 480, MidiExportMinHeight = 420, MidiExportFieldMinWidth = 48;
+
+    /// <summary>The MIDI export window: primary and secondary button padding, small button padding and the gap before the buttons.</summary>
+    public static readonly Thickness MidiExportPrimaryPadding = new(18, 4, 18, 4), MidiExportSecondaryPadding = new(14, 4, 14, 4),
+        MidiExportSmallPadding = new(10, 1, 10, 1), MidiExportButtonGap = new(0, 0, 8, 0);
+
+    /// <summary>The MIDI export Techniques rows: the track name column, the status column (its minimum and the widest it grows before it wraps),
+    /// the preset selector, and the width kept free beside a row's controls (the window's insets and frames) so they never pass the edge.</summary>
+    public const double MidiExportTechniqueNameWidth = 128, MidiExportTechniqueCountWidth = 112, MidiExportTechniqueStatusMaxWidth = 260,
+        MidiExportTechniqueSelectorWidth = 216, MidiExportTechniqueReserve = 56;
+
+    /// <summary>The gap around each part of a MIDI export row that flows onto a second line when the window is narrow.</summary>
+    public static readonly Thickness MidiExportPartGap = new(0, 3, 8, 3);
+
+    /// <summary>The piano roll toolbar: least widths, chip dot and gaps.</summary>
+    public const double PianoRollToolMinWidth = 30, PianoRollComboMinWidth = 76, PianoRollChipDot = 9,
+        PianoRollInnerGap = 2, PianoRollGroupGap = 6, PianoRollRowGap = 4;
+
+    /// <summary>The piano roll toolbar group frame: outline and inset.</summary>
+    /// <summary>The piano roll toolbar's group captions (tiny upper-case, muted) and the Step input group's dropdown least width.</summary>
+    public const double PianoRollCaptionSize = 10, PianoRollWideComboMinWidth = 120;
+
+    /// <summary>The gap under a group caption and the inset either side of a group divider.</summary>
+    public static readonly Thickness PianoRollCaptionGap = new(2, 0, 0, 1), PianoRollDivider = new(1, 0, 0, 0);
+
+    /// <summary>The inset either side of a toolbar group's divider line.</summary>
+    public const double PianoRollDividerInset = 6;
+
+    /// <summary>The thin outline drawn inside each plain piano roll note, so touching notes on one row read as separate blocks.</summary>
+    public const double PianoRollNoteEdge = 1;
+
+    public static readonly Thickness PianoRollFrameOutline = new(1), PianoRollFramePadding = new(2, 0);
+
+    /// <summary>Gives a piano roll group frame its outline and inset.</summary>
+    public static Border StylePianoRollFrame(Border frame)
+    {
+        frame.BorderThickness = PianoRollFrameOutline;
+        frame.Padding = PianoRollFramePadding;
+        return frame;
+    }
+
+    /// <summary>The "Reset entire app" dialog: its size, both step lists, the space between rows and the typed-word box.</summary>
+    public const double ResetAppWidth = 640, ResetAppHeight = 560, ResetAppMinHeight = 420, ResetAppListMaxHeight = 230,
+        ResetAppSpacing = 8, ResetAppConfirmWidth = 150;
+
+    /// <summary>The "Reset entire app" dialog: the gap above each step body, before the keep/wiped lists and above the footer.</summary>
+    public static readonly Thickness ResetAppStepGap = new(0, 10, 0, 0), ResetAppListGap = new(0, 6, 0, 0),
+        ResetAppBackupGap = new(0, 12, 0, 0), ResetAppConfirmGap = new(0, 10, 0, 0);
+
+    /// <summary>The MIDI processing window and its sibling editors (MidiParamEditors, MidiNoteMapRows, MidiPresetBars, Articulations pane/row):
+    /// adaptive widths so narrow windows wrap instead of clipping. The two list columns shrink first to their minimums while the editor
+    /// keeps its minimum; the window cannot be dragged smaller than the three minimums plus insets, gaps and chrome, and each column
+    /// clips to its own bounds with ellipsized rows (full name in the tooltip) while the editor scrolls sideways only as a last resort.</summary>
+    public const double MidiWindowWidth = 1020, MidiWindowHeight = 620,
+        MidiCatalogWidth = 250, MidiCatalogMinWidth = 140, MidiListWidth = 250, MidiListMinWidth = 140, MidiEditorMinWidth = 280,
+        MidiLabelWidth = 140, MidiLabelMinWidth = 64, MidiChoiceWidth = 150, MidiChoiceMinWidth = 196, MidiTextBoxWidth = 300, MidiTextMinWidth = 200,
+        MidiKnobSize = 28, MidiValueWidth = 90, MidiValueMinWidth = 64, MidiNoteInputMinWidth = 140, MidiNoteFrameMinWidth = 200,
+        MidiLabelReserve = 218, MidiColumnGap = 10, MidiWindowChromeWidth = 20, MidiWindowChromeHeight = 100, MidiEditorMinHeight = 320,
+        MidiTipMaxWidth = 320, MidiChipCorner = 9, MidiFrameCorner = 3, MidiFrameOutline = 1, MidiSmallText = 11;
+
+    /// <summary>The smallest window that still fits the three columns at their minimums: both lists plus the editor plus the content
+    /// insets, the two inter-column gaps and the frame allowance, so the window cannot be dragged smaller than its columns.</summary>
+    public static double MidiWindowMinWidth => MidiCatalogMinWidth + MidiListMinWidth + MidiEditorMinWidth
+        + MidiContentInset.Left + MidiContentInset.Right + MidiColumnGap * 2 + MidiWindowChromeWidth;
+
+    /// <summary>The smallest window height that still fits the editor column at its minimum plus the title, preset and status chrome.</summary>
+    public static double MidiWindowMinHeight => MidiEditorMinHeight + MidiWindowChromeHeight;
+
+    /// <summary>The MIDI editors' gaps and insets: content inset, pane gap, param row gap, chip gap, frame inset, learn gap, button gaps.</summary>
+    public static readonly Thickness MidiContentInset = new(10), MidiPaneGap = new(0, 0, 10, 0), MidiRowGap = new(0, 3, 12, 3),
+        MidiFrameInset = new(6), MidiNoteGap = new(0, 0, 0, 6), MidiInputGap = new(0, 0, 6, 0), MidiLearnGap = new(6, 0, 0, 0),
+        MidiCheckGap = new(6, 0, 0, 0), MidiValueGap = new(8, 0, 0, 0), MidiChipGap = new(0, 0, 4, 4), MidiChipInset = new(6, 1),
+        MidiSectionGap = new(0, 10, 0, 2), MidiHeadGap = new(0, 0, 0, 4), MidiFrameGap = new(2), MidiDetailPad = new(0, 0, 8, 0),
+        MidiButtonPad = new(10, 2), MidiButtonGap = new(6, 0, 0, 0), MidiSearchGap = new(0, 0, 0, 6), MidiBarGap = new(0, 6, 0, 0),
+        MidiItemPad = new(10, 3), MidiMapButtonsGap = new(140, 6, 0, 0), MidiMapSummaryGap = new(140, 8, 0, 0),
+        MidiFrameBorder = new(1), MidiHighlightBorder = new(2);
 }

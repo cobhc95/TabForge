@@ -49,6 +49,8 @@ public static partial class SettingsCatalog
                 "Replace the active tab when opening a project.", "open project replace ctrl o"),
             Bool(Tabs, "Opening", "tabs.dropnewtab", "Open dropped files in a new tab", v => tabs.DropOpensInNewTab = v, () => tabs.DropOpensInNewTab,
                 "Off (default): a file dragged onto the window opens in the selected tab. On: it opens in a new tab.", "drag drop file tab new"),
+            Choice(Tabs, "Opening", "tabs.midiimport", "MIDI import", v => tabs.MidiImportMode = MidiImportModes.Labels.Contains(v) ? v : MidiImportModes.Ask, () => tabs.MidiImportMode,
+                MidiImportModes.Labels, "When a MIDI file is opened: ask each time, or always make guitar, bass and drum tracks you can read and edit as tab, or always keep every track as MIDI (notes, controllers and pitch bends) edited in the piano roll. \"Remember my choice\" in the question sets this too.", "midi import open mid file tab piano roll ask remember"),
             Choice(Tabs, "Playback", "tabs.playbackonswitch", "When opening/switching to another tab while music is playing", v => tabs.PlaybackOnTabSwitch = v, () => tabs.PlaybackOnTabSwitch,
                 new[] { TabPlaybackActions.ContinuePlayingPrevious, TabPlaybackActions.PausePrevious, TabPlaybackActions.StopPrevious },
                 "Choose whether playback in other tabs continues, pauses or stops.", "audio playback switch"),

@@ -31,6 +31,9 @@ public sealed class PluginControlChannel
 
     /// <summary>
     /// Sends <paramref name="command"/> and waits up to <paramref name="timeoutMs"/> for the reply with the same id.
+    /// Runs its wait on the calling thread: engine-side callers only (the isolated plug-in's engine threads via
+    /// <c>RemotePlugin</c>), never the UI thread. The wait is bounded and the <c>Result</c> read below only runs
+    /// after it completed, so it never blocks beyond the timeout.
     /// Returns the reply payload when its type is <paramref name="expect"/>, otherwise null (a failure reply included).
     /// </summary>
     public byte[]? Ask(byte command, Action<BinaryWriter>? payload, byte expect, int timeoutMs, out bool timedOut)
@@ -48,7 +51,7 @@ public sealed class PluginControlChannel
         {
             Frames.Write(_pipe, command, w => { w.Write(id); payload?.Invoke(w); });
             if (!waiter.Task.Wait(timeoutMs)) { timedOut = true; return null; }
-            var (type, data) = waiter.Task.Result;
+            var (type, data) = waiter.Task.Result;   // the wait above completed: reading Result here never blocks beyond the timeout
             if (type == RemotePlugin.MsgFailed)
             {
                 _log.Write($"isolated plug-in command {command} failed: {FailureText(data)}");

@@ -59,8 +59,17 @@ internal static class PianoRollTabWriter
             else added.Add(note);
         if (removed.Count == 0 && added.Count == 0) return false;
         var carried = Pair(removed, added);
+        var marks = SnapshotBeats(removed);
         foreach (var entry in removed) Remove(entry);
-        for (var i = 0; i < added.Count; i++) Insert(song, track, map, added[i], carried.TryGetValue(i, out var from) ? from : null);
+        ClearOrigins(removed);
+        for (var i = 0; i < added.Count; i++)
+        {
+            carried.TryGetValue(i, out var from);
+            var (tremolo, whammy) = from is not null && marks.TryGetValue(from, out var mark)
+                ? (mark.Tremolo, mark.Whammy)
+                : (0, null);
+            Insert(song, track, map, added[i], from, tremolo, whammy);
+        }
         return true;
     }
 
@@ -89,8 +98,42 @@ internal static class PianoRollTabWriter
         }
     }
 
+    private static bool NeedsTremolo(TabNote note) => note.Techniques.Contains("TremoloPick");
+
+    private static bool NeedsWhammy(TabNote note) =>
+        note.Techniques.Any(t => t.Contains("TremBar", StringComparison.OrdinalIgnoreCase));
+
+    private static Dictionary<TabNote, (int Tremolo, List<BendPointModel> Whammy)> SnapshotBeats(List<PianoRollTabSource.Entry> removed)
+    {
+        var marks = new Dictionary<TabNote, (int, List<BendPointModel>)>();
+        foreach (var entry in removed)
+        {
+            if (entry.Parts.Count == 0) continue;
+            var (cell, note) = entry.Parts[0];
+            if (cell.TremoloPickDenominator == 0 && cell.WhammyPoints.Count == 0) continue;
+            marks.TryAdd(note, (cell.TremoloPickDenominator, cell.WhammyPoints.Select(p => p.Clone()).ToList()));
+        }
+        return marks;
+    }
+
+    private static void ClearOrigins(List<PianoRollTabSource.Entry> removed)
+    {
+        foreach (var cell in removed.Where(e => e.Parts.Count > 0).Select(e => e.Parts[0].Cell).Distinct())
+        {
+            if (!cell.Notes.Any(NeedsTremolo)) cell.TremoloPickDenominator = 0;
+            if (!cell.Notes.Any(NeedsWhammy)) cell.WhammyPoints.Clear();
+        }
+    }
+
+    private static void CarryBeats(TabCell cell, int tremolo, List<BendPointModel>? whammy)
+    {
+        if (tremolo != 0 && cell.TremoloPickDenominator == 0) cell.TremoloPickDenominator = tremolo;
+        if (whammy is { Count: > 0 } && cell.WhammyPoints.Count == 0)
+            cell.WhammyPoints = whammy.Select(p => p.Clone()).ToList();
+    }
+
     /// <summary>Writes one added note: a piece in each bar it covers, the first carrying the note (and its marks), the others tied on.</summary>
-    private static void Insert(SongProject song, TrackModel track, PianoRollTimeMap map, PianoRollNote note, TabNote? carried)
+    private static void Insert(SongProject song, TrackModel track, PianoRollTimeMap map, PianoRollNote note, TabNote? carried, int carriedTremolo, List<BendPointModel>? carriedWhammy)
     {
         var first = map.IndexAtBeat(note.Start);
         var last = map.IndexAtBeat(Math.Max(note.Start, note.End - Epsilon));
@@ -102,12 +145,12 @@ internal static class PianoRollTabWriter
             if (bar.Bar < 0 || bar.Bar >= track.Measures.Count) continue;
             var from = (Math.Max(note.Start, bar.StartBeat) - bar.StartBeat) * SnapCore.SlotsPerBeat;
             var to = (Math.Min(note.End, bar.EndBeat) - bar.StartBeat) * SnapCore.SlotsPerBeat;
-            head = InsertInBar(song, track, bar.Bar, note, from, to, index > first, carried, head);
+            head = InsertInBar(song, track, bar.Bar, note, from, to, index > first, carried, head, carriedTremolo, carriedWhammy);
         }
     }
 
     /// <summary>One bar's piece of an added note; returns the written head (the note later pieces tie on from).</summary>
-    private static TabNote? InsertInBar(SongProject song, TrackModel track, int bar, PianoRollNote note, double from, double to, bool tiedIn, TabNote? carried, TabNote? head)
+    private static TabNote? InsertInBar(SongProject song, TrackModel track, int bar, PianoRollNote note, double from, double to, bool tiedIn, TabNote? carried, TabNote? head, int carriedTremolo, List<BendPointModel>? carriedWhammy)
     {
         var measure = track.Measures[bar];
         var slots = Math.Max(1, MusicTime.BarSlots(song, bar));
@@ -129,7 +172,9 @@ internal static class PianoRollTabWriter
         var exact = timed.FirstOrDefault(b => Math.Abs(b.Onset - s) < Epsilon && Math.Abs(b.End - e) < Epsilon);
         if (exact is not null)
         {
+            var isAttack = !tiedIn;
             Add(exact.Cell, Piece(exact.Cell, true));
+            if (isAttack) CarryBeats(exact.Cell, carriedTremolo, carriedWhammy);
             return head;
         }
         var overlap = timed.Where(b => b.Onset < e - Epsilon && b.End > s + Epsilon).ToList();
@@ -152,7 +197,12 @@ internal static class PianoRollTabWriter
             foreach (var (length, denominator, dots) in lengths)
             {
                 var cell = PieceCell(track, owner, at, reused, denominator, dots);
-                if (inNew) Add(cell, Piece(cell, Math.Abs(at - s) < Epsilon));
+                if (inNew)
+                {
+                    var atStart = Math.Abs(at - s) < Epsilon;
+                    Add(cell, Piece(cell, atStart));
+                    if (atStart && !tiedIn) CarryBeats(cell, carriedTremolo, carriedWhammy);
+                }
                 pieces.Add(new Beat(at, cell));
                 at += length;
             }

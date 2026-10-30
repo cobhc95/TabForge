@@ -25,6 +25,8 @@ public sealed class ChainContainer
     public bool Collapsed { get; set; }
     /// <summary>The name of the preset the container came with.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? Preset { get; set; }
+    /// <summary>The preset last applied to this container (name, kind, contents as applied); absent in older files.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public TabForge.Presets.AppliedPreset? AppliedPreset { get; set; }
     /// <summary>The container's own internal routing as its source file wrote it (opaque; plug-ins run in series here).</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? Routing { get; set; }
     public int Start { get; set; }
@@ -33,6 +35,16 @@ public sealed class ChainContainer
     public int Depth { get; set; }
     /// <summary>True when the source file's pin blocks route something (empty pin blocks are the plain path, whatever the channel count).</summary>
     [JsonIgnore] public bool OwnRouting => Routing is { } r && (r.Contains("<IN_PINS\n>") != r.Contains("<IN_PINS") || r.Contains("<OUT_PINS\n>") != r.Contains("<OUT_PINS"));
+    /// <summary>Only play what is inside on the named output (driver kind and/or device); null: every output. A child may add a stricter rule (see <see cref="ActiveOnRules"/>).</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public ActiveOnRule? ActiveOn { get; set; }
+
+    /// <summary>Deep copy without a JSON roundtrip.</summary>
+    public ChainContainer Clone() => new()
+    {
+        Id = Id, Name = Name, Enabled = Enabled, Mix = Mix, Collapsed = Collapsed,
+        Preset = Preset, AppliedPreset = AppliedPreset, Routing = Routing, Start = Start, Count = Count, Depth = Depth,
+        ActiveOn = ActiveOn?.Clone(),
+    };
 }
 
 /// <summary>One item of a chain as a tree: a plug-in, or a container with its items.</summary>
@@ -271,12 +283,14 @@ public static class ChainTree
     }
 
     private static List<ChainContainer> Copy(List<ChainContainer> containers) =>
-        System.Text.Json.JsonSerializer.Deserialize<List<ChainContainer>>(System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(containers))!;
+        containers.Select(c => c.Clone()).ToList();
 
     /// <summary>A copy of one container with everything inside as a bare, packed plug-in list (new objects). Empty without plug-ins.</summary>
     public static List<PluginSlot> PackCopy(RigPreset rig, ChainContainer container)
     {
-        var copy = System.Text.Json.JsonSerializer.Deserialize<RigPreset>(System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(rig))!;
+        var plugins = rig.Plugins.Select(p => p.Clone()).ToList();
+        var boxes = rig.Containers?.Select(c => c.Clone()).ToList();
+        var copy = new RigPreset { Name = rig.Name, ArticulationMap = rig.ArticulationMap, AutoPitchMatch = rig.AutoPitchMatch, Plugins = plugins, Containers = boxes };
         var index = rig.Containers?.IndexOf(container) ?? -1;
         var tree = Tree(copy);
         if (index < 0 || copy.Containers is not { } all || index >= all.Count || Find(tree, all[index]) is not { } at) return new List<PluginSlot>();

@@ -1,3 +1,4 @@
+using System;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
@@ -16,6 +17,9 @@ namespace TabForge.Avalonia.Platform.Controls;
 // Tests: TabForge.Avalonia.Tests.CompactTrackStripTests.
 public sealed class TrackPillButton : ToggleButton
 {
+    /// <summary>A subclass has its own style key and would get no ToggleButton theme: use the stock ToggleButton theme (the capsule paints its own template).</summary>
+    protected override Type StyleKeyOverride => typeof(ToggleButton);
+
     /// <summary>The class the Core "TrackPill" look rules apply to.</summary>
     public const string LookClass = "TrackPill";
 

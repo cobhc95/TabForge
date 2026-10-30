@@ -6,6 +6,7 @@ Window logic that needs no WPF types: the state and commands a window's view dri
 | File | Purpose |
 | --- | --- |
 | `CommandPalettePresenter.cs` | The command palette's entries, fuzzy filter and ranking, selection and chosen command. The view is `Views/CommandPalette.cs`. |
+| `PaletteToolCatalog.cs` | The palette tool rows, their tabs and the command each runs. Adding a tool: `../../../docs/guides/ADD_TOOL.md`. |
 | `CompactModeStripPresenter.cs` | The compact mode strip's visibility rules, pill tooltip and lit pill. The view is `CompactMode/CompactModeStrip.cs`. |
 | `MessageBoxPresenter.cs` | The themed message box's button labels and answers, default, Esc and close answers and icon glyphs. The view is `Views/ThemedMessageBox.cs`. |
 | `ImportStatusPresenter.cs` | The status bar text, tooltip and Cancel button text for pending score imports, and the text after a cancelled import. The view is `MainWindow.Import.cs`. |

@@ -32,7 +32,8 @@ public sealed unsafe partial class SharedBlock : IDisposable
     private const int HeaderBytes = 256;
     private const int BreadcrumbChars = 520;
     public const int MeterSlots = 256;
-    public static readonly long Size = HeaderBytes + RingCapacity * sizeof(TimedMidi) + 2 * MeterSlots * sizeof(float);
+    // Per slot: the output peak (mono), the input peak, pre- and post-fader peaks L/R, the smoothed RMS L/R, and the pre- and post-fader clip counts.
+    public static readonly long Size = HeaderBytes + RingCapacity * sizeof(TimedMidi) + 8 * MeterSlots * sizeof(float) + 2 * MeterSlots * sizeof(int);
 
     private readonly MemoryMappedFile _file;
     private readonly MemoryMappedViewAccessor _view;
@@ -175,6 +176,34 @@ public sealed unsafe partial class SharedBlock : IDisposable
 
     /// <summary>TabForge: an armed track's latest input peak.</summary>
     public float InputPeak(int slot) => slot is >= 0 and < MeterSlots ? InputMeters[slot] : 0;
+
+    private float* PreMeterL => InputMeters + MeterSlots;
+    private float* PreMeterR => PreMeterL + MeterSlots;
+    private float* PostMeterL => PreMeterR + MeterSlots;
+    private float* PostMeterR => PostMeterL + MeterSlots;
+    private float* RmsMeterL => PostMeterR + MeterSlots;
+    private float* RmsMeterR => RmsMeterL + MeterSlots;
+    private int* PreClipCounts => (int*)(RmsMeterR + MeterSlots);
+    private int* PostClipCounts => PreClipCounts + MeterSlots;
+
+    /// <summary>Engine audio thread: one track slot's stereo levels for the last block, before and after its fader, and the running clip counts.</summary>
+    public void SetTrackLevels(int slot, float preLeft, float preRight, float postLeft, float postRight, float rmsLeft, float rmsRight, int preClips, int postClips)
+    {
+        if (slot is < 0 or >= MeterSlots) return;
+        PreMeterL[slot] = preLeft; PreMeterR[slot] = preRight;
+        PostMeterL[slot] = postLeft; PostMeterR[slot] = postRight;
+        RmsMeterL[slot] = rmsLeft; RmsMeterR[slot] = rmsRight;
+        Volatile.Write(ref PreClipCounts[slot], preClips); Volatile.Write(ref PostClipCounts[slot], postClips);
+    }
+
+    /// <summary>TabForge: a track slot's stereo peaks at the requested tap, its smoothed RMS and the clip count at that tap.</summary>
+    public (float PeakLeft, float PeakRight, float RmsLeft, float RmsRight, int Clips) TrackLevels(int slot, bool preFader)
+    {
+        if (slot is < 0 or >= MeterSlots) return (0, 0, 0, 0, 0);
+        return preFader
+            ? (PreMeterL[slot], PreMeterR[slot], RmsMeterL[slot], RmsMeterR[slot], Volatile.Read(ref PreClipCounts[slot]))
+            : (PostMeterL[slot], PostMeterR[slot], RmsMeterL[slot], RmsMeterR[slot], Volatile.Read(ref PostClipCounts[slot]));
+    }
 
     // Audio thread only: the path string whose text the breadcrumb holds now. A plug-in's Path is one string instance for its
     // lifetime, so a reference compare skips the copy (up to 520 chars) on every call but the first after a change.

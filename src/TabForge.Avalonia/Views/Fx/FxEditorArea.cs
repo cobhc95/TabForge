@@ -35,6 +35,7 @@ public sealed class FxEditorArea : Grid
     private readonly Func<IntPtr> _popup;
     private readonly Action<IntPtr, bool> _setPopupVisible;
     private (int W, int H) _editorPixels;
+    private bool _covered;
 
     /// <param name="popup">The engine editor popup of the window (zero when there is none); the scroll bars move its view.</param>
     /// <param name="setPopupVisible">Hides or shows the popup when the stamp changes; default: the Windows call.</param>
@@ -138,9 +139,22 @@ public sealed class FxEditorArea : Grid
     {
         var changed = show != _overlay.IsVisible;
         _overlay.Update(show, light);
-        Surface.IsVisible = !show;
-        if (changed) _setPopupVisible(_popup(), !show);
+        ApplyEditorVisibility();
+        if (changed) _setPopupVisible(_popup(), PluginEditorVisibility.EditorShows(show, _covered));
     }
+
+    /// <summary>Hides the native editor and its engine popup while another window covers the FX window (the MIDI processing window), and restores them
+    /// when it closes. The host area is hidden too, so the engine's own placement loop keeps the popup hidden instead of showing it again.</summary>
+    public bool SetCovered(bool covered)
+    {
+        if (_covered == covered) return false;
+        _covered = covered;
+        ApplyEditorVisibility();
+        _setPopupVisible(_popup(), PluginEditorVisibility.EditorShows(_overlay.IsVisible, covered));
+        return true;
+    }
+
+    private void ApplyEditorVisibility() => Surface.IsVisible = PluginEditorVisibility.EditorShows(_overlay.IsVisible, _covered);
 
     /// <summary>The docked editor reported its size (pixels): grows the window to show it whole, then lays out.</summary>
     public void SetEditorSize(int widthPixels, int heightPixels)

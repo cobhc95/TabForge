@@ -107,4 +107,17 @@ public sealed class ThemeArchitectureTests
                 hits.Add($"{Path.GetFileName(file)}: {m.Value}");
         Assert.True(hits.Count == 0, "a look names a theme brush, never a colour literal: " + string.Join("; ", hits));
     }
+
+    [Fact]
+    public void PianoRollToolbarNamesBrushesNotColourLiterals()
+    {
+        // Every piano roll view file paints from theme tokens only: no Colors/Brushes members, no Color parsing, no hex literal.
+        var literal = new Regex(@"\bColors\.|\bBrushes\.|\bColor\.(Parse|FromArgb|FromRgb)|\bnew Color\(|""#[0-9A-Fa-f]{3,8}""", RegexOptions.Compiled);
+        var views = Path.Combine(ArchitectureScan.RepoRoot(), "Source", "src", "TabForge.Avalonia", "Views", "PianoRoll");
+        var hits = new List<string>();
+        foreach (var file in Directory.EnumerateFiles(views, "*.cs"))
+            foreach (Match m in literal.Matches(File.ReadAllText(file)))
+                hits.Add($"{Path.GetFileName(file)}: {m.Value}");
+        Assert.True(hits.Count == 0, "a piano roll view names a theme brush, never a colour literal: " + string.Join("; ", hits));
+    }
 }

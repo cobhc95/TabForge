@@ -1,5 +1,6 @@
 using System.IO;
 using TabForge.Models;
+using TabForge.Playback;
 using TabForge.Presets;
 
 namespace TabForge.Services;
@@ -11,7 +12,7 @@ namespace TabForge.Services;
 /// MIDI import. Notes are quantised per beat to straight sixteenths, eighth-note triplets or sixteenth-note triplets (whichever fits the
 /// onsets of that beat best), notes that run past the bar line continue as tied beats, and a line that overlaps the one before it goes to voice 2.
 /// </summary>
-internal static class MidiToSong
+internal static partial class MidiToSong
 {
     private sealed class Bar { public long Start; public long Length; public int Num; public int Den; public int Slots; }
 
@@ -25,7 +26,7 @@ internal static class MidiToSong
         public int Voice;
     }
 
-    private sealed class Lost { public int Notes; }
+    private sealed class Lost { public int Notes; public int Controllers; }
 
     private static readonly IReadOnlyList<(double Slots, int Den, int Dots, int Tuplet)> Straight = new (double Slots, int Den, int Dots, int Tuplet)[]
         { (16, 1, 0, 0), (12, 2, 1, 0), (8, 2, 0, 0), (6, 4, 1, 0), (4, 4, 0, 0), (3, 8, 1, 0), (2, 8, 0, 0), (1, 16, 0, 0) };
@@ -56,14 +57,16 @@ internal static class MidiToSong
         var budget = new ImportBudget(context);
         var lost = new Lost();
         var channel = -1;
-        foreach (var (name, drums, notes) in groups)
+        foreach (var (name, drums, notes, source, partChannel) in groups)
         {
             budget.AddMeasures(bars.Count);
-            project.Tracks.Add(BuildTrack(name, drums, notes, bars, division, budget, lost, ref channel));
+            project.Tracks.Add(BuildTrack(name, drums, notes, bars, division, budget, lost, ref channel, source, partChannel, smf, context));
         }
         ApplyMasterBars(project, smf, bars);
+        MidiSectionImport.ApplySections(project, smf, bars.Select(b => (b.Start, b.Length)).ToList());
         if (lost.Notes > 0)
             context.DamageNotice = $"{lost.Notes:N0} MIDI note{(lost.Notes == 1 ? "" : "s")} could not be written: more than two overlapping lines in a track, or no string can play them.";
+        context.MidiNotice = MidiImportNotice.Text(context.MidiMode, project.Tracks.Count, project.Markers.Count, lost.Controllers);
         ProjectValidator.Validate(project);
         project.IsDirty = false;
         return project;
@@ -91,28 +94,31 @@ internal static class MidiToSong
     }
 
     /// <summary>One track per MIDI track (format 1) or per channel (format 0); channel 10 is always a drum track of its own.</summary>
-    private static List<(string Name, bool Drums, List<SmfNote> Notes)> Groups(SmfFile smf)
+    internal static List<(string Name, bool Drums, List<SmfNote> Notes, SmfTrack Source, int? PartChannel)> Groups(SmfFile smf)
     {
-        var list = new List<(string, bool, List<SmfNote>)>();
+        var list = new List<(string, bool, List<SmfNote>, SmfTrack, int?)>();
         foreach (var track in smf.Tracks)
         {
             if (track.Notes.Count == 0) continue;
             var parts = smf.Format == 0
-                ? track.Notes.GroupBy(n => n.Channel).OrderBy(g => g.Key).Select(g => g.ToList()).ToList()
-                : new[] { track.Notes.Where(n => n.Channel != 9).ToList(), track.Notes.Where(n => n.Channel == 9).ToList() }.Where(p => p.Count > 0).ToList();
-            foreach (var notes in parts)
+                ? track.Notes.GroupBy(n => n.Channel).OrderBy(g => g.Key).Select(g => (Notes: g.ToList(), Channel: (int?)g.Key)).ToList()
+                : new[] { (Notes: track.Notes.Where(n => n.Channel != 9).ToList(), Channel: (int?)null), (Notes: track.Notes.Where(n => n.Channel == 9).ToList(), Channel: (int?)9) }
+                    .Where(p => p.Notes.Count > 0).ToList();
+            foreach (var (notes, partChannel) in parts)
             {
                 var drums = notes[0].Channel == 9;
                 var named = parts.Count == 1 && track.Name.Length > 0;
-                list.Add((named ? track.Name : drums ? "Drums" : GeneralMidi.NameOf(notes[0].Program), drums, notes));
+                list.Add((named ? track.Name : drums ? "Drums" : GeneralMidi.NameOf(notes[0].Program), drums, notes, track, partChannel));
             }
         }
         return list;
     }
 
-    private static TrackModel BuildTrack(string name, bool drums, List<SmfNote> notes, List<Bar> bars, int division, ImportBudget budget, Lost lost, ref int channel)
+    private static TrackModel BuildTrack(string name, bool drums, List<SmfNote> notes, List<Bar> bars, int division, ImportBudget budget, Lost lost, ref int channel,
+        SmfTrack source, int? partChannel, SmfFile smf, ImportContext context)
     {
-        var program = drums ? 0 : notes[0].Program;
+        notes = MidiImportExtras.WithoutKeyswitches(notes, context);
+        var (program, hasProgram) = drums ? (0, false) : FirstProgram(source, partChannel, notes);
         var track = new TrackModel { Name = name, Measures = TemplateFactory.Measures(bars.Count) };
         if (drums)
         {
@@ -123,9 +129,15 @@ internal static class MidiToSong
         {
             channel = GuitarProTrackConverter.NextMelodicChannel(channel);
             track.MidiChannel = channel; track.MidiProgram = program; track.InstrumentName = GeneralMidi.NameOf(program);
-            SetInstrument(track, program, notes.Min(n => n.Pitch), notes.Max(n => n.Pitch));
+            SetInstrument(track, program, hasProgram, name, notes.Min(n => n.Pitch), notes.Max(n => n.Pitch));
         }
 
+        if (context.MidiMode == MidiImportMode.Midi)
+        {
+            // A MIDI track: its notes, controllers and bends live in one MIDI clip and the written bars stay empty (never both).
+            MidiImportExtras.AddMidiClip(track, source, smf, partChannel, drums, notes);
+            return track;
+        }
         var pointer = 0;
         var carry = new List<Ev>();
         for (var b = 0; b < bars.Count; b++)
@@ -138,28 +150,39 @@ internal static class MidiToSong
             carry = BuildBar(track, track.Measures[b], bar, raw, carry, division, drums, budget, lost);
         }
         GuitarProImporter.LinkTieOrigins(track);
+        lost.Controllers += MidiImportExtras.CountControllers(source, partChannel, drums);   // a tab track has no lane for them: dropped, and said so
         return track;
     }
 
-    /// <summary>Guitar tuning by default; bass by program 32-39; keys for programs below 24; a part that does not fit gets the wide keys tuning.</summary>
-    private static void SetInstrument(TrackModel track, int program, int lowest, int highest)
+    /// <summary>First program change anywhere on the track's channel(s); name fallback only with no program.</summary>
+    internal static (int Program, bool HasProgram) FirstProgram(SmfTrack source, int? partChannel, List<SmfNote> notes)
     {
-        if (program is >= 32 and <= 39)
-        {
-            track.Kind = TrackKind.Bass;
-            track.StringTunings = lowest < 28 ? new List<int> { 43, 38, 33, 28, 23 } : new List<int> { 43, 38, 33, 28 };
-        }
-        else
-        {
-            track.Kind = program < 24 ? TrackKind.Keys : TrackKind.Guitar;
-            track.StringTunings = program < 24 ? new List<int> { 96, 84, 72, 60, 48, 36, 24 } : new List<int> { 64, 59, 55, 50, 45, 40 };
-        }
-        track.NumberOfFrets = track.Kind == TrackKind.Keys ? 36 : 24;
-        if (lowest >= track.StringTunings.Min() && highest <= track.StringTunings.Max() + track.NumberOfFrets) return;
-        track.Kind = TrackKind.Keys;
-        track.StringTunings = new List<int> { 96, 84, 72, 60, 48, 36, 24 };
-        track.NumberOfFrets = 36;
+        foreach (var (_, channel, program) in source.ProgramChanges)
+            if (partChannel is int only ? channel == only : channel != 9) return (program, true);
+        return notes.Count > 0 ? (notes[0].Program, source.ProgramChanges.Count > 0) : (0, false);
     }
+
+    /// <summary>GM 24-31 guitar, 32-39 bass regardless of range; no-program tracks follow the track-name keywords.</summary>
+    internal static void SetInstrument(TrackModel track, int program, bool hasProgram, string name, int lowest, int highest)
+    {
+        if (hasProgram && program is >= 24 and <= 31) { Guitar(track); return; }
+        if (hasProgram && program is >= 32 and <= 39) { Bass(track, lowest); return; }
+        if (!hasProgram)
+        {
+            var lower = (name ?? "").ToLowerInvariant();
+            if (lower.Contains("bass")) { Bass(track, lowest); return; }
+            if (lower.Contains("piano") || lower.Contains("key")) { Keys(track); return; }
+            Guitar(track); return;
+        }
+        if (program is >= 32 and <= 39) Bass(track, lowest);
+        else if (program < 24) Keys(track);
+        else Guitar(track);
+        if (lowest >= track.StringTunings.Min() && highest <= track.StringTunings.Max() + track.NumberOfFrets) return;
+        Keys(track);
+    }
+    private static void Guitar(TrackModel t) { t.Kind = TrackKind.Guitar; t.StringTunings = new() { 64, 59, 55, 50, 45, 40 }; t.NumberOfFrets = 24; }
+    private static void Bass(TrackModel t, int lowest) { t.Kind = TrackKind.Bass; t.StringTunings = lowest < 28 ? new() { 43, 38, 33, 28, 23 } : new() { 43, 38, 33, 28 }; t.NumberOfFrets = 24; }
+    private static void Keys(TrackModel t) { t.Kind = TrackKind.Keys; t.StringTunings = new() { 96, 84, 72, 60, 48, 36, 24 }; t.NumberOfFrets = 36; }
 
     /// <summary>The beat grids (straight sixteenths, eighth triplets, sixteenth triplets) as the distance between positions in slots.</summary>
     private static double Step(int kind) => kind == 0 ? 1.0 : kind == 1 ? 4 / 3.0 : 2 / 3.0;
@@ -270,6 +293,7 @@ internal static class MidiToSong
                 var note = drums ? (n.Pitch is >= 27 and <= 87 ? MidiClipToTab.DrumNote(n.Pitch) : null) : MidiClipToTab.StringNote(track, n.Pitch, used);
                 if (note is null) { lost.Notes++; continue; }
                 note.Velocity = Math.Clamp(n.Velocity, 1, MidiLimits.Max);
+                TechniqueMarker.Apply(note, n.Marker);
                 used.Add(note.StringIndex);
                 ev.Notes.Add(note);
                 ev.EndTicks.Add(n.End);

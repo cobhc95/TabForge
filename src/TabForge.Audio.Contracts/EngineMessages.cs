@@ -50,7 +50,7 @@ public readonly record struct SetLiveLimiterMessage(bool On)
     public static SetLiveLimiterMessage Read(BinaryReader r) => new(r.ReadBoolean());
 }
 
-/// <summary><see cref="EngineCommand.SetSoundBank"/>: the SoundFont 2 file path (empty: Windows GM).</summary>
+/// <summary><see cref="EngineCommand.SetSoundBank"/>: the SoundFont 2 file path (empty: Windows GM; "None": silence, the synths render nothing).</summary>
 public readonly record struct SetSoundBankMessage(string Path)
 {
     public void Write(BinaryWriter w) => w.Write(Path);

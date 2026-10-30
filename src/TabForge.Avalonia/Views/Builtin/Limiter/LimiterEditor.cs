@@ -3,7 +3,7 @@ using System.Globalization;
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml.MarkupExtensions;
 using TabForge.Audio.Contracts;
-using TabForge.AudioEngine.Builtin.Limiter;
+using LimiterEffect = TabForge.Audio.Contracts.Builtin.LimiterParameters;
 using TabForge.Avalonia.Views.Dialogs;
 using TabForge.Models;
 using TabForge.Plugins;

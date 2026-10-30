@@ -1,4 +1,4 @@
-namespace TabForge.AudioEngine.Midi.Processors;
+namespace TabForge.Core.Midi.Processors;
 
 // Owns: the channel filter/remap note processors (16-row map, solo channel, per-row channel messages).
 

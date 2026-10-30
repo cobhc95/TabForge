@@ -81,14 +81,17 @@ public sealed partial class FxChainWindow : Window
         _editors = new FxEditorController(host, track, _area, _ui, () => OwnerHandle, () => ActualThemeVariant != ThemeVariant.Light,
             () => Selected, () => ShowSelected(), () => { ShowSelected(); if (IsVisible && WindowState != WindowState.Minimized) Activate(); }, () => PluginEditorPopup);
         _containers = new FxChainContainers(this, _list, () => _track.Rig,
-            (change, switched) => EditTree(tree => { var had = HasInstrument; change(tree); GmBackWithoutInstrument(had); }, refresh: true, switched: switched),
+            (change, switched) => EditTree(tree => { var had = HasInstrument; change(tree); KeepGmSound(had); }, refresh: true, switched: switched),
             focus => RefreshRows(focus), leaving => _editors.Leaving(leaving), () => Dialogs, () => _host.Hotkeys);
-        _containerPresets = new FxContainerPresets(this, _containers.PresetBar, () => _containers.Shown, () => _track.Rig, change => EditTree(change, refresh: true),
+        _containerPresets = new FxContainerPresets(this, _containers.PresetBar, () => _containers.Shown, () => _track.Rig, EditKeepingGmSound,
             leaving => _editors.Leaving(leaving), slot => _host.Trust.IsTrusted(slot.Path, _host.PluginSettings, _host.PluginFiles),
-            () => _host.Engine?.CollectStatesAsync(new[] { _track }, StateCollectMs) ?? System.Threading.Tasks.Task.CompletedTask, () => Dialogs);
+            () => _host.Engine?.CollectStatesAsync(new[] { _track }, StateCollectMs) ?? System.Threading.Tasks.Task.CompletedTask, () => Dialogs,
+            _host.PluginSettings, _host.SaveSettings);
         _files = new FxChainFiles(this, () => Dialogs, _host, _track, first => RefreshList(first), text => _status.Text = text, change => EditTree(change, refresh: true));
         TabForge.Avalonia.Platform.Controls.HotkeyTip.SetSource(this, () => _host.Hotkeys);   // tooltips with a key show the live binding
         _containers.LeadingItems = ListMenuItems;
+        _containers.OpenActiveOn = OpenActiveOnForContainer;
+        if (_host.Engine is { } engine) engine.OutputChanged += OnOutputChanged;   // re-match the Active on rules when a device opens or falls back
         BuildOptions();
         Content = BuildRoot();
         BuildBar();

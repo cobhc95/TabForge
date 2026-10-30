@@ -6,8 +6,8 @@ namespace TabForge.Services;
 // Tests: TabForge.Avalonia.Tests.SectionScaleDetectorTests.
 public static partial class SettingsCatalog
 {
-    private const string ReadAutoSection = "Auto: this section", ReadWholeSong = "Whole song", ReadSongKey = "Song key only";
-    private const string ListenSelected = "Selected track", ListenPitched = "All pitched tracks";
+    private const string ReadAutoSection = "Auto: this section", ReadWholeSong = "Whole song", ReadSongKey = "Song key only", ReadSelection = "Selection";
+    private const string ListenSelected = "This track", ListenPitched = "All pitched tracks";
 
     private static List<SettingDescriptor> ScaleReadoutRows(AppSettings s)
     {
@@ -15,13 +15,13 @@ public static partial class SettingsCatalog
         var rows = new List<SettingDescriptor>
         {
             Choice(Fretboard, "Scale readout", "scalereadout.readfrom", "Scale readout reads", v => scale.ReadFrom = ReadFromOf(v), () => ReadFromText(scale.ReadFrom),
-                new[] { ReadAutoSection, ReadWholeSong, ReadSongKey },
-                "Where the scale in the status bar comes from. Auto: this section finds the likely scale of the section the playhead or cursor is in. Whole song looks at every bar. Song key only shows the key signature, without detection.",
-                "scale key readout status bar detect auto section whole song key signature"),
-            Choice(Fretboard, "Scale readout", "scalereadout.listento", "Scale readout listens to", v => scale.ListenTo = v == ListenPitched ? ScaleListenTo.Pitched : ScaleListenTo.Track,
+                new[] { ReadAutoSection, ReadWholeSong, ReadSongKey, ReadSelection },
+                "Where the scale in the status bar comes from. Auto: this section finds the likely scale of the section the playhead or cursor is in. Whole song looks at every bar. Selection reads the selected bars. Song key only shows the key signature, without detection.",
+                "scale key readout status bar detect auto section whole song key signature selection"),
+            Choice(Fretboard, "Scale readout", "scalereadout.listento", "Scale readout tracks to analyse", v => scale.ListenTo = v == ListenPitched ? ScaleListenTo.Pitched : ScaleListenTo.Track,
                 () => ScaleListenTo.Normalize(scale.ListenTo) == ScaleListenTo.Pitched ? ListenPitched : ListenSelected, new[] { ListenSelected, ListenPitched },
-                "Which tracks the scale is worked out from: the selected track (default) or every pitched track (drums are left out).",
-                "scale key readout listen track tracks pitched drums"),
+                "Which tracks the scale is worked out from: this track (the track you are on, default) or all pitched tracks (guitars, bass, keys and other melodic tracks together). Drums and percussion are never included.",
+                "scale key readout tracks to analyse listen this track pitched drums percussion"),
             Bool(Fretboard, "Scale readout", "scalereadout.prefercommon", "Prefer common scales when it is close", v => scale.PreferCommon = v, () => scale.PreferCommon,
                 "When two scales fit about as well, show the more common one (major or minor before pentatonic or blues, then harmonic and melodic minor, then modes).",
                 "scale key readout prefer common popular close tie"),
@@ -37,7 +37,7 @@ public static partial class SettingsCatalog
             var name = family;
             rows.Add(Bool(Fretboard, "Scale readout", "scalereadout.family." + name.ToLowerInvariant().Replace(' ', '-'), "Consider " + name.ToLowerInvariant() + " scales",
                 v => SetFamily(scale, name, v), () => ScaleFamilies.Normalize(scale.Families).Contains(name),
-                "Whether the scale readout may name a " + name.ToLowerInvariant() + " scale (" + string.Join(", ", ScaleFamilies.ScalesOf(name)) + ").",
+                name == ScaleFamilies.Favourites ? "Whether the scale readout also considers the scales you starred as favourites (any key)." : "Whether the scale readout may name a " + name.ToLowerInvariant() + " scale (" + string.Join(", ", ScaleFamilies.ScalesOf(name)) + ").",
                 "scale key readout family consider " + name.ToLowerInvariant()));
         }
         return rows;
@@ -47,6 +47,7 @@ public static partial class SettingsCatalog
     {
         ScaleReadFrom.Song => ReadWholeSong,
         ScaleReadFrom.Key => ReadSongKey,
+        ScaleReadFrom.Selection => ReadSelection,
         _ => ReadAutoSection,
     };
 
@@ -54,6 +55,7 @@ public static partial class SettingsCatalog
     {
         ReadWholeSong => ScaleReadFrom.Song,
         ReadSongKey => ScaleReadFrom.Key,
+        ReadSelection => ScaleReadFrom.Selection,
         _ => ScaleReadFrom.Section,
     };
 

@@ -362,6 +362,8 @@ public static class MixerGroups
     /// The one rule for how a track sounds. The engine's built-in General MIDI synth runs ONLY for
     /// <see cref="TrackRoute.MidiThroughEffects"/> (chain on, no VST instrument, at least one enabled effect,
     /// MIDI sound on); every other track without an instrument stays on Windows MIDI, so nothing extra runs.
+    /// With <see cref="MixerOptions.SoundNone"/> (Sound engine None) no track reaches the built-in synth at all:
+    /// only a VST instrument still plays (the click's own slot is handled by the sync, not here).
     /// </summary>
     public static TrackRoute RouteOf(TrackModel track, MixerOptions options)
     {
@@ -396,15 +398,16 @@ public static class MixerGroups
     public static bool UsesEngineAudio(TrackModel track) =>
         (track.RecordArm && AudioInputs.HasAudio(track.AudioInput)) || track.AudioClips.Any(c => !c.IsMidi && TakeGroups.Audible(track, c));   // one owner: TakeGroups.Audible
 
-    /// <summary>The track's MIDI plays through the engine (VST instrument or effects on the General MIDI sound).</summary>
+    /// <summary>The track's MIDI plays through the engine (VST instrument or effects on the General MIDI sound). With <see cref="MixerOptions.SoundNone"/> only tracks with plug-ins stay: a VST instrument still plays, any other plug-in chain stays loaded but silent.</summary>
     /// A track with plug-ins stays in the engine whatever its route (chain off, everything bypassed, silent): the plug-ins stay
     /// loaded with their editors open, and its General MIDI sound plays on the engine's synth in time with the plug-in tracks.
     public static bool MidiInEngine(TrackModel track, MixerOptions options) =>
         track.IsAudio ? InstrumentPlays(track) :
+        options.SoundNone ? InstrumentPlays(track) || (!track.IsBus && track.Rig.Plugins.Count > 0) :
         RouteOf(track, options) is TrackRoute.Instrument or TrackRoute.MidiThroughEffects || (!track.IsBus && track.Rig.Plugins.Count > 0);
 
-    /// <summary>The track's General MIDI sound is heard (for a track in the engine: its GM synth is on).</summary>
-    public static bool GmSounds(TrackModel track, MixerOptions options) => !track.IsAudio && RouteOf(track, options) switch
+    /// <summary>The track's General MIDI sound is heard (for a track in the engine: its GM synth is on). Never with <see cref="MixerOptions.SoundNone"/>.</summary>
+    public static bool GmSounds(TrackModel track, MixerOptions options) => options.SoundNone ? false : !track.IsAudio && RouteOf(track, options) switch
     {
         TrackRoute.Instrument => track.MidiSound,
         TrackRoute.Silent => false,

@@ -1,6 +1,6 @@
 using TabForge.Audio.Contracts;
 
-namespace TabForge.AudioEngine.Midi.Processors;
+namespace TabForge.Core.Midi.Processors;
 
 // Owns: the MIDI delay processor (ms+beats+samples summed, paired note-on/off, carry-over ring).
 

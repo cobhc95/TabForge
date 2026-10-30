@@ -83,8 +83,11 @@ public sealed partial class AudioEngineClient : IDisposable
     }
 
     /// <summary>
-    /// Blocking form of <see cref="CollectStatesAsync"/> for headless probes (never call it on the UI thread: it blocks up to
-    /// <paramref name="timeoutMs"/>). Same core, run with blocking waits, so it completes synchronously and cannot deadlock.
+    /// Blocking form of <see cref="CollectStatesAsync"/> for headless probes and the window-close save
+    /// (<c>LiveInputSession.SaveStatesOnClose</c>, where a close must wait for the states): it blocks up to
+    /// <paramref name="timeoutMs"/> per plug-in batch, so never call it on the UI thread. Same core, run with blocking
+    /// waits, so it completes synchronously and cannot deadlock (the blocking path never awaits an incomplete task;
+    /// the inner waits are on the reader thread's request tasks).
     /// </summary>
     public StateCollection CollectStates(IEnumerable<TrackModel> tracks, int timeoutMs = 800)
     {

@@ -22,6 +22,9 @@ namespace TabForge.Avalonia.Platform.Controls;
 // Tests: TabForge.Avalonia.Tests.ColourButtonTests.
 public sealed class ColourButton : Button
 {
+    /// <summary>A subclass has its own style key and would get no Button theme: use the stock Button theme (the control paints its own template).</summary>
+    protected override Type StyleKeyOverride => typeof(Button);
+
     private const double SwatchCorner = 3;
     private const string BorderPartName = "Bd";
     private readonly Border _swatch;

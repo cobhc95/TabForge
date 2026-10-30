@@ -19,7 +19,7 @@ namespace TabForge.Avalonia.Views.Docking;
 // Does not own: the floating window itself (DockFloatingWindow), the pane content (DockPaneSetup), saving the layout, size and fit maths, the rendering.
 // Tests: TabForge.Avalonia.Tests.DockWorkspaceControllerTests.
 /// <summary>Edits the dock tree through DockLayoutTree and DockWorkspaceRules (the same calls) and re-shows the view.</summary>
-public sealed class DockWorkspaceController : IDockPaneDragHost, IDisposable
+public sealed partial class DockWorkspaceController : IDockPaneDragHost, IDisposable
 {
     private static readonly TimeSpan ChangeDelay = TimeSpan.FromMilliseconds(UiTiming.LayoutChangeDebounceMs);
 
@@ -60,7 +60,11 @@ public sealed class DockWorkspaceController : IDockPaneDragHost, IDisposable
         State = DockWorkspaceRules.Restore(saved, hasEditorContent: true, setup.PaneIds,
             id => Row(id).StartsClosed, id => (Row(id).DefaultHost, Row(id).DefaultAnchor), emptiedFloating);
         view.NaturalHeightIds = setup.NaturalHeightIds;
-        view.MenuOf = id => DockPanelMenu.Build(id, ResetPanel, id => ClosePanel(id), ResetAllPanels, id => FloatPanel(id));
+        view.MenuOf = id => DockPanelMenu.Build(id,
+            id => { ResetPanel(id); ChosenByUser(id, IsPanelVisible(id)); },
+            id => { ClosePanel(id); ChosenByUser(id, false); },
+            () => { ResetAllPanels(); ChosenByUser(InstrumentPanelId, IsPanelVisible(InstrumentPanelId)); },
+            id => { FloatPanel(id); ChosenByUser(id, IsPanelVisible(id)); });
         view.SurfaceBuilt += _drag.Hook;
         view.Edited += NotifyChanged;
         view.AttachedToVisualTree += (_, _) =>
@@ -90,6 +94,12 @@ public sealed class DockWorkspaceController : IDockPaneDragHost, IDisposable
     /// <summary>Raised a moment after the last change with the state to save (<see cref="DockWorkspaceRules.Capture"/>).</summary>
     public event Action<DockWorkspaceState>? LayoutChanged;
 
+    /// <summary>Raised when the user deliberately shows or hides a pane from its own menu or floating window (not a layout change or a mode
+    /// switch): the pane id and whether it is shown afterwards.</summary>
+    public event Action<string, bool>? PanelVisibilityChosenByUser;
+
+    private void ChosenByUser(string id, bool shown) => PanelVisibilityChosenByUser?.Invoke(id, shown);
+
     /// <summary>Raised before a change rebuilds the layout, while the controls still show the old one (a pane's height can still be read).</summary>
     public event Action? LayoutRebuilding;
 
@@ -103,13 +113,25 @@ public sealed class DockWorkspaceController : IDockPaneDragHost, IDisposable
     /// <summary>True for the instrument panel while keyboard mode keeps it closed.</summary>
     private bool IsInstrumentSuppressed(string id) => SuppressInstrumentPanel && id == InstrumentPanelId;
 
-    /// <summary>Moves a visible panel next to or into a host. False, with the tree untouched, when the drop is not allowed.</summary>
+    /// <summary>Moves a visible panel next to or into a host. False, with the tree untouched, when the drop is not allowed. The instrument pane keeps its size: top/bottom keeps the height, left/right the width (the Core rules remember per orientation).</summary>
     public bool DockPanelTo(string panelId, string targetHostId, DockDropZone zone, double fraction = DockLayoutTree.EdgeFraction, int? tabIndex = null)
     {
-        if (!CanDrop(panelId, targetHostId, zone)
-            || !DockWorkspaceRules.DropPanel(State, panelId, targetHostId, zone, floatingId: null, fraction, tabIndex, new List<string>()))
+        if (!CanDrop(panelId, targetHostId, zone)) return false;
+        double? keepHeight = null;
+        double? keepWidth = null;
+        if (panelId == InstrumentPanelId && zone != DockDropZone.Center)
+        {
+            if (InstrumentDockSizeMemory.IsVerticalZone(zone)) keepHeight = PanelHeight(panelId) ?? RatioHeight(panelId);
+            else keepWidth = PanelWidth(panelId) ?? RatioWidth(panelId);
+        }
+        if (!DockWorkspaceRules.DropPanel(State, panelId, targetHostId, zone, floatingId: null, fraction, tabIndex, new List<string>()))
             return false;
         Changed();
+        if (panelId == InstrumentPanelId && zone != DockDropZone.Center)
+        {
+            if (keepHeight is { } h && h > 0) RestartPanelAtHeight(panelId, h);
+            else if (keepWidth is { } w && w > 0) RestartPanelAtWidth(panelId, w);
+        }
         return true;
     }
 
@@ -132,140 +154,20 @@ public sealed class DockWorkspaceController : IDockPaneDragHost, IDisposable
         return target.Panels.Count > 1;   // within its own group: Center reorders, an edge splits it out; a lone pane has nowhere to go
     }
 
-    /// <summary>
-    /// Sizes the lower pane of the vertical split that ends in <paramref name="panelId"/>'s tab host to <paramref name="height"/> (the Core fit rule), as the
-    /// the dock does: the live ratio changes, the user's ratio is kept in UserRatio, and nothing is saved. False when no such split is shown yet, or when
-    /// the user dragged the splitter since the last fit and <paramref name="replaceUserSplit"/> is false. A saved ratio at launch is not a user drag, so the
-    /// first fit of a session always applies.
-    /// </summary>
-    public bool FitPanelHeight(string panelId, double height, bool replaceUserSplit = false)
-    {
-        foreach (var split in _view.GetVisualDescendants().OfType<DockSplitPanel>())
-        {
-            var node = split.Node;
-            if (node.Orientation != "Vertical" || node.Second is not { Kind: "tabs" } lower || !lower.Panels.Contains(panelId, StringComparer.Ordinal)) continue;
-            var available = split.AvailableNow;
-            if (available <= 0) return false;
-            // A drag clears UserRatio; a ratio other than the last fit's then belongs to the user, until a new song replaces it.
-            if (!replaceUserSplit && node.UserRatio is null && _fittedRatios.TryGetValue(panelId, out var fitted) && Math.Abs(node.Ratio - fitted) > 1e-9) return false;
-            // The split snaps its first half to whole pixels (DockSplitPanel.FirstShare), so a fractional height (density-scaled rows) would land up to half a pixel short and scroll the rows: round the first half down so the pane keeps at least the height asked.
-            var (_, ratio) = DockSizeRules.Fit(available - Math.Floor(available - height), 0, available, inFirst: false);
-            node.UserRatio ??= node.Ratio;
-            node.Ratio = ratio;
-            _fittedRatios[panelId] = ratio;
-            split.Rearrange();
-            return true;
-        }
-        return false;
-    }
-
-    /// <summary>Locks a pane's row to its content height, or unlocks it, while the window is open; the splitter beside it follows at once.</summary>
-    public void SetNaturalHeightLock(string id, bool locked)
-    {
-        _setup.SetKeepsNaturalHeight(id, locked);
-        _view.SetNaturalHeightLock(id, locked);
-    }
-
-    /// <summary>Sizes the vertical split beside a pane so the pane is <paramref name="height"/> tall, as a fresh default layout starts it. Unlike
-    /// <see cref="FitPanelHeight"/> it works for the pane in either half. It refits on each call while the ratio it last set is still in place,
-    /// so the pane holds its height as the window resizes; once the user moves that splitter the ratio no longer matches and it is left alone.
-    /// False until the split is laid out.</summary>
-    public bool StartPanelAtHeight(string panelId, double height)
-    {
-        if (StartSplitOf(panelId) is not { } start) return false;
-        var (split, inFirst) = start;
-        var node = split.Node;
-        if (_startRatios.TryGetValue(panelId, out var fitted) && Math.Abs(node.Ratio - fitted) > 1e-9) return true;   // the user moved the splitter
-        var available = split.AvailableNow;
-        if (available <= 0) return false;
-        var ratio = DockSizeRules.Fit(height, 0, available, inFirst).Ratio;
-        node.Ratio = ratio;
-        _startRatios[panelId] = ratio;
-        split.Rearrange();
-        return true;
-    }
-
-    /// <summary>
-    /// Starts the pane at <paramref name="height"/> as <see cref="StartPanelAtHeight"/> does, also when the user moved its splitter before: the user's
-    /// ratio is dropped and the split is fitted again. False until the split is laid out.
-    /// </summary>
-    public bool RestartPanelAtHeight(string panelId, double height)
-    {
-        _startRatios.Remove(panelId);
-        _draggedHeights.Remove(panelId);
-        return StartPanelAtHeight(panelId, height);
-    }
-
-    /// <summary>
-    /// The pixel height of a pane whose splitter the user moved since <see cref="StartPanelAtHeight"/> last fitted it; null while the splitter is
-    /// where the fit put it, or when no fit is held.
-    /// </summary>
-    public double? UserSetPanelHeight(string panelId) =>
-        MovedHeight(panelId) is null ? null : _draggedHeights.GetValueOrDefault(panelId) ?? PanelHeight(panelId);
-
-    // The height the split's ratio gives the pane now, in the terms StartPanelAtHeight fits (the layout pass may not have run yet).
-    private double? RatioHeight(string panelId)
-    {
-        if (StartSplitOf(panelId) is not { } start) return null;
-        var (split, inFirst) = start;
-        return (inFirst ? split.Node.Ratio : 1 - split.Node.Ratio) * split.AvailableNow;
-    }
-
-    private double? MovedHeight(string panelId)
-    {
-        if (!_startRatios.TryGetValue(panelId, out var fitted) || StartSplitOf(panelId) is not { } start) return null;
-        return Math.Abs(start.Split.Node.Ratio - fitted) > 1e-9 ? PanelHeight(panelId) : null;
-    }
-
-    /// <summary>The first vertical split shown with the pane in one of its tab halves, and whether the pane is in the first half; null when none shows it.</summary>
-    private (DockSplitPanel Split, bool InFirst)? StartSplitOf(string panelId)
-    {
-        foreach (var split in _view.GetVisualDescendants().OfType<DockSplitPanel>())
-        {
-            var node = split.Node;
-            if (node.Orientation != "Vertical") continue;
-            if (node.First is { Kind: "tabs" } upper && upper.Panels.Contains(panelId, StringComparer.Ordinal)) return (split, true);
-            if (node.Second is { Kind: "tabs" } lower && lower.Panels.Contains(panelId, StringComparer.Ordinal)) return (split, false);
-        }
-        return null;
-    }
-
-    /// <summary>The pixel height of the tab group showing <paramref name="panelId"/>, chrome included; null while it is not shown.</summary>
-    public double? PanelHeight(string panelId) =>
-        _view.GetVisualDescendants().OfType<DockTabSurface>().FirstOrDefault(s => s.Node.Panels.Contains(panelId, StringComparer.Ordinal)) is { Bounds.Height: > 0 } surface
-            ? surface.Bounds.Height : null;
-
-    /// <summary>
-    /// Holds the tab group of <paramref name="panelId"/> at <paramref name="height"/> pixels (chrome included) through every rebuild, whatever its split
-    /// ratio, or releases it with null. The split ratios stay as they were, so releasing gives the ratio's height back. Takes effect at the next rebuild.
-    /// </summary>
-    public void HoldPanelHeight(string panelId, double? height)
-    {
-        if (height is { } held) _view.HeldHeights[panelId] = held;
-        else _view.HeldHeights.Remove(panelId);
-    }
-
-    /// <summary>Puts back the ratio <see cref="FitPanelHeight"/> replaced on the split that ends in <paramref name="panelId"/>'s tab host; false when no fit is held.</summary>
-    public bool RestorePanelHeight(string panelId)
-    {
-        foreach (var split in _view.GetVisualDescendants().OfType<DockSplitPanel>())
-        {
-            var node = split.Node;
-            if (node.Second is not { Kind: "tabs" } lower || !lower.Panels.Contains(panelId, StringComparer.Ordinal) || node.UserRatio is not { } user) continue;
-            node.Ratio = user;
-            node.UserRatio = null;
-            split.Rearrange();
-            return true;
-        }
-        return false;
-    }
-
     /// <summary>Takes the panel out of the layout; it comes back with <see cref="ResetPanel"/>.</summary>
     public bool ClosePanel(string id)
     {
         if (!IsRegistered(id)) return false;
         DockWorkspaceRules.Close(State, id);
         Changed();
+        return true;
+    }
+
+    /// <summary>The pane's own close button: closes it and reports the user's choice (see <see cref="PanelVisibilityChosenByUser"/>).</summary>
+    public bool ClosePanelByUser(string id)
+    {
+        if (!ClosePanel(id)) return false;
+        ChosenByUser(id, false);
         return true;
     }
 
@@ -282,8 +184,10 @@ public sealed class DockWorkspaceController : IDockPaneDragHost, IDisposable
     /// <summary>The layout the window starts with and "Reset all panels" restores: the default (the fretboard above the score, the palettes at the right, the timeline below).</summary>
     public static DockWorkspaceState DefaultLayout() => DockLayoutTree.CreateDefaultState();
 
-    /// <summary>The layout the window starts with: the saved one when it is usable (every required pane shown), otherwise the default.</summary>
-    public static DockWorkspaceState StartupLayout(DockWorkspaceState? saved, string? fretboardMode = null) => FretboardStartupLayout.Resolve(saved, fretboardMode, DefaultLayout);
+    /// <summary>The layout the window starts with: the saved one when it is usable (every required pane shown), otherwise the default.
+    /// <paramref name="tabFretboard"/> is the Tab mode's remembered fretboard value (Remember mode: it decides the instrument pane).</summary>
+    public static DockWorkspaceState StartupLayout(DockWorkspaceState? saved, string? fretboardMode = null, bool? tabFretboard = null) =>
+        FretboardStartupLayout.Resolve(saved, fretboardMode, DefaultLayout, tabFretboard);
 
     /// <summary>A copy of the current layout, with every panel's place and size; <see cref="ApplyLayout"/> restores it as it was taken.</summary>
     public DockWorkspaceState SnapshotLayout() => DockLayoutTree.Clone(State);
@@ -483,8 +387,11 @@ public sealed class DockWorkspaceController : IDockPaneDragHost, IDisposable
 
     private void OnFloatingClosedByUser(DockFloatingWindow window)
     {
+        var heldInstrument = State.Floating.FirstOrDefault(f => f.Id == window.Id) is { } floating
+            && DockWorkspaceState.EnumeratePanelIds(floating.Root).Contains(InstrumentPanelId, StringComparer.Ordinal);
         FloatingSessionRules.CloseByUser(State, window.Id, id => (Row(id).DefaultHost, Row(id).DefaultAnchor));
         Changed();
+        if (heldInstrument) ChosenByUser(InstrumentPanelId, false);
     }
 
     private void OnFloatingMoved(DockFloatingWindow window)
@@ -498,6 +405,7 @@ public sealed class DockWorkspaceController : IDockPaneDragHost, IDisposable
     private void NotifyChanged()
     {
         foreach (var id in _startRatios.Keys) _draggedHeights[id] = MovedHeight(id) is null ? null : RatioHeight(id);   // the drag's end, before any window resize
+        foreach (var id in _startWidthRatios.Keys) _draggedWidths[id] = MovedWidth(id) is null ? null : RatioWidth(id);
         _changePending = true;
         _timer.Stop();
         _timer.Start();

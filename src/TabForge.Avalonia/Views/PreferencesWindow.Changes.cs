@@ -32,7 +32,6 @@ public sealed partial class PreferencesWindow
         WriteLive(Working, preview: false);
         _baseline = PreferencesCatalog.Copy(Working);
         _savedRows = null;
-        _workspaceWritten = false;
         _dirty = false;
         RefreshChanges();
         Applied?.Invoke();
@@ -105,15 +104,28 @@ public sealed partial class PreferencesWindow
 
     public async Task ResetAllAsync()
     {
-        // The preview has no shortcuts, so the question leaves out the presenter's shortcut count.
-        var prompt = new ResetPrompt(PreferencesPagePresenter.ResetAll(0).Title,
-            "Restore every setting to its default? Cancel still undoes it until you press OK or Apply.");
+        var prompt = PreferencesPagePresenter.ResetAll();
         if (!await Confirm(prompt)) return;
-        Working = PreferencesCatalog.ResetAllDefaults();
-        DropRows();
-        _workspaceReset = true;
+        // Only the Settings rows change: presets, layouts, folders, window sizes and last-used dialog options stay as they are.
+        var defaults = DefaultsByKey();
+        // The theme goes first: its preset rewrites the colours the rows after it then restore.
+        foreach (var row in Rows.Where(r => r.Kind != SettingKind.Button).OrderBy(r => r.Key == "appearance.thememode" ? 0 : 1))
+            row.Set(defaults[row.Key].Get());
+        ResetHotkeys(Working.Hotkeys);
+        DropRows();   // the search registry holds the old shortcuts
         MarkChanged();
         Rebuild();
+    }
+
+    /// <summary>Returns the working shortcut settings to their defaults in place, so every holder keeps the same object.</summary>
+    private static void ResetHotkeys(HotkeySettings keys)
+    {
+        var defaults = new HotkeySettings();
+        keys.Preset = defaults.Preset;
+        keys.Bindings.Clear();
+        keys.Bindings2.Clear();
+        keys.DisabledActions.Clear();
+        keys.DisabledActions2.Clear();
     }
 
     /// <summary>The Theme card's reset: after a confirmation, the built-in theme keys go back to their defaults (the same keys).</summary>

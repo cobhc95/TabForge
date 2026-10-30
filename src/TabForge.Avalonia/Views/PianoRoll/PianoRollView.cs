@@ -23,10 +23,14 @@ public sealed class PianoRollHost
     /// <summary>The transport's snap settings (the same instance the timeline magnet toggles).</summary>
     public Func<SnapSettings?> Snap { get; init; } = () => null;
     public Action ToggleSnap { get; init; } = () => { };
+    /// <summary>The live shortcut bindings (the piano roll keys follow a rebinding).</summary>
+    public Func<HotkeySettings> Hotkeys { get; init; } = () => new HotkeySettings();
     public Action OpenSnapSettings { get; init; } = () => { };
     /// <summary>Sounds a pitch on the track's sound (the score's note audition path).</summary>
     public Action<TrackModel, int> Audition { get; init; } = (_, _) => { };
     public Func<EditingSettings> Editing { get; init; } = () => new EditingSettings();
+    /// <summary>The Follow playback setting the score and the timeline share (the View menu and its hotkey flip the same one); on by default.</summary>
+    public Func<FollowSettings> Follow { get; init; } = () => new FollowSettings();
     /// <summary>The appearance settings: the Playback highlight colours the playback needle and the ruler marker.</summary>
     public Func<AppearanceSettings> Appearance { get; init; } = () => new AppearanceSettings();
     /// <summary>Saves the settings quietly (never the full broadcast); called once a gesture ends.</summary>
@@ -91,9 +95,11 @@ public sealed partial class PianoRollView : DockPanel
             SelectionChanged = RefreshInfo,
             Report = host.Report,
             QuantizeRequested = Quantize,
+            TransposeRequested = AskTranspose,
+            SnapToggleRequested = ToggleSnapNow,
+            Hotkeys = host.Hotkeys,
             LoopOn = () => _document?.Selection.LoopRepeat == true,
             Sections = () => _sections,
-            LaneMenuRequested = OpenLaneMenu,
             Playing = () => _session?.IsPlaying == true,
             NeedleOn = () => host.Editing().PianoRollPlaybackNeedle,
             PlayheadColour = light => PlaybackHighlightColour.Of(host.Appearance(), AvaloniaPalette.Get("PianoRollPlayheadMarker", light)),
@@ -104,6 +110,7 @@ public sealed partial class PianoRollView : DockPanel
         Presenter.Reloaded += RefreshDerived;
         Surface.ToolChanged = RefreshTools;
         var editing = host.Editing();
+        if (PianoRollControllers.IsLane(editing.PianoRollLane)) _lane = editing.PianoRollLane;   // the lane chosen last
         Surface.Lane = Math.Max(PianoRollSurface.MinLane, editing.PianoRollVelocityLane);
         Surface.LaneShown = editing.PianoRollVelocityLaneShown;
         _horizontal.Scroll += (_, _) => { if (_syncingBars) return; Surface.ScrollTo(_horizontal.Value, Surface.ScrollY); TellTimeline(); };
@@ -115,7 +122,12 @@ public sealed partial class PianoRollView : DockPanel
         Children.Add(top);
         Children.Add(_horizontal);
         Children.Add(_vertical);
-        Children.Add(Surface);
+        var body = new Grid();   // the surface with the Piano / Names pair over its ruler corner
+        body.Children.Add(Surface);
+        body.Children.Add(BuildKeyHeader());
+        body.Children.Add(BuildLaneButton());
+        body.Children.Add(BuildLaneToggle());
+        Children.Add(body);
         AttachMenu();
         Surface.SizeChanged += (_, _) => { if (_centrePending && Surface.Bounds.Height > 0) { _centrePending = false; Surface.CentreOnNotes(); } SyncScrollBars(); };
     }
@@ -224,7 +236,9 @@ public sealed partial class PianoRollView : DockPanel
     {
         if (!IsEffectivelyVisible) return;
         Surface.Playhead.InvalidateVisual();
-        if (_follow && _session is { IsPlaying: true } && PlayheadBeat() is { } beat) Surface.Reveal(beat);
+        var follow = _host.Follow().FollowPlayback;
+        if (_followButton.IsChecked != follow) _followButton.IsChecked = follow;   // the View menu's Follow playback flips the same setting
+        if (follow && _session is { IsPlaying: true } && PlayheadBeat() is { } beat) Surface.Reveal(beat);
     }
 
     /// <summary>The playhead's beat on the piano roll's clock, or null with no playback.</summary>
@@ -266,6 +280,7 @@ public sealed partial class PianoRollView : DockPanel
         var editing = _host.Editing();
         editing.PianoRollVelocityLane = Surface.Lane;
         editing.PianoRollVelocityLaneShown = Surface.LaneShown;
+        PlaceLaneButton();
         _host.SaveSettings();
         SyncScrollBars();
     }

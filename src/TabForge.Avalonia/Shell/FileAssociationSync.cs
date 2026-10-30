@@ -52,11 +52,23 @@ public sealed class FileAssociationSync
     public static void Follow(MainWindowSettings? settings, IFileAssociations associations, Action<string> report, Window? owner = null)
     {
         if (settings is null) return;
-        var sync = new FileAssociationSync(associations, Environment.ProcessPath ?? "", report);
-        sync.Apply(settings.Settings.General.AssociateFiles);
-        Action<AppSettings> onChanged = changed => sync.Apply(changed.General.AssociateFiles);
-        settings.SettingsChanged += onChanged;
-        if (owner is not null) owner.Closed += (_, _) => settings.SettingsChanged -= onChanged;
+        if (!OperatingSystem.IsWindows()) return;
+        try
+        {
+            var sync = new FileAssociationSync(associations, Environment.ProcessPath ?? "", report);
+            sync.Apply(settings.Settings.General.AssociateFiles);
+            Action<AppSettings> onChanged = changed =>
+            {
+                try { sync.Apply(changed.General.AssociateFiles); }
+                catch (Exception ex) { Services.Trace.Error(Services.Trace.Ui, "file associations: " + ex.Message); }
+            };
+            settings.SettingsChanged += onChanged;
+            if (owner is not null) owner.Closed += (_, _) => settings.SettingsChanged -= onChanged;
+        }
+        catch (Exception ex)
+        {
+            Services.Trace.Error(Services.Trace.Ui, "file associations: " + ex.Message);
+        }
     }
 }
 

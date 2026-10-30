@@ -6,16 +6,19 @@ using Avalonia;
 using Avalonia.Media;
 using Avalonia.Styling;
 using TabForge.Avalonia.Platform;
+using TabForge.Avalonia.Views.Dialogs;
 using TabForge.Platform;
 using TabForge.Platform.Theme;
 using TabForge.Presenters;
+using TabForge.Services;
 
 namespace TabForge.Avalonia.Views;
 
 // Owns: the piano roll surface's drawing, in theme tokens (Palette PianoRoll*, the loop and marquee tokens, the theme brushes): rows (black-key rows
-//       darker, C rows with a stronger line), bar, beat and snap-subdivision lines, the loop tint, the notes (track colour, brighter = louder; selected
-//       in the selection colour with a light outline; muted hollow and dashed), the drag previews, the keys with C labels, the ruler and the
-//       velocity lane. Only the visible rows, bars and notes are drawn. Selected notes keep their fill and get a bright outline.
+//       darker, C rows with a stronger line), bar, beat and snap-subdivision lines, the loop tint, the notes (track colour, brighter = louder; a thin
+//       edge inside each plain note so touching notes stay apart; selected in the selection colour with a light outline; muted hollow and dashed), the
+//       drag previews, the keys with C labels, the ruler and the velocity lane. Only the visible rows, bars and notes are drawn. Selected notes keep
+//       their fill and get a bright outline.
 // Does not own: the geometry and the gestures (the other PianoRollSurface parts) or the playhead (PianoRollPlayheadLayer).
 // Tests: TabForge.Avalonia.Tests.PianoRollViewTests.
 public sealed partial class PianoRollSurface
@@ -23,7 +26,8 @@ public sealed partial class PianoRollSurface
     private const double Line = 1, StrongLine = 1.5, SelectedOutline = 1.5, MutedDash = 2, MutedGap = 1.5, NoteRadius = 2;
     private const double LabelSize = 10, LabelGap = 4, MinSubPixels = 6, QuietShare = 0.65, LoopBracket = 3, StemWidth = 3, HeadRadius = 2.5;
     private const double MutedBar = 0.45, ValueLineRows = 10;
-    private const double LaneLabelSize = 10, ChevronSize = 4, ScaleTint = 0.10;
+    internal const double LaneLabelSize = 10;
+    private const double ScaleTint = 0.10;
     private static readonly IReadOnlyList<string> Swatches = Enumerable.Range(1, 14).Select(i => "SectionColour" + i).ToList();
     private const string Font = InstrumentPanelView.Font;
     private static readonly IReadOnlyList<bool> BlackKeys = new[] { false, true, false, true, false, false, true, false, true, false, true, false };
@@ -77,6 +81,7 @@ public sealed partial class PianoRollSurface
         var white = Ink("PianoRollRowWhite");
         var black = Ink("PianoRollRowBlack");
         var c = new UiStroke(Ink("PianoRollLineC"), Line);
+        var gridLine = Ink("PianoRollLineBeat");
         var (first, last) = VisibleRows();
         var scale = ScaleClasses;
         var tint = Colours.Get("AccentBrush").WithOpacity(ScaleTint);
@@ -84,12 +89,11 @@ public sealed partial class PianoRollSurface
         {
             var pitch = Rows[r];
             var y = GridTop + r * RowPx - ScrollY;
-            d.Rect(IsBlack(pitch) ? black : white, null, GridLeft, y, width - GridLeft, RowPx);
+            var plain = IsBlack(pitch) ? black : white;
+            d.Rect(ScaleRowFill(plain, gridLine, pitch), null, GridLeft, y, width - GridLeft, RowPx);
             if (scale is not null && scale.Contains(pitch % 12)) d.Rect(tint, null, GridLeft, y, width - GridLeft, RowPx);
             if (pitch % 12 == 0) d.Line(c, GridLeft, y + RowPx, width, y + RowPx);
         }
-        var hovered = _hover is var (_, hp, _) ? hp : _keyHover;   // the band across the grid on the row under the pointer
-        if (hovered >= 0) d.Rect(Ink("PianoRollHoverRow"), null, GridLeft, YOf(hovered), width - GridLeft, RowPx);
     }
 
     private void DrawGridLines(IDrawContext d)
@@ -122,6 +126,7 @@ public sealed partial class PianoRollSurface
         var track = TrackColour() ?? Colours.Get("AccentBrush");
         var row = Ink("PianoRollRowWhite");
         var outline = new UiStroke(Ink("PianoRollSelectedOutline"), SelectedOutline);
+        var edge = new UiStroke(Ink("PianoRollNoteEdge"), DialogMetrics.PianoRollNoteEdge);
         var from = BeatAt(GridLeft);
         var to = BeatAt(GridLeft + ViewportWidth);
         var (firstRow, lastRow) = VisibleRows();
@@ -137,14 +142,14 @@ public sealed partial class PianoRollSurface
             var note = notes[i];
             var rowIndex = RowIndex(note.Pitch);
             if (note.End < from || note.Start > to || rowIndex < firstRow || rowIndex > lastRow) continue;
-            if (_erased.Contains(i)) continue;
+            if (_erased.Contains(i)) { DrawErased(d, note, track, row, VelocityOf(i, note)); continue; }   // still there, tinted: deleted only on release
             var isSelected = selected.Contains(i);
             if (moving && isSelected && !_copy) continue;   // drawn at its preview place below
-            DrawNote(d, note, isSelected, FillOf(note, track, row, VelocityOf(i, note)), outline);
+            DrawNote(d, note, isSelected, NoteDrawFill(note, isSelected, track, row, VelocityOf(i, note)), outline, edge);
             DrawNoteValue(d, note, VelocityOf(i, note), _gesture is Gesture.VelocityTool or Gesture.Velocity && _velocityPreview.ContainsKey(i));
         }
         if (!moving) return;
-        foreach (var preview in DragPreview()) DrawNote(d, preview, true, FillOf(preview, track, row, preview.Velocity), outline);
+        foreach (var preview in DragPreview()) DrawNote(d, preview, true, NoteDrawFill(preview, true, track, row, preview.Velocity), outline, edge);
     }
 
     /// <summary>A note's colour in the chosen mode: the track colour brighter the louder, velocity heat, pitch class or channel.</summary>
@@ -205,13 +210,21 @@ public sealed partial class PianoRollSurface
         d.DrawText(text, r.X + LabelGap / 2, r.Y - text.Height);
     }
 
-    private void DrawNote(IDrawContext d, PianoRollNote note, bool selected, UiColor fill, UiStroke outline)
+    /// <summary>Draws one note. A plain note's <paramref name="edge"/> is drawn inside its rectangle (inset by half its width), so two touching
+    /// notes on one row keep a visible line between them; a selected note keeps its outline and a muted note its dashed hollow.</summary>
+    private void DrawNote(IDrawContext d, PianoRollNote note, bool selected, UiColor fill, UiStroke outline, UiStroke edge)
     {
         var r = NoteRect(note);
         var (filled, outlined) = NoteLook(selected, note.Muted);
         if (!filled)
             d.Rect(null, outlined ? outline : new UiStroke(fill, Line, Dash: MutedDash, Gap: MutedGap), r.X + Line / 2, r.Y + Line / 2, Math.Max(1, r.Width - Line), Math.Max(1, r.Height - Line), NoteRadius);
-        else d.Rect(fill, outlined ? outline : null, r.X, r.Y, r.Width, r.Height, NoteRadius);
+        else if (outlined) d.Rect(fill, outline, r.X, r.Y, r.Width, r.Height, NoteRadius);
+        else
+        {
+            d.Rect(fill, null, r.X, r.Y, r.Width, r.Height, NoteRadius);
+            var inset = edge.Width / 2;
+            d.Rect(null, edge, r.X + inset, r.Y + inset, Math.Max(1, r.Width - edge.Width), Math.Max(1, r.Height - edge.Width), NoteRadius);
+        }
         if (note.Voice > 0 && r.Width > 2 * StrongLine)   // the tab's second voice: a dashed inner edge
             d.Rect(null, new UiStroke(Colours.Get("TextStrongBrush"), Line, Dash: MutedDash, Gap: MutedGap), r.X + StrongLine, r.Y + StrongLine, r.Width - 2 * StrongLine, Math.Max(1, r.Height - 2 * StrongLine), NoteRadius);
     }
@@ -224,7 +237,20 @@ public sealed partial class PianoRollSurface
             var box = MarqueeRect();
             d.Rect(Ink("MarqueeFill"), new UiStroke(Ink("MarqueeBorder"), Line, Dash: MutedDash * 2, Gap: MutedGap * 2), box.X, box.Y, box.Width, box.Height);
         }
+        if (_gesture == Gesture.Lasso && _moved && LassoPoints.Count > 1)
+        {
+            var edge = new UiStroke(Ink("MarqueeBorder"), Line, Dash: MutedDash * 2, Gap: MutedGap * 2);
+            for (var i = 0; i < LassoPoints.Count; i++) d.Line(edge, LassoPoints[i].X, LassoPoints[i].Y, LassoPoints[(i + 1) % LassoPoints.Count].X, LassoPoints[(i + 1) % LassoPoints.Count].Y);
+        }
+        if (_gesture == Gesture.SplitLine && _moved && SplitPoints.Count > 1)
+        {
+            var cut = new UiStroke(Colours.Get("CursorBrush"), StrongLine);
+            for (var i = 1; i < SplitPoints.Count; i++) d.Line(cut, SplitPoints[i - 1].X, SplitPoints[i - 1].Y, SplitPoints[i].X, SplitPoints[i].Y);
+        }
+        DrawEraseLabel(d);
         var track = TrackColour() ?? Colours.Get("AccentBrush");
+        DrawGhost(d, track);
+        DrawCutMarker(d);
         if (_gesture == Gesture.Draw)
             d.Rect(track, new UiStroke(Colours.Get("TextStrongBrush"), Line), XOf(_pressBeat), YOf(_pressPitch), Math.Max(2, (_drawEnd - _pressBeat) * PixelsPerBeat), Math.Max(1, RowPx - 1), NoteRadius);
         else if (_gesture == Gesture.None && _hover is var (beat, pitch, index))
@@ -234,65 +260,16 @@ public sealed partial class PianoRollSurface
                 var r = NoteRect(Presenter.Notes[index]);
                 d.Rect(null, new UiStroke(Colours.Get("HoverAccentBrush"), StrongLine), r.X - Line, r.Y - Line, r.Width + 2 * Line, r.Height + 2 * Line, NoteRadius);
             }
+            if (Presenter.Tool == PianoRollTool.Erase && index >= 0 && index < Presenter.Notes.Count)   // the click would delete it: the same danger tint
+                DrawErased(d, Presenter.Notes[index], track, Ink("PianoRollRowWhite"), VelocityOf(index, Presenter.Notes[index]));
             if (Presenter.Tool == PianoRollTool.Split && index >= 0)
-                d.Line(new UiStroke(Colours.Get("CursorBrush"), StrongLine), XOf(beat), YOf(pitch) - 2, XOf(beat), YOf(pitch) + RowPx + 1);
+                d.Line(new UiStroke(Ink("Danger"), CutWidth, Dash: CutDash, Gap: CutGap), XOf(beat), YOf(pitch) - CutOverhang, XOf(beat), YOf(pitch) + RowPx + CutOverhang);   // where a click would cut: the cut marker's style
             else if (Presenter.Tool == PianoRollTool.Draw && index < 0)
                 d.Rect(track.WithOpacity(QuietShare), null, XOf(beat), YOf(pitch), Math.Max(2, NewLength(beat) * PixelsPerBeat), Math.Max(1, RowPx - 1), NoteRadius);
         }
     }
 
-    private void DrawKeys(IDrawContext d)
-    {
-        var white = Ink("PianoRollKeyWhite");
-        var black = Ink("PianoRollKeyBlack");
-        var label = Ink("PianoRollKeyLabel");
-        var edge = new UiStroke(Ink("PianoRollLineBeat"), Line);
-        var lit = Ink("PianoRollKeyLive");
-        var hover = Ink("PianoRollKeyHover");
-        d.PushClip(0, GridTop, GridLeft, ViewportHeight);
-        if (NoteNames)
-        {
-            DrawNameRows(d, lit, hover, edge);
-            d.Pop();
-            return;
-        }
-        d.Rect(white, null, 0, GridTop, GridLeft, ViewportHeight);
-        var (first, last) = VisibleRows();
-        for (var r = first; r <= last; r++)
-        {
-            var pitch = Rows[r];
-            var y = GridTop + r * RowPx - ScrollY;
-            var sounding = pitch == _keyDown;
-            if (IsBlack(pitch)) d.Rect(sounding ? lit : black, null, 0, y, GridLeft * 0.62, RowPx);
-            else if (sounding) d.Rect(lit, null, 0, y, GridLeft, RowPx);
-            if (pitch == _keyHover && !sounding) d.Rect(hover, null, 0, y, IsBlack(pitch) ? GridLeft * 0.62 : GridLeft, RowPx);
-            if ((pitch % 12 == 0 || FoldedLabels) && RowPx >= LabelSize - 2)
-            {
-                d.Line(edge, 0, y + RowPx, GridLeft, y + RowPx);
-                var text = d.Text(KeyLabel(pitch), Font, LabelSize, label, d.PixelsPerDip);
-                d.DrawText(text, GridLeft - text.Width - LabelGap, y + (RowPx - text.Height) / 2);
-            }
-        }
-        d.Line(edge, GridLeft - Line / 2, GridTop, GridLeft - Line / 2, GridBottom);
-        d.Pop();
-    }
-
-    /// <summary>The key strip as note names (Reaper style): a row per pitch, alternate shading, black-key rows tinted, the name at the right edge.</summary>
-    private void DrawNameRows(IDrawContext d, UiColor lit, UiColor hover, UiStroke edge)
-    {
-        var (row, alt, blackRow, ink) = (Ink("PianoRollNameRow"), Ink("PianoRollNameRowAlt"), Ink("PianoRollNameRowBlack"), Ink("PianoRollNameText"));
-        var (first, last) = VisibleRows();
-        for (var r = first; r <= last; r++)
-        {
-            var pitch = Rows[r];
-            var y = GridTop + r * RowPx - ScrollY;
-            d.Rect(pitch == _keyDown ? lit : pitch == _keyHover ? hover : IsBlack(pitch) ? blackRow : r % 2 == 0 ? row : alt, null, 0, y, GridLeft, RowPx);
-            if (RowPx < LabelSize - 2) continue;
-            var text = d.Text(NameLabel(pitch), Font, Math.Min(LabelSize, RowPx - 1), ink, d.PixelsPerDip);
-            d.DrawText(text, GridLeft - text.Width - LabelGap, y + (RowPx - text.Height) / 2);
-        }
-        d.Line(edge, GridLeft - Line / 2, GridTop, GridLeft - Line / 2, GridBottom);
-    }
+    // The key strip's paint lives in PianoRollSurface.KeyboardDraw (per-key edges, tints, previews).
 
     // Row names, made once per pitch and naming so a repaint formats no string. Ceiling: 128 per naming. Thread: UI only.
     private readonly Dictionary<(int, bool), string> _names = new();
@@ -320,25 +297,24 @@ public sealed partial class PianoRollSurface
                 : PianoRollPositionText.Readout(PianoRollPositionText.Short(Presenter.Map, _hoverBeat), pitch, velocity >= 0 ? velocity : null, DrumNames);
         }
         var text = d.Text(_readout, Font, LabelSize, Colours.Get("TextBrush"), d.PixelsPerDip);
-        d.DrawText(text, LabelGap, (GridTop - text.Height) / 2);
+        var x = _hover is null ? GridLeft + LabelGap : LabelGap;   // the Piano / Names header covers the corner: a key readout starts past it
+        d.DrawText(text, x, (GridTop - text.Height) / 2);
+    }
+
+    /// <summary>The lane header's title: the Program lane also names the instrument in force at its last point (the General MIDI name).</summary>
+    internal string LaneTitle()
+    {
+        if (LaneId != PianoRollControllers.Program) return PianoRollControllers.NameOf(LaneId);
+        var value = _points.Count == 0 ? PianoRollControllers.Centre(LaneId)
+            : PianoRollControllers.ValueAt(_points, LaneId, _points[_points.Count - 1].Beat);
+        return $"{PianoRollControllers.NameOf(LaneId)} {value} {GeneralMidi.NameOf(value)}";
     }
 
     private void DrawLane(IDrawContext d, double width)
     {
-        var header = Colours.Get("Panel2Brush");
-        var text = Colours.Get("MutedBrush");
-        d.Rect(header, null, 0, GridBottom, width, LaneHeaderSize);
+        var header = _laneHeaderHover ? Colours.Get("HoverBrush") : Colours.Get("Panel2Brush");
+        d.Rect(header, null, 0, GridBottom, width, LaneHeaderSize);   // the lane button (PianoRollView.LaneButton) sits over the left end of this strip
         d.Line(new UiStroke(Ink("PianoRollLineBar"), Line), 0, GridBottom, width, GridBottom);
-        var cx = GridLeft / 2;
-        var cy = GridBottom + LaneHeaderSize / 2;
-        var chevron = d.Paths.BuildPath(s =>
-        {
-            if (LaneShown) { s.BeginFigure(new UiPoint(cx - ChevronSize, cy - ChevronSize / 2), false, false); s.LineTo(new UiPoint(cx, cy + ChevronSize / 2)); s.LineTo(new UiPoint(cx + ChevronSize, cy - ChevronSize / 2)); }
-            else { s.BeginFigure(new UiPoint(cx - ChevronSize / 2, cy - ChevronSize), false, false); s.LineTo(new UiPoint(cx + ChevronSize / 2, cy)); s.LineTo(new UiPoint(cx - ChevronSize / 2, cy + ChevronSize)); }
-        });
-        d.Path(null, new UiStroke(text, StrongLine), chevron);
-        var title = d.Text(PianoRollControllers.NameOf(LaneId) + (LanePicker ? "  ▾" : ""), Font, LaneLabelSize, text, d.PixelsPerDip);
-        d.DrawText(title, GridLeft + LabelGap, GridBottom + (LaneHeaderSize - title.Height) / 2);
         if (!LaneShown) return;
         d.Rect(Ink("PianoRollLaneSurface"), null, 0, LaneTop, width, Lane);
         d.PushClip(GridLeft, LaneTop, ViewportWidth, Lane);

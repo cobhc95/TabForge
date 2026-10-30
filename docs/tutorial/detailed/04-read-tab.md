@@ -180,9 +180,9 @@ Right-click the panel to open the fretboard menu, or focus the panel and press `
 
 A scale is a set of notes that sound good together. If you know the scale of a passage, you know which notes are safe to play over it. The scale finder listens to the notes in your song and suggests which scales fit.
 
-Open it with **Tools > Scale finder…**, or click the **Scales** button below the legend. **Search the notes in** picks **Selection** (the bars you selected) or **Entire song**, and **All tracks** includes every track.
+Open it with **Tools > Scale finder…**, or click the **Scales** button below the legend. **Read from** picks **Auto: this section** (the section the cursor is in), **Whole song**, **Song key only**, or **Selection** (the bars you selected, shown only when the song has one), and **Tracks to analyse** picks this track or all pitched tracks (drums and percussion are never included).
 
-The **Likely scales** tab ranks scales by the share of the notes that fit. The **All scales** tab lets you choose a **Key (root)** and scale yourself. **Show on fretboard** lights the scale, and **Clear highlight** removes it. In **Preferences > Fretboard & Keyboard > Appearance**, **Scale highlight strength** sets how bright it is, from 10% to 150%, where 100% is the standard look and the root note is always stronger.
+The **Detected** cards rank scales by the share of the notes that fit, with a "Pick another…" card for any key and scale. **More scales…** lists every scale in all 12 keys under family headers with a **Find a scale…** box. A pick sticks to the section and track (Auto returns to detection). In **Fretboard look**, **Show the scale** lights it on the fretboard and keyboard; style, colour, opacity, emphasise the root, dim notes outside the scale and only on the frets in view apply at once. In **Preferences > Fretboard & Keyboard > Appearance**, **Scale highlight strength** sets how bright it is, from 10% to 150%, where 100% is the standard look and the root note is always stronger.
 
 ### Try it: Ask the scale finder
 
@@ -190,10 +190,10 @@ The **Likely scales** tab ranks scales by the share of the notes that fit. The *
 
 1. Click the **Lead Gtr** track.
 2. Drag across bars 40 to 47 on the timeline to select **Chorus 1**.
-3. Choose **Tools > Scale finder…**. The **Scale finder** window opens on the **Likely scales** tab.
+3. Choose **Tools > Scale finder…**. The scale popup opens on the detected scales.
 4. Read the top result. It names a scale and the share of the notes that fit.
-5. Click the top result, then click **Show on fretboard**. The scale lights up on the fretboard.
-6. Click **Clear highlight**, then **Close**.
+5. Click the top result. The scale lights up on the fretboard.
+6. Click **Clear highlight**, then close the popup.
 
 You know it worked when the notes of the scale light up on the fretboard, and disappear when you clear the highlight.
 

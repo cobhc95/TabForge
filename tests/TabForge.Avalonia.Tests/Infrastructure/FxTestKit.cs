@@ -35,6 +35,9 @@ internal static class FxTestKit
         public bool Opens { get; set; } = true;
         public double Load { get; set; } = 0.25;
         public bool IsRunning => Running;
+        public ActiveOnOutput ActiveOutput { get; set; }
+        public event Action? OutputChanged;
+        public void RaiseOutputChanged() => OutputChanged?.Invoke();
         public double CpuLoad => Load;
         public AutoPitchMatcher? AutoPitch => null;
         public MixerOptions Mixer { get; } = new();
@@ -91,8 +94,9 @@ internal static class FxTestKit
         track ??= Track(FxChainWindow.SampleChain());
         var window = new FxChainWindow(host ?? Host(track), track);
         window.Dialogs.Ask = (_, text, _, _, _) => Task.FromResult((ask ?? (_ => MessageBoxAnswer.Yes))(text));
-        window.Dialogs.Prompt = (_, _, _, initial) => Task.FromResult<string?>(initial);
+        window.Dialogs.SavePresetName = (_, request) => Task.FromResult<string?>(request.InitialName);
         window.Dialogs.ChoosePlugin = (_, _) => Task.FromResult<VstPluginInfo?>(null);
+        window.Dialogs.AskLoadPreset = (_, _, _, _, preferred) => Task.FromResult<FxPresetLoadAnswer?>(new FxPresetLoadAnswer(preferred, Remember: false));
         if (files is not null) window.Dialogs.Files = files;
         return window;
     }

@@ -2,6 +2,7 @@ using System;
 using TabForge.Avalonia.Views.Docking;
 using TabForge.Docking;
 using TabForge.Models;
+using TabForge.Platform;
 using TabForge.Presenters;
 using TabForge.Services;
 using TabForge.Visualization;
@@ -20,6 +21,7 @@ public sealed class FretboardSettingsBinding
     /// <summary>The dock pane id of the instrument (fretboard) pane.</summary>
     internal const string InstrumentPaneId = "instrument";
 
+    private readonly Func<FretboardMode>? _mode;
     private AppSettings _settings;
     private DockWorkspaceController? _dock;
     private InstrumentPanelStrip? _strip;
@@ -28,12 +30,15 @@ public sealed class FretboardSettingsBinding
     private bool _lockApplied;
     private bool _showApplied;
 
-    public FretboardSettingsBinding(AppSettings settings)
+    /// <param name="mode">The editor mode on screen: the show/hide row applies that mode's remembered value (Tab when null).</param>
+    public FretboardSettingsBinding(AppSettings settings, Func<FretboardMode>? mode = null)
     {
         _settings = settings;
+        _mode = mode;
         _bottomApplied = settings.Appearance.FretboardAtBottom;
         _lockApplied = settings.Appearance.LockInstrumentSize;
-        _showApplied = settings.Appearance.ShowFretboard;
+        _showApplied = FretboardVisibilityMemory.Remembered(settings, mode?.Invoke() ?? FretboardMode.Tab)
+            ?? settings.Appearance.ShowFretboard;
     }
 
     /// <summary>The panel's settings-driven values; each is the setting's own type, a Core helper's number, or a theme-table key.</summary>
@@ -57,9 +62,15 @@ public sealed class FretboardSettingsBinding
         double ScaleStrength,
         string MarkerColourKey,
         double MarkerBrightness,
-        string WhiteKeyKey)
+        string WhiteKeyKey,
+        double ScaleOpacity = 0.6,
+        bool ScaleEmphasiseRoot = true,
+        bool ScaleDimOutside = false,
+        bool ScaleOnlyInView = false,
+        UiColor? ScaleCustom = null,
+        bool PreviewPrevious = true)
     {
-        /// <summary>The look the settings describe; preview is off when preview notes are off, whatever the horizon.</summary>
+        /// <summary>The look the settings describe; preview is -1 (skip the look-ahead, like the drum map) when preview notes are off.</summary>
         public static Look From(AppSettings settings)
         {
             var editing = settings.Editing;
@@ -68,7 +79,7 @@ public sealed class FretboardSettingsBinding
                 Frets: editing.FretboardFrets,
                 LeftHanded: editing.LeftHanded,
                 KeyboardKeys: editing.KeyboardKeys,
-                PreviewHorizon: editing.PreviewNotesEnabled ? editing.PreviewHorizon : 0,
+                PreviewHorizon: editing.PreviewNotesEnabled ? editing.PreviewHorizon : -1,
                 FretNumberScale: FretNumberSizes.Scale(editing.FretNumberSize),
                 MarkerSizePercent: editing.FretMarkerSizePercent,
                 StringSpacing: FretStringSpacings.Factor(editing.FretStringSpacing),
@@ -79,12 +90,18 @@ public sealed class FretboardSettingsBinding
                 LockInstrumentSize: settings.Appearance.LockInstrumentSize,
                 ScaleRoot: scale.Root,
                 ScalePitches: scale.Pitches,
-                ScaleStyle: editing.ScaleHighlightStyle,
+                ScaleStyle: ScaleHighlightStyles.Normalize(editing.ScaleHighlightStyle),
                 ScaleColourKey: ColourKey(editing.ScaleHighlightColour),
                 ScaleStrength: ScaleHighlightStyles.StrengthFactor(editing.ScaleHighlightStrength),
                 MarkerColourKey: ColourKey(editing.FretMarkerColour),
                 MarkerBrightness: FretMarkerLevels.Level(editing.FretMarkerBrightness),
-                WhiteKeyKey: WhiteKeysPaletteKey(editing.KeyboardKeyColours));
+                WhiteKeyKey: WhiteKeysPaletteKey(editing.KeyboardKeyColours),
+                ScaleOpacity: ScaleHighlightStyles.OpacityFactor(editing.ScaleHighlightOpacity),
+                ScaleEmphasiseRoot: editing.ScaleEmphasiseRoot,
+                ScaleDimOutside: editing.ScaleDimOutside,
+                ScaleOnlyInView: editing.ScaleOnlyInView,
+                ScaleCustom: CustomColour(editing.ScaleHighlightColour, editing.ScaleHighlightCustomColour),
+                PreviewPrevious: editing.PreviewPreviousNotesEnabled);
         }
     }
 
@@ -96,6 +113,13 @@ public sealed class FretboardSettingsBinding
         _ => FretboardHorizontalPosition.Centre,
     };
 
+    /// <summary>The colour of the "Custom" scale colour setting ("#RRGGBB"); null for any other colour name or an unreadable value.</summary>
+    public static TabForge.Platform.UiColor? CustomColour(string? name, string? hex)
+    {
+        if (name != "Custom" || hex is not { Length: 7 } || hex[0] != (char)35 || !int.TryParse(hex.AsSpan(1), System.Globalization.NumberStyles.HexNumber, null, out var rgb)) return null;
+        return new TabForge.Platform.UiColor(255, (byte)(rgb >> 16), (byte)(rgb >> 8), (byte)rgb);
+    }
+
     /// <summary>The theme-table key of a colour name from the Scale highlight, Fret marker colour settings; "Default" is the lit-note green.</summary>
     public static string ColourKey(string? name) => name switch
     {
@@ -106,6 +130,7 @@ public sealed class FretboardSettingsBinding
         "Red" => "InstrumentRed",
         "Teal" => "InstrumentTeal",
         "Grey" => "InstrumentGrey",
+        "Green" => "InstrumentCurrent",
         "White" => "InstrumentWhite",
         "Silver" => "InstrumentSilver",
         _ => "InstrumentCurrent",
@@ -175,11 +200,14 @@ public sealed class FretboardSettingsBinding
             _lockApplied = locked;
             _dock.SetNaturalHeightLock(InstrumentPaneId, locked);
         }
-        // Only a change of the setting moves the pane: a pane the user closed stays closed while the setting still says shown.
-        var shown = settings.Appearance.ShowFretboard;
-        if (_showApplied != shown && _dock.IsPanelVisible(InstrumentPaneId) != shown)
-            _dock.SetPanelVisible(InstrumentPaneId, shown);
-        _showApplied = shown;
+        // Only a change of the current mode's remembered value moves the pane: a mode switch (the piano roll's hold) is not a setting change,
+        // and Band mode has no shared value (its cards keep their own per-track settings).
+        if (FretboardVisibilityMemory.Remembered(settings, _mode?.Invoke() ?? FretboardMode.Tab) is { } shown)
+        {
+            if (_showApplied != shown && _dock.IsPanelVisible(InstrumentPaneId) != shown)
+                _dock.SetPanelVisible(InstrumentPaneId, shown);
+            _showApplied = shown;
+        }
         var bottom = settings.Appearance.FretboardAtBottom;
         if (bottom != _bottomApplied)
         {

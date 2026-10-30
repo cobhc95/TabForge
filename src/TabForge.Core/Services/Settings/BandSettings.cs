@@ -63,13 +63,13 @@ public static class BandChoices
     public const string Both = "Both";
     public const string Vertical = "Vertical";
     public const string Horizontal = "Horizontal";
-    public static readonly string[] Layouts = { Vertical, Horizontal };
+    public static string[] Layouts => new[] { Vertical, Horizontal };
     public const double MinLaneZoom = 0.5, MaxLaneZoom = 3, LaneZoomStep = 1.1;
     public static double ClampZoom(double z) => double.IsFinite(z) ? Math.Round(Math.Clamp(z, MinLaneZoom, MaxLaneZoom), 3) : 1;
     public const string TabOnly = "Tab only";
     public const string FretboardsFirst = "First", FretboardsAll = "All", FretboardsNone = "None";
     public const string FullRow = "Full row";
-    public static readonly string[] PlayheadLines = { TabOnly, FullRow };
+    public static string[] PlayheadLines => new[] { TabOnly, FullRow };
     public const string RowSmall = "Small", RowMedium = "Medium", RowLarge = "Large";
     public static string[] RowMinHeights => new[] { RowSmall, RowMedium, RowLarge };   // a fresh array per read: no shared static state
     public static string NormalizeRowMin(string? v) => RowMinHeights.FirstOrDefault(s => string.Equals(s, v, StringComparison.OrdinalIgnoreCase)) ?? RowMedium;
@@ -79,8 +79,8 @@ public static class BandChoices
     /// <summary>Instrument width limits (pixels).</summary>
     public const double MinInstrumentWidth = 120, MaxInstrumentWidth = 1200;
     public static double ClampWidth(double w) => double.IsFinite(w) ? Math.Clamp(w, MinInstrumentWidth, MaxInstrumentWidth) : 0;
-    public static readonly string[] Sizes = { FullNeck, TwelveFrets, SmallKeyboard };
-    public static readonly string[] Contents = { Tab, Notation, Both };
+    public static string[] Sizes => new[] { FullNeck, TwelveFrets, SmallKeyboard };
+    public static string[] Contents => new[] { Tab, Notation, Both };
     /// <summary>Keys on the small keyboard.</summary>
     public const int SmallKeys = 37;
 

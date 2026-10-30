@@ -59,35 +59,6 @@ public sealed partial class InstrumentPanelView
     private static string KeyName(int midi) =>
         midi % 12 == 0 ? MusicTheoryService.NoteName(midi) : MusicTheoryService.NoteNames[midi % 12];
 
-    /// <summary>The idle fill of a key: under the shaded scale style a scale key is tinted toward the highlight colour, its root more strongly.</summary>
-    private UiColor ScaleKeyFill(int midi, Func<string, UiColor> ink, UiColor plain)
-    {
-        var pitchClass = ((midi % 12) + 12) % 12;
-        if (_look.ScaleStyle != ScaleHighlightStyles.Shaded || _look.ScalePitches.Length != 12 || _look.ScalePitches[pitchClass] != '1') return plain;
-        var white = KeyboardGeometryRules.IsWhite(midi);
-        var root = pitchClass == _look.ScaleRoot;
-        var strength = _look.ScaleStrength;
-        var amount = white
-            ? (root ? Math.Min(1, 0.62 * strength) : Math.Min(0.9, 0.35 * strength))
-            : (root ? Math.Min(1, 0.8 * strength) : Math.Min(0.9, 0.5 * strength));
-        return ThemeColours.Blend(plain, ink(_look.ScaleColourKey), amount);
-    }
-
-    /// <summary>The circles and rings styles put a small mark near the bottom of each scale key, the root's larger.</summary>
-    private void ScaleKeyMark(IDrawContext d, Func<string, UiColor> ink, int midi, UiRect key)
-    {
-        var pitchClass = ((midi % 12) + 12) % 12;
-        if (_look.ScalePitches.Length != 12 || _look.ScalePitches[pitchClass] != '1' || IsLit(midi)) return;
-        if (_look.ScaleStyle is not (ScaleHighlightStyles.Circles or ScaleHighlightStyles.Rings)) return;
-        var root = pitchClass == _look.ScaleRoot;
-        var radius = Math.Clamp(key.Width * KeyMarkWidthShare, KeyMarkMinRadius, KeyMarkMaxRadius);
-        var cx = key.X + key.Width / 2;
-        var cy = key.Bottom - KeyMarkLift;
-        var colour = ink(_look.ScaleColourKey);
-        if (_look.ScaleStyle == ScaleHighlightStyles.Rings) d.Ellipse(null, new UiStroke(colour, root ? 2.2 : 1.5), cx, cy, radius, radius);
-        else d.Ellipse(colour, null, cx, cy, radius, radius);
-    }
-
     /// <summary>The drum key map: every GM sound labelled "N - Name" in columns, the lit ones glowing in the current colour.</summary>
     private void DrawDrums(IDrawContext d, Func<string, UiColor> ink)
     {

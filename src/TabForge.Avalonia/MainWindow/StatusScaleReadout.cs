@@ -11,10 +11,10 @@ namespace TabForge.Avalonia;
 // Owns: the status bar scale readout: reading the section at the playhead or cursor through ScaleReadoutEngine, showing its text on the bar, the scale popup
 //   (opened from the readout, editing the saved scale settings and the picks), a pick kept in the song as one undo step, and driving the fretboard scale highlight
 //   when the readout scale changes (a deferred settings save, never a broadcast per frame).
-// Does not own: the detection and picks (ScaleReadoutEngine), the button (StatusBarView), the popup rows (ScaleReadoutPopup), the settings file (MainWindowSettings).
+// Does not own: the detection and picks (ScaleReadoutEngine), the button (StatusBarView), the panel rows (ScalePanel), the settings file (MainWindowSettings).
 // Tests: TabForge.Avalonia.Tests.StatusBarScaleTests.
 /// <summary>UI thread only.</summary>
-internal sealed class StatusScaleReadout : IScalePopupHost
+internal sealed class StatusScaleReadout
 {
     private const string TooltipSuffix = "Click to see the alternatives, choose your own, or change what it listens to.";
 
@@ -29,7 +29,7 @@ internal sealed class StatusScaleReadout : IScalePopupHost
     private int _bar;
     private Guid? _trackId;   // the track read, by id: an undo may replace the song objects
     private string? _shownKey, _lastApplied;
-    private ScaleReadoutPopup? _popup;
+    private ScalePanel? _popup;
 
     /// <param name="editing">The editing settings (null without a settings file: the readout then uses its defaults and drives no fretboard).</param>
     /// <param name="document">The shown song, whose kept picks are edited as one undo step.</param>
@@ -47,27 +47,48 @@ internal sealed class StatusScaleReadout : IScalePopupHost
     /// <summary>How many detections the engine ran (tests).</summary>
     internal int DetectionRuns => _engine.DetectionRuns;
 
-    /// <inheritdoc />
+    /// <summary>True once the readout was shown at least once (Current can be read).</summary>
+    internal bool HasResult => _result is not null;
+
+    /// <summary>The readout the panels show now.</summary>
     public ScaleReadoutResult Current => _result ?? throw new InvalidOperationException("The scale readout has not been shown yet.");
 
-    /// <inheritdoc />
     public ScaleReadoutSettings Settings => _editing()?.ScaleReadout ?? _fallback;
 
-    /// <inheritdoc />
+    /// <summary>True when the next status bar pick is kept in the song for its section and track.</summary>
     public bool KeepChoice { get; set; }
 
-    /// <inheritdoc />
+    /// <summary>How the hosts reach each other's panels (the window sets it once).</summary>
+    public ScaleHostLinks Links { get; } = new();
+
     public bool Flats => (MusicTime.BarOf(_project(), _bar)?.KeySignature ?? _project().KeySignature) < 0;
 
-    /// <inheritdoc />
     public event Action? Refreshed;
+
+    public bool HasSelection => _document().Selection.HasRange;
+
+    public (int First, int Last)? SelectionRange => _document().Selection.HasRange ? (_document().Selection.StartBar, _document().Selection.EndBar) : null;
 
     /// <summary>Reads the section at <paramref name="bar"/> for <paramref name="track"/> and shows it; the text changes only when the readout does.</summary>
     public void Show(SongProject song, int bar, TrackModel? track)
     {
         _bar = bar;
         _trackId = track?.Id;
-        var result = _engine.Compute(song, bar, track, Settings);
+        // Drum tracks have no scale: the readout shows a dash and no detection runs for them.
+        if (track is not null && (track.IsDrumTrack || track.MidiChannel == 9))
+        {
+            _result = new ScaleReadoutResult("—", ScaleReadoutEngine.ContextOf(song, bar, track, Settings, SelectionRange),
+                ScaleReadoutEngine.KeyScale(song, bar), Array.Empty<ScaleMatch>(), false, null, false);
+            const string drumKey = "—";
+            if (drumKey != _shownKey)
+            {
+                _shownKey = drumKey;
+                _view.ShowScale("—", "Drum tracks have no scale.");
+                Refreshed?.Invoke();
+            }
+            return;
+        }
+        var result = _engine.Compute(song, bar, track, Settings, SelectionRange);
         _result = result;
         var key = result.Text + "|" + result.Context.Text;
         if (key != _shownKey)
@@ -79,17 +100,16 @@ internal sealed class StatusScaleReadout : IScalePopupHost
         ApplyToFretboard(result);
     }
 
-    /// <inheritdoc />
-    public void Pick(ScaleMatch scale)
+    public void PickFor(ScaleMatch scale, bool keep, bool fromFretboard)
     {
         if (_result is null) return;
         var context = _result.Context;
-        if (KeepChoice) DocumentEdits.Run(_document(), project => _engine.KeepPick(project, context, scale.Highlight), label: "Keep scale");
+        if (fromFretboard && Settings is { ShowOnFretboard: false } link) { link.ShowOnFretboard = true; _saveDeferred(); }   // a pick made at the fretboard lights it at once
+        if (keep) DocumentEdits.Run(_document(), project => _engine.KeepPick(project, context, scale.Highlight), label: "Keep scale");
         else _engine.PickForSession(context, scale.Highlight);
         Recompute();
     }
 
-    /// <inheritdoc />
     public void UseAuto()
     {
         if (_result is null) return;
@@ -99,24 +119,64 @@ internal sealed class StatusScaleReadout : IScalePopupHost
         Recompute();
     }
 
-    /// <inheritdoc />
+    /// <summary>Tells the open panels and the piano roll to read again (a piano roll option changed).</summary>
+    internal void NotifyRefreshed() => Refreshed?.Invoke();
+
     public void SettingChanged()
     {
         _saveDeferred();
         Recompute();
     }
 
-    /// <summary>Opens the scale popup above the readout.</summary>
+    /// <summary>Opens the scale popup above the readout (never for a drum track: it has no scale).</summary>
     public void Open()
     {
         if (_result is null) return;
+        if (_project().Tracks.FirstOrDefault(t => t.Id == _trackId) is { } track && (track.IsDrumTrack || track.MidiChannel == 9)) return;
         _popup?.Close();
-        _popup = new ScaleReadoutPopup(this);
+        _popup = new ScalePanel(new StatusBarScaleHost(this, Links));
         _popup.OpenAbove(_view.ScaleAnchor);
     }
 
+    /// <summary>Opens the fretboard's scale popup above <paramref name="anchor"/>: the same body as the status bar's, with the fretboard look and the full scale list. Picks stick to the section and track.</summary>
+    /// <returns>False when nothing opened (a drum track has no scale).</returns>
+    public bool OpenForFretboard(global::Avalonia.Controls.Control anchor)
+    {
+        if (_project().Tracks.FirstOrDefault(t => t.Id == _trackId) is { } track && (track.IsDrumTrack || track.MidiChannel == 9)) return false;
+        if (_result is null) Recompute(_project(), 0);
+        if (_result is null) return false;
+        _popup?.Close();
+        var wide = (global::Avalonia.VisualTree.VisualExtensions.GetVisualRoot(anchor) as global::Avalonia.Controls.TopLevel)?.ClientSize.Width >= ScalePopupLayout.WideThreshold;
+        _popup = new ScalePanel(FretboardHost(wide));
+        _popup.OpenAbove(anchor);
+        return true;
+    }
+
+    public EditingSettings? Editing => _editing();
+
+    public PitchHistogram? Histogram => _result is null ? null : SectionScaleDetector.Collect(_project(), _result.Context.Tracks, _result.Context.FirstBar, _result.Context.LastBar);
+
+    public void LookChanged() => _saveDeferred();
+
+    public void ClearHighlight()
+    {
+        if (_editing() is { } editing) editing.ScaleHighlight = null;
+        Settings.ShowOnFretboard = false;
+        _lastApplied = null;
+        _saveDeferred();
+        Recompute();
+    }
+
+    private void Recompute(SongProject song, int bar) => Show(song, bar, song.Tracks.FirstOrDefault(t => t.Id == _trackId) ?? song.FirstNotationTrack);
+
+    /// <summary>The status bar host of the master panel (tests and the opener).</summary>
+    internal IScalePanelHost BarHost() => new StatusBarScaleHost(this, Links);
+
+    /// <summary>The fretboard host of the master panel.</summary>
+    internal IScalePanelHost FretboardHost(bool wide = false) => new FretboardScaleHost(this, Links, wide);
+
     /// <summary>The open popup, for tests.</summary>
-    internal ScaleReadoutPopup? Popup => _popup;
+    internal ScalePanel? Popup => _popup;
 
     private void Recompute()
     {

@@ -100,6 +100,7 @@ public static partial class ProjectValidator
         if (tunings.Count > InputLimits.MaxStringsPerTrack) throw Invalid("A track contains too many strings.");
         if (tunings.Any(tuning => tuning is < 0 or > MidiLimits.Max)) throw Invalid("A track contains an invalid string tuning.");
         ValidateRig(track.Rig);
+        ValidateTrackBindings(track.ArticulationBindings);
         if (!SoundSources.All.Contains(track.SoundSource)) throw Invalid("A track has an unknown sound source.");
         if (!AudioInputs.IsValid(track.AudioInput)) throw Invalid("A track has an unknown audio input.");
         AudioInputs.MigrateMidi(track);   // older songs: one audio choice and one MIDI choice
@@ -221,6 +222,18 @@ public static partial class ProjectValidator
         ValidateRig(mixer.Master.Rig);
         if (mixer.MonitorFx is not null) ValidateRig(mixer.MonitorFx.Rig);
         if (mixer.MasterPan is < -64 or > 63) throw Invalid("The master pan is outside the supported range.");
+    }
+
+    /// <summary>A track-level articulation map (a track with no instrument slot): names and values kept inside their limits.</summary>
+    private static void ValidateTrackBindings(Dictionary<string, string>? bindings)
+    {
+        if (bindings is null) return;
+        if (bindings.Count > InputLimits.MaxHotkeyBindings) throw Invalid("A track contains too many articulation bindings.");
+        foreach (var pair in bindings)
+        {
+            RequireText(pair.Key, 128, "articulation name");
+            RequireText(pair.Value, 128, "articulation value");
+        }
     }
 
     private static void ValidateRig(RigPreset? rig)

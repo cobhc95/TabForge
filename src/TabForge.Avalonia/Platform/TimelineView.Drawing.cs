@@ -116,7 +116,30 @@ public sealed partial class TimelineView
     internal TimelineLaneCursor? LaneCursor { get; set; }
 
     /// <summary>The selection this timeline draws and the edit keys route by: the shown document's (the input controller gives it); a timeline with no document keeps its own.</summary>
-    internal SelectionModel FocusModel { get; set; }
+    internal SelectionModel FocusModel
+    {
+        get => _focusModel;
+        set
+        {
+            if (ReferenceEquals(_focusModel, value)) return;
+            if (_focusModel is not null) _focusModel.Changed -= OnFocusModelChanged;
+            _focusModel = value;
+            _focusModel.Changed += OnFocusModelChanged;
+            _shownPicked = _focusModel.Rows.ToArray();
+        }
+    }
+    private SelectionModel _focusModel = null!;
+    private Guid[] _shownPicked = Array.Empty<Guid>();
+
+    /// <summary>Raised when the selected track rows change from anywhere (a timeline click, the keyboard, a menu), so the track list repaints its rows.</summary>
+    public event Action? PickedRowsChanged;
+
+    private void OnFocusModelChanged(object? sender, SelectionOrigin origin)
+    {
+        if (_focusModel.Rows.SequenceEqual(_shownPicked)) return;
+        _shownPicked = _focusModel.Rows.ToArray();
+        PickedRowsChanged?.Invoke();
+    }
 
     // The theme the frame being drawn uses, read once by Render: a theme flip mid-frame cannot mix paper and rims.
     private bool _frameLight;
@@ -357,7 +380,6 @@ public sealed partial class TimelineView
         var height = RowHeightOf(row);
         d.Rect(ink(row % 2 == 0 ? "TimelineRow" : "TimelineRowAlt"), null, 0, top, width, height);
         TrackRowTint.Fill(d, track, _frameLight, TrackTintPercent, 0, top, width, height);
-        // Selecting a track no longer tints its lane (only the header shows it); the old DrawLaneTint call lived here.
         TrackRowTint.Stripe(d, track, _frameLight, double.IsNaN(VisibleSpan.From) ? 0 : Math.Max(0, VisibleSpan.From), top, height);
         if (_showTrackLines) d.Line(edge, 0, top + height - 0.5, width, top + height - 0.5);
         if (IsArmed(row) && track.AudioClips.Count == 0) ArmedRowPainter.DrawLaneHint(d, ink, track, top + HeaderLineHeightOf(row));

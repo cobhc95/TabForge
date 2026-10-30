@@ -1,9 +1,9 @@
 using System.Text.Json;
 using TabForge.Audio.Contracts;
-using TabForge.AudioEngine.Midi.Processors;
+using TabForge.Core.Midi.Processors;
 using TabForge.AudioEngine.Plugins;
 
-namespace TabForge.AudioEngine.Midi;
+namespace TabForge.Core.Midi;
 
 // Owns: the ordered MIDI processor list in front of one instrument (engine-thread build, audio-thread swap, stuck-note release).
 

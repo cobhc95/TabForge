@@ -23,6 +23,7 @@ namespace TabForge.Avalonia.Tests;
 /// Does not own: the production classes these exercise.
 /// Tests: this class.
 /// </summary>
+[Collection("PluginLibraryRoot")]   // PluginLibrary.RootOverride is process-wide: run alone so no parallel test resets it or reads the scratch folder
 public class FxChainSupportTests
 {
     [Theory]
@@ -130,21 +131,26 @@ public class FxChainSupportTests
         PluginLibrary.SaveChain(Path.Combine(PluginLibrary.ChainsFolder, "Warm.tfchain"), new List<PluginSlot> { new() { Name = "Warm amp" } });
         PluginLibrary.SaveChain(Path.Combine(PluginLibrary.ChainsFolder, "Wide.tfchain"), new List<PluginSlot> { new() { Name = "Wide verb" } });
         string? question = null;
-        var answer = MessageBoxAnswer.No;
+        var answer = FxPresetLoadMode.Add;
         var track = FxTestKit.Track(FxChainWindow.SampleChain());
         var window = FxTestKit.Window(track);
-        window.Dialogs.Ask = (_, text, _, _, _) => { question = text; return System.Threading.Tasks.Task.FromResult(answer); };
+        window.Dialogs.AskLoadPreset = (_, name, count, _, _) =>
+        {
+            question = name;
+            Assert.True(count >= 3);
+            return System.Threading.Tasks.Task.FromResult<FxPresetLoadAnswer?>(new FxPresetLoadAnswer(answer, Remember: false));
+        };
         window.Show();
         Assert.Equal(new[] { "Warm", "Wide" }, FxTestKit.Items(window, "Warm").Concat(FxTestKit.Items(window, "Wide")).Select(i => (string)i.Header!));
         FxTestKit.Choose(window, "Warm");
         DialogTestKit.RunQueuedUiWork();
-        Assert.Contains("Replace this chain with \"Warm\"", question);
-        Assert.Equal(new[] { "Sample piano", "Sample reverb", "Sample delay", "Warm amp" }, track.Rig.Plugins.Select(p => p.Name));   // No: added to the end
-        answer = MessageBoxAnswer.Yes;
+        Assert.Equal("Warm", question);
+        Assert.Equal(new[] { "Sample piano", "Sample reverb", "Sample delay", "Warm amp" }, track.Rig.Plugins.Select(p => p.Name));   // Add: added to the end
+        answer = FxPresetLoadMode.Replace;
         FxTestKit.Choose(window, "Wide");
         DialogTestKit.RunQueuedUiWork();
         Assert.Equal(new[] { "Wide verb" }, track.Rig.Plugins.Select(p => p.Name));
-        answer = MessageBoxAnswer.Cancel;
+        window.Dialogs.AskLoadPreset = (_, _, _, _, _) => System.Threading.Tasks.Task.FromResult<FxPresetLoadAnswer?>(null);
         FxTestKit.Choose(window, "Warm");
         DialogTestKit.RunQueuedUiWork();
         Assert.Single(track.Rig.Plugins);

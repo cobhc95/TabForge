@@ -7,6 +7,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.Templates;
 using Avalonia.Layout;
 using Avalonia.Markup.Xaml.MarkupExtensions;
+using TabForge.Avalonia.Platform;
 using TabForge.Avalonia.Views.Dialogs;
 using TabForge.Avalonia.Views.Presets;
 using TabForge.Models;
@@ -24,8 +25,6 @@ namespace TabForge.Avalonia.Views;
 /// </summary>
 internal sealed class CurveSidePanel : StackPanel
 {
-    private const string SavePromptTitle = "Save as preset", SavePromptLabel = "Preset name:", SavePromptDefault = "My preset";
-
     private readonly EffectEditorKind _kind;
     private readonly EffectPresetStore _presets;
     private readonly double _previous;
@@ -149,7 +148,12 @@ internal sealed class CurveSidePanel : StackPanel
 
     private async System.Threading.Tasks.Task SaveAsPreset()
     {
-        var name = await DialogLauncher.Ask<TextPromptWindow, string?>(_owner, () => new TextPromptWindow(SavePromptTitle, SavePromptLabel, SavePromptDefault));
+        var listed = _presets.List(_kind);
+        var name = await DialogLauncher.Ask<PluginPresetWindow, string?>(_owner, () => new PluginPresetWindow(new AvaloniaDialogHost(),
+            "Save as preset", "Preset name:", "My preset",
+            listed.Where(row => !row.BuiltIn).Select(row => row.Preset.Name).ToList(),
+            listed.Where(row => row.BuiltIn).Select(row => row.Preset.Name).ToList(),
+            text => PresetRules.Error(text) ?? (text.Trim().Length > 40 ? "Use at most 40 characters." : null)));
         if (string.IsNullOrWhiteSpace(name)) return;
         if (!_presets.Save(_kind, name, _snapshot())) return;
         _presetsChanged();

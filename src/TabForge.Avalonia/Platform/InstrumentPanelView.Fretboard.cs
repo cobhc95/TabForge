@@ -32,10 +32,6 @@ public sealed partial class InstrumentPanelView
     private const double InlayRadius = 3.4;
     /// <summary>Light theme: thicker nut, 3px fret wires and bigger inlay dots.</summary>
     private const double LightNutWidth = 7.5, LightFretWireWidth = 3, LightInlayScale = 1.3;
-    /// <summary>A scale mark's standard alpha before the strength setting; the ring style's stroke width and the Rings style's radius factor.</summary>
-    private const double ScaleMarkAlpha = 0.35;
-    private const double ScaleRingWidth = 1.5;
-    private const double ScaleRingScale = 1.6;
     /// <summary>The brightness setting's full step mixes the lit colour this far toward white.</summary>
     private const double BrightenLimit = 0.5;
     /// <summary>Above this many frets in view, only the odd frets are left unnumbered; a shorter range numbers every fret.</summary>
@@ -61,7 +57,7 @@ public sealed partial class InstrumentPanelView
         var layout = FretboardLayout();
         var board = layout.Board;
         d.Rect(ink("InstrumentWood"), new UiStroke(ink("InstrumentBoardEdge"), 1), board.X, board.Y, board.Width, board.Height, BoardCorner);
-        if (_look.ScaleStyle == ScaleHighlightStyles.Shaded) DrawShadedCells(d, ink, layout);
+        DrawShadedCells(d, ink, layout);
         var light = FretboardPlaybackMarkers.IsLight(ink);
         // Fret wires between the frets, and the nut on fret 1's left edge; both span the board exactly.
         for (var fret = layout.FirstFret; fret <= layout.LastFret + 1; fret++)
@@ -101,7 +97,7 @@ public sealed partial class InstrumentPanelView
             d.DrawText(label, board.X - FretboardGeometryRules.LeftGutter + StringLabelInset, y - StringLabelLift);
         }
         DrawLegend(d, ink, board);
-        DrawScaleMarks(d, ink, layout, Math.Min(11, layout.StringGap * FretboardMarkerSizeRules.MaxRadiusShareOfGap));
+        DrawScaleMarks(d, ink, layout, Math.Min(ScaleMarkMaxRadius, layout.StringGap * FretboardMarkerSizeRules.MaxRadiusShareOfGap));
         var radius = MarkerGeometry(PlaybackMarkerRole.Now, layout).Radius;
         if (_playbackShown)
         {
@@ -125,28 +121,33 @@ public sealed partial class InstrumentPanelView
         MarkFret(d, ink, layout, hover.String, hover.Fret, ink("InstrumentLegible").WithOpacity(HoverGhostOpacity), radius);
     }
 
-    /// <summary>The playing notes on the board: recent and upcoming faint, the next movement in its colour, the sounding notes (or the released one at a rest) on top.</summary>
+    /// <summary>The playing notes on the board: recent faint, the sounding notes (or the released one at a rest) on top;
+    /// the next movement, the upcoming moves, their let-ring tags and the hand's movement line only while previewing.</summary>
 
     private void DrawPlayingNotes(IDrawContext d, Func<string, UiColor> ink, FretboardGeometryRules.Layout layout)
     {
-        foreach (var move in _movement) FretboardPlaybackMarkers.DrawMovement(d, ink, layout, move.From, move.To);
-        foreach (var n in _playing.Recent)
+        var preview = _look.PreviewHorizon >= 0;
+        if (preview) foreach (var move in _movement) FretboardPlaybackMarkers.DrawMovement(d, ink, layout, move.From, move.To);
+        if (_look.PreviewPrevious) foreach (var n in _playing.Recent)
         {
             var g = MarkerGeometry(PlaybackMarkerRole.Recent, layout);
             FretboardPlaybackMarkers.DrawRecent(d, ink, layout, n, LabelOf(n), g, NumberSize(PlaybackMarkerRole.Recent, g), RecentBrightness(n));
         }
-        for (var i = 0; i < _playing.Upcoming.Count; i++)
+        if (preview)
         {
-            var n = _playing.Upcoming[i];
-            var g = MarkerGeometry(PlaybackMarkerRole.Upcoming, layout);
-            FretboardPlaybackMarkers.DrawUpcoming(d, ink, layout, n, LabelOf(n), g, NumberSize(PlaybackMarkerRole.Upcoming, g), UpcomingBrightness(_playing.UpcomingDepth[i]));
-        }
-        foreach (var n in _playing.Next)
-        {
-            if (FretboardMovementRules.Repeats(_playing.Now, n)) continue;
-            var g = MarkerGeometry(PlaybackMarkerRole.Next, layout);
-            FretboardPlaybackMarkers.DrawNext(d, ink, layout, n, LabelOf(n), g, NumberSize(PlaybackMarkerRole.Next, g));
-            FretboardPlaybackMarkers.DrawTag(d, ink, layout, n, g, _look.FretNumberScale, ink("InstrumentNext"));
+            for (var i = 0; i < _playing.Upcoming.Count; i++)
+            {
+                var n = _playing.Upcoming[i];
+                var g = MarkerGeometry(PlaybackMarkerRole.Upcoming, layout);
+                FretboardPlaybackMarkers.DrawUpcoming(d, ink, layout, n, LabelOf(n), g, NumberSize(PlaybackMarkerRole.Upcoming, g), UpcomingBrightness(_playing.UpcomingDepth[i]));
+            }
+            foreach (var n in _playing.Next)
+            {
+                if (FretboardMovementRules.Repeats(_playing.Now, n)) continue;
+                var g = MarkerGeometry(PlaybackMarkerRole.Next, layout);
+                FretboardPlaybackMarkers.DrawNext(d, ink, layout, n, LabelOf(n), g, NumberSize(PlaybackMarkerRole.Next, g));
+                FretboardPlaybackMarkers.DrawTag(d, ink, layout, n, g, _look.FretNumberScale, ink("InstrumentNext"));
+            }
         }
         foreach (var n in _playing.Now)
         {
@@ -179,34 +180,6 @@ public sealed partial class InstrumentPanelView
     /// <summary>The inlay dot's radius: the inlay radius scaled by the marker size setting.</summary>
     private double InlayDot => InlayRadius * _look.MarkerSizePercent / 100.0;
 
-    /// <summary>Soft marks on every fret that sounds a note of the scale highlight: a fill, a ring or a wider ring, by the style setting.</summary>
-    private void DrawScaleMarks(IDrawContext d, Func<string, UiColor> ink, FretboardGeometryRules.Layout layout, double radius)
-    {
-        // The shaded style is drawn behind the board (DrawShadedCells), not as marks.
-        if (_look.ScalePitches.Length == 0 || _look.ScaleStyle == ScaleHighlightStyles.Shaded) return;
-        var colour = ink(_look.ScaleColourKey);
-        for (var s = 0; s < layout.Strings && s < Tuning.Count; s++)
-            for (var fret = layout.FirstFret; fret <= layout.LastFret; fret++)
-            {
-                var pitchClass = (Tuning[s] + fret) % 12;
-                if (_look.ScalePitches[pitchClass] != '1') continue;
-                var p = FretboardGeometryRules.PositionOf(layout, s, fret);
-                var mark = colour.WithOpacity(ScaleHighlightStyles.ScaleAlpha(ScaleMarkAlpha, _look.ScaleStrength, pitchClass == _look.ScaleRoot));
-                switch (_look.ScaleStyle)
-                {
-                    case ScaleHighlightStyles.Circles:
-                        d.Ellipse(null, new UiStroke(mark, ScaleRingWidth), p.X, p.Y, radius, radius);
-                        break;
-                    case ScaleHighlightStyles.Rings:
-                        d.Ellipse(null, new UiStroke(mark, ScaleRingWidth), p.X, p.Y, radius * ScaleRingScale, radius * ScaleRingScale);
-                        break;
-                    default:
-                        d.Ellipse(mark, null, p.X, p.Y, radius, radius);
-                        break;
-                }
-            }
-    }
-
     /// <summary>One fret marker: a filled bubble with its label inside (the fret number unless a note name is given), inked for contrast on the bubble's colour.
     /// The label's font size follows the radius (see <see cref="FretboardMarkerSizeRules.LabelFontSize"/>), so a two-digit number still fits inside the dot.</summary>
     internal static void MarkFret(IDrawContext d, Func<string, UiColor> ink, FretboardGeometryRules.Layout layout, int stringIndex, int fret, UiColor fill, double radius, string? label = null)
@@ -222,15 +195,18 @@ public sealed partial class InstrumentPanelView
 
     /// <summary>Top of the colour legend: bottom-aligned with the board, with the Scales button under it, never above the board's top strip.</summary>
     /// <remarks>The Scales button is 24 real pixels, so it is that many virtual DIPs at the drawing scale.</remarks>
-    private double LegendTop(UiRect board) => Math.Max(LegendTopMinimum, board.Bottom - (LegendRows * LegendRowHeight + LegendScalesGap + ScalesButtonHeight / FretboardScale()));
+    private double LegendTop(UiRect board) => Math.Max(LegendTopMinimum, board.Bottom - (LegendRowCount * LegendRowHeight + LegendScalesGap + ScalesButtonHeight / FretboardScale()));
 
-    /// <summary>The colour legend beside the board: now, next, upcoming and recent, in the palette colours the legend uses.</summary>
+    /// <summary>The colour legend beside the board: now, next, upcoming and recent while previewing, else now and recent only
+    /// (the legend lists only what can appear), in the palette colours the legend uses.</summary>
     private void DrawLegend(IDrawContext d, Func<string, UiColor> ink, UiRect board)
     {
-        var rows = new (string Key, string Label)[] { ("InstrumentCurrent", "now"), ("InstrumentNext", "next"), ("InstrumentAccent", "upcoming"), ("InstrumentPast", "recent") };
+        var rows = new List<(string Key, string Label)> { ("InstrumentCurrent", "now") };
+        if (_look.PreviewHorizon >= 0) { rows.Add(("InstrumentNext", "next")); rows.Add(("InstrumentAccent", "upcoming")); }
+        if (_look.PreviewPrevious) rows.Add(("InstrumentPast", "recent"));
         var x = board.Right + LegendGap;
         var top = LegendTop(board);
-        for (var i = 0; i < rows.Length; i++)
+        for (var i = 0; i < rows.Count; i++)
         {
             var y = top + i * LegendRowHeight;
             d.Ellipse(ink(rows[i].Key), new UiStroke(ink("InstrumentWood"), 1.5), x + 4, y + 7, 4.5, 4.5);
@@ -245,6 +221,6 @@ public sealed partial class InstrumentPanelView
         if (_kind != InstrumentPanelKind.Fretboard) return null;
         var board = FretboardLayout().Board;
         var s = FretboardScale();
-        return new UiPoint((board.Right + LegendGap - 2) * s, (LegendTop(board) + LegendRows * LegendRowHeight + LegendScalesGap) * s);
+        return new UiPoint((board.Right + LegendGap - 2) * s, (LegendTop(board) + LegendRowCount * LegendRowHeight + LegendScalesGap) * s);
     }
 }

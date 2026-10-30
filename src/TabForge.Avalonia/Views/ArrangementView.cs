@@ -40,6 +40,7 @@ public sealed partial class ArrangementView : UserControl
         var parts = ArrangementComposition.Build(this, song, document, contextMenus, meterTick);
         Timeline = parts.Timeline;
         Header = parts.Header;
+        TrackMeters = parts.TrackMeters;
         _trackRows = parts.TrackRows;
         Input = parts.Input;
         _names = parts.Names;
@@ -52,7 +53,8 @@ public sealed partial class ArrangementView : UserControl
         _headerRepaint = new NextFrameCoalescer(AvaloniaUiThread.ForApplication(), Header.InvalidateVisual);
 
         // The behaviour wiring stays in the view: every subscription below runs a handler this class owns on the controls the composition built.
-        _trackRows.RowsCountChanged += () => TrackRowsCountChanged?.Invoke();
+        _trackRows.RowsCountChanged += () => { TrackMeters.Reload(_document.Project); TrackRowsCountChanged?.Invoke(); };
+        Header.MeterMenuRequested = TrackMeters.OpenMenu;
         Input.TrackRowClicked += SelectTrackRow;
         Timeline.ClipDragPreviewChanged += ShowClipDragOnStrip;
         Timeline.NewTrackDropAvailable = AddTrackBar.IsVisible;
@@ -97,6 +99,7 @@ public sealed partial class ArrangementView : UserControl
         _listSplitter.DragEnded += EndTrackListDrag;
         _trackRows.WatchLayout();
         Transport.BindCommands(contextMenus);
+        Views.Meters.TrackMeterWiring.AttachInput(TrackMeters, Header, contextMenus);
         // The master row's volume is the transport's master knob: the row reads it at each paint and repaints as it moves.
         Header.MasterVolumePercent = () => (int)Math.Round(Transport.MasterVolumeKnob.Value);
         Transport.MasterVolumeKnob.ValueChanged += (_, _) => _headerRepaint.Request();
@@ -147,6 +150,7 @@ public sealed partial class ArrangementView : UserControl
         Timeline.TrackListNameWidth = TrackListWidthRules.NameWidthFor(clamped);
         Header.InvalidateMeasure();
         Header.InvalidateVisual();
+        TrackMeters.InvalidateMeasure();
         InvalidateMeasure();   // the transport's width and the columns' top band follow the list width
     }
 
@@ -307,6 +311,8 @@ public sealed partial class ArrangementView : UserControl
         Timeline.Compact = compact;
         Header.Reload(_document.Project);
         Header.IsVisible = !compact;
+        // The meters draw over the track list's rows; the compact content has no list, so they must not hold its Auto column open either.
+        TrackMeters.IsVisible = !compact;
         _listSplitter.IsVisible = !compact;
         ApplyAddTrackBarVisibility();
         if (!compact) Transport.Width = double.NaN;
@@ -317,6 +323,7 @@ public sealed partial class ArrangementView : UserControl
     public void Show(IEditableDocument document)
     {
         _document = document;
+        TrackMeters.Reload(document.Project);
         if (document is SongDocument shown) Timeline.Media = shown.Media;
         if (VisualRoot is not null) _trackRows.Watch(document);
         Input.Show(document);
@@ -453,6 +460,9 @@ public sealed partial class ArrangementView : UserControl
     /// <summary>The document this arrangement shows (the tab's song).</summary>
     public IEditableDocument Document => _document;
     public TrackHeaderColumn Header { get; }
+
+    /// <summary>The per-track meters over the header's meter column; the window attaches their engine feed.</summary>
+    public Views.Meters.TrackMeterColumn TrackMeters { get; }
     /// <summary>The controls of the armed tracks' sub-rows (monitor, input) and their level poll.</summary>
     public ArmedRowLayer ArmedRows => _trackRows.Armed;
     public TimelineInputController Input { get; }

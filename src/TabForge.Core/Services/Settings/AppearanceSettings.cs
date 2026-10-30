@@ -108,8 +108,10 @@ public sealed class AppearanceSettings
     public string CursorColour { get; set; } = Palette.Hex("ScoreCursor", false);
     /// <summary>Thumb colour for the arrangement timeline scrollbar.</summary>
     public string TimelineScrollBarThumbColour { get; set; } = "#758396";
-    /// <summary>Show the fretboard / instrument panel.</summary>
+    /// <summary>Show the fretboard / instrument panel in the tab (score) editor.</summary>
     public bool ShowFretboard { get; set; } = true;
+    /// <summary>Show the fretboard / instrument panel while the piano roll is shown; its own choice, off by default.</summary>
+    public bool ShowFretboardInPianoRoll { get; set; }
     /// <summary>Whether the fretboard shows at launch: Remember last (the saved state), Always or Never (see <see cref="FretboardStartupModes"/>).</summary>
     public string FretboardAtStartup { get; set; } = FretboardStartupModes.Remember;
     /// <summary>Fretboard / keyboard pane height is locked (splitter drags do not change it).</summary>

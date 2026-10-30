@@ -1,5 +1,6 @@
 using System;
 using Avalonia.Controls;
+using TabForge.Avalonia.Views.Midi;
 
 namespace TabForge.Avalonia.Views.Articulations;
 
@@ -21,7 +22,7 @@ public static class ArticulationsTab
         processors.Children.Add(body);
         var articulations = new TabItem { Header = "Articulations", Name = "ArticulationsTab" };
         var tabs = new TabControl { Name = "MidiTabs", Items = { new TabItem { Header = "Processors", Content = processors, Name = "ProcessorsTab" }, articulations } };
-        ToolTip.SetTip(articulations, "Which MIDI a note technique (palm mute, harmonic, slide ...) sends to this instrument: keyswitches, controllers, velocity or another pitch");
+        MidiSharedRows.Tip(articulations, "Which MIDI a note technique (palm mute, harmonic, slide ...) sends to this instrument: keyswitches, controllers, velocity or another pitch");
         tabs.SelectionChanged += (_, e) =>
         {
             if (e.Source == tabs && ReferenceEquals(tabs.SelectedItem, articulations) && articulations.Content is null) articulations.Content = makePane();
@@ -29,6 +30,22 @@ public static class ArticulationsTab
         Grid.SetRow(tabs, 0);
         Grid.SetRowSpan(tabs, 2);
         root.Children.Insert(0, tabs);
+        return tabs;
+    }
+
+    /// <summary>Installs the same two tabs when the Processors tab has no processor panes (a track without a plug-in).</summary>
+    public static TabControl Install(Grid root, Control processorsContent, Func<ArticulationsPane> makePane)
+    {
+        var articulations = new TabItem { Header = "Articulations", Name = "ArticulationsTab" };
+        var tabs = new TabControl { Name = "MidiTabs", Items = { new TabItem { Header = "Processors", Content = processorsContent, Name = "ProcessorsTab" }, articulations } };
+        MidiSharedRows.Tip(articulations, "Which MIDI a note technique (palm mute, harmonic, slide ...) sends to this instrument: keyswitches, controllers, velocity or another pitch");
+        tabs.SelectionChanged += (_, e) =>
+        {
+            if (e.Source == tabs && ReferenceEquals(tabs.SelectedItem, articulations) && articulations.Content is null) articulations.Content = makePane();
+        };
+        Grid.SetRow(tabs, 0);
+        Grid.SetRowSpan(tabs, 2);
+        root.Children.Add(tabs);
         return tabs;
     }
 }

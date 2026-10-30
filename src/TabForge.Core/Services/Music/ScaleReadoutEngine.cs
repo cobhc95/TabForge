@@ -7,17 +7,17 @@ namespace TabForge.Services;
 /// <param name="SectionName">The section title; "" for the whole song.</param>
 /// <param name="FirstBar">The first bar read (zero based).</param>
 /// <param name="LastBar">The last bar read (zero based, inclusive).</param>
-/// <param name="Marker">The section read; null for the whole song.</param>
+/// <param name="Marker">The section read; null for the whole song or the selection.</param>
 /// <param name="TrackKey">The track id ("N" format) of the listened track, or "*" for all pitched tracks.</param>
 /// <param name="TrackLabel">The track name, or "All pitched tracks".</param>
 /// <param name="Tracks">The tracks read.</param>
 public sealed record ScaleContext(string SectionName, int FirstBar, int LastBar, MarkerModel? Marker, string TrackKey, string TrackLabel, IReadOnlyList<TrackModel> Tracks)
 {
-    /// <summary>"Verse 1 · Lead Gtr · bars 19–32".</summary>
-    public string Text => $"{(Marker is null ? "Whole song" : SectionName)}  ·  {TrackLabel}  ·  bars {FirstBar + 1}–{LastBar + 1}";
+    /// <summary>"Verse 1 · Lead Gtr · bars 19–32". The selection reads as "Selection".</summary>
+    public string Text => $"{(Marker is null ? (SectionName == ScaleReadFrom.Selection ? ScaleReadFrom.Selection : "Whole song") : SectionName)}  ·  {TrackLabel}  ·  bars {FirstBar + 1}–{LastBar + 1}";
 
     /// <summary>The key a pick is remembered under for this session: the section and the track.</summary>
-    public string SessionKey => $"{(Marker is null ? "song" : $"{Marker.MeasureIndex}:{Marker.Title}")}|{TrackKey}";
+    public string SessionKey => $"{(Marker is null ? (SectionName == ScaleReadFrom.Selection ? $"selection:{FirstBar}-{LastBar}" : "song") : $"{Marker.MeasureIndex}:{Marker.Title}")}|{TrackKey}";
 }
 
 /// <summary>The readout for one position.</summary>
@@ -48,19 +48,33 @@ public sealed class ScaleReadoutEngine
     public int DetectionRuns { get; private set; }
 
     /// <summary>The bars and tracks read at <paramref name="bar"/> for <paramref name="track"/> (the selected track) under <paramref name="settings"/>.</summary>
-    public static ScaleContext ContextOf(SongProject song, int bar, TrackModel? track, ScaleReadoutSettings settings)
+    public static ScaleContext ContextOf(SongProject song, int bar, TrackModel? track, ScaleReadoutSettings settings, (int First, int Last)? selection = null)
     {
         var bars = Math.Max(1, BarRangeEditor.MaxMeasures(song));
-        var section = ScaleReadFrom.Normalize(settings.ReadFrom) == ScaleReadFrom.Song ? null : SectionLayout.At(song, bar);
+        var readFrom = ScaleReadFrom.Normalize(settings.ReadFrom);
+        if (readFrom == ScaleReadFrom.Selection && selection is { } sel)
+        {
+            var selFirst = Math.Clamp(Math.Min(sel.First, sel.Last), 0, bars - 1);
+            var selLast = Math.Clamp(Math.Max(sel.First, sel.Last), selFirst, bars - 1);
+            track ??= song.FirstNotationTrack;
+            if (ScaleListenTo.Normalize(settings.ListenTo) == ScaleListenTo.Pitched)
+                return new ScaleContext(ScaleReadFrom.Selection, selFirst, selLast, null, "*", "All pitched tracks", song.Tracks.Where(IsPitched).ToList());
+            return new ScaleContext(ScaleReadFrom.Selection, selFirst, selLast, null, track is null ? "-" : track.Id.ToString("N"), track?.Name ?? "No track",
+                track is null ? Array.Empty<TrackModel>() : new[] { track });
+        }
+        var section = readFrom == ScaleReadFrom.Song ? null : SectionLayout.At(song, bar);
         var (first, last) = (0, bars - 1);
         if (section is not null && SectionLayout.TryGetBounds(song, section, out var start, out var end)) (first, last) = (start, Math.Max(start, end - 1));
         else section = null;
         track ??= song.FirstNotationTrack;
         if (ScaleListenTo.Normalize(settings.ListenTo) == ScaleListenTo.Pitched)
-            return new ScaleContext(section?.Title ?? "", first, last, section, "*", "All pitched tracks", song.Tracks.Where(t => !t.IsDrumTrack).ToList());
+            return new ScaleContext(section?.Title ?? "", first, last, section, "*", "All pitched tracks", song.Tracks.Where(IsPitched).ToList());
         return new ScaleContext(section?.Title ?? "", first, last, section, track is null ? "-" : track.Id.ToString("N"), track?.Name ?? "No track",
             track is null ? Array.Empty<TrackModel>() : new[] { track });
     }
+
+    /// <summary>True for a track the readout may read: drums and percussion (a drum track or MIDI channel 10) are never included.</summary>
+    public static bool IsPitched(TrackModel track) => !track.IsDrumTrack && track.MidiChannel != 9;
 
     /// <summary>The scale of the key signature at <paramref name="bar"/>: the major key, or its relative natural minor.</summary>
     public static ScaleMatch KeyScale(SongProject song, int bar)
@@ -83,9 +97,9 @@ public sealed class ScaleReadoutEngine
     }
 
     /// <summary>The readout at <paramref name="bar"/> (the playhead or the cursor) for the selected <paramref name="track"/>.</summary>
-    public ScaleReadoutResult Compute(SongProject song, int bar, TrackModel? track, ScaleReadoutSettings settings)
+    public ScaleReadoutResult Compute(SongProject song, int bar, TrackModel? track, ScaleReadoutSettings settings, (int First, int Last)? selection = null)
     {
-        var context = ContextOf(song, bar, track, settings);
+        var context = ContextOf(song, bar, track, settings, selection);
         var top = Detect(song, context, settings);
         var key = KeyScale(song, bar);
         var flats = (MusicTime.BarOf(song, bar)?.KeySignature ?? song.KeySignature) < 0;
@@ -105,7 +119,7 @@ public sealed class ScaleReadoutEngine
         if (_cache.TryGetValue(key, out var cached)) return cached;
         DetectionRuns++;
         var histogram = SectionScaleDetector.Collect(song, context.Tracks, context.FirstBar, context.LastBar);
-        var scales = ScaleFamilies.ScalesOf(ScaleFamilies.Normalize(settings.Families));
+        var scales = settings.ConsideredScales();
         var top = SectionScaleDetector.Rank(histogram, scales, settings.PreferCommon).Take(TopCount).ToList();
         if (_cache.Count >= CacheLimit) _cache.Clear();
         _cache[key] = top;

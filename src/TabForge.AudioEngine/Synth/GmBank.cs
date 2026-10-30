@@ -16,10 +16,10 @@ public sealed class GmBank
     public const float SoundFontMasterVolume = 0.6f;
 
     /// <summary>One published choice: the font (null = Windows GM, loaded on demand), the master volume, the version that changes with every switch.</summary>
-    public sealed record Choice(SoundFont? Font, string Path, float MasterVolume, int Version, bool WindowsHost = true)
+    public sealed record Choice(SoundFont? Font, string Path, float MasterVolume, int Version, bool WindowsHost = true, bool Silent = false)
     {
-        /// <summary>The font to play. Windows without a SoundFont: the converted gm.dls. Elsewhere without a SoundFont: a failure that says to download it (the synth then reports itself failed).</summary>
-        public SoundFont Bank => Font ?? (WindowsHost ? DlsToSoundFont.LoadWindowsBank() : throw new FileNotFoundException(NoBankMessage));
+        /// <summary>The font to play. Windows without a SoundFont: the converted gm.dls. Elsewhere without a SoundFont: a failure that says to download it (the synth then reports itself failed). Never read when <see cref="Silent"/>.</summary>
+        public SoundFont Bank => Silent ? throw new InvalidOperationException("The silent sound bank has no font to play.") : Font ?? (WindowsHost ? DlsToSoundFont.LoadWindowsBank() : throw new FileNotFoundException(NoBankMessage));
     }
 
     /// <summary>Said when a system without gm.dls has no SoundFont to play.</summary>
@@ -69,13 +69,14 @@ public sealed class GmBank
 
     public Choice Current => _current;
 
-    /// <summary>Selects the bank: a .sf2 path, or empty for Windows GM. False (the bank stays as it was) when the file cannot be read.</summary>
+    /// <summary>Selects the bank: a .sf2 path, empty for Windows GM, "None" for silence. False (the bank stays as it was) when the file cannot be read.</summary>
     public bool Select(string path, out string error)
     {
         error = "";
         var old = _current;
         if (string.Equals(old.Path, path, StringComparison.OrdinalIgnoreCase)) return true;
         if (path.Length == 0) { _current = Fallback(old.Version + 1); return true; }
+        if (string.Equals(path, TabForge.Services.SoundEngines.None, StringComparison.Ordinal)) { _current = new Choice(null, path, 0, old.Version + 1, _windowsHost, Silent: true); return true; }
         var font = TryLoad(path, out error);
         if (font is null) return false;
         _current = new Choice(font, path, SoundFontMasterVolume, old.Version + 1, _windowsHost);

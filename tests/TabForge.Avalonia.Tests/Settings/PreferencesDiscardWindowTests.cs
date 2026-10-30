@@ -55,17 +55,17 @@ public class PreferencesDiscardWindowTests
     }
 
     [AvaloniaFact]
-    public async Task CancelAfterResetAllPutsTheBaselineLayoutBack()
+    public async Task ResetAllAndCancelLeaveTheDockLayoutAlone()
     {
         var host = new AvaloniaDialogHost { Capture = _ => MessageBoxAnswer.Yes };
-        var saved = new TabForge.Services.AppSettings();
-        Assert.Null(saved.Workspace);
+        var layout = new TabForge.Docking.DockWorkspaceState { ClosedPanels = { "mixer" } };
+        var saved = new TabForge.Services.AppSettings { Workspace = layout };
         var window = new PreferencesWindow(host, saved);
         window.Show();
         await window.ResetAllAsync();
-        Assert.NotNull(saved.Workspace);   // the reset previews its layout
+        Assert.Same(layout, saved.Workspace);   // the reset does not preview a default layout
         window.Close();
-        Assert.Null(saved.Workspace);      // Cancel puts the opening layout back
+        Assert.Same(layout, saved.Workspace);   // Cancel leaves it alone too
     }
 
     [AvaloniaFact]

@@ -89,6 +89,9 @@ public sealed partial class AudioEngineClient : IDisposable
     private readonly Dictionary<int, string[]> _sentChainIds = new();
     private readonly Dictionary<int, StateRequest> _stateRequests = new();   // by request id
     private EngineConfig? _config;
+    // The output the "Active on" rules are matched against: the configured (or fallback) driver, and the opened device's friendly name when known.
+    private volatile string? _ruleDriver;
+    private volatile string? _ruleDevice;
     private readonly OutputFallback _fallback = new();
     private SynchronizationContext? _ui;
 
@@ -119,6 +122,8 @@ public sealed partial class AudioEngineClient : IDisposable
     public string? DeviceDescription { get; private set; }
     /// <summary>The running output: driver (WASAPI, ASIO...), device, sample rate, buffer and total output latency.</summary>
     public (string Driver, string Device, int Rate, int Buffer, int LatencyMs)? Output { get; private set; }
+    /// <summary>The output the "Active on" rules match now: the configured (or fallback) driver and the opened device's friendly name when known.</summary>
+    public TabForge.Plugins.ActiveOnOutput ActiveOutput => new(_ruleDriver, _ruleDevice);
     /// <summary>The channel names of the ASIO device the running engine has open (Device: as configured), as the driver reports them; null when the engine is not running ASIO or reported none.</summary>
     public (string Device, string[] Inputs, string[] Outputs)? AsioChannels { get; private set; }
 

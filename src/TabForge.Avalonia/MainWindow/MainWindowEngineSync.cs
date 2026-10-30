@@ -54,6 +54,7 @@ public static class MainWindowEngineSync
         panes.ArrangementCreated += arrangement =>
         {
             Views.Meters.MasterMeterWiring.Attach(arrangement.Transport, playback.Engine, () => settings.Settings, settings.SaveSettings, meterTick);
+            Views.Meters.TrackMeterWiring.Attach(arrangement.TrackMeters, playback.Engine, () => settings.Settings, settings.SaveSettings);
             var knob = arrangement.Transport.MasterVolumeKnob;
             knob.Value = playback.MasterPercent;
             // A turn pushes the master at most every settings-preview interval (with a trailing run), and once more when the turn ends.
@@ -101,6 +102,7 @@ public static class MainWindowEngineSync
         public TabForge.Services.PluginSettings Plugins => _settings.Settings.Plugins;
         public Window? Owner => _window;
         public void SaveSettings() => _settings.SaveSettings();
+        public void PanicAll() => _playback.Panic();
         public void ShowStatus(string text) => _showStatus(text);
         public void SyncActive() => _playback.SyncEngine(_songs.Active, _settings.Settings.Plugins);
         public AvaloniaPlaybackSession? SessionOf(SongDocument song) => _playback.Existing(song);

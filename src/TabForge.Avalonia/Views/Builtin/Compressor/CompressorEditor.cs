@@ -1,12 +1,16 @@
+using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using Avalonia.Controls;
 using TabForge.Audio.Contracts;
 using TabForge.Audio.Contracts.Builtin;
-using TabForge.AudioEngine.Builtin.Compressor;
+using CompressorEffect = TabForge.Audio.Contracts.Builtin.CompressorParameters;
 using TabForge.Avalonia.Views.Dialogs;
+using TabForge.Avalonia.Views.Presets;
 using TabForge.Models;
 using TabForge.Plugins;
+using TabForge.Presets;
 
 namespace TabForge.Avalonia.Views.Fx;
 
@@ -23,15 +27,18 @@ public sealed class CompressorEditor : BuiltinEffectPanel
     private readonly MeterBar _reduction = new("CompressorReductionMeter", "Warning", fromRight: true), _level = new("CompressorLevelMeter", "Success");
     private readonly TextBlock _reductionText = new() { Name = "CompressorReductionText" }, _levelText = new() { Name = "CompressorLevelText" };
     private readonly ComboBox _presets = new() { Name = "CompressorPresets", PlaceholderText = "Factory preset…" };
+    private readonly Dictionary<string, string> _displayToName = new(StringComparer.OrdinalIgnoreCase);
+    private const string PresetKind = "Builtin:compressor";
     private bool _applyingPreset;
     private ParamSlider _threshold = null!, _ratio = null!, _knee = null!;
 
     public CompressorEditor(IFxChainHost host, TrackModel track, PluginSlot slot)
         : base(host, track, slot, "Compressor", CompressorEffect.Descriptors, new Size2(DialogMetrics.CompressorWidth, DialogMetrics.CompressorHeight, DialogMetrics.CompressorMinWidth, DialogMetrics.CompressorMinHeight))
     {
-        _presets.ItemsSource = BuiltinPresets.Names(BuiltinEffects.CompressorId);
         ToolTip.SetTip(_presets, "Sets the compressor for a bass, a voice or a guitar. The settings stay yours to change.");
         _presets.SelectionChanged += (_, _) => ApplyPreset();
+        FillPresets();
+        PresetCombo.Watch(_presets, () => Slot.AppliedPreset is { Kind: PresetKind } p ? p : null, () => Slot.State, FillPresets);
         _threshold = Slider(CompressorEffect.ThresholdId, "Threshold", "Level above which the compressor works.");
         _ratio = Slider(CompressorEffect.RatioId, "Ratio", "How much the level above the threshold is reduced: 4 : 1 lets 4 dB in give 1 dB out.");
         _knee = Slider(CompressorEffect.KneeId, "Knee", "0 is a sharp corner at the threshold; more eases into the compression.");
@@ -60,11 +67,43 @@ public sealed class CompressorEditor : BuiltinEffectPanel
 
     private void ApplyPreset()
     {
-        if (_applyingPreset || _presets.SelectedItem is not string name) return;
-        if (BuiltinPresets.State(BuiltinEffects.CompressorId, name) is { } state) ApplyState(state);
+        if (_applyingPreset || _presets.SelectedItem is not string shown || !_displayToName.TryGetValue(shown, out var name)) return;
+        if (BuiltinPresets.State(BuiltinEffects.CompressorId, name) is { } state)
+        {
+            ApplyState(state);
+            Slot.AppliedPreset = PresetCombo.Remember(name, PresetKind, Slot.State);
+        }
+        FillPresets();
+    }
+
+    /// <summary>Lists the factory presets with the remembered one selected (and marked when the settings differ).</summary>
+    private void FillPresets()
+    {
         _applyingPreset = true;
-        _presets.SelectedItem = null;
-        _applyingPreset = false;
+        try
+        {
+            var applied = Slot.AppliedPreset is { Kind: PresetKind } p ? p : null;
+            var names = BuiltinPresets.Names(BuiltinEffects.CompressorId);
+            var items = new List<string>();
+            _displayToName.Clear();
+            foreach (var name in names)
+            {
+                var text = PresetCombo.Decorate(name, name, applied, Slot.State, true);
+                if (!_displayToName.ContainsKey(text)) _displayToName[text] = name;
+                items.Add(text);
+            }
+            if (applied is { } missing && !names.Contains(missing.Name, StringComparer.OrdinalIgnoreCase))
+            {
+                var text = PresetCombo.Decorate(missing.Name, missing.Name, applied, Slot.State, false);
+                _displayToName[text] = missing.Name;
+                items.Add(text);
+            }
+            _presets.ItemsSource = items;
+            _presets.SelectedItem = applied is { } pick
+                ? items.FirstOrDefault(text => string.Equals(_displayToName[text], pick.Name, StringComparison.OrdinalIgnoreCase))
+                : null;
+        }
+        finally { _applyingPreset = false; }
     }
 
     protected override void ShowValues(IReadOnlyDictionary<uint, PluginParameterInfo> byId)

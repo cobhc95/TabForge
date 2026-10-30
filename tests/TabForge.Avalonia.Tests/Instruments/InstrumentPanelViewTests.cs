@@ -11,15 +11,19 @@ using TabForge.Avalonia.Platform;
 using TabForge.Documents;
 using TabForge.Models;
 using TabForge.Platform;
+using TabForge.Platform.Theme;
+using TabForge.Playback;
 using TabForge.Presenters;
 using TabForge.Presets;
+using TabForge.Services;
 using Xunit;
 
 namespace TabForge.Avalonia.Tests;
 
 /// <summary>
 /// Owns: the instrument panel check: the three layouts draw in both themes with the cursor's notes lit (PNGs go to %TEMP%\tf-avalonia-tests\InstrumentPanelViewTests
-/// for a look by eye), a click maps to the same note the Core rules give and raises NotePicked, and the Core lit-note rule reads the demo song.
+/// for a look by eye), a click maps to the same note the Core rules give and raises NotePicked, the Core lit-note rule reads the demo song,
+/// and the preview toggle (off shows now and recent only, with no next/upcoming markers, tags or legend rows, in every view).
 /// Tests: InstrumentPanelView, InstrumentPanelStrip, InstrumentLitNotes.
 /// </summary>
 public class InstrumentPanelViewTests
@@ -216,5 +220,128 @@ public class InstrumentPanelViewTests
         var fretboardCap = System.Math.Min(FretboardSizeRules.GapCapPaneHeight(strings, padding, width, InstrumentPanelView.BoardLimits), strip.Panel.WidthLimitedPaneHeight(width));
         Assert.Equal(fretboardCap, strip.MaxHeight, 1e-6);
         Assert.Equal(FretboardSizeRules.MinPaneHeight(strings, padding), strip.MinHeight, 1e-6);
+    }
+
+    // Sounding now (1000-1800, tagged H/P), next (2000, tagged L.R.), upcoming (3000, tagged L.R.)
+    // and recently released (0-400) at song time 1200: the preview toggle's on/off pair.
+    private static NoteEvent PreviewNote(double onset, double duration, int stringIndex, int fret, int midi, string? technique = null) =>
+        new() { OnsetMs = onset, DurationMs = duration, StringIndex = stringIndex, Fret = fret, Midi = midi, Technique = technique };
+
+    private static NoteEvent[] PreviewNotes() => new[]
+    {
+        PreviewNote(0, 400, 1, 1, 62),
+        PreviewNote(1000, 800, 0, 3, 67, "H/P"),
+        PreviewNote(2000, 300, 2, 2, 64, "L.R."),
+        PreviewNote(3000, 300, 4, 5, 69, "L.R."),
+    };
+
+    private static NoteEvent[] DrumPreviewNotes() => new[]
+    {
+        PreviewNote(0, 400, 0, 0, 36),
+        PreviewNote(1000, 800, 0, 0, 38),
+        PreviewNote(2000, 300, 0, 0, 42),
+        PreviewNote(3000, 300, 0, 0, 46),
+    };
+
+    private static InstrumentPanelView PreviewPanel(InstrumentPanelKind kind, bool previewOn)
+    {
+        var settings = new AppSettings();
+        settings.Editing.PreviewNotesEnabled = previewOn;
+        var panel = new InstrumentPanelView { Kind = kind, Look = FretboardSettingsBinding.Look.From(settings) };
+        panel.Show(DemoSongFactory.Create().Tracks[0], System.Array.Empty<InstrumentLitNotes.Lit>());
+        panel.Measure(new Size(1100, 170));
+        panel.Arrange(new Rect(0, 0, 1100, 170));
+        return panel;
+    }
+
+    [AvaloniaFact]
+    public void PreviewOffFretboardShowsOnlyNowAndRecent()
+    {
+        var on = PreviewPanel(InstrumentPanelKind.Fretboard, previewOn: true);
+        on.ShowPlayback(PreviewNotes(), 1200);
+        var onDraw = new InstrumentFretNumberTests.RecordingDrawContext();
+        on.Draw(onDraw, light: false);
+        Assert.Contains(onDraw.Texts, t => t.Text == "next");
+        Assert.Contains(onDraw.Texts, t => t.Text == "upcoming");
+        Assert.Contains(onDraw.Texts, t => t.Text == "L.R.");
+        Assert.Contains(64, on.LitMidis());
+        Assert.Contains(69, on.LitMidis());
+
+        var off = PreviewPanel(InstrumentPanelKind.Fretboard, previewOn: false);
+        off.ShowPlayback(PreviewNotes(), 1200);
+        Assert.Equal(new[] { 67, 62 }, off.LitMidis().ToArray());
+        var offDraw = new InstrumentFretNumberTests.RecordingDrawContext();
+        off.Draw(offDraw, light: false);
+        var labels = offDraw.Texts.Select(t => t.Text).ToList();
+        Assert.Contains("now", labels);
+        Assert.Contains("recent", labels);
+        Assert.DoesNotContain("next", labels);
+        Assert.DoesNotContain("upcoming", labels);
+        // The sounding note keeps its tag; the next/upcoming let-ring tags are never drawn.
+        Assert.Contains(offDraw.Texts, t => t.Text == "H/P");
+        Assert.DoesNotContain(offDraw.Texts, t => t.Text == "L.R.");
+    }
+
+    [AvaloniaFact]
+    public void PreviewOffKeyboardLightsOnlyNowAndRecent()
+    {
+        var next = AvaloniaPalette.Get("InstrumentNext", false);
+        var accent = AvaloniaPalette.Get("InstrumentAccent", false);
+
+        var on = PreviewPanel(InstrumentPanelKind.Keyboard, previewOn: true);
+        on.ShowPlayback(PreviewNotes(), 1200);
+        Assert.Equal(new[] { 67, 64, 69, 62 }, on.LitMidis().ToArray());
+        var onDraw = new InstrumentFretNumberTests.RecordingDrawContext();
+        on.Draw(onDraw, light: false);
+        Assert.Contains(onDraw.Rects, r => r.Fill == next);
+
+        var off = PreviewPanel(InstrumentPanelKind.Keyboard, previewOn: false);
+        off.ShowPlayback(PreviewNotes(), 1200);
+        Assert.Equal(new[] { 67, 62 }, off.LitMidis().ToArray());
+        var offDraw = new InstrumentFretNumberTests.RecordingDrawContext();
+        off.Draw(offDraw, light: false);
+        // Neither the next colour nor the upcoming accent (at any fade) lights a key.
+        Assert.DoesNotContain(offDraw.Rects, r => r.Fill == next);
+        Assert.DoesNotContain(offDraw.Rects, r => r.Fill is { } fill && fill.R == accent.R && fill.G == accent.G && fill.B == accent.B);
+    }
+
+    [AvaloniaFact]
+    public void PreviewOffDrumMapShowsOnlyNowAndRecent()
+    {
+        // The drum map never previews, whatever the toggle holds.
+        foreach (var previewOn in new[] { true, false })
+        {
+            var panel = PreviewPanel(InstrumentPanelKind.Drums, previewOn);
+            panel.ShowPlayback(DrumPreviewNotes(), 1200);
+            Assert.Equal(new[] { 38, 36 }, panel.LitMidis().ToArray());
+            panel.Draw(new InstrumentFretNumberTests.RecordingDrawContext(), light: false);
+        }
+    }
+
+    [AvaloniaFact]
+    public void LiveToggleOffClearsStalePreviewInEveryView()
+    {
+        // The menu and the Settings row both push a new look through the binding (SettingsChanged reaches the
+        // main strip and every Band card); the panel drops the look-ahead lists at once, before the next frame fills.
+        var offSettings = new AppSettings();
+        offSettings.Editing.PreviewNotesEnabled = false;
+        var offLook = FretboardSettingsBinding.Look.From(offSettings);
+        Assert.Equal(-1, offLook.PreviewHorizon);
+        foreach (var kind in new[] { InstrumentPanelKind.Fretboard, InstrumentPanelKind.Keyboard, InstrumentPanelKind.Drums })
+        {
+            var panel = PreviewPanel(kind, previewOn: true);
+            panel.ShowPlayback(kind == InstrumentPanelKind.Drums ? DrumPreviewNotes() : PreviewNotes(), 1200);
+            panel.Look = offLook;
+            var lit = panel.LitMidis().ToArray();
+            Assert.DoesNotContain(kind == InstrumentPanelKind.Drums ? 42 : 64, lit);
+            Assert.DoesNotContain(kind == InstrumentPanelKind.Drums ? 46 : 69, lit);
+            Assert.Contains(kind == InstrumentPanelKind.Drums ? 38 : 67, lit);
+            if (kind != InstrumentPanelKind.Fretboard) continue;
+            var draw = new InstrumentFretNumberTests.RecordingDrawContext();
+            panel.Draw(draw, light: false);
+            var labels = draw.Texts.Select(t => t.Text).ToList();
+            Assert.DoesNotContain("next", labels);
+            Assert.DoesNotContain("upcoming", labels);
+        }
     }
 }

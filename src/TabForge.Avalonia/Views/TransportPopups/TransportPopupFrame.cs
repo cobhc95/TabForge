@@ -76,7 +76,7 @@ public sealed class TransportPopupFrame
         _panel = new Border
         {
             Width = width, Padding = new Thickness(PanelPadding), CornerRadius = new CornerRadius(PanelCornerRadius), BorderThickness = new Thickness(1),
-            Margin = ShadowRoom, Child = Rows,
+            Margin = ShadowRoom, Child = new ScrollViewer { Content = Rows, VerticalScrollBarVisibility = global::Avalonia.Controls.Primitives.ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = global::Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled, MaxHeight = ScalePopupLayout.PopupMaxHeight },
         };
         _panel[!Border.BackgroundProperty] = new DynamicResourceExtension("Panel2Brush");
         _panel[!Border.BorderBrushProperty] = new DynamicResourceExtension("BorderSoftBrush");

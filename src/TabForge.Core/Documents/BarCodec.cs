@@ -186,6 +186,7 @@ internal static class BarCodec
         if (tempoCount < 0) m.MidBarTempos = null;
         else
         {
+            if (tempoCount > r.Remaining) throw new InvalidDataException("The undo state is damaged.");
             var tempos = new List<TempoPoint>(tempoCount);
             for (var index = 0; index < tempoCount; index++)
             {
@@ -204,6 +205,7 @@ internal static class BarCodec
     {
         var count = r.Count();
         if (count < 0) return null;
+        if (count > r.Remaining) throw new InvalidDataException("The undo state is damaged.");
         var cells = new List<TabCell>(count);
         for (var index = 0; index < count; index++)
         {
@@ -232,6 +234,7 @@ internal static class BarCodec
             if (noteCount < 0) c.Notes = null!;
             else
             {
+                if (noteCount > r.Remaining) throw new InvalidDataException("The undo state is damaged.");
                 var notes = new List<TabNote>(noteCount);
                 for (var noteIndex = 0; noteIndex < noteCount; noteIndex++)
                 {
@@ -255,6 +258,7 @@ internal static class BarCodec
                     if (techniqueCount < 0) n.Techniques = null!;
                     else
                     {
+                        if (techniqueCount > r.Remaining) throw new InvalidDataException("The undo state is damaged.");
                         // The model's case-insensitive set; a set that held two spellings of one name keeps both (ordinal).
                         var techniques = n.Techniques;
                         for (var t = 0; t < techniqueCount; t++)
@@ -281,6 +285,7 @@ internal static class BarCodec
     {
         var count = r.Count();
         if (count < 0) return null;
+        if (count > r.Remaining) throw new InvalidDataException("The undo state is damaged.");
         var points = new List<BendPointModel>(count);
         for (var index = 0; index < count; index++)
         {

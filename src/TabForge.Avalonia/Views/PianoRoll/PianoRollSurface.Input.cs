@@ -11,12 +11,12 @@ namespace TabForge.Avalonia.Views;
 //       toggles), move, Ctrl+drag copy, Alt-drag velocity, edge resize, double-click to add; Draw: click adds a note of the snap length, drag sets
 //       its length; Erase: click deletes one note, a box deletes the notes in it (Shift adds the selection, Ctrl toggles) as one step; Split: click cuts at the snap point; Mute:
 //       click toggles), the ruler (click moves the playhead, drag makes a loop), the keys (click plays), the velocity lane and its divider, and the
-//       wheel (zooms time around the pointer, Ctrl zooms the key height, Shift scrolls the keys, Alt or a tilt scrolls time). A drag keeps a preview; the edit commits on release.
+//       wheel (zooms time around the pointer, Ctrl zooms the key height, Shift scrolls the keys, or with notes selected moves the shown lane's values (PianoRollSurface.LaneWheel), Alt or a tilt scrolls time). A drag keeps a preview; the edit commits on release.
 // Does not own: the edits and the commit (PianoRollPresenter, PianoRollEdits), the drawing, the velocity lane gestures (PianoRollSurface.Velocity).
 // Tests: TabForge.Avalonia.Tests.PianoRollViewTests.
 public sealed partial class PianoRollSurface
 {
-    private enum Gesture { None, Pan, PlayheadDrag, Move, ResizeEnd, ResizeStart, Marquee, Draw, Erase, Velocity, VelocityTool, Ruler, LoopEdge, LoopMove, Divider, Key, Controller }
+    private enum Gesture { None, Pan, PlayheadDrag, Move, ResizeEnd, ResizeStart, Marquee, Lasso, Draw, Erase, SplitLine, GluePaint, MutePaint, Velocity, VelocityTool, Ruler, LoopEdge, LoopMove, Divider, Key, Controller }
 
     private const double DragThreshold = 3;
     private const double WheelRows = 3;
@@ -41,6 +41,7 @@ public sealed partial class PianoRollSurface
     private double _drawEnd;
     private int _keyDown = -1;
     private int _keyHover = -1;   // the piano key under the pointer (hover tint)
+    private bool _laneHeaderHover;   // the pointer is over the lane header (hover fill, as the toolbar buttons)
     private int _lastAuditioned = -1;
     private readonly HashSet<int> _erased = new();
     private readonly Dictionary<int, int> _velocityPreview = new();
@@ -61,7 +62,10 @@ public sealed partial class PianoRollSurface
         _dPitch = 0;
         _keyDown = -1;
         _lastAuditioned = -1;
+        _keyAudition = false;
         _erased.Clear();
+        UpdatePreview();   // a finished gesture may have set the anchor or the selection: the modifier preview follows
+        ClearSelectState();
         _velocityPreview.Clear();
         _items = null;
     }
@@ -75,6 +79,7 @@ public sealed partial class PianoRollSurface
     {
         base.OnPointerPressed(e);
         Focus();
+        FlushLaneWheel();   // a press ends a Shift+wheel burst: its values commit first
         var point = e.GetCurrentPoint(this);
         if (_pending) return;
         if (point.Properties.IsRightButtonPressed)
@@ -92,6 +97,7 @@ public sealed partial class PianoRollSurface
     internal bool Press(Point p, KeyModifiers modifiers, int clicks = 1, bool middle = false)
     {
         if (_pending) return false;
+        FlushLaneWheel();
         _press = _now = p;
         _alt = modifiers.HasFlag(KeyModifiers.Alt);
         _dragModifiers = modifiers;
@@ -107,11 +113,14 @@ public sealed partial class PianoRollSurface
     /// without a drag leaves the selection alone and the menu opens.</summary>
     internal bool PressRight(Point p, KeyModifiers modifiers)
     {
-        if (_pending || !InGrid(p)) return false;
+        if (_pending) return false;
+        if (InKeys(p)) return PressKeyRight(p, modifiers);   // the key strip: selects only (no box, no menu)
+        if (!InGrid(p)) return false;
         _press = _now = p;
         _dragModifiers = modifiers;
         _pressBeat = _dragBeat = BeatAt(p.X);
         _gesture = Gesture.Marquee;
+        if (modifiers.HasFlag(KeyModifiers.Alt)) { _gesture = Gesture.Lasso; _lasso.Clear(); _lasso.Add(p); }   // Alt: a freehand lasso
         _rightBox = true;
         SuppressMenu = false;
         return true;
@@ -128,7 +137,6 @@ public sealed partial class PianoRollSurface
         if (OnDivider(p)) { _gesture = Gesture.Divider; return true; }
         if (InLaneHeader(p))
         {
-            if (p.X >= GridLeft && LanePicker) { LaneMenuRequested?.Invoke(); return false; }
             LaneShown = !LaneShown;
             LaneChanged?.Invoke();
             InvalidateVisual();
@@ -136,14 +144,7 @@ public sealed partial class PianoRollSurface
         }
         if (InLane(p)) return LaneId == PianoRollControllers.Velocity ? PressLane(p) : PressController(p);
         if (InRuler(p)) return PressRuler(p, middle: false);
-        if (InKeys(p))
-        {
-            _gesture = Gesture.Key;
-            _keyDown = PitchAt(p.Y);
-            Audition?.Invoke(_keyDown);
-            if (StepInput) StepAdd(_keyDown);
-            return true;
-        }
+        if (InKeys(p)) return PressKeyLeft(p);   // a left press auditions only (a right press selects: PressKeyRight)
         if (!InGrid(p)) return false;
         var (index, part) = HitNote(p);
         var tool = Presenter.Tool;   // the Edit tool (PianoRollTool.Select) draws on empty grid and edits notes; the others are optional tools
@@ -154,21 +155,21 @@ public sealed partial class PianoRollSurface
                 _pressNote = index;
                 return true;
             case PianoRollTool.Split:
-                if (index >= 0) Run(Presenter.CommitAsync(PianoRollEdits.Split(Presenter.Notes, index, SplitBeat(_pressBeat)), PianoRollEditKind.Notes, "Split note"));
-                return false;
+                return StartSplit(p, index);
             case PianoRollTool.Mute:
-                if (index >= 0) Run(Presenter.CommitAsync(PianoRollEdits.ToggleMute(Presenter.Notes, new[] { index }), PianoRollEditKind.Expression, "Mute note"));
-                return false;
+                return StartMute(p, index);
             case PianoRollTool.Glue:
-                if (index >= 0) Run(Presenter.GlueAtAsync(index));
-                return false;
+                _pressNote = index;
+                return StartGlue(p, index);
             // Retired 26 Oct (tombstone): the Velocity tool (key 7). An Alt-drag on a note does its job in the Select tool (below), and the velocity
             // lane's bars are dragged directly.
-            case PianoRollTool.Draw when index < 0:
+            case PianoRollTool.Draw or PianoRollTool.Select when index < 0:   // the Write tool (the pencil; Select) writes: press, hold and drag sets the note's length and pitch
                 return StartDraw();
         }
         // Retired 26 Oct (tombstone): a left drag on empty grid drew the selection box (now the right button's); a double-click drew a note.
-        if (index < 0) return StartDraw();   // the Edit tool: press, hold and drag draws a note (length sideways, pitch up and down)
+        if (index < 0 && tool == PianoRollTool.Pointer)   // the Select tool: drag a box (Alt = lasso); a click clears; a double-click adds a note; never a drag-write
+            return clicks >= 2 ? StartDraw() : StartSelectBox(p, modifiers);
+        if (index < 0) return StartDraw();
         if (clicks >= 2 && _lastInserted is var (insertedAt, insertedPitch) && Presenter.Notes[index].Pitch == insertedPitch
             && Math.Abs(Presenter.Notes[index].Start - insertedAt) < 1e-6) return false;   // a double-click on empty grid: its first click made this note
         if (clicks >= 2 && part == NotePart.Body)   // a double-click on a note deletes it (the DAW convention)
@@ -220,6 +221,7 @@ public sealed partial class PianoRollSurface
     private bool StartDraw()
     {
         _gesture = Gesture.Draw;
+        _pressPitch = LockedPitch(_pressPitch);
         _pressBeat = PianoRollSnap.Floor(Presenter.Map, Snap(), _pressBeat, _alt);
         _drawEnd = _pressBeat + NewLength(_pressBeat);
         Sound(_pressPitch);
@@ -230,30 +232,37 @@ public sealed partial class PianoRollSurface
     {
         base.OnPointerMoved(e);
         var p = e.GetPosition(this);
-        if (_gesture == Gesture.None) { HoverAt(p); return; }
+        if (_gesture == Gesture.None) { HoverAt(p, e.KeyModifiers); return; }
         _alt = e.KeyModifiers.HasFlag(KeyModifiers.Alt) && _gesture != Gesture.VelocityTool;
         _dragModifiers = e.KeyModifiers;
         DragTo(p);
     }
 
+    /// <summary>True while the pointer is over the lane header (a test reads it).</summary>
+    internal bool LaneHeaderHovered => _laneHeaderHover;
+
     /// <summary>The pointer moved with no button: the split line or draw ghost follows it, and the resize cursor shows over a note edge or the divider.</summary>
-    internal void HoverAt(Point p)
+    internal void HoverAt(Point p, KeyModifiers modifiers = default)
     {
         (double, int, int)? hover = null;
-        var key = InKeys(p) ? PitchAt(p.Y) : -1;   // repaints only when the hovered key changes
-        if (key != _keyHover) { _keyHover = key; InvalidateVisual(); }
+        _hoverAlt = modifiers.HasFlag(KeyModifiers.Alt);
+        UpdateKeyHover(p, modifiers);   // the key strip's hover and modifier preview (repaints only on change)
+        var header = InLaneHeader(p);   // repaints only when the header hover changes, never per frame
+        if (header != _laneHeaderHover) { _laneHeaderHover = header; InvalidateVisual(); }
         if (InGrid(p))
         {
             var (index, part) = HitNote(p);
             var beat = Presenter.Tool == PianoRollTool.Split ? SnapBeat(BeatAt(p.X), Array.Empty<int>(), false) : PianoRollSnap.Floor(Presenter.Map, Snap(), BeatAt(p.X), false);
             hover = (beat, PitchAt(p.Y), index);
-            Cursor = index >= 0 && Presenter.Tool == PianoRollTool.Select && part is NotePart.Start or NotePart.End ? ResizeX
-                : index >= 0 && Presenter.Tool == PianoRollTool.Select && part == NotePart.Top || OnDivider(p) ? ResizeY : null;
+            var editing = Presenter.Tool is PianoRollTool.Select or PianoRollTool.Pointer;
+            Cursor = index >= 0 && editing && part is NotePart.Start or NotePart.End ? ResizeX
+                : index >= 0 && editing && part == NotePart.Top || OnDivider(p) ? ResizeY : null;
         }
         else Cursor = OnDivider(p) ? ResizeY : null;
         var rawBeat = InGrid(p) ? BeatAt(p.X) : double.NaN;
         var beatMoved = !double.IsNaN(rawBeat) && Math.Abs(rawBeat - _hoverBeat) * PixelsPerBeat >= 1;
         if (beatMoved || double.IsNaN(rawBeat) != double.IsNaN(_hoverBeat)) { _hoverBeat = rawBeat; InvalidateVisual(); }   // the readout's position
+        UpdateOverlays(p, hover is var (_, _, over) && over >= 0);
         if (hover == _hover) return;
         var otherNote = hover?.Item3 != _hover?.Index || hover?.Item2 != _hover?.Pitch;   // the readout follows the note and the pitch
         _hover = hover;
@@ -277,10 +286,14 @@ public sealed partial class PianoRollSurface
             case Gesture.ResizeStart: DragResize(); break;
             case Gesture.Draw:
                 _drawEnd = Math.Max(_pressBeat + PianoRollEdits.MinLength, SnapBeat(_dragBeat, Array.Empty<int>(), _alt));
-                var drawPitch = PitchAt(p.Y);   // up and down changes the drawn note's pitch
+                var drawPitch = LockedPitch(PitchAt(p.Y));   // up and down changes the drawn note's pitch
                 if (drawPitch != _pressPitch) { _pressPitch = drawPitch; Sound(drawPitch); }
                 break;
             case Gesture.Marquee when _rightBox: SuppressMenu = true; break;
+            case Gesture.Marquee or Gesture.Lasso: if (_rightBox) SuppressMenu = true; DragSelectBox(p); break;
+            case Gesture.SplitLine: DragSplit(p); break;
+            case Gesture.GluePaint: DragGlue(p); break;
+            case Gesture.MutePaint: DragMute(p); break;
             case Gesture.Erase: EraseBox(_dragModifiers); break;
             case Gesture.Velocity: DragLane(p); break;
             case Gesture.Pan:
@@ -292,9 +305,9 @@ public sealed partial class PianoRollSurface
             case Gesture.Ruler or Gesture.LoopEdge or Gesture.LoopMove: DragRuler(p); break;
             case Gesture.PlayheadDrag: DragPlayhead(p); return;   // only the playhead layer repaints
             case Gesture.Divider: Lane = Math.Clamp(Bounds.Height - p.Y - LaneHeaderSize, MinLane, Math.Max(MinLane, Bounds.Height * MaxLaneShare)); break;
-            case Gesture.Key:
+            case Gesture.Key when _keyAudition:   // press-and-hold sounds while held (a right press only selects)
                 var pitch = PitchAt(p.Y);
-                if (pitch != _keyDown) { _keyDown = pitch; Audition?.Invoke(pitch); }
+                if (pitch != _keyDown) { _keyDown = pitch; Sound(pitch); }
                 break;
         }
         InvalidateVisual();
@@ -410,6 +423,22 @@ public sealed partial class PianoRollSurface
                 // Retired 26 Oct (tombstone): a box selection set the loop to its span. In the piano roll a selection never touches the loop;
                 // loops come only from the rulers (the score's drag selection still sets it).
                 break;
+            case Gesture.Lasso when _moved:
+                ReleaseSelectBox(modifiers);
+                break;
+            case Gesture.Marquee or Gesture.Lasso when !_moved && !_rightBox && Presenter.Tool == PianoRollTool.Pointer:   // the Select tool: a click on empty grid writes nothing and clears the selection
+                if (!modifiers.HasFlag(KeyModifiers.Shift) && !modifiers.HasPrimary() && Presenter.Selected.Count > 0) { Presenter.ClearSelection(); SelectionChanged?.Invoke(); }
+                Seek?.Invoke(SnapBeat(_pressBeat, Array.Empty<int>(), _alt));   // and the playhead goes there, as a click on the timeline does
+                break;
+            case Gesture.SplitLine:
+                ReleaseSplit();
+                return;
+            case Gesture.GluePaint:
+                ReleaseGlue();
+                return;
+            case Gesture.MutePaint:
+                ReleaseMute();
+                return;
             case Gesture.PlayheadDrag:
                 ReleasePlayhead();
                 break;
@@ -443,6 +472,7 @@ public sealed partial class PianoRollSurface
     internal void Wheel(double delta, Point p, bool ctrl, bool shift, bool alt)
     {
         if (delta == 0) return;
+        if (shift && !alt && LaneWheel(delta, ctrl)) return;   // notes selected: Shift moves the shown lane's values (PianoRollSurface.LaneWheel.cs); else it scrolls
         if (p.X < GridLeft && !ctrl && !alt) shift = true;   // over the key strip (and its corner readout) the plain wheel scrolls up and down
         if (shift) ScrollTo(ScrollX, ScrollY - delta * WheelRows * RowPx);
         else if (alt) ScrollTo(ScrollX - delta * WheelBeats * PixelsPerBeat, ScrollY);
@@ -454,7 +484,12 @@ public sealed partial class PianoRollSurface
     protected override void OnPointerExited(PointerEventArgs e)
     {
         base.OnPointerExited(e);
-        if (_keyHover >= 0) { _keyHover = -1; InvalidateVisual(); }
+        ClearKeyHover();
+        if (_laneHeaderHover) { _laneHeaderHover = false; InvalidateVisual(); }
+        _hoverBeat = double.NaN;   // off the grid: the split key falls back to the playhead
+        _pointerIn = false;
+        _ghostOn = false;
+        RepaintIfOverlayMoved(_overlayBounds);
         if (_hover is null) return;
         _hover = null;
         InvalidateVisual();

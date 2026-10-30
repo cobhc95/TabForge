@@ -134,6 +134,8 @@ public static class GuitarProImporter
 
         ReadTracks(root, score, data, masterBars, project, context);
         GpifAutomationReader.Apply(data, project);   // a .gp's per-track volume / pan changes (alphaTab reads none of them)
+        // A 3-5 file saved in the Latin-1 code page reads back with U+FFFD in the score reader's UTF-8 strings: re-read them from the raw bytes.
+        if (context.Gp3To5) GpLegacyTextRepair.Apply(project, data);
 
         // Repeats / endings / sections / tempo map are master-bar level: apply them to every track.
         ReadMasterBarInfo(masterBars, project, context.Gp3To5, new GuitarProMixTableScanner.TempoRampFinder(data));
@@ -157,6 +159,7 @@ public static class GuitarProImporter
         context.DuplicateSamples.Clear();
         context.Gp3To5 = false;
         context.Gp3To4 = false;
+        context.MidiNotice = null;
         context.ChannelBlock = null;
         context.RawMixes = null;
         context.Check();

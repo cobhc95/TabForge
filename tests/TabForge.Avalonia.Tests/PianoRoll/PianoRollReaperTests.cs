@@ -119,8 +119,6 @@ public sealed class PianoRollReaperTests
         Assert.Equal(steps + 1, song.Undo.UndoCount);
         Assert.True(roll.Surface.NoteNames);
         Assert.Equal(keys, roll.Surface.GridLeft);   // one strip width in both modes: the grid never shifts
-        Assert.Equal(new[] { "Piano keys", "Note names" }, PianoRollMenus.KeyStripRows(true).Select(r => r.Header).ToArray());
-        Assert.True(PianoRollMenus.KeyStripRows(true)[1].Checked);
         roll.SetNoteNames(false);
         Assert.False(song.Project.Tracks[0].PianoRollNoteNames);
         Assert.Equal("Acoustic Snare", PianoRollPositionText.KeyName(38, drums: true));

@@ -94,7 +94,13 @@ public sealed partial class RoutedMidiOutput : IMidiOutput
 
     public IReadOnlyList<MidiOutputDeviceInfo> Devices => _inner.Devices;
 
-    public void Send(int deviceId, int status, int data1, int data2)
+    /// <summary>Sound engine None: the built-in synth stays silent, so track messages bound for the default output (the Windows MIDI synth) are dropped. Anything else (an external MIDI output, a VST instrument's engine slot, the metronome) is untouched.</summary>
+    private bool Silenced(int deviceId, int slot, bool metronome) =>
+        !metronome && slot < 0 && deviceId == -1 && _engine.Mixer.SoundNone;
+
+    public void Send(int deviceId, int status, int data1, int data2) => Send(deviceId, status, data1, data2, metronome: false);
+
+    private void Send(int deviceId, int status, int data1, int data2, bool metronome)
     {
         var routes = _routes;
         var channel = status & 0x0F;
@@ -103,6 +109,7 @@ public sealed partial class RoutedMidiOutput : IMidiOutput
             WriteToEngine(slot, status, data1, data2);
             return;
         }
+        if (Silenced(deviceId, routes[channel], metronome)) return;
         SendWindows(deviceId, status, data1, data2);
     }
 
@@ -117,7 +124,7 @@ public sealed partial class RoutedMidiOutput : IMidiOutput
             WriteToEngine(clickSlot, status, data1, data2);
             return;
         }
-        Send(deviceId, status, data1, data2);
+        Send(deviceId, status, data1, data2, metronome: true);   // the click is exempt from SoundNone: its fallback is the Windows MIDI synth
     }
 
     /// <summary>One channel message to an engine slot, stamped with the engine's latency compensation.</summary>
@@ -143,7 +150,11 @@ public sealed partial class RoutedMidiOutput : IMidiOutput
     /// <summary>Live input: straight to the device, or to the engine stamped "already due" so it plays in the next block.</summary>
     public void SendLive(int deviceId, int status, int data1, int data2)
     {
-        if (!SendLiveEngineOnly(status, data1, data2)) _inner.Send(deviceId, status, data1, data2);
+        if (!SendLiveEngineOnly(status, data1, data2))
+        {
+            if (status < 0xF0 && _engine.Mixer.SoundNone && deviceId == -1) return;   // the monitored GM track is silent in None; the click never comes through here
+            _inner.Send(deviceId, status, data1, data2);
+        }
     }
 
     /// <summary>Live input to the channel's engine slot only; false (nothing sent) when the channel is not routed or the engine is not running.</summary>

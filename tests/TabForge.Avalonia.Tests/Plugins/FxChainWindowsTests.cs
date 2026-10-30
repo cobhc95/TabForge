@@ -123,9 +123,48 @@ public class FxChainWindowsTests
         windows.OpenMidiProcessing(track);
         var midi = window.OwnedWindows.OfType<MidiProcessingWindow>().Single();
         Assert.Equal("MIDI processing: Sample piano", midi.Title);
+        Assert.Same(window, midi.Owner);   // the FX window owns the MIDI window, so z-order and clipping follow it
         wiring.Close();
         midi.Close();
         window.Close();
+        owner.Close();
+    }
+
+    [AvaloniaFact]
+    public void ArticulationsFromTheExportDialogOpenOnlyTheMidiWindowOwnedByIt()
+    {
+        var (document, windows, owner, track) = Open();
+        var builtIn = new TrackModel { Name = "Built-in", Measures = TabForge.Presets.TemplateFactory.Measures(1) };
+        document.Project.Tracks.Add(builtIn);
+        var dialog = new MidiExportWindow(document.Project, new TabForge.Rendering.MidiExportSettings(), hasSelection: false, snip: null,
+            selection: null, saveFile: null, quietSave: () => { }, report: _ => { });
+        dialog.Show(owner);
+
+        foreach (var t in new[] { track, builtIn })
+        {
+            windows.OpenArticulations(t);   // the real link path: it finds the visible export dialog as the owner
+            var midi = dialog.OwnedWindows.OfType<MidiProcessingWindow>().Single();
+            Assert.Same(dialog, midi.Owner);
+            Assert.Empty(owner.OwnedWindows.OfType<FxChainWindow>());
+            Assert.Empty(dialog.OwnedWindows.OfType<FxChainWindow>());
+            Assert.Null(windows.WindowOf(t));
+            midi.Close();
+            Assert.Empty(dialog.OwnedWindows);
+        }
+        dialog.Close();
+        owner.Close();
+    }
+
+    [AvaloniaFact]
+    public void ArticulationsLeaveAnOpenFxWindowAlone()
+    {
+        var (_, windows, owner, track) = Open();
+        var fx = windows.Open(track);
+        windows.OpenArticulations(track);
+        Assert.Same(fx, windows.WindowOf(track));
+        Assert.Single(fx.OwnedWindows.OfType<MidiProcessingWindow>());
+        Assert.True(fx.IsVisible);
+        fx.Close();
         owner.Close();
     }
 

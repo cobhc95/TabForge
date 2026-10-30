@@ -35,12 +35,8 @@ public static class PipeAuth
 
     /// <summary>
     /// Reads the peer's hello and compares it with <paramref name="token"/> (constant time). False for a wrong, short or late hello
-    /// (nothing within <paramref name="timeoutMs"/>) or a closed pipe; the caller then drops the peer.
+    /// (nothing within <paramref name="timeoutMs"/>) or a closed pipe; the caller then drops the peer. Awaited, never blocks a thread.
     /// </summary>
-    public static bool ReadAndVerify(Stream pipe, string token, int timeoutMs) =>
-        ReadAndVerifyAsync(pipe, token, timeoutMs).GetAwaiter().GetResult();
-
-    /// <summary>The same check without blocking a thread: the read is awaited under a <paramref name="timeoutMs"/> deadline.</summary>
     public static async Task<bool> ReadAndVerifyAsync(Stream pipe, string token, int timeoutMs)
     {
         var got = new byte[TokenChars];

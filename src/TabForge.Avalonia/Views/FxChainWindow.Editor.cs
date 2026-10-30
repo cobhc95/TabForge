@@ -154,6 +154,8 @@ public sealed partial class FxChainWindow
     private async void OnClosed()
     {
         _closed = true;
+        _activeOnPopup?.Close();
+        if (_host.Engine is { } outputEngine) outputEngine.OutputChanged -= OnOutputChanged;
         _cpuTimer.Stop();
         _parameters.Dispose();
         if (_pitchMatcher is not null) _pitchMatcher.Changed -= OnPitchChanged;

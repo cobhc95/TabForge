@@ -22,6 +22,7 @@ namespace TabForge.Avalonia.Tests;
 /// Does not own: the container model (ChainTree), the window or the list.
 /// Tests: this class.
 /// </summary>
+[Collection("PluginLibraryRoot")]   // PluginLibrary.RootOverride is process-wide: run alone so no parallel test resets it or reads the scratch folder
 public class FxChainContainersTests
 {
     private static (FxChainWindow Window, TrackModel Track, FxTestKit.FakeEngine Engine) Open(Func<string, MessageBoxAnswer>? ask = null)
@@ -188,8 +189,10 @@ public class FxChainContainersTests
         using var scratch = FxTestKit.ScratchLibrary();
         var (document, host, track) = FxTestKit.Song();
         var window = new FxChainWindow(host, track);
-        window.Dialogs.Prompt = (_, _, _, _) => System.Threading.Tasks.Task.FromResult<string?>("Duo");
+        window.Dialogs.SavePresetName = (_, _) => System.Threading.Tasks.Task.FromResult<string?>("Duo");
         window.Dialogs.Ask = (_, _, _, _, _) => System.Threading.Tasks.Task.FromResult(MessageBoxAnswer.Yes);
+        window.Dialogs.AskLoadPreset = (_, _, _, _, _) =>
+            System.Threading.Tasks.Task.FromResult<FxPresetLoadAnswer?>(new FxPresetLoadAnswer(FxPresetLoadMode.Replace, Remember: false));
         window.Show();
         var list = FxTestKit.List(window);
         list.Click(0);

@@ -97,10 +97,15 @@ public sealed record ClipNote(double StartSec, double LengthSec, int Pitch, int 
     [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] int? Channel = null);
 
 /// <summary>One controller point of a MIDI clip at a time in seconds of the clip's source: a control change (<paramref name="Controller"/> 0-127,
-/// value 0-127) or the pitch bend (<see cref="PitchBend"/>, value -8192 to 8191). It holds until the next point of its controller.</summary>
+/// value 0-127), the pitch bend (<see cref="PitchBend"/>, value -8192 to 8191), a program change (<see cref="ProgramChange"/>, value 0-127, stepped:
+/// one value holds from its beat) or the channel aftertouch (<see cref="ChannelAftertouch"/>, value 0-127). It holds until the next point of its controller.</summary>
 public sealed record ClipController(double StartSec, int Controller, int Value)
 {
     public const int PitchBend = 128;
+    /// <summary>A program change lane point (a 0xC0 message on the track's channel, except the percussion channel).</summary>
+    public const int ProgramChange = 129;
+    /// <summary>A channel aftertouch lane point (a 0xD0 message on the track's channel).</summary>
+    public const int ChannelAftertouch = 130;
 }
 
 /// <summary>A clip lane under a track row. Fixed lanes: only playing lanes are heard, and a new take

@@ -1,24 +1,31 @@
 using System.IO;
 using TabForge.Models;
+using TabForge.Platform;
 using TabForge.Presets;
 
 namespace TabForge.Services;
 
 // Owns: the score templates the user saves and lists.
 // Does not own: creating a new score from them (DocumentController).
-// Tests: no dedicated test class.
+// Tests: ScopedServiceTests.
+
 /// <summary>
-/// Score templates saved by the user (File > Save as template). They live as .tforge files in
-/// %APPDATA%\TabForge\Templates and appear in File > New from template after the built-in ones.
+/// The app-wide user template folder: a stable facade over the process's one <see cref="UserTemplatesStore"/>. Templates live as
+/// .tforge files in %APPDATA%\TabForge\Templates and appear in File > New from template after the built-in ones.
 /// </summary>
 public static class UserTemplates
 {
+    private static readonly ServiceSlot<UserTemplatesStore> Slot = new(new UserTemplatesStore());
+
+    /// <summary>The store the facade currently delegates to.</summary>
+    internal static UserTemplatesStore Current => Slot.Current;
+
+    /// <summary>Makes <paramref name="store"/> the template store until the returned scope is disposed.</summary>
+    internal static IDisposable Use(UserTemplatesStore store) => Slot.Use(store);
+
     public const string Extension = ".tforge";
 
-    /// <summary>Tests point this at a scratch folder.</summary>
-    public static string? FolderOverride { get; set; }
-
-    public static string Folder => FolderOverride ?? UserPaths.Templates;
+    public static string Folder => Current.Folder;
 
     public static readonly IReadOnlyList<string> BuiltInNames = new[] { "Blank", "Rock Band", "Modern Metal", "Acoustic Song" };
 
@@ -34,32 +41,10 @@ public static class UserTemplates
         return cleaned;
     }
 
-    public static IReadOnlyList<string> List()
-    {
-        try
-        {
-            if (!Directory.Exists(Folder)) return Array.Empty<string>();
-            return Directory.EnumerateFiles(Folder, "*" + Extension)
-                .Select(Path.GetFileNameWithoutExtension)
-                .Where(n => !string.IsNullOrEmpty(n))
-                .OrderBy(n => n, StringComparer.CurrentCultureIgnoreCase)
-                .Select(n => n!)
-                .ToList();
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { Services.Trace.Error(Services.Trace.Ui, "user templates: list: " + ex.Message); return Array.Empty<string>(); }
-    }
+    public static IReadOnlyList<string> List() => Current.List();
 
     /// <summary>Saves a copy of the project as a template (the open score keeps its own dirty state). Returns the stored name.</summary>
-    public static string Save(string name, SongProject project)
-    {
-        var clean = CleanName(name) ?? throw new ArgumentException("Give the template a name.", nameof(name));
-        var copy = ProjectService.Restore(ProjectService.Snapshot(project));
-        StripToSetup(copy);
-        copy.Title = clean;
-        Directory.CreateDirectory(Folder);
-        ProjectService.Save(Path.Combine(Folder, clean + Extension), copy);
-        return clean;
-    }
+    public static string Save(string name, SongProject project) => Current.Save(name, project);
 
     /// <summary>Number of empty bars a template (and a new song) starts with.</summary>
     public const int DefaultBars = 32;
@@ -91,13 +76,5 @@ public static class UserTemplates
     }
 
     /// <summary>A built-in template by name, else a user template file; always an untitled, unsaved project.</summary>
-    public static SongProject Create(string name)
-    {
-        if (BuiltInNames.Contains(name, StringComparer.Ordinal)) return TemplateFactory.Create(name);
-        var clean = CleanName(name) ?? throw new ArgumentException("Unknown template.", nameof(name));
-        var project = ProjectService.Load(Path.Combine(Folder, clean + Extension));
-        StripToSetup(project); // older templates were saved with the whole song in them
-        project.IsDirty = true;
-        return project;
-    }
+    public static SongProject Create(string name) => Current.Create(name);
 }

@@ -57,8 +57,10 @@ public sealed class MainWindowSettings : IDisposable
     /// <summary>The settings file exists but could not be read: defaults are active and nothing is saved until Preferences are applied.</summary>
     public bool LoadFailed => _store.LoadFailed;
 
-    /// <summary>The layout the window starts from: the saved one (already normalized on load), else the default layout.</summary>
-    public DockWorkspaceState StartLayout => DockWorkspaceController.StartupLayout(_store.Settings.Workspace, _store.Settings.Appearance.FretboardAtStartup);
+    /// <summary>The layout the window starts from: the saved one (already normalized on load), else the default layout; in Remember mode the
+    /// Tab mode's remembered fretboard value decides the instrument pane, so a layout saved in the piano roll cannot hide the tab's board.</summary>
+    public DockWorkspaceState StartLayout => DockWorkspaceController.StartupLayout(
+        _store.Settings.Workspace, _store.Settings.Appearance.FretboardAtStartup, _store.Settings.Appearance.ShowFretboard);
 
     /// <summary>Saves the dock's layout a moment after each change and once more when <paramref name="window"/> closes.</summary>
     public void Attach(DockWorkspaceController dock, Window window)
@@ -113,20 +115,26 @@ public sealed class MainWindowSettings : IDisposable
         _store.MarkChanged(this);
     }
 
-    /// <summary>Stores <paramref name="layout"/> (a DockWorkspaceRules.Capture result) and schedules the save; while a layout is held, the held one is stored.</summary>
+    /// <summary>Stores <paramref name="layout"/> (a DockWorkspaceRules.Capture result) and schedules the save; while a layout is held, the held one is stored.
+    /// The layout alone never writes a fretboard value: entering the piano roll or Band view hides the pane automatically, so only a deliberate
+    /// user action in a mode writes that mode's value (see <see cref="RememberFretboard"/>).</summary>
     public void SaveLayout(DockWorkspaceState layout)
     {
         var stored = _heldWorkspace ?? layout;
         _store.Settings.Workspace = stored;
-        // The fretboard setting follows the saved layout: a pane the user closed must not be shown again by the settings' apply.
-        _store.Settings.Appearance.ShowFretboard = FretboardShownIn(stored);
         _store.MarkChanged(this);
     }
 
-    /// <summary>Whether the fretboard pane is in the layout, docked or floating.</summary>
-    private static bool FretboardShownIn(DockWorkspaceState state) =>
-        DockWorkspaceState.EnumeratePanelIds(state.Root).Contains(FretboardSettingsBinding.InstrumentPaneId)
-        || state.Floating.Any(floating => DockWorkspaceState.EnumeratePanelIds(floating.Root).Contains(FretboardSettingsBinding.InstrumentPaneId));
+    /// <summary>Stores <paramref name="shown"/> as <paramref name="mode"/>'s remembered fretboard value (Tab or piano roll only; Band tracks keep their own).</summary>
+    public bool RememberFretboard(FretboardMode mode, bool shown)
+    {
+        if (!FretboardVisibilityMemory.Remember(_store.Settings, mode, shown)) return false;
+        _store.MarkChanged(this);
+        return true;
+    }
+
+    /// <summary>The value <paramref name="mode"/> remembers; null for Band mode (each band track keeps its own).</summary>
+    public bool? RememberedFretboard(FretboardMode mode) => FretboardVisibilityMemory.Remembered(_store.Settings, mode);
 
     /// <summary>Schedules a save of the settings after a change made outside the layout (a row toggle).</summary>
     public void SaveSettings() => _store.MarkChanged(this);

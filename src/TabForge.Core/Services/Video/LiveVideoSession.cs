@@ -332,6 +332,5 @@ public sealed class LiveVideoSession : IDisposable
         }
     }
 
-    public void Dispose() { try { Finish(); } catch (VideoEncoderException) { } // swallow: finishing an already-finished encoder is a no-op
- }
+    public void Dispose() => VideoDisposeHelper.TryFinish(Finish);
 }

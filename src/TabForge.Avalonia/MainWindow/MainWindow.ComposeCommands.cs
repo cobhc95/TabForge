@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using TabForge.Avalonia.Platform;
@@ -21,6 +21,7 @@ public sealed partial class MainWindow
         public InstrumentPickerFlow InstrumentPicker = null!;
         public Action RefreshInstrumentViews = null!;
         public MainWindowTimelineBars.DeletePrompt AskDeleteBars = null!;
+        public Views.Fx.FxChainWindows FxWindows = null!;
     }
 
     /// <summary>Registers every command the window has, where the constructor used to: the feature classes' Register calls and the direct Add lines,
@@ -70,6 +71,7 @@ public sealed partial class MainWindow
         MainWindowClipKeys.Register(commands, songs, panes, () => settings?.Settings.Editing.TrimEmptyBarsAtEnd ?? new EditingSettings().TrimEmptyBarsAtEnd);
         MainWindowClipEditKeys.Register(commands, songs, panes, showStatus);
         var fxWindows = MainWindowTrackFxKeys.Register(commands, songs, this, playback, settings, compose.Registry.Services.Trust);
+        shared.FxWindows = fxWindows;
         songs.SongClosing += song => fxWindows.CloseSong(song);
         songs.ActiveChanged += () =>
         {
@@ -123,12 +125,22 @@ public sealed partial class MainWindow
             compose.TopBar.Show(text, kind, NoticeCategory.Render, folder is null ? null : ("Open folder", () => FolderLauncher.Open(compose.TopBar.View, folder))),
             compose.StatusBar.Activity);
         MainWindowMixer.Register(commands, songs, this, playback, settings, showStatus);
+        scaleFinder.Scale = compose.StatusBar.Scale;
+        scaleFinder.Anchor = () => compose.InstrumentStrip?.ScalesAnchor;
         scaleFinder.Register(commands);
+        // The master scale panel's muted sections link to the other hosts: the fretboard's Scales button and the piano roll's scale arrow.
+        var pianoRoll = compose.EditorPane.PianoRoll;
+        var statusLinks = compose.StatusBar.Scale.Links;
+        statusLinks.FretboardAvailable = pianoRoll.Links.FretboardAvailable = () => compose.InstrumentStrip?.ScalesAnchor is { IsEffectivelyVisible: true };
+        statusLinks.OpenFretboard = pianoRoll.Links.OpenFretboard = () => scaleFinder.Open();
+        pianoRoll.SharedReadout = () => compose.StatusBar.Scale;   // the piano roll reads and writes the same scale pick as the status bar and the fretboard
+        statusLinks.PianoRollAvailable = () => compose.EditorPane.ShowsPianoRoll && pianoRoll.CanOpenScalePanel;
+        statusLinks.OpenPianoRoll = () => pianoRoll.OpenScalePopup();
         MainWindowChordFinder.Register(commands, this, scorePreview);
         MainWindowTuner.Register(commands, this, playback?.Engine, () => System.Linq.Enumerable.ElementAtOrDefault(songs.Active.Project.Tracks, MainWindowTrackMenu.SelectedIndex(songs.Active)), compose.Registry.Services.MeterTick);
         MainWindowPresetManager.Register(commands, this, () => settings?.Settings, () => settings?.SaveSettings());
         MainWindowToolsMenu.Register(commands, scorePreview, this, settings);
-        MainWindowViewMenu.Register(commands, this, dock, scorePreview, settings);
+        MainWindowViewMenu.Register(commands, this, dock, scorePreview, settings, mode: compose.FretboardMode);
         MainWindowViewHotkeys.Register(commands, songs, dock, settings);
         MainWindowViewToggles.Register(commands, settings, showStatus);
         if (compose.FretboardMenu is { } fretboardMenu) commands.Add("View.InstrumentView", fretboardMenu.CycleInstrumentView);
@@ -202,7 +214,8 @@ public sealed partial class MainWindow
         MainWindowScoreRows.Register(commands, scorePreview, settings, this, () => MainWindowBandView.ActiveScoreMenu(dock, panes));
         compose.EditorPane.Register(commands);   // Show in piano roll / Show in score mode (this track)
         // The piano roll holds the instrument panel closed while it is shown (a transient hold that never changes the user's own toggle); the score gives it back as the user had it.
-        var instrumentGate = new InstrumentPanelGate(dock, shown => MainWindowViewMenu.SetRowChecks(this, "View.InstrumentPanel", shown));
+        var instrumentGate = new InstrumentPanelGate(dock, shown => MainWindowViewMenu.SetRowChecks(this, "View.InstrumentPanel", shown),
+            compose.FretboardMode, mode => settings?.RememberedFretboard(mode), (mode, shown) => settings?.RememberFretboard(mode, shown));
         compose.EditorPane.ModeChanged = instrumentGate.RollChanged;
         if (compose.EditorPane.ShowsPianoRoll) compose.EditorPane.ModeChanged(true);
         MainWindowNotationMenu.Register(commands, scorePreview, this, settings, () => songs.Active, showStatus);
@@ -228,7 +241,7 @@ public sealed partial class MainWindow
         var score = compose.Score;
         var commands = compose.Commands;
         var showStatus = shared.ShowStatus;
-        var files = new MainWindowFile(dialogs, this, songs, showStatus);
+        var files = new MainWindowFile(dialogs, this, songs, showStatus, () => settings?.Settings.Tabs, () => settings?.SaveSettings());
         compose.File = files;
         compose.Media.Bind(songs, panes);
         compose.Media.Register(commands, compose.ContextMenus);
@@ -271,7 +284,12 @@ public sealed partial class MainWindow
                 midi => new AvaloniaFileDialogs(settings?.DialogFolders).OpenFile(new TabForge.Platform.FileDialogOptions { Key = midi ? TabForge.Services.DialogKeys.MidiInsert : TabForge.Services.DialogKeys.AudioInsert, Title = midi ? "Insert MIDI file" : "Insert audio file",
                     Filter = midi ? "MIDI files|*.mid;*.midi" : "Audio files|*.wav;*.mp3;*.aif;*.aiff;*.flac;*.ogg;*.m4a;*.wma" }, this)),
             showStatus, () => MainWindowInsertMenu.ShowLyrics(this, compose.Dock), audioDrop.InsertAtAsync);
-        commands.Add("File.ExportMidi", () => _ = files.ExportMidi());
+        commands.Add("File.ExportMidi", () => { new MidiExportWindow(songs.Active.Project, settings?.Settings.MidiExport ?? new TabForge.Rendering.MidiExportSettings(),
+            hasSelection: scorePreview.Editor.HasSelection, snip: songs.Active.Selection.Snapshot(),
+            selection: scorePreview.Editor.HasSelection ? scorePreview.Editor.SelectionCellRange : null,
+            saveFile: (options, window) => dialogs.SaveFile(options, window),
+            quietSave: () => settings?.SaveSettingsQuietly(), report: showStatus,
+            openArticulations: track => shared.FxWindows.OpenArticulations(track)).ShowDialog(this); });
         commands.Add("File.ExportGuitarPro", () => _ = saving.ExportGuitarPro(songs.Active, async (report, name) => { var choice = GpExportChoice.Cancel; await new GpExportPreflightWindow(report, GpExportKind.Export, name, c => choice = c).ShowDialog(this); return choice; }));
         commands.Add("File.ExportGp5", () => _ = saving.ExportLegacyCopy(songs.Active, LegacyGpFormat.Gp5));
         commands.Add("File.ExportGp4", () => _ = saving.ExportLegacyCopy(songs.Active, LegacyGpFormat.Gp4));

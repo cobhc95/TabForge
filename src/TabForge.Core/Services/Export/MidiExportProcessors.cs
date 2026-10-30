@@ -1,5 +1,5 @@
 using TabForge.Audio.Contracts;
-using TabForge.AudioEngine.Midi;
+using TabForge.Core.Midi;
 using TabForge.AudioEngine.Plugins;
 using TabForge.Models;
 using TabForge.Playback;
@@ -16,7 +16,8 @@ namespace TabForge.Services;
 /// Runs the live MIDI processor chain over each track's compiled events for a MIDI file export.
 /// The same <see cref="MidiProcessorChain"/> the engine runs live processes every track that has processors
 /// (transpose, arpeggiation, humanize, velocity, controller LFOs and the rest); articulation keyswitches stay
-/// out of the file (their pitch/velocity replacements are already baked into the notes). No audio is involved,
+/// out of the file by default (their pitch/velocity replacements are already baked into the notes) and stay in
+/// when the export's articulation-map option asks for them. No audio is involved,
 /// so audio-coupled processors pass the notes through exactly as they do live without audio. Deterministic:
 /// fixed sample rate, fixed block size, the processors' own fixed random seeds, bounded flush.
 /// </summary>
@@ -27,8 +28,9 @@ internal static class MidiExportProcessors
     private const int MaxFlushBlocks = 80;  // 8 s of tail (delay/humanize/arpeggiator tails never need this much)
     private const int QuietFlushBlocks = 4;
 
-    /// <summary>A copy of <paramref name="timeline"/> whose events ran through each track's processor chain.</summary>
-    internal static ScoreTimeline WithProcessors(SongProject project, ScoreTimeline timeline)
+    /// <summary>A copy of <paramref name="timeline"/> whose events ran through each track's processor chain. With <paramref name="keepArticulations"/>, the map's
+    /// keyswitch/controller events stay in (a mapped export writes them before their notes); the default leaves them out.</summary>
+    internal static ScoreTimeline WithProcessors(SongProject project, ScoreTimeline timeline, bool keepArticulations = false)
     {
         var processed = new ScoreTimeline
         {
@@ -49,10 +51,16 @@ internal static class MidiExportProcessors
         processed.ChannelSetup.AddRange(timeline.ChannelSetup);
         var events = new List<ScoreEvent>(timeline.Events.Count);
         for (var trackIndex = 0; trackIndex < project.Tracks.Count; trackIndex++)
+        {
             events.AddRange(ProcessTrack(project, timeline, trackIndex));
+            if (keepArticulations) events.AddRange(timeline.Events.Where(e => e.TrackIndex == trackIndex && e.IsArticulation));
+        }
         // Events of no track (metronome, count-in) never go through a chain.
         events.AddRange(timeline.Events.Where(e => e.TrackIndex < 0 || e.TrackIndex >= project.Tracks.Count));
-        processed.Events.AddRange(events.OrderBy(e => e.TimeMs));   // stable: same-time events keep their order
+        if (keepArticulations)
+            processed.Events.AddRange(events.OrderBy(e => e.TimeMs).ThenBy(e => e.IsSetup ? 0 : e.IsArticulation ? 1 : 2));   // setup, then the keyswitch, then its note
+        else
+            processed.Events.AddRange(events.OrderBy(e => e.TimeMs));   // stable: same-time events keep their order
         return processed;
     }
 

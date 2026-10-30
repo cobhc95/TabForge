@@ -2,7 +2,7 @@ using System.Diagnostics;
 using NAudio.Wave;
 using TabForge.Audio.Contracts;
 using TabForge.AudioEngine.Editors;
-using TabForge.AudioEngine.Midi;
+using TabForge.Core.Midi;
 using TabForge.AudioEngine.Mixing;
 using TabForge.AudioEngine.Output;
 using TabForge.AudioEngine.Plugins;

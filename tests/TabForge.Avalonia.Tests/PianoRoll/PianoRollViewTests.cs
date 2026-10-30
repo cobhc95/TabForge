@@ -68,6 +68,38 @@ public sealed class PianoRollViewTests
     }
 
     [AvaloniaFact]
+    public void AProgramLaneDragPreviewsWithoutSyncingAndCommitsOneStepOnRelease()
+    {
+        var document = PianoRollSongs.Midi();
+        var syncs = 0; var saves = 0; var marks = 0;
+        document.Project.TimelineMarked += _ => marks++;
+        var (view, window) = Show(document, new PianoRollHost { Document = () => document, AfterEdit = _ => syncs++, SaveSettings = () => saves++ });
+        view.ShowLane(PianoRollControllers.Program);   // saves the lane choice once; the drag below saves nothing
+        saves = 0;
+        var surface = view.Surface;
+        var steps = document.Undo.UndoCount;
+        var at = new Point(surface.XOf(1), surface.LaneTop + surface.Lane / 2);
+
+        Assert.True(surface.Press(at, KeyModifiers.None));
+        for (var i = 1; i <= 50; i++) surface.DragTo(at + new Point(i * surface.PixelsPerBeat / 50, i * 0.2));
+
+        Assert.Equal(steps, document.Undo.UndoCount);   // nothing stored, synced, saved or marked while dragging
+        Assert.Equal(0, marks);
+        Assert.Equal(0, syncs);
+        Assert.Equal(0, saves);
+
+        surface.Release(KeyModifiers.None);
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.Equal(steps + 1, document.Undo.UndoCount);   // one gesture: one step, one engine sync, no settings broadcast
+        Assert.Equal(1, syncs);
+        Assert.Equal(0, saves);
+        Assert.Single(view.Presenter.Points(PianoRollControllers.Program));
+        Assert.False(surface.Busy);
+        window.Close();
+    }
+
+    [AvaloniaFact]
     public void CancellingTheTabPromptDiscardsTheDragAndLeavesNoStep()
     {
         var document = PianoRollSongs.Tab();
@@ -133,7 +165,7 @@ public sealed class PianoRollViewTests
 
         // The piano roll's ruler: a drag makes the loop (sub-bar), a plain click moves the playhead and clears it, as the timeline ruler does.
         var ruler = PianoRollSurface.RulerSize / 2;
-        surface.Press(new Point(surface.XOf(1), ruler), KeyModifiers.None);
+        surface.Press(new Point(surface.XOf(1), ruler), KeyModifiers.Shift);
         surface.DragTo(new Point(surface.XOf(2.5), ruler));
         surface.Release(KeyModifiers.None);
         Assert.Equal((0, 4, 0, 9, false), loop);   // beats 1 to 2.5: sixteenth cells 4 to 9 of bar 1
@@ -198,7 +230,7 @@ public sealed class PianoRollViewTests
     {
         var document = PianoRollSongs.Midi();
         var (view, window) = Show(document);
-        var edit = ToolButton(window, "Edit (1)");
+        var edit = ToolButton(window, "Select (V)");
         var erase = ToolButton(window, "Erase (2)");
         var light = edit.ActualThemeVariant == ThemeVariant.Light;
         var selected = AvaloniaPalette.ColorOf(AvaloniaPalette.Get(AvaloniaPalette.BrushPaletteNames["SelectedTintBrush"], light));
@@ -213,4 +245,27 @@ public sealed class PianoRollViewTests
         Assert.Equal(0, ((ISolidColorBrush)edit.BorderBrush!).Color.A);
         window.Close();
     }
+
+    [AvaloniaFact]
+    public void ToolbarButtonsRestTransparentAndALitToggleTakesTheSelectedFillAndEdge()
+    {
+        var document = PianoRollSongs.Midi();
+        var (_, window) = Show(document);
+        var zoomIn = ToolbarButton(window, "Zoom in");
+        var scale = (ToggleButton)ToolbarButton(window, "Step input");
+        var light = zoomIn.ActualThemeVariant == ThemeVariant.Light;
+        var selected = AvaloniaPalette.ColorOf(AvaloniaPalette.Get(AvaloniaPalette.BrushPaletteNames["SelectedTintBrush"], light));
+        var edge = AvaloniaPalette.ColorOf(AvaloniaPalette.Get(AvaloniaPalette.BrushPaletteNames["SelectedOutlineBrush"], light));
+        scale.IsChecked = false;
+        Assert.Equal(0, ((ISolidColorBrush)zoomIn.Background!).Color.A);
+        Assert.Equal(0, ((ISolidColorBrush)scale.Background!).Color.A);
+        scale.IsChecked = true;
+        Assert.Equal(selected, ((ISolidColorBrush)scale.Background!).Color);
+        Assert.Equal(edge, ((ISolidColorBrush)scale.BorderBrush!).Color);
+        Assert.Equal(0, ((ISolidColorBrush)zoomIn.Background!).Color.A);
+        window.Close();
+    }
+
+    private static Button ToolbarButton(Window window, string tip) =>
+        window.GetVisualDescendants().OfType<Button>().First(b => (ToolTip.GetTip(b) as string)?.StartsWith(tip, System.StringComparison.Ordinal) == true);
 }

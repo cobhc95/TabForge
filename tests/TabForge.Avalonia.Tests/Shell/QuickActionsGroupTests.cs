@@ -129,6 +129,52 @@ public class QuickActionsGroupTests
         main.Close();
     }
 
+    private static Rect OnWindow(Control control, Window window) => new(control.TranslatePoint(default, window)!.Value, control.Bounds.Size);
+
+    [AvaloniaFact]
+    public void GroupSitsInsideTheBarBetweenThePillAndTheDividerWithEvenInsets()
+    {
+        var main = Open();
+        var row = Row(main);
+        var panel = (DockPanel)row.Child!;
+        var group = QuickActionsGroup.In(row)!;
+        var pill = panel.Children.OfType<EditorModePills>().Single();
+        Assert.True(pill.IsVisible);
+        var divider = panel.Children.OfType<Border>().Single(b => b.Width == 1 && b.Height == 15);
+        var toggles = panel.Children.OfType<StackPanel>().Single(p => p.Name == MenuRowToggles.PanelName);
+        var toggle = toggles.GetVisualDescendants().OfType<global::Avalonia.Controls.Primitives.ToggleButton>().First();
+        var buttons = group.GetVisualDescendants().OfType<Button>().Where(b => b.Classes.Contains(QuickActionsGroup.ButtonClass)).ToList();
+        Assert.Equal(2, buttons.Count);
+        var bar = OnWindow(row, main);
+        var box = OnWindow(group, main);
+        var openButton = OnWindow(buttons[0], main);
+        var saveButton = OnWindow(buttons[1], main);
+        const double eps = 0.01;
+        // Inside the bar, centred on it vertically, with the same margin on each side.
+        Assert.True(box.X >= bar.X - eps && box.Right <= bar.Right + eps && box.Y >= bar.Y - eps && box.Bottom <= bar.Bottom + eps);
+        Assert.True(Math.Abs((box.Y + box.Height / 2) - (bar.Y + bar.Height / 2)) <= 1);
+        Assert.Equal(group.Margin.Left, group.Margin.Right, 2);
+        // No overlap with the pill or the divider.
+        Assert.True(OnWindow(pill, main).Right <= box.X + eps);
+        Assert.True(box.Right <= OnWindow(divider, main).X + eps);
+        // Equal buttons, the menu row's icon height, a small even gap, no horizontal overlap.
+        Assert.Equal(openButton.Width, saveButton.Width, 2);
+        Assert.Equal(openButton.Height, saveButton.Height, 2);
+        Assert.Equal(UiMetrics.QuickButtonHeight, openButton.Height, 2);
+        Assert.Equal(toggle.Bounds.Height, openButton.Height, 2);
+        Assert.Equal(UiMetrics.QuickGroupGap, saveButton.X - openButton.Right, 2);
+        Assert.True(saveButton.X >= openButton.Right - eps);
+        // Even inner inset on all four sides: the buttons sit the same distance from the group's edge.
+        var left = openButton.X - box.X;
+        var right = box.Right - saveButton.Right;
+        var top = openButton.Y - box.Y;
+        var bottom = box.Bottom - openButton.Bottom;
+        Assert.Equal(left, right, 2);
+        Assert.Equal(top, bottom, 2);
+        Assert.Equal(left, top, 2);
+        main.Close();
+    }
+
     [AvaloniaTheory]
     [InlineData(false)]
     [InlineData(true)]

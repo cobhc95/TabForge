@@ -188,4 +188,50 @@ public class TrackListOwnerLayoutTests
         Assert.True(lastBottom <= main.ClientSize.Height + 0.5, "the last row is inside the window");
         main.Close();
     }
+
+    [AvaloniaTheory]
+    [InlineData(420)]
+    [InlineData(340)]
+    public void TheAddTrackStripStaysInsideAShortWindowAboveTheLastRow(double height)
+    {
+        var folder = Path.Combine(Path.GetTempPath(), "tf-short-strip-" + Guid.NewGuid().ToString("N"));
+        using var settings = MainWindowSettings.Open(Path.Combine(folder, "settings.json"));
+        var main = OpenOwnerWindow(settings);
+        main.Height = height;
+        Settle(main);
+        var strip = AddTrackBar(main);
+        Assert.True(strip.IsVisible && strip.Bounds.Height > 0, "the strip is shown");
+        var top = TopIn(strip, main);
+        Assert.True(top + strip.Bounds.Height <= main.ClientSize.Height + 0.5, $"strip spans {top}-{top + strip.Bounds.Height} in a {main.ClientSize.Height} window");
+        var timeline = Arrangement(main).Timeline;
+        Assert.True(TopIn(timeline, main) + timeline.TrackRowsBottom <= top + 0.5, "the rows end above the strip");
+        main.Close();
+    }
+
+    [AvaloniaTheory]
+    [InlineData(8, 420)]
+    [InlineData(3, 420)]
+    [InlineData(8, 300)]
+    public void AWindowOpenedShortKeepsTheAddTrackStripInside(int tracks, double height)
+    {
+        var project = DemoSongFactory.Create();
+        while (project.Tracks.Count > tracks) project.Tracks.RemoveAt(project.Tracks.Count - 1);
+        while (project.Tracks.Count < tracks) project.Tracks.Add(NewTrackFactory.CreateTrack(project, TrackKind.Audio));
+        var main = new MainWindow(first: new SongDocument(() => null) { Project = project }) { Width = 1400, Height = height };
+        main.Show();
+        Settle(main);
+        var strip = AddTrackBar(main);
+        var top = TopIn(strip, main);
+        Assert.True(strip.IsVisible && strip.Bounds.Height > 0, "the strip is shown");
+        Assert.True(top + strip.Bounds.Height <= main.ClientSize.Height + 0.5, $"strip spans {top}-{top + strip.Bounds.Height} in a {main.ClientSize.Height} window");
+        var timeline = Arrangement(main).Timeline;
+        Assert.True(TopIn(timeline, main) + timeline.TrackRowsBottom <= top + 0.5, "the rows end above the strip");
+        foreach (var ancestor in strip.GetVisualAncestors().OfType<Control>())
+        {
+            if (ancestor == main || !ancestor.ClipToBounds && ancestor.GetType().Name != "ScrollViewer") continue;
+            var bottom = TopIn(ancestor, main) + ancestor.Bounds.Height;
+            Assert.True(top + strip.Bounds.Height <= bottom + 0.5, $"strip bottom {top + strip.Bounds.Height} is clipped by {ancestor.GetType().Name} ending at {bottom}");
+        }
+        main.Close();
+    }
 }

@@ -40,6 +40,8 @@ public sealed class PlaybackOptions
     public bool RepeatExpansion { get; set; } = true;
     /// <summary>Leave out MIDI clips (used for the song-time map the clips are placed with).</summary>
     public bool SkipClips { get; set; }
+    /// <summary>The articulation choices of a MIDI export; null for playback, which applies the track's own map only.</summary>
+    public ArticulationExportOptions? ArticulationExport { get; set; }
     /// <summary>General MIDI note used for the metronome's accented first beat.</summary>
     public int MetronomeAccentNote { get; set; } = 34;
     /// <summary>General MIDI note used for the other metronome beats.</summary>

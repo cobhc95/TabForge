@@ -11,6 +11,10 @@ public sealed class DockWorkspaceState
     public DockNodeState? Root { get; set; }
     public List<DockFloatingState> Floating { get; set; } = new();
     public List<string> ClosedPanels { get; set; } = new();
+    /// <summary>The instrument pane's remembered share (0.02-0.98) when stacked top/bottom; null until it has been there.</summary>
+    public double? InstrumentVerticalShare { get; set; }
+    /// <summary>The instrument pane's remembered share (0.02-0.98) when beside the score left/right; null until it has been there.</summary>
+    public double? InstrumentHorizontalShare { get; set; }
 
     public static IEnumerable<string> EnumeratePanelIds(DockNodeState? node)
     {

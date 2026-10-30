@@ -68,6 +68,7 @@ public static partial class HotkeyCatalog
         (new HotkeyAction(FxChainIds.Dissolve, HotkeyCatalog.CategoryFxChain, "Dissolve container", "Ctrl+Shift+G", "Remove the focused container; its plug-ins stay in the chain."), "View.Fullscreen"),
         (new HotkeyAction(FxChainIds.Rename, HotkeyCatalog.CategoryFxChain, "Rename container", "F2", "Type a new name for the focused container."), "View.Fullscreen"),
         (new HotkeyAction(FxChainIds.DeleteContainer, HotkeyCatalog.CategoryFxChain, "Delete container with its plug-ins", "", "Remove the selected containers and every plug-in inside them."), "View.Fullscreen"),
+        (new HotkeyAction(FxChainIds.ActiveOn, HotkeyCatalog.CategoryFxChain, "Active on", "", "Choose the driver type and output device an effect or container plays on (while the plug-in list has the focus)."), "View.Fullscreen"),
     };
 
     /// <summary>Inserts every feature row after its anchor row; a missing anchor fails at start-up.</summary>

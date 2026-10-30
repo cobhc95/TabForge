@@ -63,12 +63,13 @@ public sealed class AvaloniaEngineRouting
         engine.SetTransport(project.Tempo, false, PerformedTransportBars.From(project), engine.OwnerIdOf(owner));
     }
 
-    /// <summary>Copies the sound options the sync copies (auto GM sound, play-all-through-engine) into the engine mixer, as the settings say
+    /// <summary>Copies the sound options the sync copies (auto GM sound, play-all-through-engine, sound engine None) into the engine mixer, as the settings say
     /// for every song: with play-all on, tracks without plug-ins play on the engine's General MIDI synth, as in the app, not on Windows MIDI.</summary>
     public static void ApplyMixerOptions(PluginSettings settings, MixerOptions mixer)
     {
         mixer.AutoGmSound = settings.AutoGmSound;
         mixer.PlayAllThroughEngine = settings.PlayAllThroughEngine || SoundFontStore.ActivePath(settings).Length > 0 || !OperatingSystem.IsWindows();   // the SoundFont plays only in the engine; off Windows there is no Windows MIDI synth to fall back on
+        mixer.SoundNone = SoundEngines.Resolve(settings.SoundEngine) == SoundEngines.None;
     }
 
     /// <summary>Sends only the loaded tracks' levels to the running engine (no chain, clip or route sync), for live fader, pan, mute and solo changes.</summary>

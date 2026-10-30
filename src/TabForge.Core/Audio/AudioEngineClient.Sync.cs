@@ -39,6 +39,8 @@ public sealed partial class AudioEngineClient : IDisposable
         var wanted = tracks.Where(t => MixerGroups.MidiInEngine(t, Mixer) || MixerGroups.UsesEngineAudio(t)).ToList();
         AudioInputs.SetHidden(settings.HiddenInputs); LiveInput.AddWanted(wanted, settings);   // live input: its stand-in track while it is on, whichever song syncs
         var config = _fallback.Apply(new EngineConfig(settings.Driver, settings.Device, settings.SampleRate, settings.BufferSize, settings.SeparateProcessPerPlugin, settings.InputDevice, settings.AsioInputChannel, settings.AsioOutputChannel, settings.AsioInputLastChannel, settings.AsioInputsEnabled, settings.FollowWindowsVolume, settings.AsioOutputLastChannel, settings.UseAllInputs, settings.ProtectFromPops));
+        _ruleDriver = config.Driver;
+        _ruleDevice = config.Device;   // the opened device's friendly name follows in OnReady when this is the Windows default
         // Multi-tab playback: tracks of other documents that are still playing stay live (never parked or removed here).
         var liveElsewhere = IsRunning ? _slots.Where(kv => !kv.Key.IsBus && !wanted.Contains(kv.Key) && PlaysElsewhere(kv.Value, owner)).Select(kv => kv.Key).ToList() : new List<TrackModel>();
 
@@ -149,9 +151,11 @@ public sealed partial class AudioEngineClient : IDisposable
         ChainTree.Refresh(track.Rig);
         var specs = Trust.BuildSpecs(chainOn || !track.IsBus ? track.Rig.Plugins : new List<PluginSlot>(), LiveInput.Owns(track) ? Quarantine?.Invoke() ?? Array.Empty<string>() : quarantined, settings);   // untrusted paths are Skip: never loaded
         if (!chainOn) specs = specs.Select(s => s with { Enabled = false }).ToList();
+        else specs = specs.Select((s, i) => i < track.Rig.Plugins.Count && !ActiveOnRules.Matches(track.Rig, i, ActiveOutput) ? s with { Enabled = false } : s).ToList();   // the chain starts on the right output
         // The General MIDI synth exists for every MIDI track in the engine and is switched on / off live (SetSynth): GM
         // taking over from a bypassed instrument or a switched-off chain needs no rebuild, so it stays in time.
-        var useSynth = !track.IsBus && (Click.Owns(track) || MixerGroups.MidiInEngine(track, Mixer));
+        // With SoundNone there is no synth at all (not even loaded): every track is silent unless a VST instrument plays it.
+        var useSynth = !track.IsBus && !Mixer.SoundNone && (Click.Owns(track) || MixerGroups.MidiInEngine(track, Mixer));
         var key = $"{useSynth}|{track.Name}|{(track.BusSlot == MixerBuses.MonitorSlot ? System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(track.Bus) : 0)}|" + string.Join("|", specs.Select(s => $"{s.Id}:{s.Path}:{s.Skip}:{s.Wet}:{s.IsInstrument}:{s.Pins}"));   // OutputDb and Enabled are not part of the key: SetPluginGain / SetPluginEnabled change them live
         if (!(_sentChains.TryGetValue(slot, out var sent) && sent == key))
         {
@@ -199,7 +203,7 @@ public sealed partial class AudioEngineClient : IDisposable
     /// </summary>
     private void AddClick(List<TrackModel> wanted)
     {
-        if (!IsRunning) return;
+        if (!IsRunning || Mixer.SoundNone) return;   // None: the click falls back to Windows MIDI (the engine's synths are silent), so no slot is kept for it
         if (_slots.ContainsKey(Click.Track) || _slots.Keys.Count(t => !t.IsBus) < MixerBuses.BusBase) wanted.Add(Click.Track);
     }
 
@@ -424,24 +428,6 @@ public sealed partial class AudioEngineClient : IDisposable
             }
         }
         return changed;
-    }
-
-    /// <summary>Every plug-in's live bypass: its own switch, and all of them while the chain is off (they stay loaded). Sent per plug-in that changed.</summary>
-    private void SyncBypass(TrackModel track, int slot)
-    {
-        var chainOn = track.SoundSource == SoundSources.Plugins;
-        ChainTree.Refresh(track.Rig);   // a bypassed container bypasses the plug-ins inside it
-        var now = track.Rig.Plugins.Select(p => chainOn && p.Plays).ToList();
-        var key = string.Join(",", now);
-        if (_sentBypass.TryGetValue(slot, out var sent) && sent == key) return;
-        var before = sent?.Split(',');
-        _sentBypass[slot] = key;
-        for (var i = 0; i < now.Count; i++)
-        {
-            if (before is not null && i < before.Length && before[i] == now[i].ToString()) continue;
-            var index = i; var enabled = now[i];
-            Send(EngineCommand.SetPluginBypass, new SetPluginBypassMessage(slot, index, enabled).Write);
-        }
     }
 
     /// <summary>The chain's General MIDI synth on / off (live, no rebuild); sent only when it changes (a new slot starts with it on).</summary>

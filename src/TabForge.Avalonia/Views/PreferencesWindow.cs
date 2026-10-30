@@ -77,10 +77,6 @@ public sealed partial class PreferencesWindow : Window, IPreferencesChangesHost
     private bool _changed;
     // The settings as they were at open or at the last Apply: Cancel and closing without OK copy them back into the live settings.
     private AppSettings _baseline;
-    // True after Reset all: the next live write also replaces the dock layout, as the reset does.
-    private bool _workspaceReset;
-    // True once a write carried the reset layout into the live settings: the Cancel restore must then put the baseline layout back, until Apply keeps it.
-    private bool _workspaceWritten;
     // The edits the live settings have not taken yet, and the once-per-frame run that writes them (a click only stores its value and paints).
     private readonly PreferencesLiveWriter _live;
     private readonly NextFrameCoalescer _liveFrame;
@@ -241,7 +237,11 @@ public sealed partial class PreferencesWindow : Window, IPreferencesChangesHost
         {
             var shown = Rows.Where(row => row.Category == _page).ToList();
             if (shown.Count == 0) _cards.Children.Add(ToolWindowParts.Small(ToolWindowParts.NeedsFullApp($"The {_page} page")));
-            foreach (var card in PreferencesPagePresenter.Cards(shown, searching: false)) _cards.Children.Add(RowCard(card, searching: false));
+            foreach (var card in PreferencesPagePresenter.Cards(shown, searching: false))
+            {
+                _cards.Children.Add(RowCard(card, searching: false));
+                if (_page == SettingsCatalog.AudioVst && card.Group == "Playback engine") _cards.Children.Add(SoundBanksCard());
+            }
         }
         RefreshEnabled();
     }
@@ -267,43 +267,6 @@ public sealed partial class PreferencesWindow : Window, IPreferencesChangesHost
         foreach (var card in cards) _cards.Children.Add(card);
         RefreshEnabled();
         return true;
-    }
-
-    private void MarkChanged()
-    {
-        _dirty = true;
-        WriteLive(Working);
-        RefreshChanges();
-    }
-
-    /// <summary>Refreshes the changes link; the status text is blank while changes wait (the link says so) and "All changes saved" otherwise.</summary>
-    private void RefreshChanges()
-    {
-        _changes.Refresh();
-        _status.Text = _changes.Count > 0 ? "" : SavedText;
-    }
-
-    /// <summary>Copies <paramref name="source"/> into the live settings (same object, new section values) and raises <see cref="Previewed"/>; the dock layout stays the live one except after Reset all.</summary>
-    private void WriteLive(AppSettings source, bool preview = true)
-    {
-        _live.WriteAll(source, includeWorkspace: _workspaceReset);
-        _workspaceWritten |= _workspaceReset;
-        _workspaceReset = false;
-        _rebuildPage = false;
-        if (preview) Previewed?.Invoke();
-    }
-
-    /// <summary>The once-per-frame run of the edits made since the last one: only the edited rows reach the live settings, then one preview notice, change list and enabled state.</summary>
-    private void FlushLive()
-    {
-        if (!_dirty || !_live.Pending) return;   // applied, written or cancelled since the edit
-        _live.WritePending(Working, Rows, _workspaceReset);
-        _workspaceWritten |= _workspaceReset;
-        _workspaceReset = false;
-        Previewed?.Invoke();
-        _dirty = _workspaceWritten || PreferencesPagePresenter.Changes(SavedRows(), Rows).Count > 0;   // an edit put back (a cancelled colour pick) leaves nothing to apply
-        RefreshChanges();
-        if (_rebuildPage) { _rebuildPage = false; DropRows(); Rebuild(); } else RefreshEnabled();
     }
 
     /// <summary>The OS or the user closing the window (the X button, Alt+F4) with unapplied edits asks the Cancel question first; a close the code makes (Cancel, OK, a test) does not ask again.</summary>
@@ -342,9 +305,7 @@ public sealed partial class PreferencesWindow : Window, IPreferencesChangesHost
         if (!_dirty && !OutputProfilesChanged()) return;
         _dirty = false;
         Restored = true;
-        _workspaceReset |= _workspaceWritten;
         WriteLive(_baseline, preview: false);   // the owner tells its observers once, after the window is gone
-        _workspaceWritten = false;
     }
 
     private Control MoreOptions(string page, string group, IReadOnlyList<SettingDescriptor> more, bool searching)
@@ -376,7 +337,7 @@ public sealed partial class PreferencesWindow : Window, IPreferencesChangesHost
         if (row.Description.Length > 0) text.Children.Add(ToolWindowParts.Small(row.Description));
         if (row.DependsOnValue is not null)
         {
-            var hint = ToolWindowParts.Small($"Choose {row.DependsOnValue.Split('|')[0]} above to {(row.Kind == SettingKind.Colour ? "pick a colour" : "use this")}.");
+            var hint = ToolWindowParts.Small(row.DisabledNote ?? $"Choose {row.DependsOnValue.Split('|')[0]} above to {(row.Kind == SettingKind.Colour ? "pick a colour" : "use this")}.");
             hint.Name = "DisabledHint";
             text.Children.Add(hint);
         }

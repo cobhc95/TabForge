@@ -5,6 +5,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Platform.Storage;
 using TabForge.Avalonia.Platform;
+using TabForge.Avalonia.Views.Fx;
+using TabForge.Avalonia.Views.Presets;
 using TabForge.Playback;
 using TabForge.Presenters;
 using TabForge.Services;
@@ -22,7 +24,9 @@ public sealed partial class ArticulationsPane
     private async Task SaveAsAsync()
     {
         if (ReadTable() is not { } map) return;
-        var name = (await _dialogs().Prompt(_owner, "Save articulation preset", "Preset name", ""))?.Trim();
+        var builtIns = ArticulationPresets.BuiltIn.Select(p => p.Name).ToList();
+        var name = (await _dialogs().SavePresetName(_owner, new PresetNameRequest("Save articulation preset", "Preset name:",
+            "", _store.Names(), builtIns, PresetRules.Error)))?.Trim();
         if (string.IsNullOrEmpty(name)) return;
         if (PresetRules.Error(name) is { } error) { await _dialogs().Tell(_owner, error, Caption); return; }
         if (ArticulationPresets.FindBuiltIn(name) is not null) { await _dialogs().Tell(_owner, "That name belongs to a preset that comes with the app. Pick another.", Caption); return; }
@@ -32,7 +36,7 @@ public sealed partial class ArticulationsPane
         if (!await WriteAsync(store.PathOf(name), ArticulationPreset.From(name, "", map))) return;
         store.RaiseChanged();
         _custom = false;
-        Apply(map, name);
+        Apply(map, name, PresetCombo.Remember(name, "Articulation", Snapshot(map)));
         FillPresets(name);
         _status.Text = $"Saved the preset \"{name}\".";
     }
@@ -40,7 +44,7 @@ public sealed partial class ArticulationsPane
     private async Task ExportAsync()
     {
         if (ReadTable() is not { } map) return;
-        var current = (_presets.SelectedItem as Entry)?.Name ?? "Articulations";
+        var current = _presets.SelectedEntry?.Name ?? "Articulations";
         var path = _dialogs().Files.SaveFile(new TabForge.Platform.FileDialogOptions
         {
             Key = TabForge.Services.DialogKeys.ArticulationsExport, Title = "Export articulation preset", FileName = current, DefaultExt = "json", Filter = JsonFilter, OverwritePrompt = true,
@@ -73,13 +77,13 @@ public sealed partial class ArticulationsPane
     /// <summary>Deletes the selected preset of the person's at once; the message offers Undo (the shared row layer does it, as the pencil and bin of a row do).</summary>
     private void Delete()
     {
-        if (_presets.SelectedItem is Entry { User: true, Name: { } name }) _presetRows.Delete(name);
+        if (_presets.SelectedEntry is { User: true, Name: { } name }) _presets.Rows.Delete(name);
     }
 
     /// <summary>The list changed (a delete, rename or reorder from a row, the manager or an Undo): list it again, and leave the applied preset when it is gone.</summary>
     private void PresetsChanged()
     {
-        var selected = (_presets.SelectedItem as Entry)?.Name;
+        var selected = _presets.SelectedEntry?.Name;
         if (selected is not null && ArticulationPresets.Find(selected) is null)
         {
             _custom = !CurrentMap().IsEmpty;

@@ -11,6 +11,7 @@ using Avalonia.Markup.Xaml.MarkupExtensions;
 using Avalonia.Media;
 using TabForge.Audio;
 using TabForge.Avalonia.Platform;
+using TabForge.Avalonia.Views.Dialogs;
 using TabForge.Avalonia.Views.Fx;
 using TabForge.Avalonia.Views.Midi;
 using TabForge.Models;
@@ -29,30 +30,31 @@ namespace TabForge.Avalonia.Views;
 /// Does not own: what a processor does (MidiProcessorCatalog and the engine), the list rules and texts (MidiProcessingListPresenter), the parameter controls
 /// (MidiParamEditors, MidiNoteMapRows), the preset rows (MidiPresetBars), the undo step and engine update (the edit callback the FX window passes).
 /// Not ported: drag to reorder the list (the Up and Down buttons move a processor).
-/// Size: over 300 lines because the window's three panes share one set of controls; the parameter controls and presets are in their own classes.
-/// Tests: TabForge.Avalonia.Tests.MidiProcessingWindowTests.
+/// The MIDI log half lives in MidiProcessingWindow.Log.cs and the repaint half in MidiProcessingWindow.Repaint.cs, so no file passes 500 lines.
+/// Tests: TabForge.Avalonia.Tests.MidiProcessingWindowTests, MidiClipLayoutTests.
 /// </summary>
-public sealed class MidiProcessingWindow : Window
+public sealed partial class MidiProcessingWindow : Window
 {
-    private const int MaxLogLines = 300, RawInputStage = 250;
-    private const double CatalogWidth = 250, ListWidth = 250, DimmedOpacity = 0.4;
-
+    private const double DimmedOpacity = 0.4;
     private readonly IFxChainHost _host;
     private readonly TrackModel _track;
-    private readonly PluginSlot _slot;
+    private readonly PluginSlot? _slot;
     private readonly Action<Action> _edit;
+    private readonly MidiWindowRepaint _repaint;
+    private readonly List<PluginMidiProcessor> _noSlotProcessors = new();
     private readonly MidiLearn _learn = new();
-    private readonly MidiParamEditors _editors;
-    private readonly MidiPresetBars _presets;
-    private readonly TextBox _search = new() { Margin = new Thickness(0, 0, 0, 6), Name = "SearchBox" };
-    private readonly ListBox _catalog = new() { BorderThickness = new Thickness(0), Name = "CatalogList" };
-    private readonly ListBox _list = new() { BorderThickness = new Thickness(0), Name = "ProcessorList" };
+    private readonly MidiParamEditors? _editors;
+    private readonly MidiPresetBars? _presets;
+    private readonly TextBox _search = new() { Name = "SearchBox", ClipToBounds = true };
+    private readonly ListBox _catalog = new() { BorderThickness = DialogMetrics.PresetNoOutline, Name = "CatalogList", ClipToBounds = true };
+    private readonly ListBox _list = new() { BorderThickness = DialogMetrics.PresetNoOutline, Name = "ProcessorList", ClipToBounds = true };
     private readonly TextBlock _title = new() { FontSize = 15, FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap, Name = "TitleText" };
-    private readonly TextBlock _description = new() { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 2, 0, 8), Name = "DescriptionText" };
+    private readonly TextBlock _description = new() { TextWrapping = TextWrapping.Wrap, Name = "DescriptionText" };
     private readonly TextBlock _parameterNote = new() { TextWrapping = TextWrapping.Wrap, Name = "ParameterNote", IsVisible = false };
     private readonly StackPanel _params = new() { Name = "ParamPanel" };
     private readonly Dictionary<string, (Border Box, MidiParamInfo Param)> _elems = new();
     private MidiNoteMapRows? _mapRows;
+    private ScrollViewer? _detailViewer;
     private string[] _queryWords = Array.Empty<string>();
     private string? _jumpKey;
     // Perf: typing re-applies the search at once on the first keystroke and once more when it rests (~100 ms),
@@ -67,6 +69,7 @@ public sealed class MidiProcessingWindow : Window
     private readonly StackPanel _logPanel = new() { IsVisible = false, Name = "LogPanel" };
     private readonly List<string> _logLines = new();
     private readonly TextBlock _status = ToolWindowParts.Status("StatusLine");
+    private TabControl? _midiTabs;
     private bool _building, _watching;
 
     /// <summary>The questions and messages of this window; a test replaces members to answer without a modal box.</summary>
@@ -74,30 +77,48 @@ public sealed class MidiProcessingWindow : Window
 
     /// <param name="host">The song and engine the window works with.</param>
     /// <param name="track">The track that holds the plug-in.</param>
-    /// <param name="slot">The plug-in whose MIDI processors the window edits.</param>
-    /// <param name="edit">Runs a change of the slot as one undo step with the engine update.</param>
-    public MidiProcessingWindow(IFxChainHost host, TrackModel track, PluginSlot slot, Action<Action> edit)
+    /// <param name="slot">The plug-in whose MIDI processors the window edits; null opens the Articulations tab for a track with no plug-in.</param>
+    /// <param name="edit">Runs a change of the slot (or track) as one undo step with the engine update.</param>
+    public MidiProcessingWindow(IFxChainHost host, TrackModel track, PluginSlot? slot, Action<Action> edit)
+        : this(host, track, slot, edit, PlatformAdapters.NativeWindows, AvaloniaUiThread.ForApplication()) { }
+
+    /// <summary>The MIDI processing window of a track with no plug-in: Processors explains why it cannot run; Articulations edits the track's map.</summary>
+    public MidiProcessingWindow(IFxChainHost host, TrackModel track, Action<Action> edit)
+        : this(host, track, null, edit, PlatformAdapters.NativeWindows, AvaloniaUiThread.ForApplication()) { }
+
+    /// <param name="native">The platform's native window calls; a test passes a fake to record the defensive repaint.</param>
+    /// <param name="ui">The UI thread the repaint is posted to.</param>
+    internal MidiProcessingWindow(IFxChainHost host, TrackModel track, PluginSlot? slot, Action<Action> edit, INativeWindowHandles native, IUiThread ui)
     {
         (_host, _track, _slot, _edit) = (host, track, slot, edit);
+        _repaint = new MidiWindowRepaint(native, ui, () => native.Of(this));
         Dialogs.Files = new AvaloniaFileDialogs(host.DialogFolders);
-        _slot.MidiProcessors ??= new List<PluginMidiProcessor>();
+        if (slot is not null) slot.MidiProcessors ??= new List<PluginMidiProcessor>();
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        Title = $"MIDI processing: {slot.Name}";
-        Width = 1020; Height = 620; MinWidth = 760; MinHeight = 420;
+        Title = slot is null ? $"MIDI processing: {track.Name}" : $"MIDI processing: {slot.Name}";
+        Width = DialogMetrics.MidiWindowWidth; Height = DialogMetrics.MidiWindowHeight; MinWidth = DialogMetrics.MidiWindowMinWidth; MinHeight = DialogMetrics.MidiWindowMinHeight;
         ShowInTaskbar = false;
         this[!BackgroundProperty] = new DynamicResourceExtension("WindowBackground");
         this[!ForegroundProperty] = new DynamicResourceExtension("TextPrimary");
-        _editors = new MidiParamEditors(host, track, slot, edit, _learn);
-        _presets = new MidiPresetBars(this, () => Dialogs, () => Procs, list => { _edit(() => { Procs.Clear(); Procs.AddRange(list); }); RefreshList(0); },
-            (proc, json) => { _edit(() => proc.Params = json); ShowSelected(); });
+        if (slot is not null)
+        {
+            _editors = new MidiParamEditors(host, track, slot, edit, _learn);
+            _presets = new MidiPresetBars(this, () => Dialogs, () => Procs, slot,
+                (list, applied) => { _edit(() => { Procs.Clear(); Procs.AddRange(list); slot.AppliedMidiPreset = applied; }); RefreshList(0); },
+                (proc, json, applied) => { _edit(() => { proc.Params = json; proc.AppliedPreset = applied; }); ShowSelected(); });
+        }
         Content = BuildRoot();
         WireEvents();
-        _catalog.ItemsSource = MidiProcessorCatalog.SearchAll("");
-        if (_catalog.ItemCount > 0) _catalog.SelectedIndex = 0;
+        if (slot is not null)
+        {
+            _catalog.ItemsSource = MidiProcessorCatalog.SearchAll("");
+            if (_catalog.ItemCount > 0) _catalog.SelectedIndex = 0;
+        }
         if (host.Engine is { } engine) { engine.MidiLogReceived += OnLog; engine.ChainLoaded += UpdateWatch; }
         _learn.Changed += UpdateWatch;
+        WireRepaint();
         Closed += (_, _) => OnClosed();
-        RefreshList(0);
+        if (slot is not null) RefreshList(0);
     }
 
     /// <summary>A sample plug-in with a known processor and an enabled log. Unknown types are not shown here: tests that cover them build their own slot.</summary>
@@ -112,7 +133,7 @@ public sealed class MidiProcessingWindow : Window
         ],
     };
 
-    private List<PluginMidiProcessor> Procs => _slot.MidiProcessors;
+    private List<PluginMidiProcessor> Procs => _slot?.MidiProcessors ?? _noSlotProcessors;
     private PluginMidiProcessor? Selected => _list.SelectedItem as PluginMidiProcessor;
     private bool HasLog => Procs.Any(p => p.Enabled && p.Type == "log");
 
@@ -120,34 +141,61 @@ public sealed class MidiProcessingWindow : Window
 
     private Control BuildRoot()
     {
-        var top = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 8) };
-        top.Children.Add(new TextBlock { Text = "Presets", FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0), [!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextPrimary") });
-        top.Children.Add(_presets.ListBox);
+        if (_slot is null) return BuildNoSlotRoot();
+        var top = new WrapPanel { Orientation = Orientation.Horizontal };
+        top.Spaced(DialogMetrics.MidiSearchGap);
+        var presetsLabel = new TextBlock { Text = "Presets", FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center, [!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextPrimary") };
+        presetsLabel.Spaced(DialogMetrics.MidiInputGap);
+        top.Children.Add(presetsLabel);
+        top.Children.Add(_presets!.ListBox);
         top.Children.Add(_presets.SaveList);
         top.Children.Add(_presets.DeleteList);
-        var body = new Grid { ColumnDefinitions = ColumnDefinitions.Parse($"{CatalogWidth},{ListWidth},*") };
+        var body = MidiSmallLayout.BodyGrid();
         var catalog = CatalogPane(); Grid.SetColumn(catalog, 0);
         var list = ListPane(); Grid.SetColumn(list, 1);
         var detail = DetailPane(); Grid.SetColumn(detail, 2);
         body.Children.Add(catalog); body.Children.Add(list); body.Children.Add(detail);
-        var root = new Grid { RowDefinitions = RowDefinitions.Parse("Auto,*,Auto"), Margin = new Thickness(10) };
+        var root = new Grid { RowDefinitions = RowDefinitions.Parse("Auto,*,Auto") };
+        root.Spaced(DialogMetrics.MidiContentInset);
         Grid.SetRow(top, 0); Grid.SetRow(body, 1); Grid.SetRow(_status, 2);
         root.Children.Add(top); root.Children.Add(body); root.Children.Add(_status);
-        if (_slot.Type == PluginSlotType.Instrument) Articulations.ArticulationsTab.Install(root, top, body, () => new Articulations.ArticulationsPane(_host, _track, _slot, _edit, this, () => Dialogs));   // the Articulations tab
+        if (_slot!.Type == PluginSlotType.Instrument) _midiTabs = Articulations.ArticulationsTab.Install(root, top, body, () => new Articulations.ArticulationsPane(_host, _track, _slot, _edit, this, () => Dialogs));   // the Articulations tab
         return root;
+    }
+
+    /// <summary>A track without a plug-in: Processors says why they cannot run, and the Articulations tab edits the track's own map.</summary>
+    private Control BuildNoSlotRoot()
+    {
+        var root = new Grid { RowDefinitions = RowDefinitions.Parse("Auto,*,Auto") };
+        root.Spaced(DialogMetrics.MidiContentInset);
+        var note = new TextBlock { Text = MidiProcessingListPresenter.NoInstrumentDescription, TextWrapping = TextWrapping.Wrap, Name = "NoInstrumentNote" };
+        note[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted");
+        var processors = new StackPanel { Children = { Heading("Processors"), note } };
+        Grid.SetRow(_status, 2);
+        root.Children.Add(_status);
+        _midiTabs = Articulations.ArticulationsTab.Install(root, processors,
+            () => new Articulations.ArticulationsPane(_host, _track, null, _edit, this, () => Dialogs));
+        return root;
+    }
+
+    /// <summary>Shows the Articulations tab (the Export MIDI "View / edit" link opens the same pane).</summary>
+    public void OpenArticulationsTab()
+    {
+        if (_midiTabs?.Items.OfType<TabItem>().FirstOrDefault(tab => tab.Name == "ArticulationsTab") is { } tab) _midiTabs.SelectedItem = tab;
     }
 
     private DockPanel CatalogPane()
     {
-        var pane = new DockPanel { Margin = new Thickness(0, 0, 10, 0) };
+        var pane = new DockPanel { Name = "CatalogPane", ClipToBounds = true };
         var heading = Heading("Add a processor");
         DockPanel.SetDock(heading, Dock.Top);
         DockPanel.SetDock(_search, Dock.Top);
         DockPanel.SetDock(_add, Dock.Bottom);
-        ToolTip.SetTip(_search, "Search processors and every parameter (e.g. \"velocity\", \"jitter\", \"drum map\"). Enter adds the processor or jumps to the parameter");
+        _search.Spaced(DialogMetrics.MidiSearchGap);
+        MidiSharedRows.Tip(_search, "Search processors and every parameter (e.g. \"velocity\", \"jitter\", \"drum map\"). Enter adds the processor or jumps to the parameter");
         _add.HorizontalAlignment = HorizontalAlignment.Left;
-        _add.Margin = new Thickness(0, 6, 0, 0);
-        _catalog.ItemTemplate = new FuncDataTemplate<MidiProcessorCatalog.SearchHit>((hit, _) => new TextBlock { Text = hit?.Display ?? "", TextTrimming = TextTrimming.CharacterEllipsis }, supportsRecycling: true);
+        _add.Spaced(DialogMetrics.MidiBarGap);
+        _catalog.ItemTemplate = new FuncDataTemplate<MidiProcessorCatalog.SearchHit>((hit, _) => MidiSmallLayout.CatalogText(hit?.Display ?? ""), supportsRecycling: true);
         // Perf: the catalog is virtualized (recycling template over a VirtualizingStackPanel): only the visible hits build controls.
         _catalog.ItemsPanel = new FuncTemplate<Panel?>(() => new VirtualizingStackPanel());
         pane.Children.Add(heading); pane.Children.Add(_search); pane.Children.Add(_add); pane.Children.Add(Frame(_catalog));
@@ -156,10 +204,12 @@ public sealed class MidiProcessingWindow : Window
 
     private DockPanel ListPane()
     {
-        var pane = new DockPanel { Margin = new Thickness(0, 0, 10, 0) };
+        var pane = new DockPanel { Name = "ListPane", ClipToBounds = true };
         var heading = Heading("In order (top runs first)");
         DockPanel.SetDock(heading, Dock.Top);
-        var buttons = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 6, 0, 0), Children = { _up, _down, _remove } };
+        var buttons = new WrapPanel { Orientation = Orientation.Horizontal, Name = "ListButtonRow", ClipToBounds = true };
+        buttons.Spaced(DialogMetrics.MidiBarGap);
+        buttons.Children.Add(_up); buttons.Children.Add(_down); buttons.Children.Add(_remove);
         DockPanel.SetDock(buttons, Dock.Bottom);
         _list.ItemsPanel = new FuncTemplate<Panel?>(() => new VirtualizingStackPanel());
         _list.ItemTemplate = new FuncDataTemplate<PluginMidiProcessor>((proc, _) => ProcessorRow(proc), supportsRecycling: true);
@@ -169,11 +219,11 @@ public sealed class MidiProcessingWindow : Window
 
     private DockPanel DetailPane()
     {
-        var pane = new DockPanel();
+        var pane = new DockPanel { Name = "DetailPane", MinWidth = DialogMetrics.MidiEditorMinWidth, ClipToBounds = true };
         _logPanel.Children.Add(Heading("MIDI log (this window watches while it is open)"));
         _logPanel.Children.Add(_log);
         var clear = Btn("Clear log", null, "ClearLogButton");
-        clear.Margin = new Thickness(0, 4, 0, 0);
+        clear.Spaced(DialogMetrics.MidiBarGap);
         clear.HorizontalAlignment = HorizontalAlignment.Left;
         clear.Click += (_, _) => { _logLines.Clear(); _log.Text = ""; };
         _logPanel.Children.Add(clear);
@@ -182,8 +232,16 @@ public sealed class MidiProcessingWindow : Window
         _description[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("MutedBrush");
         _parameterNote[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("MutedBrush");
         _log[!BackgroundProperty] = new DynamicResourceExtension("PanelBrush");
-        var detail = new StackPanel { Children = { _title, _description, _parameterNote, _presets.ProcessorRow, _params } };
-        pane.Children.Add(new ScrollViewer { Content = detail, VerticalScrollBarVisibility = global::Avalonia.Controls.Primitives.ScrollBarVisibility.Auto, Padding = new Thickness(0, 0, 8, 0) });
+        var detail = new StackPanel { Children = { _title, _description, _parameterNote, _presets!.ProcessorRow, _params } };
+        _title.Spaced(DialogMetrics.MidiHeadGap);
+        _description.Spaced(DialogMetrics.MidiNoteGap);
+        var viewer = new ScrollViewer { Content = detail, Name = "DetailViewer", ClipToBounds = true, VerticalScrollBarVisibility = global::Avalonia.Controls.Primitives.ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = global::Avalonia.Controls.Primitives.ScrollBarVisibility.Auto };
+        _detailViewer = viewer;
+        MidiSharedRows.ConstrainToViewport(_title, viewer);
+        MidiSharedRows.ConstrainToViewport(_description, viewer);
+        MidiSharedRows.ConstrainToViewport(_parameterNote, viewer);
+        MidiSharedRows.ConstrainToViewport(_presets.ProcessorRow, viewer);
+        pane.Children.Add(viewer);
         return pane;
     }
 
@@ -207,7 +265,7 @@ public sealed class MidiProcessingWindow : Window
         _catalog.DoubleTapped += (_, _) => AddSelected();
         _catalog.SelectionChanged += (_, _) =>
         {
-            if (_catalog.SelectedItem is MidiProcessorCatalog.SearchHit hit) ToolTip.SetTip(_catalog, hit.Param?.Tip is { Length: > 0 } tip ? tip : hit.Info.Description);
+            if (_catalog.SelectedItem is MidiProcessorCatalog.SearchHit hit) MidiSharedRows.Tip(_catalog, hit.Param?.Tip is { Length: > 0 } tip ? tip : hit.Info.Description);
         };
         _add.Click += (_, _) => AddSelected();
         _list.SelectionChanged += (_, _) => { if (!_building) ShowSelected(); };
@@ -302,8 +360,9 @@ public sealed class MidiProcessingWindow : Window
     private Control ProcessorRow(PluginMidiProcessor? proc)
     {
         var info = proc is null ? null : MidiProcessorCatalog.Find(proc.Type);
-        var check = new CheckBox { IsChecked = proc?.Enabled == true, Margin = new Thickness(0, 0, 6, 0), VerticalAlignment = VerticalAlignment.Center, Name = "ProcessorTick" };
-        ToolTip.SetTip(check, "Enabled (untick to bypass)");
+        var check = new CheckBox { IsChecked = proc?.Enabled == true, VerticalAlignment = VerticalAlignment.Center, Name = "ProcessorTick" };
+        check.Spaced(DialogMetrics.MidiCheckGap);
+        MidiSharedRows.Tip(check, "Enabled (untick to bypass)");
         check.IsCheckedChanged += (_, _) =>
         {
             if (_building || proc is null || check.IsChecked == proc.Enabled) return;
@@ -313,13 +372,15 @@ public sealed class MidiProcessingWindow : Window
         var label = new TextBlock
         {
             Text = MidiProcessingListPresenter.RowLabel(proc?.Type ?? "", info?.Name), VerticalAlignment = VerticalAlignment.Center,
-            TextTrimming = TextTrimming.CharacterEllipsis, [!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextPrimary"),
+            TextTrimming = TextTrimming.CharacterEllipsis, ClipToBounds = true, [!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextPrimary"),
         };
-        var row = new DockPanel { Margin = new Thickness(2) };
+        MidiSharedRows.Tip(label, MidiProcessingListPresenter.RowLabel(proc?.Type ?? "", info?.Name));
+        var row = new DockPanel { ClipToBounds = true };
+        row.Spaced(DialogMetrics.MidiFrameGap);
         DockPanel.SetDock(check, Dock.Left);
         row.Children.Add(check);
         row.Children.Add(label);
-        if (info is not null) ToolTip.SetTip(row, info.Description);
+        if (info is not null) MidiSharedRows.Tip(row, info.Description);
         return row;
     }
 
@@ -332,38 +393,41 @@ public sealed class MidiProcessingWindow : Window
         _up.IsEnabled = listButtons.Up;
         _down.IsEnabled = listButtons.Down;
         _remove.IsEnabled = listButtons.Remove;
-        _presets.Show(selected);
+        _presets?.Show(selected);
         _params.Children.Clear(); _elems.Clear(); _mapRows = null;
-        _editors.Reset();
+        _editors?.Reset();
         _learn.Stop();
         _parameterNote.IsVisible = false;
         if (selected is null || MidiProcessorCatalog.Find(selected.Type) is not { } info)
         {
-            (_title.Text, _description.Text) = MidiProcessingListPresenter.UnknownDetail(selected?.Type, _slot.Type != PluginSlotType.Instrument && Procs.Count > 0);
+            (_title.Text, _description.Text) = MidiProcessingListPresenter.UnknownDetail(selected?.Type, _slot?.Type != PluginSlotType.Instrument && Procs.Count > 0);
             UpdateWatch();
             return;
         }
         _title.Text = info.Name;
         _description.Text = info.Description;
         var values = MidiProcessorCatalog.ParseParams(selected, info);
-        if (info.Type == "noteMap") _mapRows = new MidiNoteMapRows(this, values, (key, name) => { _edit(() => { values[key] = name; selected.Params = values.ToJsonString(); }); _mapRows?.Refresh(); });
+        _editors!.Viewer = _detailViewer;
+        if (info.Type == "noteMap") _mapRows = new MidiNoteMapRows(this, values, (key, name) => { _edit(() => { values[key] = name; selected.Params = values.ToJsonString(); }); _mapRows?.Refresh(); }) { Viewer = _detailViewer };
         foreach (var group in new[] { "Applies to", "Main" })
         {
             var ps = info.Params.Where(p => p.Group == group).ToList();
             if (ps.Count == 0) continue;
-            var wrap = new WrapPanel();
+            var wrap = new WrapPanel { HorizontalAlignment = HorizontalAlignment.Stretch };
+            if (_detailViewer is { } viewer) MidiSharedRows.ConstrainToViewport(wrap, viewer);
             foreach (var p in ps)
             {
-                var content = p.Kind == MidiParamKind.MapPreset && _mapRows is not null ? _mapRows.Row(p) : _editors.Build(selected, values, p);
-                var box = new Border { Child = content, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(3), Padding = new Thickness(2), BorderBrush = AvaloniaPalette.TransparentBrush };
+                var content = p.Kind == MidiParamKind.MapPreset && _mapRows is not null ? _mapRows.Row(p) : _editors!.Build(selected, values, p);
+                var box = new Border { Child = content, BorderThickness = DialogMetrics.MidiFrameBorder, CornerRadius = new CornerRadius(DialogMetrics.MidiFrameCorner), BorderBrush = AvaloniaPalette.TransparentBrush };
                 _elems[p.Key] = (box, p);
                 wrap.Children.Add(box);
             }
             var header = Heading(group);
-            header.Margin = new Thickness(0, group == "Main" && info.Params.Any(p => p.Group == "Applies to") ? 10 : 0, 0, 2);
+            if (group == "Main" && info.Params.Any(p => p.Group == "Applies to")) header.Spaced(DialogMetrics.MidiSectionGap); else header.Spaced(DialogMetrics.MidiHeadGap);
             _params.Children.Add(header);
             _params.Children.Add(wrap);
         }
+        if (_detailViewer is { } scrolled && _editors!.NoteEditor is { } noted) MidiSharedRows.ConstrainToViewport(noted, scrolled);
         ApplyFilter();
         UpdateWatch();
         if (_jumpKey is { } key) { _jumpKey = null; Highlight(key); }
@@ -390,86 +454,42 @@ public sealed class MidiProcessingWindow : Window
         if (!_elems.TryGetValue(key, out var entry)) return;
         entry.Box.Opacity = 1;
         entry.Box[!Border.BorderBrushProperty] = new DynamicResourceExtension("AccentBrush");
-        entry.Box.BorderThickness = new Thickness(2);
+        entry.Box.BorderThickness = DialogMetrics.MidiHighlightBorder;
         AvaloniaUiThread.ForApplication().Post(() => entry.Box.BringIntoView(), UiPriority.Loaded);
     }
 
-    // ---------- log ----------
-
-    private void UpdateWatch()
-    {
-        _logPanel.IsVisible = HasLog;
-        var want = HasLog || _learn.Active;
-        if (want == _watching) return;
-        _watching = want;
-        _host.Engine?.WatchMidiLog(_track, want);
-    }
-
-    private void OnLog(int engineSlot, IReadOnlyList<MidiLogLine> lines)
-    {
-        if (!_watching || engineSlot != _host.Engine?.SlotOf(_track)) return;
-        foreach (var l in lines)
-        {
-            if (l.Stage == RawInputStage)   // raw input the chain saw: only used by Learn
-            {
-                if (_learn.Active && (l.Status & 0xF0) == 0x90 && l.Data2 > 0) _learn.Sink?.Invoke(l.Data1);
-                continue;
-            }
-            if (HasLog) _logLines.Add(Describe(l));
-        }
-        if (!HasLog) return;
-        if (_logLines.Count > MaxLogLines) _logLines.RemoveRange(0, _logLines.Count - MaxLogLines);
-        _log.Text = string.Join('\n', _logLines);
-        _log.CaretIndex = _log.Text.Length;
-    }
-
-    /// <summary>One log line: song time, channel, decoded message, and the position of the log processor that saw it.</summary>
-    public static string Describe(MidiLogLine l)
-    {
-        var kind = l.Status & 0xF0; var ch = (l.Status & 0x0F) + 1;
-        string note(int n) => $"{MusicTheoryService.NoteName(n)} ({n})";
-        var what = l.Status >= 0xF0 ? $"System {l.Status:X2} {l.Data1} {l.Data2}" : kind switch
-        {
-            0x90 when l.Data2 > 0 => $"ch{ch,-2} Note on   {note(l.Data1)} vel {l.Data2}",
-            0x90 or 0x80 => $"ch{ch,-2} Note off  {note(l.Data1)}",
-            0xA0 => $"ch{ch,-2} Poly pressure {note(l.Data1)} {l.Data2}",
-            0xB0 => $"ch{ch,-2} CC {l.Data1} = {l.Data2}",
-            0xC0 => $"ch{ch,-2} Program {l.Data1}",
-            0xD0 => $"ch{ch,-2} Channel pressure {l.Data1}",
-            0xE0 => $"ch{ch,-2} Pitch bend {(l.Data2 << 7 | l.Data1) - 8192}",
-            _ => $"{l.Status:X2} {l.Data1} {l.Data2}",
-        };
-        return $"{l.Time,8:0.000}s  {what}   @{l.Stage + 1}";
-    }
-
-    private void OnClosed()
-    {
-        _searchDebounce.Stop();
-        try { if (_watching) _host.Engine?.WatchMidiLog(_track, false); }
-        finally
-        {
-            if (_host.Engine is { } engine) { engine.MidiLogReceived -= OnLog; engine.ChainLoaded -= UpdateWatch; }
-        }
-    }
+    // ---------- log (see MidiProcessingWindow.Log.cs) ----------
 
     // ---------- look ----------
 
     private static Button Btn(string text, string? tip, string name)
     {
-        var button = new Button { Content = text, Name = name, Padding = new Thickness(10, 3), Margin = new Thickness(0, 0, 4, 0), [!Button.ForegroundProperty] = new DynamicResourceExtension("TextPrimary") };
-        if (tip is not null) ToolTip.SetTip(button, tip);
+        var button = new Button { Content = text, Name = name, [!Button.ForegroundProperty] = new DynamicResourceExtension("TextPrimary") };
+        DialogMetrics.WithPadding(button, DialogMetrics.MidiItemPad);
+        button.Spaced(DialogMetrics.MidiButtonGap);
+        if (tip is not null) MidiSharedRows.Tip(button, tip);
         return button;
     }
 
-    private static TextBlock Heading(string text) => new()
+    private static TextBlock Heading(string text)
     {
-        Text = text, FontWeight = FontWeight.SemiBold, Margin = new Thickness(0, 0, 0, 4),
-        [!TextBlock.ForegroundProperty] = new DynamicResourceExtension("AccentBrush"),
-    };
+        var head = new TextBlock
+        {
+            Text = text, FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap,
+            [!TextBlock.ForegroundProperty] = new DynamicResourceExtension("AccentBrush"),
+        };
+        head.Spaced(DialogMetrics.MidiHeadGap);
+        return head;
+    }
 
-    private static Border Frame(Control child) => new()
+    private static Border Frame(Control child)
     {
-        BorderThickness = new Thickness(1), Child = child,
-        [!Border.BorderBrushProperty] = new DynamicResourceExtension("BorderSoftBrush"), [!Border.BackgroundProperty] = new DynamicResourceExtension("PanelBrush"),
-    };
+        var frame = new Border
+        {
+            Child = child, ClipToBounds = true,
+            BorderThickness = DialogMetrics.MidiFrameBorder,
+            [!Border.BorderBrushProperty] = new DynamicResourceExtension("BorderSoftBrush"), [!Border.BackgroundProperty] = new DynamicResourceExtension("PanelBrush"),
+        };
+        return frame;
+    }
 }

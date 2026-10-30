@@ -161,6 +161,7 @@ public class EngineRestartResendsSetupTests
         public PluginSettings Plugins { get; } = new();
         public global::Avalonia.Controls.Window? Owner => null;
         public void SaveSettings() { }
+        public void PanicAll() { }
         public void ShowStatus(string text) { }
         public void SyncActive() { }
         public AvaloniaPlaybackSession? SessionOf(SongDocument song) => ReferenceEquals(song, _song) ? _session : null;

@@ -338,16 +338,6 @@
   "close": "GlobalTuning"
  },
  {
-  "window": "ScaleFinder"
- },
- {
-  "shot": "win-ScaleFinder-dark",
-  "target": "window:ScaleFinder"
- },
- {
-  "close": "ScaleFinder"
- },
- {
   "window": "InstrumentPicker"
  },
  {
@@ -841,16 +831,6 @@
  },
  {
   "close": "GlobalTuning"
- },
- {
-  "window": "ScaleFinder"
- },
- {
-  "shot": "win-ScaleFinder-light",
-  "target": "window:ScaleFinder"
- },
- {
-  "close": "ScaleFinder"
  },
  {
   "window": "InstrumentPicker"

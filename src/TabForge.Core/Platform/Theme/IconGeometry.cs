@@ -16,6 +16,9 @@ public static class IconGeometry
     public const string ChevronRight = "M 6,3.5 L 10.5,8 L 6,12.5";
     public const string Speaker ="M 3,6 L 5.5,6 L 9,3.5 L 9,12.5 L 5.5,10 L 3,10 Z M 11,6 C 12.3,7 12.3,9 11,10 M 12.5,4.5 C 14.5,6.5 14.5,9.5 12.5,11.5";
 
+    /// <summary>Headphones: the head band and two ear cups (the FX "Active on" button).</summary>
+    public const string Headphones = "M 3,10.5 L 3,8 A 5,5 0 0 1 13,8 L 13,10.5 M 2,10 L 4.5,10 L 4.5,13.5 L 2,13.5 Z M 11.5,10 L 14,10 L 14,13.5 L 11.5,13.5 Z";
+
     /// <summary>The cogwheel (the settings gear): a filled solid gear with eight teeth and a round centre hole; "F0" is the fill rule.</summary>
     public const string Cog = "F0 M 6.65,2.57 L 6.95,0.37 L 9.05,0.37 L 9.35,2.57 A 5.6,5.6 0 0 1 10.89,3.20 L 10.89,3.20 L 12.65,1.86 L 14.14,3.35 L 12.80,5.11 A 5.6,5.6 0 0 1 13.43,6.65 L 13.43,6.65 L 15.63,6.95 L 15.63,9.05 L 13.43,9.35 A 5.6,5.6 0 0 1 12.80,10.89 L 12.80,10.89 L 14.14,12.65 L 12.65,14.14 L 10.89,12.80 A 5.6,5.6 0 0 1 9.35,13.43 L 9.35,13.43 L 9.05,15.63 L 6.95,15.63 L 6.65,13.43 A 5.6,5.6 0 0 1 5.11,12.80 L 5.11,12.80 L 3.35,14.14 L 1.86,12.65 L 3.20,10.89 A 5.6,5.6 0 0 1 2.57,9.35 L 2.57,9.35 L 0.37,9.05 L 0.37,6.95 L 2.57,6.65 A 5.6,5.6 0 0 1 3.20,5.11 L 3.20,5.11 L 1.86,3.35 L 3.35,1.86 L 5.11,3.20 A 5.6,5.6 0 0 1 6.65,2.57 Z M 10.6,8 A 2.6,2.6 0 1 0 5.4,8 A 2.6,2.6 0 1 0 10.6,8 Z";
 
@@ -69,9 +72,6 @@ public static class IconGeometry
 
     /// <summary>Zoom out: a magnifier with a minus.</summary>
     public const string ZoomOut = "M2.7,7 A4.3,4.3 0 1 1 11.3,7 A4.3,4.3 0 1 1 2.7,7 M10.2,10.2 L13.8,13.8 M5,7 L9,7";
-
-    /// <summary>Zoom to fit: corner marks round a note.</summary>
-    public const string ZoomFit = "M2.5,5.5 L2.5,2.5 L5.5,2.5 M10.5,2.5 L13.5,2.5 L13.5,5.5 M13.5,10.5 L13.5,13.5 L10.5,13.5 M5.5,13.5 L2.5,13.5 L2.5,10.5 M5.5,6.5 L10.5,6.5 L10.5,9.5 L5.5,9.5 Z";
 
     /// <summary>Follow the playhead: an arrow against a line.</summary>
     public const string Follow = "M2.5,8 L11.5,8 M8.5,5 L11.5,8 L8.5,11 M13.5,3 L13.5,13";

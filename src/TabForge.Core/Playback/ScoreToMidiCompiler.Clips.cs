@@ -6,20 +6,21 @@ using TabForge.Models;
 namespace TabForge.Playback;
 
 // Owns: placing the recorded MIDI clips of a track's clip lanes into the timeline, in song time, with the timeline's start offset: their notes
-//   (a muted note skipped, a note's own channel kept) and their controller points (control changes and pitch bend).
+//   (a muted note skipped, a note's own channel kept) and their controller points (control changes, pitch bend, program change, channel aftertouch).
 // Does not own: the score note emission (ScoreToMidiCompiler.cs, ScoreToMidiCompiler.Techniques.cs).
-// Tests: no dedicated test class.
+// Tests: TabForge.Avalonia.Tests.PianoRollControllerTests.
 
 // ScoreToMidiCompiler: recorded MIDI clips on a track's clip lanes.
 internal sealed partial class ScoreToMidiCompiler
 {
     // ---------- MIDI clips (recorded MIDI on a track's clip lanes) ----------
 
-    /// <summary>
-    /// MIDI clips are placed in song time (the whole song as performed, repeats included), like audio clips.
-    /// This timeline may start mid-song, so its first bar is matched to that bar's first performance.
-    /// </summary>
-    /// <summary>A clip piece's controller points (CC and pitch bend) inside its trimmed part, on the track's channel.</summary>
+    /// <summary>True once a lane point before the start was folded into the chase (the setup then carries lane state too).</summary>
+    private bool _clipChased;
+
+    /// <summary>A clip piece's controller points (CC, pitch bend, program change, channel aftertouch) inside its trimmed part, on the track's channel.
+    /// A lane program change overrides the track's own program from its position (the mixer program plays where no lane point holds); points before
+    /// the start are chased into the channel setup, so a seek into the middle restores the last lane value.</summary>
     private void EmitClipControllers(TrackModel track, int trackIndex, int channel, AudioClip clip, double startSec, double offsetSec, double lengthSec, double speed, double offsetMs, double fromMs)
     {
         if (clip.Controllers is not { Count: > 0 } points) return;
@@ -27,15 +28,44 @@ internal sealed partial class ScoreToMidiCompiler
         {
             if (point.StartSec < offsetSec - 1e-6 || point.StartSec >= offsetSec + lengthSec) continue;
             var atMs = (startSec + (point.StartSec - offsetSec) / speed) * 1000 * _speedScale - offsetMs;
-            if (atMs < fromMs - 0.5 || atMs >= _timeline.TotalMs) continue;
-            var bend = point.Controller == ClipController.PitchBend;
-            var value = bend ? Math.Clamp(point.Value + 8192, 0, 16383) : Math.Clamp(point.Value, 0, MidiLimits.Max);
+            if (!ClipMessage(point, channel, out var statusBase, out var data1, out var data2)) continue;   // e.g. a program point on the percussion channel
+            if (atMs < fromMs - 0.5)
+            {
+                RecordChase(channel, statusBase, data1, data2, trackIndex);
+                _clipChased = true;
+                continue;
+            }
+            if (atMs >= _timeline.TotalMs) continue;
             _timeline.Events.Add(new ScoreEvent
             {
                 TimeMs = atMs, DeviceId = OutputDeviceOf(track), Channel = channel, TrackIndex = trackIndex,
-                Status = (bend ? 0xE0 : 0xB0) | (channel & 0x0F), Data1 = bend ? value & 0x7F : Math.Clamp(point.Controller, 0, MidiLimits.Max), Data2 = bend ? value >> 7 : value,
+                Status = statusBase | (channel & 0x0F), Data1 = data1, Data2 = data2,
             });
         }
+    }
+
+    /// <summary>The MIDI message for a lane point: CC (0xB0), pitch bend (0xE0, 14-bit), program change (0xC0, one data byte) or
+    /// channel aftertouch (0xD0, one data byte). False when the point sends nothing (program on the percussion channel).</summary>
+    private static bool ClipMessage(ClipController point, int channel, out int statusBase, out int data1, out int data2)
+    {
+        if (point.Controller == ClipController.ProgramChange)
+        {
+            statusBase = 0xC0; data1 = Math.Clamp(point.Value, 0, MidiLimits.Max); data2 = 0;
+            return channel != ChannelAllocator.PercussionChannel;
+        }
+        if (point.Controller == ClipController.ChannelAftertouch)
+        {
+            statusBase = 0xD0; data1 = Math.Clamp(point.Value, 0, MidiLimits.Max); data2 = 0;
+            return true;
+        }
+        if (point.Controller == ClipController.PitchBend)
+        {
+            var bend = Math.Clamp(point.Value + 8192, 0, 16383);
+            statusBase = 0xE0; data1 = bend & 0x7F; data2 = bend >> 7;
+            return true;
+        }
+        statusBase = 0xB0; data1 = Math.Clamp(point.Controller, 0, MidiLimits.Max); data2 = Math.Clamp(point.Value, 0, MidiLimits.Max);
+        return true;
     }
 
     private void EmitClipNotes()

@@ -44,6 +44,7 @@ public static partial class HotkeyCatalog
         new("Edit.Paste", CategoryEdit, "Paste", "Ctrl+V", "Paste at the cursor; asks only what the paste needs."),
         new("Edit.PasteSpecial", CategoryEdit, "Paste special", "Ctrl+Shift+V", "Paste with a repeat count, replace or insert, octave shift, keep string and fret, and bar settings."),
         new("Edit.SelectAll", CategoryEdit, "Select whole track", "Ctrl+A", "Select every bar of the track."),
+        new("Edit.InvertSelection", CategoryEdit, "Invert selection", "Ctrl+I", "Invert the piano roll note selection (piano roll focused)."),
         new("Edit.InsertBeat", CategoryEdit, "Insert beat", "Insert", "Insert an empty beat at the cursor and push the rest of the bar right (the bar keeps its length)."),
         new("Edit.DeleteBeats", CategoryEdit, "Delete beats (shift left)", "", "Remove the beat at the cursor and pull the rest of the bar left. Remove the beat at the cursor and pull the rest of the bar left. The Delete key clears the notes first, and removes an empty beat the same way."),
         new("Edit.RepeatSelection", CategoryEdit, "Repeat selection", "Ctrl+Shift+R", "Repeat the selected bars."),

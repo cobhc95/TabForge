@@ -323,6 +323,23 @@ public sealed class MediaRelinkTests
         Assert.False(found.ContainsKey(missing[2].FullPath));
         Assert.True(File.Exists(deep));
     }
+
+    [Fact]
+    public void FindAgreesWithSearchOnOneMatchPerName()
+    {
+        using var tmp = new MediaTestFolder();
+        var root = tmp.Dir("moved");
+        var near = tmp.File(root, "RIFF.wav", "near");
+        var missing = new[]
+        {
+            new MissingMedia(Path.Combine("Z:", "old", "riff.wav"), "riff.wav", "Z:"),
+        };
+
+        var one = Assert.Single(MediaRelink.Find(root, missing));
+
+        Assert.Equal(near, one.FoundPath);
+        Assert.Equal(1, one.Matches);
+    }
 }
 
 /// <summary>Owns: the save with the media step (MainWindowSaving + MediaSaveStep): copy, keep links, cancel, relative paths in the file, one undo step.</summary>

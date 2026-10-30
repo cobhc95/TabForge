@@ -3,7 +3,7 @@ using System.Globalization;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using TabForge.Audio.Contracts;
-using TabForge.AudioEngine.Builtin.Gate;
+using GateEffect = TabForge.Audio.Contracts.Builtin.GateParameters;
 using TabForge.Avalonia.Views.Dialogs;
 using TabForge.Models;
 using TabForge.Plugins;

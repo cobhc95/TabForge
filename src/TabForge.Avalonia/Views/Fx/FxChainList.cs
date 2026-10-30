@@ -47,6 +47,14 @@ public sealed class FxChainList : Grid
     private object? _focused;
     private int _anchor = -1;
     private bool _applying;
+    private readonly DynamicResourceExtension _accentBrushExt = new("AccentBrush");
+    private readonly DynamicResourceExtension _accentSoftBrushExt = new("AccentSoftBrush");
+    private bool _measured;
+    private int _measuredCount = -1;
+    private double _lastDragY = double.NaN, _lastDragX = double.NaN;
+    private Size _badgeSize;
+    private string? _badgeRoomKey;
+    internal int DragComputeCount { get; private set; }
 
     private int _pressRow = -1;
     private bool _collapseOnRelease, _banding, _dragging;
@@ -71,14 +79,14 @@ public sealed class FxChainList : Grid
         Name = "ChainList";
         Focusable = true;
         _scroll.Content = _rows;
-        _band[!Border.BorderBrushProperty] = new DynamicResourceExtension("AccentBrush");
-        _band[!Border.BackgroundProperty] = new DynamicResourceExtension("AccentSoftBrush");
-        _line[!Border.BackgroundProperty] = new DynamicResourceExtension("AccentBrush");
+        _band[!Border.BorderBrushProperty] = _accentBrushExt;
+        _band[!Border.BackgroundProperty] = _accentSoftBrushExt;
+        _line[!Border.BackgroundProperty] = _accentBrushExt;
         _badgeText[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextStrongBrush");
         _badge = new Border
         {
             Child = _badgeText, Padding = new Thickness(BadgePaddingX, BadgePaddingY), CornerRadius = new CornerRadius(BadgeRadius), BorderThickness = new Thickness(1), IsVisible = false,
-            [!Border.BackgroundProperty] = new DynamicResourceExtension("Panel2Brush"), [!Border.BorderBrushProperty] = new DynamicResourceExtension("AccentBrush"),
+            [!Border.BackgroundProperty] = new DynamicResourceExtension("Panel2Brush"), [!Border.BorderBrushProperty] = _accentBrushExt,
         };
         _layer.Children.Add(_band);
         _layer.Children.Add(_line);
@@ -117,7 +125,7 @@ public sealed class FxChainList : Grid
     {
         Cancel();
         _applying = true;
-        try { _rows.Children.Clear(); _items.Clear(); _selected.Clear(); }
+        try { _rows.Children.Clear(); _items.Clear(); _selected.Clear(); _measured = false; }
         finally { _applying = false; }
     }
 
@@ -135,6 +143,7 @@ public sealed class FxChainList : Grid
         global::Avalonia.Automation.AutomationProperties.SetName(chrome, name);
         _items.Add((chrome, tag, depth, dropName));
         _rows.Children.Add(chrome);
+        _measured = false;
     }
 
     /// <summary>After the rows were rebuilt: selects the rows of <paramref name="tags"/> that still exist and focuses row <paramref name="focus"/>
@@ -205,9 +214,9 @@ public sealed class FxChainList : Grid
     {
         var chrome = _items[i].Chrome;
         var focused = i == (focusedIndex ?? FocusedIndex);
-        if (focused) chrome[!Border.BorderBrushProperty] = new DynamicResourceExtension("AccentBrush");
+        if (focused) chrome[!Border.BorderBrushProperty] = _accentBrushExt;
         else { chrome.ClearValue(Border.BorderBrushProperty); chrome.BorderBrush = AvaloniaPalette.TransparentBrush; }   // a bound brush is dropped first
-        if (_selected.Contains(i)) chrome[!Border.BackgroundProperty] = new DynamicResourceExtension("AccentSoftBrush");
+        if (_selected.Contains(i)) chrome[!Border.BackgroundProperty] = _accentSoftBrushExt;
         else { chrome.ClearValue(Border.BackgroundProperty); chrome.Background = AvaloniaPalette.TransparentBrush; }
     }
 
@@ -256,6 +265,7 @@ public sealed class FxChainList : Grid
 
     private void Measure()
     {
+        if (_measured && _measuredCount == Count) return;
         _rows.UpdateLayout();
         _tops = new double[Count]; _heights = new double[Count];
         for (var i = 0; i < Count; i++)
@@ -263,7 +273,10 @@ public sealed class FxChainList : Grid
             _tops[i] = _items[i].Chrome.Bounds.Top;
             _heights[i] = _items[i].Chrome.Bounds.Height + ItemGap;
         }
+        _measured = true; _measuredCount = Count;
     }
+
+    internal void InvalidateRowMeasure() => _measured = false;
 
     private static bool KeepsOwnClick(object? source)
     {
@@ -381,6 +394,7 @@ public sealed class FxChainList : Grid
         _moving = SelectedRows.ToList();
         _dragging = true;
         _insert = _into = _lineDepth = _gapRow = -1;
+        _lastDragY = _lastDragX = double.NaN;
     }
 
     /// <summary>The height of the lifted rows above a row: how far it moves up while they are out of the list.</summary>
@@ -391,12 +405,20 @@ public sealed class FxChainList : Grid
 
     private void DragTo(double y, double x)
     {
+        // Coalesce repeated pointer reports at the same spot: one layout per position (see audit-performance).
+        if (y == _lastDragY && x == _lastDragX) return;
+        _lastDragY = y; _lastDragX = x;
+        DragComputeCount++;
         // The rows below the open gap show one lifted block lower than their place among the rows that stay: the pointer is read there.
         _pointerY = y;
         var lifted = _moving.Sum(i => _heights[i]);
         if (_gapRow >= 0 && ClosedTop(_gapRow) is var gap && y > gap) y = Math.Max(gap, y - lifted);
+        var moving = new bool[Count];
+        foreach (var m in _moving) if (m >= 0 && m < Count) moving[m] = true;
+        var canDrop = new bool[Count];
+        for (var i = 0; i < Count; i++) canDrop[i] = !moving[i] && CanDropInto?.Invoke(i, _moving) == true;
         var rows = new DropRow[Count];
-        for (var i = 0; i < Count; i++) rows[i] = new DropRow(_tops[i] - Above(i), _heights[i], _items[i].Depth, CanDropInto?.Invoke(i, _moving) == true, _moving.Contains(i));
+        for (var i = 0; i < Count; i++) rows[i] = new DropRow(_tops[i] - Above(i), _heights[i], _items[i].Depth, canDrop[i], moving[i]);
         var target = FxChainDropMath.At(rows, x, y);
         (_insert, _into, _lineDepth) = (target.Insert, target.Into, target.LineDepth);
         _gapRow = _into >= 0 && _lineDepth < 0 ? _into + 1 : _insert;   // onto a container: the gap opens right under its row
@@ -421,8 +443,7 @@ public sealed class FxChainList : Grid
                 continue;
             }
             var moving = _moving.Contains(i);
-            var to = _gapRow < 0 ? 0 : moving ? ClosedTop(_gapRow) + Above(i) - _tops[i] : -Above(i) + (i >= _gapRow ? lifted : 0);
-            if (moving && _gapRow >= 0 && !double.IsNaN(_pointerY))
+            var to = _gapRow < 0 ? 0 : moving ? ClosedTop(_gapRow) + Above(i) - _tops[i] : -Above(i) + (i >= _gapRow ? lifted : 0);            if (moving && _gapRow >= 0 && !double.IsNaN(_pointerY))
             {
                 var top = Math.Clamp(_pointerY + LiftedBelowPointer, 0, Math.Max(0, _tops[^1] + _heights[^1] - lifted));
                 to = top + Above(i) - _tops[i];
@@ -433,8 +454,8 @@ public sealed class FxChainList : Grid
             if (moving) { chrome.ZIndex = LiftedZ; chrome.Opacity = LiftedOpacity; }
             if (moving || target)
             {
-                chrome[!Border.BorderBrushProperty] = new DynamicResourceExtension("AccentBrush");
-                chrome[!Border.BackgroundProperty] = new DynamicResourceExtension("AccentSoftBrush");
+                chrome[!Border.BorderBrushProperty] = _accentBrushExt;
+                chrome[!Border.BackgroundProperty] = _accentSoftBrushExt;
             }
             else PaintRow(i);
             if (_items[i].DropName is not null) FxChainRows.ShowOpen(chrome.Child, target);
@@ -464,9 +485,15 @@ public sealed class FxChainList : Grid
         _badge.IsVisible = show && room >= BadgeMinRoom;
         if (!_badge.IsVisible) return;
         _badge.MaxWidth = room;
-        _badge.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-        Canvas.SetLeft(_badge, width - _badge.DesiredSize.Width - BadgeRightMargin);
-        Canvas.SetTop(_badge, rowTop + Math.Max(0, (rowHeight - _badge.DesiredSize.Height) / 2));
+        var key = _badgeText.Text + "|" + room.ToString("0");
+        if (key != _badgeRoomKey)
+        {
+            _badge.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            _badgeSize = _badge.DesiredSize;
+            _badgeRoomKey = key;
+        }
+        Canvas.SetLeft(_badge, width - _badgeSize.Width - BadgeRightMargin);
+        Canvas.SetTop(_badge, rowTop + Math.Max(0, (rowHeight - _badgeSize.Height) / 2));
     }
 
     private void EndDrag()

@@ -21,6 +21,12 @@ public static class HoverShade
     /// <summary>How strongly the shade covers a surface that has its own colour (a track-list row), so the colour underneath still shows through.</summary>
     public const double OverlayOpacity = 0.50;
 
+    /// <summary>How strongly the track-row hover and selection overlay covers the row, so the track colour still shows through.</summary>
+    public const double RowOverlayOpacity = 0.16;
+
+    /// <summary>The palette key of the track-row hover and selection overlay (white in the dark theme, black in the light one).</summary>
+    public const string RowOverlayKey = "OverlayInk";
+
     /// <summary>The hovered bar cell's strength on the dark theme (white) and the light theme (black), and its corner radius in DIPs.</summary>
     public const double CellDarkOpacity = 0.12, CellLightOpacity = 0.08, CellRadius = 2;
 
@@ -38,6 +44,10 @@ public static class HoverShade
         var c = AvaloniaPalette.Get(PaletteKey, light);
         return c.WithOpacity(OverlayOpacity);
     }
+
+    /// <summary>The track-row hover and selection overlay for the light or dark theme: one translucent grey for hovered, selected and multi-picked rows.</summary>
+    public static TabForge.Platform.UiColor RowOverlay(bool light) =>
+        AvaloniaPalette.Get(RowOverlayKey, light).WithOpacity(RowOverlayOpacity);
 
     /// <summary>Calls <paramref name="hoverChanged"/> with true when the pointer enters the element and false when it leaves.</summary>
     public static void Attach(InputElement element, Action<bool> hoverChanged)

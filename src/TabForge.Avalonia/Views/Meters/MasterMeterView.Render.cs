@@ -15,7 +15,9 @@ public sealed partial class MasterMeterView
 {
     // The drawing in 34 DIP units; every number scales with the control width, so a smaller (compact) bar shrinks it with the buttons.
     private const double DesignSize = UiMetrics.TransportButtonSize;
-    private const double BarWidth = 8, BarGap = 3, BarTop = 8, SideInset = 4, ClipLightHeight = 2.5, ClipLightTop = 4, NumberHeight = 9, NumberTextSize = 8.5, HoldHeight = 1.5, BarRadius = 1.5;
+    private const double BarWidth = MeterBarPainter.BarWidth, BarGap = MeterBarPainter.BarGap, BarTop = MeterBarPainter.BarTop, SideInset = MeterBarPainter.SideInset,
+        ClipLightHeight = MeterBarPainter.ClipLightHeight, ClipLightTop = MeterBarPainter.ClipLightTop, NumberHeight = MeterBarPainter.NumberHeight,
+        NumberTextSize = MeterBarPainter.NumberTextSize, HoldHeight = MeterBarPainter.HoldHeight, BarRadius = MeterBarPainter.BarRadius;
 
     public override void Render(DrawingContext context)
     {
@@ -23,7 +25,7 @@ public sealed partial class MasterMeterView
         if (width < 1 || height < 1) return;
         var light = ActualThemeVariant == ThemeVariant.Light;
         var d = _draw.Use(context);
-        var fill = _hovered ? AvaloniaPalette.Get(HoverShade.IconPaletteKey, light) : TransportBarView.TransportButton.Fill("PlaybarSurface", light);
+        var fill = _hovered ? MeterBarPainter.HoverFill(light) : TransportBarView.TransportButton.Fill("PlaybarSurface", light);
         if (light && !_hovered) fill = ThemeColours.Blend(fill, AvaloniaPalette.Get("PanelBackground", light), TransportGlowRules.LightFillLift);
         var border = TransportBarView.TransportButton.BorderWidth;
         d.Rect(fill, new UiStroke(Palette.Get("PlaybarBorder", light), border), border / 2, border / 2, width - border, height - border, TransportBarView.TransportButton.ButtonCornerRadius);
@@ -34,30 +36,11 @@ public sealed partial class MasterMeterView
         var top = BarTop * s;
         var bottom = height - SideInset * s - (settings.ShowNumber ? (NumberHeight + 1) * s : 0);
         var barHeight = Math.Max(2, bottom - top);
-        d.Rect(Model.ClipLit ? Palette.Get("Danger", light) : Palette.Get("TrackSliderTrack", light), null, left, ClipLightTop * s, barsWidth, ClipLightHeight * s, BarRadius * s);
-        DrawBar(d, light, left, top, BarWidth * s, barHeight, Model.LeftDb, Model.HoldLeftDb, s);
-        DrawBar(d, light, left + (BarWidth + BarGap) * s, top, BarWidth * s, barHeight, Model.RightDb, Model.HoldRightDb, s);
+        MeterBarPainter.DrawClipStrip(d, key => Palette.Get(key, light), light, Model.ClipLit, left, ClipLightTop * s, barsWidth, ClipLightHeight * s, BarRadius * s);
+        MeterBarPainter.DrawBars(d, key => Palette.Get(key, light), light, Model, left, top, BarWidth * s, BarGap * s, barHeight, BarRadius * s, HoldHeight * s, s);
         if (!settings.ShowNumber) return;
         var text = d.Text(Model.NumberText, ChromeMetrics.UiFontFamily, NumberTextSize * s, Palette.Get("TextPrimary", light), d.PixelsPerDip);
         d.DrawText(text, (width - text.Width) / 2, bottom + s);
     }
 
-    // One bar: the track, the green part up to the warm level and the yellow part above it, then the hold line.
-    private void DrawBar(IDrawContext d, bool light, double x, double y, double width, double height, double db, double holdDb, double s)
-    {
-        d.Rect(Palette.Get("TrackSliderTrack", light), null, x, y, width, height, BarRadius * s);
-        var fraction = MasterMeterModel.Fraction(db);
-        var warm = MasterMeterModel.Fraction(MasterMeterModel.WarmDb);
-        if (fraction > 0)
-        {
-            var green = Math.Min(fraction, warm) * height;
-            d.Rect(Palette.Get("Meter", light), null, x, y + height - green, width, green);
-            if (fraction > warm) d.Rect(Palette.Get("MeterHot", light), null, x, y + height * (1 - fraction), width, (fraction - warm) * height);
-        }
-        if (Model.HoldShown && holdDb > MasterMeterModel.FloorDb)
-        {
-            var at = Math.Min(height - HoldHeight * s, height * (1 - MasterMeterModel.Fraction(holdDb)));
-            d.Rect(Palette.Get("TextPrimary", light), null, x, y + at, width, HoldHeight * s);
-        }
-    }
 }

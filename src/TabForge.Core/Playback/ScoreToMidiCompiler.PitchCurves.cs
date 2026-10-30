@@ -4,7 +4,7 @@ using TabForge.Services;
 namespace TabForge.Playback;
 // Owns: the pitch-wheel curves of a note (bend, vibrato, slide in and out, trem bar, whammy) and the wheel arithmetic.
 // Does not own: the per-note output that calls it (ScoreToMidiCompiler.Techniques.cs) or the bar and cell walk (ScoreToMidiCompiler.cs).
-// Tests: no dedicated test class.
+// Tests: TiedBendPitchCurveTests (tied bend and vibrato curves), LegatoChainMergeTests.
 internal sealed partial class ScoreToMidiCompiler
 {
     /// <summary>How far the note's own curve (bend, vibrato, slide in or out, trem bar, whammy) moves the pitch wheel from its pitch, at most, in semitones.</summary>
@@ -27,33 +27,48 @@ internal sealed partial class ScoreToMidiCompiler
     /// channel, so independent bend/slide/vibrato streams must be summed rather than sent as
     /// competing events that overwrite each other.
     /// </summary>
-    /// <param name="baseSemitones">Offset the string already sounds at (a merged note after a slide); added to every wheel value.</param>
+    /// <param name="baseSemitones">Wheel offset the string already sounds at (a merged note after a slide or a held bend); added to every wheel value, or held until the continuation's own bend points take over.</param>
     /// <param name="joinIndex">Index of the wheel reset that ends the tied origin's curve: this curve starts from it (moved to this note's onset) instead of adding a second event.</param>
+    /// <param name="tiedContinuation">The note continues a tie chain: its own bend points are absolute against the fretted pitch and replace the held value instead of adding to it.</param>
+    /// <param name="endSemitones">Wheel offset this curve holds at its end, before the reset to centre: the next link of a tie chain starts there.</param>
     /// <returns>Index of the wheel reset that ends this curve, or -1 when no wheel events were written.</returns>
     private int EmitPitchExpression(TabNote note, TabCell cell, HashSet<string> techniques, int midi, int? slideTarget,
-        double onset, double length, int device, int channel, int trackIndex, double baseSemitones = 0, int joinIndex = -1)
+        double onset, double length, int device, int channel, int trackIndex, double baseSemitones, int joinIndex, bool tiedContinuation, out double endSemitones)
     {
-        var vibrato = techniques.Contains("Vibrato") || techniques.Contains("WideVibrato");
-        var genericBend = techniques.Contains("Bend") && note.BendPoints.Count == 0;
-        var tremBar = techniques.Contains("TremBar") || techniques.Contains("TremBarWide");
+        endSemitones = baseSemitones;
+        // A technique a map covers (or one the export skips) sends no wheel of its own: the rule is the whole message.
+        var effectTechniques = new HashSet<string>(techniques, StringComparer.Ordinal);
+        var bendCovered = ArticulationSuppressed(TechniqueNames.Bend);
+        if (bendCovered) effectTechniques.Remove(TechniqueNames.Bend);
+        if (ArticulationSuppressed(TechniqueNames.Vibrato)) { effectTechniques.Remove(TechniqueNames.Vibrato); effectTechniques.Remove(TechniqueNames.WideVibrato); }
+        if (ArticulationSuppressed("Slide")) { effectTechniques.Remove("SlideInBelow"); effectTechniques.Remove("SlideInAbove"); effectTechniques.Remove("SlideOutUp"); effectTechniques.Remove("SlideOutDown"); effectTechniques.Remove("Slide"); }
+        if (ArticulationSuppressed(TechniqueNames.LegatoSlide)) { effectTechniques.Remove(TechniqueNames.LegatoSlide); slideTarget = null; }
+        if (slideTarget is not null && ArticulationSuppressed("Slide")) slideTarget = null;
+        if (ArticulationSuppressed("TremBar") || SkipUnmappedArticulation) { effectTechniques.Remove("TremBar"); effectTechniques.Remove("TremBarWide"); }
+        var vibrato = effectTechniques.Contains("Vibrato") || effectTechniques.Contains("WideVibrato");
+        var genericBend = effectTechniques.Contains("Bend") && note.BendPoints.Count == 0;
+        var tremBar = effectTechniques.Contains("TremBar") || effectTechniques.Contains("TremBarWide");
         var whammySpan = BendPointModel.SpanOf(cell.WhammyPoints);
-        var whammyPoints = cell.WhammyPoints
-            .Select(point => (Fraction: Math.Clamp(point.Offset / whammySpan, 0, 1),
-                Semitones: Math.Clamp(point.Value / 2.0, -12.0, 12.0)))
-            .OrderBy(point => point.Fraction).ToArray();
-        var slideIn = techniques.Contains("SlideInBelow") || techniques.Contains("SlideInAbove");
-        var slideOut = techniques.Contains("SlideOutUp") || techniques.Contains("SlideOutDown");
+        var whammyPoints = SkipUnmappedArticulation
+            ? Array.Empty<(double Fraction, double Semitones)>()
+            : cell.WhammyPoints
+                .Select(point => (Fraction: Math.Clamp(point.Offset / whammySpan, 0, 1),
+                    Semitones: Math.Clamp(point.Value / 2.0, -12.0, 12.0)))
+                .OrderBy(point => point.Fraction).ToArray();
+        var slideIn = effectTechniques.Contains("SlideInBelow") || effectTechniques.Contains("SlideInAbove");
+        var slideOut = effectTechniques.Contains("SlideOutUp") || effectTechniques.Contains("SlideOutDown");
+        var noteBendCount = bendCovered ? 0 : note.BendPoints.Count;
         if (!vibrato && !genericBend && !tremBar && !slideIn && !slideOut &&
-            whammyPoints.Length == 0 && note.BendPoints.Count == 0 && slideTarget is null) return -1;
+            whammyPoints.Length == 0 && noteBendCount == 0 && slideTarget is null) return -1;
 
         var duration = Math.Max(0, length);
         var end = onset + duration;
-        var bendPoints = BendCurve(note);
+        var bendPoints = bendCovered ? Array.Empty<(double Fraction, double Semitones)>() : BendCurve(note);
         var times = CurveTimes(onset, duration, bendPoints, whammyPoints, slideTarget is not null, genericBend, tremBar, slideIn, slideOut);
 
         var resetIndex = -1;
         var vibratoStart = onset + Math.Min(55, duration * 0.12);
-        var vibratoDepth = note.VibratoDepth ?? (techniques.Contains("WideVibrato") ? _opt.WideVibratoDepth : _opt.NormalVibratoDepth);
+        var vibratoDepth = note.VibratoDepth ?? (effectTechniques.Contains("WideVibrato") ? _opt.WideVibratoDepth : _opt.NormalVibratoDepth);
         var vibratoRate = note.VibratoSpeed ?? _opt.VibratoSpeedHz;
         var slideInDuration = _slideInLeadMs > 0 ? _slideInLeadMs : Math.Max(1, Math.Min(120, duration * 0.25));
         // The reference slides in from ~3 frets, falls/rises ~5, progressively from 25% of the note
@@ -61,27 +76,37 @@ internal sealed partial class ScoreToMidiCompiler
         foreach (var at in times)
         {
             var fraction = duration <= 0 ? 1 : Math.Clamp((at - onset) / duration, 0, 1);
-            var semitones = bendPoints.Length > 0
+            var ownBend = bendPoints.Length > 0
                 ? BendAt(bendPoints, fraction)
                 : genericBend ? GenericBendAt(fraction) : 0;
+            // A tie continuation keeps the wheel where the chain was bent: its own bend points are
+            // absolute against the fretted pitch and replace the held value from their first point;
+            // without points of its own it simply holds the joined value.
+            var semitones = tiedContinuation && bendPoints.Length > 0 && fraction >= bendPoints[0].Fraction
+                ? ownBend
+                : ownBend + baseSemitones;
             if (whammyPoints.Length > 0) semitones += BendAt(whammyPoints, fraction, eased: false);   // the tremolo bar runs in straight lines
 
             // A target slide, a fretted bend and a separate slide ornament can coexist; each is
             // expressed as a delta around the note's imported sounding pitch.
-            if (slideTarget is int target && fraction < 1)
+            if (slideTarget is int target)
                 semitones += (target - midi) * Math.Clamp((fraction - SlideStart) / (SlideEnd - SlideStart), 0, 1);
             if (tremBar)
             {
                 if (whammyPoints.Length == 0)
                     semitones += TremBarAt(techniques, fraction);
             }
-            semitones += SlideOrnamentSemitones(techniques, at - onset, fraction, slideInDuration);
+            semitones += SlideOrnamentSemitones(effectTechniques, at - onset, fraction, slideInDuration);
             if (vibrato && at < end) semitones += VibratoSemitones(at, end, vibratoStart, vibratoDepth, vibratoRate);
 
-            semitones += baseSemitones;
             // All generated curves return to the unbent sounding pitch, even when the imported
-            // bend holds its peak through the written note end.
-            if (Math.Abs(at - end) < 0.001) semitones = 0;
+            // bend holds its peak through the written note end. A tie continuation starts from
+            // the value captured here, so the chain resets once, at its last note.
+            if (Math.Abs(at - end) < 0.001)
+            {
+                endSemitones = semitones;
+                semitones = 0;
+            }
             var written = WriteCurveWheel(PitchWheelForSemitones(semitones), at, onset, joinIndex, device, channel, trackIndex);
             if (Math.Abs(at - end) < 0.001) resetIndex = written;
         }

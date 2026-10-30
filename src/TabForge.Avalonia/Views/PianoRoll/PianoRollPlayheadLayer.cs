@@ -10,7 +10,7 @@ namespace TabForge.Avalonia.Views;
 
 // Owns: the piano roll's live layer over the surface, repainted alone (each playback frame, each coalesced MIDI key change) so the notes under it
 //       are not redrawn: the ruler's playhead triangle and the playback needle under it (setting; stopped too, at the stop position; both in the Playback highlight colour), and the piano keys lit live: the keys
-//       a MIDI keyboard holds (PianoRollKeyLive) and, while playing, the keys of the track's notes sounding at the playhead (PianoRollKeyPlaying).
+//       a MIDI keyboard holds (the Accent token) and, while playing, the keys of the track's notes sounding at the playhead (PianoRollKeyPlaying).
 // Does not own: where the playhead is (the surface's PlayheadBeat hook), the held keys (PianoRollKeyState), following (PianoRollView).
 // Tests: TabForge.Avalonia.Tests.PianoRollGestureTests, PianoRollKeyStateTests.
 internal sealed class PianoRollPlayheadLayer : Control
@@ -122,7 +122,7 @@ internal sealed class PianoRollPlayheadLayer : Control
         LiveDrawn = 0;
         var notes = _surface.LiveNotes;
         if (notes.Count == 0) return;
-        var track = _surface.TrackColour() ?? AvaloniaPalette.Get("PianoRollKeyLive", ActualThemeVariant == ThemeVariant.Light);
+        var track = _surface.TrackColour() ?? AvaloniaPalette.Get("Accent", ActualThemeVariant == ThemeVariant.Light);
         var fill = TransportGlowRules.Tint(track);   // the shared translucent tint of a colour
         d.PushClip(_surface.GridLeft, _surface.GridTop, _surface.ViewportWidth, _surface.ViewportHeight);
         foreach (var note in notes)
@@ -165,7 +165,7 @@ internal sealed class PianoRollPlayheadLayer : Control
             if (!_live[pitch] && !_sounding[pitch]) continue;
             var y = _surface.YOf(pitch);
             if (y + _surface.RowPx < _surface.GridTop || y > _surface.GridBottom) continue;
-            var colour = _live[pitch] ? AvaloniaPalette.Get("PianoRollKeyLive", light) : PlaybackColour;   // keys of the sounding notes use the Playback highlight
+            var colour = _live[pitch] ? AvaloniaPalette.Get("Accent", light) : PlaybackColour;   // keys of the sounding notes use the Playback highlight
             if (_surface.NoteNames) d.Rect(colour.WithOpacity(NameLit), null, 0, y, _surface.GridLeft, _surface.RowPx);   // the name shows through
             else d.Rect(colour, null, 0, y, PianoRollSurface.IsBlack(pitch) ? _surface.GridLeft * BlackShare : _surface.GridLeft, _surface.RowPx);
             lit++;

@@ -80,15 +80,15 @@ public class EntanglementSeamTests
         var window = new Window { Width = 1300, Height = 700, Content = view };
         window.Show();
         window.UpdateLayout();
-        Assert.Equal(1, meter.ListenerCount);
+        Assert.Equal(2, meter.ListenerCount);   // the armed rows and the track meters share the app tick
         var rows = Listeners(view.Timeline, nameof(TimelineView.RowsChanged));
         var scrolls = Listeners(view.Timeline, nameof(TimelineView.RowScrollChanged));
         Assert.True(rows > 0 && scrolls > 0);
 
         window.Close();
         Assert.Equal(0, meter.ListenerCount);
-        Assert.Equal(rows - 1, Listeners(view.Timeline, nameof(TimelineView.RowsChanged)));   // the armed layer is no longer called by the timeline
-        Assert.Equal(scrolls - 1, Listeners(view.Timeline, nameof(TimelineView.RowScrollChanged)));
+        Assert.Equal(rows - 2, Listeners(view.Timeline, nameof(TimelineView.RowsChanged)));   // the armed layer and the meter column are no longer called
+        Assert.Equal(scrolls - 2, Listeners(view.Timeline, nameof(TimelineView.RowScrollChanged)));
     }
 
     [AvaloniaFact]

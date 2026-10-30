@@ -10,6 +10,7 @@ using Avalonia.Layout;
 using Avalonia.Markup.Xaml.MarkupExtensions;
 using Avalonia.Media;
 using TabForge.Avalonia.Platform;
+using TabForge.Avalonia.Views.Dialogs;
 using TabForge.Plugins;
 using TabForge.Presenters;
 
@@ -22,10 +23,12 @@ namespace TabForge.Avalonia.Views.Fx;
 // Tests: TabForge.Avalonia.Tests.FxChainListTests.
 public static class FxChainRows
 {
-    public const double KindWidth = 32, SmallFontSize = 11, ContainerMinHeight = 24, ChevronSize = 20, ChevronGlyphSize = 10, TickGap = 6;
-    public const double FolderWidth = 16, FolderHeight = 14, FolderStroke = 1.3, ChevronStroke = 1.6;
-    public const double NewButtonStroke = 1.3, NewButtonIconWidth = 17, NewButtonIconHeight = 16, NewButtonSize = 24;
+    public const double KindWidth = DialogMetrics.FxRowKindWidth, SmallFontSize = DialogMetrics.FxRowSmallFont, ContainerMinHeight = DialogMetrics.FxRowMinHeight, ChevronSize = DialogMetrics.FxRowChevronSize, ChevronGlyphSize = DialogMetrics.FxRowChevronGlyph;
+    public const double FolderWidth = DialogMetrics.FxRowFolderWidth, FolderHeight = DialogMetrics.FxRowFolderHeight, FolderStroke = DialogMetrics.FxRowFolderStroke, ChevronStroke = DialogMetrics.FxRowChevronStroke;
+    public const double NewButtonStroke = DialogMetrics.FxRowNewStroke, NewButtonIconWidth = DialogMetrics.FxRowNewIconWidth, NewButtonIconHeight = DialogMetrics.FxRowNewIconHeight, NewButtonSize = DialogMetrics.FxRowNewSize;
+    private const double ActiveOnBadgeWidth = DialogMetrics.FxRowBadgeWidth, ActiveOnBadgeHeight = DialogMetrics.FxRowBadgeHeight, ActiveOnBadgeStroke = DialogMetrics.FxRowBadgeStroke, ActiveOnHintMaxWidth = DialogMetrics.FxRowHintMaxWidth;
     private const string FolderClosed = "M 1,3 L 1,12 L 15,12 L 15,5 L 8,5 L 6.5,3 Z", FolderOpen = "M 1,12 L 1,3 L 6.5,3 L 8,5 L 13,5 L 13,7 M 1,12 L 3.5,7 L 15.3,7 L 13,12 Z";
+    private const string ActiveOnIconData = "M 0.5,0.5 L 10.5,0.5 L 10.5,6.5 L 0.5,6.5 Z M 3.2,8.6 L 7.8,8.6 M 5.5,6.5 L 5.5,8.6";
     private const string NewContainerIconData = "M 9,12 L 1,12 L 1,3 L 6.5,3 L 8,5 L 15,5 L 15,7.5 M 13,9 L 13,14.5 M 10.25,11.75 L 15.75,11.75";
     private const string ChevronOpenData = "M 0,2 L 4.5,7 L 9,2", ChevronCollapsedData = "M 2,0 L 7,4.5 L 2,9";
     public const string RowHelp = "Double-click: float its window · drag: reorder, or onto a container · Ctrl or Shift+click: select several";
@@ -54,27 +57,56 @@ public static class FxChainRows
         }
     }
 
-    /// <summary>Fills the list from the rig's tree. The ticks report (plug-in or container, on); the chevron reports the container.</summary>
-    public static void Fill(FxChainList list, RigPreset rig, Action<PluginSlot, bool> setEnabled, Action<ChainContainer, bool> setContainerEnabled, Action<ChainContainer> toggleCollapsed)
+    /// <summary>Fills the list from the rig's tree. The ticks report (plug-in or container, on); the chevron reports the container.
+    /// A row whose Active on rule does not allow <paramref name="output"/> shows the badge greyed and the inactive hint.</summary>
+    public static void Fill(FxChainList list, RigPreset rig, Action<PluginSlot, bool> setEnabled, Action<ChainContainer, bool> setContainerEnabled, Action<ChainContainer> toggleCollapsed,
+        ActiveOnOutput output = default)
     {
+        var flat = 0;
         void Walk(List<ChainItem> items, int depth)
         {
             foreach (var item in items)
             {
                 if (item.Plugin is { } slot)
                 {
-                    list.Add(Plugin(slot, depth, setEnabled), slot, $"{slot.Name}\n{slot.Path}\n{RowHelp}", slot.Name, depth);
+                    var index = flat++;
+                    var inactive = ActiveOnRules.Inactive(rig, index, output);
+                    list.Add(Plugin(slot, depth, setEnabled, inactive), slot, $"{RuleTip(slot.ActiveOn, inactive)}{slot.Name}\n{slot.Path}\n{RowHelp}", slot.Name, depth);
                     continue;
                 }
                 var c = item.Container!;
                 var count = ChainTree.Plugins(item.Children).Count();
-                list.Add(Container(c, depth, count, setContainerEnabled, toggleCollapsed), c,
-                    $"Container “{c.Name}”: {Count(count)}{(c.Enabled ? "" : ", bypassed")}\n{ContainerHelp}", $"Container {c.Name}, {Count(count)}", depth, c.Name);
+                var containerInactive = ActiveOnRules.Inactive(c.ActiveOn, output);
+                list.Add(Container(c, depth, count, containerInactive, setContainerEnabled, toggleCollapsed), c,
+                    $"Container “{c.Name}”: {Count(count)}{(c.Enabled ? "" : ", bypassed")}\n{RuleTip(c.ActiveOn, containerInactive)}{ContainerHelp}", $"Container {c.Name}, {Count(count)}", depth, c.Name);
                 if (!c.Collapsed) Walk(item.Children, depth + 1);
             }
         }
         Walk(ChainTree.Tree(rig), 0);
     }
+
+    private static string RuleTip(ActiveOnRule? rule, bool inactive) =>
+        rule is null ? "" : ActiveOnPresenter.BadgeToolTip(rule, inactive) + "\n";
+
+    private static Path ActiveOnBadge(ActiveOnRule rule, bool inactive)
+    {
+        var badge = new Path
+        {
+            Data = Geometry.Parse(ActiveOnIconData), StrokeThickness = ActiveOnBadgeStroke, StrokeJoin = PenLineJoin.Round, Stretch = Stretch.None,
+            Width = ActiveOnBadgeWidth, Height = ActiveOnBadgeHeight, VerticalAlignment = VerticalAlignment.Center,
+            Name = "ActiveOnBadge",
+        }.WithMargin(DialogMetrics.FxRowBadgeMargin);
+        badge[!Shape.StrokeProperty] = new DynamicResourceExtension(inactive ? "MutedBrush" : "IconActiveBrush");
+        ToolTip.SetTip(badge, ActiveOnPresenter.BadgeToolTip(rule, inactive));
+        AutomationProperties.SetHelpText(badge, ActiveOnPresenter.Describe(rule));
+        return badge;
+    }
+
+    private static TextBlock InactiveHint() => new TextBlock()
+    {
+        Text = ActiveOnPresenter.InactiveHint, FontSize = SmallFontSize, TextTrimming = TextTrimming.CharacterEllipsis, MaxWidth = ActiveOnHintMaxWidth,
+        Name = "ActiveOnHint", [!TextBlock.ForegroundProperty] = new DynamicResourceExtension("MutedBrush"),
+    }.WithMargin(DialogMetrics.FxRowHintMargin);
 
     /// <summary>The square New container button under the list: a folder outline with a plus, in the stroke of the rows' folder glyph.</summary>
     public static Button NewContainerButton()
@@ -88,24 +120,23 @@ public static class FxChainRows
         return new Button
         {
             Content = icon, Name = "NewContainerButton", Width = NewButtonSize, Height = NewButtonSize,
-            Padding = new Thickness(0), Margin = new Thickness(0, 0, 4, 0),
-        };
+        }.WithPadding(DialogMetrics.FxRowNoPad).WithMargin(DialogMetrics.FxRowChevronGap);
     }
 
     private static CheckBox Tick(bool on, string what)
     {
-        var check = new CheckBox { IsChecked = on, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, TickGap, 0), MinWidth = 0 };
+        var check = new CheckBox { IsChecked = on, VerticalAlignment = VerticalAlignment.Center, MinWidth = 0 }.WithMargin(DialogMetrics.FxRowTickMargin);
         ToolTip.SetTip(check, on ? $"On (untick to bypass{what})" : $"Bypassed (tick to enable{what})");
         AutomationProperties.SetHelpText(check, on ? "On" : "Bypassed");
         return check;
     }
 
-    private static DockPanel Plugin(PluginSlot slot, int depth, Action<PluginSlot, bool> setEnabled)
+    private static DockPanel Plugin(PluginSlot slot, int depth, Action<PluginSlot, bool> setEnabled, bool inactive)
     {
         var check = Tick(slot.Enabled, "; with several rows selected: all of them");
         check.Name = "RowTick";
         check.IsCheckedChanged += (_, _) => { if (check.IsChecked != slot.Enabled) setEnabled(slot, check.IsChecked == true); };
-        var row = new DockPanel { Margin = new Thickness(depth * FxChainDropMath.Indent, 0, 0, 0) };
+        var row = new DockPanel().WithMargin(DialogMetrics.FxRowIndent(depth));
         DockPanel.SetDock(check, Dock.Left);
         row.Children.Add(check);
         var instrument = slot.Type == PluginSlotType.Instrument;
@@ -113,6 +144,12 @@ public static class FxChainRows
         kind[!TextBlock.ForegroundProperty] = new DynamicResourceExtension(instrument ? "SecondaryTextBrush" : "MutedBrush");
         DockPanel.SetDock(kind, Dock.Left);
         row.Children.Add(kind);
+        if (slot.ActiveOn is { } rule)
+        {
+            var badge = ActiveOnBadge(rule, inactive);
+            DockPanel.SetDock(badge, Dock.Right);
+            row.Children.Add(badge);
+        }
         var names = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
         names.Children.Add(new TextBlock
         {
@@ -125,20 +162,21 @@ public static class FxChainRows
             vendor[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("SecondaryTextBrush");
             names.Children.Add(vendor);
         }
+        if (inactive) names.Children.Add(InactiveHint());
         row.Children.Add(names);
         return row;
     }
 
-    private static DockPanel Container(ChainContainer c, int depth, int count, Action<ChainContainer, bool> setEnabled, Action<ChainContainer> toggleCollapsed)
+    private static DockPanel Container(ChainContainer c, int depth, int count, bool inactive, Action<ChainContainer, bool> setEnabled, Action<ChainContainer> toggleCollapsed)
     {
-        var row = new DockPanel { Margin = new Thickness(depth * FxChainDropMath.Indent, 0, 0, 0), MinHeight = ContainerMinHeight };
+        var row = new DockPanel { MinHeight = ContainerMinHeight }.WithMargin(DialogMetrics.FxRowIndent(depth));
         var arrow = new Path { Data = Geometry.Parse(c.Collapsed ? ChevronCollapsedData : ChevronOpenData), StrokeThickness = ChevronStroke, Width = ChevronGlyphSize, Height = ChevronGlyphSize, Stretch = Stretch.None, IsHitTestVisible = false };
         arrow[!Shape.StrokeProperty] = new DynamicResourceExtension("IconDefaultBrush");
         var chevron = new Button
         {
-            Content = arrow, Width = ChevronSize, Height = ChevronSize, Padding = new Thickness(0), Margin = new Thickness(0, 0, 4, 0), BorderThickness = new Thickness(0),
+            Content = arrow, Width = ChevronSize, Height = ChevronSize, BorderThickness = DialogMetrics.PresetNoOutline,
             Background = AvaloniaPalette.TransparentBrush, Name = "ContainerChevron",
-        };
+        }.WithPadding(DialogMetrics.FxRowNoPad).WithMargin(DialogMetrics.FxRowChevronGap);
         ToolTip.SetTip(chevron, c.Collapsed ? "Show the plug-ins of this container" : "Hide the plug-ins of this container");
         AutomationProperties.SetName(chevron, c.Collapsed ? "Expand container" : "Collapse container");
         chevron.Click += (_, _) => toggleCollapsed(c);
@@ -149,18 +187,31 @@ public static class FxChainRows
         check.IsCheckedChanged += (_, _) => { if (check.IsChecked != c.Enabled) setEnabled(c, check.IsChecked == true); };
         DockPanel.SetDock(check, Dock.Left);
         row.Children.Add(check);
-        var folder = new Path { Data = Geometry.Parse(FolderClosed), Tag = false, StrokeThickness = FolderStroke, StrokeJoin = PenLineJoin.Round, Width = FolderWidth, Height = FolderHeight, Margin = new Thickness(0, 0, 8, 0), VerticalAlignment = VerticalAlignment.Center, Name = "ContainerFolder" };
+        var folder = new Path { Data = Geometry.Parse(FolderClosed), Tag = false, StrokeThickness = FolderStroke, StrokeJoin = PenLineJoin.Round, Width = FolderWidth, Height = FolderHeight, VerticalAlignment = VerticalAlignment.Center, Name = "ContainerFolder" }.WithMargin(DialogMetrics.FxRowFolderGap);
         folder[!Shape.StrokeProperty] = new DynamicResourceExtension("IconActiveBrush");
         DockPanel.SetDock(folder, Dock.Left);
         row.Children.Add(folder);
         var number = new TextBlock
         {
-            Text = count.ToString(CultureInfo.CurrentCulture), FontSize = SmallFontSize, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 2, 0), Name = "ContainerCount",
+            Text = count.ToString(CultureInfo.CurrentCulture), FontSize = SmallFontSize, VerticalAlignment = VerticalAlignment.Center, Name = "ContainerCount",
             [!TextBlock.ForegroundProperty] = new DynamicResourceExtension("SecondaryTextBrush"),
-        };
+        }.WithMargin(DialogMetrics.FxRowCountMargin);
         ToolTip.SetTip(number, Count(count) + " inside");
         DockPanel.SetDock(number, Dock.Right);
         row.Children.Add(number);
+        if (c.ActiveOn is { } rule)
+        {
+            var badge = ActiveOnBadge(rule, inactive);
+            DockPanel.SetDock(badge, Dock.Right);
+            row.Children.Add(badge);
+        }
+        if (inactive)
+        {
+            var hint = InactiveHint();
+            hint.WithMargin(DialogMetrics.FxRowBadgeMargin);
+            DockPanel.SetDock(hint, Dock.Right);
+            row.Children.Add(hint);
+        }
         row.Children.Add(new TextBlock
         {
             Text = c.Name, FontWeight = FontWeight.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center,

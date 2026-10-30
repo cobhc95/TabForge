@@ -53,6 +53,9 @@ public sealed class MainWindowLifetime
     /// <summary>Runs first on every close attempt, before the save question: ends a recording in progress so its take is committed (undoable) and saved with the song.</summary>
     public Action? CommitBeforeClose { get; init; }
 
+    /// <summary>Runs once the window has actually closed after an approved close; cleared when the close is cancelled (a kept unsaved song).</summary>
+    public Action? AfterApprovedClose { get; set; }
+
     private void OnClosing(object? sender, WindowClosingEventArgs e)
     {
         if (_closeApproved) return;
@@ -75,7 +78,7 @@ public sealed class MainWindowLifetime
         _closing = true;
         try
         {
-            if (!await _tabs.MayCloseWindow()) return;
+            if (!await _tabs.MayCloseWindow()) { AfterApprovedClose = null; return; }   // kept an unsaved song: no after-close work
             if (FinishBeforeClose?.Invoke() is { } pending) await Bounded(pending);
             _closeApproved = true;
             _window.Close();
@@ -101,6 +104,9 @@ public sealed class MainWindowLifetime
 
     private void OnClosed(object? sender, EventArgs e)
     {
+        var after = AfterApprovedClose;
+        AfterApprovedClose = null;
+        after?.Invoke();
         _window.RemoveHandler(InputElement.KeyDownEvent, OnTunnelKeyDown);
         _window.KeyDown -= OnKeyDown;
         _window.Closing -= OnClosing;

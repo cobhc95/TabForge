@@ -16,6 +16,9 @@ public sealed class MixerOptions
     /// </summary>
     public bool PlayAllThroughEngine { get; set; } = true;
 
+    /// <summary>Settings > Audio &amp; VST: the Sound engine is "None": the built-in General MIDI synth stays silent (and the Windows MIDI path too), for users who play everything through their own instruments. VST instruments, audio tracks and external MIDI outputs are not affected.</summary>
+    public bool SoundNone { get; set; }
+
     /// <summary>Settings: tick a track's GM sound automatically when no VST instrument plays it, and untick it when one does again.</summary>
     public bool AutoGmSound { get; set; } = true;
 }

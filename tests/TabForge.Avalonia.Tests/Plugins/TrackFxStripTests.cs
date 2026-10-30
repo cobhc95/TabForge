@@ -191,9 +191,9 @@ public class TrackFxStripTests
         window.Show();
         var strip = window.Strip!;
         var now = DateTime.UtcNow;
-        for (var i = 0; i < 20; i++) strip.Tick(i, now);
+        for (var i = 0; i < 1000; i++) strip.Tick(i, now);   // warm up first: tiered compilation and first-use work settle here, not in the measured window
         var before = GC.GetAllocatedBytesForCurrentThread();
-        for (var i = 0; i < 1000; i++) strip.Tick(20 + i, now);
+        for (var i = 0; i < 1000; i++) strip.Tick(1000 + i, now);
         Assert.Equal(0, GC.GetAllocatedBytesForCurrentThread() - before);
         window.Close();
     }

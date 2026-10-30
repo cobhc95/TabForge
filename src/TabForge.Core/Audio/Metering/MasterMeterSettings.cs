@@ -4,7 +4,7 @@ namespace TabForge.Audio.Metering;
 // Does not own: loading and saving (AppSettingsStore), the Preferences rows (MasterMeterFeatureSettings), the meter itself (MasterMeterModel, Views/Meters).
 // Tests: TabForge.Avalonia.Tests.MasterMeterTests.
 /// <summary>The master level meter's saved choices. App-wide: never part of a song.</summary>
-public sealed class MasterMeterSettings
+public class MasterMeterSettings
 {
     public const string Peak = "Peak", Rms = "RMS", Loudness = "Loudness";
     public static IReadOnlyList<string> Modes { get; } = Array.AsReadOnly(new[] { Peak, Rms, Loudness });
@@ -37,7 +37,7 @@ public sealed class MasterMeterSettings
     public static int ParseHold(string? text) => HoldChoices.FirstOrDefault(h => HoldLabel(h) == text, 1);
 
     /// <summary>Brings loaded values back to valid ones.</summary>
-    public void Normalize()
+    public virtual void Normalize()
     {
         Mode = ParseMode(Mode);
         if (!HoldChoices.Contains(HoldSeconds)) HoldSeconds = 1;

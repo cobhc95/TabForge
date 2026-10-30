@@ -11,14 +11,14 @@ using TabForge.Presenters;
 
 namespace TabForge.Avalonia.Views;
 
-// Owns: the info line under the toolbar: how many notes are selected and their Start, End, Length, Pitch, Velocity and Muted, as numbers you can
-//       type. One note shows its own values; several show a range ("C4 … G4"), and a typed start, pitch or velocity shifts them all by the same
+// Owns: the toolbar's second row: how many notes are selected and their Start, End, Length, Pitch, Velocity and Muted, as numbers you can
+//       type, with Audition, Follow playback, zoom, Ghosts and the track chip at the right end. One note shows its own values; several show a range ("C4 … G4"), and a typed start, pitch or velocity shifts them all by the same
 //       amount while a typed length or mute sets them all. Each committed field (Enter or leaving it) is one undo step.
 // Does not own: the text formats (PianoRollPositionText) or the edits (PianoRollEdits through PianoRollPresenter).
 // Tests: TabForge.Avalonia.Tests.PianoRollViewTests.
 public sealed partial class PianoRollView
 {
-    private const double FieldSize = 86, InfoGap = 10;
+    private const double FieldSize = 86;
 
     private readonly TextBlock _count = new() { VerticalAlignment = VerticalAlignment.Center };
     private readonly TextBox _start = Field("Start");
@@ -35,20 +35,24 @@ public sealed partial class PianoRollView
 
     private Control BuildInfoLine()
     {
-        var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = InfoGap, VerticalAlignment = VerticalAlignment.Center };
-        row.Children.Add(_count);
+        // Row 2: the selected notes' values on the left (wrapping as whole fields), Audition, Follow, zoom, Ghosts and the track chip at the right end.
+        var middle = PianoRollToolbarLayout.Flow();
+        middle.Children.Add(_count);
         foreach (var (label, box) in new[] { ("Start", _start), ("End", _end), ("Length", _length), ("Pitch", _pitch), ("Velocity", _velocity), ("Channel", _channel) })
         {
             var caption = new TextBlock { Text = label, VerticalAlignment = VerticalAlignment.Center };
             caption[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted");
-            var field = ReferenceEquals(box, _channel) ? _channelRow : new StackPanel { Orientation = Orientation.Horizontal };
-            field.Spacing = GroupPad;
+            PianoRollToolbarLayout.StyleField(box, FieldSize);
+            var field = ReferenceEquals(box, _channel) ? _channelRow : new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+            field.Spacing = PianoRollToolbarLayout.GroupGap;
+            field.VerticalAlignment = VerticalAlignment.Center;
             field.Children.Add(caption);
             field.Children.Add(box);
-            row.Children.Add(field);
+            middle.Children.Add(field);
             box.KeyDown += (_, e) => { if (e.Key == Key.Enter) { Apply(box); e.Handled = true; } };
             box.LostFocus += (_, _) => Apply(box);
         }
+        PianoRollToolbarLayout.StyleCheck(_muted);
         _muted.IsCheckedChanged += (_, _) =>
         {
             if (_showing || Presenter.Selected.Count == 0) return;
@@ -56,16 +60,15 @@ public sealed partial class PianoRollView
             if (Presenter.Selected.All(i => Presenter.Notes[i].Muted == want)) return;
             Surface.Run(Presenter.CommitAsync(PianoRollEdits.SetMuted(Presenter.Notes, Presenter.Selected.ToList(), want), PianoRollEditKind.Expression, "Mute notes"));
         };
-        row.Children.Add(_muted);
-        var hint = new TextBlock { Text = "Typing a value with several notes selected shifts them all by the same amount.", VerticalAlignment = VerticalAlignment.Center };
-        hint[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextMuted");
-        row.Children.Add(hint);
-        return new Border { Child = row }.WithPadding(GroupPad, GroupGap);
+        middle.Children.Add(_muted);
+        var row = PianoRollToolbarLayout.FillRow(PianoRollToolbarLayout.Row2Name, middle, BuildRowTwoRight());
+        return new Border { Child = row }.WithPadding(PianoRollToolbarLayout.GroupGap, PianoRollToolbarLayout.InnerGap).WithMargin(0, PianoRollToolbarLayout.RowGap, 0, 0);
     }
 
     /// <summary>Shows the selection's values (empty fields with none selected).</summary>
     internal void RefreshInfo()
     {
+        Surface.SyncKeySelection();   // the key strip's lit and preview states follow the selection live
         if (_stale) { Dispatch(); if (!_stale) return; }
         _showing = true;
         try

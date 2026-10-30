@@ -10,4 +10,3 @@ win-Preferences-dark-1600x900
 win-FxChain-example-dark-native
 paste-special-bars-dark-native
 delete-bars-clear-light-native
-win-ScaleFinder-dark-native

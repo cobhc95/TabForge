@@ -1,4 +1,4 @@
-namespace TabForge.AudioEngine.Midi.Processors;
+namespace TabForge.Core.Midi.Processors;
 
 // Owns: the base of the stateless-looking note processors (held-note table, paired note-offs, dropped-note pairing).
 

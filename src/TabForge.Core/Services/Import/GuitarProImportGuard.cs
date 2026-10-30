@@ -78,6 +78,15 @@ public sealed class ImportContext
     public string? EmbeddedRejection { get; internal set; }
     /// <summary>The open notice when the last import found far more impossible facts than a valid file holds (see <see cref="ImportPlausibility"/>); otherwise null. The song is opened unchanged.</summary>
     public string? DamageNotice { get; internal set; }
+    /// <summary>Keyswitch notes the last MIDI import kept out of the score (articulation switches in the low keyswitch range).</summary>
+    public int KeyswitchNotesMoved { get; internal set; }
+    /// <summary>The notice that says how many keyswitch notes were left out, or null.</summary>
+    public string? KeyswitchNotice { get; internal set; }
+
+    /// <summary>How a MIDI file's tracks are made: tab and notation tracks (default) or MIDI tracks. Set by the caller before the import.</summary>
+    public MidiImportMode MidiMode { get; set; } = MidiImportMode.Tab;
+    /// <summary>The report line of the last MIDI import (tracks, sections found, data a tab track cannot keep), or null.</summary>
+    public string? MidiNotice { get; internal set; }
 
     /// <summary>True while a Guitar Pro 3-5 file is read (alphaTab names its tremolo speeds one step off there).</summary>
     internal bool Gp3To5 { get; set; }
@@ -97,6 +106,8 @@ public sealed class ImportContext
     {
         if (EmbeddedRejection is { } rejected) notices.Add(rejected);
         if (DamageNotice is { } damaged) notices.Add(damaged);
+        if (KeyswitchNotice is { } keyswitches) notices.Add(keyswitches);
+        if (MidiNotice is { } midi) notices.Add(midi);
     }
 }
 

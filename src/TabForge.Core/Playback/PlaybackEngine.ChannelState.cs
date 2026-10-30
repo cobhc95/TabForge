@@ -13,7 +13,7 @@ public sealed partial class PlaybackEngine
 {
     /// <summary>Sends the song's current program, volume, pan and sends for <paramref name="track"/> (every track when null) now and keeps them in the channel setup a pause, seek or loop re-sends. Nothing while stopped: a start compiles the song as it is.</summary>
     public void PushLiveChannelState(SongProject project, int? track = null) =>
-        PushChannelState(project, (_, t) => track is null || (track >= 0 && track < project.Tracks.Count && t == project.Tracks[track.Value]), send: true);
+        PushChannelState(project, (_, id) => track is null || (track >= 0 && track < project.Tracks.Count && id == project.Tracks[track.Value].Id), send: true);
 
     /// <summary>Brings the channel setup of a paused song in line with the live song without sending, so the resume plays the values as they are now.</summary>
     private void RefreshChannelSetupFromLive()
@@ -21,7 +21,7 @@ public sealed partial class PlaybackEngine
         if (LiveProject is { } project) PushChannelState(project, (_, _) => true, send: false);
     }
 
-    private void PushChannelState(SongProject project, Func<ScoreEvent, TrackModel, bool> affects, bool send)
+    private void PushChannelState(SongProject project, Func<ScoreEvent, Guid, bool> affects, bool send)
     {
         var song = Volatile.Read(ref _song);   // one read: the timeline and the track ids it is numbered by belong together
         var timeline = song?.Timeline;
@@ -30,7 +30,7 @@ public sealed partial class PlaybackEngine
         var latest = LatestChannelState(timeline, timeline.PlayFromMs, Volatile.Read(ref _currentStreamMs), -1);
         foreach (var e in timeline.ChannelSetup)
         {
-            if (e.TrackIndex < 0 || LiveTrackOf(project, ids, e.TrackIndex) is not { } liveTrack || !affects(e, liveTrack)) continue;   // the event's own track, found by id: a list move must not hand its channel another track's sound
+            if (e.TrackIndex < 0 || LiveTrackOf(project, ids, e.TrackIndex) is not { } liveTrack || !affects(e, liveTrack.Id)) continue;   // the event's own track, found by id: a list move must not hand its channel another track's sound
             if (!TryLiveValue(project, liveTrack, e, out var value)) continue;
             lock (_outputGate)
             {

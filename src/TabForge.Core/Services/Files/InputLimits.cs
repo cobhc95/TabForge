@@ -37,6 +37,9 @@ public static class InputLimits
     public const int MaxMarkers = 10_000;
     /// <summary>Tempo, time-signature or key-signature events of one MIDI file, each kind counted on its own.</summary>
     public const int MaxMidiMetaEvents = 8_192;
+    /// <summary>TF1 technique markers and controller points one MIDI file may carry (each counted per track).</summary>
+    public const int MaxMidiMarkers = 200_000;
+    public const int MaxMidiControllerPoints = 200_000;
     public const int MaxStringsPerTrack = 16;
     /// <summary>Highest fret number a note may carry: its own limit (127), not tied to the MIDI value range.</summary>
     public const int MaxFrets = 127;

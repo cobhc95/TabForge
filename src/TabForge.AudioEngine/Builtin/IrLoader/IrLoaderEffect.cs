@@ -11,31 +11,18 @@ namespace TabForge.AudioEngine.Builtin.IrLoader;
 /// <summary>Convolution with an impulse response WAV: one file for both sides, or separate Left / Right files. Zero latency.</summary>
 public sealed partial class IrLoaderEffect : BuiltinEffect
 {
-    public const uint MixId = 1, GainId = 2, AutoLevelId = 3, TrimId = 4, SeparateId = 5, BypassId = 6;
-    public const uint LatencyId = 100, CpuId = 101, LengthId = 102, AutoGainId = 103, StatusId = 104, FileId = 105, LeftFileId = 106, RightFileId = 107;
-    public const string FileKey = "file", LeftKey = "left", RightKey = "right";
+    public const uint MixId = IrLoaderParameters.MixId, GainId = IrLoaderParameters.GainId, AutoLevelId = IrLoaderParameters.AutoLevelId,
+        TrimId = IrLoaderParameters.TrimId, SeparateId = IrLoaderParameters.SeparateId, BypassId = IrLoaderParameters.BypassId;
+    public const uint LatencyId = IrLoaderParameters.LatencyId, CpuId = IrLoaderParameters.CpuId, LengthId = IrLoaderParameters.LengthId,
+        AutoGainId = IrLoaderParameters.AutoGainId, StatusId = IrLoaderParameters.StatusId, FileId = IrLoaderParameters.FileId,
+        LeftFileId = IrLoaderParameters.LeftFileId, RightFileId = IrLoaderParameters.RightFileId;
+    public const string FileKey = IrLoaderParameters.FileKey, LeftKey = IrLoaderParameters.LeftKey, RightKey = IrLoaderParameters.RightKey;
     /// <summary>The value of <see cref="StatusId"/>: no file chosen, the IR is loaded, or the file is missing / unreadable (its text says which).</summary>
-    public const int StatusNone = 0, StatusLoaded = 1, StatusProblem = 2;
+    public const int StatusNone = IrLoaderParameters.StatusNone, StatusLoaded = IrLoaderParameters.StatusLoaded, StatusProblem = IrLoaderParameters.StatusProblem;
     private const int Mix = 0, Gain = 1, AutoLevel = 2, Trim = 3, Separate = 4, Bypass = 5, Latency = 6, Cpu = 7, Length = 8, AutoGain = 9, Status = 10;
     private static readonly TimeSpan OfflineWait = TimeSpan.FromSeconds(10);
 
-    public static IReadOnlyList<BuiltinParameter> Descriptors { get; } =
-    [
-        new(MixId, "mix", "Mix", 0, 100, 100, Unit: "%"),
-        new(GainId, "gain", "Gain", -24, 24, 0, Unit: "dB"),
-        BuiltinParameter.Switch(AutoLevelId, "autoLevel", "Auto level", true),
-        BuiltinParameter.Switch(TrimId, "trim", "Trim silence", false),
-        BuiltinParameter.Switch(SeparateId, "separate", "Separate Left / Right files", false),
-        BuiltinParameter.Switch(BypassId, "bypass", "A/B: bypass the IR", false),
-        BuiltinParameter.Readout(LatencyId, "latency", "Latency", 1_000_000, "samples"),
-        BuiltinParameter.Readout(CpuId, "cpu", "CPU", 100, "%"),
-        BuiltinParameter.Readout(LengthId, "length", "IR length", 1_000_000, "ms"),
-        new(AutoGainId, "autoGain", "Auto level gain", -200, 200, 0, ReadOnly: true, Unit: "dB"),
-        new(StatusId, "status", "IR", 0, 2, 0, Stepped: true, ReadOnly: true),
-        new(FileId, "fileShown", "IR file", 0, 1, 0, Stepped: true, ReadOnly: true),
-        new(LeftFileId, "leftShown", "Left IR file", 0, 1, 0, Stepped: true, ReadOnly: true),
-        new(RightFileId, "rightShown", "Right IR file", 0, 1, 0, Stepped: true, ReadOnly: true),
-    ];
+    public static IReadOnlyList<BuiltinParameter> Descriptors => IrLoaderParameters.Descriptors;
 
     private readonly object _cacheGate = new();
     private readonly Dictionary<string, (DateTime Written, IrAudio Audio)> _cache = new(StringComparer.OrdinalIgnoreCase);

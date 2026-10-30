@@ -24,6 +24,8 @@ public enum PianoRollTool
     Glue,
     /// <summary>Retired 26 Oct (tombstone): no button or key picks it any more; Alt-drag a note or drag its velocity bar instead.</summary>
     Velocity,
+    /// <summary>The Select tool (V; the arrow): selects, moves and resizes notes and writes nothing. <see cref="Select"/> stays the Write tool (the pencil); the old values keep their numbers.</summary>
+    Pointer,
 }
 
 /// <summary>What an edit changes: <see cref="Notes"/> (pitch, timing, length, add, delete: rewrites a tab track's tab, so it asks once per visit) or

@@ -8,7 +8,7 @@ namespace TabForge.Avalonia.Views;
 
 // Owns: the piano roll's keys while it has focus: 1-5 pick a tool (Edit, Erase, Split, Mute, Glue); Escape cancels a drag; Ctrl+L legato; in step input Right / Left move the step and Backspace takes it back; Left/Right move the selection by the snap step, Up/Down by a semitone and
 //       Shift+Up/Down by an octave; Shift+Left/Right shorten or lengthen by the snap step; Alt+Left/Right nudge by a 64th note; Delete; Ctrl+C, X,
-//       V (at the playhead), D and A; Q quantizes, M mutes, F zooms to fit; Esc clears the note selection (a second Esc goes on to the window, which
+//       V (at the playhead), D, A and I (invert); Q quantizes, M mutes, F zooms to fit, T transposes the selection (the By dialog); Esc clears the note selection (a second Esc goes on to the window, which
 //       clears the loop). A key the piano roll does not use goes on to the window (Undo, Redo, Space...). Also the right-press that a menu acts on.
 // Does not own: the edits (PianoRollPresenter) or the quantize options and the menu (PianoRollView).
 // Tests: TabForge.Avalonia.Tests.PianoRollViewTests.
@@ -18,6 +18,12 @@ public sealed partial class PianoRollSurface
 
     /// <summary>Quantize with the view's options (Q and the menu); set by PianoRollView.</summary>
     internal Action? QuantizeRequested { get; set; }
+
+    /// <summary>Transpose with the view's dialog (T with notes selected); set by PianoRollView.</summary>
+    internal Action? TransposeRequested { get; set; }
+
+    /// <summary>Turn snap on or off (S); set by PianoRollView to the magnet button's handler.</summary>
+    internal Action? SnapToggleRequested { get; set; }
 
     /// <summary>The note a right-click opened the menu on (-1 for empty grid).</summary>
     internal int MenuNote { get; private set; } = -1;
@@ -61,6 +67,22 @@ public sealed partial class PianoRollSurface
         e.Handled = HandleKey(e.Key, e.KeyModifiers);
     }
 
+    /// <summary>The live hotkey bindings (the Shortcuts page); defaults when the host gives none.</summary>
+    internal Func<TabForge.Services.HotkeySettings>? Hotkeys { get; set; }
+
+    /// <summary>True when the key press is the command's gesture (Hotkey 1 or 2) in the current bindings.</summary>
+    internal bool IsBound(string commandId, Key key, KeyModifiers modifiers)
+    {
+        if (MainWindowKeyboard.GestureOf(key, modifiers) is not { } pressed) return false;
+        var settings = Hotkeys?.Invoke() ?? new TabForge.Services.HotkeySettings();
+        foreach (var slot in new[] { 1, 2 })
+        {
+            var bound = TabForge.Services.HotkeyCatalog.GestureFor(settings, commandId, slot);
+            if (bound.Length > 0 && string.Equals(TabForge.Services.HotkeyCatalog.Canonical(bound), pressed, StringComparison.OrdinalIgnoreCase)) return true;
+        }
+        return false;
+    }
+
     /// <summary>Escape during a drag: the gesture is dropped with nothing applied (the button's release then only lets go).</summary>
     internal void CancelGesture()
     {
@@ -73,9 +95,14 @@ public sealed partial class PianoRollSurface
     /// <summary>Runs the piano roll's meaning of a key; false when it has none (the key goes on to the window).</summary>
     internal bool HandleKey(Key key, KeyModifiers modifiers)
     {
+        FlushLaneWheel();   // a key ends a Shift+wheel burst (undo and the rest see the committed values)
         var ctrl = modifiers.HasPrimary();
         var shift = modifiers.HasFlag(KeyModifiers.Shift);
         var alt = modifiers.HasFlag(KeyModifiers.Alt);
+        if (IsBound("PianoRoll.Snap", key, modifiers) && SnapToggleRequested is { } toggleSnap) { toggleSnap(); return true; }   // the magnet button's action (focus-gated, rebindable)
+        if (IsBound("PianoRoll.SelectTool", key, modifiers)) { Presenter.Tool = PianoRollTool.Pointer; ToolChanged?.Invoke(); InvalidateVisual(); return true; }
+        if (IsBound("PianoRoll.Split", key, modifiers)) { SplitSelection(); return true; }
+        if (IsBound("PianoRoll.Glue", key, modifiers)) { GlueSelection(); return true; }
         if (!ctrl && !alt && ToolOf(key) is { } tool) { Presenter.Tool = tool; ToolChanged?.Invoke(); InvalidateVisual(); return true; }
         if (StepInput && !ctrl && !alt && StepKey(key)) return true;
         var first = Presenter.Selected.Count == 0 ? 0 : Presenter.Selected.Min(i => Presenter.Notes[i].Start);
@@ -106,6 +133,9 @@ public sealed partial class PianoRollSurface
             case Key.M when !ctrl && !alt && Presenter.Selected.Count > 0:
                 Run(Presenter.ToggleMuteAsync());
                 return true;
+            case Key.T when !ctrl && !alt && Presenter.Selected.Count > 0:   // the Transpose prompt (focus-gated, as Q, M and F)
+                TransposeRequested?.Invoke();
+                return true;
             case Key.F when !ctrl && !alt:
                 ZoomToFit();
                 return true;
@@ -118,6 +148,7 @@ public sealed partial class PianoRollSurface
             case Key.V when Presenter.Clipboard.Count > 0: Run(Presenter.PasteAsync(PlayheadBeat() ?? 0)); return true;
             case Key.D when Presenter.Selected.Count > 0: Run(Presenter.DuplicateAsync()); return true;
             case Key.A: Presenter.SelectAll(); SelectionChanged?.Invoke(); InvalidateVisual(); return true;
+            case Key.I: Presenter.InvertSelection(); SelectionChanged?.Invoke(); InvalidateVisual(); return true;
             case Key.L when Presenter.Notes.Count > 0: Run(Presenter.LegatoAsync()); return true;
         }
         return false;

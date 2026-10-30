@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -8,10 +9,15 @@ using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Headless.XUnit;
+using TabForge.Audio;
 using TabForge.AudioEngine.Plugins;
 using TabForge.AudioEngine.Synth;
 using TabForge.Avalonia.Platform;
+using TabForge.Avalonia.Transport;
+using TabForge.Models;
 using TabForge.Platform.Theme;
+using TabForge.Playback;
+using TabForge.Plugins;
 using TabForge.Services;
 using Xunit;
 
@@ -43,8 +49,8 @@ public sealed class SoundEngineTests
         Assert.Equal(OperatingSystem.IsWindows() ? FontProvider.WindowsSource : FontProvider.BundledSource, FontProvider.DefaultSource);
         var rows = SettingsCatalog.Build(new AppSettings());
         Assert.Contains(rows, r => r.Key == "vst.soundengine");
-        Assert.Contains(rows, r => r.Key == "vst.soundfont.download");
         Assert.Contains(rows, r => r.Key == "appearance.fontsource");
+        Assert.Contains(rows, r => r.Key == "vst.soundengine");
     }
 
     [Fact]
@@ -55,6 +61,128 @@ public sealed class SoundEngineTests
         Assert.True(SoundFontStore.ChosenButMissing(plugins));
         Assert.Equal("", SoundFontStore.ActivePath(plugins));
         Assert.Equal("", SoundFontStore.ActivePath(new PluginSettings { SoundEngine = SoundEngines.WindowsGm }));
+    }
+
+    [Fact]
+    public void NoneIsOfferedAndDefaultsAreUnchanged()
+    {
+        Assert.Contains(SoundEngines.WindowsGm, SoundEngines.All);
+        Assert.Contains(SoundEngines.SoundFont, SoundEngines.All);
+        Assert.Contains(SoundEngines.None, SoundEngines.All);
+        Assert.Equal(OperatingSystem.IsWindows() ? SoundEngines.WindowsGm : SoundEngines.SoundFont, SoundEngines.Default);
+        Assert.Equal(SoundEngines.None, SoundEngines.Resolve(SoundEngines.None, windowsHost: true));
+        Assert.Equal(SoundEngines.None, SoundEngines.Resolve(SoundEngines.None, windowsHost: false));
+        Assert.Equal(SoundEngines.WindowsGm, SoundEngines.Resolve("", windowsHost: true));
+        Assert.Equal(SoundEngines.SoundFont, SoundEngines.Resolve("", windowsHost: false));
+        Assert.Equal(SoundEngines.WindowsGm, SoundEngines.Resolve("bogus", windowsHost: true));
+        Assert.Equal(SoundEngines.SoundFont, SoundEngines.Resolve("bogus", windowsHost: false));
+        Assert.Equal(SoundEngines.SoundFont, SoundEngines.Resolve(SoundEngines.WindowsGm, windowsHost: false));
+    }
+
+    [Fact]
+    public void NoneRoundTripsAndWarnsAboutNothing()
+    {
+        var plugins = new PluginSettings { SoundEngine = SoundEngines.None };
+        Assert.Equal(SoundEngines.None, SoundEngines.Resolve(plugins.SoundEngine));
+        Assert.Equal(SoundEngines.None, SoundFontStore.ActivePath(plugins));
+        Assert.False(SoundFontStore.ChosenButMissing(plugins));
+        Assert.False(SoundFontStore.ChosenButMissing(plugins, windowsHost: false));
+        Assert.Contains(SettingsCatalog.Build(new AppSettings()), r => r.Key == "vst.playall" && r.DependsOn == "vst.soundengine");
+    }
+
+    [Fact]
+    public void NoneKeepsOnlyInstrumentTracksInTheEngine()
+    {
+        var mixer = new MixerOptions();
+        AvaloniaEngineRouting.ApplyMixerOptions(new PluginSettings { SoundEngine = SoundEngines.None, PlayAllThroughEngine = true }, mixer);
+        Assert.True(mixer.SoundNone);
+        var plain = new TrackModel { Name = "Piano" };
+        Assert.False(MixerGroups.MidiInEngine(plain, mixer));
+        Assert.False(MixerGroups.GmSounds(plain, mixer));
+        var vst = new TrackModel { Name = "VST", SoundSource = SoundSources.Plugins };
+        vst.Rig.Plugins.Add(new PluginSlot { Name = "Synth", Type = PluginSlotType.Instrument });
+        Assert.True(MixerGroups.MidiInEngine(vst, mixer));
+        var effects = new TrackModel { Name = "FX", SoundSource = SoundSources.Plugins };
+        effects.Rig.Plugins.Add(new PluginSlot { Name = "Echo" });
+        Assert.True(MixerGroups.MidiInEngine(effects, mixer));   // stays loaded, silent
+        Assert.False(MixerGroups.GmSounds(effects, mixer));
+        Assert.False(MixerGroups.GmSounds(vst, mixer));
+        var normal = new MixerOptions();
+        Assert.True(MixerGroups.GmSounds(plain, normal));
+    }
+
+    [Fact]
+    public void NoneDropsWindowsMidiButKeepsTheClickAndExternalOutputs()
+    {
+        using var client = new AudioEngineClient(new PluginTrust());
+        client.AttachFakeForTest();
+        client.Mixer.SoundNone = true;
+        var heard = new List<(int Device, int Status, int D1, int D2)>();
+        var resets = 0;
+        var routing = new RoutedMidiOutput(new CaptureOutput((d, s, a, b) => heard.Add((d, s, a, b)), () => resets++), client);
+        routing.SetRoutes(Enumerable.Repeat(-1, 16).ToArray());
+        routing.Send(-1, 0x90, 60, 100);          // a track's note for the Windows synth: silent
+        routing.Send(3, 0x90, 60, 100);           // an external MIDI output: untouched
+        routing.SendMetronome(-1, 0x99, 38, 100); // the click fallback: still sounds
+        Assert.DoesNotContain(heard, m => m.Device == -1 && m.Status == 0x90);
+        Assert.Contains(heard, m => m.Device == 3 && m.Status == 0x90);
+        Assert.Contains(heard, m => m.Device == -1 && m.Status == 0x99);
+        routing.ResetAll();                        // all-notes-off still reaches both outputs
+        Assert.True(resets > 0);
+    }
+
+    [Fact]
+    public void NoneWithPlayAllStillSendsEngineTracksToTheirSlots()
+    {
+        using var client = new AudioEngineClient(new PluginTrust());
+        client.AttachFakeForTest();
+        client.Mixer.SoundNone = true;
+        var engineHeard = new List<TabForge.Audio.Contracts.TimedMidi>();
+        client.WrittenForTest = m => engineHeard.Add(m);
+        var routing = new RoutedMidiOutput(new CaptureOutput((_, _, _, _) => { }, () => { }), client);
+        var routes = Enumerable.Repeat(-1, 16).ToArray();
+        routes[0] = 5;
+        routing.SetRoutes(routes);
+        routing.Send(-1, 0x90, 60, 100);   // channel 0 rides an engine slot: a VST instrument plays normally
+        Assert.Contains(engineHeard, m => m.Slot == 5);
+    }
+
+    [Fact]
+    public void NoneHoldsNoSoundBank()
+    {
+        var bank = new GmBank(windowsHost: true, bundledPath: Path.Combine(Path.GetTempPath(), "tabforge-no-such-bank", "GeneralUser-GS.sf2"));
+        Assert.True(bank.Select(SoundEngines.None, out var error), error);
+        Assert.True(bank.Current.Silent);
+        Assert.Equal(SoundEngines.None, SoundFontStore.ActivePath(new PluginSettings { SoundEngine = SoundEngines.None }));
+        Assert.True(bank.Select("", out _));   // switching back restores Windows GM
+        Assert.False(bank.Current.Silent);
+    }
+
+    [Fact]
+    public void PlayAllStaysInMoreOptionsAndIsDisabledWithANoteInNone()
+    {
+        var saved = new AppSettings();
+        saved.Plugins.SoundEngine = SoundEngines.None;
+        var rows = SettingsCatalog.Build(saved).ToDictionary(r => r.Key);
+        var playall = rows["vst.playall"];
+        Assert.False(TabForge.Presenters.PreferencesPagePresenter.IsEnabled(playall, k => rows.GetValueOrDefault(k)));
+        Assert.Equal("Not used while Sound engine is None.", playall.DisabledNote);
+        Assert.True(saved.Plugins.PlayAllThroughEngine);   // choosing None never overwrites the stored choice
+        Assert.True(SettingsCatalog.PlaceOf("vst.playall") is { More: true });
+        Assert.Equal(3, SettingsCatalog.Build(saved).Count(r => r.Group == "Playback engine" && r.More));
+        saved.Plugins.SoundEngine = SoundEngines.WindowsGm;
+        rows = SettingsCatalog.Build(saved).ToDictionary(r => r.Key);
+        Assert.True(TabForge.Presenters.PreferencesPagePresenter.IsEnabled(rows["vst.playall"], k => rows.GetValueOrDefault(k)));
+    }
+
+    /// <summary>Every message the output gets and every reset of it, for the routing tests.</summary>
+    private sealed class CaptureOutput(Action<int, int, int, int> heard, Action reset) : IMidiOutput
+    {
+        public IReadOnlyList<MidiOutputDeviceInfo> Devices { get; } = Array.Empty<MidiOutputDeviceInfo>();
+        public void Send(int deviceId, int status, int data1, int data2) => heard(deviceId, status, data1, data2);
+        public void ResetAll() => reset();
+        public void Close() { }
+        public void Dispose() { }
     }
 
     [Fact]

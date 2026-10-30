@@ -33,11 +33,15 @@ internal interface INativeWindowHandles
 
     /// <summary>The handle of a native child window in the form Avalonia's native control host takes.</summary>
     global::Avalonia.Platform.IPlatformHandle Wrap(IntPtr handle);
+
+    /// <summary>Forces a full repaint of the window and its children now; a no-op off Windows or for a zero handle.</summary>
+    void Redraw(IntPtr handle);
 }
 
-/// <summary>The non-Windows stub: native plug-in windows are not hosted there yet, so there is no handle.</summary>
+/// <summary>The non-Windows stub: native plug-in windows are not hosted there yet, so there is no handle and no native repaint.</summary>
 internal sealed class NullNativeWindowHandles : INativeWindowHandles
 {
     public IntPtr Of(TopLevel? window) => IntPtr.Zero;
     public global::Avalonia.Platform.IPlatformHandle Wrap(IntPtr handle) => throw new PlatformNotSupportedException("Native child windows are not hosted on this platform yet.");
+    public void Redraw(IntPtr handle) { }
 }

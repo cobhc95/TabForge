@@ -22,10 +22,10 @@ public sealed class StatusBarScaleTests
 {
     private static string ScaleText(StatusBarTransportTests.Rig rig) => rig.Text("StatusScaleText");
 
-    private static T Find<T>(ScaleReadoutPopup popup, string name) where T : Control =>
+    private static T Find<T>(ScalePanel popup, string name) where T : Control =>
         popup.Frame.Rows.GetLogicalDescendants().OfType<T>().Single(c => c.Name == name);
 
-    private static Window Open(ScaleReadoutPopup popup)
+    private static Window Open(ScalePanel popup)
     {
         var window = new Window { Width = 900, Height = 600, Content = new Border() };
         window.Show();
@@ -53,21 +53,21 @@ public sealed class StatusBarScaleTests
     {
         using var rig = new StatusBarTransportTests.Rig(song: SectionScaleDetectorTests.TwoSections());
         var scale = rig.Status.Scale;
-        var popup = new ScaleReadoutPopup(scale);
+        var popup = new ScalePanel(scale.BarHost());
         var window = Open(popup);
         var cards = popup.Frame.Rows.GetLogicalDescendants().OfType<RadioCard>().ToList();
         Assert.Equal(new[] { "ScaleCandidate0Card", "ScaleCandidate1Card", "ScaleCandidate2Card", "ScalePickAnotherCard" }, cards.Select(c => c.Name));
         Assert.True(cards[0].IsSelected);
         Assert.Contains(popup.Frame.Rows.GetLogicalDescendants().OfType<TextBlock>(), t => t.Text == "Verse  ·  Lead  ·  bars 1–4");
-        Assert.False(Find<Button>(popup, "ScaleAuto").IsEnabled);
+        Assert.False(Find<Button>(popup, "ScaleBackToAuto").IsVisible);
         cards[1].Select();   // the second candidate
         Assert.False(scale.Current.IsAuto);
         Assert.EndsWith("▾", ScaleText(rig));
-        Assert.True(Find<Button>(popup, "ScaleAuto").IsEnabled);
+        Assert.True(Find<Button>(popup, "ScaleBackToAuto").IsVisible);
         var picked = ScaleText(rig);
         rig.Status.Refresh();
         Assert.Equal(picked, ScaleText(rig));   // a refresh keeps the pick
-        Find<Button>(popup, "ScaleAuto").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        Find<Button>(popup, "ScaleBackToAuto").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         Assert.Equal("C major ▾ auto", ScaleText(rig));
         popup.Close();
         window.Close();
@@ -77,7 +77,7 @@ public sealed class StatusBarScaleTests
     public void PickAnotherUsesTheKeyAndScaleDropDownsAndTheLibraryHasEveryScale()
     {
         using var rig = new StatusBarTransportTests.Rig(song: SectionScaleDetectorTests.TwoSections());
-        var popup = new ScaleReadoutPopup(rig.Status.Scale);
+        var popup = new ScalePanel(rig.Status.Scale.BarHost());
         var window = Open(popup);
         Assert.Equal(12, Find<ComboBox>(popup, "ScalePickKey").ItemCount);
         Assert.Equal(MusicTheoryService.Scales.Count, Find<ComboBox>(popup, "ScalePickScale").ItemCount);
@@ -96,7 +96,7 @@ public sealed class StatusBarScaleTests
     {
         using var rig = new StatusBarTransportTests.Rig(song: SectionScaleDetectorTests.TwoSections());
         var scale = rig.Status.Scale;
-        var popup = new ScaleReadoutPopup(scale);
+        var popup = new ScalePanel(scale.BarHost());
         var window = Open(popup);
         var song = rig.Document.Project;
         Assert.Null(song.Markers[0].KeptScales);
@@ -111,7 +111,7 @@ public sealed class StatusBarScaleTests
         Assert.Equal("A minor ▾ auto", ScaleText(rig));   // the Chorus is untouched
         rig.At(rig.Timeline.Bars[1].StartMs + 100);
         Assert.Equal(kept, ScaleText(rig));   // back in the Verse the kept pick returns
-        Find<Button>(popup, "ScaleAuto").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        Find<Button>(popup, "ScaleBackToAuto").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         Assert.Null(song.Markers[0].KeptScales);
         Assert.Equal("C major ▾ auto", ScaleText(rig));
         popup.Close();
@@ -123,7 +123,7 @@ public sealed class StatusBarScaleTests
     {
         using var rig = new StatusBarTransportTests.Rig(song: SectionScaleDetectorTests.TwoSections());
         var scale = rig.Status.Scale;
-        var popup = new ScaleReadoutPopup(scale);
+        var popup = new ScalePanel(scale.BarHost());
         var window = Open(popup);
         Assert.True(Find<ToggleButton>(popup, "ReadFromSection").IsChecked);
         Assert.True(Find<ToggleButton>(popup, "ListenToTrack").IsChecked);

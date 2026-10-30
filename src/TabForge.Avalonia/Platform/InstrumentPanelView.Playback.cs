@@ -39,7 +39,10 @@ public sealed partial class InstrumentPanelView
             InvalidateVisual();
             return;
         }
-        InstrumentPlaybackLists.Fill(_scratch, notes, nowMs, _look.PreviewHorizon);
+        // Sounding notes only when the look has no look-ahead (the drum map always, melodic views when preview notes are off):
+        // a negative horizon skips the Next/Upcoming lists (and their work) entirely.
+        InstrumentPlaybackLists.Fill(_scratch, notes, nowMs, _kind == InstrumentPanelKind.Drums ? -1 : _look.PreviewHorizon,
+            includeRecent: _look.PreviewPrevious);
         _playbackNowMs = nowMs;
         if (_playbackShown && _scratch.SameNotesAs(_playing))
         {
@@ -78,6 +81,8 @@ public sealed partial class InstrumentPanelView
     {
         foreach (var n in _playing.Now) yield return n;
         foreach (var n in _playing.Released) yield return n;
+        // Sounding notes only without the look-ahead (the drum map always, melodic views while preview notes are off).
+        if (_kind == InstrumentPanelKind.Drums || _look.PreviewHorizon < 0) { foreach (var n in _playing.Recent) yield return n; yield break; }
         foreach (var n in _playing.Next) yield return n;
         foreach (var n in _playing.Upcoming) yield return n;
         foreach (var n in _playing.Recent) yield return n;

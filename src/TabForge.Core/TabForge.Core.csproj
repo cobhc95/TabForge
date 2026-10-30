@@ -24,6 +24,7 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Platform\Theme\Looks\*.json" />
+    <EmbeddedResource Include="Resources\SoundBanks\*.txt" />
     <EmbeddedResource Include="Platform\Theme\Palette\*.json" />
     <!-- Same packages and wire contracts as the app and the audio engine (see their csproj files). -->
     <PackageReference Include="TabForge.AlphaTab" Version="1.8.4-tabforge.4" />

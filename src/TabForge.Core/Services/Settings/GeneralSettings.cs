@@ -22,10 +22,10 @@ public sealed class GeneralSettings
     /// <summary>Where copied audio goes: "One song folder" (default; the song moves into its own folder with an Audio folder) or "Media folder beside" (see MediaLayouts).</summary>
     public string CollectedAudioLayout { get; set; } = MediaLayouts.SongFolderText;
     /// <summary>
-    /// Windows integration: open .gp/.gp5/.gpx/.tforge files with TabForge (per-user registration).
+    /// Windows integration: open .gp/.gp5/.gpx/.tforge files with TabForge (per-user registration, on by default).
     /// Mirrors the registry: read from it at start-up, applied to it on Apply/OK.
     /// </summary>
-    public bool AssociateFiles { get; set; }
+    public bool AssociateFiles { get; set; } = true;
     /// <summary>Show the main toolbar.</summary>
     public bool ShowToolbar { get; set; } = true;
     /// <summary>Show the status bar at the bottom.</summary>

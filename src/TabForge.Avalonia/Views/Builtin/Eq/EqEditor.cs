@@ -5,7 +5,7 @@ using Avalonia.Layout;
 using Avalonia.Markup.Xaml.MarkupExtensions;
 using Avalonia.Media;
 using TabForge.Audio.Contracts;
-using TabForge.AudioEngine.Builtin.Eq;
+using EqEffect = TabForge.Audio.Contracts.Builtin.EqParameters;
 using TabForge.Avalonia.Views.Dialogs;
 using TabForge.Models;
 using TabForge.Plugins;

@@ -120,13 +120,16 @@ public sealed class PortableBackendTests
     }
 
     [Fact]
-    public void SoundEngineChoiceOffWindowsIsTheSoundFontOnly()
+    public void SoundEngineChoiceOffWindowsIsTheSoundFontPlusSilence()
     {
         Assert.Equal(SoundEngines.SoundFont, SoundEngines.Resolve(SoundEngines.WindowsGm, windowsHost: false));
         Assert.Equal(SoundEngines.SoundFont, SoundEngines.Resolve("", windowsHost: false));
+        Assert.Equal(SoundEngines.None, SoundEngines.Resolve(SoundEngines.None, windowsHost: false));
         Assert.Equal(SoundEngines.WindowsGm, SoundEngines.Resolve(SoundEngines.WindowsGm, windowsHost: true));
+        Assert.Equal(SoundEngines.None, SoundEngines.Resolve(SoundEngines.None, windowsHost: true));
         Assert.Equal(SoundEngines.WindowsGm, SoundEngines.Resolve(null, windowsHost: true));
         Assert.Equal(SoundEngines.SoundFont, SoundEngines.Resolve(SoundEngines.SoundFont, windowsHost: true));
+        Assert.Contains(SoundEngines.None, SoundEngines.All);
         var settings = new PluginSettings { SoundEngine = SoundEngines.SoundFont };
         if (SoundFontStore.IsInstalled || File.Exists(SoundFontStore.BundledPath)) return;
         Assert.True(SoundFontStore.ChosenButMissing(settings, windowsHost: false));   // the Download SoundFont prompt shows instead of silence

@@ -45,6 +45,10 @@ public class LiveMixChasedPushTests
             var values = new[] { 20, 90 };
             var allowed = new HashSet<int>(values.Select(v => { song.Tracks[0].Volume = v; return MixerGroups.Volume(song, song.Tracks[0]); }));
             allowed.Add(MixerGroups.Volume(song, song.Tracks[0]));
+            // The compiled setup starts at the song's default level. Establish a value that WAS set before the restorer starts, or a restore
+            // that wins the race with the very first push legitimately re-sends that default (the test would read it as a lost update).
+            song.Tracks[0].Volume = values[0];
+            engine.PushLiveChannelState(song, 0);
             output.Take();
             var stop = false;
             var restorer = new Thread(() => { while (!Volatile.Read(ref stop)) engine.RestoreChannelStateAt(timeline, 0, 0, 0); });
@@ -55,6 +59,36 @@ public class LiveMixChasedPushTests
             var sent = output.Take().Where(c => c.Ch == channel && c.Cc == 7).Select(c => c.Value).ToList();
             engine.Stop();
             Assert.All(sent, v => Assert.Contains(v, allowed));
+        }
+    }
+
+    [Fact]
+    public void RestoreRacingTheFirstPushNeverSendsTheCompiledDefault()
+    {
+        var (engine, song, output, channel) = Playing();
+        using (engine)
+        {
+            var timeline = engine.Timeline!;
+            var compiled = MixerGroups.Volume(song, song.Tracks[0]);
+            song.Tracks[0].Volume = 20;
+            var set = MixerGroups.Volume(song, song.Tracks[0]);
+            Assert.NotEqual(compiled, set);
+            output.Take();
+            using var go = new ManualResetEventSlim();
+            var stop = false;
+            // The restorer is already running but cannot restore until the first push has replaced the compiled setup: the smallest window
+            // between a push and a restore, forced without sleeps or relying on thread start order.
+            var restorer = new Thread(() => { go.Wait(); while (!Volatile.Read(ref stop)) engine.RestoreChannelStateAt(timeline, 0, 0, 0); });
+            restorer.Start();
+            engine.PushLiveChannelState(song, 0);
+            go.Set();
+            for (var i = 0; i < 300; i++) { song.Tracks[0].Volume = i % 2 == 0 ? 20 : 90; engine.PushLiveChannelState(song, 0); }
+            Volatile.Write(ref stop, true);
+            restorer.Join();
+            var sent = output.Take().Where(c => c.Ch == channel && c.Cc == 7).Select(c => c.Value).ToList();
+            engine.Stop();
+            Assert.All(sent, v => Assert.Contains(v, new[] { 20, 90 }));
+            Assert.DoesNotContain(compiled, sent);
         }
     }
 

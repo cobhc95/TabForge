@@ -6,6 +6,7 @@ using Avalonia.Controls;
 using TabForge.Avalonia.Views.Fx;
 using TabForge.Models;
 using TabForge.Plugins;
+using TabForge.Presenters;
 using TabForge.Services;
 using TabForge.Services.Features;
 
@@ -64,14 +65,13 @@ public sealed partial class FxChainWindow
         }
         var after = _list.SelectedTags.LastOrDefault();
         var hadInstrument = HasInstrument;
-        var instrument = pasted.Plugins.Any(p => p.Type == PluginSlotType.Instrument);
         _editors.CloseDocked();   // as Add: the old editor closes before the engine starts creating the new plug-ins
         _editors.MarkLoading(pasted.Plugins[0]);
         EditTree(tree =>
         {
             _track.Rig.Plugins.AddRange(pasted.Plugins);
             if (after is not null && ChainTree.Find(tree, after) is { } at) at.List.InsertRange(at.Index + 1, pasted.Items); else tree.AddRange(pasted.Items);
-            if (instrument && !hadInstrument) _track.MidiSound = false;
+            KeepGmSound(hadInstrument);
             _track.SoundSource = SoundSources.Plugins;   // a pasted plug-in is heard at once, as an added one
         }, refresh: false, show: false);
         RefreshRows(pasted.Plugins[0], pasted.Plugins);
@@ -91,6 +91,9 @@ public sealed partial class FxChainWindow
         yield return Item("Duplicate", FxChainIds.DuplicatePlugins, any);
         yield return Item("Delete", FxChainIds.RemovePlugin, any);
         yield return Item("Select all", FxChainIds.SelectAllPlugins, _list.Count > 0);
+        var activeOn = Item(ActiveOnPresenter.MenuText, FxChainIds.ActiveOn, _list.SelectedTags.Any(tag => tag is PluginSlot or ChainContainer));
+        ToolTip.SetTip(activeOn, ActiveOnPresenter.MenuTip);
+        yield return activeOn;
         yield return Item(FxGenericControls.MenuText, FxChainIds.ShowGenericControls, FxGenericControls.Supports(Selected));
     }
 }

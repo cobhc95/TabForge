@@ -29,15 +29,9 @@ public sealed class CompactTrackStrip : DockPanel
     private const string CloseTooltip = "Close compact mode";
     private const string MenuTooltip = "Menus and tools hidden by compact mode";
 
-    private const double CaptionFontSize = 12.65;
-    private const double CaptionGap = 4;
     private const double MenuButtonHeight = 27;
     private static readonly Thickness MenuButtonPadding = new(8, 0, 8, 0);
     private static readonly Thickness MenuButtonMargin = new(4, 2, 8, 0);
-    private const string ChevronData = "M 1,1 L 5,5 L 9,1";
-    private const double ChevronWidth = 10;
-    private const double ChevronHeight = 6;
-    private const double ChevronStroke = 1.4;
 
     private const double CloseWidth = 26;
     private const double CloseHeight = 24;
@@ -136,23 +130,17 @@ public sealed class CompactTrackStrip : DockPanel
         Rebuild();
     }
 
-    private readonly TextBlock _caption = new() { Text = CompactModeStripPresenter.Caption, FontSize = CaptionFontSize, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center };
+    private readonly TextBlock _caption = new() { Text = CompactModeStripPresenter.Caption, VerticalAlignment = VerticalAlignment.Center };
 
     /// <summary>Sets the caption's text: the mode entered last, as HeaderModeCaption names it.</summary>
     public void SetCaption(string text) => _caption.Text = text;
 
     private Button CaptionMenuButton()
     {
-        var caption = _caption;
-        caption[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("MutedBrush");
-        var chevron = new Path
-        {
-            Data = Geometry.Parse(ChevronData), Width = ChevronWidth, Height = ChevronHeight, Stretch = Stretch.None, StrokeThickness = ChevronStroke,
-            StrokeLineCap = PenLineCap.Round, StrokeJoin = PenLineJoin.Round, VerticalAlignment = VerticalAlignment.Center,
-        };
-        chevron[!Shape.StrokeProperty] = new DynamicResourceExtension("MutedBrush");
-        var content = new StackPanel { Orientation = Orientation.Horizontal, Spacing = CaptionGap, Children = { caption, chevron } };
-        var button = FlatToolButton.Create(content);
+        _caption.FontSize = DropdownCaption.FontSize;
+        _caption.FontWeight = FontWeight.SemiBold;
+        _caption[!TextBlock.ForegroundProperty] = new DynamicResourceExtension(DropdownCaption.ForegroundKey);
+        var button = FlatToolButton.Create(DropdownCaption.Content(_caption));
         button.Height = MenuButtonHeight;
         button.Padding = MenuButtonPadding;
         button.Margin = MenuButtonMargin;

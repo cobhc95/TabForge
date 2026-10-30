@@ -72,6 +72,7 @@ public sealed partial class MainWindow
         public MainWindowLearnMode? LearnMode;
         public InstrumentPanelStrip? InstrumentStrip;
         public FretboardContextMenu? FretboardMenu;
+        public Func<FretboardMode> FretboardMode = () => Services.FretboardMode.Tab;
         public Action SyncActiveEngine = null!;
     }
 
@@ -124,15 +125,19 @@ public sealed partial class MainWindow
         var fraction = song.CursorCell / (double)Math.Max(1, MusicTime.BarSlots(song.Project, bar));
         return AudioClipTimelineRules.SecondsAtBar(song.Project, bar, fraction);
     }
+    /// <summary>The status bar scale readout, which also opens the fretboard scale popup (tests).</summary>
+    internal StatusScaleReadout? ScaleReadout { get; private set; }
+
     /// <summary>Builds the content frame where the constructor used to: title row/menu/compact strip, the notices, the status bar, approvals, the dock
     /// workspace, the layout scaler and the theme binding.</summary>
     private void ComposeFrame(MainWindowComposeState state)
     {
-        _ = new MainWindowLifetime(this, state.Keyboard, state.Songs, state.TempoBar, state.Dock, state.StatusBar, state.Panes.Selection, state.Songs)
+        ScaleReadout = state.StatusBar.Scale;
+        Lifetime = new MainWindowLifetime(this, state.Keyboard, state.Songs, state.TempoBar, state.Dock, state.StatusBar, state.Panes.Selection, state.Songs)
         { FinishBeforeClose = state.LiveVideo.FinishBeforeClose, CommitBeforeClose = () => state.RecordingHooks?.StopRecording() };
         var menu = MainWindowMenu.Build(state.Commands, this, new DockViewMenus(state.Dock, state.Settings, this,
             state.StatusBar.ShowTransient,
-            realLayout: () => state.LearnMode?.RealLayout),
+            realLayout: () => state.LearnMode?.RealLayout, mode: state.FretboardMode),
             state.Settings?.Settings.Hotkeys ?? new HotkeySettings(), state.EditorPane.Pills);
         if (state.Settings is { } iconSettings)
         {

@@ -1,87 +1,41 @@
-﻿using System.Collections.Generic;
 using System;
-using System.Threading.Tasks;
+using System.Collections.Generic;
 using Avalonia.Controls;
-using TabForge.Avalonia.Platform;
-using TabForge.Avalonia.Views;
-using TabForge.Controllers;
-using TabForge.Models;
-using TabForge.Presenters;
-using TabForge.Services;
 
 namespace TabForge.Avalonia;
 
-// Owns: opening the scale finder from the Tools menu and from the fretboard's Scales button: the search scope (the score's selection, else the loop
-//   area, else the whole song), the track it searches (the track the score shows, which is the selected track), the "Root Scale" highlight it
-//   preselects, and writing the chosen highlight to the editing settings and saving them.
-// Does not own: the finder window and its search (ScaleFinderWindow, ScaleFinderPresenter), the menu rows (FretboardContextMenu, MainMenuTable),
-//   the highlight's drawing (InstrumentPanelView).
-// Tests: TabForge.Avalonia.Tests.ScaleFinderWindowTests, TabForge.Avalonia.Tests.FretboardScaleFinderTests.
+// Owns: opening the fretboard's scale popup from the fretboard / keyboard pane's Scales button and from the Tools menu entry (the same command id and shortcut as before):
+//   it asks the status bar's scale readout, which holds the one shared pick, to open its popup anchored to the Scales button, or to the main window when no instrument pane is shown.
+// Does not own: the popup body (ScalePanel), the detection and picks (StatusScaleReadout, ScaleReadoutEngine), the menu rows (FretboardContextMenu, MainMenuTable).
+// Tests: TabForge.Avalonia.Tests.FretboardScalePopupTests.
 // Threads: UI thread only.
 public sealed class MainWindowScaleFinder
 {
     /// <summary>The menu command ids this class handles.</summary>
     public static readonly IReadOnlyList<string> Commands = new[] { "Tools.ScaleFinder" };
 
-    private readonly MainWindowTabs _songs;
-    private readonly ScorePreviewView _score;
-    private readonly Func<SelectionModel> _loop;
-    private readonly Func<EditingSettings> _editing;
-    private readonly Action _save;
     private readonly Window _owner;
 
-    /// <param name="songs">The tabs; the finder searches the shown song.</param>
-    /// <param name="score">The score; its editor gives the selected track and the selection.</param>
-    /// <param name="loop">The shown song's selection, whose loop region is searched when the score has no selection.</param>
-    /// <param name="editing">The editing settings the highlight is read from and written to.</param>
-    /// <param name="save">Saves the settings after a highlight is chosen.</param>
-    /// <param name="owner">The window the finder opens over.</param>
-    public MainWindowScaleFinder(MainWindowTabs songs, ScorePreviewView score, Func<SelectionModel> loop, Func<EditingSettings> editing, Action save, Window owner)
-    {
-        _songs = songs;
-        _score = score;
-        _loop = loop;
-        _editing = editing;
-        _save = save;
-        _owner = owner;
-    }
+    /// <param name="owner">The main window; the popup anchors to it when no Scales button is on screen.</param>
+    public MainWindowScaleFinder(Window owner) => _owner = owner;
+
+    /// <summary>The status bar scale readout that holds the shared pick and opens the popup (set once the status bar exists).</summary>
+    internal StatusScaleReadout? Scale { get; set; }
+
+    /// <summary>The control the popup opens above: the Scales button of the shown instrument pane, or null for the window.</summary>
+    internal Func<Control?>? Anchor { get; set; }
 
     /// <summary>Registers the Tools menu's Scale finder command.</summary>
-    public void Register(MainWindowCommands commands) => commands.Add("Tools.ScaleFinder", () => _ = OpenAsync());
+    public void Register(MainWindowCommands commands) => commands.Add("Tools.ScaleFinder", () => Open());
 
-    /// <summary>Opens the finder on the shown song and the selected track, preselecting the current highlight; a chosen highlight is saved.</summary>
-    public async Task OpenAsync()
+    /// <summary>Opens the popup above the Scales button (or the window).</summary>
+    /// <returns>False when nothing opened (no readout yet, or a drum track).</returns>
+    public bool Open() => Scale is { } scale && scale.OpenForFretboard(Anchor?.Invoke() is { IsVisible: true } anchor ? anchor : _owner);
+
+    /// <summary>Opens the popup (the Scales button's callback).</summary>
+    public System.Threading.Tasks.Task OpenAsync()
     {
-        var project = _songs.Active.Project;
-        var track = project.Tracks.Count > 0 ? _score.Editor.Track : null;
-        var finder = new ScaleFinderWindow(project, track, SearchRange(), _editing().ScaleHighlight);
-        await finder.ShowDialog(_owner);
-        if (ApplyChoice(_editing(), finder.Highlight)) _save();
+        Open();
+        return System.Threading.Tasks.Task.CompletedTask;
     }
-
-    /// <summary>Writes the highlight the finder closed with: "Off" clears it, a "Root Scale" sets it, null (closed without a choice) changes nothing.</summary>
-    /// <returns>True when the editing settings changed.</returns>
-    internal static bool ApplyChoice(EditingSettings editing, string? chosen)
-    {
-        if (chosen is null) return false;
-        editing.ScaleHighlight = chosen == ScaleFinderPresenter.OffHighlight ? null : chosen;
-        return true;
-    }
-
-    /// <summary>The passage the finder searches: the score's selection, else the loop region, else null (the whole song).</summary>
-    internal ScaleFinderPresenter.SearchRange? SearchRange()
-    {
-        if (_score.Editor.HasSelection)
-        {
-            var (startMeasure, startCell, endMeasure, endCell) = _score.Editor.SelectionCellRange;
-            return new ScaleFinderPresenter.SearchRange(startMeasure, startCell, endMeasure, endCell, BarsLabel(startMeasure, endMeasure));
-        }
-        if (_loop().LoopBars is { } bars)
-            return new ScaleFinderPresenter.SearchRange(bars.Start, 0, bars.End, int.MaxValue - 1, BarsLabel(bars.Start, bars.End));
-        return null;
-    }
-
-    /// <summary>The scope's name as the finder shows it: "bar 3" or "bars 3–5" (bar numbers count from one).</summary>
-    private static string BarsLabel(int startMeasure, int endMeasure) =>
-        startMeasure == endMeasure ? $"bar {startMeasure + 1}" : $"bars {startMeasure + 1}–{endMeasure + 1}";
 }

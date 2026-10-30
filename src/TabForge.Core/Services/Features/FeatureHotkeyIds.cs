@@ -31,8 +31,9 @@ public static class FxChainIds
     public const string AddPlugin = "FxChain.AddPlugin", RemovePlugin = "FxChain.RemovePlugin", Save = "FxChain.Save", Load = "FxChain.Load",
         AddToEnd = "FxChain.AddToEnd", Clear = "FxChain.Clear", SaveForHosts = "FxChain.SaveForHosts", NewContainer = "FxChain.NewContainer",
         GroupSelected = "FxChain.GroupSelected", Dissolve = "FxChain.Dissolve", Rename = "FxChain.Rename", DeleteContainer = "FxChain.DeleteContainer",
-        CutPlugins = "FxChain.Cut", CopyPlugins = "FxChain.Copy", PastePlugins = "FxChain.Paste", DuplicatePlugins = "FxChain.Duplicate", SelectAllPlugins = "FxChain.SelectAll", ShowGenericControls = "FxChain.ShowGenericControls";
+        CutPlugins = "FxChain.Cut", CopyPlugins = "FxChain.Copy", PastePlugins = "FxChain.Paste", DuplicatePlugins = "FxChain.Duplicate", SelectAllPlugins = "FxChain.SelectAll", ShowGenericControls = "FxChain.ShowGenericControls",
+        ActiveOn = "FxChain.ActiveOn";
 
     /// <summary>The commands that act on the plug-in list: a key runs them only while the list has the focus (the plug-in editor, the options and the text boxes keep their own keys).</summary>
-    public static bool NeedsListFocus(string id) => id is RemovePlugin or CutPlugins or CopyPlugins or PastePlugins or DuplicatePlugins or SelectAllPlugins or ShowGenericControls;
+    public static bool NeedsListFocus(string id) => id is RemovePlugin or CutPlugins or CopyPlugins or PastePlugins or DuplicatePlugins or SelectAllPlugins or ShowGenericControls or ActiveOn;
 }

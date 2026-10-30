@@ -17,51 +17,51 @@ namespace TabForge.Avalonia.Tests;
 // Does not own: the audio protocol itself (golden tests) or the import itself (ImportWorker tests).
 public sealed class IpcLaunchTrustTests
 {
-    private static (NamedPipeServerStream Server, NamedPipeClientStream Client) Connected()
+    private static async Task<(NamedPipeServerStream Server, NamedPipeClientStream Client)> ConnectedAsync()
     {
         var name = "TabForge.Test." + Guid.NewGuid().ToString("N");
         var server = new NamedPipeServerStream(name, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly, 4096, 4096);   // explicit buffers: a zero-sized pipe blocks a synchronous Write until the peer reads
         var client = new NamedPipeClientStream(".", name, PipeDirection.InOut, PipeOptions.CurrentUserOnly);
-        client.Connect(5000);
-        server.WaitForConnectionAsync(new System.Threading.CancellationTokenSource(5000).Token).GetAwaiter().GetResult();   // bounded: a missing peer fails the test instead of hanging the run
+        await client.ConnectAsync(5000).ConfigureAwait(false);
+        await server.WaitForConnectionAsync(new System.Threading.CancellationTokenSource(5000).Token).ConfigureAwait(false);   // bounded: a missing peer fails the test instead of hanging the run
         return (server, client);
     }
 
     [Fact]
-    public void PipePeerWithTheLaunchTokenIsAccepted()
+    public async Task PipePeerWithTheLaunchTokenIsAccepted()
     {
         var token = PipeAuth.NewToken();
         Assert.True(PipeAuth.IsWellFormed(token));
-        var (server, client) = Connected();
+        var (server, client) = await ConnectedAsync();
         using (server) using (client)
         {
             PipeAuth.WriteHello(client, token);
-            Assert.True(PipeAuth.ReadAndVerify(server, token, 3000));
+            Assert.True(await PipeAuth.ReadAndVerifyAsync(server, token, 3000));
         }
     }
 
     [Fact]
-    public void PipePeerWithoutTheTokenIsRefused()
+    public async Task PipePeerWithoutTheTokenIsRefused()
     {
-        var (server, client) = Connected();
+        var (server, client) = await ConnectedAsync();
         using (server) using (client)
         {
             client.Write(new byte[] { 1, 0, 0, 0, 0 });   // a frame straight away, no hello
-            Assert.False(PipeAuth.ReadAndVerify(server, PipeAuth.NewToken(), 1000));
+            Assert.False(await PipeAuth.ReadAndVerifyAsync(server, PipeAuth.NewToken(), 1000));
         }
     }
 
     [Fact]
-    public void PipePeerWithAWrongTokenOrSilentIsRefused()
+    public async Task PipePeerWithAWrongTokenOrSilentIsRefused()
     {
-        var (server, client) = Connected();
+        var (server, client) = await ConnectedAsync();
         using (server) using (client)
         {
             PipeAuth.WriteHello(client, PipeAuth.NewToken());
-            Assert.False(PipeAuth.ReadAndVerify(server, PipeAuth.NewToken(), 1000));
+            Assert.False(await PipeAuth.ReadAndVerifyAsync(server, PipeAuth.NewToken(), 1000));
         }
-        var (server2, client2) = Connected();
-        using (server2) using (client2) Assert.False(PipeAuth.ReadAndVerify(server2, PipeAuth.NewToken(), 300));
+        var (server2, client2) = await ConnectedAsync();
+        using (server2) using (client2) Assert.False(await PipeAuth.ReadAndVerifyAsync(server2, PipeAuth.NewToken(), 300));
     }
 
     [Fact]

@@ -5,6 +5,7 @@ using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Headless.XUnit;
+using Avalonia.Interactivity;
 using Avalonia.LogicalTree;
 using Avalonia.Threading;
 using TabForge.Avalonia.Platform;
@@ -16,10 +17,15 @@ namespace TabForge.Avalonia.Tests;
 
 /// <summary>
 /// Guard: everything the Preferences pages show can be found by the Preferences search. Walks every page's built controls and fails when a labelled
-/// control, a shortcut, a keyword, a synonym or a page name is not found; there is no list of exceptions (dialogs opened from a row are not part of a page).
+/// control, a shortcut, a keyword, a synonym or a page name is not found; the only controls without a search entry are in
+/// <see cref="DecorativeWithoutSearchEntry"/> (dividers, spacing), each saying why. Dialogs opened from a row are not part of a page.
 /// </summary>
 public class SettingsSearchGuardTests
 {
+    /// <summary>Controls with no search entry: decorative only, each with the reason. Empty: the pages build no divider or spacing control with a label.</summary>
+    private static readonly IReadOnlyDictionary<string, string> DecorativeWithoutSearchEntry = new Dictionary<string, string>
+    {
+    };
     private static PreferencesWindow Open() => new(new AvaloniaDialogHost(), new AppSettings());
 
     private static IEnumerable<(Control Control, string Label)> Labelled(PreferencesWindow window) => Interactive(window).Where(item => item.Label.Length > 0);
@@ -149,6 +155,92 @@ public class SettingsSearchGuardTests
         }
         Assert.Empty(missing);
         Assert.Equal(rows.Count + SettingsCatalog.SpecialEntries().Count + HotkeyCatalog.All.Count, registry.Count);
+    }
+
+    [AvaloniaFact]
+    public void Every_page_control_has_a_registry_entry()
+    {
+        var window = Open();
+        var settings = new AppSettings();
+        var registry = SettingsCatalog.Registry(SettingsCatalog.Build(settings), settings.Hotkeys);
+        var missing = new List<string>();
+        var seenAllowed = new HashSet<string>();
+        foreach (var page in SettingsCatalog.Categories)
+        {
+            window.Search("");
+            window.ShowPage(page);
+            foreach (var label in Labelled(window).Select(item => item.Label).Distinct().ToList())
+            {
+                if (DecorativeWithoutSearchEntry.TryGetValue(label, out var reason))
+                {
+                    Assert.False(string.IsNullOrWhiteSpace(reason), $"Allow-listed \"{label}\" must say why it needs no search entry.");
+                    seenAllowed.Add(label);
+                    continue;
+                }
+                if (!registry.Any(entry => SettingsCatalog.Matches(entry, label.ToLowerInvariant())))
+                    missing.Add($"{page}: \"{label}\"");
+            }
+        }
+        Assert.True(missing.Count == 0, "Page controls with no search entry (add a catalogue entry with keywords):\n" + string.Join("\n", missing));
+        Assert.All(DecorativeWithoutSearchEntry.Keys, key => Assert.Contains(key, seenAllowed));
+    }
+
+    [Theory]
+    [InlineData("reset")]
+    [InlineData("wipe")]
+    [InlineData("factory")]
+    [InlineData("default")]
+    [InlineData("clear")]
+    [InlineData("erase")]
+    public void Reset_synonyms_list_both_reset_actions(string query)
+    {
+        var settings = new AppSettings();
+        var registry = SettingsCatalog.Registry(SettingsCatalog.Build(settings), settings.Hotkeys);
+        foreach (var id in new[] { SettingsCatalog.ActionResetAll, SettingsCatalog.ActionResetApp })
+            Assert.True(SettingsCatalog.Matches(registry.Single(entry => entry.Id == id), query), $"\"{query}\" does not find {id}");
+    }
+
+    [Theory]
+    [InlineData("compatibility", SettingsCatalog.InfoCompatibility)]
+    [InlineData("migrate", SettingsCatalog.InfoCompatibility)]
+    [InlineData("arrangement", SettingsCatalog.InfoArrangement)]
+    [InlineData("sound bank", SettingsCatalog.BankDownload)]
+    [InlineData("delete", SettingsCatalog.BankDelete)]
+    [InlineData("download", SettingsCatalog.BankDownload)]
+    [InlineData("shortcuts reset", SettingsCatalog.ActionResetCategory)]
+    [InlineData("theme reset", SettingsCatalog.ActionResetTheme)]
+    public void Info_bank_and_reset_queries_find_their_entries(string query, string id)
+    {
+        var settings = new AppSettings();
+        var entry = SettingsCatalog.Registry(SettingsCatalog.Build(settings), settings.Hotkeys).Single(e => e.Id == id);
+        Assert.True(SettingsCatalog.Matches(entry, query), $"\"{query}\" does not find {id}");
+    }
+
+    [AvaloniaFact]
+    public void Search_results_select_the_right_page()
+    {
+        var window = Open();
+        window.Search("reset entire app");
+        Assert.True(HasCardOf(window, SettingsCatalog.Advanced), "No Advanced card for \"reset entire app\".");
+        window.Search("download");
+        Assert.True(HasCardOf(window, SettingsCatalog.AudioVst), "No Audio & Plug-ins card for \"download\".");
+        window.Search("compatibility");
+        Assert.True(HasCardOf(window, SettingsCatalog.Advanced), "No Advanced card for \"compatibility\".");
+    }
+
+    [AvaloniaFact]
+    public void Search_results_never_run_an_action()
+    {
+        var window = Open();
+        foreach (var id in new[] { SettingsCatalog.ActionResetApp, SettingsCatalog.ActionResetAll })
+        {
+            var label = SettingsCatalog.Special(id).Label;
+            window.Search(label.ToLowerInvariant());
+            window.GetLogicalDescendants().OfType<Button>().First(button => button.IsVisible && LabelOf(button) == label)
+                .RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Assert.Equal(SettingsCatalog.Advanced, window.Page);
+            Assert.Equal("All changes saved", window.StatusText);
+        }
     }
 
     [Theory]

@@ -23,8 +23,10 @@ public sealed class PluginSettings
     /// <summary>Play every track through the audio engine (its General MIDI synth) so the song uses the chosen audio driver. Off: tracks without plug-ins use Windows MIDI. Older files stored null (auto): read as on.</summary>
     [JsonConverter(typeof(NullIsTrueBoolConverter))]
     public bool PlayAllThroughEngine { get; set; } = true;
-    /// <summary>The General MIDI sound engine: "Windows GM", "TabForge SoundFont", or empty for the default of this operating system (see <see cref="SoundEngines"/>).</summary>
+    /// <summary>The General MIDI sound engine: "Windows GM", "TabForge SoundFont", "None" (silence), or empty for the default of this operating system (see <see cref="SoundEngines"/>).</summary>
     public string SoundEngine { get; set; } = "";
+    /// <summary>The user's own .sf2 file chosen with "Open your own .sf2…": its path on this computer. TabForge never copies, alters or deletes it.</summary>
+    public string UserSoundFont { get; set; } = "";
     /// <summary>Retired (kept so old files load): the engine is on by default and no rule switches it on or off any more.</summary>
     public bool AutoPlayThroughEngine { get; set; } = true;
     /// <summary>True while "play the whole song through the engine" is on because the automatic rule turned it on (not the user): only then does removing the last plug-in (without ASIO) turn it off again.</summary>
@@ -127,6 +129,8 @@ public sealed class PluginSettings
     /// records; an approved path's record is always kept. A file that changed since is only trusted again when it has the same Authenticode signer.
     /// </summary>
     public List<PluginFingerprint> TrustRecords { get; set; } = new();
+    /// <summary>Loading an FX preset into a chain that has plug-ins: "Ask" (default, the Replace / Add question), "Always replace" or "Always add".</summary>
+    public string FxPresetLoad { get; set; } = TabForge.Presenters.FxPresetLoadChoice.Ask;
     /// <summary>Show the plug-in's window inside the FX chain window (on) or floating on its own.</summary>
     public bool DockPluginWindows { get; set; } = true;
     /// <summary>Width of the plug-in list in the FX chain window (the divider beside it is dragged).</summary>

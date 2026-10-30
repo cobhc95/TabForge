@@ -1,4 +1,4 @@
-namespace TabForge.AudioEngine.Midi.Processors;
+namespace TabForge.Core.Midi.Processors;
 
 // Owns: the pass-through sender processors (own messages first at frame 0 on create/start/parameter change).
 

@@ -5,7 +5,7 @@ using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Markup.Xaml.MarkupExtensions;
 using TabForge.Audio.Contracts;
-using TabForge.AudioEngine.Builtin;
+using TabForge.Audio.Contracts.Builtin;
 using TabForge.Avalonia.Platform.Controls;
 using TabForge.Avalonia.Views.Dialogs;
 using TabForge.Models;

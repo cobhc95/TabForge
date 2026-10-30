@@ -19,6 +19,7 @@ namespace TabForge.Avalonia.Views;
 public sealed partial class PianoRollView
 {
     private const string LaneCommand = "PianoRoll.Lane";
+    private const string AnyCc = "any";
     private IReadOnlyList<(double Beat, string Title, UiColor Colour)> _sections = Array.Empty<(double, string, UiColor)>();
     private int _lane = PianoRollControllers.Velocity;
 
@@ -60,20 +61,42 @@ public sealed partial class PianoRollView
     private void RefreshDerived()
     {
         var editing = _host.Editing();
-        var scale = PianoRollScale.PitchClasses(editing.ScaleHighlight);
+        // Drum tracks have no scale: no highlight, fold, lock or detection applies to them. Otherwise the scale is the SHARED pick's effective scale (the status bar's and fretboard's).
+        var drums = Presenter.Track?.IsDrumTrack == true || Presenter.Track?.MidiChannel == 9;
+        var highlight = drums ? null : EffectiveScaleHighlight();
+        var auto = !drums && SharedAuto();
+        var scale = drums ? null : PianoRollScale.PitchClasses(highlight);
         Surface.ScaleClasses = editing.PianoRollScaleShown ? scale : null;
-        Surface.Rows = PianoRollScale.Rows(editing.PianoRollFold, scale, Presenter.Notes);
+        Surface.LockScale = editing.PianoRollScaleLock ? scale : null;
+        Surface.StepScale = scale;
+        Surface.StepFilter = editing.PianoRollStepScaleFilter;
+        Presenter.Scale = scale;
+        Presenter.ScaleLock = editing.PianoRollScaleLock && scale is not null;
+        Presenter.ScaleSteps = editing.PianoRollTransposeMode == PianoRollScaleLock.TransposeScaleSteps && scale is not null;
+        Surface.Rows = PianoRollScale.Rows(PianoRollScale.RowsOf(_document?.Project), scale, Presenter.Notes);   // SHOW ROWS is this song's choice
         Surface.ColourMode = editing.PianoRollColours;
-        Surface.LanePicker = !Presenter.IsTab && Presenter.Track is not null;
-        if (Presenter.IsTab) _lane = PianoRollControllers.Velocity;
-        Surface.ShowLane(_lane, Presenter.Points(_lane));
+        Surface.LanePicker = Presenter.Track is not null;
+        Surface.ShowLane(ShownLane, Presenter.Points(ShownLane));
         Surface.DrawVoice = Presenter.IsTab ? Surface.DrawVoice : 0;
         Surface.NoteNames = Presenter.Track?.PianoRollNoteNames == true;
+        RefreshKeyHeader();
+        RefreshLaneButton();
         Surface.NoteLengthChoice = editing.PianoRollNoteLength;
         Surface.Ghosts = editing.PianoRollGhosts && _document is { } song && Presenter.TrackIndex >= 0 ? PianoRollGhosts.Read(song.Project, Presenter.TrackIndex, Presenter.Map, Presenter.Choice) : Array.Empty<PianoRollNote>();
         Surface.DrumNames = Presenter.Track?.IsDrumTrack == true || Presenter.Track?.MidiChannel == 9;
-        _names.IsChecked = Surface.NoteNames;
         _sections = Sections();
+        UpdateScaleTips(highlight, auto, scale is null);
+    }
+
+    /// <summary>The scale the roll follows now: the shared pick's effective scale (manual, or the detected one; null on a drum track: it has no scale).</summary>
+    internal string? EffectiveScaleHighlight() => SharedReadout_() is { } readout ? readout.Current.Effective.Highlight : null;
+
+    /// <summary>A Settings scale change while the roll shows (or a popup pick): rows, the lock set and the tips follow at once.</summary>
+    public void RefreshScale()
+    {
+        RefreshDerived();
+        Surface.InvalidateVisual();
+        Surface.Playhead.InvalidateVisual();
     }
 
     private IReadOnlyList<(double Beat, string Title, UiColor Colour)> Sections()
@@ -133,17 +156,6 @@ public sealed partial class PianoRollView
         return null;
     }
 
-    /// <summary>The lane picker under the lane header: velocity and the controller lanes (radio).</summary>
-    private void OpenLaneMenu()
-    {
-        var rows = PianoRollControllers.Lanes.Select(l => new MenuSpec
-        {
-            Id = LaneCommand, Arg = l.Id.ToString(System.Globalization.CultureInfo.InvariantCulture), Header = l.Name, Checkable = true, Radio = true,
-            Checked = l.Id == _lane, NoSetting = "the lane the piano roll shows",
-        });
-        ContextMenuBuilder.Show(Surface, rows, this);
-    }
-
     /// <summary>The key strip shows note names (or piano keys): saved on the track in the song, as one undo step.</summary>
     internal void SetNoteNames(bool names)
     {
@@ -154,14 +166,21 @@ public sealed partial class PianoRollView
                 return true;
             }, invalidatesTimeline: false, label: names ? "Show note names" : "Show piano keys");
         Surface.NoteNames = names;
-        _names.IsChecked = names;
+        RefreshKeyHeader();
     }
 
-    /// <summary>Shows lane <paramref name="lane"/> (velocity, a CC number, or 128 for pitch bend) under the grid.</summary>
+    /// <summary>The lane the surface shows: the lane chosen last (a tab track's controller points live in a controller-only MIDI take on it).</summary>
+    internal int ShownLane => _lane;
+
+    /// <summary>Shows lane <paramref name="lane"/> (velocity, a CC number, 128 for pitch bend, 129 for program change, 130 for channel aftertouch) under the grid,
+    /// and keeps it as the last choice (a tab track has no lane to choose: it keeps the saved one).</summary>
     internal void ShowLane(int lane)
     {
-        _lane = Presenter.IsTab ? PianoRollControllers.Velocity : lane;
+        _lane = lane;
+        _host.Editing().PianoRollLane = lane;
+        _host.SaveSettings();
         if (!Surface.LaneShown) { Surface.LaneShown = true; SaveLane(); }
-        Surface.ShowLane(_lane, Presenter.Points(_lane));
+        Surface.ShowLane(ShownLane, Presenter.Points(ShownLane));
+        RefreshLaneButton();
     }
 }

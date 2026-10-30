@@ -17,6 +17,7 @@ public static class MidiProcessingListPresenter
     public const int MaxProcessors = 32;
 
     public const string EmptyDescription = "Search the catalog on the left and add a processor. They run in order, before the plug-in, on everything it plays: the song, live keys and other tracks routed to it.";
+    public const string NoInstrumentDescription = "These processors act on the MIDI sent to a plug-in; add an instrument to use them.";
     public const string UnknownTypeDescription = "This processor type is not known to this version of TabForge; it is kept in the song and skipped.";
     public const string EffectChainNote = " On an effect they shape the MIDI this plug-in and the ones after it receive (the General MIDI synth hears processed MIDI only from a first-slot instrument's list).";
 

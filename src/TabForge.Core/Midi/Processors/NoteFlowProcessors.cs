@@ -1,6 +1,6 @@
 using TabForge.Audio.Contracts;
 
-namespace TabForge.AudioEngine.Midi.Processors;
+namespace TabForge.Core.Midi.Processors;
 
 // Owns: the choke note-flow processor (choke set ends sounding notes, held-choke blocking).
 

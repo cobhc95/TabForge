@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
-using System.Linq;
 using TabForge.Models;
+using TabForge.Platform;
 
 namespace TabForge.Documents;
 
@@ -9,76 +9,49 @@ namespace TabForge.Documents;
 // Tests: clip lane tests.
 
 /// <summary>
-/// The audio or MIDI clip copied on a clip lane. One per process, like the score clipboard: a clip copied in one window pastes into the song
-/// of another window. It holds a private copy, so later edits of the source clip do not change what pastes; a take group is kept as its
-/// whole member list with starts relative to the earliest member. UI thread only.
+/// The app-wide clip clipboard: a stable facade over the one <see cref="ClipClipboardService"/> of the process, so a clip copied
+/// in one window pastes into the song of another window. A test may swap the service with <see cref="Use"/>.
 /// </summary>
 public static class ClipClipboard
 {
-    // Each copied clip with its track row minus the first copied row (all 0 for one clip or one take group): one static, replaced whole by each copy.
-    private static List<(int RowOffset, AudioClip Clip)> _items = new();
+    private static readonly ServiceSlot<ClipClipboardService> Slot = new(new ClipClipboardService());
 
-    public static bool HasClip => _items.Count > 0;
+    /// <summary>The service the facade currently delegates to.</summary>
+    internal static ClipClipboardService Current => Slot.Current;
 
-    public static string? Name => _items.Count > 0 ? _items[0].Clip.Name : null;
+    /// <summary>Makes <paramref name="service"/> the clipboard until the returned scope is disposed.</summary>
+    internal static IDisposable Use(ClipClipboardService service) => Slot.Use(service);
+
+    public static bool HasClip => Current.HasClip;
+
+    public static string? Name => Current.Name;
 
     /// <summary>True when the copied entry is a loop-record take group (even one with a single remaining member).</summary>
-    public static bool IsGroup => _items.Count > 0 && TakeGroups.IsGrouped(_items[0].Clip);
+    public static bool IsGroup => Current.IsGroup;
 
     /// <summary>Remembers a copy of <paramref name="clip"/>.</summary>
-    public static void Copy(AudioClip clip)
-    {
-        _items = new List<(int, AudioClip)> { (0, clip.Clone()) };
-    }
+    public static void Copy(AudioClip clip) => Current.Copy(clip);
 
     /// <summary>True when several selected clips were copied together (not a take group).</summary>
-    public static bool IsMany => _items.Count > 1 && !IsGroup;
+    public static bool IsMany => Current.IsMany;
 
     /// <summary>
     /// Remembers copies of several selected clips: starts relative to the earliest, track rows relative to the first row, lanes kept.
     /// A copy leaves its take group (the copies would otherwise join the originals' group).
     /// </summary>
-    public static void CopyMany(IReadOnlyList<(int Row, AudioClip Clip)> items)
-    {
-        var earliest = items.Min(item => item.Clip.StartSec);
-        var firstRow = items.Min(item => item.Row);
-        _items = items.Select(item =>
-        {
-            var copy = item.Clip.Clone();
-            copy.StartSec -= earliest;
-            copy.TakeGroupId = null;
-            copy.TakeGroupPass = 0;
-            return (item.Row - firstRow, copy);
-        }).ToList();
-    }
+    public static void CopyMany(IReadOnlyList<(int Row, AudioClip Clip)> items) => Current.CopyMany(items);
 
     /// <summary>New copies of the clips copied together, each with its track row offset from the first copied row.</summary>
-    public static List<(int RowOffset, AudioClip Clip)> CloneAllWithRows() => _items.Select(item => (item.RowOffset, item.Clip.Clone())).ToList();
+    public static List<(int RowOffset, AudioClip Clip)> CloneAllWithRows() => Current.CloneAllWithRows();
 
     /// <summary>
     /// Remembers the clip and every member of its take group, each start relative to the earliest member. An ordinary clip is copied alone.
     /// </summary>
-    public static void Copy(TrackModel track, AudioClip clip)
-    {
-        if (!TakeGroups.IsGrouped(clip))
-        {
-            Copy(clip);
-            return;
-        }
-        var members = TakeGroups.Members(track, clip);
-        var earliest = members.Min(member => member.StartSec);
-        _items = members.Select(member =>
-        {
-            var copy = member.Clone();
-            copy.StartSec = member.StartSec - earliest;
-            copy.Lane = 0;
-            return (0, copy);
-        }).ToList();
-    }
+    public static void Copy(TrackModel track, AudioClip clip) => Current.Copy(track, clip);
 
     /// <summary>A new copy of the remembered clip for the caller to place, or null when nothing was copied.</summary>
-    public static AudioClip? Clone() => _items.Count == 0 ? null : _items[0].Clip.Clone();
+    public static AudioClip? Clone() => Current.Clone();
 
     /// <summary>New copies of the whole remembered entry: one clip, or every remaining member of a take group.</summary>
-    public static List<AudioClip> CloneAll() => _items.Select(item => item.Clip.Clone()).ToList();
+    public static List<AudioClip> CloneAll() => Current.CloneAll();
 }

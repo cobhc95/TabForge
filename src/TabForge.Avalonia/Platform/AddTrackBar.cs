@@ -1,5 +1,7 @@
 using System;
+using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Styling;
@@ -59,6 +61,13 @@ public sealed class AddTrackBar : Control
     {
         get => _dropGhost;
         set { if (_dropGhost == value) return; _dropGhost = value; InvalidateVisual(); }
+    }
+
+    // The strip draws from its width, its list width and the theme: repaint whenever one moves, so a resize, a theme switch or a show never leaves a stale or blank band.
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+        if (change.Property == BoundsProperty || change.Property == IsVisibleProperty || change.Property == ThemeVariantScope.ActualThemeVariantProperty) InvalidateVisual();
     }
 
     protected override void OnPointerEntered(PointerEventArgs e)

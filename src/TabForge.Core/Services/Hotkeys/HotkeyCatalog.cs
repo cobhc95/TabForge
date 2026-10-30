@@ -65,8 +65,11 @@ public static partial class HotkeyCatalog
     /// <summary>FX chain window commands (see <see cref="CategoryFxChain"/>).</summary>
     public static bool IsFxChainAction(string id) => id.StartsWith("FxChain.", StringComparison.OrdinalIgnoreCase);
 
-    /// <summary>0 = the global map, 1 = clip context, 2 = track-row context, 3 = bar-range context, 4 = FX chain window, 5 = highlight context: keys only collide inside one context.</summary>
-    public static int ContextOf(string id) => IsClipAction(id) ? 1 : IsTrackRowAction(id) ? 2 : IsRangeAction(id) ? 3 : IsFxChainAction(id) ? 4 : IsHighlightAction(id) ? 5 : 0;
+    /// <summary>Piano roll commands: they only act while the piano roll has the focus (the roll reads its own keys), so they may share keys with window commands (Alt+S snap).</summary>
+    public static bool IsPianoRollAction(string id) => id.StartsWith("PianoRoll.", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>0 = the global map, 1 = clip context, 2 = track-row context, 3 = bar-range context, 4 = FX chain window, 5 = highlight context, 6 = piano roll: keys only collide inside one context.</summary>
+    public static int ContextOf(string id) => IsClipAction(id) ? 1 : IsTrackRowAction(id) ? 2 : IsRangeAction(id) ? 3 : IsFxChainAction(id) ? 4 : IsHighlightAction(id) ? 5 : IsPianoRollAction(id) ? 6 : 0;
 
     /// <summary>Two commands can share a key when they act in different contexts.</summary>
     public static bool SameContext(string a, string b) => ContextOf(a) == ContextOf(b);

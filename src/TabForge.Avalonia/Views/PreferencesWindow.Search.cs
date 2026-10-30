@@ -16,7 +16,15 @@ public sealed partial class PreferencesWindow
     private SpecialActions SpecialActions() => new(ShowPage,
         () => Platform.UiTasks.Forget(ResetThemeAsync(), "Reset theme", text => _status.Text = text),
         () => Platform.UiTasks.Forget(ResetAllAsync(), "Reset all settings", text => _status.Text = text),
+        () => _ = OpenResetAppAsync(),
         RunFooterAction);
+
+    /// <summary>Search results never run anything: picking a result opens the entry's page, where the real button lives.</summary>
+    private SpecialActions SearchActions() => new(ShowPage,
+        () => ShowPage(SettingsCatalog.Appearance),
+        () => ShowPage(SettingsCatalog.Advanced),
+        () => ShowPage(SettingsCatalog.Advanced),
+        id => ShowPage(SettingsCatalog.Special(id).Page));
 
     /// <summary>The card of a page's group: its rows, and the Theme card's reset right after the theme row on the Appearance page.</summary>
     private Control RowCard(PreferenceCard<SettingDescriptor> card, bool searching)
@@ -40,7 +48,7 @@ public sealed partial class PreferencesWindow
         var cards = new List<(int Page, Control Card)>();
         foreach (var card in PreferencesPagePresenter.Cards(found.Where(entry => entry.Row is not null).Select(entry => entry.Row!).ToList(), searching: true))
             cards.Add((PageIndex(card.Category()), RowCard(card, searching: true)));
-        var actions = SpecialActions();
+        var actions = SearchActions();
         foreach (var group in found.Where(entry => entry.Row is null && entry.Kind != SettingsEntryKind.Shortcut).GroupBy(entry => (entry.Page, entry.Section)))
         {
             var parts = group.Select(entry => PreferencesSpecialPages.Part(entry, actions)).OfType<Control>().ToList();

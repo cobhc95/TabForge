@@ -13,6 +13,7 @@ using TabForge.Avalonia.Views.Presets;
 using TabForge.Documents;
 using TabForge.Models;
 using TabForge.Plugins;
+using TabForge.Presets;
 using TabForge.Presenters;
 using TabForge.Services;
 
@@ -31,9 +32,9 @@ public sealed partial class FxChainWindow
     private const string MidiTip = "MIDI processors in front of this plug-in: filter, transpose, drum map, velocity, humanize, delay, program / CC, log… (lit when any is on)";
 
     /// <summary>One row of the preset box: a program of the plug-in, a saved preset of the user, or the name the plug-in came with.</summary>
-    internal sealed record PresetItem(string Name, int Program, PresetKind Kind)
+    internal sealed record PresetItem(string Name, int Program, PresetKind Kind, string? Label = null)
     {
-        public override string ToString() => Kind == PresetKind.User ? $"★ {Name}" : Name;
+        public override string ToString() => Label ?? (Kind == PresetKind.User ? $"★ {Name}" : Name);
     }
 
     internal enum PresetKind { Program, User, CameWith, Manage }
@@ -80,7 +81,7 @@ public sealed partial class FxChainWindow
         _addPreset.Width = SaveButtonWidth;
         _addPreset.Padding = new Thickness(0, 2, 0, 4);
         _addPreset.Margin = new Thickness(4, 0, BarGap, 0);
-        foreach (var control in new Control[] { _presetBox, _addPreset, _wiring, _midi, _parametersButton })
+        foreach (var control in new Control[] { _presetBox, _addPreset, _wiring, _activeOnButton.Button, _midi, _parametersButton })
         {
             control.VerticalAlignment = VerticalAlignment.Center;
             _bar.Children.Add(control);
@@ -96,9 +97,11 @@ public sealed partial class FxChainWindow
             () => Selected is { } slot ? PresetFolderStore.PluginKey(slot) : null,
             LoadPresetList, item => item is PresetItem { Kind: PresetKind.Manage }, isBuiltIn: item => item is PresetItem { Kind: PresetKind.Program });
         _presetBox.SelectionChanged += (_, _) => { if (!_building) _ = ApplyPresetAsync(); };
+        PresetCombo.Watch(_presetBox, () => Selected?.AppliedPreset is { Kind: "PluginPreset" } p ? p : null, () => Selected?.State, LoadPresetList);
         _addPreset.Click += (_, _) => _ = SavePresetAsync();
         _wiring.Click += (_, _) => OpenWiring();
         _midi.Click += (_, _) => OpenMidiProcessing();
+        _activeOnButton.Button.Click += (_, _) => OpenActiveOnFromButton();
         _volume.EditStarted += (_, _) => { _volumeDragging = true; _volumeSince = _host.Checkpoint(); };
         _volume.EditEnded += (_, _) =>
         {
@@ -132,20 +135,27 @@ public sealed partial class FxChainWindow
         try
         {
             var items = new List<PresetItem>();
+            var applied = Selected?.AppliedPreset is { Kind: "PluginPreset" } remembered ? remembered : null;
+            var current = Selected?.State;
             if (Selected is { } slot)
             {
                 items.AddRange(_editors.Programs.Select((name, index) => new PresetItem(name, index, PresetKind.Program)));
                 var saved = PluginLibrary.PresetNames(slot);
-                items.AddRange(TabForge.Audio.Contracts.Builtin.BuiltinPresets.Names(slot.Path).Where(name => !saved.Contains(name, StringComparer.OrdinalIgnoreCase)).Select(name => new PresetItem(name, -1, PresetKind.User)));   // a built-in's factory presets
-                items.AddRange(saved.Select(name => new PresetItem(name, -1, PresetKind.User)));
+                var factory = TabForge.Audio.Contracts.Builtin.BuiltinPresets.Names(slot.Path).Where(name => !saved.Contains(name, StringComparer.OrdinalIgnoreCase)).ToList();   // a built-in's factory presets
+                items.AddRange(factory.Select(name => new PresetItem(name, -1, PresetKind.User, "★ " + PresetCombo.Decorate(name, name, applied, current, true))));
+                items.AddRange(saved.Select(name => new PresetItem(name, -1, PresetKind.User, "★ " + PresetCombo.Decorate(name, name, applied, current, true))));
+                if (applied is { } missing && !saved.Contains(missing.Name, StringComparer.OrdinalIgnoreCase) && !factory.Contains(missing.Name, StringComparer.OrdinalIgnoreCase))
+                    items.Add(new PresetItem(missing.Name, -1, PresetKind.User, "★ " + PresetCombo.Decorate(missing.Name, missing.Name, applied, current, false)));
             }
             _presetBox.IsEnabled = items.Count > 0 || Selected is not null;
             // The preset name an imported chain gave the plug-in: its own row when no program or saved preset has that name.
-            var cameWith = Selected?.PresetName is { Length: > 0 } name ? items.FirstOrDefault(i => i.Name == name) ?? new PresetItem(name, -1, PresetKind.CameWith) : null;
+            var cameWith = applied is null && Selected?.PresetName is { Length: > 0 } name ? items.FirstOrDefault(i => i.Name == name) ?? new PresetItem(name, -1, PresetKind.CameWith) : null;
             if (cameWith is { Kind: PresetKind.CameWith }) items.Add(cameWith);
             if (Selected is not null) items.Add(new PresetItem(PresetRowText.Manage, -1, PresetKind.Manage));
             _presetBox.ItemsSource = items;
-            if (cameWith is not null) _presetBox.SelectedItem = cameWith;
+            var chosen = applied is { } pick ? items.FirstOrDefault(i => i.Kind == PresetKind.User && string.Equals(i.Name, pick.Name, StringComparison.OrdinalIgnoreCase)) : null;
+            if (chosen is not null) _presetBox.SelectedItem = chosen;
+            else if (cameWith is not null) _presetBox.SelectedItem = cameWith;
             else if (Selected is { PresetName: null } && _editors.CurrentProgram >= 0 && _editors.CurrentProgram < _editors.Programs.Count) _presetBox.SelectedIndex = _editors.CurrentProgram;
             else _presetBox.SelectedItem = null;
             _presetBox.PlaceholderText = items.Count == 0 ? NoPresetsText : null;
@@ -160,7 +170,8 @@ public sealed partial class FxChainWindow
         if (item.Kind == PresetKind.CameWith) return;
         if (item.Kind == PresetKind.Program)
         {
-            if (slot.PresetName != item.Name) Edit(() => slot.PresetName = item.Name, show: false);   // the chosen name stays with the plug-in; a pick that changes nothing makes no undo step
+            if (slot.PresetName != item.Name || slot.AppliedPreset is not null)
+                Edit(() => { slot.PresetName = item.Name; slot.AppliedPreset = null; }, show: false);   // the chosen name stays with the plug-in; a pick that changes nothing makes no undo step
             _host.Engine?.SetProgram(_track, slot, item.Program);
             return;
         }
@@ -173,6 +184,7 @@ public sealed partial class FxChainWindow
         {
             slot.PresetName = item.Name;   // the name the box shows, kept with the plug-in (per slot, saved with the song)
             slot.State = preset.State;
+            slot.AppliedPreset = PresetCombo.Remember(item.Name, "PluginPreset", preset.State);
             _host.Engine?.SetState(_track, slot, preset.State);
             if (preset.OutputDb is { } db) { slot.OutputDb = db; _host.Engine?.SetPluginGain(_track, slot); }
         }, show: false);
@@ -206,7 +218,8 @@ public sealed partial class FxChainWindow
         }
         // The saved preset becomes the plug-in's current one (as a pick would): the box lists and shows it, nothing is reloaded.
         var saved = name.Trim();
-        if (slot.PresetName != saved) Edit(() => slot.PresetName = saved, show: false);
+        if (slot.PresetName != saved || slot.AppliedPreset is not null)
+            Edit(() => { slot.PresetName = saved; slot.AppliedPreset = PresetCombo.Remember(saved, "PluginPreset", slot.State); }, show: false);
         LoadPresetList();
     }
 
@@ -226,16 +239,22 @@ public sealed partial class FxChainWindow
         return window;
     }
 
-    /// <summary>Opens (or brings forward) the MIDI processing window of the given plug-in, else the focused one, else the first.</summary>
-    public MidiProcessingWindow? OpenMidiProcessing(PluginSlot? plugin = null)
+    /// <summary>Opens (or brings forward) the MIDI processing window of the given plug-in, else the focused one, else the first. A track with
+    /// no plug-in opens it too: the Articulations tab edits the map kept on the track, and Processors says why it cannot run.</summary>
+    public MidiProcessingWindow? OpenMidiProcessing(PluginSlot? plugin = null, bool articulations = false)
     {
         var slot = plugin ?? FocusedOrFirst;
-        if (slot is null) return null;
-        if (_midiWindow is { IsVisible: true } open && ReferenceEquals(open.Tag, slot)) { open.Activate(); return open; }
-        _midiWindow?.Close();
+        if (_midiWindow is { IsVisible: true } open && ReferenceEquals(open.Tag, slot)) { open.OpenArticulationsTab(); _area.SetCovered(true); open.Activate(); return open; }
+        var previous = _midiWindow;
+        _midiWindow = null;   // a replacement keeps the editor hidden until the new window closes; the old window's Closed handler then restores nothing
+        previous?.Close();
         var window = new MidiProcessingWindow(_host, _track, slot, change => { Edit(change, refresh: false, show: false); UpdateMidiButton(); }) { Tag = slot };
-        window.Closed += (_, _) => { if (ReferenceEquals(_midiWindow, window)) _midiWindow = null; UpdateMidiButton(); };
+        if (articulations) window.OpenArticulationsTab();
+        window.Closed += (_, _) => { if (ReferenceEquals(_midiWindow, window)) { _midiWindow = null; if (!_closed) _area.SetCovered(false); } UpdateMidiButton(); };
         _midiWindow = window;
+        // The docked editor is another process's top-level popup owned by this window: hide it (and its host area, so the engine keeps it hidden)
+        // before the MIDI window opens over this one, or the editor image paints over the new window.
+        _area.SetCovered(true);
         window.Show(this);
         return window;
     }
@@ -251,7 +270,10 @@ public sealed partial class FxChainWindow
     private void ShowBar()
     {
         var selected = Selected;
-        _bar.IsEnabled = selected is not null;
+        // A track with no plug-in keeps MIDI… enabled: its Articulations tab edits the map kept on the track.
+        _bar.IsEnabled = true;
+        _presetBox.IsEnabled = _addPreset.IsEnabled = _wiring.IsEnabled = _parametersButton.IsEnabled = selected is not null;
+        _volume.IsEnabled = _bypass.IsEnabled = selected is not null;
         _building = true;
         try
         {
@@ -262,5 +284,6 @@ public sealed partial class FxChainWindow
         finally { _building = false; }
         LoadPresetList();
         UpdateMidiButton();
+        UpdateActiveOnButton();
     }
 }

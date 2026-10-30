@@ -80,8 +80,8 @@ public static class PreferencesPagePresenter
     public static ResetPrompt ResetShortcuts(int changed) =>
         new("Reset shortcuts", $"Restore the default keys for {changed} changed shortcut{Plural(changed)}?");
 
-    public static ResetPrompt ResetAll(int shortcutCount) =>
-        new("Reset all settings", $"Restore every setting and all {shortcutCount} keyboard shortcuts to their defaults? Cancel still undoes it until you press OK or Apply.");
+    public static ResetPrompt ResetAll() =>
+        new("Reset all settings", "Restores every option and keyboard shortcut in Settings to its default. Your presets, layouts, folders and songs are not touched. Cancel still undoes it until you press OK or Apply.");
 
     /// <summary>A value as the change list shows it: On / Off, a number with up to two decimals, "(none)", or its text.</summary>
     public static string ShowValue(object? value) => value switch

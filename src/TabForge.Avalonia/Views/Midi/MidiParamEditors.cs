@@ -1,3 +1,7 @@
+// Owns: the control of each kind of MIDI processor parameter (a knob with its value text, a drop-down, a tick, a text box, the note chips with an add box and
+//   Learn), each storing its value into the processor through the edit callback; a knob drag is one undo step with a light engine message while it turns.
+// Does not own: which parameters a processor has (MidiProcessorCatalog), the window layout (MidiProcessingWindow), the drum map rows (MidiNoteMapRows).
+// Tests: TabForge.Avalonia.Tests.MidiProcessingWindowTests, MidiClipLayoutTests.
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -5,18 +9,18 @@ using System.Linq;
 using System.Text.Json.Nodes;
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Markup.Xaml.MarkupExtensions;
 using Avalonia.Media;
 using TabForge.Avalonia.Platform.Controls;
+using TabForge.Avalonia.Views.Dialogs;
 using TabForge.Avalonia.Views.Fx;
 using TabForge.Documents;
 using TabForge.Models;
 using TabForge.Plugins;
 using TabForge.Services;
-using EM = TabForge.AudioEngine.Midi;
+using EM = TabForge.Core.Midi;
 
 namespace TabForge.Avalonia.Views.Midi;
 
@@ -31,13 +35,12 @@ public sealed class MidiLearn
     public void Stop() { if (!Active) return; Active = false; Sink = null; Changed?.Invoke(); }
 }
 
-// Owns: the control of each kind of MIDI processor parameter (a knob with its value text, a drop-down, a tick, a text box, the note chips with an add box and
-//   Learn), each storing its value into the processor through the edit callback; a knob drag is one undo step with a light engine message while it turns.
+// Owns: the control of each kind of MIDI processor parameter; every row stretches and wraps through MidiSharedRows,
+//   so all processors share the adaptive layout with no per-processor special cases.
 // Does not own: which parameters a processor has (MidiProcessorCatalog), the window layout (MidiProcessingWindow), the drum map rows (MidiNoteMapRows).
 // Tests: TabForge.Avalonia.Tests.MidiProcessingWindowTests.
 public sealed class MidiParamEditors
 {
-    public const double ItemWidth = 310, ItemWidthText = 460, ItemWidthNotes = 600, LabelWidth = 140, ChoiceWidth = 150, KnobSize = 28, ValueWidth = 90, TextBoxWidth = 300;
     public const int NoteSetMax = 128, TextMaxLength = 512;
 
     private readonly IFxChainHost _host;
@@ -57,6 +60,9 @@ public sealed class MidiParamEditors
     /// <summary>The note-set editor of the shown processor (hidden while Applies to is All notes); null when it has none.</summary>
     public Border? NoteEditor { get; private set; }
 
+    /// <summary>The editor column's scroller: while set, labels stay inside its viewport instead of pushing editors out.</summary>
+    public ScrollViewer? Viewer { get; set; }
+
     /// <summary>Forgets the editor of the processor that was shown.</summary>
     public void Reset() => NoteEditor = null;
 
@@ -65,29 +71,31 @@ public sealed class MidiParamEditors
     /// <summary>The control of one parameter of the processor <paramref name="proc"/> whose values are <paramref name="values"/>.</summary>
     public Control Build(PluginMidiProcessor proc, JsonObject values, MidiParamInfo p)
     {
-        var item = new StackPanel { Orientation = Orientation.Horizontal, Width = ItemWidth, Margin = new Thickness(0, 3, 12, 3) };
-        if (p.Kind == MidiParamKind.Check) { item.Children.Add(Check(proc, values, p)); return item; }
+        if (p.Kind == MidiParamKind.Check) return Wrap(Check(proc, values, p));
         if (p.Kind == MidiParamKind.NoteSet) return NoteSet(proc, values, p);
-        var label = new TextBlock
+        var tip = p.Tip.Length > 0 ? p.Tip : p.Label;
+        Control editor = p.Kind switch
         {
-            Text = p.Label, Width = LabelWidth, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis,
-            [!TextBlock.ForegroundProperty] = new DynamicResourceExtension("MutedBrush"),
+            MidiParamKind.Number => Number(proc, values, p),
+            MidiParamKind.Choice => Choice(proc, values, p),
+            MidiParamKind.Text => Text(proc, values, p),
+            _ => new TextBlock { Text = "" },
         };
-        ToolTip.SetTip(label, p.Tip.Length > 0 ? p.Tip : p.Label);
-        item.Children.Add(label);
-        switch (p.Kind)
-        {
-            case MidiParamKind.Number: Number(item, proc, values, p); break;
-            case MidiParamKind.Choice: item.Children.Add(Choice(proc, values, p)); break;
-            case MidiParamKind.Text: item.Width = ItemWidthText; item.Children.Add(Text(proc, values, p)); break;
-        }
-        return item;
+        return Wrap(Viewer is null ? MidiSharedRows.ParamRow(p.Label, tip, editor) : MidiSharedRows.ParamRow(p.Label, tip, editor, Viewer));
+    }
+
+    private static Control Wrap(Control content)
+    {
+        content.HorizontalAlignment = HorizontalAlignment.Stretch;
+        content.Spaced(DialogMetrics.MidiRowGap);
+        return content;
     }
 
     private CheckBox Check(PluginMidiProcessor proc, JsonObject values, MidiParamInfo p)
     {
-        var box = new CheckBox { Content = p.Label, IsChecked = values[p.Key]!.GetValue<double>() >= 0.5, VerticalAlignment = VerticalAlignment.Center, Name = "Param_" + p.Key };
-        if (p.Tip.Length > 0) ToolTip.SetTip(box, p.Tip);
+        var box = new CheckBox { Content = p.Label, IsChecked = values[p.Key]!.GetValue<double>() >= 0.5, VerticalAlignment = VerticalAlignment.Center, Name = "Param_" + p.Key, HorizontalAlignment = HorizontalAlignment.Left };
+        box.Spaced(DialogMetrics.MidiCheckGap);
+        if (p.Tip.Length > 0) MidiSharedRows.Tip(box, p.Tip);
         box.IsCheckedChanged += (_, _) =>
         {
             var on = box.IsChecked == true ? 1 : 0;
@@ -97,18 +105,20 @@ public sealed class MidiParamEditors
         return box;
     }
 
-    private void Number(StackPanel item, PluginMidiProcessor proc, JsonObject values, MidiParamInfo p)
+    private Control Number(PluginMidiProcessor proc, JsonObject values, MidiParamInfo p)
     {
         var scale = Math.Max(1, p.Scale);
         var knob = new KnobControl
         {
-            Minimum = p.Min * scale, Maximum = p.Max * scale, DefaultValue = p.Default * scale, Origin = Math.Clamp(0, p.Min, p.Max) * scale, Width = KnobSize, Height = KnobSize,
+            Minimum = p.Min * scale, Maximum = p.Max * scale, DefaultValue = p.Default * scale, Origin = Math.Clamp(0, p.Min, p.Max) * scale,
+            Width = DialogMetrics.MidiKnobSize, Height = DialogMetrics.MidiKnobSize,
             Label = p.Label, Format = v => p.Format(v / scale), Name = "Param_" + p.Key, Step = 1,
             Parse = text => double.TryParse(text, NumberStyles.Float, CultureInfo.CurrentCulture, out var typed) ? typed * scale : null,
             FromDisplay = displayed => displayed * scale,
         };
-        ToolTip.SetTip(knob, p.Tip.Length > 0 ? p.Tip : p.Label);
-        var text = new TextBlock { Width = ValueWidth, Margin = new Thickness(8, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center, Name = "ParamValue_" + p.Key };
+        MidiSharedRows.Tip(knob, p.Tip.Length > 0 ? p.Tip : p.Label);
+        var text = new TextBlock { MinWidth = DialogMetrics.MidiValueMinWidth, VerticalAlignment = VerticalAlignment.Center, Name = "ParamValue_" + p.Key, TextWrapping = TextWrapping.Wrap };
+        text.Spaced(DialogMetrics.MidiValueGap);
         knob.Value = Math.Round(values[p.Key]!.GetValue<double>() * scale);
         text.Text = p.Format(knob.Value / scale);
         knob.EditStarted += (_, _) => { _dragging = true; _since = _host.Checkpoint(); };
@@ -131,14 +141,16 @@ public sealed class MidiParamEditors
             _host.Edit(_track, () => { }, _since);
             _since = null;
         };
-        item.Children.Add(knob);
-        item.Children.Add(text);
+        var row = new WrapPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Stretch };
+        row.Children.Add(knob);
+        row.Children.Add(text);
+        return row;
     }
 
     private ComboBox Choice(PluginMidiProcessor proc, JsonObject values, MidiParamInfo p)
     {
-        var combo = new ComboBox { Width = ChoiceWidth, Name = "Param_" + p.Key };
-        if (p.Tip.Length > 0) ToolTip.SetTip(combo, p.Tip);
+        var combo = new ComboBox { Name = "Param_" + p.Key, HorizontalAlignment = HorizontalAlignment.Stretch };
+        MidiSharedRows.StretchDrop(combo, p.Tip.Length > 0 ? p.Tip : p.Label);
         var current = (int)Math.Round(values[p.Key]!.GetValue<double>());
         var items = (p.Choices ?? Array.Empty<(int, string)>()).Select(c => new ComboBoxItem { Content = c.Item2, Tag = c.Item1 }).ToList();
         combo.ItemsSource = items;
@@ -154,8 +166,8 @@ public sealed class MidiParamEditors
 
     private TextBox Text(PluginMidiProcessor proc, JsonObject values, MidiParamInfo p)
     {
-        var box = new TextBox { Width = TextBoxWidth, Text = values[p.Key]!.GetValue<string>(), MaxLength = TextMaxLength, Name = "Param_" + p.Key };
-        if (p.Tip.Length > 0) ToolTip.SetTip(box, p.Tip);
+        var box = new TextBox { Text = values[p.Key]!.GetValue<string>(), MaxLength = TextMaxLength, Name = "Param_" + p.Key, MinWidth = DialogMetrics.MidiTextMinWidth, HorizontalAlignment = HorizontalAlignment.Stretch, TextWrapping = TextWrapping.Wrap };
+        if (p.Tip.Length > 0) MidiSharedRows.Tip(box, p.Tip);
         void Commit()
         {
             var text = box.Text ?? "";
@@ -167,18 +179,22 @@ public sealed class MidiParamEditors
         return box;
     }
 
-    // Chips (number + name), an add box ("36, 38, 40-45, C2, D#3"), and Learn (adds the next note played into this track).
+    // Chips (number + name) that wrap, an add box ("36, 38, 40-45, C2, D#3"), and Learn (adds the next note played into this track).
     private Border NoteSet(PluginMidiProcessor proc, JsonObject values, MidiParamInfo p)
     {
         var frame = new Border
         {
-            Width = ItemWidthNotes, Padding = new Thickness(6), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(3), Name = "NoteEditor",
-            IsVisible = values["NoteMode"]!.GetValue<double>() >= 0.5, Margin = new Thickness(0, 3, 12, 3),
+            HorizontalAlignment = HorizontalAlignment.Stretch, MinWidth = DialogMetrics.MidiNoteFrameMinWidth,
+            BorderThickness = DialogMetrics.MidiFrameBorder, CornerRadius = new CornerRadius(DialogMetrics.MidiFrameCorner), Name = "NoteEditor",
+            IsVisible = values["NoteMode"]!.GetValue<double>() >= 0.5,
             [!Border.BorderBrushProperty] = new DynamicResourceExtension("BorderSoftBrush"), [!Border.BackgroundProperty] = new DynamicResourceExtension("PanelBrush"),
         };
+        frame.Padded(DialogMetrics.MidiFrameInset);
+        frame.Spaced(DialogMetrics.MidiRowGap);
         NoteEditor = frame;
-        var chips = new WrapPanel { Margin = new Thickness(0, 0, 0, 6), Name = "NoteChips" };
-        var empty = new TextBlock { Text = "No notes yet: type some below or press Learn and play them.", FontSize = 11, [!TextBlock.ForegroundProperty] = new DynamicResourceExtension("MutedBrush") };
+        var chips = new WrapPanel { Orientation = Orientation.Horizontal, Name = "NoteChips", HorizontalAlignment = HorizontalAlignment.Stretch };
+        chips.Spaced(DialogMetrics.MidiNoteGap);
+        var empty = new TextBlock { Text = "No notes yet: type some below or press Learn and play them.", FontSize = DialogMetrics.MidiSmallText, TextWrapping = TextWrapping.Wrap, [!TextBlock.ForegroundProperty] = new DynamicResourceExtension("MutedBrush") };
         List<int> Current() { var set = EM.NoteSetText.Parse(values[p.Key]!.GetValue<string>()); return Enumerable.Range(0, NoteSetMax).Where(n => set[n]).ToList(); }
         void Commit(IEnumerable<int> notes)
         {
@@ -193,20 +209,13 @@ public sealed class MidiParamEditors
             if (notes.Count == 0) chips.Children.Add(empty);
             foreach (var n in notes)
             {
-                var chip = new Border
-                {
-                    Margin = new Thickness(0, 0, 4, 4), Padding = new Thickness(6, 1), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(9), Tag = n,
-                    [!Border.BorderBrushProperty] = new DynamicResourceExtension("AccentBrush"),
-                    Child = new TextBlock { Text = $"{n} {NoteLabel(n)}  ×", FontSize = 11, [!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextBrush") },
-                };
-                ToolTip.SetTip(chip, "Click to remove");
+                var chip = MidiSharedRows.Chip($"{n} {NoteLabel(n)}  ×", n, "Click to remove");
                 var captured = n;
                 chip.PointerReleased += (_, _) => Commit(Current().Where(x => x != captured));
                 chips.Children.Add(chip);
             }
         }
-        var input = new TextBox { Width = 200, Name = "NoteInput" };
-        ToolTip.SetTip(input, "Notes to add: 36, 38, 40-45, C2, D#3 (Enter adds)");
+        var input = MidiSharedRows.NoteInput("NoteInput", "Notes to add: 36, 38, 40-45, C2, D#3 (Enter adds)");
         void AddText()
         {
             var set = EM.NoteSetText.Parse(input.Text);
@@ -216,15 +225,12 @@ public sealed class MidiParamEditors
             Commit(Current().Concat(added));
         }
         input.KeyDown += (_, e) => { if (e.Key == Key.Enter) { AddText(); e.Handled = true; } };
-        var add = new Button { Content = "Add", Padding = new Thickness(10, 2), Margin = new Thickness(6, 0, 0, 0), Name = "NoteAdd" };
+        var add = MidiSharedRows.RowButton("Add", "NoteAdd", "Adds the typed notes to the list");
         add.Click += (_, _) => AddText();
-        var learn = new ToggleButton { Content = "Learn", Padding = new Thickness(10, 2), Margin = new Thickness(6, 0, 0, 0), Name = "NoteLearn" };
-        ToolTip.SetTip(learn, "Play a note (keyboard or song): it is added to the list. Needs the track to be sounding through this chain.");
-        learn.IsCheckedChanged += (_, _) => { if (learn.IsChecked == true) _learn.Start(n => Commit(Current().Append(n))); else _learn.Stop(); };
-        var clear = new Button { Content = "Clear", Padding = new Thickness(10, 2), Margin = new Thickness(6, 0, 0, 0), Name = "NoteClear" };
+        var learn = MidiSharedRows.LearnToggle("NoteLearn", false, on => { if (on) _learn.Start(n => Commit(Current().Append(n))); else _learn.Stop(); });
+        var clear = MidiSharedRows.RowButton("Clear", "NoteClear", "Removes every note from the list");
         clear.Click += (_, _) => Commit(Array.Empty<int>());
-        var row = new StackPanel { Orientation = Orientation.Horizontal, Children = { input, add, learn, clear } };
-        frame.Child = new StackPanel { Children = { chips, row } };
+        frame.Child = new StackPanel { Children = { chips, MidiSharedRows.EntryRow(input, add, learn, clear) } };
         Rebuild();
         return frame;
     }

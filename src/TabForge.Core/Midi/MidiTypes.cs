@@ -1,7 +1,7 @@
 using System.Text.Json;
 using TabForge.AudioEngine.Plugins;
 
-namespace TabForge.AudioEngine.Midi;
+namespace TabForge.Core.Midi;
 
 // Owns: the fixed-capacity block MIDI event list (preallocated, allocation-free add, silent drop past capacity).
 

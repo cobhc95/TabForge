@@ -84,6 +84,9 @@ public static class ChromeMetrics
     public const double TrackToggleFontSize = 11, TrackToggleCorner = 4;
     public const int TrackToggleWeight = 700;
 
+    /// <summary>The selected track row's left-edge strip: its width and corner in DIPs.</summary>
+    public const double SelectedStripWidth = 4, SelectedStripCorner = 2;
+
     public const string UiFontFamily = "Segoe UI";
 
     /// <summary>The Mixer's drawn FX buttons: the split FX button's width, the Monitor FX button's width and their shared height.</summary>
@@ -104,6 +107,12 @@ public static class ChromeMetrics
 
     /// <summary>The track list's default width (every transport item on one row at normal button size) and the earlier default saved layouts may still hold.</summary>
     public const double TrackListDefaultWidth = 600, TrackListOldDefaultWidth = 532;
+
+    /// <summary>The per-track meter in a track row: the column span, the cell's width and height, the extra width the volume and pan columns took back,
+    /// the two stacked horizontal bars (height, gap, width with the number), the peak-hold tick, the clip end mark and the small number.</summary>
+    public const double TrackMeterColumnWidth = 46, TrackMeterWidth = 46, TrackMeterHeight = 18, TrackVolumeColumnWidth = 96, TrackPanColumnWidth = 96,
+        TrackMeterBarHeight = 7, TrackMeterGap = 3, TrackMeterInset = 2, TrackMeterBarsWidth = 28, TrackMeterClipMark = 2, TrackMeterHoldHeight = 1.5,
+        TrackMeterCorner = 1.5, TrackMeterNumberSize = 8.5;
 
     /// <summary>The transport bar's snug width parts (DIPs): the side margin of a full-size button and of the master meter (scaled by density),
     /// the divider's own span and side margin (scaled), the master knob's left and right margins (scaled), the zoom column's own span and side

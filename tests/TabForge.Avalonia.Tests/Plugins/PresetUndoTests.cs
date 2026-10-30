@@ -30,6 +30,7 @@ namespace TabForge.Avalonia.Tests;
 /// Does not own: the row looks (PresetRowsTests) or the manager window's list and toolbar (PresetManagerWindowTests).
 /// Tests: this class.
 /// </summary>
+[Collection("PluginLibraryRoot")]   // PluginLibrary.RootOverride is process-wide: run alone so no parallel test resets it or reads the scratch folder
 public class PresetUndoTests
 {
     [AvaloniaFact]

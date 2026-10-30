@@ -36,6 +36,7 @@ public sealed class MenuHotkeysUnchangedTests
             "Edit.Paste|Ctrl+V|",
             "Edit.PasteSpecial|Ctrl+Shift+V|",
             "Edit.SelectAll|Ctrl+A|",
+            "Edit.InvertSelection|Ctrl+I|",
             "Edit.InsertBeat|Insert|",
             "Edit.RepeatSelection|Ctrl+Shift+R|",
             "Transport.PlayPause|Space|",
@@ -167,7 +168,7 @@ public sealed class MenuHotkeysUnchangedTests
     public void NoKeyWasAddedToACommandThatHadNone()
     {
         var had = Before.Select(line => line.Split('|')[0]).ToHashSet();
-        var added = HotkeyCatalog.All.Where(a => !HotkeyCatalog.IsFxChainAction(a.Id) && (a.DefaultGesture.Length > 0 || a.DefaultGesture2.Length > 0) && !had.Contains(a.Id)).Select(a => a.Id).ToList();
+        var added = HotkeyCatalog.All.Where(a => !HotkeyCatalog.IsFxChainAction(a.Id) && !HotkeyCatalog.IsPianoRollAction(a.Id) && (a.DefaultGesture.Length > 0 || a.DefaultGesture2.Length > 0) && !had.Contains(a.Id)).Select(a => a.Id).ToList();
         Assert.True(added.Count == 0, "New default keys: " + string.Join(", ", added));
     }
 

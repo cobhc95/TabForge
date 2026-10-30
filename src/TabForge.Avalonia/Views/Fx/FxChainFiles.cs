@@ -30,7 +30,6 @@ public sealed class FxChainFiles
     public const string RfxExtension = ".rfxchain";
     public const string NoSavedChainsText = "No saved chains yet", SaveMenuText = "Save FX chain…", SaveForHostsText = "Save as FX chain for other hosts (.RfxChain)…";
     public const string SaveForHostsTip = "Writes this chain, with its containers and the plug-ins' current settings, as a chain file other hosts can load";
-    public const string ReplaceQuestionFormat = "Replace this chain with \"{0}\"?\n\nYes: replace the plug-ins of this chain.\nNo: add the saved chain to the end.";
     private const int StateCollectMs = 2000;
 
     private readonly Window _owner;
@@ -70,14 +69,18 @@ public sealed class FxChainFiles
         {
             Key = TabForge.Services.DialogKeys.FxChainLoad, Title = LoadCaption, Filter = LoadFilter, InitialDirectory = useReaper ? reaper : PluginLibrary.ChainsFolder,
         }, _owner);
-        if (file is not null) await LoadFile(file, replace);
+        if (file is not null) await LoadFile(file, replace, preferred: replace ? FxPresetLoadMode.Replace : FxPresetLoadMode.Add);
     }
 
     /// <summary>Loads one chain file (the picker answer, or a saved chain from the Chains menu) and reports the outcome.</summary>
-    public async Task LoadFile(string path, bool replace)
+    /// <param name="replace">Kept for the callers that name the menu command; the question (or Settings) decides replace or add.</param>
+    /// <param name="displayName">The preset name the question shows; null takes the file name.</param>
+    /// <param name="preferred">The choice the question starts on; null follows the menu command (Replace, or Add for "Add FX chain to the end…").</param>
+    public async Task LoadFile(string path, bool replace, string? displayName = null, FxPresetLoadMode? preferred = null)
     {
         if (_loading) return;
         ChainFileApply.ChainFileRead read;
+        string? noneFound = null;
         _loading = true;
         try
         {
@@ -85,9 +88,10 @@ public sealed class FxChainFiles
             {
                 var imported = await new FxRfxChainFlows(_owner, _host, _dialogs(), _status).ImportAsync(path, _windowClosed.Token);
                 var fileName = Path.GetFileName(path);
-                read = ChainFileApply.Check(fileName, imported?.Chain, Rig.Plugins.Count, replace, imported?.NoneFoundNotice(fileName));
+                noneFound = imported?.NoneFoundNotice(fileName);
+                read = ChainFileApply.Check(fileName, imported?.Chain, Rig.Plugins.Count, replace: true, noneFound);
             }
-            else read = ChainFileApply.Read(path, Rig.Plugins.Count, replace);
+            else read = ChainFileApply.Read(path, 0, replace: true);
         }
         catch (OperationCanceledException)
         {
@@ -105,17 +109,32 @@ public sealed class FxChainFiles
             return;
         }
         finally { _loading = false; }
-        _status(read.Outcome.Notice);
-        if (read.Plugins is not { } loaded) return;
-        if (replace) _leaving(Rig.Plugins.ToList());
+        if (read.Plugins is not { } loaded) { _status(read.Outcome.Notice); return; }
+
+        // The question comes before any change: Cancel leaves the chain, its settings and its undo history alone.
+        var name = displayName ?? FxPresetLoadPresenter.NameOf(path);
+        var start = preferred ?? (replace ? FxPresetLoadMode.Replace : FxPresetLoadMode.Add);
+        var answer = await FxPresetLoadQuiz.AskAsync(_owner, _dialogs(), _host.PluginSettings, _host.SaveSettings, name, Rig.Plugins.Count,
+            FxPresetLoadPresenter.ShowsTwoInstruments(Rig, loaded), start);
+        if (answer is not { } choice) return;
+        var mode = choice.Mode;
+        var place = ChainFileApply.Check(Path.GetFileName(path), loaded, Rig.Plugins.Count, mode == FxPresetLoadMode.Replace, noneFound);
+        _status(place.Outcome.Notice);
+        if (place.Plugins is not { } toLoad) return;
+
+        if (mode == FxPresetLoadMode.Replace) _leaving(Rig.Plugins.ToList());
+        var hadInstrument = FxChainPresenter.HasInstrument(Rig.Plugins);
         _edit(tree =>
         {
-            // A replace empties the tree too, so no empty container of the old chain stays; the loaded containers arrive packed on the first plug-in.
-            if (replace) { tree.Clear(); Rig.Plugins.Clear(); }
-            Rig.Plugins.AddRange(loaded);
+            var merged = FxChainMerge.Merge(Rig, toLoad, mode);
+            Rig.Plugins.Clear();
+            Rig.Plugins.AddRange(merged.Plugins);
+            tree.Clear();   // a replace also drops the old containers; an add keeps them in the merged tree
+            tree.AddRange(ChainTree.Tree(merged.Plugins, merged.Containers));
+            FxChainPresenter.FollowsGmSound(_track, hadInstrument, _host.PluginSettings.AutoGmSound);
             _track.SoundSource = SoundSources.Plugins;
         });
-        _applied(read.Outcome.FirstAdded);
+        _applied(place.Outcome.FirstAdded);
     }
 
     /// <summary>Reads the plug-in states, asks for a file name and writes the chain (with its containers) to it as a chain file.</summary>
@@ -169,16 +188,6 @@ public sealed class FxChainFiles
         keys.Apply(chains);
     }
 
-    // A saved chain from the menu: when this chain has plug-ins, the question decides replace (Yes), add to the end (No) or nothing (Cancel).
-    private async Task LoadSavedAsync(string path, string name)
-    {
-        var replace = true;
-        if (Rig.Plugins.Count > 0)
-        {
-            var answer = await _dialogs().Ask(_owner, string.Format(ReplaceQuestionFormat, name), LoadCaption, MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question);
-            if (answer is not (MessageBoxAnswer.Yes or MessageBoxAnswer.No)) return;
-            replace = answer == MessageBoxAnswer.Yes;
-        }
-        await LoadFile(path, replace);
-    }
+    // A saved chain from the menu: the same question as every other load decides replace, add to the end or nothing (Cancel).
+    private Task LoadSavedAsync(string path, string name) => LoadFile(path, replace: true, name);
 }

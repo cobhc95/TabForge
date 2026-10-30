@@ -4,7 +4,7 @@ using TabForge.Services;
 namespace TabForge.Playback;
 // Owns: the per-note output for the score: mutes, grace notes, tremolo picking, trills, bends, slides, vibrato, whammy, expression events and fade-in envelopes.
 // Does not own: the bar and cell walk that calls it (ScoreToMidiCompiler.cs) or the scheduler's timing (PlaybackEngine.Scheduler.cs).
-// Tests: no dedicated test class.
+// Tests: TiedBendPitchCurveTests, LegatoChainMergeTests, TechniqueExportAuditTests.
 // Long on purpose: one part of the compiler's partial class; the technique rules share the compiler's state.
 internal sealed partial class ScoreToMidiCompiler
 {
@@ -24,6 +24,7 @@ internal sealed partial class ScoreToMidiCompiler
 
         ApplyGraceTiming(trackIndex, voiceIndex, cell, note, slotMs, ref onset, ref noteMs, out var importedGraceNotes, out var graceDelaySlots);
         var velocity = ComputeVelocity(note, cell, t, importedGraceNotes);
+        _noteArticulation = ArticulationFor(track, trackIndex, cell, note, t, channel);   // the map's message and the techniques it covers
         var length = SoundingLengthMs(cell, note, t, noteMs, slotMs);
 
         var writtenEndMs = onset + noteMs;   // before the cuts above: a tie continues from the written end
@@ -34,7 +35,7 @@ internal sealed partial class ScoreToMidiCompiler
         var mergeable = !note.IsGraceNote && !t.Contains("TremoloPick") && !t.Contains("Trill") && !t.Contains("SemiHarmonic");
         // Legato slide: one pick, then the pitch slides to the target, which is not re-attacked.
         if (mergeable && !tied && _open.TryGetValue(key, out var legatoOrigin) && legatoOrigin.Legato && !legatoOrigin.Note.Dead && legatoOrigin.SlideTarget == midi &&
-            CanContinue(legatoOrigin, midi, WheelPeakSemitones(cell, note, t), onset, slotMs))
+            CanContinue(legatoOrigin, midi, WheelPeakSemitones(cell, note, t), onset, slotMs) && !ArticulationSuppressed(TechniqueNames.LegatoSlide))
         {
             tied = true;
             legatoOrigin.Legato = false;   // only the immediate slide destination merges (its own slide may set it again); later same-pitch notes attack
@@ -48,7 +49,7 @@ internal sealed partial class ScoreToMidiCompiler
         if (tied && mergeable) _timeline.TieOrphans++;   // a tremolo, trill or grace destination is picked on purpose
 
         ApplySlideInLead(trackIndex, voiceIndex, note, t, channel, ref onset, ref length);
-        var soundMidi = ApplyArticulation(track, trackIndex, cell, note, t, channel, device, onset, ref velocity, midi);   // the instrument's articulation map, if any
+        var soundMidi = ApplyArticulation(track, trackIndex, channel, device, onset, ref velocity, midi);   // the instrument's articulation map, if any
 
         var noteEvent = new NoteEvent
         {
@@ -58,7 +59,8 @@ internal sealed partial class ScoreToMidiCompiler
             Dead = note.Dead, Ghost = note.Ghost, LetRing = t.Contains("LetRing"),
             FadeIn = t.Contains("FadeIn"), ChordName = cell.ChordName,
             Technique = TechniqueTag.From(t),
-            Strum = TechniqueTag.StrumOf(cell.Notes)
+            Strum = TechniqueTag.StrumOf(cell.Notes),
+            TechniqueMarker = TechniqueMarker.Build(note),
         };
         LaneNotes(trackIndex, voiceIndex).Add(_timeline.Notes.Count);
         _timeline.Notes.Add(noteEvent);
@@ -66,7 +68,7 @@ internal sealed partial class ScoreToMidiCompiler
         // Tremolo picking / trill: several attacks inside the written value.
         var tremoloDenominator = Math.Max(cell.TremoloPickDenominator, note.TrillDurationDenominator);
         var repeats = RepetitionCount(length, slotMs, tremoloDenominator);
-        if ((t.Contains("TremoloPick") || t.Contains("Trill")) && repeats > 1 && length / repeats >= 30)
+        if ((t.Contains("TremoloPick") || t.Contains("Trill")) && repeats > 1 && length / repeats >= 30 && !SkipUnmappedArticulation)
         {
             EmitRepeatedAttacks(noteEvent, track, playBar, cellIndex, cell, note, soundMidi, velocity, onset, length, repeats, tremoloDenominator, slotMs, key, t, channel, device, trackIndex);
             return;
@@ -112,16 +114,16 @@ internal sealed partial class ScoreToMidiCompiler
         }
     }
 
-    /// <summary>How long the note sounds: the written length scaled by the cell, cut for staccato, dead and palm-muted notes.</summary>
-    private static double SoundingLengthMs(TabCell cell, TabNote note, HashSet<string> t, double noteMs, double slotMs)
+    /// <summary>How long the note sounds: the written length scaled by the cell, cut for staccato, dead and palm-muted notes (unless a map covers the cut technique).</summary>
+    private double SoundingLengthMs(TabCell cell, TabNote note, HashSet<string> t, double noteMs, double slotMs)
     {
         var length = noteMs * Math.Clamp(cell.SoundDurationPercent, 1, 200) / 100.0;
         if (cell.Staccato) length *= 0.5;
         // Dead notes are a short muted click; ghost notes (parenthesised) are just softer, full length.
-        if (note.Dead) length = Math.Min(length, slotMs * TechniqueInfo.MaxLengthSlotsOf("Dead"));   // 0.04 beat
+        if (note.Dead && !ArticulationSuppressed("Dead")) length = Math.Min(length, slotMs * TechniqueInfo.MaxLengthSlotsOf("Dead"));   // 0.04 beat
         // Palm mute: a palm-muted note is capped at a quarter note (min(quarter, written)) so it
         // chugs instead of ringing the full written value.
-        if (TechniqueNames.HasPalmMute(t)) length = Math.Min(length, TechniqueInfo.MaxLengthSlotsOf(TechniqueNames.PalmMute) * slotMs);
+        if (TechniqueNames.HasPalmMute(t) && !ArticulationSuppressed(TechniqueNames.PalmMute)) length = Math.Min(length, TechniqueInfo.MaxLengthSlotsOf(TechniqueNames.PalmMute) * slotMs);
         return Math.Max(20, length);
     }
 
@@ -132,6 +134,7 @@ internal sealed partial class ScoreToMidiCompiler
     private void ApplySlideInLead(int trackIndex, int voiceIndex, TabNote note, HashSet<string> t, int channel, ref double onset, ref double length)
     {
         if (!(t.Contains("SlideInBelow") || t.Contains("SlideInAbove")) || note.IsGraceNote || channel == ChannelAllocator.PercussionChannel) return;
+        if (ArticulationSuppressed("Slide")) return;   // the map's keyswitch tells it, no extra slide-in attack
         var lead = Math.Min(Math.Min(120, length * 0.25), Math.Max(0, onset));   // never starts before time zero
         onset -= lead;
         length += lead;
@@ -150,7 +153,7 @@ internal sealed partial class ScoreToMidiCompiler
         Add(device, channel, 0x80, midi, 0, onset + length, trackIndex);
 
         // Semi harmonic: the fundamental sounds together with the harmonic.
-        if (t.Contains("SemiHarmonic") && channel != ChannelAllocator.PercussionChannel &&
+        if (t.Contains("SemiHarmonic") && channel != ChannelAllocator.PercussionChannel && !ArticulationSuppressed(TechniqueNames.Harmonic) &&
             note.StringIndex >= 0 && note.StringIndex < track.StringTunings.Count)
         {
             var fundamental = WrittenMidi(track, cell, note);
@@ -170,13 +173,18 @@ internal sealed partial class ScoreToMidiCompiler
         if (channel != ChannelAllocator.PercussionChannel)
         {
             var target = PitchTarget(track, playBar, cellIndex, cell, note, midi, t);
+            if (ArticulationSuppressed("Slide") || ArticulationSuppressed(TechniqueNames.LegatoSlide)) target = null;   // the map replaces the slide
             if (target is int slideTo && !note.IsGraceNote && _open.TryGetValue(key, out var slidOpen))
             {
                 slidOpen.SlideTarget = slideTo;
                 slidOpen.Legato = t.Contains("LegatoSlide");   // a grace slide is quick: it never opens a merge, the principal is still picked
             }
-            var curveEnd = EmitPitchExpression(note, cell, t, midi, target, onset, length, device, channel, trackIndex);
-            if (curveEnd >= 0 && !note.IsGraceNote) _open[key].CurveEndIndex = curveEnd;
+            var curveEnd = EmitPitchExpression(note, cell, t, midi, target, onset, length, device, channel, trackIndex, 0, -1, false, out var held);
+            if (!note.IsGraceNote)
+            {
+                if (curveEnd >= 0) _open[key].CurveEndIndex = curveEnd;
+                _open[key].HeldSemitones = held;
+            }
             EmitExpressions(t, midi, onset, length, device, channel, trackIndex,
                 emitLegacyGrace: ShouldEmitLegacyGrace(cell, note));
         }
@@ -229,7 +237,7 @@ internal sealed partial class ScoreToMidiCompiler
         // Hold the wheel at the slide offset through the tie instead of snapping back to the origin.
         if (open.SlideTarget == landed && open.Note.Midi != landed && channel != ChannelAllocator.PercussionChannel)
         {
-            var hold = PitchWheelForSemitones(landed - open.Note.Midi);
+            var hold = PitchWheelForSemitones(open.HeldSemitones);
             if (open.HoldResetIndex < 0)
             {
                 AddPitchWheel(device, channel, hold, previousEnd + 0.01, trackIndex);
@@ -243,13 +251,18 @@ internal sealed partial class ScoreToMidiCompiler
         if (channel != ChannelAllocator.PercussionChannel)
         {
             var ownTarget = PitchTarget(track, playBar, cellIndex, cell, note, landed, t);
+            if (ArticulationSuppressed("Slide") || ArticulationSuppressed(TechniqueNames.LegatoSlide)) ownTarget = null;
             if (ownTarget is int slideTo)
             {
                 open.SlideTarget = slideTo;
                 open.Legato = t.Contains("LegatoSlide");
             }
             var originReset = open.HoldResetIndex < 0 ? open.CurveEndIndex : -1;   // after a held slide the origin's reset is not the chain's wheel end
-            var curveEnd = EmitPitchExpression(note, cell, t, landed, ownTarget, onset, length, device, channel, trackIndex, landed - open.Note.Midi, originReset);
+            var held = open.HeldSemitones;   // where the string is bent at the join: the continuation carries it on, never resets to centre
+            // A legato slide destination is not a tie: its curve still adds the slide's pitch offset to its own bend.
+            var curveEnd = EmitPitchExpression(note, cell, t, landed, ownTarget, onset, length, device, channel, trackIndex, held, originReset,
+                cell.IsTied || note.Tied, out var nextHeld);
+            open.HeldSemitones = nextHeld;
             if (curveEnd >= 0)
             {
                 open.HoldResetIndex = -1;   // its curve ends the wheel itself; a later link holds again
@@ -285,7 +298,8 @@ internal sealed partial class ScoreToMidiCompiler
         if (channel != ChannelAllocator.PercussionChannel)
         {
             var target = PitchTarget(track, playBar, cellIndex, cell, note, midi, t);
-            EmitPitchExpression(note, cell, t, midi, target, onset, length, device, channel, trackIndex);
+            if (ArticulationSuppressed("Slide") || ArticulationSuppressed(TechniqueNames.LegatoSlide)) target = null;
+            EmitPitchExpression(note, cell, t, midi, target, onset, length, device, channel, trackIndex, 0, -1, false, out _);
             EmitExpressions(t, midi, onset, length, device, channel, trackIndex,
                 emitLegacyGrace: ShouldEmitLegacyGrace(cell, note));
         }

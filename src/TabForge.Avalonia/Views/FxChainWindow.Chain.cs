@@ -21,12 +21,19 @@ public sealed partial class FxChainWindow
     /// <summary>The containers part of the window (tests read its menu).</summary>
     internal FxChainContainers Containers => _containers;
 
-    private bool HasInstrument => _track.Rig.Plugins.Any(p => p.Type == PluginSlotType.Instrument);
+    private bool HasInstrument => FxChainPresenter.HasInstrument(_track.Rig.Plugins);
 
-    /// <summary>The chain's last instrument left it (removed alone or with its container): the GM sound plays again.</summary>
-    private void GmBackWithoutInstrument(bool had) { if (FxChainPresenter.RestoresGmSound(had, HasInstrument)) _track.MidiSound = true; }
+    /// <summary>The GM sound follows the instrument, exactly as adding or removing a VSTi directly does (also after a preset load).</summary>
+    private void KeepGmSound(bool hadInstrument) => FxChainPresenter.FollowsGmSound(_track, hadInstrument, _host.PluginSettings.AutoGmSound);
 
     private void Edit(Action change, bool refresh = false, bool show = true) => EditTree(_ => change(), refresh, show);
+
+    /// <summary>One undo step of the chain tree that also keeps the GM sound in line with its instruments (a container preset load).</summary>
+    private void EditKeepingGmSound(Action<List<ChainItem>> change)
+    {
+        var had = HasInstrument;
+        EditTree(tree => { change(tree); KeepGmSound(had); }, refresh: true);
+    }
 
     /// <summary>
     /// One undo step on the chain: the change may edit the plug-in list, the tree of containers, or both (see <see cref="ChainTree.Edit"/>). The song is marked
@@ -57,7 +64,7 @@ public sealed partial class FxChainWindow
         {
             var keep = select ?? _list.SelectedTags;
             _list.Clear();
-            FxChainRows.Fill(_list, _track.Rig, SetEnabled, _containers.SetEnabled, _containers.ToggleCollapsed);
+            FxChainRows.Fill(_list, _track.Rig, SetEnabled, _containers.SetEnabled, _containers.ToggleCollapsed, ActiveOnOutputNow);
             _list.Restore(keep, Math.Max(0, _list.IndexOf(focus)));
             _signature = RowSignature();
         }
@@ -76,12 +83,18 @@ public sealed partial class FxChainWindow
 
     private string _signature = "";
 
-    // What the rows show: the plug-ins and containers in order with their switches and names.
-    private string RowSignature() => string.Join("|", ChainTree.Tree(_track.Rig).Select(Signature));
+    // What the rows show: the output the rules match now, and the plug-ins and containers in order with their switches, names and rules.
+    private string RowSignature()
+    {
+        var output = ActiveOnOutputNow;
+        return $"{output.Driver}|{output.Device}|" + string.Join("|", ChainTree.Tree(_track.Rig).Select(Signature));
+    }
 
     private static string Signature(ChainItem item) => item.Plugin is { } p
-        ? $"{p.Id}:{p.Enabled}:{p.GroupBypassed}:{p.Name}"
-        : $"[{item.Container!.Id}:{item.Container.Enabled}:{item.Container.Collapsed}:{item.Container.Name}:{string.Join(",", item.Children.Select(Signature))}]";
+        ? $"{p.Id}:{p.Enabled}:{p.GroupBypassed}:{p.Name}:{RuleSignature(p.ActiveOn)}"
+        : $"[{item.Container!.Id}:{item.Container.Enabled}:{item.Container.Collapsed}:{item.Container.Name}:{RuleSignature(item.Container.ActiveOn)}:{string.Join(",", item.Children.Select(Signature))}]";
+
+    private static string RuleSignature(ActiveOnRule? rule) => rule is null ? "" : $"{rule.DriverKind}:{rule.DeviceName}";
 
     /// <summary>Removes every selected plug-in as one step (or the selected containers with their plug-ins, after a question).</summary>
     private async Task RemoveSelected()
@@ -92,7 +105,7 @@ public sealed partial class FxChainWindow
         if (target == RemoveTarget.Nothing) return;
         var index = _track.Rig.Plugins.IndexOf(slots[0]);
         _editors.Leaving(slots);
-        Edit(() => { var had = HasInstrument; _track.Rig.Plugins.RemoveAll(slots.Contains); GmBackWithoutInstrument(had); }, refresh: false, show: false);
+        Edit(() => { var had = HasInstrument; _track.Rig.Plugins.RemoveAll(slots.Contains); KeepGmSound(had); }, refresh: false, show: false);
         RefreshList(index);
     }
 
@@ -100,7 +113,7 @@ public sealed partial class FxChainWindow
     private void ClearChain()
     {
         _editors.Leaving(_track.Rig.Plugins);
-        EditTree(tree => { var had = HasInstrument; tree.Clear(); _track.Rig.Plugins.Clear(); GmBackWithoutInstrument(had); }, refresh: true);
+        EditTree(tree => { var had = HasInstrument; tree.Clear(); _track.Rig.Plugins.Clear(); KeepGmSound(had); }, refresh: true);
     }
 
     /// <summary>A row's tick: switches that plug-in, or every selected plug-in when its row is one of several selected, as one step.</summary>
@@ -130,7 +143,7 @@ public sealed partial class FxChainWindow
             {
                 // An instrument goes first (it makes the sound the effects process); effects go to the end.
                 if (isInstrument && !hadInstrument) _track.Rig.Plugins.Insert(0, added); else _track.Rig.Plugins.Add(added);
-                if (isInstrument && !hadInstrument) _track.MidiSound = false;
+                KeepGmSound(hadInstrument);
                 // A plug-in you add is loaded and heard at once: adding one switches the chain on.
                 _track.SoundSource = SoundSources.Plugins;
             }, refresh: false, show: false);
@@ -160,6 +173,7 @@ public sealed partial class FxChainWindow
             case FxChainIds.DuplicatePlugins: _ = DuplicateSelected(); return true;
             case FxChainIds.SelectAllPlugins: SelectAllRows(); return true;
             case FxChainIds.ShowGenericControls: return ShowGenericControls();
+            case FxChainIds.ActiveOn: OpenActiveOn(); return true;
             case FxChainIds.Save: _ = _files.Save(); return true;
             case FxChainIds.Load: _ = _files.Load(replace: true); return true;
             case FxChainIds.AddToEnd: _ = _files.Load(replace: false); return true;

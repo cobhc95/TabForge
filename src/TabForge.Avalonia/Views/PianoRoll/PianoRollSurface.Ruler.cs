@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Avalonia;
+using Avalonia.Input;
 using TabForge.Avalonia.Platform;
 using TabForge.Platform;
 using TabForge.Platform.Theme;
@@ -11,7 +12,7 @@ namespace TabForge.Avalonia.Views;
 
 // Owns: the piano roll's bar ruler, drawn and handled as the timeline ruler is: bar numbers, the section chips, the loop region as the timeline
 //       draws it (the orange bar with a handle at each end, full strength while the Loop button repeats it, and the faint band down the grid);
-//       a click moves the playhead (the selection stays), a drag makes a loop on the snap grid (so a loop can start and end inside a bar), a drag
+//       a click moves the playhead (the selection stays), a drag scrubs it (Shift-drag makes a loop on the snap grid) (so a loop can start and end inside a bar), a drag
 //       on a loop handle moves that edge and a middle-drag moves the whole loop. The loop changes once, on release.
 // Does not own: the loop region itself and its undo step (the view's MakeLoop hook, SelectionLoopLink), the loop drawing (TimelineLoopMarks).
 // Tests: TabForge.Avalonia.Tests.PianoRollViewTests.
@@ -73,7 +74,9 @@ public sealed partial class PianoRollSurface
         }
         if (loop is var (start, end) && Math.Abs(p.X - XOf(start)) <= TimelineLoopMarks.HandleHalf + EdgeGrip) { _gesture = Gesture.LoopEdge; _loopEdge = -1; return true; }
         if (loop is var (_, last) && Math.Abs(p.X - XOf(last)) <= TimelineLoopMarks.HandleHalf + EdgeGrip) { _gesture = Gesture.LoopEdge; _loopEdge = 1; return true; }
-        _gesture = Gesture.Ruler;
+        _gesture = Gesture.Ruler;   // anywhere on the strip: a click moves the playhead there, a drag scrubs it (Shift-drag makes a loop)
+        PlayheadPreview = SnapBeat(_pressBeat, Array.Empty<int>(), _alt);
+        Playhead.InvalidateVisual();
         return true;
     }
 
@@ -83,8 +86,11 @@ public sealed partial class PianoRollSurface
         var from = SnapBeat(_pressBeat, Array.Empty<int>(), _alt);
         _dragBeat = beat;
         var loop = LoopSpan();
+        var scrub = _gesture == Gesture.Ruler && !_dragModifiers.HasFlag(KeyModifiers.Shift);
+        if (scrub) { PlayheadPreview = beat; Playhead.InvalidateVisual(); }
         _loopPreview = _gesture switch
         {
+            Gesture.Ruler when scrub => null,
             Gesture.Ruler => (Math.Min(from, beat), Math.Max(from, beat)),
             Gesture.LoopEdge when loop is var (start, end) => _loopEdge < 0 ? (Math.Min(beat, end - PianoRollEdits.MinLength), end) : (start, Math.Max(beat, start + PianoRollEdits.MinLength)),
             Gesture.LoopMove when loop is var (start, end) => Shifted(start, end, SnapBeat(start + BeatAt(p.X) - _pressBeat, Array.Empty<int>(), _alt) - start),
@@ -116,10 +122,12 @@ public sealed partial class PianoRollSurface
         if (_moved && _loopPreview is var (from, to) && to - from > 1e-6) MakeLoop?.Invoke(from, to, false);
         else if (_gesture == Gesture.Ruler)
         {
-            Seek?.Invoke(_pressBeat);   // a plain ruler click moves the playhead and clears the loop, as the timeline ruler does
-            ClearLoop?.Invoke();
+            Seek?.Invoke(PlayheadPreview ?? SnapBeat(_pressBeat, Array.Empty<int>(), _alt));   // a ruler click or scrub moves the playhead (snapped)
+            if (!_moved) ClearLoop?.Invoke();   // a plain click also clears the loop, as the timeline ruler does
         }
         _loopPreview = null;
+        PlayheadPreview = null;
+        Playhead.InvalidateVisual();
     }
 
     private void DrawLoop(IDrawContext d)

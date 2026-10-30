@@ -253,6 +253,7 @@ public static partial class ProjectValidator
         "notice" => InputLimits.MaxNoticeLength,
         "lyrics" => InputLimits.MaxLyricsLength,
         "importedfrom" or "path" => InputLimits.MaxPathLength,
+        "devicename" => TabForge.Plugins.ActiveOnRule.MaxDeviceNameChars,
         "colorhex" => 16,
         "bendtypename" or "bendstylename" or "clef" or "tripletfeelkind" or "beammode" or "stemdirection" => 128,
         _ => null

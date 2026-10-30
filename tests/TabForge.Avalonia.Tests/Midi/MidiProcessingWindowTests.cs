@@ -2,12 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json.Nodes;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.Interactivity;
 using Avalonia.LogicalTree;
 using Avalonia.Media;
 using TabForge.Audio;
+using TabForge.Avalonia.Platform;
 using TabForge.Avalonia.Platform.Controls;
 using TabForge.Avalonia.Views;
 using TabForge.Avalonia.Views.Fx;
@@ -27,6 +29,7 @@ namespace TabForge.Avalonia.Tests;
 /// Does not own: the window, the presenter, the catalog or the palette.
 /// Tests: this class.
 /// </summary>
+[Collection("PluginLibraryRoot")]   // PluginLibrary.RootOverride is process-wide: run alone so no parallel test resets it or reads the scratch folder
 public class MidiProcessingWindowTests
 {
     private sealed record Made(MidiProcessingWindow Window, PluginSlot Slot, FxTestKit.FakeEngine Engine, List<string> Edits, TrackModel Track);
@@ -39,7 +42,7 @@ public class MidiProcessingWindowTests
         var edits = new List<string>();
         var window = new MidiProcessingWindow(FxTestKit.Host(track, engine), track, slot, apply => { edits.Add("edit"); apply(); });
         window.Dialogs.Ask = (_, _, _, _, _) => System.Threading.Tasks.Task.FromResult(MessageBoxAnswer.Yes);
-        window.Dialogs.Prompt = (_, _, _, _) => System.Threading.Tasks.Task.FromResult<string?>("Mine");
+        window.Dialogs.SavePresetName = (_, _) => System.Threading.Tasks.Task.FromResult<string?>("Mine");
         if (show) window.Show();
         return new Made(window, slot, engine, edits, track);
     }
@@ -74,7 +77,7 @@ public class MidiProcessingWindowTests
         };
         Assert.Equal(expected, Layout(window).Take(expected.Length));
         Assert.Equal("MIDI processing: Sample synth", window.Title);
-        Assert.Equal((1020d, 620d, 760d, 420d), (window.Width, window.Height, window.MinWidth, window.MinHeight));
+        Assert.Equal((1020d, 620d, 620d, 420d), (window.Width, window.Height, window.MinWidth, window.MinHeight));
         window.Close();
     }
 
@@ -333,6 +336,31 @@ public class MidiProcessingWindowTests
             DialogTestKit.Named<TextBlock>(window, "ParameterNote").Foreground, DialogTestKit.Named<Button>(window, "RemoveButton").Foreground,
         })
             Assert.True(DialogTestKit.Contrast(text, window.Background, "MIDI processing") >= 4.5);
+        window.Close();
+    }
+
+    [AvaloniaFact]
+    public void ShowingMovingAndResizingRequestTheDefensiveRepaint()
+    {
+        var slot = MidiProcessingWindow.SampleSlot();
+        var track = FxTestKit.Track(new[] { slot });
+        var native = new FakeNativeWindowHandles { Handle = (IntPtr)77 };
+        var window = new MidiProcessingWindow(FxTestKit.Host(track, new FxTestKit.FakeEngine()), track, slot, apply => apply(),
+            native, AvaloniaUiThread.ForApplication());
+
+        window.Show();
+        DialogTestKit.RunQueuedUiWork();
+        Assert.Contains((IntPtr)77, native.Redraws);   // shown: a full native repaint is posted and runs
+
+        var shown = native.Redraws.Count;
+        window.Position = new PixelPoint(window.Position.X + 40, window.Position.Y);
+        DialogTestKit.RunQueuedUiWork();
+        Assert.True(native.Redraws.Count > shown, "moving the window asks for a repaint");
+
+        var moved = native.Redraws.Count;
+        window.Width += 20;
+        DialogTestKit.RunQueuedUiWork();
+        Assert.True(native.Redraws.Count > moved, "resizing the window asks for a repaint");
         window.Close();
     }
 

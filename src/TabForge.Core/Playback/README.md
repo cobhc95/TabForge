@@ -10,6 +10,12 @@ Turns a score into a timeline and MIDI events, and runs playback. No WPF.
 
 ## Key types
 - `ScoreTimeline`, `NoteTimeline`: the song laid out in time (bars, repeats, tempo).
+- `ScoreToMidiCompiler` (partial files): notes and techniques to MIDI events. Piano roll lane points (`ClipController` 0-127 CC, 128 pitch bend,
+129 program change, 130 channel aftertouch) play on the track's channel from their position and are chased into the channel setup on a seek;
+a lane program change overrides the track's own program (mixer / channel setup) from its beat, and the track's program plays again only where no
+lane point holds. `MidiExportService` writes the same timeline, so an exported file carries the lane events. `.gp` cannot hold per-beat lane points
+(only track-level program/volume/pan automations); they survive only in `.tforge` (or a `.gp` with the project embedded). Poly aftertouch is out of
+scope: it needs per-note storage the clip model has none of.
 - `ScoreToMidiCompiler` (partial files): notes and techniques to MIDI events.
 - `PlaybackEngine` (partial files): transport, scheduling and the arrangement. `PlaybackEngine.StartWorker.cs`: `BeginStart`, the start whose timeline compiles on a worker from a song copy (the Avalonia transport's Play and speed change use it), and the playhead hold until the scheduler anchors the clock. Tests: PlaybackStartWorkerTests, PlaybackStartHoldTests.
 - `ArrangementRefreshCompiler` builds the immutable future splice; `AudioGrowthRefreshFlow` bounds compilation after `PlaybackEngine.Arrangement.cs` reserves the boundary and captures the owner-thread snapshot.

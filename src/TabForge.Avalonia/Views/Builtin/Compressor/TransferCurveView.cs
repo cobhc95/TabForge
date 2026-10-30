@@ -3,6 +3,7 @@ using System.Globalization;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
+using CompressorEffect = TabForge.Audio.Contracts.Builtin.CompressorParameters;
 using TabForge.AudioEngine.Builtin.Compressor;
 using TabForge.Avalonia.Views.Dialogs;
 

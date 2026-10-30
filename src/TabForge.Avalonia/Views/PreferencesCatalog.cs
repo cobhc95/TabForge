@@ -5,7 +5,6 @@ using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Threading.Tasks;
 using TabForge.Audio;
-using TabForge.Avalonia.Views.Docking;
 using TabForge.Platform.Theme;
 using TabForge.Services;
 using TabForge.Services.Features;
@@ -81,9 +80,6 @@ public static class PreferencesCatalog
     private static readonly JsonSerializerOptions CopyOptions = new() { NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowNamedFloatingPointLiterals };
 
     public static AppSettings Copy(AppSettings s) => JsonSerializer.Deserialize<AppSettings>(JsonSerializer.Serialize(s, CopyOptions), CopyOptions)!;
-
-    /// <summary>The values a full reset-all restores: every setting at its default and the dock layout at DockWorkspaceController.DefaultLayout().</summary>
-    public static AppSettings ResetAllDefaults() => new() { Workspace = DockWorkspaceController.DefaultLayout() };
 
     /// <summary>
     /// Copies the values of <paramref name="from"/> into <paramref name="to"/> in place: every section object (Audio, Plugins, Render, ...) and every nested

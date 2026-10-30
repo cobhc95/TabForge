@@ -61,7 +61,8 @@ public sealed class PianoRollRealPathTests
         var surface = roll.Surface;
         Assert.False(roll.Presenter.IsTab);
 
-        Assert.Equal(PianoRollTool.Select, roll.Presenter.Tool);   // the Edit tool draws on empty grid
+        Assert.Equal(PianoRollTool.Pointer, roll.Presenter.Tool);   // the Select tool box-selects on empty grid; drawing is the Draw tool
+        roll.Presenter.Tool = PianoRollTool.Draw;
         var steps = song.Undo.UndoCount;
         Drag(window, At(window, surface, 3, 62), At(window, surface, 3.9, 62));
         Assert.Equal(steps + 1, song.Undo.UndoCount);
@@ -93,6 +94,7 @@ public sealed class PianoRollRealPathTests
         var (window, roll) = Open(song);
         var surface = roll.Surface;
         Assert.True(roll.Presenter.IsTab);
+        roll.Presenter.Tool = PianoRollTool.Draw;
         Drag(window, At(window, surface, 2, 64), At(window, surface, 2.9, 64));
         var prompt = window.OwnedWindows.OfType<PromptWindow>().Single();
         prompt.GetLogicalDescendants().OfType<Button>().Single(b => (b.Content as string) == "Edit the tab").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
@@ -197,15 +199,22 @@ public sealed class PianoRollRealPathTests
     }
 
     [AvaloniaFact]
-    public void ALeftDragOnEmptyGridDrawsWithLengthAndPitchARightDragSelectsAndARightClickOpensTheMenu()
+    public void ALeftDragOnEmptyGridBoxSelectsARightDragSelectsAndARightClickOpensTheMenu()
     {
         var song = PianoRollSongs.Midi();
         var (window, roll) = Open(song);
         var surface = roll.Surface;
-        // Press at beat 3 on D4, drag right two beats and up to F4: one note from 3 to 5 at F4.
+        // A left-drag on empty grid draws the selection box (Shift adds, Ctrl toggles); drawing is the Draw tool.
+        roll.Presenter.Tool = PianoRollTool.Draw;
         Drag(window, At(window, surface, 3, 62), At(window, surface, 4.95, 65));
         Assert.Contains(roll.Presenter.Notes, n => n.Pitch == 65 && System.Math.Abs(n.Start - 3) < 1e-6 && n.Length >= 1.9);
         Assert.DoesNotContain(roll.Presenter.Notes, n => n.Pitch == 62);
+
+        roll.Presenter.Tool = PianoRollTool.Pointer;
+        roll.Presenter.ClearSelection();
+        var boxFirst = surface.NoteRect(roll.Presenter.Notes[0]);
+        Drag(window, At(window, surface, new Point(boxFirst.Left - 4, boxFirst.Top - 4)), At(window, surface, new Point(boxFirst.Right + 4, boxFirst.Bottom + 4)));
+        Assert.Equal(new[] { 0 }, roll.Presenter.Selected.OrderBy(i => i).ToArray());   // a left-drag box selects
 
         roll.Presenter.ClearSelection();
         var menus = roll.MenusOpened;

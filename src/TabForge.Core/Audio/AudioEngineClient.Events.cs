@@ -28,7 +28,18 @@ public sealed partial class AudioEngineClient
             }
             case EngineEvent.Ready: OnReady(r); break;
             case EngineEvent.ChainLoaded: OnChainLoaded(r); break;
-            case EngineEvent.DeviceError: { _awaitingReady = false; var message = r.ReadBoundedString(); if (_config is { } failed && _fallback.Failed(failed) is { } notice) { message = notice; var open = _fallback.Apply(failed); _config = open; Send(EngineCommand.Configure, w => w.Write(open)); } RaiseOnUi(() => DeviceError?.Invoke(message)); break; }   // a saved output that will not open: this session plays on WASAPI (the next sync configures it), the saved choice stays
+            case EngineEvent.DeviceError:   // a saved output that will not open: this session plays on WASAPI (the next sync configures it), the saved choice stays
+            {
+                _awaitingReady = false; var message = r.ReadBoundedString();
+                if (_config is { } failed && _fallback.Failed(failed) is { } notice)
+                {
+                    message = notice; var open = _fallback.Apply(failed); _config = open;
+                    _ruleDriver = open.Driver; _ruleDevice = open.Device;   // the rules see the output that is actually tried now
+                    Send(EngineCommand.Configure, w => w.Write(open));
+                }
+                RaiseOnUi(() => { ApplyActiveOnRules(); DeviceError?.Invoke(message); });
+                break;
+            }
             case EngineEvent.PluginFailed:
             {
                 r.ReadInt32(); r.ReadInt32(); var path = r.ReadBoundedString(1024); var why = r.ReadBoundedString();
@@ -112,7 +123,9 @@ public sealed partial class AudioEngineClient
         RaiseOnUi(() => AudioInputs.SetDevice(inputDevice, recordable));   // before StatusChanged below: the pickers rebuilt for it see the device's inputs
         DeviceDescription = $"{description} · {rate} Hz · {latency} ms";
         if (_config is { } running) Output = (running.Driver, description, rate, buffer, latency);
-        RaiseOnUi(() => { StatusChanged?.Invoke(); DeviceReady?.Invoke(); });
+        _ruleDriver = _config?.Driver ?? _ruleDriver;
+        _ruleDevice = _config is { Device.Length: > 0 } namedDevice ? namedDevice.Device : ActiveOnOutput.DeviceFromDescription(description);
+        RaiseOnUi(() => { ApplyActiveOnRules(); StatusChanged?.Invoke(); DeviceReady?.Invoke(); });
     }
 
     /// <summary>A chain finished loading: its per-plug-in results, and the plug-ins whose file changed since approval are marked untrusted.</summary>

@@ -1,4 +1,3 @@
-using System.Text.Json;
 using TabForge.Models;
 using TabForge.Services;
 
@@ -55,10 +54,6 @@ public static class AutoChains
         foreach (var t in project.Tracks) Apply(settings, t);
     }
 
-    private static List<PluginSlot> Clone(List<PluginSlot> plugins)
-    {
-        var copy = JsonSerializer.Deserialize<List<PluginSlot>>(JsonSerializer.SerializeToUtf8Bytes(plugins)) ?? new();
-        foreach (var p in copy) p.Id = Guid.NewGuid().ToString("N");
-        return copy;
-    }
+    private static List<PluginSlot> Clone(List<PluginSlot> plugins) =>
+        plugins.Select(p => p.Clone(keepId: false)).ToList();
 }

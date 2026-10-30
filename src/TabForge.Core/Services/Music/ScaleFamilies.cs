@@ -1,34 +1,49 @@
 namespace TabForge.Services;
 
-// Owns: the families the scale readout groups the scale library into (Major, Minor, Pentatonic, Blues, Harmonic minor, Melodic minor, Modes, Exotic), which are on
+// Owns: the families the scale readout groups the scale library into (Major, Minor, Pentatonic, Blues, Jazz, Harmonic minor, Melodic minor, Modes, World, Exotic and the user's Favourites), which are on
 //   by default, the scales of each, and how common each scale is (the prior that breaks close fits).
 // Does not own: the scale tables (MusicTheoryService.Scales) or the detection (SectionScaleDetector).
 // Tests: TabForge.Avalonia.Tests.SectionScaleDetectorTests.
 public static class ScaleFamilies
 {
     public const string Major = "Major", Minor = "Minor", Pentatonic = "Pentatonic", Blues = "Blues",
-        HarmonicMinor = "Harmonic minor", MelodicMinor = "Melodic minor", Modes = "Modes", Exotic = "Exotic";
+        Jazz = "Jazz", HarmonicMinor = "Harmonic minor", MelodicMinor = "Melodic minor", Modes = "Modes", World = "World", Exotic = "Exotic", Favourites = "Favourites";
 
     /// <summary>Every family, in the order the popup lists its chips.</summary>
-    public static readonly IReadOnlyList<string> All = new[] { Major, Minor, Pentatonic, Blues, HarmonicMinor, MelodicMinor, Modes, Exotic };
+    public static readonly IReadOnlyList<string> All = new[] { Major, Minor, Pentatonic, Blues, Jazz, HarmonicMinor, MelodicMinor, Modes, World, Exotic, Favourites };
+
+    /// <summary>The families added after the first release of the readout: a saved choice made before them gets their default (see <see cref="ScaleReadoutSettings.SeenFamilies"/>).</summary>
+    public static readonly IReadOnlyList<string> AddedLater = new[] { Jazz, World, Favourites };
 
     /// <summary>The families that are on until the user changes them.</summary>
-    public static readonly IReadOnlyList<string> DefaultOn = new[] { Major, Minor, Pentatonic, Blues, HarmonicMinor, MelodicMinor };
+    public static readonly IReadOnlyList<string> DefaultOn = new[] { Major, Minor, Pentatonic, Blues, Jazz, HarmonicMinor, MelodicMinor, Favourites };
 
     private static readonly IReadOnlyDictionary<string, IReadOnlyList<string>> ScalesByFamily = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
     {
         [Major] = new[] { "Major" },
         [Minor] = new[] { "Natural Minor" },
         [Pentatonic] = new[] { "Major Pentatonic", "Minor Pentatonic" },
-        [Blues] = new[] { "Blues" },
+        [Blues] = new[] { "Blues", "Major Blues" },
+        [Jazz] = new[] { "Bebop Dominant", "Bebop Major", "Bebop Dorian", "Altered", "Lydian Dominant", "Lydian Augmented", "Half-Whole Diminished", "Diminished", "Whole Tone",
+            "Locrian Natural 2", "Mixolydian b6", "Dorian b2" },
         [HarmonicMinor] = new[] { "Harmonic Minor" },
         [MelodicMinor] = new[] { "Melodic Minor" },
         [Modes] = new[] { "Dorian", "Phrygian", "Lydian", "Mixolydian", "Locrian" },
-        [Exotic] = new[] { "Diminished", "Whole Tone" },
+        [World] = new[] { "Hungarian Minor", "Hungarian Major", "Phrygian Dominant", "Double Harmonic", "Hirajoshi", "In-Sen", "Iwato", "Kumoi", "Neapolitan Minor", "Neapolitan Major", "Persian" },
+        [Exotic] = new[] { "Enigmatic", "Prometheus", "Augmented" },
     };
 
-    /// <summary>The scale names of a family; empty for an unknown family.</summary>
+    /// <summary>The scale names of a family; empty for an unknown family (and for Favourites, which are the user's: see <see cref="ScaleReadoutSettings.ConsideredScales"/>).</summary>
     public static IReadOnlyList<string> ScalesOf(string family) => ScalesByFamily.TryGetValue(family, out var scales) ? scales : Array.Empty<string>();
+
+    /// <summary>The family a scale belongs to; Exotic for a scale the library added without a family.</summary>
+    public static string FamilyOf(string scale)
+    {
+        foreach (var (family, scales) in ScalesByFamily)
+            if (scales.Contains(scale, StringComparer.OrdinalIgnoreCase))
+                return family;
+        return Exotic;
+    }
 
     /// <summary>The scales of the given families, without repeats, in the library order.</summary>
     public static IReadOnlyList<string> ScalesOf(IEnumerable<string> families)
@@ -50,7 +65,7 @@ public static class ScaleFamilies
         "Major" or "Natural Minor" => 6,
         "Major Pentatonic" or "Minor Pentatonic" or "Blues" => 3,
         "Harmonic Minor" or "Melodic Minor" => 1.5,
-        "Diminished" or "Whole Tone" => -2,
+        "Diminished" or "Whole Tone" or "Half-Whole Diminished" or "Bebop Dominant" or "Bebop Major" or "Bebop Dorian" or "Augmented" => -2,
         _ => 0,
     };
 

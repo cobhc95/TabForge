@@ -254,7 +254,7 @@ public sealed partial class TransportBarView : Border
         }
     }
 
-    private static void RunIfHandled(ContextMenuHost host, string commandId)
+    internal static void RunIfHandled(ContextMenuHost host, string commandId)
     {
         if (host.Commands.Handles(commandId)) host.Commands.Run(commandId);
     }

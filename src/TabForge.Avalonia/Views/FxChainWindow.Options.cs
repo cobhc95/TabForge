@@ -34,6 +34,11 @@ public sealed partial class FxChainWindow
     private readonly Button _remeasure = Btn("Re-measure", "Measure the instruments' pitch again (silent; waits while the song plays)", "RemeasureButton");
     private readonly CheckBox _useGlobalMonitor = new() { Content = "Use for all projects", Name = "UseGlobalMonitorCheck", IsVisible = false, Margin = new Thickness(16, 0, 0, 0) };
 
+    /// <summary>The GM sound box while Sound engine is None: the built-in synth stays silent.</summary>
+    public const string SoundNoneToolTip = "Sound engine is None (Settings > Audio & Plug-ins).";
+    /// <summary>The GM sound box otherwise: its normal wording (kept here so ShowOptions can restore it).</summary>
+    public const string MidiSoundToolTip = "On: the track's General MIDI instrument sound plays; with effects and no VST instrument the effects shape it. Off: only a VST instrument sounds.";
+
     private readonly Button _optionsButton = Btn("Options (0 on)", "The track's sound options: chain, GM sound, auto-load, startup and pitch matching", "OptionsButton");
     private TrackFxStrip? _strip;
     private AutoPitchMatcher? _pitchMatcher;   // the one subscribed to, so the window leaves the same one it joined
@@ -48,7 +53,7 @@ public sealed partial class FxChainWindow
     private void BuildOptions()
     {
         ToolTip.SetTip(_useChain, "Play this track through the chain. Off: the track plays through Windows MIDI.");
-        ToolTip.SetTip(_midiSound, "On: the track's General MIDI instrument sound plays; with effects and no VST instrument the effects shape it. Off: only a VST instrument sounds.");
+        ToolTip.SetTip(_midiSound, MidiSoundToolTip);
         ToolTip.SetTip(_autoGm, "On: GM sound is ticked when no VST instrument plays this track (chain off, instrument bypassed or removed) and unticked when one plays again. A GM sound you untick yourself stays off. Same as the option in Settings > Audio & Plug-ins.");
         ToolTip.SetTip(_autoLoad, "Save this chain (plug-ins, their settings, each plug-in's MIDI processors, wiring and MIDI input) as the default for this instrument type. It is then applied automatically to any track of this instrument type without plug-ins, in any song when loaded, and to new tracks of this type. Untick to remove the default.");
         ToolTip.SetTip(_startup, "Off by default. On: this chain (plug-ins, their settings, wiring and MIDI configuration, volume, audio input and monitor setting) is added as a track, not armed, to every song you open or create. That track is not saved with the song until you untick this. Manage them in Settings > Audio & Plug-ins.");
@@ -173,20 +178,23 @@ public sealed partial class FxChainWindow
         foreach (var slot in _track.Rig.Plugins) if (slot.Type == PluginSlotType.Instrument && slot.Plays) matcher.Measure(_track, slot);
     }
 
-    private void OnSettingsChanged(AppSettings settings) { if (!_closed) ShowOptions(); }
+    private void OnSettingsChanged(AppSettings settings) { if (!_closed) RefreshFromTrack(); }   // a changed output also re-matches the Active on rules
 
     private void OnPitchChanged(TrackModel track) { if (ReferenceEquals(track, _track)) ShowPitchLabel(); }
 
     private void ShowPitchLabel() => _autoPitchLabel.Text = _host.Engine?.AutoPitch?.Describe(_track) ?? "";
 
-    /// <summary>Reads every option box from the track and the settings (the track changed elsewhere: the power switch, an undo, a load).</summary>
+    /// <summary>Reads every option box from the track and the settings (the track changed elsewhere: the power switch, an undo, a load). While Sound engine is None the GM sound box shows unchecked and disabled: the built-in synth is silent (the stored value is kept).</summary>
     private void ShowOptions()
     {
         _building = true;
         try
         {
+            var soundNone = SoundEngines.Resolve(_host.PluginSettings.SoundEngine) == SoundEngines.None;
             _useChain.IsChecked = _track.SoundSource == SoundSources.Plugins;
-            _midiSound.IsChecked = _track.MidiSound;
+            _midiSound.IsChecked = !soundNone && _track.MidiSound;
+            _midiSound.IsEnabled = !soundNone;
+            ToolTip.SetTip(_midiSound, soundNone ? SoundNoneToolTip : MidiSoundToolTip);
             _autoGm.IsChecked = _host.PluginSettings.AutoGmSound;
             _autoLoad.IsChecked = AutoChains.Has(_host.PluginSettings, _track);
             _startup.IsChecked = StartupTracks.Has(_host.PluginSettings, _track);

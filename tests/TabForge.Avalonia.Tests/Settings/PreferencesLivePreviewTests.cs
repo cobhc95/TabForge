@@ -140,7 +140,7 @@ public class PreferencesLivePreviewTests : IDisposable
                 && !typeof(System.Collections.IEnumerable).IsAssignableFrom(p.PropertyType)).ToList();
         Assert.NotEmpty(sections);
         var held = sections.ToDictionary(p => p.Name, p => p.GetValue(live));
-        PreferencesCatalog.CopyInto(PreferencesCatalog.ResetAllDefaults(), live, includeWorkspace: false);
+        PreferencesCatalog.CopyInto(new TabForge.Services.AppSettings(), live, includeWorkspace: false);
         foreach (var section in sections) Assert.Same(held[section.Name], section.GetValue(live));
     }
 

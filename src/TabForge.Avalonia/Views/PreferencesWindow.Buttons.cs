@@ -32,7 +32,6 @@ public sealed partial class PreferencesWindow
         "appearance.resetcolours" => RowButton(row, "Reset colours", true, ResetColours),
         "mixer.grouprules" => RowButton(row, "Group rules…", _actions is not null, () => _actions?.RunCommand(GroupRulesCommand)),
         "vst.asio.configure" => ConfigureAsioButton(row),
-        "vst.soundfont.download" => SoundFontButton(row),
         "vst.inputsshown" => RowButton(row, "Inputs shown…", true, () => _ = OpenInputsShownAsync()),
         "audio.linkedmedia" => RowButton(row, "Manage approved folders…", _actions is not null, () => _ = ManageLinkedAudioAsync()),
         "vst.quarantine" => RowButton(row, "Plug-ins switched off after a crash…", _actions is not null, () => _ = ManageQuarantineAsync()),

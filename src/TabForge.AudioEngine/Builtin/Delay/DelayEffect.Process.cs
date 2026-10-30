@@ -1,3 +1,4 @@
+using TabForge.Audio.Contracts.Builtin;
 using TabForge.AudioEngine.Builtin.Dsp;
 
 namespace TabForge.AudioEngine.Builtin.Delay;

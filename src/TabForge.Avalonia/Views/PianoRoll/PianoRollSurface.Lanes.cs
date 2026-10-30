@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia;
@@ -9,8 +10,9 @@ using TabForge.Presenters;
 
 namespace TabForge.Avalonia.Views;
 
-// Owns: the controller lanes (CC and pitch bend on a MIDI track: a drag draws a line of points on the snap step, the Erase tool erases a span,
-//       committed on release as one step, drawn as held steps with a resting line), the Velocity tool (drag a note up or down: the selection's
+// Owns: the controller lanes (CC, pitch bend, program change and channel aftertouch on a MIDI track: a drag draws a line of points on the
+//       snap step (a stepped program point from its beat), the Erase tool erases a span, committed on release as one step, drawn as held steps
+//       with a resting line), the Velocity tool (drag a note up or down: the selection's velocities follow), and step input (a piano key adds a note,
 //       velocities follow), and step input (a piano key adds a note, or a chord stamp, at the step cursor and moves it on by a snap step;
 //       Right / Left move the cursor, Backspace takes the last step back).
 // Does not own: the lane points and their storage (PianoRollPresenter, PianoRollControllers), the velocity lane (PianoRollSurface.Velocity).
@@ -68,12 +70,15 @@ public sealed partial class PianoRollSurface
         return true;
     }
 
-    /// <summary>The lane edit of the drag: a line of points on the snap step (or an erased span with the Erase tool), as one step.</summary>
+    /// <summary>The lane edit of the drag: a line of points on the snap step (a single stepped program point from its beat with the Program
+    /// lane, an erased span with the Erase tool), as one step.</summary>
     private Task<bool> CommitController()
     {
         var to = PianoRollSnap.Floor(Presenter.Map, Snap(), _dragBeat, _alt);
         if (Presenter.Tool == PianoRollTool.Erase)
             return Presenter.CommitPointsAsync(LaneId, PianoRollControllers.Erase(_points, _pressBeat, to + StepAt(to) / 2), "Erase controller");
+        if (LaneId == PianoRollControllers.Program)
+            return Presenter.CommitPointsAsync(LaneId, PianoRollControllers.DrawStep(_points, LaneId, _pressBeat, ControllerAt(_now.Y)), "Draw program");
         var points = PianoRollControllers.DrawLine(_points, LaneId, _pressBeat, _pressValue, to, ControllerAt(_now.Y), StepAt(_pressBeat));
         return Presenter.CommitPointsAsync(LaneId, points, "Draw controller");
     }
@@ -91,12 +96,24 @@ public sealed partial class PianoRollSurface
     /// <summary>A value drag's current value (the pressed note's), for the info line; raised only when it changes.</summary>
     internal Action<int>? ValuePreview { get; set; }
 
+    /// <summary>The lane's hint while it holds no points.</summary>
+    internal const string EmptyLaneHint = "No data yet: draw to add";
+
+    private void DrawEmptyHint(IDrawContext d)
+    {
+        if (_points.Count > 0 || _gesture == Gesture.Controller) return;
+        var text = d.Text(EmptyLaneHint, Font, LabelSize, Colours.Get("MutedBrush"), d.PixelsPerDip);
+        d.DrawText(text, GridLeft + LabelGap, ControllerY(PianoRollControllers.Centre(LaneId)) - text.Height - LabelGap);
+    }
+
     private void DrawControllerLane(IDrawContext d)
     {
+        DrawEmptyHint(d);
+        if (LaneId == PianoRollControllers.Program) { DrawProgramLane(d); return; }
         var colour = TrackColour() ?? Colours.Get("AccentBrush");
         var rest = new UiStroke(Ink("PianoRollLineBeat"), Line);
         d.Line(rest, GridLeft, ControllerY(PianoRollControllers.Centre(LaneId)), GridLeft + ViewportWidth, ControllerY(PianoRollControllers.Centre(LaneId)));
-        var points = _gesture == Gesture.Controller ? PreviewPoints() : _points;
+        var points = _wheelPoints ?? (_gesture == Gesture.Controller ? PreviewPoints() : _points);
         var stroke = new UiStroke(colour, StrongLine);
         var value = PianoRollControllers.Centre(LaneId);
         var x = GridLeft;
@@ -114,8 +131,36 @@ public sealed partial class PianoRollSurface
     private IReadOnlyList<PianoRollPoint> PreviewPoints()
     {
         var to = PianoRollSnap.Floor(Presenter.Map, Snap(), _dragBeat, _alt);
-        return Presenter.Tool == PianoRollTool.Erase ? PianoRollControllers.Erase(_points, _pressBeat, to)
+        if (Presenter.Tool == PianoRollTool.Erase) return PianoRollControllers.Erase(_points, _pressBeat, to);
+        return LaneId == PianoRollControllers.Program
+            ? PianoRollControllers.DrawStep(_points, LaneId, _pressBeat, ControllerAt(_now.Y))
             : PianoRollControllers.DrawLine(_points, LaneId, _pressBeat, _pressValue, to, ControllerAt(_now.Y), StepAt(_pressBeat));
+    }
+
+    /// <summary>The Program lane: the same held steps, but each point is a block with its program number (the header names the instrument in force).</summary>
+    private void DrawProgramLane(IDrawContext d)
+    {
+        const double half = 5;
+        var colour = TrackColour() ?? Colours.Get("AccentBrush");
+        var ink = Colours.Get("TextBrush");
+        var rest = new UiStroke(Ink("PianoRollLineBeat"), Line);
+        d.Line(rest, GridLeft, ControllerY(PianoRollControllers.Centre(LaneId)), GridLeft + ViewportWidth, ControllerY(PianoRollControllers.Centre(LaneId)));
+        var points = _wheelPoints ?? (_gesture == Gesture.Controller ? PreviewPoints() : _points);
+        var stroke = new UiStroke(colour, StrongLine);
+        var value = PianoRollControllers.Centre(LaneId);
+        var x = GridLeft;
+        foreach (var point in points)
+        {
+            var px = XOf(point.Beat);
+            var y = ControllerY(point.Value);
+            d.Line(stroke, x, ControllerY(value), px, ControllerY(value));
+            d.Line(stroke, px, ControllerY(value), px, y);
+            d.Rect(colour, null, px - half, y - half, half * 2, half * 2);
+            var label = d.Text(point.Value.ToString(CultureInfo.InvariantCulture), Font, LaneLabelSize, ink, d.PixelsPerDip);
+            d.DrawText(label, px + half + 2, y - label.Height / 2);
+            (x, value) = (px, point.Value);
+        }
+        d.Line(stroke, x, ControllerY(value), GridLeft + ViewportWidth, ControllerY(value));
     }
 
     /// <summary>Step input: a note (or the chord stamp) of one snap step at the step cursor; the cursor moves on.</summary>
@@ -123,10 +168,14 @@ public sealed partial class PianoRollSurface
     internal void StepAdd(int pitch, int velocity = DefaultVelocity, bool sameStep = false)
     {
         if (_pending) return;
+        // The step filter (not the Lock toggle) decides what a key outside the scale does: Off writes it, Snap moves it into key, Only scale notes ignores it.
+        if (PianoRollScaleLock.StepPitch(pitch, StepScale, StepFilter) is not { } written) return;
         if (sameStep && _lastStepLength > 0) StepBeat -= _lastStepLength;
         var length = NewLength(StepBeat);
-        var root = new PianoRollNote(StepBeat, length, pitch, PianoRollEdits.ClampVelocity(velocity), Voice: DrawVoice);
-        Run(Presenter.CommitAsync(PianoRollEdits.AddMany(Presenter.Notes, PianoRollEdits.Chord(root, Chord)), PianoRollEditKind.Notes, "Step input"));
+        var root = new PianoRollNote(StepBeat, length, written, PianoRollEdits.ClampVelocity(velocity), Voice: DrawVoice);
+        var chord = PianoRollEdits.Chord(root, Chord);
+        if (StepFilter == PianoRollScaleLock.StepSnap && StepScale is { Count: > 0 }) chord = chord.Select(n => n with { Pitch = PianoRollScaleLock.Snap(n.Pitch, StepScale) }).ToList();
+        Run(Presenter.CommitAsync(PianoRollEdits.AddMany(Presenter.Notes, chord), PianoRollEditKind.Notes, "Step input", lockSnap: false));
         StepBeat += length;
         _lastStepLength = length;
         Reveal(StepBeat);

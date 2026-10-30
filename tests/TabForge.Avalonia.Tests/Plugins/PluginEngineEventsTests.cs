@@ -41,6 +41,27 @@ public class PluginEngineEventsTests
         Assert.Equal(1, host.Syncs);
     }
 
+    [Fact]
+    public void AChangedSoundEnginePanicsOnceAndARepeatChangePanicsAgain()
+    {
+        using var engine = new AudioEngineClient(new TabForge.Plugins.PluginTrust());
+        var host = new EventHost();
+        using var events = new AvaloniaEngineEvents(engine, host, new AvaloniaPlaybackSessionTests.FakeUiThread());
+        host.Plugins.SoundEngine = SoundEngines.None;
+        events.ApplyRouteSettings();
+        Assert.Equal(1, host.Panics);
+        Assert.Equal(1, host.Syncs);
+        events.ApplyRouteSettings();   // nothing changed: neither again
+        Assert.Equal(1, host.Panics);
+        Assert.Equal(1, host.Syncs);
+        host.Plugins.SoundEngine = SoundEngines.WindowsGm;   // back: the stored play-all choice is untouched, behaviour restored
+        host.Plugins.PlayAllThroughEngine = true;
+        events.ApplyRouteSettings();
+        Assert.Equal(2, host.Panics);
+        Assert.Equal(2, host.Syncs);
+        Assert.True(host.Plugins.PlayAllThroughEngine);
+    }
+
     // Raises one of the client's events from the test (the client's own handlers are what the controller attached to).
     private static void Raise(AudioEngineClient engine, string eventName, params object[] args)
     {
@@ -56,8 +77,10 @@ public class PluginEngineEventsTests
         public global::Avalonia.Controls.Window? Owner => null;
         public int Saves { get; private set; }
         public int Syncs { get; private set; }
+        public int Panics { get; private set; }
         public List<string> Status { get; } = new();
         public void SaveSettings() => Saves++;
+        public void PanicAll() => Panics++;
         public void ShowStatus(string text) => Status.Add(text);
         public void SyncActive() => Syncs++;
         public AvaloniaPlaybackSession? SessionOf(SongDocument song) => null;

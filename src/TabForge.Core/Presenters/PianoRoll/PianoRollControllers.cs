@@ -3,10 +3,13 @@ using TabForge.Models;
 namespace TabForge.Presenters;
 
 // Owns: the piano roll's controller lanes for a MIDI track: the lanes offered (velocity, CC1 modulation, CC7 volume, CC10 pan, CC11 expression,
-//       CC64 sustain, pitch bend) with their value ranges, reading a controller's points from the shown clips on the performed clock, writing them
-//       back (each point to the clip that holds it, which grows to hold it), and the lane edits: a drawn line (points at each step, replacing the
-//       old ones in its span) and an erased span.
+//       CC64 sustain, pitch bend, program change, channel aftertouch, and any other CC by number) with their value ranges, reading a controller's
+//       points from the shown clips on the performed clock, writing them back (each point to the clip that holds it, which grows to hold it),
+//       and the lane edits: a drawn line (points at each step, replacing the old ones in its span), a stepped program point (one value from its
+//       beat), and an erased span.
 // Does not own: the clip model (AudioClip.Controllers), the playback of the points (ScoreToMidiCompiler.Clips), the lane drawing and gestures (the app).
+// A lane program change overrides the track's own program (mixer / channel setup) from its position; seeking restores the last lane value, and the
+// track's program plays again only where no lane point holds. Poly aftertouch is out of scope: it needs per-note storage the clip model has none of.
 // Tests: TabForge.Avalonia.Tests.PianoRollControllerTests.
 
 /// <summary>One controller point at <paramref name="Beat"/> on the piano roll's clock.</summary>
@@ -16,14 +19,44 @@ public static class PianoRollControllers
 {
     public const int Velocity = -1;
     public const int PitchBend = ClipController.PitchBend;
+    public const int Program = ClipController.ProgramChange;
+    public const int ChannelAftertouch = ClipController.ChannelAftertouch;
 
-    /// <summary>The lanes a MIDI track offers, in order (a tab track offers only <see cref="Velocity"/>).</summary>
+    /// <summary>Whether <paramref name="lane"/> is a lane id: velocity, a CC (0 to 127), pitch bend, program change or channel aftertouch.</summary>
+    public static bool IsLane(int lane) => lane == Velocity || (lane >= 0 && lane <= ChannelAftertouch);
+
+    /// <summary>The lanes a MIDI track offers, in the lane menu's order (a tab track offers only <see cref="Velocity"/>). The lane ids of the original
+    /// seven (velocity, CC1, CC7, CC10, CC11, CC64, pitch bend) are unchanged: old songs load with them as before.</summary>
     public static IReadOnlyList<(int Id, string Name)> Lanes { get; } = new[]
     {
-        (Velocity, "Velocity"), (1, "CC1 Modulation"), (7, "CC7 Volume"), (10, "CC10 Pan"), (11, "CC11 Expression"), (64, "CC64 Sustain"), (PitchBend, "Pitch bend"),
+        (Velocity, "Velocity"), (PitchBend, "Pitch bend"), (1, "Mod wheel (CC1)"), (7, "Volume (CC7)"), (10, "Pan (CC10)"), (11, "Expression (CC11)"),
+        (64, "Sustain (CC64)"), (Program, "Program change"), (ChannelAftertouch, "Channel aftertouch"),
     };
 
-    public static string NameOf(int lane) => Lanes.FirstOrDefault(l => l.Id == lane).Name ?? "CC" + lane;
+    /// <summary>Known names for CC lanes outside <see cref="Lanes"/> (picked through "+ Any CC...").</summary>
+    private static string CcName(int lane) => lane switch
+    {
+        2 => "CC2 Breath",
+        4 => "CC4 Foot",
+        5 => "CC5 Portamento time",
+        65 => "CC65 Portamento",
+        66 => "CC66 Sostenuto",
+        67 => "CC67 Soft pedal",
+        68 => "CC68 Legato",
+        69 => "CC69 Hold 2",
+        84 => "CC84 Portamento control",
+        _ => "CC" + lane,
+    };
+
+    /// <summary>The lane button's label: "Lane: " and the lane's short name (the menu adds the CC number, the label does not).</summary>
+    public static string ButtonName(int lane) => "Lane: " + (lane switch
+    {
+        Velocity => "Velocity", PitchBend => "Pitch bend", Program => "Program change", ChannelAftertouch => "Channel aftertouch",
+        7 => "Volume", 10 => "Pan", 11 => "Expression", 64 => "Sustain", 1 => "Mod wheel",
+        _ => "CC " + lane,
+    });
+
+    public static string NameOf(int lane) => Lanes.FirstOrDefault(l => l.Id == lane).Name ?? CcName(lane);
 
     public static int Min(int lane) => lane == PitchBend ? -8192 : lane == Velocity ? 1 : 0;
 
@@ -94,6 +127,15 @@ public static class PianoRollControllers
             list.Add(new PianoRollPoint(beat, Clamp(lane, (int)Math.Round(fromValue + (toValue - fromValue) * (span > 0 ? (beat - fromBeat) / span : 0)))));
         }
         if (count * step < span - 1e-6) list.Add(new PianoRollPoint(toBeat, Clamp(lane, toValue)));
+        return list.OrderBy(p => p.Beat).ToList();
+    }
+
+    /// <summary>A stepped program point at <paramref name="beat"/> (a click sets the value from that beat on):
+    /// the point at that beat is replaced, the rest of the lane kept.</summary>
+    public static List<PianoRollPoint> DrawStep(IReadOnlyList<PianoRollPoint> points, int lane, double beat, int value)
+    {
+        var list = points.Where(p => Math.Abs(p.Beat - beat) > 1e-6).ToList();
+        list.Add(new PianoRollPoint(beat, Clamp(lane, value)));
         return list.OrderBy(p => p.Beat).ToList();
     }
 

@@ -1,4 +1,4 @@
-namespace TabForge.AudioEngine.Midi.Processors;
+namespace TabForge.Core.Midi.Processors;
 
 // Owns: the scale tables and small parsing helpers shared by the P3 processors.
 
