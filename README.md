@@ -95,7 +95,11 @@ TabForge now runs on Avalonia, which made the experimental Linux build possible.
 
 **Piano roll (new in 0.8.1).** MIDI tracks and takes open in a piano roll: draw, move, resize, split, glue and quantize notes, with velocity, CC and pitch-bend lanes, a scale highlight, and live recording straight into it. Switch any track between Piano and Tab with the pills in the menu bar. Redesigned in 0.8.6: a Select tool, a two-row toolbar with Snap, Scale and Step input groups, a master scale panel, a lane picker for velocity and controller lanes, and outlined notes.
 
-<a href="docs/media/screenshots/piano-roll.png"><img src="docs/media/screenshots/piano-roll.png" alt="The MIDI piano roll" width="640"></a>
+<a href="docs/media/screenshots/piano-roll.png"><img src="docs/media/screenshots/piano-roll.png" alt="The redesigned MIDI piano roll with the lane picker and outlined notes" width="640"></a>
+
+Each plug-in or container can be set to play only for a chosen driver type (ASIO or WASAPI) and output device, in the Active on popup.
+
+<a href="docs/media/screenshots/active-on.png"><img src="docs/media/screenshots/active-on.png" alt="The Active on popup with Driver type and Output device" width="360"></a>
 
 </details>
 
