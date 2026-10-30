@@ -52,6 +52,11 @@ A redesigned MIDI piano roll (Select tool, two-row toolbar, scale panel, lane pi
 
 <table>
 <tr>
+<td width="33%" valign="top"><a href="docs/media/screenshots/piano-roll.png"><img src="docs/media/screenshots/piano-roll.png" alt="The redesigned MIDI piano roll with the lane picker and outlined notes" width="215"></a><br><b>Redesigned piano roll</b><br>Select tool, two-row toolbar, scale panel, outlined notes and a lane picker for velocity and controllers.</td>
+<td width="33%" valign="top"><a href="docs/media/screenshots/active-on.png"><img src="docs/media/screenshots/active-on.png" alt="The Active on popup with Driver type and Output device" width="215"></a><br><b>Active on</b><br>Play a plug-in or container only for a chosen driver type (ASIO or WASAPI) and output device.</td>
+<td width="33%" valign="top"></td>
+</tr>
+<tr>
 <td width="33%" valign="top"><a href="docs/media/screenshots/0.8.5/articulations-map.png"><img src="docs/media/screenshots/0.8.5/articulations-map.png" alt="The Articulations tab of the MIDI window" width="215"></a><br><b>Articulations</b><br>Palm mute, slides, harmonics and more become keyswitches or controllers for your instrument plug-in. Pick a preset or edit the table, and press Test to hear a row.</td>
 <td width="33%" valign="top"><a href="docs/media/screenshots/0.8.5/bend-editor.jpg"><img src="docs/media/screenshots/0.8.5/bend-editor.jpg" alt="The redesigned bend editor" width="215"></a><br><b>Bend and tremolo bar editors</b><br>A type list with your own presets, a tone scale and eased curves that play like a real bend.</td>
 <td width="33%" valign="top"><a href="docs/media/screenshots/0.8.5/older-formats.jpg"><img src="docs/media/screenshots/0.8.5/older-formats.jpg" alt="The window that lists what an older format leaves out" width="215"></a><br><b>Save .gp5, .gp4 or .gp3</b><br>File &gt; Export writes a copy for older programs, after listing what the format leaves out.</td>
