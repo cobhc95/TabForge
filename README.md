@@ -1,6 +1,6 @@
 # TabForge 0.8.6
 
-**A keyboard-driven tablature and notation editor for Windows, with an experimental Linux build. Opens .gp, .gpx, .gp5, .gp4 and .gp3 files and saves .gp and its own .tforge projects, and can save .gp5, .gp4 and .gp3 copies.** Write, import and play back guitar, bass, drum and keyboard parts, with a live fretboard / keyboard, an arrangement timeline, audio and MIDI recording, a mixer, VST plug-ins and offline audio and video rendering.
+**A keyboard-driven tablature and notation editor for Windows, and Linux. Opens .gp, .gpx, .gp5, .gp4 and .gp3 files and saves .gp and its own .tforge projects, and can save .gp5, .gp4 and .gp3 copies.** Write, import and play back guitar, bass, drum and keyboard parts, with a live fretboard / keyboard, an arrangement timeline, audio and MIDI recording, a mixer, VST plug-ins and offline audio and video rendering.
 
 [![TabForge with a drum plug-in](docs/media/screenshots/github-main.jpg)](docs/media/screenshots/github-main.jpg)
 
