@@ -23,7 +23,7 @@ else { $root = [IO.Path]::GetFullPath((Join-Path $top '..')); $srcRoot = Join-Pa
 $project = Join-Path $srcRoot 'src\TabForge.Avalonia\TabForge.Avalonia.csproj'
 dotnet publish $project -c Release -r win-x64 --no-restore --self-contained true -p:PublishSingleFile=true `
     -p:PublishTrimmed=false -p:IncludeNativeLibrariesForSelfExtract=true `
-    -p:ContinuousIntegrationBuild=true -p:Deterministic=true @ExtraArgs -o $Output
+    -p:ContinuousIntegrationBuild=true -p:Deterministic=true -p:PublishReadyToRunComposite=false @ExtraArgs -o $Output
 if ($LASTEXITCODE) { throw 'publish failed' }
 # Packaging guard: the private plug-in manifest is test-only and must never be in a publish folder.
 $privateManifests = @(Get-ChildItem -LiteralPath $Output -Recurse -Force -File -ErrorAction SilentlyContinue |
