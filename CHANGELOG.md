@@ -27,7 +27,7 @@ TabForge is actively developed; please report anything odd on the Issues page.
 
 - Automatic scale detection and best-match suggestions are shared by the status bar, fretboard and piano roll; these already shipped in 0.8.6 and remain a headline capability, not a newly added 0.8.7 feature.
 - Linux remains experimental and has not been validated on real hardware. Some JUCE 8 editors render black under Wine. Eight bridged plug-ins may need 1,024-frame buffers. Windows native 64-bit VST2 plug-ins are not isolated from the audio engine.
-- Release wording and screenshot captions are drafts pending owner review. No full-suite-green, real-hardware compatibility or visual-parity claim is made.
+- No full-suite-green, real-hardware compatibility or visual-parity claim is made.
 
 ## 0.8.6
 
