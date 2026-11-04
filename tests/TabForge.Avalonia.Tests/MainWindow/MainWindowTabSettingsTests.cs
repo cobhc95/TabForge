@@ -130,4 +130,71 @@ public sealed class MainWindowTabSettingsTests : IDisposable
         Assert.Equal(0, closeRequests);
         Assert.Single(tabs.Songs);
     }
+
+    // Releasing a song can run other window code (a window activation arrives during the wait for its output, or when its FX windows close), and that code reads Active.
+    [Fact]
+    public async Task TheShownSongStaysReadableWhileTheRightmostTabIsReleased()
+    {
+        var first = MainWindowTabs.NewSong();
+        var tabs = new MainWindowTabs(first, NoAnswer, NoSave, settings: new AppSettings());
+        tabs.Open(MainWindowTabs.NewSong());
+        SongDocument? shownDuringRelease = null;
+        tabs.SongClosing += _ => shownDuringRelease = tabs.Active;
+
+        Assert.True(await tabs.CloseActive());
+        Assert.Same(first, shownDuringRelease);
+        Assert.Same(first, tabs.Active);
+    }
+
+    [Theory]
+    [InlineData(LastTabActions.NewTab)]
+    [InlineData(LastTabActions.CloseWindow)]
+    public async Task TheShownSongStaysReadableWhileTheOnlyTabIsReleased(string lastTabAction)
+    {
+        var settings = new AppSettings();
+        settings.Tabs.LastTabClosed = lastTabAction;
+        var tabs = new MainWindowTabs(MainWindowTabs.NewSong(), NoAnswer, NoSave, settings: settings);
+        SongDocument? shownDuringRelease = null;
+        tabs.SongClosing += _ => shownDuringRelease = tabs.Active;
+
+        Assert.True(await tabs.CloseActive());
+        Assert.NotNull(shownDuringRelease);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public async Task ClosingABackgroundTabLeavesTheShownSongAlone(int closed)
+    {
+        var first = MainWindowTabs.NewSong();
+        var tabs = new MainWindowTabs(first, NoAnswer, NoSave, settings: new AppSettings());
+        var shown = MainWindowTabs.NewSong();
+        tabs.Open(shown);
+        tabs.Open(MainWindowTabs.NewSong());
+        tabs.Switch(1);
+        var changes = 0;
+        tabs.ActiveChanged += () => changes++;
+
+        await tabs.CloseAt(closed);
+        Assert.Same(shown, tabs.Active);
+        Assert.Equal(2, tabs.Songs.Count);
+        Assert.Equal(0, changes);
+    }
+
+    [Fact]
+    public async Task ClosingSeveralTabsKeepsTheShownSongReadableBetweenSaveQuestions()
+    {
+        var first = MainWindowTabs.NewSong();
+        var tabs = new MainWindowTabs(first, NoAnswer, NoSave, settings: new AppSettings());
+        var second = MainWindowTabs.NewSong();
+        tabs.Open(second);
+        var third = MainWindowTabs.NewSong();
+        tabs.Open(third);
+        SongDocument? shownDuringRelease = null;
+        tabs.SongClosing += _ => shownDuringRelease = tabs.Active;
+
+        await tabs.CloseMany(new[] { third, second });
+        Assert.Same(first, shownDuringRelease);
+        Assert.Same(first, tabs.Active);
+    }
 }

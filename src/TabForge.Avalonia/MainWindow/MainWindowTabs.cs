@@ -55,7 +55,7 @@ public sealed class MainWindowTabs : IDisposable
             strip.NewTabRequested += New;
             strip.DuplicateRequested += index => Duplicate(index);
             // A strip is only given with a status report (the app passes both); the check runs when a close is requested.
-            strip.CloseRequested += index => { Switch(index); Platform.UiTasks.Forget(CloseActive(), "Closing the tab", report ?? throw new InvalidOperationException("A tab strip needs a status report.")); };
+            strip.CloseRequested += index => { Platform.UiTasks.Forget(CloseAt(index), "Closing the tab", report ?? throw new InvalidOperationException("A tab strip needs a status report.")); };
         }
         Add(first, 0);
         Redraw();
@@ -212,21 +212,29 @@ public sealed class MainWindowTabs : IDisposable
     {
         var closing = Active;
         if (!await MayDiscard(closing, SavePromptPresenter.SaveChanges(closing.Project.Title))) return false;
-        Remove(closing);
-        Released(closing);
-        if (_songs.Count == 0)
+        if (_songs.Count == 1)
         {
             if (_settings.Tabs.LastTabClosed == LastTabActions.CloseWindow)
             {
+                Released(closing);   // still listed: the release can run window code that reads Active
+                Remove(closing);
                 CloseWindowRequested?.Invoke();
                 return true;
             }
-            Add(NewDefaultSong(), 0);
+            Add(NewDefaultSong(), 1);
         }
-        ActiveIndex = Math.Min(ActiveIndex, _songs.Count - 1);
+        Remove(closing);
+        Released(closing);
         Redraw();
         ActiveChanged?.Invoke();
         return true;
+    }
+
+    /// <summary>Closes the tab at <paramref name="index"/> (its close mark, middle-click or double-click). A tab in the background closes without being shown, so the shown song and any playback carry on.</summary>
+    public Task CloseAt(int index)
+    {
+        if (index < 0 || index >= _songs.Count) throw new ArgumentOutOfRangeException(nameof(index));
+        return index == ActiveIndex ? CloseActive() : CloseMany(new[] { _songs[index] });
     }
 
     /// <summary>Closes the given tabs (the tab menu's close others and close to the right), asking about each unsaved one; the shown tab stays
@@ -243,7 +251,7 @@ public sealed class MainWindowTabs : IDisposable
         var shownIndex = _songs.IndexOf(shown);
         ActiveIndex = shownIndex >= 0 ? shownIndex : Math.Clamp(ActiveIndex, 0, _songs.Count - 1);
         Redraw();
-        ActiveChanged?.Invoke();
+        if (shownIndex < 0) ActiveChanged?.Invoke();
     }
 
     /// <summary>Takes the song at <paramref name="index"/> out with no save question, because it moves to another window. With songs left
@@ -254,7 +262,6 @@ public sealed class MainWindowTabs : IDisposable
         var song = _songs[index];
         Remove(song);
         if (_songs.Count == 0) return song;
-        if (index < ActiveIndex || ActiveIndex >= _songs.Count) ActiveIndex--;
         Redraw();
         ActiveChanged?.Invoke();
         return song;
@@ -304,10 +311,15 @@ public sealed class MainWindowTabs : IDisposable
         song.DisplayStateChanged += OnDisplayStateChanged;
     }
 
+    // ActiveIndex moves with the list, never later: releasing a song can pump window messages (its FX windows closing, the wait for its output),
+    // and an activation that arrives there reads Active.
     private void Remove(SongDocument song)
     {
+        var index = _songs.IndexOf(song);
+        if (index < 0) return;
         song.DisplayStateChanged -= OnDisplayStateChanged;
-        _songs.Remove(song);
+        _songs.RemoveAt(index);
+        if (index < ActiveIndex || ActiveIndex >= _songs.Count) ActiveIndex = Math.Max(0, ActiveIndex - 1);
     }
 
     private void OnDisplayStateChanged(object? sender, EventArgs e) => Redraw();
