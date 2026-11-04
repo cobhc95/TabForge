@@ -2,10 +2,6 @@
 
 > Stable release. See the [release notes](docs/releases/0.8.7.md) and the [changelog](CHANGELOG.md).
 
-**Find your scale:** automatic detection and best-match suggestions share one choice across the status bar, fretboard and piano roll. Choose the tracks and range to analyse, compare the fit, or keep a manual choice.
-
-**New in 0.8.7:** a detailed, customisable fretboard; full and partial capos; expanded tuning presets and string audition; bridged plug-in support; and experimental Linux AppImage and tar.xz packages with bundled Wine 9.21. See the [changelog](CHANGELOG.md).
-
 **A keyboard-driven tablature and notation editor for Windows, with an experimental Linux build. Opens .gp, .gpx, .gp5, .gp4 and .gp3 files and saves .gp and its own .tforge projects, and can save .gp5, .gp4 and .gp3 copies.** Write, import and play back guitar, bass, drum and keyboard parts, with a live fretboard / keyboard, an arrangement timeline, audio and MIDI recording, a mixer, VST plug-ins and offline audio and video rendering.
 
 [![TabForge with a drum plug-in](docs/media/screenshots/github-main.jpg)](docs/media/screenshots/github-main.jpg)
@@ -147,6 +143,7 @@ Each plug-in or container can be set to play only for a chosen driver type (ASIO
 
 ## What sets it apart
 
+- **Find your scale:** automatic detection and best-match suggestions share one choice across the status bar, fretboard and piano roll. Choose the tracks and range to analyse, compare the fit, or keep a manual choice.
 - **One window:** tab editing, audio and MIDI recording, a mixer and VST2 / VST3 plug-ins on the tracks of a tab.
 - **Band view and Keyboard mode:** every track on its own instrument following playback, or falling notes with play-along scoring and *Wait for me*.
 - **Live input:** one button plays a guitar or MIDI keyboard through an FX chain, with no track and no recording.
